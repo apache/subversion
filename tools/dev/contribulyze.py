@@ -28,8 +28,9 @@
 #
 # Some Subversion project log messages include parseable data to help
 # track who's contributing what.  The exact syntax is described in
-# hacking.html#crediting, but here's an example, indented by three
-# spaces, i.e., the "Patch by:" starts at the beginning of a line:
+# http://subversion.apache.org/docs/community-guide/conventions.html#crediting,
+# but here's an example, indented by three spaces, i.e., the "Patch by:"
+# starts at the beginning of a line:
 #
 #    Patch by: David Anderson <david.anderson@calixo.net>
 #              <justin@erenkrantz.com>

@@ -790,7 +790,7 @@ public interface ISVNClient
      * @since 1.0
      */
     void streamFileContent(String path, Revision revision, Revision pegRevision,
-                           int bufferSize, OutputStream stream)
+                           OutputStream stream)
         throws ClientException;
 
     /**
@@ -798,11 +798,11 @@ public interface ISVNClient
      * @param from      old url
      * @param to        new url
      * @param path      working copy path
-     * @param recurse   recurse into subdirectories
+     * @param ignoreExternals if externals are ignored during relocate
      * @throws ClientException
      * @since 1.0
      */
-    void relocate(String from, String to, String path, boolean recurse)
+    void relocate(String from, String to, String path, boolean ignoreExternals)
             throws ClientException;
 
     /**

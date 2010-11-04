@@ -1049,30 +1049,36 @@ def commit_mods_below_switch(sbox):
 
 def relocate_beyond_repos_root(sbox):
   "relocate with prefixes longer than repo root"
-  sbox.build(read_only = True)
+  sbox.build(read_only=True, create_wc=False)
+
+  wc_backup = sbox.add_wc_path('backup')
 
   wc_dir = sbox.wc_dir
   repo_dir = sbox.repo_dir
   repo_url = sbox.repo_url
   other_repo_dir, other_repo_url = sbox.add_repo_path('other')
-  svntest.main.copy_repos(repo_dir, other_repo_dir, 1, 0)
-
   A_url = repo_url + "/A"
+  A_wc_dir = wc_dir
   other_A_url = other_repo_url + "/A"
   other_B_url = other_repo_url + "/B"
-  A_wc_dir = os.path.join(wc_dir, "A")
 
+  svntest.main.safe_rmtree(wc_dir, 1)
+  svntest.actions.run_and_verify_svn(None, None, [], 'checkout',
+                                     repo_url + '/A', wc_dir)
+  
+  svntest.main.copy_repos(repo_dir, other_repo_dir, 1, 0)
+  
   # A relocate that changes the repo path part of the URL shouldn't work.
   # This tests for issue #2380.
   svntest.actions.run_and_verify_svn(None, None,
-                                     ".*Given destination URL invalid.*",
+                                     ".*Invalid destination URL.*",
                                      'switch', '--relocate',
                                      A_url, other_B_url, A_wc_dir)
 
   # Another way of trying to change the fs path, leading to an invalid
   # repository root.
   svntest.actions.run_and_verify_svn(None, None,
-                                     ".*Given source URL invalid.*",
+                                     ".*is not the root.*",
                                      'switch', '--relocate',
                                      repo_url, other_B_url, A_wc_dir)
 
@@ -2771,7 +2777,7 @@ def tree_conflicts_on_switch_2_2(sbox):
                         'DF/D1',
                         'DDD/D1',
                         'DDF/D1',
-                        status='! ', wc_rev=None)
+                        status='! ', treeconflict='C', wc_rev=None)
   # Remove from expected status and disk everything below the deleted paths.
   expected_status.remove('DD/D1/D2',
                          'DF/D1/beta',
@@ -2959,7 +2965,7 @@ def single_file_relocate(sbox):
   svntest.main.copy_repos(repo_dir, other_repo_dir, 1, 0)
   svntest.main.safe_rmtree(repo_dir, 1)
   svntest.actions.run_and_verify_svn(None, None,
-                                     ".*Cannot relocate a single file\n",
+                                     ".*Cannot relocate.*",
                                      'switch', '--relocate',
                                      iota_url, other_iota_url, iota_path)
 
@@ -3098,7 +3104,8 @@ def relocate_with_relative_externals(sbox):
   wc_dir = sbox.wc_dir
 
   # Add a relative external.
-  change_external(os.path.join(wc_dir, 'A', 'B'), "^/A/D/G G-ext", commit=True)
+  change_external(os.path.join(wc_dir, 'A', 'B'),
+                  "^/A/D/G G-ext\n../D/H H-ext", commit=True)
   svntest.actions.run_and_verify_svn(None, None, [], 'update', wc_dir)
   
   # Move our repository to another location.
@@ -3112,10 +3119,12 @@ def relocate_with_relative_externals(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'switch', '--relocate',
                                      repo_url, other_repo_url, wc_dir)
 
-  # Check the URL of the external -- was it updated to point to the
+  # Check the URLs of the externals -- were they updated to point to the
   # .other repository URL?
   svntest.actions.run_and_verify_info([{ 'URL' : '.*.other/A/D/G$' }],
                                       os.path.join(wc_dir, 'A', 'B', 'G-ext'))
+  svntest.actions.run_and_verify_info([{ 'URL' : '.*.other/A/D/H$' }],
+                                      os.path.join(wc_dir, 'A', 'B', 'H-ext'))
 
 
 ########################################################################
@@ -3162,7 +3171,7 @@ test_list = [ None,
               single_file_relocate,
               relocate_with_switched_children,
               XFail(copy_with_switched_subdir),
-              XFail(relocate_with_relative_externals),
+              relocate_with_relative_externals,
               ]
 
 if __name__ == '__main__':

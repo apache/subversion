@@ -477,6 +477,7 @@ def ensure_tree_conflict(sbox, operation,
           verbose_print("--- Merging")
           run_and_verify_svn(None, expected_stdout, [],
                              'merge', '--ignore-ancestry',
+                             '--allow-mixed-revisions',
                              '-r', str(source_left_rev) + ':' + str(source_right_rev),
                              source_url, target_path)
         else:
@@ -1053,7 +1054,7 @@ def lock_update_only(sbox):
   expected_disk = main.greek_state.copy()
   expected_disk.remove('iota')
   expected_status = get_virginal_state(wc_dir, 1)
-  expected_status.tweak('iota', status='D ')
+  expected_status.tweak('iota', status='D ', writelocked='O')
   run_and_verify_update(wc_dir,
                         None, expected_disk, expected_status,
                         None, None, None, None, None, 1,

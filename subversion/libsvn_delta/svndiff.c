@@ -352,10 +352,13 @@ struct decode_baton
 };
 
 
-/* Decode an svndiff-encoded integer into VAL and return a pointer to
+/* Decode an svndiff-encoded integer into *VAL and return a pointer to
    the byte after the integer.  The bytes to be decoded live in the
-   range [P..END-1].  See the comment for encode_int earlier in this
-   file for more detail on the encoding format.  */
+   range [P..END-1].  If these bytes do not contain a whole encoded
+   integer, return NULL; in this case *VAL is undefined.
+
+   See the comment for encode_int() earlier in this file for more detail on
+   the encoding format.  */
 static const unsigned char *
 decode_file_offset(svn_filesize_t *val,
                    const unsigned char *p,
@@ -381,7 +384,6 @@ decode_file_offset(svn_filesize_t *val,
       }
     }
 
-  *val = temp;
   return NULL;
 }
 
@@ -409,7 +411,6 @@ decode_size(apr_size_t *val,
       }
     }
 
-  *val = temp;
   return NULL;
 }
 

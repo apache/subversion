@@ -347,7 +347,8 @@ report_revisions_and_depths(svn_wc__db_t *db,
       svn_revnum_t this_rev;
       svn_depth_t this_depth;
       svn_wc__db_lock_t *this_lock;
-      svn_boolean_t this_switched;
+      svn_boolean_t this_switched = FALSE;
+      svn_boolean_t this_file_external = FALSE;
 
       /* Clear the iteration subpool here because the loop has a bunch
          of 'continue' jump statements. */
@@ -461,7 +462,6 @@ report_revisions_and_depths(svn_wc__db_t *db,
       /* And finally prepare for reporting */
       if (!this_repos_relpath)
         {
-          this_switched = FALSE;
           this_repos_relpath = svn_relpath_join(dir_repos_relpath, child,
                                                 iterpool);
         }
@@ -472,9 +472,20 @@ report_revisions_and_depths(svn_wc__db_t *db,
                                                        NULL);
 
           if (childname == NULL || strcmp(childname, child) != 0)
-            this_switched = TRUE;
-          else
-            this_switched = FALSE;
+            {
+              const char *file_ext_str;
+
+              this_switched = TRUE;
+             
+              /* This could be a file external!  We need to know
+                 that. */
+              SVN_ERR(svn_wc__db_temp_get_file_external(&file_ext_str, db,
+                                                        this_abspath,
+                                                        scratch_pool,
+                                                        scratch_pool));
+              if (file_ext_str)
+                this_file_external = TRUE;
+            }
         }
 
       /* Tweak THIS_DEPTH to a useful value.  */
@@ -489,9 +500,15 @@ report_revisions_and_depths(svn_wc__db_t *db,
       if (!SVN_IS_VALID_REVNUM(this_rev))
         this_rev = dir_rev;
 
+      /*** File Externals **/
+      if (this_file_external)
+        {
+          /* File externals are ... special.  We ignore them. */;
+        }
+
       /*** Files ***/
-      if (this_kind == svn_wc__db_kind_file ||
-          this_kind == svn_wc__db_kind_symlink)
+      else if (this_kind == svn_wc__db_kind_file ||
+               this_kind == svn_wc__db_kind_symlink)
         {
           if (report_everything)
             {
@@ -563,7 +580,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
 
           if (report_everything)
             {
-              /* Report the dir unconditionally, one way or another. */
+              /* Report the dir unconditionally, one way or another... */
               if (this_switched)
                 SVN_ERR(reporter->link_path(report_baton,
                                             this_path,
@@ -585,24 +602,20 @@ report_revisions_and_depths(svn_wc__db_t *db,
                                            this_lock ? this_lock->token : NULL,
                                            iterpool));
             }
-
-          /* Possibly report a disjoint URL ... */
           else if (this_switched)
-            SVN_ERR(reporter->link_path(report_baton,
-                                        this_path,
-                                        svn_path_url_add_component2(
-                                                dir_repos_root,
-                                                this_repos_relpath, iterpool),
-                                        this_rev,
-                                        this_depth,
-                                        start_empty,
-                                        this_lock ? this_lock->token : NULL,
-                                        iterpool));
-          /* ... or perhaps just a differing revision, lock token, incomplete
-             subdir, the mere presence of the directory in a depth-empty or
-             depth-files dir, or if the parent dir is at depth-immediates but
-             the child is not at depth-empty.  Also describe shallow subdirs
-             if we are trying to set depth to infinity. */
+            {
+              /* ...or possibly report a disjoint URL ... */
+              SVN_ERR(reporter->link_path(report_baton,
+                                          this_path,
+                                          svn_path_url_add_component2(
+                                              dir_repos_root,
+                                              this_repos_relpath, iterpool),
+                                          this_rev,
+                                          this_depth,
+                                          start_empty,
+                                          this_lock ? this_lock->token : NULL,
+                                          iterpool));
+            }
           else if (this_rev != dir_rev
                    || this_lock
                    || is_incomplete
@@ -612,16 +625,25 @@ report_revisions_and_depths(svn_wc__db_t *db,
                        && this_depth != svn_depth_empty)
                    || (this_depth < svn_depth_infinity
                        && depth == svn_depth_infinity))
-            SVN_ERR(reporter->set_path(report_baton,
-                                       this_path,
-                                       this_rev,
-                                       this_depth,
-                                       start_empty,
-                                       this_lock ? this_lock->token : NULL,
-                                       iterpool));
+            {
+              /* ... or perhaps just a differing revision, lock token,
+                 incomplete subdir, the mere presence of the directory
+                 in a depth-empty or depth-files dir, or if the parent
+                 dir is at depth-immediates but the child is not at
+                 depth-empty.  Also describe shallow subdirs if we are
+                 trying to set depth to infinity. */
+              SVN_ERR(reporter->set_path(report_baton,
+                                         this_path,
+                                         this_rev,
+                                         this_depth,
+                                         start_empty,
+                                         this_lock ? this_lock->token : NULL,
+                                         iterpool));
+            }
 
+          /* Finally, recurse if necessary and appropriate. */
           if (SVN_DEPTH_IS_RECURSIVE(depth))
-             SVN_ERR(report_revisions_and_depths(db,
+            SVN_ERR(report_revisions_and_depths(db,
                                                 anchor_abspath,
                                                 this_path,
                                                 this_rev,
@@ -748,52 +770,21 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
                                  db, local_abspath, scratch_pool,
                                  scratch_pool);
 
-  {
-    svn_boolean_t has_base = TRUE;
+  if (err)
+    {
+      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+        return svn_error_return(err);
 
-    if (err)
-      {
-        if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-          return svn_error_return(err);
+      svn_error_clear(err);
+      SVN_ERR(svn_wc__db_read_kind(&target_kind, db, local_abspath, TRUE,
+                                   scratch_pool));
 
-        svn_error_clear(err);
-        has_base = FALSE;
-        SVN_ERR(svn_wc__db_read_kind(&target_kind, db, local_abspath, TRUE,
-                                     scratch_pool));
-
-        if (target_kind == svn_wc__db_kind_file
-            || target_kind == svn_wc__db_kind_symlink)
-          status = svn_wc__db_status_absent; /* Crawl via parent dir */
-        else
-          status = svn_wc__db_status_not_present; /* As checkout */
-      }
-
-    /* ### Check the parentstub if we don't find a BASE. But don't
-           do this if we already have the info we want or we break
-           some copy scenarios. */
-    if (!has_base && target_kind == svn_wc__db_kind_dir)
-      {
-        svn_boolean_t not_present;
-        svn_revnum_t rev = SVN_INVALID_REVNUM;
-        err = svn_wc__db_temp_is_dir_deleted(&not_present, &rev,
-                                             db, local_abspath, scratch_pool);
-
-        if (err && (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND
-                    || err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY))
-          {
-            svn_error_clear(err);
-            not_present = FALSE;
-          }
-        else
-          SVN_ERR(err);
-
-        if (not_present)
-          status = svn_wc__db_status_not_present;
-
-        if (!SVN_IS_VALID_REVNUM(target_rev))
-          target_rev = rev;
-      }
-  }
+      if (target_kind == svn_wc__db_kind_file
+          || target_kind == svn_wc__db_kind_symlink)
+        status = svn_wc__db_status_absent; /* Crawl via parent dir */
+      else
+        status = svn_wc__db_status_not_present; /* As checkout */
+    }
 
   if ((status == svn_wc__db_status_not_present)
       || (target_kind == svn_wc__db_kind_dir
@@ -952,15 +943,6 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
                                      NULL, NULL,
                                      db, parent_abspath,
                                      scratch_pool, scratch_pool);
-
-      if (err)
-        goto abort_report;
-
-      if (!parent_repos_relpath)
-        err = svn_wc__db_scan_base_repos(&parent_repos_relpath, NULL,
-                                         NULL,
-                                         db, parent_abspath,
-                                         scratch_pool, scratch_pool);
 
       if (err)
         goto abort_report;

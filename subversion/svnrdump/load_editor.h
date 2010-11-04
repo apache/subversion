@@ -89,11 +89,10 @@ struct revision_baton
 };
 
 /**
- * Build up a load editor @a parser for parsing a dumpfile stream from @a stream
- * set to fire the appropriate callbacks in load editor along with a
- * @a parser_baton, using @a pool for all memory allocations. The
- * @a editor/ @a edit_baton are central to the functionality of the
- *  parser.
+ * Build up a dumpstream parser @a parser (and corresponding baton @a
+ * parse_baton) to fire the appropriate callbacks in a commit editor
+ * set to commit to session @a session. Use @a pool for all memory
+ * allocations.
  */
 svn_error_t *
 get_dumpstream_loader(const svn_repos_parse_fns2_t **parser,
@@ -102,8 +101,10 @@ get_dumpstream_loader(const svn_repos_parse_fns2_t **parser,
                       apr_pool_t *pool);
 
 /**
- * Drive the load editor @a editor using the data in @a stream using
- * @a pool for all memory allocations.
+ * Drive the dumpstream loader described by @a parser and @a
+ * parse_baton to parse and commit the stream @a stream to the
+ * location described by @a session. Use @a pool for all memory
+ * allocations.
  */
 svn_error_t *
 drive_dumpstream_loader(svn_stream_t *stream,

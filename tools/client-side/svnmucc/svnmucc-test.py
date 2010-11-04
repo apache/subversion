@@ -34,6 +34,10 @@ this_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
 sys.path.insert(0, '%s/../../../subversion/tests/cmdline' % (this_dir))
 import svntest
 
+# setup the global 'svntest.main.options' object so functions in the
+# module don't freak out.
+svntest.main._parse_options(arglist=[])
+
 # calculate the top of the build tree
 if len(sys.argv) > 1:
   build_top = os.path.abspath(sys.argv[1])
@@ -274,6 +278,20 @@ def main():
   # revision 17
   run_svnmucc(['M /foo/bar'], #---------
               'propdel', 'testprop', 'foo/bar')
+
+  # revision 18
+  run_svnmucc(['M /foo/z.c',
+               'M /foo/foo',
+               ], #---------
+              'propset', 'testprop', 'true', 'foo/z.c',
+              'propset', 'testprop', 'true', 'foo/foo')
+
+  # revision 19
+  run_svnmucc(['M /foo/z.c',
+               'M /foo/foo',
+               ], #---------
+              'propsetf', 'testprop', sys.argv[0], 'foo/z.c',
+              'propsetf', 'testprop', sys.argv[0], 'foo/foo')
 
   # Expected missing revision error
   xrun_svnmucc(['svnmucc: \'a\' is not a revision'

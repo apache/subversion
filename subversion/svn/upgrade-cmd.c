@@ -31,6 +31,7 @@
 #include "svn_client.h"
 #include "svn_error_codes.h"
 #include "svn_error.h"
+#include "svn_path.h"
 #include "cl.h"
 #include "svn_private_config.h"
 
@@ -58,6 +59,19 @@ svn_cl__upgrade(apr_getopt_t *os,
   svn_opt_push_implicit_dot_target(targets, scratch_pool);
 
   SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, scratch_pool));
+
+  /* Don't even attempt to modify the working copy if any of the
+   * targets look like URLs. URLs are invalid input. */
+  for (i = 0; i < targets->nelts; i++)
+    {
+      const char *target = APR_ARRAY_IDX(targets, i, const char *);
+
+      if (svn_path_is_url(target))
+        return svn_error_return(svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR,
+                                                  NULL,
+                                                  _("'%s' is not a local path"),
+                                                  target));
+    }
 
   iterpool = svn_pool_create(scratch_pool);
   for (i = 0; i < targets->nelts; i++)

@@ -789,7 +789,7 @@ internal_open(sqlite3 **db3, const char *path, svn_sqlite__mode_t mode,
              error than the close error at this point. */
           sqlite3_close(*db3);
 
-          msg = apr_pstrcat(scratch_pool, msg, ": '", path, "'", NULL);
+          msg = apr_pstrcat(scratch_pool, msg, ": '", path, "'", (char *)NULL);
           return svn_error_create(SQLITE_ERROR_CODE(err_code), NULL, msg);
         }
     }
@@ -940,6 +940,11 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
      bother to do it for production...for now. */
   SVN_ERR(exec_sql(*db, "PRAGMA foreign_keys=ON;"));
 #endif
+
+  /* Store temporary tables in RAM instead of in temporary files, but don't
+     fail on this if this option is disabled in the sqlite compilation by
+     setting SQLITE_TEMP_STORE to 0 (always to disk) */
+  svn_error_clear(exec_sql(*db, "PRAGMA temp_store = MEMORY;"));
 
   /* Validate the schema, upgrading if necessary. */
   if (upgrade_sql != NULL)

@@ -28,6 +28,7 @@
 #include "svn_error.h"
 #include "svn_io.h"
 #include "svn_pools.h"
+#include "svn_props.h"
 #include "svn_string.h"
 #include "svn_utf.h"
 #include "svn_dirent_uri.h"
@@ -150,7 +151,7 @@ parse_range(svn_linenum_t *start, svn_linenum_t *length, char *range)
 {
   char *comma;
 
-  if (strlen(range) == 0)
+  if (*range == 0)
     return FALSE;
 
   comma = strstr(range, ",");
@@ -183,13 +184,13 @@ parse_range(svn_linenum_t *start, svn_linenum_t *length, char *range)
 /* Try to parse a hunk header in string HEADER, putting parsed information
  * into HUNK. Return TRUE if the header parsed correctly. ATAT is the
  * character string used to delimit the hunk header.
- * If REVERSE is TRUE, invert the hunk header while parsing it.
  * Do all allocations in POOL. */
 static svn_boolean_t
 parse_hunk_header(const char *header, svn_diff_hunk_t *hunk,
                   const char *atat, apr_pool_t *pool)
 {
   const char *p;
+  const char *start;
   svn_stringbuf_t *range;
 
   p = header + strlen(atat);
@@ -202,15 +203,17 @@ parse_hunk_header(const char *header, svn_diff_hunk_t *hunk,
     return FALSE;
   /* OK, this may be worth allocating some memory for... */
   range = svn_stringbuf_create_ensure(31, pool);
-  p++;
+  start = ++p;
   while (*p && *p != ' ')
     {
-      svn_stringbuf_appendbyte(range, *p);
       p++;
     }
+
   if (*p != ' ')
     /* No no no... */
     return FALSE;
+
+  svn_stringbuf_appendbytes(range, start, p - start);
 
   /* Try to parse the first range. */
   if (! parse_range(&hunk->original_start, &hunk->original_length, range->data))
@@ -223,15 +226,16 @@ parse_hunk_header(const char *header, svn_diff_hunk_t *hunk,
     /* Eeek! */
     return FALSE;
   /* OK, this may be worth copying... */
-  p++;
+  start = ++p;
   while (*p && *p != ' ')
     {
-      svn_stringbuf_appendbyte(range, *p);
       p++;
     }
   if (*p != ' ')
     /* No no no... */
     return FALSE;
+
+  svn_stringbuf_appendbytes(range, start, p - start);
 
   /* Check for trailing @@ */
   p++;
@@ -478,19 +482,24 @@ svn_diff_hunk_readline_diff_text(const svn_diff_hunk_t *hunk,
   return SVN_NO_ERROR;
 }
 
-/* Parse PROP_NAME from HEADER as the part after the INDICATOR line. */
+/* Parse *PROP_NAME from HEADER as the part after the INDICATOR line.
+ * Allocate *PROP_NAME in RESULT_POOL.
+ * Set *PROP_NAME to NULL if no valid property name was found. */
 static svn_error_t *
 parse_prop_name(const char **prop_name, const char *header, 
                 const char *indicator, apr_pool_t *result_pool)
 {
-  /* ### This can fail if the filename cannot be represented in the current
-   * ### locale's encoding. */
   SVN_ERR(svn_utf_cstring_to_utf8(prop_name,
                                   header + strlen(indicator),
                                   result_pool));
-
-  /* ### Are we guarenteed that there are no trailing or leading
-   * ### whitespaces in the name? */
+  if (**prop_name == '\0')
+    *prop_name = NULL;
+  else if (! svn_prop_name_is_valid(*prop_name))
+    {
+      svn_stringbuf_t *buf = svn_stringbuf_create(*prop_name, result_pool);
+      svn_stringbuf_strip_whitespace(buf);
+      *prop_name = (svn_prop_name_is_valid(buf->data) ? buf->data : NULL);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -675,20 +684,23 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
           else if (starts_with(line->data, "Added: "))
             {
               SVN_ERR(parse_prop_name(prop_name, line->data, "Added: ",
-                                      result_pool));
-              *prop_operation = svn_diff_op_added;
+                                      result_pool));  
+              if (*prop_name)
+                *prop_operation = svn_diff_op_added;
             }
           else if (starts_with(line->data, "Deleted: "))
             {
               SVN_ERR(parse_prop_name(prop_name, line->data, "Deleted: ",
                                       result_pool));
-              *prop_operation = svn_diff_op_deleted;
+              if (*prop_name)
+                *prop_operation = svn_diff_op_deleted;
             }
           else if (starts_with(line->data, "Modified: "))
             {
               SVN_ERR(parse_prop_name(prop_name, line->data, "Modified: ",
                                       result_pool));
-              *prop_operation = svn_diff_op_modified;
+              if (*prop_name)
+                *prop_operation = svn_diff_op_modified;
             }
           else if (starts_with(line->data, minus)
                    || starts_with(line->data, "diff --git "))
@@ -753,8 +765,8 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
 static int
 compare_hunks(const void *a, const void *b)
 {
-  const svn_diff_hunk_t *ha = *((const svn_diff_hunk_t **)a);
-  const svn_diff_hunk_t *hb = *((const svn_diff_hunk_t **)b);
+  const svn_diff_hunk_t *ha = *((const svn_diff_hunk_t *const *)a);
+  const svn_diff_hunk_t *hb = *((const svn_diff_hunk_t *const *)b);
 
   if (ha->original_start < hb->original_start)
     return -1;
@@ -1262,6 +1274,8 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
       const char *last_prop_name;
       const char *prop_name;
       svn_diff_operation_kind_t prop_operation;
+
+      last_prop_name = NULL;
 
       /* Parse hunks. */
       (*patch)->hunks = apr_array_make(result_pool, 10,

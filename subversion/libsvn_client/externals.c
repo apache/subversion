@@ -205,7 +205,7 @@ switch_dir_external(const char *path,
                                                   revision, svn_depth_unknown,
                                                   FALSE, FALSE, FALSE,
                                                   timestamp_sleep, TRUE,
-                                                  TRUE, ctx, subpool));
+                                                  ctx, subpool));
               svn_pool_destroy(subpool);
               return SVN_NO_ERROR;
             }
@@ -229,8 +229,8 @@ switch_dir_external(const char *path,
                   SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root,
                                                  subpool));
 
-                  err = svn_client_relocate(path, repos_root_url, repos_root,
-                                            TRUE, ctx, subpool);
+                  err = svn_client_relocate2(path, repos_root_url, repos_root,
+                                             FALSE, ctx, subpool);
                   /* If the relocation failed because the new URL points
                      to another repository, then we need to relegate and
                      check out a new WC. */
@@ -576,7 +576,7 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
                         pool,
                         url[2] == '/' ? "///" : "//",
                         svn_relpath_canonicalize(url+2, pool),
-                        NULL);
+                        (char *)NULL);
     }
   else if (svn_path_is_url(url) || *url == '/')
     {
@@ -697,7 +697,7 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
                                                    scheme,
                                                    ":",
                                                    url,
-                                                   NULL),
+                                                   (char *)NULL),
                                        pool);
       return SVN_NO_ERROR;
     }

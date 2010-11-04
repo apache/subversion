@@ -167,6 +167,7 @@ typedef struct
   svn_ra_neon__request_t *req;
   svn_stringbuf_t *description;
   svn_boolean_t contains_error;
+  svn_boolean_t contains_precondition_error;
 } multistatus_baton_t;
 
 /* Implements svn_ra_neon__startelm_cb_t. */
@@ -231,6 +232,9 @@ end_207_element(void *baton, int state,
             return svn_error_create(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                                     _("The request response contained at least "
                                       "one error"));
+          else if (b->contains_precondition_error) 
+            return svn_error_create(SVN_ERR_FS_PROP_BASEVALUE_MISMATCH, NULL,
+                                    b->description->data);
           else
             return svn_error_create(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                                     b->description->data);
@@ -259,6 +263,10 @@ end_207_element(void *baton, int state,
               b->contains_error |= (status.klass != 2);
             else
               b->propstat_has_error = (status.klass != 2);
+
+            /* Handle "412 Precondition Failed" specially */
+            if (status.code == 412)
+              b->contains_precondition_error = TRUE;
 
             free(status.reason_phrase);
           }

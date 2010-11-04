@@ -263,10 +263,11 @@ svn_repos_fs_change_txn_prop(svn_fs_txn_t *txn,
 
 
 svn_error_t *
-svn_repos_fs_change_rev_prop3(svn_repos_t *repos,
+svn_repos_fs_change_rev_prop4(svn_repos_t *repos,
                               svn_revnum_t rev,
                               const char *author,
                               const char *name,
+                              const svn_string_t *const *old_value_p,
                               const svn_string_t *new_value,
                               svn_boolean_t use_pre_revprop_change_hook,
                               svn_boolean_t use_post_revprop_change_hook,
@@ -274,9 +275,7 @@ svn_repos_fs_change_rev_prop3(svn_repos_t *repos,
                               void *authz_read_baton,
                               apr_pool_t *pool)
 {
-  svn_string_t *old_value;
   svn_repos_revision_access_level_t readability;
-  char action;
 
   SVN_ERR(svn_repos_check_revision_access(&readability, repos, rev,
                                           authz_read_func, authz_read_baton,
@@ -284,9 +283,27 @@ svn_repos_fs_change_rev_prop3(svn_repos_t *repos,
 
   if (readability == svn_repos_revision_access_full)
     {
-      SVN_ERR(validate_prop(name, new_value, pool));
-      SVN_ERR(svn_fs_revision_prop(&old_value, repos->fs, rev, name, pool));
+      const svn_string_t *old_value;
+      char action;
 
+      SVN_ERR(validate_prop(name, new_value, pool));
+
+      /* Fetch OLD_VALUE for svn_fs_change_rev_prop2(). */
+      if (old_value_p)
+        {
+          old_value = *old_value_p;
+        }
+      else
+        {
+          /* Get OLD_VALUE anyway, in order for ACTION and OLD_VALUE arguments
+           * to the hooks to be accurate. */
+          svn_string_t *old_value2;
+
+          SVN_ERR(svn_fs_revision_prop(&old_value2, repos->fs, rev, name, pool));
+          old_value = old_value2; 
+        }
+
+      /* Prepare ACTION. */
       if (! new_value)
         action = 'D';
       else if (! old_value)
@@ -294,12 +311,13 @@ svn_repos_fs_change_rev_prop3(svn_repos_t *repos,
       else
         action = 'M';
 
+      /* ### currently not passing the old_value to hooks */
       if (use_pre_revprop_change_hook)
         SVN_ERR(svn_repos__hooks_pre_revprop_change(repos, rev, author, name,
                                                     new_value, action, pool));
 
-      SVN_ERR(svn_fs_change_rev_prop2(repos->fs, rev, name, NULL, 
-                                      new_value, pool));
+      SVN_ERR(svn_fs_change_rev_prop2(repos->fs, rev, name,
+                                      &old_value, new_value, pool));
 
       if (use_post_revprop_change_hook)
         SVN_ERR(svn_repos__hooks_post_revprop_change(repos, rev, author,  name,
@@ -594,7 +612,6 @@ svn_repos_fs_get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo,
   apr_array_header_t *readable_paths = (apr_array_header_t *) paths;
   svn_fs_root_t *root;
   apr_pool_t *iterpool = svn_pool_create(pool);
-  int i;
 
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_ERR(svn_fs_youngest_rev(&rev, repos->fs, pool));
@@ -603,6 +620,8 @@ svn_repos_fs_get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo,
   /* Filter out unreadable paths before divining merge tracking info. */
   if (authz_read_func)
     {
+      int i;
+
       for (i = 0; i < paths->nelts; i++)
         {
           svn_boolean_t readable;

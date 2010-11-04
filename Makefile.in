@@ -490,12 +490,12 @@ check: bin @TRANSFORM_LIBTOOL_SCRIPTS@ $(TEST_DEPS) @BDB_TEST_DEPS@
 
 # First, set up Apache as documented in
 # subversion/tests/cmdline/README.
-davcheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@
+davcheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@ apache-mod
 	@$(MAKE) check BASE_URL=http://localhost
 
 # Automatically configure and run Apache httpd on a random port, and then
 # run make check.
-davautocheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@
+davautocheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@ apache-mod
 	@APXS=$(APXS) bash $(top_srcdir)/subversion/tests/cmdline/davautocheck.sh
 
 # First, run:

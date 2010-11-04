@@ -196,7 +196,7 @@ diff_deleted_dir(const char *dir,
                                 &kind,
                                 iterpool));
 
-      sum = apr_pcalloc(pool, sizeof(*sum));
+      sum = apr_pcalloc(iterpool, sizeof(*sum));
       sum->summarize_kind = svn_client_diff_summarize_kind_deleted;
       sum->path = path;
       sum->node_kind = kind;

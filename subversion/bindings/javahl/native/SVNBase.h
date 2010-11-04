@@ -40,7 +40,7 @@ class SVNBase
    *
    * @since 1.4.0
    */
-  jlong getCppAddr();
+  jlong getCppAddr() const;
 
   /**
    * Deletes this C++ peer object, and clears the memory address of

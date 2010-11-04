@@ -301,10 +301,7 @@ check_content(svn_diff_hunk_t *hunk, svn_boolean_t original,
     SVN_TEST_ASSERT(exp_eof == hunk_eof);
     if (exp_eof)
       break;
-    if (strcmp(exp_buf->data, hunk_buf->data))
-      return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                               "Expected '%s' but was '%s'", exp_buf->data,
-                               hunk_buf->data);
+    SVN_TEST_STRING_ASSERT(exp_buf->data, hunk_buf->data);
   }
 
   SVN_TEST_ASSERT(hunk_buf->len == 0);
@@ -345,8 +342,8 @@ test_parse_unidiff(apr_pool_t *pool)
                                         ignore_whitespace, iterpool, 
                                         iterpool));
       SVN_TEST_ASSERT(patch);
-      SVN_TEST_ASSERT(! strcmp(patch->old_filename, "A/C/gamma"));
-      SVN_TEST_ASSERT(! strcmp(patch->new_filename, "A/C/gamma"));
+      SVN_TEST_STRING_ASSERT(patch->old_filename, "A/C/gamma");
+      SVN_TEST_STRING_ASSERT(patch->new_filename, "A/C/gamma");
       SVN_TEST_ASSERT(patch->hunks->nelts == 1);
 
       hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_diff_hunk_t *);
@@ -365,13 +362,13 @@ test_parse_unidiff(apr_pool_t *pool)
       SVN_TEST_ASSERT(patch);
       if (reverse)
         {
-          SVN_TEST_ASSERT(! strcmp(patch->new_filename, "A/D/gamma.orig"));
-          SVN_TEST_ASSERT(! strcmp(patch->old_filename, "A/D/gamma"));
+          SVN_TEST_STRING_ASSERT(patch->new_filename, "A/D/gamma.orig");
+          SVN_TEST_STRING_ASSERT(patch->old_filename, "A/D/gamma");
         }
       else
         {
-          SVN_TEST_ASSERT(! strcmp(patch->old_filename, "A/D/gamma.orig"));
-          SVN_TEST_ASSERT(! strcmp(patch->new_filename, "A/D/gamma"));
+          SVN_TEST_STRING_ASSERT(patch->old_filename, "A/D/gamma.orig");
+          SVN_TEST_STRING_ASSERT(patch->new_filename, "A/D/gamma");
         }
       SVN_TEST_ASSERT(patch->hunks->nelts == 1);
 
@@ -409,8 +406,8 @@ test_parse_git_diff(apr_pool_t *pool)
                                     FALSE, /* ignore_whitespace */ 
                                     pool, pool));
   SVN_TEST_ASSERT(patch);
-  SVN_TEST_ASSERT(! strcmp(patch->old_filename, "A/mu"));
-  SVN_TEST_ASSERT(! strcmp(patch->new_filename, "A/mu"));
+  SVN_TEST_STRING_ASSERT(patch->old_filename, "A/mu");
+  SVN_TEST_STRING_ASSERT(patch->new_filename, "A/mu");
   SVN_TEST_ASSERT(patch->operation == svn_diff_op_deleted);
   SVN_TEST_ASSERT(patch->hunks->nelts == 0);
 
@@ -420,8 +417,8 @@ test_parse_git_diff(apr_pool_t *pool)
                                     FALSE, /* ignore_whitespace */ 
                                     pool, pool));
   SVN_TEST_ASSERT(patch);
-  SVN_TEST_ASSERT(! strcmp(patch->old_filename, "A/C/gamma"));
-  SVN_TEST_ASSERT(! strcmp(patch->new_filename, "A/C/gamma"));
+  SVN_TEST_STRING_ASSERT(patch->old_filename, "A/C/gamma");
+  SVN_TEST_STRING_ASSERT(patch->new_filename, "A/C/gamma");
   SVN_TEST_ASSERT(patch->operation == svn_diff_op_modified);
   SVN_TEST_ASSERT(patch->hunks->nelts == 1);
   
@@ -443,8 +440,8 @@ test_parse_git_diff(apr_pool_t *pool)
                                     pool, pool));
 
   SVN_TEST_ASSERT(patch);
-  SVN_TEST_ASSERT(! strcmp(patch->old_filename, "iota"));
-  SVN_TEST_ASSERT(! strcmp(patch->new_filename, "iota.copied"));
+  SVN_TEST_STRING_ASSERT(patch->old_filename, "iota");
+  SVN_TEST_STRING_ASSERT(patch->new_filename, "iota.copied");
   SVN_TEST_ASSERT(patch->operation == svn_diff_op_copied);
   SVN_TEST_ASSERT(patch->hunks->nelts == 0);
 
@@ -455,8 +452,8 @@ test_parse_git_diff(apr_pool_t *pool)
                                     pool, pool));
 
   SVN_TEST_ASSERT(patch);
-  SVN_TEST_ASSERT(! strcmp(patch->old_filename, "new"));
-  SVN_TEST_ASSERT(! strcmp(patch->new_filename, "new"));
+  SVN_TEST_STRING_ASSERT(patch->old_filename, "new");
+  SVN_TEST_STRING_ASSERT(patch->new_filename, "new");
   SVN_TEST_ASSERT(patch->operation == svn_diff_op_added);
   SVN_TEST_ASSERT(patch->hunks->nelts == 0);
 
@@ -482,8 +479,8 @@ test_parse_git_tree_and_text_diff(apr_pool_t *pool)
                                     FALSE, /* ignore_whitespace */ 
                                     pool, pool));
   SVN_TEST_ASSERT(patch);
-  SVN_TEST_ASSERT(! strcmp(patch->old_filename, "iota"));
-  SVN_TEST_ASSERT(! strcmp(patch->new_filename, "iota.copied"));
+  SVN_TEST_STRING_ASSERT(patch->old_filename, "iota");
+  SVN_TEST_STRING_ASSERT(patch->new_filename, "iota.copied");
   SVN_TEST_ASSERT(patch->operation == svn_diff_op_copied);
   SVN_TEST_ASSERT(patch->hunks->nelts == 1);
   
@@ -504,8 +501,8 @@ test_parse_git_tree_and_text_diff(apr_pool_t *pool)
                                     FALSE, /* ignore_whitespace */ 
                                     pool, pool));
   SVN_TEST_ASSERT(patch);
-  SVN_TEST_ASSERT(! strcmp(patch->old_filename, "A/mu"));
-  SVN_TEST_ASSERT(! strcmp(patch->new_filename, "A/mu.moved"));
+  SVN_TEST_STRING_ASSERT(patch->old_filename, "A/mu");
+  SVN_TEST_STRING_ASSERT(patch->new_filename, "A/mu.moved");
   SVN_TEST_ASSERT(patch->operation == svn_diff_op_moved);
   SVN_TEST_ASSERT(patch->hunks->nelts == 1);
   
@@ -525,8 +522,8 @@ test_parse_git_tree_and_text_diff(apr_pool_t *pool)
                                     FALSE, /* ignore_whitespace */ 
                                     pool, pool));
   SVN_TEST_ASSERT(patch);
-  SVN_TEST_ASSERT(! strcmp(patch->old_filename, "/dev/null"));
-  SVN_TEST_ASSERT(! strcmp(patch->new_filename, "new"));
+  SVN_TEST_STRING_ASSERT(patch->old_filename, "/dev/null");
+  SVN_TEST_STRING_ASSERT(patch->new_filename, "new");
   SVN_TEST_ASSERT(patch->operation == svn_diff_op_added);
   SVN_TEST_ASSERT(patch->hunks->nelts == 1);
   
@@ -545,8 +542,8 @@ test_parse_git_tree_and_text_diff(apr_pool_t *pool)
                                     FALSE, /* ignore_whitespace */ 
                                     pool, pool));
   SVN_TEST_ASSERT(patch);
-  SVN_TEST_ASSERT(! strcmp(patch->old_filename, "A/B/lambda"));
-  SVN_TEST_ASSERT(! strcmp(patch->new_filename, "/dev/null"));
+  SVN_TEST_STRING_ASSERT(patch->old_filename, "A/B/lambda");
+  SVN_TEST_STRING_ASSERT(patch->new_filename, "/dev/null");
   SVN_TEST_ASSERT(patch->operation == svn_diff_op_deleted);
   SVN_TEST_ASSERT(patch->hunks->nelts == 1);
   
@@ -579,8 +576,8 @@ test_bad_git_diff_headers(apr_pool_t *pool)
                                     FALSE, /* ignore_whitespace */ 
                                     pool, pool));
   SVN_TEST_ASSERT(patch);
-  SVN_TEST_ASSERT(! strcmp(patch->old_filename, "iota"));
-  SVN_TEST_ASSERT(! strcmp(patch->new_filename, "iota.copied"));
+  SVN_TEST_STRING_ASSERT(patch->old_filename, "iota");
+  SVN_TEST_STRING_ASSERT(patch->new_filename, "iota.copied");
   SVN_TEST_ASSERT(patch->operation == svn_diff_op_copied);
   SVN_TEST_ASSERT(patch->hunks->nelts == 1);
   
@@ -617,8 +614,8 @@ test_parse_property_diff(apr_pool_t *pool)
                                     FALSE, /* ignore_whitespace */ 
                                     pool, pool));
   SVN_TEST_ASSERT(patch);
-  SVN_TEST_ASSERT(! strcmp(patch->old_filename, "iota"));
-  SVN_TEST_ASSERT(! strcmp(patch->new_filename, "iota"));
+  SVN_TEST_STRING_ASSERT(patch->old_filename, "iota");
+  SVN_TEST_STRING_ASSERT(patch->new_filename, "iota");
   SVN_TEST_ASSERT(patch->hunks->nelts == 0);
   SVN_TEST_ASSERT(apr_hash_count(patch->prop_patches) == 3);
 
@@ -720,8 +717,8 @@ test_parse_property_and_text_diff(apr_pool_t *pool)
                                     FALSE, /* ignore_whitespace */ 
                                     pool, pool));
   SVN_TEST_ASSERT(patch);
-  SVN_TEST_ASSERT(! strcmp(patch->old_filename, "iota"));
-  SVN_TEST_ASSERT(! strcmp(patch->new_filename, "iota"));
+  SVN_TEST_STRING_ASSERT(patch->old_filename, "iota");
+  SVN_TEST_STRING_ASSERT(patch->new_filename, "iota");
   SVN_TEST_ASSERT(patch->hunks->nelts == 1);
   SVN_TEST_ASSERT(apr_hash_count(patch->prop_patches) == 1);
 
@@ -775,8 +772,8 @@ test_parse_diff_symbols_in_prop_unidiff(apr_pool_t *pool)
                                     FALSE, /* ignore_whitespace */ 
                                     pool, pool));
   SVN_TEST_ASSERT(patch);
-  SVN_TEST_ASSERT(! strcmp(patch->old_filename, "iota"));
-  SVN_TEST_ASSERT(! strcmp(patch->new_filename, "iota"));
+  SVN_TEST_STRING_ASSERT(patch->old_filename, "iota");
+  SVN_TEST_STRING_ASSERT(patch->new_filename, "iota");
   SVN_TEST_ASSERT(patch->hunks->nelts == 0);
   SVN_TEST_ASSERT(apr_hash_count(patch->prop_patches) == 3);
 
@@ -873,8 +870,8 @@ test_git_diffs_with_spaces_diff(apr_pool_t *pool)
                                     FALSE, /* ignore_whitespace */ 
                                     pool, pool));
   SVN_TEST_ASSERT(patch);
-  SVN_TEST_ASSERT(! strcmp(patch->old_filename, "path 1"));
-  SVN_TEST_ASSERT(! strcmp(patch->new_filename, "path 1"));
+  SVN_TEST_STRING_ASSERT(patch->old_filename, "path 1");
+  SVN_TEST_STRING_ASSERT(patch->new_filename, "path 1");
   SVN_TEST_ASSERT(patch->operation == svn_diff_op_added);
   SVN_TEST_ASSERT(patch->hunks->nelts == 0);
   
@@ -883,8 +880,8 @@ test_git_diffs_with_spaces_diff(apr_pool_t *pool)
                                     FALSE, /* ignore_whitespace */ 
                                     pool, pool));
   SVN_TEST_ASSERT(patch);
-  SVN_TEST_ASSERT(! strcmp(patch->old_filename, "path one 1"));
-  SVN_TEST_ASSERT(! strcmp(patch->new_filename, "path one 1"));
+  SVN_TEST_STRING_ASSERT(patch->old_filename, "path one 1");
+  SVN_TEST_STRING_ASSERT(patch->new_filename, "path one 1");
   SVN_TEST_ASSERT(patch->operation == svn_diff_op_added);
   SVN_TEST_ASSERT(patch->hunks->nelts == 0);
 
@@ -893,8 +890,8 @@ test_git_diffs_with_spaces_diff(apr_pool_t *pool)
                                     FALSE, /* ignore_whitespace */ 
                                     pool, pool));
   SVN_TEST_ASSERT(patch);
-  SVN_TEST_ASSERT(! strcmp(patch->old_filename, "dir/ b/path"));
-  SVN_TEST_ASSERT(! strcmp(patch->new_filename, "dir/ b/path"));
+  SVN_TEST_STRING_ASSERT(patch->old_filename, "dir/ b/path");
+  SVN_TEST_STRING_ASSERT(patch->new_filename, "dir/ b/path");
   SVN_TEST_ASSERT(patch->operation == svn_diff_op_added);
   SVN_TEST_ASSERT(patch->hunks->nelts == 0);
 
@@ -903,8 +900,8 @@ test_git_diffs_with_spaces_diff(apr_pool_t *pool)
                                     FALSE, /* ignore_whitespace */ 
                                     pool, pool));
   SVN_TEST_ASSERT(patch);
-  SVN_TEST_ASSERT(! strcmp(patch->old_filename, " b/path 1"));
-  SVN_TEST_ASSERT(! strcmp(patch->new_filename, " b/path 1"));
+  SVN_TEST_STRING_ASSERT(patch->old_filename, " b/path 1");
+  SVN_TEST_STRING_ASSERT(patch->new_filename, " b/path 1");
   SVN_TEST_ASSERT(patch->operation == svn_diff_op_added);
   SVN_TEST_ASSERT(patch->hunks->nelts == 0);
 

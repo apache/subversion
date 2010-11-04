@@ -799,7 +799,8 @@ svn_ra_neon__open(svn_ra_session_t *session,
     callbacks->get_client_string(callback_baton, &client_string, pool);
 
   if (client_string)
-    useragent = apr_pstrcat(pool, "SVN/" SVN_VERSION "/", client_string, NULL);
+    useragent = apr_pstrcat(pool, "SVN/" SVN_VERSION "/", client_string,
+                            (char *)NULL);
   else
     useragent = "SVN/" SVN_VERSION;
 

@@ -129,6 +129,11 @@ svn_client_upgrade(const char *path,
   info_baton.last_repos = NULL;
   info_baton.last_uuid = NULL;
 
+  if (svn_path_is_url(path))
+    return svn_error_return(svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                              _("'%s' is not a local path"),
+                                              path));
+
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
   SVN_ERR(svn_wc_upgrade(ctx->wc_ctx, local_abspath,
                          fetch_repos_info, &info_baton,

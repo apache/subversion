@@ -346,9 +346,7 @@ resolve_target_path(patch_target_t *target,
   target->canon_path_from_patchfile = svn_dirent_internal_style(
                                         path_from_patchfile, result_pool);
 
-  /* We allow properties to be set on the wc root dir.
-   * ### Do we need to check for empty paths here, shouldn't the parser
-   * ### guarentee that the paths returned are non-empty? */
+  /* We allow properties to be set on the wc root dir. */
   if (! prop_changes_only && target->canon_path_from_patchfile[0] == '\0')
     {
       /* An empty patch target path? What gives? Skip this. */
@@ -498,7 +496,7 @@ init_prop_target(prop_patch_target_t **prop_target,
   new_prop_target->content_info = content_info;
 
   err = svn_wc_prop_get2(&value, wc_ctx, local_abspath, prop_name, 
-                           result_pool, scratch_pool);
+                         result_pool, scratch_pool);
   if (err)
     {
       if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
@@ -528,12 +526,40 @@ init_prop_target(prop_patch_target_t **prop_target,
   return SVN_NO_ERROR;
 }
 
+/* Return a suitable filename for the target of PATCH.
+ * Examine the ``old'' and ``new'' file names, and choose the file name
+ * with the fewest path components, the shortest basename, and the shortest
+ * total file name length (in that order). In case of a tie, return the new
+ * filename. This heuristic is also used by Larry Wall's UNIX patch (except
+ * that it prompts for a filename in case of a tie). */
+static const char *
+choose_target_filename(const svn_patch_t *patch)
+{
+  apr_size_t old;
+  apr_size_t new;
+
+  old = svn_path_component_count(patch->old_filename);
+  new = svn_path_component_count(patch->new_filename);
+
+  if (old == new)
+    {
+      old = strlen(svn_dirent_basename(patch->old_filename, NULL));
+      new = strlen(svn_dirent_basename(patch->new_filename, NULL));
+
+      if (old == new)
+        {
+          old = strlen(patch->old_filename);
+          new = strlen(patch->new_filename);
+        }
+    }
+
+  return (old < new) ? patch->old_filename : patch->new_filename;
+}
+
 /* Attempt to initialize a *PATCH_TARGET structure for a target file
  * described by PATCH. Use working copy context WC_CTX.
  * STRIP_COUNT specifies the number of leading path components
  * which should be stripped from target paths in the patch.
- * OLD_PATCH_TARGET_NAMES indicates whether the old target's name parsed
- * from the patch file should be preferred over the new target's name.
  * The patch target structure is allocated in RESULT_POOL, but if the target
  * should be skipped, PATCH_TARGET->SKIPPED is set and the target should be
  * treated as not fully initialized, e.g. the caller should not not do any
@@ -545,9 +571,7 @@ static svn_error_t *
 init_patch_target(patch_target_t **patch_target,
                   const svn_patch_t *patch,
                   const char *base_dir,
-                  svn_wc_context_t *wc_ctx,
-                  int strip_count,
-                  svn_boolean_t old_patch_target_names,
+                  svn_wc_context_t *wc_ctx, int strip_count,
                   svn_boolean_t remove_tempfiles,
                   apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
@@ -593,8 +617,7 @@ init_patch_target(patch_target_t **patch_target,
   target->prop_targets = apr_hash_make(result_pool);
   target->pool = result_pool;
 
-  SVN_ERR(resolve_target_path(target, old_patch_target_names ?
-                                patch->old_filename : patch->new_filename,
+  SVN_ERR(resolve_target_path(target, choose_target_filename(patch),
                               base_dir, strip_count, prop_changes_only,
                               wc_ctx, result_pool, scratch_pool));
   if (! target->skipped)
@@ -631,13 +654,16 @@ init_patch_target(patch_target_t **patch_target,
                                                    scratch_pool));
         }
 
-      /* ### Is it ok to set target->added here? Isn't the target supposed to
-       * ### be marked as added after it's been proven that it can be added?
-       * ### One alternative is to include a git_added flag. Or maybe we
-       * ### should have kept the patch field in patch_target_t? Then we
-       * ### could have checked for target->patch->operation == added */
+      /* ### Is it ok to set the operation of the target already here? Isn't
+       * ### the target supposed to be marked with an operation after we have
+       * ### determined that the changes will apply cleanly to the WC? Maybe
+       * ### we should have kept the patch field in patch_target_t to be
+       * ### able to distinguish between 'what the patch says we should do' 
+       * ### and 'what we can do with the given state of our WC'. */
       if (patch->operation == svn_diff_op_added)
         target->added = TRUE;
+      else if (patch->operation == svn_diff_op_deleted)
+        target->deleted = TRUE;
 
       SVN_ERR(svn_stream_open_unique(&patched_raw,
                                      &target->patched_path, NULL,
@@ -862,59 +888,41 @@ match_hunk(svn_boolean_t *matched, target_content_info_t *content_info,
                                            NULL, FALSE,
                                            content_info->keywords, FALSE,
                                            iterpool));
-      lines_read++;
       SVN_ERR(read_line(content_info, &target_line, iterpool, iterpool));
-      if (! hunk_eof)
-        {
-          if (lines_read <= fuzz && leading_context > fuzz)
-            lines_matched = TRUE;
-          else if (lines_read > hunk_length - fuzz &&
-                   trailing_context > fuzz)
-            lines_matched = TRUE;
-          else
-            {
-              if (ignore_whitespace)
-                {
-                  char *stripped_hunk_line = apr_pstrdup(pool,
-                                                         hunk_line_translated);
-                  char *stripped_target_line = apr_pstrdup(pool, target_line);
 
-                  apr_collapse_spaces(stripped_hunk_line,
-                                      hunk_line_translated);
-                  apr_collapse_spaces(stripped_target_line, target_line);
-                  lines_matched = ! strcmp(stripped_hunk_line,
-                                           stripped_target_line);
-                }
-              else 
-                lines_matched = ! strcmp(hunk_line_translated, target_line);
+      lines_read++;
+
+      /* If the last line doesn't have a newline, we get EOF but still
+       * have a non-empty line to compare. */
+      if ((hunk_eof && hunk_line->len == 0) ||
+          (content_info->eof && *target_line == 0))
+        break;
+
+      /* Leading/trailing fuzzy lines always match. */
+      if ((lines_read <= fuzz && leading_context > fuzz) ||
+          (lines_read > hunk_length - fuzz && trailing_context > fuzz))
+        lines_matched = TRUE;
+      else
+        {
+          if (ignore_whitespace)
+            {
+              char *hunk_line_trimmed;
+              char *target_line_trimmed;
+
+              hunk_line_trimmed = apr_pstrdup(iterpool, hunk_line_translated);
+              target_line_trimmed = apr_pstrdup(iterpool, target_line);
+              apr_collapse_spaces(hunk_line_trimmed, hunk_line_trimmed);
+              apr_collapse_spaces(target_line_trimmed, target_line_trimmed);
+              lines_matched = ! strcmp(hunk_line_trimmed, target_line_trimmed);
             }
+          else
+            lines_matched = ! strcmp(hunk_line_translated, target_line);
         }
     }
-  while (lines_matched && ! (hunk_eof || content_info->eof));
+  while (lines_matched);
 
-  if (hunk_eof)
-    *matched = lines_matched;
-  else if (content_info->eof)
-    {
-      /* If the target has no newline at end-of-file, we get an EOF
-       * indication for the target earlier than we do get it for the hunk. */
-      if (match_modified)
-        SVN_ERR(svn_diff_hunk_readline_modified_text(hunk, &hunk_line,
-                                                     NULL, &hunk_eof,
-                                                     iterpool, iterpool));
-      else
-        SVN_ERR(svn_diff_hunk_readline_original_text(hunk, &hunk_line,
-                                                     NULL, &hunk_eof,
-                                                     iterpool, iterpool));
+  *matched = lines_matched && hunk_eof && hunk_line->len == 0;
 
-      /* When comparing modified text we require that all lines match, else
-       * a hunk that adds a newline at the end will be treated as already
-       * applied even if it isn't. */
-      if (! match_modified && hunk_line->len == 0 && hunk_eof)
-        *matched = lines_matched;
-      else
-        *matched = FALSE;
-    }
   SVN_ERR(seek_to_line(content_info, saved_line, iterpool));
 
   svn_pool_destroy(iterpool);
@@ -954,7 +962,6 @@ scan_for_match(svn_linenum_t *matched_line,
          ! content_info->eof)
     {
       svn_boolean_t matched;
-      int i;
 
       svn_pool_clear(iterpool);
 
@@ -966,6 +973,7 @@ scan_for_match(svn_linenum_t *matched_line,
       if (matched)
         {
           svn_boolean_t taken = FALSE;
+          int i;
 
           /* Don't allow hunks to match at overlapping locations. */
           for (i = 0; i < content_info->hunks->nelts; i++)
@@ -1160,54 +1168,55 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
   else if (original_start > 0 && content_info->stream)
     {
       svn_linenum_t saved_line = content_info->current_line;
-      svn_linenum_t modified_start;
 
-      /* Check if the hunk is already applied.
-       * We only check for an exact match here, and don't bother checking
-       * for already applied patches with offset/fuzz, because such a
-       * check would be ambiguous. */
-      if (fuzz == 0)
+      /* Scan for a match at the line where the hunk thinks it
+       * should be going. */
+      SVN_ERR(seek_to_line(content_info, original_start, scratch_pool));
+      if (content_info->current_line != original_start)
         {
-          modified_start = svn_diff_hunk_get_modified_start(hunk);
-          if (modified_start == 0)
-            {
-              /* Patch wants to delete the file. */
-              already_applied = target->locally_deleted;
-            }
-          else
-            {
-              SVN_ERR(seek_to_line(content_info, modified_start,
-                                   scratch_pool));
-              SVN_ERR(scan_for_match(&matched_line, content_info,
-                                     hunk, TRUE,
-                                     modified_start + 1,
-                                     fuzz, ignore_whitespace, TRUE,
-                                     cancel_func, cancel_baton,
-                                     scratch_pool));
-              already_applied = (matched_line == modified_start);
-            }
+          /* Seek failed. */
+          matched_line = 0;
         }
       else
-        already_applied = FALSE;
+        SVN_ERR(scan_for_match(&matched_line, content_info, hunk, TRUE,
+                               original_start + 1, fuzz,
+                               ignore_whitespace, FALSE,
+                               cancel_func, cancel_baton,
+                               scratch_pool));
 
-      if (! already_applied)
+      if (matched_line != original_start)
         {
-          /* Scan for a match at the line where the hunk thinks it
-           * should be going. */
-          SVN_ERR(seek_to_line(content_info, original_start, scratch_pool));
-          if (content_info->current_line != original_start)
+          /* Check if the hunk is already applied.
+           * We only check for an exact match here, and don't bother checking
+           * for already applied patches with offset/fuzz, because such a
+           * check would be ambiguous. */
+          if (fuzz == 0)
             {
-              /* Seek failed. */
-              matched_line = 0;
+              svn_linenum_t modified_start;
+
+              modified_start = svn_diff_hunk_get_modified_start(hunk);
+              if (modified_start == 0)
+                {
+                  /* Patch wants to delete the file. */
+                  already_applied = target->locally_deleted;
+                }
+              else
+                {
+                  SVN_ERR(seek_to_line(content_info, modified_start,
+                                       scratch_pool));
+                  SVN_ERR(scan_for_match(&matched_line, content_info,
+                                         hunk, TRUE,
+                                         modified_start + 1,
+                                         fuzz, ignore_whitespace, TRUE,
+                                         cancel_func, cancel_baton,
+                                         scratch_pool));
+                  already_applied = (matched_line == modified_start);
+                }
             }
           else
-            SVN_ERR(scan_for_match(&matched_line, content_info, hunk, TRUE,
-                                   original_start + 1, fuzz,
-                                   ignore_whitespace, FALSE,
-                                   cancel_func, cancel_baton,
-                                   scratch_pool));
+            already_applied = FALSE;
 
-          if (matched_line != original_start)
+          if (! already_applied)
             {
               /* Scan the whole file again from the start. */
               SVN_ERR(seek_to_line(content_info, 1, scratch_pool));
@@ -1252,24 +1261,6 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
   return SVN_NO_ERROR;
 }
 
-/* Attempt to write LEN bytes of DATA to STREAM, the underlying file
- * of which is at ABSPATH. Fail if not all bytes could be written to
- * the stream. Do temporary allocations in POOL. */
-static svn_error_t *
-try_stream_write(svn_stream_t *stream, const char *abspath,
-                 const char *data, apr_size_t len, apr_pool_t *pool)
-{
-  apr_size_t written;
-
-  written = len;
-  SVN_ERR(svn_stream_write(stream, data, &written));
-  if (written != len)
-    return svn_error_createf(SVN_ERR_IO_WRITE_ERROR, NULL,
-                             _("Error writing to '%s'"),
-                             svn_dirent_local_style(abspath, pool));
-  return SVN_NO_ERROR;
-}
-
 /* Copy lines to the patched stream until the specified LINE has been
  * reached. Indicate in *EOF whether end-of-file was encountered while
  * reading from the target.
@@ -1286,28 +1277,29 @@ copy_lines_to_target(target_content_info_t *content_info, svn_linenum_t line,
          && ! content_info->eof)
     {
       const char *target_line;
+      apr_size_t len;
 
       svn_pool_clear(iterpool);
 
       SVN_ERR(read_line(content_info, &target_line, iterpool, iterpool));
       if (! content_info->eof)
         target_line = apr_pstrcat(iterpool, target_line, content_info->eol_str,
-                                  NULL);
-
-      SVN_ERR(try_stream_write(content_info->patched, patched_path,
-                               target_line, strlen(target_line), iterpool));
+                                  (char *)NULL);
+      len = strlen(target_line);
+      SVN_ERR(svn_stream_write(content_info->patched, target_line, &len));
     }
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
 
-/* Write the diff text of the hunk described by HI to the
- * reject stream of CONTENT_INFO, and mark TARGET as having had rejects.
+/* Write the diff text of HUNK to the reject stream of CONTENT_INFO,
+ * and mark TARGET as having had rejects.
  * Do temporary allocations in POOL. */
 static svn_error_t *
 reject_hunk(patch_target_t *target, target_content_info_t *content_info, 
-            hunk_info_t *hi, const char *prop_name, apr_pool_t *pool)
+            const svn_diff_hunk_t *hunk, const char *prop_name,
+            apr_pool_t *pool)
 {
   const char *hunk_header;
   apr_size_t len;
@@ -1328,18 +1320,18 @@ reject_hunk(patch_target_t *target, target_content_info_t *content_info,
       /* ### What about just setting a variable to either "@@" or "##",
        * ### and merging with the else clause below? */
       hunk_header = apr_psprintf(pool, "## -%lu,%lu +%lu,%lu ##%s",
-                                 svn_diff_hunk_get_original_start(hi->hunk),
-                                 svn_diff_hunk_get_original_length(hi->hunk),
-                                 svn_diff_hunk_get_modified_start(hi->hunk),
-                                 svn_diff_hunk_get_modified_length(hi->hunk),
+                                 svn_diff_hunk_get_original_start(hunk),
+                                 svn_diff_hunk_get_original_length(hunk),
+                                 svn_diff_hunk_get_modified_start(hunk),
+                                 svn_diff_hunk_get_modified_length(hunk),
                                  APR_EOL_STR);
     }
   else
     hunk_header = apr_psprintf(pool, "@@ -%lu,%lu +%lu,%lu @@%s",
-                               svn_diff_hunk_get_original_start(hi->hunk),
-                               svn_diff_hunk_get_original_length(hi->hunk),
-                               svn_diff_hunk_get_modified_start(hi->hunk),
-                               svn_diff_hunk_get_modified_length(hi->hunk),
+                               svn_diff_hunk_get_original_start(hunk),
+                               svn_diff_hunk_get_original_length(hunk),
+                               svn_diff_hunk_get_modified_start(hunk),
+                               svn_diff_hunk_get_modified_length(hunk),
                                APR_EOL_STR);
   len = strlen(hunk_header);
   SVN_ERR(svn_stream_write(content_info->reject, hunk_header, &len));
@@ -1352,17 +1344,22 @@ reject_hunk(patch_target_t *target, target_content_info_t *content_info,
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(svn_diff_hunk_readline_diff_text(hi->hunk, &hunk_line, &eol_str,
+      SVN_ERR(svn_diff_hunk_readline_diff_text(hunk, &hunk_line, &eol_str,
                                                &eof, iterpool, iterpool));
       if (! eof)
         {
           if (hunk_line->len >= 1)
-            SVN_ERR(try_stream_write(content_info->reject, target->reject_path,
-                                     hunk_line->data, hunk_line->len,
-                                     iterpool));
+            {
+              len = hunk_line->len;
+              SVN_ERR(svn_stream_write(content_info->reject, hunk_line->data,
+                                       &len));
+            }
+
           if (eol_str)
-            SVN_ERR(try_stream_write(content_info->reject, target->reject_path,
-                                     eol_str, strlen(eol_str), iterpool));
+            {
+              len = strlen(eol_str);
+              SVN_ERR(svn_stream_write(content_info->reject, eol_str, &len));
+            }
         }
     }
   while (! eof);
@@ -1411,7 +1408,7 @@ apply_hunk(patch_target_t *target, target_content_info_t *content_info,
         {
           /* Seek failed, reject this hunk. */
           hi->rejected = TRUE;
-          SVN_ERR(reject_hunk(target, content_info, hi, prop_name, pool));
+          SVN_ERR(reject_hunk(target, content_info, hi->hunk, prop_name, pool));
           return SVN_NO_ERROR;
         }
     }
@@ -1435,11 +1432,15 @@ apply_hunk(patch_target_t *target, target_content_info_t *content_info,
       if (! eof && lines_read > hi->fuzz &&
           lines_read <= svn_diff_hunk_get_modified_length(hi->hunk) - hi->fuzz)
         {
+          apr_size_t len;
+
           if (hunk_line->len >= 1)
-            SVN_ERR(try_stream_write(content_info->patched, 
-                                     target->patched_path,
-                                     hunk_line->data, hunk_line->len,
-                                     iterpool));
+            {
+              len = hunk_line->len;
+              SVN_ERR(svn_stream_write(content_info->patched, hunk_line->data,
+                                       &len));
+            }
+
           if (eol_str)
             {
               /* Use the EOL as it was read from the patch file,
@@ -1447,9 +1448,8 @@ apply_hunk(patch_target_t *target, target_content_info_t *content_info,
               if (content_info->eol_style != svn_subst_eol_style_none)
                 eol_str = content_info->eol_str;
 
-              SVN_ERR(try_stream_write(content_info->patched,
-                                       target->patched_path, eol_str,
-                                       strlen(eol_str), iterpool));
+              len = strlen(eol_str);
+              SVN_ERR(svn_stream_write(content_info->patched, eol_str, &len));
             }
         }
     }
@@ -1619,31 +1619,30 @@ close_target_streams(const patch_target_t *target,
   apr_hash_index_t *hi;
   target_content_info_t *prop_content_info;
 
-   /* First the streams belonging to properties .. */
-      for (hi = apr_hash_first(pool, target->prop_targets);
-           hi;
-           hi = apr_hash_next(hi))
-        {
-          prop_patch_target_t *prop_target;
-          prop_target = svn__apr_hash_index_val(hi);
-          prop_content_info = prop_target->content_info;
+  /* First the streams belonging to properties .. */
+  for (hi = apr_hash_first(pool, target->prop_targets);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      prop_patch_target_t *prop_target;
+      prop_target = svn__apr_hash_index_val(hi);
+      prop_content_info = prop_target->content_info;
 
-          /* ### If the prop did not exist pre-patching we'll not have a
-           * ### stream to read from. Find a better way to store info on
-           * ### the existence of the target prop. */
-          if (prop_content_info->stream)
-            SVN_ERR(svn_stream_close(prop_content_info->stream));
+      /* ### If the prop did not exist pre-patching we'll not have a
+       * ### stream to read from. Find a better way to store info on
+       * ### the existence of the target prop. */
+      if (prop_content_info->stream)
+        SVN_ERR(svn_stream_close(prop_content_info->stream));
 
-          SVN_ERR(svn_stream_close(prop_content_info->patched));
-        }
+      SVN_ERR(svn_stream_close(prop_content_info->patched));
+    }
 
-
-   /* .. And then streams associted with the file. The reject stream is
-    * shared between all target_content_info structures. */
+  /* .. and then streams associated with the file.
+   * ### We're not closing the reject stream -- it still needed and
+   * ### will be closed later in write_out_rejected_hunks(). */
   if (target->kind_on_disk == svn_node_file)
     SVN_ERR(svn_stream_close(target->content_info->stream));
   SVN_ERR(svn_stream_close(target->content_info->patched));
-  SVN_ERR(svn_stream_close(target->content_info->reject));
 
   return SVN_NO_ERROR;
 }
@@ -1654,8 +1653,6 @@ close_target_streams(const patch_target_t *target,
  * in RESULT_POOL. Use WC_CTX as the working copy context.
  * STRIP_COUNT specifies the number of leading path components
  * which should be stripped from target paths in the patch.
- * OLD_PATCH_TARGET_NAMES indicates whether the old filename parsed
- * from the patch file should be preferred over the new filename.
  * REMOVE_TEMPFILES, PATCH_FUNC, and PATCH_BATON as in svn_client_patch().
  * IGNORE_WHITESPACE tells whether whitespace should be considered when
  * doing the matching.
@@ -1665,7 +1662,6 @@ static svn_error_t *
 apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
                 const char *abs_wc_path, svn_wc_context_t *wc_ctx,
                 int strip_count,
-                svn_boolean_t old_patch_target_names,
                 svn_boolean_t ignore_whitespace,
                 svn_boolean_t remove_tempfiles,
                 svn_client_patch_func_t patch_func,
@@ -1680,8 +1676,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
   static const int MAX_FUZZ = 2;
   apr_hash_index_t *hash_index;
 
-  SVN_ERR(init_patch_target(&target, patch, abs_wc_path, wc_ctx,
-                            strip_count, old_patch_target_names,
+  SVN_ERR(init_patch_target(&target, patch, abs_wc_path, wc_ctx, strip_count,
                             remove_tempfiles, result_pool, scratch_pool));
   if (target->skipped)
     {
@@ -1744,7 +1739,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
       if (hi->already_applied)
         continue;
       else if (hi->rejected)
-        SVN_ERR(reject_hunk(target, target->content_info, hi,
+        SVN_ERR(reject_hunk(target, target->content_info, hi->hunk,
                             NULL /* prop_name */, 
                             iterpool));
       else
@@ -1833,7 +1828,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
           if (hi->already_applied)
             continue;
           else if (hi->rejected)
-            SVN_ERR(reject_hunk(target, prop_target->content_info, hi,
+            SVN_ERR(reject_hunk(target, prop_target->content_info, hi->hunk,
                                 prop_target->name,
                                 iterpool));
           else
@@ -2047,14 +2042,13 @@ create_missing_parents(patch_target_t *target,
                * to version control. Allow cancellation since we
                * have not modified the working copy yet for this
                * target. */
-              SVN_ERR(svn_wc_add4(ctx->wc_ctx, local_abspath,
-                                  svn_depth_infinity,
-                                  NULL, SVN_INVALID_REVNUM,
-                                  ctx->cancel_func,
-                                  ctx->cancel_baton,
-                                  ctx->notify_func2,
-                                  ctx->notify_baton2,
-                                  iterpool));
+
+              if (ctx->cancel_func)
+                SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
+
+              SVN_ERR(svn_wc_add_from_disk(ctx->wc_ctx, local_abspath,
+                                           ctx->notify_func2, ctx->notify_baton2,
+                                           iterpool));
             }
         }
     }
@@ -2132,12 +2126,10 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
               /* The target file didn't exist previously,
                * so add it to version control.
                * Suppress notification, we'll do that later (and also
-               * during dry-run). Also suppress cancellation because
+               * during dry-run). Don't allow cancellation because
                * we'd rather notify about what we did before aborting. */
-              SVN_ERR(svn_wc_add4(ctx->wc_ctx, target->local_abspath,
-                                  svn_depth_infinity,
-                                  NULL, SVN_INVALID_REVNUM,
-                                  NULL, NULL, NULL, NULL, pool));
+              SVN_ERR(svn_wc_add_from_disk(ctx->wc_ctx, target->local_abspath,
+                                           NULL, NULL, pool));
             }
 
           /* Restore the target's executable bit if necessary. */
@@ -2159,6 +2151,8 @@ write_out_rejected_hunks(patch_target_t *target,
                          svn_boolean_t dry_run,
                          apr_pool_t *pool)
 {
+  SVN_ERR(svn_stream_close(target->content_info->reject));
+
   if (! dry_run && (target->had_rejects || target->had_prop_rejects))
     {
       /* Write out rejected hunks, if any. */
@@ -2182,14 +2176,6 @@ install_patched_prop_targets(patch_target_t *target,
   apr_hash_index_t *hi;
   apr_pool_t *iterpool;
 
-  if (dry_run)
-    {
-      if (! target->has_text_changes && target->kind_on_disk == svn_node_none)
-        target->added = TRUE;
-
-      return SVN_NO_ERROR;
-    }
-
   iterpool = svn_pool_create(scratch_pool);
 
   for (hi = apr_hash_first(scratch_pool, target->prop_targets);
@@ -2201,19 +2187,22 @@ install_patched_prop_targets(patch_target_t *target,
       svn_stream_t *patched_stream;
       svn_stringbuf_t *line;
       svn_stringbuf_t *prop_content;
+      const svn_string_t *prop_val;
       const char *eol_str;
       svn_boolean_t eof;
+      svn_error_t *err;
 
       svn_pool_clear(iterpool);
 
       /* For a deleted prop we only set the value to NULL. */
       if (prop_target->operation == svn_diff_op_deleted)
         {
-          SVN_ERR(svn_wc_prop_set4(ctx->wc_ctx, target->local_abspath,
-                                   prop_target->name, NULL, 
-                                   TRUE /* skip_checks */,
-                                   NULL, NULL, /* suppress notification */
-                                   iterpool));
+          if (! dry_run)
+            SVN_ERR(svn_wc_prop_set4(ctx->wc_ctx, target->local_abspath,
+                                     prop_target->name, NULL, 
+                                     TRUE /* skip_checks */,
+                                     NULL, NULL, /* suppress notification */
+                                     iterpool));
           continue;
         }
 
@@ -2257,31 +2246,73 @@ install_patched_prop_targets(patch_target_t *target,
           && target->kind_on_disk == svn_node_none
           && ! target->added)
         {
-          SVN_ERR(svn_io_file_create(target->local_abspath, "", scratch_pool));
-          SVN_ERR(svn_wc_add4(ctx->wc_ctx, target->local_abspath,
-                              svn_depth_infinity,
-                              NULL, SVN_INVALID_REVNUM,
-                              ctx->cancel_func,
-                              ctx->cancel_baton,
-                              NULL, NULL, /* suppress notification */
-                              iterpool));
+          if (! dry_run)
+            {
+              SVN_ERR(svn_io_file_create(target->local_abspath, "",
+                                         scratch_pool));
+              if (ctx->cancel_func)
+                SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
+              SVN_ERR(svn_wc_add_from_disk(ctx->wc_ctx, target->local_abspath,
+                                           /* suppress notification */
+                                           NULL, NULL,
+                                           iterpool));
+            }
           target->added = TRUE;
         }
 
-      /* ### How should we handle SVN_ERR_ILLEGAL_TARGET and
-       * ### SVN_ERR_BAD_MIME_TYPE?
-       *
-       * ### stsp: I'd say reject the property hunk.
-       * ###       We should verify all modified prop hunk texts using
-       * ###       svn_wc_canonicalize_svn_prop() before starting the
-       * ###       patching process, to reject them as early as possible. */
-      SVN_ERR(svn_wc_prop_set4(ctx->wc_ctx, target->local_abspath,
-                               prop_target->name,
-                               svn_string_create_from_buf(prop_content, 
-                                                          iterpool),
-                               TRUE /* skip_checks */,
-                               NULL, NULL,
-                               iterpool));
+      /* Attempt to set the property, and reject all hunks if this fails. */
+      prop_val = svn_string_create_from_buf(prop_content, iterpool);
+      if (dry_run)
+        {
+          const svn_string_t *canon_propval;
+
+          err = svn_wc_canonicalize_svn_prop(&canon_propval,
+                                             prop_target->name,
+                                             prop_val, target->local_abspath,
+                                             target->db_kind,
+                                             TRUE, /* ### Skipping checks */
+                                             NULL, NULL,
+                                             iterpool);
+        }
+      else
+        {
+          err = (svn_wc_prop_set4(ctx->wc_ctx, target->local_abspath,
+                                  prop_target->name, prop_val,
+                                  TRUE, /* ### Skipping checks */
+                                  NULL, NULL,
+                                  iterpool));
+        }
+
+      if (err)
+        {
+          /* ### The errors which svn_wc_canonicalize_svn_prop() will
+           * ### return aren't documented. */
+          if (err->apr_err == SVN_ERR_ILLEGAL_TARGET ||
+              err->apr_err == SVN_ERR_NODE_UNEXPECTED_KIND ||
+              err->apr_err == SVN_ERR_IO_UNKNOWN_EOL ||
+              err->apr_err == SVN_ERR_BAD_MIME_TYPE ||
+              err->apr_err == SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION)
+            {
+              int i;
+
+              svn_error_clear(err);
+
+              for (i = 0; i < prop_target->content_info->hunks->nelts; i++)
+                {
+                  hunk_info_t *hunk_info;
+
+                  hunk_info = APR_ARRAY_IDX(prop_target->content_info->hunks,
+                                            i, hunk_info_t *);
+                  hunk_info->rejected = TRUE;
+                  SVN_ERR(reject_hunk(target, prop_target->content_info,
+                                      hunk_info->hunk, prop_target->name,
+                                      iterpool));
+                }
+            }
+          else
+            return svn_error_return(err);
+        }
+
     }
 
   svn_pool_destroy(iterpool);
@@ -2568,9 +2599,6 @@ typedef struct {
   /* Number of leading components to strip from patch target paths. */
   int strip_count;
 
-  /* Whether to use the old path from the patch file instead of the new one. */
-  svn_boolean_t old_patch_target_names;
-
   /* Whether to apply the patch in reverse. */
   svn_boolean_t reverse;
 
@@ -2636,7 +2664,6 @@ apply_patches(void *baton,
 
           SVN_ERR(apply_one_patch(&target, patch, btn->abs_wc_path,
                                   btn->ctx->wc_ctx, btn->strip_count,
-                                  btn->old_patch_target_names,
                                   btn->ignore_whitespace,
                                   btn->remove_tempfiles,
                                   btn->patch_func, btn->patch_baton,
@@ -2656,7 +2683,9 @@ apply_patches(void *baton,
 
               if (! target->skipped)
                 {
-                  if (target->has_text_changes || target->added)
+                  if (target->has_text_changes 
+                      || target->added 
+                      || target->deleted)
                     SVN_ERR(install_patched_target(target, btn->abs_wc_path,
                                                    btn->ctx, btn->dry_run,
                                                    iterpool));
@@ -2692,7 +2721,6 @@ svn_client_patch(const char *patch_abspath,
                  const char *local_abspath,
                  svn_boolean_t dry_run,
                  int strip_count,
-                 svn_boolean_t old_patch_target_names,
                  svn_boolean_t reverse,
                  svn_boolean_t ignore_whitespace,
                  svn_boolean_t remove_tempfiles,
@@ -2713,7 +2741,6 @@ svn_client_patch(const char *patch_abspath,
   baton.dry_run = dry_run;
   baton.ctx = ctx;
   baton.strip_count = strip_count;
-  baton.old_patch_target_names = old_patch_target_names;
   baton.reverse = reverse;
   baton.ignore_whitespace = ignore_whitespace;
   baton.remove_tempfiles = remove_tempfiles;

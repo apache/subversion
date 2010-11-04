@@ -1141,6 +1141,13 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
 "### have the same password database, and vice versa.  The default realm"    NL
 "### is repository's uuid."                                                  NL
 "# realm = My First Repository"                                              NL
+"### The force-username-case option causes svnserve to case-normalize"       NL
+"### usernames before comparing them against the authorization rules in the" NL
+"### authz-db file configured above.  Valid values are \"upper\" (to upper-" NL
+"### case the usernames), \"lower\" (to lowercase the usernames), and"       NL
+"### \"none\" (to compare usernames as-is without case conversion, which"    NL
+"### is the default behavior)."                                              NL
+"# force-username-case = none"                                               NL
 ""                                                                           NL
 "[sasl]"                                                                     NL
 "### This option specifies whether you want to use the Cyrus SASL"           NL

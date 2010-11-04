@@ -56,17 +56,6 @@
 
 
 typedef struct {
-  /* the information for this subdir. if rsrc==NULL, then this is a sentinel
-     record in fetch_ctx_t.subdirs to close the directory implied by the
-     parent_baton member. */
-  svn_ra_neon__resource_t *rsrc;
-
-  /* the directory containing this subdirectory. */
-  void *parent_baton;
-
-} subdir_t;
-
-typedef struct {
   apr_pool_t *pool;
 
   /* these two are the handler that the editor gave us */
@@ -91,9 +80,6 @@ typedef struct {
 
   void *subctx;
 } custom_get_ctx_t;
-
-#define POP_SUBDIR(sds) (APR_ARRAY_IDX((sds), --(sds)->nelts, subdir_t *))
-#define PUSH_SUBDIR(sds,s) (APR_ARRAY_PUSH((sds), subdir_t *) = (s))
 
 typedef svn_error_t * (*prop_setter_t)(void *baton,
                                        const char *name,
@@ -346,7 +332,7 @@ static svn_error_t *add_props(apr_hash_t *props,
              server, or both.  Convert the URI namespace into normal
              'svn:' prefix again before pushing it at the wc. */
           SVN_ERR((*setter)(baton, apr_pstrcat(pool, SVN_PROP_PREFIX,
-                                               key + NSLEN, NULL),
+                                               key + NSLEN, (char *)NULL),
                             val, pool));
         }
 #undef NSLEN
@@ -640,7 +626,8 @@ filter_props(apr_hash_t *props,
       if (strncmp(name, SVN_DAV_PROP_NS_SVN, NSLEN) == 0)
         {
           apr_hash_set(props,
-                       apr_pstrcat(pool, SVN_PROP_PREFIX, name + NSLEN, NULL),
+                       apr_pstrcat(pool, SVN_PROP_PREFIX, name + NSLEN,
+                                   (char *)NULL),
                        APR_HASH_KEY_STRING,
                        value);
           continue;
@@ -1122,6 +1109,7 @@ svn_error_t *svn_ra_neon__get_latest_revnum(svn_ra_session_t *session,
 svn_error_t *svn_ra_neon__change_rev_prop(svn_ra_session_t *session,
                                           svn_revnum_t rev,
                                           const char *name,
+                                          const svn_string_t *const *old_value_p,
                                           const svn_string_t *value,
                                           apr_pool_t *pool)
 {
@@ -1130,11 +1118,23 @@ svn_error_t *svn_ra_neon__change_rev_prop(svn_ra_session_t *session,
   svn_error_t *err;
   apr_hash_t *prop_changes = NULL;
   apr_array_header_t *prop_deletes = NULL;
+  apr_hash_t *prop_old_values = NULL;
   static const ne_propname wanted_props[] =
     {
       { "DAV:", "auto-version" },
       { NULL }
     };
+
+  if (old_value_p)
+    {
+      svn_boolean_t capable;
+      SVN_ERR(svn_ra_neon__has_capability(session, &capable,
+                                          SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
+                                          pool));
+
+      /* How did you get past the same check in svn_ra_change_rev_prop2()? */
+      SVN_ERR_ASSERT(capable);
+    }
 
   /* Main objective: do a PROPPATCH (allprops) on a baseline object */
 
@@ -1165,19 +1165,33 @@ svn_error_t *svn_ra_neon__change_rev_prop(svn_ra_session_t *session,
          to attempt the PROPPATCH if the deltaV server is going to do
          auto-versioning and create a new baseline! */
 
-  if (value)
+  if (old_value_p)
     {
-      prop_changes = apr_hash_make(pool);
-      apr_hash_set(prop_changes, name, APR_HASH_KEY_STRING, value);
+      svn_dav__two_props_t *both_values;
+
+      both_values = apr_palloc(pool, sizeof(*both_values));
+      both_values->old_value_p = old_value_p;
+      both_values->new_value = value;
+
+      prop_old_values = apr_hash_make(pool);
+      apr_hash_set(prop_old_values, name, APR_HASH_KEY_STRING, both_values);
     }
   else
     {
-      prop_deletes = apr_array_make(pool, 1, sizeof(const char *));
-      APR_ARRAY_PUSH(prop_deletes, const char *) = name;
+      if (value)
+        {
+          prop_changes = apr_hash_make(pool);
+          apr_hash_set(prop_changes, name, APR_HASH_KEY_STRING, value);
+        }
+      else
+        {
+          prop_deletes = apr_array_make(pool, 1, sizeof(const char *));
+          APR_ARRAY_PUSH(prop_deletes, const char *) = name;
+        }
     }
 
   err = svn_ra_neon__do_proppatch(ras, baseline->url, prop_changes,
-                                  prop_deletes, NULL, pool);
+                                  prop_deletes, prop_old_values, NULL, pool);
   if (err)
     return
       svn_error_create
@@ -2231,7 +2245,8 @@ end_element(void *userdata, int state,
           rb->file_baton ? rb->file_pool : TOP_DIR(rb).pool;
         prop_setter_t setter =
           rb->file_baton ? editor->change_file_prop : editor->change_dir_prop;
-        const char *name = apr_pstrcat(pool, elm->nspace, elm->name, NULL);
+        const char *name = apr_pstrcat(pool, elm->nspace, elm->name,
+                                       (char *)NULL);
         void *baton = rb->file_baton ? rb->file_baton : TOP_DIR(rb).baton;
         svn_string_t valstr;
 

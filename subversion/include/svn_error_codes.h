@@ -738,6 +738,12 @@ SVN_ERROR_START
              SVN_ERR_FS_CATEGORY_START + 48,
              "Filesystem has no such checksum-representation index record")
 
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_FS_PROP_BASEVALUE_MISMATCH,
+             SVN_ERR_FS_CATEGORY_START + 49,
+             "Property value in filesystem differs from the provided "
+             "base value")
+
   /* repos errors */
 
   SVN_ERRDEF(SVN_ERR_REPOS_LOCKED,
@@ -1328,12 +1334,12 @@ SVN_ERROR_START
              SVN_ERR_MISC_CATEGORY_START + 32,
              "Unsupported schema found in SQLite db")
 
-/** @since New in 1.7. */
+  /** @since New in 1.7. */
   SVN_ERRDEF(SVN_ERR_SQLITE_BUSY,
              SVN_ERR_MISC_CATEGORY_START + 33,
              "The SQLite db is busy")
 
-/** @since New in 1.7. */
+  /** @since New in 1.7. */
   SVN_ERRDEF(SVN_ERR_SQLITE_RESETTING_FOR_ROLLBACK,
              SVN_ERR_MISC_CATEGORY_START + 34,
              "SQLite busy at transaction rollback; "

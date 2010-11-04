@@ -2135,7 +2135,7 @@ link_path(void *report_baton,
   SVN_ERR(svn_ra_serf__get_relative_path(&link, uri.path, report->sess,
                                          NULL, pool));
 
-  link = apr_pstrcat(pool, "/", link, NULL);
+  link = apr_pstrcat(pool, "/", link, (char *)NULL);
 
   svn_xml_make_open_tag(&buf, pool, svn_xml_protect_pcdata, "S:entry",
                         "rev", apr_ltoa(pool, revision),

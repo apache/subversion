@@ -106,15 +106,25 @@ def check_dav_cache(dir_path, wc_id, expected_dav_caches):
   c = db.cursor()
 
   for local_relpath, expected_dav_cache in expected_dav_caches.items():
-    c.execute('select dav_cache from base_node ' +
-              'where wc_id=? and local_relpath=?',
-        (wc_id, local_relpath))
-    dav_cache = str(c.fetchone()[0])
-
+    # NODES conversion is complete enough that we can use it if it exists
+    c.execute("""pragma table_info(nodes)""")
+    if c.fetchone():
+      c.execute('select dav_cache from nodes ' +
+                'where wc_id=? and local_relpath=? and op_depth = 0',
+                (wc_id, local_relpath))
+      row = c.fetchone()
+    else:
+      c.execute('select dav_cache from base_node ' +
+                'where wc_id=? and local_relpath=?',
+                (wc_id, local_relpath))
+      row = c.fetchone()
+    if row is None:
+      raise svntest.Failure("no dav cache for '%s'" % (local_relpath))
+    dav_cache = str(row[0])
     if dav_cache != expected_dav_cache:
       raise svntest.Failure(
               "wrong dav cache for '%s'\n  Found:    '%s'\n  Expected: '%s'" %
-                (dir_path, dav_cache, expected_dav_cache))
+                (local_relpath, dav_cache, expected_dav_cache))
 
   db.close()
 
@@ -644,6 +654,23 @@ def delete_and_keep_local(sbox):
     raise svntest.Failure('wc/Deleted should not exist')
 
 
+def dirs_only_upgrade(sbox):
+  "upgrade a wc without files" 
+
+  sbox.build(create_wc = False)
+  replace_sbox_with_tarfile(sbox, 'dirs-only.tar.bz2')
+
+  expected_output = ["Upgraded '%s'.\n" % (sbox.ospath('').rstrip(os.path.sep)),
+                     "Upgraded '%s'.\n" % (sbox.ospath('A'))]
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'upgrade', sbox.wc_dir)
+
+  expected_status = svntest.wc.State(sbox.wc_dir, {
+      ''                  : Item(status='  ', wc_rev='1'),
+      'A'                 : Item(status='  ', wc_rev='1'),
+      })
+  run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 
 ########################################################################
 # Run the tests
@@ -665,6 +692,7 @@ test_list = [ None,
               missing_dirs,
               missing_dirs2,
               XFail(delete_and_keep_local),
+              dirs_only_upgrade,
              ]
 
 

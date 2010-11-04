@@ -250,7 +250,6 @@ make_reporter(svn_ra_session_t *session,
 {
   svn_ra_local__session_baton_t *sess = session->priv;
   void *rbaton;
-  size_t repos_url_len;
   const char *other_fs_path = NULL;
   const char *repos_url_decoded;
 
@@ -262,6 +261,8 @@ make_reporter(svn_ra_session_t *session,
      regular filesystem path. */
   if (other_url)
     {
+      size_t repos_url_len;
+
       other_url = svn_path_uri_decode(other_url, pool);
       repos_url_decoded = svn_path_uri_decode(sess->repos_url, pool);
       repos_url_len = strlen(repos_url_decoded);
@@ -504,7 +505,8 @@ svn_ra_local__reparent(svn_ra_session_t *session,
 
   /* Update our FS_PATH sess member to point to our new
      relative-URL-turned-absolute-filesystem-path. */
-  relpath = apr_pstrcat(pool, "/", svn_path_uri_decode(relpath, pool), NULL);
+  relpath = apr_pstrcat(pool, "/", svn_path_uri_decode(relpath, pool),
+                        (char *)NULL);
   svn_stringbuf_set(sess->fs_path, relpath);
 
   return SVN_NO_ERROR;
@@ -563,14 +565,16 @@ static svn_error_t *
 svn_ra_local__change_rev_prop(svn_ra_session_t *session,
                               svn_revnum_t rev,
                               const char *name,
+                              const svn_string_t *const *old_value_p,
                               const svn_string_t *value,
                               apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
+
   SVN_ERR(get_username(session, pool));
-  return svn_repos_fs_change_rev_prop3(sess->repos, rev, sess->username,
-                                       name, value, TRUE, TRUE, NULL, NULL,
-                                       pool);
+  return svn_repos_fs_change_rev_prop4(sess->repos, rev, sess->username,
+                                       name, old_value_p, value, TRUE, TRUE,
+                                       NULL, NULL, pool);
 }
 
 static svn_error_t *
@@ -869,13 +873,14 @@ svn_ra_local__get_log(svn_ra_session_t *session,
                       apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
-  int i;
   struct log_baton lb;
   apr_array_header_t *abs_paths =
     apr_array_make(pool, 0, sizeof(const char *));
 
   if (paths)
     {
+      int i;
+
       for (i = 0; i < paths->nelts; i++)
         {
           const char *relative_path = APR_ARRAY_IDX(paths, i, const char *);
@@ -1389,7 +1394,8 @@ svn_ra_local__has_capability(svn_ra_session_t *session,
   if (strcmp(capability, SVN_RA_CAPABILITY_DEPTH) == 0
       || strcmp(capability, SVN_RA_CAPABILITY_LOG_REVPROPS) == 0
       || strcmp(capability, SVN_RA_CAPABILITY_PARTIAL_REPLAY) == 0
-      || strcmp(capability, SVN_RA_CAPABILITY_COMMIT_REVPROPS) == 0)
+      || strcmp(capability, SVN_RA_CAPABILITY_COMMIT_REVPROPS) == 0
+      || strcmp(capability, SVN_RA_CAPABILITY_ATOMIC_REVPROPS) == 0)
     {
       *has = TRUE;
     }

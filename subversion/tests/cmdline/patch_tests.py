@@ -671,7 +671,7 @@ def patch_chopped_leading_spaces(sbox):
 
 
 def patch_strip1(sbox):
-  "patch with --strip-count 1"
+  "patch with --strip 1"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -838,7 +838,7 @@ def patch_strip1(sbox):
                                        None, # expected err
                                        1, # check-props
                                        1, # dry-run
-                                       '--strip-count', '1')
+                                       '--strip', '1')
 
 def patch_no_index_line(sbox):
   "patch with no index lines"
@@ -2436,7 +2436,14 @@ def patch_same_twice(sbox):
     'G         %s\n' % os.path.join(wc_dir, 'A', 'D', 'gamma'),
     '>         hunk @@ -1,1 +1,1 @@ already applied\n',
     'G         %s\n' % os.path.join(wc_dir, 'iota'),
-    '>         hunk @@ -1,1 +1,2 @@ already applied\n',
+    # The iota patch inserts a line after the first line in the file,
+    # with no trailing context. Currently, Subversion applies this patch
+    # multiple times, which matches the behaviour of Larry Wall's patch
+    # implementation. A more complicated hunk matching algorithm is needed
+    # to detect the duplicate application in this case. GNU patch does detect
+    # the duplicate application. Should Subversion be taught to detect it,
+    # we need this line here:
+    # '>         hunk @@ -1,1 +1,2 @@ already applied\n',
     'G         %s\n' % os.path.join(wc_dir, 'new'),
     '>         hunk @@ -0,0 +1,1 @@ already applied\n',
     'G         %s\n' % os.path.join(wc_dir, 'A', 'mu'),
@@ -2448,6 +2455,10 @@ def patch_same_twice(sbox):
   ]
 
   expected_skip = wc.State('', {beta_path : Item()})
+
+  # See above comment about the iota patch being applied twice.
+  iota_contents += "Some more bytes\n"
+  expected_disk.tweak('iota', contents=iota_contents)
 
   svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
                                        expected_output,
@@ -2523,26 +2534,25 @@ def patch_dir_properties(sbox):
   modified_prop_contents = "The property 'modified' has changed.\n"
   ignore_prop_contents = "*.o\n.libs\n*.lo\n"
 
-  ### The output for properties set on illegal targets (i.e. svn:excutable
-  ### on a dir) is still subject to change. We might just want to bail out 
-  ### directly instead of catching the error and use the notify mechanism.
   expected_output = [
     ' U        %s\n' % wc_dir,
-    ' U        %s\n' % os.path.join(wc_dir, 'A', 'B'),
-    'Skipped missing target \'svn:executable\' on (\'%s\')' % B_path,
+    ' C        %s\n' % os.path.join(wc_dir, 'A', 'B'),
     'Summary of conflicts:\n',
-    '  Skipped paths: 1\n',
+    '  Property conflicts: 1\n',
   ]
 
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
     '' : Item(props={'modified' : modified_prop_contents,
-                     'svn:ignore' : ignore_prop_contents})
+                     'svn:ignore' : ignore_prop_contents}),
+    'A/B.svnpatch.rej'  : Item(contents="--- A/B\n+++ A/B\n" +
+                               "Property: svn:executable\n" +
+                               "## -0,0 +1,1 ##\n+*\n"),
     })
   expected_disk.tweak('A/B', props={})
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak('', status=' M')
-  expected_status.tweak('A/B', status=' M')
+  expected_status.tweak('', status=' M', wc_rev=2)
+  expected_status.tweak('A/B', status=' M', wc_rev=2)
 
   expected_skip = wc.State('', { })
 
@@ -2564,7 +2574,8 @@ def patch_add_path_with_props(sbox):
   patch_file_path = make_patch_path(sbox)
   iota_path = os.path.join(wc_dir, 'iota')
 
-  # Apply patch that adds a file and a dir.
+  # Apply patch that adds two files, one of which is empty.
+  # Both files have properties.
 
   unidiff_patch = [
     "Index: new\n",
@@ -2976,7 +2987,7 @@ def patch_prop_with_fuzz(sbox):
                                        1, # check-props
                                        1) # dry-run
 
-def patch_git_add_file(sbox):
+def patch_git_empty_files(sbox):
   "patch that contains empty files"
 
   sbox.build()
@@ -2990,18 +3001,25 @@ def patch_git_add_file(sbox):
     "===================================================================\n",
     "diff --git a/new b/new\n",
     "new file mode 10644\n",
+    "Index: iota\n",
+    "===================================================================\n",
+    "diff --git a/iota b/iota\n",
+    "deleted file mode 10644\n",
   ]
 
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
   expected_output = [
     'A         %s\n' % os.path.join(wc_dir, 'new'),
+    'D         %s\n' % os.path.join(wc_dir, 'iota'),
   ]
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({'new' : Item(contents="")})
+  expected_disk.remove('iota')
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({'new' : Item(status='A ', wc_rev=0)})
+  expected_status.tweak('iota', status='D ')
 
   expected_skip = wc.State('', { })
 
@@ -3138,8 +3156,205 @@ def patch_old_target_names(sbox):
                                        expected_skip,
                                        None, # expected err
                                        1, # check-props
+                                       1) # dry-run
+
+def patch_reverse_revert(sbox):
+  "revert a patch by reverse patching"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  patch_file_path = make_patch_path(sbox)
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+
+  mu_contents_pre_patch = [
+    "Dear internet user,\n",
+    "\n",
+    "We wish to congratulate you over your email success in our computer\n",
+    "Balloting. This is a Millennium Scientific Electronic Computer Draw\n",
+    "in which email addresses were used. All participants were selected\n",
+    "through a computer ballot system drawn from over 100,000 company\n",
+    "and 50,000,000 individual email addresses from all over the world.\n",
+    "\n",
+    "Your email address drew and have won the sum of  750,000 Euros\n",
+    "( Seven Hundred and Fifty Thousand Euros) in cash credited to\n",
+    "file with\n",
+    "    REFERENCE NUMBER: ESP/WIN/008/05/10/MA;\n",
+    "    WINNING NUMBER : 14-17-24-34-37-45-16\n",
+    "    BATCH NUMBERS :\n",
+    "    EULO/1007/444/606/08;\n",
+    "    SERIAL NUMBER: 45327\n",
+    "and PROMOTION DATE: 13th June. 2009\n",
+    "\n",
+    "To claim your winning prize, you are to contact the appointed\n",
+    "agent below as soon as possible for the immediate release of your\n",
+    "winnings with the below details.\n",
+    "\n",
+    "Again, we wish to congratulate you over your email success in our\n"
+    "computer Balloting.\n"
+  ]
+
+  # Set mu contents
+  svntest.main.file_write(mu_path, ''.join(mu_contents_pre_patch), 'wb')
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu'       : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', wc_rev=2)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  # Apply patch
+
+  unidiff_patch = [
+    "Index: A/D/gamma\n",
+    "===================================================================\n",
+    "--- A/D/gamma\t(revision 1)\n",
+    "+++ A/D/gamma\t(working copy)\n",
+    "@@ -1 +1 @@\n",
+    "-This is the file 'gamma'.\n",
+    "+It is the file 'gamma'.\n",
+    "Index: iota\n",
+    "===================================================================\n",
+    "--- iota\t(revision 1)\n",
+    "+++ iota\t(working copy)\n",
+    "@@ -1 +1,2 @@\n",
+    " This is the file 'iota'.\n",
+    "+Some more bytes\n",
+    "\n",
+    "Index: new\n",
+    "===================================================================\n",
+    "--- new	(revision 0)\n",
+    "+++ new	(revision 0)\n",
+    "@@ -0,0 +1 @@\n",
+    "+new\n",
+    "\n",
+    "--- A/mu.orig	2009-06-24 15:23:55.000000000 +0100\n",
+    "+++ A/mu	2009-06-24 15:21:23.000000000 +0100\n",
+    "@@ -6,6 +6,9 @@\n",
+    " through a computer ballot system drawn from over 100,000 company\n",
+    " and 50,000,000 individual email addresses from all over the world.\n",
+    " \n",
+    "+It is a promotional program aimed at encouraging internet users;\n",
+    "+therefore you do not need to buy ticket to enter for it.\n",
+    "+\n",
+    " Your email address drew and have won the sum of  750,000 Euros\n",
+    " ( Seven Hundred and Fifty Thousand Euros) in cash credited to\n",
+    " file with\n",
+    "@@ -14,11 +17,8 @@\n",
+    "     BATCH NUMBERS :\n",
+    "     EULO/1007/444/606/08;\n",
+    "     SERIAL NUMBER: 45327\n",
+    "-and PROMOTION DATE: 13th June. 2009\n",
+    "+and PROMOTION DATE: 14th June. 2009\n",
+    " \n",
+    " To claim your winning prize, you are to contact the appointed\n",
+    " agent below as soon as possible for the immediate release of your\n",
+    " winnings with the below details.\n",
+    "-\n",
+    "-Again, we wish to congratulate you over your email success in our\n",
+    "-computer Balloting.\n",
+    "Index: A/B/E/beta\n",
+    "===================================================================\n",
+    "--- A/B/E/beta	(revision 1)\n",
+    "+++ A/B/E/beta	(working copy)\n",
+    "@@ -1 +0,0 @@\n",
+    "-This is the file 'beta'.\n",
+  ]
+
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch), 'wb')
+
+  gamma_contents = "It is the file 'gamma'.\n"
+  iota_contents = "This is the file 'iota'.\nSome more bytes\n"
+  new_contents = "new\n"
+  mu_contents_post_patch = [
+    "Dear internet user,\n",
+    "\n",
+    "We wish to congratulate you over your email success in our computer\n",
+    "Balloting. This is a Millennium Scientific Electronic Computer Draw\n",
+    "in which email addresses were used. All participants were selected\n",
+    "through a computer ballot system drawn from over 100,000 company\n",
+    "and 50,000,000 individual email addresses from all over the world.\n",
+    "\n",
+    "It is a promotional program aimed at encouraging internet users;\n",
+    "therefore you do not need to buy ticket to enter for it.\n",
+    "\n",
+    "Your email address drew and have won the sum of  750,000 Euros\n",
+    "( Seven Hundred and Fifty Thousand Euros) in cash credited to\n",
+    "file with\n",
+    "    REFERENCE NUMBER: ESP/WIN/008/05/10/MA;\n",
+    "    WINNING NUMBER : 14-17-24-34-37-45-16\n",
+    "    BATCH NUMBERS :\n",
+    "    EULO/1007/444/606/08;\n",
+    "    SERIAL NUMBER: 45327\n",
+    "and PROMOTION DATE: 14th June. 2009\n",
+    "\n",
+    "To claim your winning prize, you are to contact the appointed\n",
+    "agent below as soon as possible for the immediate release of your\n",
+    "winnings with the below details.\n",
+  ]
+
+  expected_output = [
+    'U         %s\n' % os.path.join(wc_dir, 'A', 'D', 'gamma'),
+    'U         %s\n' % os.path.join(wc_dir, 'iota'),
+    'A         %s\n' % os.path.join(wc_dir, 'new'),
+    'U         %s\n' % os.path.join(wc_dir, 'A', 'mu'),
+    'D         %s\n' % os.path.join(wc_dir, 'A', 'B', 'E', 'beta'),
+  ]
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/D/gamma', contents=gamma_contents)
+  expected_disk.tweak('iota', contents=iota_contents)
+  expected_disk.add({'new' : Item(contents=new_contents)})
+  expected_disk.tweak('A/mu', contents=''.join(mu_contents_post_patch))
+  expected_disk.remove('A/B/E/beta')
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/D/gamma', status='M ')
+  expected_status.tweak('iota', status='M ')
+  expected_status.add({'new' : Item(status='A ', wc_rev=0)})
+  expected_status.tweak('A/mu', status='M ', wc_rev=2)
+  expected_status.tweak('A/B/E/beta', status='D ')
+
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       1) # dry-run
+
+  # Applying the same patch in reverse should undo local mods
+  expected_output = [
+    'G         %s\n' % os.path.join(wc_dir, 'A', 'D', 'gamma'),
+    'G         %s\n' % os.path.join(wc_dir, 'iota'),
+    'D         %s\n' % os.path.join(wc_dir, 'new'),
+    'G         %s\n' % os.path.join(wc_dir, 'A', 'mu'),
+    'A         %s\n' % os.path.join(wc_dir, 'A', 'B', 'E', 'beta'),
+  ]
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/mu', contents=''.join(mu_contents_pre_patch))
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', wc_rev=2)
+
+  ### svn patch should check whether the deleted file has the same
+  ### content as the file added by the patch and revert the deletion
+  ### instead of causing a replacement.
+  expected_status.tweak('A/B/E/beta', status='R ')
+
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
                                        1, # dry-run
-                                       "--old-patch-target-names")
+                                       '--reverse-diff')
 
 ########################################################################
 #Run the tests
@@ -3166,12 +3381,13 @@ test_list = [ None,
               patch_no_eol_at_eof,
               patch_with_properties,
               patch_same_twice,
-              XFail(patch_dir_properties),
+              patch_dir_properties,
               patch_add_path_with_props,
               patch_prop_offset,
               patch_prop_with_fuzz,
-              patch_git_add_file,
+              patch_git_empty_files,
               patch_old_target_names,
+              patch_reverse_revert,
             ]
 
 if __name__ == '__main__':

@@ -37,8 +37,7 @@ SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
-from svntest.main import SVN_PROP_MERGEINFO, server_sends_copyfrom_on_update, \
-  server_has_mergeinfo
+from svntest.main import SVN_PROP_MERGEINFO, server_has_mergeinfo
 
 ######################################################################
 # Tests

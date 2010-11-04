@@ -181,18 +181,23 @@ run_revert(svn_wc__db_t *db,
 {
   const svn_skel_t *arg1 = work_item->children->next;
   const char *local_abspath;
-  svn_boolean_t replaced;
   svn_wc__db_kind_t kind;
   svn_wc__db_status_t status;
   const char *parent_abspath;
   svn_boolean_t conflicted;
   apr_int64_t val;
+  svn_boolean_t reinstall_working;
+  svn_boolean_t remove_working;
 
   /* We need a NUL-terminated path, so copy it out of the skel.  */
   local_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
+
   SVN_ERR(svn_skel__parse_int(&val, arg1->next, scratch_pool));
-  replaced = (val != 0);
-  /* magic_changed is extracted further below.  */
+  remove_working = (val != 0);
+
+  SVN_ERR(svn_skel__parse_int(&val, arg1->next->next, scratch_pool));
+  reinstall_working = (val != 0);
+
   /* use_commit_times is extracted further below.  */
 
   /* NOTE: we can read KIND here since uncommitted kind changes are not
@@ -206,111 +211,15 @@ run_revert(svn_wc__db_t *db,
             db, local_abspath,
             scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_wc__db_op_set_props(db, local_abspath, NULL, NULL, NULL,
-                                  scratch_pool));
-
-  /* Deal with the working file, as needed.  */
-  if (kind == svn_wc__db_kind_file)
-    {
-      svn_boolean_t magic_changed;
-      svn_boolean_t reinstall_working;
-
-      SVN_ERR(svn_skel__parse_int(&val, arg1->next->next, scratch_pool));
-      magic_changed = (val != 0);
-
-      /* If there was a magic property change, then we'll reinstall the
-         working-file to pick up any/all appropriate changes. If there was
-         a replacement, then we definitely want to reinstall the working-file
-         using the original base.  */
-      reinstall_working = magic_changed || replaced;
-
-      /* ### This "if (replaced)" looks very likely to be an artifact of the
-         old WC-1 "revert-base and normal-base" system, and if so then it
-         should go away. */
-      if (replaced)
-        {
-          /* With the Pristine Store, there is no longer a "revert-base"
-             text that needs to be moved to a "normal text-base" location.
-
-             ### JAF: I wonder why the "revert-base" properties weren't being
-             handled the same way in this same code path.  An oversight? */
-        }
-      else if (!reinstall_working)
-        {
-          svn_node_kind_t check_kind;
-
-          /* If the working file is missing, we need to reinstall it.  */
-          SVN_ERR(svn_io_check_path(local_abspath, &check_kind,
-                                    scratch_pool));
-          reinstall_working = (check_kind == svn_node_none);
-
-          if (!reinstall_working)
-            {
-              /* ### can we optimize this call? we already fetched some
-                 ### info about the node. and *definitely* never want a
-                 ### full file-scan.  */
-
-              /* ### for now, just always reinstall. without some extra work,
-                 ### we could end up in a situation where the file is copied
-                 ### from the base, but then something fails immediately
-                 ### after that. on the second time through here, we would
-                 ### see the file is "the same" and fail to complete those
-                 ### follow-on actions. in some future work, examine the
-                 ### points of failure, and possibly precompue the
-                 ### "reinstall_working" flag, or maybe do some follow-on
-                 ### actions unconditionally.  */
-#if 1
-              reinstall_working = TRUE;
-#endif
-#if 0
-              /* ### try to avoid altering the timestamp if the intended
-                 ### contents are the same as current-contents.  */
-              SVN_ERR(svn_wc__text_modified_internal_p(&reinstall_working,
-                                                       db, local_abspath,
-                                                       FALSE, FALSE,
-                                                       scratch_pool));
-#endif
-            }
-        }
-
-      if (reinstall_working)
-        {
-          svn_boolean_t use_commit_times;
-          svn_skel_t *wi_file_install;
-
-          SVN_ERR(svn_skel__parse_int(&val, arg1->next->next->next,
-                                     scratch_pool));
-          use_commit_times = (val != 0);
-
-          SVN_ERR(svn_wc__wq_build_file_install(&wi_file_install,
-                                                db, local_abspath,
-                                                NULL /* source_abspath */,
-                                                use_commit_times,
-                                                TRUE /* record_fileinfo */,
-                                                scratch_pool, scratch_pool));
-          SVN_ERR(svn_wc__db_wq_add(db, local_abspath, wi_file_install,
-                                    scratch_pool));
-        }
-    }
-  else if (kind == svn_wc__db_kind_symlink)
-    {
-      SVN__NOT_IMPLEMENTED();
-    }
-  else if (kind == svn_wc__db_kind_dir)
-    {
-      svn_node_kind_t disk_kind;
-      SVN_ERR(svn_io_check_path(local_abspath, &disk_kind, scratch_pool));
-
-      if (disk_kind == svn_node_none)
-        SVN_ERR(svn_io_dir_make(local_abspath, APR_OS_DEFAULT, scratch_pool));
-    }
-
   if (kind == svn_wc__db_kind_dir)
-    parent_abspath = local_abspath;
+    {
+      parent_abspath = local_abspath;
+    }
   else
-    parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+    {
+      parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+    }
 
-  /* ### in wc-ng: the following block clears ACTUAL_NODE.  */
   if (conflicted)
     {
       const apr_array_header_t *conflicts;
@@ -335,39 +244,58 @@ run_revert(svn_wc__db_t *db,
           SVN_ERR(maybe_remove_conflict(parent_abspath, cd->merged_file,
                                         local_abspath, scratch_pool));
         }
-
-      SVN_ERR(svn_wc__db_op_mark_resolved(db, local_abspath,
-                                          TRUE, TRUE, FALSE,
-                                          scratch_pool));
     }
 
-  {
-    svn_boolean_t is_wc_root;
+  /* Reverting the actual node destroys conflict markers and local props.
+     Don't use svn_wc__db_op_set_props() and svn_wc__db_op_mark_resolved()
+     because those leave a record in the ACTUALS table, which is a
+     performance issue.  Besides, this does all that in one blow. */
+  SVN_ERR(svn_wc__db_op_revert_actual(db, local_abspath, scratch_pool));
 
-    SVN_ERR(svn_wc__check_wc_root(&is_wc_root, NULL, NULL,
-                                  db, local_abspath, scratch_pool));
+  /* Deal with the working file, as needed.  */
+  if (kind == svn_wc__db_kind_file)
+    {
+      if (reinstall_working)
+        {
+          svn_boolean_t use_commit_times;
+          svn_skel_t *wi_file_install;
 
-    /* Remove the WORKING_NODE from the node and (if there) its parent stub */
-    /* ### A working copy root can't have a working node and trying
-       ### to delete it fails because the root doesn't have a stub. */
-    if (!is_wc_root)
-      {
-        const char *op_root_abspath = NULL;
+          SVN_ERR(svn_skel__parse_int(&val, arg1->next->next->next,
+                                     scratch_pool));
+          use_commit_times = (val != 0);
 
-        /* If the node is not the operation root, we should not delete
-           the working node */
-        if (status == svn_wc__db_status_added)
-          SVN_ERR(svn_wc__db_scan_addition(NULL, &op_root_abspath, NULL, NULL,
-                                           NULL, NULL, NULL, NULL, NULL,
-                                           db, local_abspath,
-                                           scratch_pool, scratch_pool));
+          SVN_ERR(svn_wc__wq_build_file_install(&wi_file_install,
+                                                db, local_abspath,
+                                                NULL /* source_abspath */,
+                                                use_commit_times,
+                                                TRUE /* record_fileinfo */,
+                                                scratch_pool, scratch_pool));
+          SVN_ERR(svn_wc__db_wq_add(db, local_abspath, wi_file_install,
+                                    scratch_pool));
+        }
+    }
+  else if (kind == svn_wc__db_kind_symlink)
+    {
+      SVN__NOT_IMPLEMENTED();
+    }
+  else if (reinstall_working && kind == svn_wc__db_kind_dir)
+    {
+      svn_node_kind_t on_disk;
 
-        if (!op_root_abspath
-            || (strcmp(op_root_abspath, local_abspath) == 0))
-          SVN_ERR(svn_wc__db_temp_op_remove_working(db, local_abspath,
-                                                    scratch_pool));
-      }
-  }
+      /* Unfortunately we need another stat(), because I don't want
+         to resort to APR error macros to see if we're creating a
+         directory on top of an existing path */
+      SVN_ERR(svn_io_check_path(local_abspath, &on_disk, scratch_pool));
+      if (on_disk == svn_node_none)
+        SVN_ERR(svn_io_dir_make(local_abspath, APR_OS_DEFAULT, scratch_pool));
+    }
+
+
+  if (remove_working)
+    {
+      SVN_ERR(svn_wc__db_temp_op_remove_working(db, local_abspath,
+                                                scratch_pool));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -417,6 +345,7 @@ verify_pristine_present(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__wq_add_revert(svn_boolean_t *will_revert,
                       svn_wc__db_t *db,
+                      const char *revert_root,
                       const char *local_abspath,
                       svn_boolean_t use_commit_times,
                       apr_pool_t *scratch_pool)
@@ -424,7 +353,8 @@ svn_wc__wq_add_revert(svn_boolean_t *will_revert,
   svn_wc__db_status_t status;
   svn_wc__db_kind_t kind;
   svn_boolean_t replaced;
-  svn_boolean_t magic_changed = FALSE;
+  svn_boolean_t remove_working = FALSE;
+  svn_boolean_t reinstall_working;
 
   SVN_ERR(svn_wc__db_read_info(
             &status, &kind, NULL, NULL, NULL, NULL,
@@ -434,8 +364,11 @@ svn_wc__wq_add_revert(svn_boolean_t *will_revert,
             db, local_abspath,
             scratch_pool, scratch_pool));
 
-  /* Special handling for issue #2101.  */
-  if (kind == svn_wc__db_kind_file)
+  /* Special handling for issue #2101, which is specifically
+     about reverting copies of 'deleted' files and dirs, being inserted
+     in the copy as a schedule-delete files, yet can't be reverted. */
+  if (kind == svn_wc__db_kind_file
+      && status == svn_wc__db_status_deleted)
     SVN_ERR(verify_pristine_present(db, local_abspath, scratch_pool));
 
   /* Gather a few items *before* the revert work-item has a chance to run.
@@ -446,9 +379,9 @@ svn_wc__wq_add_revert(svn_boolean_t *will_revert,
                                        scratch_pool));
 
   /* If a replacement has occurred, then a revert definitely happens.  */
-  *will_revert = replaced;
+  *will_revert = reinstall_working = replaced;
 
-  if (!replaced)
+  if (status == svn_wc__db_status_normal)
     {
       apr_hash_t *base_props;
       apr_hash_t *working_props;
@@ -462,50 +395,64 @@ svn_wc__wq_add_revert(svn_boolean_t *will_revert,
                                        scratch_pool, scratch_pool));
       SVN_ERR(svn_prop_diffs(&prop_diffs, working_props, base_props,
                              scratch_pool));
-      magic_changed = svn_wc__has_magic_property(prop_diffs);
+      if (svn_wc__has_magic_property(prop_diffs))
+        reinstall_working = TRUE;
 
       if (prop_diffs->nelts > 0)
         {
           /* Property changes cause a revert to occur.  */
           *will_revert = TRUE;
         }
-      else
-        {
-          /* There is nothing to do for NORMAL or ADDED nodes. Typically,
-             we won't even be called for added nodes (since a revert
-             simply removes it from version control), but it is possible
-             that a parent replacement was turned from a replaced copy
-             into a normal node, and the (broken) old ENTRY->COPIED logic
-             then turns the copied children into typical ADDED nodes.
-             Since the recursion has already started, these children are
-             visited (unlike most added nodes).  */
-          if (status != svn_wc__db_status_normal
-              && status != svn_wc__db_status_added)
-            {
-              *will_revert = TRUE;
-            }
-
-          /* We may need to restore a missing working file.  */
-          if (! *will_revert)
-            {
-              svn_node_kind_t on_disk;
-
-              SVN_ERR(svn_io_check_path(local_abspath, &on_disk,
-                                        scratch_pool));
-              *will_revert = on_disk == svn_node_none;
-            }
-
-          if (! *will_revert)
-            {
-              /* ### there may be ways to simplify this test, rather than
-                 ### doing file comparisons and junk... */
-              SVN_ERR(svn_wc__internal_text_modified_p(will_revert,
-                                                       db, local_abspath,
-                                                       FALSE, FALSE,
-                                                       scratch_pool));
-            }
-        }
     }
+  else
+    {
+      *will_revert = TRUE;
+      if (status != svn_wc__db_status_added)
+        reinstall_working = TRUE;
+    }
+
+  /* We may need to restore a missing working file.  */
+  if (! reinstall_working
+      && status != svn_wc__db_status_added)
+    {
+      svn_node_kind_t on_disk;
+
+      SVN_ERR(svn_io_check_path(local_abspath, &on_disk, scratch_pool));
+      reinstall_working = on_disk == svn_node_none;
+      *will_revert = *will_revert || reinstall_working;
+    }
+
+  if (! reinstall_working
+      && status == svn_wc__db_status_normal)
+    {
+      /* ### there may be ways to simplify this test, rather than
+         ### doing file comparisons and junk... */
+      SVN_ERR(svn_wc__internal_text_modified_p(&reinstall_working,
+                                               db, local_abspath,
+                                               FALSE, FALSE,
+                                               scratch_pool));
+      *will_revert = *will_revert || reinstall_working;
+    }
+
+
+  if (status == svn_wc__db_status_added)
+    {
+      /* When looking at an added, non-replacing node, it's entry
+         will have to be removed after revert: if not, it'll look
+         like it's still under version control. */
+      const char *op_root_abspath;
+
+      SVN_ERR(svn_wc__db_scan_addition(NULL, &op_root_abspath, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL,
+                                       db, local_abspath,
+                                       scratch_pool, scratch_pool));
+
+      if (svn_dirent_is_ancestor(revert_root, op_root_abspath))
+        remove_working = TRUE;
+    }
+  else
+    remove_working = TRUE;
+
 
   /* Don't even bother to queue a work item if there is nothing to do.  */
   if (*will_revert)
@@ -517,8 +464,8 @@ svn_wc__wq_add_revert(svn_boolean_t *will_revert,
       /* These skel atoms hold references to very transitory state, but
          we only need the work_item to survive for the duration of wq_add.  */
       svn_skel__prepend_int(use_commit_times, work_item, scratch_pool);
-      svn_skel__prepend_int(magic_changed, work_item, scratch_pool);
-      svn_skel__prepend_int(replaced, work_item, scratch_pool);
+      svn_skel__prepend_int(reinstall_working, work_item, scratch_pool);
+      svn_skel__prepend_int(remove_working, work_item, scratch_pool);
       svn_skel__prepend_str(local_abspath, work_item, scratch_pool);
       svn_skel__prepend_str(OP_REVERT, work_item, scratch_pool);
 
@@ -673,12 +620,6 @@ run_base_remove(svn_wc__db_t *db,
                                        NULL, NULL,
                                        db, local_abspath,
                                        scratch_pool, scratch_pool));
-
-      if (!repos_relpath)
-        SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath, &repos_root_url,
-                                           &repos_uuid,
-                                           db, local_abspath, scratch_pool,
-                                           scratch_pool));
     }
 
   SVN_ERR(remove_base_node(db, local_abspath,
@@ -687,16 +628,15 @@ run_base_remove(svn_wc__db_t *db,
 
   if (keep_not_present)
     {
-      SVN_ERR(svn_wc__db_base_add_absent_node(db, local_abspath,
-                                              repos_relpath,
-                                              repos_root_url,
-                                              repos_uuid,
-                                              revision,
-                                              kind,
-                                              svn_wc__db_status_not_present,
-                                              NULL,
-                                              NULL,
-                                              scratch_pool));
+      SVN_ERR(svn_wc__db_base_add_not_present_node(db, local_abspath,
+                                                   repos_relpath,
+                                                   repos_root_url,
+                                                   repos_uuid,
+                                                   revision,
+                                                   kind,
+                                                   NULL,
+                                                   NULL,
+                                                   scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -793,11 +733,10 @@ run_deletion_postcommit(svn_wc__db_t *db,
              lie;  therefore, it must remember the file as being
              'deleted' for a while.  Create a new, uninteresting
              ghost entry:  */
-          SVN_ERR(svn_wc__db_base_add_absent_node(
+          SVN_ERR(svn_wc__db_base_add_not_present_node(
                     db, local_abspath,
                     repos_relpath, repos_root_url, repos_uuid,
                     new_revision, kind,
-                    svn_wc__db_status_not_present,
                     NULL, NULL,
                     scratch_pool));
         }
@@ -1919,7 +1858,7 @@ svn_error_t *
 svn_wc__wq_build_prej_install(svn_skel_t **work_item,
                               svn_wc__db_t *db,
                               const char *local_abspath,
-                              const svn_skel_t *conflict_skel,
+                              svn_skel_t *conflict_skel,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool)
 {
@@ -1929,8 +1868,7 @@ svn_wc__wq_build_prej_install(svn_skel_t **work_item,
   SVN_ERR_ASSERT(conflict_skel != NULL);
 
   if (conflict_skel != NULL)
-    /* ### woah! this needs to dup the skel into RESULT_POOL  */
-    svn_skel__prepend((svn_skel_t *)conflict_skel, *work_item);
+    svn_skel__prepend(conflict_skel, *work_item);
   svn_skel__prepend_str(apr_pstrdup(result_pool, local_abspath),
                         *work_item, result_pool);
   svn_skel__prepend_str(OP_PREJ_INSTALL, *work_item, result_pool);

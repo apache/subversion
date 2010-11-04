@@ -71,7 +71,6 @@ svn_cl__propdel(apr_getopt_t *os,
   const char *pname, *pname_utf8;
   apr_array_header_t *args, *targets;
   struct notify_wrapper_baton nwb = { 0 };
-  int i;
 
   /* Get the property's name (and a UTF-8 version of that name). */
   SVN_ERR(svn_opt_parse_num_args(&args, os, 1, pool));
@@ -121,6 +120,7 @@ svn_cl__propdel(apr_getopt_t *os,
   else  /* operate on a normal, versioned property (not a revprop) */
     {
       apr_pool_t *subpool = svn_pool_create(pool);
+      int i;
 
       if (opt_state->depth == svn_depth_unknown)
         opt_state->depth = svn_depth_empty;
