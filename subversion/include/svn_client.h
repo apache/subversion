@@ -3470,12 +3470,13 @@ svn_client_upgrade(const char *dir,
  */
 
 /**
- * Recursively modify a working copy rooted at @a wcroot_dir, changing any
- * repository URLs that begin with @a from to begin with @a to instead.
+ * Recursively modify a working copy rooted at @a wcroot_dir, changing
+ * any repository URLs that begin with @a from_prefix to begin with @a
+ * to_prefix instead.
  *
  * @param wcroot_dir Working copy root directory
- * @param from Original URL
- * @param to New URL
+ * @param from_prefix Original URL
+ * @param to_prefix New URL
  * @param ignore_externals If not set, recurse into external working
  *        copies after relocating the primary working copy
  * @param ctx svn_client_ctx_t
@@ -3485,8 +3486,8 @@ svn_client_upgrade(const char *dir,
  */
 svn_error_t *
 svn_client_relocate2(const char *wcroot_dir,
-                     const char *from,
-                     const char *to,
+                     const char *from_prefix,
+                     const char *to_prefix,
                      svn_boolean_t ignore_externals,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool);
@@ -3504,8 +3505,8 @@ svn_client_relocate2(const char *wcroot_dir,
 SVN_DEPRECATED
 svn_error_t *
 svn_client_relocate(const char *dir,
-                    const char *from,
-                    const char *to,
+                    const char *from_prefix,
+                    const char *to_prefix,
                     svn_boolean_t recurse,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool);
@@ -4458,13 +4459,14 @@ svn_client_revprop_list(apr_hash_t **props,
  * @a *result_rev to the value of the revision actually exported (set
  * it to #SVN_INVALID_REVNUM for local exports).
  *
- * @a from is either the path the working copy on disk, or a URL to the
- * repository you wish to export.
+ * @a from_path_or_url is either the path the working copy on disk, or
+ * a URL to the repository you wish to export.
  *
- * When exporting a directory @a to is the path to the directory where
- * you wish to create the exported tree, when exporting a file it is
- * the path of the file that will be created.  If @a to is the empty
- * path the name of the file/directory in the repository will be used.
+ * When exporting a directory @a to_path is the path to the directory
+ * where you wish to create the exported tree, when exporting a file
+ * it is the path of the file that will be created.  If @a to_path is
+ * the empty path the name of the file/directory in the repository
+ * will be used.
  *
  * @a peg_revision is the revision where the path is first looked up
  * when exporting from a repository.  If @a peg_revision->kind is
@@ -4482,7 +4484,8 @@ svn_client_revprop_list(apr_hash_t **props,
  *
  * @a ctx is a context used for authentication in the repository case.
  *
- * @a overwrite if TRUE will cause the export to overwrite files or directories.
+ * @a overwrite if TRUE will cause the export to overwrite files or
+ * directories.
  *
  * If @a ignore_externals is set, don't process externals definitions
  * as part of this operation.
@@ -4490,17 +4493,18 @@ svn_client_revprop_list(apr_hash_t **props,
  * If @a ignore_keywords is set, don't expand keywords as part of this
  * operation.
  *
- * @a native_eol allows you to override the standard eol marker on the platform
- * you are running on.  Can be either "LF", "CR" or "CRLF" or NULL.  If NULL
- * will use the standard eol marker.  Any other value will cause the
- * #SVN_ERR_IO_UNKNOWN_EOL error to be returned.
+ * @a native_eol allows you to override the standard eol marker on the
+ * platform you are running on.  Can be either "LF", "CR" or "CRLF" or
+ * NULL.  If NULL will use the standard eol marker.  Any other value
+ * will cause the #SVN_ERR_IO_UNKNOWN_EOL error to be returned.
  *
- * If @a depth is #svn_depth_infinity, export fully recursively.
- * Else if it is #svn_depth_immediates, export @a from and its immediate
- * children (if any), but with subdirectories empty and at
- * #svn_depth_empty.  Else if #svn_depth_files, export @a from and
- * its immediate file children (if any) only.  If @a depth is
- * #svn_depth_empty, then export exactly @a from and none of its children.
+ * If @a depth is #svn_depth_infinity, export fully recursively.  Else
+ * if it is #svn_depth_immediates, export @a from_path_or_url and its
+ * immediate children (if any), but with subdirectories empty and at
+ * #svn_depth_empty.  Else if #svn_depth_files, export @a
+ * from_path_or_url and its immediate file children (if any) only.  If
+ * @a depth is #svn_depth_empty, then export exactly @a
+ * from_path_or_url and none of its children.
  *
  * All allocations are done in @a pool.
  *
@@ -4508,8 +4512,8 @@ svn_client_revprop_list(apr_hash_t **props,
  */
 svn_error_t *
 svn_client_export5(svn_revnum_t *result_rev,
-                   const char *from,
-                   const char *to,
+                   const char *from_path_or_url,
+                   const char *to_path,
                    const svn_opt_revision_t *peg_revision,
                    const svn_opt_revision_t *revision,
                    svn_boolean_t overwrite,
@@ -4530,8 +4534,8 @@ svn_client_export5(svn_revnum_t *result_rev,
  */
 svn_error_t *
 svn_client_export4(svn_revnum_t *result_rev,
-                   const char *from,
-                   const char *to,
+                   const char *from_path_or_url,
+                   const char *to_path,
                    const svn_opt_revision_t *peg_revision,
                    const svn_opt_revision_t *revision,
                    svn_boolean_t overwrite,
@@ -4555,8 +4559,8 @@ svn_client_export4(svn_revnum_t *result_rev,
 SVN_DEPRECATED
 svn_error_t *
 svn_client_export3(svn_revnum_t *result_rev,
-                   const char *from,
-                   const char *to,
+                   const char *from_path_or_url,
+                   const char *to_path,
                    const svn_opt_revision_t *peg_revision,
                    const svn_opt_revision_t *revision,
                    svn_boolean_t overwrite,
@@ -4579,8 +4583,8 @@ svn_client_export3(svn_revnum_t *result_rev,
 SVN_DEPRECATED
 svn_error_t *
 svn_client_export2(svn_revnum_t *result_rev,
-                   const char *from,
-                   const char *to,
+                   const char *from_path_or_url,
+                   const char *to_path,
                    svn_opt_revision_t *revision,
                    svn_boolean_t force,
                    const char *native_eol,
@@ -4597,8 +4601,8 @@ svn_client_export2(svn_revnum_t *result_rev,
 SVN_DEPRECATED
 svn_error_t *
 svn_client_export(svn_revnum_t *result_rev,
-                  const char *from,
-                  const char *to,
+                  const char *from_path_or_url,
+                  const char *to_path,
                   svn_opt_revision_t *revision,
                   svn_boolean_t force,
                   svn_client_ctx_t *ctx,
