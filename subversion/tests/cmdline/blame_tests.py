@@ -462,10 +462,10 @@ def blame_merge_info(sbox):
 
   wc_dir = sbox.wc_dir
   iota_path = os.path.join(wc_dir, 'trunk', 'iota')
+  mu_path = os.path.join(wc_dir, 'trunk', 'A', 'mu')
 
   exit_code, output, error = svntest.actions.run_and_verify_svn(
-    None, None, [],
-    'blame', '-g', iota_path)
+    None, None, [], 'blame', '-g', iota_path)
 
   expected_blame = [
       { 'revision' : 2,
@@ -476,6 +476,45 @@ def blame_merge_info(sbox):
       { 'revision' : 11,
         'author' : 'jrandom',
         'text' : "'A' has changed a bit, with 'upsilon', and 'xi'.\n",
+        'merged' : 1,
+      },
+    ]
+  parse_and_verify_blame(output, expected_blame, 1)
+
+  exit_code, output, error = svntest.actions.run_and_verify_svn(
+    None, None, [], 'blame', '-g', '-r10:11', iota_path)
+
+  expected_blame = [
+      { 'revision' : None,
+        'author' : None,
+        'text' : "This is the file 'iota'.\n",
+        'merged' : 0,
+      },
+      { 'revision' : None,
+        'author' : None,
+        'text' : "'A' has changed a bit.\n",
+        'merged' : 0,
+      },
+    ]
+  parse_and_verify_blame(output, expected_blame, 1)
+
+  exit_code, output, error = svntest.actions.run_and_verify_svn(
+    None, None, [], 'blame', '-g', '-r16:17', mu_path)
+
+  expected_blame = [
+      { 'revision' : None,
+        'author' : None,
+        'text' : "This is the file 'mu'.\n",
+        'merged' : 0,
+      },
+      { 'revision' : 16,
+        'author' : 'jrandom',
+        'text' : "Don't forget to look at 'upsilon', as well.\n",
+        'merged' : 1,
+      },
+      { 'revision' : 16,
+        'author' : 'jrandom',
+        'text' : "This is yet more content in 'mu'.\n",
         'merged' : 1,
       },
     ]
@@ -680,7 +719,7 @@ test_list = [ None,
               blame_eol_styles,
               blame_ignore_whitespace,
               blame_ignore_eolstyle,
-              SkipUnless(blame_merge_info, server_has_mergeinfo),
+              XFail(SkipUnless(blame_merge_info, server_has_mergeinfo)),
               SkipUnless(blame_merge_out_of_range, server_has_mergeinfo),
               blame_peg_rev_file_not_in_head,
               blame_file_not_in_head,
