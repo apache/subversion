@@ -45,6 +45,7 @@
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_mergeinfo_private.h"
+#include "../libsvn_wc/adm_files.h"
 
 
 /*
@@ -1409,6 +1410,35 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
   return SVN_NO_ERROR;
 }
 
+/* A baton for notification_adjust_func(). */
+struct notification_adjust_baton
+{
+  svn_wc_notify_func2_t inner_func;
+  void *inner_baton;
+  const char *checkout_abspath;
+  const char *final_abspath;
+};
+
+/* A svn_wc_notify_func2_t function that wraps BATON->inner_func (whose
+ * baton is BATON->inner_baton) and adjusts the notification paths that
+ * start with BATON->checkout_abspath to start instead with
+ * BATON->final_abspath. */
+static void
+notification_adjust_func(void *baton,
+                         const svn_wc_notify_t *notify,
+                         apr_pool_t *pool)
+{
+  struct notification_adjust_baton *nb = baton;
+  svn_wc_notify_t *inner_notify = svn_wc_dup_notify(notify, pool);
+  const char *relpath;
+
+  relpath = svn_dirent_skip_ancestor(nb->checkout_abspath, notify->path);
+  inner_notify->path = svn_dirent_join(nb->final_abspath, relpath, pool);
+
+  if (nb->inner_func)
+    nb->inner_func(nb->inner_baton, inner_notify, pool);
+}
+
 /* Peform each individual copy operation for a repos -> wc copy.  A
    helper for repos_to_wc_copy().
 
@@ -1429,27 +1459,72 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
   if (pair->src_kind == svn_node_dir)
     {
       svn_boolean_t sleep_needed = FALSE;
+      const char *tmp_abspath;
+
+      /* Find a temporary location in which to check out the copy source.
+       * (This function is deprecated, but we intend to replace this whole
+       * code path with something else.) */
+      SVN_ERR(svn_wc_create_tmp_file2(NULL, &tmp_abspath, dst_abspath,
+                                      svn_io_file_del_on_close, pool));
 
       /* Make a new checkout of the requested source. While doing so,
        * resolve pair->src_revnum to an actual revision number in case it
        * was until now 'invalid' meaning 'head'.  Ask this function not to
        * sleep for timestamps, by passing a sleep_needed output param.
-       * This sends notifications for all nodes except the root node. */
-      SVN_ERR(svn_client__checkout_internal(&pair->src_revnum,
-                                            pair->src_original,
-                                            dst_abspath,
-                                            &pair->src_peg_revision,
-                                            &pair->src_op_revision, NULL,
-                                            svn_depth_infinity,
-                                            ignore_externals, FALSE, TRUE,
-                                            &sleep_needed, ctx, pool));
+       * Send notifications for all nodes except the root node, and adjust
+       * them to refer to the destination rather than this temporary path. */
+      {
+        svn_wc_notify_func2_t old_notify_func2 = ctx->notify_func2;
+        void *old_notify_baton2 = ctx->notify_baton2;
+        struct notification_adjust_baton nb;
 
-      if (! same_repositories)
+        nb.inner_func = ctx->notify_func2;
+        nb.inner_baton = ctx->notify_baton2;
+        nb.checkout_abspath = tmp_abspath;
+        nb.final_abspath = dst_abspath;
+        ctx->notify_func2 = notification_adjust_func;
+        ctx->notify_baton2 = &nb;
+
+        SVN_ERR(svn_client__checkout_internal(&pair->src_revnum,
+                                              pair->src_original,
+                                              tmp_abspath,
+                                              &pair->src_peg_revision,
+                                              &pair->src_op_revision, NULL,
+                                              svn_depth_infinity,
+                                              ignore_externals, FALSE, TRUE,
+                                              &sleep_needed, ctx, pool));
+
+        ctx->notify_func2 = old_notify_func2;
+        ctx->notify_baton2 = old_notify_baton2;
+      }
+
+      /* Schedule dst_path for addition in parent, with copy history.
+         Don't send any notification here.
+         Then remove the temporary checkout's .svn dir in preparation for
+         moving the rest of it into the final destination. */
+      if (same_repositories)
+        {
+          SVN_ERR(svn_wc_copy3(ctx->wc_ctx, tmp_abspath, dst_abspath,
+                               TRUE /* metadata_only */,
+                               ctx->cancel_func, ctx->cancel_baton,
+                               NULL, NULL, pool));
+          SVN_ERR(svn_io_remove_dir2(svn_wc__adm_child(tmp_abspath, NULL, pool),
+                                     FALSE /* ignore_enoent */,
+                                     ctx->cancel_func, ctx->cancel_baton, pool));
+        }
+      else
         {
           /* ### We want to schedule this as a simple add, or even better
              a copy from a foreign repos, but we don't yet have the
-             WC APIs to do that. */
+             WC APIs to do that, so we will just move the whole WC into
+             place as a disjoint, nested WC. */
+        }
 
+      /* Move the temporary disk tree into place. */
+      SVN_ERR(svn_io_file_rename(tmp_abspath, dst_abspath, pool));
+
+      if (! same_repositories)
+        {
           svn_io_sleep_for_timestamps(dst_abspath, pool);
 
           return svn_error_createf
@@ -1457,14 +1532,6 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
              _("Source URL '%s' is from foreign repository; "
                "leaving it as a disjoint WC"), pair->src_abspath_or_url);
         }
-
-      /* Schedule dst_path for addition in parent, with copy history.
-         Don't send any notification here.
-
-         ### This is a wierd way to do it. See the doc string of
-             svn_wc_add_repos_file4() for more about the controversy. */
-      SVN_ERR(svn_wc__integrate_nested_wc_as_copy(ctx->wc_ctx, dst_abspath,
-                                                  pool));
     } /* end directory case */
 
   else if (pair->src_kind == svn_node_file)

@@ -1156,33 +1156,6 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
 }
 
 svn_error_t *
-svn_wc__integrate_nested_wc_as_copy(svn_wc_context_t *wc_ctx,
-                                    const char *local_abspath,
-                                    apr_pool_t *scratch_pool)
-{
-  svn_wc__db_t *db = wc_ctx->db;
-  svn_boolean_t is_wc_root;
-
-  /* Precondition: LOCAL_ABSPATH is the root of a separate WC. */
-  SVN_ERR(svn_wc__check_wc_root(&is_wc_root, NULL, NULL,
-                                db, local_abspath, scratch_pool));
-  if (! is_wc_root)
-    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                             _("'%s' is not a WC root"),
-                             svn_dirent_local_style(local_abspath,
-                                                    scratch_pool));
-
-  /* Precondition: parent(LOCAL_ABSPATH) is a versioned directory in an
-   * acceptable state. */
-  SVN_ERR(check_can_add_to_parent(NULL, NULL, wc_ctx, local_abspath,
-                                  scratch_pool, scratch_pool));
-
-  SVN_ERR(integrate_nested_wc_as_copy(wc_ctx, local_abspath, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
 svn_wc_add_from_disk(svn_wc_context_t *wc_ctx,
                      const char *local_abspath,
                      svn_wc_notify_func2_t notify_func,
