@@ -5278,12 +5278,14 @@ append_to_merged_froms(svn_mergeinfo_t *output,
 
 /* Calculate the mergeinfo for PATH under revision ROOT using
    inheritance type INHERIT.  Set *MERGEINFO to the mergeinfo, or to
-   NULL if there is none.  Results are allocated in POOL; TRAIL->pool
+   NULL if there is none.  If *MERGEINFO is inherited set *INHERITED
+   to true, false otherwise.  Results are allocated in POOL; TRAIL->POOL
    is used for temporary allocations.  */
 
 struct get_mergeinfo_for_path_baton
 {
   svn_mergeinfo_t *mergeinfo;
+  svn_boolean_t *inherited;
   svn_fs_root_t *root;
   const char *path;
   svn_mergeinfo_inheritance_t inherit;
@@ -5301,6 +5303,7 @@ txn_body_get_mergeinfo_for_path(void *baton, trail_t *trail)
   dag_node_t *node = NULL;
 
   *(args->mergeinfo) = NULL;
+  *(args->inherited) = FALSE;
 
   SVN_ERR(open_path(&parent_path, args->root, args->path, 0,
                     NULL, trail, trail->pool));
@@ -5382,6 +5385,7 @@ txn_body_get_mergeinfo_for_path(void *baton, trail_t *trail)
                                                          nearest_ancestor,
                                                          trail->pool),
                                      args->pool));
+      *(args->inherited) = TRUE;
     }
   return SVN_NO_ERROR;
 }
@@ -5413,14 +5417,17 @@ txn_body_get_node_mergeinfo_stats(void *baton, trail_t *trail)
 }
 
 
-/* Get the mergeinfo for a set of paths, returned in
-   *MERGEINFO_CATALOG.  Returned values are allocated in POOL, while
-   temporary values are allocated in a sub-pool. */
+/* Get the mergeinfo for a set of paths, returned in *MERGEINFO_CATALOG.
+   If the mergeinfo for any path is inherited and VALIDATE_INHERITED_MERGEINFO
+   is true, then the mergeinfo for that path in *MERGEINFO_CATALOG will only
+   contain path-revs that actually exist in repository.  Returned values are
+   allocated in POOL, while temporary values are allocated in a sub-pool. */
 static svn_error_t *
 get_mergeinfos_for_paths(svn_fs_root_t *root,
                          svn_mergeinfo_catalog_t *mergeinfo_catalog,
                          const apr_array_header_t *paths,
                          svn_mergeinfo_inheritance_t inherit,
+                         svn_boolean_t validate_inherited_mergeinfo,
                          svn_boolean_t include_descendants,
                          apr_pool_t *pool)
 {
@@ -5431,6 +5438,7 @@ get_mergeinfos_for_paths(svn_fs_root_t *root,
   for (i = 0; i < paths->nelts; i++)
     {
       svn_mergeinfo_t path_mergeinfo;
+      svn_boolean_t inherited;
       struct get_mergeinfo_for_path_baton gmfp_args;
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
 
@@ -5440,6 +5448,7 @@ get_mergeinfos_for_paths(svn_fs_root_t *root,
 
       /* Get the mergeinfo for PATH itself. */
       gmfp_args.mergeinfo = &path_mergeinfo;
+      gmfp_args.inherited = &inherited;
       gmfp_args.root = root;
       gmfp_args.path = path;
       gmfp_args.inherit = inherit;
@@ -5448,9 +5457,16 @@ get_mergeinfos_for_paths(svn_fs_root_t *root,
                                      txn_body_get_mergeinfo_for_path,
                                      &gmfp_args, FALSE, iterpool));
       if (path_mergeinfo)
-        apr_hash_set(result_catalog, apr_pstrdup(pool, path),
-                     APR_HASH_KEY_STRING,
-                     path_mergeinfo);
+        {
+          if (inherited && validate_inherited_mergeinfo)
+            SVN_ERR(svn_fs_validate_mergeinfo(&path_mergeinfo,
+                                              path_mergeinfo, root->fs,
+                                              pool, iterpool));
+
+          apr_hash_set(result_catalog, apr_pstrdup(pool, path),
+                       APR_HASH_KEY_STRING,
+                       path_mergeinfo);
+        }
 
       /* If we're including descendants, do so. */
       if (include_descendants)
@@ -5493,6 +5509,7 @@ base_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
                    svn_fs_root_t *root,
                    const apr_array_header_t *paths,
                    svn_mergeinfo_inheritance_t inherit,
+                   svn_boolean_t validate_inherited_mergeinfo,
                    svn_boolean_t include_descendants,
                    apr_pool_t *pool)
 {
@@ -5506,8 +5523,8 @@ base_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
 
   /* Retrieve a path -> mergeinfo mapping. */
   return get_mergeinfos_for_paths(root, catalog, paths,
-                                  inherit, include_descendants,
-                                  pool);
+                                  inherit, validate_inherited_mergeinfo,
+                                  include_descendants, pool);
 }
 
 

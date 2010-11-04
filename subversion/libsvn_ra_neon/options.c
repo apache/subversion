@@ -400,7 +400,7 @@ svn_ra_neon__has_capability(svn_ra_session_t *session,
           APR_ARRAY_PUSH(paths, const char *) = "";
 
           err = svn_ra_neon__get_mergeinfo(session, &ignored, paths, 0,
-                                           FALSE, FALSE, pool);
+                                           FALSE, FALSE, FALSE, pool);
 
           if (err)
             {
