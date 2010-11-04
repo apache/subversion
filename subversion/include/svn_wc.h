@@ -4458,9 +4458,9 @@ svn_wc_add_repos_file(const char *dst_path,
  * hold a write lock.
  *
  * If @a local_abspath is a file, all its info will be removed from the
- * administrative area.  If @a name is a directory, then the administrative
- * area will be deleted, along with *all* the administrative areas anywhere
- * in the tree below @a adm_access.
+ * administrative area.  If @a local_abspath is a directory, then the
+ * administrative area will be deleted, along with *all* the administrative
+ * areas anywhere in the tree below @a adm_access.
  *
  * Normally, only administrative data is removed.  However, if
  * @a destroy_wf is TRUE, then all working file(s) and dirs are deleted
