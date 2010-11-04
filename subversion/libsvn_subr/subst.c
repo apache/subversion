@@ -799,7 +799,7 @@ struct translation_baton
      or zero if none encountered yet */
   apr_size_t src_format_len;
 
-  /* if this is svn_tristate_false, translate_newline() will be called
+  /* If this is svn_tristate_false, translate_newline() will be called
      for every newline in the file */
   svn_tristate_t nl_translation_skippable;
 };
@@ -1005,7 +1005,7 @@ translate_chunk(svn_stream_t *dst,
                 b->nl_translation_skippable = svn_tristate_false;
             }
 
-          /* We're in the boring state; look for interest characters.
+          /* We're in the boring state; look for interesting characters.
              Offset len such that it will become 0 in the first iteration. 
            */
           len = 0 - b->eol_str_len;
@@ -1038,9 +1038,10 @@ translate_chunk(svn_stream_t *dst,
                while ((p + len) < end && !interesting[(unsigned char)p[len]])
                  ++len;
             }
-          while (b->nl_translation_skippable == svn_tristate_true &&   /* can skip EOLs at all */
-                 p + len + 2 < end &&             /* not too close to EOF */
-                 eol_unchanged (b, p + len));     /* EOL format already ok */
+          while (b->nl_translation_skippable ==
+                   svn_tristate_true &&       /* can potentially skip EOLs */
+                 p + len + 2 < end &&         /* not too close to EOF */
+                 eol_unchanged (b, p + len)); /* EOL format already ok */
 
           while ((p + len) < end && !interesting[(unsigned char)p[len]])
             len++;
