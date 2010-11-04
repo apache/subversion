@@ -4781,7 +4781,12 @@ convert_to_working_status(svn_wc__db_status_t *working_status,
    Set *HAVE_BASE or *HAVE_WORK to indicate if a base node or lower
    working node is present, and *STATUS to the status of the node.
 
-   This is an experimental interface. */
+   This is an experimental interface.  It appears that delete only
+   needs to know whether the below node is base or not (if it is a
+   base the status is available via base_get_info).  It's possible
+   this function should be removed and read_info modified to return
+   the "lower is base".  I'll leave it for now because delete may turn
+   out to need more info. */
 static svn_error_t *
 info_below_working(svn_boolean_t *have_base,
                    svn_boolean_t *have_work,
