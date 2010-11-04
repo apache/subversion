@@ -4391,8 +4391,6 @@ svn_wc_add(const char *path,
  *
  * Use @a scratch_pool for temporary allocations.
  *
- * ### NOTE: the notification callback/baton is not yet used.
- *
  * ### This function is very redundant with svn_wc_add().  Ideally,
  * we'd merge them, so that svn_wc_add() would just take optional
  * new_props and optional copyfrom information.  That way it could be
@@ -4418,12 +4416,12 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                        svn_revnum_t copyfrom_rev,
                        svn_cancel_func_t cancel_func,
                        void *cancel_baton,
-                       svn_wc_notify_func2_t notify_func,
-                       void *notify_baton,
                        apr_pool_t *scratch_pool);
 
 /** Similar to svn_wc_add_repos_file4, but uses access batons and a
  * relative path instead of a working copy context and absolute path.
+ *
+ * ### NOTE: the notification callback/baton is not yet used.
  *
  * @since New in 1.6.
  * @deprecated Provided for compatibility with the 1.6 API.

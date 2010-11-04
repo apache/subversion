@@ -1496,7 +1496,6 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
          same_repositories ? pair->src_abspath_or_url : NULL,
          same_repositories ? pair->src_revnum : SVN_INVALID_REVNUM,
          ctx->cancel_func, ctx->cancel_baton,
-         ctx->notify_func2, ctx->notify_baton2,
          pool));
     }
 
