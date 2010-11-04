@@ -16,9 +16,3 @@ They will be merged into /trunk after passing the review.
    doubles its performance. It should also speed up svn checkout by
    the same amount (not factor) of time.
  
-* r1029042
- Where possible, don't use svn_stringbuf_appendbyte to copy strings; 
- use svn_stringbuf_appendbytes instead.
- Justification:
-   Low risk change to speed up parsing diffs.
-
