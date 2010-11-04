@@ -1723,13 +1723,14 @@ merge_file_added(const char *local_dir_abspath,
                    copying 'yours' to 'mine', isn't enough; we need to get
                    the whole text-base and props installed too, just as if
                    we had called 'svn cp wc wc'. */
-                /* ### would be nice to have a cancellation func to pass */
                 SVN_ERR(svn_wc_add_repos_file4(
                             merge_b->ctx->wc_ctx, mine_abspath,
                             new_base_contents, new_contents,
                             new_base_props, new_props,
                             copyfrom_url, copyfrom_rev,
-                            NULL, NULL, subpool));
+                            merge_b->ctx->cancel_func,
+                            merge_b->ctx->cancel_baton,
+                            subpool));
 
                 /* ### delete 'yours' ? */
               }
