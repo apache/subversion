@@ -452,7 +452,7 @@ public class BasicTests extends SVNTests
                  client.update(thisTest.getWCPathSet("/A/B"),
                                null, Depth.unknown, false, false, false)[0],
                      rev);
-        Info2 Binfo = collectInfos(thisTest.getWCPath() + "/A/B", null, null,
+        Info Binfo = collectInfos(thisTest.getWCPath() + "/A/B", null, null,
                                    Depth.empty, null)[0];
         long BCommitDate = Binfo.getLastChangedDate().getTime();
         long BCommitRev = rev;
@@ -1959,12 +1959,12 @@ public class BasicTests extends SVNTests
         OneTest thisTest = new OneTest();
 
         // get the item information and test it
-        Info2 info = collectInfos(thisTest.getWCPath()+"/A/mu", null, null,
+        Info info = collectInfos(thisTest.getWCPath()+"/A/mu", null, null,
                                   Depth.empty, null)[0];
         assertEquals("wrong revision from info", 1,
                      info.getLastChangedRev());
         assertEquals("wrong schedule kind from info",
-                     Info2.ScheduleKind.normal, info.getSchedule());
+                     Info.ScheduleKind.normal, info.getSchedule());
         assertEquals("wrong node kind from info", NodeKind.file,
                      info.getKind());
     }
@@ -2085,13 +2085,13 @@ public class BasicTests extends SVNTests
         OneTest thisTest = new OneTest();
 
         final String failureMsg = "Incorrect number of info objects";
-        Info2[] infos = collectInfos(thisTest.getWCPath(), null, null,
+        Info[] infos = collectInfos(thisTest.getWCPath(), null, null,
                                      Depth.empty, null);
         assertEquals(failureMsg, 1, infos.length);
         infos = collectInfos(thisTest.getWCPath(), null, null, Depth.infinity,
                              null);
         assertEquals(failureMsg, 21, infos.length);
-        for (Info2 info : infos)
+        for (Info info : infos)
         {
             assertNull("Unexpected changelist present",
                        info.getChangelistName());
@@ -3486,13 +3486,13 @@ public class BasicTests extends SVNTests
     }
 
     private class MyInfoCallback implements InfoCallback {
-        private Info2 info;
+        private Info info;
 
-        public void singleInfo(Info2 info) {
+        public void singleInfo(Info info) {
             this.info = info;
         }
 
-        public Info2 getInfo() {
+        public Info getInfo() {
             return info;
         }
     }
@@ -3627,19 +3627,19 @@ public class BasicTests extends SVNTests
         return callback.getDirEntryArray();
     }
 
-    private Info2[] collectInfos(String pathOrUrl, Revision revision,
+    private Info[] collectInfos(String pathOrUrl, Revision revision,
                                  Revision pegRevision, Depth depth,
                                  Collection<String> changelists)
         throws ClientException
     {
-       final List<Info2> infos = new ArrayList<Info2>();
+       final List<Info> infos = new ArrayList<Info>();
        
         client.info2(pathOrUrl, revision, pegRevision, depth, changelists,
                      new InfoCallback () {
-            public void singleInfo(Info2 info)
+            public void singleInfo(Info info)
             { infos.add(info); }           
         });
-        return infos.toArray(new Info2[infos.size()]);
+        return infos.toArray(new Info[infos.size()]);
     }
 
     private LogMessage[] collectLogMessages(String path, Revision pegRevision,

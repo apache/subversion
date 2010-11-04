@@ -177,7 +177,7 @@ CreateJ::ConflictVersion(const svn_wc_conflict_version_t *version)
 }
 
 jobject
-CreateJ::Info2(const char *path, const svn_info_t *info)
+CreateJ::Info(const char *path, const svn_info_t *info)
 {
   JNIEnv *env = JNIUtil::getEnv();
 
@@ -186,7 +186,7 @@ CreateJ::Info2(const char *path, const svn_info_t *info)
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
-  jclass clazz = env->FindClass(JAVA_PACKAGE "/Info2");
+  jclass clazz = env->FindClass(JAVA_PACKAGE "/Info");
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -200,7 +200,7 @@ CreateJ::Info2(const char *path, const svn_info_t *info)
                              "Ljava/lang/String;Ljava/lang/String;"
                              "JJLjava/lang/String;"
                              "L"JAVA_PACKAGE"/Lock;Z"
-                             "L"JAVA_PACKAGE"/Info2$ScheduleKind;"
+                             "L"JAVA_PACKAGE"/Info$ScheduleKind;"
                              "Ljava/lang/String;JJJ"
                              "Ljava/lang/String;Ljava/lang/String;"
                              "Ljava/lang/String;Ljava/lang/String;"

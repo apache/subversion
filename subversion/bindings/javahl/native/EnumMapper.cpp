@@ -132,7 +132,7 @@ jobject EnumMapper::mapNotifyLockState(svn_wc_notify_lock_state_t state)
 jobject EnumMapper::mapScheduleKind(svn_wc_schedule_t schedule)
 {
   // We're assuming a valid value for the C enum above
-  return mapEnum(JAVA_PACKAGE"/Info2$ScheduleKind", (int) schedule);
+  return mapEnum(JAVA_PACKAGE"/Info$ScheduleKind", (int) schedule);
 }
 
 /**
