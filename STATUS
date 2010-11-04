@@ -225,7 +225,7 @@ Candidate changes:
    Votes:
      +1: cmpilato
 
- * r1031165
+ * r1031165, r1031186
    Fix issue #3666 ("Assertion frb->last_filename == NULL fails in 
    libsvn_client/blame.c").
    Justification:
