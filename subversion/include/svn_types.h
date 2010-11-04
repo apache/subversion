@@ -181,13 +181,16 @@ svn_node_kind_to_word(svn_node_kind_t kind);
 svn_node_kind_t
 svn_node_kind_from_word(const char *word);
 
-/** Generic three-state property to represent an unknown value for values that
- * are just like booleans. @since New in 1.7. */
+/** Generic three-state property to represent an unknown value for values
+ * that are just like booleans.  The values have been set deliberately to
+ * make tristates mainly compatible with #svn_boolean_t.
+ *
+ * @since New in 1.7. */
 typedef enum
 {
-  svn_tristate_unknown = 0,
-  svn_tristate_false,
-  svn_tristate_true
+  svn_tristate_false = FALSE,
+  svn_tristate_true = TRUE,
+  svn_tristate_unknown
 } svn_tristate_t;
 
 /** Return a constant string "true", "false" or NULL representing the value of
