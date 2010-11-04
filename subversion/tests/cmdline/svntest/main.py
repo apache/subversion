@@ -1114,7 +1114,7 @@ class TestSpawningThread(threading.Thread):
       self.run_one(next_index)
 
   def run_one(self, index):
-    command = sys.argv[0]
+    command = os.path.join(os.getcwd(), sys.argv[0])
 
     args = []
     args.append(str(index))
