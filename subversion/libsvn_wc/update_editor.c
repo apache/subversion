@@ -5468,6 +5468,18 @@ svn_wc__strictly_is_wc_root(svn_boolean_t *wc_root,
 
 
 svn_error_t *
+svn_wc_get_wc_root(const char **wcroot_abspath,
+                   svn_wc_context_t *wc_ctx,
+                   const char *local_abspath,
+                   apr_pool_t *scratch_pool,
+                   apr_pool_t *result_pool)
+{
+  return svn_wc__db_get_wcroot(wcroot_abspath, wc_ctx->db,
+                               local_abspath, scratch_pool, result_pool);
+}
+
+
+svn_error_t *
 svn_wc_get_actual_target2(const char **anchor,
                           const char **target,
                           svn_wc_context_t *wc_ctx,

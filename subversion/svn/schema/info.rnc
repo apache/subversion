@@ -53,6 +53,7 @@ uuid = element uuid { uuid.type }
 ## Info in the working copy entry.
 wc-info =
   element wc-info {
+    wcroot-abspath?,
     schedule?,
     changelist?,
     copy-from-url?,
