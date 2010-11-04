@@ -64,6 +64,8 @@ wc-info =
     checksum?
   }
 
+wcroot-abspath = element wcroot-abspath { string }
+
 schedule =
   element schedule { "normal" | "add" | "delete" | "replace" | "none" }
 
