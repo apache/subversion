@@ -331,6 +331,7 @@ typedef struct root_vtable_t
                                 svn_fs_root_t *root,
                                 const apr_array_header_t *paths,
                                 svn_mergeinfo_inheritance_t inherit,
+                                svn_boolean_t validate_inherited_mergeinfo,
                                 svn_boolean_t include_descendants,
                                 apr_pool_t *pool);
 } root_vtable_t;

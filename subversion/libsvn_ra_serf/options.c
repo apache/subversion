@@ -571,7 +571,7 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
           APR_ARRAY_PUSH(paths, const char *) = "";
 
           err = svn_ra_serf__get_mergeinfo(ra_session, &ignored, paths, 0,
-                                           FALSE, FALSE, pool);
+                                           FALSE, FALSE, FALSE, pool);
 
           if (err)
             {
