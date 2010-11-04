@@ -4059,11 +4059,6 @@ svn_wc_status_set_repos_locks(void *set_locks_baton,
  *
  * Use @a scratch_pool for temporary allocations.
  *
- * @par Important:
- * This is a variant of svn_wc_add4().  No changes will happen
- * to the repository until a commit occurs.  This scheduling can be
- * removed with svn_client_revert4().
- *
  * @since New in 1.7.
  */
 svn_error_t *
@@ -4111,7 +4106,7 @@ svn_wc_copy(const char *src,
             apr_pool_t *pool);
 
 /**
- * Schedule @a local_abspath for deletion, it will be deleted from the
+ * Schedule @a local_abspath for deletion.  It will be deleted from the
  * repository on the next commit.  If @a local_abspath refers to a
  * directory, then a recursive deletion will occur. @a wc_ctx must hold
  * a write lock for the parent of @a local_abspath, @a local_abspath itself
