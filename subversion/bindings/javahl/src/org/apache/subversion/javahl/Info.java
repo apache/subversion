@@ -30,7 +30,7 @@ import java.util.Date;
  * about items in the repository or working copy
  * @since 1.2
  */
-public class Info2 implements java.io.Serializable
+public class Info implements java.io.Serializable
 {
     // Update the serialVersionUID when there is a incompatible change
     // made to this class.  See any of the following, depending upon
@@ -216,7 +216,7 @@ public class Info2 implements java.io.Serializable
      * @param depth
      * @param treeConflict
      */
-    public Info2(String path, String wcroot, String url, long rev, NodeKind kind,
+    public Info(String path, String wcroot, String url, long rev, NodeKind kind,
           String reposRootUrl, String reposUUID, long lastChangedRev,
           long lastChangedDate, String lastChangedAuthor, Lock lock,
           boolean hasWcInfo, ScheduleKind schedule, String copyFromUrl,

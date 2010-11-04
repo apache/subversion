@@ -250,7 +250,7 @@ public class Info2 implements java.io.Serializable
     /**
      * A backward-compat constructor.
      */
-    public Info2(org.apache.subversion.javahl.Info2 aInfo)
+    public Info2(org.apache.subversion.javahl.Info aInfo)
     {
         this(aInfo.getPath(), aInfo.getUrl(), aInfo.getRev(),
              NodeKind.fromApache(aInfo.getKind()),
