@@ -4053,9 +4053,8 @@ svn_wc_status_set_repos_locks(void *set_locks_baton,
  * various points during the operation.  If it returns an error
  * (typically #SVN_ERR_CANCELLED), return that error immediately.
  *
- * For each file or directory copied, @a notify_func will be called
- * with its path and the @a notify_baton.  @a notify_func may be @c NULL
- * if you are not interested in this information.
+ * If @a notify_func is non-NULL, call it with @a notify_baton and the path
+ * of the root node (only) of the destination.
  *
  * Use @a scratch_pool for temporary allocations.
  *
