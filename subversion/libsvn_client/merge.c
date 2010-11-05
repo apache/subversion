@@ -3300,6 +3300,10 @@ fix_deleted_subtree_ranges(const char *url1,
    If IMPLICIT_MERGEINFO is not NULL then set *IMPLICIT_MERGEINFO
    to TARGET_ABSPATH's implicit mergeinfo (a.k.a. natural history).
 
+   If both RECORDED_MERGEINFO and IMPLICIT_MERGEINFO are not NULL and
+   *RECORDED_MERGEINFO is inherited, then *IMPLICIT_MERGEINFO will be
+   removed from *RECORDED_MERGEINFO.
+
    If INDIRECT is not NULL set *INDIRECT to TRUE if *RECORDED_MERGEINFO
    is inherited and not explicit.  If RECORDED_MERGEINFO is NULL then
    INDIRECT is ignored.
@@ -3325,11 +3329,11 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
                    apr_pool_t *result_pool,
                    apr_pool_t *scratch_pool)
 {
+  svn_boolean_t inherited = FALSE;
+
   /* First, we get the real mergeinfo. */
   if (recorded_mergeinfo)
     {
-      svn_boolean_t inherited;
-
       /* ### FIXME: There's probably an RA session we could/should be
          ### using here instead of having this function possibly spawn
          ### yet another one.  */
@@ -3337,7 +3341,7 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
                                                     &inherited, FALSE,
                                                     inherit, NULL,
                                                     target_abspath,
-                                                    ctx, result_pool));
+                                                    ctx, scratch_pool));
       if (indirect)
         *indirect = inherited;
     }
@@ -3427,6 +3431,21 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
           SVN_ERR(svn_ra_reparent(ra_session, session_url, scratch_pool));
         }
     } /*if (implicit_mergeinfo) */
+
+
+  if (recorded_mergeinfo && *recorded_mergeinfo)
+    {
+      /* Issue #3668: Remove any self-referential mergeinfo from that
+         which TARGET_ABSPATH inherited. */
+      if (implicit_mergeinfo && inherited)
+        SVN_ERR(svn_mergeinfo_remove2(recorded_mergeinfo,
+                                      *implicit_mergeinfo,
+                                      *recorded_mergeinfo, FALSE,
+                                      result_pool, scratch_pool));
+      else
+        *recorded_mergeinfo = svn_mergeinfo_dup(*recorded_mergeinfo,
+          result_pool);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -4258,7 +4277,7 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
         svn_mergeinfo_inherited, ra_session,
         child->abspath,
         MAX(revision1, revision2),
-        MIN(revision1, revision2),
+        0, /* Get all implicit mergeinfo */
         merge_b->ctx, pool, pool));
 
       /* If CHILD isn't the merge target find its parent. */
@@ -6643,7 +6662,7 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
                                  &indirect, svn_mergeinfo_inherited,
                                  merge_b->ra_session1, target_abspath,
                                  MAX(revision1, revision2),
-                                 MIN(revision1, revision2),
+                                 0, /* Get all implicit mergeinfo */
                                  ctx, scratch_pool, scratch_pool));
 
       SVN_ERR(svn_ra_reparent(merge_b->ra_session1, url1, scratch_pool));
