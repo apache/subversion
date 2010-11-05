@@ -3290,6 +3290,86 @@ fix_deleted_subtree_ranges(const char *url1,
 
 /*** Determining What Remains To Be Merged ***/
 
+
+/* Set *INVALID_INHERITED_MERGEINFO to the mergeinfo that working copy path
+   TARGET_ABSPATH inherits, less any merge source path-revisions that don't
+   actually exist in the repository.  If all inherited mergeinfo describes
+   non-existent paths, then *INVALID_INHERITED_MERGEINFO is set to an empty
+   hash.  If TARGET_ABSPATH inherits no mergeinfo whatsoever (pre-validation),
+   then *INVALID_INHERITED_MERGEINFO is set to NULL.
+
+   RA_SESSION is an open session that points to TARGET_ABSPATH's repository
+   location or to the location of one of TARGET_ABSPATH's parents.  It may
+   be temporarily reparented.
+
+   RESULT_POOL is used to allocate *INVALID_INHERITED_MERGEINFO, SCRATCH_POOL
+   is used for any temporary allocations. */
+static svn_error_t *
+get_invalid_inherited_mergeinfo(svn_mergeinfo_t *invalid_inherited_mergeinfo,
+                                svn_ra_session_t *ra_session,
+                                const char *target_abspath,
+                                svn_client_ctx_t *ctx,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool)
+{
+  svn_mergeinfo_t repos_raw_inherited;
+  svn_mergeinfo_t repos_validated_inherited;
+  svn_revnum_t base_revision;
+
+  /* Our starting assumption. */ 
+  *invalid_inherited_mergeinfo = NULL;
+
+  SVN_ERR(svn_wc__node_get_base_rev(&base_revision, ctx->wc_ctx,
+                                    target_abspath, scratch_pool));
+
+  /* If there is no base revision then TARGET_ABSPATH doesn't exist
+     in the repository yet, so we're done. */
+  if (SVN_IS_VALID_REVNUM(base_revision))
+    {
+      const char *target_url;
+      const char *session_url;
+
+      /* Reparent RA_SESSION if necessary. */
+      SVN_ERR(svn_wc__node_get_url(&target_url, ctx->wc_ctx, target_abspath,
+                                   scratch_pool, scratch_pool));
+      SVN_ERR(svn_client__ensure_ra_session_url(&session_url, ra_session,
+                                                target_url, scratch_pool));
+
+      /* Contact the repository to derive the portion of
+         TARGET_ABSPATH's inherited mergeinfo which is non-existent
+         and remove it from */
+      SVN_ERR(svn_client__get_repos_mergeinfo(
+        ra_session, &repos_raw_inherited, "", base_revision,
+        svn_mergeinfo_inherited, TRUE,
+        FALSE, /* validate_inherited_mergeinfo */
+        scratch_pool));
+
+      if (repos_raw_inherited == NULL)
+        {
+          *invalid_inherited_mergeinfo = NULL;
+        }
+      else if (apr_hash_count(repos_raw_inherited) == 0)
+        {
+          *invalid_inherited_mergeinfo = apr_hash_make(result_pool);
+        }
+      else
+        {
+          SVN_ERR(svn_client__get_repos_mergeinfo(
+            ra_session, &repos_validated_inherited, "", base_revision,
+            svn_mergeinfo_inherited, TRUE,
+            TRUE, /* validate_inherited_mergeinfo */
+            scratch_pool));
+          SVN_ERR(svn_mergeinfo_remove2(invalid_inherited_mergeinfo,
+                                        repos_validated_inherited,
+                                        repos_raw_inherited, FALSE,
+                                        result_pool, scratch_pool));
+        }
+      SVN_ERR(svn_client__ensure_ra_session_url(&session_url, ra_session,
+                                                session_url, scratch_pool));
+    }
+  return SVN_NO_ERROR;
+}
+
 /* Get explicit and/or implicit mergeinfo for the working copy path
    TARGET_ABSPATH.
 
@@ -3314,6 +3394,9 @@ fix_deleted_subtree_ranges(const char *url1,
    is older than START, then the base revision is used as the younger
    bound in place of START.
 
+   RA_SESSION is an open session that may be temporarily reparented as
+   needed by this function.
+
    Allocate *RECORDED_MERGEINFO and *IMPLICIT_MERGEINFO in RESULT_POOL.
    Use SCRATCH_POOL for any temporary allocations. */
 static svn_error_t *
@@ -3331,8 +3414,10 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
 {
   svn_boolean_t inherited = FALSE;
 
-  /* First, we get the real mergeinfo. */
-  if (recorded_mergeinfo)
+  /* First, we get the real mergeinfo.  We use SCRATCH_POOL throughout this
+     block because we'll make a final copy of *RECORDED_MERGEINFO only after
+     removing any self-referential mergeinfo. */
+if (recorded_mergeinfo)
     {
       /* ### FIXME: There's probably an RA session we could/should be
          ### using here instead of having this function possibly spawn
@@ -3344,6 +3429,25 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
                                                     ctx, scratch_pool));
       if (indirect)
         *indirect = inherited;
+
+      /* Issue #3669: Remove any non-existent mergeinfo sources
+         from TARGET_ABSPATH's inherited mergeinfo. */
+      if (inherited)
+        {
+          svn_mergeinfo_t invalid_inherited_mergeinfo;
+
+          SVN_ERR(get_invalid_inherited_mergeinfo(&invalid_inherited_mergeinfo,
+                                                  ra_session, target_abspath,
+                                                  ctx, scratch_pool,
+                                                  scratch_pool));
+
+          if (invalid_inherited_mergeinfo
+              && apr_hash_count(invalid_inherited_mergeinfo))
+            SVN_ERR(svn_mergeinfo_remove2(recorded_mergeinfo,
+                                          invalid_inherited_mergeinfo,
+                                          *recorded_mergeinfo, FALSE,
+                                          scratch_pool, scratch_pool));
+        }
     }
 
   if (implicit_mergeinfo)
@@ -3351,7 +3455,6 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
       const char *session_url = NULL, *url;
       svn_revnum_t target_rev;
       svn_opt_revision_t peg_revision;
-      apr_pool_t *sesspool = NULL;
       svn_error_t *err;
 
       /* Assert that we have sane input. */
@@ -3359,10 +3462,12 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
                  && SVN_IS_VALID_REVNUM(end)
                  && (start > end));
 
+      *implicit_mergeinfo = NULL;
+
       peg_revision.kind = svn_opt_revision_working;
       err = svn_client__derive_location(&url, &target_rev, target_abspath,
                                         &peg_revision, ra_session,
-                                        ctx, result_pool, scratch_pool);
+                                        ctx, scratch_pool, scratch_pool);
 
       if (err)
         {
@@ -3375,7 +3480,6 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
                * mergeinfo is empty. */
               svn_error_clear(err);
               *implicit_mergeinfo = apr_hash_make(result_pool);
-              return SVN_NO_ERROR;
             }
           else
             return svn_error_return(err);
@@ -3386,49 +3490,37 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
           /* We're asking about a range outside our natural history
              altogether.  That means our implicit mergeinfo is empty. */
           *implicit_mergeinfo = apr_hash_make(result_pool);
-          return SVN_NO_ERROR;
         }
 
-      /* Temporarily point our RA_SESSION at our target URL so we can
-         fetch so-called "implicit mergeinfo" (that is, natural history). */
-      if (ra_session)
+      if (*implicit_mergeinfo == NULL)
         {
-          SVN_ERR(svn_client__ensure_ra_session_url(&session_url, ra_session,
-                                                    url, scratch_pool));
-        }
-      else
-        {
-          SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, url,
-                                                       NULL, NULL,
-                                                       FALSE, TRUE,
-                                                       ctx, scratch_pool));
-        }
+          /* Temporarily point our RA_SESSION at our target URL so we can
+             fetch so-called "implicit mergeinfo" (that is, natural
+             history). */
+          SVN_ERR(svn_client__ensure_ra_session_url(&session_url,
+                                                    ra_session, url,
+                                                    scratch_pool));
 
-      /* Do not ask for implicit mergeinfo from TARGET_ABSPATH's future.
-         TARGET_ABSPATH might not even exist, and even if it does the
-         working copy is *at* TARGET_REV so its implicit history ends
-         at TARGET_REV! */
-      if (target_rev < start)
-        start = target_rev;
+          /* Do not ask for implicit mergeinfo from TARGET_ABSPATH's future.
+             TARGET_ABSPATH might not even exist, and even if it does the
+             working copy is *at* TARGET_REV so its implicit history ends
+             at TARGET_REV! */
+          if (target_rev < start)
+            start = target_rev;
 
-      /* Fetch the implicit mergeinfo. */
-      peg_revision.kind = svn_opt_revision_number;
-      peg_revision.value.number = target_rev;
-      SVN_ERR(svn_client__get_history_as_mergeinfo(implicit_mergeinfo, url,
-                                                   &peg_revision, start, end,
-                                                   ra_session, ctx,
-                                                   result_pool));
+          /* Fetch the implicit mergeinfo. */
+          peg_revision.kind = svn_opt_revision_number;
+          peg_revision.value.number = target_rev;
+          SVN_ERR(svn_client__get_history_as_mergeinfo(implicit_mergeinfo,
+                                                       url, &peg_revision,
+                                                       start, end,
+                                                       ra_session, ctx,
+                                                       result_pool));
 
-      /* If we created an RA_SESSION above, destroy it.  Otherwise, if
-         reparented an existing session, point it back where it was when
-         we were called. */
-      if (sesspool)
-        {
-          svn_pool_destroy(sesspool);
-        }
-      else if (session_url)
-        {
-          SVN_ERR(svn_ra_reparent(ra_session, session_url, scratch_pool));
+          /* Return RA_SESSION back to where it was when we were called. */
+         SVN_ERR(svn_client__ensure_ra_session_url(&session_url,
+                                                   ra_session, session_url,
+                                                   scratch_pool)); 
         }
     } /*if (implicit_mergeinfo) */
 
