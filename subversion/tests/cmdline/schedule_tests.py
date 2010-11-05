@@ -71,7 +71,7 @@ def add_files(sbox):
   svntest.main.file_append(zeta_path, "This is the file 'zeta'.")
   svntest.main.file_append(epsilon_path, "This is the file 'epsilon'.")
 
-  sbox.simple_add(delta_path, zeta_path, epsilon_path)
+  sbox.simple_add('delta', 'A/B/zeta', 'A/D/G/epsilon')
 
   # Make sure the adds show up as such in status
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -100,7 +100,7 @@ def add_directories(sbox):
   os.mkdir(Y_path)
   os.mkdir(Z_path)
 
-  sbox.simple_add(X_path, Y_path, Z_path)
+  sbox.simple_add('X', 'A/C/Y', 'A/D/H/Z')
 
   # Make sure the adds show up as such in status
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -150,7 +150,7 @@ def nested_adds(sbox):
   svntest.main.file_append(zeta_path, "This is the file 'zeta'.")
 
   # Finally, let's try adding our new files and directories
-  sbox.simple_add(X_path, Y_path, Z_path)
+  sbox.simple_add('X', 'A/C/Y', 'A/D/H/Z')
 
   # Make sure the adds show up as such in status
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -177,19 +177,19 @@ def add_executable(sbox):
   sbox.build(read_only = True)
 
   def runTest(wc_dir, fileName, perm, executable):
-    fileName = sbox.ospath(fileName)
+    file_ospath = sbox.ospath(fileName)
     if executable:
       expected_out = ["*\n"]
     else:
       expected_out = []
 
     # create an empty file
-    open(fileName, "w")
+    open(file_ospath, "w")
 
-    os.chmod(fileName, perm)
+    os.chmod(file_ospath, perm)
     sbox.simple_add(fileName)
     svntest.actions.run_and_verify_svn(None, expected_out, [],
-                                       'propget', "svn:executable", fileName)
+                                       'propget', "svn:executable", file_ospath)
 
   test_cases = [
     ("all_exe",   0777, 1),
@@ -210,12 +210,7 @@ def delete_files(sbox):
   wc_dir = sbox.wc_dir
 
   # Schedule some files for deletion
-  iota_path = sbox.ospath('iota')
-  mu_path = sbox.ospath('A/mu')
-  rho_path = sbox.ospath('A/D/G/rho')
-  omega_path = sbox.ospath('A/D/H/omega')
-
-  sbox.simple_rm(iota_path, mu_path, rho_path, omega_path)
+  sbox.simple_rm('iota', 'A/mu', 'A/D/G/rho', 'A/D/H/omega')
 
   # Make sure the deletes show up as such in status
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -233,17 +228,7 @@ def delete_dirs(sbox):
   wc_dir = sbox.wc_dir
 
   # Schedule some directories for deletion (this is recursive!)
-  E_path = sbox.ospath('A/B/E')
-  F_path = sbox.ospath('A/B/F')
-  H_path = sbox.ospath('A/D/H')
-  alpha_path = sbox.ospath('A/B/E/alpha')
-  beta_path  = sbox.ospath('A/B/E/beta')
-  chi_path   = sbox.ospath('A/D/H/chi')
-  omega_path = sbox.ospath('A/D/H/omega')
-  psi_path   = sbox.ospath('A/D/H/psi')
-
-  # Now, delete (recursively) the directories.
-  sbox.simple_rm(E_path, F_path, H_path)
+  sbox.simple_rm('A/B/E', 'A/B/F', 'A/D/H')
 
   # Make sure the deletes show up as such in status
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -430,8 +415,8 @@ def unschedule_missing_added(sbox):
 
   svntest.main.file_append(file1_path, "This is the file 'file1'.")
   svntest.main.file_append(file2_path, "This is the file 'file2'.")
-  sbox.simple_add(file1_path, file2_path)
-  sbox.simple_mkdir(dir1_path, dir2_path)
+  sbox.simple_add('file1', 'file2')
+  sbox.simple_mkdir('dir1', 'dir2')
 
   # Make sure the 4 adds show up as such in status
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -456,8 +441,8 @@ def unschedule_missing_added(sbox):
   svntest.main.run_svn(svntest.verify.AnyOutput, 'rm', file1_path)
   ### actually, the stub does not provide enough information to revert
   ### the addition, so this command will fail. marking as XFail
-  sbox.simple_rm(dir1_path)
-  sbox.simple_revert(file2_path, dir2_path)
+  sbox.simple_rm('dir1')
+  sbox.simple_revert('file2', 'dir2')
 
   # 'svn st' should now show absolutely zero local mods.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -483,7 +468,7 @@ def delete_missing(sbox):
   svntest.main.safe_rmtree(H_path)
 
   # Now schedule them for deletion anyway, and make sure no error is output.
-  sbox.simple_rm(mu_path, H_path)
+  sbox.simple_rm('A/mu', 'A/D/H')
 
   # Commit the deletions.
   expected_output = svntest.wc.State(wc_dir, {
@@ -546,11 +531,11 @@ def status_add_deleted_directory(sbox):
 
   A_path = sbox.ospath('A')
 
-  sbox.simple_rm(A_path)
+  sbox.simple_rm('A')
   svntest.main.safe_rmtree(A_path)
   sbox.simple_commit()
 
-  sbox.simple_mkdir(A_path)
+  sbox.simple_mkdir('A')
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status = svntest.wc.State(wc_dir,

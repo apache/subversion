@@ -4588,7 +4588,7 @@ def changed_data_should_match_checkout(sbox):
 
   svntest.actions.run_and_verify_svn(None, None, [], 'copy', A_B_E, E_new)
 
-  sbox.simple_commit(wc_dir)
+  sbox.simple_commit()
 
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
@@ -4618,7 +4618,7 @@ def changed_dir_data_should_match_checkout(sbox):
 
   svntest.actions.run_and_verify_svn(None, None, [], 'copy', A_B, B_new)
 
-  sbox.simple_commit(wc_dir)
+  sbox.simple_commit()
 
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
