@@ -4835,6 +4835,28 @@ def delete_replace_delete(sbox):
   # Currently fails because pi, rho, tau get left behind
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+def copy_repos_over_deleted_same_kind(sbox):
+  "copy repos node over deleted node, same kind"
+  sbox.build(read_only = True)
+
+  main.run_svn(None, 'rm', os.path.join(sbox.wc_dir, 'iota'),
+                           os.path.join(sbox.wc_dir, 'A/B'))
+  main.run_svn(None, 'cp', sbox.repo_url + '/A/mu',
+               os.path.join(sbox.wc_dir, 'iota'))
+  main.run_svn(None, 'cp', sbox.repo_url + '/A/D',
+               os.path.join(sbox.wc_dir, 'A/B'))
+
+def copy_repos_over_deleted_other_kind(sbox):
+  "copy repos node over deleted node, other kind"
+  sbox.build(read_only = True)
+
+  main.run_svn(None, 'rm', os.path.join(sbox.wc_dir, 'iota'),
+                           os.path.join(sbox.wc_dir, 'A/B'))
+  main.run_svn(None, 'cp', sbox.repo_url + '/iota',
+               os.path.join(sbox.wc_dir, 'A/B'))
+  main.run_svn(None, 'cp', sbox.repo_url + '/A/B',
+               os.path.join(sbox.wc_dir, 'iota'))
+
 
 ########################################################################
 # Run the tests
@@ -4934,6 +4956,8 @@ test_list = [ None,
               copy_delete_delete,
               XFail(copy_delete_revert),
               delete_replace_delete,
+              copy_repos_over_deleted_same_kind,
+              XFail(copy_repos_over_deleted_other_kind),
              ]
 
 if __name__ == '__main__':
