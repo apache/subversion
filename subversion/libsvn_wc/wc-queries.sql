@@ -72,6 +72,13 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0
 ORDER BY op_depth DESC
 LIMIT 1;
 
+-- STMT_SELECT_LOWEST_WORKING_NODE
+SELECT op_depth, presence
+FROM nodes
+WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0
+ORDER BY op_depth
+LIMIT 1;
+
 -- STMT_SELECT_ACTUAL_NODE
 SELECT prop_reject, changelist, conflict_old, conflict_new,
 conflict_working, tree_conflict_data, properties, conflict_data
@@ -473,7 +480,7 @@ VALUES (?1, ?2, 0,
         ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16);
 
 -- STMT_INSERT_WORKING_NODE_FROM_BASE
-INSERT INTO nodes (
+INSERT OR REPLACE INTO nodes (
     wc_id, local_relpath, op_depth, parent_relpath, presence, kind, checksum,
     changed_revision, changed_date, changed_author, depth, symlink_target,
     translated_size, last_mod_time, properties)
