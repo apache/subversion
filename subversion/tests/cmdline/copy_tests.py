@@ -4835,9 +4835,9 @@ def delete_replace_delete(sbox):
   # Currently fails because pi, rho, tau get left behind
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-A_B_children = ('A/B/lambda', 'A/B/F', 'A/B/E/alpha', 'A/B/E/beta', 'A/B/E')
-A_D_children = ('A/D/gamma', 'A/D/G', 'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau',
-                'A/D/H', 'A/D/H/chi', 'A/D/H/psi', 'A/D/H/omega')
+A_B_children = ['A/B/lambda', 'A/B/F', 'A/B/E/alpha', 'A/B/E/beta', 'A/B/E']
+A_D_children = ['A/D/gamma', 'A/D/G', 'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau',
+                'A/D/H', 'A/D/H/chi', 'A/D/H/psi', 'A/D/H/omega']
 
 def copy_repos_over_deleted_same_kind(sbox):
   "copy repos node over deleted node, same kind"
@@ -4846,7 +4846,8 @@ def copy_repos_over_deleted_same_kind(sbox):
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
   main.run_svn(None, 'rm', os.path.join(sbox.wc_dir, 'iota'),
                            os.path.join(sbox.wc_dir, 'A/B'))
-  expected_status.tweak('iota', 'A/B', *A_B_children, status='D ')
+  for path in ['iota', 'A/B'] + A_B_children:
+    expected_status.tweak(path, status='D ')
   main.run_svn(None, 'cp', sbox.repo_url + '/A/mu',
                os.path.join(sbox.wc_dir, 'iota'))
   expected_status.tweak('iota', status='R ', wc_rev='-', copied='+')
@@ -4865,7 +4866,8 @@ def copy_repos_over_deleted_other_kind(sbox):
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
   main.run_svn(None, 'rm', os.path.join(sbox.wc_dir, 'iota'),
                            os.path.join(sbox.wc_dir, 'A/B'))
-  expected_status.tweak('iota', 'A/B', *A_B_children, status='D ')
+  for path in ['iota', 'A/B'] + A_B_children:
+    expected_status.tweak(path, status='D ')
   main.run_svn(None, 'cp', sbox.repo_url + '/iota',
                os.path.join(sbox.wc_dir, 'A/B'))
   expected_status.tweak('A/B', status='R ', wc_rev='-', copied='+')
@@ -4885,7 +4887,8 @@ def copy_wc_over_deleted_same_kind(sbox):
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
   main.run_svn(None, 'rm', os.path.join(sbox.wc_dir, 'iota'),
                            os.path.join(sbox.wc_dir, 'A/B'))
-  expected_status.tweak('iota', 'A/B', *A_B_children, status='D ')
+  for path in ['iota', 'A/B'] + A_B_children:
+    expected_status.tweak(path, status='D ')
   main.run_svn(None, 'cp', os.path.join(sbox.wc_dir, 'A/mu'),
                os.path.join(sbox.wc_dir, 'iota'))
   expected_status.tweak('iota', status='R ', wc_rev='-', copied='+')
@@ -4904,7 +4907,8 @@ def copy_wc_over_deleted_other_kind(sbox):
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
   main.run_svn(None, 'rm', os.path.join(sbox.wc_dir, 'iota'),
                            os.path.join(sbox.wc_dir, 'A/B'))
-  expected_status.tweak('iota', 'A/B', *A_B_children, status='D ')
+  for path in ['iota', 'A/B'] + A_B_children:
+    expected_status.tweak(path, status='D ')
   main.run_svn(None, 'cp', os.path.join(sbox.wc_dir, 'A/mu'),
                os.path.join(sbox.wc_dir, 'A/B'))
   expected_status.tweak('A/B', status='R ', wc_rev='-', copied='+')
