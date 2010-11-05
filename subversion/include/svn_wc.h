@@ -4230,23 +4230,6 @@ svn_wc_add_from_disk(svn_wc_context_t *wc_ctx,
                      apr_pool_t *scratch_pool);
 
 /**
- * Convert the nested pristine working copy rooted at @a local_abspath into
- * a copied subtree in the outer working copy.
- *
- * @a local_abspath must be the root of a nested working copy that has no
- * local modifications.  The parent directory of @a local_abspath must be a
- * versioned directory in the outer WC, and must belong to the same
- * repository as the nested WC.  The nested WC will be integrated into the
- * parent's WC, and will no longer be a separate WC.
- *
- * This is a replacement for svn_wc_add4() case 1.
- */
-svn_error_t *
-svn_wc__integrate_nested_wc_as_copy(svn_wc_context_t *wc_ctx,
-                                    const char *local_abspath,
-                                    apr_pool_t *scratch_pool);
-
-/**
  * Put @a local_abspath under version control by registering it as addition
  * or copy in the database containing its parent. The new node is scheduled
  * for addition to the repository below its parent node.
@@ -4283,7 +4266,7 @@ svn_wc__integrate_nested_wc_as_copy(svn_wc_context_t *wc_ctx,
  * When the @a local_abspath has been added, then @a notify_func will be
  * called (if it is not @c NULL) with the @a notify_baton and the path.
  *
- * @note For case 1, prefer svn_wc__integrate_nested_wc_as_copy().
+ * @note Case 1 is deprecated. Consider doing a WC-to-WC copy instead.
  * @note For case 2a, prefer svn_wc_add_from_disk().
  *
  * @since New in 1.7.
@@ -4475,9 +4458,9 @@ svn_wc_add_repos_file(const char *dst_path,
  * hold a write lock.
  *
  * If @a local_abspath is a file, all its info will be removed from the
- * administrative area.  If @a name is a directory, then the administrative
- * area will be deleted, along with *all* the administrative areas anywhere
- * in the tree below @a adm_access.
+ * administrative area.  If @a local_abspath is a directory, then the
+ * administrative area will be deleted, along with *all* the administrative
+ * areas anywhere in the tree below @a adm_access.
  *
  * Normally, only administrative data is removed.  However, if
  * @a destroy_wf is TRUE, then all working file(s) and dirs are deleted
@@ -5102,7 +5085,7 @@ svn_wc_crawl_revisions(const char *path,
                        apr_pool_t *pool);
 
 
-/* Updates. */
+/* Working copy roots. */
 
 /** Set @a *wc_root to @c TRUE if @a local_abspath represents a "working copy
  * root", @c FALSE otherwise. Here, @a local_abspath is a "working copy root"
@@ -5138,6 +5121,21 @@ svn_wc_is_wc_root(svn_boolean_t *wc_root,
                   svn_wc_adm_access_t *adm_access,
                   apr_pool_t *pool);
 
+/**
+ * Set @a *wcroot_abspath to the local abspath of the root of the
+ * working copy in which @a local_abspath resides.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_get_wc_root(const char **wcroot_abspath,
+                   svn_wc_context_t *wc_ctx,
+                   const char *local_abspath,
+                   apr_pool_t *scratch_pool,
+                   apr_pool_t *result_pool);
+
+
+/* Updates. */
 
 /** Conditionally split @a path into an @a anchor and @a target for the
  * purpose of updating and committing.

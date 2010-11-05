@@ -229,8 +229,8 @@ relocate_externals(const char *local_abspath,
 
 svn_error_t *
 svn_client_relocate2(const char *wcroot_dir,
-                     const char *from,
-                     const char *to,
+                     const char *from_prefix,
+                     const char *to_prefix,
                      svn_boolean_t ignore_externals,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool)
@@ -254,8 +254,8 @@ svn_client_relocate2(const char *wcroot_dir,
   if (ignore_externals)
     {
       return svn_error_return(svn_wc_relocate4(ctx->wc_ctx, local_abspath,
-                                               from, to, validator_func, &vb,
-                                               pool));
+                                               from_prefix, to_prefix,
+                                               validator_func, &vb, pool));
     }
 
   /* Fetch our current root URL. */
@@ -263,7 +263,7 @@ svn_client_relocate2(const char *wcroot_dir,
                                         ctx, pool));
 
   /* Perform the relocation. */
-  SVN_ERR(svn_wc_relocate4(ctx->wc_ctx, local_abspath, from, to,
+  SVN_ERR(svn_wc_relocate4(ctx->wc_ctx, local_abspath, from_prefix, to_prefix,
                            validator_func, &vb, pool));
 
   /* Now fetch new current root URL. */

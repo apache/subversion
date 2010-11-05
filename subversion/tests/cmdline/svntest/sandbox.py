@@ -195,16 +195,10 @@ class Sandbox:
 
   def simple_rm(self, *targets):
     assert len(targets) > 0
-    if len(targets) == 1 and is_url(targets[0]):
-      assert not self.read_only
-      targets = ('-m', svntests.main.make_log_msg(), targets[0])
     svntest.main.run_svn(False, 'rm', *targets)
 
   def simple_mkdir(self, *targets):
     assert len(targets) > 0
-    if len(targets) == 1 and is_url(targets[0]):
-      assert not self.read_only
-      targets = ('-m', svntests.main.make_log_msg(), targets[0])
     svntest.main.run_svn(False, 'mkdir', *targets)
 
   def simple_add(self, *targets):
