@@ -496,17 +496,13 @@ def revert_inside_newly_added_dir(sbox):
   "revert inside a newly added dir"
 
   sbox.build(read_only = True)
-  wc_dir = sbox.wc_dir
-
-  os.chdir(wc_dir)
 
   # Schedule a new directory for addition
-  os.mkdir('foo')
-  sbox.simple_add('foo')
+  sbox.simple_mkdir('foo')
 
   # Now change into the newly added directory, revert and make sure
   # no error is output.
-  os.chdir('foo')
+  os.chdir(sbox.ospath('foo'))
   svntest.main.run_svn(None, 'revert', '.')
 
 #----------------------------------------------------------------------
