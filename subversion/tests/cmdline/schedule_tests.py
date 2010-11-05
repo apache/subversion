@@ -522,7 +522,7 @@ def revert_inside_newly_added_dir(sbox):
   # Now change into the newly added directory, revert and make sure
   # no error is output.
   os.chdir('foo')
-  sbox.simple_revert('.')
+  svntest.main.run_svn(None, 'revert', '.')
 
 #----------------------------------------------------------------------
 # Regression test for issue #1609:
