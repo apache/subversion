@@ -1067,7 +1067,6 @@ svn_fs_validate_mergeinfo(svn_mergeinfo_t *validated_mergeinfo,
 
           for (j = range->start + 1; j <= range->end; j++)
             {
-              const char *path_val;
               apr_hash_t *paths_for_rev = apr_hash_get(rev_to_sources,
                                                        &j,
                                                        sizeof(svn_revnum_t));
@@ -1083,18 +1082,15 @@ svn_fs_validate_mergeinfo(svn_mergeinfo_t *validated_mergeinfo,
                                sizeof(svn_revnum_t), paths_for_rev);
                 }
 
-              /* ### TODO: Do we really need to dup this path? */
-              path_val = apr_pstrdup(scratch_pool, path);
-
-              apr_hash_set(paths_for_rev, path_val, APR_HASH_KEY_STRING,
-                           path_val);
+              apr_hash_set(paths_for_rev, path, APR_HASH_KEY_STRING, path);
             }
         }
     }
 
   iterpool = svn_pool_create(scratch_pool);
 
-  /* Validate the rev->source MERGEINFO equivalent hash. */
+  /* Validate the rev->source MERGEINFO equivalent hash, building the
+     validated mergeinfo as we go. */
   for (hi = apr_hash_first(scratch_pool, rev_to_sources);
        hi;
        hi = apr_hash_next(hi))
@@ -1133,7 +1129,7 @@ svn_fs_validate_mergeinfo(svn_mergeinfo_t *validated_mergeinfo,
                 svn_mergeinfo_t good_mergeinfo_fragment;
 
                 SVN_ERR(svn_mergeinfo_parse(&good_mergeinfo_fragment,
-                                            mergeinfo_str, inner_iterpool));
+                                            mergeinfo_str, scratch_pool));
                 SVN_ERR(svn_mergeinfo_merge(filtered_mergeinfo,
                                             good_mergeinfo_fragment,
                                             scratch_pool));
