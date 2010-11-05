@@ -710,6 +710,84 @@ blank_ibb(insert_base_baton_t *pibb)
 }
 
 
+/* Extend any delete of the parent of LOCAL_RELPATH to LOCAL_RELPATH.
+
+   Given a wc:
+
+              0         1         2         3         4
+              normal
+   A          normal          
+   A/B        normal              normal
+   A/B/C                          not-pres  normal
+   A/B/C/D                                            normal
+
+   That is checkout, delete A/B, copy a replacement A/B, delete copied
+   child A/B/C, add replacement A/B/C, add A/B/C/D.
+
+   Now an update that adds base nodes for A/B/C, A/B/C/D and A/B/C/D/E
+   must extend the A/B deletion:
+   
+              0         1         2         3         4
+              normal
+   A          normal
+   A/B        normal              normal
+   A/B/C      normal              not-pres  normal
+   A/B/C/D    normal              base-del            normal
+   A/B/C/D/E  normal              base-del
+
+   When adding a base node if the parent has a working node then the
+   parent base is deleted and this must be extended to cover new base
+   node.
+
+   In the example above A/B/C/D and A/B/C/D/E are the nodes that get
+   the extended delete, A/B/C is already deleted.
+ */
+static svn_error_t *
+extend_parent_delete(svn_sqlite__db_t *sdb,
+                     apr_int64_t wc_id,
+                     const char *local_relpath,
+                     apr_pool_t *scratch_pool)
+{
+  svn_boolean_t have_row;
+  svn_sqlite__stmt_t *stmt;
+  apr_int64_t parent_op_depth;
+  const char *parent_relpath = svn_relpath_dirname(local_relpath, scratch_pool);
+
+  SVN_ERR_ASSERT(local_relpath[0]);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                    STMT_SELECT_LOWEST_WORKING_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, parent_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (have_row)
+    parent_op_depth = svn_sqlite__column_int64(stmt, 0);
+  SVN_ERR(svn_sqlite__reset(stmt));
+  if (have_row)
+    {
+      apr_int64_t op_depth;
+
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+      if (have_row)
+        op_depth = svn_sqlite__column_int64(stmt, 0);
+      SVN_ERR(svn_sqlite__reset(stmt));
+      if (!have_row || parent_op_depth < op_depth)
+        {
+          SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                          STMT_INSERT_WORKING_NODE_FROM_BASE));
+          SVN_ERR(svn_sqlite__bindf(stmt, "isit", wc_id,
+                                    local_relpath, parent_op_depth,
+                                    presence_map,
+                                    svn_wc__db_status_base_deleted));
+          SVN_ERR(svn_sqlite__update(NULL, stmt));
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+
 /* */
 static svn_error_t *
 insert_base_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
@@ -772,6 +850,10 @@ insert_base_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
                                        pibb->children,
                                        0 /* BASE */,
                                        scratch_pool));
+
+  if (parent_relpath)
+    SVN_ERR(extend_parent_delete(sdb, pibb->wc_id, pibb->local_relpath,
+                                 scratch_pool));
 
   SVN_ERR(add_work_items(sdb, pibb->work_items, scratch_pool));
 
@@ -9457,14 +9539,6 @@ set_new_dir_to_incomplete_txn(void *baton,
   SVN_ERR(create_repos_id(&repos_id, dtb->repos_root_url, dtb->repos_uuid,
                           sdb, scratch_pool));
 
-  /* Delete the base and working node data */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, dtb->pdh->wcroot->sdb,
-                                    STMT_DELETE_NODES));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", dtb->pdh->wcroot->wc_id,
-                            dtb->local_relpath));
-  SVN_ERR(svn_sqlite__step_done(stmt));
-
-  /* Insert the incomplete base node */
   SVN_ERR(svn_sqlite__get_statement(&stmt, dtb->pdh->wcroot->sdb,
                                     STMT_INSERT_NODE));
 
@@ -9485,6 +9559,10 @@ set_new_dir_to_incomplete_txn(void *baton,
     SVN_ERR(svn_sqlite__bind_text(stmt, 9, svn_depth_to_word(dtb->depth)));
 
   SVN_ERR(svn_sqlite__step_done(stmt));
+
+  if (parent_relpath)
+    SVN_ERR(extend_parent_delete(dtb->pdh->wcroot->sdb, dtb->pdh->wcroot->wc_id,
+                                 dtb->local_relpath, scratch_pool));
 
   return SVN_NO_ERROR;
 }

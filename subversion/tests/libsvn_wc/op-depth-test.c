@@ -200,6 +200,21 @@ wc_commit(wc_baton_t *b, const char *path)
                             NULL, NULL, NULL, NULL, ctx, b->pool);
 }
 
+static svn_error_t *
+wc_update(wc_baton_t *b, const char *path, svn_revnum_t revnum)
+{
+  svn_client_ctx_t *ctx;
+  apr_array_header_t *result_revs;
+  apr_array_header_t *paths = apr_array_make(b->pool, 1,
+                                             sizeof(const char *));
+  svn_opt_revision_t revision = { svn_opt_revision_number, { revnum } };
+
+  APR_ARRAY_PUSH(paths, const char *) = wc_path(b, path);
+  SVN_ERR(svn_client_create_context(&ctx, b->pool));
+  return svn_client_update3(&result_revs, paths, &revision, svn_depth_infinity,
+                            TRUE, FALSE, FALSE, ctx, b->pool);
+}
+
 /* Create the Greek tree on disk in the WC, and commit it. */
 static svn_error_t *
 add_and_commit_greek_tree(wc_baton_t *b)
@@ -956,6 +971,52 @@ test_repo_wc_copies(const svn_test_opts_t *opts, apr_pool_t *pool)
   return repo_wc_copies(&b);
 }
 
+static svn_error_t *
+test_delete_with_update(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  wc_baton_t b;
+
+  b.pool = pool;
+  SVN_ERR(svn_test__create_repos_and_wc(&b.repos_url, &b.wc_abspath,
+                                        "delete_with_update", opts, pool));
+  SVN_ERR(svn_wc_context_create(&b.wc_ctx, NULL, pool, pool));
+  SVN_ERR(wc_mkdir(&b, "A"));
+  SVN_ERR(wc_commit(&b, ""));
+  SVN_ERR(wc_mkdir(&b, "A/B"));
+  SVN_ERR(wc_mkdir(&b, "A/B/C"));
+  SVN_ERR(wc_commit(&b, ""));
+  SVN_ERR(wc_update(&b, "", 1));
+
+  SVN_ERR(wc_delete(&b, "A"));
+  SVN_ERR(wc_mkdir(&b, "A"));
+  SVN_ERR(wc_mkdir(&b, "A/B"));
+  {
+    nodes_row_t rows[] = {
+      { 0, "A",       "normal",        1, "A"},
+      { 1, "A",       "normal",        NO_COPY_FROM},
+      { 2, "A/B",     "normal",        NO_COPY_FROM},
+      { 0 }
+    };
+    SVN_ERR(check_db_rows(&b, "A", rows));
+  }
+  SVN_ERR(wc_update(&b, "", 2));
+  {
+    nodes_row_t rows[] = {
+      { 0, "A",       "normal",        2, "A"},
+      { 0, "A/B",     "normal",        2, "A/B"},
+      { 0, "A/B/C",   "normal",        2, "A/B/C"},
+      { 1, "A",       "normal",        NO_COPY_FROM},
+      { 1, "A/B",     "base-deleted",  NO_COPY_FROM},
+      { 1, "A/B/C",   "base-deleted",  NO_COPY_FROM},
+      { 2, "A/B",     "normal",        NO_COPY_FROM},
+      { 0 }
+    };
+    SVN_ERR(check_db_rows(&b, "A", rows));
+  }
+
+  return SVN_NO_ERROR;
+}
+
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
 
@@ -982,6 +1043,9 @@ struct svn_test_descriptor_t test_funcs[] =
                        "needs op_depth"),
     SVN_TEST_OPTS_WIMP(test_repo_wc_copies,
                        "test_repo_wc_copies",
+                       "needs op_depth"),
+    SVN_TEST_OPTS_WIMP(test_delete_with_update,
+                       "test_test_delete_with_update",
                        "needs op_depth"),
     SVN_TEST_NULL
   };
