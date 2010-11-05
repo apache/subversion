@@ -1795,11 +1795,8 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
   lock_abspath = top_dst_path;
   if (copy_pairs->nelts == 1)
     {
-      svn_node_kind_t kind;
       top_src_url = svn_uri_dirname(top_src_url, pool);
-      SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, top_dst_path, FALSE, pool));
-      if (kind != svn_node_dir)
-        lock_abspath = svn_dirent_dirname(top_dst_path, pool);
+      lock_abspath = svn_dirent_dirname(top_dst_path, pool);
     }
 
   /* Open a repository session to the longest common src ancestor.  We do not

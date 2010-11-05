@@ -5021,7 +5021,7 @@ test_list = [ None,
               XFail(copy_delete_revert),
               delete_replace_delete,
               copy_repos_over_deleted_same_kind,
-              XFail(copy_repos_over_deleted_other_kind),
+              copy_repos_over_deleted_other_kind,
               copy_wc_over_deleted_same_kind,
               copy_wc_over_deleted_other_kind,
              ]
