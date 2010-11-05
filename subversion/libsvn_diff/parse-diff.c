@@ -190,6 +190,7 @@ parse_hunk_header(const char *header, svn_diff_hunk_t *hunk,
                   const char *atat, apr_pool_t *pool)
 {
   const char *p;
+  const char *start;
   svn_stringbuf_t *range;
 
   p = header + strlen(atat);
@@ -202,15 +203,17 @@ parse_hunk_header(const char *header, svn_diff_hunk_t *hunk,
     return FALSE;
   /* OK, this may be worth allocating some memory for... */
   range = svn_stringbuf_create_ensure(31, pool);
-  p++;
+  start = ++p;
   while (*p && *p != ' ')
     {
-      svn_stringbuf_appendbyte(range, *p);
       p++;
     }
+
   if (*p != ' ')
     /* No no no... */
     return FALSE;
+
+  svn_stringbuf_appendbytes(range, start, p - start);
 
   /* Try to parse the first range. */
   if (! parse_range(&hunk->original_start, &hunk->original_length, range->data))
@@ -223,15 +226,16 @@ parse_hunk_header(const char *header, svn_diff_hunk_t *hunk,
     /* Eeek! */
     return FALSE;
   /* OK, this may be worth copying... */
-  p++;
+  start = ++p;
   while (*p && *p != ' ')
     {
-      svn_stringbuf_appendbyte(range, *p);
       p++;
     }
   if (*p != ' ')
     /* No no no... */
     return FALSE;
+
+  svn_stringbuf_appendbytes(range, start, p - start);
 
   /* Check for trailing @@ */
   p++;

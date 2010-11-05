@@ -144,7 +144,7 @@ public class Info implements java.io.Serializable
     /**
      * A backward-compat constructor
      */
-    public Info(org.apache.subversion.javahl.Info2 aInfo)
+    public Info(org.apache.subversion.javahl.Info aInfo)
     {
         this((new File(aInfo.getPath())).getName(), aInfo.getUrl(),
              aInfo.getReposUUID(), aInfo.getReposRootUrl(),
@@ -153,7 +153,7 @@ public class Info implements java.io.Serializable
              aInfo.getLastChangedAuthor(), aInfo.getRev(),
              aInfo.getLastChangedRev(), aInfo.getLastChangedDate(),
              aInfo.getTextTime(), aInfo.getPropTime(), aInfo.getCopyFromUrl() != null,
-             aInfo.getSchedule() == org.apache.subversion.javahl.Info2.ScheduleKind.delete,
+             aInfo.getSchedule() == org.apache.subversion.javahl.Info.ScheduleKind.delete,
              checkAbsent(aInfo.getPath()), checkIncomplete(aInfo.getPath()),
              aInfo.getCopyFromRev(), aInfo.getCopyFromUrl());
     }
