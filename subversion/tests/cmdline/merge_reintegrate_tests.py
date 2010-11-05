@@ -1997,7 +1997,7 @@ def added_subtrees_with_mergeinfo_break_reintegrate(sbox):
     })
   expected_mergeinfo_output = wc.State(A_path, {
     ''     : Item(status=' U'),
-    'C/nu' : Item(status=' G'),
+    'C/nu' : Item(status=' U'),
     })
   expected_elision_output = wc.State(A_path, {
     })

@@ -155,7 +155,12 @@ svn_client__get_wc_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
 
    If there is no mergeinfo available for REL_PATH, or if the server
    doesn't support a mergeinfo capability and SQUELCH_INCAPABLE is
-   TRUE, set *TARGET_MERGEINFO to NULL. */
+   TRUE, set *TARGET_MERGEINFO to NULL.
+
+   If the *TARGET_MERGEINFO for REL_PATH path is inherited and
+   VALIDATE_INHERITED_MERGEINFO is TRUE, then *TARGET_MERGEINFO
+   will only contain merge source path-revisions that actually
+   exist in repository. */
 svn_error_t *
 svn_client__get_repos_mergeinfo(svn_ra_session_t *ra_session,
                                 svn_mergeinfo_t *target_mergeinfo,
@@ -163,6 +168,7 @@ svn_client__get_repos_mergeinfo(svn_ra_session_t *ra_session,
                                 svn_revnum_t rev,
                                 svn_mergeinfo_inheritance_t inherit,
                                 svn_boolean_t squelch_incapable,
+                                svn_boolean_t validate_inherited_mergeinfo,
                                 apr_pool_t *pool);
 
 /* If INCLUDE_DESCENDANTS is FALSE, behave exactly like
@@ -176,15 +182,17 @@ svn_client__get_repos_mergeinfo(svn_ra_session_t *ra_session,
    paths of the subtrees.  If no mergeinfo is found, then
    *TARGET_MERGEINFO_CAT is set to NULL. */
 svn_error_t *
-svn_client__get_repos_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
-                                        svn_ra_session_t *ra_session,
-                                        const char *rel_path,
-                                        svn_revnum_t rev,
-                                        svn_mergeinfo_inheritance_t inherit,
-                                        svn_boolean_t squelch_incapable,
-                                        svn_boolean_t include_descendants,
-                                        apr_pool_t *result_pool,
-                                        apr_pool_t *scratch_pool);
+svn_client__get_repos_mergeinfo_catalog(
+  svn_mergeinfo_catalog_t *mergeinfo_cat,
+  svn_ra_session_t *ra_session,
+  const char *rel_path,
+  svn_revnum_t rev,
+  svn_mergeinfo_inheritance_t inherit,
+  svn_boolean_t squelch_incapable,
+  svn_boolean_t include_descendants,
+  svn_boolean_t validate_inherited_mergeinfo,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool);
 
 /* Retrieve the direct mergeinfo for the TARGET_WCPATH from the WC's
    mergeinfo prop, or that inherited from its nearest ancestor if the

@@ -129,7 +129,7 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
       SVN_ERR(svn_client__get_repos_mergeinfo(ra_session, &src_mergeinfo,
                                               "", src_revnum,
                                               svn_mergeinfo_inherited,
-                                              TRUE, pool));
+                                              TRUE, FALSE, pool));
       if (old_session_url)
         SVN_ERR(svn_ra_reparent(ra_session, old_session_url, pool));
     }
