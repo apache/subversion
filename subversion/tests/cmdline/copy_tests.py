@@ -4835,9 +4835,9 @@ def delete_replace_delete(sbox):
   # Currently fails because pi, rho, tau get left behind
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-A_B_children = ['A/B/lambda', 'A/B/F', 'A/B/E/alpha', 'A/B/E/beta', 'A/B/E']
-A_D_children = ['A/D/gamma', 'A/D/G', 'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau',
-                'A/D/H', 'A/D/H/chi', 'A/D/H/psi', 'A/D/H/omega']
+A_B_children = ('A/B/lambda', 'A/B/F', 'A/B/E/alpha', 'A/B/E/beta', 'A/B/E')
+A_D_children = ('A/D/gamma', 'A/D/G', 'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau',
+                'A/D/H', 'A/D/H/chi', 'A/D/H/psi', 'A/D/H/omega')
 
 def copy_repos_over_deleted_same_kind(sbox):
   "copy repos node over deleted node, same kind"
