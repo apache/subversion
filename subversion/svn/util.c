@@ -826,14 +826,14 @@ svn_cl__get_log_message(const char **log_msg,
              white space as we will consider white space only as empty */
           apr_size_t len;
 
-          for (len = message->len - 1; len >= 0; len--)
+          for (len = 0; len < message->len; len++)
             {
               /* FIXME: should really use an UTF-8 whitespace test
                  rather than svn_ctype_isspace, which is ASCII only */
               if (! svn_ctype_isspace(message->data[len]))
                 break;
             }
-          if (len < 0)
+          if (len == message->len)
             message = NULL;
         }
 

@@ -27,6 +27,7 @@
 
 /*** Includes. ***/
 
+#include "svn_path.h"
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_dirent_uri.h"
@@ -37,6 +38,7 @@
 #include "client.h"
 #include "private/svn_wc_private.h"
 
+#include "svn_private_config.h"
 
 
 /*** Code. ***/
@@ -121,6 +123,19 @@ svn_client_revert2(const apr_array_header_t *paths,
   svn_boolean_t use_commit_times;
   struct revert_with_write_lock_baton baton;
 
+  /* Don't even attempt to modify the working copy if any of the
+   * targets look like URLs. URLs are invalid input. */
+  for (i = 0; i < paths->nelts; i++)
+    {
+      const char *path = APR_ARRAY_IDX(paths, i, const char *);
+
+      if (svn_path_is_url(path))
+        return svn_error_return(svn_error_createf(SVN_ERR_ILLEGAL_TARGET,
+                                                  NULL,
+                                                  _("'%s' is not a local path"),
+                                                  path));
+    }
+  
   cfg = ctx->config ? apr_hash_get(ctx->config, SVN_CONFIG_CATEGORY_CONFIG,
                                    APR_HASH_KEY_STRING) : NULL;
 

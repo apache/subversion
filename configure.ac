@@ -376,10 +376,10 @@ if test -n "`echo "$svn_lib_expat" | $EGREP ":.*:"`"; then
   old_LIBS="$LIBS"
   CPPFLAGS="$CPPFLAGS $SVN_XML_INCLUDES"
   LIBS="$LIBS $SVN_XML_LIBS"
-  AC_LINK_IFELSE([
+  AC_LINK_IFELSE([AC_LANG_SOURCE([[
 #include <expat.h>
 int main()
-{XML_ParserCreate(NULL);}], svn_lib_expat="yes", svn_lib_expat="no")
+{XML_ParserCreate(NULL);}]])], svn_lib_expat="yes", svn_lib_expat="no")
   LIBS="$old_LIBS"
   if test "$svn_lib_expat" = "yes"; then
     AC_MSG_RESULT([yes])
@@ -390,10 +390,10 @@ int main()
     if test "$enable_all_static" != "yes"; then
       SVN_APRUTIL_LIBS="$SVN_APRUTIL_LIBS `$apu_config --libs`"
     fi
-    AC_COMPILE_IFELSE([
+    AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
 #include <expat.h>
 int main()
-{XML_ParserCreate(NULL);}], svn_lib_expat="yes", svn_lib_expat="no")
+{XML_ParserCreate(NULL);}]])], svn_lib_expat="yes", svn_lib_expat="no")
     if test "$svn_lib_expat" = "yes"; then
       AC_MSG_RESULT([yes])
       AC_MSG_WARN([Expat found amongst libraries used by APR-Util, but Subversion libraries might be needlessly linked against additional unused libraries. It can be avoided by specifying exact location of Expat in argument of --with-expat option.])
@@ -500,11 +500,11 @@ dnl APR_HAS_DSO -------------------
 AC_MSG_CHECKING([whether APR has support for DSOs])
 old_CPPFLAGS="$CPPFLAGS"
 CPPFLAGS="$CPPFLAGS $SVN_APR_INCLUDES"
-AC_PREPROC_IFELSE([
+AC_PREPROC_IFELSE([AC_LANG_SOURCE([[
 #include <apr.h>
 #if !APR_HAS_DSO
 #error
-#endif],
+#endif]])],
   APR_HAS_DSO="yes"
   AC_MSG_RESULT([yes]),
   APR_HAS_DSO="no"
@@ -532,10 +532,10 @@ if test -n "$PKG_CONFIG"; then
     CPPFLAGS="$CPPFLAGS $DBUS_CPPFLAGS"
     LIBS="$LIBS $DBUS_LIBS"
     AC_MSG_CHECKING([for D-Bus])
-    AC_LINK_IFELSE([
+    AC_LINK_IFELSE([AC_LANG_SOURCE([[
 #include <dbus/dbus.h>
 int main()
-{dbus_bus_get(DBUS_BUS_SESSION, NULL);}], HAVE_DBUS="yes", HAVE_DBUS="no")
+{dbus_bus_get(DBUS_BUS_SESSION, NULL);}]])], HAVE_DBUS="yes", HAVE_DBUS="no")
     if test "$HAVE_DBUS" = "yes"; then
       AC_MSG_RESULT([yes])
     else
@@ -826,7 +826,7 @@ if test "$enable_disallowing_of_undefined_references" != "no"; then
   AC_MSG_CHECKING([for -Wl,--no-undefined])
   old_LDFLAGS="$LDFLAGS"
   LDFLAGS="$LDFLAGS -Wl,--no-undefined"
-  AC_LINK_IFELSE([int main(){;}], [svn_wl_no_undefined="yes"], [svn_wl_no_undefined="no"])
+  AC_LINK_IFELSE([AC_LANG_SOURCE([[int main(){;}]])], [svn_wl_no_undefined="yes"], [svn_wl_no_undefined="no"])
   LDFLAGS="$old_LDFLAGS"
   libraries="auth_gnome_keyring auth_kwallet client delta diff fs fs_base fs_fs fs_util ra ra_local ra_neon ra_serf ra_svn repos subr wc"
   if test "$svn_wl_no_undefined" = "yes"; then

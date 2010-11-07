@@ -36,6 +36,7 @@
 #include "client.h"
 #include "private/svn_wc_private.h"
 
+#include "svn_private_config.h"
 
 /*** Code. ***/
 
@@ -47,6 +48,11 @@ svn_client_resolve(const char *path,
                    apr_pool_t *pool)
 {
   const char *local_abspath;
+
+  if (svn_path_is_url(path))
+    return svn_error_return(svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                              _("'%s' is not a local path"),
+                                              path));
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 

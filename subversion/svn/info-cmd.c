@@ -126,6 +126,11 @@ print_info_xml(void *baton,
       /* "<wc-info>" */
       svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "wc-info", NULL);
 
+      /* "<wcroot-abspath> xx </wcroot-abspath>" */
+      if (info->wcroot_abspath)
+        svn_cl__xml_tagged_cdata(&sb, pool, "wcroot-abspath",
+                                 info->wcroot_abspath);
+
       /* "<schedule> xx </schedule>" */
       svn_cl__xml_tagged_cdata(&sb, pool, "schedule",
                                schedule_str(info->schedule));
@@ -255,6 +260,11 @@ print_info(void *baton,
   if (info->kind != svn_node_dir)
     SVN_ERR(svn_cmdline_printf(pool, _("Name: %s\n"),
                                svn_dirent_basename(target, pool)));
+
+  if (info->wcroot_abspath)
+    SVN_ERR(svn_cmdline_printf(pool, _("Working Copy Root Path: %s\n"),
+                               svn_dirent_local_style(info->wcroot_abspath,
+                                                      pool)));
 
   if (info->URL)
     SVN_ERR(svn_cmdline_printf(pool, _("URL: %s\n"), info->URL));
@@ -539,13 +549,19 @@ svn_cl__info(apr_getopt_t *os,
       SVN_ERR(svn_opt_parse_path(&peg_revision, &truepath, target, subpool));
 
       /* If no peg-rev was attached to a URL target, then assume HEAD. */
-      if (svn_path_is_url(target))
+      if (svn_path_is_url(truepath))
         {
+          truepath = svn_uri_canonicalize(truepath, subpool);
+
           if (peg_revision.kind == svn_opt_revision_unspecified)
             peg_revision.kind = svn_opt_revision_head;
         }
       else
-        SVN_ERR(svn_dirent_get_absolute(&truepath, truepath, subpool));
+        {
+          truepath = svn_dirent_canonicalize(truepath, subpool);
+
+          SVN_ERR(svn_dirent_get_absolute(&truepath, truepath, subpool));
+        }
 
       err = svn_client_info3(truepath,
                              &peg_revision, &(opt_state->start_revision),

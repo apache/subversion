@@ -763,13 +763,14 @@ add_from_disk(svn_wc_context_t *wc_ctx,
    in a state in which a new child node can be scheduled for addition;
    return an error if not. */
 static svn_error_t *
-check_can_add_to_parent(svn_wc__db_t *db,
-                        const char **repos_root_url,
+check_can_add_to_parent(const char **repos_root_url,
                         const char **repos_uuid,
+                        svn_wc_context_t *wc_ctx,
                         const char *local_abspath,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
+  svn_wc__db_t *db = wc_ctx->db;
   const char *parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
   svn_wc__db_status_t parent_status;
   svn_wc__db_kind_t parent_kind;
@@ -782,7 +783,7 @@ check_can_add_to_parent(svn_wc__db_t *db,
                              repos_uuid, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL,
-                             db, parent_abspath, scratch_pool, scratch_pool);
+                             db, parent_abspath, result_pool, scratch_pool);
 
   if (err
       || parent_status == svn_wc__db_status_not_present
@@ -812,7 +813,7 @@ check_can_add_to_parent(svn_wc__db_t *db,
                              _("Can't schedule an addition of '%s'"
                                " below a not-directory node"),
                              svn_dirent_local_style(local_abspath,
-                                                 scratch_pool));
+                                                    scratch_pool));
 
   /* If we haven't found the repository info yet, find it now. */
   if ((repos_root_url && ! *repos_root_url)
@@ -823,12 +824,12 @@ check_can_add_to_parent(svn_wc__db_t *db,
                                          repos_root_url, repos_uuid, NULL,
                                          NULL, NULL, NULL,
                                          db, parent_abspath,
-                                         scratch_pool, scratch_pool));
+                                         result_pool, scratch_pool));
       else
         SVN_ERR(svn_wc__db_scan_base_repos(NULL,
                                            repos_root_url, repos_uuid,
                                            db, parent_abspath,
-                                           scratch_pool, scratch_pool));
+                                           result_pool, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -952,6 +953,68 @@ check_can_add_node(svn_node_kind_t *kind_p,
   return SVN_NO_ERROR;
 }
 
+/* Convert the nested pristine working copy rooted at LOCAL_ABSPATH into
+ * a copied subtree in the outer working copy.
+ *
+ * LOCAL_ABSPATH must be the root of a nested working copy that has no
+ * local modifications.  The parent directory of LOCAL_ABSPATH must be a
+ * versioned directory in the outer WC, and must belong to the same
+ * repository as the nested WC.  The nested WC will be integrated into the
+ * parent's WC, and will no longer be a separate WC. */
+static svn_error_t *
+integrate_nested_wc_as_copy(svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
+                            apr_pool_t *scratch_pool)
+{
+  svn_wc__db_t *db = wc_ctx->db;
+  const char *moved_abspath;
+
+  /* Drop any references to the wc that is to be rewritten */
+  SVN_ERR(svn_wc__db_drop_root(db, local_abspath, scratch_pool));
+
+  /* Move the admin dir from the wc to a temporary location: MOVED_ABSPATH */
+  {
+    const char *tmpdir_abspath, *moved_adm_abspath, *adm_abspath;
+
+    SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&tmpdir_abspath, db,
+                                           svn_dirent_dirname(local_abspath,
+                                                              scratch_pool),
+                                           scratch_pool, scratch_pool));
+    SVN_ERR(svn_io_open_unique_file3(NULL, &moved_abspath, tmpdir_abspath,
+                                     svn_io_file_del_on_close,
+                                     scratch_pool, scratch_pool));
+    SVN_ERR(svn_io_dir_make(moved_abspath, APR_OS_DEFAULT, scratch_pool));
+
+    adm_abspath = svn_wc__adm_child(local_abspath, "", scratch_pool);
+    moved_adm_abspath = svn_wc__adm_child(moved_abspath, "", scratch_pool);
+    SVN_ERR(svn_io_file_move(adm_abspath, moved_adm_abspath, scratch_pool));
+  }
+
+  /* Copy entries from temporary location into the main db */
+  SVN_ERR(svn_wc_copy3(wc_ctx, moved_abspath, local_abspath,
+                       TRUE /* metadata_only */,
+                       NULL, NULL, NULL, NULL, scratch_pool));
+
+  /* Cleanup the temporary admin dir */
+  SVN_ERR(svn_wc__db_drop_root(db, moved_abspath, scratch_pool));
+  SVN_ERR(svn_io_remove_dir2(moved_abspath, FALSE, NULL, NULL,
+                             scratch_pool));
+
+  /* The subdir is now part of our parent working copy. Our caller assumes
+     that we return the new node locked, so obtain a lock if we didn't
+     receive the lock via our depth infinity lock */
+  {
+    svn_boolean_t owns_lock;
+    SVN_ERR(svn_wc__db_wclock_owns_lock(&owns_lock, db, local_abspath,
+                                        FALSE, scratch_pool));
+    if (!owns_lock)
+      SVN_ERR(svn_wc__db_wclock_obtain(db, local_abspath, 0, FALSE,
+                                       scratch_pool));
+  }
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_wc_add4(svn_wc_context_t *wc_ctx,
             const char *local_abspath,
@@ -975,8 +1038,9 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
 
   /* Get REPOS_ROOT_URL and REPOS_UUID.  Check that the
      parent is a versioned directory in an acceptable state. */
-  SVN_ERR(check_can_add_to_parent(db, &repos_root_url, &repos_uuid,
-                                  local_abspath, scratch_pool, scratch_pool));
+  SVN_ERR(check_can_add_to_parent(&repos_root_url, &repos_uuid,
+                                  wc_ctx, local_abspath, scratch_pool,
+                                  scratch_pool));
 
   /* If we're performing a repos-to-WC copy, check that the copyfrom
      repository is the same as the parent dir's repository. */
@@ -1010,13 +1074,8 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                                  inner_repos_root_url, inner_repos_uuid,
                                  repos_root_url, repos_uuid);
 
-      if (!svn_uri_is_ancestor(repos_root_url, copyfrom_url))
-        return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                 _("The URL '%s' is not in repository '%s'"),
-                                 copyfrom_url, repos_root_url);
-
       inner_url = svn_path_url_add_component2(repos_root_url, repos_relpath,
-                                             scratch_pool);
+                                              scratch_pool);
 
       if (strcmp(copyfrom_url, inner_url))
         return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
@@ -1057,73 +1116,30 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
           svn_stream_t *content = svn_stream_empty(scratch_pool);
 
           SVN_ERR(svn_wc_add_repos_file4(wc_ctx, local_abspath,
-                                         content, NULL,
-                                         NULL, NULL,
+                                         content, NULL, NULL, NULL,
                                          copyfrom_url, copyfrom_rev,
                                          cancel_func, cancel_baton,
-                                         NULL, NULL,
                                          scratch_pool));
         }
       else
-        SVN_ERR(svn_wc__db_op_copy_dir(db,
-                                       local_abspath,
+        SVN_ERR(svn_wc__db_op_copy_dir(db, local_abspath,
                                        apr_hash_make(scratch_pool),
-                                       copyfrom_rev,
-                                       0,
-                                       NULL,
+                                       copyfrom_rev, 0, NULL,
                                        svn_path_uri_decode(
-                                            svn_uri_skip_ancestor(repos_root_url,
-                                                                  copyfrom_url),
-                                            scratch_pool),
-                                       repos_root_url,
-                                       repos_uuid,
+                                         svn_uri_skip_ancestor(repos_root_url,
+                                                               copyfrom_url),
+                                         scratch_pool),
+                                       repos_root_url, repos_uuid,
                                        copyfrom_rev,
-                                       NULL,
-                                       depth,
-                                       NULL,
-                                       NULL,
+                                       NULL /* children */, depth,
+                                       NULL /* conflicts */,
+                                       NULL /* work items */,
                                        scratch_pool));
     }
   else  /* Case 1: Integrating a separate WC into this one, in place */
     {
-      svn_boolean_t owns_lock;
-      const char *tmpdir_abspath, *moved_abspath, *moved_adm_abspath;
-      const char *adm_abspath = svn_wc__adm_child(local_abspath, "",
-                                                  scratch_pool);
-
-      /* Drop any references to the wc that is to be rewritten */
-      SVN_ERR(svn_wc__db_drop_root(db, local_abspath, scratch_pool));
-
-      /* Move the admin dir from the wc to a temporary location */
-      SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&tmpdir_abspath, db,
-                                             svn_dirent_dirname(local_abspath,
-                                                                scratch_pool),
-                                             scratch_pool, scratch_pool));
-      SVN_ERR(svn_io_open_unique_file3(NULL, &moved_abspath, tmpdir_abspath,
-                                       svn_io_file_del_on_close,
-                                       scratch_pool, scratch_pool));
-      SVN_ERR(svn_io_dir_make(moved_abspath, APR_OS_DEFAULT, scratch_pool));
-      moved_adm_abspath = svn_wc__adm_child(moved_abspath, "", scratch_pool);
-      SVN_ERR(svn_io_file_move(adm_abspath, moved_adm_abspath, scratch_pool));
-
-      /* Copy entries from temporary location into the main db */
-      SVN_ERR(svn_wc_copy3(wc_ctx, moved_abspath, local_abspath,
-                           TRUE /* metadata_only */,
-                           NULL, NULL, NULL, NULL, scratch_pool));
-
-      /* Cleanup the temporary admin dir */
-      SVN_ERR(svn_wc__db_drop_root(db, moved_abspath, scratch_pool));
-      SVN_ERR(svn_io_remove_dir2(moved_abspath, FALSE, NULL, NULL,
-                                 scratch_pool));
-
-      /* The subdir is now part of our parent working copy. Our caller assumes
-         that we return the new node locked, so obtain a lock if we didn't
-         receive the lock via our depth infinity lock */
-      SVN_ERR(svn_wc__db_wclock_owns_lock(&owns_lock, db, local_abspath, FALSE,
+      SVN_ERR(integrate_nested_wc_as_copy(wc_ctx, local_abspath,
                                           scratch_pool));
-      if (!owns_lock)
-        SVN_ERR(svn_wc__db_wclock_obtain(db, local_abspath, 0, FALSE,
-                                         scratch_pool));
     }
 
   /* Report the addition to the caller. */
@@ -1142,8 +1158,6 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
 svn_error_t *
 svn_wc_add_from_disk(svn_wc_context_t *wc_ctx,
                      const char *local_abspath,
-                     svn_cancel_func_t cancel_func,
-                     void *cancel_baton,
                      svn_wc_notify_func2_t notify_func,
                      void *notify_baton,
                      apr_pool_t *scratch_pool)
@@ -1152,8 +1166,7 @@ svn_wc_add_from_disk(svn_wc_context_t *wc_ctx,
 
   SVN_ERR(check_can_add_node(&kind, NULL, NULL, wc_ctx, local_abspath,
                              NULL, SVN_INVALID_REVNUM, scratch_pool));
-  SVN_ERR(check_can_add_to_parent(wc_ctx->db, NULL, NULL,
-                                  local_abspath,
+  SVN_ERR(check_can_add_to_parent(NULL, NULL, wc_ctx, local_abspath,
                                   scratch_pool, scratch_pool));
   SVN_ERR(add_from_disk(wc_ctx, local_abspath, kind, scratch_pool));
 

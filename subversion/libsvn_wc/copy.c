@@ -449,7 +449,7 @@ TODO: We will probably want to notify all copied paths rather than just the
   copying, taking care to include any 'excluded' nodes but ignore any
   'deleted' paths that may be left over from a replaced sub-tree.
 
-copy_versioned_node:
+copy_versioned_tree:
   # Copy a versioned file/dir SRC_PATH to DST_PATH, recursively.
 
   # This function takes care to copy both the metadata tree and the disk
@@ -480,9 +480,12 @@ copy_versioned_node:
 
 */
 
-/* Copy a versioned file/dir SRC_PATH to DST_PATH, recursively. */
+/* Copy the working version of the versioned tree at SRC_ABSPATH to
+ * DST_ABSPATH, recursively.  If METADATA_ONLY is true, then don't copy it
+ * on disk, only in metadata, and don't care whether it already exists on
+ * disk. */
 static svn_error_t *
-copy_versioned_node(svn_wc__db_t *db,
+copy_versioned_tree(svn_wc__db_t *db,
                     const char *src_abspath,
                     const char *dst_abspath,
                     svn_boolean_t metadata_only,
@@ -714,7 +717,7 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
 #ifdef SVN_WC__OP_DEPTH
   if (svn_wc__db_same_db(db, src_abspath, dst_abspath, scratch_pool))
     {
-      SVN_ERR(copy_versioned_node(db, src_abspath, dst_abspath,
+      SVN_ERR(copy_versioned_tree(db, src_abspath, dst_abspath,
                                   metadata_only,
                                   cancel_func, cancel_baton,
                                   notify_func, notify_baton,

@@ -1,4 +1,4 @@
-/* svn_test_utils.h --- test utilities
+/* utils.h --- wc/client test utilities
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -25,7 +25,7 @@
 
 #include <apr_pools.h>
 #include "svn_error.h"
-#include "svn_test.h"
+#include "../svn_test.h"
 
 #ifdef __cplusplus
 extern "C" {

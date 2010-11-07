@@ -4053,16 +4053,10 @@ svn_wc_status_set_repos_locks(void *set_locks_baton,
  * various points during the operation.  If it returns an error
  * (typically #SVN_ERR_CANCELLED), return that error immediately.
  *
- * For each file or directory copied, @a notify_func will be called
- * with its path and the @a notify_baton.  @a notify_func may be @c NULL
- * if you are not interested in this information.
+ * If @a notify_func is non-NULL, call it with @a notify_baton and the path
+ * of the root node (only) of the destination.
  *
  * Use @a scratch_pool for temporary allocations.
- *
- * @par Important:
- * This is a variant of svn_wc_add4().  No changes will happen
- * to the repository until a commit occurs.  This scheduling can be
- * removed with svn_client_revert4().
  *
  * @since New in 1.7.
  */
@@ -4111,7 +4105,7 @@ svn_wc_copy(const char *src,
             apr_pool_t *pool);
 
 /**
- * Schedule @a local_abspath for deletion, it will be deleted from the
+ * Schedule @a local_abspath for deletion.  It will be deleted from the
  * repository on the next commit.  If @a local_abspath refers to a
  * directory, then a recursive deletion will occur. @a wc_ctx must hold
  * a write lock for the parent of @a local_abspath, @a local_abspath itself
@@ -4212,9 +4206,8 @@ svn_wc_delete(const char *path,
               apr_pool_t *pool);
 
 /**
- * Schedule the node or tree that exists on disk at @a local_abspath for
- * addition to the working copy, recursively.  The added nodes will have
- * no properties.
+ * Schedule the single node that exists on disk at @a local_abspath for
+ * addition to the working copy.  The added node will have no properties.
  *
  * The versioned state of the parent path must be a modifiable directory,
  * and the versioned state of @a local_abspath must be either nonexistent or
@@ -4223,20 +4216,15 @@ svn_wc_delete(const char *path,
  * If @a local_abspath does not exist as file, directory or symlink, return
  * #SVN_ERR_WC_PATH_NOT_FOUND.
  *
- * This is equivalent to svn_wc_add4() case 2a.
+ * This is a replacement for svn_wc_add4() case 2a.
  *
- * ### TODO: Cancellation isn't implemented yet.
+ * ### TODO: Allow the caller to provide the node's properties?
  *
- * ### TODO: Recurse as far as a specified depth?
- *
- * ### A better API might allow the caller to walk a tree and add a single
- *     node at a time, specifying each node's properties.
+ * ### TODO: Split into add_dir, add_file, add_symlink?
  */
 svn_error_t *
 svn_wc_add_from_disk(svn_wc_context_t *wc_ctx,
                      const char *local_abspath,
-                     svn_cancel_func_t cancel_func,
-                     void *cancel_baton,
                      svn_wc_notify_func2_t notify_func,
                      void *notify_baton,
                      apr_pool_t *scratch_pool);
@@ -4277,6 +4265,9 @@ svn_wc_add_from_disk(svn_wc_context_t *wc_ctx,
  *
  * When the @a local_abspath has been added, then @a notify_func will be
  * called (if it is not @c NULL) with the @a notify_baton and the path.
+ *
+ * @note Case 1 is deprecated. Consider doing a WC-to-WC copy instead.
+ * @note For case 2a, prefer svn_wc_add_from_disk().
  *
  * @since New in 1.7.
  */
@@ -4377,8 +4368,6 @@ svn_wc_add(const char *path,
  *
  * Use @a scratch_pool for temporary allocations.
  *
- * ### NOTE: the notification callback/baton is not yet used.
- *
  * ### This function is very redundant with svn_wc_add().  Ideally,
  * we'd merge them, so that svn_wc_add() would just take optional
  * new_props and optional copyfrom information.  That way it could be
@@ -4404,12 +4393,12 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                        svn_revnum_t copyfrom_rev,
                        svn_cancel_func_t cancel_func,
                        void *cancel_baton,
-                       svn_wc_notify_func2_t notify_func,
-                       void *notify_baton,
                        apr_pool_t *scratch_pool);
 
 /** Similar to svn_wc_add_repos_file4, but uses access batons and a
  * relative path instead of a working copy context and absolute path.
+ *
+ * ### NOTE: the notification callback/baton is not yet used.
  *
  * @since New in 1.6.
  * @deprecated Provided for compatibility with the 1.6 API.
@@ -4469,9 +4458,9 @@ svn_wc_add_repos_file(const char *dst_path,
  * hold a write lock.
  *
  * If @a local_abspath is a file, all its info will be removed from the
- * administrative area.  If @a name is a directory, then the administrative
- * area will be deleted, along with *all* the administrative areas anywhere
- * in the tree below @a adm_access.
+ * administrative area.  If @a local_abspath is a directory, then the
+ * administrative area will be deleted, along with *all* the administrative
+ * areas anywhere in the tree below @a adm_access.
  *
  * Normally, only administrative data is removed.  However, if
  * @a destroy_wf is TRUE, then all working file(s) and dirs are deleted
@@ -5096,7 +5085,7 @@ svn_wc_crawl_revisions(const char *path,
                        apr_pool_t *pool);
 
 
-/* Updates. */
+/* Working copy roots. */
 
 /** Set @a *wc_root to @c TRUE if @a local_abspath represents a "working copy
  * root", @c FALSE otherwise. Here, @a local_abspath is a "working copy root"
@@ -5132,6 +5121,21 @@ svn_wc_is_wc_root(svn_boolean_t *wc_root,
                   svn_wc_adm_access_t *adm_access,
                   apr_pool_t *pool);
 
+/**
+ * Set @a *wcroot_abspath to the local abspath of the root of the
+ * working copy in which @a local_abspath resides.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_get_wc_root(const char **wcroot_abspath,
+                   svn_wc_context_t *wc_ctx,
+                   const char *local_abspath,
+                   apr_pool_t *scratch_pool,
+                   apr_pool_t *result_pool);
+
+
+/* Updates. */
 
 /** Conditionally split @a path into an @a anchor and @a target for the
  * purpose of updating and committing.
