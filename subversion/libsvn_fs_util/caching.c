@@ -110,7 +110,7 @@ svn_fs_set_cache_config(const svn_fs_cache_config_t *settings)
   cache_settings = *settings;
 
   /* Allocate global membuffer cache as a side-effect.
-   * Only the first call will actually take affect. */
+   * Only the first call will actually have an effect. */
   svn_fs__get_global_membuffer_cache();
 
   /* Same for the file handle cache. */
