@@ -1,4 +1,4 @@
-ÔªøThe following people have commit access to the Subversion sources.
+The following people have commit access to the Subversion sources.
 Note that this is not a full list of Subversion's authors, however --
 for that, you'd need to look over the log messages to see all the
 patch contributors.
@@ -13,7 +13,7 @@ Blanket commit access:
        sussman   Ben Collins-Sussman <sussman@red-bean.com>
         kfogel   Karl Fogel <kfogel@red-bean.com>
         gstein   Greg Stein <gstein@gmail.com>
-         brane   Branko ƒåibej <brane@xbc.nu>
+         brane   Branko ?ibej <brane@xbc.nu>
            joe   Joe Orton <joe@manyfish.co.uk>
        ghudson   Greg Hudson <ghudson@mit.edu>
           fitz   Brian W. Fitzpatrick <fitz@red-bean.com>
@@ -29,7 +29,7 @@ Blanket commit access:
            jaa   Jani Averbach <jaa@iki.fi>
     julianfoad   Julian Foad <julian.foad@wandisco.com>
   jszakmeister   John Szakmeister <john@szakmeister.net>
-           ehu   Erik H√ºlsmann <erik.huelsmann@wandisco.com>
+           ehu   Erik H¸lsmann <erik.huelsmann@wandisco.com>
         breser   Ben Reser <ben@reser.org>
           maxb   Max Bowsher <maxb1@ukf.net>
        dberlin   Daniel Berlin <dberlin@dberlin.org>
@@ -50,11 +50,12 @@ Blanket commit access:
         peters   Peter Samuelson <peter@p12n.org>
       rhuijben   Bert Huijben <rhuijben@collab.net>
       stylesen   Senthil Kumaran S <stylesen@gmail.com>
-     steveking   Stefan K√ºng <tortoisesvn@gmail.com>
+     steveking   Stefan K¸ng <tortoisesvn@gmail.com>
          neels   Neels J. Hofmeyr <neels@elego.de>
      jwhitlock   Jeremy Whitlock <jcscoobyrs@gmail.com>
        sbutler   Stephen Butler <sbutler@elego.de>
-        dannas   Daniel N√§slund <dannas@elego.de>
+        dannas   Daniel N‰slund <dannas@elego.de>
+       stefan2   Stefan Fuhrmann <stefanfuhrmann@alice-dsl.de>
 
 [[END ACTIVE FULL COMMITTERS.  LEAVE THIS LINE HERE; SCRIPTS LOOK FOR IT.]]
 
@@ -71,7 +72,7 @@ Full committers who have asked to be listed as dormant:
       lundblad   Peter N. Lundblad <peter@famlundblad.se>
        malcolm   Malcolm Rowe <malcolm-svn-dev@farside.org.uk>
          naked   Nuutti Kotivuori <naked@iki.fi>
-     ringstrom   Tobias Ringstr√∂m <tobias@ringstrom.mine.nu>
+     ringstrom   Tobias Ringstrˆm <tobias@ringstrom.mine.nu>
 
 
 Partial committers who have asked to be listed as dormant:
@@ -91,7 +92,7 @@ Commit access for specific areas:
     joeswatosh   Joe Swatosh <joe.swatosh@gmail.com>         (Swig-Ruby b.)
     jrvernooij   Jelmer Vernooij <jelmer@samba.org>          (Python bindings)
           sage   Sage LaTorra <sagelt@gmail.com>             (Ctypes-Python bindings)
-        rdonch   –†–æ–º–∞–Ω –î–æ–Ω—á–µ–Ω–∫–æ <DXDragon@yandex.ru>         (Swig-Python b.)
+        rdonch   ????? ???????? <DXDragon@yandex.ru>         (Swig-Python b.)
 
   Packages:
 
@@ -102,7 +103,7 @@ Commit access for specific areas:
 
       kbohling   Kirby C. Bohling <kbohling@birddog.com>     (tools/dev)
            nsd   Nick Duffek <nick@duffek.com>               (doc)
-        xsteve   Stefan Reich√∂r <stefan@xsteve.at>           (psvn.el)
+        xsteve   Stefan Reichˆr <stefan@xsteve.at>           (psvn.el)
       josander   Jostein Andersen <jostein@vait.se>          (various)
       niemeyer   Gustavo Niemeyer <niemeyer@conectiva.com>   (svnperms.py)
         zbrown   Zack Brown <zbrown@tumblerings.org>         (doc)
@@ -124,15 +125,15 @@ Commit access for specific areas:
             mf   Martin Furter <mf@rola.ch>                  (svnmirror.sh
                                                           svn-backup-dumps.py)
        adejong   Arthur de Jong <arthur@ch.tudelft.nl>       (svn2cl)
-      wsanchez   Wilfredo S√°nchez <wsanchez@wsanchez.net>    (various contrib)
+      wsanchez   Wilfredo S·nchez <wsanchez@wsanchez.net>    (various contrib)
        mhagger   Michael Haggerty <mhagger@alum.mit.edu>     (svntest)
        madanus   Madan U S <madan@collab.net>                (svnmerge)
           wein   Mathias Weinert <wein@mccw.de>              (mailer)
         bhuvan   Bhuvaneswaran <bhuvan@collab.net>           (svn2feed.py,
                                                               build/hudson)
         aogier   Anthony Ogier <aogier@iorga.com>            (svn-merge-vendor.py)
-      dkagedal   David K√•gedal <davidk@lysator.liu.se>       (dsvn.el)
-      mattiase   Mattias Engdeg√•rd <mattiase@acm.org>        (dsvn.el)
+      dkagedal   David KÂgedal <davidk@lysator.liu.se>       (dsvn.el)
+      mattiase   Mattias EngdegÂrd <mattiase@acm.org>        (dsvn.el)
         dustin   Dustin J. Mitchell <dustin@zmanda.com>      (svnmerge)
    rocketraman   Raman Gupta <rocketraman@fastmail.fm>       (svnmerge)
        rhansen   Richard Hansen <rhansen@bbn.com>            (svnstsw)
@@ -147,11 +148,11 @@ Commit access for specific areas:
 
   Translation of message files:
 
-       niqueco   Nicol√°s Lichtmaier <nick@reloco.com.ar>     (po: es)
-        luebbe   L√ºbbe Onken <luebbe@tigris.org>             (po: de)
+       niqueco   Nicol·s Lichtmaier <nick@reloco.com.ar>     (po: es)
+        luebbe   L¸bbe Onken <luebbe@tigris.org>             (po: de)
     jensseidel   Jens Seidel <jensseidel@users.sf.net>       (po: de)
-      oyvindmo   √òyvind M√∏ll <svn@moll.no>                   (po: nb)
-      sunny256   √òyvind A. Holm <sunny@sunbase.org>          (po: nb)
+      oyvindmo   ÿyvind M¯ll <svn@moll.no>                   (po: nb)
+      sunny256   ÿyvind A. Holm <sunny@sunbase.org>          (po: nb)
         jzgoda   Jaroslaw Zgoda <jzgoda@o2.pl>               (po: pl)
       karolszk   Karol Szkudlarek <karol@mikronika.com.pl>   (po: pl)
         plasma   Wei-Hon Chen <plasma@ms9.hinet.net>         (po: zh_TW)
@@ -170,7 +171,7 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
   Experimental branches:
 
      gthompson   Glenn A. Thompson <gthompson@cdr.net>       (pluggable-db br.)
-       sigfred   Sigfred H√•versen <bsdlist@mumak.com>        (svnserve-ssl br.)
+       sigfred   Sigfred HÂversen <bsdlist@mumak.com>        (svnserve-ssl br.)
         pmarek   Ph. Marek <philipp@marek.priv.at>           (meta-data-v br.)
       jpeacock   John Peacock <jpeacock@rowman.com>          (perl-bindings-
                                                               improvements br.)
@@ -179,28 +180,27 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
        cacknin   Charles Acknin <charlesacknin@gmail.com>    (svnpatch-diff 
                                                               br.)
         holden   Holden Karau <holden@pigscanfly.ca>         (scheme-bindings br.)
-       stefan2   Stefan Fuhrmann <stefanfuhrmann@alice-dsl.de> (performance br.)
        jcorvel   Johan Corveleyn <jcorvel@gmail.com>         (diff-
                                                               optimizations br.)
 
   Subprojects that are complete, abandoned or have moved elsewhere:
 
-          xela   Alexander M√ºller <alex@littleblue.de>       (Java JNI b.)
+          xela   Alexander M¸ller <alex@littleblue.de>       (Java JNI b.)
        yoshiki   Yoshiki Hayashi <yoshiki@xemacs.org>        (Non-SWIG Ruby b.)
-        mmacek   Marko Maƒçek <Marko.Macek@gmx.net>           (cvs2svn branch)
+        mmacek   Marko Ma?ek <Marko.Macek@gmx.net>           (cvs2svn branch)
           mass   David Waite <mass@akuma.org>                (certs branch)
       sergeyli   Sergey A. Lipnevich <sergey@optimaltec.com> (neon-0.24 port)
       ballbach   Michael Ballbach <ballbach@rten.net>        (Old Mandrake RPM)
         morten   Morten Ludvigsen <morten@2ps.dk>            (Swig-Java b.)
-      jespersm   Jesper Steen M√∏ller <jesper@selskabet.org>  (Swig-Java b.)
+      jespersm   Jesper Steen M¯ller <jesper@selskabet.org>  (Swig-Java b.)
         knacke   Kai Nacke <kai.nacke@redstar.de>            (Swig-Java b.)
-       fmatias   F√©liciano Matias <feliciano.matias@free.fr> (doc: fr)
+       fmatias   FÈliciano Matias <feliciano.matias@free.fr> (doc: fr)
       dimentiy   Dmitriy O. Popkov <dimentiy@dimentiy.info>  (doc: ru)
     khmarbaise   Karl Heinz Marbaise <khmarbaise@gmx.de>     (doc: de)
   gerhardoettl   Gerhard Oettl <gerhard.oettl.ml@oesoft.at>  (doc: de)
      beerfrick   Ariel Arjona <beerfrick@gmail.com>          (doc: es)
         gradha   Grzegorz A. Hankiewicz <gradha@titanium.sabren.com> (doc: es)
-         ruben   Rub√©n G√≥mez <rugoli@euskalnet.net>          (doc: es)
+         ruben   RubÈn GÛmez <rugoli@euskalnet.net>          (doc: es)
       dbrouard   Diego Brouard <dbrouard@gmail.com>          (doc: es)
     firemeteor   Guo Rui <timmyguo@mail.ustc.edu.cn>         (issue-2843-dev
                                                               br.)
