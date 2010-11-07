@@ -233,6 +233,16 @@ Candidate changes:
    Votes:
      +1: cmpilato
 
+ * r1032259
+   Fix issue #3745, "svn export mistakenly uri-encodes paths"
+   Justification:
+     Without this fix, users cannot export paths from working copies
+     if the paths contain special characters such as spaces.
+   Branch:
+     ^/subversion/branches/1.6.x-issue3745
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
