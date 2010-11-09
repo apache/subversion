@@ -445,6 +445,7 @@ def wait_on_pipe(waiter, binary_mode, stdin=None):
     if exit_code and options.verbose:
       sys.stderr.write("CMD: %s exited with %d\n"
                        % (command_string, exit_code))
+      sys.stderr.flush()
     return stdout_lines, stderr_lines, exit_code
 
 def spawn_process(command, bufsize=0, binary_mode=0, stdin_lines=None,
@@ -1098,8 +1099,9 @@ class TestSpawningThread(threading.Thread):
   """A thread that runs test cases in their own processes.
   Receives test numbers to run from the queue, and saves results into
   the results field."""
-  def __init__(self, queue):
+  def __init__(self, srcdir, queue):
     threading.Thread.__init__(self)
+    self.srcdir = srcdir
     self.queue = queue
     self.results = []
 
@@ -1113,8 +1115,8 @@ class TestSpawningThread(threading.Thread):
       self.run_one(next_index)
 
   def run_one(self, index):
-    command = sys.argv[0]
-
+    command = os.path.join(self.srcdir, 'subversion/tests/cmdline',
+                           sys.argv[0])
     args = []
     args.append(str(index))
     args.append('-c')
@@ -1283,7 +1285,7 @@ def run_one_test(n, test_list, finished_tests = None):
   exit_code = TestRunner(test_list[n], n).run()
   return exit_code
 
-def _internal_run_tests(test_list, testnums, parallel):
+def _internal_run_tests(test_list, testnums, parallel, srcdir, progress_func):
   """Run the tests from TEST_LIST whose indices are listed in TESTNUMS.
 
   If we're running the tests in parallel spawn as much parallel processes
@@ -1296,15 +1298,19 @@ def _internal_run_tests(test_list, testnums, parallel):
   tests_started = 0
 
   if not parallel:
-    for testnum in testnums:
+    for i, testnum in enumerate(testnums):
       if run_one_test(testnum, test_list) == 1:
           exit_code = 1
+      # signal progress
+      if progress_func:
+        progress_func(i+1, len(testnums))
   else:
     number_queue = queue.Queue()
     for num in testnums:
       number_queue.put(num)
 
-    threads = [ TestSpawningThread(number_queue) for i in range(parallel) ]
+    threads = [ TestSpawningThread(srcdir, number_queue)
+                for i in range(parallel) ]
     for t in threads:
       t.start()
 
@@ -1316,6 +1322,10 @@ def _internal_run_tests(test_list, testnums, parallel):
     for t in threads:
       results += t.results
     results.sort()
+
+    # signal some kind of progress
+    if progress_func:
+      progress_func(len(testnums), len(testnums))
 
     # terminate the line of dots
     print("")
@@ -1392,6 +1402,8 @@ def _create_parser():
                          'test output and ignores all exceptions in the ' +
                          'run_and_verify* functions. This option is only ' +
                          'useful during test development!')
+  parser.add_option('--srcdir', action='store', dest='srcdir',
+                    help='Source directory.')
 
   # most of the defaults are None, but some are other values, set them here
   parser.set_defaults(
@@ -1428,10 +1440,6 @@ def _parse_options(arglist=sys.argv[1:]):
   return (parser, args)
 
 
-# Main func.  This is the "entry point" that all the test scripts call
-# to run their list of tests.
-#
-# This routine parses sys.argv to decide what to do.
 def run_tests(test_list, serial_only = False):
   """Main routine to run all tests in TEST_LIST.
 
@@ -1439,6 +1447,20 @@ def run_tests(test_list, serial_only = False):
         appropriate exit code.
   """
 
+  sys.exit(execute_tests(test_list, serial_only))
+
+
+# Main func.  This is the "entry point" that all the test scripts call
+# to run their list of tests.
+#
+# This routine parses sys.argv to decide what to do.
+def execute_tests(test_list, serial_only = False, test_name = None,
+                  progress_func = None):
+  """Similar to run_tests(), but just returns the exit code, rather than
+  exiting the process.  This function can be used when a caller doesn't
+  want the process to die."""
+
+  global pristine_url
   global pristine_greek_repos_url
   global svn_binary
   global svnadmin_binary
@@ -1447,6 +1469,9 @@ def run_tests(test_list, serial_only = False):
   global svndumpfilter_binary
   global svnversion_binary
   global options
+
+  if test_name:
+    sys.argv[0] = test_name
 
   testnums = []
 
@@ -1560,7 +1585,8 @@ def run_tests(test_list, serial_only = False):
     svntest.actions.setup_pristine_greek_repository()
 
   # Run the tests.
-  exit_code = _internal_run_tests(test_list, testnums, options.parallel)
+  exit_code = _internal_run_tests(test_list, testnums, options.parallel,
+                                  options.srcdir, progress_func)
 
   # Remove all scratchwork: the 'pristine' repository, greek tree, etc.
   # This ensures that an 'import' will happen the next time we run.
@@ -1571,4 +1597,4 @@ def run_tests(test_list, serial_only = False):
   svntest.sandbox.cleanup_deferred_test_paths()
 
   # Return the appropriate exit code from the tests.
-  sys.exit(exit_code)
+  return exit_code
