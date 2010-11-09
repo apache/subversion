@@ -1025,7 +1025,10 @@ send_log(svn_revnum_t rev,
    memory. */
 #define MAX_OPEN_HISTORIES 32
 
-/* Get the histories for PATHS, and store them in *HISTORIES. */
+/* Get the histories for PATHS, and store them in *HISTORIES.
+
+   If IGNORE_MISSING_LOCATIONS is set, don't treat requests for bogus
+   repository locations as fatal -- just ignore them.  */
 static svn_error_t *
 get_path_histories(apr_array_header_t **histories,
                    svn_fs_t *fs,
@@ -1033,6 +1036,7 @@ get_path_histories(apr_array_header_t **histories,
                    svn_revnum_t hist_start,
                    svn_revnum_t hist_end,
                    svn_boolean_t strict_node_history,
+                   svn_boolean_t ignore_missing_locations,
                    svn_repos_authz_func_t authz_read_func,
                    void *authz_read_baton,
                    apr_pool_t *pool)
@@ -1080,7 +1084,18 @@ get_path_histories(apr_array_header_t **histories,
 
       if (i < MAX_OPEN_HISTORIES)
         {
-          SVN_ERR(svn_fs_node_history(&info->hist, root, this_path, pool));
+          svn_error_t *err;
+          err = svn_fs_node_history(&info->hist, root, this_path, pool);
+          if (err
+              && ignore_missing_locations
+              && (err->apr_err == SVN_ERR_FS_NOT_FOUND ||
+                  err->apr_err == SVN_ERR_FS_NOT_DIRECTORY ||
+                  err->apr_err == SVN_ERR_FS_NO_SUCH_REVISION))
+            {
+              svn_error_clear(err);
+              continue;
+            }
+          SVN_ERR(err);
           info->newpool = svn_pool_create(pool);
           info->oldpool = svn_pool_create(pool);
         }
@@ -1327,6 +1342,7 @@ do_logs(svn_fs_t *fs,
         svn_boolean_t discover_changed_paths,
         svn_boolean_t strict_node_history,
         svn_boolean_t include_merged_revisions,
+        svn_boolean_t ignore_missing_locations,
         const apr_array_header_t *revprops,
         svn_boolean_t descending_order,
         svn_log_entry_receiver_t receiver,
@@ -1371,24 +1387,15 @@ handle_merged_revisions(svn_revnum_t rev,
   iterpool = svn_pool_create(pool);
   for (i = combined_list->nelts - 1; i >= 0; i--)
     {
-      svn_error_t *err;
       struct path_list_range *pl_range
         = APR_ARRAY_IDX(combined_list, i, struct path_list_range *);
 
       svn_pool_clear(iterpool);
-      err = do_logs(fs, pl_range->paths, pl_range->range.start,
-                    pl_range->range.end, 0, discover_changed_paths,
-                    strict_node_history, TRUE, revprops, TRUE,
-                    receiver, receiver_baton, authz_read_func,
-                    authz_read_baton, iterpool);
-      if (err && (err->apr_err == SVN_ERR_FS_NOT_FOUND ||
-                  err->apr_err == SVN_ERR_FS_NOT_DIRECTORY ||
-                  err->apr_err == SVN_ERR_FS_NO_SUCH_REVISION))
-        {
-          svn_error_clear(err);
-          continue;
-        }
-      SVN_ERR(err);
+      SVN_ERR(do_logs(fs, pl_range->paths, pl_range->range.start,
+                      pl_range->range.end, 0, discover_changed_paths,
+                      strict_node_history, TRUE, TRUE, revprops, TRUE,
+                      receiver, receiver_baton, authz_read_func,
+                      authz_read_baton, iterpool));
     }
   svn_pool_destroy(iterpool);
 
@@ -1403,6 +1410,9 @@ handle_merged_revisions(svn_revnum_t rev,
    the logs back as we find them, else buffer the logs and send them back
    in youngest->oldest order.
 
+   If IGNORE_MISSING_LOCATIONS is set, don't treat requests for bogus
+   repository locations as fatal -- just ignore them.
+
    Other parameters are the same as svn_repos_get_logs4().
  */
 static svn_error_t *
@@ -1414,6 +1424,7 @@ do_logs(svn_fs_t *fs,
         svn_boolean_t discover_changed_paths,
         svn_boolean_t strict_node_history,
         svn_boolean_t include_merged_revisions,
+        svn_boolean_t ignore_missing_locations,
         const apr_array_header_t *revprops,
         svn_boolean_t descending_order,
         svn_log_entry_receiver_t receiver,
@@ -1436,8 +1447,8 @@ do_logs(svn_fs_t *fs,
      one of our paths was changed.  So let's go figure out which
      revisions contain real changes to at least one of our paths.  */
   SVN_ERR(get_path_histories(&histories, fs, paths, hist_start, hist_end,
-                             strict_node_history, authz_read_func,
-                             authz_read_baton, pool));
+                             strict_node_history, ignore_missing_locations,
+                             authz_read_func, authz_read_baton, pool));
 
   /* Loop through all the revisions in the range and add any
      where a path was changed to the array, or if they wanted
@@ -1674,7 +1685,7 @@ svn_repos_get_logs4(svn_repos_t *repos,
 
   return do_logs(repos->fs, paths, start, end, limit,
                  discover_changed_paths, strict_node_history,
-                 include_merged_revisions, revprops, descending_order,
-                 receiver, receiver_baton,
+                 include_merged_revisions, FALSE, revprops,
+                 descending_order, receiver, receiver_baton,
                  authz_read_func, authz_read_baton, pool);
 }
