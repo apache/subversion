@@ -49,7 +49,8 @@ svn_fs_get_cache_config(void)
 
 /* Access the process-global (singleton) membuffer cache. The first call
  * will automatically allocate the cache using the current cache config.
- * NULL will be returned if the desired cache size is 0.
+ * NULL will be returned if the desired cache size is 0 or if the cache
+ * could not be created for some reason.
  */
 svn_membuffer_t *
 svn_fs__get_global_membuffer_cache(void)
@@ -75,12 +76,12 @@ svn_fs__get_global_membuffer_cache(void)
       apr_allocator_max_free_set(allocator, 1);
       pool = svn_pool_create_ex(NULL, allocator);
 
-      svn_cache__membuffer_cache_create
-          (&cache,
-           (apr_size_t)cache_size,
-           (apr_size_t)(cache_size / 16),
-           ! svn_fs_get_cache_config()->single_threaded,
-           pool);
+      svn_error_clear(svn_cache__membuffer_cache_create(
+          &cache,
+          (apr_size_t)cache_size,
+          (apr_size_t)(cache_size / 16),
+          ! svn_fs_get_cache_config()->single_threaded,
+          pool));
     }
 
   return cache;
@@ -96,10 +97,23 @@ svn_fs__get_global_file_handle_cache(void)
   static svn_file_handle_cache_t *cache = NULL;
 
   if (!cache)
-    svn_file_handle_cache__create_cache(&cache,
-                                        cache_settings.file_handle_count,
-                                        !cache_settings.single_threaded,
-                                        svn_pool_create(NULL));
+    {
+      svn_error_t* err = svn_file_handle_cache__create_cache(
+                             &cache,
+                             cache_settings.file_handle_count,
+                             !cache_settings.single_threaded,
+                             svn_pool_create(NULL));
+      if (err)
+        {
+          svn_error_clear(err);
+
+          /* We need the file handle cache. The only way that an error could
+           * occur would be some threading error. In that case, there is no
+           * way we could continue - not even in some limp home mode.
+           */
+          SVN_ERR_MALFUNCTION_NO_RETURN();
+        }
+    }
 
   return cache;
 }
