@@ -591,15 +591,14 @@ wc_wc_copies(wc_baton_t *b)
 static svn_error_t *
 repo_wc_copies(wc_baton_t *b)
 {
-  const char source_base_file[]   = "A/B/lambda";
-  const char source_base_dir[]    = "A/B/E";
-
   SVN_ERR(add_and_commit_greek_tree(b));
 
   /* Delete some nodes so that we can test copying onto these paths */
 
+  SVN_ERR(wc_delete(b, "A/B/lambda"));
   SVN_ERR(wc_delete(b, "A/D/gamma"));
   SVN_ERR(wc_delete(b, "A/D/G"));
+  SVN_ERR(wc_delete(b, "A/D/H"));
 
   /* Test copying various things */
 
@@ -613,36 +612,56 @@ repo_wc_copies(wc_baton_t *b)
       }
     subtests[] =
       {
-        /* file */
-        { source_base_file, "A/C/copy1", {
-            { 3, "",                "normal",   1, source_base_file }
+        /* file onto nothing */
+        { "iota", "A/C/copy1", {
+            { 3, "",                "normal",       1, "iota" },
           } },
 
-        /* dir */
-        { source_base_dir, "A/C/copy2", {
-            { 3, "",                "normal",   1, source_base_dir },
-            { 3, "alpha",           "normal",   NO_COPY_FROM },
-            { 3, "beta",            "normal",   NO_COPY_FROM }
+        /* dir onto nothing */
+        { "A/B/E", "A/C/copy2", {
+            { 3, "",                "normal",       1, "A/B/E" },
+            { 3, "alpha",           "normal",       NO_COPY_FROM },
+            { 3, "beta",            "normal",       NO_COPY_FROM },
+          } },
+
+        /* file onto a schedule-delete file */
+        { "iota", "A/B/lambda", {
+            { 0, "",                "normal",       1, "A/B/lambda" },
+            { 3, "",                "normal",       1, "iota" },
+          } },
+
+        /* dir onto a schedule-delete dir */
+        { "A/B/E", "A/D/G", {
+            { 0, "",                "normal",       1, "A/D/G" },
+            { 0, "pi",              "normal",       1, "A/D/G/pi" },
+            { 0, "rho",             "normal",       1, "A/D/G/rho" },
+            { 0, "tau",             "normal",       1, "A/D/G/tau" },
+            { 3, "",                "normal",       1, "A/B/E" },
+            { 3, "pi",              "base-deleted", NO_COPY_FROM },
+            { 3, "rho",             "base-deleted", NO_COPY_FROM },
+            { 3, "tau",             "base-deleted", NO_COPY_FROM },
+            { 3, "alpha",           "normal",       NO_COPY_FROM },
+            { 3, "beta",            "normal",       NO_COPY_FROM },
           } },
 
         /* dir onto a schedule-delete file */
-        { source_base_dir, "A/D/gamma", {
-            { 0, "",                "normal",   1, "A/D/gamma" },
-            { 3, "",                "normal",   1, source_base_dir },
-            { 3, "alpha",           "normal",   NO_COPY_FROM },
-            { 3, "beta",            "normal",   NO_COPY_FROM }
+        { "A/B/E", "A/D/gamma", {
+            { 0, "",                "normal",       1, "A/D/gamma" },
+            { 3, "",                "normal",       1, "A/B/E" },
+            { 3, "alpha",           "normal",       NO_COPY_FROM },
+            { 3, "beta",            "normal",       NO_COPY_FROM },
           } },
 
         /* file onto a schedule-delete dir */
-        { source_base_file, "A/D/G", {
-            { 0, "",                "normal",   1, "A/D/G" },
-            { 0, "pi",              "normal",   1, "A/D/G/pi" },
-            { 0, "rho",             "normal",   1, "A/D/G/rho" },
-            { 0, "tau",             "normal",   1, "A/D/G/tau" },
-            { 3, "",                "normal",   1, source_base_file },
-            { 3, "pi",              "base-deleted",   NO_COPY_FROM },
-            { 3, "rho",             "base-deleted",   NO_COPY_FROM },
-            { 3, "tau",             "base-deleted",   NO_COPY_FROM }
+        { "iota", "A/D/H", {
+            { 0, "",                "normal",       1, "A/D/H" },
+            { 0, "chi",             "normal",       1, "A/D/H/chi" },
+            { 0, "psi",             "normal",       1, "A/D/H/psi" },
+            { 0, "omega",           "normal",       1, "A/D/H/omega" },
+            { 3, "",                "normal",       1, "iota" },
+            { 3, "chi",             "base-deleted", NO_COPY_FROM },
+            { 3, "psi",             "base-deleted", NO_COPY_FROM },
+            { 3, "omega",           "base-deleted", NO_COPY_FROM },
           } },
 
         { 0 }
@@ -800,7 +819,100 @@ test_adds(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(svn_test__create_repos_and_wc(&b.repos_url, &b.wc_abspath,
                                         "adds", opts, pool));
   SVN_ERR(svn_wc_context_create(&b.wc_ctx, NULL, pool, pool));
+  SVN_ERR(add_and_commit_greek_tree(&b));
 
+  /* add file */
+  file_write(&b, "new-file", "New file");
+  SVN_ERR(wc_add(&b, "new-file"));
+  {
+    nodes_row_t rows[] = {
+      { 1, "new-file",    "normal",       NO_COPY_FROM     },
+      { 0 } };
+    SVN_ERR(check_db_rows(&b, "new-file", rows));
+  }
+
+  /* add dir */
+  SVN_ERR(wc_mkdir(&b, "new-dir"));
+  SVN_ERR(wc_mkdir(&b, "new-dir/D2"));
+  {
+    nodes_row_t rows[] = {
+      { 1, "new-dir",     "normal",       NO_COPY_FROM     },
+      { 2, "new-dir/D2",  "normal",       NO_COPY_FROM     },
+      { 0 } };
+    SVN_ERR(check_db_rows(&b, "new-dir", rows));
+  }
+
+  /* replace file */
+  SVN_ERR(wc_delete(&b, "iota"));
+  file_write(&b, "iota", "New iota file");
+  SVN_ERR(wc_add(&b, "iota"));
+  {
+    nodes_row_t rows[] = {
+      { 0, "iota",        "normal",       1, "iota"        },
+      { 1, "iota",        "normal",       NO_COPY_FROM     },
+      { 0 } };
+    SVN_ERR(check_db_rows(&b, "iota", rows));
+  }
+
+  /* replace dir */
+  SVN_ERR(wc_delete(&b, "A/B/E"));
+  SVN_ERR(wc_mkdir(&b, "A/B/E"));
+  SVN_ERR(wc_mkdir(&b, "A/B/E/D2"));
+  {
+    nodes_row_t rows[] = {
+      { 0, "A/B/E",       "normal",       1, "A/B/E"       },
+      { 0, "A/B/E/alpha", "normal",       1, "A/B/E/alpha" },
+      { 0, "A/B/E/beta",  "normal",       1, "A/B/E/beta"  },
+      { 3, "A/B/E",       "normal",       NO_COPY_FROM     },
+      { 4, "A/B/E/D2",    "normal",       NO_COPY_FROM     },
+      { 3, "A/B/E/alpha", "base-deleted", NO_COPY_FROM     },
+      { 3, "A/B/E/beta",  "base-deleted", NO_COPY_FROM     },
+      { 0 } };
+    SVN_ERR(check_db_rows(&b, "A/B/E", rows));
+  }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_adds_change_kind(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  wc_baton_t b;
+
+  b.pool = pool;
+  SVN_ERR(svn_test__create_repos_and_wc(&b.repos_url, &b.wc_abspath,
+                                        "adds", opts, pool));
+  SVN_ERR(svn_wc_context_create(&b.wc_ctx, NULL, pool, pool));
+  SVN_ERR(add_and_commit_greek_tree(&b));
+
+  /* replace dir with file */
+  SVN_ERR(wc_delete(&b, "A/B/E"));
+  file_write(&b, "A/B/E", "New E file");
+  SVN_ERR(wc_add(&b, "A/B/E"));
+  {
+    nodes_row_t rows[] = {
+      { 0, "A/B/E",       "normal",       1, "A/B/E"       },
+      { 0, "A/B/E/alpha", "normal",       1, "A/B/E/alpha" },
+      { 0, "A/B/E/beta",  "normal",       1, "A/B/E/beta"  },
+      { 3, "A/B/E",       "normal",       NO_COPY_FROM     },
+      { 3, "A/B/E/alpha", "base-deleted", NO_COPY_FROM     },
+      { 3, "A/B/E/beta",  "base-deleted", NO_COPY_FROM     },
+      { 0 } };
+    SVN_ERR(check_db_rows(&b, "A/B/E", rows));
+  }
+
+  /* replace file with dir */
+  SVN_ERR(wc_delete(&b, "iota"));
+  SVN_ERR(wc_mkdir(&b, "iota"));
+  SVN_ERR(wc_mkdir(&b, "iota/D2"));
+  {
+    nodes_row_t rows[] = {
+      { 0, "iota",        "normal",       1, "iota"        },
+      { 1, "iota",        "normal",       NO_COPY_FROM     },
+      { 2, "iota/D2",     "normal",       NO_COPY_FROM     },
+      { 0 } };
+    SVN_ERR(check_db_rows(&b, "iota", rows));
+  }
 
   return SVN_NO_ERROR;
 }
@@ -965,7 +1077,7 @@ test_repo_wc_copies(const svn_test_opts_t *opts, apr_pool_t *pool)
 
   b.pool = pool;
   SVN_ERR(svn_test__create_repos_and_wc(&b.repos_url, &b.wc_abspath,
-                                        "wc_wc_copies", opts, pool));
+                                        "repo_wc_copies", opts, pool));
   SVN_ERR(svn_wc_context_create(&b.wc_ctx, NULL, pool, pool));
 
   return repo_wc_copies(&b);
@@ -1024,7 +1136,7 @@ struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_OPTS_WIMP(test_wc_wc_copies,
-                       "wc_wc_copies",
+                       "test_wc_wc_copies",
                        "needs op_depth"),
     SVN_TEST_OPTS_WIMP(test_reverts,
                        "test_reverts",
@@ -1039,13 +1151,16 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test_delete_with_base",
                        "needs op_depth"),
     SVN_TEST_OPTS_WIMP(test_adds,
-                       "adds",
+                       "test_adds",
                        "needs op_depth"),
     SVN_TEST_OPTS_WIMP(test_repo_wc_copies,
                        "test_repo_wc_copies",
                        "needs op_depth"),
     SVN_TEST_OPTS_WIMP(test_delete_with_update,
-                       "test_test_delete_with_update",
+                       "test_delete_with_update",
+                       "needs op_depth"),
+    SVN_TEST_OPTS_WIMP(test_adds_change_kind,
+                       "test_adds_change_kind",
                        "needs op_depth"),
     SVN_TEST_NULL
   };

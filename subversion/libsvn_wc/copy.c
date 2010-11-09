@@ -203,6 +203,7 @@ static svn_error_t *
 copy_versioned_file(svn_wc__db_t *db,
                     const char *src_abspath,
                     const char *dst_abspath,
+                    const char *dst_op_root_abspath,
                     svn_boolean_t metadata_only,
                     svn_cancel_func_t cancel_func,
                     void *cancel_baton,
@@ -258,7 +259,7 @@ copy_versioned_file(svn_wc__db_t *db,
 
   /* Copy the (single) node's metadata, and move the new filesystem node
      into place. */
-  SVN_ERR(svn_wc__db_op_copy(db, src_abspath, dst_abspath,
+  SVN_ERR(svn_wc__db_op_copy(db, src_abspath, dst_abspath, dst_op_root_abspath,
                              work_items, scratch_pool));
   SVN_ERR(svn_wc__wq_run(db, dir_abspath,
                          cancel_func, cancel_baton, scratch_pool));
@@ -282,6 +283,7 @@ static svn_error_t *
 copy_versioned_dir(svn_wc__db_t *db,
                    const char *src_abspath,
                    const char *dst_abspath,
+                   const char *dst_op_root_abspath,
                    svn_boolean_t metadata_only,
                    svn_cancel_func_t cancel_func,
                    void *cancel_baton,
@@ -322,7 +324,7 @@ copy_versioned_dir(svn_wc__db_t *db,
 
   /* Copy the (single) node's metadata, and move the new filesystem node
      into place. */
-  SVN_ERR(svn_wc__db_op_copy(db, src_abspath, dst_abspath,
+  SVN_ERR(svn_wc__db_op_copy(db, src_abspath, dst_abspath, dst_op_root_abspath,
                              work_items, scratch_pool));
   SVN_ERR(svn_wc__wq_run(db, dir_abspath,
                          cancel_func, cancel_baton, scratch_pool));
@@ -366,12 +368,14 @@ copy_versioned_dir(svn_wc__db_t *db,
       if (child_kind == svn_wc__db_kind_file)
         SVN_ERR(copy_versioned_file(db,
                                     child_src_abspath, child_dst_abspath,
+                                    dst_op_root_abspath,
                                     metadata_only,
                                     cancel_func, cancel_baton, NULL, NULL,
                                     iterpool));
       else if (child_kind == svn_wc__db_kind_dir)
         SVN_ERR(copy_versioned_dir(db,
                                    child_src_abspath, child_dst_abspath,
+                                   dst_op_root_abspath,
                                    metadata_only,
                                    cancel_func, cancel_baton, NULL, NULL,
                                    iterpool));
@@ -728,14 +732,16 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
   if (src_db_kind == svn_wc__db_kind_file
       || src_db_kind == svn_wc__db_kind_symlink)
     {
-      SVN_ERR(copy_versioned_file(db, src_abspath, dst_abspath, metadata_only,
+      SVN_ERR(copy_versioned_file(db, src_abspath, dst_abspath, dst_abspath,
+                                  metadata_only,
                                   cancel_func, cancel_baton,
                                   notify_func, notify_baton,
                                   scratch_pool));
     }
   else
     {
-      SVN_ERR(copy_versioned_dir(db, src_abspath, dst_abspath, metadata_only,
+      SVN_ERR(copy_versioned_dir(db, src_abspath, dst_abspath, dst_abspath,
+                                 metadata_only,
                                  cancel_func, cancel_baton,
                                  notify_func, notify_baton,
                                  scratch_pool));

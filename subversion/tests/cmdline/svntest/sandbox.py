@@ -162,9 +162,17 @@ class Sandbox:
     return self._is_built
 
   def ospath(self, relpath, wc_dir=None):
+    """Return RELPATH converted to an OS-style path relative to the WC dir
+       of this sbox, or relative to OS-style path WC_DIR if supplied."""
     if wc_dir is None:
       wc_dir = self.wc_dir
     return os.path.join(wc_dir, svntest.wc.to_ospath(relpath))
+
+  def ospaths(self, relpaths, wc_dir=None):
+    """Return a list of RELPATHS but with each path converted to an OS-style
+       path relative to the WC dir of this sbox, or relative to OS-style
+       path WC_DIR if supplied."""
+    return [self.ospath(rp, wc_dir) for rp in relpaths]
 
   def redirected_root_url(self, temporary=False):
     """If TEMPORARY is set, return the URL which should be configured
@@ -180,41 +188,61 @@ class Sandbox:
                                   parts[1])
     
   def simple_update(self, target=None):
+    """Update the WC or TARGET.
+       TARGET is a relpath relative to the WC."""
     assert not self.read_only
     if target is None:
       target = self.wc_dir
+    else:
+      target = self.ospath(target)
     svntest.main.run_svn(False, 'update', target)
 
   def simple_commit(self, target=None):
+    """Commit the WC or TARGET with a default log message.
+       TARGET is a relpath relative to the WC."""
     assert not self.read_only
     if target is None:
       target = self.wc_dir
+    else:
+      target = self.ospath(target)
     svntest.main.run_svn(False, 'commit',
                          '-m', svntest.main.make_log_msg(),
                          target)
 
   def simple_rm(self, *targets):
+    """TARGET is a relpath relative to the WC."""
     assert len(targets) > 0
+    targets = self.ospaths(targets)
     svntest.main.run_svn(False, 'rm', *targets)
 
   def simple_mkdir(self, *targets):
+    """TARGET is a relpath relative to the WC."""
     assert len(targets) > 0
+    targets = self.ospaths(targets)
     svntest.main.run_svn(False, 'mkdir', *targets)
 
   def simple_add(self, *targets):
+    """TARGET is a relpath relative to the WC."""
     assert len(targets) > 0
+    targets = self.ospaths(targets)
     svntest.main.run_svn(False, 'add', *targets)
 
   def simple_revert(self, *targets):
+    """TARGET is a relpath relative to the WC."""
     assert len(targets) > 0
+    targets = self.ospaths(targets)
     svntest.main.run_svn(False, 'revert', *targets)
 
   def simple_propset(self, name, value, *targets):
+    """TARGET is a relpath relative to the WC."""
     assert len(targets) > 0
+    targets = self.ospaths(targets)
     svntest.main.run_svn(False, 'propset', name, value, *targets)
 
   def simple_propdel(self, name, *targets):
+    """TARGET is a relpath relative to the WC."""
     assert len(targets) > 0
+    targets = self.ospaths(targets)
     svntest.main.run_svn(False, 'propdel', name, *targets)
 
 

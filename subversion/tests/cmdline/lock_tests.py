@@ -1606,16 +1606,16 @@ def cp_isnt_ro(sbox):
   open(kappa_path, 'w').write("This is the file 'kappa'.\n")
 
   ## added file
-  sbox.simple_add(kappa_path)
+  sbox.simple_add('kappa')
   svntest.actions.set_prop('svn:needs-lock', 'yes', kappa_path)
   is_writable(kappa_path)
-  sbox.simple_commit(kappa_path)
+  sbox.simple_commit('kappa')
   is_readonly(kappa_path)
 
   ## versioned file
   svntest.actions.set_prop('svn:needs-lock', 'yes', mu_path)
   is_writable(mu_path)
-  sbox.simple_commit(mu_path)
+  sbox.simple_commit('A/mu')
   is_readonly(mu_path)
 
   # At this point, mu has 'svn:needs-lock' set
@@ -1623,13 +1623,13 @@ def cp_isnt_ro(sbox):
   ## wc->wc copied file
   svntest.main.run_svn(None, 'copy', mu_path, mu2_path)
   is_writable(mu2_path)
-  sbox.simple_commit(mu2_path)
+  sbox.simple_commit('A/mu2')
   is_readonly(mu2_path)
 
   ## URL->wc copied file
   svntest.main.run_svn(None, 'copy', mu_URL, mu3_path)
   is_writable(mu3_path)
-  sbox.simple_commit(mu3_path)
+  sbox.simple_commit('A/mu3')
   is_readonly(mu3_path)
 
 
