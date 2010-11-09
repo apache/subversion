@@ -190,7 +190,7 @@ Candidate changes for 1.5.8:
      Without this fix, mod_dav_svn can be made to crash if the SVNParentPath
      directive is used.
    Votes:
-     +1: stsp
+     +1: stsp, philip
 
 Approved changes:
 =================
