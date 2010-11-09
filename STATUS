@@ -350,6 +350,8 @@ Approved changes:
    Create fails.log files for test runs.
    Justification:
      Developer convenience.
+   Notes:
+     Somewhat non-trivial merge conflicts.
    Votes:
      +1: danielsh, cmpilato, stsp
 
