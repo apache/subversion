@@ -4119,6 +4119,12 @@ walk(const dav_walk_params *params, int depth, dav_response **response)
   walker_ctx_t ctx = { 0 };
   dav_error *err;
 
+  if (params->root->info->restype == DAV_SVN_RESTYPE_PARENTPATH_COLLECTION)
+    {
+      /* Cannot walk an SVNParentPath collection, there is no repository. */
+      return NULL;
+    }
+
   ctx.params = params;
 
   ctx.wres.walk_ctx = params->walk_ctx;
