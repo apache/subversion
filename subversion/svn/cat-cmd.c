@@ -73,9 +73,9 @@ svn_cl__cat(apr_getopt_t *os,
                                  subpool));
 
       if (svn_path_is_url(truepath))
-          truepath = svn_uri_canonicalize(truepath, subpool);
+        truepath = svn_uri_canonicalize(truepath, subpool);
       else
-          truepath = svn_dirent_canonicalize(truepath, subpool);
+        truepath = svn_dirent_canonicalize(truepath, subpool);
 
       SVN_ERR(svn_cl__try(svn_client_cat2(out, truepath, &peg_revision,
                                           &(opt_state->start_revision),
