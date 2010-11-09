@@ -53,7 +53,7 @@ TEMPDIR=$BASEDIR/temp
 case $LOCATION in
     US)
     APACHE_MIRROR=http://www.pangex.com/pub/apache
-    SOURCEFORGE_MIRROR=http://internap.dl.sourceforge.net/sourceforge
+    SOURCEFORGE_MIRROR=http://softlayer.dl.sourceforge.net
     ;;
     UK)
     APACHE_MIRROR=http://apache.rmplc.co.uk
