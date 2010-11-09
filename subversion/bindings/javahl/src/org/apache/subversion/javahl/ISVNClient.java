@@ -200,12 +200,12 @@ public interface ISVNClient
     /**
      * Sets a file for deletion.
      * @param path      path or url to be deleted
-     * @param message   if path is a url, this will be the commit message.
      * @param force     delete even when there are local modifications.
      * @param keepLocal only remove the paths from the repository.
      * @param revpropTable A string-to-string mapping of revision properties
      *                     to values which will be set if this operation
      *                     results in a commit.
+     * @param handler   the commit message callback
      * @throws ClientException
      * @since 1.5
      */
@@ -262,17 +262,14 @@ public interface ISVNClient
     /**
      * Commits changes to the repository.
      * @param path            files to commit.
-     * @param message         log message.
      * @param depth           how deep to recurse in subdirectories
      * @param noUnlock        do remove any locks
      * @param keepChangelist  keep changelist associations after the commit.
      * @param changelists  if non-null, filter paths using changelists
+     * @param handler   the commit message callback
      * @param revpropTable A string-to-string mapping of revision properties
      *                     to values which will be set if this operation
      *                     results in a commit.
-     * @return The new revision number created by the commit, or
-     * {@link Revision#SVN_INVALID_REVNUM} if the revision number is
-     * invalid.
      * @throws ClientException
      * @since 1.5
      */
@@ -287,8 +284,6 @@ public interface ISVNClient
      *
      * @param sources A list of <code>CopySource</code> objects.
      * @param destPath Destination path or URL.
-     * @param message Commit message.  May be <code>null</code> if
-     * <code>destPath</code> is not a URL.
      * @param copyAsChild Whether to copy <code>srcPaths</code> as
      * children of <code>destPath</code>.
      * @param makeParents Whether to create intermediate parents
@@ -297,6 +292,8 @@ public interface ISVNClient
      * @param revpropTable A string-to-string mapping of revision properties
      *                     to values which will be set if this operation
      *                     results in a commit.
+     * @param handler   the commit message callback, may be <code>null</code>
+     *                  if <code>destPath</code> is not a URL
      * @throws ClientException If the copy operation fails.
      * @since 1.7
      */
@@ -311,8 +308,6 @@ public interface ISVNClient
      *
      * @param srcPaths Source paths or URLs.
      * @param destPath Destination path or URL.
-     * @param message Commit message.  May be <code>null</code> if
-     * <code>destPath</code> is not a URL.
      * @param force Whether to perform the move even if local
      * modifications exist.
      * @param moveAsChild Whether to move <code>srcPaths</code> as
@@ -321,6 +316,8 @@ public interface ISVNClient
      * @param revpropTable A string-to-string mapping of revision properties
      *                     to values which will be set if this operation
      *                     results in a commit.
+     * @param handler   the commit message callback, may be <code>null</code>
+     *                  if <code>destPath</code> is not a URL
      * @throws ClientException If the move operation fails.
      * @since 1.5
      */
@@ -334,11 +331,11 @@ public interface ISVNClient
      * Creates a directory directly in a repository or creates a
      * directory on disk and schedules it for addition.
      * @param path      directories to be created
-     * @param message   commit message to used if path contains urls
      * @param makeParents Whether to create intermediate parents
      * @param revpropTable A string-to-string mapping of revision properties
      *                     to values which will be set if this operation
      *                     results in a commit.
+     * @param handler   the handler to use if paths contains URLs
      * @throws ClientException
      * @since 1.5
      */
@@ -412,7 +409,6 @@ public interface ISVNClient
      * head.
      * @param path      the local path
      * @param url       the target url
-     * @param message   the log message.
      * @param depth     depth to traverse into subdirectories
      * @param noIgnore  whether to add files matched by ignore patterns
      * @param ignoreUnknownNodeTypes whether to ignore files which
@@ -420,6 +416,7 @@ public interface ISVNClient
      * @param revpropTable A string-to-string mapping of revision properties
      *                     to values which will be set if this operation
      *                     results in a commit.
+     * @param handler   the commit message callback
      * @throws ClientException
      *
      * @since 1.5
