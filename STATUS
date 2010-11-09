@@ -129,15 +129,6 @@ Candidate changes:
    Votes:
      +1: cmpilato
 
- * r962377, r962378
-   Fix svnsync handling of directory copyfrom.
-   Justification:
-     Could lead to sync'd repositories being different from the master.
-   Concerns:
-     http://article.gmane.org/gmane.comp.version-control.subversion.devel/120590
-   Votes:
-     +1: danielsh, philip
-
  * r877814
    Fix random test failures in merge_tests.py when tests are run in parallel.
    Justification:
@@ -148,7 +139,7 @@ Candidate changes:
    Backport branch:
      ^/subversion/branches/1.6.x-r877814
    Votes:
-     +1: stsp
+     +1: stsp, cmpilato
 
  * r991534
    Fix random test failures when tests are run in parallel over DAV.
@@ -158,14 +149,14 @@ Candidate changes:
    Backport branch:
      ^/subversion/branches/1.6.x-r991534
    Votes:
-     +1: stsp
+     +1: stsp, cmpilato
 
  * r964349
    Create fails.log files for test runs.
    Justification:
      Developer convenience.
    Votes:
-     +1: danielsh
+     +1: danielsh, cmpilato
 
  * r1005446
    Make the new 'svnmucc propsetf' subcommand actually work.
@@ -241,7 +232,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.6.x-issue3745
    Votes:
-     +1: stsp
+     +1: stsp, cmpilato
 
  * r1032808
    Fix blame -g server-side memory leaks.
@@ -249,7 +240,7 @@ Candidate changes:
      As detailed in http://svn.haxx.se/dev/archive-2010-11/0102.shtml,
      blame -g can trigger a serious server side memory leak.
    Votes:
-     +1: pburba
+     +1: pburba, cmpilato
 
  * r1032970
    Fix issue #3727, "svn export into the current directory"
@@ -259,7 +250,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.6.x-issue3727
    Votes:
-     +1: stsp
+     +1: stsp, cmpilato
 
  * r1022675 (r982355 from ^subversion/branches/performance)
    Limit the amount of unused memory fragments held by the root pools.
@@ -273,7 +264,7 @@ Candidate changes:
      on 'svn:ignore' and 'bugtraq:logregex'.  This happens for me with both
      1.6.14 and trunk@1032984.
    Votes:
-     +1: pburba
+     +1: pburba, cmpilato
 
 Veto-blocked changes:
 =====================
@@ -371,3 +362,13 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r962377, r962378
+   Fix svnsync handling of directory copyfrom.
+   Justification:
+     Could lead to sync'd repositories being different from the master.
+   Concerns:
+     http://article.gmane.org/gmane.comp.version-control.subversion.devel/120590
+   Votes:
+     +1: danielsh, philip, cmpilato
+
