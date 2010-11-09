@@ -1115,8 +1115,12 @@ class TestSpawningThread(threading.Thread):
       self.run_one(next_index)
 
   def run_one(self, index):
-    command = os.path.join(self.srcdir, 'subversion/tests/cmdline',
-                           sys.argv[0])
+    if self.srcdir:
+      command = os.path.join(self.srcdir, 'subversion/tests/cmdline',
+                             sys.argv[0])
+    else:
+      command = os.path.abspath(sys.argv[0])
+
     args = []
     args.append(str(index))
     args.append('-c')
