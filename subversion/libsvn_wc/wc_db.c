@@ -2671,6 +2671,7 @@ cross_db_copy(svn_wc__db_pdh_t *src_pdh,
               svn_wc__db_pdh_t *dst_pdh,
               const char *dst_relpath,
               svn_wc__db_status_t dst_status,
+              apr_int64_t dst_op_depth,
               svn_wc__db_kind_t kind,
               const apr_array_header_t *children,
               apr_int64_t copyfrom_id,
@@ -2734,7 +2735,7 @@ cross_db_copy(svn_wc__db_pdh_t *src_pdh,
   iwb.original_revnum = copyfrom_rev;
   iwb.moved_here = FALSE;
 
-  iwb.op_depth = 2;  /* ### temporary op_depth */
+  iwb.op_depth = dst_op_depth;
 
   iwb.checksum = checksum;
   iwb.children = children;
@@ -2933,6 +2934,7 @@ db_op_copy(svn_wc__db_pdh_t *src_pdh,
            const char *src_relpath,
            svn_wc__db_pdh_t *dst_pdh,
            const char *dst_relpath,
+           apr_int64_t dst_op_depth,
            const svn_skel_t *work_items,
            apr_pool_t *scratch_pool)
 {
@@ -2943,7 +2945,6 @@ db_op_copy(svn_wc__db_pdh_t *src_pdh,
   apr_int64_t copyfrom_id;
   svn_wc__db_kind_t kind;
   const apr_array_header_t *children;
-  apr_int64_t op_depth;
 
   SVN_ERR(get_info_for_copy(&copyfrom_id, &copyfrom_relpath, &copyfrom_rev,
                             &status, &kind, &have_work,
@@ -2987,8 +2988,6 @@ db_op_copy(svn_wc__db_pdh_t *src_pdh,
   else
     children = NULL;
 
-  op_depth = 2; /* ### temporary op_depth */
-
   if (src_pdh->wcroot == dst_pdh->wcroot)
     {
       svn_sqlite__stmt_t *stmt;
@@ -3005,7 +3004,7 @@ db_op_copy(svn_wc__db_pdh_t *src_pdh,
       SVN_ERR(svn_sqlite__bindf(stmt, "issisnnnt",
                     src_pdh->wcroot->wc_id, src_relpath,
                     dst_relpath,
-                    op_depth,
+                    dst_op_depth,
                     dst_parent_relpath,
                     presence_map, dst_status));
 
@@ -3033,13 +3032,13 @@ db_op_copy(svn_wc__db_pdh_t *src_pdh,
                                            NULL /* inherit repos_path */,
                                            copyfrom_rev,
                                            children,
-                                           op_depth,
+                                           dst_op_depth,
                                            scratch_pool));
     }
   else
     {
       SVN_ERR(cross_db_copy(src_pdh, src_relpath,
-                            dst_pdh, dst_relpath, dst_status,
+                            dst_pdh, dst_relpath, dst_status, dst_op_depth,
                             kind, children,
                             copyfrom_id, copyfrom_relpath, copyfrom_rev,
                             scratch_pool));
@@ -3057,11 +3056,13 @@ svn_error_t *
 svn_wc__db_op_copy(svn_wc__db_t *db,
                    const char *src_abspath,
                    const char *dst_abspath,
+                   const char *dst_op_root_abspath,
                    const svn_skel_t *work_items,
                    apr_pool_t *scratch_pool)
 {
   svn_wc__db_pdh_t *src_pdh, *dst_pdh;
-  const char *src_relpath, *dst_relpath;
+  const char *src_relpath, *dst_relpath, *dst_op_root_relpath;
+  apr_int64_t dst_op_depth;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(src_abspath));
   SVN_ERR_ASSERT(svn_dirent_is_absolute(dst_abspath));
@@ -3078,9 +3079,19 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
                                              scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(dst_pdh);
 
+#ifdef SVN_WC__OP_DEPTH
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&dst_pdh, &dst_op_root_relpath,
+                                             db, dst_op_root_abspath,
+                                             svn_sqlite__mode_readwrite,
+                                             scratch_pool, scratch_pool));
+  dst_op_depth = relpath_depth(dst_op_root_relpath);
+#else
+  dst_op_depth = 2;  /* ### temporary op_depth */
+#endif
+
   /* ### This should all happen in one transaction. */
   SVN_ERR(db_op_copy(src_pdh, src_relpath, dst_pdh, dst_relpath,
-                     work_items, scratch_pool));
+                     dst_op_depth, work_items, scratch_pool));
 
   return SVN_NO_ERROR;
 }

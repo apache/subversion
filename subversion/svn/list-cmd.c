@@ -271,6 +271,11 @@ svn_cl__list(apr_getopt_t *os,
       SVN_ERR(svn_opt_parse_path(&peg_revision, &truepath, target,
                                  subpool));
 
+      if (svn_path_is_url(truepath))
+        truepath = svn_uri_canonicalize(truepath, subpool);
+      else
+        truepath = svn_dirent_canonicalize(truepath, subpool);
+
       if (opt_state->xml)
         {
           svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
