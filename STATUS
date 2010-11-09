@@ -158,6 +158,12 @@ Candidate changes:
      ^/subversion/branches/1.6.x-no-wcng-check
    Votes:
      +0: cmpilato
+     +1: stsp (I agree with the points cmpilato has raised in the issue.
+               Let's deal with this problem, if it really turns out to
+               be relevant, after 1.7 is released. We can still issue a 1.6.x
+               patch release at that point to fix any such problems.
+               Until then, we don't need to bother our users with this.
+               Especially since doing so is causing them real problems now.)
 
  * r877219, r877239
    In Makefile.in, try svnversion from $PATH if in-tree svnversion fails.
