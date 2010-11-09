@@ -819,7 +819,100 @@ test_adds(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(svn_test__create_repos_and_wc(&b.repos_url, &b.wc_abspath,
                                         "adds", opts, pool));
   SVN_ERR(svn_wc_context_create(&b.wc_ctx, NULL, pool, pool));
+  SVN_ERR(add_and_commit_greek_tree(&b));
 
+  /* add file */
+  file_write(&b, "new-file", "New file");
+  SVN_ERR(wc_add(&b, "new-file"));
+  {
+    nodes_row_t rows[] = {
+      { 1, "new-file",    "normal",       NO_COPY_FROM     },
+      { 0 } };
+    SVN_ERR(check_db_rows(&b, "new-file", rows));
+  }
+
+  /* add dir */
+  SVN_ERR(wc_mkdir(&b, "new-dir"));
+  SVN_ERR(wc_mkdir(&b, "new-dir/D2"));
+  {
+    nodes_row_t rows[] = {
+      { 1, "new-dir",     "normal",       NO_COPY_FROM     },
+      { 2, "new-dir/D2",  "normal",       NO_COPY_FROM     },
+      { 0 } };
+    SVN_ERR(check_db_rows(&b, "new-dir", rows));
+  }
+
+  /* replace file */
+  SVN_ERR(wc_delete(&b, "iota"));
+  file_write(&b, "iota", "New iota file");
+  SVN_ERR(wc_add(&b, "iota"));
+  {
+    nodes_row_t rows[] = {
+      { 0, "iota",        "normal",       1, "iota"        },
+      { 1, "iota",        "normal",       NO_COPY_FROM     },
+      { 0 } };
+    SVN_ERR(check_db_rows(&b, "iota", rows));
+  }
+
+  /* replace dir */
+  SVN_ERR(wc_delete(&b, "A/B/E"));
+  SVN_ERR(wc_mkdir(&b, "A/B/E"));
+  SVN_ERR(wc_mkdir(&b, "A/B/E/D2"));
+  {
+    nodes_row_t rows[] = {
+      { 0, "A/B/E",       "normal",       1, "A/B/E"       },
+      { 0, "A/B/E/alpha", "normal",       1, "A/B/E/alpha" },
+      { 0, "A/B/E/beta",  "normal",       1, "A/B/E/beta"  },
+      { 3, "A/B/E",       "normal",       NO_COPY_FROM     },
+      { 4, "A/B/E/D2",    "normal",       NO_COPY_FROM     },
+      { 3, "A/B/E/alpha", "base-deleted", NO_COPY_FROM     },
+      { 3, "A/B/E/beta",  "base-deleted", NO_COPY_FROM     },
+      { 0 } };
+    SVN_ERR(check_db_rows(&b, "A/B/E", rows));
+  }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_adds_change_kind(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  wc_baton_t b;
+
+  b.pool = pool;
+  SVN_ERR(svn_test__create_repos_and_wc(&b.repos_url, &b.wc_abspath,
+                                        "adds", opts, pool));
+  SVN_ERR(svn_wc_context_create(&b.wc_ctx, NULL, pool, pool));
+  SVN_ERR(add_and_commit_greek_tree(&b));
+
+  /* replace dir with file */
+  SVN_ERR(wc_delete(&b, "A/B/E"));
+  file_write(&b, "A/B/E", "New E file");
+  SVN_ERR(wc_add(&b, "A/B/E"));
+  {
+    nodes_row_t rows[] = {
+      { 0, "A/B/E",       "normal",       1, "A/B/E"       },
+      { 0, "A/B/E/alpha", "normal",       1, "A/B/E/alpha" },
+      { 0, "A/B/E/beta",  "normal",       1, "A/B/E/beta"  },
+      { 3, "A/B/E",       "normal",       NO_COPY_FROM     },
+      { 3, "A/B/E/alpha", "base-deleted", NO_COPY_FROM     },
+      { 3, "A/B/E/beta",  "base-deleted", NO_COPY_FROM     },
+      { 0 } };
+    SVN_ERR(check_db_rows(&b, "A/B/E", rows));
+  }
+
+  /* replace file with dir */
+  SVN_ERR(wc_delete(&b, "iota"));
+  SVN_ERR(wc_mkdir(&b, "iota"));
+  SVN_ERR(wc_mkdir(&b, "iota/D2"));
+  {
+    nodes_row_t rows[] = {
+      { 0, "iota",        "normal",       1, "iota"        },
+      { 1, "iota",        "normal",       NO_COPY_FROM     },
+      { 2, "iota/D2",     "normal",       NO_COPY_FROM     },
+      { 0 } };
+    SVN_ERR(check_db_rows(&b, "iota", rows));
+  }
 
   return SVN_NO_ERROR;
 }
@@ -1065,6 +1158,9 @@ struct svn_test_descriptor_t test_funcs[] =
                        "needs op_depth"),
     SVN_TEST_OPTS_WIMP(test_delete_with_update,
                        "test_delete_with_update",
+                       "needs op_depth"),
+    SVN_TEST_OPTS_WIMP(test_adds_change_kind,
+                       "test_adds_change_kind",
                        "needs op_depth"),
     SVN_TEST_NULL
   };
