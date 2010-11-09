@@ -113,7 +113,7 @@ Candidate changes:
      Fixes issue #3709 for clients talking to servers that don't strip
      out unreadable paths from their get-dir responses.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, stsp
 
  * ^/subversion/branches/1.6.x-no-wcng-check
    Remove the function subversion/libsvn_wc/questions.c:is_inside_wc_ng()
