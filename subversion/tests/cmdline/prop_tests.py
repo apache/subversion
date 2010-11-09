@@ -55,11 +55,11 @@ def make_local_props(sbox):
   wc_dir = sbox.wc_dir
 
   # Add properties to one file and one directory
-  sbox.simple_propset('blue', 'azul', sbox.ospath('A/mu'))
-  sbox.simple_propset('green', 'verde', sbox.ospath('A/mu'))
-  sbox.simple_propset('editme', 'the foo fighters', sbox.ospath('A/mu'))
-  sbox.simple_propset('red', 'rojo', sbox.ospath('A/D/G'))
-  sbox.simple_propset('yellow', 'amarillo', sbox.ospath('A/D/G'))
+  sbox.simple_propset('blue', 'azul', 'A/mu')
+  sbox.simple_propset('green', 'verde', 'A/mu')
+  sbox.simple_propset('editme', 'the foo fighters', 'A/mu')
+  sbox.simple_propset('red', 'rojo', 'A/D/G')
+  sbox.simple_propset('yellow', 'amarillo', 'A/D/G')
 
   # Make sure they show up as local mods in status
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -69,7 +69,7 @@ def make_local_props(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Remove one property
-  sbox.simple_propdel('yellow', sbox.ospath('A/D/G'))
+  sbox.simple_propdel('yellow', 'A/D/G')
 
   svntest.main.use_editor('foo_to_bar')
   # Edit one property
@@ -111,10 +111,8 @@ def commit_props(sbox):
   wc_dir = sbox.wc_dir
 
   # Add a property to a file and a directory
-  mu_path = sbox.ospath('A/mu')
-  H_path = sbox.ospath('A/D/H')
-  sbox.simple_propset('blue', 'azul', mu_path)
-  sbox.simple_propset('red', 'rojo', H_path)
+  sbox.simple_propset('blue', 'azul', 'A/mu')
+  sbox.simple_propset('red', 'rojo', 'A/D/H')
 
   # Create expected output tree.
   expected_output = svntest.wc.State(wc_dir, {
@@ -149,10 +147,8 @@ def update_props(sbox):
   svntest.actions.duplicate_dir(wc_dir, wc_backup)
 
   # Add a property to a file and a directory
-  mu_path = sbox.ospath('A/mu')
-  H_path = sbox.ospath('A/D/H')
-  sbox.simple_propset('blue', 'azul', mu_path)
-  sbox.simple_propset('red', 'rojo', H_path)
+  sbox.simple_propset('blue', 'azul', 'A/mu')
+  sbox.simple_propset('red', 'rojo', 'A/D/H')
 
   # Create expected output tree.
   expected_output = svntest.wc.State(wc_dir, {
@@ -170,17 +166,12 @@ def update_props(sbox):
                                         None, wc_dir)
 
   # Add more properties
-  sbox.simple_propset('blue2', 'azul2', mu_path)
-  sbox.simple_propset('red2', 'rojo2', H_path)
+  sbox.simple_propset('blue2', 'azul2', 'A/mu')
+  sbox.simple_propset('red2', 'rojo2', 'A/D/H')
   expected_status.tweak('A/mu', 'A/D/H', wc_rev=3, status='  ')
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status,
                                         None, wc_dir)
-
-  # Overwrite mu_path and H_path to refer to the backup copies from
-  # here on out.
-  mu_path = sbox.ospath('A/mu', wc_dir=wc_backup)
-  H_path = sbox.ospath('A/D/H', wc_dir=wc_backup)
 
   # Create expected output tree for an update of the wc_backup.
   expected_output = svntest.wc.State(wc_backup, {
@@ -229,11 +220,10 @@ def downdate_props(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  iota_path = sbox.ospath('iota')
   mu_path = sbox.ospath('A/mu')
 
   # Add a property to a file
-  sbox.simple_propset('cash-sound', 'cha-ching!', iota_path)
+  sbox.simple_propset('cash-sound', 'cha-ching!', 'iota')
 
   # Create expected output tree.
   expected_output = svntest.wc.State(wc_dir, {
@@ -297,14 +287,13 @@ def remove_props(sbox):
   wc_dir = sbox.wc_dir
 
   # Add a property to a file
-  iota_path = sbox.ospath('iota')
-  sbox.simple_propset('cash-sound', 'cha-ching!', iota_path)
+  sbox.simple_propset('cash-sound', 'cha-ching!', 'iota')
 
   # Commit the file
-  sbox.simple_commit(iota_path)
+  sbox.simple_commit('iota')
 
   # Now, remove the property
-  sbox.simple_propdel('cash-sound', iota_path)
+  sbox.simple_propdel('cash-sound', 'iota')
 
   # Create expected output tree.
   expected_output = svntest.wc.State(wc_dir, {
@@ -331,9 +320,9 @@ def update_conflict_props(sbox):
 
   # Add a property to a file and a directory
   mu_path = sbox.ospath('A/mu')
-  sbox.simple_propset('cash-sound', 'cha-ching!', mu_path)
+  sbox.simple_propset('cash-sound', 'cha-ching!', 'A/mu')
   A_path = sbox.ospath('A')
-  sbox.simple_propset('foo', 'bar', A_path)
+  sbox.simple_propset('foo', 'bar', 'A')
 
   # Commit the file and directory
   sbox.simple_commit()
@@ -342,8 +331,8 @@ def update_conflict_props(sbox):
   svntest.main.run_svn(None, 'up', '-r', '1', wc_dir)
 
   # Add conflicting properties
-  sbox.simple_propset('cash-sound', 'beep!', mu_path)
-  sbox.simple_propset('foo', 'baz', A_path)
+  sbox.simple_propset('cash-sound', 'beep!', 'A/mu')
+  sbox.simple_propset('foo', 'baz', 'A')
 
   # Create expected output tree for an update of the wc_backup.
   expected_output = svntest.wc.State(wc_dir, {
@@ -394,7 +383,7 @@ def commit_conflict_dirprops(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  sbox.simple_propset('foo', 'bar', wc_dir)
+  sbox.simple_propset('foo', 'bar', '')
 
   # Commit the file and directory
   sbox.simple_commit()
@@ -404,7 +393,7 @@ def commit_conflict_dirprops(sbox):
                        'up', '-r', '1', wc_dir)
 
   # Add conflicting properties
-  sbox.simple_propset('foo', 'eek', wc_dir)
+  sbox.simple_propset('foo', 'eek', '')
 
   svntest.actions.run_and_verify_commit(wc_dir, None, None,
                                         "[oO]ut[- ]of[- ]date",
@@ -428,20 +417,20 @@ def commit_replacement_props(sbox):
   # Add a property to two files
   iota_path = sbox.ospath('iota')
   lambda_path = sbox.ospath('A/B/lambda')
-  sbox.simple_propset('cash-sound', 'cha-ching!', iota_path)
-  sbox.simple_propset('boson', 'W', lambda_path)
+  sbox.simple_propset('cash-sound', 'cha-ching!', 'iota')
+  sbox.simple_propset('boson', 'W', 'A/B/lambda')
 
   # Commit (### someday use run_and_verify_commit for better coverage)
   sbox.simple_commit()
 
   # Schedule both files for deletion
-  sbox.simple_rm(iota_path, lambda_path)
+  sbox.simple_rm('iota', 'A/B/lambda')
 
   # Now recreate the files, and schedule them for addition.
   # Poof, the 'new' files don't have any properties at birth.
   svntest.main.file_append(iota_path, 'iota TNG')
   svntest.main.file_append(lambda_path, 'lambda TNG')
-  sbox.simple_add(iota_path, lambda_path)
+  sbox.simple_add('iota', 'A/B/lambda')
 
   # Sanity check:  the two files should be scheduled for (R)eplacement.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -451,7 +440,7 @@ def commit_replacement_props(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Now add a property to lambda.  Iota still doesn't have any.
-  sbox.simple_propset('capacitor', 'flux', lambda_path)
+  sbox.simple_propset('capacitor', 'flux', 'A/B/lambda')
 
   # Commit, with careful output checking.  We're actually going to
   # scan the working copy for props after the commit.
@@ -482,20 +471,20 @@ def revert_replacement_props(sbox):
   # Add a property to two files
   iota_path = sbox.ospath('iota')
   lambda_path = sbox.ospath('A/B/lambda')
-  sbox.simple_propset('cash-sound', 'cha-ching!', iota_path)
-  sbox.simple_propset('boson', 'W', lambda_path)
+  sbox.simple_propset('cash-sound', 'cha-ching!', 'iota')
+  sbox.simple_propset('boson', 'W', 'A/B/lambda')
 
   # Commit rev 2. (### someday use run_and_verify_commit for better coverage)
   sbox.simple_commit()
 
   # Schedule both files for deletion
-  sbox.simple_rm(iota_path, lambda_path)
+  sbox.simple_rm('iota', 'A/B/lambda')
 
   # Now recreate the files, and schedule them for addition.
   # Poof, the 'new' files don't have any properties at birth.
   svntest.main.file_append(iota_path, 'iota TNG')
   svntest.main.file_append(lambda_path, 'lambda TNG')
-  sbox.simple_add(iota_path, lambda_path)
+  sbox.simple_add('iota', 'A/B/lambda')
 
   # Sanity check:  the two files should be scheduled for (R)eplacement.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -505,10 +494,10 @@ def revert_replacement_props(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Now add a property to lambda.  Iota still doesn't have any.
-  sbox.simple_propset('capacitor', 'flux', lambda_path)
+  sbox.simple_propset('capacitor', 'flux', 'A/B/lambda')
 
   # Now revert both files.
-  sbox.simple_revert(iota_path, lambda_path)
+  sbox.simple_revert('iota', 'A/B/lambda')
 
   # Do an update; even though the update is really a no-op,
   # run_and_verify_update has the nice feature of scanning disk as
@@ -616,9 +605,9 @@ def inappropriate_props(sbox):
 
   path = sbox.ospath('binary')
   svntest.main.file_append(path, "binary")
-  sbox.simple_add(path)
+  sbox.simple_add('binary')
 
-  sbox.simple_propset('svn:mime-type', 'application/octet-stream', path)
+  sbox.simple_propset('svn:mime-type', 'application/octet-stream', 'binary')
 
   svntest.actions.run_and_verify_svn('Illegal target', None,
                                      svntest.verify.AnyOutput,
@@ -627,7 +616,7 @@ def inappropriate_props(sbox):
 
   path = sbox.ospath('multi-eol')
   svntest.main.file_append(path, "line1\rline2\n")
-  sbox.simple_add(path)
+  sbox.simple_add('multi-eol')
 
   svntest.actions.run_and_verify_svn('Illegal target', None,
                                      svntest.verify.AnyOutput,
@@ -636,7 +625,7 @@ def inappropriate_props(sbox):
 
   path = sbox.ospath('backwards-eol')
   svntest.main.file_append(path, "line1\n\r")
-  sbox.simple_add(path)
+  sbox.simple_add('backwards-eol')
 
   svntest.actions.run_and_verify_svn('Illegal target', None,
                                      svntest.verify.AnyOutput,
@@ -645,7 +634,7 @@ def inappropriate_props(sbox):
 
   path = sbox.ospath('incomplete-eol')
   svntest.main.file_append(path, "line1\r\n\r")
-  sbox.simple_add(path)
+  sbox.simple_add('incomplete-eol')
 
   svntest.actions.run_and_verify_svn('Illegal target', None,
                                      svntest.verify.AnyOutput,
@@ -756,10 +745,10 @@ def copy_inherits_special_props(sbox):
   # Create the first path as a binary file.  To have svn treat the
   # file as binary, have a 0x00 in the file.
   svntest.main.file_append(new_path1, "binary file\000")
-  sbox.simple_add(new_path1)
+  sbox.simple_add('new_file1.bin')
 
   # Add initial svn:mime-type to the file
-  sbox.simple_propset('svn:mime-type', orig_mime_type, new_path1)
+  sbox.simple_propset('svn:mime-type', orig_mime_type, 'new_file1.bin')
 
   # Set the svn:executable property on the file if this is a system
   # that can handle chmod, in which case svn will turn on the
@@ -767,7 +756,7 @@ def copy_inherits_special_props(sbox):
   # manually on the file and see the value of svn:executable in the
   # copied file.
   if os.name == 'posix':
-    sbox.simple_propset('svn:executable', 'on', new_path1)
+    sbox.simple_propset('svn:executable', 'on', 'new_file1.bin')
     os.chmod(new_path1, 0644)
 
   # Commit the file
@@ -1063,18 +1052,18 @@ def recursive_base_wc_ops(sbox):
   # Files with which to test, in alphabetical order
   fp_add = sbox.ospath('A/added')
   fp_del = sbox.ospath('A/mu')
-  fp_keep= sbox.ospath('iota')
+  #fp_keep= sbox.ospath('iota')
 
   # Set up properties
-  sbox.simple_propset('p', 'old-del', fp_del)
-  sbox.simple_propset('p', 'old-keep', fp_keep)
+  sbox.simple_propset('p', 'old-del', 'A/mu')
+  sbox.simple_propset('p', 'old-keep', 'iota')
   sbox.simple_commit()
 
   svntest.main.file_append(fp_add, 'blah')
-  sbox.simple_add(fp_add)
-  sbox.simple_propset('p', 'new-add', fp_add)
-  sbox.simple_propset('p', 'new-del', fp_del)
-  sbox.simple_propset('p', 'new-keep', fp_keep)
+  sbox.simple_add('A/added')
+  sbox.simple_propset('p', 'new-add', 'A/added')
+  sbox.simple_propset('p', 'new-del', 'A/mu')
+  sbox.simple_propset('p', 'new-keep', 'iota')
   svntest.main.run_svn(None, 'del', '--force', fp_del)
 
   # Test recursive proplist
@@ -1132,21 +1121,19 @@ def url_props_ops(sbox):
   prop2 = 'prop2'
   propval2 = 'propval2'
 
-  iota_path = sbox.ospath('iota')
   iota_url = sbox.repo_url + '/iota'
-  A_path = sbox.ospath('A')
   A_url = sbox.repo_url + '/A'
 
   # Add a couple of properties
-  sbox.simple_propset(prop1, propval1, iota_path)
-  sbox.simple_propset(prop1, propval1, A_path)
+  sbox.simple_propset(prop1, propval1, 'iota')
+  sbox.simple_propset(prop1, propval1, 'A')
 
   # Commit
   sbox.simple_commit()
 
   # Add a few more properties
-  sbox.simple_propset(prop2, propval2, iota_path)
-  sbox.simple_propset(prop2, propval2, A_path)
+  sbox.simple_propset(prop2, propval2, 'iota')
+  sbox.simple_propset(prop2, propval2, 'A')
 
   # Commit again
   sbox.simple_commit()
@@ -1256,7 +1243,7 @@ def update_props_on_wc_root(sbox):
   svntest.actions.duplicate_dir(wc_dir, wc_backup)
 
   # Add a property to the root folder
-  sbox.simple_propset('red', 'rojo', wc_dir)
+  sbox.simple_propset('red', 'rojo', '')
 
   # Create expected output tree.
   expected_output = svntest.wc.State(wc_dir, {
@@ -1301,14 +1288,14 @@ def props_on_replaced_file(sbox):
 
   # Add some properties to iota
   iota_path = sbox.ospath("iota")
-  sbox.simple_propset('red', 'rojo', iota_path)
-  sbox.simple_propset('blue', 'lagoon', iota_path)
+  sbox.simple_propset('red', 'rojo', 'iota')
+  sbox.simple_propset('blue', 'lagoon', 'iota')
   sbox.simple_commit()
 
   # replace iota_path
-  sbox.simple_rm(iota_path)
+  sbox.simple_rm('iota')
   svntest.main.file_append(iota_path, "some mod")
-  sbox.simple_add(iota_path)
+  sbox.simple_add('iota')
 
   # check that the replaced file has no properties
   expected_disk = svntest.main.greek_state.copy()
@@ -1318,8 +1305,8 @@ def props_on_replaced_file(sbox):
                              expected_disk.old_tree())
 
   # now add a new property to iota
-  sbox.simple_propset('red', 'mojo', iota_path)
-  sbox.simple_propset('groovy', 'baby', iota_path)
+  sbox.simple_propset('red', 'mojo', 'iota')
+  sbox.simple_propset('groovy', 'baby', 'iota')
 
   # What we expect the disk tree to look like:
   expected_disk.tweak('iota', props={'red' : 'mojo', 'groovy' : 'baby'})
@@ -1335,15 +1322,11 @@ def depthy_wc_proplist(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  A_path = sbox.ospath('A')
-  iota_path = sbox.ospath('iota')
-  mu_path = sbox.ospath('A/mu')
-
   # Set up properties.
-  sbox.simple_propset('p', 'prop1', wc_dir)
-  sbox.simple_propset('p', 'prop2', iota_path)
-  sbox.simple_propset('p', 'prop3', A_path)
-  sbox.simple_propset('p', 'prop4', mu_path)
+  sbox.simple_propset('p', 'prop1', '')
+  sbox.simple_propset('p', 'prop2', 'iota')
+  sbox.simple_propset('p', 'prop3', 'A')
+  sbox.simple_propset('p', 'prop4', 'A/mu')
 
   # Commit.
   sbox.simple_commit()
@@ -1390,15 +1373,11 @@ def depthy_url_proplist(sbox):
   repo_url = sbox.repo_url
   wc_dir = sbox.wc_dir
 
-  A_path = sbox.ospath('A')
-  iota_path = sbox.ospath('iota')
-  mu_path = sbox.ospath('A/mu')
-
   # Set up properties.
-  sbox.simple_propset('p', 'prop1', wc_dir)
-  sbox.simple_propset('p', 'prop2', iota_path)
-  sbox.simple_propset('p', 'prop3', A_path)
-  sbox.simple_propset('p', 'prop4', mu_path)
+  sbox.simple_propset('p', 'prop1', '')
+  sbox.simple_propset('p', 'prop2', 'iota')
+  sbox.simple_propset('p', 'prop3', 'A')
+  sbox.simple_propset('p', 'prop4', 'A/mu')
 
   # Test depth-empty proplist.
   exit_code, output, errput = svntest.main.run_svn(None, 'proplist',
@@ -1512,18 +1491,17 @@ def remove_custom_ns_props(sbox):
   wc_dir = sbox.wc_dir
 
   # Add a property to a file
-  iota_path = sbox.ospath('iota')
-  sbox.simple_propset('ns:cash-sound', 'cha-ching!', iota_path)
+  sbox.simple_propset('ns:cash-sound', 'cha-ching!', 'iota')
 
   # Commit the file
-  sbox.simple_commit(iota_path)
+  sbox.simple_commit('iota')
 
   # Now, make a backup copy of the working copy
   wc_backup = sbox.add_wc_path('backup')
   svntest.actions.duplicate_dir(wc_dir, wc_backup)
 
   # Remove the property
-  sbox.simple_propdel('ns:cash-sound', iota_path)
+  sbox.simple_propdel('ns:cash-sound', 'iota')
 
   # Create expected trees.
   expected_output = svntest.wc.State(wc_dir, {
@@ -1566,8 +1544,8 @@ def props_over_time(sbox):
   # Add/tweak a property 'revision' with value revision-committed to a
   # file, commit, and then repeat this a few times.
   for rev in range(2, 4):
-    sbox.simple_propset('revision', str(rev), iota_path)
-    sbox.simple_commit(iota_path)
+    sbox.simple_propset('revision', str(rev), 'iota')
+    sbox.simple_commit('iota')
 
   # Backdate to r2 so the defaults for URL- vs. WC-style queries are
   # different.
@@ -1653,18 +1631,18 @@ def same_replacement_props(sbox):
   foo_path = sbox.ospath('foo')
 
   open(foo_path, 'w').close()
-  sbox.simple_add(foo_path)
-  sbox.simple_propset('someprop', 'someval', foo_path)
-  sbox.simple_commit(foo_path)
-  sbox.simple_rm(foo_path)
+  sbox.simple_add('foo')
+  sbox.simple_propset('someprop', 'someval', 'foo')
+  sbox.simple_commit('foo')
+  sbox.simple_rm('foo')
 
   # Now replace 'foo'.
   open(foo_path, 'w').close()
-  sbox.simple_add(foo_path)
+  sbox.simple_add('foo')
 
   # Set the same property again, with the same value.
-  sbox.simple_propset('someprop', 'someval', foo_path)
-  sbox.simple_commit(foo_path)
+  sbox.simple_propset('someprop', 'someval', 'foo')
+  sbox.simple_commit('foo')
 
   # Check if the property made it into the repository.
   foo_url = sbox.repo_url + '/foo'
@@ -1688,8 +1666,8 @@ def added_moved_file(sbox):
   open(foo_path, 'w').close()
 
   # add it
-  sbox.simple_add(foo_path)
-  sbox.simple_propset('someprop', 'someval', foo_path)
+  sbox.simple_add('foo')
+  sbox.simple_propset('someprop', 'someval', 'foo')
 
   # move it
   svntest.main.run_svn(None, 'mv', foo_path, foo2_path)
@@ -1755,17 +1733,17 @@ def rm_of_replaced_file(sbox):
 
   # Add some properties to iota and mu
   iota_path = sbox.ospath('iota')
-  sbox.simple_propset('red', 'rojo', iota_path)
-  sbox.simple_propset('blue', 'lagoon', iota_path)
+  sbox.simple_propset('red', 'rojo', 'iota')
+  sbox.simple_propset('blue', 'lagoon', 'iota')
 
   mu_path = sbox.ospath('A/mu')
-  sbox.simple_propset('yellow', 'submarine', mu_path)
-  sbox.simple_propset('orange', 'toothpick', mu_path)
+  sbox.simple_propset('yellow', 'submarine', 'A/mu')
+  sbox.simple_propset('orange', 'toothpick', 'A/mu')
 
   sbox.simple_commit()
 
   # Copy iota over the top of mu
-  sbox.simple_rm(mu_path)
+  sbox.simple_rm('A/mu')
   svntest.main.run_svn(None, 'cp', iota_path, mu_path)
 
   expected_disk = svntest.main.greek_state.copy()
@@ -1809,7 +1787,6 @@ def prop_reject_grind(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  iota_path = sbox.ospath('iota')
   mu_path = sbox.ospath('A/mu')
   mu_prej_path = sbox.ospath('A/mu.prej')
 
@@ -1817,60 +1794,60 @@ def prop_reject_grind(sbox):
   # and as incoming-delete. Also set up our local-edit and local-delete
   # properties. We also need some properties that are simply different
   # from the incoming properties
-  sbox.simple_propset('edit.diff', 'repos', iota_path)
-  sbox.simple_propset('edit.edit', 'repos', iota_path)
-  sbox.simple_propset('edit.del', 'repos', iota_path)
-  sbox.simple_propset('edit.add', 'repos', iota_path)
-  sbox.simple_propset('edit.none', 'repos', iota_path)
-  sbox.simple_propset('del.edit', 'repos', iota_path)
-  sbox.simple_propset('del.edit2', 'repos', iota_path)
-  sbox.simple_propset('del.diff', 'repos', iota_path)
-  sbox.simple_propset('del.del', 'repos', iota_path)
-  sbox.simple_propset('del.add', 'repos', iota_path)
+  sbox.simple_propset('edit.diff', 'repos', 'iota')
+  sbox.simple_propset('edit.edit', 'repos', 'iota')
+  sbox.simple_propset('edit.del', 'repos', 'iota')
+  sbox.simple_propset('edit.add', 'repos', 'iota')
+  sbox.simple_propset('edit.none', 'repos', 'iota')
+  sbox.simple_propset('del.edit', 'repos', 'iota')
+  sbox.simple_propset('del.edit2', 'repos', 'iota')
+  sbox.simple_propset('del.diff', 'repos', 'iota')
+  sbox.simple_propset('del.del', 'repos', 'iota')
+  sbox.simple_propset('del.add', 'repos', 'iota')
 
-  sbox.simple_propset('edit.edit', 'local', mu_path)
-  sbox.simple_propset('add.edit', 'local', mu_path)
-  sbox.simple_propset('del.edit', 'local', mu_path)
-  sbox.simple_propset('del.edit2', 'repos', mu_path)
-  sbox.simple_propset('add.del', 'local', mu_path)
-  sbox.simple_propset('edit.del', 'local', mu_path)
-  sbox.simple_propset('del.del', 'local', mu_path)
-  sbox.simple_propset('edit.diff', 'local', mu_path)
-  sbox.simple_propset('add.diff', 'local', mu_path)
-  sbox.simple_propset('del.diff', 'local', mu_path)
+  sbox.simple_propset('edit.edit', 'local', 'A/mu')
+  sbox.simple_propset('add.edit', 'local', 'A/mu')
+  sbox.simple_propset('del.edit', 'local', 'A/mu')
+  sbox.simple_propset('del.edit2', 'repos', 'A/mu')
+  sbox.simple_propset('add.del', 'local', 'A/mu')
+  sbox.simple_propset('edit.del', 'local', 'A/mu')
+  sbox.simple_propset('del.del', 'local', 'A/mu')
+  sbox.simple_propset('edit.diff', 'local', 'A/mu')
+  sbox.simple_propset('add.diff', 'local', 'A/mu')
+  sbox.simple_propset('del.diff', 'local', 'A/mu')
 
   sbox.simple_commit()
 
   # Create r3 with all the properties that we intend to use as incoming-add,
   # and then perform the incoming-edits and incoming-deletes.
-  sbox.simple_propset('add.add', 'repos', iota_path)
-  sbox.simple_propset('add.edit', 'repos', iota_path)
-  sbox.simple_propset('add.del', 'repos', iota_path)
-  sbox.simple_propset('add.diff', 'repos', iota_path)
-  sbox.simple_propset('edit.diff', 'repos.changed', iota_path)
-  sbox.simple_propset('edit.edit', 'repos.changed', iota_path)
-  sbox.simple_propset('edit.del', 'repos.changed', iota_path)
-  sbox.simple_propset('edit.add', 'repos.changed', iota_path)
-  sbox.simple_propset('edit.none', 'repos.changed', iota_path)
-  sbox.simple_propdel('del.edit', iota_path)
-  sbox.simple_propdel('del.edit2', iota_path)
-  sbox.simple_propdel('del.diff', iota_path)
-  sbox.simple_propdel('del.del', iota_path)
-  sbox.simple_propdel('del.add', iota_path)
+  sbox.simple_propset('add.add', 'repos', 'iota')
+  sbox.simple_propset('add.edit', 'repos', 'iota')
+  sbox.simple_propset('add.del', 'repos', 'iota')
+  sbox.simple_propset('add.diff', 'repos', 'iota')
+  sbox.simple_propset('edit.diff', 'repos.changed', 'iota')
+  sbox.simple_propset('edit.edit', 'repos.changed', 'iota')
+  sbox.simple_propset('edit.del', 'repos.changed', 'iota')
+  sbox.simple_propset('edit.add', 'repos.changed', 'iota')
+  sbox.simple_propset('edit.none', 'repos.changed', 'iota')
+  sbox.simple_propdel('del.edit', 'iota')
+  sbox.simple_propdel('del.edit2', 'iota')
+  sbox.simple_propdel('del.diff', 'iota')
+  sbox.simple_propdel('del.del', 'iota')
+  sbox.simple_propdel('del.add', 'iota')
   sbox.simple_commit()
 
   # Set up our victim for all the right rejects: local-adds, local-edits,
   # and local-deletes.
-  sbox.simple_propset('edit.add', 'local', mu_path)
-  sbox.simple_propset('add.add', 'local', mu_path)
-  sbox.simple_propset('del.add', 'local', mu_path)
-  sbox.simple_propset('edit.edit', 'local.changed', mu_path)
-  sbox.simple_propset('add.edit', 'local.changed', mu_path)
-  sbox.simple_propset('del.edit', 'local.changed', mu_path)
-  sbox.simple_propset('del.edit2', 'repos.changed', mu_path)
-  sbox.simple_propdel('add.del', mu_path)
-  sbox.simple_propdel('edit.del', mu_path)
-  sbox.simple_propdel('del.del', mu_path)
+  sbox.simple_propset('edit.add', 'local', 'A/mu')
+  sbox.simple_propset('add.add', 'local', 'A/mu')
+  sbox.simple_propset('del.add', 'local', 'A/mu')
+  sbox.simple_propset('edit.edit', 'local.changed', 'A/mu')
+  sbox.simple_propset('add.edit', 'local.changed', 'A/mu')
+  sbox.simple_propset('del.edit', 'local.changed', 'A/mu')
+  sbox.simple_propset('del.edit2', 'repos.changed', 'A/mu')
+  sbox.simple_propdel('add.del', 'A/mu')
+  sbox.simple_propdel('edit.del', 'A/mu')
+  sbox.simple_propdel('del.del', 'A/mu')
 
   # Now merge r2:3 into the victim to create all variants
   svntest.main.run_svn(False, 'merge', '-r2:3', sbox.repo_url + '/iota',
@@ -1951,7 +1928,7 @@ def obstructed_subdirs(sbox):
   # this test ensures we won't run into that problem again.
 
   C_path = sbox.ospath('A/C')
-  sbox.simple_propset('red', 'blue', C_path)
+  sbox.simple_propset('red', 'blue', 'A/C')
 
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/C', props={'red': 'blue'})

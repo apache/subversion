@@ -15921,7 +15921,7 @@ def merge_into_locally_added_file(sbox):
   svntest.main.file_append(pi_path, "foo\n")
   sbox.simple_commit(); # r2
 
-  sbox.simple_add(new_path)
+  sbox.simple_add('A/D/G/new')
 
   expected_output = wc.State(wc_dir, {
     'A/D/G/new' : Item(status='G '),
@@ -15973,7 +15973,7 @@ def merge_into_locally_added_directory(sbox):
                                   "This is the file 'rho'.\n")
   svntest.main.file_append_binary(os.path.join(new_dir_path, 'tau'),
                                   "This is the file 'tau'.\n")
-  sbox.simple_add(new_dir_path)
+  sbox.simple_add('A/D/new_dir')
 
   expected_output = wc.State(wc_dir, {
     'A/D/new_dir/pi' : Item(status='G '),

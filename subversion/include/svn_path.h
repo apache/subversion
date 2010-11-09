@@ -64,6 +64,10 @@ extern "C" {
 
 
 /** Convert @a path from the local style to the canonical internal style.
+ *
+ * New code should use either svn_dirent_internal_style() (for local paths) or
+ * svn_relpath_internal_style() (for relative paths).
+ *
  * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 SVN_DEPRECATED
@@ -71,6 +75,10 @@ const char *
 svn_path_internal_style(const char *path, apr_pool_t *pool);
 
 /** Convert @a path from the canonical internal style to the local style.
+ *
+ * New code should use either svn_dirent_local_style() (for local paths) or
+ * svn_relpath_local_style() (for relative paths).
+ *
  * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 SVN_DEPRECATED
@@ -101,6 +109,9 @@ svn_path_local_style(const char *path, apr_pool_t *pool);
  * @a component won't be detected. An absolute URI can only be used
  * for the base.
  *
+ * New code should use either svn_dirent_join() (for local paths) or
+ * svn_uri_join() (for urls) or svn_relpath_join() (for relative paths).
+ *
  * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 SVN_DEPRECATED
@@ -118,7 +129,9 @@ svn_path_join(const char *base, const char *component, apr_pool_t *pool);
  * This function does not support URLs.
  *
  * See svn_path_join() for further notes about joining paths.
- *
+ * 
+ * New code should use svn_dirent_join_many() instead.
+ * 
  * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 SVN_DEPRECATED
@@ -139,7 +152,7 @@ svn_path_join_many(apr_pool_t *pool, const char *base, ...);
  * @note If an empty string is passed, then an empty string will be returned.
  *
  * New code should use either svn_dirent_basename() (for local paths) or
- * svn_uri_basename() (for urls and repository paths).
+ * svn_uri_basename() (for urls) or svn_relpath_basename (for relative paths).
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
  */
@@ -154,7 +167,7 @@ svn_path_basename(const char *path, apr_pool_t *pool);
  * The returned dirname will be allocated in @a pool.
  *
  * New code should use either svn_dirent_dirname() (for local paths) or
- * svn_uri_dirname() (for urls and repository paths).
+ * svn_uri_dirname() (for urls) or svn_relpath_dirname() (for relative paths).
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
  */
@@ -227,7 +240,7 @@ svn_path_remove_components(svn_stringbuf_t *path, apr_size_t n);
  *             - <pre>""              ==>  ""   and ""</pre>
  *
  * New code should use either svn_dirent_split() (for local paths) or
- * svn_uri_split() (for urls and repository paths).
+ * svn_uri_split() (for urls) or svn_relpath_split() (for relative paths).
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
  */
@@ -266,6 +279,10 @@ svn_dirent_is_root(const char *dirent, apr_size_t len);
  * The returned path may be statically allocated, equal to @a path, or
  * allocated from @a pool.
  *
+ * New code should use either svn_dirent_canonicalize() (for local paths) or
+ * svn_uri_canonicalize() (for urls) or svn_relpath_canonicalize() (for 
+ * relative paths).
+ *
  * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 SVN_DEPRECATED
@@ -274,6 +291,10 @@ svn_path_canonicalize(const char *path, apr_pool_t *pool);
 
 /** Return @c TRUE iff path is canonical. Use @a pool for temporary
  * allocations.
+ *
+ * New code should use either svn_dirent_is_canonical() (for local paths) or
+ * svn_uri_is_canonical() (for urls) or svn_relpath_is_canonical() (for
+ * relative paths).
  *
  * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.6 API.
@@ -300,6 +321,10 @@ svn_path_compare_paths(const char *path1, const char *path2);
  * different resources), and (b) share a common ancestor in their path
  * component, i.e. 'protocol://' is not a sufficient ancestor.
  *
+ * New code should use either svn_dirent_get_longest_ancestor() 
+ * (for local paths) or svn_uri_get_longest_ancestor() (for urls) 
+ * or svn_relpath_get_longest_ancestor() (for relative paths).
+ *
  * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 SVN_DEPRECATED
@@ -313,6 +338,8 @@ svn_path_get_longest_ancestor(const char *path1,
  *
  * @a relative may be a URL, in which case no attempt is made to convert it,
  * and a copy of the URL is returned.
+ *
+ * New code should use svn_dirent_get_absolute() instead.
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
  */
@@ -364,6 +391,9 @@ svn_path_split_if_file(const char *path,
  *
  * If there are no items in @a targets, set @a *pcommon and (if
  * applicable) @a *pcondensed_targets to @c NULL.
+ *
+ * New code should use either svn_dirent_condense_targets() (for local paths)
+ * or svn_uri_condense_targets() (for urls).
  *
  * @note There is no guarantee that @a *pcommon is within a working
  * copy.
@@ -489,6 +519,10 @@ svn_path_is_dotpath_present(const char *path);
  *       in which case a pointer into @a path2 will be returned to
  *       identify the remainder path.
  *
+ * New code should use either svn_dirent_is_child() (for local paths) or
+ * svn_uri_is_child() (for urls) or svn_relpath_is_child() 
+ * (for relative paths).
+ *
  * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 SVN_DEPRECATED
@@ -499,6 +533,11 @@ svn_path_is_child(const char *path1, const char *path2, apr_pool_t *pool);
  * and FALSE otherwise.
  *
  * @since New in 1.3.
+ *
+ * New code should use either svn_dirent_is_ancestor() (for local paths) or
+ * svn_uri_is_ancestor() (for urls) or svn_relpath_is_ancestor() (for relative 
+ * paths).
+ *
  * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 SVN_DEPRECATED
@@ -584,7 +623,7 @@ svn_path_url_add_component2(const char *url,
                             const char *component,
                             apr_pool_t *pool);
 
-/** Like svn_path_url_add_component2, but allows path components that
+/** Like svn_path_url_add_component2(), but allows path components that
  * end with a trailing '/'
  *
  * @deprecated Provided for backward compatibility with the 1.5 API.

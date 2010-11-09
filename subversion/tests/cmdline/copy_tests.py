@@ -4588,7 +4588,7 @@ def changed_data_should_match_checkout(sbox):
 
   svntest.actions.run_and_verify_svn(None, None, [], 'copy', A_B_E, E_new)
 
-  sbox.simple_commit(wc_dir)
+  sbox.simple_commit()
 
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
@@ -4618,7 +4618,7 @@ def changed_dir_data_should_match_checkout(sbox):
 
   svntest.actions.run_and_verify_svn(None, None, [], 'copy', A_B, B_new)
 
-  sbox.simple_commit(wc_dir)
+  sbox.simple_commit()
 
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
@@ -4835,6 +4835,92 @@ def delete_replace_delete(sbox):
   # Currently fails because pi, rho, tau get left behind
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+A_B_children = ['A/B/lambda', 'A/B/F', 'A/B/E/alpha', 'A/B/E/beta', 'A/B/E']
+A_D_children = ['A/D/gamma', 'A/D/G', 'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau',
+                'A/D/H', 'A/D/H/chi', 'A/D/H/psi', 'A/D/H/omega']
+
+def copy_repos_over_deleted_same_kind(sbox):
+  "copy repos node over deleted node, same kind"
+  sbox.build(read_only = True)
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+
+  # Set up some deleted paths
+  sbox.simple_rm('iota', 'A/B')
+  for path in ['iota', 'A/B'] + A_B_children:
+    expected_status.tweak(path, status='D ')
+
+  # Test copying
+  main.run_svn(None, 'cp', sbox.repo_url + '/A/mu', sbox.ospath('iota'))
+  expected_status.tweak('iota', status='R ', wc_rev='-', copied='+')
+  main.run_svn(None, 'cp', sbox.repo_url + '/A/D', sbox.ospath('A/B'))
+  expected_status.tweak('A/B', status='R ', wc_rev='-', copied='+')
+  for child in A_D_children:
+    expected_status.add({ child.replace('A/D', 'A/B'):
+                          Item(status='  ', wc_rev='-', copied='+')})
+  svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
+
+def copy_repos_over_deleted_other_kind(sbox):
+  "copy repos node over deleted node, other kind"
+  sbox.build(read_only = True)
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+
+  # Set up some deleted paths
+  sbox.simple_rm('iota', 'A/B')
+  for path in ['iota', 'A/B'] + A_B_children:
+    expected_status.tweak(path, status='D ')
+
+  # Test copying
+  main.run_svn(None, 'cp', sbox.repo_url + '/iota', sbox.ospath('A/B'))
+  expected_status.tweak('A/B', status='R ', wc_rev='-', copied='+')
+  expected_status.remove(*A_B_children)
+  main.run_svn(None, 'cp', sbox.repo_url + '/A/B', sbox.ospath('iota'))
+  expected_status.tweak('iota', status='R ', wc_rev='-', copied='+')
+  for child in A_B_children:
+    expected_status.add({ child.replace('A/B', 'iota'):
+                          Item(status='  ', wc_rev='-', copied='+')})
+  svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
+
+def copy_wc_over_deleted_same_kind(sbox):
+  "copy WC node over a deleted node, same kind"
+  sbox.build(read_only = True)
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+
+  # Set up some deleted paths
+  sbox.simple_rm('iota', 'A/B')
+  for path in ['iota', 'A/B'] + A_B_children:
+    expected_status.tweak(path, status='D ')
+
+  # Test copying
+  main.run_svn(None, 'cp', sbox.ospath('A/mu'), sbox.ospath('iota'))
+  expected_status.tweak('iota', status='R ', wc_rev='-', copied='+')
+  main.run_svn(None, 'cp', sbox.ospath('A/D'), sbox.ospath('A/B'))
+  expected_status.tweak('A/B', status='R ', wc_rev='-', copied='+')
+  for child in A_D_children:
+    expected_status.add({ child.replace('A/D', 'A/B'):
+                          Item(status='  ', wc_rev='-', copied='+')})
+  svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
+
+def copy_wc_over_deleted_other_kind(sbox):
+  "copy WC node over deleted node, other kind"
+  sbox.build(read_only = True)
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+
+  # Set up some deleted paths
+  sbox.simple_rm('iota', 'A/B')
+  for path in ['iota', 'A/B'] + A_B_children:
+    expected_status.tweak(path, status='D ')
+
+  # Test copying
+  main.run_svn(None, 'cp', sbox.ospath('A/mu'), sbox.ospath('A/B'))
+  expected_status.tweak('A/B', status='R ', wc_rev='-', copied='+')
+  expected_status.remove(*A_B_children)
+  main.run_svn(None, 'cp', sbox.ospath('A/D'), sbox.ospath('iota'))
+  expected_status.tweak('iota', status='R ', wc_rev='-', copied='+')
+  for child in A_D_children:
+    expected_status.add({ child.replace('A/D', 'iota'):
+                          Item(status='  ', wc_rev='-', copied='+')})
+  svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
+
 
 ########################################################################
 # Run the tests
@@ -4934,6 +5020,10 @@ test_list = [ None,
               copy_delete_delete,
               XFail(copy_delete_revert),
               delete_replace_delete,
+              copy_repos_over_deleted_same_kind,
+              copy_repos_over_deleted_other_kind,
+              copy_wc_over_deleted_same_kind,
+              copy_wc_over_deleted_other_kind,
              ]
 
 if __name__ == '__main__':
