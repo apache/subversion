@@ -2452,14 +2452,10 @@ add_directory(const char *path,
 
   SVN_ERR(svn_wc__ensure_directory(db->local_abspath, pool));
 
-  /* If PATH is within a locally deleted tree then make it also
-     scheduled for deletion.  We should do this at the same time as
-     setting the dir incomplete otherwise the db is temporarily
-     invalid. */
-  if (pb->in_deleted_and_tree_conflicted_subtree)
-    {
-      SVN_ERR(svn_wc__db_temp_op_delete(eb->db, db->local_abspath, pool));
-    }
+  if (!pb->in_deleted_and_tree_conflicted_subtree
+      && status == svn_wc__db_status_added)
+    /* If there is no conflict we take over any added directory */
+    SVN_ERR(svn_wc__db_temp_op_remove_working(eb->db, db->local_abspath, pool));
 
   /* If this add was obstructed by dir scheduled for addition without
      history let close_file() handle the notification because there
@@ -4526,14 +4522,6 @@ close_file(void *file_baton,
   }
 
   /* Deal with the WORKING tree, based on updates to the BASE tree.  */
-
-  /* An ancestor was locally-deleted. This file is being added within
-     that tree. We need to schedule this file for deletion.  This
-     should happen at the same time as svn_wc__db_base_add_file.  */
-  if (fb->dir_baton->in_deleted_and_tree_conflicted_subtree && fb->adding_file)
-    {
-      SVN_ERR(svn_wc__db_temp_op_delete(eb->db, fb->local_abspath, pool));
-    }
 
   /* If this file was locally-added and is now being added by the update, we
      can toss the local-add, turning this into a local-edit.  */
