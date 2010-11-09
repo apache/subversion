@@ -6848,6 +6848,7 @@ scan_addition(svn_wc__db_status_t *status,
 
     if (original_repos_relpath
         || original_repos_id
+        || (original_revision && *original_revision == SVN_INVALID_REVNUM)
         || status)
       {
         if (local_relpath != current_relpath)
@@ -6871,6 +6872,9 @@ scan_addition(svn_wc__db_status_t *status,
                                                                 current_relpath,
                                                                 scratch_pool));
               }
+
+            if (original_revision && *original_revision == SVN_INVALID_REVNUM)
+              *original_revision = svn_sqlite__column_revnum(stmt, 12);
           }
 
         /* current_relpath / current_abspath
