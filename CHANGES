@@ -3,12 +3,12 @@ Version 1.6.14
 http://svn.apache.org/repos/asf/subversion/tags/1.6.14
 
   User-visible changes:
-   * improve svnsync handling of copies (r962377, -8)
+   * improve svnsync handling of dir copies (r962377, -8)
    * hide unreadable dirs in mod_dav_svn's GET response (r996884)
    * make 'svnmucc propsetf' actually work (r1005446)
    * limit memory fragmentation in svnserve (r1022675)
-   * fix export regression from 1.6.13 (r1032970)
-   * fix export mistakenly uri-encodes paths (issue #3745)
+   * fix 'svn export' regression from 1.6.13 (r1032970)
+   * fix 'svn export' mistakenly uri-encodes paths (issue #3745)
    * fix server-side memory leaks triggered by 'blame -g' (r1032808)
 
   Developer-visible changes:
