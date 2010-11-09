@@ -37,7 +37,12 @@ static svn_fs_cache_config_t cache_settings =
     16,          /* up to 16 files kept open */
     FALSE,       /* don't cache fulltexts */
     FALSE,       /* don't cache text deltas */
+
+#ifdef APR_HAS_THREADS
     FALSE        /* assume multi-threaded operation */
+#else
+    TRUE         /* single-threaded is the only supported mode of operation */
+#endif
   };
 
 /* Get the current FSFS cache configuration. */
