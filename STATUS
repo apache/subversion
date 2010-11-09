@@ -171,14 +171,6 @@ Candidate changes:
    Votes:
      +1: cmpilato, hwright
 
- * r1033166
-   Prevent mod_dav_svn from trying to walk SVNParentPath collections.
-   Justification:
-     Without this fix, mod_dav_svn can be made to crash if the SVNParentPath
-     directive is used.
-   Votes:
-     +1: stsp, hwright
-
 Veto-blocked changes:
 =====================
 
@@ -284,3 +276,11 @@ Approved changes:
      Somewhat non-trivial merge conflicts.
    Votes:
      +1: danielsh, cmpilato, stsp
+
+ * r1033166
+   Prevent mod_dav_svn from trying to walk SVNParentPath collections.
+   Justification:
+     Without this fix, mod_dav_svn can be made to crash if the SVNParentPath
+     directive is used.
+   Votes:
+     +1: stsp, hwright, philip
