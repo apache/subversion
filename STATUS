@@ -117,29 +117,6 @@ Candidate changes:
      out unreadable paths from their get-dir responses.
    Votes:
      +1: cmpilato
-
- * r877814
-   Fix random test failures in merge_tests.py when tests are run in parallel.
-   Justification:
-     I lost a few hours tracking down test failures during 1.6.13 release
-     testing. Once I found out what was going on I realised this had
-     already been fixed on trunk. Let's not have anyone waste their time
-     on this again.
-   Backport branch:
-     ^/subversion/branches/1.6.x-r877814
-   Votes:
-     +1: stsp, cmpilato
-
- * r991534
-   Fix random test failures when tests are run in parallel over DAV.
-   Justification:
-     Random test failures irritate developers trying to do release
-     testing. See also the r877814 backport.
-   Backport branch:
-     ^/subversion/branches/1.6.x-r991534
-   Votes:
-     +1: stsp, cmpilato
-
  * ^/subversion/branches/1.6.x-no-wcng-check
    Remove the function subversion/libsvn_wc/questions.c:is_inside_wc_ng()
    and its uses.
@@ -165,15 +142,6 @@ Candidate changes:
                Until then, we don't need to bother our users with this.
                Especially since doing so is causing them real problems now.)
 
- * r877219, r877239
-   In Makefile.in, try svnversion from $PATH if in-tree svnversion fails.
-   Justification:
-     When building 1.6.x within a trunk WC there's always an error signalled
-     at the end of the build. This makes scripting the build harder than
-     necessary. Merging this change makes life easier for developers.
-   Votes:
-     +1: stsp
-
  * r1024269
    Fix issue #3733, which tracks an API knowledge violation in the repos
    dumpstream loading code.
@@ -195,7 +163,7 @@ Candidate changes:
      hand-edited that way.  But one bogus location in mergeinfo 
      is not a good reason to ignore the other non-bogus ones.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, hwright
 
  * r1031165, r1031186
    Fix issue #3666 ("Assertion frb->last_filename == NULL fails in 
@@ -203,39 +171,7 @@ Candidate changes:
    Justification:
      Aborting code?  Yep.  Uncool.
    Votes:
-     +1: cmpilato
-
- * r1032259
-   Fix issue #3745, "svn export mistakenly uri-encodes paths"
-   Justification:
-     Without this fix, users cannot export paths from working copies
-     if the paths contain special characters such as spaces.
-   Branch:
-     ^/subversion/branches/1.6.x-issue3745
-   Votes:
-     +1: stsp, cmpilato
-
- * r1032808
-   Fix blame -g server-side memory leaks.
-   Justification:
-     As detailed in http://svn.haxx.se/dev/archive-2010-11/0102.shtml,
-     blame -g can trigger a serious server side memory leak.
-   Votes:
-     +1: pburba, cmpilato
-
- * r1022675 (r982355 from ^subversion/branches/performance)
-   Limit the amount of unused memory fragments held by the root pools.
-   Justification:
-     In combination with blame -g server side memory leaks, see r1032808 and
-     http://svn.haxx.se/dev/archive-2010-11/0102.shtml, svnserve's memory
-     usage can get bloated and stay that way, see
-     see http://svn.haxx.se/dev/archive-2010-11/0165.shtml.
-   Notes:
-     Use --accept=mine-full to avoid bizzare branch root property conflicts
-     on 'svn:ignore' and 'bugtraq:logregex'.  This happens for me with both
-     1.6.14 and trunk@1032984.
-   Votes:
-     +1: pburba, cmpilato
+     +1: cmpilato, hwright
 
  * r1033166
    Prevent mod_dav_svn from trying to walk SVNParentPath collections.
@@ -243,7 +179,7 @@ Candidate changes:
      Without this fix, mod_dav_svn can be made to crash if the SVNParentPath
      directive is used.
    Votes:
-     +1: stsp
+     +1: stsp, hwright
 
 Veto-blocked changes:
 =====================
@@ -360,3 +296,67 @@ Approved changes:
      ^/subversion/branches/1.6.x-issue3727
    Votes:
      +1: stsp, cmpilato, philip
+
+ * r877814
+   Fix random test failures in merge_tests.py when tests are run in parallel.
+   Justification:
+     I lost a few hours tracking down test failures during 1.6.13 release
+     testing. Once I found out what was going on I realised this had
+     already been fixed on trunk. Let's not have anyone waste their time
+     on this again.
+   Backport branch:
+     ^/subversion/branches/1.6.x-r877814
+   Votes:
+     +1: stsp, cmpilato, hwright
+
+ * r991534
+   Fix random test failures when tests are run in parallel over DAV.
+   Justification:
+     Random test failures irritate developers trying to do release
+     testing. See also the r877814 backport.
+   Backport branch:
+     ^/subversion/branches/1.6.x-r991534
+   Votes:
+     +1: stsp, cmpilato, hwright
+
+ * r877219, r877239
+   In Makefile.in, try svnversion from $PATH if in-tree svnversion fails.
+   Justification:
+     When building 1.6.x within a trunk WC there's always an error signalled
+     at the end of the build. This makes scripting the build harder than
+     necessary. Merging this change makes life easier for developers.
+   Votes:
+     +1: stsp
+     +0: hwright
+
+ * r1032259
+   Fix issue #3745, "svn export mistakenly uri-encodes paths"
+   Justification:
+     Without this fix, users cannot export paths from working copies
+     if the paths contain special characters such as spaces.
+   Branch:
+     ^/subversion/branches/1.6.x-issue3745
+   Votes:
+     +1: stsp, cmpilato, hwright
+
+ * r1032808
+   Fix blame -g server-side memory leaks.
+   Justification:
+     As detailed in http://svn.haxx.se/dev/archive-2010-11/0102.shtml,
+     blame -g can trigger a serious server side memory leak.
+   Votes:
+     +1: pburba, cmpilato, hwright
+
+ * r1022675 (r982355 from ^subversion/branches/performance)
+   Limit the amount of unused memory fragments held by the root pools.
+   Justification:
+     In combination with blame -g server side memory leaks, see r1032808 and
+     http://svn.haxx.se/dev/archive-2010-11/0102.shtml, svnserve's memory
+     usage can get bloated and stay that way, see
+     see http://svn.haxx.se/dev/archive-2010-11/0165.shtml.
+   Notes:
+     Use --accept=mine-full to avoid bizzare branch root property conflicts
+     on 'svn:ignore' and 'bugtraq:logregex'.  This happens for me with both
+     1.6.14 and trunk@1032984.
+   Votes:
+     +1: pburba, cmpilato, hwright
