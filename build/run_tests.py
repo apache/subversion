@@ -325,6 +325,8 @@ class TestHarness:
     if self.fsfs_packing is not None:
       svntest.main.options.fsfs_packing = self.fsfs_packing
 
+    svntest.main.options.srcdir = self.srcdir
+
     # setup the output pipes
     if self.log:
       sys.stdout.flush()

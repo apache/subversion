@@ -1099,8 +1099,9 @@ class TestSpawningThread(threading.Thread):
   """A thread that runs test cases in their own processes.
   Receives test numbers to run from the queue, and saves results into
   the results field."""
-  def __init__(self, queue):
+  def __init__(self, srcdir, queue):
     threading.Thread.__init__(self)
+    self.srcdir = srcdir
     self.queue = queue
     self.results = []
 
@@ -1114,8 +1115,8 @@ class TestSpawningThread(threading.Thread):
       self.run_one(next_index)
 
   def run_one(self, index):
-    command = os.path.join(os.getcwd(), sys.argv[0])
-
+    command = os.path.join(self.srcdir, 'subversion/tests/cmdline',
+                           sys.argv[0])
     args = []
     args.append(str(index))
     args.append('-c')
@@ -1284,7 +1285,7 @@ def run_one_test(n, test_list, finished_tests = None):
   exit_code = TestRunner(test_list[n], n).run()
   return exit_code
 
-def _internal_run_tests(test_list, testnums, parallel, progress_func):
+def _internal_run_tests(test_list, testnums, parallel, srcdir, progress_func):
   """Run the tests from TEST_LIST whose indices are listed in TESTNUMS.
 
   If we're running the tests in parallel spawn as much parallel processes
@@ -1308,7 +1309,8 @@ def _internal_run_tests(test_list, testnums, parallel, progress_func):
     for num in testnums:
       number_queue.put(num)
 
-    threads = [ TestSpawningThread(number_queue) for i in range(parallel) ]
+    threads = [ TestSpawningThread(srcdir, number_queue)
+                for i in range(parallel) ]
     for t in threads:
       t.start()
 
@@ -1400,6 +1402,8 @@ def _create_parser():
                          'test output and ignores all exceptions in the ' +
                          'run_and_verify* functions. This option is only ' +
                          'useful during test development!')
+  parser.add_option('--srcdir', action='store', dest='srcdir',
+                    help='Source directory.')
 
   # most of the defaults are None, but some are other values, set them here
   parser.set_defaults(
@@ -1582,7 +1586,7 @@ def execute_tests(test_list, serial_only = False, test_name = None,
 
   # Run the tests.
   exit_code = _internal_run_tests(test_list, testnums, options.parallel,
-                                  progress_func)
+                                  options.srcdir, progress_func)
 
   # Remove all scratchwork: the 'pristine' repository, greek tree, etc.
   # This ensures that an 'import' will happen the next time we run.
