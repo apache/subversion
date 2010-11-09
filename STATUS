@@ -140,7 +140,7 @@ Candidate changes:
    Votes:
      +1: stsp, cmpilato
 
- * ^/subversion/1.6.x-no-wcng-check
+ * ^/subversion/branches/1.6.x-no-wcng-check
    Remove the function subversion/libsvn_wc/questions.c:is_inside_wc_ng()
    and its uses.
    Justification:
@@ -155,7 +155,7 @@ Candidate changes:
      exist, and making every 1.6.6+ user pay a high cost for our
      preventative efforts.  That's bad.
    Branch:
-     ^/subversion/1.6.x-no-wcng-check
+     ^/subversion/branches/1.6.x-no-wcng-check
    Votes:
      +0: cmpilato
 
