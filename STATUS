@@ -160,6 +160,20 @@ Candidate changes:
    Votes:
      +1: cmpilato, hwright
 
+ * r907644, r1033290
+   Make the revision-install target in our Makefile work with BSD make (and
+   possibly other make implementations). It was broken in 1.6.x by the
+   backport of the r877219 group, which has already been merged.
+   Justification:
+     Without this fix, the revision-install target will not fall back
+     to svnversion from $PATH if the first svnversion invocation fails
+     if BSD make is used. It will also install an empty svn-revision.txt
+     file in this situation.
+   Branch:
+     ^/subversion/branches/1.6.x-r907644
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
