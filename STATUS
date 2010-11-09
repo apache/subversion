@@ -152,17 +152,6 @@ Candidate changes:
    Votes:
      +1: cmpilato
 
- * r1028108
-   Fix issue #3270 ("'svn log -g' should more gracefully and
-   conservatively handle invalid mergeinfo source paths")
-   Justification:
-     Mergeinfo can contain bogus paths, either because Subversion
-     recorded it that way (issue issue #3271) or because it was
-     hand-edited that way.  But one bogus location in mergeinfo 
-     is not a good reason to ignore the other non-bogus ones.
-   Votes:
-     +1: cmpilato, hwright
-
  * r1031165, r1031186
    Fix issue #3666 ("Assertion frb->last_filename == NULL fails in 
    libsvn_client/blame.c").
@@ -276,3 +265,14 @@ Approved changes:
      Somewhat non-trivial merge conflicts.
    Votes:
      +1: danielsh, cmpilato, stsp
+
+ * r1028108
+   Fix issue #3270 ("'svn log -g' should more gracefully and
+   conservatively handle invalid mergeinfo source paths")
+   Justification:
+     Mergeinfo can contain bogus paths, either because Subversion
+     recorded it that way (issue issue #3271) or because it was
+     hand-edited that way.  But one bogus location in mergeinfo 
+     is not a good reason to ignore the other non-bogus ones.
+   Votes:
+     +1: cmpilato, hwright, stsp
