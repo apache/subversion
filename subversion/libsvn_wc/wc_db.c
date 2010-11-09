@@ -3062,6 +3062,9 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
 {
   svn_wc__db_pdh_t *src_pdh, *dst_pdh;
   const char *src_relpath, *dst_relpath;
+#ifdef SVN_WC__OP_DEPTH
+  const char *dst_op_root_relpath;
+#endif
   apr_int64_t dst_op_depth;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(src_abspath));
