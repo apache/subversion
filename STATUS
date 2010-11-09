@@ -103,9 +103,6 @@ Candidate changes:
      Fixes 'svn ls -R' failing when recursing into a read-blocked
      subdirectory by teaching servers not to mention such
      subdirectories so the client doesn't try to recurse into them.
-   Notes:
-     Depends on the r996884 group for a function rename and
-     introduction of another.
    Votes:
      +1: cmpilato
 
