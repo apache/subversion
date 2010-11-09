@@ -354,10 +354,3 @@ Approved changes:
      Somewhat non-trivial merge conflicts.
    Votes:
      +1: danielsh, cmpilato, stsp
-
- * r1005446
-   Make the new 'svnmucc propsetf' subcommand actually work.
-   Justification:
-     My embarrassment is justification enough.  -- C-Mike
-   Votes:
-     +1: cmpilato, stsp
