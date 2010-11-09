@@ -317,7 +317,23 @@ def info_wcroot_abspaths(sbox):
   exit_code, output, errput = svntest.main.run_svn(None, 'info', '-R', sbox.wc_dir)
   check_wcroot_paths(output, os.path.abspath(sbox.wc_dir))
 
+def info_url_special_characters(sbox):
+  """special characters in svn info URL"""
+  sbox.build(create_wc = False)
+  wc_dir = sbox.wc_dir
 
+  special_urls = [sbox.repo_url + '/A' + '/%2E',
+                  sbox.repo_url + '%2F' + 'A']
+
+  expected = {'Path' : 'A',
+              'Repository Root' : '.*',
+              'Revision' : '1',
+              'Node Kind' : 'dir',
+             }
+
+  for url in special_urls:
+    svntest.actions.run_and_verify_info([expected], url)
+  
 ########################################################################
 # Run the tests
 
@@ -327,6 +343,7 @@ test_list = [ None,
               info_on_added_file,
               info_on_mkdir,
               info_wcroot_abspaths,
+              info_url_special_characters,
              ]
 
 if __name__ == '__main__':
