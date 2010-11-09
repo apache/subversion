@@ -287,16 +287,6 @@ Approved changes:
    Votes:
      +1: danielsh, cmpilato, stsp
 
- * r1032970
-   Fix issue #3727, "svn export into the current directory"
-   Justification:
-     Regression introduced in 1.6.13, user complained:
-     http://svn.haxx.se/users/archive-2010-11/0169.shtml
-   Branch:
-     ^/subversion/branches/1.6.x-issue3727
-   Votes:
-     +1: stsp, cmpilato, philip
-
  * r877814
    Fix random test failures in merge_tests.py when tests are run in parallel.
    Justification:

@@ -426,6 +426,37 @@ def export_with_url_unsafe_characters(sbox):
   if not os.path.exists(export_target):
     raise svntest.Failure("export did not fetch file with URL unsafe path")
 
+def export_to_current_dir(sbox):
+  "export to current dir"
+  # Issue 3727: Forced export in current dir creates unexpected subdir.
+  sbox.build(create_wc = False, read_only = True)
+
+  svntest.main.safe_rmtree(sbox.wc_dir)
+  os.mkdir(sbox.wc_dir)
+
+  orig_dir = os.getcwd()
+  os.chdir(sbox.wc_dir)
+
+  export_url = sbox.repo_url + '/A/B/E'
+  export_target = '.'
+  expected_output = svntest.wc.State('', {
+    '.'         : Item(status='A '),
+    'alpha'     : Item(status='A '),
+    'beta'      : Item(status='A '),
+    })
+  expected_disk = svntest.wc.State('', {
+    'alpha'     : Item("This is the file 'alpha'.\n"),
+    'beta'      : Item("This is the file 'beta'.\n"),
+    })
+  svntest.actions.run_and_verify_export(export_url,
+                                        export_target,
+                                        expected_output,
+                                        expected_disk,
+                                        None, None, None, None,
+                                        '--force')
+
+  os.chdir(orig_dir)
+
 ########################################################################
 # Run the tests
 
@@ -450,6 +481,7 @@ test_list = [ None,
               export_creates_intermediate_folders,
               export_HEADplus1_fails,
               export_with_url_unsafe_characters,
+              export_to_current_dir,
              ]
 
 if __name__ == '__main__':

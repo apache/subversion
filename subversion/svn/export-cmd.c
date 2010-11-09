@@ -68,16 +68,9 @@ svn_cl__export(apr_getopt_t *os,
   if (targets->nelts == 1)
     to = svn_path_uri_decode(svn_path_basename(truefrom, pool), pool);
   else
-    {
-      to = APR_ARRAY_IDX(targets, 1, const char *);
+    to = APR_ARRAY_IDX(targets, 1, const char *);
 
-      /* If given the cwd, pretend we weren't given anything. */
-      if (strcmp("", to) == 0)
-        to = svn_path_uri_decode(svn_path_basename(truefrom, pool), pool);
-      else
-        /* svn_cl__eat_peg_revisions() but only on one target */
-        SVN_ERR(svn_opt__split_arg_at_peg_revision(&to, NULL, to, pool));
-    }
+  SVN_ERR(svn_opt__split_arg_at_peg_revision(&to, NULL, to, pool));
 
   if (! opt_state->quiet)
     svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE, TRUE,
