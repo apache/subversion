@@ -392,7 +392,7 @@ svn_io_open_uniquely_named(apr_file_t **file,
       if (i == 1)
         unique_name = apr_psprintf(scratch_pool, "%s%s", path, suffix);
       else
-        unique_name = apr_psprintf(scratch_pool, "%s.%u_%s", path, i, suffix);
+        unique_name = apr_psprintf(scratch_pool, "%s.%u%s", path, i, suffix);
 
       /* Hmmm.  Ideally, we would append to a native-encoding buf
          before starting iteration, then convert back to UTF-8 for
