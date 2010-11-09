@@ -287,18 +287,6 @@ Approved changes:
    Votes:
      +1: danielsh, cmpilato, stsp
 
- * r877814
-   Fix random test failures in merge_tests.py when tests are run in parallel.
-   Justification:
-     I lost a few hours tracking down test failures during 1.6.13 release
-     testing. Once I found out what was going on I realised this had
-     already been fixed on trunk. Let's not have anyone waste their time
-     on this again.
-   Backport branch:
-     ^/subversion/branches/1.6.x-r877814
-   Votes:
-     +1: stsp, cmpilato, hwright
-
  * r991534
    Fix random test failures when tests are run in parallel over DAV.
    Justification:
