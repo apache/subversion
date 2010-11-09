@@ -346,17 +346,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r996884
-   Hide unreadable directory children in mod_dav_svn's GET response.
-   Justification:
-     We might as well be as tight security-wise as we can, even if
-     we've publicly stated for years that this was an expected leak of
-     information.  Not showing unreadable subdirs, for example, prevents
-     folks from clicking that sucker in the browser only to get an authz
-     failure.
-   Votes:
-     +1: cmpilato, hwright, stsp
-
  * r964349
    Create fails.log files for test runs.
    Justification:

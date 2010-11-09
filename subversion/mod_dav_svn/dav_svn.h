@@ -587,17 +587,32 @@ typedef struct
 } dav_svn__authz_read_baton;
 
 
-/* Convert incoming RESOURCE and revision REV into a version-resource URI and
-   perform a GET subrequest on it.  This will invoke any authz modules loaded
-   into apache. Return TRUE if the subrequest succeeds, FALSE otherwise.
-
-   If REV is SVN_INVALID_REVNUM, then we look at HEAD.
-   Use POOL for any temporary allocation.
+/* Return TRUE iff the current user (as determined by Apache's
+   authentication system) has permission to read PATH in REPOS at REV
+   (where an invalid REV means "HEAD").  This will invoke any authz
+   modules loaded into Apache unless this Subversion location has been
+   configured to bypass those in favor of a direct lookup in the
+   Subversion authz subsystem.  Use POOL for any temporary allocation.
 */
 svn_boolean_t
-dav_svn__allow_read(const dav_resource *resource,
-                   svn_revnum_t rev,
-                   apr_pool_t *pool);
+dav_svn__allow_read(request_rec *r,
+                    const dav_svn_repos *repos,
+                    const char *path,
+                    svn_revnum_t rev,
+                    apr_pool_t *pool);
+
+/* Return TRUE iff the current user (as determined by Apache's
+   authentication system) has permission to read RESOURCE in REV
+   (where an invalid REV means "HEAD").  This will invoke any authz
+   modules loaded into Apache unless this Subversion location has been
+   configured to bypass those in favor of a direct lookup in the
+   Subversion authz subsystem.  Use POOL for any temporary allocation.
+*/
+svn_boolean_t
+dav_svn__allow_read_resource(const dav_resource *resource,
+                             svn_revnum_t rev,
+                             apr_pool_t *pool);
+
 
 /* If authz is enabled in the specified BATON, return a read authorization
    function. Otherwise, return NULL. */
