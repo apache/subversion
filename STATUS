@@ -286,17 +286,3 @@ Approved changes:
      Somewhat non-trivial merge conflicts.
    Votes:
      +1: danielsh, cmpilato, stsp
-
- * r1022675 (r982355 from ^subversion/branches/performance)
-   Limit the amount of unused memory fragments held by the root pools.
-   Justification:
-     In combination with blame -g server side memory leaks, see r1032808 and
-     http://svn.haxx.se/dev/archive-2010-11/0102.shtml, svnserve's memory
-     usage can get bloated and stay that way, see
-     see http://svn.haxx.se/dev/archive-2010-11/0165.shtml.
-   Notes:
-     Use --accept=mine-full to avoid bizzare branch root property conflicts
-     on 'svn:ignore' and 'bugtraq:logregex'.  This happens for me with both
-     1.6.14 and trunk@1032984.
-   Votes:
-     +1: pburba, cmpilato, hwright
