@@ -301,6 +301,8 @@ ECHO_N = @ECHO_N@
 
 TESTS = $(TEST_PROGRAMS) @BDB_TEST_PROGRAMS@
 
+TRUNK_TRAIL_URL = /repos/asf/subversion/trunk
+
 all: mkdir-init external-all local-all
 clean: external-clean local-clean
 distclean: external-distclean local-distclean
@@ -364,16 +366,12 @@ local-install: @INSTALL_RULES@
 
 ### HACK!! Find a better way to do this
 revision-install:
-	subversion/svnversion/svnversion $(top_srcdir) /repos/svn/trunk > \
-	    $(DESTDIR)$(includedir)/subversion-1/svn-revision.txt;        \
-	if test "$$?" != "0"; then                                         \
-	  svnversion $(top_srcdir) /repos/svn/trunk >                     \
-	    $(DESTDIR)$(includedir)/subversion-1/svn-revision.txt;        \
-	  if test "$$?" != "0"; then                                       \
-	    echo "unknown" >                                              \
-	      $(DESTDIR)$(includedir)/subversion-1/svn-revision.txt;      \
-	  fi;                                                             \
-	fi;
+	subversion/svnversion/svnversion $(top_srcdir) $(TRUNK_TRAIL_URL) > \
+	    $(DESTDIR)$(includedir)/subversion-1/svn-revision.txt ||        \
+	  svnversion $(top_srcdir) $(TRUNK_TRAIL_URL) >                     \
+	    $(DESTDIR)$(includedir)/subversion-1/svn-revision.txt ||        \
+	    echo "unknown" >                                                \
+	      $(DESTDIR)$(includedir)/subversion-1/svn-revision.txt
 
 install-static: @INSTALL_STATIC_RULES@
 
