@@ -287,16 +287,6 @@ Approved changes:
    Votes:
      +1: danielsh, cmpilato, stsp
 
- * r1032259
-   Fix issue #3745, "svn export mistakenly uri-encodes paths"
-   Justification:
-     Without this fix, users cannot export paths from working copies
-     if the paths contain special characters such as spaces.
-   Branch:
-     ^/subversion/branches/1.6.x-issue3745
-   Votes:
-     +1: stsp, cmpilato, hwright
-
  * r1032808
    Fix blame -g server-side memory leaks.
    Justification:

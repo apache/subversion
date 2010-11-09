@@ -80,7 +80,8 @@ svn_cl__export(apr_getopt_t *os,
     opt_state->depth = svn_depth_infinity;
 
   /* Decode the partially encoded URL and escape all URL unsafe characters. */
-  truefrom = svn_path_uri_encode(svn_path_uri_decode(truefrom, pool), pool);
+  if (svn_path_is_url(truefrom))
+    truefrom = svn_path_uri_encode(svn_path_uri_decode(truefrom, pool), pool);
 
   /* Do the export. */
   err = svn_client_export4(NULL, truefrom, to, &peg_revision,
