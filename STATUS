@@ -114,6 +114,7 @@ Candidate changes:
      out unreadable paths from their get-dir responses.
    Votes:
      +1: cmpilato
+
  * ^/subversion/branches/1.6.x-no-wcng-check
    Remove the function subversion/libsvn_wc/questions.c:is_inside_wc_ng()
    and its uses.
