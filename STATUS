@@ -217,16 +217,6 @@ Candidate changes:
    Votes:
      +1: pburba, cmpilato
 
- * r1032970
-   Fix issue #3727, "svn export into the current directory"
-   Justification:
-     Regression introduced in 1.6.13, user complained:
-     http://svn.haxx.se/users/archive-2010-11/0169.shtml
-   Branch:
-     ^/subversion/branches/1.6.x-issue3727
-   Votes:
-     +1: stsp, cmpilato
-
  * r1022675 (r982355 from ^subversion/branches/performance)
    Limit the amount of unused memory fragments held by the root pools.
    Justification:
@@ -354,3 +344,13 @@ Approved changes:
      Somewhat non-trivial merge conflicts.
    Votes:
      +1: danielsh, cmpilato, stsp
+
+ * r1032970
+   Fix issue #3727, "svn export into the current directory"
+   Justification:
+     Regression introduced in 1.6.13, user complained:
+     http://svn.haxx.se/users/archive-2010-11/0169.shtml
+   Branch:
+     ^/subversion/branches/1.6.x-issue3727
+   Votes:
+     +1: stsp, cmpilato, philip
