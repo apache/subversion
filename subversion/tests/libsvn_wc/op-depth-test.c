@@ -170,11 +170,16 @@ static svn_error_t *
 wc_revert(wc_baton_t *b, const char *path, svn_depth_t depth)
 {
   const char *abspath = wc_path(b, path);
+  const char *lock_root_abspath;
 
-  return svn_wc_revert4(b->wc_ctx, abspath, depth, FALSE, NULL,
-                        NULL, NULL, /* cancel baton + func */
-                        NULL, NULL, /* notify baton + func */
-                        b->pool);
+  SVN_ERR(svn_wc__acquire_write_lock(&lock_root_abspath, b->wc_ctx, abspath,
+                                     TRUE /* lock_anchor */, b->pool, b->pool));
+  SVN_ERR(svn_wc_revert4(b->wc_ctx, abspath, depth, FALSE, NULL,
+                         NULL, NULL, /* cancel baton + func */
+                         NULL, NULL, /* notify baton + func */
+                         b->pool));
+  SVN_ERR(svn_wc__release_write_lock(b->wc_ctx, lock_root_abspath, b->pool));
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
