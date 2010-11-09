@@ -38,6 +38,7 @@ APR_UTIL_VER	= 1.3.9
 HTTPD_VER	= 2.2.15
 NEON_VER	= 0.29.3
 SERF_VER	= 0.7.x
+SERF_OLD_VER	= 0.6.x
 CYRUS_SASL_VER	= 2.1.23
 SQLITE_VER	= 3.6.23.1
 
@@ -45,7 +46,6 @@ BDB_DIST	= db-$(BDB_VER).tar.gz
 APR_ICONV_DIST	= apr-iconv-$(APR_ICONV_VER).tar.gz
 GNU_ICONV_DIST	= libiconv-$(GNU_ICONV_VER).tar.gz
 NEON_DIST	= neon-$(NEON_VER).tar.gz
-#SERF_DIST	= serf-$(SERF_VER).tar.gz
 SQLITE_DIST	= sqlite-$(SQLITE_VER).tar.gz
 CYRUS_SASL_DIST	= cyrus-sasl-$(CYRUS_SASL_VER).tar.gz
 HTTPD_DIST	= httpd-$(HTTPD_VER).tar.bz2
@@ -70,6 +70,7 @@ HTTPD_URL	= http://archive.apache.org/dist/httpd/$(HTTPD_DIST)
 NEON_URL	= http://webdav.org/neon/$(NEON_DIST)
 #SERF_URL	= http://serf.googlecode.com/files/$(SERF_DIST)
 SERF_URL	= http://serf.googlecode.com/svn/branches/$(SERF_VER)
+SERF_OLD_URL	= http://serf.googlecode.com/svn/branches/$(SERF_OLD_VER)
 SQLITE_URL	= http://www.sqlite.org/$(SQLITE_DIST)
 CYRUS_SASL_URL	= ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/$(CYRUS_SASL_DIST)
 
@@ -81,6 +82,7 @@ APR_UTIL_SRCDIR	= $(SRCDIR)/apr-util-$(APR_UTIL_VER)
 HTTPD_SRCDIR	= $(SRCDIR)/httpd-$(HTTPD_VER)
 NEON_SRCDIR	= $(SRCDIR)/neon-$(NEON_VER)
 SERF_SRCDIR	= $(SRCDIR)/serf-$(SERF_VER)
+SERF_OLD_SRCDIR	= $(SRCDIR)/serf-$(SERF_OLD_VER)
 SQLITE_SRCDIR	= $(SRCDIR)/sqlite-$(SQLITE_VER)
 CYRUS_SASL_SRCDIR	= $(SRCDIR)/cyrus-sasl-$(CYRUS_SASL_VER)
 SVN_SRCDIR	= $(SVN_WC)
@@ -93,6 +95,7 @@ APR_UTIL_OBJDIR	= $(OBJDIR)/apr-util-$(APR_UTIL_VER)
 HTTPD_OBJDIR	= $(OBJDIR)/httpd-$(HTTPD_VER)
 NEON_OBJDIR	= $(OBJDIR)/neon-$(NEON_VER)
 SERF_OBJDIR	= $(OBJDIR)/serf-$(SERF_VER)
+SERF_OLD_OBJDIR	= $(OBJDIR)/serf-$(SERF_OLD_VER)
 SQLITE_OBJDIR	= $(OBJDIR)/sqlite-$(SQLITE_VER)
 CYRUS_SASL_OBJDIR	= $(OBJDIR)/cyrus-sasl-$(CYRUS_SASL_VER)
 SVN_OBJDIR	= $(OBJDIR)/$(SVN_REL_WC)
@@ -109,8 +112,8 @@ svn_builddir	?=$(SVN_WC)
 .PHONY: all reset clean nuke
 
 all: dirs-create bdb-install apr-install iconv-install apr-util-install \
-	httpd-install neon-install serf-install sqlite-install \
-	cyrus-sasl-install svn-install svn-bindings-install
+	httpd-install neon-install serf-install serf-old-install \
+	sqlite-install cyrus-sasl-install svn-install svn-bindings-install
 
 # Use these to start a build from the beginning.
 reset: dirs-reset bdb-reset apr-reset iconv-reset apr-util-reset \
@@ -623,6 +626,47 @@ $(SERF_OBJDIR)/.installed: $(SERF_OBJDIR)/.compiled
 	touch $@
 
 #######################################################################
+# serf-old (compatible with Subversion 1.5)
+#######################################################################
+
+serf-old-retrieve:	$(SERF_OLD_OBJDIR)/.retrieved
+serf-old-configure:	$(SERF_OLD_OBJDIR)/.configured
+serf-old-compile:	$(SERF_OLD_OBJDIR)/.compiled
+serf-old-install:	$(SERF_OLD_OBJDIR)/.installed
+serf-old-reset:
+	$(foreach f, .retrieved .configured .compiled .installed, \
+		rm -f $(SERF_OLD_OBJDIR)/$(f);)
+
+serf-old-clean:
+	-(cd $(SERF_OLD_SRCDIR) && ./serfmake clean)
+
+# retrieve serf if not present yet
+$(SERF_OLD_OBJDIR)/.retrieved:
+	[ -d $(SERF_OLD_OBJDIR) ] || mkdir -p $(SERF_OLD_OBJDIR)
+	if [ ! -d $(SERF_OLD_SRCDIR) ]; then \
+		svn export $(SERF_OLD_URL) $(SERF_OLD_SRCDIR); \
+	fi
+	touch $@
+
+# compile serf (serf won't compile outside its source tree)
+$(SERF_OLD_OBJDIR)/.compiled: $(SERF_OLD_OBJDIR)/.retrieved
+	cd $(SERF_OLD_SRCDIR) && \
+		env CFLAGS="-O0 -g" ./serfmake --with-apr=$(PREFIX)/apr \
+			--prefix=$(PREFIX)/serf-old \
+			build
+	touch $@
+
+# install serf
+$(SERF_OLD_OBJDIR)/.installed: $(SERF_OLD_OBJDIR)/.compiled
+	cd $(SERF_OLD_SRCDIR) && \
+		./serfmake --with-apr=$(PREFIX)/apr \
+			--with-apr-util=$(PREFIX)/apr \
+			--prefix=$(PREFIX)/serf-old \
+			install
+	touch $@
+
+
+#######################################################################
 # sqlite
 #######################################################################
 
@@ -765,6 +809,7 @@ $(SVN_OBJDIR)/.retrieved:
 
 ifeq ($(BRANCH_MAJOR),1.5)
 BDB_FLAG=$(PREFIX)/bdb
+SERF_FLAG=--with-serf="$(PREFIX)/serf-old"
 else ifeq ($(BRANCH_MAJOR),1.4)
 BDB_FLAG=$(PREFIX)/bdb
 else ifeq ($(BRANCH_MAJOR),1.3)
@@ -777,6 +822,7 @@ else ifeq ($(BRANCH_MAJOR),1.0)
 BDB_FLAG=$(PREFIX)/bdb
 else
 BDB_FLAG=db.h:$(PREFIX)/bdb/include:$(PREFIX)/bdb/lib:db-$(BDB_MAJOR_VER)
+SERF_FLAG=--with-serf="$(PREFIX)/serf"
 endif
 
 ifeq ($(ENABLE_JAVA_BINDINGS),yes)
@@ -807,7 +853,7 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved
 			--with-apxs="$(PREFIX)/httpd/bin/apxs" \
 			--with-apache-libexecdir=$(PREFIX)/httpd/modules/svn-$(WC) \
 			--with-neon="$(PREFIX)/neon" \
-			--with-serf="$(PREFIX)/serf" \
+			$(SERF_FLAG) \
 			--with-sqlite="$(PREFIX)/sqlite" \
 			--with-berkeley-db="$(BDB_FLAG)" \
 			--with-sasl="$(PREFIX)/cyrus-sasl" \
