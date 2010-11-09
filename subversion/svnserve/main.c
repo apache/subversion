@@ -879,7 +879,7 @@ int main(int argc, const char *argv[])
 #endif
 
       /* If we are using fulltext caches etc., we will allocate many large
-         chunks of memory of various sizes outside the cachde for those
+         chunks of memory of various sizes outside the cache for those
          fulltexts. Make sure, we use the memory wisely: use an allocator
          that causes memory fragments to be given back to the OS early. */
 
