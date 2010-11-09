@@ -287,26 +287,6 @@ Approved changes:
    Votes:
      +1: danielsh, cmpilato, stsp
 
- * r991534
-   Fix random test failures when tests are run in parallel over DAV.
-   Justification:
-     Random test failures irritate developers trying to do release
-     testing. See also the r877814 backport.
-   Backport branch:
-     ^/subversion/branches/1.6.x-r991534
-   Votes:
-     +1: stsp, cmpilato, hwright
-
- * r877219, r877239
-   In Makefile.in, try svnversion from $PATH if in-tree svnversion fails.
-   Justification:
-     When building 1.6.x within a trunk WC there's always an error signalled
-     at the end of the build. This makes scripting the build harder than
-     necessary. Merging this change makes life easier for developers.
-   Votes:
-     +1: stsp
-     +0: hwright
-
  * r1032259
    Fix issue #3745, "svn export mistakenly uri-encodes paths"
    Justification:
