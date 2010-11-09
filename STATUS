@@ -206,15 +206,3 @@ Approved changes:
    Votes:
      +1: cmpilato, danielsh, rhuijben
      -0: hwright (until such time as a backport branch exists)
-
- * r1000038, r1000060
-   Fix for issue #3695, in which the use of "SVNPathAuthz short_circuit" 
-   causes Subversion to ignore authz access rule sections which
-   contain a repository prefix.
-   Justification:
-     Rules are made to be broken.  Except when they're access rules.
-   Notes:
-     r1000038 is a whitespace-only fix required to make r1000060
-     cleanly merge.
-   Votes:
-     +1: cmpilato, kameshj, stsp
