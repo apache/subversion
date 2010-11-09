@@ -96,17 +96,6 @@ Candidate changes:
    Votes:
      +1: kameshj
 
- * r996884
-   Hide unreadable directory children in mod_dav_svn's GET response.
-   Justification:
-     We might as well be as tight security-wise as we can, even if
-     we've publicly stated for years that this was an expected leak of
-     information.  Not showing unreadable subdirs, for example, prevents
-     folks from clicking that sucker in the browser only to get an authz
-     failure.
-   Votes:
-     +1: cmpilato, hwright
-
  * r997026, r997070, r997474
    For issue #3709 ("Inconsistency between "svn list" and "svn
    checkout"), omit unreadable paths from the get-dir RA response.
@@ -150,20 +139,6 @@ Candidate changes:
      ^/subversion/branches/1.6.x-r991534
    Votes:
      +1: stsp, cmpilato
-
- * r964349
-   Create fails.log files for test runs.
-   Justification:
-     Developer convenience.
-   Votes:
-     +1: danielsh, cmpilato
-
- * r1005446
-   Make the new 'svnmucc propsetf' subcommand actually work.
-   Justification:
-     My embarrassment is justification enough.  -- C-Mike
-   Votes:
-     +1: cmpilato
 
  * ^/subversion/1.6.x-no-wcng-check
    Remove the function subversion/libsvn_wc/questions.c:is_inside_wc_ng()
@@ -370,3 +345,28 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r996884
+   Hide unreadable directory children in mod_dav_svn's GET response.
+   Justification:
+     We might as well be as tight security-wise as we can, even if
+     we've publicly stated for years that this was an expected leak of
+     information.  Not showing unreadable subdirs, for example, prevents
+     folks from clicking that sucker in the browser only to get an authz
+     failure.
+   Votes:
+     +1: cmpilato, hwright, stsp
+
+ * r964349
+   Create fails.log files for test runs.
+   Justification:
+     Developer convenience.
+   Votes:
+     +1: danielsh, cmpilato, stsp
+
+ * r1005446
+   Make the new 'svnmucc propsetf' subcommand actually work.
+   Justification:
+     My embarrassment is justification enough.  -- C-Mike
+   Votes:
+     +1: cmpilato, stsp
