@@ -104,7 +104,7 @@ Candidate changes:
      subdirectory by teaching servers not to mention such
      subdirectories so the client doesn't try to recurse into them.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, stsp
 
  * r997471
    Client-side workaround for issue #3709 ("Inconsistency between "svn
