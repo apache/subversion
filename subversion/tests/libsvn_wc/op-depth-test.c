@@ -1043,7 +1043,7 @@ struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_OPTS_WIMP(test_wc_wc_copies,
-                       "wc_wc_copies",
+                       "test_wc_wc_copies",
                        "needs op_depth"),
     SVN_TEST_OPTS_WIMP(test_reverts,
                        "test_reverts",
@@ -1058,13 +1058,13 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test_delete_with_base",
                        "needs op_depth"),
     SVN_TEST_OPTS_WIMP(test_adds,
-                       "adds",
+                       "test_adds",
                        "needs op_depth"),
     SVN_TEST_OPTS_WIMP(test_repo_wc_copies,
                        "test_repo_wc_copies",
                        "needs op_depth"),
     SVN_TEST_OPTS_WIMP(test_delete_with_update,
-                       "test_test_delete_with_update",
+                       "test_delete_with_update",
                        "needs op_depth"),
     SVN_TEST_NULL
   };
