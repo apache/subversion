@@ -287,14 +287,6 @@ Approved changes:
    Votes:
      +1: danielsh, cmpilato, stsp
 
- * r1032808
-   Fix blame -g server-side memory leaks.
-   Justification:
-     As detailed in http://svn.haxx.se/dev/archive-2010-11/0102.shtml,
-     blame -g can trigger a serious server side memory leak.
-   Votes:
-     +1: pburba, cmpilato, hwright
-
  * r1022675 (r982355 from ^subversion/branches/performance)
    Limit the amount of unused memory fragments held by the root pools.
    Justification:
