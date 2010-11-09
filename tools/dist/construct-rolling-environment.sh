@@ -77,7 +77,7 @@ setup() {
 create_prefix() {
     wget -nc http://ftp.gnu.org/gnu/autoconf/$AUTOCONF.tar.bz2
     wget -nc http://ftp.gnu.org/gnu/libtool/$LIBTOOL.tar.gz
-    wget -nc $SOURCEFORGE_MIRROR/swig/$SWIG.tar.gz
+    wget -nc $SOURCEFORGE_MIRROR/project/swig/swig/$SWIG.tar.gz
 
     tar jxvf $AUTOCONF.tar.bz2
     cd $AUTOCONF
