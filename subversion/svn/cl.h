@@ -810,6 +810,13 @@ svn_cl__eat_peg_revisions(apr_array_header_t **true_targets_p,
                           const apr_array_header_t *targets,
                           apr_pool_t *pool);
 
+/* Like svn_opt_parse_path(), but canonicalizes dirent/URL */
+svn_error_t *
+svn_cl__opt_parse_path(svn_opt_revision_t *rev,
+                       const char **truepath,
+                       const char *path,
+                       apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
