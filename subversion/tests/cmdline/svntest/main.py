@@ -1092,9 +1092,8 @@ class TestSpawningThread(threading.Thread):
   """A thread that runs test cases in their own processes.
   Receives test numbers to run from the queue, and saves results into
   the results field."""
-  def __init__(self, srcdir, queue):
+  def __init__(self, queue):
     threading.Thread.__init__(self)
-    self.srcdir = srcdir
     self.queue = queue
     self.results = []
 
@@ -1108,11 +1107,7 @@ class TestSpawningThread(threading.Thread):
       self.run_one(next_index)
 
   def run_one(self, index):
-    if self.srcdir:
-      command = os.path.join(self.srcdir, 'subversion/tests/cmdline',
-                             sys.argv[0])
-    else:
-      command = os.path.abspath(sys.argv[0])
+    command = os.path.abspath(sys.argv[0])
 
     args = []
     args.append(str(index))
@@ -1294,6 +1289,12 @@ def _internal_run_tests(test_list, testnums, parallel, srcdir, progress_func):
   finished_tests = []
   tests_started = 0
 
+  # Some of the tests use sys.argv[0] to locate their test data
+  # directory.  Perhaps we should just be passing srcdir to the tests?
+  if srcdir:
+    sys.argv[0] = os.path.join(srcdir, 'subversion', 'tests', 'cmdline',
+                               sys.argv[0])
+
   if not parallel:
     for i, testnum in enumerate(testnums):
       if run_one_test(testnum, test_list) == 1:
@@ -1306,8 +1307,7 @@ def _internal_run_tests(test_list, testnums, parallel, srcdir, progress_func):
     for num in testnums:
       number_queue.put(num)
 
-    threads = [ TestSpawningThread(srcdir, number_queue)
-                for i in range(parallel) ]
+    threads = [ TestSpawningThread(number_queue) for i in range(parallel) ]
     for t in threads:
       t.start()
 
