@@ -192,7 +192,7 @@ dav_svn__get_locks_report(const dav_resource *resource,
   /* The request URI should be a public one representing an fs path. */
   if ((! resource->info->repos_path)
       || (! resource->info->repos->repos))
-    return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
+    return dav_svn__new_error(resource->pool, HTTP_BAD_REQUEST, 0,
                          "get-locks-report run on resource which doesn't "
                          "represent a path within a repository.");
 
@@ -209,7 +209,7 @@ dav_svn__get_locks_report(const dav_resource *resource,
               (depth != svn_depth_files) &&
               (depth != svn_depth_immediates) &&
               (depth != svn_depth_infinity))
-            return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
+            return dav_svn__new_error(resource->pool, HTTP_BAD_REQUEST, 0,
                                  "Invalid 'depth' specified in "
                                  "get-locks-report request.");
           continue;

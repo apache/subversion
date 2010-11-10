@@ -110,7 +110,7 @@ dav_svn__get_deleted_rev_report(const dav_resource *resource,
   if (err)
     {
       svn_error_clear(err);
-      return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+      return dav_svn__new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
                            "Could not find revision path was deleted.");
     }
 
