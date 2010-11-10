@@ -61,7 +61,7 @@ svn_cl__accept_from_word(const char *word)
 {
   /* Shorthand options are consistent with  svn_cl__conflict_handler(). */
   if (strcmp(word, SVN_CL__ACCEPT_POSTPONE) == 0
-      || strcmp(word, "p") == 0)
+      || strcmp(word, "p") == 0 || strcmp(word, ":-P") == 0)
     return svn_cl__accept_postpone;
   if (strcmp(word, SVN_CL__ACCEPT_BASE) == 0)
     /* ### shorthand? */
@@ -70,22 +70,22 @@ svn_cl__accept_from_word(const char *word)
     /* ### shorthand? */
     return svn_cl__accept_working;
   if (strcmp(word, SVN_CL__ACCEPT_MINE_CONFLICT) == 0
-      || strcmp(word, "mc") == 0)
+      || strcmp(word, "mc") == 0 || strcmp(word, "X-)") == 0)
     return svn_cl__accept_mine_conflict;
   if (strcmp(word, SVN_CL__ACCEPT_THEIRS_CONFLICT) == 0
-      || strcmp(word, "tc") == 0)
+      || strcmp(word, "tc") == 0 || strcmp(word, "X-(") == 0)
     return svn_cl__accept_theirs_conflict;
   if (strcmp(word, SVN_CL__ACCEPT_MINE_FULL) == 0
-      || strcmp(word, "mf") == 0)
+      || strcmp(word, "mf") == 0 || strcmp(word, ":-)") == 0)
     return svn_cl__accept_mine_full;
   if (strcmp(word, SVN_CL__ACCEPT_THEIRS_FULL) == 0
-      || strcmp(word, "tf") == 0)
+      || strcmp(word, "tf") == 0 || strcmp(word, ":-(") == 0)
     return svn_cl__accept_theirs_full;
   if (strcmp(word, SVN_CL__ACCEPT_EDIT) == 0
-      || strcmp(word, "e") == 0)
+      || strcmp(word, "e") == 0 || strcmp(word, ":-E") == 0)
     return svn_cl__accept_edit;
   if (strcmp(word, SVN_CL__ACCEPT_LAUNCH) == 0
-      || strcmp(word, "l") == 0)
+      || strcmp(word, "l") == 0 || strcmp(word, ":-l") == 0)
     return svn_cl__accept_launch;
   /* word is an invalid action. */
   return svn_cl__accept_invalid;
@@ -529,13 +529,13 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                                           "resolve conflict\n"
                 "  (s)  show all         - show this list\n\n")));
             }
-          else if (strcmp(answer, "p") == 0)
+          else if (strcmp(answer, "p") == 0 || strcmp(answer, ":-P") == 0)
             {
               /* Do nothing, let file be marked conflicted. */
               (*result)->choice = svn_wc_conflict_choose_postpone;
               break;
             }
-          else if (strcmp(answer, "mc") == 0)
+          else if (strcmp(answer, "mc") == 0 || strcmp(answer, "X-)") == 0)
             {
               if (desc->is_binary)
                 {
@@ -559,7 +559,7 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                 (*result)->save_merged = TRUE;
               break;
             }
-          else if (strcmp(answer, "tc") == 0)
+          else if (strcmp(answer, "tc") == 0 || strcmp(answer, "X-(") == 0)
             {
               if (desc->is_binary)
                 {
@@ -582,14 +582,14 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                 (*result)->save_merged = TRUE;
               break;
             }
-          else if (strcmp(answer, "mf") == 0)
+          else if (strcmp(answer, "mf") == 0 || strcmp(answer, ":-)") == 0)
             {
               (*result)->choice = svn_wc_conflict_choose_mine_full;
               if (performed_edit)
                 (*result)->save_merged = TRUE;
               break;
             }
-          else if (strcmp(answer, "tf") == 0)
+          else if (strcmp(answer, "tf") == 0 || strcmp(answer, ":-(") == 0)
             {
               (*result)->choice = svn_wc_conflict_choose_theirs_full;
               if (performed_edit)
@@ -637,13 +637,13 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
               SVN_ERR(show_diff(desc, subpool));
               knows_something = TRUE;
             }
-          else if (strcmp(answer, "e") == 0)
+          else if (strcmp(answer, "e") == 0 || strcmp(answer, ":-E") == 0)
             {
               SVN_ERR(open_editor(&performed_edit, desc, b, subpool));
               if (performed_edit)
                 knows_something = TRUE;
             }
-          else if (strcmp(answer, "l") == 0)
+          else if (strcmp(answer, "l") == 0 || strcmp(answer, ":-l") == 0)
             {
               if (desc->kind == svn_wc_conflict_kind_property)
                 {
@@ -729,17 +729,17 @@ svn_cl__conflict_handler(svn_wc_conflict_result_t **result,
                 "(overwrite pre-existing item)\n"
                 "  (h)  help        - show this help\n\n")));
             }
-          if (strcmp(answer, "p") == 0)
+          if (strcmp(answer, "p") == 0 || strcmp(answer, ":-P") == 0)
             {
               (*result)->choice = svn_wc_conflict_choose_postpone;
               break;
             }
-          if (strcmp(answer, "mf") == 0)
+          if (strcmp(answer, "mf") == 0 || strcmp(answer, ":-)") == 0)
             {
               (*result)->choice = svn_wc_conflict_choose_mine_full;
               break;
             }
-          if (strcmp(answer, "tf") == 0)
+          if (strcmp(answer, "tf") == 0 || strcmp(answer, ":-(") == 0)
             {
               (*result)->choice = svn_wc_conflict_choose_theirs_full;
               break;
