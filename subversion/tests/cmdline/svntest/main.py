@@ -345,23 +345,22 @@ _safe_arg_re = re.compile(r'^[A-Za-z\d\.\_\/\-\:\@]+$')
 def _quote_arg(arg):
   """Quote ARG for a command line.
 
-  Simply surround every argument in double-quotes unless it contains
+  Return a quoted version of the string ARG, or just ARG if it contains
   only universally harmless characters.
 
   WARNING: This function cannot handle arbitrary command-line
-  arguments.  It can easily be confused by shell metacharacters.  A
-  perfect job would be difficult and OS-dependent (see, for example,
-  http://msdn.microsoft.com/library/en-us/vccelng/htm/progs_12.asp).
-  In other words, this function is just good enough for what we need
-  here."""
+  arguments: it is just good enough for what we need here."""
 
   arg = str(arg)
   if _safe_arg_re.match(arg):
     return arg
+
+  if windows:
+    # Note: subprocess.list2cmdline is Windows-specific.
+    return subprocess.list2cmdline([arg])
   else:
-    if os.name != 'nt':
-      arg = arg.replace('$', '\$')
-    return '"%s"' % (arg,)
+    # Quoting suitable for most Unix shells.
+    return "'" + arg.replace("'", "'\\''") + "'"
 
 def open_pipe(command, bufsize=0, stdin=None, stdout=None, stderr=None):
   """Opens a subprocess.Popen pipe to COMMAND using STDIN,
@@ -377,15 +376,7 @@ def open_pipe(command, bufsize=0, stdin=None, stdout=None, stderr=None):
   if (sys.platform == 'win32') and (command[0].endswith('.py')):
     command.insert(0, sys.executable)
 
-  # Quote only the arguments on Windows.  Later versions of subprocess,
-  # 2.5.2+ confirmed, don't require this quoting, but versions < 2.4.3 do.
-  if sys.platform == 'win32':
-    args = command[1:]
-    args = ' '.join([_quote_arg(x) for x in args])
-    command = command[0] + ' ' + args
-    command_string = command
-  else:
-    command_string = ' '.join(command)
+  command_string = command[0] + ' ' + ' '.join(map(_quote_arg, command[1:]))
 
   if not stdin:
     stdin = subprocess.PIPE
