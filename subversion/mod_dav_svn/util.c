@@ -600,7 +600,7 @@ dav_svn__final_flush_or_error(request_rec *r,
       apr_status_t apr_err = ap_fflush(output, bb);
       if (apr_err && (! derr))
         derr = dav_svn__new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
-                             "Error flushing brigade.");
+                                  "Error flushing brigade.");
     }
   return derr;
 }

@@ -179,9 +179,9 @@ save_value(dav_db *db, const dav_prop_name *name,
         propname = name->name;
       else
         return dav_svn__new_error(db->p, HTTP_CONFLICT, 0,
-                             "Properties may only be defined in the "
-                             SVN_DAV_PROP_NS_SVN " and " SVN_DAV_PROP_NS_CUSTOM
-                             " namespaces.");
+                                  "Properties may only be defined in the "
+                                  SVN_DAV_PROP_NS_SVN " and " 
+                                  SVN_DAV_PROP_NS_CUSTOM " namespaces.");
     }
 
   /* We've got three different types of properties (node, txn, and
@@ -301,8 +301,8 @@ db_open(apr_pool_t *p,
       if (! (resource->baselined
              && resource->type == DAV_RESOURCE_TYPE_VERSION))
         return dav_svn__new_error(p, HTTP_CONFLICT, 0,
-                             "Properties may only be changed on working "
-                             "resources.");
+                                  "Properties may only be changed on working "
+                                  "resources.");
     }
 
   db = apr_pcalloc(p, sizeof(*db));
@@ -452,7 +452,7 @@ decode_property_value(const svn_string_t **out_propval_p,
                                                       pool);
           else
             return dav_svn__new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
-                                 "Unknown property encoding");
+                                      "Unknown property encoding");
           break;
         }
 
@@ -499,10 +499,11 @@ db_store(dav_db *db,
   if (absent && ! elem->first_child)
     /* ### better error check */
     return dav_svn__new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
-                         apr_psprintf(pool, 
-                                      "'%s' cannot be specified on the value "
-                                      "without specifying an expectation",
-                                      SVN_DAV__OLD_VALUE__ABSENT));
+                              apr_psprintf(pool, 
+                                           "'%s' cannot be specified on the "
+                                           "value without specifying an "
+                                           "expectation",
+                                           SVN_DAV__OLD_VALUE__ABSENT));
 
   /* ### namespace check? */
   if (elem->first_child && !strcmp(elem->first_child->name, SVN_DAV__OLD_VALUE))
