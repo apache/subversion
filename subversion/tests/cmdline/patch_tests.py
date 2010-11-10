@@ -3356,6 +3356,59 @@ def patch_reverse_revert(sbox):
                                        1, # dry-run
                                        '--reverse-diff')
 
+def patch_strip_cwd(sbox):
+  "patch --strip propchanges cwd"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  patch_file_path = make_patch_path(sbox)
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+
+  # Apply patch
+
+  unidiff_patch = [
+    "Index: .\n",
+    "===================================================================\n",
+    "diff --git a/subversion/branches/1.6.x b/subversion/branches/1.6.x\n",
+    "--- a/subversion/branches/1.6.x\t(revision 1033278)\n",
+    "+++ b/subversion/branches/1.6.x\t(working copy)\n",
+    "\n",
+    "Property changes on: subversion/branches/1.6.x\n",
+    "___________________________________________________________________\n",
+    "Modified: svn:mergeinfo\n",
+    "   Merged /subversion/trunk:r964349\n",
+    "Added: k\n",
+    "## -0,0 +1 ##\n",
+    "+v\n",
+  ]
+
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  expected_output = [
+    ' U        %s\n' % os.path.join(wc_dir),
+  ]
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({'': Item(props={'k' : 'v\n'})})
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('', status=' M')
+
+  expected_skip = wc.State('.', { })
+
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       1, # dry-run
+                                       '--strip', '3')
+
+  svntest.actions.check_prop('k', wc_dir, ['v\n'])
+
 ########################################################################
 #Run the tests
 
@@ -3388,6 +3441,7 @@ test_list = [ None,
               patch_git_empty_files,
               patch_old_target_names,
               patch_reverse_revert,
+              patch_strip_cwd,
             ]
 
 if __name__ == '__main__':
