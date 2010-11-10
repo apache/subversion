@@ -15,7 +15,7 @@ to the TestHarness constructor.  All other parameters are names of
 test programs.
 '''
 
-import os, sys
+import os, re, sys
 import time
 
 import getopt
@@ -28,7 +28,7 @@ class TestHarness:
   '''Test harness for Subversion tests.
   '''
 
-  def __init__(self, abs_srcdir, abs_builddir, logfile,
+  def __init__(self, abs_srcdir, abs_builddir, logfile, faillogfile,
                base_url=None, fs_type=None, http_library=None,
                server_minor_version=None, verbose=None,
                cleanup=None, enable_sasl=None, parallel=None, config_file=None,
@@ -47,6 +47,7 @@ class TestHarness:
     self.srcdir = abs_srcdir
     self.builddir = abs_builddir
     self.logfile = logfile
+    self.faillogfile = faillogfile
     self.base_url = base_url
     self.fs_type = fs_type
     self.http_library = http_library
@@ -106,6 +107,27 @@ class TestHarness:
                                       's'*min(len(failed_list), 1)))
       if xpassed:
         print('  %d test%s XPASSED' % (len(xpassed), 's'*min(len(xpassed), 1)))
+    # Copy the truly interesting verbose logs to a separate file, for easier
+    # viewing.
+    if xpassed or failed_list:
+      faillog = open(self.faillogfile, 'wb')
+      last_start_lineno = None
+      last_start_re = re.compile('^(FAIL|SKIP|XFAIL|PASS|START|CLEANUP|END):')
+      for lineno, line in enumerate(log_lines):
+        # Iterate the lines.  If it ends a test we're interested in, dump that
+        # test to FAILLOG.  If it starts a test (at all), remember the line
+        # number (in case we need it later).
+        if line in xpassed or line in failed_list:
+          faillog.write('[[[\n')
+          faillog.writelines(log_lines[last_start_lineno : lineno+1])
+          faillog.write(']]]\n\n')
+        if last_start_re.match(line):
+          last_start_lineno = lineno + 1
+      faillog.close()
+    elif os.path.exists(self.faillogfile):
+      print("WARNING: no failures, but '%s' exists from a previous run."
+            % self.faillogfile)
+
     self._close_log()
     return failed
 
@@ -281,7 +303,7 @@ def main():
       raise getopt.GetoptError
 
   th = TestHarness(args[0], args[1],
-                   os.path.abspath('tests.log'),
+                   os.path.abspath('tests.log'), os.path.abspath('fails.log'),
                    base_url, fs_type, http_library, server_minor_version,
                    verbose, cleanup, enable_sasl, parallel, config_file,
                    fsfs_sharding, fsfs_packing)

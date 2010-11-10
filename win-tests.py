@@ -103,6 +103,7 @@ base_url, fs_type, verbose, cleanup = None, None, None, None
 repo_loc = 'local repository.'
 objdir = 'Debug'
 log = 'tests.log'
+faillog = 'fails.log'
 run_svnserve = None
 svnserve_args = None
 run_httpd = None
@@ -196,13 +197,16 @@ if base_url:
   repo_loc = 'remote repository ' + base_url + '.'
   if base_url[:4] == 'http':
     log = 'dav-tests.log'
+    faillog = 'dav-fails.log'
   elif base_url[:3] == 'svn':
     log = 'svn-tests.log'
+    faillog = 'svn-fails.log'
     run_svnserve = 1
   else:
     # Don't know this scheme, but who're we to judge whether it's
     # correct or not?
     log = 'url-tests.log'
+    faillog = 'url-fails.log'
 
 # Have to move the executables where the tests expect them to be
 copied_execs = []   # Store copied exec files to avoid the final dir scan
@@ -583,6 +587,7 @@ sys.path.insert(0, os.path.join(abs_srcdir, 'build'))
 import run_tests
 th = run_tests.TestHarness(abs_srcdir, abs_builddir,
                            os.path.join(abs_builddir, log),
+                           os.path.join(abs_builddir, faillog),
                            base_url, fs_type, http_library,
                            server_minor_version, 1, cleanup,
                            enable_sasl, parallel, config_file,

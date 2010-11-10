@@ -271,12 +271,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r964349
-   Create fails.log files for test runs.
-   Justification:
-     Developer convenience.
-   Notes:
-     Somewhat non-trivial merge conflicts.
-   Votes:
-     +1: danielsh, cmpilato, stsp
