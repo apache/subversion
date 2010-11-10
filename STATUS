@@ -96,25 +96,6 @@ Candidate changes:
    Votes:
      +1: kameshj
 
- * r997026, r997070, r997474
-   For issue #3709 ("Inconsistency between "svn list" and "svn
-   checkout"), omit unreadable paths from the get-dir RA response.
-   Justification:
-     Fixes 'svn ls -R' failing when recursing into a read-blocked
-     subdirectory by teaching servers not to mention such
-     subdirectories so the client doesn't try to recurse into them.
-   Votes:
-     +1: cmpilato, stsp
-
- * r997471
-   Client-side workaround for issue #3709 ("Inconsistency between "svn
-   list" and "svn checkout").
-   Justification:
-     Fixes issue #3709 for clients talking to servers that don't strip
-     out unreadable paths from their get-dir responses.
-   Votes:
-     +1: cmpilato, stsp
-
  * ^/subversion/branches/1.6.x-no-wcng-check
    Remove the function subversion/libsvn_wc/questions.c:is_inside_wc_ng()
    and its uses.
@@ -281,3 +262,22 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r997026, r997070, r997474
+   For issue #3709 ("Inconsistency between "svn list" and "svn
+   checkout"), omit unreadable paths from the get-dir RA response.
+   Justification:
+     Fixes 'svn ls -R' failing when recursing into a read-blocked
+     subdirectory by teaching servers not to mention such
+     subdirectories so the client doesn't try to recurse into them.
+   Votes:
+     +1: cmpilato, stsp, hwright
+
+ * r997471
+   Client-side workaround for issue #3709 ("Inconsistency between "svn
+   list" and "svn checkout").
+   Justification:
+     Fixes issue #3709 for clients talking to servers that don't strip
+     out unreadable paths from their get-dir responses.
+   Votes:
+     +1: cmpilato, stsp, hwright
