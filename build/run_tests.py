@@ -351,9 +351,12 @@ class TestHarness:
 
       self.dots_written = dots
 
+    serial_only = hasattr(prog_mod, 'serial_only') and prog_mod.serial_only
+
     # run the tests
     svntest.testcase.TextColors.disable()
     failed = svntest.main.execute_tests(prog_mod.test_list,
+                                        serial_only=serial_only,
                                         test_name=progbase,
                                         progress_func=progress_func)
 
