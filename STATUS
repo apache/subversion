@@ -166,10 +166,10 @@ Candidate changes:
    for the ASF repository. r1033290 makes the revision-install target work
    with BSD make (and possibly other make implementations).
    Justification:
-     Without these fixes, the revision-install target will install an empty
-     svn-revision.txt file on all system. And if BSD make is used, it will
-     not fall back to svnversion from $PATH if the first svnversion
-     invocation fails.
+     Without these fixes, the revision-install target will report the working
+     copy as switched in svn-revision.txt on all systems. If BSD make is used,
+     it will not fall back to svnversion from $PATH if the first svnversion
+     invocation fails, and install an empty svn-revision.txt file.
    Branch:
      ^/subversion/branches/1.6.x-r907644
    Votes:
