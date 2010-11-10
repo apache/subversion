@@ -416,15 +416,51 @@ static svn_error_t *
 recover_fully_packed(const svn_test_opts_t *opts,
                      apr_pool_t *pool)
 {
+  apr_pool_t *subpool;
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  const char *conflict;
+  svn_revnum_t after_rev;
+  svn_error_t *err;
+
   /* Bail (with success) on known-untestable scenarios */
   if ((strcmp(opts->fs_type, "fsfs") != 0)
       || (opts->server_minor_version && (opts->server_minor_version < 7)))
     return SVN_NO_ERROR;
 
-  /* Create the packed FS, and then recover it. */
+  /* Create a packed FS for which every revision will live in a pack
+     digest file, and then recover it. */
   SVN_ERR(create_packed_filesystem(REPO_NAME, opts, MAX_REV, SHARD_SIZE, pool));
   SVN_ERR(svn_fs_recover(REPO_NAME, NULL, NULL, pool));
 
+  /* Add another revision, re-pack, re-recover. */
+  subpool = svn_pool_create(pool);
+  SVN_ERR(svn_fs_open(&fs, REPO_NAME, NULL, subpool));
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, MAX_REV, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "A/mu", "new-mu", subpool));
+  SVN_ERR(svn_fs_commit_txn(&conflict, &after_rev, txn, subpool));
+  svn_pool_destroy(subpool);
+  SVN_ERR(svn_fs_pack(REPO_NAME, NULL, NULL, NULL, NULL, pool));
+  SVN_ERR(svn_fs_recover(REPO_NAME, NULL, NULL, pool));
+
+  /* Now, delete the youngest revprop file, and recover again.  This
+     time we want to see an error! */
+  SVN_ERR(svn_io_remove_file2(
+              svn_dirent_join_many(pool, REPO_NAME, PATH_REVPROPS_DIR,
+                                   apr_psprintf(pool, "%ld/%ld",
+                                                after_rev / SHARD_SIZE,
+                                                after_rev),
+                                   NULL),
+              FALSE, pool));
+  err = svn_fs_recover(REPO_NAME, NULL, NULL, pool);
+  if (! err)
+    return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                            "Expected SVN_ERR_FS_CORRUPT error; got none");
+  if (err->apr_err != SVN_ERR_FS_CORRUPT)
+    return svn_error_create(SVN_ERR_TEST_FAILED, err,
+                            "Expected SVN_ERR_FS_CORRUPT error; got:");
   return SVN_NO_ERROR;
 }
 #undef REPO_NAME
