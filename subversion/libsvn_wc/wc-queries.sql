@@ -346,6 +346,21 @@ SET properties = NULL,
     right_checksum = NULL
 WHERE wc_id = ?1 and local_relpath = ?2;
 
+-- STMT_CLEAR_ACTUAL_NODE_LEAVING_CONFLICT
+UPDATE actual_node
+SET properties = NULL,
+    text_mod = NULL,
+    changelist = NULL,
+    tree_conflict_data = NULL,
+    conflict_old = NULL,
+    conflict_new = NULL,
+    conflict_working = NULL,
+    prop_reject = NULL,
+    older_checksum = NULL,
+    left_checksum = NULL,
+    right_checksum = NULL
+WHERE wc_id = ?1 and local_relpath = ?2;
+
 -- STMT_UPDATE_NODE_BASE_DEPTH
 UPDATE nodes SET depth = ?3
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
@@ -684,7 +699,8 @@ WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
 -- STMT_SELECT_ACTUAL_NODE_RECURSIVE
 SELECT 1
 FROM actual_node
-WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#');
+WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
+  AND conflict_data IS NULL;
 
 /* ------------------------------------------------------------------------- */
 

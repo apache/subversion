@@ -4679,8 +4679,18 @@ db_working_actual_remove(svn_wc__db_pdh_t *pdh,
   SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
+#ifndef TREE_CONFLICTS_ON_CHILDREN
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                     STMT_DELETE_ACTUAL_NODE));
+#else
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_CLEAR_ACTUAL_NODE_LEAVING_CONFLICT));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_DELETE_ACTUAL_NODE_WITHOUT_CONFLICT));
+#endif
   SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
@@ -4700,7 +4710,8 @@ db_working_actual_remove(svn_wc__db_pdh_t *pdh,
     SVN_ERR_ASSERT(! have_row);
     SVN_ERR(svn_sqlite__reset(stmt));
   }
-  /* Postcondition: There are no ACTUAL_NODE rows in this subtree. */
+  /* Postcondition: There are no ACTUAL_NODE rows in this subtree, save
+     those with conflict information. */
   {
     svn_boolean_t have_row;
 
