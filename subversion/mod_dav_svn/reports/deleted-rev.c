@@ -111,7 +111,7 @@ dav_svn__get_deleted_rev_report(const dav_resource *resource,
     {
       svn_error_clear(err);
       return dav_svn__new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
-                           "Could not find revision path was deleted.");
+                                "Could not find revision path was deleted.");
     }
 
   bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);

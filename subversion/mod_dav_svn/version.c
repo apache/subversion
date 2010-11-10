@@ -84,7 +84,7 @@ set_auto_revprops(dav_resource *resource)
   if (! (resource->type == DAV_RESOURCE_TYPE_WORKING
          && resource->info->auto_checked_out))
     return dav_svn__new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
-                         "Set_auto_revprops called on invalid resource.");
+                              "Set_auto_revprops called on invalid resource.");
 
   if ((serr = dav_svn__attach_auto_revprops(resource->info->root.txn,
                                             resource->info->repos_path,
@@ -302,7 +302,8 @@ vsn_control(dav_resource *resource, const char *target)
      make sense to call vsn_control on a resource that exists . */
   if (resource->exists)
     return dav_svn__new_error(resource->pool, HTTP_BAD_REQUEST, 0,
-                         "vsn_control called on already-versioned resource.");
+                              "vsn_control called on already-versioned "
+                              "resource.");
 
   /* Only allow a NULL target, which means an create an 'empty' VCR. */
   if (target != NULL)
@@ -413,8 +414,9 @@ dav_svn__checkout(dav_resource *resource,
           shared_txn_name = dav_svn__get_txn(resource->info->repos,
                                              shared_activity);
           if (! shared_txn_name)
-            return dav_svn__new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
-                                 "Cannot look up a txn_name by activity");
+            return dav_svn__new_error(resource->pool,
+                                      HTTP_INTERNAL_SERVER_ERROR, 0,
+                                      "Cannot look up a txn_name by activity");
         }
 
       /* Tweak the VCR in-place, making it into a WR.  (Ignore the
@@ -890,20 +892,20 @@ dav_svn__checkin(dav_resource *resource,
                                          shared_activity);
       if (! shared_txn_name)
         return dav_svn__new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
-                             "Cannot look up a txn_name by activity");
+                                  "Cannot look up a txn_name by activity");
 
       /* Sanity checks */
       if (resource->info->root.txn_name
           && (strcmp(shared_txn_name, resource->info->root.txn_name) != 0))
         return dav_svn__new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
-                             "Internal txn_name doesn't match"
-                             " autoversioning transaction.");
+                                  "Internal txn_name doesn't match "
+                                  "autoversioning transaction.");
 
       if (! resource->info->root.txn)
         /* should already be open by checkout */
         return dav_svn__new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
-                             "Autoversioning txn isn't open "
-                             "when it should be.");
+                                  "Autoversioning txn isn't open "
+                                  "when it should be.");
 
       err = set_auto_revprops(resource);
       if (err)

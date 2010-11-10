@@ -81,8 +81,8 @@ dav_svn__dated_rev_report(const dav_resource *resource,
   if (tm == (apr_time_t) -1)
     {
       return dav_svn__new_error(resource->pool, HTTP_BAD_REQUEST, 0,
-                           "The request does not contain a valid "
-                           "'DAV:" SVN_DAV__CREATIONDATE "' element.");
+                                "The request does not contain a valid "
+                                "'DAV:" SVN_DAV__CREATIONDATE "' element.");
     }
 
   /* Do the actual work of finding the revision by date. */
@@ -91,7 +91,7 @@ dav_svn__dated_rev_report(const dav_resource *resource,
     {
       svn_error_clear(err);
       return dav_svn__new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
-                           "Could not access revision times.");
+                                "Could not access revision times.");
     }
 
   bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
