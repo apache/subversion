@@ -1435,6 +1435,14 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
           svn_pool_clear(subpool);
 
           file_path = svn_path_join(full_path, name, subpool);
+
+          if (! lookup_access(subpool, b, conn, svn_authz_read,
+                              file_path, FALSE))
+            {
+              apr_hash_set(entries, name, APR_HASH_KEY_STRING, NULL);
+              continue;
+            }
+
           entry = apr_pcalloc(pool, sizeof(*entry));
 
           if (dirent_fields & SVN_DIRENT_KIND)
