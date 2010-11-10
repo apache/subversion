@@ -870,9 +870,10 @@ test_list = [ None,
               descend_into_replace,
               XFail(delete_revprops),
              ]
+serial_only = True
 
 if __name__ == '__main__':
-  svntest.main.run_tests(test_list, serial_only = True)
+  svntest.main.run_tests(test_list, serial_only = serial_only)
   # NOTREACHED
 
 
