@@ -1609,44 +1609,6 @@ send_patch_notification(const patch_target_t *target,
   return SVN_NO_ERROR;
 }
 
-/* Close the streams of the TARGET so that their content is flushed
- * to disk. This will also close underlying streams and files. Use POOL for
- * temporary allocations. */
-static svn_error_t *
-close_target_streams(const patch_target_t *target,
-                     apr_pool_t *pool)
-{
-  apr_hash_index_t *hi;
-  target_content_info_t *prop_content_info;
-
-  /* First the streams belonging to properties .. */
-  for (hi = apr_hash_first(pool, target->prop_targets);
-       hi;
-       hi = apr_hash_next(hi))
-    {
-      prop_patch_target_t *prop_target;
-      prop_target = svn__apr_hash_index_val(hi);
-      prop_content_info = prop_target->content_info;
-
-      /* ### If the prop did not exist pre-patching we'll not have a
-       * ### stream to read from. Find a better way to store info on
-       * ### the existence of the target prop. */
-      if (prop_content_info->stream)
-        SVN_ERR(svn_stream_close(prop_content_info->stream));
-
-      SVN_ERR(svn_stream_close(prop_content_info->patched));
-    }
-
-  /* .. and then streams associated with the file.
-   * ### We're not closing the reject stream -- it still needed and
-   * ### will be closed later in write_out_rejected_hunks(). */
-  if (target->kind_on_disk == svn_node_file)
-    SVN_ERR(svn_stream_close(target->content_info->stream));
-  SVN_ERR(svn_stream_close(target->content_info->patched));
-
-  return SVN_NO_ERROR;
-}
-
 /* Apply a PATCH to a working copy at ABS_WC_PATH and put the result
  * into temporary files, to be installed in the working copy later.
  * Return information about the patch target in *PATCH_TARGET, allocated
@@ -1675,6 +1637,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
   int i;
   static const int MAX_FUZZ = 2;
   apr_hash_index_t *hash_index;
+  target_content_info_t *prop_content_info;
 
   SVN_ERR(init_patch_target(&target, patch, abs_wc_path, wc_ctx, strip_count,
                             remove_tempfiles, result_pool, scratch_pool));
@@ -1855,7 +1818,31 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
 
   svn_pool_destroy(iterpool);
 
-  SVN_ERR(close_target_streams(target, scratch_pool));
+  /* Now close some streams that we don't need any longer to get
+   * file buffers flushed to disk. First, close the props streams... */
+  for (hash_index = apr_hash_first(scratch_pool, target->prop_targets);
+       hash_index;
+       hash_index = apr_hash_next(hash_index))
+    {
+      prop_patch_target_t *prop_target;
+      prop_target = svn__apr_hash_index_val(hash_index);
+      prop_content_info = prop_target->content_info;
+
+      /* ### If the prop did not exist pre-patching we'll not have a
+       * ### stream to read from. Find a better way to store info on
+       * ### the existence of the target prop. */
+      if (prop_content_info->stream)
+        SVN_ERR(svn_stream_close(prop_content_info->stream));
+
+      SVN_ERR(svn_stream_close(prop_content_info->patched));
+    }
+
+  /* .. and then streams associated with the file.
+   * But we're not closing the reject stream -- it still needed and
+   * will be closed later in write_out_rejected_hunks(). */
+  if (target->kind_on_disk == svn_node_file)
+    SVN_ERR(svn_stream_close(target->content_info->stream));
+  SVN_ERR(svn_stream_close(target->content_info->patched));
 
   if (! target->skipped)
     {
