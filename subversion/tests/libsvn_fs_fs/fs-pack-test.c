@@ -356,7 +356,7 @@ commit_packed_fs(const svn_test_opts_t *opts,
 #undef SHARD_SIZE
 
 /* ------------------------------------------------------------------------ */
-#define REPO_NAME "test-get-set-revprop-packed-fs"
+#define REPO_NAME "test-repo-get-set-revprop-packed-fs"
 #define SHARD_SIZE 4
 #define MAX_REV 1
 static svn_error_t *
@@ -409,7 +409,7 @@ get_set_revprop_packed_fs(const svn_test_opts_t *opts,
 /* ------------------------------------------------------------------------ */
 /* Regression test for issue #3571 (fsfs 'svnadmin recover' expects
    youngest revprop to be outside revprops.db). */
-#define REPO_NAME "test-recover-fully-packed"
+#define REPO_NAME "test-repo-recover-fully-packed"
 #define SHARD_SIZE 4
 #define MAX_REV 7
 static svn_error_t *
