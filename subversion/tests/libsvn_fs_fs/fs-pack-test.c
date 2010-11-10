@@ -34,16 +34,14 @@
 #include "../svn_test_fs.h"
 
 
-/*-----------------------------------------------------------------*/
 
-/** The actual fs-tests called by `make check` **/
+/*** Helper Functions ***/
 
 /* Write the format number and maximum number of files per directory
-   to a new format file in PATH, overwriting a previously existing file.
+   to a new format file in PATH, overwriting a previously existing
+   file.  Use POOL for temporary allocation.
 
-   Use POOL for temporary allocation.
-
-   This implementation is largely stolen from libsvn_fs_fs/fs_fs.c. */
+   (This implementation is largely stolen from libsvn_fs_fs/fs_fs.c.) */
 static svn_error_t *
 write_format(const char *path,
              int format,
@@ -97,12 +95,15 @@ get_rev_contents(svn_revnum_t rev, apr_pool_t *pool)
   return apr_psprintf(pool, "%" APR_INT64_T_FMT "\n", num);
 }
 
-/* Create a packed filesystem in DIR.  Set the shard size to SHARD_SIZE
-   and create MAX_REV number of revisions.  Use POOL for allocations. */
+/* Create a packed filesystem in DIR.  Set the shard size to
+   SHARD_SIZE and create NUM_REVS number of revisions (in addition to
+   r0).  Use POOL for allocations.  After this function successfully
+   completes, the filesystem's youngest revision number will be the
+   same as NUM_REVS.  */
 static svn_error_t *
 create_packed_filesystem(const char *dir,
                          const svn_test_opts_t *opts,
-                         int max_rev,
+                         int num_revs,
                          int shard_size,
                          apr_pool_t *pool)
 {
@@ -133,9 +134,9 @@ create_packed_filesystem(const char *dir,
   SVN_ERR(svn_test__create_greek_tree(txn_root, subpool));
   SVN_ERR(svn_fs_commit_txn(&conflict, &after_rev, txn, subpool));
 
-  /* Revisions 2-11: A bunch of random changes. */
+  /* Revisions 2 thru NUM_REVS-1: content tweaks to "iota". */
   iterpool = svn_pool_create(subpool);
-  while (after_rev < max_rev + 1)
+  while (after_rev < num_revs)
     {
       svn_pool_clear(iterpool);
       SVN_ERR(svn_fs_begin_txn(&txn, fs, after_rev, iterpool));
@@ -153,7 +154,10 @@ create_packed_filesystem(const char *dir,
   return svn_fs_pack(dir, NULL, NULL, NULL, NULL, pool);
 }
 
-/* Pack a filesystem.  */
+
+/*** Tests ***/
+
+/* ------------------------------------------------------------------------ */
 #define REPO_NAME "test-repo-fsfs-pack"
 #define SHARD_SIZE 7
 #define MAX_REV 53
@@ -181,7 +185,8 @@ pack_filesystem(const svn_test_opts_t *opts,
   for (i = 0; i < (MAX_REV + 1) / SHARD_SIZE; i++)
     {
       path = svn_path_join_many(pool, REPO_NAME, "revs",
-            apr_psprintf(pool, "%d.pack", i / SHARD_SIZE), "pack", NULL);
+                                apr_psprintf(pool, "%d.pack", i / SHARD_SIZE),
+                                "pack", NULL);
 
       /* These files should exist. */
       SVN_ERR(svn_io_check_path(path, &kind, pool));
@@ -190,7 +195,8 @@ pack_filesystem(const svn_test_opts_t *opts,
                                  "Expected pack file '%s' not found", path);
 
       path = svn_path_join_many(pool, REPO_NAME, "revs",
-            apr_psprintf(pool, "%d.pack", i / SHARD_SIZE), "manifest", NULL);
+                                apr_psprintf(pool, "%d.pack", i / SHARD_SIZE),
+                                "manifest", NULL);
       SVN_ERR(svn_io_check_path(path, &kind, pool));
       if (kind != svn_node_file)
         return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
@@ -199,7 +205,8 @@ pack_filesystem(const svn_test_opts_t *opts,
 
       /* This directory should not exist. */
       path = svn_path_join_many(pool, REPO_NAME, "revs",
-            apr_psprintf(pool, "%d", i / SHARD_SIZE), NULL);
+                                apr_psprintf(pool, "%d", i / SHARD_SIZE),
+                                NULL);
       SVN_ERR(svn_io_check_path(path, &kind, pool));
       if (kind != svn_node_none)
         return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
@@ -220,12 +227,12 @@ pack_filesystem(const svn_test_opts_t *opts,
 
   /* Finally, make sure the final revision directory does exist. */
   path = svn_path_join_many(pool, REPO_NAME, "revs",
-        apr_psprintf(pool, "%d", (i / SHARD_SIZE) + 1), NULL);
+                            apr_psprintf(pool, "%d", (i / SHARD_SIZE) + 1),
+                            NULL);
   SVN_ERR(svn_io_check_path(path, &kind, pool));
   if (kind != svn_node_none)
     return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
-                             "Expected directory '%s' not found",
-                             path);
+                             "Expected directory '%s' not found", path);
 
 
   return SVN_NO_ERROR;
@@ -234,10 +241,10 @@ pack_filesystem(const svn_test_opts_t *opts,
 #undef SHARD_SIZE
 #undef MAX_REV
 
-/* Pack a filesystem.  */
+/* ------------------------------------------------------------------------ */
 #define REPO_NAME "test-repo-fsfs-pack-even"
 #define SHARD_SIZE 4
-#define MAX_REV 10
+#define MAX_REV 11
 static svn_error_t *
 pack_even_filesystem(const svn_test_opts_t *opts,
                      apr_pool_t *pool)
@@ -265,8 +272,10 @@ pack_even_filesystem(const svn_test_opts_t *opts,
 #undef SHARD_SIZE
 #undef MAX_REV
 
-/* Check reading from a packed filesystem. */
+/* ------------------------------------------------------------------------ */
 #define REPO_NAME "test-repo-read-packed-fs"
+#define SHARD_SIZE 5
+#define MAX_REV 11
 static svn_error_t *
 read_packed_fs(const svn_test_opts_t *opts,
                apr_pool_t *pool)
@@ -281,10 +290,10 @@ read_packed_fs(const svn_test_opts_t *opts,
       || (opts->server_minor_version && (opts->server_minor_version < 6)))
     return SVN_NO_ERROR;
 
-  SVN_ERR(create_packed_filesystem(REPO_NAME, opts, 11, 5, pool));
+  SVN_ERR(create_packed_filesystem(REPO_NAME, opts, MAX_REV, SHARD_SIZE, pool));
   SVN_ERR(svn_fs_open(&fs, REPO_NAME, NULL, pool));
 
-  for (i = 1; i < 12; i++)
+  for (i = 1; i < (MAX_REV + 1); i++)
     {
       svn_fs_root_t *rev_root;
       svn_stringbuf_t *sb;
@@ -306,9 +315,13 @@ read_packed_fs(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 #undef REPO_NAME
+#undef SHARD_SIZE
+#undef MAX_REV
 
-/* Check reading from a packed filesystem. */
+/* ------------------------------------------------------------------------ */
 #define REPO_NAME "test-repo-commit-packed-fs"
+#define SHARD_SIZE 5
+#define MAX_REV 10
 static svn_error_t *
 commit_packed_fs(const svn_test_opts_t *opts,
                  apr_pool_t *pool)
@@ -325,11 +338,11 @@ commit_packed_fs(const svn_test_opts_t *opts,
     return SVN_NO_ERROR;
 
   /* Create the packed FS and open it. */
-  SVN_ERR(create_packed_filesystem(REPO_NAME, opts, 11, 5, pool));
+  SVN_ERR(create_packed_filesystem(REPO_NAME, opts, MAX_REV, 5, pool));
   SVN_ERR(svn_fs_open(&fs, REPO_NAME, NULL, pool));
 
   /* Now do a commit. */
-  SVN_ERR(svn_fs_begin_txn(&txn, fs, 12, pool));
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, MAX_REV, pool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
   SVN_ERR(svn_test__set_file_contents(txn_root, "iota",
           "How much better is it to get wisdom than gold! and to get "
@@ -339,8 +352,10 @@ commit_packed_fs(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 #undef REPO_NAME
+#undef MAX_REV
+#undef SHARD_SIZE
 
-/* Get/set revprop while repository is being packed in background. */
+/* ------------------------------------------------------------------------ */
 #define REPO_NAME "test-get-set-revprop-packed-fs"
 #define SHARD_SIZE 4
 #define MAX_REV 1
@@ -367,7 +382,7 @@ get_set_revprop_packed_fs(const svn_test_opts_t *opts,
 
   subpool = svn_pool_create(pool);
   /* Do a commit to trigger packing. */
-  SVN_ERR(svn_fs_begin_txn(&txn, fs, MAX_REV + 1, subpool));
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, MAX_REV, subpool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
   SVN_ERR(svn_test__set_file_contents(txn_root, "iota", "new-iota",  subpool));
   SVN_ERR(svn_fs_commit_txn(&conflict, &after_rev, txn, subpool));
@@ -377,14 +392,19 @@ get_set_revprop_packed_fs(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_pack(REPO_NAME, NULL, NULL, NULL, NULL, pool));
 
   /* Try to get revprop for revision 0. */
-  SVN_ERR(svn_fs_revision_prop(&prop_value, fs, 0, SVN_PROP_REVISION_AUTHOR, pool));
+  SVN_ERR(svn_fs_revision_prop(&prop_value, fs, 0, SVN_PROP_REVISION_AUTHOR,
+                               pool));
 
   /* Try to change revprop for revision 0. */
   SVN_ERR(svn_fs_change_rev_prop(fs, 0, SVN_PROP_REVISION_AUTHOR,
-                                 svn_string_create("tweaked-author", pool), pool));
+                                 svn_string_create("tweaked-author", pool),
+                                 pool));
 
   return SVN_NO_ERROR;
 }
+#undef REPO_NAME
+#undef MAX_REV
+#undef SHARD_SIZE
 
 /* ------------------------------------------------------------------------ */
 
