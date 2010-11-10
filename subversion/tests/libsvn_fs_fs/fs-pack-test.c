@@ -407,6 +407,31 @@ get_set_revprop_packed_fs(const svn_test_opts_t *opts,
 #undef SHARD_SIZE
 
 /* ------------------------------------------------------------------------ */
+/* Regression test for issue #3571 (fsfs 'svnadmin recover' expects
+   youngest revprop to be outside revprops.db). */
+#define REPO_NAME "test-recover-fully-packed"
+#define SHARD_SIZE 4
+#define MAX_REV 7
+static svn_error_t *
+recover_fully_packed(const svn_test_opts_t *opts,
+                     apr_pool_t *pool)
+{
+  /* Bail (with success) on known-untestable scenarios */
+  if ((strcmp(opts->fs_type, "fsfs") != 0)
+      || (opts->server_minor_version && (opts->server_minor_version < 7)))
+    return SVN_NO_ERROR;
+
+  /* Create the packed FS, and then recover it. */
+  SVN_ERR(create_packed_filesystem(REPO_NAME, opts, MAX_REV, SHARD_SIZE, pool));
+  SVN_ERR(svn_fs_recover(REPO_NAME, NULL, NULL, pool));
+
+  return SVN_NO_ERROR;
+}
+#undef REPO_NAME
+#undef MAX_REV
+#undef SHARD_SIZE
+
+/* ------------------------------------------------------------------------ */
 
 /* The test table.  */
 
@@ -423,5 +448,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "commit to a packed FSFS filesystem"),
     SVN_TEST_OPTS_PASS(get_set_revprop_packed_fs,
                        "get/set revprop while packing FSFS filesystem"),
+    SVN_TEST_OPTS_XFAIL(recover_fully_packed,
+                        "recover a fully packed filesystem"),
     SVN_TEST_NULL
   };
