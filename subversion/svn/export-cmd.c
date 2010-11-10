@@ -52,6 +52,7 @@ svn_cl__export(apr_getopt_t *os,
   svn_error_t *err;
   svn_opt_revision_t peg_revision;
   const char *truefrom;
+  struct svn_cl__check_externals_failed_notify_baton nwb;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
@@ -95,6 +96,12 @@ svn_cl__export(apr_getopt_t *os,
   if (opt_state->depth == svn_depth_unknown)
     opt_state->depth = svn_depth_infinity;
 
+  nwb.wrapped_func = ctx->notify_func2;
+  nwb.wrapped_baton = ctx->notify_baton2;
+  nwb.had_externals_error = FALSE;
+  ctx->notify_func2 = svn_cl__check_externals_failed_notify_wrapper;
+  ctx->notify_baton2 = &nwb;
+
   /* Do the export. */
   err = svn_client_export5(NULL, truefrom, to, &peg_revision,
                            &(opt_state->start_revision),
@@ -105,6 +112,11 @@ svn_cl__export(apr_getopt_t *os,
     SVN_ERR_W(err,
               _("Destination directory exists; please remove "
                 "the directory or use --force to overwrite"));
+
+  if (nwb.had_externals_error)
+    return svn_error_create(SVN_ERR_CL_ERROR_PROCESSING_EXTERNALS, NULL,
+                            _("Failure occured processing one or more "
+                              "externals definitions"));
 
   return svn_error_return(err);
 }

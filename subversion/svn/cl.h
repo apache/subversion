@@ -569,6 +569,21 @@ svn_cl__notifier_mark_checkout(void *baton);
 svn_error_t *
 svn_cl__notifier_mark_export(void *baton);
 
+/* Baton for use with svn_cl__check_externals_failed_notify_wrapper(). */
+struct svn_cl__check_externals_failed_notify_baton
+{
+  void *wrapped_baton;                /* The "real" notify_func2. */
+  svn_wc_notify_func2_t wrapped_func; /* The "real" notify_func2 baton. */
+  svn_boolean_t had_externals_error;  /* Did something fail in an external? */
+};
+
+/* Notification function wrapper (implements `svn_wc_notify_func2_t').
+   Use with an svn_cl__check_externals_failed_notify_baton BATON. */
+void
+svn_cl__check_externals_failed_notify_wrapper(void *baton,
+                                              const svn_wc_notify_t *n,
+                                              apr_pool_t *pool);
+
 /* Print conflict stats accumulated in NOTIFY_BATON.
  * Return any error encountered during printing.
  * Do all allocations in POOL.*/
