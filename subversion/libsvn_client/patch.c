@@ -235,7 +235,7 @@ strip_path(const char **result, const char *path, int strip_count,
   apr_array_header_t *stripped;
 
   components = svn_path_decompose(path, scratch_pool);
-  if (strip_count >= components->nelts)
+  if (strip_count > components->nelts)
     return svn_error_createf(SVN_ERR_CLIENT_PATCH_BAD_STRIP_COUNT, NULL,
                              _("Cannot strip %u components from '%s'"),
                              strip_count,
