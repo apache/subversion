@@ -461,6 +461,7 @@ recover_fully_packed(const svn_test_opts_t *opts,
   if (err->apr_err != SVN_ERR_FS_CORRUPT)
     return svn_error_create(SVN_ERR_TEST_FAILED, err,
                             "Expected SVN_ERR_FS_CORRUPT error; got:");
+  svn_error_clear(err);
   return SVN_NO_ERROR;
 }
 #undef REPO_NAME
