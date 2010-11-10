@@ -6924,15 +6924,41 @@ recover_body(void *baton, apr_pool_t *pool)
   SVN_ERR(svn_io_check_path(path_revprops(fs, max_rev, pool),
                             &youngest_revprops_kind, pool));
   if (youngest_revprops_kind == svn_node_none)
-    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                             _("Revision %ld has a revs file but no "
-                               "revprops file"),
-                             max_rev);
+    {
+      svn_boolean_t uhohs = TRUE;
+
+      /* No file?  Hrm... maybe that's because this repository is
+         packed and the youngest revision is in the revprops.db
+         file?  We can at least see if that's a possibility.
+
+         ### TODO: Could we check for revprops in the revprops.db?
+         ###       What if rNNN legitimately has no revprops? */
+      if (ffd->format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT)
+        {
+          svn_revnum_t min_unpacked_revprop;
+          const char *min_unpacked_revprop_path =
+            svn_dirent_join(fs->path, PATH_MIN_UNPACKED_REVPROP, pool);
+
+          SVN_ERR(read_min_unpacked_rev(&min_unpacked_revprop,
+                                        min_unpacked_revprop_path, pool));
+          if (min_unpacked_revprop == (max_rev + 1))
+            uhohs = FALSE;
+        }
+      if (uhohs)
+        {
+          return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                                   _("Revision %ld has a revs file but no "
+                                     "revprops file"),
+                                   max_rev);
+        }
+    }
   else if (youngest_revprops_kind != svn_node_file)
-    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                             _("Revision %ld has a non-file where its "
-                               "revprops file should be"),
-                             max_rev);
+    {
+      return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                               _("Revision %ld has a non-file where its "
+                                 "revprops file should be"),
+                               max_rev);
+    }
 
   /* Now store the discovered youngest revision, and the next IDs if
      relevant, in a new 'current' file. */

@@ -484,7 +484,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "commit to a packed FSFS filesystem"),
     SVN_TEST_OPTS_PASS(get_set_revprop_packed_fs,
                        "get/set revprop while packing FSFS filesystem"),
-    SVN_TEST_OPTS_XFAIL(recover_fully_packed,
-                        "recover a fully packed filesystem"),
+    SVN_TEST_OPTS_PASS(recover_fully_packed,
+                       "recover a fully packed filesystem"),
     SVN_TEST_NULL
   };
