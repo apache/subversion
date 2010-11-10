@@ -74,6 +74,8 @@ from svntest import Skip
 #####################################################################
 # Global stuff
 
+default_num_threads = 5
+
 class SVNProcessTerminatedBySignal(Failure):
   "Exception raised if a spawned process segfaulted, aborted, etc."
   pass
@@ -1366,8 +1368,8 @@ def _create_parser():
                     help='Print binary command-lines (not with --quiet)')
   parser.add_option('-q', '--quiet', action='store_true',
                     help='Print only unexpected results (not with --verbose)')
-  parser.add_option('-p', '--parallel', action='store_const', const=5,
-                    dest='parallel',
+  parser.add_option('-p', '--parallel', action='store_const',
+                    const=default_num_threads, dest='parallel',
                     help='Run the tests in parallel')
   parser.add_option('-c', action='store_true', dest='is_child_process',
                     help='Flag if we are running this python test as a ' +
