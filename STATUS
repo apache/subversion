@@ -198,11 +198,3 @@ Approved changes:
    Votes:
      +1: cmpilato, danielsh, rhuijben
      -0: hwright (until such time as a backport branch exists)
-
- * r1033166
-   Prevent mod_dav_svn from trying to walk SVNParentPath collections.
-   Justification:
-     Without this fix, mod_dav_svn can be made to crash if the SVNParentPath
-     directive is used.
-   Votes:
-     +1: stsp, philip, cmpilato
