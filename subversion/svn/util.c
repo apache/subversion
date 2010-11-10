@@ -1324,3 +1324,19 @@ svn_cl__eat_peg_revisions(apr_array_header_t **true_targets_p,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_cl__opt_parse_path(svn_opt_revision_t *rev,
+                       const char **truepath,
+                       const char *path /* UTF-8! */,
+                       apr_pool_t *pool)
+{
+  SVN_ERR(svn_opt_parse_path(rev, truepath, path, pool));
+  
+  if (svn_path_is_url(*truepath))
+    *truepath = svn_uri_canonicalize(*truepath, pool);
+  else
+    *truepath = svn_dirent_canonicalize(*truepath, pool);
+
+  return SVN_NO_ERROR;
+}
