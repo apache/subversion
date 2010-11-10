@@ -262,12 +262,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r997471
-   Client-side workaround for issue #3709 ("Inconsistency between "svn
-   list" and "svn checkout").
-   Justification:
-     Fixes issue #3709 for clients talking to servers that don't strip
-     out unreadable paths from their get-dir responses.
-   Votes:
-     +1: cmpilato, stsp, hwright
