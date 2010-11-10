@@ -572,8 +572,8 @@ svn_cl__notifier_mark_export(void *baton);
 /* Baton for use with svn_cl__check_externals_failed_notify_wrapper(). */
 struct svn_cl__check_externals_failed_notify_baton
 {
-  void *wrapped_baton;                /* The "real" notify_func2. */
-  svn_wc_notify_func2_t wrapped_func; /* The "real" notify_func2 baton. */
+  svn_wc_notify_func2_t wrapped_func; /* The "real" notify_func2. */
+  void *wrapped_baton;                /* The "real" notify_func2 baton. */
   svn_boolean_t had_externals_error;  /* Did something fail in an external? */
 };
 
