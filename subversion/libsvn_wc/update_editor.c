@@ -1965,7 +1965,10 @@ do_entry_deletion(struct edit_baton *eb,
     }
 
     /* Receive the remote removal of excluded/absent/not present node.
-       Do not notify. */
+       Do not notify. 
+
+       ### This is wrong if svn_wc__db_status_excluded refers to a
+           working node replacing the base node.  */
   if (status == svn_wc__db_status_not_present
       || status == svn_wc__db_status_excluded
       || status == svn_wc__db_status_absent)
