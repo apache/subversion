@@ -3356,8 +3356,9 @@ def patch_reverse_revert(sbox):
                                        1, # dry-run
                                        '--reverse-diff')
 
-def patch_strip_cwd(sbox):
-  "patch --strip propchanges cwd"
+def patch_one_property(sbox, trailing_eol):
+  """Helper.  Apply a patch that sets the property 'k' to 'v\n' or to 'v',
+   and check the results."""
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -3383,6 +3384,12 @@ def patch_strip_cwd(sbox):
     "+v\n",
   ]
 
+  if trailing_eol:
+    value = "v\n"
+  else:
+    value = "v"
+    unidiff_patch += ['\ No newline at end of property']
+
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
   expected_output = [
@@ -3390,7 +3397,7 @@ def patch_strip_cwd(sbox):
   ]
 
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.add({'': Item(props={'k' : 'v\n'})})
+  expected_disk.add({'': Item(props={'k' : value})})
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('', status=' M')
@@ -3407,7 +3414,15 @@ def patch_strip_cwd(sbox):
                                        1, # dry-run
                                        '--strip', '3')
 
-  svntest.actions.check_prop('k', wc_dir, ['v\n'])
+  svntest.actions.check_prop('k', wc_dir, [value])
+
+def patch_strip_cwd(sbox):
+  "patch --strip propchanges cwd"
+  return patch_one_property(sbox, True)
+
+def patch_set_prop_no_eol(sbox):
+  "patch doesn't append newline to properties"
+  return patch_one_property(sbox, False)
 
 ########################################################################
 #Run the tests
@@ -3442,6 +3457,7 @@ test_list = [ None,
               patch_old_target_names,
               patch_reverse_revert,
               patch_strip_cwd,
+              XFail(patch_set_prop_no_eol),
             ]
 
 if __name__ == '__main__':
