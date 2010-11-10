@@ -590,7 +590,9 @@ close_revision(void *baton)
           SVN_ERR(commit_editor->close_directory(rb->db->baton, rb->pool));
           rb->db = rb->db->parent;
         }
+      /* root dir's baton */
       LDR_DBG(("Closing edit on %p\n", commit_edit_baton));
+      SVN_ERR(commit_editor->close_directory(rb->db->baton, rb->pool));
       SVN_ERR(commit_editor->close_edit(commit_edit_baton, rb->pool));
     }
   else
@@ -606,6 +608,7 @@ close_revision(void *baton)
 
       LDR_DBG(("Opened root %p\n", child_baton));
       LDR_DBG(("Closing edit on %p\n", commit_edit_baton));
+      SVN_ERR(commit_editor->close_directory(child_baton, rb->pool));
       SVN_ERR(commit_editor->close_edit(commit_edit_baton, rb->pool));
     }
 
