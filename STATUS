@@ -141,22 +141,6 @@ Candidate changes:
    Votes:
      +1: cmpilato, hwright
 
- * r877219, r877239, r907644, r1033290
-   In Makefile.in, try svnversion from $PATH if in-tree svnversion fails.
-   Justification:
-     When building 1.6.x within a trunk WC there's always an error signalled
-     at the end of the build. This makes scripting the build harder than
-     necessary. Merging this change makes life easier for developers.
-   Notes:
-     r907644 makes the revision-install target use the correct trail URL
-     for the ASF repository. r1033290 makes the revision-install target work
-     with BSD make (and possibly other make implementations).
-   Branch:
-     ^/subversion/branches/1.6.x-r907644
-   Votes:
-     +1: stsp
-     +0: hwright (r877219 and r877239 only)
-
 Veto-blocked changes:
 =====================
 
@@ -253,3 +237,19 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r877219, r877239, r907644, r1033290, r1033665, r1033685
+   In Makefile.in, try svnversion from $PATH if in-tree svnversion fails.
+   Justification:
+     When building 1.6.x within a trunk WC there's always an error signalled
+     at the end of the build. This makes scripting the build harder than
+     necessary. Merging this change makes life easier for developers.
+   Notes:
+     r907644 makes the revision-install target use the correct trail URL
+     for the ASF repository. r1033290 makes the revision-install target work
+     with BSD make (and possibly other make implementations).
+   Branch:
+     ^/subversion/branches/1.6.x-r907644
+   Votes:
+     +1: stsp, peters, danielsh
+     +0: hwright (r877219 and r877239 only)
