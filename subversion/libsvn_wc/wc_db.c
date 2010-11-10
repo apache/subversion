@@ -4481,7 +4481,12 @@ svn_wc__db_temp_op_remove_entry(svn_wc__db_t *db,
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
+#ifndef TREE_CONFLICTS_ON_CHILDREN
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_DELETE_ACTUAL_NODE));
+#else
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                    STMT_DELETE_ACTUAL_NODE_WITHOUT_CONFLICT));
+#endif
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
 
   SVN_ERR(svn_sqlite__step_done(stmt));
@@ -5413,6 +5418,7 @@ svn_wc__db_read_children_info(apr_hash_t **nodes,
 #endif
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(dir_abspath));
+  *conflicts = apr_hash_make(result_pool);
 
   SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &dir_relpath, db,
                                              dir_abspath,
@@ -5599,6 +5605,10 @@ svn_wc__db_read_children_info(apr_hash_t **nodes,
 #ifdef TREE_CONFLICTS_ON_CHILDREN
       child->conflicted = child->conflicted ||
                             !svn_sqlite__column_is_null(stmt, 8);  /* tree */
+
+      if (child->conflicted)
+        apr_hash_set(*conflicts, apr_pstrdup(result_pool, name),
+                     APR_HASH_KEY_STRING, "");
 #endif
 
       err = svn_sqlite__step(&have_row, stmt);
@@ -5608,7 +5618,6 @@ svn_wc__db_read_children_info(apr_hash_t **nodes,
 
   SVN_ERR(svn_sqlite__reset(stmt));
 
-  *conflicts = apr_hash_make(result_pool);
 #ifndef TREE_CONFLICTS_ON_CHILDREN
   SVN_ERR(read_all_tree_conflicts(&tree_conflicts, pdh, dir_relpath,
                                   scratch_pool, scratch_pool));

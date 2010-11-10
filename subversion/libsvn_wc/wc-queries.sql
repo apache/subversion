@@ -321,6 +321,11 @@ DELETE FROM actual_node
 WHERE wc_id = ?1 AND local_relpath = ?2
       AND changelist IS NULL;
 
+-- STMT_DELETE_ACTUAL_NODE_WITHOUT_CONFLICT
+DELETE FROM actual_node
+WHERE wc_id = ?1 AND local_relpath = ?2
+      AND conflict_data IS NULL;
+
 -- STMT_DELETE_NOT_PRESENT_NODES_RECURSIVE
 DELETE FROM nodes
 WHERE wc_id = ?1 AND local_relpath LIKE ?2 ESCAPE '#' AND op_depth = ?3
