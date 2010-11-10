@@ -412,7 +412,8 @@ local-install: @INSTALL_RULES@
 
 ### HACK!! Find a better way to do this
 revision-install:
-	$(MKDIR) $(DESTDIR)$(includedir)/subversion-1
+	test -d $(DESTDIR)$(includedir)/subversion-1 || \
+	  $(MKDIR) $(DESTDIR)$(includedir)/subversion-1
 	(subversion/svnversion/svnversion $(top_srcdir) $(TRUNK_TRAIL_URL) || \
 	 svnversion $(top_srcdir) $(TRUNK_TRAIL_URL) ||                       \
 	 echo "unknown";                                                      \
