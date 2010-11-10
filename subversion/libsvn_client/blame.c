@@ -483,8 +483,10 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
 
   if (revnum < frb->start_rev)
     {
-      /* We shouldn't get more than one revision before start. */
-      SVN_ERR_ASSERT(frb->last_filename == NULL);
+      /* We shouldn't get more than one revision before the starting
+         revision (unless of including merged revisions). */
+      SVN_ERR_ASSERT((frb->last_filename == NULL)
+                     || frb->include_merged_revisions);
 
       /* The file existed before start_rev; generate no blame info for
          lines from this revision (or before). */
