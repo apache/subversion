@@ -178,7 +178,7 @@ save_value(dav_db *db, const dav_prop_name *name,
         /* ignore the unknown namespace of the incoming prop. */
         propname = name->name;
       else
-        return dav_new_error(db->p, HTTP_CONFLICT, 0,
+        return dav_svn__new_error(db->p, HTTP_CONFLICT, 0,
                              "Properties may only be defined in the "
                              SVN_DAV_PROP_NS_SVN " and " SVN_DAV_PROP_NS_CUSTOM
                              " namespaces.");
@@ -300,7 +300,7 @@ db_open(apr_pool_t *p,
          changing unversioned rev props.  Remove this someday: see IZ #916. */
       if (! (resource->baselined
              && resource->type == DAV_RESOURCE_TYPE_VERSION))
-        return dav_new_error(p, HTTP_CONFLICT, 0,
+        return dav_svn__new_error(p, HTTP_CONFLICT, 0,
                              "Properties may only be changed on working "
                              "resources.");
     }
@@ -451,7 +451,7 @@ decode_property_value(const svn_string_t **out_propval_p,
             *out_propval_p = svn_base64_decode_string(maybe_encoded_propval,
                                                       pool);
           else
-            return dav_new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+            return dav_svn__new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
                                  "Unknown property encoding");
           break;
         }
@@ -498,7 +498,7 @@ db_store(dav_db *db,
 
   if (absent && ! elem->first_child)
     /* ### better error check */
-    return dav_new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+    return dav_svn__new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
                          apr_psprintf(pool, 
                                       "'%s' cannot be specified on the value "
                                       "without specifying an expectation",

@@ -80,7 +80,7 @@ dav_svn__dated_rev_report(const dav_resource *resource,
 
   if (tm == (apr_time_t) -1)
     {
-      return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
+      return dav_svn__new_error(resource->pool, HTTP_BAD_REQUEST, 0,
                            "The request does not contain a valid "
                            "'DAV:" SVN_DAV__CREATIONDATE "' element.");
     }
@@ -90,7 +90,7 @@ dav_svn__dated_rev_report(const dav_resource *resource,
                                       resource->pool)) != SVN_NO_ERROR)
     {
       svn_error_clear(err);
-      return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+      return dav_svn__new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
                            "Could not access revision times.");
     }
 

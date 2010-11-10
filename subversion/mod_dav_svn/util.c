@@ -39,6 +39,27 @@
 
 
 dav_error *
+dav_svn__new_error(apr_pool_t *pool,
+                   int status,
+                   int error_id,
+                   const char *desc)
+{
+/*
+ * Note: dav_new_error() in httpd 2.0/2.2 always treated
+ * the errno field in dav_error as an apr_status_t when
+ * logging; on some platforms errno and apr_status_t
+ * aren't directly interchangeable.  The code for httpd
+ * > 2.2 below perpetuates this.
+ */
+#if AP_MODULE_MAGIC_AT_LEAST(20091119,0)
+  /* old code assumed errno was valid; keep assuming */
+  return dav_new_error(pool, status, error_id, errno, desc);
+#else
+  return dav_new_error(pool, status, error_id, desc);
+#endif
+}
+
+dav_error *
 dav_svn__new_error_tag(apr_pool_t *pool,
                        int status,
                        int error_id,
@@ -46,6 +67,10 @@ dav_svn__new_error_tag(apr_pool_t *pool,
                        const char *namespace,
                        const char *tagname)
 {
+#if AP_MODULE_MAGIC_AT_LEAST(20091119,0)
+  return dav_new_error_tag(pool, status, error_id, 0,
+                           desc, namespace, tagname);
+#else
   /* dav_new_error_tag will record errno but Subversion makes no attempt
      to ensure that it is valid.  We reset it to avoid putting incorrect
      information into the error log, at the expense of possibly removing
@@ -53,6 +78,7 @@ dav_svn__new_error_tag(apr_pool_t *pool,
   errno = 0;
 
   return dav_new_error_tag(pool, status, error_id, desc, namespace, tagname);
+#endif
 }
 
 
@@ -573,7 +599,7 @@ dav_svn__final_flush_or_error(request_rec *r,
     {
       apr_status_t apr_err = ap_fflush(output, bb);
       if (apr_err && (! derr))
-        derr = dav_new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+        derr = dav_svn__new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
                              "Error flushing brigade.");
     }
   return derr;
