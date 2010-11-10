@@ -303,7 +303,7 @@ class TestHarness:
     if self.enable_sasl is not None:
       svntest.main.options.enable_sasl = True
     if self.parallel is not None:
-      svntest.main.options.parallel = True
+      svntest.main.options.parallel = svntest.main.default_num_threads
     if self.config_file is not None:
       svntest.main.options.config_file = self.config_file
     if self.verbose is not None:
