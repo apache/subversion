@@ -3424,6 +3424,56 @@ def patch_set_prop_no_eol(sbox):
   "patch doesn't append newline to properties"
   return patch_one_property(sbox, False)
 
+# Regression test for issue #3697
+def patch_add_symlink(sbox):
+  "patch that adds a symlink"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  patch_file_path = make_patch_path(sbox)
+
+  # Apply patch
+
+  unidiff_patch = [
+    "Index: iota_symlink\n",
+    "===================================================================\n",
+    "--- iota_symlink\t(revision 0)\n",
+    "+++ iota_symlink\t(working copy)\n",
+    "@@ -0,0 +1 @@\n",
+    "+link iota\n",
+    "\n",
+    "Property changes on: iota_symlink\n",
+    "-------------------------------------------------------------------\n",
+    "Added: svn:special\n",
+    "## -0,0 +1 ##\n",
+    "+*\n",
+  ]
+
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  expected_output = [
+    'A         %s\n' % os.path.join(wc_dir, 'iota_symlink'),
+  ]
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({'iota_symlink': Item(contents="This is the file 'iota'.\n",
+                                          props={'svn:special' : '*'})})
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({'iota_symlink': Item(status='A ', wc_rev='0')})
+
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       1) # dry-run
+
+
 ########################################################################
 #Run the tests
 
@@ -3458,6 +3508,7 @@ test_list = [ None,
               patch_reverse_revert,
               patch_strip_cwd,
               XFail(patch_set_prop_no_eol),
+              patch_add_symlink,
             ]
 
 if __name__ == '__main__':

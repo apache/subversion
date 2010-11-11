@@ -203,6 +203,9 @@ typedef struct patch_target_t {
   /* True if the patch changed any of the properties of the target. */
   svn_boolean_t has_prop_changes;
 
+  /* True if the patch contained a svn:special property. */
+  svn_boolean_t is_special;
+
   /* All the information that is specific to the content of the target. */
   target_content_info_t *content_info;
 
@@ -1736,6 +1739,9 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
       prop_name = svn__apr_hash_index_key(hash_index);
       prop_patch = svn__apr_hash_index_val(hash_index);
 
+      if (! strcmp(prop_name, SVN_PROP_SPECIAL))
+        target->is_special = TRUE;
+
       /* We'll store matched hunks in prop_content_info. */
       prop_target = apr_hash_get(target->prop_targets, prop_name, 
                                  APR_HASH_KEY_STRING);
@@ -2105,9 +2111,33 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
 
       if (! dry_run && ! target->skipped)
         {
-          /* Copy the patched file on top of the target file. */
-          SVN_ERR(svn_io_copy_file(target->patched_path,
-                                   target->local_abspath, FALSE, pool));
+          if (target->is_special)
+            {
+              svn_stream_t *stream;
+              svn_stream_t *patched_stream;
+              apr_file_t *file;
+
+              SVN_ERR(svn_io_file_open(&file, target->patched_path,
+                                       APR_READ | APR_BINARY, APR_OS_DEFAULT,
+                                       pool));
+
+              patched_stream = svn_stream_from_aprfile2(file, FALSE /* disown */,
+                                                pool);
+              SVN_ERR(svn_subst_create_specialfile(&stream, 
+                                                   target->local_abspath,
+                                                   pool, pool));
+              SVN_ERR(svn_stream_copy3(patched_stream, stream, 
+                                       NULL, /* cancel_func */ 
+                                       NULL, /* cancel_baton */
+                                       pool));
+            }
+          else
+            {
+              /* Copy the patched file on top of the target file. */
+              SVN_ERR(svn_io_copy_file(target->patched_path,
+                                       target->local_abspath, FALSE, pool));
+            }
+
           if (target->added || target->replaced)
             {
               /* The target file didn't exist previously,
