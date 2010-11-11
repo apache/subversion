@@ -340,8 +340,6 @@ ECHO_N = @ECHO_N@
 
 TESTS = $(TEST_PROGRAMS) @BDB_TEST_PROGRAMS@
 
-TRUNK_TRAIL_URL = /repos/asf/subversion/trunk
-
 all: mkdir-init external-all local-all
 clean: external-clean local-clean
 distclean: external-distclean local-distclean
@@ -414,9 +412,9 @@ local-install: @INSTALL_RULES@
 revision-install:
 	test -d $(DESTDIR)$(includedir)/subversion-1 || \
 	  $(MKDIR) $(DESTDIR)$(includedir)/subversion-1
-	(subversion/svnversion/svnversion $(top_srcdir) $(TRUNK_TRAIL_URL) || \
-	 svnversion $(top_srcdir) $(TRUNK_TRAIL_URL) ||                       \
-	 echo "unknown";                                                      \
+	(subversion/svnversion/svnversion $(top_srcdir) ||  \
+	 svnversion $(top_srcdir) ||                        \
+	 echo "unknown";                                    \
 	) > $(DESTDIR)$(includedir)/subversion-1/svn-revision.txt
 
 install-static: @INSTALL_STATIC_RULES@
