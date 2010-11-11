@@ -5380,13 +5380,16 @@ read_info(svn_wc__db_status_t *status,
     }
   else if (have_act)
     {
+#ifdef TREE_CONFLICTS_ON_CHILDREN
       /* A row in ACTUAL_NODE should never exist without a corresponding
-         node in BASE_NODE and/or WORKING_NODE.  */
-      err = svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
-                              _("Corrupt data for '%s'"),
-                              path_for_error_message(pdh->wcroot,
-                                                     local_relpath,
-                                                     scratch_pool));
+         node in BASE_NODE and/or WORKING_NODE unless it flags a conflict. */
+      if (svn_sqlite__column_is_null(stmt_act, 7)) /* conflict_data */
+#endif
+          err = svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
+                                  _("Corrupt data for '%s'"),
+                                  path_for_error_message(pdh->wcroot,
+                                                         local_relpath,
+                                                         scratch_pool));
     }
   else
     {
