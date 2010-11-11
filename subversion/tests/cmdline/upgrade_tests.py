@@ -688,7 +688,7 @@ def upgrade_tree_conflict_data(sbox):
   expected_status.tweak('A/D/G/rho', status='A ', copied='+',
                         treeconflict='C', wc_rev='-')
 
-  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  run_and_verify_status_no_server(wc_dir, expected_status)
 
 
 ########################################################################
