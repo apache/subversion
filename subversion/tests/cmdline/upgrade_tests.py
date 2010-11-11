@@ -672,6 +672,25 @@ def dirs_only_upgrade(sbox):
       })
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 
+
+def upgrade_tree_conflict_data(sbox):
+  "upgrade tree conflict data (f20->f21)"
+
+  sbox.build(create_wc = False)
+  wc_dir = sbox.wc_dir
+  replace_sbox_with_tarfile(sbox, 'upgrade_tc.tar.bz2')
+
+  # Check and see if we can still read our tree conflicts
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('A/D/G/pi', status='D ', treeconflict='C')
+  expected_status.tweak('A/D/G/tau', status='! ', treeconflict='C',
+                        wc_rev=None)
+  expected_status.tweak('A/D/G/rho', status='A ', copied='+',
+                        treeconflict='C', wc_rev='-')
+
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+
 ########################################################################
 # Run the tests
 
@@ -693,6 +712,7 @@ test_list = [ None,
               missing_dirs2,
               XFail(delete_and_keep_local),
               dirs_only_upgrade,
+              upgrade_tree_conflict_data,
              ]
 
 

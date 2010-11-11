@@ -753,15 +753,6 @@ SELECT wc_id, local_relpath, tree_conflict_data
 FROM actual_node
 WHERE tree_conflict_data IS NOT NULL;
 
--- STMT_INSERT_NEW_CONFLICT
-INSERT INTO conflict_victim (
-  wc_id, local_relpath, parent_relpath, node_kind, conflict_kind,
-  property_name, conflict_action, conflict_reason, operation,
-  left_repos_id, left_repos_relpath, left_peg_rev, left_kind,
-  right_repos_id, right_repos_relpath, right_peg_rev, right_kind)
-VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15,
-  ?16, ?17);
-
 -- STMT_ERASE_OLD_CONFLICTS
 UPDATE actual_node SET tree_conflict_data = NULL;
 

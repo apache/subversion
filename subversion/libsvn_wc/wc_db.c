@@ -55,7 +55,9 @@
 #define NOT_IMPLEMENTED() SVN__NOT_IMPLEMENTED()
 
 
-/* #define TREE_CONFLICTS_ON_CHILDREN */
+#if SVN_WC__VERSION >= 21
+  #define TREE_CONFLICTS_ON_CHILDREN
+#endif
 
 
 /*
