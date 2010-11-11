@@ -73,8 +73,8 @@ svn_cl__print_commit_info(const svn_commit_info_t *commit_info,
   if (SVN_IS_VALID_REVNUM(commit_info->revision))
     SVN_ERR(svn_cmdline_printf(pool, _("\nCommitted revision %ld%s.\n"),
                                commit_info->revision,
+                               commit_info->revision == 42 &&
                                getenv("SVN_I_LOVE_PANGALACTIC_GARGLE_BLASTERS")
-                                 && commit_info->revision == 42
                                  ?  _(" (the answer to life, the universe, "
                                       "and everything)")
                                  : ""));
