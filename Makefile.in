@@ -408,7 +408,6 @@ local-distclean: fast-distclean check-clean
 
 local-install: @INSTALL_RULES@
 
-### HACK!! Find a better way to do this
 revision-install:
 	test -d $(DESTDIR)$(includedir)/subversion-1 || \
 	  $(MKDIR) $(DESTDIR)$(includedir)/subversion-1
