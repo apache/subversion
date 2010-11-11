@@ -279,6 +279,10 @@ typedef struct nodes_row_t {
     const char *repo_relpath;
 } nodes_row_t;
 
+/* Macro for filling in the REPO_* fields of a non-base NODES_ROW_T
+ * that has no copy-from info. */
+#define NO_COPY_FROM SVN_INVALID_REVNUM, NULL
+
 /* Return a human-readable string representing ROW. */
 static const char *
 print_row(const nodes_row_t *row,
@@ -442,6 +446,17 @@ check_db_rows(wc_baton_t *b,
 /* ---------------------------------------------------------------------- */
 /* The test functions */
 
+/* Definition of a copy sub-test and its expected results. */
+struct copy_subtest_t
+{
+  /* WC-relative or repo-relative source and destination paths. */
+  const char *from_path;
+  const char *to_path;
+  /* All the expected nodes table rows within the destination sub-tree.
+   * Terminated by an all-zero row. */
+  nodes_row_t expected[20];
+};
+
 /* Check that all kinds of WC-to-WC copies give correct op_depth results:
  * create a Greek tree, make copies in it, and check the resulting DB rows. */
 static svn_error_t *
@@ -479,14 +494,7 @@ wc_wc_copies(wc_baton_t *b)
   /* Test copying various things */
 
   {
-#define NO_COPY_FROM SVN_INVALID_REVNUM, NULL
-    struct subtest_t
-      {
-        const char *from_path;
-        const char *to_path;
-        nodes_row_t expected[20];
-      }
-    subtests[] =
+    struct copy_subtest_t subtests[] =
       {
         /* base file */
         { source_base_file, "A/C/copy1", {
@@ -564,7 +572,7 @@ wc_wc_copies(wc_baton_t *b)
 
         { 0 }
       };
-    struct subtest_t *subtest;
+    struct copy_subtest_t *subtest;
 
     /* Fix up the expected->local_relpath fields in the subtest data to be
      * relative to the WC root rather than to the copy destination dir. */
@@ -608,14 +616,7 @@ repo_wc_copies(wc_baton_t *b)
   /* Test copying various things */
 
   {
-#define NO_COPY_FROM SVN_INVALID_REVNUM, NULL
-    struct subtest_t
-      {
-        const char *from_path;
-        const char *to_path;
-        nodes_row_t expected[20];
-      }
-    subtests[] =
+    struct copy_subtest_t subtests[] =
       {
         /* file onto nothing */
         { "iota", "A/C/copy1", {
@@ -671,7 +672,7 @@ repo_wc_copies(wc_baton_t *b)
 
         { 0 }
       };
-    struct subtest_t *subtest;
+    struct copy_subtest_t *subtest;
     svn_client_ctx_t *ctx;
 
     /* Fix up the expected->local_relpath fields in the subtest data to be
