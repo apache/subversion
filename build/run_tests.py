@@ -303,7 +303,7 @@ class TestHarness:
     if self.enable_sasl is not None:
       svntest.main.options.enable_sasl = True
     if self.parallel is not None:
-      svntest.main.options.parallel = True
+      svntest.main.options.parallel = svntest.main.default_num_threads
     if self.config_file is not None:
       svntest.main.options.config_file = self.config_file
     if self.verbose is not None:
@@ -351,9 +351,12 @@ class TestHarness:
 
       self.dots_written = dots
 
+    serial_only = hasattr(prog_mod, 'serial_only') and prog_mod.serial_only
+
     # run the tests
     svntest.testcase.TextColors.disable()
     failed = svntest.main.execute_tests(prog_mod.test_list,
+                                        serial_only=serial_only,
                                         test_name=progbase,
                                         progress_func=progress_func)
 

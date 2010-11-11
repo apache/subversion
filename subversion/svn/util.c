@@ -71,8 +71,13 @@ svn_cl__print_commit_info(const svn_commit_info_t *commit_info,
                           apr_pool_t *pool)
 {
   if (SVN_IS_VALID_REVNUM(commit_info->revision))
-    SVN_ERR(svn_cmdline_printf(pool, _("\nCommitted revision %ld.\n"),
-                               commit_info->revision));
+    SVN_ERR(svn_cmdline_printf(pool, _("\nCommitted revision %ld%s.\n"),
+                               commit_info->revision,
+                               commit_info->revision == 42 &&
+                               getenv("SVN_I_LOVE_PANGALACTIC_GARGLE_BLASTERS")
+                                 ?  _(" (the answer to life, the universe, "
+                                      "and everything)")
+                                 : ""));
 
   /* Writing to stdout, as there maybe systems that consider the
    * presence of stderr as an indication of commit failure.
@@ -1321,6 +1326,22 @@ svn_cl__eat_peg_revisions(apr_array_header_t **true_targets_p,
 
   SVN_ERR_ASSERT(true_targets_p);
   *true_targets_p = true_targets;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_cl__opt_parse_path(svn_opt_revision_t *rev,
+                       const char **truepath,
+                       const char *path /* UTF-8! */,
+                       apr_pool_t *pool)
+{
+  SVN_ERR(svn_opt_parse_path(rev, truepath, path, pool));
+  
+  if (svn_path_is_url(*truepath))
+    *truepath = svn_uri_canonicalize(*truepath, pool);
+  else
+    *truepath = svn_dirent_canonicalize(*truepath, pool);
 
   return SVN_NO_ERROR;
 }

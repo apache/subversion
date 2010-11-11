@@ -562,12 +562,42 @@ svn_diff_file_options_create(apr_pool_t *pool)
   return apr_pcalloc(pool, sizeof(svn_diff_file_options_t));
 }
 
+/* A baton for use with opt_parsing_error_func(). */
+struct opt_parsing_error_baton_t
+{
+  svn_error_t *err;
+  apr_pool_t *pool;
+};
+
+/* Store an error message from apr_getopt_long().  Set BATON->err to a new
+ * error with a message generated from FMT and the remaining arguments.
+ * Implements apr_getopt_err_fn_t. */
+static void
+opt_parsing_error_func(void *baton,
+                       const char *fmt, ...)
+{
+  struct opt_parsing_error_baton_t *b = baton;
+  const char *message;
+  va_list ap;
+
+  va_start(ap, fmt);
+  message = apr_pvsprintf(b->pool, fmt, ap);
+  va_end(ap);
+
+  /* Skip leading ": " (if present, which it always is in known cases). */
+  if (strncmp(message, ": ", 2) == 0)
+    message += 2;
+
+  b->err = svn_error_create(SVN_ERR_INVALID_DIFF_OPTION, NULL, message);
+}
+
 svn_error_t *
 svn_diff_file_options_parse(svn_diff_file_options_t *options,
                             const apr_array_header_t *args,
                             apr_pool_t *pool)
 {
   apr_getopt_t *os;
+  struct opt_parsing_error_baton_t opt_parsing_error_baton = { NULL, pool };
   /* Make room for each option (starting at index 1) plus trailing NULL. */
   const char **argv = apr_palloc(pool, sizeof(char*) * (args->nelts + 2));
 
@@ -576,8 +606,12 @@ svn_diff_file_options_parse(svn_diff_file_options_t *options,
   argv[args->nelts + 1] = NULL;
 
   apr_getopt_init(&os, pool, args->nelts + 1, argv);
-  /* No printing of error messages, please! */
-  os->errfn = NULL;
+
+  /* Capture any error message from apr_getopt_long().  This will typically
+   * say which option is wrong, which we would not otherwise know. */
+  os->errfn = opt_parsing_error_func;
+  os->errarg = &opt_parsing_error_baton;
+
   while (1)
     {
       const char *opt_arg;
@@ -587,7 +621,13 @@ svn_diff_file_options_parse(svn_diff_file_options_t *options,
       if (APR_STATUS_IS_EOF(err))
         break;
       if (err)
-        return svn_error_wrap_apr(err, _("Error parsing diff options"));
+        /* Wrap apr_getopt_long()'s error message.  Its doc string implies
+         * it always will produce one, but never mind if it doesn't.  Avoid
+         * using the message associated with the return code ERR, because
+         * it refers to the "command line" which may be misleading here. */
+        return svn_error_create(SVN_ERR_INVALID_DIFF_OPTION,
+                                opt_parsing_error_baton.err,
+                                _("Error in options to internal diff"));
 
       switch (opt_id)
         {

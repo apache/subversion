@@ -51,7 +51,6 @@
 #include "svn_ctype.h"
 
 #include "fs.h"
-#include "err.h"
 #include "tree.h"
 #include "lock.h"
 #include "key-gen.h"
@@ -2152,6 +2151,16 @@ read_rep_offsets(representation_t **rep_p,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+err_dangling_id(svn_fs_t *fs, const svn_fs_id_t *id)
+{
+  svn_string_t *id_str = svn_fs_fs__id_unparse(id, fs->pool);
+  return svn_error_createf
+    (SVN_ERR_FS_ID_NOT_FOUND, 0,
+     _("Reference to non-existent node '%s' in filesystem '%s'"),
+     id_str->data, fs->path);
+}
+
 /* Get the node-revision for the node ID in FS.
    Set *NODEREV_P to the new node-revision structure, allocated in POOL.
    See svn_fs_fs__get_node_revision, which wraps this and adds another
@@ -2185,7 +2194,7 @@ get_node_revision_body(node_revision_t **noderev_p,
       if (APR_STATUS_IS_ENOENT(err->apr_err))
         {
           svn_error_clear(err);
-          return svn_fs_fs__err_dangling_id(fs, id);
+          return svn_error_return(err_dangling_id(fs, id));
         }
 
       return svn_error_return(err);
@@ -6924,15 +6933,41 @@ recover_body(void *baton, apr_pool_t *pool)
   SVN_ERR(svn_io_check_path(path_revprops(fs, max_rev, pool),
                             &youngest_revprops_kind, pool));
   if (youngest_revprops_kind == svn_node_none)
-    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                             _("Revision %ld has a revs file but no "
-                               "revprops file"),
-                             max_rev);
+    {
+      svn_boolean_t uhohs = TRUE;
+
+      /* No file?  Hrm... maybe that's because this repository is
+         packed and the youngest revision is in the revprops.db
+         file?  We can at least see if that's a possibility.
+
+         ### TODO: Could we check for revprops in the revprops.db?
+         ###       What if rNNN legitimately has no revprops? */
+      if (ffd->format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT)
+        {
+          svn_revnum_t min_unpacked_revprop;
+          const char *min_unpacked_revprop_path =
+            svn_dirent_join(fs->path, PATH_MIN_UNPACKED_REVPROP, pool);
+
+          SVN_ERR(read_min_unpacked_rev(&min_unpacked_revprop,
+                                        min_unpacked_revprop_path, pool));
+          if (min_unpacked_revprop == (max_rev + 1))
+            uhohs = FALSE;
+        }
+      if (uhohs)
+        {
+          return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                                   _("Revision %ld has a revs file but no "
+                                     "revprops file"),
+                                   max_rev);
+        }
+    }
   else if (youngest_revprops_kind != svn_node_file)
-    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                             _("Revision %ld has a non-file where its "
-                               "revprops file should be"),
-                             max_rev);
+    {
+      return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                               _("Revision %ld has a non-file where its "
+                                 "revprops file should be"),
+                               max_rev);
+    }
 
   /* Now store the discovered youngest revision, and the next IDs if
      relevant, in a new 'current' file. */
@@ -7009,7 +7044,7 @@ svn_fs_fs__set_uuid(svn_fs_t *fs,
    permissions as FS->path.*/
 svn_error_t *
 svn_fs_fs__ensure_dir_exists(const char *path,
-                             svn_fs_t *fs,
+                             const char *fs_path,
                              apr_pool_t *pool)
 {
   svn_error_t *err = svn_io_dir_make(path, APR_OS_DEFAULT, pool);
@@ -7022,7 +7057,7 @@ svn_fs_fs__ensure_dir_exists(const char *path,
 
   /* We successfully created a new directory.  Dup the permissions
      from FS->path. */
-  return svn_io_copy_perms(path, fs->path, pool);
+  return svn_io_copy_perms(path, fs_path, pool);
 }
 
 /* Set *NODE_ORIGINS to a hash mapping 'const char *' node IDs to
@@ -7094,7 +7129,7 @@ set_node_origins_for_file(svn_fs_t *fs,
   SVN_ERR(svn_fs_fs__ensure_dir_exists(svn_dirent_join(fs->path,
                                                        PATH_NODE_ORIGINS_DIR,
                                                        pool),
-                                       fs, pool));
+                                       fs->path, pool));
 
   /* Read the previously existing origins (if any), and merge our
      update with it. */

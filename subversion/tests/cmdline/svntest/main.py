@@ -74,6 +74,8 @@ from svntest import Skip
 #####################################################################
 # Global stuff
 
+default_num_threads = 5
+
 class SVNProcessTerminatedBySignal(Failure):
   "Exception raised if a spawned process segfaulted, aborted, etc."
   pass
@@ -343,23 +345,22 @@ _safe_arg_re = re.compile(r'^[A-Za-z\d\.\_\/\-\:\@]+$')
 def _quote_arg(arg):
   """Quote ARG for a command line.
 
-  Simply surround every argument in double-quotes unless it contains
+  Return a quoted version of the string ARG, or just ARG if it contains
   only universally harmless characters.
 
   WARNING: This function cannot handle arbitrary command-line
-  arguments.  It can easily be confused by shell metacharacters.  A
-  perfect job would be difficult and OS-dependent (see, for example,
-  http://msdn.microsoft.com/library/en-us/vccelng/htm/progs_12.asp).
-  In other words, this function is just good enough for what we need
-  here."""
+  arguments: it is just good enough for what we need here."""
 
   arg = str(arg)
   if _safe_arg_re.match(arg):
     return arg
+
+  if windows:
+    # Note: subprocess.list2cmdline is Windows-specific.
+    return subprocess.list2cmdline([arg])
   else:
-    if os.name != 'nt':
-      arg = arg.replace('$', '\$')
-    return '"%s"' % (arg,)
+    # Quoting suitable for most Unix shells.
+    return "'" + arg.replace("'", "'\\''") + "'"
 
 def open_pipe(command, bufsize=0, stdin=None, stdout=None, stderr=None):
   """Opens a subprocess.Popen pipe to COMMAND using STDIN,
@@ -375,15 +376,7 @@ def open_pipe(command, bufsize=0, stdin=None, stdout=None, stderr=None):
   if (sys.platform == 'win32') and (command[0].endswith('.py')):
     command.insert(0, sys.executable)
 
-  # Quote only the arguments on Windows.  Later versions of subprocess,
-  # 2.5.2+ confirmed, don't require this quoting, but versions < 2.4.3 do.
-  if sys.platform == 'win32':
-    args = command[1:]
-    args = ' '.join([_quote_arg(x) for x in args])
-    command = command[0] + ' ' + args
-    command_string = command
-  else:
-    command_string = ' '.join(command)
+  command_string = command[0] + ' ' + ' '.join(map(_quote_arg, command[1:]))
 
   if not stdin:
     stdin = subprocess.PIPE
@@ -1099,9 +1092,8 @@ class TestSpawningThread(threading.Thread):
   """A thread that runs test cases in their own processes.
   Receives test numbers to run from the queue, and saves results into
   the results field."""
-  def __init__(self, srcdir, queue):
+  def __init__(self, queue):
     threading.Thread.__init__(self)
-    self.srcdir = srcdir
     self.queue = queue
     self.results = []
 
@@ -1115,8 +1107,8 @@ class TestSpawningThread(threading.Thread):
       self.run_one(next_index)
 
   def run_one(self, index):
-    command = os.path.join(self.srcdir, 'subversion/tests/cmdline',
-                           sys.argv[0])
+    command = os.path.abspath(sys.argv[0])
+
     args = []
     args.append(str(index))
     args.append('-c')
@@ -1297,6 +1289,12 @@ def _internal_run_tests(test_list, testnums, parallel, srcdir, progress_func):
   finished_tests = []
   tests_started = 0
 
+  # Some of the tests use sys.argv[0] to locate their test data
+  # directory.  Perhaps we should just be passing srcdir to the tests?
+  if srcdir:
+    sys.argv[0] = os.path.join(srcdir, 'subversion', 'tests', 'cmdline',
+                               sys.argv[0])
+
   if not parallel:
     for i, testnum in enumerate(testnums):
       if run_one_test(testnum, test_list) == 1:
@@ -1309,8 +1307,7 @@ def _internal_run_tests(test_list, testnums, parallel, srcdir, progress_func):
     for num in testnums:
       number_queue.put(num)
 
-    threads = [ TestSpawningThread(srcdir, number_queue)
-                for i in range(parallel) ]
+    threads = [ TestSpawningThread(number_queue) for i in range(parallel) ]
     for t in threads:
       t.start()
 
@@ -1362,8 +1359,8 @@ def _create_parser():
                     help='Print binary command-lines (not with --quiet)')
   parser.add_option('-q', '--quiet', action='store_true',
                     help='Print only unexpected results (not with --verbose)')
-  parser.add_option('-p', '--parallel', action='store_const', const=5,
-                    dest='parallel',
+  parser.add_option('-p', '--parallel', action='store_const',
+                    const=default_num_threads, dest='parallel',
                     help='Run the tests in parallel')
   parser.add_option('-c', action='store_true', dest='is_child_process',
                     help='Flag if we are running this python test as a ' +

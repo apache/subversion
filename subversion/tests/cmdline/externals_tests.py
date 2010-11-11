@@ -947,7 +947,7 @@ def old_style_externals_ignore_peg_reg(sbox):
   svntest.actions.run_and_verify_svn2("External '%s' used pegs" % ext.strip(),
                                       None,
                                       expected_error,
-                                      0,
+                                      1,
                                       'up',
                                       wc_dir)
 
@@ -1063,7 +1063,7 @@ def can_place_file_external_into_dir_external(sbox):
   svntest.actions.run_and_verify_svn2("Able to put file external in foreign wc",
                                       None,
                                       expected_error,
-                                      0,
+                                      1,
                                       'up',
                                       repo_url, wc_dir)
 

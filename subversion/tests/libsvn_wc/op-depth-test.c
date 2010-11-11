@@ -170,11 +170,16 @@ static svn_error_t *
 wc_revert(wc_baton_t *b, const char *path, svn_depth_t depth)
 {
   const char *abspath = wc_path(b, path);
+  const char *lock_root_abspath;
 
-  return svn_wc_revert4(b->wc_ctx, abspath, depth, FALSE, NULL,
-                        NULL, NULL, /* cancel baton + func */
-                        NULL, NULL, /* notify baton + func */
-                        b->pool);
+  SVN_ERR(svn_wc__acquire_write_lock(&lock_root_abspath, b->wc_ctx, abspath,
+                                     TRUE /* lock_anchor */, b->pool, b->pool));
+  SVN_ERR(svn_wc_revert4(b->wc_ctx, abspath, depth, FALSE, NULL,
+                         NULL, NULL, /* cancel baton + func */
+                         NULL, NULL, /* notify baton + func */
+                         b->pool));
+  SVN_ERR(svn_wc__release_write_lock(b->wc_ctx, lock_root_abspath, b->pool));
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -213,6 +218,15 @@ wc_update(wc_baton_t *b, const char *path, svn_revnum_t revnum)
   SVN_ERR(svn_client_create_context(&ctx, b->pool));
   return svn_client_update3(&result_revs, paths, &revision, svn_depth_infinity,
                             TRUE, FALSE, FALSE, ctx, b->pool);
+}
+
+static svn_error_t *
+wc_resolved(wc_baton_t *b, const char *path)
+{
+  svn_client_ctx_t *ctx;
+
+  SVN_ERR(svn_client_create_context(&ctx, b->pool));
+  return svn_client_resolved(wc_path(b, path), TRUE, ctx, b->pool);
 }
 
 /* Create the Greek tree on disk in the WC, and commit it. */
@@ -273,6 +287,10 @@ typedef struct nodes_row_t {
     svn_revnum_t repo_revnum;
     const char *repo_relpath;
 } nodes_row_t;
+
+/* Macro for filling in the REPO_* fields of a non-base NODES_ROW_T
+ * that has no copy-from info. */
+#define NO_COPY_FROM SVN_INVALID_REVNUM, NULL
 
 /* Return a human-readable string representing ROW. */
 static const char *
@@ -437,6 +455,17 @@ check_db_rows(wc_baton_t *b,
 /* ---------------------------------------------------------------------- */
 /* The test functions */
 
+/* Definition of a copy sub-test and its expected results. */
+struct copy_subtest_t
+{
+  /* WC-relative or repo-relative source and destination paths. */
+  const char *from_path;
+  const char *to_path;
+  /* All the expected nodes table rows within the destination sub-tree.
+   * Terminated by an all-zero row. */
+  nodes_row_t expected[20];
+};
+
 /* Check that all kinds of WC-to-WC copies give correct op_depth results:
  * create a Greek tree, make copies in it, and check the resulting DB rows. */
 static svn_error_t *
@@ -474,14 +503,7 @@ wc_wc_copies(wc_baton_t *b)
   /* Test copying various things */
 
   {
-#define NO_COPY_FROM SVN_INVALID_REVNUM, NULL
-    struct subtest_t
-      {
-        const char *from_path;
-        const char *to_path;
-        nodes_row_t expected[20];
-      }
-    subtests[] =
+    struct copy_subtest_t subtests[] =
       {
         /* base file */
         { source_base_file, "A/C/copy1", {
@@ -559,7 +581,7 @@ wc_wc_copies(wc_baton_t *b)
 
         { 0 }
       };
-    struct subtest_t *subtest;
+    struct copy_subtest_t *subtest;
 
     /* Fix up the expected->local_relpath fields in the subtest data to be
      * relative to the WC root rather than to the copy destination dir. */
@@ -603,14 +625,7 @@ repo_wc_copies(wc_baton_t *b)
   /* Test copying various things */
 
   {
-#define NO_COPY_FROM SVN_INVALID_REVNUM, NULL
-    struct subtest_t
-      {
-        const char *from_path;
-        const char *to_path;
-        nodes_row_t expected[20];
-      }
-    subtests[] =
+    struct copy_subtest_t subtests[] =
       {
         /* file onto nothing */
         { "iota", "A/C/copy1", {
@@ -666,7 +681,7 @@ repo_wc_copies(wc_baton_t *b)
 
         { 0 }
       };
-    struct subtest_t *subtest;
+    struct copy_subtest_t *subtest;
     svn_client_ctx_t *ctx;
 
     /* Fix up the expected->local_relpath fields in the subtest data to be
@@ -1120,6 +1135,17 @@ test_delete_with_update(const svn_test_opts_t *opts, apr_pool_t *pool)
       { 1, "A",       "normal",        NO_COPY_FROM},
       { 1, "A/B",     "base-deleted",  NO_COPY_FROM},
       { 1, "A/B/C",   "base-deleted",  NO_COPY_FROM},
+      { 2, "A/B",     "normal",        NO_COPY_FROM},
+      { 0 }
+    };
+    SVN_ERR(check_db_rows(&b, "A", rows));
+  }
+  SVN_ERR(wc_resolved(&b, ""));
+  SVN_ERR(wc_update(&b, "", 1));
+  {
+    nodes_row_t rows[] = {
+      { 0, "A",       "normal",        1, "A"},
+      { 1, "A",       "normal",        NO_COPY_FROM},
       { 2, "A/B",     "normal",        NO_COPY_FROM},
       { 0 }
     };

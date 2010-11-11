@@ -304,6 +304,13 @@ WHERE wc_id = ?1 AND local_relpath = ?2
   AND op_depth = (SELECT MAX(op_depth) FROM nodes
                   WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0);
 
+-- STMT_DELETE_LOWEST_WORKING_NODE
+DELETE FROM nodes
+WHERE wc_id = ?1 AND local_relpath = ?2
+  AND op_depth = (SELECT MIN(op_depth) FROM nodes
+                  WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0)
+  AND presence = 'base-deleted';
+
 -- STMT_DELETE_ALL_WORKING_NODES
 DELETE FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0;
@@ -321,6 +328,11 @@ DELETE FROM actual_node
 WHERE wc_id = ?1 AND local_relpath = ?2
       AND changelist IS NULL;
 
+-- STMT_DELETE_ACTUAL_NODE_WITHOUT_CONFLICT
+DELETE FROM actual_node
+WHERE wc_id = ?1 AND local_relpath = ?2
+      AND conflict_data IS NULL;
+
 -- STMT_DELETE_NOT_PRESENT_NODES_RECURSIVE
 DELETE FROM nodes
 WHERE wc_id = ?1 AND local_relpath LIKE ?2 ESCAPE '#' AND op_depth = ?3
@@ -331,6 +343,21 @@ UPDATE actual_node
 SET properties = NULL,
     text_mod = NULL,
     conflict_data = NULL,
+    tree_conflict_data = NULL,
+    conflict_old = NULL,
+    conflict_new = NULL,
+    conflict_working = NULL,
+    prop_reject = NULL,
+    older_checksum = NULL,
+    left_checksum = NULL,
+    right_checksum = NULL
+WHERE wc_id = ?1 and local_relpath = ?2;
+
+-- STMT_CLEAR_ACTUAL_NODE_LEAVING_CONFLICT
+UPDATE actual_node
+SET properties = NULL,
+    text_mod = NULL,
+    changelist = NULL,
     tree_conflict_data = NULL,
     conflict_old = NULL,
     conflict_new = NULL,
@@ -679,7 +706,8 @@ WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
 -- STMT_SELECT_ACTUAL_NODE_RECURSIVE
 SELECT 1
 FROM actual_node
-WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#');
+WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
+  AND conflict_data IS NULL;
 
 /* ------------------------------------------------------------------------- */
 
@@ -724,15 +752,6 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
 SELECT wc_id, local_relpath, tree_conflict_data
 FROM actual_node
 WHERE tree_conflict_data IS NOT NULL;
-
--- STMT_INSERT_NEW_CONFLICT
-INSERT INTO conflict_victim (
-  wc_id, local_relpath, parent_relpath, node_kind, conflict_kind,
-  property_name, conflict_action, conflict_reason, operation,
-  left_repos_id, left_repos_relpath, left_peg_rev, left_kind,
-  right_repos_id, right_repos_relpath, right_peg_rev, right_kind)
-VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15,
-  ?16, ?17);
 
 -- STMT_ERASE_OLD_CONFLICTS
 UPDATE actual_node SET tree_conflict_data = NULL;

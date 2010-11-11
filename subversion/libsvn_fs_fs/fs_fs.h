@@ -492,9 +492,9 @@ svn_error_t *svn_fs_fs__txn_prop(svn_string_t **value_p, svn_fs_txn_t *txn,
                                  const char *propname, apr_pool_t *pool);
 
 /* If directory PATH does not exist, create it and give it the same
-   permissions as FS->path.*/
+   permissions as FS_PATH.*/
 svn_error_t *svn_fs_fs__ensure_dir_exists(const char *path,
-                                          svn_fs_t *fs,
+                                          const char *fs_path,
                                           apr_pool_t *pool);
 
 /* Update the node origin index for FS, recording the mapping from
