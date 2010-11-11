@@ -5390,6 +5390,62 @@ read_info(svn_wc__db_status_t *status,
                                   path_for_error_message(pdh->wcroot,
                                                          local_relpath,
                                                          scratch_pool));
+#ifdef TREE_CONFLICTS_ON_CHILDREN
+      /* ### What should we return?  Should we have a separate
+             function for reading actual-only nodes? */
+
+      /* As a safety measure, until we decide if we want to use
+         read_info for actual-only nodes, make sure the caller asked
+         for the conflict status. */
+      SVN_ERR_ASSERT(conflicted);
+
+      if (status)
+        *status = svn_wc__db_status_normal;  /* What! No it's not! */
+      if (kind)
+        *kind = svn_wc__db_kind_unknown;
+      if (revision)
+        *revision = SVN_INVALID_REVNUM;
+      if (repos_relpath)
+        *repos_relpath = NULL;
+      if (repos_root_url)
+        *repos_root_url = NULL;
+      if (repos_uuid)
+        *repos_uuid = NULL;
+      if (changed_rev)
+        *changed_rev = SVN_INVALID_REVNUM;
+      if (changed_date)
+        *changed_date = 0;
+      if (last_mod_time)
+        *last_mod_time = 0;
+      if (depth)
+        *depth = svn_depth_unknown;
+      if (checksum)
+        *checksum = NULL;
+      if (translated_size)
+        *translated_size = 0;
+      if (target)
+        *target = NULL;
+      if (changelist)
+        *changelist = svn_sqlite__column_text(stmt_act, 1, result_pool);
+      if (original_repos_relpath)
+        *original_repos_relpath = NULL;
+      if (original_root_url)
+        *original_root_url = NULL;
+      if (original_uuid)
+        *original_uuid = NULL;
+      if (original_revision)
+        *original_revision = SVN_INVALID_REVNUM;
+      if (props_mod)
+        *props_mod = !svn_sqlite__column_is_null(stmt_act, 6);
+      if (have_base)
+        *have_base = FALSE;
+      if (have_work)
+        *have_work = FALSE;
+      if (conflicted)
+        *conflicted = TRUE;
+      if (lock)
+        *lock = NULL;
+#endif
     }
   else
     {
