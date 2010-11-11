@@ -2152,6 +2152,16 @@ read_rep_offsets(representation_t **rep_p,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+err_dangling_id(svn_fs_t *fs, const svn_fs_id_t *id)
+{
+  svn_string_t *id_str = svn_fs_fs__id_unparse(id, fs->pool);
+  return svn_error_createf
+    (SVN_ERR_FS_ID_NOT_FOUND, 0,
+     _("Reference to non-existent node '%s' in filesystem '%s'"),
+     id_str->data, fs->path);
+}
+
 /* Get the node-revision for the node ID in FS.
    Set *NODEREV_P to the new node-revision structure, allocated in POOL.
    See svn_fs_fs__get_node_revision, which wraps this and adds another
@@ -2185,7 +2195,7 @@ get_node_revision_body(node_revision_t **noderev_p,
       if (APR_STATUS_IS_ENOENT(err->apr_err))
         {
           svn_error_clear(err);
-          return svn_fs_fs__err_dangling_id(fs, id);
+          return svn_error_return(err_dangling_id(fs, id));
         }
 
       return svn_error_return(err);
