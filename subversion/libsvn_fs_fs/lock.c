@@ -108,6 +108,17 @@ hash_fetch(apr_hash_t *hash,
 }
 
 
+/* SVN_ERR_FS_CORRUPT: the lockfile for PATH in FS is corrupt.  */
+static svn_error_t *
+err_corrupt_lockfile(svn_fs_t *fs, const char *path)
+{
+  return
+    svn_error_createf(
+     SVN_ERR_FS_CORRUPT, 0,
+     _("Corrupt lockfile for path '%s' in filesystem '%s'"),
+     path, fs->path);
+}
+
 
 /*** Digest file handling functions. ***/
 
@@ -275,17 +286,17 @@ read_digest_file(apr_hash_t **children_p,
       lock->path = path;
 
       if (! ((lock->token = hash_fetch(hash, TOKEN_KEY, pool))))
-        return svn_fs_fs__err_corrupt_lockfile(fs, path);
+        return svn_error_return(err_corrupt_lockfile(fs, path));
 
       if (! ((lock->owner = hash_fetch(hash, OWNER_KEY, pool))))
-        return svn_fs_fs__err_corrupt_lockfile(fs, path);
+        return svn_error_return(err_corrupt_lockfile(fs, path));
 
       if (! ((val = hash_fetch(hash, IS_DAV_COMMENT_KEY, pool))))
-        return svn_fs_fs__err_corrupt_lockfile(fs, path);
+        return svn_error_return(err_corrupt_lockfile(fs, path));
       lock->is_dav_comment = (val[0] == '1');
 
       if (! ((val = hash_fetch(hash, CREATION_DATE_KEY, pool))))
-        return svn_fs_fs__err_corrupt_lockfile(fs, path);
+        return svn_error_return(err_corrupt_lockfile(fs, path));
       SVN_ERR(svn_time_from_cstring(&(lock->creation_date), val, pool));
 
       if ((val = hash_fetch(hash, EXPIRATION_DATE_KEY, pool)))
