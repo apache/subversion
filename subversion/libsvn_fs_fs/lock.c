@@ -168,9 +168,9 @@ write_digest_file(apr_hash_t *children,
   const char *rev_0_path;
 
   SVN_ERR(svn_fs_fs__ensure_dir_exists(svn_dirent_join(fs->path, PATH_LOCKS_DIR,
-                                                       pool), fs, pool));
+                                                       pool), fs->path, pool));
   SVN_ERR(svn_fs_fs__ensure_dir_exists(svn_dirent_dirname(digest_path, pool),
-                                       fs, pool));
+                                       fs->path, pool));
 
   if (lock)
     {
