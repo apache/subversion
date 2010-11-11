@@ -304,6 +304,13 @@ WHERE wc_id = ?1 AND local_relpath = ?2
   AND op_depth = (SELECT MAX(op_depth) FROM nodes
                   WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0);
 
+-- STMT_DELETE_LOWEST_WORKING_NODE
+DELETE FROM nodes
+WHERE wc_id = ?1 AND local_relpath = ?2
+  AND op_depth = (SELECT MIN(op_depth) FROM nodes
+                  WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0)
+  AND presence = 'base-deleted';
+
 -- STMT_DELETE_ALL_WORKING_NODES
 DELETE FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0;
