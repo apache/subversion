@@ -1196,7 +1196,6 @@ bump_to_17(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   return SVN_NO_ERROR;
 }
 
-#if (SVN_WC__VERSION > 19)
 static svn_error_t *
 bump_to_20(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
@@ -1204,7 +1203,6 @@ bump_to_20(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_20));
   return SVN_NO_ERROR;
 }
-#endif
 
 
 #if 0 /* ### no tree conflict migration yet */
@@ -1499,13 +1497,11 @@ svn_wc__upgrade_sdb(int *result_format,
                                    "use 'tools/dev/wc-ng/bump-to-19.py' to "
                                    "upgrade it"), wcroot_abspath);
 
-#if (SVN_WC__VERSION > 19)
       case 19:
         SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_20, &bb,
                                              scratch_pool));
         *result_format = 20;
         /* FALLTHROUGH  */
-#endif
 
       /* ### future bumps go here.  */
 #if 0
