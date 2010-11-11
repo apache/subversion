@@ -7044,7 +7044,7 @@ svn_fs_fs__set_uuid(svn_fs_t *fs,
    permissions as FS->path.*/
 svn_error_t *
 svn_fs_fs__ensure_dir_exists(const char *path,
-                             svn_fs_t *fs,
+                             const char *fs_path,
                              apr_pool_t *pool)
 {
   svn_error_t *err = svn_io_dir_make(path, APR_OS_DEFAULT, pool);
@@ -7057,7 +7057,7 @@ svn_fs_fs__ensure_dir_exists(const char *path,
 
   /* We successfully created a new directory.  Dup the permissions
      from FS->path. */
-  return svn_io_copy_perms(path, fs->path, pool);
+  return svn_io_copy_perms(path, fs_path, pool);
 }
 
 /* Set *NODE_ORIGINS to a hash mapping 'const char *' node IDs to
@@ -7129,7 +7129,7 @@ set_node_origins_for_file(svn_fs_t *fs,
   SVN_ERR(svn_fs_fs__ensure_dir_exists(svn_dirent_join(fs->path,
                                                        PATH_NODE_ORIGINS_DIR,
                                                        pool),
-                                       fs, pool));
+                                       fs->path, pool));
 
   /* Read the previously existing origins (if any), and merge our
      update with it. */
