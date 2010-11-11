@@ -51,7 +51,6 @@
 #include "svn_ctype.h"
 
 #include "fs.h"
-#include "err.h"
 #include "tree.h"
 #include "lock.h"
 #include "key-gen.h"

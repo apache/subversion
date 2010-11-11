@@ -36,7 +36,6 @@
 
 #include "lock.h"
 #include "tree.h"
-#include "err.h"
 #include "fs_fs.h"
 #include "../libsvn_fs/fs-loader.h"
 

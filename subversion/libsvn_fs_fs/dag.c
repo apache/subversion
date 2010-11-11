@@ -29,7 +29,6 @@
 #include "svn_pools.h"
 
 #include "dag.h"
-#include "err.h"
 #include "fs.h"
 #include "key-gen.h"
 #include "fs_fs.h"

@@ -51,7 +51,6 @@
 #include "svn_props.h"
 
 #include "fs.h"
-#include "err.h"
 #include "key-gen.h"
 #include "dag.h"
 #include "lock.h"
