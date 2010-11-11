@@ -195,7 +195,7 @@ jobject EnumMapper::mapOperation(svn_wc_operation_t operation)
 jobject EnumMapper::mapTristate(svn_tristate_t tristate)
 {
   // We're assuming a valid value for the C enum above
-  return mapEnum(JAVA_PACKAGE"/Tristate", (int) tristate);
+  return mapEnum(JAVA_PACKAGE"/Tristate", (int) (tristate - svn_tristate_false));
 }
 
 svn_wc_conflict_choice_t EnumMapper::toConflictChoice(jobject jchoice)

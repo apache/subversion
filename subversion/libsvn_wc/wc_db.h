@@ -681,10 +681,14 @@ svn_wc__db_base_add_not_present_node(svn_wc__db_t *db,
    Note that no changes are made to the local filesystem; LOCAL_ABSPATH
    is merely the key to figure out which BASE node to remove.
 
-   If the node is a directory, then ALL child nodes will be removed
-   from the BASE tree, too.
+   To maintain a consistent database this function will also remove
+   any working node that marks LOCAL_ABSPATH as base-deleted.  If this
+   results in there being no working node for LOCAL_ABSPATH then any
+   actual node will be removed if the actual node does not mark a
+   conflict.
 
-   All temporary allocations will be made in SCRATCH_POOL.
+   Note the caller is responsible for removing base node
+   children before calling this function (this may change).
 */
 svn_error_t *
 svn_wc__db_base_remove(svn_wc__db_t *db,

@@ -1391,6 +1391,10 @@ SVN_ERROR_START
              SVN_ERR_CL_CATEGORY_START + 10,
              "No external merge tool available")
 
+  SVN_ERRDEF(SVN_ERR_CL_ERROR_PROCESSING_EXTERNALS,
+             SVN_ERR_CL_CATEGORY_START + 11,
+             "Failed processing one or more externals definitions")
+
   /* malfunctions such as assertion failures */
 
   SVN_ERRDEF(SVN_ERR_ASSERTION_FAIL,

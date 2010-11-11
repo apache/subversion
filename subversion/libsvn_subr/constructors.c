@@ -45,7 +45,8 @@ svn_commit_info_t *
 svn_commit_info_dup(const svn_commit_info_t *src_commit_info,
                     apr_pool_t *pool)
 {
-  svn_commit_info_t *dst_commit_info = svn_create_commit_info(pool);
+  svn_commit_info_t *dst_commit_info
+    = apr_palloc(pool, sizeof(*dst_commit_info));
 
   dst_commit_info->date = src_commit_info->date
     ? apr_pstrdup(pool, src_commit_info->date) : NULL;
@@ -74,7 +75,7 @@ svn_log_changed_path2_dup(const svn_log_changed_path2_t *changed_path,
                           apr_pool_t *pool)
 {
   svn_log_changed_path2_t *new_changed_path
-    = svn_log_changed_path2_create(pool);
+    = apr_palloc(pool, sizeof(*new_changed_path));
 
   *new_changed_path = *changed_path;
 
@@ -190,7 +191,7 @@ svn_log_entry_t *
 svn_log_entry_dup(const svn_log_entry_t *log_entry, apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
-  svn_log_entry_t *new_entry = svn_log_entry_create(pool);
+  svn_log_entry_t *new_entry = apr_palloc(pool, sizeof(*new_entry));
 
   *new_entry = *log_entry;
 
@@ -228,7 +229,8 @@ svn_location_segment_dup(const svn_location_segment_t *segment,
                          apr_pool_t *pool)
 {
   svn_location_segment_t *new_segment =
-    apr_pcalloc(pool, sizeof(*new_segment));
+    apr_palloc(pool, sizeof(*new_segment));
+
   *new_segment = *segment;
   if (segment->path)
     new_segment->path = apr_pstrdup(pool, segment->path);
