@@ -3314,6 +3314,10 @@ svn_io_dir_walk2(const char *dirname,
 
   SVN_ERR(cstring_from_utf8(&dirname_apr, dirname, pool));
 
+  /* APR doesn't like "" directories */
+  if (dirname_apr[0] == '\0')
+    dirname_apr = ".";
+
   apr_err = apr_dir_open(&handle, dirname_apr, pool);
   if (apr_err)
     return svn_error_wrap_apr(apr_err, _("Can't open directory '%s'"),
