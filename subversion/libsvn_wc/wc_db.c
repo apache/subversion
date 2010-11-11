@@ -786,6 +786,28 @@ extend_parent_delete(svn_sqlite__db_t *sdb,
   return SVN_NO_ERROR;
 }
 
+/* This is the reverse of extend_parent_delete.
+
+   When removing a base node if the parent has a working node then the
+   parent base and this node are both deleted and so the delete of
+   this node must be removed.
+ */
+static svn_error_t *
+retract_parent_delete(svn_sqlite__db_t *sdb,
+                      apr_int64_t wc_id,
+                      const char *local_relpath,
+                      apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                    STMT_DELETE_LOWEST_WORKING_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  return SVN_NO_ERROR;
+}
+
 
 
 /* */
@@ -1824,6 +1846,45 @@ svn_wc__db_base_add_not_present_node(svn_wc__db_t *db,
     kind, svn_wc__db_status_not_present, conflict, work_items, scratch_pool);
 }
 
+struct base_remove_baton {
+  const char *local_relpath;
+  apr_int64_t wc_id;
+};
+
+static svn_error_t *
+db_base_remove(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
+{
+  struct base_remove_baton *brb = baton;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_DELETE_BASE_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", brb->wc_id, brb->local_relpath));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  SVN_ERR(retract_parent_delete(sdb, brb->wc_id, brb->local_relpath,
+                                scratch_pool));
+
+  /* If there is no working node then any actual node must be deleted,
+     unless it marks a conflict */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_WORKING_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", brb->wc_id, brb->local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  SVN_ERR(svn_sqlite__reset(stmt));
+  if (!have_row)
+    {
+#ifndef TREE_CONFLICTS_ON_CHILDREN
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_DELETE_ACTUAL_NODE));
+#else
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                    STMT_DELETE_ACTUAL_NODE_WITHOUT_CONFLICT));
+#endif
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", brb->wc_id, brb->local_relpath));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_wc__db_base_remove(svn_wc__db_t *db,
@@ -1832,7 +1893,7 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
 {
   svn_wc__db_pdh_t *pdh;
   const char *local_relpath;
-  svn_sqlite__stmt_t *stmt;
+  struct base_remove_baton brb;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -1841,17 +1902,17 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
-                                    STMT_DELETE_BASE_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
+  brb.local_relpath = local_relpath;
+  brb.wc_id = pdh->wcroot->wc_id;
 
-  SVN_ERR(svn_sqlite__step_done(stmt));
+  SVN_ERR(svn_sqlite__with_transaction(pdh->wcroot->sdb,
+                                       db_base_remove, &brb,
+                                       scratch_pool));
 
   SVN_ERR(flush_entries(db, pdh, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
-
 
 static svn_error_t *
 base_get_info(svn_wc__db_status_t *status,

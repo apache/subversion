@@ -220,6 +220,15 @@ wc_update(wc_baton_t *b, const char *path, svn_revnum_t revnum)
                             TRUE, FALSE, FALSE, ctx, b->pool);
 }
 
+static svn_error_t *
+wc_resolved(wc_baton_t *b, const char *path)
+{
+  svn_client_ctx_t *ctx;
+
+  SVN_ERR(svn_client_create_context(&ctx, b->pool));
+  return svn_client_resolved(wc_path(b, path), TRUE, ctx, b->pool);
+}
+
 /* Create the Greek tree on disk in the WC, and commit it. */
 static svn_error_t *
 add_and_commit_greek_tree(wc_baton_t *b)
@@ -1126,6 +1135,17 @@ test_delete_with_update(const svn_test_opts_t *opts, apr_pool_t *pool)
       { 1, "A",       "normal",        NO_COPY_FROM},
       { 1, "A/B",     "base-deleted",  NO_COPY_FROM},
       { 1, "A/B/C",   "base-deleted",  NO_COPY_FROM},
+      { 2, "A/B",     "normal",        NO_COPY_FROM},
+      { 0 }
+    };
+    SVN_ERR(check_db_rows(&b, "A", rows));
+  }
+  SVN_ERR(wc_resolved(&b, ""));
+  SVN_ERR(wc_update(&b, "", 1));
+  {
+    nodes_row_t rows[] = {
+      { 0, "A",       "normal",        1, "A"},
+      { 1, "A",       "normal",        NO_COPY_FROM},
       { 2, "A/B",     "normal",        NO_COPY_FROM},
       { 0 }
     };
