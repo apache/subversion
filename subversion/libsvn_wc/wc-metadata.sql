@@ -626,6 +626,16 @@ DROP TABLE WORKING_NODE;
 
 PRAGMA user_version = 20;
 
+
+/* ------------------------------------------------------------------------- */
+
+/* Format 21 involves no schema changes, it moves the tree conflict victim
+   information to victime nodes, rather than parents. */
+
+-- STMT_UPGRADE_TO_21
+PRAGMA user_version = 21;
+
+
 /* ------------------------------------------------------------------------- */
 
 /* Format YYY introduces new handling for conflict information.  */
