@@ -372,14 +372,15 @@ get_versioned_files(const apr_array_header_t **children,
 }
 
 
-/* */
+/* Return the path of the old-school administrative lock file
+   associated with LOCAL_DIR_ABSPATH, allocated from RESULT_POOL. */
 static const char *
 build_lockfile_path(const char *local_dir_abspath,
                     apr_pool_t *result_pool)
 {
   return svn_dirent_join_many(result_pool,
                               local_dir_abspath,
-                              ".svn", /* ### switch to dynamic?  */
+                              svn_wc_get_adm_dir(result_pool),
                               ADM_LOCK,
                               NULL);
 }
