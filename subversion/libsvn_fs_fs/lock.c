@@ -110,13 +110,13 @@ hash_fetch(apr_hash_t *hash,
 
 /* SVN_ERR_FS_CORRUPT: the lockfile for PATH in FS is corrupt.  */
 static svn_error_t *
-err_corrupt_lockfile(svn_fs_t *fs, const char *path)
+err_corrupt_lockfile(const char *fs_path, const char *path)
 {
   return
     svn_error_createf(
      SVN_ERR_FS_CORRUPT, 0,
      _("Corrupt lockfile for path '%s' in filesystem '%s'"),
-     path, fs->path);
+     path, fs_path);
 }
 
 
@@ -125,11 +125,11 @@ err_corrupt_lockfile(svn_fs_t *fs, const char *path)
 /* Return the path of the lock/entries file for which DIGEST is the
    hashed repository relative path. */
 static const char *
-digest_path_from_digest(svn_fs_t *fs,
+digest_path_from_digest(const char *fs_path,
                         const char *digest,
                         apr_pool_t *pool)
 {
-  return svn_dirent_join_many(pool, fs->path, PATH_LOCKS_DIR,
+  return svn_dirent_join_many(pool, fs_path, PATH_LOCKS_DIR,
                               apr_pstrmemdup(pool, digest, DIGEST_SUBDIR_LEN),
                               digest, NULL);
 }
@@ -235,7 +235,7 @@ write_digest_file(apr_hash_t *children,
 static svn_error_t *
 read_digest_file(apr_hash_t **children_p,
                  svn_lock_t **lock_p,
-                 svn_fs_t *fs,
+                 const char *fs_path,
                  const char *digest_path,
                  apr_pool_t *pool)
 {
@@ -286,17 +286,17 @@ read_digest_file(apr_hash_t **children_p,
       lock->path = path;
 
       if (! ((lock->token = hash_fetch(hash, TOKEN_KEY, pool))))
-        return svn_error_return(err_corrupt_lockfile(fs, path));
+        return svn_error_return(err_corrupt_lockfile(fs_path, path));
 
       if (! ((lock->owner = hash_fetch(hash, OWNER_KEY, pool))))
-        return svn_error_return(err_corrupt_lockfile(fs, path));
+        return svn_error_return(err_corrupt_lockfile(fs_path, path));
 
       if (! ((val = hash_fetch(hash, IS_DAV_COMMENT_KEY, pool))))
-        return svn_error_return(err_corrupt_lockfile(fs, path));
+        return svn_error_return(err_corrupt_lockfile(fs_path, path));
       lock->is_dav_comment = (val[0] == '1');
 
       if (! ((val = hash_fetch(hash, CREATION_DATE_KEY, pool))))
-        return svn_error_return(err_corrupt_lockfile(fs, path));
+        return svn_error_return(err_corrupt_lockfile(fs_path, path));
       SVN_ERR(svn_time_from_cstring(&(lock->creation_date), val, pool));
 
       if ((val = hash_fetch(hash, EXPIRATION_DATE_KEY, pool)))
@@ -358,7 +358,7 @@ set_lock(svn_fs_t *fs,
       digest_path = digest_path_from_path(fs, this_path->data, subpool);
       digest_file = svn_dirent_basename(digest_path, subpool);
 
-      SVN_ERR(read_digest_file(&this_children, &this_lock, fs,
+      SVN_ERR(read_digest_file(&this_children, &this_lock, fs->path,
                                digest_path, subpool));
 
       /* We're either writing a new lock (first time through only) or
@@ -420,7 +420,7 @@ delete_lock(svn_fs_t *fs,
       digest_path = digest_path_from_path(fs, this_path->data, subpool);
       digest_file = svn_dirent_basename(digest_path, subpool);
 
-      SVN_ERR(read_digest_file(&this_children, &this_lock, fs,
+      SVN_ERR(read_digest_file(&this_children, &this_lock, fs->path,
                                digest_path, subpool));
 
       /* Delete the lock (first time through only). */
@@ -471,7 +471,7 @@ get_lock(svn_lock_t **lock_p,
   svn_lock_t *lock;
   const char *digest_path = digest_path_from_path(fs, path, pool);
 
-  SVN_ERR(read_digest_file(NULL, &lock, fs, digest_path, pool));
+  SVN_ERR(read_digest_file(NULL, &lock, fs->path, digest_path, pool));
   if (! lock)
     return SVN_FS__ERR_NO_SUCH_LOCK(fs, path, pool);
 
@@ -528,12 +528,13 @@ get_lock_helper(svn_fs_t *fs,
 struct walk_locks_baton {
   svn_fs_get_locks_callback_t get_locks_func;
   void *get_locks_baton;
+  svn_fs_t *fs;
 };
 
 /* Implements walk_digests_callback_t. */
 static svn_error_t *
 locks_walker(void *baton,
-             svn_fs_t *fs,
+             const char *fs_path,
              const char *digest_path,
              apr_hash_t *children,
              svn_lock_t *lock,
@@ -556,7 +557,7 @@ locks_walker(void *baton,
           /* Only remove the lock if we have the write lock.
              Read operations shouldn't change the filesystem. */
           if (have_write_lock)
-            SVN_ERR(delete_lock(fs, lock, pool));
+            SVN_ERR(delete_lock(wlb->fs, lock, pool));
         }
     }
 
@@ -568,7 +569,7 @@ locks_walker(void *baton,
  * CHILDREN and LOCK come from a read_digest_file(digest_path) call.
  */
 typedef svn_error_t *(*walk_digests_callback_t)(void *baton,
-                                                svn_fs_t *fs,
+                                                const char *fs_path,
                                                 const char *digest_path,
                                                 apr_hash_t *children,
                                                 svn_lock_t *lock,
@@ -580,7 +581,7 @@ typedef svn_error_t *(*walk_digests_callback_t)(void *baton,
    HAVE_WRITE_LOCK should be true if the caller (directly or indirectly)
    has the FS write lock. */
 static svn_error_t *
-walk_digest_files(svn_fs_t *fs,
+walk_digest_files(const char *fs_path,
                   const char *digest_path,
                   walk_digests_callback_t walk_digests_func,
                   void *walk_digests_baton,
@@ -593,9 +594,9 @@ walk_digest_files(svn_fs_t *fs,
   svn_lock_t *lock;
 
   /* First, send up any locks in the current digest file. */
-  SVN_ERR(read_digest_file(&children, &lock, fs, digest_path, pool));
+  SVN_ERR(read_digest_file(&children, &lock, fs_path, digest_path, pool));
 
-  SVN_ERR(walk_digests_func(walk_digests_baton, fs, digest_path,
+  SVN_ERR(walk_digests_func(walk_digests_baton, fs_path, digest_path,
                             children, lock,
                             have_write_lock, pool));
 
@@ -608,7 +609,7 @@ walk_digest_files(svn_fs_t *fs,
       const char *digest = svn__apr_hash_index_key(hi);
       svn_pool_clear(subpool);
       SVN_ERR(walk_digest_files
-              (fs, digest_path_from_digest(fs, digest, subpool),
+              (fs_path, digest_path_from_digest(fs_path, digest, subpool),
                walk_digests_func, walk_digests_baton, have_write_lock, subpool));
     }
   svn_pool_destroy(subpool);
@@ -627,8 +628,8 @@ walk_locks(svn_fs_t *fs,
            svn_boolean_t have_write_lock,
            apr_pool_t *pool)
 {
-  struct walk_locks_baton wlb = { get_locks_func, get_locks_baton };
-  SVN_ERR(walk_digest_files(fs, digest_path, locks_walker, &wlb,
+  struct walk_locks_baton wlb = { get_locks_func, get_locks_baton, fs };
+  SVN_ERR(walk_digest_files(fs->path, digest_path, locks_walker, &wlb,
                             have_write_lock, pool));
   return SVN_NO_ERROR;
 }
