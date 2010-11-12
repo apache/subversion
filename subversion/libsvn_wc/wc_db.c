@@ -7867,11 +7867,7 @@ svn_wc__db_read_conflict_victims(const apr_array_header_t **victims,
   const char *local_relpath;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
-  apr_hash_t *found;
-  apr_array_header_t *found_keys;
   apr_hash_t *conflict_items;
-
-  *victims = NULL;
 
   /* The parent should be a working copy directory. */
   SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
@@ -7882,48 +7878,25 @@ svn_wc__db_read_conflict_victims(const apr_array_header_t **victims,
   /* ### This will be much easier once we have all conflicts in one
          field of actual*/
 
-  /* First look for text and property conflicts in ACTUAL */
+  /* Look for text, tree and property conflicts in ACTUAL */
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                     STMT_SELECT_ACTUAL_CONFLICT_VICTIMS));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
 
-  found = apr_hash_make(result_pool);
+  *victims = apr_array_make(result_pool, 0, sizeof(const char *));
 
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   while (have_row)
     {
       const char *child_relpath = svn_sqlite__column_text(stmt, 0, NULL);
-      const char *child_name = svn_dirent_basename(child_relpath, result_pool);
 
-      apr_hash_set(found, child_name, APR_HASH_KEY_STRING, child_name);
+      APR_ARRAY_PUSH(*victims, const char *) = 
+                            svn_dirent_basename(child_relpath, result_pool);
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
 
   SVN_ERR(svn_sqlite__reset(stmt));
-
-  /* And add tree conflicts */
-  SVN_ERR(read_all_tree_conflicts(&conflict_items, pdh, local_relpath,
-                                  scratch_pool, scratch_pool));
-
-  if (conflict_items)
-    {
-      apr_hash_index_t *hi;
-
-      for(hi = apr_hash_first(scratch_pool, conflict_items);
-          hi;
-          hi = apr_hash_next(hi))
-        {
-          const char *child_name =
-              svn_dirent_basename(svn__apr_hash_index_key(hi), result_pool);
-
-          /* Using a hash avoids duplicates */
-          apr_hash_set(found, child_name, APR_HASH_KEY_STRING, child_name);
-        }
-    }
-
-  SVN_ERR(svn_hash_keys(&found_keys, found, result_pool));
-  *victims = found_keys;
 
   return SVN_NO_ERROR;
 }
