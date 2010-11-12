@@ -1362,13 +1362,11 @@ svn_wc__upgrade_sdb(int *result_format,
         *result_format = 20;
         /* FALLTHROUGH  */
 
-#if SVN_WC__VERSION >= 21
       case 20:
         SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_21, &bb,
                                              scratch_pool));
         *result_format = 21;
         /* FALLTHROUGH  */
-#endif
 
       /* ### future bumps go here.  */
 #if 0
