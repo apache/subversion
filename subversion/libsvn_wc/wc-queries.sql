@@ -455,7 +455,8 @@ SELECT local_relpath
 FROM actual_node
 WHERE wc_id = ?1 AND parent_relpath = ?2 AND
   NOT ((prop_reject IS NULL) AND (conflict_old IS NULL)
-       AND (conflict_new IS NULL) AND (conflict_working IS NULL))
+       AND (conflict_new IS NULL) AND (conflict_working IS NULL)
+       AND (conflict_data IS NULL))
 
 -- STMT_SELECT_ACTUAL_CHILDREN_TREE_CONFLICT
 SELECT local_relpath, conflict_data
