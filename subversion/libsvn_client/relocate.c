@@ -126,37 +126,6 @@ validator_func(void *baton,
 }
 
 
-/* Callback of type svn_wc_external_update_t.  Just squirrels away an
-   svn:externals property value into BATON (which is an apr_hash_t *
-   keyed on local absolute path).  */
-static svn_error_t *
-externals_update_func(void *baton,
-                      const char *local_abspath,
-                      const svn_string_t *old_val,
-                      const svn_string_t *new_val,
-                      svn_depth_t depth,
-                      apr_pool_t *scratch_pool)
-{
-  apr_hash_t *externals_hash = baton;
-  apr_pool_t *hash_pool = apr_hash_pool_get(externals_hash);
-
-  apr_hash_set(externals_hash, apr_pstrdup(hash_pool, local_abspath),
-               APR_HASH_KEY_STRING, svn_string_dup(new_val, hash_pool));
-  return SVN_NO_ERROR;
-}
-
-
-/* Callback of type svn_wc_status_func4_t.  Does nothing. */
-static svn_error_t *
-status_noop_func(void *baton,
-                 const char *local_abspath,
-                 const svn_wc_status3_t *status,
-                 apr_pool_t *scratch_pool)
-{
-  return SVN_NO_ERROR;
-}
-
-
 /* Examing the array of svn_wc_external_item2_t's EXT_DESC (parsed
    from the svn:externals property set on LOCAL_ABSPATH) and determine
    if the external working copies described by such should be
@@ -270,16 +239,10 @@ svn_client_relocate2(const char *wcroot_dir,
   SVN_ERR(svn_client_root_url_from_path(&new_repos_root_url, local_abspath,
                                         ctx, pool));
 
-  externals_hash = apr_hash_make(pool);
 
-  /* Do a status run just to harvest externals definitions. */
-  SVN_ERR(svn_wc_walk_status(ctx->wc_ctx, local_abspath,
-                             svn_depth_infinity, FALSE, FALSE, NULL,
-                             status_noop_func, NULL,
-                             externals_update_func, externals_hash,
-                             ctx->cancel_func, ctx->cancel_baton, pool));
-
-  /* No externals?  No problem.  We're done here. */
+  /* Relocate externals, too (if any). */
+  SVN_ERR(svn_client__crawl_for_externals(&externals_hash, local_abspath,
+                                          svn_depth_infinity, ctx, pool, pool));
   if (! apr_hash_count(externals_hash))
     return SVN_NO_ERROR;
 
