@@ -631,6 +631,60 @@ bump_to_13(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   return SVN_NO_ERROR;
 }
 
+/*
+ * Read tree conflict descriptions from @a conflict_data.  Set @a *conflicts
+ * to a hash of pointers to svn_wc_conflict_description2_t objects indexed by
+ * svn_wc_conflict_description2_t.local_abspath, all newly allocated in @a
+ * pool.  @a dir_path is the path to the working copy directory whose conflicts
+ * are being read.  The conflicts read are the tree conflicts on the immediate
+ * child nodes of @a dir_path.  Do all allocations in @a pool.
+ *
+ * Note: There were some concerns about this function:
+ *
+ * ### this is BAD. the CONFLICTS structure should not be dependent upon
+ * ### DIR_PATH. each conflict should be labeled with an entry name, not
+ * ### a whole path. (and a path which happens to vary based upon invocation
+ * ### of the user client and these APIs)
+ *
+ * those assumptions were baked into former versions of the data model, so
+ * they have to stick around here.  But they have been removed from the
+ * New Way. */
+static svn_error_t *
+read_tree_conflicts(apr_hash_t **conflicts,
+                    const char *conflict_data,
+                    const char *dir_path,
+                    apr_pool_t *pool)
+{
+  const svn_skel_t *skel;
+  apr_pool_t *iterpool;
+
+  *conflicts = apr_hash_make(pool);
+
+  if (conflict_data == NULL)
+    return SVN_NO_ERROR;
+
+  skel = svn_skel__parse(conflict_data, strlen(conflict_data), pool);
+  if (skel == NULL)
+    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
+                            _("Error parsing tree conflict skel"));
+
+  iterpool = svn_pool_create(pool);
+  for (skel = skel->children; skel != NULL; skel = skel->next)
+    {
+      const svn_wc_conflict_description2_t *conflict;
+
+      svn_pool_clear(iterpool);
+      SVN_ERR(svn_wc__deserialize_conflict(&conflict, skel, dir_path,
+                                           pool, iterpool));
+      if (conflict != NULL)
+        apr_hash_set(*conflicts, svn_dirent_basename(conflict->local_abspath,
+                                                     pool),
+                     APR_HASH_KEY_STRING, conflict);
+    }
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
 
 /* */
 static svn_error_t *
@@ -644,8 +698,8 @@ migrate_single_tree_conflict_data(svn_sqlite__db_t *sdb,
   apr_hash_index_t *hi;
   apr_pool_t *iterpool;
 
-  SVN_ERR(svn_wc__read_tree_conflicts(&conflicts, tree_conflict_data,
-                                      local_relpath, scratch_pool));
+  SVN_ERR(read_tree_conflicts(&conflicts, tree_conflict_data, local_relpath,
+                              scratch_pool));
 
   iterpool = svn_pool_create(scratch_pool);
   for (hi = apr_hash_first(scratch_pool, conflicts);
