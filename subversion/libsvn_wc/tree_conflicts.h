@@ -92,20 +92,6 @@ svn_wc__write_tree_conflicts(const char **conflict_data,
                              apr_hash_t *conflicts,
                              apr_pool_t *pool);
 
-/*
- * Read tree conflict descriptions from @a conflict_data.  Set @a *conflicts
- * to a hash of pointers to svn_wc_conflict_description2_t objects indexed by
- * svn_wc_conflict_description2_t.local_abspath, all newly allocated in @a
- * pool.  @a dir_path is the path to the working copy directory whose conflicts
- * are being read.  The conflicts read are the tree conflicts on the immediate
- * child nodes of @a dir_path.  Do all allocations in @a pool.
- */
-svn_error_t *
-svn_wc__read_tree_conflicts(apr_hash_t **conflicts,
-                            const char *conflict_data,
-                            const char *dir_path,
-                            apr_pool_t *pool);
-
 /* Token mapping tables.  */
 extern const svn_token_map_t svn_wc__operation_map[];
 extern const svn_token_map_t svn_wc__conflict_action_map[];
