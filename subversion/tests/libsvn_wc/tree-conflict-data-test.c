@@ -87,9 +87,9 @@ test_write_tree_conflict(apr_pool_t *pool)
 {
   svn_wc_conflict_description2_t *conflict;
   const char *tree_conflict_data;
-  apr_hash_t *conflicts;
   const char *expected;
   const char *local_abspath;
+  svn_skel_t *skel;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, "Foo.c", pool));
 
@@ -99,73 +99,16 @@ test_write_tree_conflict(apr_pool_t *pool)
   conflict->action = svn_wc_conflict_action_delete;
   conflict->reason = svn_wc_conflict_reason_edited;
 
-  conflicts = apr_hash_make(pool);
-  apr_hash_set(conflicts, conflict->local_abspath, APR_HASH_KEY_STRING,
-               conflict);
+  SVN_ERR(svn_wc__serialize_conflict(&skel, conflict, pool, pool));
+  tree_conflict_data = svn_skel__unparse(skel, pool)->data;
 
-  expected = "((conflict Foo.c file update deleted edited "
-               "(version 0  2 -1 0  0 ) (version 0  2 -1 0  0 )))";
-
-  SVN_ERR(svn_wc__write_tree_conflicts(&tree_conflict_data, conflicts, pool));
+  expected = "(conflict Foo.c file update deleted edited "
+             "(version 0  2 -1 0  0 ) (version 0  2 -1 0  0 ))";
 
   if (strcmp(expected, tree_conflict_data) != 0)
     return fail(pool, "Unexpected text from tree conflict\n"
                       "  Expected: %s\n"
                       "  Actual:   %s\n", expected, tree_conflict_data);
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-test_write_2_tree_conflicts(apr_pool_t *pool)
-{
-  svn_wc_conflict_description2_t *conflict1, *conflict2;
-  apr_hash_t *conflicts;
-  const char *tree_conflict_data;
-  const char *expected1;
-  const char *expected2;
-  const char *local_abspath;
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, "Foo.c", pool));
-  conflict1 = svn_wc_conflict_description_create_tree2(
-                    local_abspath, svn_node_file, svn_wc_operation_update,
-                    NULL, NULL, pool);
-  conflict1->action = svn_wc_conflict_action_delete;
-  conflict1->reason = svn_wc_conflict_reason_edited;
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, "Bar.h", pool));
-  conflict2 = svn_wc_conflict_description_create_tree2(
-                    local_abspath, svn_node_file, svn_wc_operation_update,
-                    NULL, NULL, pool);
-  conflict2->action = svn_wc_conflict_action_edit;
-  conflict2->reason = svn_wc_conflict_reason_deleted;
-
-  conflicts = apr_hash_make(pool);
-  apr_hash_set(conflicts, conflict1->local_abspath, APR_HASH_KEY_STRING,
-               conflict1);
-  apr_hash_set(conflicts, conflict2->local_abspath, APR_HASH_KEY_STRING,
-               conflict2);
-
-  /* We don't know the order the hash will spit out the data, so just test
-     for both possibilities. */
-  expected1 = "((conflict Foo.c file update deleted edited "
-                 "(version 0  2 -1 0  0 ) (version 0  2 -1 0  0 )) "
-               "(conflict Bar.h file update edited deleted "
-                 "(version 0  2 -1 0  0 ) (version 0  2 -1 0  0 )))";
-  expected2 = "((conflict Bar.h file update edited deleted "
-                 "(version 0  2 -1 0  0 ) (version 0  2 -1 0  0 )) "
-               "(conflict Foo.c file update deleted edited "
-                 "(version 0  2 -1 0  0 ) (version 0  2 -1 0  0 )))";
-
-  SVN_ERR(svn_wc__write_tree_conflicts(&tree_conflict_data, conflicts, pool));
-
-  if (strcmp(expected1, tree_conflict_data) != 0
-        && strcmp(expected2, tree_conflict_data) != 0)
-    return fail(pool, "Unexpected text from tree conflict\n"
-                      "  Expected: %s\n"
-                      "         OR %s\n"
-                      "  Actual:   %s\n", expected1, expected2,
-                                          tree_conflict_data);
 
   return SVN_NO_ERROR;
 }
@@ -271,8 +214,6 @@ struct svn_test_descriptor_t test_funcs[] =
                    "read 1 tree conflict"),
     SVN_TEST_PASS2(test_write_tree_conflict,
                    "write 1 tree conflict"),
-    SVN_TEST_PASS2(test_write_2_tree_conflicts,
-                   "write 2 tree conflicts"),
 #ifdef THIS_TEST_RAISES_MALFUNCTION
     SVN_TEST_PASS2(test_write_invalid_tree_conflicts,
                    "detect broken tree conflict data while writing"),

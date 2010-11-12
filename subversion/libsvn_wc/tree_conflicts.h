@@ -74,23 +74,6 @@ svn_wc__deserialize_conflict(const svn_wc_conflict_description2_t **conflict,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
 
-/*
- * Encode tree conflict descriptions into a single string.
- *
- * Set *CONFLICT_DATA to a string, allocated in POOL, that encodes the tree
- * conflicts in CONFLICTS in a form suitable for storage in a single string
- * field in a WC entry. CONFLICTS is a hash of zero or more pointers to
- * svn_wc_conflict_description2_t objects, index by their basenames. All of the
- * conflict victim paths must be siblings.
- *
- * Do all allocations in POOL.
- *
- * @see svn_wc__read_tree_conflicts()
- */
-svn_error_t *
-svn_wc__write_tree_conflicts(const char **conflict_data,
-                             apr_hash_t *conflicts,
-                             apr_pool_t *pool);
 
 /* Token mapping tables.  */
 extern const svn_token_map_t svn_wc__operation_map[];
