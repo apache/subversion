@@ -68,7 +68,7 @@
 				<Tool
 					Name="VCCustomBuildTool"
 					Description="Creating svn_private_config.h from svn_private_config.hw."
-					CommandLine="copy ..\..\subversion\svn_private_config.hw ..\..\subversion\svn_private_config.h &gt; nul
+					CommandLine="copy ..\..\..\subversion\svn_private_config.hw ..\..\..\subversion\svn_private_config.h &gt; nul
 "
 					Outputs="..\..\subversion\svn_private_config.h"/>
 			</FileConfiguration>
