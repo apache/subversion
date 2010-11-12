@@ -376,29 +376,6 @@ svn_wc__serialize_conflict(svn_skel_t **skel,
 
 
 svn_error_t *
-svn_wc__write_tree_conflicts(const char **conflict_data,
-                             apr_hash_t *conflicts,
-                             apr_pool_t *pool)
-{
-  svn_skel_t *skel = svn_skel__make_empty_list(pool);
-  apr_hash_index_t *hi;
-
-  for (hi = apr_hash_first(pool, conflicts); hi; hi = apr_hash_next(hi))
-    {
-      svn_skel_t *c_skel;
-
-      SVN_ERR(svn_wc__serialize_conflict(&c_skel, svn__apr_hash_index_val(hi),
-                                         pool, pool));
-      svn_skel__prepend(c_skel, skel);
-    }
-
-  *conflict_data = svn_skel__unparse(skel, pool)->data;
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
 svn_wc__del_tree_conflict(svn_wc_context_t *wc_ctx,
                           const char *victim_abspath,
                           apr_pool_t *scratch_pool)
