@@ -4340,24 +4340,29 @@ read_tree_conflict(const svn_wc_conflict_description2_t **tree_conflict,
                    apr_pool_t *result_pool,
                    apr_pool_t *scratch_pool)
 {
-  if (local_relpath[0])
-    {
-      const char *parent_relpath;
-      apr_hash_t *tree_conflicts;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  const char *conflict_data;
+  const svn_skel_t *skel;
+  
+  *tree_conflict = NULL;
 
-      parent_relpath = svn_dirent_dirname(local_relpath, scratch_pool);
+  if (!local_relpath[0])
+    return SVN_NO_ERROR;
 
-      SVN_ERR(read_all_tree_conflicts(&tree_conflicts, pdh, parent_relpath,
-                                      result_pool, scratch_pool));
-      if (tree_conflicts)
-        *tree_conflict = apr_hash_get(tree_conflicts,
-                                      svn_dirent_basename(local_relpath, NULL),
-                                      APR_HASH_KEY_STRING);
-      else
-        *tree_conflict = NULL;
-    }
-  else
-    *tree_conflict = NULL;
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_SELECT_ACTUAL_TREE_CONFLICT));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  if (!have_row)
+    return SVN_NO_ERROR;
+
+  conflict_data = svn_sqlite__column_text(stmt, 0, NULL);
+  skel = svn_skel__parse(conflict_data, strlen(conflict_data), scratch_pool);
+  SVN_ERR(svn_wc__deserialize_conflict(tree_conflict, skel,
+                                       pdh->wcroot->abspath, result_pool,
+                                       scratch_pool));
 
   return SVN_NO_ERROR;
 }

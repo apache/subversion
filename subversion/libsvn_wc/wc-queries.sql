@@ -85,6 +85,11 @@ conflict_working, tree_conflict_data, properties, conflict_data
 FROM actual_node
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
+-- STMT_SELECT_ACTUAL_TREE_CONFLICT
+SELECT conflict_data
+FROM actual_node
+WHERE wc_id = ?1 AND local_relpath = ?2 AND conflict_data IS NOT NULL;
+
 -- STMT_SELECT_NODE_CHILDREN_INFO
 /* Getting rows in an advantageous order using
      ORDER BY local_relpath, op_depth DESC
