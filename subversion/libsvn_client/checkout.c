@@ -218,7 +218,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
                                     revision, depth, TRUE,
                                     ignore_externals,
                                     allow_unver_obstructions,
-                                    use_sleep, innercheckout,
+                                    use_sleep, innercheckout, FALSE,
                                     ctx, pool);
 
   if (err)

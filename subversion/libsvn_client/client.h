@@ -491,6 +491,12 @@ svn_client__make_local_parents(const char *path,
    these obstructions cause the update to fail.
 
    If INNERUPDATE is true, no anchor check is performed on the update target.
+
+   If MAKE_PARENTS is true, allow the update to calculate and checkout
+   (with depth=empty) any parent directories of the requested update
+   target which are missing from the working copy.
+
+   NOTE:  You may not specify both INNERUPDATE and MAKE_PARENTS as true.
 */
 svn_error_t *
 svn_client__update_internal(svn_revnum_t *result_rev,
@@ -502,6 +508,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                             svn_boolean_t allow_unver_obstructions,
                             svn_boolean_t *timestamp_sleep,
                             svn_boolean_t innerupdate,
+                            svn_boolean_t make_parents,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool);
 

@@ -1168,10 +1168,17 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  are applied to the obstructing path.  Obstructing paths are reported\n"
      "  in the first column with code 'E'.\n"
      "\n"
+     "  If the specified update target is missing from the working copy but its\n"
+     "  immediate parent directory is present, checkout the target into its\n"
+     "  parent directory at the specified depth.  If --parents is specified,\n"
+     "  create any missing parent directories of the target by checking them\n"
+     "  out, too, at depth=empty.\n"
+     "\n"
      "  Use the --set-depth option to set a new working copy depth on the\n"
      "  targets of this operation.\n"),
     {'r', 'N', opt_depth, opt_set_depth, 'q', opt_merge_cmd, opt_force,
-     opt_ignore_externals, opt_changelist, opt_editor_cmd, opt_accept} },
+     opt_ignore_externals, opt_changelist, opt_editor_cmd, opt_accept,
+     opt_parents} },
 
   { "upgrade", svn_cl__upgrade, {0}, N_
     ("Upgrade the metadata storage format for a working copy.\n"

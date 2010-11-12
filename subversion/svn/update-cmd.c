@@ -92,11 +92,11 @@ svn_cl__update(apr_getopt_t *os,
   ctx->notify_func2 = svn_cl__check_externals_failed_notify_wrapper;
   ctx->notify_baton2 = &nwb;
   
-  SVN_ERR(svn_client_update3(NULL, targets,
+  SVN_ERR(svn_client_update4(NULL, targets,
                              &(opt_state->start_revision),
                              depth, depth_is_sticky,
                              opt_state->ignore_externals,
-                             opt_state->force,
+                             opt_state->force, opt_state->parents,
                              ctx, scratch_pool));
 
   if (! opt_state->quiet)
