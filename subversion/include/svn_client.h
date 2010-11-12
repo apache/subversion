@@ -1189,6 +1189,9 @@ svn_client_checkout(svn_revnum_t *result_rev,
  * If @a allow_unver_obstructions is FALSE then the update will abort
  * if there are any unversioned obstructing items.
  *
+ * If @a make_parents is TRUE, create any non-existent parent
+ * directories also by checking them out at depth=empty.
+ *
  * If @a ctx->notify_func2 is non-NULL, invoke @a ctx->notify_func2 with
  * @a ctx->notify_baton2 for each item handled by the update, and also for
  * files restored from text-base.  If @a ctx->cancel_func is non-NULL, invoke
@@ -1207,8 +1210,28 @@ svn_client_checkout(svn_revnum_t *result_rev,
  *  implementation, and allows for the possibility that different
  *  targets may come from different repositories.
  *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_client_update4(apr_array_header_t **result_revs,
+                   const apr_array_header_t *paths,
+                   const svn_opt_revision_t *revision,
+                   svn_depth_t depth,
+                   svn_boolean_t depth_is_sticky,
+                   svn_boolean_t ignore_externals,
+                   svn_boolean_t allow_unver_obstructions,
+                   svn_boolean_t make_parents,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_update4() but with @a make_parents always set
+ * to FALSE.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  * @since New in 1.5.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_update3(apr_array_header_t **result_revs,
                    const apr_array_header_t *paths,
