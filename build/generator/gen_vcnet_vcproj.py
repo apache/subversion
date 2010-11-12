@@ -141,14 +141,14 @@ class Generator(gen_win.WinGeneratorBase):
 
     # apr doesn't supply vcproj files, the user must convert them
     # manually before loading the generated solution
-    self.move_proj_file(os.path.join('build', 'win32'),
+    self.move_proj_file(self.projfilesdir,
                         'svn_config' + self.vcproj_extension,
                           (
                             ('sql', sql),
                             ('project_guid', self.makeguid('__CONFIG__')),
                           )
                         )
-    self.move_proj_file(os.path.join('build', 'win32'),
+    self.move_proj_file(self.projfilesdir,
                         'svn_locale' + self.vcproj_extension,
                         (
                           ('project_guid', self.makeguid('svn_locale')),

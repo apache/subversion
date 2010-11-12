@@ -282,13 +282,20 @@ class WinGeneratorBase(GeneratorBase):
       if self.write_file_if_changed(svnissdeb, buf.replace("@CONFIG@", "Debug")):
         print('Wrote %s' % svnissdeb)
 
+    #Make the project files directory if it doesn't exist
+    #TODO win32 might not be the best path as win64 stuff will go here too
+    self.projfilesdir=os.path.join("build","win32",subdir)
+    self.rootpath = ".." + "\\.." * self.projfilesdir.count(os.sep)
+    if not os.path.exists(self.projfilesdir):
+      os.makedirs(self.projfilesdir)
+
     # Generate the build_zlib.bat file
     if self.zlib_path:
       data = {'zlib_path': os.path.abspath(self.zlib_path),
               'zlib_version': self.zlib_version,
               'use_ml': self.have_ml and 1 or None}
-      bat = os.path.join('build', 'win32', 'build_zlib.bat')
-      self.write_with_template(bat, 'build_zlib.ezt', data)
+      bat = os.path.join(self.projfilesdir, 'build_zlib.bat')
+      self.write_with_template(bat, 'templates/build_zlib.ezt', data)
 
     # Generate the build_locale.bat file
     pofiles = []
@@ -298,15 +305,9 @@ class WinGeneratorBase(GeneratorBase):
           pofiles.append(POFile(po[:-3]))
 
     data = {'pofiles': pofiles}
-    self.write_with_template(os.path.join('build', 'win32', 'build_locale.bat'),
-                             'build_locale.ezt', data)
-
-    #Make the project files directory if it doesn't exist
-    #TODO win32 might not be the best path as win64 stuff will go here too
-    self.projfilesdir=os.path.join("build","win32",subdir)
-    self.rootpath = ".." + "\\.." * self.projfilesdir.count(os.sep)
-    if not os.path.exists(self.projfilesdir):
-      os.makedirs(self.projfilesdir)
+    self.write_with_template(os.path.join(self.projfilesdir,
+                                          'build_locale.bat'),
+                             'templates/build_locale.ezt', data)
 
     #Here we can add additional platforms to compile for
     self.platforms = ['Win32']
@@ -679,8 +680,10 @@ class WinGeneratorBase(GeneratorBase):
       path = self.neon_path + target.external_project[4:]
     elif target.external_project[:5] == 'serf/' and self.serf_lib:
       path = self.serf_path + target.external_project[4:]
-    else:
+    elif target.external_project.find('/') != -1:
       path = target.external_project
+    else:
+      path = os.path.join(self.projfilesdir, target.external_project)
 
     return "%s.%s" % (gen_base.native_path(path), proj_ext)
 
@@ -1117,7 +1120,7 @@ class WinGeneratorBase(GeneratorBase):
     if not self.zlib_path:
       return
     zlib_path = os.path.abspath(self.zlib_path)
-    self.move_proj_file(os.path.join('build', 'win32'), name,
+    self.move_proj_file(self.projfilesdir, name,
                         (('zlib_path', zlib_path),
                          ('zlib_sources',
                           glob.glob(os.path.join(zlib_path, '*.c'))
@@ -1129,6 +1132,7 @@ class WinGeneratorBase(GeneratorBase):
                           glob.glob(os.path.join(zlib_path, '*.h'))),
                          ('zlib_version', self.zlib_version),
                          ('project_guid', self.makeguid('zlib')),
+                         ('use_ml', self.have_ml and 1 or None),
                         ))
 
   def write_neon_project_file(self, name):
@@ -1183,7 +1187,7 @@ class WinGeneratorBase(GeneratorBase):
     ### these projects include zlib, neon, serf, locale, config, etc.
 
     dest_file = os.path.join(path, name)
-    source_template = name + '.ezt'
+    source_template = os.path.join('templates', name + '.ezt')
     data = {
       'version' : self.vcproj_version,
       'configs' : self.configs,
