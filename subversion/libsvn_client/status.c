@@ -267,7 +267,7 @@ svn_client_status5(svn_revnum_t *result_rev,
   apr_array_header_t *ignores;
   svn_error_t *err;
   apr_hash_t *changelist_hash = NULL;
-  struct svn_cl__externals_store externals_store = { NULL };
+  struct svn_client__external_func_baton_t externals_store = { NULL };
 
   if (svn_path_is_url(path))
     return svn_error_return(svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
@@ -357,7 +357,7 @@ svn_client_status5(svn_revnum_t *result_rev,
 
   if (!ignore_externals)
     {
-      externals_store.pool = pool;
+      externals_store.result_pool = pool;
       externals_store.externals_new = apr_hash_make(pool);
     }
 
@@ -393,10 +393,10 @@ svn_client_status5(svn_revnum_t *result_rev,
                                     dir_abspath, target_basename,
                                     depth, get_all,
                                     no_ignore, ignores, tweak_status, &sb,
-                                    ignore_externals ? NULL
-                                                     : svn_cl__store_externals,
-                                    ignore_externals ? NULL
-                                                     : &externals_store,
+                                    ignore_externals
+                                        ? NULL
+                                        : svn_client__external_info_gatherer,
+                                    ignore_externals ? NULL : &externals_store,
                                     ctx->cancel_func, ctx->cancel_baton,
                                     pool, pool));
 
@@ -517,10 +517,10 @@ svn_client_status5(svn_revnum_t *result_rev,
       err = svn_wc_walk_status(ctx->wc_ctx, target_abspath,
                                depth, get_all, no_ignore, ignores,
                                tweak_status, &sb,
-                               ignore_externals ? NULL
-                                                : svn_cl__store_externals,
-                               ignore_externals ? NULL
-                                                : &externals_store,
+                               ignore_externals
+                                   ? NULL
+                                   : svn_client__external_info_gatherer,
+                               ignore_externals ? NULL : &externals_store,
                                ctx->cancel_func, ctx->cancel_baton,
                                pool);
 
