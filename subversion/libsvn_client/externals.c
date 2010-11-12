@@ -1392,69 +1392,33 @@ svn_client__do_external_status(svn_client_ctx_t *ctx,
   return SVN_NO_ERROR;
 }
 
-/* Implements svn_wc_externals_update_t */
-svn_error_t *
-svn_cl__store_externals(void *baton,
-                        const char *local_abspath,
-                        const svn_string_t *old_value,
-                        const svn_string_t *new_value,
-                        svn_depth_t depth,
-                        apr_pool_t *scratch_pool)
-{
-  struct svn_cl__externals_store *eb = baton;
-  apr_pool_t *dup_pool = eb->pool;
 
-  local_abspath = apr_pstrdup(dup_pool, local_abspath);
-
-  if (eb->externals_old != NULL && old_value != NULL)
-    apr_hash_set(eb->externals_new,
-                 local_abspath, APR_HASH_KEY_STRING,
-                 apr_pstrndup(dup_pool, old_value->data, old_value->len));
-
-  if (eb->externals_new != NULL && new_value != NULL)
-    apr_hash_set(eb->externals_new,
-                 local_abspath, APR_HASH_KEY_STRING,
-                 apr_pstrndup(dup_pool, new_value->data, new_value->len));
-
-  if (eb->depths != NULL)
-    apr_hash_set(eb->depths,
-                 local_abspath, APR_HASH_KEY_STRING,
-                 svn_depth_to_word(depth));
-
-  return SVN_NO_ERROR;
-}
-
-
+/* Implements the `svn_wc_externals_update_t' interface. */
 svn_error_t *
 svn_client__external_info_gatherer(void *baton,
                                    const char *local_abspath,
-                                   const svn_string_t *old_val,
-                                   const svn_string_t *new_val,
+                                   const svn_string_t *old_value,
+                                   const svn_string_t *new_value,
                                    svn_depth_t depth,
                                    apr_pool_t *scratch_pool)
 {
   svn_client__external_func_baton_t *efb = baton;
-  const char *dup_val = NULL;
-  const char *dup_path = apr_pstrdup(efb->result_pool, local_abspath);
 
-  if (old_val)
-    {
-      dup_val = apr_pstrmemdup(efb->result_pool, old_val->data, old_val->len);
+  local_abspath = apr_pstrdup(efb->result_pool, local_abspath);
 
-      apr_hash_set(efb->externals_old, dup_path, APR_HASH_KEY_STRING, dup_val);
-    }
+  if (efb->externals_old != NULL && old_value != NULL)
+    apr_hash_set(efb->externals_old, local_abspath, APR_HASH_KEY_STRING,
+                 apr_pstrndup(efb->result_pool,
+                              old_value->data, old_value->len));
 
-  if (new_val)
-    {
-      /* In most cases the value is identical */
-      if (old_val != new_val)
-        dup_val = apr_pstrmemdup(efb->result_pool, new_val->data, new_val->len);
+  if (efb->externals_new != NULL && new_value != NULL)
+    apr_hash_set(efb->externals_new, local_abspath, APR_HASH_KEY_STRING,
+                 apr_pstrndup(efb->result_pool,
+                              new_value->data, new_value->len));
 
-      apr_hash_set(efb->externals_new, dup_path, APR_HASH_KEY_STRING, dup_val);
-    }
-
-  apr_hash_set(efb->ambient_depths, dup_path, APR_HASH_KEY_STRING,
-               svn_depth_to_word(depth));
+  if (efb->ambient_depths != NULL)
+    apr_hash_set(efb->ambient_depths, local_abspath, APR_HASH_KEY_STRING,
+                 svn_depth_to_word(depth));
 
   return SVN_NO_ERROR;
 }

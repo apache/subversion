@@ -898,27 +898,6 @@ svn_client__do_commit(const char *base_url,
 
 /*** Externals (Modules) ***/
 
-struct svn_cl__externals_store
-{
-  apr_pool_t *pool;
-  apr_hash_t *externals_old;
-  apr_hash_t *externals_new;
-  apr_hash_t *depths;
-};
-
-/* Implements svn_wc_external_update_t handler, storing the received
-   data in a svn_cl__externals_store instance, which must be passed as
-   BATON.  Ignore (and don't try to update) any of the BATON's hash
-   members when they are NULL.  */
-svn_error_t *
-svn_cl__store_externals(void *baton,
-                        const char *local_abspath,
-                        const svn_string_t *old_value,
-                        const svn_string_t *new_value,
-                        svn_depth_t depth,
-                        apr_pool_t *scratch_pool);
-
-
 /* Handle changes to the svn:externals property described by EXTERNALS_OLD,
    EXTERNALS_NEW, and AMBIENT_DEPTHS.  The tree's top level directory
    is at TO_ABSPATH and corresponds to FROM_URL URL in the repository,
@@ -1022,20 +1001,24 @@ svn_client__crawl_for_externals(apr_hash_t **externals_p,
                                 apr_pool_t *scratch_pool,
                                 apr_pool_t *result_pool);
 
-/* Baton type for svn_wc__external_info_gatherer().  All fields must be
-   populated before use. */
+/* Baton type for svn_wc__external_info_gatherer(). */
 typedef struct svn_client__external_func_baton_t
 {
-  apr_hash_t *externals_old;
-  apr_hash_t *externals_new;
-  apr_hash_t *ambient_depths;
-  apr_pool_t *result_pool;
+  apr_hash_t *externals_old;  /* Hash of old externals property values,
+                                 or NULL if the caller doesn't care. */
+  apr_hash_t *externals_new;  /* Hash of new externals property values,
+                                 or NULL if the caller doesn't care. */
+  apr_hash_t *ambient_depths; /* Hash of ambient depth values, or NULL
+                                 if the caller doesn't care. */
+  apr_pool_t *result_pool;    /* Pool to use for all stored values. */
 
 } svn_client__external_func_baton_t;
 
 
 /* This function gets invoked whenever external changes are encountered.
-   This implements svn_wc_external_update_t */
+   This implements the `svn_wc_external_update_t' interface, and can
+   be used with an svn_client__external_func_baton_t BATON to gather
+   information about changes to externals definitions. */
 svn_error_t *
 svn_client__external_info_gatherer(void *baton,
                                    const char *local_abspath,
