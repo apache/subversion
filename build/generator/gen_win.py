@@ -255,8 +255,9 @@ class WinGeneratorBase(GeneratorBase):
     # Find Sqlite
     self._find_sqlite()
 
-    # Look for ML
+    # Look for ZLib and ML
     if self.zlib_path:
+      self._find_zlib()
       self._find_ml()
 
     # Find neon version
@@ -284,6 +285,7 @@ class WinGeneratorBase(GeneratorBase):
     # Generate the build_zlib.bat file
     if self.zlib_path:
       data = {'zlib_path': os.path.abspath(self.zlib_path),
+              'zlib_version': self.zlib_version,
               'use_ml': self.have_ml and 1 or None}
       bat = os.path.join('build', 'win32', 'build_zlib.bat')
       self.write_with_template(bat, 'build_zlib.ezt', data)
@@ -1125,6 +1127,7 @@ class WinGeneratorBase(GeneratorBase):
                                                    'contrib/masmx86/*.asm'))),
                          ('zlib_headers',
                           glob.glob(os.path.join(zlib_path, '*.h'))),
+                         ('zlib_version', self.zlib_version),
                          ('project_guid', self.makeguid('zlib')),
                         ))
 
@@ -1543,6 +1546,32 @@ class WinGeneratorBase(GeneratorBase):
       sys.exit(1)
     else:
       print(msg % self.sqlite_version)
+
+  def _find_zlib(self):
+    "Find the ZLib library and version"
+    
+    if not self.zlib_path:
+      self.zlib_version = '1'
+      return
+    
+    header_file = os.path.join(self.zlib_path, 'zlib.h')
+    
+    if not os.path.exists(header_file):
+      self.zlib_version = '1'
+      return
+      
+    fp = open(header_file)
+    txt = fp.read()
+    fp.close()
+    vermatch = re.search(r'^\s*#define\s+ZLIB_VERSION\s+"(\d+)\.(\d+)\.(\d+)(?:\.\d)?"', txt, re.M)
+
+    version = tuple(map(int, vermatch.groups()))
+    
+    self.zlib_version = '%d.%d.%d' % version
+
+    msg = 'Found ZLib version %s\n'
+
+    print(msg % self.zlib_version)
 
 class ProjectItem:
   "A generic item class for holding sources info, config info, etc for a project"
