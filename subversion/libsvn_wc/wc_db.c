@@ -7872,7 +7872,6 @@ svn_wc__db_read_conflict_victims(const apr_array_header_t **victims,
   const char *local_relpath;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
-  apr_hash_t *conflict_items;
 
   /* The parent should be a working copy directory. */
   SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
