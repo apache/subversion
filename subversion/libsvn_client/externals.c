@@ -1425,7 +1425,6 @@ svn_cl__store_externals(void *baton,
 }
 
 
-
 svn_error_t *
 svn_client__external_info_gatherer(void *baton,
                                    const char *local_abspath,
@@ -1457,5 +1456,58 @@ svn_client__external_info_gatherer(void *baton,
   apr_hash_set(efb->ambient_depths, dup_path, APR_HASH_KEY_STRING,
                svn_depth_to_word(depth));
 
+  return SVN_NO_ERROR;
+}
+
+
+/* Callback of type svn_wc_external_update_t.  Just squirrels away an
+   svn:externals property value into BATON (which is an apr_hash_t *
+   keyed on local absolute path).  */
+static svn_error_t *
+externals_update_func(void *baton,
+                      const char *local_abspath,
+                      const svn_string_t *old_val,
+                      const svn_string_t *new_val,
+                      svn_depth_t depth,
+                      apr_pool_t *scratch_pool)
+{
+  apr_hash_t *externals_hash = baton;
+  apr_pool_t *hash_pool = apr_hash_pool_get(externals_hash);
+
+  apr_hash_set(externals_hash, apr_pstrdup(hash_pool, local_abspath),
+               APR_HASH_KEY_STRING, svn_string_dup(new_val, hash_pool));
+  return SVN_NO_ERROR;
+}
+
+
+/* Callback of type svn_wc_status_func4_t.  Does nothing. */
+static svn_error_t *
+status_noop_func(void *baton,
+                 const char *local_abspath,
+                 const svn_wc_status3_t *status,
+                 apr_pool_t *scratch_pool)
+{
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_client__crawl_for_externals(apr_hash_t **externals_p,
+                                const char *local_abspath,
+                                svn_depth_t depth,
+                                svn_client_ctx_t *ctx,
+                                apr_pool_t *scratch_pool,
+                                apr_pool_t *result_pool)
+{
+  apr_hash_t *externals_hash = apr_hash_make(result_pool);
+
+  /* Do a status run just to harvest externals definitions. */
+  SVN_ERR(svn_wc_walk_status(ctx->wc_ctx, local_abspath, depth,
+                             FALSE, FALSE, NULL, status_noop_func, NULL,
+                             externals_update_func, externals_hash,
+                             ctx->cancel_func, ctx->cancel_baton,
+                             scratch_pool));
+
+  *externals_p = externals_hash;
   return SVN_NO_ERROR;
 }

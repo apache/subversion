@@ -1011,6 +1011,17 @@ svn_client__do_external_status(svn_client_ctx_t *ctx,
                                void *status_baton,
                                apr_pool_t *pool);
 
+/* Set *EXTERNALS_P to a hash mapping const char * local absolute
+   paths to const svn_string_t * svn:externals property values, those
+   found by crawling LOCAL_ABSPATH to DEPTH. */
+svn_error_t *
+svn_client__crawl_for_externals(apr_hash_t **externals_p,
+                                const char *local_abspath,
+                                svn_depth_t depth,
+                                svn_client_ctx_t *ctx,
+                                apr_pool_t *scratch_pool,
+                                apr_pool_t *result_pool);
+
 
 
 /* Retrieve log messages using the first provided (non-NULL) callback
