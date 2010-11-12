@@ -129,7 +129,7 @@ extern "C" {
  * Please document any further format changes here.
  */
 
-#define SVN_WC__VERSION 20
+#define SVN_WC__VERSION 21
 
 /* Formats <= this have no concept of "revert text-base/props".  */
 #define SVN_WC__NO_REVERT_FILES 4
