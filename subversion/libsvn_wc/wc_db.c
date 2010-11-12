@@ -6791,10 +6791,12 @@ scan_addition(svn_wc__db_status_t *status,
               apr_pool_t *scratch_pool)
 {
   const char *current_relpath = local_relpath;
-  const char *child_relpath = NULL;
   const char *build_relpath = "";
   svn_wc__db_wcroot_t *wcroot = pdh->wcroot;
+#ifndef SVN_WC__OP_DEPTH
   svn_boolean_t found_info = FALSE;
+  const char *child_relpath = NULL;
+#endif
 
   /* Initialize most of the OUT parameters. Generally, we'll only be filling
      in a subset of these, so it is easier to init all up front. Note that
