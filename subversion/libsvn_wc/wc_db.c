@@ -6036,17 +6036,19 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
                            apr_pool_t *scratch_pool)
 {
   svn_wc__db_pdh_t *pdh;
+  const char *local_dir_relpath;
   svn_wc__db_status_t status;
   struct relocate_baton rb;
-  const char *old_repos_root_url, *stored_local_dir_abspath;
+  const char *old_repos_root_url, *stored_local_dir_relpath;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_dir_abspath));
   /* ### assert that we were passed a directory?  */
 
-  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &rb.local_relpath, db,
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_dir_relpath, db,
                               local_dir_abspath, svn_sqlite__mode_readonly,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
+  rb.local_relpath = local_dir_relpath;
 
   SVN_ERR(read_info(&status,
                     NULL, NULL,
@@ -6063,22 +6065,22 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
     {
       /* The parent cannot be excluded, so look at the parent and then
          adjust the relpath */
-      const char *parent_abspath = svn_dirent_dirname(local_dir_abspath,
-                                                      scratch_pool);
-      SVN_ERR(svn_wc__db_read_info(&status,
-                                   NULL, NULL,
-                                   &rb.repos_relpath, &old_repos_root_url,
-                                   &rb.repos_uuid,
-                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL,
-                                   db, parent_abspath,
-                                   scratch_pool, scratch_pool));
-      stored_local_dir_abspath = local_dir_abspath;
-      local_dir_abspath = parent_abspath;
+      const char *parent_relpath = svn_relpath_dirname(local_dir_relpath,
+                                                       scratch_pool);
+      SVN_ERR(read_info(&status,
+                        NULL, NULL,
+                        &rb.repos_relpath, &old_repos_root_url,
+                        &rb.repos_uuid,
+                        NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                        NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                        NULL, NULL, NULL, NULL,
+                        pdh, parent_relpath,
+                        scratch_pool, scratch_pool));
+      stored_local_dir_relpath = rb.local_relpath;
+      local_dir_relpath = parent_relpath;
     }
   else
-    stored_local_dir_abspath = NULL;
+    stored_local_dir_relpath = NULL;
 
   if (!rb.repos_relpath || !old_repos_root_url || !rb.repos_uuid)
     {
@@ -6089,56 +6091,56 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
 
       if (status == svn_wc__db_status_deleted)
         {
-          const char *work_del_abspath;
-          SVN_ERR(svn_wc__db_scan_deletion(NULL, NULL, NULL,
-                                           &work_del_abspath,
-                                           db, local_dir_abspath,
-                                           scratch_pool, scratch_pool));
-          if (work_del_abspath)
+          const char *work_del_relpath;
+          SVN_ERR(scan_deletion(NULL, NULL, NULL, &work_del_relpath,
+                                pdh, local_dir_relpath,
+                                scratch_pool, scratch_pool));
+          if (work_del_relpath)
             {
               /* Deleted within a copy/move */
-              SVN_ERR_ASSERT(!stored_local_dir_abspath);
-              stored_local_dir_abspath = local_dir_abspath;
+              SVN_ERR_ASSERT(!stored_local_dir_relpath);
+              stored_local_dir_relpath = rb.local_relpath;
 
               /* The parent of the delete is added. */
               status = svn_wc__db_status_added;
-              local_dir_abspath = svn_dirent_dirname(work_del_abspath,
-                                                     scratch_pool);
+              local_dir_relpath = svn_relpath_dirname(work_del_relpath,
+                                                      scratch_pool);
             }
         }
 
       if (status == svn_wc__db_status_added)
         {
-          SVN_ERR(svn_wc__db_scan_addition(NULL, NULL,
-                                           &rb.repos_relpath,
-                                           &old_repos_root_url, &rb.repos_uuid,
-                                           NULL, NULL, NULL, NULL,
-                                           db, local_dir_abspath,
-                                           scratch_pool, scratch_pool));
+          SVN_ERR(scan_addition(NULL, NULL,
+                                &rb.repos_relpath, &rb.old_repos_id,
+                                NULL, NULL, NULL,
+                                pdh, local_dir_relpath,
+                                scratch_pool, scratch_pool));
         }
       else
-        SVN_ERR(svn_wc__db_scan_base_repos(&rb.repos_relpath,
-                                           &old_repos_root_url, &rb.repos_uuid,
-                                           db, local_dir_abspath,
-                                           scratch_pool, scratch_pool));
+        SVN_ERR(scan_upwards_for_repos(&rb.old_repos_id, &rb.repos_relpath,
+                                       pdh->wcroot, local_dir_relpath,
+                                       scratch_pool, scratch_pool));
+
+      SVN_ERR(fetch_repos_info(&old_repos_root_url, &rb.repos_uuid,
+                               pdh->wcroot->sdb, rb.old_repos_id,
+                               scratch_pool));
+    }
+  else
+    {
+      SVN_ERR(fetch_repos_id(&rb.old_repos_id, old_repos_root_url, rb.repos_uuid,
+                             pdh->wcroot->sdb, scratch_pool));
     }
 
   SVN_ERR_ASSERT(rb.repos_relpath && old_repos_root_url && rb.repos_uuid);
 
-  if (stored_local_dir_abspath)
+  if (stored_local_dir_relpath)
     {
-      /* Adjust to get value suitable for local_dir_abspath */
-      const char *part = svn_dirent_is_child(local_dir_abspath,
-                                             stored_local_dir_abspath,
-                                             scratch_pool);
+      const char *part = svn_relpath_is_child(local_dir_relpath,
+                                              stored_local_dir_relpath,
+                                              scratch_pool);
       rb.repos_relpath = svn_relpath_join(rb.repos_relpath, part,
                                           scratch_pool);
-      local_dir_abspath = stored_local_dir_abspath;
     }
-
-
-  SVN_ERR(fetch_repos_id(&rb.old_repos_id, old_repos_root_url, rb.repos_uuid,
-                         pdh->wcroot->sdb, scratch_pool));
 
   rb.wc_id = pdh->wcroot->wc_id;
   rb.repos_root_url = repos_root_url;
