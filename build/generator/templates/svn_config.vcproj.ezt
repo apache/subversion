@@ -74,7 +74,7 @@
 			</FileConfiguration>
 [end][end]		</File>
 [for sql]		<File
-			RelativePath="../../[sql.source]">
+			RelativePath="../../../[sql.source]">
 [for platforms][for configs]			<FileConfiguration
 				Name="[configs]|[platforms]">
 				<Tool

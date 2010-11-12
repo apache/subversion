@@ -58,7 +58,7 @@
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">..\..\subversion\svn_private_config.h;%(Outputs)</Outputs>
 [end][end]    </CustomBuild>
-[for sql]    <CustomBuild Include="..\..\[sql.source]">
+[for sql]    <CustomBuild Include="..\..\..\[sql.source]">
       <FileType>Document</FileType>
 [for configs][for platforms]      <Message Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">Generating [sql.header].</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">"[sql.svn_python]" "$(SolutionDir)\build\transform_sql.py" "%(FullPath)" "$(SolutionDir)\[sql.header]"</Command>
