@@ -9110,18 +9110,14 @@ make_copy_txn(void *baton,
 
   if (mcb->is_root && (add_working_normal || add_working_not_present))
     {
-      const char *repos_relpath, *repos_root_url, *repos_uuid;
+      const char *repos_relpath;
       apr_int64_t repos_id;
       /* Make sure the copy origin is set on the root even if the node
          didn't have a local relpath */
 
-      SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath, &repos_root_url,
-                                         &repos_uuid, mcb->db,
-                                         mcb->local_abspath,
-                                         iterpool, iterpool));
-
-      SVN_ERR(fetch_repos_id(&repos_id, repos_root_url, repos_uuid, sdb,
-                             iterpool));
+      SVN_ERR(scan_upwards_for_repos(&repos_id, &repos_relpath,
+                                     mcb->pdh->wcroot, mcb->local_relpath,
+                                     iterpool, iterpool));
 
       /* ### this is not setting the COPYFROM_REVISION column!!  */
       /* ### The regression tests passed without this, is it necessary? */
