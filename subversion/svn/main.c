@@ -367,6 +367,7 @@ const apr_getopt_option_t svn_cl__options[] =
   {"iw",            opt_ignore_whitespace, 0, NULL},
   {"idiff",         opt_internal_diff, 0, NULL},
   {"keep-locks",    opt_no_unlock, 0, NULL},
+  {"keep-cl",       opt_keep_changelists, 0, NULL},
 
   {0,               0, 0, 0},
 };
