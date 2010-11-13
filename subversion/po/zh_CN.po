@@ -55,9 +55,9 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.7\n"
 "Report-Msgid-Bugs-To: dev@subversion.apache.org\n"
-"POT-Creation-Date: 2010-11-13 14:29+0800\n"
+"POT-Creation-Date: 2010-11-13 23:36+0800\n"
 "PO-Revision-Date: 2010-11-13 15:59+0800\n"
-"Last-Translator: Dongsheng Song <dongsheng.song@gmail.com>\n"
+"Last-Translator: Subversion Developers <dev@subversion.apache.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.apache.org>\n"
 "Language: \n"
 "MIME-Version: 1.0\n"
@@ -1446,25 +1446,23 @@ msgid ""
 "Merge from foreign repository is not compatible with mergeinfo modification"
 msgstr "从外部版本库合并与合并信息修改不兼容"
 
-#, fuzzy, c-format
+#, c-format
 msgid "Merge target '%s' does not exist in the working copy"
-msgstr "路径 “%s” 不在工作副本中"
+msgstr "合并目标 “%s” 不在工作副本中"
 
-#, fuzzy
 msgid "Cannot merge into a working copy with a switched subtree"
-msgstr "不能复兴到包含已经切换子目录的工作副本"
+msgstr "不能合并到已经切换子目录的工作副本中"
 
-#, fuzzy
 msgid "Cannot merge into a working copy that has local modifications"
-msgstr "不能复兴到有本地修改的工作副本"
+msgstr "不能合并到有本地修改的工作副本中"
 
 msgid "Cannot determine revision of working copy"
 msgstr "不能确定工作副本的版本"
 
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Cannot merge into mixed-revision working copy [%lu:%lu]; try updating first"
-msgstr "不能复兴到有混合版本的工作副本；请先更新"
+msgstr "不能合并到有混合版本的工作副本 [%lu:%lu] 中；请先更新"
 
 msgid "Merge sources must both be either paths or URLs"
 msgstr "合并源必须同时是路径或 URL"
@@ -2195,9 +2193,9 @@ msgstr "事务未结束: “%s”"
 msgid "Transaction is dead: '%s'"
 msgstr "事务已结束: “%s”"
 
-#, fuzzy, c-format
+#, c-format
 msgid "revprop '%s' has unexpected value in filesystem"
-msgstr "“%s”在文件系统“%s”中不是文件"
+msgstr "revprop“%s”在文件系统中有不期望的值"
 
 msgid "Transaction aborted, but cleanup failed"
 msgstr "事务终止，但清除失败"
@@ -2393,9 +2391,9 @@ msgstr "因为其它进程正在写入以前版本，所以不能为事务 '%s' 
 msgid "Can't get exclusive lock on file '%s'"
 msgstr "不能获取文件“%s”的排它锁"
 
-#, fuzzy, c-format
+#, c-format
 msgid "Format file '%s' contains unexpected non-digit '%c' within '%s'"
-msgstr "格式文件“%s”包含一个意外的非数字字符"
+msgstr "格式文件“%s”包含意外的非数字字符 '%c' 在 '%s' 中"
 
 #, c-format
 msgid "Can't read first line of format file '%s'"
@@ -2666,11 +2664,12 @@ msgstr "“%s” 不是会话 URL “%s” 的子节点"
 msgid "'%s' isn't a child of repository root URL '%s'"
 msgstr "“%s” 不是版本库根 URL “%s” 的子节点"
 
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Specifying 'old_value_p' is not allowed when the '%s' capability is not "
 "advertised, and could indicate a bug in your client"
-msgstr "不允许通过版本库接口存储非正规属性“%s”，它说明您的客户端有漏洞"
+msgstr ""
+"当特性 '%s' 没有广告时，不允许指定 'old_value_p'，也说明您的客户端有问题"
 
 msgid "Obliterate is not supported by this Repository Access method"
 msgstr "此版本库存取方法不支持灭迹"
@@ -3228,9 +3227,8 @@ msgstr ""
 "没有凭证或已经试了太多次。\n"
 "认证失败"
 
-#, fuzzy
 msgid "Proxy authentication failed"
-msgstr "认证失败"
+msgstr "代理认证失败"
 
 #, c-format
 msgid "Premature EOF seen from server (http status=%d)"
@@ -3586,14 +3584,14 @@ msgstr ""
 "警告:  装载这个转存到空的版本库会失败。\n"
 "\n"
 
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "WARNING: Mergeinfo referencing revision(s) prior to the oldest dumped "
 "revision (%ld).\n"
 "WARNING: Loading this dump may result in invalid mergeinfo.\n"
 msgstr ""
-"警告: 版本 %ld 的参考数据比最旧的转存数据版本 (%ld)还旧。\n"
-"警告:  装载这个转存到空的版本库会失败。\n"
+"警告: 合并信息引用的版本早于最早的转存版本 (%ld)。\n"
+"警告:  加载此转储到可能导致无效的合并信息。\n"
 "\n"
 
 #, c-format
@@ -4391,11 +4389,11 @@ msgstr "“%s” 的第一行包含了非数字"
 msgid "Can't create temporary file from template '%s'"
 msgstr "无法从模版“%s”创建临时文件"
 
-#, fuzzy, c-format
+#, c-format
 msgid "Can't set aside '%s'"
-msgstr "不能取得“%s”的状态"
+msgstr "不能搁置“%s”"
 
-#, fuzzy, c-format
+#, c-format
 msgid "Unable to make name in '%s'"
 msgstr "不能为 “%s” 产生名字"
 
@@ -4725,9 +4723,9 @@ msgstr "SQLite 由于 %s 导致热复制失败"
 msgid "File '%s' has inconsistent newlines"
 msgstr "文件 “%s” 内的换行符不一致"
 
-#, fuzzy, c-format
+#, c-format
 msgid "Could not convert '%s' into a number"
-msgstr "无法连接到服务器"
+msgstr "无法转换 '%s' 到数字"
 
 #, c-format
 msgid "Number '%s' is out of range '[%llu, %llu]'"
@@ -4818,13 +4816,13 @@ msgstr "“%s”的版本不一致: 找到 %d.%d.%d%s，期望 %d.%d.%d%s"
 msgid "Malformed XML: %s at line %ld"
 msgstr "非法 XML: %s 在第 %ld 行"
 
-#, fuzzy, c-format
+#, c-format
 msgid "The existing node '%s' can not be restored."
-msgstr "找不到节点 '%s'。"
+msgstr "已有节点 '%s' 不能恢复。"
 
-#, fuzzy, c-format
+#, c-format
 msgid "The node '%s' can not be restored."
-msgstr "找不到节点 '%s'。"
+msgstr "节点 '%s' 不能恢复。"
 
 #, c-format
 msgid "Can't retrieve base revision for %s"
@@ -4833,13 +4831,13 @@ msgstr "不能获取 %s 的基础版本"
 msgid "Error aborting report"
 msgstr "取消报告出错"
 
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Checksum mismatch for text base of '%s':\n"
 "   expected:  %s\n"
 "     actual:  %s\n"
 msgstr ""
-"'%s' 的校验和不匹配:\n"
+"'%s' 原始内容的校验和不匹配:\n"
 "      期望:  %s\n"
 "      实际:  %s\n"
 
@@ -4855,17 +4853,17 @@ msgstr "“%s”不是一个有效的管理目录名"
 msgid "Node '%s' has no pristine text"
 msgstr "节点 '%s' 没有原始内容"
 
-#, fuzzy, c-format
+#, c-format
 msgid "Node '%s' has no pristine base text"
-msgstr "“%s” 不在基线资源中"
+msgstr "节点 '%s' 没有原始内容"
 
-#, fuzzy, c-format
+#, c-format
 msgid "File '%s' has no text base"
-msgstr "文件 “%s” 内的换行符不一致"
+msgstr "文件 '%s' 没有原始内容"
 
-#, fuzzy, c-format
+#, c-format
 msgid "Base node of '%s' is not a file"
-msgstr "路径“%s”不是文件"
+msgstr "'%s' 的基础节点不是文件"
 
 #, c-format
 msgid "Can only get the pristine contents of files; '%s' is not a file"
@@ -4894,9 +4892,9 @@ msgstr "URL “%s” 不匹配现有 URL “%s” 于 “%s”"
 msgid "'%s' cannot be deleted"
 msgstr "'%s' 不能被删除"
 
-#, fuzzy, c-format
+#, c-format
 msgid "Can't find parent directory's node while trying to add '%s'"
-msgstr "增加 “%s” 时无法找到父目录入口"
+msgstr "增加 “%s” 时无法找到父目录节点"
 
 #, c-format
 msgid "Can't add '%s' to a parent directory scheduled for deletion"
@@ -4950,10 +4948,10 @@ msgstr "文件“%s”有本地修改"
 msgid "'%s' is a directory, and thus cannot be a member of a changelist"
 msgstr "“%s” 是目录，因此不能是修改列表的成员"
 
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Can't add a file external to '%s' as it is not a file in repository '%s'."
-msgstr "不能从 “%s” 插入外部引用的文件到工作副本，它来源于不同的版本库根 “%s”"
+msgstr "不能增加外部文件到 '%s'，因为它不是版本库 '%s' 中的文件。"
 
 #, c-format
 msgid "'%s' is not a working copy directory"
@@ -4970,13 +4968,13 @@ msgid ""
 "Tree conflicts can only be resolved to 'working' state; '%s' not resolved"
 msgstr "树冲突只能解决为 “working” 状态；“%s” 还没有解决"
 
-#, fuzzy, c-format
+#, c-format
 msgid "Source '%s' is unexpected kind"
-msgstr "源 “%s” 不是目录"
+msgstr "源 “%s” 具有意外的类型"
 
-#, fuzzy, c-format
+#, c-format
 msgid "cannot handle node kind for '%s'"
-msgstr "“%s” 是未知的节点类型"
+msgstr "不能为 '%s'“处理节点类型"
 
 #, c-format
 msgid "Cannot copy to '%s', as it is not from repository '%s'; it is from '%s'"
@@ -5038,9 +5036,9 @@ msgstr "无法修剪 '%s': 它将要增加到版本库中。请先提交"
 msgid "Unexpectedly found '%s': path is marked 'missing'"
 msgstr "意外发现“%s”: 路径被标记为“丢失”"
 
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is not a versioned working copy"
-msgstr "“%s”不是工作副本"
+msgstr "“%s”不是已版本控制的工作副本"
 
 #, c-format
 msgid "Admin area of '%s' is missing"
@@ -5098,9 +5096,9 @@ msgstr "工作副本“%s”未被锁定"
 msgid "No write-lock in '%s'"
 msgstr "“%s”没有写入锁定"
 
-#, fuzzy, c-format
+#, c-format
 msgid "Can't obtain lock on non-directory '%s'."
-msgstr "不能获取非目录对象 '%s' 的访问权"
+msgstr "不能获取非目录对象 '%s' 的锁"
 
 msgid "Conflict callback violated API: returned no results"
 msgstr "冲突的回调函数违反 API：没有返回结果。"
@@ -5180,9 +5178,9 @@ msgstr "无效的条目终止符"
 msgid "Error at entry %d in entries file for '%s':"
 msgstr "条目文件中的条目 %d 出错于 “%s”"
 
-#, fuzzy, c-format
+#, c-format
 msgid "The property '%s' may not be merged into '%s'."
-msgstr "删除属性 “%s” 于 “%s”。\n"
+msgstr "属性 “%s” 不能合并到 “%s”。"
 
 #, c-format
 msgid ""
@@ -5198,31 +5196,37 @@ msgid ""
 "but it has been locally deleted."
 msgstr "试图增加新属性 “%s”，值为 “%s”，但是它已经在本地被删除。"
 
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Trying to delete property '%s' with value '%s',\n"
 "but property has been locally added with value '%s'."
 msgstr ""
-"试图把属性 “%s” 的值从 “%s” 改为 “%s”，\n"
+"试图删除属性 '%s'，取值为 '%s'，\n"
 "但是已经本地增加此属性，取值为 “%s”。"
 
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Trying to delete property '%s' with value '%s',\n"
 "but it has been modified from '%s' to '%s'."
-msgstr "试图删除属性 “%s”，值为 “%s”，但是其值已经从 “%s” 改为 “%s”。"
+msgstr ""
+"试图删除属性 '%s'，取值为 '%s'，\n"
+"但是其值已经从 “%s” 改为 “%s”。"
 
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Trying to delete property '%s' with value '%s',\n"
 "but property with value '%s' is locally deleted."
-msgstr "试图增加新属性 “%s”，值为 “%s”，但是它已经在本地被删除。"
+msgstr ""
+"试图删除属性 '%s'，取值为 '%s'，\n"
+"但是它已经在本地被删除，取值为 '%s'。"
 
 #, fuzzy, c-format
 msgid ""
 "Trying to delete property '%s' with value '%s',\n"
 "but the local value is '%s'."
-msgstr "试图删除属性 “%s”，值为 “%s”，但是其本地取值为 “%s”。"
+msgstr ""
+"试图删除属性 '%s'，取值为 '%s'，\n"
+"但是已经本地增加此属性，取值为 “%s”。"
 
 #, c-format
 msgid ""
@@ -5274,9 +5278,8 @@ msgstr "冲突的回调函数违反 API：没有返回合并文件。"
 msgid "Property '%s' is an entry property"
 msgstr "属性 “%s” 是条目属性"
 
-#, fuzzy
 msgid "Failed to load properties"
-msgstr "无法从磁盘装载属性"
+msgstr "加载属性失败"
 
 #, c-format
 msgid "Cannot set '%s' on a directory ('%s')"
@@ -5298,13 +5301,12 @@ msgstr "文件“%s”有二进制的 mime 类型属性"
 msgid "Can't set properties on '%s': invalid status for updating properties."
 msgstr "不能对 '%s' 设置属性: 对于更新属性，状态非法。"
 
-#, fuzzy
 msgid "Failed to load current properties"
-msgstr "无法从磁盘装载属性"
+msgstr "加载当前属性失败"
 
-#, fuzzy, c-format
+#, c-format
 msgid "Unrecognized line ending style '%s' for '%s'"
-msgstr "“%s” 含有无法识别的行结束样式"
+msgstr "无法识别的行结束样式 '%s'，对于 '%s'"
 
 #, c-format
 msgid "Cannot set non-inheritable mergeinfo on a non-directory ('%s')"
@@ -5348,15 +5350,15 @@ msgstr ""
 "       期望:  %s\n"
 "       实际:  %s\n"
 
-#, fuzzy, c-format
+#, c-format
 msgid "Cannot relocate '%s' as it is not the root of a working copy"
-msgstr "不能排除 '%s': 它是工作副本根目录"
+msgstr "不能重新定位 '%s'，因为它不是工作副本根目录"
 
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Cannot relocate '%s' as it is not the root of a working copy; try relocating "
 "'%s' instead"
-msgstr "无法复制或移动“%s”: 它不在版本库中；请先提交"
+msgstr "不能重新定位 '%s'，因为它不是工作副本根目录；请重新定位 '%s'"
 
 msgid "Cannot relocate a single file"
 msgstr "无法重新定位单个文件"
@@ -5365,9 +5367,9 @@ msgstr "无法重新定位单个文件"
 msgid "Invalid source URL prefix: '%s' (does not overlap target's URL '%s')"
 msgstr "非法源 URL 前缀: '%s' (不与目标的 URL '%s' 交叠)"
 
-#, fuzzy, c-format
+#, c-format
 msgid "Invalid destination URL: '%s'"
-msgstr "提供的目的 URL 非法: '%s'"
+msgstr "目标 URL 非法: '%s'"
 
 msgid "Unknown enumeration value in tree conflict description"
 msgstr "树冲突描述中有未知的枚举值"
@@ -5457,9 +5459,9 @@ msgstr ""
 msgid "Unrecognized node kind: '%s'"
 msgstr "无法识别的节点种类: “%s”"
 
-#, fuzzy, c-format
+#, c-format
 msgid "Node '%s' exists."
-msgstr "文件“%s”已存在"
+msgstr "节点“%s”已存在"
 
 #, c-format
 msgid "Copyfrom-url '%s' has different repository root than '%s'"
@@ -5499,9 +5501,9 @@ msgid ""
 "upgrade it"
 msgstr "工作副本 '%s' 的格式是 18; 请使用 'tools/dev/wc-ng/bump-to-19.py' 升级"
 
-#, fuzzy, c-format
+#, c-format
 msgid "Cannot upgrade '%s' as it is not a pre-1.7 working copy root"
-msgstr "不能排除 '%s': 它是工作副本根目录"
+msgstr "不能升级 '%s'，因为它不是 1.7 之前的工作副本根目录"
 
 #, c-format
 msgid "'%s' is not a directory"
@@ -5511,39 +5513,39 @@ msgstr "“%s”不是目录"
 msgid "No REPOSITORY table entry for id '%ld'"
 msgstr "对于标识 '%ld' 没有 REPOSITORY 表入口"
 
-#, fuzzy, c-format
+#, c-format
 msgid "The node '%s' is not in a workingcopy."
-msgstr "路径 “%s” 不在工作副本中"
+msgstr "节点 “%s” 不在工作副本中"
 
 #, c-format
 msgid "The node '%s' has a corrupt checksum value."
 msgstr "节点 '%s' 的校验和损坏。"
 
-#, fuzzy, c-format
+#, c-format
 msgid "Pristine text not found"
-msgstr "找不到属性"
+msgstr "找不到原始内容"
 
 #, c-format
 msgid "The pristine text with checksum '%s' was not found"
 msgstr "找不到校验和为“%s”的原始内容"
 
-#, fuzzy, c-format
+#, c-format
 msgid "The pristine text with MD5 checksum '%s' was not found"
-msgstr "找不到校验和为“%s”的原始内容"
+msgstr "找不到 MD5 校验和为“%s”的原始内容"
 
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "The pristine text with checksum '%s' was found in the DB or on disk but not "
 "both"
-msgstr "找不到校验和为“%s”的原始内容"
+msgstr "在数据库或磁盘找到了校验和为“%s”的原始内容，但是没有同时存在"
 
 #, c-format
 msgid "Cannot copy '%s' excluded by server"
 msgstr "不能复制被服务器排除的 '%s'"
 
-#, fuzzy, c-format
+#, c-format
 msgid "Cannot handle status of '%s'"
-msgstr "不能取得“%s”的状态"
+msgstr "不能处理“%s”的状态"
 
 #, c-format
 msgid "Can't store properties for '%s' in '%s'."
@@ -5575,21 +5577,21 @@ msgstr "'%s' 的属性处于不确定的状态，不能更新。详情参见问�
 msgid "Repository '%s' not found in the database"
 msgstr "在数据库中找不到版本库“%s”"
 
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is already locked."
-msgstr "已经锁定路径"
+msgstr "'%s' 已经锁定。"
 
-#, fuzzy, c-format
+#, c-format
 msgid "Working copy '%s' locked."
-msgstr "工作副本“%s”已经锁定"
+msgstr "工作副本 '%s' 已经锁定。"
 
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is already locked via '%s'."
-msgstr "已经锁定路径"
+msgstr "'%s' 已经通过 '%s' 锁定。"
 
-#, fuzzy, c-format
+#, c-format
 msgid "Working copy not locked at '%s'."
-msgstr "工作副本“%s”未被锁定"
+msgstr "工作副本 '%s' 未被锁定。"
 
 #, c-format
 msgid "'%s' has no BASE_NODE"
@@ -5620,9 +5622,9 @@ msgstr "请在用此客户端升级之前，用旧的 1.7 客户端清理"
 msgid "Missing a row in WCROOT for '%s'."
 msgstr "WCROOT 中的 '%s' 丢失了一行。"
 
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is not a working copy root"
-msgstr "“%s”不是工作副本"
+msgstr "'%s' 不是工作副本根目录"
 
 #, c-format
 msgid "Missing a row in WCROOT."
@@ -5632,9 +5634,9 @@ msgstr "WCROOT 中丢失了一行。"
 msgid "Error restoring text for '%s'"
 msgstr "还原 “%s” 文本出错"
 
-#, fuzzy, c-format
+#, c-format
 msgid "Error processing post-commit work for '%s'"
-msgstr "处理命令 “%s” 于 “%s” 出错"
+msgstr "为 '%s' 处理 post-commit 出错"
 
 #, c-format
 msgid "Unrecognized work item in the queue associated with '%s'"
@@ -6177,9 +6179,8 @@ msgstr "只有在 XML 模式 “with-no-revprops” 选项才有效"
 msgid "'with-revprop' option only valid in XML mode"
 msgstr "只有在 XML 模式 “with-revprop” 选项才有效"
 
-#, fuzzy
 msgid "'diff' option is not supported in XML mode"
-msgstr "不支持指定的 diff 选项"
+msgstr "在 XML 模式不支持 'diff' 选项"
 
 #, fuzzy
 msgid "'quiet' and 'diff' options are mutually exclusive"
@@ -6197,11 +6198,11 @@ msgstr "'extensions' 选项徐啊哟 'diff' 选项"
 msgid "-c and -r are mutually exclusive"
 msgstr "-c 与 -r 是互斥的"
 
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Only relative paths can be specified after a URL for 'svn log', but '%s' is "
 "not a relative path"
-msgstr "URL 后只能指定相对路径"
+msgstr "对于 'svn log'，在 URL 后只能指定相对路径，但 '%s' 不是相对路径"
 
 #, c-format
 msgid "cannot assign with 'with-revprop' option (drop the '=')"
@@ -6228,9 +6229,8 @@ msgstr "向下递归，与 --depth=infinity 相同"
 msgid "obsolete; try --depth=files or --depth=immediates"
 msgstr "过时；尝试 --depth=files 或 --depth=immediates"
 
-#, fuzzy
 msgid "the change made by revision ARG (like -r ARG-1:ARG)\n"
-msgstr "版本 ARG 引起的改变"
+msgstr "版本 ARG (等同于 -r ARG-1:ARG) 引起的改变\n"
 
 msgid "ARG (some commands also take ARG1:ARG2 range)\n"
 msgstr "ARG (部分命令也接受 ARG1:ARG2 范围)\n"
@@ -6241,11 +6241,8 @@ msgstr "从文件ARG读取日志信息"
 msgid "give output suitable for concatenation"
 msgstr "给予适合串联的输出"
 
-#, fuzzy
 msgid "treat value as being in charset encoding ARG"
-msgstr ""
-"认为取值使用字符集编码 ARG\n"
-"                             [alias: --enc]"
+msgstr "认为取值使用字符集编码 ARG"
 
 msgid "show program version information"
 msgstr "显示程序版本信息"
@@ -6281,11 +6278,8 @@ msgstr "输出为 XML"
 msgid "use strict semantics"
 msgstr "使用严格的语法"
 
-#, fuzzy
 msgid "do not cross copies while traversing history"
-msgstr ""
-"在复制时停止遍历历史\n"
-"                             [alias: --soc]"
+msgstr "在遍历历史时不要穿越复制"
 
 msgid "disregard default and svn:ignore property ignores"
 msgstr "忽略默认值和 svn:ignore 属性"
@@ -6299,30 +6293,20 @@ msgstr "接受未知的 SSL 服务器证书，没有\n"
 msgid "do no interactive prompting"
 msgstr "不要交互提示"
 
-#, fuzzy
 msgid "try operation but make no changes"
-msgstr ""
-"尝试操作，但是不要执行改变\n"
-"                             [alias: --dry]"
+msgstr "尝试操作，但是不要执行改变"
 
 msgid "do not print differences for deleted files"
 msgstr "不要输出删除文件造成的差异"
 
-#, fuzzy
 msgid "notice ancestry when calculating differences"
-msgstr ""
-"计算差异时关注祖先\n"
-"                             [alias: --na]"
+msgstr "计算差异时关注祖先"
 
-#, fuzzy
 msgid "ignore ancestry when calculating merges"
-msgstr ""
-"计算合并时忽略祖先\n"
-"                             [alias: --ia]"
+msgstr "计算合并时忽略祖先"
 
-#, fuzzy
 msgid "ignore externals definitions"
-msgstr "处理外部引用“%s”时出错："
+msgstr "忽略处理外部定义"
 
 msgid "use ARG as diff command"
 msgstr "使用 ARG 作为比较命令"
@@ -6376,18 +6360,14 @@ msgstr "显示结果的概要"
 msgid "remove changelist association"
 msgstr "删除修改列表耦合"
 
-#, fuzzy
 msgid "operate only on members of changelist ARG"
-msgstr ""
-"只能对修改列表 ARG 成员操作\n"
-"                             [aliases: --cl]"
+msgstr "只能对修改列表 ARG 的成员操作"
 
 msgid "don't delete changelists after commit"
 msgstr "不要在提交后删除修改列表"
 
-#, fuzzy
 msgid "keep path in working copy"
-msgstr "路径不是工作副本文件"
+msgstr "在工作副本保持路径"
 
 msgid "retrieve all revision properties"
 msgstr "获取所有版本属性"
@@ -6395,16 +6375,14 @@ msgstr "获取所有版本属性"
 msgid "retrieve no revision properties"
 msgstr "没有找回版本属性"
 
-#, fuzzy
 msgid "set revision property ARG in new revision\n"
-msgstr "获取版本属性 ARG"
+msgstr "在新版本设置版本属性 ARG\n"
 
 msgid "make intermediate directories"
 msgstr "创建中间目录"
 
-#, fuzzy
 msgid "use/display additional information from merge\n"
-msgstr "从合并历史使用/显示额外信息"
+msgstr "从合并历史使用/显示额外信息\n"
 
 msgid "specify automatic conflict resolution action\n"
 msgstr "指定自动解决冲突的动作\n"
@@ -6418,13 +6396,11 @@ msgstr "合并分支回父分支"
 msgid "number of leading path components to strip from\n"
 msgstr "要修剪的前导路径组件数目\n"
 
-#, fuzzy
 msgid "don't diff copied or moved files with their source"
 msgstr "请不要将复制或移动的文件与其源文件比较"
 
-#, fuzzy
 msgid "don't expand keywords"
-msgstr "无法明确时间"
+msgstr "不要展开关键字"
 
 msgid "apply the unidiff in reverse"
 msgstr "反向应用补丁"
@@ -6441,9 +6417,8 @@ msgstr "覆盖配置文件中指定的 diff-cmd"
 msgid "use git's extended diff format"
 msgstr "使用 git 的扩展差异格式"
 
-#, fuzzy
 msgid "Allow merge into mixed-revision working copy.\n"
-msgstr "不能复兴到有混合版本的工作副本；请先更新"
+msgstr "允许合并到混合工作副本。\n"
 
 msgid ""
 "Put files and directories under version control, scheduling\n"
@@ -6484,15 +6459,14 @@ msgstr ""
 "      如果指定了版本，将从指定的版本开始查找。\n"
 "  \n"
 
-#, fuzzy
 msgid ""
 "Associate (or dissociate) changelist CLNAME with the named files.\n"
 "usage: 1. changelist CLNAME PATH...\n"
 "       2. changelist --remove PATH...\n"
 msgstr ""
-"耦合(或解耦)文件与修改列表 CLNAME。\n"
-"使用: 1. changelist CLNAME TARGET...\n"
-"      2. changelist --remove TARGET...\n"
+"耦合(或解耦)命名文件与修改列表 CLNAME。\n"
+"使用: 1. changelist CLNAME PATH...\n"
+"      2. changelist --remove PATH...\n"
 
 msgid ""
 "Check out a working copy from a repository.\n"
@@ -6537,14 +6511,12 @@ msgstr ""
 "\n"
 "  参见 “svn help update” 以获取报告执行动作的字符列表。\n"
 
-#, fuzzy
 msgid ""
 "Recursively clean up the working copy, removing locks, resuming\n"
 "unfinished operations, etc.\n"
 "usage: cleanup [WCPATH...]\n"
 msgstr ""
 "递归清理工作副本，删除锁，继续未完成操作，等等。\n"
-"\n"
 "用法: cleanup [路径...]\n"
 
 msgid ""
@@ -7758,9 +7730,9 @@ msgstr "“%s” 是非法 --accept 取值"
 msgid "'%s' is not a valid --show-revs value"
 msgstr "“%s” 是非法 --show-revs 取值"
 
-#, fuzzy, c-format
+#, c-format
 msgid "Invalid strip count '%s'"
-msgstr "复制源路径“%s”无效"
+msgstr "无效修剪计数 '%s'"
 
 msgid "Argument to --strip must be positive"
 msgstr "--strip 参数的取值必须为正"
@@ -7798,9 +7770,8 @@ msgstr "--with-revprop 与 --with-no-revprops 是互斥的"
 msgid "--trust-server-cert requires --non-interactive"
 msgstr "--trust-server-cert 需要 --non-interactive"
 
-#, fuzzy
 msgid "--diff-cmd and --internal-diff are mutually exclusive"
-msgstr "-c 与 -r 是互斥的"
+msgstr "--diff-cmd 与 --internal-diff 是互斥的"
 
 msgid "Log message file is a versioned file; use '--force-log' to override"
 msgstr "日志信息文件受版本控制；请使用 “--force-log” 强制执行"
@@ -7822,9 +7793,8 @@ msgstr "锁注释是路径名称 (本来想用-F 选项的吗？)；请使用“
 msgid "--relocate and --depth are mutually exclusive"
 msgstr "--relocate 与 --depth 是互斥的"
 
-#, fuzzy
 msgid "--relocate and --non-recursive (-N) are mutually exclusive"
-msgstr "--relocate 与 --depth 是互斥的"
+msgstr "--relocate 与 --non-recursive (-N) 是互斥的"
 
 msgid "--auto-props and --no-auto-props are mutually exclusive"
 msgstr "--auto-props 与 --no-auto-props 是互斥的"
@@ -7873,13 +7843,11 @@ msgstr "--depth 不能与 --reintegrate 共存"
 msgid "--force cannot be used with --reintegrate"
 msgstr "--force 不能与 --reintegrate 共存"
 
-#, fuzzy
 msgid "--reintegrate can only be used with a single merge source"
-msgstr "--reintegrate 不能与 --ignore-ancestry 共存"
+msgstr "--reintegrate 只能用于单一合并源"
 
-#, fuzzy
 msgid "--allow-mixed-revisions cannot be used with --reintegrate"
-msgstr "--force 不能与 --reintegrate 共存"
+msgstr "--allow-mixed-revisions 不能与 --reintegrate 共存"
 
 msgid "Not enough arguments given"
 msgstr "没有提供足够的参数"
@@ -7937,37 +7905,37 @@ msgstr "无法恢复“%s”-- 请改用更新试试。\n"
 msgid "Resolved conflicted state of '%s'\n"
 msgstr "“%s”的冲突状态已解决\n"
 
-#, fuzzy, c-format
+#, c-format
 msgid ">         applied hunk ## -%lu,%lu +%lu,%lu ## with offset %s"
-msgstr ">         应用的块 @@ -%lu,%lu +%lu,%lu @@ 偏移 %s"
+msgstr ">         应用块 ## -%lu,%lu +%lu,%lu ##，偏移 %s"
 
 #, c-format
 msgid ">         applied hunk @@ -%lu,%lu +%lu,%lu @@ with offset %s"
 msgstr ">         应用的块 @@ -%lu,%lu +%lu,%lu @@ 偏移 %s"
 
-#, fuzzy, c-format
+#, c-format
 msgid ">         applied hunk ## -%lu,%lu +%lu,%lu ## with fuzz %d (%s)\n"
-msgstr ">         应用的块 @@ -%lu,%lu +%lu,%lu @@ 模糊 %d\n"
+msgstr ">         应用块 ## -%lu,%lu +%lu,%lu ##，包含模糊 %d (%s)\n"
 
 #, c-format
 msgid ">         applied hunk @@ -%lu,%lu +%lu,%lu @@ with fuzz %d\n"
 msgstr ">         应用的块 @@ -%lu,%lu +%lu,%lu @@ 模糊 %d\n"
 
-#, fuzzy, c-format
+#, c-format
 msgid ">         rejected hunk ## -%lu,%lu +%lu,%lu ## (%s)\n"
-msgstr ">         拒绝的块 @@ -%lu,%lu +%lu,%lu @@\n"
+msgstr ">         拒绝块 ## -%lu,%lu +%lu,%lu ## (%s)\n"
 
 #, c-format
 msgid ">         rejected hunk @@ -%lu,%lu +%lu,%lu @@\n"
 msgstr ">         拒绝的块 @@ -%lu,%lu +%lu,%lu @@\n"
 
-#, fuzzy, c-format
+#, c-format
 msgid ">         hunk ## -%lu,%lu +%lu,%lu ## already applied (%s)\n"
-msgstr ">         应用的块 @@ -%lu,%lu +%lu,%lu @@ 偏移 %s"
+msgstr ">         块 ## -%lu,%lu +%lu,%lu ## 已经应用 (%s)\n"
 
-#, fuzzy, c-format
+#, c-format
 msgid ">         hunk @@ -%lu,%lu +%lu,%lu @@ already applied\n"
-msgstr ">         拒绝的块 @@ -%lu,%lu +%lu,%lu @@\n"
+msgstr ">         块 @@ -%lu,%lu +%lu,%lu @@ 已经应用\n"
 
 #, c-format
 msgid ""
@@ -8122,9 +8090,9 @@ msgid ""
 "--- Recording mergeinfo for reverse merge of r%ld through r%ld into '%s':\n"
 msgstr "--- 正在反向合并 r%ld，经由 r%ld，到 “%s”:\n"
 
-#, fuzzy, c-format
+#, c-format
 msgid "--- Eliding mergeinfo from '%s':\n"
-msgstr "--- 正在合并 r%ld 到 “%s”:\n"
+msgstr "--- 正在从 '%s' 删除合并信息:\n"
 
 #, c-format
 msgid "--- Merging differences between foreign repository URLs into '%s':\n"
@@ -8167,9 +8135,9 @@ msgstr "删除属性 “%s” 于版本库版本 %ld\n"
 msgid "Upgraded '%s'.\n"
 msgstr "已升级的“%s”。\n"
 
-#, fuzzy, c-format
+#, c-format
 msgid "Redirecting to URL '%s'\n"
-msgstr "正在读取 “%s”"
+msgstr "重定向到 URL '%s'\n"
 
 #, c-format
 msgid "Obliterate %8ld %s\n"
@@ -8316,13 +8284,13 @@ msgstr "未版本控制"
 msgid "local %s, incoming %s upon %s"
 msgstr "本地 %s，动作 %s，操作 %s"
 
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "\n"
 "Committed revision %ld%s.\n"
 msgstr ""
 "\n"
-"提交后的版本为 %ld。\n"
+"提交后的版本为 %ld%s。\n"
 
 msgid " (the answer to life, the universe, and everything)"
 msgstr " (生命，宇宙，和一切的答案)"
@@ -8526,11 +8494,10 @@ msgid ""
 "                             earlier than 1.6"
 msgstr "使用与 1.6 之前版本兼容的格式"
 
-#, fuzzy
 msgid ""
 "use format compatible with Subversion versions\n"
 "                             earlier than 1.7"
-msgstr "使用与1.4之前版本兼容的格式"
+msgstr "使用与 1.7 之前版本兼容的格式"
 
 msgid ""
 "usage: svnadmin crashtest REPOS_PATH\n"
@@ -8809,13 +8776,13 @@ msgstr "正在计算版本 %ld 差异..."
 msgid "done.\n"
 msgstr "完成。\n"
 
-#, fuzzy, c-format
+#, c-format
 msgid "Packing revisions in shard %s..."
-msgstr "正在打包破片 %s ..."
+msgstr "正在打包版本碎片 %s ..."
 
-#, fuzzy, c-format
+#, c-format
 msgid "Packing revprops in shard %s..."
-msgstr "正在打包破片 %s ..."
+msgstr "正在打包版本属性碎片 %s ..."
 
 #, c-format
 msgid ""
@@ -9521,9 +9488,9 @@ msgstr "无法获取本地主机名"
 msgid "Failed to get lock on destination repos, currently held by '%s'\n"
 msgstr "从目标版本库获得锁失败，当前被“%s”持有\n"
 
-#, fuzzy, c-format
+#, c-format
 msgid "Couldn't get lock on destination repos after %d attempts"
-msgstr "从目标版本库获得锁失败，当前被“%s”持有\n"
+msgstr "尝试 %d 次后，对目标版本库加锁失败"
 
 msgid "\"svnrdump load\"'s lock was stolen; can't remove it"
 msgstr "\"svnrdump load\" 的锁被窃；不能删除"
@@ -9550,13 +9517,12 @@ msgstr ""
 "\n"
 "从标准输入加载 'dumpfile' 到远程版本库 URL。\n"
 
-#, fuzzy
 msgid ""
 "usage: svnrdump help [SUBCOMMAND...]\n"
 "\n"
 "Describe the usage of this program or its subcommands.\n"
 msgstr ""
-"用法: svnadmin help [SUBCOMMAND...]\n"
+"用法: svnrdump help [SUBCOMMAND...]\n"
 "\n"
 "显示本程序或其子命令的用法。\n"
 
@@ -9587,9 +9553,9 @@ msgstr ""
 "\n"
 "可用的子命令: \n"
 
-#, fuzzy, c-format
+#, c-format
 msgid "Revision %ld does not exist.\n"
-msgstr "URL “%s” 在版本 %ld 中不存在"
+msgstr "版本 %ld 不存在。\n"
 
 #, c-format
 msgid "LOWER cannot be greater than UPPER.\n"
@@ -9731,9 +9697,9 @@ msgstr ""
 "\n"
 "Cyrus SASL 认证可用。\n"
 
-#, fuzzy, c-format
+#, c-format
 msgid "Invalid port '%s'"
-msgstr "无效URL“%s”"
+msgstr "无效端口“%s”"
 
 #, c-format
 msgid "svnserve: Root path '%s' does not exist or is not a directory.\n"
@@ -10037,9 +10003,9 @@ msgid ""
 "r) option"
 msgstr ""
 
-#, fuzzy, c-format
+#, c-format
 msgid "Invalid revision range '%s' provided"
-msgstr "提供了无效的版本号码"
+msgstr "提供了无效的版本范围 '%s'"
 
 #, c-format
 msgid "Repository '%s' is not initialized for synchronization"
