@@ -115,15 +115,6 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r1034557
-   Fix issue #3512 ("ruby bindings: too many open files error")
-   Justication:
-     This is a resource leak (open file handles).
-   Notes:
-     C-Mike is *not* a Ruby coder.  Your careful review is appreciated.
-   Votes:
-     +1: cmpilato, joeswatosh
-
 Veto-blocked changes:
 =====================
 
@@ -246,3 +237,12 @@ Approved changes:
                Until then, we don't need to bother our users with this.
                Especially since doing so is causing them real problems now.)
      +1: philip, rhuijben
+
+ * r1034557
+   Fix issue #3512 ("ruby bindings: too many open files error")
+   Justication:
+     This is a resource leak (open file handles).
+   Notes:
+     C-Mike is *not* a Ruby coder.  Your careful review is appreciated.
+   Votes:
+     +1: cmpilato, joeswatosh
