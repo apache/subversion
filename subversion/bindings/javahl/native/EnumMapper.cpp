@@ -114,7 +114,7 @@ jobject EnumMapper::mapReposNotifyAction(svn_repos_notify_action_t action)
 jobject EnumMapper::mapNodeKind(svn_node_kind_t nodeKind)
 {
   // We're assuming a valid value for the C enum above
-  return mapEnum(JAVA_PACKAGE"/NodeKind", (int) nodeKind);
+  return mapEnum(JAVA_PACKAGE"/type/NodeKind", (int) nodeKind);
 }
 
 /**

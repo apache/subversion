@@ -32,6 +32,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Date;
 
+import org.apache.subversion.javahl.type.NodeKind;
+
 import junit.framework.Assert;
 /**
  * This class describe the expected state of the working copy

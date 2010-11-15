@@ -25,6 +25,8 @@ package org.apache.subversion.javahl;
 
 import java.util.Date;
 
+import org.apache.subversion.javahl.type.NodeKind;
+
 /**
  * A general subversion directory entry. Used for {@link ISVNClient#list}.
  */

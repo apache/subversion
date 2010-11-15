@@ -25,6 +25,8 @@ package org.apache.subversion.javahl;
 
 import java.util.Date;
 
+import org.apache.subversion.javahl.type.NodeKind;
+
 /**
  * Subversion status API.
  * This describes the status of one subversion item (file or directory) in
