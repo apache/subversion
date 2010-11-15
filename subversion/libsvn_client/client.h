@@ -40,13 +40,15 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/* Set *URL, allocated in RESULT_POOL, and *PEG_REVNUM (the latter is
-   ignored if NULL) to the repository URL of ABSPATH_OR_URL.  If
+/* Set *URL and *PEG_REVNUM (the latter is ignored if NULL) to the
+   repository URL of ABSPATH_OR_URL as found in revision PEG_REVISION.
+   If PEG_REVISION->kind is svn_opt_revision_unspecified, use the head
+   revision for a URL or the working revision for a local path.  If
    ABSPATH_OR_URL is an absolute WC path and PEG_REVISION->kind is
    svn_opt_revision_working, use the corresponding entry's copyfrom info.
    RA_SESSION may be NULL regardless of whether ABSPATH_OR_URL is a URL.
-   Use CTX for cancellation (ignored if NULL), and SCRATCH_POOL for all
-   temporary allocations. */
+   Use CTX for authentication and for a working copy context.  Allocate
+   *URL in RESULT_POOL. Use SCRATCH_POOL for temporary allocations. */
 svn_error_t *
 svn_client__derive_location(const char **url,
                             svn_revnum_t *peg_revnum,
@@ -71,7 +73,8 @@ svn_client__derive_location(const char **url,
 
    If PEG_REV_NUM is svn_opt_revision_unspecified, svn_opt_revision_number,
    svn_opt_revision_base, or svn_opt_revision_working then set *REVNUM
-   to the base revision. */
+   to the base revision.
+   ### What's up with this last paragraph? Sounds all wrong. */
 svn_error_t *
 svn_client__entry_location(const char **url,
                            svn_revnum_t *revnum,
