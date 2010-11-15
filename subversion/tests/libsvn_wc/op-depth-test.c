@@ -1198,9 +1198,9 @@ insert_dirs(wc_baton_t *b,
       if (nodes->local_relpath[0])
         {
           SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, 2));
-          SVN_ERR(svn_sqlite__bindf(stmt, "sissis",
+          SVN_ERR(svn_sqlite__bindf(stmt, "sissrs",
                                     nodes->local_relpath,
-                                    nodes->op_depth,
+                                    (apr_int64_t)nodes->op_depth,
                                     nodes->presence,
                                     nodes->repo_relpath,
                                     nodes->repo_revnum,
@@ -1210,9 +1210,9 @@ insert_dirs(wc_baton_t *b,
       else
         {
           SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, 1));
-          SVN_ERR(svn_sqlite__bindf(stmt, "sissi",
+          SVN_ERR(svn_sqlite__bindf(stmt, "sissr",
                                     nodes->local_relpath,
-                                    nodes->op_depth,
+                                    (apr_int64_t)nodes->op_depth,
                                     nodes->presence,
                                     nodes->repo_relpath,
                                     nodes->repo_revnum));
