@@ -523,27 +523,29 @@ SELECT wc_id, local_relpath, ?3 AS op_depth, parent_relpath, ?4 AS presence,
 FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
 
--- STMT_INSERT_WORKING_NODE_NORMAL_FROM_BASE
+-- STMT_INSERT_WORKING_NODE_FROM_BASE_COPY
 INSERT INTO nodes (
     wc_id, local_relpath, op_depth, parent_relpath, repos_id, repos_path,
     revision, presence, depth, kind, changed_revision, changed_date,
     changed_author, checksum, properties, translated_size, last_mod_time,
     symlink_target )
 SELECT wc_id, local_relpath, ?3 AS op_depth, parent_relpath, repos_id,
-    repos_path, revision, 'normal', depth, kind, changed_revision,
+    repos_path, revision, presence, depth, kind, changed_revision,
     changed_date, changed_author, checksum, properties, translated_size,
     last_mod_time, symlink_target
 FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
 
-
--- STMT_INSERT_WORKING_NODE_NOT_PRESENT_FROM_BASE
+-- STMT_INSERT_WORKING_NODE_FROM_BASE_COPY_PRESENCE
 INSERT INTO nodes (
     wc_id, local_relpath, op_depth, parent_relpath, repos_id, repos_path,
-    revision, presence, kind, changed_revision, changed_date, changed_author )
-SELECT wc_id, local_relpath, ?3 as op_depth, parent_relpath, repos_id,
-       repos_path, revision, 'not-present', kind, changed_revision,
-       changed_date, changed_author
+    revision, presence, depth, kind, changed_revision, changed_date,
+    changed_author, checksum, properties, translated_size, last_mod_time,
+    symlink_target )
+SELECT wc_id, local_relpath, ?3 AS op_depth, parent_relpath, repos_id,
+    repos_path, revision, ?4 AS presence, depth, kind, changed_revision,
+    changed_date, changed_author, checksum, properties, translated_size,
+    last_mod_time, symlink_target
 FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
 

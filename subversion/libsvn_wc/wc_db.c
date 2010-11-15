@@ -3204,6 +3204,40 @@ op_depth_of(apr_int64_t *op_depth,
   return SVN_NO_ERROR;
 }
 
+/* If there are any absent (excluded by authz) base nodes then the
+   copy must fail as it's not possible to commit such a copy.  Return
+   an error if there are any absent nodes. */
+static svn_error_t *
+catch_copy_of_absent(svn_wc__db_pdh_t *pdh,
+                     const char *local_relpath,
+                     apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  const char *absent_relpath;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_SELECT_ABSENT_NODES));
+  SVN_ERR(svn_sqlite__bindf(stmt, "iss",
+                            pdh->wcroot->wc_id,
+                            local_relpath,
+                            construct_like_arg(local_relpath,
+                                               scratch_pool)));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (have_row)
+    absent_relpath = svn_sqlite__column_text(stmt, 0, scratch_pool);
+  SVN_ERR(svn_sqlite__reset(stmt));
+  if (have_row)
+    return svn_error_createf(SVN_ERR_AUTHZ_UNREADABLE, NULL,
+                             _("Cannot copy '%s' excluded by server"),
+                             path_for_error_message(pdh->wcroot,
+                                                    absent_relpath,
+                                                    scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+
 /*
  * Copy single NODES row from src_path@src_op_depth to dst_path@dst_depth.
  * Copy all rows of descendent paths in == src_op_depth to == dst_depth.
@@ -3227,30 +3261,8 @@ copy_nodes_rows(svn_wc__db_pdh_t *src_pdh,
 
   SVN_ERR(op_depth_of(&src_op_depth, src_pdh, src_relpath));
 
-  /* If there are any absent (excluded by authz) base nodes then the
-     copy must fail.  It's not possible to commit such a copy. */
   if (src_op_depth == 0)
-    {
-      svn_boolean_t have_row;
-      const char *local_relpath;
-
-      SVN_ERR(svn_sqlite__get_statement(&stmt, src_pdh->wcroot->sdb,
-                                        STMT_SELECT_ABSENT_NODES));
-      SVN_ERR(svn_sqlite__bindf(stmt, "iss",
-                                src_pdh->wcroot->wc_id,
-                                src_relpath,
-                                construct_like_arg(src_relpath, scratch_pool)));
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
-      if (have_row)
-        local_relpath = svn_sqlite__column_text(stmt, 0, scratch_pool);
-      SVN_ERR(svn_sqlite__reset(stmt));
-      if (have_row)
-        return svn_error_createf(SVN_ERR_AUTHZ_UNREADABLE, NULL,
-                                 _("Cannot copy '%s' excluded by server"),
-                                 path_for_error_message(src_pdh->wcroot,
-                                                        local_relpath,
-                                                        scratch_pool));
-    }
+    SVN_ERR(catch_copy_of_absent(src_pdh, src_relpath, scratch_pool));
 
   /* Root node */
   SVN_ERR(svn_sqlite__get_statement(&stmt, src_pdh->wcroot->sdb,
@@ -8715,12 +8727,45 @@ struct make_copy_baton
 
   svn_wc__db_pdh_t *pdh;
   const char *local_relpath;
-  svn_boolean_t remove_base;
-  svn_boolean_t is_root;
   apr_int64_t op_depth;
 };
 
-/* Transaction callback for svn_wc__db_temp_op_make_copy */
+/* Transaction callback for svn_wc__db_temp_op_make_copy.  This is
+   used by the update editor when deleting a base node tree would be a
+   tree-conflict because there are changes to subtrees.  This function
+   inserts a copy of the base node tree below any existing working
+   subtrees.  Given a tree:
+
+             0            1           2            3
+    /     normal          -
+    A     normal          -
+    A/B   normal          -         normal
+    A/B/C normal          -         normal
+    A/F   normal          -         normal
+    A/F/G normal          -         normal
+    A/F/H normal          -         base-deleted   normal
+    A/F/E normal          -         not-present
+    A/X   normal          -
+    A/X/Y incomplete      -
+
+    This function copies the tree for A from op_depth=0, into the
+    working op_depth of A, i.e. 1, then marks as base-deleted any
+    subtrees in that op_depth that are below higher op_depth, and
+    finally removes base-deleted nodes from higher op_depth.
+
+             0            1              2            3
+    /     normal          -
+    A     normal       normal
+    A/B   normal       base-deleted   normal
+    A/B/C normal       base-deleted   normal
+    A/F   normal       base-deleted   normal
+    A/F/G normal       base-deleted   normal
+    A/F/H normal       base-deleted                   normal
+    A/F/E normal       base-deleted   not-present
+    A/X   normal       normal
+    A/X/Y incomplete   incomplete
+
+ */
 static svn_error_t *
 make_copy_txn(void *baton,
               svn_sqlite__db_t *sdb,
@@ -8729,15 +8774,18 @@ make_copy_txn(void *baton,
   struct make_copy_baton *mcb = baton;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
+#ifdef SVN_WC__OP_DEPTH
+  svn_boolean_t add_working_base_deleted = FALSE;
+#else
+  svn_boolean_t add_working = TRUE;
+#endif
   svn_boolean_t remove_working = FALSE;
-  svn_boolean_t check_base = TRUE;
-  svn_boolean_t add_working_normal = FALSE;
-  svn_boolean_t add_working_not_present = FALSE;
   const apr_array_header_t *children;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   int i;
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_WORKING_NODE));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                    STMT_SELECT_LOWEST_WORKING_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", mcb->pdh->wcroot->wc_id,
                             mcb->local_relpath));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
@@ -8754,54 +8802,18 @@ make_copy_txn(void *baton,
                      || working_status == svn_wc__db_status_not_present
                      || working_status == svn_wc__db_status_incomplete);
 
-      /* Make existing deletions of BASE_NODEs remove WORKING_NODEs */
       if (working_status == svn_wc__db_status_base_deleted)
-        {
-          remove_working = TRUE;
-          add_working_not_present = TRUE;
-        }
+        /* Make existing deletions of BASE_NODEs remove WORKING_NODEs */
+        remove_working = TRUE;
 
-      check_base = FALSE;
+#ifdef SVN_WC__OP_DEPTH
+      add_working_base_deleted = TRUE;
+#else
+      add_working = FALSE;
+#endif
     }
   else
     SVN_ERR(svn_sqlite__reset(stmt));
-
-  if (check_base)
-    {
-      svn_wc__db_status_t base_status;
-
-      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                        STMT_SELECT_BASE_NODE));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", mcb->pdh->wcroot->wc_id, 
-                                mcb->local_relpath));
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
-
-      /* If there is no BASE_NODE, we don't have to copy anything */
-      if (!have_row)
-        return svn_error_return(svn_sqlite__reset(stmt));
-
-      base_status = svn_sqlite__column_token(stmt, 2, presence_map);
-
-      SVN_ERR(svn_sqlite__reset(stmt));
-
-      switch (base_status)
-        {
-          case svn_wc__db_status_normal:
-          case svn_wc__db_status_incomplete:
-            add_working_normal = TRUE;
-            break;
-          case svn_wc__db_status_not_present:
-            add_working_not_present = TRUE;
-            break;
-          case svn_wc__db_status_excluded:
-          case svn_wc__db_status_absent:
-            /* ### Make the copy match the WC or the repository? */
-            add_working_not_present = TRUE; /* ### Match WC */
-            break;
-          default:
-            SVN_ERR_MALFUNCTION();
-        }
-    }
 
   /* Get the BASE children, as WORKING children don't need modifications */
   SVN_ERR(svn_wc__db_base_get_children(&children, mcb->db, mcb->local_abspath,
@@ -8824,8 +8836,6 @@ make_copy_txn(void *baton,
       VERIFY_USABLE_PDH(cbt.pdh);
 
       cbt.db = mcb->db;
-      cbt.remove_base = mcb->remove_base;
-      cbt.is_root = FALSE;
       cbt.op_depth = mcb->op_depth;
 
       SVN_ERR(make_copy_txn(&cbt, cbt.pdh->wcroot->sdb, iterpool));
@@ -8834,72 +8844,36 @@ make_copy_txn(void *baton,
   if (remove_working)
     {
       SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                        STMT_DELETE_WORKING_NODE));
+                                        STMT_DELETE_LOWEST_WORKING_NODE));
       SVN_ERR(svn_sqlite__bindf(stmt, "is",
                                 mcb->pdh->wcroot->wc_id,
                                 mcb->local_relpath));
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
 
-  if (add_working_normal)
-    {
-      /* Add a copy of the BASE_NODE to WORKING_NODE */
-      SVN_ERR(svn_sqlite__get_statement(
-                    &stmt, sdb,
-                    STMT_INSERT_WORKING_NODE_NORMAL_FROM_BASE));
-
-      SVN_ERR(svn_sqlite__bindf(stmt, "isi",
-                                mcb->pdh->wcroot->wc_id,
-                                mcb->local_relpath,
-                                mcb->op_depth));
-
-      SVN_ERR(svn_sqlite__step_done(stmt));
-    }
-  else if (add_working_not_present)
-    {
-      /* Add a not present WORKING_NODE */
-      SVN_ERR(svn_sqlite__get_statement(
-                &stmt, sdb,
-                STMT_INSERT_WORKING_NODE_NOT_PRESENT_FROM_BASE));
-
-      SVN_ERR(svn_sqlite__bindf(stmt, "isi",
-                                mcb->pdh->wcroot->wc_id,
-                                mcb->local_relpath,
-                                mcb->op_depth));
-
-      SVN_ERR(svn_sqlite__step_done(stmt));
-    }
-
-  if (mcb->is_root && (add_working_normal || add_working_not_present))
-    {
-      const char *repos_relpath;
-      apr_int64_t repos_id;
-      /* Make sure the copy origin is set on the root even if the node
-         didn't have a local relpath */
-
-      SVN_ERR(scan_upwards_for_repos(&repos_id, &repos_relpath,
-                                     mcb->pdh->wcroot, mcb->local_relpath,
-                                     iterpool, iterpool));
-
-      /* ### this is not setting the COPYFROM_REVISION column!!  */
-      /* ### The regression tests passed without this, is it necessary? */
-      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_UPDATE_COPYFROM));
-      SVN_ERR(svn_sqlite__bindf(stmt, "isis",
-                                mcb->pdh->wcroot->wc_id,
-                                mcb->local_relpath,
-                                repos_id,
-                                repos_relpath));
-      SVN_ERR(svn_sqlite__step_done(stmt));
-    }
-
-  /* Remove the BASE_NODE if the caller asked us to do that */
-  if (mcb->remove_base)
+#ifdef SVN_WC__OP_DEPTH
+  if (add_working_base_deleted)
     {
       SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                        STMT_DELETE_BASE_NODE));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is",
+                             STMT_INSERT_WORKING_NODE_FROM_BASE_COPY_PRESENCE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isit",
                                 mcb->pdh->wcroot->wc_id,
-                                mcb->local_relpath));
+                                mcb->local_relpath,
+                                mcb->op_depth,
+                                presence_map, svn_wc__db_status_base_deleted));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
+  else
+#else
+  if (add_working)
+#endif
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                      STMT_INSERT_WORKING_NODE_FROM_BASE_COPY));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isi",
+                                mcb->pdh->wcroot->wc_id,
+                                mcb->local_relpath,
+                                mcb->op_depth));
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
 
@@ -8914,10 +8888,11 @@ make_copy_txn(void *baton,
 svn_error_t *
 svn_wc__db_temp_op_make_copy(svn_wc__db_t *db,
                              const char *local_abspath,
-                             svn_boolean_t remove_base,
                              apr_pool_t *scratch_pool)
 {
   struct make_copy_baton mcb;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -8926,10 +8901,27 @@ svn_wc__db_temp_op_make_copy(svn_wc__db_t *db,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(mcb.pdh);
 
+  /* The update editor is supposed to call this function when there is
+     no working node for LOCAL_ABSPATH. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, mcb.pdh->wcroot->sdb,
+                                    STMT_SELECT_WORKING_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", mcb.pdh->wcroot->wc_id,
+                            mcb.local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  SVN_ERR(svn_sqlite__reset(stmt));
+  if (have_row)
+    return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                             _("Modification of '%s' already exists"),
+                             path_for_error_message(mcb.pdh->wcroot,
+                                                    mcb.local_relpath,
+                                                    scratch_pool));
+
+  /* We don't allow copies to contain absent (denied by authz) nodes;
+     the update editor is going to have to bail out. */
+  SVN_ERR(catch_copy_of_absent(mcb.pdh, mcb.local_relpath, scratch_pool));
+
   mcb.db = db;
   mcb.local_abspath = local_abspath;
-  mcb.remove_base = remove_base;
-  mcb.is_root = TRUE;
 #ifdef SVN_WC__OP_DEPTH
   mcb.op_depth = relpath_depth(mcb.local_relpath);
 #else
