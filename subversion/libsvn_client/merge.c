@@ -3554,8 +3554,13 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
   if (recorded_mergeinfo && *recorded_mergeinfo)
     {
       /* Issue #3668: Remove any self-referential mergeinfo from that
-         which TARGET_ABSPATH inherited. */
-      if (implicit_mergeinfo && inherited)
+         which TARGET_ABSPATH inherited; but only do this if we were able to
+         validate inherited mergeinfo (issue #3669) or otherwise we end
+         up with fragmented mergeinfo, see
+         http://subversion.tigris.org/issues/show_bug.cgi?id=3668#desc5 */
+      if (implicit_mergeinfo
+          && inherited
+          && inherited_validated)
         SVN_ERR(svn_mergeinfo_remove2(recorded_mergeinfo,
                                       *implicit_mergeinfo,
                                       *recorded_mergeinfo, FALSE,
