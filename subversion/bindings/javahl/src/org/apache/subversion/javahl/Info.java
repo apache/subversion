@@ -25,6 +25,8 @@ package org.apache.subversion.javahl;
 
 import java.util.Date;
 
+import org.apache.subversion.javahl.type.NodeKind;
+
 /**
  * this class is returned by {@link ISVNClient#info2} and contains information
  * about items in the repository or working copy

@@ -61,7 +61,7 @@ public final class NodeKind
         return statusNames[kind];
     }
 
-    public static int fromApache(org.apache.subversion.javahl.NodeKind aKind)
+    public static int fromApache(org.apache.subversion.javahl.type.NodeKind aKind)
     {
         switch(aKind)
         {

@@ -23,6 +23,8 @@
 
 package org.apache.subversion.javahl;
 
+import org.apache.subversion.javahl.type.NodeKind;
+
 /**
  * This class describes a item which will be commited.
  */
