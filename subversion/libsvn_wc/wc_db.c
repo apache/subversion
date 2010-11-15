@@ -4356,7 +4356,8 @@ read_tree_conflict(const svn_wc_conflict_description2_t **tree_conflict,
   svn_boolean_t have_row;
   const char *conflict_data;
   const svn_skel_t *skel;
-  
+  svn_error_t *err;
+
   *tree_conflict = NULL;
 
   if (!local_relpath[0])
@@ -4372,12 +4373,12 @@ read_tree_conflict(const svn_wc_conflict_description2_t **tree_conflict,
 
   conflict_data = svn_sqlite__column_text(stmt, 0, NULL);
   skel = svn_skel__parse(conflict_data, strlen(conflict_data), scratch_pool);
-  SVN_ERR(svn_sqlite__reset(stmt));
-  SVN_ERR(svn_wc__deserialize_conflict(tree_conflict, skel,
-                                       pdh->wcroot->abspath, result_pool,
-                                       scratch_pool));
+  err = svn_wc__deserialize_conflict(tree_conflict, skel,
+                                     pdh->wcroot->abspath, result_pool,
+                                     scratch_pool);
 
-  return SVN_NO_ERROR;
+  return svn_error_compose_create(err,
+                                  svn_sqlite__reset(stmt));
 }
 
 svn_error_t *
