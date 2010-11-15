@@ -211,29 +211,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * ^/subversion/branches/1.6.x-no-wcng-check
-   Remove the function subversion/libsvn_wc/questions.c:is_inside_wc_ng()
-   and its uses.
-   Justification:
-     First, per issue #3729, the performance cost of this check is
-     atrocious (as it seems to happen many, many times in the course
-     of a checkout) and, according to some CollabNet customers,
-     unbearable.  Secondly, the workaround stsp added to allow the
-     1.6.x test suite to run inside a trunk-managed working copy tells
-     us that it's not necessarily the case that creating a 1.6 working
-     copy below some 1.7+ wcroot is problematic.  It can be concluded,
-     then, that we might just be trying to stop a problem that doesn't
-     exist, and making every 1.6.6+ user pay a high cost for our
-     preventative efforts.  That's bad.
-   Branch:
-     ^/subversion/branches/1.6.x-no-wcng-check
-   Votes:
-     +0: cmpilato
-     +1: stsp (I agree with the points cmpilato has raised in the issue.
-               Let's deal with this problem, if it really turns out to
-               be relevant, after 1.7 is released. We can still issue a 1.6.x
-               patch release at that point to fix any such problems.
-               Until then, we don't need to bother our users with this.
-               Especially since doing so is causing them real problems now.)
-     +1: philip, rhuijben
