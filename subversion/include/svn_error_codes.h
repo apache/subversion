@@ -219,6 +219,11 @@ SVN_ERROR_START
              SVN_ERR_BAD_CATEGORY_START + 13,
              "Unknown string value of token")
 
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_BAD_CHANGELIST_NAME,
+             SVN_ERR_BAD_CATEGORY_START + 14,
+             "Invalid changelist name")
+
   /* xml errors */
 
   SVN_ERRDEF(SVN_ERR_XML_ATTRIB_NOT_FOUND,
