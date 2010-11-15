@@ -7884,6 +7884,7 @@ svn_wc__db_read_conflict_victims(const apr_array_header_t **victims,
   const char *local_relpath;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
+  apr_array_header_t *new_victims;
 
   /* The parent should be a working copy directory. */
   SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
@@ -7899,14 +7900,14 @@ svn_wc__db_read_conflict_victims(const apr_array_header_t **victims,
                                     STMT_SELECT_ACTUAL_CONFLICT_VICTIMS));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
 
-  *victims = apr_array_make(result_pool, 0, sizeof(const char *));
+  new_victims = apr_array_make(result_pool, 0, sizeof(const char *));
 
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   while (have_row)
     {
       const char *child_relpath = svn_sqlite__column_text(stmt, 0, NULL);
 
-      APR_ARRAY_PUSH(*victims, const char *) = 
+      APR_ARRAY_PUSH(new_victims, const char *) =
                             svn_dirent_basename(child_relpath, result_pool);
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
@@ -7914,6 +7915,7 @@ svn_wc__db_read_conflict_victims(const apr_array_header_t **victims,
 
   SVN_ERR(svn_sqlite__reset(stmt));
 
+  *victims = new_victims;
   return SVN_NO_ERROR;
 }
 
