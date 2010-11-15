@@ -807,8 +807,6 @@ check_can_add_to_parent(const char **repos_root_url,
                                                  scratch_pool));
     }
   else if (parent_kind != svn_wc__db_kind_dir)
-    /* Can't happen until single db; but then it causes serious
-       trouble if we allow this. */
     return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
                              _("Can't schedule an addition of '%s'"
                                " below a not-directory node"),

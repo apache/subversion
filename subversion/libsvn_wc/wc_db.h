@@ -355,9 +355,6 @@ svn_wc__db_init(svn_wc__db_t *db,
 
    LOCAL_RELPATH will be allocated in RESULT_POOL. All other (temporary)
    allocations will be made in SCRATCH_POOL.
-
-   ### note: with per-dir .svn directories, these relpaths will effectively
-   ### be the basename. it gets interesting in single-db mode
 */
 svn_error_t *
 svn_wc__db_to_relpath(const char **local_relpath,
