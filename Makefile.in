@@ -419,7 +419,7 @@ revision-install:
 install-static: @INSTALL_STATIC_RULES@
 
 # JavaHL target aliases
-javahl: mkdir-init javahl-java javahl-javah javahl-callback-javah javahl-lib @JAVAHL_TESTS_TARGET@ javahl-compat
+javahl: mkdir-init javahl-java javahl-javah javahl-callback-javah javahl-type-javah javahl-lib @JAVAHL_TESTS_TARGET@ javahl-compat
 install-javahl: javahl install-javahl-java install-javahl-javah install-javahl-lib
 javahl-compat: javahl-compat-java @JAVAHL_COMPAT_TESTS_TARGET@
 
@@ -600,7 +600,8 @@ doc-javahl:
 	  -link http://java.sun.com/javase/6/docs/api/ \
 	  org.tigris.subversion.javahl \
       org.apache.subversion.javahl \
-      org.apache.subversion.javahl.callback
+      org.apache.subversion.javahl.callback \
+      org.apache.subversion.javahl.type
 
 doc-clean:
 	rm -rf $(top_srcdir)/doc/doxygen
