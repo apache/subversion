@@ -1895,7 +1895,8 @@ static svn_error_t *get_mergeinfo(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                      mergeinfo_string));
     }
   svn_pool_destroy(iterpool);
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)b)",
+    validate_inherited_mergeinfo));
 
   return SVN_NO_ERROR;
 }

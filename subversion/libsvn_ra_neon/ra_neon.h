@@ -305,7 +305,7 @@ svn_error_t * svn_ra_neon__get_mergeinfo(
   const apr_array_header_t *paths,
   svn_revnum_t revision,
   svn_mergeinfo_inheritance_t inherit,
-  svn_boolean_t validate_inherited_mergeinfo,
+  svn_boolean_t *validate_inherited_mergeinfo,
   svn_boolean_t include_descendants,
   apr_pool_t *pool);
 
@@ -861,7 +861,8 @@ enum {
   ELEM_mergeinfo_info,
   ELEM_has_children,
   ELEM_merged_revision,
-  ELEM_deleted_rev_report
+  ELEM_deleted_rev_report,
+  ELEM_validate_inherited_mergeinfo
 };
 
 /* ### docco */
