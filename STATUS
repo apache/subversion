@@ -120,6 +120,7 @@ Candidate changes:
                patch release at that point to fix any such problems.
                Until then, we don't need to bother our users with this.
                Especially since doing so is causing them real problems now.)
+     +1: philip
 
  * r1024269
    Fix issue #3733, which tracks an API knowledge violation in the repos
