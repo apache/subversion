@@ -4372,6 +4372,7 @@ read_tree_conflict(const svn_wc_conflict_description2_t **tree_conflict,
 
   conflict_data = svn_sqlite__column_text(stmt, 0, NULL);
   skel = svn_skel__parse(conflict_data, strlen(conflict_data), scratch_pool);
+  SVN_ERR(svn_sqlite__reset(stmt));
   SVN_ERR(svn_wc__deserialize_conflict(tree_conflict, skel,
                                        pdh->wcroot->abspath, result_pool,
                                        scratch_pool));
