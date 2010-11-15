@@ -583,8 +583,13 @@ module Svn
           @tempfile1 = Tempfile.new("svn_fs")
           @tempfile2 = Tempfile.new("svn_fs")
 
-          dump_contents(@tempfile1, @root1, @path1)
-          dump_contents(@tempfile2, @root2, @path2)
+          begin
+            dump_contents(@tempfile1, @root1, @path1)
+            dump_contents(@tempfile2, @root2, @path2)
+          ensure
+            @tempfile1.close
+            @tempfile2.close
+          end
 
           [@tempfile1, @tempfile2]
         end
@@ -604,15 +609,10 @@ module Svn
       end
 
       private
-      def dump_contents(tempfile, root, path)
+      def dump_contents(open_tempfile, root, path)
         if root and path
-          begin
-            tempfile.open
-            root.file_contents(path) do |stream|
-              tempfile.print(stream.read)
-            end
-          ensure
-            tempfile.close
+          root.file_contents(path) do |stream|
+            open_tempfile.print(stream.read)
           end
         end
       end
