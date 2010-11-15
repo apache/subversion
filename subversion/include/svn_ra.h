@@ -1012,9 +1012,12 @@ svn_ra_get_dir(svn_ra_session_t *session,
  * only inherited mergeinfo for @a paths is retrieved.
  *
  * If the mergeinfo for any path is inherited and
- * @a validate_inherited_mergeinfo is TRUE, then the mergeinfo for
- * that path in @a *catalog will only contain merge source
- * path-revisions that actually exist in repository.
+ * @a *validate_inherited_mergeinfo is TRUE, then request that the server
+ * validate the mergeinfo in @a *catalog, so it contains only merge source
+ * path-revisions that actually exist in repository.  If validation is
+ * requested and the server supports it, then set
+ * @a *validate_inherited_mergeinfo to TRUE on return.  Set it to FALSE
+ * in all other cases.
  *
  * If @a include_descendants is TRUE, then additionally return the
  * mergeinfo for any descendant of any element of @a paths which has
@@ -1040,7 +1043,7 @@ svn_ra_get_mergeinfo2(svn_ra_session_t *session,
                       const apr_array_header_t *paths,
                       svn_revnum_t revision,
                       svn_mergeinfo_inheritance_t inherit,
-                      svn_boolean_t validate_inherited_mergeinfo,
+                      svn_boolean_t *validate_inherited_mergeinfo,
                       svn_boolean_t include_descendants,
                       apr_pool_t *pool);
 
