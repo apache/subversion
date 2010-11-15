@@ -2753,6 +2753,12 @@ svn_client_patch(const char *patch_abspath,
     return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
                             _("strip count must be positive"));
 
+  if (svn_path_is_url(local_abspath))
+    return svn_error_return(svn_error_createf(SVN_ERR_ILLEGAL_TARGET,
+                                              NULL,
+                                              _("'%s' is not a local path"),
+                                              local_abspath));
+
   baton.patch_abspath = patch_abspath;
   baton.abs_wc_path = local_abspath;
   baton.dry_run = dry_run;
