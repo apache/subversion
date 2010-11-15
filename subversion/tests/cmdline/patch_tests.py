@@ -3414,6 +3414,10 @@ def patch_one_property(sbox, trailing_eol):
                                        1, # dry-run
                                        '--strip', '3')
 
+  if is_os_windows():
+    # On Windows 'svn pg' uses \r\n as EOL.
+    value = value.replace('\n', '\r\n')
+
   svntest.actions.check_prop('k', wc_dir, [value])
 
 def patch_strip_cwd(sbox):
@@ -3508,7 +3512,7 @@ test_list = [ None,
               patch_reverse_revert,
               patch_strip_cwd,
               XFail(patch_set_prop_no_eol),
-              patch_add_symlink,
+              SkipUnless(patch_add_symlink, svntest.main.is_posix_os),
             ]
 
 if __name__ == '__main__':

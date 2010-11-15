@@ -471,6 +471,42 @@ get_base_info_for_deleted(svn_wc_entry_t *entry,
 }
 
 
+/*
+ * Encode tree conflict descriptions into a single string.
+ *
+ * Set *CONFLICT_DATA to a string, allocated in POOL, that encodes the tree
+ * conflicts in CONFLICTS in a form suitable for storage in a single string
+ * field in a WC entry. CONFLICTS is a hash of zero or more pointers to
+ * svn_wc_conflict_description2_t objects, index by their basenames. All of the
+ * conflict victim paths must be siblings.
+ *
+ * Do all allocations in POOL.
+ *
+ * @see svn_wc__read_tree_conflicts()
+ */
+static svn_error_t *
+write_tree_conflicts(const char **conflict_data,
+                     apr_hash_t *conflicts,
+                     apr_pool_t *pool)
+{
+  svn_skel_t *skel = svn_skel__make_empty_list(pool);
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(pool, conflicts); hi; hi = apr_hash_next(hi))
+    {
+      svn_skel_t *c_skel;
+
+      SVN_ERR(svn_wc__serialize_conflict(&c_skel, svn__apr_hash_index_val(hi),
+                                         pool, pool));
+      svn_skel__prepend(c_skel, skel);
+    }
+
+  *conflict_data = svn_skel__unparse(skel, pool)->data;
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Read one entry from wc_db. It will be allocated in RESULT_POOL and
    returned in *NEW_ENTRY.
 
@@ -586,9 +622,8 @@ read_one_entry(const svn_wc_entry_t **new_entry,
 
       if (tree_conflicts)
         {
-          SVN_ERR(svn_wc__write_tree_conflicts(&entry->tree_conflict_data,
-                                               tree_conflicts,
-                                               result_pool));
+          SVN_ERR(write_tree_conflicts(&entry->tree_conflict_data,
+                                       tree_conflicts, result_pool));
         }
     }
 

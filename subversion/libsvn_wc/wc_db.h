@@ -355,9 +355,6 @@ svn_wc__db_init(svn_wc__db_t *db,
 
    LOCAL_RELPATH will be allocated in RESULT_POOL. All other (temporary)
    allocations will be made in SCRATCH_POOL.
-
-   ### note: with per-dir .svn directories, these relpaths will effectively
-   ### be the basename. it gets interesting in single-db mode
 */
 svn_error_t *
 svn_wc__db_to_relpath(const char **local_relpath,
@@ -2382,15 +2379,12 @@ svn_wc__db_temp_op_start_directory_update(svn_wc__db_t *db,
                                           svn_revnum_t new_rev,
                                           apr_pool_t *scratch_pool);
 
-/* Update WORKING_NODE to make it represent a copy of the current working
-   copy. Leaving additions and copies as-is, but making a copy of all the
-   required BASE_NODE data to WORKING_NODE, to allow removing and/or
-   updating the BASE_NODE without changing the contents of the current
-   working copy */
+/* Copy the base tree at LOCAL_ABSPATH into the working tree as copy,
+   leaving any subtree additions and copies as-is.  This allows the
+   base node tree to be removed. */
 svn_error_t *
 svn_wc__db_temp_op_make_copy(svn_wc__db_t *db,
                              const char *local_abspath,
-                             svn_boolean_t remove_base,
                              apr_pool_t *scratch_pool);
 
 
