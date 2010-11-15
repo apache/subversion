@@ -201,6 +201,13 @@ def invalid_lock_targets(sbox):
     run_and_verify_svn_in_wc(sbox, "svn: Cannot mix repository and working "
                              "copy targets", 'lock', target1, target2)
 
+def invalid_unlock_targets(sbox):
+  "wc paths and repo URL target mixture for 'unlock'"
+  sbox.build(read_only=True)
+  for (target1, target2) in [("iota", "^/"), ("file://", "iota")]:
+    run_and_verify_svn_in_wc(sbox, "svn: Cannot mix repository and working "
+                             "copy targets", 'unlock', target1, target2)
+
 def invalid_status_targets(sbox):
   "non-working copy paths for 'status'"
   sbox.build(read_only=True)
@@ -230,6 +237,7 @@ test_list = [ None,
               invalid_resolved_targets,
               invalid_revert_targets,
               invalid_lock_targets,
+              invalid_unlock_targets,
               invalid_status_targets,
              ]
 
