@@ -2023,8 +2023,7 @@ do_entry_deletion(struct edit_baton *eb,
            * we must schedule the existing content for re-addition as a copy
            * of what it was, but with its local modifications preserved. */
 
-          SVN_ERR(svn_wc__db_temp_op_make_copy(eb->db, local_abspath, FALSE,
-                                               pool));
+          SVN_ERR(svn_wc__db_temp_op_make_copy(eb->db, local_abspath, pool));
 
           /* Fall through to remove the BASE_NODEs properly, with potentially
              keeping a not-present marker */

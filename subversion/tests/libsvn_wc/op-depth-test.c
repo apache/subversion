@@ -337,6 +337,7 @@ compare_nodes_rows(const void *key, apr_ssize_t klen,
   comparison_baton_t *b = baton;
   nodes_row_t *expected = apr_hash_get(b->expected_hash, key, klen);
   nodes_row_t *found = apr_hash_get(b->found_hash, key, klen);
+  nodes_row_t elided;
 
   /* If the FOUND row has field values that should have been elided
    * (because they match the parent row), then do so now. */
@@ -353,11 +354,16 @@ compare_nodes_rows(const void *key, apr_ssize_t klen,
                                   APR_HASH_KEY_STRING);
       if (parent_found && parent_found->op_depth > 0
           && parent_found->repo_relpath
+          && found->op_depth == parent_found->op_depth
+          && found->repo_revnum == parent_found->repo_revnum
           && strcmp(found->repo_relpath,
                     svn_relpath_join(parent_found->repo_relpath, name,
-                                     b->scratch_pool)) == 0
-          && found->repo_revnum == parent_found->repo_revnum)
+                                     b->scratch_pool)) == 0)
         {
+          /* Iterating in hash order, which is arbitrary, so only make
+             changes in a local copy */
+          elided = *found;
+          found = &elided;
           found->repo_relpath = NULL;
           found->repo_revnum = SVN_INVALID_REVNUM;
         }
@@ -1174,6 +1180,9 @@ insert_dirs(wc_baton_t *b,
     "INSERT INTO nodes (local_relpath, op_depth, presence, repos_path,"
     "                   revision, wc_id, repos_id, kind, depth)"
     "           VALUES (?1, ?2, ?3, ?4, ?5, 1, 1, 'dir', 'infinity');",
+    "INSERT INTO nodes (local_relpath, op_depth, presence, repos_path,"
+    "                   revision, parent_relpath, wc_id, repos_id, kind, depth)"
+    "           VALUES (?1, ?2, ?3, ?4, ?5, ?6, 1, 1, 'dir', 'infinity');",
     NULL,
   };
 
@@ -1184,15 +1193,31 @@ insert_dirs(wc_baton_t *b,
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, 0));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, 1));
   while(nodes->local_relpath)
     {
-      SVN_ERR(svn_sqlite__bindf(stmt, "sissi",
-                                nodes->local_relpath,
-                                nodes->op_depth,
-                                nodes->presence,
-                                nodes->repo_relpath,
-                                nodes->repo_revnum));
+      if (nodes->local_relpath[0])
+        {
+          SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, 2));
+          SVN_ERR(svn_sqlite__bindf(stmt, "sissis",
+                                    nodes->local_relpath,
+                                    nodes->op_depth,
+                                    nodes->presence,
+                                    nodes->repo_relpath,
+                                    nodes->repo_revnum,
+                                    svn_relpath_dirname(nodes->local_relpath,
+                                                        b->pool)));
+        }
+      else
+        {
+          SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, 1));
+          SVN_ERR(svn_sqlite__bindf(stmt, "sissi",
+                                    nodes->local_relpath,
+                                    nodes->op_depth,
+                                    nodes->presence,
+                                    nodes->repo_relpath,
+                                    nodes->repo_revnum));
+        }
+
       SVN_ERR(svn_sqlite__step_done(stmt));
       ++nodes;
     }
@@ -1548,6 +1573,111 @@ test_base_dir_insert_remove(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+temp_op_make_copy(wc_baton_t *b,
+                  const char *local_relpath,
+                  nodes_row_t *before,
+                  nodes_row_t *after)
+{
+  const char *dir_abspath = svn_path_join(b->wc_abspath, local_relpath,
+                                          b->pool);
+
+  SVN_ERR(insert_dirs(b, before));
+
+  SVN_ERR(svn_wc__db_temp_op_make_copy(b->wc_ctx->db, dir_abspath, b->pool));
+
+  SVN_ERR(check_db_rows(b, "", after));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_temp_op_make_copy(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  wc_baton_t b;
+
+  b.pool = pool;
+  SVN_ERR(svn_test__create_repos_and_wc(&b.repos_url, &b.wc_abspath,
+                                        "base_dir_insert_remove", opts, pool));
+  SVN_ERR(svn_wc_context_create(&b.wc_ctx, NULL, pool, pool));
+
+  {
+    /*  /           norm        -
+        A           norm        -
+        A/B         norm        -       norm
+        A/B/C       norm        -       base-del    norm
+        A/F         norm        -       norm
+        A/F/G       norm        -       norm
+        A/F/H       norm        -       not-pres
+        A/F/E       norm        -       base-del
+        A/X         norm        -
+        A/X/Y       incomplete  -
+    */
+    nodes_row_t before[] = {
+      { 0, "",      "normal",       2, "" },
+      { 0, "A",     "normal",       2, "A" },
+      { 0, "A/B",   "normal",       2, "A/B" },
+      { 0, "A/B/C", "normal",       2, "A/B/C" },
+      { 0, "A/F",   "normal",       2, "A/F" },
+      { 0, "A/F/G", "normal",       2, "A/F/G" },
+      { 0, "A/F/H", "normal",       2, "A/F/H" },
+      { 0, "A/F/E", "normal",       2, "A/F/E" },
+      { 0, "A/X",   "normal",       2, "A/X" },
+      { 0, "A/X/Y", "incomplete",   2, "A/X/Y" },
+      { 2, "A/B",   "normal",       NO_COPY_FROM },
+      { 2, "A/B/C", "base-deleted", NO_COPY_FROM },
+      { 3, "A/B/C", "normal",       NO_COPY_FROM },
+      { 2, "A/F",   "normal",       1, "S2" },
+      { 2, "A/F/G", "normal",       NO_COPY_FROM },
+      { 2, "A/F/H", "not-present",  NO_COPY_FROM },
+      { 2, "A/F/E", "base-deleted", NO_COPY_FROM },
+      { 0 }
+    };
+    /*  /           norm        -
+        A           norm        norm
+        A/B         norm        base-del    norm
+        A/B/C       norm        base-del                norm
+        A/F         norm        base-del    norm
+        A/F/G       norm        base-del    norm
+        A/F/H       norm        base-del    not-pres
+        A/F/E       norm        base-del
+        A/X         norm        norm
+        A/X/Y       incomplete  incomplete
+    */
+    nodes_row_t after[] = {
+      { 0, "",      "normal",       2, "" },
+      { 0, "A",     "normal",       2, "A" },
+      { 0, "A/B",   "normal",       2, "A/B" },
+      { 0, "A/B/C", "normal",       2, "A/B/C" },
+      { 0, "A/F",   "normal",       2, "A/F" },
+      { 0, "A/F/G", "normal",       2, "A/F/G" },
+      { 0, "A/F/H", "normal",       2, "A/F/H" },
+      { 0, "A/F/E", "normal",       2, "A/F/E" },
+      { 0, "A/X",   "normal",       2, "A/X" },
+      { 0, "A/X/Y", "incomplete",   2, "A/X/Y" },
+      { 1, "A",     "normal",       2, "A" },
+      { 1, "A/B",   "base-deleted", NO_COPY_FROM },
+      { 1, "A/B/C", "base-deleted", NO_COPY_FROM },
+      { 1, "A/F",   "base-deleted", NO_COPY_FROM },
+      { 1, "A/F/G", "base-deleted", NO_COPY_FROM },
+      { 1, "A/F/H", "base-deleted", NO_COPY_FROM },
+      { 1, "A/F/E", "base-deleted", NO_COPY_FROM },
+      { 1, "A/X",   "normal",       NO_COPY_FROM },
+      { 1, "A/X/Y", "incomplete",   NO_COPY_FROM },
+      { 2, "A/B",   "normal",       NO_COPY_FROM },
+      { 3, "A/B/C", "normal",       NO_COPY_FROM },
+      { 2, "A/F",   "normal",       1, "S2" },
+      { 2, "A/F/G", "normal",       NO_COPY_FROM },
+      { 2, "A/F/H", "not-present",  NO_COPY_FROM },
+      { 0 }
+    };
+
+    SVN_ERR(temp_op_make_copy(&b, "A", before, after));
+  }
+
+  return SVN_NO_ERROR;
+}
+
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
 
@@ -1583,6 +1713,9 @@ struct svn_test_descriptor_t test_funcs[] =
                        "needs op_depth"),
     SVN_TEST_OPTS_WIMP(test_base_dir_insert_remove,
                        "test_base_dir_insert_remove",
+                       "needs op_depth"),
+    SVN_TEST_OPTS_WIMP(test_temp_op_make_copy,
+                       "test_temp_op_make_copy",
                        "needs op_depth"),
     SVN_TEST_NULL
   };
