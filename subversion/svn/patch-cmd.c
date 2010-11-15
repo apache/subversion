@@ -48,34 +48,42 @@ svn_cl__patch(apr_getopt_t *os,
 {
   svn_cl__opt_state_t *opt_state;
   svn_client_ctx_t *ctx;
-  apr_array_header_t *args;
   apr_array_header_t *targets;
   const char *abs_patch_path;
+  const char *patch_path;
   const char *abs_target_path;
   const char *target_path;
 
   opt_state = ((svn_cl__cmd_baton_t *)baton)->opt_state;
   ctx = ((svn_cl__cmd_baton_t *)baton)->ctx;
 
-  SVN_ERR(svn_opt_parse_num_args(&args, os, 1, pool));
-  SVN_ERR(svn_dirent_get_absolute(&abs_patch_path,
-                                  APR_ARRAY_IDX(args, 0, const char *),
-                                  pool));
-
-  SVN_ERR(svn_client_args_to_target_array(&targets, os, opt_state->targets,
-                                          ctx, pool));
-  if (targets->nelts > 1)
-    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
-
-  svn_opt_push_implicit_dot_target(targets, pool);
+  SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
+                                                      opt_state->targets,
+                                                      ctx, pool));
   SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, pool));
 
-  target_path = APR_ARRAY_IDX(targets, 0, const char *);
-  if (svn_path_is_url(target_path))
+  if (targets->nelts > 2)
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
+
+  patch_path = APR_ARRAY_IDX(targets, 0, const char *);
+  if (svn_path_is_url(patch_path))
     return svn_error_return(svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR,
                                               NULL,
                                               _("'%s' is not a local path"),
-                                              target_path));
+                                              patch_path));
+  SVN_ERR(svn_dirent_get_absolute(&abs_patch_path, patch_path, pool));
+
+  if (targets->nelts == 1)
+    target_path = ""; /* "" is the canonical form of "." */
+  else
+    {
+      target_path = APR_ARRAY_IDX(targets, 1, const char *);
+      if (svn_path_is_url(target_path))
+        return svn_error_return(svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR,
+                                                  NULL,
+                                                  _("'%s' is not a local path"),
+                                                  target_path));
+    }
   SVN_ERR(svn_dirent_get_absolute(&abs_target_path, target_path, pool));
 
   SVN_ERR(svn_client_patch(abs_patch_path, abs_target_path,
