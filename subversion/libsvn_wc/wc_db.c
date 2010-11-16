@@ -2923,7 +2923,7 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
         {
           *copyfrom_relpath = NULL;
           *copyfrom_rev = SVN_INVALID_REVNUM;
-          *copyfrom_id = 0;
+          *copyfrom_id = INVALID_REPOS_ID;
         }
     }
   else if (*status == svn_wc__db_status_deleted)
@@ -8958,7 +8958,7 @@ get_copyfrom(apr_int64_t *copyfrom_repos_id,
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (!have_row)
     {
-      *copyfrom_repos_id = 0;  /* What's a good value to return? */
+      *copyfrom_repos_id = INVALID_REPOS_ID;
       *copyfrom_relpath = NULL;
       *copyfrom_revnum = SVN_INVALID_REVNUM;
       SVN_ERR(svn_sqlite__reset(stmt));
