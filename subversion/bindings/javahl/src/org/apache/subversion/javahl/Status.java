@@ -25,7 +25,7 @@ package org.apache.subversion.javahl;
 
 import java.util.Date;
 
-import org.apache.subversion.javahl.type.NodeKind;
+import org.apache.subversion.javahl.types.NodeKind;
 
 /**
  * Subversion status API.

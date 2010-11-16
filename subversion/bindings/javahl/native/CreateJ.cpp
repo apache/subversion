@@ -60,7 +60,7 @@ CreateJ::ConflictDescriptor(const svn_wc_conflict_description_t *desc)
     {
       ctor = env->GetMethodID(clazz, "<init>", "(Ljava/lang/String;"
                               "L"JAVA_PACKAGE"/ConflictDescriptor$Kind;"
-                              "L"JAVA_PACKAGE"/type/NodeKind;"
+                              "L"JAVA_PACKAGE"/types/NodeKind;"
                               "Ljava/lang/String;ZLjava/lang/String;"
                               "L"JAVA_PACKAGE"/ConflictDescriptor$Action;"
                               "L"JAVA_PACKAGE"/ConflictDescriptor$Reason;"
@@ -152,7 +152,7 @@ CreateJ::ConflictVersion(const svn_wc_conflict_version_t *version)
     {
       ctor = env->GetMethodID(clazz, "<init>", "(Ljava/lang/String;J"
                                                "Ljava/lang/String;"
-                                               "L"JAVA_PACKAGE"/type/NodeKind;"
+                                               "L"JAVA_PACKAGE"/types/NodeKind;"
                                                ")V");
       if (JNIUtil::isJavaExceptionThrown() || ctor == 0)
         POP_AND_RETURN_NULL;
@@ -197,7 +197,7 @@ CreateJ::Info(const char *path, const svn_info_t *info)
       mid = env->GetMethodID(clazz, "<init>",
                              "(Ljava/lang/String;Ljava/lang/String;"
                              "Ljava/lang/String;J"
-                             "L"JAVA_PACKAGE"/type/NodeKind;"
+                             "L"JAVA_PACKAGE"/types/NodeKind;"
                              "Ljava/lang/String;Ljava/lang/String;"
                              "JJLjava/lang/String;"
                              "L"JAVA_PACKAGE"/Lock;Z"
@@ -377,9 +377,9 @@ CreateJ::ChangedPath(const char *path, svn_log_changed_path2_t *log_item)
                                "<init>",
                                "(Ljava/lang/String;JLjava/lang/String;"
                                "L"JAVA_PACKAGE"/ChangePath$Action;"
-                               "L"JAVA_PACKAGE"/type/NodeKind;"
-                               "L"JAVA_PACKAGE"/type/Tristate;"
-                               "L"JAVA_PACKAGE"/type/Tristate;)V");
+                               "L"JAVA_PACKAGE"/types/NodeKind;"
+                               "L"JAVA_PACKAGE"/types/Tristate;"
+                               "L"JAVA_PACKAGE"/types/Tristate;)V");
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN(SVN_NO_ERROR);
     }
@@ -432,7 +432,7 @@ CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
     {
       mid = env->GetMethodID(clazz, "<init>",
                              "(Ljava/lang/String;Ljava/lang/String;"
-                             "L"JAVA_PACKAGE"/type/NodeKind;"
+                             "L"JAVA_PACKAGE"/types/NodeKind;"
                              "JJJLjava/lang/String;"
                              "L"JAVA_PACKAGE"/Status$Kind;"
                              "L"JAVA_PACKAGE"/Status$Kind;"
@@ -444,7 +444,7 @@ CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
                              "JZZLjava/lang/String;Ljava/lang/String;"
                              "Ljava/lang/String;"
                              "JL"JAVA_PACKAGE"/Lock;"
-                             "JJL"JAVA_PACKAGE"/type/NodeKind;"
+                             "JJL"JAVA_PACKAGE"/types/NodeKind;"
                              "Ljava/lang/String;Ljava/lang/String;)V");
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
@@ -697,7 +697,7 @@ CreateJ::ClientNotifyInformation(const svn_wc_notify_t *wcNotify)
       midCT = env->GetMethodID(clazz, "<init>",
                                "(Ljava/lang/String;"
                                "L"JAVA_PACKAGE"/ClientNotifyInformation$Action;"
-                               "L"JAVA_PACKAGE"/type/NodeKind;"
+                               "L"JAVA_PACKAGE"/types/NodeKind;"
                                "Ljava/lang/String;"
                                "L"JAVA_PACKAGE"/Lock;"
                                "Ljava/lang/String;"
@@ -876,7 +876,7 @@ CreateJ::CommitItem(svn_client_commit_item3_t *item)
     {
       midConstructor = env->GetMethodID(clazz, "<init>",
                                         "(Ljava/lang/String;"
-                                        "L"JAVA_PACKAGE"/type/NodeKind;"
+                                        "L"JAVA_PACKAGE"/types/NodeKind;"
                                         "ILjava/lang/String;"
                                         "Ljava/lang/String;J)V");
       if (JNIUtil::isExceptionThrown())

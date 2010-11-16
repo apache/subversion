@@ -21,7 +21,7 @@
  * @endcopyright
  */
 
-package org.apache.subversion.javahl.type;
+package org.apache.subversion.javahl.types;
 
 public enum Tristate
 {

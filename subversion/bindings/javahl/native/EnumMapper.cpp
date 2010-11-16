@@ -114,7 +114,7 @@ jobject EnumMapper::mapReposNotifyAction(svn_repos_notify_action_t action)
 jobject EnumMapper::mapNodeKind(svn_node_kind_t nodeKind)
 {
   // We're assuming a valid value for the C enum above
-  return mapEnum(JAVA_PACKAGE"/type/NodeKind", (int) nodeKind);
+  return mapEnum(JAVA_PACKAGE"/types/NodeKind", (int) nodeKind);
 }
 
 /**
@@ -195,7 +195,7 @@ jobject EnumMapper::mapOperation(svn_wc_operation_t operation)
 jobject EnumMapper::mapTristate(svn_tristate_t tristate)
 {
   // We're assuming a valid value for the C enum above
-  return mapEnum(JAVA_PACKAGE"/type/Tristate",
+  return mapEnum(JAVA_PACKAGE"/types/Tristate",
                  (int) (tristate - svn_tristate_false));
 }
 

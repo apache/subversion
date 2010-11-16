@@ -23,7 +23,7 @@
 
 package org.apache.subversion.javahl;
 
-import org.apache.subversion.javahl.type.Version;
+import org.apache.subversion.javahl.types.Version;
 
 /**
  * Handles activities related to management of native resouces
