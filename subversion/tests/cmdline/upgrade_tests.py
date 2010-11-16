@@ -690,6 +690,28 @@ def upgrade_tree_conflict_data(sbox):
 
   run_and_verify_status_no_server(wc_dir, expected_status)
 
+def delete_in_copy_upgrade(sbox):
+  "upgrade a delete within a copy"
+
+  sbox.build(create_wc = False)
+  wc_dir = sbox.wc_dir
+  replace_sbox_with_tarfile(sbox, 'delete-in-copy.tar.bz2')
+
+  # Doesn't work, creates spurious base nodes for the copy
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'upgrade', sbox.wc_dir)
+
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  expected_status.add({
+      'A/B-copied'         : Item(status='A  ', copied='+', wc_rev='-'),
+      'A/B-copied/lambda'  : Item(status='   ', copied='+', wc_rev='-'),
+      'A/B-copied/E'       : Item(status='D  ', wc_rev='-'),
+      'A/B-copied/E/alpha' : Item(status='D  ', wc_rev='-'),
+      'A/B-copied/E/beta'  : Item(status='D  ', wc_rev='-'),
+      'A/B-copied/F'       : Item(status='   ', copied='+', wc_rev='-'),
+      })
+  run_and_verify_status_no_server(sbox.wc_dir, expected_status)
+
 
 ########################################################################
 # Run the tests
@@ -713,6 +735,7 @@ test_list = [ None,
               XFail(delete_and_keep_local),
               dirs_only_upgrade,
               upgrade_tree_conflict_data,
+              XFail(delete_in_copy_upgrade),
              ]
 
 
