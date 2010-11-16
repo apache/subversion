@@ -2916,7 +2916,7 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
             = svn_relpath_join(original_repos_relpath,
                                svn_dirent_skip_ancestor(op_root_relpath,
                                                         local_relpath),
-                               scratch_pool);
+                               result_pool);
           *copyfrom_rev = original_revision;
         }
       else
@@ -2952,7 +2952,7 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
             = svn_relpath_join(original_repos_relpath,
                                svn_dirent_skip_ancestor(op_root_relpath,
                                                         local_relpath),
-                               scratch_pool);
+                               result_pool);
           *copyfrom_rev = original_revision;
         }
       else
