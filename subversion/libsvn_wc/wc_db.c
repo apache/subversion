@@ -2899,31 +2899,19 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
   else if (*status == svn_wc__db_status_added)
     {
       const char *op_root_relpath;
-      const char *original_repos_relpath;
-      svn_revnum_t original_revision;
 
-      SVN_ERR(scan_addition(status, &op_root_relpath,
+      SVN_ERR(scan_addition(NULL, &op_root_relpath,
                             NULL, NULL, /* repos_* */
-                            &original_repos_relpath, copyfrom_id,
-                            &original_revision,
+                            copyfrom_relpath, copyfrom_id, copyfrom_rev,
                             pdh, local_relpath,
                             scratch_pool, scratch_pool));
-
-      if (*status == svn_wc__db_status_copied
-          || *status == svn_wc__db_status_moved_here)
+      if (*copyfrom_relpath)
         {
           *copyfrom_relpath
-            = svn_relpath_join(original_repos_relpath,
+            = svn_relpath_join(*copyfrom_relpath,
                                svn_dirent_skip_ancestor(op_root_relpath,
                                                         local_relpath),
                                result_pool);
-          *copyfrom_rev = original_revision;
-        }
-      else
-        {
-          *copyfrom_relpath = NULL;
-          *copyfrom_rev = SVN_INVALID_REVNUM;
-          *copyfrom_id = INVALID_REPOS_ID;
         }
     }
   else if (*status == svn_wc__db_status_deleted)
@@ -2935,8 +2923,6 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
       if (work_del_relpath)
         {
           const char *op_root_relpath;
-          const char *original_repos_relpath;
-          svn_revnum_t original_revision;
           const char *parent_del_relpath = svn_dirent_dirname(work_del_relpath,
                                                               scratch_pool);
 
@@ -2944,16 +2930,14 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
              _join above.  Can we use get_copyfrom here? */
           SVN_ERR(scan_addition(NULL, &op_root_relpath,
                                 NULL, NULL, /* repos_* */
-                                &original_repos_relpath, copyfrom_id,
-                                &original_revision,
+                                copyfrom_relpath, copyfrom_id, copyfrom_rev,
                                 pdh, parent_del_relpath,
                                 scratch_pool, scratch_pool));
           *copyfrom_relpath
-            = svn_relpath_join(original_repos_relpath,
+            = svn_relpath_join(*copyfrom_relpath,
                                svn_dirent_skip_ancestor(op_root_relpath,
                                                         local_relpath),
                                result_pool);
-          *copyfrom_rev = original_revision;
         }
       else
         {
@@ -6936,6 +6920,35 @@ scan_addition(svn_wc__db_status_t *status,
                                           result_pool);
     }
 
+  /* Postconditions */
+#ifdef SVN_DEBUG
+  if (status)
+    {
+      SVN_ERR_ASSERT(*status == svn_wc__db_status_added
+                     || *status == svn_wc__db_status_copied
+                     || *status == svn_wc__db_status_moved_here);
+      if (*status == svn_wc__db_status_added)
+        {
+          SVN_ERR_ASSERT(!original_repos_relpath
+                         || *original_repos_relpath == NULL);
+          SVN_ERR_ASSERT(!original_revision
+                         || *original_revision == SVN_INVALID_REVNUM);
+          SVN_ERR_ASSERT(!original_repos_id
+                         || *original_repos_id == INVALID_REPOS_ID);
+        }
+      else
+        {
+          SVN_ERR_ASSERT(!original_repos_relpath
+                         || *original_repos_relpath != NULL);
+          SVN_ERR_ASSERT(!original_revision
+                         || *original_revision != SVN_INVALID_REVNUM);
+          SVN_ERR_ASSERT(!original_repos_id
+                         || *original_repos_id != INVALID_REPOS_ID);
+        }
+    }
+  SVN_ERR_ASSERT(!op_root_relpath || *op_root_relpath != NULL);
+#endif
+
   return SVN_NO_ERROR;
 }
 
@@ -6980,8 +6993,11 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
     *op_root_abspath = svn_dirent_join(pdh->wcroot->abspath, op_root_relpath,
                                        result_pool);
   if (repos_id_p)
-    SVN_ERR(fetch_repos_info(repos_root_url, repos_uuid, pdh->wcroot->sdb,
-                             repos_id, result_pool));
+    {
+      SVN_ERR_ASSERT(repos_id != INVALID_REPOS_ID);
+      SVN_ERR(fetch_repos_info(repos_root_url, repos_uuid, pdh->wcroot->sdb,
+                               repos_id, result_pool));
+    }
   if (original_repos_id_p)
     {
       if (original_repos_id == INVALID_REPOS_ID)
