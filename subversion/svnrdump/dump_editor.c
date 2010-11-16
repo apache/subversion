@@ -843,6 +843,8 @@ svn_error_t *
 get_dump_editor(const svn_delta_editor_t **editor,
                 void **edit_baton,
                 svn_stream_t *stream,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
                 apr_pool_t *pool)
 {
   struct dump_edit_baton *eb;
@@ -878,5 +880,7 @@ get_dump_editor(const svn_delta_editor_t **editor,
   *edit_baton = eb;
   *editor = de;
 
-  return SVN_NO_ERROR;
+  /* Wrap this editor in a cancellation editor. */
+  return svn_delta_get_cancellation_editor(cancel_func, cancel_baton,
+                                           de, eb, editor, edit_baton, pool);
 }
