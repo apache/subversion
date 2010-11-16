@@ -165,7 +165,7 @@ jobject EnumMapper::mapConflictReason(svn_wc_conflict_reason_t reason)
 
 int EnumMapper::toMergeinfoLogKind(jobject jLogKind)
 {
-  return getOrdinal(JAVA_PACKAGE"/MergeinfoLogKind", jLogKind);
+  return getOrdinal(JAVA_PACKAGE"/Mergeinfo$LogKind", jLogKind);
 }
 
 int EnumMapper::toLogLevel(jobject jLogLevel)

@@ -200,4 +200,17 @@ public class Mergeinfo implements java.io.Serializable
     {
         mergeSources.put(mergeSrc, range);
     }
+
+    /**
+     * Constants to specify which collection of revisions to report in
+     * getMergeinfoLog.
+     */
+    public enum LogKind
+    {
+        /** Revisions eligible for merging from merge-source to merge-target. */
+        eligible,
+
+        /** Revisions already merged from merge-source to merge-target. */
+        merged;
+    }
 }

@@ -2205,7 +2205,7 @@ public class BasicTests extends SVNTests
         if (expectedAvailableStart > 0)
         {
             long[] availableRevs =
-                    getMergeinfoRevisions(MergeinfoLogKind.eligible, targetPath,
+                    getMergeinfoRevisions(Mergeinfo.LogKind.eligible, targetPath,
                                           Revision.HEAD, mergeSrc,
                                           Revision.HEAD);
             assertNotNull("Missing eligible merge info on '"+targetPath + '\'',
@@ -2221,7 +2221,7 @@ public class BasicTests extends SVNTests
      * are no revisions to return.
      * @since 1.5
      */
-    private long[] getMergeinfoRevisions(MergeinfoLogKind kind,
+    private long[] getMergeinfoRevisions(Mergeinfo.LogKind kind,
                                          String pathOrUrl,
                                          Revision pegRevision,
                                          String mergeSourceUrl,
