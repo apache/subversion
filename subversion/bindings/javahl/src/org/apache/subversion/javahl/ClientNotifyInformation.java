@@ -26,6 +26,7 @@ package org.apache.subversion.javahl;
 import java.util.Map;
 import java.util.EventObject;
 import org.apache.subversion.javahl.callback.ClientNotifyCallback;
+import org.apache.subversion.javahl.type.NodeKind;
 
 /**
  * The event passed to the {@link ClientNotifyCallback#onNotify}
