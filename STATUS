@@ -104,7 +104,7 @@ Candidate changes:
      others also) try to convert the contents of a hash to the wrong
      type.
    Votes:
-     +1: cmpilato
+     +1: cmpilato, stsp
 
  * r1024269
    Fix issue #3733, which tracks an API knowledge violation in the repos
