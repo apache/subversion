@@ -783,23 +783,22 @@ AS_HELP_STRING([--with-ssl],
                 an already installed version of Neon, you probably want to pass
                 this option so that Neon (and so indirectly, Subversion) will
                 be capable of https:// access via that library. (Note that
-                Subversion also may also or alternatively be configured to use
+                Subversion may also or alternatively be configured to use
                 the Serf library for http:// and https:// access; see the
-                --with-serf and --with-openssl options.)])
+                --with-serf and --with-openssl options.)]),
 [])
 
 AC_ARG_WITH(openssl,
 AS_HELP_STRING([--with-openssl],
                [This option does NOT affect the Subversion build process in any
-                way. It enables OpenSSL support in the Serf HTTP client
-                library. If and only if you are building Serf as an integrated
-                part of the Subversion build process, rather than linking to
-                an already installed version of Serf, you probably want to pass
-                this option so that Serf (and so indirectly, Subversion) will
-                be capable of https:// access via that library. (Note that
-                Subversion also may also or alternatively be configured to use
-                the Neon library for http:// and https:// access; see the
-                --with-neon and --with-ssl options.)])
+                way. It tells an integrated Serf HTTP client library build
+                process where to locate the OpenSSL library when (and only when)
+                building Serf as an integrated part of the Subversion build
+                process. When linking to a previously installed version of Serf
+                instead, you do not need to use this option. (Note that
+                Subversion may also or alternatively be configured to use the
+                Neon library for http:// and https:// access; see the
+                --with-neon and --with-ssl options.)]),
 [])
 
 AC_ARG_ENABLE(debug,
