@@ -350,7 +350,7 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.7
      */
-    public native void getMergeinfoLog(MergeinfoLogKind kind, String pathOrUrl,
+    public native void getMergeinfoLog(Mergeinfo.LogKind kind, String pathOrUrl,
                                        Revision pegRevision,
                                        String mergeSourceUrl,
                                        Revision srcPegRevision,
