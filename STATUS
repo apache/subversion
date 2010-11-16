@@ -200,16 +200,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r984565
-   Tweak some function parameter names so the SWIG bindings can
-   distinguish between similar-but-different hash contents.
-   Justification:
-     Without this fix, the SWIG bindings (Python, at least, but perhaps
-     others also) try to convert the contents of a hash to the wrong
-     type.
-   Votes:
-     +1: cmpilato, stsp, pburba
-
  * r1024269
    Fix issue #3733, which tracks an API knowledge violation in the repos
    dumpstream loading code.

@@ -57,6 +57,7 @@
 
 %hash_argout_typemap(entries_p, svn_fs_dirent_t *)
 %hash_argout_typemap(changed_paths_p, svn_fs_path_change_t *)
+%hash_argout_typemap(changed_paths2_p, svn_fs_path_change2_t *)
 
 #ifndef SWIGPERL
 %callback_typemap(svn_fs_get_locks_callback_t get_locks_func,

@@ -1122,7 +1122,7 @@ svn_fs_path_change2_create(const svn_fs_id_t *node_rev_id,
 
 /** Determine what has changed under a @a root.
  *
- * Allocate and return a hash @a *changed_paths_p containing descriptions
+ * Allocate and return a hash @a *changed_paths2_p containing descriptions
  * of the paths changed under @a root.  The hash is keyed with
  * <tt>const char *</tt> paths, and has @c svn_fs_path_change2_t * values.
  *
@@ -1137,7 +1137,7 @@ svn_fs_path_change2_create(const svn_fs_id_t *node_rev_id,
  * @since New in 1.6.
  */
 svn_error_t *
-svn_fs_paths_changed2(apr_hash_t **changed_paths_p,
+svn_fs_paths_changed2(apr_hash_t **changed_paths2_p,
                       svn_fs_root_t *root,
                       apr_pool_t *pool);
 
