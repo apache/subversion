@@ -814,22 +814,12 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
 
   if (!repos_root || !repos_relpath)
     {
-      err = svn_wc__db_scan_base_repos(&repos_relpath, &repos_root, NULL,
-                                      db, local_abspath,
-                                      scratch_pool, scratch_pool);
-
-      if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-        svn_error_clear(err);
-      else
-        SVN_ERR(err);
-
       /* Ok, that leaves a local addition. Deleted and not existing nodes
          are already handled. */
-      if (!repos_root || !repos_relpath)
-        SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, &repos_relpath,
-                                         &repos_root, NULL, NULL, NULL, NULL,
-                                         NULL, db, local_abspath,
-                                         scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, &repos_relpath,
+                                       &repos_root, NULL, NULL, NULL, NULL,
+                                       NULL, db, local_abspath,
+                                       scratch_pool, scratch_pool));
     }
 
   if (!SVN_IS_VALID_REVNUM(target_rev))
