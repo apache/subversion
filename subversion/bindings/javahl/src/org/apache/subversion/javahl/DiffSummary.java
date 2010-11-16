@@ -25,7 +25,7 @@ package org.apache.subversion.javahl;
 
 import java.util.EventObject;
 import org.apache.subversion.javahl.callback.DiffSummaryCallback;
-import org.apache.subversion.javahl.type.NodeKind;
+import org.apache.subversion.javahl.types.NodeKind;
 
 /**
  * The event passed to the {@link DiffSummaryCallback#onSummary} API

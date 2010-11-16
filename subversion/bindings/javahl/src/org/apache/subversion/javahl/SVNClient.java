@@ -24,7 +24,7 @@
 package org.apache.subversion.javahl;
 
 import org.apache.subversion.javahl.callback.*;
-import org.apache.subversion.javahl.type.*;
+import org.apache.subversion.javahl.types.*;
 
 import java.io.OutputStream;
 import java.io.ByteArrayOutputStream;

@@ -23,7 +23,7 @@
 package org.apache.subversion.javahl;
 
 import org.apache.subversion.javahl.callback.*;
-import org.apache.subversion.javahl.type.NodeKind;
+import org.apache.subversion.javahl.types.NodeKind;
 
 import java.io.File;
 import java.io.FileInputStream;

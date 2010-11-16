@@ -30,14 +30,14 @@ package org.tigris.subversion.javahl;
  */
 public class Version
 {
-    private org.apache.subversion.javahl.type.Version aVersion;
+    private org.apache.subversion.javahl.types.Version aVersion;
 
     public Version()
     {
-        aVersion = new org.apache.subversion.javahl.type.Version();
+        aVersion = new org.apache.subversion.javahl.types.Version();
     }
 
-    public Version(org.apache.subversion.javahl.type.Version aVersion)
+    public Version(org.apache.subversion.javahl.types.Version aVersion)
     {
         this.aVersion = aVersion;
     }

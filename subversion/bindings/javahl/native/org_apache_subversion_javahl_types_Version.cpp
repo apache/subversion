@@ -20,16 +20,16 @@
  * ====================================================================
  * @endcopyright
  *
- * @file org_apache_subversion_javahl_type_Version.cpp
+ * @file org_apache_subversion_javahl_types_Version.cpp
  * @brief Implementation of the native methods in the Java class Version.
  */
 
-#include "../include/org_apache_subversion_javahl_type_Version.h"
+#include "../include/org_apache_subversion_javahl_types_Version.h"
 #include "JNIStackElement.h"
 #include "svn_version.h"
 
 JNIEXPORT jint JNICALL
-Java_org_apache_subversion_javahl_type_Version_getMajor(JNIEnv *env,
+Java_org_apache_subversion_javahl_types_Version_getMajor(JNIEnv *env,
  jobject jthis)
 {
   JNIEntry(Version, getMajor);
@@ -37,7 +37,7 @@ Java_org_apache_subversion_javahl_type_Version_getMajor(JNIEnv *env,
 }
 
 JNIEXPORT jint JNICALL
-Java_org_apache_subversion_javahl_type_Version_getMinor(JNIEnv *env,
+Java_org_apache_subversion_javahl_types_Version_getMinor(JNIEnv *env,
  jobject jthis)
 {
   JNIEntry(Version, getMinor);
@@ -45,7 +45,7 @@ Java_org_apache_subversion_javahl_type_Version_getMinor(JNIEnv *env,
 }
 
 JNIEXPORT jint JNICALL
-Java_org_apache_subversion_javahl_type_Version_getPatch(JNIEnv *env,
+Java_org_apache_subversion_javahl_types_Version_getPatch(JNIEnv *env,
  jobject jthis)
 {
   JNIEntry(Version, getPatch);
@@ -53,7 +53,7 @@ Java_org_apache_subversion_javahl_type_Version_getPatch(JNIEnv *env,
 }
 
 JNIEXPORT jstring JNICALL
-Java_org_apache_subversion_javahl_type_Version_getTag(JNIEnv *env,
+Java_org_apache_subversion_javahl_types_Version_getTag(JNIEnv *env,
  jobject jthis)
 {
   JNIEntry(Version, getTag);
@@ -65,7 +65,7 @@ Java_org_apache_subversion_javahl_type_Version_getTag(JNIEnv *env,
 }
 
 JNIEXPORT jstring JNICALL
-Java_org_apache_subversion_javahl_type_Version_getNumberTag(JNIEnv *env,
+Java_org_apache_subversion_javahl_types_Version_getNumberTag(JNIEnv *env,
  jobject jthis)
 {
   JNIEntry(Version, getNumberTag);

@@ -21,7 +21,7 @@
  * @endcopyright
  */
 
-package org.apache.subversion.javahl.type;
+package org.apache.subversion.javahl.types;
 
 /**
  * Rich man's enum for svn_node_kind_t

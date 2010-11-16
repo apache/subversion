@@ -140,7 +140,7 @@ ListCallback::createJavaDirEntry(const char *path, const char *absPath,
     {
       mid = env->GetMethodID(clazz, "<init>",
                              "(Ljava/lang/String;Ljava/lang/String;"
-                             "L"JAVA_PACKAGE"/type/NodeKind;"
+                             "L"JAVA_PACKAGE"/types/NodeKind;"
                              "JZJJLjava/lang/String;)V");
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;

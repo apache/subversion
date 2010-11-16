@@ -91,7 +91,7 @@ DiffSummaryReceiver::onSummary(const svn_client_diff_summarize_t *diff,
       ctor = env->GetMethodID(clazz, "<init>",
                               "(Ljava/lang/String;"
                               "L"JAVA_PACKAGE"/DiffSummary$DiffKind;Z"
-                              "L"JAVA_PACKAGE"/type/NodeKind;)V");
+                              "L"JAVA_PACKAGE"/types/NodeKind;)V");
       if (JNIUtil::isJavaExceptionThrown() || ctor == 0)
         POP_AND_RETURN(SVN_NO_ERROR);
     }
