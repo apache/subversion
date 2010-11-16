@@ -12804,6 +12804,13 @@ def merge_target_and_subtrees_need_nonintersecting_ranges(sbox):
     None, expected_merge_output([[8]], ['U    ' + nu_COPY_path    + '\n',
                                         ' G   ' + nu_COPY_path    + '\n']),
     [], 'merge', '-c8', sbox.repo_url + '/A/D/G/nu', nu_COPY_path)
+  # Replicate pre 1.7 merge behavior where self-referential mergeinfo
+  # could be inherited, this keeps the original intent of this test intact,
+  # see http://subversion.tigris.org/issues/show_bug.cgi?id=3669#desc8
+  svntest.actions.run_and_verify_svn(None, None, [], 'ps',
+                                     SVN_PROP_MERGEINFO, '/A/D/G/nu:2-8',
+                                     nu_COPY_path)
+  
   svntest.actions.run_and_verify_svn(
     None, expected_merge_output([[-6]], ['G    ' + omega_COPY_path    + '\n',
                                          ' G   ' + omega_COPY_path    + '\n']),
