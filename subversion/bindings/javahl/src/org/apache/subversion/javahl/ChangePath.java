@@ -23,7 +23,7 @@
 
 package org.apache.subversion.javahl;
 
-import org.apache.subversion.javahl.type.NodeKind;
+import org.apache.subversion.javahl.type.*;
 
 public class ChangePath implements java.io.Serializable
 {

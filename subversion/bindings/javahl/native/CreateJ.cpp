@@ -378,8 +378,8 @@ CreateJ::ChangedPath(const char *path, svn_log_changed_path2_t *log_item)
                                "(Ljava/lang/String;JLjava/lang/String;"
                                "L"JAVA_PACKAGE"/ChangePath$Action;"
                                "L"JAVA_PACKAGE"/type/NodeKind;"
-                               "L"JAVA_PACKAGE"/Tristate;"
-                               "L"JAVA_PACKAGE"/Tristate;)V");
+                               "L"JAVA_PACKAGE"/type/Tristate;"
+                               "L"JAVA_PACKAGE"/type/Tristate;)V");
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN(SVN_NO_ERROR);
     }
