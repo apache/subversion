@@ -2235,7 +2235,6 @@ svn_wc__wq_run(svn_wc__db_t *db,
 
   while (TRUE)
     {
-      svn_wc__db_kind_t kind;
       apr_uint64_t id;
       svn_skel_t *work_item;
 
