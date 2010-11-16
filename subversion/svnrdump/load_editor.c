@@ -662,6 +662,8 @@ drive_dumpstream_loader(svn_stream_t *stream,
                         const svn_repos_parse_fns2_t *parser,
                         void *parse_baton,
                         svn_ra_session_t *session,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
                         apr_pool_t *pool)
 {
   struct parse_baton *pb = parse_baton;
@@ -676,7 +678,7 @@ drive_dumpstream_loader(svn_stream_t *stream,
   SVN_ERR(get_lock(&lock_string, session, pool));
   SVN_ERR(svn_ra_get_repos_root2(session, &(pb->root_url), pool));
   SVN_ERR(svn_repos_parse_dumpstream2(stream, parser, parse_baton,
-                                      NULL, NULL, pool));
+                                      cancel_func, cancel_baton, pool));
   err = svn_ra_change_rev_prop2(session, 0, SVNRDUMP_PROP_LOCK,
                                  be_atomic ? &lock_string : NULL, NULL, pool);
   if (is_atomicity_error(err))
