@@ -1011,6 +1011,14 @@ svn_ra_get_dir(svn_ra_session_t *session,
  * @a inherit indicates whether explicit, explicit or inherited, or
  * only inherited mergeinfo for @a paths is retrieved.
  *
+ * If the mergeinfo for any path is inherited and
+ * @a *validate_inherited_mergeinfo is TRUE, then request that the server
+ * validate the mergeinfo in @a *catalog, so it contains only merge source
+ * path-revisions that actually exist in repository.  If validation is
+ * requested and the server supports it, then set
+ * @a *validate_inherited_mergeinfo to TRUE on return.  Set it to FALSE
+ * in all other cases.
+ *
  * If @a include_descendants is TRUE, then additionally return the
  * mergeinfo for any descendant of any element of @a paths which has
  * the @c SVN_PROP_MERGEINFO property explicitly set on it.  (Note
@@ -1027,7 +1035,23 @@ svn_ra_get_dir(svn_ra_session_t *session,
  * upgraded), return @c SVN_ERR_UNSUPPORTED_FEATURE in preference to
  * any other error that might otherwise be returned.
  *
- * @since New in 1.5.
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_ra_get_mergeinfo2(svn_ra_session_t *session,
+                      svn_mergeinfo_catalog_t *catalog,
+                      const apr_array_header_t *paths,
+                      svn_revnum_t revision,
+                      svn_mergeinfo_inheritance_t inherit,
+                      svn_boolean_t *validate_inherited_mergeinfo,
+                      svn_boolean_t include_descendants,
+                      apr_pool_t *pool);
+
+/**
+ * Similar to svn_ra_get_mergeinfo2(), but with
+ * @a validate_inherited_mergeinfo always passed as FALSE.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  */
 svn_error_t *
 svn_ra_get_mergeinfo(svn_ra_session_t *session,

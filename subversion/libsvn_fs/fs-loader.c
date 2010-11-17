@@ -991,6 +991,22 @@ svn_fs_closest_copy(svn_fs_root_t **root_p, const char **path_p,
 }
 
 svn_error_t *
+svn_fs_get_mergeinfo2(svn_mergeinfo_catalog_t *catalog,
+                      svn_fs_root_t *root,
+                      const apr_array_header_t *paths,
+                      svn_mergeinfo_inheritance_t inherit,
+                      svn_boolean_t validate_inherited_mergeinfo,
+                      svn_boolean_t include_descendants,
+                      apr_pool_t *pool)
+{
+  return svn_error_return(root->vtable->get_mergeinfo(catalog, root, paths,
+                                                      inherit,
+                                                      validate_inherited_mergeinfo,
+                                                      include_descendants,
+                                                      pool));
+}
+
+svn_error_t *
 svn_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
                      svn_fs_root_t *root,
                      const apr_array_header_t *paths,
@@ -998,10 +1014,133 @@ svn_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
                      svn_boolean_t include_descendants,
                      apr_pool_t *pool)
 {
-  return svn_error_return(root->vtable->get_mergeinfo(catalog, root, paths,
-                                                      inherit,
-                                                      include_descendants,
-                                                      pool));
+  return svn_error_return(svn_fs_get_mergeinfo2(catalog, root, paths,
+                                                inherit,
+                                                FALSE,
+                                                include_descendants,
+                                                pool));
+}
+
+svn_error_t *
+svn_fs_validate_mergeinfo(svn_mergeinfo_t *validated_mergeinfo,
+                          svn_mergeinfo_t mergeinfo,
+                          svn_fs_t *fs,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
+{
+  svn_mergeinfo_t filtered_mergeinfo;
+  apr_hash_t *rev_to_sources;
+  apr_hash_index_t *hi;
+  apr_pool_t *iterpool;
+
+  /* A couple easy outs. */
+  if (mergeinfo == NULL)
+    {
+      *validated_mergeinfo = NULL;
+      return SVN_NO_ERROR;
+    }
+  else if (apr_hash_count(mergeinfo) == 0)
+    {
+      *validated_mergeinfo = apr_hash_make(result_pool);
+      return SVN_NO_ERROR;
+    }
+
+  filtered_mergeinfo = apr_hash_make(scratch_pool);
+  rev_to_sources = apr_hash_make(scratch_pool);
+
+  /* Since svn_fs_check_path needs an svn_fs_root_t based on a revision,
+     we convert MERGEINFO into a mapping of revisions to a hash of source
+     paths for efficiency. */
+  for (hi = apr_hash_first(scratch_pool, mergeinfo);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *path = svn__apr_hash_index_key(hi);
+      apr_array_header_t *rangelist = svn__apr_hash_index_val(hi);
+      int i;
+
+      for (i = 0; i < rangelist->nelts; i++)
+        {
+          svn_merge_range_t *range =
+            APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *);
+          svn_revnum_t j;
+
+          for (j = range->start + 1; j <= range->end; j++)
+            {
+              apr_hash_t *paths_for_rev = apr_hash_get(rev_to_sources,
+                                                       &j,
+                                                       sizeof(svn_revnum_t));
+
+              /* No hash associated with this rev yet? */
+              if (!paths_for_rev)
+                {
+                  svn_revnum_t *rev = apr_palloc(scratch_pool, sizeof(*rev));
+
+                  *rev = j;
+                  paths_for_rev = apr_hash_make(scratch_pool);
+                  apr_hash_set(rev_to_sources, rev,
+                               sizeof(svn_revnum_t), paths_for_rev);
+                }
+
+              apr_hash_set(paths_for_rev, path, APR_HASH_KEY_STRING, path);
+            }
+        }
+    }
+
+  iterpool = svn_pool_create(scratch_pool);
+
+  /* Validate the rev->source MERGEINFO equivalent hash, building the
+     validated mergeinfo as we go. */
+  for (hi = apr_hash_first(scratch_pool, rev_to_sources);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      apr_pool_t *inner_iterpool;
+      apr_hash_index_t *hi2;
+      svn_node_kind_t kind;
+      const svn_revnum_t *rev = svn__apr_hash_index_key(hi);
+      apr_hash_t *paths = svn__apr_hash_index_val(hi);
+      svn_fs_root_t *mergeinfo_rev_root;
+
+      svn_pool_clear(iterpool);
+      inner_iterpool = svn_pool_create(iterpool);
+
+      SVN_ERR(svn_fs_revision_root(&mergeinfo_rev_root, fs,
+                                   *rev, iterpool));
+
+       for (hi2 = apr_hash_first(iterpool, paths);
+            hi2;
+            hi2 = apr_hash_next(hi2))
+         {
+            const char *path = svn__apr_hash_index_key(hi2);
+ 
+            svn_pool_clear(inner_iterpool);
+            SVN_ERR(svn_fs_check_path(&kind, mergeinfo_rev_root,
+                                      path, inner_iterpool));
+            if (kind == svn_node_none)
+              {
+                apr_hash_set(paths, path, APR_HASH_KEY_STRING, NULL);
+              }
+            else
+              {
+                const char *mergeinfo_str = apr_psprintf(inner_iterpool,
+                                                         "%s:%d",
+                                                         path, *rev);
+                svn_mergeinfo_t good_mergeinfo_fragment;
+
+                SVN_ERR(svn_mergeinfo_parse(&good_mergeinfo_fragment,
+                                            mergeinfo_str, scratch_pool));
+                SVN_ERR(svn_mergeinfo_merge(filtered_mergeinfo,
+                                            good_mergeinfo_fragment,
+                                            scratch_pool));
+              }
+         }
+      svn_pool_destroy(inner_iterpool);
+    }
+
+  svn_pool_destroy(iterpool);
+  *validated_mergeinfo = svn_mergeinfo_dup(filtered_mergeinfo, result_pool);
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *

@@ -597,15 +597,16 @@ svn_repos_fs_get_locks2(apr_hash_t **locks,
 
 
 svn_error_t *
-svn_repos_fs_get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo,
-                           svn_repos_t *repos,
-                           const apr_array_header_t *paths,
-                           svn_revnum_t rev,
-                           svn_mergeinfo_inheritance_t inherit,
-                           svn_boolean_t include_descendants,
-                           svn_repos_authz_func_t authz_read_func,
-                           void *authz_read_baton,
-                           apr_pool_t *pool)
+svn_repos_fs_get_mergeinfo2(svn_mergeinfo_catalog_t *mergeinfo,
+                            svn_repos_t *repos,
+                            const apr_array_header_t *paths,
+                            svn_revnum_t rev,
+                            svn_mergeinfo_inheritance_t inherit,
+                            svn_boolean_t validate_inherited_mergeinfo,
+                            svn_boolean_t include_descendants,
+                            svn_repos_authz_func_t authz_read_func,
+                            void *authz_read_baton,
+                            apr_pool_t *pool)
 {
   /* Here we cast away 'const', but won't try to write through this pointer
    * without first allocating a new array. */
@@ -653,13 +654,34 @@ svn_repos_fs_get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo,
      the change itself. */
   /* ### TODO(reint): ... but how about descendant merged-to paths? */
   if (readable_paths->nelts > 0)
-    SVN_ERR(svn_fs_get_mergeinfo(mergeinfo, root, readable_paths, inherit,
-                                 include_descendants, pool));
+    SVN_ERR(svn_fs_get_mergeinfo2(mergeinfo, root, readable_paths, inherit,
+                                  validate_inherited_mergeinfo,
+                                  include_descendants, pool));
   else
     *mergeinfo = apr_hash_make(pool);
 
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_repos_fs_get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo,
+                           svn_repos_t *repos,
+                           const apr_array_header_t *paths,
+                           svn_revnum_t rev,
+                           svn_mergeinfo_inheritance_t inherit,
+                           svn_boolean_t include_descendants,
+                           svn_repos_authz_func_t authz_read_func,
+                           void *authz_read_baton,
+                           apr_pool_t *pool)
+{
+  return svn_error_return(svn_repos_fs_get_mergeinfo2(mergeinfo, repos,
+                                                      paths, rev, inherit,
+                                                      FALSE,
+                                                      include_descendants,
+                                                      authz_read_func,
+                                                      authz_read_baton,
+                                                      pool));
 }
 
 struct pack_notify_baton
