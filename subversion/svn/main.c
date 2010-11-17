@@ -1388,6 +1388,15 @@ main(int argc, const char *argv[])
               const char *change_str =
                 APR_ARRAY_IDX(change_revs, i, const char *);
               const char *s = change_str;
+              svn_boolean_t is_negative;
+
+              /* Check for a leading minus to allow -c -r42.
+               * The is_negative flag is only used to handle this one case.
+               * The -c -42 case (without 'r') is handled by strtol()
+               * returning a negative number. */
+              is_negative = (*s == '-');
+              if (is_negative)
+                s++;
 
               /* Allow any number of 'r's to prefix a revision number.
                  ### TODO: Any reason we're not just using opt.c's
@@ -1398,7 +1407,7 @@ main(int argc, const char *argv[])
               changeno = changeno_end = strtol(s, &end, 10);
               if (end != s && *end == '-')
                 {
-                  if (changeno < 0)
+                  if (changeno < 0 || is_negative)
                     {
                       err = svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                               _("Negative number in range (%s)"
@@ -1425,6 +1434,9 @@ main(int argc, const char *argv[])
                                          _("There is no change 0"));
                   return svn_cmdline_handle_exit_error(err, pool, "svn: ");
                 }
+
+              if (is_negative)
+                changeno = -changeno;
 
               /* Figure out the range:
                     -c N  -> -r N-1:N
