@@ -9586,7 +9586,7 @@ def new_subtrees_should_not_break_merge(sbox):
     'D/H/psi'   : Item("This is the file 'psi'.\n"),
     'D/H/omega' : Item("New content"),
     'D/H/nu'    : Item("New content",
-                       props={SVN_PROP_MERGEINFO : '/A/D/H/nu:7-8'}),
+                       props={SVN_PROP_MERGEINFO : '/A/D/H/nu:8'}),
     })
   expected_skip = wc.State(A_COPY_path, { })
   svntest.actions.run_and_verify_merge(A_COPY_path, '4', '6',
@@ -9632,7 +9632,7 @@ def new_subtrees_should_not_break_merge(sbox):
     'H/psi'   : Item("This is the file 'psi'.\n"),
     'H/omega' : Item("This is the file 'omega'.\n"),
     'H/nu'    : Item("New content",
-                     props={SVN_PROP_MERGEINFO : '/A/D/H/nu:7-8'}),
+                     props={SVN_PROP_MERGEINFO : '/A/D/H/nu:8'}),
     })
   expected_skip = wc.State(D_COPY_path, { })
   svntest.actions.run_and_verify_merge(D_COPY_path, '6', '5',
@@ -9704,7 +9704,7 @@ def new_subtrees_should_not_break_merge(sbox):
     'D/H/psi'   : Item("This is the file 'psi'.\n"),
     'D/H/omega' : Item("New content"),
     'D/H/nu'    : Item("New content",
-                       props={SVN_PROP_MERGEINFO : '/A/D/H/nu:7-8'}),
+                       props={SVN_PROP_MERGEINFO : '/A/D/H/nu:8'}),
     })
   expected_skip = wc.State(A_COPY_path, { })
   svntest.actions.run_and_verify_merge(A_COPY_path, '5', '6',
@@ -12804,6 +12804,13 @@ def merge_target_and_subtrees_need_nonintersecting_ranges(sbox):
     None, expected_merge_output([[8]], ['U    ' + nu_COPY_path    + '\n',
                                         ' G   ' + nu_COPY_path    + '\n']),
     [], 'merge', '-c8', sbox.repo_url + '/A/D/G/nu', nu_COPY_path)
+  # Replicate pre 1.7 merge behavior where self-referential mergeinfo
+  # could be inherited, this keeps the original intent of this test intact,
+  # see http://subversion.tigris.org/issues/show_bug.cgi?id=3669#desc8
+  svntest.actions.run_and_verify_svn(None, None, [], 'ps',
+                                     SVN_PROP_MERGEINFO, '/A/D/G/nu:2-8',
+                                     nu_COPY_path)
+  
   svntest.actions.run_and_verify_svn(
     None, expected_merge_output([[-6]], ['G    ' + omega_COPY_path    + '\n',
                                          ' G   ' + omega_COPY_path    + '\n']),
@@ -16157,10 +16164,6 @@ def no_self_referential_or_nonexistent_inherited_mergeinfo(sbox):
   # Update the WC in preparation for merges.
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
-  # This test is marked as XFail because the following two merges
-  # create mergeinfo with both non-existent path-revs and self-referential
-  # mergeinfo.c
-  #
   # Merge all available revisions from A/C/nu to A_COPY/C/nu.
   # The target has no explicit mergeinfo of its own but inherits mergeinfo
   # from A_COPY.  A_COPY has the mergeinfo '/A:2-9' so the naive mergeinfo
@@ -16414,7 +16417,7 @@ test_list = [ None,
               merge_into_locally_added_file,
               merge_into_locally_added_directory,
               merge_with_os_deleted_subtrees,
-              XFail(no_self_referential_or_nonexistent_inherited_mergeinfo),
+              no_self_referential_or_nonexistent_inherited_mergeinfo,
              ]
 
 if __name__ == '__main__':
