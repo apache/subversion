@@ -1387,15 +1387,16 @@ main(int argc, const char *argv[])
               svn_opt_revision_range_t *range;
               const char *change_str =
                 APR_ARRAY_IDX(change_revs, i, const char *);
+              const char *s = change_str;
 
               /* Allow any number of 'r's to prefix a revision number.
                  ### TODO: Any reason we're not just using opt.c's
                  ### revision-parsing code here?  Then -c could take
                  ### "{DATE}" and the special words. */
-              while (*change_str == 'r')
-                change_str++;
-              changeno = changeno_end = strtol(change_str, &end, 10);
-              if (end != change_str && *end == '-')
+              while (*s == 'r')
+                s++;
+              changeno = changeno_end = strtol(s, &end, 10);
+              if (end != s && *end == '-')
                 {
                   if (changeno < 0)
                     {
@@ -1405,10 +1406,10 @@ main(int argc, const char *argv[])
                                               change_str);
                       return svn_cmdline_handle_exit_error(err, pool, "svn: ");
                     }
-                  change_str = end+1;
-                  while (*change_str == 'r')
-                    change_str++;
-                  changeno_end = strtol(change_str, &end, 10);
+                  s = end + 1;
+                  while (*s == 'r')
+                    s++;
+                  changeno_end = strtol(s, &end, 10);
                 }
               if (end == change_str || *end != '\0')
                 {
