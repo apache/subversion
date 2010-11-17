@@ -1124,7 +1124,7 @@ svn_fs_validate_mergeinfo(svn_mergeinfo_t *validated_mergeinfo,
             else
               {
                 const char *mergeinfo_str = apr_psprintf(inner_iterpool,
-                                                         "%s:%d",
+                                                         "%s:%ld",
                                                          path, *rev);
                 svn_mergeinfo_t good_mergeinfo_fragment;
 
