@@ -73,6 +73,8 @@ static svn_boolean_t is_atomicity_error(svn_error_t *err)
 static svn_error_t *
 get_lock(const svn_string_t **lock_string_p,
          svn_ra_session_t *session,
+         svn_cancel_func_t cancel_func,
+         void *cancel_baton,
          apr_pool_t *pool)
 {
   char hostname_str[APRMAXHOSTLEN + 1] = { 0 };
@@ -115,6 +117,7 @@ get_lock(const svn_string_t **lock_string_p,
 
       svn_pool_clear(subpool);
 
+      SVN_ERR(cancel_func(cancel_baton));
       SVN_ERR(svn_ra_rev_prop(session, 0, SVNRDUMP_PROP_LOCK, &reposlocktoken,
                               subpool));
 
@@ -675,7 +678,7 @@ drive_dumpstream_loader(svn_stream_t *stream,
                                 SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
                                 pool));
 
-  SVN_ERR(get_lock(&lock_string, session, pool));
+  SVN_ERR(get_lock(&lock_string, session, cancel_func, cancel_baton, pool));
   SVN_ERR(svn_ra_get_repos_root2(session, &(pb->root_url), pool));
   SVN_ERR(svn_repos_parse_dumpstream2(stream, parser, parse_baton,
                                       cancel_func, cancel_baton, pool));
