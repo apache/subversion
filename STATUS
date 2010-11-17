@@ -99,6 +99,13 @@ Candidate changes:
    Votes:
      +1: kameshj (with r878590 and r916286 groups)
 
+ * r996383
+   Add shorthands for 'svn --accept=%s' values.
+   Justication:
+     Require less typing to resolve conflicts.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
