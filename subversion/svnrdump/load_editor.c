@@ -93,8 +93,7 @@ get_lock(const svn_string_t **lock_string_p,
       svn_error_t *err =
         svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                          _("Target server does not support atomic revision "
-                           "property edits; consider upgrading it to 1.7 "
-                           "or using an external locking program"));
+                           "property edits; consider upgrading it to 1.7."));
       svn_handle_warning2(stderr, err, "svnrdump: ");
       svn_error_clear(err);
     }
