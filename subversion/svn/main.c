@@ -1398,10 +1398,7 @@ main(int argc, const char *argv[])
               if (is_negative)
                 s++;
 
-              /* Allow any number of 'r's to prefix a revision number.
-                 ### TODO: Any reason we're not just using opt.c's
-                 ### revision-parsing code here?  Then -c could take
-                 ### "{DATE}" and the special words. */
+              /* Allow any number of 'r's to prefix a revision number. */
               while (*s == 'r')
                 s++;
               changeno = changeno_end = strtol(s, &end, 10);
