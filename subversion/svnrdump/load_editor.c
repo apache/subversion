@@ -171,6 +171,33 @@ get_lock(const svn_string_t **lock_string_p,
                              "after %d attempts"), i);
 }
 
+/* Remove the lock on SESSION iff the lock is owned by MYLOCKTOKEN. */
+static svn_error_t *
+maybe_unlock(svn_ra_session_t *session,
+             const svn_string_t *mylocktoken,
+             apr_pool_t *scratch_pool)
+{
+  svn_string_t *reposlocktoken;
+  svn_boolean_t be_atomic;
+
+  SVN_ERR(svn_ra_has_capability(session, &be_atomic,
+                                SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
+                                scratch_pool));
+  SVN_ERR(svn_ra_rev_prop(session, 0, SVNRDUMP_PROP_LOCK,
+                          &reposlocktoken, scratch_pool));
+  if (reposlocktoken && strcmp(reposlocktoken->data, mylocktoken->data) == 0)
+    {
+      svn_error_t *err =
+        svn_ra_change_rev_prop2(session, 0, SVNRDUMP_PROP_LOCK,
+                                be_atomic ? &mylocktoken : NULL, NULL,
+                                scratch_pool);
+      if (is_atomicity_error(err))
+        return svn_error_quick_wrap(err, _("svnrdump's lock was stolen; "
+                                           "can't remove it"));
+    }
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 new_revision_record(void **revision_baton,
 		    apr_hash_t *headers,
@@ -677,17 +704,16 @@ drive_dumpstream_loader(svn_stream_t *stream,
   SVN_ERR(svn_ra_has_capability(session, &be_atomic,
                                 SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
                                 pool));
-
   SVN_ERR(get_lock(&lock_string, session, cancel_func, cancel_baton, pool));
   SVN_ERR(svn_ra_get_repos_root2(session, &(pb->root_url), pool));
-  SVN_ERR(svn_repos_parse_dumpstream2(stream, parser, parse_baton,
-                                      cancel_func, cancel_baton, pool));
-  err = svn_ra_change_rev_prop2(session, 0, SVNRDUMP_PROP_LOCK,
-                                 be_atomic ? &lock_string : NULL, NULL, pool);
-  if (is_atomicity_error(err))
-    return svn_error_quick_wrap(err,
-                                _("\"svnrdump load\"'s lock was stolen; "
-                                  "can't remove it"));
+  err = svn_repos_parse_dumpstream2(stream, parser, parse_baton,
+                                    cancel_func, cancel_baton, pool);
 
-  return SVN_NO_ERROR;
+  /* If all goes well, or if we're cancelled cleanly, don't leave a
+     stray lock behind. */
+  if ((! err) 
+      || (err && (err->apr_err == SVN_ERR_CANCELLED)))
+    err = svn_error_compose_create(maybe_unlock(session, lock_string, pool),
+                                   err);
+  return err;
 }
