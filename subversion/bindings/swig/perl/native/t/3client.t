@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-use Test::More tests => 118;
+use Test::More tests => 119;
 use strict;
 
 # shut up about variables that are only used once.
@@ -443,6 +443,19 @@ SKIP: {
     isa_ok($ctx->auth($oldauthbaton),'_p_svn_auth_baton_t',
            'Successfully set auth_baton back to old value');
 }
+
+# Keep track of the ok-ness ourselves, since we need to know the exact
+# number of tests at the start of this file. The 'subtest' feature of
+# Test::More would be perfect for this, but it's only available in very
+# recent perl versions, it seems.
+my $ok = 1;
+# Get a list of platform specific providers, using the default
+# configuration and pool.
+my @providers = @{SVN::Core::auth_get_platform_specific_client_providers(undef, undef)};
+foreach my $p (@providers) {
+    $ok &= defined($p) && $p->isa('_p_svn_auth_provider_object_t');
+}
+ok($ok, 'svn_auth_get_platform_specific_client_providers returns _p_svn_auth_provider_object_t\'s');
 
 END {
 diag('cleanup');

@@ -202,15 +202,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1035745
-   Add mapping for 'apr_array_header_t **providers' to the Perl swig bindings.
-   Justification:
-     Fixes svn_auth_get_platform_specific_client_providers() for the Perl
-     bindings.  User requested, and includes test case.
-   Notes:
-     I know so little Perl (or swig for that matter), that additional
-     eyeballs would be very nice.
-   Votes:
-     +0: hwright
-     +1: cmpilato
