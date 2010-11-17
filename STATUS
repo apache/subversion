@@ -101,7 +101,7 @@ Candidate changes:
    Justification:
      It's misleading and pointless to report anything but trunk as switched.
    Votes:
-     +1: stsp
+     +1: stsp, julianfoad
 
 Veto-blocked changes:
 =====================
