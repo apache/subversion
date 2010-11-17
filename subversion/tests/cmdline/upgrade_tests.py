@@ -728,14 +728,14 @@ test_list = [ None,
               # Upgrading from 1.4.0-1.4.5 with specific states fails
               # See issue #2530
               XFail(x3_1_4_0),
-              x3_1_4_6,
-              x3_1_6_12,
+              XFail(x3_1_4_6),
+              XFail(x3_1_6_12),
               missing_dirs,
               missing_dirs2,
               XFail(delete_and_keep_local),
               dirs_only_upgrade,
               upgrade_tree_conflict_data,
-              XFail(delete_in_copy_upgrade),
+              delete_in_copy_upgrade,
              ]
 
 
