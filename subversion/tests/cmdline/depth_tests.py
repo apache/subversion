@@ -2718,6 +2718,90 @@ def update_depth_empty_root_of_infinite_children(sbox):
                                         None, None,
                                         None, None, None, None, wc_dir)
 
+def sparse_update_with_dash_dash_parents(sbox):
+  """update --parents"""
+
+  sbox.build(create_wc = False)
+  sbox.add_test_path(sbox.wc_dir, True)
+  alpha_path = os.path.join(sbox.wc_dir, 'A', 'B', 'E', 'alpha')
+  pi_path = os.path.join(sbox.wc_dir, 'A', 'D', 'G', 'pi')
+  omega_path = os.path.join(sbox.wc_dir, 'A', 'D', 'H', 'omega')
+  
+  # Start with a depth=empty root checkout.
+  svntest.actions.run_and_verify_svn(
+      "Unexpected error from co --depth=empty",
+      svntest.verify.AnyOutput, [],
+      "co", "--depth", "empty", sbox.repo_url, sbox.wc_dir)
+
+  # Now, let's use --parents to pull in some scattered file children.
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+    'A'            : Item(status='A '),
+    'A/B'          : Item(status='A '),
+    'A/B/E'        : Item(status='A '),
+    'A/B/E/alpha'  : Item(status='A '),
+    })
+  expected_disk = svntest.wc.State('', {
+    'A'            : Item(contents=None),
+    'A/B'          : Item(contents=None),
+    'A/B/E'        : Item(contents=None),
+    'A/B/E/alpha'  : Item(contents="This is the file 'alpha'.\n"),
+    })
+  expected_status = svntest.wc.State(sbox.wc_dir, {
+    ''             : Item(status='  ', wc_rev=1),
+    'A'            : Item(status='  ', wc_rev=1),
+    'A/B'          : Item(status='  ', wc_rev=1),
+    'A/B/E'        : Item(status='  ', wc_rev=1),
+    'A/B/E/alpha'  : Item(status='  ', wc_rev=1),
+    })
+  svntest.actions.run_and_verify_update(sbox.wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None, False,
+                                        '--parents', alpha_path)
+
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+    'A/D'          : Item(status='A '),
+    'A/D/G'        : Item(status='A '),
+    'A/D/G/pi'     : Item(status='A '),
+    })
+  expected_disk.add({
+    'A/D'          : Item(contents=None),
+    'A/D/G'        : Item(contents=None),
+    'A/D/G/pi'     : Item(contents="This is the file 'pi'.\n"),
+    })
+  expected_status.add({
+    'A/D'          : Item(status='  ', wc_rev=1),
+    'A/D/G'        : Item(status='  ', wc_rev=1),
+    'A/D/G/pi'     : Item(status='  ', wc_rev=1),
+    })    
+  svntest.actions.run_and_verify_update(sbox.wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None, False,
+                                        '--parents', pi_path)
+                    
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+    'A/D/H'        : Item(status='A '),
+    'A/D/H/omega'  : Item(status='A '),
+    })
+  expected_disk.add({
+    'A/D/H'        : Item(contents=None),
+    'A/D/H/omega'  : Item(contents="This is the file 'omega'.\n"),
+    })
+  expected_status.add({
+    'A/D/H'        : Item(status='  ', wc_rev=1),
+    'A/D/H/omega'  : Item(status='  ', wc_rev=1),
+    })    
+  svntest.actions.run_and_verify_update(sbox.wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None, False,
+                                        '--parents', omega_path)
+  
+
 #----------------------------------------------------------------------
 # list all tests here, starting with None:
 test_list = [ None,
@@ -2763,6 +2847,7 @@ test_list = [ None,
               tree_conflicts_resolved_depth_infinity,
               update_excluded_path_sticky_depths,
               update_depth_empty_root_of_infinite_children,
+              sparse_update_with_dash_dash_parents,
               ]
 
 if __name__ == "__main__":

@@ -569,21 +569,9 @@ remove_base_node(svn_wc__db_t *db,
           else
             SVN_ERR(err);
         }
+    }
 
-      /* This should remove just BASE and ACTUAL, but for now also remove
-         not existing WORKING_NODE data. */
-      SVN_ERR(svn_wc__db_temp_op_remove_entry(db, local_abspath, scratch_pool));
-    }
-  else if (wrk_status == svn_wc__db_status_added
-           || (have_work && wrk_status == svn_wc__db_status_excluded))
-    /* ### deletes of working additions should fall in this case, but
-       ### we can't express these without the 4th tree */
-    {
-      /* Just remove the BASE_NODE data */
-      SVN_ERR(svn_wc__db_base_remove(db, local_abspath, scratch_pool));
-    }
-  else
-    SVN_ERR(svn_wc__db_temp_op_remove_entry(db, local_abspath, scratch_pool));
+  SVN_ERR(svn_wc__db_base_remove(db, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -2247,7 +2235,6 @@ svn_wc__wq_run(svn_wc__db_t *db,
 
   while (TRUE)
     {
-      svn_wc__db_kind_t kind;
       apr_uint64_t id;
       svn_skel_t *work_item;
 
@@ -2257,14 +2244,6 @@ svn_wc__wq_run(svn_wc__db_t *db,
         SVN_ERR(cancel_func(cancel_baton));
 
       svn_pool_clear(iterpool);
-
-      /* ### right now, we expect WRI_ABSPATH to exist. this section should
-         ### disappear in single-db. also, note that db_wq_fetch() will
-         ### watch out for missing/obstructed subdirs (ie. wq is gone)  */
-      SVN_ERR(svn_wc__db_read_kind(&kind, db, wri_abspath, TRUE,
-                                   scratch_pool));
-      if (kind == svn_wc__db_kind_unknown)
-        break;
 
       SVN_ERR(svn_wc__db_wq_fetch(&id, &work_item, db, wri_abspath,
                                   iterpool, iterpool));

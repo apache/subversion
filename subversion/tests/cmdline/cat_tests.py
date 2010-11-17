@@ -196,6 +196,20 @@ def cat_keywords(sbox):
                                      ["This is the file 'iota'.\n", "$Revision: 2 $\n"],
                                      [], 'cat', iota_path)
 
+def cat_url_special_characters(sbox):
+  """special characters in svn cat URL"""
+  sbox.build(create_wc = False)
+  wc_dir = sbox.wc_dir
+
+  special_urls = [sbox.repo_url + '/A' + '/%2E',
+                  sbox.repo_url + '%2F' + 'A']
+
+  expected_err = ["svn: warning: URL '" + sbox.repo_url + '/A'  + "'"
+                   + " refers to a directory\n"]
+
+  for url in special_urls:
+    svntest.actions.run_and_verify_svn2(None, None, expected_err, 0,
+                                        'cat', url)
 
 ########################################################################
 # Run the tests
@@ -210,6 +224,7 @@ test_list = [ None,
               cat_skip_uncattable,
               cat_unversioned_file,
               cat_keywords,
+              cat_url_special_characters,
              ]
 
 if __name__ == '__main__':

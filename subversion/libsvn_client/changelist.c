@@ -107,6 +107,10 @@ svn_client_add_to_changelist(const apr_array_header_t *paths,
   apr_hash_t *changelist_hash = NULL;
   int i;
 
+  if (changelist[0] == '\0')
+    return svn_error_create(SVN_ERR_BAD_CHANGELIST_NAME, NULL,
+                            _("Target changelist name must not be empty"));
+
   for (i = 0; i < paths->nelts; i++)
     {
       const char *path = APR_ARRAY_IDX(paths, i, const char *);

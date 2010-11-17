@@ -392,7 +392,7 @@ svn_io_open_uniquely_named(apr_file_t **file,
       if (i == 1)
         unique_name = apr_psprintf(scratch_pool, "%s%s", path, suffix);
       else
-        unique_name = apr_psprintf(scratch_pool, "%s.%u_%s", path, i, suffix);
+        unique_name = apr_psprintf(scratch_pool, "%s.%u%s", path, i, suffix);
 
       /* Hmmm.  Ideally, we would append to a native-encoding buf
          before starting iteration, then convert back to UTF-8 for
@@ -3338,6 +3338,10 @@ svn_io_dir_walk2(const char *dirname,
   SVN_ERR((*walk_func)(walk_baton, dirname, &finfo, pool));
 
   SVN_ERR(cstring_from_utf8(&dirname_apr, dirname, pool));
+
+  /* APR doesn't like "" directories */
+  if (dirname_apr[0] == '\0')
+    dirname_apr = ".";
 
   apr_err = apr_dir_open(&handle, dirname_apr, pool);
   if (apr_err)

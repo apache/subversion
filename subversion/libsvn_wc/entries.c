@@ -471,6 +471,42 @@ get_base_info_for_deleted(svn_wc_entry_t *entry,
 }
 
 
+/*
+ * Encode tree conflict descriptions into a single string.
+ *
+ * Set *CONFLICT_DATA to a string, allocated in POOL, that encodes the tree
+ * conflicts in CONFLICTS in a form suitable for storage in a single string
+ * field in a WC entry. CONFLICTS is a hash of zero or more pointers to
+ * svn_wc_conflict_description2_t objects, index by their basenames. All of the
+ * conflict victim paths must be siblings.
+ *
+ * Do all allocations in POOL.
+ *
+ * @see svn_wc__read_tree_conflicts()
+ */
+static svn_error_t *
+write_tree_conflicts(const char **conflict_data,
+                     apr_hash_t *conflicts,
+                     apr_pool_t *pool)
+{
+  svn_skel_t *skel = svn_skel__make_empty_list(pool);
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(pool, conflicts); hi; hi = apr_hash_next(hi))
+    {
+      svn_skel_t *c_skel;
+
+      SVN_ERR(svn_wc__serialize_conflict(&c_skel, svn__apr_hash_index_val(hi),
+                                         pool, pool));
+      svn_skel__prepend(c_skel, skel);
+    }
+
+  *conflict_data = svn_skel__unparse(skel, pool)->data;
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Read one entry from wc_db. It will be allocated in RESULT_POOL and
    returned in *NEW_ENTRY.
 
@@ -586,9 +622,8 @@ read_one_entry(const svn_wc_entry_t **new_entry,
 
       if (tree_conflicts)
         {
-          SVN_ERR(svn_wc__write_tree_conflicts(&entry->tree_conflict_data,
-                                               tree_conflicts,
-                                               result_pool));
+          SVN_ERR(write_tree_conflicts(&entry->tree_conflict_data,
+                                       tree_conflicts, result_pool));
         }
     }
 
@@ -1687,12 +1722,10 @@ write_entry(svn_wc__db_t *db,
             svn_sqlite__db_t *sdb,
             apr_int64_t wc_id,
             apr_int64_t repos_id,
-            const char *repos_root,
             const svn_wc_entry_t *entry,
             const char *local_relpath,
             const char *entry_abspath,
             const svn_wc_entry_t *this_dir,
-            svn_boolean_t always_create_actual,
             svn_boolean_t create_locks,
             apr_pool_t *scratch_pool)
 {
@@ -1755,7 +1788,7 @@ write_entry(svn_wc__db_t *db,
           const char *relative_url;
 
           working_node->copyfrom_repos_id = repos_id;
-          relative_url = svn_uri_is_child(repos_root, entry->copyfrom_url,
+          relative_url = svn_uri_is_child(this_dir->repos, entry->copyfrom_url,
                                           NULL);
           if (relative_url == NULL)
             working_node->copyfrom_repos_path = "";
@@ -1923,14 +1956,14 @@ write_entry(svn_wc__db_t *db,
         SVN_ERR(svn_checksum_parse_hex(&base_node->checksum, svn_checksum_md5,
                                        entry->checksum, scratch_pool));
 
-      if (repos_root)
+      if (this_dir->repos)
         {
           base_node->repos_id = repos_id;
 
           /* repos_relpath is NOT a URI. decode as appropriate.  */
           if (entry->url != NULL)
             {
-              const char *relative_url = svn_uri_is_child(repos_root,
+              const char *relative_url = svn_uri_is_child(this_dir->repos,
                                                           entry->url,
                                                           scratch_pool);
 
@@ -1942,7 +1975,7 @@ write_entry(svn_wc__db_t *db,
             }
           else
             {
-              const char *base_path = svn_uri_is_child(repos_root,
+              const char *base_path = svn_uri_is_child(this_dir->repos,
                                                        this_dir->url,
                                                        scratch_pool);
               if (base_path == NULL)
@@ -2093,7 +2126,7 @@ write_entry(svn_wc__db_t *db,
     }
 
   /* Insert the actual node. */
-  if (actual_node || always_create_actual)
+  if (actual_node)
     {
       actual_node = MAYBE_ALLOC(actual_node, scratch_pool);
 
@@ -2131,7 +2164,7 @@ entries_write_new_cb(void *baton,
   const svn_wc_entry_t *this_dir;
   apr_hash_index_t *hi;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-  const char *repos_root, *old_root_abspath, *dir_relpath;
+  const char *old_root_abspath, *dir_relpath;
 
   /* Get a copy of the "this dir" entry for comparison purposes. */
   this_dir = apr_hash_get(ewb->entries, SVN_WC_ENTRY_THIS_DIR,
@@ -2143,8 +2176,6 @@ entries_write_new_cb(void *baton,
                              _("No default entry in directory '%s'"),
                              svn_dirent_local_style(dir_abspath,
                                                     iterpool));
-  repos_root = this_dir->repos;
-
   old_root_abspath = svn_dirent_get_longest_ancestor(dir_abspath,
                                                      new_root_abspath,
                                                      scratch_pool);
@@ -2154,12 +2185,12 @@ entries_write_new_cb(void *baton,
   dir_relpath = svn_dirent_skip_ancestor(old_root_abspath, dir_abspath);
 
   /* Write out "this dir" */
-  SVN_ERR(write_entry(db, sdb, ewb->wc_id, ewb->repos_id, repos_root,
+  SVN_ERR(write_entry(db, sdb, ewb->wc_id, ewb->repos_id,
                       this_dir,
                       dir_relpath,
                       svn_dirent_join(new_root_abspath, dir_relpath,
                                       scratch_pool),
-                      this_dir, FALSE, FALSE, iterpool));
+                      this_dir, FALSE, iterpool));
 
   for (hi = apr_hash_first(scratch_pool, ewb->entries); hi;
        hi = apr_hash_next(hi))
@@ -2178,13 +2209,13 @@ entries_write_new_cb(void *baton,
          use this function for upgrading old working copies. */
       child_abspath = svn_dirent_join(dir_abspath, name, iterpool);
       child_relpath = svn_dirent_skip_ancestor(old_root_abspath, child_abspath);
-      SVN_ERR(write_entry(db, sdb, ewb->wc_id, ewb->repos_id, repos_root,
+      SVN_ERR(write_entry(db, sdb, ewb->wc_id, ewb->repos_id,
                           this_entry,
                           child_relpath,
                           svn_dirent_join(new_root_abspath, child_relpath,
                                           scratch_pool),
                           this_dir,
-                          FALSE, TRUE,
+                          TRUE,
                           iterpool));
     }
 

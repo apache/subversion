@@ -952,3 +952,18 @@ svn_cl__notifier_mark_export(void *baton)
   nb->is_export = TRUE;
   return SVN_NO_ERROR;
 }
+
+void
+svn_cl__check_externals_failed_notify_wrapper(void *baton,
+                                              const svn_wc_notify_t *n,
+                                              apr_pool_t *pool)
+{
+  struct svn_cl__check_externals_failed_notify_baton *nwb = baton;
+
+  if (n->action == svn_wc_notify_failed_external)
+    nwb->had_externals_error = TRUE;
+
+  if (nwb->wrapped_func)
+    nwb->wrapped_func(nwb->wrapped_baton, n, pool);
+}
+

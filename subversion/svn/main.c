@@ -367,6 +367,7 @@ const apr_getopt_option_t svn_cl__options[] =
   {"iw",            opt_ignore_whitespace, 0, NULL},
   {"idiff",         opt_internal_diff, 0, NULL},
   {"keep-locks",    opt_no_unlock, 0, NULL},
+  {"keep-cl",       opt_keep_changelists, 0, NULL},
 
   {0,               0, 0, 0},
 };
@@ -905,10 +906,14 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    svn:externals  - A newline separated list of module specifiers,\n"
      "      each of which consists of a URL and a relative directory path,\n"
      "      similar to the syntax of the 'svn checkout' command:\n"
-     "        http://example.com/repos/zag foo/bar\n"
-     "      An optional peg revision may be appended to the URL to pin the\n"
+     "        http://example.com/repos/zig foo/bar\n"
+     "      A revision to check out can optionally be specified to pin the\n"
      "      external to a known revision:\n"
-     "        http://example.com/repos/zig@42 foo\n"
+     "        -r25 http://example.com/repos/zig foo/bar\n"
+     "      To unambiguously identify an element at a path which has been\n"
+     "      deleted (possibly even deleted multiple times in its history),\n"
+     "      an optional peg revision can be appended to the URL:\n"
+     "        -r25 http://example.com/repos/zig@42 foo/bar\n"
      "      Relative URLs are indicated by starting the URL with one\n"
      "      of the following strings:\n"
      "        ../  to the parent directory of the extracted external\n"
@@ -1168,10 +1173,17 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  are applied to the obstructing path.  Obstructing paths are reported\n"
      "  in the first column with code 'E'.\n"
      "\n"
+     "  If the specified update target is missing from the working copy but its\n"
+     "  immediate parent directory is present, checkout the target into its\n"
+     "  parent directory at the specified depth.  If --parents is specified,\n"
+     "  create any missing parent directories of the target by checking them\n"
+     "  out, too, at depth=empty.\n"
+     "\n"
      "  Use the --set-depth option to set a new working copy depth on the\n"
      "  targets of this operation.\n"),
     {'r', 'N', opt_depth, opt_set_depth, 'q', opt_merge_cmd, opt_force,
-     opt_ignore_externals, opt_changelist, opt_editor_cmd, opt_accept} },
+     opt_ignore_externals, opt_changelist, opt_editor_cmd, opt_accept,
+     opt_parents} },
 
   { "upgrade", svn_cl__upgrade, {0}, N_
     ("Upgrade the metadata storage format for a working copy.\n"

@@ -1965,7 +1965,10 @@ do_entry_deletion(struct edit_baton *eb,
     }
 
     /* Receive the remote removal of excluded/absent/not present node.
-       Do not notify. */
+       Do not notify. 
+
+       ### This is wrong if svn_wc__db_status_excluded refers to a
+           working node replacing the base node.  */
   if (status == svn_wc__db_status_not_present
       || status == svn_wc__db_status_excluded
       || status == svn_wc__db_status_absent)
@@ -2020,8 +2023,7 @@ do_entry_deletion(struct edit_baton *eb,
            * we must schedule the existing content for re-addition as a copy
            * of what it was, but with its local modifications preserved. */
 
-          SVN_ERR(svn_wc__db_temp_op_make_copy(eb->db, local_abspath, FALSE,
-                                               pool));
+          SVN_ERR(svn_wc__db_temp_op_make_copy(eb->db, local_abspath, pool));
 
           /* Fall through to remove the BASE_NODEs properly, with potentially
              keeping a not-present marker */
