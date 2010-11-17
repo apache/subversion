@@ -89,12 +89,15 @@ Candidate changes:
    the slave repository directly.
    Notes:
      This backport depends on the r878590 and r916286 groups only for the
-     conflict free port.
+     conflict free port.  Alternatively, the back-port branch '1.6.x-r917523'
+     attempts to represent a dependency-free version of the same change.
    Justification:
      With this commit we avoid accidental commit to the slave and hence 
      making it unusable as a proxy anymore.
+   Branch:
+     ^/subversion/branches/1.6.x-r917523
    Votes:
-     +1: kameshj
+     +1: kameshj (with r878590 and r916286 groups)
 
 Veto-blocked changes:
 =====================
