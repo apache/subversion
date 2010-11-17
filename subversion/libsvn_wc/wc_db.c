@@ -128,6 +128,11 @@ APR_INLINE static int relpath_depth(const char *relpath)
   return n;
 }
 
+int svn_wc__db_op_depth_for_upgrade(const char *local_relpath)
+{
+  return relpath_depth(local_relpath);
+}
+
 typedef struct insert_base_baton_t {
   /* common to all insertions into BASE */
   svn_wc__db_status_t status;

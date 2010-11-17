@@ -2477,6 +2477,9 @@ svn_wc__db_drop_root(svn_wc__db_t *db,
                      const char *local_abspath,
                      apr_pool_t *scratch_pool);
 
+/* Return the OP_DEPTH for LOCAL_RELPATH. */
+int svn_wc__db_op_depth_for_upgrade(const char *local_relpath);
+
 /* @} */
 
 
