@@ -1,5 +1,5 @@
 Version 1.6.14
-(?? Nov 2010, from /branches/1.6.x)
+(19 Nov 2010, from /branches/1.6.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.6.14
 
   User-visible changes:
@@ -10,9 +10,20 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.14
    * fix 'svn export' regression from 1.6.13 (r1032970)
    * fix 'svn export' mistakenly uri-encodes paths (issue #3745)
    * fix server-side memory leaks triggered by 'blame -g' (r1032808)
+   * prevent crash in mod_dav_svn when using SVNParentPath (r1033166)
+   * allow 'log -g' to continue in the face of invalid mergeinfo (r1028108)
+   * filter unreadable paths for 'svn ls' and 'svn co' (r997026, -070, -474)
+   * fix abort in 'svn blame' (issue #3666)
+   * fix file handle leak in ruby bindings (issue #3512)
+   * remove check for 1.7-style working copies (issue #3729)
+   * improve some swig parameter mapping (r984565)
 
   Developer-visible changes:
    * improve test accuracy over dav (r991534, r877814)
+   * create fails.log for test runs (r964349)
+   * improve detection of 'svnversion' when buildling (r877219, et al)
+   * don't violate API constraint in dumpstream logic (issue #3733)
+   * don't report 1.6.x working copy as switched from trunk (r1033921)
 
 
 Version 1.6.13
