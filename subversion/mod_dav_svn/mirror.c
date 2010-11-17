@@ -40,8 +40,10 @@ static void proxy_request_fixup(request_rec *r,
 
     r->proxyreq = PROXYREQ_REVERSE;
     r->uri = r->unparsed_uri;
-    r->filename = apr_pstrcat(r->pool, "proxy:", master_uri,
-                              uri_segment, NULL);
+    r->filename = (char *) svn_path_uri_encode(apr_pstrcat(r->pool, "proxy:",
+                                                           master_uri,
+                                                           uri_segment,
+                                                           NULL), r->pool);
     r->handler = "proxy-server";
     ap_add_output_filter("LocationRewrite", NULL, r, r->connection);
     ap_add_output_filter("ReposRewrite", NULL, r, r->connection);
@@ -74,7 +76,7 @@ int dav_svn__proxy_merge_fixup(request_rec *r)
            of the repository isn't guaranteed to have on hand. */
         if (r->method_number == M_PROPFIND ||
             r->method_number == M_GET) {
-            seg = ap_strstr(r->unparsed_uri, root_dir);
+            seg = ap_strstr(r->uri, root_dir);
             if (seg && ap_strstr_c(seg,
                                    apr_pstrcat(r->pool, special_uri,
                                                "/wrk/", NULL))) {
@@ -87,7 +89,7 @@ int dav_svn__proxy_merge_fixup(request_rec *r)
         /* If this is a write request aimed at a public URI (such as
            MERGE, LOCK, UNLOCK, etc.) or any as-yet-unhandled request
            using a "special URI", we have to doctor it a bit for proxying. */
-        seg = ap_strstr(r->unparsed_uri, root_dir);
+        seg = ap_strstr(r->uri, root_dir);
         if (seg && (r->method_number == M_MERGE ||
                     r->method_number == M_LOCK ||
                     r->method_number == M_UNLOCK ||
@@ -134,9 +136,11 @@ apr_status_t dav_svn__location_in_filter(ap_filter_t *f,
         ctx = f->ctx = apr_pcalloc(r->pool, sizeof(*ctx));
 
         apr_uri_parse(r->pool, master_uri, &ctx->uri);
-        ctx->remotepath = ctx->uri.path;
+        /* We are url encoding the current url and the master url
+           as incoming(from client) request body has it encoded already. */
+        ctx->remotepath = svn_path_uri_encode(ctx->uri.path, r->pool);
         ctx->remotepath_len = strlen(ctx->remotepath);
-        ctx->localpath = dav_svn__get_root_dir(r);
+        ctx->localpath = svn_path_uri_encode(dav_svn__get_root_dir(r), r->pool);
         ctx->localpath_len = strlen(ctx->localpath);
         ctx->pattern = apr_strmatch_precompile(r->pool, ctx->localpath, 0);
         ctx->pattern_len = ctx->localpath_len;
@@ -187,6 +191,7 @@ apr_status_t dav_svn__location_header_filter(ap_filter_t *f,
     const char *master_uri;
 
     master_uri = dav_svn__get_master_uri(r);
+    master_uri = svn_path_uri_encode(master_uri, r->pool);
 
     if (!r->main && master_uri) {
         const char *location, *start_foo = NULL;
@@ -203,6 +208,7 @@ apr_status_t dav_svn__location_header_filter(ap_filter_t *f,
                                                    dav_svn__get_root_dir(r),
                                                    start_foo, NULL),
                                        r);
+            new_uri = svn_path_uri_encode(new_uri, r->pool);
             apr_table_set(r->headers_out, "Location", new_uri);
         }
     }
@@ -229,9 +235,11 @@ apr_status_t dav_svn__location_body_filter(ap_filter_t *f,
         ctx = f->ctx = apr_pcalloc(r->pool, sizeof(*ctx));
 
         apr_uri_parse(r->pool, master_uri, &ctx->uri);
-        ctx->remotepath = ctx->uri.path;
+        /* We are url encoding the current url and the master url
+           as incoming (from master) request body has it encoded already. */
+        ctx->remotepath = svn_path_uri_encode(ctx->uri.path, r->pool);
         ctx->remotepath_len = strlen(ctx->remotepath);
-        ctx->localpath = dav_svn__get_root_dir(r);
+        ctx->localpath = svn_path_uri_encode(dav_svn__get_root_dir(r), r->pool);
         ctx->localpath_len = strlen(ctx->localpath);
         ctx->pattern = apr_strmatch_precompile(r->pool, ctx->remotepath, 0);
         ctx->pattern_len = ctx->remotepath_len;
