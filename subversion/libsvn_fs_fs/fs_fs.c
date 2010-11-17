@@ -2234,15 +2234,14 @@ err_dangling_id(svn_fs_t *fs, const svn_fs_id_t *id)
      id_str->data, fs->path);
 }
 
-/* Combine the revision and offset of the ID to a string that will
- * be used as a cache key. Allocations will be made from POOL.
+/* Return a string that uniquely identifies the noderev with the
+ * given ID, for use as a cache key.
  */
 static const char *
 get_noderev_cache_key(const svn_fs_id_t *id, apr_pool_t *pool)
 {
-  return svn_fs_fs__combine_two_numbers(svn_fs_fs__id_rev(id),
-                                        svn_fs_fs__id_offset(id),
-                                        pool);
+  const svn_string_t *id_unparsed = svn_fs_fs__id_unparse(id, pool);
+  return id_unparsed->data;
 }
 
 /* Look up the NODEREV_P for ID in FS' node revsion cache. If noderev 
