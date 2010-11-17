@@ -74,6 +74,7 @@ typedef struct {
 typedef struct {
   apr_int64_t wc_id;
   const char *local_relpath;
+  apr_int64_t op_depth;
   const char *parent_relpath;
   svn_wc__db_status_t presence;
   svn_node_kind_t kind;  /* ### should switch to svn_wc__db_kind_t */
@@ -1620,8 +1621,7 @@ insert_working_node(svn_sqlite__db_t *sdb,
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "isisnnnnsnrisnnni",
                             working_node->wc_id, working_node->local_relpath,
-                            (working_node->parent_relpath == NULL
-                             ? (apr_int64_t)1 : (apr_int64_t)2),
+                            working_node->op_depth,
                             working_node->parent_relpath,
                             /* Setting depth for files? */
                             svn_depth_to_word(working_node->depth),
@@ -1660,7 +1660,7 @@ insert_working_node(svn_sqlite__db_t *sdb,
     SVN_ERR(svn_sqlite__bind_checksum(stmt, 14, working_node->checksum,
                                       scratch_pool));
 
-  if (working_node->properties)
+  if (working_node->properties) /* ### Never set, props done later */
     SVN_ERR(svn_sqlite__bind_properties(stmt, 15, working_node->properties,
                                         scratch_pool));
 
@@ -1712,13 +1712,20 @@ insert_actual_node(svn_sqlite__db_t *sdb,
   return svn_error_return(svn_sqlite__insert(NULL, stmt));
 }
 
+struct write_baton {
+  db_base_node_t *base;
+  db_working_node_t *work;
+};
+
 
 /* Write the information for ENTRY to WC_DB.  The WC_ID, REPOS_ID and
    REPOS_ROOT will all be used for writing ENTRY.
    ### transitioning from straight sql to using the wc_db APIs.  For the
    ### time being, we'll need both parameters. */
 static svn_error_t *
-write_entry(svn_wc__db_t *db,
+write_entry(struct write_baton **entry_node,
+            struct write_baton *parent_node,
+            svn_wc__db_t *db,
             svn_sqlite__db_t *sdb,
             apr_int64_t wc_id,
             apr_int64_t repos_id,
@@ -1727,6 +1734,7 @@ write_entry(svn_wc__db_t *db,
             const char *entry_abspath,
             const svn_wc_entry_t *this_dir,
             svn_boolean_t create_locks,
+            apr_pool_t *result_pool,
             apr_pool_t *scratch_pool)
 {
   db_base_node_t *base_node = NULL;
@@ -1743,30 +1751,32 @@ write_entry(svn_wc__db_t *db,
     {
       case svn_wc_schedule_normal:
         if (entry->copied)
-          working_node = MAYBE_ALLOC(working_node, scratch_pool);
+          working_node = MAYBE_ALLOC(working_node, result_pool);
         else
-          base_node = MAYBE_ALLOC(base_node, scratch_pool);
+          base_node = MAYBE_ALLOC(base_node, result_pool);
         break;
 
       case svn_wc_schedule_add:
-        working_node = MAYBE_ALLOC(working_node, scratch_pool);
+        working_node = MAYBE_ALLOC(working_node, result_pool);
         break;
 
       case svn_wc_schedule_delete:
-        working_node = MAYBE_ALLOC(working_node, scratch_pool);
+        working_node = MAYBE_ALLOC(working_node, result_pool);
         /* If the entry is part of a REPLACED (not COPIED) subtree,
            then it needs a BASE node. */
-       if (! (entry->copied
-               || (this_dir->copied
-                   && (this_dir->schedule == svn_wc_schedule_add ||
-                       this_dir->schedule == svn_wc_schedule_delete ||
-                       this_dir->schedule == svn_wc_schedule_replace))))
-          base_node = MAYBE_ALLOC(base_node, scratch_pool);
+        if (parent_node->base
+            && (! (entry->copied
+                   || (this_dir->copied
+                       && (this_dir->schedule == svn_wc_schedule_add ||
+                           this_dir->schedule == svn_wc_schedule_delete ||
+                           this_dir->schedule == svn_wc_schedule_replace)))))
+          base_node = MAYBE_ALLOC(base_node, result_pool);
         break;
 
       case svn_wc_schedule_replace:
-        working_node = MAYBE_ALLOC(working_node, scratch_pool);
-        base_node = MAYBE_ALLOC(base_node, scratch_pool);
+        working_node = MAYBE_ALLOC(working_node, result_pool);
+        if (parent_node->base)
+          base_node = MAYBE_ALLOC(base_node, result_pool);
         break;
     }
 
@@ -1774,14 +1784,14 @@ write_entry(svn_wc__db_t *db,
      BASE node to indicate the not-present node.  */
   if (entry->deleted)
     {
-      base_node = MAYBE_ALLOC(base_node, scratch_pool);
+      base_node = MAYBE_ALLOC(base_node, result_pool);
     }
 
   if (entry->copied)
     {
       /* Make sure we get a WORKING_NODE inserted. The copyfrom information
          will occur here or on a parent, as appropriate.  */
-      working_node = MAYBE_ALLOC(working_node, scratch_pool);
+      working_node = MAYBE_ALLOC(working_node, result_pool);
 
       if (entry->copyfrom_url)
         {
@@ -1796,60 +1806,31 @@ write_entry(svn_wc__db_t *db,
             {
               /* copyfrom_repos_path is NOT a URI. decode into repos path.  */
               working_node->copyfrom_repos_path =
-                svn_path_uri_decode(relative_url, scratch_pool);
+                svn_path_uri_decode(relative_url, result_pool);
             }
           working_node->copyfrom_revnum = entry->copyfrom_rev;
+#ifdef SVN_WC__OP_DEPTH
+          working_node->op_depth
+            = svn_wc__db_op_depth_for_upgrade(local_relpath);
+#else
+          working_node->op_depth = 2; /* ### temporary op_depth */
+#endif
+        }
+      else if (parent_node->work && parent_node->work->copyfrom_repos_path)
+        {
+          working_node->copyfrom_repos_id = repos_id;
+          working_node->copyfrom_repos_path
+            = svn_relpath_join(parent_node->work->copyfrom_repos_path,
+                               svn_relpath_basename(local_relpath, NULL),
+                               result_pool);
+          working_node->copyfrom_revnum = parent_node->work->copyfrom_revnum;
+          working_node->op_depth = parent_node->work->op_depth;
         }
       else
-        {
-          const char *parent_abspath = svn_dirent_dirname(entry_abspath,
-                                                          scratch_pool);
-          const char *op_root_abspath;
-          const char *original_repos_relpath;
-          svn_revnum_t original_revision;
-          svn_error_t *err;
-
-          /* The parent will *always* have info in the WORKING tree, since
-             we've been designated as COPIED but do not have our own
-             COPYFROM information. Therefore, our parent or a more distant
-             ancestor has that information. Grab the data.  */
-          err = svn_wc__db_scan_addition(
-                    NULL,
-                    &op_root_abspath,
-                    NULL, NULL, NULL,
-                    &original_repos_relpath, NULL, NULL, &original_revision,
-                    db,
-                    parent_abspath,
-                    scratch_pool, scratch_pool);
-
-          /* We could be reading the entries while in a transitional state
-             during an add/copy operation. The scan_addition *does* throw
-             errors sometimes. So clear anything that may come out of it,
-             and perform the copyfrom construction only when it looks like
-             we have a good/real set of return values.  */
-          svn_error_clear(err);
-
-          /* We may have been copied from a mixed-rev working copy. We need
-             to simulate additional copies around revision changes. The old
-             code could separately store the revision, but NG needs to create
-             copies at each change.  */
-          if (err == NULL
-              && op_root_abspath != NULL
-              && original_repos_relpath != NULL
-              && SVN_IS_VALID_REVNUM(original_revision)
-              /* above is valid result testing. below is the key test.  */
-              && original_revision != entry->revision)
-            {
-              const char *relpath_to_entry = svn_dirent_is_child(
-                op_root_abspath, entry_abspath, NULL);
-              const char *new_copyfrom_relpath = svn_relpath_join(
-                original_repos_relpath, relpath_to_entry, scratch_pool);
-
-              working_node->copyfrom_repos_id = repos_id;
-              working_node->copyfrom_repos_path = new_copyfrom_relpath;
-              working_node->copyfrom_revnum = entry->revision;
-            }
-        }
+        return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
+                                 _("No copyfrom URL for '%s'"),
+                                 svn_dirent_local_style(local_relpath,
+                                                        scratch_pool));
     }
 
   if (entry->keep_local)
@@ -1896,8 +1877,9 @@ write_entry(svn_wc__db_t *db,
 
   if (entry->file_external_path != NULL)
     {
-      base_node = MAYBE_ALLOC(base_node, scratch_pool);
+      base_node = MAYBE_ALLOC(base_node, result_pool);
     }
+
 
   /* Insert the base node. */
   if (base_node)
@@ -1954,7 +1936,7 @@ write_entry(svn_wc__db_t *db,
         base_node->checksum = NULL;
       else
         SVN_ERR(svn_checksum_parse_hex(&base_node->checksum, svn_checksum_md5,
-                                       entry->checksum, scratch_pool));
+                                       entry->checksum, result_pool));
 
       if (this_dir->repos)
         {
@@ -1971,7 +1953,7 @@ write_entry(svn_wc__db_t *db,
                 base_node->repos_relpath = "";
               else
                 base_node->repos_relpath = svn_path_uri_decode(relative_url,
-                                                               scratch_pool);
+                                                               result_pool);
             }
           else
             {
@@ -1984,7 +1966,7 @@ write_entry(svn_wc__db_t *db,
                 base_node->repos_relpath =
                   svn_dirent_join(svn_path_uri_decode(base_path, scratch_pool),
                                   entry->name,
-                                  scratch_pool);
+                                  result_pool);
             }
         }
 
@@ -2061,7 +2043,7 @@ write_entry(svn_wc__db_t *db,
       else
         SVN_ERR(svn_checksum_parse_hex(&working_node->checksum,
                                        svn_checksum_md5,
-                                       entry->checksum, scratch_pool));
+                                       entry->checksum, result_pool));
 
       /* All subdirs start of incomplete, and stop being incomplete
          when the entries file in the subdir is upgraded. */
@@ -2087,7 +2069,8 @@ write_entry(svn_wc__db_t *db,
               /* If the entry is part of a COPIED (not REPLACED) subtree,
                  then the deletion is referring to the WORKING node, not
                  the BASE node. */
-              if (entry->copied
+              if (!base_node
+                  || entry->copied
                   || (this_dir->copied
                       && this_dir->schedule == svn_wc_schedule_add))
                 working_node->presence = svn_wc__db_status_not_present;
@@ -2122,6 +2105,19 @@ write_entry(svn_wc__db_t *db,
       working_node->changed_date = entry->cmt_date;
       working_node->changed_author = entry->cmt_author;
 
+      if (!entry->copied)
+        {
+          if (parent_node->work)
+            working_node->op_depth = parent_node->work->op_depth;
+          else
+#ifdef SVN_WC__OP_DEPTH
+            working_node->op_depth
+              = svn_wc__db_op_depth_for_upgrade(local_relpath);
+#else
+            working_node->op_depth = 2; /* ### temporary op_depth */
+#endif
+        }
+
       SVN_ERR(insert_working_node(sdb, working_node, scratch_pool));
     }
 
@@ -2137,6 +2133,13 @@ write_entry(svn_wc__db_t *db,
       SVN_ERR(insert_actual_node(sdb, actual_node, scratch_pool));
     }
 
+  if (entry_node)
+    {
+      *entry_node = apr_palloc(result_pool, sizeof(*entry_node));
+      (*entry_node)->base = base_node;
+      (*entry_node)->work = working_node;
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -2148,6 +2151,9 @@ struct entries_write_baton
   const char *dir_abspath;
   const char *new_root_abspath;
   apr_hash_t *entries;
+  struct write_baton *parent_node;
+  struct write_baton *dir_node;
+  apr_pool_t *result_pool;
 };
 
 /* Writes entries inside a sqlite transaction
@@ -2185,12 +2191,11 @@ entries_write_new_cb(void *baton,
   dir_relpath = svn_dirent_skip_ancestor(old_root_abspath, dir_abspath);
 
   /* Write out "this dir" */
-  SVN_ERR(write_entry(db, sdb, ewb->wc_id, ewb->repos_id,
-                      this_dir,
-                      dir_relpath,
+  SVN_ERR(write_entry(&ewb->dir_node, ewb->parent_node, db, sdb,
+                      ewb->wc_id, ewb->repos_id, this_dir, dir_relpath,
                       svn_dirent_join(new_root_abspath, dir_relpath,
                                       scratch_pool),
-                      this_dir, FALSE, iterpool));
+                      this_dir, FALSE, ewb->result_pool, iterpool));
 
   for (hi = apr_hash_first(scratch_pool, ewb->entries); hi;
        hi = apr_hash_next(hi))
@@ -2209,14 +2214,12 @@ entries_write_new_cb(void *baton,
          use this function for upgrading old working copies. */
       child_abspath = svn_dirent_join(dir_abspath, name, iterpool);
       child_relpath = svn_dirent_skip_ancestor(old_root_abspath, child_abspath);
-      SVN_ERR(write_entry(db, sdb, ewb->wc_id, ewb->repos_id,
-                          this_entry,
-                          child_relpath,
+      SVN_ERR(write_entry(NULL, ewb->dir_node, db, sdb,
+                          ewb->wc_id, ewb->repos_id,
+                          this_entry, child_relpath,
                           svn_dirent_join(new_root_abspath, child_relpath,
                                           scratch_pool),
-                          this_dir,
-                          TRUE,
-                          iterpool));
+                          this_dir, TRUE, iterpool, iterpool));
     }
 
   svn_pool_destroy(iterpool);
@@ -2225,13 +2228,16 @@ entries_write_new_cb(void *baton,
 
 
 svn_error_t *
-svn_wc__write_upgraded_entries(svn_wc__db_t *db,
+svn_wc__write_upgraded_entries(void **dir_baton,
+                               void *parent_baton,
+                               svn_wc__db_t *db,
                                svn_sqlite__db_t *sdb,
                                apr_int64_t repos_id,
                                apr_int64_t wc_id,
                                const char *dir_abspath,
                                const char *new_root_abspath,
                                apr_hash_t *entries,
+                               apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool)
 {
   struct entries_write_baton ewb;
@@ -2242,12 +2248,17 @@ svn_wc__write_upgraded_entries(svn_wc__db_t *db,
   ewb.dir_abspath = dir_abspath;
   ewb.new_root_abspath = new_root_abspath;
   ewb.entries = entries;
+  ewb.parent_node = parent_baton;
+  ewb.result_pool = result_pool;
 
   /* Run this operation in a transaction to speed up SQLite.
      See http://www.sqlite.org/faq.html#q19 for more details */
-  return svn_error_return(
-      svn_sqlite__with_transaction(sdb, entries_write_new_cb, &ewb,
-                                   scratch_pool));
+  SVN_ERR(svn_sqlite__with_transaction(sdb, entries_write_new_cb, &ewb,
+                                       scratch_pool));
+
+  *dir_baton = ewb.dir_node;
+
+  return SVN_NO_ERROR;
 }
 
 
