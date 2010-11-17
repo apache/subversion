@@ -93,8 +93,10 @@ def _objinfo(o):
     return "%s: %s %s" % (t,n,f)
 
 
-def _usage_exit():
-  "print usage, exit the script"
+def _usage_exit(err=None):
+  "print ERR (if any), print usage, then exit the script"
+  if err:
+    print("ERROR: %s\n" % (err))
   print("USAGE:  gen-make.py [options...] [conf-file]")
   print("  -s        skip dependency generation")
   print("  --debug   print lots of stuff only developers care about")
@@ -261,9 +263,9 @@ if __name__ == '__main__':
                             'vsnet-version=',
                             ])
     if len(args) > 1:
-      _usage_exit()
-  except getopt.GetoptError:
-    _usage_exit()
+      _usage_exit("Too many arguments")
+  except getopt.GetoptError, e:
+    _usage_exit(str(e))
 
   conf = 'build.conf'
   skip = 0
@@ -306,7 +308,7 @@ if __name__ == '__main__':
   opt_conf.close()
 
   if gentype not in gen_modules.keys():
-    _usage_exit()
+    _usage_exit("Unknown module type '%s'" % (gentype))
 
   main(conf, gentype, skip_depends=skip, other_options=rest.list)
 
