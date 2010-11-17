@@ -87,16 +87,12 @@ get_lock(const svn_string_t **lock_string_p,
                                 pool));
   if (! be_atomic)
     {
-      /* Pre-1.7 server.  Can't lock without a race condition.
-         See issue #3546.
-       */
-      svn_error_t *err;
-
-      err = svn_error_create(
-              SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-              _("Target server does not support atomic revision property "
-                "edits; consider upgrading it to 1.7 or using an external "
-                "locking program"));
+      /* Pre-1.7 servers can't lock without a race condition.  (Issue #3546) */
+      svn_error_t *err =
+        svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                         _("Target server does not support atomic revision "
+                           "property edits; consider upgrading it to 1.7 "
+                           "or using an external locking program"));
       svn_handle_warning2(stderr, err, "svnrdump: ");
       svn_error_clear(err);
     }
@@ -124,18 +120,18 @@ get_lock(const svn_string_t **lock_string_p,
 
       if (reposlocktoken)
         {
-          /* Did we get it? If so, we're done, otherwise we sleep. */
+          /* Did we get it? If so, we're done. */
           if (strcmp(reposlocktoken->data, mylocktoken->data) == 0)
             return SVN_NO_ERROR;
-          else
-            {
-              SVN_ERR(svn_cmdline_printf
-                      (pool, _("Failed to get lock on destination "
-                               "repos, currently held by '%s'\n"),
-                       reposlocktoken->data));
 
-              apr_sleep(apr_time_from_sec(1));
-            }
+          /* ...otherwise, tell the user that someone else has the
+             lock and sleep before retrying. */
+          SVN_ERR(svn_cmdline_printf
+                  (pool, _("Failed to get lock on destination "
+                           "repos, currently held by '%s'\n"),
+                   reposlocktoken->data));
+          
+          apr_sleep(apr_time_from_sec(1));
         }
       else if (i < LOCK_RETRIES - 1)
         {
@@ -147,19 +143,23 @@ get_lock(const svn_string_t **lock_string_p,
                                         mylocktoken, subpool);
 
           if (be_atomic && err && is_atomicity_error(err))
-            /* Someone else has the lock.  Let's loop. */
-            svn_error_clear(err);
+            {
+              /* Someone else has the lock.  Let's loop. */
+              svn_error_clear(err);
+            }
           else if (be_atomic && err == SVN_NO_ERROR)
-            /* We have the lock. 
-
-               However, for compatibility with concurrent svnsync's that don't
-               support atomicity, loop anyway to double-check that they haven't
-               overwritten our lock.
-             */
-            continue;
+            {
+              /* We have the lock.  However, for compatibility with
+                 concurrent svnrdumps that don't support atomicity, loop
+                 anyway to double-check that they haven't overwritten
+                 our lock. */
+              continue;
+            }
           else
-            /* Genuine error, or we aren't atomic and need to loop. */
-            SVN_ERR(err);
+            {
+              /* Genuine error, or we aren't atomic and need to loop. */
+              SVN_ERR(err);
+            }
         }
     }
 
