@@ -1390,10 +1390,10 @@ main(int argc, const char *argv[])
               const char *s = change_str;
               svn_boolean_t is_negative;
 
-              /* Check for a leading minus to allow -c -r42.
-               * The is_negative flag is only used to handle this one case.
-               * The -c -42 case (without 'r') is handled by strtol()
-               * returning a negative number. */
+              /* Check for a leading minus to allow "-c -r42".
+               * The is_negative flag is used to handle "-c -42" and "-c -r42".
+               * The "-c r-42" case is handled by strtol() returning a
+               * negative number. */
               is_negative = (*s == '-');
               if (is_negative)
                 s++;
