@@ -120,6 +120,17 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r946355
+   Don't overwrite the LD_LIBRARY_PATH during make check-swig-pl.
+   Justification:
+     Allows running the perl bindings tests even if Subversion has been
+     linked to libraries which aren't in the standard system search path.
+     Who'd do such a thing? Well, I do that -- most dependencies for my
+     Subversion builds are installed within my home directory and the
+     runtime linker isn't searching libraries there by default.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
