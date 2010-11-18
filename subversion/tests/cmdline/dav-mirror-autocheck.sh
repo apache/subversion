@@ -23,6 +23,9 @@
 # between the two could be factored out and shared.
 #
 
+SCRIPTDIR=$(dirname $0)
+SCRIPT=$(basename $0)
+
 trap stop_httpd_and_die SIGHUP SIGTERM SIGINT
 
 function stop_httpd_and_die() {
@@ -167,7 +170,7 @@ __EOF__
 }
 
 function usage() {
-  echo "usage: $SCRIPT </path/to/svn/working/copy> <test-work-directory>" 1>&2
+  echo "usage: $SCRIPT <test-work-directory>" 1>&2
   echo "  e.g. \"$SCRIPT $HOME/projects/svn-trunk /tmp/test-work\"" 1>&2
   echo
   echo " " '<test-work-directory>' must not exist, \
@@ -178,21 +181,14 @@ function usage() {
 
 SCRIPT=$(basename $0)
 
-if [ $# -ne 2 ] ; then
-  usage
-fi
-SVN_WC="$1"
-
-# verify the SVN working copy - should have mod_dav_svn directory
-if [ ! -d "$SVN_WC/subversion/mod_dav_svn" ] ; then
-  say "ERROR: svn working copy doesn't exist, or is invalid" 1>&2
+if [ $# -ne 1 ] ; then
   usage
 fi
 
 
 # httpd ServerRoot, all test and runtime artifacts below here
 # verify that this doesn't already exist - don't clobber
-HTTPD_ROOT=$2
+HTTPD_ROOT=$1
 
 if [ -e "$HTTPD_ROOT" ] ; then
   say "ERROR: test work directory $HTTPD_ROOT already exists, please remove" 1>&2
@@ -201,8 +197,6 @@ fi
 
 #set -e
 
-say svn wc is $SVN_WC
-
 # Don't assume sbin is in the PATH.
 PATH="$PATH:/usr/sbin:/usr/local/sbin"
 
@@ -210,20 +204,32 @@ PATH="$PATH:/usr/sbin:/usr/local/sbin"
 [ ${APXS:+set} ] \
  || APXS=$(which apxs) \
  || APXS=$(which apxs2) \
- || fail "neither apxs or apxs2 found - required to run syncautocheck"
+ || fail "neither apxs or apxs2 found - required to run $SCRIPT"
+
+[ -x $APXS ] || fail "Can't execute apxs executable $APXS"
 
 say APXS: $APXS
+
+if [ -x subversion/svn/svn ]; then
+  ABS_BUILDDIR=$(pwd)
+elif [ -x $SCRIPTDIR/../../svn/svn ]; then
+  pushd $SCRIPTDIR/../../../ >/dev/null
+  ABS_BUILDDIR=$(pwd)
+  popd >/dev/null
+else
+  fail "Run this script from the root of Subversion's build tree!"
+fi
 
 # find all our needed executables, in WC or via apxs
 httpd="$($APXS -q PROGNAME)"
 HTTPD=$(get_prog_name $httpd) || fail "HTTPD not found"
 HTPASSWD=$(get_prog_name htpasswd htpasswd2) \
   || fail "Could not find htpasswd or htpasswd2"
-SVN=$SVN_WC/subversion/svn/svn
-SVNADMIN=$SVN_WC/subversion/svnadmin/svnadmin
-SVNSYNC=$SVN_WC/subversion/svnsync/svnsync
-SVNMUCC=${SVNMUCC:-$SVN_WC/tools/client-side/svnmucc/svnmucc}
-SVNLOOK=$SVN_WC/subversion/svnlook/svnlook
+SVN=$ABS_BUILDDIR/subversion/svn/svn
+SVNADMIN=$ABS_BUILDDIR/subversion/svnadmin/svnadmin
+SVNSYNC=$ABS_BUILDDIR/subversion/svnsync/svnsync
+SVNMUCC=${SVNMUCC:-$ABS_BUILDDIR/tools/client-side/svnmucc/svnmucc}
+SVNLOOK=$ABS_BUILDDIR/subversion/svnlook/svnlook
 
 [ -x $HTTPD ] || fail "HTTPD '$HTTPD' not executable"
 [ -x $HTPASSWD ] \
@@ -234,7 +240,7 @@ SVNLOOK=$SVN_WC/subversion/svnlook/svnlook
 [ -x $SVNLOOK ] || fail "SVNLOOK $SVNLOOK not built"
 [ -x $SVNMUCC ] \
  || fail SVNMUCC $SVNMUCC executable not built, needed for test. \
-    \'cd $SVN_WC\; make svnmucc\' to fix.
+    \'cd $ABS_BUILDDIR\; make svnmucc\' to fix.
 
 say HTTPD: $HTTPD
 say SVN: $SVN
@@ -283,9 +289,20 @@ LOAD_MOD_AUTHZ_USER="$(get_loadmodule_config mod_authz_user)" \
     || fail "Authz_User module not found."
 }
 
-MOD_DAV_SVN="$SVN_WC/subversion/mod_dav_svn/.libs/mod_dav_svn.so"
+if [ ${MODULE_PATH:+set} ]; then
+    MOD_DAV_SVN="$MODULE_PATH/mod_dav_svn.so"
+    MOD_AUTHZ_SVN="$MODULE_PATH/mod_authz_svn.so"
+else
+    MOD_DAV_SVN="$ABS_BUILDDIR/subversion/mod_dav_svn/.libs/mod_dav_svn.so"
+    MOD_AUTHZ_SVN="$ABS_BUILDDIR/subversion/mod_authz_svn/.libs/mod_authz_svn.so"
+fi
 
-[ -r "$MOD_DAV_SVN" ] || fail "need to build mod_dav_svn.so"
+[ -r "$MOD_DAV_SVN" ] \
+  || fail "dav_svn_module not found, please use '--enable-shared --enable-dso --with-apxs' with your 'configure' script"
+[ -r "$MOD_AUTHZ_SVN" ] \
+  || fail "authz_svn_module not found, please use '--enable-shared --enable-dso --with-apxs' with your 'configure' script"
+
+export LD_LIBRARY_PATH="$ABS_BUILDDIR/subversion/libsvn_ra_neon/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_local/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_svn/.libs"
 
 MASTER_REPOS="${MASTER_REPOS:-"$HTTPD_ROOT/master_repos"}"
 SLAVE_REPOS="${SLAVE_REPOS:-"$HTTPD_ROOT/slave_repos"}"
