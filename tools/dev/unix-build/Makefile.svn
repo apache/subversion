@@ -973,7 +973,7 @@ HTTPD_CMD = env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
 HTTPD_START_CMD = $(HTTPD_CMD) -k start
 HTTPD_STOP_CMD = $(HTTPD_CMD) -k stop
 
-SVNSERVE_START_CMD = $(svn_builddir)/subversion/svnserve/svnserve \
+SVNSERVE_START_CMD = $(SVN_PREFIX)/bin/svnserve \
 			--listen-host 127.0.0.1 \
 			--pid-file $(PWD)/svnserve-$(WC).pid \
 			-d -r $(svn_builddir)/subversion/tests/cmdline
