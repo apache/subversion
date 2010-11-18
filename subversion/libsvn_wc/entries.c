@@ -1747,6 +1747,88 @@ write_entry(struct write_baton **entry_node,
   else
     parent_relpath = svn_relpath_dirname(local_relpath, scratch_pool);
 
+  /* This is how it should work, it doesn't work like this yet because
+     we need proper op_depth to layer the working nodes.
+
+     Using "svn add", "svn rm", "svn cp" only files can be replaced
+     pre-wcng; directories can only be normal, deleted or added.
+     Files cannot be replaced within a deleted directory, so replaced
+     files can only exist in a normal directory, or a directory that
+     is added+copied.  In a normal directory a replaced file needs a
+     base node and a working node, in an added+copied directory a
+     replaced file needs two working nodes at different op-depths.
+
+     With just the above operations the conversion for files and
+     directories is straightforward:
+
+           pre-wcng                             wcng
+     parent         child                 parent     child
+
+     normal         normal                base       base
+     add+copied     normal+copied         work       work
+     normal+copied  normal+copied         work       work
+     normal         delete                base       base+work
+     delete         delete                base+work  base+work
+     add+copied     delete                work       work
+     normal         add                   base       work
+     add            add                   work       work
+     add+copied     add                   work       work
+     normal         add+copied            base       work
+     add            add+copied            work       work
+     add+copied     add+copied            work       work
+     normal         replace               base       base+work
+     add+copied     replace               work       work+work
+     normal         replace+copied        base       base+work
+     add+copied     replace+copied        work       work+work
+
+     However "svn merge" make this more complicated.  The pre-wcng
+     "svn merge" is capable of replacing a directory, that is it can
+     mark the whole tree deleted, and then copy another tree on top.
+     The entries then represent the replacing tree overlayed on the
+     deleted tree.
+
+       original       replace          schedule in
+       tree           tree             combined tree
+
+       A              A                replace+copied
+       A/f                             delete+copied
+       A/g            A/g              replace+copied
+                      A/h              add+copied
+       A/B            A/B              replace+copied
+       A/B/f                           delete+copied
+       A/B/g          A/B/g            replace+copied
+                      A/B/h            add+copied
+       A/C                             delete+copied
+       A/C/f                           delete+copied
+                      A/D              add+copied
+                      A/D/f            add+copied
+
+     The original tree could be normal tree, or an add+copied tree.
+     Committing such a merge generally worked, but making further tree
+     modifications before commit sometimes failed.
+
+     The root of the replace is handled like the file replace:
+
+           pre-wcng                             wcng
+     parent         child                 parent     child
+
+     normal         replace+copied        base       base+work
+     add+copied     replace+copied        work       work+work
+
+     although obviously the node is a directory rather then a file.
+     There are then more conversion states where the parent is
+     replaced.
+
+           pre-wcng                                wcng
+     parent           child              parent            child
+
+     replace+copied   add                [base|work]+work  work
+     replace+copied   add+copied         [base|work]+work  work
+     replace+copied   delete+copied      [base|work]+work  [base|work]+work
+     delete+copied    delete+copied      [base|work]+work  [base|work]+work
+     replace+copied   replace+copied     [base|work]+work  [base|work]+work
+  */
+
   switch (entry->schedule)
     {
       case svn_wc_schedule_normal:
