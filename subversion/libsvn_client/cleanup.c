@@ -52,9 +52,8 @@ svn_client_cleanup(const char *path,
   svn_error_t *err;
 
   if (svn_path_is_url(path))
-    return svn_error_return(svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                                              _("'%s' is not a local path"),
-                                              path));
+    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                             _("'%s' is not a local path"), path);
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
 
@@ -130,9 +129,8 @@ svn_client_upgrade(const char *path,
   info_baton.last_uuid = NULL;
 
   if (svn_path_is_url(path))
-    return svn_error_return(svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                                              _("'%s' is not a local path"),
-                                              path));
+    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                             _("'%s' is not a local path"), path);
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
   SVN_ERR(svn_wc_upgrade(ctx->wc_ctx, local_abspath,

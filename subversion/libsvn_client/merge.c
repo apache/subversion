@@ -8658,11 +8658,11 @@ do_merge(apr_hash_t **modified_subtrees,
 
   SVN_ERR(svn_wc_read_kind(&target_kind, ctx->wc_ctx, target_abspath, FALSE,
                            pool));
+
   if (target_kind != svn_node_dir && target_kind != svn_node_file)
-    return svn_error_return(svn_error_createf(
-                              SVN_ERR_ILLEGAL_TARGET, NULL,
-                              _("Merge target '%s' does not exist in the "
-                                "working copy"), target_abspath));
+    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                             _("Merge target '%s' does not exist in the "
+                               "working copy"), target_abspath);
 
   /* Ensure a known depth. */
   if (depth == svn_depth_unknown)
@@ -9124,10 +9124,11 @@ merge_locked(const char *source1,
       || (revision2->kind == svn_opt_revision_unspecified))
     return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL,
                             _("Not all required revisions are specified"));
+
   if (svn_path_is_url(source1) != svn_path_is_url(source2))
-    return svn_error_return(svn_error_create(SVN_ERR_ILLEGAL_TARGET, NULL,
-                                             _("Merge sources must both be "
-                                               "either paths or URLs")));
+    return svn_error_create(SVN_ERR_ILLEGAL_TARGET, NULL,
+                            _("Merge sources must both be "
+                              "either paths or URLs"));
 
   /* ### FIXME: This function really ought to do a history check on
      the left and right sides of the merge source, and -- if one is an
@@ -9157,12 +9158,11 @@ merge_locked(const char *source1,
 
   SVN_ERR(svn_wc_read_kind(&target_kind, ctx->wc_ctx, target_abspath, FALSE,
                            scratch_pool));
-  if (target_kind != svn_node_dir && target_kind != svn_node_file)
-    return svn_error_return(svn_error_createf(
-                              SVN_ERR_ILLEGAL_TARGET, NULL,
-                              _("Merge target '%s' does not exist in the "
-                                "working copy"), target_abspath));
 
+  if (target_kind != svn_node_dir && target_kind != svn_node_file)
+    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                             _("Merge target '%s' does not exist in the "
+                               "working copy"), target_abspath);
 
   /* Do not allow merges into mixed-revision working copies. */
   SVN_ERR(ensure_wc_is_suitable_merge_target(target_abspath, ctx,
