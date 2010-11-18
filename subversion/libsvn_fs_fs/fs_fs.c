@@ -1331,13 +1331,11 @@ upgrade_body(void *baton, apr_pool_t *pool)
     case svn_node_file:
       break;
     default:
-      return svn_error_return(svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
-                                                _("'%s' is not a regular file."
-                                                  " Please move it out of "
-                                                  "the way and try again"),
-                                                svn_dirent_join(fs->path,
-                                                                PATH_CONFIG,
-                                                                pool)));
+      return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
+                               _("'%s' is not a regular file."
+                                 " Please move it out of "
+                                 "the way and try again"),
+                               svn_dirent_join(fs->path, PATH_CONFIG, pool));
     }
 
   /* If we're already up-to-date, there's nothing else to be done here. */
