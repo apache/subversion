@@ -1029,7 +1029,7 @@ svn_fs_validate_mergeinfo(svn_mergeinfo_t *validated_mergeinfo,
                           apr_pool_t *scratch_pool)
 {
   return svn_error_return(fs->vtable->validate_mergeinfo(validated_mergeinfo,
-                                                         mergeinfo,
+                                                         fs, mergeinfo,
                                                          result_pool,
                                                          scratch_pool));
 }

@@ -198,6 +198,7 @@ typedef struct fs_vtable_t
                                   void (*handler)(const char *errpfx,
                                                   char *msg));
   svn_error_t *(*validate_mergeinfo)(svn_mergeinfo_t *validated_mergeinfo,
+                                     svn_fs_t *fs,
                                      svn_mergeinfo_t mergeinfo,
                                      apr_pool_t *result_pool,
                                      apr_pool_t *scratch_pool);
