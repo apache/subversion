@@ -1640,7 +1640,7 @@ test_dirent_skip_ancestor(apr_pool_t *pool)
       if (strcmp(tests[i].result, retval))
         return svn_error_createf(
              SVN_ERR_TEST_FAILED, NULL,
-             "test_dirent_skip_ancestor (%s, %s) returned %s instead of %s",
+             "svn_dirent_skip_ancestor (%s, %s) returned %s instead of %s",
              tests[i].path1, tests[i].path2, retval, tests[i].result);
     }
   return SVN_NO_ERROR;
@@ -2906,9 +2906,9 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS2(test_dirent_split,
                    "test svn_dirent_split"),
     SVN_TEST_PASS2(test_relpath_split,
-                   "test test_relpath_split"),
+                   "test svn_relpath_split"),
     SVN_TEST_PASS2(test_uri_split,
-                   "test test_uri_split"),
+                   "test svn_uri_split"),
     SVN_TEST_PASS2(test_dirent_get_longest_ancestor,
                    "test svn_dirent_get_longest_ancestor"),
     SVN_TEST_PASS2(test_relpath_get_longest_ancestor,
@@ -2928,11 +2928,11 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS2(test_uri_is_ancestor,
                    "test svn_uri_is_ancestor"),
     SVN_TEST_PASS2(test_dirent_skip_ancestor,
-                   "test test_dirent_skip_ancestor"),
+                   "test svn_dirent_skip_ancestor"),
     SVN_TEST_PASS2(test_relpath_skip_ancestor,
-                   "test test_relpath_skip_ancestor"),
+                   "test svn_relpath_skip_ancestor"),
     SVN_TEST_PASS2(test_uri_skip_ancestor,
-                   "test test_uri_skip_ancestor"),
+                   "test svn_uri_skip_ancestor"),
     SVN_TEST_PASS2(test_dirent_get_absolute,
                    "test svn_dirent_get_absolute"),
 #ifdef WIN32
