@@ -111,7 +111,7 @@ Candidate changes:
    Justification:
      Avoids an assert in the server.
    Votes:
-     +1: philip
+     +1: philip, stsp
 
  * r1036534
    Allow perl bindings to compile within a symlinked working copy.
