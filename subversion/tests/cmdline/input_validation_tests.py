@@ -222,6 +222,12 @@ def invalid_patch_targets(sbox):
     run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path", 'patch',
                              target1, target2)
 
+def invalid_switch_targets(sbox):
+  "non-working copy paths for 'switch'"
+  sbox.build(read_only=True)
+  run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path", 'switch',
+                           "^/", "^/")
+
 ########################################################################
 # Run the tests
 
@@ -247,6 +253,7 @@ test_list = [ None,
               invalid_unlock_targets,
               invalid_status_targets,
               invalid_patch_targets,
+              invalid_switch_targets,
              ]
 
 if __name__ == '__main__':
