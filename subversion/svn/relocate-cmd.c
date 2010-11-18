@@ -97,6 +97,16 @@ svn_cl__relocate(apr_getopt_t *os,
           apr_pool_t *subpool = svn_pool_create(scratch_pool);
           int i;
 
+          /* Target working copy root dir must be local. */
+          for (i = 2; i < targets->nelts; i++)
+            {
+              path = APR_ARRAY_IDX(targets, i, const char *);
+              if (svn_path_is_url(path))
+                return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                         _("'%s' is not a local path"),
+                                         path);
+            }
+
           for (i = 2; i < targets->nelts; i++)
             {
               svn_pool_clear(subpool);
