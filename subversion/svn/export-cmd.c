@@ -86,10 +86,9 @@ svn_cl__export(apr_getopt_t *os,
     }
 
   if (svn_path_is_url(to))
-    return svn_error_return(svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR,
-                                              NULL,
-                                              _("'%s' is not a local path"),
-                                              to));
+    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("'%s' is not a local path"), to);
+
   if (! opt_state->quiet)
     SVN_ERR(svn_cl__notifier_mark_export(ctx->notify_baton2));
 
