@@ -229,6 +229,10 @@ rm -f "$DISTPATH/STATUS"
 # (See http://svn.haxx.se/dev/archive-2009-04/0166.shtml for discussion.)
 rm -rf "$DISTPATH/contrib"
 
+# Remove notes/ from our distribution tarball.  It's large, but largely
+# blue-sky and out-of-date, and of questionable use to end users.
+rm -rf "$DISTPATH/notes"
+
 # Remove packages/ from the tarball.
 # (See http://svn.haxx.se/dev/archive-2009-12/0205.shtml)
 rm -rf "$DISTPATH/packages"
