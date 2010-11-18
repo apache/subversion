@@ -2388,12 +2388,14 @@ svn_wc__db_temp_op_make_copy(svn_wc__db_t *db,
                              apr_pool_t *scratch_pool);
 
 
+#ifndef SVN_WC__OP_DEPTH
 /* Elide the copyfrom information for LOCAL_ABSPATH if it can be derived
    from the parent node.  */
 svn_error_t *
 svn_wc__db_temp_elide_copyfrom(svn_wc__db_t *db,
                                const char *local_abspath,
                                apr_pool_t *scratch_pool);
+#endif
 
 
 /* Return the serialized file external info (from BASE) for LOCAL_ABSPATH.

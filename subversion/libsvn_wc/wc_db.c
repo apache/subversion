@@ -279,10 +279,12 @@ read_info(svn_wc__db_status_t *status,
           apr_pool_t *result_pool,
           apr_pool_t *scratch_pool);
 
+#ifndef SVN_WC__OP_DEPTH
 static svn_error_t *
 elide_copyfrom(svn_wc__db_pdh_t *pdh,
                const char *local_relpath,
                apr_pool_t *scratch_pool);
+#endif
 
 static svn_error_t *
 scan_addition(svn_wc__db_status_t *status,
@@ -3087,8 +3089,10 @@ db_op_copy(svn_wc__db_pdh_t *src_pdh,
                             scratch_pool));
     }
 
+#ifndef SVN_WC__OP_DEPTH
   /* ### Should do this earlier and insert the node with the right values. */
   SVN_ERR(elide_copyfrom(dst_pdh, dst_relpath, scratch_pool));
+#endif
 
   SVN_ERR(add_work_items(dst_pdh->wcroot->sdb, work_items, scratch_pool));
 
@@ -3447,7 +3451,11 @@ svn_wc__db_op_copy_dir(svn_wc__db_t *db,
       iwb.original_revnum = original_revision;
     }
 
+#ifdef SVN_WC__OP_DEPTH
+  iwb.op_depth = relpath_depth(local_relpath);
+#else
   iwb.op_depth = 2;  /* ### temporary op_depth */
+#endif
 
   iwb.children = children;
   iwb.depth = depth;
@@ -8960,6 +8968,7 @@ svn_wc__db_temp_op_make_copy(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+#ifndef SVN_WC__OP_DEPTH
 /* Return the copyfrom info for LOCAL_ABSPATH resolving inheritance. */
 static svn_error_t *
 get_copyfrom(apr_int64_t *copyfrom_repos_id,
@@ -9012,8 +9021,10 @@ get_copyfrom(apr_int64_t *copyfrom_repos_id,
 
   return SVN_NO_ERROR;
 }
+#endif
 
 
+#ifndef SVN_WC__OP_DEPTH
 static svn_error_t *
 elide_copyfrom(svn_wc__db_pdh_t *pdh,
                const char *local_relpath,
@@ -9117,6 +9128,7 @@ svn_wc__db_temp_elide_copyfrom(svn_wc__db_t *db,
 
   return SVN_NO_ERROR;
 }
+#endif
 
 
 svn_error_t *
