@@ -123,7 +123,7 @@ Candidate changes:
      svn merge ^/subversion/trunk/subversion/tests/cmdline/svntest/sandbox.py
      subversion\tests\cmdline\svntest\main.py -c991972
    Votes:
-     +1: pburba
+     +1: pburba, stsp
 
  * r1036429
    Fix svnsync_tests 29 for BDB.
