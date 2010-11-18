@@ -16228,6 +16228,69 @@ def no_self_referential_or_nonexistent_inherited_mergeinfo(sbox):
                                        None, None, None, None,
                                        None, 1)
 
+#----------------------------------------------------------------------
+# Test for issue #3756 'subtree merge can inherit invalid working mergeinfo'.
+def subtree_merges_inherit_invalid_working_mergeinfo(sbox):
+  "don't inherit bogus working mergeinfo"
+
+  # r1: Create a greek tree.
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # r2 - r6: Copy A to A_COPY and then make some text changes under A.
+  set_up_branch(sbox, nbr_of_branches=1)
+
+  # Some paths we'll care about
+  nu_path      = os.path.join(wc_dir, "A", "C", "nu")
+  nu_COPY_path = os.path.join(wc_dir, "A_COPY", "C", "nu")
+  A_COPY_path  = os.path.join(wc_dir, "A_COPY")
+
+  # r7 - Add the file A/C/nu
+  svntest.main.file_write(nu_path, "This is the file 'nu'.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', nu_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'commit',
+                                     '-m', 'Add file', wc_dir)
+
+  # r8 Merge c7 from A to A_COPY.
+  svntest.actions.run_and_verify_svn(
+    "Merge failed unexpectedly",
+    svntest.verify.AnyOutput, [], 'merge', sbox.repo_url + '/A',
+    A_COPY_path, '-c7')
+  svntest.actions.run_and_verify_svn(None, None, [], 'commit',
+                                     '-m', 'Merge subtree file addition',
+                                     wc_dir)
+
+  # r9 - A text change to A/C/nu.
+  svntest.main.file_write(nu_path, "This is the EDITED file 'nu'.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'commit',
+                                     '-m', 'Edit added file', wc_dir)
+
+  # Update the WC in preparation for merges.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  # Now do two merges.  The first, r3 to the root of the branch A_COPY.
+  # This creates working mergeinfo '/A:3,7' on A_COPY.  Then do a subtree
+  # file merge of r9 from A/C/nu to A_COPY/C/nu.  Since the target has no
+  # explicit mergeinfo, the mergeinfo set to record the merge of r9 should
+  # include the mergeinfo inherited from A_COPY.  *But* that raw inherited
+  # mergeinfo, '/A/C/nu:3,7' is wholly invalid: '/A/C/nu:3' simply doesn't
+  # exist in the repository and '/A/C/nu:7' is self-referential.  So the
+  # resulting mergeinfo on 'A_COPY/C/nu' should be only '/A/C/nu:9'.
+  #
+  # Currently this test is marked as XFail because the resulting mergeinfo is
+  # '/A/C/nu:3,9' and thus includes a non-existent path-rev.
+  svntest.actions.run_and_verify_svn(
+    "Merge failed unexpectedly",
+    svntest.verify.AnyOutput, [], 'merge', sbox.repo_url + '/A',
+    A_COPY_path, '-c3')
+  svntest.actions.run_and_verify_svn(
+    "Merge failed unexpectedly",
+    svntest.verify.AnyOutput, [], 'merge', sbox.repo_url + '/A/C/nu',
+    nu_COPY_path, '-c9')
+  svntest.actions.run_and_verify_svn(
+    "Subtree merge under working merge produced the wrong mergeinfo",
+    '/A/C/nu:9', [], 'pg', SVN_PROP_MERGEINFO, nu_COPY_path)
+
 ########################################################################
 # Run the tests
 
@@ -16418,6 +16481,7 @@ test_list = [ None,
               merge_into_locally_added_directory,
               merge_with_os_deleted_subtrees,
               no_self_referential_or_nonexistent_inherited_mergeinfo,
+              XFail(subtree_merges_inherit_invalid_working_mergeinfo),
              ]
 
 if __name__ == '__main__':
