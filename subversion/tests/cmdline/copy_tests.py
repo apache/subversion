@@ -4332,6 +4332,8 @@ def nonrecursive_commit_of_copy(sbox):
                                         None,
                                         wc_dir, '--depth', 'immediates')
 
+# Regression test for issue #3474 - making a new subdir, moving files into it
+# and then renaming the subdir, breaks history of the moved files.
 def copy_added_dir_with_copy(sbox):
   """copy of new dir with copied file keeps history"""
 
@@ -4358,8 +4360,6 @@ def copy_added_dir_with_copy(sbox):
       'NewDir2/mu'        : Item(status='A ', copied='+', wc_rev='-'),
     })
 
-  # Currently this fails because NewDir2/mu loses its history in the copy
-  # from NewDir to NewDir2
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
