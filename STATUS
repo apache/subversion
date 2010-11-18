@@ -200,5 +200,12 @@ Veto-blocked changes:
            Discussing on list.)
      -1: cmpilato (Changes semantics of svn_io_dir_walk()).
 
+ * r1036429
+   Fix svnsync_tests 29 for BDB.
+   Justification:
+     Avoids an assert in the server.
+   Votes:
+     +1: philip
+
 Approved changes:
 =================
