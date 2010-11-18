@@ -309,6 +309,9 @@ scan_deletion(const char **base_del_relpath,
               apr_pool_t *result_pool,
               apr_pool_t *scratch_pool);
 
+static svn_error_t *
+convert_to_working_status(svn_wc__db_status_t *working_status,
+                          svn_wc__db_status_t status);
 
 /* Return the absolute path, in local path style, of LOCAL_RELPATH in WCROOT. */
 static const char *
@@ -3394,6 +3397,61 @@ svn_wc__db_op_copy_tree(svn_wc__db_t *db,
 }
 
 
+/* If COPYFROM_RELPATH and COPYFROM_REVISION "match" the copyfrom
+   information for the parent of LOCAL_RELPATH then set *OP_DEPTH to
+   the op_depth of the parent, otherwise set *OP_DEPTH to the op_depth
+   of LOCAL_RELPATH. */
+static svn_error_t *
+op_depth_for_copy(apr_int64_t *op_depth,
+                  const char *copyfrom_relpath,
+                  svn_revnum_t copyfrom_revision,
+                  svn_wc__db_pdh_t *pdh,
+                  const char *local_relpath,
+                  apr_pool_t *scratch_pool)
+{
+#ifdef SVN_WC__OP_DEPTH
+  const char *parent_relpath, *name;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  *op_depth = relpath_depth(local_relpath);
+
+  if (!copyfrom_relpath)
+    return SVN_NO_ERROR;
+
+  svn_relpath_split(&parent_relpath, &name, local_relpath, scratch_pool);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_SELECT_WORKING_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, parent_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (have_row)
+    {
+      svn_wc__db_status_t status = svn_sqlite__column_token(stmt, 1,
+                                                            presence_map);
+      SVN_ERR(convert_to_working_status(&status, status));
+      if (status == svn_wc__db_status_added)
+        {
+          const char *parent_copyfrom_relpath
+            = svn_sqlite__column_text(stmt, 11, NULL);
+          svn_revnum_t parent_copyfrom_revision
+            = svn_sqlite__column_revnum(stmt, 12);
+      
+          if (copyfrom_revision == parent_copyfrom_revision
+              && !strcmp(svn_relpath_join(parent_copyfrom_relpath, name,
+                                          scratch_pool),
+                         copyfrom_relpath))
+            *op_depth = svn_sqlite__column_int64(stmt, 0);
+        }
+    }
+  SVN_ERR(svn_sqlite__reset(stmt));
+  
+#else
+  *op_depth = 2; /* temporary op_depth */
+#endif
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_wc__db_op_copy_dir(svn_wc__db_t *db,
                        const char *local_abspath,
@@ -3451,11 +3509,10 @@ svn_wc__db_op_copy_dir(svn_wc__db_t *db,
       iwb.original_revnum = original_revision;
     }
 
-#ifdef SVN_WC__OP_DEPTH
-  iwb.op_depth = relpath_depth(local_relpath);
-#else
-  iwb.op_depth = 2;  /* ### temporary op_depth */
-#endif
+  /* Should we do this inside the transaction? */
+  SVN_ERR(op_depth_for_copy(&iwb.op_depth,
+                            original_repos_relpath, original_revision,
+                            pdh, local_relpath, scratch_pool));
 
   iwb.children = children;
   iwb.depth = depth;
@@ -3529,16 +3586,10 @@ svn_wc__db_op_copy_file(svn_wc__db_t *db,
       iwb.original_revnum = original_revision;
     }
 
-#ifdef SVN_WC__OP_DEPTH
-  iwb.op_depth = relpath_depth(local_relpath);
-
-  /* ### TODO? If the WC parent dir is already a copy from
-   * dirname(original_repos_relpath)@original_revision, then this is a
-   * redundant copy as far is the repos is concerned, so it should share
-   * the same op_depth.  But that's a degenerate case.  Is it needed? */
-#else
-  iwb.op_depth = 2;  /* ### temporary op_depth */
-#endif
+  /* Should we do this inside the transaction? */
+  SVN_ERR(op_depth_for_copy(&iwb.op_depth,
+                            original_repos_relpath, original_revision,
+                            pdh, local_relpath, scratch_pool));
 
   iwb.checksum = checksum;
 
