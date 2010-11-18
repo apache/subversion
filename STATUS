@@ -113,6 +113,13 @@ Candidate changes:
    Votes:
      +1: philip
 
+ * r1036534
+   Allow perl bindings to compile within a symlinked working copy.
+   Justification:
+     When it happens, it's a very confusing build error.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
