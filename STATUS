@@ -106,6 +106,25 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+  * r991972
+   Replace os.rename(src,dst) with shutil.move() while setting up authz files
+   in the test suite.
+   Notes:
+     On most linux variants, os.rename(src,dst) will tolerate an existing
+     dst, but Windows will not.  The change to use os.rename() was made in
+     the backport of r991534.
+   Justification:  
+     With r991534 backported, we can no longer run the dav tests on Windows
+     without this change.
+   Branch:
+     No branch is required, however r991972 was made in sandbox.py, which
+     doesn't exist on 1.6.x.  A file merge from sandbox.py to main.py on
+     the 1.6.x branch will cleanly apply the one line change, i.e.:     
+     svn merge ^/subversion/trunk/subversion/tests/cmdline/svntest/sandbox.py
+     subversion\tests\cmdline\svntest\main.py -c991972
+   Votes:
+     +1: pburba
+
 Veto-blocked changes:
 =====================
 
