@@ -129,19 +129,19 @@ CustomLog           "${HTTPD_ROOT}/ops" "%t %u %{SVN-REPOS-NAME}e %{SVN-ACTION}e
   CustomLog           "${HTTPD_ROOT}/slave_access_log" common
   ErrorLog            "${HTTPD_ROOT}/slave_error_log"
 # slave 'normal' location  
-  <Location /${SLAVE_LOCATION}>
+  <Location "/${SLAVE_LOCATION}">
     DAV               svn
     SVNPath           "${SLAVE_REPOS}"
-    SVNMasterURI      ${MASTER_URL}
+    SVNMasterURI      "${MASTER_URL}"
     AuthType          Basic
     AuthName          "Subversion Repository"
     AuthUserFile      ${HTTPD_ROOT}/users
     Require           valid-user
   </Location>
 # slave 'sync' location
-  <Location /${SYNC_LOCATION}>
+  <Location "/${SYNC_LOCATION}">
    DAV svn
-   SVNPath ${SLAVE_REPOS}
+   SVNPath "${SLAVE_REPOS}"
    AuthType Basic
    AuthName "Slave Sync Repository"
    AuthUserFile ${HTTPD_ROOT}/users
@@ -154,7 +154,7 @@ CustomLog           "${HTTPD_ROOT}/ops" "%t %u %{SVN-REPOS-NAME}e %{SVN-ACTION}e
   ServerName ${MASTER_HOST}>
   CustomLog           "${HTTPD_ROOT}/master_access_log" common
   ErrorLog            "${HTTPD_ROOT}/master_error_log"
-  <Location /${MASTER_LOCATION}>
+  <Location "/${MASTER_LOCATION}">
     DAV               svn
     SVNPath           "${MASTER_REPOS}"
     AuthType          Basic
@@ -167,7 +167,7 @@ __EOF__
 }
 
 function usage() {
-  echo usage: $SCRIPT '</path/to/svn/working/copy>' '<test-work-directory>' 1>&2
+  echo "usage: $SCRIPT </path/to/svn/working/copy> <test-work-directory>" 1>&2
   echo "  e.g. \"$SCRIPT $HOME/projects/svn-trunk /tmp/test-work\"" 1>&2
   echo
   echo " " '<test-work-directory>' must not exist, \
@@ -181,7 +181,7 @@ SCRIPT=$(basename $0)
 if [ $# -ne 2 ] ; then
   usage
 fi
-SVN_WC=$1
+SVN_WC="$1"
 
 # verify the SVN working copy - should have mod_dav_svn directory
 if [ ! -d "$SVN_WC/subversion/mod_dav_svn" ] ; then
@@ -287,8 +287,8 @@ MOD_DAV_SVN="$SVN_WC/subversion/mod_dav_svn/.libs/mod_dav_svn.so"
 
 [ -r "$MOD_DAV_SVN" ] || fail "need to build mod_dav_svn.so"
 
-MASTER_REPOS=${MASTER_REPOS:-"$HTTPD_ROOT/master_repos"}
-SLAVE_REPOS=${SLAVE_REPOS:-"$HTTPD_ROOT/slave_repos"}
+MASTER_REPOS="${MASTER_REPOS:-"$HTTPD_ROOT/master_repos"}"
+SLAVE_REPOS="${SLAVE_REPOS:-"$HTTPD_ROOT/slave_repos"}"
 
 MASTER_HOST=127.0.0.2
 SLAVE_HOST=127.0.0.1
@@ -298,17 +298,17 @@ TEST_PORT=$(($RANDOM+1024))
 # location directive elements for master,slave,sync
 # tests currently work if master==slave,fail if different
 # ** Should different locations for each work?
-#MASTER_LOCATION=master
-#SLAVE_LOCATION=slave
-MASTER_LOCATION=repo
-SLAVE_LOCATION=repo
-SYNC_LOCATION=sync
+#MASTER_LOCATION="master"
+#SLAVE_LOCATION="slave"
+MASTER_LOCATION="repo"
+SLAVE_LOCATION="repo"
+SYNC_LOCATION="sync"
 
-MASTER_URL=http://${MASTER_HOST}:${TEST_PORT}/${MASTER_LOCATION}
-SLAVE_URL=http://${SLAVE_HOST}:${TEST_PORT}/${SLAVE_LOCATION}
-SYNC_URL=http://${SLAVE_HOST}:${TEST_PORT}/${SYNC_LOCATION}
+MASTER_URL="http://${MASTER_HOST}:${TEST_PORT}/${MASTER_LOCATION}"
+SLAVE_URL="http://${SLAVE_HOST}:${TEST_PORT}/${SLAVE_LOCATION}"
+SYNC_URL="http://${SLAVE_HOST}:${TEST_PORT}/${SYNC_LOCATION}"
 
-BASE_URL=$SLAVE_URL
+BASE_URL="$SLAVE_URL"
 
 # setup server and repositories
 say "setting up in ${HTTPD_ROOT}:"
@@ -321,28 +321,28 @@ $HTPASSWD -bc $HTTPD_USERS jrandom   rayjandom
 $HTPASSWD -b  $HTTPD_USERS jconstant rayjandom
 $HTPASSWD -b  $HTTPD_USERS scm scm
 $HTPASSWD -b  $HTTPD_USERS svnsync svnsync
-$SVNADMIN create $MASTER_REPOS || fail "create master repos failed"
-$SVNADMIN create $SLAVE_REPOS || fail "create slave repos failed"
+$SVNADMIN create "$MASTER_REPOS" || fail "create master repos failed"
+$SVNADMIN create "$SLAVE_REPOS" || fail "create slave repos failed"
 # dup them
-$SVNADMIN dump $MASTER_REPOS | $SVNADMIN load $SLAVE_REPOS \
+$SVNADMIN dump "$MASTER_REPOS" | $SVNADMIN load "$SLAVE_REPOS" \
   || fail "duplicate repositories failed"
 # make sure uuid's match
-[ `cat $SLAVE_REPOS/db/uuid` = `cat $MASTER_REPOS/db/uuid` ] \
+[ `cat "$SLAVE_REPOS/db/uuid"` = `cat "$MASTER_REPOS/db/uuid"` ] \
   || fail "master/slave uuid mismatch"
 # setup hooks:
 #  slave allows revprop changes
 #  master syncs changes to slave
-echo "#!/bin/sh" > $SLAVE_REPOS/hooks/pre-revprop-change
-echo "#!/bin/sh" > $MASTER_REPOS/hooks/post-revprop-change
-echo "#!/bin/sh" > $MASTER_REPOS/hooks/post-commit
-echo "$SVNSYNC --non-interactive sync $SYNC_URL --username=svnsync --password=svnsync" \
-    >> $MASTER_REPOS/hooks/post-revprop-change
-echo "$SVNSYNC --non-interactive sync $SYNC_URL --username=svnsync --password=svnsync" \
-    >> $MASTER_REPOS/hooks/post-commit
+echo "#!/bin/sh" > "$SLAVE_REPOS/hooks/pre-revprop-change"
+echo "#!/bin/sh" > "$MASTER_REPOS/hooks/post-revprop-change"
+echo "#!/bin/sh" > "$MASTER_REPOS/hooks/post-commit"
+echo "$SVNSYNC --non-interactive sync '$SYNC_URL' --username=svnsync --password=svnsync" \
+    >> "$MASTER_REPOS/hooks/post-revprop-change"
+echo "$SVNSYNC --non-interactive sync '$SYNC_URL' --username=svnsync --password=svnsync" \
+    >> "$MASTER_REPOS/hooks/post-commit"
 
-chmod 0755 $SLAVE_REPOS/hooks/pre-revprop-change
-chmod 0755 $MASTER_REPOS/hooks/post-revprop-change
-chmod 0755 $MASTER_REPOS/hooks/post-commit
+chmod 0755 "$SLAVE_REPOS/hooks/pre-revprop-change"
+chmod 0755 "$MASTER_REPOS/hooks/post-revprop-change"
+chmod 0755 "$MASTER_REPOS/hooks/post-commit"
 
 say "created master and slave repositories"
 
@@ -355,7 +355,7 @@ $HTTPD -f $HTTPD_CONFIG -k start || fail "httpd start failed"
 echo "."
 say initializing svnsync to $SYNC_URL
 HTTPD_PID=$HTTPD_ROOT/pid
-$SVNSYNC initialize --non-interactive $SYNC_URL $MASTER_URL \
+$SVNSYNC initialize --non-interactive "$SYNC_URL" "$MASTER_URL" \
     --username=svnsync --password=svnsync \
     || fail "svnsync initialize failed"
 
@@ -366,17 +366,17 @@ $SVNSYNC initialize --non-interactive $SYNC_URL $MASTER_URL \
 # reproducible test case from:
 # http://subversion.tigris.org/issues/show_bug.cgi?id=2939
 # 
-BASE_URL=$SLAVE_URL
+BASE_URL="$SLAVE_URL"
 say running svnmucc test to $BASE_URL
 svnmucc="$SVNMUCC --non-interactive --username jrandom --password rayjandom -mm"
 
-$svnmucc mkdir $BASE_URL/trunk mkdir $BASE_URL/trunk/dir1 mkdir $BASE_URL/trunk/dir1/dir2
-$svnmucc rm $BASE_URL/trunk/dir1/dir2
-$svnmucc cp 2 $BASE_URL/trunk $BASE_URL/branch put /dev/null $BASE_URL/branch/dir1/dir2
-$svnmucc rm $BASE_URL/branch cp 2 $BASE_URL/trunk $BASE_URL/branch put /dev/null $BASE_URL/branch/dir1/dir2
+$svnmucc mkdir "$BASE_URL/trunk" mkdir "$BASE_URL/trunk/dir1" mkdir "$BASE_URL/trunk/dir1/dir2"
+$svnmucc rm "$BASE_URL/trunk/dir1/dir2"
+$svnmucc cp 2 "$BASE_URL/trunk" "$BASE_URL/branch" put /dev/null "$BASE_URL/branch/dir1/dir2"
+$svnmucc rm "$BASE_URL/branch" cp 2 "$BASE_URL/trunk" "$BASE_URL/branch" put /dev/null "$BASE_URL/branch/dir1/dir2"
 
 say "svn log on $BASE_URL : "
-$SVN --username jrandom --password rayjandom log -vq $BASE_URL
+$SVN --username jrandom --password rayjandom log -vq "$BASE_URL"
 
 # shut it down
 echo -n "${SCRIPT}: stopping httpd: "
@@ -385,8 +385,8 @@ echo "."
 
 # verify result: should be at rev 4 in both repos
 # FIXME: do more rigorous verification here
-MASTER_HEAD=`$SVNLOOK youngest $MASTER_REPOS`
-SLAVE_HEAD=`$SVNLOOK youngest $SLAVE_REPOS`
+MASTER_HEAD=`$SVNLOOK youngest "$MASTER_REPOS"`
+SLAVE_HEAD=`$SVNLOOK youngest "$SLAVE_REPOS"`
 
 say checking consistency of master, slave repositories:
 
