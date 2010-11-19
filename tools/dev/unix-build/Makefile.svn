@@ -1049,20 +1049,37 @@ RUBYLIB=$(SVN_PREFIX)/lib/ruby/site_ruby$(shell grep \
 	grep ^svn_cv_ruby_sitedir_libsuffix $(svn_builddir)/config.log | \
 	cut -d'=' -f2)
 svn-check-swig-pl:
-	-cd $(svn_builddir) && \
-		env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) make check-swig-pl
+	-if [ $(ENABLE_PERL_BINDINGS) = yes ]; then \
+		cd $(svn_builddir) && \
+			env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
+			make check-swig-pl; \
+	fi
+	touch $@
+
 svn-check-swig-py:
-	-cd $(svn_builddir) && \
-		env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) make check-swig-py
+	-if [ $(ENABLE_PYTHON_BINDINGS) = yes ]; then \
+		cd $(svn_builddir) && \
+			env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
+			make check-swig-py; \
+	fi
+	touch $@
+
 svn-check-swig-rb:
-	-cd $(svn_builddir)/subversion/bindings/swig/ruby/test && \
-		env RUBYLIB=$(RUBYLIB) \
-		LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
-		ruby run-test.rb --verbose=verbose
+	-if [ $(ENABLE_RUBY_BINDINGS) = yes ]; then \
+		cd $(svn_builddir)/subversion/bindings/swig/ruby/test && \
+			env RUBYLIB=$(RUBYLIB) \
+			LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
+			ruby run-test.rb --verbose=verbose; \
+	fi
+	touch $@
+
 svn-check-javahl:
-	-cd $(svn_builddir) && \
-		env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
-		make check-javahl
+	-if [ $(ENABLE_JAVA_BINDINGS) = yes ]; then \
+		cd $(svn_builddir) && \
+			env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
+			make check-javahl; \
+	fi
+	touch $@
 
 svn-check: svn-check-local svn-check-svn svn-check-neon svn-check-serf svn-check-bindings
 
