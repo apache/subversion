@@ -548,7 +548,7 @@ endif
 # configure neon
 $(NEON_OBJDIR)/.configured: $(NEON_OBJDIR)/.retrieved
 	cd $(NEON_SRCDIR) && ./autogen.sh
-	if [ -n "$(KRB5_CONFIG_PATH)" -a -d "$(KRB5_CONFIG_PATH)" ]; then \
+	if [ -n "$(KRB5_CONFIG_PATH)" ] && [ -d "$(KRB5_CONFIG_PATH)" ]; then \
 		cp $(KRB5_CONFIG_PATH)/krb5-config $(NEON_OBJDIR); \
 		chmod +x $(NEON_OBJDIR)/krb5-config; \
 	fi
@@ -801,7 +801,7 @@ $(SVN_OBJDIR)/.retrieved:
 		branchdir="$(BRANCH)"; \
 		co="co"; \
 	fi; \
-	if [ ! -d $(SVN_WC) -a ! -h $(SVN_WC) ]; then \
+	if [ ! -d $(SVN_WC) ] && [ ! -h $(SVN_WC) ]; then \
 		svn $${co} $(SUBVERSION_REPOS_URL)/$${branchdir} \
 			$(SVN_WC); \
 	fi
