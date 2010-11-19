@@ -2302,7 +2302,7 @@ svn_client_status(svn_revnum_t *result_rev,
 
 /**
  * Invoke @a receiver with @a receiver_baton on each log message from
- * each start/end revision pair in the @a revision_ranges in turn,
+ * each (#svn_opt_revision_range_t *) range in @a revision_ranges in turn,
  * inclusive (but never invoke @a receiver on a given log message more
  * than once).
  *
