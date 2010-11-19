@@ -111,7 +111,9 @@ Candidate changes:
    Justification:
      Avoids an assert in the server.
    Votes:
-     +1: philip, stsp
+     +1: philip
+     +0: stsp (it fixes the test, but pburba asked on IRC how this change
+               will affect replaced directories and I'm not sure about that)
 
  * r1036534
    Allow perl bindings to compile within a symlinked working copy.
