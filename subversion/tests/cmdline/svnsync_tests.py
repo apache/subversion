@@ -791,7 +791,44 @@ def commit_a_copy_of_root(sbox):
   #Testcase for issue 3438.
   run_test(sbox, "repo_with_copy_of_root_dir.dump")
 
-# issue #3641
+# issue #3641 'svnsync fails to partially copy a repository'.
+# This currently fails because while replacements with history
+# within copies are handled, replacements without history inside
+# copies cause the sync to fail:
+#
+#   >svnsync synchronize %TEST_REPOS_ROOT_URL%/svnsync_tests-29-1
+#    %TEST_REPOS_ROOT_URL%/svnsync_tests-29/trunk/H
+#   Transmitting file data ...\..\..\subversion\svnsync\main.c:1444: (apr_err=160013)
+#   ..\..\..\subversion\svnsync\main.c:1391: (apr_err=160013)
+#   ..\..\..\subversion\libsvn_ra\ra_loader.c:1168: (apr_err=160013)
+#   ..\..\..\subversion\libsvn_delta\path_driver.c:254: (apr_err=160013)
+#   ..\..\..\subversion\libsvn_repos\replay.c:480: (apr_err=160013)
+#   ..\..\..\subversion\libsvn_repos\replay.c:276: (apr_err=160013)
+#   ..\..\..\subversion\libsvn_repos\replay.c:290: (apr_err=160013)
+#   ..\..\..\subversion\libsvn_fs_base\tree.c:1258: (apr_err=160013)
+#   ..\..\..\subversion\libsvn_fs_base\tree.c:1258: (apr_err=160013)
+#   ..\..\..\subversion\libsvn_fs_base\tree.c:1236: (apr_err=160013)
+#   ..\..\..\subversion\libsvn_fs_base\tree.c:931: (apr_err=160013)
+#   ..\..\..\subversion\libsvn_fs_base\tree.c:742: (apr_err=160013)
+#   svnsync: File not found: revision 4, path '/trunk/H/Z/B/lambda'
+#
+# See also http://svn.haxx.se/dev/archive-2010-11/0411.shtml and
+# 
+### TODO: Once the above failure is fixed, delete-revprops.expected.dump
+###       needs to be updated for this test to PASS!
+#
+# Note: For those who may poke around this test in the future, r3 of
+# delete-revprops.dump was created with the following svnmucc command:
+#
+# svnmucc.exe -mm cp head %ROOT_URL%-1/trunk/A %ROOT_URL%-1/trunk/H
+#                 rm %ROOT_URL%-1/trunk/H/B
+#                 cp head %ROOT_URL%-1/trunk/X %ROOT_URL%-1/trunk/B
+#
+# r4 was created with this svnmucc command:
+#
+# svnmucc.exe -mm cp head %ROOT_URL%-1/trunk/A %ROOT_URL%-1/trunk/H/Z
+#                 rm %ROOT_URL%-1/trunk/H/Z/B
+#                 mkdir %ROOT_URL%-1/trunk/H/Z/B
 def descend_into_replace(sbox):
   "descending into replaced dir looks in src"
   run_test(sbox, "descend_into_replace.dump", subdir='/trunk/H',
@@ -867,7 +904,7 @@ test_list = [ None,
               copy_bad_line_endings,
               delete_svn_props,
               commit_a_copy_of_root,
-              descend_into_replace,
+              XFail(descend_into_replace),
               delete_revprops,
              ]
 serial_only = True
