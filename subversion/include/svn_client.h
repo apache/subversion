@@ -1149,10 +1149,11 @@ svn_client_checkout(svn_revnum_t *result_rev,
  * Update working trees @a paths to @a revision, authenticating with the
  * authentication baton cached in @a ctx.  @a paths is an array of const
  * char * paths to be updated.  Unversioned paths that are direct children
- * of a versioned path will cause an update that attempts to add that path,
- * other unversioned paths are skipped.  If @a result_revs is not
- * @c NULL an array of svn_revnum_t will be returned with each element set
- * to the revision to which @a revision was resolved.
+ * of a versioned path will cause an update that attempts to add that path;
+ * other unversioned paths are skipped.  If @a result_revs is not NULL,
+ * @a *result_revs will be set to an array of svn_revnum_t with each
+ * element set to the revision to which @a revision was resolved for the
+ * corresponding element of @a paths.
  *
  * @a revision must be of kind #svn_opt_revision_number,
  * #svn_opt_revision_head, or #svn_opt_revision_date.  If @a
