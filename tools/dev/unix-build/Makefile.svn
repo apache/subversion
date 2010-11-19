@@ -801,7 +801,7 @@ $(SVN_OBJDIR)/.retrieved:
 		branchdir="$(BRANCH)"; \
 		co="co"; \
 	fi; \
-	if [ ! -d $(SVN_WC) -o ! -L $(SVN_WC) ]; then \
+	if [ ! -d $(SVN_WC) -a ! -L $(SVN_WC) ]; then \
 		svn $${co} $(SUBVERSION_REPOS_URL)/$${branchdir} \
 			$(SVN_WC); \
 	fi
