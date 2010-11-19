@@ -114,6 +114,10 @@ Candidate changes:
      +1: philip
      +0: stsp (it fixes the test, but pburba asked on IRC how this change
                will affect replaced directories and I'm not sure about that)
+     +0: pburba (we need to either backport this change or revert
+                 r962377-962378 or hack up a better fix for issue #3641 and
+                 backport that - see
+                 http://svn.haxx.se/dev/archive-2010-11/0412.shtml)
 
  * r1036534
    Allow perl bindings to compile within a symlinked working copy.
