@@ -29,8 +29,8 @@ DISTDIR		= $(PWD)/distfiles
 SRCDIR		= $(PWD)/src
 OBJDIR		= $(PWD)/objdir
 
-BDB_MAJOR_VER	= 4.8
-BDB_VER		= $(BDB_MAJOR_VER).30
+BDB_MAJOR_VER	= 4.7
+BDB_VER		= $(BDB_MAJOR_VER).25
 APR_VER		= 1.4.2
 APR_ICONV_VER	= 1.2.1
 GNU_ICONV_VER	= 1.13.1
@@ -1069,7 +1069,7 @@ svn-check-swig-rb:
 		cd $(svn_builddir)/subversion/bindings/swig/ruby/test && \
 			env RUBYLIB=$(RUBYLIB) \
 			LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
-			ruby run-test.rb --verbose=verbose; \
+			ruby run-test.rb --verbose=normal; \
 	fi
 	touch $@
 
