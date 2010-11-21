@@ -67,6 +67,34 @@ warn_on_cache_errors(svn_error_t *err,
   return SVN_NO_ERROR;
 }
 
+static apr_status_t
+close_unused_file_handles(void *cache_void)
+{
+  svn_file_handle_cache_t *cache = cache_void;
+  apr_status_t result = APR_SUCCESS;
+
+  /* Close all file handles that are not in use anymore. So, as long as
+   * no requests to a given repository are being processed, we may change
+   * the file content and / or structure. However, content that has been
+   * cached *above* the APR layer (e.g. fulltext caches) will *not* be
+   * changed and may become inconsistent with the disk content.
+   *
+   * This will cause concurrent threads to perform somewhat slower because
+   * they might have put those handles to good use a few moments later.
+   * They now have to actually re-open the respective files.
+   */
+  svn_error_t *err = svn_file_handle_cache__flush(cache);
+
+  /* process error returns */
+  if (err)
+  {
+    result = err->apr_err;
+    svn_error_clear(err);
+  }
+
+  return result;
+}
+
 svn_error_t *
 svn_fs_fs__initialize_caches(svn_fs_t *fs,
                              apr_pool_t *pool)
@@ -80,6 +108,12 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
   svn_boolean_t no_handler;
 
   SVN_ERR(read_config(&memcache, &no_handler, fs, pool));
+
+  /* Schedule file handle cache cleanup after finishing the request. */
+  apr_pool_cleanup_register(pool,
+                            svn_fs__get_global_file_handle_cache(),
+                            close_unused_file_handles,
+                            apr_pool_cleanup_null);
 
   /* Make the cache for revision roots.  For the vast majority of
    * commands, this is only going to contain a few entries (svnadmin
