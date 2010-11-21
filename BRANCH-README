@@ -1,0 +1,19 @@
+The purpose of this branch is to experiment with speeding up 'svn diff',
+especially for large files with lots of unchanged lines.
+
+As a secondary objective, this should also speed up 'svn blame', since blame 
+performs a diff on the client side for every revision part of the blame 
+operation. This will only be noticeable if the server and network are fast
+enough, so the client becomes the bottleneck (e.g. on a LAN, server having a
+fast backend (e.g. FSFS on SSD)).
+
+General approach: reduce the problem set for the LCS algorithm as much as
+possible, by eliminating identical prefix and suffix before putting the
+tokens (lines) into the token tree (see [1] for some background).
+
+Specific approach for this branch: scan for identical prefix/suffix
+byte-per-byte, until a difference is found. This is done immediately after
+opening the datasources, before getting the tokens (lines) and inserting them
+into the token tree.
+
+[1] http://en.wikipedia.org/wiki/Longest_common_subsequence_problem#Reduce_the_problem_set
