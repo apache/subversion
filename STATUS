@@ -135,7 +135,7 @@ Candidate changes:
      Subversion builds are installed within my home directory and the
      runtime linker isn't searching libraries there by default.
    Votes:
-     +1: stsp
+     +1: stsp, peters
 
  * r962377, r962378
    Fix svnsync handling of directory copyfrom.
