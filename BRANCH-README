@@ -16,4 +16,13 @@ byte-per-byte, until a difference is found. This is done immediately after
 opening the datasources, before getting the tokens (lines) and inserting them
 into the token tree.
 
+
+TODO:
+
+  * eliminate identical prefix                 [DONE]
+  * eliminate identical suffix                 [DONE]
+  * make diff3 and diff4 use datasources_open  []
+     (this may eliminate the need for datasource_open, and the flag
+      datasource_opened in token.c#svn_diff__get_tokens)
+
 [1] http://en.wikipedia.org/wiki/Longest_common_subsequence_problem#Reduce_the_problem_set
