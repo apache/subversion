@@ -526,6 +526,7 @@ close_handle_before_cleanup(void *handle_void)
 {
   svn_file_handle_cache__handle_t *f = handle_void;
   svn_error_t *err = SVN_NO_ERROR;
+  apr_status_t result = APR_SUCCESS;
 
   /* if this hasn't been done before: 
    * "close" the handle, i.e. return it to the cache 
@@ -537,7 +538,14 @@ close_handle_before_cleanup(void *handle_void)
   f->entry = NULL;
   f->cache = NULL;
 
-  return err ? err->apr_err : APR_SUCCESS;
+  /* process error returns */
+  if (err)
+    {
+      result = err->apr_err;
+      svn_error_clear(err);
+    }
+
+  return result;
 }
 
 /* Create a cached file handle to be returned to the application in F for
