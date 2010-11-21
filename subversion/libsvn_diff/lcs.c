@@ -163,6 +163,7 @@ svn_diff__lcs_reverse(svn_diff__lcs_t *lcs)
 svn_diff__lcs_t *
 svn_diff__lcs(svn_diff__position_t *position_list1, /* pointer to tail (ring) */
               svn_diff__position_t *position_list2, /* pointer to tail (ring) */
+              apr_off_t prefix_lines,
               apr_pool_t *pool)
 {
   int idx;
@@ -180,9 +181,11 @@ svn_diff__lcs(svn_diff__position_t *position_list1, /* pointer to tail (ring) */
    */
   lcs = apr_palloc(pool, sizeof(*lcs));
   lcs->position[0] = apr_pcalloc(pool, sizeof(*lcs->position[0]));
-  lcs->position[0]->offset = position_list1 ? position_list1->offset + 1 : 1;
+  lcs->position[0]->offset = position_list1 ? 
+    position_list1->offset + 1 : prefix_lines + 1;
   lcs->position[1] = apr_pcalloc(pool, sizeof(*lcs->position[1]));
-  lcs->position[1]->offset = position_list2 ? position_list2->offset + 1 : 1;
+  lcs->position[1]->offset = position_list2 ?
+    position_list2->offset + 1 : prefix_lines + 1;
   lcs->length = 0;
   lcs->refcount = 1;
   lcs->next = NULL;
