@@ -626,7 +626,10 @@ set_node_property(void *baton,
 
   if (strcmp(name, SVN_PROP_MERGEINFO) == 0)
     {
-      svn_string_t *renumbered_mergeinfo, *prop_val = (svn_string_t *)value;
+      svn_string_t *renumbered_mergeinfo;
+      /* ### Need to cast away const. We cannot change the declaration of
+       * ### this function since it is part of svn_repos_parse_fns2_t. */
+      svn_string_t *prop_val = (svn_string_t *)value;
 
       /* Tolerate mergeinfo with "\r\n" line endings because some
          dumpstream sources might contain as much.  If so normalize

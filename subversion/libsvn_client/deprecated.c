@@ -1796,6 +1796,22 @@ svn_client_status(svn_revnum_t *result_rev,
 
 /*** From update.c ***/
 svn_error_t *
+svn_client_update3(apr_array_header_t **result_revs,
+                   const apr_array_header_t *paths,
+                   const svn_opt_revision_t *revision,
+                   svn_depth_t depth,
+                   svn_boolean_t depth_is_sticky,
+                   svn_boolean_t ignore_externals,
+                   svn_boolean_t allow_unver_obstructions,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
+{
+  return svn_client_update4(result_revs, paths, revision,
+                            depth, depth_is_sticky, ignore_externals,
+                            allow_unver_obstructions, FALSE, ctx, pool);
+}
+
+svn_error_t *
 svn_client_update2(apr_array_header_t **result_revs,
                    const apr_array_header_t *paths,
                    const svn_opt_revision_t *revision,

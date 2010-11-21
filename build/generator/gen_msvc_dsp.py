@@ -103,6 +103,18 @@ class Generator(gen_win.WinGeneratorBase):
   def write(self):
     "Write a Workspace (.dsw)"
 
+    self.move_proj_file(self.projfilesdir,
+                        'svn_config.dsp',
+                          (
+                            ('sql', sql),
+                            ('project_guid', self.makeguid('__CONFIG__')),
+                          )
+                        )
+    self.move_proj_file(self.projfilesdir,
+                        'svn_locale.dsp',
+                        (
+                          ('project_guid', self.makeguid('svn_locale')),
+                        ))
     self.write_zlib_project_file('zlib.dsp')
     self.write_neon_project_file('neon.dsp')
     self.write_serf_project_file('serf.dsp')

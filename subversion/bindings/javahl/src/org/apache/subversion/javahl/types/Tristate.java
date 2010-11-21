@@ -1,6 +1,5 @@
-/*
- * err.h : interface to routines for returning Berkeley DB errors
- *
+/**
+ * @copyright
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -19,38 +18,19 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
+ * @endcopyright
  */
 
+package org.apache.subversion.javahl.types;
 
-
-#ifndef SVN_LIBSVN_FS_ERR_H
-#define SVN_LIBSVN_FS_ERR_H
+public enum Tristate
+{
+    /** The state of the thing is not known. */
+    Unknown,
 
-#include <apr_pools.h>
+    /** The state of the thing is false. */
+    False,
 
-#include "svn_error.h"
-#include "svn_fs.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-
-
-
-/* Building common error objects.  */
-
-
-/* SVN_ERR_FS_ID_NOT_FOUND: something in FS refers to node revision
-   ID, but that node revision doesn't exist.  */
-svn_error_t *svn_fs_fs__err_dangling_id(svn_fs_t *fs,
-                                        const svn_fs_id_t *id);
-
-/* SVN_ERR_FS_CORRUPT: the lockfile for PATH in FS is corrupt.  */
-svn_error_t *svn_fs_fs__err_corrupt_lockfile(svn_fs_t *fs,
-                                             const char *path);
-
-#ifdef __cplusplus
+    /** The state of the thing is true. */
+    True;
 }
-#endif /* __cplusplus */
-
-#endif /* SVN_LIBSVN_FS_ERR_H */

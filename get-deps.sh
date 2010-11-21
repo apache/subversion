@@ -23,15 +23,15 @@
 # get-deps.sh -- download the dependencies useful for building Subversion
 #
 
-APR=apr-1.3.8
-APR_UTIL=apr-util-1.3.9
-NEON=neon-0.29.0
-SERF=serf-0.6.1
+APR=apr-1.3.9
+APR_UTIL=apr-util-1.3.10
+NEON=neon-0.29.5
+SERF=serf-0.7.0
 ZLIB=zlib-1.2.5
-SQLITE_VERSION=3.7.2
+SQLITE_VERSION=3.7.3
 SQLITE=sqlite-amalgamation-$SQLITE_VERSION
 
-HTTPD=httpd-2.2.14
+HTTPD=httpd-2.2.17
 HTTPD_OOPS=
 APR_ICONV=apr-iconv-1.2.1
 APR_ICONV_OOPS=

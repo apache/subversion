@@ -5317,7 +5317,24 @@ def update_with_file_lock_and_keywords_property_set(sbox):
   if (mu_ts_before_update != mu_ts_after_update):
     print("The timestamp of 'mu' before and after update does not match.")
     raise svntest.Failure
-  
+
+#----------------------------------------------------------------------
+# Updating a nonexistent or deleted path should be a successful no-op,
+# when there is no incoming change.  In trunk@1035343, such an update
+# within a copied directory triggered an assertion failure.
+def update_nonexistent_child_of_copy(sbox):
+  """update a nonexistent child of a copied dir"""
+  sbox.build()
+  os.chdir(sbox.wc_dir)
+
+  svntest.main.run_svn(None, 'copy', 'A', 'A2')
+
+  # Try updating a nonexistent path in the copied dir.
+  svntest.main.run_svn(None, 'update', os.path.join('A2', 'nonexistent'))
+
+  # Try updating a deleted path in the copied dir.
+  svntest.main.run_svn(None, 'delete', os.path.join('A2', 'mu'))
+  svntest.main.run_svn(None, 'update', os.path.join('A2', 'mu'))
 
 #######################################################################
 # Run the tests
@@ -5382,7 +5399,8 @@ test_list = [ None,
               XFail(update_empty_hides_entries),
               mergeinfo_updates_merge_with_local_mods,
               update_with_excluded_subdir,
-              XFail(update_with_file_lock_and_keywords_property_set)
+              XFail(update_with_file_lock_and_keywords_property_set),
+              XFail(update_nonexistent_child_of_copy),
              ]
 
 if __name__ == '__main__':

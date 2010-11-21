@@ -118,6 +118,8 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
 
   if (! locally_added)
     {
+      svn_boolean_t validate_inherited_mergeinfo = FALSE;
+
       /* Fetch any existing (explicit) mergeinfo.  We'll temporarily
          reparent to the target URL here, just to keep the code simple.
          We could, as an alternative, first see if the target URL was a
@@ -128,8 +130,9 @@ calculate_target_mergeinfo(svn_ra_session_t *ra_session,
                                                 ra_session, src_url, pool));
       SVN_ERR(svn_client__get_repos_mergeinfo(ra_session, &src_mergeinfo,
                                               "", src_revnum,
-                                              svn_mergeinfo_inherited,
-                                              TRUE, pool));
+                                              svn_mergeinfo_inherited, TRUE,
+                                              &validate_inherited_mergeinfo,
+                                              pool));
       if (old_session_url)
         SVN_ERR(svn_ra_reparent(ra_session, old_session_url, pool));
     }
@@ -1795,11 +1798,8 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
   lock_abspath = top_dst_path;
   if (copy_pairs->nelts == 1)
     {
-      svn_node_kind_t kind;
       top_src_url = svn_uri_dirname(top_src_url, pool);
-      SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, top_dst_path, FALSE, pool));
-      if (kind != svn_node_dir)
-        lock_abspath = svn_dirent_dirname(top_dst_path, pool);
+      lock_abspath = svn_dirent_dirname(top_dst_path, pool);
     }
 
   /* Open a repository session to the longest common src ancestor.  We do not

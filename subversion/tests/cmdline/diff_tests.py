@@ -2585,9 +2585,9 @@ def basic_diff_summarize(sbox):
 
   # Add props to some items that will be deleted, and commit.
   sbox.simple_propset('prop', 'val',
-                      p('A/C'),
-                      p('A/D/gamma'),
-                      p('A/D/H/chi'))
+                      'A/C',
+                      'A/D/gamma',
+                      'A/D/H/chi')
   sbox.simple_commit() # r2
   sbox.simple_update()
 
@@ -2595,37 +2595,37 @@ def basic_diff_summarize(sbox):
   svntest.main.file_append(p('A/mu'), 'new text\n')
 
   # Prop modification.
-  sbox.simple_propset('prop', 'val', p('iota'))
+  sbox.simple_propset('prop', 'val', 'iota')
 
   # Both content and prop mods.
   svntest.main.file_append(p('A/D/G/tau'), 'new text\n')
-  sbox.simple_propset('prop', 'val', p('A/D/G/tau'))
+  sbox.simple_propset('prop', 'val', 'A/D/G/tau')
 
   # File addition.
   svntest.main.file_append(p('newfile'), 'new text\n')
   svntest.main.file_append(p('newfile2'), 'new text\n')
-  sbox.simple_add(p('newfile'),
-                  p('newfile2'))
-  sbox.simple_propset('prop', 'val', p('newfile'))
+  sbox.simple_add('newfile',
+                  'newfile2')
+  sbox.simple_propset('prop', 'val', 'newfile')
 
   # File deletion.
-  sbox.simple_rm(p('A/B/lambda'),
-                 p('A/D/gamma'))
-                 
+  sbox.simple_rm('A/B/lambda',
+                 'A/D/gamma')
+
   # Directory addition.
   os.makedirs(p('P'))
   os.makedirs(p('Q/R'))
   svntest.main.file_append(p('Q/newfile'), 'new text\n')
   svntest.main.file_append(p('Q/R/newfile'), 'new text\n')
-  sbox.simple_add(p('P'),
-                  p('Q'))
+  sbox.simple_add('P',
+                  'Q')
   sbox.simple_propset('prop', 'val',
-                      p('P'),
-                      p('Q/newfile'))
+                      'P',
+                      'Q/newfile')
 
   # Directory deletion.
-  sbox.simple_rm(p('A/D/H'),
-                 p('A/C'))
+  sbox.simple_rm('A/D/H',
+                 'A/C')
  
   # Commit, because diff-summarize handles repos-repos only.
   #svntest.main.run_svn(False, 'st', wc_dir)

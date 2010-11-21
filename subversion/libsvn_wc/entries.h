@@ -87,15 +87,21 @@ svn_wc__read_entries_old(apr_hash_t **entries,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
-/* For internal use by upgrade.c to write entries in the wc-ng format.  */
+/* For internal use by upgrade.c to write entries in the wc-ng format.
+   Return in DIR_BATON the baton to be passed as PARENT_BATON when
+   upgrading child directories. Pass a NULL PARENT_BATON when upgrading
+   the root directory. */
 svn_error_t *
-svn_wc__write_upgraded_entries(svn_wc__db_t *db,
+svn_wc__write_upgraded_entries(void **dir_baton,
+                               void *parent_baton,
+                               svn_wc__db_t *db,
                                svn_sqlite__db_t *sdb,
                                apr_int64_t repos_id,
                                apr_int64_t wc_id,
                                const char *dir_abspath,
                                const char *new_root_abspath,
                                apr_hash_t *entries,
+                               apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
 /* Parse a file external specification in the NULL terminated STR and

@@ -2500,9 +2500,9 @@ def delete_from_url_with_spaces(sbox):
   "delete a directory with ' ' using its url"
   
   sbox.build()
-  sbox.simple_mkdir(os.path.join(sbox.wc_dir, 'Dir With Spaces'))
-  sbox.simple_mkdir(os.path.join(sbox.wc_dir, 'Dir With'))
-  sbox.simple_mkdir(os.path.join(sbox.wc_dir, 'Dir With/Spaces'))
+  sbox.simple_mkdir('Dir With Spaces')
+  sbox.simple_mkdir('Dir With')
+  sbox.simple_mkdir('Dir With/Spaces')
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                       'ci', sbox.wc_dir, '-m', 'Added dir')
@@ -2671,6 +2671,19 @@ def delete_urls_with_spaces(sbox):
                                      sbox.repo_url + '/C spaced',
                                      '-m', 'Deleted B and C') 
 
+def ls_url_special_characters(sbox):
+  """special characters in svn ls URL"""
+  sbox.build(create_wc = False)
+
+  special_urls = [sbox.repo_url + '/A' + '/%2E',
+                  sbox.repo_url + '%2F' + 'A']
+
+  for url in special_urls:
+    svntest.actions.run_and_verify_svn('ls URL with special characters',
+                                       ['B/\n', 'C/\n', 'D/\n', 'mu\n'],
+                                       [], 'ls', 
+                                       url)
+
 ########################################################################
 # Run the tests
 
@@ -2732,6 +2745,7 @@ test_list = [ None,
               delete_child_parent_update,
               basic_relocate,
               delete_urls_with_spaces,
+              ls_url_special_characters,
              ]
 
 if __name__ == '__main__':
