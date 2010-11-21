@@ -23,6 +23,8 @@
 
 package org.apache.subversion.javahl;
 
+import org.apache.subversion.javahl.types.*;
+
 public class ChangePath implements java.io.Serializable
 {
     // Update the serialVersionUID when there is a incompatible change

@@ -367,6 +367,7 @@ const apr_getopt_option_t svn_cl__options[] =
   {"iw",            opt_ignore_whitespace, 0, NULL},
   {"idiff",         opt_internal_diff, 0, NULL},
   {"keep-locks",    opt_no_unlock, 0, NULL},
+  {"keep-cl",       opt_keep_changelists, 0, NULL},
 
   {0,               0, 0, 0},
 };
@@ -905,10 +906,14 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    svn:externals  - A newline separated list of module specifiers,\n"
      "      each of which consists of a URL and a relative directory path,\n"
      "      similar to the syntax of the 'svn checkout' command:\n"
-     "        http://example.com/repos/zag foo/bar\n"
-     "      An optional peg revision may be appended to the URL to pin the\n"
+     "        http://example.com/repos/zig foo/bar\n"
+     "      A revision to check out can optionally be specified to pin the\n"
      "      external to a known revision:\n"
-     "        http://example.com/repos/zig@42 foo\n"
+     "        -r25 http://example.com/repos/zig foo/bar\n"
+     "      To unambiguously identify an element at a path which has been\n"
+     "      deleted (possibly even deleted multiple times in its history),\n"
+     "      an optional peg revision can be appended to the URL:\n"
+     "        -r25 http://example.com/repos/zig@42 foo/bar\n"
      "      Relative URLs are indicated by starting the URL with one\n"
      "      of the following strings:\n"
      "        ../  to the parent directory of the extracted external\n"
@@ -1168,10 +1173,17 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  are applied to the obstructing path.  Obstructing paths are reported\n"
      "  in the first column with code 'E'.\n"
      "\n"
+     "  If the specified update target is missing from the working copy but its\n"
+     "  immediate parent directory is present, checkout the target into its\n"
+     "  parent directory at the specified depth.  If --parents is specified,\n"
+     "  create any missing parent directories of the target by checking them\n"
+     "  out, too, at depth=empty.\n"
+     "\n"
      "  Use the --set-depth option to set a new working copy depth on the\n"
      "  targets of this operation.\n"),
     {'r', 'N', opt_depth, opt_set_depth, 'q', opt_merge_cmd, opt_force,
-     opt_ignore_externals, opt_changelist, opt_editor_cmd, opt_accept} },
+     opt_ignore_externals, opt_changelist, opt_editor_cmd, opt_accept,
+     opt_parents} },
 
   { "upgrade", svn_cl__upgrade, {0}, N_
     ("Upgrade the metadata storage format for a working copy.\n"
@@ -1375,17 +1387,24 @@ main(int argc, const char *argv[])
               svn_opt_revision_range_t *range;
               const char *change_str =
                 APR_ARRAY_IDX(change_revs, i, const char *);
+              const char *s = change_str;
+              svn_boolean_t is_negative;
 
-              /* Allow any number of 'r's to prefix a revision number.
-                 ### TODO: Any reason we're not just using opt.c's
-                 ### revision-parsing code here?  Then -c could take
-                 ### "{DATE}" and the special words. */
-              while (*change_str == 'r')
-                change_str++;
-              changeno = changeno_end = strtol(change_str, &end, 10);
-              if (end != change_str && *end == '-')
+              /* Check for a leading minus to allow "-c -r42".
+               * The is_negative flag is used to handle "-c -42" and "-c -r42".
+               * The "-c r-42" case is handled by strtol() returning a
+               * negative number. */
+              is_negative = (*s == '-');
+              if (is_negative)
+                s++;
+
+              /* Allow any number of 'r's to prefix a revision number. */
+              while (*s == 'r')
+                s++;
+              changeno = changeno_end = strtol(s, &end, 10);
+              if (end != s && *end == '-')
                 {
-                  if (changeno < 0)
+                  if (changeno < 0 || is_negative)
                     {
                       err = svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                               _("Negative number in range (%s)"
@@ -1393,10 +1412,10 @@ main(int argc, const char *argv[])
                                               change_str);
                       return svn_cmdline_handle_exit_error(err, pool, "svn: ");
                     }
-                  change_str = end+1;
-                  while (*change_str == 'r')
-                    change_str++;
-                  changeno_end = strtol(change_str, &end, 10);
+                  s = end + 1;
+                  while (*s == 'r')
+                    s++;
+                  changeno_end = strtol(s, &end, 10);
                 }
               if (end == change_str || *end != '\0')
                 {
@@ -1412,6 +1431,9 @@ main(int argc, const char *argv[])
                                          _("There is no change 0"));
                   return svn_cmdline_handle_exit_error(err, pool, "svn: ");
                 }
+
+              if (is_negative)
+                changeno = -changeno;
 
               /* Figure out the range:
                     -c N  -> -r N-1:N

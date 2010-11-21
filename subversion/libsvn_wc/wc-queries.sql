@@ -72,11 +72,23 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0
 ORDER BY op_depth DESC
 LIMIT 1;
 
+-- STMT_SELECT_LOWEST_WORKING_NODE
+SELECT op_depth, presence
+FROM nodes
+WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0
+ORDER BY op_depth
+LIMIT 1;
+
 -- STMT_SELECT_ACTUAL_NODE
 SELECT prop_reject, changelist, conflict_old, conflict_new,
 conflict_working, tree_conflict_data, properties, conflict_data
 FROM actual_node
 WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_SELECT_ACTUAL_TREE_CONFLICT
+SELECT conflict_data
+FROM actual_node
+WHERE wc_id = ?1 AND local_relpath = ?2 AND conflict_data IS NOT NULL;
 
 -- STMT_SELECT_NODE_CHILDREN_INFO
 /* Getting rows in an advantageous order using
@@ -297,6 +309,13 @@ WHERE wc_id = ?1 AND local_relpath = ?2
   AND op_depth = (SELECT MAX(op_depth) FROM nodes
                   WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0);
 
+-- STMT_DELETE_LOWEST_WORKING_NODE
+DELETE FROM nodes
+WHERE wc_id = ?1 AND local_relpath = ?2
+  AND op_depth = (SELECT MIN(op_depth) FROM nodes
+                  WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0)
+  AND presence = 'base-deleted';
+
 -- STMT_DELETE_ALL_WORKING_NODES
 DELETE FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0;
@@ -314,6 +333,11 @@ DELETE FROM actual_node
 WHERE wc_id = ?1 AND local_relpath = ?2
       AND changelist IS NULL;
 
+-- STMT_DELETE_ACTUAL_NODE_WITHOUT_CONFLICT
+DELETE FROM actual_node
+WHERE wc_id = ?1 AND local_relpath = ?2
+      AND conflict_data IS NULL;
+
 -- STMT_DELETE_NOT_PRESENT_NODES_RECURSIVE
 DELETE FROM nodes
 WHERE wc_id = ?1 AND local_relpath LIKE ?2 ESCAPE '#' AND op_depth = ?3
@@ -324,6 +348,21 @@ UPDATE actual_node
 SET properties = NULL,
     text_mod = NULL,
     conflict_data = NULL,
+    tree_conflict_data = NULL,
+    conflict_old = NULL,
+    conflict_new = NULL,
+    conflict_working = NULL,
+    prop_reject = NULL,
+    older_checksum = NULL,
+    left_checksum = NULL,
+    right_checksum = NULL
+WHERE wc_id = ?1 and local_relpath = ?2;
+
+-- STMT_CLEAR_ACTUAL_NODE_LEAVING_CONFLICT
+UPDATE actual_node
+SET properties = NULL,
+    text_mod = NULL,
+    changelist = NULL,
     tree_conflict_data = NULL,
     conflict_old = NULL,
     conflict_new = NULL,
@@ -421,7 +460,8 @@ SELECT local_relpath
 FROM actual_node
 WHERE wc_id = ?1 AND parent_relpath = ?2 AND
   NOT ((prop_reject IS NULL) AND (conflict_old IS NULL)
-       AND (conflict_new IS NULL) AND (conflict_working IS NULL))
+       AND (conflict_new IS NULL) AND (conflict_working IS NULL)
+       AND (conflict_data IS NULL))
 
 -- STMT_SELECT_ACTUAL_CHILDREN_TREE_CONFLICT
 SELECT local_relpath, conflict_data
@@ -473,7 +513,7 @@ VALUES (?1, ?2, 0,
         ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16);
 
 -- STMT_INSERT_WORKING_NODE_FROM_BASE
-INSERT INTO nodes (
+INSERT OR REPLACE INTO nodes (
     wc_id, local_relpath, op_depth, parent_relpath, presence, kind, checksum,
     changed_revision, changed_date, changed_author, depth, symlink_target,
     translated_size, last_mod_time, properties)
@@ -483,27 +523,29 @@ SELECT wc_id, local_relpath, ?3 AS op_depth, parent_relpath, ?4 AS presence,
 FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
 
--- STMT_INSERT_WORKING_NODE_NORMAL_FROM_BASE
+-- STMT_INSERT_WORKING_NODE_FROM_BASE_COPY
 INSERT INTO nodes (
     wc_id, local_relpath, op_depth, parent_relpath, repos_id, repos_path,
     revision, presence, depth, kind, changed_revision, changed_date,
     changed_author, checksum, properties, translated_size, last_mod_time,
     symlink_target )
 SELECT wc_id, local_relpath, ?3 AS op_depth, parent_relpath, repos_id,
-    repos_path, revision, 'normal', depth, kind, changed_revision,
+    repos_path, revision, presence, depth, kind, changed_revision,
     changed_date, changed_author, checksum, properties, translated_size,
     last_mod_time, symlink_target
 FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
 
-
--- STMT_INSERT_WORKING_NODE_NOT_PRESENT_FROM_BASE
+-- STMT_INSERT_WORKING_NODE_FROM_BASE_COPY_PRESENCE
 INSERT INTO nodes (
     wc_id, local_relpath, op_depth, parent_relpath, repos_id, repos_path,
-    revision, presence, kind, changed_revision, changed_date, changed_author )
-SELECT wc_id, local_relpath, ?3 as op_depth, parent_relpath, repos_id,
-       repos_path, revision, 'not-present', kind, changed_revision,
-       changed_date, changed_author
+    revision, presence, depth, kind, changed_revision, changed_date,
+    changed_author, checksum, properties, translated_size, last_mod_time,
+    symlink_target )
+SELECT wc_id, local_relpath, ?3 AS op_depth, parent_relpath, repos_id,
+    repos_path, revision, ?4 AS presence, depth, kind, changed_revision,
+    changed_date, changed_author, checksum, properties, translated_size,
+    last_mod_time, symlink_target
 FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
 
@@ -672,7 +714,8 @@ WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
 -- STMT_SELECT_ACTUAL_NODE_RECURSIVE
 SELECT 1
 FROM actual_node
-WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#');
+WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
+  AND conflict_data IS NULL;
 
 /* ------------------------------------------------------------------------- */
 
@@ -717,15 +760,6 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
 SELECT wc_id, local_relpath, tree_conflict_data
 FROM actual_node
 WHERE tree_conflict_data IS NOT NULL;
-
--- STMT_INSERT_NEW_CONFLICT
-INSERT INTO conflict_victim (
-  wc_id, local_relpath, parent_relpath, node_kind, conflict_kind,
-  property_name, conflict_action, conflict_reason, operation,
-  left_repos_id, left_repos_relpath, left_peg_rev, left_kind,
-  right_repos_id, right_repos_relpath, right_peg_rev, right_kind)
-VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15,
-  ?16, ?17);
 
 -- STMT_ERASE_OLD_CONFLICTS
 UPDATE actual_node SET tree_conflict_data = NULL;

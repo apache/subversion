@@ -1489,7 +1489,7 @@ public class SVNClient implements SVNClientInterface
         try
         {
             aSVNClient.getMergeinfoLog(
-                org.apache.subversion.javahl.MergeinfoLogKind.values()[kind],
+                org.apache.subversion.javahl.Mergeinfo.LogKind.values()[kind],
                 pathOrUrl, pegRevision == null ? null : pegRevision.toApache(),
                 mergeSourceUrl,
                 srcPegRevision == null ? null : srcPegRevision.toApache(),

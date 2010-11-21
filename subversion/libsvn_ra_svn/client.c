@@ -1153,15 +1153,34 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+/* Converts a apr_uint64_t with values TRUE, FALSE or
+   SVN_RA_SVN_UNSPECIFIED_NUMBER as provided by svn_ra_svn_parse_tuple
+   to a svn_tristate_t */
+static svn_tristate_t
+optbool_to_tristate(apr_uint64_t v)
+{
+  switch (v)
+  {
+    case TRUE:
+      return svn_tristate_true;
+    case FALSE:
+      return svn_tristate_false;
+    default: /* Contains SVN_RA_SVN_UNSPECIFIED_NUMBER */
+      return svn_tristate_unknown;
+  }
+}
+
 /* If REVISION is SVN_INVALID_REVNUM, no value is sent to the
    server, which defaults to youngest. */
-static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
-                                         svn_mergeinfo_catalog_t *catalog,
-                                         const apr_array_header_t *paths,
-                                         svn_revnum_t revision,
-                                         svn_mergeinfo_inheritance_t inherit,
-                                         svn_boolean_t include_descendants,
-                                         apr_pool_t *pool)
+static svn_error_t *ra_svn_get_mergeinfo(
+  svn_ra_session_t *session,
+  svn_mergeinfo_catalog_t *catalog,
+  const apr_array_header_t *paths,
+  svn_revnum_t revision,
+  svn_mergeinfo_inheritance_t inherit,
+  svn_boolean_t *validate_inherited_mergeinfo,
+  svn_boolean_t include_descendants,
+  apr_pool_t *pool)
 {
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
@@ -1169,6 +1188,7 @@ static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
   apr_array_header_t *mergeinfo_tuple;
   svn_ra_svn_item_t *elt;
   const char *path;
+  apr_uint64_t validated_inherited_mergeinfo;
 
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", "get-mergeinfo"));
   for (i = 0; i < paths->nelts; i++)
@@ -1176,12 +1196,17 @@ static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
       path = APR_ARRAY_IDX(paths, i, const char *);
       SVN_ERR(svn_ra_svn_write_cstring(conn, pool, path));
     }
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(?r)wb)", revision,
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(?r)wbb)", revision,
                                  svn_inheritance_to_word(inherit),
-                                 include_descendants));
+                                 include_descendants,
+                                 *validate_inherited_mergeinfo));
 
   SVN_ERR(handle_auth_request(sess_baton, pool));
-  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "l", &mergeinfo_tuple));
+  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "l?B", &mergeinfo_tuple,
+                                       &validated_inherited_mergeinfo));
+
+  *validate_inherited_mergeinfo =
+    (optbool_to_tristate(validated_inherited_mergeinfo) == svn_tristate_true);
 
   *catalog = NULL;
   if (mergeinfo_tuple->nelts > 0)
@@ -1313,22 +1338,6 @@ static svn_error_t *ra_svn_diff(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
-/* Converts a apr_uint64_t with values TRUE, FALSE or
-   SVN_RA_SVN_UNSPECIFIED_NUMBER as provided by svn_ra_svn_parse_tuple
-   to a svn_tristate_t */
-static svn_tristate_t
-optbool_to_tristate(apr_uint64_t v)
-{
-  switch (v)
-  {
-    case TRUE:
-      return svn_tristate_true;
-    case FALSE:
-      return svn_tristate_false;
-    default: /* Contains SVN_RA_SVN_UNSPECIFIED_NUMBER */
-      return svn_tristate_unknown;
-  }
-}
 
 static svn_error_t *ra_svn_log(svn_ra_session_t *session,
                                const apr_array_header_t *paths,

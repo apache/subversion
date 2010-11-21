@@ -268,8 +268,8 @@ svn_cl__list(apr_getopt_t *os,
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
 
       /* Get peg revisions. */
-      SVN_ERR(svn_opt_parse_path(&peg_revision, &truepath, target,
-                                 subpool));
+      SVN_ERR(svn_cl__opt_parse_path(&peg_revision, &truepath, target,
+                                     subpool));
 
       if (opt_state->xml)
         {

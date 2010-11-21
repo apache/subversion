@@ -329,6 +329,11 @@ svn_client_switch2(svn_revnum_t *result_rev,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
+  if (svn_path_is_url(path))
+    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                             _("'%s' is not a local path"),
+                             path);
+
   return svn_client__switch_internal(result_rev, path, switch_url,
                                      peg_revision, revision, depth,
                                      depth_is_sticky, NULL, ignore_externals,

@@ -355,9 +355,6 @@ svn_wc__db_init(svn_wc__db_t *db,
 
    LOCAL_RELPATH will be allocated in RESULT_POOL. All other (temporary)
    allocations will be made in SCRATCH_POOL.
-
-   ### note: with per-dir .svn directories, these relpaths will effectively
-   ### be the basename. it gets interesting in single-db mode
 */
 svn_error_t *
 svn_wc__db_to_relpath(const char **local_relpath,
@@ -681,10 +678,14 @@ svn_wc__db_base_add_not_present_node(svn_wc__db_t *db,
    Note that no changes are made to the local filesystem; LOCAL_ABSPATH
    is merely the key to figure out which BASE node to remove.
 
-   If the node is a directory, then ALL child nodes will be removed
-   from the BASE tree, too.
+   To maintain a consistent database this function will also remove
+   any working node that marks LOCAL_ABSPATH as base-deleted.  If this
+   results in there being no working node for LOCAL_ABSPATH then any
+   actual node will be removed if the actual node does not mark a
+   conflict.
 
-   All temporary allocations will be made in SCRATCH_POOL.
+   Note the caller is responsible for removing base node
+   children before calling this function (this may change).
 */
 svn_error_t *
 svn_wc__db_base_remove(svn_wc__db_t *db,
@@ -1051,6 +1052,7 @@ svn_error_t *
 svn_wc__db_op_copy(svn_wc__db_t *db,
                    const char *src_abspath,
                    const char *dst_abspath,
+                   const char *dst_op_root_abspath,
                    const svn_skel_t *work_items,
                    apr_pool_t *scratch_pool);
 
@@ -2377,24 +2379,23 @@ svn_wc__db_temp_op_start_directory_update(svn_wc__db_t *db,
                                           svn_revnum_t new_rev,
                                           apr_pool_t *scratch_pool);
 
-/* Update WORKING_NODE to make it represent a copy of the current working
-   copy. Leaving additions and copies as-is, but making a copy of all the
-   required BASE_NODE data to WORKING_NODE, to allow removing and/or
-   updating the BASE_NODE without changing the contents of the current
-   working copy */
+/* Copy the base tree at LOCAL_ABSPATH into the working tree as copy,
+   leaving any subtree additions and copies as-is.  This allows the
+   base node tree to be removed. */
 svn_error_t *
 svn_wc__db_temp_op_make_copy(svn_wc__db_t *db,
                              const char *local_abspath,
-                             svn_boolean_t remove_base,
                              apr_pool_t *scratch_pool);
 
 
+#ifndef SVN_WC__OP_DEPTH
 /* Elide the copyfrom information for LOCAL_ABSPATH if it can be derived
    from the parent node.  */
 svn_error_t *
 svn_wc__db_temp_elide_copyfrom(svn_wc__db_t *db,
                                const char *local_abspath,
                                apr_pool_t *scratch_pool);
+#endif
 
 
 /* Return the serialized file external info (from BASE) for LOCAL_ABSPATH.
@@ -2477,6 +2478,9 @@ svn_error_t *
 svn_wc__db_drop_root(svn_wc__db_t *db,
                      const char *local_abspath,
                      apr_pool_t *scratch_pool);
+
+/* Return the OP_DEPTH for LOCAL_RELPATH. */
+int svn_wc__db_op_depth_for_upgrade(const char *local_relpath);
 
 /* @} */
 

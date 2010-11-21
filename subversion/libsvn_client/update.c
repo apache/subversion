@@ -44,7 +44,18 @@
 
 /*** Code. ***/
 
+/* This is a helper for svn_client__update_internal(), which see for
+   an explanation of most of these parameters.  Some stuff that's
+   unique is as follows:
 
+   ANCHOR_ABSPATH is the local absolute path of the update anchor.
+   This is typically either the same as LOCAL_ABSPATH, or the
+   immediate parent of LOCAL_ABSPATH.
+
+   If NOTIFY_SUMMARY is set (and there's a notification hander in
+   CTX), transmit the final update summary upon successful
+   completion of the update.
+*/
 static svn_error_t *
 update_internal(svn_revnum_t *result_rev,
                 const char *local_abspath,
@@ -56,6 +67,7 @@ update_internal(svn_revnum_t *result_rev,
                 svn_boolean_t allow_unver_obstructions,
                 svn_boolean_t *timestamp_sleep,
                 svn_boolean_t innerupdate,
+                svn_boolean_t notify_summary,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool)
 {
@@ -235,8 +247,8 @@ update_internal(svn_revnum_t *result_rev,
   if (sleep_here)
     svn_io_sleep_for_timestamps(local_abspath, pool);
 
-  /* Let everyone know we're finished here. */
-  if (ctx->notify_func2)
+  /* Let everyone know we're finished here (unless we're asked not to). */
+  if (ctx->notify_func2 && notify_summary)
     {
       svn_wc_notify_t *notify
         = svn_wc_create_notify(local_abspath, svn_wc_notify_update_completed,
@@ -266,44 +278,99 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                             svn_boolean_t allow_unver_obstructions,
                             svn_boolean_t *timestamp_sleep,
                             svn_boolean_t innerupdate,
+                            svn_boolean_t make_parents,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool)
 {
-  const char *anchor_abspath;
+  const char *anchor_abspath, *lockroot_abspath;
   svn_error_t *err;
+  svn_opt_revision_t peg_revision = *((svn_opt_revision_t *)revision);
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR_ASSERT(! (innerupdate && make_parents));
 
-  if (!innerupdate)
-    SVN_ERR(svn_wc__acquire_write_lock(&anchor_abspath,
-                                       ctx->wc_ctx, local_abspath, TRUE,
-                                       pool, pool));
+  if (make_parents)
+    {
+      int i;
+      const char *parent_abspath = local_abspath;
+      apr_array_header_t *missing_parents = 
+        apr_array_make(pool, 4, sizeof(const char *));
+
+      while (1)
+        {
+          /* Try to lock.  If we can't lock because our target (or its
+             parent) isn't a working copy, we'll try to walk up the
+             tree to find a working copy, remembering this path's
+             parent as one we need to flesh out.  */
+          err = svn_wc__acquire_write_lock(&lockroot_abspath, ctx->wc_ctx,
+                                           parent_abspath, !innerupdate,
+                                           pool, pool);
+          if (!err)
+            break;
+          if ((err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
+              || svn_dirent_is_root(parent_abspath, strlen(parent_abspath)))
+            return err;
+          svn_error_clear(err);
+
+          /* Remember the parent of our update target as a missing
+             parent. */
+          parent_abspath = svn_dirent_dirname(parent_abspath, pool);
+          APR_ARRAY_PUSH(missing_parents, const char *) = parent_abspath;
+        }
+
+      /* Run 'svn up --depth=empty' (effectively) on the missing
+         parents, if any. */
+      anchor_abspath = lockroot_abspath;
+      for (i = missing_parents->nelts - 1; i >= 0; i--)
+        {
+          const char *missing_parent =
+            APR_ARRAY_IDX(missing_parents, i, const char *);
+          err = update_internal(result_rev, missing_parent, anchor_abspath,
+                                &peg_revision, svn_depth_empty, FALSE,
+                                ignore_externals, allow_unver_obstructions,
+                                timestamp_sleep, innerupdate, FALSE,
+                                ctx, pool);
+          if (err)
+            goto cleanup;
+          anchor_abspath = missing_parent;
+
+          /* If we successfully updated a missing parent, let's re-use
+             the returned revision number for future updates for the
+             sake of consistency. */
+          peg_revision.kind = svn_opt_revision_number;
+          peg_revision.value.number = *result_rev;
+        }
+    }
   else
-    SVN_ERR(svn_wc__acquire_write_lock(&anchor_abspath,
-                                       ctx->wc_ctx, local_abspath, FALSE,
-                                       pool, pool));
+    {
+      SVN_ERR(svn_wc__acquire_write_lock(&lockroot_abspath, ctx->wc_ctx,
+                                         local_abspath, !innerupdate,
+                                         pool, pool));
+      anchor_abspath = lockroot_abspath;
+    }
 
   err = update_internal(result_rev, local_abspath, anchor_abspath,
-                         revision, depth, depth_is_sticky,
-                         ignore_externals, allow_unver_obstructions,
-                         timestamp_sleep, innerupdate, ctx, pool);
-
+                        &peg_revision, depth, depth_is_sticky,
+                        ignore_externals, allow_unver_obstructions,
+                        timestamp_sleep, innerupdate, TRUE, ctx, pool);
+ cleanup:
   err = svn_error_compose_create(
             err,
-            svn_wc__release_write_lock(ctx->wc_ctx, anchor_abspath, pool));
+            svn_wc__release_write_lock(ctx->wc_ctx, lockroot_abspath, pool));
 
   return svn_error_return(err);
 }
 
 
 svn_error_t *
-svn_client_update3(apr_array_header_t **result_revs,
+svn_client_update4(apr_array_header_t **result_revs,
                    const apr_array_header_t *paths,
                    const svn_opt_revision_t *revision,
                    svn_depth_t depth,
                    svn_boolean_t depth_is_sticky,
                    svn_boolean_t ignore_externals,
                    svn_boolean_t allow_unver_obstructions,
+                   svn_boolean_t make_parents,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
@@ -340,7 +407,8 @@ svn_client_update3(apr_array_header_t **result_revs,
                                             revision, depth, depth_is_sticky,
                                             ignore_externals,
                                             allow_unver_obstructions,
-                                            &sleep, FALSE, ctx, subpool);
+                                            &sleep, FALSE, make_parents,
+                                            ctx, subpool);
 
           if (err && err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
             {

@@ -267,47 +267,6 @@ svn_wc__deserialize_conflict(const svn_wc_conflict_description2_t **conflict,
 }
 
 
-/* ### this is BAD. the CONFLICTS structure should not be dependent upon
-   ### DIR_PATH. each conflict should be labeled with an entry name, not
-   ### a whole path. (and a path which happens to vary based upon invocation
-   ### of the user client and these APIs)  */
-svn_error_t *
-svn_wc__read_tree_conflicts(apr_hash_t **conflicts,
-                            const char *conflict_data,
-                            const char *dir_path,
-                            apr_pool_t *pool)
-{
-  const svn_skel_t *skel;
-  apr_pool_t *iterpool;
-
-  *conflicts = apr_hash_make(pool);
-
-  if (conflict_data == NULL)
-    return SVN_NO_ERROR;
-
-  skel = svn_skel__parse(conflict_data, strlen(conflict_data), pool);
-  if (skel == NULL)
-    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-                            _("Error parsing tree conflict skel"));
-
-  iterpool = svn_pool_create(pool);
-  for (skel = skel->children; skel != NULL; skel = skel->next)
-    {
-      const svn_wc_conflict_description2_t *conflict;
-
-      svn_pool_clear(iterpool);
-      SVN_ERR(svn_wc__deserialize_conflict(&conflict, skel, dir_path,
-                                           pool, iterpool));
-      if (conflict != NULL)
-        apr_hash_set(*conflicts, svn_dirent_basename(conflict->local_abspath,
-                                                     pool),
-                     APR_HASH_KEY_STRING, conflict);
-    }
-  svn_pool_destroy(iterpool);
-
-  return SVN_NO_ERROR;
-}
-
 /* Prepend to SKEL the string corresponding to enumeration value N, as found
  * in MAP. */
 static svn_error_t *
@@ -412,29 +371,6 @@ svn_wc__serialize_conflict(svn_skel_t **skel,
   SVN_ERR_ASSERT(is_valid_conflict_skel(c_skel));
 
   *skel = c_skel;
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc__write_tree_conflicts(const char **conflict_data,
-                             apr_hash_t *conflicts,
-                             apr_pool_t *pool)
-{
-  svn_skel_t *skel = svn_skel__make_empty_list(pool);
-  apr_hash_index_t *hi;
-
-  for (hi = apr_hash_first(pool, conflicts); hi; hi = apr_hash_next(hi))
-    {
-      svn_skel_t *c_skel;
-
-      SVN_ERR(svn_wc__serialize_conflict(&c_skel, svn__apr_hash_index_val(hi),
-                                         pool, pool));
-      svn_skel__prepend(c_skel, skel);
-    }
-
-  *conflict_data = svn_skel__unparse(skel, pool)->data;
-
   return SVN_NO_ERROR;
 }
 

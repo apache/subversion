@@ -6,7 +6,15 @@ cgitb.enable()
 
 import sys, os, string, subprocess, re
 
-version = '1.6.13'
+try:
+  sys.path.append(os.path.dirname(sys.argv[0]))
+  import config
+except:
+  print 'Content-type: text/plain'
+  print
+  print 'Cannot find config file'
+  sys.exit(1)
+
 r = re.compile('\[GNUPG\:\] GOODSIG (\w*) (.*)')
 
 shell_content = '''
@@ -49,6 +57,11 @@ File: <select name="filename">
     options = options + '<option value="%s">%s</option>\n' % (f, f)
 
   return c % options
+
+
+def save_valid_sig(filename, signature):
+  f = open(os.path.join(config.sigdir, filename + '.asc'), 'a')
+  f.write(signature)
 
 
 def verify_sig(signature, filename):
@@ -101,6 +114,8 @@ def process_sig(signature, filename):
   (verified, result) = verify_sig(signature, filename)
 
   if verified:
+    save_valid_sig(filename, signature)
+
     return c_verified % (filename, result[0], result[1])
   else:
     return c_unverified % (filename, result)
@@ -118,7 +133,7 @@ def main():
 
   # These are "global" values, not specific to our action.
   mapping = {
-      'version' : version,
+      'version' : config.version,
       'content' : content,
     }
 

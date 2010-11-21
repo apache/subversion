@@ -50,6 +50,7 @@ svn_cl__update(apr_getopt_t *os,
   apr_array_header_t *targets;
   svn_depth_t depth;
   svn_boolean_t depth_is_sticky;
+  struct svn_cl__check_externals_failed_notify_baton nwb;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
@@ -85,15 +86,26 @@ svn_cl__update(apr_getopt_t *os,
       depth_is_sticky = FALSE;
     }
 
-  SVN_ERR(svn_client_update3(NULL, targets,
+  nwb.wrapped_func = ctx->notify_func2;
+  nwb.wrapped_baton = ctx->notify_baton2;
+  nwb.had_externals_error = FALSE;
+  ctx->notify_func2 = svn_cl__check_externals_failed_notify_wrapper;
+  ctx->notify_baton2 = &nwb;
+  
+  SVN_ERR(svn_client_update4(NULL, targets,
                              &(opt_state->start_revision),
                              depth, depth_is_sticky,
                              opt_state->ignore_externals,
-                             opt_state->force,
+                             opt_state->force, opt_state->parents,
                              ctx, scratch_pool));
 
   if (! opt_state->quiet)
-    SVN_ERR(svn_cl__print_conflict_stats(ctx->notify_baton2, scratch_pool));
+    SVN_ERR(svn_cl__print_conflict_stats(nwb.wrapped_baton, scratch_pool));
+
+  if (nwb.had_externals_error)
+    return svn_error_create(SVN_ERR_CL_ERROR_PROCESSING_EXTERNALS, NULL,
+                            _("Failure occured processing one or more "
+                              "externals definitions"));
 
   return SVN_NO_ERROR;
 }

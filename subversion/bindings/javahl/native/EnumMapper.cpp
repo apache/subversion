@@ -114,7 +114,7 @@ jobject EnumMapper::mapReposNotifyAction(svn_repos_notify_action_t action)
 jobject EnumMapper::mapNodeKind(svn_node_kind_t nodeKind)
 {
   // We're assuming a valid value for the C enum above
-  return mapEnum(JAVA_PACKAGE"/NodeKind", (int) nodeKind);
+  return mapEnum(JAVA_PACKAGE"/types/NodeKind", (int) nodeKind);
 }
 
 /**
@@ -165,7 +165,7 @@ jobject EnumMapper::mapConflictReason(svn_wc_conflict_reason_t reason)
 
 int EnumMapper::toMergeinfoLogKind(jobject jLogKind)
 {
-  return getOrdinal(JAVA_PACKAGE"/MergeinfoLogKind", jLogKind);
+  return getOrdinal(JAVA_PACKAGE"/Mergeinfo$LogKind", jLogKind);
 }
 
 int EnumMapper::toLogLevel(jobject jLogLevel)
@@ -195,7 +195,8 @@ jobject EnumMapper::mapOperation(svn_wc_operation_t operation)
 jobject EnumMapper::mapTristate(svn_tristate_t tristate)
 {
   // We're assuming a valid value for the C enum above
-  return mapEnum(JAVA_PACKAGE"/Tristate", (int) tristate);
+  return mapEnum(JAVA_PACKAGE"/types/Tristate",
+                 (int) (tristate - svn_tristate_false));
 }
 
 svn_wc_conflict_choice_t EnumMapper::toConflictChoice(jobject jchoice)
