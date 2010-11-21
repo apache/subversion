@@ -139,6 +139,8 @@ svn_diff__get_tokens(svn_diff__position_t **position_list,
                      void *diff_baton,
                      const svn_diff_fns_t *vtable,
                      svn_diff_datasource_e datasource,
+                     svn_boolean_t datasource_opened,
+                     apr_off_t prefix_lines,
                      apr_pool_t *pool)
 {
   svn_diff__position_t *start_position;
@@ -152,10 +154,11 @@ svn_diff__get_tokens(svn_diff__position_t **position_list,
   *position_list = NULL;
 
 
-  SVN_ERR(vtable->datasource_open(diff_baton, datasource));
+  if (!datasource_opened)
+    SVN_ERR(vtable->datasource_open(diff_baton, datasource));
 
   position_ref = &start_position;
-  offset = 0;
+  offset = prefix_lines;
   hash = 0; /* The callback fn doesn't need to touch it per se */
   while (1)
     {

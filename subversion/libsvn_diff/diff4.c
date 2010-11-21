@@ -194,24 +194,32 @@ svn_diff_diff4(svn_diff_t **diff,
                                tree,
                                diff_baton, vtable,
                                svn_diff_datasource_original,
+                               FALSE,
+                               0,
                                subpool2));
 
   SVN_ERR(svn_diff__get_tokens(&position_list[1],
                                tree,
                                diff_baton, vtable,
                                svn_diff_datasource_modified,
+                               FALSE,
+                               0,
                                subpool));
 
   SVN_ERR(svn_diff__get_tokens(&position_list[2],
                                tree,
                                diff_baton, vtable,
                                svn_diff_datasource_latest,
+                               FALSE,
+                               0,
                                subpool));
 
   SVN_ERR(svn_diff__get_tokens(&position_list[3],
                                tree,
                                diff_baton, vtable,
                                svn_diff_datasource_ancestor,
+                               FALSE,
+                               0,
                                subpool2));
 
   /* Get rid of the tokens, we don't need them to calc the diff */
@@ -222,7 +230,7 @@ svn_diff_diff4(svn_diff_t **diff,
   svn_pool_clear(subpool3);
 
   /* Get the lcs for original - latest */
-  lcs_ol = svn_diff__lcs(position_list[0], position_list[2], subpool3);
+  lcs_ol = svn_diff__lcs(position_list[0], position_list[2], 0, subpool3);
   diff_ol = svn_diff__diff(lcs_ol, 1, 1, TRUE, pool);
 
   svn_pool_clear(subpool3);
@@ -243,7 +251,7 @@ svn_diff_diff4(svn_diff_t **diff,
   /* Get the lcs for common ancestor - original
    * Do reverse adjustements
    */
-  lcs_adjust = svn_diff__lcs(position_list[3], position_list[2], subpool3);
+  lcs_adjust = svn_diff__lcs(position_list[3], position_list[2], 0, subpool3);
   diff_adjust = svn_diff__diff(lcs_adjust, 1, 1, FALSE, subpool3);
   adjust_diff(diff_ol, diff_adjust);
 
@@ -252,7 +260,7 @@ svn_diff_diff4(svn_diff_t **diff,
   /* Get the lcs for modified - common ancestor
    * Do forward adjustments
    */
-  lcs_adjust = svn_diff__lcs(position_list[1], position_list[3], subpool3);
+  lcs_adjust = svn_diff__lcs(position_list[1], position_list[3], 0, subpool3);
   diff_adjust = svn_diff__diff(lcs_adjust, 1, 1, FALSE, subpool3);
   adjust_diff(diff_ol, diff_adjust);
 

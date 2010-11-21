@@ -43,6 +43,22 @@ svn_diff__diff(svn_diff__lcs_t *lcs,
   svn_diff_t *diff;
   svn_diff_t **diff_ref = &diff;
 
+  if (want_common && (original_start > 1))
+    {
+      /* we have a prefix to skip */
+      (*diff_ref) = apr_palloc(pool, sizeof(**diff_ref));
+
+      (*diff_ref)->type = svn_diff__type_common;
+      (*diff_ref)->original_start = 0;
+      (*diff_ref)->original_length = original_start - 1;
+      (*diff_ref)->modified_start = 0;
+      (*diff_ref)->modified_length = modified_start - 1;
+      (*diff_ref)->latest_start = 0;
+      (*diff_ref)->latest_length = 0;
+
+      diff_ref = &(*diff_ref)->next;
+    }
+
   while (1)
     {
       if (original_start < lcs->position[0]->offset
@@ -105,9 +121,12 @@ svn_diff_diff(svn_diff_t **diff,
 {
   svn_diff__tree_t *tree;
   svn_diff__position_t *position_list[2];
+  svn_diff_datasource_e datasource[] = {svn_diff_datasource_original,
+                                        svn_diff_datasource_modified};
   svn_diff__lcs_t *lcs;
   apr_pool_t *subpool;
   apr_pool_t *treepool;
+  apr_off_t prefix_lines = 0;
 
   *diff = NULL;
 
@@ -116,17 +135,23 @@ svn_diff_diff(svn_diff_t **diff,
 
   svn_diff__tree_create(&tree, treepool);
 
+  SVN_ERR(vtable->datasources_open(diff_baton, &prefix_lines, datasource, 2));
+
   /* Insert the data into the tree */
   SVN_ERR(svn_diff__get_tokens(&position_list[0],
                                tree,
                                diff_baton, vtable,
                                svn_diff_datasource_original,
+                               TRUE,
+                               prefix_lines,
                                subpool));
 
   SVN_ERR(svn_diff__get_tokens(&position_list[1],
                                tree,
                                diff_baton, vtable,
                                svn_diff_datasource_modified,
+                               TRUE,
+                               prefix_lines,
                                subpool));
 
   /* The cool part is that we don't need the tokens anymore.
@@ -139,10 +164,10 @@ svn_diff_diff(svn_diff_t **diff,
   svn_pool_destroy(treepool);
 
   /* Get the lcs */
-  lcs = svn_diff__lcs(position_list[0], position_list[1], subpool);
+  lcs = svn_diff__lcs(position_list[0], position_list[1], prefix_lines, subpool);
 
   /* Produce the diff */
-  *diff = svn_diff__diff(lcs, 1, 1, TRUE, pool);
+  *diff = svn_diff__diff(lcs, prefix_lines + 1, prefix_lines + 1, TRUE, pool);
 
   /* Get rid of all the data we don't have a use for anymore */
   svn_pool_destroy(subpool);
