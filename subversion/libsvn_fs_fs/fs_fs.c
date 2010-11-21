@@ -1984,10 +1984,14 @@ open_pack_or_rev_file(svn_file_handle_cache__handle_t **file,
 
           retry = TRUE;
         }
+      else
+        {
+          return svn_error_return(err);
+        }
     }
-  while (err && retry);
+  while (err);
 
-  return svn_error_return(err);
+  return SVN_NO_ERROR;
 }
 
 /* Given REV in FS, set *REV_OFFSET to REV's offset in the packed file.
