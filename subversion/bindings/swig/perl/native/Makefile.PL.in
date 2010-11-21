@@ -37,15 +37,11 @@ my $swig_srcdir = "${svnlib_srcdir}/bindings/swig";
 my $swig_builddir = "${svnlib_builddir}/bindings/swig";
 
 my @modules = qw/client delta fs ra repos wc/;
-my @ldpaths = ("$swig_builddir/perl/libsvn_swig_perl/.libs",
-               map {"$svnlib_builddir/libsvn_$_/.libs"} (@modules, qw/diff subr
-                                                                      ra_local
-                                                                      ra_svn
-                                                                      ra_neon
-                                                                      ra_serf
-                                                                      fs_base
-                                                                      fs_util
-                                                                      fs_fs/));
+my @ldpaths = (abs_path($swig_builddir) . "/perl/libsvn_swig_perl/.libs",
+               map { abs_path($svnlib_builddir) . "/libsvn_$_/.libs" }
+                   @modules, qw/diff subr ra_local ra_svn ra_neon
+                                ra_serf fs_base fs_util fs_fs/);
+
 my @ldmodules = map {"-lsvn_$_-1"} (@modules, qw/diff subr/);
 
 my $apr_shlib_path_var = '@SVN_APR_SHLIB_PATH_VAR@';
@@ -72,7 +68,7 @@ my %config = (
                  " -I$swig_srcdir -g"),
     OBJECT => q/$(O_FILES)/,
     LIBS => [join(' ', $apr_ldflags,
-                  (map {$_ = abs_path($_); "-L$_"} @ldpaths),
+                  (map {"-L$_"} @ldpaths),
                   @ldmodules, '-lsvn_swig_perl-1',
                   `$swig -perl -ldflags`)],
     test => { TESTS => "$swig_srcdir/perl/native/t/*.t" }
@@ -108,13 +104,12 @@ for (@modules) {
 # the dependencies need to be fixed
 
 sub MY::postamble {
-   package MY ;
-   
-   my $module_c_files = join (' ',map { "svn_$_.c"} @modules);
-   my $module_make_commands = join ('',map {"\t\$(MAKE) -f Makefile.$_\n"} @modules);
+    my $module_c_files = join (' ',map { "svn_$_.c"} @modules);
+    my $module_make_commands = join ('',map {"\t\$(MAKE) -f Makefile.$_\n"} @modules);
 
-  my $fullperlrun = "$apr_shlib_path_var=\${$apr_shlib_path_var}:" . join(':',@ldpaths);
-  
+    my $fullperlrun = "$apr_shlib_path_var=" .
+                      join(':', "\$($apr_shlib_path_var)", @ldpaths);
+
    return <<"EOPOST";
 all :: modules
 test :: modules
