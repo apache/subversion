@@ -115,32 +115,53 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                             close_unused_file_handles,
                             apr_pool_cleanup_null);
 
-  /* Make the cache for revision roots.  For the vast majority of
-   * commands, this is only going to contain a few entries (svnadmin
-   * dump/verify is an exception here), so to reduce overhead let's
-   * try to keep it to just one page.  I estimate each entry has about
-   * 72 bytes of overhead (svn_revnum_t key, svn_fs_id_t +
+  /* Make the caches for non-packed and packed revision roots.  For the
+   * vastmajority of commands, this is only going to contain a few entries
+   * (svnadmin dump/verify is an exception here), so to reduce overhead
+   * let's try to keep it to just one page.  I estimate each entry has
+   * about 72 bytes of overhead (svn_revnum_t key, svn_fs_id_t +
    * id_private_t + 3 strings for value, and the cache_entry); the
    * default pool size is 8192, so about a hundred should fit
    * comfortably. */
   if (svn_fs__get_global_membuffer_cache())
-    SVN_ERR(svn_cache__create_membuffer_cache(&(ffd->rev_root_id_cache),
-                                              svn_fs__get_global_membuffer_cache(),
-                                              svn_fs_fs__serialize_id,
-                                              svn_fs_fs__deserialize_id,
-                                              sizeof(svn_revnum_t),
-                                              apr_pstrcat(pool, prefix, "RRI",
+    {
+      SVN_ERR(svn_cache__create_membuffer_cache(&(ffd->rev_root_id_cache),
+                                                svn_fs__get_global_membuffer_cache(),
+                                                svn_fs_fs__serialize_id,
+                                                svn_fs_fs__deserialize_id,
+                                                sizeof(svn_revnum_t),
+                                                apr_pstrcat(pool, prefix, "RRI",
+                                                            (char *)NULL),
+                                                fs->pool));
+      SVN_ERR(svn_cache__create_membuffer_cache(&(ffd->packed_rev_root_id_cache),
+                                                svn_fs__get_global_membuffer_cache(),
+                                                svn_fs_fs__serialize_id,
+                                                svn_fs_fs__deserialize_id,
+                                                sizeof(svn_revnum_t),
+                                                apr_pstrcat(pool, prefix, "PRRI",
                                                           (char *)NULL),
-                                              fs->pool));
+                                                fs->pool));
+    }
   else
-    SVN_ERR(svn_cache__create_inprocess(&(ffd->rev_root_id_cache),
-                                        svn_fs_fs__serialize_id,
-                                        svn_fs_fs__deserialize_id,
-                                        sizeof(svn_revnum_t),
-                                        1, 100, FALSE, fs->pool));
+    {
+      SVN_ERR(svn_cache__create_inprocess(&(ffd->rev_root_id_cache),
+                                          svn_fs_fs__serialize_id,
+                                          svn_fs_fs__deserialize_id,
+                                          sizeof(svn_revnum_t),
+                                          1, 100, FALSE, fs->pool));
+      SVN_ERR(svn_cache__create_inprocess(&(ffd->packed_rev_root_id_cache),
+                                          svn_fs_fs__serialize_id,
+                                          svn_fs_fs__deserialize_id,
+                                          sizeof(svn_revnum_t),
+                                          1, 100, FALSE, fs->pool));
+    }
   if (! no_handler)
-    SVN_ERR(svn_cache__set_error_handler(ffd->rev_root_id_cache,
-                                         warn_on_cache_errors, fs, pool));
+    {
+      SVN_ERR(svn_cache__set_error_handler(ffd->rev_root_id_cache,
+                                          warn_on_cache_errors, fs, pool));
+      SVN_ERR(svn_cache__set_error_handler(ffd->packed_rev_root_id_cache,
+                                          warn_on_cache_errors, fs, pool));
+    }
 
 
   /* Rough estimate: revision DAG nodes have size around 320 bytes, so

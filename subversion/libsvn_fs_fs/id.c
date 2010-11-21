@@ -34,7 +34,6 @@ typedef struct {
   const char *txn_id;
   svn_revnum_t rev;
   apr_off_t offset;
-  svn_tristate_t is_packed;
 } id_private_t;
 
 
@@ -82,24 +81,6 @@ svn_fs_fs__id_offset(const svn_fs_id_t *id)
   id_private_t *pvt = id->fsap_data;
 
   return pvt->offset;
-}
-
-
-svn_tristate_t
-svn_fs_fs__is_packed(const svn_fs_id_t *id)
-{
-  id_private_t *pvt = id->fsap_data;
-
-  return pvt->is_packed;
-}
-
-void
-svn_fs_fs__set_packed(const svn_fs_id_t *id,
-                      svn_tristate_t is_packed)
-{
-  id_private_t *pvt = id->fsap_data;
-
-  pvt->is_packed = is_packed;
 }
 
 
@@ -206,7 +187,6 @@ svn_fs_fs__id_txn_create(const char *node_id,
   pvt->txn_id = apr_pstrdup(pool, txn_id);
   pvt->rev = SVN_INVALID_REVNUM;
   pvt->offset = -1;
-  pvt->is_packed = svn_tristate_unknown;
 
   id->vtable = &id_vtable;
   id->fsap_data = pvt;
@@ -229,7 +209,6 @@ svn_fs_fs__id_rev_create(const char *node_id,
   pvt->txn_id = NULL;
   pvt->rev = rev;
   pvt->offset = offset;
-  pvt->is_packed = svn_tristate_unknown;
 
   id->vtable = &id_vtable;
   id->fsap_data = pvt;
@@ -249,7 +228,6 @@ svn_fs_fs__id_copy(const svn_fs_id_t *id, apr_pool_t *pool)
   new_pvt->txn_id = pvt->txn_id ? apr_pstrdup(pool, pvt->txn_id) : NULL;
   new_pvt->rev = pvt->rev;
   new_pvt->offset = pvt->offset;
-  new_pvt->is_packed = pvt->is_packed;
 
   new_id->vtable = &id_vtable;
   new_id->fsap_data = new_pvt;
@@ -321,7 +299,6 @@ svn_fs_fs__id_parse(const char *data,
           return NULL;
         }
       pvt->offset = (apr_off_t)val;
-      pvt->is_packed = svn_tristate_unknown;
     }
   else if (str[0] == 't')
     {
@@ -329,7 +306,6 @@ svn_fs_fs__id_parse(const char *data,
       pvt->txn_id = str + 1;
       pvt->rev = SVN_INVALID_REVNUM;
       pvt->offset = -1;
-      pvt->is_packed = svn_tristate_unknown;
     }
   else
     return NULL;

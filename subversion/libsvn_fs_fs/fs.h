@@ -226,8 +226,14 @@ typedef struct
      multiple svn_fs_t's for the same filesystem.) */
 
   /* A cache of revision root IDs, mapping from (svn_revnum_t *) to
-     (svn_fs_id_t *).  (Not threadsafe.) */
+     (svn_fs_id_t *). Some of the IDs may belong to non-packed revs
+     but these will never be read. This is guaranteed by the fact
+     that the transition from non-packed to packed is irreversable. */
   svn_cache__t *rev_root_id_cache;
+
+  /* Similar to @ref rev_root_id_cache but all IDs are guaranteed
+     to belong to packed revisions. */
+  svn_cache__t *packed_rev_root_id_cache;
 
   /* DAG node cache for immutable nodes */
   svn_cache__t *rev_node_cache;

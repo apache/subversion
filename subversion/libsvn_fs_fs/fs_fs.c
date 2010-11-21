@@ -2974,17 +2974,23 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
   svn_file_handle_cache__handle_t *revision_file;
   apr_file_t *apr_rev_file;
   apr_off_t root_offset;
+  svn_cache__t *cache = NULL;
   svn_fs_id_t *root_id = NULL;
   svn_boolean_t is_cached;
-  svn_tristate_t is_packed;
 
   SVN_ERR(ensure_revision_exists(fs, rev, pool));
 
+  /* Try to find the ID in our caches.  Once we tried is_packed_rev
+     returned true, we will never try to use the cache for non-packed
+     revs again.  Also, if we find the entry in the cache, this 
+     function cannot be racy because we don't need to access the file. */
+  cache = is_packed_rev(fs, rev)
+        ? ffd->packed_rev_root_id_cache
+        : ffd->rev_root_id_cache;
   SVN_ERR(svn_cache__get((void **) root_id_p, &is_cached,
-                         ffd->rev_root_id_cache, &rev, pool));
+                         cache, &rev, pool));
 
-  is_packed = is_packed_rev(fs, rev) ? svn_tristate_true : svn_tristate_false;
-  if (is_cached && is_packed == svn_fs_fs__is_packed(*root_id_p))
+  if (is_cached)
     return SVN_NO_ERROR;
 
   /* we don't care about the file pointer position */
@@ -2998,13 +3004,13 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
 
   SVN_ERR(get_fs_id_at_offset(&root_id, apr_rev_file, fs, rev, root_offset, 
                               pool));
-  svn_fs_fs__set_packed(root_id, is_packed_rev(fs, rev)
-                                    ? svn_tristate_true
-                                    : svn_tristate_false);
 
   SVN_ERR(svn_file_handle_cache__close(revision_file));
 
-  SVN_ERR(svn_cache__set(ffd->rev_root_id_cache, &rev, root_id, pool));
+  /* At this point, the revision might have already gotten packed
+     but cache is still the one for non-packed IDs.  In that case,
+     it will never be looked up here, again.  So, we are safe. */
+  SVN_ERR(svn_cache__set(cache, &rev, root_id, pool));
 
   *root_id_p = root_id;
 
