@@ -110,13 +110,19 @@ svn_fs__get_global_file_handle_cache(void)
                              svn_pool_create(NULL));
       if (err)
         {
+          char buffer[1024];
+          const char *message = svn_err_best_message(err,
+                                                     buffer,
+                                                     sizeof(buffer));
+
           svn_error_clear(err);
 
           /* We need the file handle cache. The only way that an error could
            * occur would be some threading error. In that case, there is no
            * way we could continue - not even in some limp home mode.
            */
-          SVN_ERR_MALFUNCTION_NO_RETURN();
+          svn_error__malfunction(FALSE, __FILE__, __LINE__, message);
+          abort();
         }
     }
 
