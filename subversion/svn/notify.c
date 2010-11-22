@@ -553,7 +553,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
              nb->is_checkout ||
              nb->is_export))
         {
-          if ((err = svn_cmdline_printf(pool, _("Updating '%s'...\n"),
+          if ((err = svn_cmdline_printf(pool, _("Updating '%s' ...\n"),
                                         path_local)))
             goto print_error;
         }
