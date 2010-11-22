@@ -13996,7 +13996,7 @@ def merge_range_prior_to_rename_source_existence(sbox):
                                      sbox.repo_url + '/A/D/H/nu_moved',
                                      '-m', 'Move nu to nu_moved')
   svntest.actions.run_and_verify_svn(None,
-                                     ["Updating '%s'...\n" % (wc_dir),
+                                     ["Updating '%s' ...\n" % (wc_dir),
                                       "D    " + nu_path + "\n",
                                       "A    " + nu_moved_path + "\n",
                                       "Updated to revision 12.\n"],
