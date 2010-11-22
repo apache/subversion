@@ -46,7 +46,7 @@ struct notify_baton
   svn_boolean_t received_some_change;
   svn_boolean_t is_checkout;
   svn_boolean_t is_export;
-  svn_boolean_t suppress_final_line;
+  svn_boolean_t suppress_summary_lines;
   svn_boolean_t sent_first_txdelta;
   svn_boolean_t in_external;
   svn_boolean_t had_print_error; /* Used to not keep printing error messages
@@ -547,9 +547,21 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
         }
       break;
 
+    case svn_wc_notify_update_started:
+      if (! (nb->suppress_summary_lines || 
+             nb->in_external ||
+             nb->is_checkout ||
+             nb->is_export))
+        {
+          if ((err = svn_cmdline_printf(pool, _("Updating '%s'...\n"),
+                                        path_local)))
+            goto print_error;
+        }
+      break;
+
     case svn_wc_notify_update_completed:
       {
-        if (! nb->suppress_final_line)
+        if (! nb->suppress_summary_lines)
           {
             if (SVN_IS_VALID_REVNUM(n->revision))
               {
@@ -912,7 +924,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 svn_error_t *
 svn_cl__get_notifier(svn_wc_notify_func2_t *notify_func_p,
                      void **notify_baton_p,
-                     svn_boolean_t suppress_final_line,
+                     svn_boolean_t suppress_summary_lines,
                      apr_pool_t *pool)
 {
   struct notify_baton *nb = apr_palloc(pool, sizeof(*nb));
@@ -921,7 +933,7 @@ svn_cl__get_notifier(svn_wc_notify_func2_t *notify_func_p,
   nb->sent_first_txdelta = FALSE;
   nb->is_checkout = FALSE;
   nb->is_export = FALSE;
-  nb->suppress_final_line = suppress_final_line;
+  nb->suppress_summary_lines = suppress_summary_lines;
   nb->in_external = FALSE;
   nb->had_print_error = FALSE;
   nb->text_conflicts = 0;

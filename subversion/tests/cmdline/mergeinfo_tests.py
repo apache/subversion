@@ -36,6 +36,7 @@ Item = wc.StateItem
 XFail = svntest.testcase.XFail
 Skip = svntest.testcase.Skip
 SkipUnless = svntest.testcase.SkipUnless
+exp_noop_up_out = svntest.actions.expected_noop_update_output
 
 from svntest.main import SVN_PROP_MERGEINFO
 from svntest.main import server_has_mergeinfo
@@ -169,7 +170,7 @@ def non_inheritable_mergeinfo(sbox):
 
   # Update the WC, then merge r4 from A to A_COPY and r6 from A to A_COPY
   # at --depth empty and commit the merges as r7.
-  svntest.actions.run_and_verify_svn(None, ["At revision 6.\n"], [], 'up',
+  svntest.actions.run_and_verify_svn(None, exp_noop_up_out(6), [], 'up',
                                      wc_dir)
   expected_status.tweak(wc_rev=6)
   svntest.actions.run_and_verify_svn(
@@ -195,7 +196,7 @@ def non_inheritable_mergeinfo(sbox):
                                         expected_status, None, wc_dir)
 
   # Update the WC a last time to ensure full inheritance.
-  svntest.actions.run_and_verify_svn(None, ["At revision 7.\n"], [], 'up',
+  svntest.actions.run_and_verify_svn(None, exp_noop_up_out(7), [], 'up',
                                      wc_dir)
 
   # Despite being non-inheritable, r6 should still show as merged to A_COPY
@@ -248,7 +249,7 @@ def recursive_mergeinfo(sbox):
   nu2_path        = os.path.join(wc_dir, "A2", "C", "nu2")
 
   # Rename A to A2 in r7.
-  svntest.actions.run_and_verify_svn(None, ["At revision 6.\n"], [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, exp_noop_up_out(6), [], 'up', wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'ren', A_path, A2_path)
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -264,7 +265,7 @@ def recursive_mergeinfo(sbox):
   # Do several merges to create varied subtree mergeinfo
 
   # Merge r4 from A2 to A_COPY at depth empty
-  svntest.actions.run_and_verify_svn(None, ["At revision 8.\n"], [], 'up',
+  svntest.actions.run_and_verify_svn(None, exp_noop_up_out(8), [], 'up',
                                      wc_dir)
   svntest.actions.run_and_verify_svn(
     None,
@@ -318,7 +319,7 @@ def recursive_mergeinfo(sbox):
   # Commit everything this far as r9
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'ci', wc_dir, '-m', 'Many merges')
-  svntest.actions.run_and_verify_svn(None, ["At revision 9.\n"], [], 'up',
+  svntest.actions.run_and_verify_svn(None, exp_noop_up_out(9), [], 'up',
                                      wc_dir)
 
   # Test svn mergeinfo -R / --depth infinity.

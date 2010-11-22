@@ -356,6 +356,13 @@ def load_repo(sbox, dumpfile_path = None, dump_str = None):
 
   return dump_str
 
+def expected_noop_update_output(rev):
+  """Return an ExpectedOutput object describing what we'd expect to
+  see from an update to revision REV that was effectively a no-op (no
+  server changes transmitted)."""
+  return verify.createExpectedOutput("Updating '.*'...|At revision %d."
+                                     % (rev),
+                                     "no-op update")
 
 ######################################################################
 # Subversion Actions
