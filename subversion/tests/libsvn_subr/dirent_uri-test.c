@@ -2859,6 +2859,155 @@ test_dirent_is_under_root(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_fspath_is_canonical(apr_pool_t *pool)
+{
+  struct {
+    const char *path;
+    svn_boolean_t canonical;
+  } tests[] = {
+    { "",                      FALSE },
+    { ".",                     FALSE },
+    { "/",                     TRUE },
+    { "/a",                    TRUE },
+    { "/a/",                   FALSE },
+    { "//a",                   FALSE },
+    { "/a/b",                  TRUE },
+    { "/a//b",                 FALSE },
+    { "\\",                    FALSE },
+    { "\\a",                   FALSE },
+    { "/\\a",                  TRUE },  /* a single component */
+    { "/a\\",                  TRUE },  /* a single component */
+    { "/a\\b",                 TRUE },  /* a single component */
+  };
+  int i;
+
+  for (i = 0; i < COUNT_OF(tests); i++)
+    {
+      svn_boolean_t canonical
+        = svn_fspath__is_canonical(tests[i].path, pool);
+
+      if (tests[i].canonical != canonical)
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_fspath__is_canonical(\"%s\") returned "
+                                 "\"%s\" expected \"%s\"",
+                                 tests[i].path,
+                                 canonical ? "TRUE" : "FALSE",
+                                 tests[i].canonical ? "TRUE" : "FALSE");
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_fspath_join(apr_pool_t *pool)
+{
+  int i;
+
+  static const char * const joins[][3] = {
+    { "/",    "",     "/" },
+    { "/",    "d",    "/d" },
+    { "/",    "d/e",  "/d/e" },
+    { "/abc", "",     "/abc" },
+    { "/abc", "d",    "/abc/d" },
+    { "/abc", "d/e",  "/abc/d/e" },
+  };
+
+  for (i = 0; i < COUNT_OF(joins); i++ )
+    {
+      const char *base = joins[i][0];
+      const char *comp = joins[i][1];
+      const char *expect = joins[i][2];
+      char *result = svn_fspath__join(base, comp, pool);
+
+      if (strcmp(result, expect))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_fspath__join(\"%s\", \"%s\") returned "
+                                 "\"%s\". expected \"%s\"",
+                                 base, comp, result, expect);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_fspath_is_child(apr_pool_t *pool)
+{
+  int i, j;
+
+  static const char * const paths[] = {
+    "/",
+    "/f",
+    "/foo",
+    "/foo/bar",
+    "/foo/bars",
+    "/foo/bar/baz",
+    };
+
+  static const char * const
+    remainders[COUNT_OF(paths)][COUNT_OF(paths)] = {
+    { 0,  "f",  "foo",  "foo/bar",  "foo/bars", "foo/bar/baz" },
+    { 0,  0,    0,      0,          0,          0             },
+    { 0,  0,    0,      "bar",      "bars",     "bar/baz"     },
+    { 0,  0,    0,      0,          0,          "baz"         },
+    { 0,  0,    0,      0,          0,          0             },
+    { 0,  0,    0,      0,          0,          0             },
+  };
+
+  for (i = 0; i < COUNT_OF(paths); i++)
+    {
+      for (j = 0; j < COUNT_OF(paths); j++)
+        {
+          const char *remainder
+            = svn_fspath__is_child(paths[i], paths[j], pool);
+
+          if (((remainder) && (! remainders[i][j]))
+              || ((! remainder) && (remainders[i][j]))
+              || (remainder && strcmp(remainder, remainders[i][j])))
+            return svn_error_createf
+              (SVN_ERR_TEST_FAILED, NULL,
+               "svn_fspath__is_child (%s, %s) returned '%s' instead of '%s'",
+               paths[i], paths[j],
+               remainder ? remainder : "(null)",
+               remainders[i][j] ? remainders[i][j] : "(null)" );
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_fspath_basename(apr_pool_t *pool)
+{
+  int i;
+
+  struct {
+    const char *path;
+    const char *result;
+  } tests[] = {
+    { "/", "" },
+    { "/a", "a" },
+    { "/abc", "abc" },
+    { "/x/abc", "abc" },
+  };
+
+  for (i = 0; i < COUNT_OF(tests); i++)
+    {
+      const char *path = tests[i].path;
+      const char *expect = tests[i].result;
+      const char *result
+        = svn_fspath__basename(path, pool);
+
+      if (strcmp(result, expect))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_fspath__basename(\"%s\") returned "
+                                 "\"%s\". expected \"%s\"",
+                                 path, result, expect);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 /* The test table.  */
 
@@ -2959,5 +3108,13 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test svn_uri_get_file_url_from_dirent"),
     SVN_TEST_PASS2(test_dirent_is_under_root,
                    "test svn_dirent_is_under_root"),
+    SVN_TEST_PASS2(test_fspath_is_canonical,
+                   "test svn_fspath__is_canonical"),
+    SVN_TEST_PASS2(test_fspath_join,
+                   "test svn_fspath__join"),
+    SVN_TEST_PASS2(test_fspath_is_child,
+                   "test svn_fspath__is_child"),
+    SVN_TEST_PASS2(test_fspath_basename,
+                   "test svn_fspath__basename"),
     SVN_TEST_NULL
   };
