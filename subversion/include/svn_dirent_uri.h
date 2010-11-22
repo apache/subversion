@@ -803,6 +803,63 @@ svn_uri_get_file_url_from_dirent(const char **url,
                                  const char *dirent,
                                  apr_pool_t *pool);
 
+
+/**
+ * A private API for Subversion filesystem paths, otherwise known as paths
+ * within a repository, that start with a '/'.  The rules for a fspath are
+ * the same as for a relpath except for the leading '/'.  A fspath never
+ * ends with '/' except when the whole path is just '/'.
+ */
+
+/** Return TRUE iff @a fspath is canonical.  Use @a scratch_pool for
+ * temporary allocations.  @a fspath need not be canonical, of course.
+ *
+ * @since New in 1.7.
+ */
+svn_boolean_t
+svn_fspath__is_canonical(const char *fspath,
+                         apr_pool_t *scratch_pool);
+
+/** Return the fspath composed of @a fspath with @a relpath appended.
+ * Allocate the result in @a result_pool.
+ *
+ * @since New in 1.7.
+ */
+char *
+svn_fspath__join(const char *fspath,
+                 const char *relpath,
+                 apr_pool_t *result_pool);
+
+
+/** Test if @a child_fspath is a child of @a parent_fspath.  If not, return
+ * NULL.  If so, return the relpath which, if joined to @a parent_fspath,
+ * would yield @a child_fspath.
+ *
+ * If @a child_fspath is the same as @a parent_fspath, it is not considered
+ * a child, so the result is NULL; an empty string is never returned.
+ *
+ * If @a pool is NULL, a pointer into @a child_fspath will be returned to
+ * identify the remainder fspath.
+ *
+ * @since New in 1.7.
+ */
+const char *
+svn_fspath__is_child(const char *parent_fspath,
+                     const char *child_fspath,
+                     apr_pool_t *pool);
+
+
+/** Return the last component of @a fspath.  The returned value will have no
+ * slashes in it.  If @a pool is NULL, return a pointer to within @a fspath,
+ * else allocate the result in @a pool.
+ *
+ * @since New in 1.7.
+ */
+const char *
+svn_fspath__basename(const char *fspath,
+                     apr_pool_t *pool);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
