@@ -38,7 +38,7 @@ SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Wimp = svntest.testcase.Wimp
 Item = svntest.wc.StateItem
-
+exp_noop_up_out = svntest.actions.expected_noop_update_output
 
 #
 #----------------------------------------------------------------------
@@ -4228,7 +4228,7 @@ def reverse_merge_move(sbox):
   rav_svn(None, None, [], 'co', sbox.repo_url, wc2_dir)
 
   # Update working directory and ensure that we are at revision 1.
-  rav_svn(None, ["At revision 1.\n"], [], 'up', wc_dir)
+  rav_svn(None, exp_noop_up_out(1), [], 'up', wc_dir)
 
   # Add new folder and file, later commit
   new_path = os.path.join(a_dir, 'New')
@@ -4237,12 +4237,12 @@ def reverse_merge_move(sbox):
   svntest.main.file_append(first_path, 'appended first text')
   svntest.main.run_svn(None, "add", new_path)
   rav_svn(None, None, [], 'ci', wc_dir, '-m', 'Add new folder %s' % new_path)
-  rav_svn(None, ["At revision 2.\n"], [], 'up', wc_dir)
+  rav_svn(None, exp_noop_up_out(2), [], 'up', wc_dir)
 
   # Reverse merge to revert previous changes and commit
   rav_svn(None, None, [], 'merge', '-c', '-2', a_repo_url, a_dir)
   rav_svn(None, None, [], 'ci', '-m', 'Reverting svn merge -c -2.', a_dir)
-  rav_svn(None, ["At revision 3.\n"], [], 'up', wc_dir)
+  rav_svn(None, exp_noop_up_out(3), [], 'up', wc_dir)
 
   # Reverse merge again to undo last revert.
   rav_svn(None, None, [], 'merge', '-c', '-3', a_repo_url, a_dir)

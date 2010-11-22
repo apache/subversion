@@ -39,6 +39,42 @@
 
 /*** Code. ***/
 
+/* Print an update summary when there's more than one target to report
+   about. */
+static svn_error_t *
+print_update_summary(apr_array_header_t *targets,
+                     apr_array_header_t *result_revs,
+                     apr_pool_t *scratch_pool)
+{
+  int i;
+
+  if (targets->nelts < 2)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_cmdline_printf(scratch_pool, _("Summary of updates:\n")));
+
+  for (i = 0; i < targets->nelts; i++)
+    {
+      const char *path = APR_ARRAY_IDX(targets, i, const char *);
+      
+      if (i < result_revs->nelts)
+        {
+          svn_revnum_t rev = APR_ARRAY_IDX(result_revs, i, const char *);
+
+          if (SVN_IS_VALID_REVNUM(rev))
+            SVN_ERR(svn_cmdline_printf(scratch_pool,
+                                       _("  Updated '%s' to r%ld.\n"),
+                                       path, rev));
+        }
+      else
+        {
+          /* ### Notify about targets for which there's no
+             ### result_rev?  Can we even get here?  */
+        }
+    }
+  return SVN_NO_ERROR;
+}
+
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
 svn_cl__update(apr_getopt_t *os,
@@ -51,6 +87,7 @@ svn_cl__update(apr_getopt_t *os,
   svn_depth_t depth;
   svn_boolean_t depth_is_sticky;
   struct svn_cl__check_externals_failed_notify_baton nwb;
+  apr_array_header_t *result_revs;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
@@ -92,7 +129,7 @@ svn_cl__update(apr_getopt_t *os,
   ctx->notify_func2 = svn_cl__check_externals_failed_notify_wrapper;
   ctx->notify_baton2 = &nwb;
   
-  SVN_ERR(svn_client_update4(NULL, targets,
+  SVN_ERR(svn_client_update4(&result_revs, targets,
                              &(opt_state->start_revision),
                              depth, depth_is_sticky,
                              opt_state->ignore_externals,
@@ -100,7 +137,10 @@ svn_cl__update(apr_getopt_t *os,
                              ctx, scratch_pool));
 
   if (! opt_state->quiet)
-    SVN_ERR(svn_cl__print_conflict_stats(nwb.wrapped_baton, scratch_pool));
+    {
+      SVN_ERR(print_update_summary(targets, result_revs, scratch_pool));
+      SVN_ERR(svn_cl__print_conflict_stats(nwb.wrapped_baton, scratch_pool));
+    }
 
   if (nwb.had_externals_error)
     return svn_error_create(SVN_ERR_CL_ERROR_PROCESSING_EXTERNALS, NULL,
