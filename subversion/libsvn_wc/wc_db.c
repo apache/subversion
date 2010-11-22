@@ -3397,12 +3397,13 @@ svn_wc__db_op_copy_tree(svn_wc__db_t *db,
 }
 
 
-/* If COPYFROM_RELPATH and COPYFROM_REVISION "match" the copyfrom
+/* If COPYFROM_REPOS_ID+COPYFROM_RELPATH+COPYFROM_REVISION "match" the copyfrom
    information for the parent of LOCAL_RELPATH then set *OP_DEPTH to
    the op_depth of the parent, otherwise set *OP_DEPTH to the op_depth
    of LOCAL_RELPATH. */
 static svn_error_t *
 op_depth_for_copy(apr_int64_t *op_depth,
+                  apr_int64_t copyfrom_repos_id,
                   const char *copyfrom_relpath,
                   svn_revnum_t copyfrom_revision,
                   svn_wc__db_pdh_t *pdh,
@@ -3432,12 +3433,15 @@ op_depth_for_copy(apr_int64_t *op_depth,
       SVN_ERR(convert_to_working_status(&status, status));
       if (status == svn_wc__db_status_added)
         {
+          apr_int64_t parent_copyfrom_repos_id
+            = svn_sqlite__column_int64(stmt, 10);
           const char *parent_copyfrom_relpath
             = svn_sqlite__column_text(stmt, 11, NULL);
           svn_revnum_t parent_copyfrom_revision
             = svn_sqlite__column_revnum(stmt, 12);
-      
-          if (copyfrom_revision == parent_copyfrom_revision
+
+          if (parent_copyfrom_repos_id == copyfrom_repos_id
+              && copyfrom_revision == parent_copyfrom_revision
               && !strcmp(svn_relpath_join(parent_copyfrom_relpath, name,
                                           scratch_pool),
                          copyfrom_relpath))
@@ -3509,8 +3513,8 @@ svn_wc__db_op_copy_dir(svn_wc__db_t *db,
       iwb.original_revnum = original_revision;
     }
 
-  /* Should we do this inside the transaction? */
-  SVN_ERR(op_depth_for_copy(&iwb.op_depth,
+  /* ### Should we do this inside the transaction? */
+  SVN_ERR(op_depth_for_copy(&iwb.op_depth, iwb.original_repos_id,
                             original_repos_relpath, original_revision,
                             pdh, local_relpath, scratch_pool));
 
@@ -3586,8 +3590,8 @@ svn_wc__db_op_copy_file(svn_wc__db_t *db,
       iwb.original_revnum = original_revision;
     }
 
-  /* Should we do this inside the transaction? */
-  SVN_ERR(op_depth_for_copy(&iwb.op_depth,
+  /* ### Should we do this inside the transaction? */
+  SVN_ERR(op_depth_for_copy(&iwb.op_depth, iwb.original_repos_id,
                             original_repos_relpath, original_revision,
                             pdh, local_relpath, scratch_pool));
 
