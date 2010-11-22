@@ -259,7 +259,10 @@ path_rev(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 }
 
 /* Returns the path of REV in FS, whether in a pack file or not.
-   Allocate in POOL. */
+   Allocate in POOL.
+   NOTE. The file given by path is only guaranteed to actually
+   exist if it has not been deleted since this FSFS session has
+   been opened. */
 svn_error_t *
 svn_fs_fs__path_rev_absolute(const char **path,
                              svn_fs_t *fs,
