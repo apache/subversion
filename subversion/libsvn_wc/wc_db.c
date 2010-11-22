@@ -3662,7 +3662,10 @@ svn_wc__db_op_copy_symlink(svn_wc__db_t *db,
       iwb.original_revnum = original_revision;
     }
 
-  iwb.op_depth = 2;  /* ### temporary op_depth */
+  /* ### Should we do this inside the transaction? */
+  SVN_ERR(op_depth_for_copy(&iwb.op_depth, iwb.original_repos_id,
+                            original_repos_relpath, original_revision,
+                            pdh, local_relpath, scratch_pool));
 
   iwb.target = target;
 
