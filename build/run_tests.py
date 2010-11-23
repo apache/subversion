@@ -345,9 +345,6 @@ class TestHarness:
       dots_to_write = dots - self.dots_written
       if self.log:
         os.write(old_stdout, '.' * dots_to_write)
-      else:
-        sys.stdout.write(old_stdout, '.' * dots_to_write)
-        sys.stdout.flush()
 
       self.dots_written = dots
 
@@ -390,6 +387,9 @@ class TestHarness:
       test_info = '%s [%d/%d]' % (progbase, test_nr + 1, total_tests)
       sys.stdout.write('Running tests in %s' % (test_info, ))
       sys.stdout.flush()
+    else:
+      # ### Hack for --log-to-stdout to work (but not print any dots).
+      test_info = ''
 
     log.write('START: %s\n' % progbase)
     log.flush()
