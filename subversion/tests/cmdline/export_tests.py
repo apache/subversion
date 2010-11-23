@@ -436,6 +436,8 @@ def export_file_to_explicit_cwd(sbox):
   sbox.build(create_wc = True, read_only = True)
 
   iota_path = os.path.abspath(os.path.join(sbox.wc_dir, 'iota'))
+
+  tmpdir = sbox.get_tempname('file-exports')
   expected_output = svntest.wc.State('', {
       'iota': Item(status='A '),
       })
@@ -443,25 +445,11 @@ def export_file_to_explicit_cwd(sbox):
       'iota': Item(contents="This is the file 'iota'.\n"),
       })
 
-  # prepare some variables
-  oldcwd = os.path.abspath(os.getcwd())
-  tmpdir = sbox.get_tempname('file-exports')
   os.mkdir(tmpdir)
-
-  # do the work
   os.chdir(tmpdir)
-  svntest.actions.run_and_verify_svn(None, None, [], 
-                                     'export', iota_path, '.')
-
-  # TODO: avoid manual validation
-  try:
-    if open('iota').readlines() == ["This is the file 'iota'.\n"]:
-      return
-    else:
-      raise
-  except:
-    target_file = os.path.join(oldcwd, tmpdir, 'iota')
-    raise svntest.Failure("'%s' not properly exported" % target_file)
+  svntest.actions.run_and_verify_export(iota_path,
+                                        '.', expected_output,
+                                        expected_disk)
 
 def export_ignoring_keyword_translation(sbox):
   "export ignoring keyword translation"
