@@ -111,6 +111,7 @@ $content
 '''
 
 signature_area = '''
+<hr/>
 <form method="post">
 <p>Paste signatures in the area below:<br/>
 <textarea name="signatures" rows="20" cols="80"></textarea>
