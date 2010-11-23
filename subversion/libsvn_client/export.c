@@ -536,7 +536,7 @@ copy_versioned_files(const char *from,
           svn_wc_notify_t *notify = svn_wc_create_notify(to_abspath,
                                           svn_wc_notify_update_add, pool);
           notify->kind = svn_node_file;
-          (ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+          (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
         }
     }
 
