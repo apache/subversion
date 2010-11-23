@@ -9665,9 +9665,9 @@ log_find_operative_revs(void *baton,
    of the unmerged revisions in UNMERGED_CATALOG's mergeinfos are "phantoms",
    that is, one of the following conditions holds:
 
-     1) The revision effects no corresponding paths in SOURCE_REPOS_REL_PATH.
+     1) The revision affects no corresponding paths in SOURCE_REPOS_REL_PATH.
 
-     2) The revision effects corresponding paths in SOURCE_REPOS_REL_PATH,
+     2) The revision affects corresponding paths in SOURCE_REPOS_REL_PATH,
         but based on the mergeinfo in MERGED_CATALOG, the change was
         previously merged.
 
@@ -9718,7 +9718,7 @@ find_unsynced_ranges(const char *source_repos_rel_path,
         }
     }
 
-  /* Find any unmerged revisions which both effect the source and
+  /* Find any unmerged revisions which both affect the source and
      are not yet merged to it. */
   if (potentially_unmerged_ranges)
     {
