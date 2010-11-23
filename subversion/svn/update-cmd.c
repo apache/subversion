@@ -59,7 +59,7 @@ print_update_summary(apr_array_header_t *targets,
       
       if (i < result_revs->nelts)
         {
-          svn_revnum_t rev = APR_ARRAY_IDX(result_revs, i, const char *);
+          svn_revnum_t rev = APR_ARRAY_IDX(result_revs, i, svn_revnum_t);
 
           if (SVN_IS_VALID_REVNUM(rev))
             SVN_ERR(svn_cmdline_printf(scratch_pool,
