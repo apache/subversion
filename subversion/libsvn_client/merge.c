@@ -9612,8 +9612,8 @@ log_find_operative_revs(void *baton,
               && strcmp(subtree_missing_this_rev, source_rel_path))
             {
               const char *suffix =
-                svn_uri_skip_ancestor(subtree_missing_this_rev,
-                                      source_rel_path);
+                svn_relpath_skip_ancestor(subtree_missing_this_rev,
+                                          source_rel_path);
               missing_path = apr_pstrmemdup(pool, path,
                                             strlen(path) - strlen(suffix) - 1);
             }
@@ -9844,10 +9844,10 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
       svn_pool_clear(iterpool);
 
       source_path = path + strlen(target_repos_rel_path);
-      if (source_path[0] == '/') /* Remove leading '/' for svn_uri_join. */
+      if (source_path[0] == '/')  /* Remove leading '/'. */
         source_path++;
-      source_path = svn_uri_join(source_repos_rel_path, source_path,
-                                 iterpool);
+      source_path = svn_relpath_join(source_repos_rel_path, source_path,
+                                     iterpool);
       source_path_rel_to_session =
         svn_relpath_skip_ancestor(source_repos_rel_path, source_path);
 
@@ -9998,7 +9998,7 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
           svn_pool_clear(iterpool);
 
           target_path = source_path + strlen(source_repos_rel_path);
-          if (target_path[0] == '/') /* Remove leading '/' for svn_uri_join. */
+          if (target_path[0] == '/')  /* Remove leading '/'. */
             target_path++;
           err = svn_client__repos_location_segments(&segments,
                                                     target_ra_session,
