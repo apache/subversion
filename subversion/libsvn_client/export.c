@@ -551,6 +551,7 @@ open_root_internal(const char *path,
 
 /* ---------------------------------------------------------------------- */
 
+
 /*** A dedicated 'export' editor, which does no .svn/ accounting.  ***/
 
 
