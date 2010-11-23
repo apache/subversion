@@ -451,6 +451,27 @@ def export_file_to_explicit_cwd(sbox):
                                         '.', expected_output,
                                         expected_disk)
 
+def export_file_overwrite_fails(sbox):
+  "exporting a file refuses to silently overwrite"
+  sbox.build(create_wc = True, read_only = True)
+
+  iota_path = os.path.abspath(os.path.join(sbox.wc_dir, 'iota'))
+  not_iota_contents = "This obstructs 'iota'.\n"
+
+  tmpdir = sbox.get_tempname('file-overwrites')
+  os.mkdir(tmpdir)
+
+  # Run it
+  open(os.path.join(tmpdir, 'iota'), 'w').write(not_iota_contents)
+  svntest.actions.run_and_verify_svn(None, [], '.*exist.*',
+                                     'export', iota_path, tmpdir)
+
+  # Verify it failed
+  expected_disk = svntest.wc.State('', {
+      'iota': Item(contents=not_iota_contents),
+      })
+  svntest.actions.verify_disk(tmpdir, expected_disk)
+
 def export_ignoring_keyword_translation(sbox):
   "export ignoring keyword translation"
   sbox.build()
@@ -696,6 +717,7 @@ test_list = [ None,
               export_HEADplus1_fails,
               export_url_to_explicit_cwd,
               export_file_to_explicit_cwd,
+              XFail(export_file_overwrite_fails),
               export_ignoring_keyword_translation,
               export_working_copy_ignoring_keyword_translation,
               export_with_url_unsafe_characters,
