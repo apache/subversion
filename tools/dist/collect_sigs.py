@@ -27,9 +27,6 @@
 #    - This helps with idempotence
 #    - Also allows display of per-file and per-release statistics
 #  * A download link on the page itself
-#  * Make the textarea access multiple signatures
-#  * Don't require the signer to specify which file they are signing
-#    - Just check the sign against all the files for that release
 #  * Make use of the python-gpg package (http://code.google.com/p/python-gnupg/)
 #  * Post to IRC when a new signature is collected
 #    - Since we don't want to have a long running bot, perhaps we could
