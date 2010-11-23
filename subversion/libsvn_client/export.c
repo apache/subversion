@@ -95,6 +95,36 @@ get_eol_style(svn_subst_eol_style_t *style,
   return SVN_NO_ERROR;
 }
 
+/* If *APPENDABLE_DIRENT_P represents an existing directory, then append
+ * to it the basename of BASENAME_OF and return the result in
+ * *APPENDABLE_DIRENT_P.  The kind of BASENAME_OF is either dirent or uri,
+ * as given by IS_URI.
+ */
+static svn_error_t *
+append_basename_if_dir(const char **appendable_dirent_p,
+                       const char *basename_of,
+                       svn_boolean_t is_uri,
+                       apr_pool_t *pool)
+{
+  svn_node_kind_t local_kind;
+  SVN_ERR(svn_io_check_resolved_path(*appendable_dirent_p, &local_kind, pool));
+  if (local_kind == svn_node_dir)
+    {
+      const char *basename2; /* _2 because it shadows basename() */
+      
+      if (is_uri)
+        basename2 = svn_path_uri_decode(svn_uri_basename(basename_of, NULL), pool);
+      else
+        basename2 = svn_dirent_basename(basename_of, NULL);
+
+      *appendable_dirent_p = svn_dirent_join(*appendable_dirent_p,
+                                             basename2,
+                                             pool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 copy_one_versioned_file(const char *from_abspath,
                         const char *to_abspath,
@@ -495,6 +525,7 @@ copy_versioned_files(const char *from,
     }
   else if (from_kind == svn_node_file)
     {
+      SVN_ERR(append_basename_if_dir(&to_abspath, from_abspath, FALSE, pool));
       SVN_ERR(copy_one_versioned_file(from_abspath, to_abspath, ctx->wc_ctx,
                                       revision, native_eol, ignore_keywords,
                                       pool));
@@ -1000,6 +1031,13 @@ svn_client_export5(svn_revnum_t *result_rev,
                                                              NULL), pool);
               eb->root_path = to_path;
             }
+          else
+            {
+              SVN_ERR(append_basename_if_dir(&to_path, from_path_or_url, 
+                                             TRUE, pool));
+              eb->root_path = to_path;
+            }
+
           
           /* Since you cannot actually root an editor at a file, we
            * manually drive a few functions of our editor. */

@@ -4486,11 +4486,13 @@ svn_client_revprop_list(apr_hash_t **props,
  * @a from_path_or_url is either the path the working copy on disk, or
  * a URL to the repository you wish to export.
  *
- * When exporting a directory @a to_path is the path to the directory
- * where you wish to create the exported tree, when exporting a file
- * it is the path of the file that will be created.  If @a to_path is
- * the empty path the name of the file/directory in the repository
- * will be used.
+ * When exporting a directory, @a to_path is the path to the directory
+ * where you wish to create the exported tree; when exporting a file, it
+ * is the path of the file that will be created.  If @a to_path is the
+ * empty path, then the basename of the export file/directory in the repository
+ * will be used.  If @a to_path represents an existing directory, and a
+ * file is being exported, then a file with the that basename will be
+ * created under that directory (as with 'copy' operations).
  *
  * @a peg_revision is the revision where the path is first looked up
  * when exporting from a repository.  If @a peg_revision->kind is
