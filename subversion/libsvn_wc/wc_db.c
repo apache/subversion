@@ -8907,8 +8907,8 @@ make_copy_txn(void *baton,
     SVN_ERR(svn_sqlite__reset(stmt));
 
   /* Get the BASE children, as WORKING children don't need modifications */
-  SVN_ERR(svn_wc__db_base_get_children(&children, mcb->db, mcb->local_abspath,
-                                       scratch_pool, iterpool));
+  SVN_ERR(gather_children(&children, TRUE, mcb->pdh, mcb->local_relpath,
+                          scratch_pool, iterpool));
 
   for (i = 0; i < children->nelts; i++)
     {
