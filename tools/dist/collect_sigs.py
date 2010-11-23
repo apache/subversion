@@ -90,6 +90,13 @@ def files():
     if config.version in f and (f.endswith('.tar.gz') or f.endswith('.zip') or f.endswith('.tar.bz2')):
       yield f
 
+def ordinal(N):
+  try:
+    return [None, 'first', 'second', 'third', 'fourth', 'fifth', 'sixth'][N]
+  except:
+    # Huh?  We only have six files to sign.
+    return "%dth" % N
+
 shell_content = '''
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
@@ -109,15 +116,26 @@ $content
 def default_page():
   c = '''
 <form method="post">
-<p>Paste signature in the area below:<br/>
-<textarea name="signature" rows="10" cols="80"></textarea>
+<p>Paste signatures in the area below:<br/>
+<textarea name="signatures" rows="20" cols="80"></textarea>
 </p>
 <input type="submit" value="Submit" />
+<p>Any text not between the <tt>BEGIN PGP SIGNATURE</tt>
+and <tt>END PGP SIGNATURE</tt> lines will be ignored.</p>
 </form>
 '''
 
   return c
 
+
+def split(sigs):
+  lines = []
+  for line in sigs.split('\n'):
+    if lines or '--BEGIN' in line:
+      lines.append(line)
+    if '--END' in line:
+      yield "\n".join(lines)
+      lines = []
 
 def save_valid_sig(filename, signature):
   f = open(os.path.join(config.sigdir, filename + '.asc'), 'a')
@@ -163,8 +181,13 @@ def verify_sig(signature):
       all_failures += "%s:\n[[[\n%s]]]\n\n" % (filename, result)
   return (False, all_failures)
 
-
-def process_sig(signature):
+def process_sigs(signatures):
+  success = '''
+  <p style="color: green;">All %d signatures verified!</p>
+'''
+  failure = '''
+  <p style="color: red;">%d of %d signatures failed to verify; details below.</p>
+'''
   c_verified = '''
   <p style="color: green;">The signature is verified!</p>
   <p>Filename: <code>%s</code></p>
@@ -182,16 +205,41 @@ def process_sig(signature):
   <p>Please talk to the release manager if this is in error.</p>
 '''
 
-  (verified, result) = verify_sig(signature)
+  outcomes = []
+  N_sigs = 0
+  N_verified = 0
+  retval = ''
 
-  if verified:
-    (filename, keyid, user) = result
-    save_valid_sig(filename, signature)
+  # Verify
+  for signature in split(signatures):
+    N_sigs += 1
+    (verified, result) = verify_sig(signature)
+    outcomes.append((verified, result))
 
-    # TODO: record (filename, keyid) in a database
-    return c_verified % (filename, keyid, user)
+    if verified:
+      # TODO: record (filename, keyid) in a database
+      (filename, keyid, user) = result
+      save_valid_sig(filename, signature)
+      N_verified += 1
+
+  # Report
+  if N_verified == N_sigs:
+    retval += success % N_sigs
   else:
-    return c_unverified % (signature, result)
+    retval += failure % (N_sigs-N_verified, N_sigs)
+
+  N = 0
+  for outcome in outcomes:
+    N += 1
+    (verified, result) = outcome
+    retval += "<h1>Results for the %s signature</h1>" % ordinal(N)
+    if verified:
+      (filename, keyid, user) = result
+      retval += c_verified % (filename, keyid, user)
+    else:
+      retval += c_unverified % (signature, result)
+
+  return retval
 
 
 def main():
@@ -199,10 +247,10 @@ def main():
   print
 
   form = cgi.FieldStorage()
-  if 'signature' not in form:
+  if 'signatures' not in form:
     content = default_page()
   else:
-    content = process_sig(form['signature'].value)
+    content = process_sigs(form['signatures'].value)
 
   # These are "global" values, not specific to our action.
   mapping = {
