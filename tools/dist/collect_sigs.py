@@ -36,12 +36,43 @@
 #      also patch wayita to accept and then echo a privmsg?
 #
 
+import sys, os
+
+def make_config():
+  'Output a blank config file'
+
+  if os.path.exists('config.py'):
+    print "'config.py' already exists!'"
+    sys.exit(1)
+
+  conf = open('config.py', 'w')
+  conf.write("version = ''\n")
+  conf.write("sigdir = ''\n")
+  conf.write("filesdir = ''\n")
+  conf.close()
+
+  print "'config.py' generated"
+
+
+actions = { 'make_config' : make_config }
+
+
+if __name__ == '__main__':
+  if len(sys.argv) > 1:
+    if sys.argv[1] in actions:
+      actions[sys.argv[1]]()
+      sys.exit(0)
+
+
+# Stuff below this line is the web-facing side
+# ======================================================================
+
 
 import cgi
 import cgitb
 cgitb.enable()
 
-import sys, os, string, subprocess, re
+import string, subprocess, re
 
 try:
   sys.path.append(os.path.dirname(sys.argv[0]))
