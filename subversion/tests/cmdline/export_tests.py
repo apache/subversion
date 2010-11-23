@@ -413,8 +413,8 @@ def export_HEADplus1_fails(sbox):
                                      'export', sbox.repo_url, sbox.wc_dir,
                                      '-r', 38956)
 
-def export_to_explicit_cwd(sbox):
-  "export a single file to '.'"
+def export_url_to_explicit_cwd(sbox):
+  "export a single file to '.', via url"
   sbox.build(create_wc = False, read_only = True)
 
   svntest.main.safe_rmtree(sbox.wc_dir)
@@ -430,6 +430,38 @@ def export_to_explicit_cwd(sbox):
   svntest.actions.run_and_verify_export(sbox.repo_url + '/iota',
                                         '.', expected_output,
                                         expected_disk)
+
+def export_file_to_explicit_cwd(sbox):
+  "export a single file to '.', via wc"
+  sbox.build(create_wc = True, read_only = True)
+
+  iota_path = os.path.abspath(os.path.join(sbox.wc_dir, 'iota'))
+  expected_output = svntest.wc.State('', {
+      'iota': Item(status='A '),
+      })
+  expected_disk = svntest.wc.State('', {
+      'iota': Item(contents="This is the file 'iota'.\n"),
+      })
+
+  # prepare some variables
+  oldcwd = os.path.abspath(os.getcwd())
+  tmpdir = sbox.get_tempname('file-exports')
+  os.mkdir(tmpdir)
+
+  # do the work
+  os.chdir(tmpdir)
+  svntest.actions.run_and_verify_svn(None, None, [], 
+                                     'export', iota_path, '.')
+
+  # TODO: avoid manual validation
+  try:
+    if open('iota').readlines() == ["This is the file 'iota'.\n"]:
+      return
+    else:
+      raise
+  except:
+    target_file = os.path.join(oldcwd, tmpdir, 'iota')
+    raise svntest.Failure("'%s' not properly exported" % target_file)
 
 def export_ignoring_keyword_translation(sbox):
   "export ignoring keyword translation"
@@ -674,7 +706,8 @@ test_list = [ None,
               export_with_state_deleted,
               export_creates_intermediate_folders,
               export_HEADplus1_fails,
-              export_to_explicit_cwd,
+              export_url_to_explicit_cwd,
+              export_file_to_explicit_cwd,
               export_ignoring_keyword_translation,
               export_working_copy_ignoring_keyword_translation,
               export_with_url_unsafe_characters,
