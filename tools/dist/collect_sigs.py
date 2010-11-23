@@ -110,8 +110,7 @@ $content
 </html>
 '''
 
-def default_page():
-  c = '''
+signature_area = '''
 <form method="post">
 <p>Paste signatures in the area below:<br/>
 <textarea name="signatures" rows="20" cols="80"></textarea>
@@ -121,8 +120,6 @@ def default_page():
 and <tt>END PGP SIGNATURE</tt> lines will be ignored.</p>
 </form>
 '''
-
-  return c
 
 
 def split(sigs):
@@ -236,7 +233,7 @@ def process_sigs(signatures):
     else:
       retval += c_unverified % (signature, result)
 
-  return retval
+  return retval + signature_area
 
 
 def main():
@@ -245,7 +242,7 @@ def main():
 
   form = cgi.FieldStorage()
   if 'signatures' not in form:
-    content = default_page()
+    content = signature_area
   else:
     content = process_sigs(form['signatures'].value)
 
