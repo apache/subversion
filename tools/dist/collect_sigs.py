@@ -75,10 +75,6 @@ $content
 def default_page():
   c = '''
 <form method="post">
-File: <select name="filename">
-%s
-</select>
-<br/>
 <p>Paste signature in the area below:<br/>
 <textarea name="signature" rows="10" cols="80"></textarea>
 </p>
@@ -86,14 +82,7 @@ File: <select name="filename">
 </form>
 '''
 
-  contents = [os.path.basename(x) for x in files()]
-  contents.sort()
-
-  options = ''
-  for f in contents:
-    options = options + '<option value="%s">%s</option>\n' % (f, f)
-
-  return c % options
+  return c
 
 
 def save_valid_sig(filename, signature):
@@ -101,7 +90,7 @@ def save_valid_sig(filename, signature):
   f.write(signature)
 
 
-def verify_sig(signature, filename):
+def verify_sig_for_file(signature, filename):
   args = ['gpg', '--logger-fd', '1', '--no-tty',
           '--status-fd', '2', '--verify', '-',
           os.path.join(config.filesdir, filename)]
@@ -128,10 +117,20 @@ def verify_sig(signature, filename):
       keyid = match.group(1)[-8:]
       user = match.group(2)
 
-  return (True, (keyid, user))
+  return (True, (filename, keyid, user))
+
+def verify_sig(signature):
+  all_failures = ""
+  for filename in files():
+    (verified, result) = verify_sig_for_file(signature, filename)
+    if verified:
+      return (verified, result)
+    else:
+      all_failures += "%s:\n[[[\n%s]]]\n\n" % (filename, result)
+  return (False, all_failures)
 
 
-def process_sig(signature, filename):
+def process_sig(signature):
   c_verified = '''
   <p style="color: green;">The signature is verified!</p>
   <p>Filename: <code>%s</code></p>
@@ -144,19 +143,21 @@ def process_sig(signature, filename):
 '''
   c_unverified = '''
   <p style="color: red;">The signature was not able to be verified!</p>
-  <p>Filename: <code>%s</code></p>
+  <p>Signature: <pre>%s</pre></p>
   <p>Reason:</p><pre>%s</pre>
   <p>Please talk to the release manager if this is in error.</p>
 '''
 
-  (verified, result) = verify_sig(signature, filename)
+  (verified, result) = verify_sig(signature)
 
   if verified:
+    (filename, keyid, user) = result
     save_valid_sig(filename, signature)
 
-    return c_verified % (filename, result[0], result[1])
+    # TODO: record (filename, keyid) in a database
+    return c_verified % (filename, keyid, user)
   else:
-    return c_unverified % (filename, result)
+    return c_unverified % (signature, result)
 
 
 def main():
@@ -167,7 +168,7 @@ def main():
   if 'signature' not in form:
     content = default_page()
   else:
-    content = process_sig(form['signature'].value, form['filename'].value)
+    content = process_sig(form['signature'].value)
 
   # These are "global" values, not specific to our action.
   mapping = {
