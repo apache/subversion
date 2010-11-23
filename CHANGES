@@ -444,6 +444,32 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.0
     * fix building Ruby bindings with Ruby 1.9 (r35852, r35883)
 
 
+Version 1.5.8
+(?? ??? 2010, from /branches/1.5.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.5.8
+
+ User-visible changes:
+  * fix proxying of LOCK and UNLOCK requests with WebDAV proxies (r36159)
+  * improve performance of --ignore-ancestry merges (r36256)
+  * avoid crash with when using subtree mergeinfo (r36613, -13, -31, -41)
+  * improve merge correctness with non-inheritable mergeinfo (r36789)
+  * fixed: repeated mergeinfo of conflicting properties fails (issue #3250)
+  * fix segfault in wc->URL copy (r37646, -56)
+  * make 'svn up --set-depth infinity' expand shallow subtrees (r37169)
+  * make default depth of 'svn merge' infinity (r37156)
+  * error if attempting to reintegrate to/from the repo root (r37385)
+  * improve memory performance in 'svn merge' (issue #3393)
+  * fixed: 'SVNPathAuthz short_circuit' unsolicited read access (issue #3695)
+           See CVE-2010-3315, and descriptive advisory at
+           http://subversion.apache.org/security/CVE-2010-3315-advisory.txt
+  * prevent crash in mod_dav_svn when using SVNParentPath (r1033166)
+
+ Developer-visible changes:
+  * fix pointer dereference (r36783)
+  * fix error leak (r36860)
+  * make basic_tests 12 compatible with Windows and Python 2.5+ (r35930)
+
+
 Version 1.5.7
 (06 Aug 2009, from /branches/1.5.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.5.7
