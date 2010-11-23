@@ -51,6 +51,11 @@ except:
 
 r = re.compile('\[GNUPG\:\] GOODSIG (\w*) (.*)')
 
+def files():
+  for f in os.listdir(config.filesdir):
+    if config.version in f and (f.endswith('.tar.gz') or f.endswith('.zip') or f.endswith('.tar.bz2')):
+      yield f
+
 shell_content = '''
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
@@ -81,9 +86,7 @@ File: <select name="filename">
 </form>
 '''
 
-  contents = [f for f in os.listdir('.')
-              if f.endswith('.tar.gz') or f.endswith('.zip')
-                                       or f.endswith('.tar.bz2')]
+  contents = [os.path.basename(x) for x in files()]
   contents.sort()
 
   options = ''
@@ -100,7 +103,8 @@ def save_valid_sig(filename, signature):
 
 def verify_sig(signature, filename):
   args = ['gpg', '--logger-fd', '1', '--no-tty',
-          '--status-fd', '2', '--verify', '-', filename]
+          '--status-fd', '2', '--verify', '-',
+          os.path.join(config.filesdir, filename)]
 
   gpg = subprocess.Popen(args,
                          stdin=subprocess.PIPE,
