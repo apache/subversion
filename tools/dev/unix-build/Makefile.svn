@@ -1138,7 +1138,7 @@ endif
 	@echo "openssl:    `openssl version | cut -d' ' -f2`"
 	@echo "swig:       `swig -version | grep Version | cut -d' ' -f3`"
 	@echo "python:     `python --version 2>&1 | cut -d' ' -f2`"
-	@echo "perl:       `perl -V:version | sed -e \"s/^.*\'\(.*\)\';/\1/\"`"
+	@echo "perl:       `eval \`perl -V:version\`; echo $$version`"
 	@echo "ruby:       `ruby --version | cut -d' ' -f2`"
 ifeq ($(ENABLE_JAVA_BINDINGS),yes)
 	@echo "java:       `java -version 2>&1 | grep version | cut -d' ' -f3  | sed -e 's/\"//g'`"
