@@ -187,3 +187,148 @@ svn_diff__get_tokens(svn_diff__position_t **position_list,
 
   return SVN_NO_ERROR;
 }
+
+/* Find identical prefix between all datasources
+ */
+static svn_error_t *
+find_identical_prefix(svn_boolean_t *reached_one_eof,
+                      apr_off_t *prefix_lines,
+                      void *diff_baton,
+                      const svn_diff_fns_t *vtable,
+                      svn_diff_datasource_e datasource[],
+                      int datasource_len)
+{
+  void *token[4];
+  svn_boolean_t is_match, reached_all_eof;
+  int i, rv;
+
+  *prefix_lines = 0;
+  *reached_one_eof = FALSE;
+
+  /* Read first token from every datasource, and check if it matches. */
+  for (i = 0; i < datasource_len; i++)
+    {
+      SVN_ERR(vtable->datasource_get_next_token(NULL, &token[i],
+                                                diff_baton, datasource[i]));
+      *reached_one_eof = *reached_one_eof || token[i] == NULL;
+    }
+  if (*reached_one_eof)
+    {
+      /* We're done. Push back tokens that we may have read too much. */
+      for (i = 0; i < datasource_len; i++)
+        if (token[i] != NULL)
+          SVN_ERR(vtable->token_pushback_prefix(diff_baton, token[i], datasource[i]));
+      return SVN_NO_ERROR;
+    }
+  for (i = 1, is_match = TRUE; is_match && i < datasource_len; i++)
+    {
+      SVN_ERR(vtable->token_compare(diff_baton, token[0], token[i], &rv));
+      is_match = is_match && rv == 0;
+    }
+
+  /* While tokens match up, continue getting tokens and matching. */
+  while (is_match)
+    {
+      (*prefix_lines)++;
+      for (i = 0; i < datasource_len; i++)
+        {
+          SVN_ERR(vtable->datasource_get_next_token(NULL, &token[i],
+                                                    diff_baton, datasource[i]));
+          *reached_one_eof = *reached_one_eof || token[i] == NULL;
+        }
+      if (*reached_one_eof)
+        break;
+      else
+        for (i = 1, is_match = TRUE; is_match && i < datasource_len; i++)
+          {
+            SVN_ERR(vtable->token_compare(diff_baton, token[0], token[i], &rv));
+            is_match = is_match && rv == 0;
+          }
+    }
+
+  /* If all files reached their end (i.e. are fully identical), we're done. */
+  for (i = 0, reached_all_eof = TRUE; i < datasource_len; i++)
+    reached_all_eof = reached_all_eof && token[i] == NULL;
+  if (reached_all_eof)
+    return SVN_NO_ERROR;
+
+  /* Push back the non-matching token we read. */
+  for (i = 0; i < datasource_len; i++)
+    if (token[i] != NULL)
+      SVN_ERR(vtable->token_pushback_prefix(diff_baton, token[i], datasource[i]));
+
+  return SVN_NO_ERROR;
+}
+
+/*
+ * Get all tokens from the datasources.  For each datasource, return the
+ * last item in the (circular) list.
+ */
+svn_error_t *
+svn_diff__get_all_tokens(svn_diff__position_t **position_list[],
+                         apr_off_t *prefix_lines,
+                         svn_diff__tree_t *tree,
+                         void *diff_baton,
+                         const svn_diff_fns_t *vtable,
+                         svn_diff_datasource_e datasource[],
+                         int datasource_len,
+                         apr_pool_t *pool)
+{
+  svn_diff__position_t *start_position;
+  svn_diff__position_t *position = NULL;
+  svn_diff__position_t **position_ref;
+  svn_diff__node_t *node;
+  void *token;
+  apr_off_t offset;
+  apr_uint32_t hash;
+  svn_boolean_t reached_one_eof;
+  int i;
+
+  for (i = 0; i < datasource_len; i++)
+    {
+      *position_list[i] = NULL;
+      SVN_ERR(vtable->datasource_open(diff_baton, datasource[i]));
+    }
+
+  /* find identical prefix */
+  SVN_ERR(find_identical_prefix(&reached_one_eof, prefix_lines, 
+                                diff_baton, vtable, datasource, datasource_len));
+
+  /* ### TODO: find identical suffix (if not eof) */
+
+  for (i = 0; i < datasource_len; i++)
+    {
+      position_ref = &start_position;
+      offset = *prefix_lines;
+      hash = 0; /* The callback fn doesn't need to touch it per se */
+      while (1)
+        {
+          SVN_ERR(vtable->datasource_get_next_token(&hash, &token,
+                                                    diff_baton, datasource[i]));
+          if (token == NULL)
+            break;
+
+          offset++;
+          SVN_ERR(svn_diff__tree_insert_token(&node, tree,
+                                              diff_baton, vtable,
+                                              hash, token));
+
+          /* Create a new position */
+          position = apr_palloc(pool, sizeof(*position));
+          position->next = NULL;
+          position->node = node;
+          position->offset = offset;
+
+          *position_ref = position;
+          position_ref = &position->next;
+        }
+
+      *position_ref = start_position;
+
+      SVN_ERR(vtable->datasource_close(diff_baton, datasource[i]));
+
+      *position_list[i] = position;
+    }
+
+  return SVN_NO_ERROR;
+}

@@ -173,7 +173,7 @@ svn_diff__resolve_conflict(svn_diff_t *hunk,
         position[1]->next = start_position[1];
       }
 
-    *lcs_ref = svn_diff__lcs(position[0], position[1],
+    *lcs_ref = svn_diff__lcs(position[0], position[1], 0,
                              subpool);
 
     /* Fix up the EOF lcs element in case one of
@@ -289,9 +289,9 @@ svn_diff_diff3(svn_diff_t **diff,
   svn_pool_destroy(treepool);
 
   /* Get the lcs for original-modified and original-latest */
-  lcs_om = svn_diff__lcs(position_list[0], position_list[1],
+  lcs_om = svn_diff__lcs(position_list[0], position_list[1], 0,
                          subpool);
-  lcs_ol = svn_diff__lcs(position_list[0], position_list[2],
+  lcs_ol = svn_diff__lcs(position_list[0], position_list[2], 0,
                          subpool);
 
   /* Produce a merged diff */

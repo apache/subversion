@@ -135,6 +135,10 @@ typedef struct svn_diff_fns_t
                                 void *rtoken,
                                 int *compare);
 
+  svn_error_t *(*token_pushback_prefix)(void *diff_baton,
+                                        void *token,
+                                        svn_diff_datasource_e datasource);
+
   /** Free @a token from memory, the diff algorithm is done with it. */
   void (*token_discard)(void *diff_baton,
                         void *token);

@@ -128,7 +128,8 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
 
       svn_diff__normalize_buffer(&buf, &len, &state, tok->data,
                                  mem_baton->normalization_options);
-      *hash = svn_diff__adler32(0, buf, len);
+      if (hash)
+        *hash = svn_diff__adler32(0, buf, len);
       src->next_token++;
     }
   else
@@ -166,6 +167,19 @@ token_compare(void *baton, void *token1, void *token2, int *result)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+token_pushback_prefix(void *baton,
+                      void *token,
+                      svn_diff_datasource_e datasource)
+{
+  diff_mem_baton_t *mem_baton = baton;
+  source_tokens_t *src = &(mem_baton->sources[datasource_to_index(datasource)]);
+
+  src->next_token--;  
+  
+  return SVN_NO_ERROR;
+}
+
 /* Implements svn_diff_fns_t::token_discard */
 static void
 token_discard(void *baton, void *token)
@@ -192,6 +206,7 @@ static const svn_diff_fns_t svn_diff__mem_vtable =
   datasource_close,
   datasource_get_next_token,
   token_compare,
+  token_pushback_prefix,
   token_discard,
   token_discard_all
 };

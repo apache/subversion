@@ -82,6 +82,9 @@ typedef struct svn_diff__file_baton_t
     char *endp;    /* next memory address after the current chunk */
 
     svn_diff__normalize_state_t normalize_state;
+
+    /* Linked list of pushed back prefix tokens */
+    svn_diff__file_token_t *prefix_tokens;
   } files[4];
 
   /* List of free tokens that may be reused. */
@@ -330,7 +333,8 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
                                  &file->normalize_state,
                                  curp, file_baton->options);
       file_token->length += length;
-      h = svn_diff__adler32(h, curp, length);
+      if (hash)
+        h = svn_diff__adler32(h, curp, length);
 
       curp = endp = file->buffer;
       file->chunk++;
@@ -377,8 +381,46 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
 
       file_token->length += length;
 
-      *hash = svn_diff__adler32(h, c, length);
+      if (hash)
+        *hash = svn_diff__adler32(h, c, length);
       *token = file_token;
+    }
+
+  /* If there is a pushed back prefix_token available, that means we have
+     read (and normalized in-place) this token before. Adjust our new token
+     with the original raw_length of the prefix_token. */
+  if (file->prefix_tokens)
+    {
+      svn_diff__file_token_t *prefix_token = file->prefix_tokens;
+      file->prefix_tokens = file->prefix_tokens->next;
+
+      if (file_token->raw_length < prefix_token->raw_length)
+        {
+          int length_difference = prefix_token->raw_length 
+                                  - file_token->raw_length;
+          if (length_difference < file->endp - file->curp)
+            {
+              file->curp += length_difference;
+            }
+          else
+            {
+              /* ### TODO: rework this so it can handle crossing multiple 
+                 chunks, instead of only one. */
+              length_difference -= file->endp - file->curp;
+              file->curp = file->buffer;
+              file->chunk++;
+              length = file->chunk == last_chunk ?
+                offset_in_chunk(file->size) : CHUNK_SIZE;
+              file->endp = file->curp + length;
+
+              SVN_ERR(read_chunk(file->file, file->path,
+                                 file->curp, length,
+                                 chunk_to_offset(file->chunk),
+                                 file_baton->pool));
+              file->curp += length_difference;
+            }
+          file_token->raw_length = prefix_token->raw_length;
+        }
     }
 
   return SVN_NO_ERROR;
@@ -506,6 +548,37 @@ token_compare(void *baton, void *token1, void *token2, int *compare)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+token_pushback_prefix(void *baton,
+                      void *token,
+                      svn_diff_datasource_e datasource)
+{
+  svn_diff__file_baton_t *file_baton = baton;
+  svn_diff__file_token_t *file_token = token;
+  struct file_info *file =
+    &file_baton->files[datasource_to_index(datasource)];
+
+  file_token->next = file->prefix_tokens;
+  file->prefix_tokens = file_token;
+
+  if (offset_to_chunk(file_token->norm_offset) == file->chunk)
+    {
+      file->curp = file->buffer + offset_in_chunk(file_token->norm_offset);
+    }
+  else
+    {
+      /* ### TODO: rework this so it can handle crossing multiple 
+         chunks, instead of only one. */
+      file->chunk--;
+      SVN_ERR(read_chunk(file->file, file->path, file->buffer,
+                         CHUNK_SIZE, chunk_to_offset(file->chunk),
+                         file_baton->pool));
+      file->endp = file->buffer + CHUNK_SIZE;
+      file->curp = file->buffer + offset_in_chunk(file_token->norm_offset);
+    }
+
+  return SVN_NO_ERROR;
+}
 
 /* Implements svn_diff_fns_t::token_discard */
 static void
@@ -536,6 +609,7 @@ static const svn_diff_fns_t svn_diff__file_vtable =
   datasource_close,
   datasource_get_next_token,
   token_compare,
+  token_pushback_prefix,
   token_discard,
   token_discard_all
 };
