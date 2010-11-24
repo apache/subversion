@@ -1024,13 +1024,13 @@ svn-check-neon: httpd-conf $(SVN_OBJDIR)/.compiled $(SVN_OBJDIR)/.bindings-compi
 	       BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=neon \
 	       $(PARALLEL)
 	-$(foreach log, $(TEST_LOGS), \
-		test -f $(log) && cp -f $(svn_builddir)/$(log) \
+		test -f $(svn_builddir)/$(log) && cp -f $(svn_builddir)/$(log) \
 			$(svn_builddir)/$(log).$@-fsfs;)
 	-cd $(svn_builddir) && make check FS_TYPE=bdb \
 	       BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=neon \
 	       $(PARALLEL)
 	-$(foreach log, $(TEST_LOGS), \
-		test -f $(log) && cp -f $(svn_builddir)/$(log) \
+		test -f $(svn_builddir)/$(log) && cp -f $(svn_builddir)/$(log) \
 			$(svn_builddir)/$(log).$@-bdb;)
 	$(HTTPD_STOP_CMD)
 
@@ -1040,24 +1040,24 @@ svn-check-serf: httpd-conf $(SVN_OBJDIR)/.compiled $(SVN_OBJDIR)/.bindings-compi
 	       BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=serf \
 	       $(PARALLEL)
 	-$(foreach log, $(TEST_LOGS), \
-		test -f $(log) && cp -f $(svn_builddir)/$(log) \
+		test -f $(svn_builddir)/$(log) && cp -f $(svn_builddir)/$(log) \
 			$(svn_builddir)/$(log).$@-fsfs;)
 	-cd $(svn_builddir) && make check FS_TYPE=bdb \
 	       BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=serf \
 	       $(PARALLEL)
 	-$(foreach log, $(TEST_LOGS), \
-		test -f $(log) && cp -f $(svn_builddir)/$(log) \
+		test -f $(svn_builddir)/$(log) && cp -f $(svn_builddir)/$(log) \
 			$(svn_builddir)/$(log).$@-bdb;)
 	$(HTTPD_STOP_CMD)
 
 svn-check-local:
 	-cd $(svn_builddir) && make check FS_TYPE=fsfs $(PARALLEL)
 	-$(foreach log, $(TEST_LOGS), \
-		test -f $(log) && cp -f $(svn_builddir)/$(log) \
+		test -f $(svn_builddir)/$(log) && cp -f $(svn_builddir)/$(log) \
 			$(svn_builddir)/$(log).$@-fsfs;)
 	-cd $(svn_builddir) && make check FS_TYPE=bdb $(PARALLEL)
 	-$(foreach log, $(TEST_LOGS), \
-		test -f $(log) && cp -f $(svn_builddir)/$(log) \
+		test -f $(svn_builddir)/$(log) && cp -f $(svn_builddir)/$(log) \
 			$(svn_builddir)/$(log).$@-bdb;)
 
 svn-check-svn:
@@ -1065,12 +1065,12 @@ svn-check-svn:
 	-cd $(svn_builddir) && make check FS_TYPE=fsfs \
 		BASE_URL=svn://127.0.0.1 $(PARALLEL)
 	-$(foreach log, $(TEST_LOGS), \
-		test -f $(log) && cp -f $(svn_builddir)/$(log) \
+		test -f $(svn_builddir)/$(log) && cp -f $(svn_builddir)/$(log) \
 			$(svn_builddir)/$(log).$@-fsfs;)
 	-cd $(svn_builddir) && make check FS_TYPE=bdb \
 		BASE_URL=svn://127.0.0.1 $(PARALLEL)
 	-$(foreach log, $(TEST_LOGS), \
-		test -f $(log) && cp -f $(svn_builddir)/$(log) \
+		test -f $(svn_builddir)/$(log) && cp -f $(svn_builddir)/$(log) \
 			$(svn_builddir)/$(log).$@-bdb;)
 	$(SVNSERVE_STOP_CMD)
 
