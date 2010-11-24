@@ -24,7 +24,6 @@
 #
 # Some thoughts about future improvement:
 #  * Display of per-file and per-release statistics
-#  * A download link on the page itself
 #  * Make use of the python-gpg package (http://code.google.com/p/python-gnupg/)
 #  * Post to IRC when a new signature is collected
 #    - Since we don't want to have a long running bot, perhaps we could
@@ -135,17 +134,17 @@ shell_content = '''
 <title>Signature collection for Subversion $version</title>
 </head>
 <body style="font-size: 14pt; text-align: justify;
-  background-color: #f0f0f0; padding: 0 5%">
-<p>This page is used to collect signatures for the proposed release of
-Apache Subversion $version.</p>
+  background-color: #f0f0f0; padding: 0 5%%">
+<p>This page is used to collect <a href="%s/list">signatures</a> for the
+proposed release of Apache Subversion $version.</p>
 $content
 </body>
 </html>
-'''
+''' % os.getenv('SCRIPT_NAME')
 
 signature_area = '''
 <hr/>
-<form method="post">
+<form method="post" action="%s">
 <p>Paste one or more signatures in the area below:<br/>
 <textarea name="signatures" rows="20" cols="80"></textarea>
 </p>
@@ -153,7 +152,9 @@ signature_area = '''
 <p>Any text not between the <tt>BEGIN PGP SIGNATURE</tt>
 and <tt>END PGP SIGNATURE</tt> lines will be ignored.</p>
 </form>
-'''
+<hr/>
+''' % os.getenv('SCRIPT_NAME')
+ 
 
 
 def split(sigs):
@@ -164,6 +165,24 @@ def split(sigs):
     if '--END' in line:
       yield "\n".join(lines) + "\n"
       lines = []
+
+def list_signatures():
+  db = sqlite3.connect(os.path.join(config.sigdir, 'sigs.db'))
+  template = '''
+<hr/>
+<p>The following signature files are available:</p>
+<p>%s</p>
+'''
+
+  lines = ""
+  curs = db.cursor()
+  curs.execute('''SELECT filename, COUNT(*) FROM signatures
+                  GROUP BY filename ORDER BY filename''')
+  for filename, count in curs:
+    lines += '<a href="%s/%s.asc">%s.asc</a>: %d signature%s<br/>\n' \
+             % (os.getenv('SCRIPT_NAME'), filename, filename,
+                count, ['s', ''][count == 1])
+  return (template % lines) + signature_area
 
 def save_valid_sig(db, filename, keyid, signature):
   db.execute('INSERT OR REPLACE INTO signatures VALUES (?,?,?);',
@@ -273,21 +292,48 @@ def process_sigs(signatures):
   return retval + signature_area
 
 
-def main():
-  print "Content-Type: text/html"
+def cat_signatures(basename):
+  # strip '.asc' extension
+  assert basename[:-4] in files()
+
+  # cat
+  ascfile = os.path.join(config.sigdir, basename)
+  if os.path.exists(ascfile):
+    return (open(ascfile, 'r').read())
+
+def print_content_type(mimetype):
+  print "Content-Type: " + mimetype
   print
 
+def main():
   form = cgi.FieldStorage()
-  if 'signatures' not in form:
-    content = signature_area
-  else:
+  pathinfo = os.getenv('PATH_INFO')
+
+  # default value, to be changed below
+  content = signature_area
+
+  if 'signatures' in form:
     content = process_sigs(form['signatures'].value)
+
+  elif pathinfo and pathinfo[1:]:
+    basename = pathinfo.split('/')[-1]
+
+    if basename == 'list':
+      content = list_signatures()
+
+    elif basename[:-4] in files():
+      # early exit; bypass 'content' entirely
+      print_content_type('text/plain')
+      print cat_signatures(basename)
+      return
 
   # These are "global" values, not specific to our action.
   mapping = {
       'version' : config.version,
       'content' : content,
     }
+
+  print_content_type('text/html')
 
   template = string.Template(shell_content)
   print template.safe_substitute(mapping)
