@@ -3,7 +3,6 @@ Version 1.6.15
 http://svn.apache.org/repos/asf/subversion/tags/1.6.15
 
   User-visible changes:
-   * improve svnsync handling of dir copies (r962377, -8)
    * hide unreadable dirs in mod_dav_svn's GET response (r996884)
    * make 'svnmucc propsetf' actually work (r1005446)
    * limit memory fragmentation in svnserve (r1022675)
