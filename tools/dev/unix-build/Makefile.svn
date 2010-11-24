@@ -1068,9 +1068,9 @@ svn-check-swig-py:
 	fi
 	touch $@
 
+# We add the svn prefix to PATH here because the ruby tests
+# attempt to start an svnserve binary found in PATH.
 svn-check-swig-rb:
-	# We add the svn prefix to PATH here because the ruby tests
-	# attempt to start an svnserve binary found in PATH.
 	-if [ $(ENABLE_RUBY_BINDINGS) = yes ]; then \
 		cd $(svn_builddir)/subversion/bindings/swig/ruby/test && \
 			env RUBYLIB=$(RUBYLIB) \
