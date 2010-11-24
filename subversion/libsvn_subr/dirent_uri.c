@@ -1506,8 +1506,8 @@ svn_relpath_is_child(const char *parent_relpath,
                      const char *child_relpath,
                      apr_pool_t *pool)
 {
-  assert(relpath_is_canonical(parent_relpath));
-  assert(relpath_is_canonical(child_relpath));
+  /* assert(relpath_is_canonical(parent_relpath)); */
+  /* assert(relpath_is_canonical(child_relpath)); */
 
   return is_child(type_relpath, parent_relpath, child_relpath, pool);
 }
