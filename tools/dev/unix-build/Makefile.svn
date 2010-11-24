@@ -38,7 +38,7 @@ APR_UTIL_VER	= 1.3.9
 HTTPD_VER	= 2.2.15
 NEON_VER	= 0.29.3
 SERF_VER	= 0.7.x
-SERF_OLD_VER	= 0.6.x
+SERF_OLD_VER	= 0.3.1
 CYRUS_SASL_VER	= 2.1.23
 SQLITE_VER	= 3.6.23.1
 
@@ -70,7 +70,7 @@ HTTPD_URL	= http://archive.apache.org/dist/httpd/$(HTTPD_DIST)
 NEON_URL	= http://webdav.org/neon/$(NEON_DIST)
 #SERF_URL	= http://serf.googlecode.com/files/$(SERF_DIST)
 SERF_URL	= http://serf.googlecode.com/svn/branches/$(SERF_VER)
-SERF_OLD_URL	= http://serf.googlecode.com/svn/branches/$(SERF_OLD_VER)
+SERF_OLD_URL	= http://serf.googlecode.com/svn/tags/$(SERF_OLD_VER)
 SQLITE_URL	= http://www.sqlite.org/$(SQLITE_DIST)
 CYRUS_SASL_URL	= ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/$(CYRUS_SASL_DIST)
 
