@@ -119,13 +119,6 @@ Candidate changes:
                  backport that - see
                  http://svn.haxx.se/dev/archive-2010-11/0412.shtml)
 
- * r1036534
-   Allow perl bindings to compile within a symlinked working copy.
-   Justification:
-     When it happens, it's a very confusing build error.
-   Votes:
-     +1: stsp, danielsh
-
  * r962377, r962378
    Fix svnsync handling of directory copyfrom.
    Justification:
