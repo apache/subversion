@@ -267,17 +267,17 @@ def process_sigs(signatures):
     outcomes.append((verified, result))
 
     if verified:
-      # TODO: record (filename, keyid) in a database
       (filename, keyid, user) = result
       save_valid_sig(db, filename, keyid, signature)
       N_verified += 1
 
-  # Report
+  # Output header
   if N_verified == N_sigs:
     retval += success % N_sigs
   else:
     retval += failure % (N_sigs-N_verified, N_sigs)
 
+  # Output details
   N = 0
   for outcome in outcomes:
     N += 1
