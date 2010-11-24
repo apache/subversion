@@ -139,6 +139,10 @@ svn_cl__update(apr_getopt_t *os,
   if (! opt_state->quiet)
     {
       SVN_ERR(print_update_summary(targets, result_revs, scratch_pool));
+
+      /* ### Layering problem: This call assumes that the baton we're
+       * passing is the one that was originally provided by
+       * svn_cl__get_notifier(), but that isn't promised. */
       SVN_ERR(svn_cl__print_conflict_stats(nwb.wrapped_baton, scratch_pool));
     }
 
