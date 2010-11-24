@@ -587,6 +587,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
                   {
                     if (nb->received_some_change)
                       {
+                        nb->received_some_change = FALSE;
                         if ((err = svn_cmdline_printf
                              (pool, nb->in_external
                               ? _("Updated external to revision %ld.\n")
