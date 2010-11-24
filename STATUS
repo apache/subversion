@@ -124,7 +124,7 @@ Candidate changes:
    Justification:
      When it happens, it's a very confusing build error.
    Votes:
-     +1: stsp
+     +1: stsp, danielsh
 
  * r946355
    Don't overwrite the LD_LIBRARY_PATH during make check-swig-pl.
