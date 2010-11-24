@@ -147,6 +147,13 @@ Candidate changes:
      +1: philip, cmpilato
      -0: danielsh (authz concerns)
 
+ * r1038792
+   Fix sporadic ruby test failures due to "Connection refused" errors.
+   Justification:
+     Tests failing for the wrong reason are irritating.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
