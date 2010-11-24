@@ -184,6 +184,20 @@ Candidate changes for 1.5.8:
    Votes:
      +1: stsp
 
+ * r873346, r879357
+   Make the configure script handle newer versions of neon.
+   Justification:
+     Without this the build fails with newer neon versions,
+     unless the neon version check is disabled during configure.
+   Notes:
+     r873346 merges cleanly. But r879357 introduces 2 text conflicts.
+     These can be resolved with the 'theirs-conflict' (or 'X-(') choice.
+     Doing so will bump versions of some other deps in the
+     construct-rolling-environment.sh script, but Hyrum was planning
+     on doing so anyway.
+   Votes:
+     +1: stsp
+
 Approved changes:
 =================
 
