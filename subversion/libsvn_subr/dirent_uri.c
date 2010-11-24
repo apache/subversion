@@ -63,7 +63,13 @@ typedef enum {
   type_relpath
 } path_type_t;
 
- 
+
+/**** Forward declarations *****/
+
+static svn_boolean_t
+relpath_is_canonical(const char *relpath);
+
+
 /**** Internal implementation functions *****/
 
 /* Return an internal-style new path based on PATH, allocated in POOL.
@@ -1189,8 +1195,8 @@ svn_relpath_join(const char *base,
   apr_size_t clen = strlen(component);
   char *path;
 
-  assert(svn_relpath_is_canonical(base, pool));
-  assert(svn_relpath_is_canonical(component, pool));
+  assert(relpath_is_canonical(base));
+  assert(relpath_is_canonical(component));
 
   /* If either is empty return the other */
   if (blen == 0)
@@ -1316,7 +1322,7 @@ svn_relpath_dirname(const char *relpath,
 {
   apr_size_t len = strlen(relpath);
 
-  assert(svn_relpath_is_canonical(relpath, pool));
+  assert(relpath_is_canonical(relpath));
 
   return apr_pstrmemdup(pool, relpath,
                         relpath_previous_segment(relpath, len));
@@ -1329,7 +1335,7 @@ svn_relpath_basename(const char *relpath,
   apr_size_t len = strlen(relpath);
   apr_size_t start;
 
-  assert(!pool || svn_relpath_is_canonical(relpath, pool));
+  assert(relpath_is_canonical(relpath));
 
   start = len;
   while (start > 0 && relpath[start - 1] != '/')
@@ -1737,12 +1743,11 @@ svn_dirent_is_canonical(const char *dirent, apr_pool_t *pool)
     }
 #endif /* SVN_USE_DOS_PATHS */
 
-  return svn_relpath_is_canonical(ptr, pool);
+  return relpath_is_canonical(ptr);
 }
 
-svn_boolean_t
-svn_relpath_is_canonical(const char *relpath,
-                         apr_pool_t *pool)
+static svn_boolean_t
+relpath_is_canonical(const char *relpath)
 {
   const char *ptr = relpath, *seg = relpath;
 
@@ -1784,6 +1789,13 @@ svn_relpath_is_canonical(const char *relpath,
     }
 
   return TRUE;
+}
+
+svn_boolean_t
+svn_relpath_is_canonical(const char *relpath,
+                         apr_pool_t *pool)
+{
+  return relpath_is_canonical(relpath);
 }
 
 svn_boolean_t
@@ -2452,8 +2464,7 @@ svn_boolean_t
 svn_fspath__is_canonical(const char *fspath,
                          apr_pool_t *scratch_pool)
 {
-  return fspath[0] == '/'
-    && svn_relpath_is_canonical(fspath + 1, scratch_pool);
+  return fspath[0] == '/' && relpath_is_canonical(fspath + 1);
 }
 
 char *
@@ -2463,7 +2474,7 @@ svn_fspath__join(const char *fspath,
 {
   char *result;
   assert(svn_fspath__is_canonical(fspath, result_pool));
-  assert(svn_relpath_is_canonical(relpath, result_pool));
+  assert(relpath_is_canonical(relpath));
 
 #ifdef FSPATH_USE_URI
   result = svn_uri_join(fspath, relpath, result_pool);
@@ -2496,7 +2507,7 @@ svn_fspath__is_child(const char *parent_fspath,
   result = svn_relpath_is_child(parent_fspath + 1, child_fspath + 1, pool);
 #endif
 
-  assert(result == NULL || svn_relpath_is_canonical(result, pool));
+  assert(result == NULL || relpath_is_canonical(result));
   return result;
 }
 
