@@ -795,9 +795,9 @@ int main(int argc, const char *argv[])
         return ERROR_SUCCESS;
 #endif
 
-      /* If we are using fulltext caches etc., we will allocate many large
-         chunks of memory of various sizes outside the cachde for those
-         fulltexts. Make sure, we use the memory wisely: use an allocator
+      /* If we are using fulltext caches etc. we will allocate many large
+         chunks of memory of various sizes outside the cache for those
+         fulltexts. Make sure we use the memory wisely: use an allocator
          that causes memory fragments to be given back to the OS early. */
 
       if (apr_allocator_create(&allocator))
@@ -807,7 +807,7 @@ int main(int argc, const char *argv[])
 
       /* Non-standard pool handling.  The main thread never blocks to join
          the connection threads so it cannot clean up after each one.  So
-         separate pools, that can be cleared at thread exit, are used */
+         separate pools that can be cleared at thread exit are used. */
 
       connection_pool = svn_pool_create_ex(NULL, allocator);
       apr_allocator_owner_set(allocator, connection_pool);
