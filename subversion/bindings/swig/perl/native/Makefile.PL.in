@@ -92,7 +92,7 @@ sub MY::postamble {
    my $module_c_files = join (' ',map { "svn_$_.c"} @modules);
    my $module_make_commands = join ('',map {"\t\$(MAKE) -f Makefile.$_\n"} @modules);
 
-  my $fullperlrun = "$apr_shlib_path_var=" . join(':',@ldpaths);
+  my $fullperlrun = "$apr_shlib_path_var=\${$apr_shlib_path_var}:" . join(':',@ldpaths);
   
    return <<"EOPOST";
 all :: modules
