@@ -47,15 +47,21 @@ print_update_summary(apr_array_header_t *targets,
                      apr_pool_t *scratch_pool)
 {
   int i;
+  const char *path_prefix;
 
   if (targets->nelts < 2)
     return SVN_NO_ERROR;
 
+  SVN_ERR(svn_dirent_get_absolute(&path_prefix, "", scratch_pool));
   SVN_ERR(svn_cmdline_printf(scratch_pool, _("Summary of updates:\n")));
 
   for (i = 0; i < targets->nelts; i++)
     {
       const char *path = APR_ARRAY_IDX(targets, i, const char *);
+      const char *path_local;
+
+      path_local = svn_dirent_skip_ancestor(path_prefix, path);
+      path_local = svn_dirent_local_style(path_local, scratch_pool);
       
       if (i < result_revs->nelts)
         {
@@ -64,7 +70,7 @@ print_update_summary(apr_array_header_t *targets,
           if (SVN_IS_VALID_REVNUM(rev))
             SVN_ERR(svn_cmdline_printf(scratch_pool,
                                        _("  Updated '%s' to r%ld.\n"),
-                                       path, rev));
+                                       path_local, rev));
         }
       else
         {
