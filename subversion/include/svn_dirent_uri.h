@@ -653,6 +653,9 @@ svn_uri_is_ancestor(const char *parent_uri,
  * This function assumes @a parent_dirent and @a child_dirent are both
  * absolute or relative in the same way.
  *
+ * ### Returning the child in the no-match case is a bad idea when the
+ *     paths are relative; can be useful when they are absolute.
+ *
  * @since New in 1.7.
  */
 const char *
@@ -663,6 +666,8 @@ svn_dirent_skip_ancestor(const char *parent_dirent,
  * @a parent_relpath, or just "" if @a parent_relpath is equal to
  * @a child_relpath. If @a child_relpath is not below @a parent_relpath,
  * return @a child_relpath.
+ *
+ * ### Returning the child in the no-match case is a bad idea.
  *
  * @since New in 1.7.
  */
@@ -676,6 +681,9 @@ svn_relpath_skip_ancestor(const char *parent_relpath,
  *
  * This function assumes @a parent_uri and @a child_uri are both absolute or
  * relative in the same way.
+ *
+ * ### Returning the child in the no-match case is a bad idea when the
+ *     paths are relative; can be useful when they are absolute.
  *
  * @since New in 1.7.
  */
