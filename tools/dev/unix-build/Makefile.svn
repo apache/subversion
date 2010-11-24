@@ -1075,7 +1075,6 @@ svn-check-swig-pl:
 			env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
 			make check-swig-pl; \
 	fi
-	touch $@
 
 svn-check-swig-py:
 	-if [ $(ENABLE_PYTHON_BINDINGS) = yes ]; then \
@@ -1083,7 +1082,6 @@ svn-check-swig-py:
 			env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
 			make check-swig-py; \
 	fi
-	touch $@
 
 # We add the svn prefix to PATH here because the ruby tests
 # attempt to start an svnserve binary found in PATH.
@@ -1095,7 +1093,6 @@ svn-check-swig-rb:
 			PATH=$(SVN_PREFIX)/bin:$$PATH \
 			ruby run-test.rb --verbose=normal; \
 	fi
-	touch $@
 
 svn-check-javahl:
 	-if [ $(ENABLE_JAVA_BINDINGS) = yes ]; then \
@@ -1103,7 +1100,6 @@ svn-check-javahl:
 			env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
 			make check-javahl; \
 	fi
-	touch $@
 
 svn-check: svn-check-local svn-check-svn svn-check-neon svn-check-serf svn-check-bindings
 
