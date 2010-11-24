@@ -1428,6 +1428,9 @@ svn_relpath_get_longest_ancestor(const char *relpath1,
                                  const char *relpath2,
                                  apr_pool_t *pool)
 {
+  assert(relpath_is_canonical(relpath1));
+  assert(relpath_is_canonical(relpath2));
+
   return apr_pstrndup(pool, relpath1,
                       get_longest_ancestor_length(type_relpath, relpath1,
                                                   relpath2, pool));
@@ -1503,6 +1506,9 @@ svn_relpath_is_child(const char *parent_relpath,
                      const char *child_relpath,
                      apr_pool_t *pool)
 {
+  assert(relpath_is_canonical(parent_relpath));
+  assert(relpath_is_canonical(child_relpath));
+
   return is_child(type_relpath, parent_relpath, child_relpath, pool);
 }
 
@@ -1523,6 +1529,9 @@ svn_dirent_is_ancestor(const char *parent_dirent, const char *child_dirent)
 svn_boolean_t
 svn_relpath_is_ancestor(const char *parent_relpath, const char *child_relpath)
 {
+  assert(relpath_is_canonical(parent_relpath));
+  assert(relpath_is_canonical(child_relpath));
+
   return is_ancestor(type_relpath, parent_relpath, child_relpath);
 }
 
@@ -1568,6 +1577,9 @@ svn_relpath_skip_ancestor(const char *parent_relpath,
                           const char *child_relpath)
 {
   apr_size_t len = strlen(parent_relpath);
+
+  assert(relpath_is_canonical(parent_relpath));
+  assert(relpath_is_canonical(child_relpath));
 
   if (0 != memcmp(parent_relpath, child_relpath, len))
     return child_relpath; /* parent_relpath is no ancestor of child_relpath */
