@@ -1002,17 +1002,22 @@ stop-svnserve:
 
 # run tests in parallel
 PARALLEL=PARALLEL=1 CLEANUP=1
+TEST_LOGS=tests.log fails.log
 
 svn-check-neon: httpd-conf $(SVN_OBJDIR)/.compiled $(SVN_OBJDIR)/.bindings-compiled
 	$(HTTPD_START_CMD)
 	-cd $(svn_builddir) && make check FS_TYPE=fsfs \
 	       BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=neon \
 	       $(PARALLEL)
-	cp -f $(svn_builddir)/tests.log $(svn_builddir)/tests.log.ra_neon-fsfs
+	-$(foreach log, $(TEST_LOGS), \
+		test -f $(log) && cp -f $(svn_builddir)/$(log) \
+			$(svn_builddir)/$(log).$@-fsfs;)
 	-cd $(svn_builddir) && make check FS_TYPE=bdb \
 	       BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=neon \
 	       $(PARALLEL)
-	cp -f $(svn_builddir)/tests.log $(svn_builddir)/tests.log.ra_neon-bdb
+	-$(foreach log, $(TEST_LOGS), \
+		test -f $(log) && cp -f $(svn_builddir)/$(log) \
+			$(svn_builddir)/$(log).$@-bdb;)
 	$(HTTPD_STOP_CMD)
 
 svn-check-serf: httpd-conf $(SVN_OBJDIR)/.compiled $(SVN_OBJDIR)/.bindings-compiled
@@ -1020,27 +1025,39 @@ svn-check-serf: httpd-conf $(SVN_OBJDIR)/.compiled $(SVN_OBJDIR)/.bindings-compi
 	-cd $(svn_builddir) && make check FS_TYPE=fsfs \
 	       BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=serf \
 	       $(PARALLEL)
-	cp -f $(svn_builddir)/tests.log $(svn_builddir)/tests.log.ra_serf-fsfs
+	-$(foreach log, $(TEST_LOGS), \
+		test -f $(log) && cp -f $(svn_builddir)/$(log) \
+			$(svn_builddir)/$(log).$@-fsfs;)
 	-cd $(svn_builddir) && make check FS_TYPE=bdb \
 	       BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=serf \
 	       $(PARALLEL)
-	cp -f $(svn_builddir)/tests.log $(svn_builddir)/tests.log.ra_serf-bdb
+	-$(foreach log, $(TEST_LOGS), \
+		test -f $(log) && cp -f $(svn_builddir)/$(log) \
+			$(svn_builddir)/$(log).$@-bdb;)
 	$(HTTPD_STOP_CMD)
 
 svn-check-local:
 	-cd $(svn_builddir) && make check FS_TYPE=fsfs $(PARALLEL)
-	cp -f $(svn_builddir)/tests.log $(svn_builddir)/tests.log.ra_local-fsfs
+	-$(foreach log, $(TEST_LOGS), \
+		test -f $(log) && cp -f $(svn_builddir)/$(log) \
+			$(svn_builddir)/$(log).$@-fsfs;)
 	-cd $(svn_builddir) && make check FS_TYPE=bdb $(PARALLEL)
-	cp -f $(svn_builddir)/tests.log $(svn_builddir)/tests.log.ra_local-bdb
+	-$(foreach log, $(TEST_LOGS), \
+		test -f $(log) && cp -f $(svn_builddir)/$(log) \
+			$(svn_builddir)/$(log).$@-bdb;)
 
 svn-check-svn:
 	$(SVNSERVE_START_CMD)
 	-cd $(svn_builddir) && make check FS_TYPE=fsfs \
 		BASE_URL=svn://127.0.0.1 $(PARALLEL)
-	cp -f $(svn_builddir)/tests.log $(svn_builddir)/tests.log.ra_svn-fsfs
+	-$(foreach log, $(TEST_LOGS), \
+		test -f $(log) && cp -f $(svn_builddir)/$(log) \
+			$(svn_builddir)/$(log).$@-fsfs;)
 	-cd $(svn_builddir) && make check FS_TYPE=bdb \
 		BASE_URL=svn://127.0.0.1 $(PARALLEL)
-	cp -f $(svn_builddir)/tests.log $(svn_builddir)/tests.log.ra_svn-bdb
+	-$(foreach log, $(TEST_LOGS), \
+		test -f $(log) && cp -f $(svn_builddir)/$(log) \
+			$(svn_builddir)/$(log).$@-bdb;)
 	$(SVNSERVE_STOP_CMD)
 
 .PHONY: svn-check-swig-pl svn-check-swig-py svn-check-swig-rb svn-check-javahl
