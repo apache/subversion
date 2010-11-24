@@ -1069,10 +1069,13 @@ svn-check-swig-py:
 	touch $@
 
 svn-check-swig-rb:
+	# We add the svn prefix to PATH here because the ruby tests
+	# attempt to start an svnserve binary found in PATH.
 	-if [ $(ENABLE_RUBY_BINDINGS) = yes ]; then \
 		cd $(svn_builddir)/subversion/bindings/swig/ruby/test && \
 			env RUBYLIB=$(RUBYLIB) \
 			LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
+			PATH=$(SVN_PREFIX)/bin:$$PATH \
 			ruby run-test.rb --verbose=normal; \
 	fi
 	touch $@
