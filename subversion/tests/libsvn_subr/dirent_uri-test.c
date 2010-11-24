@@ -1514,7 +1514,6 @@ test_relpath_is_ancestor(apr_pool_t *pool)
   } tests[] = {
     { "foo",            "foo/bar",        TRUE},
     { "food/bar",       "foo/bar",        FALSE},
-    { "/",               "/foo",          TRUE},
     { "",                "foo",           TRUE},
     { "",                ".bar",          TRUE},
     { "foo/bar",         "foo",           FALSE},
