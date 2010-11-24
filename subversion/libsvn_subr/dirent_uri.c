@@ -1587,9 +1587,6 @@ svn_relpath_skip_ancestor(const char *parent_relpath,
   if (child_relpath[len] == 0)
     return ""; /* parent_relpath == child_relpath */
 
-  if (len == 1 && child_relpath[0] == '/')
-    return child_relpath + 1;
-
   if (child_relpath[len] == '/')
     return child_relpath + len + 1;
 
