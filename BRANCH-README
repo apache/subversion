@@ -20,5 +20,18 @@ of normalization (ignore-whitespace and ignore-eol-style options). Also, it
 may allow additional optimizations which are difficult to do when scanning
 byte-per-byte.
 
+TODO:
+  * eliminate identical prefix                         [DONE]
+  * eliminate identical suffix                         []
+  * make diff3 and diff4 use prefix/suffix scanning    []
+  
+Other wild ideas (may or may not be worth pursuing):
+  * Make prefix scanning able to skip 1 or a couple of non-matching lines, if
+    it is able to find strictly more matching lines after that, to keep the
+    prefix scanning going.
+  * Take advantage of the fact that matching lines often come in batches: when
+    inserting a new line into the token tree, and the previous line had a
+    match, first try to match the new token with the successor of the
+    previously matched line, before binary-searching the tree for a match.
 
 [1] http://en.wikipedia.org/wiki/Longest_common_subsequence_problem#Reduce_the_problem_set
