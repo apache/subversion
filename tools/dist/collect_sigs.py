@@ -129,12 +129,13 @@ def split(sigs):
     if lines or '--BEGIN' in line:
       lines.append(line)
     if '--END' in line:
-      yield "\n".join(lines)
+      yield "\n".join(lines) + "\n"
       lines = []
 
 def save_valid_sig(filename, signature):
+  # Add \n to flush.  (For some reason, .flush() didn't do the trick.)
   f = open(os.path.join(config.sigdir, filename + '.asc'), 'a')
-  f.write(signature)
+  f.write(signature + "\n")
 
 
 def verify_sig_for_file(signature, filename):
