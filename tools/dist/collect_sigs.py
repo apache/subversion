@@ -23,9 +23,7 @@
 # release.  This is a pretty rough, and patches are welcome to improve it.
 #
 # Some thoughts about future improvement:
-#  * Store all sigs, etc, in a database
-#    - This helps with idempotence
-#    - Also allows display of per-file and per-release statistics
+#  * Display of per-file and per-release statistics
 #  * A download link on the page itself
 #  * Make use of the python-gpg package (http://code.google.com/p/python-gnupg/)
 #  * Post to IRC when a new signature is collected
@@ -34,6 +32,7 @@
 #
 
 import sys, os
+import sqlite3
 
 def make_config():
   'Output a blank config file'
@@ -50,8 +49,42 @@ def make_config():
 
   print "'config.py' generated"
 
+def make_db():
+  'Initialize a blank database'
 
-actions = { 'make_config' : make_config }
+  db = sqlite3.connect('sigs.db')
+  db.execute('''
+    CREATE TABLE signatures (
+      keyid TEXT, filename TEXT, signature BLOB,
+      UNIQUE(keyid,filename)
+    );
+''');
+
+# This function is web-facing
+def generate_asc_files(target_dir='.'):
+  fds = {}
+  def _open(filename):
+    if not fds.has_key(filename):
+      fd = open(os.path.join(target_dir, filename + '.asc'), 'w')
+      fds[filename] = fd
+    return fds[filename]
+
+  db = sqlite3.connect(os.path.join(target_dir, 'sigs.db'))
+  curs = db.cursor()
+  curs.execute('SELECT filename, signature FROM signatures;')
+  for filename, signature in curs:
+    fd = _open(filename)
+    fd.write(signature + "\n")
+
+  for fd in fds.values():
+    fd.flush()
+    fd.close()
+
+actions = {
+    'make_config' : make_config,
+    'make_db' : make_db,
+    'make_asc' : generate_asc_files,
+}
 
 
 if __name__ == '__main__':
@@ -132,11 +165,12 @@ def split(sigs):
       yield "\n".join(lines) + "\n"
       lines = []
 
-def save_valid_sig(filename, signature):
-  # Add \n to flush.  (For some reason, .flush() didn't do the trick.)
-  f = open(os.path.join(config.sigdir, filename + '.asc'), 'a')
-  f.write(signature + "\n")
+def save_valid_sig(db, filename, keyid, signature):
+  db.execute('INSERT OR REPLACE INTO signatures VALUES (?,?,?);',
+             (keyid, filename, buffer(signature)))
+  db.commit()
 
+  generate_asc_files(config.sigdir)
 
 def verify_sig_for_file(signature, filename):
   args = ['gpg', '--logger-fd', '1', '--no-tty',
@@ -162,7 +196,7 @@ def verify_sig_for_file(signature, filename):
   for line in lines:
     match = r.search(line)
     if match:
-      keyid = match.group(1)[-8:]
+      keyid = match.group(1)
       user = match.group(2)
 
   return (True, (filename, keyid, user))
@@ -207,6 +241,7 @@ def process_sigs(signatures):
   retval = ''
 
   # Verify
+  db = sqlite3.connect(os.path.join(config.sigdir, 'sigs.db'))
   for signature in split(signatures):
     N_sigs += 1
     (verified, result) = verify_sig(signature)
@@ -215,7 +250,7 @@ def process_sigs(signatures):
     if verified:
       # TODO: record (filename, keyid) in a database
       (filename, keyid, user) = result
-      save_valid_sig(filename, signature)
+      save_valid_sig(db, filename, keyid, signature)
       N_verified += 1
 
   # Report
@@ -231,7 +266,7 @@ def process_sigs(signatures):
     retval += "<h1>Results for the %s signature</h1>" % ordinal(N)
     if verified:
       (filename, keyid, user) = result
-      retval += c_verified % (filename, keyid, user)
+      retval += c_verified % (filename, keyid[-8:], user)
     else:
       retval += c_unverified % (signature, result)
 
