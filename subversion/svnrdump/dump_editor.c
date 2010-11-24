@@ -105,8 +105,8 @@ normalize_props(apr_hash_t *props,
   return SVN_NO_ERROR;
 }
 
-/* Make a directory baton to represent the directory at path (relative
- * to the edit_baton).
+/* Make a directory baton to represent the directory at PATH (relative
+ * to the EDIT_BATON).
  *
  * COPYFROM_PATH/COPYFROM_REV are the path/revision against which this
  * directory should be compared for changes. If the copyfrom
@@ -176,7 +176,7 @@ dump_props(struct dump_edit_baton *eb,
   SVN_ERR(svn_hash_write_incremental(eb->props, eb->deleted_props,
                                      propstream, "PROPS-END", pool));
   SVN_ERR(svn_stream_close(propstream));
-  
+
   /* Prop-delta: true */
   SVN_ERR(svn_stream_printf(eb->stream, pool,
                             SVN_REPOS_DUMPFILE_PROP_DELTA
@@ -250,7 +250,7 @@ dump_node(struct dump_edit_baton *eb,
   /* Remove leading slashes from path and copyfrom_path */
   if (path)
     path = ((*path == '/') ? path + 1 : path);
-  
+
   if (copyfrom_path)
     copyfrom_path = ((*copyfrom_path == '/') ?
                      copyfrom_path + 1 : copyfrom_path);
@@ -289,7 +289,7 @@ dump_node(struct dump_edit_baton *eb,
                                     ": replace\n"));
 
           /* Wait for a change_*_prop to be called before dumping
-             anything */          
+             anything */
           eb->dump_props = TRUE;
           break;
         }
@@ -316,7 +316,7 @@ dump_node(struct dump_edit_baton *eb,
 
       /* We can leave this routine quietly now. Nothing more to do-
          print a couple of newlines because we're not dumping props or
-         text. */      
+         text. */
       SVN_ERR(svn_stream_printf(eb->stream, pool, "\n\n"));
       break;
 
@@ -335,7 +335,7 @@ dump_node(struct dump_edit_baton *eb,
              add_file, open_file. change_dir_prop is a special case. */
 
           /* Wait for a change_*_prop to be called before dumping
-             anything */          
+             anything */
           eb->dump_props = TRUE;
           break;
         }
@@ -353,7 +353,7 @@ dump_node(struct dump_edit_baton *eb,
          (along with the necessary PROPS-END\n\n and we're good. So
          set a dump_newlines here to print the newlines unless
          change_dir_prop is called next otherwise the `svnadmin load`
-         parser will fail.  */ 
+         parser will fail.  */
       if (kind == svn_node_dir)
         eb->dump_newlines = TRUE;
 
@@ -775,7 +775,7 @@ close_file(void *file_baton,
                                 ": %lu\n",
                                 (unsigned long)info->size));
 
-      /* Text-content-md5: 82705804337e04dcd0e586bfa2389a7f */      
+      /* Text-content-md5: 82705804337e04dcd0e586bfa2389a7f */
       SVN_ERR(svn_stream_printf(eb->stream, pool,
                                 SVN_REPOS_DUMPFILE_TEXT_CONTENT_MD5
                                 ": %s\n",
