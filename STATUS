@@ -126,13 +126,6 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r1039040
-   Use Perl to resolve symlinks when building the SWIG Perl bindings.
-   Justification:
-     r1038808 made Python a requirement to build the Perl bindings
-   Votes:
-     +1: philip
-
 Veto-blocked changes:
 =====================
 
@@ -241,3 +234,9 @@ Veto-blocked changes:
 Approved changes:
 =================
 
+ * r1039040
+   Use Perl to resolve symlinks when building the SWIG Perl bindings.
+   Justification:
+     r1038808 made Python a requirement to build the Perl bindings
+   Votes:
+     +1: philip, stsp
