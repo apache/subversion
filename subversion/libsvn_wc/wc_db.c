@@ -1065,13 +1065,10 @@ add_children_to_hash(apr_hash_t *children,
 }
 
 
-/* Return in *CHILDREN all of the children of the directory LOCAL_RELPATH.
-   If BASE_ONLY is true, then *only* the children from BASE_NODE are
-   returned (those in WORKING_NODE are ignored). The result children are
-   allocated in RESULT_POOL.  */
+/* Return in *CHILDREN all of the children of the directory LOCAL_RELPATH,
+   of any status, in all op-depths in the NODES table. */
 static svn_error_t *
 gather_children(const apr_array_header_t **children,
-                svn_boolean_t base_only,
                 svn_wc__db_pdh_t *pdh,
                 const char *local_relpath,
                 apr_pool_t *result_pool,
@@ -1080,17 +1077,12 @@ gather_children(const apr_array_header_t **children,
   apr_hash_t *names_hash = apr_hash_make(scratch_pool);
   apr_array_header_t *names_array;
 
-  /* All of the names get allocated in RESULT_POOL.  For !base_only it
+  /* All of the names get allocated in RESULT_POOL.  It
      appears to be faster to use the hash to remove duplicates than to
      use DISTINCT in the SQL query. */
-  if (base_only)
-    SVN_ERR(add_children_to_hash(names_hash, STMT_SELECT_BASE_NODE_CHILDREN,
-                                 pdh->wcroot->sdb, pdh->wcroot->wc_id,
-                                 local_relpath, result_pool));
-  else
-    SVN_ERR(add_children_to_hash(names_hash, STMT_SELECT_NODE_CHILDREN,
-                                 pdh->wcroot->sdb, pdh->wcroot->wc_id,
-                                 local_relpath, result_pool));
+  SVN_ERR(add_children_to_hash(names_hash, STMT_SELECT_NODE_CHILDREN,
+                               pdh->wcroot->sdb, pdh->wcroot->wc_id,
+                               local_relpath, result_pool));
 
   SVN_ERR(svn_hash_keys(&names_array, names_hash, result_pool));
   *children = names_array;
@@ -2203,8 +2195,8 @@ svn_wc__db_base_get_children(const apr_array_header_t **children,
                                              scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
-  return gather_children(children, TRUE,
-                         pdh, local_relpath, result_pool, scratch_pool);
+  return gather_repo_children(children, pdh, local_relpath, 0,
+                              result_pool, scratch_pool);
 }
 
 
@@ -5885,7 +5877,7 @@ svn_wc__db_read_children(const apr_array_header_t **children,
                                              scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
-  return gather_children(children, FALSE,
+  return gather_children(children,
                          pdh, local_relpath, result_pool, scratch_pool);
 }
 
@@ -8948,8 +8940,8 @@ make_copy_txn(void *baton,
     SVN_ERR(svn_sqlite__reset(stmt));
 
   /* Get the BASE children, as WORKING children don't need modifications */
-  SVN_ERR(gather_children(&children, TRUE, mcb->pdh, mcb->local_relpath,
-                          scratch_pool, iterpool));
+  SVN_ERR(gather_repo_children(&children, mcb->pdh, mcb->local_relpath, 0,
+                               scratch_pool, iterpool));
 
   for (i = 0; i < children->nelts; i++)
     {

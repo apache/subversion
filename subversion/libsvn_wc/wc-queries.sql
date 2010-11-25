@@ -132,10 +132,6 @@ INSERT OR REPLACE INTO nodes (
 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14,
         ?15, ?16, ?17, ?18, ?19);
 
--- STMT_SELECT_BASE_NODE_CHILDREN
-SELECT local_relpath FROM nodes
-WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth = 0;
-
 -- STMT_SELECT_OP_DEPTH_CHILDREN
 SELECT local_relpath FROM nodes
 WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth = ?3;
