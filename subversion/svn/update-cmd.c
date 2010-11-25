@@ -48,6 +48,7 @@ print_update_summary(apr_array_header_t *targets,
 {
   int i;
   const char *path_prefix;
+  apr_pool_t *iter_pool;
 
   if (targets->nelts < 2)
     return SVN_NO_ERROR;
@@ -55,20 +56,31 @@ print_update_summary(apr_array_header_t *targets,
   SVN_ERR(svn_dirent_get_absolute(&path_prefix, "", scratch_pool));
   SVN_ERR(svn_cmdline_printf(scratch_pool, _("Summary of updates:\n")));
 
+  iter_pool = svn_pool_create(scratch_pool);
+
   for (i = 0; i < targets->nelts; i++)
     {
       const char *path = APR_ARRAY_IDX(targets, i, const char *);
       const char *path_local;
 
+      svn_pool_clear(iter_pool);
+
+      /* Convert to an absolute path if it's not already. */
+      if (! svn_dirent_is_absolute(path))
+        SVN_ERR(svn_dirent_get_absolute(&path, path, iter_pool));
+
+      /* Remove the current working directory prefix from PATH (if
+         PATH is at or under $CWD), and convert to local style for
+         display. */
       path_local = svn_dirent_skip_ancestor(path_prefix, path);
-      path_local = svn_dirent_local_style(path_local, scratch_pool);
+      path_local = svn_dirent_local_style(path_local, iter_pool);
       
       if (i < result_revs->nelts)
         {
           svn_revnum_t rev = APR_ARRAY_IDX(result_revs, i, svn_revnum_t);
 
           if (SVN_IS_VALID_REVNUM(rev))
-            SVN_ERR(svn_cmdline_printf(scratch_pool,
+            SVN_ERR(svn_cmdline_printf(iter_pool,
                                        _("  Updated '%s' to r%ld.\n"),
                                        path_local, rev));
         }
@@ -78,6 +90,8 @@ print_update_summary(apr_array_header_t *targets,
              ### result_rev?  Can we even get here?  */
         }
     }
+
+  svn_pool_destroy(iter_pool);
   return SVN_NO_ERROR;
 }
 
