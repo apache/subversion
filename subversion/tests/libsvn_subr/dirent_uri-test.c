@@ -2884,7 +2884,7 @@ test_fspath_is_canonical(apr_pool_t *pool)
   for (i = 0; i < COUNT_OF(tests); i++)
     {
       svn_boolean_t canonical
-        = svn_fspath__is_canonical(tests[i].path, pool);
+        = svn_fspath__is_canonical(tests[i].path);
 
       if (tests[i].canonical != canonical)
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
