@@ -22,6 +22,7 @@
 set -x
 
 branch="$(basename $(svn info . | grep ^URL  | cut -d' ' -f2))"
+export MALLOC_OPTIONS=S
 (cd .. && gmake BRANCH="$branch" svn-check-bindings)
 grep -q "^Result: PASS$" tests.log.bindings.pl || exit 1
 grep -q "^OK$" tests.log.bindings.py || exit 1

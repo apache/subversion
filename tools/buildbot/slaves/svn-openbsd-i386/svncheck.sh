@@ -22,6 +22,7 @@
 set -x
 
 branch="$(basename $(svn info . | grep ^URL  | cut -d' ' -f2))"
+export MALLOC_OPTIONS=S
 (cd .. && gmake BRANCH="$branch"  svn-check-local \
                                   svn-check-svn \
                                   svn-check-neon \
