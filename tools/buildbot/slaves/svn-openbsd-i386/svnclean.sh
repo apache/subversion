@@ -27,4 +27,4 @@ for i in 3 4 5 6 7; do
   (test -h ../svn-1.${i}.x || ln -s build ../svn-1.${i}.x)
 done
 (test -h ../GNUmakefile || ln -s ../unix-build/Makefile.svn ../GNUmakefile)
-(cd .. && gmake BRANCH="$branch" svn-reset svn-clean)
+(cd .. && gmake BRANCH="$branch" reset clean)
