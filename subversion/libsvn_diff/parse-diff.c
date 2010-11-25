@@ -1040,7 +1040,7 @@ git_move_from(enum parse_state *new_state, const char *line, svn_patch_t *patch,
   return SVN_NO_ERROR;
 }
 
-/* Parse the 'rename to ' line fo a git extended unidiff. */
+/* Parse the 'rename to ' line of a git extended unidiff. */
 static svn_error_t *
 git_move_to(enum parse_state *new_state, const char *line, svn_patch_t *patch,
             apr_pool_t *result_pool, apr_pool_t *scratch_pool)
