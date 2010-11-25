@@ -133,7 +133,10 @@ make_dir_baton(const char *path,
 
   /* Construct the full path of this node. */
   if (pb)
-    abspath = svn_uri_join("/", path, pool);
+    {
+      if (path[0] != '/')
+        abspath = apr_pstrcat(pool, "/", path, (char *)NULL);
+    }
   else
     abspath = "/";
 

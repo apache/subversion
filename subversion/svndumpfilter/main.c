@@ -485,9 +485,10 @@ new_node_record(void **node_baton,
                                APR_HASH_KEY_STRING);
 
   /* Ensure that paths start with a leading '/'. */
-  node_path = svn_uri_join("/", node_path, pool);
-  if (copyfrom_path)
-    copyfrom_path = svn_uri_join("/", copyfrom_path, pool);
+  if (node_path[0] != '/')
+    node_path = apr_pstrcat(pool, "/", node_path, (char *)NULL);
+  if (copyfrom_path && copyfrom_path[0] != '/')
+    copyfrom_path = apr_pstrcat(pool, "/", copyfrom_path, (char *)NULL);
 
   nb->do_skip = skip_path(node_path, pb->prefixes,
                           pb->do_exclude, pb->glob);
@@ -1437,7 +1438,8 @@ main(int argc, const char *argv[])
              style, and absolute. */
           SVN_INT_ERR(svn_utf_cstring_to_utf8(&prefix, os->argv[i], pool));
           prefix = svn_relpath_internal_style(prefix, pool);
-          prefix = svn_uri_join("/", prefix, pool);
+          if (prefix[0] != '/')
+            prefix = apr_pstrcat(pool, "/", prefix, (char *)NULL);
           APR_ARRAY_PUSH(opt_state.prefixes, const char *) = prefix;
         }
 
