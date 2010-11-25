@@ -1085,34 +1085,38 @@ RUBYLIB=$(SVN_PREFIX)/lib/ruby/site_ruby$(shell grep \
 	cut -d'=' -f2)
 svn-check-swig-pl:
 	-if [ $(ENABLE_PERL_BINDINGS) = yes ]; then \
-		cd $(svn_builddir) && \
+		(cd $(svn_builddir) && \
 			env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
-			make check-swig-pl; \
+			make check-swig-pl 2>&1) | \
+				tee $(svn_builddir)/tests.log.bindings.pl; \
 	fi
 
 svn-check-swig-py:
 	-if [ $(ENABLE_PYTHON_BINDINGS) = yes ]; then \
-		cd $(svn_builddir) && \
+		(cd $(svn_builddir) && \
 			env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
-			make check-swig-py; \
+			make check-swig-py 2>&1) | \
+				tee $(svn_builddir)/tests.log.bindings.py; \
 	fi
 
 # We add the svn prefix to PATH here because the ruby tests
 # attempt to start an svnserve binary found in PATH.
 svn-check-swig-rb:
 	-if [ $(ENABLE_RUBY_BINDINGS) = yes ]; then \
-		cd $(svn_builddir)/subversion/bindings/swig/ruby/test && \
+		(cd $(svn_builddir)/subversion/bindings/swig/ruby/test && \
 			env RUBYLIB=$(RUBYLIB) \
 			LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
 			PATH=$(SVN_PREFIX)/bin:$$PATH \
-			ruby run-test.rb --verbose=normal; \
+			ruby run-test.rb --verbose=normal 2>&1) | \
+				tee $(svn_builddir)/tests.log.bindings.rb; \
 	fi
 
 svn-check-javahl:
 	-if [ $(ENABLE_JAVA_BINDINGS) = yes ]; then \
-		cd $(svn_builddir) && \
+		(cd $(svn_builddir) && \
 			env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
-			make check-javahl; \
+			make check-javahl 2>&1) | \
+				tee $(svn_builddir)/tests.log.bindings.javahl; \
 	fi
 
 svn-check: svn-check-local svn-check-svn svn-check-neon svn-check-serf svn-check-bindings
