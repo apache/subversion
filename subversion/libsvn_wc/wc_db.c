@@ -3005,6 +3005,11 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
 }
 
 static svn_error_t *
+op_depth_of(apr_int64_t *op_depth,
+            svn_wc__db_pdh_t *pdh,
+            const char *local_relpath);
+
+static svn_error_t *
 op_depth_for_copy(apr_int64_t *op_depth,
                   apr_int64_t copyfrom_repos_id,
                   const char *copyfrom_relpath,
@@ -3073,9 +3078,13 @@ db_op_copy(svn_wc__db_pdh_t *src_pdh,
     }
 
   if (kind == svn_wc__db_kind_dir)
-    SVN_ERR(gather_repo_children(&children, src_pdh, src_relpath,
-                                 relpath_depth(src_relpath),
-                                 scratch_pool, scratch_pool));
+    {
+      apr_int64_t src_op_depth;
+
+      SVN_ERR(op_depth_of(&src_op_depth, src_pdh, src_relpath));
+      SVN_ERR(gather_repo_children(&children, src_pdh, src_relpath,
+                                   src_op_depth, scratch_pool, scratch_pool));
+    }
   else
     children = NULL;
 
