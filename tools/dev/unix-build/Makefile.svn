@@ -736,12 +736,21 @@ $(CYRUS_SASL_OBJDIR)/.retrieved: $(DISTDIR)/$(CYRUS_SASL_DIST)
 		> $(CYRUS_SASL_SRCDIR)/plugins/digestmd5.c.patched
 	mv $(CYRUS_SASL_SRCDIR)/plugins/digestmd5.c.patched \
 		$(CYRUS_SASL_SRCDIR)/plugins/digestmd5.c
+ifeq ($(UNAME),OpenBSD)
+	# Fixes GSSAPI support on OpenBSD, which hasn't got libroken:
+	for f in `grep -l -R -- -lroken $(CYRUS_SASL_SRCDIR)`; do \
+		sed -e 's/-lroken//g' < $$f > $$f.tmp && \
+		mv $$f.tmp $$f; \
+	done
+	chmod +x $(CYRUS_SASL_SRCDIR)/configure
+endif
 	touch $@
 
 # configure cyrus-sasl
 $(CYRUS_SASL_OBJDIR)/.configured: $(CYRUS_SASL_OBJDIR)/.retrieved
 	cd $(CYRUS_SASL_OBJDIR) \
-		&& env CFLAGS="-g" $(CYRUS_SASL_SRCDIR)/configure \
+		&& env CFLAGS="-g" CPPFLAGS="-I/usr/include/kerberosV" \
+		$(CYRUS_SASL_SRCDIR)/configure \
 		--with-dbpath=$(PREFIX)/cyrus-sasl/etc/sasldb2 \
 		--with-plugindir=$(PREFIX)/cyrus-sasl/lib/sasl2 \
 		--with-configdir=$(PREFIX)/cyrus-sasl/lib/sasl2 \
