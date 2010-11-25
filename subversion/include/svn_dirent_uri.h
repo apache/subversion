@@ -819,14 +819,13 @@ svn_uri_get_file_url_from_dirent(const char **url,
  * ends with '/' except when the whole path is just '/'.
  */
 
-/** Return TRUE iff @a fspath is canonical.  Use @a scratch_pool for
- * temporary allocations.  @a fspath need not be canonical, of course.
+/** Return TRUE iff @a fspath is canonical.
+ * @a fspath need not be canonical, of course.
  *
  * @since New in 1.7.
  */
 svn_boolean_t
-svn_fspath__is_canonical(const char *fspath,
-                         apr_pool_t *scratch_pool);
+svn_fspath__is_canonical(const char *fspath);
 
 /** Return the fspath composed of @a fspath with @a relpath appended.
  * Allocate the result in @a result_pool.
