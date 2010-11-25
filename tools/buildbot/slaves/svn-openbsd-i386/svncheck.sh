@@ -26,3 +26,6 @@ branch="$(basename $(svn info . | grep ^URL  | cut -d' ' -f2))"
                                   svn-check-svn \
                                   svn-check-neon \
                                   svn-check-serf)
+grep -q "^FAIL:" tests.log* && exit 1
+grep -q "^XPASS:" tests.log* && exit 1
+exit 0

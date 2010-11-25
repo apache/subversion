@@ -23,3 +23,8 @@ set -x
 
 branch="$(basename $(svn info . | grep ^URL  | cut -d' ' -f2))"
 (cd .. && gmake BRANCH="$branch" svn-check-bindings)
+grep -q "^Result: PASS$" tests.log.bindings.pl || exit 1
+grep -q "^OK$" tests.log.bindings.py || exit 1
+tail -n 1 tests.log.bindings.rb | grep -q ", 0 failures, 0 errors" || exit 1
+#TODO javahl
+exit 0
