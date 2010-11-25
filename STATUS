@@ -119,22 +119,19 @@ Candidate changes:
                  backport that - see
                  http://svn.haxx.se/dev/archive-2010-11/0412.shtml)
 
- * r962377, r962378
-   Fix svnsync handling of directory copyfrom.
-   Justification:
-     Could lead to sync'd repositories being different from the master.
-   Concerns:
-     http://article.gmane.org/gmane.comp.version-control.subversion.devel/120590
-   Votes:
-     +1: philip, cmpilato
-     -0: danielsh (authz concerns)
-
  * r1038792
    Fix sporadic ruby test failures due to "Connection refused" errors.
    Justification:
      Tests failing for the wrong reason are irritating.
    Votes:
      +1: stsp
+
+ * r1039040
+   Use Perl to resolve symlinks when building the SWIG Perl bindings.
+   Justification:
+     r1038808 made Python a requirement to build the Perl bindings
+   Votes:
+     +1: philip
 
 Veto-blocked changes:
 =====================
@@ -229,6 +226,17 @@ Veto-blocked changes:
            svn_io_dir_walk() which we should not do in a back-port.
            Discussing on list.)
      -1: cmpilato (Changes semantics of svn_io_dir_walk()).
+
+ * r962377, r962378
+   Fix svnsync handling of directory copyfrom.
+   Justification:
+     Could lead to sync'd repositories being different from the master.
+   Concerns:
+     http://article.gmane.org/gmane.comp.version-control.subversion.devel/120590
+   Votes:
+     +1: cmpilato
+     -0: danielsh (authz concerns)
+     -1: philip (svnsync_tests.py descend_into_replace is XFail)
 
 Approved changes:
 =================
