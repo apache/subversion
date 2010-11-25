@@ -1598,7 +1598,7 @@ test_temp_op_make_copy(const svn_test_opts_t *opts, apr_pool_t *pool)
 
   b.pool = pool;
   SVN_ERR(svn_test__create_repos_and_wc(&b.repos_url, &b.wc_abspath,
-                                        "base_dir_insert_remove", opts, pool));
+                                        "temp_op_make_copy", opts, pool));
   SVN_ERR(svn_wc_context_create(&b.wc_ctx, NULL, pool, pool));
 
   {
