@@ -723,7 +723,7 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
                                                         scratch_pool));
     }
 
-#ifdef SVN_WC__OP_DEPTH
+#if 0  /* was: #ifdef SVN_WC__OP_DEPTH */
   if (svn_wc__db_same_db(db, src_abspath, dst_abspath, scratch_pool))
     {
       SVN_ERR(copy_versioned_tree(db, src_abspath, dst_abspath,
