@@ -1693,7 +1693,7 @@ test_wc_move(const svn_test_opts_t *opts, apr_pool_t *pool)
       { 2, "A/B",             "base-deleted", NO_COPY_FROM },
       { 2, "A/B/C",           "base-deleted", NO_COPY_FROM },
       { 2, "A/B-move",        "normal",       1, "A/B" },
-      { 2, "A/B-move/C",      "not-present",  NO_COPY_FROM },
+      { 2, "A/B-move/C",      "not-present",  1, "A/B/C" },
       { 3, "A/B-move/C-move", "normal",       1, "A/B/C" },
       { 0 }
     };

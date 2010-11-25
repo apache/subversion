@@ -2955,9 +2955,9 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
     }
   else if (*status == svn_wc__db_status_deleted)
     {
-      const char *work_del_relpath;
+      const char *base_del_relpath, *work_del_relpath;
 
-      SVN_ERR(scan_deletion(NULL, NULL, NULL, &work_del_relpath,
+      SVN_ERR(scan_deletion(&base_del_relpath, NULL, NULL, &work_del_relpath,
                             pdh, local_relpath, scratch_pool, scratch_pool));
       if (work_del_relpath)
         {
@@ -2978,19 +2978,21 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
                                                         local_relpath),
                                result_pool);
         }
-      else
+      else if (base_del_relpath)
         {
-          *copyfrom_relpath = repos_relpath;
-          *copyfrom_rev = revision;
-          if (!repos_root_url || !repos_uuid)
-            SVN_ERR(scan_upwards_for_repos(copyfrom_id, NULL,
-                                           pdh->wcroot, local_relpath,
-                                           result_pool, scratch_pool));
-          else
-            SVN_ERR(fetch_repos_id(copyfrom_id,
-                                   repos_root_url, repos_uuid,
-                                   pdh->wcroot->sdb, scratch_pool));
+          SVN_ERR(base_get_info(NULL, NULL, copyfrom_rev, copyfrom_relpath,
+                                &repos_root_url, &repos_uuid,
+                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                NULL, NULL,
+                                pdh, base_del_relpath,
+                                result_pool, scratch_pool));
+
+          SVN_ERR(fetch_repos_id(copyfrom_id,
+                                 repos_root_url, repos_uuid,
+                                 pdh->wcroot->sdb, scratch_pool));
         }
+      else
+        SVN_ERR_MALFUNCTION();
     }
   else
     {
