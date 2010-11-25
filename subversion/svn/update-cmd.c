@@ -66,7 +66,8 @@ print_update_summary(apr_array_header_t *targets,
       svn_pool_clear(iter_pool);
 
       /* Convert to an absolute path if it's not already. */
-      if (! svn_dirent_is_absolute(path))
+      /* (It shouldn't be URL, but don't call svn_dirent_* if it is.) */
+      if (! svn_path_is_url(path) && ! svn_dirent_is_absolute(path))
         SVN_ERR(svn_dirent_get_absolute(&path, path, iter_pool));
 
       /* Remove the current working directory prefix from PATH (if
