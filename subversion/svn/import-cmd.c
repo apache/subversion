@@ -101,10 +101,9 @@ svn_cl__import(apr_getopt_t *os,
     }
 
   if (svn_path_is_url(path))
-    return svn_error_return(svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR,
-                                              NULL,
-                                              _("'%s' is not a local path"),
-                                              path));
+    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("'%s' is not a local path"), path);
+
   if (! svn_path_is_url(url))
     return svn_error_createf
       (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,

@@ -1149,10 +1149,11 @@ svn_client_checkout(svn_revnum_t *result_rev,
  * Update working trees @a paths to @a revision, authenticating with the
  * authentication baton cached in @a ctx.  @a paths is an array of const
  * char * paths to be updated.  Unversioned paths that are direct children
- * of a versioned path will cause an update that attempts to add that path,
- * other unversioned paths are skipped.  If @a result_revs is not
- * @c NULL an array of svn_revnum_t will be returned with each element set
- * to the revision to which @a revision was resolved.
+ * of a versioned path will cause an update that attempts to add that path;
+ * other unversioned paths are skipped.  If @a result_revs is not NULL,
+ * @a *result_revs will be set to an array of svn_revnum_t with each
+ * element set to the revision to which @a revision was resolved for the
+ * corresponding element of @a paths.
  *
  * @a revision must be of kind #svn_opt_revision_number,
  * #svn_opt_revision_head, or #svn_opt_revision_date.  If @a
@@ -2302,7 +2303,7 @@ svn_client_status(svn_revnum_t *result_rev,
 
 /**
  * Invoke @a receiver with @a receiver_baton on each log message from
- * each start/end revision pair in the @a revision_ranges in turn,
+ * each (#svn_opt_revision_range_t *) range in @a revision_ranges in turn,
  * inclusive (but never invoke @a receiver on a given log message more
  * than once).
  *
@@ -4485,11 +4486,13 @@ svn_client_revprop_list(apr_hash_t **props,
  * @a from_path_or_url is either the path the working copy on disk, or
  * a URL to the repository you wish to export.
  *
- * When exporting a directory @a to_path is the path to the directory
- * where you wish to create the exported tree, when exporting a file
- * it is the path of the file that will be created.  If @a to_path is
- * the empty path the name of the file/directory in the repository
- * will be used.
+ * When exporting a directory, @a to_path is the path to the directory
+ * where you wish to create the exported tree; when exporting a file, it
+ * is the path of the file that will be created.  If @a to_path is the
+ * empty path, then the basename of the export file/directory in the repository
+ * will be used.  If @a to_path represents an existing directory, and a
+ * file is being exported, then a file with the that basename will be
+ * created under that directory (as with 'copy' operations).
  *
  * @a peg_revision is the revision where the path is first looked up
  * when exporting from a repository.  If @a peg_revision->kind is

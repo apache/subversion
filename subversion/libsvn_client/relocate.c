@@ -217,6 +217,11 @@ svn_client_relocate2(const char *wcroot_dir,
   vb.url_uuids = apr_array_make(pool, 1, sizeof(struct url_uuid_t));
   vb.pool = pool;
 
+  if (svn_path_is_url(wcroot_dir))
+    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                             _("'%s' is not a local path"),
+                             wcroot_dir);
+
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, wcroot_dir, pool));
 
   /* If we're ignoring externals, just relocate and get outta here. */

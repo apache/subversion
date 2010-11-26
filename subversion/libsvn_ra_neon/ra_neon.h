@@ -299,13 +299,15 @@ svn_error_t *svn_ra_neon__get_dir(svn_ra_session_t *session,
 svn_error_t * svn_ra_neon__abort_commit(void *session_baton,
                                         void *edit_baton);
 
-svn_error_t * svn_ra_neon__get_mergeinfo(svn_ra_session_t *session,
-                                         apr_hash_t **mergeinfo,
-                                         const apr_array_header_t *paths,
-                                         svn_revnum_t revision,
-                                         svn_mergeinfo_inheritance_t inherit,
-                                         svn_boolean_t include_descendants,
-                                         apr_pool_t *pool);
+svn_error_t * svn_ra_neon__get_mergeinfo(
+  svn_ra_session_t *session,
+  apr_hash_t **mergeinfo,
+  const apr_array_header_t *paths,
+  svn_revnum_t revision,
+  svn_mergeinfo_inheritance_t inherit,
+  svn_boolean_t *validate_inherited_mergeinfo,
+  svn_boolean_t include_descendants,
+  apr_pool_t *pool);
 
 svn_error_t * svn_ra_neon__do_update(svn_ra_session_t *session,
                                      const svn_ra_reporter3_t **reporter,
@@ -859,7 +861,8 @@ enum {
   ELEM_mergeinfo_info,
   ELEM_has_children,
   ELEM_merged_revision,
-  ELEM_deleted_rev_report
+  ELEM_deleted_rev_report,
+  ELEM_validate_inherited_mergeinfo
 };
 
 /* ### docco */

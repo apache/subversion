@@ -1420,7 +1420,6 @@ cleanup_fs_access(void *data)
 /* Helper func to construct a special 'parentpath' private resource. */
 static dav_error *
 get_parentpath_resource(request_rec *r,
-                        const char *root_path,
                         dav_resource **resource)
 {
   const char *new_uri;
@@ -1915,7 +1914,7 @@ get_resource(request_rec *r,
 
       if (strcmp(parentpath, uri) == 0)
         {
-          err = get_parentpath_resource(r, root_path, resource);
+          err = get_parentpath_resource(r, resource);
           if (err)
             return err;
           return NULL;

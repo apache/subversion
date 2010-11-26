@@ -95,6 +95,14 @@ svn_error_t *svn_fs_base__get_path_created_rev(svn_revnum_t *rev,
                                                trail_t *trail,
                                                apr_pool_t *pool);
 
+/* Implements svn_fs_validate_mergeinfo. */
+svn_error_t *
+svn_fs_base__validate_mergeinfo(svn_mergeinfo_t *validated_mergeinfo,
+                                svn_fs_t *fs,
+                                svn_mergeinfo_t mergeinfo,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool);
+
 /* ### Experimental obliterate-like-deltify - see implementation. */
 svn_error_t *
 svn_fs_base__obliterate_rep(svn_fs_t *fs,

@@ -1156,7 +1156,9 @@ struct upgrade_data_t {
 
    Uses SCRATCH_POOL for all temporary allocation.  */
 static svn_error_t *
-upgrade_to_wcng(svn_wc__db_t *db,
+upgrade_to_wcng(void **dir_baton,
+                void *parent_baton,
+                svn_wc__db_t *db,
                 const char *dir_abspath,
                 int old_format,
                 svn_wc_upgrade_get_repos_info_t repos_info_func,
@@ -1258,11 +1260,11 @@ upgrade_to_wcng(svn_wc__db_t *db,
                                        scratch_pool));
     }
  
-  SVN_ERR(svn_wc__write_upgraded_entries(db, data->sdb,
+  SVN_ERR(svn_wc__write_upgraded_entries(dir_baton, parent_baton, db, data->sdb,
                                          data->repos_id, data->wc_id,
                                          dir_abspath, data->root_abspath,
                                          entries,
-                                         scratch_pool));
+                                         result_pool, scratch_pool));
 
   /***** WC PROPS *****/
 
@@ -1453,7 +1455,8 @@ svn_wc__upgrade_sdb(int *result_format,
 
 /* */
 static svn_error_t *
-upgrade_working_copy(svn_wc__db_t *db,
+upgrade_working_copy(void *parent_baton,
+                     svn_wc__db_t *db,
                      const char *dir_abspath,
                      svn_wc_upgrade_get_repos_info_t repos_info_func,
                      void *repos_info_baton,
@@ -1463,8 +1466,10 @@ upgrade_working_copy(svn_wc__db_t *db,
                      void *cancel_baton,
                      svn_wc_notify_func2_t notify_func,
                      void *notify_baton,
+                     apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool)
 {
+  void *dir_baton;
   int old_format;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_array_header_t *subdirs;
@@ -1507,7 +1512,7 @@ upgrade_working_copy(svn_wc__db_t *db,
     }
 
 
-  SVN_ERR(upgrade_to_wcng(db, dir_abspath, old_format,
+  SVN_ERR(upgrade_to_wcng(&dir_baton, parent_baton, db, dir_abspath, old_format,
                           repos_info_func, repos_info_baton,
                           repos_cache, data, scratch_pool, iterpool));
 
@@ -1523,12 +1528,12 @@ upgrade_working_copy(svn_wc__db_t *db,
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(upgrade_working_copy(db, child_abspath,
+      SVN_ERR(upgrade_working_copy(dir_baton, db, child_abspath,
                                    repos_info_func, repos_info_baton,
                                    repos_cache, data,
                                    cancel_func, cancel_baton,
                                    notify_func, notify_baton,
-                                   iterpool));
+                                   iterpool, iterpool));
     }
 
   svn_pool_destroy(iterpool);
@@ -1611,12 +1616,12 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
                           scratch_pool, scratch_pool));
 
   /* Upgrade the pre-wcng into a wcng in a temporary location. */
-  SVN_ERR(upgrade_working_copy(db, local_abspath,
+  SVN_ERR(upgrade_working_copy(NULL, db, local_abspath,
                                repos_info_func, repos_info_baton,
                                apr_hash_make(scratch_pool), &data,
                                cancel_func, cancel_baton,
                                notify_func, notify_baton,
-                               scratch_pool));
+                               scratch_pool, scratch_pool));
 
   /* A workqueue item to move the pristine dir into place */
   pristine_from = svn_wc__adm_child(data.root_abspath, PRISTINE_STORAGE_RELPATH,

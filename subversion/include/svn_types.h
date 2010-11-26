@@ -185,6 +185,9 @@ svn_node_kind_from_word(const char *word);
  * that are just like booleans.  The values have been set deliberately to
  * make tristates disjoint from #svn_boolean_t.
  *
+ * @note It is unsafe to use apr_pcalloc() to allocate these, since '0' is
+ * not a valid value.
+ *
  * @since New in 1.7. */
 typedef enum
 {

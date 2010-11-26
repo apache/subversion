@@ -1379,13 +1379,15 @@ svn_ra_serf__get_locks(svn_ra_session_t *ra_session,
                        svn_depth_t depth,
                        apr_pool_t *pool);
 
-svn_error_t * svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
-                                         apr_hash_t **mergeinfo,
-                                         const apr_array_header_t *paths,
-                                         svn_revnum_t revision,
-                                         svn_mergeinfo_inheritance_t inherit,
-                                         svn_boolean_t include_descendants,
-                                         apr_pool_t *pool);
+svn_error_t * svn_ra_serf__get_mergeinfo(
+  svn_ra_session_t *ra_session,
+  apr_hash_t **mergeinfo,
+  const apr_array_header_t *paths,
+  svn_revnum_t revision,
+  svn_mergeinfo_inheritance_t inherit,
+  svn_boolean_t *validate_inherited_mergeinfo,
+  svn_boolean_t include_descendants,
+  apr_pool_t *pool);
 
 /* Exchange capabilities with the server, by sending an OPTIONS
  * request announcing the client's capabilities, and by filling

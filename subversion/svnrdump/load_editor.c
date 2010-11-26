@@ -73,6 +73,8 @@ static svn_boolean_t is_atomicity_error(svn_error_t *err)
 static svn_error_t *
 get_lock(const svn_string_t **lock_string_p,
          svn_ra_session_t *session,
+         svn_cancel_func_t cancel_func,
+         void *cancel_baton,
          apr_pool_t *pool)
 {
   char hostname_str[APRMAXHOSTLEN + 1] = { 0 };
@@ -87,16 +89,11 @@ get_lock(const svn_string_t **lock_string_p,
                                 pool));
   if (! be_atomic)
     {
-      /* Pre-1.7 server.  Can't lock without a race condition.
-         See issue #3546.
-       */
-      svn_error_t *err;
-
-      err = svn_error_create(
-              SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-              _("Target server does not support atomic revision property "
-                "edits; consider upgrading it to 1.7 or using an external "
-                "locking program"));
+      /* Pre-1.7 servers can't lock without a race condition.  (Issue #3546) */
+      svn_error_t *err =
+        svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                         _("Target server does not support atomic revision "
+                           "property edits; consider upgrading it to 1.7."));
       svn_handle_warning2(stderr, err, "svnrdump: ");
       svn_error_clear(err);
     }
@@ -119,23 +116,24 @@ get_lock(const svn_string_t **lock_string_p,
 
       svn_pool_clear(subpool);
 
+      SVN_ERR(cancel_func(cancel_baton));
       SVN_ERR(svn_ra_rev_prop(session, 0, SVNRDUMP_PROP_LOCK, &reposlocktoken,
                               subpool));
 
       if (reposlocktoken)
         {
-          /* Did we get it? If so, we're done, otherwise we sleep. */
+          /* Did we get it? If so, we're done. */
           if (strcmp(reposlocktoken->data, mylocktoken->data) == 0)
             return SVN_NO_ERROR;
-          else
-            {
-              SVN_ERR(svn_cmdline_printf
-                      (pool, _("Failed to get lock on destination "
-                               "repos, currently held by '%s'\n"),
-                       reposlocktoken->data));
 
-              apr_sleep(apr_time_from_sec(1));
-            }
+          /* ...otherwise, tell the user that someone else has the
+             lock and sleep before retrying. */
+          SVN_ERR(svn_cmdline_printf
+                  (pool, _("Failed to get lock on destination "
+                           "repos, currently held by '%s'\n"),
+                   reposlocktoken->data));
+          
+          apr_sleep(apr_time_from_sec(1));
         }
       else if (i < LOCK_RETRIES - 1)
         {
@@ -147,25 +145,56 @@ get_lock(const svn_string_t **lock_string_p,
                                         mylocktoken, subpool);
 
           if (be_atomic && err && is_atomicity_error(err))
-            /* Someone else has the lock.  Let's loop. */
-            svn_error_clear(err);
+            {
+              /* Someone else has the lock.  Let's loop. */
+              svn_error_clear(err);
+            }
           else if (be_atomic && err == SVN_NO_ERROR)
-            /* We have the lock. 
-
-               However, for compatibility with concurrent svnsync's that don't
-               support atomicity, loop anyway to double-check that they haven't
-               overwritten our lock.
-             */
-            continue;
+            {
+              /* We have the lock.  However, for compatibility with
+                 concurrent svnrdumps that don't support atomicity, loop
+                 anyway to double-check that they haven't overwritten
+                 our lock. */
+              continue;
+            }
           else
-            /* Genuine error, or we aren't atomic and need to loop. */
-            SVN_ERR(err);
+            {
+              /* Genuine error, or we aren't atomic and need to loop. */
+              SVN_ERR(err);
+            }
         }
     }
 
   return svn_error_createf(APR_EINVAL, NULL,
                            _("Couldn't get lock on destination repos "
                              "after %d attempts"), i);
+}
+
+/* Remove the lock on SESSION iff the lock is owned by MYLOCKTOKEN. */
+static svn_error_t *
+maybe_unlock(svn_ra_session_t *session,
+             const svn_string_t *mylocktoken,
+             apr_pool_t *scratch_pool)
+{
+  svn_string_t *reposlocktoken;
+  svn_boolean_t be_atomic;
+
+  SVN_ERR(svn_ra_has_capability(session, &be_atomic,
+                                SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
+                                scratch_pool));
+  SVN_ERR(svn_ra_rev_prop(session, 0, SVNRDUMP_PROP_LOCK,
+                          &reposlocktoken, scratch_pool));
+  if (reposlocktoken && strcmp(reposlocktoken->data, mylocktoken->data) == 0)
+    {
+      svn_error_t *err =
+        svn_ra_change_rev_prop2(session, 0, SVNRDUMP_PROP_LOCK,
+                                be_atomic ? &mylocktoken : NULL, NULL,
+                                scratch_pool);
+      if (is_atomicity_error(err))
+        return svn_error_quick_wrap(err, _("svnrdump's lock was stolen; "
+                                           "can't remove it"));
+    }
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -282,7 +311,7 @@ new_node_record(void **node_baton,
       child_db = apr_pcalloc(rb->pool, sizeof(*child_db));
       child_db->baton = child_baton;
       child_db->depth = 0;
-      child_db->relpath = svn_relpath_canonicalize("/", rb->pool);
+      child_db->relpath = "";
       child_db->parent = NULL;
       rb->db = child_db;
     }
@@ -674,17 +703,16 @@ drive_dumpstream_loader(svn_stream_t *stream,
   SVN_ERR(svn_ra_has_capability(session, &be_atomic,
                                 SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
                                 pool));
-
-  SVN_ERR(get_lock(&lock_string, session, pool));
+  SVN_ERR(get_lock(&lock_string, session, cancel_func, cancel_baton, pool));
   SVN_ERR(svn_ra_get_repos_root2(session, &(pb->root_url), pool));
-  SVN_ERR(svn_repos_parse_dumpstream2(stream, parser, parse_baton,
-                                      cancel_func, cancel_baton, pool));
-  err = svn_ra_change_rev_prop2(session, 0, SVNRDUMP_PROP_LOCK,
-                                 be_atomic ? &lock_string : NULL, NULL, pool);
-  if (is_atomicity_error(err))
-    return svn_error_quick_wrap(err,
-                                _("\"svnrdump load\"'s lock was stolen; "
-                                  "can't remove it"));
+  err = svn_repos_parse_dumpstream2(stream, parser, parse_baton,
+                                    cancel_func, cancel_baton, pool);
 
-  return SVN_NO_ERROR;
+  /* If all goes well, or if we're cancelled cleanly, don't leave a
+     stray lock behind. */
+  if ((! err) 
+      || (err && (err->apr_err == SVN_ERR_CANCELLED)))
+    err = svn_error_compose_create(maybe_unlock(session, lock_string, pool),
+                                   err);
+  return err;
 }

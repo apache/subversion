@@ -29,8 +29,8 @@ DISTDIR		= $(PWD)/distfiles
 SRCDIR		= $(PWD)/src
 OBJDIR		= $(PWD)/objdir
 
-BDB_MAJOR_VER	= 4.8
-BDB_VER		= $(BDB_MAJOR_VER).30
+BDB_MAJOR_VER	= 4.7
+BDB_VER		= $(BDB_MAJOR_VER).25
 APR_VER		= 1.4.2
 APR_ICONV_VER	= 1.2.1
 GNU_ICONV_VER	= 1.13.1
@@ -38,7 +38,7 @@ APR_UTIL_VER	= 1.3.9
 HTTPD_VER	= 2.2.15
 NEON_VER	= 0.29.3
 SERF_VER	= 0.7.x
-SERF_OLD_VER	= 0.6.x
+SERF_OLD_VER	= 0.3.1
 CYRUS_SASL_VER	= 2.1.23
 SQLITE_VER	= 3.6.23.1
 
@@ -70,7 +70,7 @@ HTTPD_URL	= http://archive.apache.org/dist/httpd/$(HTTPD_DIST)
 NEON_URL	= http://webdav.org/neon/$(NEON_DIST)
 #SERF_URL	= http://serf.googlecode.com/files/$(SERF_DIST)
 SERF_URL	= http://serf.googlecode.com/svn/branches/$(SERF_VER)
-SERF_OLD_URL	= http://serf.googlecode.com/svn/branches/$(SERF_OLD_VER)
+SERF_OLD_URL	= http://serf.googlecode.com/svn/tags/$(SERF_OLD_VER)
 SQLITE_URL	= http://www.sqlite.org/$(SQLITE_DIST)
 CYRUS_SASL_URL	= ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/$(CYRUS_SASL_DIST)
 
@@ -117,12 +117,12 @@ all: dirs-create bdb-install apr-install iconv-install apr-util-install \
 
 # Use these to start a build from the beginning.
 reset: dirs-reset bdb-reset apr-reset iconv-reset apr-util-reset \
-	httpd-reset neon-reset serf-reset sqlite-reset cyrus-sasl-reset \
-	svn-reset
+	httpd-reset neon-reset serf-reset serf-old-reset sqlite-reset \
+	cyrus-sasl-reset svn-reset
 
 # Use to save disc space.
 clean: bdb-clean apr-clean iconv-clean apr-util-clean httpd-clean \
-	neon-clean serf-clean cyrus-sasl-clean svn-clean
+	neon-clean serf-clean serf-old-clean cyrus-sasl-clean svn-clean
 
 # Nukes everything (including installed binaries!)
 # Use this to start ALL OVER AGAIN! Use with caution!
@@ -548,7 +548,7 @@ endif
 # configure neon
 $(NEON_OBJDIR)/.configured: $(NEON_OBJDIR)/.retrieved
 	cd $(NEON_SRCDIR) && ./autogen.sh
-	if [ -n "$(KRB5_CONFIG_PATH)" -a -d "$(KRB5_CONFIG_PATH)" ]; then \
+	if [ -n "$(KRB5_CONFIG_PATH)" ] && [ -d "$(KRB5_CONFIG_PATH)" ]; then \
 		cp $(KRB5_CONFIG_PATH)/krb5-config $(NEON_OBJDIR); \
 		chmod +x $(NEON_OBJDIR)/krb5-config; \
 	fi
@@ -720,7 +720,7 @@ cyrus-sasl-reset:
 		rm -f $(CYRUS_SASL_OBJDIR)/$(f);)
 
 cyrus-sasl-clean:
-	-(cd $(CYRUS_SASL_OBJDIR) && make clean)
+	-(cd $(CYRUS_SASL_OBJDIR) && make distclean)
 
 # fetch distfile for cyrus-sasl
 $(DISTDIR)/$(CYRUS_SASL_DIST):
@@ -736,12 +736,21 @@ $(CYRUS_SASL_OBJDIR)/.retrieved: $(DISTDIR)/$(CYRUS_SASL_DIST)
 		> $(CYRUS_SASL_SRCDIR)/plugins/digestmd5.c.patched
 	mv $(CYRUS_SASL_SRCDIR)/plugins/digestmd5.c.patched \
 		$(CYRUS_SASL_SRCDIR)/plugins/digestmd5.c
+ifeq ($(UNAME),OpenBSD)
+	# Fixes GSSAPI support on OpenBSD, which hasn't got libroken:
+	for f in `grep -l -R -- -lroken $(CYRUS_SASL_SRCDIR)`; do \
+		sed -e 's/-lroken//g' < $$f > $$f.tmp && \
+		mv $$f.tmp $$f; \
+	done
+	chmod +x $(CYRUS_SASL_SRCDIR)/configure
+endif
 	touch $@
 
 # configure cyrus-sasl
 $(CYRUS_SASL_OBJDIR)/.configured: $(CYRUS_SASL_OBJDIR)/.retrieved
 	cd $(CYRUS_SASL_OBJDIR) \
-		&& env CFLAGS="-g" $(CYRUS_SASL_SRCDIR)/configure \
+		&& env CFLAGS="-g" CPPFLAGS="-I/usr/include/kerberosV" \
+		$(CYRUS_SASL_SRCDIR)/configure \
 		--with-dbpath=$(PREFIX)/cyrus-sasl/etc/sasldb2 \
 		--with-plugindir=$(PREFIX)/cyrus-sasl/lib/sasl2 \
 		--with-configdir=$(PREFIX)/cyrus-sasl/lib/sasl2 \
@@ -801,7 +810,7 @@ $(SVN_OBJDIR)/.retrieved:
 		branchdir="$(BRANCH)"; \
 		co="co"; \
 	fi; \
-	if [ ! -d $(SVN_WC) ]; then \
+	if [ ! -d $(SVN_WC) ] && [ ! -h $(SVN_WC) ]; then \
 		svn $${co} $(SUBVERSION_REPOS_URL)/$${branchdir} \
 			$(SVN_WC); \
 	fi
@@ -810,19 +819,33 @@ $(SVN_OBJDIR)/.retrieved:
 ifeq ($(BRANCH_MAJOR),1.5)
 BDB_FLAG=$(PREFIX)/bdb
 SERF_FLAG=--with-serf="$(PREFIX)/serf-old"
+MOD_DAV_SVN=modules/mod_dav_svn.so
+MOD_AUTHZ_SVN=modules/mod_authz_svn.so
 else ifeq ($(BRANCH_MAJOR),1.4)
 BDB_FLAG=$(PREFIX)/bdb
+MOD_DAV_SVN=modules/mod_dav_svn.so
+MOD_AUTHZ_SVN=modules/mod_authz_svn.so
 else ifeq ($(BRANCH_MAJOR),1.3)
 BDB_FLAG=$(PREFIX)/bdb
+MOD_DAV_SVN=modules/mod_dav_svn.so
+MOD_AUTHZ_SVN=modules/mod_authz_svn.so
 else ifeq ($(BRANCH_MAJOR),1.2)
 BDB_FLAG=$(PREFIX)/bdb
+MOD_DAV_SVN=modules/mod_dav_svn.so
+MOD_AUTHZ_SVN=modules/mod_authz_svn.so
 else ifeq ($(BRANCH_MAJOR),1.1)
 BDB_FLAG=$(PREFIX)/bdb
+MOD_DAV_SVN=modules/mod_dav_svn.so
+MOD_AUTHZ_SVN=modules/mod_authz_svn.so
 else ifeq ($(BRANCH_MAJOR),1.0)
 BDB_FLAG=$(PREFIX)/bdb
+MOD_DAV_SVN=modules/mod_dav_svn.so
+MOD_AUTHZ_SVN=modules/mod_authz_svn.so
 else
 BDB_FLAG=db.h:$(PREFIX)/bdb/include:$(PREFIX)/bdb/lib:db-$(BDB_MAJOR_VER)
 SERF_FLAG=--with-serf="$(PREFIX)/serf"
+MOD_DAV_SVN=modules/svn-$(WC)/mod_dav_svn.so
+MOD_AUTHZ_SVN=modules/svn-$(WC)/mod_authz_svn.so
 endif
 
 ifeq ($(ENABLE_JAVA_BINDINGS),yes)
@@ -925,8 +948,8 @@ httpd-conf:
 	echo "# httpd config for make check" > $(HTTPD_CHECK_CONF)
 	echo "ServerRoot \"$(PREFIX)/httpd\"" >> $(HTTPD_CHECK_CONF)
 	echo "Listen localhost:$(HTTPD_CHECK_PORT)" >> $(HTTPD_CHECK_CONF)
-	echo "LoadModule dav_svn_module modules/svn-$(WC)/mod_dav_svn.so" >> $(HTTPD_CHECK_CONF)
-	echo "LoadModule authz_svn_module modules/svn-$(WC)/mod_authz_svn.so" >> $(HTTPD_CHECK_CONF)
+	echo "LoadModule dav_svn_module $(MOD_DAV_SVN)" >> $(HTTPD_CHECK_CONF)
+	echo "LoadModule authz_svn_module $(MOD_AUTHZ_SVN)" >> $(HTTPD_CHECK_CONF)
 	echo "DocumentRoot "$(PREFIX)/httpd/htdocs"" >> $(HTTPD_CHECK_CONF)
 	echo "# These two Locations are used for 'make check'" >> $(HTTPD_CHECK_CONF)
 	echo "<Directory />" >> $(HTTPD_CHECK_CONF)
@@ -965,6 +988,10 @@ httpd-conf:
 # We need this to make sure some targets below pick up the right libraries
 LD_LIBRARY_PATH=$(PREFIX)/apr/lib:$(PREFIX)/iconv/lib:$(PREFIX)/bdb/lib:$(PREFIX)/neon/lib:$(PREFIX)/serf/lib:$(PREFIX)/sqlite/lib:$(PREFIX)/cyrus-sasl/lib:$(PREFIX)/iconv/lib:$(PREFIX)/svn-$(WC)/lib
 
+.PHONY: libpath
+libpath:
+	@echo export LD_LIBRARY_PATH=$(LD_LIBRARY_PATH):$$LD_LIBRARY_PATH
+
 .PHONY: start-svnserve stop-svnserve start-httpd stop-httpd
 
 HTTPD_CMD = env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
@@ -973,7 +1000,7 @@ HTTPD_CMD = env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
 HTTPD_START_CMD = $(HTTPD_CMD) -k start
 HTTPD_STOP_CMD = $(HTTPD_CMD) -k stop
 
-SVNSERVE_START_CMD = $(svn_builddir)/subversion/svnserve/svnserve \
+SVNSERVE_START_CMD = $(SVN_PREFIX)/bin/svnserve \
 			--listen-host 127.0.0.1 \
 			--pid-file $(PWD)/svnserve-$(WC).pid \
 			-d -r $(svn_builddir)/subversion/tests/cmdline
@@ -998,45 +1025,62 @@ stop-svnserve:
 
 # run tests in parallel
 PARALLEL=PARALLEL=1 CLEANUP=1
+TEST_LOGS=tests.log fails.log
 
 svn-check-neon: httpd-conf $(SVN_OBJDIR)/.compiled $(SVN_OBJDIR)/.bindings-compiled
 	$(HTTPD_START_CMD)
-	cd $(svn_builddir) && make check FS_TYPE=fsfs \
+	-cd $(svn_builddir) && make check FS_TYPE=fsfs \
 	       BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=neon \
 	       $(PARALLEL)
-	ln -f $(svn_builddir)/tests.log $(svn_builddir)/tests.log.ra_neon-fsfs
-	cd $(svn_builddir) && make check FS_TYPE=bdb \
+	-$(foreach log, $(TEST_LOGS), \
+		test -f $(svn_builddir)/$(log) && cp -f $(svn_builddir)/$(log) \
+			$(svn_builddir)/$(log).$@-fsfs;)
+	-cd $(svn_builddir) && make check FS_TYPE=bdb \
 	       BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=neon \
 	       $(PARALLEL)
-	ln -f $(svn_builddir)/tests.log $(svn_builddir)/tests.log.ra_neon-bdb
+	-$(foreach log, $(TEST_LOGS), \
+		test -f $(svn_builddir)/$(log) && cp -f $(svn_builddir)/$(log) \
+			$(svn_builddir)/$(log).$@-bdb;)
 	$(HTTPD_STOP_CMD)
 
 svn-check-serf: httpd-conf $(SVN_OBJDIR)/.compiled $(SVN_OBJDIR)/.bindings-compiled
 	$(HTTPD_START_CMD)
-	cd $(svn_builddir) && make check FS_TYPE=fsfs \
+	-cd $(svn_builddir) && make check FS_TYPE=fsfs \
 	       BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=serf \
 	       $(PARALLEL)
-	ln -f $(svn_builddir)/tests.log $(svn_builddir)/tests.log.ra_serf-fsfs
-	cd $(svn_builddir) && make check FS_TYPE=bdb \
+	-$(foreach log, $(TEST_LOGS), \
+		test -f $(svn_builddir)/$(log) && cp -f $(svn_builddir)/$(log) \
+			$(svn_builddir)/$(log).$@-fsfs;)
+	-cd $(svn_builddir) && make check FS_TYPE=bdb \
 	       BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=serf \
 	       $(PARALLEL)
-	ln -f $(svn_builddir)/tests.log $(svn_builddir)/tests.log.ra_serf-bdb
+	-$(foreach log, $(TEST_LOGS), \
+		test -f $(svn_builddir)/$(log) && cp -f $(svn_builddir)/$(log) \
+			$(svn_builddir)/$(log).$@-bdb;)
 	$(HTTPD_STOP_CMD)
 
 svn-check-local:
-	cd $(svn_builddir) && make check FS_TYPE=fsfs $(PARALLEL)
-	ln -f $(svn_builddir)/tests.log $(svn_builddir)/tests.log.ra_local-fsfs
-	cd $(svn_builddir) && make check FS_TYPE=bdb $(PARALLEL)
-	ln -f $(svn_builddir)/tests.log $(svn_builddir)/tests.log.ra_local-bdb
+	-cd $(svn_builddir) && make check FS_TYPE=fsfs $(PARALLEL)
+	-$(foreach log, $(TEST_LOGS), \
+		test -f $(svn_builddir)/$(log) && cp -f $(svn_builddir)/$(log) \
+			$(svn_builddir)/$(log).$@-fsfs;)
+	-cd $(svn_builddir) && make check FS_TYPE=bdb $(PARALLEL)
+	-$(foreach log, $(TEST_LOGS), \
+		test -f $(svn_builddir)/$(log) && cp -f $(svn_builddir)/$(log) \
+			$(svn_builddir)/$(log).$@-bdb;)
 
 svn-check-svn:
 	$(SVNSERVE_START_CMD)
-	cd $(svn_builddir) && make check FS_TYPE=fsfs BASE_URL=svn://127.0.0.1 \
-		 $(PARALLEL)
-	ln -f $(svn_builddir)/tests.log $(svn_builddir)/tests.log.ra_svn-fsfs
-	cd $(svn_builddir) && make check FS_TYPE=bdb BASE_URL=svn://127.0.0.1 \
-		 $(PARALLEL)
-	ln -f $(svn_builddir)/tests.log $(svn_builddir)/tests.log.ra_svn-bdb
+	-cd $(svn_builddir) && make check FS_TYPE=fsfs \
+		BASE_URL=svn://127.0.0.1 $(PARALLEL)
+	-$(foreach log, $(TEST_LOGS), \
+		test -f $(svn_builddir)/$(log) && cp -f $(svn_builddir)/$(log) \
+			$(svn_builddir)/$(log).$@-fsfs;)
+	-cd $(svn_builddir) && make check FS_TYPE=bdb \
+		BASE_URL=svn://127.0.0.1 $(PARALLEL)
+	-$(foreach log, $(TEST_LOGS), \
+		test -f $(svn_builddir)/$(log) && cp -f $(svn_builddir)/$(log) \
+			$(svn_builddir)/$(log).$@-bdb;)
 	$(SVNSERVE_STOP_CMD)
 
 .PHONY: svn-check-swig-pl svn-check-swig-py svn-check-swig-rb svn-check-javahl
@@ -1049,20 +1093,40 @@ RUBYLIB=$(SVN_PREFIX)/lib/ruby/site_ruby$(shell grep \
 	grep ^svn_cv_ruby_sitedir_libsuffix $(svn_builddir)/config.log | \
 	cut -d'=' -f2)
 svn-check-swig-pl:
-	cd $(svn_builddir) && \
-		env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) make check-swig-pl
+	-if [ $(ENABLE_PERL_BINDINGS) = yes ]; then \
+		(cd $(svn_builddir) && \
+			env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
+			make check-swig-pl 2>&1) | \
+				tee $(svn_builddir)/tests.log.bindings.pl; \
+	fi
+
 svn-check-swig-py:
-	cd $(svn_builddir) && \
-		env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) make check-swig-py
+	-if [ $(ENABLE_PYTHON_BINDINGS) = yes ]; then \
+		(cd $(svn_builddir) && \
+			env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
+			make check-swig-py 2>&1) | \
+				tee $(svn_builddir)/tests.log.bindings.py; \
+	fi
+
+# We add the svn prefix to PATH here because the ruby tests
+# attempt to start an svnserve binary found in PATH.
 svn-check-swig-rb:
-	cd $(svn_builddir)/subversion/bindings/swig/ruby/test && \
-		env RUBYLIB=$(RUBYLIB) \
-		LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
-		ruby run-test.rb --verbose=verbose
+	-if [ $(ENABLE_RUBY_BINDINGS) = yes ]; then \
+		(cd $(svn_builddir)/subversion/bindings/swig/ruby/test && \
+			env RUBYLIB=$(RUBYLIB) \
+			LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
+			PATH=$(SVN_PREFIX)/bin:$$PATH \
+			ruby run-test.rb --verbose=normal 2>&1) | \
+				tee $(svn_builddir)/tests.log.bindings.rb; \
+	fi
+
 svn-check-javahl:
-	cd $(svn_builddir) && \
-		env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
-		make check-javahl
+	-if [ $(ENABLE_JAVA_BINDINGS) = yes ]; then \
+		(cd $(svn_builddir) && \
+			env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
+			make check-javahl 2>&1) | \
+				tee $(svn_builddir)/tests.log.bindings.javahl; \
+	fi
 
 svn-check: svn-check-local svn-check-svn svn-check-neon svn-check-serf svn-check-bindings
 
@@ -1097,7 +1161,7 @@ endif
 	@echo "openssl:    `openssl version | cut -d' ' -f2`"
 	@echo "swig:       `swig -version | grep Version | cut -d' ' -f3`"
 	@echo "python:     `python --version 2>&1 | cut -d' ' -f2`"
-	@echo "perl:       `perl -version | grep ^This | cut -d' ' -f4 | sed -e 's/^v//'`"
+	@echo "perl:       `eval \`perl -V:version\`; echo $$version`"
 	@echo "ruby:       `ruby --version | cut -d' ' -f2`"
 ifeq ($(ENABLE_JAVA_BINDINGS),yes)
 	@echo "java:       `java -version 2>&1 | grep version | cut -d' ' -f3  | sed -e 's/\"//g'`"

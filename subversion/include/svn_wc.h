@@ -1039,6 +1039,9 @@ typedef enum svn_wc_notify_action_t
    * which is unable to be operated on.  @since New in 1.6. */
   svn_wc_notify_failed_external,
 
+  /** Starting an update operation.  @since New in 1.7. */
+  svn_wc_notify_update_started,
+
   /** An update tried to add a file or directory at path but an
    * unversioned obstruction was found.  @since New in 1.7. */
   svn_wc_notify_update_obstruction,

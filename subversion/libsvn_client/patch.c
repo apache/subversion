@@ -939,9 +939,9 @@ match_hunk(svn_boolean_t *matched, target_content_info_t *content_info,
  * Return the line at which HUNK was matched in *MATCHED_LINE.
  * If the hunk did not match at all, set *MATCHED_LINE to zero.
  * If the hunk matched multiple times, and MATCH_FIRST is TRUE,
- * return the line number at which the first match occured in *MATCHED_LINE.
+ * return the line number at which the first match occurred in *MATCHED_LINE.
  * If the hunk matched multiple times, and MATCH_FIRST is FALSE,
- * return the line number at which the last match occured in *MATCHED_LINE.
+ * return the line number at which the last match occurred in *MATCHED_LINE.
  * If IGNORE_WHITESPACE is set, ignore whitespace during the matching.
  * If MATCH_MODIFIED is TRUE, match the modified hunk text,
  * rather than the original hunk text.
@@ -1313,7 +1313,7 @@ reject_hunk(patch_target_t *target, target_content_info_t *content_info,
     {
       const char *prop_header;
         
-      /* ### Print 'Added', 'Deleted' or 'Modified' instead of 'Propperty'.
+      /* ### Print 'Added', 'Deleted' or 'Modified' instead of 'Property'.
        */
       prop_header = apr_psprintf(pool, "Property: %s\n", prop_name);
       len = strlen(prop_header);
@@ -2754,10 +2754,8 @@ svn_client_patch(const char *patch_abspath,
                             _("strip count must be positive"));
 
   if (svn_path_is_url(local_abspath))
-    return svn_error_return(svn_error_createf(SVN_ERR_ILLEGAL_TARGET,
-                                              NULL,
-                                              _("'%s' is not a local path"),
-                                              local_abspath));
+    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                             _("'%s' is not a local path"), local_abspath);
 
   baton.patch_abspath = patch_abspath;
   baton.abs_wc_path = local_abspath;

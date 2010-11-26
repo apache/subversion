@@ -350,3 +350,37 @@ Node-copyfrom-path: trunk/X
 
 
 
+Revision-number: 4
+Prop-content-length: 101
+Content-length: 101
+
+K 10
+svn:author
+V 6
+pburba
+K 8
+svn:date
+V 27
+2010-11-19T17:10:31.620281Z
+K 7
+svn:log
+V 1
+m
+PROPS-END
+
+Node-path: trunk/H/Z
+Node-kind: dir
+Node-action: add
+Node-copyfrom-rev: 3
+Node-copyfrom-path: trunk/A
+
+
+Node-path: trunk/H/Z/B
+Node-kind: dir
+Node-action: replace
+Prop-content-length: 10
+Content-length: 10
+
+PROPS-END
+
+

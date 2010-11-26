@@ -1351,6 +1351,7 @@ def create_default_options():
 def _create_parser():
   """Return a parser for our test suite."""
   # set up the parser
+  _default_http_library = 'serf'
   usage = 'usage: %prog [options] [<test> ...]'
   parser = optparse.OptionParser(usage=usage)
   parser.add_option('-l', '--list', action='store_true', dest='list_tests',
@@ -1381,7 +1382,7 @@ def _create_parser():
   parser.add_option('--http-library', action='store',
                     help="Make svn use this DAV library (neon or serf) if " +
                          "it supports both, else assume it's using this " +
-                         "one; the default is neon")
+                         "one; the default is " + _default_http_library)
   parser.add_option('--server-minor-version', type='int', action='store',
                     help="Set the minor version for the server ('4', " +
                          "'5', or '6').")
@@ -1406,7 +1407,7 @@ def _create_parser():
   parser.set_defaults(
         server_minor_version=7,
         url=file_scheme_prefix + pathname2url(os.path.abspath(os.getcwd())),
-        http_library='serf')
+        http_library=_default_http_library)
 
   return parser
 

@@ -253,6 +253,7 @@ build_info_for_unversioned(svn_info_t **info,
    RECEIVER on all children of DIR, but none of their children; if
    svn_depth_files, then invoke RECEIVER on file children of DIR but
    not on subdirectories; if svn_depth_infinity, recurse fully.
+   DIR is a relpath, relative to the root of RA_SESSION.
 */
 static svn_error_t *
 push_dir_info(svn_ra_session_t *ra_session,
@@ -288,7 +289,7 @@ push_dir_info(svn_ra_session_t *ra_session,
       if (ctx->cancel_func)
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
-      path = svn_uri_join(dir, name, subpool);
+      path = svn_relpath_join(dir, name, subpool);
       URL  = svn_path_url_add_component2(session_URL, name, subpool);
 
       fs_path = svn_uri_is_child(repos_root, URL, subpool);

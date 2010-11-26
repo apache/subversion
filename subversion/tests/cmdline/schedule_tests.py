@@ -37,7 +37,7 @@ SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Wimp = svntest.testcase.Wimp
 Item = svntest.wc.StateItem
-
+exp_noop_up_out = svntest.actions.expected_noop_update_output
 
 ######################################################################
 # Tests
@@ -543,7 +543,7 @@ def status_add_deleted_directory(sbox):
 
   # Update will *not* remove the entry for A despite it being marked
   # deleted.
-  svntest.actions.run_and_verify_svn(None, ['At revision 2.\n'], [],
+  svntest.actions.run_and_verify_svn(None, exp_noop_up_out(2), [],
                                      'up', wc_dir)
   expected_status.tweak('', 'iota', wc_rev=2)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
