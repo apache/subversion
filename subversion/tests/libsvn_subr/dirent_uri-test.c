@@ -2914,16 +2914,9 @@ test_fspath_join(apr_pool_t *pool)
 
   for (i = 0; i < COUNT_OF(joins); i++ )
     {
-      const char *base = joins[i][0];
-      const char *comp = joins[i][1];
-      const char *expect = joins[i][2];
-      char *result = svn_fspath__join(base, comp, pool);
+      char *result = svn_fspath__join(joins[i][0], joins[i][1], pool);
 
-      if (strcmp(result, expect))
-        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                                 "svn_fspath__join(\"%s\", \"%s\") returned "
-                                 "\"%s\". expected \"%s\"",
-                                 base, comp, result, expect);
+      SVN_TEST_STRING_ASSERT(result, joins[i][2]);
     }
 
   return SVN_NO_ERROR;
@@ -2960,15 +2953,7 @@ test_fspath_is_child(apr_pool_t *pool)
           const char *remainder
             = svn_fspath__is_child(paths[i], paths[j], pool);
 
-          if (((remainder) && (! remainders[i][j]))
-              || ((! remainder) && (remainders[i][j]))
-              || (remainder && strcmp(remainder, remainders[i][j])))
-            return svn_error_createf
-              (SVN_ERR_TEST_FAILED, NULL,
-               "svn_fspath__is_child (%s, %s) returned '%s' instead of '%s'",
-               paths[i], paths[j],
-               remainder ? remainder : "(null)",
-               remainders[i][j] ? remainders[i][j] : "(null)" );
+          SVN_TEST_STRING_ASSERT(remainder, remainders[i][j]);
         }
     }
 
@@ -2992,16 +2977,9 @@ test_fspath_basename(apr_pool_t *pool)
 
   for (i = 0; i < COUNT_OF(tests); i++)
     {
-      const char *path = tests[i].path;
-      const char *expect = tests[i].result;
-      const char *result
-        = svn_fspath__basename(path, pool);
+      const char *result = svn_fspath__basename(tests[i].path, pool);
 
-      if (strcmp(result, expect))
-        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                                 "svn_fspath__basename(\"%s\") returned "
-                                 "\"%s\". expected \"%s\"",
-                                 path, result, expect);
+      SVN_TEST_STRING_ASSERT(result, tests[i].result);
     }
 
   return SVN_NO_ERROR;
