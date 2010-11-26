@@ -129,14 +129,6 @@ count_components(const char *path)
 
 
 /*** Public interfaces ***/
-
-/* ### Temporary definition, until this is available in dirent_uri.h */
-#define svn_fspath__get_longest_ancestor(path1, path2, pool) \
-  apr_pstrcat((pool), \
-              "/", \
-              svn_relpath_get_longest_ancestor((path1)+1, (path2)+1, (pool)), \
-              NULL)
-
 svn_error_t *
 svn_delta_path_driver(const svn_delta_editor_t *editor,
                       void *edit_baton,
@@ -225,7 +217,7 @@ svn_delta_path_driver(const svn_delta_editor_t *editor,
       /*** Step C - Open any directories between the common ancestor
            and the parent of the current path. ***/
       if (*path == '/')
-        svn_uri_split(&pdir, &bname, path, iterpool);
+        svn_fspath__split(&pdir, &bname, path, iterpool);
       else
         svn_relpath_split(&pdir, &bname, path, iterpool);
       if (strlen(pdir) > common_len)
