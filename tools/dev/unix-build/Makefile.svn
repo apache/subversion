@@ -720,7 +720,7 @@ cyrus-sasl-reset:
 		rm -f $(CYRUS_SASL_OBJDIR)/$(f);)
 
 cyrus-sasl-clean:
-	-(cd $(CYRUS_SASL_OBJDIR) && make clean)
+	-(cd $(CYRUS_SASL_OBJDIR) && make distclean)
 
 # fetch distfile for cyrus-sasl
 $(DISTDIR)/$(CYRUS_SASL_DIST):
