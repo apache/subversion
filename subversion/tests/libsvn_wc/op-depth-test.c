@@ -1203,7 +1203,7 @@ insert_dirs(wc_baton_t *b,
   return SVN_NO_ERROR;
 }
 
-static int count_rows(nodes_row_t *rows)
+static apr_int64_t count_rows(nodes_row_t *rows)
 {
   nodes_row_t *first = rows;
   while(rows->local_relpath)
@@ -1221,7 +1221,8 @@ base_dir_insert_remove(wc_baton_t *b,
   nodes_row_t *after;
   const char *dir_abspath = svn_path_join(b->wc_abspath, local_relpath,
                                           b->pool);
-  int i, num_before = count_rows(before), num_added = count_rows(added);
+  int i;
+  apr_int64_t num_before = count_rows(before), num_added = count_rows(added);
 
   SVN_ERR(insert_dirs(b, before));
 
