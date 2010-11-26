@@ -21,6 +21,9 @@
  * ====================================================================
  */
 
+/* To avoid warnings... */
+#define SVN_DEPRECATED
+
 #include <apr_pools.h>
 #include <apr_general.h>
 
