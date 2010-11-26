@@ -2961,27 +2961,92 @@ test_fspath_is_child(apr_pool_t *pool)
 }
 
 static svn_error_t *
-test_fspath_basename(apr_pool_t *pool)
+test_fspath_dirname_basename_split(apr_pool_t *pool)
 {
   int i;
 
-  struct {
+  static const struct {
     const char *path;
-    const char *result;
+    const char *dirname;
+    const char *basename;
   } tests[] = {
-    { "/", "" },
-    { "/a", "a" },
-    { "/abc", "abc" },
-    { "/x/abc", "abc" },
+    { "/", "/", "" },
+    { "/a", "/", "a" },
+    { "/abc", "/", "abc" },
+    { "/x/abc", "/x", "abc" },
+    { "/x/y/abc", "/x/y", "abc" },
   };
 
   for (i = 0; i < COUNT_OF(tests); i++)
     {
-      const char *result = svn_fspath__basename(tests[i].path, pool);
+      const char *result_dirname, *result_basename;
 
-      SVN_TEST_STRING_ASSERT(result, tests[i].result);
+      result_dirname = svn_fspath__dirname(tests[i].path, pool);
+      SVN_TEST_STRING_ASSERT(result_dirname, tests[i].dirname);
+
+      result_basename = svn_fspath__basename(tests[i].path, pool);
+      SVN_TEST_STRING_ASSERT(result_basename, tests[i].basename);
+
+      svn_fspath__split(&result_dirname, &result_basename, tests[i].path,
+                        pool);
+      SVN_TEST_STRING_ASSERT(result_dirname, tests[i].dirname);
+      SVN_TEST_STRING_ASSERT(result_basename, tests[i].basename);
     }
 
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_fspath_get_longest_ancestor(apr_pool_t *pool)
+{
+  int i;
+
+  /* Paths to test and their expected results.  Same as in
+   * test_relpath_get_longest_ancestor() but with '/' prefix. */
+  struct {
+    const char *path1;
+    const char *path2;
+    const char *result;
+  } tests[] = {
+    { "/foo",            "/foo/bar",         "/foo" },
+    { "/foo/bar",        "/foo/bar",         "/foo/bar" },
+    { "/",               "/foo",             "/" },
+    { "/",               "/foo",             "/" },
+    { "/",               "/.bar",            "/" },
+    { "/.bar",           "/",                "/" },
+    { "/foo/bar",        "/foo",             "/foo" },
+    { "/foo/bar",        "/foo",             "/foo" },
+    { "/rif",            "/raf",             "/" },
+    { "/foo",            "/bar",             "/" },
+    { "/foo",            "/foo/bar",         "/foo" },
+    { "/foo.",           "/foo./.bar",       "/foo." },
+    { "/",               "/",                "/" },
+    { "/http:/test",     "/http:/test",      "/http:/test" },
+    { "/http:/test",     "/http:/taste",     "/http:" },
+    { "/http:/test",     "/http:/test/foo",  "/http:/test" },
+    { "/http:/test",     "/file:/test/foo",  "/" },
+    { "/http:/test",     "/http:/testF",     "/http:" },
+    { "/file:/A/C",      "/file:/B/D",       "/file:" },
+    { "/file:/A/C",      "/file:/A/D",       "/file:/A" },
+    { "/X:/foo",         "/X:",              "/X:" },
+    { "/X:/folder1",     "/X:/folder2",      "/X:" },
+    { "/X:",             "/X:foo",           "/" },
+    { "/X:foo",          "/X:bar",           "/" },
+  };
+
+  for (i = 0; i < COUNT_OF(tests); i++)
+    {
+      const char *result;
+
+      result = svn_fspath__get_longest_ancestor(tests[i].path1, tests[i].path2,
+                                                pool);
+      SVN_TEST_STRING_ASSERT(tests[i].result, result);
+
+      /* changing the order of the paths should return the same result */
+      result = svn_fspath__get_longest_ancestor(tests[i].path2, tests[i].path1,
+                                                pool);
+      SVN_TEST_STRING_ASSERT(tests[i].result, result);
+    }
   return SVN_NO_ERROR;
 }
 
@@ -3091,7 +3156,9 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test svn_fspath__join"),
     SVN_TEST_PASS2(test_fspath_is_child,
                    "test svn_fspath__is_child"),
-    SVN_TEST_PASS2(test_fspath_basename,
-                   "test svn_fspath__basename"),
+    SVN_TEST_PASS2(test_fspath_dirname_basename_split,
+                   "test svn_fspath__dirname/basename/split"),
+    SVN_TEST_PASS2(test_fspath_get_longest_ancestor,
+                   "test svn_fspath__get_longest_ancestor"),
     SVN_TEST_NULL
   };
