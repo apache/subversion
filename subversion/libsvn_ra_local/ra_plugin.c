@@ -928,7 +928,7 @@ svn_ra_local__do_check_path(svn_ra_session_t *session,
 {
   svn_ra_local__session_baton_t *sess = session->priv;
   svn_fs_root_t *root;
-  const char *abs_path = svn_uri_join(sess->fs_path->data, path, pool);
+  const char *abs_path = svn_fspath__join(sess->fs_path->data, path, pool);
 
   if (! SVN_IS_VALID_REVNUM(revision))
     SVN_ERR(svn_fs_youngest_rev(&revision, sess->fs, pool));
