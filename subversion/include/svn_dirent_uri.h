@@ -322,10 +322,10 @@ svn_relpath_dirname(const char *relpath,
  *
  * If @a dirpath or @a base_name is NULL, then don't set that one.
  *
- * Either @a dirpath or @a base_name may be @a dirent's own address, but they
+ * Either @a dirpath or @a base_name may be @a uri's own address, but they
  * may not both be the same address, or the results are undefined.
  *
- * If @a dirent has two or more components, the separator between @a dirpath
+ * If @a uri has two or more components, the separator between @a dirpath
  * and @a base_name is not included in either of the new names.
  *
  *   examples:
@@ -344,11 +344,11 @@ svn_uri_split(const char **dirpath,
               apr_pool_t *pool);
 
 /** Get the basename of the specified canonicalized @a uri.  The
- * basename is defined as the last component of the uri.  If the @a dirent
+ * basename is defined as the last component of the uri.  If the @a uri
  * is root then that is returned. Otherwise, the returned value will have no
  * slashes in it.
  *
- * Example: svn_dirent_basename("http://server/foo/bar") -> "bar"
+ * Example: svn_uri_basename("http://server/foo/bar") -> "bar"
  *
  * The returned basename will be allocated in @a pool. If @a pool is NULL
  * a pointer to the basename in @a uri is returned.
@@ -362,9 +362,9 @@ svn_uri_basename(const char *uri,
                  apr_pool_t *pool);
 
 /** Get the dirname of the specified canonicalized @a uri, defined as
- * the dirent with its basename removed.
+ * the uri with its basename removed.
  *
- * If @a dirent is root  (e.g. "http://server"), it is returned
+ * If @a uri is root (e.g. "http://server"), it is returned
  * unchanged.
  *
  * The returned dirname will be allocated in @a pool.
@@ -745,7 +745,7 @@ svn_dirent_condense_targets(const char **pcommon,
  *     to an array of targets relative to @a *pcommon, and if @a
  *     remove_redundancies is TRUE, omit any uris that are descendants of
  *     another uri in @a targets.  If *pcommon is empty, @a
- *     *pcondensed_targets will contain absolute dirents; redundancies
+ *     *pcondensed_targets will contain absolute uris; redundancies
  *     can still be removed.  If @a pcondensed_targets is NULL, leave it
  *     alone.
  *
@@ -900,7 +900,7 @@ svn_fspath__is_child(const char *parent_fspath,
 
 /** Return the relative path part of @a child_fspath that is below
  * @a parent_fspath, or just "" if @a parent_fspath is equal to
- * @a child_fspath. If @a child_fspath is not below @a parent_relpath,
+ * @a child_fspath. If @a child_fspath is not below @a parent_fspath,
  * return @a child_fspath.
  *
  * ### Returning the child in the no-match case is a bad idea.
