@@ -1845,8 +1845,8 @@ test_relpath_get_longest_ancestor(apr_pool_t *pool)
     {
       const char *retval;
 
-      retval = svn_uri_get_longest_ancestor(tests[i].path1, tests[i].path2,
-                                             pool);
+      retval = svn_relpath_get_longest_ancestor(tests[i].path1, tests[i].path2,
+                                                pool);
 
       if (strcmp(tests[i].result, retval))
         return svn_error_createf
