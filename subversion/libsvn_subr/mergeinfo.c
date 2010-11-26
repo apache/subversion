@@ -1760,7 +1760,7 @@ svn_mergeinfo__remove_prefix_from_catalog(svn_mergeinfo_catalog_t *out_catalog,
       apr_ssize_t padding = 0;
 
       SVN_ERR_ASSERT(klen >= prefix_len);
-      SVN_ERR_ASSERT(svn_uri_is_ancestor(prefix_path, original_path));
+      SVN_ERR_ASSERT(svn_fspath__is_ancestor(prefix_path, original_path));
 
       /* If the ORIGINAL_PATH doesn't match the PREFIX_PATH exactly
          and we're not simply removing a single leading slash (such as
