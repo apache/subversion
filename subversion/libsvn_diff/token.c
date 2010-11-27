@@ -204,32 +204,10 @@ find_identical_prefix(svn_boolean_t *reached_one_eof,
 
   *prefix_lines = 0;
   *reached_one_eof = FALSE;
-
-  /* Read first token from every datasource, and check if it matches. */
-  for (i = 0; i < datasource_len; i++)
+  while (1)
     {
-      SVN_ERR(vtable->datasource_get_next_token(NULL, &token[i],
-                                                diff_baton, datasource[i]));
-      *reached_one_eof = *reached_one_eof || token[i] == NULL;
-    }
-  if (*reached_one_eof)
-    {
-      /* We're done. Push back tokens that we may have read too much. */
-      for (i = 0; i < datasource_len; i++)
-        if (token[i] != NULL)
-          SVN_ERR(vtable->token_pushback_prefix(diff_baton, token[i], datasource[i]));
-      return SVN_NO_ERROR;
-    }
-  for (i = 1, is_match = TRUE; is_match && i < datasource_len; i++)
-    {
-      SVN_ERR(vtable->token_compare(diff_baton, token[0], token[i], &rv));
-      is_match = is_match && rv == 0;
-    }
-
-  /* While tokens match up, continue getting tokens and matching. */
-  while (is_match)
-    {
-      (*prefix_lines)++;
+      /* Keep getting tokens and matching them, until there are no tokens
+         left, or we encounter a non-matching token. */
       for (i = 0; i < datasource_len; i++)
         {
           SVN_ERR(vtable->datasource_get_next_token(NULL, &token[i],
@@ -237,13 +215,21 @@ find_identical_prefix(svn_boolean_t *reached_one_eof,
           *reached_one_eof = *reached_one_eof || token[i] == NULL;
         }
       if (*reached_one_eof)
-        break;
+        {
+          break;
+        }
       else
-        for (i = 1, is_match = TRUE; is_match && i < datasource_len; i++)
-          {
-            SVN_ERR(vtable->token_compare(diff_baton, token[0], token[i], &rv));
-            is_match = is_match && rv == 0;
-          }
+        {
+          for (i = 1, is_match = TRUE; is_match && i < datasource_len; i++)
+            {
+              SVN_ERR(vtable->token_compare(diff_baton, token[0], token[i], &rv));
+              is_match = is_match && rv == 0;
+            }
+          if (is_match)
+            (*prefix_lines)++;
+          else
+            break;
+        }
     }
 
   /* If all files reached their end (i.e. are fully identical), we're done. */
