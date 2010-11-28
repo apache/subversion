@@ -1668,6 +1668,22 @@ svn_wc_prop_list2(apr_hash_t **props,
                                                    scratch_pool));
 }
 
+svn_error_t *
+svn_wc_prop_list_recursive(svn_wc_context_t *wc_ctx,
+                           const char *local_abspath,
+                           svn_depth_t depth,
+                           svn_wc_prop_list_receiver_func_t receiver_func,
+                           void *receiver_baton,
+                           apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(depth == svn_depth_infinity); /* ### TODO other depths */
+
+  return svn_error_return(svn_wc__db_read_props_recursive(wc_ctx->db,
+                                                          local_abspath,
+                                                          receiver_func,
+                                                          receiver_baton,
+                                                          scratch_pool));
+}
 
 svn_error_t *
 svn_wc__get_pristine_props(apr_hash_t **props,

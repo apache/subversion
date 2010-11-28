@@ -149,9 +149,29 @@ SELECT properties, presence FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2
 ORDER BY op_depth DESC;
 
+-- STMT_SELECT_NODE_PROPS_RECURSIVE
+SELECT properties, local_relpath FROM nodes
+WHERE wc_id = ?1
+  AND local_relpath NOT IN (
+    SELECT actual_node.local_relpath FROM actual_node
+    WHERE actual_node.wc_id = ?1
+  )
+  AND (presence = 'normal' OR presence = 'incomplete')
+GROUP BY local_relpath
+ORDER BY op_depth DESC;
+
 -- STMT_SELECT_ACTUAL_PROPS
 SELECT properties FROM actual_node
 WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_SELECT_ACTUAL_PROPS_RECURSIVE
+SELECT properties, local_relpath FROM actual_node
+WHERE wc_id = ?1
+  AND local_relpath NOT IN (
+    SELECT nodes.local_relpath FROM nodes
+    WHERE nodes.wc_id = ?1
+      AND nodes.presence != 'normal' AND nodes.presence != 'incomplete'
+  );
 
 -- STMT_UPDATE_NODE_BASE_PROPS
 UPDATE nodes SET properties = ?3
