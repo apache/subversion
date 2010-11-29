@@ -183,7 +183,7 @@ jobject EnumMapper::mapDepth(svn_depth_t depth)
 {
   // We're assuming a valid value for the C enum above
   // The offset for depths is -2
-  return mapEnum(JAVA_PACKAGE"/Depth", ((int) depth) + 2);
+  return mapEnum(JAVA_PACKAGE"/types/Depth", ((int) depth) + 2);
 }
 
 jobject EnumMapper::mapOperation(svn_wc_operation_t operation)
