@@ -1707,6 +1707,49 @@ test_wc_move(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_mixed_rev_copy(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  wc_baton_t b;
+
+  b.pool = pool;
+  SVN_ERR(svn_test__create_repos_and_wc(&b.repos_url, &b.wc_abspath,
+                                        "mixed_rev_copy", opts, pool));
+  SVN_ERR(svn_wc_context_create(&b.wc_ctx, NULL, pool, pool));
+  SVN_ERR(wc_mkdir(&b, "A"));
+  SVN_ERR(wc_commit(&b, ""));
+  SVN_ERR(wc_mkdir(&b, "A/B"));
+  SVN_ERR(wc_commit(&b, ""));
+  SVN_ERR(wc_mkdir(&b, "A/B/C"));
+  SVN_ERR(wc_commit(&b, ""));
+
+  SVN_ERR(wc_copy(&b, "A", "X"));
+  {
+    nodes_row_t rows[] = {
+      { 1, "X",     "normal",       1, "A" },
+      { 1, "X/B",   "normal",       2, "A/B" },
+      { 1, "X/B/C", "normal",       3, "A/B/C" },
+      { 0 }
+    };
+    SVN_ERR(check_db_rows(&b, "X", rows));
+  }
+
+  SVN_ERR(wc_copy(&b, "A/B", "X/Y"));
+  {
+    nodes_row_t rows[] = {
+      { 1, "X",     "normal",       1, "A" },
+      { 1, "X/B",   "normal",       2, "A/B" },
+      { 1, "X/B/C", "normal",       3, "A/B/C" },
+      { 2, "X/Y",   "normal",       2, "A/B" },
+      { 2, "X/Y/C", "normal",       3, "A/B/C" },
+      { 0 }
+    };
+    SVN_ERR(check_db_rows(&b, "X", rows));
+  }
+
+  return SVN_NO_ERROR;
+}
+
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
 
@@ -1747,6 +1790,9 @@ struct svn_test_descriptor_t test_funcs[] =
                        "needs op_depth"),
     SVN_TEST_OPTS_WIMP(test_wc_move,
                        "test_wc_move",
+                       "needs op_depth"),
+    SVN_TEST_OPTS_WIMP(test_mixed_rev_copy,
+                       "test_mixed_rev_copy",
                        "needs op_depth"),
     SVN_TEST_NULL
   };
