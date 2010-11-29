@@ -4072,13 +4072,13 @@ set_tc_txn2(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
     {
       /* There is an existing ACTUAL row, so just update it. */
       SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                        STMT_UPDATE_ACTUAL_CONFLICT_DATA));
+                                        STMT_UPDATE_ACTUAL_TREE_CONFLICTS));
     }
   else
     {
       /* We need to insert an ACTUAL row with the tree conflict data. */
       SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                        STMT_INSERT_ACTUAL_CONFLICT_DATA));
+                                        STMT_INSERT_ACTUAL_TREE_CONFLICTS));
     }
 
   SVN_ERR(svn_sqlite__bindf(stmt, "iss", stb->wc_id, stb->local_relpath,
@@ -5141,9 +5141,7 @@ read_info(svn_wc__db_status_t *status,
                  !svn_sqlite__column_is_null(stmt_act, 3) || /* new */
                  !svn_sqlite__column_is_null(stmt_act, 4) || /* working */
                  !svn_sqlite__column_is_null(stmt_act, 0) || /* prop_reject */
-                 !svn_sqlite__column_is_null(stmt_act, 7); /* conflict_data */
-
-              /* At the end of this function we check for tree conflicts */
+                 !svn_sqlite__column_is_null(stmt_act, 5); /* tree_conflict_data */
             }
           else
             *conflicted = FALSE;
@@ -5180,7 +5178,7 @@ read_info(svn_wc__db_status_t *status,
     {
       /* A row in ACTUAL_NODE should never exist without a corresponding
          node in BASE_NODE and/or WORKING_NODE unless it flags a conflict. */
-      if (svn_sqlite__column_is_null(stmt_act, 7)) /* conflict_data */
+      if (svn_sqlite__column_is_null(stmt_act, 5)) /* conflict_data */
           err = svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
                                   _("Corrupt data for '%s'"),
                                   path_for_error_message(pdh->wcroot,
@@ -5508,7 +5506,7 @@ svn_wc__db_read_children_info(apr_hash_t **nodes,
                           !svn_sqlite__column_is_null(stmt, 3) ||  /* new */
                           !svn_sqlite__column_is_null(stmt, 4) ||  /* work */
                           !svn_sqlite__column_is_null(stmt, 0) ||  /* prop */
-                          !svn_sqlite__column_is_null(stmt, 8);  /* tree */
+                          !svn_sqlite__column_is_null(stmt, 5);  /* tree */
 
       if (child->conflicted)
         apr_hash_set(*conflicts, apr_pstrdup(result_pool, name),

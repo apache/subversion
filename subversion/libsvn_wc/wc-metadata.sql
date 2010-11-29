@@ -638,6 +638,18 @@ PRAGMA user_version = 21;
 
 /* ------------------------------------------------------------------------- */
 
+/* Format 22 simply moves the tree conflict information from the conflict_data
+   column to the tree_conflict_data column. */
+
+-- STMT_UPGRADE_TO_22
+UPDATE actual_node SET tree_conflict_data = conflict_data;
+UPDATE actual_node SET conflict_data = NULL;
+
+PRAGMA user_version = 22;
+
+
+/* ------------------------------------------------------------------------- */
+
 /* Format YYY introduces new handling for conflict information.  */
 -- format: YYY
 
