@@ -89,7 +89,9 @@ datasource_to_index(svn_diff_datasource_e datasource)
 
 /* Implements svn_diff_fns_t::datasource_open */
 static svn_error_t *
-datasource_open(void *baton, svn_diff_datasource_e datasource)
+datasource_open(void *baton,
+                svn_diff_datasource_e datasource,
+                svn_boolean_t open_at_end)
 {
   /* Do nothing: everything is already there and initialized to 0 */
   return SVN_NO_ERROR;
@@ -138,6 +140,18 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
   return SVN_NO_ERROR;
 }
 
+/* Implements svn_diff_fns_t::datasource_get_previous_token */
+static svn_error_t *
+datasource_get_previous_token(void **token, void *baton,
+                              svn_diff_datasource_e datasource)
+{
+  /* ### TODO */
+  *token = NULL;
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Implements svn_diff_fns_t::token_compare */
 static svn_error_t *
 token_compare(void *baton, void *token1, void *token2, int *result)
@@ -180,6 +194,17 @@ token_pushback_prefix(void *baton,
   return SVN_NO_ERROR;
 }
 
+
+static svn_error_t *
+token_pushback_suffix(void *baton,
+                      void *token,
+                      svn_diff_datasource_e datasource)
+{
+  /* ### TODO */
+  return SVN_NO_ERROR;
+}
+
+
 /* Implements svn_diff_fns_t::token_discard */
 static void
 token_discard(void *baton, void *token)
@@ -205,8 +230,10 @@ static const svn_diff_fns_t svn_diff__mem_vtable =
   datasource_open,
   datasource_close,
   datasource_get_next_token,
+  datasource_get_previous_token,
   token_compare,
   token_pushback_prefix,
+  token_pushback_suffix,
   token_discard,
   token_discard_all
 };

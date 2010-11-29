@@ -152,7 +152,7 @@ svn_diff__get_tokens(svn_diff__position_t **position_list,
   *position_list = NULL;
 
 
-  SVN_ERR(vtable->datasource_open(diff_baton, datasource));
+  SVN_ERR(vtable->datasource_open(diff_baton, datasource, FALSE));
 
   position_ref = &start_position;
   offset = 0;
@@ -188,22 +188,77 @@ svn_diff__get_tokens(svn_diff__position_t **position_list,
   return SVN_NO_ERROR;
 }
 
-/* Find identical prefix between all datasources
+/* Find identical suffix between all datasources
  */
 static svn_error_t *
-find_identical_prefix(svn_boolean_t *reached_one_eof,
-                      apr_off_t *prefix_lines,
+find_identical_suffix(svn_boolean_t *reached_one_bof,
                       void *diff_baton,
                       const svn_diff_fns_t *vtable,
                       svn_diff_datasource_e datasource[],
                       int datasource_len)
 {
   void *token[4];
-  svn_boolean_t is_match, reached_all_eof;
+  svn_boolean_t is_match, reached_all_bof;
+  int i, rv;
+
+  *reached_one_bof = FALSE;
+  while (1)
+    {
+      /* Keep getting tokens and matching them, until there are no tokens
+         left, or we encounter a non-matching token. */
+      for (i = 0; i < datasource_len; i++)
+        {
+          SVN_ERR(vtable->datasource_get_previous_token(&token[i], diff_baton,
+                                                        datasource[i]));
+          *reached_one_bof = *reached_one_bof || token[i] == NULL;
+        }
+      if (*reached_one_bof)
+        {
+          break;
+        }
+      else
+        {
+          for (i = 1, is_match = TRUE; is_match && i < datasource_len; i++)
+            {
+              SVN_ERR(vtable->token_compare(diff_baton, token[0], token[i], &rv));
+              is_match = is_match && rv == 0;
+            }
+          if (!is_match)
+            break;
+        }
+    }
+
+  /* If all files reached their beginning (i.e. are fully identical),
+     we're done. */
+  for (i = 0, reached_all_bof = TRUE; i < datasource_len; i++)
+    reached_all_bof = reached_all_bof && token[i] == NULL;
+  if (reached_all_bof)
+    return SVN_NO_ERROR;
+
+  /* Push back the non-matching token we read. */
+  for (i = 0; i < datasource_len; i++)
+    if (token[i] != NULL)
+      SVN_ERR(vtable->token_pushback_suffix(diff_baton, token[i], datasource[i]));
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Find identical prefix between all datasources
+ */
+static svn_error_t *
+find_identical_prefix(apr_off_t *prefix_lines,
+                      void *diff_baton,
+                      const svn_diff_fns_t *vtable,
+                      svn_diff_datasource_e datasource[],
+                      int datasource_len)
+{
+  void *token[4];
+  svn_boolean_t is_match, reached_one_eof, reached_all_eof;
   int i, rv;
 
   *prefix_lines = 0;
-  *reached_one_eof = FALSE;
+  reached_one_eof = FALSE;
   while (1)
     {
       /* Keep getting tokens and matching them, until there are no tokens
@@ -212,9 +267,9 @@ find_identical_prefix(svn_boolean_t *reached_one_eof,
         {
           SVN_ERR(vtable->datasource_get_next_token(NULL, &token[i],
                                                     diff_baton, datasource[i]));
-          *reached_one_eof = *reached_one_eof || token[i] == NULL;
+          reached_one_eof = reached_one_eof || token[i] == NULL;
         }
-      if (*reached_one_eof)
+      if (reached_one_eof)
         {
           break;
         }
@@ -267,20 +322,28 @@ svn_diff__get_all_tokens(svn_diff__position_t **position_list[],
   void *token;
   apr_off_t offset;
   apr_uint32_t hash;
-  svn_boolean_t reached_one_eof;
+  svn_boolean_t reached_one_bof;
   int i;
 
   for (i = 0; i < datasource_len; i++)
     {
       *position_list[i] = NULL;
-      SVN_ERR(vtable->datasource_open(diff_baton, datasource[i]));
+      SVN_ERR(vtable->datasource_open(diff_baton, datasource[i], TRUE));
     }
 
-  /* find identical prefix */
-  SVN_ERR(find_identical_prefix(&reached_one_eof, prefix_lines, 
-                                diff_baton, vtable, datasource, datasource_len));
+  /* find identical suffix */
+  SVN_ERR(find_identical_suffix(&reached_one_bof, diff_baton, vtable,
+                                datasource, datasource_len));
 
-  /* ### TODO: find identical suffix (if not eof) */
+  for (i = 0; i < datasource_len; i++)
+    {
+      SVN_ERR(vtable->datasource_open(diff_baton, datasource[i], FALSE));
+    }
+
+  /* find identical prefix (but don't bother if one file was all suffix) */
+  /*if (!reached_one_bof)*/
+    SVN_ERR(find_identical_prefix(prefix_lines, diff_baton, vtable,
+                                  datasource, datasource_len));
 
   for (i = 0; i < datasource_len; i++)
     {

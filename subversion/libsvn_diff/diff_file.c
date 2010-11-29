@@ -214,35 +214,49 @@ map_or_read_file(apr_file_t **file,
  *
  * Implements svn_diff_fns_t::datasource_open. */
 static svn_error_t *
-datasource_open(void *baton, svn_diff_datasource_e datasource)
+datasource_open(void *baton,
+                svn_diff_datasource_e datasource,
+                svn_boolean_t open_at_end)
 {
   svn_diff__file_baton_t *file_baton = baton;
   struct file_info *file = &file_baton->files[datasource_to_index(datasource)];
   apr_finfo_t finfo;
   apr_off_t length;
-  char *curp;
-  char *endp;
 
-  SVN_ERR(svn_io_file_open(&file->file, file->path,
-                           APR_READ, APR_OS_DEFAULT, file_baton->pool));
+  if (file->file == NULL)
+    {
+      SVN_ERR(svn_io_file_open(&file->file, file->path,
+                               APR_READ, APR_OS_DEFAULT, file_baton->pool));
+      SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_SIZE,
+                                   file->file, file_baton->pool));
+      file->size = finfo.size;
+    }
 
-  SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_SIZE,
-                               file->file, file_baton->pool));
-
-  file->size = finfo.size;
-  length = finfo.size > CHUNK_SIZE ? CHUNK_SIZE : finfo.size;
-
-  if (length == 0)
+  if (file->size == 0)
     return SVN_NO_ERROR;
 
-  endp = curp = apr_palloc(file_baton->pool, (apr_size_t) length);
-  endp += length;
+  if (open_at_end)
+    {
+      file->chunk = (int) offset_to_chunk(file->size); /* last chunk */
+      length = offset_in_chunk(file->size);
+      if (file->chunk == 0)    /* if last chunk is the only chunk */
+        file->buffer = apr_palloc(file_baton->pool, (apr_size_t) length);
+      else
+        file->buffer = apr_palloc(file_baton->pool, CHUNK_SIZE);
+      file->endp = file->buffer + length;
+      file->curp = file->endp - 1;
+    }
+  else
+    {
+      file->chunk = 0;
+      length = finfo.size > CHUNK_SIZE ? CHUNK_SIZE : finfo.size;
+      file->buffer = apr_palloc(file_baton->pool, (apr_size_t) length);
+      file->endp = file->buffer + length;
+      file->curp = file->buffer;
+    }
 
-  file->buffer = file->curp = curp;
-  file->endp = endp;
-
-  return read_chunk(file->file, file->path,
-                    curp, length, 0, file_baton->pool);
+  return read_chunk(file->file, file->path, file->buffer, length,
+                    chunk_to_offset(file->chunk), file_baton->pool);
 }
 
 
@@ -426,6 +440,19 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
   return SVN_NO_ERROR;
 }
 
+
+/* Implements svn_diff_fns_t::datasource_get_previous_token */
+static svn_error_t *
+datasource_get_previous_token(void **token, void *baton,
+                              svn_diff_datasource_e datasource)
+{
+  /* ### TODO */
+  *token = NULL;
+
+  return SVN_NO_ERROR;
+}
+
+
 #define COMPARE_CHUNK_SIZE 4096
 
 /* Implements svn_diff_fns_t::token_compare */
@@ -580,6 +607,17 @@ token_pushback_prefix(void *baton,
   return SVN_NO_ERROR;
 }
 
+
+static svn_error_t *
+token_pushback_suffix(void *baton,
+                      void *token,
+                      svn_diff_datasource_e datasource)
+{
+  /* ### TODO */
+  return SVN_NO_ERROR;
+}
+
+
 /* Implements svn_diff_fns_t::token_discard */
 static void
 token_discard(void *baton, void *token)
@@ -608,8 +646,10 @@ static const svn_diff_fns_t svn_diff__file_vtable =
   datasource_open,
   datasource_close,
   datasource_get_next_token,
+  datasource_get_previous_token,
   token_compare,
   token_pushback_prefix,
+  token_pushback_suffix,
   token_discard,
   token_discard_all
 };

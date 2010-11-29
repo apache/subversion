@@ -110,7 +110,8 @@ typedef struct svn_diff_fns_t
 {
   /** Open the datasource of type @a datasource. */
   svn_error_t *(*datasource_open)(void *diff_baton,
-                                  svn_diff_datasource_e datasource);
+                                  svn_diff_datasource_e datasource,
+                                  svn_boolean_t open_at_end);
 
   /** Close the datasource of type @a datasource. */
   svn_error_t *(*datasource_close)(void *diff_baton,
@@ -124,6 +125,14 @@ typedef struct svn_diff_fns_t
                                             void *diff_baton,
                                             svn_diff_datasource_e datasource);
 
+  /** Get the previous "token" from the datasource of type @a datasource
+   * (reading backwards). Return a "token" in @a *token.  Leave @a token
+   * untouched when the datasource is exhausted.
+   */
+  svn_error_t *(*datasource_get_previous_token)(void **token,
+                                                void *diff_baton,
+                                                svn_diff_datasource_e datasource);
+
   /** A function for ordering the tokens, resembling 'strcmp' in functionality.
    * @a compare should contain the return value of the comparison:
    * If @a ltoken and @a rtoken are "equal", return 0.  If @a ltoken is
@@ -136,6 +145,10 @@ typedef struct svn_diff_fns_t
                                 int *compare);
 
   svn_error_t *(*token_pushback_prefix)(void *diff_baton,
+                                        void *token,
+                                        svn_diff_datasource_e datasource);
+
+  svn_error_t *(*token_pushback_suffix)(void *diff_baton,
                                         void *token,
                                         svn_diff_datasource_e datasource);
 
