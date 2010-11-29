@@ -3246,10 +3246,12 @@ catch_copy_of_absent(svn_wc__db_pdh_t *pdh,
 }
 
 
-/* If COPYFROM_REPOS_ID+COPYFROM_RELPATH+COPYFROM_REVISION "match" the copyfrom
-   information for the parent of LOCAL_RELPATH then set *OP_DEPTH to
-   the op_depth of the parent, otherwise set *OP_DEPTH to the op_depth
-   of LOCAL_RELPATH. */
+/* If LOCAL_RELPATH is presence=incomplete then set *OP_DEPTH to the
+   op_depth of the incomplete node, otherwise if the copyfrom
+   information COPYFROM_REPOS_ID+COPYFROM_RELPATH+COPYFROM_REVISION
+   "matches" the copyfrom information for the parent of LOCAL_RELPATH
+   then set *OP_DEPTH to the op_depth of the parent, otherwise set
+   *OP_DEPTH to the op_depth of LOCAL_RELPATH. */
 static svn_error_t *
 op_depth_for_copy(apr_int64_t *op_depth,
                   apr_int64_t copyfrom_repos_id,
@@ -3269,8 +3271,24 @@ op_depth_for_copy(apr_int64_t *op_depth,
   if (!copyfrom_relpath)
     return SVN_NO_ERROR;
 
-  svn_relpath_split(&parent_relpath, &name, local_relpath, scratch_pool);
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_SELECT_WORKING_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (have_row)
+    {
+      svn_wc__db_status_t status = svn_sqlite__column_token(stmt, 1,
+                                                            presence_map);
+      if (status == svn_wc__db_status_incomplete)
+        {
+          *op_depth = svn_sqlite__column_int64(stmt, 0);
+          SVN_ERR(svn_sqlite__reset(stmt));
+          return SVN_NO_ERROR;
+        }
+    }
+  SVN_ERR(svn_sqlite__reset(stmt));
 
+  svn_relpath_split(&parent_relpath, &name, local_relpath, scratch_pool);
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                     STMT_SELECT_WORKING_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, parent_relpath));
