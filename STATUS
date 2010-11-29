@@ -198,6 +198,20 @@ Candidate changes for 1.5.8:
    Votes:
      +1: stsp
 
+  * r1028084, r1028125
+    Fix JVM recognition on OS X Snow Leopard (10.6).
+    Justification:
+      Buildings Subversion on OS X 10.6 can be impossible, or more difficult,
+      without porting this.
+    Notes:
+      Apple has updated their JDK structure that results in its JDK not being
+      found on Snow Leopard.  This can be worked around by using the --with-jdk
+      configure option but it was never required before and the JDK structure
+      isn't exactly intuitive enough to expect regular people to know how to
+      find the right path to use.
+    Votes:
+      +1: jwhitlock
+
 Approved changes:
 =================
 
