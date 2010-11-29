@@ -13340,7 +13340,7 @@ def natural_history_filtering(sbox):
   #
   #   7) Merge all available revisions from 'branch1' to 'branch2'.
   #      'branch2' should have explicit merginfo for both 'branch1' *and* for
-  #      the revisions on 'trunk' which occured after 'branch2' was copied as
+  #      the revisions on 'trunk' which occurred after 'branch2' was copied as
   #      these are not part of 'branch2's natural history.
 
   sbox.build()

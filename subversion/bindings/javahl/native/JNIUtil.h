@@ -179,7 +179,7 @@ class JNIUtil
   static JNIMutex *g_logMutex;
 
   /**
-   * Flag, that an exception occured during our initialization.
+   * Flag, that an exception occurred during our initialization.
    */
   static bool g_initException;
 
