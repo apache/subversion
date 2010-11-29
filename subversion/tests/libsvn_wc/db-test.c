@@ -75,7 +75,8 @@
 #define MD5_2 "5d41402abc4b2a76b9719d911017c592"
 #define SHA1_1 "aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d"
 
-#define I_TC_DATA "((conflict F file update edited deleted (version 22 " ROOT_ONE " 1 2 branch1/ft/F none) (version 22 " ROOT_ONE " 1 3 branch1/ft/F file)) (conflict G file update edited deleted (version 22 " ROOT_ONE " 1 2 branch1/ft/F none) (version 22 " ROOT_ONE " 1 3 branch1/ft/F file)) )"
+#define F_TC_DATA "(conflict F file update edited deleted (version 22 " ROOT_ONE " 1 2 branch1/ft/F none) (version 22 " ROOT_ONE " 1 3 branch1/ft/F file))"
+#define G_TC_DATA "(conflict G file update edited deleted (version 22 " ROOT_ONE " 1 2 branch1/ft/F none) (version 22 " ROOT_ONE " 1 3 branch1/ft/F file))"
 
 static const char * const TESTING_DATA = (
    /* Load our test data.
@@ -262,7 +263,13 @@ static const char * const TESTING_DATA = (
   "  null, null, null, null);"
    "insert into actual_node values ("
    "  1, 'I', '', null, null, null, null, null, 'changelist', null, "
-   "'" I_TC_DATA "', null, null, null, null);"
+   "  null, null, null, null, null);"
+   "insert into actual_node values ("
+   "  1, 'F', '', null, null, null, null, null, null, null, "
+   "  null, '" F_TC_DATA "', null, null, null);"
+   "insert into actual_node values ("
+   "  1, 'G', '', null, null, null, null, null, null, null, "
+   "  null, '" G_TC_DATA "', null, null, null);"
    "  "
    "insert into nodes values ("
    "  1, 'M', 0, '', 1, 'M', null, 'normal', "
