@@ -40,7 +40,9 @@
 /*** Code. ***/
 
 /* Print an update summary when there's more than one target to report
-   about. */
+   about.  Each (const char *) path in TARGETS is an absolute or relative
+   dirent, and each (svn_revnum_t) entry in RESULT_REVS is the corresponding
+   updated revision, or SVN_INVALID_REVNUM if not a valid target. */
 static svn_error_t *
 print_update_summary(apr_array_header_t *targets,
                      apr_array_header_t *result_revs,
@@ -118,6 +120,30 @@ svn_cl__update(apr_getopt_t *os,
   svn_opt_push_implicit_dot_target(targets, scratch_pool);
 
   SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, scratch_pool));
+
+  /* If any targets are URLs, notify that we're skipping them and remove
+     them from TARGETS.  Although svn_client_update4() would skip them
+     anyway, we don't want to pass invalid targets to it, and especially
+     not to print_update_summary(). */
+  {
+    apr_array_header_t *new_targets
+      = apr_array_make(scratch_pool, targets->nelts, sizeof(const char *));
+    int i;
+
+    for (i = 0; i < targets->nelts; i++)
+      {
+        const char *target = APR_ARRAY_IDX(targets, i, const char *);
+
+        if (svn_path_is_url(target))
+          ctx->notify_func2(ctx->notify_baton2,
+                            svn_wc_create_notify_url(
+                              target, svn_wc_notify_skip, scratch_pool),
+                            scratch_pool);
+        else
+          APR_ARRAY_PUSH(new_targets, const char *) = target;
+      }
+    targets = new_targets;
+  }
 
   /* If using changelists, convert targets into a set of paths that
      match the specified changelist(s). */
