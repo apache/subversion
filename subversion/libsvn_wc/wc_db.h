@@ -1567,19 +1567,6 @@ svn_wc__db_read_props(apr_hash_t **props,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool);
 
-/* Call RECEIVER_FUNC, passing RECEIVER_BATON, an absolute path, and
- * a hash table mapping <tt>char *</tt> names onto svn_string_t *
- * values for all the regular properties of the node at LOCAL_ABSPATH
- * and any node beneath LOCAL_ABSPATH.
- *
- * ### TODO: Add and implement DEPTH parameter.
- */
-svn_error_t *
-svn_wc__db_read_props_recursive(svn_wc__db_t *db,
-                                const char *local_abspath,
-                                svn_wc_prop_list_receiver_func_t receiver_func,
-                                void *receiver_baton,
-                                apr_pool_t *scratch_pool);
 
 /* Set *PROPS to the properties of the node LOCAL_ABSPATH in the WORKING
    tree (looking through to the BASE tree as required).
