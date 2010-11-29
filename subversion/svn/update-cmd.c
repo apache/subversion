@@ -63,35 +63,34 @@ print_update_summary(apr_array_header_t *targets,
   for (i = 0; i < targets->nelts; i++)
     {
       const char *path = APR_ARRAY_IDX(targets, i, const char *);
-      const char *path_local;
+      svn_revnum_t rev = SVN_INVALID_REVNUM;
 
       svn_pool_clear(iter_pool);
 
-      /* Convert to an absolute path if it's not already. */
-      /* (It shouldn't be URL, but don't call svn_dirent_* if it is.) */
-      if (! svn_path_is_url(path) && ! svn_dirent_is_absolute(path))
-        SVN_ERR(svn_dirent_get_absolute(&path, path, iter_pool));
+      /* PATH shouldn't be a URL. */
+      SVN_ERR_ASSERT(! svn_path_is_url(path));
 
-      /* Remove the current working directory prefix from PATH (if
-         PATH is at or under $CWD), and convert to local style for
-         display. */
-      path_local = svn_dirent_skip_ancestor(path_prefix, path);
-      path_local = svn_dirent_local_style(path_local, iter_pool);
-      
+      /* Grab the result revision from the corresponding slot in our
+         RESULT_REVS array. */
       if (i < result_revs->nelts)
-        {
-          svn_revnum_t rev = APR_ARRAY_IDX(result_revs, i, svn_revnum_t);
+        rev = APR_ARRAY_IDX(result_revs, i, svn_revnum_t);
 
-          if (SVN_IS_VALID_REVNUM(rev))
-            SVN_ERR(svn_cmdline_printf(iter_pool,
-                                       _("  Updated '%s' to r%ld.\n"),
-                                       path_local, rev));
-        }
-      else
-        {
-          /* ### Notify about targets for which there's no
-             ### result_rev?  Can we even get here?  */
-        }
+      /* No result rev?  We must have skipped this path.  At any rate,
+         nothing to report here. */
+      if (! SVN_IS_VALID_REVNUM(rev))
+        continue;
+
+      /* Convert to an absolute path if it's not already. */
+      if (! svn_dirent_is_absolute(path))
+        SVN_ERR(svn_dirent_get_absolute(&path, path, iter_pool));
+      path = svn_dirent_local_style(svn_dirent_skip_ancestor(path_prefix,
+                                                             path), iter_pool);
+
+      /* Print an update summary for this target, removing the current
+         working directory prefix from PATH (if PATH is at or under
+         $CWD), and converting the path to local style for display. */
+      SVN_ERR(svn_cmdline_printf(iter_pool, _("  Updated '%s' to r%ld.\n"),
+                                 path, rev));
     }
 
   svn_pool_destroy(iter_pool);
