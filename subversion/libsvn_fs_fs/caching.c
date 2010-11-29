@@ -119,7 +119,7 @@ manifest_serialize(char **data,
 {
   apr_array_header_t *manifest = in;
 
-  *data_len = sizeof(apr_off_t) *manifest->nelts;
+  *data_len = sizeof(apr_off_t) * manifest->nelts;
   *data = apr_palloc(pool, *data_len);
   memcpy(*data, manifest->elts, *data_len);
 
