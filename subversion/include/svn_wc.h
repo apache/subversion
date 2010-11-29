@@ -5538,35 +5538,6 @@ svn_wc_prop_list(apr_hash_t **props,
                  svn_wc_adm_access_t *adm_access,
                  apr_pool_t *pool);
 
-/** A callback invoked by svn_wc_prop_list_recursive() */
-typedef svn_error_t *(*svn_wc_prop_list_receiver_func_t)(
-                         void *baton,
-                         const char *local_abspath,
-                         apr_hash_t *props,
-                         apr_pool_t *scratch_pool);
-
-/** Call @a receiver_func, passing @a receiver_baton, an absolute path, and
- * a hash table mapping <tt>char *</tt> names onto <tt>svn_string_t *</tt>
- * values for all the regular properties of the node at @a local_abspath
- * and any node beneath @a local_abspath within the specified @a depth.
- *
- * If a node has no properties, @a receiver_func is not called for the node.
- *
- * Use @a wc_ctx to access the working copy, and @a scratch_pool for
- * temporary allocations.
- *
- * If the the node at @a local_abspath does not exist,
- * #SVN_ERR_WC_PATH_NOT_FOUND is returned.
- *
- * @since New in 1.7.
- */
-svn_error_t *
-svn_wc_prop_list_recursive(svn_wc_context_t *wc_ctx,
-                           const char *local_abspath,
-                           svn_depth_t depth,
-                           svn_wc_prop_list_receiver_func_t receiver_func,
-                           void *receiver_baton,
-                           apr_pool_t *scratch_pool);
 
 /** Return the set of "pristine" properties for @a local_abspath.
  *

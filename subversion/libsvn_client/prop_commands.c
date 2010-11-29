@@ -1219,45 +1219,6 @@ proplist_walk_cb(const char *local_abspath,
                        scratch_pool);
 }
 
-struct recursive_proplist_receiver_baton
-{
-  apr_hash_t *changelist_hash; /* Keys are changelists to filter on. */
-  svn_wc_context_t *wc_ctx;  /* Working copy context. */
-  svn_proplist_receiver_t receiver;  /* Proplist receiver to call. */
-  void *receiver_baton;    /* Baton for the proplist receiver. */
-
-  /* Anchor, anchor_abspath pair for converting to relative paths */
-  const char *anchor;
-  const char *anchor_abspath;
-};
-
-static svn_error_t *
-recursive_proplist_receiver(void *baton,
-                            const char *local_abspath,
-                            apr_hash_t *props,
-                            apr_pool_t *scratch_pool)
-{
-  struct recursive_proplist_receiver_baton *b = baton;
-  const char *path;
-
-  /* If the node doesn't pass changelist filtering, get outta here. */
-  if (! svn_wc__changelist_match(b->wc_ctx, local_abspath,
-                                 b->changelist_hash, scratch_pool))
-    return SVN_NO_ERROR;
-
-  if (b->anchor && b->anchor_abspath)
-    {
-      path = svn_dirent_join(b->anchor,
-                             svn_dirent_skip_ancestor(b->anchor_abspath,
-                                                      local_abspath),
-                             scratch_pool);
-    }
-  else
-    path = local_abspath;
-
-  return call_receiver(path, props, b->receiver, b->receiver_baton,
-                       scratch_pool);
-}
 
 /* Note: this implementation is very similar to svn_client_propget3(). */
 svn_error_t *
@@ -1318,36 +1279,6 @@ svn_client_proplist3(const char *path_or_url,
       if (depth >= svn_depth_files && (kind == svn_node_dir))
         {
           struct proplist_walk_baton wb;
-
-          /* ### The new svn_wc_prop_list_recursive() interface currently
-           * ### only supports depth infinity.
-           * ### And there will be a separate API for getting pristine props. */
-          if (depth == svn_depth_infinity && ! pristine)
-            {
-              struct recursive_proplist_receiver_baton b;
-
-              b.wc_ctx = ctx->wc_ctx;
-              b.changelist_hash = changelist_hash;
-              b.receiver = receiver;
-              b.receiver_baton = receiver_baton;
-
-              if (strcmp(path_or_url, local_abspath) != 0)
-                {
-                  b.anchor = path_or_url;
-                  b.anchor_abspath = local_abspath;
-                }
-              else
-                {
-                  b.anchor = NULL;
-                  b.anchor_abspath = NULL;
-                }
-
-              return svn_error_return(svn_wc_prop_list_recursive(
-                                        ctx->wc_ctx, local_abspath,
-                                        svn_depth_infinity,
-                                        recursive_proplist_receiver,
-                                        &b, pool));
-            }
 
           wb.wc_ctx = ctx->wc_ctx;
           wb.pristine = pristine;
