@@ -176,7 +176,7 @@ int EnumMapper::toLogLevel(jobject jLogLevel)
 svn_depth_t EnumMapper::toDepth(jobject jdepth)
 {
   // The offset for depths is -2
-  return (svn_depth_t) (getOrdinal(JAVA_PACKAGE"/Depth", jdepth) - 2);
+  return (svn_depth_t) (getOrdinal(JAVA_PACKAGE"/types/Depth", jdepth) - 2);
 }
 
 jobject EnumMapper::mapDepth(svn_depth_t depth)

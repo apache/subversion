@@ -21,7 +21,7 @@
  * @endcopyright
  */
 
-package org.apache.subversion.javahl;
+package org.apache.subversion.javahl.types;
 
 /**
  * The concept of depth for directories.

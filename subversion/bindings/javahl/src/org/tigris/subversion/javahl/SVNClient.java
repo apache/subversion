@@ -2353,7 +2353,7 @@ public class SVNClient implements SVNClientInterface
         	aSVNClient.info2(path,
         					org.apache.subversion.javahl.Revision.HEAD,
         					org.apache.subversion.javahl.Revision.HEAD,
-        					org.apache.subversion.javahl.Depth.empty,
+        					org.apache.subversion.javahl.types.Depth.empty,
         				    null, new org.apache.subversion.javahl.callback.InfoCallback()
         	{
 				public void singleInfo(org.apache.subversion.javahl.Info info) {
