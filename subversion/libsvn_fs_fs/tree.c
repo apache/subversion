@@ -801,8 +801,8 @@ make_path_mutable(svn_fs_root_t *root,
 
 
 /* Open the node identified by PATH in ROOT.  Set DAG_NODE_P to the
- *node we find, allocated in POOL.  Return the error
- *SVN_ERR_FS_NOT_FOUND if this node doesn't exist. */
+   node we find, allocated in POOL.  Return the error
+   SVN_ERR_FS_NOT_FOUND if this node doesn't exist. */
 static svn_error_t *
 get_dag(dag_node_t **dag_node_p,
         svn_fs_root_t *root,
@@ -1133,7 +1133,7 @@ fs_props_changed(svn_boolean_t *changed_p,
 
 /* Merges and commits. */
 
-/* Set ARGS->node to the root node of ARGS->root.  */
+/* Set *NODE to the root node of ROOT.  */
 static svn_error_t *
 get_root(dag_node_t **node, svn_fs_root_t *root, apr_pool_t *pool)
 {
@@ -1555,13 +1555,16 @@ merge(svn_stringbuf_t *conflict_p,
   return SVN_NO_ERROR;
 }
 
-/* Merge changes between an ancestor and BATON->source_node into
-   BATON->txn.  The ancestor is either BATON->ancestor_node, or if
-   that is null, BATON->txn's base node.
+/* Merge changes between an ancestor and SOURCE_NODE into
+   TXN.  The ancestor is either ANCESTOR_NODE, or if
+   that is null, TXN's base node.
 
-   If the merge is successful, BATON->txn's base will become
-   BATON->source_node, and its root node will have a new ID, a
-   successor of BATON->source_node. */
+   If the merge is successful, TXN's base will become
+   SOURCE_NODE, and its root node will have a new ID, a
+   successor of SOURCE_NODE.
+
+   If a conflict results, update *CONFLICT to the path in the txn that
+   conflicted; see the CONFLICT_P parameter of merge() for details. */
 static svn_error_t *
 merge_changes(dag_node_t *ancestor_node,
               dag_node_t *source_node,
@@ -1585,13 +1588,8 @@ merge_changes(dag_node_t *ancestor_node,
                        svn_fs_fs__dag_get_id(txn_root_node)))
     {
       /* If no changes have been made in TXN since its current base,
-         then it can't conflict with any changes since that base.  So
-         we just set *both* its base and root to source, making TXN
-         in effect a repeat of source. */
-
-      /* ### kff todo: this would, of course, be a mighty silly thing
-         for the caller to do, and we might want to consider whether
-         this response is really appropriate. */
+         then it can't conflict with any changes since that base.
+         The caller isn't supposed to call us in that case. */
       SVN_ERR_MALFUNCTION();
     }
   else
