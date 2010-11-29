@@ -135,7 +135,7 @@ manifest_deserialize(void **out,
 {
   apr_array_header_t *manifest = apr_array_make(pool,
                                        (int) (data_len / sizeof(apr_off_t)),
-                                       (int) sizeof(apr_off_t));
+                                       sizeof(apr_off_t));
   memcpy(manifest->elts, data, data_len);
   manifest->nelts = (int) (data_len / sizeof(apr_off_t));
   *out = manifest;
