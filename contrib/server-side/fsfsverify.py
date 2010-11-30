@@ -913,6 +913,11 @@ def truncate(noderev, revFile):
   fields[3] = '0' * len(fields[3])
   fields[4] = '0' * len(fields[4])
   fields[5] = 'd41d8cd98f00b204e9800998ecf8427e'
+
+  if len(fields) > 6:
+    fields[6] = 'da39a3ee5e6b4b0d3255bfef95601890afd80709'
+    fields[7] = fields[7].strip()
+
   newTextRep = ' '.join(fields) + '\x0a'
   assert(len(newTextRep) == overallLength)
   revFile.write(newTextRep)
