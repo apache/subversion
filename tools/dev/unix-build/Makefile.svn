@@ -678,6 +678,9 @@ sqlite-reset:
 	$(foreach f, .retrieved .configured .compiled .installed, \
 		rm -f $(SQLITE_OBJDIR)/$(f);)
 
+sqlite-clean:
+	-cd $(SQLITE_OBJDIR) && make clean
+
 # fetch distfile for sqlite
 $(DISTDIR)/$(SQLITE_DIST):
 	cd $(DISTDIR) && $(FETCH_CMD) $(SQLITE_URL)
