@@ -86,22 +86,26 @@ CREATE TABLE PRISTINE (
      pristine texts referenced from this database. */
   checksum  TEXT NOT NULL PRIMARY KEY,
 
-  /* ### enumerated values specifying type of compression. NULL implies
-     ### that no compression has been applied. */
+  /* Enumerated values specifying type of compression. The only value
+     supported so far is NULL, meaning that no compression has been applied
+     and the pristine text is stored verbatim in the file. */
   compression  INTEGER,
 
-  /* The size in bytes of the file in which the pristine text is stored. */
-  /* ### used to verify the pristine file is "proper". NULL if unknown,
-     ### and (thus) the pristine copy is incomplete/unusable. */
+  /* The size in bytes of the file in which the pristine text is stored.
+     Used to verify the pristine file is "proper". NULL if unknown, and
+     (thus) the pristine copy is incomplete/unusable.
+     ### We always set this; there may be no need to allow NULL. Shall we
+         add "NOT NULL" to the schema? */
   size  INTEGER,
 
   /* ### this will probably go away, in favor of counting references
-     ### that exist in NODES. */
+     ### that exist in NODES. Not yet used; always set to 1. */
   refcount  INTEGER NOT NULL,
 
   /* Alternative MD5 checksum used for communicating with older
-     repositories. Not guaranteed to be unique among table rows.
-     NULL if not (yet) calculated. */
+     repositories. Not strictly guaranteed to be unique among table rows.
+     ### We always set this and require it to be non-null. Can we add
+         "NOT NULL" to the schema? */
   md5_checksum  TEXT
   );
 
