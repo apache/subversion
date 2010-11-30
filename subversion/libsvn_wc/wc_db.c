@@ -254,8 +254,7 @@ read_info(svn_wc__db_status_t *status,
           svn_wc__db_kind_t *kind,
           svn_revnum_t *revision,
           const char **repos_relpath,
-          const char **repos_root_url,
-          const char **repos_uuid,
+          apr_int64_t *repos_id,
           svn_revnum_t *changed_rev,
           apr_time_t *changed_date,
           const char **changed_author,
@@ -266,8 +265,7 @@ read_info(svn_wc__db_status_t *status,
           const char **target,
           const char **changelist,
           const char **original_repos_relpath,
-          const char **original_root_url,
-          const char **original_uuid,
+          apr_int64_t *original_repos_id,
           svn_revnum_t *original_revision,
           svn_boolean_t *props_mod,
           svn_boolean_t *have_base,
@@ -537,13 +535,12 @@ fetch_repos_info(const char **repos_root_url,
   return svn_error_return(svn_sqlite__reset(stmt));
 }
 
-/* Set *REPOS_ROOT_URL, *REPOS_UUID, *REVISION and *REPOS_RELPATH from the
+/* Set *REPOS_ID, *REVISION and *REPOS_RELPATH from the
  * given columns of the SQLITE statement STMT, or to NULL if the respective
  * column value is null.  Any of the output parameters may be NULL if not
  * required. */
 static svn_error_t *
-repos_location_from_columns(const char **repos_root_url,
-                            const char **repos_uuid,
+repos_location_from_columns(apr_int64_t *repos_id,
                             svn_revnum_t *revision,
                             const char **repos_relpath,
                             svn_wc__db_pdh_t *pdh,
@@ -555,23 +552,13 @@ repos_location_from_columns(const char **repos_root_url,
 {
   svn_error_t *err = SVN_NO_ERROR;
 
-  if (repos_root_url || repos_uuid)
+  if (repos_id)
     {
       /* Fetch repository information via REPOS_ID. */
       if (svn_sqlite__column_is_null(stmt, col_repos_id))
-        {
-          if (repos_root_url)
-            *repos_root_url = NULL;
-          if (repos_uuid)
-            *repos_uuid = NULL;
-        }
+        *repos_id = INVALID_REPOS_ID;
       else
-        {
-          err = fetch_repos_info(repos_root_url, repos_uuid,
-                                 pdh->wcroot->sdb,
-                                 svn_sqlite__column_int64(stmt, col_repos_id),
-                                 result_pool);
-        }
+        *repos_id = svn_sqlite__column_int64(stmt, col_repos_id);
     }
   if (revision)
     {
@@ -1959,13 +1946,14 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+/* Like svn_wc__db_base_get_info(), but taking PDH+LOCAL_RELPATH instead of
+ * DB+LOCAL_ABSPATH and outputting REPOS_ID instead of URL+UUID. */
 static svn_error_t *
 base_get_info(svn_wc__db_status_t *status,
               svn_wc__db_kind_t *kind,
               svn_revnum_t *revision,
               const char **repos_relpath,
-              const char **repos_root_url,
-              const char **repos_uuid,
+              apr_int64_t *repos_id,
               svn_revnum_t *changed_rev,
               apr_time_t *changed_date,
               const char **changed_author,
@@ -2003,11 +1991,9 @@ base_get_info(svn_wc__db_status_t *status,
         {
           *status = svn_sqlite__column_token(stmt, 2, presence_map);
         }
-      err = repos_location_from_columns(repos_root_url, repos_uuid, revision,
-                                        repos_relpath,
+      err = repos_location_from_columns(repos_id, revision, repos_relpath,
                                         pdh, stmt, 0, 4, 1, result_pool);
-      SVN_ERR_ASSERT(!repos_root_url || *repos_root_url);
-      SVN_ERR_ASSERT(!repos_uuid || *repos_uuid);
+      SVN_ERR_ASSERT(!repos_id || *repos_id != INVALID_REPOS_ID);
       SVN_ERR_ASSERT(!repos_relpath || *repos_relpath);
       if (lock)
         {
@@ -2112,6 +2098,7 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
 {
   svn_wc__db_pdh_t *pdh;
   const char *local_relpath;
+  apr_int64_t repos_id;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -2120,11 +2107,15 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
-  SVN_ERR(base_get_info(status, kind, revision, repos_relpath, repos_root_url,
-                        repos_uuid, changed_rev, changed_date, changed_author,
+  SVN_ERR(base_get_info(status, kind, revision, repos_relpath, &repos_id,
+                        changed_rev, changed_date, changed_author,
                         last_mod_time, depth, checksum, translated_size,
                         target, lock,
                         pdh, local_relpath, result_pool, scratch_pool));
+  SVN_ERR_ASSERT(repos_id != INVALID_REPOS_ID);
+  SVN_ERR(fetch_repos_info(repos_root_url, repos_uuid,
+                           pdh->wcroot->sdb, repos_id, result_pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -2803,8 +2794,7 @@ cross_db_copy(svn_wc__db_pdh_t *src_pdh,
                     NULL /* kind */,
                     NULL /* revision */,
                     NULL /* repos_relpath */,
-                    NULL /* repos_root_url */,
-                    NULL /* repos_uuid */,
+                    NULL /* repos_id */,
                     &changed_rev, &changed_date, &changed_author,
                     NULL /* last_mod_time */,
                     &depth,
@@ -2813,8 +2803,7 @@ cross_db_copy(svn_wc__db_pdh_t *src_pdh,
                     NULL /* target */,
                     NULL /* changelist */,
                     NULL /* original_repos_relpath */,
-                    NULL /* original_root_url */,
-                    NULL /* original_uuid */,
+                    NULL /* original_repos_id */,
                     NULL /* original_revision */,
                     NULL /* props_mod */,
                     NULL /* have_base */,
@@ -2904,11 +2893,10 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool)
 {
-  const char *repos_relpath, *repos_root_url, *repos_uuid;
+  const char *repos_relpath;
   svn_revnum_t revision;
 
-  SVN_ERR(read_info(status, kind, &revision,
-                    &repos_relpath, &repos_root_url, &repos_uuid,
+  SVN_ERR(read_info(status, kind, &revision, &repos_relpath, copyfrom_id,
                     NULL /* changed_rev */,
                     NULL /* changed_date */,
                     NULL /* changed_author */,
@@ -2919,8 +2907,7 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
                     NULL /* target */,
                     NULL /* changelist */,
                     NULL /* original_repos_relpath */,
-                    NULL /* original_root_url */,
-                    NULL /* original_uuid */,
+                    NULL /* original_repos_id */,
                     NULL /* original_revision */,
                     NULL /* props_mod */,
                     NULL /* have_base */,
@@ -2994,15 +2981,11 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
       else if (base_del_relpath)
         {
           SVN_ERR(base_get_info(NULL, NULL, copyfrom_rev, copyfrom_relpath,
-                                &repos_root_url, &repos_uuid,
+                                copyfrom_id,
                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                 NULL, NULL,
                                 pdh, base_del_relpath,
                                 result_pool, scratch_pool));
-
-          SVN_ERR(fetch_repos_id(copyfrom_id,
-                                 repos_root_url, repos_uuid,
-                                 pdh->wcroot->sdb, scratch_pool));
         }
       else
         SVN_ERR_MALFUNCTION();
@@ -3011,9 +2994,6 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
     {
       *copyfrom_relpath = repos_relpath;
       *copyfrom_rev = revision;
-      SVN_ERR(fetch_repos_id(copyfrom_id,
-                             repos_root_url, repos_uuid,
-                             pdh->wcroot->sdb, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -4833,8 +4813,8 @@ temp_op_delete_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   svn_boolean_t have_work, new_have_work;
 
   SVN_ERR(read_info(&status,
-                    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                     &have_work,
                     NULL, NULL,
                     b->pdh, b->local_relpath,
@@ -4939,15 +4919,14 @@ svn_wc__db_temp_op_delete(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
-/* Like svn_wc__db_read_info(), but with PDH+LOCAL_RELPATH instead of
- * DB+LOCAL_ABSPATH.*/
+/* Like svn_wc__db_read_info(), but taking PDH+LOCAL_RELPATH instead of
+ * DB+LOCAL_ABSPATH, and outputting repos ids instead of URL+UUID. */
 static svn_error_t *
 read_info(svn_wc__db_status_t *status,
           svn_wc__db_kind_t *kind,
           svn_revnum_t *revision,
           const char **repos_relpath,
-          const char **repos_root_url,
-          const char **repos_uuid,
+          apr_int64_t *repos_id,
           svn_revnum_t *changed_rev,
           apr_time_t *changed_date,
           const char **changed_author,
@@ -4958,8 +4937,7 @@ read_info(svn_wc__db_status_t *status,
           const char **target,
           const char **changelist,
           const char **original_repos_relpath,
-          const char **original_root_url,
-          const char **original_uuid,
+          apr_int64_t *original_repos_id,
           svn_revnum_t *original_revision,
           svn_boolean_t *props_mod,
           svn_boolean_t *have_base,
@@ -5021,10 +4999,8 @@ read_info(svn_wc__db_status_t *status,
         }
       if (op_depth != 0)
         {
-          if (repos_root_url)
-            *repos_root_url = NULL;
-          if (repos_uuid)
-            *repos_uuid = NULL;
+          if (repos_id)
+            *repos_id = INVALID_REPOS_ID;
           if (revision)
             *revision = SVN_INVALID_REVNUM;
           if (repos_relpath)
@@ -5035,13 +5011,12 @@ read_info(svn_wc__db_status_t *status,
         }
       else
         {
-          /* Fetch repository information via REPOS_ID. If we have a
+          /* Fetch repository information. If we have a
              WORKING_NODE (and have been added), then the repository
              we're being added to will be dependent upon a parent. The
              caller can scan upwards to locate the repository.  */
           err = svn_error_compose_create(
-            err, repos_location_from_columns(repos_root_url, repos_uuid,
-                                             revision, repos_relpath,
+            err, repos_location_from_columns(repos_id, revision, repos_relpath,
                                              pdh, stmt_info, 1, 5, 2,
                                              result_pool));
         }
@@ -5123,10 +5098,8 @@ read_info(svn_wc__db_status_t *status,
         }
       if (op_depth == 0)
         {
-          if (original_root_url)
-            *original_root_url = NULL;
-          if (original_uuid)
-            *original_uuid = NULL;
+          if (original_repos_id)
+            *original_repos_id = INVALID_REPOS_ID;
           if (original_revision)
             *original_revision = SVN_INVALID_REVNUM;
           if (original_repos_relpath)
@@ -5135,8 +5108,7 @@ read_info(svn_wc__db_status_t *status,
       else
         {
           err = svn_error_compose_create(
-            err, repos_location_from_columns(original_root_url, original_uuid,
-                                             original_revision,
+            err, repos_location_from_columns(original_repos_id, original_revision,
                                              original_repos_relpath,
                                              pdh, stmt_info, 1, 5, 2,
                                              result_pool));
@@ -5213,10 +5185,8 @@ read_info(svn_wc__db_status_t *status,
         *revision = SVN_INVALID_REVNUM;
       if (repos_relpath)
         *repos_relpath = NULL;
-      if (repos_root_url)
-        *repos_root_url = NULL;
-      if (repos_uuid)
-        *repos_uuid = NULL;
+      if (repos_id)
+        *repos_id = INVALID_REPOS_ID;
       if (changed_rev)
         *changed_rev = SVN_INVALID_REVNUM;
       if (changed_date)
@@ -5235,10 +5205,8 @@ read_info(svn_wc__db_status_t *status,
         *changelist = svn_sqlite__column_text(stmt_act, 1, result_pool);
       if (original_repos_relpath)
         *original_repos_relpath = NULL;
-      if (original_root_url)
-        *original_root_url = NULL;
-      if (original_uuid)
-        *original_uuid = NULL;
+      if (original_repos_id)
+        *original_repos_id = INVALID_REPOS_ID;
       if (original_revision)
         *original_revision = SVN_INVALID_REVNUM;
       if (props_mod)
@@ -5301,6 +5269,7 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
 {
   svn_wc__db_pdh_t *pdh;
   const char *local_relpath;
+  apr_int64_t repos_id, original_repos_id;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -5309,13 +5278,17 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
-  SVN_ERR(read_info(status, kind, revision, repos_relpath, repos_root_url,
-                    repos_uuid, changed_rev, changed_date, changed_author,
+  SVN_ERR(read_info(status, kind, revision, repos_relpath, &repos_id,
+                    changed_rev, changed_date, changed_author,
                     last_mod_time, depth, checksum, translated_size, target,
-                    changelist, original_repos_relpath, original_root_url,
-                    original_uuid, original_revision, props_mod, have_base,
+                    changelist, original_repos_relpath, &original_repos_id,
+                    original_revision, props_mod, have_base,
                     have_work, conflicted, lock,
                     pdh, local_relpath, result_pool, scratch_pool));
+  SVN_ERR(fetch_repos_info(repos_root_url, repos_uuid,
+                           pdh->wcroot->sdb, repos_id, result_pool));
+  SVN_ERR(fetch_repos_info(original_root_url, original_uuid,
+                           pdh->wcroot->sdb, original_repos_id, result_pool));
 
   return SVN_NO_ERROR;
 }
@@ -5794,7 +5767,7 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
   const char *local_dir_relpath;
   svn_wc__db_status_t status;
   struct relocate_baton rb;
-  const char *old_repos_root_url, *stored_local_dir_relpath;
+  const char *stored_local_dir_relpath;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_dir_abspath));
   /* ### assert that we were passed a directory?  */
@@ -5807,10 +5780,9 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
 
   SVN_ERR(read_info(&status,
                     NULL, NULL,
-                    &rb.repos_relpath, &old_repos_root_url,
-                    &rb.repos_uuid,
+                    &rb.repos_relpath, &rb.old_repos_id,
                     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                    NULL, NULL, NULL, NULL, NULL, NULL,
+                    NULL, NULL, NULL, NULL, NULL,
                     &rb.have_base_node,
                     NULL, NULL, NULL,
                     pdh, rb.local_relpath,
@@ -5824,11 +5796,10 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
                                                        scratch_pool);
       SVN_ERR(read_info(&status,
                         NULL, NULL,
-                        &rb.repos_relpath, &old_repos_root_url,
-                        &rb.repos_uuid,
+                        &rb.repos_relpath, &rb.old_repos_id,
                         NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                         NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                        NULL, NULL, NULL, NULL,
+                        NULL, NULL, NULL,
                         pdh, parent_relpath,
                         scratch_pool, scratch_pool));
       stored_local_dir_relpath = rb.local_relpath;
@@ -5837,7 +5808,7 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
   else
     stored_local_dir_relpath = NULL;
 
-  if (!rb.repos_relpath || !old_repos_root_url || !rb.repos_uuid)
+  if (!rb.repos_relpath || rb.old_repos_id == INVALID_REPOS_ID)
     {
       /* Do we need to support relocating something that is
          added/deleted/excluded without relocating the parent?  If not
@@ -5875,18 +5846,11 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
         SVN_ERR(scan_upwards_for_repos(&rb.old_repos_id, &rb.repos_relpath,
                                        pdh->wcroot, local_dir_relpath,
                                        scratch_pool, scratch_pool));
-
-      SVN_ERR(fetch_repos_info(&old_repos_root_url, &rb.repos_uuid,
-                               pdh->wcroot->sdb, rb.old_repos_id,
-                               scratch_pool));
-    }
-  else
-    {
-      SVN_ERR(fetch_repos_id(&rb.old_repos_id, old_repos_root_url, rb.repos_uuid,
-                             pdh->wcroot->sdb, scratch_pool));
     }
 
-  SVN_ERR_ASSERT(rb.repos_relpath && old_repos_root_url && rb.repos_uuid);
+  SVN_ERR(fetch_repos_info(NULL, &rb.repos_uuid,
+                           pdh->wcroot->sdb, rb.old_repos_id, scratch_pool));
+  SVN_ERR_ASSERT(rb.repos_relpath && rb.repos_uuid);
 
   if (stored_local_dir_relpath)
     {
@@ -8062,7 +8026,7 @@ svn_wc__db_node_hidden(svn_boolean_t *hidden,
 
   /* Now check the BASE node's status.  */
   SVN_ERR(base_get_info(&base_status,
-                        NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                        NULL, NULL, NULL, NULL, NULL, NULL,
                         NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                         pdh, local_relpath, scratch_pool, scratch_pool));
 
