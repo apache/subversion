@@ -440,6 +440,19 @@ SELECT 1 FROM actual_node
     OR  right_checksum = ?1 OR right_checksum = ?2
 LIMIT 1
 
+-- STMT_SELECT_ALL_PRISTINE_REFERENCES
+SELECT checksum FROM nodes
+  WHERE checksum IS NOT NULL
+UNION ALL
+SELECT older_checksum FROM actual_node
+  WHERE older_checksum IS NOT NULL
+UNION ALL
+SELECT left_checksum FROM actual_node
+  WHERE left_checksum  IS NOT NULL
+UNION ALL
+SELECT right_checksum FROM actual_node
+  WHERE right_checksum IS NOT NULL
+
 -- STMT_DELETE_PRISTINE
 DELETE FROM pristine
 WHERE checksum = ?1
