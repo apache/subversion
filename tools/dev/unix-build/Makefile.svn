@@ -105,6 +105,10 @@ SVN_OBJDIR	= $(OBJDIR)/$(SVN_REL_WC)
 # builds!
 svn_builddir	?=$(SVN_WC)
 
+ifdef PROFILE
+PROFILE_CFLAGS=-pg
+endif
+
 #######################################################################
 # Main targets.
 #######################################################################
@@ -190,7 +194,8 @@ $(BDB_OBJDIR)/.retrieved: $(DISTDIR)/$(BDB_DIST)
 # configure bdb
 $(BDB_OBJDIR)/.configured: $(BDB_OBJDIR)/.retrieved
 	cd $(BDB_SRCDIR)/build_unix \
-		&& env CFLAGS="-g" ../dist/configure \
+		&& env CFLAGS="-g $(PROFILE_CFLAGS)" \
+		../dist/configure \
 		--prefix=$(PREFIX)/bdb \
 		--enable-debug
 	touch $@
@@ -237,7 +242,8 @@ $(APR_OBJDIR)/.configured: $(APR_OBJDIR)/.retrieved
 			> $(APR_SRCDIR)/build/apr_hints.m4
 	cd $(APR_SRCDIR) && ./buildconf
 	cd $(APR_OBJDIR) \
-		&& env CFLAGS="-O0 -g" $(APR_SRCDIR)/configure \
+		&& env CFLAGS="-O0 -g $(PROFILE_CFLAGS)" \
+		$(APR_SRCDIR)/configure \
 		--prefix=$(PREFIX)/apr \
 		--enable-maintainer-mode \
 		--disable-threads
@@ -281,7 +287,8 @@ $(APR_ICONV_OBJDIR)/.retrieved: $(DISTDIR)/$(APR_ICONV_DIST)
 # configure apr-iconv
 $(APR_ICONV_OBJDIR)/.configured: $(APR_ICONV_OBJDIR)/.retrieved
 	cd $(APR_ICONV_OBJDIR) \
-		&& env CFLAGS="-g" $(APR_ICONV_SRCDIR)/configure \
+		&& env CFLAGS="-g $(PROFILE_CFLAGS)" \
+		$(APR_ICONV_SRCDIR)/configure \
 		--prefix=$(PREFIX)/apr \
 		--with-apr=$(PREFIX)/apr
 	touch $@
@@ -289,7 +296,7 @@ $(APR_ICONV_OBJDIR)/.configured: $(APR_ICONV_OBJDIR)/.retrieved
 # compile apr-iconv
 $(APR_ICONV_OBJDIR)/.compiled: $(APR_ICONV_OBJDIR)/.configured
 	(cd $(APR_ICONV_OBJDIR) \
-		&& make CPPFLAGS="-D_OSD_POSIX" CFLAGS="-g -O0")
+		&& make CPPFLAGS="-D_OSD_POSIX" CFLAGS="-g -O0 $(PROFILE_CFLAGS)")
 	touch $@
 
 # install apr-iconv
@@ -360,7 +367,8 @@ $(GNU_ICONV_OBJDIR)/.configured: $(GNU_ICONV_OBJDIR)/.retrieved
 	cd $(SRCDIR)/libiconv-${GNU_ICONV_VER} && \
 		${MAKE} -f Makefile.devel lib/aliases.h
 	cd $(GNU_ICONV_OBJDIR) \
-		&& env CFLAGS="-g" $(GNU_ICONV_SRCDIR)/configure \
+		&& env CFLAGS="-g $(PROFILE_CFLAGS)" \
+		$(GNU_ICONV_SRCDIR)/configure \
 		--prefix=$(PREFIX)/iconv \
 		--enable-extra-encodings
 	touch $@
@@ -427,7 +435,7 @@ $(APR_UTIL_OBJDIR)/.configured: $(APR_UTIL_OBJDIR)/.retrieved
 	cd $(APR_UTIL_SRCDIR) && ./buildconf --with-apr=$(APR_SRCDIR)
 	cd $(APR_UTIL_OBJDIR) \
 		&& env LD_LIBRARY_PATH=$(PREFIX)/bdb/lib \
-			CFLAGS="-O0 -g" \
+			CFLAGS="-O0 -g $(PROFILE_CFLAGS)" \
 			$(APR_UTIL_SRCDIR)/configure \
 		--prefix=$(PREFIX)/apr \
 		--enable-maintainer-mode \
@@ -475,7 +483,8 @@ $(HTTPD_OBJDIR)/.retrieved: $(DISTDIR)/$(HTTPD_DIST)
 # configure httpd
 $(HTTPD_OBJDIR)/.configured: $(HTTPD_OBJDIR)/.retrieved
 	cd $(HTTPD_OBJDIR) \
-		&& $(HTTPD_SRCDIR)/configure \
+		&& CFLAGS="$(PROFILE_CFLAGS)" \
+		$(HTTPD_SRCDIR)/configure \
 		--prefix=$(PREFIX)/httpd \
 		--enable-maintainer-mode \
 		--enable-ssl \
@@ -554,7 +563,8 @@ $(NEON_OBJDIR)/.configured: $(NEON_OBJDIR)/.retrieved
 		chmod +x $(NEON_OBJDIR)/krb5-config; \
 	fi
 	cd $(NEON_OBJDIR) \
-		&& env CFLAGS="-g" $(NEON_SRCDIR)/configure \
+		&& env CFLAGS="-g $(PROFILE_CFLAGS)" \
+		$(NEON_SRCDIR)/configure \
 		PATH=$(NEON_OBJDIR):$$PATH \
 		--prefix=$(PREFIX)/neon \
 		--with-ssl \
@@ -612,7 +622,8 @@ $(SERF_OBJDIR)/.retrieved:
 # compile serf (serf won't compile outside its source tree)
 $(SERF_OBJDIR)/.compiled: $(SERF_OBJDIR)/.retrieved
 	cd $(SERF_SRCDIR) && \
-		env CFLAGS="-O0 -g" ./serfmake --with-apr=$(PREFIX)/apr \
+		env CFLAGS="-O0 -g $(PROFILE_CFLAGS)" \
+			./serfmake --with-apr=$(PREFIX)/apr \
 			--prefix=$(PREFIX)/serf \
 			build
 	touch $@
@@ -652,7 +663,8 @@ $(SERF_OLD_OBJDIR)/.retrieved:
 # compile serf (serf won't compile outside its source tree)
 $(SERF_OLD_OBJDIR)/.compiled: $(SERF_OLD_OBJDIR)/.retrieved
 	cd $(SERF_OLD_SRCDIR) && \
-		env CFLAGS="-O0 -g" ./serfmake --with-apr=$(PREFIX)/apr \
+		env CFLAGS="-O0 -g $(PROFILE_CFLAGS)" \
+			./serfmake --with-apr=$(PREFIX)/apr \
 			--prefix=$(PREFIX)/serf-old \
 			build
 	touch $@
@@ -695,7 +707,8 @@ $(SQLITE_OBJDIR)/.retrieved: $(DISTDIR)/$(SQLITE_DIST)
 # configure sqlite
 $(SQLITE_OBJDIR)/.configured: $(SQLITE_OBJDIR)/.retrieved
 	cd $(SQLITE_OBJDIR) \
-		&& env CFLAGS="-g" $(SQLITE_SRCDIR)/configure \
+		&& env CFLAGS="-g $(PROFILE_CFLAGS)" \
+		$(SQLITE_SRCDIR)/configure \
 		--prefix=$(PREFIX)/sqlite \
 		--disable-tcl \
 		--disable-threadsafe
@@ -753,7 +766,8 @@ endif
 # configure cyrus-sasl
 $(CYRUS_SASL_OBJDIR)/.configured: $(CYRUS_SASL_OBJDIR)/.retrieved
 	cd $(CYRUS_SASL_OBJDIR) \
-		&& env CFLAGS="-g" CPPFLAGS="-I/usr/include/kerberosV" \
+		&& env CFLAGS="-g $(PROFILE_CFLAGS)" \
+		CPPFLAGS="-I/usr/include/kerberosV" \
 		$(CYRUS_SASL_SRCDIR)/configure \
 		--with-dbpath=$(PREFIX)/cyrus-sasl/etc/sasldb2 \
 		--with-plugindir=$(PREFIX)/cyrus-sasl/lib/sasl2 \
@@ -859,6 +873,14 @@ else
 	JAVAHL_FLAG=--enable-javahl=no
 endif
 
+ifdef PROFILE
+SVN_ALL_STATIC=--enable-all-static
+else
+SVN_WITH_HTTPD=--with-apxs="$(PREFIX)/httpd/bin/apxs" \
+	--with-apache-libexecdir="$(PREFIX)/httpd/modules/svn-$(WC)"
+SVN_WITH_SASL=--with-sasl="$(PREFIX)/cyrus-sasl"
+endif
+
 # configure svn
 $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved
 	@if [ $(ENABLE_JAVA_BINDINGS) = yes ]; then \
@@ -877,22 +899,22 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved
 			--prefix="$(SVN_PREFIX)" \
 			--with-apr="$(PREFIX)/apr" \
 			--with-apr-util="$(PREFIX)/apr" \
-			--with-apxs="$(PREFIX)/httpd/bin/apxs" \
-			--with-apache-libexecdir=$(PREFIX)/httpd/modules/svn-$(WC) \
 			--with-neon="$(PREFIX)/neon" \
+			$(SVN_WITH_HTTPD) \
+			$(SVN_WITH_SASL) \
 			$(SERF_FLAG) \
 			--with-sqlite="$(PREFIX)/sqlite" \
 			--with-berkeley-db="$(BDB_FLAG)" \
-			--with-sasl="$(PREFIX)/cyrus-sasl" \
 			--with-ruby-sitedir="$(SVN_PREFIX)/lib/ruby/site_ruby" \
 			--disable-mod-activation \
-			$(JAVAHL_FLAG)
+			$(JAVAHL_FLAG) \
+			$(SVN_ALL_STATIC)
 	touch $@
 
 # compile svn
 $(SVN_OBJDIR)/.compiled: $(SVN_OBJDIR)/.configured
 	cd $(svn_builddir) \
-		&& make
+		&& make EXTRA_CFLAGS="$(PROFILE_CFLAGS)"
 	touch $@
 
 # install svn
