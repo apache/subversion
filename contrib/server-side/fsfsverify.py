@@ -851,7 +851,7 @@ class RegexpStrategy(WalkStrategy):
     self.nodeFile = open(filename, 'rb')
 
   def _nodeWalker(self):
-    nodeId_re = re.compile(r'^id: [a-z0-9\./]+$')
+    nodeId_re = re.compile(r'^id: [a-z0-9\./\-]+$')
 
     self.f.seek(0)
     offset = 0
