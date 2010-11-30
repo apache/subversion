@@ -24,5 +24,9 @@ TODO:
   * make diff3 and diff4 use datasources_open  []
      (this may eliminate the need for datasource_open, and the flag
       datasource_opened in token.c#svn_diff__get_tokens)
+  * implement (part of) increment_pointers and
+    decrement_pointers with a macro            []
+     (offers another 10% speedup)
+  * rev svn_diff.h#svn_diff_fns_t              []
 
 [1] http://en.wikipedia.org/wiki/Longest_common_subsequence_problem#Reduce_the_problem_set
