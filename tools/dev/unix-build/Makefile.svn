@@ -122,7 +122,8 @@ reset: dirs-reset bdb-reset apr-reset iconv-reset apr-util-reset \
 
 # Use to save disc space.
 clean: bdb-clean apr-clean iconv-clean apr-util-clean httpd-clean \
-	neon-clean serf-clean serf-old-clean cyrus-sasl-clean svn-clean
+	neon-clean serf-clean serf-old-clean sqlite-clean cyrus-sasl-clean \
+	svn-clean
 
 # Nukes everything (including installed binaries!)
 # Use this to start ALL OVER AGAIN! Use with caution!
