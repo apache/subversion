@@ -495,7 +495,8 @@ get_pristine_fname(const char **pristine_abspath,
 
 
 /* Look up REPOS_ID in SDB and set *REPOS_ROOT_URL and/or *REPOS_UUID to
- * its root URL and UUID respectively.  Either output parameter may be
+ * its root URL and UUID respectively.  If REPOS_ID is INVALID_REPOS_ID,
+ * use NULL for both URL and UUID.  Either or both output parameters may be
  * NULL if not wanted. */
 static svn_error_t *
 fetch_repos_info(const char **repos_root_url,
@@ -506,6 +507,18 @@ fetch_repos_info(const char **repos_root_url,
 {
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
+
+  if (!repos_root_url && !repos_uuid)
+    return SVN_NO_ERROR;
+
+  if (repos_id == INVALID_REPOS_ID)
+    {
+      if (repos_root_url)
+        *repos_root_url = NULL;
+      if (repos_uuid)
+        *repos_uuid = NULL;
+      return SVN_NO_ERROR;
+    }
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                     STMT_SELECT_REPOSITORY_BY_ID));
@@ -5388,11 +5401,10 @@ svn_wc__db_read_children_info(apr_hash_t **nodes,
             }
           else
             {
-              const char *repos_uuid;
               apr_int64_t repos_id = svn_sqlite__column_int64(stmt, 1);
               if (!repos_root_url)
                 {
-                  err = fetch_repos_info(&repos_root_url, &repos_uuid,
+                  err = fetch_repos_info(&repos_root_url, NULL,
                                          pdh->wcroot->sdb, repos_id,
                                          result_pool);
                   if (err)
@@ -6508,10 +6520,8 @@ svn_wc__db_scan_base_repos(const char **repos_relpath,
   SVN_ERR(scan_upwards_for_repos(&repos_id, repos_relpath,
                                  pdh->wcroot, local_relpath,
                                  result_pool, scratch_pool));
-
-  if (repos_root_url || repos_uuid)
-    return fetch_repos_info(repos_root_url, repos_uuid, pdh->wcroot->sdb,
-                            repos_id, result_pool);
+  SVN_ERR(fetch_repos_info(repos_root_url, repos_uuid, pdh->wcroot->sdb,
+                           repos_id, result_pool));
 
   return SVN_NO_ERROR;
 }
@@ -6928,26 +6938,13 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
   if (op_root_abspath)
     *op_root_abspath = svn_dirent_join(pdh->wcroot->abspath, op_root_relpath,
                                        result_pool);
-  if (repos_id_p)
-    {
-      SVN_ERR_ASSERT(repos_id != INVALID_REPOS_ID);
-      SVN_ERR(fetch_repos_info(repos_root_url, repos_uuid, pdh->wcroot->sdb,
-                               repos_id, result_pool));
-    }
-  if (original_repos_id_p)
-    {
-      if (original_repos_id == INVALID_REPOS_ID)
-        {
-          if (original_root_url)
-            *original_root_url = NULL;
-          if (original_uuid)
-            *original_uuid = NULL;
-        }
-      else
-        SVN_ERR(fetch_repos_info(original_root_url, original_uuid,
-                                 pdh->wcroot->sdb, original_repos_id,
-                                 result_pool));
-    }
+  /* REPOS_ID must be valid if requested; ORIGINAL_REPOS_ID need not be. */
+  SVN_ERR_ASSERT(repos_id_p == NULL || repos_id != INVALID_REPOS_ID);
+  SVN_ERR(fetch_repos_info(repos_root_url, repos_uuid, pdh->wcroot->sdb,
+                           repos_id, result_pool));
+  SVN_ERR(fetch_repos_info(original_root_url, original_uuid,
+                           pdh->wcroot->sdb, original_repos_id,
+                           result_pool));
 
   return SVN_NO_ERROR;
 }
