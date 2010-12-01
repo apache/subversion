@@ -2659,8 +2659,6 @@ svn_wc__db_pristine_cleanup(svn_wc__db_t *db,
   svn_wc__db_pdh_t *pdh;
   const char *local_relpath;
   svn_sqlite__stmt_t *stmt;
-  apr_hash_t *sha1s = apr_hash_make(scratch_pool);
-  apr_hash_index_t *hi;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
 
@@ -2669,9 +2667,9 @@ svn_wc__db_pristine_cleanup(svn_wc__db_t *db,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
-  /* Find all the pristines in the DB; store their SHA-1s in SHA1S. */
+  /* Find each unreferenced pristine in the DB and remove it. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
-                                    STMT_SELECT_PRISTINE_ROWS));
+                                    STMT_SELECT_UNREFERENCED_PRISTINES));
   while (1)
     {
       svn_boolean_t have_row;
@@ -2683,48 +2681,9 @@ svn_wc__db_pristine_cleanup(svn_wc__db_t *db,
 
       SVN_ERR(svn_sqlite__column_checksum(&sha1_checksum, stmt, 0,
                                           scratch_pool));
-      apr_hash_set(sha1s, sha1_checksum->digest,
-                   svn_checksum_size(sha1_checksum), (void *)1);
-    }
-  SVN_ERR(svn_sqlite__reset(stmt));
-
-  /* Find all the referenced pristines; remove their SHA-1s from SHA1S. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
-                                    STMT_SELECT_ALL_PRISTINE_REFERENCES));
-  while (1)
-    {
-      svn_boolean_t have_row;
-      const svn_checksum_t *sha1_checksum;
-
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
-      if (! have_row)
-        break;
-
-      SVN_ERR(svn_sqlite__column_checksum(&sha1_checksum, stmt, 0,
-                                          scratch_pool));
-      if (sha1_checksum->kind != svn_checksum_sha1)
-        {
-          /* ### Transitional. Should no longer be possible. */
-          SVN_ERR(svn_wc__db_pristine_get_sha1(&sha1_checksum, db, wri_abspath,
-                                               sha1_checksum,
-                                               scratch_pool, scratch_pool));
-        }
-      apr_hash_set(sha1s, sha1_checksum->digest,
-                   svn_checksum_size(sha1_checksum), NULL);
-    }
-  SVN_ERR(svn_sqlite__reset(stmt));
-
-  /* Remove each remaining pristine that is listed in SHA1S. */
-  for (hi = apr_hash_first(scratch_pool, sha1s);
-       hi; hi = apr_hash_next(hi))
-    {
-      const unsigned char *sha1_digest = svn__apr_hash_index_key(hi);
-      const svn_checksum_t *sha1_checksum
-        = svn_checksum__from_digest(sha1_digest, svn_checksum_sha1,
-                                    scratch_pool);
-
       SVN_ERR(pristine_remove(pdh, sha1_checksum, scratch_pool));
     }
+  SVN_ERR(svn_sqlite__reset(stmt));
 
   return SVN_NO_ERROR;
 }
