@@ -243,9 +243,7 @@ def process_sigs(signatures):
   <p>Key ID: <code>%s</code></p>
   <p>User: <code>%s</code></p>
   <p>This signature has been saved, and will be included as part of the
-    release signatures.  Please send mail to
-    <a href="mailto:dev@subversion.apache.org">dev@subversion.apache.org</a>
-    acknowledging your successful signature.</p>
+    release signatures.</p>
 '''
   c_unverified = '''
   <p style="color: red;">The signature was not able to be verified!</p>
