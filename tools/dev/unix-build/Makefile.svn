@@ -233,6 +233,12 @@ $(APR_OBJDIR)/.retrieved:
 	fi
 	touch $@
 
+ifdef THREADING
+THREADS_FLAG=--enable-threads
+else
+THREADS_FLAG=--disable-threads
+endif
+
 # configure apr
 $(APR_OBJDIR)/.configured: $(APR_OBJDIR)/.retrieved
 	cp $(APR_SRCDIR)/build/apr_hints.m4 \
@@ -246,7 +252,7 @@ $(APR_OBJDIR)/.configured: $(APR_OBJDIR)/.retrieved
 		$(APR_SRCDIR)/configure \
 		--prefix=$(PREFIX)/apr \
 		--enable-maintainer-mode \
-		--disable-threads
+		$(THREADS_FLAG)
 	touch $@
 
 # compile apr
@@ -704,6 +710,12 @@ $(SQLITE_OBJDIR)/.retrieved: $(DISTDIR)/$(SQLITE_DIST)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(SQLITE_DIST)
 	touch $@
 
+ifdef THREADING
+THREADSAFE_FLAG=--enable-threadsafe
+else
+THREADSAFE_FLAG=--disable-threadsafe
+endif
+
 # configure sqlite
 $(SQLITE_OBJDIR)/.configured: $(SQLITE_OBJDIR)/.retrieved
 	cd $(SQLITE_OBJDIR) \
@@ -711,7 +723,7 @@ $(SQLITE_OBJDIR)/.configured: $(SQLITE_OBJDIR)/.retrieved
 		$(SQLITE_SRCDIR)/configure \
 		--prefix=$(PREFIX)/sqlite \
 		--disable-tcl \
-		--disable-threadsafe
+		$(THREADSAFE_FLAG)
 	touch $@
 
 # compile sqlite
