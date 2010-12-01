@@ -2868,7 +2868,7 @@ def diff_with_depth(sbox):
 
   diff = [
     "\n",
-    "Property changes on: .\n",
+    "Property changes on: \n",
     "___________________________________________________________________\n",
     "Added: foo1\n",
     "## -0,0 +1 ##\n",
@@ -2892,7 +2892,7 @@ def diff_with_depth(sbox):
     "## -0,0 +1 ##\n",
     "+bar4\n"]
 
-  dot_header = make_diff_header(".", "revision 1", "working copy")
+  dot_header = make_diff_header("", "revision 1", "working copy")
   iota_header = make_diff_header('iota', "revision 1", "working copy")
   A_header = make_diff_header('A', "revision 1", "working copy")
   B_header = make_diff_header(B_path, "revision 1", "working copy")
@@ -2939,7 +2939,7 @@ def diff_with_depth(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'ci', '-m', '')
 
-  dot_header = make_diff_header(".", "revision 1", "revision 2")
+  dot_header = make_diff_header("", "revision 1", "revision 2")
   iota_header = make_diff_header('iota', "revision 1", "revision 2")
   A_header = make_diff_header('A', "revision 1", "revision 2")
   B_header = make_diff_header(B_path, "revision 1", "revision 2")
@@ -3011,12 +3011,12 @@ def diff_with_depth(sbox):
     "## -1 +1 ##\n",
     "-bar2\n",
     "+baz2\n",
-    "Index: .\n",
+    "Index: \n",
     "===================================================================\n",
-    "--- .\t(revision 2)\n",
-    "+++ .\t(working copy)\n",
+    "--- \t(revision 2)\n",
+    "+++ \t(working copy)\n",
     "\n",
-    "Property changes on: .\n",
+    "Property changes on: \n",
     "___________________________________________________________________\n",
     "Modified: foo1\n",
     "## -1 +1 ##\n",
@@ -3713,6 +3713,42 @@ def diff_git_with_props(sbox):
 
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff', 
                                      '--git', wc_dir)
+
+def diff_git_with_props_on_dir(sbox):
+  "diff in git format showing prop changes on dir"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Now commit the local mod, creating rev 2.
+  expected_output = svntest.wc.State(wc_dir, {
+    '.' : Item(verb='Sending'),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    '' : Item(status='  ', wc_rev=2),
+    })
+
+  svntest.main.run_svn(None, 'ps', 'a','b', wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  was_cwd = os.getcwd()
+  os.chdir(wc_dir)
+  expected_output = make_git_diff_header("", "", "revision 1",
+                                         "revision 2",
+                                         add=False, text_changes=False) + [
+      "\n",
+      "Property changes on: \n",
+      "___________________________________________________________________\n",
+      "Added: a\n",
+      "## -0,0 +1 ##\n",
+      "+b\n",
+  ]
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff',
+                                     '-c2', '--git')
+  os.chdir(was_cwd)
 ########################################################################
 #Run the tests
 
@@ -3775,7 +3811,8 @@ test_list = [ None,
               diff_prop_missing_context,
               diff_prop_multiple_hunks,
               diff_git_empty_files,
-              diff_git_with_props,
+              diff_git_with_props, 
+              diff_git_with_props_on_dir,
               ]
 
 if __name__ == '__main__':
