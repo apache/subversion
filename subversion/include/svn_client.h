@@ -1000,8 +1000,11 @@ svn_client_create_context(svn_client_ctx_t **ctx,
  * converting them to UTF-8, followed by targets from @a known_targets
  * (which might come from, for example, the "--targets" command line option).
  *
- * On each URL target, do some IRI-to-URI encoding and some auto-escaping.
- * On each local path, canonicalize case and path separators.
+ * Process each target in one of the following ways.  For a repository-
+ * relative URL: resolve to a full URL, contacting the repository if
+ * necessary to do so, and then treat as a full URL.  For a URL: do some
+ * IRI-to-URI encoding and some auto-escaping, and canonicalize.  For a
+ * local path: canonicalize case and path separators.
  *
  * Allocate @a *targets_p and its elements in @a pool.
  *
