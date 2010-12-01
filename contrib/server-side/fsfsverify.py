@@ -20,6 +20,13 @@ import optparse
 import sys
 import re
 
+try:
+    import hashlib
+    md5_new = hashlib.md5
+except ImportError:
+    import md5
+    md5_new = md5.new
+
 
 # A handy constant for refering to the NULL digest (one that
 # matches every digest).
@@ -67,6 +74,10 @@ class DataCorrupt(FsfsVerifyException):
 
 
 class NoMoreData(FsfsVerifyException):
+  pass
+
+
+class CmdlineError(FsfsVerifyException):
   pass
 
 
@@ -350,8 +361,8 @@ class Window(object):
           self.isDataCompressed = True
       except Exception, e:
         new_e = InvalidCompressedStream(
-          "Invalid compressed data stream at offset %d (%s)" % (offset,
-                                                                str(e)),
+          "Invalid compressed data stream at offset %d (%s, %s)\n" % (
+              offset, str(e), repr(self)),
           offset)
         new_e.windowOffset = self.windowOffset
         raise new_e
@@ -522,7 +533,7 @@ class Rep(object):
     self.length = int(length)
     self.size = int(size)
 
-    self.digest = digest
+    self.digest = digest.strip()
     self.currentRev = currentRev
 
     self.contentType = contentType
@@ -561,16 +572,14 @@ class Rep(object):
                                                       self.contentType)
 
     if header == 'DELTA':
-      # Consume the rest of the DELTA header
-      while f.read(1) != '\n':
-        pass
-
+      line = f.readline()
+      digest = None
+      
       # This should be the start of the svndiff stream
       actual_start = f.tell()
       try:
         svndiff = Svndiff(f, self.length)
         svndiff.verify()
-        digest = None
       except Exception, e:
         e.rep = self
         e.noderev = self.noderev
@@ -582,8 +591,7 @@ class Rep(object):
       if f.read(1) != '\n':
         raise DataCorrupt, "Expected a '\\n' after PLAIN"
 
-      import md5
-      m = md5.new()
+      m = md5_new()
       m.update(f.read(self.length))
 
       if self.digest and self.digest != NULL_DIGEST \
@@ -592,15 +600,19 @@ class Rep(object):
           "PLAIN data is corrupted.  Expected digest '%s', computed '%s'." % (
             self.digest, m.hexdigest())
 
-      if f.read(7) != 'ENDREP\n':
-        raise DataCorrupt, "Terminating ENDREP missing!"
+      buf = f.read(6)
+      if buf != 'ENDREP':
+        raise DataCorrupt, "Terminating ENDREP missing! %r, %r" % (buf, self)
+        pass
 
 
 class TextRep(Rep):
   def __init__(self, rev, offset, length, size, digest,
-               contentType, currentRev, noderev):
+               contentType, currentRev, noderev, sha1=None, uniquifier=None):
     super(TextRep,self).__init__('text', rev, offset, length, size,
                                  digest, contentType, currentRev, noderev)
+    self.sha1 = None
+    self.uniquifier = None
 
 
 class PropRep(Rep):
@@ -650,6 +662,7 @@ class NodeRev(object):
     self.nodeOffset = f.tell()
 
     while True:
+      currentOffset = f.tell()
       line = f.readline()
       if line == '':
         raise IOError, "Unexpected end of file"
@@ -666,7 +679,11 @@ class NodeRev(object):
         raise
 
       # pull of the leading space and trailing new line
+      if len(value) < 2:
+          raise FsfsVerifyException("value needs to contain 2 or more bytes (%d)" % currentOffset)
       value = value[1:-1]
+
+      assert value != ""
 
       if field == 'id':
         self.id = NodeId(value)
@@ -681,7 +698,16 @@ class NodeRev(object):
         length = int(values[2])
         size = int(values[3])
         digest = values[4]
-        # TODO SHA1 digest
+        
+        if len(values) > 5:
+            sha1 = values[5]
+        else:
+            sha1 = None
+        
+        if len(values) > 6:
+            uniquifier = values[6]
+        else:
+            uniquifier = None
 
         if rev != currentRev:
           contentType = None
@@ -692,7 +718,7 @@ class NodeRev(object):
           f.seek(savedOffset)
 
         self.text = TextRep(rev, offset, length, size, digest,
-                            contentType, currentRev, self)
+                            contentType, currentRev, self, sha1, uniquifier)
       elif field == 'props':
         (rev, offset, length, size, digest) = value.split(' ')
         rev = int(rev)
@@ -723,6 +749,28 @@ class NodeRev(object):
           offset = f.tell()
           f.seek(self.text.offset)
           self.dir = getDirHash(f)
+          
+          for k,v in self.dir.items():
+              nodeType, nodeId = v
+              
+              if nodeId.rev != self.id.rev:
+                  if not os.path.exists(str(nodeId.rev)):
+                      print "Can't check %s" % repr(nodeId)
+                      continue
+                  with open(str(nodeId.rev),'rb') as tmp:
+                      tmp.seek(nodeId.offset)
+                      idLine = tmp.readline()
+              else:
+                  f.seek(nodeId.offset)
+                  idLine = f.readline()
+              
+              if idLine != ("id: %s\n" % nodeId):
+                  raise DataCorrupt(
+                     ("Entry for '%s' at " % k ) +
+                     ("offset %d is pointing to an " % self.text.offset) +
+                     ("invalid location (node claims to be at offset %d)" % (
+                       nodeId.offset))
+                    )
           f.seek(offset)
         else:
           # The directory entries are stored in another file.
@@ -1111,8 +1159,9 @@ if __name__ == '__main__':
     match = re.match('([0-9]+)', os.path.basename(filename))
     currentRev = int(match.group(1), 10)
   except:
-    raise CmdlineError, \
-      "The file name must start with a decimal number that indicates the revision"
+    raise CmdlineError(
+      "The file name must start with a decimal " +
+      "number that indicates the revision")
 
   if options.noderevRegexp:
     strategy = RegexpStrategy(filename, root, currentRev)
