@@ -72,10 +72,9 @@ Candidate changes for 1.5.8:
      Can cause repeat merges to break in the presence of non-inheritable
      mergeinfo.
    Notes:
-     r877146 is a test for the issue, r877157 is the fix.  There is a backport
-     branch at http://svn.collab.net/repos/svn/branches/1.5.x-issue3392, but
-     it is dependent on r876953 being merged first.  (If this change *must* be
-     merged before r876953 I'll create a branch to do so - pburba)
+     r877146 is a test for the issue, r877157 is the fix.
+   Branch:
+     ^/subversion/branches/1.5.x-issue3392
    Votes:
      +1: pburba, arfrever
 
@@ -120,6 +119,7 @@ Candidate changes for 1.5.8:
      This was introduced in 1.5.1 and propagated till now.
    Votes:
      +1: stylesen
+     -1: pburba (This change uses a 1.6 API, svn_error_compose_create).
 
  * r878760-7
    Fix serious bugs in libsvn_ra_svn and svnsync.  (If svnsync errors
@@ -162,6 +162,7 @@ Candidate changes for 1.5.8:
      files are used everywhere else in the world.
    Votes:
      +1: cmpilato
+     -0: this change conflicts when merged
 
  * r880082
    Respect Apache's ServerSignature directive.
