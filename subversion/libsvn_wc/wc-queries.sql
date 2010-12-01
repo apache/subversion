@@ -426,10 +426,6 @@ SELECT checksum
 FROM pristine
 WHERE md5_checksum = ?1
 
--- STMT_SELECT_PRISTINE_ROWS
-SELECT checksum
-FROM pristine
-
 -- STMT_SELECT_ANY_PRISTINE_REFERENCE
 SELECT 1 FROM nodes
   WHERE checksum = ?1 OR checksum = ?2
@@ -440,16 +436,19 @@ SELECT 1 FROM actual_node
     OR  right_checksum = ?1 OR right_checksum = ?2
 LIMIT 1
 
--- STMT_SELECT_ALL_PRISTINE_REFERENCES
+-- STMT_SELECT_UNREFERENCED_PRISTINES
+SELECT checksum
+FROM pristine
+EXCEPT
 SELECT checksum FROM nodes
   WHERE checksum IS NOT NULL
-UNION ALL
+EXCEPT
 SELECT older_checksum FROM actual_node
   WHERE older_checksum IS NOT NULL
-UNION ALL
+EXCEPT
 SELECT left_checksum FROM actual_node
   WHERE left_checksum  IS NOT NULL
-UNION ALL
+EXCEPT
 SELECT right_checksum FROM actual_node
   WHERE right_checksum IS NOT NULL
 
