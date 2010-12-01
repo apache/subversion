@@ -407,8 +407,12 @@ svn_error_t *svn_fs_fs__move_into_place(const char *old_filename,
                                         const char *perms_reference,
                                         apr_pool_t *pool);
 
-/* Sets *PATH to the path of REV in FS, whether in a pack file or not.
-   Allocate in POOL. */
+/* Set *PATH to the path of REV in FS, whether in a pack file or not.
+   Allocate *PATH in POOL.
+
+   Note: If the caller does not have the write lock on FS, then the path is
+   not guaranteed to remain correct after the function returns, because the
+   revision might become packed just after this call. */
 svn_error_t *
 svn_fs_fs__path_rev_absolute(const char **path,
                              svn_fs_t *fs,
