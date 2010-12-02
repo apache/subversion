@@ -166,10 +166,3 @@ Approved changes:
      drops it to 51 MB.
    Votes:
      +1: pburba, hwright, cmpilato (via IRC)
-
- * r880082
-   Respect Apache's ServerSignature directive.
-   Justification:
-     Many subversion server administrators want it.
-   Votes:
-     +1: stylesen, cmpilato, hwright
