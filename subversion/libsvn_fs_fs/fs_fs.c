@@ -1901,9 +1901,14 @@ open_pack_or_rev_file(apr_file_t **file,
                       svn_revnum_t rev,
                       apr_pool_t *pool)
 {
+  fs_fs_data_t *ffd = fs->fsap_data;
   svn_error_t *err;
   const char *path;
   svn_boolean_t retry = FALSE;
+
+  /* If the filesystem doesn't support packing, try once instead of twice. */
+  if (ffd->format < SVN_FS_FS__MIN_PACKED_FORMAT)
+    retry = TRUE;
 
   do
     {
@@ -1925,7 +1930,8 @@ open_pack_or_rev_file(apr_file_t **file,
             return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
                                     _("No such revision %ld"), rev);
 
-          /* we failed for the first time. Refresh cache & retry. */
+          /* We failed for the first time. Refresh cache & retry.
+             (We already know the format is new enough.) */
           SVN_ERR(update_min_unpacked_rev(fs, pool));
 
           retry = TRUE;
