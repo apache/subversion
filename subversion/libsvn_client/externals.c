@@ -204,7 +204,7 @@ switch_dir_external(const char *path,
               SVN_ERR(svn_client__update_internal(NULL, local_abspath,
                                                   revision, svn_depth_unknown,
                                                   FALSE, FALSE, FALSE,
-                                                  timestamp_sleep, TRUE,
+                                                  timestamp_sleep, TRUE, FALSE,
                                                   ctx, subpool));
               svn_pool_destroy(subpool);
               return SVN_NO_ERROR;
@@ -230,7 +230,7 @@ switch_dir_external(const char *path,
                                                  subpool));
 
                   err = svn_client_relocate2(path, repos_root_url, repos_root,
-                                             ctx, subpool);
+                                             FALSE, ctx, subpool);
                   /* If the relocation failed because the new URL points
                      to another repository, then we need to relegate and
                      check out a new WC. */
@@ -1392,70 +1392,86 @@ svn_client__do_external_status(svn_client_ctx_t *ctx,
   return SVN_NO_ERROR;
 }
 
-/* Implements svn_wc_externals_update_t */
+
+/* Implements the `svn_wc_externals_update_t' interface. */
 svn_error_t *
-svn_cl__store_externals(void *baton,
-                        const char *local_abspath,
-                        const svn_string_t *old_value,
-                        const svn_string_t *new_value,
-                        svn_depth_t depth,
-                        apr_pool_t *scratch_pool)
+svn_client__external_info_gatherer(void *baton,
+                                   const char *local_abspath,
+                                   const svn_string_t *old_value,
+                                   const svn_string_t *new_value,
+                                   svn_depth_t depth,
+                                   apr_pool_t *scratch_pool)
 {
-  struct svn_cl__externals_store *eb = baton;
-  apr_pool_t *dup_pool = eb->pool;
+  svn_client__external_func_baton_t *efb = baton;
 
-  local_abspath = apr_pstrdup(dup_pool, local_abspath);
+  local_abspath = apr_pstrdup(efb->result_pool, local_abspath);
 
-  if (eb->externals_old != NULL && old_value != NULL)
-    apr_hash_set(eb->externals_new,
-                 local_abspath, APR_HASH_KEY_STRING,
-                 apr_pstrndup(dup_pool, old_value->data, old_value->len));
+  if (efb->externals_old != NULL && old_value != NULL)
+    apr_hash_set(efb->externals_old, local_abspath, APR_HASH_KEY_STRING,
+                 apr_pstrndup(efb->result_pool,
+                              old_value->data, old_value->len));
 
-  if (eb->externals_new != NULL && new_value != NULL)
-    apr_hash_set(eb->externals_new,
-                 local_abspath, APR_HASH_KEY_STRING,
-                 apr_pstrndup(dup_pool, new_value->data, new_value->len));
+  if (efb->externals_new != NULL && new_value != NULL)
+    apr_hash_set(efb->externals_new, local_abspath, APR_HASH_KEY_STRING,
+                 apr_pstrndup(efb->result_pool,
+                              new_value->data, new_value->len));
 
-  if (eb->depths != NULL)
-    apr_hash_set(eb->depths,
-                 local_abspath, APR_HASH_KEY_STRING,
+  if (efb->ambient_depths != NULL)
+    apr_hash_set(efb->ambient_depths, local_abspath, APR_HASH_KEY_STRING,
                  svn_depth_to_word(depth));
 
   return SVN_NO_ERROR;
 }
 
 
+/* Callback of type svn_wc_external_update_t.  Just squirrels away an
+   svn:externals property value into BATON (which is an apr_hash_t *
+   keyed on local absolute path).  */
+static svn_error_t *
+externals_update_func(void *baton,
+                      const char *local_abspath,
+                      const svn_string_t *old_val,
+                      const svn_string_t *new_val,
+                      svn_depth_t depth,
+                      apr_pool_t *scratch_pool)
+{
+  apr_hash_t *externals_hash = baton;
+  apr_pool_t *hash_pool = apr_hash_pool_get(externals_hash);
+
+  apr_hash_set(externals_hash, apr_pstrdup(hash_pool, local_abspath),
+               APR_HASH_KEY_STRING, svn_string_dup(new_val, hash_pool));
+  return SVN_NO_ERROR;
+}
+
+
+/* Callback of type svn_wc_status_func4_t.  Does nothing. */
+static svn_error_t *
+status_noop_func(void *baton,
+                 const char *local_abspath,
+                 const svn_wc_status3_t *status,
+                 apr_pool_t *scratch_pool)
+{
+  return SVN_NO_ERROR;
+}
+
 
 svn_error_t *
-svn_client__external_info_gatherer(void *baton,
-                                   const char *local_abspath,
-                                   const svn_string_t *old_val,
-                                   const svn_string_t *new_val,
-                                   svn_depth_t depth,
-                                   apr_pool_t *scratch_pool)
+svn_client__crawl_for_externals(apr_hash_t **externals_p,
+                                const char *local_abspath,
+                                svn_depth_t depth,
+                                svn_client_ctx_t *ctx,
+                                apr_pool_t *scratch_pool,
+                                apr_pool_t *result_pool)
 {
-  svn_client__external_func_baton_t *efb = baton;
-  const char *dup_val = NULL;
-  const char *dup_path = apr_pstrdup(efb->result_pool, local_abspath);
+  apr_hash_t *externals_hash = apr_hash_make(result_pool);
 
-  if (old_val)
-    {
-      dup_val = apr_pstrmemdup(efb->result_pool, old_val->data, old_val->len);
+  /* Do a status run just to harvest externals definitions. */
+  SVN_ERR(svn_wc_walk_status(ctx->wc_ctx, local_abspath, depth,
+                             FALSE, FALSE, NULL, status_noop_func, NULL,
+                             externals_update_func, externals_hash,
+                             ctx->cancel_func, ctx->cancel_baton,
+                             scratch_pool));
 
-      apr_hash_set(efb->externals_old, dup_path, APR_HASH_KEY_STRING, dup_val);
-    }
-
-  if (new_val)
-    {
-      /* In most cases the value is identical */
-      if (old_val != new_val)
-        dup_val = apr_pstrmemdup(efb->result_pool, new_val->data, new_val->len);
-
-      apr_hash_set(efb->externals_new, dup_path, APR_HASH_KEY_STRING, dup_val);
-    }
-
-  apr_hash_set(efb->ambient_depths, dup_path, APR_HASH_KEY_STRING,
-               svn_depth_to_word(depth));
-
+  *externals_p = externals_hash;
   return SVN_NO_ERROR;
 }

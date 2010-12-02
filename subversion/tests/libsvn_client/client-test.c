@@ -379,7 +379,7 @@ test_patch(const svn_test_opts_t *opts,
   pcb.patched_tempfiles = apr_hash_make(pool);
   pcb.reject_tempfiles = apr_hash_make(pool);
   pcb.state_pool = pool;
-  SVN_ERR(svn_client_patch(patch_file_path, wc_path, FALSE, 0, FALSE, FALSE,
+  SVN_ERR(svn_client_patch(patch_file_path, wc_path, FALSE, 0, FALSE,
                            FALSE, FALSE, patch_collection_func, &pcb,
                            ctx, pool, pool));
   SVN_ERR(svn_io_file_close(patch_file, pool));

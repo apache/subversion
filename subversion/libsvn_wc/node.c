@@ -1122,14 +1122,22 @@ svn_wc__node_get_lock_info(const char **lock_token,
                            apr_pool_t *scratch_pool)
 {
   svn_wc__db_lock_t *lock;
+  svn_error_t *err;
 
-  SVN_ERR(svn_wc__db_read_info(NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, &lock,
-                               wc_ctx->db, local_abspath,
-                               result_pool, scratch_pool));
+  err = svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 &lock,
+                                 wc_ctx->db, local_abspath,
+                                 result_pool, scratch_pool);
+
+  if (err)
+    {
+      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+        return svn_error_return(err);
+
+      svn_error_clear(err);
+      lock = NULL;
+    }
   if (lock_token)
     *lock_token = lock ? lock->token : NULL;
   if (lock_owner)

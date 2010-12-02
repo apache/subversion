@@ -1715,6 +1715,11 @@ svn_repos_get_logs(svn_repos_t *repos,
  * @a inherit indicates whether explicit, explicit or inherited, or
  * only inherited mergeinfo for @a paths is fetched.
  *
+ * If the mergeinfo for any path is inherited and
+ * @a validate_inherited_mergeinfo is TRUE, then the mergeinfo for
+ * that path in @a *catalog will only contain merge source
+ * path-revisions that actually exist in repository.
+ *
  * If @a revision is #SVN_INVALID_REVNUM, it defaults to youngest.
  *
  * If @a include_descendants is TRUE, then additionally return the
@@ -1731,7 +1736,25 @@ svn_repos_get_logs(svn_repos_t *repos,
  *
  * Use @a pool for all allocations.
  *
- * @since New in 1.5.
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_repos_fs_get_mergeinfo2(svn_mergeinfo_catalog_t *catalog,
+                            svn_repos_t *repos,
+                            const apr_array_header_t *paths,
+                            svn_revnum_t revision,
+                            svn_mergeinfo_inheritance_t inherit,
+                            svn_boolean_t validate_inherited_mergeinfo,
+                            svn_boolean_t include_descendants,
+                            svn_repos_authz_func_t authz_read_func,
+                            void *authz_read_baton,
+                            apr_pool_t *pool);
+
+/**
+ * Similar to svn_repos_fs_get_mergeinfo2(), but with
+ * @a validate_inherited_mergeinfo always passed as FALSE.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  */
 svn_error_t *
 svn_repos_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
@@ -2556,7 +2579,7 @@ svn_repos_load_fs2(svn_repos_t *repos,
  * Similar to svn_repos_load_fs2(), but with @a use_pre_commit_hook and
  * @a use_post_commit_hook always @c FALSE.
  *
- * @deprecated Provided for backward compatibility with the 1.0 API.
+ * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 SVN_DEPRECATED
 svn_error_t *

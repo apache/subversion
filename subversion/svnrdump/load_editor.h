@@ -104,13 +104,17 @@ get_dumpstream_loader(const svn_repos_parse_fns2_t **parser,
  * Drive the dumpstream loader described by @a parser and @a
  * parse_baton to parse and commit the stream @a stream to the
  * location described by @a session. Use @a pool for all memory
- * allocations.
+ * allocations.  Use @a cancel_func and @a cancel_baton to check for
+ * user cancellation of the operation (for timely-but-safe
+ * termination).
  */
 svn_error_t *
 drive_dumpstream_loader(svn_stream_t *stream,
                         const svn_repos_parse_fns2_t *parser,
                         void *parse_baton,
                         svn_ra_session_t *session,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
                         apr_pool_t *pool);
 
 #endif

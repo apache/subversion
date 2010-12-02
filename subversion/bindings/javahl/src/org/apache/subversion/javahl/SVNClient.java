@@ -24,6 +24,7 @@
 package org.apache.subversion.javahl;
 
 import org.apache.subversion.javahl.callback.*;
+import org.apache.subversion.javahl.types.*;
 
 import java.io.OutputStream;
 import java.io.ByteArrayOutputStream;
@@ -349,7 +350,7 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.7
      */
-    public native void getMergeinfoLog(MergeinfoLogKind kind, String pathOrUrl,
+    public native void getMergeinfoLog(Mergeinfo.LogKind kind, String pathOrUrl,
                                        Revision pegRevision,
                                        String mergeSourceUrl,
                                        Revision srcPegRevision,
@@ -495,7 +496,8 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.0
      */
-    public native void relocate(String from, String to, String path)
+    public native void relocate(String from, String to, String path,
+                                boolean ignoreExternals)
             throws ClientException;
 
     /**

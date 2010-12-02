@@ -689,9 +689,10 @@ test_list = [ None,
                               svntest.main.is_ra_type_file),
                          svntest.main.server_has_mergeinfo),
              ]
+serial_only = True
 
 if __name__ == '__main__':
-  svntest.main.run_tests(test_list, serial_only = True)
+  svntest.main.run_tests(test_list, serial_only = serial_only)
   # NOTREACHED
 
 

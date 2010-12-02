@@ -1489,7 +1489,7 @@ public class SVNClient implements SVNClientInterface
         try
         {
             aSVNClient.getMergeinfoLog(
-                org.apache.subversion.javahl.MergeinfoLogKind.values()[kind],
+                org.apache.subversion.javahl.Mergeinfo.LogKind.values()[kind],
                 pathOrUrl, pegRevision == null ? null : pegRevision.toApache(),
                 mergeSourceUrl,
                 srcPegRevision == null ? null : srcPegRevision.toApache(),
@@ -2125,7 +2125,7 @@ public class SVNClient implements SVNClientInterface
 
         try
         {
-            aSVNClient.relocate(from, to, path);
+            aSVNClient.relocate(from, to, path, true);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -2348,15 +2348,15 @@ public class SVNClient implements SVNClientInterface
     {
         try
         {
-        	final List<org.apache.subversion.javahl.Info2> infos =
-        		new ArrayList<org.apache.subversion.javahl.Info2>();
+        	final List<org.apache.subversion.javahl.Info> infos =
+        		new ArrayList<org.apache.subversion.javahl.Info>();
         	aSVNClient.info2(path,
         					org.apache.subversion.javahl.Revision.HEAD,
         					org.apache.subversion.javahl.Revision.HEAD,
-        					org.apache.subversion.javahl.Depth.empty,
+        					org.apache.subversion.javahl.types.Depth.empty,
         				    null, new org.apache.subversion.javahl.callback.InfoCallback()
         	{
-				public void singleInfo(org.apache.subversion.javahl.Info2 info) {
+				public void singleInfo(org.apache.subversion.javahl.Info info) {
 					infos.add(info);
 				}
         	});
@@ -2593,7 +2593,7 @@ public class SVNClient implements SVNClientInterface
                           Depth.toADepth(depth), changelists == null ? null
                             : Arrays.asList(changelists),
         new org.apache.subversion.javahl.callback.InfoCallback () {
-            public void singleInfo(org.apache.subversion.javahl.Info2 aInfo)
+            public void singleInfo(org.apache.subversion.javahl.Info aInfo)
             {
                 callback.singleInfo(aInfo == null ? null : new Info2(aInfo));
             }

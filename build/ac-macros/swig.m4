@@ -231,10 +231,10 @@ AC_DEFUN(SVN_FIND_SWIG,
     old_LIBS="$LIBS"
     CFLAGS="`echo $CFLAGS | $SED -e "s/ -ansi//g"` $svn_cv_ruby_includes"
     LIBS="$SWIG_RB_LIBS"
-    AC_LINK_IFELSE([
+    AC_LINK_IFELSE([AC_LANG_SOURCE([[
 #include <ruby.h>
 int main()
-{rb_errinfo();}], have_rb_errinfo="yes", have_rb_errinfo="no")
+{rb_errinfo();}]])], have_rb_errinfo="yes", have_rb_errinfo="no")
     if test "$have_rb_errinfo" = "yes"; then
       AC_MSG_RESULT([yes])
       AC_DEFINE([HAVE_RB_ERRINFO], [1],

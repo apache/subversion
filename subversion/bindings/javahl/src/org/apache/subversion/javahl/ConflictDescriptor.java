@@ -23,6 +23,8 @@
 
 package org.apache.subversion.javahl;
 
+import org.apache.subversion.javahl.types.NodeKind;
+
 /**
  * The description of a merge conflict, encountered during
  * merge/update/switch operations.

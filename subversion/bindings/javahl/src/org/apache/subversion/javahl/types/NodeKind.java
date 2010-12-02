@@ -21,17 +21,37 @@
  * @endcopyright
  */
 
-package org.apache.subversion.javahl;
+package org.apache.subversion.javahl.types;
 
 /**
- * Constants to specify which collection of revisions to report in
- * getMergeinfoLog.
+ * Rich man's enum for svn_node_kind_t
  */
-public enum MergeinfoLogKind
+public enum NodeKind
 {
-    /** Revisions eligible for merging from merge-source to merge-target. */
-    eligible,
+    /* absent */
+    none    ("none"),
 
-    /** Revisions already merged from merge-source to merge-target. */
-    merged;
+    /* regular file */
+    file    ("file"),
+
+    /* directory */
+    dir     ("dir"),
+
+    /* something's here, but we don't know what */
+    unknown ("unknown");
+
+    /**
+     * The description of the node kind.
+     */
+    private String description;
+
+    NodeKind(String description)
+    {
+        this.description = description;
+    }
+
+    public String toString()
+    {
+        return description;
+    }
 }

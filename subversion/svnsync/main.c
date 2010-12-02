@@ -530,6 +530,8 @@ check_if_session_is_at_repos_root(svn_ra_session_t *sess,
 /* Remove the properties in TARGET_PROPS but not in SOURCE_PROPS from
  * revision REV of the repository associated with RA session SESSION.
  *
+ * For REV zero, don't remove properties with the "svn:sync-" prefix.
+ * 
  * All allocations will be done in a subpool of POOL.
  */
 static svn_error_t *
@@ -549,6 +551,10 @@ remove_props_not_in_source(svn_ra_session_t *session,
       const char *propname = svn__apr_hash_index_key(hi);
 
       svn_pool_clear(subpool);
+
+      if (rev == 0 && !strncmp(propname, SVNSYNC_PROP_PREFIX,
+                               sizeof(SVNSYNC_PROP_PREFIX) - 1))
+        continue;
 
       /* Delete property if the name can't be found in SOURCE_PROPS. */
       if (! apr_hash_get(source_props, propname, APR_HASH_KEY_STRING))
@@ -1487,7 +1493,7 @@ do_copy_revprops(svn_ra_session_t *to_session,
     {
       int normalized_count;
       SVN_ERR(check_cancel(NULL));
-      SVN_ERR(copy_revprops(from_session, to_session, i, FALSE,
+      SVN_ERR(copy_revprops(from_session, to_session, i, TRUE,
                             baton->quiet, &normalized_count, pool));
       normalized_rev_props_count += normalized_count;
     }

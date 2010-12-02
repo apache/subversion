@@ -41,6 +41,7 @@
 
 static svn_error_t *
 rewrite_urls(const apr_array_header_t *targets,
+             svn_boolean_t ignore_externals,
              svn_client_ctx_t *ctx,
              apr_pool_t *pool)
 {
@@ -65,7 +66,8 @@ rewrite_urls(const apr_array_header_t *targets,
 
   if (targets->nelts == 2)
     {
-      SVN_ERR(svn_client_relocate2("", from, to, ctx, pool));
+      SVN_ERR(svn_client_relocate2("", from, to, ignore_externals,
+                                   ctx, pool));
     }
   else
     {
@@ -75,7 +77,8 @@ rewrite_urls(const apr_array_header_t *targets,
         {
           const char *target = APR_ARRAY_IDX(targets, i, const char *);
           svn_pool_clear(subpool);
-          SVN_ERR(svn_client_relocate2(target, from, to, ctx, subpool));
+          SVN_ERR(svn_client_relocate2(target, from, to,
+                                       ignore_externals, ctx, subpool));
         }
     }
 
@@ -98,6 +101,7 @@ svn_cl__switch(apr_getopt_t *os,
   svn_opt_revision_t peg_revision;
   svn_depth_t depth;
   svn_boolean_t depth_is_sticky;
+  struct svn_cl__check_externals_failed_notify_baton nwb;
 
   /* This command should discover (or derive) exactly two cmdline
      arguments: a local path to update ("target"), and a new url to
@@ -108,7 +112,8 @@ svn_cl__switch(apr_getopt_t *os,
 
   /* handle only-rewrite case specially */
   if (opt_state->relocate)
-    return rewrite_urls(targets, ctx, scratch_pool);
+    return rewrite_urls(targets, opt_state->ignore_externals,
+                        ctx, scratch_pool);
 
   if (targets->nelts < 1)
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
@@ -139,6 +144,12 @@ svn_cl__switch(apr_getopt_t *os,
       (SVN_ERR_BAD_URL, NULL,
        _("'%s' does not appear to be a URL"), switch_url);
 
+  /* Target path cannot be URL */
+  if (svn_path_is_url(target))
+    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("'%s' is not a local path"),
+                             target);
+
   /* Canonicalize the URL. */
   switch_url = svn_uri_canonicalize(switch_url, scratch_pool);
 
@@ -154,6 +165,12 @@ svn_cl__switch(apr_getopt_t *os,
       depth_is_sticky = FALSE;
     }
 
+  nwb.wrapped_func = ctx->notify_func2;
+  nwb.wrapped_baton = ctx->notify_baton2;
+  nwb.had_externals_error = FALSE;
+  ctx->notify_func2 = svn_cl__check_externals_failed_notify_wrapper;
+  ctx->notify_baton2 = &nwb;
+
   /* Do the 'switch' update. */
   SVN_ERR(svn_client_switch2(NULL, target, switch_url, &peg_revision,
                              &(opt_state->start_revision), depth,
@@ -161,7 +178,12 @@ svn_cl__switch(apr_getopt_t *os,
                              opt_state->force, ctx, scratch_pool));
 
   if (! opt_state->quiet)
-    SVN_ERR(svn_cl__print_conflict_stats(ctx->notify_baton2, scratch_pool));
+    SVN_ERR(svn_cl__print_conflict_stats(nwb.wrapped_baton, scratch_pool));
+
+  if (nwb.had_externals_error)
+    return svn_error_create(SVN_ERR_CL_ERROR_PROCESSING_EXTERNALS, NULL,
+                            _("Failure occurred processing one or more "
+                              "externals definitions"));
 
   return SVN_NO_ERROR;
 }

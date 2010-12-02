@@ -612,14 +612,14 @@ svn_wc__node_get_info_bits(apr_time_t *text_time,
 
 
 /**
- * Acquire a recursive write lock for @a local_abspath or if @a lock_anchor
+ * Acquire a recursive write lock for @a local_abspath.  If @a lock_anchor
  * is true, determine if @a local_abspath has an anchor that should be locked
- * instead. Store the obtained lock in @a wc_ctx.
+ * instead; otherwise, @a local_abspath must be a versioned directory.
+ * Store the obtained lock in @a wc_ctx.
  *
  * If @a lock_root_abspath is not NULL, store the root of the lock in
  * @a *lock_root_abspath. If @a lock_root_abspath is NULL, then @a
- * local_abspath must be a versioned directory and @a lock_anchor must be
- * FALSE.
+ * lock_anchor must be FALSE.
  *
  * Returns @c SVN_ERR_WC_LOCKED if an existing lock is encountered, in
  * which case any locks acquired will have been released.

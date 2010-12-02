@@ -1068,18 +1068,17 @@ def relocate_beyond_repos_root(sbox):
   
   svntest.main.copy_repos(repo_dir, other_repo_dir, 1, 0)
   
-
   # A relocate that changes the repo path part of the URL shouldn't work.
   # This tests for issue #2380.
   svntest.actions.run_and_verify_svn(None, None,
-                                     ".*Given destination URL invalid.*",
+                                     ".*Invalid destination URL.*",
                                      'switch', '--relocate',
                                      A_url, other_B_url, A_wc_dir)
 
   # Another way of trying to change the fs path, leading to an invalid
   # repository root.
   svntest.actions.run_and_verify_svn(None, None,
-                                     ".*Given source URL invalid.*",
+                                     ".*is not the root.*",
                                      'switch', '--relocate',
                                      repo_url, other_B_url, A_wc_dir)
 
@@ -2778,7 +2777,7 @@ def tree_conflicts_on_switch_2_2(sbox):
                         'DF/D1',
                         'DDD/D1',
                         'DDF/D1',
-                        status='! ', wc_rev=None)
+                        status='! ', treeconflict='C', wc_rev=None)
   # Remove from expected status and disk everything below the deleted paths.
   expected_status.remove('DD/D1/D2',
                          'DF/D1/beta',
@@ -3105,7 +3104,8 @@ def relocate_with_relative_externals(sbox):
   wc_dir = sbox.wc_dir
 
   # Add a relative external.
-  change_external(os.path.join(wc_dir, 'A', 'B'), "^/A/D/G G-ext", commit=True)
+  change_external(os.path.join(wc_dir, 'A', 'B'),
+                  "^/A/D/G G-ext\n../D/H H-ext", commit=True)
   svntest.actions.run_and_verify_svn(None, None, [], 'update', wc_dir)
   
   # Move our repository to another location.
@@ -3119,10 +3119,12 @@ def relocate_with_relative_externals(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'switch', '--relocate',
                                      repo_url, other_repo_url, wc_dir)
 
-  # Check the URL of the external -- was it updated to point to the
+  # Check the URLs of the externals -- were they updated to point to the
   # .other repository URL?
   svntest.actions.run_and_verify_info([{ 'URL' : '.*.other/A/D/G$' }],
                                       os.path.join(wc_dir, 'A', 'B', 'G-ext'))
+  svntest.actions.run_and_verify_info([{ 'URL' : '.*.other/A/D/H$' }],
+                                      os.path.join(wc_dir, 'A', 'B', 'H-ext'))
 
 
 ########################################################################
@@ -3169,7 +3171,7 @@ test_list = [ None,
               single_file_relocate,
               relocate_with_switched_children,
               XFail(copy_with_switched_subdir),
-              XFail(relocate_with_relative_externals),
+              relocate_with_relative_externals,
               ]
 
 if __name__ == '__main__':

@@ -34,7 +34,6 @@
 #include "svn_version.h"
 #include "svn_pools.h"
 #include "fs.h"
-#include "err.h"
 #include "fs_fs.h"
 #include "tree.h"
 #include "lock.h"
@@ -160,7 +159,8 @@ static fs_vtable_t fs_vtable = {
   svn_fs_fs__unlock,
   svn_fs_fs__get_lock,
   svn_fs_fs__get_locks,
-  fs_set_errcall
+  fs_set_errcall,
+  svn_fs_fs__validate_mergeinfo,
 };
 
 

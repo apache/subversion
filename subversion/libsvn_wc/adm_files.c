@@ -774,7 +774,6 @@ svn_wc_create_tmp_file2(apr_file_t **fp,
   svn_wc__db_t *db;
   const char *local_abspath;
   const char *temp_dir;
-  apr_file_t *file;
   svn_error_t *err;
 
   SVN_ERR_ASSERT(fp || new_name);
@@ -792,13 +791,8 @@ svn_wc_create_tmp_file2(apr_file_t **fp,
   if (err)
     return svn_error_return(err);
 
-  SVN_ERR(svn_io_open_unique_file3(&file, new_name, temp_dir,
+  SVN_ERR(svn_io_open_unique_file3(fp, new_name, temp_dir,
                                    delete_when, pool, pool));
-
-  if (fp)
-    *fp = file;
-  else
-    SVN_ERR(svn_io_file_close(file, pool));
 
   return SVN_NO_ERROR;
 }

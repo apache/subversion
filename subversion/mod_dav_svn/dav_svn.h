@@ -723,6 +723,19 @@ dav_svn__new_error_tag(apr_pool_t *pool,
                        const char *tagname);
 
 
+/* A wrapper around mod_dav's dav_new_error, mod_dav_svn uses this
+   instead of the mod_dav function to enable special mod_dav_svn specific
+   processing.  See dav_new_error for parameter documentation.
+   Note that DESC may be null (it's hard to track this down from
+   dav_new_error()'s documentation, but see the dav_error type,
+   which says that its desc field may be NULL). */
+dav_error *
+dav_svn__new_error(apr_pool_t *pool,
+                   int status,
+                   int errno_id,
+                   const char *desc);
+
+
 /* Convert an svn_error_t into a dav_error, pushing another error based on
    MESSAGE if MESSAGE is not NULL.  Use the provided HTTP status for the
    DAV errors.  Allocate new DAV errors from POOL.

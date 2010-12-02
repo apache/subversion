@@ -112,14 +112,15 @@ svn_mergeinfo__add_prefix_to_catalog(svn_mergeinfo_catalog_t *out_catalog,
                                      apr_pool_t *result_pool,
                                      apr_pool_t *scratch_pool);
 
-/* Makes a deep copy of MERGEINFO in *OUT_MERGEINFO.  If SUFFIX_REL_PATH is
-   a valid relative path then add it to the end of each key path in
-   *OUT_MERGEINFO.  *OUT_MERGEINFO is allocated in RESULT_POOL.  SCRATCH_POOL
-   is used for any temporary allocations. */
+/* Set *OUT_MERGEINFO to a deep copy of MERGEINFO with the relpath
+   SUFFIX_RELPATH added to the end of each key path.
+
+   Allocate *OUT_MERGEINFO in RESULT_POOL.  Use SCRATCH_POOL for any
+   temporary allocations. */
 svn_error_t *
 svn_mergeinfo__add_suffix_to_mergeinfo(svn_mergeinfo_t *out_mergeinfo,
                                        svn_mergeinfo_t mergeinfo,
-                                       const char *suffix,
+                                       const char *suffix_relpath,
                                        apr_pool_t *result_pool,
                                        apr_pool_t *scratch_pool);
 

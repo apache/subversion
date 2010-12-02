@@ -386,7 +386,7 @@ dump_node(struct edit_baton *eb,
 
               SVN_ERR(svn_fs_file_checksum(&checksum, svn_checksum_md5,
                                            compare_root, compare_path,
-                                           TRUE, pool));
+                                           FALSE, pool));
               hex_digest = svn_checksum_to_cstring(checksum, pool);
               if (hex_digest)
                 SVN_ERR(svn_stream_printf(eb->stream, pool,
@@ -395,7 +395,7 @@ dump_node(struct edit_baton *eb,
 
               SVN_ERR(svn_fs_file_checksum(&checksum, svn_checksum_sha1,
                                            compare_root, compare_path,
-                                           TRUE, pool));
+                                           FALSE, pool));
               hex_digest = svn_checksum_to_cstring(checksum, pool);
               if (hex_digest)
                 SVN_ERR(svn_stream_printf(eb->stream, pool,
@@ -513,7 +513,7 @@ dump_node(struct edit_baton *eb,
             {
               SVN_ERR(svn_fs_file_checksum(&checksum, svn_checksum_md5,
                                            compare_root, compare_path,
-                                           TRUE, pool));
+                                           FALSE, pool));
               hex_digest = svn_checksum_to_cstring(checksum, pool);
               if (hex_digest)
                 SVN_ERR(svn_stream_printf(eb->stream, pool,
@@ -522,7 +522,7 @@ dump_node(struct edit_baton *eb,
 
               SVN_ERR(svn_fs_file_checksum(&checksum, svn_checksum_sha1,
                                            compare_root, compare_path,
-                                           TRUE, pool));
+                                           FALSE, pool));
               hex_digest = svn_checksum_to_cstring(checksum, pool);
               if (hex_digest)
                 SVN_ERR(svn_stream_printf(eb->stream, pool,
@@ -542,7 +542,7 @@ dump_node(struct edit_baton *eb,
                                 ": %" SVN_FILESIZE_T_FMT "\n", textlen));
 
       SVN_ERR(svn_fs_file_checksum(&checksum, svn_checksum_md5,
-                                   eb->fs_root, path, TRUE, pool));
+                                   eb->fs_root, path, FALSE, pool));
       hex_digest = svn_checksum_to_cstring(checksum, pool);
       if (hex_digest)
         SVN_ERR(svn_stream_printf(eb->stream, pool,
@@ -550,7 +550,7 @@ dump_node(struct edit_baton *eb,
                                   ": %s\n", hex_digest));
 
       SVN_ERR(svn_fs_file_checksum(&checksum, svn_checksum_sha1,
-                                   eb->fs_root, path, TRUE, pool));
+                                   eb->fs_root, path, FALSE, pool));
       hex_digest = svn_checksum_to_cstring(checksum, pool);
       if (hex_digest)
         SVN_ERR(svn_stream_printf(eb->stream, pool,

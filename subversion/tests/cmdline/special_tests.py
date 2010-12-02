@@ -473,7 +473,7 @@ def merge_file_into_symlink(sbox):
   # ok, now merge the change to the file into the symlink we created, this
   # gives us a weird error
   svntest.main.run_svn(None,
-                       'merge', '-r', '4:5', d_url,
+                       'merge', '-r', '4:5', '--allow-mixed-revisions', d_url,
                        os.path.join(wc_dir, 'A', 'Dprime'))
 
 # Issue 2701: Tests to see repository with symlinks can be checked out on all

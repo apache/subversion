@@ -26,7 +26,10 @@
 #include "fs.h"
 
 /* Open the fsfs filesystem pointed to by PATH and associate it with
-   filesystem object FS.  Use POOL for temporary allocations. */
+   filesystem object FS.  Use POOL for temporary allocations.
+
+   ### Some parts of *FS must have been initialized beforehand; some parts
+       (including FS->path) are initialized by this function. */
 svn_error_t *svn_fs_fs__open(svn_fs_t *fs,
                              const char *path,
                              apr_pool_t *pool);
@@ -336,7 +339,10 @@ svn_error_t *svn_fs_fs__reserve_copy_id(const char **copy_id,
                                         apr_pool_t *pool);
 
 /* Create a fs_fs fileysystem referenced by FS at path PATH.  Get any
-   temporary allocations from POOL. */
+   temporary allocations from POOL.
+
+   ### Some parts of *FS must have been initialized beforehand; some parts
+       (including FS->path) are initialized by this function. */
 svn_error_t *svn_fs_fs__create(svn_fs_t *fs,
                                const char *path,
                                apr_pool_t *pool);
@@ -401,8 +407,12 @@ svn_error_t *svn_fs_fs__move_into_place(const char *old_filename,
                                         const char *perms_reference,
                                         apr_pool_t *pool);
 
-/* Sets *PATH to the path of REV in FS, whether in a pack file or not.
-   Allocate in POOL. */
+/* Set *PATH to the path of REV in FS, whether in a pack file or not.
+   Allocate *PATH in POOL.
+
+   Note: If the caller does not have the write lock on FS, then the path is
+   not guaranteed to remain correct after the function returns, because the
+   revision might become packed just after this call. */
 svn_error_t *
 svn_fs_fs__path_rev_absolute(const char **path,
                              svn_fs_t *fs,
@@ -486,9 +496,9 @@ svn_error_t *svn_fs_fs__txn_prop(svn_string_t **value_p, svn_fs_txn_t *txn,
                                  const char *propname, apr_pool_t *pool);
 
 /* If directory PATH does not exist, create it and give it the same
-   permissions as FS->path.*/
+   permissions as FS_PATH.*/
 svn_error_t *svn_fs_fs__ensure_dir_exists(const char *path,
-                                          svn_fs_t *fs,
+                                          const char *fs_path,
                                           apr_pool_t *pool);
 
 /* Update the node origin index for FS, recording the mapping from

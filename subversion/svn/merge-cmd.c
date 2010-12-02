@@ -293,6 +293,10 @@ svn_cl__merge(apr_getopt_t *os,
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                 _("--reintegrate can only be used with "
                                   "a single merge source"));
+      if (opt_state->allow_mixed_rev)
+        return svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                                _("--allow-mixed-revisions cannot be used "
+                                  "with --reintegrate"));
     }
 
   if (! two_sources_specified) /* TODO: Switch order of if */
@@ -322,7 +326,7 @@ svn_cl__merge(apr_getopt_t *os,
                                            opt_state->dry_run,
                                            options, ctx, pool);
       else
-        err = svn_client_merge_peg3(sourcepath1,
+        err = svn_client_merge_peg4(sourcepath1,
                                     ranges_to_merge,
                                     &peg_revision1,
                                     targetpath,
@@ -331,6 +335,7 @@ svn_cl__merge(apr_getopt_t *os,
                                     opt_state->force,
                                     opt_state->record_only,
                                     opt_state->dry_run,
+                                    opt_state->allow_mixed_rev,
                                     options,
                                     ctx,
                                     pool);
@@ -342,7 +347,7 @@ svn_cl__merge(apr_getopt_t *os,
                                                  NULL,
                                                  _("Merge sources must both be "
                                                    "either paths or URLs")));
-      err = svn_client_merge3(sourcepath1,
+      err = svn_client_merge4(sourcepath1,
                               &first_range_start,
                               sourcepath2,
                               &first_range_end,
@@ -352,6 +357,7 @@ svn_cl__merge(apr_getopt_t *os,
                               opt_state->force,
                               opt_state->record_only,
                               opt_state->dry_run,
+                              opt_state->allow_mixed_rev,
                               options,
                               ctx,
                               pool);
