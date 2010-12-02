@@ -194,13 +194,3 @@ Approved changes:
    Votes:
      +1: cmpilato, danielsh, rhuijben
      -0: hwright (until such time as a backport branch exists)
-
- * r1032808
-   Fix blame -g server-side memory leaks.
-   Justification:
-     As detailed in http://svn.haxx.se/dev/archive-2010-11/0102.shtml,
-     blame -g can trigger a serious server side memory leak.
-   Votes:
-     +1: stsp, philip, pburba
-     (For 1.6.x there was +1: pburba, cmpilato, hwright)
-
