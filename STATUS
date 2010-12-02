@@ -198,7 +198,7 @@ Candidate changes for 1.5.9:
      Use --accept=mine-full to avoid bizzare branch root property conflicts
      on 'svn:ignore' and 'bugtraq:logregex'.
    Votes:
-     +1: stsp
+     +1: stsp, philip
      (For 1.6.x there was +1: pburba, cmpilato, hwright)
 
  * r1032808
@@ -207,7 +207,7 @@ Candidate changes for 1.5.9:
      As detailed in http://svn.haxx.se/dev/archive-2010-11/0102.shtml,
      blame -g can trigger a serious server side memory leak.
    Votes:
-     +1: stsp
+     +1: stsp, philip
      (For 1.6.x there was +1: pburba, cmpilato, hwright)
 
 Approved changes:
