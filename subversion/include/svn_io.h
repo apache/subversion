@@ -692,11 +692,13 @@ svn_error_t *
 svn_io_file_flush_to_disk(apr_file_t *file,
                           apr_pool_t *pool);
 
-/** Copy the file whose basename or relative path is @a file within
- * directory @a src_path to the same basename or relative path within
- * directory @a dest_path.  Overwrite the destination if it already
- * exists.  Set the destination file's permissions to match those of
- * the source.  Use @a pool for memory allocations.
+/** Copy the file whose basename (or relative path) is @a file within
+ * directory @a src_path to the same basename (or relative path) within
+ * directory @a dest_path.  Overwrite the destination file if it already
+ * exists.  The destination directory (including any directory
+ * components in @a name) must already exist.  Set the destination
+ * file's permissions to match those of the source.  Use @a pool for
+ * memory allocations.
  */
 svn_error_t *
 svn_io_dir_file_copy(const char *src_path,
