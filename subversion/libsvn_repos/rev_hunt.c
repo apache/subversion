@@ -1090,8 +1090,8 @@ find_interesting_revisions(apr_array_header_t *path_revisions,
 
   /* We switch between two pools while looping, since we need information from
      the last iteration to be available. */
-  iterpool = svn_pool_create(result_pool);
-  last_pool = svn_pool_create(result_pool);
+  iterpool = svn_pool_create(scratch_pool);
+  last_pool = svn_pool_create(scratch_pool);
 
   /* The path had better be a file in this revision. */
   SVN_ERR(svn_fs_revision_root(&root, repos->fs, end, scratch_pool));
@@ -1170,6 +1170,7 @@ find_interesting_revisions(apr_array_header_t *path_revisions,
     }
 
   svn_pool_destroy(iterpool);
+  svn_pool_destroy(last_pool);
 
   return SVN_NO_ERROR;
 }
