@@ -142,7 +142,7 @@ Candidate changes for 1.5.9:
      --accept=theirs-conflict to merge it, and then replace the one
      introduced call to svn_dirent_local_style() with svn_path_local_style().
    Votes:
-     +1: cmpilato
+     +1: cmpilato, pburba
 
  * r880082
    Respect Apache's ServerSignature directive.
@@ -178,7 +178,7 @@ Candidate changes for 1.5.9:
      svnserve's peak memory use from 574 MB to 71 MB.  r1041438 further
      drops it to 51 MB.
    Votes:
-     +1: pburba
+     +1: pburba, cmpilato (via IRC)
 
 Approved changes:
 =================
