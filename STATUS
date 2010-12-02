@@ -144,7 +144,7 @@ Candidate changes for 1.5.9:
     Justification:
       Failing tests are bad.
     Votes:
-      +1: hwright
+      +1: hwright, cmpilato
 
 Approved changes:
 =================
