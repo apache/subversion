@@ -1906,10 +1906,6 @@ open_pack_or_rev_file(apr_file_t **file,
   const char *path;
   svn_boolean_t retry = FALSE;
 
-  /* If the filesystem doesn't support packing, try once instead of twice. */
-  if (ffd->format < SVN_FS_FS__MIN_PACKED_FORMAT)
-    retry = TRUE;
-
   do
     {
       err = svn_fs_fs__path_rev_absolute(&path, fs, rev, pool);
@@ -1919,7 +1915,8 @@ open_pack_or_rev_file(apr_file_t **file,
         err = svn_io_file_open(file, path,
                               APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool);
 
-      if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+      if (err && APR_STATUS_IS_ENOENT(err->apr_err)
+      	  && ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
         {
           /* Could not open the file. This may happen if the
            * file once existed but got packed later. */
@@ -1930,8 +1927,7 @@ open_pack_or_rev_file(apr_file_t **file,
             return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
                                     _("No such revision %ld"), rev);
 
-          /* We failed for the first time. Refresh cache & retry.
-             (We already know the format is new enough.) */
+          /* We failed for the first time. Refresh cache & retry. */
           SVN_ERR(update_min_unpacked_rev(fs, pool));
 
           retry = TRUE;
