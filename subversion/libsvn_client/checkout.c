@@ -92,7 +92,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
 
   /* Sanity check.  Without these, the checkout is meaningless. */
   SVN_ERR_ASSERT(local_abspath != NULL);
-  SVN_ERR_ASSERT(url != NULL);
+  SVN_ERR_ASSERT(svn_uri_is_canonical(url, pool));
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   /* Fulfill the docstring promise of svn_client_checkout: */
@@ -100,9 +100,6 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
       && (revision->kind != svn_opt_revision_date)
       && (revision->kind != svn_opt_revision_head))
     return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL, NULL);
-
-  /* Canonicalize the URL. */
-  url = svn_uri_canonicalize(url, pool);
 
   {
     svn_boolean_t have_repos_root_url;

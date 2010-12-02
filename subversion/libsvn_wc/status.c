@@ -782,8 +782,8 @@ send_status_structure(const struct walk_status_baton *wb,
           /* repos_lock still uses the deprecated filesystem absolute path
              format */
           repos_lock = apr_hash_get(wb->repos_locks,
-                                    svn_uri_join("/", repos_relpath,
-                                                 scratch_pool),
+                                    svn_fspath__join("/", repos_relpath,
+                                                     scratch_pool),
                                     APR_HASH_KEY_STRING);
         }
     }
@@ -2187,10 +2187,10 @@ close_file(void *file_baton,
               const char *repos_relpath = svn_relpath_join(dir_repos_relpath,
                                                            fb->name, pool);
 
-               repos_lock = apr_hash_get(fb->edit_baton->wb.repos_locks,
-                                         svn_uri_join("/", repos_relpath,
-                                                      pool),
-                                         APR_HASH_KEY_STRING);
+              repos_lock = apr_hash_get(fb->edit_baton->wb.repos_locks,
+                                        svn_fspath__join("/", repos_relpath,
+                                                         pool),
+                                        APR_HASH_KEY_STRING);
             }
         }
     }

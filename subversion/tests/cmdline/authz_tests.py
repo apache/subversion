@@ -1003,8 +1003,17 @@ def wc_wc_copy(sbox):
                                      'svn: Cannot copy.*excluded by server',
                                      'cp', sbox.ospath('A'), sbox.ospath('A2'))
 
-  # The copy failed, no change in status
-  svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
+
+  # The copy failed and A2/B/E is incomplete.  That means A2 and A2/B
+  # are complete, but for the other parts of A2 the status is undefined.
+  expected_output = svntest.verify.ExpectedOutput(
+    ['A  +             -        1 jrandom      ' + sbox.ospath('A2') + '\n',
+     '   +             -        1 jrandom      ' + sbox.ospath('A2/B') + '\n',
+     '!               ?        ?   ?           ' + sbox.ospath('A2/B/E') + '\n',
+     ])
+  expected_output.match_all = False
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'st', '--verbose', sbox.ospath('A2'))
 
 def wc_wc_copy_revert(sbox):
   "wc-to-wc-copy with absent nodes and then revert"

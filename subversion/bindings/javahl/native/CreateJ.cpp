@@ -206,7 +206,7 @@ CreateJ::Info(const char *path, const svn_info_t *info)
                              "Ljava/lang/String;Ljava/lang/String;"
                              "Ljava/lang/String;Ljava/lang/String;"
                              "Ljava/lang/String;Ljava/lang/String;JJ"
-                             "L"JAVA_PACKAGE"/Depth;"
+                             "L"JAVA_PACKAGE"/types/Depth;"
                              "L"JAVA_PACKAGE"/ConflictDescriptor;)V");
       if (mid == 0 || JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;

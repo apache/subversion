@@ -36,6 +36,7 @@ Skip = svntest.testcase.Skip
 SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
 Item = wc.StateItem
+exp_noop_up_out = svntest.actions.expected_noop_update_output
 
 ######################################################################
 # Tests
@@ -286,7 +287,8 @@ def import_avoid_empty_revision(sbox):
   svntest.main.safe_rmtree(empty_dir)
 
   # Verify that an empty revision has not been created
-  svntest.actions.run_and_verify_svn(None, [ "At revision 1.\n"],
+  svntest.actions.run_and_verify_svn(None,
+                                     exp_noop_up_out(1),
                                      [], "update",
                                      empty_dir)
 #----------------------------------------------------------------------

@@ -67,6 +67,9 @@ svn_log_changed_path2_create(apr_pool_t *pool)
   svn_log_changed_path2_t *new_changed_path
     = apr_pcalloc(pool, sizeof(*new_changed_path));
 
+  new_changed_path->text_modified = svn_tristate_unknown;
+  new_changed_path->props_modified = svn_tristate_unknown;
+
   return new_changed_path;
 }
 

@@ -394,7 +394,7 @@ make_entry(dag_node_t **child_p,
   /* Create the new node's NODE-REVISION */
   memset(&new_noderev, 0, sizeof(new_noderev));
   new_noderev.kind = is_dir ? svn_node_dir : svn_node_file;
-  new_noderev.created_path = svn_uri_join(parent_path, name, pool);
+  new_noderev.created_path = svn_fspath__join(parent_path, name, pool);
 
   SVN_ERR(get_node_revision(&parent_noderev, parent, pool));
   new_noderev.copyroot_path = apr_pstrdup(pool,
@@ -687,7 +687,7 @@ svn_fs_fs__dag_clone_child(dag_node_t **child_p,
       noderev->predecessor_id = svn_fs_fs__id_copy(cur_entry->id, pool);
       if (noderev->predecessor_count != -1)
         noderev->predecessor_count++;
-      noderev->created_path = svn_uri_join(parent_path, name, pool);
+      noderev->created_path = svn_fspath__join(parent_path, name, pool);
 
       SVN_ERR(svn_fs_fs__create_successor(&new_node_id, fs, cur_entry->id,
                                           noderev, copy_id, txn_id, pool));
@@ -1256,7 +1256,7 @@ svn_fs_fs__dag_copy(dag_node_t *to_node,
       if (to_noderev->predecessor_count != -1)
         to_noderev->predecessor_count++;
       to_noderev->created_path =
-        svn_uri_join(svn_fs_fs__dag_get_created_path(to_node), entry,
+        svn_fspath__join(svn_fs_fs__dag_get_created_path(to_node), entry,
                      pool);
       to_noderev->copyfrom_path = apr_pstrdup(pool, from_path);
       to_noderev->copyfrom_rev = from_rev;

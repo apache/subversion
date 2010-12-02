@@ -156,7 +156,7 @@ svn_client__adjust_mergeinfo_source_paths(svn_mergeinfo_t adjusted_mergeinfo,
 
       /* Copy inherited mergeinfo into our output hash, adjusting the
          merge source as appropriate. */
-      path = svn_uri_join(merge_source, rel_path, pool);
+      path = svn_fspath__join(merge_source, rel_path, pool);
       copied_rangelist = svn_rangelist_dup(rangelist, pool);
       apr_hash_set(adjusted_mergeinfo, path, APR_HASH_KEY_STRING,
                    copied_rangelist);
@@ -1395,7 +1395,7 @@ filter_log_entry_with_rangelist(void *baton,
             {
               merge_source_path =
                 APR_ARRAY_IDX(fleb->merge_source_paths, i, const char *);
-              if (svn_uri_is_ancestor(merge_source_path, path))
+              if (svn_fspath__is_ancestor(merge_source_path, path))
                 {
                   /* If MERGE_SOURCE was itself deleted, replaced, or added
                      in LOG_ENTRY->REVISION then ignore this PATH since you
@@ -1412,11 +1412,11 @@ filter_log_entry_with_rangelist(void *baton,
             continue;
 
           /* Calculate the target path which PATH would affect if merged. */
-          merge_source_rel_target = svn_uri_skip_ancestor(merge_source_path,
-                                                          path);
-          target_path_affected = svn_uri_join(fleb->abs_repos_target_path,
-                                              merge_source_rel_target,
-                                              iterpool);
+          merge_source_rel_target = svn_fspath__skip_ancestor(merge_source_path,
+                                                              path);
+          target_path_affected = svn_fspath__join(fleb->abs_repos_target_path,
+                                                  merge_source_rel_target,
+                                                  iterpool);
 
           nearest_ancestor_mergeinfo =
             find_nearest_ancestor(fleb->depth_first_catalog_index,

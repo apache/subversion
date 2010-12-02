@@ -412,7 +412,7 @@ parent_path_path(parent_path_t *parent_path,
   if (parent_path->parent)
     path_so_far = parent_path_path(parent_path->parent, pool);
   return parent_path->entry
-    ? svn_uri_join(path_so_far, parent_path->entry, pool)
+    ? svn_fspath__join(path_so_far, parent_path->entry, pool)
     : path_so_far;
 }
 
@@ -617,7 +617,7 @@ open_path(parent_path_t **parent_path_p,
       entry = svn_fs__next_entry_name(&next, rest, pool);
 
       /* Calculate the path traversed thus far. */
-      path_so_far = svn_uri_join(path_so_far, entry, pool);
+      path_so_far = svn_fspath__join(path_so_far, entry, pool);
 
       if (*entry == '\0')
         {
@@ -801,8 +801,8 @@ make_path_mutable(svn_fs_root_t *root,
 
 
 /* Open the node identified by PATH in ROOT.  Set DAG_NODE_P to the
- *node we find, allocated in POOL.  Return the error
- *SVN_ERR_FS_NOT_FOUND if this node doesn't exist. */
+   node we find, allocated in POOL.  Return the error
+   SVN_ERR_FS_NOT_FOUND if this node doesn't exist. */
 static svn_error_t *
 get_dag(dag_node_t **dag_node_p,
         svn_fs_root_t *root,
@@ -1133,7 +1133,7 @@ fs_props_changed(svn_boolean_t *changed_p,
 
 /* Merges and commits. */
 
-/* Set ARGS->node to the root node of ARGS->root.  */
+/* Set *NODE to the root node of ROOT.  */
 static svn_error_t *
 get_root(dag_node_t **node, svn_fs_root_t *root, apr_pool_t *pool)
 {
@@ -1555,13 +1555,16 @@ merge(svn_stringbuf_t *conflict_p,
   return SVN_NO_ERROR;
 }
 
-/* Merge changes between an ancestor and BATON->source_node into
-   BATON->txn.  The ancestor is either BATON->ancestor_node, or if
-   that is null, BATON->txn's base node.
+/* Merge changes between an ancestor and SOURCE_NODE into
+   TXN.  The ancestor is either ANCESTOR_NODE, or if
+   that is null, TXN's base node.
 
-   If the merge is successful, BATON->txn's base will become
-   BATON->source_node, and its root node will have a new ID, a
-   successor of BATON->source_node. */
+   If the merge is successful, TXN's base will become
+   SOURCE_NODE, and its root node will have a new ID, a
+   successor of SOURCE_NODE.
+
+   If a conflict results, update *CONFLICT to the path in the txn that
+   conflicted; see the CONFLICT_P parameter of merge() for details. */
 static svn_error_t *
 merge_changes(dag_node_t *ancestor_node,
               dag_node_t *source_node,
@@ -1585,13 +1588,8 @@ merge_changes(dag_node_t *ancestor_node,
                        svn_fs_fs__dag_get_id(txn_root_node)))
     {
       /* If no changes have been made in TXN since its current base,
-         then it can't conflict with any changes since that base.  So
-         we just set *both* its base and root to source, making TXN
-         in effect a repeat of source. */
-
-      /* ### kff todo: this would, of course, be a mighty silly thing
-         for the caller to do, and we might want to consider whether
-         this response is really appropriate. */
+         then it can't conflict with any changes since that base.
+         The caller isn't supposed to call us in that case. */
       SVN_ERR_MALFUNCTION();
     }
   else
@@ -2980,7 +2978,7 @@ prev_location(const char **prev_path,
                          copy_root, copy_path, pool));
   if (strcmp(copy_path, path) != 0)
     remainder = svn_relpath_is_child(copy_path, path, pool);
-  *prev_path = svn_uri_join(copy_src_path, remainder, pool);
+  *prev_path = svn_fspath__join(copy_src_path, remainder, pool);
   *prev_rev = copy_src_rev;
   return SVN_NO_ERROR;
 }
@@ -3240,7 +3238,7 @@ history_prev(void *baton, apr_pool_t *pool)
           SVN_ERR(svn_fs_fs__dag_get_copyfrom_path(&copy_src, node, pool));
 
           dst_rev = copyroot_rev;
-          src_path = svn_uri_join(copy_src, remainder, pool);
+          src_path = svn_fspath__join(copy_src, remainder, pool);
         }
     }
 
@@ -3532,7 +3530,7 @@ crawl_directory_dag_for_mergeinfo(svn_fs_root_t *root,
 
       svn_pool_clear(iterpool);
 
-      kid_path = svn_uri_join(this_path, dirent->name, iterpool);
+      kid_path = svn_fspath__join(this_path, dirent->name, iterpool);
       SVN_ERR(get_dag(&kid_dag, root, kid_path, iterpool));
 
       SVN_ERR(svn_fs_fs__dag_has_mergeinfo(&has_mergeinfo, kid_dag, iterpool));
@@ -3601,7 +3599,7 @@ append_to_merged_froms(svn_mergeinfo_t *output,
       apr_array_header_t *rangelist = svn__apr_hash_index_val(hi);
       char *newpath;
 
-      newpath = svn_uri_join(path, path_piece, pool);
+      newpath = svn_fspath__join(path, path_piece, pool);
       apr_hash_set(*output, newpath, APR_HASH_KEY_STRING,
                    svn_rangelist_dup(rangelist, pool));
     }

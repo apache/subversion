@@ -81,14 +81,14 @@ LIMIT 1;
 
 -- STMT_SELECT_ACTUAL_NODE
 SELECT prop_reject, changelist, conflict_old, conflict_new,
-conflict_working, tree_conflict_data, properties, conflict_data
+conflict_working, tree_conflict_data, properties
 FROM actual_node
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
 -- STMT_SELECT_ACTUAL_TREE_CONFLICT
-SELECT conflict_data
+SELECT tree_conflict_data
 FROM actual_node
-WHERE wc_id = ?1 AND local_relpath = ?2 AND conflict_data IS NOT NULL;
+WHERE wc_id = ?1 AND local_relpath = ?2 AND tree_conflict_data IS NOT NULL;
 
 -- STMT_SELECT_NODE_CHILDREN_INFO
 /* Getting rows in an advantageous order using
@@ -132,9 +132,9 @@ INSERT OR REPLACE INTO nodes (
 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14,
         ?15, ?16, ?17, ?18, ?19);
 
--- STMT_SELECT_BASE_NODE_CHILDREN
+-- STMT_SELECT_OP_DEPTH_CHILDREN
 SELECT local_relpath FROM nodes
-WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth = 0;
+WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth = ?3;
 
 -- STMT_SELECT_NODE_CHILDREN
 SELECT local_relpath FROM nodes
@@ -233,15 +233,6 @@ WHERE wc_id = ?1 AND local_relpath = ?2
   AND op_depth = (SELECT MAX(op_depth) FROM nodes
                   WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0);
 
--- STMT_UPDATE_ACTUAL_CONFLICT_DATA
-UPDATE actual_node SET conflict_data = ?3
-WHERE wc_id = ?1 AND local_relpath = ?2;
-
--- STMT_INSERT_ACTUAL_CONFLICT_DATA
-INSERT INTO actual_node (
-  wc_id, local_relpath, conflict_data, parent_relpath)
-VALUES (?1, ?2, ?3, ?4);
-
 -- STMT_UPDATE_ACTUAL_TREE_CONFLICTS
 UPDATE actual_node SET tree_conflict_data = ?3
 WHERE wc_id = ?1 AND local_relpath = ?2;
@@ -336,7 +327,7 @@ WHERE wc_id = ?1 AND local_relpath = ?2
 -- STMT_DELETE_ACTUAL_NODE_WITHOUT_CONFLICT
 DELETE FROM actual_node
 WHERE wc_id = ?1 AND local_relpath = ?2
-      AND conflict_data IS NULL;
+      AND tree_conflict_data IS NULL;
 
 -- STMT_DELETE_NOT_PRESENT_NODES_RECURSIVE
 DELETE FROM nodes
@@ -347,7 +338,6 @@ WHERE wc_id = ?1 AND local_relpath LIKE ?2 ESCAPE '#' AND op_depth = ?3
 UPDATE actual_node
 SET properties = NULL,
     text_mod = NULL,
-    conflict_data = NULL,
     tree_conflict_data = NULL,
     conflict_old = NULL,
     conflict_new = NULL,
@@ -363,7 +353,6 @@ UPDATE actual_node
 SET properties = NULL,
     text_mod = NULL,
     changelist = NULL,
-    tree_conflict_data = NULL,
     conflict_old = NULL,
     conflict_new = NULL,
     conflict_working = NULL,
@@ -437,10 +426,6 @@ SELECT checksum
 FROM pristine
 WHERE md5_checksum = ?1
 
--- STMT_SELECT_PRISTINE_ROWS
-SELECT checksum
-FROM pristine
-
 -- STMT_SELECT_ANY_PRISTINE_REFERENCE
 SELECT 1 FROM nodes
   WHERE checksum = ?1 OR checksum = ?2
@@ -450,6 +435,22 @@ SELECT 1 FROM actual_node
     OR  left_checksum  = ?1 OR left_checksum  = ?2
     OR  right_checksum = ?1 OR right_checksum = ?2
 LIMIT 1
+
+-- STMT_SELECT_UNREFERENCED_PRISTINES
+SELECT checksum
+FROM pristine
+EXCEPT
+SELECT checksum FROM nodes
+  WHERE checksum IS NOT NULL
+EXCEPT
+SELECT older_checksum FROM actual_node
+  WHERE older_checksum IS NOT NULL
+EXCEPT
+SELECT left_checksum FROM actual_node
+  WHERE left_checksum  IS NOT NULL
+EXCEPT
+SELECT right_checksum FROM actual_node
+  WHERE right_checksum IS NOT NULL
 
 -- STMT_DELETE_PRISTINE
 DELETE FROM pristine
@@ -461,15 +462,16 @@ FROM actual_node
 WHERE wc_id = ?1 AND parent_relpath = ?2 AND
   NOT ((prop_reject IS NULL) AND (conflict_old IS NULL)
        AND (conflict_new IS NULL) AND (conflict_working IS NULL)
-       AND (conflict_data IS NULL))
+       AND (tree_conflict_data IS NULL))
 
 -- STMT_SELECT_ACTUAL_CHILDREN_TREE_CONFLICT
-SELECT local_relpath, conflict_data
+SELECT local_relpath, tree_conflict_data
 FROM actual_node
-WHERE wc_id = ?1 AND parent_relpath = ?2 AND conflict_data IS NOT NULL;
+WHERE wc_id = ?1 AND parent_relpath = ?2 AND tree_conflict_data IS NOT NULL;
 
 -- STMT_SELECT_CONFLICT_DETAILS
-SELECT prop_reject, conflict_old, conflict_new, conflict_working, conflict_data
+SELECT prop_reject, conflict_old, conflict_new, conflict_working,
+    tree_conflict_data
 FROM actual_node
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
@@ -715,7 +717,7 @@ WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
 SELECT 1
 FROM actual_node
 WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
-  AND conflict_data IS NULL;
+  AND tree_conflict_data IS NULL;
 
 /* ------------------------------------------------------------------------- */
 
@@ -755,6 +757,15 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
 /* ------------------------------------------------------------------------- */
 
 /* these are used in upgrade.c  */
+
+-- STMT_UPDATE_ACTUAL_CONFLICT_DATA
+UPDATE actual_node SET conflict_data = ?3
+WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_INSERT_ACTUAL_CONFLICT_DATA
+INSERT INTO actual_node (
+  wc_id, local_relpath, conflict_data, parent_relpath)
+VALUES (?1, ?2, ?3, ?4);
 
 -- STMT_SELECT_OLD_TREE_CONFLICT
 SELECT wc_id, local_relpath, tree_conflict_data

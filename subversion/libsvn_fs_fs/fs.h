@@ -132,7 +132,6 @@ extern "C" {
    relate to a particular transaction in a filesystem (as identified
    by transaction id and filesystem UUID).  Objects of this type are
    allocated in their own subpool of the common pool. */
-struct fs_fs_shared_txn_data_t;
 typedef struct fs_fs_shared_txn_data_t
 {
   /* The next transaction in the list, or NULL if there is no following
@@ -171,7 +170,7 @@ typedef struct fs_fs_shared_txn_data_t
 /* Private FSFS-specific data shared between all svn_fs_t objects that
    relate to a particular filesystem, as identified by filesystem UUID.
    Objects of this type are allocated in the common pool. */
-typedef struct
+typedef struct fs_fs_shared_data_t
 {
   /* A list of shared transaction objects for each transaction that is
      currently active, or NULL if none are.  All access to this list,
@@ -203,7 +202,7 @@ typedef struct
 } fs_fs_shared_data_t;
 
 /* Private (non-shared) FSFS-specific data for each svn_fs_t object. */
-typedef struct
+typedef struct fs_fs_data_t
 {
   /* The format number of this FS. */
   int format;
@@ -268,7 +267,7 @@ typedef struct
 
 
 /*** Filesystem Transaction ***/
-typedef struct
+typedef struct transaction_t
 {
   /* property list (const char * name, svn_string_t * value).
      may be NULL if there are no properties.  */
@@ -291,7 +290,7 @@ typedef struct
 /*** Representation ***/
 /* If you add fields to this, check to see if you need to change
  * svn_fs_fs__rep_copy. */
-typedef struct
+typedef struct representation_t
 {
   /* Checksums for the contents produced by this representation.
      This checksum is for the contents the rep shows to consumers,
@@ -338,7 +337,7 @@ typedef struct
 /*** Node-Revision ***/
 /* If you add fields to this, check to see if you need to change
  * copy_node_revision in dag.c. */
-typedef struct
+typedef struct node_revision_t
 {
   /* node kind */
   svn_node_kind_t kind;
@@ -388,7 +387,7 @@ typedef struct
 
 
 /*** Change ***/
-typedef struct
+typedef struct change_t
 {
   /* Path of the change. */
   const char *path;
