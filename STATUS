@@ -75,15 +75,6 @@ Candidate changes for 1.5.9:
    Votes:
      +1: cmpilato, arfrever
 
- * r877842
-   Make svnadmin load tolerate mergeinfo with "\r\n".
-   Justification:
-     Prior to this change you cannot load a dump file that contains Windows
-     style newlines in svn:mergeinfo.  See
-     http://svn.haxx.se/dev/archive-2009-05/0179.shtml.
-   Votes:
-     +1: pburba, cmpilato
-
  * r877853
    Fix a potential segfault when doing noop file merges.
    Justification:
@@ -130,26 +121,7 @@ Candidate changes for 1.5.9:
    Branch:
      ^/branches/1.5.x-r39109
    Votes:
-     +1: pburba
-
- * r879293
-   Perform MIME type matching case-insensitively.  (Issue #3479)
-   Justification:
-     The broken behavior is inconsistent with the way MIME mapping
-     files are used everywhere else in the world.
-   Notes:
-     This merge will conflict due to changes in the path APIs.  Use
-     --accept=theirs-conflict to merge it, and then replace the one
-     introduced call to svn_dirent_local_style() with svn_path_local_style().
-   Votes:
-     +1: cmpilato, pburba
-
- * r880082
-   Respect Apache's ServerSignature directive.
-   Justification:
-     Many subversion server administrators want it.
-   Votes:
-     +1: stylesen, cmpilato
+     +1: pburba, hwright
 
   * r1028084, r1028125
     Fix JVM recognition on OS X Snow Leopard (10.6).
@@ -167,19 +139,6 @@ Candidate changes for 1.5.9:
       -0: stsp (not a critical build or security fix -- maybe just
                 document the workaround instead?)
 
- * r1041438
-   Further improvement to an approved backport of a blame -g server-side
-   memory leak fix (r1032808).
-   Justification:
-     Very simple change that fixes another memory leak.
-   Notes:
-     In the test case described in
-     http://svn.haxx.se/dev/archive-2010-11/0163.shtml, r1032808 dropped
-     svnserve's peak memory use from 574 MB to 71 MB.  r1041438 further
-     drops it to 51 MB.
-   Votes:
-     +1: pburba, cmpilato (via IRC)
-
 Approved changes:
 =================
 
@@ -194,3 +153,44 @@ Approved changes:
    Votes:
      +1: cmpilato, danielsh, rhuijben
      -0: hwright (until such time as a backport branch exists)
+
+ * r1041438
+   Further improvement to an approved backport of a blame -g server-side
+   memory leak fix (r1032808).
+   Justification:
+     Very simple change that fixes another memory leak.
+   Notes:
+     In the test case described in
+     http://svn.haxx.se/dev/archive-2010-11/0163.shtml, r1032808 dropped
+     svnserve's peak memory use from 574 MB to 71 MB.  r1041438 further
+     drops it to 51 MB.
+   Votes:
+     +1: pburba, hwright, cmpilato (via IRC)
+
+ * r880082
+   Respect Apache's ServerSignature directive.
+   Justification:
+     Many subversion server administrators want it.
+   Votes:
+     +1: stylesen, cmpilato, hwright
+
+ * r879293
+   Perform MIME type matching case-insensitively.  (Issue #3479)
+   Justification:
+     The broken behavior is inconsistent with the way MIME mapping
+     files are used everywhere else in the world.
+   Notes:
+     This merge will conflict due to changes in the path APIs.  Use
+     --accept=theirs-conflict to merge it, and then replace the one
+     introduced call to svn_dirent_local_style() with svn_path_local_style().
+   Votes:
+     +1: cmpilato, pburba, hwright
+
+ * r877842
+   Make svnadmin load tolerate mergeinfo with "\r\n".
+   Justification:
+     Prior to this change you cannot load a dump file that contains Windows
+     style newlines in svn:mergeinfo.  See
+     http://svn.haxx.se/dev/archive-2009-05/0179.shtml.
+   Votes:
+     +1: pburba, cmpilato, hwright
