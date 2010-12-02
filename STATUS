@@ -49,22 +49,6 @@ Candidate changes for 1.5.9:
    Votes:
      +1: pburba
 
- * r876804, r876840, r876849
-   Fix issue #3383 'Foreign repository merge can add mergeinfo from the
-   foreign repos'
-   Justification:
-     At best this mergeinfo refers to non-existent paths in the target's
-     repos.  At worst the mergeinfo intersects with actual path/revisions
-     in the merge target.  The latter might cause real problems, making it
-     appear merges have been done that actually have not or vice-versa.
-   Notes:
-     r876849 is the fix, the other revisions are expansion of an existing
-     merge test to cover this issue.  There are some minor conflicts, a
-     backport branch can be found at
-     http://svn.collab.net/repos/svn/branches/1.5.x-r36775.
-   Votes:
-     +1: pburba, arfrever
-
  * r877146, r877157
    Fix issue #3392 'Parsing error with reverse merges and non-inheritable
    mergeinfo'
@@ -224,4 +208,19 @@ Approved changes:
    Votes:
      +1: stsp, philip, pburba
      (For 1.6.x there was +1: pburba, cmpilato, hwright)
+
+ * r876804, r876840, r876849
+   Fix issue #3383 'Foreign repository merge can add mergeinfo from the
+   foreign repos'
+   Justification:
+     At best this mergeinfo refers to non-existent paths in the target's
+     repos.  At worst the mergeinfo intersects with actual path/revisions
+     in the merge target.  The latter might cause real problems, making it
+     appear merges have been done that actually have not or vice-versa.
+   Notes:
+     r876849 is the fix, the other revisions are expansion of an existing
+     merge test to cover this issue.  There are some minor conflicts, a
+     backport branch can be found at ^subversion/branches/1.5.x-r36775.
+   Votes:
+     +1: pburba, arfrever, cmpilato
 
