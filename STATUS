@@ -185,12 +185,3 @@ Approved changes:
      introduced call to svn_dirent_local_style() with svn_path_local_style().
    Votes:
      +1: cmpilato, pburba, hwright
-
- * r877842
-   Make svnadmin load tolerate mergeinfo with "\r\n".
-   Justification:
-     Prior to this change you cannot load a dump file that contains Windows
-     style newlines in svn:mergeinfo.  See
-     http://svn.haxx.se/dev/archive-2009-05/0179.shtml.
-   Votes:
-     +1: pburba, cmpilato, hwright
