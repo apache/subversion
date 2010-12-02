@@ -146,6 +146,13 @@ Candidate changes for 1.5.9:
     Votes:
       +1: peters, philip
 
+  * r880162
+    Fix ruby test failure caused by the merge of r879293.
+    Justification:
+      Failing tests are bad.
+    Votes:
+      +1: hwright
+
 Approved changes:
 =================
 
