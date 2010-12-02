@@ -953,8 +953,7 @@ $(SVN_OBJDIR)/.bindings-compiled: $(SVN_OBJDIR)/.installed
 	fi
 	if [ $(ENABLE_PERL_BINDINGS) = yes ]; then \
 		cd $(svn_builddir) \
-			&& make swig-pl-lib \
-			&& make install-swig-pl-lib; \
+			&& make swig-pl; \
 	fi
 	if [ $(ENABLE_JAVA_BINDINGS) = yes ]; then \
 		cd $(svn_builddir) \
