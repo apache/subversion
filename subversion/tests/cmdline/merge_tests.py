@@ -6496,15 +6496,18 @@ def prop_add_to_child_with_mergeinfo(sbox):
 def foreign_repos_does_not_update_mergeinfo(sbox):
   "set no mergeinfo when merging from foreign repos"
 
-  # Test for issue #2788.
+  # Test for issue #2788 and issue #3383.
 
   sbox.build()
   wc_dir = sbox.wc_dir
   expected_disk, expected_status = set_up_branch(sbox)
 
+  # Set up for test of issue #2788.
+
   # Create a second repository with the same greek tree
   repo_dir = sbox.repo_dir
   other_repo_dir, other_repo_url = sbox.add_repo_path("other")
+  other_wc_dir = sbox.add_wc_path("other")
   svntest.main.copy_repos(repo_dir, other_repo_dir, 6, 1)
 
   # Merge r3:4 (using implied peg revisions) from 'other' repos into
@@ -6546,6 +6549,68 @@ def foreign_repos_does_not_update_mergeinfo(sbox):
 
   expected_status.tweak('A_COPY/D/G/rho', 'A_COPY/B/E/beta', status='M ')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Set up for test of issue #3383.
+  svntest.actions.run_and_verify_svn(None, None, [], 'revert', '-R', wc_dir)
+
+  # Get a working copy for the foreign repos.  
+  svntest.actions.run_and_verify_svn(None, None, [], 'co', other_repo_url,
+                                     other_wc_dir)
+
+  # Create mergeinfo on the foreign repos on an existing directory and
+  # file and an added directory and file.  Commit as r7.  And no, we aren't
+  # checking these intermediate steps very thoroughly, but we test these
+  # simple merges to *death* elsewhere.
+
+  # Create mergeinfo on an existing directory.
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+                                     other_repo_url + '/A',
+                                     os.path.join(other_wc_dir, 'A_COPY'),
+                                     '-c5')
+
+  # Create mergeinfo on an existing file.
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+                                     other_repo_url + '/A/D/H/psi',
+                                     os.path.join(other_wc_dir, 'A_COPY',
+                                                  'D', 'H', 'psi'),
+                                     '-c3')
+
+  # Add a new directory with mergeinfo in the foreign repos.
+  new_dir = os.path.join(other_wc_dir, 'A_COPY', 'N')
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', new_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ps',
+                                     SVN_PROP_MERGEINFO, '', new_dir)
+
+  # Add a new file with mergeinfo in the foreign repos.
+  new_file = os.path.join(other_wc_dir, 'A_COPY', 'nu')
+  svntest.main.file_write(new_file, "This is the file 'nu'.\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', new_file)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ps',
+                                     SVN_PROP_MERGEINFO, '', new_file)
+
+  expected_output = wc.State(other_wc_dir,{
+    'A_COPY'          : Item(verb='Sending'), # Mergeinfo created
+    'A_COPY/B/E/beta' : Item(verb='Sending'),
+    'A_COPY/D/H/psi'  : Item(verb='Sending'), # Mergeinfo created
+    'A_COPY/N'        : Item(verb='Adding'),  # Has empty mergeinfo
+    'A_COPY/nu'       : Item(verb='Adding'),  # Has empty mergeinfo
+    })
+  svntest.actions.run_and_verify_commit(other_wc_dir, expected_output,
+                                        None, None, other_wc_dir,
+                                        '-m',
+                                        'create mergeinfo on foreign repos')
+  # Now merge a diff from the foreign repos that contains the mergeinfo
+  # addition in r7 to A_COPY.  The mergeinfo diff should *not* be applied
+  # to A_COPY since it refers to a foreign repository...
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+                                     other_repo_url + '/A@1',
+                                     other_repo_url + '/A_COPY@7',
+                                     os.path.join(wc_dir, 'A_COPY'))
+  #...which means there should be no mergeinfo anywhere in WC_DIR, since
+  # this test never created any.
+  svntest.actions.run_and_verify_svn(None, [], [], 'pg',
+                                     SVN_PROP_MERGEINFO, '-R',
+                                     wc_dir)
 
 def avoid_reflected_revs(sbox):
   "avoid repeated merges for cyclic merging"
