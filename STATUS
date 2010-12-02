@@ -126,19 +126,6 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r1041438
-   Further improvement to a previously backported blame -g server-side
-   memory leak fix (r1032808).
-   Justification:
-     Very simple change that fixes another memory leak.
-   Notes:
-     In the test case described in
-     http://svn.haxx.se/dev/archive-2010-11/0163.shtml, r1032808 dropped
-     svnserve's peak memory use from 574 MB to 71 MB.  r1041438 further
-     drops it to 51 MB.
-   Votes:
-     +1: pburba, cmpilato (via IRC)
-
 Veto-blocked changes:
 =====================
 
@@ -260,3 +247,16 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1041438
+   Further improvement to a previously backported blame -g server-side
+   memory leak fix (r1032808).
+   Justification:
+     Very simple change that fixes another memory leak.
+   Notes:
+     In the test case described in
+     http://svn.haxx.se/dev/archive-2010-11/0163.shtml, r1032808 dropped
+     svnserve's peak memory use from 574 MB to 71 MB.  r1041438 further
+     drops it to 51 MB.
+   Votes:
+     +1: pburba, hwright, cmpilato (via IRC)
