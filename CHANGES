@@ -469,6 +469,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.5.9
   * fix server-side memory leaks triggered by 'blame -g' (r1032808)
   * perform MIME type matching case-insensitively (issue #3479)
   * respect Apache's ServerSignature directive (r880082)
+  * error if attempting to use Serf >= 0.4.0 (r1041545)
 
  Developer-visible changes:
   * fix pointer dereference (r36783)
