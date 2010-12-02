@@ -19,10 +19,18 @@ AC_DEFUN(SVN_LIB_SERF,
       serf_prefix=$withval
       save_cppflags="$CPPFLAGS $SVN_APR_INCLUDES $SVN_APRUTIL_INCLUDES"
       CPPFLAGS="$CPPFLAGS $SVN_APR_INCLUDES $SVN_APRUTIL_INCLUDES -I$serf_prefix/include/serf-0"
+      AC_MSG_CHECKING([supported Serf version])
       AC_CHECK_HEADERS(serf.h,[
         save_ldflags="$LDFLAGS"
         LDFLAGS="$LDFLAGS -L$serf_prefix/lib"
-        AC_CHECK_LIB(serf-0, serf_context_create,[serf_found="yes"])
+        AC_CHECK_LIB(serf-0, serf_context_create,[
+          AC_COMPILE_IFELSE([
+#include <serf.h>
+#if SERF_MAJOR_VERSION > 0 || SERF_MINOR_VERSION > 3
+#error serf version too new, we only support 0.3.x and below
+#endif
+          ],[serf_found="yes"],
+            [AC_MSG_ERROR([only serf versions up to 0.3.x supported])])])
         LDFLAGS="$save_ldflags"])
       CPPFLAGS="$save_cppflags"
     fi
