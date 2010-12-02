@@ -92,21 +92,16 @@ CREATE TABLE PRISTINE (
   compression  INTEGER,
 
   /* The size in bytes of the file in which the pristine text is stored.
-     Used to verify the pristine file is "proper". NULL if unknown, and
-     (thus) the pristine copy is incomplete/unusable.
-     ### We always set this; there may be no need to allow NULL. Shall we
-         add "NOT NULL" to the schema? */
-  size  INTEGER,
+     Used to verify the pristine file is "proper". */
+  size  INTEGER NOT NULL,
 
   /* ### this will probably go away, in favor of counting references
      ### that exist in NODES. Not yet used; always set to 1. */
   refcount  INTEGER NOT NULL,
 
   /* Alternative MD5 checksum used for communicating with older
-     repositories. Not strictly guaranteed to be unique among table rows.
-     ### We always set this and require it to be non-null. Can we add
-         "NOT NULL" to the schema? */
-  md5_checksum  TEXT
+     repositories. Not strictly guaranteed to be unique among table rows. */
+  md5_checksum  TEXT NOT NULL
   );
 
 
@@ -711,3 +706,9 @@ INSERT INTO ACTUAL_NODE SELECT
 FROM ACTUAL_NODE_BACKUP;
 
 DROP TABLE ACTUAL_NODE_BACKUP;
+
+/* Note: One difference remains between the schemas of an upgraded and a
+ * fresh WC.  While format 22 was current, "NOT NULL" was added to the
+ * columns PRISTINE.size and PRISTINE.md5_checksum.  The format was not
+ * bumped because it is a forward- and backward-compatible change. */
+
