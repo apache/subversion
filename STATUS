@@ -139,6 +139,13 @@ Candidate changes for 1.5.9:
       -0: stsp (not a critical build or security fix -- maybe just
                 document the workaround instead?)
 
+  * 1.5.x-serf-config branch
+    Block Subversion from compiling with too-new serf versions.
+    Justification:
+      Prevent user confusion in the presence of incompatible serf installs.
+    Votes:
+      +1:
+
 Approved changes:
 =================
 
