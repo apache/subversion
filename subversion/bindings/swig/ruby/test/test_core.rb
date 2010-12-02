@@ -628,9 +628,8 @@ EOM
     assert_raises(Svn::Error::BadFilename) do
       Svn::Core::MimeType.detect(nonexistent_html_file)
     end
-    assert_raises(Svn::Error::BadFilename) do
-      Svn::Core::MimeType.detect(nonexistent_html_file, type_map)
-    end
+    assert_equal("text/html",
+                 Svn::Core::MimeType.detect(nonexistent_html_file, type_map))
 
     empty_html_file = File.join(@tmp_path, "empty.html")
     FileUtils.touch(empty_html_file)

@@ -153,10 +153,3 @@ Approved changes:
    Votes:
      +1: cmpilato, danielsh, rhuijben
      -0: hwright (until such time as a backport branch exists)
-
-  * r880162
-    Fix ruby test failure caused by the merge of r879293.
-    Justification:
-      Failing tests are bad.
-    Votes:
-      +1: hwright, cmpilato
