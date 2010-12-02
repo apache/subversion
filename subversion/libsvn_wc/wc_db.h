@@ -918,9 +918,8 @@ svn_wc__db_pristine_get_tempdir(const char **temp_dir_abspath,
 
 /* Install the file TEMPFILE_ABSPATH (which is sitting in a directory given by
    svn_wc__db_pristine_get_tempdir()) into the pristine data store, to be
-   identified by the SHA-1 checksum of its contents, SHA1_CHECKSUM.
-
-   ### the md5_checksum parameter is temporary. */
+   identified by the SHA-1 checksum of its contents, SHA1_CHECKSUM, and whose
+   MD-5 checksum is MD5_CHECKSUM. */
 svn_error_t *
 svn_wc__db_pristine_install(svn_wc__db_t *db,
                             const char *tempfile_abspath,
@@ -991,54 +990,12 @@ svn_wc__db_pristine_check(svn_boolean_t *present,
                           apr_pool_t *scratch_pool);
 
 
-/* ### if _check() returns "corrupted pristine file", then this function
-   ### can be used to repair it. It will attempt to restore integrity
-   ### between the SQLite database and the filesystem. Failing that, then
-   ### it will attempt to clean out the record and/or file. Failing that,
-   ### then it will return SOME_ERROR. */
-/* ### dlr: What is this the checksum of? */
-svn_error_t *
-svn_wc__db_pristine_repair(svn_wc__db_t *db,
-                           const char *wri_abspath,
-                           const svn_checksum_t *sha1_checksum,
-                           apr_pool_t *scratch_pool);
-
-
 /* @} */
 
 
 /* @defgroup svn_wc__db_op  Operations on WORKING tree
    @{
 */
-
-/* Return TRUE if SRC_ABSPATH and DST_ABSPATH are versioned paths in the
- * same DB; FALSE otherwise. */
-svn_boolean_t
-svn_wc__db_same_db(svn_wc__db_t *db,
-                   const char *src_abspath,
-                   const char *dst_abspath,
-                   apr_pool_t *scratch_pool);
-
-/* Copy the tree at SRC_ABSPATH (in NODES and ACTUAL_NODE tables) to
- * DST_ABSPATH.
- *
- * SRC_ABSPATH and DST_ABSPATH must be in the same WC.  SRC_ABSPATH must
- * exist, and must not be excluded/absent/not-present.  The parent of
- * DST_ABSPATH must be a versioned directory.  DST_ABSPATH must be in a
- * state suitable for creating a new node: nonexistent or deleted.
- *
- * Preserve changelist associations in the copy.  Preserve all node states
- * including excluded/absent/not-present.
- *
- * Copy the metadata only: do not look at or copy the nodes on disk.
- *
- * Add WORK_ITEMS to the work queue. */
-svn_error_t *
-svn_wc__db_op_copy_tree(svn_wc__db_t *db,
-                        const char *src_abspath,
-                        const char *dst_abspath,
-                        const svn_skel_t *work_items,
-                        apr_pool_t *scratch_pool);
 
 /* Copy the node at SRC_ABSPATH (in NODES and ACTUAL_NODE tables) to
  * DST_ABSPATH, both in DB but not necessarily in the same WC.  The parent

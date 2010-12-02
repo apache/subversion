@@ -574,10 +574,6 @@ display_prop_diffs(const apr_array_header_t *propchanges,
   const char *path1 = apr_pstrdup(pool, orig_path1);
   const char *path2 = apr_pstrdup(pool, orig_path2);
 
-  /* If we're creating a diff on the wc root, path would be empty. */
-  if (path[0] == '\0')
-    path = apr_psprintf(pool, ".");
-
   if (use_git_diff_format)
     {
       SVN_ERR(adjust_relative_to_repos_root(&path1, path, orig_path1,

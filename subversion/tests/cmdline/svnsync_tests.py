@@ -814,21 +814,19 @@ def commit_a_copy_of_root(sbox):
 #
 # See also http://svn.haxx.se/dev/archive-2010-11/0411.shtml and
 # 
-### TODO: Once the above failure is fixed, delete-revprops.expected.dump
-###       needs to be updated for this test to PASS!
 #
 # Note: For those who may poke around this test in the future, r3 of
 # delete-revprops.dump was created with the following svnmucc command:
 #
-# svnmucc.exe -mm cp head %ROOT_URL%-1/trunk/A %ROOT_URL%-1/trunk/H
-#                 rm %ROOT_URL%-1/trunk/H/B
-#                 cp head %ROOT_URL%-1/trunk/X %ROOT_URL%-1/trunk/B
+# svnmucc.exe -mm cp head %ROOT_URL%/trunk/A %ROOT_URL%/trunk/H
+#                 rm %ROOT_URL%/trunk/H/B
+#                 cp head %ROOT_URL%/trunk/X %ROOT_URL%/trunk/B
 #
 # r4 was created with this svnmucc command:
 #
-# svnmucc.exe -mm cp head %ROOT_URL%-1/trunk/A %ROOT_URL%-1/trunk/H/Z
-#                 rm %ROOT_URL%-1/trunk/H/Z/B
-#                 mkdir %ROOT_URL%-1/trunk/H/Z/B
+# svnmucc.exe -mm cp head %ROOT_URL%/trunk/A %ROOT_URL%/trunk/H/Z
+#                 rm %ROOT_URL%/trunk/H/Z/B
+#                 mkdir %ROOT_URL%/trunk/H/Z/B
 def descend_into_replace(sbox):
   "descending into replaced dir looks in src"
   run_test(sbox, "descend_into_replace.dump", subdir='/trunk/H',

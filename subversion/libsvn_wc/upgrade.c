@@ -1134,6 +1134,13 @@ bump_to_21(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+bump_to_22(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_22));
+  return SVN_NO_ERROR;
+}
+
 
 struct upgrade_data_t {
   svn_sqlite__db_t *sdb;
@@ -1424,6 +1431,12 @@ svn_wc__upgrade_sdb(int *result_format,
         *result_format = 21;
         /* FALLTHROUGH  */
 
+      case 21:
+        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_22, &bb,
+                                             scratch_pool));
+        *result_format = 22;
+        /* FALLTHROUGH  */
+
       /* ### future bumps go here.  */
 #if 0
       case XXX-1:
@@ -1455,8 +1468,7 @@ svn_wc__upgrade_sdb(int *result_format,
 
 /* */
 static svn_error_t *
-upgrade_working_copy(void **dir_baton,
-                     void *parent_baton,
+upgrade_working_copy(void *parent_baton,
                      svn_wc__db_t *db,
                      const char *dir_abspath,
                      svn_wc_upgrade_get_repos_info_t repos_info_func,
@@ -1470,6 +1482,7 @@ upgrade_working_copy(void **dir_baton,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool)
 {
+  void *dir_baton;
   int old_format;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_array_header_t *subdirs;
@@ -1512,7 +1525,7 @@ upgrade_working_copy(void **dir_baton,
     }
 
 
-  SVN_ERR(upgrade_to_wcng(dir_baton, parent_baton, db, dir_abspath, old_format,
+  SVN_ERR(upgrade_to_wcng(&dir_baton, parent_baton, db, dir_abspath, old_format,
                           repos_info_func, repos_info_baton,
                           repos_cache, data, scratch_pool, iterpool));
 
@@ -1525,11 +1538,10 @@ upgrade_working_copy(void **dir_baton,
   for (i = 0; i < subdirs->nelts; ++i)
     {
       const char *child_abspath = APR_ARRAY_IDX(subdirs, i, const char *);
-      void *child_baton;
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(upgrade_working_copy(&child_baton, *dir_baton, db, child_abspath,
+      SVN_ERR(upgrade_working_copy(dir_baton, db, child_abspath,
                                    repos_info_func, repos_info_baton,
                                    repos_cache, data,
                                    cancel_func, cancel_baton,
@@ -1596,7 +1608,6 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
   struct upgrade_data_t data = { NULL };
   svn_skel_t *work_item, *work_items = NULL;
   const char *pristine_from, *pristine_to, *db_from, *db_to;
-  void *parent_baton;
 
   if (!is_old_wcroot(local_abspath, scratch_pool))
     return svn_error_createf(
@@ -1618,7 +1629,7 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
                           scratch_pool, scratch_pool));
 
   /* Upgrade the pre-wcng into a wcng in a temporary location. */
-  SVN_ERR(upgrade_working_copy(&parent_baton, NULL, db, local_abspath,
+  SVN_ERR(upgrade_working_copy(NULL, db, local_abspath,
                                repos_info_func, repos_info_baton,
                                apr_hash_make(scratch_pool), &data,
                                cancel_func, cancel_baton,

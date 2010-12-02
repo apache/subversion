@@ -311,7 +311,7 @@ new_node_record(void **node_baton,
       child_db = apr_pcalloc(rb->pool, sizeof(*child_db));
       child_db->baton = child_baton;
       child_db->depth = 0;
-      child_db->relpath = svn_relpath_canonicalize("/", rb->pool);
+      child_db->relpath = "";
       child_db->parent = NULL;
       rb->db = child_db;
     }

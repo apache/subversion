@@ -35,6 +35,9 @@ from svntest.main import server_has_mergeinfo
 from svntest.main import SVN_PROP_MERGEINFO
 from merge_tests import set_up_branch
 
+# (abbreviation)
+exp_noop_up_out = svntest.actions.expected_noop_update_output
+
 ######################################################################
 #
 # The Plan:
@@ -1564,7 +1567,8 @@ def merge_sensitive_log_added_mergeinfo_replaces_inherited(sbox):
   # Reverse merge r3 from 'A/D/H' to 'A_COPY/D/H' and commit as r8.
   # First update the wc so mergeinfo inheritance can occur.  This is
   # necessary so A_COPY/D/H 'knows' that r3 has been merged into it.
-  svntest.actions.run_and_verify_svn(None, ["At revision 7.\n"], [],
+  svntest.actions.run_and_verify_svn(None,
+                                     exp_noop_up_out(7), [],
                                      'up', wc_dir)
   wc_status.tweak(wc_rev=7)
   expected_output = wc.State(H_COPY_path, {

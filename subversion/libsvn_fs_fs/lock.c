@@ -1024,7 +1024,7 @@ get_locks_filter_func(void *baton,
   else if ((b->requested_depth == svn_depth_files) ||
            (b->requested_depth == svn_depth_immediates))
     {
-      const char *rel_uri = svn_uri_is_child(b->path, lock->path, pool);
+      const char *rel_uri = svn_fspath__is_child(b->path, lock->path, pool);
       if (rel_uri && (svn_path_component_count(rel_uri) == 1))
         SVN_ERR(b->get_locks_func(b->get_locks_baton, lock, pool));
     }

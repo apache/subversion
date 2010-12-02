@@ -1000,8 +1000,11 @@ svn_client_create_context(svn_client_ctx_t **ctx,
  * converting them to UTF-8, followed by targets from @a known_targets
  * (which might come from, for example, the "--targets" command line option).
  *
- * On each URL target, do some IRI-to-URI encoding and some auto-escaping.
- * On each local path, canonicalize case and path separators.
+ * Process each target in one of the following ways.  For a repository-
+ * relative URL: resolve to a full URL, contacting the repository if
+ * necessary to do so, and then treat as a full URL.  For a URL: do some
+ * IRI-to-URI encoding and some auto-escaping, and canonicalize.  For a
+ * local path: canonicalize case and path separators.
  *
  * Allocate @a *targets_p and its elements in @a pool.
  *
@@ -4486,11 +4489,13 @@ svn_client_revprop_list(apr_hash_t **props,
  * @a from_path_or_url is either the path the working copy on disk, or
  * a URL to the repository you wish to export.
  *
- * When exporting a directory @a to_path is the path to the directory
- * where you wish to create the exported tree, when exporting a file
- * it is the path of the file that will be created.  If @a to_path is
- * the empty path the name of the file/directory in the repository
- * will be used.
+ * When exporting a directory, @a to_path is the path to the directory
+ * where you wish to create the exported tree; when exporting a file, it
+ * is the path of the file that will be created.  If @a to_path is the
+ * empty path, then the basename of the export file/directory in the repository
+ * will be used.  If @a to_path represents an existing directory, and a
+ * file is being exported, then a file with the that basename will be
+ * created under that directory (as with 'copy' operations).
  *
  * @a peg_revision is the revision where the path is first looked up
  * when exporting from a repository.  If @a peg_revision->kind is

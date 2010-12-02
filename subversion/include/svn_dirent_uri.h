@@ -322,10 +322,10 @@ svn_relpath_dirname(const char *relpath,
  *
  * If @a dirpath or @a base_name is NULL, then don't set that one.
  *
- * Either @a dirpath or @a base_name may be @a dirent's own address, but they
+ * Either @a dirpath or @a base_name may be @a uri's own address, but they
  * may not both be the same address, or the results are undefined.
  *
- * If @a dirent has two or more components, the separator between @a dirpath
+ * If @a uri has two or more components, the separator between @a dirpath
  * and @a base_name is not included in either of the new names.
  *
  *   examples:
@@ -344,11 +344,11 @@ svn_uri_split(const char **dirpath,
               apr_pool_t *pool);
 
 /** Get the basename of the specified canonicalized @a uri.  The
- * basename is defined as the last component of the uri.  If the @a dirent
+ * basename is defined as the last component of the uri.  If the @a uri
  * is root then that is returned. Otherwise, the returned value will have no
  * slashes in it.
  *
- * Example: svn_dirent_basename("http://server/foo/bar") -> "bar"
+ * Example: svn_uri_basename("http://server/foo/bar") -> "bar"
  *
  * The returned basename will be allocated in @a pool. If @a pool is NULL
  * a pointer to the basename in @a uri is returned.
@@ -362,9 +362,9 @@ svn_uri_basename(const char *uri,
                  apr_pool_t *pool);
 
 /** Get the dirname of the specified canonicalized @a uri, defined as
- * the dirent with its basename removed.
+ * the uri with its basename removed.
  *
- * If @a dirent is root  (e.g. "http://server"), it is returned
+ * If @a uri is root (e.g. "http://server"), it is returned
  * unchanged.
  *
  * The returned dirname will be allocated in @a pool.
@@ -653,6 +653,9 @@ svn_uri_is_ancestor(const char *parent_uri,
  * This function assumes @a parent_dirent and @a child_dirent are both
  * absolute or relative in the same way.
  *
+ * ### Returning the child in the no-match case is a bad idea when the
+ *     paths are relative; can be useful when they are absolute.
+ *
  * @since New in 1.7.
  */
 const char *
@@ -663,6 +666,8 @@ svn_dirent_skip_ancestor(const char *parent_dirent,
  * @a parent_relpath, or just "" if @a parent_relpath is equal to
  * @a child_relpath. If @a child_relpath is not below @a parent_relpath,
  * return @a child_relpath.
+ *
+ * ### Returning the child in the no-match case is a bad idea.
  *
  * @since New in 1.7.
  */
@@ -676,6 +681,9 @@ svn_relpath_skip_ancestor(const char *parent_relpath,
  *
  * This function assumes @a parent_uri and @a child_uri are both absolute or
  * relative in the same way.
+ *
+ * ### Returning the child in the no-match case is a bad idea when the
+ *     paths are relative; can be useful when they are absolute.
  *
  * @since New in 1.7.
  */
@@ -737,7 +745,7 @@ svn_dirent_condense_targets(const char **pcommon,
  *     to an array of targets relative to @a *pcommon, and if @a
  *     remove_redundancies is TRUE, omit any uris that are descendants of
  *     another uri in @a targets.  If *pcommon is empty, @a
- *     *pcondensed_targets will contain absolute dirents; redundancies
+ *     *pcondensed_targets will contain absolute uris; redundancies
  *     can still be removed.  If @a pcondensed_targets is NULL, leave it
  *     alone.
  *
@@ -802,6 +810,126 @@ svn_error_t *
 svn_uri_get_file_url_from_dirent(const char **url,
                                  const char *dirent,
                                  apr_pool_t *pool);
+
+
+/**************************************************************************
+ * A private API for Subversion filesystem paths, otherwise known as paths
+ * within a repository, that start with a '/'.  The rules for a fspath are
+ * the same as for a relpath except for the leading '/'.  A fspath never
+ * ends with '/' except when the whole path is just '/'.
+ **************************************************************************/
+
+/** Return TRUE iff @a fspath is canonical.
+ * @a fspath need not be canonical, of course.
+ *
+ * @since New in 1.7.
+ */
+svn_boolean_t
+svn_fspath__is_canonical(const char *fspath);
+
+
+/** Return the dirname of @a fspath, defined as the path with its basename
+ * removed.  If @a fspath is "/", return "/".
+ *
+ * Allocate the result in @a pool.
+ *
+ * @since New in 1.7.
+ */
+const char *
+svn_fspath__dirname(const char *fspath,
+                    apr_pool_t *pool);
+
+/** Return the last component of @a fspath.  The returned value will have no
+ * slashes in it.  If @a fspath is "/", return "".
+ *
+ * If @a pool is NULL, return a pointer to within @a fspath, else allocate
+ * the result in @a pool.
+ *
+ * @since New in 1.7.
+ */
+const char *
+svn_fspath__basename(const char *fspath,
+                     apr_pool_t *pool);
+
+/** Divide the canonical @a fspath into @a *dirpath and @a
+ * *base_name, allocated in @a pool.
+ *
+ * If @a dirpath or @a base_name is NULL, then don't set that one.
+ *
+ * Either @a dirpath or @a base_name may be @a fspath's own address, but they
+ * may not both be the same address, or the results are undefined.
+ *
+ * If @a fspath has two or more components, the separator between @a dirpath
+ * and @a base_name is not included in either of the new names.
+ *
+ * @since New in 1.7.
+ */
+void
+svn_fspath__split(const char **dirpath,
+                  const char **base_name,
+                  const char *fspath,
+                  apr_pool_t *result_pool);
+
+/** Return the fspath composed of @a fspath with @a relpath appended.
+ * Allocate the result in @a result_pool.
+ *
+ * @since New in 1.7.
+ */
+char *
+svn_fspath__join(const char *fspath,
+                 const char *relpath,
+                 apr_pool_t *result_pool);
+
+
+/** Test if @a child_fspath is a child of @a parent_fspath.  If not, return
+ * NULL.  If so, return the relpath which, if joined to @a parent_fspath,
+ * would yield @a child_fspath.
+ *
+ * If @a child_fspath is the same as @a parent_fspath, it is not considered
+ * a child, so the result is NULL; an empty string is never returned.
+ *
+ * If @a pool is NULL, a pointer into @a child_fspath will be returned to
+ * identify the remainder fspath.
+ *
+ * @since New in 1.7.
+ */
+const char *
+svn_fspath__is_child(const char *parent_fspath,
+                     const char *child_fspath,
+                     apr_pool_t *pool);
+
+/** Return the relative path part of @a child_fspath that is below
+ * @a parent_fspath, or just "" if @a parent_fspath is equal to
+ * @a child_fspath. If @a child_fspath is not below @a parent_fspath,
+ * return @a child_fspath.
+ *
+ * ### Returning the child in the no-match case is a bad idea.
+ *
+ * @since New in 1.7.
+ */
+const char *
+svn_fspath__skip_ancestor(const char *parent_fspath,
+                          const char *child_fspath);
+
+/** Return TRUE if @a parent_fspath is an ancestor of @a child_fspath or
+ * the fspaths are equal, and FALSE otherwise.
+ *
+ * @since New in 1.7.
+ */
+svn_boolean_t
+svn_fspath__is_ancestor(const char *parent_fspath,
+                        const char *child_fspath);
+
+/** Return the longest common path shared by two fspaths, @a fspath1 and
+ * @a fspath2.  If there's no common ancestor, return "/".
+ *
+ * @since New in 1.7.
+ */
+char *
+svn_fspath__get_longest_ancestor(const char *fspath1,
+                                 const char *fspath2,
+                                 apr_pool_t *result_pool);
+
 
 #ifdef __cplusplus
 }

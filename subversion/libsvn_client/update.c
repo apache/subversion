@@ -156,6 +156,20 @@ update_internal(svn_revnum_t *result_rev,
     ? svn_cstring_split(preserved_exts_str, "\n\r\t\v ", FALSE, pool)
     : NULL;
 
+  /* Let everyone know we're starting a real update (unless we're
+     asked not to). */
+  if (ctx->notify_func2 && notify_summary)
+    {
+      svn_wc_notify_t *notify
+        = svn_wc_create_notify(local_abspath, svn_wc_notify_update_started,
+                               pool);
+      notify->kind = svn_node_none;
+      notify->content_state = notify->prop_state
+        = svn_wc_notify_state_inapplicable;
+      notify->lock_state = svn_wc_notify_lock_state_inapplicable;
+      (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+    }
+
   /* Open an RA session for the URL */
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, &corrected_url,
                                                anchor_url,

@@ -7387,11 +7387,11 @@ get_inoperative_immediate_children(apr_hash_t **immediate_children,
         apr_hash_set(*immediate_children,
                      apr_pstrdup(result_pool, child->abspath),
                      APR_HASH_KEY_STRING,
-                     svn_uri_join(merge_source_repos_abspath,
-                                  svn_dirent_is_child(merge_target_abspath,
-                                                      child->abspath,
-                                                      iterpool),
-                                  result_pool));
+                     svn_fspath__join(merge_source_repos_abspath,
+                                      svn_dirent_is_child(merge_target_abspath,
+                                                          child->abspath,
+                                                          iterpool),
+                                      result_pool));
     }
 
   svn_pool_destroy(iterpool);
@@ -7567,9 +7567,9 @@ record_mergeinfo_for_dir_merge(svn_mergeinfo_catalog_t result_catalog,
           if (!child_repos_path)
             child_repos_path = "";
 
-          child_merge_src_canon_path = svn_uri_join(mergeinfo_path,
-                                                    child_repos_path,
-                                                    iterpool);
+          child_merge_src_canon_path = svn_fspath__join(mergeinfo_path,
+                                                        child_repos_path,
+                                                        iterpool);
           /* Filter any ranges from each child's natural history before
              setting mergeinfo describing the merge. */
           SVN_ERR(filter_natural_history_from_mergeinfo(
@@ -7877,7 +7877,7 @@ log_noop_revs(void *baton,
       /* Adjust REL_PATH so it is relative to the merge source then use it to
          calculate what path in the merge target would be affected by this
          revision. */
-      rel_path = svn_uri_skip_ancestor(log_gap_baton->source_repos_abs, path);
+      rel_path = svn_fspath__skip_ancestor(log_gap_baton->source_repos_abs, path);
       cwmi_path = svn_dirent_join(log_gap_baton->merge_b->target_abspath,
                                   rel_path, pool);
 
@@ -9580,10 +9580,10 @@ log_find_operative_revs(void *baton,
       svn_mergeinfo_t log_entry_as_mergeinfo;
 
       /* Easy out: The path is not within the tree of interest. */
-      if (!svn_uri_is_ancestor(log_baton->target_abspath, path))
+      if (!svn_fspath__is_ancestor(log_baton->target_abspath, path))
         continue;
 
-      rel_path = svn_uri_skip_ancestor(log_baton->target_abspath, path);
+      rel_path = svn_fspath__skip_ancestor(log_baton->target_abspath, path);
       source_rel_path = svn_relpath_join(log_baton->source_repos_rel_path,
                                          rel_path, pool);
 
@@ -9612,8 +9612,8 @@ log_find_operative_revs(void *baton,
               && strcmp(subtree_missing_this_rev, source_rel_path))
             {
               const char *suffix =
-                svn_uri_skip_ancestor(subtree_missing_this_rev,
-                                      source_rel_path);
+                svn_relpath_skip_ancestor(subtree_missing_this_rev,
+                                          source_rel_path);
               missing_path = apr_pstrmemdup(pool, path,
                                             strlen(path) - strlen(suffix) - 1);
             }
@@ -9665,9 +9665,9 @@ log_find_operative_revs(void *baton,
    of the unmerged revisions in UNMERGED_CATALOG's mergeinfos are "phantoms",
    that is, one of the following conditions holds:
 
-     1) The revision effects no corresponding paths in SOURCE_REPOS_REL_PATH.
+     1) The revision affects no corresponding paths in SOURCE_REPOS_REL_PATH.
 
-     2) The revision effects corresponding paths in SOURCE_REPOS_REL_PATH,
+     2) The revision affects corresponding paths in SOURCE_REPOS_REL_PATH,
         but based on the mergeinfo in MERGED_CATALOG, the change was
         previously merged.
 
@@ -9718,7 +9718,7 @@ find_unsynced_ranges(const char *source_repos_rel_path,
         }
     }
 
-  /* Find any unmerged revisions which both effect the source and
+  /* Find any unmerged revisions which both affect the source and
      are not yet merged to it. */
   if (potentially_unmerged_ranges)
     {
@@ -9844,10 +9844,10 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
       svn_pool_clear(iterpool);
 
       source_path = path + strlen(target_repos_rel_path);
-      if (source_path[0] == '/') /* Remove leading '/' for svn_uri_join. */
+      if (source_path[0] == '/')  /* Remove leading '/'. */
         source_path++;
-      source_path = svn_uri_join(source_repos_rel_path, source_path,
-                                 iterpool);
+      source_path = svn_relpath_join(source_repos_rel_path, source_path,
+                                     iterpool);
       source_path_rel_to_session =
         svn_relpath_skip_ancestor(source_repos_rel_path, source_path);
 
@@ -9998,7 +9998,7 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
           svn_pool_clear(iterpool);
 
           target_path = source_path + strlen(source_repos_rel_path);
-          if (target_path[0] == '/') /* Remove leading '/' for svn_uri_join. */
+          if (target_path[0] == '/')  /* Remove leading '/'. */
             target_path++;
           err = svn_client__repos_location_segments(&segments,
                                                     target_ra_session,

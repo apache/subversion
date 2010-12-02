@@ -86,23 +86,22 @@ CREATE TABLE PRISTINE (
      pristine texts referenced from this database. */
   checksum  TEXT NOT NULL PRIMARY KEY,
 
-  /* ### enumerated values specifying type of compression. NULL implies
-     ### that no compression has been applied. */
+  /* Enumerated values specifying type of compression. The only value
+     supported so far is NULL, meaning that no compression has been applied
+     and the pristine text is stored verbatim in the file. */
   compression  INTEGER,
 
-  /* The size in bytes of the file in which the pristine text is stored. */
-  /* ### used to verify the pristine file is "proper". NULL if unknown,
-     ### and (thus) the pristine copy is incomplete/unusable. */
-  size  INTEGER,
+  /* The size in bytes of the file in which the pristine text is stored.
+     Used to verify the pristine file is "proper". */
+  size  INTEGER NOT NULL,
 
   /* ### this will probably go away, in favor of counting references
-     ### that exist in NODES. */
+     ### that exist in NODES. Not yet used; always set to 1. */
   refcount  INTEGER NOT NULL,
 
   /* Alternative MD5 checksum used for communicating with older
-     repositories. Not guaranteed to be unique among table rows.
-     NULL if not (yet) calculated. */
-  md5_checksum  TEXT
+     repositories. Not strictly guaranteed to be unique among table rows. */
+  md5_checksum  TEXT NOT NULL
   );
 
 
@@ -638,6 +637,18 @@ PRAGMA user_version = 21;
 
 /* ------------------------------------------------------------------------- */
 
+/* Format 22 simply moves the tree conflict information from the conflict_data
+   column to the tree_conflict_data column. */
+
+-- STMT_UPGRADE_TO_22
+UPDATE actual_node SET tree_conflict_data = conflict_data;
+UPDATE actual_node SET conflict_data = NULL;
+
+PRAGMA user_version = 22;
+
+
+/* ------------------------------------------------------------------------- */
+
 /* Format YYY introduces new handling for conflict information.  */
 -- format: YYY
 
@@ -695,3 +706,9 @@ INSERT INTO ACTUAL_NODE SELECT
 FROM ACTUAL_NODE_BACKUP;
 
 DROP TABLE ACTUAL_NODE_BACKUP;
+
+/* Note: One difference remains between the schemas of an upgraded and a
+ * fresh WC.  While format 22 was current, "NOT NULL" was added to the
+ * columns PRISTINE.size and PRISTINE.md5_checksum.  The format was not
+ * bumped because it is a forward- and backward-compatible change. */
+
