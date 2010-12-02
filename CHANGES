@@ -443,9 +443,9 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.0
     * fix building Ruby bindings with Ruby 1.9 (r35852, r35883)
 
 
-Version 1.5.8
-(03 Dec 2010, from /branches/1.5.x)
-http://svn.apache.org/repos/asf/subversion/tags/1.5.8
+Version 1.5.9
+(06 Dec 2010, from /branches/1.5.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.5.9
 
  User-visible changes:
   * fix proxying of LOCK and UNLOCK requests with WebDAV proxies (r36159)
@@ -455,18 +455,29 @@ http://svn.apache.org/repos/asf/subversion/tags/1.5.8
   * fixed: repeated mergeinfo of conflicting properties fails (issue #3250)
   * fix segfault in wc->URL copy (r37646, -56)
   * make 'svn up --set-depth infinity' expand shallow subtrees (r37169)
+  * resolve symlinks when checking for ~/.subversion (r36023)
   * make default depth of 'svn merge' infinity (r37156)
+  * don't allow foreign merges to add foreign mergeinfo (issue #3383)
   * error if attempting to reintegrate to/from the repo root (r37385)
+  * let 'svnadmin load' tolerate mergeinfo with "\r\n" (r37768)
   * improve memory performance in 'svn merge' (issue #3393)
   * fixed: 'SVNPathAuthz short_circuit' unsolicited read access (issue #3695)
            See CVE-2010-3315, and descriptive advisory at
            http://subversion.apache.org/security/CVE-2010-3315-advisory.txt
   * prevent crash in mod_dav_svn when using SVNParentPath (r1033166)
+  * limit memory fragmentation in svnserve (r1022675)
+  * fix server-side memory leaks triggered by 'blame -g' (r1032808)
+  * perform MIME type matching case-insensitively (issue #3479)
+  * respect Apache's ServerSignature directive (r880082)
 
  Developer-visible changes:
   * fix pointer dereference (r36783)
   * fix error leak (r36860)
   * make basic_tests 12 compatible with Windows and Python 2.5+ (r35930)
+
+
+Version 1.5.8
+(Not released, see changes for 1.5.9.)
 
 
 Version 1.5.7
