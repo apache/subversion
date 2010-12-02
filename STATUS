@@ -132,13 +132,6 @@ Candidate changes for 1.5.9:
    Votes:
      +1: pburba
 
- * r876097
-   Resolve symlinks when checking ~/.subversion
-   Justification:
-     It gives flexibility to users to link different .subversion folders.
-   Votes:
-     +1: stylesen, stsp
-
  * r879293
    Perform MIME type matching case-insensitively.  (Issue #3479)
    Justification:
@@ -153,7 +146,7 @@ Candidate changes for 1.5.9:
    Justification:
      Many subversion server administrators want it.
    Votes:
-     +1: stylesen
+     +1: stylesen, cmpilato
 
   * r1028084, r1028125
     Fix JVM recognition on OS X Snow Leopard (10.6).
@@ -173,6 +166,28 @@ Candidate changes for 1.5.9:
 
 Approved changes:
 =================
+
+ * r876097
+   Resolve symlinks when checking ~/.subversion
+   Justification:
+     It gives flexibility to users to link different .subversion folders.
+   Votes:
+     +1: stylesen, stsp, cmpilato
+
+ * r876804, r876840, r876849
+   Fix issue #3383 'Foreign repository merge can add mergeinfo from the
+   foreign repos'
+   Justification:
+     At best this mergeinfo refers to non-existent paths in the target's
+     repos.  At worst the mergeinfo intersects with actual path/revisions
+     in the merge target.  The latter might cause real problems, making it
+     appear merges have been done that actually have not or vice-versa.
+   Notes:
+     r876849 is the fix, the other revisions are expansion of an existing
+     merge test to cover this issue.  There are some minor conflicts, a
+     backport branch can be found at ^subversion/branches/1.5.x-r36775.
+   Votes:
+     +1: pburba, arfrever, cmpilato
 
  * r876925, r876931
    'svnadmin upgrade'-ing pre-1.2 repositories fails for lack of
@@ -208,19 +223,4 @@ Approved changes:
    Votes:
      +1: stsp, philip, pburba
      (For 1.6.x there was +1: pburba, cmpilato, hwright)
-
- * r876804, r876840, r876849
-   Fix issue #3383 'Foreign repository merge can add mergeinfo from the
-   foreign repos'
-   Justification:
-     At best this mergeinfo refers to non-existent paths in the target's
-     repos.  At worst the mergeinfo intersects with actual path/revisions
-     in the merge target.  The latter might cause real problems, making it
-     appear merges have been done that actually have not or vice-versa.
-   Notes:
-     r876849 is the fix, the other revisions are expansion of an existing
-     merge test to cover this issue.  There are some minor conflicts, a
-     backport branch can be found at ^subversion/branches/1.5.x-r36775.
-   Votes:
-     +1: pburba, arfrever, cmpilato
 
