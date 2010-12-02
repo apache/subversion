@@ -173,15 +173,3 @@ Approved changes:
      Many subversion server administrators want it.
    Votes:
      +1: stylesen, cmpilato, hwright
-
- * r879293
-   Perform MIME type matching case-insensitively.  (Issue #3479)
-   Justification:
-     The broken behavior is inconsistent with the way MIME mapping
-     files are used everywhere else in the world.
-   Notes:
-     This merge will conflict due to changes in the path APIs.  Use
-     --accept=theirs-conflict to merge it, and then replace the one
-     introduced call to svn_dirent_local_style() with svn_path_local_style().
-   Votes:
-     +1: cmpilato, pburba, hwright
