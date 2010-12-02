@@ -7606,8 +7606,8 @@ pack_shard(const char *revs_dir,
   SVN_ERR(svn_io_set_file_read_only(manifest_file_path, FALSE, pool));
 
   /* Update the min-unpacked-rev file to reflect our newly packed shard.
-   * (ffd->min_unpacked_rev will be updated by open_pack_or_rev_file().)
-   */
+   * (This doesn't update ffd->min_unpacked_rev.  That will be updated by
+   * open_pack_or_rev_file() when necessary.) */
   final_path = svn_dirent_join(fs_path, PATH_MIN_UNPACKED_REV, iterpool);
   SVN_ERR(svn_stream_open_unique(&tmp_stream, &tmp_path, fs_path,
                                    svn_io_file_del_none, iterpool, iterpool));
@@ -7674,9 +7674,8 @@ pack_revprop_shard(svn_fs_t *fs,
       SVN_ERR(svn_sqlite__insert(NULL, stmt));
     }
 
-  /* Update the min-unpacked-rev file to reflect our newly packed shard.
-   * (ffd->min_unpacked_rev will be updated by open_pack_or_rev_file().)
-   */
+  /* Update the min-unpacked-revprop file to reflect our newly packed shard.
+   * (This doesn't update ffd->min_unpacked_revprop.) */
   final_path = svn_dirent_join(fs_path, PATH_MIN_UNPACKED_REVPROP, iterpool);
   SVN_ERR(svn_stream_open_unique(&tmp_stream, &tmp_path, fs_path,
                                  svn_io_file_del_none, iterpool, iterpool));
