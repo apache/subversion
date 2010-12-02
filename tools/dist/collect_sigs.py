@@ -28,6 +28,8 @@
 #  * Post to IRC when a new signature is collected
 #    - Since we don't want to have a long running bot, perhaps we could
 #      also patch wayita to accept and then echo a privmsg?
+#  * Mail dev@ when somebody submits a successful signature, and include a
+#    comments field which could be included in the mail.
 #
 
 import sys, os
