@@ -261,6 +261,5 @@ main(int argc, const char *argv[])
   svn_pool_destroy(pool);
   apr_terminate();
 
-  exit(exit_code);
   return exit_code;
 }

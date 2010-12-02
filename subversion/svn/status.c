@@ -163,6 +163,7 @@ print_status(const char *path,
           svn_wc_conflict_description_t *old_tree_conflict;
           SVN_ERR(svn_wc__get_tree_conflict(&tree_conflict, ctx->wc_ctx,
                                             local_abspath, pool, pool));
+          SVN_ERR_ASSERT(tree_conflict != NULL);
           old_tree_conflict = svn_wc__cd2_to_cd(tree_conflict, pool);
 
           tree_status_code = 'C';

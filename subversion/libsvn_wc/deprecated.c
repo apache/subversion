@@ -2729,7 +2729,6 @@ svn_wc_add_repos_file3(const char *dst_path,
                                  copyfrom_url,
                                  copyfrom_rev,
                                  cancel_func, cancel_baton,
-                                 notify_func, notify_baton,
                                  pool));
 
   return svn_error_return(svn_wc_context_destroy(wc_ctx));

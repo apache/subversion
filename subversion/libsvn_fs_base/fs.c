@@ -497,6 +497,7 @@ static fs_vtable_t fs_vtable = {
   svn_fs_base__get_lock,
   svn_fs_base__get_locks,
   base_bdb_set_errcall,
+  svn_fs_base__validate_mergeinfo,
 };
 
 /* Where the format number is stored. */

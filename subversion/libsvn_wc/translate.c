@@ -376,6 +376,7 @@ svn_wc__maybe_set_read_only(svn_boolean_t *did_set,
                             apr_pool_t *scratch_pool)
 {
   const svn_string_t *needs_lock;
+  svn_wc__db_status_t status;
   svn_wc__db_lock_t *lock;
   svn_error_t *err;
 
@@ -384,7 +385,7 @@ svn_wc__maybe_set_read_only(svn_boolean_t *did_set,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  err = svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL,
+  err = svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL,
@@ -399,6 +400,11 @@ svn_wc__maybe_set_read_only(svn_boolean_t *did_set,
   else if (err)
     return svn_error_return(err);
   else if (lock)
+    /* ### Is this "we have the lock?" */
+    return SVN_NO_ERROR;
+
+  /* Files that aren't in the repository yet should be left writable. */
+  if (status == svn_wc__db_status_added)
     return SVN_NO_ERROR;
 
   SVN_ERR(svn_wc__internal_propget(&needs_lock, db, local_abspath,

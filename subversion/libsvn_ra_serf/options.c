@@ -566,12 +566,15 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
              support mergeinfo. */
           svn_mergeinfo_catalog_t ignored;
           svn_error_t *err;
+          svn_boolean_t validate_inherited_mergeinfo = FALSE;
           apr_array_header_t *paths = apr_array_make(pool, 1,
                                                      sizeof(char *));
           APR_ARRAY_PUSH(paths, const char *) = "";
 
           err = svn_ra_serf__get_mergeinfo(ra_session, &ignored, paths, 0,
-                                           FALSE, FALSE, pool);
+                                           FALSE,
+                                           &validate_inherited_mergeinfo,
+                                           FALSE, pool);
 
           if (err)
             {

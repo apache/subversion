@@ -1,5 +1,4 @@
-/*
- * err.h : interface to routines for returning Berkeley DB errors
+/* utils.h --- wc/client test utilities
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -21,36 +20,45 @@
  * ====================================================================
  */
 
-
-
-#ifndef SVN_LIBSVN_FS_ERR_H
-#define SVN_LIBSVN_FS_ERR_H
+#ifndef SVN_TEST_UTILS_H
+#define SVN_TEST_UTILS_H
 
 #include <apr_pools.h>
-
 #include "svn_error.h"
-#include "svn_fs.h"
+#include "../svn_test.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
 
+/*-------------------------------------------------------------------*/
 
-/* Building common error objects.  */
+/** Helper routines for creating repositories and WCs. **/
 
 
-/* SVN_ERR_FS_ID_NOT_FOUND: something in FS refers to node revision
-   ID, but that node revision doesn't exist.  */
-svn_error_t *svn_fs_fs__err_dangling_id(svn_fs_t *fs,
-                                        const svn_fs_id_t *id);
+#define REPOSITORIES_WORK_DIR "svn-test-work/repositories"
+#define WCS_WORK_DIR "svn-test-work/working-copies"
 
-/* SVN_ERR_FS_CORRUPT: the lockfile for PATH in FS is corrupt.  */
-svn_error_t *svn_fs_fs__err_corrupt_lockfile(svn_fs_t *fs,
-                                             const char *path);
+/* Create an empty repository and WC for the test TEST_NAME.  Set *REPOS_URL
+ * to the URL of the new repository and *WC_ABSPATH to the root path of the
+ * new WC.
+ *
+ * Create the repository and WC in subdirectories called
+ * REPOSITORIES_WORK_DIR/TEST_NAME and WCS_WORK_DIR/TEST_NAME respectively,
+ * within the current working directory.
+ *
+ * Register the new repo and the new WC for cleanup. */
+svn_error_t *
+svn_test__create_repos_and_wc(const char **repos_url,
+                              const char **wc_abspath,
+                              const char *test_name,
+                              const svn_test_opts_t *opts,
+                              apr_pool_t *pool);
+
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-#endif /* SVN_LIBSVN_FS_ERR_H */
+#endif  /* SVN_TEST_UTILS_H */

@@ -1204,7 +1204,7 @@ print_tree(svn_fs_root_t *root,
   if (full_paths)
     name = path;
   else if (*path == '/')
-    name = svn_uri_basename(path, pool);
+    name = svn_fspath__basename(path, pool);
   else
     name = svn_relpath_basename(path, NULL);
 
@@ -1244,7 +1244,7 @@ print_tree(svn_fs_root_t *root,
           svn_pool_clear(subpool);
           SVN_ERR(print_tree(root,
                              (*path == '/')
-                                 ? svn_uri_join(path, entry->name, pool)
+                                 ? svn_fspath__join(path, entry->name, pool)
                                  : svn_relpath_join(path, entry->name, pool),
                              entry->id, (entry->kind == svn_node_dir),
                              indentation + 1, show_ids, full_paths,

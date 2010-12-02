@@ -1514,7 +1514,6 @@ test_relpath_is_ancestor(apr_pool_t *pool)
   } tests[] = {
     { "foo",            "foo/bar",        TRUE},
     { "food/bar",       "foo/bar",        FALSE},
-    { "/",               "/foo",          TRUE},
     { "",                "foo",           TRUE},
     { "",                ".bar",          TRUE},
     { "foo/bar",         "foo",           FALSE},
@@ -1640,7 +1639,7 @@ test_dirent_skip_ancestor(apr_pool_t *pool)
       if (strcmp(tests[i].result, retval))
         return svn_error_createf(
              SVN_ERR_TEST_FAILED, NULL,
-             "test_dirent_skip_ancestor (%s, %s) returned %s instead of %s",
+             "svn_dirent_skip_ancestor (%s, %s) returned %s instead of %s",
              tests[i].path1, tests[i].path2, retval, tests[i].result);
     }
   return SVN_NO_ERROR;
@@ -1846,8 +1845,8 @@ test_relpath_get_longest_ancestor(apr_pool_t *pool)
     {
       const char *retval;
 
-      retval = svn_uri_get_longest_ancestor(tests[i].path1, tests[i].path2,
-                                             pool);
+      retval = svn_relpath_get_longest_ancestor(tests[i].path1, tests[i].path2,
+                                                pool);
 
       if (strcmp(tests[i].result, retval))
         return svn_error_createf
@@ -2859,6 +2858,198 @@ test_dirent_is_under_root(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_fspath_is_canonical(apr_pool_t *pool)
+{
+  struct {
+    const char *path;
+    svn_boolean_t canonical;
+  } tests[] = {
+    { "",                      FALSE },
+    { ".",                     FALSE },
+    { "/",                     TRUE },
+    { "/a",                    TRUE },
+    { "/a/",                   FALSE },
+    { "//a",                   FALSE },
+    { "/a/b",                  TRUE },
+    { "/a//b",                 FALSE },
+    { "\\",                    FALSE },
+    { "\\a",                   FALSE },
+    { "/\\a",                  TRUE },  /* a single component */
+    { "/a\\",                  TRUE },  /* a single component */
+    { "/a\\b",                 TRUE },  /* a single component */
+  };
+  int i;
+
+  for (i = 0; i < COUNT_OF(tests); i++)
+    {
+      svn_boolean_t canonical
+        = svn_fspath__is_canonical(tests[i].path);
+
+      if (tests[i].canonical != canonical)
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_fspath__is_canonical(\"%s\") returned "
+                                 "\"%s\" expected \"%s\"",
+                                 tests[i].path,
+                                 canonical ? "TRUE" : "FALSE",
+                                 tests[i].canonical ? "TRUE" : "FALSE");
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_fspath_join(apr_pool_t *pool)
+{
+  int i;
+
+  static const char * const joins[][3] = {
+    { "/",    "",     "/" },
+    { "/",    "d",    "/d" },
+    { "/",    "d/e",  "/d/e" },
+    { "/abc", "",     "/abc" },
+    { "/abc", "d",    "/abc/d" },
+    { "/abc", "d/e",  "/abc/d/e" },
+  };
+
+  for (i = 0; i < COUNT_OF(joins); i++ )
+    {
+      char *result = svn_fspath__join(joins[i][0], joins[i][1], pool);
+
+      SVN_TEST_STRING_ASSERT(result, joins[i][2]);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_fspath_is_child(apr_pool_t *pool)
+{
+  int i, j;
+
+  static const char * const paths[] = {
+    "/",
+    "/f",
+    "/foo",
+    "/foo/bar",
+    "/foo/bars",
+    "/foo/bar/baz",
+    };
+
+  static const char * const
+    remainders[COUNT_OF(paths)][COUNT_OF(paths)] = {
+    { 0,  "f",  "foo",  "foo/bar",  "foo/bars", "foo/bar/baz" },
+    { 0,  0,    0,      0,          0,          0             },
+    { 0,  0,    0,      "bar",      "bars",     "bar/baz"     },
+    { 0,  0,    0,      0,          0,          "baz"         },
+    { 0,  0,    0,      0,          0,          0             },
+    { 0,  0,    0,      0,          0,          0             },
+  };
+
+  for (i = 0; i < COUNT_OF(paths); i++)
+    {
+      for (j = 0; j < COUNT_OF(paths); j++)
+        {
+          const char *remainder
+            = svn_fspath__is_child(paths[i], paths[j], pool);
+
+          SVN_TEST_STRING_ASSERT(remainder, remainders[i][j]);
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_fspath_dirname_basename_split(apr_pool_t *pool)
+{
+  int i;
+
+  static const struct {
+    const char *path;
+    const char *dirname;
+    const char *basename;
+  } tests[] = {
+    { "/", "/", "" },
+    { "/a", "/", "a" },
+    { "/abc", "/", "abc" },
+    { "/x/abc", "/x", "abc" },
+    { "/x/y/abc", "/x/y", "abc" },
+  };
+
+  for (i = 0; i < COUNT_OF(tests); i++)
+    {
+      const char *result_dirname, *result_basename;
+
+      result_dirname = svn_fspath__dirname(tests[i].path, pool);
+      SVN_TEST_STRING_ASSERT(result_dirname, tests[i].dirname);
+
+      result_basename = svn_fspath__basename(tests[i].path, pool);
+      SVN_TEST_STRING_ASSERT(result_basename, tests[i].basename);
+
+      svn_fspath__split(&result_dirname, &result_basename, tests[i].path,
+                        pool);
+      SVN_TEST_STRING_ASSERT(result_dirname, tests[i].dirname);
+      SVN_TEST_STRING_ASSERT(result_basename, tests[i].basename);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_fspath_get_longest_ancestor(apr_pool_t *pool)
+{
+  int i;
+
+  /* Paths to test and their expected results.  Same as in
+   * test_relpath_get_longest_ancestor() but with '/' prefix. */
+  struct {
+    const char *path1;
+    const char *path2;
+    const char *result;
+  } tests[] = {
+    { "/foo",            "/foo/bar",         "/foo" },
+    { "/foo/bar",        "/foo/bar",         "/foo/bar" },
+    { "/",               "/foo",             "/" },
+    { "/",               "/foo",             "/" },
+    { "/",               "/.bar",            "/" },
+    { "/.bar",           "/",                "/" },
+    { "/foo/bar",        "/foo",             "/foo" },
+    { "/foo/bar",        "/foo",             "/foo" },
+    { "/rif",            "/raf",             "/" },
+    { "/foo",            "/bar",             "/" },
+    { "/foo",            "/foo/bar",         "/foo" },
+    { "/foo.",           "/foo./.bar",       "/foo." },
+    { "/",               "/",                "/" },
+    { "/http:/test",     "/http:/test",      "/http:/test" },
+    { "/http:/test",     "/http:/taste",     "/http:" },
+    { "/http:/test",     "/http:/test/foo",  "/http:/test" },
+    { "/http:/test",     "/file:/test/foo",  "/" },
+    { "/http:/test",     "/http:/testF",     "/http:" },
+    { "/file:/A/C",      "/file:/B/D",       "/file:" },
+    { "/file:/A/C",      "/file:/A/D",       "/file:/A" },
+    { "/X:/foo",         "/X:",              "/X:" },
+    { "/X:/folder1",     "/X:/folder2",      "/X:" },
+    { "/X:",             "/X:foo",           "/" },
+    { "/X:foo",          "/X:bar",           "/" },
+  };
+
+  for (i = 0; i < COUNT_OF(tests); i++)
+    {
+      const char *result;
+
+      result = svn_fspath__get_longest_ancestor(tests[i].path1, tests[i].path2,
+                                                pool);
+      SVN_TEST_STRING_ASSERT(tests[i].result, result);
+
+      /* changing the order of the paths should return the same result */
+      result = svn_fspath__get_longest_ancestor(tests[i].path2, tests[i].path1,
+                                                pool);
+      SVN_TEST_STRING_ASSERT(tests[i].result, result);
+    }
+  return SVN_NO_ERROR;
+}
+
 
 /* The test table.  */
 
@@ -2906,9 +3097,9 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS2(test_dirent_split,
                    "test svn_dirent_split"),
     SVN_TEST_PASS2(test_relpath_split,
-                   "test test_relpath_split"),
+                   "test svn_relpath_split"),
     SVN_TEST_PASS2(test_uri_split,
-                   "test test_uri_split"),
+                   "test svn_uri_split"),
     SVN_TEST_PASS2(test_dirent_get_longest_ancestor,
                    "test svn_dirent_get_longest_ancestor"),
     SVN_TEST_PASS2(test_relpath_get_longest_ancestor,
@@ -2928,11 +3119,11 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS2(test_uri_is_ancestor,
                    "test svn_uri_is_ancestor"),
     SVN_TEST_PASS2(test_dirent_skip_ancestor,
-                   "test test_dirent_skip_ancestor"),
+                   "test svn_dirent_skip_ancestor"),
     SVN_TEST_PASS2(test_relpath_skip_ancestor,
-                   "test test_relpath_skip_ancestor"),
+                   "test svn_relpath_skip_ancestor"),
     SVN_TEST_PASS2(test_uri_skip_ancestor,
-                   "test test_uri_skip_ancestor"),
+                   "test svn_uri_skip_ancestor"),
     SVN_TEST_PASS2(test_dirent_get_absolute,
                    "test svn_dirent_get_absolute"),
 #ifdef WIN32
@@ -2959,5 +3150,15 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test svn_uri_get_file_url_from_dirent"),
     SVN_TEST_PASS2(test_dirent_is_under_root,
                    "test svn_dirent_is_under_root"),
+    SVN_TEST_PASS2(test_fspath_is_canonical,
+                   "test svn_fspath__is_canonical"),
+    SVN_TEST_PASS2(test_fspath_join,
+                   "test svn_fspath__join"),
+    SVN_TEST_PASS2(test_fspath_is_child,
+                   "test svn_fspath__is_child"),
+    SVN_TEST_PASS2(test_fspath_dirname_basename_split,
+                   "test svn_fspath__dirname/basename/split"),
+    SVN_TEST_PASS2(test_fspath_get_longest_ancestor,
+                   "test svn_fspath__get_longest_ancestor"),
     SVN_TEST_NULL
   };

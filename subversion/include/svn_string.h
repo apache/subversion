@@ -199,7 +199,7 @@ svn_stringbuf_ncreate(const char *bytes, apr_size_t size, apr_pool_t *pool);
 /** Create a new empty bytestring with at least @a minimum_size bytes of
  * space available in the memory block.
  *
- * The allocated string buffer will be one byte larger then @a minimum_size
+ * The allocated string buffer will be one byte larger than @a minimum_size
  * to account for a final '\\0'.
  *
  * @since New in 1.6.

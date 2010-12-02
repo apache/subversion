@@ -25,12 +25,14 @@ package org.apache.subversion.javahl;
 
 import java.util.Date;
 
+import org.apache.subversion.javahl.types.*;
+
 /**
  * this class is returned by {@link ISVNClient#info2} and contains information
  * about items in the repository or working copy
  * @since 1.2
  */
-public class Info2 implements java.io.Serializable
+public class Info implements java.io.Serializable
 {
     // Update the serialVersionUID when there is a incompatible change
     // made to this class.  See any of the following, depending upon
@@ -45,6 +47,11 @@ public class Info2 implements java.io.Serializable
      * the path of the item
      */
     private String path;
+
+    /**
+     * the working copy root
+     */
+    private String wcroot;
 
     /**
      * the url of the item
@@ -187,6 +194,7 @@ public class Info2 implements java.io.Serializable
      * constructor to build the object by native code. See fields for
      * parameters
      * @param path
+     * @param wcroot
      * @param url
      * @param rev
      * @param kind
@@ -210,7 +218,7 @@ public class Info2 implements java.io.Serializable
      * @param depth
      * @param treeConflict
      */
-    public Info2(String path, String url, long rev, NodeKind kind,
+    public Info(String path, String wcroot, String url, long rev, NodeKind kind,
           String reposRootUrl, String reposUUID, long lastChangedRev,
           long lastChangedDate, String lastChangedAuthor, Lock lock,
           boolean hasWcInfo, ScheduleKind schedule, String copyFromUrl,
@@ -220,6 +228,7 @@ public class Info2 implements java.io.Serializable
           long reposSize, Depth depth, ConflictDescriptor treeConflict)
     {
         this.path = path;
+        this.wcroot = wcroot;
         this.url = url;
         this.rev = rev;
         this.kind = kind;
@@ -253,6 +262,14 @@ public class Info2 implements java.io.Serializable
     public String getPath()
     {
         return path;
+    }
+
+    /**
+     * return the workgin copy root
+     */
+    public String getWcroot()
+    {
+        return wcroot;
     }
 
     /**

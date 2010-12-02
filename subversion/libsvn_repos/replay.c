@@ -225,8 +225,13 @@ add_subdir(svn_fs_root_t *source_root,
             continue;
           else if (change->change_kind == svn_fs_path_change_replace)
             {
-              /* ### Can this assert fail? */
-              SVN_ERR_ASSERT(change->copyfrom_known);
+              if (! change->copyfrom_known)
+                {
+                  SVN_ERR(svn_fs_copied_from(&change->copyfrom_rev,
+                                             &change->copyfrom_path,
+                                             target_root, new_path, pool));
+                  change->copyfrom_known = TRUE;
+                }
               copyfrom_path = change->copyfrom_path;
               copyfrom_rev = change->copyfrom_rev;
             }

@@ -76,7 +76,7 @@ goto checkrebuild
 
 @rem **************************************************************************
 :build
-set COMMON_CC_OPTS=/nologo /W3 /FD /GX /DWIN32 /D_WINDOWS
+set COMMON_CC_OPTS=/nologo /W3 /FD /DWIN32 /D_WINDOWS
 set CFLAGS=%COMMON_CC_OPTS% %CC_OPTS% $(LOC)
 set BUILD_OPTS=%ASM_OPTS% CFLAGS="%COMMON_CC_OPTS% %CC_OPTS% $(LOC)"
 @echo nmake /f win32\Makefile.msc %BUILD_OPTS% STATICLIB=%STATICLIB% %target%

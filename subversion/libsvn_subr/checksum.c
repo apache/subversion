@@ -135,6 +135,9 @@ const char *
 svn_checksum_to_cstring(const svn_checksum_t *checksum,
                         apr_pool_t *pool)
 {
+  if (checksum == NULL)
+    return NULL;
+
   switch (checksum->kind)
     {
       case svn_checksum_md5:

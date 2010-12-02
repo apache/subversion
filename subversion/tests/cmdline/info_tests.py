@@ -285,6 +285,55 @@ def info_on_mkdir(sbox):
                        ('depth',    {}, 'infinity'),
                        ('schedule', {}, 'add')])
 
+def info_wcroot_abspaths(sbox):
+  """wc root paths in 'svn info' output"""
+
+  def check_wcroot_paths(lines, wcroot_abspath):
+    "check that paths found on input lines beginning 'Path: ' are as expected"
+    path = None
+    target = None
+    for line in lines:
+      if line.startswith('Path: '):
+        target = line[6:].rstrip()
+      if line.startswith('Working Copy Root Path: '):
+        path = line[24:].rstrip()
+      if target is not None and path is not None:
+        break
+
+    if target is None:
+      target = "(UNKNOWN)"
+      
+    if path is None:
+      print "No WC root path for '%s'" % (target)
+      raise svntest.Failure
+    
+    if path != wcroot_abspath:
+      print("For target '%s'..." % (target))
+      print("   Reported WC root path: %s" % (path))
+      print("   Expected WC root path: %s" % (wcroot_abspath))
+      raise svntest.Failure
+
+  sbox.build(read_only=True)
+  exit_code, output, errput = svntest.main.run_svn(None, 'info', '-R', sbox.wc_dir)
+  check_wcroot_paths(output, os.path.abspath(sbox.wc_dir))
+
+def info_url_special_characters(sbox):
+  """special characters in svn info URL"""
+  sbox.build(create_wc = False)
+  wc_dir = sbox.wc_dir
+
+  special_urls = [sbox.repo_url + '/A' + '/%2E',
+                  sbox.repo_url + '%2F' + 'A']
+
+  expected = {'Path' : 'A',
+              'Repository Root' : '.*',
+              'Revision' : '1',
+              'Node Kind' : 'dir',
+             }
+
+  for url in special_urls:
+    svntest.actions.run_and_verify_info([expected], url)
+  
 ########################################################################
 # Run the tests
 
@@ -293,6 +342,8 @@ test_list = [ None,
               info_with_tree_conflicts,
               info_on_added_file,
               info_on_mkdir,
+              info_wcroot_abspaths,
+              info_url_special_characters,
              ]
 
 if __name__ == '__main__':

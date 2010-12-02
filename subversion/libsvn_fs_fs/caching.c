@@ -119,7 +119,7 @@ manifest_serialize(char **data,
 {
   apr_array_header_t *manifest = in;
 
-  *data_len = sizeof(apr_off_t) *manifest->nelts;
+  *data_len = sizeof(apr_off_t) * manifest->nelts;
   *data = apr_palloc(pool, *data_len);
   memcpy(*data, manifest->elts, *data_len);
 
@@ -134,10 +134,10 @@ manifest_deserialize(void **out,
                      apr_pool_t *pool)
 {
   apr_array_header_t *manifest = apr_array_make(pool,
-                                                data_len / sizeof(apr_off_t),
-                                                sizeof(apr_off_t));
+                                       (int) (data_len / sizeof(apr_off_t)),
+                                       sizeof(apr_off_t));
   memcpy(manifest->elts, data, data_len);
-  manifest->nelts = data_len / sizeof(apr_off_t);
+  manifest->nelts = (int) (data_len / sizeof(apr_off_t));
   *out = manifest;
 
   return SVN_NO_ERROR;
