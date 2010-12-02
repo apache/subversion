@@ -160,10 +160,3 @@ Approved changes:
    Votes:
      +1: cmpilato, danielsh, rhuijben
      -0: hwright (until such time as a backport branch exists)
-
-  * 1.5.x-serf-config branch
-    Block Subversion from compiling with too-new serf versions.
-    Justification:
-      Prevent user confusion in the presence of incompatible serf installs.
-    Votes:
-      +1: peters, philip, cmpilato
