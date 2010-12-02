@@ -139,13 +139,6 @@ Candidate changes for 1.5.9:
       -0: stsp (not a critical build or security fix -- maybe just
                 document the workaround instead?)
 
-  * 1.5.x-serf-config branch
-    Block Subversion from compiling with too-new serf versions.
-    Justification:
-      Prevent user confusion in the presence of incompatible serf installs.
-    Votes:
-      +1: peters, philip
-
   * r880162
     Fix ruby test failure caused by the merge of r879293.
     Justification:
@@ -167,3 +160,10 @@ Approved changes:
    Votes:
      +1: cmpilato, danielsh, rhuijben
      -0: hwright (until such time as a backport branch exists)
+
+  * 1.5.x-serf-config branch
+    Block Subversion from compiling with too-new serf versions.
+    Justification:
+      Prevent user confusion in the presence of incompatible serf installs.
+    Votes:
+      +1: peters, philip, cmpilato
