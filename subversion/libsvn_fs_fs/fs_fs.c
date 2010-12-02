@@ -7607,7 +7607,7 @@ pack_shard(const char *revs_dir,
 
   /* Update the min-unpacked-rev file to reflect our newly packed shard.
    * (This doesn't update ffd->min_unpacked_rev.  That will be updated by
-   * open_pack_or_rev_file() when necessary.) */
+   * update_min_unpacked_rev() when necessary.) */
   final_path = svn_dirent_join(fs_path, PATH_MIN_UNPACKED_REV, iterpool);
   SVN_ERR(svn_stream_open_unique(&tmp_stream, &tmp_path, fs_path,
                                    svn_io_file_del_none, iterpool, iterpool));
