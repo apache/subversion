@@ -137,9 +137,12 @@ Candidate changes for 1.5.9:
    Justification:
      The broken behavior is inconsistent with the way MIME mapping
      files are used everywhere else in the world.
+   Notes:
+     This merge will conflict due to changes in the path APIs.  Use
+     --accept=theirs-conflict to merge it, and then replace the one
+     introduced call to svn_dirent_local_style() with svn_path_local_style().
    Votes:
      +1: cmpilato
-     -0: this change conflicts when merged
 
  * r880082
    Respect Apache's ServerSignature directive.
