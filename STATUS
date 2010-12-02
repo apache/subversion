@@ -144,7 +144,7 @@ Candidate changes for 1.5.9:
     Justification:
       Prevent user confusion in the presence of incompatible serf installs.
     Votes:
-      +1:
+      +1: peters
 
 Approved changes:
 =================
