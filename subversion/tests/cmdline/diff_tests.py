@@ -2868,7 +2868,7 @@ def diff_with_depth(sbox):
 
   diff = [
     "\n",
-    "Property changes on: \n",
+    "Property changes on: .\n",
     "___________________________________________________________________\n",
     "Added: foo1\n",
     "## -0,0 +1 ##\n",
@@ -2892,7 +2892,7 @@ def diff_with_depth(sbox):
     "## -0,0 +1 ##\n",
     "+bar4\n"]
 
-  dot_header = make_diff_header("", "revision 1", "working copy")
+  dot_header = make_diff_header(".", "revision 1", "working copy")
   iota_header = make_diff_header('iota', "revision 1", "working copy")
   A_header = make_diff_header('A', "revision 1", "working copy")
   B_header = make_diff_header(B_path, "revision 1", "working copy")
@@ -2939,7 +2939,7 @@ def diff_with_depth(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'ci', '-m', '')
 
-  dot_header = make_diff_header("", "revision 1", "revision 2")
+  dot_header = make_diff_header(".", "revision 1", "revision 2")
   iota_header = make_diff_header('iota', "revision 1", "revision 2")
   A_header = make_diff_header('A', "revision 1", "revision 2")
   B_header = make_diff_header(B_path, "revision 1", "revision 2")
@@ -3011,12 +3011,12 @@ def diff_with_depth(sbox):
     "## -1 +1 ##\n",
     "-bar2\n",
     "+baz2\n",
-    "Index: \n",
+    "Index: .\n",
     "===================================================================\n",
-    "--- \t(revision 2)\n",
-    "+++ \t(working copy)\n",
+    "--- .\t(revision 2)\n",
+    "+++ .\t(working copy)\n",
     "\n",
-    "Property changes on: \n",
+    "Property changes on: .\n",
     "___________________________________________________________________\n",
     "Modified: foo1\n",
     "## -1 +1 ##\n",
@@ -3735,7 +3735,7 @@ def diff_git_with_props_on_dir(sbox):
 
   was_cwd = os.getcwd()
   os.chdir(wc_dir)
-  expected_output = make_git_diff_header("", "", "revision 1",
+  expected_output = make_git_diff_header(".", "", "revision 1",
                                          "revision 2",
                                          add=False, text_changes=False) + [
       "\n",
