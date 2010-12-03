@@ -6966,11 +6966,10 @@ recover_body(void *baton, apr_pool_t *pool)
       if (ffd->format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT)
         {
           svn_revnum_t min_unpacked_revprop;
-          const char *min_unpacked_revprop_path =
-            svn_dirent_join(fs->path, PATH_MIN_UNPACKED_REVPROP, pool);
 
           SVN_ERR(read_min_unpacked_rev(&min_unpacked_revprop,
-                                        min_unpacked_revprop_path, pool));
+                                        path_min_unpacked_revprop(fs, pool),
+                                        pool));
           if (min_unpacked_revprop == (max_rev + 1))
             uhohs = FALSE;
         }
@@ -7734,8 +7733,7 @@ pack_body(void *baton,
   svn_revnum_t min_unpacked_rev;
   svn_revnum_t min_unpacked_revprop;
 
-  SVN_ERR(read_format(&format, &max_files_per_dir,
-                      svn_dirent_join(pb->fs->path, PATH_FORMAT, pool),
+  SVN_ERR(read_format(&format, &max_files_per_dir, path_format(pb->fs, pool),
                       pool));
 
   /* If the repository isn't a new enough format, we don't support packing.
@@ -7750,16 +7748,13 @@ pack_body(void *baton,
     return SVN_NO_ERROR;
 
   SVN_ERR(read_min_unpacked_rev(&min_unpacked_rev,
-                                svn_dirent_join(pb->fs->path,
-                                                PATH_MIN_UNPACKED_REV, pool),
+                                path_min_unpacked_rev(pb->fs, pool),
                                 pool));
 
   if (format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT)
     {
       SVN_ERR(read_min_unpacked_rev(&min_unpacked_revprop,
-                                    svn_dirent_join(pb->fs->path,
-                                                    PATH_MIN_UNPACKED_REVPROP,
-                                                    pool),
+                                    path_min_unpacked_revprop(pb->fs, pool),
                                     pool));
     }
   else
