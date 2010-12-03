@@ -8,6 +8,7 @@ ENABLE_RUBY_BINDINGS ?= yes
 ENABLE_PERL_BINDINGS ?= yes
 ENABLE_JAVA_BINDINGS ?= no # they don't build with thread-less APR...
 USE_APR_ICONV ?= no # set to yes to use APR iconv instead of GNU iconv
+PARALLEL = PARALLEL=1 CLEANUP=1
 
 PWD		= $(shell pwd)
 UNAME		= $(shell uname)
@@ -1068,64 +1069,32 @@ start-svnserve: $(SVN_OBJDIR)/.compiled
 stop-svnserve:
 	$(SVNSERVE_STOP_CMD)
 
-# run tests in parallel
-PARALLEL=PARALLEL=1 CLEANUP=1
-TEST_LOGS=tests.log fails.log
+define do_check
+@-cd $(svn_builddir) && for fs in fsfs bdb; do \
+    echo "Begin test: $(subst svn-check-,,$@) x $$fs"; \
+    make check $(PARALLEL) $1 FS_TYPE=$$fs; \
+    for log in tests.log fails.log; do \
+        test -f $$log && mv -f $$log $$log.$@-$$fs; \
+    done; \
+done
+endef
 
 svn-check-neon: httpd-conf $(SVN_OBJDIR)/.compiled $(SVN_OBJDIR)/.bindings-compiled
 	$(HTTPD_START_CMD)
-	-cd $(svn_builddir) && make check FS_TYPE=fsfs \
-	       BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=neon \
-	       $(PARALLEL)
-	-$(foreach log, $(TEST_LOGS), \
-		test -f $(svn_builddir)/$(log) && cp -f $(svn_builddir)/$(log) \
-			$(svn_builddir)/$(log).$@-fsfs;)
-	-cd $(svn_builddir) && make check FS_TYPE=bdb \
-	       BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=neon \
-	       $(PARALLEL)
-	-$(foreach log, $(TEST_LOGS), \
-		test -f $(svn_builddir)/$(log) && cp -f $(svn_builddir)/$(log) \
-			$(svn_builddir)/$(log).$@-bdb;)
+	$(call do_check,BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=neon)
 	$(HTTPD_STOP_CMD)
 
 svn-check-serf: httpd-conf $(SVN_OBJDIR)/.compiled $(SVN_OBJDIR)/.bindings-compiled
 	$(HTTPD_START_CMD)
-	-cd $(svn_builddir) && make check FS_TYPE=fsfs \
-	       BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=serf \
-	       $(PARALLEL)
-	-$(foreach log, $(TEST_LOGS), \
-		test -f $(svn_builddir)/$(log) && cp -f $(svn_builddir)/$(log) \
-			$(svn_builddir)/$(log).$@-fsfs;)
-	-cd $(svn_builddir) && make check FS_TYPE=bdb \
-	       BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=serf \
-	       $(PARALLEL)
-	-$(foreach log, $(TEST_LOGS), \
-		test -f $(svn_builddir)/$(log) && cp -f $(svn_builddir)/$(log) \
-			$(svn_builddir)/$(log).$@-bdb;)
+	$(call do_check,BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=serf)
 	$(HTTPD_STOP_CMD)
 
 svn-check-local:
-	-cd $(svn_builddir) && make check FS_TYPE=fsfs $(PARALLEL)
-	-$(foreach log, $(TEST_LOGS), \
-		test -f $(svn_builddir)/$(log) && cp -f $(svn_builddir)/$(log) \
-			$(svn_builddir)/$(log).$@-fsfs;)
-	-cd $(svn_builddir) && make check FS_TYPE=bdb $(PARALLEL)
-	-$(foreach log, $(TEST_LOGS), \
-		test -f $(svn_builddir)/$(log) && cp -f $(svn_builddir)/$(log) \
-			$(svn_builddir)/$(log).$@-bdb;)
+	$(call do_check)
 
 svn-check-svn:
 	$(SVNSERVE_START_CMD)
-	-cd $(svn_builddir) && make check FS_TYPE=fsfs \
-		BASE_URL=svn://127.0.0.1 $(PARALLEL)
-	-$(foreach log, $(TEST_LOGS), \
-		test -f $(svn_builddir)/$(log) && cp -f $(svn_builddir)/$(log) \
-			$(svn_builddir)/$(log).$@-fsfs;)
-	-cd $(svn_builddir) && make check FS_TYPE=bdb \
-		BASE_URL=svn://127.0.0.1 $(PARALLEL)
-	-$(foreach log, $(TEST_LOGS), \
-		test -f $(svn_builddir)/$(log) && cp -f $(svn_builddir)/$(log) \
-			$(svn_builddir)/$(log).$@-bdb;)
+	$(call do_check,BASE_URL=svn://127.0.0.1)
 	$(SVNSERVE_STOP_CMD)
 
 .PHONY: svn-check-swig-pl svn-check-swig-py svn-check-swig-rb svn-check-javahl
