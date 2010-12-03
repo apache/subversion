@@ -7517,6 +7517,31 @@ svn_fs_fs__begin_obliteration_txn(svn_fs_txn_t **txn_p,
 
 
 /****** Packing FSFS shards *********/
+
+/* Write a file FILENAME in directory FS_PATH, containing a single line
+ * with the number REVNUM in ASCII decimal.  Move the file into place
+ * atomically, overwriting any existing file.
+ *
+ * Similar to write_current(). */
+static svn_error_t *
+write_revnum_file(const char *fs_path,
+                  const char *filename,
+                  svn_revnum_t revnum,
+                  apr_pool_t *scratch_pool)
+{
+  const char *final_path, *tmp_path;
+  svn_stream_t *tmp_stream;
+
+  final_path = svn_dirent_join(fs_path, filename, scratch_pool);
+  SVN_ERR(svn_stream_open_unique(&tmp_stream, &tmp_path, fs_path,
+                                   svn_io_file_del_none,
+                                   scratch_pool, scratch_pool));
+  SVN_ERR(svn_stream_printf(tmp_stream, scratch_pool, "%ld\n", revnum));
+  SVN_ERR(svn_stream_close(tmp_stream));
+  SVN_ERR(move_into_place(tmp_path, final_path, final_path, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
 /* Pack a single shard SHARD in REVS_DIR, using POOL for allocations.
    CANCEL_FUNC and CANCEL_BATON are what you think they are.
 
@@ -7533,12 +7558,10 @@ pack_shard(const char *revs_dir,
            void *cancel_baton,
            apr_pool_t *pool)
 {
-  const char *tmp_path, *final_path;
   const char *pack_file_path, *manifest_file_path, *shard_path;
   const char *pack_file_dir;
   svn_stream_t *pack_stream, *manifest_stream;
   svn_revnum_t start_rev, end_rev, rev;
-  svn_stream_t *tmp_stream;
   apr_off_t next_offset;
   apr_pool_t *iterpool;
 
@@ -7549,8 +7572,8 @@ pack_shard(const char *revs_dir,
   pack_file_path = svn_dirent_join(pack_file_dir, "pack", pool);
   manifest_file_path = svn_dirent_join(pack_file_dir, "manifest", pool);
   shard_path = svn_dirent_join(revs_dir,
-                             apr_psprintf(pool, "%" APR_INT64_T_FMT, shard),
-                             pool);
+                               apr_psprintf(pool, "%" APR_INT64_T_FMT, shard),
+                               pool);
 
   /* Notify caller we're starting to pack this shard. */
   if (notify_func)
@@ -7608,13 +7631,9 @@ pack_shard(const char *revs_dir,
   /* Update the min-unpacked-rev file to reflect our newly packed shard.
    * (This doesn't update ffd->min_unpacked_rev.  That will be updated by
    * update_min_unpacked_rev() when necessary.) */
-  final_path = svn_dirent_join(fs_path, PATH_MIN_UNPACKED_REV, iterpool);
-  SVN_ERR(svn_stream_open_unique(&tmp_stream, &tmp_path, fs_path,
-                                   svn_io_file_del_none, iterpool, iterpool));
-  SVN_ERR(svn_stream_printf(tmp_stream, iterpool, "%ld\n",
-                            (svn_revnum_t) ((shard + 1) * max_files_per_dir)));
-  SVN_ERR(svn_stream_close(tmp_stream));
-  SVN_ERR(move_into_place(tmp_path, final_path, final_path, iterpool));
+  SVN_ERR(write_revnum_file(fs_path, PATH_MIN_UNPACKED_REV,
+                            (svn_revnum_t)((shard + 1) * max_files_per_dir),
+                            iterpool));
   svn_pool_destroy(iterpool);
 
   /* Finally, remove the existing shard directory. */
@@ -7642,10 +7661,9 @@ pack_revprop_shard(svn_fs_t *fs,
                    apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  const char *shard_path, *final_path, *tmp_path;
+  const char *shard_path;
   svn_revnum_t start_rev, end_rev, rev;
   svn_sqlite__stmt_t *stmt;
-  svn_stream_t *tmp_stream;
   apr_pool_t *iterpool;
 
   shard_path = svn_dirent_join(revprops_dir,
@@ -7676,13 +7694,9 @@ pack_revprop_shard(svn_fs_t *fs,
 
   /* Update the min-unpacked-revprop file to reflect our newly packed shard.
    * (This doesn't update ffd->min_unpacked_revprop.) */
-  final_path = svn_dirent_join(fs_path, PATH_MIN_UNPACKED_REVPROP, iterpool);
-  SVN_ERR(svn_stream_open_unique(&tmp_stream, &tmp_path, fs_path,
-                                 svn_io_file_del_none, iterpool, iterpool));
-  SVN_ERR(svn_stream_printf(tmp_stream, iterpool, "%ld\n",
-                            (svn_revnum_t) ((shard + 1) * max_files_per_dir)));
-  SVN_ERR(svn_stream_close(tmp_stream));
-  SVN_ERR(move_into_place(tmp_path, final_path, final_path, iterpool));
+  SVN_ERR(write_revnum_file(fs_path, PATH_MIN_UNPACKED_REVPROP,
+                            (svn_revnum_t)((shard + 1) * max_files_per_dir),
+                            iterpool));
   svn_pool_destroy(iterpool);
 
   /* Finally, remove the existing shard directory. */
