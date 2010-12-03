@@ -234,6 +234,12 @@ def invalid_relocate_targets(sbox):
   run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path", 'relocate',
                            "^/", "^/", "^/")
 
+def invalid_mkdir_targets(sbox):
+  "invalid targets for 'mkdir'"
+  sbox.build(read_only=True)
+  run_and_verify_svn_in_wc(sbox, "svn: Cannot mix repository and working "
+                           "copy targets", 'mkdir', "folder", "^/folder")
+
 ########################################################################
 # Run the tests
 
@@ -261,6 +267,7 @@ test_list = [ None,
               invalid_patch_targets,
               invalid_switch_targets,
               invalid_relocate_targets,
+              invalid_mkdir_targets,
              ]
 
 if __name__ == '__main__':
