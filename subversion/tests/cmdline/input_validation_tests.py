@@ -234,6 +234,8 @@ def invalid_relocate_targets(sbox):
   run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path", 'relocate',
                            "^/", "^/", "^/")
 
+# See also basic_tests.py:basic_mkdir_mix_targets(), which tests
+# the same thing the other way around.
 def invalid_mkdir_targets(sbox):
   "invalid targets for 'mkdir'"
   sbox.build(read_only=True)
