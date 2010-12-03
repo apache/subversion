@@ -2486,12 +2486,14 @@ def basic_add_svn_format_file(sbox):
   svntest.actions.run_and_verify_status(wc_dir, output)
 
 # Issue 2586, Unhelpful error message: Unrecognized URL scheme for ''
+# See also input_validation_tests.py:invalid_mkdir_targets(), which tests
+# the same thing the other way around.
 def basic_mkdir_mix_targets(sbox):
   "mkdir mix url and local path should error"
 
   sbox.build()
   Y_url = sbox.repo_url + '/Y'
-  expected_error = ".*Illegal repository URL 'subdir'"
+  expected_error = "svn: Cannot mix repository and working copy targets"
 
   svntest.actions.run_and_verify_svn(None, None, expected_error,
                                      'mkdir', '-m', 'log_msg', Y_url, 'subdir')
