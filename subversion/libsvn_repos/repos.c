@@ -545,6 +545,7 @@ PREWRITTEN_HOOKS_TEXT
   }  /* end pre-revprop-change hook */
 
 
+#ifdef SVN_WITH_EXPERIMENTAL_OBLITERATE
   /* Pre-obliterate hook. */
   {
     this_path = apr_psprintf(pool, "%s%s",
@@ -617,6 +618,7 @@ PREWRITTEN_HOOKS_TEXT
     SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
               _("Creating pre-obliterate hook"));
   }  /* end pre-obliterate hook */
+#endif
 
 
   /* Pre-lock hook. */
@@ -1032,6 +1034,7 @@ PREWRITTEN_HOOKS_TEXT
               _("Creating post-revprop-change hook"));
   } /* end post-revprop-change hook */
 
+#ifdef SVN_WITH_EXPERIMENTAL_OBLITERATE
   /* Post-obliterate hook. */
   {
     this_path = apr_psprintf(pool, "%s%s",
@@ -1089,6 +1092,7 @@ PREWRITTEN_HOOKS_TEXT
     SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
               _("Creating post-obliterate hook"));
   } /* end post-obliterate hook */
+#endif
 
   return SVN_NO_ERROR;
 }
