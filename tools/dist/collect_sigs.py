@@ -30,6 +30,9 @@
 #      also patch wayita to accept and then echo a privmsg?
 #  * Mail dev@ when somebody submits a successful signature, and include a
 #    comments field which could be included in the mail.
+#  * Use a subversion repository instead of sqlite backend
+#    - no need to re-invent storage and retrieval
+#    - perhaps we could re-use existing CIA/mailer hooks?
 #
 
 import sys, os
