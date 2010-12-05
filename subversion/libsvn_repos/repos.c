@@ -674,6 +674,8 @@ PREWRITTEN_HOOKS_TEXT
 "REPOS=\"$1\""                                                               NL
 "PATH=\"$2\""                                                                NL
 "USER=\"$3\""                                                                NL
+"COMMENT=\"$4\""                                                             NL
+"STEAL=\"$5\""                                                               NL
 ""                                                                           NL
 "# If a lock exists and is owned by a different person, don't allow it"      NL
 "# to be stolen (e.g., with 'svn lock --force ...')."                        NL
@@ -757,6 +759,8 @@ PREWRITTEN_HOOKS_TEXT
 "REPOS=\"$1\""                                                               NL
 "PATH=\"$2\""                                                                NL
 "USER=\"$3\""                                                                NL
+"TOKEN=\"$4\""                                                               NL
+"BREAK=\"$5\""                                                               NL
 ""                                                                           NL
 "# If a lock is owned by a different person, don't allow it be broken."      NL
 "# (Maybe this script could send email to the lock owner?)"                  NL
