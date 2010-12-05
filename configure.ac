@@ -1041,7 +1041,7 @@ SVN_CHECK_JDK($JAVA_OLDEST_WORKING_VER)
 
 AC_PATH_PROG(PERL, perl, none)
 
-AC_PATH_PROG(RUBY, ruby, none)
+AC_PATH_PROGS(RUBY, ruby ruby1.8, none)
 if test "$RUBY" != "none"; then
   if "$RUBY" -r mkmf -e 'exit(have_func("rb_hash_foreach") ? 0 : 1)'; then
     AC_PATH_PROG(RDOC, rdoc, none)
