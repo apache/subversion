@@ -193,9 +193,27 @@ svn_checksum_parse_hex(svn_checksum_t **checksum,
                        const char *hex,
                        apr_pool_t *pool)
 {
-  int len;
-  int i;
-  unsigned char is_zeros = '\0';
+  int i, len;
+  char is_nonzero = '\0';
+  static const char xdigitval[256] =
+    {
+      -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+      -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+      -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+       0, 1, 2, 3, 4, 5, 6, 7, 8, 9,-1,-1,-1,-1,-1,-1,   /* 0-9 */
+      -1,10,11,12,13,14,15,-1,-1,-1,-1,-1,-1,-1,-1,-1,   /* A-F */
+      -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+      -1,10,11,12,13,14,15,-1,-1,-1,-1,-1,-1,-1,-1,-1,   /* a-f */
+      -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+      -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+      -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+      -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+      -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+      -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+      -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+      -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+      -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
+    };
 
   if (hex == NULL)
     {
@@ -210,19 +228,15 @@ svn_checksum_parse_hex(svn_checksum_t **checksum,
 
   for (i = 0; i < len; i++)
     {
-      if ((! svn_ctype_isxdigit(hex[i * 2])) ||
-          (! svn_ctype_isxdigit(hex[i * 2 + 1])))
+      char x1 = xdigitval[(unsigned char)hex[i * 2]];
+      char x2 = xdigitval[(unsigned char)hex[i * 2 + 1]];
+      if (x1 == (char)-1 || x2 == (char)-1)
         return svn_error_create(SVN_ERR_BAD_CHECKSUM_PARSE, NULL, NULL);
 
-      ((unsigned char *)(*checksum)->digest)[i] =
-        ((svn_ctype_isalpha(hex[i*2]) ? hex[i*2] - 'a' + 10
-                                      : hex[i*2] - '0') << 4) |
-        (svn_ctype_isalpha(hex[i*2+1]) ? hex[i*2+1] - 'a' + 10
-                                       : hex[i*2+1] - '0');
-      is_zeros |= (*checksum)->digest[i];
+      is_nonzero |= ((char *)(*checksum)->digest)[i] = x1 << 4 | x2;
     }
 
-  if (is_zeros == '\0')
+  if (!is_nonzero)
     *checksum = NULL;
 
   return SVN_NO_ERROR;
