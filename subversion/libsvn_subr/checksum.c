@@ -195,6 +195,7 @@ svn_checksum_parse_hex(svn_checksum_t **checksum,
 {
   int i, len;
   char is_nonzero = '\0';
+  char *digest;
   static const char xdigitval[256] =
     {
       -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
@@ -224,6 +225,7 @@ svn_checksum_parse_hex(svn_checksum_t **checksum,
   SVN_ERR(validate_kind(kind));
 
   *checksum = svn_checksum_create(kind, pool);
+  digest = (char *)(*checksum)->digest;
   len = DIGESTSIZE(kind);
 
   for (i = 0; i < len; i++)
@@ -233,7 +235,8 @@ svn_checksum_parse_hex(svn_checksum_t **checksum,
       if (x1 == (char)-1 || x2 == (char)-1)
         return svn_error_create(SVN_ERR_BAD_CHECKSUM_PARSE, NULL, NULL);
 
-      is_nonzero |= ((char *)(*checksum)->digest)[i] = x1 << 4 | x2;
+      digest[i] = (x1 << 4) | x2;
+      is_nonzero |= (x1 << 4) | x2;
     }
 
   if (!is_nonzero)
