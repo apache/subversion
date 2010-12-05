@@ -1934,13 +1934,12 @@ open_pack_or_rev_file(apr_file_t **file,
         }
       else
         {
-          /* the file exists but something prevented us from opnening it */
-          return svn_error_return(err);
+          retry = FALSE;
         }
     }
-  while (err);
+  while (retry);
 
-  return SVN_NO_ERROR;
+  return svn_error_return(err);
 }
 
 /* Given REV in FS, set *REV_OFFSET to REV's offset in the packed file.
