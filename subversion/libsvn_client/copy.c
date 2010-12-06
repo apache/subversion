@@ -1944,10 +1944,19 @@ try_copy(const apr_array_header_t *sources,
           svn_pool_clear(iterpool);
 
           if (src_is_url)
-            pair->src_abspath_or_url = apr_pstrdup(pool, source->path);
+            {
+              pair->src_abspath_or_url = apr_pstrdup(pool, source->path);
+              src_basename = svn_uri_basename(pair->src_abspath_or_url,
+                                              iterpool);
+            }
           else
-            SVN_ERR(svn_dirent_get_absolute(&pair->src_abspath_or_url,
-                                            source->path, pool));
+            {
+              SVN_ERR(svn_dirent_get_absolute(&pair->src_abspath_or_url,
+                                              source->path, pool));
+              src_basename = svn_dirent_basename(pair->src_abspath_or_url,
+                                                 iterpool);
+            }
+            
           pair->src_op_revision = *source->revision;
           pair->src_peg_revision = *source->peg_revision;
 
@@ -1956,12 +1965,7 @@ try_copy(const apr_array_header_t *sources,
                                             src_is_url,
                                             TRUE,
                                             iterpool));
-          if (src_is_url)
-            src_basename = svn_uri_basename(pair->src_abspath_or_url,
-                                            iterpool);
-          else
-            src_basename = svn_dirent_basename(pair->src_abspath_or_url,
-                                               iterpool);
+
           if (srcs_are_urls && ! dst_is_url)
             src_basename = svn_path_uri_decode(src_basename, iterpool);
 
