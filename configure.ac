@@ -844,11 +844,10 @@ if test "$enable_disallowing_of_undefined_references" != "no"; then
   LDFLAGS="$LDFLAGS -Wl,--no-undefined"
   AC_LINK_IFELSE([AC_LANG_SOURCE([[int main(){;}]])], [svn_wl_no_undefined="yes"], [svn_wl_no_undefined="no"])
   LDFLAGS="$old_LDFLAGS"
-  libraries="auth_gnome_keyring auth_kwallet client delta diff fs fs_base fs_fs fs_util ra ra_local ra_neon ra_serf ra_svn repos subr wc"
   if test "$svn_wl_no_undefined" = "yes"; then
     AC_MSG_RESULT([yes])
-    for library in $libraries; do
-      eval "libsvn_${library}_LDFLAGS=-Wl,--no-undefined"
+    ls "$abs_srcdir"/subversion | grep libsvn_ | while read library_dir; do
+      eval "`basename $library_dir`_LDFLAGS=-Wl,--no-undefined"
     done
   else
     AC_MSG_RESULT([no])
