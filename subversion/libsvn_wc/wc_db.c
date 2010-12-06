@@ -7201,7 +7201,8 @@ scan_deletion(const char **base_del_relpath,
         local_op_depth = op_depth;
 
       if (work_del_relpath && !work_del_relpath[0]
-          && op_depth != local_op_depth && op_depth > 0)
+          && ((op_depth < local_op_depth && op_depth > 0)
+              || child_presence == svn_wc__db_status_not_present))
 #else
       if (work_del_relpath != NULL
           && work_presence == svn_wc__db_status_normal
