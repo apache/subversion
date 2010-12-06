@@ -6980,7 +6980,8 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
   svn_wc__db_pdh_t *pdh;
   const char *local_relpath;
   const char *op_root_relpath;
-  apr_int64_t repos_id, original_repos_id;
+  apr_int64_t repos_id = INVALID_REPOS_ID;
+  apr_int64_t original_repos_id = INVALID_REPOS_ID;
   apr_int64_t *repos_id_p
     = (repos_root_url || repos_uuid) ? &repos_id : NULL;
   apr_int64_t *original_repos_id_p
@@ -7003,6 +7004,7 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
                                        result_pool);
   /* REPOS_ID must be valid if requested; ORIGINAL_REPOS_ID need not be. */
   SVN_ERR_ASSERT(repos_id_p == NULL || repos_id != INVALID_REPOS_ID);
+
   SVN_ERR(fetch_repos_info(repos_root_url, repos_uuid, pdh->wcroot->sdb,
                            repos_id, result_pool));
   SVN_ERR(fetch_repos_info(original_root_url, original_uuid,
