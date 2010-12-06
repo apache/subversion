@@ -7033,6 +7033,9 @@ scan_deletion(const char **base_del_relpath,
   svn_boolean_t child_has_base = FALSE;
   svn_boolean_t found_moved_to = FALSE;
   svn_wc__db_wcroot_t *wcroot = pdh->wcroot;
+#ifdef SVN_WC__OP_DEPTH
+  apr_int64_t local_op_depth, op_depth;
+#endif
 
   /* Initialize all the OUT parameters.  */
   if (base_del_relpath != NULL)
@@ -7193,18 +7196,20 @@ scan_deletion(const char **base_del_relpath,
         }
 
 #ifdef SVN_WC__OP_DEPTH
-      if (work_del_relpath != NULL
-          && work_presence == svn_wc__db_status_normal
-          && (child_presence == svn_wc__db_status_not_present
-              || child_presence == svn_wc__db_status_base_deleted))
+      op_depth = svn_sqlite__column_int64(stmt, 3);
+      if (current_relpath == local_relpath)
+        local_op_depth = op_depth;
+
+      if (work_del_relpath && !work_del_relpath[0]
+          && op_depth != local_op_depth && op_depth > 0)
 #else
       if (work_del_relpath != NULL
           && work_presence == svn_wc__db_status_normal
           && child_presence == svn_wc__db_status_not_present)
-#endif
-        {
           /* Parent is normal, but child was deleted. Therefore, the child
              is the root of a WORKING subtree deletion.  */
+#endif
+        {
           *work_del_relpath = apr_pstrdup(result_pool, child_relpath);
         }
 
