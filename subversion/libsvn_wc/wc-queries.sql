@@ -329,10 +329,10 @@ DELETE FROM actual_node
 WHERE wc_id = ?1 AND local_relpath = ?2
       AND tree_conflict_data IS NULL;
 
--- STMT_DELETE_NOT_PRESENT_NODES_RECURSIVE
+-- STMT_DELETE_CHILD_NODES_RECURSIVE
 DELETE FROM nodes
 WHERE wc_id = ?1 AND local_relpath LIKE ?2 ESCAPE '#' AND op_depth = ?3
-  AND presence = 'not-present';
+  AND presence = ?4
 
 -- STMT_CLEAR_ACTUAL_NODE_LEAVING_CHANGELIST
 UPDATE actual_node
@@ -524,6 +524,19 @@ SELECT wc_id, local_relpath, ?3 AS op_depth, parent_relpath, ?4 AS presence,
        symlink_target, translated_size, last_mod_time, properties
 FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
+
+-- STMT_INSERT_WORKING_NODE_FROM_NODE
+INSERT OR REPLACE INTO nodes (
+    wc_id, local_relpath, op_depth, parent_relpath, presence, kind, checksum,
+    changed_revision, changed_date, changed_author, depth, symlink_target,
+    translated_size, last_mod_time, properties)
+SELECT wc_id, local_relpath, ?3 AS op_depth, parent_relpath, ?4 AS presence,
+       kind, checksum, changed_revision, changed_date, changed_author, depth,
+       symlink_target, translated_size, last_mod_time, properties
+FROM nodes
+WHERE wc_id = ?1 AND local_relpath = ?2
+ORDER BY op_depth DESC
+LIMIT 1;
 
 -- STMT_INSERT_WORKING_NODE_FROM_BASE_COPY
 INSERT INTO nodes (

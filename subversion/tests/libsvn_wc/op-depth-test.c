@@ -938,9 +938,12 @@ test_delete_of_copies(const svn_test_opts_t *opts, apr_pool_t *pool)
                          FALSE, TRUE, NULL, NULL, NULL, NULL, pool));
   {
     nodes_row_t rows[] = {
-      { 2, "A/B-copied/E",       "not-present",       1, "A/B/E" },
-      { 2, "A/B-copied/E/alpha", "not-present",       1, "A/B/E/alpha" },
-      { 2, "A/B-copied/E/beta",  "not-present",       1, "A/B/E/beta" },
+      { 2, "A/B-copied/E",       "normal",       1, "A/B/E" },
+      { 2, "A/B-copied/E/alpha", "normal",       1, "A/B/E/alpha" },
+      { 2, "A/B-copied/E/beta",  "normal",       1, "A/B/E/beta" },
+      { 3, "A/B-copied/E",       "base-deleted", NO_COPY_FROM },
+      { 3, "A/B-copied/E/alpha", "base-deleted", NO_COPY_FROM },
+      { 3, "A/B-copied/E/beta",  "base-deleted", NO_COPY_FROM },
       { 0 }
     };
     SVN_ERR(check_db_rows(&b, "A/B-copied/E", rows));
@@ -949,13 +952,15 @@ test_delete_of_copies(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(wc_copy(&b, "A/D/G", "A/B-copied/E"));
   {
     nodes_row_t rows[] = {
-      { 2, "A/B-copied/E",       "not-present",       1, "A/B/E" },
-      { 2, "A/B-copied/E/alpha", "not-present",       1, "A/B/E/alpha" },
-      { 2, "A/B-copied/E/beta",  "not-present",       1, "A/B/E/beta" },
-      { 3, "A/B-copied/E",       "normal",            1, "A/D/G" },
-      { 3, "A/B-copied/E/pi",    "normal",            1, "A/D/G/pi" },
-      { 3, "A/B-copied/E/rho",   "normal",            1, "A/D/G/rho" },
-      { 3, "A/B-copied/E/tau",   "normal",            1, "A/D/G/tau" },
+      { 2, "A/B-copied/E",       "normal",       1, "A/B/E" },
+      { 2, "A/B-copied/E/alpha", "normal",       1, "A/B/E/alpha" },
+      { 2, "A/B-copied/E/beta",  "normal",       1, "A/B/E/beta" },
+      { 3, "A/B-copied/E",       "normal",       1, "A/D/G" },
+      { 3, "A/B-copied/E/alpha", "base-deleted", NO_COPY_FROM },
+      { 3, "A/B-copied/E/beta",  "base-deleted", NO_COPY_FROM },
+      { 3, "A/B-copied/E/pi",    "normal",       1, "A/D/G/pi" },
+      { 3, "A/B-copied/E/rho",   "normal",       1, "A/D/G/rho" },
+      { 3, "A/B-copied/E/tau",   "normal",       1, "A/D/G/tau" },
       { 0 }
     };
     SVN_ERR(check_db_rows(&b, "A/B-copied/E", rows));
@@ -965,13 +970,16 @@ test_delete_of_copies(const svn_test_opts_t *opts, apr_pool_t *pool)
                          FALSE, TRUE, NULL, NULL, NULL, NULL, pool));
   {
     nodes_row_t rows[] = {
-      { 2, "A/B-copied/E",       "not-present",       1, "A/B/E" },
-      { 2, "A/B-copied/E/alpha", "not-present",       1, "A/B/E/alpha" },
-      { 2, "A/B-copied/E/beta",  "not-present",       1, "A/B/E/beta" },
-      { 3, "A/B-copied/E",       "normal",            1, "A/D/G" },
-      { 3, "A/B-copied/E/pi",    "normal",            1, "A/D/G/pi" },
-      { 3, "A/B-copied/E/rho",   "not-present",       1, "A/D/G/rho" },
-      { 3, "A/B-copied/E/tau",   "normal",            1, "A/D/G/tau" },
+      { 2, "A/B-copied/E",       "normal",       1, "A/B/E" },
+      { 2, "A/B-copied/E/alpha", "normal",       1, "A/B/E/alpha" },
+      { 2, "A/B-copied/E/beta",  "normal",       1, "A/B/E/beta" },
+      { 3, "A/B-copied/E",       "normal",       1, "A/D/G" },
+      { 3, "A/B-copied/E/alpha", "base-deleted", NO_COPY_FROM },
+      { 3, "A/B-copied/E/beta",  "base-deleted", NO_COPY_FROM },
+      { 3, "A/B-copied/E/pi",    "normal",       1, "A/D/G/pi" },
+      { 3, "A/B-copied/E/rho",   "normal",       1, "A/D/G/rho" },
+      { 3, "A/B-copied/E/tau",   "normal",       1, "A/D/G/tau" },
+      { 4, "A/B-copied/E/rho",   "base-deleted", NO_COPY_FROM },
       { 0 }
     };
     SVN_ERR(check_db_rows(&b, "A/B-copied/E", rows));
@@ -981,9 +989,12 @@ test_delete_of_copies(const svn_test_opts_t *opts, apr_pool_t *pool)
                          FALSE, TRUE, NULL, NULL, NULL, NULL, pool));
   {
     nodes_row_t rows[] = {
-      { 2, "A/B-copied/E",       "not-present",       1, "A/B/E" },
-      { 2, "A/B-copied/E/alpha", "not-present",       1, "A/B/E/alpha" },
-      { 2, "A/B-copied/E/beta",  "not-present",       1, "A/B/E/beta" },
+      { 2, "A/B-copied/E",       "normal",       1, "A/B/E" },
+      { 2, "A/B-copied/E/alpha", "normal",       1, "A/B/E/alpha" },
+      { 2, "A/B-copied/E/beta",  "normal",       1, "A/B/E/beta" },
+      { 3, "A/B-copied/E",       "base-deleted", NO_COPY_FROM },
+      { 3, "A/B-copied/E/alpha", "base-deleted", NO_COPY_FROM },
+      { 3, "A/B-copied/E/beta",  "base-deleted", NO_COPY_FROM },
       { 0 }
     };
     SVN_ERR(check_db_rows(&b, "A/B-copied/E", rows));
@@ -995,7 +1006,8 @@ test_delete_of_copies(const svn_test_opts_t *opts, apr_pool_t *pool)
                          FALSE, TRUE, NULL, NULL, NULL, NULL, pool));
   {
     nodes_row_t rows[] = {
-      { 3, "A/B-copied/E/F", "not-present",       1, "A/B/F" },
+      { 3, "A/B-copied/E/F", "normal",       1, "A/B/F" },
+      { 4, "A/B-copied/E/F", "base-deleted", NO_COPY_FROM },
       { 0 }
     };
     SVN_ERR(check_db_rows(&b, "A/B-copied/E/F", rows));
@@ -1750,6 +1762,79 @@ test_mixed_rev_copy(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_delete_of_replace(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  wc_baton_t b;
+
+  b.pool = pool;
+  SVN_ERR(svn_test__create_repos_and_wc(&b.repos_url, &b.wc_abspath,
+                                        "delete_of_replace", opts, pool));
+  SVN_ERR(svn_wc_context_create(&b.wc_ctx, NULL, pool, pool));
+  SVN_ERR(wc_mkdir(&b, "A"));
+  SVN_ERR(wc_mkdir(&b, "A/B"));
+  SVN_ERR(wc_mkdir(&b, "A/B/C"));
+  SVN_ERR(wc_mkdir(&b, "A/B/C/F"));
+  SVN_ERR(wc_mkdir(&b, "A/B/C/F/K"));
+  SVN_ERR(wc_mkdir(&b, "A/B/C/G"));
+  SVN_ERR(wc_mkdir(&b, "A/B/C/G/K"));
+  SVN_ERR(wc_commit(&b, ""));
+  SVN_ERR(wc_update(&b, "", 1));
+
+  SVN_ERR(wc_copy(&b, "A", "X"));
+  SVN_ERR(wc_move(&b, "X/B/C/F", "X/B/C/H"));
+  SVN_ERR(wc_commit(&b, ""));
+  SVN_ERR(wc_update(&b, "", 2));
+
+  SVN_ERR(wc_delete(&b, "A/B"));
+  SVN_ERR(wc_copy(&b, "X/B", "A/B"));
+  {
+    nodes_row_t rows[] = {
+      { 0, "A",         "normal",       2, "A" },
+      { 0, "A/B",       "normal",       2, "A/B" },
+      { 0, "A/B/C",     "normal",       2, "A/B/C" },
+      { 0, "A/B/C/F",   "normal",       2, "A/B/C/F" },
+      { 0, "A/B/C/F/K", "normal",       2, "A/B/C/F/K" },
+      { 0, "A/B/C/G",   "normal",       2, "A/B/C/G" },
+      { 0, "A/B/C/G/K", "normal",       2, "A/B/C/G/K" },
+      { 2, "A/B",       "normal",       2, "X/B" },
+      { 2, "A/B/C",     "normal",       2, "X/B/C" },
+      { 2, "A/B/C/F",   "base-deleted", NO_COPY_FROM },
+      { 2, "A/B/C/F/K", "base-deleted", NO_COPY_FROM },
+      { 2, "A/B/C/G",   "normal",       2, "X/B/C/G" },
+      { 2, "A/B/C/G/K", "normal",       2, "X/B/C/G/K" },
+      { 2, "A/B/C/H",   "normal",       2, "X/B/C/H" },
+      { 2, "A/B/C/H/K", "normal",       2, "X/B/C/H/K" },
+      { 0 }
+    };
+    SVN_ERR(check_db_rows(&b, "A", rows));
+  }
+
+  SVN_ERR(wc_delete(&b, "A/B"));
+  {
+    nodes_row_t rows[] = {
+      { 0, "A",         "normal",       2, "A" },
+      { 0, "A/B",       "normal",       2, "A/B" },
+      { 0, "A/B/C",     "normal",       2, "A/B/C" },
+      { 0, "A/B/C/F",   "normal",       2, "A/B/C/F" },
+      { 0, "A/B/C/F/K", "normal",       2, "A/B/C/F/K" },
+      { 0, "A/B/C/G",   "normal",       2, "A/B/C/G" },
+      { 0, "A/B/C/G/K", "normal",       2, "A/B/C/G/K" },
+      { 2, "A/B",       "base-deleted", NO_COPY_FROM },
+      { 2, "A/B/C",     "base-deleted", NO_COPY_FROM },
+      { 2, "A/B/C/F",   "base-deleted", NO_COPY_FROM },
+      { 2, "A/B/C/F/K", "base-deleted", NO_COPY_FROM },
+      { 2, "A/B/C/G",   "base-deleted", NO_COPY_FROM },
+      { 2, "A/B/C/G/K", "base-deleted", NO_COPY_FROM },
+      { 0 }
+    };
+    SVN_ERR(check_db_rows(&b, "A", rows));
+  }
+
+  return SVN_NO_ERROR;
+}
+
+
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
 
@@ -1793,6 +1878,9 @@ struct svn_test_descriptor_t test_funcs[] =
                        "needs op_depth"),
     SVN_TEST_OPTS_WIMP(test_mixed_rev_copy,
                        "test_mixed_rev_copy",
+                       "needs op_depth"),
+    SVN_TEST_OPTS_WIMP(test_delete_of_replace,
+                       "test_delete_of_replace",
                        "needs op_depth"),
     SVN_TEST_NULL
   };
