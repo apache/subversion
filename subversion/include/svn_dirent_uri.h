@@ -42,14 +42,21 @@
  *    Examples: "file", "dir/file", "dir/subdir/../file"
  *    But not: "/file", "http://server/file"
  *
+ *  - a Subversion filesystem path (fspath), otherwise known as a path
+ *    within a repository, is a path relative to the root of the repository
+ *    filesystem, that starts with a slash ("/").  The rules for a fspath
+ *    are the same as for a relpath except for the leading '/'.  A fspath
+ *    never ends with '/' except when the whole path is just '/'.
+ *
+ *    The fspath API is private.
+ *
  * This distinction is needed because on Windows we have to handle some
  * dirents and URIs differently. Since it's not possible to determine from
  * the path string if it's a dirent or a URI, it's up to the API user to
  * make this choice. See also issue #2028.
  *
- * Nearly all the @c svn_dirent_xxx, @c svn_relpath_xxx and @c svn_uri_xxx
- * functions expect paths passed into them to be in canonical form.  The only
- * functions which do *not* have such expectations are:
+ * All of these functions expect paths passed into them to be in canonical
+ * form, except:
  *
  *    - @c svn_dirent_canonicalize()
  *    - @c svn_dirent_is_canonical()
@@ -61,10 +68,12 @@
  *    - @c svn_relpath_local_style()
  *    - @c svn_uri_canonicalize()
  *    - @c svn_uri_is_canonical()
+ *    - @c svn_fspath__is_canonical()
  *
- * Code that works with repository paths should always use repository
- * root based relative paths (relpaths), or uris if it has to specify the
- * repository itself too.
+ * Code that works with a path-in-repository should use, in order of
+ * preference: a relpath (preferred), or a fspath (widely used by legacy
+ * code), or a relative URI (not recommended except in the context of
+ * splitting or joining to a full URL).
  *
  * All code that works with local files, MUST USE the dirent apis.
  *
@@ -811,13 +820,6 @@ svn_uri_get_file_url_from_dirent(const char **url,
                                  const char *dirent,
                                  apr_pool_t *pool);
 
-
-/**************************************************************************
- * A private API for Subversion filesystem paths, otherwise known as paths
- * within a repository, that start with a '/'.  The rules for a fspath are
- * the same as for a relpath except for the leading '/'.  A fspath never
- * ends with '/' except when the whole path is just '/'.
- **************************************************************************/
 
 /** Return TRUE iff @a fspath is canonical.
  * @a fspath need not be canonical, of course.
