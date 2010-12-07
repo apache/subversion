@@ -325,42 +325,58 @@ CREATE TABLE NODES (
 
   /* WC state fields */
 
-  /* Is this node "present" or has it been excluded for some reason?
+  /* The tree state of the node.
 
-     In case 'op_depth' is equal to 0, this is part of the BASE tree; in
-     that case, all presence values except 'base-deleted' are allowed.
+     ### This applies to SVN_WC__OP_DEPTH, the intended final code!
 
-     In case 'op_depth' is greater than 0, this is part of a layer of
-     working nodes; in that case, the following presence values apply:
+     In case 'op_depth' is equal to 0, this node is part of the 'BASE'
+     tree.  The 'BASE' represents pristine nodes that are in the
+     repository; it is obtained and modified by commands such as
+     checkout/update/switch.
 
-     Only allowed values: normal, not-present, incomplete, base-deleted,
-     excluded.  (the others do not make sense for the WORKING tree)
+     In case 'op_depth' is greater than 0, this node is part of a
+     layer of working nodes.  The 'WORKING' tree is obtained and
+     modified by commands like delete/copy/revert.
 
-     normal: this node has been added/copied/moved-here. There may be an
-       underlying BASE node at this location, implying this is a replace.
-       Scan upwards from here looking for copyfrom or moved_here values
-       to detect the type of operation constructing this node.
+     The 'BASE' and 'WORKING' trees use the same literal values for
+     the 'presence' but the meaning of each value can vary depending
+     on the tree.
 
-     not-present: the node (or parent) was originally copied or moved-here.
-       A subtree of that source has since been deleted. There may be
-       underlying BASE node to replace. For a move-here or copy-here, the
-       records are simply removed rather than switched to not-present.
-       Note this reflects a deletion only. It is not possible move-away
-       nodes from the WORKING tree. The purported destination would receive
-       a copy from the original source of a copy-here/move-here, or if the
-       nodes were plain adds, those nodes would be shifted to that target
-       for addition.
+     normal: in the 'BASE' tree this is an ordinary node for which we
+       have full information.  In the 'WORKING' tree it's an added or
+       copied node for which we have full information.
 
-     incomplete: nodes are being added into the WORKING tree, and the full
-       information about this node is not (yet) present.
+     not-present: in the 'BASE' tree this is a node that is implied to
+       exist by the parent node, but is not present in the working
+       copy.  Typically obtained by delete/commit, or by update to
+       revision in which the node does not exist.  In the 'WORKING'
+       tree this is a copy of a 'not-present' node from the 'BASE'
+       tree, and it will be deleted on commit.  Such a node cannot be
+       copied directly, but can be copied as a descendant.
 
-     base-deleted: the underlying BASE node has been marked for deletion due
-       to a delete or a move-away (see the moved_to column to determine
-       which), and has not been replaced.
+     incomplete: in the 'BASE' tree this is an ordinary node for which
+       we do not have full information.  Only the name is guaranteed;
+       we may not have all its children, we may not have its checksum,
+       etc.  In the 'WORKING' tree this is a copied node for which we
+       do not have the full information.  This state is generally
+       obtained when an operation was interrupted.
 
-     excluded: this node is administratively excluded (sparse WC). This must
-       be a child (or grandchild etc.) of a copied directory.
-  */
+     base-deleted: not valid in 'BASE' tree.  In the 'WORKING' tree
+       this represents a node that is deleted from the tree below the
+       current 'op_depth'.  This state is badly named, it should be
+       something like 'deleted'.
+
+     absent: in the 'BASE' tree this is a node that is excluded by
+       authz.  The name of the node is known from the parent, but no
+       other information is available.  Not valid in the 'WORKING'
+       tree as there is no way to commit such a node.
+
+     excluded: in the 'BASE' tree this node is administratively
+       excluded by the user (sparse WC).  In the 'WORKING' tree this
+       is a copy of an excluded node from the 'BASE' tree.  Such a
+       node cannot be copied directly but can be copied as a
+       descendant. */
+
   presence  TEXT NOT NULL,
 
   /* ### JF: For an old-style move, "copyfrom" info stores its source, but a
