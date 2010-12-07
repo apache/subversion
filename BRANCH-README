@@ -21,13 +21,13 @@ TODO:
 
   * eliminate identical prefix                 [DONE]
   * eliminate identical suffix                 [DONE]
-  * make diff3 and diff4 use datasources_open  []
+  * make diff3 and diff4 use datasources_open  [IN PROGRESS]
      (this may eliminate the need for datasource_open, and the flag
       datasource_opened in token.c#svn_diff__get_tokens)
   * implement (part of) increment_pointers and
     decrement_pointers with a macro            []
      (offers another 10% speedup)
-  * rev svn_diff.h#svn_diff_fns_t              []
+  * revv svn_diff.h#svn_diff_fns_t             []
 
 Other wild ideas (may or may not be worth pursuing):
   * Make prefix scanning able to skip 1 or a couple of non-matching lines, if
