@@ -5592,17 +5592,15 @@ get_mergeinfo_walk_cb(const char *local_abspath,
 
   /* TODO(#2843) How to deal with a excluded item on merge? */
 
+  SVN_ERR(svn_wc__get_mergeinfo_walk_info(&is_present, &deleted, &absent,
+                                          &depth,
+                                          wb->ctx->wc_ctx, local_abspath,
+                                          scratch_pool));
+
   /* Ignore LOCAL_ABSPATH if its parent thinks it exists, but it is not
      actually present. */
-  SVN_ERR(svn_wc__node_is_status_present(&is_present, wb->ctx->wc_ctx,
-                                         local_abspath, scratch_pool));
   if (!is_present)
     return SVN_NO_ERROR;
-
-  SVN_ERR(svn_wc__node_is_status_deleted(&deleted, wb->ctx->wc_ctx,
-                                         local_abspath, scratch_pool));
-  SVN_ERR(svn_wc__node_is_status_absent(&absent, wb->ctx->wc_ctx,
-                                        local_abspath, scratch_pool));
 
    if (deleted || absent)
     {
@@ -5627,8 +5625,6 @@ get_mergeinfo_walk_cb(const char *local_abspath,
 
   SVN_ERR(svn_wc_read_kind(&kind, wb->ctx->wc_ctx, local_abspath, TRUE,
                            scratch_pool));
-  SVN_ERR(svn_wc__node_get_depth(&depth, wb->ctx->wc_ctx, local_abspath,
-                                 scratch_pool));
 
   immediate_child_dir = ((wb->depth == svn_depth_immediates)
                          &&(kind == svn_node_dir)

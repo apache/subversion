@@ -1472,3 +1472,29 @@ svn_wc__node_get_info_bits(apr_time_t *text_time,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_wc__get_mergeinfo_walk_info(svn_boolean_t *is_present,
+                                svn_boolean_t *is_deleted,
+                                svn_boolean_t *is_absent,
+                                svn_depth_t *depth,
+                                svn_wc_context_t *wc_ctx,
+                                const char *local_abspath,
+                                apr_pool_t *scratch_pool)
+{
+  svn_wc__db_status_t status;
+
+  SVN_ERR(svn_wc__db_read_info(&status,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, depth, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL,
+                               wc_ctx->db, local_abspath,
+                               scratch_pool, scratch_pool));
+
+  *is_present = (status != svn_wc__db_status_not_present);
+  *is_deleted = (status == svn_wc__db_status_deleted);
+  *is_absent = (status == svn_wc__db_status_absent);
+
+  return SVN_NO_ERROR;
+}
