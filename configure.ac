@@ -1256,7 +1256,7 @@ AC_CONFIG_FILES([Makefile])
 SVN_CONFIG_SCRIPT(tools/backup/hot-backup.py)
 SVN_CONFIG_SCRIPT(tools/hook-scripts/commit-access-control.pl)
 SVN_CONFIG_SCRIPT(subversion/bindings/swig/perl/native/Makefile.PL)
-if test -e packages/solaris/pkginfo; then
+if test -e packages/solaris/pkginfo.in; then
   SVN_CONFIG_SCRIPT(packages/solaris/pkginfo)
 fi
 AC_SUBST(SVN_CONFIG_SCRIPT_FILES)
