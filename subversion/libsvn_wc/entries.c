@@ -309,165 +309,6 @@ get_base_info_for_deleted(svn_wc_entry_t *entry,
         entry->revision = parent_entry->revision;
     }
 
-  /* For deleted nodes, our COPIED flag has a rather complex meaning.
-
-     In general, COPIED means "an operation on an ancestor took care
-     of me." This typically refers to a copy of an ancestor (and
-     this node just came along for the ride). However, in certain
-     situations the COPIED flag is set for deleted nodes.
-
-     First off, COPIED will *never* be set for nodes/subtrees that
-     are simply deleted. The deleted node/subtree *must* be under
-     an ancestor that has been copied. Plain additions do not count;
-     only copies (add-with-history).
-
-     The basic algorithm to determine whether we live within a
-     copied subtree is as follows:
-
-     1) find the root of the deletion operation that affected us
-     (we may be that root, or an ancestor was deleted and took
-     us with it)
-
-     2) look at the root's *parent* and determine whether that was
-     a copy or a simple add.
-
-     It would appear that we would be done at this point. Once we
-     determine that the parent was copied, then we could just set
-     the COPIED flag.
-
-     Not so fast. Back to the general concept of "an ancestor
-     operation took care of me." Further consider two possibilities:
-
-     1) this node is scheduled for deletion from the copied subtree,
-     so at commit time, we copy then delete
-
-     2) this node is scheduled for deletion because a subtree was
-     deleted and then a copied subtree was added (causing a
-     replacement). at commit time, we delete a subtree, and then
-     copy a subtree. we do not need to specifically touch this
-     node -- all operations occur on ancestors.
-
-     Given the "ancestor operation" concept, then in case (1) we
-     must *clear* the COPIED flag since we'll have more work to do.
-     In case (2), we *set* the COPIED flag to indicate that no
-     real work is going to happen on this node.
-
-     Great fun. And just maybe the code reading the entries has no
-     bugs in interpreting that gobbledygook... but that *is* the
-     expectation of the code. Sigh.
-
-     We can get a little bit of shortcut here if THIS_DIR is
-     also schduled for deletion.
-  */
-  if (parent_entry != NULL
-      && parent_entry->schedule == svn_wc_schedule_delete)
-    {
-      /* ### not entirely sure that we can rely on the parent. for
-         ### example, what if we are a deletion of a BASE node, but
-         ### the parent is a deletion of a copied subtree? sigh.  */
-
-      /* Child nodes simply inherit the parent's COPIED flag.  */
-      entry->copied = parent_entry->copied;
-    }
-  else
-    {
-      svn_boolean_t base_replaced;
-      const char *work_del_abspath;
-
-      /* Find out details of our deletion.  */
-      SVN_ERR(svn_wc__db_scan_deletion(NULL,
-                                       &base_replaced,
-                                       NULL,
-                                       &work_del_abspath,
-                                       db, entry_abspath,
-                                       scratch_pool, scratch_pool));
-
-      /* If there is no deletion in the WORKING tree, then the
-         node is a child of a simple explicit deletion of the
-         BASE tree. It certainly isn't copied. If we *do* find
-         a deletion in the WORKING tree, then we need to discover
-         information about the parent.  */
-      if (work_del_abspath != NULL)
-        {
-          const char *parent_abspath;
-          svn_wc__db_status_t parent_status;
-
-          /* The parent is in WORKING except during post-commit when
-             it may have been moved from the WORKING tree to the BASE
-             tree.  */
-          parent_abspath = svn_dirent_dirname(work_del_abspath,
-                                              scratch_pool);
-          SVN_ERR(svn_wc__db_read_info(&parent_status,
-                                       NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       db, parent_abspath,
-                                       scratch_pool, scratch_pool));
-          if (parent_status == svn_wc__db_status_added)
-            SVN_ERR(svn_wc__db_scan_addition(&parent_status,
-                                             NULL,
-                                             NULL, NULL, NULL,
-                                             NULL, NULL, NULL, NULL,
-                                             db,
-                                             parent_abspath,
-                                             scratch_pool, scratch_pool));
-          if (parent_status == svn_wc__db_status_copied
-              || parent_status == svn_wc__db_status_moved_here
-              || parent_status == svn_wc__db_status_normal)
-            {
-              /* The parent is copied/moved here, so WORK_DEL_ABSPATH
-                 is the root of a deleted subtree. Our COPIED status
-                 is now dependent upon whether the copied root is
-                 replacing a BASE tree or not.
-
-                 But: if we are schedule-delete as a result of being
-                 a copied DELETED node, then *always* mark COPIED.
-                 Normal copies have cmt_* data; copied DELETED nodes
-                 are missing this info.
-
-                 Note: MOVED_HERE is a concept foreign to this old
-                 interface, but it is best represented as if a copy
-                 had occurred, so we'll model it that way to old
-                 clients.
-
-                 Note: svn_wc__db_status_normal corresponds to the
-                 post-commit parent that was copied or moved in
-                 WORKING but has now been converted to BASE.
-              */
-              if (SVN_IS_VALID_REVNUM(entry->cmt_rev))
-                {
-                  /* The scan_deletion call will tell us if there
-                     was an explicit move-away of an ancestor (which
-                     also means a replacement has occurred since
-                     there is a WORKING tree that isn't simply
-                     BASE deletions). The call will also tell us if
-                     there was an implicit deletion caused by a
-                     replacement. All stored in BASE_REPLACED.  */
-                  entry->copied = base_replaced;
-                }
-              else
-                {
-                  entry->copied = TRUE;
-                }
-            }
-          else
-            {
-              SVN_ERR_ASSERT(parent_status == svn_wc__db_status_added);
-
-              /* Whoops. WORK_DEL_ABSPATH is scheduled for deletion,
-                 yet the parent is scheduled for a plain addition.
-                 This can occur when a subtree is deleted, and then
-                 nodes are added *later*. Since the parent is a simple
-                 add, then nothing has been copied. Nothing more to do.
-
-                 Note: if a subtree is added, *then* deletions are
-                 made, the nodes should simply be removed from
-                 version control.  */
-            }
-        }
-    }
-
   return SVN_NO_ERROR;
 }
 
@@ -688,8 +529,17 @@ read_one_entry(const svn_wc_entry_t **new_entry,
   else if (status == svn_wc__db_status_deleted)
     {
       svn_node_kind_t path_kind;
+      const char *work_del_abspath;
+
       /* ### we don't have to worry about moves, so this is a delete. */
       entry->schedule = svn_wc_schedule_delete;
+
+      SVN_ERR(svn_wc__db_scan_deletion(NULL, NULL, NULL,
+                                       &work_del_abspath,
+                                       db, entry_abspath,
+                                       scratch_pool, scratch_pool));
+      if (work_del_abspath)
+        entry->copied = TRUE;
 
       /* If there is still a directory on-disk we keep it, if not it is
          already deleted. Simple, isn't it? 

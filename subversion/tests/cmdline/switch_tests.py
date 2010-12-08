@@ -558,10 +558,10 @@ def relocate_deleted_missing_copied(sbox):
   expected_status.add({
     'A/D2'         : Item(status='A ', wc_rev='-', copied='+'),
     'A/D2/gamma'   : Item(status='  ', wc_rev='-', copied='+'),
-    'A/D2/G'       : Item(status='D ', wc_rev='?'),
-    'A/D2/G/pi'    : Item(status='D ', wc_rev='?'),
-    'A/D2/G/rho'   : Item(status='D ', wc_rev='?'),
-    'A/D2/G/tau'   : Item(status='D ', wc_rev='?'),
+    'A/D2/G'       : Item(status='D ', wc_rev='-', copied='+'),
+    'A/D2/G/pi'    : Item(status='D ', wc_rev='-', copied='+'),
+    'A/D2/G/rho'   : Item(status='D ', wc_rev='-', copied='+'),
+    'A/D2/G/tau'   : Item(status='D ', wc_rev='-', copied='+'),
     'A/D2/H'       : Item(status='  ', wc_rev='-', copied='+'),
     'A/D2/H/chi'   : Item(status='  ', wc_rev='-', copied='+'),
     'A/D2/H/omega' : Item(status='  ', wc_rev='-', copied='+'),
@@ -614,7 +614,7 @@ def relocate_deleted_missing_copied(sbox):
                         'A/D2/H', 'A/D2/H/chi', 'A/D2/H/omega', 'A/D2/H/psi',
                         wc_rev='-')
   expected_status.tweak('A/D2/G', 'A/D2/G/pi', 'A/D2/G/rho', 'A/D2/G/tau',
-                        wc_rev='?')
+                        copied='+', wc_rev='-')
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,

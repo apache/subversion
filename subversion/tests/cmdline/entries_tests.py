@@ -233,12 +233,9 @@ def deletion_details(sbox):
   entries = svntest.main.run_entriesdump(D2_G_path)
   check_names(entries, 'pi')
 
-  # case (1) of the DELETED nodes COPIED handling (see comment in
-  # read_entries). we are a deletion of a copied subtree. thus, extra
-  # work at commit time. thus, not COPIED.
   # oh, and this sucker has a URL, too
   validate(entries['pi'], url='%s/A/D2/G/pi' % sbox.repo_url,
-           copied=False, schedule=SCHEDULE_DELETE)
+           copied=True, schedule=SCHEDULE_DELETE)
 
   ### hmm. somehow, subtrees can be *added* over a *deleted* subtree.
   ### maybe this can happen via 'svn merge' ? ... the operations below

@@ -1543,7 +1543,7 @@ def wc_to_wc_copy_deleted(sbox):
     'A/B2'         : Item(status='A ', wc_rev='-', copied='+'),
     'A/B2/E'       : Item(status='  ', wc_rev='-', copied='+'),
     'A/B2/E/beta'  : Item(status='  ', wc_rev='-', copied='+'),
-    'A/B2/E/alpha' : Item(status='D ', wc_rev=2),
+    'A/B2/E/alpha' : Item(status='D ', wc_rev='-', copied='+'),
     'A/B2/lambda'  : Item(status='D ', wc_rev='-', copied='+'),
     'A/B2/F'       : Item(status='D ', wc_rev='-', copied='+'),
     })
@@ -4422,10 +4422,10 @@ def move_dir_containing_move(sbox):
       'A/B_tmp'               : Item(status='A ', copied='+', wc_rev='-'),
       # alpha has a revision that isn't reported by status.
       'A/B_tmp/E'             : Item(status='  ', copied='+', wc_rev='-'),
-      'A/B_tmp/E/alpha'       : Item(status='D ', wc_rev='?', entry_rev='1'),
+      'A/B_tmp/E/alpha'       : Item(status='D ', copied='+', wc_rev='-'),
       'A/B_tmp/E/alpha_moved' : Item(status='A ', copied='+', wc_rev='-'),
       'A/B_tmp/E/beta'        : Item(status='  ', copied='+', wc_rev='-'),
-      'A/B_tmp/F'             : Item(status='D ', wc_rev='?'),
+      'A/B_tmp/F'             : Item(status='D ', copied='+', wc_rev='-'),
       'A/B_tmp/F_moved'       : Item(status='A ', copied='+', wc_rev='-'),
       'A/B_tmp/lambda'        : Item(status='  ', copied='+', wc_rev='-'),
     })
@@ -4445,12 +4445,11 @@ def move_dir_containing_move(sbox):
                          'A/B_tmp/lambda')
   expected_status.add({
       'A/B_moved'               : Item(status='A ', copied='+', wc_rev='-'),
-      # alpha has a revision that isn't reported by status.
       'A/B_moved/E'             : Item(status='  ', copied='+', wc_rev='-'),
-      'A/B_moved/E/alpha'       : Item(status='D ', wc_rev='?', entry_rev='1'),
+      'A/B_moved/E/alpha'       : Item(status='D ', copied='+', wc_rev='-'),
       'A/B_moved/E/alpha_moved' : Item(status='A ', copied='+', wc_rev='-'),
       'A/B_moved/E/beta'        : Item(status='  ', copied='+', wc_rev='-'),
-      'A/B_moved/F'             : Item(status='D ', wc_rev='?'),
+      'A/B_moved/F'             : Item(status='D ', copied='+', wc_rev='-'),
       'A/B_moved/F_moved'       : Item(status='A ', copied='+', wc_rev='-'),
       'A/B_moved/lambda'        : Item(status='  ', copied='+', wc_rev='-'),
     })
@@ -4769,8 +4768,7 @@ def copy_delete_undo(sbox, use_revert):
 
   # Delete a child
   svntest.main.run_svn(wc_dir, 'rm', sbox.ospath('A/B/E-copied/alpha'))
-  expected_status.tweak('A/B/E-copied/alpha', status='D ', copied=None,
-                        wc_rev='?', entry_rev='1')
+  expected_status.tweak('A/B/E-copied/alpha', status='D ')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Undo the whole copy

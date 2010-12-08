@@ -697,17 +697,20 @@ def delete_in_copy_upgrade(sbox):
   wc_dir = sbox.wc_dir
   replace_sbox_with_tarfile(sbox, 'delete-in-copy.tar.bz2')
 
-  # Doesn't work, creates spurious base nodes for the copy
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'upgrade', sbox.wc_dir)
+
+  # This doesn't fail with SVN_WC__OP_DEPTH but doesn't do the right
+  # thing either: B-copied looks like a copy where E and F are
+  # not-present rather than deleted.
 
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
   expected_status.add({
       'A/B-copied'         : Item(status='A ', copied='+', wc_rev='-'),
       'A/B-copied/lambda'  : Item(status='  ', copied='+', wc_rev='-'),
-      'A/B-copied/E'       : Item(status='D ', wc_rev='?'),
-      'A/B-copied/E/alpha' : Item(status='D ', wc_rev='?'),
-      'A/B-copied/E/beta'  : Item(status='D ', wc_rev='?'),
+      'A/B-copied/E'       : Item(status='D ', copied='+', wc_rev='-'),
+      'A/B-copied/E/alpha' : Item(status='D ', copied='+', wc_rev='-'),
+      'A/B-copied/E/beta'  : Item(status='D ', copied='+', wc_rev='-'),
       'A/B-copied/F'       : Item(status='  ', copied='+', wc_rev='-'),
       })
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
