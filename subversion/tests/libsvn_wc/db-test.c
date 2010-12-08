@@ -1032,7 +1032,6 @@ test_scan_deletion(apr_pool_t *pool)
   const char *local_abspath;
   svn_wc__db_t *db;
   const char *base_del_abspath;
-  svn_boolean_t base_replaced;
   const char *work_del_abspath;
   const char *moved_to_abspath;
 
@@ -1043,14 +1042,12 @@ test_scan_deletion(apr_pool_t *pool)
   /* Node was moved elsewhere. */
   SVN_ERR(svn_wc__db_scan_deletion(
             &base_del_abspath,
-            &base_replaced,
             &moved_to_abspath,
             &work_del_abspath,
             db, svn_dirent_join(local_abspath, "J/J-e", pool),
             pool, pool));
   SVN_TEST_ASSERT(validate_abspath(local_abspath, "J/J-e",
                                    base_del_abspath, pool));
-  SVN_TEST_ASSERT(base_replaced);
   SVN_TEST_ASSERT(validate_abspath(local_abspath, "other/place",
                                    moved_to_abspath, pool));
   SVN_TEST_ASSERT(validate_abspath(local_abspath, "J/J-e",
@@ -1059,14 +1056,12 @@ test_scan_deletion(apr_pool_t *pool)
   /* Node was moved elsewhere (child of operation root). */
   SVN_ERR(svn_wc__db_scan_deletion(
             &base_del_abspath,
-            &base_replaced,
             &moved_to_abspath,
             &work_del_abspath,
             db, svn_dirent_join(local_abspath, "J/J-e/J-e-a", pool),
             pool, pool));
   SVN_TEST_ASSERT(validate_abspath(local_abspath, "J/J-e",
                                    base_del_abspath, pool));
-  SVN_TEST_ASSERT(base_replaced);
   SVN_TEST_ASSERT(validate_abspath(local_abspath, "other/place",
                                    moved_to_abspath, pool));
   SVN_TEST_ASSERT(validate_abspath(local_abspath, "J/J-e",
@@ -1075,7 +1070,6 @@ test_scan_deletion(apr_pool_t *pool)
   /* Root of delete. Parent is a WORKING node. */
   SVN_ERR(svn_wc__db_scan_deletion(
             &base_del_abspath,
-            &base_replaced,
             &moved_to_abspath,
             &work_del_abspath,
             db, svn_dirent_join(local_abspath, "J/J-c", pool),
@@ -1083,7 +1077,6 @@ test_scan_deletion(apr_pool_t *pool)
   /* Implicit delete of "J" (via replacement).  */
   SVN_TEST_ASSERT(validate_abspath(local_abspath, "J",
                                    base_del_abspath, pool));
-  SVN_TEST_ASSERT(base_replaced);
   SVN_TEST_ASSERT(moved_to_abspath == NULL);
   SVN_TEST_ASSERT(validate_abspath(local_abspath, "J/J-c",
                                    work_del_abspath, pool));
@@ -1091,7 +1084,6 @@ test_scan_deletion(apr_pool_t *pool)
   /* Child of a deleted root. */
   SVN_ERR(svn_wc__db_scan_deletion(
             &base_del_abspath,
-            &base_replaced,
             &moved_to_abspath,
             &work_del_abspath,
             db, svn_dirent_join(local_abspath, "J/J-c/J-c-a", pool),
@@ -1099,7 +1091,6 @@ test_scan_deletion(apr_pool_t *pool)
   /* Implicit delete of "J" (via replacement).  */
   SVN_TEST_ASSERT(validate_abspath(local_abspath, "J",
                                    base_del_abspath, pool));
-  SVN_TEST_ASSERT(base_replaced);
   SVN_TEST_ASSERT(moved_to_abspath == NULL);
   SVN_TEST_ASSERT(validate_abspath(local_abspath, "J/J-c",
                                    work_del_abspath, pool));
@@ -1107,14 +1098,12 @@ test_scan_deletion(apr_pool_t *pool)
   /* Base-deleted tree extending past deleted WORKING subtree.  */
   SVN_ERR(svn_wc__db_scan_deletion(
             &base_del_abspath,
-            &base_replaced,
             &moved_to_abspath,
             &work_del_abspath,
             db, svn_dirent_join(local_abspath, "J/J-e/J-e-b/Jeba", pool),
             pool, pool));
   SVN_TEST_ASSERT(validate_abspath(local_abspath, "J/J-e",
                                    base_del_abspath, pool));
-  SVN_TEST_ASSERT(base_replaced);
   SVN_TEST_ASSERT(validate_abspath(local_abspath, "other/place",
                                    moved_to_abspath, pool));
   SVN_TEST_ASSERT(validate_abspath(local_abspath, "J/J-e",
@@ -1123,7 +1112,6 @@ test_scan_deletion(apr_pool_t *pool)
   /* Base-deleted tree extending past added WORKING tree.  */
   SVN_ERR(svn_wc__db_scan_deletion(
             &base_del_abspath,
-            &base_replaced,
             &moved_to_abspath,
             &work_del_abspath,
             db, svn_dirent_join(local_abspath, "J/J-f/J-f-a", pool),
@@ -1131,49 +1119,42 @@ test_scan_deletion(apr_pool_t *pool)
   /* Implicit delete of "J" (via replacement).  */
   SVN_TEST_ASSERT(validate_abspath(local_abspath, "J",
                                    base_del_abspath, pool));
-  SVN_TEST_ASSERT(base_replaced);
   SVN_TEST_ASSERT(moved_to_abspath == NULL);
   SVN_TEST_ASSERT(work_del_abspath == NULL);
 
   /* Root of delete. Parent is a BASE node. */
   SVN_ERR(svn_wc__db_scan_deletion(
             &base_del_abspath,
-            &base_replaced,
             &moved_to_abspath,
             &work_del_abspath,
             db, svn_dirent_join(local_abspath, "K", pool),
             pool, pool));
   SVN_TEST_ASSERT(validate_abspath(local_abspath, "K",
                                    base_del_abspath, pool));
-  SVN_TEST_ASSERT(!base_replaced);
   SVN_TEST_ASSERT(moved_to_abspath == NULL);
   SVN_TEST_ASSERT(work_del_abspath == NULL);
 
   /* Base-deleted tree. Start below root.  */
   SVN_ERR(svn_wc__db_scan_deletion(
             &base_del_abspath,
-            &base_replaced,
             &moved_to_abspath,
             &work_del_abspath,
             db, svn_dirent_join(local_abspath, "K/K-a", pool),
             pool, pool));
   SVN_TEST_ASSERT(validate_abspath(local_abspath, "K",
                                    base_del_abspath, pool));
-  SVN_TEST_ASSERT(!base_replaced);
   SVN_TEST_ASSERT(moved_to_abspath == NULL);
   SVN_TEST_ASSERT(work_del_abspath == NULL);
 
   /* Base-deleted tree via move.  */
   SVN_ERR(svn_wc__db_scan_deletion(
             &base_del_abspath,
-            &base_replaced,
             &moved_to_abspath,
             &work_del_abspath,
             db, svn_dirent_join(local_abspath, "K/K-b", pool),
             pool, pool));
   SVN_TEST_ASSERT(validate_abspath(local_abspath, "K/K-b",
                                    base_del_abspath, pool));
-  SVN_TEST_ASSERT(!base_replaced);
   SVN_TEST_ASSERT(validate_abspath(local_abspath, "moved/away",
                                    moved_to_abspath, pool));
   SVN_TEST_ASSERT(work_del_abspath == NULL);
@@ -1181,13 +1162,11 @@ test_scan_deletion(apr_pool_t *pool)
   /* Subtree deletion of added tree. Start at child.  */
   SVN_ERR(svn_wc__db_scan_deletion(
             &base_del_abspath,
-            &base_replaced,
             &moved_to_abspath,
             &work_del_abspath,
             db, svn_dirent_join(local_abspath, "L/L-a/L-a-a", pool),
             pool, pool));
   SVN_TEST_ASSERT(base_del_abspath == NULL);
-  SVN_TEST_ASSERT(!base_replaced);
   SVN_TEST_ASSERT(moved_to_abspath == NULL);
   SVN_TEST_ASSERT(validate_abspath(local_abspath, "L/L-a",
                                    work_del_abspath, pool));
@@ -1195,13 +1174,11 @@ test_scan_deletion(apr_pool_t *pool)
   /* Subtree deletion of added tree. Start at root.  */
   SVN_ERR(svn_wc__db_scan_deletion(
             &base_del_abspath,
-            &base_replaced,
             &moved_to_abspath,
             &work_del_abspath,
             db, svn_dirent_join(local_abspath, "L/L-a", pool),
             pool, pool));
   SVN_TEST_ASSERT(base_del_abspath == NULL);
-  SVN_TEST_ASSERT(!base_replaced);
   SVN_TEST_ASSERT(moved_to_abspath == NULL);
   SVN_TEST_ASSERT(validate_abspath(local_abspath, "L/L-a",
                                    work_del_abspath, pool));
@@ -1209,13 +1186,11 @@ test_scan_deletion(apr_pool_t *pool)
   /* Root of delete, parent converted to BASE during post-commit. */
   SVN_ERR(svn_wc__db_scan_deletion(
             &base_del_abspath,
-            &base_replaced,
             &moved_to_abspath,
             &work_del_abspath,
             db, svn_dirent_join(local_abspath, "M/M-a", pool),
             pool, pool));
   SVN_TEST_ASSERT(base_del_abspath == NULL);
-  SVN_TEST_ASSERT(!base_replaced);
   SVN_TEST_ASSERT(moved_to_abspath == NULL);
   SVN_TEST_ASSERT(validate_abspath(local_abspath, "M/M-a",
                                    work_del_abspath, pool));

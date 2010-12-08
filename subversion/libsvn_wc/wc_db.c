@@ -299,7 +299,6 @@ scan_addition(svn_wc__db_status_t *status,
 
 static svn_error_t *
 scan_deletion(const char **base_del_relpath,
-              svn_boolean_t *base_replaced,
               const char **moved_to_relpath,
               const char **work_del_relpath,
               svn_wc__db_pdh_t *pdh,
@@ -2942,7 +2941,7 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
     {
       const char *base_del_relpath, *work_del_relpath;
 
-      SVN_ERR(scan_deletion(&base_del_relpath, NULL, NULL, &work_del_relpath,
+      SVN_ERR(scan_deletion(&base_del_relpath, NULL, &work_del_relpath,
                             pdh, local_relpath, scratch_pool, scratch_pool));
       if (work_del_relpath)
         {
@@ -5917,7 +5916,7 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
       if (status == svn_wc__db_status_deleted)
         {
           const char *work_del_relpath;
-          SVN_ERR(scan_deletion(NULL, NULL, NULL, &work_del_relpath,
+          SVN_ERR(scan_deletion(NULL, NULL, &work_del_relpath,
                                 pdh, local_dir_relpath,
                                 scratch_pool, scratch_pool));
           if (work_del_relpath)
@@ -7019,7 +7018,6 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
  * DB+LOCAL_ABSPATH, and outputting relpaths instead of abspaths. */
 static svn_error_t *
 scan_deletion(const char **base_del_relpath,
-              svn_boolean_t *base_replaced,
               const char **moved_to_relpath,
               const char **work_del_relpath,
               svn_wc__db_pdh_t *pdh,
@@ -7040,8 +7038,6 @@ scan_deletion(const char **base_del_relpath,
   /* Initialize all the OUT parameters.  */
   if (base_del_relpath != NULL)
     *base_del_relpath = NULL;
-  if (base_replaced != NULL)
-    *base_replaced = FALSE;  /* becomes TRUE when we know for sure.  */
   if (moved_to_relpath != NULL)
     *moved_to_relpath = NULL;
   if (work_del_relpath != NULL)
@@ -7164,16 +7160,6 @@ scan_deletion(const char **base_del_relpath,
           /* If a BASE node is marked as not-present, then we'll ignore
              it within this function. That status is simply a bookkeeping
              gimmick, not a real node that may have been deleted.  */
-
-          /* If we're looking at a present BASE node, *and* there is a
-             WORKING node (present or deleted), then a replacement has
-             occurred here or in an ancestor.  */
-          if (base_replaced != NULL
-              && base_presence == svn_wc__db_status_normal
-              && work_presence != svn_wc__db_status_base_deleted)
-            {
-              *base_replaced = TRUE;
-            }
         }
 
       /* Only grab the nearest ancestor.  */
@@ -7236,7 +7222,6 @@ scan_deletion(const char **base_del_relpath,
 
 svn_error_t *
 svn_wc__db_scan_deletion(const char **base_del_abspath,
-                         svn_boolean_t *base_replaced,
                          const char **moved_to_abspath,
                          const char **work_del_abspath,
                          svn_wc__db_t *db,
@@ -7255,7 +7240,7 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
-  SVN_ERR(scan_deletion(&base_del_relpath, base_replaced, &moved_to_relpath,
+  SVN_ERR(scan_deletion(&base_del_relpath, &moved_to_relpath,
                         &work_del_relpath,
                         pdh, local_relpath, result_pool, scratch_pool));
 
