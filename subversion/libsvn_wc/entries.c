@@ -254,7 +254,6 @@ get_base_info_for_deleted(svn_wc_entry_t *entry,
 
       SVN_ERR(svn_wc__db_scan_deletion(NULL,
                                        NULL,
-                                       NULL,
                                        &work_del_abspath,
                                        db, entry_abspath,
                                        scratch_pool, scratch_pool));
@@ -534,7 +533,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
       /* ### we don't have to worry about moves, so this is a delete. */
       entry->schedule = svn_wc_schedule_delete;
 
-      SVN_ERR(svn_wc__db_scan_deletion(NULL, NULL, NULL,
+      SVN_ERR(svn_wc__db_scan_deletion(NULL, NULL,
                                        &work_del_abspath,
                                        db, entry_abspath,
                                        scratch_pool, scratch_pool));

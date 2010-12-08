@@ -1943,8 +1943,7 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
    the deleted node.
 
    In this example, BASE_DEL_ABSPATH will bet set to B/W. That is the root of
-   the BASE tree (implicitly) deleted by the replacement. BASE_REPLACED will
-   be set to TRUE since B/W replaces the BASE node at B/W. WORK_DEL_ABSPATH
+   the BASE tree (implicitly) deleted by the replacement. WORK_DEL_ABSPATH
    will be set to the subtree deleted within the replacement; in this case,
    B/W/D. No move-away took place, so MOVED_TO_ABSPATH is set to NULL.
 
@@ -1954,14 +1953,12 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
    post-move, but that is not known or reported by this function.
 
    If BASE does not have a B/W, then the WORKING B/W is not a replacement,
-   but a simple add/copy/move-here. BASE_DEL_ABSPATH will be set to NULL,
-   and BASE_REPLACED will be set to FALSE.
+   but a simple add/copy/move-here. BASE_DEL_ABSPATH will be set to NULL.
 
    If B/W/D does not exist in the WORKING tree (we're only talking about a
    deletion of nodes of the BASE tree), then deleting B/W/D would have marked
    the subtree for deletion. BASE_DEL_ABSPATH will refer to B/W/D,
-   BASE_REPLACED will be FALSE, MOVED_TO_ABSPATH will be NULL, and
-   WORK_DEL_ABSPATH will be NULL.
+   MOVED_TO_ABSPATH will be NULL, and WORK_DEL_ABSPATH will be NULL.
 
    If the BASE node B/W/D was moved instead of deleted, then MOVED_TO_ABSPATH
    would indicate the target location (and other OUT values as above).
@@ -2009,11 +2006,6 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
    BASE_DEL_ABSPATH will specify the nearest ancestor of the explicit or
    implicit deletion (if any) that applies to the BASE tree.
 
-   BASE_REPLACED will specify whether the node at BASE_DEL_ABSPATH has
-   been replaced (shadowed) by nodes in the WORKING tree. If no BASE
-   deletion has occurred (BASE_DEL_ABSPATH is NULL, meaning the deletion
-   is confined to the WORKING TREE), then BASE_REPLACED will be FALSE.
-
    MOVED_TO_ABSPATH will specify the nearest ancestor that has moved-away,
    if any. If no ancestors have been moved-away, then this is set to NULL.
 
@@ -2033,7 +2025,6 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
 */
 svn_error_t *
 svn_wc__db_scan_deletion(const char **base_del_abspath,
-                         svn_boolean_t *base_replaced,
                          const char **moved_to_abspath,
                          const char **work_del_abspath,
                          svn_wc__db_t *db,

@@ -984,7 +984,7 @@ svn_wc__node_get_working_rev_info(svn_revnum_t *revision,
       const char *base_del_abspath;
 
       SVN_ERR(svn_wc__db_scan_deletion(&base_del_abspath, NULL,
-                                       NULL, &work_del_abspath, wc_ctx->db,
+                                       &work_del_abspath, wc_ctx->db,
                                        local_abspath, scratch_pool,
                                        scratch_pool));
       if (work_del_abspath)
@@ -1075,7 +1075,7 @@ svn_wc__node_get_commit_base_rev(svn_revnum_t *commit_base_revision,
       const char *parent_abspath;
       svn_wc__db_status_t parent_status;
 
-      SVN_ERR(svn_wc__db_scan_deletion(NULL, NULL, NULL,
+      SVN_ERR(svn_wc__db_scan_deletion(NULL, NULL,
                                        &work_del_abspath,
                                        wc_ctx->db, local_abspath,
                                        scratch_pool, scratch_pool));
@@ -1263,9 +1263,7 @@ svn_wc__internal_node_get_schedule(svn_wc_schedule_t *schedule,
             break;
 
           /* Find out details of our deletion.  */
-          SVN_ERR(svn_wc__db_scan_deletion(NULL,
-                                           NULL,
-                                           NULL,
+          SVN_ERR(svn_wc__db_scan_deletion(NULL, NULL,
                                            &work_del_abspath,
                                            db, local_abspath,
                                            scratch_pool, scratch_pool));
