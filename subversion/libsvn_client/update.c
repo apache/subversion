@@ -397,10 +397,19 @@ svn_client_update4(apr_array_header_t **result_revs,
 
   for (i = 0; i < paths->nelts; ++i)
     {
+      path = APR_ARRAY_IDX(paths, i, const char *);
+
+      if (svn_path_is_url(path))
+        return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                 _("'%s' is not a local path"), path);
+    }
+
+  for (i = 0; i < paths->nelts; ++i)
+    {
       svn_boolean_t sleep;
-      svn_boolean_t skipped = FALSE;
       svn_error_t *err = SVN_NO_ERROR;
       svn_revnum_t result_rev;
+      const char *local_abspath;
       path = APR_ARRAY_IDX(paths, i, const char *);
 
       svn_pool_clear(subpool);
@@ -408,57 +417,30 @@ svn_client_update4(apr_array_header_t **result_revs,
       if (ctx->cancel_func && (err = ctx->cancel_func(ctx->cancel_baton)))
         break;
 
-      if (svn_path_is_url(path))
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, subpool));
+      err = svn_client__update_internal(&result_rev, local_abspath,
+                                        revision, depth, depth_is_sticky,
+                                        ignore_externals,
+                                        allow_unver_obstructions,
+                                        &sleep, FALSE, make_parents,
+                                        ctx, subpool);
+
+      if (err && err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
         {
-          skipped = TRUE;
-        }
-      else
-        {
-          const char *local_abspath;
-
-          SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, subpool));
-          err = svn_client__update_internal(&result_rev, local_abspath,
-                                            revision, depth, depth_is_sticky,
-                                            ignore_externals,
-                                            allow_unver_obstructions,
-                                            &sleep, FALSE, make_parents,
-                                            ctx, subpool);
-
-          if (err && err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
-            {
-              return svn_error_return(err);
-            }
-
-          if (err)
-            {
-              /* SVN_ERR_WC_NOT_WORKING_COPY: it's not versioned */
-              svn_error_clear(err);
-              skipped = TRUE;
-            }
+          return svn_error_return(err);
         }
 
-      if (skipped)
+      if (err)
         {
+          /* SVN_ERR_WC_NOT_WORKING_COPY: it's not versioned */
+          svn_error_clear(err);
           result_rev = SVN_INVALID_REVNUM;
           if (ctx->notify_func2)
             {
               svn_wc_notify_t *notify;
-
-              if (svn_path_is_url(path))
-                {
-                  /* For some historic reason this user error is supported,
-                     and must provide correct notifications. */
-                  notify = svn_wc_create_notify_url(path,
-                                                    svn_wc_notify_skip,
-                                                    subpool);
-                }
-              else
-                {
-                  notify = svn_wc_create_notify(path,
-                                                svn_wc_notify_skip,
-                                                subpool);
-                }
-
+              notify = svn_wc_create_notify(path,
+                                            svn_wc_notify_skip,
+                                            subpool);
               (*ctx->notify_func2)(ctx->notify_baton2, notify, subpool);
             }
         }
