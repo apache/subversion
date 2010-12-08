@@ -2411,6 +2411,8 @@ def move_dir_out_of_moved_dir(sbox):
                                         None,
                                         wc_dir)
 
+# Includes regression testing for issue #3429 ("svn mv A B; svn mv B A"
+# generates replace without history).
 def move_file_back_and_forth(sbox):
   "move a moved file back to original location"
 
@@ -2426,17 +2428,21 @@ def move_file_back_and_forth(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'mv',
                                      rho_move_path, rho_path)
 
-  # Created expected output tree for 'svn ci':
+  # Check expected status before commit
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/D/G/rho' : Item(status='R ', copied='+', wc_rev='-'),
+    })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Commit, and check expected output and status
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/G/rho' : Item(verb='Replacing'),
     })
-
-  # Create expected status tree
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/D/G/rho' : Item(status='  ', wc_rev=2),
     })
-
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
@@ -2444,6 +2450,8 @@ def move_file_back_and_forth(sbox):
                                         wc_dir)
 
 
+# Includes regression testing for issue #3429 ("svn mv A B; svn mv B A"
+# generates replace without history).
 def move_dir_back_and_forth(sbox):
   "move a moved dir back to original location"
 
@@ -2471,6 +2479,23 @@ def move_dir_back_and_forth(sbox):
 
   svntest.actions.run_and_verify_svn(None, None, expected_err,
                                      'mv', D_move_path, D_path)
+
+  if svntest.main.wc_is_singledb(wc_dir):
+    # Verify that the status indicates a replace with history
+    expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+    expected_status.add({
+      'A/D'               : Item(status='R ', copied='+', wc_rev='-'),
+      'A/D/G'             : Item(status='  ', copied='+', wc_rev='-'),
+      'A/D/G/pi'          : Item(status='  ', copied='+', wc_rev='-'),
+      'A/D/G/rho'         : Item(status='  ', copied='+', wc_rev='-'),
+      'A/D/G/tau'         : Item(status='  ', copied='+', wc_rev='-'),
+      'A/D/gamma'         : Item(status='  ', copied='+', wc_rev='-'),
+      'A/D/H'             : Item(status='  ', copied='+', wc_rev='-'),
+      'A/D/H/chi'         : Item(status='  ', copied='+', wc_rev='-'),
+      'A/D/H/omega'       : Item(status='  ', copied='+', wc_rev='-'),
+      'A/D/H/psi'         : Item(status='  ', copied='+', wc_rev='-'),
+      })
+    svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 def copy_move_added_paths(sbox):
   "copy and move added paths without commits"
