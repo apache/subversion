@@ -1900,7 +1900,14 @@ ensure_revision_exists(svn_fs_t *fs,
 /* Open the correct revision file for REV.  If the filesystem FS has
    been packed, *FILE will be set to the packed file; otherwise, set *FILE
    to the revision file for REV.  Return SVN_ERR_FS_NO_SUCH_REVISION if the
-   file doesn't exist.  Use POOL for allocations. */
+   file doesn't exist.
+
+   TODO: Consider returning an indication of whether this is a packed rev
+         file, so the caller need not rely on is_packed_rev() which in turn
+         relies on the cached FFD->min_unpacked_rev value not having changed
+         since the rev file was opened.
+
+   Use POOL for allocations. */
 static svn_error_t *
 open_pack_or_rev_file(apr_file_t **file,
                       svn_fs_t *fs,
@@ -2651,8 +2658,18 @@ get_fs_id_at_offset(svn_fs_id_t **id_p,
    specifies the offset to the root node-id and to the changed path
    information.  Store the root node offset in *ROOT_OFFSET and the
    changed path offset in *CHANGES_OFFSET.  If either of these
-   pointers is NULL, do nothing with it.  If PACKED is true, REV_FILE
-   should be a packed shard file.  Allocate temporary variables from POOL. */
+   pointers is NULL, do nothing with it.
+
+   If PACKED is true, REV_FILE should be a packed shard file.
+   ### There is currently no such parameter.  This function assumes that
+       is_packed_rev(FS, REV) will indicate whether REV_FILE is a packed
+       file.  Therefore FS->fsap_data->min_unpacked_rev must not have been
+       refreshed since REV_FILE was opened if there is a possibility that
+       revision REV may have become packed since then.
+       TODO: Take an IS_PACKED parameter instead, in order to remove this
+       requirement.
+
+   Allocate temporary variables from POOL. */
 static svn_error_t *
 get_root_changes_offset(apr_off_t *root_offset,
                         apr_off_t *changes_offset,
