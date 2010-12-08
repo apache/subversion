@@ -254,44 +254,15 @@ svn_fs_fs__path_rev_absolute(const char **path,
 {
   fs_fs_data_t *ffd = fs->fsap_data;
 
-  if (ffd->format < SVN_FS_FS__MIN_PACKED_FORMAT)
+  if (ffd->format < SVN_FS_FS__MIN_PACKED_FORMAT
+      || ! is_packed_rev(fs, rev))
     {
       *path = path_rev(fs, rev, pool);
-      return SVN_NO_ERROR;
     }
-
-  if (! is_packed_rev(fs, rev))
+  else
     {
-      svn_node_kind_t kind;
-
-      /* Initialize the return variable. */
-      *path = path_rev(fs, rev, pool);
-
-      SVN_ERR(svn_io_check_path(*path, &kind, pool));
-      if (kind == svn_node_file)
-        {
-          /* *path is already set correctly. */
-          return SVN_NO_ERROR;
-        }
-      else
-        {
-          /* Someone must have run 'svnadmin pack' while this fs object
-           * was open. */
-
-          SVN_ERR(update_min_unpacked_rev(fs, pool));
-
-          /* The rev really should be present now. */
-          if (! is_packed_rev(fs, rev))
-            return svn_error_createf(APR_ENOENT, NULL,
-                                     _("Revision file '%s' does not exist, "
-                                       "and r%ld is not packed"),
-                                     svn_dirent_local_style(*path, pool),
-                                     rev);
-          /* Fall through. */
-        }
+      *path = path_rev_packed(fs, rev, "pack", pool);
     }
-
-  *path = path_rev_packed(fs, rev, "pack", pool);
 
   return SVN_NO_ERROR;
 }
