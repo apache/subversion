@@ -1273,11 +1273,7 @@ svn_wc__internal_node_get_schedule(svn_wc_schedule_t *schedule,
           if (!work_del_abspath)
             break; /* Base deletion */
 
-          /* We miss the 4th tree to properly find out if this is
-             the root of a working-delete. Only in that case
-             should copied be set to true. See entries.c for details. */
-
-          *copied = FALSE; /* Until we can fix this test */
+          *copied = TRUE;
           break;
         }
       case svn_wc__db_status_added:
