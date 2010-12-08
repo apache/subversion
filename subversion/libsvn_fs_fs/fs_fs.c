@@ -7704,6 +7704,22 @@ struct pack_baton
   void *cancel_baton;
 };
 
+
+/* The work-horse for svn_fs_fs__pack, called with the FS write lock.
+   This implements the svn_fs_fs__with_write_lock() 'body' callback
+   type.  BATON is a 'struct pack_baton *'.
+   
+   WARNING: if you add a call to this function, please note:
+     The code currently assumes that any piece of code running with
+     the write-lock set can rely on the ffd->min_unpacked_rev and
+     ffd->min_unpacked_revprop caches to be up-to-date (and, by
+     extension, on not having to use a retry when calling
+     svn_fs_fs__path_rev_absolute() and friends).  If you add a call
+     to this function, consider whether you have to call
+     update_min_unpacked_rev() and update_min_unpacked_revprop()
+     afterwards.
+     See this thread: http://thread.gmane.org/1291206765.3782.3309.camel@edith
+ */
 static svn_error_t *
 pack_body(void *baton,
           apr_pool_t *pool)
