@@ -731,7 +731,7 @@ def create_repos(path):
     # (e.g. due to a missing 'svnadmin' binary).
     raise SVNRepositoryCreateFailure("".join(stderr).rstrip())
 
-  # Allow unauthenticated users to write to the repos, for ra_svn testing.
+  # Require authentication to write to the repos, for ra_svn testing.
   file_write(get_svnserve_conf_file_path(path),
              "[general]\nauth-access = write\n");
   if options.enable_sasl:

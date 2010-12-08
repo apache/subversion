@@ -48,6 +48,8 @@ svn_cl__mkdir(apr_getopt_t *os,
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
   svn_error_t *err;
+  svn_boolean_t wc_present = FALSE, url_present = FALSE;
+  int i;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
@@ -55,6 +57,22 @@ svn_cl__mkdir(apr_getopt_t *os,
 
   if (! targets->nelts)
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
+
+  /* Check to see if at least one of our paths is a working copy
+     path or a repository url. */
+  for (i = 0; i < targets->nelts; ++i)
+    {
+      const char *target = APR_ARRAY_IDX(targets, i, const char *);
+      if (! svn_path_is_url(target))
+        wc_present = TRUE;
+      else
+        url_present = TRUE;
+    }
+
+  if (url_present && wc_present)
+    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                        _("Cannot mix repository and working copy "
+                          "targets"));
 
   if (! svn_path_is_url(APR_ARRAY_IDX(targets, 0, const char *)))
     {

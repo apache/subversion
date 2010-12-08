@@ -198,7 +198,7 @@ extern "C" {
  *
  * - @b Complete/Abort: The driver will end transmission by calling \n
  *    svn_editor_complete() if successful, or \n
- *    svn_editor_abort() if an error or cancellation occured.
+ *    svn_editor_abort() if an error or cancellation occurred.
  * \n\n
  *
  * <h3>Driving Order Restrictions</h3>

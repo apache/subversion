@@ -706,6 +706,21 @@ svn_wc__node_get_schedule(svn_wc_schedule_t *schedule,
                           const char *local_abspath,
                           apr_pool_t *scratch_pool);
 
+/**
+ * Helper function which fetches all the relevant information for
+ * libsvn_client/merge.c:get_mergeinfo_walk_cb().  This combines several
+ * svn_wc__db_read_info() calls into one, limiting the number of database
+ * accesses, and, more importantly, system calls.
+ */
+svn_error_t *
+svn_wc__get_mergeinfo_walk_info(svn_boolean_t *is_present,
+                                svn_boolean_t *is_deleted,
+                                svn_boolean_t *is_absent,
+                                svn_depth_t *depth,
+                                svn_wc_context_t *wc_ctx,
+                                const char *local_abspath,
+                                apr_pool_t *scratch_pool);
+
 
 #ifdef __cplusplus
 }

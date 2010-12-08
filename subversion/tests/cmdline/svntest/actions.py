@@ -1852,7 +1852,6 @@ def inject_conflict_into_wc(sbox, state_path, file_path,
                                       conflicting_contents, contents,
                                       merged_rev)
   exit_code, output, errput = main.run_svn(None, "up", "-r", str(merged_rev),
-                                           sbox.repo_url + "/" + state_path,
                                            file_path)
   if expected_status:
     expected_status.tweak(state_path, wc_rev=merged_rev)

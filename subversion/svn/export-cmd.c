@@ -114,7 +114,7 @@ svn_cl__export(apr_getopt_t *os,
 
   if (nwb.had_externals_error)
     return svn_error_create(SVN_ERR_CL_ERROR_PROCESSING_EXTERNALS, NULL,
-                            _("Failure occured processing one or more "
+                            _("Failure occurred processing one or more "
                               "externals definitions"));
 
   return svn_error_return(err);

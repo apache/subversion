@@ -545,6 +545,7 @@ PREWRITTEN_HOOKS_TEXT
   }  /* end pre-revprop-change hook */
 
 
+#ifdef SVN_WITH_EXPERIMENTAL_OBLITERATE
   /* Pre-obliterate hook. */
   {
     this_path = apr_psprintf(pool, "%s%s",
@@ -617,6 +618,7 @@ PREWRITTEN_HOOKS_TEXT
     SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
               _("Creating pre-obliterate hook"));
   }  /* end pre-obliterate hook */
+#endif
 
 
   /* Pre-lock hook. */
@@ -672,6 +674,8 @@ PREWRITTEN_HOOKS_TEXT
 "REPOS=\"$1\""                                                               NL
 "PATH=\"$2\""                                                                NL
 "USER=\"$3\""                                                                NL
+"COMMENT=\"$4\""                                                             NL
+"STEAL=\"$5\""                                                               NL
 ""                                                                           NL
 "# If a lock exists and is owned by a different person, don't allow it"      NL
 "# to be stolen (e.g., with 'svn lock --force ...')."                        NL
@@ -755,6 +759,8 @@ PREWRITTEN_HOOKS_TEXT
 "REPOS=\"$1\""                                                               NL
 "PATH=\"$2\""                                                                NL
 "USER=\"$3\""                                                                NL
+"TOKEN=\"$4\""                                                               NL
+"BREAK=\"$5\""                                                               NL
 ""                                                                           NL
 "# If a lock is owned by a different person, don't allow it be broken."      NL
 "# (Maybe this script could send email to the lock owner?)"                  NL
@@ -1032,6 +1038,7 @@ PREWRITTEN_HOOKS_TEXT
               _("Creating post-revprop-change hook"));
   } /* end post-revprop-change hook */
 
+#ifdef SVN_WITH_EXPERIMENTAL_OBLITERATE
   /* Post-obliterate hook. */
   {
     this_path = apr_psprintf(pool, "%s%s",
@@ -1089,6 +1096,7 @@ PREWRITTEN_HOOKS_TEXT
     SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
               _("Creating post-obliterate hook"));
   } /* end post-obliterate hook */
+#endif
 
   return SVN_NO_ERROR;
 }

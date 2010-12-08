@@ -725,12 +725,10 @@ apply_textdelta(svn_txdelta_window_handler_t *handler,
 
   return svn_fs_apply_textdelta(handler, handler_baton,
                                 rb->txn_root, nb->path,
-                                nb->base_checksum ?
                                 svn_checksum_to_cstring(nb->base_checksum,
-                                                        nb->pool) : NULL,
-                                nb->result_checksum ?
+                                                        nb->pool),
                                 svn_checksum_to_cstring(nb->result_checksum,
-                                                        nb->pool) : NULL,
+                                                        nb->pool),
                                 nb->pool);
 }
 
@@ -744,9 +742,8 @@ set_fulltext(svn_stream_t **stream,
 
   return svn_fs_apply_text(stream,
                            rb->txn_root, nb->path,
-                           nb->result_checksum ?
                            svn_checksum_to_cstring(nb->result_checksum,
-                                                   nb->pool) : NULL,
+                                                   nb->pool),
                            nb->pool);
 }
 

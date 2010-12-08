@@ -3460,8 +3460,7 @@ apply_textdelta(void *file_baton,
                                                 fb->edit_baton->db,
                                                 fb->local_abspath,
                                                 pool, pool));
-    recorded_base_checksum
-      = checksum ? svn_checksum_to_cstring(checksum, pool) : NULL;
+    recorded_base_checksum = svn_checksum_to_cstring(checksum, pool);
     if (recorded_base_checksum && expected_base_checksum
         && strcmp(expected_base_checksum, recorded_base_checksum) != 0)
       return svn_error_createf(SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,

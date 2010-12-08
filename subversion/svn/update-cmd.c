@@ -40,7 +40,9 @@
 /*** Code. ***/
 
 /* Print an update summary when there's more than one target to report
-   about. */
+   about.  Each (const char *) path in TARGETS is an absolute or relative
+   dirent, and each (svn_revnum_t) entry in RESULT_REVS is the corresponding
+   updated revision, or SVN_INVALID_REVNUM if not a valid target. */
 static svn_error_t *
 print_update_summary(apr_array_header_t *targets,
                      apr_array_header_t *result_revs,
@@ -61,35 +63,34 @@ print_update_summary(apr_array_header_t *targets,
   for (i = 0; i < targets->nelts; i++)
     {
       const char *path = APR_ARRAY_IDX(targets, i, const char *);
-      const char *path_local;
+      svn_revnum_t rev = SVN_INVALID_REVNUM;
 
       svn_pool_clear(iter_pool);
 
-      /* Convert to an absolute path if it's not already. */
-      /* (It shouldn't be URL, but don't call svn_dirent_* if it is.) */
-      if (! svn_path_is_url(path) && ! svn_dirent_is_absolute(path))
-        SVN_ERR(svn_dirent_get_absolute(&path, path, iter_pool));
+      /* PATH shouldn't be a URL. */
+      SVN_ERR_ASSERT(! svn_path_is_url(path));
 
-      /* Remove the current working directory prefix from PATH (if
-         PATH is at or under $CWD), and convert to local style for
-         display. */
-      path_local = svn_dirent_skip_ancestor(path_prefix, path);
-      path_local = svn_dirent_local_style(path_local, iter_pool);
-      
+      /* Grab the result revision from the corresponding slot in our
+         RESULT_REVS array. */
       if (i < result_revs->nelts)
-        {
-          svn_revnum_t rev = APR_ARRAY_IDX(result_revs, i, svn_revnum_t);
+        rev = APR_ARRAY_IDX(result_revs, i, svn_revnum_t);
 
-          if (SVN_IS_VALID_REVNUM(rev))
-            SVN_ERR(svn_cmdline_printf(iter_pool,
-                                       _("  Updated '%s' to r%ld.\n"),
-                                       path_local, rev));
-        }
-      else
-        {
-          /* ### Notify about targets for which there's no
-             ### result_rev?  Can we even get here?  */
-        }
+      /* No result rev?  We must have skipped this path.  At any rate,
+         nothing to report here. */
+      if (! SVN_IS_VALID_REVNUM(rev))
+        continue;
+
+      /* Convert to an absolute path if it's not already. */
+      if (! svn_dirent_is_absolute(path))
+        SVN_ERR(svn_dirent_get_absolute(&path, path, iter_pool));
+      path = svn_dirent_local_style(svn_dirent_skip_ancestor(path_prefix,
+                                                             path), iter_pool);
+
+      /* Print an update summary for this target, removing the current
+         working directory prefix from PATH (if PATH is at or under
+         $CWD), and converting the path to local style for display. */
+      SVN_ERR(svn_cmdline_printf(iter_pool, _("  Updated '%s' to r%ld.\n"),
+                                 path, rev));
     }
 
   svn_pool_destroy(iter_pool);
@@ -109,6 +110,7 @@ svn_cl__update(apr_getopt_t *os,
   svn_boolean_t depth_is_sticky;
   struct svn_cl__check_externals_failed_notify_baton nwb;
   apr_array_header_t *result_revs;
+  int i;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
@@ -118,6 +120,16 @@ svn_cl__update(apr_getopt_t *os,
   svn_opt_push_implicit_dot_target(targets, scratch_pool);
 
   SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, scratch_pool));
+
+  /* If any targets are URLs, display error message and exit. */
+  for (i = 0; i < targets->nelts; i++)
+    {
+      const char *target = APR_ARRAY_IDX(targets, i, const char *);
+
+      if (svn_path_is_url(target))
+        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("'%s' is not a local path"), target);
+    }
 
   /* If using changelists, convert targets into a set of paths that
      match the specified changelist(s). */
@@ -169,7 +181,7 @@ svn_cl__update(apr_getopt_t *os,
 
   if (nwb.had_externals_error)
     return svn_error_create(SVN_ERR_CL_ERROR_PROCESSING_EXTERNALS, NULL,
-                            _("Failure occured processing one or more "
+                            _("Failure occurred processing one or more "
                               "externals definitions"));
 
   return SVN_NO_ERROR;

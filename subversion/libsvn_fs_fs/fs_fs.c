@@ -271,18 +271,17 @@ svn_fs_fs__path_rev_absolute(const char **path,
 {
   fs_fs_data_t *ffd = fs->fsap_data;
 
-  if (ffd->format < SVN_FS_FS__MIN_PACKED_FORMAT)
+  if (ffd->format < SVN_FS_FS__MIN_PACKED_FORMAT
+      || ! is_packed_rev(fs, rev))
     {
       *path = path_rev(fs, rev, pool);
-      return SVN_NO_ERROR;
     }
-
-  if (! is_packed_rev(fs, rev))
+  else
     {
       svn_node_kind_t kind;
 
       /* Initialize the return variable. */
-      *path = path_rev(fs, rev, pool);
+      *path = path_rev_packed(fs, rev, "pack", pool);
 
       /* quick check the path. For revs close to HEAD, this will often
        * be effective (and, hence, efficient). */
@@ -313,8 +312,6 @@ svn_fs_fs__path_rev_absolute(const char **path,
           /* Fall through. */
         }
     }
-
-  *path = path_rev_packed(fs, rev, "pack", pool);
 
   return SVN_NO_ERROR;
 }
@@ -1928,7 +1925,14 @@ ensure_revision_exists(svn_fs_t *fs,
    to the revision file for REV.  Return SVN_ERR_FS_NO_SUCH_REVISION if the
    file doesn't exist.  Move the file pointer of OFFSET, if the latter is
    not -1.  Prefer cached file handles that share the same COOKIE (again,
-   if not -1).  Use POOL for allocations. */
+   if not -1).
+
+   TODO: Consider returning an indication of whether this is a packed rev
+         file, so the caller need not rely on is_packed_rev() which in turn
+         relies on the cached FFD->min_unpacked_rev value not having changed
+         since the rev file was opened.
+
+   Use POOL for allocations. */
 static svn_error_t *
 open_pack_or_rev_file(svn_file_handle_cache__handle_t **file,
                       svn_fs_t *fs,
@@ -1937,10 +1941,10 @@ open_pack_or_rev_file(svn_file_handle_cache__handle_t **file,
                       int cookie,
                       apr_pool_t *pool)
 {
+  fs_fs_data_t *ffd = fs->fsap_data;
   svn_error_t *err;
   const char *path;
   svn_boolean_t retry = FALSE;
-  fs_fs_data_t *ffd = fs->fsap_data;
 
   do
     {
@@ -1964,7 +1968,8 @@ open_pack_or_rev_file(svn_file_handle_cache__handle_t **file,
           assert(err || svn_file_handle_cache__get_apr_handle(*file));
         }
 
-      if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+      if (err && APR_STATUS_IS_ENOENT(err->apr_err)
+      	  && ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
         {
           /* Could not open the file. This may happen if the
            * file once existed but got packed later. Note that
@@ -1987,10 +1992,10 @@ open_pack_or_rev_file(svn_file_handle_cache__handle_t **file,
         }
       else
         {
-          return svn_error_return(err);
+          retry = FALSE;
         }
     }
-  while (err);
+  while (retry);
 
   return SVN_NO_ERROR;
 }
@@ -2784,8 +2789,18 @@ get_fs_id_at_offset(svn_fs_id_t **id_p,
    specifies the offset to the root node-id and to the changed path
    information.  Store the root node offset in *ROOT_OFFSET and the
    changed path offset in *CHANGES_OFFSET.  If either of these
-   pointers is NULL, do nothing with it.  If PACKED is true, REV_FILE
-   should be a packed shard file.  Allocate temporary variables from POOL. */
+   pointers is NULL, do nothing with it.
+
+   If PACKED is true, REV_FILE should be a packed shard file.
+   ### There is currently no such parameter.  This function assumes that
+       is_packed_rev(FS, REV) will indicate whether REV_FILE is a packed
+       file.  Therefore FS->fsap_data->min_unpacked_rev must not have been
+       refreshed since REV_FILE was opened if there is a possibility that
+       revision REV may have become packed since then.
+       TODO: Take an IS_PACKED parameter instead, in order to remove this
+       requirement.
+
+   Allocate temporary variables from POOL. */
 static svn_error_t *
 get_root_changes_offset(apr_off_t *root_offset,
                         apr_off_t *changes_offset,
@@ -7331,11 +7346,10 @@ recover_body(void *baton, apr_pool_t *pool)
       if (ffd->format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT)
         {
           svn_revnum_t min_unpacked_revprop;
-          const char *min_unpacked_revprop_path =
-            svn_dirent_join(fs->path, PATH_MIN_UNPACKED_REVPROP, pool);
 
           SVN_ERR(read_min_unpacked_rev(&min_unpacked_revprop,
-                                        min_unpacked_revprop_path, pool));
+                                        path_min_unpacked_revprop(fs, pool),
+                                        pool));
           if (min_unpacked_revprop == (max_rev + 1))
             uhohs = FALSE;
         }
@@ -7882,6 +7896,31 @@ svn_fs_fs__begin_obliteration_txn(svn_fs_txn_t **txn_p,
 
 
 /****** Packing FSFS shards *********/
+
+/* Write a file FILENAME in directory FS_PATH, containing a single line
+ * with the number REVNUM in ASCII decimal.  Move the file into place
+ * atomically, overwriting any existing file.
+ *
+ * Similar to write_current(). */
+static svn_error_t *
+write_revnum_file(const char *fs_path,
+                  const char *filename,
+                  svn_revnum_t revnum,
+                  apr_pool_t *scratch_pool)
+{
+  const char *final_path, *tmp_path;
+  svn_stream_t *tmp_stream;
+
+  final_path = svn_dirent_join(fs_path, filename, scratch_pool);
+  SVN_ERR(svn_stream_open_unique(&tmp_stream, &tmp_path, fs_path,
+                                   svn_io_file_del_none,
+                                   scratch_pool, scratch_pool));
+  SVN_ERR(svn_stream_printf(tmp_stream, scratch_pool, "%ld\n", revnum));
+  SVN_ERR(svn_stream_close(tmp_stream));
+  SVN_ERR(move_into_place(tmp_path, final_path, final_path, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
 /* Pack a single shard SHARD in REVS_DIR, using POOL for allocations.
    CANCEL_FUNC and CANCEL_BATON are what you think they are.
 
@@ -7898,12 +7937,10 @@ pack_shard(const char *revs_dir,
            void *cancel_baton,
            apr_pool_t *pool)
 {
-  const char *tmp_path, *final_path;
   const char *pack_file_path, *manifest_file_path, *shard_path;
   const char *pack_file_dir;
   svn_stream_t *pack_stream, *manifest_stream;
   svn_revnum_t start_rev, end_rev, rev;
-  svn_stream_t *tmp_stream;
   apr_off_t next_offset;
   apr_pool_t *iterpool;
 
@@ -7914,8 +7951,8 @@ pack_shard(const char *revs_dir,
   pack_file_path = svn_dirent_join(pack_file_dir, "pack", pool);
   manifest_file_path = svn_dirent_join(pack_file_dir, "manifest", pool);
   shard_path = svn_dirent_join(revs_dir,
-                             apr_psprintf(pool, "%" APR_INT64_T_FMT, shard),
-                             pool);
+                               apr_psprintf(pool, "%" APR_INT64_T_FMT, shard),
+                               pool);
 
   /* Notify caller we're starting to pack this shard. */
   if (notify_func)
@@ -7971,15 +8008,11 @@ pack_shard(const char *revs_dir,
   SVN_ERR(svn_io_set_file_read_only(manifest_file_path, FALSE, pool));
 
   /* Update the min-unpacked-rev file to reflect our newly packed shard.
-   * (ffd->min_unpacked_rev will be updated by open_pack_or_rev_file().)
-   */
-  final_path = svn_dirent_join(fs_path, PATH_MIN_UNPACKED_REV, iterpool);
-  SVN_ERR(svn_stream_open_unique(&tmp_stream, &tmp_path, fs_path,
-                                   svn_io_file_del_none, iterpool, iterpool));
-  SVN_ERR(svn_stream_printf(tmp_stream, iterpool, "%ld\n",
-                            (svn_revnum_t) ((shard + 1) * max_files_per_dir)));
-  SVN_ERR(svn_stream_close(tmp_stream));
-  SVN_ERR(move_into_place(tmp_path, final_path, final_path, iterpool));
+   * (This doesn't update ffd->min_unpacked_rev.  That will be updated by
+   * update_min_unpacked_rev() when necessary.) */
+  SVN_ERR(write_revnum_file(fs_path, PATH_MIN_UNPACKED_REV,
+                            (svn_revnum_t)((shard + 1) * max_files_per_dir),
+                            iterpool));
   svn_pool_destroy(iterpool);
 
   /* Finally, remove the existing shard directory. */
@@ -8007,10 +8040,9 @@ pack_revprop_shard(svn_fs_t *fs,
                    apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  const char *shard_path, *final_path, *tmp_path;
+  const char *shard_path;
   svn_revnum_t start_rev, end_rev, rev;
   svn_sqlite__stmt_t *stmt;
-  svn_stream_t *tmp_stream;
   apr_pool_t *iterpool;
 
   shard_path = svn_dirent_join(revprops_dir,
@@ -8039,16 +8071,11 @@ pack_revprop_shard(svn_fs_t *fs,
       SVN_ERR(svn_sqlite__insert(NULL, stmt));
     }
 
-  /* Update the min-unpacked-rev file to reflect our newly packed shard.
-   * (ffd->min_unpacked_rev will be updated by open_pack_or_rev_file().)
-   */
-  final_path = svn_dirent_join(fs_path, PATH_MIN_UNPACKED_REVPROP, iterpool);
-  SVN_ERR(svn_stream_open_unique(&tmp_stream, &tmp_path, fs_path,
-                                 svn_io_file_del_none, iterpool, iterpool));
-  SVN_ERR(svn_stream_printf(tmp_stream, iterpool, "%ld\n",
-                            (svn_revnum_t) ((shard + 1) * max_files_per_dir)));
-  SVN_ERR(svn_stream_close(tmp_stream));
-  SVN_ERR(move_into_place(tmp_path, final_path, final_path, iterpool));
+  /* Update the min-unpacked-revprop file to reflect our newly packed shard.
+   * (This doesn't update ffd->min_unpacked_revprop.) */
+  SVN_ERR(write_revnum_file(fs_path, PATH_MIN_UNPACKED_REVPROP,
+                            (svn_revnum_t)((shard + 1) * max_files_per_dir),
+                            iterpool));
   svn_pool_destroy(iterpool);
 
   /* Finally, remove the existing shard directory. */
@@ -8086,31 +8113,28 @@ pack_body(void *baton,
   svn_revnum_t min_unpacked_rev;
   svn_revnum_t min_unpacked_revprop;
 
-  SVN_ERR(read_format(&format, &max_files_per_dir,
-                      svn_dirent_join(pb->fs->path, PATH_FORMAT, pool),
+  SVN_ERR(read_format(&format, &max_files_per_dir, path_format(pb->fs, pool),
                       pool));
 
   /* If the repository isn't a new enough format, we don't support packing.
      Return a friendly error to that effect. */
   if (format < SVN_FS_FS__MIN_PACKED_FORMAT)
-    return svn_error_create(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
-      _("FS format too old to pack, please upgrade."));
+    return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+      _("FSFS format (%d) too old to pack, please upgrade."),
+      format);
 
   /* If we aren't using sharding, we can't do any packing, so quit. */
   if (!max_files_per_dir)
     return SVN_NO_ERROR;
 
   SVN_ERR(read_min_unpacked_rev(&min_unpacked_rev,
-                                svn_dirent_join(pb->fs->path,
-                                                PATH_MIN_UNPACKED_REV, pool),
+                                path_min_unpacked_rev(pb->fs, pool),
                                 pool));
 
   if (format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT)
     {
       SVN_ERR(read_min_unpacked_rev(&min_unpacked_revprop,
-                                    svn_dirent_join(pb->fs->path,
-                                                    PATH_MIN_UNPACKED_REVPROP,
-                                                    pool),
+                                    path_min_unpacked_revprop(pb->fs, pool),
                                     pool));
     }
   else

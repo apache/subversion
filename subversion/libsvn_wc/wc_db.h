@@ -918,9 +918,8 @@ svn_wc__db_pristine_get_tempdir(const char **temp_dir_abspath,
 
 /* Install the file TEMPFILE_ABSPATH (which is sitting in a directory given by
    svn_wc__db_pristine_get_tempdir()) into the pristine data store, to be
-   identified by the SHA-1 checksum of its contents, SHA1_CHECKSUM.
-
-   ### the md5_checksum parameter is temporary. */
+   identified by the SHA-1 checksum of its contents, SHA1_CHECKSUM, and whose
+   MD-5 checksum is MD5_CHECKSUM. */
 svn_error_t *
 svn_wc__db_pristine_install(svn_wc__db_t *db,
                             const char *tempfile_abspath,
@@ -989,19 +988,6 @@ svn_wc__db_pristine_check(svn_boolean_t *present,
                           const char *wri_abspath,
                           const svn_checksum_t *sha1_checksum,
                           apr_pool_t *scratch_pool);
-
-
-/* ### if _check() returns "corrupted pristine file", then this function
-   ### can be used to repair it. It will attempt to restore integrity
-   ### between the SQLite database and the filesystem. Failing that, then
-   ### it will attempt to clean out the record and/or file. Failing that,
-   ### then it will return SOME_ERROR. */
-/* ### dlr: What is this the checksum of? */
-svn_error_t *
-svn_wc__db_pristine_repair(svn_wc__db_t *db,
-                           const char *wri_abspath,
-                           const svn_checksum_t *sha1_checksum,
-                           apr_pool_t *scratch_pool);
 
 
 /* @} */

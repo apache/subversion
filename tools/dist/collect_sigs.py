@@ -28,6 +28,11 @@
 #  * Post to IRC when a new signature is collected
 #    - Since we don't want to have a long running bot, perhaps we could
 #      also patch wayita to accept and then echo a privmsg?
+#  * Mail dev@ when somebody submits a successful signature, and include a
+#    comments field which could be included in the mail.
+#  * Use a subversion repository instead of sqlite backend
+#    - no need to re-invent storage and retrieval
+#    - perhaps we could re-use existing CIA/mailer hooks?
 #
 
 import sys, os
@@ -243,9 +248,7 @@ def process_sigs(signatures):
   <p>Key ID: <code>%s</code></p>
   <p>User: <code>%s</code></p>
   <p>This signature has been saved, and will be included as part of the
-    release signatures.  Please send mail to
-    <a href="mailto:dev@subversion.apache.org">dev@subversion.apache.org</a>
-    acknowledging your successful signature.</p>
+    release signatures.</p>
 '''
   c_unverified = '''
   <p style="color: red;">The signature was not able to be verified!</p>

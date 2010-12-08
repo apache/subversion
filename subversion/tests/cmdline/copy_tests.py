@@ -1543,7 +1543,7 @@ def wc_to_wc_copy_deleted(sbox):
     'A/B2'         : Item(status='A ', wc_rev='-', copied='+'),
     'A/B2/E'       : Item(status='  ', wc_rev='-', copied='+'),
     'A/B2/E/beta'  : Item(status='  ', wc_rev='-', copied='+'),
-    'A/B2/E/alpha' : Item(status='D ', wc_rev=2),
+    'A/B2/E/alpha' : Item(status='D ', wc_rev='-', copied='+'),
     'A/B2/lambda'  : Item(status='D ', wc_rev='-', copied='+'),
     'A/B2/F'       : Item(status='D ', wc_rev='-', copied='+'),
     })
@@ -2411,6 +2411,8 @@ def move_dir_out_of_moved_dir(sbox):
                                         None,
                                         wc_dir)
 
+# Includes regression testing for issue #3429 ("svn mv A B; svn mv B A"
+# generates replace without history).
 def move_file_back_and_forth(sbox):
   "move a moved file back to original location"
 
@@ -2420,25 +2422,27 @@ def move_file_back_and_forth(sbox):
   rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
   rho_move_path = os.path.join(wc_dir, 'A', 'D', 'rho_moved')
 
-  # Move A/D/G/rho to A/D/rho_moved
+  # Move A/D/G/rho away from and then back to its original path
   svntest.actions.run_and_verify_svn(None, None, [], 'mv',
                                      rho_path, rho_move_path)
-
-  # Move the moved file: A/D/rho_moved to A/B/F/rho_move_moved
   svntest.actions.run_and_verify_svn(None, None, [], 'mv',
                                      rho_move_path, rho_path)
 
-  # Created expected output tree for 'svn ci':
+  # Check expected status before commit
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/D/G/rho' : Item(status='R ', copied='+', wc_rev='-'),
+    })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Commit, and check expected output and status
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/G/rho' : Item(verb='Replacing'),
     })
-
-  # Create expected status tree
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/D/G/rho' : Item(status='  ', wc_rev=2),
     })
-
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
@@ -2446,6 +2450,8 @@ def move_file_back_and_forth(sbox):
                                         wc_dir)
 
 
+# Includes regression testing for issue #3429 ("svn mv A B; svn mv B A"
+# generates replace without history).
 def move_dir_back_and_forth(sbox):
   "move a moved dir back to original location"
 
@@ -2473,6 +2479,23 @@ def move_dir_back_and_forth(sbox):
 
   svntest.actions.run_and_verify_svn(None, None, expected_err,
                                      'mv', D_move_path, D_path)
+
+  if svntest.main.wc_is_singledb(wc_dir):
+    # Verify that the status indicates a replace with history
+    expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+    expected_status.add({
+      'A/D'               : Item(status='R ', copied='+', wc_rev='-'),
+      'A/D/G'             : Item(status='  ', copied='+', wc_rev='-'),
+      'A/D/G/pi'          : Item(status='  ', copied='+', wc_rev='-'),
+      'A/D/G/rho'         : Item(status='  ', copied='+', wc_rev='-'),
+      'A/D/G/tau'         : Item(status='  ', copied='+', wc_rev='-'),
+      'A/D/gamma'         : Item(status='  ', copied='+', wc_rev='-'),
+      'A/D/H'             : Item(status='  ', copied='+', wc_rev='-'),
+      'A/D/H/chi'         : Item(status='  ', copied='+', wc_rev='-'),
+      'A/D/H/omega'       : Item(status='  ', copied='+', wc_rev='-'),
+      'A/D/H/psi'         : Item(status='  ', copied='+', wc_rev='-'),
+      })
+    svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 def copy_move_added_paths(sbox):
   "copy and move added paths without commits"
@@ -4422,10 +4445,10 @@ def move_dir_containing_move(sbox):
       'A/B_tmp'               : Item(status='A ', copied='+', wc_rev='-'),
       # alpha has a revision that isn't reported by status.
       'A/B_tmp/E'             : Item(status='  ', copied='+', wc_rev='-'),
-      'A/B_tmp/E/alpha'       : Item(status='D ', wc_rev='?', entry_rev='1'),
+      'A/B_tmp/E/alpha'       : Item(status='D ', copied='+', wc_rev='-'),
       'A/B_tmp/E/alpha_moved' : Item(status='A ', copied='+', wc_rev='-'),
       'A/B_tmp/E/beta'        : Item(status='  ', copied='+', wc_rev='-'),
-      'A/B_tmp/F'             : Item(status='D ', wc_rev='?'),
+      'A/B_tmp/F'             : Item(status='D ', copied='+', wc_rev='-'),
       'A/B_tmp/F_moved'       : Item(status='A ', copied='+', wc_rev='-'),
       'A/B_tmp/lambda'        : Item(status='  ', copied='+', wc_rev='-'),
     })
@@ -4445,12 +4468,11 @@ def move_dir_containing_move(sbox):
                          'A/B_tmp/lambda')
   expected_status.add({
       'A/B_moved'               : Item(status='A ', copied='+', wc_rev='-'),
-      # alpha has a revision that isn't reported by status.
       'A/B_moved/E'             : Item(status='  ', copied='+', wc_rev='-'),
-      'A/B_moved/E/alpha'       : Item(status='D ', wc_rev='?', entry_rev='1'),
+      'A/B_moved/E/alpha'       : Item(status='D ', copied='+', wc_rev='-'),
       'A/B_moved/E/alpha_moved' : Item(status='A ', copied='+', wc_rev='-'),
       'A/B_moved/E/beta'        : Item(status='  ', copied='+', wc_rev='-'),
-      'A/B_moved/F'             : Item(status='D ', wc_rev='?'),
+      'A/B_moved/F'             : Item(status='D ', copied='+', wc_rev='-'),
       'A/B_moved/F_moved'       : Item(status='A ', copied='+', wc_rev='-'),
       'A/B_moved/lambda'        : Item(status='  ', copied='+', wc_rev='-'),
     })
@@ -4769,8 +4791,7 @@ def copy_delete_undo(sbox, use_revert):
 
   # Delete a child
   svntest.main.run_svn(wc_dir, 'rm', sbox.ospath('A/B/E-copied/alpha'))
-  expected_status.tweak('A/B/E-copied/alpha', status='D ', copied=None,
-                        wc_rev='?', entry_rev='1')
+  expected_status.tweak('A/B/E-copied/alpha', status='D ')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Undo the whole copy

@@ -844,11 +844,10 @@ if test "$enable_disallowing_of_undefined_references" != "no"; then
   LDFLAGS="$LDFLAGS -Wl,--no-undefined"
   AC_LINK_IFELSE([AC_LANG_SOURCE([[int main(){;}]])], [svn_wl_no_undefined="yes"], [svn_wl_no_undefined="no"])
   LDFLAGS="$old_LDFLAGS"
-  libraries="auth_gnome_keyring auth_kwallet client delta diff fs fs_base fs_fs fs_util ra ra_local ra_neon ra_serf ra_svn repos subr wc"
   if test "$svn_wl_no_undefined" = "yes"; then
     AC_MSG_RESULT([yes])
-    for library in $libraries; do
-      eval "libsvn_${library}_LDFLAGS=-Wl,--no-undefined"
+    ls "$abs_srcdir"/subversion | grep libsvn_ | while read library_dir; do
+      eval "`basename $library_dir`_LDFLAGS=-Wl,--no-undefined"
     done
   else
     AC_MSG_RESULT([no])
@@ -1041,7 +1040,7 @@ SVN_CHECK_JDK($JAVA_OLDEST_WORKING_VER)
 
 AC_PATH_PROG(PERL, perl, none)
 
-AC_PATH_PROG(RUBY, ruby, none)
+AC_PATH_PROGS(RUBY, ruby ruby1.8, none)
 if test "$RUBY" != "none"; then
   if "$RUBY" -r mkmf -e 'exit(have_func("rb_hash_foreach") ? 0 : 1)'; then
     AC_PATH_PROG(RDOC, rdoc, none)
@@ -1257,7 +1256,9 @@ AC_CONFIG_FILES([Makefile])
 SVN_CONFIG_SCRIPT(tools/backup/hot-backup.py)
 SVN_CONFIG_SCRIPT(tools/hook-scripts/commit-access-control.pl)
 SVN_CONFIG_SCRIPT(subversion/bindings/swig/perl/native/Makefile.PL)
-SVN_CONFIG_SCRIPT(packages/solaris/pkginfo)
+if test -e packages/solaris/pkginfo.in; then
+  SVN_CONFIG_SCRIPT(packages/solaris/pkginfo)
+fi
 AC_SUBST(SVN_CONFIG_SCRIPT_FILES)
 
 AC_OUTPUT

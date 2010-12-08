@@ -156,8 +156,7 @@ build_info_for_entry(svn_info_t **info,
 
   SVN_ERR(svn_wc__node_get_base_checksum(&checksum, wc_ctx, local_abspath,
                                          pool, pool));
-  if (checksum)
-    tmpinfo->checksum = svn_checksum_to_cstring(checksum, pool);
+  tmpinfo->checksum = svn_checksum_to_cstring(checksum, pool);
 
   SVN_ERR(svn_wc__node_get_depth(&tmpinfo->depth, wc_ctx,
                                  local_abspath, pool));

@@ -673,16 +673,6 @@ mkdir_urls(const apr_array_header_t *urls,
   const char *common;
   int i;
 
-  /* Early exit when there is a mix of URLs and local paths. */
-  for (i = 0; i < urls->nelts; i++)
-    {
-      const char *url = APR_ARRAY_IDX(urls, i, const char *);
-      if (! svn_path_is_url(url))
-        return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                                 _("Illegal repository URL '%s'"),
-                                 url);
-    }
-
   /* Find any non-existent parent directories */
   if (make_parents)
     {
@@ -875,8 +865,27 @@ svn_client_mkdir4(const apr_array_header_t *paths,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
 {
+  svn_boolean_t wc_present = FALSE, url_present = FALSE;
+  int i;
+
   if (! paths->nelts)
     return SVN_NO_ERROR;
+
+  /* Check to see if at least one of our paths is a working copy
+     path or a repository url. */
+  for (i = 0; i < paths->nelts; ++i)
+    {
+      const char *path = APR_ARRAY_IDX(paths, i, const char *);
+      if (! svn_path_is_url(path))
+       wc_present = TRUE;
+      else
+       url_present = TRUE;
+    }
+
+  if (url_present && wc_present)
+    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                             _("Cannot mix repository and working copy "
+                               "targets"));
 
   if (svn_path_is_url(APR_ARRAY_IDX(paths, 0, const char *)))
     {
@@ -887,7 +896,6 @@ svn_client_mkdir4(const apr_array_header_t *paths,
     {
       /* This is a regular "mkdir" + "svn add" */
       apr_pool_t *subpool = svn_pool_create(pool);
-      int i;
 
       for (i = 0; i < paths->nelts; i++)
         {
