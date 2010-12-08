@@ -25,32 +25,47 @@
 @rem *
 @rem * From this directory, run this batch file like so:
 @rem *
-@rem *    .\build_zlib debug|release (rebuild)
+@rem *    .\build_zlib debug|release Win32|X64 [rebuild|clean]
 @rem *
 @rem **************************************************************************
 
 @rem **************************************************************************
 cd /D [zlib_path]
 set exitcode=0
-[if-any use_ml]
-@rem **************************************************************************
-@rem Compile ASM sources with ML
-set ASFLAGS=-nologo -Zi -coff
-set LOC=-DASMV -DASMINF
-set OBJA=gvmat32c.obj gvmat32.obj inffas32.obj
-set ASM_OPTS=ASFLAGS="%ASFLAGS%" LOC="%LOC%" OBJA="%OBJA%"
-if not exist gvmat32c.c    copy contrib\masmx86\gvmat32c.c .
-if not exist gvmat32.asm   copy contrib\masmx86\gvmat32.asm .
-if not exist inffas32.asm  copy contrib\masmx86\inffas32.asm .[end]
+set zlib_version=[zlib_version]
 
 if /i "%1" == "release" goto release
 if /i "%1" == "debug" goto debug
 goto pIerr
 
+:checkplatform
+if /i "%2" == "Win32" goto PWin32
+if /i "%2" == "x64" goto PX64
+goto pIIerr
+
 :checkrebuild
-if /i "%2" == "rebuild" goto rebuild
-if /i "%2" == "clean" goto clean
-if not "%2" == "" goto pIIerr
+
+[if-any use_ml]
+@rem **************************************************************************
+@rem Compile ASM sources with ML
+set ASFLAGS=-nologo -Zi -coff
+set LOC=-DASMV -DASMINF
+[is zlib_version "1.2.4"]
+set OBJA=contrib\masmx86\gvmat32c.obj contrib\masmx86\gvmat32.obj contrib\masmx86\inffas32.obj
+set ASM_OPTS=ASFLAGS="%ASFLAGS%" LOC="%LOC%" OBJA="%OBJA%"
+[else]
+if /i "%2" == "Win32" (
+  set ASM_OPTS=LOC="-DASMV -DASMINF" OBJA="inffas32.obj match686.obj"
+) else if /i "%2" == "x64" (
+  set ASM_OPTS=LOC="-DASMV -DASMINF" OBJA="inffasx64.obj gvmat64.obj inffas8664.c" AS=ml64 
+)
+[end]
+[end]
+
+
+if /i "%3" == "rebuild" goto rebuild
+if /i "%3" == "clean" goto clean
+if not "%3" == "" goto pIIIerr
 set target= %STATICLIB%
 goto build
 
@@ -66,19 +81,31 @@ goto build
 :release
 set STATICLIB=zlibstat.lib
 set CC_OPTS=/MD /O2 /Zi
-goto checkrebuild
+goto checkplatform
 
 @rem **************************************************************************
 :debug
 set STATICLIB=zlibstatD.lib
-set CC_OPTS=/MDd /Gm /Gi /ZI /Od /GZ /D_DEBUG
+set CC_OPTS=/MDd /Gm /ZI /Od /GZ /D_DEBUG
+goto checkplatform
+
+@rem **************************************************************************
+:PWin32
+goto checkrebuild
+
+@rem **************************************************************************
+:PX64
 goto checkrebuild
 
 @rem **************************************************************************
 :build
-set COMMON_CC_OPTS=/nologo /W3 /FD /DWIN32 /D_WINDOWS
-set CFLAGS=%COMMON_CC_OPTS% %CC_OPTS% $(LOC)
-set BUILD_OPTS=%ASM_OPTS% CFLAGS="%COMMON_CC_OPTS% %CC_OPTS% $(LOC)"
+set COMMON_CC_OPTS=/nologo /W3 /DWIN32 /D_WINDOWS
+[is zlib_version "1.2.4"]
+set CFLAGS=%COMMON_CC_OPTS% %CC_OPTS% %LOC%
+set BUILD_OPTS=%ASM_OPTS% CFLAGS="%COMMON_CC_OPTS% %CC_OPTS% %LOC%"
+[else]
+set BUILD_OPTS=%ASM_OPTS%
+[end]
 @echo nmake /f win32\Makefile.msc %BUILD_OPTS% STATICLIB=%STATICLIB% %target%
 nmake /nologo /f win32\Makefile.msc %BUILD_OPTS% STATICLIB=%STATICLIB% %target%
 if not errorlevel 0 goto err
@@ -91,7 +118,13 @@ goto err
 
 @rem **************************************************************************
 :pIIerr
-echo error: Second parameter should be "rebuild" or empty
+echo error: Second parameter should be "Win32" or "X64"
+goto err
+
+
+@rem **************************************************************************
+:pIIIerr
+echo error: Third parameter should be "rebuild" or empty
 goto err
 
 @rem **************************************************************************

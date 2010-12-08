@@ -44,9 +44,9 @@
   <PropertyGroup>
 [for configs][for platforms]    <OutDir Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">.\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">.\</IntDir>
-    <NMakeBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">cmd /c "$(ProjectDir)build_zlib.bat" [configs]</NMakeBuildCommandLine>
-    <NMakeReBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">cmd /c "$(ProjectDir)build_zlib.bat" [configs] rebuild</NMakeReBuildCommandLine>
-    <NMakeCleanCommandLine Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">cmd /c "$(ProjectDir)build_zlib.bat" [configs] clean</NMakeCleanCommandLine>
+    <NMakeBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">cmd /c "$(ProjectDir)build_zlib.bat" [configs] [platforms]</NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">cmd /c "$(ProjectDir)build_zlib.bat" [configs] [platforms] rebuild</NMakeReBuildCommandLine>
+    <NMakeCleanCommandLine Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">cmd /c "$(ProjectDir)build_zlib.bat" [configs] [platforms] clean</NMakeCleanCommandLine>
     <NMakeOutput Condition="'$(Configuration)|$(Platform)'=='[configs]|[platforms]'">[zlib_path]\[is configs "Release"]zlibstat.lib[else]zlibstatD.lib[end]</NMakeOutput>
 [end][end]  </PropertyGroup>
   <ItemDefinitionGroup>
