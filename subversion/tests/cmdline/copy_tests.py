@@ -2420,11 +2420,9 @@ def move_file_back_and_forth(sbox):
   rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
   rho_move_path = os.path.join(wc_dir, 'A', 'D', 'rho_moved')
 
-  # Move A/D/G/rho to A/D/rho_moved
+  # Move A/D/G/rho away from and then back to its original path
   svntest.actions.run_and_verify_svn(None, None, [], 'mv',
                                      rho_path, rho_move_path)
-
-  # Move the moved file: A/D/rho_moved to A/B/F/rho_move_moved
   svntest.actions.run_and_verify_svn(None, None, [], 'mv',
                                      rho_move_path, rho_path)
 
