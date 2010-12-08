@@ -78,8 +78,10 @@ svn_cl__copy(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, pool));
 
-  /* Figure out which type of trace editor to use.
-     If the src_paths are not homogeneous, setup_copy will return an error. */
+  /* Figure out which type of notification to use.
+     (There is no need to check that the src paths are homogeneous;
+     svn_client_copy6() through its subroutine try_copy() will return an
+     error if they are not.) */
   src_path = APR_ARRAY_IDX(targets, 0, const char *);
   srcs_are_urls = svn_path_is_url(src_path);
   dst_path = APR_ARRAY_IDX(targets, targets->nelts - 1, const char *);
