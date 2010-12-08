@@ -1007,8 +1007,7 @@ def cannot_move_or_remove_file_externals(sbox):
   # Bring the working copy up to date and check that the file the file
   # external is switched to still exists.
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'up',
-                                     repo_url, wc_dir)
+                                     'up', wc_dir)
 
   open(os.path.join(wc_dir, 'A', 'D', 'gamma')).close()
 
@@ -1036,8 +1035,7 @@ def can_place_file_external_into_dir_external(sbox):
   # Bring the working copy up to date and check that the file the file
   # external is switched to still exists.
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'up',
-                                     repo_url, wc_dir)
+                                     'up', wc_dir)
 
   beta1_path = os.path.join(wc_dir, 'A', 'B', 'E', 'beta')
   beta1_contents = open(beta1_path).read()
@@ -1064,8 +1062,7 @@ def can_place_file_external_into_dir_external(sbox):
                                       None,
                                       expected_error,
                                       1,
-                                      'up',
-                                      repo_url, wc_dir)
+                                      'up', wc_dir)
 
 #----------------------------------------------------------------------
 
@@ -1082,8 +1079,7 @@ def external_into_path_with_spaces(sbox):
   change_external(wc_dir, ext)
 
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'up',
-                                     repo_url, wc_dir)
+                                     'up', wc_dir)
   probe_paths_exist([
       os.path.join(wc_dir, 'A', 'copy of D'),
       os.path.join(wc_dir, 'A', 'another copy of D'),
@@ -1334,8 +1330,7 @@ def relegate_external(sbox):
   externals_desc = '^/A/B/E        external'
   change_external(A_path, externals_desc)
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'up',
-                                     repo_url, wc_dir)
+                                     'up', wc_dir)
 
   # create another repository
   other_repo_dir, other_repo_url = sbox.add_repo_path('other')
