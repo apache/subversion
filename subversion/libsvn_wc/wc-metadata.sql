@@ -665,6 +665,15 @@ PRAGMA user_version = 22;
 
 /* ------------------------------------------------------------------------- */
 
+/* Format 23 involves no schema changes, it introduces multi-layer
+   op-depth processing for NODES. */
+
+-- STMT_UPGRADE_TO_23
+PRAGMA user_version = 23;
+
+
+/* ------------------------------------------------------------------------- */
+
 /* Format YYY introduces new handling for conflict information.  */
 -- format: YYY
 
