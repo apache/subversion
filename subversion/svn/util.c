@@ -1345,3 +1345,26 @@ svn_cl__opt_parse_path(svn_opt_revision_t *rev,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_cl__assert_homogeneous_target_type(const apr_array_header_t *targets)
+{
+  svn_boolean_t wc_present = FALSE, url_present = FALSE;
+  int i;
+
+  for (i = 0; i < targets->nelts; ++i)
+    {
+      const char *target = APR_ARRAY_IDX(targets, i, const char *);
+      if (! svn_path_is_url(target))
+        wc_present = TRUE;
+      else
+        url_present = TRUE;
+    }
+
+  if (url_present && wc_present)
+    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("Cannot mix repository and working copy "
+                               "targets"));
+
+  return SVN_NO_ERROR;
+}
