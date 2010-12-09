@@ -74,13 +74,20 @@ static svn_opt_subcommand_t dump_cmd, load_cmd;
 enum svn_svnrdump__longopt_t
   {
     opt_config_dir = SVN_OPT_FIRST_LONGOPT_ID,
+    opt_config_option,
     opt_auth_username,
     opt_auth_password,
-    opt_non_interactive,
     opt_auth_nocache,
+    opt_non_interactive,
     opt_version,
-    opt_config_option,
   };
+
+#define SVN_SVNRDUMP__BASE_OPTIONS opt_config_dir, \
+                                   opt_config_option, \
+                                   opt_auth_username, \
+                                   opt_auth_password, \
+                                   opt_auth_nocache, \
+                                   opt_non_interactive
 
 static const svn_opt_subcommand_desc2_t svnrdump__cmd_table[] =
 {
@@ -89,13 +96,11 @@ static const svn_opt_subcommand_desc2_t svnrdump__cmd_table[] =
        "Dump revisions LOWER to UPPER of repository at remote URL to stdout\n"
        "in a 'dumpfile' portable format.  If only LOWER is given, dump that\n"
        "one revision.\n"),
-    { 'r', 'q', opt_config_dir, opt_config_option, opt_non_interactive,
-      opt_auth_username, opt_auth_password, opt_auth_nocache } },
+    { 'r', 'q', SVN_SVNRDUMP__BASE_OPTIONS } },
   { "load", load_cmd, { 0 },
     N_("usage: svnrdump load URL\n\n"
        "Load a 'dumpfile' given on stdin to a repository at remote URL.\n"),
-    { 'q', opt_config_dir, opt_config_option, opt_non_interactive,
-      opt_auth_username, opt_auth_password, opt_auth_nocache } },
+    { 'q', SVN_SVNRDUMP__BASE_OPTIONS } },
   { "help", 0, { "?", "h" },
     N_("usage: svnrdump help [SUBCOMMAND...]\n\n"
        "Describe the usage of this program or its subcommands.\n"),
