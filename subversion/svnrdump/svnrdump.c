@@ -79,6 +79,7 @@ enum svn_svnrdump__longopt_t
     opt_auth_password,
     opt_auth_nocache,
     opt_non_interactive,
+    opt_incremental,
     opt_version,
   };
 
@@ -96,7 +97,7 @@ static const svn_opt_subcommand_desc2_t svnrdump__cmd_table[] =
        "Dump revisions LOWER to UPPER of repository at remote URL to stdout\n"
        "in a 'dumpfile' portable format.  If only LOWER is given, dump that\n"
        "one revision.\n"),
-    { 'r', 'q', SVN_SVNRDUMP__BASE_OPTIONS } },
+    { 'r', 'q', opt_incremental, SVN_SVNRDUMP__BASE_OPTIONS } },
   { "load", load_cmd, { 0 },
     N_("usage: svnrdump load URL\n\n"
        "Load a 'dumpfile' given on stdin to a repository at remote URL.\n"),
@@ -114,6 +115,8 @@ static const apr_getopt_option_t svnrdump__options[] =
                       N_("specify revision number ARG (or X:Y range)")},
     {"quiet",         'q', 0,
                       N_("no progress (only errors) to stderr")},
+    {"incremental",   opt_incremental, 0,
+                      N_("dump incrementally")},
     {"config-dir",    opt_config_dir, 1,
                       N_("read user configuration files from directory ARG")},
     {"username",      opt_auth_username, 1,
@@ -158,6 +161,7 @@ typedef struct opt_baton_t {
   svn_opt_revision_t start_revision;
   svn_opt_revision_t end_revision;
   svn_boolean_t quiet;
+  svn_boolean_t incremental;
 } opt_baton_t;
 
 /* Print dumpstream-formatted information about REVISION.
@@ -277,6 +281,49 @@ open_connection(svn_ra_session_t **session,
   return SVN_NO_ERROR;
 }
 
+/* Print a revision record header for REVISION to STDOUT_STREAM.  Use
+ * SESSION to contact the repository for revision properties and
+ * such.
+ */
+static svn_error_t *
+dump_revision_header(svn_ra_session_t *session,
+                     svn_stream_t *stdout_stream, 
+                     svn_revnum_t revision,
+                     apr_pool_t *pool)
+{
+  apr_hash_t *prophash;
+  svn_stringbuf_t *propstring;
+  svn_stream_t *propstream;
+
+  SVN_ERR(svn_stream_printf(stdout_stream, pool,
+                            SVN_REPOS_DUMPFILE_REVISION_NUMBER
+                            ": %ld\n", revision));
+
+  prophash = apr_hash_make(pool);
+  propstring = svn_stringbuf_create("", pool);
+  SVN_ERR(svn_ra_rev_proplist(session, revision, &prophash, pool));
+
+  propstream = svn_stream_from_stringbuf(propstring, pool);
+  SVN_ERR(svn_hash_write2(prophash, propstream, "PROPS-END", pool));
+  SVN_ERR(svn_stream_close(propstream));
+
+  /* Property-content-length: 14; Content-length: 14 */
+  SVN_ERR(svn_stream_printf(stdout_stream, pool,
+                            SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH
+                            ": %" APR_SIZE_T_FMT "\n",
+                            propstring->len));
+  SVN_ERR(svn_stream_printf(stdout_stream, pool,
+                            SVN_REPOS_DUMPFILE_CONTENT_LENGTH
+                            ": %" APR_SIZE_T_FMT "\n\n",
+                            propstring->len));
+  /* The properties */
+  SVN_ERR(svn_stream_write(stdout_stream, propstring->data,
+                           &(propstring->len)));
+  SVN_ERR(svn_stream_printf(stdout_stream, pool, "\n"));
+
+  return SVN_NO_ERROR;
+}
+
 /* Replay revisions START_REVISION thru END_REVISION (inclusive) of
  * the repository located at URL, using callbacks which generate
  * Subversion repository dumpstreams describing the changes made in
@@ -289,6 +336,7 @@ replay_revisions(svn_ra_session_t *session,
                  svn_revnum_t start_revision,
                  svn_revnum_t end_revision,
                  svn_boolean_t quiet,
+                 svn_boolean_t incremental,
                  apr_pool_t *pool)
 {
   const svn_delta_editor_t *dump_editor;
@@ -318,46 +366,62 @@ replay_revisions(svn_ra_session_t *session,
   /* Fake revision 0 if necessary */
   if (start_revision == 0)
     {
-      apr_hash_t *prophash;
-      svn_stringbuf_t *propstring;
-      svn_stream_t *propstream;
-      SVN_ERR(svn_stream_printf(stdout_stream, pool,
-                                SVN_REPOS_DUMPFILE_REVISION_NUMBER
-                                ": %ld\n", start_revision));
+      SVN_ERR(dump_revision_header(session, stdout_stream,
+                                   start_revision, pool));
 
-      prophash = apr_hash_make(pool);
-      propstring = svn_stringbuf_create("", pool);
-
-      SVN_ERR(svn_ra_rev_proplist(session, start_revision,
-                                  &prophash, pool));
-
-      propstream = svn_stream_from_stringbuf(propstring, pool);
-      SVN_ERR(svn_hash_write2(prophash, propstream, "PROPS-END", pool));
-      SVN_ERR(svn_stream_close(propstream));
-
-      /* Property-content-length: 14; Content-length: 14 */
-      SVN_ERR(svn_stream_printf(stdout_stream, pool,
-                                SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH
-                                ": %" APR_SIZE_T_FMT "\n",
-                                propstring->len));
-      SVN_ERR(svn_stream_printf(stdout_stream, pool,
-                                SVN_REPOS_DUMPFILE_CONTENT_LENGTH
-                                ": %" APR_SIZE_T_FMT "\n\n",
-                                propstring->len));
-      /* The properties */
-      SVN_ERR(svn_stream_write(stdout_stream, propstring->data,
-                               &(propstring->len)));
-      SVN_ERR(svn_stream_printf(stdout_stream, pool, "\n"));
+      /* Revision 0 has no tree changes, so we're done. */
       if (! quiet)
         svn_cmdline_fprintf(stderr, pool, "* Dumped revision %lu.\n",
                             start_revision);
-
       start_revision++;
+
+      /* If our first revision is 0, we can treat this as an
+         incremental dump. */
+      incremental = TRUE;
     }
 
-  SVN_ERR(svn_ra_replay_range(session, start_revision, end_revision,
-                              0, TRUE, replay_revstart, replay_revend,
-                              replay_baton, pool));
+  if (incremental)
+    {
+      SVN_ERR(svn_ra_replay_range(session, start_revision, end_revision,
+                                  0, TRUE, replay_revstart, replay_revend,
+                                  replay_baton, pool));
+    }
+  else
+    {
+      const svn_ra_reporter3_t *reporter;
+      void *report_baton;
+
+      /* First, we need to dump the start_revision in full.  We'll
+         start with a revision record header. */
+      SVN_ERR(dump_revision_header(session, stdout_stream,
+                                   start_revision, pool));
+
+      /* Then, we'll drive the dump editor with what would look like a
+         full checkout of the repository as it looked in
+         START_REVISION.  We do this by manufacturing a basic 'report'
+         to the update reporter, telling it that we have nothing to
+         start with.  The delta between nothing and everything-at-REV
+         is, effectively, a full dump of REV. */
+      SVN_ERR(svn_ra_do_update2(session, &reporter, &report_baton,
+                                start_revision, "", svn_depth_infinity,
+                                FALSE, dump_editor, dump_baton, pool));
+      SVN_ERR(reporter->set_path(report_baton, "", start_revision,
+                                 svn_depth_infinity, TRUE, NULL, pool));
+      SVN_ERR(reporter->finish_report(report_baton, pool));
+      
+      /* All finished with START_REVISION! */
+      if (! quiet)
+        svn_cmdline_fprintf(stderr, pool, "* Dumped revision %lu.\n",
+                            start_revision);
+      start_revision++;
+
+      /* Now go pick up additional revisions in the range, if any. */
+      if (start_revision <= end_revision)
+        SVN_ERR(svn_ra_replay_range(session, start_revision, end_revision,
+                                    0, TRUE, replay_revstart, replay_revend,
+                                    replay_baton, pool));
+    }
+
   SVN_ERR(svn_stream_close(stdout_stream));
   return SVN_NO_ERROR;
 }
@@ -458,7 +522,7 @@ dump_cmd(apr_getopt_t *os,
   return replay_revisions(opt_baton->session, opt_baton->url,
                           opt_baton->start_revision.value.number,
                           opt_baton->end_revision.value.number,
-                          opt_baton->quiet, pool);
+                          opt_baton->quiet, opt_baton->incremental, pool);
 }
 
 /* Handle the "load" subcommand.  Implements `svn_opt_subcommand_t'.  */
@@ -699,6 +763,9 @@ main(int argc, const char **argv)
           break;
         case opt_non_interactive:
           non_interactive = TRUE;
+          break;
+        case opt_incremental:
+          opt_baton->incremental = TRUE;
           break;
         case opt_config_option:
           if (!config_options)
