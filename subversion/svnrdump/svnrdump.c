@@ -155,8 +155,8 @@ struct replay_baton {
 typedef struct opt_baton_t {
   svn_ra_session_t *session;
   const char *url;
-  svn_revnum_t start_revision;
-  svn_revnum_t end_revision;
+  svn_opt_revision_t start_revision;
+  svn_opt_revision_t end_revision;
   svn_boolean_t quiet;
 } opt_baton_t;
 
@@ -456,7 +456,8 @@ dump_cmd(apr_getopt_t *os,
 {
   opt_baton_t *opt_baton = baton;
   return replay_revisions(opt_baton->session, opt_baton->url,
-                          opt_baton->start_revision, opt_baton->end_revision,
+                          opt_baton->start_revision.value.number,
+                          opt_baton->end_revision.value.number,
                           opt_baton->quiet, pool);
 }
 
@@ -488,13 +489,95 @@ help_cmd(apr_getopt_t *os,
                              NULL, pool);
 }
 
+/* Examine the OPT_BATON's 'start_revision' and 'end_revision'
+ * members, making sure that they make sense (in general, and as
+ * applied to a repository whose current youngest revision is
+ * LATEST_REVISION).
+ */
+static svn_error_t *
+validate_and_resolve_revisions(opt_baton_t *opt_baton,
+                               svn_revnum_t latest_revision,
+                               apr_pool_t *pool)
+{
+  svn_revnum_t provided_start_rev = SVN_INVALID_REVNUM;
+
+  /* Ensure that the start revision is something we can handle.  We
+     want a number >= 0.  If unspecified, make it a number (r0) --
+     anything else is bogus.  */
+  if (opt_baton->start_revision.kind == svn_opt_revision_number)
+    {
+      provided_start_rev = opt_baton->start_revision.value.number;
+    }
+  else if (opt_baton->start_revision.kind == svn_opt_revision_unspecified)
+    {
+      opt_baton->start_revision.kind = svn_opt_revision_number;
+      opt_baton->start_revision.value.number = 0;
+    }
+
+  if (opt_baton->start_revision.kind != svn_opt_revision_number)
+    {
+      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                              _("Unsupported revision specifier used; use "
+                                "only integer values or 'HEAD'"));
+    }
+
+  if ((opt_baton->start_revision.value.number < 0) ||
+      (opt_baton->start_revision.value.number > latest_revision))
+    {
+      return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                               _("Revision '%ld' does not exist"),
+                               opt_baton->start_revision.value.number);
+    }
+
+  /* Ensure that the end revision is something we can handle.  We want
+     a number <= the youngest, and > the start revision.  If
+     unspecified, make it a number (start_revision + 1 if that was
+     specified, the youngest revision in the repository otherwise) --
+     anything else is bogus.  */
+  if (opt_baton->end_revision.kind == svn_opt_revision_unspecified)
+    {
+      opt_baton->end_revision.kind = svn_opt_revision_number;
+      if (SVN_IS_VALID_REVNUM(provided_start_rev))
+        opt_baton->end_revision.value.number = provided_start_rev;
+      else
+        opt_baton->end_revision.value.number = latest_revision;
+    }
+
+  if (opt_baton->end_revision.kind != svn_opt_revision_number)
+    {
+      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                              _("Unsupported revision specifier used; use "
+                                "only integer values or 'HEAD'"));
+    }
+
+  if ((opt_baton->end_revision.value.number < 0) ||
+      (opt_baton->end_revision.value.number > latest_revision))
+    {
+      return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                               _("Revision '%ld' does not exist"),
+                               opt_baton->end_revision.value.number);
+    }
+
+  /* Finally, make sure that the end revision is younger than the
+     start revision.  We don't do "backwards" 'round here.  */
+  if (opt_baton->end_revision.value.number < 
+      opt_baton->start_revision.value.number)
+    {
+      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                              _("LOWER revision cannot be greater than "
+                                "UPPER revision; consider reversing your "
+                                "revision range"));
+    }
+  return SVN_NO_ERROR;
+}
+
 int
 main(int argc, const char **argv)
 {
+  svn_error_t *err = SVN_NO_ERROR;
   const svn_opt_subcommand_desc2_t *subcommand = NULL;
   opt_baton_t *opt_baton;
-  char *revision_cut = NULL;
-  svn_revnum_t latest_revision = svn_opt_revision_unspecified;
+  svn_revnum_t latest_revision = SVN_INVALID_REVNUM;
   apr_pool_t *pool = NULL;
   const char *config_dir = NULL;
   const char *username = NULL;
@@ -512,8 +595,8 @@ main(int argc, const char **argv)
 
   pool = svn_pool_create(NULL);
   opt_baton = apr_pcalloc(pool, sizeof(*opt_baton));
-  opt_baton->start_revision = svn_opt_revision_unspecified;
-  opt_baton->end_revision = svn_opt_revision_unspecified;
+  opt_baton->start_revision.kind = svn_opt_revision_unspecified;
+  opt_baton->end_revision.kind = svn_opt_revision_unspecified;
   opt_baton->url = NULL;
 
   SVNRDUMP_ERR(svn_cmdline__getopt_init(&os, argc, argv, pool));
@@ -567,19 +650,27 @@ main(int argc, const char **argv)
         {
         case 'r':
           {
-            revision_cut = strchr(opt_arg, ':');
-            if (revision_cut)
+            /* Make sure we've not seen -r already. */
+            if (opt_baton->start_revision.kind != svn_opt_revision_unspecified)
               {
-                opt_baton->start_revision =
-                  (svn_revnum_t)strtoul(opt_arg, &revision_cut, 10);
-                opt_baton->end_revision =
-                  (svn_revnum_t)strtoul(revision_cut + 1, NULL, 10);
+                err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                       _("Multiple revision arguments "
+                                         "encountered; try '-r N:M' instead "
+                                         "of '-r N -r M'"));
+                return svn_cmdline_handle_exit_error(err, pool, "svnrdump: ");
               }
-            else
+            /* Parse the -r argument. */
+            if (svn_opt_parse_revision(&(opt_baton->start_revision),
+                                       &(opt_baton->end_revision),
+                                       opt_arg, pool) != 0)
               {
-                opt_baton->start_revision =
-                  (svn_revnum_t)strtoul(opt_arg, NULL, 10);
-                opt_baton->end_revision = opt_baton->start_revision;
+                const char *utf8_opt_arg;
+                err = svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool);
+                if (! err)
+                  err = svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                          _("Syntax error in revision "
+                                            "argument '%s'"), utf8_opt_arg);
+                return svn_cmdline_handle_exit_error(err, pool, "svnrdump: ");
               }
           }
           break;
@@ -638,8 +729,7 @@ main(int argc, const char **argv)
   if (subcommand == NULL)
     {
       const char *first_arg_utf8;
-      svn_error_t *err = svn_utf_cstring_to_utf8(&first_arg_utf8,
-                                                 first_arg, pool);
+      err = svn_utf_cstring_to_utf8(&first_arg_utf8, first_arg, pool);
       if (err)
         return svn_cmdline_handle_exit_error(err, pool, "svnrdump: ");
       svn_error_clear(svn_cmdline_fprintf(stderr, pool,
@@ -716,24 +806,10 @@ main(int argc, const char **argv)
      unspecified.  */
   SVNRDUMP_ERR(svn_ra_get_latest_revnum(opt_baton->session,
                                         &latest_revision, pool));
-  if (opt_baton->start_revision == svn_opt_revision_unspecified)
-    opt_baton->start_revision = 0;
-  if (opt_baton->end_revision == svn_opt_revision_unspecified)
-    opt_baton->end_revision = latest_revision;
-  if (opt_baton->end_revision > latest_revision)
-    {
-      SVN_INT_ERR(svn_cmdline_fprintf(stderr, pool,
-                                      _("Revision %ld does not exist.\n"),
-                                      opt_baton->end_revision));
-      exit(EXIT_FAILURE);
-    }
-  if (opt_baton->end_revision < opt_baton->start_revision)
-    {
-      SVN_INT_ERR(svn_cmdline_fprintf(stderr, pool,
-                                      _("LOWER cannot be greater "
-                                        "than UPPER.\n")));
-      exit(EXIT_FAILURE);
-    }
+
+  /* Make sure any provided revisions make sense. */
+  SVNRDUMP_ERR(validate_and_resolve_revisions(opt_baton, 
+                                              latest_revision, pool));
 
   /* Dispatch the subcommand */
   SVNRDUMP_ERR((*subcommand->cmd_func)(os, opt_baton, pool));
