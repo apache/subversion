@@ -140,6 +140,14 @@ Candidate changes:
     Votes:
       +1: jwhitlock
 
+  * r947006
+    Fix JVM object leak.
+    Justification:
+      Without this fix, dumping repositories with a large number of revisions
+      or files crashes.
+    Votes:
+      +1: hwright
+
 Veto-blocked changes:
 =====================
 
