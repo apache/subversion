@@ -181,6 +181,11 @@ static const char * const TESTING_DATA = (
   "  1, 'I', 1, '', 2, 'some/dir', 2, 'normal',"
   "  0, null, 'dir', '()', 'immediates', null, null, 2, " TIME_2s ", '" AUTHOR_2 "',"
   "  null, null, null, null);"
+
+   /* I'm not sure what the working J is supposed to represent.  It
+      replaces the base J, but is it a copy or not?  It has no
+      copyfrom, but nodes like J/J-e appear to be deleted which
+      implies they are children of a copied J. */
   "insert into nodes values ("
   "  1, 'J', 1, '', null, null, null, 'normal',"
   "  0, null, 'dir', '()', 'immediates', null, null, null, null, null,"
