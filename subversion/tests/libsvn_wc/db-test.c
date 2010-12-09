@@ -1172,12 +1172,22 @@ test_scan_deletion(apr_pool_t *pool)
             &work_del_abspath,
             db, svn_dirent_join(local_abspath, "J/J-e/J-e-b/Jeba", pool),
             pool, pool));
+  /* ### I don't understand this.  "J/J-e/J-e-b/Jeba" is a deleted
+     base node that is not overlayed by the replacement rooted at "J".
+     Why does base_del_abspath refer to "J-e"?  */
   SVN_TEST_ASSERT(validate_abspath(local_abspath, "J/J-e",
                                    base_del_abspath, pool));
   SVN_TEST_ASSERT(validate_abspath(local_abspath, "other/place",
                                    moved_to_abspath, pool));
+#ifndef SVN_WC__OP_DEPTH
+  /* ### I don't understand this.  "J/J-e/J-e-b/Jeba" is a deleted
+     base node that is not overlayed by the replacement rooted at "J".
+     Why is work_del_abspath not NULL?  */
   SVN_TEST_ASSERT(validate_abspath(local_abspath, "J/J-e",
                                    work_del_abspath, pool));
+#else
+  SVN_TEST_ASSERT(work_del_abspath == NULL);
+#endif
 
   /* Base-deleted tree extending past added WORKING tree.  */
   SVN_ERR(svn_wc__db_scan_deletion(
