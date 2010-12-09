@@ -803,6 +803,9 @@ WHERE nodes_work.local_relpath = ?1
   AND nodes_work.op_depth = (SELECT MAX(op_depth) FROM nodes
                              WHERE local_relpath = ?1 AND op_depth > 0);
 
+-- STMT_HAS_WORKING_NODES
+SELECT 1 FROM nodes WHERE op_depth > 0;
+
 
 /* ------------------------------------------------------------------------- */
 

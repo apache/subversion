@@ -124,12 +124,25 @@ extern "C" {
  * The change from 19 to 20 introduces NODES and drops BASE_NODE and
  * WORKING_NODE, op_depth is always 0 or 2. 
  *
+ * The change from 20 to 21 moved tree conflict storage from the
+ * parent to the conflicted node.
+ *
+ * The change from 21 to 22 moved tree conflict storage from
+ * conflict_data column to the tree_conflict_data column.
+ *
+ * The change from 22 to 23 introduced multi-layer op_depth processing for
+ * NODES.
+ *
  * == 1.7.x shipped with format ???
  *
  * Please document any further format changes here.
  */
 
 #define SVN_WC__VERSION 22
+
+#if SVN_WC__VERSION >= 23
+#define SVN_WC__OP_DEPTH
+#endif
 
 /* Formats <= this have no concept of "revert text-base/props".  */
 #define SVN_WC__NO_REVERT_FILES 4
