@@ -83,24 +83,25 @@ enum svn_svnrdump__longopt_t
   };
 
 static const svn_opt_subcommand_desc2_t svnrdump__cmd_table[] =
-  {
-    { "dump", dump_cmd, { 0 },
-      N_("usage: svnrdump dump URL [-r LOWER[:UPPER]]\n\n"
-         "Dump revisions LOWER to UPPER of repository at remote URL "
-         "to stdout in a 'dumpfile' portable format.\n"
-         "If only LOWER is given, dump that one revision.\n"),
-      { 0 } },
-    { "load", load_cmd, { 0 },
-      N_("usage: svnrdump load URL\n\n"
-         "Load a 'dumpfile' given on stdin to a repository "
-         "at remote URL.\n"),
-      { 0 } },
-    { "help", 0, { "?", "h" },
-      N_("usage: svnrdump help [SUBCOMMAND...]\n\n"
-         "Describe the usage of this program or its subcommands.\n"),
-      { 0 } },
-    { NULL, NULL, { 0 }, NULL, { 0 } }
-  };
+{
+  { "dump", dump_cmd, { 0 },
+    N_("usage: svnrdump dump URL [-r LOWER[:UPPER]]\n\n"
+       "Dump revisions LOWER to UPPER of repository at remote URL to stdout\n"
+       "in a 'dumpfile' portable format.  If only LOWER is given, dump that\n"
+       "one revision.\n"),
+    { 'r', 'q', opt_config_dir, opt_config_option, opt_non_interactive,
+      opt_auth_username, opt_auth_password, opt_auth_nocache } },
+  { "load", load_cmd, { 0 },
+    N_("usage: svnrdump load URL\n\n"
+       "Load a 'dumpfile' given on stdin to a repository at remote URL.\n"),
+    { 'q', opt_config_dir, opt_config_option, opt_non_interactive,
+      opt_auth_username, opt_auth_password, opt_auth_nocache } },
+  { "help", 0, { "?", "h" },
+    N_("usage: svnrdump help [SUBCOMMAND...]\n\n"
+       "Describe the usage of this program or its subcommands.\n"),
+    { 0 } },
+  { NULL, NULL, { 0 }, NULL, { 0 } }
+};
 
 static const apr_getopt_option_t svnrdump__options[] =
   {
@@ -498,6 +499,8 @@ main(int argc, const char **argv)
   apr_array_header_t *config_options = NULL;
   apr_getopt_t *os;
   const char *first_arg;
+  apr_array_header_t *received_opts;
+  int i;
 
   if (svn_cmdline_init ("svnrdump", stderr) != EXIT_SUCCESS)
     return EXIT_FAILURE;
@@ -535,6 +538,8 @@ main(int argc, const char **argv)
   apr_signal(SIGXFSZ, SIG_IGN);
 #endif
 
+  received_opts = apr_array_make(pool, SVN_OPT_MAX_OPTIONS, sizeof(int));
+
   while (1)
     {
       int opt;
@@ -549,6 +554,9 @@ main(int argc, const char **argv)
           SVNRDUMP_ERR(usage(argv[0], pool));
           exit(EXIT_FAILURE);
         }
+
+      /* Stash the option code in an array before parsing it. */
+      APR_ARRAY_PUSH(received_opts, int) = opt;
 
       switch(opt)
         {
@@ -635,6 +643,39 @@ main(int argc, const char **argv)
       SVNRDUMP_ERR(help_cmd(NULL, NULL, pool));
       svn_pool_destroy(pool);
       exit(EXIT_FAILURE);
+    }
+
+  /* Check that the subcommand wasn't passed any inappropriate options. */
+  for (i = 0; i < received_opts->nelts; i++)
+    {
+      int opt_id = APR_ARRAY_IDX(received_opts, i, int);
+
+      /* All commands implicitly accept --help, so just skip over this
+         when we see it. Note that we don't want to include this option
+         in their "accepted options" list because it would be awfully
+         redundant to display it in every commands' help text. */
+      if (opt_id == 'h' || opt_id == '?')
+        continue;
+
+      if (! svn_opt_subcommand_takes_option3(subcommand, opt_id, NULL))
+        {
+          const char *optstr;
+          const apr_getopt_option_t *badopt =
+            svn_opt_get_option_from_code2(opt_id, svnrdump__options,
+                                          subcommand, pool);
+          svn_opt_format_option(&optstr, badopt, FALSE, pool);
+          if (subcommand->name[0] == '-')
+            help_cmd(NULL, NULL, pool);
+          else
+            svn_error_clear
+              (svn_cmdline_fprintf
+               (stderr, pool,
+                _("Subcommand '%s' doesn't accept option '%s'\n"
+                  "Type 'svnrdump help %s' for usage.\n"),
+                subcommand->name, optstr, subcommand->name));
+          svn_pool_destroy(pool);
+          return EXIT_FAILURE;
+        }
     }
 
   if (subcommand && strcmp(subcommand->name, "help") == 0)
