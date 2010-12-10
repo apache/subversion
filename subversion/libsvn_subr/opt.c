@@ -662,7 +662,7 @@ svn_opt_push_implicit_dot_target(apr_array_header_t *targets,
                                  apr_pool_t *pool)
 {
   if (targets->nelts == 0)
-    array_push_str(targets, "", pool); /* Ha! "", not ".", is the canonical */
+    APR_ARRAY_PUSH(targets, const char *) = ""; /* Ha! "", not ".", is the canonical */
   assert(targets->nelts);
 }
 
