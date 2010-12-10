@@ -138,7 +138,7 @@ extern "C" {
  * Please document any further format changes here.
  */
 
-#define SVN_WC__VERSION 22
+#define SVN_WC__VERSION 23
 
 #if SVN_WC__VERSION >= 23
 #define SVN_WC__OP_DEPTH
