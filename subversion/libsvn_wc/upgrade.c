@@ -1026,10 +1026,13 @@ bump_to_18(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   return SVN_NO_ERROR;
 }
 
-
+/* If DIR_RELPATH is set then any .svn-revert files will trigger an
+   attempt to update the checksum in a NODES row below the top WORKING
+   node. */
 static svn_error_t *
 migrate_text_bases(const char *dir_abspath,
                    const char *new_wcroot_abspath,
+                   const char *dir_relpath,
                    svn_sqlite__db_t *sdb,
                    apr_pool_t *scratch_pool)
 {
@@ -1098,6 +1101,52 @@ migrate_text_bases(const char *dir_abspath,
          pristine directory as well as the text-base directory. */
       SVN_ERR(svn_io_copy_file(text_base_path, pristine_path, TRUE,
                                iterpool));
+
+      if (dir_relpath)
+        {
+          apr_size_t len = strlen(text_base_basename);
+          if (len >= sizeof(SVN_WC__REVERT_EXT)
+              && strcmp(text_base_basename
+                        + len - sizeof(SVN_WC__REVERT_EXT) - 1,
+                        SVN_WC__REVERT_EXT))
+            {
+              /* Assumming this revert-base is not an orphan, the
+                 upgrade process will have inserted a NODES row with a
+                 null checksum below the top-level working node.
+                 Update that checksum now. */
+              apr_int64_t op_depth = -1, wc_id = 1;
+              const char *name
+                = apr_pstrndup(iterpool, text_base_basename,
+                               len - sizeof(SVN_WC__REVERT_EXT) + 1);
+              const char *local_relpath = svn_relpath_join(dir_relpath, name,
+                                                           iterpool);
+              svn_boolean_t have_row;
+
+              SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                                STMT_SELECT_NODE_INFO));
+              SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
+              SVN_ERR(svn_sqlite__step(&have_row, stmt));
+              if (have_row)
+                {
+                  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+                  if (have_row && svn_sqlite__column_is_null(stmt, 6)
+                      && !strcmp(svn_sqlite__column_text(stmt, 4, NULL),
+                                 "file"))
+                    op_depth = svn_sqlite__column_int64(stmt, 0);
+                }
+              SVN_ERR(svn_sqlite__reset(stmt));
+              if (op_depth != -1)
+                {
+                  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                                    STMT_UPDATE_CHECKSUM));
+                  SVN_ERR(svn_sqlite__bindf(stmt, "isi", wc_id, local_relpath,
+                                            op_depth));
+                  SVN_ERR(svn_sqlite__bind_checksum(stmt, 4, sha1_checksum,
+                                                    iterpool));
+                  SVN_ERR(svn_sqlite__update(NULL, stmt));
+                }
+            }
+        }
     }
 
   svn_pool_destroy(iterpool);
@@ -1112,7 +1161,7 @@ bump_to_17(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   const char *wcroot_abspath = ((struct bump_baton *)baton)->wcroot_abspath;
 
   SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_17));
-  SVN_ERR(migrate_text_bases(wcroot_abspath, wcroot_abspath, sdb,
+  SVN_ERR(migrate_text_bases(wcroot_abspath, wcroot_abspath, NULL, sdb,
                              scratch_pool));
 
   return SVN_NO_ERROR;
@@ -1203,6 +1252,7 @@ upgrade_to_wcng(void **dir_baton,
   svn_node_kind_t logfile_on_disk;
   apr_hash_t *entries;
   svn_wc_entry_t *this_dir;
+  const char *old_wcroot_abspath, *dir_relpath;
 
   /* Don't try to mess with the WC if there are old log files left. */
 
@@ -1299,14 +1349,13 @@ upgrade_to_wcng(void **dir_baton,
   /***** WC PROPS *****/
 
   /* Ugh. We don't know precisely where the wcprops are. Ignore them.  */
+  old_wcroot_abspath = svn_dirent_get_longest_ancestor(dir_abspath,
+                                                       data->root_abspath,
+                                                       scratch_pool);
+  dir_relpath = svn_dirent_skip_ancestor(old_wcroot_abspath, dir_abspath);
   if (old_format != SVN_WC__WCPROPS_LOST)
     {
       apr_hash_t *all_wcprops;
-      const char *old_wcroot_abspath
-        = svn_dirent_get_longest_ancestor(dir_abspath, data->root_abspath,
-                                          scratch_pool);
-      const char *dir_relpath = svn_dirent_skip_ancestor(old_wcroot_abspath,
-                                                         dir_abspath);
 
       if (old_format <= SVN_WC__WCPROPS_MANY_FILES_VERSION)
         SVN_ERR(read_many_wcprops(&all_wcprops, dir_abspath,
@@ -1319,8 +1368,8 @@ upgrade_to_wcng(void **dir_baton,
                                                  all_wcprops, scratch_pool));
     }
 
-  SVN_ERR(migrate_text_bases(dir_abspath, data->root_abspath, data->sdb,
-                             scratch_pool));
+  SVN_ERR(migrate_text_bases(dir_abspath, data->root_abspath, dir_relpath,
+                             data->sdb, scratch_pool));
 
   /* Upgrade all the properties (including "this dir").
 

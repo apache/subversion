@@ -728,6 +728,10 @@ WHERE nodes_work.local_relpath = ?1
 -- STMT_HAS_WORKING_NODES
 SELECT 1 FROM nodes WHERE op_depth > 0;
 
+-- STMT_UPDATE_CHECKSUM
+UPDATE nodes SET checksum = ?4
+WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3;
+
 
 /* ------------------------------------------------------------------------- */
 
