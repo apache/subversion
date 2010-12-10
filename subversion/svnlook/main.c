@@ -1841,6 +1841,24 @@ warning_func(void *baton,
 }
 
 
+/* Return an error if the number of arguments (excluding the repository
+ * argument) is not NUM_ARGS.  NUM_ARGS must be 0 or 1.  The arguments
+ * are assumed to be found in OPT_STATE->arg1 and OPT_STATE->arg2. */
+static svn_error_t *
+check_number_of_args(struct svnlook_opt_state *opt_state,
+                     int num_args)
+{
+  if ((num_args == 0 && opt_state->arg1 != NULL)
+      || (num_args == 1 && opt_state->arg2 != NULL))
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                            _("Too many arguments given"));
+  if ((num_args == 1 && opt_state->arg1 == NULL))
+    return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
+                            _("Missing repository path argument"));
+  return SVN_NO_ERROR;
+}
+
+
 /* Factory function for the context baton. */
 static svn_error_t *
 get_ctxt_baton(svnlook_ctxt_t **baton_p,
@@ -1887,6 +1905,8 @@ subcommand_author(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   struct svnlook_opt_state *opt_state = baton;
   svnlook_ctxt_t *c;
 
+  SVN_ERR(check_number_of_args(opt_state, 0));
+
   SVN_ERR(get_ctxt_baton(&c, opt_state, pool));
   SVN_ERR(do_author(c, pool));
   return SVN_NO_ERROR;
@@ -1899,10 +1919,7 @@ subcommand_cat(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   struct svnlook_opt_state *opt_state = baton;
   svnlook_ctxt_t *c;
 
-  if (opt_state->arg1 == NULL)
-    return svn_error_createf
-      (SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
-       _("Missing repository path argument"));
+  SVN_ERR(check_number_of_args(opt_state, 1));
 
   SVN_ERR(get_ctxt_baton(&c, opt_state, pool));
   SVN_ERR(do_cat(c, opt_state->arg1, pool));
@@ -1916,6 +1933,8 @@ subcommand_changed(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   struct svnlook_opt_state *opt_state = baton;
   svnlook_ctxt_t *c;
 
+  SVN_ERR(check_number_of_args(opt_state, 0));
+
   SVN_ERR(get_ctxt_baton(&c, opt_state, pool));
   SVN_ERR(do_changed(c, pool));
   return SVN_NO_ERROR;
@@ -1927,6 +1946,8 @@ subcommand_date(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   struct svnlook_opt_state *opt_state = baton;
   svnlook_ctxt_t *c;
+
+  SVN_ERR(check_number_of_args(opt_state, 0));
 
   SVN_ERR(get_ctxt_baton(&c, opt_state, pool));
   SVN_ERR(do_date(c, pool));
@@ -1940,6 +1961,8 @@ subcommand_diff(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   struct svnlook_opt_state *opt_state = baton;
   svnlook_ctxt_t *c;
 
+  SVN_ERR(check_number_of_args(opt_state, 0));
+
   SVN_ERR(get_ctxt_baton(&c, opt_state, pool));
   SVN_ERR(do_diff(c, pool));
   return SVN_NO_ERROR;
@@ -1951,6 +1974,8 @@ subcommand_dirschanged(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   struct svnlook_opt_state *opt_state = baton;
   svnlook_ctxt_t *c;
+
+  SVN_ERR(check_number_of_args(opt_state, 0));
 
   SVN_ERR(get_ctxt_baton(&c, opt_state, pool));
   SVN_ERR(do_dirs_changed(c, pool));
@@ -1964,10 +1989,7 @@ subcommand_filesize(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   struct svnlook_opt_state *opt_state = baton;
   svnlook_ctxt_t *c;
 
-  if (opt_state->arg1 == NULL)
-    return svn_error_createf
-      (SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
-       _("Missing repository path argument"));
+  SVN_ERR(check_number_of_args(opt_state, 1));
 
   SVN_ERR(get_ctxt_baton(&c, opt_state, pool));
   SVN_ERR(do_filesize(c, opt_state->arg1, pool));
@@ -2012,10 +2034,11 @@ subcommand_history(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   struct svnlook_opt_state *opt_state = baton;
   svnlook_ctxt_t *c;
-  const char *path = "/";
+  const char *path = (opt_state->arg1 ? opt_state->arg1 : "/");
 
-  if (opt_state->arg1)
-    path = opt_state->arg1;
+  if (opt_state->arg2 != NULL)
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                            _("Too many arguments given"));
 
   SVN_ERR(get_ctxt_baton(&c, opt_state, pool));
   SVN_ERR(do_history(c, path, pool));
@@ -2029,18 +2052,13 @@ subcommand_lock(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   struct svnlook_opt_state *opt_state = baton;
   svnlook_ctxt_t *c;
-  const char *path;
   svn_lock_t *lock;
 
-  if (opt_state->arg1)
-    path = opt_state->arg1;
-  else
-    return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
-                            _("Missing path argument"));
+  SVN_ERR(check_number_of_args(opt_state, 1));
 
   SVN_ERR(get_ctxt_baton(&c, opt_state, pool));
 
-  SVN_ERR(svn_fs_get_lock(&lock, c->fs, path, pool));
+  SVN_ERR(svn_fs_get_lock(&lock, c->fs, opt_state->arg1, pool));
 
   if (lock)
     {
@@ -2078,6 +2096,8 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   struct svnlook_opt_state *opt_state = baton;
   svnlook_ctxt_t *c;
 
+  SVN_ERR(check_number_of_args(opt_state, 0));
+
   SVN_ERR(get_ctxt_baton(&c, opt_state, pool));
   SVN_ERR(do_author(c, pool));
   SVN_ERR(do_date(c, pool));
@@ -2091,6 +2111,8 @@ subcommand_log(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   struct svnlook_opt_state *opt_state = baton;
   svnlook_ctxt_t *c;
+
+  SVN_ERR(check_number_of_args(opt_state, 0));
 
   SVN_ERR(get_ctxt_baton(&c, opt_state, pool));
   SVN_ERR(do_log(c, FALSE, pool));
@@ -2117,6 +2139,10 @@ subcommand_pget(apr_getopt_t *os, void *baton, apr_pool_t *pool)
         (SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
          _("Missing propname or repository path argument"));
     }
+  if ((opt_state->revprop && opt_state->arg2 != NULL)
+      || os->ind < os->argc)
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                            _("Too many arguments given"));
 
   SVN_ERR(get_ctxt_baton(&c, opt_state, pool));
   SVN_ERR(do_pget(c, opt_state->arg1,
@@ -2131,10 +2157,7 @@ subcommand_plist(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   struct svnlook_opt_state *opt_state = baton;
   svnlook_ctxt_t *c;
 
-  if (!opt_state->revprop && opt_state->arg1 == NULL)
-    return svn_error_create
-      (SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
-       _("Missing repository path argument"));
+  SVN_ERR(check_number_of_args(opt_state, opt_state->revprop ? 0 : 1));
 
   SVN_ERR(get_ctxt_baton(&c, opt_state, pool));
   SVN_ERR(do_plist(c, opt_state->revprop ? NULL : opt_state->arg1,
@@ -2148,6 +2171,10 @@ subcommand_tree(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   struct svnlook_opt_state *opt_state = baton;
   svnlook_ctxt_t *c;
+
+  if (opt_state->arg2 != NULL)
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                            _("Too many arguments given"));
 
   SVN_ERR(get_ctxt_baton(&c, opt_state, pool));
   SVN_ERR(do_tree(c, opt_state->arg1 ? opt_state->arg1 : "",
@@ -2163,6 +2190,8 @@ subcommand_youngest(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   struct svnlook_opt_state *opt_state = baton;
   svnlook_ctxt_t *c;
 
+  SVN_ERR(check_number_of_args(opt_state, 0));
+
   SVN_ERR(get_ctxt_baton(&c, opt_state, pool));
   SVN_ERR(svn_cmdline_printf(pool, "%ld\n", c->rev_id));
   return SVN_NO_ERROR;
@@ -2175,6 +2204,8 @@ subcommand_uuid(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   struct svnlook_opt_state *opt_state = baton;
   svnlook_ctxt_t *c;
   const char *uuid;
+
+  SVN_ERR(check_number_of_args(opt_state, 0));
 
   SVN_ERR(get_ctxt_baton(&c, opt_state, pool));
   SVN_ERR(svn_fs_get_uuid(c->fs, &uuid, pool));
