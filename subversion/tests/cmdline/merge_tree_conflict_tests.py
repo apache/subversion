@@ -1878,7 +1878,7 @@ def merge_replace_causes_tree_conflict2(sbox):
 test_list = [ None,
               SkipUnless(delete_file_and_dir,
                          server_has_mergeinfo),
-              SkipUnless(Wimp("needs op-depth", merge_catches_nonexistent_target),
+              SkipUnless(merge_catches_nonexistent_target,
                          server_has_mergeinfo),
               SkipUnless(merge_tree_deleted_in_target,
                          server_has_mergeinfo),
