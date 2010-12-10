@@ -38,6 +38,7 @@ from merge_tests import set_up_branch
 Skip = svntest.testcase.Skip
 SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
+Wimp = svntest.testcase.Wimp
 Item = svntest.wc.StateItem
 exp_noop_up_out = svntest.actions.expected_noop_update_output
 
@@ -5397,7 +5398,7 @@ test_list = [ None,
               restarted_update_should_delete_dir_prop,
               tree_conflicts_on_update_1_1,
               tree_conflicts_on_update_1_2,
-              XFail(tree_conflicts_on_update_2_1),
+              Wimp("needs op-depth", tree_conflicts_on_update_2_1),
               tree_conflicts_on_update_2_2,
               XFail(tree_conflicts_on_update_2_3),
               tree_conflicts_on_update_3,

@@ -35,6 +35,7 @@ from svntest import verify, actions, main
 Skip = svntest.testcase.Skip
 SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
+Wimp = svntest.testcase.Wimp
 Item = svntest.wc.StateItem
 
 from svntest.main import SVN_PROP_MERGEINFO, server_has_mergeinfo
@@ -3165,7 +3166,7 @@ test_list = [ None,
               tolerate_local_mods,
               tree_conflicts_on_switch_1_1,
               tree_conflicts_on_switch_1_2,
-              XFail(tree_conflicts_on_switch_2_1),
+              Wimp("needs op-depth", tree_conflicts_on_switch_2_1),
               tree_conflicts_on_switch_2_2,
               tree_conflicts_on_switch_3,
               single_file_relocate,

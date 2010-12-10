@@ -34,6 +34,7 @@ import svntest
 # (abbreviation)
 Skip = svntest.testcase.Skip
 XFail = svntest.testcase.XFail
+Wimp = svntest.testcase.Wimp
 Item = svntest.wc.StateItem
 
 
@@ -3795,7 +3796,7 @@ test_list = [ None,
               diff_weird_author,
               diff_ignore_whitespace,
               diff_ignore_eolstyle,
-              XFail(diff_in_renamed_folder),
+              Wimp("needs op-depth", diff_in_renamed_folder),
               diff_with_depth,
               diff_ignore_eolstyle_empty_lines,
               diff_backward_repos_wc_copy,
