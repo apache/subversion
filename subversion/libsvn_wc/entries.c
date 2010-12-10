@@ -91,7 +91,6 @@ typedef struct {
   svn_depth_t depth;
   apr_time_t last_mod_time;
   apr_hash_t *properties;
-  svn_boolean_t keep_local;
 } db_working_node_t;
 
 typedef struct {
@@ -1587,7 +1586,7 @@ write_entry(struct write_baton **entry_node,
             apr_pool_t *scratch_pool)
 {
   db_base_node_t *base_node = NULL;
-  db_working_node_t *working_node = NULL;
+  db_working_node_t *working_node = NULL, *below_working_node = NULL;
   db_actual_node_t *actual_node = NULL;
   const char *parent_relpath;
 
@@ -1681,6 +1680,11 @@ write_entry(struct write_baton **entry_node,
   switch (entry->schedule)
     {
       case svn_wc_schedule_normal:
+        SVN_ERR_ASSERT(!parent_node
+                       || (parent_node->base && !parent_node->work
+                           && !entry->copied)
+                       || (!parent_node->base && parent_node->work
+                           && entry->copied));
         if (entry->copied)
           working_node = MAYBE_ALLOC(working_node, result_pool);
         else
@@ -1688,26 +1692,26 @@ write_entry(struct write_baton **entry_node,
         break;
 
       case svn_wc_schedule_add:
+        SVN_ERR_ASSERT((parent_node->base && !parent_node->work)
+                       || (parent_node->work && !parent_node->base));
         working_node = MAYBE_ALLOC(working_node, result_pool);
         break;
 
       case svn_wc_schedule_delete:
+        SVN_ERR_ASSERT(!entry->copied);
         working_node = MAYBE_ALLOC(working_node, result_pool);
-        /* If the entry is part of a REPLACED (not COPIED) subtree,
-           then it needs a BASE node. */
-        if (parent_node->base
-            && (! (entry->copied
-                   || (this_dir->copied
-                       && (this_dir->schedule == svn_wc_schedule_add ||
-                           this_dir->schedule == svn_wc_schedule_delete ||
-                           this_dir->schedule == svn_wc_schedule_replace)))))
+        if (parent_node->base)
           base_node = MAYBE_ALLOC(base_node, result_pool);
         break;
 
       case svn_wc_schedule_replace:
+        SVN_ERR_ASSERT((parent_node->base && !parent_node->work)
+                       || (parent_node->work && !parent_node->base));
         working_node = MAYBE_ALLOC(working_node, result_pool);
         if (parent_node->base)
           base_node = MAYBE_ALLOC(base_node, result_pool);
+        else
+          below_working_node = MAYBE_ALLOC(below_working_node, scratch_pool);
         break;
     }
 
@@ -1715,15 +1719,19 @@ write_entry(struct write_baton **entry_node,
      BASE node to indicate the not-present node.  */
   if (entry->deleted)
     {
-      base_node = MAYBE_ALLOC(base_node, result_pool);
+      SVN_ERR_ASSERT(base_node && !working_node && !below_working_node);
+      SVN_ERR_ASSERT(!entry->incomplete);
+      base_node->presence = svn_wc__db_status_not_present;
+    }
+
+  if (entry->absent)
+    {
+      SVN_ERR_ASSERT(base_node && !working_node);
+      base_node->presence = svn_wc__db_status_absent;
     }
 
   if (entry->copied)
     {
-      /* Make sure we get a WORKING_NODE inserted. The copyfrom information
-         will occur here or on a parent, as appropriate.  */
-      working_node = MAYBE_ALLOC(working_node, result_pool);
-
       if (entry->copyfrom_url)
         {
           const char *relative_url;
@@ -1762,20 +1770,6 @@ write_entry(struct write_baton **entry_node,
                                  _("No copyfrom URL for '%s'"),
                                  svn_dirent_local_style(local_relpath,
                                                         scratch_pool));
-    }
-
-  if (entry->keep_local)
-    {
-      SVN_ERR_ASSERT(working_node != NULL);
-      SVN_ERR_ASSERT(entry->schedule == svn_wc_schedule_delete);
-      working_node->keep_local = TRUE;
-    }
-
-  if (entry->absent)
-    {
-      SVN_ERR_ASSERT(working_node == NULL);
-      SVN_ERR_ASSERT(base_node != NULL);
-      base_node->presence = svn_wc__db_status_absent;
     }
 
   if (entry->conflict_old)
@@ -1832,8 +1826,6 @@ write_entry(struct write_baton **entry_node,
 
       if (entry->deleted)
         {
-          SVN_ERR_ASSERT(!entry->incomplete);
-
           base_node->presence = svn_wc__db_status_not_present;
           /* ### should be svn_node_unknown, but let's store what we have. */
           base_node->kind = entry->kind;
@@ -1951,6 +1943,40 @@ write_entry(struct write_baton **entry_node,
         }
     }
 
+#ifdef SVN_WC__OP_DEPTH
+  if (below_working_node)
+    {
+      below_working_node->wc_id = wc_id;
+      below_working_node->local_relpath = local_relpath;
+      below_working_node->op_depth = parent_node->work->op_depth;
+      below_working_node->parent_relpath = parent_relpath;
+      below_working_node->presence = svn_wc__db_status_normal;
+      below_working_node->kind = svn_node_file;
+      below_working_node->copyfrom_repos_id
+        = parent_node->work->copyfrom_repos_id;
+      below_working_node->copyfrom_repos_path
+        = svn_relpath_join(parent_node->work->copyfrom_repos_path, entry->name,
+                           scratch_pool);
+      below_working_node->copyfrom_revnum
+        = parent_node->work->copyfrom_revnum;
+      below_working_node->moved_here = FALSE;
+      below_working_node->moved_to = FALSE;
+
+      /* ### We have a problem, the revert_base information isn't
+             available in the entry structure.  We will have to get it
+             from the working copy. */
+      below_working_node->checksum = NULL;
+      below_working_node->translated_size = 0;
+      below_working_node->changed_rev = SVN_INVALID_REVNUM;
+      below_working_node->changed_date = 0;
+      below_working_node->changed_author = NULL;
+      below_working_node->depth = svn_depth_infinity;
+      below_working_node->last_mod_time = 0;
+      below_working_node->properties = NULL;
+      SVN_ERR(insert_working_node(sdb, below_working_node, scratch_pool));
+    }
+#endif
+
   /* Insert the working node. */
   if (working_node)
     {
@@ -2066,7 +2092,7 @@ write_entry(struct write_baton **entry_node,
 
   if (entry_node)
     {
-      *entry_node = apr_palloc(result_pool, sizeof(*entry_node));
+      *entry_node = apr_palloc(result_pool, sizeof(**entry_node));
       (*entry_node)->base = base_node;
       (*entry_node)->work = working_node;
     }
