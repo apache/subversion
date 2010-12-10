@@ -203,11 +203,11 @@ blame_receiver(void *baton,
          we may need to adjust this. */
       if (merged_revision < revision)
         {
-          svn_stream_printf(out, pool, "G ");
+          SVN_ERR(svn_stream_printf(out, pool, "G "));
           use_merged = TRUE;
         }
       else
-        svn_stream_printf(out, pool, "  ");
+        SVN_ERR(svn_stream_printf(out, pool, "  "));
     }
 
   if (use_merged)

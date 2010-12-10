@@ -462,25 +462,19 @@ print_info(void *baton,
         svn_cl__node_description(info->tree_conflict->src_right_version,
                                  info->repos_root_URL, pool);
 
-      svn_cmdline_printf(pool,
-                         "%s: %s\n",
-                         _("Tree conflict"),
-                         desc);
+      SVN_ERR(svn_cmdline_printf(pool, "%s: %s\n", _("Tree conflict"), desc));
 
       if (src_left_version)
-        svn_cmdline_printf(pool,
-                           "  %s: %s\n",
-                           _("Source  left"), /* (1) */
-                           src_left_version);
+        SVN_ERR(svn_cmdline_printf(pool, "  %s: %s\n",
+                                   _("Source  left"), /* (1) */
+                                   src_left_version));
         /* (1): Sneaking in a space in "Source  left" so that it is the
          * same length as "Source right" while it still starts in the same
          * column. That's just a tiny tweak in the English `svn'. */
 
       if (src_right_version)
-        svn_cmdline_printf(pool,
-                           "  %s: %s\n",
-                           _("Source right"),
-                           src_right_version);
+        SVN_ERR(svn_cmdline_printf(pool, "  %s: %s\n", _("Source right"),
+                                   src_right_version));
     }
 
   /* Print extra newline separator. */

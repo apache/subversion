@@ -34,7 +34,8 @@ test_platform_specific_auth_providers(apr_pool_t *pool)
   int number_of_providers = 0;
 
   /* Test non-available auth provider */
-  svn_auth_get_platform_specific_provider(&provider, "fake", "fake", pool);
+  SVN_ERR(svn_auth_get_platform_specific_provider(&provider, "fake", "fake",
+                                                  pool));
 
   if (provider)
     return svn_error_createf
@@ -44,7 +45,8 @@ test_platform_specific_auth_providers(apr_pool_t *pool)
 
   /* Make sure you get appropriate number of providers when retrieving
      all auth providers */
-  svn_auth_get_platform_specific_client_providers(&providers, NULL, pool);
+  SVN_ERR(svn_auth_get_platform_specific_client_providers(&providers, NULL,
+                                                          pool));
 
 #ifdef SVN_HAVE_GNOME_KEYRING
   number_of_providers += 2;

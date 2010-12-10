@@ -3491,7 +3491,8 @@ rep_read_contents(void *baton,
           svn_checksum_t *md5_checksum;
 
           rb->checksum_finalized = TRUE;
-          svn_checksum_final(&md5_checksum, rb->md5_checksum_ctx, rb->pool);
+          SVN_ERR(svn_checksum_final(&md5_checksum, rb->md5_checksum_ctx,
+                                     rb->pool));
           if (!svn_checksum_match(md5_checksum, rb->md5_checksum))
             return svn_error_createf
               (SVN_ERR_FS_CORRUPT, NULL,
@@ -5652,7 +5653,7 @@ write_hash_rep(svn_filesize_t *size,
   SVN_ERR(svn_hash_write2(hash, stream, SVN_HASH_TERMINATOR, pool));
 
   /* Store the results. */
-  svn_checksum_final(checksum, whb->checksum_ctx, pool);
+  SVN_ERR(svn_checksum_final(checksum, whb->checksum_ctx, pool));
   *size = whb->size;
 
   return svn_stream_printf(whb->stream, pool, "ENDREP\n");
@@ -7595,8 +7596,8 @@ pack_shard(const char *revs_dir,
       SVN_ERR(svn_io_stat(&finfo, path, APR_FINFO_SIZE, iterpool));
 
       /* Update the manifest. */
-      svn_stream_printf(manifest_stream, iterpool, "%" APR_OFF_T_FMT "\n",
-                        next_offset);
+      SVN_ERR(svn_stream_printf(manifest_stream, iterpool, "%" APR_OFF_T_FMT
+                                "\n", next_offset));
       next_offset += finfo.size;
 
       /* Copy all the bits from the rev file to the end of the pack file. */

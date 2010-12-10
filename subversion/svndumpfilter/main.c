@@ -1294,7 +1294,7 @@ main(int argc, const char *argv[])
 
   if (argc <= 1)
     {
-      subcommand_help(NULL, NULL, pool);
+      SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
       svn_pool_destroy(pool);
       return EXIT_FAILURE;
     }
@@ -1320,7 +1320,7 @@ main(int argc, const char *argv[])
         break;
       else if (apr_err)
         {
-          subcommand_help(NULL, NULL, pool);
+          SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
           svn_pool_destroy(pool);
           return EXIT_FAILURE;
         }
@@ -1359,7 +1359,7 @@ main(int argc, const char *argv[])
           break;
         default:
           {
-            subcommand_help(NULL, NULL, pool);
+            SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
             svn_pool_destroy(pool);
             return EXIT_FAILURE;
           }
@@ -1394,7 +1394,7 @@ main(int argc, const char *argv[])
               svn_error_clear(svn_cmdline_fprintf
                               (stderr, pool,
                                _("Subcommand argument required\n")));
-              subcommand_help(NULL, NULL, pool);
+              SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
               svn_pool_destroy(pool);
               return EXIT_FAILURE;
             }
@@ -1414,7 +1414,7 @@ main(int argc, const char *argv[])
               svn_error_clear(svn_cmdline_fprintf(stderr, pool,
                                                   _("Unknown command: '%s'\n"),
                                                   first_arg_utf8));
-              subcommand_help(NULL, NULL, pool);
+              SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
               svn_pool_destroy(pool);
               return EXIT_FAILURE;
             }
@@ -1496,7 +1496,7 @@ main(int argc, const char *argv[])
                                           pool);
           svn_opt_format_option(&optstr, badopt, FALSE, pool);
           if (subcommand->name[0] == '-')
-            subcommand_help(NULL, NULL, pool);
+            SVN_INT_ERR(subcommand_help(NULL, NULL, pool));
           else
             svn_error_clear(svn_cmdline_fprintf
                             (stderr, pool,
