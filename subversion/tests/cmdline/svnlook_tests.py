@@ -471,14 +471,14 @@ def diff_ignore_whitespace(sbox):
   # Check the output of 'svnlook diff -x --ignore-space-change' on mu.
   # It should not print anything.
   output = run_svnlook('diff', '-r2', '-x', '--ignore-space-change',
-                       repo_dir, '/A/mu')
+                       repo_dir)
   if output != []:
     raise svntest.Failure
 
   # Check the output of 'svnlook diff -x --ignore-all-space' on mu.
   # It should not print anything.
   output = run_svnlook('diff', '-r2', '-x', '--ignore-all-space',
-                       repo_dir, '/A/mu')
+                       repo_dir)
   if output != []:
     raise svntest.Failure
 
@@ -528,7 +528,7 @@ def diff_ignore_eolstyle(sbox):
 
 
     output = run_svnlook('diff', '-r', str(rev + 1), '-x',
-                         '--ignore-eol-style', repo_dir, '/A/mu')
+                         '--ignore-eol-style', repo_dir)
     rev += 1
 
     canonical_mu_path = mu_path.replace(os.path.sep, '/')
@@ -565,7 +565,7 @@ def diff_binary(sbox):
   svntest.main.run_svn(None, 'ci', '-m', 'log msg', mu_path)
 
   # Now run 'svnlook diff' and look for the "Binary files differ" message.
-  output = run_svnlook('diff', repo_dir, '/A/mu')
+  output = run_svnlook('diff', repo_dir)
   if not "(Binary files differ)\n" in output:
     raise svntest.Failure("No 'Binary files differ' indication in "
                           "'svnlook diff' output.")
@@ -637,7 +637,7 @@ def output_command(fp, cmd, opt):
   return status
 
 for (svnlook_cmd, svnlook_opt) in %s:
-  output_command(fp, svnlook_cmd, svnlook_opt.split(' '))
+  output_command(fp, svnlook_cmd, svnlook_opt.split())
 fp.close()"""
   pre_commit_hook = svntest.main.get_pre_commit_hook_path(repo_dir)
 
