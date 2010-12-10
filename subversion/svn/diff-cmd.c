@@ -260,7 +260,7 @@ svn_cl__diff(apr_getopt_t *os,
     }
   else
     {
-      svn_boolean_t working_copy_present = FALSE, url_present = FALSE;
+      svn_boolean_t working_copy_present;
 
       /* The 'svn diff [-r N[:M]] [TARGET[@REV]...]' case matches. */
 
@@ -272,25 +272,14 @@ svn_cl__diff(apr_getopt_t *os,
       old_target = "";
       new_target = "";
 
-      /* Check to see if at least one of our paths is a working copy
-         path. */
-      for (i = 0; i < targets->nelts; ++i)
-        {
-          const char *path = APR_ARRAY_IDX(targets, i, const char *);
-          if (! svn_path_is_url(path))
-            working_copy_present = TRUE;
-          else
-            url_present = TRUE;
-        }
+      SVN_ERR(svn_cl__assert_homogeneous_target_type(targets));
 
-      if (url_present && working_copy_present)
-        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                  _("Cannot mix repository and working copy "
-                                    "targets"));
+      working_copy_present = ! svn_path_is_url(APR_ARRAY_IDX(targets, 0,
+                                                             const char *));
 
       if (opt_state->start_revision.kind == svn_opt_revision_unspecified
           && working_copy_present)
-          opt_state->start_revision.kind = svn_opt_revision_base;
+        opt_state->start_revision.kind = svn_opt_revision_base;
       if (opt_state->end_revision.kind == svn_opt_revision_unspecified)
         opt_state->end_revision.kind = working_copy_present
           ? svn_opt_revision_working : svn_opt_revision_head;
