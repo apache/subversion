@@ -52,7 +52,9 @@ public class SVNClient implements SVNClientInterface
     public SVNClient()
     {
         aSVNClient = new org.apache.subversion.javahl.SVNClient();
-        cppAddr = aSVNClient.getCppAddr();
+        /* This is a bogus value, there really shouldn't be any reason
+           for a user of this class to care.  You've been warned. */
+        cppAddr = 0xdeadbeef;
     }
 
      /**
@@ -313,12 +315,71 @@ public class SVNClient implements SVNClientInterface
         aSVNClient.password(password);
     }
 
+    private class PromptUser1Wrapper
+        implements org.apache.subversion.javahl.callback.UserPasswordCallback
+    {
+        PromptUserPassword oldPrompt;
+
+        PromptUser1Wrapper(PromptUserPassword prompt)
+        {
+            oldPrompt = prompt;
+        }
+
+        public String getPassword()
+        {
+            return oldPrompt.getPassword();
+        }
+
+        public String getUsername()
+        {
+            return oldPrompt.getUsername();
+        }
+
+        public String askQuestion(String realm, String question,
+                                  boolean showAnswer)
+        {
+            return oldPrompt.askQuestion(realm, question, showAnswer);
+        }
+
+        public boolean askYesNo(String realm, String question,
+                                boolean yesIsDefault)
+        {
+            return oldPrompt.askYesNo(realm, question, yesIsDefault);
+        }
+
+        public boolean prompt(String realm, String username)
+        {
+            return oldPrompt.prompt(realm, username);
+        }
+
+        public int askTrustSSLServer(String info, boolean allowPermanently)
+        {
+            return askTrustSSLServer(info, allowPermanently);
+        }
+
+        public boolean userAllowedSave()
+        {
+            return false;
+        }
+
+        public String askQuestion(String realm, String question,
+                                  boolean showAnswer, boolean maySave)
+        {
+            return askQuestion(realm, question, showAnswer);
+        }
+
+        public boolean prompt(String realm, String username, boolean maySave)
+        {
+            return prompt(realm, username);
+        }
+    }
+
     /**
      * @since 1.0
      */
     public void setPrompt(PromptUserPassword prompt)
     {
-        aSVNClient.setPrompt(prompt);
+        aSVNClient.setPrompt(new PromptUser1Wrapper(prompt));
     }
 
     /**
@@ -657,11 +718,18 @@ public class SVNClient implements SVNClientInterface
     /**
      * @since 1.0
      */
-    public void commitMessageHandler(final CommitMessage messageHandler)
+    public void commitMessageHandler(CommitMessage messageHandler)
     {
         class MyCommitMessageHandler
-            implements org.apache.subversion.javahl.CommitMessage
+            implements org.apache.subversion.javahl.callback.CommitMessageCallback
         {
+            private CommitMessage messageHandler;
+
+            public MyCommitMessageHandler(CommitMessage messageHandler)
+            {
+                this.messageHandler = messageHandler;
+            }
+
             public String getLogMessage(
                 Set<org.apache.subversion.javahl.CommitItem> elementsToBeCommited)
             {
@@ -683,8 +751,10 @@ public class SVNClient implements SVNClientInterface
             }
         }
 
-        aSVNClient.commitMessageHandler(new MyCommitMessageHandler());
+        cachedHandler = new MyCommitMessageHandler(messageHandler);
     }
+
+    private org.apache.subversion.javahl.callback.CommitMessageCallback cachedHandler = null;
 
     /**
      * @deprecated Use {@link #remove(String[], String, boolean, boolean, Map)}
@@ -707,7 +777,10 @@ public class SVNClient implements SVNClientInterface
         try
         {
             aSVNClient.remove(new HashSet<String>(Arrays.asList(paths)),
-                              message, force, keepLocal, revpropTable);
+                              force, keepLocal, revpropTable,
+                              message == null ? cachedHandler
+                                    : new ConstMsg(message),
+                              null);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -873,12 +946,23 @@ public class SVNClient implements SVNClientInterface
     {
         try
         {
-            return aSVNClient.commit(new HashSet<String>(Arrays.asList(paths)),
-                                     message, Depth.toADepth(depth), noUnlock,
-                                     keepChangelist,
-                                     changelists == null ? null
-                                       : Arrays.asList(changelists),
-                                     revpropTable);
+            final long[] revList = { -1 };
+            org.apache.subversion.javahl.callback.CommitCallback callback =
+                new org.apache.subversion.javahl.callback.CommitCallback () {
+                    public void commitInfo(org.apache.subversion.javahl.CommitInfo info)
+                    { revList[0] = info.getRevision(); }
+                };
+
+            aSVNClient.commit(new HashSet<String>(Arrays.asList(paths)),
+                              Depth.toADepth(depth), noUnlock,
+                              keepChangelist,
+                              changelists == null ? null
+                                : Arrays.asList(changelists),
+                              revpropTable,
+                              message == null ? cachedHandler
+                                    : new ConstMsg(message),
+                              callback);
+            return revList[0];
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -905,8 +989,11 @@ public class SVNClient implements SVNClientInterface
                 aCopySources.add(src.toApache());
             }
 
-            aSVNClient.copy(aCopySources, destPath, message, copyAsChild,
-                            makeParents, ignoreExternals, revpropTable);
+            aSVNClient.copy(aCopySources, destPath, copyAsChild,
+                            makeParents, ignoreExternals, revpropTable,
+                            message == null ? cachedHandler
+                                : new ConstMsg(message),
+                            null);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -953,8 +1040,11 @@ public class SVNClient implements SVNClientInterface
         try
         {
             aSVNClient.move(new HashSet<String>(Arrays.asList(srcPaths)),
-                            destPath, message, force, moveAsChild,
-                            makeParents, revpropTable);
+                            destPath, force, moveAsChild, makeParents,
+                            revpropTable,
+                            message == null ? cachedHandler
+                                : new ConstMsg(message),
+                            null);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -998,7 +1088,10 @@ public class SVNClient implements SVNClientInterface
         try
         {
             aSVNClient.mkdir(new HashSet<String>(Arrays.asList(paths)),
-                             message, makeParents, revpropTable);
+                             makeParents, revpropTable,
+                             message == null ? cachedHandler
+                                : new ConstMsg(message),
+                             null);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -1178,8 +1271,11 @@ public class SVNClient implements SVNClientInterface
     {
         try
         {
-            aSVNClient.doImport(path, url, message, Depth.toADepth(depth),
-                                noIgnore, ignoreUnknownNodeTypes, revpropTable);
+            aSVNClient.doImport(path, url, Depth.toADepth(depth),
+                                noIgnore, ignoreUnknownNodeTypes, revpropTable,
+                                message == null ? cachedHandler
+                                    : new ConstMsg(message),
+                                null);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -1760,7 +1856,7 @@ public class SVNClient implements SVNClientInterface
             aSVNClient.propertySet(path, name, value, Depth.toADepth(depth),
                                    changelists == null ? null
                                     : Arrays.asList(changelists),
-                                   force, revpropTable);
+                                   force, revpropTable, null);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -2009,7 +2105,7 @@ public class SVNClient implements SVNClientInterface
             aSVNClient.streamFileContent(path,
                           revision == null ? null : revision.toApache(),
                           pegRevision == null ? null : pegRevision.toApache(),
-                          bufferSize, stream);
+                          stream);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
@@ -2529,6 +2625,23 @@ public class SVNClient implements SVNClientInterface
         public void onSummary(org.apache.subversion.javahl.DiffSummary summary)
         {
             callback.onSummary(new DiffSummary(summary));
+        }
+    }
+
+    private class ConstMsg
+        implements org.apache.subversion.javahl.callback.CommitMessageCallback
+    {
+        private String message;
+
+        ConstMsg(String message)
+        {
+            this.message = message;
+        }
+
+        public String getLogMessage(
+                    Set<org.apache.subversion.javahl.CommitItem> items)
+        {
+            return message;
         }
     }
 }

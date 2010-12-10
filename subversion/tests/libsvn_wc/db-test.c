@@ -48,9 +48,9 @@
 #include "../svn_test.h"
 
 
-#define ROOT_ONE "http://example.com/one/"
-#define ROOT_TWO "http://example.com/two/"
-#define ROOT_THREE "http://example.com/three/"
+#define ROOT_ONE "http://example.com/one"
+#define ROOT_TWO "http://example.com/two"
+#define ROOT_THREE "http://example.com/three"
 
 #define UUID_ONE "uuid1"
 #define UUID_TWO "uuid2"
@@ -75,7 +75,7 @@
 #define MD5_2 "5d41402abc4b2a76b9719d911017c592"
 #define SHA1_1 "aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d"
 
-#define I_TC_DATA "((conflict F file update edited deleted (version 23 " ROOT_ONE " 1 2 branch1/ft/F none) (version 23 " ROOT_ONE " 1 3 branch1/ft/F file)) (conflict G file update edited deleted (version 23 " ROOT_ONE " 1 2 branch1/ft/F none) (version 23 " ROOT_ONE " 1 3 branch1/ft/F file)) )"
+#define I_TC_DATA "((conflict F file update edited deleted (version 22 " ROOT_ONE " 1 2 branch1/ft/F none) (version 22 " ROOT_ONE " 1 3 branch1/ft/F file)) (conflict G file update edited deleted (version 22 " ROOT_ONE " 1 2 branch1/ft/F none) (version 22 " ROOT_ONE " 1 3 branch1/ft/F file)) )"
 
 static const char * const TESTING_DATA = (
    /* Load our test data.
@@ -90,6 +90,7 @@ static const char * const TESTING_DATA = (
    /* ### The file_externals column in BASE_NODE is temporary, and will be
       ### removed.  However, to keep the tests passing, we need to add it
       ### to the following insert statements.  *Be sure to remove it*. */
+#ifndef SVN_WC__NODES_ONLY
    "insert into base_node values ("
    "  1, '', 1, '', null, 'normal', 'dir', "
    "  1, null, null, "
@@ -187,6 +188,92 @@ static const char * const TESTING_DATA = (
    "  1, " TIME_1s ", '" AUTHOR_1 "', null, null, null, '()', null, null, "
    "  null); "
    " "
+#endif
+#ifdef SVN_WC__NODES
+   /* load the base nodes into the nodes table */
+  "insert into nodes values ("
+  "  1, '', 0, null, 1, '', 1, 'normal', 'infinity',"
+  "  null, null, 'dir', 1, " TIME_1s ", '" AUTHOR_1 "', null,"
+  "  '()', null, null, null, null, null);"
+  "insert into nodes values ("
+  "  1, 'A', 0, '', null, null, 1, 'normal', null,"
+  "  null, null, 'file', 1, " TIME_1s ", '" AUTHOR_1 "', '$md5 $" MD5_1 "',"
+  "  '()', 10, null, null, null, null);"
+  "insert into nodes values ("
+  "  1, 'B', 0, '', null, null, null, 'excluded', null,"
+  "  null, null, 'symlink', null, null, null, null,"
+  "  null, null, null, null, null, null);"
+  "insert into nodes values ("
+  "  1, 'C', 0, '', null, null, null, 'absent', null,"
+  "  null, null, 'unknown', null, null, null, null,"
+  "  null, null, null, null, null, null);"
+  "insert into nodes values ("
+  "  1, 'D', 0, '', null, null, null, 'not-present', null,"
+  "  null, null, 'unknown', null, null, null, null,"
+  "  null, null, null, null, null, null);"
+  "insert into nodes values ("
+  "  1, 'E', 0, '', null, null, null, 'incomplete', null,"
+  "  null, null, 'unknown', null, null, null, null,"
+  "  null, null, null, null, null, null);"
+  "insert into nodes values ("
+  "  1, 'F', 0, '', null, null, 1, 'normal', null,"
+  "  null, null, 'file', 1, " TIME_1s ", '" AUTHOR_1 "', '$sha1$" SHA1_1 "',"
+  "  '()', 15, null, null, null, null);"
+  "insert into nodes values ("
+  "  1, 'G', 0, '', 2, 'G-alt', 1, 'normal', null,"
+  "  null, null, 'file', 2, " TIME_2s ", '" AUTHOR_2 "', '$sha1$" SHA1_1 "',"
+  "  '()', 15, null, null, null, null);"
+  "insert into nodes values ("
+  "  1, 'H', 0, '', null, null, 1, 'normal', null,"
+  "  null, null, 'symlink', 1, " TIME_1s ", '" AUTHOR_1 "', null,"
+  "  '()', null, null, null, 'H-target', null);"
+  "insert into nodes values ("
+  "  1, 'I', 0, '', null, null, 1, 'normal', null,"
+  "  null, null, 'dir', 1, " TIME_1s ", '" AUTHOR_1 "', null,"
+  "  '()', null, null, null, null, null);"
+  "insert into nodes values ("
+  "  1, 'J', 0, '', null, null, 1, 'normal', null,"
+  "  null, null, 'dir', 1, " TIME_1s ", '" AUTHOR_1 "', null,"
+  "  '()', null, null, null, null, null);"
+  "insert into nodes values ("
+  "  1, 'J/J-e', 0, 'J', null, null, 1, 'normal', null,"
+  "  null, null, 'dir', 1, " TIME_1s ", '" AUTHOR_1 "', null,"
+  "  '()', null, null, null, null, null);"
+  "insert into nodes values ("
+  "  1, 'J/J-e/J-e-a', 0, 'J/J-e', null, null, 1, 'normal', null,"
+  " null, null, 'file', 1, " TIME_1s ", '" AUTHOR_1 "', '$sha1$" SHA1_1 "',"
+  "  '()', 15, null, null, null, null);"
+  "insert into nodes values ("
+  "  1, 'J/J-e/J-e-b', 0, 'J/J-e', null, null, 1, 'normal', null,"
+  "  null, null, 'dir', 1, " TIME_1s ", '" AUTHOR_1 "', null,"
+  "  '()', null, null, null, null, null);"
+  "insert into nodes values ("
+  "  1, 'J/J-e/J-e-b/Jeba', 0, 'J/J-e/J-e-b', null, null, 1, 'normal', null,"
+  "  null, null, 'file', 1, " TIME_1s ", '" AUTHOR_1 "', '$sha1$" SHA1_1 "',"
+  "  '()', 15, null, null, null, null);"
+  "insert into nodes values ("
+  "  1, 'J/J-f', 0, 'J', null, null, 1, 'normal', null,"
+  "  null, null, 'dir', 1, " TIME_1s ", '" AUTHOR_1 "', null,"
+  "  '()', null, null, null, null, null);"
+  "insert into nodes values ("
+  "  1, 'J/J-f/J-f-a', 0, 'J/J-f', null, null, 1, 'normal', null,"
+  "  null, null, 'dir', 1, " TIME_1s ", '" AUTHOR_1 "', null,"
+  "  '()', null, null, null, null, null);"
+  "insert into nodes values ("
+  "  1, 'K', 0, '', null, null, 1, 'normal', null,"
+  "  null, null, 'dir', 1, " TIME_1s ", '" AUTHOR_1 "', null,"
+  "  '()', null, null, null, null, null);"
+  "insert into nodes values ("
+  "  1, 'K/K-a', 0, 'K', null, null, 1, 'normal', null,"
+  "   null, null, 'file', 1, " TIME_1s ", '" AUTHOR_1 "', '$sha1$" SHA1_1 "',"
+  "  '()', 15, null, null, null, null);"
+  "insert into nodes values ("
+  "  1, 'K/K-b', 0, 'K', null, null, 1, 'normal', null,"
+  "  null, null, 'file', 1, " TIME_1s ", '" AUTHOR_1 "', '$sha1$" SHA1_1 "',"
+  " '()', 15, null, null, null, null);"
+  ""
+#endif
+#ifndef SVN_WC__NODES_ONLY
    "insert into working_node values ("
    "  1, 'I', '', 'normal', 'dir', "
    "  null, null, "
@@ -293,10 +380,101 @@ static const char * const TESTING_DATA = (
    "  null, null, null, 'immediates', null, "
    "  null, null, null, 0, null, null, '()', 0); "
    " "
+#endif
+#ifdef SVN_WC__NODES
+   /* Load data into NODES table;
+      ### op_depths have not been calculated by me yet;
+      the value 1 is just 'good enough' to make the nodes WORKING nodes. */
+  "insert into nodes values ("
+  "  1, 'I', 1, '', 2, 'some/dir', 2, 'normal', 'immediates',"
+  "  0, null, 'dir', 2, " TIME_2s ", '" AUTHOR_2 "', null, '()',"
+  "  null, null, null, null, null);"
+  "insert into nodes values ("
+  "  1, 'J', 1, '', null, null, null, 'normal', 'immediates',"
+  "  0, null, 'dir', null, null, null, null, '()',"
+  "  null, null, null, null, null);"
+  "insert into nodes values ("
+  "  1, 'J/J-a', 1, 'J', null, null, null, 'normal', null,"
+  "  0, null, 'file', null, null, null, null, '()',"
+  "  null, null, null, null, null);"
+  "insert into nodes values ("
+  "  1, 'J/J-b', 1, 'J', 2, 'some/dir', 2, 'normal', 'infinity',"
+  "  0, null, 'dir', 2, " TIME_2s ", '" AUTHOR_2 "', null, '()',"
+  "  null, null, null, null, null);"
+  "insert into nodes values ("
+  "  1, 'J/J-b/J-b-a', 1, 'J/J-b', 2, 'another/dir', 2, 'normal', 'infinity',"
+  "  0, null, 'dir', 2, " TIME_2s ", '" AUTHOR_2 "', null, '()',"
+  "  null, null, null, null, null);"
+  "insert into nodes values ("
+  "  1, 'J/J-b/J-b-b', 1, 'J/J-b', null, null, null, 'normal', null,"
+  "  0, null, 'file', null, null, null, null, '()',"
+  "  null, null, null, null, null);"
+  "insert into nodes values ("
+  "  1, 'J/J-c', 1, 'J', null, null, null, 'not-present', null,"
+  "  0, null, 'dir', null, null, null, null, '()',"
+  "  null, null, null, null, null);"
+  "insert into nodes values ("
+  "  1, 'J/J-c/J-c-a', 1, 'J/J-c', null, null, null, 'not-present', null,"
+  "  0, null, 'dir', null, null, null, null, '()',"
+  "  null, null, null, null, null);"
+  "insert into nodes values ("
+  "  1, 'J/J-d', 1, 'J', 2, 'moved/file', 2, 'normal', null,"
+  "  1, null, 'file', 2, " TIME_2s ", '" AUTHOR_2 "', '$md5 $" MD5_1 "',"
+  " '()', 10, null, null, null, null);"
+  "insert into nodes values ("
+  "  1, 'J/J-e', 1, 'J', null, null, null, 'not-present', null,"
+  "  0, 'other/place', 'dir', null, null, null, null, '()',"
+  "  null, null, null, null, null);"
+  "insert into nodes values ("
+  "  1, 'J/J-e/J-e-a', 1, 'J/J-e', null, null, null, 'not-present', null,"
+  "  0, null, 'file', null, null, null, null, '()',"
+  "  null, null, null, null, null);"
+  "insert into nodes values ("
+  "  1, 'J/J-e/J-e-b', 1, 'J/J-e', null, null, null, 'not-present',"
+  "  null, 0, null, 'dir', null, null, null, null, '()',"
+  "  null, null, null, null, null);"
+  "insert into nodes values ("
+  "  1, 'J/J-e/J-e-b/Jeba', 1, 'J/J-e/J-e-b', null, null, null, 'base-deleted',"
+  "  null, 0, null, 'file', null, null, null, null, '()',"
+  "  null, null, null, null, null);"
+  "insert into nodes values ("
+  "  1, 'J/J-f', 1, 'J', null, null, null, 'normal', 'immediates',"
+  "  0, null, 'dir', null, null, null, null, '()',"
+  "  null, null, null, null, null);"
+  "insert into nodes values ("
+  "  1, 'J/J-f/J-f-a', 1, 'J/J-f', null, null, null, 'base-deleted',"
+  "  'immediates', 0, null, 'dir', null, null, null, null, '()',"
+  "  null, null, null, null, null);"
+  "insert into nodes values ("
+  "  1, 'K', 1, '', null, null, null, 'base-deleted', null,"
+  "  0, null, 'dir', null, null, null, null, '()',"
+  "  null, null, null, null, null);"
+  "insert into nodes values ("
+  "  1, 'K/K-a', 1, 'K', null, null, null, 'base-deleted', null,"
+  "  0, null, 'file', null, null, null, null, '()',"
+  "  null, null, null, null, null);"
+  "insert into nodes values ("
+  "  1, 'K/K-b', 1, 'K', null, null, null, 'base-deleted', null,"
+  "  0, 'moved/away', 'file', null, null, null, null, '()',"
+  "  null, null, null, null, null);"
+  "insert into nodes values ("
+  "  1, 'L', 1, '', null, null, null, 'normal', 'immediates',"
+  "  0, null, 'dir', null, null, null, null, '()',"
+  "  null, null, null, null, null);"
+  "insert into nodes values ("
+  "  1, 'L/L-a', 1, 'L', null, null, null, 'not-present', 'immediates',"
+  "  0, null, 'dir', null, null, null, null, '()',"
+  "  null, null, null, null, null);"
+  "insert into nodes values ("
+  "  1, 'L/L-a/L-a-a', 1, 'L', null, null, null, 'not-present', 'immediates',"
+  "  0, null, 'dir', null, null, null, null, '()',"
+  "  null, null, null, null, null);"
+#endif
    "insert into actual_node values ("
    "  1, 'I', '', null, null, null, null, null, 'changelist', null, "
    "'" I_TC_DATA "', null, null, null, null);"
    "  "
+#ifndef SVN_WC__NODES_ONLY
    "insert into base_node values ("
    "  1, 'M', null, null, '', 'normal', 'dir', "
    "  1, null, null, "
@@ -307,6 +485,17 @@ static const char * const TESTING_DATA = (
    "  null, null, "
    "  null, null, null, null, null, "
    "  null, null, null, 0, null, null, '()', 0); "
+#endif
+#ifdef SVN_WC__NODES
+   "insert into nodes values ("
+   "  1, 'M', 0, '', null, null, null, 'normal', null, "
+   "  1, null, 'dir', 1, " TIME_1s ", '" AUTHOR_1 "', null, '()', "
+   "  null, null, null, null, null);"
+   "insert into nodes values ("
+   "  1, 'M/M-a', 1, 'M', null, null, null, 'not-present', null, "
+   "  null, null, 'file', null, null, null, null, '()', "
+   "  null, 0, null, null, null);"
+#endif
    );
 
 WC_QUERIES_SQL_DECLARE_STATEMENTS(statements);
@@ -321,8 +510,8 @@ create_fake_wc(const char *subdir, int format, apr_pool_t *scratch_pool)
   svn_sqlite__db_t *sdb;
   const char * const my_statements[] = {
     statements[STMT_CREATE_SCHEMA],
-#ifdef SVN_WC__NODE_DATA
-    statements[STMT_CREATE_NODE_DATA],
+#ifdef SVN_WC__NODES
+    statements[STMT_CREATE_NODES],
 #endif
     TESTING_DATA,
     NULL
@@ -724,10 +913,10 @@ test_inserting_nodes(apr_pool_t *pool)
             pool));
 
   /* Create a new not-present symlink node. */
-  SVN_ERR(svn_wc__db_base_add_absent_node(
+  SVN_ERR(svn_wc__db_base_add_not_present_node(
             db, svn_dirent_join(local_abspath, "Q", pool),
             "Q", ROOT_ONE, UUID_ONE, 3,
-            svn_wc__db_kind_symlink, svn_wc__db_status_not_present,
+            svn_wc__db_kind_symlink,
             NULL, NULL,
             pool));
 
@@ -1288,8 +1477,7 @@ test_global_relocate(apr_pool_t *pool)
   SVN_TEST_STRING_ASSERT(repos_uuid, UUID_ONE);
 
   /* Test relocating to a repos not existant in the db */
-  SVN_ERR(svn_wc__db_global_relocate(db, local_abspath, ROOT_THREE, TRUE,
-                                     pool));
+  SVN_ERR(svn_wc__db_global_relocate(db, local_abspath, ROOT_THREE, pool));
   SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL,
                                &repos_relpath, &repos_root_url, &repos_uuid,
                                NULL, NULL, NULL, NULL,

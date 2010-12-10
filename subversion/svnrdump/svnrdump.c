@@ -54,18 +54,16 @@ enum svn_svnrdump__longopt_t
 
 static const svn_opt_subcommand_desc2_t svnrdump__cmd_table[] =
   {
-    { "dump", dump_cmd, { "d" },
+    { "dump", dump_cmd, { 0 },
       N_("usage: svnrdump dump URL [-r LOWER[:UPPER]]\n\n"
          "Dump revisions LOWER to UPPER of repository at remote URL "
          "to stdout in a 'dumpfile' portable format.\n"
-         "If omitted, LOWER defaults to zero and UPPER to the latest "
-         "latest revision.\n"),
+         "If only LOWER is given, dump that one revision.\n"),
       { 0 } },
-    { "load", load_cmd, { "l" },
+    { "load", load_cmd, { 0 },
       N_("usage: svnrdump load URL\n\n"
          "Load a 'dumpfile' given on stdin to a repository "
-         "at remote URL.\n"
-         "## This feature is not yet available.\n"),
+         "at remote URL.\n"),
       { 0 } },
     { "help", 0, { "?", "h" },
       N_("usage: svnrdump help [SUBCOMMAND...]\n\n"
@@ -76,7 +74,7 @@ static const svn_opt_subcommand_desc2_t svnrdump__cmd_table[] =
 
 static const apr_getopt_option_t svnrdump__options[] =
   {
-    {"revision",     'r', 1, N_("REV1[:REV2] range of revisions to dump")},
+    {"revision",     'r', 1, N_("specify revision number ARG (or X:Y range)")},
     {"quiet",         'q', 0, N_("no progress (only errors) to stderr")},
     {"config-dir",    opt_config_dir, 1, N_("read user configuration files from"
                                             " directory ARG") },
@@ -139,6 +137,7 @@ replay_revstart(svn_revnum_t revision,
   SVN_ERR(svn_stream_printf(stdout_stream, pool,
                             SVN_REPOS_DUMPFILE_REVISION_NUMBER
                             ": %ld\n", revision));
+  SVN_ERR(normalize_props(rev_props, pool));
   propstring = svn_stringbuf_create_ensure(0, pool);
   revprop_stream = svn_stream_from_stringbuf(propstring, pool);
   SVN_ERR(svn_hash_write2(rev_props, revprop_stream, "PROPS-END", pool));
@@ -180,7 +179,7 @@ replay_revend(svn_revnum_t revision,
   /* No resources left to free. */
   struct replay_baton *rb = replay_baton;
   if (! rb->quiet)
-    svn_cmdline_fprintf(stderr, pool, "* Dumped revision %lu\n", revision);
+    svn_cmdline_fprintf(stderr, pool, "* Dumped revision %lu.\n", revision);
   return SVN_NO_ERROR;
 }
 
@@ -289,7 +288,7 @@ replay_revisions(svn_ra_session_t *session, const char *url,
                                &(propstring->len)));
       SVN_ERR(svn_stream_printf(stdout_stream, pool, "\n"));
       if (! quiet)
-        svn_cmdline_fprintf(stderr, pool, "* Dumped revision %lu\n", start_revision);
+        svn_cmdline_fprintf(stderr, pool, "* Dumped revision %lu.\n", start_revision);
 
       start_revision++;
     }
@@ -472,7 +471,10 @@ main(int argc, const char **argv)
                                                                 NULL, 10);
               }
             else
-              opt_baton->start_revision = (svn_revnum_t)strtoul(opt_arg, NULL, 10);
+              {
+                opt_baton->start_revision = (svn_revnum_t)strtoul(opt_arg, NULL, 10);
+                opt_baton->end_revision = opt_baton->start_revision;
+              }
           }
           break;
         case 'q':

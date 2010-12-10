@@ -623,6 +623,9 @@ def mergeinfo_recording_in_skipped_merge(sbox):
     'D/H/omega': Item("This is the file 'omega'.\n"),
     'D/H/psi'  : Item("This is the file 'psi'.\n"),
     })
+  if svntest.main.wc_is_singledb(sbox.wc_dir):
+    # Delete removes directories in single-db
+    expected_disk.remove('B/E')
   expected_skip = wc.State(A_COPY_path, {})
   svntest.actions.run_and_verify_merge(A_COPY_path, None, None,
                                        A_url, None,
@@ -796,9 +799,11 @@ leaf_edit = svntest.actions.deep_trees_leaf_edit
 tree_del = svntest.actions.deep_trees_tree_del
 leaf_del = svntest.actions.deep_trees_leaf_del
 
-state_after_leaf_edit = svntest.actions.deep_trees_after_leaf_edit
-state_after_leaf_del = svntest.actions.deep_trees_after_leaf_del
-state_after_tree_del = svntest.actions.deep_trees_after_tree_del
+disk_after_leaf_edit = svntest.actions.deep_trees_after_leaf_edit
+disk_after_leaf_del = svntest.actions.deep_trees_after_leaf_del
+disk_after_tree_del = svntest.actions.deep_trees_after_tree_del
+disk_after_leaf_del_no_ci = svntest.actions.deep_trees_after_leaf_del_no_ci
+disk_after_tree_del_no_ci = svntest.actions.deep_trees_after_tree_del_no_ci
 
 deep_trees_conflict_output = svntest.actions.deep_trees_conflict_output
 
@@ -821,7 +826,7 @@ def tree_conflicts_on_merge_local_ci_4_1(sbox):
 
   expected_output = deep_trees_conflict_output
 
-  expected_disk = state_after_tree_del
+  expected_disk = disk_after_tree_del
 
   expected_status = svntest.wc.State('', {
     ''                  : Item(status=' M', wc_rev='3'),
@@ -858,7 +863,7 @@ def tree_conflicts_on_merge_local_ci_4_2(sbox):
 
   expected_output = deep_trees_conflict_output
 
-  expected_disk = state_after_tree_del
+  expected_disk = disk_after_tree_del
 
   expected_status = svntest.wc.State('', {
     ''                  : Item(status=' M', wc_rev='3'),
@@ -897,7 +902,7 @@ def tree_conflicts_on_merge_local_ci_5_1(sbox):
 
   expected_output = deep_trees_conflict_output
 
-  expected_disk = state_after_leaf_edit
+  expected_disk = disk_after_leaf_edit
 
   # We should detect 6 tree conflicts, and nothing should be deleted (when
   # we skip tree conflict victims).
@@ -947,14 +952,7 @@ def tree_conflicts_on_merge_local_ci_5_2(sbox):
 
   expected_output = deep_trees_conflict_output
 
-  expected_disk = svntest.wc.State('', {
-    'F'                 : Item(),
-    'D'                 : Item(),
-    'DF/D1'             : Item(),
-    'DD/D1'             : Item(),
-    'DDF/D1/D2'         : Item(),
-    'DDD/D1/D2'         : Item(),
-    })
+  expected_disk = disk_after_leaf_del
 
   expected_status = svntest.wc.State('', {
     ''                  : Item(status=' M', wc_rev='3'),
@@ -995,7 +993,7 @@ def tree_conflicts_on_merge_local_ci_6(sbox):
 
   expected_output = deep_trees_conflict_output
 
-  expected_disk = state_after_tree_del
+  expected_disk = disk_after_tree_del
 
   expected_status = svntest.wc.State('', {
     ''                  : Item(status=' M', wc_rev='3'),
@@ -1029,19 +1027,14 @@ def tree_conflicts_on_merge_local_ci_6(sbox):
 def tree_conflicts_on_merge_no_local_ci_4_1(sbox):
   "tree conflicts 4.1: tree del (no ci), leaf edit"
 
+  sbox.build()
+
   # use case 4, as in notes/tree-conflicts/use-cases.txt
   # 4.1) local tree delete, incoming leaf edit
 
   expected_output = deep_trees_conflict_output
 
-  expected_disk = svntest.wc.State('', {
-    'F'                 : Item(),
-    'D/D1'              : Item(),
-    'DF/D1'             : Item(),
-    'DD/D1/D2'          : Item(),
-    'DDF/D1/D2'         : Item(),
-    'DDD/D1/D2/D3'      : Item(),
-    })
+  expected_disk = disk_after_tree_del_no_ci(sbox.wc_dir)
 
   expected_status = svntest.wc.State('', {
     ''                  : Item(status=' M', wc_rev='3'),
@@ -1083,18 +1076,13 @@ def tree_conflicts_on_merge_no_local_ci_4_1(sbox):
 def tree_conflicts_on_merge_no_local_ci_4_2(sbox):
   "tree conflicts 4.2: tree del (no ci), leaf del"
 
+  sbox.build()
+
   # 4.2) local tree delete, incoming leaf delete
 
   expected_output = deep_trees_conflict_output
 
-  expected_disk = svntest.wc.State('', {
-    'F'                 : Item(),
-    'D/D1'              : Item(),
-    'DF/D1'             : Item(),
-    'DD/D1/D2'          : Item(),
-    'DDF/D1/D2'         : Item(),
-    'DDD/D1/D2/D3'      : Item(),
-    })
+  expected_disk = disk_after_tree_del_no_ci(sbox.wc_dir)
 
   expected_status = svntest.wc.State('', {
     ''                  : Item(status=' M', wc_rev='3'),
@@ -1142,7 +1130,7 @@ def tree_conflicts_on_merge_no_local_ci_5_1(sbox):
 
   expected_output = deep_trees_conflict_output
 
-  expected_disk = state_after_leaf_edit
+  expected_disk = disk_after_leaf_edit
 
   expected_status = svntest.wc.State('', {
     ''                  : Item(status=' M', wc_rev='3'),
@@ -1150,23 +1138,23 @@ def tree_conflicts_on_merge_no_local_ci_5_1(sbox):
     'D/D1'              : Item(status=' M', treeconflict='C', wc_rev='3'),
     'D/D1/delta'        : Item(status='A ', wc_rev='0'),
     'DD'                : Item(status='  ', wc_rev='3'),
-    'DD/D1'             : Item(status=' M', treeconflict='C', wc_rev='3'),
-    'DD/D1/D2'          : Item(status='  ', wc_rev='3'),
+    'DD/D1'             : Item(status='  ', treeconflict='C', wc_rev='3'),
+    'DD/D1/D2'          : Item(status=' M', wc_rev='3'),
     'DD/D1/D2/epsilon'  : Item(status='A ', wc_rev='0'),
     'DDD'               : Item(status='  ', wc_rev='3'),
-    'DDD/D1'            : Item(status=' M', treeconflict='C', wc_rev='3'),
+    'DDD/D1'            : Item(status='  ', treeconflict='C', wc_rev='3'),
     'DDD/D1/D2'         : Item(status='  ', wc_rev='3'),
-    'DDD/D1/D2/D3'      : Item(status='  ', wc_rev='3'),
+    'DDD/D1/D2/D3'      : Item(status=' M', wc_rev='3'),
     'DDD/D1/D2/D3/zeta' : Item(status='A ', wc_rev='0'),
     'DDF'               : Item(status='  ', wc_rev='3'),
-    'DDF/D1'            : Item(status=' M', treeconflict='C', wc_rev='3'),
+    'DDF/D1'            : Item(status='  ', treeconflict='C', wc_rev='3'),
     'DDF/D1/D2'         : Item(status='  ', wc_rev='3'),
-    'DDF/D1/D2/gamma'   : Item(status='M ', wc_rev='3'),
+    'DDF/D1/D2/gamma'   : Item(status='MM', wc_rev='3'),
     'DF'                : Item(status='  ', wc_rev='3'),
-    'DF/D1'             : Item(status=' M', treeconflict='C', wc_rev='3'),
-    'DF/D1/beta'        : Item(status='M ', wc_rev='3'),
+    'DF/D1'             : Item(status='  ', treeconflict='C', wc_rev='3'),
+    'DF/D1/beta'        : Item(status='MM', wc_rev='3'),
     'F'                 : Item(status='  ', wc_rev='3'),
-    'F/alpha'           : Item(status='M ', treeconflict='C', wc_rev='3'),
+    'F/alpha'           : Item(status='MM', treeconflict='C', wc_rev='3'),
     })
 
   expected_skip = svntest.wc.State('', {
@@ -1191,14 +1179,7 @@ def tree_conflicts_on_merge_no_local_ci_5_2(sbox):
 
   expected_output = deep_trees_conflict_output
 
-  expected_disk = svntest.wc.State('', {
-    'F'                 : Item(),
-    'D/D1'              : Item(),
-    'DF/D1'             : Item(),
-    'DD/D1/D2'          : Item(),
-    'DDF/D1/D2'         : Item(),
-    'DDD/D1/D2/D3'      : Item(),
-    })
+  expected_disk = disk_after_leaf_del_no_ci(sbox.wc_dir)
 
   expected_status = svntest.wc.State('', {
     ''                  : Item(status=' M', wc_rev='3'),
@@ -1240,19 +1221,14 @@ def tree_conflicts_on_merge_no_local_ci_5_2(sbox):
 def tree_conflicts_on_merge_no_local_ci_6(sbox):
   "tree conflicts 6: tree del (no ci), tree del"
 
+  sbox.build()
+
   # use case 6, as in notes/tree-conflicts/use-cases.txt
   # local tree delete, incoming tree delete
 
   expected_output = deep_trees_conflict_output
 
-  expected_disk = svntest.wc.State('', {
-    'F'                 : Item(),
-    'D/D1'              : Item(),
-    'DF/D1'             : Item(),
-    'DD/D1/D2'          : Item(),
-    'DDF/D1/D2'         : Item(),
-    'DDD/D1/D2/D3'      : Item(),
-    })
+  expected_disk = disk_after_tree_del_no_ci(sbox.wc_dir)
 
   expected_status = svntest.wc.State('', {
     ''                  : Item(status=' M', wc_rev='3'),
@@ -1296,15 +1272,28 @@ def tree_conflicts_merge_edit_onto_missing(sbox):
 
   # local tree missing (via shell delete), incoming leaf edit
 
+  # Note: In 1.7 merge tracking aware merges raise an error if the
+  # merge target has subtrees missing due to a shell delete.  To
+  # preserve the original intent of this test we'll run the merge
+  # with the --ignore-ancestry option, which neither considers nor
+  # records mergeinfo.  With this option the merge should "succeed"
+  # while skipping the missing paths.  Of course with no mergeinfo
+  # recorded and everything skipped, there is nothing to commit, so
+  # unlike most of the tree conflict tests we don't bother with the
+  # final commit step.
+
+  sbox.build()
   expected_output = wc.State('', {
   })
 
-  expected_disk = state_after_tree_del
+  expected_disk = disk_after_tree_del
 
+  # Don't expect any mergeinfo property changes because we run
+  # the merge with the --ignore-ancestry option.
   expected_status = svntest.wc.State('', {
-    ''                  : Item(status=' M', wc_rev=3),
+    ''                  : Item(status='  ', wc_rev=3),
     'F'                 : Item(status='  ', wc_rev=3),
-    'F/alpha'           : Item(status='!M', wc_rev=3),
+    'F/alpha'           : Item(status='! ', wc_rev=3),
     'D'                 : Item(status='  ', wc_rev=3),
     'D/D1'              : Item(status='! ', wc_rev='?'),
     'DF'                : Item(status='  ', wc_rev=3),
@@ -1322,6 +1311,19 @@ def tree_conflicts_merge_edit_onto_missing(sbox):
     'DDD/D1/D2'         : Item(status='  '),
     'DDD/D1/D2/D3'      : Item(status='  '),
     })
+
+  if svntest.main.wc_is_singledb(sbox.wc_dir):
+    expected_status.tweak('D/D1',            wc_rev=3, entry_rev='?')
+    expected_status.tweak('DF/D1',           wc_rev=3, entry_rev='?')
+    expected_status.tweak('DF/D1/beta',      wc_rev=3, status='! ')
+    expected_status.tweak('DD/D1',           wc_rev=3, entry_rev='?')
+    expected_status.tweak('DD/D1/D2',        wc_rev=3, status='! ')
+    expected_status.tweak('DDF/D1',          wc_rev=3, entry_rev='?')
+    expected_status.tweak('DDF/D1/D2',       wc_rev=3, status='! ')
+    expected_status.tweak('DDF/D1/D2/gamma', wc_rev=3, status='! ')
+    expected_status.tweak('DDD/D1',          wc_rev=3, entry_rev='?')
+    expected_status.tweak('DDD/D1/D2',       wc_rev=3, status='! ')
+    expected_status.tweak('DDD/D1/D2/D3',    wc_rev=3, status='! ')
 
   expected_skip = svntest.wc.State('', {
     'F/alpha'           : Item(),
@@ -1337,18 +1339,7 @@ def tree_conflicts_merge_edit_onto_missing(sbox):
                expected_disk,
                expected_status,
                expected_skip,
-
-               ### This should not be happening!
-               ### The commit succeeds (it only commits mergeinfo).
-               ### But then the work queue freaks out while trying to install
-               ### F/alpha into the WC, because F/alpha is missing from disk.
-               ### We end up with a working copy that cannot be cleaned up.
-               ### To make this test pass for now we'll expect this error.
-               ### When the problem is fixed this test will start to fail
-               ### and should be adjusted.
-               commit_block_string=".*Error bumping revisions post-commit",
-
-             ) ], False)
+             ) ], False, do_commit_conflicts=False, ignore_ancestry=True)
 
 #----------------------------------------------------------------------
 def tree_conflicts_merge_del_onto_missing(sbox):
@@ -1356,15 +1347,28 @@ def tree_conflicts_merge_del_onto_missing(sbox):
 
   # local tree missing (via shell delete), incoming leaf edit
 
+  # Note: In 1.7 merge tracking aware merges raise an error if the
+  # merge target has subtrees missing due to a shell delete.  To
+  # preserve the original intent of this test we'll run the merge
+  # with the --ignore-ancestry option, which neither considers nor
+  # records mergeinfo.  With this option the merge should "succeed"
+  # while skipping the missing paths.  Of course with no mergeinfo
+  # recorded and everything skipped, there is nothing to commit, so
+  # unlike most of the tree conflict tests we don't bother with the
+  # final commit step.
+
+  sbox.build()
   expected_output = wc.State('', {
   })
 
-  expected_disk = state_after_tree_del
+  expected_disk = disk_after_tree_del
 
+  # Don't expect any mergeinfo property changes because we run
+  # the merge with the --ignore-ancestry option.
   expected_status = svntest.wc.State('', {
-    ''                  : Item(status=' M', wc_rev=3),
+    ''                  : Item(status='  ', wc_rev=3),
     'F'                 : Item(status='  ', wc_rev=3),
-    'F/alpha'           : Item(status='!M', wc_rev=3),
+    'F/alpha'           : Item(status='! ', wc_rev=3),
     'D'                 : Item(status='  ', wc_rev=3),
     'D/D1'              : Item(status='! ', wc_rev='?'),
     'DF'                : Item(status='  ', wc_rev=3),
@@ -1383,6 +1387,19 @@ def tree_conflicts_merge_del_onto_missing(sbox):
     'DDD/D1/D2/D3'      : Item(status='  '),
     })
 
+  if svntest.main.wc_is_singledb(sbox.wc_dir):
+    expected_status.tweak('D/D1',            wc_rev=3)
+    expected_status.tweak('DF/D1',           wc_rev=3)
+    expected_status.tweak('DF/D1/beta',      wc_rev=3, status='! ')
+    expected_status.tweak('DD/D1',           wc_rev=3)
+    expected_status.tweak('DD/D1/D2',        wc_rev=3, status='! ')
+    expected_status.tweak('DDF/D1',          wc_rev=3)
+    expected_status.tweak('DDF/D1/D2',       wc_rev=3, status='! ')
+    expected_status.tweak('DDF/D1/D2/gamma', wc_rev=3, status='! ')
+    expected_status.tweak('DDD/D1',          wc_rev=3)
+    expected_status.tweak('DDD/D1/D2',       wc_rev=3, status='! ')
+    expected_status.tweak('DDD/D1/D2/D3',    wc_rev=3, status='! ')
+
   expected_skip = svntest.wc.State('', {
     'F/alpha'           : Item(),
     'D/D1'              : Item(),
@@ -1397,18 +1414,7 @@ def tree_conflicts_merge_del_onto_missing(sbox):
                expected_disk,
                expected_status,
                expected_skip,
-
-               ### This should not be happening!
-               ### The commit succeeds (it only commits mergeinfo).
-               ### But then the work queue freaks out while trying to install
-               ### F/alpha into the WC, because F/alpha is missing from disk.
-               ### We end up with a working copy that cannot be cleaned up.
-               ### To make this test pass for now we'll expect this error.
-               ### When the problem is fixed this test will start to fail
-               ### and should be adjusted.
-               commit_block_string=".*Error bumping revisions post-commit",
-
-             ) ], False)
+             ) ], False, do_commit_conflicts=False, ignore_ancestry=True)
 
 #----------------------------------------------------------------------
 def merge_replace_setup(sbox):
@@ -1891,7 +1897,7 @@ test_list = [ None,
               tree_conflicts_on_merge_local_ci_6,
               tree_conflicts_on_merge_no_local_ci_4_1,
               tree_conflicts_on_merge_no_local_ci_4_2,
-              XFail(tree_conflicts_on_merge_no_local_ci_5_1),
+              tree_conflicts_on_merge_no_local_ci_5_1,
               XFail(tree_conflicts_on_merge_no_local_ci_5_2),
               tree_conflicts_on_merge_no_local_ci_6,
               tree_conflicts_merge_edit_onto_missing,

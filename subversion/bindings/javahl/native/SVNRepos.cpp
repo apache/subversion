@@ -53,10 +53,10 @@ SVNRepos *SVNRepos::getCppObject(jobject jthis)
   return (cppAddr == 0 ? NULL : reinterpret_cast<SVNRepos *>(cppAddr));
 }
 
-void SVNRepos::dispose(jobject jthis)
+void SVNRepos::dispose()
 {
   static jfieldID fid = 0;
-  SVNBase::dispose(jthis, &fid, JAVA_PACKAGE"/SVNRepos");
+  SVNBase::dispose(&fid, JAVA_PACKAGE"/SVNRepos");
 }
 
 void SVNRepos::create(File &path, bool disableFsyncCommits,
@@ -613,7 +613,7 @@ void SVNRepos::upgrade(File &path, ReposNotifyCallback *notifyCallback)
               );
 }
 
-jobject SVNRepos::lslocks(File &path)
+jobject SVNRepos::lslocks(File &path, svn_depth_t depth)
 {
   SVN::Pool requestPool;
   svn_repos_t *repos;
@@ -631,8 +631,8 @@ jobject SVNRepos::lslocks(File &path)
                              requestPool.pool()), NULL);
   fs = svn_repos_fs (repos);
   /* Fetch all locks on or below the root directory. */
-  SVN_JNI_ERR(svn_repos_fs_get_locks(&locks, repos, "/", NULL, NULL,
-                                     requestPool.pool()),
+  SVN_JNI_ERR(svn_repos_fs_get_locks2(&locks, repos, "/", depth, NULL, NULL,
+                                      requestPool.pool()),
               NULL);
 
   JNIEnv *env = JNIUtil::getEnv();

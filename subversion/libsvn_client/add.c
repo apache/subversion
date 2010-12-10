@@ -43,6 +43,7 @@
 #include "svn_hash.h"
 #include "svn_sorts.h"
 #include "client.h"
+#include "svn_ctype.h"
 
 #include "private/svn_wc_private.h"
 
@@ -80,11 +81,11 @@ trim_string(char **pstr)
   char *str = *pstr;
   size_t i;
 
-  while (apr_isspace(*str))
+  while (svn_ctype_isspace(*str))
     str++;
   *pstr = str;
   i = strlen(str);
-  while ((i > 0) && apr_isspace(str[i-1]))
+  while ((i > 0) && svn_ctype_isspace(str[i-1]))
     i--;
   str[i] = '\0';
 }
@@ -656,6 +657,8 @@ static svn_error_t *
 mkdir_urls(const apr_array_header_t *urls,
            svn_boolean_t make_parents,
            const apr_hash_t *revprop_table,
+           svn_commit_callback2_t commit_callback,
+           void *commit_baton,
            svn_client_ctx_t *ctx,
            apr_pool_t *pool)
 {
@@ -805,8 +808,8 @@ mkdir_urls(const apr_array_header_t *urls,
   /* Fetch RA commit editor */
   SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
                                     commit_revprops,
-                                    ctx->commit_callback2,
-                                    ctx->commit_baton,
+                                    commit_callback,
+                                    commit_baton,
                                     NULL, TRUE, /* No lock tokens */
                                     pool));
 
@@ -867,6 +870,8 @@ svn_error_t *
 svn_client_mkdir4(const apr_array_header_t *paths,
                   svn_boolean_t make_parents,
                   const apr_hash_t *revprop_table,
+                  svn_commit_callback2_t commit_callback,
+                  void *commit_baton,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
 {
@@ -875,7 +880,8 @@ svn_client_mkdir4(const apr_array_header_t *paths,
 
   if (svn_path_is_url(APR_ARRAY_IDX(paths, 0, const char *)))
     {
-      SVN_ERR(mkdir_urls(paths, make_parents, revprop_table, ctx, pool));
+      SVN_ERR(mkdir_urls(paths, make_parents, revprop_table, commit_callback,
+                         commit_baton, ctx, pool));
     }
   else
     {

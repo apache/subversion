@@ -167,6 +167,7 @@ def status_type_change(sbox):
 
   sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
+  single_db = svntest.main.wc_is_singledb(wc_dir)
 
   os.chdir(wc_dir)
 
@@ -176,7 +177,33 @@ def status_type_change(sbox):
   os.rename('A', 'iota')
   os.rename('was_iota', 'A')
 
-  expected_output = [
+  if single_db:
+    expected_output = [
+        '~       A\n',
+        '!       A/mu\n',
+        '!       A/B\n',
+        '!       A/B/lambda\n',
+        '!       A/B/E\n',
+        '!       A/B/E/alpha\n',
+        '!       A/B/E/beta\n',
+        '!       A/B/F\n',
+        '!       A/C\n',
+        '!       A/D\n',
+        '!       A/D/gamma\n',
+        '!       A/D/G\n',
+        '!       A/D/G/rho\n',
+        '!       A/D/G/pi\n',
+        '!       A/D/G/tau\n',
+        '!       A/D/H\n',
+        '!       A/D/H/chi\n',
+        '!       A/D/H/omega\n',
+        '!       A/D/H/psi\n',
+        '~       iota\n',
+    ]
+
+    expected_output = [s.replace('/', os.path.sep) for s in expected_output]
+  else:
+    expected_output = [
         '~       A\n',
         '~       iota\n',
     ]
@@ -189,7 +216,7 @@ def status_type_change(sbox):
   os.remove('A')
   os.mkdir('A')
 
-  if svntest.main.wc_is_singledb('.'):
+  if single_db:
     # A is a directory again, so it is no longer missing, but it's
     # descendants are
     expected_output = [
@@ -248,6 +275,7 @@ def status_type_change_to_symlink(sbox):
 
   sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
+  single_db = svntest.main.wc_is_singledb(wc_dir)
 
   os.chdir(wc_dir)
 
@@ -257,13 +285,28 @@ def status_type_change_to_symlink(sbox):
   svntest.main.safe_rmtree('A/D')
   os.symlink('bar', 'A/D')
 
-  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                              'status')
-  if len(output) != 2:
-    raise svntest.Failure
-  for line in output:
-    if not re.match("~ +(iota|A/D)", line):
-      raise svntest.Failure
+  if single_db:
+    expected_output = [
+        '~       A/D\n',
+        '!       A/D/gamma\n',
+        '!       A/D/G\n',
+        '!       A/D/G/rho\n',
+        '!       A/D/G/pi\n',
+        '!       A/D/G/tau\n',
+        '!       A/D/H\n',
+        '!       A/D/H/chi\n',
+        '!       A/D/H/omega\n',
+        '!       A/D/H/psi\n',
+        '~       iota\n',
+        ]
+  else:
+    expected_output = [
+        '~       A/D\n',
+        '~       iota\n',
+      ]
+
+  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
+                                     [], 'status')
 
   # "valid" symlinks
   os.remove('iota')
@@ -271,13 +314,8 @@ def status_type_change_to_symlink(sbox):
   os.symlink('A/mu', 'iota')
   os.symlink('C', 'A/D')
 
-  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                              'status')
-  if len(output) != 2:
-    raise svntest.Failure
-  for line in output:
-    if not re.match("~ +(iota|A/D)", line):
-      raise svntest.Failure
+  svntest.actions.run_and_verify_svn(None, UnorderedOutput(expected_output),
+                                     [], 'status')
 
 #----------------------------------------------------------------------
 # Regression test for revision 3686.

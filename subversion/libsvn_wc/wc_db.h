@@ -126,7 +126,7 @@ typedef struct svn_wc__db_t svn_wc__db_t;
 
 
 /* Enumerated constants for how to open a WC datastore.  */
-typedef enum {
+typedef enum svn_wc__db_openmode_t {
   svn_wc__db_openmode_default,    /* Open in the default mode (r/w now). */
   svn_wc__db_openmode_readonly,   /* Changes will definitely NOT be made. */
   svn_wc__db_openmode_readwrite   /* Changes will definitely be made. */
@@ -148,7 +148,7 @@ typedef enum {
    ###   cannot simply be added. it would surprise too much code.
    ###   (we could probably create svn_node_kind2_t though)
 */
-typedef enum {
+typedef enum svn_wc__db_kind_t {
     /* The node is a directory. */
     svn_wc__db_kind_dir,
 
@@ -162,20 +162,11 @@ typedef enum {
        deletion, or incomplete status. */
     svn_wc__db_kind_unknown,
 
-    /* This directory node is a placeholder; the actual information is
-       held within the subdirectory.
-
-       Note: users of this API shouldn't see this kind. It will be
-       handled internally to wc_db.
-
-       ### only used with per-dir .svn subdirectories.  */
-    svn_wc__db_kind_subdir
-
 } svn_wc__db_kind_t;
 
 
 /* Enumerated values describing the state of a node. */
-typedef enum {
+typedef enum svn_wc__db_status_t {
     /* The node is present and has no known modifications applied to it. */
     svn_wc__db_status_normal,
 
@@ -201,32 +192,6 @@ typedef enum {
     /* This node has been deleted. No text or property modifications
        will be present. */
     svn_wc__db_status_deleted,
-
-    /* The information for this directory node is obstructed by something
-       in the local filesystem. Full details are not available.
-
-       This is only returned by an unshadowed BASE node. If a WORKING node
-       is present, then obstructed_delete or obstructed_add is returned as
-       appropriate.
-
-       ### only used with per-dir .svn subdirectories.  */
-    svn_wc__db_status_obstructed,
-
-    /* The information for this directory node is obstructed by something
-       in the local filesystem. Full details are not available.
-
-       The directory has been marked for deletion.
-
-       ### only used with per-dir .svn subdirectories.  */
-    svn_wc__db_status_obstructed_delete,
-
-    /* The information for this directory node is obstructed by something
-       in the local filesystem. Full details are not available.
-
-       The directory has been marked for addition.
-
-       ### only used with per-dir .svn subdirectories.  */
-    svn_wc__db_status_obstructed_add,
 
     /* This node was named by the server, but no information was provided. */
     svn_wc__db_status_absent,
@@ -259,7 +224,7 @@ typedef enum {
 
 /* Lock information.  We write/read it all as one, so let's use a struct
    for convenience.  */
-typedef struct {
+typedef struct svn_wc__db_lock_t {
   /* The lock token */
   const char *token;
 
@@ -426,6 +391,25 @@ svn_wc__db_get_wcroot(const char **wcroot_abspath,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool);
 
+typedef svn_error_t * (*svn_wc__db_sqlite_lock_cb)(svn_wc__db_t *db,
+                                                   void *baton,
+                                                   apr_pool_t *scratch_pool);
+
+/* Obtain a sqlite lock to efficiently use the working copy database for
+   WRI_ABSPATH and call LOCK_CB with CB_BATON while this lock exist.
+
+   On returning from this function all operations will be committed, but
+   operations might have been committed before returning from this function.
+
+   ### See svn_sqlite__with_lock() for more details.
+ */
+svn_error_t *
+svn_wc__db_with_sqlite_lock(svn_wc__db_t *db,
+                            const char *wri_abspath,
+                            svn_wc__db_sqlite_lock_cb lock_cb,
+                            void *cb_baton,
+                            apr_pool_t *scratch_pool);
+
 /* @} */
 
 /* Different kinds of trees
@@ -438,10 +422,15 @@ svn_wc__db_get_wcroot(const char **wcroot_abspath,
 
 /* @defgroup svn_wc__db_base  BASE tree management
 
-   BASE should be what we get from the server. The *absolute* pristine copy.
-   Nothing can change it -- it is always a reflection of the repository.
+   BASE is what we get from the server.  It is the *absolute* pristine copy.
    You need to use checkout, update, switch, or commit to alter your view of
    the repository.
+
+   In the BASE tree, each node corresponds to a particular node-rev in the
+   repository.  It can be a mixed-revision tree.  Each node holds either a
+   copy of the node-rev as it exists in the repository (if presence =
+   'normal'), or a place-holder (if presence = 'absent' or 'excluded' or
+   'not-present').
 
    @{
 */
@@ -629,7 +618,6 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
 
      svn_wc__db_status_absent
      svn_wc__db_status_excluded
-     svn_wc__db_status_not_present
 
    If CONFLICT is not NULL, then it describes a conflict for this node. The
    node will be record as conflicted (in ACTUAL).
@@ -651,6 +639,36 @@ svn_wc__db_base_add_absent_node(svn_wc__db_t *db,
                                 const svn_skel_t *conflict,
                                 const svn_skel_t *work_items,
                                 apr_pool_t *scratch_pool);
+
+
+/* Create a node in the BASE tree that is present in name only.
+
+   The new node will be located at LOCAL_ABSPATH, and correspond to the
+   repository node described by <REPOS_RELPATH, REPOS_ROOT_URL, REPOS_UUID>
+   at revision REVISION.
+
+   The node's kind is described by KIND, and the reason for its absence
+   is 'svn_wc__db_status_not_present'.
+
+   If CONFLICT is not NULL, then it describes a conflict for this node. The
+   node will be record as conflicted (in ACTUAL).
+
+   Any work items that are necessary as part of this node construction may
+   be passed in WORK_ITEMS.
+
+   All temporary allocations will be made in SCRATCH_POOL.
+*/
+svn_error_t *
+svn_wc__db_base_add_not_present_node(svn_wc__db_t *db,
+                                     const char *local_abspath,
+                                     const char *repos_relpath,
+                                     const char *repos_root_url,
+                                     const char *repos_uuid,
+                                     svn_revnum_t revision,
+                                     svn_wc__db_kind_t kind,
+                                     const svn_skel_t *conflict,
+                                     const svn_skel_t *work_items,
+                                     apr_pool_t *scratch_pool);
 
 
 /* Remove a node from the BASE tree.
@@ -1673,15 +1691,11 @@ svn_wc__db_is_wcroot(svn_boolean_t *is_root,
 
    ### Assuming the future ability to copy across repositories, should we
    ### refrain from resetting the copyfrom information in this operation?
-
-   ### SINGLE_DB is a temp argument, and should be TRUE if using compressed
-   ### metadata.  When *all* metadata gets compressed, it should disappear.
 */
 svn_error_t *
 svn_wc__db_global_relocate(svn_wc__db_t *db,
                            const char *local_dir_abspath,
                            const char *repos_root_url,
-                           svn_boolean_t single_db,
                            apr_pool_t *scratch_pool);
 
 
@@ -2051,6 +2065,7 @@ svn_wc__db_upgrade_begin(svn_sqlite__db_t **sdb,
 
 svn_error_t *
 svn_wc__db_upgrade_apply_dav_cache(svn_sqlite__db_t *sdb,
+                                   const char *dir_relpath,
                                    apr_hash_t *cache_values,
                                    apr_pool_t *scratch_pool);
 
@@ -2212,54 +2227,6 @@ svn_wc__db_temp_forget_directory(svn_wc__db_t *db,
                                  const char *local_dir_abspath,
                                  apr_pool_t *scratch_pool);
 
-
-/* A temporary API similar to svn_wc__db_base_add_directory() and
-   svn_wc__db_base_add_file(), in that it adds a subdirectory to the given
-   DB.  * Arguments are the same as those to svn_wc__db_base_add_directory().
-
-   Note: Since the subdir node type is a fiction created to satisfy our
-   current backward-compat hacks, this is a temporary API expected to
-   disappear with that node type does.
-*/
-svn_error_t *
-svn_wc__db_temp_base_add_subdir(svn_wc__db_t *db,
-                                const char *local_abspath,
-                                const char *repos_relpath,
-                                const char *repos_root_url,
-                                const char *repos_uuid,
-                                svn_revnum_t revision,
-                                const apr_hash_t *props,
-                                svn_revnum_t changed_rev,
-                                apr_time_t changed_date,
-                                const char *changed_author,
-                                svn_depth_t depth,
-                                apr_pool_t *scratch_pool);
-
-svn_error_t *
-svn_wc__db_temp_is_dir_deleted(svn_boolean_t *not_present,
-                               svn_revnum_t *base_revision,
-                               svn_wc__db_t *db,
-                               const char *local_abspath,
-                               apr_pool_t *scratch_pool);
-
-#ifndef SVN_WC__SINGLE_DB
-/* For a deleted node, determine its keep_local flag. (This flag will
-   go away once we have a consolidated administrative area) */
-svn_error_t *
-svn_wc__db_temp_determine_keep_local(svn_boolean_t *keep_local,
-                                     svn_wc__db_t *db,
-                                     const char *local_abspath,
-                                     apr_pool_t *scratch_pool);
-
-/* For a deleted directory, set its keep_local flag. (This flag will
-   go away once we have a consolidated administrative area) */
-svn_error_t *
-svn_wc__db_temp_set_keep_local(svn_wc__db_t *db,
-                               const char *local_abspath,
-                               svn_boolean_t keep_local,
-                               apr_pool_t *scratch_pool);
-#endif
-
 /* Removes all references of LOCAL_ABSPATH from its working copy
    using DB. */
 svn_error_t *
@@ -2403,12 +2370,6 @@ svn_wc__db_temp_get_file_external(const char **serialized_file_external,
                                   apr_pool_t *scratch_pool);
 
 
-/* Remove a stray "subdir" record in the BASE_NODE table.  */
-svn_error_t *
-svn_wc__db_temp_remove_subdir_record(svn_wc__db_t *db,
-                                     const char *local_abspath,
-                                     apr_pool_t *scratch_pool);
-
 /* Set file external information on LOCAL_ABSPATH to REPOS_RELPATH
    at PEG_REV with revision REV*/
 svn_error_t *
@@ -2437,20 +2398,6 @@ svn_wc__db_temp_op_set_property_conflict_marker_file(svn_wc__db_t *db,
                                                      const char *prej_basename,
                                                      apr_pool_t *scratch_pool);
 
-/* Ensure that the parent stub of LOCAL_ABSPATH contains a BASE_NODE record with
-   a normal status and optionally remove the WORKING_NODE record for the node;
-   this assumes that the parent directory is in the incomplete state, or the
-   node already exists (either as working or as base node). 
-
-   ### This function is a HACK with assumptions that aren't completely checked.
-   ### Don't add new callers unless you exactly know what 
-   ### you are doing! This call is never needed once we get to a central db. */
-svn_error_t *
-svn_wc__db_temp_set_parent_stub_to_normal(svn_wc__db_t *db,
-                                          const char *local_abspath,
-                                          svn_boolean_t delete_working,
-                                          apr_pool_t *scratch_pool);
-
 /* Sets a base nodes revision and/or repository relative path. If
    LOCAL_ABSPATH's rev (REV) is valid, set is revision and if SET_REPOS_RELPATH
    is TRUE set its repository relative path to REPOS_RELPATH (and make sure its
@@ -2464,7 +2411,6 @@ svn_wc__db_temp_op_set_rev_and_repos_relpath(svn_wc__db_t *db,
                                              const char *repos_relpath,
                                              const char *repos_root_url,
                                              const char *repos_uuid,
-                                             svn_boolean_t update_stub,
                                              apr_pool_t *scratch_pool);
 
 /* Tweak a locally added existing directory LOCAL_ABSPATH to have a base
@@ -2494,17 +2440,6 @@ svn_wc__db_drop_root(svn_wc__db_t *db,
                      const char *local_abspath,
                      apr_pool_t *scratch_pool);
 
-/* Internal version of svn_wc__node_get_copyfrom_info */
-svn_error_t *
-svn_wc__internal_get_copyfrom_info(const char **copyfrom_root_url,
-                                   const char **copyfrom_repos_relpath,
-                                   const char **copyfrom_url,
-                                   svn_revnum_t *copyfrom_rev,
-                                   svn_boolean_t *is_copy_target,
-                                   svn_wc__db_t *db,
-                                   const char *local_abspath,
-                                   apr_pool_t *result_pool,
-                                   apr_pool_t *scratch_pool);
 /* @} */
 
 

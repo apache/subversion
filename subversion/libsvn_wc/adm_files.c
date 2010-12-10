@@ -357,14 +357,6 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
                                "because it has an unexpected status"),
                              svn_dirent_local_style(local_abspath,
                                                     scratch_pool));
-  else
-    /* We know that it is a file, so we can't hit the _obstructed stati.
-       Also, we should never see _base_deleted here. */
-    SVN_ERR_ASSERT(status != svn_wc__db_status_obstructed
-                   && status != svn_wc__db_status_obstructed_add
-                   && status != svn_wc__db_status_obstructed_delete
-                   && status != svn_wc__db_status_base_deleted);
-
   if (sha1_checksum)
     SVN_ERR(svn_wc__db_pristine_read(contents, db, local_abspath,
                                      sha1_checksum,
@@ -638,7 +630,6 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
    * arbitrary revision and the URL may differ if the add is
    * being driven from a merge which will have a different URL. */
   if (status != svn_wc__db_status_deleted
-      && status != svn_wc__db_status_obstructed_delete
       && status != svn_wc__db_status_not_present)
     {
       /* ### Should we match copyfrom_revision? */
@@ -731,29 +722,21 @@ svn_wc__adm_destroy(svn_wc__db_t *db,
 
   SVN_ERR(svn_wc__write_check(db, dir_abspath, scratch_pool));
 
-#ifdef SVN_WC__SINGLE_DB
   SVN_ERR(svn_wc__db_get_wcroot(&adm_abspath, db, dir_abspath,
                                 scratch_pool, scratch_pool));
-#endif
-
 
   /* Well, the coast is clear for blowing away the administrative
      directory, which also removes the lock */
   SVN_ERR(svn_wc__db_temp_forget_directory(db, dir_abspath, scratch_pool));
 
-#ifndef SVN_WC__SINGLE_DB
-  adm_abspath = svn_wc__adm_child(dir_abspath, NULL, scratch_pool);
-  SVN_ERR(svn_io_remove_dir2(adm_abspath, FALSE, NULL, NULL, scratch_pool));
-#else
-  /* ### We should check if we are the only user of this DB!!! */
-
+  /* ### We should check if we are the only user of this DB, or
+         perhaps call svn_wc__db_drop_root? */
   if (strcmp(adm_abspath, dir_abspath) == 0)
     SVN_ERR(svn_io_remove_dir2(svn_wc__adm_child(adm_abspath, NULL,
                                                  scratch_pool),
                                FALSE,
                                cancel_func, cancel_baton,
                                scratch_pool));
-#endif
 
   return SVN_NO_ERROR;
 }

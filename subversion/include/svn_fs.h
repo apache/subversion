@@ -1154,7 +1154,7 @@ svn_fs_path_change2_create(const svn_fs_id_t *node_rev_id,
 
 /** Determine what has changed under a @a root.
  *
- * Allocate and return a hash @a *changed_paths_p containing descriptions
+ * Allocate and return a hash @a *changed_paths2_p containing descriptions
  * of the paths changed under @a root.  The hash is keyed with
  * <tt>const char *</tt> paths, and has #svn_fs_path_change2_t * values.
  *
@@ -1169,7 +1169,7 @@ svn_fs_path_change2_create(const svn_fs_id_t *node_rev_id,
  * @since New in 1.6.
  */
 svn_error_t *
-svn_fs_paths_changed2(apr_hash_t **changed_paths_p,
+svn_fs_paths_changed2(apr_hash_t **changed_paths2_p,
                       svn_fs_root_t *root,
                       apr_pool_t *pool);
 
@@ -1896,8 +1896,8 @@ svn_fs_revision_proplist(apr_hash_t **table_p,
  * - @a name is the name of the property to change.
  * - if @a old_value_p is not @c NULL, then @a *old_value_p is the expected old
  *   value of the property, and changing the value will fail with error
- *   #SVN_ERR_BAD_PROPERTY_VALUE if the present value of the property is not @a
- *   *old_value_p.
+ *   #SVN_ERR_FS_PROP_BASEVALUE_MISMATCH if the present value of the property
+ *   is not @a *old_value_p.  (This is an atomic test-and-set).
  * - @a value is the new value of the property, or zero if the property should
  *   be removed altogether.
  *

@@ -89,7 +89,8 @@ svn_cl__delete(apr_getopt_t *os,
   SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, pool));
 
   err = svn_client_delete4(targets, opt_state->force, opt_state->keep_local,
-                           opt_state->revprop_table, ctx, pool);
+                           opt_state->revprop_table, svn_cl__print_commit_info,
+                           NULL, ctx, pool);
   if (err)
     err = svn_cl__may_need_force(err);
 

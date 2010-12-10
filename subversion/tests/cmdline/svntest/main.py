@@ -1060,9 +1060,6 @@ def server_has_mergeinfo():
 def server_has_revprop_commit():
   return options.server_minor_version >= 5
 
-def server_sends_copyfrom_on_update():
-  return options.server_minor_version >= 5
-
 def server_authz_has_aliases():
   return options.server_minor_version >= 5
 

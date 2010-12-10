@@ -33,6 +33,13 @@ select repos_id, repos_relpath, presence, kind, revnum, checksum,
 from base_node
 where wc_id = ?1 and local_relpath = ?2;
 
+-- STMT_SELECT_BASE_NODE_1
+select repos_id, repos_path, presence, kind, revision, checksum,
+  translated_size, changed_revision, changed_date, changed_author, depth,
+  symlink_target, last_mod_time, properties
+from nodes
+where wc_id = ?1 and local_relpath = ?2 and op_depth = 0;
+
 -- STMT_SELECT_BASE_NODE_WITH_LOCK
 select base_node.repos_id, base_node.repos_relpath, presence, kind,
   revnum, checksum, translated_size, changed_rev, changed_date,
@@ -43,6 +50,16 @@ left outer join lock on base_node.repos_id = lock.repos_id
   and base_node.repos_relpath = lock.repos_relpath
 where wc_id = ?1 and local_relpath = ?2;
 
+-- STMT_SELECT_BASE_NODE_WITH_LOCK_1
+select nodes.repos_id, nodes.repos_path, presence, kind, revision,
+  checksum, translated_size, changed_revision, changed_date, changed_author,
+  depth, symlink_target, last_mod_time, properties, lock_token, lock_owner,
+  lock_comment, lock_date
+from nodes
+left outer join lock on nodes.repos_id = lock.repos_id
+  and nodes.repos_path = lock.repos_relpath
+where wc_id = ?1 and local_relpath = ?2 and op_depth = 0;
+
 -- STMT_SELECT_WORKING_NODE
 select presence, kind, checksum, translated_size,
   changed_rev, changed_date, changed_author, depth, symlink_target,
@@ -50,6 +67,15 @@ select presence, kind, checksum, translated_size,
   moved_here, moved_to, last_mod_time, properties
 from working_node
 where wc_id = ?1 and local_relpath = ?2;
+
+-- STMT_SELECT_WORKING_NODE_1
+select presence, kind, checksum, translated_size,
+  changed_revision, changed_date, changed_author, depth, symlink_target,
+  repos_id, repos_path, revision,
+  moved_here, moved_to, last_mod_time, properties
+from nodes
+where wc_id = ?1 and local_relpath = ?2 and op_depth > 0 order by op_depth desc
+limit 1;
 
 -- STMT_SELECT_ACTUAL_NODE
 select prop_reject, changelist, conflict_old, conflict_new,
@@ -77,14 +103,14 @@ insert or replace into base_node (
 values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14,
         ?15, ?16, ?17);
 
--- STMT_INSERT_NODE_DATA
-insert or replace into node_data (
-   wc_id, local_relpath, op_depth, parent_relpath, presence, kind,
-   changed_revision, changed_date, changed_author, depth, checksum,
-   symlink_target, original_repos_id, original_repos_path,
-   original_revision, properties)
-values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12,
-        ?13, ?14, ?15, ?16);
+-- STMT_INSERT_NODE
+insert or replace into nodes (
+  wc_id, local_relpath, op_depth, parent_relpath, repos_id, repos_path,
+  revision, presence, depth, kind, changed_revision, changed_date,
+  changed_author, checksum, properties, translated_size, last_mod_time,
+  dav_cache, symlink_target )
+values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14,
+        ?15, ?16, ?17, ?18, ?19);
 
 -- STMT_INSERT_BASE_NODE_INCOMPLETE
 insert or ignore into base_node (
@@ -102,26 +128,46 @@ INSERT OR IGNORE INTO WORKING_NODE (
   wc_id, local_relpath, parent_relpath, presence, kind)
 VALUES (?1, ?2, ?3, 'incomplete', 'unknown');
 
--- STMT_INSERT_NODE_DATA_INCOMPLETE
-INSERT OR IGNORE INTO NODE_DATA (
-  wc_id, local_relpath, op_depth, parent_relpath, presence, kind)
-VALUES (?1, ?2, ?3, ?4, 'incomplete', 'unknown');
-
 -- STMT_COUNT_BASE_NODE_CHILDREN
 SELECT COUNT(*) FROM BASE_NODE
 WHERE wc_id = ?1 AND parent_relpath = ?2;
+
+-- STMT_COUNT_BASE_NODE_CHILDREN_1
+SELECT COUNT(*) FROM NODES
+WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth = 0;
 
 -- STMT_COUNT_WORKING_NODE_CHILDREN
 SELECT COUNT(*) FROM WORKING_NODE
 WHERE wc_id = ?1 AND parent_relpath = ?2;
 
+-- STMT_COUNT_WORKING_NODE_CHILDREN_1
+SELECT COUNT(*) FROM NODES
+WHERE wc_id = ?1 AND parent_relpath = ?2
+  AND op_depth IN (SELECT op_depth FROM NODES
+                   WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth > 0
+                   ORDER BY op_depth DESC
+                   LIMIT 1);
+
+
 -- STMT_SELECT_BASE_NODE_CHILDREN
 select local_relpath from base_node
 where wc_id = ?1 and parent_relpath = ?2;
 
+-- STMT_SELECT_BASE_NODE_CHILDREN_1
+select local_relpath from nodes
+where wc_id = ?1 and parent_relpath = ?2 and op_depth = 0;
+
 -- STMT_SELECT_WORKING_NODE_CHILDREN
 SELECT local_relpath FROM WORKING_NODE
 WHERE wc_id = ?1 AND parent_relpath = ?2;
+
+-- STMT_SELECT_WORKING_NODE_CHILDREN_1
+SELECT local_relpath FROM NODES
+WHERE wc_id = ?1 AND parent_relpath = ?2
+  AND op_depth IN (SELECT op_depth FROM NODES
+                   WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth > 0
+                   ORDER BY op_depth DESC
+                   LIMIT 1);
 
 -- STMT_SELECT_WORKING_IS_FILE
 select kind == 'file' from working_node
@@ -135,9 +181,18 @@ where wc_id = ?1 and local_relpath = ?2;
 select properties from base_node
 where wc_id = ?1 and local_relpath = ?2;
 
+-- STMT_SELECT_BASE_PROPS_1
+select properties from nodes
+where wc_id = ?1 and local_relpath = ?2 and op_depth = 0;
+
 -- STMT_SELECT_WORKING_PROPS
 SELECT properties, presence FROM WORKING_NODE
 WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_SELECT_WORKING_PROPS_1
+SELECT properties, presence FROM NODES
+WHERE wc_id = ?1 AND local_relpath = ?2
+AND op_depth > 0 ORDER BY op_depth DESC LIMIT 1;
 
 -- STMT_SELECT_ACTUAL_PROPS
 select properties from actual_node
@@ -147,20 +202,22 @@ where wc_id = ?1 and local_relpath = ?2;
 update base_node set properties = ?3
 where wc_id = ?1 and local_relpath = ?2;
 
--- STMT_UPDATE_NODE_DATA_BASE_PROPS
-update node_data set properties = ?3
+-- STMT_UPDATE_NODE_BASE_PROPS
+update nodes set properties = ?3
 where wc_id = ?1 and local_relpath = ?2 and op_depth = 0;
 
 -- STMT_UPDATE_WORKING_PROPS
 update working_node set properties = ?3
 where wc_id = ?1 and local_relpath = ?2;
 
--- STMT_UPDATE_NODE_DATA_WORKING_PROPS
-update node_data set properties = ?3
+-- STMT_UPDATE_NODE_WORKING_PROPS
+update nodes set properties = ?3
 where wc_id = ?1 and local_relpath = ?2
   and op_depth in
-   (select max(op_depth) from node_data
-    where wc_id = ?1 and local_relpath = ?2);
+   (select op_depth from nodes
+    where wc_id = ?1 and local_relpath = ?2 and op_depth > 0
+    order by op_depth desc
+    limit 1);
 
 -- STMT_UPDATE_ACTUAL_PROPS
 update actual_node set properties = ?3
@@ -184,6 +241,10 @@ values (?1);
 update base_node set dav_cache = ?3
 where wc_id = ?1 and local_relpath = ?2;
 
+-- STMT_UPDATE_BASE_NODE_DAV_CACHE
+update nodes set dav_cache = ?3
+where wc_id = ?1 and local_relpath = ?2 and op_depth = 0;
+
 -- STMT_SELECT_BASE_DAV_CACHE
 select dav_cache from base_node
 where wc_id = ?1 and local_relpath = ?2;
@@ -195,10 +256,6 @@ left outer join base_node on base_node.wc_id = working_node.wc_id
   and base_node.local_relpath = working_node.local_relpath
 where working_node.wc_id = ?1 and working_node.local_relpath = ?2;
 
--- STMT_SELECT_PARENT_STUB_INFO
-select presence = 'not-present', revnum from base_node
-where wc_id = ?1 and local_relpath = ?2;
-
 -- STMT_DELETE_LOCK
 delete from lock
 where repos_id = ?1 and repos_relpath = ?2;
@@ -206,6 +263,12 @@ where repos_id = ?1 and repos_relpath = ?2;
 -- STMT_CLEAR_BASE_RECURSIVE_DAV_CACHE
 update base_node set dav_cache = null
 where dav_cache is not null and wc_id = ?1 and
+  (local_relpath = ?2 or
+   local_relpath like ?3 escape '#');
+
+-- STMT_CLEAR_BASE_NODE_RECURSIVE_DAV_CACHE
+update nodes set dav_cache = null
+where dav_cache is not null and wc_id = ?1 and op_depth = 0 and
   (local_relpath = ?2 or
    local_relpath like ?3 escape '#');
 
@@ -221,11 +284,11 @@ where copyfrom_repos_id is not null and wc_id = ?1 and
   (local_relpath = ?2 or
    local_relpath like ?3 escape '#');
 
--- STMT_UPDATE_NODE_DATA_RECURSIVE_ORIGINAL_REPO
-update node_data set original_repos_id = ?5
-where wc_id = ?1 and original_repos_id = ?4 and
-  (local_relpath = ?2 or
-   local_relpath like ?3 escape '#');
+-- STMT_RECURSIVE_UPDATE_NODE_REPO
+update NODES set repos_id = ?5, dav_cache = null
+where wc_id = ?1 and repos_id = ?4 and
+  (local_relpath = ?2
+   or local_relpath like ?3 escape '#');
 
 -- STMT_UPDATE_LOCK_REPOS_ID
 update lock set repos_id = ?4
@@ -237,9 +300,21 @@ where repos_id = ?1 and
 UPDATE BASE_NODE SET translated_size = ?3, last_mod_time = ?4
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
+-- STMT_UPDATE_BASE_NODE_FILEINFO
+update nodes set translated_size = ?3, last_mod_time = ?4
+where wc_id = ?1 and local_relpath = ?2 and op_depth = 0;
+
 -- STMT_UPDATE_WORKING_FILEINFO
 UPDATE WORKING_NODE SET translated_size = ?3, last_mod_time = ?4
 WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_UPDATE_WORKING_NODE_FILEINFO
+update nodes set translated_size = ?3, last_mod_time = ?4
+where wc_id = ?1 and local_relpath = ?2
+  and op_depth = (select op_depth from nodes
+                  where wc_id = ?1 and local_relpath = ?2 and op_depth > 0
+                  order by op_depth desc
+                  limit 1);
 
 -- STMT_UPDATE_ACTUAL_TREE_CONFLICTS
 update actual_node set tree_conflict_data = ?3
@@ -290,25 +365,21 @@ VALUES (?1, ?2, ?3, ?4);
 delete from base_node
 where wc_id = ?1 and local_relpath = ?2;
 
-/* ### Basically, this query can't exist:
-   we can't be deleting BASE nodes while they still have
-   associated WORKING nodes;
-   at minimum, the op_depth restriction should be removed */
--- STMT_DELETE_NODE_DATA_BASE
-delete from node_data
+-- STMT_DELETE_BASE_NODE_1
+delete from nodes
 where wc_id = ?1 and local_relpath = ?2 and op_depth = 0;
 
 -- STMT_DELETE_WORKING_NODE
 delete from working_node
 where wc_id = ?1 and local_relpath = ?2;
 
--- STMT_DELETE_NODE_DATA_WORKING
-delete from node_data
+-- STMT_DELETE_WORKING_NODES
+delete from nodes
 where wc_id = ?1 and local_relpath = ?2 and op_depth > 0;
 
--- STMT_DELETE_NODE_DATA_LAYERS
-delete from node_data
-where wc_id = ?1 and local_relpath = ?2 and op_depth >= ?3;
+-- STMT_DELETE_NODES
+delete from nodes
+where wc_id = ?1 and local_relpath = ?2;
 
 -- STMT_DELETE_ACTUAL_NODE
 delete from actual_node
@@ -319,43 +390,47 @@ UPDATE BASE_NODE SET depth = ?3
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
 -- STMT_UPDATE_NODE_BASE_DEPTH
-UPDATE NODE_DATA SET depth = ?3
-WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
+update NODES set depth = ?3
+where wc_id = ?1 and local_relpath = ?2 and op_depth = 0;
 
 -- STMT_UPDATE_WORKING_DEPTH
 UPDATE WORKING_NODE SET depth = ?3
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
 -- STMT_UPDATE_NODE_WORKING_DEPTH
-UPDATE NODE_DATA SET depth = ?3
-WHERE wc_id = ?1 AND local_relpath = ?2 AND
-      op_depth IN (SELECT MAX(op_depth) FROM NODE_DATA
-                   WHERE wc_id = ?1 AND local_relpath = ?2);
+update NODES set depth = ?3
+where wc_id = ?1 and local_relpath = ?2 and
+      op_depth in (select op_depth from NODES
+                   where wc_id = ?1 and local_relpath = ?2 and op_depth > 0
+                   order by op_depth desc
+                   limit 1);
 
 -- STMT_UPDATE_BASE_EXCLUDED
 UPDATE BASE_NODE SET presence = 'excluded', depth = NULL
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
 -- STMT_UPDATE_NODE_BASE_EXCLUDED
-UPDATE NODE_DATA SET presence = 'excluded', depth = NULL
-WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
+update NODES set presence = 'excluded', depth = NULL
+where wc_id = ?1 and local_relpath = ?2 and op_depth = 0;
 
 -- STMT_UPDATE_WORKING_EXCLUDED
 UPDATE WORKING_NODE SET presence = 'excluded', depth = NULL
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
 -- STMT_UPDATE_NODE_WORKING_EXCLUDED
-UPDATE NODE_DATA SET presence = 'excluded', depth = NULL
-WHERE wc_id = ?1 AND local_relpath = ?2 AND
-      op_depth IN (SELECT MAX(op_depth) FROM NODE_DATA
-                   WHERE wc_id = ?1 AND local_relpath = ?2);
+update nodes SET presence = 'excluded', depth = NULL
+where wc_id = ?1 and local_relpath = ?2 and
+      op_depth IN (select op_depth from NODES
+                   where wc_id = ?1 and local_relpath = ?2
+                   order by op_depth DECSC
+                   limit 1);
 
 -- STMT_UPDATE_BASE_PRESENCE
 update base_node set presence= ?3
 where wc_id = ?1 and local_relpath = ?2;
 
 -- STMT_UPDATE_NODE_BASE_PRESENCE
-update node_data set presence = ?3
+update nodes set presence = ?3
 where wc_id = ?1 and local_relpath = ?2 and op_depth = 0;
 
 -- STMT_UPDATE_BASE_PRESENCE_KIND
@@ -363,7 +438,7 @@ update base_node set presence = ?3, kind = ?4
 where wc_id = ?1 and local_relpath = ?2;
 
 -- STMT_UPDATE_NODE_BASE_PRESENCE_KIND
-update node_data set presence = ?3, kind = ?4
+update nodes set presence = ?3, kind = ?4
 where wc_id = ?1 and local_relpath = ?2 and op_depth = 0;
 
 -- STMT_UPDATE_WORKING_PRESENCE
@@ -371,10 +446,10 @@ update working_node set presence = ?3
 where wc_id = ?1 and local_relpath =?2;
 
 -- STMT_UPDATE_NODE_WORKING_PRESENCE
-update node_data set presence = ?3
+update nodes set presence = ?3
 where wc_id = ?1 and local_relpath = ?2
-  and op_depth in (select op_depth from node_data
-                   where wc_id = ?1 and local_relpath = ?2
+  and op_depth in (select op_depth from nodes
+                   where wc_id = ?1 and local_relpath = ?2 and op_depth > 0
                    order by op_depth desc
                    limit 1);
 
@@ -382,9 +457,17 @@ where wc_id = ?1 and local_relpath = ?2
 update base_node set presence = ?3, revnum = ?4
 where wc_id = ?1 and local_relpath = ?2;
 
+-- STMT_UPDATE_BASE_NODE_PRESENCE_AND_REVNUM
+update nodes set presence = ?3, revision = ?4
+where wc_id = ?1 and local_relpath = ?2 and op_depth = 0;
+
 -- STMT_UPDATE_BASE_PRESENCE_REVNUM_AND_REPOS_RELPATH
 update base_node set presence = ?3, revnum = ?4, repos_relpath = ?5
 where wc_id = ?1 and local_relpath = ?2;
+
+-- STMT_UPDATE_BASE_NODE_PRESENCE_REVNUM_AND_REPOS_PATH
+update nodes set presence = ?3, revision = ?4, repos_path = ?5
+where wc_id = ?1 and local_relpath = ?2 and op_depth = 0;
 
 -- STMT_LOOK_FOR_WORK
 SELECT id FROM WORK_QUEUE LIMIT 1;
@@ -488,6 +571,14 @@ INSERT OR REPLACE INTO BASE_NODE (
   depth, symlink_target, dav_cache)
 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16);
 
+-- STMT_APPLY_CHANGES_TO_BASE_NODE
+insert or replace into NODES (
+  wc_id, local_relpath, op_depth, parent_relpath, repos_id, repos_path,
+  revision, presence, depth, kind, changed_revision, changed_date,
+  changed_author, checksum, properties, dav_cache, symlink_target )
+values (?1, ?2, 0,
+        ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16);
+
 -- STMT_INSERT_WORKING_NODE_FROM_BASE_NODE
 INSERT INTO WORKING_NODE (
     wc_id, local_relpath, parent_relpath, presence, kind, checksum,
@@ -497,6 +588,17 @@ SELECT wc_id, local_relpath, parent_relpath, ?3 AS presence, kind, checksum,
     translated_size, changed_rev, changed_date, changed_author, depth,
     symlink_target, last_mod_time FROM BASE_NODE
 WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_INSERT_WORKING_NODE_FROM_BASE
+INSERT INTO NODES (
+    wc_id, local_relpath, op_depth, parent_relpath, presence, kind, checksum,
+    changed_revision, changed_date, changed_author, depth, symlink_target,
+    translated_size, last_mod_time, properties)
+SELECT wc_id, local_relpath, ?3 as op_depth, parent_relpath, ?4 as presence,
+       kind, checksum, changed_revision, changed_date, changed_author, depth,
+       symlink_target, translated_size, last_mod_time, properties
+FROM NODES
+WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
 
 -- STMT_INSERT_WORKING_NODE_NORMAL_FROM_BASE_NODE
 INSERT INTO WORKING_NODE (
@@ -510,6 +612,20 @@ SELECT wc_id, local_relpath, parent_relpath, 'normal', kind, checksum,
     repos_relpath, revnum FROM BASE_NODE
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
+-- STMT_INSERT_WORKING_NODE_NORMAL_FROM_BASE
+insert into NODES (
+    wc_id, local_relpath, op_depth, parent_relpath, repos_id, repos_path,
+    revision, presence, depth, kind, changed_revision, changed_date,
+    changed_author, checksum, properties, translated_size, last_mod_time,
+    symlink_target )
+select wc_id, local_relpath, ?3 as op_depth, parent_relpath, repos_id,
+    repos_path, revision, 'normal', depth, kind, changed_revision,
+    changed_date, changed_author, checksum, properties, translated_size,
+    last_mod_time, symlink_target
+from NODES
+where wc_id = ?1 and local_relpath = ?2 and op_depth = 0;
+
+
 -- STMT_INSERT_WORKING_NODE_NOT_PRESENT_FROM_BASE_NODE
 INSERT INTO WORKING_NODE (
     wc_id, local_relpath, parent_relpath, presence, kind, changed_rev,
@@ -519,6 +635,17 @@ SELECT wc_id, local_relpath, parent_relpath, 'not-present', kind, changed_rev,
     changed_date, changed_author, repos_id,
     repos_relpath, revnum FROM BASE_NODE
 WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_INSERT_WORKING_NODE_NOT_PRESENT_FROM_BASE
+insert into NODES (
+    wc_id, local_relpath, op_depth, parent_relpath, repos_id, repos_path,
+    revision, presence, kind, changed_revision, changed_date, changed_author )
+select wc_id, local_relpath, ?3 as op_depth, parent_relpath, repos_id,
+       repos_path, revision, 'not-present', kind, changed_revision,
+       changed_date, changed_author
+from NODES
+where wc_id = ?1 and local_relpath = ?2 and op_depth = 0;
+
 
 -- ### the statement below should be setting copyfrom_revision!
 -- STMT_UPDATE_COPYFROM
@@ -532,11 +659,34 @@ UPDATE WORKING_NODE SET
   copyfrom_revnum = null
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
+-- STMT_UPDATE_COPYFROM_TO_INHERIT_1
+UPDATE NODES SET
+  repos_id = null,
+  repos_path = null,
+  revision = null
+WHERE wc_id = ?1 AND local_relpath = ?2
+  AND op_depth IN (SELECT op_depth FROM nodes
+                   WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0
+                   ORDER BY op_depth DESC
+                   LIMIT 1);
+
 -- STMT_DETERMINE_TREE_FOR_RECORDING
 SELECT 0 FROM BASE_NODE WHERE wc_id = ?1 AND local_relpath = ?2
 UNION
 SELECT 1 FROM WORKING_NODE WHERE wc_id = ?1 AND local_relpath = ?2;
 
+-- STMT_DETERMINE_TREE_FOR_RECORDING_1
+SELECT 0 FROM NODES WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
+UNION
+SELECT 1 FROM NODES WHERE wc_id = ?1 AND local_relpath = ?2
+  AND op_depth IN (SELECT op_depth FROM nodes
+                   WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0
+                   ORDER BY op_depth DESC
+                   LIMIT 1);
+
+
+/* ### Why can't this query not just use the BASE repository
+   location values, instead of taking 3 additional parameters?! */
 -- STMT_INSERT_WORKING_NODE_COPY_FROM_BASE
 INSERT OR REPLACE INTO WORKING_NODE (
     wc_id, local_relpath, parent_relpath, presence, kind, checksum,
@@ -549,6 +699,19 @@ SELECT wc_id, ?3 AS local_relpath, ?4 AS parent_relpath, ?5 AS presence, kind,
     ?7 AS copyfrom_repos_path, ?8 AS copyfrom_revnum FROM BASE_NODE
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
+-- STMT_INSERT_WORKING_NODE_COPY_FROM_BASE_1
+insert or replace into NODES (
+    wc_id, local_relpath, op_depth, parent_relpath, repos_id,
+    repos_path, revision, presence, depth, kind, changed_revision,
+    changed_date, changed_author, checksum, properties, translated_size,
+    last_mod_time, symlink_target )
+select wc_id, ?3 as local_relpath, ?4 as op_depth, ?5 as parent_relpath,
+    ?6 as repos_id, ?7 as repos_path, ?8 as revision, ?9 as presence, depth,
+    kind, changed_revision, changed_date, changed_author, checksum, properties,
+    translated_size, last_mod_time, symlink_target
+from NODES
+where wc_id = ?1 and local_relpath = ?2 and op_depth = 0;
+
 -- STMT_INSERT_WORKING_NODE_COPY_FROM_WORKING
 INSERT OR REPLACE INTO WORKING_NODE (
     wc_id, local_relpath, parent_relpath, presence, kind, checksum,
@@ -560,6 +723,21 @@ SELECT wc_id, ?3 AS local_relpath, ?4 AS parent_relpath, ?5 AS presence, kind,
     symlink_target, last_mod_time, properties, ?6 AS copyfrom_repos_id,
     ?7 AS copyfrom_repos_path, ?8 AS copyfrom_revnum FROM WORKING_NODE
 WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_INSERT_WORKING_NODE_COPY_FROM_WORKING_1
+insert or replace into NODES (
+    wc_id, local_relpath, op_depth, parent_relpath, repos_id, repos_path,
+    revision, presence, depth, kind, changed_revision, changed_date,
+    changed_author, checksum, properties, translated_size, last_mod_time,
+    symlink_target )
+select wc_id, ?3 as local_relpath, ?4 as op_depth, ?5 as parent_relpath,
+    ?6 as repos_id, ?7 as repos_path, ?8 as revision, ?9 as presence, depth,
+    kind, changed_revision, changed_date, changed_author, checksum, properties,
+    translated_size, last_mod_time, symlink_target
+from NODES
+where wc_id = ?1 and local_relpath = ?2 and op_depth > 0
+order by op_depth desc
+limit 1;
 
 -- STMT_INSERT_ACTUAL_NODE_FROM_ACTUAL_NODE
 INSERT OR REPLACE INTO ACTUAL_NODE (
@@ -580,9 +758,17 @@ SELECT 0 FROM WORKING_NODE WHERE wc_id = ?1 and local_relpath = ?2 and kind = 's
 UPDATE BASE_NODE SET revnum=?3
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
+-- STMT_UPDATE_BASE_REVISION_1
+update nodes set revision = ?3
+where wc_id = ?1 and local_relpath = ?2 and op_depth = 0;
+
 -- STMT_UPDATE_BASE_REPOS
 UPDATE BASE_NODE SET repos_id = ?3, repos_relpath = ?4
 WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_UPDATE_BASE_REPOS_1
+update nodes set repos_id = ?3, repos_path = ?4
+where wc_id = ?1 and local_relpath = ?2 and op_depth = 0;
 
 /* ------------------------------------------------------------------------- */
 
@@ -597,6 +783,16 @@ insert or replace into base_node (
 values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14,
   ?15, ?16);
 
+-- STMT_INSERT_BASE_NODE_FOR_ENTRY_1
+/* The BASE tree has a fixed op_depth '0' */
+insert or replace into nodes (
+  wc_id, local_relpath, op_depth, parent_relpath, repos_id, repos_path,
+  revision, presence, kind, checksum,
+  changed_revision, changed_date, changed_author, depth, properties,
+  translated_size, last_mod_time )
+values (?1, ?2, 0, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13,
+       ?14, ?15, ?16 );
+
 -- STMT_INSERT_WORKING_NODE
 insert or replace into working_node (
   wc_id, local_relpath, parent_relpath, presence, kind,
@@ -606,6 +802,22 @@ insert or replace into working_node (
   last_mod_time, properties, keep_local, symlink_target)
 values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14,
   ?15, ?16, ?17, ?18, ?19, ?20);
+
+-- STMT_INSERT_WORKING_NODE_DATA_1
+insert or replace into node_data (
+  wc_id, local_relpath, op_depth, parent_relpath, presence, kind,
+  original_repos_id, original_repos_path, original_revision, checksum,
+  changed_revision, changed_date, changed_author, depth, properties,
+  symlink_target )
+values (?1,  ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9,
+        ?10, ?11, ?12, ?13, ?14, ?15, ?16 );
+
+-- STMT_INSERT_WORKING_NODE_DATA_2
+insert or replace into working_node (
+  wc_id, local_relpath, parent_relpath, moved_here, moved_to, translated_size,
+  last_mod_time, keep_local )
+values (?1,  ?2, ?3, ?4, ?5, ?6, ?7, ?8 );
+
 
 -- STMT_INSERT_ACTUAL_NODE
 insert or replace into actual_node (
@@ -657,96 +869,17 @@ values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15,
 update actual_node set tree_conflict_data = null;
 
 -- STMT_SELECT_ALL_FILES
+/* Should this select on wc_id as well? */
 SELECT local_relpath FROM BASE_NODE
-WHERE kind = 'file'
+WHERE kind = 'file' AND parent_relpath = ?1
 UNION
 SELECT local_relpath FROM WORKING_NODE
-WHERE kind = 'file';
+WHERE kind = 'file' AND parent_relpath = ?1;
 
 -- STMT_PLAN_PROP_UPGRADE
 SELECT 0, presence, wc_id FROM BASE_NODE WHERE local_relpath = ?1
 UNION ALL
 SELECT 1, presence, wc_id FROM WORKING_NODE WHERE local_relpath = ?1;
-
--- STMT_ATTACH_WCROOT_DB
-/* ?1 is the path to the WC-root DB file to attach. */
-ATTACH ?1 AS root;
-
--- STMT_COPY_BASE_NODE_TABLE_TO_WCROOT_DB
-/* Copy BASE_NODE to WC-root DB: first the '' row, then the rest. */
-/* ?1 is the wc_relpath of the subdirectory that we're processing. */
-/* ?2 is the wc_relpath of the parent of the subdir we're processing. */
-INSERT INTO root.BASE_NODE (
-    wc_id, local_relpath, repos_id, repos_relpath, parent_relpath,
-    presence,
-    revnum, kind, checksum, translated_size, changed_rev, changed_date,
-    changed_author, depth, last_mod_time, properties )
-SELECT wc_id, ?1,
-    repos_id, repos_relpath, ?2 AS parent_relpath, presence,
-    revnum, kind, checksum, translated_size, changed_rev, changed_date,
-    changed_author, depth, last_mod_time, properties FROM BASE_NODE
-WHERE local_relpath = '';
-INSERT INTO root.BASE_NODE (
-    wc_id, local_relpath, repos_id, repos_relpath, parent_relpath,
-    presence,
-    revnum, kind, checksum, translated_size, changed_rev, changed_date,
-    changed_author, depth, last_mod_time, properties )
-SELECT wc_id, ?1 || '/' || local_relpath,
-    repos_id, repos_relpath, ?1 AS parent_relpath, presence,
-    revnum, kind, checksum, translated_size, changed_rev, changed_date,
-    changed_author, depth, last_mod_time, properties FROM BASE_NODE
-WHERE local_relpath != '';
-
--- STMT_COPY_WORKING_NODE_TABLE_TO_WCROOT_DB
-INSERT INTO root.WORKING_NODE (
-    wc_id, local_relpath, parent_relpath, presence, kind, checksum,
-    translated_size, changed_rev, changed_date, changed_author, depth,
-    symlink_target, last_mod_time, properties, copyfrom_repos_id,
-    copyfrom_repos_path, copyfrom_revnum )
-SELECT wc_id, ?1, ?2 AS parent_relpath,
-    presence, kind, checksum,
-    translated_size, changed_rev, changed_date, changed_author, depth,
-    symlink_target, last_mod_time, properties, copyfrom_repos_id,
-    copyfrom_repos_path, copyfrom_revnum FROM WORKING_NODE
-WHERE local_relpath = '';
-INSERT INTO root.WORKING_NODE (
-    wc_id, local_relpath, parent_relpath, presence, kind, checksum,
-    translated_size, changed_rev, changed_date, changed_author, depth,
-    symlink_target, last_mod_time, properties, copyfrom_repos_id,
-    copyfrom_repos_path, copyfrom_revnum )
-SELECT wc_id, ?1 || '/' || local_relpath, ?1 AS parent_relpath,
-    presence, kind, checksum,
-    translated_size, changed_rev, changed_date, changed_author, depth,
-    symlink_target, last_mod_time, properties, copyfrom_repos_id,
-    copyfrom_repos_path, copyfrom_revnum FROM WORKING_NODE
-WHERE local_relpath != '';
-/* TODO - maybe: WHERE kind != 'subdir'; */
-
--- STMT_COPY_ACTUAL_NODE_TABLE_TO_WCROOT_DB
-INSERT INTO root.ACTUAL_NODE (
-    wc_id, local_relpath, parent_relpath, properties,
-    conflict_old, conflict_new, conflict_working,
-    prop_reject, changelist, text_mod, tree_conflict_data )
-SELECT wc_id, ?1, ?2 AS parent_relpath, properties,
-     conflict_old, conflict_new, conflict_working,
-     prop_reject, changelist, text_mod, tree_conflict_data FROM ACTUAL_NODE
-WHERE local_relpath = '';
-INSERT INTO root.ACTUAL_NODE (
-    wc_id, local_relpath, parent_relpath, properties,
-    conflict_old, conflict_new, conflict_working,
-    prop_reject, changelist, text_mod, tree_conflict_data )
-SELECT wc_id, ?1 || '/' || local_relpath, ?1 AS parent_relpath, properties,
-     conflict_old, conflict_new, conflict_working,
-     prop_reject, changelist, text_mod, tree_conflict_data FROM ACTUAL_NODE
-WHERE local_relpath != '';
-
--- STMT_COPY_LOCK_TABLE_TO_WCROOT_DB
-INSERT INTO root.LOCK
-SELECT * FROM LOCK;
-
--- STMT_COPY_PRISTINE_TABLE_TO_WCROOT_DB
-INSERT INTO root.PRISTINE
-SELECT * FROM PRISTINE;
 
 
 /* ------------------------------------------------------------------------- */

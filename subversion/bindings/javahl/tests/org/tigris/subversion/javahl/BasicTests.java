@@ -1352,14 +1352,17 @@ public class BasicTests extends SVNTests
         client.remove(new String[] {thisTest.getWCPath()+"/A/B/E"}, null, true);
         removeDirOrFile(new File(thisTest.getWorkingCopy(), "A/B/E"));
         thisTest.getWc().setItemTextStatus("A/B/E", Status.Kind.deleted);
-        thisTest.getWc().removeItem("A/B/E/alpha");
-        thisTest.getWc().removeItem("A/B/E/beta");
+        thisTest.getWc().setItemTextStatus("A/B/E/alpha", Status.Kind.deleted);
+        thisTest.getWc().setItemTextStatus("A/B/E/beta", Status.Kind.deleted);
 
         // test the status of the working copy
         thisTest.checkStatus();
 
-        // revert A/B/E -> this will not resurect it
+        // revert A/B/E -> this will resurect it
         client.revert(thisTest.getWCPath()+"/A/B/E", true);
+        thisTest.getWc().setItemTextStatus("A/B/E", Status.Kind.normal);
+        thisTest.getWc().setItemTextStatus("A/B/E/alpha", Status.Kind.normal);
+        thisTest.getWc().setItemTextStatus("A/B/E/beta", Status.Kind.normal);
 
         // test the status of the working copy
         thisTest.checkStatus();
@@ -1637,8 +1640,7 @@ public class BasicTests extends SVNTests
         assertFalse("failed to remove unmodified file",
                 new File(thisTest.getWorkingCopy(), "A/B/E/alpha").exists());
         file = new File(thisTest.getWorkingCopy(),"A/B/F");
-        assertTrue("removed versioned dir", file.exists()
-                && file.isDirectory());
+        assertFalse("failed to remove versioned dir", file.exists());
         assertFalse("failed to remove unversioned dir",
                 new File(thisTest.getWorkingCopy(), "A/C/Q").exists());
         assertFalse("failed to remove added dir",
@@ -1714,83 +1716,6 @@ public class BasicTests extends SVNTests
         // check out the previous revision
         client.checkout(thisTest.getUrl()+"/A/D", thisTest.getWCPath()+"/new_D",
                 new Revision.Number(1), true);
-    }
-
-    /**
-     * Test if Subversion will detect the change of a file to a
-     * direcory.
-     * @throws Throwable
-     */
-    public void testBasicNodeKindChange() throws Throwable
-    {
-        // create working copy
-        OneTest thisTest = new OneTest();
-
-        //  remove A/D/gamma
-        client.remove(new String[] {thisTest.getWCPath()+"/A/D/gamma"}, null,
-                false);
-        thisTest.getWc().setItemTextStatus("A/D/gamma", Status.Kind.deleted);
-
-        // check the working copy status
-        thisTest.checkStatus();
-
-        try
-        {
-            // creating a directory in the place of the deleted file should
-            // fail
-            client.mkdir(new String[] {thisTest.getWCPath()+"/A/D/gamma"},
-                    null);
-            fail("can change node kind");
-        }
-        catch(ClientException e)
-        {
-
-        }
-
-        // check the working copy status
-        thisTest.checkStatus();
-
-        // commit the deletion
-        addExpectedCommitItem(thisTest.getWCPath(),
-                thisTest.getUrl(), "A/D/gamma", NodeKind.file,
-                CommitItemStateFlags.Delete);
-        assertEquals("wrong revision number from commit",
-                client.commit(new String[]{thisTest.getWCPath()},"log message",
-                        true), 2);
-        thisTest.getWc().removeItem("A/D/gamma");
-
-        // check the working copy status
-        thisTest.checkStatus();
-
-        try
-        {
-            // creating a directory in the place of the deleted file should
-            // still fail
-            client.mkdir(
-                    new String[] {thisTest.getWCPath()+"/A/D/gamma"}, null);
-            fail("can change node kind");
-        }
-        catch(ClientException e)
-        {
-
-        }
-
-        // check the working copy status
-        thisTest.checkStatus();
-
-        // update the working copy
-        client.update(thisTest.getWCPath(), null, true);
-
-        // check the working copy status
-        thisTest.checkStatus();
-
-        // now creating the directory should succeed
-        client.mkdir(new String[] {thisTest.getWCPath()+"/A/D/gamma"}, null);
-        thisTest.getWc().addItem("A/D/gamma", null);
-        thisTest.getWc().setItemTextStatus("A/D/gamma", Status.Kind.added);
-
-        // check the working copy status
-        thisTest.checkStatus();
     }
 
     /**
@@ -3085,10 +3010,9 @@ public class BasicTests extends SVNTests
                 tcTest.getWc().getItemContent("A/B/E/alpha"));
         tcTest.getWc().setItemWorkingCopyRevision("A/B/F/alpha", 2);
         // we expect the tree conflict to turn the existing item into
-        // a scheduled-add with history.  We expect the modifications in
-        // the local file to have been copied to the new file.
+        // a scheduled-add with history.
         tcTest.getWc().setItemTextStatus("A/B/E/alpha", StatusKind.added);
-        tcTest.getWc().setItemTextStatus("A/B/F/alpha", StatusKind.modified);
+        tcTest.getWc().setItemTextStatus("A/B/F/alpha", StatusKind.normal);
 
         // check the status of the working copy of the tc test
         tcTest.checkStatus();

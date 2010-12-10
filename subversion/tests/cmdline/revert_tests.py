@@ -851,29 +851,37 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
                   os.path.join(G_path, 'alpha'),
                   os.path.join(G_path, 'beta')]
 
+  if svntest.main.wc_is_singledb(wc_dir):
+    # These nodes are not lost in single-db
+    revert_paths += [ os.path.join(G_path, 'pi'),
+                      os.path.join(G_path, 'rho'),
+                      os.path.join(G_path, 'tau')]
+
   expected_output = svntest.verify.UnorderedOutput([
     "Reverted '%s'\n" % path for path in revert_paths])
 
   svntest.actions.run_and_verify_svn(None, expected_output, [], "revert", "-R",
                                      G_path)
 
-  ### GS (Oct 11): this is stupid. after a revert, there should be
-  ###              *NO* status whatsoever. ugh. this status behavior
-  ###              has been twiddled over the 1.6/1.7 dev cycle, but
-  ###              it "should" just disappear.
 
-  ### Is it a bug that we'd need to run revert twice to finish the job?
+  # Revert leaves these added nodes as unversioned
   expected_output = svntest.verify.UnorderedOutput(
-    ["A       " + os.path.join(G_path, "pi") + "\n",
-     "A       " + os.path.join(G_path, "rho") + "\n",
-     "A       " + os.path.join(G_path, "tau") + "\n"])
+    ["?       " + os.path.join(G_path, "pi") + "\n",
+     "?       " + os.path.join(G_path, "rho") + "\n",
+     "?       " + os.path.join(G_path, "tau") + "\n"])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      "status", wc_dir)
 
   svntest.main.safe_rmtree(G_path)
 
-  expected_output = svntest.verify.UnorderedOutput(
-    ["!       " + G_path + "\n"])
+  if svntest.main.wc_is_singledb(wc_dir):
+    expected_output = svntest.verify.UnorderedOutput(
+      ["!       " + G_path + "\n",
+       "!       " + os.path.join(G_path, "alpha") + "\n",
+       "!       " + os.path.join(G_path, "beta") + "\n"])
+  else:
+    expected_output = svntest.verify.UnorderedOutput(
+      ["!       " + G_path + "\n"])
   svntest.actions.run_and_verify_svn(None, expected_output, [], "status",
                                      wc_dir)
 
@@ -989,6 +997,49 @@ def revert_add_over_not_present_dir(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
+def revert_added_tree(sbox):
+  "revert an added tree fails"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'mkdir', sbox.ospath('X'), sbox.ospath('X/Y'))
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'X'   : Item(status='A ', wc_rev=0),
+    'X/Y' : Item(status='A ', wc_rev=0),
+    })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Revert is non-recursive and fails, status is unchanged
+  expected_error = '.*Try \'svn revert --depth infinity\'.*'
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'revert', sbox.ospath('X'))
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+
+def revert_child_of_copy(sbox):
+  "revert a child of a copied directory does nothing"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', sbox.ospath('A/B/E'), sbox.ospath('A/B/E2'))
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/B/E2'       : Item(status='A ', copied='+', wc_rev='-'),
+    'A/B/E2/alpha' : Item(status='  ', copied='+', wc_rev='-'),
+    'A/B/E2/beta'  : Item(status='  ', copied='+', wc_rev='-'),
+    })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Revert of child of copy does nothing, status is unchanged
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'revert', sbox.ospath('A/B/E2/beta'))
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+
 ########################################################################
 # Run the tests
 
@@ -1011,11 +1062,12 @@ test_list = [ None,
               revert_propdel__file,
               revert_replaced_with_history_file_1,
               status_of_missing_dir_after_revert,
-              Wimp("revert behavior needs better definition",
-                   status_of_missing_dir_after_revert_replaced_with_history_dir),
+              status_of_missing_dir_after_revert_replaced_with_history_dir,
               revert_replaced_with_history_file_2,
               revert_tree_conflicts_in_updated_files,
               revert_add_over_not_present_dir,
+              revert_added_tree,
+              revert_child_of_copy,
              ]
 
 if __name__ == '__main__':

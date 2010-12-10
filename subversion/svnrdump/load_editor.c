@@ -30,8 +30,14 @@
 #include "svn_path.h"
 #include "svn_ra.h"
 #include "svn_io.h"
+#include "svn_private_config.h"
+
+#include <apr_network_io.h>
 
 #include "load_editor.h"
+
+#define SVNRDUMP_PROP_LOCK SVN_PROP_PREFIX "rdump-lock"
+#define LOCK_RETRIES 10
 
 #ifdef SVN_DEBUG
 #define LDR_DBG(x) SVN_DBG(x)
@@ -44,11 +50,72 @@ commit_callback(const svn_commit_info_t *commit_info,
                 void *baton,
                 apr_pool_t *pool)
 {
-  SVN_ERR(svn_cmdline_printf(pool, "* Loaded revision %ld\n",
+  /* ### Don't print directly; generate a notification. */
+  SVN_ERR(svn_cmdline_printf(pool, "* Loaded revision %ld.\n",
                              commit_info->revision));
   return SVN_NO_ERROR;
 }
 
+/* Acquire a lock (of sorts) on the repository associated with the
+ * given RA SESSION. This lock is just a revprop change attempt in a
+ * time-delay loop. This function is duplicated by svnsync in main.c.
+ *
+ * ### TODO: Make this function more generic and
+ * expose it through a header for use by other Subversion
+ * applications to avoid duplication.
+ */
+static svn_error_t *
+get_lock(svn_ra_session_t *session, apr_pool_t *pool)
+{
+  char hostname_str[APRMAXHOSTLEN + 1] = { 0 };
+  svn_string_t *mylocktoken, *reposlocktoken;
+  apr_status_t apr_err;
+  apr_pool_t *subpool;
+  int i;
+
+  apr_err = apr_gethostname(hostname_str, sizeof(hostname_str), pool);
+  if (apr_err)
+    return svn_error_wrap_apr(apr_err, _("Can't get local hostname"));
+
+  mylocktoken = svn_string_createf(pool, "%s:%s", hostname_str,
+                                   svn_uuid_generate(pool));
+
+  subpool = svn_pool_create(pool);
+
+  for (i = 0; i < LOCK_RETRIES; ++i)
+    {
+      svn_pool_clear(subpool);
+
+      SVN_ERR(svn_ra_rev_prop(session, 0, SVNRDUMP_PROP_LOCK, &reposlocktoken,
+                              subpool));
+
+      if (reposlocktoken)
+        {
+          /* Did we get it? If so, we're done, otherwise we sleep. */
+          if (strcmp(reposlocktoken->data, mylocktoken->data) == 0)
+            return SVN_NO_ERROR;
+          else
+            {
+              SVN_ERR(svn_cmdline_printf
+                      (pool, _("Failed to get lock on destination "
+                               "repos, currently held by '%s'\n"),
+                       reposlocktoken->data));
+
+              apr_sleep(apr_time_from_sec(1));
+            }
+        }
+      else if (i < LOCK_RETRIES - 1)
+        {
+          /* Except in the very last iteration, try to set the lock. */
+          SVN_ERR(svn_ra_change_rev_prop(session, 0, SVNRDUMP_PROP_LOCK,
+                                         mylocktoken, subpool));
+        }
+    }
+
+  return svn_error_createf(APR_EINVAL, NULL,
+                           _("Couldn't get lock on destination repos "
+                             "after %d attempts"), i);
+}
 
 static svn_error_t *
 new_revision_record(void **revision_baton,
@@ -115,6 +182,7 @@ new_node_record(void **node_baton,
   void *commit_edit_baton;
   char *ancestor_path;
   apr_array_header_t *residual_open_path;
+  char *relpath_compose;
   const char *nb_dirname;
   apr_size_t residual_close_count;
   int i;
@@ -131,16 +199,20 @@ new_node_record(void **node_baton,
 
   /* If the creation of commit_editor is pending, create it now and
      open_root on it; also create a top-level directory baton. */
-  if (!commit_editor) {
 
-      if (rb->revprop_table)
-        {
-          /* Clear revprops that we aren't allowed to set with the commit */
-          apr_hash_set(rb->revprop_table, SVN_PROP_REVISION_AUTHOR,
-                       APR_HASH_KEY_STRING, NULL);
-          apr_hash_set(rb->revprop_table, SVN_PROP_REVISION_DATE,
-                       APR_HASH_KEY_STRING, NULL);
-        }
+  if (!commit_editor)
+    {
+      /* The revprop_table should have been filled in with important
+         information like svn:log in set_revision_property. We can now
+         use it all this information to create our commit_editor. But
+         first, clear revprops that we aren't allowed to set with the
+         commit_editor. We'll set them separately using the RA API
+         after closing the editor (see close_revision). */
+
+      apr_hash_set(rb->revprop_table, SVN_PROP_REVISION_AUTHOR,
+                   APR_HASH_KEY_STRING, NULL);
+      apr_hash_set(rb->revprop_table, SVN_PROP_REVISION_DATE,
+                   APR_HASH_KEY_STRING, NULL);
 
       SVN_ERR(svn_ra_get_commit_editor3(rb->pb->session, &commit_editor,
                                         &commit_edit_baton, rb->revprop_table,
@@ -162,7 +234,7 @@ new_node_record(void **node_baton,
       child_db->relpath = svn_relpath_canonicalize("/", rb->pool);
       child_db->parent = NULL;
       rb->db = child_db;
-  }
+    }
 
   for (hi = apr_hash_first(rb->pool, headers); hi; hi = apr_hash_next(hi))
     {
@@ -233,8 +305,11 @@ new_node_record(void **node_baton,
         
       for (i = 0; i < residual_open_path->nelts; i ++)
         {
-          SVN_ERR(commit_editor->open_directory(APR_ARRAY_IDX(residual_open_path,
-                                                              i, const char *),
+          relpath_compose =
+            svn_relpath_join(rb->db->relpath,
+                             APR_ARRAY_IDX(residual_open_path, i, const char *),
+                             rb->pool);
+          SVN_ERR(commit_editor->open_directory(relpath_compose,
                                                 rb->db->baton,
                                                 rb->rev - 1,
                                                 rb->pool, &child_baton));
@@ -242,10 +317,7 @@ new_node_record(void **node_baton,
           child_db = apr_pcalloc(rb->pool, sizeof(*child_db));
           child_db->baton = child_baton;
           child_db->depth = rb->db->depth + 1;
-          child_db->relpath = svn_relpath_join(rb->db->relpath,
-                                               APR_ARRAY_IDX(residual_open_path,
-                                                             i, const char *),
-                                               rb->pool);
+          child_db->relpath = relpath_compose;
           child_db->parent = rb->db;
           rb->db = child_db;
         }
@@ -348,14 +420,21 @@ set_node_property(void *baton,
   commit_editor = nb->rb->pb->commit_editor;
   pool = nb->rb->pool;
 
-  LDR_DBG(("Applying properties on %p\n", nb->file_baton));
-  if (nb->kind == svn_node_file)
-    SVN_ERR(commit_editor->change_file_prop(nb->file_baton, name,
-                                            value, pool));
-  else
-    SVN_ERR(commit_editor->change_dir_prop(nb->rb->db->baton, name,
-                                           value, pool));
-
+  switch (nb->kind)
+    {
+    case svn_node_file:
+      LDR_DBG(("Applying properties on %p\n", nb->file_baton));
+      SVN_ERR(commit_editor->change_file_prop(nb->file_baton, name,
+                                              value, pool));
+      break;
+    case svn_node_dir:
+      LDR_DBG(("Applying properties on %p\n", nb->rb->db->baton));
+      SVN_ERR(commit_editor->change_dir_prop(nb->rb->db->baton, name,
+                                             value, pool));
+      break;
+    default:
+      break;
+    }
   return SVN_NO_ERROR;
 }
 
@@ -448,7 +527,8 @@ close_revision(void *baton)
 
   /* Fake revision 0 */
   if (rb->rev == 0)
-    SVN_ERR(svn_cmdline_printf(rb->pool, "* Loaded revision 0\n"));
+    /* ### Don't print directly; generate a notification. */
+    SVN_ERR(svn_cmdline_printf(rb->pool, "* Loaded revision 0.\n"));
   else if (commit_editor)
     {
       /* Close all pending open directories, and then close the edit
@@ -533,9 +613,11 @@ drive_dumpstream_loader(svn_stream_t *stream,
   struct parse_baton *pb;
   pb = parse_baton;
 
+  SVN_ERR(get_lock(session, pool));
   SVN_ERR(svn_ra_get_repos_root2(session, &(pb->root_url), pool));
   SVN_ERR(svn_repos_parse_dumpstream2(stream, parser, parse_baton,
                                       NULL, NULL, pool));
+  SVN_ERR(svn_ra_change_rev_prop(session, 0, SVNRDUMP_PROP_LOCK, NULL, pool));
 
   return SVN_NO_ERROR;
 }

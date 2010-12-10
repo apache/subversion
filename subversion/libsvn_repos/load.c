@@ -34,9 +34,11 @@
 #include "svn_mergeinfo.h"
 #include "svn_checksum.h"
 #include "svn_subst.h"
+#include "svn_ctype.h"
 
 #include <apr_lib.h>
 
+#include "private/svn_dep_compat.h"
 #include "private/svn_mergeinfo_private.h"
 
 /*----------------------------------------------------------------------*/
@@ -449,9 +451,11 @@ parse_property_block(svn_stream_t *stream,
       else if ((buf[0] == 'K') && (buf[1] == ' '))
         {
           char *keybuf;
+          apr_uint64_t len;
 
+          SVN_ERR(svn_cstring_strtoui64(&len, buf + 2, 0, APR_SIZE_MAX, 10));
           SVN_ERR(read_key_or_val(&keybuf, actual_length,
-                                  stream, atoi(buf + 2), proppool));
+                                  stream, (apr_size_t)len, proppool));
 
           /* Read a val length line */
           SVN_ERR(svn_stream_readline(stream, &strbuf, "\n", &eof, proppool));
@@ -465,8 +469,10 @@ parse_property_block(svn_stream_t *stream,
             {
               svn_string_t propstring;
               char *valbuf;
+              apr_int64_t val;
 
-              propstring.len = atoi(buf + 2);
+              SVN_ERR(svn_cstring_atoi64(&val, buf + 2));
+              propstring.len = (apr_size_t)val;
               SVN_ERR(read_key_or_val(&valbuf, actual_length,
                                       stream, propstring.len, proppool));
               propstring.data = valbuf;
@@ -523,9 +529,11 @@ parse_property_block(svn_stream_t *stream,
       else if ((buf[0] == 'D') && (buf[1] == ' '))
         {
           char *keybuf;
+          apr_uint64_t len;
 
+          SVN_ERR(svn_cstring_strtoui64(&len, buf + 2, 0, APR_SIZE_MAX, 10));
           SVN_ERR(read_key_or_val(&keybuf, actual_length,
-                                  stream, atoi(buf + 2), proppool));
+                                  stream, (apr_size_t)len, proppool));
 
           /* We don't expect these in revision properties, and if we see
              one when we don't have a delete_node_property callback,
@@ -642,7 +650,7 @@ parse_format_version(const char *versionstring, int *version)
     return svn_error_create(SVN_ERR_STREAM_MALFORMED_DATA, NULL,
                             _("Malformed dumpfile header"));
 
-  value = atoi(p+1);
+  SVN_ERR(svn_cstring_atoi(&value, p + 1));
 
   if (value > SVN_REPOS_DUMPFILE_FORMAT_VERSION)
     return svn_error_createf(SVN_ERR_STREAM_MALFORMED_DATA, NULL,
@@ -735,7 +743,7 @@ svn_repos_parse_dumpstream2(svn_stream_t *stream,
             return stream_ran_dry();
         }
 
-      if ((linebuf->len == 0) || (apr_isspace(linebuf->data[0])))
+      if ((linebuf->len == 0) || (svn_ctype_isspace(linebuf->data[0])))
         continue; /* empty line ... loop */
 
       /*** Found the beginning of a new record. ***/
@@ -784,7 +792,7 @@ svn_repos_parse_dumpstream2(svn_stream_t *stream,
                                      APR_HASH_KEY_STRING)))
         {
           /* ### someday, switch modes of operation here. */
-          version = atoi(value);
+          SVN_ERR(svn_cstring_atoi(&version, value));
         }
       /* Or is this bogosity?! */
       else

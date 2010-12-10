@@ -1128,7 +1128,7 @@ svn_wc_get_ancestry(char **url,
 
   SVN_ERR(svn_wc__get_entry(&entry, svn_wc__adm_get_db(adm_access),
                             local_abspath, FALSE,
-                            svn_node_unknown, FALSE,
+                            svn_node_unknown,
                             pool, pool));
 
   if (url)
@@ -1789,6 +1789,7 @@ svn_wc_get_diff_editor5(svn_wc_adm_access_t *anchor,
                                    depth,
                                    ignore_ancestry,
                                    FALSE,
+                                   FALSE,
                                    use_text_base,
                                    reverse_order,
                                    changelists,
@@ -1940,6 +1941,7 @@ svn_wc_diff5(svn_wc_adm_access_t *anchor,
                        depth,
                        ignore_ancestry,
                        FALSE,
+                       FALSE,
                        changelists,
                        NULL, NULL,
                        pool));
@@ -2045,27 +2047,11 @@ svn_wc_mark_missing_deleted(const char *path,
                             svn_wc_adm_access_t *parent,
                             apr_pool_t *pool)
 {
-#ifdef SINGLE_DB
   /* With a single DB a node will never be missing */
   return svn_error_createf(SVN_ERR_WC_PATH_FOUND, NULL,
                            _("Unexpectedly found '%s': "
                              "path is marked 'missing'"),
                            svn_dirent_local_style(path, pool));
-#else
-  const char *local_abspath;
-  svn_wc_context_t *wc_ctx;
-
-  SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL,
-                                         svn_wc__adm_get_db(parent), pool));
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-
-  SVN_ERR(svn_wc__temp_mark_missing_not_present(local_abspath, wc_ctx, pool));
-
-  SVN_ERR(svn_wc_context_destroy(wc_ctx));
-
-  return SVN_NO_ERROR;
-#endif
 }
 
 
@@ -2959,7 +2945,6 @@ svn_wc_get_update_editor3(svn_revnum_t *target_revision,
                                     allow_unver_obstructions,
                                     diff3_cmd,
                                     preserved_exts,
-                                    fetch_func, fetch_baton,
                                     conflict_func, conflict_baton,
                                     external_func, eb,
                                     cancel_func, cancel_baton,
@@ -3076,7 +3061,6 @@ svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
                                     allow_unver_obstructions,
                                     diff3_cmd,
                                     preserved_exts,
-                                    NULL, NULL,
                                     conflict_func, conflict_baton,
                                     external_func, eb,
                                     cancel_func, cancel_baton,
@@ -3380,12 +3364,16 @@ svn_wc_relocate3(const char *path,
   const char *local_abspath;
   svn_wc_context_t *wc_ctx;
 
+  if (! recurse)
+    svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, 0,
+                     _("Non-recursive relocation not supported"));
+
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
                                          svn_wc__adm_get_db(adm_access),
                                          pool));
 
-  SVN_ERR(svn_wc_relocate4(wc_ctx, local_abspath, from, to, recurse,
+  SVN_ERR(svn_wc_relocate4(wc_ctx, local_abspath, from, to,
                            validator, validator_baton, pool));
 
   return svn_error_return(svn_wc_context_destroy(wc_ctx));
@@ -3925,7 +3913,6 @@ svn_wc__entry_versioned_internal(const svn_wc_entry_t **entry,
   SVN_ERR(svn_wc__get_entry_versioned(entry, svn_wc__adm_get_db(adm_access),
                                       local_abspath, svn_node_unknown,
                                       show_hidden,
-                                      FALSE, /* NEED_PARENT_STUB */
                                       pool, pool));
 
   return SVN_NO_ERROR;

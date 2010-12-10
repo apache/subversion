@@ -122,6 +122,7 @@ typedef enum {
   opt_show_diff,
   opt_internal_diff,
   opt_use_git_diff_format,
+  opt_old_patch_target_names,
   opt_ignore_mergeinfo
 } svn_cl__longopt_t;
 
@@ -284,7 +285,9 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                             "
                        "ARG may be one of 'LF', 'CR', 'CRLF'")},
   {"limit",         'l', 1, N_("maximum number of log entries")},
-  {"no-unlock",     opt_no_unlock, 0, N_("don't unlock the targets")},
+  {"no-unlock",     opt_no_unlock, 0, N_("don't unlock the targets\n"
+                       "                             "
+                       "[aliases: --nul, --keep-lock]")},
   {"summarize",     opt_summarize, 0, N_("show a summary of the results")},
   {"remove",         opt_remove, 0, N_("remove changelist association")},
   {"changelist",    opt_changelist, 1,
@@ -356,6 +359,10 @@ const apr_getopt_option_t svn_cl__options[] =
   {"reverse-diff", opt_reverse_diff, 0,
                     N_("apply the unidiff in reverse\n"
                        "                             "
+                       "This option also reverses patch target names; the\n"
+                       "                             "
+                       "--old-patch-target-names option will prevent this.\n"
+                       "                             "
                        "[alias: --rd]")},
   {"ignore-whitespace", opt_ignore_whitespace, 0,
                        N_("ignore whitespace during pattern matching\n"
@@ -369,10 +376,23 @@ const apr_getopt_option_t svn_cl__options[] =
                        N_("override diff-cmd specified in config file\n"
                        "                             "
                        "[alias: --idiff]")},
-  {"git-diff", opt_use_git_diff_format, 0,
+  {"git", opt_use_git_diff_format, 0,
                        N_("use git's extended diff format\n")},
   {"ignore-mergeinfo",  opt_ignore_mergeinfo, 0,
                     N_("ignore changes to mergeinfo")},
+
+  {"old-patch-target-names", opt_old_patch_target_names, 0,
+                       N_("use target names from the old side of a patch.\n"
+                       "                             "
+                       "If a diff header contains\n"
+                       "                             "
+                       "  --- foo.c\n"
+                       "                             "
+                       "  +++ foo.c.new\n"
+                       "                             "
+                       "this option will cause the name \"foo.c\" to be used\n"
+                       "                             "
+                       "[alias: --optn]")},
 
   /* Long-opt Aliases
    *
@@ -402,6 +422,9 @@ const apr_getopt_option_t svn_cl__options[] =
   {"iw",            opt_ignore_whitespace, 0, NULL},
   {"diff",          opt_show_diff, 0, NULL},
   {"idiff",         opt_internal_diff, 0, NULL},
+  {"nul",           opt_no_unlock, 0, NULL},
+  {"keep-lock",     opt_no_unlock, 0, NULL},
+  {"optn",          opt_old_patch_target_names, 0, NULL},
 
   {0,               0, 0, 0},
 };
@@ -546,7 +569,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    committed, are immediately removed from the working copy\n"
      "    unless the --keep-local option is given.\n"
      "    PATHs that are, or contain, unversioned or modified items will\n"
-     "    not be removed unless the --force option is given.\n"
+     "    not be removed unless the --force or --keep-local option is given.\n"
      "\n"
      "  2. Each item specified by a URL is deleted from the repository\n"
      "    via an immediate commit.\n"),
@@ -851,7 +874,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  do not agree with.\n"
      ),
     {'q', opt_dry_run, opt_strip_count, opt_reverse_diff,
-     opt_ignore_whitespace} },
+     opt_ignore_whitespace, opt_old_patch_target_names} },
 
   { "propdel", svn_cl__propdel, {"pdel", "pd"}, N_
     ("Remove a property from files, dirs, or revisions.\n"
@@ -1787,6 +1810,9 @@ main(int argc, const char *argv[])
       case opt_use_git_diff_format:
         opt_state.use_git_diff_format = TRUE;
         break;
+      case opt_old_patch_target_names:
+        opt_state.old_patch_target_names = TRUE;
+        break;
       case opt_ignore_mergeinfo:
         opt_state.ignore_mergeinfo = TRUE;
         break;
@@ -2067,12 +2093,24 @@ main(int argc, const char *argv[])
         }
     }
 
-  if (opt_state.relocate && (opt_state.depth != svn_depth_unknown))
+  /* Relocation is infinite-depth only. */
+  if (opt_state.relocate)
     {
-      err = svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
-                             _("--relocate and --depth are mutually "
-                               "exclusive"));
-      return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+      if (opt_state.depth != svn_depth_unknown)
+        {
+          err = svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                                 _("--relocate and --depth are mutually "
+                                   "exclusive"));
+          return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+        }
+      if (! descend)
+        {
+          err = svn_error_create(
+                    SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
+                    _("--relocate and --non-recursive (-N) are mutually "
+                      "exclusive"));
+          return svn_cmdline_handle_exit_error(err, pool, "svn: ");
+        }
     }
 
   /* Only a few commands can accept a revision range; the rest can take at
@@ -2235,10 +2273,6 @@ main(int argc, const char *argv[])
       if (err)
         return svn_cmdline_handle_exit_error(err, pool, "svn: ");
     }
-
-  /* Set up our commit callback.  We leave the callback NULL. */
-  if (!opt_state.quiet)
-    ctx->commit_callback2 = svn_cl__print_commit_info;
 
   /* Set up our cancellation support. */
   ctx->cancel_func = svn_cl__check_cancel;

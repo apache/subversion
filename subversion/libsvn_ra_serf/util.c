@@ -36,6 +36,7 @@
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_private_config.h"
+#include "svn_string.h"
 #include "svn_xml.h"
 #include "private/svn_dep_compat.h"
 
@@ -736,7 +737,10 @@ start_error(svn_ra_serf__xml_parser_t *parser,
       err_code = svn_xml_get_attr_value("errcode", attrs);
       if (err_code)
         {
-          ctx->error->apr_err = apr_atoi64(err_code);
+          apr_int64_t val;
+          
+          SVN_ERR(svn_cstring_atoi64(&val, err_code));
+          ctx->error->apr_err = (apr_status_t)val;
         }
       else
         {
@@ -1049,7 +1053,7 @@ svn_ra_serf__handle_multistatus_only(serf_request_t *request,
           server_err->parser.cdata = cdata_207;
           server_err->parser.done = &ctx->done;
           server_err->parser.ignore_errors = TRUE;
-    }
+        }
       else
         {
           ctx->done = TRUE;

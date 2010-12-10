@@ -37,6 +37,7 @@ import tarfile
 import tempfile
 
 import svntest
+from svntest import wc
 
 Item = svntest.wc.StateItem
 XFail = svntest.testcase.XFail
@@ -85,9 +86,19 @@ def check_format(sbox, expected_format):
       raise svntest.Failure("found format '%d'; expected '%d'; in wc '%s'" %
                             (found_format, expected_format, root))
 
+    if svntest.main.wc_is_singledb(sbox.wc_dir):
+      dirs[:] = []
+
     if dot_svn in dirs:
       dirs.remove(dot_svn)
 
+def check_pristine(sbox, files):
+  for file in files:
+    file_path = sbox.ospath(file)
+    file_text = open(file_path, 'r').read()
+    file_pristine = open(svntest.wc.text_base_path(file_path), 'r').read()
+    if (file_text != file_pristine):
+      raise svntest.Failure("pristine mismatch for '%s'" % (file))
 
 def check_dav_cache(dir_path, wc_id, expected_dav_caches):
   dot_svn = svntest.main.get_admin_name()
@@ -199,6 +210,7 @@ def basic_upgrade(sbox):
   # Now check the contents of the working copy
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
+  check_pristine(sbox, ['iota', 'A/mu'])
 
 def upgrade_with_externals(sbox):
   "upgrade with externals"
@@ -217,6 +229,8 @@ def upgrade_with_externals(sbox):
 
   # Actually check the format number of the upgraded working copy
   check_format(sbox, get_current_format())
+  check_pristine(sbox, ['iota', 'A/mu',
+                        'A/D/x/lambda', 'A/D/x/E/alpha'])
 
 def upgrade_1_5_body(sbox, subcommand):
   replace_sbox_with_tarfile(sbox, 'upgrade_1_5.tar.bz2')
@@ -237,6 +251,7 @@ def upgrade_1_5_body(sbox, subcommand):
   # Now check the contents of the working copy
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
+  check_pristine(sbox, ['iota', 'A/mu'])
 
 
 def upgrade_1_5(sbox):
@@ -398,6 +413,8 @@ def basic_upgrade_1_0(sbox):
   svntest.actions.run_and_verify_info(expected_infos,
                                       os.path.join(sbox.wc_dir, 'DELETED'))
 
+  check_pristine(sbox, ['iota', 'A/mu', 'A/D/H/zeta'])
+
 # Helper function for the x3 tests.
 def do_x3_upgrade(sbox):
   # Attempt to use the working copy, this should give an error
@@ -532,6 +549,101 @@ def x3_1_6_12(sbox):
 
   do_x3_upgrade(sbox)
 
+def missing_dirs(sbox):
+  "missing directories and obstructing files"
+
+  # tarball wc looks like:
+  #   svn co URL wc
+  #   svn cp wc/A/B wc/A/B_new
+  #   rm -rf wc/A/B/E wc/A/D wc/A/B_new/E wc/A/B_new/F
+  #   touch wc/A/D wc/A/B_new/F
+
+  sbox.build(create_wc = False)
+  replace_sbox_with_tarfile(sbox, 'missing-dirs.tar.bz2')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'upgrade', sbox.wc_dir)
+  expected_status = svntest.wc.State(sbox.wc_dir,
+    {
+      ''                  : Item(status='  ', wc_rev='1'),
+      'A'                 : Item(status='  ', wc_rev='1'),
+      'A/mu'              : Item(status='  ', wc_rev='1'),
+      'A/C'               : Item(status='  ', wc_rev='1'),
+      'A/D'               : Item(status='~ ', wc_rev='?'),
+      'A/B'               : Item(status='  ', wc_rev='1'),
+      'A/B/F'             : Item(status='  ', wc_rev='1'),
+      'A/B/E'             : Item(status='! ', wc_rev='?'),
+      'A/B/lambda'        : Item(status='  ', wc_rev='1'),
+      'iota'              : Item(status='  ', wc_rev='1'),
+      'A/B_new'           : Item(status='A ', wc_rev='-', copied='+'),
+      'A/B_new/E'         : Item(status='! ', wc_rev='?'),
+      'A/B_new/F'         : Item(status='~ ', wc_rev='?'),
+      'A/B_new/lambda'    : Item(status='  ', wc_rev='-', copied='+'),
+    })
+  if svntest.main.wc_is_singledb(sbox.wc_dir):
+    expected_status.tweak('A/D', 'A/B_new/F', status='! ')
+  run_and_verify_status_no_server(sbox.wc_dir, expected_status)
+  
+def missing_dirs2(sbox):
+  "missing directories and obstructing dirs"
+
+  sbox.build(create_wc = False)
+  replace_sbox_with_tarfile(sbox, 'missing-dirs.tar.bz2')
+  os.remove(sbox.ospath('A/D'))
+  os.remove(sbox.ospath('A/B_new/F'))
+  os.mkdir(sbox.ospath('A/D'))
+  os.mkdir(sbox.ospath('A/B_new/F'))
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'upgrade', sbox.wc_dir)
+  expected_status = svntest.wc.State(sbox.wc_dir,
+    {
+      ''                  : Item(status='  ', wc_rev='1'),
+      'A'                 : Item(status='  ', wc_rev='1'),
+      'A/mu'              : Item(status='  ', wc_rev='1'),
+      'A/C'               : Item(status='  ', wc_rev='1'),
+      'A/D'               : Item(status='~ ', wc_rev='?'),
+      'A/B'               : Item(status='  ', wc_rev='1'),
+      'A/B/F'             : Item(status='  ', wc_rev='1'),
+      'A/B/E'             : Item(status='! ', wc_rev='?'),
+      'A/B/lambda'        : Item(status='  ', wc_rev='1'),
+      'iota'              : Item(status='  ', wc_rev='1'),
+      'A/B_new'           : Item(status='A ', wc_rev='-', copied='+'),
+      'A/B_new/E'         : Item(status='! ', wc_rev='?'),
+      'A/B_new/F'         : Item(status='~ ', wc_rev='?'),
+      'A/B_new/lambda'    : Item(status='  ', wc_rev='-', copied='+'),
+    })
+  if svntest.main.wc_is_singledb(sbox.wc_dir):
+    expected_status.tweak('A/D', 'A/B_new/F', status='! ')
+  run_and_verify_status_no_server(sbox.wc_dir, expected_status)
+
+def delete_and_keep_local(sbox):
+  "check status delete and delete --keep-local"
+
+  sbox.build(create_wc = False)
+  replace_sbox_with_tarfile(sbox, 'wc-delete.tar.bz2')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'upgrade', sbox.wc_dir)
+
+  expected_status = svntest.wc.State(sbox.wc_dir,
+    {
+      ''                  : Item(status='  ', wc_rev='0'),
+      'Normal'            : Item(status='  ', wc_rev='1'),
+      'Deleted-Keep-Local': Item(status='D ', wc_rev='1'),
+      'Deleted'           : Item(status='D ', wc_rev='1'),
+  })
+
+  run_and_verify_status_no_server(sbox.wc_dir, expected_status)
+
+  # Deleted-Keep-Local should still exist after the upgrade
+  if not os.path.exists(os.path.join(sbox.wc_dir, 'Deleted-Keep-Local')):
+    raise svntest.Failure('wc/Deleted-Keep-Local should exist')
+
+  # Deleted-Keep-Local should be removed after the upgrade as it was
+  # schedule delete and doesn't contain unversioned changes.
+  if os.path.exists(os.path.join(sbox.wc_dir, 'Deleted')):
+    raise svntest.Failure('wc/Deleted should not exist')
+
+
 
 ########################################################################
 # Run the tests
@@ -550,6 +662,9 @@ test_list = [ None,
               XFail(x3_1_4_0),
               x3_1_4_6,
               x3_1_6_12,
+              missing_dirs,
+              missing_dirs2,
+              XFail(delete_and_keep_local),
              ]
 
 

@@ -641,6 +641,28 @@ svn_error_t *svn_ra_rev_prop(svn_ra_session_t *session,
   return session->vtable->rev_prop(session, rev, name, value, pool);
 }
 
+struct ccw_baton
+{
+  svn_commit_callback2_t original_callback;
+  void *original_baton;
+
+  svn_ra_session_t *session;
+};
+
+/* Wrapper which populates the repos_root field of the commit_info struct */
+static svn_error_t *
+commit_callback_wrapper(const svn_commit_info_t *commit_info,
+                        void *baton,
+                        apr_pool_t *pool)
+{
+  struct ccw_baton *ccwb = baton;
+  svn_commit_info_t *ci = svn_commit_info_dup(commit_info, pool);
+  
+  SVN_ERR(svn_ra_get_repos_root2(ccwb->session, &ci->repos_root, pool));
+
+  return ccwb->original_callback(ci, ccwb->original_baton, pool);
+}
+
 svn_error_t *svn_ra_get_commit_editor3(svn_ra_session_t *session,
                                        const svn_delta_editor_t **editor,
                                        void **edit_baton,
@@ -651,10 +673,21 @@ svn_error_t *svn_ra_get_commit_editor3(svn_ra_session_t *session,
                                        svn_boolean_t keep_locks,
                                        apr_pool_t *pool)
 {
+  /* Allocate this in a pool, since the callback will be called long after
+     this function as returned. */
+  struct ccw_baton *ccwb = apr_palloc(pool, sizeof(*ccwb));
+
+  ccwb->original_callback = callback;
+  ccwb->original_baton = callback_baton;
+  ccwb->session = session;
+
   return session->vtable->get_commit_editor(session, editor, edit_baton,
-                                            revprop_table, callback,
-                                            callback_baton, lock_tokens,
-                                            keep_locks, pool);
+                                            revprop_table,
+                                            callback
+                                                ? commit_callback_wrapper
+                                                : NULL,
+                                            callback ? ccwb : NULL,
+                                            lock_tokens, keep_locks, pool);
 }
 
 svn_error_t *svn_ra_get_file(svn_ra_session_t *session,

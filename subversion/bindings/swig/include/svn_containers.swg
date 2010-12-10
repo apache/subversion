@@ -205,6 +205,27 @@
   %append_output(svn_swig_py_changed_path_hash_to_dict($1));
 }
 
+%typemap(in) apr_hash_t *changed_paths2
+  (apr_pool_t *_global_pool = NULL, PyObject *_global_py_pool = NULL)
+{
+  if (_global_pool == NULL)
+  {
+    if (svn_swig_py_get_parent_pool(args, $descriptor(apr_pool_t *),
+                                    &_global_py_pool, &_global_pool))
+      SWIG_fail;
+  }
+
+  $1 = svn_swig_py_struct_ptr_hash_from_dict($input,
+    $descriptor(svn_log_changed_path2_t *), _global_pool);
+  if (PyErr_Occurred()) {
+    SWIG_fail;
+  }
+}
+%typemap(out) apr_hash_t *changed_paths2
+{
+  %append_output(svn_swig_py_changed_path2_hash_to_dict($1));
+}
+
 /* apr_hash_t * <const char *, svn_config_t *> */
 %typemap(in) apr_hash_t *config
   (apr_pool_t *_global_pool = NULL, PyObject *_global_py_pool = NULL)

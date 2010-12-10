@@ -30,6 +30,7 @@
 #include "JNIStringHolder.h"
 #include "JNIByteArray.h"
 #include "SVNRepos.h"
+#include "EnumMapper.h"
 #include "Revision.h"
 #include "InputStream.h"
 #include "OutputStream.h"
@@ -59,7 +60,7 @@ Java_org_apache_subversion_javahl_SVNRepos_dispose
       JNIUtil::throwError(_("bad C++ this"));
       return;
     }
-  cl->dispose(jthis);
+  cl->dispose();
 }
 
 JNIEXPORT void JNICALL
@@ -407,7 +408,7 @@ Java_org_apache_subversion_javahl_SVNRepos_verify
 
 JNIEXPORT jobject JNICALL
 Java_org_apache_subversion_javahl_SVNRepos_lslocks
-(JNIEnv *env, jobject jthis, jobject jpath)
+(JNIEnv *env, jobject jthis, jobject jpath, jobject jdepth)
 {
   JNIEntry(SVNRepos, lslocks);
   SVNRepos *cl = SVNRepos::getCppObject(jthis);
@@ -421,7 +422,7 @@ Java_org_apache_subversion_javahl_SVNRepos_lslocks
   if (JNIUtil::isExceptionThrown())
     return NULL;
 
-  return cl->lslocks(path);
+  return cl->lslocks(path, EnumMapper::toDepth(jdepth));
 }
 
 JNIEXPORT void JNICALL

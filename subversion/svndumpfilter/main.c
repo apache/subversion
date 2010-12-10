@@ -91,20 +91,20 @@ write_prop_to_stringbuf(svn_stringbuf_t **strbuf,
 
   bytes_used = apr_snprintf(buf, sizeof(buf), "%d", namelen);
   svn_stringbuf_appendbytes(*strbuf, buf, bytes_used);
-  svn_stringbuf_appendbytes(*strbuf, "\n", 1);
+  svn_stringbuf_appendbyte(*strbuf, '\n');
 
   svn_stringbuf_appendbytes(*strbuf, name, namelen);
-  svn_stringbuf_appendbytes(*strbuf, "\n", 1);
+  svn_stringbuf_appendbyte(*strbuf, '\n');
 
   /* Output value length, then value. */
   svn_stringbuf_appendbytes(*strbuf, "V ", 2);
 
   bytes_used = apr_snprintf(buf, sizeof(buf), "%" APR_SIZE_T_FMT, value->len);
   svn_stringbuf_appendbytes(*strbuf, buf, bytes_used);
-  svn_stringbuf_appendbytes(*strbuf, "\n", 1);
+  svn_stringbuf_appendbyte(*strbuf, '\n');
 
   svn_stringbuf_appendbytes(*strbuf, value->data, value->len);
-  svn_stringbuf_appendbytes(*strbuf, "\n", 1);
+  svn_stringbuf_appendbyte(*strbuf, '\n');
 }
 
 
@@ -365,19 +365,19 @@ output_revision(struct revision_baton_t *rb)
       bytes_used = apr_snprintf(buf, sizeof(buf), ": %" APR_SIZE_T_FMT,
                                 props->len);
       svn_stringbuf_appendbytes(rb->header, buf, bytes_used);
-      svn_stringbuf_appendbytes(rb->header, "\n", 1);
+      svn_stringbuf_appendbyte(rb->header, '\n');
     }
 
   svn_stringbuf_appendcstr(rb->header, SVN_REPOS_DUMPFILE_CONTENT_LENGTH);
   bytes_used = apr_snprintf(buf, sizeof(buf), ": %" APR_SIZE_T_FMT, props->len);
   svn_stringbuf_appendbytes(rb->header, buf, bytes_used);
-  svn_stringbuf_appendbytes(rb->header, "\n", 1);
+  svn_stringbuf_appendbyte(rb->header, '\n');
 
   /* put an end to headers */
-  svn_stringbuf_appendbytes(rb->header, "\n", 1);
+  svn_stringbuf_appendbyte(rb->header, '\n');
 
   /* put an end to revision */
-  svn_stringbuf_appendbytes(props,  "\n", 1);
+  svn_stringbuf_appendbyte(props, '\n');
 
   /* write out the revision */
   /* Revision is written out in the following cases:
@@ -633,7 +633,7 @@ output_node(struct node_baton_t *nb)
       bytes_used = apr_snprintf(buf, sizeof(buf), ": %" APR_SIZE_T_FMT,
                                 nb->props->len);
       svn_stringbuf_appendbytes(nb->header, buf, bytes_used);
-      svn_stringbuf_appendbytes(nb->header, "\n", 1);
+      svn_stringbuf_appendbyte(nb->header, '\n');
     }
   if (nb->has_text)
     {
@@ -642,16 +642,16 @@ output_node(struct node_baton_t *nb)
       bytes_used = apr_snprintf(buf, sizeof(buf), ": %" SVN_FILESIZE_T_FMT,
                                 nb->tcl);
       svn_stringbuf_appendbytes(nb->header, buf, bytes_used);
-      svn_stringbuf_appendbytes(nb->header, "\n", 1);
+      svn_stringbuf_appendbyte(nb->header, '\n');
     }
   svn_stringbuf_appendcstr(nb->header, SVN_REPOS_DUMPFILE_CONTENT_LENGTH);
   bytes_used = apr_snprintf(buf, sizeof(buf), ": %" SVN_FILESIZE_T_FMT,
                             (svn_filesize_t) (nb->props->len + nb->tcl));
   svn_stringbuf_appendbytes(nb->header, buf, bytes_used);
-  svn_stringbuf_appendbytes(nb->header, "\n", 1);
+  svn_stringbuf_appendbyte(nb->header, '\n');
 
   /* put an end to headers */
-  svn_stringbuf_appendbytes(nb->header, "\n", 1);
+  svn_stringbuf_appendbyte(nb->header, '\n');
 
   /* 3. output all the stuff */
 

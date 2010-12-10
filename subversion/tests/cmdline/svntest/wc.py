@@ -579,6 +579,9 @@ class State:
         # DELETED node lives.
         if entry.deleted and entry.schedule != 1:
           continue
+        # entries that are ABSENT don't show up in status
+        if entry.absent:
+          continue
         if name and entry.kind == 2:
           # stub subdirectory. leave a "missing" StateItem in here. note
           # that we can't put the status as "! " because that gets tweaked
@@ -822,8 +825,9 @@ def text_base_path(file_path):
   while True:
     db_path = os.path.join(root_path, dot_svn, 'wc.db')
     try:
-      db = svntest.sqlite3.connect(db_path)
-      break
+      if os.path.exists(db_path):
+        db = svntest.sqlite3.connect(db_path)
+        break
     except: pass
     head, tail = os.path.split(root_path)
     if head == root_path:
@@ -839,7 +843,11 @@ def text_base_path(file_path):
     c.execute("""select checksum from base_node
                  where local_relpath = '""" + relpath + """'""")
     checksum = c.fetchone()[0]
-  if checksum is None or checksum[0:6] != "$sha1$":
+  if checksum is not None and checksum[0:6] == "$md5 $":
+    c.execute("""select checksum from pristine
+                 where md5_checksum = '""" + checksum + """'""")
+    checksum = c.fetchone()[0]
+  if checksum is None:
     raise svntest.Failure("No SHA1 checksum for " + relpath)
   db.close()
 

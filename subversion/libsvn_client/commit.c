@@ -676,6 +676,8 @@ svn_client_import4(const char *path,
                    svn_boolean_t no_ignore,
                    svn_boolean_t ignore_unknown_node_types,
                    const apr_hash_t *revprop_table,
+                   svn_commit_callback2_t commit_callback,
+                   void *commit_baton,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
@@ -765,8 +767,7 @@ svn_client_import4(const char *path,
   while ((err = get_ra_editor(&ra_session,
                               &editor, &edit_baton, ctx, url, base_dir_abspath,
                               log_msg, NULL, revprop_table, FALSE, NULL, TRUE,
-                              ctx->commit_callback2, ctx->commit_baton,
-                              subpool)));
+                              commit_callback, commit_baton, subpool)));
 
   /* Reverse the order of the components we added to our NEW_ENTRIES array. */
   if (new_entries->nelts)
@@ -928,23 +929,6 @@ post_process_commit_item(svn_wc_committed_queue_t *queue,
   svn_boolean_t loop_recurse = FALSE;
   svn_boolean_t remove_lock;
 
-  /* Is it a missing, deleted directory?
-
-     ### Temporary: once we centralise this sort of node is just a
-     normal delete and will get handled by the post-commit queue. */
-  if (item->kind == svn_node_dir
-      && item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
-    {
-      svn_boolean_t obstructed;
-
-      SVN_ERR(svn_wc__node_is_status_obstructed(&obstructed,
-                                                wc_ctx, item->path,
-                                                scratch_pool));
-      if (obstructed)
-        return svn_wc__temp_mark_missing_not_present(item->path,
-                                                     wc_ctx, scratch_pool);
-    }
-
   if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
       && (item->kind == svn_node_dir)
       && (item->copyfrom_url))
@@ -1036,6 +1020,8 @@ svn_client_commit5(const apr_array_header_t *targets,
                    svn_boolean_t keep_changelists,
                    const apr_array_header_t *changelists,
                    const apr_hash_t *revprop_table,
+                   svn_commit_callback2_t commit_callback,
+                   void *commit_baton,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
@@ -1197,8 +1183,8 @@ svn_client_commit5(const apr_array_header_t *targets,
                                      pool)))
     goto cleanup;
 
-  cb.original_callback = ctx->commit_callback2;
-  cb.original_baton = ctx->commit_baton;
+  cb.original_callback = commit_callback;
+  cb.original_baton = commit_baton;
   cb.info = &commit_info;
   cb.pool = pool;
 

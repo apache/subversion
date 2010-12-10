@@ -53,13 +53,8 @@
 
 /* Baton for capture_commit_info() */
 struct capture_baton_t {
-  svn_commit_callback2_t original_callback;
-  void *original_baton;
-
   svn_commit_info_t **info;
   apr_pool_t *pool;
-
-  svn_boolean_t saw_commit;
 };
 
 
@@ -73,11 +68,6 @@ capture_commit_info(const svn_commit_info_t *commit_info,
   struct capture_baton_t *cb = baton;
 
   *(cb->info) = svn_commit_info_dup(commit_info, cb->pool);
-
-  if (cb->original_callback)
-    SVN_ERR((cb->original_callback)(commit_info, cb->original_baton, pool));
-
-  cb->saw_commit = TRUE;
 
   return SVN_NO_ERROR;
 }
@@ -124,20 +114,13 @@ svn_client_mkdir3(svn_commit_info_t **commit_info_p,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
 {
-  svn_client_ctx_t shadow_ctx;
   struct capture_baton_t cb;
 
   cb.info = commit_info_p;
   cb.pool = pool;
-  cb.original_callback = ctx->commit_callback2;
-  cb.original_baton = ctx->commit_baton;
 
-  shadow_ctx = *ctx;
-  shadow_ctx.commit_callback2 = capture_commit_info;
-  shadow_ctx.commit_baton = &cb;
-
-  return svn_client_mkdir4(paths, make_parents, revprop_table, &shadow_ctx,
-                           pool);
+  return svn_client_mkdir4(paths, make_parents, revprop_table,
+                           capture_commit_info, &cb, ctx, pool);
 }
 
 svn_error_t *
@@ -334,7 +317,7 @@ wrapped_receiver(void *baton,
   struct wrapped_receiver_baton_s *b = baton;
   svn_stringbuf_t *expanded_line = svn_stringbuf_create(line, pool);
 
-  svn_stringbuf_appendbytes(expanded_line, "\r", 1);
+  svn_stringbuf_appendbyte(expanded_line, '\r');
 
   return b->orig_receiver(b->orig_baton, line_no, revision, author,
                           date, expanded_line->data, pool);
@@ -398,21 +381,14 @@ svn_client_import3(svn_commit_info_t **commit_info_p,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
-  svn_client_ctx_t shadow_ctx;
   struct capture_baton_t cb;
 
   cb.info = commit_info_p;
   cb.pool = pool;
-  cb.original_callback = ctx->commit_callback2;
-  cb.original_baton = ctx->commit_baton;
-
-  shadow_ctx = *ctx;
-  shadow_ctx.commit_callback2 = capture_commit_info;
-  shadow_ctx.commit_baton = &cb;
 
   return svn_client_import4(path, url, depth, no_ignore,
                             ignore_unknown_node_types, revprop_table,
-                            &shadow_ctx, pool);
+                            capture_commit_info, &cb, ctx, pool);
 }
 
 svn_error_t *
@@ -460,23 +436,17 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
-  svn_client_ctx_t shadow_ctx;
   struct capture_baton_t cb;
 
+  *commit_info_p = NULL;
   cb.info = commit_info_p;
   cb.pool = pool;
-  cb.original_callback = ctx->commit_callback2;
-  cb.original_baton = ctx->commit_baton;
-  cb.saw_commit = FALSE;
-
-  shadow_ctx = *ctx;
-  shadow_ctx.commit_callback2 = capture_commit_info;
-  shadow_ctx.commit_baton = &cb;
 
   SVN_ERR(svn_client_commit5(targets, depth, keep_locks, keep_changelists,
-                             changelists, revprop_table, &shadow_ctx, pool));
+                             changelists, revprop_table,
+                             capture_commit_info, &cb, ctx, pool));
 
-  if (!cb.saw_commit)
+  if (! *commit_info_p)
     *commit_info_p = svn_create_commit_info(pool);
 
   return SVN_NO_ERROR;
@@ -539,20 +509,14 @@ svn_client_copy5(svn_commit_info_t **commit_info_p,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
-  svn_client_ctx_t shadow_ctx;
   struct capture_baton_t cb;
 
   cb.info = commit_info_p;
   cb.pool = pool;
-  cb.original_callback = ctx->commit_callback2;
-  cb.original_baton = ctx->commit_baton;
-
-  shadow_ctx = *ctx;
-  shadow_ctx.commit_callback2 = capture_commit_info;
-  shadow_ctx.commit_baton = &cb;
 
   return svn_client_copy6(sources, dst_path, copy_as_child, make_parents,
-                          ignore_externals, revprop_table, &shadow_ctx, pool);
+                          ignore_externals, revprop_table,
+                          capture_commit_info, &cb, ctx, pool);
 }
 
 svn_error_t *
@@ -651,20 +615,14 @@ svn_client_move5(svn_commit_info_t **commit_info_p,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
-  svn_client_ctx_t shadow_ctx;
   struct capture_baton_t cb;
 
   cb.info = commit_info_p;
   cb.pool = pool;
-  cb.original_callback = ctx->commit_callback2;
-  cb.original_baton = ctx->commit_baton;
-
-  shadow_ctx = *ctx;
-  shadow_ctx.commit_callback2 = capture_commit_info;
-  shadow_ctx.commit_baton = &cb;
 
   return svn_client_move6(src_paths, dst_path, force, move_as_child,
-                          make_parents, revprop_table, &shadow_ctx, pool);
+                          make_parents, revprop_table,
+                          capture_commit_info, &cb, ctx, pool);
 }
 
 svn_error_t *
@@ -768,20 +726,13 @@ svn_client_delete3(svn_commit_info_t **commit_info_p,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
-  svn_client_ctx_t shadow_ctx;
   struct capture_baton_t cb;
 
   cb.info = commit_info_p;
   cb.pool = pool;
-  cb.original_callback = ctx->commit_callback2;
-  cb.original_baton = ctx->commit_baton;
-
-  shadow_ctx = *ctx;
-  shadow_ctx.commit_callback2 = capture_commit_info;
-  shadow_ctx.commit_baton = &cb;
 
   return svn_client_delete4(paths, force, keep_local, revprop_table,
-                            &shadow_ctx, pool);
+                            capture_commit_info, &cb, ctx, pool);
 }
 
 svn_error_t *
@@ -1526,21 +1477,14 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool)
 {
-  svn_client_ctx_t shadow_ctx;
   struct capture_baton_t cb;
 
   cb.info = commit_info_p;
   cb.pool = pool;
-  cb.original_callback = ctx->commit_callback2;
-  cb.original_baton = ctx->commit_baton;
-
-  shadow_ctx = *ctx;
-  shadow_ctx.commit_callback2 = capture_commit_info;
-  shadow_ctx.commit_baton = &cb;
 
   return svn_client_propset4(propname, propval, target, depth, skip_checks,
                              base_revision_for_url, changelists, revprop_table,
-                             &shadow_ctx, pool);
+                             capture_commit_info, &cb, ctx, pool);
 }
 
 svn_error_t *
@@ -1737,7 +1681,7 @@ svn_client_status4(svn_revnum_t *result_rev,
                                        status_baton };
 
   return svn_client_status5(result_rev, ctx, path, revision, depth, get_all,
-                            update, no_ignore, ignore_externals, FALSE,
+                            update, no_ignore, ignore_externals, TRUE, FALSE,
                             changelists, status4_wrapper_func, &swb, pool);
 }
 
@@ -2133,4 +2077,19 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
                                   discover_changed_paths,
                                   svn_depth_empty, revprops, ctx,
                                   pool);
+}
+
+/*** From relocate.c ***/
+svn_error_t *
+svn_client_relocate(const char *path,
+                    const char *from,
+                    const char *to,
+                    svn_boolean_t recurse,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool)
+{
+  if (! recurse)
+    svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, 0,
+                     _("Non-recursive relocation not supported"));
+  return svn_client_relocate2(path, from, to, ctx, pool);
 }

@@ -90,7 +90,7 @@ typedef struct {
   replay_info_t *parent;
 } prop_info_t;
 
-typedef struct {
+typedef struct replay_context_t {
   apr_pool_t *src_rev_pool;
   apr_pool_t *dst_rev_pool;
 
@@ -118,12 +118,19 @@ typedef struct {
   /* Cached report target url */
   const char *report_target;
 
+  /* Target and revision to fetch revision properties on */
+  const char *revprop_target;
+  svn_revnum_t revprop_rev;
+
   /* Revision properties for this revision. */
   apr_hash_t *revs_props;
   apr_hash_t *props;
 
   /* Keep a reference to the XML parser ctx to report any errors. */
   svn_ra_serf__xml_parser_t *parser_ctx;
+
+  /* The propfind for the revision properties of the current revision */
+  svn_ra_serf__propfind_context_t *prop_ctx;
 
 } replay_context_t;
 
@@ -180,11 +187,15 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
     {
       push_state(parser, ctx, REPORT);
 
+      /* Before we can continue, we need the revision properties. */
+      SVN_ERR_ASSERT(!ctx->prop_ctx
+                     || svn_ra_serf__propfind_is_done(ctx->prop_ctx));
+
       /* Create a pool for the commit editor. */
       ctx->dst_rev_pool = svn_pool_create(ctx->src_rev_pool);
       ctx->props = apr_hash_make(ctx->dst_rev_pool);
-      SVN_ERR(svn_ra_serf__walk_all_props(ctx->revs_props, ctx->report_target,
-                                          ctx->revision,
+      SVN_ERR(svn_ra_serf__walk_all_props(ctx->revs_props, ctx->revprop_target,
+                                          ctx->revprop_rev,
                                           svn_ra_serf__set_bare_props,
                                           ctx->props, ctx->dst_rev_pool));
       if (ctx->revstart_func)
@@ -751,12 +762,29 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
           /* Request all properties of a certain revision. */
           replay_ctx->report_target = report_target;
           replay_ctx->revs_props = apr_hash_make(replay_ctx->src_rev_pool);
+
+          if (SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(session))
+           {
+             replay_ctx->revprop_target = apr_psprintf(pool, "%s/%ld",
+                                                       session->rev_stub, rev);
+             replay_ctx->revprop_rev = SVN_INVALID_REVNUM;
+            }
+          else
+            {
+              replay_ctx->revprop_target = report_target;
+              replay_ctx->revprop_rev = rev;
+            }
+
           SVN_ERR(svn_ra_serf__deliver_props(&prop_ctx,
                                              replay_ctx->revs_props, session,
-                                             session->conns[0], report_target,
-                                             rev,  "0", all_props,
+                                             session->conns[0],
+                                             replay_ctx->revprop_target,
+                                             replay_ctx->revprop_rev,
+                                             "0", all_props,
                                              TRUE, NULL,
                                              replay_ctx->src_rev_pool));
+
+          replay_ctx->prop_ctx = prop_ctx;
 
           /* Send the replay report request. */
           handler = apr_pcalloc(replay_ctx->src_rev_pool, sizeof(*handler));

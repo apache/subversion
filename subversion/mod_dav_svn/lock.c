@@ -458,7 +458,8 @@ get_locks(dav_lockdb *lockdb,
 
   /* If the resource's fs path is unreadable, we don't want to say
      anything about locks attached to it.*/
-  if (! dav_svn__allow_read(resource, SVN_INVALID_REVNUM, resource->pool))
+  if (! dav_svn__allow_read_resource(resource, SVN_INVALID_REVNUM,
+                                     resource->pool))
     return dav_new_error(resource->pool, HTTP_FORBIDDEN,
                          DAV_ERR_LOCK_SAVE_LOCK,
                          "Path is not accessible.");
@@ -518,7 +519,8 @@ find_lock(dav_lockdb *lockdb,
 
   /* If the resource's fs path is unreadable, we don't want to say
      anything about locks attached to it.*/
-  if (! dav_svn__allow_read(resource, SVN_INVALID_REVNUM, resource->pool))
+  if (! dav_svn__allow_read_resource(resource, SVN_INVALID_REVNUM,
+                                     resource->pool))
     return dav_new_error(resource->pool, HTTP_FORBIDDEN,
                          DAV_ERR_LOCK_SAVE_LOCK,
                          "Path is not accessible.");
@@ -596,7 +598,8 @@ has_locks(dav_lockdb *lockdb, const dav_resource *resource, int *locks_present)
 
   /* If the resource's fs path is unreadable, we don't want to say
      anything about locks attached to it.*/
-  if (! dav_svn__allow_read(resource, SVN_INVALID_REVNUM, resource->pool))
+  if (! dav_svn__allow_read_resource(resource, SVN_INVALID_REVNUM,
+                                     resource->pool))
     return dav_new_error(resource->pool, HTTP_FORBIDDEN,
                          DAV_ERR_LOCK_SAVE_LOCK,
                          "Path is not accessible.");
@@ -639,7 +642,8 @@ append_locks(dav_lockdb *lockdb,
 
   /* If the resource's fs path is unreadable, we don't allow a lock to
      be created on it. */
-  if (! dav_svn__allow_read(resource, SVN_INVALID_REVNUM, resource->pool))
+  if (! dav_svn__allow_read_resource(resource, SVN_INVALID_REVNUM,
+                                     resource->pool))
     return dav_new_error(resource->pool, HTTP_FORBIDDEN,
                          DAV_ERR_LOCK_SAVE_LOCK,
                          "Path is not accessible.");
@@ -806,7 +810,8 @@ remove_lock(dav_lockdb *lockdb,
 
   /* If the resource's fs path is unreadable, we don't allow a lock to
      be removed from it. */
-  if (! dav_svn__allow_read(resource, SVN_INVALID_REVNUM, resource->pool))
+  if (! dav_svn__allow_read_resource(resource, SVN_INVALID_REVNUM,
+                                     resource->pool))
     return dav_new_error(resource->pool, HTTP_FORBIDDEN,
                          DAV_ERR_LOCK_SAVE_LOCK,
                          "Path is not accessible.");
@@ -891,7 +896,8 @@ refresh_locks(dav_lockdb *lockdb,
 
   /* If the resource's fs path is unreadable, we don't want to say
      anything about locks attached to it.*/
-  if (! dav_svn__allow_read(resource, SVN_INVALID_REVNUM, resource->pool))
+  if (! dav_svn__allow_read_resource(resource, SVN_INVALID_REVNUM,
+                                     resource->pool))
     return dav_new_error(resource->pool, HTTP_FORBIDDEN,
                          DAV_ERR_LOCK_SAVE_LOCK,
                          "Path is not accessible.");

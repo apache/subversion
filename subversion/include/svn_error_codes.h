@@ -365,14 +365,14 @@ SVN_ERROR_START
              SVN_ERR_WC_CATEGORY_START + 6,
              "Invalid lock")
 
- /** Previously this error number was used by SVN_ERR_WC_NOT_DIRECTORY, which
+ /** Previously this error number was used by #SVN_ERR_WC_NOT_DIRECTORY, which
   * is now an alias for this error.
   * @since Since 1.7. */
   SVN_ERRDEF(SVN_ERR_WC_NOT_WORKING_COPY,
              SVN_ERR_WC_CATEGORY_START + 7,
              "Path is not a working copy directory")
 
-  /* This name is deprecated. Use SVN_ERR_WC_NOT_WORKING_COPY.
+  /** This name is deprecated. Use #SVN_ERR_WC_NOT_WORKING_COPY.
    * @deprecated Provided for backward compatibility with the 1.6 API. */
 #define SVN_ERR_WC_NOT_DIRECTORY SVN_ERR_WC_NOT_WORKING_COPY
 
@@ -511,6 +511,11 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_WC_CLEANUP_REQUIRED,
              SVN_ERR_WC_CATEGORY_START + 37,
              "Previous operation was interrupted; run 'svn cleanup'")
+
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_WC_INVALID_OPERATION_DEPTH,
+             SVN_ERR_WC_CATEGORY_START + 38,
+             "This operation can not be performed with just this depth.")
 
   /* fs errors */
 
@@ -732,6 +737,12 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_FS_NO_SUCH_CHECKSUM_REP,
              SVN_ERR_FS_CATEGORY_START + 48,
              "Filesystem has no such checksum-representation index record")
+
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_FS_PROP_BASEVALUE_MISMATCH,
+             SVN_ERR_FS_CATEGORY_START + 49,
+             "Property value in filesystem differs from the provided "
+             "base value")
 
   /* repos errors */
 
@@ -1323,12 +1334,12 @@ SVN_ERROR_START
              SVN_ERR_MISC_CATEGORY_START + 32,
              "Unsupported schema found in SQLite db")
 
-/** @since New in 1.7. */
+  /** @since New in 1.7. */
   SVN_ERRDEF(SVN_ERR_SQLITE_BUSY,
              SVN_ERR_MISC_CATEGORY_START + 33,
              "The SQLite db is busy")
 
-/** @since New in 1.7. */
+  /** @since New in 1.7. */
   SVN_ERRDEF(SVN_ERR_SQLITE_RESETTING_FOR_ROLLBACK,
              SVN_ERR_MISC_CATEGORY_START + 34,
              "SQLite busy at transaction rollback; "

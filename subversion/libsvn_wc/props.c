@@ -68,34 +68,6 @@ message_from_skel(const svn_skel_t *skel,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool);
 
-static svn_error_t *
-load_pristine_props(apr_hash_t **props,
-                    svn_wc__db_t *db,
-                    const char *local_abspath,
-                    apr_pool_t *result_pool,
-                    apr_pool_t *scratch_pool)
-{
-  SVN_ERR(svn_wc__db_read_pristine_props(props, db, local_abspath,
-                                         result_pool, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-load_actual_props(apr_hash_t **props,
-                  svn_wc__db_t *db,
-                  const char *local_abspath,
-                  apr_pool_t *result_pool,
-                  apr_pool_t *scratch_pool)
-{
-  SVN_ERR(svn_wc__db_read_props(props, db, local_abspath,
-                                result_pool, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-
 /* Given a *SINGLE* property conflict in PROP_SKEL, generate a message
    for it, and write it to STREAM, along with a trailing EOL sequence.
 
@@ -174,8 +146,8 @@ immediate_install_props(svn_wc__db_t *db,
   apr_hash_t *base_props;
 
   /* ### no pristines should be okay.  */
-  SVN_ERR_W(load_pristine_props(&base_props, db, local_abspath,
-                                scratch_pool, scratch_pool),
+  SVN_ERR_W(svn_wc__db_read_pristine_props(&base_props, db, local_abspath,
+                                           scratch_pool, scratch_pool),
             _("Failed to load pristine properties"));
 
   /* Check if the props are modified. If no changes, then wipe out
@@ -1721,8 +1693,8 @@ svn_wc__get_actual_props(apr_hash_t **props,
   /* ### perform some state checking. for example, locally-deleted nodes
      ### should not have any ACTUAL props.  */
 
-  return svn_error_return(load_actual_props(props, db, local_abspath,
-                                            result_pool, scratch_pool));
+  return svn_error_return(svn_wc__db_read_props(props, db, local_abspath,
+                                                result_pool, scratch_pool));
 }
 
 
@@ -1786,30 +1758,11 @@ svn_wc__get_pristine_props(apr_hash_t **props,
       return SVN_NO_ERROR;
     }
 
-  /* The node is obstructed:
-
-     - subdir is missing, obstructed by a file, or missing admin area
-     - a file is obstructed by a versioned subdir   (### not reported)
-
-     Thus, properties are not available for this node. Returning NULL
-     would indicate "not defined" for its state. For obstructions, we
-     cannot *determine* whether properties should be here or not.
-
-     ### it would be nice to report an obstruction, rather than simply
-     ### PROPERTY_NOT_FOUND. but this is transitional until single-db.  */
-  if (status == svn_wc__db_status_obstructed_delete
-      || status == svn_wc__db_status_obstructed
-      || status == svn_wc__db_status_obstructed_add)
-    return svn_error_createf(SVN_ERR_PROPERTY_NOT_FOUND, NULL,
-                             U_("Directory '%s' is missing on disk, so the "
-                                "properties are not available."),
-                             svn_dirent_local_style(local_abspath,
-                                                    scratch_pool));
-
   /* status: normal, moved_here, copied, deleted  */
 
   /* After the above checks, these pristines should always be present.  */
-  return svn_error_return(load_pristine_props(props, db, local_abspath,
+  return svn_error_return(
+               svn_wc__db_read_pristine_props(props, db, local_abspath,
                                               result_pool, scratch_pool));
 }
 
@@ -2149,8 +2102,8 @@ svn_wc__internal_propset(svn_wc__db_t *db,
       /* If not, we'll set the file to read-only at commit time. */
     }
 
-  SVN_ERR_W(load_actual_props(&prophash, db, local_abspath,
-                              scratch_pool, scratch_pool),
+  SVN_ERR_W(svn_wc__db_read_props(&prophash, db, local_abspath,
+                                  scratch_pool, scratch_pool),
             _("Failed to load current properties"));
 
   /* If we're changing this file's list of expanded keywords, then
@@ -2315,7 +2268,7 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
       if (propval->data[propval->len - 1] != '\n')
         {
           new_value = svn_stringbuf_create_from_string(propval, pool);
-          svn_stringbuf_appendbytes(new_value, "\n", 1);
+          svn_stringbuf_appendbyte(new_value, '\n');
         }
 
       /* Make sure this is a valid externals property.  Do not
@@ -2438,8 +2391,8 @@ svn_wc__internal_propdiff(apr_array_header_t **propchanges,
 
   /* ### if pristines are not defined, then should this raise an error,
      ### or use an empty set?  */
-  SVN_ERR(load_pristine_props(&baseprops, db, local_abspath,
-                              result_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_read_pristine_props(&baseprops, db, local_abspath,
+                                         result_pool, scratch_pool));
 
   if (original_props != NULL)
     *original_props = baseprops;
@@ -2453,8 +2406,8 @@ svn_wc__internal_propdiff(apr_array_header_t **propchanges,
       if (baseprops == NULL)
         baseprops = apr_hash_make(scratch_pool);
 
-      SVN_ERR(load_actual_props(&actual_props, db, local_abspath,
-                                result_pool, scratch_pool));
+      SVN_ERR(svn_wc__db_read_props(&actual_props, db, local_abspath,
+                                    result_pool, scratch_pool));
       /* ### be wary. certain nodes don't have ACTUAL props either. we
          ### may want to raise an error. or maybe that is a deletion of
          ### any potential pristine props?  */

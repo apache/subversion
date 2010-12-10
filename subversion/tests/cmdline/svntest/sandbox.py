@@ -57,13 +57,15 @@ class Sandbox:
     ### TODO: Move this into to the build() method
     # For dav tests we need a single authz file which must be present,
     # so we recreate it each time a sandbox is created with some default
-    # contents.
+    # contents, making sure that an empty file is never present
     if self.repo_url.startswith("http"):
       # this dir doesn't exist out of the box, so we may have to make it
       if not os.path.exists(svntest.main.work_dir):
         os.makedirs(svntest.main.work_dir)
       self.authz_file = os.path.join(svntest.main.work_dir, "authz")
-      open(self.authz_file, 'w').write("[/]\n* = rw\n")
+      tmp_authz_file = os.path.join(svntest.main.work_dir, "authz-" + self.name)
+      open(tmp_authz_file, 'w').write("[/]\n* = rw\n")
+      shutil.move(tmp_authz_file, self.authz_file)
 
     # For svnserve tests we have a per-repository authz file, and it
     # doesn't need to be there in order for things to work, so we don't
@@ -177,6 +179,12 @@ class Sandbox:
                                   temporary and 'TEMP' or 'PERM',
                                   parts[1])
     
+  def simple_update(self, target=None):
+    assert not self.read_only
+    if target is None:
+      target = self.wc_dir
+    svntest.main.run_svn(False, 'update', target)
+
   def simple_commit(self, target=None):
     assert not self.read_only
     if target is None:

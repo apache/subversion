@@ -445,12 +445,10 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
 
 
 static svn_error_t *
-wc_to_wc_copy(const apr_array_header_t *copy_pairs,
-              const char *dst_path,
-              svn_boolean_t is_move,
-              svn_boolean_t make_parents,
-              svn_client_ctx_t *ctx,
-              apr_pool_t *pool)
+verify_wc_srcs_and_dsts(const apr_array_header_t *copy_pairs,
+                        svn_boolean_t make_parents,
+                        svn_client_ctx_t *ctx,
+                        apr_pool_t *pool)
 {
   int i;
   apr_pool_t *iterpool = svn_pool_create(pool);
@@ -507,11 +505,7 @@ wc_to_wc_copy(const apr_array_header_t *copy_pairs,
 
   svn_pool_destroy(iterpool);
 
-  /* Copy or move all targets. */
-  if (is_move)
-    return do_wc_to_wc_moves(copy_pairs, dst_path, ctx, pool);
-  else
-    return do_wc_to_wc_copies(copy_pairs, ctx, pool);
+  return SVN_NO_ERROR;
 }
 
 
@@ -724,6 +718,8 @@ static svn_error_t *
 repos_to_repos_copy(const apr_array_header_t *copy_pairs,
                     svn_boolean_t make_parents,
                     const apr_hash_t *revprop_table,
+                    svn_commit_callback2_t commit_callback,
+                    void *commit_baton,
                     svn_client_ctx_t *ctx,
                     svn_boolean_t is_move,
                     apr_pool_t *pool)
@@ -1116,8 +1112,8 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
   /* Fetch RA commit editor. */
   SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
                                     commit_revprops,
-                                    ctx->commit_callback2,
-                                    ctx->commit_baton,
+                                    commit_callback,
+                                    commit_baton,
                                     NULL, TRUE, /* No lock tokens */
                                     pool));
 
@@ -1152,6 +1148,8 @@ static svn_error_t *
 wc_to_repos_copy(const apr_array_header_t *copy_pairs,
                  svn_boolean_t make_parents,
                  const apr_hash_t *revprop_table,
+                 svn_commit_callback2_t commit_callback,
+                 void *commit_baton,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
@@ -1390,8 +1388,8 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
   /* Fetch RA commit editor. */
   SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
                                     commit_revprops,
-                                    ctx->commit_callback2,
-                                    ctx->commit_baton, NULL,
+                                    commit_callback,
+                                    commit_baton, NULL,
                                     TRUE, /* No lock tokens */
                                     pool));
 
@@ -1872,6 +1870,8 @@ try_copy(const apr_array_header_t *sources,
          svn_boolean_t make_parents,
          svn_boolean_t ignore_externals,
          const apr_hash_t *revprop_table,
+         svn_commit_callback2_t commit_callback,
+         void *commit_baton,
          svn_client_ctx_t *ctx,
          apr_pool_t *pool)
 {
@@ -2149,14 +2149,20 @@ try_copy(const apr_array_header_t *sources,
   /* Now, call the right handler for the operation. */
   if ((! srcs_are_urls) && (! dst_is_url))
     {
-      return svn_error_return(
-        wc_to_wc_copy(copy_pairs, dst_path_in, is_move, make_parents, ctx,
-                      pool));
+      SVN_ERR(verify_wc_srcs_and_dsts(copy_pairs, make_parents, ctx, pool));
+
+      /* Copy or move all targets. */
+      if (is_move)
+        return svn_error_return(do_wc_to_wc_moves(copy_pairs, dst_path_in, ctx,
+                                                  pool));
+      else
+        return svn_error_return(do_wc_to_wc_copies(copy_pairs, ctx, pool));
     }
   else if ((! srcs_are_urls) && (dst_is_url))
     {
       return svn_error_return(
-        wc_to_repos_copy(copy_pairs, make_parents, revprop_table, ctx, pool));
+        wc_to_repos_copy(copy_pairs, make_parents, revprop_table,
+                         commit_callback, commit_baton, ctx, pool));
     }
   else if ((srcs_are_urls) && (! dst_is_url))
     {
@@ -2167,8 +2173,9 @@ try_copy(const apr_array_header_t *sources,
   else
     {
       return svn_error_return(
-        repos_to_repos_copy(copy_pairs, make_parents,
-                            revprop_table, ctx, is_move, pool));
+        repos_to_repos_copy(copy_pairs, make_parents, revprop_table,
+                            commit_callback, commit_baton, ctx, is_move,
+                            pool));
     }
 }
 
@@ -2182,6 +2189,8 @@ svn_client_copy6(const apr_array_header_t *sources,
                  svn_boolean_t make_parents,
                  svn_boolean_t ignore_externals,
                  const apr_hash_t *revprop_table,
+                 svn_commit_callback2_t commit_callback,
+                 void *commit_baton,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
@@ -2198,6 +2207,7 @@ svn_client_copy6(const apr_array_header_t *sources,
                  make_parents,
                  ignore_externals,
                  revprop_table,
+                 commit_callback, commit_baton,
                  ctx,
                  subpool);
 
@@ -2230,6 +2240,7 @@ svn_client_copy6(const apr_array_header_t *sources,
                      make_parents,
                      ignore_externals,
                      revprop_table,
+                     commit_callback, commit_baton,
                      ctx,
                      subpool);
     }
@@ -2246,6 +2257,8 @@ svn_client_move6(const apr_array_header_t *src_paths,
                  svn_boolean_t move_as_child,
                  svn_boolean_t make_parents,
                  const apr_hash_t *revprop_table,
+                 svn_commit_callback2_t commit_callback,
+                 void *commit_baton,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
@@ -2280,6 +2293,7 @@ svn_client_move6(const apr_array_header_t *src_paths,
                  make_parents,
                  FALSE,
                  revprop_table,
+                 commit_callback, commit_baton,
                  ctx,
                  subpool);
 
@@ -2309,6 +2323,7 @@ svn_client_move6(const apr_array_header_t *src_paths,
                      make_parents,
                      FALSE,
                      revprop_table,
+                     commit_callback, commit_baton,
                      ctx,
                      subpool);
     }

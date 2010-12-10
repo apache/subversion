@@ -217,10 +217,12 @@ public interface ISVNRepos {
 	/**
 	 * list all locks in the repository
 	 * @param path              the path to the repository
+     * @param depth             the depth to recurse
 	 * @throws ClientException  throw in case of problem
-	 * @since 1.2
+	 * @since 1.7
 	 */
-	public abstract Set<Lock> lslocks(File path) throws ClientException;
+	public abstract Set<Lock> lslocks(File path, Depth depth)
+            throws ClientException;
 
 	/**
 	 * remove multiple locks from the repository

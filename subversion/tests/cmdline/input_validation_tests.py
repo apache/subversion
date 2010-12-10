@@ -149,6 +149,31 @@ def invalid_log_targets(sbox):
                              "specified after a URL for 'svn log', but.*is " +
                              "not a relative path", 'log', target1, target2)
 
+def invalid_merge_args(sbox):
+  "invalid arguments for 'merge'"
+  sbox.build(read_only=True)
+  run_and_verify_svn_in_wc(sbox, "svn: A working copy merge source needs "
+                           "an explicit revision", 'merge', 'iota', '^/')
+  for (src, target) in [('iota@HEAD', '^/'), ('iota@BASE', 'file://')]:
+    run_and_verify_svn_in_wc(sbox, "svn: Merge sources must both be either "
+                             "paths or URLs", 'merge', src, target)
+  run_and_verify_svn_in_wc(sbox, "svn: Path '.*' does not exist",
+                           'merge', 'iota@BASE', 'iota@HEAD', 'nonexistent')
+  run_and_verify_svn_in_wc(sbox, "svn: Too many arguments given",
+                          'merge', '-c42', '^/A/B', '^/A/C', 'iota')
+  run_and_verify_svn_in_wc(sbox, "svn: Cannot specify a revision range with" +
+                           " two URLs", 'merge', '-c42', '^/mu', '^/')
+  run_and_verify_svn_in_wc(sbox, "svn: Path '.*' does not exist",
+                           'merge', '-c42', '^/mu', 'nonexistent')
+
+def invalid_wcpath_upgrade(sbox):
+  "non-working copy paths for 'upgrade'"
+  sbox.build(read_only=True)
+  for target in _invalid_wc_path_targets:
+    run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path", 'upgrade',
+                             target, target)
+
+
 ########################################################################
 # Run the tests
 
@@ -165,6 +190,8 @@ test_list = [ None,
               invalid_export_targets,
               invalid_import_args,
               invalid_log_targets,
+              invalid_merge_args,
+              invalid_wcpath_upgrade,
              ]
 
 if __name__ == '__main__':

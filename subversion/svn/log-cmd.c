@@ -354,6 +354,7 @@ log_entry_receiver(void *baton,
                       if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
                         {
                           svn_error_clear(err);
+                          parent = svn_uri_dirname(parent, pool);
                           continue;
                         }
                       if (err->apr_err == SVN_ERR_RA_ILLEGAL_URL ||
@@ -365,8 +366,6 @@ log_entry_receiver(void *baton,
                         }
                       return svn_error_return(err);
                     }
-
-                  parent = svn_uri_dirname(parent, pool);
                 }
               svn_pool_destroy(iterpool);
             }

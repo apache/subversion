@@ -291,6 +291,7 @@ svn_client_status5(svn_revnum_t *result_rev,
                    svn_boolean_t update,
                    svn_boolean_t no_ignore,
                    svn_boolean_t ignore_externals,
+                   svn_boolean_t depth_as_sticky,
                    svn_boolean_t ignore_mergeinfo,
                    const apr_array_header_t *changelists,
                    svn_client_status_func_t status_func,
@@ -496,6 +497,7 @@ svn_client_status5(svn_revnum_t *result_rev,
         {
           svn_revnum_t revnum;
           report_baton_t rb;
+          svn_depth_t status_depth;
 
           if (revision->kind == svn_opt_revision_head)
             {
@@ -513,10 +515,15 @@ svn_client_status5(svn_revnum_t *result_rev,
                                                       pool));
             }
 
+          if (depth_as_sticky)
+            status_depth = depth;
+          else
+            status_depth = svn_depth_unknown; /* Use depth from WC */
+
           /* Do the deed.  Let the RA layer drive the status editor. */
           SVN_ERR(svn_ra_do_status2(ra_session, &rb.wrapped_reporter,
                                     &rb.wrapped_report_baton,
-                                    target_basename, revnum, svn_depth_unknown,
+                                    target_basename, revnum, status_depth,
                                     editor, edit_baton, pool));
 
           /* Init the report baton. */
