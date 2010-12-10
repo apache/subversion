@@ -35,6 +35,7 @@ from svntest import main, wc, verify, actions
 # (abbreviation)
 Item = wc.StateItem
 XFail = svntest.testcase.XFail
+Wimp = svntest.testcase.Wimp
 Skip = svntest.testcase.Skip
 SkipUnless = svntest.testcase.SkipUnless
 
@@ -1877,7 +1878,7 @@ def merge_replace_causes_tree_conflict2(sbox):
 test_list = [ None,
               SkipUnless(delete_file_and_dir,
                          server_has_mergeinfo),
-              SkipUnless(XFail(merge_catches_nonexistent_target),
+              SkipUnless(Wimp("needs op-depth", merge_catches_nonexistent_target),
                          server_has_mergeinfo),
               SkipUnless(merge_tree_deleted_in_target,
                          server_has_mergeinfo),
