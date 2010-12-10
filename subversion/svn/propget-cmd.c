@@ -155,7 +155,7 @@ print_properties(svn_stream_t *out,
           apr_hash_t *hash = apr_hash_make(iterpool);
 
           apr_hash_set(hash, pname_utf8, APR_HASH_KEY_STRING, propval);
-          svn_cl__print_prop_hash(out, hash, FALSE, iterpool);
+          SVN_ERR(svn_cl__print_prop_hash(out, hash, FALSE, iterpool));
         }
       else
         {

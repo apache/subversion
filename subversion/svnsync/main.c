@@ -1829,7 +1829,7 @@ main(int argc, const char *argv[])
 
   if (argc <= 1)
     {
-      help_cmd(NULL, NULL, pool);
+      SVN_INT_ERR(help_cmd(NULL, NULL, pool));
       svn_pool_destroy(pool);
       return EXIT_FAILURE;
     }
@@ -1850,7 +1850,7 @@ main(int argc, const char *argv[])
         break;
       else if (apr_err)
         {
-          help_cmd(NULL, NULL, pool);
+          SVN_INT_ERR(help_cmd(NULL, NULL, pool));
           svn_pool_destroy(pool);
           return EXIT_FAILURE;
         }
@@ -1970,7 +1970,7 @@ main(int argc, const char *argv[])
 
           default:
             {
-              help_cmd(NULL, NULL, pool);
+              SVN_INT_ERR(help_cmd(NULL, NULL, pool));
               svn_pool_destroy(pool);
               return EXIT_FAILURE;
             }
@@ -2041,7 +2041,7 @@ main(int argc, const char *argv[])
             }
           else
             {
-              help_cmd(NULL, NULL, pool);
+              SVN_INT_ERR(help_cmd(NULL, NULL, pool));
               svn_pool_destroy(pool);
               return EXIT_FAILURE;
             }
@@ -2053,7 +2053,7 @@ main(int argc, const char *argv[])
                                                          first_arg);
           if (subcommand == NULL)
             {
-              help_cmd(NULL, NULL, pool);
+              SVN_INT_ERR(help_cmd(NULL, NULL, pool));
               svn_pool_destroy(pool);
               return EXIT_FAILURE;
             }
@@ -2076,7 +2076,7 @@ main(int argc, const char *argv[])
           svn_opt_format_option(&optstr, badopt, FALSE, pool);
           if (subcommand->name[0] == '-')
             {
-              help_cmd(NULL, NULL, pool);
+              SVN_INT_ERR(help_cmd(NULL, NULL, pool));
             }
           else
             {

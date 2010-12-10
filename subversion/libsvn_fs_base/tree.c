@@ -5365,9 +5365,10 @@ crawl_directory_for_mergeinfo(svn_fs_t *fs,
       void *val;
       svn_pool_clear(iterpool);
       apr_hash_this(hi, &key, NULL, &val);
-      crawl_directory_for_mergeinfo(fs, val,
-                                    svn_fspath__join(node_path, key, iterpool),
-                                    result_catalog, iterpool);
+      SVN_ERR(crawl_directory_for_mergeinfo(fs, val,
+                                            svn_fspath__join(node_path, key,
+                                                             iterpool),
+                                            result_catalog, iterpool));
     }
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;

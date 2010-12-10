@@ -279,8 +279,9 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
 /** vtable for doing commits to a fs **/
 
 
-static struct node_baton *
-make_node_baton(apr_hash_t *headers,
+static svn_error_t *
+make_node_baton(struct node_baton **node_baton_p,
+                apr_hash_t *headers,
                 struct revision_baton *rb,
                 apr_pool_t *pool)
 {
@@ -344,26 +345,29 @@ make_node_baton(apr_hash_t *headers,
   if ((val = apr_hash_get(headers, SVN_REPOS_DUMPFILE_TEXT_CONTENT_CHECKSUM,
                           APR_HASH_KEY_STRING)))
     {
-      svn_checksum_parse_hex(&nb->result_checksum, svn_checksum_md5, val, pool);
+      SVN_ERR(svn_checksum_parse_hex(&nb->result_checksum, svn_checksum_md5,
+                                     val, pool));
     }
 
   if ((val = apr_hash_get(headers, SVN_REPOS_DUMPFILE_TEXT_DELTA_BASE_CHECKSUM,
                           APR_HASH_KEY_STRING)))
     {
-      svn_checksum_parse_hex(&nb->base_checksum, svn_checksum_md5, val, pool);
+      SVN_ERR(svn_checksum_parse_hex(&nb->base_checksum, svn_checksum_md5, val,
+                                     pool));
     }
 
   if ((val = apr_hash_get(headers, SVN_REPOS_DUMPFILE_TEXT_COPY_SOURCE_CHECKSUM,
                           APR_HASH_KEY_STRING)))
     {
-      svn_checksum_parse_hex(&nb->copy_source_checksum, svn_checksum_md5, val,
-                             pool);
+      SVN_ERR(svn_checksum_parse_hex(&nb->copy_source_checksum,
+                                     svn_checksum_md5, val, pool));
     }
 
   /* What's cool about this dump format is that the parser just
      ignores any unrecognized headers.  :-)  */
 
-  return nb;
+  *node_baton_p = nb;
+  return SVN_NO_ERROR;
 }
 
 static struct revision_baton *
@@ -539,7 +543,7 @@ new_node_record(void **node_baton,
                             _("Malformed dumpstream: "
                               "Revision 0 must not contain node records"));
 
-  nb = make_node_baton(headers, rb, pool);
+  SVN_ERR(make_node_baton(&nb, headers, rb, pool));
 
   /* Make sure we have an action we recognize. */
   if (nb->action < svn_node_action_change

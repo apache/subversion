@@ -180,7 +180,7 @@ replay_revstart(svn_revnum_t revision,
   svn_stream_t *stdout_stream;
   svn_stream_t *revprop_stream;
 
-  svn_stream_for_stdout(&stdout_stream, pool);
+  SVN_ERR(svn_stream_for_stdout(&stdout_stream, pool));
 
   /* Revision-number: 19 */
   SVN_ERR(svn_stream_printf(stdout_stream, pool,
@@ -230,7 +230,8 @@ replay_revend(svn_revnum_t revision,
   /* No resources left to free. */
   struct replay_baton *rb = replay_baton;
   if (! rb->quiet)
-    svn_cmdline_fprintf(stderr, pool, "* Dumped revision %lu.\n", revision);
+    SVN_ERR(svn_cmdline_fprintf(stderr, pool, "* Dumped revision %lu.\n",
+                                revision));
   return SVN_NO_ERROR;
 }
 
@@ -371,8 +372,8 @@ replay_revisions(svn_ra_session_t *session,
 
       /* Revision 0 has no tree changes, so we're done. */
       if (! quiet)
-        svn_cmdline_fprintf(stderr, pool, "* Dumped revision %lu.\n",
-                            start_revision);
+        SVN_ERR(svn_cmdline_fprintf(stderr, pool, "* Dumped revision %lu.\n",
+                                    start_revision));
       start_revision++;
 
       /* If our first revision is 0, we can treat this as an
@@ -411,8 +412,8 @@ replay_revisions(svn_ra_session_t *session,
       
       /* All finished with START_REVISION! */
       if (! quiet)
-        svn_cmdline_fprintf(stderr, pool, "* Dumped revision %lu.\n",
-                            start_revision);
+        SVN_ERR(svn_cmdline_fprintf(stderr, pool, "* Dumped revision %lu.\n",
+                                    start_revision));
       start_revision++;
 
       /* Now go pick up additional revisions in the range, if any. */
@@ -448,7 +449,7 @@ load_revisions(svn_ra_session_t *session,
   SVN_ERR(drive_dumpstream_loader(stdin_stream, parser, parse_baton,
                                   session, check_cancel, NULL, pool));
 
-  svn_stream_close(stdin_stream);
+  SVN_ERR(svn_stream_close(stdin_stream));
 
   return SVN_NO_ERROR;
 }
@@ -827,7 +828,7 @@ main(int argc, const char **argv)
                                           subcommand, pool);
           svn_opt_format_option(&optstr, badopt, FALSE, pool);
           if (subcommand->name[0] == '-')
-            help_cmd(NULL, NULL, pool);
+            SVN_INT_ERR(help_cmd(NULL, NULL, pool));
           else
             svn_error_clear
               (svn_cmdline_fprintf

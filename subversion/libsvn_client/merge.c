@@ -4456,7 +4456,7 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
           /* If this is a reverse merge reorder CHILD->REMAINING_RANGES
               so it will work with the svn_rangelist_* APIs below. */
           if (revision1 > revision2)
-            svn_rangelist_reverse(child->remaining_ranges, iterpool);
+            SVN_ERR(svn_rangelist_reverse(child->remaining_ranges, iterpool));
 
           for (j = 0; j < child->remaining_ranges->nelts; j++)
             {
@@ -4498,7 +4498,7 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
             }
 
           if (revision1 > revision2) /* Reverse merge */
-            svn_rangelist_reverse(child->remaining_ranges, iterpool);
+            SVN_ERR(svn_rangelist_reverse(child->remaining_ranges, iterpool));
         }
     }
 
