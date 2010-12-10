@@ -1855,7 +1855,10 @@ write_entry(struct write_baton **entry_node,
             }
         }
 
-      if (entry->kind == svn_node_dir)
+      /* If there is a WORKING node file then we don't have the
+         revert-base checksum for this file.  It will get updated
+         later when we transfer the pristine texts. */
+      if (entry->kind == svn_node_dir || working_node)
         base_node->checksum = NULL;
       else
         SVN_ERR(svn_checksum_parse_hex(&base_node->checksum, svn_checksum_md5,
@@ -1962,9 +1965,9 @@ write_entry(struct write_baton **entry_node,
       below_working_node->moved_here = FALSE;
       below_working_node->moved_to = FALSE;
 
-      /* ### We have a problem, the revert_base information isn't
-             available in the entry structure.  We will have to get it
-             from the working copy. */
+      /* We have a problem, the revert_base information isn't
+         available in the entry structure.  The checksum will get
+         updated later when we transfer the pristines. */
       below_working_node->checksum = NULL;
       below_working_node->translated_size = 0;
       below_working_node->changed_rev = SVN_INVALID_REVNUM;
