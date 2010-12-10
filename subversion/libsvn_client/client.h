@@ -1107,10 +1107,6 @@ const svn_opt_revision_t *
 svn_cl__rev_default_to_peg(const svn_opt_revision_t *revision,
                            const svn_opt_revision_t *peg_revision);
 
-/* Return an error if TARGETS contains a mixture of URLs and paths; otherwise
- * return SVN_NO_ERROR. */
-svn_error_t *
-svn_client__assert_homogeneous_target_type(const apr_array_header_t *targets);
 
 #ifdef __cplusplus
 }
