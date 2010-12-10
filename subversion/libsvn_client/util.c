@@ -34,6 +34,7 @@
 #include "svn_wc.h"
 #include "svn_client.h"
 
+#include "private/svn_client_private.h"
 #include "private/svn_wc_private.h"
 
 #include "client.h"
