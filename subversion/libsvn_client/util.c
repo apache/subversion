@@ -335,12 +335,11 @@ svn_client__assert_homogeneous_target_type(const apr_array_header_t *targets)
         wc_present = TRUE;
       else
         url_present = TRUE;
+      if (url_present && wc_present)
+        return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                 _("Cannot mix repository and working copy "
+                                   "targets"));
     }
-
-  if (url_present && wc_present)
-    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                             _("Cannot mix repository and working copy "
-                               "targets"));
 
   return SVN_NO_ERROR;
 }
