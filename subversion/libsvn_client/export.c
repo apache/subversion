@@ -95,6 +95,36 @@ get_eol_style(svn_subst_eol_style_t *style,
   return SVN_NO_ERROR;
 }
 
+/* If *APPENDABLE_DIRENT_P represents an existing directory, then append
+ * to it the basename of BASENAME_OF and return the result in
+ * *APPENDABLE_DIRENT_P.  The kind of BASENAME_OF is either dirent or uri,
+ * as given by IS_URI.
+ */
+static svn_error_t *
+append_basename_if_dir(const char **appendable_dirent_p,
+                       const char *basename_of,
+                       svn_boolean_t is_uri,
+                       apr_pool_t *pool)
+{
+  svn_node_kind_t local_kind;
+  SVN_ERR(svn_io_check_resolved_path(*appendable_dirent_p, &local_kind, pool));
+  if (local_kind == svn_node_dir)
+    {
+      const char *basename2; /* _2 because it shadows basename() */
+      
+      if (is_uri)
+        basename2 = svn_path_uri_decode(svn_uri_basename(basename_of, NULL), pool);
+      else
+        basename2 = svn_dirent_basename(basename_of, NULL);
+
+      *appendable_dirent_p = svn_dirent_join(*appendable_dirent_p,
+                                             basename2,
+                                             pool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 copy_one_versioned_file(const char *from_abspath,
                         const char *to_abspath,
@@ -300,7 +330,6 @@ copy_versioned_files(const char *from,
   const char *to_abspath;
   svn_node_kind_t from_kind;
   svn_depth_t node_depth;
-  int j;
   
   SVN_ERR(svn_dirent_get_absolute(&from_abspath, from, pool));
   SVN_ERR(svn_dirent_get_absolute(&to_abspath, to, pool));
@@ -350,6 +379,7 @@ copy_versioned_files(const char *from,
   if (from_kind == svn_node_dir)
     {
       apr_fileperms_t perm = APR_OS_DEFAULT;
+      int j;
 
       /* Try to make the new directory.  If this fails because the
          directory already exists, check our FORCE flag to see if we
@@ -495,9 +525,19 @@ copy_versioned_files(const char *from,
     }
   else if (from_kind == svn_node_file)
     {
+      SVN_ERR(append_basename_if_dir(&to_abspath, from_abspath, FALSE, pool));
       SVN_ERR(copy_one_versioned_file(from_abspath, to_abspath, ctx->wc_ctx,
                                       revision, native_eol, ignore_keywords,
                                       pool));
+
+      /* Notify. */
+      if (ctx->notify_func2)
+        {
+          svn_wc_notify_t *notify = svn_wc_create_notify(to_abspath,
+                                          svn_wc_notify_update_add, pool);
+          notify->kind = svn_node_file;
+          (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+        }
     }
 
   return SVN_NO_ERROR;
@@ -551,6 +591,7 @@ open_root_internal(const char *path,
 
 /* ---------------------------------------------------------------------- */
 
+
 /*** A dedicated 'export' editor, which does no .svn/ accounting.  ***/
 
 
@@ -929,8 +970,8 @@ close_file(void *file_baton,
 
 svn_error_t *
 svn_client_export5(svn_revnum_t *result_rev,
-                   const char *from,
-                   const char *to,
+                   const char *from_path_or_url,
+                   const char *to_path,
                    const svn_opt_revision_t *peg_revision,
                    const svn_opt_revision_t *revision,
                    svn_boolean_t overwrite,
@@ -947,15 +988,15 @@ svn_client_export5(svn_revnum_t *result_rev,
   SVN_ERR_ASSERT(peg_revision != NULL);
   SVN_ERR_ASSERT(revision != NULL);
 
-  if (svn_path_is_url(to))
-    return svn_error_return(svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                                              _("'%s' is not a local path"),
-                                              to));
-    
-  peg_revision = svn_cl__rev_default_to_head_or_working(peg_revision, from);
+  if (svn_path_is_url(to_path))
+    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                             _("'%s' is not a local path"), to_path);
+
+  peg_revision = svn_cl__rev_default_to_head_or_working(peg_revision,
+                                                        from_path_or_url);
   revision = svn_cl__rev_default_to_peg(revision, peg_revision);
 
-  if (svn_path_is_url(from) ||
+  if (svn_path_is_url(from_path_or_url) ||
       ! SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(revision->kind))
     {
       svn_revnum_t revnum;
@@ -966,14 +1007,14 @@ svn_client_export5(svn_revnum_t *result_rev,
 
       /* Get the RA connection. */
       SVN_ERR(svn_client__ra_session_from_path(&ra_session, &revnum,
-                                               &url, from, NULL,
+                                               &url, from_path_or_url, NULL,
                                                peg_revision,
                                                revision, ctx, pool));
 
       /* Get the repository root. */
       SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_url, pool));
 
-      eb->root_path = to;
+      eb->root_path = to_path;
       eb->root_url = url;
       eb->force = overwrite;
       eb->target_revision = &edit_revision;
@@ -993,6 +1034,20 @@ svn_client_export5(svn_revnum_t *result_rev,
           apr_hash_index_t *hi;
           struct file_baton *fb = apr_pcalloc(pool, sizeof(*fb));
 
+          if (svn_path_is_empty(to_path))
+            {
+              to_path = svn_path_uri_decode(svn_uri_basename(from_path_or_url,
+                                                             NULL), pool);
+              eb->root_path = to_path;
+            }
+          else
+            {
+              SVN_ERR(append_basename_if_dir(&to_path, from_path_or_url, 
+                                             TRUE, pool));
+              eb->root_path = to_path;
+            }
+
+          
           /* Since you cannot actually root an editor at a file, we
            * manually drive a few functions of our editor. */
 
@@ -1084,19 +1139,19 @@ svn_client_export5(svn_revnum_t *result_rev,
            * So we just create the empty dir manually; but we do it via
            * open_root_internal(), in order to get proper notification.
            */
-          SVN_ERR(svn_io_check_path(to, &kind, pool));
+          SVN_ERR(svn_io_check_path(to_path, &kind, pool));
           if (kind == svn_node_none)
             SVN_ERR(open_root_internal
-                    (to, overwrite, ctx->notify_func2,
+                    (to_path, overwrite, ctx->notify_func2,
                      ctx->notify_baton2, pool));
 
           if (! ignore_externals && depth == svn_depth_infinity)
             {
               const char *to_abspath;
 
-              SVN_ERR(svn_dirent_get_absolute(&to_abspath, to, pool));
+              SVN_ERR(svn_dirent_get_absolute(&to_abspath, to_path, pool));
               SVN_ERR(svn_client__fetch_externals(eb->externals,
-                                                  from, to_abspath,
+                                                  from_path_or_url, to_abspath,
                                                   repos_root_url, depth, TRUE,
                                                   native_eol, &use_sleep,
                                                   ctx, pool));
@@ -1105,7 +1160,8 @@ svn_client_export5(svn_revnum_t *result_rev,
       else if (kind == svn_node_none)
         {
           return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                                   _("URL '%s' doesn't exist"), from);
+                                   _("URL '%s' doesn't exist"),
+                                   from_path_or_url);
         }
       /* kind == svn_node_unknown not handled */
     }
@@ -1113,8 +1169,8 @@ svn_client_export5(svn_revnum_t *result_rev,
     {
       /* This is a working copy export. */
       /* just copy the contents of the working copy into the target path. */
-      SVN_ERR(copy_versioned_files(from, to, revision, overwrite,
-                                   ignore_externals, ignore_keywords,
+      SVN_ERR(copy_versioned_files(from_path_or_url, to_path, revision,
+                                   overwrite, ignore_externals, ignore_keywords,
                                    depth, native_eol, ctx, pool));
     }
 
@@ -1122,7 +1178,7 @@ svn_client_export5(svn_revnum_t *result_rev,
   if (ctx->notify_func2)
     {
       svn_wc_notify_t *notify
-        = svn_wc_create_notify(to,
+        = svn_wc_create_notify(to_path,
                                svn_wc_notify_update_completed, pool);
       notify->revision = edit_revision;
       (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);

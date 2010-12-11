@@ -21,6 +21,7 @@
 #
 
 # Dependencies of libraries
+# TODO: generate from build.conf
 subr="subr"
 auth_gnome_keyring="auth_gnome_keyring $subr"
 auth_kwallet="auth_kwallet $subr"
@@ -39,11 +40,9 @@ ra="ra $delta $ra_local $ra_neon $ra_serf $ra_svn $subr"
 wc="wc $delta $diff $subr"
 client="client $delta $diff $ra $subr $wc"
 
-# Variable 'libraries' containing names of variables corresponding to libraries
-libraries="auth_gnome_keyring auth_kwallet client delta diff fs fs_base fs_fs fs_util ra ra_local ra_neon ra_serf ra_svn repos subr wc"
-
-for library in $libraries; do
-  # Delete duplicates in dependencies of libraries
+# Delete duplicates in dependencies of libraries
+ls subversion | grep libsvn_ | while read library_dir; do
+  library=`basename $library_dir | sed s/libsvn_//`
   library_dependencies="$(echo -n $(for x in $(eval echo "\$$library"); do echo $x; done | sort -u))"
   eval "$library=\$library_dependencies"
 done
@@ -57,16 +56,19 @@ svnserve="$delta $fs $ra_svn $repos $subr"
 svnsync="$auth_gnome_keyring $auth_kwallet $delta $ra $subr"
 svnversion="$subr $wc"
 entries_dump="$subr $wc"
+atomic_ra_revprop_change="$subr $ra"
 
 # Variable 'executables' containing names of variables corresponding to executables
-executables="svn svnadmin svndumpfilter svnlook svnserve svnsync svnversion entries_dump"
+executables="svn svnadmin svndumpfilter svnlook svnserve svnsync svnversion entries_dump atomic_ra_revprop_change"
 
 for executable in $executables; do
   # Set variables containing paths of executables
-  if [ "$executable" != entries_dump ]; then
-    eval "${executable}_path=subversion/$executable/$executable"
-  else
+  eval "${executable}_path=subversion/$executable/$executable"
+  if [ "$executable" = entries_dump ]; then
     eval "${executable}_path=subversion/tests/cmdline/entries-dump"
+  fi
+  if [ "$executable" = atomic_ra_revprop_change ]; then
+    eval "${executable}_path=subversion/tests/cmdline/atomic-ra-revprop-change"
   fi
   # Delete duplicates in dependencies of executables
   executable_dependencies="$(echo -n $(for x in $(eval echo "\$$executable"); do echo $x; done | sort -u))"

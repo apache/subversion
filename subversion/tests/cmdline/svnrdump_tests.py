@@ -311,6 +311,11 @@ def commit_a_copy_of_root_load(sbox):
   "load: commit a copy of root"
   run_load_test(sbox, "repo-with-copy-of-root-dir.dump")
 
+def descend_into_replace_dump(sbox):
+  "dump: descending into replaced dir looks in src"
+  run_dump_test(sbox, "descend-into-replace.dump", subdir='/trunk/H',
+                expected_dumpfile_name = "descend-into-replace.expected.dump")
+
 ########################################################################
 # Run the tests
 
@@ -335,7 +340,7 @@ test_list = [ None,
               tag_trunk_with_file2_dump,
               tag_trunk_with_file2_load,
               dir_prop_change_dump,
-              Wimp("TODO", dir_prop_change_load, svntest.main.is_ra_type_dav),
+              dir_prop_change_load,
               copy_parent_modify_prop_dump,
               copy_parent_modify_prop_load,
               url_encoding_dump,
@@ -343,7 +348,7 @@ test_list = [ None,
               copy_revprops_dump,
               copy_revprops_load,
               only_trunk_dump,
-              Wimp("TODO", only_trunk_A_with_changes_dump),
+              only_trunk_A_with_changes_dump,
               no_author_dump,
               no_author_load,
               move_and_modify_in_the_same_revision_dump,
@@ -351,6 +356,7 @@ test_list = [ None,
               copy_bad_line_endings_dump,
               commit_a_copy_of_root_dump,
               commit_a_copy_of_root_load,
+              XFail(descend_into_replace_dump, svntest.main.is_fs_type_bdb),
              ]
 
 if __name__ == '__main__':

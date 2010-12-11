@@ -995,9 +995,14 @@ def wc_wc_copy(sbox):
                                           expected_output,
                                           expected_wc)
 
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  expected_status.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
+  svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
+
   svntest.actions.run_and_verify_svn(None, None,
                                      'svn: Cannot copy.*excluded by server',
                                      'cp', sbox.ospath('A'), sbox.ospath('A2'))
+
 
   # The copy failed and A2/B/E is incomplete.  That means A2 and A2/B
   # are complete, but for the other parts of A2 the status is undefined.
@@ -1007,7 +1012,6 @@ def wc_wc_copy(sbox):
      '!               ?        ?   ?           ' + sbox.ospath('A2/B/E') + '\n',
      ])
   expected_output.match_all = False
-
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'st', '--verbose', sbox.ospath('A2'))
 
@@ -1016,9 +1020,6 @@ def wc_wc_copy_revert(sbox):
 
   wc_wc_copy(sbox)
 
-  # Fails with a "No write-lock" error, as does "rm --force", on a
-  # path under A2.  Multiple repeats fail on different paths until the
-  # command completes.
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'revert', '--recursive', sbox.ospath('A2'))
   
@@ -1089,14 +1090,14 @@ test_list = [ None,
                    svntest.main.is_ra_type_file),
               Skip(multiple_matches, svntest.main.is_ra_type_file),
               Skip(wc_wc_copy, svntest.main.is_ra_type_file),
-              Skip(wc_wc_copy_revert,
-                   svntest.main.is_ra_type_file),
+              Skip(wc_wc_copy_revert, svntest.main.is_ra_type_file),
               Skip(authz_recursive_ls,
                    svntest.main.is_ra_type_file),
              ]
+serial_only = True
 
 if __name__ == '__main__':
-  svntest.main.run_tests(test_list, serial_only = True)
+  svntest.main.run_tests(test_list, serial_only = serial_only)
   # NOTREACHED
 
 

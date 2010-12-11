@@ -38,7 +38,8 @@
 
 
 ClientContext::ClientContext(jobject jsvnclient)
-    : m_prompter(NULL)
+    : m_prompter(NULL),
+      m_cancelOperation(false)
 {
     JNIEnv *env = JNIUtil::getEnv();
     JNICriticalSection criticalSection(*JNIUtil::getGlobalPoolMutex());
@@ -240,7 +241,7 @@ ClientContext::setConfigDirectory(const char *configDir)
 }
 
 const char *
-ClientContext::getConfigDirectory()
+ClientContext::getConfigDirectory() const
 {
     return m_configDir.c_str();
 }
@@ -285,7 +286,7 @@ ClientContext::notify(void *baton,
       env->DeleteLocalRef(clazz);
     }
 
-  jobject jInfo = CreateJ::ClientNotifyInformation(notify, pool);
+  jobject jInfo = CreateJ::ClientNotifyInformation(notify);
   if (JNIUtil::isJavaExceptionThrown())
     return;
 

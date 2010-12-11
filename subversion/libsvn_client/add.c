@@ -45,6 +45,7 @@
 #include "client.h"
 #include "svn_ctype.h"
 
+#include "private/svn_client_private.h"
 #include "private/svn_wc_private.h"
 
 #include "svn_private_config.h"
@@ -167,7 +168,7 @@ auto_props_enumerator(const char *name,
   apr_array_header_t *props;
 
   /* nothing to do here without a value */
-  if (strlen(value) == 0)
+  if (*value == 0)
     return TRUE;
 
   /* check if filename matches and return if it doesn't */
@@ -273,6 +274,7 @@ svn_client__get_auto_props(apr_hash_t **properties,
   return SVN_NO_ERROR;
 }
 
+/* Only call this if the on-disk node kind is a file. */
 static svn_error_t *
 add_file(const char *local_abspath,
          svn_client_ctx_t *ctx,
@@ -298,9 +300,8 @@ add_file(const char *local_abspath,
                                        ctx, pool));
 
   /* Add the file */
-  SVN_ERR(svn_wc_add4(ctx->wc_ctx, local_abspath, svn_depth_infinity, NULL,
-                      SVN_INVALID_REVNUM, ctx->cancel_func, ctx->cancel_baton,
-                      NULL, NULL, pool));
+  SVN_ERR(svn_wc_add_from_disk(ctx->wc_ctx, local_abspath,
+                               NULL, NULL, pool));
 
   if (is_special)
     /* This must be a special file. */
@@ -385,9 +386,9 @@ add_dir_recursive(const char *dir_abspath,
   iterpool = svn_pool_create(scratch_pool);
 
   /* Add this directory to revision control. */
-  err = svn_wc_add4(ctx->wc_ctx, dir_abspath, svn_depth_infinity, NULL,
-                    SVN_INVALID_REVNUM, ctx->cancel_func, ctx->cancel_baton,
-                    ctx->notify_func2, ctx->notify_baton2, iterpool);
+  err = svn_wc_add_from_disk(ctx->wc_ctx, dir_abspath,
+                             ctx->notify_func2, ctx->notify_baton2,
+                             iterpool);
   if (err && err->apr_err == SVN_ERR_ENTRY_EXISTS && force)
     svn_error_clear(err);
   else if (err)
@@ -546,11 +547,12 @@ add_parent_dirs(svn_client_ctx_t *ctx,
     SVN_ERR(svn_wc__acquire_write_lock(NULL, wc_ctx, parent_abspath, FALSE,
                                        scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_wc_add4(wc_ctx, local_abspath, svn_depth_infinity,
-                      NULL, SVN_INVALID_REVNUM,
-                      ctx->cancel_func, ctx->cancel_baton,
-                      ctx->notify_func2, ctx->notify_baton2,
-                      scratch_pool));
+  if (ctx->cancel_func)
+    SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
+
+  SVN_ERR(svn_wc_add_from_disk(wc_ctx, local_abspath,
+                               ctx->notify_func2, ctx->notify_baton2,
+                               scratch_pool));
   /* ### New dir gets added with its own per-directory lock which we
      must release.  This code should be redundant when we move to a
      single db. */
@@ -575,9 +577,8 @@ svn_client_add4(const char *path,
   struct add_with_write_lock_baton baton;
 
   if (svn_path_is_url(path))
-    return svn_error_return(svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                                              _("'%s' is not a local path"),
-                                              path));
+    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                             _("'%s' is not a local path"), path);
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
@@ -672,16 +673,6 @@ mkdir_urls(const apr_array_header_t *urls,
   svn_error_t *err;
   const char *common;
   int i;
-
-  /* Early exit when there is a mix of URLs and local paths. */
-  for (i = 0; i < urls->nelts; i++)
-    {
-      const char *url = APR_ARRAY_IDX(urls, i, const char *);
-      if (! svn_path_is_url(url))
-        return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                                 _("Illegal repository URL '%s'"),
-                                 url);
-    }
 
   /* Find any non-existent parent directories */
   if (make_parents)
@@ -877,6 +868,8 @@ svn_client_mkdir4(const apr_array_header_t *paths,
 {
   if (! paths->nelts)
     return SVN_NO_ERROR;
+
+  SVN_ERR(svn_client__assert_homogeneous_target_type(paths));
 
   if (svn_path_is_url(APR_ARRAY_IDX(paths, 0, const char *)))
     {

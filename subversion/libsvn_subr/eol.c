@@ -84,7 +84,7 @@ svn_eol__detect_file_eol(const char **eol, apr_file_t *file, apr_pool_t *pool)
       err = svn_io_file_read(file, buf, &nbytes, pool);
       if (err)
         {
-          /* An error occured. We're going to return in any case,
+          /* An error occurred. We're going to return in any case,
            * so reset the file cursor right now. */
           pos = orig_pos;
           SVN_ERR(svn_io_file_seek(file, APR_SET, &pos, pool));

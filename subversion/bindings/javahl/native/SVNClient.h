@@ -75,7 +75,7 @@ class SVNClient :public SVNBase
              bool ignoreMimeType, bool includeMergedRevisions,
              BlameCallback *callback);
   void relocate(const char *from, const char *to, const char *path,
-                bool recurse);
+                bool ignoreExternals);
   void streamFileContent(const char *path, Revision &revision,
                          Revision &pegRevision, OutputStream &outputStream);
   void propertySet(const char *path, const char *name, const char *value,

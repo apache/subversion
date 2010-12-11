@@ -74,10 +74,10 @@ AC_DEFUN(SVN_LIB_KWALLET,
                   kde_lib_suffix="`$KDE4_CONFIG --libsuffix`"
                   LDFLAGS="$old_LDFLAGS `SVN_REMOVE_STANDARD_LIB_DIRS($qt_lib_dirs -L$kde_dir/lib$kde_lib_suffix)`"
                   AC_LANG(C++)
-                  AC_LINK_IFELSE([
+                  AC_LINK_IFELSE([AC_LANG_SOURCE([[
 #include <kwallet.h>
 int main()
-{KWallet::Wallet::walletList();}], svn_lib_kwallet="yes", svn_lib_kwallet="no")
+{KWallet::Wallet::walletList();}]])], svn_lib_kwallet="yes", svn_lib_kwallet="no")
                   AC_LANG(C)
                   if test "$svn_lib_kwallet" = "yes"; then
                     AC_MSG_RESULT([yes])

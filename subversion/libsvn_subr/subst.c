@@ -371,16 +371,14 @@ svn_subst_build_keywords2(apr_hash_t **kw,
 
 
 /* Write out LEN bytes of BUF into STREAM. */
+/* ### TODO: 'stream_write()' would be a better name for this. */
 static svn_error_t *
 translate_write(svn_stream_t *stream,
                 const void *buf,
                 apr_size_t len)
 {
-  apr_size_t wrote = len;
-  svn_error_t *write_err = svn_stream_write(stream, buf, &wrote);
-  if ((write_err) || (len != wrote))
-    return write_err;
-
+  SVN_ERR(svn_stream_write(stream, buf, &len));
+  /* (No need to check LEN, as a short write always produces an error.) */
   return SVN_NO_ERROR;
 }
 
@@ -609,30 +607,36 @@ translate_keyword(char *buf,
 }
 
 
-/* Translate NEWLINE_BUF (length of NEWLINE_LEN) to the newline format
-   specified in EOL_STR (length of EOL_STR_LEN), and write the
-   translated thing to FILE (whose path is DST_PATH).
+/* Translate the newline string NEWLINE_BUF (of length NEWLINE_LEN) to
+   the newline string EOL_STR (of length EOL_STR_LEN), writing the
+   result (which is always EOL_STR) to the stream DST.
 
-   SRC_FORMAT (length *SRC_FORMAT_LEN) is a cache of the first newline
-   found while processing SRC_PATH.  If the current newline is not the
-   same style as that of SRC_FORMAT, look to the REPAIR parameter.  If
-   REPAIR is TRUE, ignore the inconsistency, else return an
-   SVN_ERR_IO_INCONSISTENT_EOL error.  If we are examining the first
-   newline in the file, copy it to {SRC_FORMAT, *SRC_FORMAT_LEN} to
-   use for later consistency checks. */
+   Also check for consistency of the source newline strings across
+   multiple calls, using SRC_FORMAT (length *SRC_FORMAT_LEN) as a cache
+   of the first newline found.  If the current newline is not the same
+   as SRC_FORMAT, look to the REPAIR parameter.  If REPAIR is TRUE,
+   ignore the inconsistency, else return an SVN_ERR_IO_INCONSISTENT_EOL
+   error.  If *SRC_FORMAT_LEN is 0, assume we are examining the first
+   newline in the file, and copy it to {SRC_FORMAT, *SRC_FORMAT_LEN} to
+   use for later consistency checks.
+
+   Note: all parameters are required even if REPAIR is TRUE.
+   ### We could require that REPAIR must not change across a sequence of
+       calls, and could then optimize by not using SRC_FORMAT at all if
+       REPAIR is TRUE.
+*/
 static svn_error_t *
 translate_newline(const char *eol_str,
                   apr_size_t eol_str_len,
                   char *src_format,
                   apr_size_t *src_format_len,
-                  char *newline_buf,
+                  const char *newline_buf,
                   apr_size_t newline_len,
                   svn_stream_t *dst,
                   svn_boolean_t repair)
 {
-  /* If this is the first newline we've seen, cache it
-     future comparisons, else compare it with our cache to
-     check for consistency. */
+  /* If we've seen a newline before, compare it with our cache to
+     check for consistency, else cache it for future comparisons. */
   if (*src_format_len)
     {
       /* Comparing with cache.  If we are inconsistent and
@@ -649,7 +653,7 @@ translate_newline(const char *eol_str,
       strncpy(src_format, newline_buf, newline_len);
       *src_format_len = newline_len;
     }
-  /* Translate the newline */
+  /* Write the desired newline */
   return translate_write(dst, eol_str, eol_str_len);
 }
 
@@ -794,6 +798,10 @@ struct translation_baton
   /* Length of the EOL style string found in the chunk-source,
      or zero if none encountered yet */
   apr_size_t src_format_len;
+
+  /* If this is svn_tristate_false, translate_newline() will be called
+     for every newline in the file */
+  svn_tristate_t nl_translation_skippable;
 };
 
 
@@ -824,6 +832,7 @@ create_translation_baton(const char *eol_str,
   b->newline_off = 0;
   b->keyword_off = 0;
   b->src_format_len = 0;
+  b->nl_translation_skippable = svn_tristate_unknown;
 
   /* Most characters don't start translation actions.
    * Mark those that do depending on the parameters we got. */
@@ -838,6 +847,38 @@ create_translation_baton(const char *eol_str,
 
   return b;
 }
+
+/* Return TRUE if the EOL starting at BUF matches the eol_str member of B.
+ * Be aware of special cases like "\n\r\n" and "\n\n\r". For sequences like
+ * "\n$" (an EOL followed by a keyword), the result will be FALSE since it is
+ * more efficient to handle that special case implicitly in the calling code
+ * by exiting the quick scan loop.
+ * The caller must ensure that buf[0] and buf[1] refer to valid memory
+ * locations.
+ */
+static APR_INLINE svn_boolean_t
+eol_unchanged(struct translation_baton *b,
+              const char *buf)
+{
+  /* If the first byte doesn't match, the whole EOL won't.
+   * This does also handle the (certainly invalid) case that 
+   * eol_str would be an empty string.
+   */
+  if (buf[0] != b->eol_str[0])
+    return FALSE;
+
+  /* two-char EOLs must be a full match */
+  if (b->eol_str_len == 2)
+    return buf[1] == b->eol_str[1];
+
+  /* The first char matches the required 1-byte EOL. 
+   * But maybe, buf[] contains a 2-byte EOL?
+   * In that case, the second byte will be interesting
+   * and not be another EOL of its own.
+   */
+  return !b->interesting[(unsigned char)buf[1]] || buf[0] == buf[1];
+}
+
 
 /* Translate eols and keywords of a 'chunk' of characters BUF of size BUFLEN
  * according to the settings and state stored in baton B.
@@ -944,19 +985,72 @@ translate_chunk(svn_stream_t *dst,
               continue;
             }
 
-          /* We're in the boring state; look for interest characters. */
-          len = 0;
+          /* translate_newline will modify the baton for src_format_len==0
+             or may return an error if b->repair is FALSE.  In all other
+             cases, we can skip the newline translation as long as source
+             EOL format and actual EOL format match.  If there is a 
+             mismatch, translate_newline will be called regardless of 
+             nl_translation_skippable. 
+           */
+          if (b->nl_translation_skippable == svn_tristate_unknown &&
+              b->src_format_len > 0)
+            {
+              /* test whether translate_newline may return an error */
+              if (b->eol_str_len == b->src_format_len &&
+                  strncmp(b->eol_str, b->src_format, b->eol_str_len) == 0)
+                b->nl_translation_skippable = svn_tristate_true;
+              else if (b->repair) 
+                b->nl_translation_skippable = svn_tristate_true;
+              else
+                b->nl_translation_skippable = svn_tristate_false;
+            }
 
-          /* We wanted memcspn(), but lacking that, the loop below has
-             the same effect. Also, skip NUL characters.
-          */
+          /* We're in the boring state; look for interesting characters.
+             Offset len such that it will become 0 in the first iteration. 
+           */
+          len = 0 - b->eol_str_len;
+
+          /* Look for the next EOL (or $) that actually needs translation.
+             Stop there or at EOF, whichever is encountered first.
+           */
+          do
+            {
+              /* skip current EOL */
+              len += b->eol_str_len;
+
+              /* Check 4 bytes at once to allow for efficient pipelining
+                 and to reduce loop condition overhead. */
+              while ((p + len + 4) <= end)
+                {
+                  char sum = interesting[(unsigned char)p[len]]
+                           | interesting[(unsigned char)p[len+1]]
+                           | interesting[(unsigned char)p[len+2]]
+                           | interesting[(unsigned char)p[len+3]];
+
+                  if (sum != 0)
+                    break;
+
+                  len += 4;
+                }
+
+               /* Found an interesting char or EOF in the next 4 bytes. 
+                  Find its exact position. */
+               while ((p + len) < end && !interesting[(unsigned char)p[len]])
+                 ++len;
+            }
+          while (b->nl_translation_skippable ==
+                   svn_tristate_true &&       /* can potentially skip EOLs */
+                 p + len + 2 < end &&         /* not too close to EOF */
+                 eol_unchanged (b, p + len)); /* EOL format already ok */
+
           while ((p + len) < end && !interesting[(unsigned char)p[len]])
             len++;
 
           if (len)
-            SVN_ERR(translate_write(dst, p, len));
-
-          p += len;
+            {
+              SVN_ERR(translate_write(dst, p, len));
+              p += len;
+            }
 
           /* Set up state according to the interesting character, if any. */
           if (p < end)

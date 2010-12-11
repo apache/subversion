@@ -27,6 +27,7 @@
 
 /*** Includes. ***/
 
+#include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_client.h"
 #include "svn_error_codes.h"
@@ -58,6 +59,8 @@ svn_cl__unlock(apr_getopt_t *os,
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
 
   SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, scratch_pool));
+
+  SVN_ERR(svn_cl__assert_homogeneous_target_type(targets));
 
   return svn_error_return(
     svn_client_unlock(targets, opt_state->force, ctx, scratch_pool));

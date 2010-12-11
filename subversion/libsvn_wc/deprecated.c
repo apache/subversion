@@ -2064,7 +2064,6 @@ svn_wc_parse_externals_description2(apr_array_header_t **externals_p,
 {
   apr_array_header_t *list;
   apr_pool_t *subpool = svn_pool_create(pool);
-  int i;
 
   SVN_ERR(svn_wc_parse_externals_description3(externals_p ? &list : NULL,
                                               parent_directory, desc,
@@ -2072,6 +2071,8 @@ svn_wc_parse_externals_description2(apr_array_header_t **externals_p,
 
   if (externals_p)
     {
+      int i;
+
       *externals_p = apr_array_make(pool, list->nelts,
                                     sizeof(svn_wc_external_item_t *));
       for (i = 0; i < list->nelts; i++)
@@ -2103,7 +2104,6 @@ svn_wc_parse_externals_description(apr_hash_t **externals_p,
                                    apr_pool_t *pool)
 {
   apr_array_header_t *list;
-  int i;
 
   SVN_ERR(svn_wc_parse_externals_description2(externals_p ? &list : NULL,
                                               parent_directory, desc, pool));
@@ -2111,6 +2111,8 @@ svn_wc_parse_externals_description(apr_hash_t **externals_p,
   /* Store all of the items into the hash if that was requested. */
   if (externals_p)
     {
+      int i;
+
       *externals_p = apr_hash_make(pool);
       for (i = 0; i < list->nelts; i++)
         {
@@ -2727,7 +2729,6 @@ svn_wc_add_repos_file3(const char *dst_path,
                                  copyfrom_url,
                                  copyfrom_rev,
                                  cancel_func, cancel_baton,
-                                 notify_func, notify_baton,
                                  pool));
 
   return svn_error_return(svn_wc_context_destroy(wc_ctx));
@@ -3365,8 +3366,8 @@ svn_wc_relocate3(const char *path,
   svn_wc_context_t *wc_ctx;
 
   if (! recurse)
-    svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, 0,
-                     _("Non-recursive relocation not supported"));
+    SVN_ERR(svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                             _("Non-recursive relocation not supported")));
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,

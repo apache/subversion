@@ -14,7 +14,7 @@ Blanket commit access:
         kfogel   Karl Fogel <kfogel@red-bean.com>
         gstein   Greg Stein <gstein@gmail.com>
          brane   Branko Čibej <brane@xbc.nu>
-           joe   Joe Orton <joe@manyfish.co.uk>
+        jorton   Joe Orton <joe@manyfish.co.uk>
        ghudson   Greg Hudson <ghudson@mit.edu>
           fitz   Brian W. Fitzpatrick <fitz@red-bean.com>
         daniel   Daniel Stenberg <daniel@haxx.se>
@@ -49,12 +49,13 @@ Blanket commit access:
       danielsh   Daniel Shahaf <d.s@daniel.shahaf.name>
         peters   Peter Samuelson <peter@p12n.org>
       rhuijben   Bert Huijben <rhuijben@collab.net>
-      stylesen   Senthil Kumaran S <senthil@collab.net>
+      stylesen   Senthil Kumaran S <stylesen@gmail.com>
      steveking   Stefan Küng <tortoisesvn@gmail.com>
          neels   Neels J. Hofmeyr <neels@elego.de>
      jwhitlock   Jeremy Whitlock <jcscoobyrs@gmail.com>
        sbutler   Stephen Butler <sbutler@elego.de>
         dannas   Daniel Näslund <dannas@elego.de>
+       stefan2   Stefan Fuhrmann <stefanfuhrmann@alice-dsl.de>
 
 [[END ACTIVE FULL COMMITTERS.  LEAVE THIS LINE HERE; SCRIPTS LOOK FOR IT.]]
 
@@ -179,7 +180,8 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
        cacknin   Charles Acknin <charlesacknin@gmail.com>    (svnpatch-diff 
                                                               br.)
         holden   Holden Karau <holden@pigscanfly.ca>         (scheme-bindings br.)
-       stefan2   Stefan Fuhrmann <stefanfuhrmann@alice-dsl.de> (performance br.)
+       jcorvel   Johan Corveleyn <jcorvel@gmail.com>         (diff-
+                                                              optimizations br.)
 
   Subprojects that are complete, abandoned or have moved elsewhere:
 

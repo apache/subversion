@@ -40,9 +40,9 @@
 			ATLMinimizesCRunTimeLibraryUsage="FALSE">
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="cmd /c build_zlib.bat debug"
-				ReBuildCommandLine="cmd /c build_zlib.bat debug rebuild"
-				CleanCommandLine="cmd /c build_zlib.bat debug clean"
+				BuildCommandLine="cmd /c build_zlib.bat debug [platforms]"
+				ReBuildCommandLine="cmd /c build_zlib.bat debug [platforms] rebuild"
+				CleanCommandLine="cmd /c build_zlib.bat debug [platforms] clean"
 				Output="[zlib_path]\zlibstatD.lib"/>
 		</Configuration>
 		<Configuration
@@ -56,9 +56,9 @@
 			ATLMinimizesCRunTimeLibraryUsage="FALSE">
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="cmd /c build_zlib.bat release"
-				ReBuildCommandLine="cmd /c build_zlib.bat release rebuild"
-				CleanCommandLine="cmd /c build_zlib.bat release clean"
+				BuildCommandLine="cmd /c build_zlib.bat release [platforms]"
+				ReBuildCommandLine="cmd /c build_zlib.bat release [platforms] rebuild"
+				CleanCommandLine="cmd /c build_zlib.bat release [platforms] clean"
 				Output="[zlib_path]\zlibstat.lib"/>
 		</Configuration>
 [end]	</Configurations>

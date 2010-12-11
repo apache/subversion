@@ -34,6 +34,7 @@ import svntest
 # (abbreviation)
 Skip = svntest.testcase.Skip
 XFail = svntest.testcase.XFail
+Wimp = svntest.testcase.Wimp
 Item = svntest.wc.StateItem
 
 
@@ -2409,8 +2410,12 @@ def diff_repos_wc_add_with_props(sbox):
   diff_X_bar_base_r3 = make_diff_header("X/bar", "revision 0",
                                                  "revision 3") + diff_X_bar
 
-  expected_output_r1_base = diff_X_r1_base + diff_X_bar_r1_base + diff_foo_r1_base
-  expected_output_base_r3 = diff_foo_base_r3 + diff_X_bar_base_r3 + diff_X_base_r3
+  expected_output_r1_base = svntest.verify.UnorderedOutput(diff_X_r1_base +
+                                                           diff_X_bar_r1_base +
+                                                           diff_foo_r1_base)
+  expected_output_base_r3 = svntest.verify.UnorderedOutput(diff_foo_base_r3 +
+                                                           diff_X_bar_base_r3 +
+                                                           diff_X_base_r3)
 
   os.chdir(sbox.wc_dir)
 
@@ -2581,9 +2586,9 @@ def basic_diff_summarize(sbox):
 
   # Add props to some items that will be deleted, and commit.
   sbox.simple_propset('prop', 'val',
-                      p('A/C'),
-                      p('A/D/gamma'),
-                      p('A/D/H/chi'))
+                      'A/C',
+                      'A/D/gamma',
+                      'A/D/H/chi')
   sbox.simple_commit() # r2
   sbox.simple_update()
 
@@ -2591,37 +2596,37 @@ def basic_diff_summarize(sbox):
   svntest.main.file_append(p('A/mu'), 'new text\n')
 
   # Prop modification.
-  sbox.simple_propset('prop', 'val', p('iota'))
+  sbox.simple_propset('prop', 'val', 'iota')
 
   # Both content and prop mods.
   svntest.main.file_append(p('A/D/G/tau'), 'new text\n')
-  sbox.simple_propset('prop', 'val', p('A/D/G/tau'))
+  sbox.simple_propset('prop', 'val', 'A/D/G/tau')
 
   # File addition.
   svntest.main.file_append(p('newfile'), 'new text\n')
   svntest.main.file_append(p('newfile2'), 'new text\n')
-  sbox.simple_add(p('newfile'),
-                  p('newfile2'))
-  sbox.simple_propset('prop', 'val', p('newfile'))
+  sbox.simple_add('newfile',
+                  'newfile2')
+  sbox.simple_propset('prop', 'val', 'newfile')
 
   # File deletion.
-  sbox.simple_rm(p('A/B/lambda'),
-                 p('A/D/gamma'))
-                 
+  sbox.simple_rm('A/B/lambda',
+                 'A/D/gamma')
+
   # Directory addition.
   os.makedirs(p('P'))
   os.makedirs(p('Q/R'))
   svntest.main.file_append(p('Q/newfile'), 'new text\n')
   svntest.main.file_append(p('Q/R/newfile'), 'new text\n')
-  sbox.simple_add(p('P'),
-                  p('Q'))
+  sbox.simple_add('P',
+                  'Q')
   sbox.simple_propset('prop', 'val',
-                      p('P'),
-                      p('Q/newfile'))
+                      'P',
+                      'Q/newfile')
 
   # Directory deletion.
-  sbox.simple_rm(p('A/D/H'),
-                 p('A/C'))
+  sbox.simple_rm('A/D/H',
+                 'A/C')
  
   # Commit, because diff-summarize handles repos-repos only.
   #svntest.main.run_svn(False, 'st', wc_dir)
@@ -3709,6 +3714,42 @@ def diff_git_with_props(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff', 
                                      '--git', wc_dir)
 
+def diff_git_with_props_on_dir(sbox):
+  "diff in git format showing prop changes on dir"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Now commit the local mod, creating rev 2.
+  expected_output = svntest.wc.State(wc_dir, {
+    '.' : Item(verb='Sending'),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    '' : Item(status='  ', wc_rev=2),
+    })
+
+  svntest.main.run_svn(None, 'ps', 'a','b', wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  was_cwd = os.getcwd()
+  os.chdir(wc_dir)
+  expected_output = make_git_diff_header(".", "", "revision 1",
+                                         "revision 2",
+                                         add=False, text_changes=False) + [
+      "\n",
+      "Property changes on: \n",
+      "___________________________________________________________________\n",
+      "Added: a\n",
+      "## -0,0 +1 ##\n",
+      "+b\n",
+  ]
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff',
+                                     '-c2', '--git')
+  os.chdir(was_cwd)
+
 
 # Check ignoring mergeinfo in a diff
 def diff_ignore_mergeinfo(sbox):
@@ -3853,7 +3894,7 @@ test_list = [ None,
               diff_weird_author,
               diff_ignore_whitespace,
               diff_ignore_eolstyle,
-              XFail(diff_in_renamed_folder),
+              diff_in_renamed_folder,
               diff_with_depth,
               diff_ignore_eolstyle_empty_lines,
               diff_backward_repos_wc_copy,
@@ -3869,7 +3910,8 @@ test_list = [ None,
               diff_prop_missing_context,
               diff_prop_multiple_hunks,
               diff_git_empty_files,
-              diff_git_with_props,
+              diff_git_with_props, 
+              diff_git_with_props_on_dir,
               diff_ignore_mergeinfo,
               ]
 

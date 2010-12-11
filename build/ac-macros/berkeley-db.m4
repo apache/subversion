@@ -64,7 +64,7 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
       fi
 
       if test "$withval" = "yes"; then
-        if test "$apu_db_version" != "4"; then
+        if test "$apu_db_version" -lt "4"; then
           AC_MSG_ERROR([APR-UTIL wasn't linked against Berkeley DB 4,
                         while the fs component is required.  Reinstall
                         APR-UTIL with the appropiate options.])
@@ -73,7 +73,7 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
         status=required
 
       elif test "$apu_found" != "reconfig"; then
-        if test "$apu_db_version" != 4; then
+        if test "$apu_db_version" -lt 4; then
           AC_MSG_ERROR([APR-UTIL was installed independently, it won't be
                         possible to use the specified Berkeley DB: $withval])
         fi
@@ -115,7 +115,7 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB,
                    whether apr-util is linked against Berkeley DB
                    $db_version])
       status=try-link
-    elif test "$apu_db_version" != "4"; then
+    elif test "$apu_db_version" -lt "4"; then
       status=skip
     else
       status=try-link

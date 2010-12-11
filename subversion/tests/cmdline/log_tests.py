@@ -35,6 +35,9 @@ from svntest.main import server_has_mergeinfo
 from svntest.main import SVN_PROP_MERGEINFO
 from merge_tests import set_up_branch
 
+# (abbreviation)
+exp_noop_up_out = svntest.actions.expected_noop_update_output
+
 ######################################################################
 #
 # The Plan:
@@ -298,7 +301,8 @@ def merge_history_repos(sbox):
   # Mergeinfo changes on /trunk:
   #    Merged /branches/a:r7
   os.chdir('trunk')
-  svntest.main.run_svn(None, 'merge', '--record-only', '-r6:7',
+  svntest.main.run_svn(None, 'merge', '--allow-mixed-revisions',
+                       '--record-only', '-r6:7',
                        os.path.join('..', branch_a))
   svntest.main.run_svn(None, 'ci', '-m',
                        "Block r7 from merging to trunk.",
@@ -392,7 +396,8 @@ def merge_history_repos(sbox):
   #    Merged /trunk:r2
   #    Merged /branches/c:r3-16
   os.chdir('trunk')
-  svntest.main.run_svn(None, 'merge', os.path.join('..', branch_c) + '@HEAD')
+  svntest.main.run_svn(None, 'merge', '--allow-mixed-revisions',
+                       os.path.join('..', branch_c) + '@HEAD')
   svntest.main.file_write(os.path.join('A', 'mu'),
                           "This is the file 'mu'.\n" +
                           "Don't forget to look at 'upsilon', as well.\n" +
@@ -1297,7 +1302,7 @@ def log_changes_range(sbox):
 
   exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                               'log', '-c',
-                                                              '2:5', repo_url)
+                                                              '2-5', repo_url)
 
   log_chain = parse_log_output(output)
   check_log_chain(log_chain, [2, 3, 4, 5])
@@ -1315,6 +1320,19 @@ def log_changes_list(sbox):
 
   log_chain = parse_log_output(output)
   check_log_chain(log_chain, [2, 5, 7])
+
+def log_changes_complex(sbox):
+  "test log -c on complex set of ranges"
+
+  guarantee_repos_and_wc(sbox)
+  repo_url = sbox.repo_url
+
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                              'log', '-c',
+                                                              '2,5-3,-8,6-7', repo_url)
+
+  log_chain = parse_log_output(output)
+  check_log_chain(log_chain, [2, 5, 4, 3, 8, 6, 7])
 
 #----------------------------------------------------------------------
 def only_one_wc_path(sbox):
@@ -1549,7 +1567,8 @@ def merge_sensitive_log_added_mergeinfo_replaces_inherited(sbox):
   # Reverse merge r3 from 'A/D/H' to 'A_COPY/D/H' and commit as r8.
   # First update the wc so mergeinfo inheritance can occur.  This is
   # necessary so A_COPY/D/H 'knows' that r3 has been merged into it.
-  svntest.actions.run_and_verify_svn(None, ["At revision 7.\n"], [],
+  svntest.actions.run_and_verify_svn(None,
+                                     exp_noop_up_out(7), [],
                                      'up', wc_dir)
   wc_status.tweak(wc_rev=7)
   expected_output = wc.State(H_COPY_path, {
@@ -1760,8 +1779,9 @@ test_list = [ None,
               SkipUnless(merge_sensitive_log_added_path,
                          server_has_mergeinfo),
               log_single_change,
-              XFail(log_changes_range),
+              log_changes_range,
               log_changes_list,
+              log_changes_complex,
               only_one_wc_path,
               retrieve_revprops,
               log_xml_with_bad_data,

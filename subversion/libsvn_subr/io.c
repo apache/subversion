@@ -334,6 +334,10 @@ svn_io_open_uniquely_named(apr_file_t **file,
   unsigned int i;
   struct temp_file_cleanup_s *baton = NULL;
 
+  /* At the beginning, we don't know whether unique_path will need 
+     UTF8 conversion */
+  svn_boolean_t needs_utf8_conversion = TRUE;
+
   SVN_ERR_ASSERT(file || unique_path);
 
   if (dirpath == NULL)
@@ -394,7 +398,21 @@ svn_io_open_uniquely_named(apr_file_t **file,
          before starting iteration, then convert back to UTF-8 for
          return. But I suppose that would make the appending code
          sensitive to i18n in a way it shouldn't be... Oh well. */
-      SVN_ERR(cstring_from_utf8(&unique_name_apr, unique_name, scratch_pool));
+      if (needs_utf8_conversion)
+        {
+          SVN_ERR(cstring_from_utf8(&unique_name_apr, unique_name,
+                                    scratch_pool));
+          if (i == 1)
+            {
+              /* The variable parts of unique_name will not require UTF8
+                 conversion. Therefore, if UTF8 conversion had no effect
+                 on it in the first iteration, it won't require conversion
+                 in any future interation. */
+              needs_utf8_conversion = strcmp(unique_name_apr, unique_name);
+            }
+        }
+      else
+        unique_name_apr = unique_name;
 
       apr_err = file_open(&try_file, unique_name_apr, flag,
                           APR_OS_DEFAULT, FALSE, result_pool);
@@ -800,6 +818,29 @@ file_perms_set(const char *fname, apr_fileperms_t perms,
   else
     return SVN_NO_ERROR;
 }
+
+/* Set permissions PERMS on the FILE. This is a cheaper variant of the 
+ * file_perms_set wrapper() function because no locale-dependent string
+ * conversion is required. 
+ */
+static svn_error_t *
+file_perms_set2(apr_file_t* file, apr_fileperms_t perms)
+{
+  const char *fname_apr;
+  apr_status_t status;
+
+  status = apr_file_name_get(&fname_apr, file);
+  if (status)
+    return svn_error_wrap_apr(status, _("Can't get file name"));
+
+  status = apr_file_perms_set(fname_apr, perms);
+  if (status)
+    return svn_error_wrap_apr(status, _("Can't set permissions on '%s'"),
+                              fname_apr);
+  else
+    return SVN_NO_ERROR;
+}
+
 #endif /* !WIN32 && !__OS2__ */
 
 svn_error_t *
@@ -1268,30 +1309,46 @@ reown_file(const char *path,
 static svn_error_t *
 get_default_file_perms(apr_fileperms_t *perms, apr_pool_t *scratch_pool)
 {
-  apr_finfo_t finfo;
-  apr_file_t *fd;
+  /* the default permissions as read from the temp folder */
+  static apr_fileperms_t default_perms = 0;
 
-  /* Get the perms for a newly created file to find out what bits
-     should be set.
+  /* Technically, this "racy": Multiple threads may use enter here and
+     try to figure out the default permisission concurrently. That's fine
+     since they will end up with the same results. Even more technical,
+     apr_fileperms_t is an atomic type on 32+ bit machines.
+   */
+  if (default_perms == 0)
+    {
+      apr_finfo_t finfo;
+      apr_file_t *fd;
 
-     NOTE: normally del_on_close can be problematic because APR might
-       delete the file if we spawned any child processes. In this case,
-       the lifetime of this file handle is about 3 lines of code, so
-       we can safely use del_on_close here.
+      /* Get the perms for a newly created file to find out what bits
+        should be set.
 
-     NOTE: not so fast, shorty. if some other thread forks off a child,
-       then the APR cleanups run, and the file will disappear. sigh.
+        Normally del_on_close can be problematic because APR might
+        delete the file if we spawned any child processes. In this
+        case, the lifetime of this file handle is about 3 lines of
+        code, so we can safely use del_on_close here.
 
-     Using svn_io_open_uniquely_named() here because other tempfile
-     creation functions tweak the permission bits of files they create.
-  */
-  SVN_ERR(svn_io_open_uniquely_named(&fd, NULL, NULL, "svn-tempfile", ".tmp",
-                                     svn_io_file_del_on_pool_cleanup,
-                                     scratch_pool, scratch_pool));
-  SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_PROT, fd, scratch_pool));
-  SVN_ERR(svn_io_file_close(fd, scratch_pool));
+        Not so fast! If some other thread forks off a child, then the
+        APR cleanups run, and the file will disappear. So use
+        del_on_pool_cleanup instead.
 
-  *perms = finfo.protection;
+        Using svn_io_open_uniquely_named() here because other tempfile
+        creation functions tweak the permission bits of files they create.
+      */
+      SVN_ERR(svn_io_open_uniquely_named(&fd, NULL, NULL, "svn-tempfile", ".tmp",
+                                        svn_io_file_del_on_pool_cleanup,
+                                        scratch_pool, scratch_pool));
+      SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_PROT, fd, scratch_pool));
+      SVN_ERR(svn_io_file_close(fd, scratch_pool));
+
+      *perms = finfo.protection;
+      default_perms = finfo.protection;
+    }
+  else
+    *perms = default_perms;
+
   return SVN_NO_ERROR;
 }
 
@@ -1664,7 +1721,7 @@ svn_io_file_lock2(const char *lock_file,
 
 /* Data consistency/coherency operations. */
 
-static svn_error_t *
+static APR_INLINE svn_error_t *
 do_io_file_wrapper_cleanup(apr_file_t *file, apr_status_t status,
                            const char *msg, const char *msg_no_name,
                            apr_pool_t *pool);
@@ -2545,7 +2602,6 @@ svn_io_parse_mimetypes_file(apr_hash_t **type_map,
     {
       apr_array_header_t *tokens;
       const char *type;
-      int i;
 
       svn_pool_clear(subpool);
 
@@ -2557,6 +2613,8 @@ svn_io_parse_mimetypes_file(apr_hash_t **type_map,
       /* Only pay attention to non-empty, non-comment lines. */
       if (buf->len)
         {
+          int i;
+
           if (buf->data[0] == '#')
             continue;
 
@@ -2724,7 +2782,7 @@ svn_io_file_open(apr_file_t **new_file, const char *fname,
 }
 
 
-static svn_error_t *
+static APR_INLINE svn_error_t *
 do_io_file_wrapper_cleanup(apr_file_t *file, apr_status_t status,
                            const char *msg, const char *msg_no_name,
                            apr_pool_t *pool)
@@ -3255,6 +3313,10 @@ svn_io_dir_walk2(const char *dirname,
   SVN_ERR((*walk_func)(walk_baton, dirname, &finfo, pool));
 
   SVN_ERR(cstring_from_utf8(&dirname_apr, dirname, pool));
+
+  /* APR doesn't like "" directories */
+  if (dirname_apr[0] == '\0')
+    dirname_apr = ".";
 
   apr_err = apr_dir_open(&handle, dirname_apr, pool);
   if (apr_err)
@@ -3819,7 +3881,7 @@ svn_io_open_unique_file3(apr_file_t **file,
    * ### So we tweak perms of the tempfile here, but only if the umask
    * ### allows it. */
   SVN_ERR(merge_default_file_perms(tempfile, &perms, scratch_pool));
-  SVN_ERR(file_perms_set(tempname, perms, scratch_pool));
+  SVN_ERR(file_perms_set2(tempfile, perms));
 #endif
 
   if (file)

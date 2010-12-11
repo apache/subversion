@@ -35,6 +35,7 @@
 #include "svn_pools.h"
 
 #include "svn_private_config.h"
+#include "private/svn_client_private.h"
 #include "private/svn_wc_private.h"
 
 
@@ -183,7 +184,7 @@ organize_lock_targets(const char **common_parent_url,
   apr_pool_t *subpool = svn_pool_create(pool);
   svn_boolean_t url_mode;
 
-  /* All targets must be either urls or paths */
+  SVN_ERR(svn_client__assert_homogeneous_target_type(targets));
 
   url_mode = ((targets->nelts >= 1) &&
               svn_path_is_url(APR_ARRAY_IDX(targets, 0, const char *)));

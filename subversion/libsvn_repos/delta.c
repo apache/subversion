@@ -965,7 +965,6 @@ delta_dirs(struct context *c,
          entries hash? */
       if (s_entries && ((s_entry = apr_hash_get(s_entries, key, klen)) != 0))
         {
-          int distance;
           svn_node_kind_t src_kind;
 
           s_fullpath = svn_path_join(source_path, t_entry->name, subpool);
@@ -984,7 +983,7 @@ delta_dirs(struct context *c,
                        old one and add the new one.
                     1: means the nodes are related through ancestry, so go
                        ahead and do the replace directly.  */
-              distance = svn_fs_compare_ids(s_entry->id, t_entry->id);
+              int distance = svn_fs_compare_ids(s_entry->id, t_entry->id);
               if (distance == 0)
                 {
                   /* no-op */

@@ -428,7 +428,7 @@ void SVNClient::move(Targets &srcPaths, const char *destPath,
         return;
 
     SVN_JNI_ERR(svn_client_move6((apr_array_header_t *) srcs,
-                                 destinationPath.c_str(), force, moveAsChild,
+                                 destinationPath.c_str(), moveAsChild,
                                  makeParents, revprops.hash(requestPool),
                                  CommitCallback::callback, callback, ctx,
                                  requestPool.pool()), );
@@ -1103,7 +1103,6 @@ void SVNClient::streamFileContent(const char *path, Revision &revision,
     Path intPath(path);
     SVN_JNI_ERR(intPath.error_occured(), );
 
-    JNIEnv *env = JNIUtil::getEnv();
     svn_client_ctx_t *ctx = context.getContext(NULL);
     if (ctx == NULL)
         return;
@@ -1153,7 +1152,7 @@ jbyteArray SVNClient::revProperty(const char *path,
                                    propval->len);
 }
 void SVNClient::relocate(const char *from, const char *to, const char *path,
-                         bool recurse)
+                         bool ignoreExternals)
 {
     SVN::Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", );
@@ -1172,9 +1171,9 @@ void SVNClient::relocate(const char *from, const char *to, const char *path,
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_relocate(intPath.c_str(), intFrom.c_str(),
-                                    intTo.c_str(), recurse, ctx,
-                                    requestPool.pool()), );
+    SVN_JNI_ERR(svn_client_relocate2(intPath.c_str(), intFrom.c_str(),
+                                     intTo.c_str(), ignoreExternals, ctx,
+                                     requestPool.pool()), );
 }
 
 void SVNClient::blame(const char *path, Revision &pegRevision,
@@ -1408,13 +1407,12 @@ jobject SVNClient::revProperties(const char *path, Revision &revision)
                                         &set_rev, ctx, requestPool.pool()),
                 NULL);
 
-    return CreateJ::PropertyMap(props, requestPool.pool());
+    return CreateJ::PropertyMap(props);
 }
 
 struct info_baton
 {
     std::vector<info_entry> infoVect;
-    int info_ver;
     apr_pool_t *pool;
 };
 
@@ -1463,7 +1461,7 @@ SVNClient::patch(const char *patchPath, const char *targetPath, bool dryRun,
     // Should parameterize the following, instead of defaulting to FALSE
     SVN_JNI_ERR(svn_client_patch(checkedPatchPath.c_str(),
                                  checkedTargetPath.c_str(),
-                                 dryRun, stripCount, FALSE, reverse,
+                                 dryRun, stripCount, reverse,
                                  ignoreWhitespace, removeTempfiles,
                                  PatchCallback::callback, callback,
                                  ctx, requestPool.pool(),

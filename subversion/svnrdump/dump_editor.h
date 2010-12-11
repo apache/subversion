@@ -64,27 +64,20 @@ struct handler_baton
 {
   svn_txdelta_window_handler_t apply_handler;
   void *apply_baton;
-
-  /* Pool used for temporary allocations during delta application in
-     window_handler() */
-  apr_pool_t *pool;
-
-  /* Information about the path of the temporary file used */
-  const char *delta_abspath;
-  svn_stream_t *delta_filestream;
-
-  /* Global edit baton */
-  struct dump_edit_baton *eb;
 };
 
 /**
  * Get a dump editor @a editor along with a @a edit_baton allocated in
- * @a pool. The editor will write output to @a stream.
+ * @a pool.  The editor will write output to @a stream.  Use @a
+ * cancel_func and @a cancel_baton to check for user cancellation of
+ * the operation (for timely-but-safe termination).
  */
 svn_error_t *
 get_dump_editor(const svn_delta_editor_t **editor,
                 void **edit_baton,
                 svn_stream_t *stream,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
                 apr_pool_t *pool);
 
 /**

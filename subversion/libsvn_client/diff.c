@@ -448,7 +448,7 @@ print_git_diff_header_modified(svn_stream_t *os, const char *header_encoding,
 
 /* Print a git diff header showing the OPERATION to the stream OS using
  * HEADER_ENCODING. Return suitable diff labels for the git diff in *LABEL1
- * and *LABEL2. PATH is the path being diffed, ORIG_TARGET1 and ORIG_TARGET2
+ * and *LABEL2. REPOS_RELPATH1 and REPOS_RELPATH2 are relative to reposroot.
  * are the paths passed to the original diff command. REV1 and REV2 are
  * revisions being diffed. COPYFROM_PATH indicates where the diffed item
  * was copied from. RA_SESSION and WC_CTX are used to adjust paths in the
@@ -460,9 +460,8 @@ static svn_error_t *
 print_git_diff_header(svn_stream_t *os,
                       const char **label1, const char **label2,
                       svn_diff_operation_kind_t operation,
-                      const char *path,
-                      const char *path1,
-                      const char *path2,
+                      const char *repos_relpath1,
+                      const char *repos_relpath2,
                       svn_revnum_t rev1,
                       svn_revnum_t rev2,
                       const char *copyfrom_path,
@@ -472,18 +471,6 @@ print_git_diff_header(svn_stream_t *os,
                       const char *wc_root_abspath,
                       apr_pool_t *scratch_pool)
 {
-  const char *repos_relpath1;
-  const char *repos_relpath2;
-
-  SVN_ERR(adjust_relative_to_repos_root(&repos_relpath1, path, path1,
-                                        ra_session, wc_ctx,
-                                        wc_root_abspath,
-                                        scratch_pool));
-  SVN_ERR(adjust_relative_to_repos_root(&repos_relpath2, path, path2,
-                                        ra_session, wc_ctx,
-                                        wc_root_abspath,
-                                        scratch_pool));
-
   if (operation == svn_diff_op_deleted)
     {
       SVN_ERR(print_git_diff_header_deleted(os, header_encoding,
@@ -578,11 +565,11 @@ display_prop_diffs(const apr_array_header_t *propchanges,
   svn_stringbuf_t *propdiff_header = svn_stringbuf_create("", pool);
   svn_stringbuf_t *append_buf;
 
-  /* First construct the prop diff header. */
-
   /* If we're creating a diff on the wc root, path would be empty. */
   if (path[0] == '\0')
     path = apr_psprintf(pool, ".");
+
+  /* First construct the prop diff header. */
 
   if (use_git_diff_format)
     {
@@ -595,6 +582,10 @@ display_prop_diffs(const apr_array_header_t *propchanges,
                                             wc_root_abspath,
                                             pool));
     }
+
+  /* If we're creating a diff on the wc root, path would be empty. */
+  if (path[0] == '\0')
+    path = apr_psprintf(pool, ".");
 
   if (show_diff_header)
     {
@@ -624,9 +615,8 @@ display_prop_diffs(const apr_array_header_t *propchanges,
           append_buf = svn_stringbuf_create("", pool);
           os = svn_stream_from_stringbuf(append_buf, pool);
           SVN_ERR(print_git_diff_header(os, &label1, &label2,
-                                        svn_diff_op_modified, path,
-                                        orig_path1, orig_path2,
-                                        rev1, rev2, NULL,
+                                        svn_diff_op_modified,
+                                        path1, path2, rev1, rev2, NULL,
                                         encoding, ra_session, wc_ctx,
                                         wc_root_abspath, pool));
 
@@ -1019,16 +1009,25 @@ diff_content_changed(const char *path,
                    path, equal_string));
 
           if (diff_cmd_baton->use_git_diff_format)
-            SVN_ERR(print_git_diff_header(os, &label1, &label2, operation,
-                                          path, diff_cmd_baton->orig_path_1,
-                                          diff_cmd_baton->orig_path_2,
-                                          rev1, rev2,
-                                          copyfrom_path,
-                                          diff_cmd_baton->header_encoding,
-                                          diff_cmd_baton->ra_session,
-                                          diff_cmd_baton->wc_ctx,
-                                          diff_cmd_baton->wc_root_abspath,
-                                          subpool));
+            {
+              const char *tmp_path1, *tmp_path2;
+              SVN_ERR(adjust_relative_to_repos_root(
+                         &tmp_path1, path, diff_cmd_baton->orig_path_1,
+                         diff_cmd_baton->ra_session, diff_cmd_baton->wc_ctx,
+                         diff_cmd_baton->wc_root_abspath, subpool));
+              SVN_ERR(adjust_relative_to_repos_root(
+                         &tmp_path2, path, diff_cmd_baton->orig_path_2,
+                         diff_cmd_baton->ra_session, diff_cmd_baton->wc_ctx,
+                         diff_cmd_baton->wc_root_abspath, subpool));
+              SVN_ERR(print_git_diff_header(os, &label1, &label2, operation,
+                                            tmp_path1, tmp_path2, rev1, rev2,
+                                            copyfrom_path,
+                                            diff_cmd_baton->header_encoding,
+                                            diff_cmd_baton->ra_session,
+                                            diff_cmd_baton->wc_ctx,
+                                            diff_cmd_baton->wc_root_abspath,
+                                            subpool));
+            }
 
           /* Output the actual diff */
           if (svn_diff_contains_diffs(diff) || diff_cmd_baton->force_empty)

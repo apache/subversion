@@ -1091,29 +1091,6 @@ window_handler(svn_txdelta_window_t *window, void *baton)
 }
 
 
-/* Prepare directory for dir_baton DB for updating or checking out.
- * Give it depth DEPTH.
- *
- * If the path already exists, but is not a working copy for
- * ANCESTOR_URL and ANCESTOR_REVISION, then an error will be returned.
- */
-static svn_error_t *
-prep_directory(struct dir_baton *db,
-               const char *ancestor_url,
-               svn_revnum_t ancestor_revision,
-               apr_pool_t *pool)
-{
-  const char *dir_abspath;
-
-  dir_abspath = db->local_abspath;
-
-  /* Make sure the directory exists. */
-  SVN_ERR(svn_wc__ensure_directory(dir_abspath, pool));
-
-  return SVN_NO_ERROR;
-}
-
-
 /* Find the last-change info within ENTRY_PROPS, and return then in the
    CHANGED_* parameters. Each parameter will be initialized to its "none"
    value, and will contain the relavent info if found.
@@ -1550,7 +1527,8 @@ create_tree_conflict(svn_wc_conflict_description2_t **pconflict,
            * calling this function. Do that on the caller's side. */
           right_repos_relpath = eb->switch_relpath;
           right_repos_relpath = apr_pstrcat(result_pool, right_repos_relpath,
-                                            "_THIS_IS_INCOMPLETE", NULL);
+                                            "_THIS_IS_INCOMPLETE",
+                                            (char *)NULL);
         }
     }
   else
@@ -1987,7 +1965,10 @@ do_entry_deletion(struct edit_baton *eb,
     }
 
     /* Receive the remote removal of excluded/absent/not present node.
-       Do not notify. */
+       Do not notify. 
+
+       ### This is wrong if svn_wc__db_status_excluded refers to a
+           working node replacing the base node.  */
   if (status == svn_wc__db_status_not_present
       || status == svn_wc__db_status_excluded
       || status == svn_wc__db_status_absent)
@@ -2042,8 +2023,7 @@ do_entry_deletion(struct edit_baton *eb,
            * we must schedule the existing content for re-addition as a copy
            * of what it was, but with its local modifications preserved. */
 
-          SVN_ERR(svn_wc__db_temp_op_make_copy(eb->db, local_abspath, FALSE,
-                                               pool));
+          SVN_ERR(svn_wc__db_temp_op_make_copy(eb->db, local_abspath, pool));
 
           /* Fall through to remove the BASE_NODEs properly, with potentially
              keeping a not-present marker */
@@ -2116,7 +2096,7 @@ delete_entry(const char *path,
              apr_pool_t *pool)
 {
   struct dir_baton *pb = parent_baton;
-  const char *base = svn_relpath_basename(path, pool);
+  const char *base = svn_relpath_basename(path, NULL);
   const char *local_abspath;
   const char *their_relpath;
 
@@ -2472,21 +2452,12 @@ add_directory(const char *path,
                                                        db->ambient_depth,
                                                        pool));
 
-  SVN_ERR(prep_directory(db,
-                         svn_path_url_add_component2(eb->repos_root,
-                                                     db->new_relpath, pool),
-                         *(eb->target_revision),
-                         db->pool));
+  SVN_ERR(svn_wc__ensure_directory(db->local_abspath, pool));
 
-  /* If PATH is within a locally deleted tree then make it also
-     scheduled for deletion.  We must do this after the call to
-     prep_directory() otherwise the administrative area for DB->PATH
-     is not present, nor is there an entry for DB->PATH in DB->PATH's
-     entries. */
-  if (pb->in_deleted_and_tree_conflicted_subtree)
-    {
-      SVN_ERR(svn_wc__db_temp_op_delete(eb->db, db->local_abspath, pool));
-    }
+  if (!pb->in_deleted_and_tree_conflicted_subtree
+      && status == svn_wc__db_status_added)
+    /* If there is no conflict we take over any added directory */
+    SVN_ERR(svn_wc__db_temp_op_remove_working(eb->db, db->local_abspath, pool));
 
   /* If this add was obstructed by dir scheduled for addition without
      history let close_file() handle the notification because there
@@ -2924,22 +2895,10 @@ close_directory(void *dir_baton,
          item to write out an old-style props file.  */
       if (new_base_props != NULL)
         {
-          apr_array_header_t *prop_diffs;
-
           SVN_ERR_ASSERT(new_actual_props != NULL);
 
-          /* If the ACTUAL props are the same as the BASE props, then we
-             should "write" a NULL. This will remove the props from the
-             ACTUAL_NODE row, and remove the old-style props file, indicating
-             "no change".  */
-          props = new_actual_props;
-          SVN_ERR(svn_prop_diffs(&prop_diffs, new_actual_props, new_base_props,
-                                 pool));
-          if (prop_diffs->nelts == 0)
-            props = NULL;
-
           SVN_ERR(svn_wc__db_op_set_props(eb->db, db->local_abspath,
-                                          props,
+                                          new_actual_props,
                                           NULL /* conflict */,
                                           NULL /* work_items */,
                                           pool));
@@ -3501,8 +3460,7 @@ apply_textdelta(void *file_baton,
                                                 fb->edit_baton->db,
                                                 fb->local_abspath,
                                                 pool, pool));
-    recorded_base_checksum
-      = checksum ? svn_checksum_to_cstring(checksum, pool) : NULL;
+    recorded_base_checksum = svn_checksum_to_cstring(checksum, pool);
     if (recorded_base_checksum && expected_base_checksum
         && strcmp(expected_base_checksum, recorded_base_checksum) != 0)
       return svn_error_createf(SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
@@ -4303,7 +4261,6 @@ close_file(void *file_baton,
    * a text conflict. So flag a tree conflict here. */
   if (fb->adding_file && fb->add_existed)
     {
-      int i;
       svn_boolean_t local_is_link = FALSE;
       svn_boolean_t incoming_is_link = FALSE;
 
@@ -4322,6 +4279,8 @@ close_file(void *file_baton,
         }
       else
         {
+          int i;
+
           for (i = 0; i < regular_props->nelts; ++i)
             {
               const svn_prop_t *prop = &APR_ARRAY_IDX(regular_props, i,
@@ -4387,32 +4346,31 @@ close_file(void *file_baton,
       /* We will ALWAYS have properties to save (after a not-dry-run merge).  */
       SVN_ERR_ASSERT(new_base_props != NULL && new_actual_props != NULL);
 
-    /* Merge the text. This will queue some additional work.  */
-    SVN_ERR(merge_file(&all_work_items, &install_pristine, &install_from,
-                       &content_state, fb, new_text_base_sha1_checksum,
-                       pool, scratch_pool));
+      /* Merge the text. This will queue some additional work.  */
+      SVN_ERR(merge_file(&all_work_items, &install_pristine, &install_from,
+                         &content_state, fb, new_text_base_sha1_checksum,
+                         pool, scratch_pool));
 
-    if (install_pristine)
-      {
-        svn_boolean_t record_fileinfo;
+      if (install_pristine)
+        {
+          svn_boolean_t record_fileinfo;
 
-        /* If we are installing from the pristine contents, then go ahead and
-           record the fileinfo. That will be the "proper" values. Installing
-           from some random file means the fileinfo does NOT correspond to
-           the pristine (in which case, the fileinfo will be cleared for
-           safety's sake).  */
-        record_fileinfo = install_from == NULL;
+          /* If we are installing from the pristine contents, then go ahead and
+             record the fileinfo. That will be the "proper" values. Installing
+             from some random file means the fileinfo does NOT correspond to
+             the pristine (in which case, the fileinfo will be cleared for
+             safety's sake).  */
+          record_fileinfo = install_from == NULL;
 
-        SVN_ERR(svn_wc__wq_build_file_install(&work_item,
-                                              eb->db,
-                                              fb->local_abspath,
-                                              install_from,
-                                              eb->use_commit_times,
-                                              record_fileinfo,
-                                              pool, pool));
-        all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
-      }
-
+          SVN_ERR(svn_wc__wq_build_file_install(&work_item,
+                                                eb->db,
+                                                fb->local_abspath,
+                                                install_from,
+                                                eb->use_commit_times,
+                                                record_fileinfo,
+                                                pool, pool));
+          all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
+        }
     }
   else
     {
@@ -4566,13 +4524,6 @@ close_file(void *file_baton,
 
   /* Deal with the WORKING tree, based on updates to the BASE tree.  */
 
-  /* An ancestor was locally-deleted. This file is being added within
-     that tree. We need to schedule this file for deletion.  */
-  if (fb->dir_baton->in_deleted_and_tree_conflicted_subtree && fb->adding_file)
-    {
-      SVN_ERR(svn_wc__db_temp_op_delete(eb->db, fb->local_abspath, pool));
-    }
-
   /* If this file was locally-added and is now being added by the update, we
      can toss the local-add, turning this into a local-edit.  */
   if (fb->add_existed && fb->adding_file)
@@ -4585,23 +4536,10 @@ close_file(void *file_baton,
      properties merge. */
   if (! fb->adding_base_under_local_add)
     {
-      apr_hash_t *props;
-      apr_array_header_t *prop_diffs;
-
       SVN_ERR_ASSERT(new_actual_props != NULL);
 
-      /* If the ACTUAL props are the same as the BASE props, then we
-         should "write" a NULL. This will remove the props from the
-         ACTUAL_NODE row, and remove the old-style props file, indicating
-         "no change".  */
-      props = new_actual_props;
-      SVN_ERR(svn_prop_diffs(&prop_diffs, new_actual_props, new_base_props,
-                             pool));
-      if (prop_diffs->nelts == 0)
-        props = NULL;
-
       SVN_ERR(svn_wc__db_op_set_props(eb->db, fb->local_abspath,
-                                      props,
+                                      new_actual_props,
                                       NULL /* conflict */,
                                       NULL /* work_item */,
                                       pool));
@@ -4806,7 +4744,7 @@ tweak_entries(svn_wc__db_t *db,
       svn_wc__db_status_t status;
 
       const char *child_repos_relpath = NULL;
-      svn_boolean_t excluded;
+      svn_boolean_t excluded, is_file_external;
 
       svn_pool_clear(iterpool);
 
@@ -4816,10 +4754,19 @@ tweak_entries(svn_wc__db_t *db,
                                                child_basename, iterpool);
 
       child_abspath = svn_dirent_join(dir_abspath, child_basename, iterpool);
+
+      /* Skip stuff we've already decided to exclude. */
       excluded = (apr_hash_get(exclude_paths, child_abspath,
                                APR_HASH_KEY_STRING) != NULL);
-
       if (excluded)
+        continue;
+
+      /* Skip stuff we've identified as file externals.  (If we're
+         here, we were doing an update of a directory, not the actual
+         switch handling of a file external itself.) */
+      SVN_ERR(svn_wc__internal_is_file_external(&is_file_external, db,
+                                                child_abspath, iterpool));
+      if (is_file_external)
         continue;
 
       SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
@@ -5510,6 +5457,18 @@ svn_wc__strictly_is_wc_root(svn_boolean_t *wc_root,
 
 
 svn_error_t *
+svn_wc_get_wc_root(const char **wcroot_abspath,
+                   svn_wc_context_t *wc_ctx,
+                   const char *local_abspath,
+                   apr_pool_t *scratch_pool,
+                   apr_pool_t *result_pool)
+{
+  return svn_wc__db_get_wcroot(wcroot_abspath, wc_ctx->db,
+                               local_abspath, scratch_pool, result_pool);
+}
+
+
+svn_error_t *
 svn_wc_get_actual_target2(const char **anchor,
                           const char **target,
                           svn_wc_context_t *wc_ctx,
@@ -5573,8 +5532,6 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                        svn_revnum_t copyfrom_rev,
                        svn_cancel_func_t cancel_func,
                        void *cancel_baton,
-                       svn_wc_notify_func2_t notify_func,
-                       void *notify_baton,
                        apr_pool_t *scratch_pool)
 {
   svn_wc__db_t *db = wc_ctx->db;
@@ -5590,7 +5547,6 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   const char *original_root_url;
   const char *original_repos_relpath;
   const char *original_uuid;
-  apr_hash_t *actual_props;
   svn_revnum_t changed_rev;
   apr_time_t changed_date;
   const char *changed_author;
@@ -5710,25 +5666,6 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                                    &changed_author,
                                    db, local_abspath,
                                    entry_props, pool, pool));
-  }
-
-  /* Add some work items to install the properties.  */
-  {
-    if (new_props == NULL)
-      {
-        actual_props = NULL;
-      }
-    else
-      {
-        apr_array_header_t *prop_diffs;
-
-        SVN_ERR(svn_prop_diffs(&prop_diffs, new_props, new_base_props,
-                               pool));
-        if (prop_diffs->nelts == 0)
-          actual_props = NULL;
-        else
-          actual_props = new_props;
-      }
   }
 
   /* Copy NEW_BASE_CONTENTS into a temporary file so our log can refer to
@@ -5855,7 +5792,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   /* ### if below fails, then the above db change would remain :-(  */
 
   SVN_ERR(svn_wc__db_op_set_props(db, local_abspath,
-                                  actual_props,
+                                  new_props,
                                   NULL /* conflict */,
                                   all_work_items,
                                   pool));

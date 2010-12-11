@@ -61,6 +61,7 @@
 
 #include "private/svn_token.h"
 #include "private/svn_opt_private.h"
+#include "private/svn_client_private.h"
 
 
 
@@ -71,8 +72,13 @@ svn_cl__print_commit_info(const svn_commit_info_t *commit_info,
                           apr_pool_t *pool)
 {
   if (SVN_IS_VALID_REVNUM(commit_info->revision))
-    SVN_ERR(svn_cmdline_printf(pool, _("\nCommitted revision %ld.\n"),
-                               commit_info->revision));
+    SVN_ERR(svn_cmdline_printf(pool, _("\nCommitted revision %ld%s.\n"),
+                               commit_info->revision,
+                               commit_info->revision == 42 &&
+                               getenv("SVN_I_LOVE_PANGALACTIC_GARGLE_BLASTERS")
+                                 ?  _(" (the answer to life, the universe, "
+                                      "and everything)")
+                                 : ""));
 
   /* Writing to stdout, as there maybe systems that consider the
    * presence of stderr as an indication of commit failure.
@@ -826,14 +832,14 @@ svn_cl__get_log_message(const char **log_msg,
              white space as we will consider white space only as empty */
           apr_size_t len;
 
-          for (len = message->len - 1; len >= 0; len--)
+          for (len = 0; len < message->len; len++)
             {
               /* FIXME: should really use an UTF-8 whitespace test
                  rather than svn_ctype_isspace, which is ASCII only */
               if (! svn_ctype_isspace(message->data[len]))
                 break;
             }
-          if (len < 0)
+          if (len == message->len)
             message = NULL;
         }
 
@@ -906,9 +912,6 @@ svn_cl__may_need_force(svn_error_t *err)
 svn_error_t *
 svn_cl__error_checked_fputs(const char *string, FILE* stream)
 {
-  /* This function is equal to svn_cmdline_fputs() minus
-     the utf8->local encoding translation */
-
   /* On POSIX systems, errno will be set on an error in fputs, but this might
      not be the case on other platforms.  We reset errno and only
      use it if it was set by the below fputs call.  Else, we just return
@@ -1326,4 +1329,33 @@ svn_cl__eat_peg_revisions(apr_array_header_t **true_targets_p,
   *true_targets_p = true_targets;
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_cl__opt_parse_path(svn_opt_revision_t *rev,
+                       const char **truepath,
+                       const char *path /* UTF-8! */,
+                       apr_pool_t *pool)
+{
+  SVN_ERR(svn_opt_parse_path(rev, truepath, path, pool));
+  
+  if (svn_path_is_url(*truepath))
+    *truepath = svn_uri_canonicalize(*truepath, pool);
+  else
+    *truepath = svn_dirent_canonicalize(*truepath, pool);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_cl__assert_homogeneous_target_type(const apr_array_header_t *targets)
+{
+  svn_error_t *err;
+
+  err = svn_client__assert_homogeneous_target_type(targets);
+  if (err && err->apr_err == SVN_ERR_ILLEGAL_TARGET)
+    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, err,
+                             _("Cannot mix repository and working copy "
+                               "targets"));
+  return err;
 }

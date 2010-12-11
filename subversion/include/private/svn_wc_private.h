@@ -612,14 +612,14 @@ svn_wc__node_get_info_bits(apr_time_t *text_time,
 
 
 /**
- * Acquire a recursive write lock for @a local_abspath or if @a lock_anchor
+ * Acquire a recursive write lock for @a local_abspath.  If @a lock_anchor
  * is true, determine if @a local_abspath has an anchor that should be locked
- * instead. Store the obtained lock in @a wc_ctx.
+ * instead; otherwise, @a local_abspath must be a versioned directory.
+ * Store the obtained lock in @a wc_ctx.
  *
  * If @a lock_root_abspath is not NULL, store the root of the lock in
  * @a *lock_root_abspath. If @a lock_root_abspath is NULL, then @a
- * local_abspath must be a versioned directory and @a lock_anchor must be
- * FALSE.
+ * lock_anchor must be FALSE.
  *
  * Returns @c SVN_ERR_WC_LOCKED if an existing lock is encountered, in
  * which case any locks acquired will have been released.
@@ -705,6 +705,21 @@ svn_wc__node_get_schedule(svn_wc_schedule_t *schedule,
                           svn_wc_context_t *wc_ctx,
                           const char *local_abspath,
                           apr_pool_t *scratch_pool);
+
+/**
+ * Helper function which fetches all the relevant information for
+ * libsvn_client/merge.c:get_mergeinfo_walk_cb().  This combines several
+ * svn_wc__db_read_info() calls into one, limiting the number of database
+ * accesses, and, more importantly, system calls.
+ */
+svn_error_t *
+svn_wc__get_mergeinfo_walk_info(svn_boolean_t *is_present,
+                                svn_boolean_t *is_deleted,
+                                svn_boolean_t *is_absent,
+                                svn_depth_t *depth,
+                                svn_wc_context_t *wc_ctx,
+                                const char *local_abspath,
+                                apr_pool_t *scratch_pool);
 
 
 #ifdef __cplusplus

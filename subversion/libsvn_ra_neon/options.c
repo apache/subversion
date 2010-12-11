@@ -152,6 +152,8 @@ parse_capabilities(ne_request *req,
                APR_HASH_KEY_STRING, capability_no);
   apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
                APR_HASH_KEY_STRING, capability_no);
+  apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
+               APR_HASH_KEY_STRING, capability_no);
 
   /* Then find out which ones are supported. */
   val = ne_get_response_header(req, "dav");
@@ -197,6 +199,10 @@ parse_capabilities(ne_request *req,
 
       if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_LOG_REVPROPS, vals))
         apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
+                     APR_HASH_KEY_STRING, capability_yes);
+
+      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_ATOMIC_REVPROPS, vals))
+        apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
                      APR_HASH_KEY_STRING, capability_yes);
 
       if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_PARTIAL_REPLAY,
@@ -389,12 +395,15 @@ svn_ra_neon__has_capability(svn_ra_session_t *session,
              support mergeinfo. */
           svn_mergeinfo_catalog_t ignored;
           svn_error_t *err;
+          svn_boolean_t validate_inherited_mergeinfo = FALSE;
           apr_array_header_t *paths = apr_array_make(pool, 1,
                                                      sizeof(char *));
           APR_ARRAY_PUSH(paths, const char *) = "";
 
           err = svn_ra_neon__get_mergeinfo(session, &ignored, paths, 0,
-                                           FALSE, FALSE, pool);
+                                           FALSE,
+                                           &validate_inherited_mergeinfo,
+                                           FALSE, pool);
 
           if (err)
             {

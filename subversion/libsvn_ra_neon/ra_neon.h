@@ -254,6 +254,7 @@ svn_error_t *svn_ra_neon__get_dated_revision(svn_ra_session_t *session,
 svn_error_t *svn_ra_neon__change_rev_prop(svn_ra_session_t *session,
                                           svn_revnum_t rev,
                                           const char *name,
+                                          const svn_string_t *const *old_value_p,
                                           const svn_string_t *value,
                                           apr_pool_t *pool);
 
@@ -298,13 +299,15 @@ svn_error_t *svn_ra_neon__get_dir(svn_ra_session_t *session,
 svn_error_t * svn_ra_neon__abort_commit(void *session_baton,
                                         void *edit_baton);
 
-svn_error_t * svn_ra_neon__get_mergeinfo(svn_ra_session_t *session,
-                                         apr_hash_t **mergeinfo,
-                                         const apr_array_header_t *paths,
-                                         svn_revnum_t revision,
-                                         svn_mergeinfo_inheritance_t inherit,
-                                         svn_boolean_t include_descendants,
-                                         apr_pool_t *pool);
+svn_error_t * svn_ra_neon__get_mergeinfo(
+  svn_ra_session_t *session,
+  apr_hash_t **mergeinfo,
+  const apr_array_header_t *paths,
+  svn_revnum_t revision,
+  svn_mergeinfo_inheritance_t inherit,
+  svn_boolean_t *validate_inherited_mergeinfo,
+  svn_boolean_t include_descendants,
+  apr_pool_t *pool);
 
 svn_error_t * svn_ra_neon__do_update(svn_ra_session_t *session,
                                      const svn_ra_reporter3_t **reporter,
@@ -575,12 +578,15 @@ svn_error_t *svn_ra_neon__get_vcc(const char **vcc,
 /* Issue a PROPPATCH request on URL, transmitting PROP_CHANGES (a hash
    of const svn_string_t * values keyed on Subversion user-visible
    property names) and PROP_DELETES (an array of property names to
-   delete).  Send any extra request headers in EXTRA_HEADERS. Use POOL
-   for all allocations.  */
+   delete). PROP_OLD_VALUES is a hash of Subversion user-visible property
+   names mapped to svn_dav__two_props_t * values. Send any extra
+   request headers in EXTRA_HEADERS. Use POOL for all allocations.
+ */
 svn_error_t *svn_ra_neon__do_proppatch(svn_ra_neon__session_t *ras,
                                        const char *url,
                                        apr_hash_t *prop_changes,
                                        const apr_array_header_t *prop_deletes,
+                                       apr_hash_t *prop_old_values,
                                        apr_hash_t *extra_headers,
                                        apr_pool_t *pool);
 
@@ -855,7 +861,8 @@ enum {
   ELEM_mergeinfo_info,
   ELEM_has_children,
   ELEM_merged_revision,
-  ELEM_deleted_rev_report
+  ELEM_deleted_rev_report,
+  ELEM_validate_inherited_mergeinfo
 };
 
 /* ### docco */

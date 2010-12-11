@@ -126,6 +126,11 @@ print_info_xml(void *baton,
       /* "<wc-info>" */
       svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "wc-info", NULL);
 
+      /* "<wcroot-abspath> xx </wcroot-abspath>" */
+      if (info->wcroot_abspath)
+        svn_cl__xml_tagged_cdata(&sb, pool, "wcroot-abspath",
+                                 info->wcroot_abspath);
+
       /* "<schedule> xx </schedule>" */
       svn_cl__xml_tagged_cdata(&sb, pool, "schedule",
                                schedule_str(info->schedule));
@@ -255,6 +260,11 @@ print_info(void *baton,
   if (info->kind != svn_node_dir)
     SVN_ERR(svn_cmdline_printf(pool, _("Name: %s\n"),
                                svn_dirent_basename(target, pool)));
+
+  if (info->wcroot_abspath)
+    SVN_ERR(svn_cmdline_printf(pool, _("Working Copy Root Path: %s\n"),
+                               svn_dirent_local_style(info->wcroot_abspath,
+                                                      pool)));
 
   if (info->URL)
     SVN_ERR(svn_cmdline_printf(pool, _("URL: %s\n"), info->URL));
@@ -452,25 +462,19 @@ print_info(void *baton,
         svn_cl__node_description(info->tree_conflict->src_right_version,
                                  info->repos_root_URL, pool);
 
-      svn_cmdline_printf(pool,
-                         "%s: %s\n",
-                         _("Tree conflict"),
-                         desc);
+      SVN_ERR(svn_cmdline_printf(pool, "%s: %s\n", _("Tree conflict"), desc));
 
       if (src_left_version)
-        svn_cmdline_printf(pool,
-                           "  %s: %s\n",
-                           _("Source  left"), /* (1) */
-                           src_left_version);
+        SVN_ERR(svn_cmdline_printf(pool, "  %s: %s\n",
+                                   _("Source  left"), /* (1) */
+                                   src_left_version));
         /* (1): Sneaking in a space in "Source  left" so that it is the
          * same length as "Source right" while it still starts in the same
          * column. That's just a tiny tweak in the English `svn'. */
 
       if (src_right_version)
-        svn_cmdline_printf(pool,
-                           "  %s: %s\n",
-                           _("Source right"),
-                           src_right_version);
+        SVN_ERR(svn_cmdline_printf(pool, "  %s: %s\n", _("Source right"),
+                                   src_right_version));
     }
 
   /* Print extra newline separator. */
@@ -539,13 +543,19 @@ svn_cl__info(apr_getopt_t *os,
       SVN_ERR(svn_opt_parse_path(&peg_revision, &truepath, target, subpool));
 
       /* If no peg-rev was attached to a URL target, then assume HEAD. */
-      if (svn_path_is_url(target))
+      if (svn_path_is_url(truepath))
         {
+          truepath = svn_uri_canonicalize(truepath, subpool);
+
           if (peg_revision.kind == svn_opt_revision_unspecified)
             peg_revision.kind = svn_opt_revision_head;
         }
       else
-        SVN_ERR(svn_dirent_get_absolute(&truepath, truepath, subpool));
+        {
+          truepath = svn_dirent_canonicalize(truepath, subpool);
+
+          SVN_ERR(svn_dirent_get_absolute(&truepath, truepath, subpool));
+        }
 
       err = svn_client_info3(truepath,
                              &peg_revision, &(opt_state->start_revision),

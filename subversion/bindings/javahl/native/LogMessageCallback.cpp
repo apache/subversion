@@ -115,7 +115,7 @@ LogMessageCallback::singleMessage(svn_log_entry_t *log_entry, apr_pool_t *pool)
 
   jobject jrevprops = NULL;
   if (log_entry->revprops != NULL && apr_hash_count(log_entry->revprops) > 0)
-    jrevprops = CreateJ::PropertyMap(log_entry->revprops, pool);
+    jrevprops = CreateJ::PropertyMap(log_entry->revprops);
 
   env->CallVoidMethod(m_callback,
                       sm_mid,

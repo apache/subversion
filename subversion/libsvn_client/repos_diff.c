@@ -521,7 +521,7 @@ diff_deleted_dir(const char *dir,
                                 mimetype1, mimetype2,
                                 b->pristine_props,
                                 b->edit_baton->diff_cmd_baton,
-                                pool));
+                                iterpool));
         }
  
       if (dirent->kind == svn_node_dir)
@@ -1060,7 +1060,8 @@ close_directory(void *dir_baton,
     return SVN_NO_ERROR;
 
   if (eb->dry_run)
-    svn_hash__clear(svn_client__dry_run_deletions(eb->diff_cmd_baton), pool);
+    SVN_ERR(svn_hash__clear(svn_client__dry_run_deletions(eb->diff_cmd_baton),
+                            pool));
 
   err = get_dir_abspath(&local_dir_abspath, eb->wc_ctx, b->wcpath,
                         FALSE, b->pool);
@@ -1244,7 +1245,7 @@ absent_directory(const char *path,
       svn_wc_notify_t *notify
         = svn_wc_create_notify(svn_dirent_join(pb->wcpath,
                                                svn_relpath_basename(path,
-                                                                    pool),
+                                                                    NULL),
                                                pool),
                                svn_wc_notify_skip, pool);
       notify->kind = svn_node_dir;

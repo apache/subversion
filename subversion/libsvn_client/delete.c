@@ -37,6 +37,7 @@
 #include "svn_path.h"
 #include "client.h"
 
+#include "private/svn_client_private.h"
 #include "private/svn_wc_private.h"
 
 #include "svn_private_config.h"
@@ -162,7 +163,7 @@ delete_urls(const apr_array_header_t *paths,
     {
       const char *bname;
       svn_uri_split(&common, &bname, common, pool);
-      APR_ARRAY_PUSH(targets, const char *) = svn_path_uri_decode(bname, pool);
+      APR_ARRAY_PUSH(targets, const char *) = bname;
     }
 
   /* Create new commit items and add them to the array. */
@@ -206,7 +207,7 @@ delete_urls(const apr_array_header_t *paths,
       const char *item_url;
 
       svn_pool_clear(subpool);
-      item_url = svn_path_url_add_component2(common, path, subpool);
+      item_url = svn_uri_join(common, path, subpool);
       path = svn_path_uri_decode(path, pool);
       APR_ARRAY_IDX(targets, i, const char *) = path;
 
@@ -328,17 +329,8 @@ svn_client_delete4(const apr_array_header_t *paths,
   if (! paths->nelts)
     return SVN_NO_ERROR;
 
-  /* Check that all targets are of the same type. */
+  SVN_ERR(svn_client__assert_homogeneous_target_type(paths));
   is_url = svn_path_is_url(APR_ARRAY_IDX(paths, 0, const char *));
-  for (i = 1; i < paths->nelts; i++)
-    {
-      const char *path = APR_ARRAY_IDX(paths, i, const char *);
-      if (is_url != svn_path_is_url(path))
-        return svn_error_return(
-                 svn_error_create(SVN_ERR_ILLEGAL_TARGET, NULL,
-                                  _("Cannot mix repository and working copy "
-                                    "targets")));
-    }
 
   if (is_url)
     {

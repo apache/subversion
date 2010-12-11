@@ -313,6 +313,13 @@ capabilities_headers_iterator_callback(void *baton,
                        SVN_RA_CAPABILITY_LOG_REVPROPS,
                        APR_HASH_KEY_STRING, capability_yes);
         }
+      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_ATOMIC_REVPROPS,
+                                      vals))
+        {
+          apr_hash_set(orc->session->capabilities,
+                       SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
+                       APR_HASH_KEY_STRING, capability_yes);
+        }
       if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_PARTIAL_REPLAY, vals))
         {
           apr_hash_set(orc->session->capabilities,
@@ -404,6 +411,8 @@ options_response_handler(serf_request_t *request,
                APR_HASH_KEY_STRING, capability_no);
   apr_hash_set(orc->session->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
                APR_HASH_KEY_STRING, capability_no);
+  apr_hash_set(orc->session->capabilities, SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
+               APR_HASH_KEY_STRING, capability_no);
 
   /* Then see which ones we can discover. */
   serf_bucket_headers_do(hdrs, capabilities_headers_iterator_callback, orc);
@@ -485,8 +494,9 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
   svn_error_t *err;
 
   /* This routine automatically fills in serf_sess->capabilities */
-  svn_ra_serf__create_options_req(&opt_ctx, serf_sess, serf_sess->conns[0],
-                                  serf_sess->repos_url.path, pool);
+  SVN_ERR(svn_ra_serf__create_options_req(&opt_ctx, serf_sess,
+                                          serf_sess->conns[0],
+                                          serf_sess->repos_url.path, pool));
 
   err = svn_ra_serf__context_run_wait(
             svn_ra_serf__get_options_done_ptr(opt_ctx), serf_sess, pool);
@@ -557,12 +567,15 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
              support mergeinfo. */
           svn_mergeinfo_catalog_t ignored;
           svn_error_t *err;
+          svn_boolean_t validate_inherited_mergeinfo = FALSE;
           apr_array_header_t *paths = apr_array_make(pool, 1,
                                                      sizeof(char *));
           APR_ARRAY_PUSH(paths, const char *) = "";
 
           err = svn_ra_serf__get_mergeinfo(ra_session, &ignored, paths, 0,
-                                           FALSE, FALSE, pool);
+                                           FALSE,
+                                           &validate_inherited_mergeinfo,
+                                           FALSE, pool);
 
           if (err)
             {

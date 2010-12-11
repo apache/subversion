@@ -530,12 +530,12 @@ svn_error_t *
 svn_fs_access_add_lock_token2(svn_fs_access_t *access_ctx,
                               const char *path,
                               const char *token);
+
 /**
  * Same as svn_fs_access_add_lock_token2(), but with @a path set to value 1.
  *
- * @deprecated Provided for backward compatibility with the 1.1 API.
+ * @deprecated Provided for backward compatibility with the 1.5 API.
  */
-
 SVN_DEPRECATED
 svn_error_t *
 svn_fs_access_add_lock_token(svn_fs_access_t *access_ctx,
@@ -1477,16 +1477,36 @@ svn_fs_closest_copy(svn_fs_root_t **root_p,
  * @a inherit indicates whether to retrieve explicit,
  * explicit-or-inherited, or only inherited mergeinfo.
  *
+ * If the mergeinfo for any path is inherited and
+ * @a validate_inherited_mergeinfo is TRUE, then the mergeinfo for
+ * that path in @a *catalog will only contain merge source
+ * path-revisions that actually exist in repository.
+ *
  * If @a include_descendants is TRUE, then additionally return the
  * mergeinfo for any descendant of any element of @a paths which has
  * the #SVN_PROP_MERGEINFO property explicitly set on it.  (Note
  * that inheritance is only taken into account for the elements in @a
  * paths; descendants of the elements in @a paths which get their
- * mergeinfo via inheritance are not included in @a *mergeoutput.)
+ * mergeinfo via inheritance are not included in @a *catalog.)
  *
  * Do any necessary temporary allocation in @a pool.
  *
- * @since New in 1.5.
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_fs_get_mergeinfo2(svn_mergeinfo_catalog_t *catalog,
+                      svn_fs_root_t *root,
+                      const apr_array_header_t *paths,
+                      svn_mergeinfo_inheritance_t inherit,
+                      svn_boolean_t validate_inherited_mergeinfo,
+                      svn_boolean_t include_descendants,
+                      apr_pool_t *pool);
+
+/**
+ * Similar to svn_fs_get_mergeinfo2(), but with
+ * @a validate_inherited_mergeinfo always passed as FALSE.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
  */
 svn_error_t *
 svn_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
@@ -1495,6 +1515,25 @@ svn_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
                      svn_mergeinfo_inheritance_t inherit,
                      svn_boolean_t include_descendants,
                      apr_pool_t *pool);
+
+/**
+ * Set @a *validated_mergeinfo equal to deep copy of @a mergeinfo, less
+ * any mergeinfo that describes path-revs that do not exist in @a FS.
+ * If @a mergeinfo is empty then @a *validated_mergeinfo is set to an empty
+ * mergeinfo hash.  If @a mergeinfo is NULL then @a *validated_mergeinfo is
+ * set to NULL.
+ *
+ * @a *validated_mergeinfo is allocated in @a result_pool.  All tempporary
+ * allocations are performed in @a scratch_pool.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_fs_validate_mergeinfo(svn_mergeinfo_t *validated_mergeinfo,
+                          svn_fs_t *fs,
+                          svn_mergeinfo_t mergeinfo,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
 
 /** Merge changes between two nodes into a third node.
  *
@@ -1894,10 +1933,11 @@ svn_fs_revision_proplist(apr_hash_t **table_p,
  * - @a fs is a filesystem, and @a rev is the revision in that filesystem
  *   whose property should change.
  * - @a name is the name of the property to change.
- * - if @a old_value_p is not @c NULL, then @a *old_value_p is the expected old
- *   value of the property, and changing the value will fail with error
- *   #SVN_ERR_FS_PROP_BASEVALUE_MISMATCH if the present value of the property
- *   is not @a *old_value_p.  (This is an atomic test-and-set).
+ * - if @a old_value_p is not @c NULL, then changing the property will fail with
+ *   error #SVN_ERR_FS_PROP_BASEVALUE_MISMATCH if the present value of the
+ *   property is not @a *old_value_p.  (This is an atomic test-and-set).
+ *   @a *old_value_p may be @c NULL, representing that the property must be not
+ *   already set.
  * - @a value is the new value of the property, or zero if the property should
  *   be removed altogether.
  *

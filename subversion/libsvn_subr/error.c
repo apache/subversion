@@ -269,6 +269,18 @@ svn_error_root_cause(svn_error_t *err)
   return err;
 }
 
+svn_boolean_t
+svn_error_has_cause(svn_error_t *err, apr_status_t apr_err)
+{
+  svn_error_t *child;
+
+  for (child = err; child; child = child->child)
+    if (child->apr_err == apr_err)
+      return TRUE;
+
+  return FALSE;
+}
+
 svn_error_t *
 svn_error_dup(svn_error_t *err)
 {
@@ -473,11 +485,12 @@ svn_handle_error2(svn_error_t *err,
   tmp_err = err;
   while (tmp_err)
     {
-      int i;
       svn_boolean_t printed_already = FALSE;
 
       if (! tmp_err->message)
         {
+          int i;
+
           for (i = 0; i < empties->nelts; i++)
             {
               if (tmp_err->apr_err == APR_ARRAY_IDX(empties, i, apr_status_t) )

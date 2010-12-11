@@ -763,12 +763,12 @@ svn_ra__file_revs_from_log(svn_ra_session_t *ra_session,
       currpool = lastpool;
       lastpool = tmppool;
 
-      svn_stream_close(last_stream);
+      SVN_ERR(svn_stream_close(last_stream));
       last_stream = stream;
       last_props = props;
     }
 
-  svn_stream_close(last_stream);
+  SVN_ERR(svn_stream_close(last_stream));
   svn_pool_destroy(currpool);
   svn_pool_destroy(lastpool);
 

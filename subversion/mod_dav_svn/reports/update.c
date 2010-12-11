@@ -250,7 +250,7 @@ absent_helper(svn_boolean_t is_dir,
                "<S:absent-%s name=\"%s\"/>" DEBUG_CR,
                DIR_OR_FILE(is_dir),
                apr_xml_quote_string(pool,
-                                    svn_relpath_basename(path, pool),
+                                    svn_relpath_basename(path, NULL),
                                     1)));
     }
 
@@ -409,8 +409,6 @@ open_helper(svn_boolean_t is_dir,
 static svn_error_t *
 close_helper(svn_boolean_t is_dir, item_baton_t *baton)
 {
-  int i;
-
   if (baton->uc->resource_walk)
     return SVN_NO_ERROR;
 
@@ -419,6 +417,7 @@ close_helper(svn_boolean_t is_dir, item_baton_t *baton)
   if (baton->removed_props && (! baton->added || baton->copyfrom))
     {
       const char *qname;
+      int i;
 
       for (i = 0; i < baton->removed_props->nelts; i++)
         {
@@ -589,7 +588,7 @@ upd_delete_entry(const char *path,
 {
   item_baton_t *parent = parent_baton;
   const char *qname = apr_xml_quote_string(pool,
-                                           svn_relpath_basename(path, pool),
+                                           svn_relpath_basename(path, NULL),
                                            1);
   return dav_svn__brigade_printf(parent->uc->bb, parent->uc->output,
                                  "<S:delete-entry name=\"%s\"/>" DEBUG_CR,
@@ -918,7 +917,8 @@ malformed_element_error(const char *tagname, apr_pool_t *pool)
 {
   const char *errstr = apr_pstrcat(pool, "The request's '", tagname,
                                    "' element is malformed; there "
-                                   "is a problem with the client.", NULL);
+                                   "is a problem with the client.",
+                                   (char *)NULL);
   return dav_svn__new_error_tag(pool, HTTP_BAD_REQUEST, 0, errstr,
                                 SVN_DAV_ERROR_NAMESPACE, SVN_DAV_ERROR_TAG);
 }

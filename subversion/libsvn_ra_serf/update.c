@@ -1189,10 +1189,11 @@ fetch_file(report_context_t *ctx, report_info_t *info)
   info->propfind = NULL;
   if (info->fetch_props)
     {
-      svn_ra_serf__deliver_props(&info->propfind, info->props,
-                                 ctx->sess, conn,
-                                 info->url, info->target_rev, "0", all_props,
-                                 FALSE, &ctx->done_propfinds, info->dir->pool);
+      SVN_ERR(svn_ra_serf__deliver_props(&info->propfind, info->props,
+                                         ctx->sess, conn, info->url,
+                                         info->target_rev, "0", all_props,
+                                         FALSE, &ctx->done_propfinds,
+                                         info->dir->pool));
 
       SVN_ERR_ASSERT(info->propfind);
 
@@ -1743,12 +1744,14 @@ end_report(svn_ra_serf__xml_parser_t *parser,
           /* Unconditionally set fetch_props now. */
           info->dir->fetch_props = TRUE;
 
-          svn_ra_serf__deliver_props(&info->dir->propfind, info->dir->props,
-                                     ctx->sess,
-                                     ctx->sess->conns[ctx->sess->cur_conn],
-                                     info->dir->url, info->dir->target_rev,
-                                     "0", all_props, FALSE,
-                                     &ctx->done_propfinds, info->dir->pool);
+          SVN_ERR(svn_ra_serf__deliver_props(&info->dir->propfind,
+                                             info->dir->props, ctx->sess,
+                                             ctx->sess->conns[ctx->sess->cur_conn],
+                                             info->dir->url,
+                                             info->dir->target_rev, "0",
+                                             all_props, FALSE,
+                                             &ctx->done_propfinds,
+                                             info->dir->pool));
 
           SVN_ERR_ASSERT(info->dir->propfind);
 
@@ -2135,7 +2138,7 @@ link_path(void *report_baton,
   SVN_ERR(svn_ra_serf__get_relative_path(&link, uri.path, report->sess,
                                          NULL, pool));
 
-  link = apr_pstrcat(pool, "/", link, NULL);
+  link = apr_pstrcat(pool, "/", link, (char *)NULL);
 
   svn_xml_make_open_tag(&buf, pool, svn_xml_protect_pcdata, "S:entry",
                         "rev", apr_ltoa(pool, revision),

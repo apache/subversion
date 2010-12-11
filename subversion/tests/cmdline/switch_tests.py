@@ -35,6 +35,7 @@ from svntest import verify, actions, main
 Skip = svntest.testcase.Skip
 SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
+Wimp = svntest.testcase.Wimp
 Item = svntest.wc.StateItem
 
 from svntest.main import SVN_PROP_MERGEINFO, server_has_mergeinfo
@@ -558,10 +559,10 @@ def relocate_deleted_missing_copied(sbox):
   expected_status.add({
     'A/D2'         : Item(status='A ', wc_rev='-', copied='+'),
     'A/D2/gamma'   : Item(status='  ', wc_rev='-', copied='+'),
-    'A/D2/G'       : Item(status='D ', wc_rev='?'),
-    'A/D2/G/pi'    : Item(status='D ', wc_rev='?'),
-    'A/D2/G/rho'   : Item(status='D ', wc_rev='?'),
-    'A/D2/G/tau'   : Item(status='D ', wc_rev='?'),
+    'A/D2/G'       : Item(status='D ', wc_rev='-', copied='+'),
+    'A/D2/G/pi'    : Item(status='D ', wc_rev='-', copied='+'),
+    'A/D2/G/rho'   : Item(status='D ', wc_rev='-', copied='+'),
+    'A/D2/G/tau'   : Item(status='D ', wc_rev='-', copied='+'),
     'A/D2/H'       : Item(status='  ', wc_rev='-', copied='+'),
     'A/D2/H/chi'   : Item(status='  ', wc_rev='-', copied='+'),
     'A/D2/H/omega' : Item(status='  ', wc_rev='-', copied='+'),
@@ -614,7 +615,7 @@ def relocate_deleted_missing_copied(sbox):
                         'A/D2/H', 'A/D2/H/chi', 'A/D2/H/omega', 'A/D2/H/psi',
                         wc_rev='-')
   expected_status.tweak('A/D2/G', 'A/D2/G/pi', 'A/D2/G/rho', 'A/D2/G/tau',
-                        wc_rev='?')
+                        copied='+', wc_rev='-')
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
@@ -1068,18 +1069,17 @@ def relocate_beyond_repos_root(sbox):
   
   svntest.main.copy_repos(repo_dir, other_repo_dir, 1, 0)
   
-
   # A relocate that changes the repo path part of the URL shouldn't work.
   # This tests for issue #2380.
   svntest.actions.run_and_verify_svn(None, None,
-                                     ".*Given destination URL invalid.*",
+                                     ".*Invalid destination URL.*",
                                      'switch', '--relocate',
                                      A_url, other_B_url, A_wc_dir)
 
   # Another way of trying to change the fs path, leading to an invalid
   # repository root.
   svntest.actions.run_and_verify_svn(None, None,
-                                     ".*Given source URL invalid.*",
+                                     ".*is not the root.*",
                                      'switch', '--relocate',
                                      repo_url, other_B_url, A_wc_dir)
 
@@ -2778,7 +2778,7 @@ def tree_conflicts_on_switch_2_2(sbox):
                         'DF/D1',
                         'DDD/D1',
                         'DDF/D1',
-                        status='! ', wc_rev=None)
+                        status='! ', treeconflict='C', wc_rev=None)
   # Remove from expected status and disk everything below the deleted paths.
   expected_status.remove('DD/D1/D2',
                          'DF/D1/beta',
@@ -3105,7 +3105,8 @@ def relocate_with_relative_externals(sbox):
   wc_dir = sbox.wc_dir
 
   # Add a relative external.
-  change_external(os.path.join(wc_dir, 'A', 'B'), "^/A/D/G G-ext", commit=True)
+  change_external(os.path.join(wc_dir, 'A', 'B'),
+                  "^/A/D/G G-ext\n../D/H H-ext", commit=True)
   svntest.actions.run_and_verify_svn(None, None, [], 'update', wc_dir)
   
   # Move our repository to another location.
@@ -3119,10 +3120,12 @@ def relocate_with_relative_externals(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'switch', '--relocate',
                                      repo_url, other_repo_url, wc_dir)
 
-  # Check the URL of the external -- was it updated to point to the
+  # Check the URLs of the externals -- were they updated to point to the
   # .other repository URL?
   svntest.actions.run_and_verify_info([{ 'URL' : '.*.other/A/D/G$' }],
                                       os.path.join(wc_dir, 'A', 'B', 'G-ext'))
+  svntest.actions.run_and_verify_info([{ 'URL' : '.*.other/A/D/H$' }],
+                                      os.path.join(wc_dir, 'A', 'B', 'H-ext'))
 
 
 ########################################################################
@@ -3163,13 +3166,13 @@ test_list = [ None,
               tolerate_local_mods,
               tree_conflicts_on_switch_1_1,
               tree_conflicts_on_switch_1_2,
-              XFail(tree_conflicts_on_switch_2_1),
+              tree_conflicts_on_switch_2_1,
               tree_conflicts_on_switch_2_2,
               tree_conflicts_on_switch_3,
               single_file_relocate,
               relocate_with_switched_children,
               XFail(copy_with_switched_subdir),
-              XFail(relocate_with_relative_externals),
+              relocate_with_relative_externals,
               ]
 
 if __name__ == '__main__':

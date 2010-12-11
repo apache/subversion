@@ -1,6 +1,4 @@
 /*
- * err.h : interface to routines for returning Berkeley DB errors
- *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -21,36 +19,31 @@
  * ====================================================================
  */
 
-
 
-#ifndef SVN_LIBSVN_FS_ERR_H
-#define SVN_LIBSVN_FS_ERR_H
+#ifndef SVN_DEBUG_REPORTER_H
+#define SVN_DEBUG_REPORTER_H
 
-#include <apr_pools.h>
-
-#include "svn_error.h"
-#include "svn_fs.h"
+#include "svn_ra.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
-
-
-/* Building common error objects.  */
-
-
-/* SVN_ERR_FS_ID_NOT_FOUND: something in FS refers to node revision
-   ID, but that node revision doesn't exist.  */
-svn_error_t *svn_fs_fs__err_dangling_id(svn_fs_t *fs,
-                                        const svn_fs_id_t *id);
-
-/* SVN_ERR_FS_CORRUPT: the lockfile for PATH in FS is corrupt.  */
-svn_error_t *svn_fs_fs__err_corrupt_lockfile(svn_fs_t *fs,
-                                             const char *path);
+/* Return a debug reporter that wraps @a wrapped_reporter.
+ *
+ * The debug reporter simply prints an indication of what callbacks are being
+ * called to @c stderr, and is only intended for use in debugging subversion
+ * reporters.
+ */
+svn_error_t *
+svn_ra__get_debug_reporter(const svn_ra_reporter3_t **reporter,
+                           void **report_baton,
+                           const svn_ra_reporter3_t *wrapped_reporter,
+                           void *wrapped_report_baton,
+                           apr_pool_t *pool);
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-#endif /* SVN_LIBSVN_FS_ERR_H */
+#endif /* SVN_DEBUG_REPORTER_H */

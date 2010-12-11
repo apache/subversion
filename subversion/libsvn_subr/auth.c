@@ -187,7 +187,7 @@ svn_auth_first_credentials(void **credentials,
                              cred_kind);
 
   /* First, see if we have cached creds in the auth_baton. */
-  cache_key = apr_pstrcat(pool, cred_kind, ":", realmstring, NULL);
+  cache_key = apr_pstrcat(pool, cred_kind, ":", realmstring, (char *)NULL);
   creds = apr_hash_get(auth_baton->creds_cache,
                        cache_key, APR_HASH_KEY_STRING);
   if (creds)

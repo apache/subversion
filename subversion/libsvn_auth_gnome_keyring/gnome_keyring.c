@@ -64,11 +64,8 @@ callback_destroy_data_keyring(void *data)
   if (data == NULL)
     return;
 
-  if (key_info->keyring_name)
-    {
-      free((void*)key_info->keyring_name);
-      key_info->keyring_name = NULL;
-    }
+  free((void*)key_info->keyring_name);
+  key_info->keyring_name = NULL;
 
   if (key_info->info)
     {
@@ -132,8 +129,7 @@ callback_default_keyring(GnomeKeyringResult result,
     }
   else
     {
-      if (key_info->keyring_name != NULL)
-        free((void*)key_info->keyring_name);
+      free((void*)key_info->keyring_name);
       key_info->keyring_name = NULL;
     }
 
@@ -296,8 +292,7 @@ password_get_gnome_keyring(const char **password,
                    "");
     }
 
-  if (default_keyring)
-    free(default_keyring);
+  free(default_keyring);
 
   return ret;
 }
@@ -347,8 +342,7 @@ password_set_gnome_keyring(apr_hash_t *creds,
                    "");
     }
 
-  if (default_keyring)
-    free(default_keyring);
+  free(default_keyring);
 
   return result == GNOME_KEYRING_RESULT_OK;
 }

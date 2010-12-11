@@ -221,15 +221,15 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t reintegrate;     /* use "reintegrate" merge-source heuristic */
   svn_boolean_t trust_server_cert; /* trust server SSL certs that would
                                       otherwise be rejected as "untrusted" */
-  int strip_count; /* number of leading path components to strip */
+  int strip; /* number of leading path components to strip */
   svn_boolean_t ignore_keywords;  /* do not expand keywords */
   svn_boolean_t reverse_diff;     /* reverse a diff (e.g. when patching) */
   svn_boolean_t ignore_whitespace; /* don't account for whitespace when
                                       patching */
-  svn_boolean_t show_diff;        /* produce diff output */
+  svn_boolean_t show_diff;        /* produce diff output (maps to --diff) */
   svn_boolean_t internal_diff;    /* override diff_cmd in config file */
   svn_boolean_t use_git_diff_format; /* Use git's extended diff format */
-  svn_boolean_t old_patch_target_names; /* Use target names from old side */
+  svn_boolean_t allow_mixed_rev; /* Allow operation on mixed-revision WC */
   svn_boolean_t ignore_mergeinfo; /* ignore mergeinfo in reporting commands. */
 } svn_cl__opt_state_t;
 
@@ -271,6 +271,7 @@ svn_opt_subcommand_t
   svn_cl__propget,
   svn_cl__proplist,
   svn_cl__propset,
+  svn_cl__relocate,
   svn_cl__revert,
   svn_cl__resolve,
   svn_cl__resolved,
@@ -418,15 +419,18 @@ svn_cl__print_status_xml(const char *path,
                          apr_pool_t *pool);
 
 
-/* Print a hash that maps property names (char *) to property values
-   (svn_string_t *).  The names are assumed to be in UTF-8 format;
+/* Print to stdout a hash that maps property names (char *) to property
+   values (svn_string_t *).  The names are assumed to be in UTF-8 format;
    the values are either in UTF-8 (the special Subversion props) or
    plain binary values.
+
+   If OUT is not NULL, then write to it rather than stdout.
 
    If NAMES_ONLY is true, print just names, else print names and
    values. */
 svn_error_t *
-svn_cl__print_prop_hash(apr_hash_t *prop_hash,
+svn_cl__print_prop_hash(svn_stream_t *out,
+                        apr_hash_t *prop_hash,
                         svn_boolean_t names_only,
                         apr_pool_t *pool);
 
@@ -566,6 +570,21 @@ svn_cl__notifier_mark_checkout(void *baton);
 svn_error_t *
 svn_cl__notifier_mark_export(void *baton);
 
+/* Baton for use with svn_cl__check_externals_failed_notify_wrapper(). */
+struct svn_cl__check_externals_failed_notify_baton
+{
+  svn_wc_notify_func2_t wrapped_func; /* The "real" notify_func2. */
+  void *wrapped_baton;                /* The "real" notify_func2 baton. */
+  svn_boolean_t had_externals_error;  /* Did something fail in an external? */
+};
+
+/* Notification function wrapper (implements `svn_wc_notify_func2_t').
+   Use with an svn_cl__check_externals_failed_notify_baton BATON. */
+void
+svn_cl__check_externals_failed_notify_wrapper(void *baton,
+                                              const svn_wc_notify_t *n,
+                                              apr_pool_t *pool);
+
 /* Print conflict stats accumulated in NOTIFY_BATON.
  * Return any error encountered during printing.
  * Do all allocations in POOL.*/
@@ -627,7 +646,10 @@ svn_cl__cleanup_log_msg(void *log_msg_baton,
 svn_error_t *
 svn_cl__may_need_force(svn_error_t *err);
 
-/* Write the STRING to the stdio STREAM, returning an error if it fails. */
+/* Write the STRING to the stdio STREAM, returning an error if it fails.
+
+   This function is equal to svn_cmdline_fputs() minus the utf8->local
+   encoding translation.  */
 svn_error_t *
 svn_cl__error_checked_fputs(const char *string, FILE* stream);
 
@@ -788,6 +810,18 @@ svn_error_t *
 svn_cl__eat_peg_revisions(apr_array_header_t **true_targets_p,
                           const apr_array_header_t *targets,
                           apr_pool_t *pool);
+
+/* Like svn_opt_parse_path(), but canonicalizes dirent/URL */
+svn_error_t *
+svn_cl__opt_parse_path(svn_opt_revision_t *rev,
+                       const char **truepath,
+                       const char *path,
+                       apr_pool_t *pool);
+
+/* Return an error if TARGETS contains a mixture of URLs and paths; otherwise
+ * return SVN_NO_ERROR. */
+svn_error_t *
+svn_cl__assert_homogeneous_target_type(const apr_array_header_t *targets);
 
 #ifdef __cplusplus
 }

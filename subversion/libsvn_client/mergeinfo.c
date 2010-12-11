@@ -156,7 +156,7 @@ svn_client__adjust_mergeinfo_source_paths(svn_mergeinfo_t adjusted_mergeinfo,
 
       /* Copy inherited mergeinfo into our output hash, adjusting the
          merge source as appropriate. */
-      path = svn_uri_join(merge_source, rel_path, pool);
+      path = svn_fspath__join(merge_source, rel_path, pool);
       copied_rangelist = svn_rangelist_dup(rangelist, pool);
       apr_hash_set(adjusted_mergeinfo, path, APR_HASH_KEY_STRING,
                    copied_rangelist);
@@ -442,17 +442,16 @@ svn_client__get_repos_mergeinfo(svn_ra_session_t *ra_session,
                                 svn_revnum_t rev,
                                 svn_mergeinfo_inheritance_t inherit,
                                 svn_boolean_t squelch_incapable,
+                                svn_boolean_t *validate_inherited_mergeinfo,
                                 apr_pool_t *pool)
 {
   svn_mergeinfo_catalog_t tgt_mergeinfo_cat;
 
   *target_mergeinfo = NULL;
 
-  SVN_ERR(svn_client__get_repos_mergeinfo_catalog(&tgt_mergeinfo_cat,
-                                                  ra_session,
-                                                  rel_path, rev, inherit,
-                                                  squelch_incapable, FALSE,
-                                                  pool, pool));
+  SVN_ERR(svn_client__get_repos_mergeinfo_catalog(
+    &tgt_mergeinfo_cat, ra_session, rel_path, rev, inherit,
+    squelch_incapable, FALSE, validate_inherited_mergeinfo, pool, pool));
 
   if (tgt_mergeinfo_cat && apr_hash_count(tgt_mergeinfo_cat))
     {
@@ -468,15 +467,17 @@ svn_client__get_repos_mergeinfo(svn_ra_session_t *ra_session,
 }
 
 svn_error_t *
-svn_client__get_repos_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
-                                        svn_ra_session_t *ra_session,
-                                        const char *rel_path,
-                                        svn_revnum_t rev,
-                                        svn_mergeinfo_inheritance_t inherit,
-                                        svn_boolean_t squelch_incapable,
-                                        svn_boolean_t include_descendants,
-                                        apr_pool_t *result_pool,
-                                        apr_pool_t *scratch_pool)
+svn_client__get_repos_mergeinfo_catalog(
+  svn_mergeinfo_catalog_t *mergeinfo_cat,
+  svn_ra_session_t *ra_session,
+  const char *rel_path,
+  svn_revnum_t rev,
+  svn_mergeinfo_inheritance_t inherit,
+  svn_boolean_t squelch_incapable,
+  svn_boolean_t include_descendants,
+  svn_boolean_t *validate_inherited_mergeinfo,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
   svn_mergeinfo_t repos_mergeinfo;
@@ -486,8 +487,9 @@ svn_client__get_repos_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
   APR_ARRAY_PUSH(rel_paths, const char *) = rel_path;
 
   /* Fetch the mergeinfo. */
-  err = svn_ra_get_mergeinfo(ra_session, &repos_mergeinfo, rel_paths, rev,
-                             inherit, include_descendants, result_pool);
+  err = svn_ra_get_mergeinfo2(ra_session, &repos_mergeinfo, rel_paths, rev,
+                              inherit, validate_inherited_mergeinfo,
+                              include_descendants, result_pool);
   if (err)
     {
       if (squelch_incapable && err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
@@ -606,6 +608,7 @@ svn_client__get_wc_or_repos_mergeinfo_catalog(
             {
               const char *session_url = NULL;
               apr_pool_t *sesspool = NULL;
+              svn_boolean_t validate_inherited_mergeinfo = FALSE;
 
               if (ra_session)
                 {
@@ -624,7 +627,8 @@ svn_client__get_wc_or_repos_mergeinfo_catalog(
               SVN_ERR(svn_client__get_repos_mergeinfo_catalog(
                         target_mergeinfo_catalog, ra_session,
                         "", target_rev, inherit,
-                        TRUE, FALSE, result_pool, scratch_pool));
+                        TRUE, FALSE, &validate_inherited_mergeinfo,
+                        result_pool, scratch_pool));
 
               if (*target_mergeinfo_catalog
                   && apr_hash_get(*target_mergeinfo_catalog, "",
@@ -672,7 +676,7 @@ svn_client__mergeinfo_from_segments(svn_mergeinfo_t *mergeinfo_p,
         continue;
 
       /* Prepend a leading slash to our path. */
-      source_path = apr_pstrcat(pool, "/", segment->path, NULL);
+      source_path = apr_pstrcat(pool, "/", segment->path, (char *)NULL);
 
       /* See if we already stored ranges for this path.  If not, make
          a new list.  */
@@ -1027,6 +1031,7 @@ get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_catalog,
   if (is_url)
     {
       svn_mergeinfo_catalog_t tmp_catalog;
+      svn_boolean_t validate_inherited_mergeinfo = FALSE;
 
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, "", scratch_pool));
       SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL,
@@ -1037,14 +1042,10 @@ get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_catalog,
                                               local_abspath, ra_session,
                                               &peg_rev, scratch_pool));
       SVN_ERR(svn_ra_get_repos_root2(ra_session, repos_root, scratch_pool));
-      SVN_ERR(svn_client__get_repos_mergeinfo_catalog(&tmp_catalog,
-                                                      ra_session,
-                                                      "", rev,
-                                                      svn_mergeinfo_inherited,
-                                                      FALSE,
-                                                      include_descendants,
-                                                      result_pool,
-                                                      scratch_pool));
+      SVN_ERR(svn_client__get_repos_mergeinfo_catalog(
+        &tmp_catalog, ra_session, "", rev, svn_mergeinfo_inherited,
+        FALSE, include_descendants, &validate_inherited_mergeinfo,
+        result_pool, scratch_pool));
 
       /* If we're not querying the root of the repository, the catalog
          we fetched will be keyed on paths relative to the session
@@ -1258,11 +1259,12 @@ static svn_mergeinfo_t
 find_nearest_ancestor(const apr_array_header_t *depth_first_catalog_index,
                       const char *abs_repos_path)
 {
-  int i;
   int ancestor_index = -1;
 
   if (depth_first_catalog_index)
     {
+      int i;
+
       for (i = 0; i < depth_first_catalog_index->nelts; i++)
         {
           svn_sort__item_t item = APR_ARRAY_IDX(depth_first_catalog_index, i,
@@ -1393,7 +1395,7 @@ filter_log_entry_with_rangelist(void *baton,
             {
               merge_source_path =
                 APR_ARRAY_IDX(fleb->merge_source_paths, i, const char *);
-              if (svn_uri_is_ancestor(merge_source_path, path))
+              if (svn_fspath__is_ancestor(merge_source_path, path))
                 {
                   /* If MERGE_SOURCE was itself deleted, replaced, or added
                      in LOG_ENTRY->REVISION then ignore this PATH since you
@@ -1410,11 +1412,11 @@ filter_log_entry_with_rangelist(void *baton,
             continue;
 
           /* Calculate the target path which PATH would affect if merged. */
-          merge_source_rel_target = svn_uri_skip_ancestor(merge_source_path,
-                                                          path);
-          target_path_affected = svn_uri_join(fleb->abs_repos_target_path,
-                                              merge_source_rel_target,
-                                              iterpool);
+          merge_source_rel_target = svn_fspath__skip_ancestor(merge_source_path,
+                                                              path);
+          target_path_affected = svn_fspath__join(fleb->abs_repos_target_path,
+                                                  merge_source_rel_target,
+                                                  iterpool);
 
           nearest_ancestor_mergeinfo =
             find_nearest_ancestor(fleb->depth_first_catalog_index,

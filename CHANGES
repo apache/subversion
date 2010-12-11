@@ -1,5 +1,36 @@
+Version 1.6.15
+(26 Nov 2010, from /branches/1.6.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.6.15
+
+  User-visible changes:
+   * hide unreadable dirs in mod_dav_svn's GET response (r996884)
+   * make 'svnmucc propsetf' actually work (r1005446)
+   * limit memory fragmentation in svnserve (r1022675)
+   * fix 'svn export' regression from 1.6.13 (r1032970)
+   * fix 'svn export' mistakenly uri-encodes paths (issue #3745)
+   * fix server-side memory leaks triggered by 'blame -g' (r1032808)
+   * prevent crash in mod_dav_svn when using SVNParentPath (r1033166)
+   * allow 'log -g' to continue in the face of invalid mergeinfo (r1028108)
+   * filter unreadable paths for 'svn ls' and 'svn co' (r997026, -070, -474)
+   * fix abort in 'svn blame -g' (issue #3666)
+   * fix file handle leak in ruby bindings (issue #3512)
+   * remove check for 1.7-style working copies (issue #3729)
+
+  Developer-visible changes:
+   * improve some swig parameter mapping (r984565, r1035745)
+   * improve test accuracy over dav (r991534, r877814)
+   * create fails.log for test runs (r964349)
+   * improve detection of 'svnversion' when buildling (r877219, et al)
+   * don't violate API layering in dumpstream logic (issue #3733)
+   * don't report working copy installs as switched (r1033921)
+
+
+Version 1.6.14
+(Not released, see changes for 1.6.15.)
+
+
 Version 1.6.13
-(?? Sep 2010, from /branches/1.6.x)
+(01 Oct 2010, from /branches/1.6.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.6.13
 
   User-visible changes:
@@ -7,17 +38,29 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.13
    * improve auto-props failure error message (r961970)
    * improve error message for 403 status with ra_neon (r876615)
    * don't allow 'merge --reintegrate' for 2-url merges (r959004)
-   * improve handling of missing fsfs.conf in with hotcopy (r980811, -1449)
+   * improve handling of missing fsfs.conf during hotcopy (r980811, -1449)
    * escape unsafe characters in a URL during export (issue #3683)
    * don't leak stale locks in FSFS (r959760)
-   * better detect broken working copies during update over neon (r979045)
-   * make rev files read-only (r981921)
+   * better detect broken working copies during update over ra_neon (r979045)
+   * fsfs: make rev files read-only (r981921)
    * properly canonicalize a URL (r984928, -31)
+   * fix wc corruption with 'commit --depth=empty' (issue #3700)
+   * permissions fixes when doing reintegrate merges (related to issue #3242)
+   * fix mergeinfo miscalculation during 2-url merges (issue #3648)
+   * fix error transmission problems in svnserve (r997457, -66)
+   * fixed: record-only merges create self-referential mergeinfo (issue #3646)
+   * fixed: 'SVNPathAuthz short_circuit' unsolicited read access (issue #3695)
+            See CVE-2010-3315, and descriptive advisory at
+            http://subversion.apache.org/security/CVE-2010-3315-advisory.txt
+   * make 'svnmucc propset' handle existing and non-existing URLs (r1000607)
+   * add new 'propsetf' subcommand to svnmucc (r1000612)
+   * warn about copied dirs during 'svn ci' with limited depth (r1002094)
 
   Developer-visible changes:
    * make ruby bindings compatible with Ruby 1.9 (r957507)
    * use the repos verify API in JavaHL (r948916)
    * teach ra_serf to parse md5 checksums with update editors (r979429)
+   * let ra_serf work with current serf releases (r879757, r880320, r943796)
 
 
 Version 1.6.12
@@ -398,6 +441,44 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.0
     * many improvements to all bindings (Java, Perl, Python, and Ruby)
     * respect CFLAGS in SWIG bindings (r35879)
     * fix building Ruby bindings with Ruby 1.9 (r35852, r35883)
+
+
+Version 1.5.9
+(06 Dec 2010, from /branches/1.5.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.5.9
+
+ User-visible changes:
+  * fix proxying of LOCK and UNLOCK requests with WebDAV proxies (r36159)
+  * improve performance of --ignore-ancestry merges (r36256)
+  * avoid crash with when using subtree mergeinfo (r36613, -13, -31, -41)
+  * improve merge correctness with non-inheritable mergeinfo (r36789)
+  * fixed: repeated mergeinfo of conflicting properties fails (issue #3250)
+  * fix segfault in wc->URL copy (r37646, -56)
+  * make 'svn up --set-depth infinity' expand shallow subtrees (r37169)
+  * resolve symlinks when checking for ~/.subversion (r36023)
+  * make default depth of 'svn merge' infinity (r37156)
+  * don't allow foreign merges to add foreign mergeinfo (issue #3383)
+  * error if attempting to reintegrate to/from the repo root (r37385)
+  * let 'svnadmin load' tolerate mergeinfo with "\r\n" (r37768)
+  * improve memory performance in 'svn merge' (issue #3393)
+  * fixed: 'SVNPathAuthz short_circuit' unsolicited read access (issue #3695)
+           See CVE-2010-3315, and descriptive advisory at
+           http://subversion.apache.org/security/CVE-2010-3315-advisory.txt
+  * prevent crash in mod_dav_svn when using SVNParentPath (r1033166)
+  * limit memory fragmentation in svnserve (r1022675)
+  * fix server-side memory leaks triggered by 'blame -g' (r1032808)
+  * perform MIME type matching case-insensitively (issue #3479)
+  * respect Apache's ServerSignature directive (r880082)
+  * error early if attempting to use Serf >= 0.4.0 (r1041545)
+
+ Developer-visible changes:
+  * fix pointer dereference (r36783)
+  * fix error leak (r36860)
+  * make basic_tests 12 compatible with Windows and Python 2.5+ (r35930)
+
+
+Version 1.5.8
+(Not released, see changes for 1.5.9.)
 
 
 Version 1.5.7

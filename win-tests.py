@@ -226,7 +226,6 @@ if run_httpd:
     base_url = 'http://localhost:' + str(httpd_port)
 
 if base_url:
-  all_tests = client_tests
   repo_loc = 'remote repository ' + base_url + '.'
   if base_url[:4] == 'http':
     log = 'dav-tests.log'

@@ -376,10 +376,10 @@ if test -n "`echo "$svn_lib_expat" | $EGREP ":.*:"`"; then
   old_LIBS="$LIBS"
   CPPFLAGS="$CPPFLAGS $SVN_XML_INCLUDES"
   LIBS="$LIBS $SVN_XML_LIBS"
-  AC_LINK_IFELSE([
+  AC_LINK_IFELSE([AC_LANG_SOURCE([[
 #include <expat.h>
 int main()
-{XML_ParserCreate(NULL);}], svn_lib_expat="yes", svn_lib_expat="no")
+{XML_ParserCreate(NULL);}]])], svn_lib_expat="yes", svn_lib_expat="no")
   LIBS="$old_LIBS"
   if test "$svn_lib_expat" = "yes"; then
     AC_MSG_RESULT([yes])
@@ -390,10 +390,10 @@ int main()
     if test "$enable_all_static" != "yes"; then
       SVN_APRUTIL_LIBS="$SVN_APRUTIL_LIBS `$apu_config --libs`"
     fi
-    AC_COMPILE_IFELSE([
+    AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
 #include <expat.h>
 int main()
-{XML_ParserCreate(NULL);}], svn_lib_expat="yes", svn_lib_expat="no")
+{XML_ParserCreate(NULL);}]])], svn_lib_expat="yes", svn_lib_expat="no")
     if test "$svn_lib_expat" = "yes"; then
       AC_MSG_RESULT([yes])
       AC_MSG_WARN([Expat found amongst libraries used by APR-Util, but Subversion libraries might be needlessly linked against additional unused libraries. It can be avoided by specifying exact location of Expat in argument of --with-expat option.])
@@ -500,11 +500,11 @@ dnl APR_HAS_DSO -------------------
 AC_MSG_CHECKING([whether APR has support for DSOs])
 old_CPPFLAGS="$CPPFLAGS"
 CPPFLAGS="$CPPFLAGS $SVN_APR_INCLUDES"
-AC_PREPROC_IFELSE([
+AC_PREPROC_IFELSE([AC_LANG_SOURCE([[
 #include <apr.h>
 #if !APR_HAS_DSO
 #error
-#endif],
+#endif]])],
   APR_HAS_DSO="yes"
   AC_MSG_RESULT([yes]),
   APR_HAS_DSO="no"
@@ -532,10 +532,10 @@ if test -n "$PKG_CONFIG"; then
     CPPFLAGS="$CPPFLAGS $DBUS_CPPFLAGS"
     LIBS="$LIBS $DBUS_LIBS"
     AC_MSG_CHECKING([for D-Bus])
-    AC_LINK_IFELSE([
+    AC_LINK_IFELSE([AC_LANG_SOURCE([[
 #include <dbus/dbus.h>
 int main()
-{dbus_bus_get(DBUS_BUS_SESSION, NULL);}], HAVE_DBUS="yes", HAVE_DBUS="no")
+{dbus_bus_get(DBUS_BUS_SESSION, NULL);}]])], HAVE_DBUS="yes", HAVE_DBUS="no")
     if test "$HAVE_DBUS" = "yes"; then
       AC_MSG_RESULT([yes])
     else
@@ -702,7 +702,7 @@ dnl Build and install rules -------------------
 INSTALL_STATIC_RULES="install-bin install-docs"
 INSTALL_RULES="install-fsmod-lib install-ramod-lib install-lib install-include install-static"
 INSTALL_RULES="$INSTALL_RULES $INSTALL_APACHE_RULE"
-BUILD_RULES="fsmod-lib ramod-lib lib bin test $BUILD_APACHE_RULE"
+BUILD_RULES="fsmod-lib ramod-lib lib bin test $BUILD_APACHE_RULE tools"
 
 if test "$svn_lib_berkeley_db" = "yes"; then
   BUILD_RULES="$BUILD_RULES bdb-lib bdb-test"
@@ -777,12 +777,28 @@ dnl Process some configuration options ----------
 AC_ARG_WITH(ssl,
 AS_HELP_STRING([--with-ssl],
                [This option does NOT affect the Subversion build process in any
-                way. It enables OpenSSL support in the Neon library. If and
-                only if you are building Neon as an integrated part of the
-                Subversion build process, rather than linking to an already
-                installed version of Neon, you probably want to pass this
-                option so that Neon (and so indirectly, Subversion) will be
-                capable of https:// access.]),
+                way. It enables OpenSSL support in the Neon HTTP client
+                library. If and only if you are building Neon as an integrated
+                part of the Subversion build process, rather than linking to
+                an already installed version of Neon, you probably want to pass
+                this option so that Neon (and so indirectly, Subversion) will
+                be capable of https:// access via that library. (Note that
+                Subversion may also or alternatively be configured to use
+                the Serf library for http:// and https:// access; see the
+                --with-serf and --with-openssl options.)]),
+[])
+
+AC_ARG_WITH(openssl,
+AS_HELP_STRING([--with-openssl],
+               [This option does NOT affect the Subversion build process in any
+                way. It tells an integrated Serf HTTP client library build
+                process where to locate the OpenSSL library when (and only when)
+                building Serf as an integrated part of the Subversion build
+                process. When linking to a previously installed version of Serf
+                instead, you do not need to use this option. (Note that
+                Subversion may also or alternatively be configured to use the
+                Neon library for http:// and https:// access; see the
+                --with-neon and --with-ssl options.)]),
 [])
 
 AC_ARG_ENABLE(debug,
@@ -826,13 +842,12 @@ if test "$enable_disallowing_of_undefined_references" != "no"; then
   AC_MSG_CHECKING([for -Wl,--no-undefined])
   old_LDFLAGS="$LDFLAGS"
   LDFLAGS="$LDFLAGS -Wl,--no-undefined"
-  AC_LINK_IFELSE([int main(){;}], [svn_wl_no_undefined="yes"], [svn_wl_no_undefined="no"])
+  AC_LINK_IFELSE([AC_LANG_SOURCE([[int main(){;}]])], [svn_wl_no_undefined="yes"], [svn_wl_no_undefined="no"])
   LDFLAGS="$old_LDFLAGS"
-  libraries="auth_gnome_keyring auth_kwallet client delta diff fs fs_base fs_fs fs_util ra ra_local ra_neon ra_serf ra_svn repos subr wc"
   if test "$svn_wl_no_undefined" = "yes"; then
     AC_MSG_RESULT([yes])
-    for library in $libraries; do
-      eval "libsvn_${library}_LDFLAGS=-Wl,--no-undefined"
+    ls "$abs_srcdir"/subversion | grep libsvn_ | while read library_dir; do
+      eval "`basename $library_dir`_LDFLAGS=-Wl,--no-undefined"
     done
   else
     AC_MSG_RESULT([no])
@@ -1025,7 +1040,7 @@ SVN_CHECK_JDK($JAVA_OLDEST_WORKING_VER)
 
 AC_PATH_PROG(PERL, perl, none)
 
-AC_PATH_PROG(RUBY, ruby, none)
+AC_PATH_PROGS(RUBY, ruby ruby1.8, none)
 if test "$RUBY" != "none"; then
   if "$RUBY" -r mkmf -e 'exit(have_func("rb_hash_foreach") ? 0 : 1)'; then
     AC_PATH_PROG(RDOC, rdoc, none)
@@ -1241,7 +1256,9 @@ AC_CONFIG_FILES([Makefile])
 SVN_CONFIG_SCRIPT(tools/backup/hot-backup.py)
 SVN_CONFIG_SCRIPT(tools/hook-scripts/commit-access-control.pl)
 SVN_CONFIG_SCRIPT(subversion/bindings/swig/perl/native/Makefile.PL)
-SVN_CONFIG_SCRIPT(packages/solaris/pkginfo)
+if test -e packages/solaris/pkginfo.in; then
+  SVN_CONFIG_SCRIPT(packages/solaris/pkginfo)
+fi
 AC_SUBST(SVN_CONFIG_SCRIPT_FILES)
 
 AC_OUTPUT

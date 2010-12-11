@@ -34,6 +34,7 @@
 #include "svn_wc.h"
 #include "svn_client.h"
 
+#include "private/svn_client_private.h"
 #include "private/svn_wc_private.h"
 
 #include "client.h"
@@ -218,7 +219,9 @@ svn_client__path_relative_to_root(const char **rel_path,
         }
       rel_url = svn_path_uri_decode(rel_url, result_pool);
       *rel_path = include_leading_slash
-                    ? apr_pstrcat(result_pool, "/", rel_url, NULL) : rel_url;
+                    ? apr_pstrcat(result_pool, "/", rel_url,
+                                  (char *)NULL)
+                    : rel_url;
     }
 
   return SVN_NO_ERROR;
@@ -317,4 +320,26 @@ svn_cl__rev_default_to_peg(const svn_opt_revision_t *revision,
   if (revision->kind == svn_opt_revision_unspecified)
     return peg_revision;
   return revision;
+}
+
+svn_error_t *
+svn_client__assert_homogeneous_target_type(const apr_array_header_t *targets)
+{
+  svn_boolean_t wc_present = FALSE, url_present = FALSE;
+  int i;
+
+  for (i = 0; i < targets->nelts; ++i)
+    {
+      const char *target = APR_ARRAY_IDX(targets, i, const char *);
+      if (! svn_path_is_url(target))
+        wc_present = TRUE;
+      else
+        url_present = TRUE;
+      if (url_present && wc_present)
+        return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                 _("Cannot mix repository and working copy "
+                                   "targets"));
+    }
+
+  return SVN_NO_ERROR;
 }

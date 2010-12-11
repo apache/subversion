@@ -537,7 +537,7 @@ svn_diff_file_output_unified3(svn_stream_t *output_stream,
 /** Similar to svn_diff_file_output_unified3(), but with @a relative_to_dir
  * set to NULL and @a show_c_function to false.
  *
- * @deprecated Provided for backwards compatibility with the 1.3 API.
+ * @deprecated Provided for backwards compatibility with the 1.4 API.
  */
 SVN_DEPRECATED
 svn_error_t *

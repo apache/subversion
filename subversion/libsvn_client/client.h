@@ -39,34 +39,16 @@
 extern "C" {
 #endif /* __cplusplus */
 
-struct svn_cl__externals_store
-{
-  apr_pool_t *pool;
-  apr_hash_t *externals_old;
-  apr_hash_t *externals_new;
-  apr_hash_t *depths;
-};
-
-/* svn_wc_external_update_t handler, storing the received data in a
- * svn_cl__externals_store instance, which must be passed as baton.
- * When one of the hashes is NULL, these values are not stored */
-svn_error_t *
-svn_cl__store_externals(void *baton,
-                        const char *local_abspath,
-                        const svn_string_t *old_value,
-                        const svn_string_t *new_value,
-                        svn_depth_t depth,
-                        apr_pool_t *scratch_pool);
-
-
 
-/* Set *URL, allocated in RESULT_POOL, and *PEG_REVNUM (the latter is
-   ignored if NULL) to the repository URL of ABSPATH_OR_URL.  If
+/* Set *URL and *PEG_REVNUM (the latter is ignored if NULL) to the
+   repository URL of ABSPATH_OR_URL as found in revision PEG_REVISION.
+   If PEG_REVISION->kind is svn_opt_revision_unspecified, use the head
+   revision for a URL or the working revision for a local path.  If
    ABSPATH_OR_URL is an absolute WC path and PEG_REVISION->kind is
    svn_opt_revision_working, use the corresponding entry's copyfrom info.
    RA_SESSION may be NULL regardless of whether ABSPATH_OR_URL is a URL.
-   Use CTX for cancellation (ignored if NULL), and SCRATCH_POOL for all
-   temporary allocations. */
+   Use CTX for authentication and for a working copy context.  Allocate
+   *URL in RESULT_POOL. Use SCRATCH_POOL for temporary allocations. */
 svn_error_t *
 svn_client__derive_location(const char **url,
                             svn_revnum_t *peg_revnum,
@@ -91,7 +73,8 @@ svn_client__derive_location(const char **url,
 
    If PEG_REV_NUM is svn_opt_revision_unspecified, svn_opt_revision_number,
    svn_opt_revision_base, or svn_opt_revision_working then set *REVNUM
-   to the base revision. */
+   to the base revision.
+   ### What's up with this last paragraph? Sounds all wrong. */
 svn_error_t *
 svn_client__entry_location(const char **url,
                            svn_revnum_t *revnum,
@@ -491,6 +474,12 @@ svn_client__make_local_parents(const char *path,
    these obstructions cause the update to fail.
 
    If INNERUPDATE is true, no anchor check is performed on the update target.
+
+   If MAKE_PARENTS is true, allow the update to calculate and checkout
+   (with depth=empty) any parent directories of the requested update
+   target which are missing from the working copy.
+
+   NOTE:  You may not specify both INNERUPDATE and MAKE_PARENTS as true.
 */
 svn_error_t *
 svn_client__update_internal(svn_revnum_t *result_rev,
@@ -502,6 +491,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                             svn_boolean_t allow_unver_obstructions,
                             svn_boolean_t *timestamp_sleep,
                             svn_boolean_t innerupdate,
+                            svn_boolean_t make_parents,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool);
 
@@ -912,7 +902,6 @@ svn_client__do_commit(const char *base_url,
 /*** Externals (Modules) ***/
 
 /* Handle changes to the svn:externals property described by EXTERNALS_OLD,
-
    EXTERNALS_NEW, and AMBIENT_DEPTHS.  The tree's top level directory
    is at TO_ABSPATH and corresponds to FROM_URL URL in the repository,
    which has a root URL of REPOS_ROOT_URL.  A write lock should be
@@ -1005,6 +994,44 @@ svn_client__do_external_status(svn_client_ctx_t *ctx,
                                void *status_baton,
                                apr_pool_t *pool);
 
+/* Set *EXTERNALS_P to a hash mapping const char * local absolute
+   paths to const svn_string_t * svn:externals property values, those
+   found by crawling LOCAL_ABSPATH to DEPTH. */
+svn_error_t *
+svn_client__crawl_for_externals(apr_hash_t **externals_p,
+                                const char *local_abspath,
+                                svn_depth_t depth,
+                                svn_client_ctx_t *ctx,
+                                apr_pool_t *scratch_pool,
+                                apr_pool_t *result_pool);
+
+/* Baton type for svn_wc__external_info_gatherer(). */
+typedef struct svn_client__external_func_baton_t
+{
+  apr_hash_t *externals_old;  /* Hash of old externals property values,
+                                 or NULL if the caller doesn't care. */
+  apr_hash_t *externals_new;  /* Hash of new externals property values,
+                                 or NULL if the caller doesn't care. */
+  apr_hash_t *ambient_depths; /* Hash of ambient depth values, or NULL
+                                 if the caller doesn't care. */
+  apr_pool_t *result_pool;    /* Pool to use for all stored values. */
+
+} svn_client__external_func_baton_t;
+
+
+/* This function gets invoked whenever external changes are encountered.
+   This implements the `svn_wc_external_update_t' interface, and can
+   be used with an svn_client__external_func_baton_t BATON to gather
+   information about changes to externals definitions. */
+svn_error_t *
+svn_client__external_info_gatherer(void *baton,
+                                   const char *local_abspath,
+                                   const svn_string_t *old_val,
+                                   const svn_string_t *new_val,
+                                   svn_depth_t depth,
+                                   apr_pool_t *scratch_pool);
+
+
 
 
 /* Retrieve log messages using the first provided (non-NULL) callback
@@ -1080,32 +1107,6 @@ svn_cl__rev_default_to_head_or_working(const svn_opt_revision_t *revision,
 const svn_opt_revision_t *
 svn_cl__rev_default_to_peg(const svn_opt_revision_t *revision,
                            const svn_opt_revision_t *peg_revision);
-
-
-/* Some external traversal helpers.
- */
-/* This function gets invoked whenever external changes are encountered.
-   This implements svn_wc_external_update_t */
-svn_error_t *
-svn_client__external_info_gatherer(void *baton,
-                                   const char *local_abspath,
-                                   const svn_string_t *old_val,
-                                   const svn_string_t *new_val,
-                                   svn_depth_t depth,
-                                   apr_pool_t *scratch_pool);
-
-/* Baton type for svn_wc__external_info_gatherer().  All fields must be
-   populated before use. */
-typedef struct svn_client__external_func_baton_t
-{
-  apr_hash_t *externals_old;
-  apr_hash_t *externals_new;
-  apr_hash_t *ambient_depths;
-
-  apr_pool_t *result_pool;
-} svn_client__external_func_baton_t;
-
-
 
 
 #ifdef __cplusplus

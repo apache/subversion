@@ -60,7 +60,7 @@ CreateJ::ConflictDescriptor(const svn_wc_conflict_description_t *desc)
     {
       ctor = env->GetMethodID(clazz, "<init>", "(Ljava/lang/String;"
                               "L"JAVA_PACKAGE"/ConflictDescriptor$Kind;"
-                              "L"JAVA_PACKAGE"/NodeKind;"
+                              "L"JAVA_PACKAGE"/types/NodeKind;"
                               "Ljava/lang/String;ZLjava/lang/String;"
                               "L"JAVA_PACKAGE"/ConflictDescriptor$Action;"
                               "L"JAVA_PACKAGE"/ConflictDescriptor$Reason;"
@@ -152,7 +152,8 @@ CreateJ::ConflictVersion(const svn_wc_conflict_version_t *version)
     {
       ctor = env->GetMethodID(clazz, "<init>", "(Ljava/lang/String;J"
                                                "Ljava/lang/String;"
-                                               "L"JAVA_PACKAGE"/NodeKind;)V");
+                                               "L"JAVA_PACKAGE"/types/NodeKind;"
+                                               ")V");
       if (JNIUtil::isJavaExceptionThrown() || ctor == 0)
         POP_AND_RETURN_NULL;
     }
@@ -177,7 +178,7 @@ CreateJ::ConflictVersion(const svn_wc_conflict_version_t *version)
 }
 
 jobject
-CreateJ::Info2(const char *path, const svn_info_t *info)
+CreateJ::Info(const char *path, const svn_info_t *info)
 {
   JNIEnv *env = JNIUtil::getEnv();
 
@@ -186,7 +187,7 @@ CreateJ::Info2(const char *path, const svn_info_t *info)
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
-  jclass clazz = env->FindClass(JAVA_PACKAGE "/Info2");
+  jclass clazz = env->FindClass(JAVA_PACKAGE "/Info");
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -194,23 +195,28 @@ CreateJ::Info2(const char *path, const svn_info_t *info)
   if (mid == 0)
     {
       mid = env->GetMethodID(clazz, "<init>",
-                             "(Ljava/lang/String;Ljava/lang/String;J"
-                             "L"JAVA_PACKAGE"/NodeKind;"
+                             "(Ljava/lang/String;Ljava/lang/String;"
+                             "Ljava/lang/String;J"
+                             "L"JAVA_PACKAGE"/types/NodeKind;"
                              "Ljava/lang/String;Ljava/lang/String;"
                              "JJLjava/lang/String;"
                              "L"JAVA_PACKAGE"/Lock;Z"
-                             "L"JAVA_PACKAGE"/Info2$ScheduleKind;"
+                             "L"JAVA_PACKAGE"/Info$ScheduleKind;"
                              "Ljava/lang/String;JJJ"
                              "Ljava/lang/String;Ljava/lang/String;"
                              "Ljava/lang/String;Ljava/lang/String;"
                              "Ljava/lang/String;Ljava/lang/String;JJ"
-                             "L"JAVA_PACKAGE"/Depth;"
+                             "L"JAVA_PACKAGE"/types/Depth;"
                              "L"JAVA_PACKAGE"/ConflictDescriptor;)V");
       if (mid == 0 || JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
     }
 
   jstring jpath = JNIUtil::makeJString(path);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  jstring jwcroot = JNIUtil::makeJString(info->wcroot_abspath);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -280,7 +286,8 @@ CreateJ::Info2(const char *path, const svn_info_t *info)
   jlong jreposSize = info->size == SVN_INFO_SIZE_UNKNOWN
     ? -1 : (jlong) info->size;
 
-  jobject jinfo2 = env->NewObject(clazz, mid, jpath, jurl, (jlong) info->rev,
+  jobject jinfo2 = env->NewObject(clazz, mid, jpath, jwcroot, jurl,
+                                  (jlong) info->rev,
                                   jnodeKind, jreposRootUrl, jreportUUID,
                                   (jlong) info->last_changed_rev,
                                   (jlong) info->last_changed_date,
@@ -370,9 +377,9 @@ CreateJ::ChangedPath(const char *path, svn_log_changed_path2_t *log_item)
                                "<init>",
                                "(Ljava/lang/String;JLjava/lang/String;"
                                "L"JAVA_PACKAGE"/ChangePath$Action;"
-                               "L"JAVA_PACKAGE"/NodeKind;"
-                               "L"JAVA_PACKAGE"/Tristate;"
-                               "L"JAVA_PACKAGE"/Tristate;)V");
+                               "L"JAVA_PACKAGE"/types/NodeKind;"
+                               "L"JAVA_PACKAGE"/types/Tristate;"
+                               "L"JAVA_PACKAGE"/types/Tristate;)V");
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN(SVN_NO_ERROR);
     }
@@ -425,7 +432,7 @@ CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
     {
       mid = env->GetMethodID(clazz, "<init>",
                              "(Ljava/lang/String;Ljava/lang/String;"
-                             "L"JAVA_PACKAGE"/NodeKind;"
+                             "L"JAVA_PACKAGE"/types/NodeKind;"
                              "JJJLjava/lang/String;"
                              "L"JAVA_PACKAGE"/Status$Kind;"
                              "L"JAVA_PACKAGE"/Status$Kind;"
@@ -437,7 +444,7 @@ CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
                              "JZZLjava/lang/String;Ljava/lang/String;"
                              "Ljava/lang/String;"
                              "JL"JAVA_PACKAGE"/Lock;"
-                             "JJL"JAVA_PACKAGE"/NodeKind;"
+                             "JJL"JAVA_PACKAGE"/types/NodeKind;"
                              "Ljava/lang/String;Ljava/lang/String;)V");
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
@@ -671,8 +678,7 @@ CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
 }
 
 jobject
-CreateJ::ClientNotifyInformation(const svn_wc_notify_t *wcNotify,
-                                 apr_pool_t *pool)
+CreateJ::ClientNotifyInformation(const svn_wc_notify_t *wcNotify)
 {
   JNIEnv *env = JNIUtil::getEnv();
 
@@ -691,7 +697,8 @@ CreateJ::ClientNotifyInformation(const svn_wc_notify_t *wcNotify,
       midCT = env->GetMethodID(clazz, "<init>",
                                "(Ljava/lang/String;"
                                "L"JAVA_PACKAGE"/ClientNotifyInformation$Action;"
-                               "L"JAVA_PACKAGE"/NodeKind;Ljava/lang/String;"
+                               "L"JAVA_PACKAGE"/types/NodeKind;"
+                               "Ljava/lang/String;"
                                "L"JAVA_PACKAGE"/Lock;"
                                "Ljava/lang/String;"
                                "L"JAVA_PACKAGE"/ClientNotifyInformation$Status;"
@@ -762,7 +769,7 @@ CreateJ::ClientNotifyInformation(const svn_wc_notify_t *wcNotify,
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
-  jobject jrevProps = CreateJ::PropertyMap(wcNotify->rev_props, pool);
+  jobject jrevProps = CreateJ::PropertyMap(wcNotify->rev_props);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -791,8 +798,7 @@ CreateJ::ClientNotifyInformation(const svn_wc_notify_t *wcNotify,
 }
 
 jobject
-CreateJ::ReposNotifyInformation(const svn_repos_notify_t *reposNotify,
-                                apr_pool_t *pool)
+CreateJ::ReposNotifyInformation(const svn_repos_notify_t *reposNotify)
 {
   JNIEnv *env = JNIUtil::getEnv();
 
@@ -870,7 +876,7 @@ CreateJ::CommitItem(svn_client_commit_item3_t *item)
     {
       midConstructor = env->GetMethodID(clazz, "<init>",
                                         "(Ljava/lang/String;"
-                                        "L"JAVA_PACKAGE"/NodeKind;"
+                                        "L"JAVA_PACKAGE"/types/NodeKind;"
                                         "ILjava/lang/String;"
                                         "Ljava/lang/String;J)V");
       if (JNIUtil::isExceptionThrown())
@@ -1016,7 +1022,6 @@ CreateJ::RevisionRangeList(apr_array_header_t *ranges)
 jobject
 CreateJ::StringSet(apr_array_header_t *strings)
 {
-  JNIEnv *env = JNIUtil::getEnv();
   std::vector<jobject> jstrs;
 
   for (int i = 0; i < strings->nelts; ++i)
@@ -1032,7 +1037,7 @@ CreateJ::StringSet(apr_array_header_t *strings)
   return CreateJ::Set(jstrs);
 }
 
-jobject CreateJ::PropertyMap(apr_hash_t *prop_hash, apr_pool_t *pool)
+jobject CreateJ::PropertyMap(apr_hash_t *prop_hash)
 {
   JNIEnv *env = JNIUtil::getEnv();
 
@@ -1072,7 +1077,8 @@ jobject CreateJ::PropertyMap(apr_hash_t *prop_hash, apr_pool_t *pool)
 
   apr_hash_index_t *hi;
   int i = 0;
-  for (hi = apr_hash_first(pool, prop_hash); hi; hi = apr_hash_next(hi), ++i)
+  for (hi = apr_hash_first(apr_hash_pool_get(prop_hash), prop_hash);
+       hi; hi = apr_hash_next(hi), ++i)
     {
       const char *key;
       svn_string_t *val;

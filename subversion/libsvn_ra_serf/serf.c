@@ -433,7 +433,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
 
   if (client_string)
     serf_sess->conns[0]->useragent = apr_pstrcat(pool, USER_AGENT, "/",
-                                                 client_string, NULL);
+                                                 client_string, (char *)NULL);
   else
     serf_sess->conns[0]->useragent = USER_AGENT;
 
@@ -600,9 +600,10 @@ fetch_path_props(svn_ra_serf__propfind_context_t **ret_prop_ctx,
    */
   if (!SVN_IS_VALID_REVNUM(revision))
     {
-      svn_ra_serf__deliver_props(&prop_ctx, props, session, session->conns[0],
-                                 path, revision, "0", desired_props, TRUE,
-                                 NULL, session->pool);
+      SVN_ERR(svn_ra_serf__deliver_props(&prop_ctx, props, session,
+                                         session->conns[0], path, revision,
+                                         "0", desired_props, TRUE, NULL,
+                                         session->pool));
     }
   else
     {
@@ -619,10 +620,10 @@ fetch_path_props(svn_ra_serf__propfind_context_t **ret_prop_ctx,
       prop_ctx = NULL;
       path = svn_path_url_add_component2(basecoll_url, relative_url, pool);
       revision = SVN_INVALID_REVNUM;
-      svn_ra_serf__deliver_props(&prop_ctx, props, session, session->conns[0],
-                                 path, revision, "0",
-                                 desired_props, TRUE,
-                                 NULL, session->pool);
+      SVN_ERR(svn_ra_serf__deliver_props(&prop_ctx, props, session,
+                                         session->conns[0], path, revision,
+                                         "0", desired_props, TRUE, NULL,
+                                         session->pool));
     }
 
   if (prop_ctx)

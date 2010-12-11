@@ -35,6 +35,7 @@ from svntest import main, wc, verify, actions
 # (abbreviation)
 Item = wc.StateItem
 XFail = svntest.testcase.XFail
+Wimp = svntest.testcase.Wimp
 Skip = svntest.testcase.Skip
 SkipUnless = svntest.testcase.SkipUnless
 
@@ -416,7 +417,7 @@ def three_way_merge_add_of_existing_binary_file(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, None, None, None, None,
-                                       1)
+                                       1, 0, '--allow-mixed-revisions', A_path)
 
 #----------------------------------------------------------------------
 # Issue #2515
@@ -1877,7 +1878,7 @@ def merge_replace_causes_tree_conflict2(sbox):
 test_list = [ None,
               SkipUnless(delete_file_and_dir,
                          server_has_mergeinfo),
-              SkipUnless(XFail(merge_catches_nonexistent_target),
+              SkipUnless(merge_catches_nonexistent_target,
                          server_has_mergeinfo),
               SkipUnless(merge_tree_deleted_in_target,
                          server_has_mergeinfo),

@@ -119,7 +119,7 @@ manifest_serialize(char **data,
 {
   apr_array_header_t *manifest = in;
 
-  *data_len = sizeof(apr_off_t) *manifest->nelts;
+  *data_len = sizeof(apr_off_t) * manifest->nelts;
   *data = apr_palloc(pool, *data_len);
   memcpy(*data, manifest->elts, *data_len);
 
@@ -134,10 +134,10 @@ manifest_deserialize(void **out,
                      apr_pool_t *pool)
 {
   apr_array_header_t *manifest = apr_array_make(pool,
-                                                data_len / sizeof(apr_off_t),
-                                                sizeof(apr_off_t));
+                                       (int) (data_len / sizeof(apr_off_t)),
+                                       sizeof(apr_off_t));
   memcpy(manifest->elts, data, data_len);
-  manifest->nelts = data_len / sizeof(apr_off_t);
+  manifest->nelts = (int) (data_len / sizeof(apr_off_t));
   *out = manifest;
 
   return SVN_NO_ERROR;
@@ -198,7 +198,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
   const char *prefix = apr_pstrcat(pool,
                                    "fsfs:", ffd->uuid,
                                    "/", fs->path, ":",
-                                   NULL);
+                                   (char *)NULL);
   svn_memcache_t *memcache;
   svn_boolean_t no_handler;
 
@@ -219,7 +219,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                                        deserialize_id,
                                        sizeof(svn_revnum_t),
                                        apr_pstrcat(pool, prefix, "RRI",
-                                                   NULL),
+                                                   (char *)NULL),
                                        fs->pool));
   else
     SVN_ERR(svn_cache__create_inprocess(&(ffd->rev_root_id_cache),
@@ -239,7 +239,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                                        svn_fs_fs__dag_deserialize,
                                        APR_HASH_KEY_STRING,
                                        apr_pstrcat(pool, prefix, "DAG",
-                                                   NULL),
+                                                   (char *)NULL),
                                        fs->pool));
   else
     SVN_ERR(svn_cache__create_inprocess(&(ffd->rev_node_cache),
@@ -259,7 +259,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                                        svn_fs_fs__dir_entries_deserialize,
                                        APR_HASH_KEY_STRING,
                                        apr_pstrcat(pool, prefix, "DIR",
-                                                   NULL),
+                                                   (char *)NULL),
                                        fs->pool));
   else
     SVN_ERR(svn_cache__create_inprocess(&(ffd->dir_cache),
@@ -279,7 +279,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                                        manifest_deserialize,
                                        sizeof(svn_revnum_t),
                                        apr_pstrcat(pool, prefix, "PACK-MANIFEST",
-                                                   NULL),
+                                                   (char *)NULL),
                                        fs->pool));
   else
     SVN_ERR(svn_cache__create_inprocess(&(ffd->packed_offset_cache),
@@ -298,7 +298,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                                          NULL, NULL,
                                          APR_HASH_KEY_STRING,
                                          apr_pstrcat(pool, prefix, "TEXT",
-                                                     NULL),
+                                                     (char *)NULL),
                                          fs->pool));
       if (! no_handler)
         SVN_ERR(svn_cache__set_error_handler(ffd->fulltext_cache,

@@ -74,6 +74,8 @@ from svntest import Skip
 #####################################################################
 # Global stuff
 
+default_num_threads = 5
+
 class SVNProcessTerminatedBySignal(Failure):
   "Exception raised if a spawned process segfaulted, aborted, etc."
   pass
@@ -158,6 +160,8 @@ svnversion_binary = os.path.abspath('../../svnversion/svnversion' + _exe)
 svndumpfilter_binary = os.path.abspath('../../svndumpfilter/svndumpfilter' + \
                                        _exe)
 entriesdump_binary = os.path.abspath('entries-dump' + _exe)
+atomic_ra_revprop_change_binary = os.path.abspath('atomic-ra-revprop-change' + \
+                                                  _exe)
 
 # Location to the pristine repository, will be calculated from test_area_url
 # when we know what the user specified for --url.
@@ -341,23 +345,22 @@ _safe_arg_re = re.compile(r'^[A-Za-z\d\.\_\/\-\:\@]+$')
 def _quote_arg(arg):
   """Quote ARG for a command line.
 
-  Simply surround every argument in double-quotes unless it contains
+  Return a quoted version of the string ARG, or just ARG if it contains
   only universally harmless characters.
 
   WARNING: This function cannot handle arbitrary command-line
-  arguments.  It can easily be confused by shell metacharacters.  A
-  perfect job would be difficult and OS-dependent (see, for example,
-  http://msdn.microsoft.com/library/en-us/vccelng/htm/progs_12.asp).
-  In other words, this function is just good enough for what we need
-  here."""
+  arguments: it is just good enough for what we need here."""
 
   arg = str(arg)
   if _safe_arg_re.match(arg):
     return arg
+
+  if windows:
+    # Note: subprocess.list2cmdline is Windows-specific.
+    return subprocess.list2cmdline([arg])
   else:
-    if os.name != 'nt':
-      arg = arg.replace('$', '\$')
-    return '"%s"' % (arg,)
+    # Quoting suitable for most Unix shells.
+    return "'" + arg.replace("'", "'\\''") + "'"
 
 def open_pipe(command, bufsize=0, stdin=None, stdout=None, stderr=None):
   """Opens a subprocess.Popen pipe to COMMAND using STDIN,
@@ -373,15 +376,7 @@ def open_pipe(command, bufsize=0, stdin=None, stdout=None, stderr=None):
   if (sys.platform == 'win32') and (command[0].endswith('.py')):
     command.insert(0, sys.executable)
 
-  # Quote only the arguments on Windows.  Later versions of subprocess,
-  # 2.5.2+ confirmed, don't require this quoting, but versions < 2.4.3 do.
-  if sys.platform == 'win32':
-    args = command[1:]
-    args = ' '.join([_quote_arg(x) for x in args])
-    command = command[0] + ' ' + args
-    command_string = command
-  else:
-    command_string = ' '.join(command)
+  command_string = command[0] + ' ' + ' '.join(map(_quote_arg, command[1:]))
 
   if not stdin:
     stdin = subprocess.PIPE
@@ -443,6 +438,7 @@ def wait_on_pipe(waiter, binary_mode, stdin=None):
     if exit_code and options.verbose:
       sys.stderr.write("CMD: %s exited with %d\n"
                        % (command_string, exit_code))
+      sys.stderr.flush()
     return stdout_lines, stderr_lines, exit_code
 
 def spawn_process(command, bufsize=0, binary_mode=0, stdin_lines=None,
@@ -639,6 +635,20 @@ def run_entriesdump_subdirs(path):
                                                         0, 0, None, '--subdirs', path)
   return [line.strip() for line in stdout_lines if not line.startswith("DBG:")]
 
+def run_atomic_ra_revprop_change(url, revision, propname, skel, want_error):
+  """Run the atomic-ra-revprop-change helper, returning its exit code, stdout, 
+  and stderr.  For HTTP, default HTTP library is used."""
+  # use spawn_process rather than run_command to avoid copying all the data
+  # to stdout in verbose mode.
+  #exit_code, stdout_lines, stderr_lines = spawn_process(entriesdump_binary,
+  #                                                      0, 0, None, path)
+
+  # This passes HTTP_LIBRARY in addition to our params.
+  return run_command(atomic_ra_revprop_change_binary, True, False, 
+                     url, revision, propname, skel,
+                     options.http_library, want_error and 1 or 0)
+
+
 # Chmod recursively on a whole subtree
 def chmod_tree(path, mode, mask):
   for dirpath, dirs, files in os.walk(path):
@@ -721,7 +731,7 @@ def create_repos(path):
     # (e.g. due to a missing 'svnadmin' binary).
     raise SVNRepositoryCreateFailure("".join(stderr).rstrip())
 
-  # Allow unauthenticated users to write to the repos, for ra_svn testing.
+  # Require authentication to write to the repos, for ra_svn testing.
   file_write(get_svnserve_conf_file_path(path),
              "[general]\nauth-access = write\n");
   if options.enable_sasl:
@@ -1039,6 +1049,9 @@ def is_fs_type_fsfs():
   # This assumes that fsfs is the default fs implementation.
   return options.fs_type == 'fsfs' or options.fs_type is None
 
+def is_fs_type_bdb():
+  return options.fs_type == 'bdb'
+
 def is_os_windows():
   return os.name == 'nt'
 
@@ -1072,6 +1085,9 @@ def server_has_partial_replay():
 def server_enforces_date_syntax():
   return options.server_minor_version >= 5
 
+def server_has_atomic_revprop():
+  return options.server_minor_version >= 7
+
 ######################################################################
 
 
@@ -1094,7 +1110,7 @@ class TestSpawningThread(threading.Thread):
       self.run_one(next_index)
 
   def run_one(self, index):
-    command = sys.argv[0]
+    command = os.path.abspath(sys.argv[0])
 
     args = []
     args.append(str(index))
@@ -1252,15 +1268,19 @@ def run_one_test(n, test_list, finished_tests = None):
   If we're running the tests in parallel spawn the test in a new process.
   """
 
-  if (n < 1) or (n > len(test_list) - 1):
+  # allow N to be negative, so './basic_tests.py -- -1' works
+  num_tests = len(test_list) - 1
+  if (n == 0) or (abs(n) > num_tests):
     print("There is no test %s.\n" % n)
     return 1
+  if n < 0:
+    n += 1+num_tests
 
   # Run the test.
   exit_code = TestRunner(test_list[n], n).run()
   return exit_code
 
-def _internal_run_tests(test_list, testnums, parallel):
+def _internal_run_tests(test_list, testnums, parallel, srcdir, progress_func):
   """Run the tests from TEST_LIST whose indices are listed in TESTNUMS.
 
   If we're running the tests in parallel spawn as much parallel processes
@@ -1272,10 +1292,19 @@ def _internal_run_tests(test_list, testnums, parallel):
   finished_tests = []
   tests_started = 0
 
+  # Some of the tests use sys.argv[0] to locate their test data
+  # directory.  Perhaps we should just be passing srcdir to the tests?
+  if srcdir:
+    sys.argv[0] = os.path.join(srcdir, 'subversion', 'tests', 'cmdline',
+                               sys.argv[0])
+
   if not parallel:
-    for testnum in testnums:
+    for i, testnum in enumerate(testnums):
       if run_one_test(testnum, test_list) == 1:
           exit_code = 1
+      # signal progress
+      if progress_func:
+        progress_func(i+1, len(testnums))
   else:
     number_queue = queue.Queue()
     for num in testnums:
@@ -1293,6 +1322,10 @@ def _internal_run_tests(test_list, testnums, parallel):
     for t in threads:
       results += t.results
     results.sort()
+
+    # signal some kind of progress
+    if progress_func:
+      progress_func(len(testnums), len(testnums))
 
     # terminate the line of dots
     print("")
@@ -1321,6 +1354,7 @@ def create_default_options():
 def _create_parser():
   """Return a parser for our test suite."""
   # set up the parser
+  _default_http_library = 'serf'
   usage = 'usage: %prog [options] [<test> ...]'
   parser = optparse.OptionParser(usage=usage)
   parser.add_option('-l', '--list', action='store_true', dest='list_tests',
@@ -1329,8 +1363,8 @@ def _create_parser():
                     help='Print binary command-lines (not with --quiet)')
   parser.add_option('-q', '--quiet', action='store_true',
                     help='Print only unexpected results (not with --verbose)')
-  parser.add_option('-p', '--parallel', action='store_const', const=5,
-                    dest='parallel',
+  parser.add_option('-p', '--parallel', action='store_const',
+                    const=default_num_threads, dest='parallel',
                     help='Run the tests in parallel')
   parser.add_option('-c', action='store_true', dest='is_child_process',
                     help='Flag if we are running this python test as a ' +
@@ -1351,7 +1385,7 @@ def _create_parser():
   parser.add_option('--http-library', action='store',
                     help="Make svn use this DAV library (neon or serf) if " +
                          "it supports both, else assume it's using this " +
-                         "one; the default is neon")
+                         "one; the default is " + _default_http_library)
   parser.add_option('--server-minor-version', type='int', action='store',
                     help="Set the minor version for the server ('4', " +
                          "'5', or '6').")
@@ -1369,12 +1403,14 @@ def _create_parser():
                          'test output and ignores all exceptions in the ' +
                          'run_and_verify* functions. This option is only ' +
                          'useful during test development!')
+  parser.add_option('--srcdir', action='store', dest='srcdir',
+                    help='Source directory.')
 
   # most of the defaults are None, but some are other values, set them here
   parser.set_defaults(
         server_minor_version=7,
         url=file_scheme_prefix + pathname2url(os.path.abspath(os.getcwd())),
-        http_library='serf')
+        http_library=_default_http_library)
 
   return parser
 
@@ -1405,10 +1441,6 @@ def _parse_options(arglist=sys.argv[1:]):
   return (parser, args)
 
 
-# Main func.  This is the "entry point" that all the test scripts call
-# to run their list of tests.
-#
-# This routine parses sys.argv to decide what to do.
 def run_tests(test_list, serial_only = False):
   """Main routine to run all tests in TEST_LIST.
 
@@ -1416,6 +1448,20 @@ def run_tests(test_list, serial_only = False):
         appropriate exit code.
   """
 
+  sys.exit(execute_tests(test_list, serial_only))
+
+
+# Main func.  This is the "entry point" that all the test scripts call
+# to run their list of tests.
+#
+# This routine parses sys.argv to decide what to do.
+def execute_tests(test_list, serial_only = False, test_name = None,
+                  progress_func = None):
+  """Similar to run_tests(), but just returns the exit code, rather than
+  exiting the process.  This function can be used when a caller doesn't
+  want the process to die."""
+
+  global pristine_url
   global pristine_greek_repos_url
   global svn_binary
   global svnadmin_binary
@@ -1424,6 +1470,9 @@ def run_tests(test_list, serial_only = False):
   global svndumpfilter_binary
   global svnversion_binary
   global options
+
+  if test_name:
+    sys.argv[0] = test_name
 
   testnums = []
 
@@ -1537,7 +1586,8 @@ def run_tests(test_list, serial_only = False):
     svntest.actions.setup_pristine_greek_repository()
 
   # Run the tests.
-  exit_code = _internal_run_tests(test_list, testnums, options.parallel)
+  exit_code = _internal_run_tests(test_list, testnums, options.parallel,
+                                  options.srcdir, progress_func)
 
   # Remove all scratchwork: the 'pristine' repository, greek tree, etc.
   # This ensures that an 'import' will happen the next time we run.
@@ -1548,4 +1598,4 @@ def run_tests(test_list, serial_only = False):
   svntest.sandbox.cleanup_deferred_test_paths()
 
   # Return the appropriate exit code from the tests.
-  sys.exit(exit_code)
+  return exit_code

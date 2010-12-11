@@ -77,6 +77,7 @@ typedef struct svn_ra__vtable_t {
   svn_error_t *(*change_rev_prop)(svn_ra_session_t *session,
                                   svn_revnum_t rev,
                                   const char *name,
+                                  const svn_string_t *const *old_value_p,
                                   const svn_string_t *value,
                                   apr_pool_t *pool);
 
@@ -118,6 +119,7 @@ typedef struct svn_ra__vtable_t {
                                 const apr_array_header_t *paths,
                                 svn_revnum_t revision,
                                 svn_mergeinfo_inheritance_t inherit,
+                                svn_boolean_t *validate_inherited_mergeinfo,
                                 svn_boolean_t include_merged_revisions,
                                 apr_pool_t *pool);
   svn_error_t *(*do_update)(svn_ra_session_t *session,

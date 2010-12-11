@@ -173,6 +173,80 @@ def invalid_wcpath_upgrade(sbox):
     run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path", 'upgrade',
                              target, target)
 
+def invalid_resolve_targets(sbox):
+  "non-working copy paths for 'resolve'"
+  sbox.build(read_only=True)
+  for target in _invalid_wc_path_targets:
+    run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path", 'resolve',
+                             '--accept', 'base', target)
+
+def invalid_resolved_targets(sbox):
+  "non-working copy paths for 'resolved'"
+  sbox.build(read_only=True)
+  for target in _invalid_wc_path_targets:
+    run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path", 'resolved',
+                             target)
+
+def invalid_revert_targets(sbox):
+  "non-working copy paths for 'revert'"
+  sbox.build(read_only=True)
+  for target in _invalid_wc_path_targets:
+    run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path", 'revert',
+                             target)
+
+def invalid_lock_targets(sbox):
+  "wc paths and repo URL target mixture for 'lock'"
+  sbox.build(read_only=True)
+  for (target1, target2) in [("iota", "^/"), ("file://", "iota")]:
+    run_and_verify_svn_in_wc(sbox, "svn: Cannot mix repository and working "
+                             "copy targets", 'lock', target1, target2)
+
+def invalid_unlock_targets(sbox):
+  "wc paths and repo URL target mixture for 'unlock'"
+  sbox.build(read_only=True)
+  for (target1, target2) in [("iota", "^/"), ("file://", "iota")]:
+    run_and_verify_svn_in_wc(sbox, "svn: Cannot mix repository and working "
+                             "copy targets", 'unlock', target1, target2)
+
+def invalid_status_targets(sbox):
+  "non-working copy paths for 'status'"
+  sbox.build(read_only=True)
+  for target in _invalid_wc_path_targets:
+    run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path", 'status',
+                             target)
+
+def invalid_patch_targets(sbox):
+  "non-working copy paths for 'patch'"
+  sbox.build(read_only=True)
+  for (target1, target2) in [("foo", "^/"), ("^/", "^/"), ("^/", "foo")]:
+    run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path", 'patch',
+                             target1, target2)
+
+def invalid_switch_targets(sbox):
+  "non-working copy paths for 'switch'"
+  sbox.build(read_only=True)
+  run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path", 'switch',
+                           "^/", "^/")
+
+def invalid_relocate_targets(sbox):
+  "non-working copy paths for 'relocate'"
+  sbox.build(read_only=True)
+  run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path", 'relocate',
+                           "^/", "^/", "^/")
+
+# See also basic_tests.py:basic_mkdir_mix_targets(), which tests
+# the same thing the other way around.
+def invalid_mkdir_targets(sbox):
+  "invalid targets for 'mkdir'"
+  sbox.build(read_only=True)
+  run_and_verify_svn_in_wc(sbox, "svn: Cannot mix repository and working "
+                           "copy targets", 'mkdir', "folder", "^/folder")
+
+def invalid_update_targets(sbox):
+  "non-working copy paths for 'update'"
+  sbox.build(read_only=True)
+  run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path", 'update',
+                           "^/")
 
 ########################################################################
 # Run the tests
@@ -192,6 +266,17 @@ test_list = [ None,
               invalid_log_targets,
               invalid_merge_args,
               invalid_wcpath_upgrade,
+              invalid_resolve_targets,
+              invalid_resolved_targets,
+              invalid_revert_targets,
+              invalid_lock_targets,
+              invalid_unlock_targets,
+              invalid_status_targets,
+              invalid_patch_targets,
+              invalid_switch_targets,
+              invalid_relocate_targets,
+              invalid_mkdir_targets,
+              invalid_update_targets,
              ]
 
 if __name__ == '__main__':

@@ -622,6 +622,7 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
   /* In protocol version 2, we send back our protocol version, our
    * capability list, and the URL, and subsequently there is an auth
    * request. */
+  /* Client-side capabilities list: */
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "n(wwwwww)cc(?c)",
                                  (apr_uint64_t) 2,
                                  SVN_RA_SVN_CAP_EDIT_PIPELINE,
@@ -813,16 +814,49 @@ static svn_error_t *ra_svn_get_dated_rev(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+/* Forward declaration. */
+static svn_error_t *ra_svn_has_capability(svn_ra_session_t *session,
+                                          svn_boolean_t *has,
+                                          const char *capability,
+                                          apr_pool_t *pool);
+
 static svn_error_t *ra_svn_change_rev_prop(svn_ra_session_t *session, svn_revnum_t rev,
                                            const char *name,
+                                           const svn_string_t *const *old_value_p,
                                            const svn_string_t *value,
                                            apr_pool_t *pool)
 {
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
+  svn_boolean_t dont_care;
+  const svn_string_t *old_value;
+  svn_boolean_t has_atomic_revprops;
 
-  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "change-rev-prop", "rc?s",
-                               rev, name, value));
+  SVN_ERR(ra_svn_has_capability(session, &has_atomic_revprops,
+                                SVN_RA_SVN_CAP_ATOMIC_REVPROPS,
+                                pool));
+
+  if (old_value_p)
+    {
+      /* How did you get past the same check in svn_ra_change_rev_prop2()? */
+      SVN_ERR_ASSERT(has_atomic_revprops);
+
+      dont_care = FALSE;
+      old_value = *old_value_p;
+    }
+  else
+    {
+      dont_care = TRUE;
+      old_value = NULL;
+    }
+
+  if (has_atomic_revprops)
+    SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "change-rev-prop2", "rc(?s)(b?s)",
+                                 rev, name, value, dont_care, old_value));
+  else
+    SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "change-rev-prop", "rc?s",
+                                 rev, name, value));
+
   SVN_ERR(handle_auth_request(sess_baton, pool));
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, ""));
   return SVN_NO_ERROR;
@@ -1029,7 +1063,7 @@ static svn_error_t *ra_svn_get_file(svn_ra_session_t *session, const char *path,
       svn_checksum_t *checksum;
       const char *hex_digest;
 
-      svn_checksum_final(&checksum, checksum_ctx, pool);
+      SVN_ERR(svn_checksum_final(&checksum, checksum_ctx, pool));
       hex_digest = svn_checksum_to_cstring_display(checksum, pool);
       if (strcmp(hex_digest, expected_checksum) != 0)
         return svn_error_createf
@@ -1119,15 +1153,34 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+/* Converts a apr_uint64_t with values TRUE, FALSE or
+   SVN_RA_SVN_UNSPECIFIED_NUMBER as provided by svn_ra_svn_parse_tuple
+   to a svn_tristate_t */
+static svn_tristate_t
+optbool_to_tristate(apr_uint64_t v)
+{
+  switch (v)
+  {
+    case TRUE:
+      return svn_tristate_true;
+    case FALSE:
+      return svn_tristate_false;
+    default: /* Contains SVN_RA_SVN_UNSPECIFIED_NUMBER */
+      return svn_tristate_unknown;
+  }
+}
+
 /* If REVISION is SVN_INVALID_REVNUM, no value is sent to the
    server, which defaults to youngest. */
-static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
-                                         svn_mergeinfo_catalog_t *catalog,
-                                         const apr_array_header_t *paths,
-                                         svn_revnum_t revision,
-                                         svn_mergeinfo_inheritance_t inherit,
-                                         svn_boolean_t include_descendants,
-                                         apr_pool_t *pool)
+static svn_error_t *ra_svn_get_mergeinfo(
+  svn_ra_session_t *session,
+  svn_mergeinfo_catalog_t *catalog,
+  const apr_array_header_t *paths,
+  svn_revnum_t revision,
+  svn_mergeinfo_inheritance_t inherit,
+  svn_boolean_t *validate_inherited_mergeinfo,
+  svn_boolean_t include_descendants,
+  apr_pool_t *pool)
 {
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
@@ -1135,6 +1188,7 @@ static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
   apr_array_header_t *mergeinfo_tuple;
   svn_ra_svn_item_t *elt;
   const char *path;
+  apr_uint64_t validated_inherited_mergeinfo;
 
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", "get-mergeinfo"));
   for (i = 0; i < paths->nelts; i++)
@@ -1142,12 +1196,17 @@ static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
       path = APR_ARRAY_IDX(paths, i, const char *);
       SVN_ERR(svn_ra_svn_write_cstring(conn, pool, path));
     }
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(?r)wb)", revision,
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(?r)wbb)", revision,
                                  svn_inheritance_to_word(inherit),
-                                 include_descendants));
+                                 include_descendants,
+                                 *validate_inherited_mergeinfo));
 
   SVN_ERR(handle_auth_request(sess_baton, pool));
-  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "l", &mergeinfo_tuple));
+  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "l?B", &mergeinfo_tuple,
+                                       &validated_inherited_mergeinfo));
+
+  *validate_inherited_mergeinfo =
+    (optbool_to_tristate(validated_inherited_mergeinfo) == svn_tristate_true);
 
   *catalog = NULL;
   if (mergeinfo_tuple->nelts > 0)
@@ -1279,22 +1338,6 @@ static svn_error_t *ra_svn_diff(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
-/* Converts a apr_uint64_t with values TRUE, FALSE or
-   SVN_RA_SVN_UNSPECIFIED_NUMBER as provided by svn_ra_svn_parse_tuple
-   to a svn_tristate_t */
-static svn_tristate_t
-optbool_to_tristate(apr_uint64_t v)
-{
-  switch (v)
-  {
-    case TRUE:
-      return svn_tristate_true;
-    case FALSE:
-      return svn_tristate_false;
-    default: /* Contains SVN_RA_SVN_UNSPECIFIED_NUMBER */
-      return svn_tristate_unknown;
-  }
-}
 
 static svn_error_t *ra_svn_log(svn_ra_session_t *session,
                                const apr_array_header_t *paths,
@@ -2257,7 +2300,7 @@ static svn_error_t *ra_svn_get_locks(svn_ra_session_t *session,
   /* Figure out the repository abspath from PATH. */
   abs_path = svn_path_url_add_component2(sess->url, path, pool);
   SVN_ERR(path_relative_to_root(session, &abs_path, abs_path, pool));
-  abs_path = apr_pstrcat(pool, "/", abs_path, NULL);
+  abs_path = apr_pstrcat(pool, "/", abs_path, (char *)NULL);
 
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "get-locks", "c(w)", path,
                                svn_depth_to_word(depth)));
@@ -2420,6 +2463,9 @@ static svn_error_t *ra_svn_has_capability(svn_ra_session_t *session,
   else if (strcmp(capability, SVN_RA_CAPABILITY_COMMIT_REVPROPS) == 0)
     *has = svn_ra_svn_has_capability(sess->conn,
                                      SVN_RA_SVN_CAP_COMMIT_REVPROPS);
+  else if (strcmp(capability, SVN_RA_CAPABILITY_ATOMIC_REVPROPS) == 0)
+    *has = svn_ra_svn_has_capability(sess->conn,
+                                     SVN_RA_SVN_CAP_ATOMIC_REVPROPS);
   else  /* Don't know any other capabilities, so error. */
     {
       return svn_error_createf
