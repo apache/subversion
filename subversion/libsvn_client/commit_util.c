@@ -1024,8 +1024,8 @@ svn_client__harvest_committables(apr_hash_t **committables,
            * has no entry (e.g. locally deleted), issue a proper tree-
            * conflicts error instead of a "not under version control". */
           const svn_wc_conflict_description2_t *conflict;
-          svn_wc__get_tree_conflict(&conflict, wc_ctx, target_abspath,
-                                    iterpool, iterpool);
+          SVN_ERR(svn_wc__get_tree_conflict(&conflict, wc_ctx, target_abspath,
+                                            iterpool, iterpool));
           if (conflict != NULL)
             return svn_error_createf(
                        SVN_ERR_WC_FOUND_CONFLICT, NULL,

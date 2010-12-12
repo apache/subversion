@@ -75,10 +75,11 @@ struct svn_memcache_t {
                                     2 * APR_MD5_DIGESTSIZE)
 
 
-/* Returns a memcache key for the given key KEY for CACHE, allocated
+/* Set *MC_KEY to a memcache key for the given key KEY for CACHE, allocated
    in POOL. */
-static const char *
-build_key(memcache_t *cache,
+static svn_error_t *
+build_key(const char **mc_key,
+          memcache_t *cache,
           const void *raw_key,
           apr_pool_t *pool)
 {
@@ -111,7 +112,8 @@ build_key(memcache_t *cache,
   if (long_key_len > MEMCACHED_KEY_UNHASHED_LEN)
     {
       svn_checksum_t *checksum;
-      svn_checksum(&checksum, svn_checksum_md5, long_key, long_key_len, pool);
+      SVN_ERR(svn_checksum(&checksum, svn_checksum_md5, long_key, long_key_len,
+                           pool));
 
       long_key = apr_pstrcat(pool,
                              apr_pstrmemdup(pool, long_key,
@@ -120,7 +122,8 @@ build_key(memcache_t *cache,
                              (char *)NULL);
     }
 
-  return long_key;
+  *mc_key = long_key;
+  return SVN_NO_ERROR;
 }
 
 
@@ -138,7 +141,7 @@ memcache_get(void **value_p,
   apr_size_t data_len;
   apr_pool_t *subpool = svn_pool_create(pool);
 
-  mc_key = build_key(cache, key, subpool);
+  SVN_ERR(build_key(&mc_key, cache, key, subpool));
 
   apr_err = apr_memcache_getp(cache->memcache,
                               (cache->deserialize_func ? subpool : pool),
@@ -184,9 +187,11 @@ memcache_set(void *cache_void,
   memcache_t *cache = cache_void;
   apr_pool_t *subpool = svn_pool_create(pool);
   char *data;
-  const char *mc_key = build_key(cache, key, subpool);
+  const char *mc_key;
   apr_size_t data_len;
   apr_status_t apr_err;
+
+  SVN_ERR(build_key(&mc_key, cache, key, subpool));
 
   if (cache->serialize_func)
     {

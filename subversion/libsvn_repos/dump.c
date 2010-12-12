@@ -480,8 +480,8 @@ dump_node(struct edit_baton *eb,
         oldhash = apr_hash_make(pool);
       propstring = svn_stringbuf_create_ensure(0, pool);
       propstream = svn_stream_from_stringbuf(propstring, pool);
-      svn_hash_write_incremental(prophash, oldhash, propstream, "PROPS-END",
-                                 pool);
+      SVN_ERR(svn_hash_write_incremental(prophash, oldhash, propstream,
+                                         "PROPS-END", pool));
       SVN_ERR(svn_stream_close(propstream));
       proplen = propstring->len;
       content_length += proplen;
@@ -907,7 +907,7 @@ write_revision_record(svn_stream_t *stream,
 
   encoded_prophash = svn_stringbuf_create_ensure(0, pool);
   propstream = svn_stream_from_stringbuf(encoded_prophash, pool);
-  svn_hash_write2(props, propstream, "PROPS-END", pool);
+  SVN_ERR(svn_hash_write2(props, propstream, "PROPS-END", pool));
   SVN_ERR(svn_stream_close(propstream));
 
   /* ### someday write a revision-content-checksum */

@@ -35,6 +35,7 @@ from svntest import verify, actions, main
 Skip = svntest.testcase.Skip
 SkipUnless = svntest.testcase.SkipUnless
 XFail = svntest.testcase.XFail
+Wimp = svntest.testcase.Wimp
 Item = svntest.wc.StateItem
 
 from svntest.main import SVN_PROP_MERGEINFO, server_has_mergeinfo
@@ -558,10 +559,10 @@ def relocate_deleted_missing_copied(sbox):
   expected_status.add({
     'A/D2'         : Item(status='A ', wc_rev='-', copied='+'),
     'A/D2/gamma'   : Item(status='  ', wc_rev='-', copied='+'),
-    'A/D2/G'       : Item(status='D ', wc_rev='?'),
-    'A/D2/G/pi'    : Item(status='D ', wc_rev='?'),
-    'A/D2/G/rho'   : Item(status='D ', wc_rev='?'),
-    'A/D2/G/tau'   : Item(status='D ', wc_rev='?'),
+    'A/D2/G'       : Item(status='D ', wc_rev='-', copied='+'),
+    'A/D2/G/pi'    : Item(status='D ', wc_rev='-', copied='+'),
+    'A/D2/G/rho'   : Item(status='D ', wc_rev='-', copied='+'),
+    'A/D2/G/tau'   : Item(status='D ', wc_rev='-', copied='+'),
     'A/D2/H'       : Item(status='  ', wc_rev='-', copied='+'),
     'A/D2/H/chi'   : Item(status='  ', wc_rev='-', copied='+'),
     'A/D2/H/omega' : Item(status='  ', wc_rev='-', copied='+'),
@@ -614,7 +615,7 @@ def relocate_deleted_missing_copied(sbox):
                         'A/D2/H', 'A/D2/H/chi', 'A/D2/H/omega', 'A/D2/H/psi',
                         wc_rev='-')
   expected_status.tweak('A/D2/G', 'A/D2/G/pi', 'A/D2/G/rho', 'A/D2/G/tau',
-                        wc_rev='?')
+                        copied='+', wc_rev='-')
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
@@ -3165,7 +3166,7 @@ test_list = [ None,
               tolerate_local_mods,
               tree_conflicts_on_switch_1_1,
               tree_conflicts_on_switch_1_2,
-              XFail(tree_conflicts_on_switch_2_1),
+              tree_conflicts_on_switch_2_1,
               tree_conflicts_on_switch_2_2,
               tree_conflicts_on_switch_3,
               single_file_relocate,

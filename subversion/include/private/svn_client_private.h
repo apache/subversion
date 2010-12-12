@@ -50,6 +50,14 @@ svn_client__obliterate_path_rev(const char *url,
                                 apr_pool_t *pool);
 
 
+/** Return @c SVN_ERR_ILLEGAL_TARGET if TARGETS contains a mixture of
+ * URLs and paths; otherwise return SVN_NO_ERROR.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_client__assert_homogeneous_target_type(const apr_array_header_t *targets);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

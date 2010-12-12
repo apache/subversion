@@ -4253,7 +4253,8 @@ verify_checksum(const svn_test_opts_t *opts,
      against our idea of its checksum.  They should be the same. */
 
   str = svn_stringbuf_create("My text editor charges me rent.", pool);
-  svn_checksum(&expected_checksum, svn_checksum_md5, str->data, str->len, pool);
+  SVN_ERR(svn_checksum(&expected_checksum, svn_checksum_md5, str->data,
+                       str->len, pool));
 
   SVN_ERR(svn_test__create_fs(&fs, "test-repo-verify-checksum",
                               opts, pool));

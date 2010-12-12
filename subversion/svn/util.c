@@ -61,6 +61,7 @@
 
 #include "private/svn_token.h"
 #include "private/svn_opt_private.h"
+#include "private/svn_client_private.h"
 
 
 
@@ -1344,4 +1345,17 @@ svn_cl__opt_parse_path(svn_opt_revision_t *rev,
     *truepath = svn_dirent_canonicalize(*truepath, pool);
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_cl__assert_homogeneous_target_type(const apr_array_header_t *targets)
+{
+  svn_error_t *err;
+
+  err = svn_client__assert_homogeneous_target_type(targets);
+  if (err && err->apr_err == SVN_ERR_ILLEGAL_TARGET)
+    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, err,
+                             _("Cannot mix repository and working copy "
+                               "targets"));
+  return err;
 }

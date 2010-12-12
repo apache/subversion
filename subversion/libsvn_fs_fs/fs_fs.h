@@ -411,8 +411,10 @@ svn_error_t *svn_fs_fs__move_into_place(const char *old_filename,
    Allocate *PATH in POOL.
 
    Note: If the caller does not have the write lock on FS, then the path is
-   not guaranteed to remain correct after the function returns, because the
-   revision might become packed just after this call. */
+   not guaranteed to be correct or to remain correct after the function
+   returns, because the revision might become packed before or after this
+   call.  If a file exists at that path, then it is correct; if not, then
+   the caller should call update_min_unpacked_rev() and re-try once. */
 svn_error_t *
 svn_fs_fs__path_rev_absolute(const char **path,
                              svn_fs_t *fs,

@@ -1063,7 +1063,7 @@ static svn_error_t *ra_svn_get_file(svn_ra_session_t *session, const char *path,
       svn_checksum_t *checksum;
       const char *hex_digest;
 
-      svn_checksum_final(&checksum, checksum_ctx, pool);
+      SVN_ERR(svn_checksum_final(&checksum, checksum_ctx, pool));
       hex_digest = svn_checksum_to_cstring_display(checksum, pool);
       if (strcmp(hex_digest, expected_checksum) != 0)
         return svn_error_createf

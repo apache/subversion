@@ -2305,7 +2305,7 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
     {
       apr_array_header_t *ignores;
 
-      svn_wc_get_default_ignores(&ignores, NULL, result_pool);
+      SVN_ERR(svn_wc_get_default_ignores(&ignores, NULL, result_pool));
       eb->ignores = ignores;
     }
 
@@ -2375,7 +2375,7 @@ svn_wc_walk_status(svn_wc_context_t *wc_ctx,
     {
       apr_array_header_t *ignores;
 
-      svn_wc_get_default_ignores(&ignores, NULL, scratch_pool);
+      SVN_ERR(svn_wc_get_default_ignores(&ignores, NULL, scratch_pool));
       ignore_patterns = ignores;
     }
 

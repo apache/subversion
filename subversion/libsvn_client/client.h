@@ -1107,8 +1107,6 @@ const svn_opt_revision_t *
 svn_cl__rev_default_to_peg(const svn_opt_revision_t *revision,
                            const svn_opt_revision_t *peg_revision);
 
-
-
 
 #ifdef __cplusplus
 }

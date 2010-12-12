@@ -684,7 +684,15 @@ svn_fs_commit_txn(const char **conflict_p, svn_revnum_t *new_rev,
   SVN_ERR(txn->vtable->commit(conflict_p, new_rev, txn, pool));
 
 #ifdef PACK_AFTER_EVERY_COMMIT
-  SVN_ERR(svn_fs_pack(fs_path, NULL, NULL, NULL, NULL, pool));
+  {
+    svn_error_t *err = svn_fs_pack(fs_path, NULL, NULL, NULL, NULL, pool);
+    if (err && err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
+      /* Pre-1.6 filesystem. */
+      svn_error_clear(err);
+    else if (err)
+      /* Real error. */
+      return svn_error_return(err);
+  }
 #endif
 
   return SVN_NO_ERROR;

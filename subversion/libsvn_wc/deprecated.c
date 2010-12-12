@@ -3366,8 +3366,8 @@ svn_wc_relocate3(const char *path,
   svn_wc_context_t *wc_ctx;
 
   if (! recurse)
-    svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, 0,
-                     _("Non-recursive relocation not supported"));
+    SVN_ERR(svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                             _("Non-recursive relocation not supported")));
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,

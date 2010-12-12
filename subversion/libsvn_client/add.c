@@ -45,6 +45,7 @@
 #include "client.h"
 #include "svn_ctype.h"
 
+#include "private/svn_client_private.h"
 #include "private/svn_wc_private.h"
 
 #include "svn_private_config.h"
@@ -673,16 +674,6 @@ mkdir_urls(const apr_array_header_t *urls,
   const char *common;
   int i;
 
-  /* Early exit when there is a mix of URLs and local paths. */
-  for (i = 0; i < urls->nelts; i++)
-    {
-      const char *url = APR_ARRAY_IDX(urls, i, const char *);
-      if (! svn_path_is_url(url))
-        return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                                 _("Illegal repository URL '%s'"),
-                                 url);
-    }
-
   /* Find any non-existent parent directories */
   if (make_parents)
     {
@@ -877,6 +868,8 @@ svn_client_mkdir4(const apr_array_header_t *paths,
 {
   if (! paths->nelts)
     return SVN_NO_ERROR;
+
+  SVN_ERR(svn_client__assert_homogeneous_target_type(paths));
 
   if (svn_path_is_url(APR_ARRAY_IDX(paths, 0, const char *)))
     {

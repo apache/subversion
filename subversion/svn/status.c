@@ -167,8 +167,10 @@ print_status(const char *path,
           old_tree_conflict = svn_wc__cd2_to_cd(tree_conflict, pool);
 
           tree_status_code = 'C';
-          svn_cl__get_human_readable_tree_conflict_description(
-            &desc, old_tree_conflict, pool);
+          SVN_ERR(svn_cl__get_human_readable_tree_conflict_description(
+                            &desc,
+                            old_tree_conflict,
+                            pool));
           tree_desc_line = apr_psprintf(pool, "\n      >   %s", desc);
           (*tree_conflicts)++;
         }

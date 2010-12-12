@@ -672,7 +672,22 @@ def dirs_only_upgrade(sbox):
       })
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 
-
+def read_tree_conflict_data(sbox, path):
+  dot_svn = svntest.main.get_admin_name()
+  db = svntest.sqlite3.connect(os.path.join(sbox.wc_dir, dot_svn, 'wc.db'))
+  for row in db.execute("select tree_conflict_data from actual_node "
+                        "where tree_conflict_data is not null "
+                        "and local_relpath = '%s'" % path):
+    return
+  raise svntest.Failure("conflict expected for '%s'" % path)
+  
+def no_actual_node(sbox, path):
+  dot_svn = svntest.main.get_admin_name()
+  db = svntest.sqlite3.connect(os.path.join(sbox.wc_dir, dot_svn, 'wc.db'))
+  for row in db.execute("select 1 from actual_node "
+                        "where local_relpath = '%s'" % path):
+    raise svntest.Failure("no actual node expected for '%s'" % path)
+  
 def upgrade_tree_conflict_data(sbox):
   "upgrade tree conflict data (f20->f21)"
 
@@ -688,7 +703,31 @@ def upgrade_tree_conflict_data(sbox):
   expected_status.tweak('A/D/G/rho', status='A ', copied='+',
                         treeconflict='C', wc_rev='-')
 
-  run_and_verify_status_no_server(wc_dir, expected_status)
+  # Look inside pre-upgrade database
+  read_tree_conflict_data(sbox, 'A/D/G')
+  no_actual_node(sbox, 'A/D/G/pi')
+  no_actual_node(sbox, 'A/D/G/rho')
+  no_actual_node(sbox, 'A/D/G/tau')
+
+  # While the upgrade from f20 to f21 will work the upgrade from f22
+  # to f23 will not, since working nodes are present, so the
+  # auto-upgrade will fail.  If this happens we cannot use the
+  # Subversion libraries to query the working copy.
+  exit_code, output, errput = svntest.main.run_svn('format 22', 'st', wc_dir)
+
+  if not exit_code:
+    run_and_verify_status_no_server(wc_dir, expected_status)
+  else:
+    if not svntest.verify.RegexOutput('.*format 22 with WORKING nodes.*',
+                                      match_all=False).matches(errput):
+      raise svntest.Failure()
+
+  # Look insde post-upgrade database
+  read_tree_conflict_data(sbox, 'A/D/G/pi')
+  read_tree_conflict_data(sbox, 'A/D/G/rho')
+  read_tree_conflict_data(sbox, 'A/D/G/tau')
+  # no_actual_node(sbox, 'A/D/G')  ### not removed but should be?
+
 
 def delete_in_copy_upgrade(sbox):
   "upgrade a delete within a copy"
@@ -697,17 +736,20 @@ def delete_in_copy_upgrade(sbox):
   wc_dir = sbox.wc_dir
   replace_sbox_with_tarfile(sbox, 'delete-in-copy.tar.bz2')
 
-  # Doesn't work, creates spurious base nodes for the copy
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'upgrade', sbox.wc_dir)
+
+  # This doesn't fail with SVN_WC__OP_DEPTH but doesn't do the right
+  # thing either: B-copied looks like a copy where E and F are
+  # not-present rather than deleted.
 
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
   expected_status.add({
       'A/B-copied'         : Item(status='A ', copied='+', wc_rev='-'),
       'A/B-copied/lambda'  : Item(status='  ', copied='+', wc_rev='-'),
-      'A/B-copied/E'       : Item(status='D ', wc_rev='?'),
-      'A/B-copied/E/alpha' : Item(status='D ', wc_rev='?'),
-      'A/B-copied/E/beta'  : Item(status='D ', wc_rev='?'),
+      'A/B-copied/E'       : Item(status='D ', copied='+', wc_rev='-'),
+      'A/B-copied/E/alpha' : Item(status='D ', copied='+', wc_rev='-'),
+      'A/B-copied/E/beta'  : Item(status='D ', copied='+', wc_rev='-'),
       'A/B-copied/F'       : Item(status='  ', copied='+', wc_rev='-'),
       })
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)

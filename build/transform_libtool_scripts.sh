@@ -21,6 +21,7 @@
 #
 
 # Dependencies of libraries
+# TODO: generate from build.conf
 subr="subr"
 auth_gnome_keyring="auth_gnome_keyring $subr"
 auth_kwallet="auth_kwallet $subr"
@@ -39,11 +40,9 @@ ra="ra $delta $ra_local $ra_neon $ra_serf $ra_svn $subr"
 wc="wc $delta $diff $subr"
 client="client $delta $diff $ra $subr $wc"
 
-# Variable 'libraries' containing names of variables corresponding to libraries
-libraries="auth_gnome_keyring auth_kwallet client delta diff fs fs_base fs_fs fs_util ra ra_local ra_neon ra_serf ra_svn repos subr wc"
-
-for library in $libraries; do
-  # Delete duplicates in dependencies of libraries
+# Delete duplicates in dependencies of libraries
+ls subversion | grep libsvn_ | while read library_dir; do
+  library=`basename $library_dir | sed s/libsvn_//`
   library_dependencies="$(echo -n $(for x in $(eval echo "\$$library"); do echo $x; done | sort -u))"
   eval "$library=\$library_dependencies"
 done
