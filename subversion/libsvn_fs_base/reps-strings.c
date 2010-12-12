@@ -906,10 +906,12 @@ txn_body_read_rep(void *baton, trail_t *trail)
             {
               representation_t *rep;
 
-              svn_checksum_final(&args->rb->md5_checksum,
-                                 args->rb->md5_checksum_ctx, trail->pool);
-              svn_checksum_final(&args->rb->sha1_checksum,
-                                 args->rb->sha1_checksum_ctx, trail->pool);
+              SVN_ERR(svn_checksum_final(&args->rb->md5_checksum,
+                                         args->rb->md5_checksum_ctx,
+                                         trail->pool));
+              SVN_ERR(svn_checksum_final(&args->rb->sha1_checksum,
+                                         args->rb->sha1_checksum_ctx,
+                                         trail->pool));
               args->rb->checksum_finalized = TRUE;
 
               SVN_ERR(svn_fs_bdb__read_rep(&rep, args->rb->fs,

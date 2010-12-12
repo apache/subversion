@@ -1049,6 +1049,9 @@ def is_fs_type_fsfs():
   # This assumes that fsfs is the default fs implementation.
   return options.fs_type == 'fsfs' or options.fs_type is None
 
+def is_fs_type_bdb():
+  return options.fs_type == 'bdb'
+
 def is_os_windows():
   return os.name == 'nt'
 

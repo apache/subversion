@@ -35,6 +35,7 @@
 #include "svn_pools.h"
 
 #include "svn_private_config.h"
+#include "private/svn_client_private.h"
 #include "private/svn_wc_private.h"
 
 
@@ -182,25 +183,8 @@ organize_lock_targets(const char **common_parent_url,
   apr_hash_t *rel_targets_ret = apr_hash_make(pool);
   apr_pool_t *subpool = svn_pool_create(pool);
   svn_boolean_t url_mode;
-  svn_boolean_t wc_present = FALSE, url_present = FALSE;
 
-  /* Check to see if at least one of our paths is a working copy
-   * path or a repository url. */
-  for (i = 0; i < targets->nelts; ++i)
-    {
-      const char *target = APR_ARRAY_IDX(targets, i, const char *);
-      if (! svn_path_is_url(target))
-       wc_present = TRUE;
-      else
-       url_present = TRUE;
-    }
-
-  if (url_present && wc_present)
-    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                             _("Cannot mix repository and working copy "
-                               "targets"));
-
-  /* All targets must be either urls or paths */
+  SVN_ERR(svn_client__assert_homogeneous_target_type(targets));
 
   url_mode = ((targets->nelts >= 1) &&
               svn_path_is_url(APR_ARRAY_IDX(targets, 0, const char *)));

@@ -299,7 +299,6 @@ scan_addition(svn_wc__db_status_t *status,
 
 static svn_error_t *
 scan_deletion(const char **base_del_relpath,
-              svn_boolean_t *base_replaced,
               const char **moved_to_relpath,
               const char **work_del_relpath,
               svn_wc__db_pdh_t *pdh,
@@ -2942,7 +2941,7 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
     {
       const char *base_del_relpath, *work_del_relpath;
 
-      SVN_ERR(scan_deletion(&base_del_relpath, NULL, NULL, &work_del_relpath,
+      SVN_ERR(scan_deletion(&base_del_relpath, NULL, &work_del_relpath,
                             pdh, local_relpath, scratch_pool, scratch_pool));
       if (work_del_relpath)
         {
@@ -4436,31 +4435,42 @@ svn_wc__db_temp_op_set_dir_depth(svn_wc__db_t *db,
 
    ### Do we need to handle incomplete here? */
 static svn_error_t *
-delete_not_present_children(svn_wc__db_pdh_t *pdh,
-                            const char *local_relpath,
-                            apr_pool_t *scratch_pool)
+remove_children(svn_wc__db_pdh_t *pdh,
+                const char *local_relpath,
+                svn_wc__db_status_t status,
+                apr_int64_t op_depth,
+                apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
-#ifdef SVN_WC__OP_DEPTH
-  apr_int64_t op_depth = relpath_depth(local_relpath);
-#else
-  apr_int64_t op_depth = 2;  /* ### temporary op_depth */
-#endif
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
-                                    STMT_DELETE_NOT_PRESENT_NODES_RECURSIVE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "isi", pdh->wcroot->wc_id,
+                                    STMT_DELETE_CHILD_NODES_RECURSIVE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isit", pdh->wcroot->wc_id,
                             construct_like_arg(local_relpath,
                                                scratch_pool),
-                            op_depth));
+                            op_depth, presence_map, status));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+db_working_actual_remove(svn_wc__db_pdh_t *pdh,
+                         const char *local_relpath,
+                         apr_pool_t *scratch_pool);
+
+static svn_error_t *
+info_below_working(svn_boolean_t *have_base,
+                   svn_boolean_t *have_work,
+                   svn_wc__db_status_t *status,
+                   svn_wc__db_pdh_t *pdh,
+                   const char *local_relpath,
+                   apr_pool_t *scratch_pool);
+
 /* Update the working node for LOCAL_ABSPATH setting presence=STATUS */
 static svn_error_t *
-db_working_update_presence(svn_wc__db_status_t status,
+db_working_update_presence(apr_int64_t op_depth,
+                           svn_wc__db_status_t status,
                            svn_wc__db_pdh_t *pdh,
                            const char *local_relpath,
                            apr_pool_t *scratch_pool)
@@ -4475,11 +4485,55 @@ db_working_update_presence(svn_wc__db_status_t status,
 
   if (status == svn_wc__db_status_base_deleted)
     {
-      /* Switching to base-deleted is undoing an add/copy.  If this
-         was a copy then any children of the copy will now be
-         not-present and should be removed.  By this stage an add will
-         have no children. */
-      SVN_ERR(delete_not_present_children(pdh, local_relpath, scratch_pool));
+      /* Switching to base-deleted is undoing an add/copy.  By this
+         stage an add will have no children. */
+#ifdef SVN_WC__OP_DEPTH
+      const apr_array_header_t *children;
+      apr_pool_t *iterpool;
+      int i;
+
+      /* Children of the copy will be marked deleted in the layer
+         above. */
+      SVN_ERR(remove_children(pdh, local_relpath,
+                              svn_wc__db_status_base_deleted, op_depth + 1,
+                              scratch_pool));
+
+      /* Children of the copy that overlay a lower level become
+         base_deleted, otherwise they get removed. */
+      SVN_ERR(gather_repo_children(&children, pdh, local_relpath, op_depth,
+                                   scratch_pool, scratch_pool));
+      iterpool = svn_pool_create(scratch_pool);
+      for (i = 0; i < children->nelts; ++i)
+        {
+          const char *name = APR_ARRAY_IDX(children, i, const char *);
+          const char *child_relpath;
+          svn_boolean_t below_base, below_work;
+          svn_wc__db_status_t below_status;
+
+          svn_pool_clear(iterpool);
+
+          child_relpath = svn_relpath_join(local_relpath, name, iterpool);
+          SVN_ERR(info_below_working(&below_base, &below_work, &below_status,
+                                     pdh, child_relpath, iterpool));
+          if ((below_base || below_work)
+              && (below_status == svn_wc__db_status_normal
+                  || below_status == svn_wc__db_status_added
+                  || below_status == svn_wc__db_status_incomplete))
+            SVN_ERR(db_working_update_presence(op_depth,
+                                               svn_wc__db_status_base_deleted,
+                                               pdh, child_relpath, iterpool));
+          else
+            SVN_ERR(db_working_actual_remove(pdh, child_relpath, iterpool));
+        }
+      svn_pool_destroy(iterpool);
+#else
+      /* If this was a copy then any children of the copy will now be
+         not-present and should be removed. */
+      SVN_ERR(remove_children(pdh, local_relpath,
+                              svn_wc__db_status_not_present,
+                              2 /* ### temporary op_depth */,
+                              scratch_pool));
+#endif
 
       /* Reset the copyfrom in case this was a copy.
          ### What else should be reset? Properties? Or copy the node again? */
@@ -4535,7 +4589,19 @@ db_working_actual_remove(svn_wc__db_pdh_t *pdh,
   SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
-  SVN_ERR(delete_not_present_children(pdh, local_relpath, scratch_pool));
+#ifndef SVN_WC__OP_DEPTH
+  SVN_ERR(remove_children(pdh, local_relpath, svn_wc__db_status_not_present,
+                          2 /* ### temporary op_depth */, scratch_pool));
+#else
+  SVN_ERR(remove_children(pdh, local_relpath, svn_wc__db_status_base_deleted,
+                          op_depth + 1, scratch_pool));
+  SVN_ERR(remove_children(pdh, local_relpath, svn_wc__db_status_normal,
+                          op_depth, scratch_pool));
+  SVN_ERR(remove_children(pdh, local_relpath, svn_wc__db_status_not_present,
+                          op_depth, scratch_pool));
+  SVN_ERR(remove_children(pdh, local_relpath, svn_wc__db_status_incomplete,
+                          op_depth, scratch_pool));
+#endif
 
   /* Postcondition: There are no NODES rows in this subtree, at same or
    * greater op_depth. */
@@ -4586,8 +4652,13 @@ db_working_insert(svn_wc__db_status_t status,
   apr_int64_t op_depth = 2; /* ### temporary op_depth */
 #endif
 
+#ifdef SVN_WC__OP_DEPTH
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_INSERT_WORKING_NODE_FROM_NODE));
+#else
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                     STMT_INSERT_WORKING_NODE_FROM_BASE));
+#endif
   SVN_ERR(svn_sqlite__bindf(stmt, "isit", pdh->wcroot->wc_id,
                             local_relpath, op_depth, presence_map, status));
   SVN_ERR(svn_sqlite__insert(NULL, stmt));
@@ -4795,7 +4866,10 @@ temp_op_delete_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
   struct temp_op_delete_baton *b = baton;
   svn_wc__db_status_t status, new_working_status;
-  svn_boolean_t have_work, new_have_work;
+  svn_boolean_t have_work, add_work = FALSE, del_work = FALSE, mod_work = FALSE;
+#ifndef SVN_WC__OP_DEPTH
+  svn_boolean_t new_have_work;
+#endif
 
   SVN_ERR(read_info(&status,
                     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -4805,8 +4879,10 @@ temp_op_delete_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
                     b->pdh, b->local_relpath,
                     scratch_pool, scratch_pool));
 
+#ifndef SVN_WC__OP_DEPTH
   new_have_work = have_work;
   new_working_status = status;
+#endif
 
   if (!have_work)
     {
@@ -4814,13 +4890,17 @@ temp_op_delete_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
       if (status == svn_wc__db_status_normal
           || status == svn_wc__db_status_incomplete)
         {
+#ifdef SVN_WC__OP_DEPTH
+          add_work = TRUE;
+#else
           new_have_work = TRUE;
           new_working_status = svn_wc__db_status_base_deleted;
+#endif
         }
     }
   else if (status == svn_wc__db_status_added)
     {
-      /* ADD/COPY-HERE/MOVE-HERE */
+      /* ADD/COPY-HERE/MOVE-HERE that could be a replace */
       svn_boolean_t add_or_root_of_copy;
 
       SVN_ERR(is_add_or_root_of_copy(&add_or_root_of_copy,
@@ -4833,24 +4913,51 @@ temp_op_delete_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
           SVN_ERR(info_below_working(&below_base, &below_work, &below_status,
                                      b->pdh, b->local_relpath, scratch_pool));
 
+#ifdef SVN_WC__OP_DEPTH
+          if ((below_base || below_work)
+              && below_status != svn_wc__db_status_not_present)
+            mod_work = TRUE;
+          else
+            del_work = TRUE;
+#else
           if (below_base && below_status != svn_wc__db_status_not_present)
             new_working_status = svn_wc__db_status_base_deleted;
           else
             new_have_work = FALSE;
+#endif
         }
       else
-        new_working_status = svn_wc__db_status_not_present;
+        {
+#ifdef SVN_WC__OP_DEPTH
+          add_work = TRUE;
+#else
+          new_working_status = svn_wc__db_status_not_present;
+#endif
+        }
     }
   else if (status == svn_wc__db_status_incomplete)
     {
       svn_boolean_t add_or_root_of_copy;
       SVN_ERR(is_add_or_root_of_copy(&add_or_root_of_copy,
                                      b->pdh, b->local_relpath, scratch_pool));
+#ifdef SVN_WC__OP_DEPTH
+      if (add_or_root_of_copy)
+        del_work = TRUE;
+      else
+        add_work = TRUE;
+#else
       if (add_or_root_of_copy)
         new_have_work = FALSE;
+#endif
     }
 
-  if (!new_have_work && have_work)
+#ifndef SVN_WC__OP_DEPTH
+  del_work = !new_have_work && have_work;
+  add_work = new_have_work && !have_work;
+  mod_work = new_have_work && have_work && new_working_status != status;
+#endif
+
+  if (del_work)
     {
       SVN_ERR(db_working_actual_remove(b->pdh, b->local_relpath, scratch_pool));
 
@@ -4858,15 +4965,21 @@ temp_op_delete_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
       SVN_ERR(svn_wc__db_temp_forget_directory(b->db, b->local_abspath,
                                                scratch_pool));
     }
-  else if (new_have_work && !have_work)
+  else if (add_work)
     {
+#ifdef SVN_WC__OP_DEPTH
+      new_working_status = svn_wc__db_status_base_deleted;
+#endif
       SVN_ERR(db_working_insert(new_working_status, b->pdh, b->local_relpath,
                                 scratch_pool));
     }
-  else if (new_have_work && have_work
-           && new_working_status != status)
+  else if (mod_work)
     {
-      SVN_ERR(db_working_update_presence(new_working_status, b->pdh,
+#ifdef SVN_WC__OP_DEPTH
+      new_working_status = svn_wc__db_status_base_deleted;
+#endif
+      SVN_ERR(db_working_update_presence(relpath_depth(b->local_relpath),
+                                         new_working_status, b->pdh,
                                          b->local_relpath, scratch_pool));
     }
   else
@@ -5803,7 +5916,7 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
       if (status == svn_wc__db_status_deleted)
         {
           const char *work_del_relpath;
-          SVN_ERR(scan_deletion(NULL, NULL, NULL, &work_del_relpath,
+          SVN_ERR(scan_deletion(NULL, NULL, &work_del_relpath,
                                 pdh, local_dir_relpath,
                                 scratch_pool, scratch_pool));
           if (work_del_relpath)
@@ -6866,7 +6979,8 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
   svn_wc__db_pdh_t *pdh;
   const char *local_relpath;
   const char *op_root_relpath;
-  apr_int64_t repos_id, original_repos_id;
+  apr_int64_t repos_id = INVALID_REPOS_ID;
+  apr_int64_t original_repos_id = INVALID_REPOS_ID;
   apr_int64_t *repos_id_p
     = (repos_root_url || repos_uuid) ? &repos_id : NULL;
   apr_int64_t *original_repos_id_p
@@ -6889,6 +7003,7 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
                                        result_pool);
   /* REPOS_ID must be valid if requested; ORIGINAL_REPOS_ID need not be. */
   SVN_ERR_ASSERT(repos_id_p == NULL || repos_id != INVALID_REPOS_ID);
+
   SVN_ERR(fetch_repos_info(repos_root_url, repos_uuid, pdh->wcroot->sdb,
                            repos_id, result_pool));
   SVN_ERR(fetch_repos_info(original_root_url, original_uuid,
@@ -6903,7 +7018,6 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
  * DB+LOCAL_ABSPATH, and outputting relpaths instead of abspaths. */
 static svn_error_t *
 scan_deletion(const char **base_del_relpath,
-              svn_boolean_t *base_replaced,
               const char **moved_to_relpath,
               const char **work_del_relpath,
               svn_wc__db_pdh_t *pdh,
@@ -6917,12 +7031,13 @@ scan_deletion(const char **base_del_relpath,
   svn_boolean_t child_has_base = FALSE;
   svn_boolean_t found_moved_to = FALSE;
   svn_wc__db_wcroot_t *wcroot = pdh->wcroot;
+#ifdef SVN_WC__OP_DEPTH
+  apr_int64_t local_op_depth, op_depth;
+#endif
 
   /* Initialize all the OUT parameters.  */
   if (base_del_relpath != NULL)
     *base_del_relpath = NULL;
-  if (base_replaced != NULL)
-    *base_replaced = FALSE;  /* becomes TRUE when we know for sure.  */
   if (moved_to_relpath != NULL)
     *moved_to_relpath = NULL;
   if (work_del_relpath != NULL)
@@ -6993,7 +7108,7 @@ scan_deletion(const char **base_del_relpath,
         }
 
       /* We need the presence of the WORKING node. Note that legal values
-         are: normal, not-present, base-deleted.  */
+         are: normal, not-present, base-deleted, incomplete.  */
       work_presence = svn_sqlite__column_token(stmt, 1, presence_map);
 
       /* The starting node should be deleted.  */
@@ -7006,6 +7121,8 @@ scan_deletion(const char **base_del_relpath,
                                  path_for_error_message(wcroot,
                                                         local_relpath,
                                                         scratch_pool));
+
+      /* ### incomplete not handled */
       SVN_ERR_ASSERT(work_presence == svn_wc__db_status_normal
                      || work_presence == svn_wc__db_status_not_present
                      || work_presence == svn_wc__db_status_base_deleted);
@@ -7043,16 +7160,6 @@ scan_deletion(const char **base_del_relpath,
           /* If a BASE node is marked as not-present, then we'll ignore
              it within this function. That status is simply a bookkeeping
              gimmick, not a real node that may have been deleted.  */
-
-          /* If we're looking at a present BASE node, *and* there is a
-             WORKING node (present or deleted), then a replacement has
-             occurred here or in an ancestor.  */
-          if (base_replaced != NULL
-              && base_presence == svn_wc__db_status_normal
-              && work_presence != svn_wc__db_status_base_deleted)
-            {
-              *base_replaced = TRUE;
-            }
         }
 
       /* Only grab the nearest ancestor.  */
@@ -7074,12 +7181,22 @@ scan_deletion(const char **base_del_relpath,
                                     svn_sqlite__column_text(stmt, 2, NULL));
         }
 
+#ifdef SVN_WC__OP_DEPTH
+      op_depth = svn_sqlite__column_int64(stmt, 3);
+      if (current_relpath == local_relpath)
+        local_op_depth = op_depth;
+
+      if (work_del_relpath && !work_del_relpath[0]
+          && ((op_depth < local_op_depth && op_depth > 0)
+              || child_presence == svn_wc__db_status_not_present))
+#else
       if (work_del_relpath != NULL
           && work_presence == svn_wc__db_status_normal
           && child_presence == svn_wc__db_status_not_present)
-        {
           /* Parent is normal, but child was deleted. Therefore, the child
              is the root of a WORKING subtree deletion.  */
+#endif
+        {
           *work_del_relpath = apr_pstrdup(result_pool, child_relpath);
         }
 
@@ -7105,7 +7222,6 @@ scan_deletion(const char **base_del_relpath,
 
 svn_error_t *
 svn_wc__db_scan_deletion(const char **base_del_abspath,
-                         svn_boolean_t *base_replaced,
                          const char **moved_to_abspath,
                          const char **work_del_abspath,
                          svn_wc__db_t *db,
@@ -7124,7 +7240,7 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_PDH(pdh);
 
-  SVN_ERR(scan_deletion(&base_del_relpath, base_replaced, &moved_to_relpath,
+  SVN_ERR(scan_deletion(&base_del_relpath, &moved_to_relpath,
                         &work_del_relpath,
                         pdh, local_relpath, result_pool, scratch_pool));
 

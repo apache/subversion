@@ -87,7 +87,7 @@ AC_DEFUN(SVN_FIND_JDK,
 
     if test "$OSX_VER" = "10.4"; then
       dnl For OS X 10.4, the SDK version is 10.4u instead of 10.4.
-      OSX_VER = "$OSX_VERu"
+      OSX_VER="10.4u"
     fi
 
     OSX_SYS_JAVA_FRAMEWORK="/System/Library/Frameworks/JavaVM.framework"

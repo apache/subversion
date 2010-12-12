@@ -1060,7 +1060,8 @@ close_directory(void *dir_baton,
     return SVN_NO_ERROR;
 
   if (eb->dry_run)
-    svn_hash__clear(svn_client__dry_run_deletions(eb->diff_cmd_baton), pool);
+    SVN_ERR(svn_hash__clear(svn_client__dry_run_deletions(eb->diff_cmd_baton),
+                            pool));
 
   err = get_dir_abspath(&local_dir_abspath, eb->wc_ctx, b->wcpath,
                         FALSE, b->pool);

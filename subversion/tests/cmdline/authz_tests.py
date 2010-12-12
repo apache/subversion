@@ -1020,9 +1020,6 @@ def wc_wc_copy_revert(sbox):
 
   wc_wc_copy(sbox)
 
-  # Fails with a "No write-lock" error, as does "rm --force", on a
-  # path under A2.  Multiple repeats fail on different paths until the
-  # command completes.  No longer applies with op_depth.
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'revert', '--recursive', sbox.ospath('A2'))
   
@@ -1092,10 +1089,8 @@ test_list = [ None,
               Skip(authz_access_required_at_repo_root2,
                    svntest.main.is_ra_type_file),
               Skip(multiple_matches, svntest.main.is_ra_type_file),
-              Wimp("Needs op_depth", Skip(wc_wc_copy,
-                   svntest.main.is_ra_type_file)),
-              Wimp("Redundant with op_depth", Skip(wc_wc_copy_revert,
-                   svntest.main.is_ra_type_file)),
+              Skip(wc_wc_copy, svntest.main.is_ra_type_file),
+              Skip(wc_wc_copy_revert, svntest.main.is_ra_type_file),
               Skip(authz_recursive_ls,
                    svntest.main.is_ra_type_file),
              ]

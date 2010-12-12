@@ -110,6 +110,7 @@ svn_cl__update(apr_getopt_t *os,
   svn_boolean_t depth_is_sticky;
   struct svn_cl__check_externals_failed_notify_baton nwb;
   apr_array_header_t *result_revs;
+  int i;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
@@ -120,29 +121,15 @@ svn_cl__update(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, scratch_pool));
 
-  /* If any targets are URLs, notify that we're skipping them and remove
-     them from TARGETS.  Although svn_client_update4() would skip them
-     anyway, we don't want to pass invalid targets to it, and especially
-     not to print_update_summary(). */
-  {
-    apr_array_header_t *new_targets
-      = apr_array_make(scratch_pool, targets->nelts, sizeof(const char *));
-    int i;
+  /* If any targets are URLs, display error message and exit. */
+  for (i = 0; i < targets->nelts; i++)
+    {
+      const char *target = APR_ARRAY_IDX(targets, i, const char *);
 
-    for (i = 0; i < targets->nelts; i++)
-      {
-        const char *target = APR_ARRAY_IDX(targets, i, const char *);
-
-        if (svn_path_is_url(target))
-          ctx->notify_func2(ctx->notify_baton2,
-                            svn_wc_create_notify_url(
-                              target, svn_wc_notify_skip, scratch_pool),
-                            scratch_pool);
-        else
-          APR_ARRAY_PUSH(new_targets, const char *) = target;
-      }
-    targets = new_targets;
-  }
+      if (svn_path_is_url(target))
+        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("'%s' is not a local path"), target);
+    }
 
   /* If using changelists, convert targets into a set of paths that
      match the specified changelist(s). */

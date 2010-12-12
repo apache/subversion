@@ -91,7 +91,6 @@ typedef struct {
   svn_depth_t depth;
   apr_time_t last_mod_time;
   apr_hash_t *properties;
-  svn_boolean_t keep_local;
 } db_working_node_t;
 
 typedef struct {
@@ -254,7 +253,6 @@ get_base_info_for_deleted(svn_wc_entry_t *entry,
 
       SVN_ERR(svn_wc__db_scan_deletion(NULL,
                                        NULL,
-                                       NULL,
                                        &work_del_abspath,
                                        db, entry_abspath,
                                        scratch_pool, scratch_pool));
@@ -307,165 +305,6 @@ get_base_info_for_deleted(svn_wc_entry_t *entry,
          revision.  */
       if (!SVN_IS_VALID_REVNUM(entry->revision))
         entry->revision = parent_entry->revision;
-    }
-
-  /* For deleted nodes, our COPIED flag has a rather complex meaning.
-
-     In general, COPIED means "an operation on an ancestor took care
-     of me." This typically refers to a copy of an ancestor (and
-     this node just came along for the ride). However, in certain
-     situations the COPIED flag is set for deleted nodes.
-
-     First off, COPIED will *never* be set for nodes/subtrees that
-     are simply deleted. The deleted node/subtree *must* be under
-     an ancestor that has been copied. Plain additions do not count;
-     only copies (add-with-history).
-
-     The basic algorithm to determine whether we live within a
-     copied subtree is as follows:
-
-     1) find the root of the deletion operation that affected us
-     (we may be that root, or an ancestor was deleted and took
-     us with it)
-
-     2) look at the root's *parent* and determine whether that was
-     a copy or a simple add.
-
-     It would appear that we would be done at this point. Once we
-     determine that the parent was copied, then we could just set
-     the COPIED flag.
-
-     Not so fast. Back to the general concept of "an ancestor
-     operation took care of me." Further consider two possibilities:
-
-     1) this node is scheduled for deletion from the copied subtree,
-     so at commit time, we copy then delete
-
-     2) this node is scheduled for deletion because a subtree was
-     deleted and then a copied subtree was added (causing a
-     replacement). at commit time, we delete a subtree, and then
-     copy a subtree. we do not need to specifically touch this
-     node -- all operations occur on ancestors.
-
-     Given the "ancestor operation" concept, then in case (1) we
-     must *clear* the COPIED flag since we'll have more work to do.
-     In case (2), we *set* the COPIED flag to indicate that no
-     real work is going to happen on this node.
-
-     Great fun. And just maybe the code reading the entries has no
-     bugs in interpreting that gobbledygook... but that *is* the
-     expectation of the code. Sigh.
-
-     We can get a little bit of shortcut here if THIS_DIR is
-     also schduled for deletion.
-  */
-  if (parent_entry != NULL
-      && parent_entry->schedule == svn_wc_schedule_delete)
-    {
-      /* ### not entirely sure that we can rely on the parent. for
-         ### example, what if we are a deletion of a BASE node, but
-         ### the parent is a deletion of a copied subtree? sigh.  */
-
-      /* Child nodes simply inherit the parent's COPIED flag.  */
-      entry->copied = parent_entry->copied;
-    }
-  else
-    {
-      svn_boolean_t base_replaced;
-      const char *work_del_abspath;
-
-      /* Find out details of our deletion.  */
-      SVN_ERR(svn_wc__db_scan_deletion(NULL,
-                                       &base_replaced,
-                                       NULL,
-                                       &work_del_abspath,
-                                       db, entry_abspath,
-                                       scratch_pool, scratch_pool));
-
-      /* If there is no deletion in the WORKING tree, then the
-         node is a child of a simple explicit deletion of the
-         BASE tree. It certainly isn't copied. If we *do* find
-         a deletion in the WORKING tree, then we need to discover
-         information about the parent.  */
-      if (work_del_abspath != NULL)
-        {
-          const char *parent_abspath;
-          svn_wc__db_status_t parent_status;
-
-          /* The parent is in WORKING except during post-commit when
-             it may have been moved from the WORKING tree to the BASE
-             tree.  */
-          parent_abspath = svn_dirent_dirname(work_del_abspath,
-                                              scratch_pool);
-          SVN_ERR(svn_wc__db_read_info(&parent_status,
-                                       NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       db, parent_abspath,
-                                       scratch_pool, scratch_pool));
-          if (parent_status == svn_wc__db_status_added)
-            SVN_ERR(svn_wc__db_scan_addition(&parent_status,
-                                             NULL,
-                                             NULL, NULL, NULL,
-                                             NULL, NULL, NULL, NULL,
-                                             db,
-                                             parent_abspath,
-                                             scratch_pool, scratch_pool));
-          if (parent_status == svn_wc__db_status_copied
-              || parent_status == svn_wc__db_status_moved_here
-              || parent_status == svn_wc__db_status_normal)
-            {
-              /* The parent is copied/moved here, so WORK_DEL_ABSPATH
-                 is the root of a deleted subtree. Our COPIED status
-                 is now dependent upon whether the copied root is
-                 replacing a BASE tree or not.
-
-                 But: if we are schedule-delete as a result of being
-                 a copied DELETED node, then *always* mark COPIED.
-                 Normal copies have cmt_* data; copied DELETED nodes
-                 are missing this info.
-
-                 Note: MOVED_HERE is a concept foreign to this old
-                 interface, but it is best represented as if a copy
-                 had occurred, so we'll model it that way to old
-                 clients.
-
-                 Note: svn_wc__db_status_normal corresponds to the
-                 post-commit parent that was copied or moved in
-                 WORKING but has now been converted to BASE.
-              */
-              if (SVN_IS_VALID_REVNUM(entry->cmt_rev))
-                {
-                  /* The scan_deletion call will tell us if there
-                     was an explicit move-away of an ancestor (which
-                     also means a replacement has occurred since
-                     there is a WORKING tree that isn't simply
-                     BASE deletions). The call will also tell us if
-                     there was an implicit deletion caused by a
-                     replacement. All stored in BASE_REPLACED.  */
-                  entry->copied = base_replaced;
-                }
-              else
-                {
-                  entry->copied = TRUE;
-                }
-            }
-          else
-            {
-              SVN_ERR_ASSERT(parent_status == svn_wc__db_status_added);
-
-              /* Whoops. WORK_DEL_ABSPATH is scheduled for deletion,
-                 yet the parent is scheduled for a plain addition.
-                 This can occur when a subtree is deleted, and then
-                 nodes are added *later*. Since the parent is a simple
-                 add, then nothing has been copied. Nothing more to do.
-
-                 Note: if a subtree is added, *then* deletions are
-                 made, the nodes should simply be removed from
-                 version control.  */
-            }
-        }
     }
 
   return SVN_NO_ERROR;
@@ -688,8 +527,17 @@ read_one_entry(const svn_wc_entry_t **new_entry,
   else if (status == svn_wc__db_status_deleted)
     {
       svn_node_kind_t path_kind;
+      const char *work_del_abspath;
+
       /* ### we don't have to worry about moves, so this is a delete. */
       entry->schedule = svn_wc_schedule_delete;
+
+      SVN_ERR(svn_wc__db_scan_deletion(NULL, NULL,
+                                       &work_del_abspath,
+                                       db, entry_abspath,
+                                       scratch_pool, scratch_pool));
+      if (work_del_abspath)
+        entry->copied = TRUE;
 
       /* If there is still a directory on-disk we keep it, if not it is
          already deleted. Simple, isn't it? 
@@ -1738,7 +1586,7 @@ write_entry(struct write_baton **entry_node,
             apr_pool_t *scratch_pool)
 {
   db_base_node_t *base_node = NULL;
-  db_working_node_t *working_node = NULL;
+  db_working_node_t *working_node = NULL, *below_working_node = NULL;
   db_actual_node_t *actual_node = NULL;
   const char *parent_relpath;
 
@@ -1832,6 +1680,11 @@ write_entry(struct write_baton **entry_node,
   switch (entry->schedule)
     {
       case svn_wc_schedule_normal:
+        SVN_ERR_ASSERT(!parent_node
+                       || (parent_node->base && !parent_node->work
+                           && !entry->copied)
+                       || (!parent_node->base && parent_node->work
+                           && entry->copied));
         if (entry->copied)
           working_node = MAYBE_ALLOC(working_node, result_pool);
         else
@@ -1839,26 +1692,26 @@ write_entry(struct write_baton **entry_node,
         break;
 
       case svn_wc_schedule_add:
+        SVN_ERR_ASSERT((parent_node->base && !parent_node->work)
+                       || (parent_node->work && !parent_node->base));
         working_node = MAYBE_ALLOC(working_node, result_pool);
         break;
 
       case svn_wc_schedule_delete:
+        SVN_ERR_ASSERT(!entry->copied);
         working_node = MAYBE_ALLOC(working_node, result_pool);
-        /* If the entry is part of a REPLACED (not COPIED) subtree,
-           then it needs a BASE node. */
-        if (parent_node->base
-            && (! (entry->copied
-                   || (this_dir->copied
-                       && (this_dir->schedule == svn_wc_schedule_add ||
-                           this_dir->schedule == svn_wc_schedule_delete ||
-                           this_dir->schedule == svn_wc_schedule_replace)))))
+        if (parent_node->base)
           base_node = MAYBE_ALLOC(base_node, result_pool);
         break;
 
       case svn_wc_schedule_replace:
+        SVN_ERR_ASSERT((parent_node->base && !parent_node->work)
+                       || (parent_node->work && !parent_node->base));
         working_node = MAYBE_ALLOC(working_node, result_pool);
         if (parent_node->base)
           base_node = MAYBE_ALLOC(base_node, result_pool);
+        else
+          below_working_node = MAYBE_ALLOC(below_working_node, scratch_pool);
         break;
     }
 
@@ -1866,15 +1719,19 @@ write_entry(struct write_baton **entry_node,
      BASE node to indicate the not-present node.  */
   if (entry->deleted)
     {
-      base_node = MAYBE_ALLOC(base_node, result_pool);
+      SVN_ERR_ASSERT(base_node && !working_node && !below_working_node);
+      SVN_ERR_ASSERT(!entry->incomplete);
+      base_node->presence = svn_wc__db_status_not_present;
+    }
+
+  if (entry->absent)
+    {
+      SVN_ERR_ASSERT(base_node && !working_node);
+      base_node->presence = svn_wc__db_status_absent;
     }
 
   if (entry->copied)
     {
-      /* Make sure we get a WORKING_NODE inserted. The copyfrom information
-         will occur here or on a parent, as appropriate.  */
-      working_node = MAYBE_ALLOC(working_node, result_pool);
-
       if (entry->copyfrom_url)
         {
           const char *relative_url;
@@ -1913,20 +1770,6 @@ write_entry(struct write_baton **entry_node,
                                  _("No copyfrom URL for '%s'"),
                                  svn_dirent_local_style(local_relpath,
                                                         scratch_pool));
-    }
-
-  if (entry->keep_local)
-    {
-      SVN_ERR_ASSERT(working_node != NULL);
-      SVN_ERR_ASSERT(entry->schedule == svn_wc_schedule_delete);
-      working_node->keep_local = TRUE;
-    }
-
-  if (entry->absent)
-    {
-      SVN_ERR_ASSERT(working_node == NULL);
-      SVN_ERR_ASSERT(base_node != NULL);
-      base_node->presence = svn_wc__db_status_absent;
     }
 
   if (entry->conflict_old)
@@ -1983,8 +1826,6 @@ write_entry(struct write_baton **entry_node,
 
       if (entry->deleted)
         {
-          SVN_ERR_ASSERT(!entry->incomplete);
-
           base_node->presence = svn_wc__db_status_not_present;
           /* ### should be svn_node_unknown, but let's store what we have. */
           base_node->kind = entry->kind;
@@ -2014,7 +1855,10 @@ write_entry(struct write_baton **entry_node,
             }
         }
 
-      if (entry->kind == svn_node_dir)
+      /* If there is a WORKING node file then we don't have the
+         revert-base checksum for this file.  It will get updated
+         later when we transfer the pristine texts. */
+      if (entry->kind == svn_node_dir || working_node)
         base_node->checksum = NULL;
       else
         SVN_ERR(svn_checksum_parse_hex(&base_node->checksum, svn_checksum_md5,
@@ -2101,6 +1945,40 @@ write_entry(struct write_baton **entry_node,
           SVN_ERR(svn_sqlite__step_done(stmt));
         }
     }
+
+#ifdef SVN_WC__OP_DEPTH
+  if (below_working_node)
+    {
+      below_working_node->wc_id = wc_id;
+      below_working_node->local_relpath = local_relpath;
+      below_working_node->op_depth = parent_node->work->op_depth;
+      below_working_node->parent_relpath = parent_relpath;
+      below_working_node->presence = svn_wc__db_status_normal;
+      below_working_node->kind = svn_node_file;
+      below_working_node->copyfrom_repos_id
+        = parent_node->work->copyfrom_repos_id;
+      below_working_node->copyfrom_repos_path
+        = svn_relpath_join(parent_node->work->copyfrom_repos_path, entry->name,
+                           scratch_pool);
+      below_working_node->copyfrom_revnum
+        = parent_node->work->copyfrom_revnum;
+      below_working_node->moved_here = FALSE;
+      below_working_node->moved_to = FALSE;
+
+      /* We have a problem, the revert_base information isn't
+         available in the entry structure.  The checksum will get
+         updated later when we transfer the pristines. */
+      below_working_node->checksum = NULL;
+      below_working_node->translated_size = 0;
+      below_working_node->changed_rev = SVN_INVALID_REVNUM;
+      below_working_node->changed_date = 0;
+      below_working_node->changed_author = NULL;
+      below_working_node->depth = svn_depth_infinity;
+      below_working_node->last_mod_time = 0;
+      below_working_node->properties = NULL;
+      SVN_ERR(insert_working_node(sdb, below_working_node, scratch_pool));
+    }
+#endif
 
   /* Insert the working node. */
   if (working_node)
@@ -2217,7 +2095,7 @@ write_entry(struct write_baton **entry_node,
 
   if (entry_node)
     {
-      *entry_node = apr_palloc(result_pool, sizeof(*entry_node));
+      *entry_node = apr_palloc(result_pool, sizeof(**entry_node));
       (*entry_node)->base = base_node;
       (*entry_node)->work = working_node;
     }

@@ -60,16 +60,18 @@
 
 /*** Generic helper functions. ***/
 
-/* Return the MD5 hash of STR. */
-static const char *
-make_digest(const char *str,
+/* Set *DIGEST to the MD5 hash of STR. */
+static svn_error_t *
+make_digest(const char **digest,
+            const char *str,
             apr_pool_t *pool)
 {
   svn_checksum_t *checksum;
 
-  svn_checksum(&checksum, svn_checksum_md5, str, strlen(str), pool);
+  SVN_ERR(svn_checksum(&checksum, svn_checksum_md5, str, strlen(str), pool));
 
-  return svn_checksum_to_cstring_display(checksum, pool);
+  *digest = svn_checksum_to_cstring_display(checksum, pool);
+  return SVN_NO_ERROR;
 }
 
 
@@ -134,18 +136,22 @@ digest_path_from_digest(const char *fs_path,
 }
 
 
-/* Return the path to the lock/entries digest file associate with
-   PATH, where PATH is the path to the lock file or lock entries file
+/* Set *DIGEST_PATH to the path to the lock/entries digest file associate
+   with PATH, where PATH is the path to the lock file or lock entries file
    in FS. */
-static const char *
-digest_path_from_path(const char *fs_path,
+static svn_error_t *
+digest_path_from_path(const char **digest_path,
+                      const char *fs_path,
                       const char *path,
                       apr_pool_t *pool)
 {
-  const char *digest = make_digest(path, pool);
-  return svn_dirent_join_many(pool, fs_path, PATH_LOCKS_DIR,
-                              apr_pstrmemdup(pool, digest, DIGEST_SUBDIR_LEN),
-                              digest, NULL);
+  const char *digest;
+  SVN_ERR(make_digest(&digest, path, pool));
+  *digest_path = svn_dirent_join_many(pool, fs_path, PATH_LOCKS_DIR,
+                                      apr_pstrmemdup(pool, digest,
+                                                     DIGEST_SUBDIR_LEN),
+                                      digest, NULL);
+  return SVN_NO_ERROR;
 }
 
 
@@ -362,7 +368,8 @@ set_lock(const char *fs_path,
 
       /* Calculate the DIGEST_PATH for the currently FS path, and then
          get its DIGEST_FILE basename. */
-      digest_path = digest_path_from_path(fs_path, this_path->data, subpool);
+      SVN_ERR(digest_path_from_path(&digest_path, fs_path, this_path->data,
+                                    subpool));
       digest_file = svn_dirent_basename(digest_path, subpool);
 
       SVN_ERR(read_digest_file(&this_children, &this_lock, fs_path,
@@ -424,7 +431,8 @@ delete_lock(svn_fs_t *fs,
 
       /* Calculate the DIGEST_PATH for the currently FS path, and then
          get its DIGEST_FILE basename. */
-      digest_path = digest_path_from_path(fs->path, this_path->data, subpool);
+      SVN_ERR(digest_path_from_path(&digest_path, fs->path, this_path->data,
+                                    subpool));
       digest_file = svn_dirent_basename(digest_path, subpool);
 
       SVN_ERR(read_digest_file(&this_children, &this_lock, fs->path,
@@ -478,7 +486,9 @@ get_lock(svn_lock_t **lock_p,
          apr_pool_t *pool)
 {
   svn_lock_t *lock;
-  const char *digest_path = digest_path_from_path(fs->path, path, pool);
+  const char *digest_path;
+
+  SVN_ERR(digest_path_from_path(&digest_path, fs->path, path, pool));
 
   SVN_ERR(read_digest_file(NULL, &lock, fs->path, digest_path, pool));
   if (! lock)
@@ -702,7 +712,8 @@ svn_fs_fs__allow_locked_operation(const char *path,
   if (recurse)
     {
       /* Discover all locks at or below the path. */
-      const char *digest_path = digest_path_from_path(fs->path, path, pool);
+      const char *digest_path;
+      SVN_ERR(digest_path_from_path(&digest_path, fs->path, path, pool));
       SVN_ERR(walk_locks(fs, digest_path, get_locks_callback,
                          fs, have_write_lock, pool));
     }
@@ -1052,7 +1063,7 @@ svn_fs_fs__get_locks(svn_fs_t *fs,
   glfb.get_locks_baton = get_locks_baton;
 
   /* Get the top digest path in our tree of interest, and then walk it. */
-  digest_path = digest_path_from_path(fs->path, path, pool);
+  SVN_ERR(digest_path_from_path(&digest_path, fs->path, path, pool));
   SVN_ERR(walk_locks(fs, digest_path, get_locks_filter_func, &glfb,
                      FALSE, pool));
   return SVN_NO_ERROR;
