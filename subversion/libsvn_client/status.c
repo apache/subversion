@@ -495,14 +495,16 @@ svn_client_status5(svn_revnum_t *result_rev,
           SVN_ERR(svn_wc_crawl_revisions5(ctx->wc_ctx,
                                           target_abspath,
                                           &lock_fetch_reporter, &rb, FALSE,
-                                          depth, TRUE, (! server_supports_depth),
+                                          depth, TRUE,
+                                          (! server_supports_depth),
                                           FALSE, NULL, NULL, NULL, NULL, pool));
         }
 
       if (ctx->notify_func2)
         {
           svn_wc_notify_t *notify
-            = svn_wc_create_notify(target_abspath, svn_wc_notify_status_completed, pool);
+            = svn_wc_create_notify(target_abspath,
+                                   svn_wc_notify_status_completed, pool);
           notify->revision = edit_revision;
           (ctx->notify_func2)(ctx->notify_baton2, notify, pool);
         }
