@@ -1632,10 +1632,15 @@ make_file_baton(struct dir_baton *parent_dir_baton,
 }
 
 
-svn_boolean_t
-svn_wc__is_sendable_status(const svn_wc_status3_t *status,
-                           svn_boolean_t no_ignore,
-                           svn_boolean_t get_all)
+/**
+ * Return a boolean answer to the question "Is @a status something that
+ * should be reported?".  @a no_ignore and @a get_all are the same as
+ * svn_wc_get_status_editor4().
+ */
+static svn_boolean_t
+is_sendable_status(const svn_wc_status3_t *status,
+                   svn_boolean_t no_ignore,
+                   svn_boolean_t get_all)
 {
   /* If the repository status was touched at all, it's interesting. */
   if (status->repos_node_status != svn_wc_status_none)
@@ -1764,7 +1769,7 @@ handle_statii(struct edit_baton *eb,
         }
       if (dir_was_deleted)
         status->repos_node_status = svn_wc_status_deleted;
-      if (svn_wc__is_sendable_status(status, eb->no_ignore, eb->get_all))
+      if (is_sendable_status(status, eb->no_ignore, eb->get_all))
         SVN_ERR((eb->status_func)(eb->status_baton, local_abspath, status,
                                   iterpool));
     }
@@ -2001,8 +2006,8 @@ close_directory(void *dir_baton,
                             dir_status ? dir_status->repos_root_url : NULL,
                             dir_status ? dir_status->repos_relpath : NULL,
                             db->statii, was_deleted, db->depth, pool));
-      if (dir_status && svn_wc__is_sendable_status(dir_status, eb->no_ignore,
-                                                   eb->get_all))
+      if (dir_status && is_sendable_status(dir_status, eb->no_ignore,
+                                           eb->get_all))
         SVN_ERR((eb->status_func)(eb->status_baton, db->local_abspath,
                                   dir_status, pool));
       apr_hash_set(pb->statii, db->local_abspath, APR_HASH_KEY_STRING, NULL);
@@ -2032,8 +2037,7 @@ close_directory(void *dir_baton,
                                          eb->cancel_func, eb->cancel_baton,
                                          pool));
                 }
-              if (svn_wc__is_sendable_status(tgt_status, eb->no_ignore,
-                                             eb->get_all))
+              if (is_sendable_status(tgt_status, eb->no_ignore, eb->get_all))
                 SVN_ERR((eb->status_func)(eb->status_baton, eb->target_abspath,
                                           tgt_status, pool));
             }
@@ -2047,8 +2051,8 @@ close_directory(void *dir_baton,
                                 eb->anchor_status->repos_root_url,
                                 eb->anchor_status->repos_relpath,
                                 db->statii, FALSE, eb->default_depth, pool));
-          if (svn_wc__is_sendable_status(eb->anchor_status, eb->no_ignore,
-                                         eb->get_all))
+          if (is_sendable_status(eb->anchor_status, eb->no_ignore,
+                                 eb->get_all))
             SVN_ERR((eb->status_func)(eb->status_baton, db->local_abspath,
                                       eb->anchor_status, pool));
           eb->anchor_status = NULL;
