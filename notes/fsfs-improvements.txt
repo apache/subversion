@@ -164,19 +164,23 @@ against"):
 	r6->r4
 	r7->r6
 
-Default ordering r7,r6,r5,r4,r3,r2,r1,r0 requires
-3/3/2/2/2/2/1/1 seeks.  For 2^N changes (N integer > 0),
+Default ordering r0,r1,r2,r3,r4,r5,r6,r7 requires
+1/1/2/2/2/2/3/3 seeks.  For 2^N changes (N integer > 0),
 we need (N+1)/2 seeks on average.
 
-A path-optimized ordering r1,r3,r2,r5,r7,r6,r4,r0
-requires 2/2/2/2/1/1/1/1 seeks.  It's (N+3)/4 on average.
+A path-optimized ordering r0,r4,r6,r7,r5,r2,r3,r1
+requires 1/1/1/1/2/2/2/2 seeks.  It's (N+3)/4 on average.
 That optimized ordering can easily be constructed by
 
 	* select the highest rev not covered, yet
-	* prepend its diff path to the existing result
-	  (until we meet a revision at already is in
-	  in the result)
+	* add its diff path to the existing result
+	  (starting with the first revision not
+          already is in the result)
 	* repeat until all revs are covered
+
+Note that revision paths start with the low end of
+the revision range because contents gets reconstructed
+from r0 upwards.
 
 
 Move the Manifest Info into the Packed File
