@@ -6311,35 +6311,15 @@ struct record_baton {
 };
 
 
-/* Record TRANSLATED_SIZE and LAST_MOD_TIME into the WORKING tree if a
-   node is present; otherwise, record it into the BASE tree. One of them
-   must exist.  */
+/* Record TRANSLATED_SIZE and LAST_MOD_TIME into top layer in NODES */
 static svn_error_t *
 record_fileinfo(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
   struct record_baton *rb = baton;
-  svn_boolean_t base_exists;
-  svn_boolean_t working_exists;
   svn_sqlite__stmt_t *stmt;
   int affected_rows;
 
-  SVN_ERR(which_trees_exist(&base_exists, &working_exists,
-                            sdb, rb->wcroot->wc_id, rb->local_relpath));
-  if (!base_exists && !working_exists)
-    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                             _("Could not find node '%s' for recording file "
-                               "information."),
-                             path_for_error_message(rb->wcroot,
-                                                    rb->local_relpath,
-                                                    scratch_pool));
-
-  /* ### Instead of doing it this way, we just ought to update the highest
-     op_depth level. That way, there's no need to find out which
-     tree to update first */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                    working_exists
-                                      ? STMT_UPDATE_WORKING_NODE_FILEINFO
-                                      : STMT_UPDATE_BASE_NODE_FILEINFO));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_UPDATE_NODE_FILEINFO));
   SVN_ERR(svn_sqlite__bindf(stmt, "isii",
                             rb->wcroot->wc_id, rb->local_relpath,
                             rb->translated_size, rb->last_mod_time));
