@@ -622,15 +622,6 @@ ensure_repos_info(svn_wc_entry_t *entry,
 }
 
 
-/* */
-static svn_error_t *
-bump_to_13(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
-{
-  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_13));
-
-  return SVN_NO_ERROR;
-}
-
 /*
  * Read tree conflict descriptions from @a conflict_data.  Set @a *conflicts
  * to a hash of pointers to svn_wc_conflict_description2_t objects indexed by
@@ -804,67 +795,9 @@ migrate_tree_conflict_data(svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 }
 
 
-/* */
-static svn_error_t *
-migrate_locks(const char *wcroot_abspath,
-              svn_sqlite__db_t *sdb,
-              apr_pool_t *scratch_pool)
-{
-  const char *lockfile_abspath = build_lockfile_path(wcroot_abspath,
-                                                     scratch_pool);
-  svn_node_kind_t kind;
-
-  SVN_ERR(svn_io_check_path(lockfile_abspath, &kind, scratch_pool));
-  if (kind != svn_node_none)
-    {
-      svn_sqlite__stmt_t *stmt;
-      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_WC_LOCK));
-      /* ### These values are magic, and will need to be updated when we
-         ### go to a centralized system. */
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", (apr_int64_t)1, ""));
-      SVN_ERR(svn_sqlite__step_done(stmt));
-    }
-
-  return SVN_NO_ERROR;
-}
-
 struct bump_baton {
   const char *wcroot_abspath;
 };
-
-/* */
-static svn_error_t *
-bump_to_14(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
-{
-  const char *wcroot_abspath = ((struct bump_baton *)baton)->wcroot_abspath;
-
-  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_14));
-
-  SVN_ERR(migrate_locks(wcroot_abspath, sdb, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-
-/* */
-static svn_error_t *
-bump_to_15(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
-{
-  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_15));
-
-  return SVN_NO_ERROR;
-}
-
-
-/* */
-static svn_error_t *
-bump_to_16(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
-{
-  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_16));
-
-  return SVN_NO_ERROR;
-}
-
 
 /* Migrate the properties for one node (LOCAL_ABSPATH).  */
 static svn_error_t *
@@ -1004,28 +937,6 @@ migrate_props(const char *dir_abspath,
 }
 
 
-/* */
-struct bump_to_18_baton
-{
-  const char *wcroot_abspath;
-  int original_format;
-};
-
-
-static svn_error_t *
-bump_to_18(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
-{
-  struct bump_to_18_baton *b18 = baton;
-
-  /* ### no schema changes (yet)... */
-  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_18));
-
-  SVN_ERR(migrate_props(b18->wcroot_abspath, b18->wcroot_abspath, sdb,
-                        b18->original_format, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
 /* If DIR_RELPATH is set then any .svn-revert files will trigger an
    attempt to update the checksum in a NODES row below the top WORKING
    node. */
@@ -1150,19 +1061,6 @@ migrate_text_bases(const char *dir_abspath,
     }
 
   svn_pool_destroy(iterpool);
-
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-bump_to_17(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
-{
-  const char *wcroot_abspath = ((struct bump_baton *)baton)->wcroot_abspath;
-
-  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_17));
-  SVN_ERR(migrate_text_bases(wcroot_abspath, wcroot_abspath, NULL, sdb,
-                             scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1404,6 +1302,17 @@ svn_wc__upgrade_sdb(int *result_format,
                                                     scratch_pool),
                              start_format);
 
+  /* Early WCNG formats no longer supported. */
+  if (start_format < 19)
+    return svn_error_createf(SVN_ERR_WC_UPGRADE_REQUIRED, NULL,
+                             _("Working copy format of '%s' is too old (%d); "
+                               "use a format 18 client, then "
+                               "use 'tools/dev/wc-ng/bump-to-19.py', then "
+                               "use the current client"),
+                             svn_dirent_local_style(wcroot_abspath,
+                                                    scratch_pool),
+                             start_format);
+
   /* ### need lock-out. only one upgrade at a time. note that other code
      ### cannot use this un-upgraded database until we finish the upgrade.  */
 
@@ -1411,86 +1320,6 @@ svn_wc__upgrade_sdb(int *result_format,
      intentional. */
   switch (start_format)
     {
-      case 12:
-        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_13, &bb,
-                                             scratch_pool));
-        /* If the transaction succeeded, then we don't need the wcprops
-           files. We stopped writing them partway through format 12, but
-           we may be upgrading from an "early 12" and need to toss those
-           files. We aren't going to migrate them because it is *also*
-           possible that current/real data is sitting within the database.
-           This is why STMT_UPGRADE_TO_13 just clears the 'dav_cache'
-           column -- we cannot definitely state that the column values
-           are Proper.
-
-           They're removed by wipe_obsolete_files(), below.  */
-
-        *result_format = 13;
-        /* FALLTHROUGH  */
-
-      case 13:
-        /* Build WCLOCKS and migrate any physical lock.  */
-        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_14, &bb,
-                                             scratch_pool));
-        /* If the transaction succeeded, then any lock has been migrated,
-           and we can toss the physical file (below).  */
-
-        *result_format = 14;
-        /* FALLTHROUGH  */
-
-      case 14:
-        /* Revamp the recording of 'excluded' nodes.  */
-        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_15, &bb,
-                                             scratch_pool));
-        *result_format = 15;
-        /* FALLTHROUGH  */
-
-      case 15:
-        /* Perform some minor changes to the schema.  */
-        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_16, &bb,
-                                             scratch_pool));
-        *result_format = 16;
-        /* FALLTHROUGH  */
-
-      case 16:
-        {
-          const char *pristine_dir;
-
-          /* Create the '.svn/pristine' directory.  */
-          pristine_dir = svn_wc__adm_child(wcroot_abspath,
-                                           SVN_WC__ADM_PRISTINE,
-                                           scratch_pool);
-          SVN_ERR(svn_wc__ensure_directory(pristine_dir, scratch_pool));
-
-          /* Move text bases into the pristine directory, and update the db */
-          SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_17, &bb,
-                                               scratch_pool));
-        }
-
-        *result_format = 17;
-        /* FALLTHROUGH  */
-
-      case 17:
-        {
-          struct bump_to_18_baton b18;
-
-          b18.wcroot_abspath = wcroot_abspath;
-          b18.original_format = start_format;
-
-          /* Move the properties into the database.  */
-          SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_18, &b18,
-                                               scratch_pool));
-        }
-
-        *result_format = 18;
-        /* FALLTHROUGH  */
-
-      case 18:
-        return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                 _("The working copy '%s' is at format 18; "
-                                   "use 'tools/dev/wc-ng/bump-to-19.py' to "
-                                   "upgrade it"), wcroot_abspath);
-
       case 19:
         SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_20, &bb,
                                              scratch_pool));
