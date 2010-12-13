@@ -292,17 +292,16 @@ svn_client_status5(svn_revnum_t *result_rev,
     SVN_ERR(svn_io_check_path(target_abspath, &disk_kind, pool));
     err = svn_wc_read_kind(&kind, ctx->wc_ctx, target_abspath, FALSE, pool);
 
-    if (err && ((err->apr_err == SVN_ERR_WC_MISSING) ||
-                (err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)))
-    {
-      /* This error code is checked for in svn to continue after an error */
-      svn_error_clear(err);
-      return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
-                               _("'%s' is not a working copy"),
-                               svn_dirent_local_style(path, pool));
-    }
-
-    SVN_ERR(err);
+    if (err && (err->apr_err == SVN_ERR_WC_MISSING))
+      {
+        /* Calling code expects SVN_ERR_WC_NOT_WORKING_COPY. */
+        svn_error_clear(err);
+        return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
+                                 _("'%s' is not a working copy"),
+                                 svn_dirent_local_style(path, pool));
+      }
+    else if (err)
+      return err;
 
     /* Dir must be an existing directory or the status editor fails */
     if (kind == svn_node_dir && disk_kind == svn_node_dir)

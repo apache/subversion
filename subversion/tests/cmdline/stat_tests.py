@@ -964,8 +964,10 @@ def status_unversioned_dir(sbox):
   "status on unversioned dir (issue 2030)"
   sbox.build(read_only = True)
   dir = sbox.repo_dir
-  expected_err = ["svn: warning: '" + dir + "' is not a working copy\n",
-                  "svn: warning: '" + dir + "' is not a working copy\n"]
+  expected_err = ["svn: warning: '" + os.path.abspath(dir) +
+                  "' is not a working copy\n",
+                  "svn: warning: '" + os.path.abspath(dir) +
+                  "' is not a working copy\n"]
   svntest.actions.run_and_verify_svn2(None, [], expected_err, 0,
                                       "status", dir, dir)
 
