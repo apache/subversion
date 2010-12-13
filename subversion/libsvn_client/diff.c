@@ -565,10 +565,6 @@ display_prop_diffs(const apr_array_header_t *propchanges,
   svn_stringbuf_t *propdiff_header = svn_stringbuf_create("", pool);
   svn_stringbuf_t *append_buf;
 
-  /* If we're creating a diff on the wc root, path would be empty. */
-  if (path[0] == '\0')
-    path = apr_psprintf(pool, ".");
-
   /* First construct the prop diff header. */
 
   if (use_git_diff_format)
