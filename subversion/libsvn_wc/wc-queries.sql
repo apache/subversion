@@ -224,15 +224,11 @@ WHERE repos_id = ?1 AND
   (repos_relpath = ?2 OR
    repos_relpath LIKE ?3 ESCAPE '#');
 
--- STMT_UPDATE_BASE_NODE_FILEINFO
-UPDATE nodes SET translated_size = ?3, last_mod_time = ?4
-WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
-
--- STMT_UPDATE_WORKING_NODE_FILEINFO
+-- STMT_UPDATE_NODE_FILEINFO
 UPDATE nodes SET translated_size = ?3, last_mod_time = ?4
 WHERE wc_id = ?1 AND local_relpath = ?2
   AND op_depth = (SELECT MAX(op_depth) FROM nodes
-                  WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0);
+                  WHERE wc_id = ?1 AND local_relpath = ?2);
 
 -- STMT_UPDATE_ACTUAL_TREE_CONFLICTS
 UPDATE actual_node SET tree_conflict_data = ?3
