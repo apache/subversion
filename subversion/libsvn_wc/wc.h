@@ -140,9 +140,6 @@ extern "C" {
 
 #define SVN_WC__VERSION 23
 
-#if SVN_WC__VERSION >= 23
-#define SVN_WC__OP_DEPTH
-#endif
 
 /* Formats <= this have no concept of "revert text-base/props".  */
 #define SVN_WC__NO_REVERT_FILES 4

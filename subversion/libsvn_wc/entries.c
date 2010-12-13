@@ -1748,12 +1748,8 @@ write_entry(struct write_baton **entry_node,
                 svn_path_uri_decode(relative_url, result_pool);
             }
           working_node->copyfrom_revnum = entry->copyfrom_rev;
-#ifdef SVN_WC__OP_DEPTH
           working_node->op_depth
             = svn_wc__db_op_depth_for_upgrade(local_relpath);
-#else
-          working_node->op_depth = 2; /* ### temporary op_depth */
-#endif
         }
       else if (parent_node->work && parent_node->work->copyfrom_repos_path)
         {
@@ -1946,7 +1942,6 @@ write_entry(struct write_baton **entry_node,
         }
     }
 
-#ifdef SVN_WC__OP_DEPTH
   if (below_working_node)
     {
       below_working_node->wc_id = wc_id;
@@ -1978,7 +1973,6 @@ write_entry(struct write_baton **entry_node,
       below_working_node->properties = NULL;
       SVN_ERR(insert_working_node(sdb, below_working_node, scratch_pool));
     }
-#endif
 
   /* Insert the working node. */
   if (working_node)
@@ -2070,12 +2064,8 @@ write_entry(struct write_baton **entry_node,
           if (parent_node->work)
             working_node->op_depth = parent_node->work->op_depth;
           else
-#ifdef SVN_WC__OP_DEPTH
             working_node->op_depth
               = svn_wc__db_op_depth_for_upgrade(local_relpath);
-#else
-            working_node->op_depth = 2; /* ### temporary op_depth */
-#endif
         }
 
       SVN_ERR(insert_working_node(sdb, working_node, scratch_pool));

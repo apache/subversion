@@ -327,8 +327,6 @@ CREATE TABLE NODES (
 
   /* The tree state of the node.
 
-     ### This applies to SVN_WC__OP_DEPTH, the intended final code!
-
      In case 'op_depth' is equal to 0, this node is part of the 'BASE'
      tree.  The 'BASE' represents pristine nodes that are in the
      repository; it is obtained and modified by commands such as
