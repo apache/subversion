@@ -23,6 +23,8 @@
 
 
 
+#define SVN_DEPRECATED
+
 #include <limits.h>
 #include "svn_mergeinfo.h"
 #include "../../libsvn_client/mergeinfo.h"
