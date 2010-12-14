@@ -54,7 +54,7 @@ reading forward through a file.
 Don't Interleave Revision and Content Data
 ------------------------------------------
 
-Format "5" keeps the each revision as a single block.  When
+Format "5" keeps each revision as a single block.  When
 re-constructing a node content from the diffs,  we jump
 through a number of distant revision blocks.  For each node.
 
