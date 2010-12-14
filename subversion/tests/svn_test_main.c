@@ -260,7 +260,7 @@ do_test_num(const char *progname,
 
   if (msg)
     {
-      int len = strlen(msg);
+      size_t len = strlen(msg);
       if (len > 50)
         printf("WARNING: Test docstring exceeds 50 characters\n");
       if (msg[len - 1] == '.')
