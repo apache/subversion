@@ -547,6 +547,55 @@ test_wc_add_scenarios(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+/* This is for issue #3234. */
+static svn_error_t *
+test_copy_crash(const svn_test_opts_t *opts,
+                apr_pool_t *pool)
+{
+  svn_repos_t *repos;
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  apr_array_header_t *sources;
+  svn_revnum_t committed_rev;
+  svn_opt_revision_t rev;
+  svn_client_copy_source_t source;
+  svn_client_ctx_t *ctx;
+  const char *dest;
+  const char *repos_url;
+
+  /* Create a filesytem and repository. */
+  SVN_ERR(svn_test__create_repos(&repos, "test-copy-crash",
+                                 opts, pool));
+  fs = svn_repos_fs(repos);
+
+  /* Prepare a txn to receive the greek tree. */
+  SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &committed_rev, txn, pool));
+
+  SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, "test-copy-crash",
+                                           pool));
+
+  svn_client_create_context(&ctx, pool);
+
+  rev.kind = svn_opt_revision_head;
+  dest = svn_path_url_add_component2(repos_url, "A/E", pool);
+  source.path = svn_path_url_add_component2(repos_url, "A/B", pool);
+  source.revision = &rev;
+  source.peg_revision = &rev;
+  sources = apr_array_make(pool, 1, sizeof(svn_client_copy_source_t *));
+  APR_ARRAY_PUSH(sources, svn_client_copy_source_t *) = &source;
+
+  /* This shouldn't crash. */
+  SVN_ERR(svn_client_copy6(sources, dest, FALSE, TRUE, FALSE, NULL, NULL, NULL,
+                           ctx, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
 /* ========================================================================== */
 
 struct svn_test_descriptor_t test_funcs[] =
@@ -558,5 +607,6 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test svn_client_args_to_target_array"),
     SVN_TEST_OPTS_PASS(test_patch, "test svn_client_patch"),
     SVN_TEST_OPTS_PASS(test_wc_add_scenarios, "test svn_wc_add3 scenarios"),
+    SVN_TEST_OPTS_XFAIL(test_copy_crash, "test a crash in svn_client_copy5"),
     SVN_TEST_NULL
   };
