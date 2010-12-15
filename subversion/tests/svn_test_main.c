@@ -225,6 +225,7 @@ do_test_num(const char *progname,
   skip = desc->mode == svn_test_skip;
   xfail = desc->mode == svn_test_xfail;
   wimp = xfail && desc->wip;
+  msg = desc->msg;
 
   if (!allow_segfaults)
     {
@@ -241,7 +242,6 @@ do_test_num(const char *progname,
   if (setjmp(jump_buffer) == 0)
     {
       /* Do test */
-      msg = desc->msg;
       if (msg_only || skip)
         ; /* pass */
       else if (desc->func2)
