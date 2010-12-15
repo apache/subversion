@@ -770,8 +770,8 @@ test_list = [ None,
               # Upgrading from 1.4.0-1.4.5 with specific states fails
               # See issue #2530
               XFail(x3_1_4_0),
-              XFail(x3_1_4_6),
-              XFail(x3_1_6_12),
+              x3_1_4_6,
+              x3_1_6_12,
               missing_dirs,
               missing_dirs2,
               XFail(delete_and_keep_local),
