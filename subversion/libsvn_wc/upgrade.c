@@ -1060,7 +1060,6 @@ migrate_text_bases(const char *dir_abspath,
               svn_boolean_t have_row;
               svn_sqlite__stmt_t *stmt;
 
-              SVN_DBG(("revert-base('%s') = '%s'\n", text_base_basename, name));
               SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                                 STMT_SELECT_NODE_INFO));
               SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
@@ -1084,10 +1083,6 @@ migrate_text_bases(const char *dir_abspath,
                                                     iterpool));
                   SVN_ERR(svn_sqlite__update(NULL, stmt));
                 }
-            }
-          else
-            {
-              SVN_DBG(("revert-base('%s') = No\n", text_base_basename));
             }
         }
     }
