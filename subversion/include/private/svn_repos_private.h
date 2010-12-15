@@ -70,6 +70,21 @@ svn_repos__obliterate_path_rev(svn_repos_t *repos,
                                apr_pool_t *pool);
 
 
+/** Validate that property @a name is valid for use in a Subversion
+ * repository; return @c SVN_ERR_REPOS_BAD_ARGS if it isn't.  For some
+ * "svn:" properties, also validate the @a value, and return
+ * @c SVN_ERR_BAD_PROPERTY_VALUE if it is not valid.
+ * 
+ * Use @a pool for temporary allocations.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_repos__validate_prop(const char *name,
+                         const svn_string_t *value,
+                         apr_pool_t *pool);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

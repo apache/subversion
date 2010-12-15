@@ -2533,6 +2533,10 @@ svn_repos_dump_fs(svn_repos_t *repos,
  * If @a use_post_commit_hook is set, call the repository's
  * post-commit hook after committing each loaded revision.
  *
+ * If @a validate_props is set, then validate Subversion revision and
+ * node properties (those in the svn: namespace) against established
+ * rules for those things.
+ *
  * If non-NULL, use @a notify_func and @a notify_baton to send notification
  * of events to the caller.
  *
@@ -2549,6 +2553,7 @@ svn_repos_load_fs3(svn_repos_t *repos,
                    const char *parent_dir,
                    svn_boolean_t use_pre_commit_hook,
                    svn_boolean_t use_post_commit_hook,
+                   svn_boolean_t validate_props,
                    svn_repos_notify_func_t notify_func,
                    void *notify_baton,
                    svn_cancel_func_t cancel_func,
@@ -2556,8 +2561,9 @@ svn_repos_load_fs3(svn_repos_t *repos,
                    apr_pool_t *pool);
 
 /**
- * Similar to svn_repos_load_fs3(), but with @a feedback_stream in place of
- * the #svn_repos_notify_func_t and baton.
+ * Similar to svn_repos_load_fs3(), but with @a feedback_stream in
+ * place of the #svn_repos_notify_func_t and baton and with
+ * @a validate_props always FALSE.
  *
  * @since New in 1.2.
  * @deprecated Provided for backward compatibility with the 1.6 API.
@@ -2732,12 +2738,15 @@ svn_repos_parse_dumpstream2(svn_stream_t *stream,
  * 'copyfrom' history to exist in the repository when it encounters
  * nodes that are added-with-history.
  *
+ * If @a validate_props is set, then validate Subversion revision and
+ * node properties (those in the svn: namespace) against established
+ * rules for those things.
+ *
  * If @a parent_dir is not NULL, then the parser will reparent all the
  * loaded nodes, from root to @a parent_dir.  The directory @a parent_dir
  * must be an existing directory in the repository.
  *
  * Print all parsing feedback to @a outstream (if non-@c NULL).
- *
  *
  * @since New in 1.7.
  */
@@ -2746,6 +2755,7 @@ svn_repos_get_fs_build_parser3(const svn_repos_parse_fns2_t **parser,
                                void **parse_baton,
                                svn_repos_t *repos,
                                svn_boolean_t use_history,
+                               svn_boolean_t validate_props,
                                enum svn_repos_load_uuid uuid_action,
                                const char *parent_dir,
                                svn_repos_notify_func_t notify_func,
@@ -2753,8 +2763,9 @@ svn_repos_get_fs_build_parser3(const svn_repos_parse_fns2_t **parser,
                                apr_pool_t *pool);
 
 /**
- * Similar to svn_repos_get_fs_build_parser3(), but with @a outstream in place
- * if a #svn_repos_notify_func_t and baton.
+ * Similar to svn_repos_get_fs_build_parser3(), but with @a outstream
+ * in place if a #svn_repos_notify_func_t and baton and with
+ * @a validate_props always FALSE.
  *
  * @since New in 1.1.
  * @deprecated Provided for backward compatibility with the 1.6 API.

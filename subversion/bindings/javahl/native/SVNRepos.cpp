@@ -322,6 +322,7 @@ void SVNRepos::load(File &path,
   SVN_JNI_ERR(svn_repos_load_fs3(repos, dataIn.getStream(requestPool),
                                  uuid_action, relativePath,
                                  usePreCommitHook, usePostCommitHook,
+                                 FALSE,
                                  notifyCallback != NULL
                                     ? ReposNotifyCallback::notify
                                     : NULL,

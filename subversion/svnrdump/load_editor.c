@@ -31,6 +31,7 @@
 #include "svn_ra.h"
 #include "svn_io.h"
 #include "svn_private_config.h"
+#include "private/svn_repos_private.h"
 
 #include <apr_network_io.h>
 
@@ -469,6 +470,8 @@ set_revision_property(void *baton,
   struct revision_baton *rb;
   rb = baton;
 
+  SVN_ERR(svn_repos__validate_prop(name, value, rb->pool));
+
   if (rb->rev > 0)
     apr_hash_set(rb->revprop_table, apr_pstrdup(rb->pool, name),
                  APR_HASH_KEY_STRING, svn_string_dup(value, rb->pool));
@@ -500,6 +503,8 @@ set_node_property(void *baton,
   commit_editor = nb->rb->pb->commit_editor;
   pool = nb->rb->pool;
 
+  SVN_ERR(svn_repos__validate_prop(name, value, pool));
+
   switch (nb->kind)
     {
     case svn_node_file:
@@ -528,6 +533,8 @@ delete_node_property(void *baton,
   nb = baton;
   commit_editor = nb->rb->pb->commit_editor;
   pool = nb->rb->pool;
+
+  SVN_ERR(svn_repos__validate_prop(name, NULL, pool));
 
   if (nb->kind == svn_node_file)
     SVN_ERR(commit_editor->change_file_prop(nb->file_baton, name,
@@ -641,11 +648,15 @@ close_revision(void *baton)
       SVN_ERR(commit_editor->close_edit(commit_edit_baton, rb->pool));
     }
 
-  /* svn_fs_commit_txn rewrites the datestamp/ author property-
-     rewrite it by hand after closing the commit_editor. */
+  /* svn_fs_commit_txn() rewrites the datestamp and author properties;
+     we'll rewrite them again by hand after closing the commit_editor. */
+  SVN_ERR(svn_repos__validate_prop(SVN_PROP_REVISION_DATE,
+                                   rb->datestamp, rb->pool));
   SVN_ERR(svn_ra_change_rev_prop2(rb->pb->session, rb->rev,
                                   SVN_PROP_REVISION_DATE,
                                   NULL, rb->datestamp, rb->pool));
+  SVN_ERR(svn_repos__validate_prop(SVN_PROP_REVISION_AUTHOR,
+                                   rb->author, rb->pool));
   SVN_ERR(svn_ra_change_rev_prop2(rb->pb->session, rb->rev,
                                   SVN_PROP_REVISION_AUTHOR,
                                   NULL, rb->author, rb->pool));

@@ -52,6 +52,7 @@ struct parse_baton
   svn_fs_t *fs;
 
   svn_boolean_t use_history;
+  svn_boolean_t validate_props;
   svn_boolean_t use_pre_commit_hook;
   svn_boolean_t use_post_commit_hook;
   enum svn_repos_load_uuid uuid_action;
@@ -110,6 +111,44 @@ struct node_baton
 
 
 /*----------------------------------------------------------------------*/
+
+
+/* Change revision property NAME to VALUE for REVISION in REPOS.  If
+   VALIDATE_PROPS is set, use functions which perform validation of
+   the property value.  Otherwise, bypass those checks. */
+static svn_error_t *
+change_rev_prop(svn_repos_t *repos,
+                svn_revnum_t revision,
+                const char *name,
+                const svn_string_t *value,
+                svn_boolean_t validate_props,
+                apr_pool_t *pool)
+{
+  if (validate_props)
+    return svn_fs_change_rev_prop2(svn_repos_fs(repos), revision, name,
+                                   NULL, value, pool);
+  else
+    return svn_repos_fs_change_rev_prop4(repos, revision, NULL, name,
+                                         NULL, value, FALSE, FALSE,
+                                         NULL, NULL, pool);
+}
+
+/* Change property NAME to VALUE for PATH in TXN_ROOT.  If
+   VALIDATE_PROPS is set, use functions which perform validation of
+   the property value.  Otherwise, bypass those checks. */
+static svn_error_t *
+change_node_prop(svn_fs_root_t *txn_root,
+                 const char *path,
+                 const char *name,
+                 const svn_string_t *value,
+                 svn_boolean_t validate_props,
+                 apr_pool_t *pool)
+{
+  if (validate_props)
+    return svn_repos_fs_change_node_prop(txn_root, path, name, value, pool);
+  else
+    return svn_fs_change_node_prop(txn_root, path, name, value, pool);
+}
 
 /* Prepend the mergeinfo source paths in MERGEINFO_ORIG with PARENT_DIR, and
    return it in *MERGEINFO_VAL. */
@@ -582,8 +621,7 @@ new_node_record(void **node_baton,
   *node_baton = nb;
   return SVN_NO_ERROR;
 }
-
-
+               
 static svn_error_t *
 set_revision_property(void *baton,
                       const char *name,
@@ -593,7 +631,10 @@ set_revision_property(void *baton,
 
   if (rb->rev > 0)
     {
-      SVN_ERR(svn_fs_change_txn_prop(rb->txn, name, value, rb->pool));
+      if (rb->pb->validate_props)
+        SVN_ERR(svn_repos_fs_change_txn_prop(rb->txn, name, value, rb->pool));
+      else
+        SVN_ERR(svn_fs_change_txn_prop(rb->txn, name, value, rb->pool));
 
       /* Remember any datestamp that passes through!  (See comment in
          close_revision() below.) */
@@ -610,8 +651,8 @@ set_revision_property(void *baton,
       SVN_ERR(svn_fs_youngest_rev(&youngest_rev, pb->fs, rb->pool));
 
       if (youngest_rev == 0)
-        SVN_ERR(svn_fs_change_rev_prop2(pb->fs, 0, name, NULL, value,
-                                        rb->pool));
+        SVN_ERR(change_rev_prop(pb->repos, 0, name, value,
+                                pb->validate_props, rb->pool));
     }
 
   return SVN_NO_ERROR;
@@ -676,8 +717,8 @@ set_node_property(void *baton,
         }
     }
 
-  return svn_fs_change_node_prop(rb->txn_root, nb->path,
-                                 name, value, nb->pool);
+  return change_node_prop(rb->txn_root, nb->path, name, value,
+                          pb->validate_props, nb->pool);
 }
 
 
@@ -688,8 +729,8 @@ delete_node_property(void *baton,
   struct node_baton *nb = baton;
   struct revision_baton *rb = nb->rb;
 
-  return svn_fs_change_node_prop(rb->txn_root, nb->path,
-                                 name, NULL, nb->pool);
+  return change_node_prop(rb->txn_root, nb->path, name, NULL,
+                          rb->pb->validate_props, nb->pool);
 }
 
 
@@ -709,10 +750,8 @@ remove_node_props(void *baton)
       const void *key;
 
       apr_hash_this(hi, &key, NULL, NULL);
-
-      SVN_ERR(svn_fs_change_node_prop(rb->txn_root, nb->path,
-                                      (const char *) key, NULL,
-                                      nb->pool));
+      SVN_ERR(change_node_prop(rb->txn_root, nb->path, key, NULL,
+                               rb->pb->validate_props, nb->pool));
     }
 
   return SVN_NO_ERROR;
@@ -858,9 +897,8 @@ close_revision(void *baton)
      Note that if rb->datestamp is NULL, that's fine -- if the dump
      data doesn't carry a datestamp, we want to preserve that fact in
      the load. */
-  SVN_ERR(svn_fs_change_rev_prop(pb->fs, *new_rev,
-                                 SVN_PROP_REVISION_DATE, rb->datestamp,
-                                 rb->pool));
+  SVN_ERR(change_rev_prop(pb->repos, *new_rev, SVN_PROP_REVISION_DATE,
+                          rb->datestamp, pb->validate_props, rb->pool));
 
   if (pb->notify_func)
     {
@@ -886,6 +924,7 @@ svn_repos_get_fs_build_parser3(const svn_repos_parse_fns2_t **callbacks,
                                void **parse_baton,
                                svn_repos_t *repos,
                                svn_boolean_t use_history,
+                               svn_boolean_t validate_props,
                                enum svn_repos_load_uuid uuid_action,
                                const char *parent_dir,
                                svn_repos_notify_func_t notify_func,
@@ -910,6 +949,7 @@ svn_repos_get_fs_build_parser3(const svn_repos_parse_fns2_t **callbacks,
   pb->repos = repos;
   pb->fs = svn_repos_fs(repos);
   pb->use_history = use_history;
+  pb->validate_props = validate_props;
   pb->notify_func = notify_func;
   pb->notify_baton = notify_baton;
   pb->notify = svn_repos_notify_create(svn_repos_notify_load_txn_start, pool);
@@ -934,6 +974,7 @@ svn_repos_load_fs3(svn_repos_t *repos,
                    const char *parent_dir,
                    svn_boolean_t use_pre_commit_hook,
                    svn_boolean_t use_post_commit_hook,
+                   svn_boolean_t validate_props,
                    svn_repos_notify_func_t notify_func,
                    void *notify_baton,
                    svn_cancel_func_t cancel_func,
@@ -949,6 +990,7 @@ svn_repos_load_fs3(svn_repos_t *repos,
   SVN_ERR(svn_repos_get_fs_build_parser3(&parser, &parse_baton,
                                          repos,
                                          TRUE, /* look for copyfrom revs */
+                                         validate_props,
                                          uuid_action,
                                          parent_dir,
                                          notify_func,

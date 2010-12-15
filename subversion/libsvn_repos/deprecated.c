@@ -718,7 +718,7 @@ svn_repos_load_fs2(svn_repos_t *repos,
                    apr_pool_t *pool)
 {
   return svn_repos_load_fs3(repos, dumpstream, uuid_action, parent_dir,
-                            use_pre_commit_hook, use_post_commit_hook,
+                            use_pre_commit_hook, use_post_commit_hook, FALSE,
                             feedback_stream ? repos_notify_handler : NULL,
                             feedback_stream, cancel_func, cancel_baton, pool);
 }
@@ -804,7 +804,7 @@ svn_repos_get_fs_build_parser2(const svn_repos_parse_fns2_t **parser,
                                apr_pool_t *pool)
 {
   return svn_repos_get_fs_build_parser3(parser, parse_baton, repos, use_history,
-                                        uuid_action, parent_dir,
+                                        FALSE, uuid_action, parent_dir,
                                         outstream ? repos_notify_handler : NULL,
                                         outstream, pool);
 }
