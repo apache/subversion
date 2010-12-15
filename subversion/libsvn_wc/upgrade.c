@@ -937,7 +937,11 @@ migrate_props(const char *dir_abspath,
 }
 
 
-/* If DIR_RELPATH is set then any .svn-revert files will trigger an
+/* Copy all the text-base files from the administrative area of WC directory
+   DIR_ABSPATH into the pristine store of SDB which is located in directory
+   NEW_WCROOT_ABSPATH.
+
+   If DIR_RELPATH is set then any .svn-revert files will trigger an
    attempt to update the checksum in a NODES row below the top WORKING
    node. */
 static svn_error_t *
@@ -954,65 +958,74 @@ migrate_text_bases(const char *dir_abspath,
                                                 TEXT_BASE_SUBDIR,
                                                 scratch_pool);
 
+  /* Iterate over the text-base files */
   SVN_ERR(svn_io_get_dirents3(&dirents, text_base_dir, TRUE,
                               scratch_pool, scratch_pool));
   for (hi = apr_hash_first(scratch_pool, dirents); hi;
-            hi = apr_hash_next(hi))
+       hi = apr_hash_next(hi))
     {
       const char *text_base_basename = svn__apr_hash_index_key(hi);
-      const char *pristine_path;
-      const char *text_base_path;
       svn_checksum_t *md5_checksum;
       svn_checksum_t *sha1_checksum;
-      svn_sqlite__stmt_t *stmt;
-      apr_finfo_t finfo;
 
       svn_pool_clear(iterpool);
-      text_base_path = svn_dirent_join(text_base_dir, text_base_basename,
-                                       iterpool);
 
-      /* ### This code could be a bit smarter: we could chain checksum
-             streams instead of reading the file twice; we could check to
-             see if a pristine row exists before attempting to insert one;
-             we could check and see if a pristine file exists before
-             attempting to copy a new one over it.
-             
-             However, I think simplicity is the big win here, especially since
-             this is code that runs exactly once on a user's machine: when
-             doing the upgrade.  If you disagree, feel free to add the
-             complexity. :)  */
+      /* Calculate its checksums and copy it to the pristine store */
+      {
+        const char *pristine_path;
+        const char *text_base_path;
+        svn_sqlite__stmt_t *stmt;
+        apr_finfo_t finfo;
 
-      /* Gather the two checksums. */
-      SVN_ERR(svn_io_file_checksum2(&md5_checksum, text_base_path,
-                                    svn_checksum_md5, iterpool));
-      SVN_ERR(svn_io_file_checksum2(&sha1_checksum, text_base_path,
-                                    svn_checksum_sha1, iterpool));
+        text_base_path = svn_dirent_join(text_base_dir, text_base_basename,
+                                         iterpool);
 
-      SVN_ERR(svn_io_stat(&finfo, text_base_path, APR_FINFO_SIZE, iterpool));
+        /* ### This code could be a bit smarter: we could chain checksum
+               streams instead of reading the file twice; we could check to
+               see if a pristine row exists before attempting to insert one;
+               we could check and see if a pristine file exists before
+               attempting to copy a new one over it.
 
-      /* Insert a row into the pristine table. */
-      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_PRISTINE));
-      SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, sha1_checksum, iterpool));
-      SVN_ERR(svn_sqlite__bind_checksum(stmt, 2, md5_checksum, iterpool));
-      SVN_ERR(svn_sqlite__bind_int64(stmt, 3, finfo.size));
-      SVN_ERR(svn_sqlite__insert(NULL, stmt));
+               However, I think simplicity is the big win here, especially since
+               this is code that runs exactly once on a user's machine: when
+               doing the upgrade.  If you disagree, feel free to add the
+               complexity. :)  */
 
-      SVN_ERR(svn_wc__db_pristine_get_future_path(&pristine_path,
-                                                  new_wcroot_abspath,
-                                                  sha1_checksum,
-                                                  iterpool, iterpool));
+        /* Gather the two checksums. */
+        SVN_ERR(svn_io_file_checksum2(&md5_checksum, text_base_path,
+                                      svn_checksum_md5, iterpool));
+        SVN_ERR(svn_io_file_checksum2(&sha1_checksum, text_base_path,
+                                      svn_checksum_sha1, iterpool));
 
-      /* Ensure any sharding directories exist. */
-      SVN_ERR(svn_wc__ensure_directory(svn_dirent_dirname(pristine_path,
-                                                          iterpool),
-                                       iterpool));
+        SVN_ERR(svn_io_stat(&finfo, text_base_path, APR_FINFO_SIZE, iterpool));
 
-      /* Copy, rather than move, so that the upgrade can be restarted.
-         It could be moved if upgrades scanned for files in the
-         pristine directory as well as the text-base directory. */
-      SVN_ERR(svn_io_copy_file(text_base_path, pristine_path, TRUE,
-                               iterpool));
+        /* Insert a row into the pristine table. */
+        SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_PRISTINE));
+        SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, sha1_checksum, iterpool));
+        SVN_ERR(svn_sqlite__bind_checksum(stmt, 2, md5_checksum, iterpool));
+        SVN_ERR(svn_sqlite__bind_int64(stmt, 3, finfo.size));
+        SVN_ERR(svn_sqlite__insert(NULL, stmt));
 
+        SVN_ERR(svn_wc__db_pristine_get_future_path(&pristine_path,
+                                                    new_wcroot_abspath,
+                                                    sha1_checksum,
+                                                    iterpool, iterpool));
+
+        /* Ensure any sharding directories exist. */
+        SVN_ERR(svn_wc__ensure_directory(svn_dirent_dirname(pristine_path,
+                                                            iterpool),
+                                         iterpool));
+
+        /* Copy, rather than move, so that the upgrade can be restarted.
+           It could be moved if upgrades scanned for files in the
+           pristine directory as well as the text-base directory. */
+        SVN_ERR(svn_io_copy_file(text_base_path, pristine_path, TRUE,
+                                 iterpool));
+      }
+
+      /* If DIR_RELPATH is set and this text base is a "revert base", then
+         attempt to update the checksum in a NODES row below the top WORKING
+         node. */
       if (dir_relpath)
         {
           apr_size_t len = strlen(text_base_basename);
@@ -1032,6 +1045,7 @@ migrate_text_bases(const char *dir_abspath,
               const char *local_relpath = svn_relpath_join(dir_relpath, name,
                                                            iterpool);
               svn_boolean_t have_row;
+              svn_sqlite__stmt_t *stmt;
 
               SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                                 STMT_SELECT_NODE_INFO));
