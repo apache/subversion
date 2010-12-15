@@ -222,6 +222,7 @@ enum
     svnadmin__bdb_log_keep,
     svnadmin__config_dir,
     svnadmin__bypass_hooks,
+    svnadmin__bypass_prop_validation,
     svnadmin__use_pre_commit_hook,
     svnadmin__use_post_commit_hook,
     svnadmin__use_pre_revprop_change_hook,
@@ -260,6 +261,9 @@ static const apr_getopt_option_t options_table[] =
 
     {"bypass-hooks",  svnadmin__bypass_hooks, 0,
      N_("bypass the repository hook system")},
+
+    {"bypass-prop-validation",  svnadmin__bypass_prop_validation, 0,
+     N_("bypass property validation logic")},
 
     {"quiet",         'q', 0,
      N_("no progress (only errors) to stderr")},
@@ -396,7 +400,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "one specified in the stream.  Progress feedback is sent to stdout.\n"),
    {'q', svnadmin__ignore_uuid, svnadmin__force_uuid,
     svnadmin__use_pre_commit_hook, svnadmin__use_post_commit_hook,
-    svnadmin__parent_dir} },
+    svnadmin__parent_dir, svnadmin__bypass_prop_validation} },
 
   {"lslocks", subcommand_lslocks, {0}, N_
    ("usage: svnadmin lslocks REPOS_PATH [PATH-IN-REPOS]\n\n"
@@ -510,6 +514,7 @@ struct svnadmin_opt_state
   svn_boolean_t clean_logs;                         /* --clean-logs */
   svn_boolean_t bypass_hooks;                       /* --bypass-hooks */
   svn_boolean_t wait;                               /* --wait */
+  svn_boolean_t bypass_prop_validation;             /* --bypass-prop-validation */
   enum svn_repos_load_uuid uuid_action;             /* --ignore-uuid,
                                                        --force-uuid */
   const char *parent_dir;
@@ -933,6 +938,7 @@ subcommand_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 static svn_error_t *
 subcommand_load(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
+  svn_error_t *err;
   struct svnadmin_opt_state *opt_state = baton;
   svn_repos_t *repos;
   svn_stream_t *stdin_stream, *stdout_stream = NULL;
@@ -947,14 +953,19 @@ subcommand_load(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   if (! opt_state->quiet)
     stdout_stream = recode_stream_create(stdout, pool);
 
-  SVN_ERR(svn_repos_load_fs3(repos, stdin_stream,
-                             opt_state->uuid_action, opt_state->parent_dir,
-                             opt_state->use_pre_commit_hook,
-                             opt_state->use_post_commit_hook,
-                             !opt_state->quiet ? repos_notify_handler : NULL,
-                             stdout_stream, check_cancel, NULL, pool));
-
-  return SVN_NO_ERROR;
+  err = svn_repos_load_fs3(repos, stdin_stream,
+                           opt_state->uuid_action, opt_state->parent_dir,
+                           opt_state->use_pre_commit_hook,
+                           opt_state->use_post_commit_hook,
+                           opt_state->bypass_prop_validation ? FALSE : TRUE,
+                           opt_state->quiet ? NULL : repos_notify_handler,
+                           stdout_stream, check_cancel, NULL, pool);
+  if (err && err->apr_err == SVN_ERR_BAD_PROPERTY_VALUE)
+    return svn_error_quick_wrap(err, 
+                                "Invalid property value found in dumpstream; "
+                                "consider repairing the source or using "
+                                "--bypass-prop-validation while loading.");
+  return err;
 }
 
 
@@ -1177,23 +1188,12 @@ set_revprop(const char *prop_name, const char *filename,
 
   /* If we are bypassing the hooks system, we just hit the filesystem
      directly. */
-  if (opt_state->use_pre_revprop_change_hook ||
-      opt_state->use_post_revprop_change_hook)
-    {
-      SVN_ERR(svn_repos_fs_change_rev_prop3(repos,
-                            opt_state->start_revision.value.number,
-                            NULL, prop_name, prop_value,
-                            opt_state->use_pre_revprop_change_hook,
-                            opt_state->use_post_revprop_change_hook, NULL,
-                            NULL, pool));
-    }
-  else
-    {
-      svn_fs_t *fs = svn_repos_fs(repos);
-      SVN_ERR(svn_fs_change_rev_prop2(fs,
-                                      opt_state->start_revision.value.number,
-                                      prop_name, NULL, prop_value, pool));
-    }
+  SVN_ERR(svn_repos_fs_change_rev_prop4(
+              repos, opt_state->start_revision.value.number,
+              NULL, prop_name, NULL, prop_value,
+              opt_state->use_pre_revprop_change_hook,
+              opt_state->use_post_revprop_change_hook,
+              NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1721,6 +1721,9 @@ main(int argc, const char *argv[])
         break;
       case svnadmin__bypass_hooks:
         opt_state.bypass_hooks = TRUE;
+        break;
+      case svnadmin__bypass_prop_validation:
+        opt_state.bypass_prop_validation = TRUE;
         break;
       case svnadmin__clean_logs:
         opt_state.clean_logs = TRUE;

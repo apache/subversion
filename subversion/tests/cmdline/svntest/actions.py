@@ -304,14 +304,20 @@ def run_and_verify_svn2(message, expected_stdout, expected_stderr,
   verify.verify_exit_code(message, exit_code, expected_exit)
   return exit_code, out, err
 
-def run_and_verify_load(repo_dir, dump_file_content):
+def run_and_verify_load(repo_dir, dump_file_content,
+                        bypass_prop_validation = False):
   "Runs 'svnadmin load' and reports any errors."
   if not isinstance(dump_file_content, list):
     raise TypeError("dump_file_content argument should have list type")
   expected_stderr = []
-  exit_code, output, errput = main.run_command_stdin(
-    main.svnadmin_binary, expected_stderr, 0, 1, dump_file_content,
-    'load', '--force-uuid', '--quiet', repo_dir)
+  if bypass_prop_validation:
+    exit_code, output, errput = main.run_command_stdin(
+      main.svnadmin_binary, expected_stderr, 0, 1, dump_file_content,
+      'load', '--force-uuid', '--quiet', '--bypass-prop-validation', repo_dir)
+  else:
+    exit_code, output, errput = main.run_command_stdin(
+      main.svnadmin_binary, expected_stderr, 0, 1, dump_file_content,
+      'load', '--force-uuid', '--quiet', repo_dir)
 
   verify.verify_outputs("Unexpected stderr output", None, errput,
                         None, expected_stderr)
@@ -340,7 +346,8 @@ def run_and_verify_svnrdump(dumpfile_content, expected_stdout,
   verify.verify_exit_code("Unexpected return code", exit_code, expected_exit)
   return output
 
-def load_repo(sbox, dumpfile_path = None, dump_str = None):
+def load_repo(sbox, dumpfile_path = None, dump_str = None,
+              bypass_prop_validation = False):
   "Loads the dumpfile into sbox"
   if not dump_str:
     dump_str = open(dumpfile_path, "rb").read()
@@ -351,7 +358,8 @@ def load_repo(sbox, dumpfile_path = None, dump_str = None):
   main.create_repos(sbox.repo_dir)
 
   # Load the mergetracking dumpfile into the repos, and check it out the repo
-  run_and_verify_load(sbox.repo_dir, dump_str.splitlines(True))
+  run_and_verify_load(sbox.repo_dir, dump_str.splitlines(True),
+                      bypass_prop_validation)
   run_and_verify_svn(None, None, [], "co", sbox.repo_url, sbox.wc_dir)
 
   return dump_str

@@ -33,6 +33,7 @@
 #include "svn_time.h"
 #include "repos.h"
 #include "svn_private_config.h"
+#include "private/svn_repos_private.h"
 #include "private/svn_utf_private.h"
 
 
@@ -152,15 +153,10 @@ svn_repos_fs_begin_txn_for_update(svn_fs_txn_t **txn_p,
 
 /*** Property wrappers ***/
 
-/* Validate that property NAME is valid for use in a Subversion
-   repository; return SVN_ERR_REPOS_BAD_ARGS if it isn't.  For some "svn:"
-   properties, also validate the value, and return SVN_ERR_BAD_PROPERTY_VALUE
-   if it is not valid.
-
-   Use POOL for temporary allocations.
- */
-static svn_error_t *
-validate_prop(const char *name, const svn_string_t *value, apr_pool_t *pool)
+svn_error_t *
+svn_repos__validate_prop(const char *name,
+                         const svn_string_t *value,
+                         apr_pool_t *pool)
 {
   svn_prop_kind_t kind = svn_property_kind(NULL, name);
 
@@ -223,7 +219,7 @@ svn_repos_fs_change_node_prop(svn_fs_root_t *root,
                               apr_pool_t *pool)
 {
   /* Validate the property, then call the wrapped function. */
-  SVN_ERR(validate_prop(name, value, pool));
+  SVN_ERR(svn_repos__validate_prop(name, value, pool));
   return svn_fs_change_node_prop(root, path, name, value, pool);
 }
 
@@ -238,7 +234,7 @@ svn_repos_fs_change_txn_props(svn_fs_txn_t *txn,
   for (i = 0; i < txnprops->nelts; i++)
     {
       svn_prop_t *prop = &APR_ARRAY_IDX(txnprops, i, svn_prop_t);
-      SVN_ERR(validate_prop(prop->name, prop->value, pool));
+      SVN_ERR(svn_repos__validate_prop(prop->name, prop->value, pool));
     }
 
   return svn_fs_change_txn_props(txn, txnprops, pool);
@@ -286,7 +282,7 @@ svn_repos_fs_change_rev_prop4(svn_repos_t *repos,
       const svn_string_t *old_value;
       char action;
 
-      SVN_ERR(validate_prop(name, new_value, pool));
+      SVN_ERR(svn_repos__validate_prop(name, new_value, pool));
 
       /* Fetch OLD_VALUE for svn_fs_change_rev_prop2(). */
       if (old_value_p)
