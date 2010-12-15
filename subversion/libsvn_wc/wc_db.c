@@ -5161,8 +5161,7 @@ read_info(svn_wc__db_status_t *status,
               op_depth = svn_sqlite__column_int64(stmt_info, 0);
             }
 
-          if (have_base)
-            *have_base = (op_depth == 0);
+          *have_base = (op_depth == 0);
         }
     }
   else if (have_act)
