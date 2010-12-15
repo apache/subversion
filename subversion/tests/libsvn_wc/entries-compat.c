@@ -71,9 +71,9 @@
 #define AUTHOR_1 "johndoe"
 #define AUTHOR_2 "janedoe"
 
-/* Stick to MD5 values. We don't want to trigger SHA1->MD5 lookups.  */
+/* Some arbitrary checksum values */
 #define MD5_1 "2d18c5e57e84c5b8a5e9a6e13fa394dc"
-#define MD5_2 "5d41402abc4b2a76b9719d911017c592"
+#define SHA1_1 "aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d"
 
 #define F_TC_DATA "(conflict F file update edited deleted (version 22 " ROOT_ONE " 1 2 branch1/ft/F none) (version 22 " ROOT_ONE " 1 3 branch1/ft/F file))"
 #define G_TC_DATA "(conflict G file update edited deleted (version 22 " ROOT_ONE " 1 2 branch1/ft/F none) (version 22 " ROOT_ONE " 1 3 branch1/ft/F file))"
@@ -88,6 +88,8 @@ static const char * const TESTING_DATA = (
    "insert into repository values (2, '" ROOT_TWO "', '" UUID_TWO "'); "
    "insert into wcroot values (1, null); "
 
+   "insert into pristine values ('$sha1$" SHA1_1 "', NULL, 15, 1, '$md5 $" MD5_1 "'); "
+
    /* ### The file_externals column in NODES is temporary, and will be
       ### removed.  However, to keep the tests passing, we need to add it
       ### to the following insert statements.  *Be sure to remove it*. */
@@ -99,7 +101,7 @@ static const char * const TESTING_DATA = (
   "  null, null, null, null);"
   "insert into nodes values ("
   "  1, 'A', 0, '', 1, 'A', 1, 'normal',"
-  "  null, null, 'file', '()', null, '$md5 $" MD5_1 "', null, 1, " TIME_1s ", '" AUTHOR_1 "',"
+  "  null, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, 1, " TIME_1s ", '" AUTHOR_1 "',"
   "  10, null, null, null);"
   "insert into nodes values ("
   "  1, 'B', 0, '', 1, 'B', null, 'excluded',"
@@ -119,11 +121,11 @@ static const char * const TESTING_DATA = (
   "  null, null, null, null);"
   "insert into nodes values ("
   "  1, 'F', 0, '', 1, 'F', 1, 'normal',"
-  "  null, null, 'file', '()', null, '$md5 $" MD5_1 "', null, 1, " TIME_1s ", '" AUTHOR_1 "',"
+  "  null, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, 1, " TIME_1s ", '" AUTHOR_1 "',"
   "  15, null, null, null);"
   "insert into nodes values ("
   "  1, 'G', 0, '', 2, 'G-alt', 1, 'normal',"
-  "  null, null, 'file', '()', null, '$md5 $" MD5_1 "', null, 2, " TIME_2s ", '" AUTHOR_2 "',"
+  "  null, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, 2, " TIME_2s ", '" AUTHOR_2 "',"
   "  15, null, null, null);"
   "insert into nodes values ("
   "  1, 'H', 0, '', 1, 'H', 1, 'normal',"
@@ -143,7 +145,7 @@ static const char * const TESTING_DATA = (
   "  null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-e/J-e-a', 0, 'J/J-e', 1, 'J/J-e/J-e-a', 1, 'normal',"
-  "  null, null, 'file', '()', null, '$md5 $" MD5_1 "', null, 1, " TIME_1s ", '" AUTHOR_1 "',"
+  "  null, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, 1, " TIME_1s ", '" AUTHOR_1 "',"
   "  15, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-e/J-e-b', 0, 'J/J-e', 1, 'J/J-e/J-e-b', 1, 'normal',"
@@ -151,7 +153,7 @@ static const char * const TESTING_DATA = (
   "  null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-e/J-e-b/Jeba', 0, 'J/J-e/J-e-b', 1, 'J/J-e/J-e-b/Jeba', 1, 'normal',"
-  "  null, null, 'file', '()', null, '$md5 $" MD5_1 "', null, 1, " TIME_1s ", '" AUTHOR_1 "',"
+  "  null, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, 1, " TIME_1s ", '" AUTHOR_1 "',"
   "  15, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-f', 0, 'J', 1, 'J/J-f', 1, 'normal',"
@@ -167,11 +169,11 @@ static const char * const TESTING_DATA = (
   "  null, null, null, null);"
   "insert into nodes values ("
   "  1, 'K/K-a', 0, 'K', 1, 'K/K-a', 1, 'normal',"
-  "  null, null, 'file', '()', null, '$md5 $" MD5_1 "', null, 1, " TIME_1s ", '" AUTHOR_1 "',"
+  "  null, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, 1, " TIME_1s ", '" AUTHOR_1 "',"
   "  15, null, null, null);"
   "insert into nodes values ("
   "  1, 'K/K-b', 0, 'K', 1, 'K/K-b', 1, 'normal',"
-  "  null, null, 'file', '()', null, '$md5 $" MD5_1 "', null, 1, " TIME_1s ", '" AUTHOR_1 "',"
+  "  null, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, 1, " TIME_1s ", '" AUTHOR_1 "',"
   "  15, null, null, null);"
   ""
    /* Load data into NODES table;
@@ -211,7 +213,7 @@ static const char * const TESTING_DATA = (
   "  null, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-d', 1, 'J', 2, 'moved/file', 2, 'normal',"
-  "  1, null, 'file', '()', null, '$md5 $" MD5_1 "', null, 2, " TIME_2s ", '" AUTHOR_2 "',"
+  "  1, null, 'file', '()', null, '$sha1$" SHA1_1 "', null, 2, " TIME_2s ", '" AUTHOR_2 "',"
   "  10, null, null, null);"
   "insert into nodes values ("
   "  1, 'J/J-e', 1, 'J', null, null, null, 'not-present',"
