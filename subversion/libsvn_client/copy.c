@@ -1026,6 +1026,11 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
       /* More info for our INFO structure.  */
       info->src_path = src_rel;
       info->dst_path = dst_rel;
+
+      apr_hash_set(action_hash, info->dst_path, APR_HASH_KEY_STRING,
+                       info);
+      if (is_move && (! info->resurrection))
+        apr_hash_set(action_hash, info->src_path, APR_HASH_KEY_STRING, info);
     }
 
   if (SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx))
@@ -1060,8 +1065,6 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
           item->url = svn_uri_join(top_url, info->dst_path, pool);
           item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
           APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
-          apr_hash_set(action_hash, info->dst_path, APR_HASH_KEY_STRING,
-                       info);
 
           if (is_move && (! info->resurrection))
             {
@@ -1069,8 +1072,6 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
               item->url = svn_uri_join(top_url, info->src_path, pool);
               item->state_flags = SVN_CLIENT_COMMIT_ITEM_DELETE;
               APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
-              apr_hash_set(action_hash, info->src_path, APR_HASH_KEY_STRING,
-                           info);
             }
         }
 
