@@ -52,6 +52,7 @@ svn="$auth_gnome_keyring $auth_kwallet $client $delta $diff $ra $subr $wc"
 svnadmin="$delta $fs $repos $subr"
 svndumpfilter="$delta $fs $repos $subr"
 svnlook="$delta $diff $fs $repos $subr"
+svnrdump="$auth_gnome_keyring $auth_kwallet $client $delta $ra $repos $subr"
 svnserve="$delta $fs $ra_svn $repos $subr"
 svnsync="$auth_gnome_keyring $auth_kwallet $delta $ra $subr"
 svnversion="$subr $wc"
@@ -59,7 +60,7 @@ entries_dump="$subr $wc"
 atomic_ra_revprop_change="$subr $ra"
 
 # Variable 'executables' containing names of variables corresponding to executables
-executables="svn svnadmin svndumpfilter svnlook svnserve svnsync svnversion entries_dump atomic_ra_revprop_change"
+executables="svn svnadmin svndumpfilter svnlook svnrdump svnserve svnsync svnversion atomic_ra_revprop_change entries_dump"
 
 for executable in $executables; do
   # Set variables containing paths of executables
