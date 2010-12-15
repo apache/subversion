@@ -1029,10 +1029,10 @@ migrate_text_bases(const char *dir_abspath,
       if (dir_relpath)
         {
           apr_size_t len = strlen(text_base_basename);
-          if (len >= sizeof(SVN_WC__REVERT_EXT)
-              && strcmp(text_base_basename
-                        + len - sizeof(SVN_WC__REVERT_EXT) - 1,
-                        SVN_WC__REVERT_EXT))
+          apr_size_t suffix_len = sizeof(SVN_WC__REVERT_EXT) - 1;
+          if (len > suffix_len
+              && !strcmp(text_base_basename + len - suffix_len,
+                         SVN_WC__REVERT_EXT))
             {
               /* Assumming this revert-base is not an orphan, the
                  upgrade process will have inserted a NODES row with a
@@ -1040,8 +1040,7 @@ migrate_text_bases(const char *dir_abspath,
                  Update that checksum now. */
               apr_int64_t op_depth = -1, wc_id = 1;
               const char *name
-                = apr_pstrndup(iterpool, text_base_basename,
-                               len - sizeof(SVN_WC__REVERT_EXT) + 1);
+                = apr_pstrndup(iterpool, text_base_basename, len - suffix_len);
               const char *local_relpath = svn_relpath_join(dir_relpath, name,
                                                            iterpool);
               svn_boolean_t have_row;

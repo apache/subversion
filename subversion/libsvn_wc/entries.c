@@ -1851,10 +1851,10 @@ write_entry(struct write_baton **entry_node,
             }
         }
 
-      /* If there is a WORKING node file then we don't have the
+      /* If there is a copied WORKING node file then we don't have the
          revert-base checksum for this file.  It will get updated
          later when we transfer the pristine texts. */
-      if (entry->kind == svn_node_dir || working_node)
+      if (entry->kind == svn_node_dir || (working_node && entry->copied))
         base_node->checksum = NULL;
       else
         SVN_ERR(svn_checksum_parse_hex(&base_node->checksum, svn_checksum_md5,

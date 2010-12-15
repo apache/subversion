@@ -1317,6 +1317,19 @@ svn_wc__internal_node_get_schedule(svn_wc_schedule_t *schedule,
               if (base_status != svn_wc__db_status_not_present)
                 *schedule = svn_wc_schedule_replace;
             }
+          else
+            {
+              svn_boolean_t below_work;
+
+              SVN_ERR(svn_wc__db_temp_below_work(&below_work,
+                                                 db, local_abspath,
+                                                 scratch_pool));
+              /* Unlike base nodes above, not-present is considered a
+                 replace since working not-present represents a delete
+                 to be committed */
+              if (below_work)
+                *schedule = svn_wc_schedule_replace;
+            }
 
           if (status == svn_wc__db_status_added)
             break; /* Local addition */

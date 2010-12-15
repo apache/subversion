@@ -9114,3 +9114,25 @@ svn_wc__db_temp_op_set_new_dir_to_incomplete(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc__db_temp_below_work(svn_boolean_t *have_work,
+                           svn_wc__db_t *db,
+                           const char *local_abspath,
+                           apr_pool_t *scratch_pool)
+{
+  svn_boolean_t have_base;
+  svn_wc__db_status_t status;
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+  SVN_ERR(info_below_working(&have_base, have_work, &status,
+                             pdh, local_relpath, scratch_pool));
+
+  return SVN_NO_ERROR;
+}

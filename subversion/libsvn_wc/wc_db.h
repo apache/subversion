@@ -2430,6 +2430,14 @@ svn_wc__db_drop_root(svn_wc__db_t *db,
 /* Return the OP_DEPTH for LOCAL_RELPATH. */
 int svn_wc__db_op_depth_for_upgrade(const char *local_relpath);
 
+/* Set *HAVE_WORK TRUE if there is a working layer below the top layer */
+svn_error_t *
+svn_wc__db_temp_below_work(svn_boolean_t *have_work,
+                           svn_wc__db_t *db,
+                           const char *local_abspath,
+                           apr_pool_t *scratch_pool);
+
+
 /* @} */
 
 
