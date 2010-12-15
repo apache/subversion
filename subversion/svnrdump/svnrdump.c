@@ -158,6 +158,7 @@ struct replay_baton {
 typedef struct opt_baton_t {
   svn_ra_session_t *session;
   const char *url;
+  svn_boolean_t help;
   svn_opt_revision_t start_revision;
   svn_opt_revision_t end_revision;
   svn_boolean_t quiet;
@@ -750,8 +751,7 @@ main(int argc, const char **argv)
           exit(EXIT_SUCCESS);
           break;
         case 'h':
-          SVNRDUMP_ERR(help_cmd(os, opt_baton, pool));
-          exit(EXIT_SUCCESS);
+          opt_baton->help = TRUE;
           break;
         case opt_auth_username:
           SVNRDUMP_ERR(svn_utf_cstring_to_utf8(&username, opt_arg, pool));
@@ -780,32 +780,42 @@ main(int argc, const char **argv)
         }
     }
 
-  if (os->ind >= os->argc)
+  if (opt_baton->help)
     {
-      svn_error_clear(svn_cmdline_fprintf(stderr, pool,
-                                          _("Subcommand argument required\n")));
-      SVNRDUMP_ERR(help_cmd(NULL, NULL, pool));
-      svn_pool_destroy(pool);
-      exit(EXIT_FAILURE);
+      subcommand = svn_opt_get_canonical_subcommand2(svnrdump__cmd_table,
+                                                     "help");
     }
-
-  first_arg = os->argv[os->ind++];
-
-  subcommand = svn_opt_get_canonical_subcommand2(svnrdump__cmd_table,
-                                                 first_arg);
-
-  if (subcommand == NULL)
+  else
     {
-      const char *first_arg_utf8;
-      err = svn_utf_cstring_to_utf8(&first_arg_utf8, first_arg, pool);
-      if (err)
-        return svn_cmdline_handle_exit_error(err, pool, "svnrdump: ");
-      svn_error_clear(svn_cmdline_fprintf(stderr, pool,
-                                          _("Unknown command: '%s'\n"),
-                                          first_arg_utf8));
-      SVNRDUMP_ERR(help_cmd(NULL, NULL, pool));
-      svn_pool_destroy(pool);
-      exit(EXIT_FAILURE);
+      if (os->ind >= os->argc)
+        {
+          svn_error_clear(
+              svn_cmdline_fprintf(stderr, pool,
+                                  _("Subcommand argument required\n")));
+          SVNRDUMP_ERR(help_cmd(NULL, NULL, pool));
+          svn_pool_destroy(pool);
+          exit(EXIT_FAILURE);
+        }
+      else
+        {
+          first_arg = os->argv[os->ind++];
+          subcommand = svn_opt_get_canonical_subcommand2(svnrdump__cmd_table,
+                                                         first_arg);
+
+          if (subcommand == NULL)
+            {
+              const char *first_arg_utf8;
+              err = svn_utf_cstring_to_utf8(&first_arg_utf8, first_arg, pool);
+              if (err)
+                return svn_cmdline_handle_exit_error(err, pool, "svnrdump: ");
+              svn_error_clear(svn_cmdline_fprintf(stderr, pool,
+                                                  _("Unknown command: '%s'\n"),
+                                                  first_arg_utf8));
+              SVNRDUMP_ERR(help_cmd(NULL, NULL, pool));
+              svn_pool_destroy(pool);
+              exit(EXIT_FAILURE);
+            }
+         }
     }
 
   /* Check that the subcommand wasn't passed any inappropriate options. */
@@ -830,12 +840,11 @@ main(int argc, const char **argv)
           if (subcommand->name[0] == '-')
             SVN_INT_ERR(help_cmd(NULL, NULL, pool));
           else
-            svn_error_clear
-              (svn_cmdline_fprintf
-               (stderr, pool,
-                _("Subcommand '%s' doesn't accept option '%s'\n"
-                  "Type 'svnrdump help %s' for usage.\n"),
-                subcommand->name, optstr, subcommand->name));
+            svn_error_clear(svn_cmdline_fprintf(
+                                stderr, pool,
+                                _("Subcommand '%s' doesn't accept option '%s'\n"
+                                  "Type 'svnrdump help %s' for usage.\n"),
+                                subcommand->name, optstr, subcommand->name));
           svn_pool_destroy(pool);
           return EXIT_FAILURE;
         }
@@ -844,6 +853,7 @@ main(int argc, const char **argv)
   if (subcommand && strcmp(subcommand->name, "help") == 0)
     {
       SVNRDUMP_ERR(help_cmd(os, opt_baton, pool));
+      svn_pool_destroy(pool);
       exit(EXIT_SUCCESS);
     }
 
@@ -852,6 +862,7 @@ main(int argc, const char **argv)
       || !svn_path_is_url(os->argv[os->ind]))
     {
       SVNRDUMP_ERR(usage(argv[0], pool));
+      svn_pool_destroy(pool);
       exit(EXIT_FAILURE);
     }
 
