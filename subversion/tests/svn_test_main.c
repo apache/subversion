@@ -26,9 +26,11 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <setjmp.h>
 
 #include <apr_pools.h>
 #include <apr_general.h>
+#include <apr_signal.h>
 
 #include "svn_cmdline.h"
 #include "svn_opt.h"
@@ -63,6 +65,9 @@ static svn_boolean_t quiet_mode = FALSE;
 /* Test option: Remove test directories after success */
 static svn_boolean_t cleanup_mode = FALSE;
 
+/* Test option: Allow segfaults */
+static svn_boolean_t allow_segfaults = FALSE;
+
 /* Option parsing enums and structures */
 enum {
   cleanup_opt = SVN_OPT_FIRST_LONGOPT_ID,
@@ -72,7 +77,8 @@ enum {
   trap_assert_opt,
   quiet_opt,
   config_opt,
-  server_minor_version_opt
+  server_minor_version_opt,
+  allow_segfault_opt
 };
 
 static const apr_getopt_option_t cl_options[] =
@@ -94,6 +100,8 @@ static const apr_getopt_option_t cl_options[] =
                     N_("catch and report SVN_ERR_ASSERT failures")},
   {"quiet",         quiet_opt, 0,
                     N_("print only unexpected results")},
+  {"allow-segfaults", allow_segfault_opt, 0,
+                    N_("don't trap seg faults (useful for debugging)")},
   {0,               0, 0, 0}
 };
 
@@ -175,6 +183,16 @@ get_array_size(void)
   return (i - 1);
 }
 
+/* Buffer used for setjmp/longjmp. */
+static jmp_buf jump_buffer;
+
+/* Our SIGSEGV handler, which jumps back into do_test_num(), which see for
+   more information. */
+static void
+crash_handler(int signum)
+{
+  longjmp(jump_buffer, 1);
+}
 
 
 /* Execute a test number TEST_NUM.  Pretty-print test name and dots
@@ -208,20 +226,44 @@ do_test_num(const char *progname,
   xfail = desc->mode == svn_test_xfail;
   wimp = xfail && desc->wip;
 
-  /* Do test */
-  msg = desc->msg;
-  if (msg_only || skip)
-    ; /* pass */
-  else if (desc->func2)
-    err = (*desc->func2)(pool);
-  else
-    err = (*desc->func_opts)(opts, pool);
-
-  if (err && err->apr_err == SVN_ERR_TEST_SKIPPED)
+  if (!allow_segfaults)
     {
-      svn_error_clear(err);
-      err = SVN_NO_ERROR;
-      skip = TRUE;
+      /* Catch a crashing test, so we don't interrupt the rest of 'em. */
+      apr_signal(SIGSEGV, crash_handler);
+    }
+
+  /* We use setjmp/longjmp to recover from the crash.  setjmp() essentially
+     establishes a rollback point, and longjmp() goes back to that point.
+     When we invoke longjmp(), it instructs setjmp() to return non-zero,
+     so we don't end up in an infinite loop.
+
+     If we've got non-zero from setjmp(), we know we've crashed. */
+  if (setjmp(jump_buffer) == 0)
+    {
+      /* Do test */
+      msg = desc->msg;
+      if (msg_only || skip)
+        ; /* pass */
+      else if (desc->func2)
+        err = (*desc->func2)(pool);
+      else
+        err = (*desc->func_opts)(opts, pool);
+
+      if (err && err->apr_err == SVN_ERR_TEST_SKIPPED)
+        {
+          svn_error_clear(err);
+          err = SVN_NO_ERROR;
+          skip = TRUE;
+        }
+    }
+  else
+    err = svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                           "Test crashed (unknown reason)");
+
+  if (!allow_segfaults)
+    {
+      /* Now back to your regularly scheduled program... */
+      apr_signal(SIGSEGV, SIG_DFL);
     }
 
   /* Failure means unexpected results -- FAIL or XPASS. */
@@ -369,6 +411,9 @@ main(int argc, const char *argv[])
           break;
         case quiet_opt:
           quiet_mode = TRUE;
+          break;
+        case allow_segfault_opt:
+          allow_segfaults = TRUE;
           break;
         case server_minor_version_opt:
           {
