@@ -937,6 +937,23 @@ migrate_props(const char *dir_abspath,
 }
 
 
+/* If STR ends with SUFFIX and is longer than SUFFIX, return the part of
+ * STR that comes before SUFFIX; else return NULL. */
+static char *
+remove_suffix(const char *str, const char *suffix, apr_pool_t *result_pool)
+{
+  int str_len = strlen(str);
+  int suffix_len = strlen(suffix);
+
+  if (str_len > suffix_len
+      && strcmp(str + str_len - suffix_len, suffix) == 0)
+    {
+      return apr_pstrmemdup(result_pool, str, str_len - suffix_len);
+    }
+
+  return NULL;
+}
+
 /* Copy all the text-base files from the administrative area of WC directory
    DIR_ABSPATH into the pristine store of SDB which is located in directory
    NEW_WCROOT_ABSPATH.
@@ -1028,24 +1045,22 @@ migrate_text_bases(const char *dir_abspath,
          node. */
       if (dir_relpath)
         {
-          apr_size_t len = strlen(text_base_basename);
-          apr_size_t suffix_len = sizeof(SVN_WC__REVERT_EXT) - 1;
-          if (len > suffix_len
-              && !strcmp(text_base_basename + len - suffix_len,
-                         SVN_WC__REVERT_EXT))
+          const char *name
+            = remove_suffix(text_base_basename, SVN_WC__REVERT_EXT, iterpool);
+
+          if (name)
             {
               /* Assumming this revert-base is not an orphan, the
                  upgrade process will have inserted a NODES row with a
                  null checksum below the top-level working node.
                  Update that checksum now. */
               apr_int64_t op_depth = -1, wc_id = 1;
-              const char *name
-                = apr_pstrndup(iterpool, text_base_basename, len - suffix_len);
               const char *local_relpath = svn_relpath_join(dir_relpath, name,
                                                            iterpool);
               svn_boolean_t have_row;
               svn_sqlite__stmt_t *stmt;
 
+              SVN_DBG(("revert-base('%s') = '%s'\n", text_base_basename, name));
               SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                                 STMT_SELECT_NODE_INFO));
               SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
@@ -1069,6 +1084,10 @@ migrate_text_bases(const char *dir_abspath,
                                                     iterpool));
                   SVN_ERR(svn_sqlite__update(NULL, stmt));
                 }
+            }
+          else
+            {
+              SVN_DBG(("revert-base('%s') = No\n", text_base_basename));
             }
         }
     }
