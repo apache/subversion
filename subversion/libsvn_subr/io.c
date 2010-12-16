@@ -2188,21 +2188,28 @@ handle_child_process_error(apr_pool_t *pool, apr_status_t status,
 
 
 svn_error_t *
-svn_io_start_cmd(apr_proc_t *cmd_proc,
-                 const char *path,
-                 const char *cmd,
-                 const char *const *args,
-                 svn_boolean_t inherit,
-                 apr_file_t *infile,
-                 apr_file_t *outfile,
-                 apr_file_t *errfile,
-                 apr_pool_t *pool)
+svn_io_start_cmd2(apr_proc_t *cmd_proc,
+                  const char *path,
+                  const char *cmd,
+                  const char *const *args,
+                  svn_boolean_t inherit,
+                  svn_boolean_t infile_pipe,
+                  apr_file_t *infile,
+                  svn_boolean_t outfile_pipe,
+                  apr_file_t *outfile,
+                  svn_boolean_t errfile_pipe,
+                  apr_file_t *errfile,
+                  apr_pool_t *pool)
 {
   apr_status_t apr_err;
   apr_procattr_t *cmdproc_attr;
   int num_args;
   const char **args_native;
   const char *cmd_apr;
+
+  SVN_ERR_ASSERT(!((infile != NULL) && infile_pipe));
+  SVN_ERR_ASSERT(!((outfile != NULL) && outfile_pipe));
+  SVN_ERR_ASSERT(!((errfile != NULL) && errfile_pipe));
 
   /* Create the process attributes. */
   apr_err = apr_procattr_create(&cmdproc_attr, pool);
@@ -2212,7 +2219,7 @@ svn_io_start_cmd(apr_proc_t *cmd_proc,
 
   /* Make sure we invoke cmd directly, not through a shell. */
   apr_err = apr_procattr_cmdtype_set(cmdproc_attr,
-                                     inherit?APR_PROGRAM_PATH:APR_PROGRAM);
+                                     inherit ? APR_PROGRAM_PATH : APR_PROGRAM);
   if (apr_err)
     return svn_error_wrap_apr(apr_err, _("Can't set process '%s' cmdtype"),
                               cmd);
@@ -2255,6 +2262,13 @@ svn_io_start_cmd(apr_proc_t *cmd_proc,
         return svn_error_wrap_apr
           (apr_err, _("Can't set process '%s' child errfile"), cmd);
     }
+
+  /* Forward request for pipes to APR. */
+  if (infile_pipe || outfile_pipe || errfile_pipe)
+    apr_procattr_io_set(cmdproc_attr,
+                        infile_pipe ? APR_FULL_BLOCK : APR_NO_PIPE,
+                        outfile_pipe ? APR_FULL_BLOCK : APR_NO_PIPE,
+                        errfile_pipe ? APR_FULL_BLOCK : APR_NO_PIPE);
 
   /* Have the child print any problems executing its program to errfile. */
   apr_err = apr_pool_userdata_set(errfile, ERRFILE_KEY, NULL, pool);
