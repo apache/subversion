@@ -23,6 +23,7 @@
 #
 
 import os
+import stat
 import sys
 try:
   # Python >=3.0
@@ -453,6 +454,8 @@ class Generator(gen_base.GeneratorBase):
 
     self.write_standalone()
 
+    self.write_transform_libtool_scripts(install_sources)
+
   def write_standalone(self):
     """Write autogen-standalone.mk"""
 
@@ -467,6 +470,84 @@ class Generator(gen_base.GeneratorBase):
     standalone.write('\n')
     standalone.write(open("build-outputs.mk","r").read())
     standalone.close()
+
+  def write_transform_libtool_scripts(self, install_sources):
+    """Write build/transform_libtool_scripts.sh"""
+    script = 'build/transform_libtool_scripts.sh'
+    fd = open(script, 'w')
+    fd.write('''#!/bin/sh
+# DO NOT EDIT -- AUTOMATICALLY GENERATED
+
+transform()
+{
+  SCRIPT="$1"
+  LIBS="$2"
+  if [ -f $SCRIPT ]; then
+    if grep LD_PRELOAD "$SCRIPT" > /dev/null; then
+      :
+    elif grep LD_LIBRARY_PATH "$SCRIPT" > /dev/null; then
+      echo "Transforming $SCRIPT"
+      EXISTINGLIBS=""
+      for LIB in $LIBS; do
+        if [ -f $LIB ]; then
+          if [ -z "$EXISTINGLIBS" ]; then
+            EXISTINGLIBS="$LIB"
+          else
+            EXISTINGLIBS="$EXISTINGLIBS $LIB"
+          fi
+        fi
+      done
+      cat "$SCRIPT" |
+      (
+        read LINE
+        echo "$LINE"
+        echo "LD_PRELOAD=\\"$EXISTINGLIBS\\""
+        echo "export LD_PRELOAD"
+        cat
+      ) < "$SCRIPT" > "$SCRIPT.new"
+      mv -f "$SCRIPT.new" "$SCRIPT"
+      chmod +x "$SCRIPT"
+    fi
+  fi
+}
+
+DIR=`pwd`
+
+''')
+    libdep_cache = {}
+    paths = {}
+    for target_ob in install_sources:
+      if not isinstance(target_ob, gen_base.TargetExe):
+        continue
+      name = target_ob.name
+      libs = self._get_all_lib_deps(target_ob.name, libdep_cache, paths)
+      path = paths[name]
+      for i in range(0, len(libs)):
+        lib = libs[i]
+        libpath = paths[libs[i]]
+        libs[i] = '$DIR/%s/.libs/%s-%s.so' % (libpath, lib, self.version)
+      fd.write('transform %s/%s "%s"\n' % (path, name, " ".join(libs)))
+    fd.close()
+    mode = stat.S_IRWXU|stat.S_IRGRP|stat.S_IXGRP|stat.S_IROTH|stat.S_IXOTH
+    os.chmod(script, mode)
+
+  def _get_all_lib_deps(self, target_name, libdep_cache, paths):
+    if not target_name in libdep_cache:
+      libs = {}
+      path = None
+      if target_name in self.sections:
+        section = self.sections[target_name]
+        opt_libs = self.sections[target_name].options.get('libs')
+        paths[target_name] = section.options.get('path')
+        if opt_libs:
+          for lib_name in opt_libs.split():
+            if lib_name.startswith('libsvn_'):
+              libs[lib_name] = True
+            for lib in self._get_all_lib_deps(lib_name, libdep_cache, paths):
+              libs[lib] = True
+      libdep_cache[target_name] = libs.keys()[:]
+      libdep_cache[target_name].sort()
+    return libdep_cache[target_name]
 
 class UnknownDependency(Exception):
   "We don't know how to deal with the dependent to link it in."
