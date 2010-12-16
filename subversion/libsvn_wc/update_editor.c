@@ -4084,8 +4084,6 @@ close_file(void *file_baton,
   svn_wc_notify_state_t content_state, prop_state;
   svn_wc_notify_lock_state_t lock_state;
   svn_checksum_t *expected_md5_checksum = NULL;
-  svn_checksum_t *new_text_base_md5_checksum;
-  svn_checksum_t *new_text_base_sha1_checksum;
   apr_hash_t *new_base_props = NULL;
   apr_hash_t *new_actual_props = NULL;
   apr_array_header_t *entry_props;
@@ -4115,31 +4113,24 @@ close_file(void *file_baton,
     SVN_ERR(svn_checksum_parse_hex(&expected_md5_checksum, svn_checksum_md5,
                                    expected_md5_digest, pool));
 
-  /* Retrieve the new text-base file's checksums. */
   if (fb->received_textdelta)
-    {
-      new_text_base_md5_checksum = fb->new_text_base_md5_checksum;
-      new_text_base_sha1_checksum = fb->new_text_base_sha1_checksum;
-      SVN_ERR_ASSERT(new_text_base_md5_checksum &&
-                     new_text_base_sha1_checksum);
-    }
+    SVN_ERR_ASSERT(fb->new_text_base_sha1_checksum
+                   && fb->new_text_base_md5_checksum);
   else
-    {
-      SVN_ERR_ASSERT(! fb->new_text_base_sha1_checksum
-                     && ! fb->copied_text_base_sha1_checksum);
-      new_text_base_md5_checksum = NULL;
-      new_text_base_sha1_checksum = NULL;
-    }
+    SVN_ERR_ASSERT(! fb->new_text_base_sha1_checksum
+                   && ! fb->new_text_base_md5_checksum);
 
-  if (new_text_base_md5_checksum && expected_md5_checksum
-      && !svn_checksum_match(expected_md5_checksum, new_text_base_md5_checksum))
+  if (fb->new_text_base_md5_checksum && expected_md5_checksum
+      && !svn_checksum_match(expected_md5_checksum,
+                             fb->new_text_base_md5_checksum))
     return svn_error_createf(SVN_ERR_CHECKSUM_MISMATCH, NULL,
             _("Checksum mismatch for '%s':\n"
               "   expected:  %s\n"
               "     actual:  %s\n"),
             svn_dirent_local_style(fb->local_abspath, pool),
             expected_md5_digest,
-            svn_checksum_to_cstring_display(new_text_base_md5_checksum, pool));
+            svn_checksum_to_cstring_display(fb->new_text_base_md5_checksum,
+                                            pool));
 
   SVN_ERR(svn_wc_read_kind(&kind, eb->wc_ctx, fb->local_abspath, TRUE, pool));
   if (kind == svn_node_none && ! fb->adding_file)
@@ -4326,7 +4317,7 @@ close_file(void *file_baton,
 
       /* Merge the text. This will queue some additional work.  */
       SVN_ERR(merge_file(&all_work_items, &install_pristine, &install_from,
-                         &content_state, fb, new_text_base_sha1_checksum,
+                         &content_state, fb, fb->new_text_base_sha1_checksum,
                          pool, scratch_pool));
 
       if (install_pristine)
@@ -4392,7 +4383,7 @@ close_file(void *file_baton,
   /* Now that all the state has settled, should we update the readonly
      status of the working file? The LOCK_STATE will signal what we should
      do for this node.  */
-  if (new_text_base_sha1_checksum == NULL
+  if (fb->new_text_base_sha1_checksum == NULL
       && lock_state == svn_wc_notify_lock_state_unlocked)
     {
       /* If a lock was removed and we didn't update the text contents, we
@@ -4440,7 +4431,7 @@ close_file(void *file_baton,
       /* Set the 'checksum' column of the file's BASE_NODE row to
        * NEW_TEXT_BASE_SHA1_CHECKSUM.  The pristine text identified by that
        * checksum is already in the pristine store. */
-    const svn_checksum_t *new_checksum = new_text_base_sha1_checksum;
+    const svn_checksum_t *new_checksum = fb->new_text_base_sha1_checksum;
     const char *serialised;
 
     /* If we don't have a NEW checksum, then the base must not have changed.
