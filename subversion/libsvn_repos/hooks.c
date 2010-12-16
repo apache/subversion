@@ -177,56 +177,14 @@ run_hook_cmd(svn_string_t **result,
              apr_file_t *stdin_handle,
              apr_pool_t *pool)
 {
-  apr_file_t *read_errhandle, *write_errhandle, *null_handle;
-  apr_file_t *read_outhandle, *write_outhandle;
+  apr_file_t *null_handle;
   apr_status_t apr_err;
   svn_error_t *err;
   apr_proc_t cmd_proc;
 
-  /* Create a pipe to access stderr of the child. */
-  apr_err = apr_file_pipe_create(&read_errhandle, &write_errhandle, pool);
-  if (apr_err)
-    return svn_error_wrap_apr
-      (apr_err, _("Can't create pipe for hook '%s'"), cmd);
-
-  /* Pipes are inherited by default, but we don't want that, since
-     APR will duplicate the write end of the pipe for the child process.
-     Not closing the read end is harmless, but if the write end is inherited,
-     it will be inherited by grandchildren as well.  This causes problems
-     if a hook script puts long-running jobs in the background.  Even if
-     they redirect stderr to something else, the write end of our pipe will
-     still be open, causing us to block. */
-  apr_err = apr_file_inherit_unset(read_errhandle);
-  if (apr_err)
-    return svn_error_wrap_apr
-      (apr_err, _("Can't make pipe read handle non-inherited for hook '%s'"),
-       cmd);
-
-  apr_err = apr_file_inherit_unset(write_errhandle);
-  if (apr_err)
-    return svn_error_wrap_apr
-      (apr_err, _("Can't make pipe write handle non-inherited for hook '%s'"),
-       cmd);
-
   if (result)
     {
-      /* Create a pipe to access stdout of the child. */
-      apr_err = apr_file_pipe_create(&read_outhandle, &write_outhandle, pool);
-      if (apr_err)
-        return svn_error_wrap_apr
-          (apr_err, _("Can't create pipe for hook '%s'"), cmd);
-
-      apr_err = apr_file_inherit_unset(read_outhandle);
-      if (apr_err)
-        return svn_error_wrap_apr
-          (apr_err,
-           _("Can't make pipe read handle non-inherited for hook '%s'"), cmd);
-
-      apr_err = apr_file_inherit_unset(write_outhandle);
-      if (apr_err)
-        return svn_error_wrap_apr
-          (apr_err,
-           _("Can't make pipe write handle non-inherited for hook '%s'"), cmd);
+      null_handle = NULL;
     }
   else
     {
@@ -238,26 +196,9 @@ run_hook_cmd(svn_string_t **result,
             (apr_err, _("Can't create null stdout for hook '%s'"), cmd);
     }
 
-  err = svn_io_start_cmd(&cmd_proc, ".", cmd, args, FALSE,
-                         stdin_handle, result ? write_outhandle : null_handle,
-                         write_errhandle, pool);
-
-  /* This seems to be done automatically if we pass the third parameter of
-     apr_procattr_child_in/out_set(), but svn_io_run_cmd()'s interface does
-     not support those parameters. We need to close the write end of the
-     pipe so we don't hang on the read end later, if we need to read it. */
-  apr_err = apr_file_close(write_errhandle);
-  if (!err && apr_err)
-    return svn_error_wrap_apr
-      (apr_err, _("Error closing write end of stderr pipe"));
-
-  if (result)
-    {
-      apr_err = apr_file_close(write_outhandle);
-      if (!err && apr_err)
-        return svn_error_wrap_apr
-          (apr_err, _("Error closing write end of stderr pipe"));
-    }
+  err = svn_io_start_cmd2(&cmd_proc, ".", cmd, args, FALSE,
+                          FALSE, stdin_handle, result != NULL, null_handle,
+                          TRUE, NULL, pool);
 
   if (err)
     {
@@ -266,13 +207,13 @@ run_hook_cmd(svn_string_t **result,
     }
   else
     {
-      err = check_hook_result(name, cmd, &cmd_proc, read_errhandle, pool);
+      err = check_hook_result(name, cmd, &cmd_proc, cmd_proc.err, pool);
     }
 
   /* Hooks are fallible, and so hook failure is "expected" to occur at
      times.  When such a failure happens we still want to close the pipe
      and null file */
-  apr_err = apr_file_close(read_errhandle);
+  apr_err = apr_file_close(cmd_proc.err);
   if (!err && apr_err)
     return svn_error_wrap_apr
       (apr_err, _("Error closing read end of stderr pipe"));
@@ -280,8 +221,8 @@ run_hook_cmd(svn_string_t **result,
   if (result)
     {
       svn_stringbuf_t *native_stdout;
-      SVN_ERR(svn_stringbuf_from_aprfile(&native_stdout, read_outhandle, pool));
-      apr_err = apr_file_close(read_outhandle);
+      SVN_ERR(svn_stringbuf_from_aprfile(&native_stdout, cmd_proc.out, pool));
+      apr_err = apr_file_close(cmd_proc.out);
       if (!err && apr_err)
         return svn_error_wrap_apr
           (apr_err, _("Error closing read end of stderr pipe"));
