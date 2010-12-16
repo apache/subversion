@@ -3887,18 +3887,18 @@ merge_file(svn_skel_t **work_items,
                     path_ext = "";
                 }
 
-                {
-                  svn_revnum_t old_rev = revision;
+              {
+                svn_revnum_t old_rev = revision;
 
-                  /* ### BH: Why is this necessary? */
-                  if (!SVN_IS_VALID_REVNUM(old_rev))
-                    old_rev = 0;
+                /* ### BH: Why is this necessary? */
+                if (!SVN_IS_VALID_REVNUM(old_rev))
+                  old_rev = 0;
 
-                  oldrev_str = apr_psprintf(pool, ".r%ld%s%s",
-                                            old_rev,
-                                            *path_ext ? "." : "",
-                                            *path_ext ? path_ext : "");
-                }
+                oldrev_str = apr_psprintf(pool, ".r%ld%s%s",
+                                          old_rev,
+                                          *path_ext ? "." : "",
+                                          *path_ext ? path_ext : "");
+              }
               newrev_str = apr_psprintf(pool, ".r%ld%s%s",
                                         *eb->target_revision,
                                         *path_ext ? "." : "",
@@ -4115,10 +4115,7 @@ close_file(void *file_baton,
     SVN_ERR(svn_checksum_parse_hex(&expected_md5_checksum, svn_checksum_md5,
                                    expected_md5_digest, pool));
 
-  /* Retrieve the new text-base file's path and checksums.  If it was an
-   * add-with-history, with no apply_textdelta, then that means the text-base
-   * of the copied file, else the new text-base created by apply_textdelta(),
-   * if any. */
+  /* Retrieve the new text-base file's checksums. */
   if (fb->received_textdelta)
     {
       new_text_base_md5_checksum = fb->new_text_base_md5_checksum;
