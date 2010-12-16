@@ -1374,7 +1374,8 @@ subcommand_lslocks(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
 
   /* Fetch all locks on or below the root directory. */
-  SVN_ERR(svn_repos_fs_get_locks(&locks, repos, fs_path, NULL, NULL, pool));
+  SVN_ERR(svn_repos_fs_get_locks2(&locks, repos, fs_path, svn_depth_infinity,
+                                  NULL, NULL, pool));
 
   for (hi = apr_hash_first(pool, locks); hi; hi = apr_hash_next(hi))
     {
