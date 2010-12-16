@@ -1244,73 +1244,6 @@ which_trees_exist(svn_boolean_t *base_exists,
 }
 
 
-/* Determine which trees' nodes exist for a given LOCAL_RELPATH in the
-   specified SDB.
-
-   Note: this is VERY similar to the above which_trees_exist() except that
-   we return a WC_ID and verify some additional constraints.  */
-static svn_error_t *
-prop_upgrade_trees(svn_boolean_t *base_exists,
-                   svn_wc__db_status_t *base_presence,
-                   svn_boolean_t *working_exists,
-                   svn_wc__db_status_t *work_presence,
-                   apr_int64_t *wc_id,
-                   svn_sqlite__db_t *sdb,
-                   const char *local_relpath)
-{
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
-
-  *base_exists = FALSE;
-  *working_exists = FALSE;
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_PLAN_PROP_UPGRADE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "s", local_relpath));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-
-  /* During a property upgrade, there better be a row corresponding to
-     the provided LOCAL_RELPATH. We shouldn't even be here without a
-     query for available rows.  */
-  SVN_ERR_ASSERT(have_row);
-
-  /* Use the first column to detect which table this row came from.  */
-  if (svn_sqlite__column_int(stmt, 0))
-    {
-      *working_exists = TRUE;  /* value == 1  */
-      *work_presence = svn_sqlite__column_token(stmt, 1, presence_map);
-    }
-  else
-    {
-      *base_exists = TRUE;  /* value == 0  */
-      *base_presence = svn_sqlite__column_token(stmt, 1, presence_map);
-    }
-
-  /* Return the WC_ID that was assigned.  */
-  *wc_id = svn_sqlite__column_int64(stmt, 2);
-
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  if (have_row)
-    {
-      /* If both rows, then both tables.  */
-      *base_exists = TRUE;
-      *working_exists = TRUE;
-
-      /* If the second row came from WORKING_NODE, then we should also
-         fetch the 'presence' column value.  */
-      if (svn_sqlite__column_int(stmt, 0))
-        *work_presence = svn_sqlite__column_token(stmt, 1, presence_map);
-      else
-        *base_presence = svn_sqlite__column_token(stmt, 1, presence_map);
-
-      /* During an upgrade, there should be just one working copy, so both
-         rows should refer to the same value.  */
-      SVN_ERR_ASSERT(*wc_id == svn_sqlite__column_int64(stmt, 2));
-    }
-
-  return svn_error_return(svn_sqlite__reset(stmt));
-}
-
-
 /* */
 static svn_error_t *
 create_db(svn_sqlite__db_t **sdb,
@@ -7094,12 +7027,10 @@ svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
                                int original_format,
                                apr_pool_t *scratch_pool)
 {
-  svn_boolean_t have_base;
-  svn_wc__db_status_t base_presence;
-  svn_boolean_t have_work;
-  svn_wc__db_status_t work_presence;
-  apr_int64_t wc_id;
   svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  apr_int64_t wc_id, top_op_depth = -1, below_op_depth = -1;
+  svn_wc__db_status_t top_presence, below_presence;
   int affected_rows;
 
   /* ### working_props: use set_props_txn.
@@ -7129,19 +7060,31 @@ svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
      the handling of our inputs, relative to the state of this node.
   */
 
-  /* Collect information about this node.  */
-  SVN_ERR(prop_upgrade_trees(&have_base, &base_presence,
-                             &have_work, &work_presence,
-                             &wc_id, sdb, local_relpath));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_NODE_UPGRADE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "s", local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (have_row)
+    {
+      top_op_depth = svn_sqlite__column_int64(stmt, 0);
+      top_presence = svn_sqlite__column_token(stmt, 1, presence_map);
+      wc_id = svn_sqlite__column_int64(stmt, 2);
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+      if (have_row)
+        {
+          below_op_depth = svn_sqlite__column_int64(stmt, 0);
+          below_presence = svn_sqlite__column_token(stmt, 1, presence_map);
+        }
+    }
+  SVN_ERR(svn_sqlite__reset(stmt));
 
   /* Detect the buggy scenario described above. We cannot upgrade this
      working copy if we have no idea where BASE_PROPS should go.  */
   if (original_format > SVN_WC__NO_REVERT_FILES
       && revert_props == NULL
-      && have_work
-      && work_presence == svn_wc__db_status_normal
-      && have_base
-      && base_presence != svn_wc__db_status_not_present)
+      && top_op_depth != -1
+      && top_presence == svn_wc__db_status_normal
+      && below_op_depth != -1
+      && below_presence != svn_wc__db_status_not_present)
     {
       /* There should be REVERT_PROPS, so it appears that we just ran into
          the described bug. Sigh.  */
@@ -7154,48 +7097,44 @@ svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
                                                  scratch_pool), scratch_pool));
     }
 
-  if (have_base
-      && (base_presence == svn_wc__db_status_normal
-          || base_presence == svn_wc__db_status_incomplete))
+  /* Need at least one row, or two rows if there are revert props */
+  if (top_op_depth == -1
+      || (below_op_depth == -1 && revert_props))
+    return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
+                             _("Insufficient NODES rows for '%s'"),
+                             svn_dirent_local_style(
+                               svn_dirent_join(dir_abspath, local_relpath,
+                                               scratch_pool), scratch_pool));
+
+  /* one row, base props only: upper row gets base props
+     two rows, base props only: lower row gets base props
+     two rows, base and revert props: upper row gets base, lower gets revert */
+
+
+  if (revert_props || below_op_depth == -1)
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                        STMT_UPDATE_NODE_PROPS));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isi",
+                                wc_id, local_relpath, top_op_depth));
+      SVN_ERR(svn_sqlite__bind_properties(stmt, 4, base_props, scratch_pool));
+      SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
+
+      SVN_ERR_ASSERT(affected_rows == 1);
+    }
+
+  if (below_op_depth != -1)
     {
       apr_hash_t *props = revert_props ? revert_props : base_props;
 
       SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                        STMT_UPDATE_NODE_BASE_PROPS));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
-      SVN_ERR(svn_sqlite__bind_properties(stmt, 3, props, scratch_pool));
+                                        STMT_UPDATE_NODE_PROPS));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isi",
+                                wc_id, local_relpath, below_op_depth));
+      SVN_ERR(svn_sqlite__bind_properties(stmt, 4, props, scratch_pool));
       SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
 
-      /* ### should we provide a nicer error message?  */
       SVN_ERR_ASSERT(affected_rows == 1);
-    }
-
-  if (have_work)
-    {
-      /* WORKING_NODE has very limited 'presence' values.  */
-      SVN_ERR_ASSERT(work_presence == svn_wc__db_status_normal
-                     || work_presence == svn_wc__db_status_not_present
-                     || work_presence == svn_wc__db_status_base_deleted
-                     || work_presence == svn_wc__db_status_incomplete);
-
-      /* Do we have a replaced node? It has properties: an empty set for
-         adds, and a non-empty set for copies/moves.  */
-      if (original_format > SVN_WC__NO_REVERT_FILES
-          && (work_presence == svn_wc__db_status_normal
-              || work_presence == svn_wc__db_status_incomplete))
-        {
-          SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                            STMT_UPDATE_NODE_WORKING_PROPS));
-          SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
-          SVN_ERR(svn_sqlite__bind_properties(stmt, 3, base_props,
-                                              scratch_pool));
-          SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
-
-          /* ### should we provide a nicer error message?  */
-          SVN_ERR_ASSERT(affected_rows == 1);
-        }
-      /* else other states should have no properties.  */
-      /* ### should we insert empty props for <= SVN_WC__NO_REVERT_FILES?  */
     }
 
   /* If there are WORKING_PROPS, then they always go into ACTUAL_NODE.  */

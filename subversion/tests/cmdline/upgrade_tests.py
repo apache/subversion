@@ -754,6 +754,47 @@ def delete_in_copy_upgrade(sbox):
       })
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 
+def replaced_files(sbox):
+  "upgrade with base and working replaced files"
+
+  sbox.build(create_wc = False)
+  wc_dir = sbox.wc_dir
+  replace_sbox_with_tarfile(sbox, 'replaced-files.tar.bz2')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'upgrade', sbox.wc_dir)
+
+  # A/f is a base file that is replaced with a copy of A/g, B is a
+  # working-only copy of A, and B/f is a working-only file replaced
+  # with a copy of A/g
+  expected_status = svntest.wc.State(sbox.wc_dir,
+    {
+      ''    : Item(status='  ', wc_rev='5'),
+      'A'   : Item(status='  ', wc_rev='5'),
+      'A/f' : Item(status='R ', wc_rev='-', copied='+'),
+      'A/g' : Item(status='  ', wc_rev='5'),
+      'B'   : Item(status='A ', wc_rev='-', copied='+'),
+      'B/f' : Item(status='R ', wc_rev='-', copied='+'),
+      'B/g' : Item(status='  ', wc_rev='-', copied='+'),
+  })
+  run_and_verify_status_no_server(sbox.wc_dir, expected_status)
+
+  simple_property_verify(sbox.wc_dir, {
+      'A/f' : {'pAg' : 'vAg' },
+      'A/g' : {'pAg' : 'vAg' },
+      'B/f' : {'pAg' : 'vAg' },
+      'B/g' : {'pAg' : 'vAg' },
+      })
+
+  svntest.actions.run_and_verify_svn(None, 'Reverted.*', [], 'revert',
+                                     sbox.ospath('A/f'), sbox.ospath('B/f'))
+
+  simple_property_verify(sbox.wc_dir, {
+      'A/f' : {'pAf' : 'vAf' },
+      'A/g' : {'pAg' : 'vAg' },
+      'B/f' : {'pAf' : 'vAf' },
+      'B/g' : {'pAg' : 'vAg' },
+      })
 
 ########################################################################
 # Run the tests
@@ -778,6 +819,7 @@ test_list = [ None,
               dirs_only_upgrade,
               upgrade_tree_conflict_data,
               delete_in_copy_upgrade,
+              replaced_files,
              ]
 
 
