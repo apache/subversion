@@ -908,9 +908,6 @@ struct file_baton
   /* Set if this file is new. */
   svn_boolean_t adding_file;
 
-  /* Set if this file is new with history. */
-  svn_boolean_t added_with_history;
-
   /* Set if an unversioned file of the same name already existed in
      this directory. */
   svn_boolean_t obstruction_found;
@@ -3859,7 +3856,7 @@ merge_file(svn_skel_t **work_items,
           svn_node_kind_t wfile_kind;
 
           SVN_ERR(svn_io_check_path(fb->local_abspath, &wfile_kind, pool));
-          if (wfile_kind == svn_node_none && ! fb->added_with_history)
+          if (wfile_kind == svn_node_none)
             {
               /* working file is missing?!
                  Just copy the new text-base to the file. */
@@ -3890,14 +3887,6 @@ merge_file(svn_skel_t **work_items,
                     path_ext = "";
                 }
 
-              /* Create strings representing the revisions of the
-                 old and new text-bases. */
-              /* Either an old version, or an add-with-history */
-              if (fb->added_with_history)
-                oldrev_str = apr_psprintf(pool, ".copied%s%s",
-                                          *path_ext ? "." : "",
-                                          *path_ext ? path_ext : "");
-              else
                 {
                   svn_revnum_t old_rev = revision;
 
@@ -4134,14 +4123,6 @@ close_file(void *file_baton,
     {
       new_text_base_md5_checksum = fb->new_text_base_md5_checksum;
       new_text_base_sha1_checksum = fb->new_text_base_sha1_checksum;
-      SVN_ERR_ASSERT(new_text_base_md5_checksum &&
-                     new_text_base_sha1_checksum);
-    }
-  else if (fb->added_with_history)
-    {
-      SVN_ERR_ASSERT(! fb->new_text_base_sha1_checksum);
-      new_text_base_md5_checksum = fb->copied_text_base_md5_checksum;
-      new_text_base_sha1_checksum = fb->copied_text_base_sha1_checksum;
       SVN_ERR_ASSERT(new_text_base_md5_checksum &&
                      new_text_base_sha1_checksum);
     }
