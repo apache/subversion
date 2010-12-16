@@ -489,6 +489,10 @@ transform()
       echo "Transforming $SCRIPT"
       EXISTINGLIBS=""
       for LIB in $LIBS; do
+        # exclude libsvn_test since the undefined test_funcs breaks libtool
+        case $LIB in
+          *libsvn_test-*) continue ;;
+        esac
         if [ -f $LIB ]; then
           if [ -z "$EXISTINGLIBS" ]; then
             EXISTINGLIBS="$LIB"
