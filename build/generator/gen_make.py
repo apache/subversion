@@ -493,24 +493,34 @@ transform()
         case $LIB in
           *libsvn_test-*) continue ;;
         esac
-        if [ -f $LIB ]; then
-          if [ -z "$EXISTINGLIBS" ]; then
-            EXISTINGLIBS="$LIB"
-          else
-            EXISTINGLIBS="$EXISTINGLIBS $LIB"
-          fi
+        if [ ! -f $LIB ]; then
+           LIB=${LIB}.0
+           if [ ! -f $LIB ]; then
+             LIB=${LIB}.0
+             if [ ! -f $LIB ]; then
+               continue
+             fi
+           fi
+        fi
+
+        if [ -z "$EXISTINGLIBS" ]; then
+          EXISTINGLIBS="$LIB"
+        else
+          EXISTINGLIBS="$EXISTINGLIBS $LIB"
         fi
       done
-      cat "$SCRIPT" |
-      (
-        read LINE
-        echo "$LINE"
-        echo "LD_PRELOAD=\\"$EXISTINGLIBS\\""
-        echo "export LD_PRELOAD"
-        cat
-      ) < "$SCRIPT" > "$SCRIPT.new"
-      mv -f "$SCRIPT.new" "$SCRIPT"
-      chmod +x "$SCRIPT"
+      if [ ! -z "$EXISTINGLIBS" ]; then
+        cat "$SCRIPT" |
+        (
+          read LINE
+          echo "$LINE"
+          echo "LD_PRELOAD=\\"$EXISTINGLIBS\\""
+          echo "export LD_PRELOAD"
+          cat
+        ) < "$SCRIPT" > "$SCRIPT.new"
+        mv -f "$SCRIPT.new" "$SCRIPT"
+        chmod +x "$SCRIPT"
+      fi
     fi
   fi
 }
