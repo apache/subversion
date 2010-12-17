@@ -494,15 +494,8 @@ transform()
           *libsvn_test-*) continue ;;
         esac
         if [ ! -f $LIB ]; then
-           LIB=${LIB}.0
-           if [ ! -f $LIB ]; then
-             LIB=${LIB}.0
-             if [ ! -f $LIB ]; then
-               continue
-             fi
-           fi
+          continue
         fi
-
         if [ -z "$EXISTINGLIBS" ]; then
           EXISTINGLIBS="$LIB"
         else
