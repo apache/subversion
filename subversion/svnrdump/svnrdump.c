@@ -789,9 +789,6 @@ main(int argc, const char **argv)
     {
       if (os->ind >= os->argc)
         {
-          svn_error_clear(
-              svn_cmdline_fprintf(stderr, pool,
-                                  _("Subcommand argument required\n")));
           SVNRDUMP_ERR(help_cmd(NULL, NULL, pool));
           svn_pool_destroy(pool);
           exit(EXIT_FAILURE);
