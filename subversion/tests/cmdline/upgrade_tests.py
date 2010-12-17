@@ -764,30 +764,38 @@ def replaced_files(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'upgrade', sbox.wc_dir)
 
-  # A/f is a base file that is replaced with a copy of A/g, B is a
-  # working-only copy of A, and B/f is a working-only file replaced
-  # with a copy of A/g
+  # A is a checked-out dir containing A/f and A/g, then
+  # svn cp wc/A wc/B
+  # svn rm wc/A/f wc/B/f
+  # svn cp wc/A/g wc/A/f     # A/f replaced by copied A/g
+  # svn cp wc/A/g wc/B/f     # B/f replaced by copied A/g (working-only)
+  # svn rm wc/A/g wc/B/g
+  # touch wc/A/g wc/B/g
+  # svn add wc/A/g wc/B/g    # A/g replaced, B/g replaced (working-only)
+  # svn ps pX vX wc/A/g
+  # svn ps pY vY wc/B/g
   expected_status = svntest.wc.State(sbox.wc_dir,
     {
       ''    : Item(status='  ', wc_rev='5'),
       'A'   : Item(status='  ', wc_rev='5'),
       'A/f' : Item(status='R ', wc_rev='-', copied='+'),
-      'A/g' : Item(status='  ', wc_rev='5'),
+      'A/g' : Item(status='RM', wc_rev='5'),
       'B'   : Item(status='A ', wc_rev='-', copied='+'),
       'B/f' : Item(status='R ', wc_rev='-', copied='+'),
-      'B/g' : Item(status='  ', wc_rev='-', copied='+'),
+      'B/g' : Item(status='RM', wc_rev='0'),
   })
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 
   simple_property_verify(sbox.wc_dir, {
       'A/f' : {'pAg' : 'vAg' },
-      'A/g' : {'pAg' : 'vAg' },
+      'A/g' : {'pX'  : 'vX' },
       'B/f' : {'pAg' : 'vAg' },
-      'B/g' : {'pAg' : 'vAg' },
+      'B/g' : {'pY'  : 'vY' },
       })
 
   svntest.actions.run_and_verify_svn(None, 'Reverted.*', [], 'revert',
-                                     sbox.ospath('A/f'), sbox.ospath('B/f'))
+                                     sbox.ospath('A/f'), sbox.ospath('B/f'),
+                                     sbox.ospath('A/g'), sbox.ospath('B/g'))
 
   simple_property_verify(sbox.wc_dir, {
       'A/f' : {'pAf' : 'vAf' },
