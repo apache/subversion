@@ -2061,11 +2061,8 @@ write_entry(struct write_baton **entry_node,
 
       if (!entry->copied)
         {
-          if (parent_node->work)
-            working_node->op_depth = parent_node->work->op_depth;
-          else
-            working_node->op_depth
-              = svn_wc__db_op_depth_for_upgrade(local_relpath);
+          working_node->op_depth
+            = svn_wc__db_op_depth_for_upgrade(local_relpath);
         }
 
       SVN_ERR(insert_working_node(sdb, working_node, scratch_pool));

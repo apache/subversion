@@ -7108,6 +7108,7 @@ svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
 
   /* one row, base props only: upper row gets base props
      two rows, base props only: lower row gets base props
+     two rows, revert props only: lower row gets revert props
      two rows, base and revert props: upper row gets base, lower gets revert */
 
 
