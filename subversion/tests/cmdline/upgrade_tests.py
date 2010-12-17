@@ -43,8 +43,7 @@ Item = svntest.wc.StateItem
 XFail = svntest.testcase.XFail
 SkipUnless = svntest.testcase.SkipUnless
 
-wc_is_too_old_regex = (".*Working copy format of '.*' is too old \(\d+\); " +
-                    "please run 'svn upgrade'")
+wc_is_too_old_regex = (".*Working copy format of '.*' is too old \(\d+\).*")
 
 
 def get_current_format():
