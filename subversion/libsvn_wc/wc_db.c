@@ -5453,6 +5453,61 @@ svn_wc__db_read_children_info(apr_hash_t **nodes,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc__db_read_children_walker_info(apr_hash_t **nodes,
+                                     svn_wc__db_t *db,
+                                     const char *dir_abspath,
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *dir_relpath;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  apr_int64_t op_depth;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(dir_abspath));
+
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &dir_relpath, db,
+                                             dir_abspath,
+                                             svn_sqlite__mode_readonly,
+                                             scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_SELECT_NODE_CHILDREN_WALKER_INFO));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, dir_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  *nodes = apr_hash_make(result_pool);
+  while (have_row)
+    {
+      struct svn_wc__db_walker_info_t *child;
+      const char *child_relpath = svn_sqlite__column_text(stmt, 0, NULL);
+      const char *name = svn_relpath_basename(child_relpath, NULL);
+      svn_error_t *err;
+
+      child = apr_hash_get(*nodes, name, APR_HASH_KEY_STRING);
+      if (child == NULL)
+        child = apr_palloc(result_pool, sizeof(*child));
+
+      op_depth = svn_sqlite__column_int(stmt, 1);
+      child->status = svn_sqlite__column_token(stmt, 2, presence_map);
+      if (op_depth > 0)
+        SVN_ERR(convert_to_working_status(&child->status, child->status));
+      child->kind = svn_sqlite__column_token(stmt, 3, kind_map);
+      apr_hash_set(*nodes, apr_pstrdup(result_pool, name),
+                   APR_HASH_KEY_STRING, child);
+
+      err = svn_sqlite__step(&have_row, stmt);
+      if (err)
+        SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
+    }
+
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_wc__db_read_prop(const svn_string_t **propval,

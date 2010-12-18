@@ -1518,6 +1518,25 @@ svn_wc__db_read_children_info(apr_hash_t **nodes,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool);
 
+
+/* Structure returned by svn_wc__db_read_walker_info.  Only has the
+   fields needed by svn_wc__internal_walk_children(). */
+struct svn_wc__db_walker_info_t {
+  svn_wc__db_status_t status;
+  svn_wc__db_kind_t kind;
+};
+
+/* Return in *NODES a hash mapping name->struct svn_wc__db_walker_info_t for
+   the children of DIR_ABSPATH. "name" is the child's name relatve to
+   DIR_ABSPATH, not an absolute path. */
+svn_error_t *
+svn_wc__db_read_children_walker_info(apr_hash_t **nodes,
+                                     svn_wc__db_t *db,
+                                     const char *dir_abspath,
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool);
+
+
 /* Set *PROPVAL to the value of the property named PROPNAME of the node
    LOCAL_ABSPATH in the ACTUAL tree (looking through to the WORKING or BASE
    tree as required).

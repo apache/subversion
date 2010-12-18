@@ -648,22 +648,28 @@ walker_helper(svn_wc__db_t *db,
               void *cancel_baton,
               apr_pool_t *scratch_pool)
 {
-  const apr_array_header_t *rel_children;
+  apr_hash_t *rel_children_info;
+  apr_hash_index_t *hi;
   apr_pool_t *iterpool;
-  int i;
 
   if (depth == svn_depth_empty)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_wc__db_read_children(&rel_children, db, dir_abspath,
-                                   scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_read_children_walker_info(&rel_children_info, db,
+                                               dir_abspath, scratch_pool,
+                                               scratch_pool));
+
 
   iterpool = svn_pool_create(scratch_pool);
-  for (i = 0; i < rel_children->nelts; i++)
+  for (hi = apr_hash_first(scratch_pool, rel_children_info);
+       hi;
+       hi = apr_hash_next(hi))
     {
+      const char *child_name = svn__apr_hash_index_key(hi);
+      struct svn_wc__db_walker_info_t *wi = svn__apr_hash_index_val(hi);
+      svn_wc__db_kind_t child_kind = wi->kind;
+      svn_wc__db_status_t child_status = wi->status;
       const char *child_abspath;
-      svn_wc__db_kind_t child_kind;
-      svn_wc__db_status_t child_status;
 
       svn_pool_clear(iterpool);
 
@@ -671,17 +677,7 @@ walker_helper(svn_wc__db_t *db,
       if (cancel_func)
         SVN_ERR(cancel_func(cancel_baton));
 
-      child_abspath = svn_dirent_join(dir_abspath,
-                                      APR_ARRAY_IDX(rel_children, i,
-                                                    const char *),
-                                      iterpool);
-
-      SVN_ERR(svn_wc__db_read_info(&child_status, &child_kind, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL,
-                                   db, child_abspath, iterpool, iterpool));
+      child_abspath = svn_dirent_join(dir_abspath, child_name, iterpool);
 
       if (!show_hidden)
         switch (child_status)
