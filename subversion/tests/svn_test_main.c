@@ -258,7 +258,8 @@ do_test_num(const char *progname,
     }
   else
     err = svn_error_create(SVN_ERR_TEST_FAILED, NULL,
-                           "Test crashed (unknown reason)");
+                           "Test crashed "
+                           "(run in debugger with '--allow-segfaults')");
 
   if (!allow_segfaults)
     {
