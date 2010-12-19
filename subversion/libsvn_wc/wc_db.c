@@ -8316,6 +8316,8 @@ svn_wc__db_wclock_release(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+/* Like svn_wc__db_wclock_owns_lock() but taking PDH+LOCAL_RELPATH instead
+ * of DB+LOCAL_ABSPATH. */
 static svn_error_t *
 wclock_owns_lock(svn_boolean_t *own_lock,
                  svn_wc__db_pdh_t *pdh,
