@@ -95,7 +95,7 @@ svn_ra__release_operational_lock(svn_ra_session_t *session,
                                 scratch_pool));
   SVN_ERR(svn_ra_rev_prop(session, 0, lock_revprop_name,
                           &reposlocktoken, scratch_pool));
-  if (reposlocktoken && svn_string_compare(reposlocktoken, mylocktoken))
+  if (reposlocktoken && !svn_string_compare(reposlocktoken, mylocktoken))
     {
       svn_error_t *err;
       
