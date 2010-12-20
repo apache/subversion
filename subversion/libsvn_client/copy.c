@@ -983,10 +983,6 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
         }
       else if (strcmp(pair->src_abspath_or_url, top_url) == 0)
         {
-          if (is_move)
-            return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                     _("Cannot move URL '%s' into itself"),
-                                     pair->src_abspath_or_url);
           src_rel = "";
           SVN_ERR(svn_ra_check_path(ra_session, src_rel, pair->src_revnum,
                                     &info->src_kind, pool));
@@ -2078,7 +2074,7 @@ try_copy(const apr_array_header_t *sources,
                "supported"));
         }
 
-      /* Disallow moving any path onto or into itself. */
+      /* Disallow moving any path/URL onto or into itself. */
       for (i = 0; i < copy_pairs->nelts; i++)
         {
           svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
@@ -2086,10 +2082,14 @@ try_copy(const apr_array_header_t *sources,
 
           if (strcmp(pair->src_abspath_or_url,
                      pair->dst_abspath_or_url) == 0)
-            return svn_error_createf
-              (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-               _("Cannot move path '%s' into itself"),
-               svn_dirent_local_style(pair->src_abspath_or_url, pool));
+            return svn_error_createf(
+              SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+              srcs_are_urls ?
+                _("Cannot move URL '%s' into itself") :
+                _("Cannot move path '%s' into itself"),
+              srcs_are_urls ?
+                pair->src_abspath_or_url :
+                svn_dirent_local_style(pair->src_abspath_or_url, pool));
         }
     }
   else
