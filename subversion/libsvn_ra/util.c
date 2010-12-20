@@ -103,8 +103,9 @@ svn_ra__release_operational_lock(svn_ra_session_t *session,
                                     be_atomic ? &mylocktoken : NULL, NULL,
                                     scratch_pool);
       if (is_atomicity_error(err))
-        return svn_error_quick_wrap(err,
-                                    _("Lock was stolen; unable to remove it"));
+        return svn_error_createf(err->apr_err, err,
+                                 _("Lock was stolen by '%s'; unable to "
+                                   "remove it"), reposlocktoken->data);
     }
 
   return SVN_NO_ERROR;
