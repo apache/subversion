@@ -78,7 +78,7 @@ svn_ra__assert_mergeinfo_capable_server(svn_ra_session_t *ra_session,
  */
 static svn_boolean_t is_atomicity_error(svn_error_t *err)
 {
-  return svn_error_has_cause(err, SVN_ERR_FS_PROP_BASEVALUE_MISMATCH);
+  return svn_error_find_cause(err, SVN_ERR_FS_PROP_BASEVALUE_MISMATCH);
 }
 
 svn_error_t *
