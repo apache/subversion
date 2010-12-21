@@ -200,6 +200,7 @@ struct add_lock_token_baton
 /* This implements the svn_wc__node_found_func_t interface. */
 static svn_error_t *
 add_lock_token(const char *local_abspath,
+               svn_node_kind_t kind,
                void *walk_baton,
                apr_pool_t *scratch_pool)
 {

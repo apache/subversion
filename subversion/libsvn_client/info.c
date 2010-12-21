@@ -334,6 +334,7 @@ struct found_entry_baton
 /* An svn_wc__node_found_func_t callback function. */
 static svn_error_t *
 info_found_node_callback(const char *local_abspath,
+                         svn_node_kind_t kind,
                          void *walk_baton,
                          apr_pool_t *pool)
 {

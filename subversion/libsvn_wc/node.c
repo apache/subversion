@@ -165,6 +165,55 @@ svn_wc__node_get_repos_info(const char **repos_root_url,
   return SVN_NO_ERROR;
 }
 
+/* Convert DB_KIND into the appropriate NODE_KIND value.
+ * If SHOW_HIDDEN is TRUE, report the node kind as found in the DB
+ * even if DB_STATUS indicates that the node is hidden.
+ * Else, return svn_kind_none for such nodes.
+ *
+ * ### This is a bit ugly. We should consider promoting svn_wc__db_kind_t
+ * ### to the de-facto node kind type instead of converting between them
+ * ### in non-backwards compat code.
+ * ### See also comments at the definition of svn_wc__db_kind_t. */
+static svn_error_t *
+convert_db_kind_to_node_kind(svn_node_kind_t *node_kind,
+                             svn_wc__db_kind_t db_kind,
+                             svn_wc__db_status_t db_status,
+                             svn_boolean_t show_hidden)
+{
+  switch (db_kind)
+    {
+      case svn_wc__db_kind_file:
+        *node_kind = svn_node_file;
+        break;
+      case svn_wc__db_kind_dir:
+        *node_kind = svn_node_dir;
+        break;
+      case svn_wc__db_kind_symlink:
+        *node_kind = svn_node_file;
+        break;
+      case svn_wc__db_kind_unknown:
+        *node_kind = svn_node_unknown;
+        break;
+      default:
+        SVN_ERR_MALFUNCTION();
+    }
+
+  /* Make sure hidden nodes return svn_node_none. */
+  if (! show_hidden)
+    switch (db_status)
+      {
+        case svn_wc__db_status_not_present:
+        case svn_wc__db_status_absent:
+        case svn_wc__db_status_excluded:
+          *node_kind = svn_node_none;
+
+        default:
+          break;
+      }
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_wc_read_kind(svn_node_kind_t *kind,
                  svn_wc_context_t *wc_ctx,
@@ -192,36 +241,7 @@ svn_wc_read_kind(svn_node_kind_t *kind,
   else
     SVN_ERR(err);
 
-  switch (db_kind)
-    {
-      case svn_wc__db_kind_file:
-        *kind = svn_node_file;
-        break;
-      case svn_wc__db_kind_dir:
-        *kind = svn_node_dir;
-        break;
-      case svn_wc__db_kind_symlink:
-        *kind = svn_node_file;
-        break;
-      case svn_wc__db_kind_unknown:
-        *kind = svn_node_unknown;
-        break;
-      default:
-        SVN_ERR_MALFUNCTION();
-    }
-
-  /* Make sure hidden nodes return svn_node_none. */
-  if (! show_hidden)
-    switch (db_status)
-      {
-        case svn_wc__db_status_not_present:
-        case svn_wc__db_status_absent:
-        case svn_wc__db_status_excluded:
-          *kind = svn_node_none;
-
-        default:
-          break;
-      }
+  SVN_ERR(convert_db_kind_to_node_kind(kind, db_kind, db_status, show_hidden));
 
   return SVN_NO_ERROR;
 }
@@ -695,9 +715,14 @@ walker_helper(svn_wc__db_t *db,
       if (child_kind == svn_wc__db_kind_file
             || depth >= svn_depth_immediates)
         {
-          /* ### Maybe we should pass kind to the callback?.
-             ### almost every callee starts by asking for this */
-          SVN_ERR(walk_callback(child_abspath, walk_baton, iterpool));
+          svn_node_kind_t kind;
+
+          SVN_ERR(convert_db_kind_to_node_kind(&kind, child_kind,
+                                               child_status, show_hidden));
+          /* ### We might want to pass child_status as well because at least
+           * ### one callee is asking for it.
+           * ### But is it OK to use an svn_wc__db type in this API? */
+          SVN_ERR(walk_callback(child_abspath, kind, walk_baton, iterpool));
         }
 
       /* Recurse into this directory, if appropriate. */
@@ -733,28 +758,30 @@ svn_wc__internal_walk_children(svn_wc__db_t *db,
                                void *cancel_baton,
                                apr_pool_t *scratch_pool)
 {
-  svn_wc__db_kind_t kind;
+  svn_wc__db_kind_t db_kind;
+  svn_node_kind_t kind;
   svn_wc__db_status_t status;
 
   SVN_ERR_ASSERT(walk_depth >= svn_depth_empty
                  && walk_depth <= svn_depth_infinity);
 
   /* Check if the node exists before the first callback */
-  SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
+  SVN_ERR(svn_wc__db_read_info(&status, &db_kind, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
                                db, local_abspath, scratch_pool, scratch_pool));
 
-  SVN_ERR(walk_callback(local_abspath, walk_baton, scratch_pool));
+  SVN_ERR(convert_db_kind_to_node_kind(&kind, db_kind, status, show_hidden));
+  SVN_ERR(walk_callback(local_abspath, kind, walk_baton, scratch_pool));
 
-  if (kind == svn_wc__db_kind_file
+  if (db_kind == svn_wc__db_kind_file
       || status == svn_wc__db_status_not_present
       || status == svn_wc__db_status_excluded
       || status == svn_wc__db_status_absent)
     return SVN_NO_ERROR;
 
-  if (kind == svn_wc__db_kind_dir)
+  if (db_kind == svn_wc__db_kind_dir)
     {
       return svn_error_return(
         walker_helper(db, local_abspath, show_hidden, walk_callback, walk_baton,
