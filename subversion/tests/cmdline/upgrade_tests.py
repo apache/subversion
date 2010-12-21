@@ -182,6 +182,22 @@ def simple_property_verify(dir_path, expected_props):
     print('Actual properties: %s' % actual_props)
     raise svntest.Failure("Properties unequal")
 
+def simple_checksum_verify(expected_checksums):
+
+  for path, checksum in expected_checksums:
+    exit_code, output, errput = svntest.main.run_svn(None, 'info', path)
+    if exit_code:
+      raise svntest.Failure()
+    if checksum:
+      if not svntest.verify.RegexOutput('Checksum: ' + checksum,
+                                        match_all=False).matches(output):
+        raise svntest.Failure("did not get expected checksum " + checksum)
+    if not checksum:
+      if svntest.verify.RegexOutput('Checksum: ',
+                                    match_all=False).matches(output):
+        raise svntest.Failure("unexpected checksum")
+
+
 def run_and_verify_status_no_server(wc_dir, expected_status):
   "same as svntest.actions.run_and_verify_status(), but without '-u'"
 
@@ -792,6 +808,14 @@ def replaced_files(sbox):
       'B/g' : {'pY'  : 'vY' },
       })
 
+  simple_checksum_verify([
+      [sbox.ospath('A/f'), 'e59e06d2a8b63f23e230003b5a15e2d0'], # temp MD5
+      #[sbox.ospath('A/f'), '395dfb603d8a4e0348d0b082803f2b7426c76eb9'],
+      [sbox.ospath('A/g'), None],
+      [sbox.ospath('B/f'), 'e59e06d2a8b63f23e230003b5a15e2d0'], # temp MD5
+      #[sbox.ospath('B/f'), '395dfb603d8a4e0348d0b082803f2b7426c76eb9'],
+      [sbox.ospath('B/g'), None]])
+
   svntest.actions.run_and_verify_svn(None, 'Reverted.*', [], 'revert',
                                      sbox.ospath('A/f'), sbox.ospath('B/f'),
                                      sbox.ospath('A/g'), sbox.ospath('B/g'))
@@ -802,6 +826,12 @@ def replaced_files(sbox):
       'B/f' : {'pAf' : 'vAf' },
       'B/g' : {'pAg' : 'vAg' },
       })
+
+  simple_checksum_verify([
+      [sbox.ospath('A/f'), '958eb2d755df2d9e0de6f7b835aec16b64d83f6f'],
+      [sbox.ospath('A/g'), '395dfb603d8a4e0348d0b082803f2b7426c76eb9'],
+      [sbox.ospath('B/f'), '958eb2d755df2d9e0de6f7b835aec16b64d83f6f'],
+      [sbox.ospath('B/g'), '395dfb603d8a4e0348d0b082803f2b7426c76eb9']])
 
 ########################################################################
 # Run the tests
