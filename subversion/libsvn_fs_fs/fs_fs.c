@@ -5426,9 +5426,20 @@ rep_write_contents_close(void *baton)
   /* Check and see if we already have a representation somewhere that's
      identical to the one we just wrote out. */
   if (ffd->rep_sharing_allowed)
-    /* ### TODO: ignore errors opening the DB (issue #3506) * */
-    SVN_ERR(svn_fs_fs__get_rep_reference(&old_rep, b->fs, rep->sha1_checksum,
-                                         b->parent_pool));
+    {
+      svn_error_t *err;
+      err = svn_fs_fs__get_rep_reference(&old_rep, b->fs, rep->sha1_checksum,
+                                         b->parent_pool);
+      if (err)
+        {
+          /* Something's wrong with the rep-sharing index.  We can continue 
+             without rep-sharing, but warn.
+           */
+          (b->fs->warning)(b->fs->warning_baton, err);
+          svn_error_clear(err);
+          old_rep = NULL;
+        }
+    }
   else
     old_rep = NULL;
 
