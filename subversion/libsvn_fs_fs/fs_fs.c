@@ -6388,7 +6388,8 @@ svn_fs_fs__commit(svn_revnum_t *new_rev_p,
 
   if (ffd->rep_sharing_allowed)
     {
-      /* ### TODO: ignore errors opening the DB (issue #3506) * */
+      /* At this point, *NEW_REV_P has been set, so errors here won't affect
+         the success of the commit.  (See svn_fs_commit_txn().)  */
       SVN_ERR(svn_fs_fs__open_rep_cache(fs, pool));
       SVN_ERR(svn_sqlite__with_transaction(ffd->rep_cache_db,
                                            commit_sqlite_txn_callback,
