@@ -250,6 +250,16 @@ svn_subst_stream_translated_to_normal_form(svn_stream_t **stream,
 }
 
 svn_error_t *
+svn_subst_translate_string(svn_string_t **new_value,
+                           const svn_string_t *value,
+                           const char *encoding,
+                           apr_pool_t *pool)
+{
+  return svn_subst_translate_string2(new_value, NULL, NULL, value,
+                                     encoding, pool, pool);
+}
+
+svn_error_t *
 svn_subst_stream_detranslated(svn_stream_t **stream_p,
                               const char *src,
                               svn_subst_eol_style_t eol_style,

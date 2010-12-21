@@ -606,10 +606,33 @@ translate_keyword(char *buf,
   return FALSE;
 }
 
+/* A boolean expression that evaluates to true if the first STR_LEN characters
+   of the string STR are one of the end-of-line strings LF, CR, or CRLF;
+   to false otherwise.  */
+#define STRING_IS_EOL(str, str_len) \
+  (((str_len) == 2 &&  (str)[0] == '\r' && (str)[1] == '\n') || \
+   ((str_len) == 1 && ((str)[0] == '\n' || (str)[0] == '\r')))
+
+/* A boolean expression that evaluates to true if the end-of-line string EOL1,
+   having length EOL1_LEN, and the end-of-line string EOL2, having length
+   EOL2_LEN, are different, assuming that EOL1 and EOL2 are both from the
+   set {"\n", "\r", "\r\n"};  to false otherwise.
+
+   Given that EOL1 and EOL2 are either "\n", "\r", or "\r\n", then if
+   EOL1_LEN is not the same as EOL2_LEN, then EOL1 and EOL2 are of course
+   different. If EOL1_LEN and EOL2_LEN are both 2 then EOL1 and EOL2 are both
+   "\r\n" and *EOL1 == *EOL2. Otherwise, EOL1_LEN and EOL2_LEN are both 1.
+   We need only check the one character for equality to determine whether
+   EOL1 and EOL2 are different in that case. */
+#define DIFFERENT_EOL_STRINGS(eol1, eol1_len, eol2, eol2_len) \
+  (((eol1_len) != (eol2_len)) || (*(eol1) != *(eol2)))
+
 
 /* Translate the newline string NEWLINE_BUF (of length NEWLINE_LEN) to
    the newline string EOL_STR (of length EOL_STR_LEN), writing the
    result (which is always EOL_STR) to the stream DST.
+
+   This function assumes that NEWLINE_BUF is either "\n", "\r", or "\r\n".
 
    Also check for consistency of the source newline strings across
    multiple calls, using SRC_FORMAT (length *SRC_FORMAT_LEN) as a cache
@@ -619,6 +642,11 @@ translate_keyword(char *buf,
    error.  If *SRC_FORMAT_LEN is 0, assume we are examining the first
    newline in the file, and copy it to {SRC_FORMAT, *SRC_FORMAT_LEN} to
    use for later consistency checks.
+
+   If TRANSLATED_EOL is not NULL, then set *TRANSLATED_EOL to TRUE if the
+   newline string that was written (EOL_STR) is not the same as the newline
+   string that was translated (NEWLINE_BUF), otherwise leave *TRANSLATED_EOL
+   untouched.
 
    Note: all parameters are required even if REPAIR is TRUE.
    ### We could require that REPAIR must not change across a sequence of
@@ -633,17 +661,19 @@ translate_newline(const char *eol_str,
                   const char *newline_buf,
                   apr_size_t newline_len,
                   svn_stream_t *dst,
+                  svn_boolean_t *translated_eol,
                   svn_boolean_t repair)
 {
+  SVN_ERR_ASSERT(STRING_IS_EOL(newline_buf, newline_len));
+
   /* If we've seen a newline before, compare it with our cache to
      check for consistency, else cache it for future comparisons. */
   if (*src_format_len)
     {
       /* Comparing with cache.  If we are inconsistent and
          we are NOT repairing the file, generate an error! */
-      if ((! repair) &&
-          ((*src_format_len != newline_len) ||
-           (strncmp(src_format, newline_buf, newline_len))))
+      if ((! repair) && DIFFERENT_EOL_STRINGS(src_format, *src_format_len,
+                                              newline_buf, newline_len))
         return svn_error_create(SVN_ERR_IO_INCONSISTENT_EOL, NULL, NULL);
     }
   else
@@ -653,8 +683,18 @@ translate_newline(const char *eol_str,
       strncpy(src_format, newline_buf, newline_len);
       *src_format_len = newline_len;
     }
+
   /* Write the desired newline */
-  return translate_write(dst, eol_str, eol_str_len);
+  SVN_ERR(translate_write(dst, eol_str, eol_str_len));
+
+  /* Report whether we translated it.  Note: Not using DIFFERENT_EOL_STRINGS()
+   * because EOL_STR may not be a valid EOL sequence. */
+  if (translated_eol != NULL &&
+      (eol_str_len != newline_len ||
+       memcmp(eol_str, newline_buf, eol_str_len) != 0))
+    *translated_eol = TRUE;
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -765,10 +805,12 @@ svn_subst_keywords_differ2(apr_hash_t *a,
   return FALSE;
 }
 
+
 /* Baton for translate_chunk() to store its state in. */
 struct translation_baton
 {
   const char *eol_str;
+  svn_boolean_t *translated_eol;
   svn_boolean_t repair;
   apr_hash_t *keywords;
   svn_boolean_t expand;
@@ -813,6 +855,7 @@ struct translation_baton
  */
 static struct translation_baton *
 create_translation_baton(const char *eol_str,
+                         svn_boolean_t *translated_eol,
                          svn_boolean_t repair,
                          apr_hash_t *keywords,
                          svn_boolean_t expand,
@@ -826,6 +869,7 @@ create_translation_baton(const char *eol_str,
 
   b->eol_str = eol_str;
   b->eol_str_len = eol_str ? strlen(eol_str) : 0;
+  b->translated_eol = translated_eol;
   b->repair = repair;
   b->keywords = keywords;
   b->expand = expand;
@@ -888,6 +932,9 @@ eol_unchanged(struct translation_baton *b,
  * To finish a series of chunk translations, flush all buffers by calling
  * this routine with a NULL value for BUF.
  *
+ * If B->translated_eol is not NULL, then set *B->translated_eol to TRUE if
+ * an end-of-line sequence was changed, otherwise leave it untouched.
+ *
  * Use POOL for temporary allocations.
  */
 static svn_error_t *
@@ -924,7 +971,8 @@ translate_chunk(svn_stream_t *dst,
               SVN_ERR(translate_newline(b->eol_str, b->eol_str_len,
                                         b->src_format,
                                         &b->src_format_len, b->newline_buf,
-                                        b->newline_off, dst, b->repair));
+                                        b->newline_off, dst, b->translated_eol,
+                                        b->repair));
 
               b->newline_off = 0;
             }
@@ -1070,7 +1118,8 @@ translate_chunk(svn_stream_t *dst,
                                             b->src_format,
                                             &b->src_format_len,
                                             b->newline_buf,
-                                            b->newline_off, dst, b->repair));
+                                            b->newline_off, dst,
+                                            b->translated_eol, b->repair));
 
                   b->newline_off = 0;
                   break;
@@ -1086,7 +1135,7 @@ translate_chunk(svn_stream_t *dst,
           SVN_ERR(translate_newline(b->eol_str, b->eol_str_len,
                                     b->src_format, &b->src_format_len,
                                     b->newline_buf, b->newline_off,
-                                    dst, b->repair));
+                                    dst, b->translated_eol, b->repair));
           b->newline_off = 0;
         }
 
@@ -1349,14 +1398,20 @@ svn_subst_read_specialfile(svn_stream_t **stream,
   return SVN_NO_ERROR;
 }
 
-
-svn_stream_t *
-svn_subst_stream_translated(svn_stream_t *stream,
-                            const char *eol_str,
-                            svn_boolean_t repair,
-                            apr_hash_t *keywords,
-                            svn_boolean_t expand,
-                            apr_pool_t *result_pool)
+/* Same as svn_subst_stream_translated(), except for the following.
+ *
+ * If TRANSLATED_EOL is not NULL, then reading and/or writing to the stream
+ * will set *TRANSLATED_EOL to TRUE if an end-of-line sequence was changed,
+ * otherwise leave it untouched.
+ */
+static svn_stream_t *
+stream_translated(svn_stream_t *stream,
+                  const char *eol_str,
+                  svn_boolean_t *translated_eol,
+                  svn_boolean_t repair,
+                  apr_hash_t *keywords,
+                  svn_boolean_t expand,
+                  apr_pool_t *result_pool)
 {
   struct translated_stream_baton *baton
     = apr_palloc(result_pool, sizeof(*baton));
@@ -1398,9 +1453,11 @@ svn_subst_stream_translated(svn_stream_t *stream,
   /* Setup the baton fields */
   baton->stream = stream;
   baton->in_baton
-    = create_translation_baton(eol_str, repair, keywords, expand, result_pool);
+    = create_translation_baton(eol_str, translated_eol, repair, keywords,
+                               expand, result_pool);
   baton->out_baton
-    = create_translation_baton(eol_str, repair, keywords, expand, result_pool);
+    = create_translation_baton(eol_str, translated_eol, repair, keywords,
+                               expand, result_pool);
   baton->written = FALSE;
   baton->readbuf = svn_stringbuf_create("", result_pool);
   baton->readbuf_off = 0;
@@ -1417,15 +1474,32 @@ svn_subst_stream_translated(svn_stream_t *stream,
   return s;
 }
 
+svn_stream_t *
+svn_subst_stream_translated(svn_stream_t *stream,
+                            const char *eol_str,
+                            svn_boolean_t repair,
+                            apr_hash_t *keywords,
+                            svn_boolean_t expand,
+                            apr_pool_t *result_pool)
+{
+  return stream_translated(stream, eol_str, NULL, repair, keywords, expand,
+                           result_pool);
+}
 
-svn_error_t *
-svn_subst_translate_cstring2(const char *src,
-                             const char **dst,
-                             const char *eol_str,
-                             svn_boolean_t repair,
-                             apr_hash_t *keywords,
-                             svn_boolean_t expand,
-                             apr_pool_t *pool)
+/* Same as svn_subst_translate_cstring2(), except for the following.
+ *
+ * If TRANSLATED_EOL is not NULL, then set *TRANSLATED_EOL to TRUE if an
+ * end-of-line sequence was changed, or to FALSE otherwise.
+ */
+static svn_error_t *
+translate_cstring(const char **dst,
+                  svn_boolean_t *translated_eol,
+                  const char *src,
+                  const char *eol_str,
+                  svn_boolean_t repair,
+                  apr_hash_t *keywords,
+                  svn_boolean_t expand,
+                  apr_pool_t *pool)
 {
   svn_stringbuf_t *dst_stringbuf;
   svn_stream_t *dst_stream;
@@ -1442,9 +1516,12 @@ svn_subst_translate_cstring2(const char *src,
   dst_stringbuf = svn_stringbuf_create("", pool);
   dst_stream = svn_stream_from_stringbuf(dst_stringbuf, pool);
 
+  if (translated_eol)
+    *translated_eol = FALSE;
+
   /* Another wrapper to translate the content. */
-  dst_stream = svn_subst_stream_translated(dst_stream, eol_str, repair,
-                                           keywords, expand, pool);
+  dst_stream = stream_translated(dst_stream, eol_str, translated_eol, repair,
+                                 keywords, expand, pool);
 
   /* Jam the text into the destination stream (to translate it). */
   SVN_ERR(svn_stream_write(dst_stream, src, &len));
@@ -1454,6 +1531,19 @@ svn_subst_translate_cstring2(const char *src,
 
   *dst = dst_stringbuf->data;
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_subst_translate_cstring2(const char *src,
+                             const char **dst,
+                             const char *eol_str,
+                             svn_boolean_t repair,
+                             apr_hash_t *keywords,
+                             svn_boolean_t expand,
+                             apr_pool_t *pool)
+{
+  return translate_cstring(dst, NULL, src, eol_str, repair, keywords, expand,
+                            pool);
 }
 
 /* Given a special file at SRC, generate a textual representation of
@@ -1768,14 +1858,16 @@ svn_subst_stream_from_specialfile(svn_stream_t **stream,
 
 /*** String translation */
 svn_error_t *
-svn_subst_translate_string(svn_string_t **new_value,
-                           const svn_string_t *value,
-                           const char *encoding,
-                           apr_pool_t *pool)
+svn_subst_translate_string2(svn_string_t **new_value,
+                            svn_boolean_t *translated_to_utf8,
+                            svn_boolean_t *translated_line_endings,
+                            const svn_string_t *value,
+                            const char *encoding,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
 {
   const char *val_utf8;
   const char *val_utf8_lf;
-  apr_pool_t *scratch_pool = svn_pool_create(pool);
 
   if (value == NULL)
     {
@@ -1793,16 +1885,19 @@ svn_subst_translate_string(svn_string_t **new_value,
       SVN_ERR(svn_utf_cstring_to_utf8(&val_utf8, value->data, scratch_pool));
     }
 
-  SVN_ERR(svn_subst_translate_cstring2(val_utf8,
-                                       &val_utf8_lf,
-                                       "\n",  /* translate to LF */
-                                       FALSE, /* no repair */
-                                       NULL,  /* no keywords */
-                                       FALSE, /* no expansion */
-                                       scratch_pool));
+  if (translated_to_utf8)
+    *translated_to_utf8 = (strcmp(value->data, val_utf8) != 0);
 
-  *new_value = svn_string_create(val_utf8_lf, pool);
-  svn_pool_destroy(scratch_pool);
+  SVN_ERR(translate_cstring(&val_utf8_lf,
+                            translated_line_endings,
+                            val_utf8,
+                            "\n",  /* translate to LF */
+                            FALSE, /* no repair */
+                            NULL,  /* no keywords */
+                            FALSE, /* no expansion */
+                            scratch_pool));
+
+  *new_value = svn_string_create(val_utf8_lf, result_pool);
   return SVN_NO_ERROR;
 }
 
