@@ -416,7 +416,7 @@ svn_ra_local__get_schemes(apr_pool_t *pool)
 
 /* Do nothing.
  *
- * Why is this acceptable?  As of now, FS warnings are used for only
+ * Why is this acceptable?  FS warnings used to be used for only
  * two things: failures to close BDB repositories and failures to
  * interact with memcached in FSFS (new in 1.6).  In 1.5 and earlier,
  * we did not call svn_fs_set_warning_func in ra_local, which means
@@ -433,6 +433,9 @@ static void
 ignore_warnings(void *baton,
                 svn_error_t *err)
 {
+#ifdef SVN_DEBUG
+  SVN_DBG(("Ignoring FS warning %ld\n", err ? err->apr_err : 0));
+#endif
   return;
 }
 
