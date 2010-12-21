@@ -756,7 +756,7 @@ svn_io_copy_file(const char *src,
 #endif
 
   SVN_ERR(svn_io_file_open(&from_file, src, APR_READ | APR_BINARY,
-                         APR_OS_DEFAULT, pool));
+                           APR_OS_DEFAULT, pool));
 
   /* For atomicity, we copy to a tmp file and then rename the tmp
      file over the real destination. */
