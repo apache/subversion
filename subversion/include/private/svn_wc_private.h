@@ -159,6 +159,7 @@ svn_wc__strictly_is_wc_root(svn_boolean_t *wc_root,
 
 /** A callback invoked by the generic node-walker function.  */
 typedef svn_error_t *(*svn_wc__node_found_func_t)(const char *local_abspath,
+                                                  svn_node_kind_t kind,
                                                   void *walk_baton,
                                                   apr_pool_t *scratch_pool);
 

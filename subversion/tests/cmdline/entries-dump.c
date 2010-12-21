@@ -143,14 +143,11 @@ struct directory_walk_baton
 /* svn_wc__node_found_func_t implementation for directory_dump */
 static svn_error_t *
 print_dir(const char *local_abspath,
+          svn_node_kind_t kind,
           void *walk_baton,
           apr_pool_t *scratch_pool)
 {
   struct directory_walk_baton *bt = walk_baton;
-  svn_node_kind_t kind;
-
-  SVN_ERR(svn_wc_read_kind(&kind, bt->wc_ctx, local_abspath, FALSE,
-                           scratch_pool));
 
   if (kind != svn_node_dir)
     return SVN_NO_ERROR;

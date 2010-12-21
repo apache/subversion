@@ -52,6 +52,7 @@ struct walk_baton
  * Temporary allocations are made in SCRATCH_POOL. */
 static svn_error_t *
 analyze_status(const char *local_abspath,
+               svn_node_kind_t kind,
                void *baton,
                apr_pool_t *scratch_pool)
 {

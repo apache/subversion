@@ -1297,18 +1297,21 @@ typedef struct modcheck_baton_t {
                                           then this field has no meaning. */
 } modcheck_baton_t;
 
-/* */
+/* An implementation of svn_wc__node_found_func_t. */
 static svn_error_t *
 modcheck_found_node(const char *local_abspath,
+                    svn_node_kind_t kind,
                     void *walk_baton,
                     apr_pool_t *scratch_pool)
 {
   modcheck_baton_t *baton = walk_baton;
-  svn_wc__db_kind_t kind;
+  svn_wc__db_kind_t db_kind;
   svn_wc__db_status_t status;
   svn_boolean_t modified;
 
-  SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
+  /* ### The walker could in theory pass status and db kind as arguments.
+   * ### So this read_info call is probably redundant. */
+  SVN_ERR(svn_wc__db_read_info(&status, &db_kind, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL,
@@ -1321,7 +1324,7 @@ modcheck_found_node(const char *local_abspath,
      modification */
   else if (!baton->found_mod || baton->all_edits_are_deletes)
     SVN_ERR(entry_has_local_mods(&modified, baton->db, local_abspath,
-                                 kind, scratch_pool));
+                                 db_kind, scratch_pool));
 
   if (modified)
     {
