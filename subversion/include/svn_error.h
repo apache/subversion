@@ -318,7 +318,7 @@ svn_handle_warning(FILE *stream,
  * through this function, but should *not* be cleared (as the returned
  * error is shares memory with @a ERR).
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
 svn_error_t *svn_error_purge_tracing(svn_error_t *err);
 
