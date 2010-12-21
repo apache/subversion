@@ -958,14 +958,15 @@ remove_suffix(const char *str, const char *suffix, apr_pool_t *result_pool)
    DIR_ABSPATH into the pristine store of SDB which is located in directory
    NEW_WCROOT_ABSPATH.
 
-   If DIR_RELPATH is set then any .svn-revert files will trigger an
-   attempt to update the checksum in a NODES row below the top WORKING
-   node. */
+   Set *TEXT_BASES_INFO to a new hash, allocated in RESULT_POOL, that maps
+   (const char *) name of the versioned file to (svn_wc__text_base_info_t *)
+   information about the pristine text. */
 static svn_error_t *
-migrate_text_bases(const char *dir_abspath,
+migrate_text_bases(apr_hash_t **text_bases_info,
+                   const char *dir_abspath,
                    const char *new_wcroot_abspath,
-                   const char *dir_relpath,
                    svn_sqlite__db_t *sdb,
+                   apr_pool_t *result_pool,
                    apr_pool_t *scratch_pool)
 {
   apr_hash_t *dirents;
@@ -974,6 +975,8 @@ migrate_text_bases(const char *dir_abspath,
   const char *text_base_dir = svn_wc__adm_child(dir_abspath,
                                                 TEXT_BASE_SUBDIR,
                                                 scratch_pool);
+
+  *text_bases_info = apr_hash_make(result_pool);
 
   /* Iterate over the text-base files */
   SVN_ERR(svn_io_get_dirents3(&dirents, text_base_dir, TRUE,
@@ -1040,51 +1043,41 @@ migrate_text_bases(const char *dir_abspath,
                                  iterpool));
       }
 
-      /* If DIR_RELPATH is set and this text base is a "revert base", then
-         attempt to update the checksum in a NODES row below the top WORKING
-         node. */
-      if (dir_relpath)
-        {
-          const char *name
-            = remove_suffix(text_base_basename, SVN_WC__REVERT_EXT, iterpool);
+      /* Add the checksums for this text-base to *TEXT_BASES_INFO. */
+      {
+        const char *versioned_file_name;
+        svn_boolean_t is_revert_base;
+        svn_wc__text_base_info_t *info;
+        svn_wc__text_base_file_info_t *file_info;
 
-          if (name)
-            {
-              /* Assumming this revert-base is not an orphan, the
-                 upgrade process will have inserted a NODES row with a
-                 null checksum below the top-level working node.
-                 Update that checksum now. */
-              apr_int64_t op_depth = -1, wc_id = 1;
-              const char *local_relpath = svn_relpath_join(dir_relpath, name,
-                                                           iterpool);
-              svn_boolean_t have_row;
-              svn_sqlite__stmt_t *stmt;
+        /* Determine the versioned file name and whether this is a normal base
+         * or a revert base. */
+        versioned_file_name = remove_suffix(text_base_basename,
+                                            SVN_WC__REVERT_EXT, result_pool);
+        if (versioned_file_name)
+          {
+            is_revert_base = TRUE;
+          }
+        else
+          {
+            versioned_file_name = remove_suffix(text_base_basename,
+                                                SVN_WC__BASE_EXT, result_pool);
+            is_revert_base = FALSE;
+          }
 
-              SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                                STMT_SELECT_NODE_INFO));
-              SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
-              SVN_ERR(svn_sqlite__step(&have_row, stmt));
-              if (have_row)
-                {
-                  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-                  if (have_row && svn_sqlite__column_is_null(stmt, 6)
-                      && !strcmp(svn_sqlite__column_text(stmt, 4, NULL),
-                                 "file"))
-                    op_depth = svn_sqlite__column_int64(stmt, 0);
-                }
-              SVN_ERR(svn_sqlite__reset(stmt));
-              if (op_depth != -1)
-                {
-                  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                                    STMT_UPDATE_CHECKSUM));
-                  SVN_ERR(svn_sqlite__bindf(stmt, "isi", wc_id, local_relpath,
-                                            op_depth));
-                  SVN_ERR(svn_sqlite__bind_checksum(stmt, 4, sha1_checksum,
-                                                    iterpool));
-                  SVN_ERR(svn_sqlite__update(NULL, stmt));
-                }
-            }
-        }
+        /* Create a new info struct for this versioned file, or fill in the
+         * existing one if this is the second text-base we've found for it. */
+        info = apr_hash_get(*text_bases_info, versioned_file_name,
+                            APR_HASH_KEY_STRING);
+        if (info == NULL)
+          info = apr_pcalloc(result_pool, sizeof (*info));
+        file_info = (is_revert_base ? &info->revert_base : &info->normal_base);
+
+        file_info->sha1_checksum = svn_checksum_dup(sha1_checksum, result_pool);
+        file_info->md5_checksum = svn_checksum_dup(md5_checksum, result_pool);
+        apr_hash_set(*text_bases_info, versioned_file_name, APR_HASH_KEY_STRING,
+                     info);
+      }
     }
 
   svn_pool_destroy(iterpool);
@@ -1176,6 +1169,7 @@ upgrade_to_wcng(void **dir_baton,
   apr_hash_t *entries;
   svn_wc_entry_t *this_dir;
   const char *old_wcroot_abspath, *dir_relpath;
+  apr_hash_t *text_bases_info;
 
   /* Don't try to mess with the WC if there are old log files left. */
 
@@ -1197,18 +1191,21 @@ upgrade_to_wcng(void **dir_baton,
    * The semantics and storage mechanisms between the two are vastly different,
    * so it's going to be a bit painful.  Here's a plan for the operation:
    *
-   * 1) The 'entries' file needs to be moved to the new format. We read it
-   *    using the old-format reader, and then use our compatibility code
-   *    for writing entries to fill out the (new) wc_db state.
+   * 1) Read the old 'entries' using the old-format reader.
    *
-   * 2) Convert wcprop to the wc-ng format
+   * 2) Create the new DB if it hasn't already been created.
    *
-   * 3) Trash old, unused files and subdirs
+   * 3) Use our compatibility code for writing entries to fill out the (new)
+   *    DB state.  Use the remembered checksums, since an entry has only the
+   *    MD5 not the SHA1 checksum, and in the case of a revert-base doesn't
+   *    even have that.
    *
-   * ### (fill in other bits as they are implemented)
+   * 4) Convert wcprop to the wc-ng format
+   *
+   * 5) Migrate regular properties to the WC-NG DB.
    */
 
-  /***** ENTRIES *****/
+  /***** ENTRIES - READ *****/
   SVN_ERR(svn_wc__read_entries_old(&entries, dir_abspath,
                                    scratch_pool, scratch_pool));
 
@@ -1229,6 +1226,7 @@ upgrade_to_wcng(void **dir_baton,
                    apr_pstrdup(hash_pool, this_dir->uuid));
     }
 
+  /* Create the new DB if it hasn't already been created. */
   if (!data->sdb)
     {
       const char *root_adm_abspath;
@@ -1262,20 +1260,25 @@ upgrade_to_wcng(void **dir_baton,
       SVN_ERR(svn_wc__db_wclock_obtain(db, data->root_abspath, 0, FALSE,
                                        scratch_pool));
     }
- 
-  SVN_ERR(svn_wc__write_upgraded_entries(dir_baton, parent_baton, db, data->sdb,
-                                         data->repos_id, data->wc_id,
-                                         dir_abspath, data->root_abspath,
-                                         entries,
-                                         result_pool, scratch_pool));
 
-  /***** WC PROPS *****/
-
-  /* Ugh. We don't know precisely where the wcprops are. Ignore them.  */
   old_wcroot_abspath = svn_dirent_get_longest_ancestor(dir_abspath,
                                                        data->root_abspath,
                                                        scratch_pool);
   dir_relpath = svn_dirent_skip_ancestor(old_wcroot_abspath, dir_abspath);
+
+  /***** TEXT BASES *****/
+  SVN_ERR(migrate_text_bases(&text_bases_info, dir_abspath, data->root_abspath,
+                             data->sdb, scratch_pool, scratch_pool));
+
+  /***** ENTRIES - WRITE *****/
+  SVN_ERR(svn_wc__write_upgraded_entries(dir_baton, parent_baton, db, data->sdb,
+                                         data->repos_id, data->wc_id,
+                                         dir_abspath, data->root_abspath,
+                                         entries, text_bases_info,
+                                         result_pool, scratch_pool));
+
+  /***** WC PROPS *****/
+  /* If we don't know precisely where the wcprops are, ignore them.  */
   if (old_format != SVN_WC__WCPROPS_LOST)
     {
       apr_hash_t *all_wcprops;
@@ -1290,9 +1293,6 @@ upgrade_to_wcng(void **dir_baton,
       SVN_ERR(svn_wc__db_upgrade_apply_dav_cache(data->sdb, dir_relpath,
                                                  all_wcprops, scratch_pool));
     }
-
-  SVN_ERR(migrate_text_bases(dir_abspath, data->root_abspath, dir_relpath,
-                             data->sdb, scratch_pool));
 
   /* Upgrade all the properties (including "this dir").
 

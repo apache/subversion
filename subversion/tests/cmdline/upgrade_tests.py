@@ -809,11 +809,9 @@ def replaced_files(sbox):
       })
 
   simple_checksum_verify([
-      [sbox.ospath('A/f'), 'e59e06d2a8b63f23e230003b5a15e2d0'], # temp MD5
-      #[sbox.ospath('A/f'), '395dfb603d8a4e0348d0b082803f2b7426c76eb9'],
+      [sbox.ospath('A/f'), '395dfb603d8a4e0348d0b082803f2b7426c76eb9'],
       [sbox.ospath('A/g'), None],
-      [sbox.ospath('B/f'), 'e59e06d2a8b63f23e230003b5a15e2d0'], # temp MD5
-      #[sbox.ospath('B/f'), '395dfb603d8a4e0348d0b082803f2b7426c76eb9'],
+      [sbox.ospath('B/f'), '395dfb603d8a4e0348d0b082803f2b7426c76eb9'],
       [sbox.ospath('B/g'), None]])
 
   svntest.actions.run_and_verify_svn(None, 'Reverted.*', [], 'revert',

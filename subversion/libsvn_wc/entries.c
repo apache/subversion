@@ -1578,6 +1578,7 @@ write_entry(struct write_baton **entry_node,
             apr_int64_t wc_id,
             apr_int64_t repos_id,
             const svn_wc_entry_t *entry,
+            const svn_wc__text_base_info_t *text_base_info,
             const char *local_relpath,
             const char *entry_abspath,
             const svn_wc_entry_t *this_dir,
@@ -1851,14 +1852,43 @@ write_entry(struct write_baton **entry_node,
             }
         }
 
-      /* If there is a copied WORKING node file then we don't have the
-         revert-base checksum for this file.  It will get updated
-         later when we transfer the pristine texts. */
-      if (entry->kind == svn_node_dir || (working_node && entry->copied))
+      if (entry->kind == svn_node_dir)
         base_node->checksum = NULL;
       else
-        SVN_ERR(svn_checksum_parse_hex(&base_node->checksum, svn_checksum_md5,
-                                       entry->checksum, result_pool));
+        {
+          if (text_base_info && text_base_info->revert_base.sha1_checksum)
+            base_node->checksum = text_base_info->revert_base.sha1_checksum;
+          else if (text_base_info && text_base_info->normal_base.sha1_checksum)
+            base_node->checksum = text_base_info->normal_base.sha1_checksum;
+          else
+            base_node->checksum = NULL;
+
+          /* The base MD5 checksum is available in the entry, unless there
+           * is a copied WORKING node.  If possible, verify that the entry
+           * checksum matches the base file that we found. */
+#ifdef SVN_DEBUG
+          if (! (working_node && entry->copied))
+            {
+              svn_checksum_t *entry_md5_checksum, *found_md5_checksum;
+              SVN_ERR(svn_checksum_parse_hex(&entry_md5_checksum, svn_checksum_md5,
+                                             entry->checksum, scratch_pool));
+              if (text_base_info && text_base_info->revert_base.md5_checksum)
+                found_md5_checksum = text_base_info->revert_base.md5_checksum;
+              else if (text_base_info && text_base_info->normal_base.md5_checksum)
+                found_md5_checksum = text_base_info->normal_base.md5_checksum;
+              else
+                found_md5_checksum = NULL;
+              if (entry_md5_checksum && found_md5_checksum)
+                SVN_ERR_ASSERT(svn_checksum_match(entry_md5_checksum,
+                                                  found_md5_checksum));
+              else
+                {
+                  /* ### Not sure what conditions this should cover. */
+                  /* SVN_ERR_ASSERT(entry->deleted || ...); */
+                }
+            }
+#endif
+        }
 
       if (this_dir->repos)
         {
@@ -1960,10 +1990,9 @@ write_entry(struct write_baton **entry_node,
       below_working_node->moved_here = FALSE;
       below_working_node->moved_to = FALSE;
 
-      /* We have a problem, the revert_base information isn't
-         available in the entry structure.  The checksum will get
-         updated later when we transfer the pristines. */
-      below_working_node->checksum = NULL;
+      /* The revert_base checksum isn't available in the entry structure,
+         so the caller provides it. */
+      below_working_node->checksum = text_base_info->revert_base.sha1_checksum;
       below_working_node->translated_size = 0;
       below_working_node->changed_rev = SVN_INVALID_REVNUM;
       below_working_node->changed_date = 0;
@@ -1995,9 +2024,24 @@ write_entry(struct write_baton **entry_node,
       if (entry->kind == svn_node_dir)
         working_node->checksum = NULL;
       else
-        SVN_ERR(svn_checksum_parse_hex(&working_node->checksum,
-                                       svn_checksum_md5,
-                                       entry->checksum, result_pool));
+        {
+          working_node->checksum = text_base_info->normal_base.sha1_checksum;
+
+          /* If an MD5 checksum is present in the entry, we can verify that
+           * it matches the MD5 of the base file we found earlier. */
+#ifdef SVN_DEBUG
+          if (entry->checksum)
+          {
+            svn_checksum_t *md5_checksum;
+            SVN_ERR(svn_checksum_parse_hex(&md5_checksum, svn_checksum_md5,
+                                           entry->checksum, result_pool));
+            SVN_ERR_ASSERT(
+              md5_checksum && text_base_info->normal_base.md5_checksum);
+            SVN_ERR_ASSERT(svn_checksum_match(
+              md5_checksum, text_base_info->normal_base.md5_checksum));
+          }
+#endif
+        }
 
       /* All subdirs start of incomplete, and stop being incomplete
          when the entries file in the subdir is upgraded. */
@@ -2098,6 +2142,7 @@ struct entries_write_baton
   const char *dir_abspath;
   const char *new_root_abspath;
   apr_hash_t *entries;
+  apr_hash_t *text_bases_info;
   struct write_baton *parent_node;
   struct write_baton *dir_node;
   apr_pool_t *result_pool;
@@ -2139,7 +2184,7 @@ entries_write_new_cb(void *baton,
 
   /* Write out "this dir" */
   SVN_ERR(write_entry(&ewb->dir_node, ewb->parent_node, db, sdb,
-                      ewb->wc_id, ewb->repos_id, this_dir, dir_relpath,
+                      ewb->wc_id, ewb->repos_id, this_dir, NULL, dir_relpath,
                       svn_dirent_join(new_root_abspath, dir_relpath,
                                       scratch_pool),
                       this_dir, FALSE, ewb->result_pool, iterpool));
@@ -2150,6 +2195,8 @@ entries_write_new_cb(void *baton,
       const char *name = svn__apr_hash_index_key(hi);
       const svn_wc_entry_t *this_entry = svn__apr_hash_index_val(hi);
       const char *child_abspath, *child_relpath;
+      svn_wc__text_base_info_t *text_base_info
+        = apr_hash_get(ewb->text_bases_info, name, APR_HASH_KEY_STRING);
 
       svn_pool_clear(iterpool);
 
@@ -2163,7 +2210,7 @@ entries_write_new_cb(void *baton,
       child_relpath = svn_dirent_skip_ancestor(old_root_abspath, child_abspath);
       SVN_ERR(write_entry(NULL, ewb->dir_node, db, sdb,
                           ewb->wc_id, ewb->repos_id,
-                          this_entry, child_relpath,
+                          this_entry, text_base_info, child_relpath,
                           svn_dirent_join(new_root_abspath, child_relpath,
                                           scratch_pool),
                           this_dir, TRUE, iterpool, iterpool));
@@ -2184,6 +2231,7 @@ svn_wc__write_upgraded_entries(void **dir_baton,
                                const char *dir_abspath,
                                const char *new_root_abspath,
                                apr_hash_t *entries,
+                               apr_hash_t *text_bases_info,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool)
 {
@@ -2195,6 +2243,7 @@ svn_wc__write_upgraded_entries(void **dir_baton,
   ewb.dir_abspath = dir_abspath;
   ewb.new_root_abspath = new_root_abspath;
   ewb.entries = entries;
+  ewb.text_bases_info = text_bases_info;
   ewb.parent_node = parent_baton;
   ewb.result_pool = result_pool;
 
