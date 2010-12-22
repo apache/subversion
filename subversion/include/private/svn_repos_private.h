@@ -84,6 +84,25 @@ svn_repos__validate_prop(const char *name,
                          const svn_string_t *value,
                          apr_pool_t *pool);
 
+/**
+ * Given the error @a err from svn_repos_fs_commit_txn(), return an
+ * string containing either or both of the svn_fs_commit_txn() error
+ * and the SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED wrapped error from
+ * the post-commit hook.  Any error tracing placeholders in the error
+ * chain are skipped over.
+ *
+ * ### This method should not be necessary, but there are a few
+ * ### places, e.g. mod_dav_svn, where only a single error message
+ * ### string is returned to the caller and it is useful to have both
+ * ### error messages included in the message.
+ *
+ * Use @a pool to allocate the string in.
+ *
+ * @since New in 1.7.
+ */
+const char *
+svn_repos__post_commit_error_str(svn_error_t *err,
+                                 apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

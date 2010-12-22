@@ -644,7 +644,56 @@ change_dir_prop(void *dir_baton,
                                        name, value, pool);
 }
 
+const char *
+svn_repos__post_commit_error_str(svn_error_t *err,
+                                 apr_pool_t *pool)
+{
+  svn_error_t *hook_err1, *hook_err2;
 
+  if (! err)
+    return "(no error)";
+
+  err = svn_error_purge_tracing(err);
+
+  hook_err1 = svn_error_find_cause(err, SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED);
+  if (hook_err1 && hook_err1->child)
+    hook_err2 = hook_err1->child;
+  else
+    hook_err2 = hook_err1;
+
+  /* This implementation counts on svn_repos_fs_commit_txn() returning
+     svn_fs_commit_txn() as the parent error with a child
+     SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED error.  If the parent error
+     is SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED then there was no error
+     in svn_fs_commit_txn(). */
+  if (hook_err1)
+    {
+      if (err == hook_err1)
+        {
+          if (hook_err2->message)
+            return apr_pstrdup(pool, hook_err2->message);
+          else
+            return "(no error message)";
+        }
+      else
+        {
+          return apr_psprintf(pool,
+                              "Post commit processing had error and '%s' "
+                              "post-commit hook had error '%s'.",
+                              err->message ? err->message
+                                           : "(no error message)",
+                              hook_err2->message ? hook_err2->message
+                                                 : "(no error message)");
+        }
+    }
+  else
+    {
+      if (err->message)
+        return apr_pstrdup(pool, err->message);
+      else
+        return "(no error message)";
+    }
+}
 
 static svn_error_t *
 close_edit(void *edit_baton,
@@ -675,17 +724,7 @@ close_edit(void *edit_baton,
              succeeded.  In which case, save the post-commit warning
              (to be reported back to the client, who will probably
              display it as a warning) and clear the error. */
-          if (err->child && err->child->message)
-            {
-              svn_error_t *warning_err = err->child;
-#ifdef SVN_ERR__TRACING
-              /* Skip over any trace records.  */
-              while (warning_err->message != NULL
-                     && strcmp(warning_err->message, SVN_ERR__TRACED) == 0)
-                warning_err = warning_err->child;
-#endif
-              post_commit_err = apr_pstrdup(pool, warning_err->message);
-            }
+          post_commit_err = svn_repos__post_commit_error_str(err, pool);
 
           svn_error_clear(err);
           err = SVN_NO_ERROR;
