@@ -252,75 +252,98 @@ datasource_open(void *baton, svn_diff_datasource_e datasource)
  * If the end of the current chunk is reached, read the next chunk in the
  * buffer and point curp to the start of the chunk.  If EOF is reached, set
  * curp equal to endp to indicate EOF. */
-static svn_error_t *
-increment_pointers(struct file_info *file[], int file_len, apr_pool_t *pool)
-{
-  int i;
+#define INCREMENT_POINTERS(all_files, files_len, pool)                       \
+  do {                                                                       \
+    int i;                                                                   \
+                                                                             \
+    for (i = 0; i < files_len; i++)                                          \
+    {                                                                        \
+      if (all_files[i]->curp < all_files[i]->endp - 1)                       \
+        all_files[i]->curp++;                                                \
+      else                                                                   \
+        SVN_ERR(increment_chunk(all_files[i], pool));                        \
+    }                                                                        \
+  } while (0)
 
-  for (i = 0; i < file_len; i++)
-    if (file[i]->chunk == -1) /* indicates before beginning of file */
-      {
-        file[i]->chunk = 0; /* point to beginning of file again */
-      }
-    else if (file[i]->curp == file[i]->endp - 1)
-      {
-        apr_off_t last_chunk = offset_to_chunk(file[i]->size);
-        if (file[i]->chunk == last_chunk)
-          {
-            file[i]->curp++; /* curp == endp signals end of file */
-          }
-        else
-          {
-            apr_off_t length;
-            file[i]->chunk++;
-            length = file[i]->chunk == last_chunk ? 
-              offset_in_chunk(file[i]->size) : CHUNK_SIZE;
-            SVN_ERR(read_chunk(file[i]->file, file[i]->path, file[i]->buffer,
-                               length, chunk_to_offset(file[i]->chunk),
-                               pool));
-            file[i]->endp = file[i]->buffer + length;
-            file[i]->curp = file[i]->buffer;
-          }
-      }
-    else
-      {
-        file[i]->curp++;
-      }
-
-  return SVN_NO_ERROR;
-}
 
 /* For all files in the FILE array, decrement the curp pointer.  If the
  * start of a chunk is reached, read the previous chunk in the buffer and
  * point curp to the last byte of the chunk.  If the beginning of a FILE is
  * reached, set chunk to -1 to indicate BOF. */
+#define DECREMENT_POINTERS(all_files, files_len, pool)                       \
+  do {                                                                       \
+    int i;                                                                   \
+                                                                             \
+    for (i = 0; i < files_len; i++)                                          \
+    {                                                                        \
+      if (all_files[i]->curp > all_files[i]->buffer)                         \
+        all_files[i]->curp--;                                                \
+      else                                                                   \
+        SVN_ERR(decrement_chunk(all_files[i], pool));                        \
+    }                                                                        \
+  } while (0)
+
+
 static svn_error_t *
-decrement_pointers(struct file_info *file[], int file_len, apr_pool_t *pool)
+increment_chunk(struct file_info *file, apr_pool_t *pool)
 {
-  int i;
+  apr_off_t length;
+  apr_off_t last_chunk = offset_to_chunk(file->size);
 
-  for (i = 0; i < file_len; i++)
-    if (file[i]->curp == file[i]->buffer)
-      {
-        if (file[i]->chunk == 0)
-          file[i]->chunk--; /* chunk == -1 signals beginning of file */
-        else
-          {
-            file[i]->chunk--;
-            SVN_ERR(read_chunk(file[i]->file, file[i]->path, file[i]->buffer,
-                               CHUNK_SIZE, chunk_to_offset(file[i]->chunk),
-                               pool));
-            file[i]->endp = file[i]->buffer + CHUNK_SIZE;
-            file[i]->curp = file[i]->endp - 1;
-          }
-      }
-    else
-      {
-        file[i]->curp--;
-      }
-
+  if (file->chunk == -1)
+    {
+      /* We are at BOF (Beginning Of File). Point to first chunk/byte again. */
+      file->chunk = 0;
+      file->curp = file->buffer;
+    }
+  else if (file->chunk == last_chunk)
+    {
+      /* We are at the last chunk. Indicate EOF by setting curp == endp. */
+      file->curp = file->endp;
+    }
+  else
+    {
+      /* There are still chunks left. Read next chunk and reset pointers. */
+      file->chunk++;
+      length = file->chunk == last_chunk ? 
+        offset_in_chunk(file->size) : CHUNK_SIZE;
+      SVN_ERR(read_chunk(file->file, file->path, file->buffer,
+                         length, chunk_to_offset(file->chunk),
+                         pool));
+      file->endp = file->buffer + length;
+      file->curp = file->buffer;
+    }
+  
   return SVN_NO_ERROR;
 }
+
+
+static svn_error_t *
+decrement_chunk(struct file_info *file, apr_pool_t *pool)
+{
+  if (file->chunk == 0)
+    {
+      /* We are already at the first chunk. Indicate BOF (Beginning Of File)
+         by setting chunk = -1 and curp = endp - 1. Both conditions are
+         important. They help the increment step to catch the BOF situation
+         in an efficient way. */
+      file->chunk--; 
+      file->curp = file->endp - 1;
+    }
+  else
+    {
+      /* Read previous chunk and reset pointers. */
+      file->chunk--;
+      SVN_ERR(read_chunk(file->file, file->path, file->buffer,
+                         CHUNK_SIZE, chunk_to_offset(file->chunk),
+                         pool));
+      file->endp = file->buffer + CHUNK_SIZE;
+      file->curp = file->endp - 1;
+    }
+  
+  return SVN_NO_ERROR;
+}
+
 
 /* Check whether one of the FILEs has its pointers 'before' the beginning of
  * the file (this can happen while scanning backwards). This is the case if
@@ -391,7 +414,7 @@ find_identical_prefix(svn_boolean_t *reached_one_eof, apr_off_t *prefix_lines,
           had_cr = FALSE;
         }
 
-      increment_pointers(file, file_len, pool);
+      INCREMENT_POINTERS(file, file_len, pool);
 
       /* curp == endp indicates EOF (this can only happen with last chunk) */
       *reached_one_eof = is_one_at_eof(file, file_len);
@@ -421,20 +444,20 @@ find_identical_prefix(svn_boolean_t *reached_one_eof, apr_off_t *prefix_lines,
       if (ended_at_nonmatching_newline)
         {
           (*prefix_lines)--;
-          decrement_pointers(file, file_len, pool);
+          DECREMENT_POINTERS(file, file_len, pool);
         }
     }
 
   /* Back up one byte, so we point at the last identical byte */
-  decrement_pointers(file, file_len, pool);
+  DECREMENT_POINTERS(file, file_len, pool);
 
   /* Back up to the last eol sequence (\n, \r\n or \r) */
   while (!is_one_at_bof(file, file_len) && 
          *file[0]->curp != '\n' && *file[0]->curp != '\r')
-    decrement_pointers(file, file_len, pool);
+    DECREMENT_POINTERS(file, file_len, pool);
 
   /* Slide one byte forward, to point past the eol sequence */
-  increment_pointers(file, file_len, pool);
+  INCREMENT_POINTERS(file, file_len, pool);
 
   return SVN_NO_ERROR;
 }
@@ -518,7 +541,7 @@ find_identical_suffix(struct file_info *file[], int file_len,
       is_match && *file_for_suffix[0].curp == *file_for_suffix[i].curp;
   while (is_match)
     {
-      decrement_pointers(file_for_suffix_ptr, file_len, pool);
+      DECREMENT_POINTERS(file_for_suffix_ptr, file_len, pool);
       
       reached_prefix = file_for_suffix[0].chunk == suffix_min_chunk0 
                        && (file_for_suffix[0].curp - file_for_suffix[0].buffer)
@@ -533,7 +556,7 @@ find_identical_suffix(struct file_info *file[], int file_len,
     }
 
   /* Slide one byte forward, to point at the first byte of identical suffix */
-  increment_pointers(file_for_suffix_ptr, file_len, pool);
+  INCREMENT_POINTERS(file_for_suffix_ptr, file_len, pool);
 
   /* Slide forward until we find an eol sequence to add the rest of the line
      we're in. Then add SUFFIX_LINES_TO_KEEP more lines. Stop if at least 
@@ -543,15 +566,15 @@ find_identical_suffix(struct file_info *file[], int file_len,
       while (!is_one_at_eof(file_for_suffix_ptr, file_len)
              && *file_for_suffix[0].curp != '\n'
              && *file_for_suffix[0].curp != '\r')
-        increment_pointers(file_for_suffix_ptr, file_len, pool);
+        INCREMENT_POINTERS(file_for_suffix_ptr, file_len, pool);
 
       /* Slide one or two more bytes, to point past the eol. */
       if (!is_one_at_eof(file_for_suffix_ptr, file_len)
           && *file_for_suffix[0].curp == '\r')
-        increment_pointers(file_for_suffix_ptr, file_len, pool);
+        INCREMENT_POINTERS(file_for_suffix_ptr, file_len, pool);
       if (!is_one_at_eof(file_for_suffix_ptr, file_len)
           && *file_for_suffix[0].curp == '\n')
-        increment_pointers(file_for_suffix_ptr, file_len, pool);
+        INCREMENT_POINTERS(file_for_suffix_ptr, file_len, pool);
     }
   while (!is_one_at_eof(file_for_suffix_ptr, file_len) 
          && suffix_lines_to_keep--);
