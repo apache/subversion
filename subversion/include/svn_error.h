@@ -194,7 +194,9 @@ svn_error_t *
 svn_error_root_cause(svn_error_t *err);
 
 /** Return the first error in @a err's chain that has an error code @a
- * apr_err or #SVN_NO_ERROR if there is no error with that code.
+ * apr_err or #SVN_NO_ERROR if there is no error with that code.  @a
+ * err should *not* be cleared as the returned error shares memory
+ * with @a err.
  *
  * If @a err is #SVN_NO_ERROR, return #SVN_NO_ERROR.
  *
