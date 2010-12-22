@@ -38,6 +38,7 @@
 #include "svn_props.h"
 #include "repos.h"
 #include "svn_private_config.h"
+#include "private/svn_repos_private.h"
 
 
 
