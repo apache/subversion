@@ -657,6 +657,10 @@ svn_repos__post_commit_error_str(svn_error_t *err,
 
   err = svn_error_purge_tracing(err);
 
+  /* hook_err1 is the SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED wrapped
+     error from the post-commit script, if any, and hook_err2 should
+     be the original error, but be defensive and handle a case where
+     SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED doesn't wrap an error. */
   hook_err1 = svn_error_find_cause(err, SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED);
   if (hook_err1 && hook_err1->child)
     hook_err2 = hook_err1->child;
@@ -672,15 +676,15 @@ svn_repos__post_commit_error_str(svn_error_t *err,
     {
       if (err == hook_err1)
         {
-          if (hook_err2->message)
-            msg = apr_pstrdup(pool, hook_err2->message);
-          else
-            msg = "(no error message)";
+          msg = apr_psprintf(pool,
+                             "Post-commit hook had error '%s'.",
+                             hook_err2->message ? hook_err2->message
+                                                : "(no error message)");
         }
       else
         {
           msg = apr_psprintf(pool,
-                             "Post commit processing had error and '%s' "
+                             "Post commit processing had error '%s' and "
                              "post-commit hook had error '%s'.",
                              err->message ? err->message
                                           : "(no error message)",
@@ -690,10 +694,10 @@ svn_repos__post_commit_error_str(svn_error_t *err,
     }
   else
     {
-      if (err->message)
-        msg = apr_pstrdup(pool, err->message);
-      else
-        msg = "(no error message)";
+      msg = apr_psprintf(pool,
+                         "Post-commit processing had error '%s'.",
+                         hook_err2->message ? hook_err2->message
+                                            : "(no error message)");
     }
 
   /* Because svn_error_purge_tracing() was used on the input error,
