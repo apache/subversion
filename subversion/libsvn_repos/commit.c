@@ -654,7 +654,7 @@ close_edit(void *edit_baton,
   svn_revnum_t new_revision = SVN_INVALID_REVNUM;
   svn_error_t *err;
   const char *conflict;
-  char *post_commit_err = NULL;
+  const char *post_commit_err = NULL;
 
   /* If no transaction has been created (ie. if open_root wasn't
      called before close_edit), abort the operation here with an
