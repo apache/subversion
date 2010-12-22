@@ -1844,15 +1844,27 @@ svn_repos_get_file_revs(svn_repos_t *repos,
  * @{
  */
 
-/** Like svn_fs_commit_txn(), but invoke the @a repos's pre- and
+/** Like svn_fs_commit_txn(), but invoke the @a repos' pre- and
  * post-commit hooks around the commit.  Use @a pool for any necessary
  * allocations.
  *
- * If the pre-commit hook or svn_fs_commit_txn() fails, throw the
- * original error to caller.  If an error occurs when running the
- * post-commit hook, return the original error wrapped with
- * SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED.  If the caller sees this
- * error, it knows that the commit succeeded anyway.
+ * If the pre-commit hook fails, do not attempt to commit the
+ * transaction and throw the original error to the caller.
+ *
+ * A successful commit is indicated by a valid revision value in @a
+ * *new_rev, not if svn_fs_commit_txn() returns an error, which can
+ * occur during its post commit FS processing.  If the transaction was
+ * not committed, then return the associated error and do not execute
+ * the post-commit hook.
+ *
+ * If the commit succeeds the post-commit hook is executed.  If the
+ * post-commit hook returns an error, always wrap it with
+ * SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED; this allows the caller to
+ * find the post-commit hook error in the returned error chain.  If
+ * both svn_fs_commit_txn() and the post-commit hook return errors,
+ * then svn_fs_commit_txn()'s error is the parent error and the
+ * SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED wrapped error is the child
+ * error.
  *
  * @a conflict_p, @a new_rev, and @a txn are as in svn_fs_commit_txn().
  */
