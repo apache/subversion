@@ -743,8 +743,8 @@ close_edit(void *edit_baton,
         commit_info->author = author ? author->data : NULL;
         commit_info->post_commit_err = post_commit_err;
         err = (*eb->commit_callback)(commit_info,
-                                      eb->commit_callback_baton,
-                                      pool);
+                                     eb->commit_callback_baton,
+                                     pool);
       }
   }
 
