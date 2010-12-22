@@ -1309,6 +1309,25 @@ upgrade_to_wcng(void **dir_baton,
 }
 
 
+/* Return a string indicating the released version (or versions) of
+ * Subversion that used WC format number WC_FORMAT, or some other
+ * suitable string if no released version used WC_FORMAT.
+ *
+ * ### It's not ideal to encode this sort of knowledge in this low-level
+ * library.  On the other hand, it doesn't need to be updated often and
+ * should be easily found when it does need to be updated.  */
+static const char *
+version_string_from_format(int wc_format)
+{
+  switch (wc_format)
+    {
+      case 4: return "<=1.3";
+      case 8: return "1.4";
+      case 9: return "1.5";
+      case 10: return "1.6";
+    }
+  return _("(unreleased development version)");
+}
 
 svn_error_t *
 svn_wc__upgrade_sdb(int *result_format,
@@ -1321,15 +1340,18 @@ svn_wc__upgrade_sdb(int *result_format,
 
   if (start_format < SVN_WC__WC_NG_VERSION /* 12 */)
     return svn_error_createf(SVN_ERR_WC_UPGRADE_REQUIRED, NULL,
-                             _("Working copy format of '%s' is too old (%d)"),
+                             _("Working copy '%s' is too old (format %d, "
+                               "created by Subversion %s)"),
                              svn_dirent_local_style(wcroot_abspath,
                                                     scratch_pool),
-                             start_format);
+                             start_format,
+                             version_string_from_format(start_format));
 
   /* Early WCNG formats no longer supported. */
   if (start_format < 19)
     return svn_error_createf(SVN_ERR_WC_UPGRADE_REQUIRED, NULL,
-                             _("Working copy format of '%s' is too old (%d); "
+                             _("Working copy '%s' is an old development "
+                               "version (format %d); to upgrade it, "
                                "use a format 18 client, then "
                                "use 'tools/dev/wc-ng/bump-to-19.py', then "
                                "use the current client"),
