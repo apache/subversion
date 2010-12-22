@@ -61,6 +61,7 @@
  * EXPECTED_CONFLICT.  If they don't match, return error.
  *
  * If a conflict is expected but the commit succeeds anyway, return
+ * error.  If the commit fails but does not provide an error, return
  * error.
  */
 static svn_error_t *
@@ -110,13 +111,24 @@ test_commit_txn(svn_revnum_t *new_rev,
              "conflicting commit returned valid new revision");
         }
     }
-  else if (err)   /* commit failed, but not due to conflict */
+  else if (err)   /* commit may have succeeded, but always report an error */
     {
-      return svn_error_quick_wrap
-        (err, "commit failed due to something other than a conflict");
+      if (SVN_IS_VALID_REVNUM(*new_rev))
+        return svn_error_quick_wrap
+          (err, "commit succeeded but something else failed");
+      else
+        return svn_error_quick_wrap
+          (err, "commit failed due to something other than a conflict");
     }
-  else            /* err == NULL, so commit succeeded */
+  else            /* err == NULL, commit should have succeeded */
     {
+      if (! SVN_IS_VALID_REVNUM(*new_rev))
+        {
+          return svn_error_create
+            (SVN_ERR_FS_GENERAL, NULL,
+             "commit failed but no error was returned");
+        }
+
       if (expected_conflict)
         {
           return svn_error_createf
