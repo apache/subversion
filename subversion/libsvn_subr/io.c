@@ -2361,8 +2361,9 @@ svn_io_run_cmd(const char *path,
 {
   apr_proc_t cmd_proc;
 
-  SVN_ERR(svn_io_start_cmd(&cmd_proc, path, cmd, args, inherit,
-                           infile, outfile, errfile, pool));
+  SVN_ERR(svn_io_start_cmd2(&cmd_proc, path, cmd, args, inherit,
+                            FALSE, infile, FALSE, outfile, FALSE, errfile,
+                            pool));
 
   return svn_io_wait_for_cmd(&cmd_proc, cmd, exitcode, exitwhy, pool);
 }
