@@ -33,6 +33,7 @@
 #include "svn_dirent_uri.h"
 
 #include "private/svn_wc_private.h"
+#include "../libsvn_wc/entries.h"
 
 static void
 str_value(const char *name, const char *value)
@@ -67,11 +68,33 @@ entries_dump(const char *dir_path, apr_pool_t *pool)
   apr_hash_t *entries;
   apr_hash_index_t *hi;
   svn_boolean_t locked;
+  svn_error_t *err;
 
-  SVN_ERR(svn_wc_locked(&locked, dir_path, pool));
-  SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, dir_path, FALSE, 0,
-                           NULL, NULL, pool));
-  SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, pool));
+  err = svn_wc_adm_open3(&adm_access, NULL, dir_path, FALSE, 0,
+                         NULL, NULL, pool);
+  if (!err)
+    {
+      SVN_ERR(svn_wc_locked(&locked, dir_path, pool));
+      SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, pool));
+    }
+  else
+    {
+      const char *dir_abspath, *lockfile_path;
+      svn_node_kind_t kind;
+
+      /* ### Should svn_wc_adm_open3 be returning UPGRADE_REQUIRED? */
+      if (err->apr_err != SVN_ERR_WC_NOT_DIRECTORY)
+        return err;
+      svn_error_clear(err);
+      adm_access = NULL;
+      SVN_ERR(svn_dirent_get_absolute(&dir_abspath, dir_path, pool));
+      SVN_ERR(svn_wc__read_entries_old(&entries, dir_abspath, pool, pool));
+      lockfile_path = svn_dirent_join_many(pool, dir_path,
+                                           svn_wc_get_adm_dir(pool),
+                                           "lock", NULL);
+      SVN_ERR(svn_io_check_path(lockfile_path, &kind, pool));
+      locked = (kind == svn_node_file);
+    }
 
   for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
     {
@@ -128,7 +151,10 @@ entries_dump(const char *dir_path, apr_pool_t *pool)
       printf("entries['%s'] = e\n", (const char *)key);
     }
 
-  return svn_wc_adm_close2(adm_access, pool);
+  if (adm_access)
+    SVN_ERR(svn_wc_adm_close2(adm_access, pool));
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -163,21 +189,59 @@ print_dir(const char *local_abspath,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+directory_dump_old(struct directory_walk_baton *bt,
+                   const char *dir_abspath,
+                   apr_pool_t *scratch_pool)
+{
+  apr_hash_t *entries;
+  apr_hash_index_t *hi;
+
+  SVN_ERR(svn_wc__read_entries_old(&entries, dir_abspath,
+                                   scratch_pool, scratch_pool));
+  for (hi = apr_hash_first(scratch_pool, entries); hi; hi = apr_hash_next(hi))
+    {
+      const svn_wc_entry_t *entry = svn__apr_hash_index_val(hi);
+      const char *local_abspath;
+
+      if (entry->deleted || entry->absent || entry->kind != svn_node_dir)
+        continue;
+
+      local_abspath = svn_dirent_join(dir_abspath, entry->name, scratch_pool);
+      if (strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR))
+        SVN_ERR(directory_dump_old(bt, local_abspath, scratch_pool));
+      else
+        SVN_ERR(print_dir(local_abspath, entry->kind, bt, scratch_pool));
+    }
+  return SVN_NO_ERROR;
+}
+
 /* Print all not-hidden subdirectories in the working copy, starting by path */
 static svn_error_t *
 directory_dump(const char *path,
                apr_pool_t *scratch_pool)
 {
   struct directory_walk_baton bt;
+  svn_error_t *err;
 
   SVN_ERR(svn_wc_context_create(&bt.wc_ctx, NULL, scratch_pool, scratch_pool));
   SVN_ERR(svn_dirent_get_absolute(&bt.root_abspath, path, scratch_pool));
 
   bt.prefix_path = path;
 
-  SVN_ERR(svn_wc__node_walk_children(bt.wc_ctx, bt.root_abspath, FALSE,
-                                     print_dir, &bt, svn_depth_infinity,
-                                     NULL, NULL, scratch_pool));
+  err = svn_wc__node_walk_children(bt.wc_ctx, bt.root_abspath, FALSE,
+                                   print_dir, &bt, svn_depth_infinity,
+                                   NULL, NULL, scratch_pool);
+  if (err)
+    {
+      const char *dir_abspath;
+
+      if (err->apr_err != SVN_ERR_WC_UPGRADE_REQUIRED)
+        return err;
+      svn_error_clear(err);
+      SVN_ERR(svn_dirent_get_absolute(&dir_abspath, path, scratch_pool));
+      SVN_ERR(directory_dump_old(&bt, dir_abspath, scratch_pool));
+    }
 
   return svn_error_return(svn_wc_context_destroy(bt.wc_ctx));
 }
