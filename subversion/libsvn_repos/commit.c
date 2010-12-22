@@ -653,7 +653,7 @@ svn_repos__post_commit_error_str(svn_error_t *err,
   const char *msg;
 
   if (! err)
-    return "(no error)";
+    return _("(no error)");
 
   err = svn_error_purge_tracing(err);
 
@@ -671,33 +671,38 @@ svn_repos__post_commit_error_str(svn_error_t *err,
      svn_fs_commit_txn() as the parent error with a child
      SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED error.  If the parent error
      is SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED then there was no error
-     in svn_fs_commit_txn(). */
+     in svn_fs_commit_txn().
+
+     The post-commit hook error message is already self describing, so
+     it can be dropped into an error message without any additional
+     text. */
   if (hook_err1)
     {
       if (err == hook_err1)
         {
-          msg = apr_psprintf(pool,
-                             "Post-commit hook had error '%s'.",
-                             hook_err2->message ? hook_err2->message
-                                                : "(no error message)");
+          if (hook_err2->message)
+            msg = apr_pstrdup(pool, hook_err2->message);
+          else
+            msg = _("post-commit hook failed with no error message");
         }
       else
         {
-          msg = apr_psprintf(pool,
-                             "Post commit processing had error '%s' and "
-                             "post-commit hook had error '%s'.",
-                             err->message ? err->message
-                                          : "(no error message)",
-                             hook_err2->message ? hook_err2->message
-                                                : "(no error message)");
+          msg = hook_err2->message
+                  ? hook_err2->message
+                  : _("post-commit hook failed with no error message.");
+          msg = apr_psprintf(
+                  pool,
+                  _("post commit FS processing had error '%s' and %s"),
+                  err->message ? err->message : _("(no error message)"),
+                  msg);
         }
     }
   else
     {
       msg = apr_psprintf(pool,
-                         "Post-commit processing had error '%s'.",
+                         _("post-commit FS processing had error '%s'."),
                          hook_err2->message ? hook_err2->message
-                                            : "(no error message)");
+                                            : _("(no error message)"));
     }
 
   /* Because svn_error_purge_tracing() was used on the input error,
