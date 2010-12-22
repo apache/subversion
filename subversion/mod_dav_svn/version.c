@@ -1322,7 +1322,7 @@ merge(dav_resource *target,
   svn_fs_txn_t *txn;
   const char *conflict;
   svn_error_t *serr;
-  char *post_commit_err = NULL;
+  const char *post_commit_err = NULL;
   svn_revnum_t new_rev;
   apr_hash_t *locks;
   svn_boolean_t disable_merge_response = FALSE;
