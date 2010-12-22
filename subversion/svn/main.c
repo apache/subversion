@@ -1329,7 +1329,8 @@ main(int argc, const char *argv[])
       const char *utf8_opt_arg;
 
       /* Parse the next option. */
-      apr_status_t apr_err = apr_getopt_long(os, svn_cl__options, &opt_id, &opt_arg);
+      apr_status_t apr_err = apr_getopt_long(os, svn_cl__options, &opt_id,
+                                             &opt_arg);
       if (APR_STATUS_IS_EOF(apr_err))
         break;
       else if (apr_err)
@@ -1406,7 +1407,8 @@ main(int argc, const char *argv[])
                 {
                   if (changeno < 0 || is_negative)
                     {
-                      err = svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                      err = svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR,
+                                              NULL,
                                               _("Negative number in range (%s)"
                                                 " not supported with -c"),
                                               change_str);
@@ -1577,8 +1579,8 @@ main(int argc, const char *argv[])
             return svn_cmdline_handle_exit_error
               (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                  _("'%s' is not a valid depth; try "
-                                   "'exclude', 'empty', 'files', 'immediates', "
-                                   "or 'infinity'"),
+                                   "'exclude', 'empty', 'files', "
+                                   "'immediates', or 'infinity'"),
                                  utf8_opt_arg), pool, "svn: ");
           }
         break;
@@ -1681,7 +1683,8 @@ main(int argc, const char *argv[])
       case opt_config_options:
         if (!opt_state.config_options)
           opt_state.config_options =
-                   apr_array_make(pool, 1, sizeof(svn_cmdline__config_argument_t*));
+                   apr_array_make(pool, 1,
+                                  sizeof(svn_cmdline__config_argument_t*));
 
         err = svn_utf_cstring_to_utf8(&opt_arg, opt_arg, pool);
         if (!err)
@@ -2170,7 +2173,8 @@ main(int argc, const char *argv[])
   if (opt_state.config_options)
     {
       svn_error_clear(
-          svn_cmdline__apply_config_options(ctx->config, opt_state.config_options,
+          svn_cmdline__apply_config_options(ctx->config,
+                                            opt_state.config_options,
                                             "svn: ", "--config-option"));
     }
 
