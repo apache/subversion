@@ -922,9 +922,10 @@ dav_svn__checkin(dav_resource *resource,
         {
           if (serr)
             {
-              apr_status_t apr_err = serr->apr_err;
-              const char *post_commit_err = svn_repos__post_commit_error_str
-                                              (serr, resource->pool);
+              const char *post_commit_err;
+              apr_err = serr->apr_err;
+              post_commit_err = svn_repos__post_commit_error_str
+                                  (serr, resource->pool);
               serr = SVN_NO_ERROR;
               ap_log_perror(APLOG_MARK, APLOG_ERR, apr_err, resource->pool,
                             "commit of r%ld succeeded, but an error occurred "
