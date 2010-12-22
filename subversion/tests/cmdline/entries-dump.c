@@ -33,7 +33,6 @@
 #include "svn_dirent_uri.h"
 
 #include "private/svn_wc_private.h"
-#include "../libsvn_wc/entries.h"
 
 static void
 str_value(const char *name, const char *value)

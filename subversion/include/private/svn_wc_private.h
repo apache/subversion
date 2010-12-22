@@ -714,6 +714,15 @@ svn_wc__get_mergeinfo_walk_info(svn_boolean_t *is_present,
                                 apr_pool_t *scratch_pool);
 
 
+/**
+ * For use by entries.c and entries-dump.c to read old-format working copies.
+ */
+svn_error_t *
+svn_wc__read_entries_old(apr_hash_t **entries,
+                         const char *dir_abspath,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
