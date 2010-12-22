@@ -170,7 +170,7 @@ get_access_conf(request_rec *r, authz_svn_config_rec *conf)
     {
       dav_err = dav_svn_get_repos_path(r, conf->base_path, &repos_path);
       if (dav_err) {
-        ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r, dav_err->desc);
+        ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r, "%s", dav_err->desc);
         return NULL;
       }
       access_file = svn_dirent_join_many(r->pool, repos_path, "conf",
