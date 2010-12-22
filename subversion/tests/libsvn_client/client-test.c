@@ -341,6 +341,7 @@ test_patch(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
   SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
   SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &committed_rev, txn, pool));
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(committed_rev));
 
   /* Check out the HEAD revision */
   SVN_ERR(svn_dirent_get_absolute(&cwd, "", pool));
@@ -430,6 +431,7 @@ test_wc_add_scenarios(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
   SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
   SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &committed_rev, txn, pool));
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(committed_rev));
 
   SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, "test-wc-add-repos",
                                            pool));
@@ -574,6 +576,7 @@ test_copy_crash(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
   SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
   SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &committed_rev, txn, pool));
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(committed_rev));
 
   SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, "test-copy-crash",
                                            pool));

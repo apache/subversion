@@ -119,6 +119,7 @@ lock_only(const svn_test_opts_t *opts,
   /* Create the greek tree and commit it. */
   SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
   SVN_ERR(svn_fs_commit_txn(&conflict, &newrev, txn, pool));
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(newrev));
 
   /* We are now 'bubba'. */
   SVN_ERR(svn_fs_create_access(&access, "bubba", pool));
@@ -158,6 +159,7 @@ lookup_lock_by_path(const svn_test_opts_t *opts,
   /* Create the greek tree and commit it. */
   SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
   SVN_ERR(svn_fs_commit_txn(&conflict, &newrev, txn, pool));
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(newrev));
 
   /* We are now 'bubba'. */
   SVN_ERR(svn_fs_create_access(&access, "bubba", pool));
@@ -201,6 +203,7 @@ attach_lock(const svn_test_opts_t *opts,
   /* Create the greek tree and commit it. */
   SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
   SVN_ERR(svn_fs_commit_txn(&conflict, &newrev, txn, pool));
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(newrev));
 
   /* We are now 'bubba'. */
   SVN_ERR(svn_fs_create_access(&access, "bubba", pool));
@@ -253,6 +256,7 @@ get_locks(const svn_test_opts_t *opts,
   /* Create the greek tree and commit it. */
   SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
   SVN_ERR(svn_fs_commit_txn(&conflict, &newrev, txn, pool));
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(newrev));
 
   /* We are now 'bubba'. */
   SVN_ERR(svn_fs_create_access(&access, "bubba", pool));
@@ -381,6 +385,7 @@ basic_lock(const svn_test_opts_t *opts,
   /* Create the greek tree and commit it. */
   SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
   SVN_ERR(svn_fs_commit_txn(&conflict, &newrev, txn, pool));
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(newrev));
 
   /* We are now 'bubba'. */
   SVN_ERR(svn_fs_create_access(&access, "bubba", pool));
@@ -432,6 +437,7 @@ lock_credentials(const svn_test_opts_t *opts,
   /* Create the greek tree and commit it. */
   SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
   SVN_ERR(svn_fs_commit_txn(&conflict, &newrev, txn, pool));
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(newrev));
 
   /* We are now 'bubba'. */
   SVN_ERR(svn_fs_create_access(&access, "bubba", pool));
@@ -455,6 +461,7 @@ lock_credentials(const svn_test_opts_t *opts,
 
   /* Try to commit the file change.  Should fail, because we're nobody. */
   err = svn_fs_commit_txn(&conflict, &newrev, txn, pool);
+  SVN_ERR_ASSERT(! SVN_IS_VALID_REVNUM(newrev));
   if (! err)
     return svn_error_create
       (SVN_ERR_TEST_FAILED, NULL,
@@ -467,6 +474,7 @@ lock_credentials(const svn_test_opts_t *opts,
 
   /* Try to commit the file change.  Should fail, because we're 'hortense'. */
   err = svn_fs_commit_txn(&conflict, &newrev, txn, pool);
+  SVN_ERR_ASSERT(! SVN_IS_VALID_REVNUM(newrev));
   if (! err)
     return svn_error_create
       (SVN_ERR_TEST_FAILED, NULL,
@@ -479,6 +487,7 @@ lock_credentials(const svn_test_opts_t *opts,
 
   /* Try to commit the file change.  Should fail, because there's no token. */
   err = svn_fs_commit_txn(&conflict, &newrev, txn, pool);
+  SVN_ERR_ASSERT(! SVN_IS_VALID_REVNUM(newrev));
   if (! err)
     return svn_error_create
       (SVN_ERR_TEST_FAILED, NULL,
@@ -490,6 +499,7 @@ lock_credentials(const svn_test_opts_t *opts,
 
   /* Commit should now succeed. */
   SVN_ERR(svn_fs_commit_txn(&conflict, &newrev, txn, pool));
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(newrev));
 
   return SVN_NO_ERROR;
 }
@@ -522,6 +532,7 @@ final_lock_check(const svn_test_opts_t *opts,
   /* Create the greek tree and commit it. */
   SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
   SVN_ERR(svn_fs_commit_txn(&conflict, &newrev, txn, pool));
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(newrev));
 
   /* Make a new transaction and delete "/A" */
   SVN_ERR(svn_fs_begin_txn2(&txn, fs, newrev, SVN_FS_TXN_CHECK_LOCKS, pool));
@@ -540,6 +551,7 @@ final_lock_check(const svn_test_opts_t *opts,
   /* Try to commit the transaction.  Should fail, because a child of
      the deleted directory is locked by someone else. */
   err = svn_fs_commit_txn(&conflict, &newrev, txn, pool);
+  SVN_ERR_ASSERT(! SVN_IS_VALID_REVNUM(newrev));
   if (! err)
     return svn_error_create
       (SVN_ERR_TEST_FAILED, NULL,
@@ -550,6 +562,7 @@ final_lock_check(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_set_access(fs, access));
   SVN_ERR(svn_fs_access_add_lock_token(access, mylock->token));
   SVN_ERR(svn_fs_commit_txn(&conflict, &newrev, txn, pool));
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(newrev));
 
   return SVN_NO_ERROR;
 }
@@ -579,6 +592,7 @@ lock_dir_propchange(const svn_test_opts_t *opts,
   /* Create the greek tree and commit it. */
   SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
   SVN_ERR(svn_fs_commit_txn(&conflict, &newrev, txn, pool));
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(newrev));
 
   /* Become 'bubba' and lock "/A/D/G/rho". */
   SVN_ERR(svn_fs_create_access(&access, "bubba", pool));
@@ -599,6 +613,7 @@ lock_dir_propchange(const svn_test_opts_t *opts,
   /* Commit should succeed;  this means we're doing a non-recursive
      lock-check on directory, rather than a recursive one.  */
   SVN_ERR(svn_fs_commit_txn(&conflict, &newrev, txn, pool));
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(newrev));
 
   return SVN_NO_ERROR;
 }
@@ -629,6 +644,7 @@ lock_name_reservation(const svn_test_opts_t *opts,
   /* Create the greek tree and commit it. */
   SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
   SVN_ERR(svn_fs_commit_txn(&conflict, &newrev, txn, pool));
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(newrev));
 
   /* Become 'bubba' and lock imaginary path  "/A/D/G2/blooga". */
   SVN_ERR(svn_fs_create_access(&access, "bubba", pool));
@@ -752,6 +768,7 @@ lock_expiration(const svn_test_opts_t *opts,
   /* Create the greek tree and commit it. */
   SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
   SVN_ERR(svn_fs_commit_txn(&conflict, &newrev, txn, pool));
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(newrev));
 
   /* Make a new transaction and change rho. */
   SVN_ERR(svn_fs_begin_txn2(&txn, fs, newrev, SVN_FS_TXN_CHECK_LOCKS, pool));
@@ -774,6 +791,7 @@ lock_expiration(const svn_test_opts_t *opts,
   /* Try to commit.  Should fail because we're 'nobody', and the lock
      hasn't expired yet. */
   err = svn_fs_commit_txn(&conflict, &newrev, txn, pool);
+  SVN_ERR_ASSERT(! SVN_IS_VALID_REVNUM(newrev));
   if (! err)
     return svn_error_create
       (SVN_ERR_TEST_FAILED, NULL,
@@ -810,6 +828,7 @@ lock_expiration(const svn_test_opts_t *opts,
   }
 
   SVN_ERR(svn_fs_commit_txn(&conflict, &newrev, txn, pool));
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(newrev));
 
   return SVN_NO_ERROR;
 }
@@ -836,6 +855,7 @@ lock_break_steal_refresh(const svn_test_opts_t *opts,
   /* Create the greek tree and commit it. */
   SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
   SVN_ERR(svn_fs_commit_txn(&conflict, &newrev, txn, pool));
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(newrev));
 
   /* Become 'bubba' and lock "/A/D/G/rho". */
   SVN_ERR(svn_fs_create_access(&access, "bubba", pool));
@@ -916,6 +936,7 @@ lock_out_of_date(const svn_test_opts_t *opts,
   /* Create the greek tree and commit it. */
   SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
   SVN_ERR(svn_fs_commit_txn(&conflict, &newrev, txn, pool));
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(newrev));
 
   /* Commit a small change to /A/D/G/rho, creating revision 2. */
   SVN_ERR(svn_fs_begin_txn2(&txn, fs, newrev, SVN_FS_TXN_CHECK_LOCKS, pool));
@@ -923,6 +944,7 @@ lock_out_of_date(const svn_test_opts_t *opts,
   SVN_ERR(svn_test__set_file_contents(txn_root, "/A/D/G/rho",
                                       "new contents", pool));
   SVN_ERR(svn_fs_commit_txn(&conflict, &newrev, txn, pool));
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(newrev));
 
   /* We are now 'bubba'. */
   SVN_ERR(svn_fs_create_access(&access, "bubba", pool));
