@@ -716,9 +716,9 @@ close_edit(void *edit_baton,
   err = svn_repos_fs_commit_txn(&conflict, eb->repos,
                                 &new_revision, eb->txn, pool);
 
-  if (err)
+  if (SVN_IS_VALID_REVNUM(new_revision))
     {
-      if (err->apr_err == SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED)
+      if (err)
         {
           /* If the error was in post-commit, then the commit itself
              succeeded.  In which case, save the post-commit warning
@@ -729,28 +729,28 @@ close_edit(void *edit_baton,
           svn_error_clear(err);
           err = SVN_NO_ERROR;
         }
-      else  /* Got a real error -- one that stopped the commit */
-        {
-          /* ### todo: we should check whether it really was a conflict,
-             and return the conflict info if so? */
+    }
+  else
+    {
+      /* ### todo: we should check whether it really was a conflict,
+         and return the conflict info if so? */
 
-          /* If the commit failed, it's *probably* due to a conflict --
-             that is, the txn being out-of-date.  The filesystem gives us
-             the ability to continue diddling the transaction and try
-             again; but let's face it: that's not how the cvs or svn works
-             from a user interface standpoint.  Thus we don't make use of
-             this fs feature (for now, at least.)
+      /* If the commit failed, it's *probably* due to a conflict --
+         that is, the txn being out-of-date.  The filesystem gives us
+         the ability to continue diddling the transaction and try
+         again; but let's face it: that's not how the cvs or svn works
+         from a user interface standpoint.  Thus we don't make use of
+         this fs feature (for now, at least.)
 
-             So, in a nutshell: svn commits are an all-or-nothing deal.
-             Each commit creates a new fs txn which either succeeds or is
-             aborted completely.  No second chances;  the user simply
-             needs to update and commit again  :)
+         So, in a nutshell: svn commits are an all-or-nothing deal.
+         Each commit creates a new fs txn which either succeeds or is
+         aborted completely.  No second chances;  the user simply
+         needs to update and commit again  :)
 
-             We ignore the possible error result from svn_fs_abort_txn();
-             it's more important to return the original error. */
-          svn_error_clear(svn_fs_abort_txn(eb->txn, pool));
-          return svn_error_return(err);
-        }
+         We ignore the possible error result from svn_fs_abort_txn();
+         it's more important to return the original error. */
+      svn_error_clear(svn_fs_abort_txn(eb->txn, pool));
+      return svn_error_return(err);
     }
 
   /* Pass new revision information to the caller's callback. */
