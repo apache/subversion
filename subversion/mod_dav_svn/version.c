@@ -922,15 +922,15 @@ dav_svn__checkin(dav_resource *resource,
         {
           if (serr)
             {
+              apr_status_t apr_err = serr->apr_err;
               const char *post_commit_err = svn_repos__post_commit_error_str
                                               (serr, resource->pool);
-              ap_log_perror(APLOG_MARK, APLOG_ERR, serr->apr_err,
-                            resource->pool,
+              serr = SVN_NO_ERROR;
+              ap_log_perror(APLOG_MARK, APLOG_ERR, apr_err, resource->pool,
                             "commit of r%ld succeeded, but an error occurred "
                             "after the commit: '%s'",
                             new_rev,
                             post_commit_err);
-              svn_error_clear(serr);
             }
         }
       else
@@ -1420,7 +1420,7 @@ merge(dav_resource *target,
              ### client some other way than hijacking the post-commit
              ### error message.*/
           post_commit_err = svn_repos__post_commit_error_str(serr, pool);
-          svn_error_clear(serr);
+          serr = SVN_NO_ERROR;
         }
     }
   else

@@ -650,6 +650,7 @@ svn_repos__post_commit_error_str(svn_error_t *err,
                                  apr_pool_t *pool)
 {
   svn_error_t *hook_err1, *hook_err2;
+  const char *msg;
 
   if (! err)
     return "(no error)";
@@ -672,28 +673,35 @@ svn_repos__post_commit_error_str(svn_error_t *err,
       if (err == hook_err1)
         {
           if (hook_err2->message)
-            return apr_pstrdup(pool, hook_err2->message);
+            msg = apr_pstrdup(pool, hook_err2->message);
           else
-            return "(no error message)";
+            msg = "(no error message)";
         }
       else
         {
-          return apr_psprintf(pool,
-                              "Post commit processing had error and '%s' "
-                              "post-commit hook had error '%s'.",
-                              err->message ? err->message
-                                           : "(no error message)",
-                              hook_err2->message ? hook_err2->message
-                                                 : "(no error message)");
+          msg = apr_psprintf(pool,
+                             "Post commit processing had error and '%s' "
+                             "post-commit hook had error '%s'.",
+                             err->message ? err->message
+                                          : "(no error message)",
+                             hook_err2->message ? hook_err2->message
+                                                : "(no error message)");
         }
     }
   else
     {
       if (err->message)
-        return apr_pstrdup(pool, err->message);
+        msg = apr_pstrdup(pool, err->message);
       else
-        return "(no error message)";
+        msg = "(no error message)";
     }
+
+  /* Because svn_error_purge_tracing() was used on the input error,
+     the purged error must either be cleared here or returned to the
+     caller.  This function just clears it. */
+  svn_error_clear(err);
+
+  return msg;
 }
 
 static svn_error_t *
@@ -726,8 +734,6 @@ close_edit(void *edit_baton,
              (to be reported back to the client, who will probably
              display it as a warning) and clear the error. */
           post_commit_err = svn_repos__post_commit_error_str(err, pool);
-
-          svn_error_clear(err);
           err = SVN_NO_ERROR;
         }
     }
