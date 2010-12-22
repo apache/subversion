@@ -80,13 +80,6 @@ svn_error_t *
 svn_wc__entry_is_hidden(svn_boolean_t *hidden, const svn_wc_entry_t *entry);
 
 
-/* For internal use by entries.c to read/write old-format working copies. */
-svn_error_t *
-svn_wc__read_entries_old(apr_hash_t **entries,
-                         const char *dir_abspath,
-                         apr_pool_t *result_pool,
-                         apr_pool_t *scratch_pool);
-
 /* The checksums of one pre-1.7 text-base file.  If the text-base file
  * exists, both checksums are filled in, otherwise both fields are NULL. */
 typedef struct svn_wc__text_base_file_info_t
