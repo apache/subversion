@@ -748,9 +748,9 @@ dav_svn__new_error(apr_pool_t *pool,
    string constant. */
 dav_error *
 dav_svn__convert_err(svn_error_t *serr,
-                    int status,
-                    const char *message,
-                    apr_pool_t *pool);
+                     int status,
+                     const char *message,
+                     apr_pool_t *pool);
 
 
 /* Compare (PATH in ROOT) to (PATH in ROOT/PATH's created_rev).
