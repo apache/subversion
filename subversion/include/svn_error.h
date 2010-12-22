@@ -317,7 +317,7 @@ svn_handle_warning(FILE *stream,
  * error tracing placeholders, and return the new top-level error
  * chain item.  @a ERR should be considered unusable after passing
  * through this function, but should *not* be cleared (as the returned
- * error is shares memory with @a ERR).
+ * error is shares memory with @a ERR).  @a ERR can be SVN_NO_ERROR.
  *
  * @since New in 1.7.
  */
