@@ -279,7 +279,7 @@ parse_vcc_uri(dav_resource_combined *comb,
     {
       /* a specific Version Resource; in this case, a Baseline */
 
-      int revnum;
+      svn_revnum_t revnum;
 
       if (label != NULL)
         {
@@ -347,7 +347,7 @@ parse_baseline_coll_uri(dav_resource_combined *comb,
                         int use_checked_in)
 {
   const char *slash;
-  int revnum;
+  svn_revnum_t revnum;
 
   /* format: REVISION/REPOS_PATH */
 
@@ -385,7 +385,7 @@ parse_baseline_uri(dav_resource_combined *comb,
                    const char *label,
                    int use_checked_in)
 {
-  int revnum;
+  svn_revnum_t revnum;
 
   /* format: REVISION */
 
