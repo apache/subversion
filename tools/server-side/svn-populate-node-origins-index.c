@@ -120,8 +120,8 @@ build_index(const char *repos_path, apr_pool_t *pool)
 {
   svn_repos_t *repos;
   svn_fs_t *fs;
-  svn_revnum_t youngest_rev;
-  int i, slotsize;
+  svn_revnum_t youngest_rev, i;
+  size_t slotsize;
   const char *progress_fmt;
   apr_pool_t *subpool;
 
@@ -134,9 +134,10 @@ build_index(const char *repos_path, apr_pool_t *pool)
   /* Fetch the youngest revision of the repository. */
   SVN_ERR(svn_fs_youngest_rev(&youngest_rev, fs, pool));
   slotsize = strlen(apr_ltoa(pool, youngest_rev));
-  progress_fmt = apr_psprintf(pool,
-                              "[%%%dd/%%%dd]  Found %%d new lines of history."
-                              "\n", slotsize, slotsize);
+  progress_fmt = apr_psprintf
+                   (pool,
+                    "[%%%ldld/%%%ldld]  Found %%d new lines of history."
+                    "\n", slotsize, slotsize);
 
   /* Now, iterate over all the revisions, calling index_revision_adds(). */
   subpool = svn_pool_create(pool);
