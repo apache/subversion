@@ -883,10 +883,12 @@ svn_ra_serf__define_ns(svn_ra_serf__ns_t **ns_list,
  * Look up @a name in the @a ns_list list for previously declared namespace
  * definitions.
  *
- * @return @a svn_ra_serf__dav_props_t tuple representing the expanded name.
+ * Return (in @a *returned_prop_name) @a svn_ra_serf__dav_props_t tuple
+ * representing the expanded name.
  */
-svn_ra_serf__dav_props_t
-svn_ra_serf__expand_ns(svn_ra_serf__ns_t *ns_list,
+void
+svn_ra_serf__expand_ns(svn_ra_serf__dav_props_t *returned_prop_name,
+                       svn_ra_serf__ns_t *ns_list,
                        const char *name);
 
 /*
