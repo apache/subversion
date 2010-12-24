@@ -104,7 +104,7 @@ Candidate changes:
    Justication:
      Require less typing to resolve conflicts.
    Votes:
-     +1: danielsh
+     +1: danielsh, blair
 
  * r1036429
    Fix svnsync_tests 29 for BDB.
@@ -124,7 +124,7 @@ Candidate changes:
    Justification:
      Tests failing for the wrong reason are irritating.
    Votes:
-     +1: stsp
+     +1: stsp, blair
 
  * r1028084, r1028125, r1041638
    Fix JVM recognition on OS X Snow Leopard (10.6).
@@ -139,6 +139,8 @@ Candidate changes:
      find the right path to use.
    Votes:
      +1: jwhitlock
+     +0.9: blair, I tested this on Snow Leopard and it worked, but
+           didn't do a line-by-line review of the changes
 
  * r947006
    Fix JVM object leak.
@@ -147,6 +149,7 @@ Candidate changes:
      or files crashes.
    Votes:
      +1: hwright
+     +0.5: blair
 
 Veto-blocked changes:
 =====================
