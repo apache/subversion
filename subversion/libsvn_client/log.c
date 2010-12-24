@@ -452,15 +452,14 @@ svn_client_log5(const apr_array_header_t *targets,
           APR_ARRAY_PUSH(target_urls, const char *) = url;
           APR_ARRAY_PUSH(real_targets, const char *) = target;
         }
-      svn_pool_destroy(iterpool);
 
       /* if we have no valid target_urls, just exit. */
       if (target_urls->nelts == 0)
         return SVN_NO_ERROR;
 
       /* Find the base URL and condensed targets relative to it. */
-      SVN_ERR(svn_path_condense_targets(&url_or_path, &condensed_targets,
-                                        target_urls, TRUE, pool));
+      SVN_ERR(svn_uri_condense_targets(&url_or_path, &condensed_targets,
+                                       target_urls, TRUE, pool, iterpool));
 
       if (condensed_targets->nelts == 0)
         APR_ARRAY_PUSH(condensed_targets, const char *) = "";
@@ -468,6 +467,7 @@ svn_client_log5(const apr_array_header_t *targets,
       /* 'targets' now becomes 'real_targets', which has bogus,
          unversioned things removed from it. */
       targets = real_targets;
+      svn_pool_destroy(iterpool);
     }
 
 
@@ -476,7 +476,8 @@ svn_client_log5(const apr_array_header_t *targets,
      * we use our initial target path to figure out where to root the RA
      * session, otherwise we use our URL. */
     if (SVN_CLIENT__REVKIND_NEEDS_WC(peg_rev.kind))
-      SVN_ERR(svn_path_condense_targets(&ra_target, NULL, targets, TRUE, pool));
+      SVN_ERR(svn_dirent_condense_targets(&ra_target, NULL, targets,
+                                          TRUE, pool, pool));
     else
       ra_target = url_or_path;
 

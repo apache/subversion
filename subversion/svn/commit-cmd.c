@@ -34,6 +34,7 @@
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_path.h"
+#include "svn_dirent_uri.h"
 #include "svn_error.h"
 #include "svn_config.h"
 #include "cl.h"
@@ -78,11 +79,8 @@ svn_cl__commit(apr_getopt_t *os,
   SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, pool));
 
   /* Condense the targets (like commit does)... */
-  SVN_ERR(svn_path_condense_targets(&base_dir,
-                                    &condensed_targets,
-                                    targets,
-                                    TRUE,
-                                    pool));
+  SVN_ERR(svn_dirent_condense_targets(&base_dir, &condensed_targets, targets,
+                                      TRUE, pool, pool));
 
   if ((! condensed_targets) || (! condensed_targets->nelts))
     {
