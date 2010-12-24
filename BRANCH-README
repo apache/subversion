@@ -25,7 +25,7 @@ TODO:
      (this may eliminate the need for datasource_open, and the flag
       datasource_opened in token.c#svn_diff__get_tokens)
   * implement (part of) increment_pointers and
-    decrement_pointers with a macro            []
+    decrement_pointers with a macro            [DONE]
      (offers another 10% speedup)
   * revv svn_diff.h#svn_diff_fns_t             []
 
