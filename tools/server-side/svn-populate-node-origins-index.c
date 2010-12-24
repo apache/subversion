@@ -136,7 +136,9 @@ build_index(const char *repos_path, apr_pool_t *pool)
   slotsize = strlen(apr_ltoa(pool, youngest_rev));
   progress_fmt = apr_psprintf
                    (pool,
-                    "[%%%ldld/%%%ldld]  Found %%d new lines of history."
+                    "[%%%" APR_SIZE_T_FMT "ld"
+                    "/%%%" APR_SIZE_T_FMT "ld]  "
+                    "Found %%d new lines of history."
                     "\n", slotsize, slotsize);
 
   /* Now, iterate over all the revisions, calling index_revision_adds(). */
