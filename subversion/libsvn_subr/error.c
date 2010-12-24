@@ -39,6 +39,7 @@ static const char SVN_FILE_LINE_UNDEFINED[] = "svn:<undefined>";
 #endif /* SVN_DEBUG */
 
 #include "svn_private_config.h"
+#include "private/svn_error_private.h"
 
 
 /*** Helpers for creating errors ***/
@@ -331,8 +332,8 @@ svn_error_clear(svn_error_t *err)
     }
 }
 
-/* Is ERR a tracing-only error chain link?  */
-static svn_boolean_t is_tracing_link(svn_error_t *err)
+svn_boolean_t
+svn_error__is_tracing_link(svn_error_t *err)
 {
 #ifdef SVN_ERR__TRACING
   /* ### A strcmp()?  Really?  I think it's the best we can do unless
@@ -358,7 +359,7 @@ svn_error_purge_tracing(svn_error_t *err)
   while (tmp_err)
     {
       /* Skip over any trace-only links. */
-      while (tmp_err && is_tracing_link(tmp_err))
+      while (tmp_err && svn_error__is_tracing_link(tmp_err))
         tmp_err = tmp_err->child;
 
       /* Add a new link to the new chain (creating the chain if necessary). */
@@ -420,7 +421,7 @@ print_error(svn_error_t *err, FILE *stream, const char *prefix)
 #endif /* SVN_DEBUG */
 
   /* "traced call" */
-  if (is_tracing_link(err))
+  if (svn_error__is_tracing_link(err))
     {
       /* Skip it.  We already printed the file-line coordinates. */
     }
@@ -550,7 +551,7 @@ const char *
 svn_err_best_message(svn_error_t *err, char *buf, apr_size_t bufsize)
 {
   /* Skip over any trace records.  */
-  while (is_tracing_link(err))
+  while (svn_error__is_tracing_link(err))
     err = err->child;
   if (err->message)
     return err->message;
