@@ -27,6 +27,7 @@
 
 #include "svn_error_codes.h"
 #include "svn_error.h"
+#include "private/svn_error_private.h"
 
 #include "../svn_test.h"
 
@@ -78,6 +79,37 @@ test_error_root_cause(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_error_purge_tracing(apr_pool_t *pool)
+{
+  svn_error_t *err, *err2, *child;
+
+  if (SVN_NO_ERROR != svn_error_purge_tracing(SVN_NO_ERROR))
+    return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                            "svn_error_purge_tracing() didn't return "
+                            "SVN_NO_ERROR after being passed a "
+                            "SVN_NO_ERROR.");
+
+  err = svn_error_quick_wrap(svn_error_create(SVN_ERR_BASE, NULL,
+                                              "root error"),
+                             "wrapped");
+  err = svn_error_quick_wrap(svn_error_create(SVN_ERR_BASE, err,
+                                              "other error"),
+                             "re-wrapped");
+
+  err2 = svn_error_purge_tracing(err);
+  for (child = err2; child; child = child->child)
+    if (svn_error__is_tracing_link(child))
+      {
+        return svn_error_create(SVN_ERR_TEST_FAILED, err,
+                                "Tracing link found after purging the "
+                                "following chain:");
+      }
+
+  svn_error_clear(err);
+  return SVN_NO_ERROR;
+}
+
 
 /* The test table.  */
 
@@ -86,5 +118,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test_error_root_cause,
                    "test svn_error_root_cause"),
+    SVN_TEST_PASS2(test_error_purge_tracing,
+                   "test svn_error_purge_tracing"),
     SVN_TEST_NULL
   };
