@@ -38,8 +38,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.6\n"
 "Report-Msgid-Bugs-To: dev@subversion.apache.org\n"
-"POT-Creation-Date: 2010-09-05 21:45+0800\n"
-"PO-Revision-Date: 2010-09-05 21:33+0800\n"
+"POT-Creation-Date: 2010-12-26 12:00+0800\n"
+"PO-Revision-Date: 2010-12-26 12:00+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.apache.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.apache.org>\n"
 "Language: \n"
@@ -3541,10 +3541,6 @@ msgstr "转存流在“%.20s”包含错误头部(没有值)"
 msgid "Incomplete or unterminated property block"
 msgstr "不完整或未结束的属性块"
 
-#, c-format
-msgid " removing '\\r' from %s ..."
-msgstr "正在从 '%s' 删除 '\\r' ..."
-
 msgid "Unexpected EOF writing contents"
 msgstr "写内容时意外结束"
 
@@ -3602,6 +3598,10 @@ msgstr "     * 正在替换路径: %s ..."
 #, c-format
 msgid "Unrecognized node-action on node '%s'"
 msgstr "节点“%s”的动作不能识别"
+
+#, c-format
+msgid " removing '\\r' from %s ..."
+msgstr "正在从 '%s' 删除 '\\r' ..."
 
 msgid " done.\n"
 msgstr "完成。\n"
@@ -4323,14 +4323,14 @@ msgstr ""
 
 msgid ""
 "Copyright (C) 2000-2009 CollabNet.\n"
-"Subversion is open source software, see http://subversion.tigris.org/\n"
+"Subversion is open source software, see http://subversion.apache.org/\n"
 "This product includes software developed by CollabNet (http://www.Collab."
 "Net/).\n"
 "\n"
 msgstr ""
 "版权所有 (C) 2000-2009 CollabNet。\n"
-"Subversion 是开放源代码软件，请参阅 http://subversion.tigris.org/ 站点。\n"
-"此产品包含由 CollabNet(http://www.Collab.Net/) 开发的软件。\n"
+"Subversion 是开放源代码软件，请参阅 http://subversion.apache.org/ 站点。\n"
+"此产品包含由 CollabNet (http://www.Collab.Net/) 开发的软件。\n"
 "\n"
 
 #, c-format
@@ -5181,15 +5181,6 @@ msgstr "无效属性 %s 位于 “%s”: 目标 “%s” 包含 “..” 或是�
 
 #, c-format
 msgid ""
-"The path '%s' appears to be part of a Subversion 1.7 or greater\n"
-"working copy rooted at '%s'.\n"
-"Please upgrade your Subversion client to use this working copy."
-msgstr ""
-"路径 '%s' 好像是 Subversion 1.7 或更高版本的工作副本，根路径是 '%s'。\n"
-"请升级你的 Subversion 客户端，以使用此工作副本。"
-
-#, c-format
-msgid ""
 "Working copy format of '%s' is too old (%d); please check out your working "
 "copy again"
 msgstr "“%s”的工作副本格式太旧(%d)；请重新取出工作副本"
@@ -5371,6 +5362,15 @@ msgstr "修改列表的名称不能为空"
 #, c-format
 msgid "'%s' does not appear to be a URL"
 msgstr "“%s”不像是URL"
+
+#, c-format
+msgid ""
+"svn: warning: The depth of this commit is '%s', but copied directories will "
+"regardless be committed with depth '%s'. You must remove unwanted children of "
+"those directories in a separate commit.\n"
+msgstr ""
+"svn: 警告: 此提交的深度是 '%s'，但是复制的目录将被提交的深度是 '%s'。你必须在"
+"独立的提交中删除这些目录中不需要的项目。\n"
 
 msgid "||||||| ORIGINAL"
 msgstr "||||||| 原始版本"
