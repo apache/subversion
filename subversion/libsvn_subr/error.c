@@ -362,6 +362,9 @@ svn_error_purge_tracing(svn_error_t *err)
       while (tmp_err && svn_error__is_tracing_link(tmp_err))
         tmp_err = tmp_err->child;
 
+      /* The link must be a real link in the error chain. */
+      SVN_ERR_ASSERT(tmp_err);
+
       /* Add a new link to the new chain (creating the chain if necessary). */
       if (! new_err)
         {
@@ -377,9 +380,6 @@ svn_error_purge_tracing(svn_error_t *err)
       /* Advance to the next link in the original chain. */
       tmp_err = tmp_err->child;
     }
-
-  /* If we get here, there had better be a real link in this error chain. */
-  SVN_ERR_ASSERT(new_err_leaf);
 
   /* Tie off the chain, and return its head. */
   new_err_leaf->child = NULL;
