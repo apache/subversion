@@ -141,8 +141,15 @@ test_error_purge_tracing(apr_pool_t *pool)
     if (err2)
       {
         /* If err2 does share the same pool as err, then make a copy
-           of err2 before err is cleared. */
+           of err2 and err3 before err is cleared. */
         svn_error_t err2_copy = *err2;
+        svn_error_t *err3 = err2;
+        svn_error_t err3_copy;
+
+        while (err3 && svn_error__is_tracing_link(err3))
+          err3 = err3->child;
+        if (err3)
+          err3_copy = *err3;
 
         svn_error_clear(err);
 
@@ -153,7 +160,16 @@ test_error_purge_tracing(apr_pool_t *pool)
 
         svn_error_clear(err2);
 
+        SVN_TEST_ASSERT(err3);
         SVN_TEST_ASSERT(SVN_ERR_ASSERTION_FAIL == err2_copy.apr_err);
+        SVN_TEST_ASSERT(SVN_ERR_ASSERTION_FAIL == err3_copy.apr_err);
+
+        /* This is the line number in error.c where
+           SVN_ERR_ASSERT(tmp_err) is called.  This check is done to
+           assert that the error is being thrown from the expected
+           line and not from another assertion that could be
+           introduced in the future. */
+        SVN_TEST_ASSERT(374 == err3_copy.line);
       }
     else
       {
