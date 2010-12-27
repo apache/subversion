@@ -133,7 +133,7 @@ create_packed_filesystem(const char *dir,
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
   SVN_ERR(svn_test__create_greek_tree(txn_root, subpool));
   SVN_ERR(svn_fs_commit_txn(&conflict, &after_rev, txn, subpool));
-  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(after_rev));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(after_rev));
 
   /* Revisions 2 thru NUM_REVS-1: content tweaks to "iota". */
   iterpool = svn_pool_create(subpool);
@@ -147,7 +147,7 @@ create_packed_filesystem(const char *dir,
                                                            iterpool),
                                           iterpool));
       SVN_ERR(svn_fs_commit_txn(&conflict, &after_rev, txn, iterpool));
-      SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(after_rev));
+      SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(after_rev));
     }
   svn_pool_destroy(iterpool);
   svn_pool_destroy(subpool);
@@ -350,7 +350,7 @@ commit_packed_fs(const svn_test_opts_t *opts,
           "How much better is it to get wisdom than gold! and to get "
           "understanding rather to be chosen than silver!", pool));
   SVN_ERR(svn_fs_commit_txn(&conflict, &after_rev, txn, pool));
-  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(after_rev));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(after_rev));
 
   return SVN_NO_ERROR;
 }
@@ -389,7 +389,7 @@ get_set_revprop_packed_fs(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
   SVN_ERR(svn_test__set_file_contents(txn_root, "iota", "new-iota",  subpool));
   SVN_ERR(svn_fs_commit_txn(&conflict, &after_rev, txn, subpool));
-  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(after_rev));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(after_rev));
   svn_pool_clear(subpool);
 
   /* Pack the repository. */
@@ -445,7 +445,7 @@ recover_fully_packed(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
   SVN_ERR(svn_test__set_file_contents(txn_root, "A/mu", "new-mu", subpool));
   SVN_ERR(svn_fs_commit_txn(&conflict, &after_rev, txn, subpool));
-  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(after_rev));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(after_rev));
   svn_pool_destroy(subpool);
   SVN_ERR(svn_fs_pack(REPO_NAME, NULL, NULL, NULL, NULL, pool));
   SVN_ERR(svn_fs_recover(REPO_NAME, NULL, NULL, pool));
