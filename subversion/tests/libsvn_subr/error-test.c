@@ -111,8 +111,54 @@ test_error_purge_tracing(apr_pool_t *pool)
                                 "Tracing link found after purging the "
                                 "following chain:");
       }
-
   svn_error_clear(err);
+
+#ifdef SVN_ERR__TRACING
+  /* Make an error chain containing only tracing errors and check that
+     svn_error_purge_tracing() asserts on it. */
+  {
+    svn_error_t err_copy, err2_copy;
+    svn_error_malfunction_handler_t orig_handler;
+
+    /* For this test, use a random error status. */
+    err = svn_error_create(SVN_ERR_BAD_UUID, NULL, SVN_ERR__TRACED);
+    err = svn_error_return(err);
+
+    /* Register a malfunction handler that doesn't call abort() to
+       check that a new error chain with a SVN_ERR_ASSERTION_FAIL is
+       returned. */
+    orig_handler =
+      svn_error_set_malfunction_handler(svn_error_raise_on_malfunction);
+    err2 = svn_error_purge_tracing(err);
+    svn_error_set_malfunction_handler(orig_handler);
+
+    err_copy = *err;
+
+    if (err2)
+      {
+        /* If err2 does share the same pool as err, then make a copy
+           of err2 before err is cleared. */
+        err2_copy = *err2;
+
+        svn_error_clear(err);
+
+        /* The returned error is only safe to clear if this assertion
+           holds, otherwise it has the same pool as the original
+           error. */
+        SVN_ERR_ASSERT(err_copy.pool != err2_copy.pool);
+
+        svn_error_clear(err2);
+
+        SVN_ERR_ASSERT(SVN_ERR_ASSERTION_FAIL == err2_copy.apr_err);
+      }
+    else
+      {
+        svn_error_clear(err);
+        SVN_ERR_ASSERT(err2);
+      }
+  }
+#endif
+
   return SVN_NO_ERROR;
 }
 
