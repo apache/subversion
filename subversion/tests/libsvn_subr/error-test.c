@@ -91,17 +91,21 @@ test_error_purge_tracing(apr_pool_t *pool)
                             "SVN_NO_ERROR.");
 
   err = svn_error_return(svn_error_create(SVN_ERR_BASE, NULL, "root error"));
+#ifdef SVN_ERR__TRACING
   if (! svn_error__is_tracing_link(err))
     {
       return svn_error_create(SVN_ERR_TEST_FAILED, err,
                               "The top error is not a tracing link:");
     }
+#endif
   err = svn_error_return(svn_error_create(SVN_ERR_BASE, err, "other error"));
+#ifdef SVN_ERR__TRACING
   if (! svn_error__is_tracing_link(err))
     {
       return svn_error_create(SVN_ERR_TEST_FAILED, err,
                               "The top error is not a tracing link:");
     }
+#endif
 
   err2 = svn_error_purge_tracing(err);
   for (child = err2; child; child = child->child)
