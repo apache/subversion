@@ -148,7 +148,7 @@ def main():
         sys.exit(0)
 
     po_dir = 'subversion/po'
-    branch_name = l10n.match('URL:.*/svn/(\S+)', info_out)
+    branch_name = l10n.match('URL:.*/asf/subversion/(\S+)', info_out)
     [info_out, info_err] = l10n.safe_command(['svnversion', po_dir])
     if info_err:
         sys.stderr.write("\nError: %s\n" % info_err)
@@ -156,7 +156,7 @@ def main():
         sys.exit(0)
 
     wc_version = re.sub('[MS]', '', info_out)
-    title = "Translation status report for %s r%s" % \
+    title = "Translation status report for %s@r%s" % \
                (branch_name, wc_version)
 
     os.chdir(po_dir)
