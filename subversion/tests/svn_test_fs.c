@@ -723,7 +723,7 @@ svn_test__create_blame_repository(svn_repos_t **out_repos,
   SVN_ERR(svn_fs_make_dir(txn_root, "tags", pool));
   SVN_ERR(svn_fs_make_dir(txn_root, "branches", pool));
   SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
-  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
 
   /* Revision 2:  Add the Greek tree on the trunk. */
   SVN_ERR(svn_repos_fs_begin_txn_for_commit(&txn, repos, youngest_rev,
@@ -731,7 +731,7 @@ svn_test__create_blame_repository(svn_repos_t **out_repos,
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
   SVN_ERR(svn_test__create_greek_tree_at(txn_root, "trunk", pool));
   SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
-  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
 
   /* Revision 3:  Tweak trunk/A/mu. */
   SVN_ERR(svn_repos_fs_begin_txn_for_commit(&txn, repos, youngest_rev,
@@ -740,7 +740,7 @@ svn_test__create_blame_repository(svn_repos_t **out_repos,
   SVN_ERR(svn_test__set_file_contents(txn_root, "trunk/A/mu",
                                       "A\nB\nC\nD\nE\nF\nG\nH\nI", pool));
   SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
-  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
 
   /* Revision 4:  Copy trunk to branches/1.0.x. */
   SVN_ERR(svn_repos_fs_begin_txn_for_commit(&txn, repos, youngest_rev,
@@ -751,7 +751,7 @@ svn_test__create_blame_repository(svn_repos_t **out_repos,
                       txn_root, "branches/1.0.x",
                       pool));
   SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
-  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
 
   /* Revision 5:  Tweak trunk/A/mu. */
   SVN_ERR(svn_repos_fs_begin_txn_for_commit(&txn, repos, youngest_rev,
@@ -761,7 +761,7 @@ svn_test__create_blame_repository(svn_repos_t **out_repos,
                                       "A\nB\nC -- trunk edit\nD\nE\nF\nG\nH\nI",
                                       pool));
   SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
-  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
 
   /* Revision 6:  Tweak branches/1.0.x/A/mu. */
   SVN_ERR(svn_repos_fs_begin_txn_for_commit(&txn, repos, youngest_rev,
@@ -771,7 +771,7 @@ svn_test__create_blame_repository(svn_repos_t **out_repos,
                                       "A\nB\nC\nD -- branch edit\nE\nF\nG\nH\nI",
                                       pool));
   SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
-  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
 
   /* Revision 7:  Merge trunk to branch. */
   SVN_ERR(svn_repos_fs_begin_txn_for_commit(&txn, repos, youngest_rev,
@@ -784,7 +784,7 @@ svn_test__create_blame_repository(svn_repos_t **out_repos,
                                   svn_string_create("/trunk:4-6", pool),
                                   pool));
   SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
-  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
 
   /* Revision 8:  Merge branch to trunk. */
   SVN_ERR(svn_repos_fs_begin_txn_for_commit(&txn, repos, youngest_rev,
@@ -797,7 +797,7 @@ svn_test__create_blame_repository(svn_repos_t **out_repos,
                                   svn_string_create("/branches/1.0.x:4-7", pool),
                                   pool));
   SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
-  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
 
   return SVN_NO_ERROR;
 }
