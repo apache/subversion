@@ -59,9 +59,9 @@ def usage_and_exit(errmsg=None):
 
 
 class l10nReport:
-    def __init__(self, to_email_id="bhuvan@collab.net"):
+    def __init__(self, to_email_id=""):
         self.to_email_id = to_email_id
-        self.from_email_id = "<dev@subversion.tigris.org>"
+        self.from_email_id = "<dev@subversion.apache.org>"
 
     def safe_command(self, cmd_and_args, cmd_in=""):
         [stdout, stderr] = subprocess.Popen(cmd_and_args, \
@@ -178,7 +178,7 @@ def main():
         print(po_format)
 
     if to_email_id:
-        email_from = "From: SVN DEV <noreply@subversion.tigris.org>"
+        email_from = "From: SVN DEV <noreply@subversion.apache.org>"
         email_to = "To: %s" % to_email_id
         email_sub = "Subject: [l10n] Translation status report for %s r%s" \
                      % (branch_name, wc_version)
