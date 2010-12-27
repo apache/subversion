@@ -1446,18 +1446,18 @@ merge(svn_stringbuf_t *conflict_p,
              a modification. In any of these cases, flag a conflict. */
           if (s_entry == NULL || t_entry == NULL)
             return conflict_err(conflict_p,
-                                svn_dirent_join(target_path,
-                                                a_entry->name,
-                                                iterpool));
+                                svn_fspath__join(target_path,
+                                                 a_entry->name,
+                                                 iterpool));
 
           /* If any of the three entries is of type file, flag a conflict. */
           if (s_entry->kind == svn_node_file
               || t_entry->kind == svn_node_file
               || a_entry->kind == svn_node_file)
             return conflict_err(conflict_p,
-                                svn_dirent_join(target_path,
-                                                a_entry->name,
-                                                iterpool));
+                                svn_fspath__join(target_path,
+                                                 a_entry->name,
+                                                 iterpool));
 
           /* If either SOURCE-ENTRY or TARGET-ENTRY is not a direct
              modification of ANCESTOR-ENTRY, declare a conflict. */
@@ -1470,9 +1470,9 @@ merge(svn_stringbuf_t *conflict_p,
               || strcmp(svn_fs_fs__id_copy_id(t_entry->id),
                         svn_fs_fs__id_copy_id(a_entry->id)) != 0)
             return conflict_err(conflict_p,
-                                svn_dirent_join(target_path,
-                                                a_entry->name,
-                                                iterpool));
+                                svn_fspath__join(target_path,
+                                                 a_entry->name,
+                                                 iterpool));
 
           /* Direct modifications were made to the directory
              ANCESTOR-ENTRY in both SOURCE and TARGET.  Recursively
@@ -1483,7 +1483,7 @@ merge(svn_stringbuf_t *conflict_p,
                                           t_entry->id, iterpool));
           SVN_ERR(svn_fs_fs__dag_get_node(&a_ent_node, fs,
                                           a_entry->id, iterpool));
-          new_tpath = svn_dirent_join(target_path, t_entry->name, iterpool);
+          new_tpath = svn_fspath__join(target_path, t_entry->name, iterpool);
           SVN_ERR(merge(conflict_p, new_tpath,
                         t_ent_node, s_ent_node, a_ent_node,
                         txn_id,
@@ -1519,9 +1519,9 @@ merge(svn_stringbuf_t *conflict_p,
       /* If NAME exists in TARGET, declare a conflict. */
       if (t_entry)
         return conflict_err(conflict_p,
-                            svn_dirent_join(target_path,
-                                            t_entry->name,
-                                            iterpool));
+                            svn_fspath__join(target_path,
+                                             t_entry->name,
+                                             iterpool));
 
       SVN_ERR(svn_fs_fs__dag_get_node(&s_ent_node, fs,
                                       s_entry->id, iterpool));
