@@ -142,15 +142,6 @@ Candidate changes:
      +0.9: blair, I tested this on Snow Leopard and it worked, but
            didn't do a line-by-line review of the changes
 
- * r947006
-   Fix JVM object leak.
-   Justification:
-     Without this fix, dumping repositories with a large number of revisions
-     or files crashes.
-   Votes:
-     +1: hwright
-     +0.5: blair
-
  * r1051632, r1051638
    Ensure that *new_rev is set to an invalid revision before
    attempting a commit, this helps implement svn_fs_commit_txn() and
@@ -292,3 +283,12 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r947006
+   Fix JVM object leak.
+   Justification:
+     Without this fix, dumping repositories with a large number of revisions
+     or files crashes.
+   Votes:
+     +1: hwright
+     +0.5: blair
