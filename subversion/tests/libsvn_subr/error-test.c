@@ -149,16 +149,16 @@ test_error_purge_tracing(apr_pool_t *pool)
         /* The returned error is only safe to clear if this assertion
            holds, otherwise it has the same pool as the original
            error. */
-        SVN_ERR_ASSERT(err_copy.pool != err2_copy.pool);
+        SVN_TEST_ASSERT(err_copy.pool != err2_copy.pool);
 
         svn_error_clear(err2);
 
-        SVN_ERR_ASSERT(SVN_ERR_ASSERTION_FAIL == err2_copy.apr_err);
+        SVN_TEST_ASSERT(SVN_ERR_ASSERTION_FAIL == err2_copy.apr_err);
       }
     else
       {
         svn_error_clear(err);
-        SVN_ERR_ASSERT(err2);
+        SVN_TEST_ASSERT(err2);
       }
   }
 #endif
