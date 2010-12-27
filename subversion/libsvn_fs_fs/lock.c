@@ -396,10 +396,10 @@ set_lock(const char *fs_path,
                                 digest_path, perms_reference, subpool));
 
       /* Prep for next iteration, or bail if we're done. */
-      if (svn_dirent_is_root(this_path->data, this_path->len))
+      if (svn_uri_is_root(this_path->data, this_path->len))
         break;
       svn_stringbuf_set(this_path,
-                        svn_dirent_dirname(this_path->data, subpool));
+                        svn_fspath__dirname(this_path->data, subpool));
     }
 
   svn_pool_destroy(subpool);
@@ -464,10 +464,10 @@ delete_lock(svn_fs_t *fs,
         }
 
       /* Prep for next iteration, or bail if we're done. */
-      if (svn_dirent_is_root(this_path->data, this_path->len))
+      if (svn_uri_is_root(this_path->data, this_path->len))
         break;
       svn_stringbuf_set(this_path,
-                        svn_dirent_dirname(this_path->data, subpool));
+                        svn_fspath__dirname(this_path->data, subpool));
     }
 
   svn_pool_destroy(subpool);
