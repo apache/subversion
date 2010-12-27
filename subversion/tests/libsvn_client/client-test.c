@@ -242,7 +242,7 @@ check_patch_result(const char *path, const char **expected_lines, const char *eo
     }
   svn_pool_destroy(iterpool);
 
-  SVN_ERR_ASSERT(i == num_expected_lines);
+  SVN_TEST_ASSERT(i == num_expected_lines);
   SVN_ERR(svn_io_remove_file2(path, FALSE, pool));
 
   return SVN_NO_ERROR;
@@ -341,7 +341,7 @@ test_patch(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
   SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
   SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &committed_rev, txn, pool));
-  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(committed_rev));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(committed_rev));
 
   /* Check out the HEAD revision */
   SVN_ERR(svn_dirent_get_absolute(&cwd, "", pool));
@@ -374,7 +374,7 @@ test_patch(const svn_test_opts_t *opts,
     {
       apr_size_t len = strlen(unidiff_patch[i]);
       SVN_ERR(svn_io_file_write(patch_file, unidiff_patch[i], &len, pool));
-      SVN_ERR_ASSERT(len == strlen(unidiff_patch[i]));
+      SVN_TEST_ASSERT(len == strlen(unidiff_patch[i]));
     }
   SVN_ERR(svn_io_file_flush_to_disk(patch_file, pool));
 
@@ -387,13 +387,13 @@ test_patch(const svn_test_opts_t *opts,
                            ctx, pool, pool));
   SVN_ERR(svn_io_file_close(patch_file, pool));
 
-  SVN_ERR_ASSERT(apr_hash_count(pcb.patched_tempfiles) == 1);
+  SVN_TEST_ASSERT(apr_hash_count(pcb.patched_tempfiles) == 1);
   key = "A/D/gamma";
   patched_tempfile_path = apr_hash_get(pcb.patched_tempfiles, key,
                                        APR_HASH_KEY_STRING);
   SVN_ERR(check_patch_result(patched_tempfile_path, expected_gamma, "\n",
                              EXPECTED_GAMMA_LINES, pool));
-  SVN_ERR_ASSERT(apr_hash_count(pcb.reject_tempfiles) == 1);
+  SVN_TEST_ASSERT(apr_hash_count(pcb.reject_tempfiles) == 1);
   key = "A/D/gamma";
   reject_tempfile_path = apr_hash_get(pcb.reject_tempfiles, key,
                                      APR_HASH_KEY_STRING);
@@ -431,7 +431,7 @@ test_wc_add_scenarios(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
   SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
   SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &committed_rev, txn, pool));
-  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(committed_rev));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(committed_rev));
 
   SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, "test-wc-add-repos",
                                            pool));
@@ -576,7 +576,7 @@ test_copy_crash(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
   SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
   SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &committed_rev, txn, pool));
-  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(committed_rev));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(committed_rev));
 
   SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, "test-copy-crash",
                                            pool));
