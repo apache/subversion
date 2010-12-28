@@ -174,7 +174,10 @@ Candidate changes:
      This branch also has r1053185 in it.
    Notes:
      r1051745 applies cleanly to 1.6.x while r1051744 and r1053185
-     needs the branch.
+       needs the branch.
+     r1053241 copies the definition of SVN_TEST_ASSERT() into
+       svn_test.h.  This is an "original" commit on this branch since
+       there are no clean merges that would bring this over.
    Votes:
      +1: blair
 
