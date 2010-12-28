@@ -254,7 +254,7 @@ datasource_open(void *baton, svn_diff_datasource_e datasource)
  * curp equal to endp to indicate EOF. */
 #define INCREMENT_POINTERS(all_files, files_len, pool)                       \
   do {                                                                       \
-    int i;                                                                   \
+    apr_size_t i;                                                            \
                                                                              \
     for (i = 0; i < files_len; i++)                                          \
     {                                                                        \
@@ -272,7 +272,7 @@ datasource_open(void *baton, svn_diff_datasource_e datasource)
  * reached, set chunk to -1 to indicate BOF. */
 #define DECREMENT_POINTERS(all_files, files_len, pool)                       \
   do {                                                                       \
-    int i;                                                                   \
+    apr_size_t i;                                                            \
                                                                              \
     for (i = 0; i < files_len; i++)                                          \
     {                                                                        \
@@ -349,9 +349,9 @@ decrement_chunk(struct file_info *file, apr_pool_t *pool)
  * the file (this can happen while scanning backwards). This is the case if
  * one of them has chunk == -1. */
 static svn_boolean_t
-is_one_at_bof(struct file_info *file[], int file_len)
+is_one_at_bof(struct file_info *file[], apr_size_t file_len)
 {
-  int i;
+  apr_size_t i;
 
   for (i = 0; i < file_len; i++)
     if (file[i]->chunk == -1)
@@ -363,9 +363,9 @@ is_one_at_bof(struct file_info *file[], int file_len)
 /* Check whether one of the FILEs has its pointers at EOF (this is the case if
  * one of them has curp == endp (this can only happen at the last chunk)) */
 static svn_boolean_t
-is_one_at_eof(struct file_info *file[], int file_len)
+is_one_at_eof(struct file_info *file[], apr_size_t file_len)
 {
-  int i;
+  apr_size_t i;
 
   for (i = 0; i < file_len; i++)
     if (file[i]->curp == file[i]->endp)
@@ -384,12 +384,12 @@ is_one_at_eof(struct file_info *file[], int file_len)
  * of the FILEs are set to point at the first byte after the prefix. */
 static svn_error_t *
 find_identical_prefix(svn_boolean_t *reached_one_eof, apr_off_t *prefix_lines,
-                      struct file_info *file[], int file_len,
+                      struct file_info *file[], apr_size_t file_len,
                       apr_pool_t *pool)
 {
   svn_boolean_t had_cr = FALSE;
   svn_boolean_t is_match, reached_all_eof;
-  int i;
+  apr_size_t i;
 
   *prefix_lines = 0;
   for (i = 1, is_match = TRUE; i < file_len; i++)
@@ -472,7 +472,7 @@ find_identical_prefix(svn_boolean_t *reached_one_eof, apr_off_t *prefix_lines,
  * find_identical_prefix), so we can determine where suffix scanning should 
  * ultimately stop. */
 static svn_error_t *
-find_identical_suffix(struct file_info *file[], int file_len,
+find_identical_suffix(struct file_info *file[], apr_size_t file_len,
                       apr_pool_t *pool)
 {
   struct file_info file_for_suffix[4];
@@ -483,7 +483,7 @@ find_identical_suffix(struct file_info *file[], int file_len,
   apr_off_t min_file_size;
   int suffix_lines_to_keep = SUFFIX_LINES_TO_KEEP;
   svn_boolean_t is_match, reached_prefix;
-  int i;
+  apr_size_t i;
 
   for (i = 0; i < file_len; i++)
     {
@@ -609,14 +609,14 @@ find_identical_suffix(struct file_info *file[], int file_len,
 static svn_error_t *
 datasources_open(void *baton, apr_off_t *prefix_lines,
                  svn_diff_datasource_e datasource[],
-                 int datasource_len)
+                 apr_size_t datasource_len)
 {
   svn_diff__file_baton_t *file_baton = baton;
   struct file_info *file[4];
   apr_finfo_t finfo[4];
   apr_off_t length[4];
   svn_boolean_t reached_one_eof;
-  int i;
+  apr_size_t i;
 
   /* Open datasources and read first chunk */
   for (i = 0; i < datasource_len; i++)

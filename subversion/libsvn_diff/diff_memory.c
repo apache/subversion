@@ -100,7 +100,7 @@ datasource_open(void *baton, svn_diff_datasource_e datasource)
 static svn_error_t *
 datasources_open(void *baton, apr_off_t *prefix_lines,
                  svn_diff_datasource_e datasource[], 
-                 int datasource_len)
+                 apr_size_t datasource_len)
 {
   /* Do nothing: everything is already there and initialized to 0 */
   return SVN_NO_ERROR;
