@@ -142,6 +142,15 @@ Candidate changes:
      +0.9: blair, I tested this on Snow Leopard and it worked, but
            didn't do a line-by-line review of the changes
 
+ * r1053208
+   svn_error_raise_on_malfunction() needs to call svn_error__locate().
+   Justification:
+     If this is not done, then svn_error_raise_on_malfunction() will
+     not properly set the filename and line number in the svn_error_t
+     it creates.
+   Votes:
+     +1: blair
+
  * r1051632, r1051638
    Ensure that *new_rev is set to an invalid revision before
    attempting a commit, this helps implement svn_fs_commit_txn() and
