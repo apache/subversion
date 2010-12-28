@@ -34,6 +34,14 @@
 #include "svn_utf.h"
 
 #ifdef SVN_DEBUG
+/* XXX FIXME: These should be protected by a thread mutex.
+   svn_error__locate and make_error_internal should cooperate
+   in locking and unlocking it. */
+
+/* XXX TODO: Define mutex here #if APR_HAS_THREADS */
+static const char * volatile error_file = NULL;
+static long volatile error_line = -1;
+
 /* file_line for the non-debug case. */
 static const char SVN_FILE_LINE_UNDEFINED[] = "svn:<undefined>";
 #endif /* SVN_DEBUG */
@@ -56,21 +64,16 @@ static const char SVN_FILE_LINE_UNDEFINED[] = "svn:<undefined>";
 #undef svn_error_quick_wrap
 #undef svn_error_wrap_apr
 
-
-/* XXX FIXME: These should be protected by a thread mutex.
-   svn_error__locate and make_error_internal should cooperate
-   in locking and unlocking it. */
-
-/* XXX TODO: Define mutex here #if APR_HAS_THREADS */
-static const char * volatile error_file = NULL;
-static long volatile error_line = -1;
-
+/* Note: This function was historically in the public API, so we need
+ * to define it even when !SVN_DEBUG. */
 void
 svn_error__locate(const char *file, long line)
 {
+#if defined(SVN_DEBUG)
   /* XXX TODO: Lock mutex here */
   error_file = file;
   error_line = line;
+#endif
 }
 
 
@@ -112,11 +115,11 @@ make_error_internal(apr_status_t apr_err,
   new_error->apr_err = apr_err;
   new_error->child   = child;
   new_error->pool    = pool;
+#if defined(SVN_DEBUG)
   new_error->file    = error_file;
   new_error->line    = error_line;
   /* XXX TODO: Unlock mutex here */
 
-#if defined(SVN_DEBUG)
   if (! child)
       apr_pool_cleanup_register(pool, new_error,
                                 err_abort,
