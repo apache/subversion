@@ -707,15 +707,28 @@ append_locks(dav_lockdb *lockdb,
                                     "Could not create empty file.",
                                     resource->pool);
 
-      if ((serr = svn_repos_fs_commit_txn(&conflict_msg, repos->repos,
-                                          &new_rev, txn, resource->pool)))
+      serr = svn_repos_fs_commit_txn(&conflict_msg, repos->repos,
+                                     &new_rev, txn, resource->pool);
+      if (SVN_IS_VALID_REVNUM(new_rev))
+        {
+          svn_error_clear(serr);
+        }
+      else
         {
           svn_error_clear(svn_fs_abort_txn(txn, resource->pool));
-          return dav_svn__convert_err(serr, HTTP_CONFLICT,
-                                      apr_psprintf(resource->pool,
-                                                   "Conflict when committing "
-                                                   "'%s'.", conflict_msg),
-                                      resource->pool);
+          if (serr)
+            return dav_svn__convert_err(serr, HTTP_CONFLICT,
+                                        apr_psprintf(resource->pool,
+                                                     "Conflict when "
+                                                     "committing '%s'.",
+                                                     conflict_msg),
+                                        resource->pool);
+          else
+            return dav_new_error(resource->pool,
+                                      HTTP_INTERNAL_SERVER_ERROR,
+                                      0,
+                                      "Commit failed but there was no error "
+                                      "provided.");
         }
     }
 

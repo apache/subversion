@@ -1337,7 +1337,18 @@ close_revision(void *baton)
     }
 
   /* Commit. */
-  if ((err = svn_fs_commit_txn(&conflict_msg, new_rev, rb->txn, rb->pool)))
+  err = svn_fs_commit_txn(&conflict_msg, new_rev, rb->txn, rb->pool);
+  if (SVN_IS_VALID_REVNUM(*new_rev))
+    {
+      if (err)
+        {
+          /* ### Log any error, but better yet is to rev
+             ### close_revision()'s API to allow both new_rev and err
+             ### to be returned, see #3768. */
+          svn_error_clear(err);
+        }
+    }
+  else
     {
       svn_error_clear(svn_fs_abort_txn(rb->txn, rb->pool));
       if (conflict_msg)
