@@ -705,11 +705,6 @@ svn_repos__post_commit_error_str(svn_error_t *err,
                                             : _("(no error message)"));
     }
 
-  /* Because svn_error_purge_tracing() was used on the input error,
-     the purged error must either be cleared here or returned to the
-     caller.  This function just clears it. */
-  svn_error_clear(err);
-
   return msg;
 }
 
@@ -743,6 +738,7 @@ close_edit(void *edit_baton,
              (to be reported back to the client, who will probably
              display it as a warning) and clear the error. */
           post_commit_err = svn_repos__post_commit_error_str(err, pool);
+          svn_error_clear(err);
           err = SVN_NO_ERROR;
         }
     }

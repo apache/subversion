@@ -358,39 +358,46 @@ svn_error_t *
 svn_error_purge_tracing(svn_error_t *err)
 {
 #ifdef SVN_ERR__TRACING
-  svn_error_t *tmp_err = err;
   svn_error_t *new_err = NULL, *new_err_leaf = NULL;
 
   if (! err)
     return SVN_NO_ERROR;
 
-  while (tmp_err)
+  do
     {
-      /* Skip over any trace-only links. */
-      while (tmp_err && svn_error__is_tracing_link(tmp_err))
-        tmp_err = tmp_err->child;
+      svn_error_t *tmp_err;
 
-      /* The link must be a real link in the error chain. */
-      SVN_ERR_ASSERT(tmp_err);
+      /* Skip over any trace-only links. */
+      while (err && svn_error__is_tracing_link(err))
+        err = err->child;
+
+      /* The link must be a real link in the error chain, otherwise an
+         error chain with trace only links would map into SVN_NO_ERROR. */
+      SVN_ERR_ASSERT(err);
+
+      /* Copy the current error except for its child error pointer
+         into the new error.  Share any message and source filename
+         strings from the error. */
+      tmp_err = apr_palloc(err->pool, sizeof(*tmp_err));
+      *tmp_err = *err;
+      tmp_err->child = NULL;
 
       /* Add a new link to the new chain (creating the chain if necessary). */
       if (! new_err)
         {
           new_err = tmp_err;
-          new_err_leaf = new_err;
+          new_err_leaf = tmp_err;
         }
       else
         {
           new_err_leaf->child = tmp_err;
-          new_err_leaf = new_err_leaf->child;
+          new_err_leaf = tmp_err;
         }
 
       /* Advance to the next link in the original chain. */
-      tmp_err = tmp_err->child;
-    }
+      err = err->child;
+    } while (err);
 
-  /* Tie off the chain, and return its head. */
-  new_err_leaf->child = NULL;
   return new_err;
 #else  /* SVN_ERR__TRACING */
   return err;

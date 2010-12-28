@@ -111,7 +111,7 @@ dav_svn__convert_err(svn_error_t *serr,
     /* Remove the trace-only error chain links.  We need predictable
        protocol behavior regardless of whether or not we're in a
        debugging build. */
-    serr = svn_error_purge_tracing(serr);
+    svn_error_t *purged_serr = svn_error_purge_tracing(serr);
 
     /* ### someday mod_dav_svn will send back 'rich' error tags, much
        finer grained than plain old svn_error_t's.  But for now, all
@@ -122,7 +122,7 @@ dav_svn__convert_err(svn_error_t *serr,
        appropriate HTTP status code.  If no more appropriate HTTP
        status code maps to the Subversion error code, use the one
        suggested status provided by the caller. */
-    switch (serr->apr_err)
+    switch (purged_serr->apr_err)
       {
       case SVN_ERR_FS_NOT_FOUND:
         status = HTTP_NOT_FOUND;
@@ -139,11 +139,12 @@ dav_svn__convert_err(svn_error_t *serr,
         /* add other mappings here */
       }
 
-    derr = build_error_chain(pool, serr, status);
+    derr = build_error_chain(pool, purged_serr, status);
     if (message != NULL
-        && serr->apr_err != SVN_ERR_REPOS_HOOK_FAILURE)
+        && purged_serr->apr_err != SVN_ERR_REPOS_HOOK_FAILURE)
       /* Don't hide hook failures; we might hide the error text */
-      derr = dav_push_error(pool, status, serr->apr_err, message, derr);
+      derr = dav_push_error(pool, status, purged_serr->apr_err,
+                            message, derr);
 
     /* Now, destroy the Subversion error. */
     svn_error_clear(serr);
