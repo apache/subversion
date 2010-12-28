@@ -32,6 +32,7 @@
 #include "svn_props.h"
 #include "svn_dav.h"
 #include "svn_base64.h"
+#include "private/svn_repos_private.h"
 #include "private/svn_dav_protocol.h"
 #include "private/svn_log.h"
 
@@ -1334,8 +1335,7 @@ merge(dav_resource *target,
     }
   else if (serr)
     {
-      if (serr->child && serr->child->message)
-        post_commit_err = apr_pstrdup(pool, serr->child->message);
+      post_commit_err = svn_repos__post_commit_error_str(serr, pool);
       svn_error_clear(serr);
     }
 
