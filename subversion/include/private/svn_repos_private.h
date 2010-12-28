@@ -44,12 +44,15 @@ extern "C" {
  * the post-commit hook.  Any error tracing placeholders in the error
  * chain are skipped over.
  *
+ * This function clears @a err and it should not be used after passing
+ * it to this function.
+ *
  * ### This method should not be necessary, but there are a few
  * ### places, e.g. mod_dav_svn, where only a single error message
  * ### string is returned to the caller and it is useful to have both
  * ### error messages included in the message.
  *
- * Use @a pool to allocate the string in.
+ * Use @a pool to do any allocations in.
  *
  * @since New in 1.7.
  */
