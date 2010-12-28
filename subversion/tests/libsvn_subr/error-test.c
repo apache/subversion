@@ -165,11 +165,11 @@ test_error_purge_tracing(apr_pool_t *pool)
         SVN_TEST_ASSERT(SVN_ERR_ASSERTION_FAIL == err3_copy.apr_err);
 
         /* This is the line number in error.c where
-           SVN_ERR_ASSERT(tmp_err) is called.  This check is done to
+           SVN_ERR_ASSERT(err) is called.  This check is done to
            assert that the error is being thrown from the expected
            line and not from another assertion that could be
            introduced in the future. */
-        SVN_TEST_ASSERT(374 == err3_copy.line);
+        SVN_TEST_ASSERT(376 == err3_copy.line);
       }
     else
       {

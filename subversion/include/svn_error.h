@@ -315,11 +315,20 @@ svn_handle_warning(FILE *stream,
 #endif
 
 /**
- * Purge from @a err and its child chain any links associated with
- * error tracing placeholders, and return the new top-level error
- * chain item.  @a err should be considered unusable after passing
- * through this function, but should *not* be cleared (as the returned
- * error shares memory with @a err).  @a err can be #SVN_NO_ERROR.
+ * Returns an error chain that is based on @a err's error chain but
+ * does not include any error tracing placeholders.  @a err is not
+ * modified, except for any allocations using its pool.
+ *
+ * The returned error chain is allocated from @a err's pool and shares
+ * its message and source filename character arrays.  The returned
+ * error chain should *not* be cleared because it is not a fully
+ * fledged error chain, only clearing @a err should be done to clear
+ * the returned error chain.  If @a err is cleared, then the returned
+ * error chain is unusable.
+ *
+ * @a err can be #SVN_NO_ERROR.  If @a err is not #SVN_NO_ERROR, then
+ * the last link in the error chain must be a non-tracing error, i.e,
+ * a real error.
  *
  * @since New in 1.7.
  */
