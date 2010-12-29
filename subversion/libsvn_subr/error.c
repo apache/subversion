@@ -34,20 +34,6 @@
 #include "svn_utf.h"
 
 #ifdef SVN_DEBUG
-/* file_line for the non-debug case. */
-static const char SVN_FILE_LINE_UNDEFINED[] = "svn:<undefined>";
-#endif /* SVN_DEBUG */
-
-#include "svn_private_config.h"
-
-
-/*** Helpers for creating errors ***/
-#undef svn_error_create
-#undef svn_error_createf
-#undef svn_error_quick_wrap
-#undef svn_error_wrap_apr
-
-
 /* XXX FIXME: These should be protected by a thread mutex.
    svn_error__locate and make_error_internal should cooperate
    in locking and unlocking it. */
@@ -56,12 +42,38 @@ static const char SVN_FILE_LINE_UNDEFINED[] = "svn:<undefined>";
 static const char * volatile error_file = NULL;
 static long volatile error_line = -1;
 
+/* file_line for the non-debug case. */
+static const char SVN_FILE_LINE_UNDEFINED[] = "svn:<undefined>";
+#endif /* SVN_DEBUG */
+
+#include "svn_private_config.h"
+#include "private/svn_error_private.h"
+
+
+/*
+ * Undefine the helpers for creating errors.
+ *
+ * *NOTE*: Any use of these functions in any other function may need
+ * to call svn_error__locate() because the macro that would otherwise
+ * do this is being undefined and the filename and line number will
+ * not be properly set in the static error_file and error_line
+ * variables.
+ */
+#undef svn_error_create
+#undef svn_error_createf
+#undef svn_error_quick_wrap
+#undef svn_error_wrap_apr
+
+/* Note: This function was historically in the public API, so we need
+ * to define it even when !SVN_DEBUG. */
 void
 svn_error__locate(const char *file, long line)
 {
+#if defined(SVN_DEBUG)
   /* XXX TODO: Lock mutex here */
   error_file = file;
   error_line = line;
+#endif
 }
 
 
@@ -103,11 +115,11 @@ make_error_internal(apr_status_t apr_err,
   new_error->apr_err = apr_err;
   new_error->child   = child;
   new_error->pool    = pool;
+#if defined(SVN_DEBUG)
   new_error->file    = error_file;
   new_error->line    = error_line;
   /* XXX TODO: Unlock mutex here */
 
-#if defined(SVN_DEBUG)
   if (! child)
       apr_pool_cleanup_register(pool, new_error,
                                 err_abort,
@@ -269,16 +281,16 @@ svn_error_root_cause(svn_error_t *err)
   return err;
 }
 
-svn_boolean_t
-svn_error_has_cause(svn_error_t *err, apr_status_t apr_err)
+svn_error_t *
+svn_error_find_cause(svn_error_t *err, apr_status_t apr_err)
 {
   svn_error_t *child;
 
   for (child = err; child; child = child->child)
     if (child->apr_err == apr_err)
-      return TRUE;
+      return child;
 
-  return FALSE;
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -331,8 +343,8 @@ svn_error_clear(svn_error_t *err)
     }
 }
 
-/* Is ERR a tracing-only error chain link?  */
-static svn_boolean_t is_tracing_link(svn_error_t *err)
+svn_boolean_t
+svn_error__is_tracing_link(svn_error_t *err)
 {
 #ifdef SVN_ERR__TRACING
   /* ### A strcmp()?  Really?  I think it's the best we can do unless
@@ -349,39 +361,46 @@ svn_error_t *
 svn_error_purge_tracing(svn_error_t *err)
 {
 #ifdef SVN_ERR__TRACING
-  svn_error_t *tmp_err = err;
   svn_error_t *new_err = NULL, *new_err_leaf = NULL;
 
   if (! err)
     return SVN_NO_ERROR;
 
-  while (tmp_err)
+  do
     {
+      svn_error_t *tmp_err;
+
       /* Skip over any trace-only links. */
-      while (tmp_err && is_tracing_link(tmp_err))
-        tmp_err = tmp_err->child;
+      while (err && svn_error__is_tracing_link(err))
+        err = err->child;
+
+      /* The link must be a real link in the error chain, otherwise an
+         error chain with trace only links would map into SVN_NO_ERROR. */
+      SVN_ERR_ASSERT(err);
+
+      /* Copy the current error except for its child error pointer
+         into the new error.  Share any message and source filename
+         strings from the error. */
+      tmp_err = apr_palloc(err->pool, sizeof(*tmp_err));
+      *tmp_err = *err;
+      tmp_err->child = NULL;
 
       /* Add a new link to the new chain (creating the chain if necessary). */
       if (! new_err)
         {
           new_err = tmp_err;
-          new_err_leaf = new_err;
+          new_err_leaf = tmp_err;
         }
       else
         {
           new_err_leaf->child = tmp_err;
-          new_err_leaf = new_err_leaf->child;
+          new_err_leaf = tmp_err;
         }
 
       /* Advance to the next link in the original chain. */
-      tmp_err = tmp_err->child;
-    }
+      err = err->child;
+    } while (err);
 
-  /* If we get here, there had better be a real link in this error chain. */
-  SVN_ERR_ASSERT(new_err_leaf);
-
-  /* Tie off the chain, and return its head. */
-  new_err_leaf->child = NULL;
   return new_err;
 #else  /* SVN_ERR__TRACING */
   return err;
@@ -420,7 +439,7 @@ print_error(svn_error_t *err, FILE *stream, const char *prefix)
 #endif /* SVN_DEBUG */
 
   /* "traced call" */
-  if (is_tracing_link(err))
+  if (svn_error__is_tracing_link(err))
     {
       /* Skip it.  We already printed the file-line coordinates. */
     }
@@ -550,7 +569,7 @@ const char *
 svn_err_best_message(svn_error_t *err, char *buf, apr_size_t bufsize)
 {
   /* Skip over any trace records.  */
-  while (is_tracing_link(err))
+  while (svn_error__is_tracing_link(err))
     err = err->child;
   if (err->message)
     return err->message;
@@ -592,6 +611,11 @@ svn_error_raise_on_malfunction(svn_boolean_t can_return,
 {
   if (!can_return)
     abort(); /* Nothing else we can do as a library */
+
+  /* The filename and line number of the error source needs to be set
+     here because svn_error_createf() is not the macro defined in
+     svn_error.h but the real function. */
+  svn_error__locate(file, line);
 
   if (expr)
     return svn_error_createf(SVN_ERR_ASSERTION_FAIL, NULL,

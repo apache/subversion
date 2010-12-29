@@ -572,7 +572,7 @@ dav_error *
 dav_svn__merge_response(ap_filter_t *output,
                         const dav_svn_repos *repos,
                         svn_revnum_t new_rev,
-                        char *post_commit_err,
+                        const char *post_commit_err,
                         apr_xml_elem *prop_elem,
                         svn_boolean_t disable_merge_response,
                         apr_pool_t *pool);
@@ -748,9 +748,9 @@ dav_svn__new_error(apr_pool_t *pool,
    string constant. */
 dav_error *
 dav_svn__convert_err(svn_error_t *serr,
-                    int status,
-                    const char *message,
-                    apr_pool_t *pool);
+                     int status,
+                     const char *message,
+                     apr_pool_t *pool);
 
 
 /* Compare (PATH in ROOT) to (PATH in ROOT/PATH's created_rev).

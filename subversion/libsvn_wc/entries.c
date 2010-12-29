@@ -91,7 +91,6 @@ typedef struct {
   svn_depth_t depth;
   apr_time_t last_mod_time;
   apr_hash_t *properties;
-  svn_boolean_t keep_local;
 } db_working_node_t;
 
 typedef struct {
@@ -253,7 +252,6 @@ get_base_info_for_deleted(svn_wc_entry_t *entry,
       svn_error_clear(err);
 
       SVN_ERR(svn_wc__db_scan_deletion(NULL,
-                                       NULL,
                                        NULL,
                                        &work_del_abspath,
                                        db, entry_abspath,
@@ -534,7 +532,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
       /* ### we don't have to worry about moves, so this is a delete. */
       entry->schedule = svn_wc_schedule_delete;
 
-      SVN_ERR(svn_wc__db_scan_deletion(NULL, NULL, NULL,
+      SVN_ERR(svn_wc__db_scan_deletion(NULL, NULL,
                                        &work_del_abspath,
                                        db, entry_abspath,
                                        scratch_pool, scratch_pool));
@@ -1580,6 +1578,7 @@ write_entry(struct write_baton **entry_node,
             apr_int64_t wc_id,
             apr_int64_t repos_id,
             const svn_wc_entry_t *entry,
+            const svn_wc__text_base_info_t *text_base_info,
             const char *local_relpath,
             const char *entry_abspath,
             const svn_wc_entry_t *this_dir,
@@ -1588,7 +1587,7 @@ write_entry(struct write_baton **entry_node,
             apr_pool_t *scratch_pool)
 {
   db_base_node_t *base_node = NULL;
-  db_working_node_t *working_node = NULL;
+  db_working_node_t *working_node = NULL, *below_working_node = NULL;
   db_actual_node_t *actual_node = NULL;
   const char *parent_relpath;
 
@@ -1682,6 +1681,11 @@ write_entry(struct write_baton **entry_node,
   switch (entry->schedule)
     {
       case svn_wc_schedule_normal:
+        SVN_ERR_ASSERT(!parent_node
+                       || (parent_node->base && !parent_node->work
+                           && !entry->copied)
+                       || (!parent_node->base && parent_node->work
+                           && entry->copied));
         if (entry->copied)
           working_node = MAYBE_ALLOC(working_node, result_pool);
         else
@@ -1689,26 +1693,26 @@ write_entry(struct write_baton **entry_node,
         break;
 
       case svn_wc_schedule_add:
+        SVN_ERR_ASSERT((parent_node->base && !parent_node->work)
+                       || (parent_node->work && !parent_node->base));
         working_node = MAYBE_ALLOC(working_node, result_pool);
         break;
 
       case svn_wc_schedule_delete:
+        SVN_ERR_ASSERT(!entry->copied);
         working_node = MAYBE_ALLOC(working_node, result_pool);
-        /* If the entry is part of a REPLACED (not COPIED) subtree,
-           then it needs a BASE node. */
-        if (parent_node->base
-            && (! (entry->copied
-                   || (this_dir->copied
-                       && (this_dir->schedule == svn_wc_schedule_add ||
-                           this_dir->schedule == svn_wc_schedule_delete ||
-                           this_dir->schedule == svn_wc_schedule_replace)))))
+        if (parent_node->base)
           base_node = MAYBE_ALLOC(base_node, result_pool);
         break;
 
       case svn_wc_schedule_replace:
+        SVN_ERR_ASSERT((parent_node->base && !parent_node->work)
+                       || (parent_node->work && !parent_node->base));
         working_node = MAYBE_ALLOC(working_node, result_pool);
         if (parent_node->base)
           base_node = MAYBE_ALLOC(base_node, result_pool);
+        else
+          below_working_node = MAYBE_ALLOC(below_working_node, scratch_pool);
         break;
     }
 
@@ -1716,15 +1720,19 @@ write_entry(struct write_baton **entry_node,
      BASE node to indicate the not-present node.  */
   if (entry->deleted)
     {
-      base_node = MAYBE_ALLOC(base_node, result_pool);
+      SVN_ERR_ASSERT(base_node && !working_node && !below_working_node);
+      SVN_ERR_ASSERT(!entry->incomplete);
+      base_node->presence = svn_wc__db_status_not_present;
+    }
+
+  if (entry->absent)
+    {
+      SVN_ERR_ASSERT(base_node && !working_node);
+      base_node->presence = svn_wc__db_status_absent;
     }
 
   if (entry->copied)
     {
-      /* Make sure we get a WORKING_NODE inserted. The copyfrom information
-         will occur here or on a parent, as appropriate.  */
-      working_node = MAYBE_ALLOC(working_node, result_pool);
-
       if (entry->copyfrom_url)
         {
           const char *relative_url;
@@ -1741,12 +1749,8 @@ write_entry(struct write_baton **entry_node,
                 svn_path_uri_decode(relative_url, result_pool);
             }
           working_node->copyfrom_revnum = entry->copyfrom_rev;
-#ifdef SVN_WC__OP_DEPTH
           working_node->op_depth
             = svn_wc__db_op_depth_for_upgrade(local_relpath);
-#else
-          working_node->op_depth = 2; /* ### temporary op_depth */
-#endif
         }
       else if (parent_node->work && parent_node->work->copyfrom_repos_path)
         {
@@ -1763,20 +1767,6 @@ write_entry(struct write_baton **entry_node,
                                  _("No copyfrom URL for '%s'"),
                                  svn_dirent_local_style(local_relpath,
                                                         scratch_pool));
-    }
-
-  if (entry->keep_local)
-    {
-      SVN_ERR_ASSERT(working_node != NULL);
-      SVN_ERR_ASSERT(entry->schedule == svn_wc_schedule_delete);
-      working_node->keep_local = TRUE;
-    }
-
-  if (entry->absent)
-    {
-      SVN_ERR_ASSERT(working_node == NULL);
-      SVN_ERR_ASSERT(base_node != NULL);
-      base_node->presence = svn_wc__db_status_absent;
     }
 
   if (entry->conflict_old)
@@ -1833,8 +1823,6 @@ write_entry(struct write_baton **entry_node,
 
       if (entry->deleted)
         {
-          SVN_ERR_ASSERT(!entry->incomplete);
-
           base_node->presence = svn_wc__db_status_not_present;
           /* ### should be svn_node_unknown, but let's store what we have. */
           base_node->kind = entry->kind;
@@ -1867,8 +1855,40 @@ write_entry(struct write_baton **entry_node,
       if (entry->kind == svn_node_dir)
         base_node->checksum = NULL;
       else
-        SVN_ERR(svn_checksum_parse_hex(&base_node->checksum, svn_checksum_md5,
-                                       entry->checksum, result_pool));
+        {
+          if (text_base_info && text_base_info->revert_base.sha1_checksum)
+            base_node->checksum = text_base_info->revert_base.sha1_checksum;
+          else if (text_base_info && text_base_info->normal_base.sha1_checksum)
+            base_node->checksum = text_base_info->normal_base.sha1_checksum;
+          else
+            base_node->checksum = NULL;
+
+          /* The base MD5 checksum is available in the entry, unless there
+           * is a copied WORKING node.  If possible, verify that the entry
+           * checksum matches the base file that we found. */
+#ifdef SVN_DEBUG
+          if (! (working_node && entry->copied))
+            {
+              svn_checksum_t *entry_md5_checksum, *found_md5_checksum;
+              SVN_ERR(svn_checksum_parse_hex(&entry_md5_checksum, svn_checksum_md5,
+                                             entry->checksum, scratch_pool));
+              if (text_base_info && text_base_info->revert_base.md5_checksum)
+                found_md5_checksum = text_base_info->revert_base.md5_checksum;
+              else if (text_base_info && text_base_info->normal_base.md5_checksum)
+                found_md5_checksum = text_base_info->normal_base.md5_checksum;
+              else
+                found_md5_checksum = NULL;
+              if (entry_md5_checksum && found_md5_checksum)
+                SVN_ERR_ASSERT(svn_checksum_match(entry_md5_checksum,
+                                                  found_md5_checksum));
+              else
+                {
+                  /* ### Not sure what conditions this should cover. */
+                  /* SVN_ERR_ASSERT(entry->deleted || ...); */
+                }
+            }
+#endif
+        }
 
       if (this_dir->repos)
         {
@@ -1952,6 +1972,37 @@ write_entry(struct write_baton **entry_node,
         }
     }
 
+  if (below_working_node)
+    {
+      below_working_node->wc_id = wc_id;
+      below_working_node->local_relpath = local_relpath;
+      below_working_node->op_depth = parent_node->work->op_depth;
+      below_working_node->parent_relpath = parent_relpath;
+      below_working_node->presence = svn_wc__db_status_normal;
+      below_working_node->kind = svn_node_file;
+      below_working_node->copyfrom_repos_id
+        = parent_node->work->copyfrom_repos_id;
+      below_working_node->copyfrom_repos_path
+        = svn_relpath_join(parent_node->work->copyfrom_repos_path, entry->name,
+                           scratch_pool);
+      below_working_node->copyfrom_revnum
+        = parent_node->work->copyfrom_revnum;
+      below_working_node->moved_here = FALSE;
+      below_working_node->moved_to = FALSE;
+
+      /* The revert_base checksum isn't available in the entry structure,
+         so the caller provides it. */
+      below_working_node->checksum = text_base_info->revert_base.sha1_checksum;
+      below_working_node->translated_size = 0;
+      below_working_node->changed_rev = SVN_INVALID_REVNUM;
+      below_working_node->changed_date = 0;
+      below_working_node->changed_author = NULL;
+      below_working_node->depth = svn_depth_infinity;
+      below_working_node->last_mod_time = 0;
+      below_working_node->properties = NULL;
+      SVN_ERR(insert_working_node(sdb, below_working_node, scratch_pool));
+    }
+
   /* Insert the working node. */
   if (working_node)
     {
@@ -1973,9 +2024,24 @@ write_entry(struct write_baton **entry_node,
       if (entry->kind == svn_node_dir)
         working_node->checksum = NULL;
       else
-        SVN_ERR(svn_checksum_parse_hex(&working_node->checksum,
-                                       svn_checksum_md5,
-                                       entry->checksum, result_pool));
+        {
+          working_node->checksum = text_base_info->normal_base.sha1_checksum;
+
+          /* If an MD5 checksum is present in the entry, we can verify that
+           * it matches the MD5 of the base file we found earlier. */
+#ifdef SVN_DEBUG
+          if (entry->checksum)
+          {
+            svn_checksum_t *md5_checksum;
+            SVN_ERR(svn_checksum_parse_hex(&md5_checksum, svn_checksum_md5,
+                                           entry->checksum, result_pool));
+            SVN_ERR_ASSERT(
+              md5_checksum && text_base_info->normal_base.md5_checksum);
+            SVN_ERR_ASSERT(svn_checksum_match(
+              md5_checksum, text_base_info->normal_base.md5_checksum));
+          }
+#endif
+        }
 
       /* All subdirs start of incomplete, and stop being incomplete
          when the entries file in the subdir is upgraded. */
@@ -2039,15 +2105,8 @@ write_entry(struct write_baton **entry_node,
 
       if (!entry->copied)
         {
-          if (parent_node->work)
-            working_node->op_depth = parent_node->work->op_depth;
-          else
-#ifdef SVN_WC__OP_DEPTH
-            working_node->op_depth
-              = svn_wc__db_op_depth_for_upgrade(local_relpath);
-#else
-            working_node->op_depth = 2; /* ### temporary op_depth */
-#endif
+          working_node->op_depth
+            = svn_wc__db_op_depth_for_upgrade(local_relpath);
         }
 
       SVN_ERR(insert_working_node(sdb, working_node, scratch_pool));
@@ -2067,7 +2126,7 @@ write_entry(struct write_baton **entry_node,
 
   if (entry_node)
     {
-      *entry_node = apr_palloc(result_pool, sizeof(*entry_node));
+      *entry_node = apr_palloc(result_pool, sizeof(**entry_node));
       (*entry_node)->base = base_node;
       (*entry_node)->work = working_node;
     }
@@ -2083,6 +2142,7 @@ struct entries_write_baton
   const char *dir_abspath;
   const char *new_root_abspath;
   apr_hash_t *entries;
+  apr_hash_t *text_bases_info;
   struct write_baton *parent_node;
   struct write_baton *dir_node;
   apr_pool_t *result_pool;
@@ -2124,7 +2184,7 @@ entries_write_new_cb(void *baton,
 
   /* Write out "this dir" */
   SVN_ERR(write_entry(&ewb->dir_node, ewb->parent_node, db, sdb,
-                      ewb->wc_id, ewb->repos_id, this_dir, dir_relpath,
+                      ewb->wc_id, ewb->repos_id, this_dir, NULL, dir_relpath,
                       svn_dirent_join(new_root_abspath, dir_relpath,
                                       scratch_pool),
                       this_dir, FALSE, ewb->result_pool, iterpool));
@@ -2135,6 +2195,8 @@ entries_write_new_cb(void *baton,
       const char *name = svn__apr_hash_index_key(hi);
       const svn_wc_entry_t *this_entry = svn__apr_hash_index_val(hi);
       const char *child_abspath, *child_relpath;
+      svn_wc__text_base_info_t *text_base_info
+        = apr_hash_get(ewb->text_bases_info, name, APR_HASH_KEY_STRING);
 
       svn_pool_clear(iterpool);
 
@@ -2148,7 +2210,7 @@ entries_write_new_cb(void *baton,
       child_relpath = svn_dirent_skip_ancestor(old_root_abspath, child_abspath);
       SVN_ERR(write_entry(NULL, ewb->dir_node, db, sdb,
                           ewb->wc_id, ewb->repos_id,
-                          this_entry, child_relpath,
+                          this_entry, text_base_info, child_relpath,
                           svn_dirent_join(new_root_abspath, child_relpath,
                                           scratch_pool),
                           this_dir, TRUE, iterpool, iterpool));
@@ -2169,6 +2231,7 @@ svn_wc__write_upgraded_entries(void **dir_baton,
                                const char *dir_abspath,
                                const char *new_root_abspath,
                                apr_hash_t *entries,
+                               apr_hash_t *text_bases_info,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool)
 {
@@ -2180,6 +2243,7 @@ svn_wc__write_upgraded_entries(void **dir_baton,
   ewb.dir_abspath = dir_abspath;
   ewb.new_root_abspath = new_root_abspath;
   ewb.entries = entries;
+  ewb.text_bases_info = text_bases_info;
   ewb.parent_node = parent_baton;
   ewb.result_pool = result_pool;
 

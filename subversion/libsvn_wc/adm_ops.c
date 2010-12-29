@@ -510,7 +510,7 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
                              iterpool));
     }
 
-  svn_hash__clear(queue->queue, iterpool);
+  SVN_ERR(svn_hash__clear(queue->queue, iterpool));
 
   svn_pool_destroy(iterpool);
 

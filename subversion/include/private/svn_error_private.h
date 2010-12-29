@@ -20,46 +20,27 @@
  * ====================================================================
  * @endcopyright
  *
- * @file svn_client_private.h
- * @brief Subversion-internal client APIs.
+ * @file svn_error_private.h
+ * @brief Subversion-internal error APIs.
  */
 
-#ifndef SVN_CLIENT_PRIVATE_H
-#define SVN_CLIENT_PRIVATE_H
+#ifndef SVN_ERROR_PRIVATE_H
+#define SVN_ERROR_PRIVATE_H
 
-#include <apr_pools.h>
-
-#include "svn_client.h"
 #include "svn_types.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
-
-/** Obliterate the node at URL @a url in revision @a rev.
- *
- * Use the authentication baton stored in @a ctx for authentication.
- *
- * @since New in 1.7.
+/**
+ * Returns if @a err is a "tracing" error.
  */
-svn_error_t *
-svn_client__obliterate_path_rev(const char *url,
-                                svn_revnum_t rev,
-                                svn_client_ctx_t *ctx,
-                                apr_pool_t *pool);
-
-
-/** Return @c SVN_ERR_ILLEGAL_TARGET if TARGETS contains a mixture of
- * URLs and paths; otherwise return SVN_NO_ERROR.
- *
- * @since New in 1.7.
- */
-svn_error_t *
-svn_client__assert_homogeneous_target_type(const apr_array_header_t *targets);
+svn_boolean_t
+svn_error__is_tracing_link(svn_error_t *err);
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-#endif /* SVN_CLIENT_PRIVATE_H */
+#endif /* SVN_ERROR_PRIVATE_H */

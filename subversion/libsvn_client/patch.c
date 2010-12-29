@@ -2643,7 +2643,6 @@ apply_patches(void *baton,
 {
   svn_patch_t *patch;
   apr_pool_t *iterpool;
-  const char *patch_eol_str;
   apr_file_t *patch_file;
   apr_array_header_t *targets_info;
   apply_patches_baton_t *btn = baton;
@@ -2651,15 +2650,6 @@ apply_patches(void *baton,
   /* Try to open the patch file. */
   SVN_ERR(svn_io_file_open(&patch_file, btn->patch_abspath,
                            APR_READ | APR_BINARY, 0, scratch_pool));
-
-  SVN_ERR(svn_eol__detect_file_eol(&patch_eol_str, patch_file, scratch_pool));
-  if (patch_eol_str == NULL)
-    {
-      /* If we can't figure out the EOL scheme, just assume native.
-       * It's most likely a bad patch file anyway that will fail to
-       * apply later. */
-      patch_eol_str = APR_EOL_STR;
-    }
 
   /* Apply patches. */
   targets_info = apr_array_make(scratch_pool, 0,

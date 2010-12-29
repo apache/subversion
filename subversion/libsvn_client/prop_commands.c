@@ -105,6 +105,7 @@ struct propset_walk_baton
  */
 static svn_error_t *
 propset_walk_cb(const char *local_abspath,
+                svn_node_kind_t kind,
                 void *walk_baton,
                 apr_pool_t *pool)
 {
@@ -679,8 +680,9 @@ struct propget_walk_baton
  */
 static svn_error_t *
 propget_walk_cb(const char *local_abspath,
-                  void *walk_baton,
-                  apr_pool_t *pool)
+                svn_node_kind_t kind,
+                void *walk_baton,
+                apr_pool_t *pool)
 {
   struct propget_walk_baton *wb = walk_baton;
   const svn_string_t *propval;
@@ -895,7 +897,7 @@ get_prop_from_wc(apr_hash_t *props,
   else if (svn_wc__changelist_match(ctx->wc_ctx, target_abspath,
                                     changelist_hash, pool))
     {
-      SVN_ERR(propget_walk_cb(target_abspath, &wb, pool));
+      SVN_ERR(propget_walk_cb(target_abspath, kind, &wb, pool));
     }
 
   return SVN_NO_ERROR;
@@ -1186,6 +1188,7 @@ struct proplist_walk_baton
  */
 static svn_error_t *
 proplist_walk_cb(const char *local_abspath,
+                 svn_node_kind_t kind,
                  void *walk_baton,
                  apr_pool_t *scratch_pool)
 {

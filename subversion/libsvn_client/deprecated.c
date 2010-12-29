@@ -2106,7 +2106,7 @@ svn_client_relocate(const char *path,
                     apr_pool_t *pool)
 {
   if (! recurse)
-    svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, 0,
-                     _("Non-recursive relocation not supported"));
+    SVN_ERR(svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                             _("Non-recursive relocation not supported")));
   return svn_client_relocate2(path, from_prefix, to_prefix, TRUE, ctx, pool);
 }

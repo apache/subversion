@@ -207,8 +207,8 @@ dump_props(struct dump_edit_baton *eb,
       SVN_ERR(svn_stream_printf(eb->stream, pool, "\n\n"));
 
       /* Cleanup so that data is never dumped twice. */
-      svn_hash__clear(eb->props, eb->pool);
-      svn_hash__clear(eb->deleted_props, eb->pool);
+      SVN_ERR(svn_hash__clear(eb->props, eb->pool));
+      SVN_ERR(svn_hash__clear(eb->deleted_props, eb->pool));
       if (trigger_var)
         *trigger_var = FALSE;
     }
@@ -525,7 +525,7 @@ close_directory(void *dir_baton,
                         FALSE, NULL, SVN_INVALID_REVNUM, pool));
     }
 
-  svn_hash__clear(db->deleted_entries, pool);
+  SVN_ERR(svn_hash__clear(db->deleted_entries, pool));
   return SVN_NO_ERROR;
 }
 
@@ -725,7 +725,7 @@ apply_textdelta(void *file_baton, const char *base_checksum,
 
   eb->dump_text = TRUE;
   eb->base_checksum = apr_pstrdup(eb->pool, base_checksum);
-  svn_stream_close(delta_filestream);
+  SVN_ERR(svn_stream_close(delta_filestream));
 
   /* The actual writing takes place when this function has
      finished. Set handler and handler_baton now so for
@@ -806,8 +806,8 @@ close_file(void *file_baton,
 
       /* Cleanup */
       eb->dump_props = FALSE;
-      svn_hash__clear(eb->props, eb->pool);
-      svn_hash__clear(eb->deleted_props, eb->pool);
+      SVN_ERR(svn_hash__clear(eb->props, eb->pool));
+      SVN_ERR(svn_hash__clear(eb->deleted_props, eb->pool));
     }
 
   /* Dump the text */

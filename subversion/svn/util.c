@@ -61,6 +61,7 @@
 
 #include "private/svn_token.h"
 #include "private/svn_opt_private.h"
+#include "private/svn_client_private.h"
 
 
 
@@ -483,8 +484,9 @@ svn_cl__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
       /* Translate back to UTF8/LF if desired. */
       if (as_text)
         {
-          err = svn_subst_translate_string(edited_contents, *edited_contents,
-                                           encoding, pool);
+          err = svn_subst_translate_string2(edited_contents, FALSE, FALSE,
+                                            *edited_contents, encoding, pool,
+                                            pool);
           if (err)
             {
               err = svn_error_quick_wrap
@@ -709,8 +711,9 @@ svn_cl__get_log_message(const char **log_msg,
       /* Make a string from a stringbuf, sharing the data allocation. */
       log_msg_str->data = log_msg_buf->data;
       log_msg_str->len = log_msg_buf->len;
-      SVN_ERR_W(svn_subst_translate_string(&log_msg_str, log_msg_str,
-                                           lmb->message_encoding, pool),
+      SVN_ERR_W(svn_subst_translate_string2(&log_msg_str, FALSE, FALSE,
+                                            log_msg_str, lmb->message_encoding,
+                                            pool, pool),
                 _("Error normalizing log message to internal format"));
 
       *log_msg = log_msg_str->data;
@@ -1344,4 +1347,17 @@ svn_cl__opt_parse_path(svn_opt_revision_t *rev,
     *truepath = svn_dirent_canonicalize(*truepath, pool);
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_cl__assert_homogeneous_target_type(const apr_array_header_t *targets)
+{
+  svn_error_t *err;
+
+  err = svn_client__assert_homogeneous_target_type(targets);
+  if (err && err->apr_err == SVN_ERR_ILLEGAL_TARGET)
+    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, err,
+                             _("Cannot mix repository and working copy "
+                               "targets"));
+  return err;
 }

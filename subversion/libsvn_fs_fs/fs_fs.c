@@ -3844,7 +3844,8 @@ rep_read_contents(void *baton,
           svn_checksum_t *md5_checksum;
 
           rb->checksum_finalized = TRUE;
-          svn_checksum_final(&md5_checksum, rb->md5_checksum_ctx, rb->pool);
+          SVN_ERR(svn_checksum_final(&md5_checksum, rb->md5_checksum_ctx,
+                                     rb->pool));
           if (!svn_checksum_match(md5_checksum, rb->md5_checksum))
             return svn_error_createf
               (SVN_ERR_FS_CORRUPT, NULL,
@@ -5800,9 +5801,20 @@ rep_write_contents_close(void *baton)
   /* Check and see if we already have a representation somewhere that's
      identical to the one we just wrote out. */
   if (ffd->rep_sharing_allowed)
-    /* ### TODO: ignore errors opening the DB (issue #3506) * */
-    SVN_ERR(svn_fs_fs__get_rep_reference(&old_rep, b->fs, rep->sha1_checksum,
-                                         b->parent_pool));
+    {
+      svn_error_t *err;
+      err = svn_fs_fs__get_rep_reference(&old_rep, b->fs, rep->sha1_checksum,
+                                         b->parent_pool);
+      if (err)
+        {
+          /* Something's wrong with the rep-sharing index.  We can continue 
+             without rep-sharing, but warn.
+           */
+          (b->fs->warning)(b->fs->warning_baton, err);
+          svn_error_clear(err);
+          old_rep = NULL;
+        }
+    }
   else
     old_rep = NULL;
 
@@ -6029,7 +6041,7 @@ write_hash_rep(svn_filesize_t *size,
   SVN_ERR(svn_hash_write2(hash, stream, SVN_HASH_TERMINATOR, pool));
 
   /* Store the results. */
-  svn_checksum_final(checksum, whb->checksum_ctx, pool);
+  SVN_ERR(svn_checksum_final(checksum, whb->checksum_ctx, pool));
   *size = whb->size;
 
   return svn_stream_printf(whb->stream, pool, "ENDREP\n");
@@ -6585,12 +6597,18 @@ commit_body(void *baton, apr_pool_t *pool)
   /* Update the 'current' file. */
   SVN_ERR(write_final_current(cb->fs, cb->txn->id, new_rev, start_node_id,
                               start_copy_id, pool));
+
+  /* At this point the new revision is committed and globally visible
+     so let the caller know it succeeded by giving it the new revision
+     number, which fulfills svn_fs_commit_txn() contract.  Any errors
+     after this point do not change the fact that a new revision was
+     created. */
+  *cb->new_rev_p = new_rev;
+
   ffd->youngest_rev_cache = new_rev;
 
   /* Remove this transaction directory. */
   SVN_ERR(svn_fs_fs__purge_txn(cb->fs, cb->txn->id, pool));
-
-  *cb->new_rev_p = new_rev;
 
   return SVN_NO_ERROR;
 }
@@ -6759,7 +6777,8 @@ svn_fs_fs__commit(svn_revnum_t *new_rev_p,
 
   if (ffd->rep_sharing_allowed)
     {
-      /* ### TODO: ignore errors opening the DB (issue #3506) * */
+      /* At this point, *NEW_REV_P has been set, so errors here won't affect
+         the success of the commit.  (See svn_fs_commit_txn().)  */
       SVN_ERR(svn_fs_fs__open_rep_cache(fs, pool));
       SVN_ERR(svn_sqlite__with_transaction(ffd->rep_cache_db,
                                            commit_sqlite_txn_callback,
@@ -7990,8 +8009,8 @@ pack_shard(const char *revs_dir,
       SVN_ERR(svn_io_stat(&finfo, path, APR_FINFO_SIZE, iterpool));
 
       /* Update the manifest. */
-      svn_stream_printf(manifest_stream, iterpool, "%" APR_OFF_T_FMT "\n",
-                        next_offset);
+      SVN_ERR(svn_stream_printf(manifest_stream, iterpool, "%" APR_OFF_T_FMT
+                                "\n", next_offset));
       next_offset += finfo.size;
 
       /* Copy all the bits from the rev file to the end of the pack file. */
@@ -8099,6 +8118,22 @@ struct pack_baton
   void *cancel_baton;
 };
 
+
+/* The work-horse for svn_fs_fs__pack, called with the FS write lock.
+   This implements the svn_fs_fs__with_write_lock() 'body' callback
+   type.  BATON is a 'struct pack_baton *'.
+   
+   WARNING: if you add a call to this function, please note:
+     The code currently assumes that any piece of code running with
+     the write-lock set can rely on the ffd->min_unpacked_rev and
+     ffd->min_unpacked_revprop caches to be up-to-date (and, by
+     extension, on not having to use a retry when calling
+     svn_fs_fs__path_rev_absolute() and friends).  If you add a call
+     to this function, consider whether you have to call
+     update_min_unpacked_rev() and update_min_unpacked_revprop()
+     afterwards.
+     See this thread: http://thread.gmane.org/1291206765.3782.3309.camel@edith
+ */
 static svn_error_t *
 pack_body(void *baton,
           apr_pool_t *pool)

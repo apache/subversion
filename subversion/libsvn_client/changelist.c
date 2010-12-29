@@ -56,18 +56,16 @@ struct set_cl_fn_baton
    as LOCAL_ABSPATH is deemed a valid target of that association.  */
 static svn_error_t *
 set_node_changelist(const char *local_abspath,
+                    svn_node_kind_t kind,
                     void *baton,
                     apr_pool_t *pool)
 {
   struct set_cl_fn_baton *b = (struct set_cl_fn_baton *)baton;
-  svn_node_kind_t kind;
 
   /* See if this entry passes our changelist filtering. */
   if (! svn_wc__changelist_match(b->ctx->wc_ctx, local_abspath,
                                  b->changelist_hash, pool))
     return SVN_NO_ERROR;
-
-  SVN_ERR(svn_wc_read_kind(&kind, b->ctx->wc_ctx, local_abspath, FALSE, pool));
 
   /* We only care about files right now. */
   if (kind != svn_node_file)
@@ -213,14 +211,13 @@ struct get_cl_fn_baton
 
 static svn_error_t *
 get_node_changelist(const char *local_abspath,
+                    svn_node_kind_t kind,
                     void *baton,
                     apr_pool_t *pool)
 {
   struct get_cl_fn_baton *b = (struct get_cl_fn_baton *)baton;
-  svn_node_kind_t kind;
   const char *changelist;
 
-  SVN_ERR(svn_wc_read_kind(&kind, b->wc_ctx, local_abspath, FALSE, pool));
   SVN_ERR(svn_wc__node_get_changelist(&changelist, b->wc_ctx,
                                       local_abspath, pool, pool));
 

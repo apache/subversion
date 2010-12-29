@@ -972,7 +972,7 @@ svn_wc__db_pristine_remove(svn_wc__db_t *db,
                            apr_pool_t *scratch_pool);
 
 
-/* Remove all unreferenced pristines belonging to WRI_ABSPATH in DB. */
+/* Remove all unreferenced pristines in the WC of WRI_ABSPATH in DB. */
 svn_error_t *
 svn_wc__db_pristine_cleanup(svn_wc__db_t *db,
                             const char *wri_abspath,
@@ -1518,6 +1518,25 @@ svn_wc__db_read_children_info(apr_hash_t **nodes,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool);
 
+
+/* Structure returned by svn_wc__db_read_walker_info.  Only has the
+   fields needed by svn_wc__internal_walk_children(). */
+struct svn_wc__db_walker_info_t {
+  svn_wc__db_status_t status;
+  svn_wc__db_kind_t kind;
+};
+
+/* Return in *NODES a hash mapping name->struct svn_wc__db_walker_info_t for
+   the children of DIR_ABSPATH. "name" is the child's name relatve to
+   DIR_ABSPATH, not an absolute path. */
+svn_error_t *
+svn_wc__db_read_children_walker_info(apr_hash_t **nodes,
+                                     svn_wc__db_t *db,
+                                     const char *dir_abspath,
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool);
+
+
 /* Set *PROPVAL to the value of the property named PROPNAME of the node
    LOCAL_ABSPATH in the ACTUAL tree (looking through to the WORKING or BASE
    tree as required).
@@ -1943,8 +1962,7 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
    the deleted node.
 
    In this example, BASE_DEL_ABSPATH will bet set to B/W. That is the root of
-   the BASE tree (implicitly) deleted by the replacement. BASE_REPLACED will
-   be set to TRUE since B/W replaces the BASE node at B/W. WORK_DEL_ABSPATH
+   the BASE tree (implicitly) deleted by the replacement. WORK_DEL_ABSPATH
    will be set to the subtree deleted within the replacement; in this case,
    B/W/D. No move-away took place, so MOVED_TO_ABSPATH is set to NULL.
 
@@ -1954,14 +1972,12 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
    post-move, but that is not known or reported by this function.
 
    If BASE does not have a B/W, then the WORKING B/W is not a replacement,
-   but a simple add/copy/move-here. BASE_DEL_ABSPATH will be set to NULL,
-   and BASE_REPLACED will be set to FALSE.
+   but a simple add/copy/move-here. BASE_DEL_ABSPATH will be set to NULL.
 
    If B/W/D does not exist in the WORKING tree (we're only talking about a
    deletion of nodes of the BASE tree), then deleting B/W/D would have marked
    the subtree for deletion. BASE_DEL_ABSPATH will refer to B/W/D,
-   BASE_REPLACED will be FALSE, MOVED_TO_ABSPATH will be NULL, and
-   WORK_DEL_ABSPATH will be NULL.
+   MOVED_TO_ABSPATH will be NULL, and WORK_DEL_ABSPATH will be NULL.
 
    If the BASE node B/W/D was moved instead of deleted, then MOVED_TO_ABSPATH
    would indicate the target location (and other OUT values as above).
@@ -2009,11 +2025,6 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
    BASE_DEL_ABSPATH will specify the nearest ancestor of the explicit or
    implicit deletion (if any) that applies to the BASE tree.
 
-   BASE_REPLACED will specify whether the node at BASE_DEL_ABSPATH has
-   been replaced (shadowed) by nodes in the WORKING tree. If no BASE
-   deletion has occurred (BASE_DEL_ABSPATH is NULL, meaning the deletion
-   is confined to the WORKING TREE), then BASE_REPLACED will be FALSE.
-
    MOVED_TO_ABSPATH will specify the nearest ancestor that has moved-away,
    if any. If no ancestors have been moved-away, then this is set to NULL.
 
@@ -2033,7 +2044,6 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
 */
 svn_error_t *
 svn_wc__db_scan_deletion(const char **base_del_abspath,
-                         svn_boolean_t *base_replaced,
                          const char **moved_to_abspath,
                          const char **work_del_abspath,
                          svn_wc__db_t *db,
@@ -2345,16 +2355,6 @@ svn_wc__db_temp_op_make_copy(svn_wc__db_t *db,
                              apr_pool_t *scratch_pool);
 
 
-#ifndef SVN_WC__OP_DEPTH
-/* Elide the copyfrom information for LOCAL_ABSPATH if it can be derived
-   from the parent node.  */
-svn_error_t *
-svn_wc__db_temp_elide_copyfrom(svn_wc__db_t *db,
-                               const char *local_abspath,
-                               apr_pool_t *scratch_pool);
-#endif
-
-
 /* Return the serialized file external info (from BASE) for LOCAL_ABSPATH.
    Stores NULL into SERIALIZED_FILE_EXTERNAL if this node is NOT a file
    external. If a BASE node does not exist: SVN_ERR_WC_PATH_NOT_FOUND.  */
@@ -2438,6 +2438,14 @@ svn_wc__db_drop_root(svn_wc__db_t *db,
 
 /* Return the OP_DEPTH for LOCAL_RELPATH. */
 int svn_wc__db_op_depth_for_upgrade(const char *local_relpath);
+
+/* Set *HAVE_WORK TRUE if there is a working layer below the top layer */
+svn_error_t *
+svn_wc__db_temp_below_work(svn_boolean_t *have_work,
+                           svn_wc__db_t *db,
+                           const char *local_abspath,
+                           apr_pool_t *scratch_pool);
+
 
 /* @} */
 

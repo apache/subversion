@@ -1044,7 +1044,7 @@ HTTPD_CMD = env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
 			$(PREFIX)/httpd/bin/apachectl \
 			-f conf/httpd-svn-check-$(WC).conf
 HTTPD_START_CMD = $(HTTPD_CMD) -k start
-HTTPD_STOP_CMD = $(HTTPD_CMD) -k stop
+HTTPD_STOP_CMD = $(HTTPD_CMD) -k stop; sleep 3
 
 SVNSERVE_START_CMD = $(SVN_PREFIX)/bin/svnserve \
 			--listen-host 127.0.0.1 \
@@ -1061,7 +1061,6 @@ start-httpd: httpd-conf
 
 stop-httpd:
 	$(HTTPD_STOP_CMD)
-	sleep 3
 
 start-svnserve: $(SVN_OBJDIR)/.compiled
 	$(SVNSERVE_START_CMD)

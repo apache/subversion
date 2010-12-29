@@ -668,7 +668,7 @@ parse_revision_line(const char **input, const char *end, svn_mergeinfo_t hash,
      absolute path key. */
   existing_rangelist = apr_hash_get(hash, pathname->data, APR_HASH_KEY_STRING);
   if (existing_rangelist)
-    svn_rangelist_merge(&rangelist, existing_rangelist, pool);
+    SVN_ERR(svn_rangelist_merge(&rangelist, existing_rangelist, pool));
 
   apr_hash_set(hash, pathname->data, APR_HASH_KEY_STRING, rangelist);
 
@@ -1188,9 +1188,9 @@ mergeinfo_hash_diff_cb(const void *key, apr_ssize_t klen,
       apr_array_header_t *deleted_rangelist, *added_rangelist;
       from_rangelist = apr_hash_get(cb->from, path, APR_HASH_KEY_STRING);
       to_rangelist = apr_hash_get(cb->to, path, APR_HASH_KEY_STRING);
-      svn_rangelist_diff(&deleted_rangelist, &added_rangelist,
-                         from_rangelist, to_rangelist,
-                         cb->consider_inheritance, cb->pool);
+      SVN_ERR(svn_rangelist_diff(&deleted_rangelist, &added_rangelist,
+                                 from_rangelist, to_rangelist,
+                                 cb->consider_inheritance, cb->pool));
       if (cb->deleted && deleted_rangelist->nelts > 0)
         apr_hash_set(cb->deleted, apr_pstrdup(cb->pool, path),
                      APR_HASH_KEY_STRING, deleted_rangelist);

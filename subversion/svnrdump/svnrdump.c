@@ -74,33 +74,40 @@ static svn_opt_subcommand_t dump_cmd, load_cmd;
 enum svn_svnrdump__longopt_t
   {
     opt_config_dir = SVN_OPT_FIRST_LONGOPT_ID,
+    opt_config_option,
     opt_auth_username,
     opt_auth_password,
-    opt_non_interactive,
     opt_auth_nocache,
+    opt_non_interactive,
+    opt_incremental,
     opt_version,
-    opt_config_option,
   };
 
+#define SVN_SVNRDUMP__BASE_OPTIONS opt_config_dir, \
+                                   opt_config_option, \
+                                   opt_auth_username, \
+                                   opt_auth_password, \
+                                   opt_auth_nocache, \
+                                   opt_non_interactive
+
 static const svn_opt_subcommand_desc2_t svnrdump__cmd_table[] =
-  {
-    { "dump", dump_cmd, { 0 },
-      N_("usage: svnrdump dump URL [-r LOWER[:UPPER]]\n\n"
-         "Dump revisions LOWER to UPPER of repository at remote URL "
-         "to stdout in a 'dumpfile' portable format.\n"
-         "If only LOWER is given, dump that one revision.\n"),
-      { 0 } },
-    { "load", load_cmd, { 0 },
-      N_("usage: svnrdump load URL\n\n"
-         "Load a 'dumpfile' given on stdin to a repository "
-         "at remote URL.\n"),
-      { 0 } },
-    { "help", 0, { "?", "h" },
-      N_("usage: svnrdump help [SUBCOMMAND...]\n\n"
-         "Describe the usage of this program or its subcommands.\n"),
-      { 0 } },
-    { NULL, NULL, { 0 }, NULL, { 0 } }
-  };
+{
+  { "dump", dump_cmd, { 0 },
+    N_("usage: svnrdump dump URL [-r LOWER[:UPPER]]\n\n"
+       "Dump revisions LOWER to UPPER of repository at remote URL to stdout\n"
+       "in a 'dumpfile' portable format.  If only LOWER is given, dump that\n"
+       "one revision.\n"),
+    { 'r', 'q', opt_incremental, SVN_SVNRDUMP__BASE_OPTIONS } },
+  { "load", load_cmd, { 0 },
+    N_("usage: svnrdump load URL\n\n"
+       "Load a 'dumpfile' given on stdin to a repository at remote URL.\n"),
+    { 'q', SVN_SVNRDUMP__BASE_OPTIONS } },
+  { "help", 0, { "?", "h" },
+    N_("usage: svnrdump help [SUBCOMMAND...]\n\n"
+       "Describe the usage of this program or its subcommands.\n"),
+    { 0 } },
+  { NULL, NULL, { 0 }, NULL, { 0 } }
+};
 
 static const apr_getopt_option_t svnrdump__options[] =
   {
@@ -108,6 +115,8 @@ static const apr_getopt_option_t svnrdump__options[] =
                       N_("specify revision number ARG (or X:Y range)")},
     {"quiet",         'q', 0,
                       N_("no progress (only errors) to stderr")},
+    {"incremental",   opt_incremental, 0,
+                      N_("dump incrementally")},
     {"config-dir",    opt_config_dir, 1,
                       N_("read user configuration files from directory ARG")},
     {"username",      opt_auth_username, 1,
@@ -149,9 +158,11 @@ struct replay_baton {
 typedef struct opt_baton_t {
   svn_ra_session_t *session;
   const char *url;
-  svn_revnum_t start_revision;
-  svn_revnum_t end_revision;
+  svn_boolean_t help;
+  svn_opt_revision_t start_revision;
+  svn_opt_revision_t end_revision;
   svn_boolean_t quiet;
+  svn_boolean_t incremental;
 } opt_baton_t;
 
 /* Print dumpstream-formatted information about REVISION.
@@ -170,7 +181,7 @@ replay_revstart(svn_revnum_t revision,
   svn_stream_t *stdout_stream;
   svn_stream_t *revprop_stream;
 
-  svn_stream_for_stdout(&stdout_stream, pool);
+  SVN_ERR(svn_stream_for_stdout(&stdout_stream, pool));
 
   /* Revision-number: 19 */
   SVN_ERR(svn_stream_printf(stdout_stream, pool,
@@ -220,7 +231,8 @@ replay_revend(svn_revnum_t revision,
   /* No resources left to free. */
   struct replay_baton *rb = replay_baton;
   if (! rb->quiet)
-    svn_cmdline_fprintf(stderr, pool, "* Dumped revision %lu.\n", revision);
+    SVN_ERR(svn_cmdline_fprintf(stderr, pool, "* Dumped revision %lu.\n",
+                                revision));
   return SVN_NO_ERROR;
 }
 
@@ -271,6 +283,49 @@ open_connection(svn_ra_session_t **session,
   return SVN_NO_ERROR;
 }
 
+/* Print a revision record header for REVISION to STDOUT_STREAM.  Use
+ * SESSION to contact the repository for revision properties and
+ * such.
+ */
+static svn_error_t *
+dump_revision_header(svn_ra_session_t *session,
+                     svn_stream_t *stdout_stream, 
+                     svn_revnum_t revision,
+                     apr_pool_t *pool)
+{
+  apr_hash_t *prophash;
+  svn_stringbuf_t *propstring;
+  svn_stream_t *propstream;
+
+  SVN_ERR(svn_stream_printf(stdout_stream, pool,
+                            SVN_REPOS_DUMPFILE_REVISION_NUMBER
+                            ": %ld\n", revision));
+
+  prophash = apr_hash_make(pool);
+  propstring = svn_stringbuf_create("", pool);
+  SVN_ERR(svn_ra_rev_proplist(session, revision, &prophash, pool));
+
+  propstream = svn_stream_from_stringbuf(propstring, pool);
+  SVN_ERR(svn_hash_write2(prophash, propstream, "PROPS-END", pool));
+  SVN_ERR(svn_stream_close(propstream));
+
+  /* Property-content-length: 14; Content-length: 14 */
+  SVN_ERR(svn_stream_printf(stdout_stream, pool,
+                            SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH
+                            ": %" APR_SIZE_T_FMT "\n",
+                            propstring->len));
+  SVN_ERR(svn_stream_printf(stdout_stream, pool,
+                            SVN_REPOS_DUMPFILE_CONTENT_LENGTH
+                            ": %" APR_SIZE_T_FMT "\n\n",
+                            propstring->len));
+  /* The properties */
+  SVN_ERR(svn_stream_write(stdout_stream, propstring->data,
+                           &(propstring->len)));
+  SVN_ERR(svn_stream_printf(stdout_stream, pool, "\n"));
+
+  return SVN_NO_ERROR;
+}
+
 /* Replay revisions START_REVISION thru END_REVISION (inclusive) of
  * the repository located at URL, using callbacks which generate
  * Subversion repository dumpstreams describing the changes made in
@@ -283,6 +338,7 @@ replay_revisions(svn_ra_session_t *session,
                  svn_revnum_t start_revision,
                  svn_revnum_t end_revision,
                  svn_boolean_t quiet,
+                 svn_boolean_t incremental,
                  apr_pool_t *pool)
 {
   const svn_delta_editor_t *dump_editor;
@@ -312,46 +368,62 @@ replay_revisions(svn_ra_session_t *session,
   /* Fake revision 0 if necessary */
   if (start_revision == 0)
     {
-      apr_hash_t *prophash;
-      svn_stringbuf_t *propstring;
-      svn_stream_t *propstream;
-      SVN_ERR(svn_stream_printf(stdout_stream, pool,
-                                SVN_REPOS_DUMPFILE_REVISION_NUMBER
-                                ": %ld\n", start_revision));
+      SVN_ERR(dump_revision_header(session, stdout_stream,
+                                   start_revision, pool));
 
-      prophash = apr_hash_make(pool);
-      propstring = svn_stringbuf_create("", pool);
-
-      SVN_ERR(svn_ra_rev_proplist(session, start_revision,
-                                  &prophash, pool));
-
-      propstream = svn_stream_from_stringbuf(propstring, pool);
-      SVN_ERR(svn_hash_write2(prophash, propstream, "PROPS-END", pool));
-      SVN_ERR(svn_stream_close(propstream));
-
-      /* Property-content-length: 14; Content-length: 14 */
-      SVN_ERR(svn_stream_printf(stdout_stream, pool,
-                                SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH
-                                ": %" APR_SIZE_T_FMT "\n",
-                                propstring->len));
-      SVN_ERR(svn_stream_printf(stdout_stream, pool,
-                                SVN_REPOS_DUMPFILE_CONTENT_LENGTH
-                                ": %" APR_SIZE_T_FMT "\n\n",
-                                propstring->len));
-      /* The properties */
-      SVN_ERR(svn_stream_write(stdout_stream, propstring->data,
-                               &(propstring->len)));
-      SVN_ERR(svn_stream_printf(stdout_stream, pool, "\n"));
+      /* Revision 0 has no tree changes, so we're done. */
       if (! quiet)
-        svn_cmdline_fprintf(stderr, pool, "* Dumped revision %lu.\n",
-                            start_revision);
-
+        SVN_ERR(svn_cmdline_fprintf(stderr, pool, "* Dumped revision %lu.\n",
+                                    start_revision));
       start_revision++;
+
+      /* If our first revision is 0, we can treat this as an
+         incremental dump. */
+      incremental = TRUE;
     }
 
-  SVN_ERR(svn_ra_replay_range(session, start_revision, end_revision,
-                              0, TRUE, replay_revstart, replay_revend,
-                              replay_baton, pool));
+  if (incremental)
+    {
+      SVN_ERR(svn_ra_replay_range(session, start_revision, end_revision,
+                                  0, TRUE, replay_revstart, replay_revend,
+                                  replay_baton, pool));
+    }
+  else
+    {
+      const svn_ra_reporter3_t *reporter;
+      void *report_baton;
+
+      /* First, we need to dump the start_revision in full.  We'll
+         start with a revision record header. */
+      SVN_ERR(dump_revision_header(session, stdout_stream,
+                                   start_revision, pool));
+
+      /* Then, we'll drive the dump editor with what would look like a
+         full checkout of the repository as it looked in
+         START_REVISION.  We do this by manufacturing a basic 'report'
+         to the update reporter, telling it that we have nothing to
+         start with.  The delta between nothing and everything-at-REV
+         is, effectively, a full dump of REV. */
+      SVN_ERR(svn_ra_do_update2(session, &reporter, &report_baton,
+                                start_revision, "", svn_depth_infinity,
+                                FALSE, dump_editor, dump_baton, pool));
+      SVN_ERR(reporter->set_path(report_baton, "", start_revision,
+                                 svn_depth_infinity, TRUE, NULL, pool));
+      SVN_ERR(reporter->finish_report(report_baton, pool));
+      
+      /* All finished with START_REVISION! */
+      if (! quiet)
+        SVN_ERR(svn_cmdline_fprintf(stderr, pool, "* Dumped revision %lu.\n",
+                                    start_revision));
+      start_revision++;
+
+      /* Now go pick up additional revisions in the range, if any. */
+      if (start_revision <= end_revision)
+        SVN_ERR(svn_ra_replay_range(session, start_revision, end_revision,
+                                    0, TRUE, replay_revstart, replay_revend,
+                                    replay_baton, pool));
+    }
+
   SVN_ERR(svn_stream_close(stdout_stream));
   return SVN_NO_ERROR;
 }
@@ -378,7 +450,7 @@ load_revisions(svn_ra_session_t *session,
   SVN_ERR(drive_dumpstream_loader(stdin_stream, parser, parse_baton,
                                   session, check_cancel, NULL, pool));
 
-  svn_stream_close(stdin_stream);
+  SVN_ERR(svn_stream_close(stdin_stream));
 
   return SVN_NO_ERROR;
 }
@@ -450,8 +522,9 @@ dump_cmd(apr_getopt_t *os,
 {
   opt_baton_t *opt_baton = baton;
   return replay_revisions(opt_baton->session, opt_baton->url,
-                          opt_baton->start_revision, opt_baton->end_revision,
-                          opt_baton->quiet, pool);
+                          opt_baton->start_revision.value.number,
+                          opt_baton->end_revision.value.number,
+                          opt_baton->quiet, opt_baton->incremental, pool);
 }
 
 /* Handle the "load" subcommand.  Implements `svn_opt_subcommand_t'.  */
@@ -482,13 +555,95 @@ help_cmd(apr_getopt_t *os,
                              NULL, pool);
 }
 
+/* Examine the OPT_BATON's 'start_revision' and 'end_revision'
+ * members, making sure that they make sense (in general, and as
+ * applied to a repository whose current youngest revision is
+ * LATEST_REVISION).
+ */
+static svn_error_t *
+validate_and_resolve_revisions(opt_baton_t *opt_baton,
+                               svn_revnum_t latest_revision,
+                               apr_pool_t *pool)
+{
+  svn_revnum_t provided_start_rev = SVN_INVALID_REVNUM;
+
+  /* Ensure that the start revision is something we can handle.  We
+     want a number >= 0.  If unspecified, make it a number (r0) --
+     anything else is bogus.  */
+  if (opt_baton->start_revision.kind == svn_opt_revision_number)
+    {
+      provided_start_rev = opt_baton->start_revision.value.number;
+    }
+  else if (opt_baton->start_revision.kind == svn_opt_revision_unspecified)
+    {
+      opt_baton->start_revision.kind = svn_opt_revision_number;
+      opt_baton->start_revision.value.number = 0;
+    }
+
+  if (opt_baton->start_revision.kind != svn_opt_revision_number)
+    {
+      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                              _("Unsupported revision specifier used; use "
+                                "only integer values or 'HEAD'"));
+    }
+
+  if ((opt_baton->start_revision.value.number < 0) ||
+      (opt_baton->start_revision.value.number > latest_revision))
+    {
+      return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                               _("Revision '%ld' does not exist"),
+                               opt_baton->start_revision.value.number);
+    }
+
+  /* Ensure that the end revision is something we can handle.  We want
+     a number <= the youngest, and > the start revision.  If
+     unspecified, make it a number (start_revision + 1 if that was
+     specified, the youngest revision in the repository otherwise) --
+     anything else is bogus.  */
+  if (opt_baton->end_revision.kind == svn_opt_revision_unspecified)
+    {
+      opt_baton->end_revision.kind = svn_opt_revision_number;
+      if (SVN_IS_VALID_REVNUM(provided_start_rev))
+        opt_baton->end_revision.value.number = provided_start_rev;
+      else
+        opt_baton->end_revision.value.number = latest_revision;
+    }
+
+  if (opt_baton->end_revision.kind != svn_opt_revision_number)
+    {
+      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                              _("Unsupported revision specifier used; use "
+                                "only integer values or 'HEAD'"));
+    }
+
+  if ((opt_baton->end_revision.value.number < 0) ||
+      (opt_baton->end_revision.value.number > latest_revision))
+    {
+      return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                               _("Revision '%ld' does not exist"),
+                               opt_baton->end_revision.value.number);
+    }
+
+  /* Finally, make sure that the end revision is younger than the
+     start revision.  We don't do "backwards" 'round here.  */
+  if (opt_baton->end_revision.value.number < 
+      opt_baton->start_revision.value.number)
+    {
+      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                              _("LOWER revision cannot be greater than "
+                                "UPPER revision; consider reversing your "
+                                "revision range"));
+    }
+  return SVN_NO_ERROR;
+}
+
 int
 main(int argc, const char **argv)
 {
+  svn_error_t *err = SVN_NO_ERROR;
   const svn_opt_subcommand_desc2_t *subcommand = NULL;
   opt_baton_t *opt_baton;
-  char *revision_cut = NULL;
-  svn_revnum_t latest_revision = svn_opt_revision_unspecified;
+  svn_revnum_t latest_revision = SVN_INVALID_REVNUM;
   apr_pool_t *pool = NULL;
   const char *config_dir = NULL;
   const char *username = NULL;
@@ -498,14 +653,16 @@ main(int argc, const char **argv)
   apr_array_header_t *config_options = NULL;
   apr_getopt_t *os;
   const char *first_arg;
+  apr_array_header_t *received_opts;
+  int i;
 
   if (svn_cmdline_init ("svnrdump", stderr) != EXIT_SUCCESS)
     return EXIT_FAILURE;
 
   pool = svn_pool_create(NULL);
   opt_baton = apr_pcalloc(pool, sizeof(*opt_baton));
-  opt_baton->start_revision = svn_opt_revision_unspecified;
-  opt_baton->end_revision = svn_opt_revision_unspecified;
+  opt_baton->start_revision.kind = svn_opt_revision_unspecified;
+  opt_baton->end_revision.kind = svn_opt_revision_unspecified;
   opt_baton->url = NULL;
 
   SVNRDUMP_ERR(svn_cmdline__getopt_init(&os, argc, argv, pool));
@@ -535,6 +692,8 @@ main(int argc, const char **argv)
   apr_signal(SIGXFSZ, SIG_IGN);
 #endif
 
+  received_opts = apr_array_make(pool, SVN_OPT_MAX_OPTIONS, sizeof(int));
+
   while (1)
     {
       int opt;
@@ -550,23 +709,34 @@ main(int argc, const char **argv)
           exit(EXIT_FAILURE);
         }
 
+      /* Stash the option code in an array before parsing it. */
+      APR_ARRAY_PUSH(received_opts, int) = opt;
+
       switch(opt)
         {
         case 'r':
           {
-            revision_cut = strchr(opt_arg, ':');
-            if (revision_cut)
+            /* Make sure we've not seen -r already. */
+            if (opt_baton->start_revision.kind != svn_opt_revision_unspecified)
               {
-                opt_baton->start_revision =
-                  (svn_revnum_t)strtoul(opt_arg, &revision_cut, 10);
-                opt_baton->end_revision =
-                  (svn_revnum_t)strtoul(revision_cut + 1, NULL, 10);
+                err = svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                       _("Multiple revision arguments "
+                                         "encountered; try '-r N:M' instead "
+                                         "of '-r N -r M'"));
+                return svn_cmdline_handle_exit_error(err, pool, "svnrdump: ");
               }
-            else
+            /* Parse the -r argument. */
+            if (svn_opt_parse_revision(&(opt_baton->start_revision),
+                                       &(opt_baton->end_revision),
+                                       opt_arg, pool) != 0)
               {
-                opt_baton->start_revision =
-                  (svn_revnum_t)strtoul(opt_arg, NULL, 10);
-                opt_baton->end_revision = opt_baton->start_revision;
+                const char *utf8_opt_arg;
+                err = svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool);
+                if (! err)
+                  err = svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                          _("Syntax error in revision "
+                                            "argument '%s'"), utf8_opt_arg);
+                return svn_cmdline_handle_exit_error(err, pool, "svnrdump: ");
               }
           }
           break;
@@ -581,8 +751,7 @@ main(int argc, const char **argv)
           exit(EXIT_SUCCESS);
           break;
         case 'h':
-          SVNRDUMP_ERR(help_cmd(os, opt_baton, pool));
-          exit(EXIT_SUCCESS);
+          opt_baton->help = TRUE;
           break;
         case opt_auth_username:
           SVNRDUMP_ERR(svn_utf_cstring_to_utf8(&username, opt_arg, pool));
@@ -596,6 +765,9 @@ main(int argc, const char **argv)
         case opt_non_interactive:
           non_interactive = TRUE;
           break;
+        case opt_incremental:
+          opt_baton->incremental = TRUE;
+          break;
         case opt_config_option:
           if (!config_options)
               config_options =
@@ -608,38 +780,77 @@ main(int argc, const char **argv)
         }
     }
 
-  if (os->ind >= os->argc)
+  if (opt_baton->help)
     {
-      svn_error_clear(svn_cmdline_fprintf(stderr, pool,
-                                          _("Subcommand argument required\n")));
-      SVNRDUMP_ERR(help_cmd(NULL, NULL, pool));
-      svn_pool_destroy(pool);
-      exit(EXIT_FAILURE);
+      subcommand = svn_opt_get_canonical_subcommand2(svnrdump__cmd_table,
+                                                     "help");
+    }
+  else
+    {
+      if (os->ind >= os->argc)
+        {
+          SVNRDUMP_ERR(help_cmd(NULL, NULL, pool));
+          svn_pool_destroy(pool);
+          exit(EXIT_FAILURE);
+        }
+      else
+        {
+          first_arg = os->argv[os->ind++];
+          subcommand = svn_opt_get_canonical_subcommand2(svnrdump__cmd_table,
+                                                         first_arg);
+
+          if (subcommand == NULL)
+            {
+              const char *first_arg_utf8;
+              err = svn_utf_cstring_to_utf8(&first_arg_utf8, first_arg, pool);
+              if (err)
+                return svn_cmdline_handle_exit_error(err, pool, "svnrdump: ");
+              svn_error_clear(svn_cmdline_fprintf(stderr, pool,
+                                                  _("Unknown command: '%s'\n"),
+                                                  first_arg_utf8));
+              SVNRDUMP_ERR(help_cmd(NULL, NULL, pool));
+              svn_pool_destroy(pool);
+              exit(EXIT_FAILURE);
+            }
+         }
     }
 
-  first_arg = os->argv[os->ind++];
-
-  subcommand = svn_opt_get_canonical_subcommand2(svnrdump__cmd_table,
-                                                 first_arg);
-
-  if (subcommand == NULL)
+  /* Check that the subcommand wasn't passed any inappropriate options. */
+  for (i = 0; i < received_opts->nelts; i++)
     {
-      const char *first_arg_utf8;
-      svn_error_t *err = svn_utf_cstring_to_utf8(&first_arg_utf8,
-                                                 first_arg, pool);
-      if (err)
-        return svn_cmdline_handle_exit_error(err, pool, "svnrdump: ");
-      svn_error_clear(svn_cmdline_fprintf(stderr, pool,
-                                          _("Unknown command: '%s'\n"),
-                                          first_arg_utf8));
-      SVNRDUMP_ERR(help_cmd(NULL, NULL, pool));
-      svn_pool_destroy(pool);
-      exit(EXIT_FAILURE);
+      int opt_id = APR_ARRAY_IDX(received_opts, i, int);
+
+      /* All commands implicitly accept --help, so just skip over this
+         when we see it. Note that we don't want to include this option
+         in their "accepted options" list because it would be awfully
+         redundant to display it in every commands' help text. */
+      if (opt_id == 'h' || opt_id == '?')
+        continue;
+
+      if (! svn_opt_subcommand_takes_option3(subcommand, opt_id, NULL))
+        {
+          const char *optstr;
+          const apr_getopt_option_t *badopt =
+            svn_opt_get_option_from_code2(opt_id, svnrdump__options,
+                                          subcommand, pool);
+          svn_opt_format_option(&optstr, badopt, FALSE, pool);
+          if (subcommand->name[0] == '-')
+            SVN_INT_ERR(help_cmd(NULL, NULL, pool));
+          else
+            svn_error_clear(svn_cmdline_fprintf(
+                                stderr, pool,
+                                _("Subcommand '%s' doesn't accept option '%s'\n"
+                                  "Type 'svnrdump help %s' for usage.\n"),
+                                subcommand->name, optstr, subcommand->name));
+          svn_pool_destroy(pool);
+          return EXIT_FAILURE;
+        }
     }
 
   if (subcommand && strcmp(subcommand->name, "help") == 0)
     {
       SVNRDUMP_ERR(help_cmd(os, opt_baton, pool));
+      svn_pool_destroy(pool);
       exit(EXIT_SUCCESS);
     }
 
@@ -648,6 +859,7 @@ main(int argc, const char **argv)
       || !svn_path_is_url(os->argv[os->ind]))
     {
       SVNRDUMP_ERR(usage(argv[0], pool));
+      svn_pool_destroy(pool);
       exit(EXIT_FAILURE);
     }
 
@@ -670,24 +882,10 @@ main(int argc, const char **argv)
      unspecified.  */
   SVNRDUMP_ERR(svn_ra_get_latest_revnum(opt_baton->session,
                                         &latest_revision, pool));
-  if (opt_baton->start_revision == svn_opt_revision_unspecified)
-    opt_baton->start_revision = 0;
-  if (opt_baton->end_revision == svn_opt_revision_unspecified)
-    opt_baton->end_revision = latest_revision;
-  if (opt_baton->end_revision > latest_revision)
-    {
-      SVN_INT_ERR(svn_cmdline_fprintf(stderr, pool,
-                                      _("Revision %ld does not exist.\n"),
-                                      opt_baton->end_revision));
-      exit(EXIT_FAILURE);
-    }
-  if (opt_baton->end_revision < opt_baton->start_revision)
-    {
-      SVN_INT_ERR(svn_cmdline_fprintf(stderr, pool,
-                                      _("LOWER cannot be greater "
-                                        "than UPPER.\n")));
-      exit(EXIT_FAILURE);
-    }
+
+  /* Make sure any provided revisions make sense. */
+  SVNRDUMP_ERR(validate_and_resolve_revisions(opt_baton, 
+                                              latest_revision, pool));
 
   /* Dispatch the subcommand */
   SVNRDUMP_ERR((*subcommand->cmd_func)(os, opt_baton, pool));

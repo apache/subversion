@@ -836,7 +836,7 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
                   (mergestream, diff, the_val, working_val, new_val,
                    NULL, NULL, NULL, NULL,
                    svn_diff_conflict_display_modified_latest, filepool));
-          svn_stream_close(mergestream);
+          SVN_ERR(svn_stream_close(mergestream));
         }
     }
 

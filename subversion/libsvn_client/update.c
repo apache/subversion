@@ -180,8 +180,8 @@ update_internal(svn_revnum_t *result_rev,
      relocate our working copy first. */
   if (corrected_url)
     {
-      SVN_ERR(svn_client_relocate(anchor_abspath, anchor_url, corrected_url,
-                                  TRUE, ctx, pool));
+      SVN_ERR(svn_client_relocate2(anchor_abspath, anchor_url, corrected_url,
+                                   TRUE, ctx, pool));
       anchor_url = corrected_url;
     }
 

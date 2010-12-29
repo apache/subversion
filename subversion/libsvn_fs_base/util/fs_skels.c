@@ -1071,14 +1071,14 @@ svn_fs_base__unparse_representation_skel(svn_skel_t **skel_p,
 
   /* SHA1 */
   if ((format >= SVN_FS_BASE__MIN_REP_SHARING_FORMAT) && rep->sha1_checksum)
-    prepend_checksum(header_skel, rep->sha1_checksum, pool);
+    SVN_ERR(prepend_checksum(header_skel, rep->sha1_checksum, pool));
 
   /* MD5 */
   {
     svn_checksum_t *md5_checksum = rep->md5_checksum;
     if (! md5_checksum)
       md5_checksum = svn_checksum_create(svn_checksum_md5, pool);
-    prepend_checksum(header_skel, md5_checksum, pool);
+    SVN_ERR(prepend_checksum(header_skel, md5_checksum, pool));
   }
 
   /* TXN */
