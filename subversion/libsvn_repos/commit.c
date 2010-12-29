@@ -701,8 +701,8 @@ svn_repos__post_commit_error_str(svn_error_t *err,
     {
       msg = apr_psprintf(pool,
                          _("post-commit FS processing had error '%s'."),
-                         hook_err2->message ? hook_err2->message
-                                            : _("(no error message)"));
+                         err->message ? err->message
+                                      : _("(no error message)"));
     }
 
   return msg;
