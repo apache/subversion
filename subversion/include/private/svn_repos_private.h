@@ -44,8 +44,7 @@ extern "C" {
  * the post-commit hook.  Any error tracing placeholders in the error
  * chain are skipped over.
  *
- * This function clears @a err and it should not be used after passing
- * it to this function.
+ * This function does not modify @a err.
  *
  * ### This method should not be necessary, but there are a few
  * ### places, e.g. mod_dav_svn, where only a single error message
