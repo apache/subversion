@@ -192,6 +192,35 @@ Candidate changes:
    Votes:
      +1: blair
 
+ * 1.6.x-svn_fs_commit_txn branch
+   Have all of server-side Subversion, from svn_fs_commit_txn(),
+   through to mod_dav_svn, implement the documented (since 1.0.x)
+   behavior that svn_fs_commit_txn() and svn_repos_fs_commit_txn()
+   should indicate a successful commit by a valid returned revision
+   number, not by any returned error.  Now, regardless if
+   svn_fs_commit_txn()'s post commit FS processing (that's its new
+   official name) fails, svn_repos_fs_commit_txn() will run the
+   post-commit hook.  All code that uses svn_fs_commit_txn() and/or
+   svn_repos_fs_commit_txn() now uses the revision number to test if
+   the commit succeeded.
+   Justification:
+     Fixes bug reports on users@s.a.o where if post commit FS
+       processing fails, the client reports an error but the commit
+       succeeded, which is confusing for users.
+     Implementing the documented and correct behavior is a good thing.
+   Notes:
+     For a successful unit test pass, it requires that r1051632,
+       r1051638 and r1051751 listed above be merged previously.
+     The branch has many commits in it from trunk, which includes some
+       churn from reviews on trunk.  I recommend reviewing a cumulative
+       diff:
+       svn diff -r r1053420:r1053500 ^/subversion/branches/1.6.x-svn_fs_commit_txn
+     This merge doesn't address the client side behavior.
+   Branch:
+     ^/subversion/branches/1.6.x-svn_fs_commit_txn
+   Votes:
+     +1: blair
+
 Veto-blocked changes:
 =====================
 
