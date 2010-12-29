@@ -178,6 +178,9 @@ def main():
         print(po_format)
 
     if to_email_id:
+        import smtplib
+
+        server = smtplib.SMTP('localhost')
         email_from = "From: SVN DEV <noreply@subversion.apache.org>"
         email_to = "To: %s" % to_email_id
         email_sub = "Subject: [l10n] Translation status report for %s r%s" \
@@ -186,8 +189,7 @@ def main():
         msg = "%s\n%s\n%s\n%s\n%s\n%s\n%s" % (email_from, email_to,\
               email_sub, title, format_head, format_line, body)
 
-        cmd = ['sendmail', '-t']
-        l10n.safe_command(cmd, msg)
+        server.sendmail(email_from, email_to, msg)
         print("The report is sent to '%s' email id." % to_email_id)
     else:
         print("\nYou have not passed '-m' option, so email is not sent.")
