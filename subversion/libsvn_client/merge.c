@@ -5572,6 +5572,7 @@ record_missing_subtree_roots(const char *local_abspath,
    WB->CHILDREN_WITH_MERGEINFO array. */
 static svn_error_t *
 get_mergeinfo_walk_cb(const char *local_abspath,
+                      svn_node_kind_t kind,
                       void *walk_baton,
                       apr_pool_t *scratch_pool)
 {
@@ -5583,7 +5584,6 @@ get_mergeinfo_walk_cb(const char *local_abspath,
     !svn_path_compare_paths(local_abspath, wb->merge_target_abspath);
   const char *abs_parent_path = svn_dirent_dirname(local_abspath,
                                                    scratch_pool);
-  svn_node_kind_t kind;
   svn_depth_t depth;
   svn_boolean_t is_present;
   svn_boolean_t deleted;
@@ -5622,9 +5622,6 @@ get_mergeinfo_walk_cb(const char *local_abspath,
       SVN_ERR(svn_wc__path_switched(&switched, wb->ctx->wc_ctx, local_abspath,
                                     scratch_pool));
     }
-
-  SVN_ERR(svn_wc_read_kind(&kind, wb->ctx->wc_ctx, local_abspath, TRUE,
-                           scratch_pool));
 
   immediate_child_dir = ((wb->depth == svn_depth_immediates)
                          &&(kind == svn_node_dir)
@@ -10305,6 +10302,7 @@ struct get_subtree_mergeinfo_walk_baton
    POOL is used only for temporary allocations. */
 static svn_error_t *
 get_subtree_mergeinfo_walk_cb(const char *local_abspath,
+                              svn_node_kind_t kind,
                               void *walk_baton,
                               apr_pool_t *pool)
 {

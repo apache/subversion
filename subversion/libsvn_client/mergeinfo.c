@@ -323,6 +323,7 @@ struct get_mergeinfo_catalog_walk_baton
 
 static svn_error_t *
 get_subtree_mergeinfo_walk_cb(const char *local_abspath,
+                              svn_node_kind_t kind,
                               void *walk_baton,
                               apr_pool_t *scratch_pool)
 {

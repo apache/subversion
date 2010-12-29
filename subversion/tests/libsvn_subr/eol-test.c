@@ -59,7 +59,7 @@ test_detect_file_eol(apr_pool_t *pool)
       SVN_ERR(svn_io_file_seek(file, APR_SET, &pos, pool));
       len = data_len;
       SVN_ERR(svn_io_file_write(file, file_data[i], &len, pool));
-      SVN_ERR_ASSERT(len == data_len);
+      SVN_TEST_ASSERT(len == data_len);
       SVN_ERR(svn_io_file_seek(file, APR_CUR, &pos, pool));
       SVN_ERR(svn_io_file_trunc(file, pos, pool));
 
@@ -68,9 +68,9 @@ test_detect_file_eol(apr_pool_t *pool)
 
       SVN_ERR(svn_eol__detect_file_eol(&eol, file, pool));
       if (eol && expected_eol[i])
-        SVN_ERR_ASSERT(strcmp(eol, expected_eol[i]) == 0);
+        SVN_TEST_ASSERT(strcmp(eol, expected_eol[i]) == 0);
       else
-        SVN_ERR_ASSERT(eol == expected_eol[i]);
+        SVN_TEST_ASSERT(eol == expected_eol[i]);
     }
 
   SVN_ERR(svn_io_file_close(file, pool));

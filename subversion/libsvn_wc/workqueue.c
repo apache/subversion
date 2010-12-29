@@ -1515,15 +1515,6 @@ run_file_install(svn_wc__db_t *db,
       SVN_ERR(get_and_record_fileinfo(db, local_abspath,
                                       FALSE /* ignore_enoent */,
                                       scratch_pool));
-
-#ifndef SVN_WC__OP_DEPTH
-      /* ### there used to be a call to entry_modify() above, to set the
-         ### TRANSLATED_SIZE and LAST_MOD_TIME values. that function elided
-         ### copyfrom information that snuck into the database. it should
-         ### not be there in the first place, but we can manually get rid
-         ### of the erroneous, inheritable copyfrom data.  */
-      SVN_ERR(svn_wc__db_temp_elide_copyfrom(db, local_abspath, scratch_pool));
-#endif
     }
 
   return SVN_NO_ERROR;

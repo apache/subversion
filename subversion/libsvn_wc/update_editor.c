@@ -908,9 +908,6 @@ struct file_baton
   /* Set if this file is new. */
   svn_boolean_t adding_file;
 
-  /* Set if this file is new with history. */
-  svn_boolean_t added_with_history;
-
   /* Set if an unversioned file of the same name already existed in
      this directory. */
   svn_boolean_t obstruction_found;
@@ -927,24 +924,6 @@ struct file_baton
      resulting new text base, which is in the pristine store, else NULL. */
   svn_checksum_t *new_text_base_md5_checksum;
   svn_checksum_t *new_text_base_sha1_checksum;
-
-  /* If this file was added with history, these are the checksums of the
-     copy-from text base, which is in the pristine store, else NULL. */
-  svn_checksum_t *copied_text_base_md5_checksum;
-  svn_checksum_t *copied_text_base_sha1_checksum;
-
-  /* If this file was added with history, and the copyfrom had local
-     mods, this is the path to a copy of the user's version with local
-     mods (in the temporary area). */
-  const char *copied_working_text;
-
-  /* If this file was added with history, this hash contains the base
-     properties of the copied file. */
-  apr_hash_t *copied_base_props;
-
-  /* If this file was added with history, this hash contains the working
-     properties of the copied file. */
-  apr_hash_t *copied_working_props;
 
   /* Set if we've received an apply_textdelta for this file. */
   svn_boolean_t received_textdelta;
@@ -1318,18 +1297,21 @@ typedef struct modcheck_baton_t {
                                           then this field has no meaning. */
 } modcheck_baton_t;
 
-/* */
+/* An implementation of svn_wc__node_found_func_t. */
 static svn_error_t *
 modcheck_found_node(const char *local_abspath,
+                    svn_node_kind_t kind,
                     void *walk_baton,
                     apr_pool_t *scratch_pool)
 {
   modcheck_baton_t *baton = walk_baton;
-  svn_wc__db_kind_t kind;
+  svn_wc__db_kind_t db_kind;
   svn_wc__db_status_t status;
   svn_boolean_t modified;
 
-  SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
+  /* ### The walker could in theory pass status and db kind as arguments.
+   * ### So this read_info call is probably redundant. */
+  SVN_ERR(svn_wc__db_read_info(&status, &db_kind, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL,
@@ -1342,7 +1324,7 @@ modcheck_found_node(const char *local_abspath,
      modification */
   else if (!baton->found_mod || baton->all_edits_are_deletes)
     SVN_ERR(entry_has_local_mods(&modified, baton->db, local_abspath,
-                                 kind, scratch_pool));
+                                 db_kind, scratch_pool));
 
   if (modified)
     {
@@ -3496,13 +3478,7 @@ apply_textdelta(void *file_baton,
     }
   else
     {
-      if (fb->copied_text_base_sha1_checksum)
-        SVN_ERR(svn_wc__db_pristine_read(&source, fb->edit_baton->db,
-                                         fb->local_abspath,
-                                         fb->copied_text_base_sha1_checksum,
-                                         handler_pool, handler_pool));
-      else
-        source = svn_stream_empty(handler_pool);
+      source = svn_stream_empty(handler_pool);
     }
 
   /* If we don't have a recorded checksum, use the ra provided checksum */
@@ -3704,8 +3680,7 @@ merge_file(svn_skel_t **work_items,
      Note that this compares to the current pristine file, which is
      different from fb->old_text_base_path if we have a replaced-with-history
      file.  However, in the case we had an obstruction, we check against the
-     new text base. (And if we're doing an add-with-history and we've already
-     saved a copy of a locally-modified file, then there certainly are mods.)
+     new text base.
 
      Special case: The working file is referring to a file external? If so
                    then we must mark it as unmodified in order to avoid bogus
@@ -3713,17 +3688,7 @@ merge_file(svn_skel_t **work_items,
                    merge externals item from the repository.
 
      ### Newly added file externals have a svn_wc_schedule_add here. */
-  if (fb->copied_working_text)
-    {
-      /* The file was copied here, and it came with both a (new) pristine
-         and a working file. Presumably, the working file is modified
-         relative to the new pristine.
-
-         The new pristine is in NEW_TEXT_BASE_TMP_ABSPATH, which should also
-         be FB->COPIED_TEXT_BASE_ABSPATH.  */
-      is_locally_modified = TRUE;
-    }
-  else if (file_external &&
+  if (file_external &&
            status ==svn_wc__db_status_added)
     {
       is_locally_modified = FALSE; /* ### Or a conflict will be raised */
@@ -3859,7 +3824,7 @@ merge_file(svn_skel_t **work_items,
           svn_node_kind_t wfile_kind;
 
           SVN_ERR(svn_io_check_path(fb->local_abspath, &wfile_kind, pool));
-          if (wfile_kind == svn_node_none && ! fb->added_with_history)
+          if (wfile_kind == svn_node_none)
             {
               /* working file is missing?!
                  Just copy the new text-base to the file. */
@@ -3890,26 +3855,18 @@ merge_file(svn_skel_t **work_items,
                     path_ext = "";
                 }
 
-              /* Create strings representing the revisions of the
-                 old and new text-bases. */
-              /* Either an old version, or an add-with-history */
-              if (fb->added_with_history)
-                oldrev_str = apr_psprintf(pool, ".copied%s%s",
+              {
+                svn_revnum_t old_rev = revision;
+
+                /* ### BH: Why is this necessary? */
+                if (!SVN_IS_VALID_REVNUM(old_rev))
+                  old_rev = 0;
+
+                oldrev_str = apr_psprintf(pool, ".r%ld%s%s",
+                                          old_rev,
                                           *path_ext ? "." : "",
                                           *path_ext ? path_ext : "");
-              else
-                {
-                  svn_revnum_t old_rev = revision;
-
-                  /* ### BH: Why is this necessary? */
-                  if (!SVN_IS_VALID_REVNUM(old_rev))
-                    old_rev = 0;
-
-                  oldrev_str = apr_psprintf(pool, ".r%ld%s%s",
-                                            old_rev,
-                                            *path_ext ? "." : "",
-                                            *path_ext ? path_ext : "");
-                }
+              }
               newrev_str = apr_psprintf(pool, ".r%ld%s%s",
                                         *eb->target_revision,
                                         *path_ext ? "." : "",
@@ -3925,11 +3882,6 @@ merge_file(svn_skel_t **work_items,
                                              pool, pool));
                   delete_left = TRUE;
                 }
-              else if (fb->copied_text_base_sha1_checksum)
-                SVN_ERR(svn_wc__db_pristine_get_path(&merge_left, eb->db,
-                                                     fb->local_abspath,
-                                                     fb->copied_text_base_sha1_checksum,
-                                                     pool, pool));
               else
                 SVN_ERR(svn_wc__ultimate_base_text_path_to_read(
                   &merge_left, eb->db, fb->local_abspath, pool, pool));
@@ -3950,7 +3902,7 @@ merge_file(svn_skel_t **work_items,
                         merge_left, NULL,
                         new_text_base_tmp_abspath, NULL,
                         fb->local_abspath,
-                        fb->copied_working_text,
+                        NULL /* copyfrom_abspath */,
                         oldrev_str, newrev_str, mine_str,
                         FALSE /* dry_run */,
                         eb->diff3_cmd, NULL, fb->propchanges,
@@ -3964,16 +3916,6 @@ merge_file(svn_skel_t **work_items,
                 {
                   SVN_ERR(svn_wc__wq_build_file_remove(&work_item,
                                                        eb->db, merge_left,
-                                                       pool, pool));
-                  *work_items = svn_wc__wq_merge(*work_items, work_item, pool);
-                }
-
-              /* And clean up add-with-history-related temp file too. */
-              if (fb->copied_working_text)
-                {
-                  SVN_ERR(svn_wc__wq_build_file_remove(&work_item,
-                                                       eb->db,
-                                                       fb->copied_working_text,
                                                        pool, pool));
                   *work_items = svn_wc__wq_merge(*work_items, work_item, pool);
                 }
@@ -4095,8 +4037,6 @@ close_file(void *file_baton,
   svn_wc_notify_state_t content_state, prop_state;
   svn_wc_notify_lock_state_t lock_state;
   svn_checksum_t *expected_md5_checksum = NULL;
-  svn_checksum_t *new_text_base_md5_checksum;
-  svn_checksum_t *new_text_base_sha1_checksum;
   apr_hash_t *new_base_props = NULL;
   apr_hash_t *new_actual_props = NULL;
   apr_array_header_t *entry_props;
@@ -4126,42 +4066,24 @@ close_file(void *file_baton,
     SVN_ERR(svn_checksum_parse_hex(&expected_md5_checksum, svn_checksum_md5,
                                    expected_md5_digest, pool));
 
-  /* Retrieve the new text-base file's path and checksums.  If it was an
-   * add-with-history, with no apply_textdelta, then that means the text-base
-   * of the copied file, else the new text-base created by apply_textdelta(),
-   * if any. */
   if (fb->received_textdelta)
-    {
-      new_text_base_md5_checksum = fb->new_text_base_md5_checksum;
-      new_text_base_sha1_checksum = fb->new_text_base_sha1_checksum;
-      SVN_ERR_ASSERT(new_text_base_md5_checksum &&
-                     new_text_base_sha1_checksum);
-    }
-  else if (fb->added_with_history)
-    {
-      SVN_ERR_ASSERT(! fb->new_text_base_sha1_checksum);
-      new_text_base_md5_checksum = fb->copied_text_base_md5_checksum;
-      new_text_base_sha1_checksum = fb->copied_text_base_sha1_checksum;
-      SVN_ERR_ASSERT(new_text_base_md5_checksum &&
-                     new_text_base_sha1_checksum);
-    }
+    SVN_ERR_ASSERT(fb->new_text_base_sha1_checksum
+                   && fb->new_text_base_md5_checksum);
   else
-    {
-      SVN_ERR_ASSERT(! fb->new_text_base_sha1_checksum
-                     && ! fb->copied_text_base_sha1_checksum);
-      new_text_base_md5_checksum = NULL;
-      new_text_base_sha1_checksum = NULL;
-    }
+    SVN_ERR_ASSERT(! fb->new_text_base_sha1_checksum
+                   && ! fb->new_text_base_md5_checksum);
 
-  if (new_text_base_md5_checksum && expected_md5_checksum
-      && !svn_checksum_match(expected_md5_checksum, new_text_base_md5_checksum))
+  if (fb->new_text_base_md5_checksum && expected_md5_checksum
+      && !svn_checksum_match(expected_md5_checksum,
+                             fb->new_text_base_md5_checksum))
     return svn_error_createf(SVN_ERR_CHECKSUM_MISMATCH, NULL,
             _("Checksum mismatch for '%s':\n"
               "   expected:  %s\n"
               "     actual:  %s\n"),
             svn_dirent_local_style(fb->local_abspath, pool),
             expected_md5_digest,
-            svn_checksum_to_cstring_display(new_text_base_md5_checksum, pool));
+            svn_checksum_to_cstring_display(fb->new_text_base_md5_checksum,
+                                            pool));
 
   SVN_ERR(svn_wc_read_kind(&kind, eb->wc_ctx, fb->local_abspath, TRUE, pool));
   if (kind == svn_node_none && ! fb->adding_file)
@@ -4226,15 +4148,7 @@ close_file(void *file_baton,
     local_actual_props = apr_hash_make(pool);
 
 
-  if (fb->copied_base_props)
-    {
-      /* The BASE props are given by the source of the copy. We may also
-         have some ACTUAL props if the server directed us to copy a path
-         located in our WC which had some ACTUAL changes.  */
-      current_base_props = fb->copied_base_props;
-      current_actual_props = fb->copied_working_props;
-    }
-  else if (kind != svn_node_none)
+  if (kind != svn_node_none)
     {
       /* This node already exists. Grab its properties. */
       SVN_ERR(svn_wc__get_pristine_props(&current_base_props,
@@ -4268,30 +4182,20 @@ close_file(void *file_baton,
                                 SVN_PROP_SPECIAL,
                                 APR_HASH_KEY_STRING) != NULL;
 
-      /* Jump through hoops to get the proper props in case of
-       * a copy. (see the fb->copied_base_props condition above) */
-      if (fb->copied_base_props)
-        {
-          incoming_is_link = fb->copied_working_props
-                             && apr_hash_get(fb->copied_working_props,
-                                             SVN_PROP_SPECIAL,
-                                             APR_HASH_KEY_STRING) != NULL;
-        }
-      else
-        {
-          int i;
+      {
+        int i;
 
-          for (i = 0; i < regular_props->nelts; ++i)
-            {
-              const svn_prop_t *prop = &APR_ARRAY_IDX(regular_props, i,
-                                                      svn_prop_t);
+        for (i = 0; i < regular_props->nelts; ++i)
+          {
+            const svn_prop_t *prop = &APR_ARRAY_IDX(regular_props, i,
+                                                    svn_prop_t);
 
-              if (strcmp(prop->name, SVN_PROP_SPECIAL) == 0)
-                {
-                  incoming_is_link = TRUE;
-                }
-            }
-        }
+            if (strcmp(prop->name, SVN_PROP_SPECIAL) == 0)
+              {
+                incoming_is_link = TRUE;
+              }
+          }
+      }
 
 
       if (local_is_link != incoming_is_link)
@@ -4348,7 +4252,7 @@ close_file(void *file_baton,
 
       /* Merge the text. This will queue some additional work.  */
       SVN_ERR(merge_file(&all_work_items, &install_pristine, &install_from,
-                         &content_state, fb, new_text_base_sha1_checksum,
+                         &content_state, fb, fb->new_text_base_sha1_checksum,
                          pool, scratch_pool));
 
       if (install_pristine)
@@ -4377,14 +4281,8 @@ close_file(void *file_baton,
       /* Adding a BASE node under a locally added node.
        * The incoming add becomes the revert-base! */
       svn_wc_notify_state_t no_prop_state;
-      apr_hash_t *copied_base_props;
       apr_hash_t *no_new_actual_props = NULL;
       apr_hash_t *no_working_props = apr_hash_make(pool);
-
-      copied_base_props = fb->copied_base_props;
-      if (! copied_base_props)
-        copied_base_props = apr_hash_make(pool);
-
 
       /* Store the incoming props (sent as propchanges) in new_base_props.
        * Keep the actual props unchanged. */
@@ -4397,7 +4295,7 @@ close_file(void *file_baton,
                                   NULL /* left_version */,
                                   NULL /* right_version */,
                                   NULL /* server_baseprops (update, not merge)  */,
-                                  copied_base_props,
+                                  apr_hash_make(pool),
                                   no_working_props,
                                   regular_props, /* propchanges */
                                   TRUE /* base_merge */,
@@ -4414,7 +4312,7 @@ close_file(void *file_baton,
   /* Now that all the state has settled, should we update the readonly
      status of the working file? The LOCK_STATE will signal what we should
      do for this node.  */
-  if (new_text_base_sha1_checksum == NULL
+  if (fb->new_text_base_sha1_checksum == NULL
       && lock_state == svn_wc_notify_lock_state_unlocked)
     {
       /* If a lock was removed and we didn't update the text contents, we
@@ -4439,18 +4337,6 @@ close_file(void *file_baton,
       all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
     }
 
-  /* Remove the copied text base file if we're no longer using it. */
-  if (fb->copied_text_base_sha1_checksum)
-    {
-      /* ### TODO: Add a WQ item to remove this pristine if unreferenced:
-         svn_wc__wq_build_pristine_remove(&work_item,
-                                          eb->db, fb->local_abspath,
-                                          fb->copied_text_base_sha1_checksum,
-                                          pool);
-         all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
-      */
-    }
-
   /* ### NOTE: from this point onwards, we make several changes to the
      ### database in a non-transactional way. we also queue additional
      ### work after these changes. some revamps need to be performed to
@@ -4462,7 +4348,7 @@ close_file(void *file_baton,
       /* Set the 'checksum' column of the file's BASE_NODE row to
        * NEW_TEXT_BASE_SHA1_CHECKSUM.  The pristine text identified by that
        * checksum is already in the pristine store. */
-    const svn_checksum_t *new_checksum = new_text_base_sha1_checksum;
+    const svn_checksum_t *new_checksum = fb->new_text_base_sha1_checksum;
     const char *serialised;
 
     /* If we don't have a NEW checksum, then the base must not have changed.

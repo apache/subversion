@@ -484,8 +484,9 @@ svn_cl__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
       /* Translate back to UTF8/LF if desired. */
       if (as_text)
         {
-          err = svn_subst_translate_string(edited_contents, *edited_contents,
-                                           encoding, pool);
+          err = svn_subst_translate_string2(edited_contents, FALSE, FALSE,
+                                            *edited_contents, encoding, pool,
+                                            pool);
           if (err)
             {
               err = svn_error_quick_wrap
@@ -710,8 +711,9 @@ svn_cl__get_log_message(const char **log_msg,
       /* Make a string from a stringbuf, sharing the data allocation. */
       log_msg_str->data = log_msg_buf->data;
       log_msg_str->len = log_msg_buf->len;
-      SVN_ERR_W(svn_subst_translate_string(&log_msg_str, log_msg_str,
-                                           lmb->message_encoding, pool),
+      SVN_ERR_W(svn_subst_translate_string2(&log_msg_str, FALSE, FALSE,
+                                            log_msg_str, lmb->message_encoding,
+                                            pool, pool),
                 _("Error normalizing log message to internal format"));
 
       *log_msg = log_msg_str->data;

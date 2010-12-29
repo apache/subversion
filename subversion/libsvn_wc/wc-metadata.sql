@@ -167,9 +167,9 @@ CREATE TABLE ACTUAL_NODE (
            conflicts? Why do we need these in a column to refer to the
            pristine store? Can't we just parse the checksums from
            conflict_data as well? */
-  older_checksum  TEXT,
-  left_checksum  TEXT,
-  right_checksum  TEXT,
+  older_checksum  TEXT REFERENCES PRISTINE (checksum),
+  left_checksum  TEXT REFERENCES PRISTINE (checksum),
+  right_checksum  TEXT REFERENCES PRISTINE (checksum),
 
   PRIMARY KEY (wc_id, local_relpath)
   );
@@ -327,8 +327,6 @@ CREATE TABLE NODES (
 
   /* The tree state of the node.
 
-     ### This applies to SVN_WC__OP_DEPTH, the intended final code!
-
      In case 'op_depth' is equal to 0, this node is part of the 'BASE'
      tree.  The 'BASE' represents pristine nodes that are in the
      repository; it is obtained and modified by commands such as
@@ -417,7 +415,7 @@ CREATE TABLE NODES (
 
   /* The SHA-1 checksum of the pristine text, if this node is a file and was
      moved here or copied here, else NULL. */
-  checksum  TEXT,
+  checksum  TEXT REFERENCES PRISTINE (checksum),
 
   /* for kind==symlink, this specifies the target. */
   symlink_target  TEXT,
@@ -481,126 +479,6 @@ CREATE TABLE NODES (
 
 CREATE INDEX I_NODES_PARENT ON NODES (wc_id, parent_relpath, op_depth);
 
-
-
-/* ------------------------------------------------------------------------- */
-
-/* Format 13 introduces the work queue, and erases a few columns from the
-   original schema.  */
--- STMT_UPGRADE_TO_13
-
-CREATE TABLE WORK_QUEUE (
-  /* Work items are identified by this value.  */
-  id  INTEGER PRIMARY KEY AUTOINCREMENT,
-
-  /* A serialized skel specifying the work item.  */
-  work  BLOB NOT NULL
-  );
-
-/* The contents of dav_cache are suspect in format 12, so it is best to just
-   erase anything there.  */
-UPDATE BASE_NODE SET incomplete_children=null, dav_cache=null;
-
-PRAGMA user_version = 13;
-
-
-/* ------------------------------------------------------------------------- */
-
-/* Format 14 introduces a table for storing wc locks, and additional columns
-   for storing conflict data in ACTUAL. */
--- STMT_UPGRADE_TO_14
-
-/* The existence of a row in this table implies a write lock. */
-CREATE TABLE WC_LOCK (
-  /* specifies the location of this node in the local filesystem */
-  wc_id  INTEGER NOT NULL  REFERENCES WCROOT (id),
-  local_dir_relpath  TEXT NOT NULL,
- 
-  PRIMARY KEY (wc_id, local_dir_relpath)
- );
-
-/* A skel containing the conflict details. */
-ALTER TABLE ACTUAL_NODE
-ADD COLUMN conflict_data  BLOB;
-
-/* Three columns containing the checksums of older, left and right conflict
-   texts.  Stored in a column to allow storing them in the pristine store */
-ALTER TABLE ACTUAL_NODE
-ADD COLUMN older_checksum  TEXT;
-
-ALTER TABLE ACTUAL_NODE
-ADD COLUMN left_checksum  TEXT;
-
-ALTER TABLE ACTUAL_NODE
-ADD COLUMN right_checksum  TEXT;
-
-PRAGMA user_version = 14;
-
-
-/* ------------------------------------------------------------------------- */
-
-/* Format 15 introduces new handling for excluded nodes.  */
--- STMT_UPGRADE_TO_15
-
-UPDATE base_node
-SET
-  presence = 'excluded',
-  checksum = NULL, translated_size = NULL, changed_rev = NULL,
-  changed_date = NULL, changed_author = NULL, depth = NULL,
-  symlink_target = NULL, last_mod_time = NULL, properties = NULL,
-  incomplete_children = NULL, file_external = NULL
-WHERE depth = 'exclude';
-
-/* We don't support cropping working nodes, but we might see them
-   via a copy from a sparse tree. Convert them anyway to make sure
-   we never see depth exclude in our database */
-UPDATE working_node
-SET
-  presence = 'excluded',
-  checksum = NULL, translated_size = NULL, changed_rev = NULL,
-  changed_date = NULL, changed_author = NULL, depth = NULL,
-  symlink_target = NULL, copyfrom_repos_id = NULL, copyfrom_repos_path = NULL,
-  copyfrom_revnum = NULL, moved_here = NULL, moved_to = NULL,
-  last_mod_time = NULL, properties = NULL, keep_local = NULL
-WHERE depth = 'exclude';
-
-PRAGMA user_version = 15;
-
-
-/* ------------------------------------------------------------------------- */
-
-/* Format 16 introduces some new columns for pristines and locks.  */
--- STMT_UPGRADE_TO_16
-
-/* An md5 column for the pristine table. */
-ALTER TABLE PRISTINE
-ADD COLUMN md5_checksum  TEXT;
-
-/* Add the locked_levels column to record the depth of a lock. */
-ALTER TABLE WC_LOCK
-ADD COLUMN locked_levels  INTEGER NOT NULL DEFAULT -1;
-
-/* Default the depth of existing locks to 0. */
-UPDATE wc_lock
-SET locked_levels = 0;
-
-PRAGMA user_version = 16;
-
-/* ------------------------------------------------------------------------- */
-
-/* Format 17 involves no schema changes, it moves the pristine files
-   from .svn/text-base to .svn/pristine */
-
--- STMT_UPGRADE_TO_17
-PRAGMA user_version = 17;
-
-/* ------------------------------------------------------------------------- */
-
-/* Format 18 involves no schema changes, it moves the property data from files
-   into the database. */
-
--- STMT_UPGRADE_TO_18
-PRAGMA user_version = 18;
 
 
 /* Format 20 introduces NODES and removes BASE_NODE and WORKING_NODE */
@@ -732,8 +610,15 @@ FROM ACTUAL_NODE_BACKUP;
 
 DROP TABLE ACTUAL_NODE_BACKUP;
 
-/* Note: One difference remains between the schemas of an upgraded and a
- * fresh WC.  While format 22 was current, "NOT NULL" was added to the
+/* Note: Other differences between the schemas of an upgraded and a
+ * fresh WC.
+ *
+ * While format 22 was current, "NOT NULL" was added to the
  * columns PRISTINE.size and PRISTINE.md5_checksum.  The format was not
- * bumped because it is a forward- and backward-compatible change. */
+ * bumped because it is a forward- and backward-compatible change.
+ *
+ * While format 23 was current, "REFERENCES PRISTINE" was added to the
+ * columns ACTUAL_NODE.older_checksum, ACTUAL_NODE.left_checksum,
+ * ACTUAL_NODE.right_checksum, NODES.checksum.
+ */
 

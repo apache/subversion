@@ -1171,7 +1171,7 @@ start_xml(void *userData, const char *raw_name, const char **attrs)
 
   svn_ra_serf__define_ns(&parser->state->ns_list, attrs, parser->state->pool);
 
-  name = svn_ra_serf__expand_ns(parser->state->ns_list, raw_name);
+  svn_ra_serf__expand_ns(&name, parser->state->ns_list, raw_name);
 
   parser->error = parser->start(parser, parser->user_data, name, attrs);
 }
@@ -1185,7 +1185,7 @@ end_xml(void *userData, const char *raw_name)
   if (parser->error)
     return;
 
-  name = svn_ra_serf__expand_ns(parser->state->ns_list, raw_name);
+  svn_ra_serf__expand_ns(&name, parser->state->ns_list, raw_name);
 
   parser->error = parser->end(parser, parser->user_data, name);
 }

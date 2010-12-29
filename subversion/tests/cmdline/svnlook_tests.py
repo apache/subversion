@@ -337,7 +337,8 @@ text
 """
 
   # load dumpfile with inconsistent newlines into repos.
-  svntest.actions.load_repo(sbox, dump_str=dump_str)
+  svntest.actions.load_repo(sbox, dump_str=dump_str,
+                            bypass_prop_validation=True)
 
   exit_code, output, errput = svntest.main.run_svnlook("info",
                                                        sbox.repo_dir, "-r1")
