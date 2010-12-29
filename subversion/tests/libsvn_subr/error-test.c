@@ -169,7 +169,7 @@ test_error_purge_tracing(apr_pool_t *pool)
            assert that the error is being thrown from the expected
            line and not from another assertion that could be
            introduced in the future. */
-        SVN_TEST_ASSERT(376 == err3_copy.line);
+        SVN_TEST_ASSERT(379 == err3_copy.line);
       }
     else
       {
