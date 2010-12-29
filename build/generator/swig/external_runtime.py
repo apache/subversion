@@ -65,7 +65,7 @@ class Generator(generator.swig.Generator):
 
     # Build runtime files
     out = self._output_file(lang)
-    if self.version() == 103024:
+    if self.version() == (1, 3, 24):
       out_file = open(out, "w")
       out_file.write(open("%s/swigrun.swg" % self.proxy_dir).read())
       out_file.write(open("%s/common.swg" % self.proxy_dir).read())
@@ -79,12 +79,12 @@ class Generator(generator.swig.Generator):
 
     # SWIG 1.3.24-27 should include rubyhead.swg in their
     # external runtime, but they don't.
-    if lang == "ruby" and self.version() < 103028:
+    if lang == "ruby" and self.version() < (1, 3, 28):
       runtime = open(out).read()
       out_file = open(out, "w")
       head = open("%s/rubyhead.swg" % self.proxy_dir).read();
       out_file.write(head)
-      if self.version() >= 103026:
+      if self.version() >= (1, 3, 26):
         # SWIG 1.3.26-27 should include rubytracking.swg in their
         # external runtime, but they don't.
         tracking = open("%s/rubytracking.swg" % self.proxy_dir).read();
@@ -94,7 +94,7 @@ class Generator(generator.swig.Generator):
 
     # SWIG 1.3.25 and earlier use the wrong number of arguments in calls to
     # SWIG_GetModule. We fix this below.
-    if self.version() <= 103025:
+    if self.version() <= (1, 3, 25):
       for line in fileinput.input(out, inplace=1):
         sys.stdout.write(
           re.sub(r"SWIG_GetModule\(\)", "SWIG_GetModule(NULL)", line)

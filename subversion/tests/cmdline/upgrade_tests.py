@@ -43,8 +43,7 @@ Item = svntest.wc.StateItem
 XFail = svntest.testcase.XFail
 SkipUnless = svntest.testcase.SkipUnless
 
-wc_is_too_old_regex = (".*Working copy format of '.*' is too old \(\d+\); " +
-                    "please run 'svn upgrade'")
+wc_is_too_old_regex = (".*Working copy '.*' is too old \(format \d+.*\).*")
 
 
 def get_current_format():
@@ -182,6 +181,22 @@ def simple_property_verify(dir_path, expected_props):
   if not v1 or not v2:
     print('Actual properties: %s' % actual_props)
     raise svntest.Failure("Properties unequal")
+
+def simple_checksum_verify(expected_checksums):
+
+  for path, checksum in expected_checksums:
+    exit_code, output, errput = svntest.main.run_svn(None, 'info', path)
+    if exit_code:
+      raise svntest.Failure()
+    if checksum:
+      if not svntest.verify.RegexOutput('Checksum: ' + checksum,
+                                        match_all=False).matches(output):
+        raise svntest.Failure("did not get expected checksum " + checksum)
+    if not checksum:
+      if svntest.verify.RegexOutput('Checksum: ',
+                                    match_all=False).matches(output):
+        raise svntest.Failure("unexpected checksum")
+
 
 def run_and_verify_status_no_server(wc_dir, expected_status):
   "same as svntest.actions.run_and_verify_status(), but without '-u'"
@@ -754,6 +769,67 @@ def delete_in_copy_upgrade(sbox):
       })
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 
+def replaced_files(sbox):
+  "upgrade with base and working replaced files"
+
+  sbox.build(create_wc = False)
+  wc_dir = sbox.wc_dir
+  replace_sbox_with_tarfile(sbox, 'replaced-files.tar.bz2')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'upgrade', sbox.wc_dir)
+
+  # A is a checked-out dir containing A/f and A/g, then
+  # svn cp wc/A wc/B
+  # svn rm wc/A/f wc/B/f
+  # svn cp wc/A/g wc/A/f     # A/f replaced by copied A/g
+  # svn cp wc/A/g wc/B/f     # B/f replaced by copied A/g (working-only)
+  # svn rm wc/A/g wc/B/g
+  # touch wc/A/g wc/B/g
+  # svn add wc/A/g wc/B/g    # A/g replaced, B/g replaced (working-only)
+  # svn ps pX vX wc/A/g
+  # svn ps pY vY wc/B/g
+  expected_status = svntest.wc.State(sbox.wc_dir,
+    {
+      ''    : Item(status='  ', wc_rev='5'),
+      'A'   : Item(status='  ', wc_rev='5'),
+      'A/f' : Item(status='R ', wc_rev='-', copied='+'),
+      'A/g' : Item(status='RM', wc_rev='5'),
+      'B'   : Item(status='A ', wc_rev='-', copied='+'),
+      'B/f' : Item(status='R ', wc_rev='-', copied='+'),
+      'B/g' : Item(status='RM', wc_rev='0'),
+  })
+  run_and_verify_status_no_server(sbox.wc_dir, expected_status)
+
+  simple_property_verify(sbox.wc_dir, {
+      'A/f' : {'pAg' : 'vAg' },
+      'A/g' : {'pX'  : 'vX' },
+      'B/f' : {'pAg' : 'vAg' },
+      'B/g' : {'pY'  : 'vY' },
+      })
+
+  simple_checksum_verify([
+      [sbox.ospath('A/f'), '395dfb603d8a4e0348d0b082803f2b7426c76eb9'],
+      [sbox.ospath('A/g'), None],
+      [sbox.ospath('B/f'), '395dfb603d8a4e0348d0b082803f2b7426c76eb9'],
+      [sbox.ospath('B/g'), None]])
+
+  svntest.actions.run_and_verify_svn(None, 'Reverted.*', [], 'revert',
+                                     sbox.ospath('A/f'), sbox.ospath('B/f'),
+                                     sbox.ospath('A/g'), sbox.ospath('B/g'))
+
+  simple_property_verify(sbox.wc_dir, {
+      'A/f' : {'pAf' : 'vAf' },
+      'A/g' : {'pAg' : 'vAg' },
+      'B/f' : {'pAf' : 'vAf' },
+      'B/g' : {'pAg' : 'vAg' },
+      })
+
+  simple_checksum_verify([
+      [sbox.ospath('A/f'), '958eb2d755df2d9e0de6f7b835aec16b64d83f6f'],
+      [sbox.ospath('A/g'), '395dfb603d8a4e0348d0b082803f2b7426c76eb9'],
+      [sbox.ospath('B/f'), '958eb2d755df2d9e0de6f7b835aec16b64d83f6f'],
+      [sbox.ospath('B/g'), '395dfb603d8a4e0348d0b082803f2b7426c76eb9']])
 
 ########################################################################
 # Run the tests
@@ -770,14 +846,15 @@ test_list = [ None,
               # Upgrading from 1.4.0-1.4.5 with specific states fails
               # See issue #2530
               XFail(x3_1_4_0),
-              XFail(x3_1_4_6),
-              XFail(x3_1_6_12),
+              x3_1_4_6,
+              x3_1_6_12,
               missing_dirs,
               missing_dirs2,
               XFail(delete_and_keep_local),
               dirs_only_upgrade,
               upgrade_tree_conflict_data,
               delete_in_copy_upgrade,
+              replaced_files,
              ]
 
 

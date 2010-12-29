@@ -5426,9 +5426,20 @@ rep_write_contents_close(void *baton)
   /* Check and see if we already have a representation somewhere that's
      identical to the one we just wrote out. */
   if (ffd->rep_sharing_allowed)
-    /* ### TODO: ignore errors opening the DB (issue #3506) * */
-    SVN_ERR(svn_fs_fs__get_rep_reference(&old_rep, b->fs, rep->sha1_checksum,
-                                         b->parent_pool));
+    {
+      svn_error_t *err;
+      err = svn_fs_fs__get_rep_reference(&old_rep, b->fs, rep->sha1_checksum,
+                                         b->parent_pool);
+      if (err)
+        {
+          /* Something's wrong with the rep-sharing index.  We can continue 
+             without rep-sharing, but warn.
+           */
+          (b->fs->warning)(b->fs->warning_baton, err);
+          svn_error_clear(err);
+          old_rep = NULL;
+        }
+    }
   else
     old_rep = NULL;
 
@@ -6206,12 +6217,18 @@ commit_body(void *baton, apr_pool_t *pool)
   /* Update the 'current' file. */
   SVN_ERR(write_final_current(cb->fs, cb->txn->id, new_rev, start_node_id,
                               start_copy_id, pool));
+
+  /* At this point the new revision is committed and globally visible
+     so let the caller know it succeeded by giving it the new revision
+     number, which fulfills svn_fs_commit_txn() contract.  Any errors
+     after this point do not change the fact that a new revision was
+     created. */
+  *cb->new_rev_p = new_rev;
+
   ffd->youngest_rev_cache = new_rev;
 
   /* Remove this transaction directory. */
   SVN_ERR(svn_fs_fs__purge_txn(cb->fs, cb->txn->id, pool));
-
-  *cb->new_rev_p = new_rev;
 
   return SVN_NO_ERROR;
 }
@@ -6377,7 +6394,8 @@ svn_fs_fs__commit(svn_revnum_t *new_rev_p,
 
   if (ffd->rep_sharing_allowed)
     {
-      /* ### TODO: ignore errors opening the DB (issue #3506) * */
+      /* At this point, *NEW_REV_P has been set, so errors here won't affect
+         the success of the commit.  (See svn_fs_commit_txn().)  */
       SVN_ERR(svn_fs_fs__open_rep_cache(fs, pool));
       SVN_ERR(svn_sqlite__with_transaction(ffd->rep_cache_db,
                                            commit_sqlite_txn_callback,

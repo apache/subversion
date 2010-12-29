@@ -762,7 +762,7 @@ svn_ra_get_dated_revision(svn_ra_session_t *session,
  *
  * Use @a pool for memory allocation.
  *
- * @see svn_fs_change_rev_prop2(), svn_error_has_cause().
+ * @see svn_fs_change_rev_prop2(), svn_error_find_cause().
  *
  * @since New in 1.7.
  */

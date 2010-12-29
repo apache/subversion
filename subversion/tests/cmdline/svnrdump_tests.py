@@ -66,7 +66,7 @@ def build_repos(sbox):
   svntest.main.create_repos(sbox.repo_dir)
 
 def run_dump_test(sbox, dumpfile_name, expected_dumpfile_name = None,
-                  subdir = None):
+                  subdir = None, bypass_prop_validation = False):
   """Load a dumpfile using 'svnadmin load', dump it with 'svnrdump
   dump' and check that the same dumpfile is produced or that
   expected_dumpfile_name is produced if provided. Additionally, the
@@ -85,7 +85,8 @@ def run_dump_test(sbox, dumpfile_name, expected_dumpfile_name = None,
                                         dumpfile_name),
                            'rb').readlines()
 
-  svntest.actions.run_and_verify_load(sbox.repo_dir, svnadmin_dumpfile)
+  svntest.actions.run_and_verify_load(sbox.repo_dir, svnadmin_dumpfile,
+                                      bypass_prop_validation)
   
   repo_url = sbox.repo_url
   if subdir:
@@ -301,7 +302,8 @@ def url_encoding_load(sbox):
 def copy_bad_line_endings_dump(sbox):
   "dump: inconsistent line endings in svn:props"
   run_dump_test(sbox, "copy-bad-line-endings.dump",
-           expected_dumpfile_name="copy-bad-line-endings.expected.dump")
+                expected_dumpfile_name="copy-bad-line-endings.expected.dump",
+                bypass_prop_validation=True)
 
 def commit_a_copy_of_root_dump(sbox):
   "dump: commit a copy of root"

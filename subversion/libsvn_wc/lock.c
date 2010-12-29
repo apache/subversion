@@ -543,18 +543,8 @@ open_single(svn_wc_adm_access_t **adm_access,
 
   /* The format version must match exactly. Note that wc_db will perform
      an auto-upgrade if allowed. If it does *not*, then it has decided a
-     manual upgrade is required.
-
-     Note: if it decided on a manual upgrade, then we "should" never even
-     reach this code. An error should have been raised earlier.  */
-  if (wc_format != SVN_WC__VERSION)
-    {
-      return svn_error_createf(SVN_ERR_WC_UPGRADE_REQUIRED, NULL,
-                               _("Working copy format of '%s' is too old (%d); "
-                                 "please run 'svn upgrade'"),
-                               svn_dirent_local_style(path, scratch_pool),
-                               wc_format);
-    }
+     manual upgrade is required and it should have raised an error.  */
+  SVN_ERR_ASSERT(wc_format == SVN_WC__VERSION);
 
   /* Need to create a new lock */
   SVN_ERR(adm_access_alloc(&lock, path, db, db_provided, write_lock,

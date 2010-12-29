@@ -215,6 +215,7 @@ struct invalidate_wcprop_walk_baton
    `svn_wc_entry_callbacks_t'. */
 static svn_error_t *
 invalidate_wcprop_for_node(const char *local_abspath,
+                           svn_node_kind_t kind,
                            void *walk_baton,
                            apr_pool_t *pool)
 {

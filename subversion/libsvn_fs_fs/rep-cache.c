@@ -72,8 +72,9 @@ svn_fs_fs__open_rep_cache(svn_fs_t *fs,
                           apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  return svn_error_return(svn_atomic__init_once(&ffd->rep_cache_db_opened,
-                                                open_rep_cache, fs, pool));
+  svn_error_t *err = svn_atomic__init_once(&ffd->rep_cache_db_opened,
+                                           open_rep_cache, fs, pool);
+  return svn_error_quick_wrap(err, _("Couldn't open rep-cache database"));
 }
 
 svn_error_t *

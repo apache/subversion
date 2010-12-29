@@ -123,7 +123,7 @@ pristine_write_read(const svn_test_opts_t *opts,
 
     SVN_ERR(svn_wc__db_pristine_check(&present, db, wc_abspath, data_sha1,
                                       pool));
-    SVN_ERR_ASSERT(! present);
+    SVN_TEST_ASSERT(! present);
   }
 
   /* Install the new pristine file, referenced by its checksum. */
@@ -136,7 +136,7 @@ pristine_write_read(const svn_test_opts_t *opts,
 
     SVN_ERR(svn_wc__db_pristine_check(&present, db, wc_abspath, data_sha1,
                                       pool));
-    SVN_ERR_ASSERT(present);
+    SVN_TEST_ASSERT(present);
   }
 
   /* Look up its MD-5 from its SHA-1, and check it's the same MD-5. */
@@ -181,7 +181,7 @@ pristine_write_read(const svn_test_opts_t *opts,
 
     SVN_ERR(svn_wc__db_pristine_check(&present, db, wc_abspath, data_sha1,
                                       pool));
-    SVN_ERR_ASSERT(! present);
+    SVN_TEST_ASSERT(! present);
   }
 
   return SVN_NO_ERROR;

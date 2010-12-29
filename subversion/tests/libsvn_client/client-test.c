@@ -23,6 +23,8 @@
 
 
 
+#define SVN_DEPRECATED
+
 #include <limits.h>
 #include "svn_mergeinfo.h"
 #include "../../libsvn_client/mergeinfo.h"
@@ -240,7 +242,7 @@ check_patch_result(const char *path, const char **expected_lines, const char *eo
     }
   svn_pool_destroy(iterpool);
 
-  SVN_ERR_ASSERT(i == num_expected_lines);
+  SVN_TEST_ASSERT(i == num_expected_lines);
   SVN_ERR(svn_io_remove_file2(path, FALSE, pool));
 
   return SVN_NO_ERROR;
@@ -339,6 +341,7 @@ test_patch(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
   SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
   SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &committed_rev, txn, pool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(committed_rev));
 
   /* Check out the HEAD revision */
   SVN_ERR(svn_dirent_get_absolute(&cwd, "", pool));
@@ -371,7 +374,7 @@ test_patch(const svn_test_opts_t *opts,
     {
       apr_size_t len = strlen(unidiff_patch[i]);
       SVN_ERR(svn_io_file_write(patch_file, unidiff_patch[i], &len, pool));
-      SVN_ERR_ASSERT(len == strlen(unidiff_patch[i]));
+      SVN_TEST_ASSERT(len == strlen(unidiff_patch[i]));
     }
   SVN_ERR(svn_io_file_flush_to_disk(patch_file, pool));
 
@@ -384,13 +387,13 @@ test_patch(const svn_test_opts_t *opts,
                            ctx, pool, pool));
   SVN_ERR(svn_io_file_close(patch_file, pool));
 
-  SVN_ERR_ASSERT(apr_hash_count(pcb.patched_tempfiles) == 1);
+  SVN_TEST_ASSERT(apr_hash_count(pcb.patched_tempfiles) == 1);
   key = "A/D/gamma";
   patched_tempfile_path = apr_hash_get(pcb.patched_tempfiles, key,
                                        APR_HASH_KEY_STRING);
   SVN_ERR(check_patch_result(patched_tempfile_path, expected_gamma, "\n",
                              EXPECTED_GAMMA_LINES, pool));
-  SVN_ERR_ASSERT(apr_hash_count(pcb.reject_tempfiles) == 1);
+  SVN_TEST_ASSERT(apr_hash_count(pcb.reject_tempfiles) == 1);
   key = "A/D/gamma";
   reject_tempfile_path = apr_hash_get(pcb.reject_tempfiles, key,
                                      APR_HASH_KEY_STRING);
@@ -428,6 +431,7 @@ test_wc_add_scenarios(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
   SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
   SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &committed_rev, txn, pool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(committed_rev));
 
   SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, "test-wc-add-repos",
                                            pool));
@@ -545,6 +549,56 @@ test_wc_add_scenarios(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+/* This is for issue #3234. */
+static svn_error_t *
+test_copy_crash(const svn_test_opts_t *opts,
+                apr_pool_t *pool)
+{
+  svn_repos_t *repos;
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  apr_array_header_t *sources;
+  svn_revnum_t committed_rev;
+  svn_opt_revision_t rev;
+  svn_client_copy_source_t source;
+  svn_client_ctx_t *ctx;
+  const char *dest;
+  const char *repos_url;
+
+  /* Create a filesytem and repository. */
+  SVN_ERR(svn_test__create_repos(&repos, "test-copy-crash",
+                                 opts, pool));
+  fs = svn_repos_fs(repos);
+
+  /* Prepare a txn to receive the greek tree. */
+  SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &committed_rev, txn, pool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(committed_rev));
+
+  SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, "test-copy-crash",
+                                           pool));
+
+  svn_client_create_context(&ctx, pool);
+
+  rev.kind = svn_opt_revision_head;
+  dest = svn_path_url_add_component2(repos_url, "A/E", pool);
+  source.path = svn_path_url_add_component2(repos_url, "A/B", pool);
+  source.revision = &rev;
+  source.peg_revision = &rev;
+  sources = apr_array_make(pool, 1, sizeof(svn_client_copy_source_t *));
+  APR_ARRAY_PUSH(sources, svn_client_copy_source_t *) = &source;
+
+  /* This shouldn't crash. */
+  SVN_ERR(svn_client_copy6(sources, dest, FALSE, TRUE, FALSE, NULL, NULL, NULL,
+                           ctx, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
 /* ========================================================================== */
 
 struct svn_test_descriptor_t test_funcs[] =
@@ -556,5 +610,6 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test svn_client_args_to_target_array"),
     SVN_TEST_OPTS_PASS(test_patch, "test svn_client_patch"),
     SVN_TEST_OPTS_PASS(test_wc_add_scenarios, "test svn_wc_add3 scenarios"),
+    SVN_TEST_OPTS_PASS(test_copy_crash, "test a crash in svn_client_copy5"),
     SVN_TEST_NULL
   };

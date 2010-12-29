@@ -164,7 +164,7 @@ change_rev_prop(const char *url,
                                     &old_value, propval, pool);
 
       if (want_error && err
-          && svn_error_has_cause(err, SVN_ERR_FS_PROP_BASEVALUE_MISMATCH))
+          && svn_error_find_cause(err, SVN_ERR_FS_PROP_BASEVALUE_MISMATCH))
         {
           /* Expectation was matched.  Get out. */
           svn_error_clear(err);
