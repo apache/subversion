@@ -1050,7 +1050,7 @@ svn_client_args_to_target_array(apr_array_header_t **targets_p,
  * Checkout a working copy from a repository.
  *
  * @param[out] result_rev   If non-NULL, the value of the revision checked
- *              out form the repository.
+ *              out from the repository.
  * @param[in] URL       The repository URL of the checkout source.
  * @param[in] path      The root of the new working copy.
  * @param[in] peg_revision  The peg revision.
