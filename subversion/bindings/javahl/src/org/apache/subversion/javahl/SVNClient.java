@@ -423,18 +423,6 @@ public class SVNClient implements ISVNClient
             throws ClientException;
 
     /**
-     * @since 1.5
-     */
-    public void propertyRemove(String path, String name, Depth depth,
-                               Collection<String> changelists,
-                               CommitCallback callback)
-            throws ClientException
-    {
-        propertySet(path, name, (byte []) null, depth, changelists, false, null,
-                    callback);
-    }
-
-    /**
      * @since 1.0
      */
     public native byte[] revProperty(String path, String name, Revision rev)
