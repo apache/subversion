@@ -691,12 +691,15 @@ public class BasicTests extends SVNTests
                                                  "iota"),
                                         false);
 
-        client.propertySet(itemPath, "abc", "def", Depth.empty, null, false,
+        byte[] BINARY_DATA = {-12, -125, -51, 43, 5, 47, 116, -72, -120,
+                2, -98, -100, -73, 61, 118, 74, 36, 38, 56, 107, 45, 91, 38, 107, -87,
+                119, -107, -114, -45, -128, -69, 96};
+        client.propertySet(itemPath, "abc", BINARY_DATA, Depth.empty, null, false,
                 null, null);
         Map<String, byte[]> properties = collectProperties(itemPath, null,
                                                     null, Depth.empty, null);
 
-        assertEquals("def", new String(properties.get("abc")));
+        assertTrue(Arrays.equals(BINARY_DATA, properties.get("abc")));
 
         wc.setItemPropStatus("iota", Status.Kind.modified);
         thisTest.checkStatus();
@@ -705,7 +708,8 @@ public class BasicTests extends SVNTests
         itemPath = fileToSVNPath(new File(thisTest.getWCPath(),
                                           "/A/B/E/alpha"),
                                  false);
-        client.propertyCreate(itemPath, "cqcq", "qrz", Depth.empty, null,
+        String alphaVal = "qrz";
+        client.propertyCreate(itemPath, "cqcq", alphaVal.getBytes(), Depth.empty, null,
                               false, null);
 
         final Map<String, Map<String, byte[]>> propMaps =
@@ -719,7 +723,7 @@ public class BasicTests extends SVNTests
         for (String key : propMap.keySet())
         {
             assertEquals("cqcq", key);
-            assertEquals("qrz", new String(propMap.get(key)));
+            assertEquals(alphaVal, new String(propMap.get(key)));
         }
 
         wc.setItemPropStatus("A/B/E/alpha", Status.Kind.modified);
