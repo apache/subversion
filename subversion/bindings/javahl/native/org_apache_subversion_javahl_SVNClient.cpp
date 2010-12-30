@@ -914,7 +914,7 @@ Java_org_apache_subversion_javahl_SVNClient_properties
 
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_propertySet
-(JNIEnv *env, jobject jthis, jstring jpath, jstring jname, jstring jvalue,
+(JNIEnv *env, jobject jthis, jstring jpath, jstring jname, jbyteArray jvalue,
  jobject jdepth, jobject jchangelists, jboolean jforce, jobject jrevpropTable,
  jobject jcallback)
 {
@@ -933,7 +933,7 @@ Java_org_apache_subversion_javahl_SVNClient_propertySet
   if (JNIUtil::isExceptionThrown())
     return;
 
-  JNIStringHolder value(jvalue);
+  JNIByteArray value(jvalue);
   if (JNIUtil::isExceptionThrown())
     return;
 

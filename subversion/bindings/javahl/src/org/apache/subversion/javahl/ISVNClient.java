@@ -674,6 +674,11 @@ public interface ISVNClient
      * @throws ClientException
      * @since 1.5
      */
+    void propertySet(String path, String name, byte[] value, Depth depth,
+                     Collection<String> changelists, boolean force,
+                     Map<String, String> revpropTable, CommitCallback callback)
+            throws ClientException;
+
     void propertySet(String path, String name, String value, Depth depth,
                      Collection<String> changelists, boolean force,
                      Map<String, String> revpropTable, CommitCallback callback)
@@ -704,6 +709,11 @@ public interface ISVNClient
      * @throws ClientException
      * @since 1.5
      */
+    void propertyCreate(String path, String name, byte[] value, Depth depth,
+                        Collection<String> changelists, boolean force,
+                        CommitCallback callback)
+            throws ClientException;
+
     void propertyCreate(String path, String name, String value, Depth depth,
                         Collection<String> changelists, boolean force,
                         CommitCallback callback)
