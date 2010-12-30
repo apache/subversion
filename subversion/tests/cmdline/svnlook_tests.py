@@ -271,7 +271,7 @@ def test_print_property_diffs(sbox):
 
   # replace wcdir/iota with iota in expected_output
   for i in range(len(expected_output)):
-    expected_output[i] = expected_output[i].replace(canonical_iota_path, 
+    expected_output[i] = expected_output[i].replace(canonical_iota_path,
                                                     'iota')
 
   # Check that the header filenames match.
@@ -280,7 +280,7 @@ def test_print_property_diffs(sbox):
   if expected_output[3].split()[1] != output[3].split()[1]:
     raise svntest.Failure
 
-  svntest.verify.compare_and_display_lines('', '', 
+  svntest.verify.compare_and_display_lines('', '',
                                            expected_output[4:],
                                            output[4:])
 
@@ -536,7 +536,7 @@ def diff_ignore_eolstyle(sbox):
 
     # replace wcdir/A/mu with A/mu in expected_output
     for i in range(len(expected_output)):
-      expected_output[i] = expected_output[i].replace(canonical_mu_path, 
+      expected_output[i] = expected_output[i].replace(canonical_mu_path,
                                                       'A/mu')
 
     # Check that the header filenames match.
@@ -545,7 +545,7 @@ def diff_ignore_eolstyle(sbox):
     if expected_output[3].split()[1] != output[3].split()[1]:
       raise svntest.Failure
 
-    svntest.verify.compare_and_display_lines('', '', 
+    svntest.verify.compare_and_display_lines('', '',
                                              expected_output[4:],
                                              output[4:])
 

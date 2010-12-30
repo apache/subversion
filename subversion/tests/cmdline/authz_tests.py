@@ -920,8 +920,8 @@ def authz_access_required_at_repo_root2(sbox):
                        '-m', 'rename file in readable writable space',
                        root_url + '/A/B/E/alpha',
                        root_url + '/A/B/E/alpha-renamed')
-  
-  # Check out original greek sub tree below /A/B/E 
+
+  # Check out original greek sub tree below /A/B/E
   # and update it to the above rename.
   wc_dir = sbox.add_wc_path('ABE')
   os.mkdir(wc_dir)
@@ -933,7 +933,7 @@ def authz_access_required_at_repo_root2(sbox):
                        '-m', 'rename diretory in readable writable space',
                        root_url + '/A/D/H',
                        root_url + '/A/D/a g e')
-  
+
   # Check out original greek sub tree below /A/D
   # and update it to the above rename.
   wc_dir = sbox.add_wc_path('AD')
@@ -1022,7 +1022,7 @@ def wc_wc_copy_revert(sbox):
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'revert', '--recursive', sbox.ospath('A2'))
-  
+
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
   expected_status.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
   svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)

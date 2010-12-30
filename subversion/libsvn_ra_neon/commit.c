@@ -56,7 +56,7 @@
  * NOTE:  If you tweak this structure, please update dup_resource() to
  * ensure that it continues to create complete deep copies!
  */
-typedef struct
+typedef struct version_rsrc_t
 {
   svn_revnum_t revision;  /* resource's revision, or SVN_INVALID_REVNUM
                              if it's new or is the HEAD */
@@ -74,7 +74,7 @@ typedef struct
 } version_rsrc_t;
 
 
-typedef struct
+typedef struct commit_ctx_t
 {
   svn_ra_neon__session_t *ras;
   const char *activity_url;
@@ -102,7 +102,7 @@ typedef struct
 
 } commit_ctx_t;
 
-typedef struct
+typedef struct put_baton_t
 {
   apr_file_t *tmpfile;        /* may be NULL for content-less file */
   svn_stringbuf_t *fname;     /* may be NULL for content-less file */
@@ -112,7 +112,7 @@ typedef struct
   apr_pool_t *pool;
 } put_baton_t;
 
-typedef struct
+typedef struct resource_baton_t
 {
   commit_ctx_t *cc;
   version_rsrc_t *rsrc;

@@ -187,7 +187,7 @@ svn_wc__cd_to_cd2(const svn_wc_conflict_description_t *conflict,
  */
 svn_error_t *
 svn_wc__status2_from_3(svn_wc_status2_t **status,
-                       const svn_wc_status3_t *old_status, 
+                       const svn_wc_status3_t *old_status,
                        svn_wc_context_t *wc_ctx,
                        const char *local_abspath,
                        apr_pool_t *result_pool,
@@ -324,7 +324,7 @@ svn_wc__node_get_url(const char **url,
  * repos_relpath it will have in the repository.
  *
  * If @a local_abspath is not in the working copy, return @c
- * SVN_ERR_WC_PATH_NOT_FOUND. 
+ * SVN_ERR_WC_PATH_NOT_FOUND.
  * */
 svn_error_t *
 svn_wc__node_get_repos_relpath(const char **repos_relpath,
@@ -344,7 +344,7 @@ svn_wc__node_get_repos_relpath(const char **repos_relpath,
  * @a copyfrom_root_url and @a copyfrom_repos_relpath return the exact same
  * information as @a copyfrom_url, just still separated as root and relpath.
  *
- * If @a local_abspath is not copied, set @a *copyfrom_root_url, 
+ * If @a local_abspath is not copied, set @a *copyfrom_root_url,
  * @a *copyfrom_repos_relpath and @a copyfrom_url to NULL and
  * @a *copyfrom_rev to @c SVN_INVALID_REVNUM.
  *
@@ -467,7 +467,7 @@ svn_wc__node_get_base_rev(svn_revnum_t *base_revision,
 
 /* Get the working revision of @a local_abspath using @a wc_ctx. If @a
  * local_abspath is not in the working copy, return @c
- * SVN_ERR_WC_PATH_NOT_FOUND.  
+ * SVN_ERR_WC_PATH_NOT_FOUND.
  *
  * This function is meant as a temporary solution for using the old-style
  * semantics of entries. It will handle any uncommitted changes (delete,
@@ -477,24 +477,24 @@ svn_wc__node_get_base_rev(svn_revnum_t *base_revision,
  * the path that was deleted. But if the delete is  below an add, the
  * revision is set to SVN_INVALID_REVNUM. For an add, copy or move we return
  * SVN_INVALID_REVNUM. In case of a replacement, we return the BASE
- * revision. 
+ * revision.
  *
  * The @a changed_rev is set to the latest committed change to @a
  * local_abspath before or equal to @a revision, unless the node is
  * copied-here or moved-here. Then it is the revision of the latest committed
  * change before or equal to the copyfrom_rev.  NOTE, that we use
- * SVN_INVALID_REVNUM for a scheduled copy or move. 
+ * SVN_INVALID_REVNUM for a scheduled copy or move.
  *
  * The @a changed_date and @a changed_author are the ones associated with @a
- * changed_rev.  
+ * changed_rev.
  */
 svn_error_t *
 svn_wc__node_get_working_rev_info(svn_revnum_t *revision,
-                                  svn_revnum_t *changed_rev, 
-                                  apr_time_t *changed_date, 
+                                  svn_revnum_t *changed_rev,
+                                  apr_time_t *changed_date,
                                   const char **changed_author,
-                                  svn_wc_context_t *wc_ctx, 
-                                  const char *local_abspath, 
+                                  svn_wc_context_t *wc_ctx,
+                                  const char *local_abspath,
                                   apr_pool_t *scratch_pool,
                                   apr_pool_t *result_pool);
 

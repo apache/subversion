@@ -1004,7 +1004,7 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   #                  r4                                            |     |
   #                   |                                            V     V
   #                  branches/B1/B/E------------------------------r14---r15->
-  #                  
+  #
   #
   # The mergeinfo on this repos@15 is:
   #
@@ -1034,7 +1034,7 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
     "/trunk/B/E:5-6,8-9\n"])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'propget', 'svn:mergeinfo', '-R',
-                                     sbox.repo_url)  
+                                     sbox.repo_url)
 
   # PART 2: Load a a series of incremental dumps to an empty repository.
   #
@@ -1085,7 +1085,7 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   # repository.  First, try the full dump-load in one shot.
   #
   # PART 3: Load a full dump to an non-empty repository.
-  #  
+  #
   # Reset our sandbox.
   test_create(sbox)
 
@@ -1145,7 +1145,7 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   # Load this skeleton repos into the empty target:
   load_and_verify_dumpstream(sbox, [], [], None, dumpfile_skeleton,
                              '--ignore-uuid')
-  
+
   # Load the three incremental dump files in sequence.
   load_and_verify_dumpstream(sbox, [], [], None,
                              open(dump_file_r1_10).read(),
@@ -1287,7 +1287,7 @@ text
   # care of the removal and recreation of the original repository.)
   svntest.actions.load_repo(sbox, dump_str=dump_str,
                             bypass_prop_validation=True)
-    
+
 
 ########################################################################
 # Run the tests

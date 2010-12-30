@@ -160,7 +160,7 @@ create_offset_index(const svn_txdelta_window_t *window, apr_pool_t *pool)
 }
 
 /* Find the index of the delta op thet defines that data at OFFSET in
-   NDX. HINT is an arbitrary positin within NDX and doesn't even need 
+   NDX. HINT is an arbitrary positin within NDX and doesn't even need
    to be valid. To effectively speed up the search, use the last result
    as hint because most lookups come as a sequence of decreasing values
    for OFFSET and they concentrate on the lower end of the array. */
@@ -198,7 +198,7 @@ search_offset_index(const offset_index_t *ndx,
     {
       if (offset < ndx->offs[op])
         hi = op;
-      else 
+      else
         lo = ++op;
     }
 
@@ -630,12 +630,12 @@ build_range_list(apr_size_t offset, apr_size_t limit, range_index_t *ndx)
 /* Copy the instructions from WINDOW that define the range [OFFSET,
    LIMIT) in WINDOW's target stream to TARGET_OFFSET in the window
    represented by BUILD_BATON. HINT is a position in the instructions
-   array that helps finding the position for OFFSET. A safe default 
-   is 0. Use NDX to find the instructions in WINDOW. Allocate space 
+   array that helps finding the position for OFFSET. A safe default
+   is 0. Use NDX to find the instructions in WINDOW. Allocate space
    in BUILD_BATON from POOL. */
 
 static void
-copy_source_ops(apr_size_t offset, apr_size_t limit,  
+copy_source_ops(apr_size_t offset, apr_size_t limit,
                 apr_size_t target_offset,
                 apr_size_t hint,
                 svn_txdelta__ops_baton_t *build_baton,

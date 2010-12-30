@@ -405,7 +405,7 @@ svn_cstring_casecmp(const char *str1, const char *str2);
  * Parse the C string @a str into a 64 bit number, and return it in @a *n.
  * Assume that the number is represented in base @a base.
  * Raise an error if conversion fails (e.g. due to overflow), or if the
- * converted number is smaller than @a minval or larger than @a maxval. 
+ * converted number is smaller than @a minval or larger than @a maxval.
  *
  * @since New in 1.7.
  */
@@ -438,7 +438,7 @@ svn_cstring_atoi(int *n, const char *str);
  * Parse the C string @a str into an unsigned 64 bit number, and return
  * it in @a *n. Assume that the number is represented in base @a base.
  * Raise an error if conversion fails (e.g. due to overflow), or if the
- * converted number is smaller than @a minval or larger than @a maxval. 
+ * converted number is smaller than @a minval or larger than @a maxval.
  *
  * @since New in 1.7.
  */

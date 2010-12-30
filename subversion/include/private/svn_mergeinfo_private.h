@@ -226,7 +226,7 @@ svn_rangelist__initialize(svn_revnum_t start,
                           svn_boolean_t inheritable,
                           apr_pool_t *result_pool);
 
-/* Adjust in-place MERGEINFO's rangelists by OFFSET.  If OFFSET is negative 
+/* Adjust in-place MERGEINFO's rangelists by OFFSET.  If OFFSET is negative
    and would adjust any part of MERGEINFO's source revisions to 0 or less,
    then those revisions are dropped.  If all the source revisions for a merge
    source path are dropped, then the path itself is dropped.  If all merge

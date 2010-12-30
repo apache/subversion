@@ -3400,7 +3400,7 @@ typedef struct svn_wc_status3_t
   /** The URL of the repository */
   const char *repos_root_url;
 
-  /** The in-repository path relative to the repository root. 
+  /** The in-repository path relative to the repository root.
    * Use svn_path_url_component2() to join this value to the
    * repos_root_url to get the full URL.
    */
@@ -5277,7 +5277,7 @@ svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
 
 /** Similar to svn_wc_get_update_editor4, but uses access batons and relative
  * path instead of a working copy context-abspath pair and
- * svn_wc_traversal_info_t instead of an externals callback.  Also, 
+ * svn_wc_traversal_info_t instead of an externals callback.  Also,
  * @a fetch_func and @a fetch_baton are ignored.
  *
  * If @a ti is non-NULL, record traversal info in @a ti, for use by
@@ -5580,7 +5580,7 @@ svn_wc_get_pristine_props(apr_hash_t **props,
                           const char *local_abspath,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);
-                          
+
 
 /** Set @a *value to the value of property @a name for @a local_abspath,
  * allocating @a *value in @a result_pool.  If no such prop, set @a *value

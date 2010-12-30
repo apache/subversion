@@ -45,7 +45,7 @@
 /*** Getting misc. information ***/
 
 /* The baton for use with copyfrom_info_receiver(). */
-typedef struct
+typedef struct copyfrom_info_t
 {
   svn_boolean_t is_first;
   const char *path;
@@ -148,7 +148,7 @@ svn_client__get_copy_source(const char *path_or_url,
 
 /* compatibility with pre-1.5 servers, which send only author/date/log
  *revprops in log entries */
-typedef struct
+typedef struct pre_15_receiver_baton_t
 {
   svn_client_ctx_t *ctx;
   /* ra session for retrieving revprops from old servers */
@@ -244,7 +244,7 @@ pre_15_receiver(void *baton, svn_log_entry_t *log_entry, apr_pool_t *pool)
 }
 
 /* limit receiver */
-typedef struct
+typedef struct limit_receiver_baton_t
 {
   int limit;
   svn_log_entry_receiver_t receiver;

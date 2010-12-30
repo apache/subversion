@@ -621,7 +621,7 @@ new_node_record(void **node_baton,
   *node_baton = nb;
   return SVN_NO_ERROR;
 }
-               
+
 static svn_error_t *
 set_revision_property(void *baton,
                       const char *name,

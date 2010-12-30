@@ -1260,7 +1260,7 @@ svn_repos_verify_fs2(svn_repos_t *repos,
       /* Get cancellable dump editor, but with our close_directory handler. */
       SVN_ERR(get_dump_editor((const svn_delta_editor_t **)&dump_editor,
                               &dump_edit_baton, fs, rev, "",
-                              svn_stream_empty(pool), 
+                              svn_stream_empty(pool),
                               notify_func, notify_baton,
                               start_rev,
                               FALSE, TRUE, /* use_deltas, verify */

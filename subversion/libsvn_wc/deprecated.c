@@ -3637,7 +3637,7 @@ svn_wc_copy2(const char *src,
   SVN_ERR(svn_wc_copy3(wc_ctx,
                        src_abspath,
                        dst_abspath,
-                       FALSE /* metadata_only */, 
+                       FALSE /* metadata_only */,
                        cancel_func, cancel_baton,
                        notify_func, notify_baton,
                        pool));

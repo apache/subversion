@@ -48,7 +48,7 @@ typedef struct bdb_env_t bdb_env_t;
 
 
 /* Thread-specific error info related to the bdb_env_t. */
-typedef struct
+typedef struct bdb_error_info_t
 {
   /* We hold the extended info here until the Berkeley DB function returns.
      It usually returns an error code, triggering the collection and
@@ -75,7 +75,7 @@ typedef struct
 
 
 /* The Berkeley DB environment baton. */
-typedef struct
+typedef struct bdb_env_baton_t
 {
   /* The Berkeley DB environment. This pointer must be identical to
      the one in the bdb_env_t. */

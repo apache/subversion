@@ -107,7 +107,7 @@ typedef svn_error_t *(*svn_repos_authz_func_t)(svn_boolean_t *allowed,
  *
  * @since New in 1.3.
  */
-typedef enum
+typedef enum svn_repos_authz_access_t
 {
   /** No access. */
   svn_authz_none = 0,
@@ -2010,7 +2010,7 @@ svn_repos_fs_get_locks2(apr_hash_t **locks,
                         void *authz_read_baton,
                         apr_pool_t *pool);
 
-/** 
+/**
  * Similar to svn_repos_fs_get_locks2(), but with @a depth always
  * passed as svn_depth_infinity.
  *
@@ -2972,7 +2972,7 @@ svn_repos_authz_check_access(svn_authz_t *authz,
  *
  * @since New in 1.5.
  */
-typedef enum
+typedef enum svn_repos_revision_access_level_t
 {
   svn_repos_revision_access_none,
   svn_repos_revision_access_partial,

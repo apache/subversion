@@ -47,7 +47,7 @@
 /*
  * This enum represents the current state of our XML parsing for a REPORT.
  */
-typedef enum {
+typedef enum lock_state_e {
   NONE = 0,
   PROP,
   LOCK_DISCOVERY,
@@ -60,12 +60,12 @@ typedef enum {
   COMMENT,
 } lock_state_e;
 
-typedef struct {
+typedef struct lock_prop_info_t {
   const char *data;
   apr_size_t len;
 } lock_prop_info_t;
 
-typedef struct {
+typedef struct lock_info_t {
   apr_pool_t *pool;
 
   const char *path;

@@ -253,7 +253,7 @@ def svnversion_with_structural_changes(sbox):
                                             iota_copy_path, repo_url +
                                             '/iota_copy',
                                             [ "Uncommitted local addition, "
-                                            "copy or move\n" ], 
+                                            "copy or move\n" ],
                                             [])
   C_path = os.path.join(wc_dir, 'A', 'C')
   C_copy_path = os.path.join(wc_dir, 'C_copy')
@@ -264,7 +264,7 @@ def svnversion_with_structural_changes(sbox):
                                             C_copy_path, repo_url +
                                             '/C_copy',
                                             [ "Uncommitted local addition, "
-                                            "copy or move\n" ], 
+                                            "copy or move\n" ],
                                             [])
 
 ########################################################################

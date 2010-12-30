@@ -37,14 +37,14 @@
 
 
 /* Our current parsing state we're in for the PROPFIND response. */
-typedef enum {
+typedef enum prop_state_e {
   NONE = 0,
   RESPONSE,
   PROP,
   PROPVAL,
 } prop_state_e;
 
-typedef struct {
+typedef struct prop_info_t {
   apr_pool_t *pool;
 
   /* Current ns, attribute name, and value of the property we're parsing */

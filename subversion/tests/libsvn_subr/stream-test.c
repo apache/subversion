@@ -429,7 +429,7 @@ test_stream_seek_translated(apr_pool_t *pool)
   svn_stream_mark_t *mark, *mark2;
   apr_hash_t *keywords;
   svn_string_t *keyword_val;
-  
+
   keywords = apr_hash_make(pool);
   keyword_val = svn_string_create("my key word was expanded", pool);
   apr_hash_set(keywords, "MyKeyword", APR_HASH_KEY_STRING, keyword_val);

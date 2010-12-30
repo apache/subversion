@@ -42,12 +42,12 @@ struct svn_ra_svn__stream_st {
   ra_svn_timeout_fn_t timeout_fn;
 };
 
-typedef struct {
+typedef struct sock_baton_t {
   apr_socket_t *sock;
   apr_pool_t *pool;
 } sock_baton_t;
 
-typedef struct {
+typedef struct file_baton_t {
   apr_file_t *in_file;
   apr_file_t *out_file;
   apr_pool_t *pool;
