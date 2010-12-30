@@ -1081,8 +1081,6 @@ static svn_error_t *
 accumulate_last_change(svn_revnum_t *changed_rev,
                        apr_time_t *changed_date,
                        const char **changed_author,
-                       svn_wc__db_t *db,
-                       const char *local_abspath,
                        const apr_array_header_t *entry_props,
                        apr_pool_t *scratch_pool,
                        apr_pool_t *result_pool)
@@ -2797,7 +2795,7 @@ close_directory(void *dir_baton,
       SVN_ERR(accumulate_last_change(&new_changed_rev,
                                      &new_changed_date,
                                      &new_changed_author,
-                                     eb->db, db->local_abspath, entry_props,
+                                     entry_props,
                                      pool, pool));
     }
 
@@ -4099,7 +4097,6 @@ close_file(void *file_baton,
   SVN_ERR(accumulate_last_change(&new_changed_rev,
                                  &new_changed_date,
                                  &new_changed_author,
-                                 eb->db, fb->local_abspath,
                                  entry_props,
                                  pool, pool));
 
@@ -5550,7 +5547,6 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
     SVN_ERR(accumulate_last_change(&changed_rev,
                                    &changed_date,
                                    &changed_author,
-                                   db, local_abspath,
                                    entry_props, pool, pool));
   }
 
