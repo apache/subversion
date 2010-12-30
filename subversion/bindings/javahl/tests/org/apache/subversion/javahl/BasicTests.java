@@ -703,8 +703,8 @@ public class BasicTests extends SVNTests
                                           "/A/B/E/alpha"),
                                  false);
         String alphaVal = "qrz";
-        client.propertyCreate(itemPath, "cqcq", alphaVal.getBytes(), Depth.empty, null,
-                              false, null);
+        client.propertySet(itemPath, "cqcq", alphaVal.getBytes(), Depth.empty,
+                           null, false, null, null);
 
         final Map<String, Map<String, byte[]>> propMaps =
                                     new HashMap<String, Map<String, byte[]>>();
@@ -2796,8 +2796,8 @@ public class BasicTests extends SVNTests
 
                 if (operativeRevision == 2) {
                     // Set svn:eol-style=native on iota
-                    client.propertyCreate(iotaPath, "svn:eol-style", "native",
-                                          Depth.empty, null, false, null);
+                    client.propertySet(iotaPath, "svn:eol-style", "native",
+                                       Depth.empty, null, false, null, null);
                     Set<String> paths = new HashSet<String>(1);
                     paths.add(iotaPath);
                     addExpectedCommitItem(thisTest.getWCPath(),
