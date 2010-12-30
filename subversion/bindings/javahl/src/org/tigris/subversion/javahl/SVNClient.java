@@ -1853,7 +1853,9 @@ public class SVNClient implements SVNClientInterface
     {
         try
         {
-            aSVNClient.propertySet(path, name, value, Depth.toADepth(depth),
+            aSVNClient.propertySet(path, name,
+                                   value == null ? null : value.getBytes(),
+                                   Depth.toADepth(depth),
                                    changelists == null ? null
                                     : Arrays.asList(changelists),
                                    force, revpropTable, null);

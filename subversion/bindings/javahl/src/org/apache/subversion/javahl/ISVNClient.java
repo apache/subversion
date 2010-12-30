@@ -680,11 +680,6 @@ public interface ISVNClient
                      Map<String, String> revpropTable, CommitCallback callback)
             throws ClientException;
 
-    void propertySet(String path, String name, String value, Depth depth,
-                     Collection<String> changelists, boolean force,
-                     Map<String, String> revpropTable, CommitCallback callback)
-            throws ClientException;
-
     /**
      * Remove one property of an item.
      * @param path      path of the item

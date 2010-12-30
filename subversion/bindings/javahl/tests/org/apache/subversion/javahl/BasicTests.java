@@ -335,8 +335,7 @@ public class BasicTests extends SVNTests
         assertEquals("wrong revision from update",
                      update(thisTest), rev);
         thisTest.checkStatus();
-        client.propertySet(thisTest.getWCPath(), "propname", "propval",
-                Depth.empty, null, false, null, null);
+        setprop(thisTest.getWCPath(), "propname", "propval");
         thisTest.getWc().setItemPropStatus("", Status.Kind.modified);
         addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl().toString(),
                              null, NodeKind.dir, CommitItemStateFlags.PropMods);
@@ -373,8 +372,7 @@ public class BasicTests extends SVNTests
         String nuAuthor = status.getLastCommitAuthor();
 
         // ----- r9: Prop change on A/B/F ---------------------------
-        client.propertySet(thisTest.getWCPath() + "/A/B/F", "propname",
-                           "propval", Depth.empty, null, false, null, null);
+        setprop(thisTest.getWCPath() + "/A/B/F", "propname", "propval");
         addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl().toString(),
                               "A/B/F", NodeKind.dir,
                               CommitItemStateFlags.PropMods);
@@ -688,8 +686,7 @@ public class BasicTests extends SVNTests
         byte[] BINARY_DATA = {-12, -125, -51, 43, 5, 47, 116, -72, -120,
                 2, -98, -100, -73, 61, 118, 74, 36, 38, 56, 107, 45, 91, 38, 107, -87,
                 119, -107, -114, -45, -128, -69, 96};
-        client.propertySet(itemPath, "abc", BINARY_DATA, Depth.empty, null, false,
-                null, null);
+        setprop(itemPath, "abc", BINARY_DATA);
         Map<String, byte[]> properties = collectProperties(itemPath, null,
                                                     null, Depth.empty, null);
 
@@ -703,8 +700,7 @@ public class BasicTests extends SVNTests
                                           "/A/B/E/alpha"),
                                  false);
         String alphaVal = "qrz";
-        client.propertySet(itemPath, "cqcq", alphaVal.getBytes(), Depth.empty,
-                           null, false, null, null);
+        setprop(itemPath, "cqcq", alphaVal.getBytes());
 
         final Map<String, Map<String, byte[]>> propMaps =
                                     new HashMap<String, Map<String, byte[]>>();
@@ -1418,13 +1414,13 @@ public class BasicTests extends SVNTests
         thisTest.getWc().setItemTextStatus("A/D/H/chi", Status.Kind.modified);
 
         // set a property on A/D/G/rho file
-        client.propertySet(thisTest.getWCPath()+"/A/D/G/rho", "abc", "def",
-                Depth.infinity, null, false, null, null);
+        client.propertySet(thisTest.getWCPath()+"/A/D/G/rho", "abc",
+                           (new String("def")).getBytes(),
+                           Depth.infinity, null, false, null, null);
         thisTest.getWc().setItemPropStatus("A/D/G/rho", Status.Kind.modified);
 
         // set a property on A/B/F directory
-        client.propertySet(thisTest.getWCPath()+"/A/B/F", "abc", "def",
-                Depth.empty, null, false, null, null);
+        setprop(thisTest.getWCPath()+"/A/B/F", "abc", "def");
         thisTest.getWc().setItemPropStatus("A/B/F", Status.Kind.modified);
 
         // create a unversioned A/C/sigma file
@@ -2024,9 +2020,7 @@ public class BasicTests extends SVNTests
         Set<String> muPathSet = new HashSet<String>(1);
         muPathSet.add(thisTest.getWCPath()+"/A/mu");
 
-        client.propertySet(thisTest.getWCPath()+"/A/mu",
-                           Property.NEEDS_LOCK, "*", Depth.empty,
-                           null, false, null, null);
+        setprop(thisTest.getWCPath()+"/A/mu", Property.NEEDS_LOCK, "*");
 
         addExpectedCommitItem(thisTest.getWCPath(),
                               thisTest.getUrl().toString(), "A/mu",NodeKind.file,
@@ -2749,8 +2743,7 @@ public class BasicTests extends SVNTests
             "## -0,0 +1 ##" + NL +
             "+Test property value." + NL;
 
-        client.propertySet(aPath, "testprop", "Test property value.",
-                Depth.empty, null, false, null, null);
+        setprop(aPath, "testprop", "Test property value.");
         client.diff(aPath, Revision.BASE, aPath, Revision.WORKING, wcPath,
                     diffOutput.getPath(), Depth.infinity, null, true, true,
                     false, false);
@@ -2768,8 +2761,7 @@ public class BasicTests extends SVNTests
             "## -0,0 +1 ##" + NL +
             "+Test property value." + NL;
 
-        client.propertySet(aPath, "testprop", "Test property value.",
-                Depth.empty, null, false, null, null);
+        setprop(aPath, "testprop", "Test property value.");
         client.diff(aPath, Revision.BASE, aPath, Revision.WORKING, aPath,
                     diffOutput.getPath(), Depth.infinity, null, true, true,
                     false, false);
@@ -2796,8 +2788,7 @@ public class BasicTests extends SVNTests
 
                 if (operativeRevision == 2) {
                     // Set svn:eol-style=native on iota
-                    client.propertySet(iotaPath, "svn:eol-style", "native",
-                                       Depth.empty, null, false, null, null);
+                    setprop(iotaPath, "svn:eol-style", "native");
                     Set<String> paths = new HashSet<String>(1);
                     paths.add(iotaPath);
                     addExpectedCommitItem(thisTest.getWCPath(),
@@ -3989,5 +3980,19 @@ public class BasicTests extends SVNTests
     {
         return client.update(thisTest.getWCPathSet(subpath), null,
                              Depth.unknown, false, false, false, false)[0];
+    }
+
+    private void setprop(String path, String name, String value)
+        throws ClientException
+    {
+        client.propertySet(path, name, value != null ? value.getBytes() : null,
+                           Depth.empty, null, false, null, null);
+    }
+
+    private void setprop(String path, String name, byte[] value)
+        throws ClientException
+    {
+        client.propertySet(path, name, value, Depth.empty,
+                           null, false, null, null);
     }
 }

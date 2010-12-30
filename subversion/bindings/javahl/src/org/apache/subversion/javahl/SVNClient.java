@@ -422,17 +422,6 @@ public class SVNClient implements ISVNClient
                                    CommitCallback callback)
             throws ClientException;
 
-    public void propertySet(String path, String name, String value,
-                            Depth depth, Collection<String> changelists,
-                            boolean force,
-                            Map<String, String> revpropTable,
-                            CommitCallback callback)
-            throws ClientException
-    {
-        propertySet(path, name, value != null ? value.getBytes() : null,
-                    depth, changelists, force, revpropTable, callback);
-    }
-
     /**
      * @since 1.5
      */
