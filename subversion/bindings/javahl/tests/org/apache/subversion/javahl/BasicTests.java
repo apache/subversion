@@ -267,9 +267,7 @@ public class BasicTests extends SVNTests
 
         thisTest.getWc().setItemWorkingCopyRevision("A/D/G", rev);
         assertEquals("wrong revision from update",
-                 client.update(thisTest.getWCPathSet("/A/D/G"),
-                               null, Depth.unknown, false, false, false)[0],
-                     rev);
+                     update(thisTest, "/A/D/G"), rev);
         long GCommitRev = rev;
 
         // ----- r4: modify file A/D/G/tau --------------------------
@@ -335,8 +333,7 @@ public class BasicTests extends SVNTests
         // ----- r7: Update then commit prop change on root dir -----
         thisTest.getWc().setRevision(rev);
         assertEquals("wrong revision from update",
-                     client.update(thisTest.getWCPathSet(), null,
-                            Depth.unknown, false, false, false)[0], rev);
+                     update(thisTest), rev);
         thisTest.checkStatus();
         client.propertySet(thisTest.getWCPath(), "propname", "propval",
                 Depth.empty, null, false, null, null);
@@ -450,9 +447,7 @@ public class BasicTests extends SVNTests
 
         thisTest.getWc().setItemWorkingCopyRevision("A/B", rev);
         assertEquals("wrong revision from update",
-                 client.update(thisTest.getWCPathSet("/A/B"),
-                               null, Depth.unknown, false, false, false)[0],
-                     rev);
+                     update(thisTest, "/A/B"), rev);
         Info Binfo = collectInfos(thisTest.getWCPath() + "/A/B", null, null,
                                    Depth.empty, null)[0];
         long BCommitDate = Binfo.getLastChangedDate().getTime();
@@ -474,8 +469,7 @@ public class BasicTests extends SVNTests
         thisTest.getWc().removeItem("A/D/H/psi");
         thisTest.getWc().setRevision(rev);
         assertEquals("wrong revision from update",
-                     client.update(thisTest.getWCPathSet(), null,
-                            Depth.unknown, false, false, false)[0], rev);
+                     update(thisTest), rev);
         thisTest.getWc().addItem("A/D/H/psi", null);
         dir = new File(thisTest.getWorkingCopy(), "A/D/H/psi");
         dir.mkdir();
@@ -778,9 +772,7 @@ public class BasicTests extends SVNTests
 
         // update the backup test
         assertEquals("wrong revision number from update",
-                     client.update(backupTest.getWCPathSet(), null,
-                                   Depth.unknown, false, false, false)[0],
-                     2);
+                     update(backupTest), 2);
 
         // set the expected working copy layout for the backup test
         backupTest.getWc().setItemWorkingCopyRevision("A/mu", 2);
@@ -822,9 +814,7 @@ public class BasicTests extends SVNTests
 
         // update the working copy
         assertEquals("wrong revision from update",
-                     client.update(thisTest.getWCPathSet(), null,
-                            Depth.unknown, false, false, false)[0],
-                     2);
+                     update(thisTest), 2);
 
         // check the status of the working copy
         thisTest.checkStatus();
@@ -885,9 +875,7 @@ public class BasicTests extends SVNTests
 
         // update the WC to get new folder and confirm the copy
         assertEquals("wrong revision number from update",
-                     client.update(thisTest.getWCPathSet(), null,
-                                   Depth.unknown, false, false, false)[0],
-                     3);
+                     update(thisTest), 3);
     }
 
     /**
@@ -1115,9 +1103,7 @@ public class BasicTests extends SVNTests
 
         // update the backup working copy
         assertEquals("wrong revision number from update",
-                     client.update(backupTest.getWCPathSet(), null,
-                                   Depth.unknown, false, false, false)[0],
-                     3);
+                     update(backupTest), 3);
 
         // check the status of the backup working copy
         backupTest.checkStatus();
@@ -1225,9 +1211,7 @@ public class BasicTests extends SVNTests
 
         // update the backup working copy from the repository
         assertEquals("wrong revision number from update",
-                     client.update(backupTest.getWCPathSet(), null,
-                            Depth.unknown, false, false, false)[0],
-                     2);
+                     update(backupTest), 2);
 
         // check the status of the backup working copy
         backupTest.checkStatus();
@@ -1779,8 +1763,7 @@ public class BasicTests extends SVNTests
 
         // update the working
         assertEquals("wrong revision from update",
-                client.update(thisTest.getWCPathSet(), null,
-                              Depth.unknown, false, false, false)[0],2);
+                     update(thisTest), 2);
         thisTest.getWc().addItem("dirA", null);
         thisTest.getWc().setItemWorkingCopyRevision("dirA",2);
         thisTest.getWc().addItem("dirA/dirB", null);
@@ -1944,9 +1927,8 @@ public class BasicTests extends SVNTests
         removeDirOrFile(dir);
 
         // udpate the working copy
-        assertEquals("wrong revision from update", 2,
-                     client.update(thisTest.getWCPathSet(), null,
-                     Depth.unknown, false, false, false)[0]);
+        assertEquals("wrong revision from update",
+                     update(thisTest), 2);
         thisTest.getWc().addItem("dir", null);
         thisTest.getWc().addItem("dir/foo.c", "");
 
@@ -2447,8 +2429,7 @@ public class BasicTests extends SVNTests
                             false, false, null, null);
 
         // update the branch WC (to r5) before merge
-        client.update(thisTest.getWCPathSet("/branches"), Revision.HEAD,
-                      Depth.unknown, false, false, false);
+        update(thisTest, "/branches");
 
         String branchPath = thisTest.getWCPath() + "/branches/A";
         String modUrl = thisTest.getUrl() + "/A";
@@ -2480,8 +2461,7 @@ public class BasicTests extends SVNTests
         catch(ClientException e)
         {
             // update the WC (to r6) and try again
-            client.update(thisTest.getWCPathSet(), Revision.HEAD,
-                          Depth.unknown, false, false, false);
+            update(thisTest);
             client.mergeReintegrate(branchUrl, Revision.HEAD,
                                     thisTest.getWCPath() + "/A", false);
         }
@@ -2634,8 +2614,7 @@ public class BasicTests extends SVNTests
                     new ConstMsg("create A branch"), null);
 
         // update the WC (to r3) so that it has the branches folder
-        client.update(thisTest.getWCPathSet(), Revision.HEAD,
-                      Depth.unknown, false, false, false);
+        update(thisTest);
 
         return thisTest;
     }
@@ -2991,8 +2970,7 @@ public class BasicTests extends SVNTests
         client.notification2(notify);
         // update the test
         assertEquals("wrong revision number from update",
-                client.update(thisTest.getWCPathSet(), null,
-                        Depth.unknown, false, false, false)[0], 1);
+                     update(thisTest), 1);
     }
 
     public void testBasicCancelOperation() throws Throwable
@@ -3017,8 +2995,7 @@ public class BasicTests extends SVNTests
         // update the test to try to cancel an operation
         try
         {
-            client.update(thisTest.getWCPathSet(), null,
-                          Depth.unknown, false, false, false);
+            update(thisTest);
             fail("missing exception for canceled operation");
         }
         catch (ClientException e)
@@ -3049,8 +3026,7 @@ public class BasicTests extends SVNTests
         // Perform an update to exercise the progress notification.
         try
         {
-            client.update(thisTest.getWCPathSet(), null,
-                          Depth.unknown, false, false, false);
+            update(thisTest);
             fail("No progress reported");
         }
         catch (RuntimeException progressReported)
@@ -3114,9 +3090,7 @@ public class BasicTests extends SVNTests
 
         // update the tc test
         assertEquals("wrong revision number from update",
-                     client.update(tcTest.getWCPathSet(), null,
-                                   Depth.unknown, false, false, false)[0],
-                     2);
+                     update(tcTest), 2);
 
         // set the expected working copy layout for the tc test
         tcTest.getWc().addItem("A/B/F/alpha",
@@ -3252,8 +3226,7 @@ public class BasicTests extends SVNTests
         try
         {
             // obstructed update should fail
-            client.update(backupTest.getWCPathSet(), null,
-                          Depth.unknown, false, false, false);
+            update(backupTest);
             fail("obstructed update should fail by default");
         }
         catch (ClientException expected)
@@ -4000,5 +3973,21 @@ public class BasicTests extends SVNTests
                 sb.append(val);
             }
         }
+    }
+
+    /** A helper which calls update with a bunch of default args. */
+    private long update(OneTest thisTest)
+        throws ClientException
+    {
+        return client.update(thisTest.getWCPathSet(), null,
+                             Depth.unknown, false, false, false)[0];
+    }
+
+    /** A helper which calls update with a bunch of default args. */
+    private long update(OneTest thisTest, String subpath)
+        throws ClientException
+    {
+        return client.update(thisTest.getWCPathSet(subpath), null,
+                             Depth.unknown, false, false, false)[0];
     }
 }
