@@ -1061,7 +1061,7 @@ svn_fs_revision_root_revision(svn_fs_root_t *root);
 
 
 /** The kind of change that occurred on the path. */
-typedef enum
+typedef enum svn_fs_path_change_kind_t
 {
   /** path modified in txn */
   svn_fs_path_change_modify = 0,
@@ -2222,7 +2222,7 @@ svn_fs_print_modules(svn_stringbuf_t *output,
 
 
 /** The kind of action being taken by 'pack'. */
-typedef enum
+typedef enum svn_fs_pack_notify_action_t
 {
   /** packing of the shard has commenced */
   svn_fs_pack_notify_start = 0,

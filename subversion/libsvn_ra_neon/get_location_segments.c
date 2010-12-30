@@ -67,7 +67,7 @@ static const svn_ra_neon__xml_elm_t gls_report_elements[] =
   { NULL }
 };
 
-typedef struct {
+typedef struct get_location_segments_baton_t {
   svn_location_segment_receiver_t receiver;
   void *receiver_baton;
   apr_pool_t *subpool;

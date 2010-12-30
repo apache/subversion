@@ -154,7 +154,7 @@ validate_element(int parent, int child)
   return multistatus_nesting_table[i][j];
 }
 
-typedef struct
+typedef struct multistatus_baton_t
 {
   svn_stringbuf_t *want_cdata;
   svn_stringbuf_t *cdata;
@@ -460,7 +460,7 @@ attach_ne_body_reader(svn_ra_neon__request_t *req,
 }
 
 
-typedef struct
+typedef struct body_reader_wrapper_baton_t
 {
   svn_ra_neon__request_t *req;
   svn_ra_neon__block_reader real_reader;
@@ -916,7 +916,7 @@ error_parser_create(svn_ra_neon__request_t *req)
  * interface.
  */
 
-typedef struct
+typedef struct body_provider_baton_t
 {
   svn_ra_neon__request_t *req;
   apr_file_t *body_file;
@@ -1065,7 +1065,7 @@ parse_spool_file(svn_ra_neon__session_t *ras,
  * are returned they are stored in this baton and a Neon level
  * error code is returned to the parser.
  */
-typedef struct {
+typedef struct parser_wrapper_baton_t {
   svn_ra_neon__request_t *req;
   ne_xml_parser *parser;
 

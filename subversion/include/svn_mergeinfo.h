@@ -507,7 +507,7 @@ svn_rangelist_dup(const apr_array_header_t *rangelist, apr_pool_t *pool);
  *
  * @since New in 1.5.
  */
-typedef enum
+typedef enum svn_mergeinfo_inheritance_t
 {
   /** Explicit mergeinfo only. */
   svn_mergeinfo_explicit,

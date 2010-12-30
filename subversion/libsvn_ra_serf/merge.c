@@ -49,7 +49,7 @@
 /*
  * This enum represents the current state of our XML parsing for a MERGE.
  */
-typedef enum {
+typedef enum merge_state_e {
   NONE = 0,
   MERGE_RESPONSE,
   UPDATED_SET,
@@ -66,14 +66,14 @@ typedef enum {
   PROP_VAL,
 } merge_state_e;
 
-typedef enum {
+typedef enum resource_type_e {
   UNSET,
   BASELINE,
   COLLECTION,
   CHECKED_IN,
 } resource_type_e;
 
-typedef struct {
+typedef struct merge_info_t {
   /* Temporary allocations here please */
   apr_pool_t *pool;
 

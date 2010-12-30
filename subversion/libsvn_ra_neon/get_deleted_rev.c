@@ -67,7 +67,7 @@ static const svn_ra_neon__xml_elm_t drev_report_elements[] =
 };
 
 /* Context for parsing server's response. */
-typedef struct
+typedef struct drev_baton_t
 {
   svn_stringbuf_t *cdata;
   svn_revnum_t revision;

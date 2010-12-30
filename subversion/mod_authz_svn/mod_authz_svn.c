@@ -46,7 +46,7 @@
 
 extern module AP_MODULE_DECLARE_DATA authz_svn_module;
 
-typedef struct {
+typedef struct authz_svn_config_rec {
   int authoritative;
   int anonymous;
   int no_auth_when_anon_ok;

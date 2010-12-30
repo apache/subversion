@@ -59,7 +59,7 @@
 
 #include "server.h"
 
-typedef struct {
+typedef struct commit_callback_baton_t {
   apr_pool_t *pool;
   svn_revnum_t *new_rev;
   const char **date;
@@ -67,7 +67,7 @@ typedef struct {
   const char **post_commit_err;
 } commit_callback_baton_t;
 
-typedef struct {
+typedef struct report_driver_baton_t {
   server_baton_t *sb;
   const char *repos_url;  /* Decoded repository URL. */
   void *report_baton;
@@ -79,18 +79,18 @@ typedef struct {
   svn_revnum_t *from_rev;
 } report_driver_baton_t;
 
-typedef struct {
+typedef struct log_baton_t {
   const char *fs_path;
   svn_ra_svn_conn_t *conn;
   int stack_depth;
 } log_baton_t;
 
-typedef struct {
+typedef struct file_revs_baton_t {
   svn_ra_svn_conn_t *conn;
   apr_pool_t *pool;  /* Pool provided in the handler call. */
 } file_revs_baton_t;
 
-typedef struct {
+typedef struct fs_warning_baton_t {
   server_baton_t *server;
   svn_ra_svn_conn_t *conn;
   apr_pool_t *pool;

@@ -42,7 +42,7 @@ extern "C" {
  *
  * @since New in 1.6.
  */
-typedef enum
+typedef enum svn_checksum_kind_t
 {
   /** The checksum is (or should be set to) an MD5 checksum. */
   svn_checksum_md5,

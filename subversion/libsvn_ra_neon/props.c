@@ -79,7 +79,7 @@ static const ne_propname baseline_props[] =
 
 /*** Propfind Implementation ***/
 
-typedef struct {
+typedef struct elem_defn {
   svn_ra_neon__xml_elmid id;
   const char *name;
   int is_property;      /* is it a property, or part of some structure? */

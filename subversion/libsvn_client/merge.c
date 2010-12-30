@@ -1213,7 +1213,7 @@ merge_props_changed(const char *local_dir_abspath,
 }
 
 /* Contains any state collected while resolving conflicts. */
-typedef struct
+typedef struct conflict_resolver_baton_t
 {
   /* The wrapped callback and baton. */
   svn_wc_conflict_resolver_func_t wrapped_func;
@@ -2591,7 +2591,7 @@ merge_callbacks =
 
 
 /* Contains any state collected while receiving path notifications. */
-typedef struct
+typedef struct notification_receiver_baton_t
 {
   /* The wrapped callback and baton. */
   svn_wc_notify_func2_t wrapped_func;

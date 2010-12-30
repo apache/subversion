@@ -32,7 +32,7 @@ extern "C" {
 
 /* Stores the context information related to Digest authentication.
    The context is per connection. */
-typedef struct
+typedef struct serf_digest_context_t
 {
   /* nonce-count for digest authentication */
   unsigned int digest_nc;

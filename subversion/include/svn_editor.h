@@ -640,7 +640,7 @@ svn_editor_setcb_abort(svn_editor_t *editor,
  * @see svn_editor_setcb_many(), svn_editor_create(), svn_editor_t.
  * @since New in 1.7.
  */
-typedef struct
+typedef struct svn_editor_cb_many_t
 {
   svn_editor_cb_add_directory_t cb_add_directory;
   svn_editor_cb_add_file_t cb_add_file;

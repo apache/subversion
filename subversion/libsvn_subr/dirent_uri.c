@@ -57,7 +57,7 @@
 #endif
 
 /* Path type definition. Used only by internal functions. */
-typedef enum {
+typedef enum path_type_t {
   type_uri,
   type_dirent,
   type_relpath

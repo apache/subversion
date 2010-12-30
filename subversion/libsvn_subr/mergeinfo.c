@@ -126,7 +126,7 @@ parse_pathname(const char **input,
   (SVN_IS_VALID_REVNUM((range)->start) && ((range)->start < (range)->end))
 
 /* Ways in which two svn_merge_range_t can intersect or adjoin, if at all. */
-typedef enum
+typedef enum intersection_type_t
 {
   /* Ranges don't intersect and don't adjoin. */
   svn__no_intersection,

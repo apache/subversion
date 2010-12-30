@@ -64,7 +64,7 @@
 #define DEPTH_TO_RECURSE(d)    \
         ((d) == svn_depth_unknown || (d) > svn_depth_files)
 
-typedef struct {
+typedef struct ra_svn_commit_callback_baton_t {
   svn_ra_svn__session_baton_t *sess_baton;
   apr_pool_t *pool;
   svn_revnum_t *new_rev;
@@ -72,7 +72,7 @@ typedef struct {
   void *callback_baton;
 } ra_svn_commit_callback_baton_t;
 
-typedef struct {
+typedef struct ra_svn_reporter_baton_t {
   svn_ra_svn__session_baton_t *sess_baton;
   svn_ra_svn_conn_t *conn;
   apr_pool_t *pool;

@@ -73,7 +73,7 @@ extern "C" {
  * ### only a single FS open; otherwise, it will have to work a bit harder
  * ### to keep the things in sync.
  */
-typedef struct {
+typedef struct dav_svn_repos {
   apr_pool_t *pool;     /* request_rec -> pool */
 
   /* Remember the root URL path of this repository (just a path; no
@@ -175,7 +175,7 @@ enum dav_svn_private_restype {
 
 
 /* store info about a root in a repository */
-typedef struct {
+typedef struct dav_svn_root {
   /* If a root within the FS has been opened, the value is stored here.
      Otherwise, this field is NULL. */
   svn_fs_root_t *root;
@@ -662,7 +662,7 @@ dav_svn__post_create_txn(const dav_resource *resource,
 /*** authz.c ***/
 
 /* A baton needed by dav_svn__authz_read_func(). */
-typedef struct
+typedef struct dav_svn__authz_read_baton
 {
   /* The original request, needed to generate a subrequest. */
   request_rec *r;
@@ -809,7 +809,7 @@ dav_svn__build_uri(const dav_svn_repos *repos,
    ### URIs which we may need to parse. it also ignores any scheme, host,
    ### and port in the URI and simply assumes it refers to the same server.
 */
-typedef struct {
+typedef struct dav_svn__uri_info {
   svn_revnum_t rev;
   const char *repos_path;
   const char *activity_id;

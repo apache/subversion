@@ -71,7 +71,7 @@ struct dav_stream {
 
 /* Convenience structure that facilitates combined memory allocation of
    a dav_resource and dav_resource_private pair. */
-typedef struct {
+typedef struct dav_resource_combined {
   dav_resource res;
   dav_resource_private priv;
 } dav_resource_combined;
@@ -3049,7 +3049,7 @@ set_headers(request_rec *r, const dav_resource *resource)
 }
 
 
-typedef struct {
+typedef struct diff_ctx_t {
   ap_filter_t *output;
   apr_pool_t *pool;
 } diff_ctx_t;
@@ -3932,7 +3932,7 @@ move_resource(dav_resource *src,
 }
 
 
-typedef struct {
+typedef struct walker_ctx_t {
   /* the input walk parameters */
   const dav_walk_params *params;
 

@@ -30,7 +30,7 @@
 extern "C" {
 #endif /* __cplusplus */
 
-typedef struct {
+typedef struct svn_cache__vtable_t {
   svn_error_t *(*get)(void **value,
                       svn_boolean_t *found,
                       void *cache_implementation,

@@ -76,7 +76,7 @@ enum merge_rtype {
   RTYPE_BASELINE    /* a baseline resource */
 };
 
-typedef struct {
+typedef struct merge_ctx_t {
   /*WARNING: WANT_CDATA should stay the first element in the baton:
     svn_ra_neon__xml_collect_cdata() assumes the baton starts with a stringbuf.
   */

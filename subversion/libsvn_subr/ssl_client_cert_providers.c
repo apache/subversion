@@ -105,7 +105,7 @@ void svn_auth_get_ssl_client_cert_file_provider
 
 /* Baton type for prompting to send client ssl creds.
    There is no iteration baton type. */
-typedef struct
+typedef struct ssl_client_cert_prompt_provider_baton_t
 {
   svn_auth_ssl_client_cert_prompt_func_t prompt_func;
   void *prompt_baton;
@@ -115,7 +115,7 @@ typedef struct
 } ssl_client_cert_prompt_provider_baton_t;
 
 /* Iteration baton. */
-typedef struct
+typedef struct ssl_client_cert_prompt_iter_baton_t
 {
   /* The original provider baton */
   ssl_client_cert_prompt_provider_baton_t *pb;

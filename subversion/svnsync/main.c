@@ -226,7 +226,7 @@ static const apr_getopt_option_t svnsync_options[] =
     { 0, 0, 0, 0 }
   };
 
-typedef struct {
+typedef struct opt_baton_t {
   svn_boolean_t non_interactive;
   svn_boolean_t trust_server_cert;
   svn_boolean_t no_auth_cache;
@@ -355,7 +355,7 @@ get_lock(const svn_string_t **lock_string_p,
 
 
 /* Baton for the various subcommands to share. */
-typedef struct {
+typedef struct subcommand_baton_t {
   /* common to all subcommands */
   apr_hash_t *config;
   svn_ra_callbacks2_t source_callbacks;
@@ -930,7 +930,7 @@ open_target_session(svn_ra_session_t **target_session_p,
 }
 
 /* Replay baton, used during sychnronization. */
-typedef struct {
+typedef struct replay_baton_t {
   svn_ra_session_t *from_session;
   svn_ra_session_t *to_session;
   subcommand_baton_t *sb;

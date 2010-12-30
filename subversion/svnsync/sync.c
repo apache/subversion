@@ -137,7 +137,7 @@ svnsync_normalize_revprops(apr_hash_t *rev_props,
 
 
 /* Edit baton */
-typedef struct {
+typedef struct edit_baton_t {
   const svn_delta_editor_t *wrapped_editor;
   void *wrapped_edit_baton;
   const char *to_url;  /* URL we're copying into, for correct copyfrom URLs */
@@ -155,7 +155,7 @@ typedef struct {
 
 
 /* A dual-purpose baton for files and directories. */
-typedef struct {
+typedef struct node_baton_t {
   void *edit_baton;
   void *wrapped_node_baton;
 } node_baton_t;

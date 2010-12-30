@@ -103,7 +103,7 @@ struct dag_node_cache_t
 };
 
 
-typedef struct
+typedef struct base_root_data_t
 {
 
   /* For revision roots, this is a dag node for the revision's root
@@ -4239,7 +4239,7 @@ base_paths_changed(apr_hash_t **changed_paths_p,
 
 
 /* Our coolio opaque history object. */
-typedef struct
+typedef struct base_history_data_t
 {
   /* filesystem object */
   svn_fs_t *fs;
