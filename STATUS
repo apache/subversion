@@ -221,6 +221,13 @@ Candidate changes:
    Votes:
      +1: blair
 
+ * r1053984
+   Fix bug where committing a changelist was prevented by a file outside that
+   changelist having unexpectedly changed special status.
+   Justification:
+     Local fix.  users@ reports.
+   Votes:
+
 Veto-blocked changes:
 =====================
 
