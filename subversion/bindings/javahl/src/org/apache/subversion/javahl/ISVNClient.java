@@ -681,19 +681,6 @@ public interface ISVNClient
             throws ClientException;
 
     /**
-     * Remove one property of an item.
-     * @param path      path of the item
-     * @param name      name of the property
-     * @param depth     the depth to recurse into subdirectories
-     * @param changelists changelists to filter by
-     * @throws ClientException
-     * @since 1.5
-     */
-    void propertyRemove(String path, String name, Depth depth,
-                        Collection<String> changelists, CommitCallback callback)
-            throws ClientException;
-
-    /**
      * Retrieve one revsision property of one item
      * @param path      path of the item
      * @param name      name of the property
