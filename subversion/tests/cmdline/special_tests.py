@@ -664,6 +664,24 @@ def propvalue_normalized(sbox):
                                      iota2_path)
 
 
+# on users@: http://mid.gmane.org/1292856447.8650.24.camel@nimble.325Bayport
+def unrelated_changed_special_status(sbox):
+  "commit foo while bar changed special status"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  os.chdir(os.path.join(sbox.wc_dir, 'A/D/H'))
+
+  open('chi', 'a').write('random local mod')
+  os.unlink('psi')
+  os.symlink('omega', 'psi') # omega is versioned!
+  svntest.main.run_svn(None, 'changelist', 'chi cl', 'chi')
+  svntest.actions.run_and_verify_svn(None, None, [], 'commit',
+                                     '--changelist', 'chi cl',
+                                     '-m', 'psi changed special status')
+
+
 ########################################################################
 # Run the tests
 
@@ -687,6 +705,8 @@ test_list = [ None,
               SkipUnless(update_obstructing_symlink, svntest.main.is_posix_os),
               warn_on_reserved_name,
               Skip(propvalue_normalized, svntest.main.is_posix_os),
+              SkipUnless(unrelated_changed_special_status,
+                         svntest.main.is_posix_os),
              ]
 
 if __name__ == '__main__':
