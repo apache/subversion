@@ -52,7 +52,7 @@
 
 /* Temporary structures which mirror the tables in wc-metadata.sql.
    For detailed descriptions of each field, see that file. */
-typedef struct {
+typedef struct db_base_node_t {
   apr_int64_t wc_id;
   const char *local_relpath;
   apr_int64_t repos_id;
@@ -71,7 +71,7 @@ typedef struct {
   apr_hash_t *properties;
 } db_base_node_t;
 
-typedef struct {
+typedef struct db_working_node_t {
   apr_int64_t wc_id;
   const char *local_relpath;
   apr_int64_t op_depth;
@@ -93,7 +93,7 @@ typedef struct {
   apr_hash_t *properties;
 } db_working_node_t;
 
-typedef struct {
+typedef struct db_actual_node_t {
   apr_int64_t wc_id;
   const char *local_relpath;
   const char *parent_relpath;
@@ -540,8 +540,8 @@ read_one_entry(const svn_wc_entry_t **new_entry,
         entry->copied = TRUE;
 
       /* If there is still a directory on-disk we keep it, if not it is
-         already deleted. Simple, isn't it? 
-         
+         already deleted. Simple, isn't it?
+
          Before single-db we had to keep the administative area alive until
          after the commit really deletes it. Setting keep alive stopped the
          commit processing from deleting the directory. We don't delete it
@@ -625,7 +625,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
                                            entry_abspath,
                                            result_pool, scratch_pool));
 
-          /* In wc.db we want to keep the valid revision of the not-present 
+          /* In wc.db we want to keep the valid revision of the not-present
              BASE_REV, but when we used entries we set the revision to 0
              when adding a new node over a not present base node. */
           if (work_status == svn_wc__db_status_added

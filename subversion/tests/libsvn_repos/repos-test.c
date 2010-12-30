@@ -2377,7 +2377,7 @@ get_logs(const svn_test_opts_t *opts,
 
 /* Tests for svn_repos_get_file_revsN() */
 
-typedef struct {
+typedef struct file_revs_t {
     svn_revnum_t rev;
     const char *path;
     svn_boolean_t result_of_merge;

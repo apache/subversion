@@ -65,7 +65,7 @@ static const svn_ra_neon__xml_elm_t lock_elements[] =
   { NULL }
 };
 
-typedef struct
+typedef struct lock_baton_t
 {
   svn_stringbuf_t *cdata;
   apr_pool_t *pool;
@@ -211,7 +211,7 @@ lock_from_baton(svn_lock_t **lock,
           if (strncmp("Second-", timeout_str, strlen("Second-")) == 0)
             {
               int time_offset;
-              
+
               SVN_ERR(svn_cstring_atoi(&time_offset, &(timeout_str[7])));
               lck->expiration_date = lck->creation_date
                 + apr_time_from_sec(time_offset);

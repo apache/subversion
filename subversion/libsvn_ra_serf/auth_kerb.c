@@ -99,7 +99,7 @@
  * ### TODO: Not implemented yet!
  */
 
-typedef enum
+typedef enum gss_api_auth_state
 {
   gss_api_auth_not_started,
   gss_api_auth_in_progress,
@@ -110,7 +110,7 @@ typedef enum
 #define KRB_HTTP_SERVICE "HTTP"
 
 /* Stores the context information related to Kerberos authentication. */
-typedef struct
+typedef struct serf_gss_api_context_t
 {
   apr_pool_t *pool;
 

@@ -186,7 +186,7 @@ def verify_mirror(dest_sbox, exp_dump_file_contents):
 
   svntest.verify.compare_and_display_lines(
     "Dump files", "DUMP", exp_dump_file_contents, dest_dump)
-  
+
 def run_test(sbox, dump_file_name, subdir=None, exp_dump_file_name=None,
              bypass_prop_validation=False):
   """Load a dump file, sync repositories, and compare contents with the original
@@ -214,7 +214,7 @@ or another dump file."""
     exp_master_dumpfile_contents = master_dumpfile_contents
 
   verify_mirror(dest_sbox, exp_master_dumpfile_contents)
-  
+
 
 
 ######################################################################
@@ -818,7 +818,7 @@ def commit_a_copy_of_root(sbox):
 #   svnsync: File not found: revision 4, path '/trunk/H/Z/B/lambda'
 #
 # See also http://svn.haxx.se/dev/archive-2010-11/0411.shtml and
-# 
+#
 #
 # Note: For those who may poke around this test in the future, r3 of
 # delete-revprops.dump was created with the following svnmucc command:

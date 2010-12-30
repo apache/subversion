@@ -1579,7 +1579,7 @@ remove_prefix_helper(struct catalog_bits *test_data,
   svn_mergeinfo_catalog_t in_catalog, out_catalog, exp_out_catalog;
   apr_hash_index_t *hi;
   int i = 0;
-  
+
   in_catalog = apr_hash_make(pool);
   exp_out_catalog = apr_hash_make(pool);
   while (test_data[i].orig_path)

@@ -1835,7 +1835,7 @@ svn_client_update(svn_revnum_t *result_rev,
 {
   apr_array_header_t *paths = apr_array_make(pool, 1, sizeof(const char *));
   apr_array_header_t *result_revs;
-  
+
   APR_ARRAY_PUSH(paths, const char *) = path;
 
   SVN_ERR(svn_client_update2(&result_revs, paths, revision, recurse, FALSE,
@@ -1890,7 +1890,7 @@ svn_client_checkout2(svn_revnum_t *result_rev,
                      apr_pool_t *pool)
 {
   return svn_error_return(svn_client_checkout3(result_rev, URL, path,
-                                        peg_revision, revision, 
+                                        peg_revision, revision,
                                         SVN_DEPTH_INFINITY_OR_FILES(recurse),
                                         ignore_externals, FALSE, ctx, pool));
 }

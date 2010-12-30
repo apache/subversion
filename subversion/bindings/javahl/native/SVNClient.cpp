@@ -322,7 +322,7 @@ void SVNClient::add(const char *path,
 
 jlongArray SVNClient::update(Targets &targets, Revision &revision,
                              svn_depth_t depth, bool depthIsSticky,
-                             bool ignoreExternals,
+                             bool makeParents, bool ignoreExternals,
                              bool allowUnverObstructions)
 {
     SVN::Pool requestPool;
@@ -334,12 +334,13 @@ jlongArray SVNClient::update(Targets &targets, Revision &revision,
 
     const apr_array_header_t *array = targets.array(requestPool);
     SVN_JNI_ERR(targets.error_occured(), NULL);
-    SVN_JNI_ERR(svn_client_update3(&revs, array,
+    SVN_JNI_ERR(svn_client_update4(&revs, array,
                                    revision.revision(),
                                    depth,
                                    depthIsSticky,
                                    ignoreExternals,
                                    allowUnverObstructions,
+                                   makeParents,
                                    ctx, requestPool.pool()),
                 NULL);
 
@@ -566,7 +567,7 @@ void SVNClient::doImport(const char *path, const char *url,
     SVN_JNI_ERR(svn_client_import4(intPath.c_str(), intUrl.c_str(), depth,
                                    noIgnore, ignoreUnknownNodeTypes,
                                    revprops.hash(requestPool),
-                                   CommitCallback::callback, callback, 
+                                   CommitCallback::callback, callback,
                                    ctx, requestPool.pool()), );
 }
 
@@ -870,7 +871,7 @@ void SVNClient::properties(const char *path, Revision &revision,
 }
 
 void SVNClient::propertySet(const char *path, const char *name,
-                            const char *value, svn_depth_t depth,
+                            JNIByteArray &value, svn_depth_t depth,
                             StringArray &changelists, bool force,
                             RevpropTable &revprops, CommitCallback *callback)
 {
@@ -879,10 +880,11 @@ void SVNClient::propertySet(const char *path, const char *name,
     SVN_JNI_NULL_PTR_EX(name, "name", );
 
     svn_string_t *val;
-    if (value == NULL)
+    if (value.isNull())
       val = NULL;
     else
-      val = svn_string_create(value, requestPool.pool());
+      val = svn_string_ncreate((const char *)value.getBytes(), value.getLength(),
+                               requestPool.pool());
 
     Path intPath(path);
     SVN_JNI_ERR(intPath.error_occured(), );

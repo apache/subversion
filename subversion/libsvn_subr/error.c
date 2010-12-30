@@ -580,7 +580,7 @@ svn_err_best_message(svn_error_t *err, char *buf, apr_size_t bufsize)
 
 /* svn_strerror() and helpers */
 
-typedef struct {
+typedef struct err_defn {
   svn_errno_t errcode;
   const char *errdesc;
 } err_defn;

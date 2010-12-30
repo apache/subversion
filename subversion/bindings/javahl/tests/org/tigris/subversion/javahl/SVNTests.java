@@ -282,7 +282,7 @@ class SVNTests extends TestCase
     private static class DefaultPromptUserPassword implements PromptUserPassword3
     {
 
-        public int askTrustSSLServer(String info, boolean allowPermanently) 
+        public int askTrustSSLServer(String info, boolean allowPermanently)
         {
             return PromptUserPassword3.AcceptTemporary;
         }
@@ -318,25 +318,25 @@ class SVNTests extends TestCase
         }
 
         public String askQuestion(String realm, String question,
-                boolean showAnswer, boolean maySave) 
+                boolean showAnswer, boolean maySave)
         {
             return "";
         }
 
-        public boolean userAllowedSave() 
+        public boolean userAllowedSave()
         {
             return false;
         }
     }
 
-    private static class DefaultProgressListener implements ProgressListener 
+    private static class DefaultProgressListener implements ProgressListener
     {
 
-        public void onProgress(ProgressEvent event) 
+        public void onProgress(ProgressEvent event)
         {
             // Do nothing, just receive the event
         }
-        
+
     }
 
     /**

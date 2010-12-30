@@ -150,7 +150,7 @@ def guarantee_greek_repository(path):
 def run_and_verify_atomic_ra_revprop_change(message,
                                             expected_stdout,
                                             expected_stderr,
-                                            expected_exit, 
+                                            expected_exit,
                                             url, revision, propname,
                                             old_propval, propval,
                                             want_error):

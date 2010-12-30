@@ -738,7 +738,7 @@ start_error(svn_ra_serf__xml_parser_t *parser,
       if (err_code)
         {
           apr_int64_t val;
-          
+
           SVN_ERR(svn_cstring_atoi64(&val, err_code));
           ctx->error->apr_err = (apr_status_t)val;
         }
@@ -1714,7 +1714,7 @@ setup_request_cb(serf_request_t *request,
 
   if (err)
     {
-      ctx->session->pending_error 
+      ctx->session->pending_error
                 = svn_error_compose_create(ctx->session->pending_error,
                                            err);
 

@@ -47,7 +47,7 @@
 /*
  * This enum represents the current state of our XML parsing.
  */
-typedef enum {
+typedef enum replay_state_e {
   NONE = 0,
   REPORT,
   OPEN_DIR,
@@ -76,7 +76,7 @@ typedef svn_error_t *
                  const svn_string_t *value,
                  apr_pool_t *pool);
 
-typedef struct {
+typedef struct prop_info_t {
   apr_pool_t *pool;
 
   change_prop_t change;

@@ -57,7 +57,7 @@
 /* This structure is used as baton for enumerating the config entries
    in the auto-props section.
 */
-typedef struct
+typedef struct auto_props_baton_t
 {
   /* the file name for which properties are searched */
   const char *filename;

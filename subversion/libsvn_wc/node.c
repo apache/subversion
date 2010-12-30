@@ -421,7 +421,7 @@ svn_wc__node_get_url(const char **url,
                             result_pool, scratch_pool));
 }
 
-/* ### This is essentially a copy-paste of svn_wc__internal_get_url(). 
+/* ### This is essentially a copy-paste of svn_wc__internal_get_url().
  * ### If we decide to keep this one, then it should be rewritten to avoid
  * ### code duplication.*/
 svn_error_t *
@@ -980,11 +980,11 @@ svn_wc__node_get_base_rev(svn_revnum_t *base_revision,
 
 svn_error_t *
 svn_wc__node_get_working_rev_info(svn_revnum_t *revision,
-                                  svn_revnum_t *changed_rev, 
-                                  apr_time_t *changed_date, 
+                                  svn_revnum_t *changed_rev,
+                                  apr_time_t *changed_date,
                                   const char **changed_author,
-                                  svn_wc_context_t *wc_ctx, 
-                                  const char *local_abspath, 
+                                  svn_wc_context_t *wc_ctx,
+                                  const char *local_abspath,
                                   apr_pool_t *scratch_pool,
                                   apr_pool_t *result_pool)
 {
@@ -1016,7 +1016,7 @@ svn_wc__node_get_working_rev_info(svn_revnum_t *revision,
                                        NULL, changed_rev, changed_date,
                                        changed_author, NULL, NULL, NULL,
                                        NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, 
+                                       NULL, NULL, NULL, NULL,
                                        NULL, NULL, wc_ctx->db, work_del_abspath,
                                        result_pool, scratch_pool));
         }
@@ -1169,7 +1169,7 @@ svn_wc__node_get_lock_info(const char **lock_token,
     *lock_comment = lock ? lock->comment : NULL;
   if (lock_date)
     *lock_date = lock ? lock->date : 0;
-      
+
   return SVN_NO_ERROR;
 }
 

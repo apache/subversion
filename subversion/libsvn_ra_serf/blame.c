@@ -47,7 +47,7 @@
 /*
  * This enum represents the current state of our XML parsing for a REPORT.
  */
-typedef enum {
+typedef enum blame_state_e {
   NONE = 0,
   FILE_REVS_REPORT,
   FILE_REV,
@@ -58,7 +58,7 @@ typedef enum {
   TXDELTA,
 } blame_state_e;
 
-typedef struct {
+typedef struct blame_info_t {
   /* Current pool. */
   apr_pool_t *pool;
 
@@ -96,7 +96,7 @@ typedef struct {
 
 } blame_info_t;
 
-typedef struct {
+typedef struct blame_context_t {
   /* pool passed to get_file_revs */
   apr_pool_t *pool;
 

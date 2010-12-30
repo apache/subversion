@@ -55,11 +55,11 @@ class SubversionCoreTestCase(unittest.TestCase):
     rev = svn.core.svn_opt_revision_t()
     rev.kind = svn.core.svn_opt_revision_head
     ctx = svn.client.create_context()
-    
+
     class Receiver:
       def __call__(self, path, info, pool):
         raise self.e
-    
+
     rec = Receiver()
     args = (repos_uri, rev, rev, rec, svn.core.svn_depth_empty, None, ctx)
 
@@ -67,7 +67,7 @@ class SubversionCoreTestCase(unittest.TestCase):
       # ordinary Python exceptions must be passed through
       rec.e = TypeError()
       self.assertRaises(TypeError, svn.client.info2, *args)
-      
+
       # SubversionException will be translated into an svn_error_t, propagated
       # through the call chain and translated back to SubversionException.
       rec.e = svn.core.SubversionException("Bla bla bla.",
@@ -76,14 +76,14 @@ class SubversionCoreTestCase(unittest.TestCase):
       rec.e.child = svn.core.SubversionException("Yada yada.",
                                              svn.core.SVN_ERR_INCOMPLETE_DATA)
       self.assertRaises(svn.core.SubversionException, svn.client.info2, *args)
-      
+
       # It must remain unchanged through the process.
       try:
         svn.client.info2(*args)
       except svn.core.SubversionException, exc:
         # find the original exception
         while exc.file != rec.e.file: exc = exc.child
-        
+
         self.assertEqual(exc.message, rec.e.message)
         self.assertEqual(exc.apr_err, rec.e.apr_err)
         self.assertEqual(exc.line, rec.e.line)
@@ -92,7 +92,7 @@ class SubversionCoreTestCase(unittest.TestCase):
         self.assertEqual(exc.child.child, None)
         self.assertEqual(exc.child.file, None)
         self.assertEqual(exc.child.line, 0)
-        
+
       # Incomplete SubversionExceptions must trigger Python exceptions, which
       # will be passed through.
       rec.e = svn.core.SubversionException("No fields except message.")

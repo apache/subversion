@@ -67,7 +67,7 @@ extern "C" {
 typedef struct svn_ra_serf__session_t svn_ra_serf__session_t;
 typedef struct svn_ra_serf__auth_protocol_t svn_ra_serf__auth_protocol_t;
 
-typedef enum
+typedef enum svn_ra_serf__authn_types
 {
   svn_ra_serf__authn_none      = 0x00,
   svn_ra_serf__authn_basic     = 0x01,

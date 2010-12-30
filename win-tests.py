@@ -483,7 +483,7 @@ class Httpd:
     fp.write(self._svn_repo('local_tmp'))
 
     # And two redirects for the redirect tests
-    fp.write('RedirectMatch permanent ^/svn-test-work/repositories/' 
+    fp.write('RedirectMatch permanent ^/svn-test-work/repositories/'
              'REDIRECT-PERM-(.*)$ /svn-test-work/repositories/$1\n')
     fp.write('RedirectMatch           ^/svn-test-work/repositories/'
              'REDIRECT-TEMP-(.*)$ /svn-test-work/repositories/$1\n')
@@ -491,7 +491,7 @@ class Httpd:
     fp.write('TypesConfig     ' + self._quote(self.httpd_mime_types) + '\n')
     fp.write('LogLevel        Debug\n')
     fp.write('HostNameLookups Off\n')
-    
+
     fp.close()
 
   def __del__(self):
@@ -685,26 +685,26 @@ else:
           '-Dtest.rooturl=',
           '-Dtest.fstype=' + fs_type ,
           '-Dtest.tests=',
-          
-          '-Djava.library.path=' 
+
+          '-Djava.library.path='
                     + os.path.join(abs_objdir,
                                    'subversion/bindings/javahl/native'),
-          '-classpath', 
+          '-classpath',
           os.path.join(abs_srcdir, 'subversion/bindings/javahl/classes') +';' +
             gen_obj.junit_path
          )
-  
-  sys.stderr.flush()        
+
+  sys.stderr.flush()
   print('Running org.apache.subversion tests:')
   sys.stdout.flush()
-  
+
   r = subprocess.call(args + tuple(['org.apache.subversion.javahl.RunTests']))
   sys.stdout.flush()
   sys.stderr.flush()
   if (r != 0):
     print('[Test runner reported failure]')
     failed = True
-  
+
   print('Running org.tigris.subversion tests:')
   sys.stdout.flush()
   r = subprocess.call(args + tuple(['org.tigris.subversion.javahl.RunTests']))
@@ -713,7 +713,7 @@ else:
   if (r != 0):
     print('[Test runner reported failure]')
     failed = True
-  
+
 # Stop service daemon, if any
 if daemon:
   del daemon

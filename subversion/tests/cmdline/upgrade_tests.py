@@ -607,7 +607,7 @@ def missing_dirs(sbox):
   if svntest.main.wc_is_singledb(sbox.wc_dir):
     expected_status.tweak('A/D', 'A/B_new/F', status='! ')
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
-  
+
 def missing_dirs2(sbox):
   "missing directories and obstructing dirs"
 
@@ -670,7 +670,7 @@ def delete_and_keep_local(sbox):
 
 
 def dirs_only_upgrade(sbox):
-  "upgrade a wc without files" 
+  "upgrade a wc without files"
 
   sbox.build(create_wc = False)
   replace_sbox_with_tarfile(sbox, 'dirs-only.tar.bz2')
@@ -695,14 +695,14 @@ def read_tree_conflict_data(sbox, path):
                         "and local_relpath = '%s'" % path):
     return
   raise svntest.Failure("conflict expected for '%s'" % path)
-  
+
 def no_actual_node(sbox, path):
   dot_svn = svntest.main.get_admin_name()
   db = svntest.sqlite3.connect(os.path.join(sbox.wc_dir, dot_svn, 'wc.db'))
   for row in db.execute("select 1 from actual_node "
                         "where local_relpath = '%s'" % path):
     raise svntest.Failure("no actual node expected for '%s'" % path)
-  
+
 def upgrade_tree_conflict_data(sbox):
   "upgrade tree conflict data (f20->f21)"
 

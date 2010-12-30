@@ -73,7 +73,7 @@ def temporary_redirect(sbox):
   sbox.build(create_wc=False)
   wc_dir = sbox.add_wc_path("my")
   co_url = sbox.redirected_root_url(temporary=True)
-  
+
   # Try various actions against the repository, expecting an error
   # that indicates that some relocation has occurred.
   exit_code, out, err = svntest.main.run_svn('.*moved temporarily.*',
@@ -95,7 +95,7 @@ def redirected_checkout(sbox):
   sbox.build(create_wc=False)
   wc_dir = sbox.add_wc_path("my")
   co_url = sbox.redirected_root_url()
-  
+
   # Checkout the working copy via its redirect URL
   exit_code, out, err = svntest.main.run_svn(None, 'co', co_url, wc_dir)
   if err:
@@ -105,7 +105,7 @@ def redirected_checkout(sbox):
 
   # Verify that we have the expected URL.
   verify_url(wc_dir, sbox.repo_url)
-  
+
 #----------------------------------------------------------------------
 
 def redirected_update(sbox):
@@ -136,7 +136,7 @@ def redirected_update(sbox):
 
   # Verify that we have the expected URL.
   verify_url(wc_dir, sbox.repo_url)
-  
+
 #----------------------------------------------------------------------
 
 ########################################################################

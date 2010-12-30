@@ -932,7 +932,7 @@ svn_error_t *svn_ra_svn__handle_failure_status(const apr_array_header_t *params,
          easily change that, so "" means a nonexistent message. */
       if (!*message)
         message = NULL;
-      
+
       /* Skip over links in the error chain that were intended only to
          exist on the server (to wrap real errors intended for the
          client) but accidentally got included in the server's actual
@@ -952,7 +952,7 @@ svn_error_t *svn_ra_svn__handle_failure_status(const apr_array_header_t *params,
   if (! err)
     err = svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                            _("Malformed error list"));
-    
+
   return err;
 }
 

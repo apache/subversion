@@ -2414,7 +2414,7 @@ svn_wc__db_temp_op_set_rev_and_repos_relpath(svn_wc__db_t *db,
    REPOS_RELPATH is not NULL, apply REPOS_RELPATH, REPOS_ROOT_URL and
    REPOS_UUID.
    Perform all temporary allocations in SCRATCH_POOL.
-   
+
    ### For 1.7 this should probably become a proper tree conflict and
    ### just handled by putting a base directory below the existing
    ### working node.
