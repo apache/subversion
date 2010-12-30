@@ -222,7 +222,6 @@ public class BasicTests extends SVNTests
         PrintWriter pw;
         Status status;
         MyStatusCallback statusCallback;
-        MyCommitCallback commitCallback = new MyCommitCallback();
         long rev;             // Resulting rev from co or update
         long expectedRev = 2;  // Keeps track of the latest rev committed
 
@@ -234,10 +233,7 @@ public class BasicTests extends SVNTests
         addExpectedCommitItem(thisTest.getWCPath(),
                               thisTest.getUrl().toString(), "A/D/G/rho",
                               NodeKind.file, CommitItemStateFlags.TextMods);
-        client.commit(thisTest.getWCPathSet(), Depth.infinity,
-                      false, false, null, null, new ConstMsg("log msg"),
-                      commitCallback);
-        rev = commitCallback.getRevision();
+        rev = commit(thisTest, "log msg");
         assertEquals("wrong revision number from commit", rev, expectedRev++);
         thisTest.getWc().setItemWorkingCopyRevision("A/D/G/rho", rev);
         thisTest.getWc().setItemContent("A/D/G/rho",
@@ -258,10 +254,7 @@ public class BasicTests extends SVNTests
         addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl().toString(),
                               "A/D/G/pi", NodeKind.file,
                               CommitItemStateFlags.Delete);
-        client.commit(thisTest.getWCPathSet(), Depth.infinity,
-                      false, false, null, null, new ConstMsg("log msg"),
-                      commitCallback);
-        rev = commitCallback.getRevision();
+        rev = commit(thisTest, "log msg");
         assertEquals("wrong revision number from commit", rev, expectedRev++);
         thisTest.getWc().removeItem("A/D/G/pi");
 
@@ -278,10 +271,7 @@ public class BasicTests extends SVNTests
         addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl().toString(),
                               "A/D/G/tau",NodeKind.file,
                               CommitItemStateFlags.TextMods);
-        client.commit(thisTest.getWCPathSet(), Depth.infinity,
-                      false, false, null, null, new ConstMsg("log msg"),
-                      commitCallback);
-        rev = commitCallback.getRevision();
+        rev = commit(thisTest, "log msg");
         assertEquals("wrong revision number from commit", rev, expectedRev++);
         thisTest.getWc().setItemWorkingCopyRevision("A/D/G/tau", rev);
         thisTest.getWc().setItemContent("A/D/G/tau",
@@ -301,10 +291,7 @@ public class BasicTests extends SVNTests
         addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl().toString(),
                               "A/C", NodeKind.dir,
                               CommitItemStateFlags.Delete);
-        client.commit(thisTest.getWCPathSet(), Depth.infinity,
-                      false, false, null, null, new ConstMsg("log msg"),
-                      commitCallback);
-        rev = commitCallback.getRevision();
+        rev = commit(thisTest, "log msg");
         assertEquals("wrong revision number from commit", rev, expectedRev++);
         thisTest.getWc().removeItem("A/C");
         long CCommitRev = rev;
@@ -316,10 +303,7 @@ public class BasicTests extends SVNTests
         client.add(dir.getAbsolutePath(), Depth.infinity, false, false, false);
         addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl().toString(),
                               "A/B/I", NodeKind.dir, CommitItemStateFlags.Add);
-        client.commit(thisTest.getWCPathSet(), Depth.infinity,
-                      false, false, null, null, new ConstMsg("log msg"),
-                      commitCallback);
-        rev = commitCallback.getRevision();
+        rev = commit(thisTest, "log msg");
         assertEquals("wrong revision number from commit", rev, expectedRev++);
         thisTest.getWc().addItem("A/B/I", null);
         statusCallback = new MyStatusCallback();
@@ -339,10 +323,7 @@ public class BasicTests extends SVNTests
         thisTest.getWc().setItemPropStatus("", Status.Kind.modified);
         addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl().toString(),
                              null, NodeKind.dir, CommitItemStateFlags.PropMods);
-        client.commit(thisTest.getWCPathSet(), Depth.infinity,
-                      false, false, null, null, new ConstMsg("log msg"),
-                      commitCallback);
-        rev = commitCallback.getRevision();
+        rev = commit(thisTest, "log msg");
         assertEquals("wrong revision number from commit", rev, expectedRev++);
         thisTest.getWc().setItemWorkingCopyRevision("", rev);
         thisTest.getWc().setItemPropStatus("", Status.Kind.normal);
@@ -357,10 +338,7 @@ public class BasicTests extends SVNTests
                               "A/D/H/nu", NodeKind.file,
                               CommitItemStateFlags.TextMods +
                               CommitItemStateFlags.Add);
-        client.commit(thisTest.getWCPathSet(), Depth.infinity,
-                      false, false, null, null, new ConstMsg("log msg"),
-                      commitCallback);
-        rev = commitCallback.getRevision();
+        rev = commit(thisTest, "log msg");
         assertEquals("wrong revision number from commit", rev, expectedRev++);
         thisTest.getWc().addItem("A/D/H/nu", "This is the file 'nu'.");
         statusCallback = new MyStatusCallback();
@@ -376,10 +354,7 @@ public class BasicTests extends SVNTests
         addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl().toString(),
                               "A/B/F", NodeKind.dir,
                               CommitItemStateFlags.PropMods);
-        client.commit(thisTest.getWCPathSet(), Depth.infinity,
-                      false, false, null, null, new ConstMsg("log msg"),
-                      commitCallback);
-        rev = commitCallback.getRevision();
+        rev = commit(thisTest, "log msg");
         assertEquals("wrong revision number from commit", rev, expectedRev++);
         thisTest.getWc().setItemPropStatus("A/B/F", Status.Kind.normal);
         thisTest.getWc().setItemWorkingCopyRevision("A/B/F", rev);
@@ -397,10 +372,7 @@ public class BasicTests extends SVNTests
         addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl().toString(),
                               "A/D/H/chi", NodeKind.file,
                               CommitItemStateFlags.Delete);
-        client.commit(thisTest.getWCPathSet(), Depth.infinity,
-                      false, false, null, null, new ConstMsg("log msg"),
-                      commitCallback);
-        rev = commitCallback.getRevision();
+        rev = commit(thisTest, "log msg");
         assertEquals("wrong revision number from commit", rev, expectedRev++);
         thisTest.getWc().removeItem("A/D/G/pi");
 
@@ -413,10 +385,7 @@ public class BasicTests extends SVNTests
                               "A/D/H/chi", NodeKind.file,
                               CommitItemStateFlags.TextMods +
                               CommitItemStateFlags.Add);
-        client.commit(thisTest.getWCPathSet(), Depth.infinity,
-                      false, false, null, null, new ConstMsg("log msg"),
-                      commitCallback);
-        rev = commitCallback.getRevision();
+        rev = commit(thisTest, "log msg");
         assertEquals("wrong revision number from commit", rev, expectedRev++);
         thisTest.getWc().addItem("A/D/H/chi",
                                  "This is the replacement file 'chi'.");
@@ -434,10 +403,7 @@ public class BasicTests extends SVNTests
         addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl().toString(),
                               "A/B/E", NodeKind.dir,
                               CommitItemStateFlags.Delete);
-        client.commit(thisTest.getWCPathSet(), Depth.infinity,
-                      false, false, null, null, new ConstMsg("log msg"),
-                      commitCallback);
-        rev = commitCallback.getRevision();
+        rev = commit(thisTest, "log msg");
         assertEquals("wrong revision number from commit", rev, expectedRev++);
         thisTest.getWc().removeItem("A/B/E/alpha");
         thisTest.getWc().removeItem("A/B/E/beta");
@@ -459,10 +425,7 @@ public class BasicTests extends SVNTests
         addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl().toString(),
                               "A/D/H/psi", NodeKind.file,
                               CommitItemStateFlags.Delete);
-        client.commit(thisTest.getWCPathSet(), Depth.infinity,
-                      false, false, null, null, new ConstMsg("log msg"),
-                      commitCallback);
-        rev = commitCallback.getRevision();
+        rev = commit(thisTest, "log msg");
         assertEquals("wrong revision number from commit", rev, expectedRev++);
         thisTest.getWc().removeItem("A/D/H/psi");
         thisTest.getWc().setRevision(rev);
@@ -475,10 +438,7 @@ public class BasicTests extends SVNTests
         addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl().toString(),
                               "A/D/H/psi", NodeKind.dir,
                               CommitItemStateFlags.Add);
-        client.commit(thisTest.getWCPathSet(), Depth.infinity,
-                      false, false, null, null, new ConstMsg("log msg"),
-                      commitCallback);
-        rev = commitCallback.getRevision();
+        rev = commit(thisTest, "log msg");
         assertEquals("wrong revision number from commit", rev, expectedRev++);
         statusCallback = new MyStatusCallback();
         client.status(thisTest.getWCPath() + "/A/D/H/psi", Depth.immediates,
@@ -3198,9 +3158,7 @@ public class BasicTests extends SVNTests
                               CommitItemStateFlags.TextMods +
                               CommitItemStateFlags.Add);
         assertEquals("wrong revision number from commit",
-                     client.commit(thisTest.getWCPathSet(),
-                                   "log msg", Depth.infinity, false, false,
-                                   null, null), 2);
+                     commit(thisTest, "log msg"), 2);
         thisTest.getWc().addItem("A/D/H/nu", "This is the file 'nu'.");
         statusCallback = new MyStatusCallback();
         client.status(thisTest.getWCPath() + "/A/D/H/nu", Depth.immediates,
@@ -3994,5 +3952,16 @@ public class BasicTests extends SVNTests
     {
         client.propertySet(path, name, value, Depth.empty,
                            null, false, null, null);
+    }
+
+    private long commit(OneTest thisTest, String msg)
+        throws ClientException
+    {
+        MyCommitCallback commitCallback = new MyCommitCallback();
+
+        client.commit(thisTest.getWCPathSet(), Depth.infinity,
+                      false, false, null, null, new ConstMsg(msg),
+                      commitCallback);
+        return commitCallback.getRevision();
     }
 }
