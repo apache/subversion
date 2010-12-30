@@ -446,27 +446,6 @@ public class SVNClient implements ISVNClient
     }
 
     /**
-     * @since 1.5
-     */
-    public void propertyCreate(String path, String name, byte[] value,
-                               Depth depth, Collection<String> changelists,
-                               boolean force, CommitCallback callback)
-            throws ClientException
-    {
-        propertySet(path, name, value, depth, changelists, force, null,
-                    callback);
-    }
-
-    public void propertyCreate(String path, String name, String value,
-                               Depth depth, Collection<String> changelists,
-                               boolean force, CommitCallback callback)
-            throws ClientException
-    {
-        propertySet(path, name, value, depth, changelists, force, null,
-                    callback);
-    }
-
-    /**
      * @since 1.0
      */
     public native byte[] revProperty(String path, String name, Revision rev)
