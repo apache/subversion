@@ -120,7 +120,7 @@ static const svn_ra_neon__xml_elm_t getlocks_report_elements[] =
 
 
 /* Context for parsing server's response. */
-typedef struct {
+typedef struct get_locks_baton_t {
   const char *path;                /* target of the report */
   svn_depth_t requested_depth;     /* requested depth of the report */
   svn_lock_t *current_lock;        /* the lock being constructed */

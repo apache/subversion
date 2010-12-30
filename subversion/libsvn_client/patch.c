@@ -2603,7 +2603,7 @@ delete_empty_dirs(apr_array_header_t *targets_info, svn_client_ctx_t *ctx,
 }
 
 /* Baton for apply_patches(). */
-typedef struct {
+typedef struct apply_patches_baton_t {
   /* The path to the patch file. */
   const char *patch_abspath;
 

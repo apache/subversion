@@ -50,7 +50,7 @@
 #define PATHAUTHZ_BYPASS_ARG "short_circuit"
 
 /* per-server configuration */
-typedef struct {
+typedef struct server_conf_t {
   const char *special_uri;
 } server_conf_t;
 
@@ -73,7 +73,7 @@ enum path_authz_conf {
 };
 
 /* per-dir configuration */
-typedef struct {
+typedef struct dir_conf_t {
   const char *fs_path;               /* path to the SVN FS */
   const char *repo_name;             /* repository name */
   const char *xslt_uri;              /* XSL transform URI */
@@ -663,7 +663,7 @@ merge_xml_filter_insert(request_rec *r)
 }
 
 
-typedef struct {
+typedef struct merge_ctx_t {
   apr_bucket_brigade *bb;
   apr_xml_parser *parser;
   apr_pool_t *pool;

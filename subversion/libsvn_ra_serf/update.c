@@ -63,7 +63,7 @@
  * allocations that will live as long as the tag is opened.  Once
  * the tag is 'closed', the pool will be reused.
  */
-typedef enum {
+typedef enum report_state_e {
     NONE = 0,
     OPEN_DIR,
     ADD_DIR,

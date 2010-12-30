@@ -52,7 +52,7 @@
 
 /* Temporary structures which mirror the tables in wc-metadata.sql.
    For detailed descriptions of each field, see that file. */
-typedef struct {
+typedef struct db_base_node_t {
   apr_int64_t wc_id;
   const char *local_relpath;
   apr_int64_t repos_id;
@@ -71,7 +71,7 @@ typedef struct {
   apr_hash_t *properties;
 } db_base_node_t;
 
-typedef struct {
+typedef struct db_working_node_t {
   apr_int64_t wc_id;
   const char *local_relpath;
   apr_int64_t op_depth;
@@ -93,7 +93,7 @@ typedef struct {
   apr_hash_t *properties;
 } db_working_node_t;
 
-typedef struct {
+typedef struct db_actual_node_t {
   apr_int64_t wc_id;
   const char *local_relpath;
   const char *parent_relpath;

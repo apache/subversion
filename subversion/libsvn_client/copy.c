@@ -513,7 +513,7 @@ verify_wc_srcs_and_dsts(const apr_array_header_t *copy_pairs,
 
 
 /* Path-specific state used as part of path_driver_cb_baton. */
-typedef struct
+typedef struct path_driver_info_t
 {
   const char *src_url;
   const char *src_path;

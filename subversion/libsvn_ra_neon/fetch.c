@@ -55,7 +55,7 @@
 #include "ra_neon.h"
 
 
-typedef struct {
+typedef struct file_read_ctx_t {
   apr_pool_t *pool;
 
   /* these two are the handler that the editor gave us */
@@ -68,13 +68,13 @@ typedef struct {
 
 } file_read_ctx_t;
 
-typedef struct {
+typedef struct file_write_ctx_t {
   svn_boolean_t do_checksum;  /* only accumulate checksum if set */
   svn_checksum_ctx_t *checksum_ctx; /* accumulating checksum of file contents */
   svn_stream_t *stream;       /* stream to write file contents to */
 } file_write_ctx_t;
 
-typedef struct {
+typedef struct custom_get_ctx_t {
   svn_ra_neon__request_t *req;  /* Used to propagate errors out of the reader */
   int checked_type;             /* have we processed ctype yet? */
 
@@ -86,7 +86,7 @@ typedef svn_error_t * (*prop_setter_t)(void *baton,
                                        const svn_string_t *value,
                                        apr_pool_t *pool);
 
-typedef struct {
+typedef struct dir_item_t {
   /* The baton returned by the editor's open_root/open_dir */
   void *baton;
 
@@ -110,7 +110,7 @@ typedef struct {
 
 } dir_item_t;
 
-typedef struct {
+typedef struct report_baton_t {
   svn_ra_neon__session_t *ras;
 
   apr_file_t *tmpfile;

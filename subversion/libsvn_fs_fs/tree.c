@@ -97,7 +97,7 @@
    kept in the FS object and shared among multiple revision root
    objects.
 */
-typedef struct
+typedef struct fs_rev_root_data_t
 {
   /* A dag node for the revision's root directory. */
   dag_node_t *root_dir;
@@ -111,7 +111,7 @@ typedef struct
 
 } fs_rev_root_data_t;
 
-typedef struct
+typedef struct fs_txn_root_data_t
 {
   /* Cache of txn DAG nodes (without their nested noderevs, because
    * it's mutable). */
@@ -2764,7 +2764,7 @@ fs_paths_changed(apr_hash_t **changed_paths_p,
 
 
 /* Our coolio opaque history object. */
-typedef struct
+typedef struct fs_history_data_t
 {
   /* filesystem object */
   svn_fs_t *fs;

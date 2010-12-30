@@ -1281,7 +1281,7 @@ translated_stream_close(void *baton)
 
 
 /* svn_stream_mark_t for translation streams. */
-typedef struct
+typedef struct mark_translated_t
 {
   /* Saved translation state. */
   struct translated_stream_baton saved_baton;

@@ -43,7 +43,7 @@
 #include "../dav_svn.h"
 
 
-typedef struct {
+typedef struct update_ctx_t {
   const dav_resource *resource;
 
   /* the revision we are updating to. used to generated IDs. */

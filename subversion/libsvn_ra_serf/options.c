@@ -48,7 +48,7 @@
 /*
  * This enum represents the current state of our XML parsing for an OPTIONS.
  */
-typedef enum {
+typedef enum options_state_e {
   OPTIONS,
   ACTIVITY_COLLECTION,
   HREF,

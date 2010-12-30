@@ -170,7 +170,7 @@ typedef struct insert_base_baton_t {
 } insert_base_baton_t;
 
 
-typedef struct {
+typedef struct insert_working_baton_t {
   /* common to all insertions into WORKING (including NODE_DATA) */
   svn_wc__db_status_t presence;
   svn_wc__db_kind_t kind;

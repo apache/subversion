@@ -41,7 +41,7 @@ static const svn_ra_neon__xml_elm_t options_elements[] =
   { NULL }
 };
 
-typedef struct {
+typedef struct options_ctx_t {
   /*WARNING: WANT_CDATA should stay the first element in the baton:
     svn_ra_neon__xml_collect_cdata() assumes the baton starts with a stringbuf.
   */

@@ -71,7 +71,7 @@ static const svn_ra_neon__xml_elm_t drev_report_elements[] =
   { NULL }
 };
 
-typedef struct
+typedef struct drev_baton_t
 {
   svn_stringbuf_t *cdata;
   apr_pool_t *pool;

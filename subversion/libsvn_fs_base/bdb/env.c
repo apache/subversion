@@ -76,7 +76,7 @@
    filesystems.  We /should/ be safe using this as a unique hash key,
    because the database must be on a local filesystem.  We can hope,
    anyway. */
-typedef struct
+typedef struct bdb_env_key_t
 {
   apr_dev_t device;
   apr_ino_t inode;

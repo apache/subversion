@@ -47,7 +47,7 @@ extern "C" {
 /*** Option processing ***/
 
 /* --accept actions */
-typedef enum
+typedef enum svn_cl__accept_t
 {
   /* invalid accept action */
   svn_cl__accept_invalid = -2,
@@ -112,7 +112,7 @@ svn_cl__accept_from_word(const char *word);
 /*** Mergeinfo flavors. ***/
 
 /* --show-revs values */
-typedef enum {
+typedef enum svn_cl__show_revs_t {
   svn_cl__show_revs_invalid = -1,
   svn_cl__show_revs_merged,
   svn_cl__show_revs_eligible
@@ -233,7 +233,7 @@ typedef struct svn_cl__opt_state_t
 } svn_cl__opt_state_t;
 
 
-typedef struct
+typedef struct svn_cl__cmd_baton_t
 {
   svn_cl__opt_state_t *opt_state;
   svn_client_ctx_t *ctx;
@@ -324,7 +324,7 @@ svn_cl__check_cancel(void *baton);
 
 /* Various conflict-resolution callbacks. */
 
-typedef struct {
+typedef struct svn_cl__conflict_baton_t {
   svn_cl__accept_t accept_which;
   apr_hash_t *config;
   const char *editor_cmd;

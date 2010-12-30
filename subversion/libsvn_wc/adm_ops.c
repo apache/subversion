@@ -74,7 +74,7 @@ struct svn_wc_committed_queue_t
   svn_boolean_t have_recursive;
 };
 
-typedef struct
+typedef struct committed_queue_item_t
 {
   const char *local_abspath;
   svn_boolean_t recurse;

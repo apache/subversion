@@ -65,7 +65,7 @@ static const svn_ra_neon__xml_elm_t lock_elements[] =
   { NULL }
 };
 
-typedef struct
+typedef struct lock_baton_t
 {
   svn_stringbuf_t *cdata;
   apr_pool_t *pool;

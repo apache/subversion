@@ -49,7 +49,7 @@
 /*
  * This enum represents the current state of our XML parsing for a REPORT.
  */
-typedef enum {
+typedef enum lock_state_e {
   NONE = 0,
   REPORT,
   LOCK,
@@ -61,7 +61,7 @@ typedef enum {
   EXPIRATION_DATE,
 } lock_state_e;
 
-typedef struct {
+typedef struct lock_info_t {
   /* Temporary pool */
   apr_pool_t *pool;
 
@@ -73,7 +73,7 @@ typedef struct {
 
 } lock_info_t;
 
-typedef struct {
+typedef struct lock_context_t {
   apr_pool_t *pool;
 
   /* target and requested depth of the operation. */

@@ -989,7 +989,7 @@ svn_fs_fs__get_lock(svn_lock_t **lock_p,
 
 
 /* Baton for get_locks_filter_func(). */
-typedef struct
+typedef struct get_locks_filter_baton_t
 {
   const char *path;
   svn_depth_t requested_depth;
