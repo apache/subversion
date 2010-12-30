@@ -2114,7 +2114,7 @@ svn_mergeinfo__adjust_mergeinfo_rangelists(svn_mergeinfo_t *adjusted_mergeinfo,
                 APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *);
 
               if (range->start + offset > 0 && range->end + offset > 0)
-                {                  
+                {
                   if (range->start + offset < 0)
                     range->start = 0;
                   else

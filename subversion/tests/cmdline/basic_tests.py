@@ -2490,7 +2490,7 @@ def basic_mkdir_mix_targets(sbox):
 
 def delete_from_url_with_spaces(sbox):
   "delete a directory with ' ' using its url"
-  
+
   sbox.build()
   sbox.simple_mkdir('Dir With Spaces')
   sbox.simple_mkdir('Dir With')
@@ -2498,7 +2498,7 @@ def delete_from_url_with_spaces(sbox):
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                       'ci', sbox.wc_dir, '-m', 'Added dir')
-  
+
   # This fails on 1.6.11 with an escaping error.
   svntest.actions.run_and_verify_svn(None, None, [],
                                       'rm', sbox.repo_url + '/Dir%20With%20Spaces',
@@ -2619,7 +2619,7 @@ def basic_relocate(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'switch', '--relocate',
                                      substring, substring, wc_dir)
   _verify_url(wc_dir, repo_url)
-  
+
   # Real relocation to OTHER_REPO_URL.
   svntest.actions.run_and_verify_svn(None, None, [], 'switch', '--relocate',
                                      repo_url, other_repo_url, wc_dir)
@@ -2644,24 +2644,24 @@ def basic_relocate(sbox):
 def delete_urls_with_spaces(sbox):
   "delete multiple targets with spaces"
   sbox.build(create_wc = False)
-  
-  # Create three directories with a space in their name  
+
+  # Create three directories with a space in their name
   svntest.actions.run_and_verify_svn(None, None, [], 'mkdir',
                                      sbox.repo_url + '/A spaced',
                                      sbox.repo_url + '/B spaced',
                                      sbox.repo_url + '/C spaced',
                                      '-m', 'Created dirs')
 
-  # Try to delete the first                                     
+  # Try to delete the first
   svntest.actions.run_and_verify_svn(None, None, [], 'rm',
                                      sbox.repo_url + '/A spaced',
-                                     '-m', 'Deleted A') 
+                                     '-m', 'Deleted A')
 
   # And then two at once
   svntest.actions.run_and_verify_svn(None, None, [], 'rm',
                                      sbox.repo_url + '/B spaced',
                                      sbox.repo_url + '/C spaced',
-                                     '-m', 'Deleted B and C') 
+                                     '-m', 'Deleted B and C')
 
 def ls_url_special_characters(sbox):
   """special characters in svn ls URL"""
@@ -2673,7 +2673,7 @@ def ls_url_special_characters(sbox):
   for url in special_urls:
     svntest.actions.run_and_verify_svn('ls URL with special characters',
                                        ['B/\n', 'C/\n', 'D/\n', 'mu\n'],
-                                       [], 'ls', 
+                                       [], 'ls',
                                        url)
 
 ########################################################################

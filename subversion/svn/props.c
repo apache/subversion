@@ -104,7 +104,7 @@ svn_cl__print_prop_hash(svn_stream_t *out,
 
       if (out)
         {
-          pname_stdout = apr_psprintf(pool, "  %s\n", pname_stdout); 
+          pname_stdout = apr_psprintf(pool, "  %s\n", pname_stdout);
           SVN_ERR(svn_subst_translate_cstring2(pname_stdout, &pname_stdout,
                                               APR_EOL_STR,  /* 'native' eol */
                                               FALSE, /* no repair */

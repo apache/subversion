@@ -2010,7 +2010,7 @@ svn_repos_fs_get_locks2(apr_hash_t **locks,
                         void *authz_read_baton,
                         apr_pool_t *pool);
 
-/** 
+/**
  * Similar to svn_repos_fs_get_locks2(), but with @a depth always
  * passed as svn_depth_infinity.
  *

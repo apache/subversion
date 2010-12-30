@@ -300,7 +300,7 @@ svn_repos_fs_change_rev_prop4(svn_repos_t *repos,
           svn_string_t *old_value2;
 
           SVN_ERR(svn_fs_revision_prop(&old_value2, repos->fs, rev, name, pool));
-          old_value = old_value2; 
+          old_value = old_value2;
         }
 
       /* Prepare ACTION. */
@@ -716,7 +716,7 @@ svn_repos_fs_pack2(svn_repos_t *repos,
                    apr_pool_t *pool)
 {
   struct pack_notify_baton pnb;
-  
+
   pnb.notify_func = notify_func;
   pnb.notify_baton = notify_baton;
 

@@ -589,11 +589,11 @@ class WinGeneratorBase(GeneratorBase):
 
       cdesc = 'Generating %s ' % def_file
 
-      sources.append(ProjectItem(path=gsrc, reldir=None, 
+      sources.append(ProjectItem(path=gsrc, reldir=None,
                                  custom_build=cbuild,
                                  custom_target=def_file,
                                  custom_desc=cdesc,
-                                 user_deps=deps, 
+                                 user_deps=deps,
                                  extension=''))
 
       sources.append(ProjectItem(path=def_file, reldir=None,
@@ -1553,24 +1553,24 @@ class WinGeneratorBase(GeneratorBase):
 
   def _find_zlib(self):
     "Find the ZLib library and version"
-    
+
     if not self.zlib_path:
       self.zlib_version = '1'
       return
-    
+
     header_file = os.path.join(self.zlib_path, 'zlib.h')
-    
+
     if not os.path.exists(header_file):
       self.zlib_version = '1'
       return
-      
+
     fp = open(header_file)
     txt = fp.read()
     fp.close()
     vermatch = re.search(r'^\s*#define\s+ZLIB_VERSION\s+"(\d+)\.(\d+)\.(\d+)(?:\.\d)?"', txt, re.M)
 
     version = tuple(map(int, vermatch.groups()))
-    
+
     self.zlib_version = '%d.%d.%d' % version
 
     msg = 'Found ZLib version %s\n'

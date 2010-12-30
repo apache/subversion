@@ -159,7 +159,7 @@ static const apr_getopt_option_t svnsync_options[] =
   {
     {"quiet",          'q', 0,
                        N_("print as little as possible") },
-    {"revision",       'r', 1, 
+    {"revision",       'r', 1,
                        N_("operate on revision ARG (or range ARG1:ARG2)\n"
                           "                             "
                           "A revision argument can be one of:\n"
@@ -441,7 +441,7 @@ check_if_session_is_at_repos_root(svn_ra_session_t *sess,
  * revision REV of the repository associated with RA session SESSION.
  *
  * For REV zero, don't remove properties with the "svn:sync-" prefix.
- * 
+ *
  * All allocations will be done in a subpool of POOL.
  */
 static svn_error_t *
@@ -1482,7 +1482,7 @@ resolve_revnums(svn_revnum_t *start_revnum,
                                  _("Invalid revision number (%ld)"),
                                  end_rev);
     }
-  
+
   *start_revnum = start_rev;
   *end_revnum = end_rev;
   return SVN_NO_ERROR;
@@ -1552,7 +1552,7 @@ copy_revprops_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
           from_url = NULL;
         }
     }
-  
+
   if (! to_url)
     {
       /* This is the "... TO_URL SOURCE_URL" syntax.  Revisions
@@ -1580,7 +1580,7 @@ copy_revprops_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
   if (from_url && (! svn_path_is_url(from_url)))
     return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                              _("Path '%s' is not a URL"), from_url);
-      
+
   baton = make_subcommand_baton(opt_baton, to_url, from_url,
                                 start_rev, end_rev, pool);
   SVN_ERR(open_target_session(&to_session, baton, pool));

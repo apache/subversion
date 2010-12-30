@@ -57,15 +57,15 @@ public class ReposNotifyInformation extends EventObject
      * The warning text.
      */
     private String warning;
-    
+
     private long shard;
-    
+
     private long newRevision;
-    
+
     private long oldRevision;
-    
+
     private NodeAction nodeAction;
-    
+
     private String path;
 
     /**
@@ -113,17 +113,17 @@ public class ReposNotifyInformation extends EventObject
     {
         return warning;
     }
-    
+
     public long getShard()
     {
        return shard;
     }
-    
+
     public long getNewRevision()
     {
        return newRevision;
     }
-    
+
     public long getOldRevision()
     {
        return oldRevision;
@@ -133,12 +133,12 @@ public class ReposNotifyInformation extends EventObject
     {
        return nodeAction;
     }
-    
+
     public String getPath()
     {
        return path;
     }
-    
+
     /**
      * The type of action triggering the notification
      */
@@ -192,7 +192,7 @@ public class ReposNotifyInformation extends EventObject
         /** Upgrade has started. */
         upgrade_start;
     }
-    
+
     public enum NodeAction
     {
          change,

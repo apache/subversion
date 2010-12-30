@@ -73,7 +73,7 @@ def filter_and_return_output(dump, bufsize=0, *varargs):
   # normalize the stderr line endings on Windows ourselves.
   if sys.platform == 'win32':
       errput = map(lambda x : x.replace('\r\n', '\n'), errput)
-      
+
   return output, errput
 
 
@@ -111,7 +111,7 @@ def reflect_dropped_renumbered_revs(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)
-  
+
 
   # Test svndumpfilter with exclude option
   test_create(sbox)
@@ -295,7 +295,7 @@ def filter_mergeinfo_revs_outside_of_dump_stream(sbox):
   #                  r4                                            |     |
   #                   |                                            V     V
   #                  branches/B1/B/E------------------------------r14---r15->
-  #                  
+  #
   #
   # The mergeinfo on the complete repos would look like this:
   #
@@ -403,7 +403,7 @@ def filter_mergeinfo_revs_outside_of_dump_stream(sbox):
   #
   # ...But /branches/B2 has been filtered out, so all references to
   # that branch should be gone, leaving:
-  # 
+  #
   #   Properties on 'branches/B1':
   #     svn:mergeinfo
   #       /trunk:10
@@ -427,7 +427,7 @@ def filter_mergeinfo_revs_outside_of_dump_stream(sbox):
   #
   # This test currently fails with this mergeinfo:
   #
-  # 
+  #
   #
   #
   # Check that all the blather above really happens.  First does
@@ -497,7 +497,7 @@ def dropped_but_not_renumbered_empty_revs(sbox):
   test_create(sbox)
 
   # The dump file mergeinfo_included_full.dump represents this repository:
-  # 
+  #
   #
   #                       __________________________________________
   #                      |                                         |
@@ -525,7 +525,7 @@ def dropped_but_not_renumbered_empty_revs(sbox):
   #                  r4                                            |     |
   #                   |                                            V     V
   #                  branches/B1/B/E------------------------------r14---r15->
-  #                  
+  #
   #
   # The mergeinfo on mergeinfo_included_full.dump is:
   #
@@ -579,7 +579,7 @@ def dropped_but_not_renumbered_empty_revs(sbox):
   #                    ^
   #       With r7 dropped, r8 and r9 in the incoming
   #       dump becomes r7 and r8 in the loaded repos.
- 
+
   # Check the resulting mergeinfo.
   url = sbox.repo_url + "/branches"
   expected_output = svntest.verify.UnorderedOutput([

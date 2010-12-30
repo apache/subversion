@@ -364,8 +364,8 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
           /* Notify the user that a redirect is being followed. */
           if (ctx->notify_func2 != NULL)
             {
-              svn_wc_notify_t *notify = 
-                svn_wc_create_notify_url(corrected, 
+              svn_wc_notify_t *notify =
+                svn_wc_create_notify_url(corrected,
                                          svn_wc_notify_url_redirect, pool);
               (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
             }

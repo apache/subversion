@@ -391,7 +391,7 @@ public class Revision implements java.io.Serializable
                return RevisionKind.working;
            }
        }
-       
+
        public static org.apache.subversion.javahl.Revision.Kind toAKind(int kind)
        {
            switch (kind)

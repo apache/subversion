@@ -717,20 +717,20 @@ request_body_to_string(svn_string_t **request_str,
         {
           const char *data;
           apr_size_t len;
-          
+
           if (APR_BUCKET_IS_EOS(bucket))
             {
               seen_eos = 1;
               break;
             }
-          
+
           if (APR_BUCKET_IS_METADATA(bucket))
             continue;
-          
+
           status = apr_bucket_read(bucket, &data, &len, APR_BLOCK_READ);
           if (status != APR_SUCCESS)
             goto cleanup;
-          
+
           total_read += len;
           if (limit_req_body && total_read > limit_req_body)
             {
@@ -740,10 +740,10 @@ request_body_to_string(svn_string_t **request_str,
               result = HTTP_REQUEST_ENTITY_TOO_LARGE;
               goto cleanup;
             }
-          
+
           svn_stringbuf_appendbytes(buf, data, len);
         }
-      
+
       apr_brigade_cleanup(brigade);
     }
   while (!seen_eos);
@@ -758,7 +758,7 @@ request_body_to_string(svn_string_t **request_str,
 
  cleanup:
   apr_brigade_destroy(brigade);
-  
+
   /* Apache will supply a default error, plus the error log above. */
   return result;
 }

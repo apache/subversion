@@ -142,11 +142,11 @@ const apr_getopt_option_t svn_cl__options[] =
   {"quiet",         'q', 0, N_("print nothing, or only summary information")},
   {"recursive",     'R', 0, N_("descend recursively, same as --depth=infinity")},
   {"non-recursive", 'N', 0, N_("obsolete; try --depth=files or --depth=immediates")},
-  {"change",        'c', 1, 
+  {"change",        'c', 1,
                     N_("the change made by revision ARG (like -r ARG-1:ARG)\n"
                        SVN_CL__OPTION_CONTINUATION_INDENT
                        "If ARG is negative this is like -r ARG:ARG-1")},
-  {"revision",      'r', 1, 
+  {"revision",      'r', 1,
                     N_("ARG (some commands also take ARG1:ARG2 range)\n"
                        SVN_CL__OPTION_CONTINUATION_INDENT
                        "A revision argument can be one of:\n"

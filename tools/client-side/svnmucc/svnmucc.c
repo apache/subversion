@@ -162,7 +162,7 @@ struct operation {
   const char *url;       /* to copy, valid for add and replace */
   const char *src_file;  /* for put, the source file for contents */
   apr_hash_t *children;  /* const char *path -> struct operation * */
-  apr_hash_t *prop_mods; /* const char *prop_name -> 
+  apr_hash_t *prop_mods; /* const char *prop_name ->
                             const svn_string_t *prop_value */
   apr_array_header_t *prop_dels; /* const char *prop_name deletions */
   void *baton;           /* as returned by the commit editor */
@@ -204,7 +204,7 @@ change_props(const svn_delta_editor_t *editor,
         {
           const void *key;
           void *val;
-          
+
           svn_pool_clear(iterpool);
           apr_hash_this(hi, &key, NULL, &val);
           if (child->kind == svn_node_dir)
@@ -1009,15 +1009,15 @@ main(int argc, const char **argv)
           else if (action->action == ACTION_PROPSET)
             {
               action->prop_value =
-                svn_string_create(APR_ARRAY_IDX(action_args, i, 
+                svn_string_create(APR_ARRAY_IDX(action_args, i,
                                                 const char *), pool);
               if (++i == action_args->nelts)
                 insufficient(pool);
             }
           else
             {
-              const char *propval_file = 
-                svn_path_canonicalize(APR_ARRAY_IDX(action_args, i, 
+              const char *propval_file =
+                svn_path_canonicalize(APR_ARRAY_IDX(action_args, i,
                                                     const char *), pool);
 
               if (++i == action_args->nelts)

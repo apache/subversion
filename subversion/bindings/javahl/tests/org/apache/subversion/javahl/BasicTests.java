@@ -2572,7 +2572,7 @@ public class BasicTests extends SVNTests
 
         return thisTest;
     }
-    
+
     /**
      * Test the patch API.  This doesn't yet test the results, it only ensures
      * that execution goes down to the C layer and back.
@@ -2584,7 +2584,7 @@ public class BasicTests extends SVNTests
     	File patchInput = new File(super.localTmp, thisTest.testName);
     	final String iotaPath = thisTest.getWCPath().replace('\\', '/') + "/iota";
         final String NL = System.getProperty("line.separator");
-    	
+
     	final String patchText = "Index: iota" + NL +
             "===================================================================" + NL +
             "--- iota\t(revision 1)" + NL +
@@ -2592,12 +2592,12 @@ public class BasicTests extends SVNTests
             "@@ -1 +1,2 @@" + NL +
             " This is the file 'iota'." + NL +
             "+No, this is *really* the file 'iota'." + NL;
-    	
+
         PrintWriter writer = new PrintWriter(new FileOutputStream(patchInput));
         writer.print(patchText);
         writer.flush();
         writer.close();
-    	
+
     	client.patch(patchInput.getAbsolutePath(), iotaPath, false, 0,
     			false, true, true,
     			new PatchCallback() {
@@ -3493,13 +3493,13 @@ public class BasicTests extends SVNTests
                                              Collection<String> changelists)
         throws ClientException
     {
-       final Map<String, Map<String, byte[]>> propMap = 
+       final Map<String, Map<String, byte[]>> propMap =
             new HashMap<String, Map<String, byte[]>>();
-       
+
         client.properties(path, revision, revision, depth, changelists,
                 new ProplistCallback () {
             public void singlePath(String path, Map<String, byte[]> props)
-            { propMap.put(path, props); }          
+            { propMap.put(path, props); }
         });
 
         return propMap.get(path);
@@ -3560,11 +3560,11 @@ public class BasicTests extends SVNTests
         throws ClientException
     {
        final List<Info> infos = new ArrayList<Info>();
-       
+
         client.info2(pathOrUrl, revision, pegRevision, depth, changelists,
                      new InfoCallback () {
             public void singleInfo(Info info)
-            { infos.add(info); }           
+            { infos.add(info); }
         });
         return infos.toArray(new Info[infos.size()]);
     }

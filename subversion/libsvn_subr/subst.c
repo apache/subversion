@@ -905,7 +905,7 @@ eol_unchanged(struct translation_baton *b,
               const char *buf)
 {
   /* If the first byte doesn't match, the whole EOL won't.
-   * This does also handle the (certainly invalid) case that 
+   * This does also handle the (certainly invalid) case that
    * eol_str would be an empty string.
    */
   if (buf[0] != b->eol_str[0])
@@ -915,7 +915,7 @@ eol_unchanged(struct translation_baton *b,
   if (b->eol_str_len == 2)
     return buf[1] == b->eol_str[1];
 
-  /* The first char matches the required 1-byte EOL. 
+  /* The first char matches the required 1-byte EOL.
    * But maybe, buf[] contains a 2-byte EOL?
    * In that case, the second byte will be interesting
    * and not be another EOL of its own.
@@ -1036,9 +1036,9 @@ translate_chunk(svn_stream_t *dst,
           /* translate_newline will modify the baton for src_format_len==0
              or may return an error if b->repair is FALSE.  In all other
              cases, we can skip the newline translation as long as source
-             EOL format and actual EOL format match.  If there is a 
-             mismatch, translate_newline will be called regardless of 
-             nl_translation_skippable. 
+             EOL format and actual EOL format match.  If there is a
+             mismatch, translate_newline will be called regardless of
+             nl_translation_skippable.
            */
           if (b->nl_translation_skippable == svn_tristate_unknown &&
               b->src_format_len > 0)
@@ -1047,14 +1047,14 @@ translate_chunk(svn_stream_t *dst,
               if (b->eol_str_len == b->src_format_len &&
                   strncmp(b->eol_str, b->src_format, b->eol_str_len) == 0)
                 b->nl_translation_skippable = svn_tristate_true;
-              else if (b->repair) 
+              else if (b->repair)
                 b->nl_translation_skippable = svn_tristate_true;
               else
                 b->nl_translation_skippable = svn_tristate_false;
             }
 
           /* We're in the boring state; look for interesting characters.
-             Offset len such that it will become 0 in the first iteration. 
+             Offset len such that it will become 0 in the first iteration.
            */
           len = 0 - b->eol_str_len;
 
@@ -1081,7 +1081,7 @@ translate_chunk(svn_stream_t *dst,
                   len += 4;
                 }
 
-               /* Found an interesting char or EOF in the next 4 bytes. 
+               /* Found an interesting char or EOF in the next 4 bytes.
                   Find its exact position. */
                while ((p + len) < end && !interesting[(unsigned char)p[len]])
                  ++len;
@@ -1296,7 +1296,7 @@ translated_stream_mark(void *baton, svn_stream_mark_t **mark, apr_pool_t *pool)
 {
   mark_translated_t *mt;
   struct translated_stream_baton *b = baton;
-  
+
   mt = apr_palloc(pool, sizeof(*mt));
   SVN_ERR(svn_stream_mark(b->stream, &mt->mark, pool));
 
@@ -1331,13 +1331,13 @@ translated_stream_seek(void *baton, svn_stream_mark_t *mark)
                                 b->iterpool));
 
       SVN_ERR(svn_stream_seek(b->stream, mt->mark));
-    
+
       /* Restore translation state, avoiding new allocations. */
       *b->in_baton = *mt->saved_baton.in_baton;
       *b->out_baton = *mt->saved_baton.out_baton;
       b->written = mt->saved_baton.written;
       svn_stringbuf_setempty(b->readbuf);
-      svn_stringbuf_appendbytes(b->readbuf, mt->saved_baton.readbuf->data, 
+      svn_stringbuf_appendbytes(b->readbuf, mt->saved_baton.readbuf->data,
                                 mt->saved_baton.readbuf->len);
       b->readbuf_off = mt->saved_baton.readbuf_off;
       memcpy(b->buf, mt->saved_baton.buf, SVN__TRANSLATION_BUF_SIZE);

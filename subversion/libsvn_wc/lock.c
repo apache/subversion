@@ -162,19 +162,19 @@ svn_wc__internal_check_wc(int *wc_format,
                 return SVN_NO_ERROR;
               }
           }
-      
+
         err = svn_wc__db_read_info(&db_status, &db_kind, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL,
                                    db, local_abspath,
                                    scratch_pool, scratch_pool);
-      
+
         if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
           {
             svn_error_clear(err);
             *wc_format = 0;
-            return SVN_NO_ERROR; 
+            return SVN_NO_ERROR;
           }
         else
           SVN_ERR(err);

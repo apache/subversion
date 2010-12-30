@@ -196,7 +196,7 @@ extract_values_from_skel(svn_string_t **old_propval_p,
 {
   apr_hash_t *proplist;
   svn_skel_t *skel;
-  
+
   skel = svn_skel__parse(skel_cstr, strlen(skel_cstr), pool);
   SVN_ERR(svn_skel__parse_proplist(&proplist, skel, pool));
   *old_propval_p = apr_hash_get(proplist, KEY_OLD_PROPVAL, APR_HASH_KEY_STRING);

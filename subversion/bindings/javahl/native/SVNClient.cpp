@@ -567,7 +567,7 @@ void SVNClient::doImport(const char *path, const char *url,
     SVN_JNI_ERR(svn_client_import4(intPath.c_str(), intUrl.c_str(), depth,
                                    noIgnore, ignoreUnknownNodeTypes,
                                    revprops.hash(requestPool),
-                                   CommitCallback::callback, callback, 
+                                   CommitCallback::callback, callback,
                                    ctx, requestPool.pool()), );
 }
 

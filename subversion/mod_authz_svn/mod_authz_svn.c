@@ -166,7 +166,7 @@ get_access_conf(request_rec *r, authz_svn_config_rec *conf)
   dav_error *dav_err;
   char errbuf[256];
 
-  if (conf->repo_relative_access_file) 
+  if (conf->repo_relative_access_file)
     {
       dav_err = dav_svn_get_repos_path(r, conf->base_path, &repos_path);
       if (dav_err) {
@@ -176,12 +176,12 @@ get_access_conf(request_rec *r, authz_svn_config_rec *conf)
       access_file = svn_dirent_join_many(r->pool, repos_path, "conf",
                                          conf->repo_relative_access_file,
                                          NULL);
-    } 
+    }
   else
     {
       access_file = conf->access_file;
     }
-  
+
   ap_log_rerror(APLOG_MARK, APLOG_DEBUG, 0, r,
                 "Path to authz file is %s", access_file);
 

@@ -642,7 +642,7 @@ svn_wc__status2_from_3(svn_wc_status2_t **status,
   if (old_status->versioned
       && old_status->conflicted
       && old_status->node_status != svn_wc_status_obstructed
-      && (old_status->kind == svn_node_file 
+      && (old_status->kind == svn_node_file
           || old_status->node_status != svn_wc_status_missing))
     {
       svn_boolean_t text_conflict_p, prop_conflict_p;

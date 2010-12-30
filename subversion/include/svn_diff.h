@@ -941,7 +941,7 @@ svn_diff_hunk_get_trailing_context(const svn_diff_hunk_t *hunk);
 
 /**
  * Data type to manage parsing of properties in patches.
- * 
+ *
  * @since New in 1.7. */
 typedef struct svn_prop_patch_t {
   const char *name;
@@ -1000,7 +1000,7 @@ typedef struct svn_patch_t {
  * whitespace to be parsed.
  * Allocate results in @a result_pool.
  * Use @a scratch_pool for all other allocations.
- * 
+ *
  * @since New in 1.7. */
 svn_error_t *
 svn_diff_parse_next_patch(svn_patch_t **patch,

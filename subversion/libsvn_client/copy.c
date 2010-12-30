@@ -824,7 +824,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
      *and* destinations might be an optimization when the user is
      authorized to access all that stuff, but could cause the
      operation to fail altogether otherwise.  See issue #3242.  */
-  SVN_ERR(get_copy_pair_ancestors(copy_pairs, NULL, &top_url_dst, &top_url_all, 
+  SVN_ERR(get_copy_pair_ancestors(copy_pairs, NULL, &top_url_dst, &top_url_all,
                                   pool));
   top_url = is_move ? top_url_all : top_url_dst;
 
@@ -1629,7 +1629,7 @@ repos_to_wc_copy_locked(const apr_array_header_t *copy_pairs,
          ### simplify the conditions? */
 
       /* Hidden by client exclusion */
-      SVN_ERR(svn_wc__node_get_depth(&node_depth, ctx->wc_ctx, 
+      SVN_ERR(svn_wc__node_get_depth(&node_depth, ctx->wc_ctx,
                                      pair->dst_abspath_or_url, iterpool));
       if (node_depth == svn_depth_exclude)
         {
@@ -1661,7 +1661,7 @@ repos_to_wc_copy_locked(const apr_array_header_t *copy_pairs,
           SVN_ERR(svn_wc__node_is_status_deleted(&is_deleted, ctx->wc_ctx,
                                                  pair->dst_abspath_or_url,
                                                  iterpool));
-          SVN_ERR(svn_wc__node_is_status_present(&is_present, 
+          SVN_ERR(svn_wc__node_is_status_present(&is_present,
                                                  ctx->wc_ctx,
                                                  pair->dst_abspath_or_url,
                                                  iterpool));
@@ -1953,7 +1953,7 @@ try_copy(const apr_array_header_t *sources,
               src_basename = svn_dirent_basename(pair->src_abspath_or_url,
                                                  iterpool);
             }
-            
+
           pair->src_op_revision = *source->revision;
           pair->src_peg_revision = *source->peg_revision;
 

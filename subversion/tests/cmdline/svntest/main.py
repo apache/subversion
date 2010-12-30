@@ -636,7 +636,7 @@ def run_entriesdump_subdirs(path):
   return [line.strip() for line in stdout_lines if not line.startswith("DBG:")]
 
 def run_atomic_ra_revprop_change(url, revision, propname, skel, want_error):
-  """Run the atomic-ra-revprop-change helper, returning its exit code, stdout, 
+  """Run the atomic-ra-revprop-change helper, returning its exit code, stdout,
   and stderr.  For HTTP, default HTTP library is used."""
   # use spawn_process rather than run_command to avoid copying all the data
   # to stdout in verbose mode.
@@ -644,7 +644,7 @@ def run_atomic_ra_revprop_change(url, revision, propname, skel, want_error):
   #                                                      0, 0, None, path)
 
   # This passes HTTP_LIBRARY in addition to our params.
-  return run_command(atomic_ra_revprop_change_binary, True, False, 
+  return run_command(atomic_ra_revprop_change_binary, True, False,
                      url, revision, propname, skel,
                      options.http_library, want_error and 1 or 0)
 

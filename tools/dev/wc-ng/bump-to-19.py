@@ -212,7 +212,7 @@ def select_subdir(wc_subdir_path):
     return False
   else:
     return True
-  
+
 
 def migrate_wc_subdirs(wc_root_path):
   """Move Subversion metadata from the admin dir of each subdirectory
