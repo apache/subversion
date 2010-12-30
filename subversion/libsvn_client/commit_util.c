@@ -394,6 +394,7 @@ harvest_committables(apr_hash_t *committables,
   const char *cf_relpath = NULL;
   svn_revnum_t entry_rev, cf_rev = SVN_INVALID_REVNUM;
   const svn_string_t *propval;
+  svn_boolean_t matches_changelists;
   svn_boolean_t is_special;
   svn_boolean_t is_file_external;
   svn_boolean_t is_added;
@@ -442,6 +443,17 @@ harvest_committables(apr_hash_t *committables,
          svn_dirent_local_style(local_abspath, scratch_pool));
     }
 
+  /* Save the result for reuse. */
+  matches_changelists = svn_wc__changelist_match(ctx->wc_ctx, local_abspath,
+                                                 changelists, scratch_pool);
+
+  /* Early exit. */
+  if (working_kind != svn_node_dir && working_kind != svn_node_none
+      && ! matches_changelists)
+    {
+      return SVN_NO_ERROR;
+    }
+
   /* Verify that the node's type has not changed before attempting to
      commit. */
   SVN_ERR(svn_wc_prop_get2(&propval, ctx->wc_ctx, local_abspath,
@@ -466,8 +478,7 @@ harvest_committables(apr_hash_t *committables,
 
   /* If ENTRY is in our changelist, then examine it for conflicts. We
      need to bail out if any conflicts exist.  */
-  if (svn_wc__changelist_match(ctx->wc_ctx, local_abspath, changelists,
-                               scratch_pool))
+  if (matches_changelists)
     {
       svn_boolean_t tc, pc, treec;
 
