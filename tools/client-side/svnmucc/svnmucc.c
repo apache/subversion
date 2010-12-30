@@ -136,7 +136,7 @@ commit_callback(const svn_commit_info_t *commit_info,
   return SVN_NO_ERROR;
 }
 
-typedef enum {
+typedef enum action_code_t {
   ACTION_MV,
   ACTION_MKDIR,
   ACTION_CP,
