@@ -420,8 +420,8 @@ Java_org_apache_subversion_javahl_SVNClient_add
 JNIEXPORT jlongArray JNICALL
 Java_org_apache_subversion_javahl_SVNClient_update
 (JNIEnv *env, jobject jthis, jobject jtargets, jobject jrevision,
- jobject jdepth, jboolean jdepthIsSticky, jboolean jignoreExternals,
- jboolean jallowUnverObstructions)
+ jobject jdepth, jboolean jdepthIsSticky, jboolean jmakeParents,
+ jboolean jignoreExternals, jboolean jallowUnverObstructions)
 {
   JNIEntry(SVNClient, update);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -441,6 +441,7 @@ Java_org_apache_subversion_javahl_SVNClient_update
 
   return cl->update(targets, revision, EnumMapper::toDepth(jdepth),
                     jdepthIsSticky ? true : false,
+                    jmakeParents ? true : false,
                     jignoreExternals ? true : false,
                     jallowUnverObstructions ? true : false);
 }

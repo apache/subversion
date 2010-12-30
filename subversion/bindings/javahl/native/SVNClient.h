@@ -129,7 +129,7 @@ class SVNClient :public SVNBase
               StringArray &changelists, RevpropTable &revprops,
               CommitCallback *callback);
   jlongArray update(Targets &targets, Revision &revision, svn_depth_t depth,
-                    bool depthIsSticky, bool ignoreExternals,
+                    bool depthIsSticky, bool makeParents, bool ignoreExternals,
                     bool allowUnverObstructions);
   void add(const char *path, svn_depth_t depth, bool force, bool no_ignore,
            bool add_parents);

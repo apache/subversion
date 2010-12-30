@@ -497,7 +497,7 @@ public class BasicTests extends SVNTests
         assertEquals("wrong revision from update",
                      client.update(thisTest.getWCPathSet(),
                                    Revision.getInstance(1), Depth.unknown,
-                                   false, false, false)[0],
+                                   false, false, false, false)[0],
                      1);
         thisTest.getWc().setRevision(1);
 
@@ -2508,7 +2508,7 @@ public class BasicTests extends SVNTests
 
         // Backdate the WC to the previous revision (r1).
         client.update(thisTest.getWCPathSet(), Revision.getInstance(1),
-                      Depth.unknown, false, false, false);
+                      Depth.unknown, false, false, false, false);
 
         // Prep for a merge conflict by changing A/mu in a different
         // way.
@@ -3980,7 +3980,7 @@ public class BasicTests extends SVNTests
         throws ClientException
     {
         return client.update(thisTest.getWCPathSet(), null,
-                             Depth.unknown, false, false, false)[0];
+                             Depth.unknown, false, false, false, false)[0];
     }
 
     /** A helper which calls update with a bunch of default args. */
@@ -3988,6 +3988,6 @@ public class BasicTests extends SVNTests
         throws ClientException
     {
         return client.update(thisTest.getWCPathSet(subpath), null,
-                             Depth.unknown, false, false, false)[0];
+                             Depth.unknown, false, false, false, false)[0];
     }
 }

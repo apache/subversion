@@ -322,7 +322,7 @@ void SVNClient::add(const char *path,
 
 jlongArray SVNClient::update(Targets &targets, Revision &revision,
                              svn_depth_t depth, bool depthIsSticky,
-                             bool ignoreExternals,
+                             bool makeParents, bool ignoreExternals,
                              bool allowUnverObstructions)
 {
     SVN::Pool requestPool;
@@ -334,12 +334,13 @@ jlongArray SVNClient::update(Targets &targets, Revision &revision,
 
     const apr_array_header_t *array = targets.array(requestPool);
     SVN_JNI_ERR(targets.error_occured(), NULL);
-    SVN_JNI_ERR(svn_client_update3(&revs, array,
+    SVN_JNI_ERR(svn_client_update4(&revs, array,
                                    revision.revision(),
                                    depth,
                                    depthIsSticky,
                                    ignoreExternals,
                                    allowUnverObstructions,
+                                   makeParents,
                                    ctx, requestPool.pool()),
                 NULL);
 

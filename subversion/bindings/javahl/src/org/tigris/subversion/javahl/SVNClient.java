@@ -903,7 +903,7 @@ public class SVNClient implements SVNClientInterface
         {
             return aSVNClient.update(new HashSet<String>(Arrays.asList(paths)),
                                 revision == null ? null : revision.toApache(),
-                                Depth.toADepth(depth), depthIsSticky,
+                                Depth.toADepth(depth), depthIsSticky, false,
                                 ignoreExternals, allowUnverObstructions);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
