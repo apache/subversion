@@ -78,7 +78,7 @@ class SVNClient :public SVNBase
                 bool ignoreExternals);
   void streamFileContent(const char *path, Revision &revision,
                          Revision &pegRevision, OutputStream &outputStream);
-  void propertySet(const char *path, const char *name, const char *value,
+  void propertySet(const char *path, const char *name, JNIByteArray &value,
                    svn_depth_t depth, StringArray &changelists, bool force,
                    RevpropTable &revprops, CommitCallback *callback);
   void properties(const char *path, Revision &revision,
