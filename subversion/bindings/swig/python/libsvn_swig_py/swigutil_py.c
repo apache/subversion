@@ -1474,7 +1474,7 @@ static svn_error_t *type_conversion_error(const char *datatype)
 /*** Editor Wrapping ***/
 
 /* this baton is used for the editor, directory, and file batons. */
-typedef struct {
+typedef struct item_baton {
   PyObject *editor;     /* the editor handling the callbacks */
   PyObject *baton;      /* the dir/file baton (or NULL for edit baton) */
 } item_baton;
