@@ -257,8 +257,9 @@ public interface ISVNClient
      * @since 1.5
      */
     long[] update(Set<String> path, Revision revision, Depth depth,
-                  boolean depthIsSticky, boolean ignoreExternals,
-                  boolean allowUnverObstructions) throws ClientException;
+                  boolean depthIsSticky, boolean makeParents,
+                  boolean ignoreExternals, boolean allowUnverObstructions)
+        throws ClientException;
 
     /**
      * Commits changes to the repository.

@@ -225,6 +225,7 @@ public class SVNClient implements ISVNClient
      */
     public native long[] update(Set<String> paths, Revision revision,
                                 Depth depth, boolean depthIsSticky,
+                                boolean makeParents,
                                 boolean ignoreExternals,
                                 boolean allowUnverObstructions)
             throws ClientException;
