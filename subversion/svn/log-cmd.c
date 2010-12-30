@@ -283,7 +283,7 @@ log_entry_receiver(void *baton,
 
       /* Fall back to "" to get options initialized either way. */
       if (lb->diff_extensions)
-        diff_options = svn_cstring_split(lb->diff_extensions, " \t\n\r", 
+        diff_options = svn_cstring_split(lb->diff_extensions, " \t\n\r",
                                          TRUE, pool);
       else
         diff_options = NULL;

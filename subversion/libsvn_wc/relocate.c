@@ -136,7 +136,7 @@ svn_wc_relocate4(svn_wc_context_t *wc_ctx,
                              _("Invalid source URL prefix: '%s' (does not "
                                "overlap target's URL '%s')"),
                              from, old_url);
-  
+
   if (old_url_len == from_len)
     new_url = to;
   else

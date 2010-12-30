@@ -738,7 +738,7 @@ start_error(svn_ra_serf__xml_parser_t *parser,
       if (err_code)
         {
           apr_int64_t val;
-          
+
           SVN_ERR(svn_cstring_atoi64(&val, err_code));
           ctx->error->apr_err = (apr_status_t)val;
         }
@@ -1171,7 +1171,7 @@ start_xml(void *userData, const char *raw_name, const char **attrs)
 
   svn_ra_serf__define_ns(&parser->state->ns_list, attrs, parser->state->pool);
 
-  name = svn_ra_serf__expand_ns(parser->state->ns_list, raw_name);
+  svn_ra_serf__expand_ns(&name, parser->state->ns_list, raw_name);
 
   parser->error = parser->start(parser, parser->user_data, name, attrs);
 }
@@ -1185,7 +1185,7 @@ end_xml(void *userData, const char *raw_name)
   if (parser->error)
     return;
 
-  name = svn_ra_serf__expand_ns(parser->state->ns_list, raw_name);
+  svn_ra_serf__expand_ns(&name, parser->state->ns_list, raw_name);
 
   parser->error = parser->end(parser, parser->user_data, name);
 }
@@ -1714,7 +1714,7 @@ setup_request_cb(serf_request_t *request,
 
   if (err)
     {
-      ctx->session->pending_error 
+      ctx->session->pending_error
                 = svn_error_compose_create(ctx->session->pending_error,
                                            err);
 

@@ -66,7 +66,7 @@ static const svn_ra_neon__xml_elm_t gloc_report_elements[] =
   { NULL }
 };
 
-typedef struct {
+typedef struct get_locations_baton_t {
   svn_ra_neon__session_t *ras;
   apr_hash_t *hash;
   apr_pool_t *pool;

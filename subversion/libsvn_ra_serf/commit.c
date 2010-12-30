@@ -47,7 +47,7 @@
 
 
 /* Structure associated with a CHECKOUT request. */
-typedef struct {
+typedef struct checkout_context_t {
 
   apr_pool_t *pool;
 
@@ -63,7 +63,7 @@ typedef struct {
 } checkout_context_t;
 
 /* Baton passed back with the commit editor. */
-typedef struct {
+typedef struct commit_context_t {
   /* Pool for our commit. */
   apr_pool_t *pool;
 
@@ -97,7 +97,7 @@ typedef struct {
 #define USING_HTTPV2_COMMIT_SUPPORT(commit_ctx) ((commit_ctx)->txn_url != NULL)
 
 /* Structure associated with a PROPPATCH request. */
-typedef struct {
+typedef struct proppatch_context_t {
   apr_pool_t *pool;
 
   const char *name;
@@ -119,7 +119,7 @@ typedef struct {
   svn_ra_serf__simple_request_context_t progress;
 } proppatch_context_t;
 
-typedef struct {
+typedef struct delete_context_t {
   const char *path;
 
   svn_revnum_t revision;
@@ -172,7 +172,7 @@ typedef struct dir_context_t {
 } dir_context_t;
 
 /* Represents a file to be committed. */
-typedef struct {
+typedef struct file_context_t {
   /* Pool for our file. */
   apr_pool_t *pool;
 
@@ -1225,7 +1225,7 @@ create_txn_post_body(serf_bucket_t **body_bkt,
 
 
 /* Handler baton for POST request. */
-typedef struct
+typedef struct post_response_ctx_t
 {
   svn_ra_serf__simple_request_context_t *request_ctx;
   commit_context_t *commit_ctx;

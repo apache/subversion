@@ -4330,11 +4330,11 @@ def nonrecursive_commit_of_copy(sbox):
 
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
-  
+
   expected_output = svntest.wc.State(wc_dir, {
     'A_new': Item(verb='Adding'),
     })
-  
+
   # These nodes are added by the commit
   expected_status.tweak('A_new', 'A_new/D', 'A_new/D/G', 'A_new/D/G/pi',
                         'A_new/D/G/rho', 'A_new/D/G/tau', 'A_new/D/H',
@@ -4703,7 +4703,7 @@ def copy_over_deleted_dir(sbox):
 
 def mixed_rev_copy_del(sbox):
   """copy mixed-rev and delete children"""
-  
+
   sbox.build()
   wc_dir = sbox.wc_dir
 
@@ -4942,6 +4942,21 @@ def copy_wc_over_deleted_other_kind(sbox):
                           Item(status='  ', wc_rev='-', copied='+')})
   svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
 
+def move_wc_and_repo_dir_to_itself(sbox):
+  "move wc and repo dir to itself"
+  sbox.build(read_only = True)
+  wc_dir = os.path.join(sbox.wc_dir, 'A')
+  repo_url = sbox.repo_url + '/A'
+
+  # try to move wc dir to itself
+  svntest.actions.run_and_verify_svn(None, [],
+                                     '.*Cannot move path.* into itself.*',
+                                     'move', wc_dir, wc_dir)
+
+  # try to move repo dir to itself
+  svntest.actions.run_and_verify_svn(None, [],
+                                     '.*Cannot move URL.* into itself.*',
+                                     'move', repo_url, repo_url)
 
 ########################################################################
 # Run the tests
@@ -5045,6 +5060,7 @@ test_list = [ None,
               copy_repos_over_deleted_other_kind,
               copy_wc_over_deleted_same_kind,
               copy_wc_over_deleted_other_kind,
+              move_wc_and_repo_dir_to_itself,
              ]
 
 if __name__ == '__main__':

@@ -53,7 +53,7 @@ int hash_do_callback(void *baton,
                      const void *value)
 {
   struct hash_do_baton *hdb = baton;
-  
+
   svn_pool_clear(hdb->iterpool);
   hdb->err = (*hdb->func)(hdb->baton, key, klen, (void *)value, hdb->iterpool);
 

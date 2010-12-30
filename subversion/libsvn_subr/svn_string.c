@@ -404,8 +404,8 @@ svn_stringbuf_ensure(svn_stringbuf_t *str, apr_size_t minimum_size)
 }
 
 
-/* WARNING - Optimized code ahead! 
- * This function has been hand-tuned for performance. Please read 
+/* WARNING - Optimized code ahead!
+ * This function has been hand-tuned for performance. Please read
  * the comments below before modifying the code.
  */
 void
@@ -423,7 +423,7 @@ svn_stringbuf_appendbyte(svn_stringbuf_t *str, char byte)
       /* The following read does not depend this write, so we
        * can issue the write first to minimize register pressure:
        * The value of old_len+1 is no longer needed; on most processors,
-       * dest[old_len+1] will be calculated implicitly as part of 
+       * dest[old_len+1] will be calculated implicitly as part of
        * the addressing scheme.
        */
       str->len = old_len+1;
@@ -441,7 +441,7 @@ svn_stringbuf_appendbyte(svn_stringbuf_t *str, char byte)
        *
        * Including the "byte" fetch, all operations so far could be
        * issued at once and be scheduled at the CPU's descression.
-       * Most likely, no-one will soon depend on the data that will be 
+       * Most likely, no-one will soon depend on the data that will be
        * written in this function. So, no stalls there, either.
        */
       dest[old_len] = byte;

@@ -107,7 +107,7 @@ typedef svn_error_t *(*svn_repos_authz_func_t)(svn_boolean_t *allowed,
  *
  * @since New in 1.3.
  */
-typedef enum
+typedef enum svn_repos_authz_access_t
 {
   /** No access. */
   svn_authz_none = 0,
@@ -1844,15 +1844,27 @@ svn_repos_get_file_revs(svn_repos_t *repos,
  * @{
  */
 
-/** Like svn_fs_commit_txn(), but invoke the @a repos's pre- and
+/** Like svn_fs_commit_txn(), but invoke the @a repos' pre- and
  * post-commit hooks around the commit.  Use @a pool for any necessary
  * allocations.
  *
- * If the pre-commit hook or svn_fs_commit_txn() fails, throw the
- * original error to caller.  If an error occurs when running the
- * post-commit hook, return the original error wrapped with
- * SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED.  If the caller sees this
- * error, it knows that the commit succeeded anyway.
+ * If the pre-commit hook fails, do not attempt to commit the
+ * transaction and throw the original error to the caller.
+ *
+ * A successful commit is indicated by a valid revision value in @a
+ * *new_rev, not if svn_fs_commit_txn() returns an error, which can
+ * occur during its post commit FS processing.  If the transaction was
+ * not committed, then return the associated error and do not execute
+ * the post-commit hook.
+ *
+ * If the commit succeeds the post-commit hook is executed.  If the
+ * post-commit hook returns an error, always wrap it with
+ * SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED; this allows the caller to
+ * find the post-commit hook error in the returned error chain.  If
+ * both svn_fs_commit_txn() and the post-commit hook return errors,
+ * then svn_fs_commit_txn()'s error is the parent error and the
+ * SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED wrapped error is the child
+ * error.
  *
  * @a conflict_p, @a new_rev, and @a txn are as in svn_fs_commit_txn().
  */
@@ -1998,7 +2010,7 @@ svn_repos_fs_get_locks2(apr_hash_t **locks,
                         void *authz_read_baton,
                         apr_pool_t *pool);
 
-/** 
+/**
  * Similar to svn_repos_fs_get_locks2(), but with @a depth always
  * passed as svn_depth_infinity.
  *
@@ -2533,6 +2545,10 @@ svn_repos_dump_fs(svn_repos_t *repos,
  * If @a use_post_commit_hook is set, call the repository's
  * post-commit hook after committing each loaded revision.
  *
+ * If @a validate_props is set, then validate Subversion revision and
+ * node properties (those in the svn: namespace) against established
+ * rules for those things.
+ *
  * If non-NULL, use @a notify_func and @a notify_baton to send notification
  * of events to the caller.
  *
@@ -2549,6 +2565,7 @@ svn_repos_load_fs3(svn_repos_t *repos,
                    const char *parent_dir,
                    svn_boolean_t use_pre_commit_hook,
                    svn_boolean_t use_post_commit_hook,
+                   svn_boolean_t validate_props,
                    svn_repos_notify_func_t notify_func,
                    void *notify_baton,
                    svn_cancel_func_t cancel_func,
@@ -2556,8 +2573,9 @@ svn_repos_load_fs3(svn_repos_t *repos,
                    apr_pool_t *pool);
 
 /**
- * Similar to svn_repos_load_fs3(), but with @a feedback_stream in place of
- * the #svn_repos_notify_func_t and baton.
+ * Similar to svn_repos_load_fs3(), but with @a feedback_stream in
+ * place of the #svn_repos_notify_func_t and baton and with
+ * @a validate_props always FALSE.
  *
  * @since New in 1.2.
  * @deprecated Provided for backward compatibility with the 1.6 API.
@@ -2732,12 +2750,15 @@ svn_repos_parse_dumpstream2(svn_stream_t *stream,
  * 'copyfrom' history to exist in the repository when it encounters
  * nodes that are added-with-history.
  *
+ * If @a validate_props is set, then validate Subversion revision and
+ * node properties (those in the svn: namespace) against established
+ * rules for those things.
+ *
  * If @a parent_dir is not NULL, then the parser will reparent all the
  * loaded nodes, from root to @a parent_dir.  The directory @a parent_dir
  * must be an existing directory in the repository.
  *
  * Print all parsing feedback to @a outstream (if non-@c NULL).
- *
  *
  * @since New in 1.7.
  */
@@ -2746,6 +2767,7 @@ svn_repos_get_fs_build_parser3(const svn_repos_parse_fns2_t **parser,
                                void **parse_baton,
                                svn_repos_t *repos,
                                svn_boolean_t use_history,
+                               svn_boolean_t validate_props,
                                enum svn_repos_load_uuid uuid_action,
                                const char *parent_dir,
                                svn_repos_notify_func_t notify_func,
@@ -2753,8 +2775,9 @@ svn_repos_get_fs_build_parser3(const svn_repos_parse_fns2_t **parser,
                                apr_pool_t *pool);
 
 /**
- * Similar to svn_repos_get_fs_build_parser3(), but with @a outstream in place
- * if a #svn_repos_notify_func_t and baton.
+ * Similar to svn_repos_get_fs_build_parser3(), but with @a outstream
+ * in place if a #svn_repos_notify_func_t and baton and with
+ * @a validate_props always FALSE.
  *
  * @since New in 1.1.
  * @deprecated Provided for backward compatibility with the 1.6 API.
@@ -2949,7 +2972,7 @@ svn_repos_authz_check_access(svn_authz_t *authz,
  *
  * @since New in 1.5.
  */
-typedef enum
+typedef enum svn_repos_revision_access_level_t
 {
   svn_repos_revision_access_none,
   svn_repos_revision_access_partial,

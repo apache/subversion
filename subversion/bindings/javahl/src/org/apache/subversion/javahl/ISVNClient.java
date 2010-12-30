@@ -257,8 +257,9 @@ public interface ISVNClient
      * @since 1.5
      */
     long[] update(Set<String> path, Revision revision, Depth depth,
-                  boolean depthIsSticky, boolean ignoreExternals,
-                  boolean allowUnverObstructions) throws ClientException;
+                  boolean depthIsSticky, boolean makeParents,
+                  boolean ignoreExternals, boolean allowUnverObstructions)
+        throws ClientException;
 
     /**
      * Commits changes to the repository.
@@ -674,39 +675,9 @@ public interface ISVNClient
      * @throws ClientException
      * @since 1.5
      */
-    void propertySet(String path, String name, String value, Depth depth,
+    void propertySet(String path, String name, byte[] value, Depth depth,
                      Collection<String> changelists, boolean force,
                      Map<String, String> revpropTable, CommitCallback callback)
-            throws ClientException;
-
-    /**
-     * Remove one property of an item.
-     * @param path      path of the item
-     * @param name      name of the property
-     * @param depth     the depth to recurse into subdirectories
-     * @param changelists changelists to filter by
-     * @throws ClientException
-     * @since 1.5
-     */
-    void propertyRemove(String path, String name, Depth depth,
-                        Collection<String> changelists, CommitCallback callback)
-            throws ClientException;
-
-    /**
-     * Create and sets one property of an item with a byte array value
-     *
-     * @param path    path of the item
-     * @param name    name of the property
-     * @param value   new value of the property
-     * @param depth   depth to set property on the subdirectories
-     * @param changelists changelists to filter by
-     * @param force   do not check if the value is valid
-     * @throws ClientException
-     * @since 1.5
-     */
-    void propertyCreate(String path, String name, String value, Depth depth,
-                        Collection<String> changelists, boolean force,
-                        CommitCallback callback)
             throws ClientException;
 
     /**
@@ -942,7 +913,7 @@ public interface ISVNClient
      */
     void upgrade(String path)
             throws ClientException;
-    
+
     /**
      * Apply a unidiff patch.
      * @param patchPath        the path of the patch

@@ -351,17 +351,17 @@ install: external-install local-install revision-install
 local-all: @BUILD_RULES@ @TRANSFORM_LIBTOOL_SCRIPTS@
 
 transform-libtool-scripts: @BUILD_RULES@
-	@$(top_srcdir)/build/transform_libtool_scripts.sh
+	@$(SHELL) $(top_srcdir)/build/transform_libtool_scripts.sh
 
 locale-gnu-pot:
 	cd $(abs_srcdir) && XGETTEXT="$(XGETTEXT)" MSGMERGE="$(MSGMERGE)" \
-	  tools/po/po-update.sh pot
+	  $(SHELL) tools/po/po-update.sh pot
 
 # "make locale-gnu-po-update" updates all translations.
 # "make locale-gnu-po-update PO=ll" updates only the ll.po file.
 locale-gnu-po-update:
 	cd $(abs_srcdir) && XGETTEXT="$(XGETTEXT)" MSGMERGE="$(MSGMERGE)" \
-	  tools/po/po-update.sh $(PO)
+	  $(SHELL) tools/po/po-update.sh $(PO)
 
 # clean everything but the bulky test output, returning the system back
 # to before 'make' was run.
@@ -824,7 +824,7 @@ install-swig-rb-doc:
 
 # ctypes-python make targets
 ctypes-python: local-all
-	$(abs_srcdir)/build/run_ctypesgen.sh "$(LT_EXECUTE)" "$(CPPFLAGS)" "$(EXTRA_CTYPES_LDFLAGS)" "$(PYTHON)" "$(CTYPESGEN)" "$(abs_srcdir)" "$(abs_builddir)" "$(libdir)" "$(SVN_APR_CONFIG)" "$(SVN_APRUTIL_CONFIG)"
+	$(SHELL) $(abs_srcdir)/build/run_ctypesgen.sh "$(LT_EXECUTE)" "$(CPPFLAGS)" "$(EXTRA_CTYPES_LDFLAGS)" "$(PYTHON)" "$(CTYPESGEN)" "$(abs_srcdir)" "$(abs_builddir)" "$(libdir)" "$(SVN_APR_CONFIG)" "$(SVN_APRUTIL_CONFIG)"
 
 install-ctypes-python: ctypes-python
 	cd $(CTYPES_PYTHON_SRC_DIR); \

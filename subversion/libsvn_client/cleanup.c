@@ -174,7 +174,7 @@ svn_client_upgrade(const char *path,
 
           item = APR_ARRAY_IDX(externals_p, i, svn_wc_external_item2_t*);
 
-          external_path = svn_dirent_join(externals_parent, item->target_dir, 
+          external_path = svn_dirent_join(externals_parent, item->target_dir,
                                           iterpool);
 
           SVN_ERR(svn_dirent_get_absolute(&external_abspath, external_path,

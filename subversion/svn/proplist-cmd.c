@@ -39,7 +39,7 @@
 
 #include "svn_private_config.h"
 
-typedef struct
+typedef struct proplist_baton_t
 {
   svn_cl__opt_state_t *opt_state;
   svn_boolean_t is_url;

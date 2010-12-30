@@ -1004,7 +1004,7 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   #                  r4                                            |     |
   #                   |                                            V     V
   #                  branches/B1/B/E------------------------------r14---r15->
-  #                  
+  #
   #
   # The mergeinfo on this repos@15 is:
   #
@@ -1034,7 +1034,7 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
     "/trunk/B/E:5-6,8-9\n"])
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'propget', 'svn:mergeinfo', '-R',
-                                     sbox.repo_url)  
+                                     sbox.repo_url)
 
   # PART 2: Load a a series of incremental dumps to an empty repository.
   #
@@ -1085,7 +1085,7 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   # repository.  First, try the full dump-load in one shot.
   #
   # PART 3: Load a full dump to an non-empty repository.
-  #  
+  #
   # Reset our sandbox.
   test_create(sbox)
 
@@ -1145,7 +1145,7 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   # Load this skeleton repos into the empty target:
   load_and_verify_dumpstream(sbox, [], [], None, dumpfile_skeleton,
                              '--ignore-uuid')
-  
+
   # Load the three incremental dump files in sequence.
   load_and_verify_dumpstream(sbox, [], [], None,
                              open(dump_file_r1_10).read(),
@@ -1228,6 +1228,67 @@ def hotcopy_symlink(sbox):
     if os.readlink(symlink_path + '_abs') != target_abspath:
       raise svntest.Failure
 
+def load_bad_props(sbox):
+  "svadmin load with invalid svn: props"
+
+  dump_str = """SVN-fs-dump-format-version: 2
+
+UUID: dc40867b-38f6-0310-9f5f-f81aa277e06f
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2005-05-03T19:09:41.129900Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 99
+Content-length: 99
+
+K 7
+svn:log
+V 3
+\n\r\n
+K 10
+svn:author
+V 2
+pl
+K 8
+svn:date
+V 27
+2005-05-03T19:10:19.975578Z
+PROPS-END
+
+Node-path: file
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 5
+Text-content-md5: e1cbb0c3879af8347246f12c559a86b5
+Content-length: 15
+
+PROPS-END
+text
+
+
+"""
+  test_create(sbox)
+
+  # Try to load the dumpstream, expecting a failure (because of mixed EOLs).
+  load_and_verify_dumpstream(sbox, [], svntest.verify.AnyOutput,
+                             dumpfile_revisions, dump_str,
+                             '--ignore-uuid')
+
+  # Now try it again bypassing prop validation.  (This interface takes
+  # care of the removal and recreation of the original repository.)
+  svntest.actions.load_repo(sbox, dump_str=dump_str,
+                            bypass_prop_validation=True)
+
+
 ########################################################################
 # Run the tests
 
@@ -1257,6 +1318,7 @@ test_list = [ None,
                          svntest.main.is_fs_type_fsfs),
               dont_drop_valid_mergeinfo_during_incremental_loads,
               SkipUnless(hotcopy_symlink, svntest.main.is_posix_os),
+              load_bad_props,
              ]
 
 if __name__ == '__main__':

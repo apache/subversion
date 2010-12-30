@@ -71,7 +71,7 @@ struct dav_stream {
 
 /* Convenience structure that facilitates combined memory allocation of
    a dav_resource and dav_resource_private pair. */
-typedef struct {
+typedef struct dav_resource_combined {
   dav_resource res;
   dav_resource_private priv;
 } dav_resource_combined;
@@ -279,7 +279,7 @@ parse_vcc_uri(dav_resource_combined *comb,
     {
       /* a specific Version Resource; in this case, a Baseline */
 
-      int revnum;
+      svn_revnum_t revnum;
 
       if (label != NULL)
         {
@@ -347,7 +347,7 @@ parse_baseline_coll_uri(dav_resource_combined *comb,
                         int use_checked_in)
 {
   const char *slash;
-  int revnum;
+  svn_revnum_t revnum;
 
   /* format: REVISION/REPOS_PATH */
 
@@ -385,7 +385,7 @@ parse_baseline_uri(dav_resource_combined *comb,
                    const char *label,
                    int use_checked_in)
 {
-  int revnum;
+  svn_revnum_t revnum;
 
   /* format: REVISION */
 
@@ -3049,7 +3049,7 @@ set_headers(request_rec *r, const dav_resource *resource)
 }
 
 
-typedef struct {
+typedef struct diff_ctx_t {
   ap_filter_t *output;
   apr_pool_t *pool;
 } diff_ctx_t;
@@ -3932,7 +3932,7 @@ move_resource(dav_resource *src,
 }
 
 
-typedef struct {
+typedef struct walker_ctx_t {
   /* the input walk parameters */
   const dav_walk_params *params;
 
@@ -4054,7 +4054,7 @@ do_walk(walker_ctx_t *ctx, int depth)
       if (params->walk_type & DAV_WALKTYPE_AUTH)
         {
           const char *repos_relpath =
-            apr_pstrcat(iterpool, 
+            apr_pstrcat(iterpool,
                         apr_pstrmemdup(iterpool,
                                        ctx->repos_path->data,
                                        ctx->repos_path->len),
@@ -4103,7 +4103,7 @@ do_walk(walker_ctx_t *ctx, int depth)
       ctx->uri->len = uri_len;
       ctx->repos_path->len = repos_len;
     }
-  
+
   svn_pool_destroy(iterpool);
 
   return NULL;
@@ -4379,7 +4379,7 @@ int dav_svn__method_post(request_rec *r)
      the client with (hopefully) some helpful information. */
   if (derr)
     return dav_svn__error_response_tag(r, derr);
-    
+
   return OK;
 }
 

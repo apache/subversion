@@ -28,12 +28,12 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-typedef struct {
+typedef struct CtxtHandle {
     int dwLower;
     int dwUpper;
 } CtxtHandle;
 
-typedef struct {
+struct SecurityFunctionTable {
   int (*QuerySecurityPackageInfo)(const void *,const void *);
   void (*FreeContextBuffer)(const void *);
   int (*AcquireCredentialsHandle)(const void *, const void *, int,
@@ -45,7 +45,8 @@ typedef struct {
                                    const void *, int, int, int, const void *,
                                    int, const void *, const void *,
                                    const void *, const void *);
-} * PSecurityFunctionTable;
+};
+typedef struct SecurityFunctionTable *PSecurityFunctionTable;
 
 typedef int SECURITY_STATUS, DWORD, TimeStamp;
 
@@ -64,17 +65,17 @@ typedef int SECURITY_STATUS, DWORD, TimeStamp;
 
 PSecurityFunctionTable InitSecurityInterface(void);
 
-typedef struct {
+typedef struct SecPkgInfo {
   int cbMaxToken;
 } SecPkgInfo;
 
-typedef struct {
+typedef struct SecBuffer {
   int BufferType;
   int cbBuffer;
   const void *pvBuffer;
 } SecBuffer;
 
-typedef struct {
+typedef struct SecBufferDesc {
   int cBuffers;
   int ulVersion;
   const void *pBuffers;

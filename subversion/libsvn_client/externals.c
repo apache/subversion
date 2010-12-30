@@ -279,7 +279,7 @@ switch_dir_external(const char *path,
       /* Buh-bye, old and busted ... */
       SVN_ERR(svn_wc__acquire_write_lock(NULL, ctx->wc_ctx, local_abspath,
                                          FALSE, pool, pool));
-      
+
       SVN_ERR(relegate_dir_external(&baton, pool, pool));
     }
   else
@@ -858,7 +858,7 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
             SVN_ERR(svn_client_export4(NULL, new_item->url, local_abspath,
                                        &(new_item->peg_revision),
                                        &(new_item->revision),
-                                       TRUE, FALSE, svn_depth_infinity, 
+                                       TRUE, FALSE, svn_depth_infinity,
                                        ib->native_eol,
                                        ib->ctx, ib->iter_pool));
           else

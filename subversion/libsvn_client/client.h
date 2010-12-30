@@ -502,7 +502,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
    This structure is used by svn_client__checkout_internal() to save
    one or more round-trips if the client already gathered some of this
    information.  Not all the fields need to be filled in.  */
-typedef struct
+typedef struct svn_client__ra_session_from_path_results
 {
   /* The repository root URL.  A NULL value means the root URL is
      unknown.*/
@@ -688,7 +688,7 @@ svn_client__get_diff_summarize_editor(const char *target,
    various helper functions may need.  Not every copy function uses every
    field.
 */
-typedef struct
+typedef struct svn_client__copy_pair_t
 {
     /* The absolute source path or url. */
     const char *src_abspath_or_url;

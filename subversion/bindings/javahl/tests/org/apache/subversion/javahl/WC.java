@@ -528,7 +528,7 @@ public class WC
         // result array
         for (Item item : items.values())
         {
-            Assert.assertTrue("item '" + item.myPath + 
+            Assert.assertTrue("item '" + item.myPath +
                               "' in working copy not found in status",
                     item.touched);
         }

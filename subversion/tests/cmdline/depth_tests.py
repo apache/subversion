@@ -2726,7 +2726,7 @@ def sparse_update_with_dash_dash_parents(sbox):
   alpha_path = os.path.join(sbox.wc_dir, 'A', 'B', 'E', 'alpha')
   pi_path = os.path.join(sbox.wc_dir, 'A', 'D', 'G', 'pi')
   omega_path = os.path.join(sbox.wc_dir, 'A', 'D', 'H', 'omega')
-  
+
   # Start with a depth=empty root checkout.
   svntest.actions.run_and_verify_svn(
       "Unexpected error from co --depth=empty",
@@ -2774,14 +2774,14 @@ def sparse_update_with_dash_dash_parents(sbox):
     'A/D'          : Item(status='  ', wc_rev=1),
     'A/D/G'        : Item(status='  ', wc_rev=1),
     'A/D/G/pi'     : Item(status='  ', wc_rev=1),
-    })    
+    })
   svntest.actions.run_and_verify_update(sbox.wc_dir,
                                         expected_output,
                                         expected_disk,
                                         expected_status,
                                         None, None, None, None, None, False,
                                         '--parents', pi_path)
-                    
+
   expected_output = svntest.wc.State(sbox.wc_dir, {
     'A/D/H'        : Item(status='A '),
     'A/D/H/omega'  : Item(status='A '),
@@ -2793,14 +2793,14 @@ def sparse_update_with_dash_dash_parents(sbox):
   expected_status.add({
     'A/D/H'        : Item(status='  ', wc_rev=1),
     'A/D/H/omega'  : Item(status='  ', wc_rev=1),
-    })    
+    })
   svntest.actions.run_and_verify_update(sbox.wc_dir,
                                         expected_output,
                                         expected_disk,
                                         expected_status,
                                         None, None, None, None, None, False,
                                         '--parents', omega_path)
-  
+
 
 #----------------------------------------------------------------------
 # list all tests here, starting with None:

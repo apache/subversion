@@ -59,9 +59,9 @@ def usage_and_exit(errmsg=None):
 
 
 class l10nReport:
-    def __init__(self, to_email_id="bhuvan@collab.net"):
+    def __init__(self, to_email_id=""):
         self.to_email_id = to_email_id
-        self.from_email_id = "<dev@subversion.tigris.org>"
+        self.from_email_id = "<dev@subversion.apache.org>"
 
     def safe_command(self, cmd_and_args, cmd_in=""):
         [stdout, stderr] = subprocess.Popen(cmd_and_args, \
@@ -148,7 +148,7 @@ def main():
         sys.exit(0)
 
     po_dir = 'subversion/po'
-    branch_name = l10n.match('URL:.*/svn/(\S+)', info_out)
+    branch_name = l10n.match('URL:.*/asf/subversion/(\S+)', info_out)
     [info_out, info_err] = l10n.safe_command(['svnversion', po_dir])
     if info_err:
         sys.stderr.write("\nError: %s\n" % info_err)
@@ -156,7 +156,7 @@ def main():
         sys.exit(0)
 
     wc_version = re.sub('[MS]', '', info_out)
-    title = "Translation status report for %s r%s" % \
+    title = "Translation status report for %s@r%s" % \
                (branch_name, wc_version)
 
     os.chdir(po_dir)
@@ -178,7 +178,10 @@ def main():
         print(po_format)
 
     if to_email_id:
-        email_from = "From: SVN DEV <noreply@subversion.tigris.org>"
+        import smtplib
+
+        server = smtplib.SMTP('localhost')
+        email_from = "From: SVN DEV <noreply@subversion.apache.org>"
         email_to = "To: %s" % to_email_id
         email_sub = "Subject: [l10n] Translation status report for %s r%s" \
                      % (branch_name, wc_version)
@@ -186,8 +189,7 @@ def main():
         msg = "%s\n%s\n%s\n%s\n%s\n%s\n%s" % (email_from, email_to,\
               email_sub, title, format_head, format_line, body)
 
-        cmd = ['sendmail', '-t']
-        l10n.safe_command(cmd, msg)
+        server.sendmail(email_from, email_to, msg)
         print("The report is sent to '%s' email id." % to_email_id)
     else:
         print("\nYou have not passed '-m' option, so email is not sent.")

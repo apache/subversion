@@ -157,7 +157,7 @@ relocate_externals(const char *local_abspath,
         APR_ARRAY_IDX(ext_desc, i, svn_wc_external_item2_t *);
       const char *target_repos_root_url;
       const char *target_abspath;
-      
+
       svn_pool_clear(iterpool);
 
       /* If this external isn't pulled in via a relative URL, ignore
@@ -270,7 +270,7 @@ svn_client_relocate2(const char *wcroot_dir,
         SVN_ERR(relocate_externals(this_abspath, ext_desc, old_repos_root_url,
                                    new_repos_root_url, ctx, iterpool));
     }
-    
+
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;

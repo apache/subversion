@@ -1550,7 +1550,7 @@ svn_fs_fs__hotcopy(const char *src_path,
               err2 = svn_dirent_get_absolute(&dst_abspath, dst_path, pool);
               if (err2)
                 return svn_error_return(svn_error_compose_create(err, err2));
-              
+
               /* ### hack: strip off the 'db/' directory from paths so
                * ### they make sense to the user */
               src_abspath = svn_dirent_dirname(src_abspath, pool);
@@ -2757,7 +2757,7 @@ get_root_changes_offset(apr_off_t *root_offset,
    directory to its final location NEW_FILENAME in the repository.  On
    Unix, match the permissions of the new file to the permissions of
    PERMS_REFERENCE.  Temporary allocations are from POOL.
-   
+
    This function almost duplicates svn_io_file_move(), but it tries to
    guarantee a flush. */
 static svn_error_t *
@@ -5426,9 +5426,20 @@ rep_write_contents_close(void *baton)
   /* Check and see if we already have a representation somewhere that's
      identical to the one we just wrote out. */
   if (ffd->rep_sharing_allowed)
-    /* ### TODO: ignore errors opening the DB (issue #3506) * */
-    SVN_ERR(svn_fs_fs__get_rep_reference(&old_rep, b->fs, rep->sha1_checksum,
-                                         b->parent_pool));
+    {
+      svn_error_t *err;
+      err = svn_fs_fs__get_rep_reference(&old_rep, b->fs, rep->sha1_checksum,
+                                         b->parent_pool);
+      if (err)
+        {
+          /* Something's wrong with the rep-sharing index.  We can continue
+             without rep-sharing, but warn.
+           */
+          (b->fs->warning)(b->fs->warning_baton, err);
+          svn_error_clear(err);
+          old_rep = NULL;
+        }
+    }
   else
     old_rep = NULL;
 
@@ -6206,12 +6217,18 @@ commit_body(void *baton, apr_pool_t *pool)
   /* Update the 'current' file. */
   SVN_ERR(write_final_current(cb->fs, cb->txn->id, new_rev, start_node_id,
                               start_copy_id, pool));
+
+  /* At this point the new revision is committed and globally visible
+     so let the caller know it succeeded by giving it the new revision
+     number, which fulfills svn_fs_commit_txn() contract.  Any errors
+     after this point do not change the fact that a new revision was
+     created. */
+  *cb->new_rev_p = new_rev;
+
   ffd->youngest_rev_cache = new_rev;
 
   /* Remove this transaction directory. */
   SVN_ERR(svn_fs_fs__purge_txn(cb->fs, cb->txn->id, pool));
-
-  *cb->new_rev_p = new_rev;
 
   return SVN_NO_ERROR;
 }
@@ -6377,7 +6394,8 @@ svn_fs_fs__commit(svn_revnum_t *new_rev_p,
 
   if (ffd->rep_sharing_allowed)
     {
-      /* ### TODO: ignore errors opening the DB (issue #3506) * */
+      /* At this point, *NEW_REV_P has been set, so errors here won't affect
+         the success of the commit.  (See svn_fs_commit_txn().)  */
       SVN_ERR(svn_fs_fs__open_rep_cache(fs, pool));
       SVN_ERR(svn_sqlite__with_transaction(ffd->rep_cache_db,
                                            commit_sqlite_txn_callback,
@@ -7709,7 +7727,7 @@ struct pack_baton
 /* The work-horse for svn_fs_fs__pack, called with the FS write lock.
    This implements the svn_fs_fs__with_write_lock() 'body' callback
    type.  BATON is a 'struct pack_baton *'.
-   
+
    WARNING: if you add a call to this function, please note:
      The code currently assumes that any piece of code running with
      the write-lock set can rely on the ffd->min_unpacked_rev and

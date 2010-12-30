@@ -57,7 +57,7 @@
 #endif
 
 /* Path type definition. Used only by internal functions. */
-typedef enum {
+typedef enum path_type_t {
   type_uri,
   type_dirent,
   type_relpath
@@ -1925,10 +1925,10 @@ svn_uri_is_canonical(const char *uri, apr_pool_t *pool)
 
               /* Can't usesvn_ctype_isxdigit() because lower case letters are
                  not in our canonical format */
-              if (((*(ptr+1) < '0' || *(ptr+1) > '9')) 
+              if (((*(ptr+1) < '0' || *(ptr+1) > '9'))
                   && (*(ptr+1) < 'A' || *(ptr+1) > 'F'))
                 return FALSE;
-              else if (((*(ptr+2) < '0' || *(ptr+2) > '9')) 
+              else if (((*(ptr+2) < '0' || *(ptr+2) > '9'))
                   && (*(ptr+2) < 'A' || *(ptr+2) > 'F'))
                 return FALSE;
 
@@ -2144,6 +2144,7 @@ svn_uri_condense_targets(const char **pcommon,
   /* Early exit when there's only one uri to work on. */
   if (targets->nelts == 1)
     {
+      *pcommon = apr_pstrdup(result_pool, *pcommon);
       if (pcondensed_targets)
         *pcondensed_targets = apr_array_make(result_pool, 0,
                                              sizeof(const char *));

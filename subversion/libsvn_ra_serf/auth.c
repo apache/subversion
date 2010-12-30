@@ -191,7 +191,7 @@ svn_ra_serf__encode_auth_header(const char *protocol, const char **header,
 /**
  * Baton passed to the response header callback function
  */
-typedef struct {
+typedef struct auth_baton_t {
   int code;
   const char *header;
   svn_ra_serf__handler_t *ctx;

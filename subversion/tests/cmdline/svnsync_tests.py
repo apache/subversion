@@ -136,14 +136,16 @@ def run_info(url, expected_error=None):
     raise SVNUnexpectedStdout("Missing stdout")
 
 
-def setup_and_sync(sbox, dump_file_contents, subdir=None):
+def setup_and_sync(sbox, dump_file_contents, subdir=None,
+                   bypass_prop_validation=False):
   """Create a repository for SBOX, load it with DUMP_FILE_CONTENTS, then create a mirror repository and sync it with SBOX.  Return the mirror sandbox."""
 
   # Create the empty master repository.
   build_repos(sbox)
 
   # Load the repository from DUMP_FILE_PATH.
-  svntest.actions.run_and_verify_load(sbox.repo_dir, dump_file_contents)
+  svntest.actions.run_and_verify_load(sbox.repo_dir, dump_file_contents,
+                                      bypass_prop_validation)
 
   # Create the empty destination repository.
   dest_sbox = sbox.clone_dependent()
@@ -184,8 +186,9 @@ def verify_mirror(dest_sbox, exp_dump_file_contents):
 
   svntest.verify.compare_and_display_lines(
     "Dump files", "DUMP", exp_dump_file_contents, dest_dump)
-  
-def run_test(sbox, dump_file_name, subdir=None, exp_dump_file_name=None):
+
+def run_test(sbox, dump_file_name, subdir=None, exp_dump_file_name=None,
+             bypass_prop_validation=False):
   """Load a dump file, sync repositories, and compare contents with the original
 or another dump file."""
 
@@ -198,7 +201,8 @@ or another dump file."""
                                                dump_file_name),
                                   'rb').readlines()
 
-  dest_sbox = setup_and_sync(sbox, master_dumpfile_contents, subdir)
+  dest_sbox = setup_and_sync(sbox, master_dumpfile_contents, subdir,
+                             bypass_prop_validation)
 
   # Compare the dump produced by the mirror repository with either the original
   # dump file (used to create the master repository) or another specified dump
@@ -210,7 +214,7 @@ or another dump file."""
     exp_master_dumpfile_contents = master_dumpfile_contents
 
   verify_mirror(dest_sbox, exp_master_dumpfile_contents)
-  
+
 
 
 ######################################################################
@@ -778,7 +782,8 @@ def info_not_synchronized(sbox):
 def copy_bad_line_endings(sbox):
   "copy with inconsistent lineendings in svn:props"
   run_test(sbox, "copy-bad-line-endings.dump",
-           exp_dump_file_name="copy-bad-line-endings.expected.dump")
+           exp_dump_file_name="copy-bad-line-endings.expected.dump",
+           bypass_prop_validation=True)
 
 #----------------------------------------------------------------------
 
@@ -813,7 +818,7 @@ def commit_a_copy_of_root(sbox):
 #   svnsync: File not found: revision 4, path '/trunk/H/Z/B/lambda'
 #
 # See also http://svn.haxx.se/dev/archive-2010-11/0411.shtml and
-# 
+#
 #
 # Note: For those who may poke around this test in the future, r3 of
 # delete-revprops.dump was created with the following svnmucc command:

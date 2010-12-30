@@ -164,7 +164,7 @@ change_rev_prop(const char *url,
                                     &old_value, propval, pool);
 
       if (want_error && err
-          && svn_error_has_cause(err, SVN_ERR_FS_PROP_BASEVALUE_MISMATCH))
+          && svn_error_find_cause(err, SVN_ERR_FS_PROP_BASEVALUE_MISMATCH))
         {
           /* Expectation was matched.  Get out. */
           svn_error_clear(err);
@@ -196,7 +196,7 @@ extract_values_from_skel(svn_string_t **old_propval_p,
 {
   apr_hash_t *proplist;
   svn_skel_t *skel;
-  
+
   skel = svn_skel__parse(skel_cstr, strlen(skel_cstr), pool);
   SVN_ERR(svn_skel__parse_proplist(&proplist, skel, pool));
   *old_propval_p = apr_hash_get(proplist, KEY_OLD_PROPVAL, APR_HASH_KEY_STRING);

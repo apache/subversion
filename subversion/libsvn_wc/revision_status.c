@@ -52,18 +52,19 @@ struct walk_baton
  * Temporary allocations are made in SCRATCH_POOL. */
 static svn_error_t *
 analyze_status(const char *local_abspath,
+               svn_node_kind_t kind,
                void *baton,
                apr_pool_t *scratch_pool)
 {
   struct walk_baton *wb = baton;
   svn_revnum_t changed_rev;
   svn_revnum_t revision;
-  svn_revnum_t item_rev; 
+  svn_revnum_t item_rev;
   svn_depth_t depth;
   svn_wc__db_status_t status;
 
-  SVN_ERR(svn_wc__db_read_info(&status, NULL, &revision, NULL, 
-                               NULL, NULL, &changed_rev, 
+  SVN_ERR(svn_wc__db_read_info(&status, NULL, &revision, NULL,
+                               NULL, NULL, &changed_rev,
                                NULL, NULL, NULL, &depth, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, wb->db,
@@ -72,7 +73,7 @@ analyze_status(const char *local_abspath,
   /* We need the excluded and absent paths when checking for sparse
    * checkouts. But only for that. To collect those we're walking all the
    * hidden nodes. */
-  if (status == svn_wc__db_status_excluded 
+  if (status == svn_wc__db_status_excluded
       || status == svn_wc__db_status_absent)
     {
       wb->result->sparse_checkout = TRUE;
@@ -85,7 +86,7 @@ analyze_status(const char *local_abspath,
   else if (status == svn_wc__db_status_added
            || status == svn_wc__db_status_deleted)
     {
-      wb->result->modified = TRUE; 
+      wb->result->modified = TRUE;
     }
 
   if (! wb->result->switched)
@@ -134,10 +135,10 @@ analyze_status(const char *local_abspath,
                                                FALSE,
                                                TRUE,
                                                scratch_pool));
-      wb->result->modified |= text_mod; 
+      wb->result->modified |= text_mod;
     }
 
-  wb->result->sparse_checkout |= (depth != svn_depth_infinity 
+  wb->result->sparse_checkout |= (depth != svn_depth_infinity
                                   && depth != svn_depth_unknown);
   return SVN_NO_ERROR;
 }

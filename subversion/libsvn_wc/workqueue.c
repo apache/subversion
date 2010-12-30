@@ -480,8 +480,8 @@ svn_wc__wq_add_revert(svn_boolean_t *will_revert,
 
 /* Removes a BASE_NODE and all it's data, leaving any adds and copies as is.
    Do this as a depth first traversal to make sure than any parent still exists
-   on error conditions. 
-   
+   on error conditions.
+
    ### This function needs review for 4th tree behavior.*/
 static svn_error_t *
 remove_base_node(svn_wc__db_t *db,
@@ -712,7 +712,7 @@ run_deletion_postcommit(svn_wc__db_t *db,
                 db, local_abspath,
                 FALSE, FALSE, cancel_func, cancel_baton, scratch_pool));
 
-      /* If the parent entry's working rev 'lags' behind new_rev... 
+      /* If the parent entry's working rev 'lags' behind new_rev...
          ### Maybe we should also add a not-present node if the
          ### deleted node was switched? */
       if (new_revision > parent_revision)

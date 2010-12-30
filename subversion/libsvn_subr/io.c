@@ -334,7 +334,7 @@ svn_io_open_uniquely_named(apr_file_t **file,
   unsigned int i;
   struct temp_file_cleanup_s *baton = NULL;
 
-  /* At the beginning, we don't know whether unique_path will need 
+  /* At the beginning, we don't know whether unique_path will need
      UTF8 conversion */
   svn_boolean_t needs_utf8_conversion = TRUE;
 
@@ -756,7 +756,7 @@ svn_io_copy_file(const char *src,
 #endif
 
   SVN_ERR(svn_io_file_open(&from_file, src, APR_READ | APR_BINARY,
-                         APR_OS_DEFAULT, pool));
+                           APR_OS_DEFAULT, pool));
 
   /* For atomicity, we copy to a tmp file and then rename the tmp
      file over the real destination. */
@@ -819,9 +819,9 @@ file_perms_set(const char *fname, apr_fileperms_t perms,
     return SVN_NO_ERROR;
 }
 
-/* Set permissions PERMS on the FILE. This is a cheaper variant of the 
+/* Set permissions PERMS on the FILE. This is a cheaper variant of the
  * file_perms_set wrapper() function because no locale-dependent string
- * conversion is required. 
+ * conversion is required.
  */
 static svn_error_t *
 file_perms_set2(apr_file_t* file, apr_fileperms_t perms)
@@ -2137,7 +2137,7 @@ svn_io_stat_dirent(const svn_io_dirent2_t **dirent_p,
                     | APR_FINFO_SIZE | APR_FINFO_MTIME,
                     scratch_pool);
 
-  if (err && ignore_enoent && 
+  if (err && ignore_enoent &&
       (APR_STATUS_IS_ENOENT(err->apr_err)
        || SVN__APR_STATUS_IS_ENOTDIR(err->apr_err)))
     {
@@ -2188,21 +2188,28 @@ handle_child_process_error(apr_pool_t *pool, apr_status_t status,
 
 
 svn_error_t *
-svn_io_start_cmd(apr_proc_t *cmd_proc,
-                 const char *path,
-                 const char *cmd,
-                 const char *const *args,
-                 svn_boolean_t inherit,
-                 apr_file_t *infile,
-                 apr_file_t *outfile,
-                 apr_file_t *errfile,
-                 apr_pool_t *pool)
+svn_io_start_cmd2(apr_proc_t *cmd_proc,
+                  const char *path,
+                  const char *cmd,
+                  const char *const *args,
+                  svn_boolean_t inherit,
+                  svn_boolean_t infile_pipe,
+                  apr_file_t *infile,
+                  svn_boolean_t outfile_pipe,
+                  apr_file_t *outfile,
+                  svn_boolean_t errfile_pipe,
+                  apr_file_t *errfile,
+                  apr_pool_t *pool)
 {
   apr_status_t apr_err;
   apr_procattr_t *cmdproc_attr;
   int num_args;
   const char **args_native;
   const char *cmd_apr;
+
+  SVN_ERR_ASSERT(!((infile != NULL) && infile_pipe));
+  SVN_ERR_ASSERT(!((outfile != NULL) && outfile_pipe));
+  SVN_ERR_ASSERT(!((errfile != NULL) && errfile_pipe));
 
   /* Create the process attributes. */
   apr_err = apr_procattr_create(&cmdproc_attr, pool);
@@ -2212,7 +2219,7 @@ svn_io_start_cmd(apr_proc_t *cmd_proc,
 
   /* Make sure we invoke cmd directly, not through a shell. */
   apr_err = apr_procattr_cmdtype_set(cmdproc_attr,
-                                     inherit?APR_PROGRAM_PATH:APR_PROGRAM);
+                                     inherit ? APR_PROGRAM_PATH : APR_PROGRAM);
   if (apr_err)
     return svn_error_wrap_apr(apr_err, _("Can't set process '%s' cmdtype"),
                               cmd);
@@ -2255,6 +2262,13 @@ svn_io_start_cmd(apr_proc_t *cmd_proc,
         return svn_error_wrap_apr
           (apr_err, _("Can't set process '%s' child errfile"), cmd);
     }
+
+  /* Forward request for pipes to APR. */
+  if (infile_pipe || outfile_pipe || errfile_pipe)
+    apr_procattr_io_set(cmdproc_attr,
+                        infile_pipe ? APR_FULL_BLOCK : APR_NO_PIPE,
+                        outfile_pipe ? APR_FULL_BLOCK : APR_NO_PIPE,
+                        errfile_pipe ? APR_FULL_BLOCK : APR_NO_PIPE);
 
   /* Have the child print any problems executing its program to errfile. */
   apr_err = apr_pool_userdata_set(errfile, ERRFILE_KEY, NULL, pool);
@@ -2347,8 +2361,9 @@ svn_io_run_cmd(const char *path,
 {
   apr_proc_t cmd_proc;
 
-  SVN_ERR(svn_io_start_cmd(&cmd_proc, path, cmd, args, inherit,
-                           infile, outfile, errfile, pool));
+  SVN_ERR(svn_io_start_cmd2(&cmd_proc, path, cmd, args, inherit,
+                            FALSE, infile, FALSE, outfile, FALSE, errfile,
+                            pool));
 
   return svn_io_wait_for_cmd(&cmd_proc, cmd, exitcode, exitwhy, pool);
 }
@@ -3236,7 +3251,7 @@ svn_io_dir_remove_nonrecursive(const char *dirname, apr_pool_t *pool)
         if (APR_STATUS_IS_ENOTEMPTY(empty_status))
           retry = FALSE;
       }
-    
+
     if (retry)
       {
         WIN32_RETRY_LOOP(status, apr_dir_remove(dirname_apr, pool));
@@ -3689,7 +3704,7 @@ temp_file_create(apr_file_t **new_file,
   if (status)
     return svn_error_wrap_apr(status, _("Can't create temporary file from "
                               "template '%s'"), templ);
-  
+
   /* Translate the returned path back to utf-8 before returning it */
   return svn_error_return(svn_path_cstring_to_utf8(new_file_name,
                                                    templ_apr,
@@ -3705,7 +3720,7 @@ temp_file_create(apr_file_t **new_file,
 
   /* Offset by some time value and a unique request nr to make the number
      +- unique for both this process and on the computer */
-  int baseNr = (GetTickCount() << 11) + 7 * svn_atomic_inc(&tempname_counter) 
+  int baseNr = (GetTickCount() << 11) + 7 * svn_atomic_inc(&tempname_counter)
                + GetCurrentProcessId();
   int i;
 

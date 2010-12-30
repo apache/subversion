@@ -128,7 +128,7 @@ def invalid_export_targets(sbox):
   run_and_verify_svn_in_wc(sbox, "svn: Can't create directory 'iota':.*",
                            'export', '.', 'iota')
   for target in ["^/", "file://"]:
-    run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path", 
+    run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path",
                              'export', '.', target)
 
 def invalid_import_args(sbox):

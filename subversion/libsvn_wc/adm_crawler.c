@@ -476,7 +476,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
               const char *file_ext_str;
 
               this_switched = TRUE;
-             
+
               /* This could be a file external!  We need to know
                  that. */
               SVN_ERR(svn_wc__db_temp_get_file_external(&file_ext_str, db,

@@ -513,7 +513,7 @@ verify_wc_srcs_and_dsts(const apr_array_header_t *copy_pairs,
 
 
 /* Path-specific state used as part of path_driver_cb_baton. */
-typedef struct
+typedef struct path_driver_info_t
 {
   const char *src_url;
   const char *src_path;
@@ -824,7 +824,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
      *and* destinations might be an optimization when the user is
      authorized to access all that stuff, but could cause the
      operation to fail altogether otherwise.  See issue #3242.  */
-  SVN_ERR(get_copy_pair_ancestors(copy_pairs, NULL, &top_url_dst, &top_url_all, 
+  SVN_ERR(get_copy_pair_ancestors(copy_pairs, NULL, &top_url_dst, &top_url_all,
                                   pool));
   top_url = is_move ? top_url_all : top_url_dst;
 
@@ -983,10 +983,6 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
         }
       else if (strcmp(pair->src_abspath_or_url, top_url) == 0)
         {
-          if (is_move)
-            return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                     _("Cannot move URL '%s' into itself"),
-                                     pair->src_abspath_or_url);
           src_rel = "";
           SVN_ERR(svn_ra_check_path(ra_session, src_rel, pair->src_revnum,
                                     &info->src_kind, pool));
@@ -1026,6 +1022,11 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
       /* More info for our INFO structure.  */
       info->src_path = src_rel;
       info->dst_path = dst_rel;
+
+      apr_hash_set(action_hash, info->dst_path, APR_HASH_KEY_STRING,
+                       info);
+      if (is_move && (! info->resurrection))
+        apr_hash_set(action_hash, info->src_path, APR_HASH_KEY_STRING, info);
     }
 
   if (SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx))
@@ -1060,8 +1061,6 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
           item->url = svn_uri_join(top_url, info->dst_path, pool);
           item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
           APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
-          apr_hash_set(action_hash, info->dst_path, APR_HASH_KEY_STRING,
-                       info);
 
           if (is_move && (! info->resurrection))
             {
@@ -1069,8 +1068,6 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
               item->url = svn_uri_join(top_url, info->src_path, pool);
               item->state_flags = SVN_CLIENT_COMMIT_ITEM_DELETE;
               APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
-              apr_hash_set(action_hash, info->src_path, APR_HASH_KEY_STRING,
-                           info);
             }
         }
 
@@ -1632,7 +1629,7 @@ repos_to_wc_copy_locked(const apr_array_header_t *copy_pairs,
          ### simplify the conditions? */
 
       /* Hidden by client exclusion */
-      SVN_ERR(svn_wc__node_get_depth(&node_depth, ctx->wc_ctx, 
+      SVN_ERR(svn_wc__node_get_depth(&node_depth, ctx->wc_ctx,
                                      pair->dst_abspath_or_url, iterpool));
       if (node_depth == svn_depth_exclude)
         {
@@ -1664,7 +1661,7 @@ repos_to_wc_copy_locked(const apr_array_header_t *copy_pairs,
           SVN_ERR(svn_wc__node_is_status_deleted(&is_deleted, ctx->wc_ctx,
                                                  pair->dst_abspath_or_url,
                                                  iterpool));
-          SVN_ERR(svn_wc__node_is_status_present(&is_present, 
+          SVN_ERR(svn_wc__node_is_status_present(&is_present,
                                                  ctx->wc_ctx,
                                                  pair->dst_abspath_or_url,
                                                  iterpool));
@@ -1956,7 +1953,7 @@ try_copy(const apr_array_header_t *sources,
               src_basename = svn_dirent_basename(pair->src_abspath_or_url,
                                                  iterpool);
             }
-            
+
           pair->src_op_revision = *source->revision;
           pair->src_peg_revision = *source->peg_revision;
 
@@ -2077,7 +2074,7 @@ try_copy(const apr_array_header_t *sources,
                "supported"));
         }
 
-      /* Disallow moving any path onto or into itself. */
+      /* Disallow moving any path/URL onto or into itself. */
       for (i = 0; i < copy_pairs->nelts; i++)
         {
           svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
@@ -2085,10 +2082,14 @@ try_copy(const apr_array_header_t *sources,
 
           if (strcmp(pair->src_abspath_or_url,
                      pair->dst_abspath_or_url) == 0)
-            return svn_error_createf
-              (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-               _("Cannot move path '%s' into itself"),
-               svn_dirent_local_style(pair->src_abspath_or_url, pool));
+            return svn_error_createf(
+              SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+              srcs_are_urls ?
+                _("Cannot move URL '%s' into itself") :
+                _("Cannot move path '%s' into itself"),
+              srcs_are_urls ?
+                pair->src_abspath_or_url :
+                svn_dirent_local_style(pair->src_abspath_or_url, pool));
         }
     }
   else

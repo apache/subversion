@@ -1,6 +1,5 @@
-/*
- * cache.h: cache vtable interface
- *
+/**
+ * @copyright
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -19,46 +18,29 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
+ * @endcopyright
+ *
+ * @file svn_error_private.h
+ * @brief Subversion-internal error APIs.
  */
 
-#ifndef SVN_LIBSVN_SUBR_CACHE_H
-#define SVN_LIBSVN_SUBR_CACHE_H
+#ifndef SVN_ERROR_PRIVATE_H
+#define SVN_ERROR_PRIVATE_H
 
-#include "private/svn_cache.h"
+#include "svn_types.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
-typedef struct svn_cache__vtable_t {
-  svn_error_t *(*get)(void **value,
-                      svn_boolean_t *found,
-                      void *cache_implementation,
-                      const void *key,
-                      apr_pool_t *pool);
-
-  svn_error_t *(*set)(void *cache_implementation,
-                      const void *key,
-                      void *value,
-                      apr_pool_t *pool);
-
-  svn_error_t *(*iter)(svn_boolean_t *completed,
-                       void *cache_implementation,
-                       svn_iter_apr_hash_cb_t func,
-                       void *baton,
-                       apr_pool_t *pool);
-} svn_cache__vtable_t;
-
-struct svn_cache__t {
-  const svn_cache__vtable_t *vtable;
-  svn_cache__error_handler_t error_handler;
-  void *error_baton;
-  void *cache_internal;
-};
-
+/**
+ * Returns if @a err is a "tracing" error.
+ */
+svn_boolean_t
+svn_error__is_tracing_link(svn_error_t *err);
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-#endif /* SVN_LIBSVN_SUBR_CACHE_H */
+#endif /* SVN_ERROR_PRIVATE_H */

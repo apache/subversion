@@ -31,13 +31,12 @@
 #include "svn_ra.h"
 #include "svn_io.h"
 #include "svn_private_config.h"
-
-#include <apr_network_io.h>
+#include "private/svn_repos_private.h"
+#include "private/svn_ra_private.h"
 
 #include "load_editor.h"
 
 #define SVNRDUMP_PROP_LOCK SVN_PROP_PREFIX "rdump-lock"
-#define LOCK_RETRIES 10
 
 #if 0
 #define LDR_DBG(x) SVN_DBG(x)
@@ -56,10 +55,16 @@ commit_callback(const svn_commit_info_t *commit_info,
   return SVN_NO_ERROR;
 }
 
-/* See subversion/svnsync/main.c for docstring */
-static svn_boolean_t is_atomicity_error(svn_error_t *err)
+/* Implements `svn_ra__lock_retry_func_t'. */
+static svn_error_t *
+lock_retry_func(void *baton,
+                const svn_string_t *reposlocktoken,
+                apr_pool_t *pool)
 {
-  return svn_error_has_cause(err, SVN_ERR_FS_PROP_BASEVALUE_MISMATCH);
+  return svn_cmdline_printf(pool,
+                            _("Failed to get lock on destination "
+                              "repos, currently held by '%s'\n"),
+                            reposlocktoken->data);
 }
 
 /* Acquire a lock (of sorts) on the repository associated with the
@@ -77,12 +82,7 @@ get_lock(const svn_string_t **lock_string_p,
          void *cancel_baton,
          apr_pool_t *pool)
 {
-  char hostname_str[APRMAXHOSTLEN + 1] = { 0 };
-  svn_string_t *mylocktoken, *reposlocktoken;
-  apr_status_t apr_err;
   svn_boolean_t be_atomic;
-  apr_pool_t *subpool;
-  int i;
 
   SVN_ERR(svn_ra_has_capability(session, &be_atomic,
                                 SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
@@ -98,103 +98,10 @@ get_lock(const svn_string_t **lock_string_p,
       svn_error_clear(err);
     }
 
-  apr_err = apr_gethostname(hostname_str, sizeof(hostname_str), pool);
-  if (apr_err)
-    return svn_error_wrap_apr(apr_err, _("Can't get local hostname"));
-
-  mylocktoken = svn_string_createf(pool, "%s:%s", hostname_str,
-                                   svn_uuid_generate(pool));
-
-  /* If we succeed, this is what the property will be set to. */
-  *lock_string_p = mylocktoken;
-
-  subpool = svn_pool_create(pool);
-
-  for (i = 0; i < LOCK_RETRIES; ++i)
-    {
-      svn_error_t *err;
-
-      svn_pool_clear(subpool);
-
-      SVN_ERR(cancel_func(cancel_baton));
-      SVN_ERR(svn_ra_rev_prop(session, 0, SVNRDUMP_PROP_LOCK, &reposlocktoken,
-                              subpool));
-
-      if (reposlocktoken)
-        {
-          /* Did we get it? If so, we're done. */
-          if (strcmp(reposlocktoken->data, mylocktoken->data) == 0)
-            return SVN_NO_ERROR;
-
-          /* ...otherwise, tell the user that someone else has the
-             lock and sleep before retrying. */
-          SVN_ERR(svn_cmdline_printf
-                  (pool, _("Failed to get lock on destination "
-                           "repos, currently held by '%s'\n"),
-                   reposlocktoken->data));
-          
-          apr_sleep(apr_time_from_sec(1));
-        }
-      else if (i < LOCK_RETRIES - 1)
-        {
-          const svn_string_t *unset = NULL;
-
-          /* Except in the very last iteration, try to set the lock. */
-          err = svn_ra_change_rev_prop2(session, 0, SVNRDUMP_PROP_LOCK,
-                                        be_atomic ? &unset : NULL,
-                                        mylocktoken, subpool);
-
-          if (be_atomic && err && is_atomicity_error(err))
-            {
-              /* Someone else has the lock.  Let's loop. */
-              svn_error_clear(err);
-            }
-          else if (be_atomic && err == SVN_NO_ERROR)
-            {
-              /* We have the lock.  However, for compatibility with
-                 concurrent svnrdumps that don't support atomicity, loop
-                 anyway to double-check that they haven't overwritten
-                 our lock. */
-              continue;
-            }
-          else
-            {
-              /* Genuine error, or we aren't atomic and need to loop. */
-              SVN_ERR(err);
-            }
-        }
-    }
-
-  return svn_error_createf(APR_EINVAL, NULL,
-                           _("Couldn't get lock on destination repos "
-                             "after %d attempts"), i);
-}
-
-/* Remove the lock on SESSION iff the lock is owned by MYLOCKTOKEN. */
-static svn_error_t *
-maybe_unlock(svn_ra_session_t *session,
-             const svn_string_t *mylocktoken,
-             apr_pool_t *scratch_pool)
-{
-  svn_string_t *reposlocktoken;
-  svn_boolean_t be_atomic;
-
-  SVN_ERR(svn_ra_has_capability(session, &be_atomic,
-                                SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
-                                scratch_pool));
-  SVN_ERR(svn_ra_rev_prop(session, 0, SVNRDUMP_PROP_LOCK,
-                          &reposlocktoken, scratch_pool));
-  if (reposlocktoken && strcmp(reposlocktoken->data, mylocktoken->data) == 0)
-    {
-      svn_error_t *err =
-        svn_ra_change_rev_prop2(session, 0, SVNRDUMP_PROP_LOCK,
-                                be_atomic ? &mylocktoken : NULL, NULL,
-                                scratch_pool);
-      if (is_atomicity_error(err))
-        return svn_error_quick_wrap(err, _("svnrdump's lock was stolen; "
-                                           "can't remove it"));
-    }
-  return SVN_NO_ERROR;
+  return svn_ra__get_operational_lock(lock_string_p, NULL, session,
+                                      SVNRDUMP_PROP_LOCK, FALSE,
+                                      10 /* retries */, lock_retry_func, NULL,
+                                      cancel_func, cancel_baton, pool);
 }
 
 static svn_error_t *
@@ -382,7 +289,7 @@ new_node_record(void **node_baton,
           SVN_ERR(commit_editor->close_directory(rb->db->baton, rb->pool));
           rb->db = rb->db->parent;
         }
-        
+
       for (i = 0; i < residual_open_path->nelts; i ++)
         {
           relpath_compose =
@@ -469,6 +376,8 @@ set_revision_property(void *baton,
   struct revision_baton *rb;
   rb = baton;
 
+  SVN_ERR(svn_repos__validate_prop(name, value, rb->pool));
+
   if (rb->rev > 0)
     apr_hash_set(rb->revprop_table, apr_pstrdup(rb->pool, name),
                  APR_HASH_KEY_STRING, svn_string_dup(value, rb->pool));
@@ -500,6 +409,8 @@ set_node_property(void *baton,
   commit_editor = nb->rb->pb->commit_editor;
   pool = nb->rb->pool;
 
+  SVN_ERR(svn_repos__validate_prop(name, value, pool));
+
   switch (nb->kind)
     {
     case svn_node_file:
@@ -528,6 +439,8 @@ delete_node_property(void *baton,
   nb = baton;
   commit_editor = nb->rb->pb->commit_editor;
   pool = nb->rb->pool;
+
+  SVN_ERR(svn_repos__validate_prop(name, NULL, pool));
 
   if (nb->kind == svn_node_file)
     SVN_ERR(commit_editor->change_file_prop(nb->file_baton, name,
@@ -641,11 +554,15 @@ close_revision(void *baton)
       SVN_ERR(commit_editor->close_edit(commit_edit_baton, rb->pool));
     }
 
-  /* svn_fs_commit_txn rewrites the datestamp/ author property-
-     rewrite it by hand after closing the commit_editor. */
+  /* svn_fs_commit_txn() rewrites the datestamp and author properties;
+     we'll rewrite them again by hand after closing the commit_editor. */
+  SVN_ERR(svn_repos__validate_prop(SVN_PROP_REVISION_DATE,
+                                   rb->datestamp, rb->pool));
   SVN_ERR(svn_ra_change_rev_prop2(rb->pb->session, rb->rev,
                                   SVN_PROP_REVISION_DATE,
                                   NULL, rb->datestamp, rb->pool));
+  SVN_ERR(svn_repos__validate_prop(SVN_PROP_REVISION_AUTHOR,
+                                   rb->author, rb->pool));
   SVN_ERR(svn_ra_change_rev_prop2(rb->pb->session, rb->rev,
                                   SVN_PROP_REVISION_AUTHOR,
                                   NULL, rb->author, rb->pool));
@@ -710,9 +627,10 @@ drive_dumpstream_loader(svn_stream_t *stream,
 
   /* If all goes well, or if we're cancelled cleanly, don't leave a
      stray lock behind. */
-  if ((! err) 
-      || (err && (err->apr_err == SVN_ERR_CANCELLED)))
-    err = svn_error_compose_create(maybe_unlock(session, lock_string, pool),
-                                   err);
+  if ((! err) || (err && (err->apr_err == SVN_ERR_CANCELLED)))
+    err = svn_error_compose_create(
+              svn_ra__release_operational_lock(session, SVNRDUMP_PROP_LOCK,
+                                               lock_string, pool),
+              err);
   return err;
 }

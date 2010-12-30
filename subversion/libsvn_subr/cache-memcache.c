@@ -44,7 +44,7 @@
 */
 
 /* The (internal) cache object. */
-typedef struct {
+typedef struct memcache_t {
   /* The memcached server set we're using. */
   apr_memcache_t *memcache;
 

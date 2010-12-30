@@ -167,9 +167,9 @@ CREATE TABLE ACTUAL_NODE (
            conflicts? Why do we need these in a column to refer to the
            pristine store? Can't we just parse the checksums from
            conflict_data as well? */
-  older_checksum  TEXT,
-  left_checksum  TEXT,
-  right_checksum  TEXT,
+  older_checksum  TEXT REFERENCES PRISTINE (checksum),
+  left_checksum  TEXT REFERENCES PRISTINE (checksum),
+  right_checksum  TEXT REFERENCES PRISTINE (checksum),
 
   PRIMARY KEY (wc_id, local_relpath)
   );
@@ -415,7 +415,7 @@ CREATE TABLE NODES (
 
   /* The SHA-1 checksum of the pristine text, if this node is a file and was
      moved here or copied here, else NULL. */
-  checksum  TEXT,
+  checksum  TEXT REFERENCES PRISTINE (checksum),
 
   /* for kind==symlink, this specifies the target. */
   symlink_target  TEXT,
@@ -610,8 +610,15 @@ FROM ACTUAL_NODE_BACKUP;
 
 DROP TABLE ACTUAL_NODE_BACKUP;
 
-/* Note: One difference remains between the schemas of an upgraded and a
- * fresh WC.  While format 22 was current, "NOT NULL" was added to the
+/* Note: Other differences between the schemas of an upgraded and a
+ * fresh WC.
+ *
+ * While format 22 was current, "NOT NULL" was added to the
  * columns PRISTINE.size and PRISTINE.md5_checksum.  The format was not
- * bumped because it is a forward- and backward-compatible change. */
+ * bumped because it is a forward- and backward-compatible change.
+ *
+ * While format 23 was current, "REFERENCES PRISTINE" was added to the
+ * columns ACTUAL_NODE.older_checksum, ACTUAL_NODE.left_checksum,
+ * ACTUAL_NODE.right_checksum, NODES.checksum.
+ */
 

@@ -37,7 +37,7 @@
 
 #include "svn_private_config.h"
 
-typedef struct
+typedef struct blame_baton_t
 {
   svn_cl__opt_state_t *opt_state;
   svn_stream_t *out;

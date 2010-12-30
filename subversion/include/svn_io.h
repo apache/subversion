@@ -1484,9 +1484,17 @@ svn_io_dir_walk(const char *dirname,
 
 /**
  * Start @a cmd with @a args, using utf8-encoded @a path as working
- * directory.  Connect @a cmd's stdin, stdout, and stderr to @a infile,
- * @a outfile, and @a errfile, except where they are NULL.  Return the
- * process handle for the invoked program in @a *cmd_proc.
+ * directory.  Return the process handle for the invoked program in @a
+ * *cmd_proc.
+ *
+ * If @a infile_pipe is TRUE, connect @a cmd's stdin to a pipe;
+ * otherwise, connect it to @a infile (which may be NULL).  If
+ * @a outfile_pipe is TRUE, connect @a cmd's stdout to a pipe; otherwise,
+ * connect it to @a outfile (which may be NULL).  If @a errfile_pipe
+ * is TRUE, connect @a cmd's stderr to a pipe; otherwise, connect it
+ * to @a errfile (which may be NULL).  (Callers must pass FALSE for
+ * each of these boolean values for which the corresponding file
+ * handle is non-NULL.)
  *
  * @a args is a list of utf8-encoded <tt>const char *</tt> arguments,
  * terminated by @c NULL.  @a args[0] is the name of the program, though it
@@ -1501,8 +1509,29 @@ svn_io_dir_walk(const char *dirname,
  * will result in error output being written to @a errfile, if non-NULL, and
  * a non-zero exit status being returned to the parent process.
  *
+ * @since New in 1.7.
+ */
+svn_error_t *svn_io_start_cmd2(apr_proc_t *cmd_proc,
+                               const char *path,
+                               const char *cmd,
+                               const char *const *args,
+                               svn_boolean_t inherit,
+                               svn_boolean_t infile_pipe,
+                               apr_file_t *infile,
+                               svn_boolean_t outfile_pipe,
+                               apr_file_t *outfile,
+                               svn_boolean_t errfile_pipe,
+                               apr_file_t *errfile,
+                               apr_pool_t *pool);
+
+/**
+ * Similar to svn_io_start_cmd2() but with @a infile_pipe, @a
+ * outfile_pipe, and @a errfile_pipe always FALSE.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API
  * @since New in 1.3.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_io_start_cmd(apr_proc_t *cmd_proc,
                  const char *path,

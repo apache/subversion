@@ -302,11 +302,11 @@ def info_wcroot_abspaths(sbox):
 
     if target is None:
       target = "(UNKNOWN)"
-      
+
     if path is None:
       print "No WC root path for '%s'" % (target)
       raise svntest.Failure
-    
+
     if path != wcroot_abspath:
       print("For target '%s'..." % (target))
       print("   Reported WC root path: %s" % (path))
@@ -333,7 +333,7 @@ def info_url_special_characters(sbox):
 
   for url in special_urls:
     svntest.actions.run_and_verify_info([expected], url)
-  
+
 ########################################################################
 # Run the tests
 

@@ -1031,14 +1031,14 @@ def patch_remove_empty_dirs(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  
+
   patch_file_path = make_patch_path(sbox)
 
   # Contents of B:
   # A/B/lamba
   # A/B/F
   # A/B/E/{alpha,beta}
-  # Before patching we've deleted F, which means that B is empty after patching and 
+  # Before patching we've deleted F, which means that B is empty after patching and
   # should be removed.
   #
   # Contents of H:
@@ -1124,7 +1124,7 @@ def patch_remove_empty_dirs(sbox):
 
   expected_skip = wc.State('', { })
 
-  svntest.actions.run_and_verify_patch(wc_dir, 
+  svntest.actions.run_and_verify_patch(wc_dir,
                                        os.path.abspath(patch_file_path),
                                        expected_output,
                                        expected_disk,
@@ -1946,7 +1946,7 @@ def patch_with_ignore_whitespace(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
 
-  # Apply patch with leading and trailing spaces removed and tabs transformed 
+  # Apply patch with leading and trailing spaces removed and tabs transformed
   # to spaces. The patch should match and the hunks should be written to the
   # target as-is.
 
@@ -2612,7 +2612,7 @@ def patch_add_path_with_props(sbox):
   ]
 
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.add({'new': Item(contents="This is the file 'new'\n", 
+  expected_disk.add({'new': Item(contents="This is the file 'new'\n",
                                  props={'added' : added_prop_contents})})
   expected_disk.add({'X': Item(contents="",
                                props={'added' : added_prop_contents})})

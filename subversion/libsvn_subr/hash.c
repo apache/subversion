@@ -347,7 +347,7 @@ svn_hash_read(apr_hash_t *hash,
           size_t keylen;
           int parsed_len;
           void *keybuf;
-          
+
           /* Get the length of the key */
           SVN_ERR(svn_cstring_atoi(&parsed_len, buf + 2));
           keylen = parsed_len;

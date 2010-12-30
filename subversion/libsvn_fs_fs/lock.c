@@ -339,7 +339,7 @@ read_digest_file(apr_hash_t **children_p,
 /* Write LOCK in FS to the actual OS filesystem.
 
    Use PERMS_REFERENCE for the permissions of any digest files.
-   
+
    Note: this takes an FS_PATH because it's called from the hotcopy logic.
  */
 static svn_error_t *
@@ -396,10 +396,10 @@ set_lock(const char *fs_path,
                                 digest_path, perms_reference, subpool));
 
       /* Prep for next iteration, or bail if we're done. */
-      if (svn_dirent_is_root(this_path->data, this_path->len))
+      if (svn_uri_is_root(this_path->data, this_path->len))
         break;
       svn_stringbuf_set(this_path,
-                        svn_dirent_dirname(this_path->data, subpool));
+                        svn_fspath__dirname(this_path->data, subpool));
     }
 
   svn_pool_destroy(subpool);
@@ -464,10 +464,10 @@ delete_lock(svn_fs_t *fs,
         }
 
       /* Prep for next iteration, or bail if we're done. */
-      if (svn_dirent_is_root(this_path->data, this_path->len))
+      if (svn_uri_is_root(this_path->data, this_path->len))
         break;
       svn_stringbuf_set(this_path,
-                        svn_dirent_dirname(this_path->data, subpool));
+                        svn_fspath__dirname(this_path->data, subpool));
     }
 
   svn_pool_destroy(subpool);
@@ -584,7 +584,7 @@ locks_walker(void *baton,
 }
 
 /* Callback type for walk_digest_files().
- * 
+ *
  * CHILDREN and LOCK come from a read_digest_file(digest_path) call.
  */
 typedef svn_error_t *(*walk_digests_callback_t)(void *baton,
@@ -605,7 +605,7 @@ walk_digest_files(const char *fs_path,
                   walk_digests_callback_t walk_digests_func,
                   void *walk_digests_baton,
                   svn_boolean_t have_write_lock,
-                  apr_pool_t *pool) 
+                  apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
   apr_hash_t *children;
@@ -989,7 +989,7 @@ svn_fs_fs__get_lock(svn_lock_t **lock_p,
 
 
 /* Baton for get_locks_filter_func(). */
-typedef struct
+typedef struct get_locks_filter_baton_t
 {
   const char *path;
   svn_depth_t requested_depth;
@@ -1027,7 +1027,7 @@ get_locks_filter_func(void *baton,
      c) we've asked for depth=files or depth=immediates, and this
         lock is on an immediate child of our query path.
   */
-  if ((strcmp(b->path, lock->path) == 0) 
+  if ((strcmp(b->path, lock->path) == 0)
       || (b->requested_depth == svn_depth_infinity))
     {
       SVN_ERR(b->get_locks_func(b->get_locks_baton, lock, pool));
@@ -1040,7 +1040,7 @@ get_locks_filter_func(void *baton,
         SVN_ERR(b->get_locks_func(b->get_locks_baton, lock, pool));
     }
 
-  return SVN_NO_ERROR; 
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -1058,7 +1058,7 @@ svn_fs_fs__get_locks(svn_fs_t *fs,
   path = svn_fs__canonicalize_abspath(path, pool);
 
   glfb.path = path;
-  glfb.requested_depth = depth; 
+  glfb.requested_depth = depth;
   glfb.get_locks_func = get_locks_func;
   glfb.get_locks_baton = get_locks_baton;
 

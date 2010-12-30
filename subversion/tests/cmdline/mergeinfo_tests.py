@@ -376,7 +376,7 @@ def recursive_mergeinfo(sbox):
     sbox.repo_url + '/A2/D/H/omega',
     sbox.repo_url + '/A_COPY/D/H/omega',
     '--show-revs', 'merged')
-  
+
 # Test for issue #3180 'svn mergeinfo ignores peg rev for WC target'.
 def mergeinfo_on_pegged_wc_path(sbox):
   "svn mergeinfo on pegged working copy target"

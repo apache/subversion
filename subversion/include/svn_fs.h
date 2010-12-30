@@ -811,15 +811,16 @@ svn_fs_begin_txn(svn_fs_txn_t **txn_p,
  *
  * If the commit succeeds, @a txn is invalid.
  *
- * If the commit fails, @a txn is still valid; you can make more
- * operations to resolve the conflict, or call svn_fs_abort_txn() to
- * abort the transaction.
+ * If the commit fails for any reason, @a *new_rev is an invalid
+ * revision number, an error other than #SVN_NO_ERROR is returned and
+ * @a txn is still valid; you can make more operations to resolve the
+ * conflict, or call svn_fs_abort_txn() to abort the transaction.
  *
  * @note Success or failure of the commit of @a txn is determined by
  * examining the value of @a *new_rev upon this function's return.  If
  * the value is a valid revision number, the commit was successful,
  * even though a non-@c NULL function return value may indicate that
- * something else went wrong.
+ * something else went wrong in post commit FS processing.
  */
 svn_error_t *
 svn_fs_commit_txn(const char **conflict_p,
@@ -1060,7 +1061,7 @@ svn_fs_revision_root_revision(svn_fs_root_t *root);
 
 
 /** The kind of change that occurred on the path. */
-typedef enum
+typedef enum svn_fs_path_change_kind_t
 {
   /** path modified in txn */
   svn_fs_path_change_modify = 0,
@@ -1958,7 +1959,7 @@ svn_fs_change_rev_prop2(svn_fs_t *fs,
                         apr_pool_t *pool);
 
 
-/** 
+/**
  * Similar to svn_fs_change_rev_prop2(), but with @a old_value_p passed as
  * @c NULL.
  *
@@ -2193,7 +2194,7 @@ svn_fs_get_locks2(svn_fs_t *fs,
                   void *get_locks_baton,
                   apr_pool_t *pool);
 
-/** 
+/**
  * Similar to svn_fs_get_locks2(), but with @a depth always passed as
  * svn_depth_infinity.
  *
@@ -2221,7 +2222,7 @@ svn_fs_print_modules(svn_stringbuf_t *output,
 
 
 /** The kind of action being taken by 'pack'. */
-typedef enum
+typedef enum svn_fs_pack_notify_action_t
 {
   /** packing of the shard has commenced */
   svn_fs_pack_notify_start = 0,

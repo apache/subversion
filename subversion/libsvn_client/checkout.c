@@ -211,12 +211,15 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
     }
 
   /* Have update fix the incompleteness. */
-  err = svn_client__update_internal(result_rev, local_abspath,
-                                    revision, depth, TRUE,
-                                    ignore_externals,
-                                    allow_unver_obstructions,
-                                    use_sleep, innercheckout, FALSE,
-                                    ctx, pool);
+  if (! err)
+    {
+      err = svn_client__update_internal(result_rev, local_abspath,
+                                        revision, depth, TRUE,
+                                        ignore_externals,
+                                        allow_unver_obstructions,
+                                        use_sleep, innercheckout, FALSE,
+                                        ctx, pool);
+    }
 
   if (err)
     {

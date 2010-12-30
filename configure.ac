@@ -268,8 +268,13 @@ AC_SUBST(LT_CFLAGS)
 AC_SUBST(LT_LDFLAGS)
 
 AC_ARG_ENABLE(local-library-preloading,
-  AS_HELP_STRING([--disable-local-library-preloading], 
-                 [Disable preloading of locally built libraries in locally built executables]),
+  AS_HELP_STRING([--enable-local-library-preloading], 
+                 [Enable preloading of locally built libraries in locally
+                  built executables.  This may be necessary for testing
+                  prior to installation on some platforms.  It doesn't work
+                  on some platforms (Darwin, OpenBSD, ...) and on platforms
+                  where it does work (Linux, ...) it may interfere with the
+                  installation process.]),
   [
   if test "$enableval" != "no"; then
     if test "$svn_enable_shared" = "yes"; then
@@ -281,11 +286,7 @@ AC_ARG_ENABLE(local-library-preloading,
     TRANSFORM_LIBTOOL_SCRIPTS=""
   fi
   ], [
-  if test "`uname`" != "Darwin" && test "$svn_enable_shared" = "yes"; then
-    TRANSFORM_LIBTOOL_SCRIPTS="transform-libtool-scripts"
-  else
-    TRANSFORM_LIBTOOL_SCRIPTS=""
-  fi
+  TRANSFORM_LIBTOOL_SCRIPTS=""
 ])
 AC_SUBST(TRANSFORM_LIBTOOL_SCRIPTS)
 

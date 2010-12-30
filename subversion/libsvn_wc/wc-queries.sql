@@ -104,6 +104,15 @@ LEFT OUTER JOIN lock ON nodes.repos_id = lock.repos_id
   AND nodes.repos_path = lock.repos_relpath
 WHERE wc_id = ?1 AND parent_relpath = ?2;
 
+-- STMT_SELECT_NODE_CHILDREN_WALKER_INFO
+/* ### See comment at STMT_SELECT_NODE_CHILDREN_INFO.
+   ### Should C code handle GROUP BY local_relpath ORDER BY op_depths DESC? */
+SELECT local_relpath, op_depth, presence, kind
+FROM nodes
+WHERE wc_id = ?1 AND parent_relpath = ?2
+GROUP BY local_relpath
+ORDER BY op_depth DESC;
+
 -- STMT_SELECT_ACTUAL_CHILDREN_INFO
 SELECT prop_reject, changelist, conflict_old, conflict_new,
 conflict_working, tree_conflict_data, properties, local_relpath,
@@ -712,14 +721,15 @@ UPDATE actual_node SET tree_conflict_data = NULL;
 SELECT DISTINCT local_relpath FROM nodes
 WHERE kind = 'file' AND parent_relpath = ?1;
 
--- STMT_PLAN_PROP_UPGRADE
-SELECT 0, nodes_base.presence, nodes_base.wc_id FROM nodes nodes_base
-WHERE nodes_base.local_relpath = ?1 AND nodes_base.op_depth = 0
-UNION ALL
-SELECT 1, nodes_work.presence, nodes_work.wc_id FROM nodes nodes_work
-WHERE nodes_work.local_relpath = ?1
-  AND nodes_work.op_depth = (SELECT MAX(op_depth) FROM nodes
-                             WHERE local_relpath = ?1 AND op_depth > 0);
+-- STMT_SELECT_NODE_UPGRADE
+SELECT op_depth, presence, wc_id
+FROM nodes
+WHERE local_relpath = ?1
+ORDER BY op_depth DESC;
+
+-- STMT_UPDATE_NODE_PROPS
+UPDATE nodes SET properties = ?4
+WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3;
 
 -- STMT_HAS_WORKING_NODES
 SELECT 1 FROM nodes WHERE op_depth > 0;

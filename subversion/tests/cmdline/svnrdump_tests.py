@@ -66,7 +66,7 @@ def build_repos(sbox):
   svntest.main.create_repos(sbox.repo_dir)
 
 def run_dump_test(sbox, dumpfile_name, expected_dumpfile_name = None,
-                  subdir = None):
+                  subdir = None, bypass_prop_validation = False):
   """Load a dumpfile using 'svnadmin load', dump it with 'svnrdump
   dump' and check that the same dumpfile is produced or that
   expected_dumpfile_name is produced if provided. Additionally, the
@@ -85,8 +85,9 @@ def run_dump_test(sbox, dumpfile_name, expected_dumpfile_name = None,
                                         dumpfile_name),
                            'rb').readlines()
 
-  svntest.actions.run_and_verify_load(sbox.repo_dir, svnadmin_dumpfile)
-  
+  svntest.actions.run_and_verify_load(sbox.repo_dir, svnadmin_dumpfile,
+                                      bypass_prop_validation)
+
   repo_url = sbox.repo_url
   if subdir:
     repo_url = repo_url + subdir
@@ -199,7 +200,7 @@ def copy_and_modify_dump(sbox):
 def copy_and_modify_load(sbox):
   "load: copy and modify"
   run_load_test(sbox, "copy-and-modify.dump")
-  
+
 def no_author_dump(sbox):
   "dump: copy revs with no svn:author revprops"
   run_dump_test(sbox, "no-author.dump")
@@ -211,7 +212,7 @@ def no_author_load(sbox):
 def copy_from_previous_version_and_modify_dump(sbox):
   "dump: copy from previous version and modify"
   run_dump_test(sbox, "copy-from-previous-version-and-modify.dump")
-  
+
 def copy_from_previous_version_and_modify_load(sbox):
   "load: copy from previous version and modify"
   run_load_test(sbox, "copy-from-previous-version-and-modify.dump")
@@ -259,7 +260,7 @@ def tag_trunk_with_file2_load(sbox):
 def dir_prop_change_dump(sbox):
   "dump: directory property changes"
   run_dump_test(sbox, "dir-prop-change.dump")
-  
+
 def dir_prop_change_load(sbox):
   "load: directory property changes"
   run_load_test(sbox, "dir-prop-change.dump")
@@ -301,7 +302,8 @@ def url_encoding_load(sbox):
 def copy_bad_line_endings_dump(sbox):
   "dump: inconsistent line endings in svn:props"
   run_dump_test(sbox, "copy-bad-line-endings.dump",
-           expected_dumpfile_name="copy-bad-line-endings.expected.dump")
+                expected_dumpfile_name="copy-bad-line-endings.expected.dump",
+                bypass_prop_validation=True)
 
 def commit_a_copy_of_root_dump(sbox):
   "dump: commit a copy of root"

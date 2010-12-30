@@ -972,7 +972,7 @@ svn_wc__db_pristine_remove(svn_wc__db_t *db,
                            apr_pool_t *scratch_pool);
 
 
-/* Remove all unreferenced pristines belonging to WRI_ABSPATH in DB. */
+/* Remove all unreferenced pristines in the WC of WRI_ABSPATH in DB. */
 svn_error_t *
 svn_wc__db_pristine_cleanup(svn_wc__db_t *db,
                             const char *wri_abspath,
@@ -1517,6 +1517,25 @@ svn_wc__db_read_children_info(apr_hash_t **nodes,
                               const char *dir_abspath,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool);
+
+
+/* Structure returned by svn_wc__db_read_walker_info.  Only has the
+   fields needed by svn_wc__internal_walk_children(). */
+struct svn_wc__db_walker_info_t {
+  svn_wc__db_status_t status;
+  svn_wc__db_kind_t kind;
+};
+
+/* Return in *NODES a hash mapping name->struct svn_wc__db_walker_info_t for
+   the children of DIR_ABSPATH. "name" is the child's name relatve to
+   DIR_ABSPATH, not an absolute path. */
+svn_error_t *
+svn_wc__db_read_children_walker_info(apr_hash_t **nodes,
+                                     svn_wc__db_t *db,
+                                     const char *dir_abspath,
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool);
+
 
 /* Set *PROPVAL to the value of the property named PROPNAME of the node
    LOCAL_ABSPATH in the ACTUAL tree (looking through to the WORKING or BASE
@@ -2336,16 +2355,6 @@ svn_wc__db_temp_op_make_copy(svn_wc__db_t *db,
                              apr_pool_t *scratch_pool);
 
 
-#ifndef SVN_WC__OP_DEPTH
-/* Elide the copyfrom information for LOCAL_ABSPATH if it can be derived
-   from the parent node.  */
-svn_error_t *
-svn_wc__db_temp_elide_copyfrom(svn_wc__db_t *db,
-                               const char *local_abspath,
-                               apr_pool_t *scratch_pool);
-#endif
-
-
 /* Return the serialized file external info (from BASE) for LOCAL_ABSPATH.
    Stores NULL into SERIALIZED_FILE_EXTERNAL if this node is NOT a file
    external. If a BASE node does not exist: SVN_ERR_WC_PATH_NOT_FOUND.  */
@@ -2405,7 +2414,7 @@ svn_wc__db_temp_op_set_rev_and_repos_relpath(svn_wc__db_t *db,
    REPOS_RELPATH is not NULL, apply REPOS_RELPATH, REPOS_ROOT_URL and
    REPOS_UUID.
    Perform all temporary allocations in SCRATCH_POOL.
-   
+
    ### For 1.7 this should probably become a proper tree conflict and
    ### just handled by putting a base directory below the existing
    ### working node.
@@ -2429,6 +2438,14 @@ svn_wc__db_drop_root(svn_wc__db_t *db,
 
 /* Return the OP_DEPTH for LOCAL_RELPATH. */
 int svn_wc__db_op_depth_for_upgrade(const char *local_relpath);
+
+/* Set *HAVE_WORK TRUE if there is a working layer below the top layer */
+svn_error_t *
+svn_wc__db_temp_below_work(svn_boolean_t *have_work,
+                           svn_wc__db_t *db,
+                           const char *local_abspath,
+                           apr_pool_t *scratch_pool);
+
 
 /* @} */
 

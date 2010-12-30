@@ -49,7 +49,7 @@
 /*
  * This enum represents the current state of our XML parsing for a REPORT.
  */
-typedef enum {
+typedef enum log_state_e {
   NONE = 0,
   REPORT,
   ITEM,
@@ -65,7 +65,7 @@ typedef enum {
   MODIFIED_PATH,
 } log_state_e;
 
-typedef struct {
+typedef struct log_info_t {
   apr_pool_t *pool;
 
   /* The currently collected value as we build it up */
@@ -82,7 +82,7 @@ typedef struct {
   const char *revprop_name;
 } log_info_t;
 
-typedef struct {
+typedef struct log_context_t {
   apr_pool_t *pool;
 
   /* parameters set by our caller */

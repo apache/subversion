@@ -169,7 +169,7 @@ svn__apr_hash_index_val(const apr_hash_index_t *hi);
 /** @} */
 
 /** The various types of nodes in the Subversion filesystem. */
-typedef enum
+typedef enum svn_node_kind_t
 {
   /** absent */
   svn_node_none,
@@ -211,7 +211,7 @@ svn_node_kind_from_word(const char *word);
  * not a valid value.
  *
  * @since New in 1.7. */
-typedef enum
+typedef enum svn_tristate_t
 {
   svn_tristate_false = 2,
   svn_tristate_true,
@@ -364,7 +364,7 @@ enum svn_recurse_kind
  *
  * @since New in 1.5.
  */
-typedef enum
+typedef enum svn_depth_t
 {
   /* The order of these depths is important: the higher the number,
      the deeper it descends.  This allows us to compare two depths
