@@ -4330,11 +4330,11 @@ def nonrecursive_commit_of_copy(sbox):
 
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
-  
+
   expected_output = svntest.wc.State(wc_dir, {
     'A_new': Item(verb='Adding'),
     })
-  
+
   # These nodes are added by the commit
   expected_status.tweak('A_new', 'A_new/D', 'A_new/D/G', 'A_new/D/G/pi',
                         'A_new/D/G/rho', 'A_new/D/G/tau', 'A_new/D/H',
@@ -4703,7 +4703,7 @@ def copy_over_deleted_dir(sbox):
 
 def mixed_rev_copy_del(sbox):
   """copy mixed-rev and delete children"""
-  
+
   sbox.build()
   wc_dir = sbox.wc_dir
 

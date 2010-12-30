@@ -207,7 +207,7 @@ def supports_obliterate():
       if line.find("obliterate") != -1:
         return True
   return False
-    
+
 
 # list all tests here, starting with None:
 test_list = [ None,

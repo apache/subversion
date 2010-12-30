@@ -5183,7 +5183,7 @@ svn_fs_base__validate_mergeinfo(svn_mergeinfo_t *validated_mergeinfo,
             hi2 = apr_hash_next(hi2))
          {
             const char *path = svn__apr_hash_index_key(hi2);
- 
+
             svn_pool_clear(inner_iterpool);
             SVN_ERR(base_check_path(&kind, mergeinfo_rev_root,
                                     path, inner_iterpool));

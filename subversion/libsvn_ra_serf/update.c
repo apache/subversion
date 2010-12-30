@@ -1009,7 +1009,7 @@ handle_stream(serf_request_t *request,
 
   /* Woo-hoo.  Nothing here to see.  */
   location = svn_ra_serf__response_get_location(response, pool);
-  
+
   err = svn_ra_serf__error_on_status(sl.code,
                                      fetch_ctx->info->name,
                                      location);

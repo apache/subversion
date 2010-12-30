@@ -307,7 +307,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
     {
       int i;
       const char *parent_abspath = local_abspath;
-      apr_array_header_t *missing_parents = 
+      apr_array_header_t *missing_parents =
         apr_array_make(pool, 4, sizeof(const char *));
 
       while (1)

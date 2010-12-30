@@ -109,7 +109,7 @@ svn_cl__commit(apr_getopt_t *os,
                                  "directories in a separate commit.\n"),
                                svn_depth_to_word(opt_state->depth),
                                svn_depth_to_word(svn_depth_infinity)));
-    
+
   cfg = apr_hash_get(ctx->config, SVN_CONFIG_CATEGORY_CONFIG,
                      APR_HASH_KEY_STRING);
   if (cfg)

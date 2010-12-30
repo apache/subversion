@@ -240,7 +240,7 @@ class SVNTests extends TestCase
                               NodeKind.none, CommitItemStateFlags.Add);
         client.doImport(greekFiles.getAbsolutePath(),
                        makeReposUrl(greekRepos).toString(),
-                        Depth.infinity, false, false, null, 
+                        Depth.infinity, false, false, null,
                         new MyCommitMessage(), null);
         admin.dump(greekRepos, new FileOutputStream(greekDump),
                    null, null, false, false, null);
@@ -287,7 +287,7 @@ class SVNTests extends TestCase
     private static class DefaultPromptUserPassword implements UserPasswordCallback
     {
 
-        public int askTrustSSLServer(String info, boolean allowPermanently) 
+        public int askTrustSSLServer(String info, boolean allowPermanently)
         {
             return UserPasswordCallback.AcceptTemporary;
         }
@@ -323,25 +323,25 @@ class SVNTests extends TestCase
         }
 
         public String askQuestion(String realm, String question,
-                boolean showAnswer, boolean maySave) 
+                boolean showAnswer, boolean maySave)
         {
             return "";
         }
 
-        public boolean userAllowedSave() 
+        public boolean userAllowedSave()
         {
             return false;
         }
     }
 
-    private static class DefaultProgressListener implements ProgressCallback 
+    private static class DefaultProgressListener implements ProgressCallback
     {
 
-        public void onProgress(ProgressEvent event) 
+        public void onProgress(ProgressEvent event)
         {
             // Do nothing, just receive the event
         }
-        
+
     }
     /**
      * build a sample directory with test files to be used as import for
@@ -421,7 +421,7 @@ class SVNTests extends TestCase
      * Create the url for the repository to be used for the tests.
      * @param file  the directory of the repository
      * @return the URL for the repository
-     * @throws SubversionException 
+     * @throws SubversionException
      */
     protected URI makeReposUrl(File file) throws SubversionException
     {

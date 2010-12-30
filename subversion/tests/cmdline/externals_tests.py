@@ -1481,7 +1481,7 @@ def merge_target_with_externals(sbox):
   A_path              = os.path.join(wc_dir, "A")
   A_branch_path       = os.path.join(wc_dir, "A-branch")
   A_gamma_branch_path = os.path.join(wc_dir, "A-branch", "D", "gamma")
-  
+
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'checkout',
                                      repo_url, wc_dir)

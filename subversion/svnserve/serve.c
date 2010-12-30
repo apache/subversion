@@ -307,7 +307,7 @@ svn_error_t *load_configs(svn_config_t **cfg,
              * will go to standard error for the admin to see. */
             return err;
         }
-      
+
       /* Are we going to be case-normalizing usernames when we consult
        * this authz file? */
       svn_config_get(*cfg, &case_force_val, SVN_CONFIG_SECTION_GENERAL,

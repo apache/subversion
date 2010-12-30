@@ -1084,7 +1084,7 @@ svn_error_t *svn_ra_neon__get_latest_revnum(svn_ra_session_t *session,
      PROPFINDs. */
   if (SVN_RA_NEON__HAVE_HTTPV2_SUPPORT(ras))
     {
-      SVN_ERR(svn_ra_neon__exchange_capabilities(ras, NULL, 
+      SVN_ERR(svn_ra_neon__exchange_capabilities(ras, NULL,
                                                  latest_revnum, pool));
       if (! SVN_IS_VALID_REVNUM(*latest_revnum))
         return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,

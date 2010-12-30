@@ -548,7 +548,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       break;
 
     case svn_wc_notify_update_started:
-      if (! (nb->suppress_summary_lines || 
+      if (! (nb->suppress_summary_lines ||
              nb->in_external ||
              nb->is_checkout ||
              nb->is_export))

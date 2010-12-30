@@ -98,8 +98,8 @@ svn_ra__release_operational_lock(svn_ra_session_t *session,
   if (reposlocktoken && svn_string_compare(reposlocktoken, mylocktoken))
     {
       svn_error_t *err;
-      
-      err = svn_ra_change_rev_prop2(session, 0, lock_revprop_name, 
+
+      err = svn_ra_change_rev_prop2(session, 0, lock_revprop_name,
                                     be_atomic ? &mylocktoken : NULL, NULL,
                                     scratch_pool);
       if (is_atomicity_error(err))

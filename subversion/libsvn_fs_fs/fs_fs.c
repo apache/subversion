@@ -1550,7 +1550,7 @@ svn_fs_fs__hotcopy(const char *src_path,
               err2 = svn_dirent_get_absolute(&dst_abspath, dst_path, pool);
               if (err2)
                 return svn_error_return(svn_error_compose_create(err, err2));
-              
+
               /* ### hack: strip off the 'db/' directory from paths so
                * ### they make sense to the user */
               src_abspath = svn_dirent_dirname(src_abspath, pool);
@@ -2757,7 +2757,7 @@ get_root_changes_offset(apr_off_t *root_offset,
    directory to its final location NEW_FILENAME in the repository.  On
    Unix, match the permissions of the new file to the permissions of
    PERMS_REFERENCE.  Temporary allocations are from POOL.
-   
+
    This function almost duplicates svn_io_file_move(), but it tries to
    guarantee a flush. */
 static svn_error_t *
@@ -5432,7 +5432,7 @@ rep_write_contents_close(void *baton)
                                          b->parent_pool);
       if (err)
         {
-          /* Something's wrong with the rep-sharing index.  We can continue 
+          /* Something's wrong with the rep-sharing index.  We can continue
              without rep-sharing, but warn.
            */
           (b->fs->warning)(b->fs->warning_baton, err);
@@ -7727,7 +7727,7 @@ struct pack_baton
 /* The work-horse for svn_fs_fs__pack, called with the FS write lock.
    This implements the svn_fs_fs__with_write_lock() 'body' callback
    type.  BATON is a 'struct pack_baton *'.
-   
+
    WARNING: if you add a call to this function, please note:
      The code currently assumes that any piece of code running with
      the write-lock set can rely on the ffd->min_unpacked_rev and

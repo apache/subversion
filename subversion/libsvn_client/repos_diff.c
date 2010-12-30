@@ -489,7 +489,7 @@ diff_deleted_dir(const char *dir,
                           revision,
                           SVN_DIRENT_KIND,
                           pool));
-  
+
   for (hi = apr_hash_first(pool, dirents); hi;
        hi = apr_hash_next(hi))
     {
@@ -511,7 +511,7 @@ diff_deleted_dir(const char *dir,
           SVN_ERR(get_file_from_ra(b, revision));
 
           SVN_ERR(get_empty_file(b->edit_baton, &(b->path_end_revision)));
-      
+
           get_file_mime_types(&mimetype1, &mimetype2, b);
 
           SVN_ERR(eb->diff_callbacks->file_deleted(
@@ -523,7 +523,7 @@ diff_deleted_dir(const char *dir,
                                 b->edit_baton->diff_cmd_baton,
                                 iterpool));
         }
- 
+
       if (dirent->kind == svn_node_dir)
         SVN_ERR(diff_deleted_dir(path,
                                  revision,
@@ -595,7 +595,7 @@ delete_entry(const char *path,
                     (local_dir_abspath, &state, &tree_conflicted,
                      svn_dirent_join(eb->target, path, pool),
                      eb->diff_cmd_baton, pool));
- 
+
             if (eb->walk_deleted_repos_dirs)
               {
                 /* A workaround for issue 2333.  The "old" dir will be

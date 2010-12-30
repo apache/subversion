@@ -1108,7 +1108,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
         {
           /* This code should never be used, as it doesn't install proper
              pristine and/or properties. But it was not an error in the old
-             version of this function. 
+             version of this function.
 
              ===> Use svn_wc_add_repos_file4() directly! */
           svn_stream_t *content = svn_stream_empty(scratch_pool);
@@ -1869,7 +1869,7 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
 
           entry_abspath = svn_dirent_join(local_abspath, entry_name, iterpool);
 
-          /* ### where did the adm_missing and depth_exclude test go?!? 
+          /* ### where did the adm_missing and depth_exclude test go?!?
 
              ### BH: depth exclude is handled by hidden and missing is ok
                      for this temp_op. */

@@ -122,7 +122,7 @@ extern "C" {
  * the working copy.
  *
  * The change from 19 to 20 introduces NODES and drops BASE_NODE and
- * WORKING_NODE, op_depth is always 0 or 2. 
+ * WORKING_NODE, op_depth is always 0 or 2.
  *
  * The change from 20 to 21 moved tree conflict storage from the
  * parent to the conflicted node.

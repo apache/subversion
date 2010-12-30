@@ -376,7 +376,7 @@ create_open(svn_wc__db_t **db,
                           TRUE /* auto_upgrade */,
                           TRUE /* enforce_empty_wq */,
                           pool, pool));
-  
+
   return SVN_NO_ERROR;
 }
 

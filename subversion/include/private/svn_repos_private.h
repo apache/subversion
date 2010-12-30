@@ -74,7 +74,7 @@ svn_repos__obliterate_path_rev(svn_repos_t *repos,
  * repository; return @c SVN_ERR_REPOS_BAD_ARGS if it isn't.  For some
  * "svn:" properties, also validate the @a value, and return
  * @c SVN_ERR_BAD_PROPERTY_VALUE if it is not valid.
- * 
+ *
  * Use @a pool for temporary allocations.
  *
  * @since New in 1.7.

@@ -232,7 +232,7 @@ end_207_element(void *baton, int state,
             return svn_error_create(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                                     _("The request response contained at least "
                                       "one error"));
-          else if (b->contains_precondition_error) 
+          else if (b->contains_precondition_error)
             return svn_error_create(SVN_ERR_FS_PROP_BASEVALUE_MISMATCH, NULL,
                                     b->description->data);
           else

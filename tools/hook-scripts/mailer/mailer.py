@@ -965,7 +965,7 @@ class DifflibDiffContent():
     tolines = open(to_file, 'U').readlines()
     self.diff = difflib.unified_diff(fromlines, tolines,
                                      label_from, label_to)
-    
+
   def __nonzero__(self):
     # we always have some items
     return True

@@ -4054,7 +4054,7 @@ do_walk(walker_ctx_t *ctx, int depth)
       if (params->walk_type & DAV_WALKTYPE_AUTH)
         {
           const char *repos_relpath =
-            apr_pstrcat(iterpool, 
+            apr_pstrcat(iterpool,
                         apr_pstrmemdup(iterpool,
                                        ctx->repos_path->data,
                                        ctx->repos_path->len),
@@ -4103,7 +4103,7 @@ do_walk(walker_ctx_t *ctx, int depth)
       ctx->uri->len = uri_len;
       ctx->repos_path->len = repos_len;
     }
-  
+
   svn_pool_destroy(iterpool);
 
   return NULL;
@@ -4379,7 +4379,7 @@ int dav_svn__method_post(request_rec *r)
      the client with (hopefully) some helpful information. */
   if (derr)
     return dav_svn__error_response_tag(r, derr);
-    
+
   return OK;
 }
 

@@ -367,7 +367,7 @@ diff_label(const char *path,
  * PATH2 to the stream OS using HEADER_ENCODING.
  * All allocations are done in RESULT_POOL. */
 static svn_error_t *
-print_git_diff_header_added(svn_stream_t *os, const char *header_encoding, 
+print_git_diff_header_added(svn_stream_t *os, const char *header_encoding,
                             const char *path1, const char *path2,
                             apr_pool_t *result_pool)
 {
@@ -383,7 +383,7 @@ print_git_diff_header_added(svn_stream_t *os, const char *header_encoding,
  * PATH2 to the stream OS using HEADER_ENCODING.
  * All allocations are done in RESULT_POOL. */
 static svn_error_t *
-print_git_diff_header_deleted(svn_stream_t *os, const char *header_encoding, 
+print_git_diff_header_deleted(svn_stream_t *os, const char *header_encoding,
                               const char *path1, const char *path2,
                               apr_pool_t *result_pool)
 {
@@ -399,7 +399,7 @@ print_git_diff_header_deleted(svn_stream_t *os, const char *header_encoding,
 /* Print a git diff header for a copy from COPYFROM_PATH to PATH to the stream
  * OS using HEADER_ENCODING. All allocations are done in RESULT_POOL. */
 static svn_error_t *
-print_git_diff_header_copied(svn_stream_t *os, const char *header_encoding, 
+print_git_diff_header_copied(svn_stream_t *os, const char *header_encoding,
                              const char *copyfrom_path, const char *path,
                              apr_pool_t *result_pool)
 {
@@ -425,7 +425,7 @@ print_git_diff_header_renamed(svn_stream_t *os, const char *header_encoding,
                                       "diff --git a/%s b/%s%s",
                                       copyfrom_path, path, APR_EOL_STR));
   SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
-                                      "rename from %s%s", copyfrom_path, 
+                                      "rename from %s%s", copyfrom_path,
                                       APR_EOL_STR));
   SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
                                       "rename to %s%s", path, APR_EOL_STR));
@@ -436,7 +436,7 @@ print_git_diff_header_renamed(svn_stream_t *os, const char *header_encoding,
  * PATH2 to the stream OS using HEADER_ENCODING.
  * All allocations are done in RESULT_POOL. */
 static svn_error_t *
-print_git_diff_header_modified(svn_stream_t *os, const char *header_encoding, 
+print_git_diff_header_modified(svn_stream_t *os, const char *header_encoding,
                                const char *path1, const char *path2,
                                apr_pool_t *result_pool)
 {
@@ -531,12 +531,12 @@ print_git_diff_header(svn_stream_t *os,
    passed to svn_client_diff5, which is probably stdout.
 
    ### FIXME needs proper docstring
-   
+
    If USE_GIT_DIFF_FORMAT is TRUE, pring git diff headers, which always
    show paths relative to the repository root. RA_SESSION and WC_CTX are
    needed to normalize paths relative the repository root, and are ignored
    if USE_GIT_DIFF_FORMAT is FALSE.
-   
+
    WC_ROOT_ABSPATH is the absolute path to the root directory of a working
    copy involved in a repos-wc diff, and may be NULL. */
 static svn_error_t *
@@ -595,8 +595,8 @@ display_prop_diffs(const apr_array_header_t *propchanges,
        * ### diff_content_changed() does not! */
 
       SVN_ERR(file_printf_from_utf8(file, encoding,
-                                    "Index: %s" APR_EOL_STR 
-                                    "%s" APR_EOL_STR, 
+                                    "Index: %s" APR_EOL_STR
+                                    "%s" APR_EOL_STR,
                                     path, equal_string));
 
       if (use_git_diff_format)
@@ -778,7 +778,7 @@ struct diff_cmd_baton {
    * directory of the working copy involved in the diff. */
   const char *wc_root_abspath;
 
-  /* A hashtable using the visited paths as keys. 
+  /* A hashtable using the visited paths as keys.
    * ### This is needed for us to know if we need to print a diff header for
    * ### a path that has property changes. */
   apr_hash_t *visited_paths;
@@ -1137,7 +1137,7 @@ diff_file_deleted_with_diff(const char *local_dir_abspath,
 
   if (tmpfile1)
     SVN_ERR(diff_content_changed(path,
-                                 tmpfile1, tmpfile2, diff_cmd_baton->revnum1, 
+                                 tmpfile1, tmpfile2, diff_cmd_baton->revnum1,
                                  diff_cmd_baton->revnum2,
                                  mimetype1, mimetype2,
                                  svn_diff_op_deleted, NULL, diff_baton));
@@ -1371,7 +1371,7 @@ find_wc_root(const char *local_abspath, svn_wc_context_t *wc_ctx,
  *  and REVISION2 are local. If PEG_REVISION is not unspecified, ensure that
  *  at least one of the two revisions is non-local.
  *  If PATH1 can only be found in the repository, set *IS_REPOS1 to TRUE.
- *  If PATH2 can only be found in the repository, set *IS_REPOS2 to TRUE. */ 
+ *  If PATH2 can only be found in the repository, set *IS_REPOS2 to TRUE. */
 static svn_error_t *
 check_paths(svn_boolean_t *is_repos1,
             svn_boolean_t *is_repos2,
@@ -2072,7 +2072,7 @@ set_up_diff_cmd_and_options(struct diff_cmd_baton *diff_cmd_baton,
                             apr_hash_t *config, apr_pool_t *pool)
 {
   const char *diff_cmd = NULL;
- 
+
   /* See if there is a diff command and/or diff arguments. */
   if (config)
     {
@@ -2092,7 +2092,7 @@ set_up_diff_cmd_and_options(struct diff_cmd_baton *diff_cmd_baton,
 
   if (options == NULL)
     options = apr_array_make(pool, 0, sizeof(const char *));
- 
+
   if (diff_cmd)
     SVN_ERR(svn_path_cstring_to_utf8(&diff_cmd_baton->diff_cmd, diff_cmd,
                                      pool));
@@ -2264,7 +2264,7 @@ svn_client_diff_peg5(const apr_array_header_t *options,
   diff_cmd_baton.orig_path_1 = path;
   diff_cmd_baton.orig_path_2 = path;
 
-  SVN_ERR(set_up_diff_cmd_and_options(&diff_cmd_baton, options, 
+  SVN_ERR(set_up_diff_cmd_and_options(&diff_cmd_baton, options,
                                       ctx->config, pool));
   diff_cmd_baton.pool = pool;
   diff_cmd_baton.outfile = outfile;

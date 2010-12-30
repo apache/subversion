@@ -336,7 +336,7 @@ svn_ra_neon__get_activity_collection(const svn_string_t **activity_coll,
 {
   svn_revnum_t ignored_revnum;
   if (! ras->act_coll)
-    SVN_ERR(svn_ra_neon__exchange_capabilities(ras, NULL, 
+    SVN_ERR(svn_ra_neon__exchange_capabilities(ras, NULL,
                                                &ignored_revnum, pool));
   *activity_coll = svn_string_create(ras->act_coll, pool);
   return SVN_NO_ERROR;

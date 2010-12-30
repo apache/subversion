@@ -615,7 +615,7 @@ public class SVNClient implements ISVNClient
                              Collection<String> changelists,
                              InfoCallback callback)
             throws ClientException;
-    
+
     /**
      * @since 1.7
      */

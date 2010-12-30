@@ -877,7 +877,7 @@ def bad_intermediate_urls(sbox):
   actions.run_and_verify_switch(wc_dir, wc_dir, url_A_C, expected_output,
     expected_disk, expected_status, None, None, None, None, None, False)
 
-  
+
   # However, the URL for wc/A should now reflect ^/A/C/A, not something else.
   expected_infos = [
       { 'URL' : '.*/A/C/A$' },
@@ -1066,9 +1066,9 @@ def relocate_beyond_repos_root(sbox):
   svntest.main.safe_rmtree(wc_dir, 1)
   svntest.actions.run_and_verify_svn(None, None, [], 'checkout',
                                      repo_url + '/A', wc_dir)
-  
+
   svntest.main.copy_repos(repo_dir, other_repo_dir, 1, 0)
-  
+
   # A relocate that changes the repo path part of the URL shouldn't work.
   # This tests for issue #2380.
   svntest.actions.run_and_verify_svn(None, None,
@@ -1358,40 +1358,40 @@ def forced_switch_failures(sbox):
   #    """
   #    # Add a directory to obstruct a file.
   #    mkdir A/B/F/pi
-  #  
+  #
   #    # Add a file to obstruct a directory.
   #    echo "The file 'H'" > A/C/H
-  #  
+  #
   #    # Test three cases where forced switch should cause a tree conflict
-  #  
+  #
   #    # 1) A forced switch that tries to add a file when an unversioned
   #    #    directory of the same name already exists.  (Currently fails)
   #    svn switch --force url/A/D A/C
-  #  
+  #
   #    # 2) A forced switch that tries to add a dir when a file of the same
   #    #    name already exists. (Tree conflict)
   #    svn switch --force url/A/D/G A/B/F
   #    svn info A/B/F/pi
-  #  
+  #
   #    # 3) A forced update that tries to add a directory when a versioned
   #    #    directory of the same name already exists.
-  #  
+  #
   #    # Make dir A/D/H/I in repos.
   #    svn mkdir -m "Log message" url/A/D/H/I
-  #  
+  #
   #    # Make A/D/G/I and co A/D/H/I into it.
   #    mkdir A/D/G/I
   #    svn co url/A/D/H/I A/D/G/I
-  #  
+  #
   #    # Try the forced switch.  A/D/G/I obstructs the dir A/D/G/I coming
   #    # from the repos, causing an error.
   #    svn switch --force url/A/D/H A/D/G
-  #  
+  #
   #    # Delete all three obstructions and finish the update.
   #    rm -rf A/D/G/I
   #    rm A/B/F/pi
   #    rm A/C/H
-  #  
+  #
   #    # A/B/F is switched to A/D/G
   #    # A/C is switched to A/D
   #    # A/D/G is switched to A/D/H
@@ -1518,9 +1518,9 @@ def forced_switch_failures(sbox):
     'A/D/G/I'           : Item(),
   })
 
-  exit_code, so, se = svntest.actions.run_and_verify_svn( 
-    "Unexpected error during co", 
-    ['Checked out revision 2.\n'], [], 
+  exit_code, so, se = svntest.actions.run_and_verify_svn(
+    "Unexpected error during co",
+    ['Checked out revision 2.\n'], [],
     "co", url_A_D_H_I, A_D_G_I)
 
   # Try the forced switch.  A/D/G/I obstructs the dir A/D/G/I coming
@@ -3100,7 +3100,7 @@ def copy_with_switched_subdir(sbox):
 ### regression test for issue #3597
 def relocate_with_relative_externals(sbox):
   "relocate a directory containing relative externals"
-  
+
   sbox.build()
   wc_dir = sbox.wc_dir
 
@@ -3108,7 +3108,7 @@ def relocate_with_relative_externals(sbox):
   change_external(os.path.join(wc_dir, 'A', 'B'),
                   "^/A/D/G G-ext\n../D/H H-ext", commit=True)
   svntest.actions.run_and_verify_svn(None, None, [], 'update', wc_dir)
-  
+
   # Move our repository to another location.
   repo_dir = sbox.repo_dir
   repo_url = sbox.repo_url

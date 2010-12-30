@@ -511,7 +511,7 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
       *corrected_url = opt_ctx->parser_ctx->location;
       return SVN_NO_ERROR;
     }
-                        
+
   return svn_error_compose_create(
              svn_ra_serf__error_on_status(opt_ctx->status_code,
                                           serf_sess->repos_url.path,

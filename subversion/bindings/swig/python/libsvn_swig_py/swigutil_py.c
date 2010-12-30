@@ -4115,7 +4115,7 @@ svn_swig_py_txdelta_window_t_ops_get(svn_txdelta_window_t *window,
 {
   PyObject *result = PyList_New(window->num_ops);
   int i;
-  
+
   for (i = 0; i < window->num_ops; ++i)
       PyList_SET_ITEM(result, i,
                       svn_swig_NewPointerObj(window->ops + i, op_type_info,
