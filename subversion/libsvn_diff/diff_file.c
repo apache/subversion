@@ -701,7 +701,7 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
         && (curp - file->buffer) == file->suffix_offset_in_chunk)
       return SVN_NO_ERROR;
 
-  /* Get a new token */
+  /* Allocate a new token, or fetch one from the "reusable tokens" list. */
   file_token = file_baton->tokens;
   if (file_token)
     {
@@ -931,6 +931,7 @@ token_discard(void *baton, void *token)
   svn_diff__file_baton_t *file_baton = baton;
   svn_diff__file_token_t *file_token = token;
 
+  /* Prepend FILE_TOKEN to FILE_BATON->TOKENS, for reuse. */
   file_token->next = file_baton->tokens;
   file_baton->tokens = file_token;
 }
