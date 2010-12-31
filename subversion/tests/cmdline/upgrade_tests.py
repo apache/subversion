@@ -831,6 +831,16 @@ def replaced_files(sbox):
       [sbox.ospath('B/f'), '958eb2d755df2d9e0de6f7b835aec16b64d83f6f'],
       [sbox.ospath('B/g'), '395dfb603d8a4e0348d0b082803f2b7426c76eb9']])
 
+def upgrade_with_scheduled_change(sbox):
+  "upgrade 1.6.x wc with a scheduled change"
+  
+  sbox.build(create_wc = False)
+  replace_sbox_with_tarfile(sbox, 'upgrade_with_scheduled_change.tar.bz2')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'upgrade', sbox.wc_dir)
+  
+   
 ########################################################################
 # Run the tests
 
@@ -855,6 +865,7 @@ test_list = [ None,
               upgrade_tree_conflict_data,
               delete_in_copy_upgrade,
               replaced_files,
+              XFail(upgrade_with_scheduled_change),
              ]
 
 
