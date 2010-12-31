@@ -122,7 +122,7 @@ sspi_maxtokensize(const char *auth_pkg,
   else
     return svn_error_createf
       (SVN_ERR_RA_SERF_SSPI_INITIALISATION_FAILED, NULL,
-       _("SSPI Initialization failed.");
+       _("SSPI Initialization failed."));
 
   return SVN_NO_ERROR;
 }
