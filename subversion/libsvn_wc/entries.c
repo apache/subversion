@@ -1992,7 +1992,14 @@ write_entry(struct write_baton **entry_node,
 
       /* The revert_base checksum isn't available in the entry structure,
          so the caller provides it. */
-      below_working_node->checksum = text_base_info->revert_base.sha1_checksum;
+
+      /* text_base_info is NULL for files scheduled to be added. */
+      below_working_node->checksum = NULL;
+      if (text_base_info)
+        {
+          below_working_node->checksum =
+             text_base_info->revert_base.sha1_checksum;
+        }
       below_working_node->translated_size = 0;
       below_working_node->changed_rev = SVN_INVALID_REVNUM;
       below_working_node->changed_date = 0;
@@ -2025,12 +2032,16 @@ write_entry(struct write_baton **entry_node,
         working_node->checksum = NULL;
       else
         {
-          working_node->checksum = text_base_info->normal_base.sha1_checksum;
+          working_node->checksum = NULL;
+          /* text_base_info is NULL for files scheduled to be added. */
+          if (text_base_info)
+            working_node->checksum = text_base_info->normal_base.sha1_checksum;
+         
 
           /* If an MD5 checksum is present in the entry, we can verify that
            * it matches the MD5 of the base file we found earlier. */
 #ifdef SVN_DEBUG
-          if (entry->checksum)
+          if (entry->checksum && text_base_info)
           {
             svn_checksum_t *md5_checksum;
             SVN_ERR(svn_checksum_parse_hex(&md5_checksum, svn_checksum_md5,

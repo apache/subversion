@@ -865,7 +865,7 @@ test_list = [ None,
               upgrade_tree_conflict_data,
               delete_in_copy_upgrade,
               replaced_files,
-              XFail(upgrade_with_scheduled_change),
+              upgrade_with_scheduled_change,
              ]
 
 
