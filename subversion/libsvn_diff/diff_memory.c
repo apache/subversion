@@ -103,6 +103,7 @@ datasources_open(void *baton, apr_off_t *prefix_lines,
                  apr_size_t datasource_len)
 {
   /* Do nothing: everything is already there and initialized to 0 */
+  *prefix_lines = 0;
   return SVN_NO_ERROR;
 }
 
