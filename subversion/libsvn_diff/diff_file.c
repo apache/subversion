@@ -256,12 +256,12 @@ datasource_open(void *baton, svn_diff_datasource_e datasource)
   do {                                                                       \
     apr_size_t svn_macro__i;                                                 \
                                                                              \
-    for (svn_macro__i = 0; svn_macro__i < files_len; svn_macro__i++)         \
+    for (svn_macro__i = 0; svn_macro__i < (files_len); svn_macro__i++)       \
     {                                                                        \
-      if (all_files[svn_macro__i]->curp < all_files[svn_macro__i]->endp - 1) \
-        all_files[svn_macro__i]->curp++;                                     \
+      if ((all_files)[svn_macro__i]->curp < (all_files)[svn_macro__i]->endp - 1) \
+        (all_files)[svn_macro__i]->curp++;                                   \
       else                                                                   \
-        SVN_ERR(increment_chunk(all_files[svn_macro__i], pool));             \
+        SVN_ERR(increment_chunk((all_files)[svn_macro__i], (pool)));         \
     }                                                                        \
   } while (0)
 
@@ -274,12 +274,12 @@ datasource_open(void *baton, svn_diff_datasource_e datasource)
   do {                                                                       \
     apr_size_t svn_macro__i;                                                 \
                                                                              \
-    for (svn_macro__i = 0; svn_macro__i < files_len; svn_macro__i++)         \
+    for (svn_macro__i = 0; svn_macro__i < (files_len); svn_macro__i++)       \
     {                                                                        \
-      if (all_files[svn_macro__i]->curp > all_files[svn_macro__i]->buffer)   \
-        all_files[svn_macro__i]->curp--;                                     \
+      if ((all_files)[svn_macro__i]->curp > (all_files)[svn_macro__i]->buffer) \
+        (all_files)[svn_macro__i]->curp--;                                   \
       else                                                                   \
-        SVN_ERR(decrement_chunk(all_files[svn_macro__i], pool));             \
+        SVN_ERR(decrement_chunk((all_files)[svn_macro__i], (pool)));         \
     }                                                                        \
   } while (0)
 
