@@ -61,7 +61,7 @@ stream_write(svn_stream_t *out,
   SVN_ERR(svn_stream_write(out, data, &write_len));
   if (write_len != len)
     return svn_error_create(SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
-                            "Error writing to stream");
+                            _("Error writing to stream"));
   return SVN_NO_ERROR;
 }
 

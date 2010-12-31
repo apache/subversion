@@ -98,7 +98,7 @@ initialize_sspi(void *baton, apr_pool_t* pool)
 
   return svn_error_createf
           (SVN_ERR_RA_SERF_SSPI_INITIALISATION_FAILED, NULL,
-           "SSPI Initialization failed.");
+           _("SSPI Initialization failed."));
 }
 
 /* Calculates the maximum token size based on the authentication protocol. */
@@ -121,7 +121,7 @@ sspi_maxtokensize(const char *auth_pkg,
   else
     return svn_error_createf
       (SVN_ERR_RA_SERF_SSPI_INITIALISATION_FAILED, NULL,
-       "SSPI Initialization failed.");
+       _("SSPI Initialization failed.");
 
   return SVN_NO_ERROR;
 }
@@ -291,7 +291,7 @@ sspi_get_credentials(char *token, apr_size_t token_len,
   if (status != SEC_E_OK)
     return svn_error_createf
             (SVN_ERR_RA_SERF_SSPI_INITIALISATION_FAILED, NULL,
-             "SSPI Initialization failed.");
+             _("SSPI Initialization failed."));
 
   status = sspi->InitializeSecurityContext(&creds,
                                            ctx != NULL && ctx->dwLower != 0
@@ -336,7 +336,7 @@ sspi_get_credentials(char *token, apr_size_t token_len,
 
       default:
           return svn_error_createf(SVN_ERR_AUTHN_FAILED, NULL,
-                "Authentication failed with error 0x%x.", status);
+                _("Authentication failed with error 0x%x."), status);
     }
 
   return SVN_NO_ERROR;

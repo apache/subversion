@@ -311,8 +311,8 @@ svn_ra_serf__handle_digest_auth(svn_ra_serf__handler_t *ctx,
     {
       /* No more credentials. */
       return svn_error_create(SVN_ERR_AUTHN_FAILED, NULL,
-                "No more credentials or we tried too many times.\n"
-                "Authentication failed");
+                _("No more credentials or we tried too many times.\n"
+                "Authentication failed"));
     }
 
   simple_creds = creds;

@@ -335,7 +335,7 @@ svn_ra_serf__handle_auth(int code,
     {
       if (session->auth_protocol)
         return svn_error_createf(SVN_ERR_AUTHN_FAILED, NULL,
-                                 "%s Authentication failed",
+                                 _("%s Authentication failed"),
                                  session->auth_protocol->auth_name);
       else
         return svn_error_create(SVN_ERR_AUTHN_FAILED, NULL, NULL);
@@ -359,8 +359,8 @@ svn_ra_serf__handle_auth(int code,
     {
       /* Support more authentication mechanisms. */
       return svn_error_createf(SVN_ERR_AUTHN_FAILED, NULL,
-                               "%s authentication not supported.\n"
-                               "Authentication failed",
+                               _("%s authentication not supported.\n"
+                               "Authentication failed"),
                                ab.last_prot_name
                                  ? ab.last_prot_name
                                  : "Unknown");
@@ -461,8 +461,8 @@ handle_basic_auth(svn_ra_serf__handler_t *ctx,
     {
       /* No more credentials. */
       return svn_error_create(SVN_ERR_AUTHN_FAILED, NULL,
-                "No more credentials or we tried too many times.\n"
-                "Authentication failed");
+                _("No more credentials or we tried too many times.\n"
+                "Authentication failed"));
     }
 
   simple_creds = creds;
@@ -537,7 +537,7 @@ handle_proxy_basic_auth(svn_ra_serf__handler_t *ctx,
     {
       /* No more credentials. */
       return svn_error_create(SVN_ERR_AUTHN_FAILED, NULL,
-                "Proxy authentication failed");
+                _("Proxy authentication failed"));
     }
 
   svn_ra_serf__encode_auth_header(session->proxy_auth_protocol->auth_name,
