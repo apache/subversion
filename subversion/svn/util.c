@@ -623,7 +623,7 @@ svn_cl__cleanup_log_msg(void *log_msg_baton,
      commit error chain, too. */
 
   err = svn_error_createf(commit_err->apr_err, NULL,
-                          "   '%s'",
+                          _("   '%s'"),
                           svn_dirent_local_style(lmb->tmpfile_left, pool));
   svn_error_compose(commit_err,
                     svn_error_create(commit_err->apr_err, err,

@@ -963,12 +963,12 @@ parse_dav_status(int *status_code_out, svn_stringbuf_t *buf,
     token = apr_strtok(NULL, " \t\r\n", &tok_status);
   if (!token)
     return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                             "Malformed DAV:status CDATA '%s'",
+                             _("Malformed DAV:status CDATA '%s'"),
                              buf->data);
   err = svn_cstring_atoi(status_code_out, token);
   if (err)
     return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, err,
-                             "Malformed DAV:status CDATA '%s'",
+                             _("Malformed DAV:status CDATA '%s'"),
                              buf->data);
 
   return SVN_NO_ERROR;
@@ -1294,8 +1294,8 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
                 }
             }
           SVN_ERR(svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                                         "XML parsing failed: (%d %s)",
-                                         sl.code, sl.reason));
+                                    _("XML parsing failed: (%d %s)"),
+                                    sl.code, sl.reason));
         }
 
       if (ctx->error && ctx->ignore_errors == FALSE)

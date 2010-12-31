@@ -39,6 +39,7 @@
 #include "svn_path.h"
 #include "svn_io.h"
 #include "svn_props.h"
+#include "svn_private_config.h"
 
 #include "client.h"
 
@@ -375,7 +376,7 @@ get_dir_abspath(const char **local_dir_abspath,
         *local_dir_abspath = local_abspath;
       else if (!lenient)
         return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
-                                 "'%s' is not a versioned directory",
+                                 _("'%s' is not a versioned directory"),
                                  svn_dirent_local_style(local_abspath, pool));
     }
 
