@@ -68,6 +68,7 @@
 #include "ra_serf.h"
 #include "win32_auth_sspi.h"
 
+#include "svn_private_config.h"
 #include "private/svn_atomic.h"
 
 #ifdef SVN_RA_SERF_SSPI_ENABLED
