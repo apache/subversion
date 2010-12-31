@@ -702,6 +702,12 @@ install-man:
 install-swig-py: install-swig-py-lib
 install-swig-rb: install-swig-rb-lib
 
+check-SWIG:
+	if [ "$(SWIG)" = "none" ]; then \
+	  echo "SWIG disabled at configure time" >&2; \
+	  exit 1; \
+	fi
+
 clean-swig: clean-swig-headers clean-swig-py clean-swig-rb clean-swig-pl
 extraclean-swig: extraclean-swig-headers extraclean-swig-py \
                  extraclean-swig-rb extraclean-swig-pl
@@ -730,7 +736,7 @@ READLINK_PL=$(PERL) -e 'use Cwd; print Cwd::realpath(shift)'
 
 swig-pl_DEPS = autogen-swig-pl libsvn_swig_perl \
   $(SWIG_PL_DIR)/native/Makefile
-swig-pl: $(swig-pl_DEPS)
+swig-pl: check-SWIG $(swig-pl_DEPS)
 	if test "`$(READLINK_PL) $(SWIG_PL_DIR)`" != "`$(READLINK_PL) $(SWIG_PL_SRC_DIR)`"; then \
 	  ln -sf $(SWIG_PL_SRC_DIR)/native/*.c $(SWIG_PL_DIR)/native; \
 	fi
@@ -773,7 +779,7 @@ copy-swig-py: autogen-swig-py $(SWIG_PY_DIR)/libsvn
 	done
 	@touch $(SWIG_PY_DIR)/libsvn/__init__.py
 
-swig-py: autogen-swig-py copy-swig-py
+swig-py: check-SWIG autogen-swig-py copy-swig-py
 
 check-swig-py: swig-py
 	cd $(SWIG_PY_DIR); \
@@ -795,7 +801,7 @@ clean-swig-py:
 extraclean-swig-py: clean-swig-py
 	$(EXTRACLEAN_SWIG_PY)
 
-swig-rb: autogen-swig-rb
+swig-rb: check-SWIG autogen-swig-rb
 
 check-swig-rb: swig-rb svnserve
 	cd $(SWIG_RB_DIR); \
