@@ -361,6 +361,13 @@ svn_error_t *svn_error_purge_tracing(svn_error_t *err);
 
 /** @} */
 
+
+/** Error groups
+ *
+ * @defgroup svn_error_error_groups Error groups
+ * @{
+ */
+
 /**
  * Return TRUE if @a err is an error specifically related to locking a
  * path in the repository, FALSE otherwise.
@@ -387,6 +394,15 @@ svn_error_t *svn_error_purge_tracing(svn_error_t *err);
    err->apr_err == SVN_ERR_FS_NO_SUCH_LOCK ||               \
    err->apr_err == SVN_ERR_RA_NOT_LOCKED ||                 \
    err->apr_err == SVN_ERR_FS_LOCK_EXPIRED)
+
+/** @} */
+
+
+/** Internal malfunctions and assertions
+ *
+ * @defgroup svn_error_malfunction_assertion Malfunctions and assertions
+ * @{
+ */
 
 /** Report that an internal malfunction has occurred, and possibly terminate
  * the program.
@@ -547,6 +563,8 @@ svn_error_abort_on_malfunction(svn_boolean_t can_return,
                                const char *file,
                                int line,
                                const char *expr);
+
+/** @} */
 
 
 #ifdef __cplusplus
