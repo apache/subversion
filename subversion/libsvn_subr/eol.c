@@ -52,7 +52,7 @@ svn_eol__find_eol_start(char *buf, apr_size_t len)
    * for chunky data access. This overhead is still justified because
    * only lines tend to be tens of chars long.
    */
-  for (; (len > 0) && ((apr_uintptr_t)buf) & (sizeof(apr_uintptr_t)-1)
+  for (; (len > 0) && ((apr_size_t)buf) & (sizeof(apr_size_t)-1)
        ; ++buf, --len)
   {
     if (*buf == '\n' || *buf == '\r')
@@ -62,16 +62,16 @@ svn_eol__find_eol_start(char *buf, apr_size_t len)
 #endif
 
   /* Scan the input one machine word at a time. */
-  for (; len > sizeof(apr_uintptr_t)
-       ; buf += sizeof(apr_uintptr_t), len -= sizeof(apr_uintptr_t))
+  for (; len > sizeof(apr_size_t)
+       ; buf += sizeof(apr_size_t), len -= sizeof(apr_size_t))
   {
     /* This is a variant of the well-known strlen test: */
-    apr_uintptr_t chunk = *(const apr_uintptr_t *)buf;
+    apr_size_t chunk = *(const apr_size_t *)buf;
 
     /* A byte in R_TEST is \0, iff it was \r in *BUF.
      * Similarly, N_TEST is an indicator for \n. */
-    apr_uintptr_t r_test = chunk ^ R_MASK;
-    apr_uintptr_t n_test = chunk ^ N_MASK;
+    apr_size_t r_test = chunk ^ R_MASK;
+    apr_size_t n_test = chunk ^ N_MASK;
 
     /* A byte in R_TEST can by < 0x80, iff it has been \0 before 
      * (i.e. \r in *BUF). Dito for N_TEST. */
