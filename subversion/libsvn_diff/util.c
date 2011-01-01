@@ -24,7 +24,6 @@
 
 #include <apr.h>
 #include <apr_general.h>
-#include <zlib.h>
 
 #include "svn_error.h"
 #include "svn_diff.h"
@@ -32,78 +31,6 @@
 #include "svn_ctype.h"
 
 #include "diff.h"
-
-/**
- * An Adler-32 implementation per RFC1950.
- *
- * "The Adler-32 algorithm is much faster than the CRC32 algorithm yet
- * still provides an extremely low probability of undetected errors"
- */
-
-/*
- * 65521 is the largest prime less than 65536.
- * "That 65521 is prime is important to avoid a possible large class of
- *  two-byte errors that leave the check unchanged."
- */
-#define ADLER_MOD_BASE 65521
-
-/*
- * Start with CHECKSUM and update the checksum by processing a chunk
- * of DATA sized LEN.
- */
-apr_uint32_t
-svn_diff__adler32(apr_uint32_t checksum, const char *data, apr_off_t len)
-{
-  /* The actual limit can be set somewhat higher but should
-   * not be lower because the SIMD code would not be used
-   * in that case.
-   *
-   * However, it must be lower than 5552 to make sure our local
-   * implementation does not suffer from overflows.
-   */
-  if (len >= 80)
-    {
-      /* Larger buffers can be effiently handled by Marc Adler's
-       * optimized code. Also, new zlib versions will come with
-       * SIMD code for x86 and x64.
-       */
-      return adler32(checksum, data, len);
-    }
-  else
-    {
-      const unsigned char *input = (const unsigned char *)data;
-      apr_uint32_t s1 = checksum & 0xFFFF;
-      apr_uint32_t s2 = checksum >> 16;
-      apr_uint32_t b;
-
-      /* Some loop unrolling
-       * (approx. one clock tick per byte + 2 ticks loop overhead)
-       */
-      for (; len >= 8; len -= 8, input += 8)
-      {
-        s1 += input[0]; s2 += s1;
-        s1 += input[1]; s2 += s1;
-        s1 += input[2]; s2 += s1;
-        s1 += input[3]; s2 += s1;
-        s1 += input[4]; s2 += s1;
-        s1 += input[5]; s2 += s1;
-        s1 += input[6]; s2 += s1;
-        s1 += input[7]; s2 += s1;
-      }
-
-      /* Adler-32 calculation as a simple two ticks per iteration loop.
-       */
-      while (len--)
-        {
-          b = *input++;
-          s1 += b;
-          s2 += s1;
-        }
-
-      return ((s2 % ADLER_MOD_BASE) << 16) | (s1 % ADLER_MOD_BASE);
-    }
-}
-
 
 svn_boolean_t
 svn_diff_contains_conflicts(svn_diff_t *diff)
