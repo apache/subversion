@@ -34,6 +34,7 @@
 #include "svn_utf.h"
 #include "diff.h"
 #include "svn_private_config.h"
+#include "private/svn_adler32.h"
 
 typedef struct source_tokens_t
 {
@@ -128,7 +129,7 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
 
       svn_diff__normalize_buffer(&buf, &len, &state, tok->data,
                                  mem_baton->normalization_options);
-      *hash = svn_diff__adler32(0, buf, len);
+      *hash = svn__adler32(0, buf, len);
       src->next_token++;
     }
   else
