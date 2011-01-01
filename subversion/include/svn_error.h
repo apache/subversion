@@ -395,6 +395,16 @@ svn_error_t *svn_error_purge_tracing(svn_error_t *err);
    err->apr_err == SVN_ERR_RA_NOT_LOCKED ||                 \
    err->apr_err == SVN_ERR_FS_LOCK_EXPIRED)
 
+/** Evaluates to @c TRUE iff @a apr_err (of type #apr_status_t) is in the given
+ * @a category, which should be one of the @c SVN_ERR_*_CATEGORY_START
+ * constants.
+ * 
+ * @since New in 1.7.
+ */
+#define SVN_ERROR_IN_CATEGORY(apr_err, category)            \
+    ((category) == ((apr_err) / SVN_ERR_CATEGORY_SIZE) * SVN_ERR_CATEGORY_SIZE)
+
+
 /** @} */
 
 
@@ -518,6 +528,8 @@ svn_error__malfunction(svn_boolean_t can_return,
  *
  * The function may alter its behaviour according to compile-time
  * and run-time and even interactive conditions.
+ *
+ * @see SVN_ERROR_IN_CATEGORY()
  *
  * @since New in 1.6.
  */

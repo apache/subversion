@@ -376,7 +376,14 @@ svn_error_purge_tracing(svn_error_t *err)
 
       /* The link must be a real link in the error chain, otherwise an
          error chain with trace only links would map into SVN_NO_ERROR. */
-      SVN_ERR_ASSERT(err);
+      if (! err)
+        return svn_error_create(
+                 SVN_ERR_ASSERTION_ONLY_TRACING_LINKS, 
+                 svn_error_compose_create(
+                   svn_error__malfunction(TRUE, __FILE__, __LINE__,
+                                          NULL /* ### say something? */),
+                   err),
+                 NULL);
 
       /* Copy the current error except for its child error pointer
          into the new error.  Share any message and source filename
