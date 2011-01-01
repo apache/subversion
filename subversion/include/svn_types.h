@@ -62,6 +62,24 @@ extern "C" {
 # endif
 #endif
 
+
+/** Indicate whether the current platform supports unaligned data access.
+ *
+ * On the majority of machines running SVN (x86 / x64), unaligned access
+ * is much cheaper than repeated aligned access. Define this macro to 1
+ * on those machines.
+ * Unaligned access on other machines (e.g. IA64) will trigger memory
+ * acccess faults or simply misbehave.
+ *
+ * @since New in 1.7.
+ */
+#ifndef SVN_UNALIGNED_ACCESS_IS_OK
+# if defined(_M_IX86) || defined(_M_X64) || defined(i386) || defined(__x86_64)
+#  define SVN_UNALIGNED_ACCESS_IS_OK 1
+# else
+#  define SVN_UNALIGNED_ACCESS_IS_OK 0
+# endif
+#endif
 
 
 /** Subversion error object.
