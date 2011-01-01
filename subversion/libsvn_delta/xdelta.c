@@ -29,6 +29,8 @@
 
 #include "svn_delta.h"
 #include "delta.h"
+
+#include "private/svn_adler32.h"
 
 /* This is pseudo-adler32. It is adler32 without the prime modulus.
    The idea is borrowed from monotone, and is a translation of the C++
@@ -38,6 +40,10 @@
 
 #define ADLER32_MASK      0x0000ffff
 #define ADLER32_CHAR_MASK 0x000000ff
+
+/* Size of the blocks we compute checksums for. This was chosen out of
+   thin air.  Monotone used 64, xdelta1 used 64, rsync uses 128.  */
+#define MATCH_BLOCKSIZE 64
 
 /* Structure to store the state of our adler32 checksum.  */
 struct adler32
@@ -66,9 +72,30 @@ adler32_out(struct adler32 *ad, const char c)
 {
   ad->s1 -= ((apr_uint32_t) (c)) & ADLER32_CHAR_MASK;
   ad->s1 &= ADLER32_MASK;
-  ad->s2 -= (ad->len * (((apr_uint32_t) c) & ADLER32_CHAR_MASK)) + 1;
+  ad->s2 -= (ad->len * (((apr_uint32_t) c) & ADLER32_CHAR_MASK));
   ad->s2 &= ADLER32_MASK;
   --ad->len;
+}
+
+/* Feed C_IN into the adler32 checksum and remove C_OUT at the same time.
+ * This function may (and will) only be called for
+ * ad->len == MATCH_BLOCKSIZE.
+ */
+static APR_INLINE void
+adler32_replace(struct adler32 *ad, const char c_out, const char c_in)
+{
+  apr_uint32_t s1 = ad->s1;
+  apr_uint32_t s2 = ad->s2;
+
+  s2 -= (MATCH_BLOCKSIZE * (((apr_uint32_t) c_out) & ADLER32_CHAR_MASK));
+
+  s1 -= ((apr_uint32_t) (c_out)) & ADLER32_CHAR_MASK;
+  s1 += ((apr_uint32_t) (c_in)) & ADLER32_CHAR_MASK;
+
+  s2 += s1;
+
+  ad->s1 = s1 & ADLER32_MASK;
+  ad->s2 = s2 & ADLER32_MASK;
 }
 
 /* Return the current adler32 checksum in the adler32 structure.  */
@@ -85,17 +112,14 @@ adler32_sum(const struct adler32 *ad)
 static APR_INLINE struct adler32 *
 init_adler32(struct adler32 *ad, const char *data, apr_uint32_t datalen)
 {
-  ad->s1 = 1;
-  ad->s2 = 0;
-  ad->len = 0;
-  while (datalen--)
-    adler32_in(ad, *(data++));
+  apr_uint32_t adler32 = svn__adler32(0, data, datalen);
+
+  ad->s1 = adler32 & ADLER32_MASK;
+  ad->s2 = (adler32 >> 16) & ADLER32_MASK;
+  ad->len = datalen;
+
   return ad;
 }
-
-/* Size of the blocks we compute checksums for. This was chosen out of
-   thin air.  Monotone used 64, xdelta1 used 64, rsync uses 128.  */
-#define MATCH_BLOCKSIZE 64
 
 /* Information for a block of the delta source.  The length of the
    block is the smaller of MATCH_BLOCKSIZE and the difference between
@@ -201,6 +225,35 @@ init_blocks_table(const char *data,
     }
 }
 
+/* Return the lowest position at which A and B differ. If no difference
+ * can be found in the first MAX_LEN characters, MAX_LEN will be returned.
+ */
+static apr_size_t
+match_length(const char *a, const char *b, apr_size_t max_len)
+{
+  apr_size_t pos = 0;
+
+#if SVN_UNALIGNED_ACCESS_IS_OK
+
+  /* Chunky operation is so much faster ...
+   *
+   * We can't make this work on architectures that require aligned access
+   * because A and B will probably have different alignment. So, skipping
+   * the first few chars until alignment is reached is not an option.
+   */
+  for (; pos + sizeof(apr_size_t) <= max_len; pos += sizeof(apr_size_t))
+    if (*(const apr_size_t*)(a + pos) != *(const apr_size_t*)(b + pos))
+      break;
+
+#endif
+
+  for (; pos < max_len; ++pos)
+    if (a[pos] != b[pos])
+      break;
+
+  return pos;
+}
+
 /* Try to find a match for the target data B in BLOCKS, and then
    extend the match as long as data in A and B at the match position
    continues to match.  We set the position in a we ended up in (in
@@ -229,6 +282,8 @@ find_match(const struct blocks *blocks,
   apr_uint32_t sum = adler32_sum(rolling);
   apr_size_t alen, badvance, apos;
   apr_size_t tpos, tlen;
+  apr_size_t delta, max_delta;
+  const char *aptr, *bptr;
 
   tpos = find_block(blocks, sum);
 
@@ -246,14 +301,15 @@ find_match(const struct blocks *blocks,
   apos = tpos;
   alen = tlen;
   badvance = tlen;
+
   /* Extend the match forward as far as possible */
-  while ((apos + alen < asize)
-         && (bpos + badvance < bsize)
-         && (a[apos + alen] == b[bpos + badvance]))
-    {
-      ++alen;
-      ++badvance;
-    }
+  max_delta = asize - apos - alen < bsize - bpos - badvance
+            ? asize - apos - alen
+            : bsize - bpos - badvance;
+  delta = match_length(a + apos + alen, b + bpos + badvance, max_delta);
+
+  alen += delta;
+  badvance += delta;
 
   /* See if we can extend backwards into a previous insert hunk.  */
   while (apos > 0
@@ -329,7 +385,6 @@ compute_delta(svn_txdelta__ops_baton_t *build_baton,
       apr_size_t apos = 0;
       apr_size_t alen = 1;
       apr_size_t badvance = 1;
-      apr_size_t next;
       svn_boolean_t match;
 
       match = find_match(&blocks, &rolling, a, asize, b, bsize, lo, &apos,
@@ -354,14 +409,49 @@ compute_delta(svn_txdelta__ops_baton_t *build_baton,
           svn_txdelta__insert_op(build_baton, svn_txdelta_source,
                                  apos, alen, NULL, pool);
         }
-      next = lo;
-      for (; next < lo + badvance; ++next)
+
+      if (badvance == 1)
         {
-          adler32_out(&rolling, b[next]);
-          if (next + MATCH_BLOCKSIZE < bsize)
-            adler32_in(&rolling, b[next + MATCH_BLOCKSIZE]);
+          /* This seems to be the _vast_ majority case -- even if
+           * you sum BADVANCE up, this case still accounts for 2/3
+           * of all bytes being processed.
+           */
+          if (lo + MATCH_BLOCKSIZE < bsize)
+            adler32_replace(&rolling, b[lo], b[lo + MATCH_BLOCKSIZE]);
+          else
+            adler32_out(&rolling, b[lo]);
+
+          lo++;
         }
-      lo = next;
+      else if (badvance >= MATCH_BLOCKSIZE)
+        {
+          /* BADVANCE is often large enough that we can calculate the
+           * Adler32 sum directly instead of expensively updating the
+           * existing values.
+           */
+          apr_size_t remaining_block = lo + MATCH_BLOCKSIZE < bsize
+                                     ? MATCH_BLOCKSIZE
+                                     : bsize - (lo + MATCH_BLOCKSIZE);
+          init_adler32(&rolling,
+                       b + lo + badvance - remaining_block,
+                       remaining_block);
+          lo += badvance;
+        }
+      else
+        {
+          /* The very rare 3rd case
+           * (can only possibly happen close to end of the file).
+           */
+          apr_size_t next = lo;
+
+          for (; next < lo + badvance; ++next)
+            if (next + MATCH_BLOCKSIZE < bsize)
+              adler32_replace(&rolling, b[next], b[next + MATCH_BLOCKSIZE]);
+            else
+              adler32_out(&rolling, b[next]);
+
+          lo = next;
+        }
     }
 
   /* If we still have an insert pending at the end, throw it in.  */
