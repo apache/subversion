@@ -24,6 +24,7 @@
 
 #include <apr.h>
 #include <apr_general.h>
+#include <zlib.h>
 
 #include "svn_error.h"
 #include "svn_diff.h"
@@ -47,49 +48,60 @@
 #define ADLER_MOD_BASE 65521
 
 /*
- * "The modulo on unsigned long accumulators can be delayed for 5552 bytes,
- *  so the modulo operation time is negligible."
- */
-#define ADLER_MOD_BLOCK_SIZE 5552
-
-
-/*
  * Start with CHECKSUM and update the checksum by processing a chunk
  * of DATA sized LEN.
  */
 apr_uint32_t
 svn_diff__adler32(apr_uint32_t checksum, const char *data, apr_off_t len)
 {
-  const unsigned char *input = (const unsigned char *)data;
-  apr_uint32_t s1 = checksum & 0xFFFF;
-  apr_uint32_t s2 = checksum >> 16;
-  apr_uint32_t b;
-  apr_size_t blocks = len / ADLER_MOD_BLOCK_SIZE;
-
-  len %= ADLER_MOD_BLOCK_SIZE;
-
-  while (blocks--)
+  /* The actual limit can be set somewhat higher but should
+   * not be lower because the SIMD code would not be used
+   * in that case.
+   *
+   * However, it must be lower than 5552 to make sure our local
+   * implementation does not suffer from overflows.
+   */
+  if (len >= 80)
     {
-      int count = ADLER_MOD_BLOCK_SIZE;
-      while (count--)
+      /* Larger buffers can be effiently handled by Marc Adler's
+       * optimized code. Also, new zlib versions will come with
+       * SIMD code for x86 and x64.
+       */
+      return adler32(checksum, data, len);
+    }
+  else
+    {
+      const unsigned char *input = (const unsigned char *)data;
+      apr_uint32_t s1 = checksum & 0xFFFF;
+      apr_uint32_t s2 = checksum >> 16;
+      apr_uint32_t b;
+
+      /* Some loop unrolling
+       * (approx. one clock tick per byte + 2 ticks loop overhead)
+       */
+      for (; len >= 8; len -= 8, input += 8)
+      {
+        s1 += input[0]; s2 += s1;
+        s1 += input[1]; s2 += s1;
+        s1 += input[2]; s2 += s1;
+        s1 += input[3]; s2 += s1;
+        s1 += input[4]; s2 += s1;
+        s1 += input[5]; s2 += s1;
+        s1 += input[6]; s2 += s1;
+        s1 += input[7]; s2 += s1;
+      }
+
+      /* Adler-32 calculation as a simple two ticks per iteration loop.
+       */
+      while (len--)
         {
           b = *input++;
           s1 += b;
           s2 += s1;
         }
 
-      s1 %= ADLER_MOD_BASE;
-      s2 %= ADLER_MOD_BASE;
+      return ((s2 % ADLER_MOD_BASE) << 16) | (s1 % ADLER_MOD_BASE);
     }
-
-  while (len--)
-    {
-      b = *input++;
-      s1 += b;
-      s2 += s1;
-    }
-
-  return ((s2 % ADLER_MOD_BASE) << 16) | (s1 % ADLER_MOD_BASE);
 }
 
 
