@@ -29,6 +29,11 @@
 
 #include <apr.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
+
 /**
  * Return an adler32 checksum based on CHECKSUM, updated with
  * DATA of size LEN.
@@ -37,6 +42,11 @@
  */
 apr_uint32_t
 svn__adler32(apr_uint32_t checksum, const char *data, apr_off_t len);
+
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 
 #endif /* SVN_ADLER32_H */
