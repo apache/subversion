@@ -1571,7 +1571,7 @@ print_history(void *baton,
       if (phb->count >= phb->limit)
         /* Not L10N'd, since this error is supressed by the caller. */
         return svn_error_create(SVN_ERR_CEASE_INVOCATION, NULL,
-                                "History item limit reached");
+                                _("History item limit reached"));
     }
 
   return SVN_NO_ERROR;

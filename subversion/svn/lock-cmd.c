@@ -72,8 +72,9 @@ get_comment(const char **comment, svn_client_ctx_t *ctx,
     }
 
   /* Translate to UTF8/LF. */
-  SVN_ERR(svn_subst_translate_string(&comment_string, comment_string,
-                                     opt_state->encoding, pool));
+  SVN_ERR(svn_subst_translate_string2(&comment_string, NULL, NULL,
+                                      comment_string, opt_state->encoding,
+                                      pool, pool));
   *comment = comment_string->data;
 
   return SVN_NO_ERROR;

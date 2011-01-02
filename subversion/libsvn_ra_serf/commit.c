@@ -230,7 +230,7 @@ return_response_err(svn_ra_serf__handler_t *handler,
   err = svn_error_compose_create(
             ctx->server_error.error,
             svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-                              "%s of '%s': %d %s",
+                              _("%s of '%s': %d %s"),
                               handler->method, handler->path,
                               ctx->status, ctx->reason));
 

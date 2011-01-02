@@ -606,11 +606,9 @@ patterning_copy(char *target, const char *source, apr_size_t len)
 {
   const char *end = source + len;
 
-  /* On the majority of machines (x86 / x64), unaligned access is much
-   * cheaper than repeated aligned access.  Therefore, use chunky copies on
-   * these machines when feasible.
-   * For those machines, GCC, ICC and MSC will define one of the following: */
-#if defined(_M_IX86) || defined(_M_X64) || defined(i386) || defined(__x86_64)
+  /* On many machines, we can do "chunky" copies. */
+
+#if SVN_UNALIGNED_ACCESS_IS_OK
 
   if (end + sizeof(apr_uint32_t) <= target)
     {

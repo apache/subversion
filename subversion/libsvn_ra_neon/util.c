@@ -651,7 +651,7 @@ generate_error(svn_ra_neon__request_t *req, apr_pool_t *pool)
 
   /*### This is a translation nightmare. Make sure to compose full strings
     and mark those for translation. */
-  return svn_error_createf(errcode, NULL, "%s: %s (%s://%s)",
+  return svn_error_createf(errcode, NULL, _("%s: %s (%s://%s)"),
                            context, msg, ne_get_scheme(req->ne_sess),
                            hostport);
 }
@@ -771,7 +771,7 @@ start_err_element(void *baton, int parent,
            overwritten by the <human-readable> tag, or even someday by
            a <D:failed-precondition/> tag. */
         *err = svn_error_create(APR_EGENERAL, NULL,
-                                "General svn error from server");
+                                _("General svn error from server"));
         break;
       }
     case ELEM_human_readable:
