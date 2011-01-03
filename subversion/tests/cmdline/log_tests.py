@@ -1750,6 +1750,42 @@ def log_of_local_copy(sbox):
                           "differs from that on move source '%s'"
                           % (psi_moved_path, psi_path))
 
+
+def ignore_mergeinfo_log(sbox):
+  "'svn log --ignore-mergeinfo' scenarios"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  iota_path = os.path.join(wc_dir, 'iota')
+
+  # Change the mergeinfo prop in r2
+  svntest.main.run_svn(None, 'ps', svntest.main.SVN_PROP_MERGEINFO, 'foo:1',
+                       iota_path)
+  svntest.main.run_svn(None, 'ci', '-m', 'Log message for revision 2\n\n',
+                       wc_dir)
+
+  # Change contents in r3
+  svntest.main.file_append(iota_path, 'another brick in the wall')
+  svntest.main.run_svn(None, 'ci', '-m', 'Log message for revision 3', wc_dir)
+
+  # Remove the mergeinfo prop in r4
+  svntest.main.run_svn(None, 'pd', svntest.main.SVN_PROP_MERGEINFO, iota_path)
+  svntest.main.run_svn(None, 'ci', '-m', 'Log message for revision 4\n\n',
+                       wc_dir)
+
+  # Change contents in r5
+  svntest.main.file_append(iota_path, 'hey, teacher, leave those kids alone!')
+  svntest.main.run_svn(None, 'ci', '-m', 'Log message for revision 5', wc_dir)
+
+  # Now run log to see if we can omit the svn:mergeinfo revisions
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                  'log', '--ignore-mergeinfo',
+                                                  iota_path)
+
+  log_chain = parse_log_output(output)
+  check_log_chain(log_chain, [5, 3, 1])
+
+
 ########################################################################
 # Run the tests
 
@@ -1792,6 +1828,7 @@ test_list = [ None,
               SkipUnless(merge_sensitive_log_propmod_merge_inheriting_path,
                          server_has_mergeinfo),
               log_of_local_copy,
+              SkipUnless(XFail(ignore_mergeinfo_log), server_has_mergeinfo),
              ]
 
 if __name__ == '__main__':
