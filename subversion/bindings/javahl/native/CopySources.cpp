@@ -69,8 +69,8 @@ CopySources::makeJCopySource(const char *path, svn_revnum_t rev, SVN::Pool &pool
     {
       ctor = env->GetMethodID(clazz, "<init>",
                               "(Ljava/lang/String;"
-                              "L" JAVA_PACKAGE "/Revision;"
-                              "L" JAVA_PACKAGE "/Revision;)V");
+                              "L" JAVA_PACKAGE "/types/Revision;"
+                              "L" JAVA_PACKAGE "/types/Revision;)V");
       if (JNIUtil::isExceptionThrown())
         POP_AND_RETURN_NULL;
     }
@@ -131,7 +131,7 @@ CopySources::array(SVN::Pool &pool)
       if (getRevision == 0)
         {
           getRevision = env->GetMethodID(clazz, "getRevision",
-                                         "()L"JAVA_PACKAGE"/Revision;");
+                                         "()L"JAVA_PACKAGE"/types/Revision;");
           if (JNIUtil::isJavaExceptionThrown() || getRevision == 0)
             return NULL;
         }
@@ -152,7 +152,7 @@ CopySources::array(SVN::Pool &pool)
       if (getPegRevision == 0)
         {
           getPegRevision = env->GetMethodID(clazz, "getPegRevision",
-                                            "()L"JAVA_PACKAGE"/Revision;");
+                                            "()L"JAVA_PACKAGE"/types/Revision;");
           if (JNIUtil::isJavaExceptionThrown() || getPegRevision == 0)
             return NULL;
         }

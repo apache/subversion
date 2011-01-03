@@ -56,7 +56,7 @@ const svn_opt_revision_range_t *RevisionRange::toRange(SVN::Pool &pool) const
   if (fmid == 0)
     {
       fmid = env->GetMethodID(clazz, "getFromRevision",
-                              "()L"JAVA_PACKAGE"/Revision;");
+                              "()L"JAVA_PACKAGE"/types/Revision;");
       if (JNIUtil::isJavaExceptionThrown())
         return NULL;
     }
@@ -65,7 +65,7 @@ const svn_opt_revision_range_t *RevisionRange::toRange(SVN::Pool &pool) const
   if (tmid == 0)
     {
       tmid = env->GetMethodID(clazz, "getToRevision",
-                              "()L"JAVA_PACKAGE"/Revision;");
+                              "()L"JAVA_PACKAGE"/types/Revision;");
       if (JNIUtil::isJavaExceptionThrown())
         return NULL;
     }
