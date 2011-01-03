@@ -664,7 +664,7 @@ svn_error_t *svn_ra_neon__get_file(svn_ra_session_t *session,
   svn_ra_neon__resource_t *rsrc;
   const char *final_url;
   svn_ra_neon__session_t *ras = session->priv;
-  const char *url = svn_path_url_add_component(ras->url->data, path, pool);
+  const char *url = svn_path_url_add_component2(ras->url->data, path, pool);
 
   /* If the revision is invalid (head), then we're done.  Just fetch
      the public URL, because that will always get HEAD. */
@@ -683,9 +683,9 @@ svn_error_t *svn_ra_neon__get_file(svn_ra_session_t *session,
                                              ras,
                                              url, revision,
                                              pool));
-      final_url = svn_path_url_add_component(bc_url.data,
-                                             bc_relative.data,
-                                             pool);
+      final_url = svn_path_url_add_component2(bc_url.data,
+                                              bc_relative.data,
+                                              pool);
       if (fetched_rev != NULL)
         *fetched_rev = got_rev;
     }
@@ -789,7 +789,7 @@ svn_error_t *svn_ra_neon__get_dir(svn_ra_session_t *session,
   apr_size_t final_url_n_components;
   svn_boolean_t supports_deadprop_count;
   svn_ra_neon__session_t *ras = session->priv;
-  const char *url = svn_path_url_add_component(ras->url->data, path, pool);
+  const char *url = svn_path_url_add_component2(ras->url->data, path, pool);
 
   /* If the revision is invalid (head), then we're done.  Just fetch
      the public URL, because that will always get HEAD. */
@@ -808,9 +808,9 @@ svn_error_t *svn_ra_neon__get_dir(svn_ra_session_t *session,
                                              ras,
                                              url, revision,
                                              pool));
-      final_url = svn_path_url_add_component(bc_url.data,
-                                             bc_relative.data,
-                                             pool);
+      final_url = svn_path_url_add_component2(bc_url.data,
+                                              bc_relative.data,
+                                              pool);
       if (fetched_rev != NULL)
         *fetched_rev = got_rev;
     }
