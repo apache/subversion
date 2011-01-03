@@ -27,6 +27,8 @@
 #include <apr_pools.h>
 #include <apr_general.h>
 
+#define SVN_DEPRECATED
+
 #include "svn_types.h"
 #include "svn_pools.h"
 #include "svn_wc.h"
