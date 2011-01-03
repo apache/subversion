@@ -31,7 +31,7 @@
 #include "EnumMapper.h"
 #include "RevisionRange.h"
 #include "CreateJ.h"
-#include "../include/org_apache_subversion_javahl_Revision.h"
+#include "../include/org_apache_subversion_javahl_types_Revision.h"
 #include "../include/org_apache_subversion_javahl_CommitItemStateFlags.h"
 
 #include "svn_path.h"
@@ -67,8 +67,8 @@ CreateJ::ConflictDescriptor(const svn_wc_conflict_description_t *desc)
                               "L"JAVA_PACKAGE"/ConflictDescriptor$Operation;"
                               "Ljava/lang/String;Ljava/lang/String;"
                               "Ljava/lang/String;Ljava/lang/String;"
-                              "L"JAVA_PACKAGE"/ConflictVersion;"
-                              "L"JAVA_PACKAGE"/ConflictVersion;)V");
+                              "L"JAVA_PACKAGE"/types/ConflictVersion;"
+                              "L"JAVA_PACKAGE"/types/ConflictVersion;)V");
       if (JNIUtil::isJavaExceptionThrown() || ctor == 0)
         POP_AND_RETURN_NULL;
     }
@@ -143,7 +143,7 @@ CreateJ::ConflictVersion(const svn_wc_conflict_version_t *version)
     return NULL;
 
   // Create an instance of the conflict version.
-  jclass clazz = env->FindClass(JAVA_PACKAGE "/ConflictVersion");
+  jclass clazz = env->FindClass(JAVA_PACKAGE "/types/ConflictVersion");
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -200,7 +200,7 @@ CreateJ::Info(const char *path, const svn_info_t *info)
                              "L"JAVA_PACKAGE"/types/NodeKind;"
                              "Ljava/lang/String;Ljava/lang/String;"
                              "JJLjava/lang/String;"
-                             "L"JAVA_PACKAGE"/Lock;Z"
+                             "L"JAVA_PACKAGE"/types/Lock;Z"
                              "L"JAVA_PACKAGE"/Info$ScheduleKind;"
                              "Ljava/lang/String;JJJ"
                              "Ljava/lang/String;Ljava/lang/String;"
@@ -318,7 +318,7 @@ CreateJ::Lock(const svn_lock_t *lock)
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
-  jclass clazz = env->FindClass(JAVA_PACKAGE"/Lock");
+  jclass clazz = env->FindClass(JAVA_PACKAGE"/types/Lock");
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -366,7 +366,7 @@ CreateJ::ChangedPath(const char *path, svn_log_changed_path2_t *log_item)
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
-  jclass clazzCP = env->FindClass(JAVA_PACKAGE"/ChangePath");
+  jclass clazzCP = env->FindClass(JAVA_PACKAGE"/types/ChangePath");
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN(SVN_NO_ERROR);
 
@@ -376,7 +376,7 @@ CreateJ::ChangedPath(const char *path, svn_log_changed_path2_t *log_item)
       midCP = env->GetMethodID(clazzCP,
                                "<init>",
                                "(Ljava/lang/String;JLjava/lang/String;"
-                               "L"JAVA_PACKAGE"/ChangePath$Action;"
+                               "L"JAVA_PACKAGE"/types/ChangePath$Action;"
                                "L"JAVA_PACKAGE"/types/NodeKind;"
                                "L"JAVA_PACKAGE"/types/Tristate;"
                                "L"JAVA_PACKAGE"/types/Tristate;)V");
@@ -423,7 +423,7 @@ CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
-  jclass clazz = env->FindClass(JAVA_PACKAGE"/Status");
+  jclass clazz = env->FindClass(JAVA_PACKAGE"/types/Status");
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -434,16 +434,16 @@ CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
                              "(Ljava/lang/String;Ljava/lang/String;"
                              "L"JAVA_PACKAGE"/types/NodeKind;"
                              "JJJLjava/lang/String;"
-                             "L"JAVA_PACKAGE"/Status$Kind;"
-                             "L"JAVA_PACKAGE"/Status$Kind;"
-                             "L"JAVA_PACKAGE"/Status$Kind;"
-                             "L"JAVA_PACKAGE"/Status$Kind;"
+                             "L"JAVA_PACKAGE"/types/Status$Kind;"
+                             "L"JAVA_PACKAGE"/types/Status$Kind;"
+                             "L"JAVA_PACKAGE"/types/Status$Kind;"
+                             "L"JAVA_PACKAGE"/types/Status$Kind;"
                              "ZZZL"JAVA_PACKAGE"/ConflictDescriptor;"
                              "Ljava/lang/String;Ljava/lang/String;"
                              "Ljava/lang/String;Ljava/lang/String;"
                              "JZZLjava/lang/String;Ljava/lang/String;"
                              "Ljava/lang/String;"
-                             "JL"JAVA_PACKAGE"/Lock;"
+                             "JL"JAVA_PACKAGE"/types/Lock;"
                              "JJL"JAVA_PACKAGE"/types/NodeKind;"
                              "Ljava/lang/String;Ljava/lang/String;)V");
       if (JNIUtil::isJavaExceptionThrown())
@@ -455,9 +455,10 @@ CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
 
   jstring jUrl = NULL;
   jobject jNodeKind = NULL;
-  jlong jRevision = org_apache_subversion_javahl_Revision_SVN_INVALID_REVNUM;
+  jlong jRevision =
+    org_apache_subversion_javahl_types_Revision_SVN_INVALID_REVNUM;
   jlong jLastChangedRevision =
-    org_apache_subversion_javahl_Revision_SVN_INVALID_REVNUM;
+    org_apache_subversion_javahl_types_Revision_SVN_INVALID_REVNUM;
   jlong jLastChangedDate = 0;
   jstring jLastCommitAuthor = NULL;
   jobject jTextType = NULL;
@@ -475,14 +476,14 @@ CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
   jstring jConflictWorking = NULL;
   jstring jURLCopiedFrom = NULL;
   jlong jRevisionCopiedFrom =
-    org_apache_subversion_javahl_Revision_SVN_INVALID_REVNUM;
+    org_apache_subversion_javahl_types_Revision_SVN_INVALID_REVNUM;
   jstring jLockToken = NULL;
   jstring jLockComment = NULL;
   jstring jLockOwner = NULL;
   jlong jLockCreationDate = 0;
   jobject jLock = NULL;
   jlong jOODLastCmtRevision =
-    org_apache_subversion_javahl_Revision_SVN_INVALID_REVNUM;
+    org_apache_subversion_javahl_types_Revision_SVN_INVALID_REVNUM;
   jlong jOODLastCmtDate = 0;
   jobject jOODKind = NULL;
   jstring jOODLastCmtAuthor = NULL;
@@ -699,7 +700,7 @@ CreateJ::ClientNotifyInformation(const svn_wc_notify_t *wcNotify)
                                "L"JAVA_PACKAGE"/ClientNotifyInformation$Action;"
                                "L"JAVA_PACKAGE"/types/NodeKind;"
                                "Ljava/lang/String;"
-                               "L"JAVA_PACKAGE"/Lock;"
+                               "L"JAVA_PACKAGE"/types/Lock;"
                                "Ljava/lang/String;"
                                "L"JAVA_PACKAGE"/ClientNotifyInformation$Status;"
                                "L"JAVA_PACKAGE"/ClientNotifyInformation$Status;"
