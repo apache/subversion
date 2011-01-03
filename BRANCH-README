@@ -1,0 +1,8 @@
+This branch exists to add --ignore-mergeinfo to 'svn log'.
+The goal of this flag is to allow users to filter changes to mergeinfo from
+the log reporting operation, thus allowing them to more easily detect
+"real" changes of interest.  'log' is one of several modes that need to
+be supported.
+
+TODO:
+ - Retrieve logs from the server
