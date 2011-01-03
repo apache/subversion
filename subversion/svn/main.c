@@ -672,7 +672,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    svn log http://www.example.com/repo/project@50 foo.c bar.c\n"),
     {'r', 'q', 'v', 'g', 'c', opt_targets, opt_stop_on_copy, opt_incremental,
      opt_xml, 'l', opt_with_all_revprops, opt_with_no_revprops, opt_with_revprop,
-     opt_diff, opt_diff_cmd, opt_internal_diff, 'x'},
+     opt_diff, opt_diff_cmd, opt_internal_diff, opt_ignore_mergeinfo, 'x'},
     {{opt_with_revprop, N_("retrieve revision property ARG")},
      {'c', N_("the change made in revision ARG")}} },
 
@@ -1092,7 +1092,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "          >   local missing, incoming edit upon update\n"
      "    D       wc/qax.c\n"),
     { 'u', 'v', 'N', opt_depth, 'q', opt_no_ignore, opt_incremental, opt_xml,
-      opt_ignore_externals, opt_changelist, opt_ignore_mergeinfo} },
+      opt_ignore_externals, opt_changelist} },
 
   { "switch", svn_cl__switch, {"sw"}, N_
     ("Update the working copy to a different URL within the same repository.\n"
