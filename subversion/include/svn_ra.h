@@ -1459,9 +1459,30 @@ svn_ra_do_diff(svn_ra_session_t *session,
  * revprops is NULL or contains a revprop other than svn:author, svn:date,
  * or svn:log, an @c SVN_ERR_RA_NOT_IMPLEMENTED error is returned.
  *
- * @since New in 1.5.
+ * @since New in 1.6.
  */
+svn_error_t *
+svn_ra_get_log3(svn_ra_session_t *session,
+                const apr_array_header_t *paths,
+                svn_revnum_t start,
+                svn_revnum_t end,
+                int limit,
+                svn_boolean_t discover_changed_paths,
+                svn_boolean_t strict_node_history,
+                svn_boolean_t include_merged_revisions,
+                svn_boolean_t ignore_mergeinfo,
+                const apr_array_header_t *revprops,
+                svn_log_entry_receiver_t receiver,
+                void *receiver_baton,
+                apr_pool_t *pool);
 
+/**
+ * Similar to svn_ra_get_log3(), but with @a ignore_mergeinfo always @c FALSE.
+ * 
+ * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_get_log2(svn_ra_session_t *session,
                 const apr_array_header_t *paths,

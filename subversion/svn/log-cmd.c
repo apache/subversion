@@ -706,13 +706,14 @@ svn_cl__log(apr_getopt_t *os,
           if (!opt_state->quiet)
             APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_LOG;
         }
-      SVN_ERR(svn_client_log5(targets,
+      SVN_ERR(svn_client_log6(targets,
                               &peg_revision,
                               opt_state->revision_ranges,
                               opt_state->limit,
                               opt_state->verbose,
                               opt_state->stop_on_copy,
                               opt_state->use_merge_history,
+                              opt_state->ignore_mergeinfo,
                               revprops,
                               log_entry_receiver_xml,
                               &lb,
@@ -729,13 +730,14 @@ svn_cl__log(apr_getopt_t *os,
       APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_DATE;
       if (!opt_state->quiet)
         APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_LOG;
-      SVN_ERR(svn_client_log5(targets,
+      SVN_ERR(svn_client_log6(targets,
                               &peg_revision,
                               opt_state->revision_ranges,
                               opt_state->limit,
                               opt_state->verbose,
                               opt_state->stop_on_copy,
                               opt_state->use_merge_history,
+                              opt_state->ignore_mergeinfo,
                               revprops,
                               log_entry_receiver,
                               &lb,

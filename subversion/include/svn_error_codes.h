@@ -1350,6 +1350,11 @@ SVN_ERROR_START
              "SQLite busy at transaction rollback; "
              "resetting all busy SQLite statements to allow rollback")
 
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_NONSENSICAL_OPTIONS,
+             SVN_ERR_MISC_CATEGORY_START + 35,
+             "Argument combinations are invalid")
+
   /* command-line client errors */
 
   SVN_ERRDEF(SVN_ERR_CL_ARG_PARSING_ERROR,

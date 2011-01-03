@@ -2341,6 +2341,9 @@ svn_client_status(svn_revnum_t *result_rev,
  * If @a include_merged_revisions is set, log information for revisions
  * which have been merged to @a targets will also be returned.
  *
+ * If @a ignore_mergeinfo_changes is set, log will ignore any changes to
+ * the svn:mergeinfo property when determining which revisions to return.
+ *
  * If @a revprops is NULL, retrieve all revprops; else, retrieve only the
  * revprops named in the array (i.e. retrieve none if the array is empty).
  *
@@ -2356,8 +2359,31 @@ svn_client_status(svn_revnum_t *result_rev,
  * If @a ctx->notify_func2 is non-NULL, then call @a ctx->notify_func2/baton2
  * with a 'skip' signal on any unversioned targets.
  *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_client_log6(const apr_array_header_t *targets,
+                const svn_opt_revision_t *peg_revision,
+                const apr_array_header_t *revision_ranges,
+                int limit,
+                svn_boolean_t discover_changed_paths,
+                svn_boolean_t strict_node_history,
+                svn_boolean_t include_merged_revisions,
+                svn_boolean_t ignore_mergeinfo_changes,
+                const apr_array_header_t *revprops,
+                svn_log_entry_receiver_t receiver,
+                void *receiver_baton,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_log6(), but with @a ignore_mergeinfo_changes
+ * always @c FALSE.
+ *
+ * @deprecated Provided for compatibility with the 1.6 API.
  * @since New in 1.6.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_log5(const apr_array_header_t *targets,
                 const svn_opt_revision_t *peg_revision,

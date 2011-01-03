@@ -266,13 +266,14 @@ limit_receiver(void *baton, svn_log_entry_t *log_entry, apr_pool_t *pool)
 
 
 svn_error_t *
-svn_client_log5(const apr_array_header_t *targets,
+svn_client_log6(const apr_array_header_t *targets,
                 const svn_opt_revision_t *peg_revision,
                 const apr_array_header_t *revision_ranges,
                 int limit,
                 svn_boolean_t discover_changed_paths,
                 svn_boolean_t strict_node_history,
                 svn_boolean_t include_merged_revisions,
+                svn_boolean_t ignore_mergeinfo_changes,
                 const apr_array_header_t *revprops,
                 svn_log_entry_receiver_t real_receiver,
                 void *real_receiver_baton,
@@ -603,7 +604,7 @@ svn_client_log5(const apr_array_header_t *targets,
           passed_receiver_baton = &lb;
         }
 
-      SVN_ERR(svn_ra_get_log2(ra_session,
+      SVN_ERR(svn_ra_get_log3(ra_session,
                               condensed_targets,
                               start_revnum,
                               end_revnum,
@@ -611,6 +612,7 @@ svn_client_log5(const apr_array_header_t *targets,
                               discover_changed_paths,
                               strict_node_history,
                               include_merged_revisions,
+                              ignore_mergeinfo_changes,
                               passed_receiver_revprops,
                               passed_receiver,
                               passed_receiver_baton,
