@@ -85,8 +85,9 @@ svn_cl__propset(apr_getopt_t *os,
   /* We only want special Subversion property values to be in UTF-8
      and LF line endings.  All other propvals are taken literally. */
   if (svn_prop_needs_translation(pname_utf8))
-    SVN_ERR(svn_subst_translate_string(&propval, propval,
-                                       opt_state->encoding, scratch_pool));
+    SVN_ERR(svn_subst_translate_string2(&propval, NULL, NULL, propval,
+                                        opt_state->encoding, scratch_pool,
+                                        scratch_pool));
   else if (opt_state->encoding)
     return svn_error_create
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
