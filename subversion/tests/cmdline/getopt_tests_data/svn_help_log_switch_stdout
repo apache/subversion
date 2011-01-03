@@ -60,6 +60,7 @@ Valid options:
   --diff                   : produce diff output
   --diff-cmd ARG           : use ARG as diff command
   --internal-diff [--idiff] : override diff-cmd specified in config file
+  --ignore-mergeinfo       : ignore changes to mergeinfo
   -x [--extensions] ARG    : Default: '-u'. When Subversion is invoking an
                              external diff program, ARG is simply passed along
                              to the program. But when Subversion is using its
