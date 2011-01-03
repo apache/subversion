@@ -21,11 +21,11 @@
  * @endcopyright
  */
 
-package org.apache.subversion.javahl;
+package org.apache.subversion.javahl.types;
 
 import java.util.Date;
 
-import org.apache.subversion.javahl.types.NodeKind;
+import org.apache.subversion.javahl.ISVNClient;
 
 /**
  * A general subversion directory entry. Used for {@link ISVNClient#list}.
