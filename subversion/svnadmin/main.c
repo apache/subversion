@@ -1182,7 +1182,8 @@ set_revprop(const char *prop_name, const char *filename,
   prop_value->data = file_contents->data;
   prop_value->len = file_contents->len;
 
-  SVN_ERR(svn_subst_translate_string(&prop_value, prop_value, NULL, pool));
+  SVN_ERR(svn_subst_translate_string2(&prop_value, NULL, NULL, prop_value,
+                                      NULL, pool, pool));
 
   /* Open the filesystem  */
   SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
