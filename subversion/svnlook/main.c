@@ -821,7 +821,7 @@ display_prop_diffs(const apr_array_header_t *prop_diffs,
 
   for (i = 0; i < prop_diffs->nelts; i++)
     {
-      const char *header_fmt;
+      const char *header_label;
       const svn_string_t *orig_value;
       const svn_prop_t *pc = &APR_ARRAY_IDX(prop_diffs, i, svn_prop_t);
 
@@ -833,12 +833,12 @@ display_prop_diffs(const apr_array_header_t *prop_diffs,
         orig_value = NULL;
 
       if (! orig_value)
-        header_fmt = "Added: %s\n";
+        header_label = "Added";
       else if (! pc->value)
-        header_fmt = "Deleted: %s\n";
+        header_label = "Deleted";
       else
-        header_fmt = "Modified: %s\n";
-      SVN_ERR(svn_cmdline_printf(pool, header_fmt, pc->name));
+        header_label = "Modified";
+      SVN_ERR(svn_cmdline_printf(pool, "%s: %s\n", header_label, pc->name));
 
       /* Flush stdout before we open a stream to it below. */
       SVN_ERR(svn_cmdline_fflush(stdout));
