@@ -123,6 +123,7 @@ typedef enum svn_cl__longopt_t {
   opt_internal_diff,
   opt_use_git_diff_format,
   opt_allow_mixed_revisions,
+  opt_ignore_mergeinfo
 } svn_cl__longopt_t;
 
 #define SVN_CL__OPTION_CONTINUATION_INDENT "                             "
@@ -339,6 +340,8 @@ const apr_getopt_option_t svn_cl__options[] =
                        "Use of this option is not recommended!\n"
                        SVN_CL__OPTION_CONTINUATION_INDENT
                        "Please run 'svn update' instead.")},
+  {"ignore-mergeinfo",  opt_ignore_mergeinfo, 0,
+                    N_("ignore changes to mergeinfo")},
 
   /* Long-opt Aliases
    *
@@ -1089,7 +1092,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "          >   local missing, incoming edit upon update\n"
      "    D       wc/qax.c\n"),
     { 'u', 'v', 'N', opt_depth, 'q', opt_no_ignore, opt_incremental, opt_xml,
-      opt_ignore_externals, opt_changelist} },
+      opt_ignore_externals, opt_changelist, opt_ignore_mergeinfo} },
 
   { "switch", svn_cl__switch, {"sw"}, N_
     ("Update the working copy to a different URL within the same repository.\n"
@@ -1817,6 +1820,9 @@ main(int argc, const char *argv[])
         break;
       case opt_allow_mixed_revisions:
         opt_state.allow_mixed_rev = TRUE;
+        break;
+      case opt_ignore_mergeinfo:
+        opt_state.ignore_mergeinfo = TRUE;
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
