@@ -1289,50 +1289,61 @@ svn_client_update(svn_revnum_t *result_rev,
  * @{
  */
 
-/** Switch working tree @a path to @a url\@peg_revision at @a revision,
- * authenticating with the authentication baton cached in @a ctx.  If
- * @a result_rev is not @c NULL, set @a *result_rev to the value of
- * the revision to which the working copy was actually switched.
+/** 
+ * Switch an existing working copy directory to a different repository
+ * location.
  *
- * Summary of purpose: this is normally used to switch a working
- * directory over to another line of development, such as a branch or
- * a tag.  Switching an existing working directory is more efficient
- * than checking out @a url from scratch.
+ * This is normally used to switch a working copy directory over to another
+ * line of development, such as a branch or a tag.  Switching an existing
+ * working copy directory is more efficient than checking out @a URL from
+ * scratch.
  *
- * @a revision must be of kind #svn_opt_revision_number,
- * #svn_opt_revision_head, or #svn_opt_revision_date; otherwise,
- * return #SVN_ERR_CLIENT_BAD_REVISION.
+ * @param[out] result_rev   If non-NULL, the value of the revision to which
+ *                          the working copy was actually switched.
+ * @param[in] path      The directory to be switched.  This need not be the
+ *              root of a working copy.
+ * @param[in] URL       The repository URL to switch to.
+ * @param[in] peg_revision  The peg revision.
+ * @param[in] revision  The operative revision.
+ * @param[in] depth     The depth of the operation.  If #svn_depth_infinity,
+ *                      switch fully recursively.  Else if #svn_depth_immediates,
+ *                      switch @a path and its file children (if any), and
+ *                      switch subdirectories but do not update them.  Else if
+ *                      #svn_depth_files, switch just file children, ignoring
+ *                      subdirectories completely.  Else if #svn_depth_empty,
+ *                      switch just @a path and touch nothing underneath it.
+ * @param[in] depth_is_sticky   If @c TRUE, and @a depth is not
+ *              #svn_depth_unknown, then in addition to switching @a path, also
+ *              set its sticky ambient depth value to @a depth.
+ * @param[in] ignore_externals  If @c TRUE, don't process externals
+ *              definitions as part of this operation.
+ * @param[in] allow_unver_obstructions  If @c TRUE, then tolerate existing
+ *              unversioned items that obstruct incoming paths.  Only
+ *              obstructions of the same type (file or dir) as the added
+ *              item are tolerated.  The text of obstructing files is left
+ *              as-is, effectively treating it as a user modification after
+ *              the checkout.  Working properties of obstructing items are
+ *              set equal to the base properties. <br>
+ *              If @c FALSE, then abort if there are any unversioned
+ *              obstructing items.
+ * @param[in] ctx   The standard client context, used for authentication and
+ *              notification.  The notifier is invoked for paths affected by
+ *              the switch, and also for files which may be restored from the
+ *              pristine store after being previously removed from the working
+ *              copy.
+ * @param[in] pool  Used for any temporary allocation.
  *
- * If @a depth is #svn_depth_infinity, switch fully recursively.
- * Else if it is #svn_depth_immediates, switch @a path and its file
- * children (if any), and switch subdirectories but do not update
- * them.  Else if #svn_depth_files, switch just file children,
- * ignoring subdirectories completely.  Else if #svn_depth_empty,
- * switch just @a path and touch nothing underneath it.
- *
- * If @a depth_is_sticky is set and @a depth is not
- * #svn_depth_unknown, then in addition to switching PATH, also set
- * its sticky ambient depth value to @a depth.
- *
- * If @a ignore_externals is set, don't process externals definitions
- * as part of this operation.
- *
- * If @a allow_unver_obstructions is TRUE then the switch tolerates
- * existing unversioned items that obstruct added paths.  Only
- * obstructions of the same type (file or dir) as the added item are
- * tolerated.  The text of obstructing files is left as-is, effectively
- * treating it as a user modification after the switch.  Working
- * properties of obstructing items are set equal to the base properties.
- * If @a allow_unver_obstructions is FALSE then the switch will abort
- * if there are any unversioned obstructing items.
- *
- * If @a ctx->notify_func2 is non-NULL, invoke it with @a ctx->notify_baton2
- * on paths affected by the switch.  Also invoke it for files may be restored
- * from the text-base because they were removed from the working copy.
- *
- * Use @a pool for any temporary allocation.
+ * @return A pointer to an #svn_error_t of the type (this list is not
+ *         exhaustive): <br>
+ *         #SVN_ERR_CLIENT_BAD_REVISION if @a revision is not one of
+ *         #svn_opt_revision_number, #svn_opt_revision_head, or
+ *         #svn_opt_revision_date. <br>
+ *         If no error occurred, return #SVN_NO_ERROR.
  *
  * @since New in 1.5.
+ *
+ * @see #svn_depth_t <br> #svn_client_ctx_t <br> @ref clnt_revisions for
+ *      a discussion of operative and peg revisions.
  */
 svn_error_t *
 svn_client_switch2(svn_revnum_t *result_rev,
