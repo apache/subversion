@@ -23,6 +23,8 @@
 
 package org.apache.subversion.javahl;
 
+import org.apache.subversion.javahl.types.Revision;
+
 /**
  * A description of a copy source.
  */
@@ -58,7 +60,7 @@ public class CopySource implements java.io.Serializable
      * @param path
      * @param revision The source revision.
      * @param pegRevision The peg revision.  Typically interpreted as
-     * {@link org.apache.subversion.javahl.Revision#HEAD} when
+     * {@link org.apache.subversion.javahl.types.Revision#HEAD} when
      * <code>null</code>.
      */
     public CopySource(String path, Revision revision, Revision pegRevision)

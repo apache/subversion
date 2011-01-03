@@ -32,7 +32,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Date;
 
-import org.apache.subversion.javahl.types.NodeKind;
+import org.apache.subversion.javahl.types.*;
 
 import junit.framework.Assert;
 /**

@@ -320,7 +320,7 @@ public class Status implements java.io.Serializable
     /**
      * A backward-compat wrapper.
      */
-    public Status(org.apache.subversion.javahl.Status aStatus)
+    public Status(org.apache.subversion.javahl.types.Status aStatus)
     {
         this(aStatus.getPath(), aStatus.getUrl(),
              NodeKind.fromApache(aStatus.getNodeKind()),
@@ -871,7 +871,7 @@ public class Status implements java.io.Serializable
     }
 
     private static int fromAStatusKind(
-                            org.apache.subversion.javahl.Status.Kind aKind)
+                            org.apache.subversion.javahl.types.Status.Kind aKind)
     {
         if (aKind == null)
             return StatusKind.none;

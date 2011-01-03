@@ -55,14 +55,14 @@ public class ChangePath implements java.io.Serializable, Comparable
     /**
      * A backward-compat constructor.
      */
-    public ChangePath(org.apache.subversion.javahl.ChangePath aChangePath)
+    public ChangePath(org.apache.subversion.javahl.types.ChangePath aChangePath)
     {
         this(aChangePath.getPath(), aChangePath.getCopySrcRevision(),
              aChangePath.getCopySrcPath(),
-              ((aChangePath.getAction() == org.apache.subversion.javahl.ChangePath.Action.add) ? 'A' :
-              ((aChangePath.getAction() == org.apache.subversion.javahl.ChangePath.Action.delete) ? 'D' :
-              ((aChangePath.getAction() == org.apache.subversion.javahl.ChangePath.Action.replace) ? 'R' :
-              ((aChangePath.getAction() == org.apache.subversion.javahl.ChangePath.Action.modify) ? 'M' :
+              ((aChangePath.getAction() == org.apache.subversion.javahl.types.ChangePath.Action.add) ? 'A' :
+              ((aChangePath.getAction() == org.apache.subversion.javahl.types.ChangePath.Action.delete) ? 'D' :
+              ((aChangePath.getAction() == org.apache.subversion.javahl.types.ChangePath.Action.replace) ? 'R' :
+              ((aChangePath.getAction() == org.apache.subversion.javahl.types.ChangePath.Action.modify) ? 'M' :
                 ' ')))),
              NodeKind.fromApache(aChangePath.getNodeKind()));
     }
