@@ -191,18 +191,15 @@ organize_lock_targets(const char **common_parent_url,
 
   /* Get the common parent and all paths */
   if (url_mode)
-    {
       SVN_ERR(svn_uri_condense_targets(common_parent_url, &rel_targets,
                                        targets, TRUE, pool, pool));
-    }
   else
-    {
       SVN_ERR(svn_dirent_condense_targets(common_parent_url, &rel_targets,
                                           targets, TRUE, pool, pool));
-    }
 
-  /* svn_path_condense_targets leaves paths empty if TARGETS only had
-     1 member, so we special case that. */
+  /* svn_uri_condense_targets and svn_dirent_condense_targets leaves
+     URLs/paths empty if TARGETS only had 1 member, so we special case
+     that. */
   if (apr_is_empty_array(rel_targets))
     {
       const char *parent, *base;
@@ -273,8 +270,8 @@ organize_lock_targets(const char **common_parent_url,
       SVN_ERR(svn_uri_condense_targets(&common_url, &rel_urls, urls,
                                        FALSE, pool, pool));
 
-      /* svn_path_condense_targets leaves paths empty if TARGETS only had
-         1 member, so we special case that (again). */
+      /* svn_uri_condense_targets leaves URLs empty if TARGETS only
+         had 1 member, so we special case that (again). */
       if (apr_is_empty_array(rel_urls))
         {
           const char *base_name = svn_uri_basename(common_url, pool);
