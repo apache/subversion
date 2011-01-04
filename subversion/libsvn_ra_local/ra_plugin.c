@@ -1401,10 +1401,15 @@ svn_ra_local__has_capability(svn_ra_session_t *session,
       || strcmp(capability, SVN_RA_CAPABILITY_LOG_REVPROPS) == 0
       || strcmp(capability, SVN_RA_CAPABILITY_PARTIAL_REPLAY) == 0
       || strcmp(capability, SVN_RA_CAPABILITY_COMMIT_REVPROPS) == 0
-      || strcmp(capability, SVN_RA_CAPABILITY_ATOMIC_REVPROPS) == 0
-      || strcmp(capability, SVN_RA_CAPABILITY_IGNORE_MERGEINFO) == 0)
+      || strcmp(capability, SVN_RA_CAPABILITY_ATOMIC_REVPROPS) == 0)
     {
       *has = TRUE;
+    }
+  else if (strcmp(capability, SVN_RA_CAPABILITY_IGNORE_MERGEINFO) == 0)
+    {
+      /* ### When the server supports this capability, we'll fold this
+         ### into the above conditional. */
+      *has = FALSE;
     }
   else if (strcmp(capability, SVN_RA_CAPABILITY_MERGEINFO) == 0)
     {
