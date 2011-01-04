@@ -1777,13 +1777,23 @@ def ignore_mergeinfo_log(sbox):
   svntest.main.file_append(iota_path, 'hey, teacher, leave those kids alone!')
   svntest.main.run_svn(None, 'ci', '-m', 'Log message for revision 5', wc_dir)
 
+  # Vanilla log
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                  'log', iota_path)
+  check_log_chain(parse_log_output(output), [5, 4, 3, 2, 1])
+
   # Now run log to see if we can omit the svn:mergeinfo revisions
   exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                   'log', '--ignore-mergeinfo',
                                                   iota_path)
+  check_log_chain(parse_log_output(output), [5, 3, 1])
 
-  log_chain = parse_log_output(output)
-  check_log_chain(log_chain, [5, 3, 1])
+  # And with a limit flag
+  exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                  'log', '--ignore-mergeinfo',
+                                                  '--limit', '2',
+                                                  iota_path)
+  check_log_chain(parse_log_output(output), [5, 3])
 
 
 ########################################################################
