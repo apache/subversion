@@ -39,6 +39,10 @@ set +e
 
 trap trap_cleanup SIGHUP SIGTERM SIGINT
 
+# Ensure the server uses a known locale.
+LC_ALL=C
+export LC_ALL
+
 function really_cleanup() {
     if [ -e  "$SVNSERVE_PID" ]; then
         kill $(cat "$SVNSERVE_PID")
