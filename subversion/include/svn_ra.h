@@ -1996,6 +1996,14 @@ svn_ra_has_capability(svn_ra_session_t *session,
  */
 #define SVN_RA_CAPABILITY_ATOMIC_REVPROPS "atomic-revprops"
 
+/**
+ * The capability to ignore mergeinfo when performing various requests,
+ * such as logs.
+ *
+ * @since New in 1.7
+ */
+#define SVN_RA_CAPABILITY_IGNORE_MERGEINFO "ignore-mergeinfo"
+
 /*       *** PLEASE READ THIS IF YOU ADD A NEW CAPABILITY ***
  *
  * RA layers generally fetch all capabilities when asked about any
