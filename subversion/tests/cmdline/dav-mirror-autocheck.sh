@@ -28,6 +28,10 @@ SCRIPT=$(basename $0)
 
 trap stop_httpd_and_die SIGHUP SIGTERM SIGINT
 
+# Ensure the server uses a known locale.
+LC_ALL=C
+export LC_ALL
+
 function stop_httpd_and_die() {
   [ -e "$HTTPD_PID" ] && kill $(cat "$HTTPD_PID")
   exit 1
