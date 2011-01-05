@@ -176,6 +176,9 @@ static const apr_getopt_option_t options_table[] =
                        "                            "
                        "       Ignore changes in EOL style")},
 
+  {"quiet",             'q', 0,
+   N_("no progress (only errors) to stderr")},
+
   {0,                   0, 0, 0}
 };
 
@@ -310,6 +313,7 @@ struct svnlook_opt_state
   svn_boolean_t non_recursive;    /* --non-recursive */
   svn_boolean_t xml;              /* --xml */
   const char *extensions;         /* diff extension args (UTF-8!) */
+  svn_boolean_t quiet;            /* --quiet */
 };
 
 
@@ -2021,7 +2025,8 @@ subcommand_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   SVN_ERR(svn_opt_print_help3(os, "svnlook",
                               opt_state ? opt_state->version : FALSE,
-                              FALSE, version_footer->data,
+                              opt_state ? opt_state->quiet : FALSE,
+                              version_footer->data,
                               header, cmd_table, options_table, NULL,
                               NULL, pool));
 
@@ -2326,6 +2331,10 @@ main(int argc, const char *argv[])
           opt_state.help = TRUE;
           break;
 
+        case 'q':
+          opt_state.quiet = TRUE;
+          break;
+
         case svnlook__revprop_opt:
           opt_state.revprop = TRUE;
           break;
@@ -2419,6 +2428,7 @@ main(int argc, const char *argv[])
               static const svn_opt_subcommand_desc2_t pseudo_cmd =
                 { "--version", subcommand_help, {0}, "",
                   {svnlook__version,  /* must accept its own option */
+                   'q',
                   } };
 
               subcommand = &pseudo_cmd;
