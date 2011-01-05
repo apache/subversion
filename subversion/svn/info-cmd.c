@@ -566,23 +566,11 @@ svn_cl__info(apr_getopt_t *os,
         {
           /* If one of the targets is a non-existent URL or wc-entry,
              don't bail out.  Just warn and move on to the next target. */
-          if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+          if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND ||
+              err->apr_err == SVN_ERR_RA_ILLEGAL_URL)
             {
-              SVN_ERR(svn_cmdline_fprintf
-                      (stderr, subpool,
-                       _("%s:  (Not a versioned resource)\n\n"),
-                       svn_path_is_url(truepath)
-                         ? truepath
-                         : svn_dirent_local_style(truepath, pool)));
-            }
-          else if (err->apr_err == SVN_ERR_RA_ILLEGAL_URL)
-            {
-              SVN_ERR(svn_cmdline_fprintf
-                      (stderr, subpool,
-                       _("%s:  (Not a valid URL)\n\n"),
-                       svn_path_is_url(truepath)
-                         ? truepath
-                         : svn_dirent_local_style(truepath, pool)));
+              svn_handle_warning2(stderr, err, "svn: ");
+              svn_error_clear(svn_cmdline_fprintf(stderr, subpool, "\n"));
             }
           else
             {

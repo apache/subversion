@@ -2260,7 +2260,8 @@ def info_nonexisting_file(sbox):
 
   # Check for the correct error message
   for line in errput:
-    if re.match(".*\(Not a valid URL\).*", line):
+    if re.match(".*" + idonotexist_url + ".*non-existent in revision 1.*",
+                line):
       return
 
   # Else never matched the expected error output, so the test failed.
