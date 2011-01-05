@@ -190,13 +190,13 @@ def main():
         email_to = "To: %s" % to_email_id
         email_sub = "Subject: [l10n] Translation status report for %s r%s" \
                      % (branch_name, wc_version)
-        x_headers = "".join([
-          "X-Mailer: l10n-report.py r%ld\n" % _rev(),
-          "Reply-To: dev@subversion.apache.org\n",
-          "Mail-Followup-To: dev@subversion.apache.org\n",
+        x_headers = "\n".join([
+          "X-Mailer: l10n-report.py r%ld" % _rev(),
+          "Reply-To: dev@subversion.apache.org",
+          "Mail-Followup-To: dev@subversion.apache.org",
           # http://www.iana.org/assignments/auto-submitted-keywords/auto-submitted-keywords.xhtml
-          "Auto-Submitted: auto-generated\n",
-        ];
+          "Auto-Submitted: auto-generated",
+        ]);
 
         msg = "\n".join((email_from, email_to, email_sub, x_headers,
                         title, format_head, format_line, body))
