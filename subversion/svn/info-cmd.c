@@ -566,8 +566,7 @@ svn_cl__info(apr_getopt_t *os,
         {
           /* If one of the targets is a non-existent URL or wc-entry,
              don't bail out.  Just warn and move on to the next target. */
-          if (err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE
-              || err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
+          if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
             {
               SVN_ERR(svn_cmdline_fprintf
                       (stderr, subpool,
