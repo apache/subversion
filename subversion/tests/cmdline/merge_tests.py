@@ -15790,29 +15790,33 @@ def record_only_merge_creates_self_referential_mergeinfo(sbox):
                                        '--record-only', A_path)
 
 #----------------------------------------------------------------------
-# Test for issue #3657 'phantom svn:eol-style changes cause spurious merge
-# text conflicts'.
-def copy_causes_phantom_eol_conflict(sbox):
-  "other prop changes cause phantom eol conflict"
+# Test for issue #3657 'dav update report handler in skelta mode can cause
+# spurious conflicts'.
+def dav_skelta_mode_causes_spurious_conflicts (sbox):
+  "dav skelta mode can cause spurious conflicts"
 
   sbox.build()
   wc_dir = sbox.wc_dir
 
   # Some paths we'll care about
-  mu_path                = os.path.join(wc_dir, "A", "mu")
-  A_path                 = os.path.join(wc_dir, "A")
-  A_branch_path          = os.path.join(wc_dir, "A-branch")
-  A_branch_backport_path = os.path.join(wc_dir, "A-branch-backport")
-  mu_path                = os.path.join(wc_dir, "A", "mu")
-  mu2_path               = os.path.join(wc_dir, "A", "mu2")
-  mu_backport_path       = os.path.join(wc_dir, "A-branch-backport", "mu")
+  mu_path       = os.path.join(wc_dir, "A", "mu")
+  A_path        = os.path.join(wc_dir, "A")
+  C_path        = os.path.join(wc_dir, "A", "C")
+  A_branch_path = os.path.join(wc_dir, "A-branch")
+  C_branch_path = os.path.join(wc_dir, "A-branch", "C")
 
-  # r2 - Set the 'native' svn:eol-style on A/mu:
+  # r2 - Set some intial properties:
+  #
+  #  'dir-prop'='value1' on A/C.
+  #  'svn:eol-style'='native' on A/mu.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ps', 'dir-prop', 'initial-val',
+                                     C_path)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'ps', 'svn:eol-style', 'native',
                                      mu_path)
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'ci', '-m', 'Set native eol-style',
+                                     'ci', '-m', 'Set some properties',
                                      wc_dir)
 
   # r3 - Branch 'A' to 'A-branch':
@@ -15823,34 +15827,56 @@ def copy_causes_phantom_eol_conflict(sbox):
                                      'ci', '-m', 'Create a branch of A',
                                      wc_dir)
 
-  # r4 - Make a text mod and prop mod to 'A/mu':
+  # r4 - Make a text mod to 'A/mu' and add new props to 'A/mu' and 'A/C':
   svntest.main.file_write(mu_path, "The new mu!\n")
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'ps', 'prop-name', 'prop-val', mu_path)
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'ci', '-m', 'Edit a file', wc_dir)
+                                     'ps', 'another-dir-prop', 'initial-val',
+                                     C_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+                                     'Edit a file and make some prop changes',
+                                     wc_dir)
+
+  # r5 - Modify the sole property on 'A-branch/C':
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ps', 'dir-prop', 'branch-val',
+                                     C_branch_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'prop mod on branch', wc_dir)
 
   # Now merge r4 from 'A' to 'A-branch'.
   #
   # Previously this failed over ra_neon and ra_serf on Windows:
   #
   #   >svn merge ^^/A A-branch -c4
-  #   Conflict discovered in 'A-branch/mu'.
+  #   Conflict discovered in 'C:/SVN/src-trunk/Debug/subversion/tests/cmdline
+  #     /svn-test-work/working_copies/merge_tests-110/A-branch/mu'.
   #   Select: (p) postpone, (df) diff-full, (e) edit,
   #           (mc) mine-conflict, (tc) theirs-conflict,
   #           (s) show all options: p
   #   --- Merging r4 into 'A-branch':
   #   CU   A-branch\mu
+  #   Conflict for property 'another-dir-prop' discovered on 'C:/SVN/src-trunk
+  #     /Debug/subversion/tests/cmdline/svn-test-work/working_copies/
+  #     merge_tests-110/A-branch/C'.
+  #   Select: (p) postpone,
+  #           (mf) mine-full, (tf) theirs-full,
+  #           (s) show all options: p
+  #    C   A-branch\C
   #   --- Recording mergeinfo for merge of r4 into 'A-branch':
   #    U   A-branch
   #   Summary of conflicts:
   #     Text conflicts: 1
+  #     Property conflicts: 1
   #
-  # The conflict was on the whole file as it appeared there was an eol-style
-  # change to native, when in fact no such change was present in r7.
+  # The file conflict was fixed in r966822, but the property conflict is
+  # still present and is the reason for this test's XFail status, see
+  # http://subversion.tigris.org/issues/show_bug.cgi?id=3657#desc13.
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   expected_output = wc.State(A_branch_path, {
     'mu' : Item(status='UU'),
+    'C'  : Item(status=' U'),
     })
   expected_mergeinfo_output = wc.State(A_branch_path, {
     ''   : Item(status=' U'),
@@ -15865,7 +15891,7 @@ def copy_causes_phantom_eol_conflict(sbox):
     'B/E/beta'  : Item(status='  '),
     'B/lambda'  : Item(status='  '),
     'B/F'       : Item(status='  '),
-    'C'         : Item(status='  '),
+    'C'         : Item(status=' M'),
     'D'         : Item(status='  '),
     'D/G'       : Item(status='  '),
     'D/G/pi'    : Item(status='  '),
@@ -15877,7 +15903,7 @@ def copy_causes_phantom_eol_conflict(sbox):
     'D/H/psi'   : Item(status='  '),
     'D/H/omega' : Item(status='  '),
     })
-  expected_status.tweak(wc_rev=4)
+  expected_status.tweak(wc_rev=5)
   expected_disk = wc.State('', {
     ''          : Item(props={SVN_PROP_MERGEINFO :
                               '/A:4'}),
@@ -15890,7 +15916,8 @@ def copy_causes_phantom_eol_conflict(sbox):
     'B/E/beta'  : Item("This is the file 'beta'.\n"),
     'B/lambda'  : Item("This is the file 'lambda'.\n"),
     'B/F'       : Item(),
-    'C'         : Item(),
+    'C'         : Item(props={'dir-prop' : 'branch-val',
+                              'another-dir-prop' : 'initial-val'}),
     'D'         : Item(),
     'D/G'       : Item(),
     'D/G/pi'    : Item("This is the file 'pi'.\n"),
@@ -16478,7 +16505,8 @@ test_list = [ None,
               foreign_repos_del_and_props,
               immediate_depth_merge_creates_minimal_subtree_mergeinfo,
               record_only_merge_creates_self_referential_mergeinfo,
-              copy_causes_phantom_eol_conflict,
+              XFail(dav_skelta_mode_causes_spurious_conflicts,
+                    svntest.main.is_windows_type_dav),
               merge_into_locally_added_file,
               merge_into_locally_added_directory,
               merge_with_os_deleted_subtrees,
