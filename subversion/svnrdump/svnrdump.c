@@ -484,6 +484,7 @@ usage(const char *progname,
  */
 static svn_error_t *
 version(const char *progname,
+        svn_boolean_t quiet,
         apr_pool_t *pool)
 {
   svn_stringbuf_t *version_footer =
@@ -493,7 +494,7 @@ version(const char *progname,
 
   SVN_ERR(svn_ra_print_modules(version_footer, pool));
   return svn_opt_print_help3(NULL, ensure_appname(progname, pool),
-                             TRUE, FALSE, version_footer->data,
+                             TRUE, quiet, version_footer->data,
                              NULL, NULL, NULL, NULL, NULL, pool);
 }
 
@@ -796,6 +797,7 @@ main(int argc, const char **argv)
               static const svn_opt_subcommand_desc2_t pseudo_cmd =
                 { "--version", help_cmd, {0}, "",
                   {opt_version,  /* must accept its own option */
+                   'q',  /* --quiet */
                   } };
               subcommand = &pseudo_cmd;
             }
@@ -863,7 +865,7 @@ main(int argc, const char **argv)
 
   if (subcommand && strcmp(subcommand->name, "--version") == 0)
     {
-      SVNRDUMP_ERR(version(argv[0], pool));
+      SVNRDUMP_ERR(version(argv[0], opt_baton->quiet, pool));
       svn_pool_destroy(pool);
       exit(EXIT_SUCCESS);
     }
