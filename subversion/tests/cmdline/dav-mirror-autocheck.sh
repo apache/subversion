@@ -171,7 +171,7 @@ __EOF__
 
 function usage() {
   echo "usage: $SCRIPT <test-work-directory>" 1>&2
-  echo "  e.g. \"$SCRIPT $HOME/projects/svn-trunk /tmp/test-work\"" 1>&2
+  echo "  e.g. \"$SCRIPT /tmp/test-work\"" 1>&2
   echo
   echo " " '<test-work-directory>' must not exist, \
     I will not clobber it for you 1>&2
