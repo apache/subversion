@@ -38,61 +38,56 @@
    explicit permission to use it under these terms at 8:02pm on
    Friday, February 11th, 2005.  */
 
-#define ADLER32_MASK      0x0000ffff
-#define ADLER32_CHAR_MASK 0x000000ff
-
 /* Size of the blocks we compute checksums for. This was chosen out of
-   thin air.  Monotone used 64, xdelta1 used 64, rsync uses 128.  */
+   thin air.  Monotone used 64, xdelta1 used 64, rsync uses 128.
+   However, later optimizations assume it to be 256 or less.
+ */
 #define MATCH_BLOCKSIZE 64
-
-/* Structure to store the state of our adler32 checksum.  */
-struct adler32
-{
-  apr_uint32_t s1;
-  apr_uint32_t s2;
-};
 
 /* Feed C_IN into the adler32 checksum and remove C_OUT at the same time.
  * This function may (and will) only be called for characters that are
  * MATCH_BLOCKSIZE positions apart.
+ *
+ * Please note that the lower 16 bits cannot overflow in neither direction.
+ * Therefore, we don't need to split the value into separate values for
+ * sum(char) and sum(sum(char)).
  */
-static APR_INLINE void
-adler32_replace(struct adler32 *ad, const char c_out, const char c_in)
+static APR_INLINE apr_uint32_t
+adler32_replace(apr_uint32_t adler32, const char c_out, const char c_in)
 {
-  apr_uint32_t s1 = ad->s1;
-  apr_uint32_t s2 = ad->s2;
+  adler32 -= (MATCH_BLOCKSIZE * 0x10000u * ((unsigned char) c_out));
 
-  s2 -= (MATCH_BLOCKSIZE * (((apr_uint32_t) c_out) & ADLER32_CHAR_MASK));
+  adler32 -= (unsigned char)c_out;
+  adler32 += (unsigned char)c_in;
 
-  s1 -= ((apr_uint32_t) (c_out)) & ADLER32_CHAR_MASK;
-  s1 += ((apr_uint32_t) (c_in)) & ADLER32_CHAR_MASK;
-
-  s2 += s1;
-
-  ad->s1 = s1 & ADLER32_MASK;
-  ad->s2 = s2 & ADLER32_MASK;
+  return adler32 + adler32 * 0x10000;
 }
 
-/* Return the current adler32 checksum in the adler32 structure.  */
+/* Calculate an peudo-adler32 checksum for MATCH_BLOCKSIZE bytes starting
+   at DATA.  Return the checksum value.  */
 
 static APR_INLINE apr_uint32_t
-adler32_sum(const struct adler32 *ad)
+init_adler32(const char *data)
 {
-  return (ad->s2 << 16) | (ad->s1);
-}
+  const unsigned char *input = (const unsigned char *)data;
+  const unsigned char *last = input + MATCH_BLOCKSIZE;
 
-/* Initialize an adler32 checksum structure with DATA, which has length
-   DATALEN.  Return the initialized structure.  */
+  apr_uint32_t s1 = 0;
+  apr_uint32_t s2 = 0;
 
-static APR_INLINE struct adler32 *
-init_adler32(struct adler32 *ad, const char *data)
-{
-  apr_uint32_t adler32 = svn__adler32(0, data, MATCH_BLOCKSIZE);
+  for (; input < last; input += 8)
+    {
+      s1 += input[0]; s2 += s1;
+      s1 += input[1]; s2 += s1;
+      s1 += input[2]; s2 += s1;
+      s1 += input[3]; s2 += s1;
+      s1 += input[4]; s2 += s1;
+      s1 += input[5]; s2 += s1;
+      s1 += input[6]; s2 += s1;
+      s1 += input[7]; s2 += s1;
+    }
 
-  ad->s1 = adler32 & ADLER32_MASK;
-  ad->s2 = (adler32 >> 16) & ADLER32_MASK;
-
-  return ad;
+  return s2 * 0x10000 + s1;
 }
 
 /* Information for a block of the delta source.  The length of the
@@ -175,7 +170,6 @@ init_blocks_table(const char *data,
                   apr_pool_t *pool)
 {
   apr_size_t i;
-  struct adler32 adler;
   apr_size_t nblocks;
   apr_size_t nslots = 1;
 
@@ -200,10 +194,7 @@ init_blocks_table(const char *data,
      not use that shorter block for deltification (only indirectly
      as an extension of some previous block). */
   for (i = 0; i + MATCH_BLOCKSIZE <= datalen; i += MATCH_BLOCKSIZE)
-    {
-      apr_uint32_t adlersum = adler32_sum(init_adler32(&adler, data + i));
-      add_block(blocks, adlersum, i);
-    }
+    add_block(blocks, init_adler32(data + i), i);
 }
 
 /* Return the lowest position at which A and B differ. If no difference
@@ -246,7 +237,7 @@ match_length(const char *a, const char *b, apr_size_t max_len)
  */
 static apr_size_t
 find_match(const struct blocks *blocks,
-           const struct adler32 *rolling,
+           const apr_uint32_t rolling,
            const char *a,
            apr_size_t asize,
            const char *b,
@@ -255,34 +246,33 @@ find_match(const struct blocks *blocks,
            apr_size_t *aposp,
            apr_size_t pending_insert_start)
 {
-  apr_uint32_t sum = adler32_sum(rolling);
-  apr_size_t tpos, bpos = *bposp;
+  apr_size_t apos, bpos = *bposp;
   apr_size_t delta, max_delta;
 
-  tpos = find_block(blocks, sum, b + bpos);
+  apos = find_block(blocks, rolling, b + bpos);
 
   /* See if we have a match.  */
-  if (tpos == (apr_size_t)-1)
+  if (apos == (apr_size_t)-1)
     return 0;
 
   /* Extend the match forward as far as possible */
-  max_delta = asize - tpos - MATCH_BLOCKSIZE < bsize - bpos - MATCH_BLOCKSIZE
-            ? asize - tpos - MATCH_BLOCKSIZE
+  max_delta = asize - apos - MATCH_BLOCKSIZE < bsize - bpos - MATCH_BLOCKSIZE
+            ? asize - apos - MATCH_BLOCKSIZE
             : bsize - bpos - MATCH_BLOCKSIZE;
-  delta = match_length(a + tpos + MATCH_BLOCKSIZE,
+  delta = match_length(a + apos + MATCH_BLOCKSIZE,
                        b + bpos + MATCH_BLOCKSIZE,
                        max_delta);
 
   /* See if we can extend backwards (max MATCH_BLOCKSIZE-1 steps because A's
      content has been sampled only every MATCH_BLOCKSIZE positions).  */
-  while (tpos > 0 && bpos > pending_insert_start && a[tpos-1] == b[bpos-1])
+  while (apos > 0 && bpos > pending_insert_start && a[apos-1] == b[bpos-1])
     {
-      --tpos;
+      --apos;
       --bpos;
       ++delta;
     }
 
-  *aposp = tpos;
+  *aposp = apos;
   *bposp = bpos;
 
   return MATCH_BLOCKSIZE + delta;
@@ -322,7 +312,7 @@ compute_delta(svn_txdelta__ops_baton_t *build_baton,
               apr_pool_t *pool)
 {
   struct blocks blocks;
-  struct adler32 rolling;
+  apr_uint32_t rolling;
   apr_size_t lo = 0, pending_insert_start = 0;
 
   /* If the size of the target is smaller than the match blocksize, just
@@ -338,14 +328,14 @@ compute_delta(svn_txdelta__ops_baton_t *build_baton,
   init_blocks_table(a, asize, &blocks, pool);
 
   /* Initialize our rolling checksum.  */
-  init_adler32(&rolling, b);
+  rolling = init_adler32(b);
   while (lo < bsize)
     {
       apr_size_t matchlen = 0;
       apr_size_t apos;
 
       if (lo + MATCH_BLOCKSIZE <= bsize)
-        matchlen = find_match(&blocks, &rolling, a, asize, b, bsize,
+        matchlen = find_match(&blocks, rolling, a, asize, b, bsize,
                               &lo, &apos, pending_insert_start);
 
       /* If we didn't find a real match, insert the byte at the target
@@ -355,7 +345,7 @@ compute_delta(svn_txdelta__ops_baton_t *build_baton,
           /* move block one position forward. Short blocks at the end of
              the buffer cannot be used as the beginning of a new match */
           if (lo + MATCH_BLOCKSIZE < bsize)
-            adler32_replace(&rolling, b[lo], b[lo + MATCH_BLOCKSIZE]);
+            rolling = adler32_replace(rolling, b[lo], b[lo+MATCH_BLOCKSIZE]);
 
           lo++;
         }
@@ -378,7 +368,7 @@ compute_delta(svn_txdelta__ops_baton_t *build_baton,
            * Ignore short buffers at the end of B.
            */
           if (lo + MATCH_BLOCKSIZE <= bsize)
-            init_adler32(&rolling, b + lo);
+            rolling = init_adler32(b + lo);
         }
     }
 
