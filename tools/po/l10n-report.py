@@ -40,6 +40,8 @@ import os
 import re
 import subprocess
 
+LIST_ADDRESS = "dev@subversion.apache.org"
+
 def _rev():
   dollar = "$Revision$"
   return int(re.findall('[0-9]+', dollar)[0]);
@@ -66,7 +68,7 @@ def usage_and_exit(errmsg=None):
 class l10nReport:
     def __init__(self, to_email_id=""):
         self.to_email_id = to_email_id
-        self.from_email_id = "<dev@subversion.apache.org>"
+        self.from_email_id = "<%s>" % LIST_ADDRESS
 
     def safe_command(self, cmd_and_args, cmd_in=""):
         [stdout, stderr] = subprocess.Popen(cmd_and_args, \
@@ -192,8 +194,8 @@ def main():
                      % (branch_name, wc_version)
         x_headers = "\n".join([
           "X-Mailer: l10n-report.py r%ld" % _rev(),
-          "Reply-To: dev@subversion.apache.org",
-          "Mail-Followup-To: dev@subversion.apache.org",
+          "Reply-To: %s" % LIST_ADDRESS,
+          "Mail-Followup-To: %s" % LIST_ADDRESS,
           # http://www.iana.org/assignments/auto-submitted-keywords/auto-submitted-keywords.xhtml
           "Auto-Submitted: auto-generated",
         ]);
