@@ -65,7 +65,7 @@ static const svn_ra_neon__xml_elm_t lock_elements[] =
   { NULL }
 };
 
-typedef struct
+typedef struct lock_baton_t
 {
   svn_stringbuf_t *cdata;
   apr_pool_t *pool;
@@ -211,7 +211,7 @@ lock_from_baton(svn_lock_t **lock,
           if (strncmp("Second-", timeout_str, strlen("Second-")) == 0)
             {
               int time_offset;
-              
+
               SVN_ERR(svn_cstring_atoi(&time_offset, &(timeout_str[7])));
               lck->expiration_date = lck->creation_date
                 + apr_time_from_sec(time_offset);
@@ -250,7 +250,7 @@ do_lock(svn_lock_t **lock,
   svn_error_t *err = SVN_NO_ERROR;
 
   /* To begin, we convert the incoming path into an absolute fs-path. */
-  url = svn_path_url_add_component(ras->url->data, path, pool);
+  url = svn_path_url_add_component2(ras->url->data, path, pool);
   SVN_ERR(svn_ra_neon__get_baseline_info(NULL, NULL, &fs_path, NULL, ras,
                                          url, SVN_INVALID_REVNUM, pool));
 
@@ -402,7 +402,7 @@ do_unlock(svn_ra_session_t *session,
   apr_hash_t *extra_headers = apr_hash_make(pool);
 
   /* Make a neon lock structure containing token and full URL to unlock. */
-  url = svn_path_url_add_component(ras->url->data, path, pool);
+  url = svn_path_url_add_component2(ras->url->data, path, pool);
   if (ne_uri_parse(url, &uri) != 0)
     {
       ne_uri_free(&uri);
@@ -524,7 +524,7 @@ svn_ra_neon__get_lock_internal(svn_ra_neon__session_t *ras,
     "</D:propfind>";
 
   /* To begin, we convert the incoming path into an absolute fs-path. */
-  url = svn_path_url_add_component(ras->url->data, path, pool);
+  url = svn_path_url_add_component2(ras->url->data, path, pool);
 
   err = svn_ra_neon__get_baseline_info(NULL, NULL, &fs_path, NULL, ras,
                                        url, SVN_INVALID_REVNUM, pool);

@@ -230,7 +230,7 @@ delete_urls(const apr_array_header_t *paths,
                                 &kind, subpool));
       if (kind == svn_node_none)
         return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
-                                 "URL '%s' does not exist", item_url);
+                                 _("URL '%s' does not exist"), item_url);
     }
   svn_pool_destroy(subpool);
 

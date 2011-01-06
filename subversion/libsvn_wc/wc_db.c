@@ -170,7 +170,7 @@ typedef struct insert_base_baton_t {
 } insert_base_baton_t;
 
 
-typedef struct {
+typedef struct insert_working_baton_t {
   /* common to all insertions into WORKING (including NODE_DATA) */
   svn_wc__db_status_t presence;
   svn_wc__db_kind_t kind;
@@ -723,7 +723,7 @@ blank_ibb(insert_base_baton_t *pibb)
 
               0         1         2         3         4
               normal
-   A          normal          
+   A          normal
    A/B        normal              normal
    A/B/C                          not-pres  normal
    A/B/C/D                                            normal
@@ -733,7 +733,7 @@ blank_ibb(insert_base_baton_t *pibb)
 
    Now an update that adds base nodes for A/B/C, A/B/C/D and A/B/C/D/E
    must extend the A/B deletion:
-   
+
               0         1         2         3         4
               normal
    A          normal
@@ -2489,10 +2489,10 @@ svn_wc__db_pristine_get_sha1(const svn_checksum_t **sha1_checksum,
 }
 
 
-/* Delete the pristine text referenced by SHA1_CHECKSUM in the database
- * referenced by PDH. */
+/* Delete the pristine text referenced by SHA1_CHECKSUM from the pristine
+ * store of WCROOT.  Delete both the database row and the file on disk. */
 static svn_error_t *
-pristine_remove(svn_wc__db_pdh_t *pdh,
+pristine_remove(svn_wc__db_wcroot_t *wcroot,
                 const svn_checksum_t *sha1_checksum,
                 apr_pool_t *scratch_pool)
 {
@@ -2500,13 +2500,13 @@ pristine_remove(svn_wc__db_pdh_t *pdh,
   const char *pristine_abspath;
 
   /* Remove the DB row. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_DELETE_PRISTINE));
   SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, sha1_checksum, scratch_pool));
   SVN_ERR(svn_sqlite__update(NULL, stmt));
 
   /* Remove the file */
-  SVN_ERR(get_pristine_fname(&pristine_abspath, pdh->wcroot->abspath,
+  SVN_ERR(get_pristine_fname(&pristine_abspath, wcroot->abspath,
                              sha1_checksum, TRUE /* create_subdir */,
                              scratch_pool, scratch_pool));
   SVN_ERR(svn_io_remove_file2(pristine_abspath, TRUE /* ignore_enoent */,
@@ -2577,31 +2577,21 @@ svn_wc__db_pristine_remove(svn_wc__db_t *db,
   /* If not referenced, remove the PRISTINE table row and the file. */
   if (! is_referenced)
     {
-      SVN_ERR(pristine_remove(pdh, sha1_checksum, scratch_pool));
+      SVN_ERR(pristine_remove(pdh->wcroot, sha1_checksum, scratch_pool));
     }
 
   return SVN_NO_ERROR;
 }
 
 
-svn_error_t *
-svn_wc__db_pristine_cleanup(svn_wc__db_t *db,
-                            const char *wri_abspath,
-                            apr_pool_t *scratch_pool)
+static svn_error_t *
+pristine_cleanup_wcroot(svn_wc__db_wcroot_t *wcroot,
+                        apr_pool_t *scratch_pool)
 {
-  svn_wc__db_pdh_t *pdh;
-  const char *local_relpath;
   svn_sqlite__stmt_t *stmt;
 
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
-
-  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
-                              wri_abspath, svn_sqlite__mode_readonly,
-                              scratch_pool, scratch_pool));
-  VERIFY_USABLE_PDH(pdh);
-
   /* Find each unreferenced pristine in the DB and remove it. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_UNREFERENCED_PRISTINES));
   while (1)
     {
@@ -2614,9 +2604,30 @@ svn_wc__db_pristine_cleanup(svn_wc__db_t *db,
 
       SVN_ERR(svn_sqlite__column_checksum(&sha1_checksum, stmt, 0,
                                           scratch_pool));
-      SVN_ERR(pristine_remove(pdh, sha1_checksum, scratch_pool));
+      SVN_ERR(pristine_remove(wcroot, sha1_checksum, scratch_pool));
     }
   SVN_ERR(svn_sqlite__reset(stmt));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__db_pristine_cleanup(svn_wc__db_t *db,
+                            const char *wri_abspath,
+                            apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
+
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              wri_abspath, svn_sqlite__mode_readonly,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  SVN_ERR(pristine_cleanup_wcroot(pdh->wcroot, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -3221,7 +3232,7 @@ op_depth_for_copy(apr_int64_t *op_depth,
         }
     }
   SVN_ERR(svn_sqlite__reset(stmt));
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -4109,7 +4120,7 @@ read_all_tree_conflicts(apr_hash_t **tree_conflicts,
       const char *conflict_data;
       const svn_skel_t *skel;
       const svn_wc_conflict_description2_t *conflict;
-      
+
       svn_pool_clear(iterpool);
 
       child_relpath = svn_sqlite__column_text(stmt, 0, NULL);
@@ -4728,7 +4739,7 @@ info_below_working(svn_boolean_t *have_base,
             *have_work = TRUE;
           else
             *have_base = TRUE;
-              
+
           *status = svn_sqlite__column_token(stmt, 3, presence_map);
           if (op_depth > 0)
             SVN_ERR(convert_to_working_status(status, *status));
@@ -4855,7 +4866,7 @@ svn_wc__db_temp_op_delete(svn_wc__db_t *db,
   VERIFY_USABLE_PDH(b.pdh);
 
   /* These two for svn_wc__db_temp_forget_directory */
-  b.db = db; 
+  b.db = db;
   b.local_abspath = local_abspath;
 
   SVN_ERR(svn_sqlite__with_transaction(b.pdh->wcroot->sdb, temp_op_delete_txn,
@@ -6176,7 +6187,7 @@ svn_wc__db_global_commit(svn_wc__db_t *db,
 
   cb.new_revision = new_revision;
 
-  cb.changed_rev = changed_revision; 
+  cb.changed_rev = changed_revision;
   cb.changed_date = changed_date;
   cb.changed_author = changed_author;
   cb.new_checksum = new_checksum;
@@ -8751,7 +8762,7 @@ svn_wc__db_temp_op_set_file_external(svn_wc__db_t *db,
   svn_boolean_t got_row;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-  SVN_ERR_ASSERT(!repos_relpath 
+  SVN_ERR_ASSERT(!repos_relpath
                  || svn_relpath_is_canonical(repos_relpath, scratch_pool));
 
   SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,

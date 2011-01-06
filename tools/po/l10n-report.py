@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 #
+# $Id$
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -39,6 +40,12 @@ import os
 import re
 import subprocess
 
+LIST_ADDRESS = "dev@subversion.apache.org"
+
+def _rev():
+  dollar = "$Revision$"
+  return int(re.findall('[0-9]+', dollar)[0]);
+
 def usage_and_exit(errmsg=None):
     """Print a usage message, plus an ERRMSG (if provided), then exit.
     If ERRMSG is provided, the usage message is printed to stderr and
@@ -61,7 +68,7 @@ def usage_and_exit(errmsg=None):
 class l10nReport:
     def __init__(self, to_email_id=""):
         self.to_email_id = to_email_id
-        self.from_email_id = "<dev@subversion.apache.org>"
+        self.from_email_id = "<%s>" % LIST_ADDRESS
 
     def safe_command(self, cmd_and_args, cmd_in=""):
         [stdout, stderr] = subprocess.Popen(cmd_and_args, \
@@ -185,9 +192,16 @@ def main():
         email_to = "To: %s" % to_email_id
         email_sub = "Subject: [l10n] Translation status report for %s r%s" \
                      % (branch_name, wc_version)
+        x_headers = "\n".join([
+          "X-Mailer: l10n-report.py r%ld" % _rev(),
+          "Reply-To: %s" % LIST_ADDRESS,
+          "Mail-Followup-To: %s" % LIST_ADDRESS,
+          # http://www.iana.org/assignments/auto-submitted-keywords/auto-submitted-keywords.xhtml
+          "Auto-Submitted: auto-generated",
+        ]);
 
-        msg = "%s\n%s\n%s\n%s\n%s\n%s\n%s" % (email_from, email_to,\
-              email_sub, title, format_head, format_line, body)
+        msg = "\n".join((email_from, email_to, email_sub, x_headers,
+                        title, format_head, format_line, body))
 
         server.sendmail(email_from, email_to, msg)
         print("The report is sent to '%s' email id." % to_email_id)

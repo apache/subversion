@@ -420,8 +420,8 @@ Java_org_apache_subversion_javahl_SVNClient_add
 JNIEXPORT jlongArray JNICALL
 Java_org_apache_subversion_javahl_SVNClient_update
 (JNIEnv *env, jobject jthis, jobject jtargets, jobject jrevision,
- jobject jdepth, jboolean jdepthIsSticky, jboolean jignoreExternals,
- jboolean jallowUnverObstructions)
+ jobject jdepth, jboolean jdepthIsSticky, jboolean jmakeParents,
+ jboolean jignoreExternals, jboolean jallowUnverObstructions)
 {
   JNIEntry(SVNClient, update);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -441,6 +441,7 @@ Java_org_apache_subversion_javahl_SVNClient_update
 
   return cl->update(targets, revision, EnumMapper::toDepth(jdepth),
                     jdepthIsSticky ? true : false,
+                    jmakeParents ? true : false,
                     jignoreExternals ? true : false,
                     jallowUnverObstructions ? true : false);
 }
@@ -760,7 +761,7 @@ Java_org_apache_subversion_javahl_SVNClient_suggestMergeSources
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_apache_subversion_javahl_Revision_2Ljava_lang_String_2Lorg_apache_subversion_javahl_Revision_2Ljava_lang_String_2ZLorg_apache_subversion_javahl_types_Depth_2ZZZ
+Java_org_apache_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Revision_2Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Revision_2Ljava_lang_String_2ZLorg_apache_subversion_javahl_types_Depth_2ZZZ
 (JNIEnv *env, jobject jthis, jstring jpath1, jobject jrevision1,
  jstring jpath2, jobject jrevision2, jstring jlocalPath, jboolean jforce,
  jobject jdepth, jboolean jignoreAncestry, jboolean jdryRun,
@@ -800,7 +801,7 @@ Java_org_apache_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_apach
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_apache_subversion_javahl_Revision_2Ljava_util_List_2Ljava_lang_String_2ZLorg_apache_subversion_javahl_types_Depth_2ZZZ
+Java_org_apache_subversion_javahl_SVNClient_merge__Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Revision_2Ljava_util_List_2Ljava_lang_String_2ZLorg_apache_subversion_javahl_types_Depth_2ZZZ
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jpegRevision,
  jobject jranges, jstring jlocalPath, jboolean jforce, jobject jdepth,
  jboolean jignoreAncestry, jboolean jdryRun, jboolean jrecordOnly)
@@ -914,7 +915,7 @@ Java_org_apache_subversion_javahl_SVNClient_properties
 
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_propertySet
-(JNIEnv *env, jobject jthis, jstring jpath, jstring jname, jstring jvalue,
+(JNIEnv *env, jobject jthis, jstring jpath, jstring jname, jbyteArray jvalue,
  jobject jdepth, jobject jchangelists, jboolean jforce, jobject jrevpropTable,
  jobject jcallback)
 {
@@ -933,7 +934,7 @@ Java_org_apache_subversion_javahl_SVNClient_propertySet
   if (JNIUtil::isExceptionThrown())
     return;
 
-  JNIStringHolder value(jvalue);
+  JNIByteArray value(jvalue);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -1128,7 +1129,7 @@ JNIEXPORT void JNICALL Java_org_apache_subversion_javahl_SVNClient_getMergeinfoL
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_apache_subversion_javahl_Revision_2Ljava_lang_String_2Lorg_apache_subversion_javahl_Revision_2Ljava_lang_String_2Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Depth_2Ljava_util_Collection_2ZZZZ
+Java_org_apache_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Revision_2Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Revision_2Ljava_lang_String_2Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Depth_2Ljava_util_Collection_2ZZZZ
 (JNIEnv *env, jobject jthis, jstring jtarget1, jobject jrevision1,
  jstring jtarget2, jobject jrevision2, jstring jrelativeToDir,
  jstring joutfileName, jobject jdepth, jobject jchangelists,
@@ -1178,7 +1179,7 @@ Java_org_apache_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_apache
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_apache_subversion_javahl_Revision_2Lorg_apache_subversion_javahl_Revision_2Lorg_apache_subversion_javahl_Revision_2Ljava_lang_String_2Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Depth_2Ljava_util_Collection_2ZZZZ
+Java_org_apache_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Revision_2Lorg_apache_subversion_javahl_types_Revision_2Lorg_apache_subversion_javahl_types_Revision_2Ljava_lang_String_2Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Depth_2Ljava_util_Collection_2ZZZZ
 (JNIEnv *env, jobject jthis, jstring jtarget, jobject jpegRevision,
  jobject jstartRevision, jobject jendRevision, jstring jrelativeToDir,
  jstring joutfileName, jobject jdepth, jobject jchangelists,
@@ -1228,7 +1229,7 @@ Java_org_apache_subversion_javahl_SVNClient_diff__Ljava_lang_String_2Lorg_apache
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNClient_diffSummarize__Ljava_lang_String_2Lorg_apache_subversion_javahl_Revision_2Ljava_lang_String_2Lorg_apache_subversion_javahl_Revision_2Lorg_apache_subversion_javahl_types_Depth_2Ljava_util_Collection_2ZLorg_apache_subversion_javahl_callback_DiffSummaryCallback_2
+Java_org_apache_subversion_javahl_SVNClient_diffSummarize__Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Revision_2Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Revision_2Lorg_apache_subversion_javahl_types_Depth_2Ljava_util_Collection_2ZLorg_apache_subversion_javahl_callback_DiffSummaryCallback_2
 (JNIEnv *env, jobject jthis, jstring jtarget1, jobject jrevision1,
  jstring jtarget2, jobject jrevision2, jobject jdepth, jobject jchangelists,
  jboolean jignoreAncestry, jobject jdiffSummaryReceiver)
@@ -1271,7 +1272,7 @@ Java_org_apache_subversion_javahl_SVNClient_diffSummarize__Ljava_lang_String_2Lo
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNClient_diffSummarize__Ljava_lang_String_2Lorg_apache_subversion_javahl_Revision_2Lorg_apache_subversion_javahl_Revision_2Lorg_apache_subversion_javahl_Revision_2Lorg_apache_subversion_javahl_types_Depth_2Ljava_util_Collection_2ZLorg_apache_subversion_javahl_callback_DiffSummaryCallback_2
+Java_org_apache_subversion_javahl_SVNClient_diffSummarize__Ljava_lang_String_2Lorg_apache_subversion_javahl_types_Revision_2Lorg_apache_subversion_javahl_types_Revision_2Lorg_apache_subversion_javahl_types_Revision_2Lorg_apache_subversion_javahl_types_Depth_2Ljava_util_Collection_2ZLorg_apache_subversion_javahl_callback_DiffSummaryCallback_2
 (JNIEnv *env, jobject jthis, jstring jtarget, jobject jPegRevision,
  jobject jStartRevision, jobject jEndRevision, jobject jdepth,
  jobject jchangelists, jboolean jignoreAncestry,

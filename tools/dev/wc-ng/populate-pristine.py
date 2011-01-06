@@ -58,7 +58,7 @@ INSERT_QUERY = """
   INTO pristine(checksum,compression,size,refcount,md5_checksum)
   VALUES (?,?,?,?,?)
 """
-  
+
 def populate(wc_path):
   conn = open_db(wc_path)
   sys.stdout.write("Updating '%s': " % wc_path)

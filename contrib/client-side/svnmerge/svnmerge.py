@@ -746,10 +746,10 @@ class RevisionSet:
                 for R in parm.split(","):
                     rev_or_revs = re.split(revision_range_split_re, R)
                     if len(rev_or_revs) == 1:
-                        self._revs[int(rev_or_revs[0])] = 1
+                        self._revs[int(lstrip(rev_or_revs[0], 'r'))] = 1
                     elif len(rev_or_revs) == 2:
-                        for rev in range(int(rev_or_revs[0]),
-                                         int(rev_or_revs[1])+1):
+                        for rev in range(int(lstrip(rev_or_revs[0], 'r')),
+                                         int(lstrip(rev_or_revs[1], 'r'))+1):
                             self._revs[rev] = 1
                     else:
                         raise ValueError, 'Ill formatted revision range: ' + R

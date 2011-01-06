@@ -26,7 +26,7 @@ package org.apache.subversion.javahl;
 import java.util.Map;
 import java.util.EventObject;
 import org.apache.subversion.javahl.callback.ClientNotifyCallback;
-import org.apache.subversion.javahl.types.NodeKind;
+import org.apache.subversion.javahl.types.*;
 
 /**
  * The event passed to the {@link ClientNotifyCallback#onNotify}
@@ -115,7 +115,7 @@ public class ClientNotifyInformation extends EventObject
     long oldRevision;
 
     long hunkOriginalStart;
-    
+
     long hunkOriginalLength;
 
     long hunkModifiedStart;

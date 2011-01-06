@@ -46,6 +46,7 @@
 
 #include "private/svn_utf_private.h"
 #include "private/svn_eol_private.h"
+#include "private/svn_adler32.h"
 
 /* A token, i.e. a line read from a file. */
 typedef struct svn_diff__file_token_t
@@ -331,7 +332,7 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
                                  &file->normalize_state,
                                  curp, file_baton->options);
       file_token->length += length;
-      h = svn_diff__adler32(h, curp, length);
+      h = svn__adler32(h, curp, length);
 
       curp = endp = file->buffer;
       file->chunk++;
@@ -378,7 +379,7 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
 
       file_token->length += length;
 
-      *hash = svn_diff__adler32(h, c, length);
+      *hash = svn__adler32(h, c, length);
       *token = file_token;
     }
 
@@ -1290,7 +1291,7 @@ svn_diff_file_output_unified3(svn_stream_t *output_stream,
 /* A stream to remember *leading* context.  Note that this stream does
    *not* copy the data that it is remembering; it just saves
    *pointers! */
-typedef struct {
+typedef struct context_saver_t {
   svn_stream_t *stream;
   const char *data[SVN_DIFF__UNIFIED_CONTEXT_SIZE];
   apr_size_t len[SVN_DIFF__UNIFIED_CONTEXT_SIZE];

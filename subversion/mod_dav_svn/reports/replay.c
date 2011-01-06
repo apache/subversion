@@ -42,7 +42,7 @@
 #include "../dav_svn.h"
 
 
-typedef struct {
+typedef struct edit_baton_t {
   apr_bucket_brigade *bb;
   ap_filter_t *output;
   svn_boolean_t started;

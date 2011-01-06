@@ -157,13 +157,13 @@ public class Info implements java.io.Serializable
              checkAbsent(aInfo.getPath()), checkIncomplete(aInfo.getPath()),
              aInfo.getCopyFromRev(), aInfo.getCopyFromUrl());
     }
-    
+
     private static boolean checkAbsent(String path)
     {
     	File f = new File(path);
     	return !f.exists();
     }
-    
+
     /** See if the path is incomplete.  We currently have no way of getting
      *  this information from the existing info struct, so just return false.
      */

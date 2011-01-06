@@ -1406,6 +1406,10 @@ SVN_ERROR_START
              SVN_ERR_MALFUNC_CATEGORY_START + 0,
              "Assertion failure")
 
+  SVN_ERRDEF(SVN_ERR_ASSERTION_ONLY_TRACING_LINKS,
+             SVN_ERR_MALFUNC_CATEGORY_START + 1,
+             "No non-tracing links found in the error chain")
+
 SVN_ERROR_END
 
 

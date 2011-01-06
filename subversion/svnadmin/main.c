@@ -754,25 +754,25 @@ repos_notify_handler(void *baton,
                                   _("     * editing path : %s ..."),
                                   notify->path));
             break;
-          
+
           case svn_node_action_delete:
             svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
                                   _("     * deleting path : %s ..."),
                                   notify->path));
             break;
-          
+
           case svn_node_action_add:
             svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
                                   _("     * adding path : %s ..."),
                                   notify->path));
             break;
-          
+
           case svn_node_action_replace:
             svn_error_clear(svn_stream_printf(feedback_stream, scratch_pool,
                                   _("     * replacing path : %s ..."),
                                   notify->path));
             break;
-          
+
         }
       }
       return;
@@ -939,7 +939,8 @@ subcommand_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   SVN_ERR(svn_opt_print_help3(os, "svnadmin",
                               opt_state ? opt_state->version : FALSE,
-                              FALSE, version_footer->data,
+                              opt_state ? opt_state->quiet : FALSE,
+                              version_footer->data,
                               header, cmd_table, options_table, NULL, NULL,
                               pool));
 
@@ -1195,7 +1196,8 @@ set_revprop(const char *prop_name, const char *filename,
   prop_value->data = file_contents->data;
   prop_value->len = file_contents->len;
 
-  SVN_ERR(svn_subst_translate_string(&prop_value, prop_value, NULL, pool));
+  SVN_ERR(svn_subst_translate_string2(&prop_value, NULL, NULL, prop_value,
+                                      NULL, pool, pool));
 
   /* Open the filesystem  */
   SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
@@ -1788,6 +1790,7 @@ main(int argc, const char *argv[])
               static const svn_opt_subcommand_desc2_t pseudo_cmd =
                 { "--version", subcommand_help, {0}, "",
                   {svnadmin__version,  /* must accept its own option */
+                   'q',  /* --quiet */
                   } };
 
               subcommand = &pseudo_cmd;

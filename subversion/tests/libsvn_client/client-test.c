@@ -36,7 +36,7 @@
 #include "../svn_test.h"
 #include "../svn_test_fs.h"
 
-typedef struct {
+typedef struct mergeinfo_catalog_item {
   const char *path;
   const char *unparsed_mergeinfo;
   svn_boolean_t remains;

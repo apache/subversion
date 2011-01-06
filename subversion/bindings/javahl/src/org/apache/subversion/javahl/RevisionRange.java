@@ -23,6 +23,8 @@
 
 package org.apache.subversion.javahl;
 
+import org.apache.subversion.javahl.types.Revision;
+
 /**
  * Object that describes a revision range
  *

@@ -32,7 +32,7 @@
 #include "cache.h"
 
 /* The (internal) cache object. */
-typedef struct {
+typedef struct inprocess_cache_t {
   /* Maps from a key (of size CACHE->KLEN) to a struct cache_entry. */
   apr_hash_t *hash;
   apr_ssize_t klen;

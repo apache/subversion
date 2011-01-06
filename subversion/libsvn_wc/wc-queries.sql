@@ -516,7 +516,7 @@ INSERT OR REPLACE INTO nodes (
     wc_id, local_relpath, op_depth, parent_relpath, presence, kind, checksum,
     changed_revision, changed_date, changed_author, depth, symlink_target,
     translated_size, last_mod_time, properties)
-SELECT wc_id, local_relpath, ?3 AS op_depth, parent_relpath, ?4 AS presence,
+SELECT wc_id, local_relpath, ?3 /*op_depth*/, parent_relpath, ?4 /*presence*/,
        kind, checksum, changed_revision, changed_date, changed_author, depth,
        symlink_target, translated_size, last_mod_time, properties
 FROM nodes
@@ -527,7 +527,7 @@ INSERT OR REPLACE INTO nodes (
     wc_id, local_relpath, op_depth, parent_relpath, presence, kind, checksum,
     changed_revision, changed_date, changed_author, depth, symlink_target,
     translated_size, last_mod_time, properties)
-SELECT wc_id, local_relpath, ?3 AS op_depth, parent_relpath, ?4 AS presence,
+SELECT wc_id, local_relpath, ?3 /*op_depth*/, parent_relpath, ?4 /*presence*/,
        kind, checksum, changed_revision, changed_date, changed_author, depth,
        symlink_target, translated_size, last_mod_time, properties
 FROM nodes
@@ -541,7 +541,7 @@ INSERT INTO nodes (
     revision, presence, depth, kind, changed_revision, changed_date,
     changed_author, checksum, properties, translated_size, last_mod_time,
     symlink_target )
-SELECT wc_id, local_relpath, ?3 AS op_depth, parent_relpath, repos_id,
+SELECT wc_id, local_relpath, ?3 /*op_depth*/, parent_relpath, repos_id,
     repos_path, revision, presence, depth, kind, changed_revision,
     changed_date, changed_author, checksum, properties, translated_size,
     last_mod_time, symlink_target
@@ -554,8 +554,8 @@ INSERT INTO nodes (
     revision, presence, depth, kind, changed_revision, changed_date,
     changed_author, checksum, properties, translated_size, last_mod_time,
     symlink_target )
-SELECT wc_id, local_relpath, ?3 AS op_depth, parent_relpath, repos_id,
-    repos_path, revision, ?4 AS presence, depth, kind, changed_revision,
+SELECT wc_id, local_relpath, ?3 /*op_depth*/, parent_relpath, repos_id,
+    repos_path, revision, ?4 /*presence*/, depth, kind, changed_revision,
     changed_date, changed_author, checksum, properties, translated_size,
     last_mod_time, symlink_target
 FROM nodes
@@ -607,8 +607,8 @@ INSERT OR REPLACE INTO nodes (
     repos_path, revision, presence, depth, kind, changed_revision,
     changed_date, changed_author, checksum, properties, translated_size,
     last_mod_time, symlink_target )
-SELECT wc_id, ?3 AS local_relpath, ?4 AS op_depth, ?5 AS parent_relpath,
-    ?6 AS repos_id, ?7 AS repos_path, ?8 AS revision, ?9 AS presence, depth,
+SELECT wc_id, ?3 /*local_relpath*/, ?4 /*op_depth*/, ?5 /*parent_relpath*/,
+    ?6 /*repos_id*/, ?7 /*repos_path*/, ?8 /*revision*/, ?9 /*presence*/, depth,
     kind, changed_revision, changed_date, changed_author, checksum, properties,
     translated_size, last_mod_time, symlink_target
 FROM nodes
@@ -620,8 +620,8 @@ INSERT OR REPLACE INTO nodes (
     revision, presence, depth, kind, changed_revision, changed_date,
     changed_author, checksum, properties, translated_size, last_mod_time,
     symlink_target )
-SELECT wc_id, ?3 AS local_relpath, ?4 AS op_depth, ?5 AS parent_relpath,
-    ?6 AS repos_id, ?7 AS repos_path, ?8 AS revision, ?9 AS presence, depth,
+SELECT wc_id, ?3 /*local_relpath*/, ?4 /*op_depth*/, ?5 /*parent_relpath*/,
+    ?6 /*repos_id*/, ?7 /*repos_path*/, ?8 /*revision*/, ?9 /*presence*/, depth,
     kind, changed_revision, changed_date, changed_author, checksum, properties,
     translated_size, last_mod_time, symlink_target
 FROM nodes
@@ -634,7 +634,7 @@ INSERT OR REPLACE INTO actual_node (
      wc_id, local_relpath, parent_relpath, properties,
      conflict_old, conflict_new, conflict_working,
      prop_reject, changelist, text_mod, tree_conflict_data )
-SELECT wc_id, ?3 AS local_relpath, ?4 AS parent_relpath, properties,
+SELECT wc_id, ?3 /*local_relpath*/, ?4 /*parent_relpath*/, properties,
      conflict_old, conflict_new, conflict_working,
      prop_reject, changelist, text_mod, tree_conflict_data
 FROM actual_node

@@ -61,7 +61,7 @@ extern "C" {
 typedef int svn_ra_neon__xml_elmid;
 
 /** XML element */
-typedef struct {
+typedef struct svn_ra_neon__xml_elm_t {
   /** XML namespace. */
   const char *nspace;
 
@@ -154,7 +154,7 @@ typedef struct svn_ra_neon__session_t {
 #define SVN_RA_NEON__HAVE_HTTPV2_SUPPORT(ras) ((ras)->me_resource != NULL)
 
 
-typedef struct {
+typedef struct svn_ra_neon__request_t {
   ne_request *ne_req;                   /* neon request structure */
   ne_session *ne_sess;                  /* neon session structure */
   svn_ra_neon__session_t *sess;          /* DAV session structure */
@@ -436,7 +436,7 @@ svn_error_t *svn_ra_neon__get_path_relative_to_root(svn_ra_session_t *session,
 
 #define SVN_RA_NEON__PROP_DEADPROP_COUNT SVN_DAV_PROP_NS_DAV "deadprop-count"
 
-typedef struct {
+typedef struct svn_ra_neon__resource_t {
   /* what is the URL for this resource */
   const char *url;
 

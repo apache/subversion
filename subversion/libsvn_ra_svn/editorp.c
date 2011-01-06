@@ -48,7 +48,7 @@
  * connection; both ends are useful for both server and client.
  */
 
-typedef struct {
+typedef struct ra_svn_edit_baton_t {
   svn_ra_svn_conn_t *conn;
   svn_ra_svn_edit_callback callback;    /* Called on successful completion. */
   void *callback_baton;
@@ -57,14 +57,14 @@ typedef struct {
 } ra_svn_edit_baton_t;
 
 /* Works for both directories and files. */
-typedef struct {
+typedef struct ra_svn_baton_t {
   svn_ra_svn_conn_t *conn;
   apr_pool_t *pool;
   ra_svn_edit_baton_t *eb;
   const char *token;
 } ra_svn_baton_t;
 
-typedef struct {
+typedef struct ra_svn_driver_state_t {
   const svn_delta_editor_t *editor;
   void *edit_baton;
   apr_hash_t *tokens;
@@ -85,7 +85,7 @@ typedef struct {
    field in this structure is vestigial for files, and we use it for a
    different purpose instead: at apply-textdelta time, we set it to a
    subpool of the file pool, which is destroyed in textdelta-end. */
-typedef struct {
+typedef struct ra_svn_token_entry_t {
   const char *token;
   void *baton;
   svn_boolean_t is_file;

@@ -34,6 +34,7 @@
 #include "svn_utf.h"
 #include "diff.h"
 #include "svn_private_config.h"
+#include "private/svn_adler32.h"
 
 typedef struct source_tokens_t
 {
@@ -128,7 +129,7 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
 
       svn_diff__normalize_buffer(&buf, &len, &state, tok->data,
                                  mem_baton->normalization_options);
-      *hash = svn_diff__adler32(0, buf, len);
+      *hash = svn__adler32(0, buf, len);
       src->next_token++;
     }
   else
@@ -644,7 +645,7 @@ svn_diff_mem_string_output_unified(svn_stream_t *output_stream,
 /* A stream to remember *leading* context.  Note that this stream does
    *not* copy the data that it is remembering; it just saves
    *pointers! */
-typedef struct {
+typedef struct context_saver_t {
   svn_stream_t *stream;
   const char *data[SVN_DIFF__UNIFIED_CONTEXT_SIZE];
   apr_size_t len[SVN_DIFF__UNIFIED_CONTEXT_SIZE];

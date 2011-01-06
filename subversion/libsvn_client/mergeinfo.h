@@ -207,9 +207,10 @@ svn_client__get_repos_mergeinfo_catalog(
    target has no info of its own.
 
    If no mergeinfo can be obtained from the WC or REPOS_ONLY is TRUE,
-   get it from the repository.  RA_SESSION should be an open RA
-   session pointing at TARGET_WCPATH's URL, or NULL, in which case this
-   function will open its own temporary session.
+   get it from the repository.  If the repository is contacted for mergeinfo
+   and RA_SESSION does not point to TARGET_WCPATH's URL, then it is
+   temporarily reparented.  If RA_SESSION is NULL, then a temporary session
+   is opened as needed.
 
    Store any mergeinfo obtained for TARGET_WCPATH in
    *TARGET_MERGEINFO, if no mergeinfo is found *TARGET_MERGEINFO is

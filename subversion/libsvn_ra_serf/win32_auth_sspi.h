@@ -50,7 +50,7 @@
 extern "C" {
 #endif /* __cplusplus */
 
-typedef enum
+typedef enum sspi_auth_state
 {
   sspi_auth_not_started,
   sspi_auth_in_progress,
@@ -60,7 +60,7 @@ typedef enum
 /* Stores the context information related to SSPI. The context is per
    connection, it enables SSPI to go through the challenge/response cycle
    of the authentication protocols. */
-typedef struct
+typedef struct serf_sspi_context_t
 {
   CtxtHandle ctx;
 

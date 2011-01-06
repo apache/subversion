@@ -623,7 +623,7 @@ svn_cl__cleanup_log_msg(void *log_msg_baton,
      commit error chain, too. */
 
   err = svn_error_createf(commit_err->apr_err, NULL,
-                          "   '%s'",
+                          _("   '%s'"),
                           svn_dirent_local_style(lmb->tmpfile_left, pool));
   svn_error_compose(commit_err,
                     svn_error_create(commit_err->apr_err, err,
@@ -1340,7 +1340,7 @@ svn_cl__opt_parse_path(svn_opt_revision_t *rev,
                        apr_pool_t *pool)
 {
   SVN_ERR(svn_opt_parse_path(rev, truepath, path, pool));
-  
+
   if (svn_path_is_url(*truepath))
     *truepath = svn_uri_canonicalize(*truepath, pool);
   else

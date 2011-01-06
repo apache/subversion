@@ -1049,7 +1049,7 @@ def lock_update_only(sbox):
   # In our other working copy, steal that lock.
   svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
                                      '-m', '', '--force', file_path)
-  
+
   # Now update the first working copy.  It should appear as a no-op.
   expected_disk = main.greek_state.copy()
   expected_disk.remove('iota')

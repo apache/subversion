@@ -186,7 +186,7 @@ class Sandbox:
     return '%s/REDIRECT-%s-%s' % (parts[0],
                                   temporary and 'TEMP' or 'PERM',
                                   parts[1])
-    
+
   def simple_update(self, target=None):
     """Update the WC or TARGET.
        TARGET is a relpath relative to the WC."""

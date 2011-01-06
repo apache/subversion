@@ -492,7 +492,7 @@ check_and_set_revprop(svn_revnum_t *set_rev,
         }
     }
 
-  SVN_ERR(svn_ra_change_rev_prop2(ra_session, *set_rev, propname, 
+  SVN_ERR(svn_ra_change_rev_prop2(ra_session, *set_rev, propname,
                                   NULL, propval, pool));
 
   return SVN_NO_ERROR;
@@ -550,7 +550,7 @@ svn_client_revprop_set2(const char *propname,
       	old_value_p = &original_propval;
 
       /* The actual RA call. */
-      SVN_ERR(svn_ra_change_rev_prop2(ra_session, *set_rev, propname, 
+      SVN_ERR(svn_ra_change_rev_prop2(ra_session, *set_rev, propname,
                                       old_value_p, propval, pool));
     }
   else

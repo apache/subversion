@@ -128,14 +128,6 @@ svn_diff__resolve_conflict(svn_diff_t *hunk,
                            apr_pool_t *pool);
 
 
-/*
- * Return an adler32 checksum based on CHECKSUM, updated with
- * DATA of size LEN.
- */
-apr_uint32_t
-svn_diff__adler32(apr_uint32_t checksum, const char *data, apr_off_t len);
-
-
 /* Normalize the characters pointed to by the buffer BUF (of length *LENGTHP)
  * according to the options *OPTS, starting in the state *STATEP.
  *

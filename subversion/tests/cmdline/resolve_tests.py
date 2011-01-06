@@ -114,7 +114,7 @@ def prop_conflict_resolution(sbox):
   mu_path    = os.path.join(wc_dir, "A", "mu")
   gamma_path = os.path.join(wc_dir, "A", "D", "gamma")
   psi_path   = os.path.join(wc_dir, "A", "D", "H", "psi")
-  
+
   # r2 - Set property 'propname:propval' on iota, A/mu, and A/D/gamma.
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'ps', 'propname', 'propval',
@@ -147,7 +147,7 @@ def prop_conflict_resolution(sbox):
     """Revert the WC, update it to r2, and set the following properties:
 
     itoa      : 'propname' = 'local_edit'
-                'newprop'  = 'new-val-no-incoming' 
+                'newprop'  = 'new-val-no-incoming'
     A/mu      : 'propname' = 'local_edit'
     A/D/gamma : 'propname' = 'incoming-no-conflict'
     A/D/H/psi : 'newprop'  = 'new-val-no-incoming'
@@ -159,7 +159,7 @@ def prop_conflict_resolution(sbox):
     properties:
 
     itoa      : 'propname' = RESOLVED_EDITED_PROP_VAL_OUTPUT
-                'newprop'  = 'new-val-no-incoming' 
+                'newprop'  = 'new-val-no-incoming'
     A/mu      : 'propname' = RESOLVED_DELETED_PROP_VAL_OUTPUT
     A/D/gamma : 'propname' = 'incoming-no-conflict'
     A/D/H/psi : 'newprop'  = 'new-val-no-incoming'
@@ -188,7 +188,7 @@ def prop_conflict_resolution(sbox):
                                        psi_path,
                                        iota_path)
 
-    # Update, postponing all conflict resolution. 
+    # Update, postponing all conflict resolution.
     svntest.actions.run_and_verify_svn(None, None, [], 'up',
                                        '--accept=postpone', wc_dir)
     svntest.actions.run_and_verify_resolve([iota_path, mu_path, gamma_path], '-R',

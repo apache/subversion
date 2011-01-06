@@ -225,6 +225,7 @@ public class SVNClient implements ISVNClient
      */
     public native long[] update(Set<String> paths, Revision revision,
                                 Depth depth, boolean depthIsSticky,
+                                boolean makeParents,
                                 boolean ignoreExternals,
                                 boolean allowUnverObstructions)
             throws ClientException;
@@ -414,36 +415,12 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.5
      */
-    public native void propertySet(String path, String name, String value,
+    public native void propertySet(String path, String name, byte[] value,
                                    Depth depth, Collection<String> changelists,
                                    boolean force,
                                    Map<String, String> revpropTable,
                                    CommitCallback callback)
             throws ClientException;
-
-    /**
-     * @since 1.5
-     */
-    public void propertyRemove(String path, String name, Depth depth,
-                               Collection<String> changelists,
-                               CommitCallback callback)
-            throws ClientException
-    {
-        propertySet(path, name, null, depth, changelists, false, null,
-                    callback);
-    }
-
-    /**
-     * @since 1.5
-     */
-    public void propertyCreate(String path, String name, String value,
-                               Depth depth, Collection<String> changelists,
-                               boolean force, CommitCallback callback)
-            throws ClientException
-    {
-        propertySet(path, name, value, depth, changelists, force, null,
-                    callback);
-    }
 
     /**
      * @since 1.0
@@ -638,7 +615,7 @@ public class SVNClient implements ISVNClient
                              Collection<String> changelists,
                              InfoCallback callback)
             throws ClientException;
-    
+
     /**
      * @since 1.7
      */

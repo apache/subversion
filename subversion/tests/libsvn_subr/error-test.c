@@ -129,7 +129,7 @@ test_error_purge_tracing(apr_pool_t *pool)
     err = svn_error_return(err);
 
     /* Register a malfunction handler that doesn't call abort() to
-       check that a new error chain with a SVN_ERR_ASSERTION_FAIL is
+       check that a new error chain with an assertion error is
        returned. */
     orig_handler =
       svn_error_set_malfunction_handler(svn_error_raise_on_malfunction);
@@ -150,6 +150,8 @@ test_error_purge_tracing(apr_pool_t *pool)
           err3 = err3->child;
         if (err3)
           err3_copy = *err3;
+        else
+          err3_copy.apr_err = APR_SUCCESS;
 
         svn_error_clear(err);
 
@@ -161,15 +163,12 @@ test_error_purge_tracing(apr_pool_t *pool)
         svn_error_clear(err2);
 
         SVN_TEST_ASSERT(err3);
-        SVN_TEST_ASSERT(SVN_ERR_ASSERTION_FAIL == err2_copy.apr_err);
-        SVN_TEST_ASSERT(SVN_ERR_ASSERTION_FAIL == err3_copy.apr_err);
 
-        /* This is the line number in error.c where
-           SVN_ERR_ASSERT(err) is called.  This check is done to
-           assert that the error is being thrown from the expected
-           line and not from another assertion that could be
-           introduced in the future. */
-        SVN_TEST_ASSERT(379 == err3_copy.line);
+        SVN_TEST_ASSERT(SVN_ERROR_IN_CATEGORY(err2_copy.apr_err,
+                                              SVN_ERR_MALFUNC_CATEGORY_START));
+        SVN_TEST_ASSERT(err3_copy.apr_err == err2_copy.apr_err);
+        SVN_TEST_ASSERT(
+          SVN_ERR_ASSERTION_ONLY_TRACING_LINKS == err3_copy.apr_err);
       }
     else
       {

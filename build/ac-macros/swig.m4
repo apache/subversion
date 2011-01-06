@@ -55,7 +55,7 @@ AC_DEFUN(SVN_FIND_SWIG,
   where=$1
 
   if test $where = no; then
-    AC_PATH_PROG(SWIG, none, none)
+    SWIG=none
   elif test $where = check; then
     AC_PATH_PROG(SWIG, swig, none)
   else

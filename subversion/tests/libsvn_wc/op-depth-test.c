@@ -327,7 +327,7 @@ print_row(const nodes_row_t *row,
 }
 
 /* A baton to pass through svn_hash_diff() to compare_nodes_rows(). */
-typedef struct {
+typedef struct comparison_baton_t {
     apr_hash_t *expected_hash;  /* Maps "OP_DEPTH PATH" to nodes_row_t. */
     apr_hash_t *found_hash;     /* Maps "OP_DEPTH PATH" to nodes_row_t. */
     apr_pool_t *scratch_pool;

@@ -349,9 +349,16 @@ class Generator(gen_base.GeneratorBase):
         continue
 
       outputs = [ ]
+
+      # Fake CHECK-SWIG dependency, because these targets are in
+      # both Makefile.in AND build-outputs.mk
+      if itype == "swig-rb" or itype == "swig-py" or itype == "swig-pl":
+      	outputs.append('check-SWIG')
+
       for t in i_targets:
         if hasattr(t, 'filename'):
           outputs.append(t.filename)
+
       data.itargets.append(_eztdata(type=itype, outputs=outputs))
 
     ########################################

@@ -301,7 +301,7 @@ make_file_baton(struct file_baton **f_p,
          depth==empty.  So if the parent doesn't
          already have an entry for the file, then the parent
          doesn't want to hear about the file at all. */
-      
+
       if (hidden || kind == svn_wc__db_kind_unknown)
         {
           f->ambiently_excluded = TRUE;

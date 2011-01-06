@@ -53,7 +53,7 @@ public class ConflictVersion
     /**
      * A backward-compat constructor.
      */
-    public ConflictVersion(org.apache.subversion.javahl.ConflictVersion aVer)
+    public ConflictVersion(org.apache.subversion.javahl.types.ConflictVersion aVer)
     {
         this(aVer.getReposURL(), aVer.getPegRevision(), aVer.getPathInRepos(),
              NodeKind.fromApache(aVer.getNodeKind()));

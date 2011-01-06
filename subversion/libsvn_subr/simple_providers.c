@@ -49,7 +49,7 @@
 #define AUTHN_PASSTYPE_KEY            "passtype"
 
 /* Baton type for the simple provider. */
-typedef struct
+typedef struct simple_provider_baton_t
 {
   svn_auth_plaintext_prompt_func_t plaintext_prompt_func;
   void *prompt_baton;
@@ -541,7 +541,7 @@ svn_auth_get_simple_provider2
 /*-----------------------------------------------------------------------*/
 
 /* Baton type for username/password prompting. */
-typedef struct
+typedef struct simple_prompt_provider_baton_t
 {
   svn_auth_simple_prompt_func_t prompt_func;
   void *prompt_baton;
@@ -552,7 +552,7 @@ typedef struct
 
 
 /* Iteration baton type for username/password prompting. */
-typedef struct
+typedef struct simple_prompt_iter_baton_t
 {
   /* how many times we've reprompted */
   int retries;

@@ -159,7 +159,7 @@ static const apr_getopt_option_t svnsync_options[] =
   {
     {"quiet",          'q', 0,
                        N_("print as little as possible") },
-    {"revision",       'r', 1, 
+    {"revision",       'r', 1,
                        N_("operate on revision ARG (or range ARG1:ARG2)\n"
                           "                             "
                           "A revision argument can be one of:\n"
@@ -226,7 +226,7 @@ static const apr_getopt_option_t svnsync_options[] =
     { 0, 0, 0, 0 }
   };
 
-typedef struct {
+typedef struct opt_baton_t {
   svn_boolean_t non_interactive;
   svn_boolean_t trust_server_cert;
   svn_boolean_t no_auth_cache;
@@ -355,7 +355,7 @@ get_lock(const svn_string_t **lock_string_p,
 
 
 /* Baton for the various subcommands to share. */
-typedef struct {
+typedef struct subcommand_baton_t {
   /* common to all subcommands */
   apr_hash_t *config;
   svn_ra_callbacks2_t source_callbacks;
@@ -441,7 +441,7 @@ check_if_session_is_at_repos_root(svn_ra_session_t *sess,
  * revision REV of the repository associated with RA session SESSION.
  *
  * For REV zero, don't remove properties with the "svn:sync-" prefix.
- * 
+ *
  * All allocations will be done in a subpool of POOL.
  */
 static svn_error_t *
@@ -930,7 +930,7 @@ open_target_session(svn_ra_session_t **target_session_p,
 }
 
 /* Replay baton, used during sychnronization. */
-typedef struct {
+typedef struct replay_baton_t {
   svn_ra_session_t *from_session;
   svn_ra_session_t *to_session;
   subcommand_baton_t *sb;
@@ -1482,7 +1482,7 @@ resolve_revnums(svn_revnum_t *start_revnum,
                                  _("Invalid revision number (%ld)"),
                                  end_rev);
     }
-  
+
   *start_revnum = start_rev;
   *end_revnum = end_rev;
   return SVN_NO_ERROR;
@@ -1552,7 +1552,7 @@ copy_revprops_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
           from_url = NULL;
         }
     }
-  
+
   if (! to_url)
     {
       /* This is the "... TO_URL SOURCE_URL" syntax.  Revisions
@@ -1580,7 +1580,7 @@ copy_revprops_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
   if (from_url && (! svn_path_is_url(from_url)))
     return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                              _("Path '%s' is not a URL"), from_url);
-      
+
   baton = make_subcommand_baton(opt_baton, to_url, from_url,
                                 start_rev, end_rev, pool);
   SVN_ERR(open_target_session(&to_session, baton, pool));
@@ -1681,7 +1681,8 @@ help_cmd(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   SVN_ERR(svn_opt_print_help3(os, "svnsync",
                               opt_baton ? opt_baton->version : FALSE,
-                              FALSE, version_footer->data, header,
+                              opt_baton ? opt_baton->quiet : FALSE,
+                              version_footer->data, header,
                               svnsync_cmd_table, svnsync_options, NULL,
                               NULL, pool));
 
@@ -1961,6 +1962,7 @@ main(int argc, const char *argv[])
               static const svn_opt_subcommand_desc2_t pseudo_cmd =
                 { "--version", help_cmd, {0}, "",
                   {svnsync_opt_version,  /* must accept its own option */
+                   'q',  /* --quiet */
                   } };
 
               subcommand = &pseudo_cmd;

@@ -130,7 +130,7 @@ typedef struct report_baton_t
   svn_fs_root_t *t_root;
   svn_fs_root_t *s_roots[NUM_CACHED_SOURCE_ROOTS];
 
-  /* Cache for revision properties. This is used to eliminate redundant 
+  /* Cache for revision properties. This is used to eliminate redundant
      revprop fetching. */
   apr_hash_t* revision_infos;
 
@@ -461,7 +461,7 @@ get_revision_info(report_baton_t *b,
   info = apr_hash_get(b->revision_infos, &rev, sizeof(rev));
   if (!info)
     {
-      /* Info is not available, yet. 
+      /* Info is not available, yet.
          Get all revprops. */
       SVN_ERR(svn_fs_revision_proplist(&r_props,
                                        b->repos->fs,

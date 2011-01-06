@@ -29,7 +29,7 @@
 
 #include "ra_neon.h"
 
-typedef struct {
+typedef struct replay_baton_t {
   /* The underlying editor and baton we're replaying into. */
   const svn_delta_editor_t *editor;
   void *edit_baton;
@@ -65,7 +65,7 @@ typedef struct {
                                    dir_item_t))
 
 /* Info about a given directory we've seen. */
-typedef struct {
+typedef struct dir_item_t {
   void *baton;
   const char *path;
   apr_pool_t *pool;
