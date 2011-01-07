@@ -856,11 +856,12 @@ insert_base_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
                             (pibb->kind == svn_wc__db_kind_symlink) ?
                                 pibb->target : NULL)); /* 19 */
 
-  if (pibb->kind == svn_wc__db_kind_file) {
-    SVN_ERR(svn_sqlite__bind_checksum(stmt, 14, pibb->checksum, scratch_pool));
-    if (pibb->translated_size != SVN_INVALID_FILESIZE)
-      SVN_ERR(svn_sqlite__bind_int64(stmt, 16, pibb->translated_size));
-  }
+  if (pibb->kind == svn_wc__db_kind_file)
+    {
+      SVN_ERR(svn_sqlite__bind_checksum(stmt, 14, pibb->checksum, scratch_pool));
+      if (pibb->translated_size != SVN_INVALID_FILESIZE)
+        SVN_ERR(svn_sqlite__bind_int64(stmt, 16, pibb->translated_size));
+    }
 
   SVN_ERR(svn_sqlite__bind_properties(stmt, 15, pibb->props,
                                       scratch_pool));
@@ -4062,17 +4063,18 @@ svn_wc__db_op_revert_actual(svn_wc__db_t *db,
   SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
 
-  if (affected_rows == 0) {
-    /* Failed to delete the row.
-       Presumably because there was a changelist set on it */
+  if (affected_rows == 0)
+    {
+      /* Failed to delete the row.
+         Presumably because there was a changelist set on it */
 
-    SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
-                               STMT_CLEAR_ACTUAL_NODE_LEAVING_CHANGELIST));
-    SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
-    SVN_ERR(svn_sqlite__step_done(stmt));
-    /* We're not interested here if there was an affected row or not:
-       If there isn't by now, then there simply was no row to begin with */
-  }
+      SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                 STMT_CLEAR_ACTUAL_NODE_LEAVING_CHANGELIST));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+      /* We're not interested here if there was an affected row or not:
+         If there isn't by now, then there simply was no row to begin with */
+    }
 
   /* Some entries have cached the above values. Kapow!!  */
   SVN_ERR(flush_entries(db, pdh, local_abspath, scratch_pool));
