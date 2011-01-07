@@ -2192,7 +2192,8 @@ svn_fs_get_locks2(svn_fs_t *fs,
                   apr_pool_t *pool);
 
 /** Similar to svn_fs_get_locks2(), but with @a depth always passed as
- * svn_depth_infinity.
+ * svn_depth_infinity, and with the following known problem (which is
+ * not present in svn_fs_get_locks2()):
  *
  * @note On Berkeley-DB-backed filesystems in Subversion 1.6 and
  * prior, the @a get_locks_func callback will be invoked from within a
@@ -2200,8 +2201,7 @@ svn_fs_get_locks2(svn_fs_t *fs,
  * as a result, forbidden from calling any svn_fs API functions which
  * might themselves attempt to start a new Berkeley DB transaction
  * (which is most of this svn_fs API).  Yes, this is a nasty
- * implementation detail to have to be aware of.  We hope to fix this
- * problem in the future.
+ * implementation detail to have to be aware of.
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
  */
