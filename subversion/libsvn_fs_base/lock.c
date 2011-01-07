@@ -468,7 +468,7 @@ svn_fs_base__get_locks(svn_fs_t *fs,
   SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_get_locks, &args, FALSE, pool));
 
   /* Rewind the spool file, then re-read it, calling GET_LOCKS_FUNC(). */
-  svn_io_file_seek(args.spool_file, APR_SET, &offset, pool);
+  SVN_ERR(svn_io_file_seek(args.spool_file, APR_SET, &offset, pool));
   stream = svn_stream_from_aprfile2(args.spool_file, FALSE, pool);
 
   while (1)
@@ -502,7 +502,7 @@ svn_fs_base__get_locks(svn_fs_t *fs,
       /* Parse the skel into a lock, and notify the caller. */
       lock_skel = svn_skel__parse(skel_buf, skel_len, iterpool);
       SVN_ERR(svn_fs_base__parse_lock_skel(&lock, lock_skel, iterpool));
-      get_locks_func(get_locks_baton, lock, iterpool);
+      SVN_ERR(get_locks_func(get_locks_baton, lock, iterpool));
     }
 
   SVN_ERR(svn_stream_close(stream));
