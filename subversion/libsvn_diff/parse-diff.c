@@ -35,19 +35,32 @@
 #include "svn_diff.h"
 
 #include "private/svn_eol_private.h"
+#include "private/svn_dep_compat.h"
 
 /* Helper macro for readability */
 #define starts_with(str, start)  \
   (strncmp((str), (start), strlen(start)) == 0)
 
-struct svn_diff_hunk_t {
-  /* Hunk texts (see include/svn_diff.h). */
-  svn_stream_t *diff_text;
-  svn_stream_t *original_text;
-  svn_stream_t *modified_text;
+/* This struct describes a range within a file, as well as the
+ * current cursor position within the range. All numbers are in bytes. */
+struct svn_diff__hunk_range {
+  apr_off_t start;
+  apr_off_t end;
+  apr_off_t current;
+};
 
+struct svn_diff_hunk_t {
   /* The patch this hunk belongs to. */
   svn_patch_t *patch;
+
+  /* APR file handle to the patch file this hunk came from. */
+  apr_file_t *apr_file;
+
+  /* Ranges used to keep track of this hunk's texts positions within
+   * the patch file. */
+  struct svn_diff__hunk_range diff_text_range;
+  struct svn_diff__hunk_range original_text_range;
+  struct svn_diff__hunk_range modified_text_range;
 
   /* Hunk ranges as they appeared in the patch file.
    * All numbers are lines, not bytes. */
@@ -61,28 +74,28 @@ struct svn_diff_hunk_t {
   svn_linenum_t trailing_context;
 };
 
-svn_error_t *
-svn_diff_hunk_reset_diff_text(const svn_diff_hunk_t *hunk)
+void
+svn_diff_hunk_reset_diff_text(svn_diff_hunk_t *hunk)
 {
-  return svn_error_return(svn_stream_reset(hunk->diff_text));
+  hunk->diff_text_range.current = hunk->diff_text_range.start;
 }
 
-svn_error_t *
-svn_diff_hunk_reset_original_text(const svn_diff_hunk_t *hunk)
+void
+svn_diff_hunk_reset_original_text(svn_diff_hunk_t *hunk)
 {
   if (hunk->patch->reverse)
-    return svn_error_return(svn_stream_reset(hunk->modified_text));
+    hunk->modified_text_range.current = hunk->modified_text_range.start;
   else
-    return svn_error_return(svn_stream_reset(hunk->original_text));
+    hunk->original_text_range.current = hunk->original_text_range.start;
 }
 
-svn_error_t *
-svn_diff_hunk_reset_modified_text(const svn_diff_hunk_t *hunk)
+void
+svn_diff_hunk_reset_modified_text(svn_diff_hunk_t *hunk)
 {
   if (hunk->patch->reverse)
-    return svn_error_return(svn_stream_reset(hunk->original_text));
+    hunk->original_text_range.current = hunk->original_text_range.start;
   else
-    return svn_error_return(svn_stream_reset(hunk->modified_text));
+    hunk->modified_text_range.current = hunk->modified_text_range.start;
 }
 
 svn_linenum_t
@@ -253,32 +266,49 @@ parse_hunk_header(const char *header, svn_diff_hunk_t *hunk,
   return TRUE;
 }
 
-/* Set *EOL to the first end-of-line string found in the stream
- * accessed through READ_FN, MARK_FN and SEEK_FN, whose stream baton
- * is BATON.  Leave the stream read position unchanged.
+/* Set *EOL to the first end-of-line string found in FILE.
+ * Start scanning at the current file cursor offset and scan up
+ * to MAX_LEN bytes. Leave the current file cursor position unchanged.
  * Allocate *EOL statically; POOL is a scratch pool. */
 static svn_error_t *
-scan_eol(const char **eol, svn_stream_t *stream, apr_pool_t *pool)
+scan_eol(const char **eol, apr_file_t *file, apr_size_t max_len,
+         apr_pool_t *pool)
 {
   const char *eol_str;
-  svn_stream_mark_t *mark;
+  apr_off_t pos;
+  apr_size_t total_len;
 
-  SVN_ERR(svn_stream_mark(stream, &mark, pool));
+  pos = 0;
+  SVN_ERR(svn_io_file_seek(file, APR_CUR, &pos, pool));
 
   eol_str = NULL;
+  total_len = 0;
   while (! eol_str)
     {
-      char buf[512];
+      char buf[256];
       apr_size_t len;
+      svn_error_t *err;
 
-      len = sizeof(buf);
-      SVN_ERR(svn_stream_read(stream, buf, &len));
+      if (total_len >= max_len)
+        break;
+
+      len = sizeof(buf) - 1 < (max_len - total_len) ? sizeof(buf) - 1
+                                                    : (max_len - total_len);
+      err = svn_io_file_read_full(file, buf, sizeof(buf) - 1, &len, pool);
+      if (err && APR_STATUS_IS_EOF(err->apr_err))
+        svn_error_clear(err);
+      else
+        SVN_ERR(err);
+
       if (len == 0)
         break; /* EOF */
+
+      buf[len] = '\0';
+      total_len += len;
       eol_str = svn_eol__detect_eol(buf, buf + len);
     }
 
-  SVN_ERR(svn_stream_seek(stream, mark));
+  SVN_ERR(svn_io_file_seek(file, APR_SET, &pos, pool));
 
   *eol = eol_str;
 
@@ -286,95 +316,129 @@ scan_eol(const char **eol, svn_stream_t *stream, apr_pool_t *pool)
 }
 
 /* A helper function similar to svn_stream_readline_detect_eol(),
- * suitable for reading original or modified hunk text from a STREAM
- * which has been mapped onto a hunk region within a unidiff patch file.
+ * suitable for reading a line of text from a range in the patch file.
  *
- * Allocate *STRINGBUF in RESULT_POOL, and read into it one line from STREAM.
- *
- * STREAM is expected to contain unidiff text.
- * Leading unidiff symbols ('+', '-', and ' ') are removed from the line,
- * Any lines commencing with the VERBOTEN character are discarded.
- * VERBOTEN should be '+' or '-', depending on which form of hunk text
- * is being read.
+ * Allocate *STRINGBUF in RESULT_POOL, and read into it one line from FILE.
+ * Reading stops either after a line-terminator was found or after
+ * MAX_LEN bytes have been read.
  *
  * The line-terminator is detected automatically and stored in *EOL
- * if EOL is not NULL. If EOF is reached and the stream does not end
+ * if EOL is not NULL. If EOF is reached and FILE does not end
  * with a newline character, and EOL is not NULL, *EOL is set to NULL.
  *
  * SCRATCH_POOL is used for temporary allocations.
  */
 static svn_error_t *
-hunk_readline(svn_stream_t *stream,
-              svn_stringbuf_t **stringbuf,
-              const char **eol,
-              svn_boolean_t *eof,
-              char verboten,
-              apr_pool_t *result_pool,
-              apr_pool_t *scratch_pool)
+readline(apr_file_t *file,
+         svn_stringbuf_t **stringbuf,
+         const char **eol,
+         svn_boolean_t *eof,
+         apr_size_t max_len,
+         apr_pool_t *result_pool,
+         apr_pool_t *scratch_pool)
 {
   svn_stringbuf_t *str;
-  apr_pool_t *iterpool;
-  svn_boolean_t filtered;
   const char *eol_str;
+  apr_size_t numbytes;
+  const char *match;
+  char c;
+  apr_size_t len;
+
+  str = svn_stringbuf_create_ensure(80, result_pool);
+
+  SVN_ERR(scan_eol(&eol_str, file, max_len, scratch_pool));
+  if (eol)
+    *eol = eol_str;
+  if (eol_str == NULL)
+    {
+      /* No newline until EOF, EOL_STR can be anything. */
+      eol_str = APR_EOL_STR;
+    }
+
+  /* Read into STR up to and including the next EOL sequence. */
+  match = eol_str;
+  numbytes = 1;
+  len = 0;
+  while (*match)
+    {
+      svn_error_t *err;
+
+      err = svn_io_file_read_full(file, &c, sizeof(c), &numbytes,
+                                  scratch_pool);
+      if (err && APR_STATUS_IS_EOF(err->apr_err))
+        svn_error_clear(err);
+      else
+        SVN_ERR(err);
+      len++;
+      if (numbytes != 1 || len > max_len)
+        {
+          *eof = TRUE;
+          *stringbuf = str;
+          return SVN_NO_ERROR;
+        }
+      if (c == *match)
+        match++;
+      else
+        match = eol_str;
+
+      svn_stringbuf_appendbyte(str, c);
+    }
 
   *eof = FALSE;
+  svn_stringbuf_chop(str, match - eol_str);
+  *stringbuf = str;
 
-  iterpool = svn_pool_create(scratch_pool);
+  return SVN_NO_ERROR;
+}
+
+/* Read a line of original or modified hunk text from the specified
+ * RANGE within FILE. FILE is expected to contain unidiff text.
+ * Leading unidiff symbols ('+', '-', and ' ') are removed from the line,
+ * Any lines commencing with the VERBOTEN character are discarded.
+ * VERBOTEN should be '+' or '-', depending on which form of hunk text
+ * is being read.
+ * 
+ * All other parameters are as in svn_diff_hunk_readline_original_text()
+ * and svn_diff_hunk_readline_modified_text().
+ */
+static svn_error_t *
+hunk_readline_original_or_modified(apr_file_t *file,
+                                   struct svn_diff__hunk_range *range,
+                                   svn_stringbuf_t **stringbuf,
+                                   const char **eol,
+                                   svn_boolean_t *eof,
+                                   char verboten,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool)
+{
+  apr_size_t max_len;
+  svn_boolean_t filtered;
+  apr_off_t pos;
+  svn_stringbuf_t *str;
+
+  if (range->current >= range->end)
+    {
+      /* We're past the range. Indicate that no bytes can be read. */
+      *eof = TRUE;
+      if (eol)
+        *eol = NULL;
+      *stringbuf = svn_stringbuf_create("", result_pool);
+      return SVN_NO_ERROR;
+    }
+
+  pos = 0;
+  SVN_ERR(svn_io_file_seek(file, APR_CUR, &pos,  scratch_pool));
+  SVN_ERR(svn_io_file_seek(file, APR_SET, &range->current, scratch_pool));
   do
     {
-      apr_size_t numbytes;
-      const char *match;
-      char c;
-
-      svn_pool_clear(iterpool);
-
-      /* Since we're reading one character at a time, let's at least
-         optimize for the 90% case.  90% of the time, we can avoid the
-         stringbuf ever having to realloc() itself if we start it out at
-         80 chars.  */
-      str = svn_stringbuf_create_ensure(80, iterpool);
-
-      SVN_ERR(scan_eol(&eol_str, stream, iterpool));
-      if (eol)
-        *eol = eol_str;
-      if (eol_str == NULL)
-        {
-          /* No newline until EOF, EOL_STR can be anything. */
-          eol_str = APR_EOL_STR;
-        }
-
-      /* Read into STR up to and including the next EOL sequence. */
-      match = eol_str;
-      numbytes = 1;
-      while (*match)
-        {
-          SVN_ERR(svn_stream_read(stream, &c, &numbytes));
-          if (numbytes != 1)
-            {
-              /* a 'short' read means the stream has run out. */
-              *eof = TRUE;
-              /* We know we don't have a whole EOL sequence, but ensure we
-               * don't chop off any partial EOL sequence that we may have. */
-              match = eol_str;
-              /* Process this short (or empty) line just like any other
-               * except with *EOF set. */
-              break;
-            }
-
-          if (c == *match)
-            match++;
-          else
-            match = eol_str;
-
-          svn_stringbuf_appendbyte(str, c);
-        }
-
-      svn_stringbuf_chop(str, match - eol_str);
+      max_len = range->end - range->current;
+      SVN_ERR(readline(file, &str, eol, eof, max_len,
+                       result_pool, scratch_pool));
+      range->current = 0;
+      SVN_ERR(svn_io_file_seek(file, APR_CUR, &range->current, scratch_pool));
       filtered = (str->data[0] == verboten || str->data[0] == '\\');
     }
   while (filtered && ! *eof);
-  /* Not destroying the iterpool just yet since we still need STR
-   * which is allocated in it. */
 
   if (filtered)
     {
@@ -392,46 +456,49 @@ hunk_readline(svn_stream_t *stream,
       *stringbuf = svn_stringbuf_dup(str, result_pool);
     }
 
-  /* Done. RIP iterpool. */
-  svn_pool_destroy(iterpool);
+  SVN_ERR(svn_io_file_seek(file, APR_SET, &pos, scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_diff_hunk_readline_original_text(const svn_diff_hunk_t *hunk,
+svn_diff_hunk_readline_original_text(svn_diff_hunk_t *hunk,
                                      svn_stringbuf_t **stringbuf,
                                      const char **eol,
                                      svn_boolean_t *eof,
                                      apr_pool_t *result_pool,
                                      apr_pool_t *scratch_pool)
 {
-  return svn_error_return(hunk_readline(hunk->patch->reverse ?
-                                          hunk->modified_text :
-                                          hunk->original_text,
-                                        stringbuf, eol, eof,
-                                        hunk->patch->reverse ? '-' : '+',
-                                        result_pool, scratch_pool));
+  return svn_error_return(
+    hunk_readline_original_or_modified(hunk->apr_file,
+                                       hunk->patch->reverse ?
+                                         &hunk->modified_text_range :
+                                         &hunk->original_text_range,
+                                       stringbuf, eol, eof,
+                                       hunk->patch->reverse ? '-' : '+',
+                                       result_pool, scratch_pool));
 }
 
 svn_error_t *
-svn_diff_hunk_readline_modified_text(const svn_diff_hunk_t *hunk,
+svn_diff_hunk_readline_modified_text(svn_diff_hunk_t *hunk,
                                      svn_stringbuf_t **stringbuf,
                                      const char **eol,
                                      svn_boolean_t *eof,
                                      apr_pool_t *result_pool,
                                      apr_pool_t *scratch_pool)
 {
-  return svn_error_return(hunk_readline(hunk->patch->reverse ?
-                                          hunk->original_text :
-                                          hunk->modified_text,
-                                        stringbuf, eol, eof,
-                                        hunk->patch->reverse ? '+' : '-',
-                                        result_pool, scratch_pool));
+  return svn_error_return(
+    hunk_readline_original_or_modified(hunk->apr_file,
+                                       hunk->patch->reverse ?
+                                         &hunk->original_text_range :
+                                         &hunk->modified_text_range,
+                                       stringbuf, eol, eof,
+                                       hunk->patch->reverse ? '+' : '-',
+                                       result_pool, scratch_pool));
 }
 
 svn_error_t *
-svn_diff_hunk_readline_diff_text(const svn_diff_hunk_t *hunk,
+svn_diff_hunk_readline_diff_text(svn_diff_hunk_t *hunk,
                                  svn_stringbuf_t **stringbuf,
                                  const char **eol,
                                  svn_boolean_t *eof,
@@ -440,10 +507,31 @@ svn_diff_hunk_readline_diff_text(const svn_diff_hunk_t *hunk,
 {
   svn_diff_hunk_t dummy;
   svn_stringbuf_t *line;
+  apr_size_t max_len;
+  apr_off_t pos;
 
-  SVN_ERR(svn_stream_readline_detect_eol(hunk->diff_text, &line, eol, eof,
-                                         result_pool));
+  if (hunk->diff_text_range.current >= hunk->diff_text_range.end)
+    {
+      /* We're past the range. Indicate that no bytes can be read. */
+      *eof = TRUE;
+      if (eol)
+        *eol = NULL;
+      *stringbuf = svn_stringbuf_create("", result_pool);
+      return SVN_NO_ERROR;
+    }
 
+  pos = 0;
+  SVN_ERR(svn_io_file_seek(hunk->apr_file, APR_CUR, &pos, scratch_pool));
+  SVN_ERR(svn_io_file_seek(hunk->apr_file, APR_SET,
+                           &hunk->diff_text_range.current, scratch_pool));
+  max_len = hunk->diff_text_range.end - hunk->diff_text_range.current;
+  SVN_ERR(readline(hunk->apr_file, &line, eol, eof, max_len, result_pool,
+                   scratch_pool));
+  hunk->diff_text_range.current = 0;
+  SVN_ERR(svn_io_file_seek(hunk->apr_file, APR_CUR,
+                           &hunk->diff_text_range.current, scratch_pool));
+  SVN_ERR(svn_io_file_seek(hunk->apr_file, APR_SET, &pos, scratch_pool));
+  
   if (hunk->patch->reverse)
     {
       if (parse_hunk_header(line->data, &dummy, "@@", scratch_pool))
@@ -504,10 +592,10 @@ parse_prop_name(const char **prop_name, const char *header,
   return SVN_NO_ERROR;
 }
 
-/* Return the next *HUNK from a PATCH, using STREAM to read data
- * from the patch file. If no hunk can be found, set *HUNK to NULL. Set
- * IS_PROPERTY to TRUE if we have a property hunk. If the returned HUNK is
- * the first belonging to a certain property, then PROP_NAME and
+/* Return the next *HUNK from a PATCH in APR_FILE.
+ * If no hunk can be found, set *HUNK to NULL.
+ * Set IS_PROPERTY to TRUE if we have a property hunk. If the returned HUNK
+ * is the first belonging to a certain property, then PROP_NAME and
  * PROP_OPERATION will be set too. If we have a text hunk, PROP_NAME will be
  * NULL. If IGNORE_WHITESPACE is TRUE, let lines without leading spaces be
  * recognized as context lines.  Allocate results in
@@ -518,7 +606,7 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
                 const char **prop_name,
                 svn_diff_operation_kind_t *prop_operation,
                 svn_patch_t *patch,
-                svn_stream_t *stream,
+                apr_file_t *apr_file,
                 svn_boolean_t ignore_whitespace,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool)
@@ -530,9 +618,6 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
   svn_boolean_t eof, in_hunk, hunk_seen;
   apr_off_t pos, last_line;
   apr_off_t start, end;
-  svn_stream_t *diff_text;
-  svn_stream_t *original_text;
-  svn_stream_t *modified_text;
   svn_linenum_t original_lines;
   svn_linenum_t modified_lines;
   svn_linenum_t leading_context;
@@ -546,7 +631,7 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
   *prop_name = NULL;
   *is_property = FALSE;
 
-  if (apr_file_eof(patch->patch_file) == APR_EOF)
+  if (apr_file_eof(apr_file) == APR_EOF)
     {
       /* No more hunks here. */
       *hunk = NULL;
@@ -562,7 +647,7 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
 
   /* Get current seek position -- APR has no ftell() :( */
   pos = 0;
-  SVN_ERR(svn_io_file_seek(patch->patch_file, APR_CUR, &pos, scratch_pool));
+  SVN_ERR(svn_io_file_seek(apr_file, APR_CUR, &pos, scratch_pool));
 
   iterpool = svn_pool_create(scratch_pool);
   do
@@ -572,15 +657,14 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
 
       /* Remember the current line's offset, and read the line. */
       last_line = pos;
-      SVN_ERR(svn_stream_readline_detect_eol(stream, &line, NULL, &eof,
-                                             iterpool));
+      SVN_ERR(readline(apr_file, &line, NULL, &eof, APR_SIZE_MAX,
+                       iterpool, iterpool));
 
       if (! eof)
         {
-          /* Update line offset for next iteration.
-           * APR has no ftell() :( */
+          /* Update line offset for next iteration. */
           pos = 0;
-          SVN_ERR(svn_io_file_seek(patch->patch_file, APR_CUR, &pos, iterpool));
+          SVN_ERR(svn_io_file_seek(apr_file, APR_CUR, &pos, iterpool));
         }
 
       /* Lines starting with a backslash are comments, such as
@@ -717,41 +801,23 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
     /* Rewind to the start of the line just read, so subsequent calls
      * to this function or svn_diff_parse_next_patch() don't end
      * up skipping the line -- it may contain a patch or hunk header. */
-    SVN_ERR(svn_io_file_seek(patch->patch_file, APR_SET, &last_line,
-                             scratch_pool));
+    SVN_ERR(svn_io_file_seek(apr_file, APR_SET, &last_line, scratch_pool));
 
   if (hunk_seen && start < end)
     {
-      apr_file_t *f;
-      apr_int32_t flags = APR_READ | APR_BUFFERED;
-
-      /* Create a stream which returns the hunk text itself. */
-      SVN_ERR(svn_io_file_open(&f, patch->path, flags, APR_OS_DEFAULT,
-                               result_pool));
-      diff_text = svn_stream_from_aprfile_range_readonly(f, FALSE,
-                                                         start, end,
-                                                         result_pool);
-
-      /* Create a stream which returns the original hunk text. */
-      SVN_ERR(svn_io_file_open(&f, patch->path, flags, APR_OS_DEFAULT,
-                               result_pool));
-      original_text = svn_stream_from_aprfile_range_readonly(f, FALSE,
-                                                             start, end,
-                                                             result_pool);
-
-      /* Create a stream which returns the modified hunk text. */
-      SVN_ERR(svn_io_file_open(&f, patch->path, flags, APR_OS_DEFAULT,
-                               result_pool));
-      modified_text = svn_stream_from_aprfile_range_readonly(f, FALSE,
-                                                             start, end,
-                                                             result_pool);
-
-      (*hunk)->diff_text = diff_text;
       (*hunk)->patch = patch;
-      (*hunk)->original_text = original_text;
-      (*hunk)->modified_text = modified_text;
+      (*hunk)->apr_file = apr_file;
       (*hunk)->leading_context = leading_context;
       (*hunk)->trailing_context = trailing_context;
+      (*hunk)->diff_text_range.start = start;
+      (*hunk)->diff_text_range.current = start;
+      (*hunk)->diff_text_range.end = end;
+      (*hunk)->original_text_range.start = start;
+      (*hunk)->original_text_range.current = start;
+      (*hunk)->original_text_range.end = end;
+      (*hunk)->modified_text_range.start = start;
+      (*hunk)->modified_text_range.current = start;
+      (*hunk)->modified_text_range.end = end;
     }
   else
     /* Something went wrong, just discard the result. */
@@ -773,18 +839,6 @@ compare_hunks(const void *a, const void *b)
   if (ha->original_start > hb->original_start)
     return 1;
   return 0;
-}
-
-/*
- * Ensure that all streams which were opened for HUNK are closed.
- */
-static svn_error_t *
-close_hunk(const svn_diff_hunk_t *hunk)
-{
-  SVN_ERR(svn_stream_close(hunk->original_text));
-  SVN_ERR(svn_stream_close(hunk->modified_text));
-  SVN_ERR(svn_stream_close(hunk->diff_text));
-  return SVN_NO_ERROR;
 }
 
 /* Possible states of the diff header parser. */
@@ -1134,22 +1188,43 @@ add_property_hunk(svn_patch_t *patch, const char *prop_name,
   return SVN_NO_ERROR;
 }
 
+struct svn_patch_file_t
+{
+  /* The APR file handle to the patch file. */
+  apr_file_t *apr_file;
+
+  /* The file offset at which the next patch is expected. */
+  apr_off_t next_patch_offset;
+};
+
+svn_error_t *
+svn_diff_open_patch_file(svn_patch_file_t **patch_file,
+                         const char *local_abspath,
+                         apr_pool_t *result_pool)
+{
+  svn_patch_file_t *p;
+
+  p = apr_palloc(result_pool, sizeof(*p));
+  SVN_ERR(svn_io_file_open(&p->apr_file, local_abspath,
+                           APR_READ | APR_BINARY, 0, result_pool));
+  p->next_patch_offset = 0;
+  *patch_file = p;
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_diff_parse_next_patch(svn_patch_t **patch,
-                          apr_file_t *patch_file,
+                          svn_patch_file_t *patch_file,
                           svn_boolean_t reverse,
                           svn_boolean_t ignore_whitespace,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
-  const char *fname;
-  svn_stream_t *stream;
   apr_off_t pos, last_line;
   svn_boolean_t eof;
   svn_boolean_t line_after_tree_header_read = FALSE;
-
   apr_pool_t *iterpool;
-
   enum parse_state state = state_start;
 
   /* Our table consisting of:
@@ -1172,32 +1247,19 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
       {"deleted file ", state_git_diff_seen,    git_deleted_file},
     };
 
-  if (apr_file_eof(patch_file) == APR_EOF)
+  if (apr_file_eof(patch_file->apr_file) == APR_EOF)
     {
       /* No more patches here. */
       *patch = NULL;
       return SVN_NO_ERROR;
     }
 
-  /* Get the patch's filename. */
-  SVN_ERR(svn_io_file_name_get(&fname, patch_file, result_pool));
-
-  /* Record what we already know about the patch. */
   *patch = apr_pcalloc(result_pool, sizeof(**patch));
-  (*patch)->patch_file = patch_file;
-  (*patch)->path = fname;
 
-  /* Get a stream to read lines from the patch file.
-   * The file should not be closed when we close the stream so
-   * make sure it is disowned. */
-  stream = svn_stream_from_aprfile2(patch_file, TRUE, scratch_pool);
-
-  /* Get current seek position -- APR has no ftell() :( */
-  pos = 0;
-  SVN_ERR(svn_io_file_seek((*patch)->patch_file, APR_CUR, &pos, scratch_pool));
+  pos = patch_file->next_patch_offset;
+  SVN_ERR(svn_io_file_seek(patch_file->apr_file, APR_SET, &pos, scratch_pool));
 
   iterpool = svn_pool_create(scratch_pool);
-
   do
     {
       svn_stringbuf_t *line;
@@ -1207,15 +1269,15 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
 
       /* Remember the current line's offset, and read the line. */
       last_line = pos;
-      SVN_ERR(svn_stream_readline_detect_eol(stream, &line, NULL, &eof,
-                                             iterpool));
+      SVN_ERR(readline(patch_file->apr_file, &line, NULL, &eof,
+                       APR_SIZE_MAX, iterpool, iterpool));
 
       if (! eof)
         {
-          /* Update line offset for next iteration.
-           * APR has no ftell() :( */
+          /* Update line offset for next iteration. */
           pos = 0;
-          SVN_ERR(svn_io_file_seek((*patch)->patch_file, APR_CUR, &pos, iterpool));
+          SVN_ERR(svn_io_file_seek(patch_file->apr_file, APR_CUR, &pos,
+                                   iterpool));
         }
 
       /* Run the state machine. */
@@ -1244,14 +1306,15 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
            * Rewind to the start of the line just read, so subsequent calls
            * to this function don't end up skipping the line -- it may
            * contain a patch. */
-          SVN_ERR(svn_io_file_seek((*patch)->patch_file, APR_SET, &last_line,
+          SVN_ERR(svn_io_file_seek(patch_file->apr_file, APR_SET, &last_line,
                                    scratch_pool));
           break;
         }
       else if (state == state_git_tree_seen)
           line_after_tree_header_read = TRUE;
 
-    } while (! eof);
+    }
+  while (! eof);
 
   (*patch)->reverse = reverse;
   if (reverse)
@@ -1286,8 +1349,8 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
           svn_pool_clear(iterpool);
 
           SVN_ERR(parse_next_hunk(&hunk, &is_property, &prop_name,
-                                  &prop_operation, *patch, stream,
-                                  ignore_whitespace,
+                                  &prop_operation, *patch,
+                                  patch_file->apr_file, ignore_whitespace,
                                   result_pool, iterpool));
 
           if (hunk && is_property)
@@ -1310,7 +1373,10 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
     }
 
   svn_pool_destroy(iterpool);
-  SVN_ERR(svn_stream_close(stream));
+
+  patch_file->next_patch_offset = 0;
+  SVN_ERR(svn_io_file_seek(patch_file->apr_file, APR_CUR,
+                           &patch_file->next_patch_offset, scratch_pool));
 
   if (*patch)
     {
@@ -1326,34 +1392,9 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
 }
 
 svn_error_t *
-svn_diff_close_patch(const svn_patch_t *patch, apr_pool_t *scratch_pool)
+svn_diff_close_patch_file(svn_patch_file_t *patch_file,
+                          apr_pool_t *scratch_pool)
 {
-  int i;
-  apr_hash_index_t *hi;
-
-  for (i = 0; i < patch->hunks->nelts; i++)
-    {
-      const svn_diff_hunk_t *hunk = APR_ARRAY_IDX(patch->hunks, i,
-                                                  svn_diff_hunk_t *);
-      SVN_ERR(close_hunk(hunk));
-    }
-
-  for (hi = apr_hash_first(scratch_pool, patch->prop_patches);
-       hi;
-       hi = apr_hash_next(hi))
-    {
-          svn_prop_patch_t *prop_patch;
-
-          prop_patch = svn__apr_hash_index_val(hi);
-
-          for (i = 0; i < prop_patch->hunks->nelts; i++)
-            {
-              const svn_diff_hunk_t *hunk;
-
-              hunk = APR_ARRAY_IDX(prop_patch->hunks, i, svn_diff_hunk_t *);
-              SVN_ERR(close_hunk(hunk));
-            }
-    }
-
-  return SVN_NO_ERROR;
+  return svn_error_return(svn_io_file_close(patch_file->apr_file,
+                                            scratch_pool));
 }
