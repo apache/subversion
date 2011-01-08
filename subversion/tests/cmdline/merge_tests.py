@@ -15792,7 +15792,7 @@ def record_only_merge_creates_self_referential_mergeinfo(sbox):
 #----------------------------------------------------------------------
 # Test for issue #3657 'dav update report handler in skelta mode can cause
 # spurious conflicts'.
-def dav_skelta_mode_causes_spurious_conflicts (sbox):
+def dav_skelta_mode_causes_spurious_conflicts(sbox):
   "dav skelta mode can cause spurious conflicts"
 
   sbox.build()
@@ -15869,10 +15869,6 @@ def dav_skelta_mode_causes_spurious_conflicts (sbox):
   #   Summary of conflicts:
   #     Text conflicts: 1
   #     Property conflicts: 1
-  #
-  # The file conflict was fixed in r966822, but the property conflict is
-  # still present and is the reason for this test's XFail status, see
-  # http://subversion.tigris.org/issues/show_bug.cgi?id=3657#desc13.
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   expected_output = wc.State(A_branch_path, {
     'mu' : Item(status='UU'),
@@ -16505,8 +16501,7 @@ test_list = [ None,
               foreign_repos_del_and_props,
               immediate_depth_merge_creates_minimal_subtree_mergeinfo,
               record_only_merge_creates_self_referential_mergeinfo,
-              XFail(dav_skelta_mode_causes_spurious_conflicts,
-                    svntest.main.is_ra_type_dav),
+              dav_skelta_mode_causes_spurious_conflicts,
               merge_into_locally_added_file,
               merge_into_locally_added_directory,
               merge_with_os_deleted_subtrees,

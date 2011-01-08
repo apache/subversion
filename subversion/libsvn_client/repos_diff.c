@@ -32,6 +32,8 @@
  * each file have been created the diff callback is invoked to display
  * the difference between the two files.  */
 
+#include <apr_uri.h>
+
 #include "svn_hash.h"
 #include "svn_wc.h"
 #include "svn_pools.h"
@@ -65,6 +67,10 @@ struct edit_baton {
 
   /* RA_SESSION is the open session for making requests to the RA layer */
   svn_ra_session_t *ra_session;
+
+  /* TRUE if RA_SESSION is open to a repository URL using the http or https
+     scheme. */
+  svn_boolean_t is_dav_session;
 
   /* The rev1 from the '-r Rev1:Rev2' command line option */
   svn_revnum_t revision;
@@ -1168,9 +1174,9 @@ change_file_prop(void *file_baton,
   if (b->skip)
     return SVN_NO_ERROR;
 
-  /* Issue #3657 'phantom svn:eol-style changes cause spurious merge text
-     conflicts'.  When communicating with the repository via ra_serf and
-     ra_neon, the change_dir_prop and change_file_prop svn_delta_editor_t
+  /* Issue #3657 'dav update report handler in skelta mode can cause
+     spurious conflicts'.  When communicating with the repository via ra_serf
+     and ra_neon, the change_dir_prop and change_file_prop svn_delta_editor_t
      callbacks are called (obviously) when a directory or file property has
      changed between the start and end of the edit.  Less obvious however,
      is that these callbacks may be made describing *all* of the properties
@@ -1178,11 +1184,24 @@ change_file_prop(void *file_baton,
      (Specifically ra_neon does this for diff/merge and ra_serf does it
      for diff/merge/update/switch).
 
-     Normally this is fairly harmless, but if it appears that the
-     svn:eol-style property has changed on a file, then we can get spurious
-     text conflicts (i.e. Issue #3657).  To prevent this, we populate
-     FILE_BATON->PRISTINE_PROPS only with actual property changes. */
-  if (value)
+     This means that the change_[file|dir]_prop svn_delta_editor_t callbacks
+     may be made where there are no property changes (i.e. a noop change of
+     NAME from VALUE to VALUE).  Normally this is harmless, but during a
+     merge it can result in spurious conflicts if the WC's pristine property
+     NAME has a value other than VALUE.  In an ideal world the mod_dav_svn
+     update report handler, when in 'skelta' mode and describing changes to
+     a path on which a property has changed, wouldn't ask the client to later
+     fetch all properties and figure out what has changed itself.  The server
+     already knows which properties have changed!
+
+     Regardless, such a change is not yet implemented, and even when it is,
+     the client should DTRT with regard to older servers which behave this
+     way.  Hence this little hack:  We populate FILE_BATON->PROPCHANGES only
+     with *actual* property changes.
+
+     See http://subversion.tigris.org/issues/show_bug.cgi?id=3657#desc9 and
+     http://svn.haxx.se/dev/archive-2010-08/0351.shtml for more details. */
+  if (value && b->edit_baton->is_dav_session)
     {
       const char *current_prop = svn_prop_get_value(b->pristine_props, name);
       if (current_prop && strcmp(current_prop, value->data) == 0)
@@ -1209,6 +1228,15 @@ change_dir_prop(void *dir_baton,
   /* Skip *everything* within a newly tree-conflicted directory. */
   if (db->skip)
     return SVN_NO_ERROR;
+
+  /* See the comment re issue #3657 in the change_file_prop() callback. */
+  if (value && db->edit_baton->is_dav_session)
+    {
+      const char *current_prop = svn_prop_get_value(db->pristine_props,
+                                                    name);
+      if (current_prop && strcmp(current_prop, value->data) == 0)
+        return SVN_NO_ERROR;
+    }
 
   propchange = apr_array_push(db->propchanges);
   propchange->name = apr_pstrdup(db->pool, name);
@@ -1309,6 +1337,10 @@ svn_client__get_diff_editor(const char *target,
   svn_delta_editor_t *tree_editor = svn_delta_default_editor(subpool);
   struct edit_baton *eb = apr_palloc(subpool, sizeof(*eb));
   const char *target_abspath;
+  const char *session_url;
+  apr_status_t status;
+  apr_uri_t apr_uri;
+
   SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, pool));
 
   eb->target = target;
@@ -1317,6 +1349,23 @@ svn_client__get_diff_editor(const char *target,
   eb->diff_cmd_baton = diff_cmd_baton;
   eb->dry_run = dry_run;
   eb->ra_session = ra_session;
+
+  SVN_ERR(svn_ra_get_session_url(ra_session, &session_url, subpool));
+  status = apr_uri_parse(subpool, session_url, &apr_uri);
+  if (status)
+    {
+      return svn_error_createf(SVN_ERR_BAD_URL, NULL,
+                               _("Unable to parse URL '%s'"), session_url);
+    }
+  else
+    {
+      if (svn_cstring_casecmp(apr_uri.scheme, "https") == 0
+          || svn_cstring_casecmp(apr_uri.scheme, "http") == 0)
+        eb->is_dav_session = TRUE;
+      else
+        eb->is_dav_session = FALSE;
+    }
+
   eb->revision = revision;
   eb->empty_file = NULL;
   eb->empty_hash = apr_hash_make(subpool);
