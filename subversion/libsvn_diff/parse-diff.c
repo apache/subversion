@@ -537,22 +537,22 @@ svn_diff_hunk_readline_diff_text(svn_diff_hunk_t *hunk,
       if (parse_hunk_header(line->data, &dummy, "@@", scratch_pool))
         {
           /* Line is a hunk header, reverse it. */
-          *stringbuf = svn_stringbuf_createf(result_pool,
-                                             "@@ -%lu,%lu +%lu,%lu @@",
-                                             hunk->modified_start,
-                                             hunk->modified_length,
-                                             hunk->original_start,
-                                             hunk->original_length);
+          line = svn_stringbuf_createf(result_pool,
+                                       "@@ -%lu,%lu +%lu,%lu @@",
+                                       hunk->modified_start,
+                                       hunk->modified_length,
+                                       hunk->original_start,
+                                       hunk->original_length);
         }
       else if (parse_hunk_header(line->data, &dummy, "##", scratch_pool))
         {
           /* Line is a hunk header, reverse it. */
-          *stringbuf = svn_stringbuf_createf(result_pool,
-                                             "## -%lu,%lu +%lu,%lu ##",
-                                             hunk->modified_start,
-                                             hunk->modified_length,
-                                             hunk->original_start,
-                                             hunk->original_length);
+          line = svn_stringbuf_createf(result_pool,
+                                       "## -%lu,%lu +%lu,%lu ##",
+                                       hunk->modified_start,
+                                       hunk->modified_length,
+                                       hunk->original_start,
+                                       hunk->original_length);
         }
       else
         {
@@ -560,12 +560,10 @@ svn_diff_hunk_readline_diff_text(svn_diff_hunk_t *hunk,
             line->data[0] = '-';
           else if (line->data[0] == '-')
             line->data[0] = '+';
-
-          *stringbuf = line;
         }
     }
-  else
-    *stringbuf = line;
+
+  *stringbuf = line;
 
   return SVN_NO_ERROR;
 }
