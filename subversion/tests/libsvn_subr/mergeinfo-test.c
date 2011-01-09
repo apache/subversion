@@ -26,6 +26,8 @@
 #include <apr_hash.h>
 #include <apr_tables.h>
 
+#define SVN_DEPRECATED
+
 #include "svn_pools.h"
 #include "svn_types.h"
 #include "svn_mergeinfo.h"

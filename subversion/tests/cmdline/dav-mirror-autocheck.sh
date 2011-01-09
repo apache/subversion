@@ -28,6 +28,10 @@ SCRIPT=$(basename $0)
 
 trap stop_httpd_and_die SIGHUP SIGTERM SIGINT
 
+# Ensure the server uses a known locale.
+LC_ALL=C
+export LC_ALL
+
 function stop_httpd_and_die() {
   [ -e "$HTTPD_PID" ] && kill $(cat "$HTTPD_PID")
   exit 1
@@ -171,7 +175,7 @@ __EOF__
 
 function usage() {
   echo "usage: $SCRIPT <test-work-directory>" 1>&2
-  echo "  e.g. \"$SCRIPT $HOME/projects/svn-trunk /tmp/test-work\"" 1>&2
+  echo "  e.g. \"$SCRIPT /tmp/test-work\"" 1>&2
   echo
   echo " " '<test-work-directory>' must not exist, \
     I will not clobber it for you 1>&2

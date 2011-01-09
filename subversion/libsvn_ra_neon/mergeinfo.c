@@ -250,8 +250,8 @@ svn_ra_neon__get_mergeinfo(svn_ra_session_t *session,
   SVN_ERR(svn_ra_neon__get_baseline_info(NULL, &bc_url, &bc_relative, NULL,
                                          ras, ras->url->data, revision,
                                          pool));
-  final_bc_url = svn_path_url_add_component(bc_url.data, bc_relative.data,
-                                            pool);
+  final_bc_url = svn_path_url_add_component2(bc_url.data, bc_relative.data,
+                                             pool);
 
   SVN_ERR(svn_ra_neon__parsed_request(ras,
                                       "REPORT",

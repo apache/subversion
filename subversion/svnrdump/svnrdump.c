@@ -159,6 +159,7 @@ typedef struct opt_baton_t {
   svn_ra_session_t *session;
   const char *url;
   svn_boolean_t help;
+  svn_boolean_t version;
   svn_opt_revision_t start_revision;
   svn_opt_revision_t end_revision;
   svn_boolean_t quiet;
@@ -483,6 +484,7 @@ usage(const char *progname,
  */
 static svn_error_t *
 version(const char *progname,
+        svn_boolean_t quiet,
         apr_pool_t *pool)
 {
   svn_stringbuf_t *version_footer =
@@ -492,7 +494,7 @@ version(const char *progname,
 
   SVN_ERR(svn_ra_print_modules(version_footer, pool));
   return svn_opt_print_help3(NULL, ensure_appname(progname, pool),
-                             TRUE, FALSE, version_footer->data,
+                             TRUE, quiet, version_footer->data,
                              NULL, NULL, NULL, NULL, NULL, pool);
 }
 
@@ -547,6 +549,7 @@ help_cmd(apr_getopt_t *os,
   const char *header =
     _("general usage: svnrdump SUBCOMMAND URL [-r LOWER[:UPPER]]\n"
       "Type 'svnrdump help <subcommand>' for help on a specific subcommand.\n"
+      "Type 'svnrdump --version' to see the program version and RA modules.\n"
       "\n"
       "Available subcommands:\n");
 
@@ -747,8 +750,7 @@ main(int argc, const char **argv)
           config_dir = opt_arg;
           break;
         case opt_version:
-          SVNRDUMP_ERR(version(argv[0], pool));
-          exit(EXIT_SUCCESS);
+          opt_baton->version = TRUE;
           break;
         case 'h':
           opt_baton->help = TRUE;
@@ -785,13 +787,27 @@ main(int argc, const char **argv)
       subcommand = svn_opt_get_canonical_subcommand2(svnrdump__cmd_table,
                                                      "help");
     }
-  else
+  if (subcommand == NULL)
     {
       if (os->ind >= os->argc)
         {
-          SVNRDUMP_ERR(help_cmd(NULL, NULL, pool));
-          svn_pool_destroy(pool);
-          exit(EXIT_FAILURE);
+          if (opt_baton->version)
+            {
+              /* Use the "help" subcommand to handle the "--version" option. */
+              static const svn_opt_subcommand_desc2_t pseudo_cmd =
+                { "--version", help_cmd, {0}, "",
+                  {opt_version,  /* must accept its own option */
+                   'q',  /* --quiet */
+                  } };
+              subcommand = &pseudo_cmd;
+            }
+
+          else
+            { 
+              SVNRDUMP_ERR(help_cmd(NULL, NULL, pool));
+              svn_pool_destroy(pool);
+              exit(EXIT_FAILURE);
+            }
         }
       else
         {
@@ -812,7 +828,7 @@ main(int argc, const char **argv)
               svn_pool_destroy(pool);
               exit(EXIT_FAILURE);
             }
-         }
+        }
     }
 
   /* Check that the subcommand wasn't passed any inappropriate options. */
@@ -845,6 +861,13 @@ main(int argc, const char **argv)
           svn_pool_destroy(pool);
           return EXIT_FAILURE;
         }
+    }
+
+  if (subcommand && strcmp(subcommand->name, "--version") == 0)
+    {
+      SVNRDUMP_ERR(version(argv[0], opt_baton->quiet, pool));
+      svn_pool_destroy(pool);
+      exit(EXIT_SUCCESS);
     }
 
   if (subcommand && strcmp(subcommand->name, "help") == 0)

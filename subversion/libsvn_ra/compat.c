@@ -851,8 +851,8 @@ svn_ra__get_deleted_rev_from_log(svn_ra_session_t *session,
 
   SVN_ERR(svn_ra_get_session_url(session, &session_url, pool));
   SVN_ERR(svn_ra_get_repos_root2(session, &source_root_url, pool));
-  rel_path_url = svn_path_url_add_component(session_url, rel_deleted_path,
-                                            pool);
+  rel_path_url = svn_path_url_add_component2(session_url, rel_deleted_path,
+                                             pool);
   abs_del_path = svn_path_uri_decode(rel_path_url + strlen(source_root_url), pool);
   log_path_deleted_baton.path = abs_del_path;
   log_path_deleted_baton.revision_deleted = SVN_INVALID_REVNUM;

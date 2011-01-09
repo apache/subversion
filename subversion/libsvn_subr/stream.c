@@ -555,11 +555,6 @@ svn_stream_disown(svn_stream_t *stream, apr_pool_t *pool)
 struct baton_apr {
   apr_file_t *file;
   apr_pool_t *pool;
-
-  /* Offsets when reading from a range of the file.
-   * When either of these is negative, no range has been specified. */
-  apr_off_t start;
-  apr_off_t end;
 };
 
 /* svn_stream_mark_t for streams backed by APR files. */
@@ -626,12 +621,7 @@ seek_handler_apr(void *baton, svn_stream_mark_t *mark)
     }
   else
     {
-      apr_off_t offset;
-
-      /* If we're reading from a range, reset to the start of the range.
-       * Otherwise, reset to the start of the file. */
-      offset = btn->start >= 0 ? btn->start : 0;
-
+      apr_off_t offset = 0;
       SVN_ERR(svn_io_file_seek(btn->file, APR_SET, &offset, btn->pool));
     }
 
@@ -707,88 +697,9 @@ svn_stream_from_aprfile2(apr_file_t *file,
   baton = apr_palloc(pool, sizeof(*baton));
   baton->file = file;
   baton->pool = pool;
-  baton->start = -1;
-  baton->end = -1;
   stream = svn_stream_create(baton, pool);
   svn_stream_set_read(stream, read_handler_apr);
   svn_stream_set_write(stream, write_handler_apr);
-  svn_stream_set_mark(stream, mark_handler_apr);
-  svn_stream_set_seek(stream, seek_handler_apr);
-
-  if (! disown)
-    svn_stream_set_close(stream, close_handler_apr);
-
-  return stream;
-}
-
-/* A read handler (#svn_read_fn_t) that forwards to read_handler_apr()
-   but only allows reading between BATON->start and BATON->end. */
-static svn_error_t *
-read_range_handler_apr(void *baton, char *buffer, apr_size_t *len)
-{
-  struct baton_apr *btn = baton;
-
-  /* ### BH: I think this can be simplified/optimized by just keeping
-             track of the current position. */
-
-  /* Check for range restriction. */
-  if (btn->start >= 0 && btn->end > 0)
-    {
-      /* Get the current file position and make sure it is in range. */
-      apr_off_t pos;
-
-      pos = 0;
-      SVN_ERR(svn_io_file_seek(btn->file, APR_CUR, &pos, btn->pool));
-      if (pos < btn->start)
-        {
-          /* We're before the range, so forward the file cursor to
-           * the start of the range. */
-          pos = btn->start;
-          SVN_ERR(svn_io_file_seek(btn->file, APR_SET, &pos, btn->pool));
-        }
-      else if (pos >= btn->end)
-        {
-          /* We're past the range, indicate that no bytes can be read. */
-          *len = 0;
-          return SVN_NO_ERROR;
-        }
-
-      /* We're in range, but don't read over the end of the range. */
-      if (pos + *len > btn->end)
-        *len = (apr_size_t)(btn->end - pos);
-    }
-
-  return read_handler_apr(baton, buffer, len);
-}
-
-
-svn_stream_t *
-svn_stream_from_aprfile_range_readonly(apr_file_t *file,
-                                       svn_boolean_t disown,
-                                       apr_off_t start,
-                                       apr_off_t end,
-                                       apr_pool_t *pool)
-{
-  struct baton_apr *baton;
-  svn_stream_t *stream;
-  apr_off_t pos;
-
-  /* ### HACK: These shortcuts don't handle disown FALSE properly */
-  if (file == NULL || start < 0 || end <= 0 || start >= end)
-    return svn_stream_empty(pool);
-
-  /* Set the file pointer to the start of the range. */
-  pos = start;
-  if (apr_file_seek(file, APR_SET, &pos) != APR_SUCCESS)
-    return svn_stream_empty(pool);
-
-  baton = apr_palloc(pool, sizeof(*baton));
-  baton->file = file;
-  baton->pool = pool;
-  baton->start = start;
-  baton->end = end;
-  stream = svn_stream_create(baton, pool);
-  svn_stream_set_read(stream, read_range_handler_apr);
   svn_stream_set_mark(stream, mark_handler_apr);
   svn_stream_set_seek(stream, seek_handler_apr);
 

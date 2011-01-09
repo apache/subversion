@@ -147,34 +147,37 @@ static const apr_getopt_option_t options_table[] =
   {"xml",               svnlook__xml_opt, 0,
    N_("output in XML")},
 
-  {"extensions",    'x', 1,
-                    N_("Default: '-u'. When Subversion is invoking an\n"
-                       "                            "
-                       " external diff program, ARG is simply passed along\n"
-                       "                            "
-                       " to the program. But when Subversion is using its\n"
-                       "                            "
-                       " default internal diff implementation, or when\n"
-                       "                            "
-                       " Subversion is displaying blame annotations, ARG\n"
-                       "                            "
-                       " could be any of the following:\n"
-                       "                            "
-                       "    -u (--unified):\n"
-                       "                            "
-                       "       Output 3 lines of unified context.\n"
-                       "                            "
-                       "    -b (--ignore-space-change):\n"
-                       "                            "
-                       "       Ignore changes in the amount of white space.\n"
-                       "                            "
-                       "    -w (--ignore-all-space):\n"
-                       "                            "
-                       "       Ignore all white space.\n"
-                       "                            "
-                       "    --ignore-eol-style:\n"
-                       "                            "
-                       "       Ignore changes in EOL style")},
+  {"extensions",        'x', 1,
+   N_("Default: '-u'. When Subversion is invoking an\n"
+      "                            "
+      " external diff program, ARG is simply passed along\n"
+      "                            "
+      " to the program. But when Subversion is using its\n"
+      "                            "
+      " default internal diff implementation, or when\n"
+      "                            "
+      " Subversion is displaying blame annotations, ARG\n"
+      "                            "
+      " could be any of the following:\n"
+      "                            "
+      "    -u (--unified):\n"
+      "                            "
+      "       Output 3 lines of unified context.\n"
+      "                            "
+      "    -b (--ignore-space-change):\n"
+      "                            "
+      "       Ignore changes in the amount of white space.\n"
+      "                            "
+      "    -w (--ignore-all-space):\n"
+      "                            "
+      "       Ignore all white space.\n"
+      "                            "
+      "    --ignore-eol-style:\n"
+      "                            "
+      "       Ignore changes in EOL style")},
+
+  {"quiet",             'q', 0,
+   N_("no progress (only errors) to stderr")},
 
   {0,                   0, 0, 0}
 };
@@ -310,6 +313,7 @@ struct svnlook_opt_state
   svn_boolean_t non_recursive;    /* --non-recursive */
   svn_boolean_t xml;              /* --xml */
   const char *extensions;         /* diff extension args (UTF-8!) */
+  svn_boolean_t quiet;            /* --quiet */
 };
 
 
@@ -821,7 +825,7 @@ display_prop_diffs(const apr_array_header_t *prop_diffs,
 
   for (i = 0; i < prop_diffs->nelts; i++)
     {
-      const char *header_fmt;
+      const char *header_label;
       const svn_string_t *orig_value;
       const svn_prop_t *pc = &APR_ARRAY_IDX(prop_diffs, i, svn_prop_t);
 
@@ -833,12 +837,12 @@ display_prop_diffs(const apr_array_header_t *prop_diffs,
         orig_value = NULL;
 
       if (! orig_value)
-        header_fmt = "Added: %s\n";
+        header_label = "Added";
       else if (! pc->value)
-        header_fmt = "Deleted: %s\n";
+        header_label = "Deleted";
       else
-        header_fmt = "Modified: %s\n";
-      SVN_ERR(svn_cmdline_printf(pool, header_fmt, pc->name));
+        header_label = "Modified";
+      SVN_ERR(svn_cmdline_printf(pool, "%s: %s\n", header_label, pc->name));
 
       /* Flush stdout before we open a stream to it below. */
       SVN_ERR(svn_cmdline_fflush(stdout));
@@ -2021,7 +2025,8 @@ subcommand_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   SVN_ERR(svn_opt_print_help3(os, "svnlook",
                               opt_state ? opt_state->version : FALSE,
-                              FALSE, version_footer->data,
+                              opt_state ? opt_state->quiet : FALSE,
+                              version_footer->data,
                               header, cmd_table, options_table, NULL,
                               NULL, pool));
 
@@ -2326,6 +2331,10 @@ main(int argc, const char *argv[])
           opt_state.help = TRUE;
           break;
 
+        case 'q':
+          opt_state.quiet = TRUE;
+          break;
+
         case svnlook__revprop_opt:
           opt_state.revprop = TRUE;
           break;
@@ -2419,6 +2428,7 @@ main(int argc, const char *argv[])
               static const svn_opt_subcommand_desc2_t pseudo_cmd =
                 { "--version", subcommand_help, {0}, "",
                   {svnlook__version,  /* must accept its own option */
+                   'q',
                   } };
 
               subcommand = &pseudo_cmd;
