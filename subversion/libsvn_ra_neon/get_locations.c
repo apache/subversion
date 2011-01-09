@@ -178,8 +178,8 @@ svn_ra_neon__get_locations(svn_ra_session_t *session,
                                          ras, ras->url->data,
                                          peg_revision,
                                          pool));
-  final_bc_url = svn_path_url_add_component(bc_url.data, bc_relative.data,
-                                            pool);
+  final_bc_url = svn_path_url_add_component2(bc_url.data, bc_relative.data,
+                                             pool);
 
   err = svn_ra_neon__parsed_request(ras, "REPORT", final_bc_url,
                                     request_body->data, NULL, NULL,

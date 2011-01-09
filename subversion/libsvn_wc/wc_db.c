@@ -856,11 +856,12 @@ insert_base_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
                             (pibb->kind == svn_wc__db_kind_symlink) ?
                                 pibb->target : NULL)); /* 19 */
 
-  if (pibb->kind == svn_wc__db_kind_file) {
-    SVN_ERR(svn_sqlite__bind_checksum(stmt, 14, pibb->checksum, scratch_pool));
-    if (pibb->translated_size != SVN_INVALID_FILESIZE)
-      SVN_ERR(svn_sqlite__bind_int64(stmt, 16, pibb->translated_size));
-  }
+  if (pibb->kind == svn_wc__db_kind_file)
+    {
+      SVN_ERR(svn_sqlite__bind_checksum(stmt, 14, pibb->checksum, scratch_pool));
+      if (pibb->translated_size != SVN_INVALID_FILESIZE)
+        SVN_ERR(svn_sqlite__bind_int64(stmt, 16, pibb->translated_size));
+    }
 
   SVN_ERR(svn_sqlite__bind_properties(stmt, 15, pibb->props,
                                       scratch_pool));
@@ -2489,10 +2490,10 @@ svn_wc__db_pristine_get_sha1(const svn_checksum_t **sha1_checksum,
 }
 
 
-/* Delete the pristine text referenced by SHA1_CHECKSUM in the database
- * referenced by PDH. */
+/* Delete the pristine text referenced by SHA1_CHECKSUM from the pristine
+ * store of WCROOT.  Delete both the database row and the file on disk. */
 static svn_error_t *
-pristine_remove(svn_wc__db_pdh_t *pdh,
+pristine_remove(svn_wc__db_wcroot_t *wcroot,
                 const svn_checksum_t *sha1_checksum,
                 apr_pool_t *scratch_pool)
 {
@@ -2500,13 +2501,13 @@ pristine_remove(svn_wc__db_pdh_t *pdh,
   const char *pristine_abspath;
 
   /* Remove the DB row. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_DELETE_PRISTINE));
   SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, sha1_checksum, scratch_pool));
   SVN_ERR(svn_sqlite__update(NULL, stmt));
 
   /* Remove the file */
-  SVN_ERR(get_pristine_fname(&pristine_abspath, pdh->wcroot->abspath,
+  SVN_ERR(get_pristine_fname(&pristine_abspath, wcroot->abspath,
                              sha1_checksum, TRUE /* create_subdir */,
                              scratch_pool, scratch_pool));
   SVN_ERR(svn_io_remove_file2(pristine_abspath, TRUE /* ignore_enoent */,
@@ -2577,31 +2578,21 @@ svn_wc__db_pristine_remove(svn_wc__db_t *db,
   /* If not referenced, remove the PRISTINE table row and the file. */
   if (! is_referenced)
     {
-      SVN_ERR(pristine_remove(pdh, sha1_checksum, scratch_pool));
+      SVN_ERR(pristine_remove(pdh->wcroot, sha1_checksum, scratch_pool));
     }
 
   return SVN_NO_ERROR;
 }
 
 
-svn_error_t *
-svn_wc__db_pristine_cleanup(svn_wc__db_t *db,
-                            const char *wri_abspath,
-                            apr_pool_t *scratch_pool)
+static svn_error_t *
+pristine_cleanup_wcroot(svn_wc__db_wcroot_t *wcroot,
+                        apr_pool_t *scratch_pool)
 {
-  svn_wc__db_pdh_t *pdh;
-  const char *local_relpath;
   svn_sqlite__stmt_t *stmt;
 
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
-
-  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
-                              wri_abspath, svn_sqlite__mode_readonly,
-                              scratch_pool, scratch_pool));
-  VERIFY_USABLE_PDH(pdh);
-
   /* Find each unreferenced pristine in the DB and remove it. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_UNREFERENCED_PRISTINES));
   while (1)
     {
@@ -2614,9 +2605,30 @@ svn_wc__db_pristine_cleanup(svn_wc__db_t *db,
 
       SVN_ERR(svn_sqlite__column_checksum(&sha1_checksum, stmt, 0,
                                           scratch_pool));
-      SVN_ERR(pristine_remove(pdh, sha1_checksum, scratch_pool));
+      SVN_ERR(pristine_remove(wcroot, sha1_checksum, scratch_pool));
     }
   SVN_ERR(svn_sqlite__reset(stmt));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__db_pristine_cleanup(svn_wc__db_t *db,
+                            const char *wri_abspath,
+                            apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
+
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                              wri_abspath, svn_sqlite__mode_readonly,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  SVN_ERR(pristine_cleanup_wcroot(pdh->wcroot, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -4051,17 +4063,18 @@ svn_wc__db_op_revert_actual(svn_wc__db_t *db,
   SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
 
-  if (affected_rows == 0) {
-    /* Failed to delete the row.
-       Presumably because there was a changelist set on it */
+  if (affected_rows == 0)
+    {
+      /* Failed to delete the row.
+         Presumably because there was a changelist set on it */
 
-    SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
-                               STMT_CLEAR_ACTUAL_NODE_LEAVING_CHANGELIST));
-    SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
-    SVN_ERR(svn_sqlite__step_done(stmt));
-    /* We're not interested here if there was an affected row or not:
-       If there isn't by now, then there simply was no row to begin with */
-  }
+      SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                 STMT_CLEAR_ACTUAL_NODE_LEAVING_CHANGELIST));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+      /* We're not interested here if there was an affected row or not:
+         If there isn't by now, then there simply was no row to begin with */
+    }
 
   /* Some entries have cached the above values. Kapow!!  */
   SVN_ERR(flush_entries(db, pdh, local_abspath, scratch_pool));

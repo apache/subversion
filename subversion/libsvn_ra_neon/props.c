@@ -1017,9 +1017,9 @@ svn_error_t *svn_ra_neon__get_baseline_info(svn_boolean_t *is_dir,
   if (is_dir != NULL)
     {
       /* query the DAV:resourcetype of the full, assembled URL. */
-      const char *full_bc_url = svn_path_url_add_component(my_bc_url->data,
-                                                           my_bc_rel.data,
-                                                           pool);
+      const char *full_bc_url = svn_path_url_add_component2(my_bc_url->data,
+                                                            my_bc_rel.data,
+                                                            pool);
       SVN_ERR(svn_ra_neon__get_starting_props(&rsrc, sess, full_bc_url,
                                               NULL, pool));
       *is_dir = rsrc->is_collection;
@@ -1280,7 +1280,7 @@ svn_ra_neon__do_check_path(svn_ra_session_t *session,
 
   /* If we were given a relative path to append, append it. */
   if (path)
-    url = svn_path_url_add_component(url, path, pool);
+    url = svn_path_url_add_component2(url, path, pool);
 
   err = svn_ra_neon__get_baseline_info(&is_dir, NULL, NULL, NULL,
                                        ras, url, revision, pool);
@@ -1320,7 +1320,7 @@ svn_ra_neon__do_stat(svn_ra_session_t *session,
 
   /* If we were given a relative path to append, append it. */
   if (path)
-    url = svn_path_url_add_component(url, path, pool);
+    url = svn_path_url_add_component2(url, path, pool);
 
   /* Invalid revision means HEAD, which is just the public URL. */
   if (! SVN_IS_VALID_REVNUM(revision))
@@ -1348,8 +1348,8 @@ svn_ra_neon__do_stat(svn_ra_session_t *session,
             return err;
         }
 
-      final_url = svn_path_url_add_component(bc_url.data, bc_relative.data,
-                                             pool);
+      final_url = svn_path_url_add_component2(bc_url.data, bc_relative.data,
+                                              pool);
     }
 
   /* Depth-zero PROPFIND is the One True DAV Way. */

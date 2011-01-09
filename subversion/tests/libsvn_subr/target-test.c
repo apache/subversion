@@ -31,6 +31,8 @@
 #include <unistd.h> /* for getcwd() */
 #endif
 
+#define SVN_DEPRECATED
+
 #include "svn_pools.h"
 #include "svn_path.h"
 

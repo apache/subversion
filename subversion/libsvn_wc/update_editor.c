@@ -275,9 +275,6 @@ struct dir_baton
   /* Set if updates to this directory are skipped */
   svn_boolean_t skip_this;
 
-  /* Set if updates to all descendants of this directory are skipped */
-  svn_boolean_t skip_descendants;
-
   /* Set if there was a previous notification for this directory */
   svn_boolean_t already_notified;
 
@@ -1212,7 +1209,6 @@ open_root(void *edit_baton,
   if (already_conflicted)
     {
       db->skip_this = TRUE;
-      db->skip_descendants = TRUE;
       db->already_notified = TRUE;
       db->bump_info->skipped = TRUE;
 
@@ -2082,13 +2078,8 @@ delete_entry(const char *path,
 
   local_abspath = svn_dirent_join(pb->local_abspath, base, pool);
 
-  if (pb->skip_descendants)
-    {
-      if (!pb->skip_this)
-        SVN_ERR(remember_skipped_tree(pb->edit_baton, local_abspath));
-
-      return SVN_NO_ERROR;
-    }
+  if (pb->skip_this)
+    return SVN_NO_ERROR;
 
   SVN_ERR(check_path_under_root(pb->local_abspath, base, pool));
 
@@ -2126,13 +2117,9 @@ add_directory(const char *path,
   SVN_ERR(make_dir_baton(&db, path, eb, pb, TRUE, pool));
   *child_baton = db;
 
-  if (pb->skip_descendants)
+  if (pb->skip_this)
     {
-      if (!pb->skip_this)
-        SVN_ERR(remember_skipped_tree(eb, db->local_abspath));
-
       db->skip_this = TRUE;
-      db->skip_descendants = TRUE;
       db->already_notified = TRUE;
 
       return SVN_NO_ERROR;
@@ -2229,7 +2216,6 @@ add_directory(const char *path,
       SVN_ERR(remember_skipped_tree(eb, db->local_abspath));
 
       db->skip_this = TRUE;
-      db->skip_descendants = TRUE;
       db->already_notified = TRUE;
 
       /* ### TODO: Also print victim_path in the skip msg. */
@@ -2414,7 +2400,6 @@ add_directory(const char *path,
       SVN_ERR(remember_skipped_tree(eb, db->local_abspath));
 
       db->skip_this = TRUE;
-      db->skip_descendants = TRUE;
       db->already_notified = TRUE;
 
       do_notification(eb, db->local_abspath, svn_node_unknown,
@@ -2484,13 +2469,9 @@ open_directory(const char *path,
   /* We should have a write lock on every directory touched.  */
   SVN_ERR(svn_wc__write_check(eb->db, db->local_abspath, pool));
 
-  if (pb->skip_descendants)
+  if (pb->skip_this)
     {
-      if (!pb->skip_this)
-        SVN_ERR(remember_skipped_tree(eb, db->local_abspath));
-
       db->skip_this = TRUE;
-      db->skip_descendants = TRUE;
       db->already_notified = TRUE;
 
       db->bump_info->skipped = TRUE;
@@ -2527,7 +2508,6 @@ open_directory(const char *path,
       SVN_ERR(remember_skipped_tree(eb, db->local_abspath));
 
       db->skip_this = TRUE;
-      db->skip_descendants = TRUE;
       db->already_notified = TRUE;
 
       do_notification(eb, db->local_abspath, svn_node_unknown,
@@ -2564,7 +2544,6 @@ open_directory(const char *path,
           tree_conflict->reason != svn_wc_conflict_reason_replaced)
         {
           SVN_ERR(remember_skipped_tree(eb, db->local_abspath));
-          db->skip_descendants = TRUE;
           db->skip_this = TRUE;
 
           return SVN_NO_ERROR;
@@ -3033,14 +3012,10 @@ add_file(const char *path,
   SVN_ERR(make_file_baton(&fb, pb, path, TRUE, pool));
   *file_baton = fb;
 
-  if (pb->skip_descendants)
+  if (pb->skip_this)
     {
-      if (!pb->skip_this)
-        SVN_ERR(remember_skipped_tree(eb, fb->local_abspath));
-
       fb->skip_this = TRUE;
       fb->already_notified = TRUE;
-
       return SVN_NO_ERROR;
     }
 
@@ -3320,14 +3295,10 @@ open_file(const char *path,
   SVN_ERR(make_file_baton(&fb, pb, path, FALSE, pool));
   *file_baton = fb;
 
-  if (pb->skip_descendants)
+  if (pb->skip_this)
     {
-      if (!pb->skip_this)
-        SVN_ERR(remember_skipped_tree(eb, fb->local_abspath));
-
       fb->skip_this = TRUE;
       fb->already_notified = TRUE;
-
       return SVN_NO_ERROR;
     }
 

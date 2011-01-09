@@ -861,12 +861,12 @@ match_hunk(svn_boolean_t *matched, target_content_info_t *content_info,
   trailing_context = svn_diff_hunk_get_trailing_context(hunk);
   if (match_modified)
     {
-      SVN_ERR(svn_diff_hunk_reset_modified_text(hunk));
+      svn_diff_hunk_reset_modified_text(hunk);
       hunk_length = svn_diff_hunk_get_modified_length(hunk);
     }
   else
     {
-      SVN_ERR(svn_diff_hunk_reset_original_text(hunk));
+      svn_diff_hunk_reset_original_text(hunk);
       hunk_length = svn_diff_hunk_get_original_length(hunk);
     }
   iterpool = svn_pool_create(pool);
@@ -1031,7 +1031,7 @@ match_existing_target(svn_boolean_t *match,
   svn_boolean_t eof;
   svn_boolean_t hunk_eof;
 
-  SVN_ERR(svn_diff_hunk_reset_modified_text(hunk));
+  svn_diff_hunk_reset_modified_text(hunk);
 
   iterpool = svn_pool_create(scratch_pool);
   do
@@ -1419,7 +1419,7 @@ apply_hunk(patch_target_t *target, target_content_info_t *content_info,
   /* Write the hunk's version to the patched result.
    * Don't write the lines which matched with fuzz. */
   lines_read = 0;
-  SVN_ERR(svn_diff_hunk_reset_modified_text(hi->hunk));
+  svn_diff_hunk_reset_modified_text(hi->hunk);
   iterpool = svn_pool_create(pool);
   do
     {
@@ -2643,13 +2643,13 @@ apply_patches(void *baton,
 {
   svn_patch_t *patch;
   apr_pool_t *iterpool;
-  apr_file_t *patch_file;
+  svn_patch_file_t *patch_file;
   apr_array_header_t *targets_info;
   apply_patches_baton_t *btn = baton;
 
   /* Try to open the patch file. */
-  SVN_ERR(svn_io_file_open(&patch_file, btn->patch_abspath,
-                           APR_READ | APR_BINARY, 0, scratch_pool));
+  SVN_ERR(svn_diff_open_patch_file(&patch_file, btn->patch_abspath,
+                                   scratch_pool));
 
   /* Apply patches. */
   targets_info = apr_array_make(scratch_pool, 0,
@@ -2707,8 +2707,6 @@ apply_patches(void *baton,
                 }
               SVN_ERR(send_patch_notification(target, btn->ctx, iterpool));
             }
-
-          SVN_ERR(svn_diff_close_patch(patch, iterpool));
         }
     }
   while (patch);
@@ -2717,7 +2715,7 @@ apply_patches(void *baton,
   SVN_ERR(delete_empty_dirs(targets_info, btn->ctx, btn->dry_run,
                             scratch_pool));
 
-  SVN_ERR(svn_io_file_close(patch_file, iterpool));
+  SVN_ERR(svn_diff_close_patch_file(patch_file, iterpool));
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;

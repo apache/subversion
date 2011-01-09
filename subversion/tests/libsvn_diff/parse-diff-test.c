@@ -248,26 +248,26 @@ static const char *bad_git_diff_header =
 
 /* Create a PATCH_FILE with name FNAME containing the contents of DIFF. */
 static svn_error_t *
-create_patch_file(apr_file_t **patch_file, const char *fname,
+create_patch_file(svn_patch_file_t **patch_file, const char *fname,
                   const char *diff, apr_pool_t *pool)
 {
-  apr_off_t pos = 0;
   apr_size_t len;
   apr_status_t status;
+  apr_file_t *apr_file;
 
   /* Create a patch file. */
-  status = apr_file_open(patch_file, fname,
+  status = apr_file_open(&apr_file, fname,
                         (APR_READ | APR_WRITE | APR_CREATE | APR_TRUNCATE |
                          APR_DELONCLOSE), APR_OS_DEFAULT, pool);
   if (status != APR_SUCCESS)
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL, "Cannot open '%s'",
                              fname);
   len = strlen(diff);
-  status = apr_file_write_full(*patch_file, diff, len, &len);
+  status = apr_file_write_full(apr_file, diff, len, &len);
   if (status || len != strlen(diff))
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                              "Cannot write to '%s'", fname);
-  SVN_ERR(svn_io_file_seek(*patch_file, APR_SET, &pos, pool));
+  SVN_ERR(svn_diff_open_patch_file(patch_file, fname, pool));
 
   return SVN_NO_ERROR;
 }
@@ -312,14 +312,12 @@ check_content(svn_diff_hunk_t *hunk, svn_boolean_t original,
 static svn_error_t *
 test_parse_unidiff(apr_pool_t *pool)
 {
-  apr_file_t *patch_file;
+  svn_patch_file_t *patch_file;
   const char *fname = "test_parse_unidiff.patch";
   svn_boolean_t reverse;
   svn_boolean_t ignore_whitespace;
   int i;
   apr_pool_t *iterpool;
-
-  SVN_ERR(create_patch_file(&patch_file, fname, unidiff, pool));
 
   reverse = FALSE;
   ignore_whitespace = FALSE;
@@ -328,13 +326,10 @@ test_parse_unidiff(apr_pool_t *pool)
     {
       svn_patch_t *patch;
       svn_diff_hunk_t *hunk;
-      apr_off_t pos;
 
       svn_pool_clear(iterpool);
 
-      /* Reset file pointer. */
-      pos = 0;
-      SVN_ERR(svn_io_file_seek(patch_file, APR_SET, &pos, iterpool));
+      SVN_ERR(create_patch_file(&patch_file, fname, unidiff, pool));
 
       /* We have two patches with one hunk each.
        * Parse the first patch. */
@@ -383,6 +378,7 @@ test_parse_unidiff(apr_pool_t *pool)
                             pool));
 
       reverse = !reverse;
+      SVN_ERR(svn_diff_close_patch_file(patch_file, pool));
     }
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
@@ -393,7 +389,7 @@ test_parse_git_diff(apr_pool_t *pool)
 {
   /* ### Should we check for reversed diffs? */
 
-  apr_file_t *patch_file;
+  svn_patch_file_t *patch_file;
   svn_patch_t *patch;
   svn_diff_hunk_t *hunk;
   const char *fname = "test_parse_git_diff.patch";
@@ -457,6 +453,8 @@ test_parse_git_diff(apr_pool_t *pool)
   SVN_TEST_ASSERT(patch->operation == svn_diff_op_added);
   SVN_TEST_ASSERT(patch->hunks->nelts == 0);
 
+  SVN_ERR(svn_diff_close_patch_file(patch_file, pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -465,7 +463,7 @@ test_parse_git_tree_and_text_diff(apr_pool_t *pool)
 {
   /* ### Should we check for reversed diffs? */
 
-  apr_file_t *patch_file;
+  svn_patch_file_t *patch_file;
   svn_patch_t *patch;
   svn_diff_hunk_t *hunk;
   const char *fname = "test_parse_git_tree_and_text_diff.patch";
@@ -556,6 +554,8 @@ test_parse_git_tree_and_text_diff(apr_pool_t *pool)
   SVN_ERR(check_content(hunk, FALSE,
                         "",
                         pool));
+
+  SVN_ERR(svn_diff_close_patch_file(patch_file, pool));
   return SVN_NO_ERROR;
 }
 
@@ -563,7 +563,7 @@ test_parse_git_tree_and_text_diff(apr_pool_t *pool)
 static svn_error_t *
 test_bad_git_diff_headers(apr_pool_t *pool)
 {
-  apr_file_t *patch_file;
+  svn_patch_file_t *patch_file;
   svn_patch_t *patch;
   svn_diff_hunk_t *hunk;
   const char *fname = "test_bad_git_diff_header.patch";
@@ -592,6 +592,7 @@ test_bad_git_diff_headers(apr_pool_t *pool)
                         "some more bytes to 'iota'" NL,
                         pool));
 
+  SVN_ERR(svn_diff_close_patch_file(patch_file, pool));
   return SVN_NO_ERROR;
 }
 
@@ -600,7 +601,7 @@ test_bad_git_diff_headers(apr_pool_t *pool)
 static svn_error_t *
 test_parse_property_diff(apr_pool_t *pool)
 {
-  apr_file_t *patch_file;
+  svn_patch_file_t *patch_file;
   svn_patch_t *patch;
   svn_prop_patch_t *prop_patch;
   svn_diff_hunk_t *hunk;
@@ -696,13 +697,14 @@ test_parse_property_diff(apr_pool_t *pool)
                         "new value" NL,
                         pool));
 
+  SVN_ERR(svn_diff_close_patch_file(patch_file, pool));
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
 test_parse_property_and_text_diff(apr_pool_t *pool)
 {
-  apr_file_t *patch_file;
+  svn_patch_file_t *patch_file;
   svn_patch_t *patch;
   svn_prop_patch_t *prop_patch;
   svn_diff_hunk_t *hunk;
@@ -751,6 +753,7 @@ test_parse_property_and_text_diff(apr_pool_t *pool)
                         "value" NL,
                         pool));
 
+  SVN_ERR(svn_diff_close_patch_file(patch_file, pool));
   return SVN_NO_ERROR;
 }
 
@@ -758,7 +761,7 @@ static svn_error_t *
 test_parse_diff_symbols_in_prop_unidiff(apr_pool_t *pool)
 {
   svn_patch_t *patch;
-  apr_file_t *patch_file;
+  svn_patch_file_t *patch_file;
   svn_prop_patch_t *prop_patch;
   svn_diff_hunk_t *hunk;
   apr_array_header_t *hunks;
@@ -852,13 +855,14 @@ test_parse_diff_symbols_in_prop_unidiff(apr_pool_t *pool)
                         "## -1,2 +1,4 ##" NL,
                         pool));
 
+  SVN_ERR(svn_diff_close_patch_file(patch_file, pool));
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
 test_git_diffs_with_spaces_diff(apr_pool_t *pool)
 {
-  apr_file_t *patch_file;
+  svn_patch_file_t *patch_file;
   svn_patch_t *patch;
   const char *fname = "test_git_diffs_with_spaces_diff.patch";
 
@@ -905,6 +909,7 @@ test_git_diffs_with_spaces_diff(apr_pool_t *pool)
   SVN_TEST_ASSERT(patch->operation == svn_diff_op_added);
   SVN_TEST_ASSERT(patch->hunks->nelts == 0);
 
+  SVN_ERR(svn_diff_close_patch_file(patch_file, pool));
   return SVN_NO_ERROR;
 }
 /* ========================================================================== */

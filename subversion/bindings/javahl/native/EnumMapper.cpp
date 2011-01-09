@@ -63,13 +63,13 @@ jobject EnumMapper::mapChangePathAction(const char action)
   switch (action)
     {
       case 'A':
-        return mapEnum(JAVA_PACKAGE"/ChangePath$Action", 0);
+        return mapEnum(JAVA_PACKAGE"/types/ChangePath$Action", 0);
       case 'D':
-        return mapEnum(JAVA_PACKAGE"/ChangePath$Action", 1);
+        return mapEnum(JAVA_PACKAGE"/types/ChangePath$Action", 1);
       case 'R':
-        return mapEnum(JAVA_PACKAGE"/ChangePath$Action", 2);
+        return mapEnum(JAVA_PACKAGE"/types/ChangePath$Action", 2);
       case 'M':
-        return mapEnum(JAVA_PACKAGE"/ChangePath$Action", 3);
+        return mapEnum(JAVA_PACKAGE"/types/ChangePath$Action", 3);
       default:
         return NULL;
     }
@@ -142,7 +142,7 @@ jobject EnumMapper::mapStatusKind(svn_wc_status_kind svnKind)
 {
   // We're assuming a valid value for the C enum above
   // The offset here is +1
-  return mapEnum(JAVA_PACKAGE"/Status$Kind", ((int) svnKind) - 1);
+  return mapEnum(JAVA_PACKAGE"/types/Status$Kind", ((int) svnKind) - 1);
 }
 
 jobject EnumMapper::mapConflictKind(svn_wc_conflict_kind_t kind)
@@ -207,7 +207,7 @@ svn_wc_conflict_choice_t EnumMapper::toConflictChoice(jobject jchoice)
 
 svn_opt_revision_kind EnumMapper::toRevisionKind(jobject jkind)
 {
-  return (svn_opt_revision_kind) getOrdinal(JAVA_PACKAGE"/Revision$Kind",
+  return (svn_opt_revision_kind) getOrdinal(JAVA_PACKAGE"/types/Revision$Kind",
                                             jkind);
 }
 

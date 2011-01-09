@@ -359,8 +359,8 @@ svn_ra_neon__get_file_revs(svn_ra_session_t *session,
   SVN_ERR(svn_ra_neon__get_baseline_info(NULL, &bc_url, &bc_relative, NULL,
                                          ras, ras->url->data, end,
                                          pool));
-  final_bc_url = svn_path_url_add_component(bc_url.data, bc_relative.data,
-                                            pool);
+  final_bc_url = svn_path_url_add_component2(bc_url.data, bc_relative.data,
+                                             pool);
 
   /* Dispatch the request. */
   err = svn_ra_neon__parsed_request(ras, "REPORT", final_bc_url,

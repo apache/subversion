@@ -53,6 +53,10 @@ try:
 except AttributeError:
   my_getopt = getopt.getopt
 
+# Ensure the compiled C tests use a known locale (Python tests set the locale
+# explicitly).
+os.environ['LC_ALL'] = 'C'
+
 class TextColors:
   '''Some ANSI terminal constants for output color'''
   ENDC = '\033[0;m'

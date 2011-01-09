@@ -21,9 +21,8 @@
  * @endcopyright
  */
 
-package org.apache.subversion.javahl;
+package org.apache.subversion.javahl.types;
 
-import org.apache.subversion.javahl.types.NodeKind;
 
 /**
  * The description of a merge conflict, encountered during

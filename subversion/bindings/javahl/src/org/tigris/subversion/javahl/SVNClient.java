@@ -194,7 +194,7 @@ public class SVNClient implements SVNClientInterface
                               changelists == null ? null
                                 : Arrays.asList(changelists),
         new org.apache.subversion.javahl.callback.StatusCallback () {
-         public void doStatus(org.apache.subversion.javahl.Status aStatus)
+         public void doStatus(org.apache.subversion.javahl.types.Status aStatus)
                     { callback.doStatus(new Status(aStatus)); }
                 });
         }
@@ -285,8 +285,8 @@ public class SVNClient implements SVNClientInterface
                          pegRevision == null ? null : pegRevision.toApache(),
                          Depth.toADepth(depth), direntFields, fetchLocks,
         new org.apache.subversion.javahl.callback.ListCallback () {
-            public void doEntry(org.apache.subversion.javahl.DirEntry dirent,
-                                org.apache.subversion.javahl.Lock lock)
+            public void doEntry(org.apache.subversion.javahl.types.DirEntry dirent,
+                                org.apache.subversion.javahl.types.Lock lock)
             {
                 callback.doEntry(new DirEntry(dirent),
                                  lock == null ? null : new Lock(lock));
@@ -529,7 +529,7 @@ public class SVNClient implements SVNClientInterface
             }
 
             public void singleMessage(
-                    Set<org.apache.subversion.javahl.ChangePath> aChangedPaths,
+                    Set<org.apache.subversion.javahl.types.ChangePath> aChangedPaths,
                     long revision, Map<String, byte[]> revprops,
                     boolean hasChildren)
             {
@@ -542,7 +542,7 @@ public class SVNClient implements SVNClientInterface
                     changedPaths = new ChangePath[aChangedPaths.size()];
 
                     int i = 0;
-                    for (org.apache.subversion.javahl.ChangePath cp
+                    for (org.apache.subversion.javahl.types.ChangePath cp
                                                             : aChangedPaths)
                     {
                         changedPaths[i] = new ChangePath(cp);
@@ -1458,7 +1458,7 @@ public class SVNClient implements SVNClientInterface
             implements org.apache.subversion.javahl.callback.LogMessageCallback
         {
             public void singleMessage(
-                    Set<org.apache.subversion.javahl.ChangePath> aChangedPaths,
+                    Set<org.apache.subversion.javahl.types.ChangePath> aChangedPaths,
                     long revision, Map<String, byte[]> revprops,
                     boolean hasChildren)
             {
@@ -1469,7 +1469,7 @@ public class SVNClient implements SVNClientInterface
                     changedPaths = new ChangePath[aChangedPaths.size()];
 
                     int i = 0;
-                    for (org.apache.subversion.javahl.ChangePath cp
+                    for (org.apache.subversion.javahl.types.ChangePath cp
                                                              : aChangedPaths)
                     {
                         changedPaths[i] = new ChangePath(cp);
@@ -2353,8 +2353,8 @@ public class SVNClient implements SVNClientInterface
         	final List<org.apache.subversion.javahl.Info> infos =
         		new ArrayList<org.apache.subversion.javahl.Info>();
         	aSVNClient.info2(path,
-        					org.apache.subversion.javahl.Revision.HEAD,
-        					org.apache.subversion.javahl.Revision.HEAD,
+        					org.apache.subversion.javahl.types.Revision.HEAD,
+        					org.apache.subversion.javahl.types.Revision.HEAD,
         					org.apache.subversion.javahl.types.Depth.empty,
         				    null, new org.apache.subversion.javahl.callback.InfoCallback()
         	{
