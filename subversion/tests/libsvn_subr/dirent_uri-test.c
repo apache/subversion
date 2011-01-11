@@ -1269,6 +1269,9 @@ test_uri_is_canonical(apr_pool_t *pool)
     { "file:///folder/c#",      FALSE }, /* # needs escaping */
     { "file:///fld/with space", FALSE }, /* # needs escaping */
     { "file:///fld/c%23",       TRUE }, /* Properly escaped C# */
+    { "file:///%DE%AD%BE%EF",  TRUE },
+    { "file:///%de%ad%be%ef",  FALSE },
+    { "file:///%DE%ad%BE%ef",  FALSE },
 #ifdef SVN_USE_DOS_PATHS
     { "file:///c:/temp/repos", FALSE },
     { "file:///c:/temp/REPOS", FALSE },
