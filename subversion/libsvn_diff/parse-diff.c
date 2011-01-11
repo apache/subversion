@@ -1207,6 +1207,79 @@ svn_diff_open_patch_file(svn_patch_file_t **patch_file,
   return SVN_NO_ERROR;
 }
 
+/* Parse hunks from APR_FILE and store them in PATCH->HUNKS.
+ * Parsing stops if no valid next hunk can be found.
+ * If IGNORE_WHITESPACE is TRUE, lines without
+ * leading spaces will be treated as context lines.
+ * Allocate results in RESULT_POOL.
+ * Use SCRATCH_POOL for temporary allocations. */
+static svn_error_t *
+parse_hunks(svn_patch_t *patch, apr_file_t *apr_file,
+            svn_boolean_t ignore_whitespace,
+            apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+{
+  svn_diff_hunk_t *hunk;
+  svn_boolean_t is_property;
+  const char *last_prop_name;
+  const char *prop_name;
+  svn_diff_operation_kind_t prop_operation;
+  apr_pool_t *iterpool;
+
+  last_prop_name = NULL;
+
+  patch->hunks = apr_array_make(result_pool, 10, sizeof(svn_diff_hunk_t *));
+  patch->prop_patches = apr_hash_make(result_pool);
+  iterpool = svn_pool_create(scratch_pool);
+  do
+    {
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(parse_next_hunk(&hunk, &is_property, &prop_name, &prop_operation,
+                              patch, apr_file, ignore_whitespace, result_pool,
+                              iterpool));
+
+      if (hunk && is_property)
+        {
+          if (! prop_name)
+            prop_name = last_prop_name;
+          else
+            last_prop_name = prop_name;
+          SVN_ERR(add_property_hunk(patch, prop_name, hunk, prop_operation,
+                                    result_pool));
+        }
+      else if (hunk)
+        {
+          APR_ARRAY_PUSH(patch->hunks, svn_diff_hunk_t *) = hunk;
+          last_prop_name = NULL;
+        }
+
+    }
+  while (hunk);
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+/* State machine for the diff header parser.
+ * Expected Input   Required state          Function to call */
+static struct transition transitions[] =
+{
+  {"--- ",          state_start,            diff_minus},
+  {"+++ ",          state_minus_seen,       diff_plus},
+  {"diff --git",    state_start,            git_start},
+  {"--- a/",        state_git_diff_seen,    git_minus},
+  {"--- a/",        state_git_tree_seen,    git_minus},
+  {"--- /dev/null", state_git_tree_seen,    git_minus},
+  {"+++ b/",        state_git_minus_seen,   git_plus},
+  {"+++ /dev/null", state_git_minus_seen,   git_plus},
+  {"rename from ",  state_git_diff_seen,    git_move_from},
+  {"rename to ",    state_move_from_seen,   git_move_to},
+  {"copy from ",    state_git_diff_seen,    git_copy_from},
+  {"copy to ",      state_copy_from_seen,   git_copy_to},
+  {"new file ",     state_git_diff_seen,    git_new_file},
+  {"deleted file ", state_git_diff_seen,    git_deleted_file},
+};
+
 svn_error_t *
 svn_diff_parse_next_patch(svn_patch_t **patch,
                           svn_patch_file_t *patch_file,
@@ -1220,26 +1293,6 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
   svn_boolean_t line_after_tree_header_read = FALSE;
   apr_pool_t *iterpool;
   enum parse_state state = state_start;
-
-  /* Our table consisting of:
-   * Expected Input     Required state          Function to call */
-  struct transition transitions[] =
-    {
-      {"--- ",          state_start,            diff_minus},
-      {"+++ ",          state_minus_seen,       diff_plus},
-      {"diff --git",    state_start,            git_start},
-      {"--- a/",        state_git_diff_seen,    git_minus},
-      {"--- a/",        state_git_tree_seen,    git_minus},
-      {"--- /dev/null", state_git_tree_seen,    git_minus},
-      {"+++ b/",        state_git_minus_seen,   git_plus},
-      {"+++ /dev/null", state_git_minus_seen,   git_plus},
-      {"rename from ",  state_git_diff_seen,    git_move_from},
-      {"rename to ",    state_move_from_seen,   git_move_to},
-      {"copy from ",    state_git_diff_seen,    git_copy_from},
-      {"copy to ",      state_copy_from_seen,   git_copy_to},
-      {"new file ",     state_git_diff_seen,    git_new_file},
-      {"deleted file ", state_git_diff_seen,    git_deleted_file},
-    };
 
   if (apr_file_eof(patch_file->apr_file) == APR_EOF)
     {
@@ -1287,14 +1340,12 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
             }
         }
 
-      if (state == state_unidiff_found
-          || state == state_git_header_found)
+      if (state == state_unidiff_found || state == state_git_header_found)
         {
           /* We have a valid diff header, yay! */
           break;
         }
-      else if (state == state_git_tree_seen
-               && line_after_tree_header_read)
+      else if (state == state_git_tree_seen && line_after_tree_header_read)
         {
           /* We have a valid diff header for a patch with only tree changes.
            * Rewind to the start of the line just read, so subsequent calls
@@ -1305,7 +1356,7 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
           break;
         }
       else if (state == state_git_tree_seen)
-          line_after_tree_header_read = TRUE;
+        line_after_tree_header_read = TRUE;
 
     }
   while (! eof);
@@ -1325,46 +1376,8 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
       *patch = NULL;
     }
   else
-    {
-      svn_diff_hunk_t *hunk;
-      svn_boolean_t is_property;
-      const char *last_prop_name;
-      const char *prop_name;
-      svn_diff_operation_kind_t prop_operation;
-
-      last_prop_name = NULL;
-
-      /* Parse hunks. */
-      (*patch)->hunks = apr_array_make(result_pool, 10,
-                                       sizeof(svn_diff_hunk_t *));
-      (*patch)->prop_patches = apr_hash_make(result_pool);
-      do
-        {
-          svn_pool_clear(iterpool);
-
-          SVN_ERR(parse_next_hunk(&hunk, &is_property, &prop_name,
-                                  &prop_operation, *patch,
-                                  patch_file->apr_file, ignore_whitespace,
-                                  result_pool, iterpool));
-
-          if (hunk && is_property)
-            {
-              if (! prop_name)
-                prop_name = last_prop_name;
-              else
-                last_prop_name = prop_name;
-              SVN_ERR(add_property_hunk(*patch, prop_name, hunk, prop_operation,
-                                        result_pool));
-            }
-          else if (hunk)
-            {
-              APR_ARRAY_PUSH((*patch)->hunks, svn_diff_hunk_t *) = hunk;
-              last_prop_name = NULL;
-            }
-
-        }
-      while (hunk);
-    }
+    SVN_ERR(parse_hunks(*patch, patch_file->apr_file, ignore_whitespace,
+                        result_pool, iterpool));
 
   svn_pool_destroy(iterpool);
 
