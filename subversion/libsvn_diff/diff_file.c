@@ -389,7 +389,7 @@ find_identical_prefix(svn_boolean_t *reached_one_eof, apr_off_t *prefix_lines,
                       apr_pool_t *pool)
 {
   svn_boolean_t had_cr = FALSE;
-  svn_boolean_t is_match, reached_all_eof;
+  svn_boolean_t is_match;
   apr_size_t i;
 
   *prefix_lines = 0;
@@ -425,12 +425,6 @@ find_identical_prefix(svn_boolean_t *reached_one_eof, apr_off_t *prefix_lines,
         for (i = 1, is_match = TRUE; i < file_len; i++)
           is_match = is_match && *file[0]->curp == *file[i]->curp;
     }
-
-  /* If all files reached their end (i.e. are fully identical), we're done */
-  for (i = 0, reached_all_eof = TRUE; i < file_len; i++)
-    reached_all_eof = reached_all_eof && file[i]->curp == file[i]->endp;
-  if (reached_all_eof)
-    return SVN_NO_ERROR;
 
   if (had_cr)
     {
