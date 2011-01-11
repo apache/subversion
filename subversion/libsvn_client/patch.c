@@ -48,7 +48,7 @@
 
 typedef struct hunk_info_t {
   /* The hunk. */
-  const svn_diff_hunk_t *hunk;
+  svn_diff_hunk_t *hunk;
 
   /* The line where the hunk matched in the target file. */
   svn_linenum_t matched_line;
@@ -834,7 +834,7 @@ seek_to_line(target_content_info_t *content_info, svn_linenum_t line,
  * Do temporary allocations in POOL. */
 static svn_error_t *
 match_hunk(svn_boolean_t *matched, target_content_info_t *content_info,
-           const svn_diff_hunk_t *hunk, int fuzz,
+           svn_diff_hunk_t *hunk, int fuzz,
            svn_boolean_t ignore_whitespace,
            svn_boolean_t match_modified, apr_pool_t *pool)
 {
@@ -950,7 +950,7 @@ match_hunk(svn_boolean_t *matched, target_content_info_t *content_info,
 static svn_error_t *
 scan_for_match(svn_linenum_t *matched_line,
                target_content_info_t *content_info,
-               const svn_diff_hunk_t *hunk, svn_boolean_t match_first,
+               svn_diff_hunk_t *hunk, svn_boolean_t match_first,
                svn_linenum_t upper_line, int fuzz,
                svn_boolean_t ignore_whitespace,
                svn_boolean_t match_modified,
@@ -1022,7 +1022,7 @@ scan_for_match(svn_linenum_t *matched_line,
 static svn_error_t *
 match_existing_target(svn_boolean_t *match,
                       target_content_info_t *content_info,
-                      const svn_diff_hunk_t *hunk,
+                      svn_diff_hunk_t *hunk,
                       svn_stream_t *stream,
                       apr_pool_t *scratch_pool)
 {
@@ -1087,7 +1087,7 @@ match_existing_target(svn_boolean_t *match,
 static svn_error_t *
 get_hunk_info(hunk_info_t **hi, patch_target_t *target,
               target_content_info_t *content_info,
-              const svn_diff_hunk_t *hunk, int fuzz,
+              svn_diff_hunk_t *hunk, int fuzz,
               svn_boolean_t ignore_whitespace,
               svn_boolean_t is_prop_hunk,
               svn_cancel_func_t cancel_func, void *cancel_baton,
@@ -1301,7 +1301,7 @@ copy_lines_to_target(target_content_info_t *content_info, svn_linenum_t line,
  * Do temporary allocations in POOL. */
 static svn_error_t *
 reject_hunk(patch_target_t *target, target_content_info_t *content_info,
-            const svn_diff_hunk_t *hunk, const char *prop_name,
+            svn_diff_hunk_t *hunk, const char *prop_name,
             apr_pool_t *pool)
 {
   const char *hunk_header;
