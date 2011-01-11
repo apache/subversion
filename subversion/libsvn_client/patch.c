@@ -1701,6 +1701,9 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
 
       svn_pool_clear(iterpool);
 
+      if (cancel_func)
+        SVN_ERR((cancel_func)(cancel_baton));
+
       hi = APR_ARRAY_IDX(target->content_info->hunks, i, hunk_info_t *);
       if (hi->already_applied)
         continue;
@@ -2211,6 +2214,9 @@ install_patched_prop_targets(patch_target_t *target,
 
       svn_pool_clear(iterpool);
 
+      if (ctx->cancel_func)
+        SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
+
       /* For a deleted prop we only set the value to NULL. */
       if (prop_target->operation == svn_diff_op_deleted)
         {
@@ -2267,8 +2273,6 @@ install_patched_prop_targets(patch_target_t *target,
             {
               SVN_ERR(svn_io_file_create(target->local_abspath, "",
                                          scratch_pool));
-              if (ctx->cancel_func)
-                SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
               SVN_ERR(svn_wc_add_from_disk(ctx->wc_ctx, target->local_abspath,
                                            /* suppress notification */
                                            NULL, NULL,
