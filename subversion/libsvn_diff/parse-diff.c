@@ -685,10 +685,9 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
 
           c = line->data[0];
           /* Tolerate chopped leading spaces on empty lines. */
-          if (original_lines > 0 && modified_lines > 0
-              && ((c == ' ')
-              || (! eof && line->len == 0)
-              || (ignore_whitespace && c != del && c != add)))
+          if (original_lines > 0 && modified_lines > 0 &&
+              ((c == ' ') || (! eof && line->len == 0) ||
+               (ignore_whitespace && c != del && c != add)))
             {
               hunk_seen = TRUE;
               original_lines--;
@@ -735,9 +734,6 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
         }
       else
         {
-          /* ### Add an is_hunk_header() helper function that returns
-           * ### the proper atat string? Then we could collapse the
-           * ### following two if-clauses. */
           if (starts_with(line->data, text_atat))
             {
               /* Looks like we have a hunk header, try to rip it apart. */
