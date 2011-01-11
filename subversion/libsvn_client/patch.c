@@ -483,7 +483,7 @@ init_prop_target(prop_patch_target_t **prop_target,
 
   content_info = apr_pcalloc(result_pool, sizeof(*content_info));
 
-  /* All other fields in are FALSE or NULL due to apr_pcalloc().*/
+  /* All other fields are FALSE or NULL due to apr_pcalloc(). */
   content_info->current_line = 1;
   content_info->eol_style = svn_subst_eol_style_none;
   content_info->lines = apr_array_make(result_pool, 0,
