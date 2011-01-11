@@ -928,6 +928,10 @@ test_uri_canonicalize(apr_pool_t *pool)
     { "foo./.",               "foo." },
     { "foo././/.",            "foo." },
     { "/foo/bar",             "/foo/bar" },
+    /*** TODO:
+    { "/foo/b%ABble",         "/foo/b%ABble" },
+    { "/foo/b%abble",         "/foo/b%ABble" },
+    */
     { "foo/..",               "foo/.." },
     { "foo/../",              "foo/.." },
     { "foo/../.",             "foo/.." },
@@ -970,6 +974,8 @@ test_uri_canonicalize(apr_pool_t *pool)
     { "s://d/c#",              "s://d/c%23" }, /* Escape schema separator */
     { "s://d/c($) .+?",        "s://d/c($)%20.+%3F" }, /* Test special chars */
     { "file:///C%3a/temp",     "file:///C:/temp" },
+    { "http://server/cr%AB",   "http://server/cr%AB" },
+    { "http://server/cr%ab",   "http://server/cr%AB" },
 #ifdef SVN_USE_DOS_PATHS
     { "file:///c:/temp/repos", "file:///C:/temp/repos" },
     { "file:///c:/temp/REPOS", "file:///C:/temp/REPOS" },
