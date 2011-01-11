@@ -32,6 +32,7 @@
 #include "svn_client.h"
 #include "svn_dirent_uri.h"
 #include "svn_diff.h"
+#include "svn_hash.h"
 #include "svn_io.h"
 #include "svn_path.h"
 #include "svn_pools.h"
@@ -2540,7 +2541,7 @@ delete_empty_dirs(apr_array_header_t *targets_info, svn_client_ctx_t *ctx,
        * an empty parent with their parent. */
       again = FALSE;
       empty_dirs_copy = apr_hash_copy(iterpool, empty_dirs);
-      apr_hash_clear(empty_dirs);
+      SVN_ERR(svn_hash__clear(empty_dirs, iterpool));
 
       for (hi = apr_hash_first(iterpool, empty_dirs_copy);
            hi;
