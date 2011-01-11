@@ -2586,6 +2586,11 @@ delete_empty_dirs(apr_array_header_t *targets_info, svn_client_ctx_t *ctx,
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
       empty_dir = svn__apr_hash_index_key(hi);
+      if (! dry_run)
+        SVN_ERR(svn_wc_delete4(ctx->wc_ctx, empty_dir, FALSE, FALSE,
+                               ctx->cancel_func, ctx->cancel_baton,
+                               NULL, NULL, /* no duplicate notification */
+                               iterpool));
       if (ctx->notify_func2)
         {
           svn_wc_notify_t *notify;
@@ -2594,11 +2599,6 @@ delete_empty_dirs(apr_array_header_t *targets_info, svn_client_ctx_t *ctx,
                                         iterpool);
           (*ctx->notify_func2)(ctx->notify_baton2, notify, iterpool);
         }
-      if (! dry_run)
-        SVN_ERR(svn_wc_delete4(ctx->wc_ctx, empty_dir, FALSE, FALSE,
-                               ctx->cancel_func, ctx->cancel_baton,
-                               NULL, NULL, /* no duplicate notification */
-                               iterpool));
     }
   svn_pool_destroy(iterpool);
 
