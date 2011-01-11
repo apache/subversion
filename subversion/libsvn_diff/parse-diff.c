@@ -595,9 +595,9 @@ parse_prop_name(const char **prop_name, const char *header,
  * Set IS_PROPERTY to TRUE if we have a property hunk. If the returned HUNK
  * is the first belonging to a certain property, then PROP_NAME and
  * PROP_OPERATION will be set too. If we have a text hunk, PROP_NAME will be
- * NULL. If IGNORE_WHITESPACE is TRUE, let lines without leading spaces be
- * recognized as context lines.  Allocate results in
- * RESULT_POOL.  Use SCRATCH_POOL for all other allocations. */
+ * NULL.  If IGNORE_WHITESPACE is TRUE, lines without leading spaces will be
+ * treated as context lines.  Allocate results in RESULT_POOL.
+ * Use SCRATCH_POOL for all other allocations. */
 static svn_error_t *
 parse_next_hunk(svn_diff_hunk_t **hunk,
                 svn_boolean_t *is_property,
