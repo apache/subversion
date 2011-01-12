@@ -40,7 +40,9 @@ import os
 import re
 import subprocess
 
+FROM_ADDRESS = "Subversion Translation Status <noreply@subversion.apache.org>"
 LIST_ADDRESS = "dev@subversion.apache.org"
+SUBJECT_TEMPLATE = "[l10n] Translation status report for %s r%s"
 
 def _rev():
   dollar = "$Revision$"
@@ -78,6 +80,8 @@ class l10nReport:
         return stdout, stderr
 
     def match(self, pattern, string):
+        if isinstance(pattern, basestring):
+            pattern = re.compile(pattern)
         match = re.compile(pattern).search(string)
         if match and match.groups():
             return match.group(1)
@@ -162,20 +166,21 @@ def main():
         sys.stderr.flush()
         sys.exit(0)
 
-    wc_version = re.sub('[MS]', '', info_out)
+    wc_version = re.sub('[MS]', '', info_out.strip())
     title = "Translation status report for %s@r%s" % \
                (branch_name, wc_version)
 
     os.chdir(po_dir)
     files = sorted(os.listdir('.'))
-    format_head = "%6s %7s %7s %7s %7s" % ("lang", "trans", "untrans",
+    format_head = "\n%6s %7s %7s %7s %7s" % ("lang", "trans", "untrans",
                    "fuzzy", "obs")
     format_line = "--------------------------------------"
     print("\n%s\n%s\n%s" % (title, format_head, format_line))
 
     body = ""
+    po_pattern = re.compile('(.*).po$')
     for file in files:
-        lang = l10n.match('(.*).po$', file)
+        lang = l10n.match(po_pattern, file)
         if not lang:
             continue
         [trans, untrans, fuzzy, obsolete]  = l10n.get_msgattribs(file)
@@ -186,25 +191,28 @@ def main():
 
     if to_email_id:
         import smtplib
+        # Ensure compatibility of the email module all the way to Python 2.3
+        try:
+            from email.message import Message
+        except ImportError:
+            from email.Message import Message
+
+        msg = Message()
+        msg["From"] = FROM_ADDRESS
+        msg["To"] = to_email_id
+        msg["Subject"] = SUBJECT_TEMPLATE % (branch_name, wc_version)
+        msg["X-Mailer"] = "l10n-report.py r%s" % _rev()
+        msg["Reply-To"] = LIST_ADDRESS
+        msg["Mail-Followup-To"] = LIST_ADDRESS
+        # http://www.iana.org/assignments/auto-submitted-keywords/auto-submitted-keywords.xhtml
+        msg["Auto-Submitted"] = 'auto-generated'
+        msg.set_type("text/plain")
+        msg.set_payload("\n".join((title, format_head, format_line, body)))
 
         server = smtplib.SMTP('localhost')
-        email_from = "From: Subversion Translation Status <noreply@subversion.apache.org>"
-        email_to = "To: %s" % to_email_id
-        email_sub = "Subject: [l10n] Translation status report for %s r%s" \
-                     % (branch_name, wc_version)
-        x_headers = "\n".join([
-          "X-Mailer: l10n-report.py r%ld" % _rev(),
-          "Reply-To: %s" % LIST_ADDRESS,
-          "Mail-Followup-To: %s" % LIST_ADDRESS,
-          # http://www.iana.org/assignments/auto-submitted-keywords/auto-submitted-keywords.xhtml
-          "Auto-Submitted: auto-generated",
-        ]);
-
-        msg = "\n".join((email_from, email_to, email_sub, x_headers,
-                        "", # blank line at end of headers
-                        title, format_head, format_line, body))
-
-        server.sendmail(email_from, email_to, msg)
+        server.sendmail("From: " + FROM_ADDRESS,
+                        "To: " + to_email_id,
+                        msg.as_string())
         print("The report is sent to '%s' email id." % to_email_id)
     else:
         print("\nYou have not passed '-m' option, so email is not sent.")
