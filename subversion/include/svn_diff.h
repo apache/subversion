@@ -844,7 +844,7 @@ typedef struct svn_diff_hunk_t svn_diff_hunk_t;
  * @since New in 1.7.
  */
 svn_error_t *
-svn_diff_hunk_readline_diff_text(const svn_diff_hunk_t *hunk,
+svn_diff_hunk_readline_diff_text(svn_diff_hunk_t *hunk,
                                  svn_stringbuf_t **stringbuf,
                                  const char **eol,
                                  svn_boolean_t *eof,
@@ -864,7 +864,7 @@ svn_diff_hunk_readline_diff_text(const svn_diff_hunk_t *hunk,
  * @since New in 1.7.
  */
 svn_error_t *
-svn_diff_hunk_readline_original_text(const svn_diff_hunk_t *hunk,
+svn_diff_hunk_readline_original_text(svn_diff_hunk_t *hunk,
                                      svn_stringbuf_t **stringbuf,
                                      const char **eol,
                                      svn_boolean_t *eof,
@@ -879,7 +879,7 @@ svn_diff_hunk_readline_original_text(const svn_diff_hunk_t *hunk,
  * @since New in 1.7.
  */
 svn_error_t *
-svn_diff_hunk_readline_modified_text(const svn_diff_hunk_t *hunk,
+svn_diff_hunk_readline_modified_text(svn_diff_hunk_t *hunk,
                                      svn_stringbuf_t **stringbuf,
                                      const char **eol,
                                      svn_boolean_t *eof,
@@ -888,18 +888,18 @@ svn_diff_hunk_readline_modified_text(const svn_diff_hunk_t *hunk,
 
 /** Reset the diff text of @a hunk so it can be read again from the start.
  * @since New in 1.7. */
-svn_error_t *
-svn_diff_hunk_reset_diff_text(const svn_diff_hunk_t *hunk);
+void
+svn_diff_hunk_reset_diff_text(svn_diff_hunk_t *hunk);
 
 /** Reset the original text of @a hunk so it can be read again from the start.
  * @since New in 1.7. */
-svn_error_t *
-svn_diff_hunk_reset_original_text(const svn_diff_hunk_t *hunk);
+void
+svn_diff_hunk_reset_original_text(svn_diff_hunk_t *hunk);
 
 /** Reset the modified text of @a hunk so it can be read again from the start.
  * @since New in 1.7. */
-svn_error_t *
-svn_diff_hunk_reset_modified_text(const svn_diff_hunk_t *hunk);
+void
+svn_diff_hunk_reset_modified_text(svn_diff_hunk_t *hunk);
 
 /** Return the line offset of the original hunk text,
  * as parsed from the hunk header.
@@ -941,6 +941,7 @@ svn_diff_hunk_get_trailing_context(const svn_diff_hunk_t *hunk);
 
 /**
  * Data type to manage parsing of properties in patches.
+ * API users should not allocate structures of this type directly.
  *
  * @since New in 1.7. */
 typedef struct svn_prop_patch_t {
@@ -957,15 +958,10 @@ typedef struct svn_prop_patch_t {
 
 /**
  * Data type to manage parsing of patches.
+ * API users should not allocate structures of this type directly.
  *
  * @since New in 1.7. */
 typedef struct svn_patch_t {
-  /** Path to the patch file. */
-  const char *path;
-
-  /** The patch file itself. */
-  apr_file_t *patch_file;
-
   /**
    * The old and new file names as retrieved from the patch file.
    * These paths are UTF-8 encoded and canonicalized, but otherwise
@@ -992,6 +988,20 @@ typedef struct svn_patch_t {
   svn_boolean_t reverse;
 } svn_patch_t;
 
+/* An opaque type representing an open patch file.
+ *
+ * @since New in 1.7. */
+typedef struct svn_patch_file_t svn_patch_file_t;
+
+/* Open @a patch_file at @a local_abspath.
+ * Allocate @a patch_file in @a result_pool.
+ *
+ * @since New in 1.7. */
+svn_error_t *
+svn_diff_open_patch_file(svn_patch_file_t **patch_file,
+                         const char *local_abspath,
+                         apr_pool_t *result_pool);
+
 /**
  * Return the next @a *patch in @a patch_file.
  * If no patch can be found, set @a *patch to NULL.
@@ -1004,20 +1014,21 @@ typedef struct svn_patch_t {
  * @since New in 1.7. */
 svn_error_t *
 svn_diff_parse_next_patch(svn_patch_t **patch,
-                          apr_file_t *patch_file,
+                          svn_patch_file_t *patch_file,
                           svn_boolean_t reverse,
                           svn_boolean_t ignore_whitespace,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);
 
 /**
- * Dispose of @a patch, closing any streams used by it.
+ * Dispose of @a patch_file.
  * Use @a scratch_pool for all temporary allocations.
  *
  * @since New in 1.7.
  */
 svn_error_t *
-svn_diff_close_patch(const svn_patch_t *patch, apr_pool_t *scratch_pool);
+svn_diff_close_patch_file(svn_patch_file_t *patch_file,
+                          apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

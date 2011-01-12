@@ -492,9 +492,9 @@ INSERT INTO NODES (
        changed_revision, changed_date, changed_author,
        checksum, properties, translated_size, last_mod_time,
        dav_cache, symlink_target, file_external )
-SELECT wc_id, local_relpath, 0 AS op_depth, parent_relpath,
+SELECT wc_id, local_relpath, 0 /*op_depth*/, parent_relpath,
        repos_id, repos_relpath, revnum,
-       presence, depth, NULL AS moved_here, NULL AS moved_to, kind,
+       presence, depth, NULL /*moved_here*/, NULL /*moved_to*/, kind,
        changed_rev, changed_date, changed_author,
        checksum, properties, translated_size, last_mod_time,
        dav_cache, symlink_target, file_external
@@ -506,12 +506,12 @@ INSERT INTO NODES (
        changed_revision, changed_date, changed_author,
        checksum, properties, translated_size, last_mod_time,
        dav_cache, symlink_target, file_external )
-SELECT wc_id, local_relpath, 2 AS op_depth, parent_relpath,
+SELECT wc_id, local_relpath, 2 /*op_depth*/, parent_relpath,
        copyfrom_repos_id, copyfrom_repos_path, copyfrom_revnum,
-       presence, depth, NULL AS moved_here, NULL AS moved_to, kind,
+       presence, depth, NULL /*moved_here*/, NULL /*moved_to*/, kind,
        changed_rev, changed_date, changed_author,
        checksum, properties, translated_size, last_mod_time,
-       NULL AS dav_cache, symlink_target, NULL AS file_external
+       NULL /*dav_cache*/, symlink_target, NULL /*file_external*/
 FROM WORKING_NODE;
 
 DROP TABLE BASE_NODE;

@@ -32,9 +32,9 @@
 
 
 static svn_error_t *
-version(apr_pool_t *pool)
+version(svn_boolean_t quiet, apr_pool_t *pool)
 {
-  return svn_opt_print_help3(NULL, "svnversion", TRUE, FALSE, NULL, NULL,
+  return svn_opt_print_help3(NULL, "svnversion", TRUE, quiet, NULL, NULL,
                              NULL, NULL, NULL, NULL, pool);
 }
 
@@ -128,6 +128,8 @@ main(int argc, const char *argv[])
   apr_getopt_t *os;
   svn_node_kind_t kind;
   svn_wc_context_t *wc_ctx;
+  svn_boolean_t quiet = FALSE;
+  svn_boolean_t is_version = FALSE;
   const apr_getopt_option_t options[] =
     {
       {"no-newline", 'n', 0, N_("do not output the trailing newline")},
@@ -135,6 +137,8 @@ main(int argc, const char *argv[])
       {"help", 'h', 0, N_("display this help")},
       {"version", SVNVERSION_OPT_VERSION, 0,
        N_("show program version information")},
+      {"quiet",         'q', 0,
+       N_("no progress (only errors) to stderr")},
       {0,             0,  0,  0}
     };
 
@@ -193,12 +197,14 @@ main(int argc, const char *argv[])
         case 'c':
           committed = TRUE;
           break;
+        case 'q':
+          quiet = TRUE;
+          break;
         case 'h':
           help(options, pool);
           break;
         case SVNVERSION_OPT_VERSION:
-          SVN_INT_ERR(version(pool));
-          exit(0);
+          is_version = TRUE;
           break;
         default:
           usage(pool);
@@ -206,6 +212,11 @@ main(int argc, const char *argv[])
         }
     }
 
+  if (is_version)
+    {
+      SVN_INT_ERR(version(quiet, pool));
+      exit(0);
+    }
   if (os->ind > argc || os->ind < argc - 2)
     {
       usage(pool);

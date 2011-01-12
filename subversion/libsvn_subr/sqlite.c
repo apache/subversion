@@ -694,7 +694,7 @@ check_format(svn_sqlite__db_t *db,
                            current_schema);
 }
 
-static volatile svn_atomic_t sqlite_init_state;
+static volatile svn_atomic_t sqlite_init_state = 0;
 
 /* If possible, verify that SQLite was compiled in a thread-safe
    manner. */

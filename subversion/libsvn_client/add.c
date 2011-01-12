@@ -462,6 +462,11 @@ struct add_with_write_lock_baton {
   svn_boolean_t force;
   svn_boolean_t no_ignore;
   svn_client_ctx_t *ctx;
+
+  /* Absolute path to the first existing parent directory of local_abspath.
+   * If not NULL, all missing parents of local_abspath must be created
+   * before local_abspath can be added. */
+  const char *existing_parent_abspath;
 };
 
 /* The main logic of the public svn_client_add4. */
@@ -471,6 +476,47 @@ add(void *baton, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
   svn_node_kind_t kind;
   svn_error_t *err;
   struct add_with_write_lock_baton *b = baton;
+
+  if (b->existing_parent_abspath)
+    {
+      const char *parent_abspath;
+      const char *child_relpath;
+      apr_array_header_t *components;
+      int i;
+      apr_pool_t *iterpool;
+
+      parent_abspath = b->existing_parent_abspath;
+      child_relpath = svn_dirent_is_child(b->existing_parent_abspath,
+                                          b->local_abspath, NULL);
+      components = svn_path_decompose(child_relpath, scratch_pool);
+      iterpool = svn_pool_create(scratch_pool);
+      for (i = 0; i < components->nelts - 1; i++)
+        {
+          const char *component;
+          svn_node_kind_t disk_kind;
+
+          svn_pool_clear(iterpool);
+
+          if (b->ctx->cancel_func)
+            SVN_ERR(b->ctx->cancel_func(b->ctx->cancel_baton));
+
+          component = APR_ARRAY_IDX(components, i, const char *);
+          parent_abspath = svn_dirent_join(parent_abspath, component,
+                                           scratch_pool);
+          SVN_ERR(svn_io_check_path(parent_abspath, &disk_kind, iterpool));
+          if (disk_kind != svn_node_none && disk_kind != svn_node_dir)
+            return svn_error_createf(SVN_ERR_CLIENT_NO_VERSIONED_PARENT, NULL,
+                                     _("'%s' prevents creating parent of '%s'"),
+                                     parent_abspath, b->local_abspath);
+
+          SVN_ERR(svn_io_make_dir_recursively(parent_abspath, scratch_pool));
+          SVN_ERR(svn_wc_add_from_disk(b->ctx->wc_ctx, parent_abspath,
+                                       b->ctx->notify_func2,
+                                       b->ctx->notify_baton2,
+                                       scratch_pool));
+        }
+      svn_pool_destroy(iterpool);
+    }
 
   SVN_ERR(svn_io_check_path(b->local_abspath, &kind, scratch_pool));
   if (kind == svn_node_dir)
@@ -505,26 +551,27 @@ add(void *baton, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 }
 
 
-/* Go up the directory tree, looking for a versioned directory.  If found,
-   add all the intermediate directories.  Otherwise, return
-   SVN_ERR_CLIENT_NO_VERSIONED_PARENT. */
-/* ### This function needs rewriting into its callers in a style that finds the
-       parent and then acquires an infinite depth lock there for the entire
-       operation */
+/* Go up the directory tree from LOCAL_ABSPATH, looking for a versioned
+ * directory.  If found, return its path in *EXISTING_PARENT_ABSPATH.
+ * Otherwise, return SVN_ERR_CLIENT_NO_VERSIONED_PARENT. */
 static svn_error_t *
-add_parent_dirs(svn_client_ctx_t *ctx,
-                const char *local_abspath,
-                apr_pool_t *scratch_pool)
+find_existing_parent(const char **existing_parent_abspath,
+                     svn_client_ctx_t *ctx,
+                     const char *local_abspath,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
 {
   int format;
   const char *parent_abspath;
-  svn_boolean_t own_lock;
   svn_wc_context_t *wc_ctx = ctx->wc_ctx;
 
   SVN_ERR(svn_wc_check_wc2(&format, wc_ctx, local_abspath, scratch_pool));
 
   if (format > 0)
-    return SVN_NO_ERROR;
+    {
+      *existing_parent_abspath = apr_pstrdup(result_pool, local_abspath);
+      return SVN_NO_ERROR;
+    }
 
   if (svn_dirent_is_root(local_abspath, strlen(local_abspath)))
     return svn_error_create(SVN_ERR_CLIENT_NO_VERSIONED_PARENT, NULL, NULL);
@@ -538,25 +585,11 @@ add_parent_dirs(svn_client_ctx_t *ctx,
 
   parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
 
-  SVN_ERR(add_parent_dirs(ctx, parent_abspath, scratch_pool));
-
-  SVN_ERR(svn_wc_locked2(&own_lock, NULL, wc_ctx, parent_abspath,
-                         scratch_pool));
-
-  if (!own_lock)
-    SVN_ERR(svn_wc__acquire_write_lock(NULL, wc_ctx, parent_abspath, FALSE,
-                                       scratch_pool, scratch_pool));
-
   if (ctx->cancel_func)
     SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
-  SVN_ERR(svn_wc_add_from_disk(wc_ctx, local_abspath,
-                               ctx->notify_func2, ctx->notify_baton2,
-                               scratch_pool));
-  /* ### New dir gets added with its own per-directory lock which we
-     must release.  This code should be redundant when we move to a
-     single db. */
-  SVN_ERR(svn_wc__release_write_lock(wc_ctx, parent_abspath, scratch_pool));
+  SVN_ERR(find_existing_parent(existing_parent_abspath, ctx, parent_abspath,
+                               result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -594,12 +627,17 @@ svn_client_add4(const char *path,
   else
     parent_abspath = svn_dirent_dirname(local_abspath, pool);
 
+  baton.existing_parent_abspath = NULL;
   if (add_parents)
     {
       apr_pool_t *subpool;
+      const char *existing_parent_abspath;
 
       subpool = svn_pool_create(pool);
-      SVN_ERR(add_parent_dirs(ctx, parent_abspath, subpool));
+      SVN_ERR(find_existing_parent(&existing_parent_abspath, ctx,
+                                   parent_abspath, pool, subpool));
+      if (strcmp(existing_parent_abspath, parent_abspath) != 0)
+        baton.existing_parent_abspath = existing_parent_abspath;
       svn_pool_destroy(subpool);
     }
 
@@ -609,8 +647,10 @@ svn_client_add4(const char *path,
   baton.no_ignore = no_ignore;
   baton.ctx = ctx;
   SVN_ERR(svn_wc__call_with_write_lock(add, &baton, ctx->wc_ctx,
-                                       parent_abspath, FALSE,
-                                       pool, pool));
+                                       baton.existing_parent_abspath
+                                         ? baton.existing_parent_abspath
+                                         : parent_abspath,
+                                       FALSE, pool, pool));
   return SVN_NO_ERROR;
 }
 

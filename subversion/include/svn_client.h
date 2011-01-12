@@ -1302,7 +1302,7 @@ svn_client_update(svn_revnum_t *result_rev,
  *                          the working copy was actually switched.
  * @param[in] path      The directory to be switched.  This need not be the
  *              root of a working copy.
- * @param[in] URL       The repository URL to switch to.
+ * @param[in] url       The repository URL to switch to.
  * @param[in] peg_revision  The peg revision.
  * @param[in] revision  The operative revision.
  * @param[in] depth     The depth of the operation.  If #svn_depth_infinity,

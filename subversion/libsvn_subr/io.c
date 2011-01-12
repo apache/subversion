@@ -637,7 +637,7 @@ svn_io_copy_link(const char *src,
 }
 
 /* Temporary directory name cache for svn_io_temp_dir() */
-static volatile svn_atomic_t temp_dir_init_state;
+static volatile svn_atomic_t temp_dir_init_state = 0;
 static const char *temp_dir;
 
 /* Helper function to initialize temp dir. Passed to svn_atomic__init_once */
@@ -1067,14 +1067,15 @@ svn_error_t *svn_io_file_create(const char *file,
 {
   apr_file_t *f;
   apr_size_t written;
-  svn_error_t *err;
+  svn_error_t *err = SVN_NO_ERROR;
 
   SVN_ERR(svn_io_file_open(&f, file,
                            (APR_WRITE | APR_CREATE | APR_EXCL),
                            APR_OS_DEFAULT,
                            pool));
-  err= svn_io_file_write_full(f, contents, strlen(contents),
-                              &written, pool);
+  if (contents && *contents)
+    err = svn_io_file_write_full(f, contents, strlen(contents),
+                                 &written, pool);
 
 
   return svn_error_return(

@@ -218,6 +218,8 @@ static const apr_getopt_option_t svnserve__options[] =
     {"help",             'h', 0, N_("display this help")},
     {"version",           SVNSERVE_OPT_VERSION, 0,
      N_("show program version information")},
+    {"quiet",            'q', 0,
+     N_("no progress (only errors) to stderr")},
     {0,                  0,   0, 0}
   };
 
@@ -260,7 +262,7 @@ static void help(apr_pool_t *pool)
   exit(0);
 }
 
-static svn_error_t * version(apr_pool_t *pool)
+static svn_error_t * version(svn_boolean_t quiet, apr_pool_t *pool)
 {
   const char *fs_desc_start
     = _("The following repository back-end (FS) modules are available:\n\n");
@@ -275,7 +277,7 @@ static svn_error_t * version(apr_pool_t *pool)
                            _("\nCyrus SASL authentication is available.\n"));
 #endif
 
-  return svn_opt_print_help3(NULL, "svnserve", TRUE, FALSE, version_footer->data,
+  return svn_opt_print_help3(NULL, "svnserve", TRUE, quiet, version_footer->data,
                              NULL, NULL, NULL, NULL, NULL, pool);
 }
 
@@ -393,6 +395,8 @@ int main(int argc, const char *argv[])
   int family = APR_INET;
   apr_int32_t sockaddr_info_flags = 0;
   svn_boolean_t prefer_v6 = FALSE;
+  svn_boolean_t quiet = FALSE;
+  svn_boolean_t is_version = FALSE;
   int mode_opt_count = 0;
   const char *config_filename = NULL;
   const char *pid_filename = NULL;
@@ -451,9 +455,12 @@ int main(int argc, const char *argv[])
           help(pool);
           break;
 
+        case 'q':
+          quiet = TRUE;
+          break;
+
         case SVNSERVE_OPT_VERSION:
-          SVN_INT_ERR(version(pool));
-          exit(0);
+          is_version = TRUE;
           break;
 
         case 'd':
@@ -575,6 +582,13 @@ int main(int argc, const char *argv[])
 
         }
     }
+
+  if (is_version)
+    {
+      SVN_INT_ERR(version(quiet, pool));
+      exit(0);
+    }
+
   if (os->ind != argc)
     usage(argv[0], pool);
 

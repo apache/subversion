@@ -1054,7 +1054,7 @@ subcommand_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   SVN_ERR(svn_opt_print_help3(os, "svndumpfilter",
                               opt_state ? opt_state->version : FALSE,
-                              FALSE, NULL,
+                              opt_state ? opt_state->quiet : FALSE, NULL,
                               header, cmd_table, options_table, NULL,
                               NULL, pool));
 
@@ -1336,6 +1336,7 @@ main(int argc, const char *argv[])
           break;
         case svndumpfilter__version:
           opt_state.version = TRUE;
+          break;
         case svndumpfilter__quiet:
           opt_state.quiet = TRUE;
           break;
@@ -1385,6 +1386,7 @@ main(int argc, const char *argv[])
               static const svn_opt_subcommand_desc2_t pseudo_cmd =
                 { "--version", subcommand_help, {0}, "",
                   {svndumpfilter__version,  /* must accept its own option */
+                   svndumpfilter__quiet,
                   } };
 
               subcommand = &pseudo_cmd;

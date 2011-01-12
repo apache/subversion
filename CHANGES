@@ -9,7 +9,9 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.15
    * fix 'svn export' regression from 1.6.13 (r1032970)
    * fix 'svn export' mistakenly uri-encodes paths (issue #3745)
    * fix server-side memory leaks triggered by 'blame -g' (r1032808)
+            This has been tracked as CVE-2010-4644
    * prevent crash in mod_dav_svn when using SVNParentPath (r1033166)
+            This has been tracked as CVE-2010-4539
    * allow 'log -g' to continue in the face of invalid mergeinfo (r1028108)
    * filter unreadable paths for 'svn ls' and 'svn co' (r997026, -070, -474)
    * fix abort in 'svn blame -g' (issue #3666)
