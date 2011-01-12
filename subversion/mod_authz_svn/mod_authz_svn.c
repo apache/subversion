@@ -42,6 +42,7 @@
 #include "svn_config.h"
 #include "svn_string.h"
 #include "svn_repos.h"
+#include "svn_dirent_uri.h"
 
 
 extern module AP_MODULE_DECLARE_DATA authz_svn_module;
