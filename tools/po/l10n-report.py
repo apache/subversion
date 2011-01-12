@@ -201,6 +201,7 @@ def main():
         ]);
 
         msg = "\n".join((email_from, email_to, email_sub, x_headers,
+                        "", # blank line at end of headers
                         title, format_head, format_line, body))
 
         server.sendmail(email_from, email_to, msg)
