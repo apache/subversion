@@ -228,6 +228,15 @@ Candidate changes:
      Local fix.  users@ reports.
    Votes:
 
+ * r1058269
+   Fix issue #3486, "attempt to add tree conflict that already exists" again.
+   Justification:
+     Users should not be able to run into this condition.
+   Branch:
+     ^/subversion/branches/1.6.x-r1058269
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
