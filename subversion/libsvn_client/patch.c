@@ -1939,8 +1939,7 @@ create_missing_parents(patch_target_t *target,
 
       svn_pool_clear(iterpool);
 
-      component = APR_ARRAY_IDX(components, i,
-                                const char *);
+      component = APR_ARRAY_IDX(components, i, const char *);
       local_abspath = svn_dirent_join(local_abspath, component, scratch_pool);
 
       SVN_ERR(svn_wc_read_kind(&wc_kind, ctx->wc_ctx, local_abspath, TRUE,
@@ -1994,8 +1993,7 @@ create_missing_parents(patch_target_t *target,
       for (i = 0; i < present_components; i++)
         {
           const char *component;
-          component = APR_ARRAY_IDX(components, i,
-                                    const char *);
+          component = APR_ARRAY_IDX(components, i, const char *);
           local_abspath = svn_dirent_join(local_abspath,
                                           component, scratch_pool);
         }
@@ -2015,10 +2013,9 @@ create_missing_parents(patch_target_t *target,
 
           svn_pool_clear(iterpool);
 
-          component = APR_ARRAY_IDX(components, i,
-                                    const char *);
+          component = APR_ARRAY_IDX(components, i, const char *);
           local_abspath = svn_dirent_join(local_abspath, component,
-                                     scratch_pool);
+                                          scratch_pool);
           if (dry_run)
             {
               if (ctx->notify_func2)
