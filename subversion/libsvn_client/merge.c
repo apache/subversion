@@ -531,14 +531,13 @@ tree_conflict(merge_cmd_baton_t *merge_b,
   if (merge_b->record_only || merge_b->dry_run)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_wc__get_tree_conflict(&existing_conflict, conflict->path,
+  SVN_ERR(svn_wc__get_tree_conflict(&existing_conflict, victim_path,
                                     adm_access, merge_b->pool));
   if (existing_conflict == NULL)
     {
-      /* Construct the new conflict first to get the proper conflict->path */
+      /* There is no existing tree conflict so it is safe to add one. */
       SVN_ERR(make_tree_conflict(&conflict, merge_b, adm_access, victim_path,
                                  node_kind, action, reason));
-
       SVN_ERR(svn_wc__add_tree_conflict(conflict, adm_access, merge_b->pool));
     }
 
