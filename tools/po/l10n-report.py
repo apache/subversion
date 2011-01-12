@@ -188,7 +188,7 @@ def main():
         import smtplib
 
         server = smtplib.SMTP('localhost')
-        email_from = "From: SVN DEV <noreply@subversion.apache.org>"
+        email_from = "From: Subversion Translation Status <noreply@subversion.apache.org>"
         email_to = "To: %s" % to_email_id
         email_sub = "Subject: [l10n] Translation status report for %s r%s" \
                      % (branch_name, wc_version)
