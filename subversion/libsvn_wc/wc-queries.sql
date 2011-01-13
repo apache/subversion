@@ -423,21 +423,14 @@ SELECT checksum
 FROM pristine
 WHERE md5_checksum = ?1
 
--- STMT_SELECT_ANY_PRISTINE_REFERENCE
-SELECT 1 FROM nodes
-  WHERE checksum = ?1 OR checksum = ?2
-LIMIT 1
-
 -- STMT_SELECT_UNREFERENCED_PRISTINES
 SELECT checksum
 FROM pristine
-EXCEPT
-SELECT checksum FROM nodes
-  WHERE checksum IS NOT NULL
+WHERE refcount = 0
 
--- STMT_DELETE_PRISTINE
+-- STMT_DELETE_PRISTINE_IF_UNREFERENCED
 DELETE FROM pristine
-WHERE checksum = ?1
+WHERE checksum = ?1 AND refcount = 0
 
 -- STMT_SELECT_ACTUAL_CONFLICT_VICTIMS
 SELECT local_relpath
