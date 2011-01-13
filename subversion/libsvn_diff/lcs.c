@@ -191,7 +191,24 @@ svn_diff__lcs(svn_diff__position_t *position_list1, /* pointer to tail (ring) */
   lcs->next = NULL;
 
   if (position_list1 == NULL || position_list2 == NULL)
-    return lcs;
+    if (prefix_lines)
+      {
+        /* If there are prefix_lines, we create a specific prefix_lcs piece,
+         * which can be pre-pended to the normal lcs chain. */
+        svn_diff__lcs_t *prefix_lcs = apr_palloc(pool, sizeof(*lcs));
+        prefix_lcs->position[0] = apr_pcalloc(pool, sizeof(*lcs->position[0]));
+        prefix_lcs->position[0]->offset = 1;
+        prefix_lcs->position[1] = apr_pcalloc(pool, sizeof(*lcs->position[1]));
+        prefix_lcs->position[1]->offset = 1;
+        prefix_lcs->length = prefix_lines;
+        prefix_lcs->refcount = 1;
+        prefix_lcs->next = lcs;
+        return prefix_lcs;
+      }
+    else
+      {
+        return lcs;
+      }
 
   /* Calculate length of both sequences to be compared */
   length[0] = position_list1->offset - position_list1->next->offset + 1;
@@ -252,5 +269,22 @@ svn_diff__lcs(svn_diff__position_t *position_list1, /* pointer to tail (ring) */
   position_list1->next = sentinel_position[idx].next;
   position_list2->next = sentinel_position[abs(1 - idx)].next;
 
-  return lcs;
+  if (prefix_lines)
+    {
+      /* If there are prefix_lines, we create a specific prefix_lcs piece,
+       * which can be pre-pended to the normal lcs chain. */
+      svn_diff__lcs_t *prefix_lcs = apr_palloc(pool, sizeof(*lcs));
+      prefix_lcs->position[0] = apr_pcalloc(pool, sizeof(*lcs->position[0]));
+      prefix_lcs->position[0]->offset = 1;
+      prefix_lcs->position[1] = apr_pcalloc(pool, sizeof(*lcs->position[1]));
+      prefix_lcs->position[1]->offset = 1;
+      prefix_lcs->length = prefix_lines;
+      prefix_lcs->refcount = 1;
+      prefix_lcs->next = lcs;
+      return prefix_lcs;
+    }
+  else
+    {
+      return lcs;
+    }
 }

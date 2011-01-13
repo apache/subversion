@@ -43,22 +43,6 @@ svn_diff__diff(svn_diff__lcs_t *lcs,
   svn_diff_t *diff;
   svn_diff_t **diff_ref = &diff;
 
-  if (want_common && (original_start > 1))
-    {
-      /* we have a prefix to skip */
-      (*diff_ref) = apr_palloc(pool, sizeof(**diff_ref));
-
-      (*diff_ref)->type = svn_diff__type_common;
-      (*diff_ref)->original_start = 0;
-      (*diff_ref)->original_length = original_start - 1;
-      (*diff_ref)->modified_start = 0;
-      (*diff_ref)->modified_length = modified_start - 1;
-      (*diff_ref)->latest_start = 0;
-      (*diff_ref)->latest_length = 0;
-
-      diff_ref = &(*diff_ref)->next;
-    }
-
   while (1)
     {
       if (original_start < lcs->position[0]->offset
@@ -167,7 +151,7 @@ svn_diff_diff(svn_diff_t **diff,
   lcs = svn_diff__lcs(position_list[0], position_list[1], prefix_lines, subpool);
 
   /* Produce the diff */
-  *diff = svn_diff__diff(lcs, prefix_lines + 1, prefix_lines + 1, TRUE, pool);
+  *diff = svn_diff__diff(lcs, 1, 1, TRUE, pool);
 
   /* Get rid of all the data we don't have a use for anymore */
   svn_pool_destroy(subpool);
