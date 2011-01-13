@@ -2528,7 +2528,6 @@ svn_wc__db_pristine_remove(svn_wc__db_t *db,
 {
   svn_wc__db_pdh_t *pdh;
   const char *local_relpath;
-  svn_boolean_t is_referenced;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
   SVN_ERR_ASSERT(sha1_checksum != NULL);
