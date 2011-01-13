@@ -95,8 +95,9 @@ CREATE TABLE PRISTINE (
      Used to verify the pristine file is "proper". */
   size  INTEGER NOT NULL,
 
-  /* ### this will probably go away, in favor of counting references
-     ### that exist in NODES. Not yet used; always set to 1. */
+  /* The number of rows in the NODES table that have a 'checksum' column
+     value that refers to this row.  (References in other places, such as
+     in the ACTUAL_NODE table, are not counted.) */
   refcount  INTEGER NOT NULL,
 
   /* Alternative MD5 checksum used for communicating with older
@@ -480,6 +481,35 @@ CREATE TABLE NODES (
 CREATE INDEX I_NODES_PARENT ON NODES (wc_id, parent_relpath, op_depth);
 
 
+-- STMT_CREATE_NODES_TRIGGERS
+
+CREATE TRIGGER nodes_insert_trigger
+AFTER INSERT ON nodes
+/* WHEN NEW.checksum IS NOT NULL */
+BEGIN
+  UPDATE pristine SET refcount = refcount + 1
+  WHERE checksum = NEW.checksum;
+END;
+
+CREATE TRIGGER nodes_delete_trigger
+AFTER DELETE ON nodes
+/* WHEN OLD.checksum IS NOT NULL */
+BEGIN
+  UPDATE pristine SET refcount = refcount - 1
+  WHERE checksum = OLD.checksum;
+END;
+
+CREATE TRIGGER nodes_update_checksum_trigger
+AFTER UPDATE OF checksum ON nodes
+/* WHEN NEW.checksum IS NOT NULL OR OLD.checksum IS NOT NULL */
+BEGIN
+  UPDATE pristine SET refcount = refcount + 1
+  WHERE checksum = NEW.checksum;
+  UPDATE pristine SET refcount = refcount - 1
+  WHERE checksum = OLD.checksum;
+END;
+
+
 
 /* Format 20 introduces NODES and removes BASE_NODE and WORKING_NODE */
 
@@ -548,6 +578,19 @@ PRAGMA user_version = 22;
 
 -- STMT_UPGRADE_TO_23
 PRAGMA user_version = 23;
+
+
+/* ------------------------------------------------------------------------- */
+
+/* Format 24 involves no schema changes; it starts using the pristine
+   table's refcount column correctly. */
+
+-- STMT_UPGRADE_TO_24
+UPDATE pristine SET refcount =
+  (SELECT COUNT(*) FROM nodes
+   WHERE checksum = pristine.checksum /*OR checksum = pristine.md5_checksum*/);
+
+PRAGMA user_version = 24;
 
 
 /* ------------------------------------------------------------------------- */
