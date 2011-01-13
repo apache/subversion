@@ -932,7 +932,11 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
 
                  ### Maybe switch to NORMAL(1) when we use larger transaction
                      scopes */
-              "PRAGMA synchronous=OFF;"));
+              "PRAGMA synchronous=OFF;"
+              /* Enable recursive triggers so that a user trigger will fire
+               * in the deletion phase of an INSERT OR REPLACE statement.
+               * Requires SQLite >= 3.6.18 */
+              "PRAGMA recursive_triggers=ON;"));
 
 #if SQLITE_VERSION_AT_LEAST(3,6,19) && defined(SVN_DEBUG)
   /* When running in debug mode, enable the checking of foreign key
