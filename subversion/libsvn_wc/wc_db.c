@@ -2494,8 +2494,8 @@ svn_wc__db_pristine_get_sha1(const svn_checksum_t **sha1_checksum,
  * database row and the file on disk. */
 static svn_error_t *
 pristine_remove_if_unreferenced(svn_wc__db_wcroot_t *wcroot,
-                const svn_checksum_t *sha1_checksum,
-                apr_pool_t *scratch_pool)
+                                const svn_checksum_t *sha1_checksum,
+                                apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
   const char *pristine_abspath;
@@ -2587,7 +2587,8 @@ pristine_cleanup_wcroot(svn_wc__db_wcroot_t *wcroot,
 
       SVN_ERR(svn_sqlite__column_checksum(&sha1_checksum, stmt, 0,
                                           scratch_pool));
-      SVN_ERR(pristine_remove_if_unreferenced(wcroot, sha1_checksum, scratch_pool));
+      SVN_ERR(pristine_remove_if_unreferenced(wcroot, sha1_checksum,
+                                              scratch_pool));
     }
   SVN_ERR(svn_sqlite__reset(stmt));
 
