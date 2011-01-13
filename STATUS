@@ -139,6 +139,16 @@ Candidate changes for 1.5.10:
       -0: stsp (not a critical build or security fix -- maybe just
                 document the workaround instead?)
 
+ * r1058722
+   Initialize report_info_t's prop_encoding member in
+   libsvn_ra_serf/update.c:start_report() rather than using what was
+   previously in shared memory.
+   Justification:
+     No known problems with this, but using an unitialized struct member
+     is asking for problems.
+   Votes:
+     +1: pburba
+
 Approved changes:
 =================
 
