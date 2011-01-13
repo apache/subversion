@@ -237,6 +237,16 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r1058722
+   Initialize report_info_t's prop_encoding member in
+   libsvn_ra_serf/update.c:start_report() rather than using what was
+   previously in shared memory.
+   Justification:
+     No known problems with this, but using an unitialized struct member
+     is asking for problems.
+   Votes:
+     +1: pburba
+
 Veto-blocked changes:
 =====================
 
