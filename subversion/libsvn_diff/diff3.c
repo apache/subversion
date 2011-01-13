@@ -251,10 +251,14 @@ svn_diff_diff3(svn_diff_t **diff,
 {
   svn_diff__tree_t *tree;
   svn_diff__position_t *position_list[3];
+  svn_diff_datasource_e datasource[] = {svn_diff_datasource_original,
+                                        svn_diff_datasource_modified,
+                                        svn_diff_datasource_latest};
   svn_diff__lcs_t *lcs_om;
   svn_diff__lcs_t *lcs_ol;
   apr_pool_t *subpool;
   apr_pool_t *treepool;
+  apr_off_t prefix_lines = 0;
 
   *diff = NULL;
 
@@ -263,28 +267,30 @@ svn_diff_diff3(svn_diff_t **diff,
 
   svn_diff__tree_create(&tree, treepool);
 
+  SVN_ERR(vtable->datasources_open(diff_baton, &prefix_lines, datasource, 3));
+
   SVN_ERR(svn_diff__get_tokens(&position_list[0],
                                tree,
                                diff_baton, vtable,
                                svn_diff_datasource_original,
-                               FALSE,
-                               0,
+                               TRUE,
+                               prefix_lines,
                                subpool));
 
   SVN_ERR(svn_diff__get_tokens(&position_list[1],
                                tree,
                                diff_baton, vtable,
                                svn_diff_datasource_modified,
-                               FALSE,
-                               0,
+                               TRUE,
+                               prefix_lines,
                                subpool));
 
   SVN_ERR(svn_diff__get_tokens(&position_list[2],
                                tree,
                                diff_baton, vtable,
                                svn_diff_datasource_latest,
-                               FALSE,
-                               0,
+                               TRUE,
+                               prefix_lines,
                                subpool));
 
   /* Get rid of the tokens, we don't need them to calc the diff */
@@ -295,9 +301,9 @@ svn_diff_diff3(svn_diff_t **diff,
   svn_pool_destroy(treepool);
 
   /* Get the lcs for original-modified and original-latest */
-  lcs_om = svn_diff__lcs(position_list[0], position_list[1], 0,
+  lcs_om = svn_diff__lcs(position_list[0], position_list[1], prefix_lines,
                          subpool);
-  lcs_ol = svn_diff__lcs(position_list[0], position_list[2], 0,
+  lcs_ol = svn_diff__lcs(position_list[0], position_list[2], prefix_lines,
                          subpool);
 
   /* Produce a merged diff */
@@ -330,7 +336,7 @@ svn_diff_diff3(svn_diff_t **diff,
       }
     else
       {
-        sentinel_position[0].offset = 1;
+        sentinel_position[0].offset = prefix_lines + 1;
         sentinel_position[0].next = NULL;
         position_list[1] = &sentinel_position[0];
       }
@@ -344,7 +350,7 @@ svn_diff_diff3(svn_diff_t **diff,
       }
     else
       {
-        sentinel_position[1].offset = 1;
+        sentinel_position[1].offset = prefix_lines + 1;
         sentinel_position[1].next = NULL;
         position_list[2] = &sentinel_position[1];
       }
