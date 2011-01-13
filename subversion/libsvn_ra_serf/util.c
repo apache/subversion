@@ -914,7 +914,7 @@ svn_ra_serf__response_get_location(serf_bucket_t *response,
 
   headers = serf_bucket_response_get_headers(response);
   val = serf_bucket_headers_get(headers, "Location");
-  return val ? svn_uri_canonicalize(val, pool) : NULL;
+  return val ? svn_ra_serf__uri_canonicalize(val, pool, pool) : NULL;
 }
 
 /* Implements svn_ra_serf__response_handler_t */
@@ -1837,9 +1837,9 @@ svn_ra_serf__discover_vcc(const char **vcc_url,
       session->repos_root = session->repos_url;
       session->repos_root.path = apr_pstrdup(session->pool, url_buf->data);
       session->repos_root_str =
-        svn_uri_canonicalize(apr_uri_unparse(session->pool,
-                                             &session->repos_root, 0),
-                             session->pool);
+        svn_ra_serf__uri_canonicalize(apr_uri_unparse(session->pool,
+                                                      &session->repos_root, 0),
+                                      pool, session->pool);
     }
 
   /* Store the repository UUID in the cache. */
@@ -1933,4 +1933,36 @@ svn_ra_serf__error_on_status(int status_code,
     }
 
   return SVN_NO_ERROR;
+}
+
+
+static const char *
+relative_uri_normalize(const char *relpath,
+                       apr_pool_t *scratch_pool,
+                       apr_pool_t *result_pool)
+{
+  return svn_path_uri_encode(
+             svn_relpath_canonicalize(
+                 svn_path_uri_decode(relpath, scratch_pool),
+                 scratch_pool),
+             result_pool);
+}
+
+
+const char *
+svn_ra_serf__uri_canonicalize(const char *uri,
+                              apr_pool_t *scratch_pool,
+                              apr_pool_t *result_pool)
+{
+  if (svn_path_is_url(uri))
+    return svn_uri_canonicalize(uri, result_pool);
+
+  if (uri[0] == '/')
+    return apr_pstrcat(result_pool, "/", 
+                       relative_uri_normalize(uri + 1,
+                                              scratch_pool,
+                                              scratch_pool),
+                       NULL);
+  
+  return relative_uri_normalize(uri, scratch_pool, result_pool);
 }

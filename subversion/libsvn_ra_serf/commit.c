@@ -311,7 +311,8 @@ handle_checkout(serf_request_t *request,
       if (status)
         err = svn_error_compose_create(svn_error_wrap_apr(status, NULL), err);
 
-      ctx->resource_url = svn_uri_canonicalize(uri.path, ctx->pool);
+      ctx->resource_url = svn_ra_serf__uri_canonicalize(uri.path, pool,
+                                                        ctx->pool);
     }
 
   return err;
@@ -487,7 +488,8 @@ get_version_url(const char **checked_in_url,
 
       if (current_version)
         {
-          *checked_in_url = svn_uri_canonicalize(current_version->data, pool);
+          *checked_in_url =
+            svn_ra_serf__uri_canonicalize(current_version->data, pool, pool);
           return SVN_NO_ERROR;
         }
     }
@@ -542,7 +544,7 @@ get_version_url(const char **checked_in_url,
                                  _("Path '%s' not present"),
                                  session->repos_url.path);
 
-      root_checkout = svn_uri_canonicalize(root_checkout, pool);
+      root_checkout = svn_ra_serf__uri_canonicalize(root_checkout, pool, pool);
     }
 
   *checked_in_url = svn_path_url_add_component2(root_checkout, relpath, pool);
