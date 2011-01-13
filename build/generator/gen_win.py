@@ -1544,8 +1544,9 @@ class WinGeneratorBase(GeneratorBase):
     msg = 'Found SQLite version %s\n'
 
     major, minor, patch = version
-    if major < 3 or (major == 3 and minor < 4):
-      sys.stderr.write("ERROR: SQLite 3.4.0 or higher is required "
+    if major < 3 or (major == 3 and minor < 6) \
+                 or (major == 3 and minor == 6 and patch < 18):
+      sys.stderr.write("ERROR: SQLite 3.6.18 or higher is required "
                        "(%s found)\n" % self.sqlite_version);
       sys.exit(1)
     else:
