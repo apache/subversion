@@ -21,12 +21,14 @@ TODO:
 
   * eliminate identical prefix                 [DONE]
   * eliminate identical suffix                 [DONE]
-  * make diff3 and diff4 use datasources_open  [IN PROGRESS]
+  * make diff3 and diff4 use datasources_open  [DONE]
      (this may eliminate the need for datasource_open, and the flag
       datasource_opened in token.c#svn_diff__get_tokens)
   * implement (part of) increment_pointers and
     decrement_pointers with a macro            [DONE]
      (offers another 10% speedup)
+  * integrate (some of the) low-level optimizations for prefix/suffix
+    scanning, proposed by stefan2 [2]          []
   * revv svn_diff.h#svn_diff_fns_t             []
 
 Other wild ideas (may or may not be worth pursuing):
@@ -37,5 +39,9 @@ Other wild ideas (may or may not be worth pursuing):
     inserting a new line into the token tree, and the previous line had a
     match, first try to match the new token with the successor of the
     previously matched line, before binary-searching the tree for a match.
+  * Add some balancing to the token tree in token.c#svn_diff__tree_insert_token
+    to make sure it doesn't degenerate. We may want to investigate first
+    whether non-balancedness is really a problem in normal use cases.
 
 [1] http://en.wikipedia.org/wiki/Longest_common_subsequence_problem#Reduce_the_problem_set
+[2] http://svn.haxx.se/dev/archive-2011-01/0005.shtml
