@@ -30,11 +30,12 @@
  *    Examples: "/foo/bar", "X:/temp", "//server/share" and on Windows "A:/"
  *    But not: "http://server"
  *
- *  - a URI is an absolute path that starts with a '/' or a schema definition.
- *    Examples: "/", "/foo", "http://server", "svn+ssh://user@host:123/file"
- *    But not: "file", "dir/file", "A:/dir"
- *    ### Currently the URI implementation still allows relpaths as valid
- *    uris, but this will change soon.
+ * - a URI, for our purposes, is just a URL -- a URI-encoded, absolute
+ *    path that starts with a schema definition.
+ *    Examples: "http://server", "svn+ssh://user@host:123/My%20Stuff/file.doc"
+ *    But not: "file", "dir/file", "A:/dir", "/
+ *    ### Currently the URI implementation still allows relative URIs
+ *    ### as valid uris, but this will change soon.
  *
  *  - a relative path (relpath) is an unrooted path that can be joined to
  *    any other relative path, uri or dirent. A relative path is never
