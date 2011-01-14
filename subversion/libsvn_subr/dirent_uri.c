@@ -1819,6 +1819,7 @@ svn_uri_is_canonical(const char *uri, apr_pool_t *pool)
    *  - no '//'
    *  - lowercase URL scheme
    *  - lowercase URL hostname
+   *  - uppercase hex-encoded pair digits ("%AB", not "%ab")
    */
 
   if (*uri == '\0')

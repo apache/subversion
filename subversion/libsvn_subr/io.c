@@ -637,7 +637,7 @@ svn_io_copy_link(const char *src,
 }
 
 /* Temporary directory name cache for svn_io_temp_dir() */
-static volatile svn_atomic_t temp_dir_init_state;
+static volatile svn_atomic_t temp_dir_init_state = 0;
 static const char *temp_dir;
 
 /* Helper function to initialize temp dir. Passed to svn_atomic__init_once */

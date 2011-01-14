@@ -32,6 +32,7 @@
 #include "svn_client.h"
 #include "svn_dirent_uri.h"
 #include "svn_diff.h"
+#include "svn_hash.h"
 #include "svn_io.h"
 #include "svn_path.h"
 #include "svn_pools.h"
@@ -48,7 +49,7 @@
 
 typedef struct hunk_info_t {
   /* The hunk. */
-  const svn_diff_hunk_t *hunk;
+  svn_diff_hunk_t *hunk;
 
   /* The line where the hunk matched in the target file. */
   svn_linenum_t matched_line;
@@ -483,7 +484,7 @@ init_prop_target(prop_patch_target_t **prop_target,
 
   content_info = apr_pcalloc(result_pool, sizeof(*content_info));
 
-  /* All other fields in are FALSE or NULL due to apr_pcalloc().*/
+  /* All other fields are FALSE or NULL due to apr_pcalloc(). */
   content_info->current_line = 1;
   content_info->eol_style = svn_subst_eol_style_none;
   content_info->lines = apr_array_make(result_pool, 0,
@@ -834,7 +835,7 @@ seek_to_line(target_content_info_t *content_info, svn_linenum_t line,
  * Do temporary allocations in POOL. */
 static svn_error_t *
 match_hunk(svn_boolean_t *matched, target_content_info_t *content_info,
-           const svn_diff_hunk_t *hunk, int fuzz,
+           svn_diff_hunk_t *hunk, int fuzz,
            svn_boolean_t ignore_whitespace,
            svn_boolean_t match_modified, apr_pool_t *pool)
 {
@@ -950,7 +951,7 @@ match_hunk(svn_boolean_t *matched, target_content_info_t *content_info,
 static svn_error_t *
 scan_for_match(svn_linenum_t *matched_line,
                target_content_info_t *content_info,
-               const svn_diff_hunk_t *hunk, svn_boolean_t match_first,
+               svn_diff_hunk_t *hunk, svn_boolean_t match_first,
                svn_linenum_t upper_line, int fuzz,
                svn_boolean_t ignore_whitespace,
                svn_boolean_t match_modified,
@@ -1022,7 +1023,7 @@ scan_for_match(svn_linenum_t *matched_line,
 static svn_error_t *
 match_existing_target(svn_boolean_t *match,
                       target_content_info_t *content_info,
-                      const svn_diff_hunk_t *hunk,
+                      svn_diff_hunk_t *hunk,
                       svn_stream_t *stream,
                       apr_pool_t *scratch_pool)
 {
@@ -1087,7 +1088,7 @@ match_existing_target(svn_boolean_t *match,
 static svn_error_t *
 get_hunk_info(hunk_info_t **hi, patch_target_t *target,
               target_content_info_t *content_info,
-              const svn_diff_hunk_t *hunk, int fuzz,
+              svn_diff_hunk_t *hunk, int fuzz,
               svn_boolean_t ignore_whitespace,
               svn_boolean_t is_prop_hunk,
               svn_cancel_func_t cancel_func, void *cancel_baton,
@@ -1301,7 +1302,7 @@ copy_lines_to_target(target_content_info_t *content_info, svn_linenum_t line,
  * Do temporary allocations in POOL. */
 static svn_error_t *
 reject_hunk(patch_target_t *target, target_content_info_t *content_info,
-            const svn_diff_hunk_t *hunk, const char *prop_name,
+            svn_diff_hunk_t *hunk, const char *prop_name,
             apr_pool_t *pool)
 {
   const char *hunk_header;
@@ -1701,6 +1702,9 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
 
       svn_pool_clear(iterpool);
 
+      if (cancel_func)
+        SVN_ERR((cancel_func)(cancel_baton));
+
       hi = APR_ARRAY_IDX(target->content_info->hunks, i, hunk_info_t *);
       if (hi->already_applied)
         continue;
@@ -1935,8 +1939,7 @@ create_missing_parents(patch_target_t *target,
 
       svn_pool_clear(iterpool);
 
-      component = APR_ARRAY_IDX(components, i,
-                                const char *);
+      component = APR_ARRAY_IDX(components, i, const char *);
       local_abspath = svn_dirent_join(local_abspath, component, scratch_pool);
 
       SVN_ERR(svn_wc_read_kind(&wc_kind, ctx->wc_ctx, local_abspath, TRUE,
@@ -1990,8 +1993,7 @@ create_missing_parents(patch_target_t *target,
       for (i = 0; i < present_components; i++)
         {
           const char *component;
-          component = APR_ARRAY_IDX(components, i,
-                                    const char *);
+          component = APR_ARRAY_IDX(components, i, const char *);
           local_abspath = svn_dirent_join(local_abspath,
                                           component, scratch_pool);
         }
@@ -2011,10 +2013,9 @@ create_missing_parents(patch_target_t *target,
 
           svn_pool_clear(iterpool);
 
-          component = APR_ARRAY_IDX(components, i,
-                                    const char *);
+          component = APR_ARRAY_IDX(components, i, const char *);
           local_abspath = svn_dirent_join(local_abspath, component,
-                                     scratch_pool);
+                                          scratch_pool);
           if (dry_run)
             {
               if (ctx->notify_func2)
@@ -2211,6 +2212,9 @@ install_patched_prop_targets(patch_target_t *target,
 
       svn_pool_clear(iterpool);
 
+      if (ctx->cancel_func)
+        SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
+
       /* For a deleted prop we only set the value to NULL. */
       if (prop_target->operation == svn_diff_op_deleted)
         {
@@ -2267,8 +2271,6 @@ install_patched_prop_targets(patch_target_t *target,
             {
               SVN_ERR(svn_io_file_create(target->local_abspath, "",
                                          scratch_pool));
-              if (ctx->cancel_func)
-                SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
               SVN_ERR(svn_wc_add_from_disk(ctx->wc_ctx, target->local_abspath,
                                            /* suppress notification */
                                            NULL, NULL,
@@ -2368,14 +2370,14 @@ find_existing_children(void *baton,
 
 /* Indicate in *EMPTY whether the directory at LOCAL_ABSPATH has any
  * versioned or unversioned children. Consider any DELETED_TARGETS,
- * as well as paths listed in DELETED_ABSPATHS_LIST (which may be NULL)
- * as already deleted. Use WC_CTX as the working copy context.
+ * as well as paths occuring as keys of DELETED_ABSPATHS_HASH (which may
+ * be NULL) as already deleted. Use WC_CTX as the working copy context.
  * Do temporary allocations in SCRATCH_POOL. */
 static svn_error_t *
 check_dir_empty(svn_boolean_t *empty, const char *local_abspath,
                 svn_wc_context_t *wc_ctx,
                 apr_array_header_t *deleted_targets,
-                apr_array_header_t *deleted_abspath_list,
+                apr_hash_t *deleted_abspath_hash,
                 apr_pool_t *scratch_pool)
 {
   struct status_baton btn;
@@ -2423,13 +2425,17 @@ check_dir_empty(svn_boolean_t *empty, const char *local_abspath,
               break;
            }
         }
-      if (! deleted && deleted_abspath_list)
+      if (! deleted && deleted_abspath_hash)
         {
-          for (j = 0; j < deleted_abspath_list->nelts; j++)
+          apr_hash_index_t *hi;
+
+          for (hi = apr_hash_first(scratch_pool, deleted_abspath_hash);
+               hi;
+               hi = apr_hash_next(hi))
             {
               const char *abspath;
 
-              abspath = APR_ARRAY_IDX(deleted_abspath_list, j, const char *);
+              abspath = svn__apr_hash_index_key(hi);
               if (! svn_path_compare_paths(found, abspath))
                {
                   deleted = TRUE;
@@ -2447,33 +2453,6 @@ check_dir_empty(svn_boolean_t *empty, const char *local_abspath,
   return SVN_NO_ERROR;
 }
 
-/* Push a copy of EMPTY_DIR, allocated in RESULT_POOL, onto the EMPTY_DIRS
- * array if no directory matching EMPTY_DIR is already in the array. */
-static void
-push_if_unique(apr_array_header_t *empty_dirs, const char *empty_dir,
-               apr_pool_t *result_pool)
-{
-  svn_boolean_t is_unique;
-  int i;
-
-  is_unique = TRUE;
-  for (i = 0; i < empty_dirs->nelts; i++)
-    {
-      const char *empty_dir2;
-
-      empty_dir2 = APR_ARRAY_IDX(empty_dirs, i, const char *);
-      if (strcmp(empty_dir, empty_dir2) == 0)
-        {
-          is_unique = FALSE;
-          break;
-        }
-    }
-
-  if (is_unique)
-    APR_ARRAY_PUSH(empty_dirs, const char *) = apr_pstrdup(result_pool,
-                                                           empty_dir);
-}
-
 /* Delete all directories from the working copy which are left empty
  * by deleted TARGETS. Use client context CTX.
  * If DRY_RUN is TRUE, do not modify the working copy.
@@ -2482,11 +2461,13 @@ static svn_error_t *
 delete_empty_dirs(apr_array_header_t *targets_info, svn_client_ctx_t *ctx,
                   svn_boolean_t dry_run, apr_pool_t *scratch_pool)
 {
-  apr_array_header_t *empty_dirs;
+  apr_hash_t *empty_dirs;
+  apr_hash_t *non_empty_dirs;
   apr_array_header_t *deleted_targets;
   apr_pool_t *iterpool;
   svn_boolean_t again;
   int i;
+  apr_hash_index_t *hi;
 
   /* Get a list of all deleted targets. */
   deleted_targets = apr_array_make(scratch_pool, 0, sizeof(patch_target_t *));
@@ -2504,7 +2485,8 @@ delete_empty_dirs(apr_array_header_t *targets_info, svn_client_ctx_t *ctx,
     return SVN_NO_ERROR;
 
   /* Look for empty parent directories of deleted targets. */
-  empty_dirs = apr_array_make(scratch_pool, 0, sizeof(const char *));
+  empty_dirs = apr_hash_make(scratch_pool);
+  non_empty_dirs = apr_hash_make(scratch_pool);
   iterpool = svn_pool_create(scratch_pool);
   for (i = 0; i < targets_info->nelts; i++)
     {
@@ -2519,17 +2501,24 @@ delete_empty_dirs(apr_array_header_t *targets_info, svn_client_ctx_t *ctx,
 
       target_info = APR_ARRAY_IDX(targets_info, i, patch_target_info_t *);
       parent = svn_dirent_dirname(target_info->local_abspath, iterpool);
+
+      if (apr_hash_get(non_empty_dirs, parent, APR_HASH_KEY_STRING))
+        continue;
+      else if (apr_hash_get(empty_dirs, parent, APR_HASH_KEY_STRING))
+        continue;
+
       SVN_ERR(check_dir_empty(&parent_empty, parent, ctx->wc_ctx,
                               deleted_targets, NULL, iterpool));
       if (parent_empty)
-        {
-          APR_ARRAY_PUSH(empty_dirs, const char *) =
-            apr_pstrdup(scratch_pool, parent);
-        }
+        apr_hash_set(empty_dirs, apr_pstrdup(scratch_pool, parent),
+                     APR_HASH_KEY_STRING, "");
+      else
+        apr_hash_set(non_empty_dirs, apr_pstrdup(scratch_pool, parent),
+                     APR_HASH_KEY_STRING, "");
     }
 
   /* We have nothing to do if there aren't any empty directories. */
-  if (empty_dirs->nelts == 0)
+  if (apr_hash_count(empty_dirs) == 0)
     {
       svn_pool_destroy(iterpool);
       return SVN_NO_ERROR;
@@ -2538,7 +2527,7 @@ delete_empty_dirs(apr_array_header_t *targets_info, svn_client_ctx_t *ctx,
   /* Determine the minimal set of empty directories we need to delete. */
   do
     {
-      apr_array_header_t *empty_dirs_copy;
+      apr_hash_t *empty_dirs_copy;
 
       svn_pool_clear(iterpool);
 
@@ -2548,32 +2537,43 @@ delete_empty_dirs(apr_array_header_t *targets_info, svn_client_ctx_t *ctx,
       /* Rebuild the empty dirs list, replacing empty dirs which have
        * an empty parent with their parent. */
       again = FALSE;
-      empty_dirs_copy = apr_array_copy(iterpool, empty_dirs);
-      apr_array_clear(empty_dirs);
-      for (i = 0; i < empty_dirs_copy->nelts; i++)
+      empty_dirs_copy = apr_hash_copy(iterpool, empty_dirs);
+      SVN_ERR(svn_hash__clear(empty_dirs, iterpool));
+
+      for (hi = apr_hash_first(iterpool, empty_dirs_copy);
+           hi;
+           hi = apr_hash_next(hi))
         {
           svn_boolean_t parent_empty;
           const char *empty_dir;
           const char *parent;
 
-          empty_dir = APR_ARRAY_IDX(empty_dirs_copy, i, const char *);
+          empty_dir = svn__apr_hash_index_key(hi);
           parent = svn_dirent_dirname(empty_dir, iterpool);
+
+          if (apr_hash_get(empty_dirs, parent, APR_HASH_KEY_STRING))
+            continue;
+
           SVN_ERR(check_dir_empty(&parent_empty, parent, ctx->wc_ctx,
                                   deleted_targets, empty_dirs_copy,
                                   iterpool));
           if (parent_empty)
             {
               again = TRUE;
-              push_if_unique(empty_dirs, parent, scratch_pool);
+              apr_hash_set(empty_dirs, apr_pstrdup(scratch_pool, parent),
+                           APR_HASH_KEY_STRING, "");
             }
           else
-            push_if_unique(empty_dirs, empty_dir, scratch_pool);
+            apr_hash_set(empty_dirs, apr_pstrdup(scratch_pool, empty_dir),
+                         APR_HASH_KEY_STRING, "");
         }
     }
   while (again);
 
   /* Finally, delete empty directories. */
-  for (i = 0; i < empty_dirs->nelts; i++)
+  for (hi = apr_hash_first(scratch_pool, empty_dirs);
+       hi;
+       hi = apr_hash_next(hi))
     {
       const char *empty_dir;
 
@@ -2582,7 +2582,12 @@ delete_empty_dirs(apr_array_header_t *targets_info, svn_client_ctx_t *ctx,
       if (ctx->cancel_func)
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
-      empty_dir = APR_ARRAY_IDX(empty_dirs, i, const char *);
+      empty_dir = svn__apr_hash_index_key(hi);
+      if (! dry_run)
+        SVN_ERR(svn_wc_delete4(ctx->wc_ctx, empty_dir, FALSE, FALSE,
+                               ctx->cancel_func, ctx->cancel_baton,
+                               NULL, NULL, /* no duplicate notification */
+                               iterpool));
       if (ctx->notify_func2)
         {
           svn_wc_notify_t *notify;
@@ -2591,11 +2596,6 @@ delete_empty_dirs(apr_array_header_t *targets_info, svn_client_ctx_t *ctx,
                                         iterpool);
           (*ctx->notify_func2)(ctx->notify_baton2, notify, iterpool);
         }
-      if (! dry_run)
-        SVN_ERR(svn_wc_delete4(ctx->wc_ctx, empty_dir, FALSE, FALSE,
-                               ctx->cancel_func, ctx->cancel_baton,
-                               NULL, NULL, /* no duplicate notification */
-                               iterpool));
     }
   svn_pool_destroy(iterpool);
 

@@ -373,7 +373,7 @@ clear_cache(void *data)
 }
 #endif /* APR_HAS_THREADS */
 
-static volatile svn_atomic_t bdb_cache_state;
+static volatile svn_atomic_t bdb_cache_state = 0;
 
 static svn_error_t *
 bdb_init_cb(void *baton, apr_pool_t *pool)
