@@ -25,31 +25,39 @@
  *
  * This library makes a clear distinction between several path formats:
  *
- *  - a dirent is a path on (local) disc or a UNC path (Windows) in either
- *    relative or absolute format
- *    Examples: "/foo/bar", "X:/temp", "//server/share" and on Windows "A:/"
- *    But not: "http://server"
+ *  - a dirent is a path on (local) disc or a UNC path (Windows) in
+ *    either relative or absolute format.
+ *    Examples:
+ *       "/foo/bar", "X:/temp", "//server/share", "A:/" (Windows only)
+ *    But not:
+ *       "http://server"
  *
- * - a URI, for our purposes, is just a URL -- a URI-encoded, absolute
- *    path that starts with a schema definition.
- *    Examples: "http://server", "svn+ssh://user@host:123/My%20Stuff/file.doc"
- *    But not: "file", "dir/file", "A:/dir", "/
- *    ### Currently the URI implementation still allows relative URIs
- *    ### as valid uris, but this will change soon.
+ * - a uri, for our purposes, is a percent-encoded, absolute path
+ *    (URI) that starts with a schema definition.  In practice, these
+ *    tend to look like URLs, but never carry query strings.
+ *    Examples:
+ *       "http://server", "file:///path/to/repos",
+ *       "svn+ssh://user@host:123/My%20Stuff/file.doc"
+ *    But not:
+ *       "file", "dir/file", "A:/dir", "/My%20Stuff/file.doc"
+ *    ### Currently the uri implementation still allows relative URIs
+ *    ### (carrying both relative and absolute path data) as valid
+ *    ### uris, but this will change soon.
  *
- *  - a relative path (relpath) is an unrooted path that can be joined to
- *    any other relative path, uri or dirent. A relative path is never
- *    rooted/prefixed by a '/'.
- *    Examples: "file", "dir/file", "dir/subdir/../file"
- *    But not: "/file", "http://server/file"
+ *  - a relative path (relpath) is an unrooted path that can be joined
+ *    to any other relative path, uri or dirent. A relative path is
+ *    never rooted/prefixed by a '/'.
+ *    Examples:
+ *       "file", "dir/file", "dir/subdir/../file"
+ *    But not:
+ *       "/file", "http://server/file"
  *
- *  - a Subversion filesystem path (fspath), otherwise known as a path
- *    within a repository, is a path relative to the root of the repository
- *    filesystem, that starts with a slash ("/").  The rules for a fspath
- *    are the same as for a relpath except for the leading '/'.  A fspath
- *    never ends with '/' except when the whole path is just '/'.
- *
- *    The fspath API is private.
+ *  - a Subversion filesystem path (fspath) -- otherwise known as a
+ *    path within a repository -- is a path relative to the root of
+ *    the repository filesystem, that starts with a slash ("/").  The
+ *    rules for a fspath are the same as for a relpath except for the
+ *    leading '/'.  A fspath never ends with '/' except when the whole
+ *    path is just '/'.  ### NOTE:  The fspath API is private.
  *
  * This distinction is needed because on Windows we have to handle some
  * dirents and URIs differently. Since it's not possible to determine from
