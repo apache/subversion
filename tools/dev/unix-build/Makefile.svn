@@ -2,6 +2,11 @@
 #
 # WARNING: This may or may not work on your system. This Makefile is
 # an example, rather than a ready-made universal solution.
+#
+# Note to Subversion committers:
+# This Makefile is used by the svn-openbsd-i386 buildbot
+# (http://ci.apache.org/builders/svn-openbsd-i386).
+# Please check the bot's health after making changes to this file.
 
 ENABLE_PYTHON_BINDINGS ?= yes
 ENABLE_RUBY_BINDINGS ?= yes
