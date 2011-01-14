@@ -144,14 +144,17 @@ svn_wc_relocate4(svn_wc_context_t *wc_ctx,
     new_url = apr_pstrcat(scratch_pool, to, old_url + from_len, NULL);
   if (! svn_path_is_url(new_url))
     return svn_error_createf(SVN_ERR_WC_INVALID_RELOCATION, NULL,
-                             _("Invalid destination URL: '%s'"), new_url);
+                             _("Invalid relocation destination: '%s' "
+                               "(not a URL)"), new_url);
 
   new_repos_root = uri_remove_components(new_url, repos_relpath, scratch_pool);
   if (!new_repos_root)
     return svn_error_createf(SVN_ERR_WC_INVALID_RELOCATION, NULL,
-                             _("Invalid destination URL: '%s'"), new_url);
+                             _("Invalid relocation destination: '%s' "
+                               "(does not point to target)" ), new_url);
 
-  SVN_ERR(validator(validator_baton, uuid, new_url, new_repos_root, scratch_pool));
+  SVN_ERR(validator(validator_baton, uuid, new_url, new_repos_root,
+                    scratch_pool));
 
   return svn_error_return(svn_wc__db_global_relocate(wc_ctx->db, local_abspath,
                                                      new_repos_root,
