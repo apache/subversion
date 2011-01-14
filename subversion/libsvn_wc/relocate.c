@@ -35,31 +35,36 @@
 #include "svn_private_config.h"
 
 
-/* */
+/* If the components of RELPATH exactly match (after being
+   URI-encoded) the final components of URL, return a copy of URL
+   minus those components allocated in RESULT_POOL; otherwise, return
+   NULL. */
 static const char *
-uri_remove_components(const char *uri,
-                      const char *component,
-                      apr_pool_t *result_pool)
+url_remove_final_relpath(const char *url,
+                         const char *relpath,
+                         apr_pool_t *scratch_pool,
+                         apr_pool_t *result_pool)
 {
-  char *result = apr_pstrdup(result_pool, uri);
+  char *result = apr_pstrdup(result_pool, url);
   char *result_end;
-  const char *component_end;
+  const char *relpath_end;
 
-  SVN_ERR_ASSERT_NO_RETURN(svn_uri_is_absolute(uri));
-  SVN_ERR_ASSERT_NO_RETURN(!svn_uri_is_absolute(component));
+  SVN_ERR_ASSERT_NO_RETURN(svn_path_is_url(url));
+  SVN_ERR_ASSERT_NO_RETURN(svn_relpath_is_canonical(relpath, scratch_pool));
 
-  if (component[0] == 0)
+  if (relpath[0] == 0)
     return result;
 
+  relpath = svn_path_uri_encode(relpath, scratch_pool);
   result_end = result + strlen(result) - 1;
-  component_end = component + strlen(component) - 1;
+  relpath_end = relpath + strlen(relpath) - 1;
 
-  while (component_end >= component)
+  while (relpath_end >= relpath)
     {
-      if (*result_end != *component_end)
+      if (*result_end != *relpath_end)
         return NULL;
 
-      component_end--;
+      relpath_end--;
       result_end--;
     }
 
@@ -147,7 +152,8 @@ svn_wc_relocate4(svn_wc_context_t *wc_ctx,
                              _("Invalid relocation destination: '%s' "
                                "(not a URL)"), new_url);
 
-  new_repos_root = uri_remove_components(new_url, repos_relpath, scratch_pool);
+  new_repos_root = url_remove_final_relpath(new_url, repos_relpath,
+                                            scratch_pool, scratch_pool);
   if (!new_repos_root)
     return svn_error_createf(SVN_ERR_WC_INVALID_RELOCATION, NULL,
                              _("Invalid relocation destination: '%s' "
