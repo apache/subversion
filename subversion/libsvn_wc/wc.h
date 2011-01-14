@@ -133,12 +133,15 @@ extern "C" {
  * The change from 22 to 23 introduced multi-layer op_depth processing for
  * NODES.
  *
+ * The change from 23 to 24 started using the 'refcount' column of the
+ * 'pristine' table correctly, instead of always setting it to '1'.
+ *
  * == 1.7.x shipped with format ???
  *
  * Please document any further format changes here.
  */
 
-#define SVN_WC__VERSION 23
+#define SVN_WC__VERSION 24
 
 
 /* Formats <= this have no concept of "revert text-base/props".  */

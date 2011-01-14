@@ -102,6 +102,11 @@ typedef svn_error_t *(*svn_ra__lock_retry_func_t)(void *baton,
  * Use @a cancel_func and @a cancel_baton to check for early
  * cancellation.
  *
+ * @note If the server does not support #SVN_RA_CAPABILITY_ATOMIC_REVPROPS
+ * (i.e., is a pre-1.7 server), then this function makes a "best effort"
+ * attempt to obtain the lock, but is susceptible to a race condition; see
+ * issue #3546.
+ *
  * @since New in 1.7.
  */
 svn_error_t *

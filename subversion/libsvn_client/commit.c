@@ -1091,6 +1091,13 @@ svn_client_commit5(const apr_array_header_t *targets,
   SVN_ERR(svn_wc__acquire_write_lock(NULL, ctx->wc_ctx, base_abspath,
                                      FALSE, pool, pool));
 
+  /*
+   * At this point, the working copy must be unlocked (if possible)
+   * before returning from this function. So we must now handle every
+   * error explicitly, rather than using SVN_ERR().
+   *
+   */
+
   /* One day we might support committing from multiple working copies, but
      we don't yet.  This check ensures that we don't silently commit a
      subset of the targets.
@@ -1105,8 +1112,13 @@ svn_client_commit5(const apr_array_header_t *targets,
         const char *target_path = APR_ARRAY_IDX(targets, i, const char *);
 
         svn_pool_clear(iterpool);
-        SVN_ERR(check_nonrecursive_dir_delete(target_path, ctx->wc_ctx, depth,
-                                              iterpool));
+        cmt_err = check_nonrecursive_dir_delete(target_path, ctx->wc_ctx,
+                                                depth, iterpool);
+        if (cmt_err)
+          {
+            svn_pool_destroy(iterpool);
+            goto cleanup;
+          }
       }
     svn_pool_destroy(iterpool);
   }

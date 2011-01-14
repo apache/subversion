@@ -504,8 +504,8 @@ I.    INTRODUCTION
 
       13. SQLite  (REQUIRED)
 
-      Subversion (starting with version 1.6) requires SQLite version
-      3.4.0 or above, and you can meet this dependency several ways:
+      Subversion 1.7 requires SQLite version 3.6.18 or above.  You can meet
+      this dependency several ways:
         * Use an SQLite amalgamation file.
         * Specify an SQLite installation to use.
         * Let Subversion find an installed SQLite.
