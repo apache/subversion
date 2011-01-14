@@ -19,6 +19,7 @@
 #
 #
 
+set -e
 set -x
 
 branch="$(basename $(svn info . | grep ^URL  | cut -d' ' -f2))"
