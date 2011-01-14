@@ -11103,7 +11103,7 @@ def set_up_renamed_subtree(sbox):
   expected_status.remove('A/D/H/psi')
 
   # Replicate old WC-to-WC move behavior where empty mergeinfo was set on
-  # the move desination.  Pre 1.6 repositories might have mergeinfo like
+  # the move destination.  Pre 1.6 repositories might have mergeinfo like
   # this so we still want to test that the issue #3067 fixes tested by
   # merge_chokes_on_renamed_subtrees and subtrees_with_empty_mergeinfo
   # still work.
