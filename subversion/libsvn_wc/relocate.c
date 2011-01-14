@@ -128,7 +128,8 @@ svn_wc_relocate4(svn_wc_context_t *wc_ctx,
     return svn_error_create(SVN_ERR_CLIENT_INVALID_RELOCATION, NULL,
                             _("Cannot relocate a single file"));
 
-  old_url = svn_uri_join(old_repos_root, repos_relpath, scratch_pool);
+  old_url = svn_path_url_add_component2(old_repos_root, repos_relpath,
+                                        scratch_pool);
   old_url_len = strlen(old_url);
   from_len = strlen(from);
   if ((from_len > old_url_len) || (strncmp(old_url, from, strlen(from)) != 0))
