@@ -1050,7 +1050,8 @@ SVNSERVE_START_CMD = $(SVN_PREFIX)/bin/svnserve \
 			--listen-host 127.0.0.1 \
 			--pid-file $(PWD)/svnserve-$(WC).pid \
 			-d -r $(svn_builddir)/subversion/tests/cmdline
-SVNSERVE_STOP_CMD = kill `cat $(PWD)/svnserve-$(WC).pid`
+SVNSERVE_STOP_CMD = kill `cat $(PWD)/svnserve-$(WC).pid`; sleep 3; \
+			rm -f $(PWD)/svnserve-$(WC).pid
 
 start-httpd: httpd-conf
 	$(HTTPD_START_CMD)
@@ -1063,6 +1064,10 @@ stop-httpd:
 	$(HTTPD_STOP_CMD)
 
 start-svnserve: $(SVN_OBJDIR)/.compiled
+	-ls $(PWD)/svnserve-*.pid | while read pidfile; do \
+		kill `cat "$$pidfile"`; sleep 3; \
+		rm -f $$pidfile; \
+	done
 	$(SVNSERVE_START_CMD)
 
 stop-svnserve:
