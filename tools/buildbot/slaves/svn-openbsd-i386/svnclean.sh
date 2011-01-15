@@ -27,6 +27,6 @@ branch="$(basename $(svn info . | grep ^URL  | cut -d' ' -f2))"
 for i in 3 4 5 6 7; do
   (test -h ../svn-1.${i}.x || ln -s build ../svn-1.${i}.x)
 done
-svn update ../unix-build
+svn update ../../unix-build
 (test -h ../GNUmakefile || ln -s ../unix-build/Makefile.svn ../GNUmakefile)
 (cd .. && gmake BRANCH="$branch" reset clean)
