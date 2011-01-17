@@ -1152,12 +1152,12 @@ class TestRunner:
 
   def list(self):
     if options.verbose and self.pred.inprogress:
-      print(" %2d     %-5s  %s [[%s]]" % (self.index,
+      print(" %3d     %-5s  %s [[%s]]" % (self.index,
                                         self.pred.list_mode(),
                                         self.pred.description,
                                         self.pred.inprogress))
     else:
-      print(" %2d     %-5s  %s" % (self.index,
+      print(" %3d     %-5s  %s" % (self.index,
                                    self.pred.list_mode(),
                                    self.pred.description))
     sys.stdout.flush()
