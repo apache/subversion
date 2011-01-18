@@ -210,47 +210,6 @@ test_dirent_is_absolute(apr_pool_t *pool)
 }
 
 static svn_error_t *
-test_uri_is_absolute(apr_pool_t *pool)
-{
-  apr_size_t i;
-
-  /* Paths to test and their expected results. */
-  struct {
-    const char *path;
-    svn_boolean_t result;
-  } tests[] = {
-    { "/foo/bar",      TRUE },
-    { "/foo",          TRUE },
-    { "/",             TRUE },
-    { "foo/bar",       FALSE },
-    { "foo",           FALSE },
-    { "",              FALSE },
-    { "X:/foo",        FALSE },
-    { "X:foo",         FALSE },
-    { "X:foo/bar",     FALSE },
-    { "X:",            FALSE },
-    { "http://",       TRUE },
-    { "http://test",   TRUE },
-    { "http://foo/bar",TRUE },
-  };
-
-  for (i = 0; i < COUNT_OF(tests); i++)
-    {
-      svn_boolean_t retval;
-
-      retval = svn_uri_is_absolute(tests[i].path);
-      if (tests[i].result != retval)
-        return svn_error_createf
-          (SVN_ERR_TEST_FAILED, NULL,
-           "svn_uri_is_absolute (%s) returned %s instead of %s",
-           tests[i].path, retval ? "TRUE" : "FALSE",
-           tests[i].result ? "TRUE" : "FALSE");
-    }
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
 test_dirent_join(apr_pool_t *pool)
 {
   int i;
@@ -3071,8 +3030,6 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test svn_uri_is_root"),
     SVN_TEST_PASS2(test_dirent_is_absolute,
                    "test svn_dirent_is_absolute"),
-    SVN_TEST_PASS2(test_uri_is_absolute,
-                   "test svn_uri_is_absolute"),
     SVN_TEST_PASS2(test_dirent_join,
                    "test svn_dirent_join(_many)"),
     SVN_TEST_PASS2(test_relpath_join,
