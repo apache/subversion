@@ -213,7 +213,7 @@ svn_relpath_join(const char *base,
  * @since New in 1.7.
  */
 char *
-svn_uri_join(const char *base,
+svn_url_join(const char *base,
              const char *component,
              apr_pool_t *pool);
 
@@ -356,7 +356,7 @@ svn_relpath_dirname(const char *relpath,
  * @since New in 1.7.
  */
 void
-svn_uri_split(const char **dirpath,
+svn_url_split(const char **dirpath,
               const char **base_name,
               const char *uri,
               apr_pool_t *pool);
@@ -376,7 +376,7 @@ svn_uri_split(const char **dirpath,
  * @since New in 1.7.
  */
 const char *
-svn_uri_basename(const char *uri,
+svn_url_basename(const char *uri,
                  apr_pool_t *pool);
 
 /** Get the dirname of the specified canonicalized @a uri, defined as
@@ -390,7 +390,7 @@ svn_uri_basename(const char *uri,
  * @since New in 1.7.
  */
 char *
-svn_uri_dirname(const char *uri,
+svn_url_dirname(const char *uri,
                 apr_pool_t *pool);
 
 
@@ -408,7 +408,7 @@ svn_dirent_is_absolute(const char *dirent);
  * @since New in 1.7.
  */
 svn_boolean_t
-svn_uri_is_absolute(const char *uri);
+svn_url_is_absolute(const char *uri);
 
 /** Return TRUE if @a dirent is considered a root directory on the platform
  * at hand.
@@ -432,7 +432,7 @@ svn_dirent_is_root(const char *dirent,
  * @since New in 1.7
  */
 svn_boolean_t
-svn_uri_is_root(const char *uri,
+svn_url_is_root(const char *uri,
                 apr_size_t len);
 
 /** Return a new dirent like @a dirent, but transformed such that some types
@@ -495,7 +495,7 @@ svn_relpath_canonicalize(const char *relpath,
  * @since New in 1.7.
  */
 const char *
-svn_uri_canonicalize(const char *uri,
+svn_url_canonicalize(const char *uri,
                      apr_pool_t *pool);
 
 /** Return @c TRUE iff @a dirent is canonical.  Use @a pool for temporary
@@ -526,7 +526,7 @@ svn_relpath_is_canonical(const char *relpath,
  * @since New in 1.7.
  */
 svn_boolean_t
-svn_uri_is_canonical(const char *uri,
+svn_url_is_canonical(const char *uri,
                      apr_pool_t *pool);
 
 /** Return the longest common dirent shared by two canonicalized dirents,
@@ -564,7 +564,7 @@ svn_relpath_get_longest_ancestor(const char *relpath1,
  * @since New in 1.7.
  */
 char *
-svn_uri_get_longest_ancestor(const char *uri1,
+svn_url_get_longest_ancestor(const char *uri1,
                              const char *uri2,
                              apr_pool_t *pool);
 
@@ -602,7 +602,7 @@ svn_dirent_get_absolute(const char **pabsolute,
  * @since New in 1.7.
  */
 const char *
-svn_uri_is_child(const char *parent_uri,
+svn_url_is_child(const char *parent_uri,
                  const char *child_uri,
                  apr_pool_t *pool);
 
@@ -659,7 +659,7 @@ svn_relpath_is_ancestor(const char *parent_relpath,
  * @since New in 1.7.
  */
 svn_boolean_t
-svn_uri_is_ancestor(const char *parent_uri,
+svn_url_is_ancestor(const char *parent_uri,
                     const char *child_uri);
 
 
@@ -706,7 +706,7 @@ svn_relpath_skip_ancestor(const char *parent_relpath,
  * @since New in 1.7.
  */
 const char *
-svn_uri_skip_ancestor(const char *parent_uri,
+svn_url_skip_ancestor(const char *parent_uri,
                       const char *child_uri);
 
 /** Find the common prefix of the canonicalized dirents in @a targets
@@ -784,7 +784,7 @@ svn_dirent_condense_targets(const char **pcommon,
  * @since New in 1.7.
  */
 svn_error_t *
-svn_uri_condense_targets(const char **pcommon,
+svn_url_condense_targets(const char **pcommon,
                          apr_array_header_t **pcondensed_targets,
                          const apr_array_header_t *targets,
                          svn_boolean_t remove_redundancies,
@@ -815,7 +815,7 @@ svn_dirent_is_under_root(svn_boolean_t *under_root,
  * @since New in 1.7.
  */
 svn_error_t *
-svn_uri_get_dirent_from_file_url(const char **dirent,
+svn_url_get_dirent_from_file_url(const char **dirent,
                                  const char *url,
                                  apr_pool_t *pool);
 
@@ -825,7 +825,7 @@ svn_uri_get_dirent_from_file_url(const char **dirent,
  * @since New in 1.7.
  */
 svn_error_t *
-svn_uri_get_file_url_from_dirent(const char **url,
+svn_url_get_file_url_from_dirent(const char **url,
                                  const char *dirent,
                                  apr_pool_t *pool);
 
