@@ -197,27 +197,6 @@ svn_relpath_join(const char *base,
                  const char *component,
                  apr_pool_t *pool);
 
-/** Join a valid base uri (@a base) with a relative path or uri
- * (@a component), allocating the result in @a pool. @a component need
- * not be a single component: it can be a relative path or a '/'
- * prefixed relative path to join component to the root path of @a base.
- *
- * If @a component is the empty path, then @a base will be copied and
- * returned.
- *
- * If the @a component is an absolute uri, then it is copied and returned.
- *
- * If @a component starts with a '/' and @a base contains a scheme, the
- * scheme defined joining rules are applied.
- *
- * @since New in 1.7.
- */
-char *
-svn_url_join(const char *base,
-             const char *component,
-             apr_pool_t *pool);
-
-
 /** Gets the name of the specified canonicalized @a dirent as it is known
  * within its parent directory. If the @a dirent is root, return "". The
  * returned value will not have slashes in it.
@@ -402,13 +381,6 @@ svn_url_dirname(const char *uri,
  */
 svn_boolean_t
 svn_dirent_is_absolute(const char *dirent);
-
-/** Return TRUE if @a uri is considered absolute or is a URL.
- *
- * @since New in 1.7.
- */
-svn_boolean_t
-svn_url_is_absolute(const char *uri);
 
 /** Return TRUE if @a dirent is considered a root directory on the platform
  * at hand.
