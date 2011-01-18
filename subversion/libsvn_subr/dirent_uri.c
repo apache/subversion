@@ -968,7 +968,7 @@ svn_dirent_is_root(const char *dirent, apr_size_t len)
 }
 
 svn_boolean_t
-svn_uri_is_root(const char *uri, apr_size_t len)
+svn_url_is_root(const char *uri, apr_size_t len)
 {
   /* directory is root if it's equal to '/' */
   if (len == 1 && uri[0] == '/')
@@ -1213,7 +1213,7 @@ svn_relpath_join(const char *base,
 }
 
 char *
-svn_uri_join(const char *base, const char *component, apr_pool_t *pool)
+svn_url_join(const char *base, const char *component, apr_pool_t *pool)
 {
   apr_size_t blen = strlen(base);
   apr_size_t clen = strlen(component);
@@ -1363,7 +1363,7 @@ svn_relpath_split(const char **dirpath,
 }
 
 char *
-svn_uri_dirname(const char *uri, apr_pool_t *pool)
+svn_url_dirname(const char *uri, apr_pool_t *pool)
 {
   apr_size_t len = strlen(uri);
 
@@ -1376,7 +1376,7 @@ svn_uri_dirname(const char *uri, apr_pool_t *pool)
 }
 
 const char *
-svn_uri_basename(const char *uri, apr_pool_t *pool)
+svn_url_basename(const char *uri, apr_pool_t *pool)
 {
   apr_size_t len = strlen(uri);
   apr_size_t start;
@@ -1399,7 +1399,7 @@ svn_uri_basename(const char *uri, apr_pool_t *pool)
 }
 
 void
-svn_uri_split(const char **dirpath,
+svn_url_split(const char **dirpath,
               const char **base_name,
               const char *uri,
               apr_pool_t *pool)
@@ -1437,7 +1437,7 @@ svn_relpath_get_longest_ancestor(const char *relpath1,
 }
 
 char *
-svn_uri_get_longest_ancestor(const char *uri1,
+svn_url_get_longest_ancestor(const char *uri1,
                              const char *uri2,
                              apr_pool_t *pool)
 {
@@ -1513,7 +1513,7 @@ svn_relpath_is_child(const char *parent_relpath,
 }
 
 const char *
-svn_uri_is_child(const char *parent_uri,
+svn_url_is_child(const char *parent_uri,
                  const char *child_uri,
                  apr_pool_t *pool)
 {
@@ -1536,7 +1536,7 @@ svn_relpath_is_ancestor(const char *parent_relpath, const char *child_relpath)
 }
 
 svn_boolean_t
-svn_uri_is_ancestor(const char *parent_uri, const char *child_uri)
+svn_url_is_ancestor(const char *parent_uri, const char *child_uri)
 {
   return is_ancestor(type_uri, parent_uri, child_uri);
 }
@@ -1595,7 +1595,7 @@ svn_relpath_skip_ancestor(const char *parent_relpath,
 
 
 const char *
-svn_uri_skip_ancestor(const char *parent_uri,
+svn_url_skip_ancestor(const char *parent_uri,
                       const char *child_uri)
 {
   apr_size_t len = strlen(parent_uri);
@@ -1642,7 +1642,7 @@ svn_dirent_is_absolute(const char *dirent)
 }
 
 svn_boolean_t
-svn_uri_is_absolute(const char *uri)
+svn_url_is_absolute(const char *uri)
 {
   /* uri is absolute if it starts with '/' */
   if (uri && uri[0] == '/')
@@ -1682,7 +1682,7 @@ svn_dirent_get_absolute(const char **pabsolute,
 }
 
 const char *
-svn_uri_canonicalize(const char *uri, apr_pool_t *pool)
+svn_url_canonicalize(const char *uri, apr_pool_t *pool)
 {
   return canonicalize(type_uri, uri, pool);
 }
@@ -1808,7 +1808,7 @@ svn_relpath_is_canonical(const char *relpath,
 }
 
 svn_boolean_t
-svn_uri_is_canonical(const char *uri, apr_pool_t *pool)
+svn_url_is_canonical(const char *uri, apr_pool_t *pool)
 {
   const char *ptr = uri, *seg = uri;
   const char *schema_data = NULL;
@@ -2119,7 +2119,7 @@ svn_dirent_condense_targets(const char **pcommon,
 }
 
 svn_error_t *
-svn_uri_condense_targets(const char **pcommon,
+svn_url_condense_targets(const char **pcommon,
                          apr_array_header_t **pcondensed_targets,
                          const apr_array_header_t *targets,
                          svn_boolean_t remove_redundancies,
@@ -2325,7 +2325,7 @@ svn_dirent_is_under_root(svn_boolean_t *under_root,
 }
 
 svn_error_t *
-svn_uri_get_dirent_from_file_url(const char **dirent,
+svn_url_get_dirent_from_file_url(const char **dirent,
                                  const char *url,
                                  apr_pool_t *pool)
 {
@@ -2441,7 +2441,7 @@ svn_uri_get_dirent_from_file_url(const char **dirent,
 }
 
 svn_error_t *
-svn_uri_get_file_url_from_dirent(const char **url,
+svn_url_get_file_url_from_dirent(const char **url,
                                  const char *dirent,
                                  apr_pool_t *pool)
 {
