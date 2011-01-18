@@ -1,0 +1,16 @@
+This branch is for the development of changes related to Subversion
+issue #2028[1], namely the redefinition of "uri" from an API
+perspective to include onto absolute URLs.  The desired outcome is
+that Subversion will speak consistently in terms of absolute base
+paths (absolute URLs in the RA layers, absolute dirents in the WC
+layer, etc.) and paths relative to those.
+
+Because the use of the path APIs in Subversion is so ubiquitous, this
+branch will be kept in sync with the 'trunk' -- handling conflicts
+here as they occur -- with an eye on eventual reintegration.
+
+This branch is *NOT* guaranteed to build.  In fact, compilation errors
+are being intentionally used as cheap pointers to code that needs to
+be examined in light of the desired functionality.
+
+[1] http://subversion.tigris.org/issues/show_bug.cgi?id=2028
