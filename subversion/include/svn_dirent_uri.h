@@ -864,6 +864,15 @@ svn_fspath__join(const char *fspath,
                  apr_pool_t *result_pool);
 
 
+/** Return TRUE if @a fspath (with length @a len) is the root
+ * directory; return FALSE otherwise.
+ *
+ * @since New in 1.7.
+ */
+svn_boolean_t
+svn_fspath__is_root(const char *fspath,
+                    apr_size_t len);
+
 /** Test if @a child_fspath is a child of @a parent_fspath.  If not, return
  * NULL.  If so, return the relpath which, if joined to @a parent_fspath,
  * would yield @a child_fspath.
