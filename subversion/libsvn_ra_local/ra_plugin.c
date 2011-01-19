@@ -499,7 +499,7 @@ svn_ra_local__reparent(svn_ra_session_t *session,
   /* If the new URL isn't the same as our repository root URL, then
      let's ensure that it's some child of it. */
   if (strcmp(url, sess->repos_url) != 0)
-    relpath = svn_uri_is_child(sess->repos_url, url, pool);
+    relpath = svn_url_is_child(sess->repos_url, url, pool);
   if (! relpath)
     return svn_error_createf
       (SVN_ERR_RA_ILLEGAL_URL, NULL,
@@ -521,9 +521,9 @@ svn_ra_local__get_session_url(svn_ra_session_t *session,
                               apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
-  *url = svn_uri_join(sess->repos_url,
-                      svn_path_uri_encode(sess->fs_path->data + 1, pool),
-                      pool);
+  *url = svn_path_url_add_component2(sess->repos_url,
+                                     sess->fs_path->data + 1,
+                                     pool);
   return SVN_NO_ERROR;
 }
 
