@@ -2418,6 +2418,17 @@ svn_fspath__is_canonical(const char *fspath)
 }
 
 
+const char *
+svn_fspath__canonicalize(const char *fspath,
+                         apr_pool_t *pool)
+{
+  if ((fspath[0] == '/') && (fspath[1] == '\0'))
+    return "/";
+
+  return apr_pstrcat(pool, "/", svn_relpath_canonicalize(fspath, pool), NULL);
+}
+
+
 svn_boolean_t
 svn_fspath__is_root(const char *fspath, apr_size_t len)
 {

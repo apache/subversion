@@ -811,6 +811,19 @@ svn_boolean_t
 svn_fspath__is_canonical(const char *fspath);
 
 
+/** This function is similar to svn_relpath_canonicalize(), except
+ * that it returns an fspath (which is essentially just a relpath
+ * tacked onto a leading forward slash).
+ *
+ * The returned fspath may be statically allocated or allocated from
+ * @a pool.
+ *
+ * @since New in 1.7.
+ */
+const char *
+svn_fspath__canonicalize(const char *fspath,
+                         apr_pool_t *pool);
+
 /** Return the dirname of @a fspath, defined as the path with its basename
  * removed.  If @a fspath is "/", return "/".
  *
