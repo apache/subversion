@@ -2419,6 +2419,14 @@ svn_fspath__is_canonical(const char *fspath)
 }
 
 
+svn_boolean_t
+svn_fspath__is_root(const char *fspath, apr_size_t len)
+{
+  /* directory is root if it's equal to '/' */
+  return (len == 1 && fspath[0] == '/');
+}
+
+
 const char *
 svn_fspath__is_child(const char *parent_fspath,
                      const char *child_fspath,
