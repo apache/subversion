@@ -96,13 +96,13 @@ internal_style(path_type_t type, const char *path, apr_pool_t *pool)
 
   switch (type)
     {
-      case type_dirent:
-        return svn_dirent_canonicalize(path, pool);
+      case type_uri:
+        return svn_url_canonicalize(path, pool);
       case type_relpath:
         return svn_relpath_canonicalize(path, pool);
-      case type_uri:
+      case type_dirent:
       default:
-        return svn_uri_canonicalize(path, pool);
+        return svn_dirent_canonicalize(path, pool);
     }
 }
 
@@ -785,7 +785,7 @@ is_child(path_type_t type, const char *path1, const char *path2,
         return NULL;
 
       /* check if this is an absolute path */
-      if ((type == type_uri && svn_uri_is_absolute(path2)) ||
+      if ((type == type_uri) ||
           (type == type_dirent && dirent_is_rooted(path2)))
         return NULL;
       else
@@ -871,8 +871,9 @@ is_ancestor(path_type_t type, const char *path1, const char *path2)
        case type_relpath:
          return TRUE;
        case type_uri:
+         return FALSE;
        default:
-         return !svn_uri_is_absolute(path2);
+         return path2[0] != '/';
      }
 
   /* If path1 is a prefix of path2, then:
@@ -1318,9 +1319,9 @@ svn_url_dirname(const char *uri, apr_pool_t *pool)
 {
   apr_size_t len = strlen(uri);
 
-  assert(svn_uri_is_canonical(uri, pool));
+  assert(svn_url_is_canonical(uri, pool));
 
-  if (svn_uri_is_root(uri, len))
+  if (svn_url_is_root(uri, len))
     return apr_pstrmemdup(pool, uri, len);
   else
     return apr_pstrmemdup(pool, uri, uri_previous_segment(uri, len));
@@ -1332,9 +1333,9 @@ svn_url_basename(const char *uri, apr_pool_t *pool)
   apr_size_t len = strlen(uri);
   apr_size_t start;
 
-  assert(svn_uri_is_canonical(uri, NULL));
+  assert(svn_url_is_canonical(uri, NULL));
 
-  if (svn_uri_is_root(uri, len))
+  if (svn_url_is_root(uri, len))
     return "";
   else
     {
@@ -1358,10 +1359,10 @@ svn_url_split(const char **dirpath,
   assert(dirpath != base_name);
 
   if (dirpath)
-    *dirpath = svn_uri_dirname(uri, pool);
+    *dirpath = svn_url_dirname(uri, pool);
 
   if (base_name)
-    *base_name = svn_uri_basename(uri, pool);
+    *base_name = svn_url_basename(uri, pool);
 }
 
 char *
@@ -2079,7 +2080,7 @@ svn_url_condense_targets(const char **pcommon,
       return SVN_NO_ERROR;
     }
 
-  *pcommon = svn_uri_canonicalize(APR_ARRAY_IDX(targets, 0, const char *),
+  *pcommon = svn_url_canonicalize(APR_ARRAY_IDX(targets, 0, const char *),
                                   scratch_pool);
 
   /* Early exit when there's only one uri to work on. */
@@ -2108,12 +2109,12 @@ svn_url_condense_targets(const char **pcommon,
 
   for (i = 1; i < targets->nelts; ++i)
     {
-      const char *uri = svn_uri_canonicalize(
+      const char *uri = svn_url_canonicalize(
                            APR_ARRAY_IDX(targets, i, const char *),
                            scratch_pool);
       APR_ARRAY_PUSH(uri_targets, const char *) = uri;
 
-      *pcommon = svn_uri_get_longest_ancestor(*pcommon, uri,
+      *pcommon = svn_url_get_longest_ancestor(*pcommon, uri,
                                               scratch_pool);
     }
 
@@ -2151,7 +2152,7 @@ svn_url_condense_targets(const char **pcommon,
                   uri_i = APR_ARRAY_IDX(uri_targets, i, const char *);
                   uri_j = APR_ARRAY_IDX(uri_targets, j, const char *);
 
-                  ancestor = svn_uri_get_longest_ancestor(uri_i,
+                  ancestor = svn_url_get_longest_ancestor(uri_i,
                                                           uri_j,
                                                           scratch_pool);
 
@@ -2212,7 +2213,7 @@ svn_url_condense_targets(const char **pcommon,
                  */
               rel_item += basedir_len;
               if ((rel_item[0] == '/') ||
-                  (rel_item[0] && !svn_uri_is_root(*pcommon, basedir_len)))
+                  (rel_item[0] && !svn_url_is_root(*pcommon, basedir_len)))
                 {
                   rel_item++;
                 }
@@ -2271,7 +2272,7 @@ svn_url_get_dirent_from_file_url(const char **dirent,
 {
   const char *hostname, *path;
 
-  SVN_ERR_ASSERT(svn_uri_is_canonical(url, pool));
+  SVN_ERR_ASSERT(svn_url_is_canonical(url, pool));
   SVN_ERR_ASSERT(svn_path_is_url(url));
 
   /* Verify that the URL is well-formed (loosely) */
