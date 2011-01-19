@@ -2428,11 +2428,7 @@ svn_fspath__is_child(const char *parent_fspath,
   assert(svn_fspath__is_canonical(parent_fspath));
   assert(svn_fspath__is_canonical(child_fspath));
 
-#ifdef FSPATH_USE_URI
-  result = svn_uri_is_child(parent_fspath, child_fspath, pool);
-#else
   result = svn_relpath_is_child(parent_fspath + 1, child_fspath + 1, pool);
-#endif
 
   assert(result == NULL || svn_relpath_is_canonical(result, pool));
   return result;
@@ -2446,14 +2442,10 @@ svn_fspath__skip_ancestor(const char *parent_fspath,
   assert(svn_fspath__is_canonical(parent_fspath));
   assert(svn_fspath__is_canonical(child_fspath));
 
-#ifdef FSPATH_USE_URI
-  result = svn_uri_skip_ancestor(parent_fspath, child_fspath);
-#else
   if (svn_relpath_is_ancestor(parent_fspath + 1, child_fspath + 1))
     result = svn_relpath_skip_ancestor(parent_fspath + 1, child_fspath + 1);
   else
     result = child_fspath;
-#endif
 
   assert(svn_relpath_is_canonical(result, NULL)
          || strcmp(result, child_fspath) == 0);
@@ -2467,11 +2459,7 @@ svn_fspath__is_ancestor(const char *parent_fspath,
   assert(svn_fspath__is_canonical(parent_fspath));
   assert(svn_fspath__is_canonical(child_fspath));
 
-#ifdef FSPATH_USE_URI
-  return svn_uri_is_ancestor(parent_fspath, child_fspath);
-#else
   return svn_relpath_is_ancestor(parent_fspath + 1, child_fspath + 1);
-#endif
 }
 
 
@@ -2482,12 +2470,8 @@ svn_fspath__dirname(const char *fspath,
   const char *result;
   assert(svn_fspath__is_canonical(fspath));
 
-#ifdef FSPATH_USE_URI
-  result = svn_uri_dirname(fspath, pool);
-#else
   result = apr_pstrcat(pool, "/", svn_relpath_dirname(fspath + 1, pool),
                        (char *)NULL);
-#endif
 
   assert(svn_fspath__is_canonical(result));
   return result;
@@ -2501,11 +2485,7 @@ svn_fspath__basename(const char *fspath,
   const char *result;
   assert(svn_fspath__is_canonical(fspath));
 
-#ifdef FSPATH_USE_URI
-  result = svn_uri_basename(fspath, pool);
-#else
   result = svn_relpath_basename(fspath + 1, pool);
-#endif
 
   assert(strchr(result, '/') == NULL);
   return result;
@@ -2535,16 +2515,12 @@ svn_fspath__join(const char *fspath,
   assert(svn_fspath__is_canonical(fspath));
   assert(svn_relpath_is_canonical(relpath, result_pool));
 
-#ifdef FSPATH_USE_URI
-  result = svn_uri_join(fspath, relpath, result_pool);
-#else
   if (relpath[0] == '\0')
     result = apr_pstrdup(result_pool, fspath);
   else if (fspath[1] == '\0')
     result = apr_pstrcat(result_pool, "/", relpath, (char *)NULL);
   else
     result = apr_pstrcat(result_pool, fspath, "/", relpath, (char *)NULL);
-#endif
 
   assert(svn_fspath__is_canonical(result));
   return result;
@@ -2559,15 +2535,11 @@ svn_fspath__get_longest_ancestor(const char *fspath1,
   assert(svn_fspath__is_canonical(fspath1));
   assert(svn_fspath__is_canonical(fspath2));
 
-#ifdef FSPATH_USE_URI
-  result = svn_uri_get_longest_ancestor(fspath1, fspath2, result_pool);
-#else
   result = apr_pstrcat(result_pool, "/",
                        svn_relpath_get_longest_ancestor(fspath1 + 1,
                                                         fspath2 + 1,
                                                         result_pool),
                        NULL);
-#endif
 
   assert(svn_fspath__is_canonical(result));
   return result;
