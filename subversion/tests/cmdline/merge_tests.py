@@ -16316,6 +16316,92 @@ def subtree_merges_inherit_invalid_working_mergeinfo(sbox):
     "Subtree merge under working merge produced the wrong mergeinfo",
     '/A/C/nu:9', [], 'pg', SVN_PROP_MERGEINFO, nu_COPY_path)
 
+
+#----------------------------------------------------------------------
+# Test for issue #3686 'executable flag not correctly set on merge'
+# See http://subversion.tigris.org/issues/show_bug.cgi?id=3686
+def merge_change_to_file_with_executable(sbox):
+  "executable flag is maintained during binary merge"
+
+  # Scenario: When merging a change to a binary file with the 'svn:executable'
+  # property set, the file is not marked as 'executable'. After commit, the 
+  # executable bit is set correctly.
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  trunk_url = sbox.repo_url + '/A/B/E'
+
+  alpha_path = os.path.join(wc_dir, "A", "B", "E", "alpha")
+  beta_path = os.path.join(wc_dir, "A", "B", "E", "beta")
+
+  # Force one of the files to be a binary type
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'svn:mime-type',
+                                     'application/octet-stream',
+                                     alpha_path)
+
+  # Set the 'svn:executable' property on both files
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'svn:executable', 'ON',
+                                     beta_path)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'svn:executable', 'ON',
+                                     alpha_path)
+
+  # Verify the executable bit has been set before committing
+  if not os.access(alpha_path, os.X_OK):
+    raise svntest.Failure("alpha not marked as executable before commit")
+  if not os.access(beta_path, os.X_OK):
+    raise svntest.Failure("beta is not marked as executable before commit")
+
+  # Commit change (r2)
+  sbox.simple_commit()
+
+  # Verify the executable bit has remained after committing
+  if not os.access(alpha_path, os.X_OK):
+    raise svntest.Failure("alpha not marked as executable before commit")
+  if not os.access(beta_path, os.X_OK):
+    raise svntest.Failure("beta is not marked as executable before commit")
+
+  # Create the branch
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                     trunk_url,
+                                     sbox.repo_url + '/branch',
+                                     '-m', "Creating the Branch")   
+
+  # Modify the files + commit (r3)
+  svntest.main.file_append(alpha_path, 'appended alpha text')
+  svntest.main.file_append(beta_path, 'appended beta text')
+  sbox.simple_commit()
+
+  # Switch the WC to the branch
+  svntest.actions.run_and_verify_svn(None, None, [], 'switch',
+                                     sbox.repo_url + '/branch',
+                                     wc_dir)
+  
+  # Recalculate the paths
+  alpha_path = os.path.join(wc_dir, "alpha")
+  beta_path = os.path.join(wc_dir, "beta")
+
+  # Merge the changes across
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+                                     trunk_url, wc_dir)
+
+  # Verify the executable bit has been set
+  if not os.access(alpha_path, os.X_OK):
+    raise svntest.Failure("alpha is not marked as executable after merge")
+  if not os.access(beta_path, os.X_OK):
+    raise svntest.Failure("beta is not marked as executable after merge")
+
+  # Commit (r4)
+  sbox.simple_commit()
+
+  # Verify the executable bit has been set
+  if not os.access(alpha_path, os.X_OK):
+    raise svntest.Failure("alpha is not marked as executable after commit")
+  if not os.access(beta_path, os.X_OK):
+    raise svntest.Failure("beta is not marked as executable after commit")
+
 ########################################################################
 # Run the tests
 
@@ -16507,6 +16593,8 @@ test_list = [ None,
               merge_with_os_deleted_subtrees,
               no_self_referential_or_nonexistent_inherited_mergeinfo,
               XFail(subtree_merges_inherit_invalid_working_mergeinfo),
+              XFail(SkipUnless(merge_change_to_file_with_executable,
+              	               svntest.main.is_posix_os)),
              ]
 
 if __name__ == '__main__':
