@@ -174,7 +174,7 @@ keyword_printf(const char *fmt,
           if (url)
             {
               const char *base_name
-                = svn_path_uri_decode(svn_uri_basename(url, pool), pool);
+                = svn_path_uri_decode(svn_url_basename(url, pool), pool);
               svn_stringbuf_appendcstr(value, base_name);
             }
           break;
