@@ -249,7 +249,7 @@ svn_fs_bdb__locks_get(svn_fs_t *fs,
 
   /* As long as the prefix of the returned KEY matches LOOKUP_PATH we
      know it is either LOOKUP_PATH or a decendant thereof.  */
-  if (svn_fspath__is_root(path, strlen(path)))
+  if (!svn_fspath__is_root(path, strlen(path)))
     lookup_path = apr_pstrcat(pool, path, "/", (char *)NULL);
 
   while ((! db_err)
