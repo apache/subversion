@@ -997,7 +997,7 @@ svn_opt__arg_canonicalize_url(const char **url_out, const char *url_in,
                              target);
 
   /* Strip any trailing '/' and collapse other redundant elements. */
-  target = svn_uri_canonicalize(target, pool);
+  target = svn_url_canonicalize(target, pool);
 
   *url_out = target;
   return SVN_NO_ERROR;

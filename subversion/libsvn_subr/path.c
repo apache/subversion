@@ -498,7 +498,7 @@ svn_path_get_longest_ancestor(const char *path1,
      there's nothing common between them.  */
   if (path1_is_url && path2_is_url)
     {
-      return svn_uri_get_longest_ancestor(path1, path2, pool);
+      return svn_url_get_longest_ancestor(path1, path2, pool);
     }
   else if ((! path1_is_url) && (! path2_is_url))
     {
