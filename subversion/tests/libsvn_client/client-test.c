@@ -345,7 +345,7 @@ test_patch(const svn_test_opts_t *opts,
 
   /* Check out the HEAD revision */
   SVN_ERR(svn_dirent_get_absolute(&cwd, "", pool));
-  SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, "test-patch-repos",
+  SVN_ERR(svn_url_get_file_url_from_dirent(&repos_url, "test-patch-repos",
                                            pool));
 
   /* Put wc inside an unversioned directory.  Checking out a 1.7 wc
@@ -433,7 +433,7 @@ test_wc_add_scenarios(const svn_test_opts_t *opts,
   SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &committed_rev, txn, pool));
   SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(committed_rev));
 
-  SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, "test-wc-add-repos",
+  SVN_ERR(svn_url_get_file_url_from_dirent(&repos_url, "test-wc-add-repos",
                                            pool));
 
   SVN_ERR(svn_dirent_get_absolute(&wc_path, "test-wc-add", pool));
@@ -578,7 +578,7 @@ test_copy_crash(const svn_test_opts_t *opts,
   SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &committed_rev, txn, pool));
   SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(committed_rev));
 
-  SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, "test-copy-crash",
+  SVN_ERR(svn_url_get_file_url_from_dirent(&repos_url, "test-copy-crash",
                                            pool));
 
   svn_client_create_context(&ctx, pool);

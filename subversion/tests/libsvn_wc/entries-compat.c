@@ -642,7 +642,7 @@ test_access_baton_like_locking(apr_pool_t *pool)
 
     SVN_ERR(svn_io_make_dir_recursively(subdir, pool));
     SVN_ERR(svn_wc_ensure_adm3(subdir, repos_uuid,
-                               svn_uri_join(url, "sub-wc", pool),
+                               svn_path_url_add_component2(url, "sub-wc", pool),
                                repos_root_url, 0, svn_depth_infinity,
                                pool));
 

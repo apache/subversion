@@ -889,7 +889,7 @@ main(int argc, const char **argv)
   SVNRDUMP_ERR(svn_utf_cstring_to_utf8(&(opt_baton->url),
                                        os->argv[os->ind], pool));
 
-  opt_baton->url = svn_uri_canonicalize(os->argv[os->ind], pool);
+  opt_baton->url = svn_url_canonicalize(os->argv[os->ind], pool);
 
   SVNRDUMP_ERR(open_connection(&(opt_baton->session),
                                opt_baton->url,
