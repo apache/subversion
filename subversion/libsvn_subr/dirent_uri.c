@@ -1214,6 +1214,19 @@ svn_relpath_join(const char *base,
 }
 
 char *
+svn_url_join_relpath(const char *base,
+                     const char *relpath,
+                     apr_pool_t *pool)
+{
+  assert(svn_url_is_canonical(base, pool));
+  assert(relpath_is_canonical(relpath));
+
+  if (SVN_PATH_IS_EMPTY(relpath))
+    return apr_pstrdup(pool, base);
+  return apr_pstrcat(pool, base, "/", relpath, NULL);
+}
+
+char *
 svn_dirent_dirname(const char *dirent, apr_pool_t *pool)
 {
   apr_size_t len = strlen(dirent);
