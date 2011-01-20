@@ -69,6 +69,24 @@ svn_repos__obliterate_path_rev(svn_repos_t *repos,
                                const char *path,
                                apr_pool_t *pool);
 
+/** Return the path to @a repos's pre-obliterate hook, allocated in
+ * @a pool.
+ *
+ * @since New in 1.7.
+ */
+const char *
+svn_repos__pre_obliterate_hook(svn_repos_t *repos,
+                               apr_pool_t *pool);
+
+/** Return the path to @a repos's post-obliterate hook, allocated in
+ * @a pool.
+ *
+ * @since New in 1.7.
+ */
+const char *
+svn_repos__post_obliterate_hook(svn_repos_t *repos,
+                                apr_pool_t *pool);
+
 
 /** Validate that property @a name is valid for use in a Subversion
  * repository; return @c SVN_ERR_REPOS_BAD_ARGS if it isn't.  For some

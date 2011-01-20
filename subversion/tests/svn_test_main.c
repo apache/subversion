@@ -78,7 +78,8 @@ enum {
   quiet_opt,
   config_opt,
   server_minor_version_opt,
-  allow_segfault_opt
+  allow_segfault_opt,
+  srcdir_opt
 };
 
 static const apr_getopt_option_t cl_options[] =
@@ -102,6 +103,8 @@ static const apr_getopt_option_t cl_options[] =
                     N_("print only unexpected results")},
   {"allow-segfaults", allow_segfault_opt, 0,
                     N_("don't trap seg faults (useful for debugging)")},
+  {"srcdir",        srcdir_opt, 1,
+                    N_("source directory")},
   {0,               0, 0, 0}
 };
 
