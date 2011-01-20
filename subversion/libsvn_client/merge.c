@@ -489,12 +489,12 @@ make_conflict_versions(const svn_wc_conflict_version_t **left,
 
   *left = svn_wc_conflict_version_create(
             src_repos_url,
-            svn_uri_is_child(src_repos_url, left_url, merge_b->pool),
+            svn_url_is_child(src_repos_url, left_url, merge_b->pool),
             merge_b->merge_source.rev1, node_kind, merge_b->pool);
 
   *right = svn_wc_conflict_version_create(
              src_repos_url,
-             svn_uri_is_child(src_repos_url, right_url, merge_b->pool),
+             svn_url_is_child(src_repos_url, right_url, merge_b->pool),
              merge_b->merge_source.rev2, node_kind, merge_b->pool);
 
   return SVN_NO_ERROR;
@@ -10419,7 +10419,7 @@ merge_reintegrate_locked(const char *source,
      (with regard to the WC). */
   rev1 = target_base_rev;
 
-  source_repos_rel_path = svn_uri_skip_ancestor(wc_repos_root, url2);
+  source_repos_rel_path = svn_url_skip_ancestor(wc_repos_root, url2);
   source_repos_rel_path = svn_path_uri_decode(source_repos_rel_path,
                                               scratch_pool);
   SVN_ERR(svn_client__path_relative_to_root(&target_repos_rel_path,
