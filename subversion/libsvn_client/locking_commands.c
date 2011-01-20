@@ -191,7 +191,7 @@ organize_lock_targets(const char **common_parent_url,
 
   /* Get the common parent and all paths */
   if (url_mode)
-    SVN_ERR(svn_uri_condense_targets(common_parent_url, &rel_targets,
+    SVN_ERR(svn_url_condense_targets(common_parent_url, &rel_targets,
                                      targets, TRUE, result_pool,
                                      scratch_pool));
   else
@@ -206,7 +206,7 @@ organize_lock_targets(const char **common_parent_url,
     {
       const char *parent, *base;
       if (url_mode)
-        svn_uri_split(&parent, &base, *common_parent_url, result_pool);
+        svn_url_split(&parent, &base, *common_parent_url, result_pool);
       else
         svn_dirent_split(&parent, &base, *common_parent_url, result_pool);
 
@@ -271,15 +271,15 @@ organize_lock_targets(const char **common_parent_url,
         }
 
       /* Condense our absolute urls and get the relative urls. */
-      SVN_ERR(svn_uri_condense_targets(&common_url, &rel_urls, urls,
+      SVN_ERR(svn_url_condense_targets(&common_url, &rel_urls, urls,
                                        FALSE, result_pool, scratch_pool));
 
       /* svn_uri_condense_targets leaves URLs empty if TARGETS only
          had 1 member, so we special case that (again). */
       if (apr_is_empty_array(rel_urls))
         {
-          const char *base_name = svn_uri_basename(common_url, scratch_pool);
-          common_url = svn_uri_dirname(common_url, result_pool);
+          const char *base_name = svn_url_basename(common_url, scratch_pool);
+          common_url = svn_url_dirname(common_url, result_pool);
           APR_ARRAY_PUSH(rel_urls, const char *) = base_name;
         }
 

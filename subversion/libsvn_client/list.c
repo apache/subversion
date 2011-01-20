@@ -179,7 +179,7 @@ svn_client_list2(const char *path_or_url,
 
               /* Open another session to the path's parent.  This server
                  doesn't support svn_ra_reparent anyway, so don't try it. */
-              svn_uri_split(&parent_url, &base_name, url, pool);
+              svn_url_split(&parent_url, &base_name, url, pool);
 
               /* 'base_name' is now the last component of an URL, but we want
                  to use it as a plain file name. Therefore, we must URI-decode

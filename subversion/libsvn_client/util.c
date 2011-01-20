@@ -208,7 +208,7 @@ svn_client__path_relative_to_root(const char **rel_path,
          back from this, the two URLs have no commonality (which
          should only happen if our caller provided us a REPOS_ROOT and
          a PATH_OR_URL of something not in that repository).  */
-      const char *rel_url = svn_uri_is_child(repos_root, abspath_or_url,
+      const char *rel_url = svn_url_is_child(repos_root, abspath_or_url,
                                              scratch_pool);
       if (! rel_url)
         {
@@ -219,8 +219,7 @@ svn_client__path_relative_to_root(const char **rel_path,
         }
       rel_url = svn_path_uri_decode(rel_url, result_pool);
       *rel_path = include_leading_slash
-                    ? apr_pstrcat(result_pool, "/", rel_url,
-                                  (char *)NULL)
+                    ? apr_pstrcat(result_pool, "/", rel_url, NULL)
                     : rel_url;
     }
 
