@@ -599,12 +599,12 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
   SVN_ERR_ASSERT(url != NULL);
   SVN_ERR_ASSERT(repos_root_url != NULL);
   SVN_ERR_ASSERT(repos_uuid != NULL);
-  SVN_ERR_ASSERT(svn_uri_is_ancestor(repos_root_url, url));
+  SVN_ERR_ASSERT(svn_url_is_ancestor(repos_root_url, url));
 
   SVN_ERR(svn_wc__internal_check_wc(&format, db, local_abspath, TRUE,
                                     scratch_pool));
 
-  repos_relpath = svn_uri_is_child(repos_root_url, url, scratch_pool);
+  repos_relpath = svn_url_is_child(repos_root_url, url, scratch_pool);
   if (repos_relpath == NULL)
     repos_relpath = "";
   else
@@ -685,8 +685,9 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
                                 _("URL '%s' doesn't match existing "
                                   "URL '%s' in '%s'"),
                                 url,
-                                svn_uri_join(db_repos_root_url,
-                                             db_repos_relpath, scratch_pool),
+                                svn_path_url_add_component2(db_repos_root_url,
+                                                            db_repos_relpath,
+                                                            scratch_pool),
                                 local_abspath);
         }
     }

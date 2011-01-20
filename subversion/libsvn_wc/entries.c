@@ -1738,7 +1738,7 @@ write_entry(struct write_baton **entry_node,
           const char *relative_url;
 
           working_node->copyfrom_repos_id = repos_id;
-          relative_url = svn_uri_is_child(this_dir->repos, entry->copyfrom_url,
+          relative_url = svn_url_is_child(this_dir->repos, entry->copyfrom_url,
                                           NULL);
           if (relative_url == NULL)
             working_node->copyfrom_repos_path = "";
@@ -1897,7 +1897,7 @@ write_entry(struct write_baton **entry_node,
           /* repos_relpath is NOT a URI. decode as appropriate.  */
           if (entry->url != NULL)
             {
-              const char *relative_url = svn_uri_is_child(this_dir->repos,
+              const char *relative_url = svn_url_is_child(this_dir->repos,
                                                           entry->url,
                                                           scratch_pool);
 
@@ -1909,7 +1909,7 @@ write_entry(struct write_baton **entry_node,
             }
           else
             {
-              const char *base_path = svn_uri_is_child(this_dir->repos,
+              const char *base_path = svn_url_is_child(this_dir->repos,
                                                        this_dir->url,
                                                        scratch_pool);
               if (base_path == NULL)

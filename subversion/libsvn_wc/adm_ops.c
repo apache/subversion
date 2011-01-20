@@ -859,7 +859,7 @@ check_can_add_node(svn_node_kind_t *kind_p,
   svn_boolean_t exists;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-  SVN_ERR_ASSERT(!copyfrom_url || (svn_uri_is_canonical(copyfrom_url,
+  SVN_ERR_ASSERT(!copyfrom_url || (svn_url_is_canonical(copyfrom_url,
                                                         scratch_pool)
                                    && SVN_IS_VALID_REVNUM(copyfrom_rev)));
 
@@ -1042,8 +1042,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
 
   /* If we're performing a repos-to-WC copy, check that the copyfrom
      repository is the same as the parent dir's repository. */
-  if (copyfrom_url
-      && !svn_uri_is_ancestor(repos_root_url, copyfrom_url))
+  if (copyfrom_url && !svn_url_is_ancestor(repos_root_url, copyfrom_url))
     return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                              _("The URL '%s' has a different repository "
                                "root than its parent"), copyfrom_url);
@@ -1120,19 +1119,23 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                                          scratch_pool));
         }
       else
-        SVN_ERR(svn_wc__db_op_copy_dir(db, local_abspath,
-                                       apr_hash_make(scratch_pool),
-                                       copyfrom_rev, 0, NULL,
-                                       svn_path_uri_decode(
-                                         svn_uri_skip_ancestor(repos_root_url,
-                                                               copyfrom_url),
-                                         scratch_pool),
-                                       repos_root_url, repos_uuid,
-                                       copyfrom_rev,
-                                       NULL /* children */, depth,
-                                       NULL /* conflicts */,
-                                       NULL /* work items */,
-                                       scratch_pool));
+        {
+          const char *repos_relpath =
+            svn_path_uri_decode(svn_url_skip_ancestor(repos_root_url,
+                                                      copyfrom_url),
+                                scratch_pool);
+
+          SVN_ERR(svn_wc__db_op_copy_dir(db, local_abspath,
+                                         apr_hash_make(scratch_pool),
+                                         copyfrom_rev, 0, NULL,
+                                         repos_relpath,
+                                         repos_root_url, repos_uuid,
+                                         copyfrom_rev,
+                                         NULL /* children */, depth,
+                                         NULL /* conflicts */,
+                                         NULL /* work items */,
+                                         scratch_pool));
+        }
     }
   else  /* Case 1: Integrating a separate WC into this one, in place */
     {
@@ -2142,11 +2145,11 @@ svn_wc__set_file_external_location(svn_wc_context_t *wc_ctx,
   const svn_opt_revision_t unspecified_rev = { svn_opt_revision_unspecified };
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-  SVN_ERR_ASSERT(!url || svn_uri_is_canonical(url, scratch_pool));
+  SVN_ERR_ASSERT(!url || svn_url_is_canonical(url, scratch_pool));
 
   if (url)
     {
-      external_repos_relpath = svn_uri_is_child(repos_root_url, url, NULL);
+      external_repos_relpath = svn_url_is_child(repos_root_url, url, NULL);
 
       if (external_repos_relpath == NULL)
           return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
