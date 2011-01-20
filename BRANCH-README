@@ -27,7 +27,6 @@ Here are the svn_uri_* functions which need to be reviewed/modified:
    svn_uri_split
    svn_uri_basename
    svn_uri_dirname
-   svn_uri_is_canonical
    svn_uri_get_longest_ancestor
    svn_uri_is_child
    svn_uri_is_ancestor
@@ -36,6 +35,11 @@ Here are the svn_uri_* functions which need to be reviewed/modified:
 
       Remove code that accepts non-URL URIs (asserting that input is
       valid).
+
+   svn_uri_is_canonical
+
+      Remove code that accepts non-URL URIs (asserting that input is
+      valid).  Also, lose unused 'pool' parameter.
    
    svn_uri_canonicalize
 
