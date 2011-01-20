@@ -32,6 +32,7 @@
 #include "svn_fs.h"
 #include "svn_ra.h"  /* for SVN_RA_CAPABILITY_* */
 #include "svn_repos.h"
+#include "private/svn_repos_private.h"
 #include "svn_private_config.h" /* for SVN_TEMPLATE_ROOT_DIR */
 
 #include "repos.h"
@@ -163,7 +164,7 @@ svn_repos_post_revprop_change_hook(svn_repos_t *repos, apr_pool_t *pool)
 
 
 const char *
-svn_repos_pre_obliterate_hook(svn_repos_t *repos, apr_pool_t *pool)
+svn_repos__pre_obliterate_hook(svn_repos_t *repos, apr_pool_t *pool)
 {
   return svn_dirent_join(repos->hook_path, SVN_REPOS__HOOK_PRE_OBLITERATE,
                        pool);
@@ -171,7 +172,7 @@ svn_repos_pre_obliterate_hook(svn_repos_t *repos, apr_pool_t *pool)
 
 
 const char *
-svn_repos_post_obliterate_hook(svn_repos_t *repos, apr_pool_t *pool)
+svn_repos__post_obliterate_hook(svn_repos_t *repos, apr_pool_t *pool)
 {
   return svn_dirent_join(repos->hook_path, SVN_REPOS__HOOK_POST_OBLITERATE,
                        pool);
@@ -549,7 +550,7 @@ PREWRITTEN_HOOKS_TEXT
   /* Pre-obliterate hook. */
   {
     this_path = apr_psprintf(pool, "%s%s",
-                             svn_repos_pre_obliterate_hook(repos, pool),
+                             svn_repos__pre_obliterate_hook(repos, pool),
                              SVN_REPOS__HOOK_DESC_EXT);
 
 #define SCRIPT_NAME SVN_REPOS__HOOK_PRE_OBLITERATE
@@ -1042,7 +1043,7 @@ PREWRITTEN_HOOKS_TEXT
   /* Post-obliterate hook. */
   {
     this_path = apr_psprintf(pool, "%s%s",
-                             svn_repos_post_obliterate_hook(repos, pool),
+                             svn_repos__post_obliterate_hook(repos, pool),
                              SVN_REPOS__HOOK_DESC_EXT);
 
 #define SCRIPT_NAME SVN_REPOS__HOOK_POST_OBLITERATE

@@ -87,6 +87,7 @@ def _usage_exit():
   print(" --config-file           : Configuration file for tests")
   print(" --fsfs-sharding         : Specify shard size (for fsfs)")
   print(" --fsfs-packing          : Run 'svnadmin pack' automatically")
+  print(" --log-to-stdout         : Write log results to stdout")
 
   sys.exit(0)
 
@@ -119,7 +120,8 @@ opts, args = my_getopt(sys.argv[1:], 'hrdvqct:pu:f:',
                         'httpd-server', 'http-library=', 'help',
                         'fsfs-packing', 'fsfs-sharding=', 'javahl',
                         'list', 'enable-sasl', 'bin=', 'parallel',
-                        'config-file=', 'server-minor-version='])
+                        'config-file=', 'server-minor-version=',
+                        'log-to-stdout'])
 if len(args) > 1:
   print('Warning: non-option arguments after the first one will be ignored')
 
@@ -144,6 +146,7 @@ fsfs_sharding = None
 fsfs_packing = None
 server_minor_version = None
 config_file = None
+log_to_stdout = None
 tests_to_run = []
 
 for opt, val in opts:
@@ -200,6 +203,8 @@ for opt, val in opts:
     parallel = 1
   elif opt in ('--config-file'):
     config_file = val
+  elif opt == '--log-to-stdout':
+    log_to_stdout = 1
 
 # Calculate the source and test directory names
 abs_srcdir = os.path.abspath("")
@@ -616,16 +621,19 @@ abs_builddir = fix_case(abs_builddir)
 
 daemon = None
 # Run the tests
-if run_svnserve:
-  daemon = Svnserve(svnserve_args, objdir, abs_objdir, abs_builddir)
 
-if run_httpd:
-  daemon = Httpd(abs_httpd_dir, abs_objdir, abs_builddir, httpd_port,
-                 httpd_service)
+# No need to start any servers if we are only listing the tests.
+if not list_tests:
+  if run_svnserve:
+    daemon = Svnserve(svnserve_args, objdir, abs_objdir, abs_builddir)
 
-# Start service daemon, if any
-if daemon:
-  daemon.start()
+  if run_httpd:
+    daemon = Httpd(abs_httpd_dir, abs_objdir, abs_builddir, httpd_port,
+                   httpd_service)
+
+  # Start service daemon, if any
+  if daemon:
+    daemon.start()
 
 # Find the full path and filename of any test that is specified just by
 # its base name.
@@ -653,14 +661,24 @@ else:
   tests_to_run = all_tests
 
 
-print('Testing %s configuration on %s' % (objdir, repo_loc))
+if list_tests:
+  print('Listing %s configuration on %s' % (objdir, repo_loc))
+else:
+  print('Testing %s configuration on %s' % (objdir, repo_loc))
 sys.path.insert(0, os.path.join(abs_srcdir, 'build'))
 
 if not test_javahl:
   import run_tests
+  if log_to_stdout:
+    log_file = None
+    fail_log_file = None
+  else:
+    log_file = os.path.join(abs_builddir, log)
+    fail_log_file = os.path.join(abs_builddir, faillog)
+
   th = run_tests.TestHarness(abs_srcdir, abs_builddir,
-                             os.path.join(abs_builddir, log),
-                             os.path.join(abs_builddir, faillog),
+                             log_file,
+                             fail_log_file,
                              base_url, fs_type, http_library,
                              server_minor_version, not quiet,
                              cleanup, enable_sasl, parallel, config_file,

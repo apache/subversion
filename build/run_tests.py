@@ -153,14 +153,21 @@ class TestHarness:
 
     passed = [x for x in log_lines if x[:6] == 'PASS: ']
 
-    skipped = [x for x in log_lines if x[:6] == 'SKIP: ']
-    if skipped:
+    if self.list_tests:
+      skipped = [x for x in log_lines if x[9:13] == 'SKIP']
+    else:
+      skipped = [x for x in log_lines if x[:6] == 'SKIP: ']
+
+    if skipped and not self.list_tests:
       print('At least one test was SKIPPED, checking ' + self.logfile)
       for x in skipped:
         sys.stdout.write(x)
 
-    xfailed = [x for x in log_lines if x[:6] == 'XFAIL:']
-    if xfailed:
+    if self.list_tests:
+      xfailed = [x for x in log_lines if x[9:14] == 'XFAIL']
+    else:
+      xfailed = [x for x in log_lines if x[:6] == 'XFAIL:']
+    if xfailed and not self.list_tests:
       print('At least one test XFAILED, checking ' + self.logfile)
       for x in xfailed:
         printxfail(x)
@@ -178,21 +185,36 @@ class TestHarness:
         sys.stdout.write(x)
 
     # Print summaries, from least interesting to most interesting.
-    print('Summary of test results:')
+    if self.list_tests:
+      print('Summary of test listing:')
+    else:
+      print('Summary of test results:')
     if passed:
       print('  %d test%s PASSED'
             % (len(passed), 's'*min(len(passed) - 1, 1)))
     if skipped:
-      print('  %d test%s SKIPPED'
-            % (len(skipped), 's'*min(len(skipped) - 1, 1)))
+      if self.list_tests:
+        print('  %d test%s are set as SKIP'
+              % (len(skipped), 's'*min(len(skipped) - 1, 1)))
+      else:
+        print('  %d test%s SKIPPED'
+              % (len(skipped), 's'*min(len(skipped) - 1, 1)))
     if xfailed:
       passwimp = [x for x in xfailed if 0 <= x.find(wimptag)]
       if passwimp:
-        print('  %d test%s XFAILED (%d WORK-IN-PROGRESS)'
-              % (len(xfailed), 's'*min(len(xfailed) - 1, 1), len(passwimp)))
+        if self.list_tests:
+          print('  %d test%s are set to XFAIL (%d WORK-IN-PROGRESS)'
+                % (len(xfailed), 's'*min(len(xfailed) - 1, 1), len(passwimp)))
+        else:
+          print('  %d test%s XFAILED (%d WORK-IN-PROGRESS)'
+                % (len(xfailed), 's'*min(len(xfailed) - 1, 1), len(passwimp)))
       else:
-        print('  %d test%s XFAILED'
-              % (len(xfailed), 's'*min(len(xfailed) - 1, 1)))
+        if self.list_tests:
+          print('  %d test%s are set as XFAIL'
+                % (len(xfailed), 's'*min(len(xfailed) - 1, 1)))
+        else:
+          print('  %d test%s XFAILED'
+                % (len(xfailed), 's'*min(len(xfailed) - 1, 1)))
     if xpassed:
       failwimp = [x for x in xpassed if 0 <= x.find(wimptag)]
       if failwimp:
@@ -245,8 +267,9 @@ class TestHarness:
     'Run a c test, escaping parameters as required.'
     progdir, progbase = os.path.split(prog)
 
-    sys.stdout.write('.' * dot_count)
-    sys.stdout.flush()
+    if not self.list_tests:
+      sys.stdout.write('.' * dot_count)
+      sys.stdout.flush()
 
     if os.access(progbase, os.X_OK):
       progname = './' + progbase
@@ -265,18 +288,10 @@ class TestHarness:
       cmdline.append('--cleanup')
     if self.fs_type is not None:
       cmdline.append('--fs-type=' + self.fs_type)
-    if self.http_library is not None:
-      cmdline.append('--http-library=' + self.http_library)
     if self.server_minor_version is not None:
       cmdline.append('--server-minor-version=' + self.server_minor_version)
     if self.list_tests is not None:
       cmdline.append('--list')
-    if self.svn_bin is not None:
-      cmdline.append('--bin=' + self.svn_bin)
-    if self.fsfs_sharding is not None:
-      cmdline.append('--fsfs-sharding=%d' % self.fsfs_sharding)
-    if self.fsfs_packing is not None:
-      cmdline.append('--fsfs-packing')
 
     if test_nums:
       test_nums = test_nums.split(',')
@@ -356,10 +371,16 @@ class TestHarness:
 
     # run the tests
     svntest.testcase.TextColors.disable()
+
+    if self.list_tests:
+      prog_f = None
+    else:
+      prog_f = progress_func
+
     failed = svntest.main.execute_tests(prog_mod.test_list,
                                         serial_only=serial_only,
                                         test_name=progbase,
-                                        progress_func=progress_func)
+                                        progress_func=prog_f)
 
     # restore some values
     sys.path = old_path
@@ -389,13 +410,20 @@ class TestHarness:
     if self.log:
       # Using write here because we don't want even a trailing space
       test_info = '%s [%d/%d]' % (progbase, test_nr + 1, total_tests)
-      sys.stdout.write('Running tests in %s' % (test_info, ))
+      if self.list_tests:
+        sys.stdout.write('Listing tests in %s' % (test_info, ))
+      else:
+        sys.stdout.write('Running tests in %s' % (test_info, ))
       sys.stdout.flush()
     else:
       # ### Hack for --log-to-stdout to work (but not print any dots).
       test_info = ''
 
-    log.write('START: %s\n' % progbase)
+    if self.list_tests:
+      log.write('LISTING: %s\n' % progbase)
+    else:
+      log.write('START: %s\n' % progbase)
+
     log.flush()
 
     start_time = datetime.now()
@@ -427,18 +455,24 @@ class TestHarness:
       else:
         log.write('FAIL:  %s: Unknown test failure.\n' % progbase)
 
-    # Log the elapsed time.
-    elapsed_time = str(datetime.now() - start_time)
-    log.write('END: %s\n' % progbase)
-    log.write('ELAPSED: %s %s\n' % (progbase, elapsed_time))
+    if not self.list_tests:
+      # Log the elapsed time.
+      elapsed_time = str(datetime.now() - start_time)
+      log.write('END: %s\n' % progbase)
+      log.write('ELAPSED: %s %s\n' % (progbase, elapsed_time))
+
     log.write('\n')
 
-    # If we printed a "Running all tests in ..." line, add the test result.
+    # If we are only listing the tests just add a newline, otherwise if
+    # we printed a "Running all tests in ..." line, add the test result.
     if self.log:
-      if failed:
-        print(TextColors.FAILURE + 'FAILURE' + TextColors.ENDC)
+      if self.list_tests:
+        print ''
       else:
-        print(TextColors.SUCCESS + 'success' + TextColors.ENDC)
+        if failed:
+          print(TextColors.FAILURE + 'FAILURE' + TextColors.ENDC)
+        else:
+          print(TextColors.SUCCESS + 'success' + TextColors.ENDC)
 
     return failed
 
