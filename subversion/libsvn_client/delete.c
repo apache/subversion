@@ -157,12 +157,12 @@ delete_urls(const apr_array_header_t *paths,
   apr_pool_t *subpool = svn_pool_create(pool);
 
   /* Condense our list of deletion targets. */
-  SVN_ERR(svn_uri_condense_targets(&common, &targets, paths, TRUE,
+  SVN_ERR(svn_url_condense_targets(&common, &targets, paths, TRUE,
                                    pool, subpool));
   if (! targets->nelts)
     {
       const char *bname;
-      svn_uri_split(&common, &bname, common, pool);
+      svn_url_split(&common, &bname, common, pool);
       APR_ARRAY_PUSH(targets, const char *) = bname;
     }
 
@@ -179,7 +179,7 @@ delete_urls(const apr_array_header_t *paths,
           const char *path = APR_ARRAY_IDX(targets, i, const char *);
 
           item = svn_client_commit_item3_create(pool);
-          item->url = svn_uri_join(common, path, pool);
+          item->url = svn_url_join_relpath(common, path, pool);
           item->state_flags = SVN_CLIENT_COMMIT_ITEM_DELETE;
           APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
         }
@@ -207,7 +207,7 @@ delete_urls(const apr_array_header_t *paths,
       const char *item_url;
 
       svn_pool_clear(subpool);
-      item_url = svn_uri_join(common, path, subpool);
+      item_url = svn_url_join_relpath(common, path, subpool);
       path = svn_path_uri_decode(path, pool);
       APR_ARRAY_IDX(targets, i, const char *) = path;
 

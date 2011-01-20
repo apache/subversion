@@ -1145,7 +1145,7 @@ harvest_copy_committables(void *baton, void *item, apr_pool_t *pool)
                               pair->src_abspath_or_url,
                               repos_root_url,
                               svn_path_uri_decode(
-                                  svn_uri_skip_ancestor(
+                                  svn_url_skip_ancestor(
                                             repos_root_url,
                                             pair->dst_abspath_or_url),
                                   pool),
@@ -1230,7 +1230,7 @@ svn_client__condense_commit_items(const char **base_url,
       if (i == 0)
         *base_url = apr_pstrdup(pool, url);
       else
-        *base_url = svn_uri_get_longest_ancestor(*base_url, url, pool);
+        *base_url = svn_url_get_longest_ancestor(*base_url, url, pool);
 
       /* If our BASE_URL is itself a to-be-committed item, and it is
          anything other than an already-versioned directory with
@@ -1243,7 +1243,7 @@ svn_client__condense_commit_items(const char **base_url,
       if ((strlen(*base_url) == strlen(url))
           && (! ((item->kind == svn_node_dir)
                  && item->state_flags == SVN_CLIENT_COMMIT_ITEM_PROP_MODS)))
-        *base_url = svn_uri_dirname(*base_url, pool);
+        *base_url = svn_url_dirname(*base_url, pool);
 
       /* Stash our item here for the next iteration. */
       last_item = item;

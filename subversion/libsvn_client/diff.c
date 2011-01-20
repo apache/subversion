@@ -1532,9 +1532,9 @@ diff_prepare_repos_repos(const char **url1,
   *target2 = "";
   if ((kind1 == svn_node_file) || (kind2 == svn_node_file))
     {
-      svn_uri_split(anchor1, target1, *url1, pool);
+      svn_url_split(anchor1, target1, *url1, pool);
       *target1 = svn_path_uri_decode(*target1, pool);
-      svn_uri_split(anchor2, target2, *url2, pool);
+      svn_url_split(anchor2, target2, *url2, pool);
       *target2 = svn_path_uri_decode(*target2, pool);
       if (*base_path)
         *base_path = svn_dirent_dirname(*base_path, pool);
@@ -1830,11 +1830,13 @@ diff_repos_wc(const char *path1,
       if (!reverse)
         {
           callback_baton->orig_path_1 = url1;
-          callback_baton->orig_path_2 = svn_uri_join(anchor_url, target, pool);
+          callback_baton->orig_path_2 = svn_url_join_relpath(anchor_url,
+                                                             target, pool);
         }
       else
         {
-          callback_baton->orig_path_1 = svn_uri_join(anchor_url, target, pool);
+          callback_baton->orig_path_1 = svn_url_join_relpath(anchor_url,
+                                                             target, pool);
           callback_baton->orig_path_2 = url1;
         }
     }
