@@ -3040,7 +3040,7 @@ svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
   svn_wc_external_update_t external_func = NULL;
   struct traversal_info_update_baton *eb = NULL;
 
-  SVN_ERR_ASSERT(switch_url && svn_uri_is_canonical(switch_url, pool));
+  SVN_ERR_ASSERT(switch_url && svn_url_is_canonical(switch_url, pool));
 
   SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL, db, pool));
 
