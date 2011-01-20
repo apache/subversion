@@ -57,7 +57,7 @@ make_and_open_local_repos(svn_ra_session_t **session,
   SVN_ERR(svn_test__create_repos(&repos, repos_name, opts, pool));
   SVN_ERR(svn_ra_initialize(pool));
 
-  SVN_ERR(svn_uri_get_file_url_from_dirent(&url, repos_name, pool));
+  SVN_ERR(svn_url_get_file_url_from_dirent(&url, repos_name, pool));
 
   SVN_ERR(svn_ra_open3(session,
                        url,
@@ -218,7 +218,7 @@ check_split_url(const char *repos_path,
   /* Create a filesystem and repository */
   SVN_ERR(svn_test__create_repos(&repos, repos_path, opts, pool));
 
-  SVN_ERR(svn_uri_get_file_url_from_dirent(&root_url, repos_path, pool));
+  SVN_ERR(svn_url_get_file_url_from_dirent(&root_url, repos_path, pool));
   if (in_repos_path)
     url = apr_pstrcat(pool, root_url, in_repos_path, (char *)NULL);
   else

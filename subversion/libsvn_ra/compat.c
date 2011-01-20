@@ -674,7 +674,7 @@ svn_ra__file_revs_from_log(svn_ra_session_t *ra_session,
   SVN_ERR(svn_ra_get_session_url(ra_session, &session_url, pool));
 
   /* Create the initial path, using the repos_url and session_url */
-  tmp = svn_uri_is_child(repos_url, session_url, pool);
+  tmp = svn_url_is_child(repos_url, session_url, pool);
   repos_abs_path = apr_palloc(pool, strlen(tmp) + 1);
   repos_abs_path[0] = '/';
   memcpy(repos_abs_path + 1, tmp, strlen(tmp));
