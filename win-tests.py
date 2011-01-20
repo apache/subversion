@@ -616,16 +616,19 @@ abs_builddir = fix_case(abs_builddir)
 
 daemon = None
 # Run the tests
-if run_svnserve:
-  daemon = Svnserve(svnserve_args, objdir, abs_objdir, abs_builddir)
 
-if run_httpd:
-  daemon = Httpd(abs_httpd_dir, abs_objdir, abs_builddir, httpd_port,
-                 httpd_service)
+# No need to start any servers if we are only listing the tests.
+if not list_tests:
+  if run_svnserve:
+    daemon = Svnserve(svnserve_args, objdir, abs_objdir, abs_builddir)
 
-# Start service daemon, if any
-if daemon:
-  daemon.start()
+  if run_httpd:
+    daemon = Httpd(abs_httpd_dir, abs_objdir, abs_builddir, httpd_port,
+                   httpd_service)
+
+  # Start service daemon, if any
+  if daemon:
+    daemon.start()
 
 # Find the full path and filename of any test that is specified just by
 # its base name.
@@ -653,7 +656,10 @@ else:
   tests_to_run = all_tests
 
 
-print('Testing %s configuration on %s' % (objdir, repo_loc))
+if list_tests:
+  print('Listing %s configuration on %s' % (objdir, repo_loc))
+else:
+  print('Testing %s configuration on %s' % (objdir, repo_loc))
 sys.path.insert(0, os.path.join(abs_srcdir, 'build'))
 
 if not test_javahl:

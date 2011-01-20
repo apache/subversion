@@ -1570,8 +1570,8 @@ def execute_tests(test_list, serial_only = False, test_name = None,
     for testnum in testnums:
       TestRunner(test_list[testnum], testnum).list()
 
-    # done. just exit with success.
-    sys.exit(0)
+    # We are simply listing the tests so always exit with success.
+    return 0
 
   # don't run tests in parallel when the tests don't support it or there
   # are only a few tests to run.
