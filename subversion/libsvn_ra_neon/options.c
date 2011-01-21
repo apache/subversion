@@ -108,9 +108,11 @@ end_element(void *baton, int state,
   options_ctx_t *oc = baton;
 
   if (state == ELEM_href)
-    oc->activity_coll = svn_string_create(svn_uri_canonicalize(oc->cdata->data,
-                                                               oc->pool),
-                                          oc->pool);
+    oc->activity_coll =
+      svn_string_create(svn_ra_neon__uri_canonicalize(oc->cdata->data,
+                                                      oc->pool,
+                                                      oc->pool),
+                        oc->pool);
 
   return SVN_NO_ERROR;
 }
