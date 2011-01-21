@@ -1570,8 +1570,24 @@ svn_ra_neon__request_get_location(svn_ra_neon__request_t *request,
                                   apr_pool_t *pool)
 {
   const char *val = ne_get_response_header(request->ne_req, "Location");
-  return val ? svn_uri_join(request->url,
-                            svn_uri_canonicalize(val, pool),
-                            pool)
-             : NULL;
+  return val ? svn_ra_neon__uri_canonicalize(val, pool, pool) : NULL;
 }
+
+
+const char *
+svn_ra_neon__uri_canonicalize(const char *uri,
+                              apr_pool_t *scratch_pool,
+                              apr_pool_t *result_pool)
+{
+  if (svn_path_is_url(uri))
+    return svn_url_canonicalize(uri, result_pool);
+
+  return apr_pstrcat(result_pool, "/", 
+                     svn_path_uri_encode(
+                         svn_relpath_canonicalize(
+                             svn_path_uri_decode(uri, scratch_pool),
+                             scratch_pool),
+                         result_pool),
+                     NULL);
+}
+  

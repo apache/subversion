@@ -1010,6 +1010,16 @@ const char *
 svn_ra_neon__request_get_location(svn_ra_neon__request_t *request,
                                   apr_pool_t *pool);
 
+/* Canonicalize an absolute URI, in the general sense.  URI might be a
+ * full, absolute, schema-ful URL.  It might be just the path portion
+ * of a URL.  Whatever the case, it is a URI-encoded identifier of
+ * *some sort*, as will be the returned form thereof.
+ */
+const char *
+svn_ra_neon__uri_canonicalize(const char *uri,
+                              apr_pool_t *scratch_pool,
+                              apr_pool_t *result_pool);
+
 
 /*
  * Implements the get_locations RA layer function. */
