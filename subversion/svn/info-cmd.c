@@ -545,7 +545,7 @@ svn_cl__info(apr_getopt_t *os,
       /* If no peg-rev was attached to a URL target, then assume HEAD. */
       if (svn_path_is_url(truepath))
         {
-          truepath = svn_uri_canonicalize(truepath, subpool);
+          truepath = svn_url_canonicalize(truepath, subpool);
 
           if (peg_revision.kind == svn_opt_revision_unspecified)
             peg_revision.kind = svn_opt_revision_head;

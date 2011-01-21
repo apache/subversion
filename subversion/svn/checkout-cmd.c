@@ -93,9 +93,8 @@ svn_cl__checkout(apr_getopt_t *os,
 
           /* Discard the peg-revision, if one was provided. */
           SVN_ERR(svn_opt_parse_path(&pegrev, &local_dir, local_dir, pool));
-
-          local_dir = svn_uri_basename(local_dir, pool);
-          local_dir = svn_path_uri_decode(local_dir, pool);
+          local_dir = svn_path_uri_decode(svn_url_basename(local_dir, pool),
+                                          pool);
         }
       else
         {
@@ -136,7 +135,7 @@ svn_cl__checkout(apr_getopt_t *os,
       SVN_ERR(svn_opt_parse_path(&peg_revision, &true_url, repos_url,
                                  subpool));
 
-      true_url = svn_uri_canonicalize(true_url, subpool);
+      true_url = svn_url_canonicalize(true_url, subpool);
 
       /* Use sub-directory of destination if checking-out multiple URLs */
       if (targets->nelts == 2)
@@ -145,9 +144,12 @@ svn_cl__checkout(apr_getopt_t *os,
         }
       else
         {
-          target_dir = svn_uri_basename(true_url, subpool);
-          target_dir = svn_path_uri_decode(target_dir, subpool);
-          target_dir = svn_dirent_join(local_dir, target_dir, subpool);
+          target_dir =
+            svn_dirent_join(local_dir,
+                            svn_path_uri_decode(svn_url_basename(true_url,
+                                                                 subpool),
+                                                subpool),
+                            subpool);
         }
 
       /* Checkout doesn't accept an unspecified revision, so default to
