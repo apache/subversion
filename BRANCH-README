@@ -32,9 +32,6 @@ TODO:
   * revv svn_diff.h#svn_diff_fns_t             []
 
 Other wild ideas (may or may not be worth pursuing):
-  * Make prefix scanning able to skip 1 or a couple of non-matching lines, if
-    it is able to find strictly more matching lines after that, to keep the
-    prefix scanning going.
   * Take advantage of the fact that matching lines often come in batches: when
     inserting a new line into the token tree, and the previous line had a
     match, first try to match the new token with the successor of the
@@ -42,6 +39,26 @@ Other wild ideas (may or may not be worth pursuing):
   * Add some balancing to the token tree in token.c#svn_diff__tree_insert_token
     to make sure it doesn't degenerate. We may want to investigate first
     whether non-balancedness is really a problem in normal use cases.
+    
+Rejected ideas:
+  * Make prefix scanning able to skip 1 or a couple of non-matching lines, if
+    it is able to find strictly more matching lines after that, to keep the
+    prefix scanning going.
+    
+    This is not a good idea, because it can lead to bad cases of
+    missynchronization (see [3]):
+    
+      bxxaxxbxx
+       || ||
+      axxbxx
+
+    instead of (longest common subsequence):
+    
+      bxxaxxbxx
+        //////
+       axxbxx
 
 [1] http://en.wikipedia.org/wiki/Longest_common_subsequence_problem#Reduce_the_problem_set
 [2] http://svn.haxx.se/dev/archive-2011-01/0005.shtml
+[3] Miller, W., and Myers, E.W. "A File Comparison Program.", Software - 
+    Practice & Experience 15 (1985), pp. 1025-1040.
