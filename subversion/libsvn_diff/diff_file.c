@@ -390,9 +390,9 @@ find_identical_prefix(svn_boolean_t *reached_one_eof, apr_off_t *prefix_lines,
 {
   svn_boolean_t had_cr = FALSE;
   svn_boolean_t is_match;
+  apr_off_t lines = 0;
   apr_size_t i;
 
-  *prefix_lines = 0;
   for (i = 1, is_match = TRUE; i < file_len; i++)
     is_match = is_match && *file[0].curp == *file[i].curp;
   while (is_match)
@@ -402,12 +402,12 @@ find_identical_prefix(svn_boolean_t *reached_one_eof, apr_off_t *prefix_lines,
       /* check for eol, and count */
       if (*file[0].curp == '\r')
         {
-          (*prefix_lines)++;
+          lines++;
           had_cr = TRUE;
         }
       else if (*file[0].curp == '\n' && !had_cr)
         {
-          (*prefix_lines)++;
+          lines++;
         }
       else 
         {
@@ -429,7 +429,7 @@ find_identical_prefix(svn_boolean_t *reached_one_eof, apr_off_t *prefix_lines,
     {
       /* Check if we ended in the middle of a \r\n for one file, but \r for 
          another. If so, back up one byte, so the next loop will back up
-         the entire line. Also decrement *prefix_lines, since we counted one
+         the entire line. Also decrement lines, since we counted one
          too many for the \r. */
       svn_boolean_t ended_at_nonmatching_newline = FALSE;
       for (i = 0; i < file_len; i++)
@@ -437,7 +437,7 @@ find_identical_prefix(svn_boolean_t *reached_one_eof, apr_off_t *prefix_lines,
                                        || *file[i].curp == '\n';
       if (ended_at_nonmatching_newline)
         {
-          (*prefix_lines)--;
+          lines--;
           DECREMENT_POINTERS(file, file_len, pool);
         }
     }
@@ -452,6 +452,8 @@ find_identical_prefix(svn_boolean_t *reached_one_eof, apr_off_t *prefix_lines,
 
   /* Slide one byte forward, to point past the eol sequence */
   INCREMENT_POINTERS(file, file_len, pool);
+
+  *prefix_lines = lines;
 
   return SVN_NO_ERROR;
 }
