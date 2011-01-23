@@ -375,6 +375,32 @@ is_one_at_eof(struct file_info file[], apr_size_t file_len)
   return FALSE;
 }
 
+/* Quickly determine whether there is a eol char in CHUNK.
+ * (mainly copy-n-paste from eol.c#svn_eol__find_eol_start).
+ */
+#if APR_SIZEOF_VOIDP == 8
+#  define LOWER_7BITS_SET 0x7f7f7f7f7f7f7f7f
+#  define BIT_7_SET       0x8080808080808080
+#  define R_MASK          0x0a0a0a0a0a0a0a0a
+#  define N_MASK          0x0d0d0d0d0d0d0d0d
+#else
+#  define LOWER_7BITS_SET 0x7f7f7f7f
+#  define BIT_7_SET       0x80808080
+#  define R_MASK          0x0a0a0a0a
+#  define N_MASK          0x0d0d0d0d
+#endif
+
+static svn_boolean_t contains_eol(apr_size_t chunk)
+{
+  apr_size_t r_test = chunk ^ R_MASK;
+  apr_size_t n_test = chunk ^ N_MASK;
+
+  r_test |= (r_test & LOWER_7BITS_SET) + LOWER_7BITS_SET;
+  n_test |= (n_test & LOWER_7BITS_SET) + LOWER_7BITS_SET;
+
+  return (r_test & n_test & BIT_7_SET) != BIT_7_SET;
+}
+
 /* Find the prefix which is identical between all elements of the FILE array.
  * Return the number of prefix lines in PREFIX_LINES.  REACHED_ONE_EOF will be
  * set to TRUE if one of the FILEs reached its end while scanning prefix,
@@ -389,7 +415,7 @@ find_identical_prefix(svn_boolean_t *reached_one_eof, apr_off_t *prefix_lines,
                       apr_pool_t *pool)
 {
   svn_boolean_t had_cr = FALSE;
-  svn_boolean_t is_match;
+  svn_boolean_t is_match, can_read_word;
   apr_off_t lines = 0;
   apr_size_t i;
 
@@ -415,6 +441,31 @@ find_identical_prefix(svn_boolean_t *reached_one_eof, apr_off_t *prefix_lines,
         }
 
       INCREMENT_POINTERS(file, file_len, pool);
+
+#if SVN_UNALIGNED_ACCESS_IS_OK
+
+      /* Skip quickly over the stuff between EOLs. */
+      for (i = 0, can_read_word = TRUE; i < file_len; i++)
+        can_read_word = can_read_word 
+                        && (file[i].curp + sizeof(apr_size_t) < file[i].endp);
+      while (can_read_word)
+        {
+          for (i = 1, is_match = TRUE; i < file_len; i++)
+            is_match = is_match
+                       && (   *(const apr_size_t *)file[0].curp
+                           == *(const apr_size_t *)file[i].curp);
+
+          if (!is_match || contains_eol(*(const apr_size_t *)file[0].curp))
+            break;
+
+          for (i = 0; i < file_len; i++)
+            file[i].curp += sizeof(apr_size_t);
+          for (i = 0, can_read_word = TRUE; i < file_len; i++)
+            can_read_word = can_read_word 
+                        && (file[i].curp + sizeof(apr_size_t) < file[i].endp);
+        }
+
+#endif
 
       /* curp == endp indicates EOF (this can only happen with last chunk) */
       *reached_one_eof = is_one_at_eof(file, file_len);
@@ -477,7 +528,7 @@ find_identical_suffix(struct file_info file[], apr_size_t file_len,
   apr_off_t suffix_min_offset0;
   apr_off_t min_file_size;
   int suffix_lines_to_keep = SUFFIX_LINES_TO_KEEP;
-  svn_boolean_t is_match, reached_prefix;
+  svn_boolean_t is_match, can_read, can_read_word, reached_prefix;
   apr_size_t i;
 
   memset(file_for_suffix, 0, sizeof(file_for_suffix));
@@ -527,23 +578,74 @@ find_identical_suffix(struct file_info file[], apr_size_t file_len,
     }
 
   /* Scan backwards until mismatch or until we reach the prefix. */
-  for (i = 1, is_match = TRUE; i < file_len; i++)
-    is_match =
-      is_match && *file_for_suffix[0].curp == *file_for_suffix[i].curp;
-  while (is_match)
+  while (1)
     {
+      /* Initialize the minimum pointer positions. */
+      const char *min_curp[4];
+
+      min_curp[0] = file_for_suffix[0].chunk == suffix_min_chunk0
+                  ? file_for_suffix[0].buffer + suffix_min_offset0 + 1
+                  : file_for_suffix[0].buffer + 1;
+      for (i = 1; i < file_len; i++)
+        min_curp[i] = file_for_suffix[i].buffer + 1;
+
+#if SVN_UNALIGNED_ACCESS_IS_OK
+
+      /* Scan quickly by reading with machine-word granularity. */
+      for (i = 0, can_read_word = TRUE; i < file_len; i++)
+        can_read_word = can_read_word 
+                        && (   file_for_suffix[i].curp - sizeof(apr_size_t)
+                            >= min_curp[i]);
+      if (can_read_word)
+        {
+          do
+            {
+              for (i = 0; i < file_len; i++)
+                file_for_suffix[i].curp -= sizeof(apr_size_t);
+
+              for (i = 0, can_read_word = TRUE; i < file_len; i++)
+                can_read_word = can_read_word 
+                                && (   file_for_suffix[i].curp - sizeof(apr_size_t)
+                                    >= min_curp[i]);
+              for (i = 1, is_match = TRUE; i < file_len; i++)
+                is_match = is_match
+                           && (   *(const apr_size_t *)(file_for_suffix[0].curp + 1)
+                               == *(const apr_size_t *)(file_for_suffix[i].curp + 1));
+            } while (can_read_word && is_match);
+
+            for (i = 0; i < file_len; i++)
+              file_for_suffix[i].curp += sizeof(apr_size_t);
+        }
+
+#endif
+
+      for (i = 1, is_match = TRUE; i < file_len; i++)
+        is_match =
+          is_match && *file_for_suffix[0].curp == *file_for_suffix[i].curp;
+      for (i = 0, can_read = TRUE; i < file_len; i++)
+        can_read = can_read && (file_for_suffix[i].curp > min_curp[i]);
+      while (is_match && can_read)
+        {
+          for (i = 0; i < file_len; i++)
+            file_for_suffix[i].curp--;
+          for (i = 1, is_match = TRUE; i < file_len; i++)
+            is_match =
+              is_match && *file_for_suffix[0].curp == *file_for_suffix[i].curp;
+          for (i = 0, can_read = TRUE; i < file_len; i++)
+            can_read = can_read && (file_for_suffix[i].curp > min_curp[i]);
+        }
+
+      if (!is_match)
+        break;
+
       DECREMENT_POINTERS(file_for_suffix, file_len, pool);
-      
+
       reached_prefix = file_for_suffix[0].chunk == suffix_min_chunk0 
                        && (file_for_suffix[0].curp - file_for_suffix[0].buffer)
                           == suffix_min_offset0;
 
       if (reached_prefix || is_one_at_bof(file_for_suffix, file_len))
         break;
-      else
-        for (i = 1, is_match = TRUE; i < file_len; i++)
-          is_match =
-            is_match && *file_for_suffix[0].curp == *file_for_suffix[i].curp;
     }
 
   /* Slide one byte forward, to point at the first byte of identical suffix */
