@@ -30,6 +30,8 @@
 #include "svn_subst.h"
 #include "svn_dirent_uri.h"
 
+#include "private/svn_fspath.h"
+
 #include "dump_editor.h"
 
 #define ARE_VALID_COPY_ARGS(p,r) ((p) && SVN_IS_VALID_REVNUM(r))

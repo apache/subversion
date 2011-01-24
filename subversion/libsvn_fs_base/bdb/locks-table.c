@@ -39,6 +39,7 @@
 #include "lock-tokens-table.h"
 
 #include "private/svn_fs_util.h"
+#include "private/svn_fspath.h"
 
 
 int

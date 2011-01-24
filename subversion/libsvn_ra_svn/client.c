@@ -47,6 +47,8 @@
 #include "svn_props.h"
 #include "svn_mergeinfo.h"
 
+#include "private/svn_fspath.h"
+
 #include "ra_svn.h"
 
 #ifdef SVN_HAVE_SASL
