@@ -32,6 +32,7 @@
 #include "svn_error_codes.h"
 #include "svn_string.h"
 #include "svn_mergeinfo.h"
+#include "private/svn_fspath.h"
 #include "private/svn_mergeinfo_private.h"
 #include "svn_private_config.h"
 #include "svn_hash.h"

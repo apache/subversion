@@ -1130,6 +1130,8 @@ class TestSpawningThread(threading.Thread):
       args.append('--http-library=' + options.http_library)
     if options.server_minor_version:
       args.append('--server-minor-version=' + str(options.server_minor_version))
+    if options.mode_filter:
+      args.append('--mode-filter=' + options.mode_filter)
 
     result, stdout_lines, stderr_lines = spawn_process(command, 0, 0, None,
                                                        *args)
@@ -1151,16 +1153,23 @@ class TestRunner:
     self.index = index
 
   def list(self):
-    if options.verbose and self.pred.inprogress:
-      print(" %3d     %-5s  %s [[%s]]" % (self.index,
-                                        self.pred.list_mode(),
-                                        self.pred.description,
-                                        self.pred.inprogress))
-    else:
-      print(" %3d     %-5s  %s" % (self.index,
-                                   self.pred.list_mode(),
-                                   self.pred.description))
+    if options.mode_filter.upper() == 'ALL' \
+       or options.mode_filter.upper() == self.pred.list_mode().upper() \
+       or (options.mode_filter.upper() == 'PASS' \
+           and self.pred.list_mode() == ''):
+      if options.verbose and self.pred.inprogress:
+        print(" %3d    %-5s  %s [[%s]]" % (self.index,
+                                           self.pred.list_mode(),
+                                           self.pred.description,
+                                           self.pred.inprogress))
+      else:
+        print(" %3d    %-5s  %s" % (self.index,
+                                    self.pred.list_mode(),
+                                    self.pred.description))
     sys.stdout.flush()
+
+  def get_mode(self):
+    return self.pred.list_mode()
 
   def get_function_name(self):
     return self.pred.get_function_name()
@@ -1276,9 +1285,15 @@ def run_one_test(n, test_list, finished_tests = None):
   if n < 0:
     n += 1+num_tests
 
-  # Run the test.
-  exit_code = TestRunner(test_list[n], n).run()
-  return exit_code
+  test_mode = TestRunner(test_list[n], n).get_mode().upper()
+  if options.mode_filter.upper() == 'ALL' \
+     or options.mode_filter.upper() == test_mode \
+     or (options.mode_filter.upper() == 'PASS' and test_mode == ''):
+    # Run the test.
+    exit_code = TestRunner(test_list[n], n).run()
+    return exit_code
+  else:
+    return 0
 
 def _internal_run_tests(test_list, testnums, parallel, srcdir, progress_func):
   """Run the tests from TEST_LIST whose indices are listed in TESTNUMS.
@@ -1300,6 +1315,7 @@ def _internal_run_tests(test_list, testnums, parallel, srcdir, progress_func):
 
   if not parallel:
     for i, testnum in enumerate(testnums):
+      
       if run_one_test(testnum, test_list) == 1:
           exit_code = 1
       # signal progress
@@ -1369,6 +1385,9 @@ def _create_parser():
   parser.add_option('-c', action='store_true', dest='is_child_process',
                     help='Flag if we are running this python test as a ' +
                          'child process')
+  parser.add_option('--mode-filter', action='store', dest='mode_filter',
+                    default='ALL',
+                    help='Limit tests to those with type specified (e.g. XFAIL)')
   parser.add_option('--url', action='store',
                     help='Base url to the repos (e.g. svn://localhost)')
   parser.add_option('--fs-type', action='store',
@@ -1565,11 +1584,18 @@ def execute_tests(test_list, serial_only = False, test_name = None,
     testnums = list(range(1, len(test_list)))
 
   if options.list_tests:
-    print("Test #  Mode   Test Description")
-    print("------  -----  ----------------")
+    header = "Test #  Mode   Test Description\n" \
+             "------  -----  ----------------"
+    printed_header = False
     for testnum in testnums:
-      TestRunner(test_list[testnum], testnum).list()
-
+      test_mode = TestRunner(test_list[testnum], testnum).get_mode().upper()
+      if options.mode_filter.upper() == 'ALL' \
+         or options.mode_filter.upper() == test_mode \
+         or (options.mode_filter.upper() == 'PASS' and test_mode == ''):
+        if not printed_header:
+          print header
+          printed_header = True
+        TestRunner(test_list[testnum], testnum).list()
     # We are simply listing the tests so always exit with success.
     return 0
 

@@ -95,7 +95,8 @@ enum svn_test_mode_t
   {
     svn_test_pass,
     svn_test_xfail,
-    svn_test_skip
+    svn_test_skip,
+    svn_test_all
   };
 
 /* Each test gets a test descriptor, holding the function and other
