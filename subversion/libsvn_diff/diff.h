@@ -112,7 +112,6 @@ svn_diff__get_tokens(svn_diff__position_t **position_list,
                      void *diff_baton,
                      const svn_diff_fns_t *vtable,
                      svn_diff_datasource_e datasource,
-                     svn_boolean_t datasource_opened,
                      apr_off_t prefix_lines,
                      apr_pool_t *pool);
 

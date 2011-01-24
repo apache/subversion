@@ -201,7 +201,6 @@ svn_diff_diff4(svn_diff_t **diff,
                                tree,
                                diff_baton, vtable,
                                svn_diff_datasource_original,
-                               TRUE,
                                prefix_lines,
                                subpool2));
 
@@ -209,7 +208,6 @@ svn_diff_diff4(svn_diff_t **diff,
                                tree,
                                diff_baton, vtable,
                                svn_diff_datasource_modified,
-                               TRUE,
                                prefix_lines,
                                subpool));
 
@@ -217,7 +215,6 @@ svn_diff_diff4(svn_diff_t **diff,
                                tree,
                                diff_baton, vtable,
                                svn_diff_datasource_latest,
-                               TRUE,
                                prefix_lines,
                                subpool));
 
@@ -225,7 +222,6 @@ svn_diff_diff4(svn_diff_t **diff,
                                tree,
                                diff_baton, vtable,
                                svn_diff_datasource_ancestor,
-                               TRUE,
                                prefix_lines,
                                subpool2));
 
