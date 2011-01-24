@@ -37,6 +37,7 @@
 #include "svn_ctype.h"
 
 #include "dirent_uri.h"
+#include "private/svn_fspath.h"
 
 /* The canonical empty path.  Can this be changed?  Well, change the empty
    test below and the path library will work, not so sure about the fs/wc

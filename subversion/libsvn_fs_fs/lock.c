@@ -40,6 +40,7 @@
 #include "../libsvn_fs/fs-loader.h"
 
 #include "private/svn_fs_util.h"
+#include "private/svn_fspath.h"
 #include "svn_private_config.h"
 
 /* Names of hash keys used to store a lock for writing to disk. */
