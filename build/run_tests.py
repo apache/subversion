@@ -79,7 +79,7 @@ class TestHarness:
                server_minor_version=None, verbose=None,
                cleanup=None, enable_sasl=None, parallel=None, config_file=None,
                fsfs_sharding=None, fsfs_packing=None,
-               list_tests=None, svn_bin=None):
+               list_tests=None, svn_bin=None, mode_filter=None):
     '''Construct a TestHarness instance.
 
     ABS_SRCDIR and ABS_BUILDDIR are the source and build directories.
@@ -91,6 +91,8 @@ class TestHarness:
     HTTP_LIBRARY is the HTTP library for DAV-based communications.
     SERVER_MINOR_VERSION is the minor version of the server being tested.
     SVN_BIN is the path where the svn binaries are installed.
+    mode_filter restricts the TestHarness to tests with the expected mode
+    XFail, Skip, Pass, or All tests (default).
     '''
     self.srcdir = abs_srcdir
     self.builddir = abs_builddir
@@ -113,6 +115,7 @@ class TestHarness:
       self.config_file = os.path.abspath(config_file)
     self.list_tests = list_tests
     self.svn_bin = svn_bin
+    self.mode_filter = mode_filter
     self.log = None
     if not sys.stdout.isatty() or sys.platform == 'win32':
       TextColors.disable()
@@ -151,10 +154,13 @@ class TestHarness:
         sys.stdout.write('%s\n       [[%s'
                          % (x[:wip], x[wip + len(wimptag):]))
 
-    passed = [x for x in log_lines if x[:6] == 'PASS: ']
+    if self.list_tests:
+      passed = [x for x in log_lines if x[8:13] == '     ']
+    else:
+      passed = [x for x in log_lines if x[:6] == 'PASS: ']
 
     if self.list_tests:
-      skipped = [x for x in log_lines if x[9:13] == 'SKIP']
+      skipped = [x for x in log_lines if x[8:12] == 'SKIP']
     else:
       skipped = [x for x in log_lines if x[:6] == 'SKIP: ']
 
@@ -164,7 +170,7 @@ class TestHarness:
         sys.stdout.write(x)
 
     if self.list_tests:
-      xfailed = [x for x in log_lines if x[9:14] == 'XFAIL']
+      xfailed = [x for x in log_lines if x[8:13] == 'XFAIL']
     else:
       xfailed = [x for x in log_lines if x[:6] == 'XFAIL:']
     if xfailed and not self.list_tests:
@@ -190,8 +196,12 @@ class TestHarness:
     else:
       print('Summary of test results:')
     if passed:
-      print('  %d test%s PASSED'
-            % (len(passed), 's'*min(len(passed) - 1, 1)))
+      if self.list_tests:
+        print('  %d test%s are set to PASS'
+              % (len(passed), 's'*min(len(passed) - 1, 1)))
+      else:
+        print('  %d test%s PASSED'
+              % (len(passed), 's'*min(len(passed) - 1, 1)))
     if skipped:
       if self.list_tests:
         print('  %d test%s are set as SKIP'
@@ -292,6 +302,8 @@ class TestHarness:
       cmdline.append('--server-minor-version=' + self.server_minor_version)
     if self.list_tests is not None:
       cmdline.append('--list')
+    if self.mode_filter is not None:
+      cmdline.append('--mode-filter=' + self.mode_filter)
 
     if test_nums:
       test_nums = test_nums.split(',')
@@ -343,6 +355,8 @@ class TestHarness:
       svntest.main.options.fsfs_sharding = self.fsfs_sharding
     if self.fsfs_packing is not None:
       svntest.main.options.fsfs_packing = self.fsfs_packing
+    if self.mode_filter is not None:
+      svntest.main.options.mode_filter = self.mode_filter
 
     svntest.main.options.srcdir = self.srcdir
 
