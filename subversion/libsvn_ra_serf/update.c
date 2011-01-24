@@ -1794,8 +1794,11 @@ end_report(svn_ra_serf__xml_parser_t *parser,
       if (SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(ctx->sess))
         {
           const char *fs_path;
-          const char *full_path = svn_uri_join(ctx->sess->repos_url.path,
-                                               info->name, info->pool);
+          const char *full_path =
+            svn_fspath__join(ctx->sess->repos_url.path,
+                             svn_path_uri_encode(info->name, info->pool),
+                             info->pool);
+          
           SVN_ERR(svn_ra_serf__get_relative_path(&fs_path, full_path,
                                                  ctx->sess, NULL, info->pool));
           info->delta_base = svn_string_createf(info->pool, "%s/%ld/%s",

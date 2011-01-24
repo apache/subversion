@@ -36,6 +36,7 @@
 #include "svn_delta.h"
 #include "svn_version.h"
 #include "svn_dav.h"
+#include "svn_dirent_uri.h"
 
 #include "private/svn_dav_protocol.h"
 
@@ -61,6 +62,27 @@ extern "C" {
 #ifdef WIN32
 #define SVN_RA_SERF_SSPI_ENABLED
 #endif
+
+
+/* A faux fspath API used inside this library to help us distinguish
+ * between real URI-decoded fspaths and URI-encoded URL path-portions.
+ */
+#define svn_ra_serf__uri_basename             svn_fspath__basename
+#define svn_ra_serf__uri_dirname              svn_fspath__dirname
+#define svn_ra_serf__uri_get_longest_ancestor svn_fspath__get_longest_ancestor
+#define svn_ra_serf__uri_is_ancestor          svn_fspath__is_ancestor
+#define svn_ra_serf__uri_is_canonical         svn_fspath__is_canonical
+#define svn_ra_serf__uri_is_child             svn_fspath__is_child
+#define svn_ra_serf__uri_is_root              svn_fspath__is_root
+#define svn_ra_serf__uri_join                 svn_fspath__join
+#define svn_ra_serf__uri_skip_ancestor        svn_fspath__skip_ancestor
+#define svn_ra_serf__uri_split                svn_fspath__split
+
+/* Like svn_fspath__canonicalize(), but this one accepts both full
+   URLs and URL path-portions. */
+const char *
+svn_ra_serf__uri_canonicalize(const char *uri,
+                              apr_pool_t *pool);
 
 
 /* Forward declarations. */
@@ -800,10 +822,6 @@ svn_ra_serf__response_get_location(serf_bucket_t *response,
  * URI-encoded identifier of *some sort*, as will be the returned form
  * thereof.
  */
-const char *
-svn_ra_serf__uri_canonicalize(const char *uri,
-                              apr_pool_t *scratch_pool,
-                              apr_pool_t *result_pool);
 
 /** XML helper functions. **/
 
