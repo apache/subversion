@@ -298,7 +298,7 @@ end_merge(svn_ra_serf__xml_parser_t *parser,
           const char *href;
 
           href = apr_hash_get(info->props, "href", APR_HASH_KEY_STRING);
-          if (! svn_ra_serf__uri_is_ancestor(ctx->merge_url, href))
+          if (! svn_urlpath__is_ancestor(ctx->merge_url, href))
             {
               /* ### need something better than APR_EGENERAL */
               return svn_error_createf(APR_EGENERAL, NULL,
@@ -320,7 +320,7 @@ end_merge(svn_ra_serf__xml_parser_t *parser,
                  an ancestor of HREF.  All that remains is to
                  determine of HREF is the same as CTX->MERGE_URL, or --
                  if not -- is relative value as a child thereof. */
-              href = svn_ra_serf__uri_is_child(ctx->merge_url, href, NULL);
+              href = svn_urlpath__is_child(ctx->merge_url, href, NULL);
               if (! href)
                 href = "";
 
@@ -365,7 +365,7 @@ end_merge(svn_ra_serf__xml_parser_t *parser,
       info->prop_val = apr_pstrmemdup(info->pool, info->prop_val,
                                       info->prop_val_len);
       if (strcmp(info->prop_name, "href") == 0)
-        info->prop_val = svn_ra_serf__uri_canonicalize(info->prop_val,
+        info->prop_val = svn_urlpath__canonicalize(info->prop_val,
                                                        info->pool);
 
       /* Set our property. */
@@ -454,7 +454,7 @@ svn_ra_serf__merge_lock_token_list(apr_hash_t *lock_tokens,
       path.data = key;
       path.len = klen;
 
-      if (parent && !svn_ra_serf__uri_is_ancestor(parent, key))
+      if (parent && !svn_urlpath__is_ancestor(parent, key))
         continue;
 
       svn_ra_serf__add_open_tag_buckets(body, alloc, "S:lock", NULL);

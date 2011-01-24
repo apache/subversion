@@ -915,7 +915,7 @@ svn_ra_serf__response_get_location(serf_bucket_t *response,
 
   headers = serf_bucket_response_get_headers(response);
   val = serf_bucket_headers_get(headers, "Location");
-  return val ? svn_ra_serf__uri_canonicalize(val, pool) : NULL;
+  return val ? svn_urlpath__canonicalize(val, pool) : NULL;
 }
 
 /* Implements svn_ra_serf__response_handler_t */
@@ -1802,7 +1802,7 @@ svn_ra_serf__discover_vcc(const char **vcc_url,
               svn_error_clear(err);
 
               /* Okay, strip off a component from PATH. */
-              path = svn_ra_serf__uri_dirname(path, pool);
+              path = svn_urlpath__dirname(path, pool);
             }
         }
     }
@@ -1837,9 +1837,9 @@ svn_ra_serf__discover_vcc(const char **vcc_url,
       session->repos_root = session->repos_url;
       session->repos_root.path = apr_pstrdup(session->pool, url_buf->data);
       session->repos_root_str =
-        svn_ra_serf__uri_canonicalize(apr_uri_unparse(session->pool,
-                                                      &session->repos_root, 0),
-                                      session->pool);
+        svn_urlpath__canonicalize(apr_uri_unparse(session->pool,
+                                                  &session->repos_root, 0),
+                                  session->pool);
     }
 
   /* Store the repository UUID in the cache. */
@@ -1884,7 +1884,7 @@ svn_ra_serf__get_relative_path(const char **rel_path,
     }
   else
     {
-      *rel_path = svn_ra_serf__uri_is_child(decoded_root, decoded_orig, pool);
+      *rel_path = svn_urlpath__is_child(decoded_root, decoded_orig, pool);
       SVN_ERR_ASSERT(*rel_path != NULL);
     }
   return SVN_NO_ERROR;
@@ -1933,22 +1933,4 @@ svn_ra_serf__error_on_status(int status_code,
     }
 
   return SVN_NO_ERROR;
-}
-
-
-const char *
-svn_ra_serf__uri_canonicalize(const char *uri,
-                              apr_pool_t *pool)
-{
-  if (svn_path_is_url(uri))
-    {
-      uri = svn_url_canonicalize(uri, pool);
-    }
-  else
-    {
-      uri = svn_fspath__canonicalize(uri, pool);
-      uri = svn_path_uri_decode(uri, pool);
-      uri = svn_path_uri_encode(uri, pool);
-    }
-  return uri;
 }

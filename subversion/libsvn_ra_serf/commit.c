@@ -41,6 +41,7 @@
 
 #include "svn_private_config.h"
 #include "private/svn_dep_compat.h"
+#include "private/svn_fspath.h"
 
 #include "ra_serf.h"
 #include "../libsvn_ra/ra_loader.h"
@@ -311,7 +312,7 @@ handle_checkout(serf_request_t *request,
       if (status)
         err = svn_error_compose_create(svn_error_wrap_apr(status, NULL), err);
 
-      ctx->resource_url = svn_ra_serf__uri_canonicalize(uri.path, ctx->pool);
+      ctx->resource_url = svn_urlpath__canonicalize(uri.path, ctx->pool);
     }
 
   return err;
@@ -488,7 +489,7 @@ get_version_url(const char **checked_in_url,
       if (current_version)
         {
           *checked_in_url =
-            svn_ra_serf__uri_canonicalize(current_version->data, pool);
+            svn_urlpath__canonicalize(current_version->data, pool);
           return SVN_NO_ERROR;
         }
     }
@@ -543,7 +544,7 @@ get_version_url(const char **checked_in_url,
                                  _("Path '%s' not present"),
                                  session->repos_url.path);
 
-      root_checkout = svn_ra_serf__uri_canonicalize(root_checkout, pool);
+      root_checkout = svn_urlpath__canonicalize(root_checkout, pool);
     }
 
   *checked_in_url = svn_path_url_add_component2(root_checkout, relpath, pool);

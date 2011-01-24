@@ -64,27 +64,6 @@ extern "C" {
 #endif
 
 
-/* A faux fspath API used inside this library to help us distinguish
- * between real URI-decoded fspaths and URI-encoded URL path-portions.
- */
-#define svn_ra_serf__uri_basename             svn_fspath__basename
-#define svn_ra_serf__uri_dirname              svn_fspath__dirname
-#define svn_ra_serf__uri_get_longest_ancestor svn_fspath__get_longest_ancestor
-#define svn_ra_serf__uri_is_ancestor          svn_fspath__is_ancestor
-#define svn_ra_serf__uri_is_canonical         svn_fspath__is_canonical
-#define svn_ra_serf__uri_is_child             svn_fspath__is_child
-#define svn_ra_serf__uri_is_root              svn_fspath__is_root
-#define svn_ra_serf__uri_join                 svn_fspath__join
-#define svn_ra_serf__uri_skip_ancestor        svn_fspath__skip_ancestor
-#define svn_ra_serf__uri_split                svn_fspath__split
-
-/* Like svn_fspath__canonicalize(), but this one accepts both full
-   URLs and URL path-portions. */
-const char *
-svn_ra_serf__uri_canonicalize(const char *uri,
-                              apr_pool_t *pool);
-
-
 /* Forward declarations. */
 typedef struct svn_ra_serf__session_t svn_ra_serf__session_t;
 typedef struct svn_ra_serf__auth_protocol_t svn_ra_serf__auth_protocol_t;
