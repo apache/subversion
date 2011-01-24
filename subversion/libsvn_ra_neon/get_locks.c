@@ -44,6 +44,7 @@
 #include "svn_time.h"
 
 #include "private/svn_dav_protocol.h"
+#include "private/svn_fspath.h"
 #include "svn_private_config.h"
 
 #include "ra_neon.h"
