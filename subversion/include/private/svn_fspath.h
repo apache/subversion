@@ -173,6 +173,28 @@ svn_fspath__get_longest_ancestor(const char *fspath1,
                                  apr_pool_t *result_pool);
 
 
+
+
+/** A faux fspath API used by the DAV modules to help us distinguish
+ * between real URI-decoded fspaths and URI-encoded URL path-portions.
+ */
+#define svn_urlpath__basename             svn_fspath__basename
+#define svn_urlpath__dirname              svn_fspath__dirname
+#define svn_urlpath__get_longest_ancestor svn_fspath__get_longest_ancestor
+#define svn_urlpath__is_ancestor          svn_fspath__is_ancestor
+#define svn_urlpath__is_canonical         svn_fspath__is_canonical
+#define svn_urlpath__is_child             svn_fspath__is_child
+#define svn_urlpath__is_root              svn_fspath__is_root
+#define svn_urlpath__join                 svn_fspath__join
+#define svn_urlpath__skip_ancestor        svn_fspath__skip_ancestor
+#define svn_urlpath__split                svn_fspath__split
+
+/* Like svn_fspath__canonicalize(), but this one accepts both full
+   URLs and URL path-portions. */
+const char *
+svn_urlpath__canonicalize(const char *uri, apr_pool_t *pool);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

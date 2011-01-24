@@ -2423,7 +2423,8 @@ svn_url_get_file_url_from_dirent(const char **url,
 }
 
 
-/* ------------------------ The fspath API ------------------------ */
+
+/* -------------- The fspath API (see private/svn_fspath.h) -------------- */
 
 svn_boolean_t
 svn_fspath__is_canonical(const char *fspath)
@@ -2575,4 +2576,26 @@ svn_fspath__get_longest_ancestor(const char *fspath1,
 
   assert(svn_fspath__is_canonical(result));
   return result;
+}
+
+
+
+
+/* -------------- The urlpath API (see private/svn_fspath.h) ------------- */
+
+const char *
+svn_urlpath__canonicalize(const char *uri,
+                          apr_pool_t *pool)
+{
+  if (svn_path_is_url(uri))
+    {
+      uri = svn_url_canonicalize(uri, pool);
+    }
+  else
+    {
+      uri = svn_fspath__canonicalize(uri, pool);
+      uri = svn_path_uri_decode(uri, pool);
+      uri = svn_path_uri_encode(uri, pool);
+    }
+  return uri;
 }
