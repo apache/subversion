@@ -79,6 +79,8 @@ def _usage_exit():
   print("  --http-library         : dav library to use, neon (default) or serf")
   print("  --javahl               : Run the javahl tests instead of the normal tests")
   print("  --list                 : print test doc strings only")
+  print("  --mode-filter=TYPE     : limit tests to expected TYPE = XFAIL, SKIP, PASS,")
+  print("                           or 'ALL' (default)")
   print("  --enable-sasl          : enable Cyrus SASL authentication for")
   print("                           svnserve")
   print("  -p, --parallel         : run multiple tests in parallel")
@@ -121,7 +123,7 @@ opts, args = my_getopt(sys.argv[1:], 'hrdvqct:pu:f:',
                         'fsfs-packing', 'fsfs-sharding=', 'javahl',
                         'list', 'enable-sasl', 'bin=', 'parallel',
                         'config-file=', 'server-minor-version=',
-                        'log-to-stdout'])
+                        'log-to-stdout', 'mode-filter='])
 if len(args) > 1:
   print('Warning: non-option arguments after the first one will be ignored')
 
@@ -147,6 +149,7 @@ fsfs_packing = None
 server_minor_version = None
 config_file = None
 log_to_stdout = None
+mode_filter=None
 tests_to_run = []
 
 for opt, val in opts:
@@ -192,6 +195,8 @@ for opt, val in opts:
     test_javahl = 1
   elif opt == '--list':
     list_tests = 1
+  elif opt == '--mode-filter':
+    mode_filter = val
   elif opt == '--enable-sasl':
     enable_sasl = 1
     base_url = "svn://localhost/"
@@ -683,7 +688,7 @@ if not test_javahl:
                              server_minor_version, not quiet,
                              cleanup, enable_sasl, parallel, config_file,
                              fsfs_sharding, fsfs_packing,
-                             list_tests, svn_bin)
+                             list_tests, svn_bin, mode_filter)
   old_cwd = os.getcwd()
   try:
     os.chdir(abs_builddir)

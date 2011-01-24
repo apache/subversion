@@ -68,6 +68,10 @@ static svn_boolean_t cleanup_mode = FALSE;
 /* Test option: Allow segfaults */
 static svn_boolean_t allow_segfaults = FALSE;
 
+/* Test option: Limit testing to a given mode (i.e. XFail, Skip,
+   Pass, All). */
+enum svn_test_mode_t mode_filter = svn_test_all;
+
 /* Option parsing enums and structures */
 enum {
   cleanup_opt = SVN_OPT_FIRST_LONGOPT_ID,
@@ -79,7 +83,8 @@ enum {
   config_opt,
   server_minor_version_opt,
   allow_segfault_opt,
-  srcdir_opt
+  srcdir_opt,
+  mode_filter_opt
 };
 
 static const apr_getopt_option_t cl_options[] =
@@ -92,6 +97,9 @@ static const apr_getopt_option_t cl_options[] =
                     N_("specify a filesystem backend type ARG")},
   {"list",          list_opt, 0,
                     N_("lists all the tests with their short description")},
+  {"mode-filter",   mode_filter_opt, 1,
+                    N_("only run/list tests with expected mode ARG = PASS, "
+                       "XFAIL, SKIP, or ALL (default)\n")},
   {"verbose",       verbose_opt, 0,
                     N_("print extra information")},
   {"server-minor-version", server_minor_version_opt, 1,
@@ -199,12 +207,15 @@ crash_handler(int signum)
 
 
 /* Execute a test number TEST_NUM.  Pretty-print test name and dots
-   according to our test-suite spec, and return the result code. */
+   according to our test-suite spec, and return the result code.
+   If HEADER_MSG and *HEADER_MSG are not NULL, print *HEADER_MSG prior
+   to pretty-printing the test information, then set *HEADER_MSG to NULL. */
 static svn_boolean_t
 do_test_num(const char *progname,
             int test_num,
             svn_boolean_t msg_only,
             svn_test_opts_t *opts,
+            const char **header_msg,
             apr_pool_t *pool)
 {
   svn_boolean_t skip, xfail, wimp;
@@ -213,12 +224,15 @@ do_test_num(const char *progname,
   const char *msg = NULL;  /* the message this individual test prints out */
   const struct svn_test_descriptor_t *desc;
   const int array_size = get_array_size();
+  svn_boolean_t run_this_test; /* This test's mode matches DESC->MODE. */
 
   /* Check our array bounds! */
   if (test_num < 0)
     test_num += array_size + 1;
   if ((test_num > array_size) || (test_num <= 0))
     {
+      if (header_msg && *header_msg)
+        printf(*header_msg);
       printf("FAIL: %s: THERE IS NO TEST NUMBER %2d\n", progname, test_num);
       skip_cleanup = TRUE;
       return TRUE;  /* BAIL, this test number doesn't exist. */
@@ -229,6 +243,13 @@ do_test_num(const char *progname,
   xfail = desc->mode == svn_test_xfail;
   wimp = xfail && desc->wip;
   msg = desc->msg;
+  run_this_test = mode_filter == svn_test_all || mode_filter == desc->mode;
+
+  if (run_this_test && header_msg && *header_msg)
+    {
+      printf(*header_msg);
+      *header_msg = NULL;
+    }
 
   if (!allow_segfaults)
     {
@@ -245,7 +266,7 @@ do_test_num(const char *progname,
   if (setjmp(jump_buffer) == 0)
     {
       /* Do test */
-      if (msg_only || skip)
+      if (msg_only || skip || !run_this_test)
         ; /* pass */
       else if (desc->func2)
         err = (*desc->func2)(pool);
@@ -282,15 +303,16 @@ do_test_num(const char *progname,
 
   if (msg_only)
     {
-      printf(" %2d     %-5s  %s%s%s%s\n",
-             test_num,
-             (xfail ? "XFAIL" : (skip ? "SKIP" : "")),
-             msg ? msg : "(test did not provide name)",
-             (wimp && verbose_mode) ? " [[" : "",
-             (wimp && verbose_mode) ? desc->wip : "",
-             (wimp && verbose_mode) ? "]]" : "");
+      if (run_this_test)
+        printf(" %3d    %-5s  %s%s%s%s\n",
+               test_num,
+               (xfail ? "XFAIL" : (skip ? "SKIP" : "")),
+               msg ? msg : "(test did not provide name)",
+               (wimp && verbose_mode) ? " [[" : "",
+               (wimp && verbose_mode) ? desc->wip : "",
+               (wimp && verbose_mode) ? "]]" : "");
     }
-  else if ((! quiet_mode) || test_failed)
+  else if (run_this_test && ((! quiet_mode) || test_failed))
     {
       printf("%s %s %d: %s%s%s%s\n",
              (err
@@ -407,6 +429,22 @@ main(int argc, const char *argv[])
         case list_opt:
           list_mode = TRUE;
           break;
+        case mode_filter_opt:
+          if (svn_cstring_casecmp(opt_arg, "PASS") == 0)
+            mode_filter = svn_test_pass;
+          else if (svn_cstring_casecmp(opt_arg, "XFAIL") == 0)
+            mode_filter = svn_test_xfail;
+          else if (svn_cstring_casecmp(opt_arg, "SKIP") == 0)
+            mode_filter = svn_test_skip;
+          else if (svn_cstring_casecmp(opt_arg, "ALL") == 0)
+            mode_filter = svn_test_all;
+          else
+            {
+              fprintf(stderr, "FAIL: Invalid --mode-filter option.  Try ");
+              fprintf(stderr, " PASS, XFAIL, SKIP or ALL.\n");
+              exit(1);
+            }
+          break;
         case verbose_opt:
           verbose_mode = TRUE;
           break;
@@ -456,15 +494,16 @@ main(int argc, const char *argv[])
     {
       if (! strcmp(argv[1], "list") || list_mode)
         {
+          const char *header_msg;
           ran_a_test = TRUE;
 
           /* run all tests with MSG_ONLY set to TRUE */
-
-          printf("Test #  Mode   Test Description\n"
-                 "------  -----  ----------------\n");
+          header_msg = "Test #  Mode   Test Description\n"
+                       "------  -----  ----------------\n";
           for (i = 1; i <= array_size; i++)
             {
-              if (do_test_num(prog_name, i, TRUE, &opts, test_pool))
+              if (do_test_num(prog_name, i, TRUE, &opts, &header_msg,
+                              test_pool))
                 got_error = TRUE;
 
               /* Clear the per-function pool */
@@ -484,7 +523,8 @@ main(int argc, const char *argv[])
                     continue;
 
                   ran_a_test = TRUE;
-                  if (do_test_num(prog_name, test_num, FALSE, &opts, test_pool))
+                  if (do_test_num(prog_name, test_num, FALSE, &opts, NULL,
+                                  test_pool))
                     got_error = TRUE;
 
                   /* Clear the per-function pool */
@@ -500,7 +540,7 @@ main(int argc, const char *argv[])
       /* just run all tests */
       for (i = 1; i <= array_size; i++)
         {
-          if (do_test_num(prog_name, i, FALSE, &opts, test_pool))
+          if (do_test_num(prog_name, i, FALSE, &opts, NULL, test_pool))
             got_error = TRUE;
 
           /* Clear the per-function pool */
