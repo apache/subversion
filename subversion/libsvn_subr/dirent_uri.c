@@ -2594,6 +2594,7 @@ svn_urlpath__canonicalize(const char *uri,
   else
     {
       uri = svn_fspath__canonicalize(uri, pool);
+      /* Do a little dance to normalize hex encoding. */
       uri = svn_path_uri_decode(uri, pool);
       uri = svn_path_uri_encode(uri, pool);
     }

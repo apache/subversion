@@ -29,6 +29,8 @@
 #include "svn_private_config.h"
 #include "../libsvn_ra/ra_loader.h"
 
+#include "private/svn_fspath.h"
+
 #include "ra_neon.h"
 
 
@@ -109,9 +111,7 @@ end_element(void *baton, int state,
 
   if (state == ELEM_href)
     oc->activity_coll =
-      svn_string_create(svn_ra_neon__uri_canonicalize(oc->cdata->data,
-                                                      oc->pool,
-                                                      oc->pool),
+      svn_string_create(svn_urlpath__canonicalize(oc->cdata->data, oc->pool),
                         oc->pool);
 
   return SVN_NO_ERROR;

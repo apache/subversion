@@ -41,6 +41,7 @@
 #include "../libsvn_ra/ra_loader.h"
 
 #include "private/svn_dav_protocol.h"
+#include "private/svn_fspath.h"
 #include "svn_private_config.h"
 
 #include "ra_neon.h"
@@ -414,9 +415,7 @@ static svn_error_t * end_element(void *baton, int state,
       /* Special handling for <href> that belongs to the <response> tag. */
       if (rsrc->href_parent == ELEM_response)
         return assign_rsrc_url(pc->rsrc,
-                               svn_ra_neon__uri_canonicalize(cdata,
-                                                             pc->pool,
-                                                             pc->pool),
+                               svn_urlpath__canonicalize(cdata, pc->pool),
                                pc->pool);
 
       /* Use the parent element's name, not the href. */
@@ -428,9 +427,7 @@ static svn_error_t * end_element(void *baton, int state,
 
       /* All other href's we'll treat as property values. */
       name = parent_defn->name;
-      value = svn_string_create(svn_ra_neon__uri_canonicalize(cdata,
-                                                              pc->pool,
-                                                              pc->pool),
+      value = svn_string_create(svn_urlpath__canonicalize(cdata, pc->pool),
                                 pc->pool);
       break;
 
