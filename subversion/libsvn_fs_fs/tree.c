@@ -60,6 +60,7 @@
 
 #include "private/svn_mergeinfo_private.h"
 #include "private/svn_fs_util.h"
+#include "private/svn_fspath.h"
 #include "../libsvn_fs/fs-loader.h"
 
 

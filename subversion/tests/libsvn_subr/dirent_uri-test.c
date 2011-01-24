@@ -36,6 +36,7 @@
 
 #include "svn_pools.h"
 #include "svn_dirent_uri.h"
+#include "private/svn_fspath.h"
 
 #include "../svn_test.h"
 
