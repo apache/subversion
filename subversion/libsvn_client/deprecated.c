@@ -1216,7 +1216,7 @@ svn_client_log5(const apr_array_header_t *targets,
 {
   return svn_client_log6(targets, peg_revision, revision_ranges, limit,
                          discover_changed_paths, strict_node_history,
-                         include_merged_revisions, FALSE, revprops,
+                         include_merged_revisions, NULL, revprops,
                          receiver, receiver_baton, ctx, pool);
 }
 

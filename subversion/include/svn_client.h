@@ -2341,8 +2341,9 @@ svn_client_status(svn_revnum_t *result_rev,
  * If @a include_merged_revisions is set, log information for revisions
  * which have been merged to @a targets will also be returned.
  *
- * If @a ignore_mergeinfo_changes is set, log will ignore any changes to
- * the svn:mergeinfo property when determining which revisions to return.
+ * @a ignore_prop_mods is an optional hash of property names.  If
+ * non-NULL, log will ignore any changes to properties names as the keys
+ * of the hash when determining which revisions to return.
  *
  * If @a revprops is NULL, retrieve all revprops; else, retrieve only the
  * revprops named in the array (i.e. retrieve none if the array is empty).
@@ -2369,7 +2370,7 @@ svn_client_log6(const apr_array_header_t *targets,
                 svn_boolean_t discover_changed_paths,
                 svn_boolean_t strict_node_history,
                 svn_boolean_t include_merged_revisions,
-                svn_boolean_t ignore_mergeinfo_changes,
+                const apr_hash_t *ignore_prop_mods,
                 const apr_array_header_t *revprops,
                 svn_log_entry_receiver_t receiver,
                 void *receiver_baton,

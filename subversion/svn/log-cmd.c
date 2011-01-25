@@ -565,6 +565,7 @@ svn_cl__log(apr_getopt_t *os,
   svn_opt_revision_t peg_revision;
   const char *true_path;
   apr_array_header_t *revprops;
+  apr_hash_t *ignored_props = NULL;
 
   if (!opt_state->xml)
     {
@@ -664,6 +665,13 @@ svn_cl__log(apr_getopt_t *os,
   lb.merge_stack = apr_array_make(pool, 0, sizeof(svn_revnum_t));
   lb.pool = pool;
 
+  if (opt_state->ignore_mergeinfo)
+    {
+      ignored_props = apr_hash_make(pool);
+      apr_hash_set(ignored_props, SVN_PROP_MERGEINFO, APR_HASH_KEY_STRING,
+                   (void *) 0xdeadbeef);
+    }
+
   if (opt_state->xml)
     {
       /* If output is not incremental, output the XML header and wrap
@@ -713,7 +721,7 @@ svn_cl__log(apr_getopt_t *os,
                               opt_state->verbose,
                               opt_state->stop_on_copy,
                               opt_state->use_merge_history,
-                              opt_state->ignore_mergeinfo,
+                              ignored_props,
                               revprops,
                               log_entry_receiver_xml,
                               &lb,
@@ -737,7 +745,7 @@ svn_cl__log(apr_getopt_t *os,
                               opt_state->verbose,
                               opt_state->stop_on_copy,
                               opt_state->use_merge_history,
-                              opt_state->ignore_mergeinfo,
+                              ignored_props,
                               revprops,
                               log_entry_receiver,
                               &lb,
