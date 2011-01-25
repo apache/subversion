@@ -1415,8 +1415,8 @@ svn_url_get_longest_ancestor(const char *uri1,
   apr_size_t uri_ancestor_len;
   apr_size_t i = 0;
 
-  assert(svn_path_is_url(uri1));
-  assert(svn_path_is_url(uri2));
+  assert(svn_path_is_canonical(uri1, NULL));
+  assert(svn_path_is_canonical(uri2, NULL));
 
   /* Find ':' */
   while (1)
@@ -1471,7 +1471,12 @@ svn_url_is_child(const char *parent_uri,
                  const char *child_uri,
                  apr_pool_t *pool)
 {
-  const char *relpath = is_child(type_uri, parent_uri, child_uri, pool);
+  const char *relpath;
+
+  assert(svn_url_is_canonical(parent_uri, NULL));
+  assert(svn_url_is_canonical(child_uri, NULL));
+
+  relpath = is_child(type_uri, parent_uri, child_uri, pool);
 
   /* ### TODO: URI decode a non-NULL relpath? */
   return relpath;
@@ -1559,6 +1564,9 @@ svn_url_skip_ancestor(const char *parent_uri,
                       const char *child_uri)
 {
   apr_size_t len = strlen(parent_uri);
+
+  assert(svn_url_is_canonical(parent_uri, NULL));
+  assert(svn_url_is_canonical(child_uri, NULL));
 
   if (0 != memcmp(parent_uri, child_uri, len))
     return child_uri; /* parent_uri is no ancestor of child_uri */
@@ -1763,11 +1771,11 @@ svn_url_is_canonical(const char *uri, apr_pool_t *pool)
   const char *schema_data = NULL;
 
   /* URI is canonical if it has:
-   *  - no '.' segments
-   *  - no closing '/', unless for the root path '/' itself
-   *  - no '//'
    *  - lowercase URL scheme
    *  - lowercase URL hostname
+   *  - no '.' segments
+   *  - no closing '/'
+   *  - no '//'
    *  - uppercase hex-encoded pair digits ("%AB", not "%ab")
    */
 
@@ -1796,13 +1804,14 @@ svn_url_is_canonical(const char *uri, apr_pool_t *pool)
   /* Skip :// */
   ptr += 3;
 
+  /* Scheme only?  That works. */
+  if (! *ptr)
+    return TRUE;
+
   /* This might be the hostname */
   seg = ptr;
   while (*ptr && (*ptr != '/') && (*ptr != '@'))
     ptr++;
-
-  if (! *ptr)
-    return TRUE;
 
   if (*ptr == '@')
     seg = ptr + 1;

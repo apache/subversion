@@ -1421,7 +1421,7 @@ test_uri_is_ancestor(apr_pool_t *pool)
     { "http://test",    "http://taste",    FALSE},
     { "http://test",    "http://test/foo", TRUE},
     { "http://test",    "file://test/foo", FALSE},
-    { "http://test",    "http://testF",    FALSE},
+    { "http://test",    "http://testf",    FALSE},
     { "http://",        "http://test",     TRUE},
   };
 
@@ -1544,21 +1544,8 @@ test_uri_skip_ancestor(apr_pool_t *pool)
     const char *path2;
     const char *result;
   } tests[] = {
-    { "/foo",            "/foo/bar",        "bar"},
-    { "/foo/bar",        "/foot/bar",       "/foot/bar"},
-    { "/foo",            "/foo",            ""},
-    { "/foo",            "/foot",           "/foot"},
-    { "/foot",           "/foo",            "/foo"},
-    { "",                "foo",             "foo"},
-    { "",                "/foo",            "/foo"},
-    { "/",               "/foo",            "foo"},
-    { "/foo/bar/bla",    "/foo/bar",        "/foo/bar"},
-    { "/foo/bar",        "/foo/bar/bla",    "bla"},
-    { "foo/bar",         "foo",             "foo"},
-    { "/foo/bar",        "foo",             "foo"},
-    { "/",               "bar/bla",         "bar/bla"},
     { "http://server",   "http://server/q", "q" },
-    { "svn://server",   "http://server/q",  "http://server/q" },
+    { "svn://server",    "http://server/q", "http://server/q" },
   };
 
   for (i = 0; i < COUNT_OF(tests); i++)
@@ -1730,7 +1717,7 @@ test_uri_get_longest_ancestor(apr_pool_t *pool)
     { "http://test",    "http://taste",    SVN_EMPTY_PATH},
     { "http://test",    "http://test/foo", "http://test"},
     { "http://test",    "file://test/foo", SVN_EMPTY_PATH},
-    { "http://test",    "http://testF",    SVN_EMPTY_PATH},
+    { "http://test",    "http://testf",    SVN_EMPTY_PATH},
     { "http://",        "http://test",     SVN_EMPTY_PATH},
     { "file:///A/C",    "file:///B/D",     SVN_EMPTY_PATH},
     { "file:///A/C",    "file:///A/D",     "file:///A"},
@@ -1967,74 +1954,23 @@ test_uri_is_child(apr_pool_t *pool)
 {
   int i, j;
 
-#define NUM_TEST_PATHS 20
-
   static const char * const paths[] = {
-    "/foo/bar",
-    "/foo/bars",
-    "/foo/baz",
-    "/foo/bar/baz",
-    "/flu/blar/blaz",
-    "/foo/bar/baz/bing/boom",
-    SVN_EMPTY_PATH,
-    "foo",
-    ".foo",
-    "/",
-    "foo2",
     "http://foo/bar",
     "http://foo/baz",
-    "H:",
     "http://foo",
     "http://f",
-    "H:/foo/bar",
-    "H:/foo/baz",
-    "H:foo",
-    "H:foo/baz",
+    "file://foo/bar",
+    "file://foo/bar/baz",
     };
 
   static const char * const
     remainders[COUNT_OF(paths)][COUNT_OF(paths)] = {
-    { 0, 0, 0, "baz", 0, "baz/bing/boom", 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, "bing/boom", 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, "foo", ".foo", 0, "foo2",
-      0, 0, "H:", 0, 0, "H:/foo/bar", "H:/foo/baz", "H:foo", "H:foo/baz" },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { "foo/bar", "foo/bars", "foo/baz", "foo/bar/baz", "flu/blar/blaz",
-      "foo/bar/baz/bing/boom", 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, "foo/bar", "foo/baz", 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      "bar", "baz", 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, "baz" },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0 }
+    { 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0 },
+    { "bar", "baz", 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, "baz" },
+    { 0, 0, 0, 0, 0, 0 },
   };
 
   for (i = 0; i < COUNT_OF(paths); i++)
@@ -2050,14 +1986,14 @@ test_uri_is_child(apr_pool_t *pool)
               || (remainder && strcmp(remainder, remainders[i][j])))
             return svn_error_createf
               (SVN_ERR_TEST_FAILED, NULL,
-               "svn_uri_is_child (%s, %s) [%d,%d] returned '%s' instead of '%s'",
+               "svn_uri_is_child (%s, %s) [%d,%d] "
+               "returned '%s' instead of '%s'",
                paths[i], paths[j], i, j,
                remainder ? remainder : "(null)",
                remainders[i][j] ? remainders[i][j] : "(null)" );
         }
     }
 
-#undef NUM_TEST_PATHS
   return SVN_NO_ERROR;
 }
 
