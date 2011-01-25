@@ -15,48 +15,47 @@ be examined in light of the desired functionality.
 
 Here are the svn_uri_* functions which need to be reviewed/modified:
 
-   svn_uri_is_absolute [DONE]
+   svn_url_is_absolute [DONE]
 
       Remove.  All URLs will be absolute by definition.
 
-   svn_uri_join
+   svn_url_join [DONE]
 
-      Remove.  Maybe add svn_uri_join_relpath() (though
-      svn_path_url_add_component2() should be sufficient)
+      Replace with svn_url_join_relpath().
    
-   svn_uri_dirname
-   svn_uri_get_longest_ancestor
-   svn_uri_is_ancestor
-   svn_uri_skip_ancestor
-   svn_uri_condense_targets
+   svn_url_dirname [DONE]
+   svn_url_get_longest_ancestor [DONE]
+   svn_url_is_ancestor [DONE]
+   svn_url_skip_ancestor [DONE]
+   svn_url_condense_targets [DONE]
 
       Remove code that accepts non-URL URIs (asserting that input is
       valid).
 
-   svn_uri_split
-   svn_uri_basename
-   svn_uri_is_child
+   svn_url_split
+   svn_url_basename
+   svn_url_is_child
 
       Remove code that accepts non-URL URIs (asserting that input is
       valid).  URI-decode the returned relpaths .
 
-   svn_uri_is_canonical
+   svn_url_is_canonical
 
       Remove code that accepts non-URL URIs (asserting that input is
       valid).  Also, lose unused 'pool' parameter.
    
-   svn_uri_canonicalize
+   svn_url_canonicalize [DONE]
 
       Assert that we have something vaguely URL-ish to even work with.
    
-   svn_uri_get_dirent_from_file_url [DONE]
-   svn_uri_get_file_url_from_dirent [DONE]
+   svn_url_get_dirent_from_file_url [DONE]
+   svn_url_get_file_url_from_dirent [DONE]
 
       Expect nothing will change here.
    
-   svn_url_is_root
+   svn_url_is_root [DONE]
 
-      This says it's not to be used with URLs, so purge this function
-      and rework its current usage to use something else.
+      This says it's not to be used with URLs, but why not?  Make it
+      handle URLs.
 
 [1] http://subversion.tigris.org/issues/show_bug.cgi?id=2028
