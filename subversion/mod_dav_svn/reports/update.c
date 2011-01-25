@@ -98,13 +98,7 @@ typedef struct item_baton_t {
   svn_boolean_t text_changed;        /* Did the file's contents change? */
   svn_boolean_t added;               /* File added? (Implies text_changed.) */
   svn_boolean_t copyfrom;            /* File copied? */
-  apr_array_header_t *changed_props; /* array of const char * prop names */
   apr_array_header_t *removed_props; /* array of const char * prop names */
-
-  /* "entry props" */
-  const char *committed_rev;
-  const char *committed_date;
-  const char *last_author;
 
 } item_baton_t;
 
@@ -414,7 +408,7 @@ close_helper(svn_boolean_t is_dir, item_baton_t *baton)
 
   /* ### ack!  binary names won't float here! */
   /* If this is a copied file/dir, we can have removed props. */
-  if (baton->removed_props && (! baton->added || baton->copyfrom))
+  if (baton->removed_props && baton->copyfrom)
     {
       const char *qname;
       int i;
@@ -429,60 +423,14 @@ close_helper(svn_boolean_t is_dir, item_baton_t *baton)
         }
     }
 
-  if ((! baton->uc->send_all) && baton->changed_props && (! baton->added))
-    {
-      /* Tell the client to fetch all the props */
-      SVN_ERR(dav_svn__brigade_puts(baton->uc->bb, baton->uc->output,
-                                    "<S:fetch-props/>" DEBUG_CR));
-    }
-
-  SVN_ERR(dav_svn__brigade_puts(baton->uc->bb, baton->uc->output, "<S:prop>"));
-
-  /* Both modern and non-modern clients need the checksum... */
   if (baton->text_checksum)
     {
       SVN_ERR(dav_svn__brigade_printf(baton->uc->bb, baton->uc->output,
-                                      "<V:md5-checksum>%s</V:md5-checksum>",
+                                      "<S:prop>"
+                                      "<V:md5-checksum>%s</V:md5-checksum>"
+                                      "</S:prop>",
                                       baton->text_checksum));
     }
-
-  /* ...but only non-modern clients want the 3 CR-related properties
-     sent like here, because they can't handle receiving these special
-     props inline like any other prop.
-     ### later on, compress via the 'scattered table' solution as
-     discussed with gstein.  -bmcs */
-  if (! baton->uc->send_all)
-    {
-      /* ### grrr, these DAV: property names are already #defined in
-         ra_dav.h, and statically defined in liveprops.c.  And now
-         they're hardcoded here.  Isn't there some header file that both
-         sides of the network can share?? */
-
-      /* ### special knowledge: svn_repos_dir_delta2 will never send
-       *removals* of the commit-info "entry props". */
-      if (baton->committed_rev)
-        SVN_ERR(dav_svn__brigade_printf(baton->uc->bb, baton->uc->output,
-                                        "<D:version-name>%s</D:version-name>",
-                                        baton->committed_rev));
-
-      if (baton->committed_date)
-        SVN_ERR(dav_svn__brigade_printf(baton->uc->bb, baton->uc->output,
-                                        "<D:creationdate>%s</D:creationdate>",
-                                        baton->committed_date));
-
-      if (baton->last_author)
-        SVN_ERR(dav_svn__brigade_printf(baton->uc->bb, baton->uc->output,
-                                        "<D:creator-displayname>%s"
-                                        "</D:creator-displayname>",
-                                        apr_xml_quote_string(baton->pool,
-                                                             baton->last_author,
-                                                             1)));
-
-    }
-
-  /* Close unconditionally, because we sent checksum unconditionally. */
-  SVN_ERR(dav_svn__brigade_puts(baton->uc->bb, baton->uc->output,
-                                "</S:prop>" DEBUG_CR));
 
   if (baton->added)
     SVN_ERR(dav_svn__brigade_printf(baton->uc->bb, baton->uc->output,
@@ -646,8 +594,10 @@ upd_change_xxx_prop(void *baton,
   if (qname == name)
     qname = apr_pstrdup(b->pool, name);
 
-
-  if (b->uc->send_all)
+  /* Even if we are not in send-all mode we have the prop changes already,
+     so send them to the client now instead of telling the client to fetch
+     them later. */
+  if (b->uc->send_all || !b->added)
     {
       if (value)
         {
@@ -683,56 +633,16 @@ upd_change_xxx_prop(void *baton,
                                           qname));
         }
     }
-  else  /* don't do inline response, just cache prop names for close_helper */
+  else if (!value) /* This is an addition in 'skelta' mode so there is no
+                      need for an inline response since property fetching
+                      is implied in addition.  We still need to cache
+                      property removals because a copied path might
+                      have removed properties. */
     {
-      /* For now, store certain entry props, because we'll need to send
-         them later as standard DAV ("D:") props.  ### this should go
-         away and we should just tunnel those props on through for the
-         client to deal with. */
-#define NSLEN (sizeof(SVN_PROP_ENTRY_PREFIX) - 1)
-      if (! strncmp(name, SVN_PROP_ENTRY_PREFIX, NSLEN))
-        {
-          if (strcmp(name, SVN_PROP_ENTRY_COMMITTED_REV) == 0)
-            {
-              b->committed_rev = value ?
-                apr_pstrdup(b->pool, value->data) : NULL;
-            }
-          else if (strcmp(name, SVN_PROP_ENTRY_COMMITTED_DATE) == 0)
-            {
-              b->committed_date = value ?
-                apr_pstrdup(b->pool, value->data) : NULL;
-            }
-          else if (strcmp(name, SVN_PROP_ENTRY_LAST_AUTHOR) == 0)
-            {
-              b->last_author = value ?
-                apr_pstrdup(b->pool, value->data) : NULL;
-            }
-          else if ((strcmp(name, SVN_PROP_ENTRY_LOCK_TOKEN) == 0)
-                   && (! value))
-            {
-              /* We only support delete of lock tokens, not add/modify. */
-              if (! b->removed_props)
-                b->removed_props = apr_array_make(b->pool, 1, sizeof(name));
-              APR_ARRAY_PUSH(b->removed_props, const char *) = qname;
-            }
-          return SVN_NO_ERROR;
-        }
-#undef NSLEN
+      if (! b->removed_props)
+        b->removed_props = apr_array_make(b->pool, 1, sizeof(name));
 
-      if (value)
-        {
-          if (! b->changed_props)
-            b->changed_props = apr_array_make(b->pool, 1, sizeof(name));
-
-          APR_ARRAY_PUSH(b->changed_props, const char *) = qname;
-        }
-      else
-        {
-          if (! b->removed_props)
-            b->removed_props = apr_array_make(b->pool, 1, sizeof(name));
-
-          APR_ARRAY_PUSH(b->removed_props, const char *) = qname;
-        }
+      APR_ARRAY_PUSH(b->removed_props, const char *) = qname;
     }
 
   return SVN_NO_ERROR;

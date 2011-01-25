@@ -188,10 +188,11 @@ typedef struct report_baton_t {
   /* Use an intermediate tmpfile for the REPORT response. */
   svn_boolean_t spool_response;
 
-  /* A modern server will understand our "send-all" attribute on the
-     update report request, and will put a "send-all" attribute on
-     its response.  If we see that attribute, we set this to true,
-     otherwise, it stays false (i.e., it's not a modern server). */
+  /* If this report is for a switch, update, or status (but not a
+     merge/diff), then we made the update report request with the "send-all"
+     attribute.  The server reponds to this by putting a "send-all" attribute
+     in its response.  If we see that attribute, we set this to true,
+     otherwise, it stays false. */
   svn_boolean_t receiving_all;
 
   /* Hash mapping 'const char *' paths -> 'const char *' lock tokens. */
@@ -1588,19 +1589,16 @@ start_element(int *elem, void *userdata, int parent, const char *nspace,
       /* push the new baton onto the directory baton stack */
       push_dir(rb, new_dir_baton, pathbuf, subpool);
 
-      /* Property fetching is implied in addition.  This flag is only
-         for parsing old-style reports; it is ignored when talking to
-         a modern server. */
+      /* Property fetching is implied in addition. */
       TOP_DIR(rb).fetch_props = TRUE;
 
       bc_url = svn_xml_get_attr_value("bc-url", atts);
 
-      /* In non-modern report responses, we're just told to fetch the
+      /* If we are not in send-all mode, we're just told to fetch the
          props later.  In that case, we can at least do a pre-emptive
          depth-1 propfind on the directory right now; this prevents
          individual propfinds on added-files later on, thus reducing
-         the number of network turnarounds (though not by as much as
-         simply getting a modern report response!).  */
+         the number of network turnarounds. */
       if ((! rb->receiving_all) && bc_url)
         {
           apr_hash_t *bc_children;
@@ -1711,9 +1709,7 @@ start_element(int *elem, void *userdata, int parent, const char *nspace,
                                       crev, rb->file_pool,
                                       &rb->file_baton));
 
-      /* Property fetching is implied in addition.  This flag is only
-         for parsing old-style reports; it is ignored when talking to
-         a modern server. */
+      /* Property fetching is implied in addition. */
       rb->fetch_props = TRUE;
 
       break;
