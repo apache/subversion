@@ -338,12 +338,8 @@ svn_relpath_dirname(const char *relpath,
  * If @a uri has two or more components, the separator between @a dirpath
  * and @a base_name is not included in either of the new names.
  *
- *   examples:
- *             - <pre>"/foo/bar/baz"  ==>  "/foo/bar" and "baz"</pre>
- *             - <pre>"/bar"          ==>  "/"  and "bar"</pre>
- *             - <pre>"/"             ==>  "/"  and "/"</pre>
- *             - <pre>"bar"           ==>  ""   and "bar"</pre>
- *             - <pre>""              ==>  ""   and ""</pre>
+ * Examples:
+ *   - <pre>"http://server/foo/bar"  ==>  "http://server/foo" and "bar"</pre>
  *
  * @since New in 1.7.
  */
@@ -362,8 +358,6 @@ svn_url_split(const char **dirpath,
  *
  * The returned basename will be allocated in @a pool. If @a pool is NULL
  * a pointer to the basename in @a uri is returned.
- *
- * @note If an empty string is passed, then an empty string will be returned.
  *
  * @since New in 1.7.
  */
@@ -384,7 +378,6 @@ svn_url_basename(const char *uri,
 char *
 svn_url_dirname(const char *uri,
                 apr_pool_t *pool);
-
 
 /** Return TRUE if @a dirent is considered absolute on the platform at
  * hand. E.g. '/foo' on Posix platforms or 'X:/foo', '//server/share/foo'
@@ -410,9 +403,7 @@ svn_boolean_t
 svn_dirent_is_root(const char *dirent,
                    apr_size_t len);
 
-/** Return TRUE if @a uri is a root path, so starts with '/'.
- *
- * Do not use this function with URLs.
+/** Return TRUE if @a uri is a root URL (e.g., "http://server").
  *
  * @since New in 1.7
  */
@@ -464,16 +455,11 @@ svn_relpath_canonicalize(const char *relpath,
  * of uri specification redundancies are removed.
  *
  * This involves collapsing redundant "/./" elements, removing
- * multiple adjacent separator characters, removing trailing
- * separator characters, and possibly other semantically inoperative
- * transformations.
- *
- * If @a uri starts with a schema, this function also normalizes the
- * escaping of the path component by unescaping characters that don't
- * need escaping and escaping characters that do need escaping but
- * weren't.
- *
- * This functions supports URLs.
+ * multiple adjacent separator characters, removing trailing separator
+ * characters, and possibly other semantically inoperative
+ * transformations.  This function also normalizes the escaping of the
+ * path component by unescaping characters that don't need escaping
+ * and escaping characters that do need escaping but weren't.
  *
  * The returned uri may be statically allocated or allocated from @a pool.
  *
@@ -538,12 +524,10 @@ svn_relpath_get_longest_ancestor(const char *relpath1,
 
 /** Return the longest common path shared by two canonicalized uris,
  * @a uri1 and @a uri2.  If there's no common ancestor, return the
- * empty path.
- *
- * @a uri1 and @a uri2 may be URLs.  In order for two URLs to have
- * a common ancestor, they must (a) have the same protocol (since two URLs
- * with the same path but different protocols may point at completely
- * different resources), and (b) share a common ancestor in their path
+ * empty path.  In order for two URLs to have a common ancestor, they
+ * must (a) have the same protocol (since two URLs with the same path
+ * but different protocols may point at completely different
+ * resources), and (b) share a common ancestor in their path
  * component, i.e. 'protocol://' is not a sufficient ancestor.
  *
  * @since New in 1.7.
@@ -639,8 +623,6 @@ svn_relpath_is_ancestor(const char *parent_relpath,
 /** Return TRUE if @a parent_uri is an ancestor of @a child_uri or
  * the uris are equal, and FALSE otherwise.
  *
- * This function supports URLs.
- *
  * @since New in 1.7.
  */
 svn_boolean_t
@@ -681,12 +663,6 @@ svn_relpath_skip_ancestor(const char *parent_relpath,
 /** Return the relative path part of @a child_uri that is below
  * @a parent_uri, or just "" if @a parent_uri is equal to @a child_uri. If
  * @a child_uri is not below @a parent_uri, return @a child_uri.
- *
- * This function assumes @a parent_uri and @a child_uri are both absolute or
- * relative in the same way.
- *
- * ### Returning the child in the no-match case is a bad idea when the
- *     paths are relative; can be useful when they are absolute.
  *
  * @since New in 1.7.
  */
@@ -763,7 +739,7 @@ svn_dirent_condense_targets(const char **pcommon,
  * If there are no items in @a targets, set @a *pcommon and (if
  * applicable) @a *pcondensed_targets to @c NULL.
  *
- * Allocates @a *pcommon and @a *targets in @a result_pool. Temporary
+ * Allocate @a *pcommon and @a *targets in @a result_pool. Temporary
  * allocations will be performed in @a scratch_pool.
  *
  * @since New in 1.7.
