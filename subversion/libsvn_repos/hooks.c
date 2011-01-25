@@ -35,6 +35,7 @@
 #include "repos.h"
 #include "svn_private_config.h"
 #include "private/svn_fs_private.h"
+#include "private/svn_repos_private.h"
 
 
 
@@ -592,7 +593,7 @@ svn_repos__hooks_pre_obliterate(svn_repos_t *repos,
                                 const svn_string_t *obliteration_set,
                                 apr_pool_t *pool)
 {
-  const char *hook = svn_repos_pre_obliterate_hook(repos, pool);
+  const char *hook = svn_repos__pre_obliterate_hook(repos, pool);
   svn_boolean_t broken_link;
 
   if ((hook = check_hook_cmd(hook, &broken_link, pool)) && broken_link)

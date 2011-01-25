@@ -428,12 +428,88 @@ svn_path_compare_paths(const char *path1,
   return (unsigned char)(path1[i]) < (unsigned char)(path2[i]) ? -1 : 1;
 }
 
+/* Return the string length of the longest common ancestor of PATH1 and PATH2.
+ *
+ * This function handles everything except the URL-handling logic
+ * of svn_path_get_longest_ancestor, and assumes that PATH1 and
+ * PATH2 are *not* URLs.
+ *
+ * If the two paths do not share a common ancestor, return 0.
+ *
+ * New strings are allocated in POOL.
+ */
+static apr_size_t
+get_path_ancestor_length(const char *path1,
+                         const char *path2,
+                         apr_pool_t *pool)
+{
+  apr_size_t path1_len, path2_len;
+  apr_size_t i = 0;
+  apr_size_t last_dirsep = 0;
+
+  path1_len = strlen(path1);
+  path2_len = strlen(path2);
+
+  if (SVN_PATH_IS_EMPTY(path1) || SVN_PATH_IS_EMPTY(path2))
+    return 0;
+
+  while (path1[i] == path2[i])
+    {
+      /* Keep track of the last directory separator we hit. */
+      if (path1[i] == '/')
+        last_dirsep = i;
+
+      i++;
+
+      /* If we get to the end of either path, break out. */
+      if ((i == path1_len) || (i == path2_len))
+        break;
+    }
+
+  /* two special cases:
+     1. '/' is the longest common ancestor of '/' and '/foo'
+     2. '/' is the longest common ancestor of '/rif' and '/raf' */
+  if (i == 1 && path1[0] == '/' && path2[0] == '/')
+    return 1;
+
+  /* last_dirsep is now the offset of the last directory separator we
+     crossed before reaching a non-matching byte.  i is the offset of
+     that non-matching byte. */
+  if (((i == path1_len) && (path2[i] == '/'))
+           || ((i == path2_len) && (path1[i] == '/'))
+           || ((i == path1_len) && (i == path2_len)))
+    return i;
+  else
+    if (last_dirsep == 0 && path1[0] == '/' && path2[0] == '/')
+      return 1;
+    return last_dirsep;
+}
+
+
 char *
 svn_path_get_longest_ancestor(const char *path1,
                               const char *path2,
                               apr_pool_t *pool)
 {
-  return svn_uri_get_longest_ancestor(path1, path2, pool);
+  svn_boolean_t path1_is_url = svn_path_is_url(path1);
+  svn_boolean_t path2_is_url = svn_path_is_url(path2);
+
+  /* Are we messing with URLs?  If we have a mix of URLs and non-URLs,
+     there's nothing common between them.  */
+  if (path1_is_url && path2_is_url)
+    {
+      return svn_uri_get_longest_ancestor(path1, path2, pool);
+    }
+  else if ((! path1_is_url) && (! path2_is_url))
+    {
+      return apr_pstrndup(pool, path1,
+                          get_path_ancestor_length(path1, path2, pool));
+    }
+  else
+    {
+      /* A URL and a non-URL => no common prefix */
+      return apr_pmemdup(pool, SVN_EMPTY_PATH, sizeof(SVN_EMPTY_PATH));
+    }
 }
 
 const char *
@@ -441,14 +517,70 @@ svn_path_is_child(const char *path1,
                   const char *path2,
                   apr_pool_t *pool)
 {
-  return svn_uri_is_child(path1, path2, pool);
+  apr_size_t i;
+
+  /* assert (is_canonical (path1, strlen (path1)));  ### Expensive strlen */
+  /* assert (is_canonical (path2, strlen (path2)));  ### Expensive strlen */
+
+  /* Allow "" and "foo" to be parent/child */
+  if (SVN_PATH_IS_EMPTY(path1))               /* "" is the parent  */
+    {
+      if (SVN_PATH_IS_EMPTY(path2)            /* "" not a child    */
+          || path2[0] == '/')                  /* "/foo" not a child */
+        return NULL;
+      else
+        /* everything else is child */
+        return pool ? apr_pstrdup(pool, path2) : path2;
+    }
+
+  /* Reach the end of at least one of the paths.  How should we handle
+     things like path1:"foo///bar" and path2:"foo/bar/baz"?  It doesn't
+     appear to arise in the current Subversion code, it's not clear to me
+     if they should be parent/child or not. */
+  for (i = 0; path1[i] && path2[i]; i++)
+    if (path1[i] != path2[i])
+      return NULL;
+
+  /* There are two cases that are parent/child
+          ...      path1[i] == '\0'
+          .../foo  path2[i] == '/'
+      or
+          /        path1[i] == '\0'
+          /foo     path2[i] != '/'
+  */
+  if (path1[i] == '\0' && path2[i])
+    {
+      if (path2[i] == '/')
+        return pool ? apr_pstrdup(pool, path2 + i + 1) : path2 + i + 1;
+      else if (i == 1 && path1[0] == '/')
+        return pool ? apr_pstrdup(pool, path2 + 1) : path2 + 1;
+    }
+
+  /* Otherwise, path2 isn't a child. */
+  return NULL;
 }
 
 
 svn_boolean_t
 svn_path_is_ancestor(const char *path1, const char *path2)
 {
-  return svn_uri_is_ancestor(path1, path2);
+  apr_size_t path1_len = strlen(path1);
+
+  /* If path1 is empty and path2 is not absoulte, then path1 is an ancestor. */
+  if (SVN_PATH_IS_EMPTY(path1))
+    return *path2 != '/';
+
+  /* If path1 is a prefix of path2, then:
+     - If path1 ends in a path separator,
+     - If the paths are of the same length
+     OR
+     - path2 starts a new path component after the common prefix,
+     then path1 is an ancestor. */
+  if (strncmp(path1, path2, path1_len) == 0)
+    return path1[path1_len - 1] == '/'
+      || (path2[path1_len] == '/' || path2[path1_len] == '\0');
+
+  return FALSE;
 }
 
 

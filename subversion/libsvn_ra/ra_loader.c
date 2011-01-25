@@ -301,6 +301,16 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
   /* Initialize the return variable. */
   *session_p = NULL;
 
+  apr_err = apr_uri_parse(sesspool, repos_URL, &repos_URI);
+  /* ### Should apr_uri_parse leave hostname NULL?  It doesn't
+   * for "file:///" URLs, only for bogus URLs like "bogus".
+   * If this is the right behavior for apr_uri_parse, maybe we
+   * should have a svn_uri_parse wrapper. */
+  if (apr_err != APR_SUCCESS || repos_URI.hostname == NULL)
+    return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                             _("Illegal repository URL '%s'"),
+                             repos_URL);
+
   if (callbacks->auth_baton)
     {
       /* The 'store-passwords' and 'store-auth-creds' parameters used to
@@ -363,15 +373,6 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
 
           /* Find out where we're about to connect to, and
            * try to pick a server group based on the destination. */
-          apr_err = apr_uri_parse(sesspool, repos_URL, &repos_URI);
-          /* ### Should apr_uri_parse leave hostname NULL?  It doesn't
-           * for "file:///" URLs, only for bogus URLs like "bogus".
-           * If this is the right behavior for apr_uri_parse, maybe we
-           * should have a svn_uri_parse wrapper. */
-          if (apr_err != APR_SUCCESS || repos_URI.hostname == NULL)
-            return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                                     _("Illegal repository URL '%s'"),
-                                     repos_URL);
           server_group = svn_config_find_group(servers, repos_URI.hostname,
                                                SVN_CONFIG_SECTION_GROUPS,
                                                sesspool);
@@ -500,7 +501,19 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
      what to do. */
   if (corrected_url_p && corrected_url)
     {
-      *corrected_url_p = apr_pstrdup(pool, corrected_url);
+      if (! svn_path_is_url(corrected_url))
+        {
+          /* RFC1945 and RFC2616 state that the Location header's
+             value (from whence this CORRECTED_URL ultimately comes),
+             if present, must be an absolute URI.  But some Apache
+             versions (those older than 2.2.11, it seems) transmit
+             only the path portion of the URI.  See issue #3775 for
+             details. */
+          apr_uri_t corrected_URI = repos_URI;
+          corrected_URI.path = (char *)corrected_url;
+          corrected_url = apr_uri_unparse(pool, &corrected_URI, 0);
+        }
+      *corrected_url_p = svn_uri_canonicalize(corrected_url, pool);
       svn_pool_destroy(sesspool);
       return SVN_NO_ERROR;
     }

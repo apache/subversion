@@ -256,7 +256,7 @@ svn_subst_translate_string(svn_string_t **new_value,
                            apr_pool_t *pool)
 {
   return svn_subst_translate_string2(new_value, NULL, NULL, value,
-                                     encoding, pool, pool);
+                                     encoding, FALSE, pool, pool);
 }
 
 svn_error_t *

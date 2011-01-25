@@ -942,8 +942,8 @@ migrate_props(const char *dir_abspath,
 static char *
 remove_suffix(const char *str, const char *suffix, apr_pool_t *result_pool)
 {
-  int str_len = strlen(str);
-  int suffix_len = strlen(suffix);
+  size_t str_len = strlen(str);
+  size_t suffix_len = strlen(suffix);
 
   if (str_len > suffix_len
       && strcmp(str + str_len - suffix_len, suffix) == 0)
@@ -1126,6 +1126,14 @@ bump_to_23(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
                              wcroot_abspath);
 
   SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_23));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+bump_to_24(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_24));
+  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_CREATE_NODES_TRIGGERS));
   return SVN_NO_ERROR;
 }
 
@@ -1388,6 +1396,12 @@ svn_wc__upgrade_sdb(int *result_format,
         SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_23, &bb,
                                              scratch_pool));
         *result_format = 23;
+        /* FALLTHROUGH  */
+
+      case 23:
+        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_24, &bb,
+                                             scratch_pool));
+        *result_format = 24;
         /* FALLTHROUGH  */
 
       /* ### future bumps go here.  */

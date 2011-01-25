@@ -36,6 +36,7 @@
 #include "../libsvn_ra/ra_loader.h"
 #include "private/svn_mergeinfo_private.h"
 #include "private/svn_repos_private.h"
+#include "private/svn_fspath.h"
 
 #define APR_WANT_STRFUNC
 #include <apr_want.h>

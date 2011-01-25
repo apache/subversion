@@ -158,7 +158,7 @@ delete_urls(const apr_array_header_t *paths,
 
   /* Condense our list of deletion targets. */
   SVN_ERR(svn_uri_condense_targets(&common, &targets, paths, TRUE,
-                                   pool, pool));
+                                   pool, subpool));
   if (! targets->nelts)
     {
       const char *bname;
