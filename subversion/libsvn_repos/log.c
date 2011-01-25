@@ -1609,7 +1609,7 @@ do_logs(svn_fs_t *fs,
 
 
 svn_error_t *
-svn_repos_get_logs4(svn_repos_t *repos,
+svn_repos_get_logs5(svn_repos_t *repos,
                     const apr_array_header_t *paths,
                     svn_revnum_t start,
                     svn_revnum_t end,
@@ -1617,6 +1617,7 @@ svn_repos_get_logs4(svn_repos_t *repos,
                     svn_boolean_t discover_changed_paths,
                     svn_boolean_t strict_node_history,
                     svn_boolean_t include_merged_revisions,
+                    svn_boolean_t ignore_mergeinfo,
                     const apr_array_header_t *revprops,
                     svn_repos_authz_func_t authz_read_func,
                     void *authz_read_baton,
@@ -1627,6 +1628,13 @@ svn_repos_get_logs4(svn_repos_t *repos,
   svn_revnum_t head = SVN_INVALID_REVNUM;
   svn_fs_t *fs = repos->fs;
   svn_boolean_t descending_order;
+
+  /* Including merged revisions and ignoring mergeinfo simultaneously is
+     nonsensical, so prohibit it. */
+  if (include_merged_revisions && ignore_mergeinfo)
+    return svn_error_create
+      (SVN_ERR_NONSENSICAL_OPTIONS, NULL,
+       _("Can't ignore mergeinfo and include merged revisions simultaneously"));
 
   /* Setup log range. */
   SVN_ERR(svn_fs_youngest_rev(&head, fs, pool));
@@ -1664,7 +1672,7 @@ svn_repos_get_logs4(svn_repos_t *repos,
      paths or a single empty (or "/") path, then we can bypass a bunch
      of complexity because we already know in which revisions the root
      directory was changed -- all of them.  */
-  if ((! include_merged_revisions)
+  if ((! include_merged_revisions)  && (! ignore_mergeinfo)
       && ((! paths->nelts)
           || ((paths->nelts == 1)
               && (svn_path_is_empty(APR_ARRAY_IDX(paths, 0, const char *))

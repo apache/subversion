@@ -1623,6 +1623,31 @@ svn_repos_node_location_segments(svn_repos_t *repos,
  * @since New in 1.5.
  */
 svn_error_t *
+svn_repos_get_logs5(svn_repos_t *repos,
+                    const apr_array_header_t *paths,
+                    svn_revnum_t start,
+                    svn_revnum_t end,
+                    int limit,
+                    svn_boolean_t discover_changed_paths,
+                    svn_boolean_t strict_node_history,
+                    svn_boolean_t include_merged_revisions,
+                    svn_boolean_t ignore_mergeinfo,
+                    const apr_array_header_t *revprops,
+                    svn_repos_authz_func_t authz_read_func,
+                    void *authz_read_baton,
+                    svn_log_entry_receiver_t receiver,
+                    void *receiver_baton,
+                    apr_pool_t *pool);
+
+/**
+ * Similar to svn_repos_get_logs5(), but with @a ignore_mergeinfo set to
+ * @c FALSE.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
+svn_error_t *
 svn_repos_get_logs4(svn_repos_t *repos,
                     const apr_array_header_t *paths,
                     svn_revnum_t start,
