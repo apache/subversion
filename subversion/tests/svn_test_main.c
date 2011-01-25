@@ -232,7 +232,7 @@ do_test_num(const char *progname,
   if ((test_num > array_size) || (test_num <= 0))
     {
       if (header_msg && *header_msg)
-        printf(*header_msg);
+        printf("%s", *header_msg);
       printf("FAIL: %s: THERE IS NO TEST NUMBER %2d\n", progname, test_num);
       skip_cleanup = TRUE;
       return TRUE;  /* BAIL, this test number doesn't exist. */
@@ -247,7 +247,7 @@ do_test_num(const char *progname,
 
   if (run_this_test && header_msg && *header_msg)
     {
-      printf(*header_msg);
+      printf("%s", *header_msg);
       *header_msg = NULL;
     }
 
