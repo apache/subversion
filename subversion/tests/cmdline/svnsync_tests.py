@@ -278,7 +278,7 @@ def tag_with_modified_file(sbox):
 
 def dir_prop_change(sbox):
   "directory property changes"
-  run_test(sbox, "dir_prop_change.dump")
+  run_test(sbox, "dir-prop-change.dump")
 
 #----------------------------------------------------------------------
 
@@ -794,7 +794,7 @@ def delete_svn_props(sbox):
 def commit_a_copy_of_root(sbox):
   "commit a copy of root causes sync to fail"
   #Testcase for issue 3438.
-  run_test(sbox, "repo_with_copy_of_root_dir.dump")
+  run_test(sbox, "repo-with-copy-of-root-dir.dump")
 
 # issue #3641 'svnsync fails to partially copy a repository'.
 # This currently fails because while replacements with history
@@ -834,8 +834,8 @@ def commit_a_copy_of_root(sbox):
 #                 mkdir %ROOT_URL%/trunk/H/Z/B
 def descend_into_replace(sbox):
   "descending into replaced dir looks in src"
-  run_test(sbox, "descend_into_replace.dump", subdir='/trunk/H',
-           exp_dump_file_name = "descend_into_replace.expected.dump")
+  run_test(sbox, "descend-into-replace.dump", subdir='/trunk/H',
+           exp_dump_file_name = "descend-into-replace.expected.dump")
 
 # issue #3728
 def delete_revprops(sbox):
