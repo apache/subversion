@@ -1863,6 +1863,7 @@ svn_subst_translate_string2(svn_string_t **new_value,
                             svn_boolean_t *translated_line_endings,
                             const svn_string_t *value,
                             const char *encoding,
+                            svn_boolean_t repair,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool)
 {
@@ -1892,7 +1893,7 @@ svn_subst_translate_string2(svn_string_t **new_value,
                             translated_line_endings,
                             val_utf8,
                             "\n",  /* translate to LF */
-                            FALSE, /* no repair */
+                            repair,
                             NULL,  /* no keywords */
                             FALSE, /* no expansion */
                             scratch_pool));
