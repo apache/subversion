@@ -1727,7 +1727,7 @@ ra_svn_get_location_segments(svn_ra_session_t *session,
             return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                     _("Expected valid revision range"));
           if (ret_path)
-            ret_path = svn_fspath__canonicalize(ret_path, iterpool);
+            ret_path = svn_relpath_canonicalize(ret_path, iterpool);
           segment->path = ret_path;
           segment->range_start = range_start;
           segment->range_end = range_end;
