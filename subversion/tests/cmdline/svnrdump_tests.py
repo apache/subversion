@@ -26,6 +26,7 @@
 
 # General modules
 import sys, os
+import re
 
 # Our testing module
 import svntest
@@ -49,9 +50,10 @@ Wimp = svntest.testcase.Wimp
 # /dev/null). This is really harmless, but `svnadmin dump` contains
 # the logic for differentiating between these two cases.
 
-mismatched_headers_re = \
-    "Prop-delta: |Text-content-sha1: |Text-copy-source-md5: |" \
-    "Text-copy-source-sha1: |Text-delta-base-sha1: .*"
+mismatched_headers_re = re.compile(
+    "Prop-delta: .*|Text-content-sha1: .*|Text-copy-source-md5: .*|" 
+    "Text-copy-source-sha1: .*|Text-delta-base-sha1: .*"
+)
 
 ######################################################################
 # Helper routines
@@ -102,6 +104,7 @@ def run_dump_test(sbox, dumpfile_name, expected_dumpfile_name = None,
     svnadmin_dumpfile = open(os.path.join(svnrdump_tests_dir,
                                           expected_dumpfile_name),
                              'rb').readlines()
+    svnadmin_dumpfile = svntest.verify.UnorderedOutput(svnadmin_dumpfile)
 
   # Compare the output from stdout
   svntest.verify.compare_and_display_lines(
@@ -362,7 +365,7 @@ test_list = [ None,
               copy_bad_line_endings_dump,
               commit_a_copy_of_root_dump,
               commit_a_copy_of_root_load,
-              XFail(descend_into_replace_dump, svntest.main.is_fs_type_bdb),
+              descend_into_replace_dump,
               descend_into_replace_load,
              ]
 
