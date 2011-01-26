@@ -320,7 +320,7 @@ new_node_record(void **node_baton,
       if (nb->action == svn_node_action_delete)
         break;
       else
-        /* FALL THROUGH */
+        /* FALL THROUGH */;
     case svn_node_action_add:
       switch (nb->kind)
         {
