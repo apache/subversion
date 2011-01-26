@@ -906,7 +906,7 @@ test_list = [ None,
               copy_bad_line_endings,
               delete_svn_props,
               commit_a_copy_of_root,
-              XFail(descend_into_replace),
+              descend_into_replace,
               delete_revprops,
              ]
 serial_only = True
