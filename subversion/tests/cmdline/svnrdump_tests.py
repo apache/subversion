@@ -366,7 +366,7 @@ test_list = [ None,
               commit_a_copy_of_root_dump,
               commit_a_copy_of_root_load,
               descend_into_replace_dump,
-              XFail(descend_into_replace_load),
+              descend_into_replace_load,
              ]
 
 if __name__ == '__main__':

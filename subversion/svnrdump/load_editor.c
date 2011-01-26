@@ -312,6 +312,15 @@ new_node_record(void **node_baton,
 
   switch (nb->action)
     {
+    case svn_node_action_delete:
+    case svn_node_action_replace:
+      LDR_DBG(("Deleting entry %s in %p\n", nb->path, rb->db->baton));
+      SVN_ERR(commit_editor->delete_entry(nb->path, rb->rev,
+                                          rb->db->baton, rb->pool));
+      if (nb->action == svn_node_action_delete)
+        break;
+      else
+        /* FALL THROUGH */
     case svn_node_action_add:
       switch (nb->kind)
         {
@@ -353,14 +362,6 @@ new_node_record(void **node_baton,
           /* The directory baton has already been set */
           break;
         }
-      break;
-    case svn_node_action_delete:
-      LDR_DBG(("Deleting entry %s in %p\n", nb->path, rb->db->baton));
-      SVN_ERR(commit_editor->delete_entry(nb->path, rb->rev,
-                                          rb->db->baton, rb->pool));
-      break;
-    case svn_node_action_replace:
-      /* Absent in dumpstream; represented as a delete + add */
       break;
     }
 
