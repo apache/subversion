@@ -384,8 +384,9 @@ parse_format_version(const char *versionstring, int *version)
       || strncmp(versionstring,
                  SVN_REPOS_DUMPFILE_MAGIC_HEADER,
                  magic_len))
-    return svn_error_create(SVN_ERR_STREAM_MALFORMED_DATA, NULL,
-                            _("Malformed dumpfile header"));
+    return svn_error_createf(SVN_ERR_STREAM_MALFORMED_DATA, NULL,
+                             _("Malformed dumpfile header '%s'"),
+                             versionstring);
 
   SVN_ERR(svn_cstring_atoi(&value, p + 1));
 

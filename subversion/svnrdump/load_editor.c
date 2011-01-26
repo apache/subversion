@@ -106,9 +106,9 @@ get_lock(const svn_string_t **lock_string_p,
 
 static svn_error_t *
 new_revision_record(void **revision_baton,
-		    apr_hash_t *headers,
-		    void *parse_baton,
-		    apr_pool_t *pool)
+                    apr_hash_t *headers,
+                    void *parse_baton,
+                    apr_pool_t *pool)
 {
   struct revision_baton *rb;
   struct parse_baton *pb;
@@ -312,6 +312,15 @@ new_node_record(void **node_baton,
 
   switch (nb->action)
     {
+    case svn_node_action_delete:
+    case svn_node_action_replace:
+      LDR_DBG(("Deleting entry %s in %p\n", nb->path, rb->db->baton));
+      SVN_ERR(commit_editor->delete_entry(nb->path, rb->rev,
+                                          rb->db->baton, rb->pool));
+      if (nb->action == svn_node_action_delete)
+        break;
+      else
+        /* FALL THROUGH */;
     case svn_node_action_add:
       switch (nb->kind)
         {
@@ -353,14 +362,6 @@ new_node_record(void **node_baton,
           /* The directory baton has already been set */
           break;
         }
-      break;
-    case svn_node_action_delete:
-      LDR_DBG(("Deleting entry %s in %p\n", nb->path, rb->db->baton));
-      SVN_ERR(commit_editor->delete_entry(nb->path, rb->rev,
-                                          rb->db->baton, rb->pool));
-      break;
-    case svn_node_action_replace:
-      /* Absent in dumpstream; represented as a delete + add */
       break;
     }
 

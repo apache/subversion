@@ -269,11 +269,21 @@ add_subdir(svn_fs_root_t *source_root,
            * I think not; when path_driver_cb_func() calls add_subdir(), it
            * passes SOURCE_ROOT and SOURCE_PATH that are unreadable.
            */
-          SVN_ERR(add_subdir(new_source_root, target_root, editor, edit_baton,
-                             new_path, *dir_baton,
-                             new_source_path,
-                             authz_read_func, authz_read_baton,
-                             changed_paths, subpool, &new_dir_baton));
+          if (change && change->change_kind == svn_fs_path_change_replace
+              && copyfrom_path == NULL)
+            {
+              SVN_ERR(editor->add_directory(new_path, *dir_baton,
+                                            NULL, SVN_INVALID_REVNUM,
+                                            subpool, &new_dir_baton));
+            }
+          else
+            {
+              SVN_ERR(add_subdir(new_source_root, target_root, editor, edit_baton,
+                                 new_path, *dir_baton,
+                                 new_source_path,
+                                 authz_read_func, authz_read_baton,
+                                 changed_paths, subpool, &new_dir_baton));
+            }
 
           SVN_ERR(editor->close_directory(new_dir_baton, subpool));
         }
