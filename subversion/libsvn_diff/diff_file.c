@@ -415,8 +415,9 @@ find_identical_prefix(svn_boolean_t *reached_one_eof, apr_off_t *prefix_lines,
                       apr_pool_t *pool)
 {
   svn_boolean_t had_cr = FALSE;
-  svn_boolean_t is_match, can_read_word;
+  svn_boolean_t is_match;
   apr_off_t lines = 0;
+  apr_ssize_t max_delta, delta;
   apr_size_t i;
 
   for (i = 1, is_match = TRUE; i < file_len; i++)
@@ -444,30 +445,44 @@ find_identical_prefix(svn_boolean_t *reached_one_eof, apr_off_t *prefix_lines,
 
 #if SVN_UNALIGNED_ACCESS_IS_OK
 
-      /* Skip quickly over the stuff between EOLs. */
-      for (i = 0, can_read_word = TRUE; i < file_len; i++)
-        can_read_word = can_read_word 
-                        && (file[i].curp + sizeof(apr_size_t) < file[i].endp);
-      while (can_read_word)
+      /* Try to advance as far as possible with machine-word granularity.
+       * Determine how far we may advance with chunky ops without reaching
+       * endp for any of the files.
+       * Signedness is important here if curp gets close to endp.
+       */
+      max_delta = file[0].endp - file[0].curp - sizeof(apr_size_t);
+      for (i = 1; i < file_len; i++)
         {
-          for (i = 1, is_match = TRUE; i < file_len; i++)
-            is_match = is_match
-                       && (   *(const apr_size_t *)file[0].curp
-                           == *(const apr_size_t *)file[i].curp);
+          delta = file[i].endp - file[i].curp - sizeof(apr_size_t);
+          if (delta < max_delta)
+            max_delta = delta;
+        }
 
-          if (!is_match || contains_eol(*(const apr_size_t *)file[0].curp))
+      is_match = TRUE;
+      for (delta = 0; delta < max_delta && is_match; delta += sizeof(apr_size_t))
+        {
+          apr_size_t chunk = *(const apr_size_t *)(file[0].curp + delta);
+          if (contains_eol(chunk))
             break;
 
-          for (i = 0; i < file_len; i++)
-            file[i].curp += sizeof(apr_size_t);
-          for (i = 0, can_read_word = TRUE; i < file_len; i++)
-            can_read_word = can_read_word 
-                        && (file[i].curp + sizeof(apr_size_t) < file[i].endp);
+          for (i = 1; i < file_len; i++)
+            if (chunk != *(const apr_size_t *)(file[i].curp + delta))
+              {
+                is_match = FALSE;
+                delta -= sizeof(apr_size_t);
+                break;
+              }
         }
+
+      /* We either found a mismatch or an EOL at or shortly behind curp+delta
+       * or we cannot proceed with chunky ops without exceeding endp.
+       * In any way, everything up to curp + delta is equal and not an EOL.
+       */
+      for (i = 0; i < file_len; i++)
+        file[i].curp += delta;
 
 #endif
 
-      /* curp == endp indicates EOF (this can only happen with last chunk) */
       *reached_one_eof = is_one_at_eof(file, file_len);
       if (*reached_one_eof)
         break;
