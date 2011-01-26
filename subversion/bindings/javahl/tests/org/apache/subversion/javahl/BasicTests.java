@@ -2582,7 +2582,6 @@ public class BasicTests extends SVNTests
     {
     	OneTest thisTest = new OneTest(true);
     	File patchInput = new File(super.localTmp, thisTest.testName);
-    	final String iotaPath = thisTest.getWCPath().replace('\\', '/') + "/iota";
         final String NL = System.getProperty("line.separator");
 
     	final String patchText = "Index: iota" + NL +
@@ -2598,7 +2597,8 @@ public class BasicTests extends SVNTests
         writer.flush();
         writer.close();
 
-    	client.patch(patchInput.getAbsolutePath(), iotaPath, false, 0,
+    	client.patch(patchInput.getAbsolutePath(),
+                thisTest.getWCPath().replace('\\', '/'), false, 0,
     			false, true, true,
     			new PatchCallback() {
 					public boolean singlePatch(String pathFromPatchfile,
