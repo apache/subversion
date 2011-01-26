@@ -106,9 +106,9 @@ get_lock(const svn_string_t **lock_string_p,
 
 static svn_error_t *
 new_revision_record(void **revision_baton,
-		    apr_hash_t *headers,
-		    void *parse_baton,
-		    apr_pool_t *pool)
+                    apr_hash_t *headers,
+                    void *parse_baton,
+                    apr_pool_t *pool)
 {
   struct revision_baton *rb;
   struct parse_baton *pb;
