@@ -190,7 +190,7 @@ $LDD "$CLIENT_CMD" | grep -q 'not found' \
   || fail "Subversion client couldn't find and/or load ra_dav library"
 
 httpd="$($APXS -q PROGNAME)"
-HTTPD=$(get_prog_name $httpd) || fail "HTTPD not found"
+HTTPD=$(get_prog_name $httpd) || fail "HTTPD '$HTTPD' not found"
 [ -x $HTTPD ] || fail "HTTPD '$HTTPD' not executable"
 
 "$HTTPD" -v 1>/dev/null 2>&1 \

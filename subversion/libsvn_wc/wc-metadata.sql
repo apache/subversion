@@ -76,9 +76,12 @@ CREATE UNIQUE INDEX I_LOCAL_ABSPATH ON WCROOT (local_abspath);
 
 /* ------------------------------------------------------------------------- */
 
-/* The PRISTINE table keeps track of pristine texts. Each pristine text is
-   stored in a file which may be compressed. Each pristine text is
-   referenced by any number of rows in the NODES and ACTUAL_NODE tables.
+/* The PRISTINE table keeps track of pristine texts.  Each row describes a
+   single pristine text.  The text itself is stored in a file whose name is
+   derived from the 'checksum' column.  Each pristine text is referenced by
+   any number of rows in the NODES and ACTUAL_NODE tables.
+
+   In future, the pristine text file may be compressed.
  */
 CREATE TABLE PRISTINE (
   /* The SHA-1 checksum of the pristine text. This is a unique key. The

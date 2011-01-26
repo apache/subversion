@@ -36,6 +36,7 @@
 
 #include "../libsvn_fs/fs-loader.h"
 
+#include "private/svn_fspath.h"
 #include "svn_private_config.h"
 
 

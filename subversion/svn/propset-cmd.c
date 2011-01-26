@@ -86,8 +86,8 @@ svn_cl__propset(apr_getopt_t *os,
      and LF line endings.  All other propvals are taken literally. */
   if (svn_prop_needs_translation(pname_utf8))
     SVN_ERR(svn_subst_translate_string2(&propval, NULL, NULL, propval,
-                                        opt_state->encoding, scratch_pool,
-                                        scratch_pool));
+                                        opt_state->encoding, FALSE,
+                                        scratch_pool, scratch_pool));
   else if (opt_state->encoding)
     return svn_error_create
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
