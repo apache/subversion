@@ -298,7 +298,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
 {
   const char *anchor_abspath, *lockroot_abspath;
   svn_error_t *err;
-  svn_opt_revision_t peg_revision = *((svn_opt_revision_t *)revision);
+  svn_opt_revision_t peg_revision = *revision;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(! (innerupdate && make_parents));
