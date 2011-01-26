@@ -125,7 +125,6 @@ typedef enum svn_cl__longopt_t {
   opt_allow_mixed_revisions,
 } svn_cl__longopt_t;
 
-#define SVN_CL__OPTION_CONTINUATION_INDENT "                             "
 
 /* Option codes and descriptions for the command line client.
  *
@@ -144,23 +143,23 @@ const apr_getopt_option_t svn_cl__options[] =
   {"non-recursive", 'N', 0, N_("obsolete; try --depth=files or --depth=immediates")},
   {"change",        'c', 1,
                     N_("the change made by revision ARG (like -r ARG-1:ARG)\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "If ARG is negative this is like -r ARG:ARG-1")},
   {"revision",      'r', 1,
                     N_("ARG (some commands also take ARG1:ARG2 range)\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "A revision argument can be one of:\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "   NUMBER       revision number\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "   '{' DATE '}' revision at start of the date\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "   'HEAD'       latest in repository\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "   'BASE'       base rev of item's working copy\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "   'COMMITTED'  last commit at or before BASE\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "   'PREV'       revision just before COMMITTED")},
   {"file",          'F', 1, N_("read log message from file ARG")},
   {"incremental",   opt_incremental, 0,
@@ -174,45 +173,45 @@ const apr_getopt_option_t svn_cl__options[] =
   {"password",      opt_auth_password, 1, N_("specify a password ARG")},
   {"extensions",    'x', 1,
                     N_("Default: '-u'. When Subversion is invoking an\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "external diff program, ARG is simply passed along\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "to the program. But when Subversion is using its\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "default internal diff implementation, or when\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "Subversion is displaying blame annotations, ARG\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "could be any of the following:\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "   -u (--unified):\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "      Output 3 lines of unified context.\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "   -b (--ignore-space-change):\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "      Ignore changes in the amount of white space.\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "   -w (--ignore-all-space):\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "      Ignore all white space.\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "   --ignore-eol-style:\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "      Ignore changes in EOL style.\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "   -p (--show-c-function):\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "      Show C function name in diff output.")},
   {"targets",       opt_targets, 1,
                     N_("pass contents of file ARG as additional args")},
   {"depth",         opt_depth, 1,
                     N_("limit operation by depth ARG ('empty', 'files',\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "'immediates', or 'infinity')")},
   {"set-depth",     opt_set_depth, 1,
                     N_("set new working copy depth to ARG ('exclude',\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "'empty', 'files', 'immediates', or 'infinity')")},
   {"xml",           opt_xml, 0, N_("output in XML")},
   {"strict",        opt_strict, 0, N_("use strict semantics")},
@@ -224,7 +223,7 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("do not cache authentication tokens")},
   {"trust-server-cert", opt_trust_server_cert, 0,
                     N_("accept unknown SSL server certificates without\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "prompting (but only with '--non-interactive')")},
   {"non-interactive", opt_non_interactive, 0,
                     N_("do no interactive prompting")},
@@ -252,21 +251,21 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("read user configuration files from directory ARG")},
   {"config-option", opt_config_options, 1,
                     N_("set user configuration option in the format:\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "    FILE:SECTION:OPTION=[VALUE]\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "For example:\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "    servers:global:http-library=serf")},
   {"auto-props",    opt_autoprops, 0, N_("enable automatic properties")},
   {"no-auto-props", opt_no_autoprops, 0, N_("disable automatic properties")},
   {"native-eol",    opt_native_eol, 1,
                     N_("use a different EOL marker than the standard\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "system marker for files with the svn:eol-style\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "property set to 'native'.\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "ARG may be one of 'LF', 'CR', 'CRLF'")},
   {"limit",         'l', 1, N_("maximum number of log entries")},
   {"no-unlock",     opt_no_unlock, 0, N_("don't unlock the targets")},
@@ -283,42 +282,42 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("retrieve no revision properties")},
   {"with-revprop",  opt_with_revprop, 1,
                     N_("set revision property ARG in new revision\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "using the name[=value] format")},
   {"parents",       opt_parents, 0, N_("make intermediate directories")},
   {"use-merge-history", 'g', 0,
                     N_("use/display additional information from merge\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "history")},
   {"accept",        opt_accept, 1,
                     N_("specify automatic conflict resolution action\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "('postpone', 'base', 'mine-conflict',\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "'theirs-conflict', 'mine-full', 'theirs-full',\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "'edit', 'launch')")},
   {"show-revs",     opt_show_revs, 1,
                     N_("specify which collection of revisions to display\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "('merged', 'eligible')")},
   {"reintegrate",   opt_reintegrate, 0,
                     N_("merge a branch back into its parent branch")},
   {"strip",         opt_strip, 1,
                     N_("number of leading path components to strip from\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "paths parsed from the patch file. --strip 0\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "is the default and leaves paths unmodified.\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "--strip 1 would change the path\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "'doc/fudge/crunchy.html' to 'fudge/crunchy.html'.\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "--strip 2 would leave just 'crunchy.html'\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "The expected component separator is '/' on all\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "platforms. A leading '/' counts as one component.")},
   {"show-copies-as-adds", opt_show_copies_as_adds, 0,
                     N_("don't diff copied or moved files with their source")},
@@ -335,9 +334,9 @@ const apr_getopt_option_t svn_cl__options[] =
                        N_("use git's extended diff format")},
   {"allow-mixed-revisions", opt_allow_mixed_revisions, 0,
                        N_("Allow merge into mixed-revision working copy.\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "Use of this option is not recommended!\n"
-                       SVN_CL__OPTION_CONTINUATION_INDENT
+                       "                             "
                        "Please run 'svn update' instead.")},
 
   /* Long-opt Aliases
@@ -973,9 +972,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  Note:  the --accept option is currently required.\n"),
     {opt_targets, 'R', opt_depth, 'q', opt_accept},
     {{opt_accept, N_("specify automatic conflict resolution source\n"
-                     SVN_CL__OPTION_CONTINUATION_INDENT
+                     "                             "
                      "('base', 'working', 'mine-conflict',\n"
-                     SVN_CL__OPTION_CONTINUATION_INDENT
+                     "                             "
                      "'theirs-conflict', 'mine-full', 'theirs-full')")}} },
 
   { "resolved", svn_cl__resolved, {0}, N_
