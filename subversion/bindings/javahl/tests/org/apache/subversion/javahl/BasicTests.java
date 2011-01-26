@@ -2580,11 +2580,11 @@ public class BasicTests extends SVNTests
      */
     public void testPatch() throws SubversionException, IOException
     {
-    	OneTest thisTest = new OneTest(true);
-    	File patchInput = new File(super.localTmp, thisTest.testName);
+        OneTest thisTest = new OneTest(true);
+        File patchInput = new File(super.localTmp, thisTest.testName);
         final String NL = System.getProperty("line.separator");
 
-    	final String patchText = "Index: iota" + NL +
+        final String patchText = "Index: iota" + NL +
             "===================================================================" + NL +
             "--- iota\t(revision 1)" + NL +
             "+++ iota\t(working copy)" + NL +
@@ -2597,15 +2597,16 @@ public class BasicTests extends SVNTests
         writer.flush();
         writer.close();
 
-    	client.patch(patchInput.getAbsolutePath(),
-                thisTest.getWCPath().replace('\\', '/'), false, 0,
-    			false, true, true,
-    			new PatchCallback() {
-					public boolean singlePatch(String pathFromPatchfile,
-                            String patchPath, String rejectPath) {
-						// Do nothing, right now.
-                        return false;
-					}
+        client.patch(patchInput.getAbsolutePath(),
+                     thisTest.getWCPath().replace('\\', '/'), false, 0,
+                     false, true, true,
+                     new PatchCallback() {
+                         public boolean singlePatch(String pathFromPatchfile,
+                                                    String patchPath,
+                                                    String rejectPath) {
+                             // Do nothing, right now.
+                            return false;
+                         }
     	});
     }
 
