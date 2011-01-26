@@ -710,7 +710,6 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    U  Updated\n"
      "    C  Conflict\n"
      "    G  Merged\n"
-     "    E  Existed\n"
      "    R  Replaced\n"
      "\n"
      "  Characters in the first column report about the item itself.\n"
