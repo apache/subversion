@@ -238,6 +238,11 @@ class UnorderedOutput(ExpectedOutput):
   def __cmp__(self, other):
     raise Exception('badness')
 
+  def matches_except(self, expected, actual, except_re):
+    assert type(actual) == type([]) # ### if this trips: fix it!
+    return self.is_equivalent_list([l for l in expected if not except_re.match(l)],
+                                   [l for l in actual if not except_re.match(l)])
+
   def is_equivalent_list(self, expected, actual):
     "Disregard the order of ACTUAL lines during comparison."
 

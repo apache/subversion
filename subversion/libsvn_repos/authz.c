@@ -391,8 +391,8 @@ authz_get_tree_access(svn_config_t *cfg, const char *repos_name,
    any kind of granted access.  Implements the
    svn_config_section_enumerator2_t interface. */
 static svn_boolean_t
-authz_global_parse_section(const char *section_name, void *baton,
-                           apr_pool_t *pool)
+authz_get_any_access_parser_cb(const char *section_name, void *baton,
+                               apr_pool_t *pool)
 {
   struct authz_lookup_baton *b = baton;
 
@@ -422,10 +422,10 @@ authz_global_parse_section(const char *section_name, void *baton,
  * to any path within the REPOSITORY.  Return TRUE if so.  Use POOL
  * for temporary allocations. */
 static svn_boolean_t
-authz_get_global_access(svn_config_t *cfg, const char *repos_name,
-                        const char *user,
-                        svn_repos_authz_access_t required_access,
-                        apr_pool_t *pool)
+authz_get_any_access(svn_config_t *cfg, const char *repos_name,
+                     const char *user,
+                     svn_repos_authz_access_t required_access,
+                     apr_pool_t *pool)
 {
   struct authz_lookup_baton baton = { 0 };
 
@@ -434,8 +434,13 @@ authz_get_global_access(svn_config_t *cfg, const char *repos_name,
   baton.required_access = required_access;
   baton.access = FALSE; /* Deny access by default. */
   baton.repos_path = apr_pstrcat(pool, repos_name, ":/", (char *)NULL);
-
-  svn_config_enumerate_sections2(cfg, authz_global_parse_section,
+  
+  /* We could have used svn_config_enumerate2 for "repos_name:/".
+   * However, this requires access for root explicitly (which the user
+   * may not always have). So we end up enumerating the sections in 
+   * the authz CFG and stop on the first match with some access for 
+   * this user. */
+  svn_config_enumerate_sections2(cfg, authz_get_any_access_parser_cb,
                                  &baton, pool);
 
   /* If walking the configuration was inconclusive, deny access. */
@@ -743,12 +748,12 @@ svn_repos_authz_check_access(svn_authz_t *authz, const char *repos_name,
 {
   const char *current_path = path;
 
-  /* If PATH is NULL, do a global access lookup. */
+  /* If PATH is NULL, check if the user has *any* access. */
   if (!path)
     {
-      *access_granted = authz_get_global_access(authz->cfg, repos_name,
-                                                user, required_access,
-                                                pool);
+      *access_granted = authz_get_any_access(authz->cfg, repos_name,
+                                             user, required_access,
+                                             pool);
       return SVN_NO_ERROR;
     }
 

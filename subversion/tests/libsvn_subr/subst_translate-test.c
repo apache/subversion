@@ -66,7 +66,7 @@ test_svn_subst_translate_string2(apr_pool_t *pool)
 
     SVN_ERR(svn_subst_translate_string2(&new_value,
                                         NULL, &translated_line_endings,
-                                        source_string, "ISO-8859-1",
+                                        source_string, "ISO-8859-1", FALSE,
                                         pool, pool));
     SVN_TEST_STRING_ASSERT(new_value->data, t->expected_str);
     SVN_TEST_ASSERT(translated_line_endings == t->translated_line_endings);
@@ -76,12 +76,41 @@ test_svn_subst_translate_string2(apr_pool_t *pool)
     translated_line_endings = ! t->translated_line_endings;
     SVN_ERR(svn_subst_translate_string2(&new_value, &translated_to_utf8,
                                         &translated_line_endings,
-                                        source_string, "ISO-8859-1",
+                                        source_string, "ISO-8859-1", FALSE,
                                         pool, pool));
     SVN_TEST_STRING_ASSERT(new_value->data, t->expected_str);
     SVN_TEST_ASSERT(translated_to_utf8 == t->translated_to_utf8);
     SVN_TEST_ASSERT(translated_line_endings == t->translated_line_endings);
   }
+
+  /* Test that when REPAIR is FALSE, SVN_ERR_IO_INCONSISTENT_EOL is returned. */
+    {
+      svn_string_t *source_string = svn_string_create("  \r   \r\n  \n ", pool);
+      svn_string_t *new_value = NULL;
+      svn_error_t *err = svn_subst_translate_string2(&new_value, NULL, NULL,
+                                                     source_string,
+                                                     "ISO-8859-1", FALSE, pool,
+                                                     pool);
+      SVN_TEST_ASSERT(err != SVN_NO_ERROR);
+      SVN_TEST_ASSERT(err->apr_err == SVN_ERR_IO_INCONSISTENT_EOL);
+      svn_error_clear(err);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_repairing_svn_subst_translate_string2(apr_pool_t *pool)
+{
+    {
+      svn_string_t *source_string = svn_string_create("  \r   \r\n  \n ", pool);
+      svn_string_t *new_value = NULL;
+      SVN_ERR(svn_subst_translate_string2(&new_value, NULL, NULL, source_string,
+                                          "ISO-8859-1", TRUE, pool, pool));
+      SVN_TEST_ASSERT(new_value != NULL);
+      SVN_TEST_ASSERT(new_value->data != NULL);
+      SVN_TEST_STRING_ASSERT(new_value->data, "  \n   \n  \n ");
+    }
 
   return SVN_NO_ERROR;
 }
@@ -142,6 +171,8 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test_svn_subst_translate_string2,
                    "test svn_subst_translate_string2()"),
+    SVN_TEST_PASS2(test_repairing_svn_subst_translate_string2,
+                   "test repairing svn_subst_translate_string2()"),
     SVN_TEST_PASS2(test_svn_subst_translate_cstring2,
                    "test svn_subst_translate_cstring2()"),
     SVN_TEST_NULL

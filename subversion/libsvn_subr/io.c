@@ -81,22 +81,27 @@
   retry loop cannot completely solve this problem either, but can
   help mitigate it.
 */
+#define RETRY_MAX_ATTEMPTS 100
+#define RETRY_INITIAL_SLEEP 1000
+#define RETRY_MAX_SLEEP 128000
+
 #ifndef WIN32_RETRY_LOOP
 #if defined(WIN32) && !defined(SVN_NO_WIN32_RETRY_LOOP)
 #define WIN32_RETRY_LOOP(err, expr)                                        \
   do                                                                       \
     {                                                                      \
       apr_status_t os_err = APR_TO_OS_ERROR(err);                          \
-      int sleep_count = 1000;                                              \
+      int sleep_count = RETRY_INITIAL_SLEEP;                               \
       int retries;                                                         \
       for (retries = 0;                                                    \
-           retries < 100 && (os_err == ERROR_ACCESS_DENIED                 \
-                             || os_err == ERROR_SHARING_VIOLATION          \
-                             || os_err == ERROR_DIR_NOT_EMPTY);            \
+           retries < RETRY_MAX_ATTEMPTS &&                                 \
+           (os_err == ERROR_ACCESS_DENIED                                  \
+            || os_err == ERROR_SHARING_VIOLATION                           \
+            || os_err == ERROR_DIR_NOT_EMPTY);                             \
            ++retries, os_err = APR_TO_OS_ERROR(err))                       \
         {                                                                  \
           apr_sleep(sleep_count);                                          \
-          if (sleep_count < 128000)                                        \
+          if (sleep_count < RETRY_MAX_SLEEP)                               \
             sleep_count *= 2;                                              \
           (err) = (expr);                                                  \
         }                                                                  \

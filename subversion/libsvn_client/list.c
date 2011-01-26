@@ -31,6 +31,7 @@
 
 #include "client.h"
 
+#include "private/svn_fspath.h"
 #include "svn_private_config.h"
 
 /* Get the directory entries of DIR at REV (relative to the root of

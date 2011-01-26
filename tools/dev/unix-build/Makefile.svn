@@ -2,6 +2,11 @@
 #
 # WARNING: This may or may not work on your system. This Makefile is
 # an example, rather than a ready-made universal solution.
+#
+# Note to Subversion committers:
+# This Makefile is used by the svn-openbsd-i386 buildbot
+# (http://ci.apache.org/builders/svn-openbsd-i386).
+# Please check the bot's health after making changes to this file.
 
 ENABLE_PYTHON_BINDINGS ?= yes
 ENABLE_RUBY_BINDINGS ?= yes
@@ -1050,7 +1055,8 @@ SVNSERVE_START_CMD = $(SVN_PREFIX)/bin/svnserve \
 			--listen-host 127.0.0.1 \
 			--pid-file $(PWD)/svnserve-$(WC).pid \
 			-d -r $(svn_builddir)/subversion/tests/cmdline
-SVNSERVE_STOP_CMD = kill `cat $(PWD)/svnserve-$(WC).pid`
+SVNSERVE_STOP_CMD = kill `cat $(PWD)/svnserve-$(WC).pid`; sleep 3; \
+			rm -f $(PWD)/svnserve-$(WC).pid
 
 start-httpd: httpd-conf
 	$(HTTPD_START_CMD)
@@ -1063,6 +1069,10 @@ stop-httpd:
 	$(HTTPD_STOP_CMD)
 
 start-svnserve: $(SVN_OBJDIR)/.compiled
+	-ls $(PWD)/svnserve-*.pid | while read pidfile; do \
+		kill `cat "$$pidfile"`; sleep 3; \
+		rm -f $$pidfile; \
+	done
 	$(SVNSERVE_START_CMD)
 
 stop-svnserve:
