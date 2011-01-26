@@ -2736,6 +2736,7 @@ svn_client_patch(const char *patch_abspath,
                  apr_pool_t *scratch_pool)
 {
   apply_patches_baton_t baton;
+  svn_node_kind_t kind;
 
   if (strip_count < 0)
     return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
@@ -2744,6 +2745,14 @@ svn_client_patch(const char *patch_abspath,
   if (svn_path_is_url(local_abspath))
     return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
                              _("'%s' is not a local path"), local_abspath);
+
+  SVN_ERR(svn_io_check_path(local_abspath, &kind, scratch_pool));
+  if (kind == svn_node_none)
+    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                             _("'%s' does not exist "), local_abspath);
+  if (kind != svn_node_dir)
+    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                             _("'%s' is not a directory"), local_abspath);
 
   baton.patch_abspath = patch_abspath;
   baton.abs_wc_path = local_abspath;
