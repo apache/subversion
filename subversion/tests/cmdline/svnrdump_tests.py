@@ -318,6 +318,10 @@ def descend_into_replace_dump(sbox):
   run_dump_test(sbox, "descend-into-replace.dump", subdir='/trunk/H',
                 expected_dumpfile_name = "descend-into-replace.expected.dump")
 
+def descend_into_replace_load(sbox):
+  "load: descending into replaced dir looks in src"
+  run_load_test(sbox, "descend-into-replace.dump")
+
 ########################################################################
 # Run the tests
 
@@ -359,6 +363,7 @@ test_list = [ None,
               commit_a_copy_of_root_dump,
               commit_a_copy_of_root_load,
               XFail(descend_into_replace_dump, svntest.main.is_fs_type_bdb),
+              descend_into_replace_load,
              ]
 
 if __name__ == '__main__':
