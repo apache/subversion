@@ -9,11 +9,19 @@ Because the use of the path APIs in Subversion is so ubiquitous, this
 branch will be kept in sync with the 'trunk' -- handling conflicts
 here as they occur -- with an eye on eventual reintegration.
 
-This branch is *NOT* guaranteed to build.  In fact, compilation errors
-are being intentionally used as cheap pointers to code that needs to
-be examined in light of the desired functionality.
+========
+THE PLAN
+========
 
-Here are the svn_uri_* functions which need to be reviewed/modified:
+Step 1:  [DONE]
+
+   Rename all svn_uri_* functions to svn_url_*.  This will allow the
+   compiler to help identify unreviewed code, including any new
+   introductions via sync merges with the trunk.
+
+Step 2:  [DONE]
+
+   Review svn_url_* functions for correctness/relevance:
 
    svn_url_is_absolute [DONE]
 
@@ -28,21 +36,17 @@ Here are the svn_uri_* functions which need to be reviewed/modified:
    svn_url_is_ancestor [DONE]
    svn_url_skip_ancestor [DONE]
    svn_url_condense_targets [DONE]
+   svn_url_split [DONE]
+   svn_url_basename [DONE]
+   svn_url_is_child [DONE]
 
       Remove code that accepts non-URL URIs (asserting that input is
       valid).
 
-   svn_url_split
-   svn_url_basename
-   svn_url_is_child
+   svn_url_is_canonical [DONE]
 
       Remove code that accepts non-URL URIs (asserting that input is
-      valid).  URI-decode the returned relpaths .
-
-   svn_url_is_canonical
-
-      Remove code that accepts non-URL URIs (asserting that input is
-      valid).  Also, lose unused 'pool' parameter.
+      valid).
    
    svn_url_canonicalize [DONE]
 
@@ -58,4 +62,21 @@ Here are the svn_uri_* functions which need to be reviewed/modified:
       This says it's not to be used with URLs, but why not?  Make it
       handle URLs.
 
+Step 3:
+
+   Return URI-decoded relpaths (instead of URI-encoded ones) from some
+   of these APIs:
+
+      svn_url_split
+      svn_url_basename
+      svn_url_is_child
+
+   Make svn_url_join_relpath() URI-encoded its input relpath.
+
+Step 4:
+
+   Rename svn_url_* back to svn_uri_*.
+
+
+----------------
 [1] http://subversion.tigris.org/issues/show_bug.cgi?id=2028
