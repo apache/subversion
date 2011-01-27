@@ -118,7 +118,7 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *repos_path,
                  int latest_schema, const char * const *upgrade_sql,
                  apr_pool_t *result_pool, apr_pool_t *scratch_pool);
 
-/* Explicity close the connection in DB. */
+/* Explicitly close the connection in DB. */
 svn_error_t *
 svn_sqlite__close(svn_sqlite__db_t *db);
 
