@@ -154,7 +154,7 @@ parse_capabilities(ne_request *req,
                APR_HASH_KEY_STRING, capability_no);
   apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
                APR_HASH_KEY_STRING, capability_no);
-  apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_IGNORE_MERGEINFO,
+  apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_IGNORE_PROP_MODS,
                APR_HASH_KEY_STRING, capability_no);
 
   /* Then find out which ones are supported. */
@@ -207,9 +207,9 @@ parse_capabilities(ne_request *req,
         apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
                      APR_HASH_KEY_STRING, capability_yes);
 
-      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_IGNORE_MERGEINFO,
+      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_IGNORE_PROP_MODS,
                                       vals))
-        apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_IGNORE_MERGEINFO,
+        apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_IGNORE_PROP_MODS,
                      APR_HASH_KEY_STRING, capability_yes);
 
       if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_PARTIAL_REPLAY,
