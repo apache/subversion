@@ -908,6 +908,10 @@ svn_error_t *svn_ra_get_log3(svn_ra_session_t *session,
   if (include_merged_revisions)
     SVN_ERR(svn_ra__assert_mergeinfo_capable_server(session, NULL, pool));
 
+  if (ignored_prop_mods != NULL)
+    SVN_ERR(svn_ra__assert_server_capability(session,
+                                SVN_RA_CAPABILITY_IGNORE_PROP_MODS, pool));
+
   return session->vtable->get_log(session, paths, start, end, limit,
                                   discover_changed_paths, strict_node_history,
                                   include_merged_revisions,

@@ -45,6 +45,15 @@ svn_ra__assert_mergeinfo_capable_server(svn_ra_session_t *ra_session,
                                         const char *path_or_url,
                                         apr_pool_t *pool);
 
+/* Return an error with code SVN_ERR_UNSUPPORTED_FEATURE, if the "server"
+   pointed to by RA_SESSION doesn't support CAPABILITY.
+
+   Perform temporary allocations in POOL. */
+svn_error_t *
+svn_ra__assert_server_capability(svn_ra_session_t *ra_session,
+                                 const char *capability,
+                                 apr_pool_t *pool);
+
 /** Permanently delete @a path (relative to the URL of @a session) in revision
  * @a rev.
  *

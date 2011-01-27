@@ -73,6 +73,22 @@ svn_ra__assert_mergeinfo_capable_server(svn_ra_session_t *ra_session,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_ra__assert_server_capability(svn_ra_session_t *ra_session,
+                                 const char *capability,
+                                 apr_pool_t *pool)
+{
+  svn_boolean_t capable;
+
+  SVN_ERR(svn_ra_has_capability(ra_session, &capable, capability, pool));
+  if (! capable)
+    {
+      return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL, NULL);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Does ERR mean "the current value of the revprop isn't equal to
    the *OLD_VALUE_P you gave me"?
  */
