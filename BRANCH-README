@@ -68,11 +68,11 @@ Step 3:
    of these APIs:
 
       svn_url_basename [DONE]
-      svn_url_condense_targets
+      svn_url_condense_targets [DONE]
       svn_url_is_child [DONE]
       svn_url_split [DONE]
 
-   Make svn_url_join_relpath() URI-encoded its input relpath.
+   Make svn_url_join_relpath() URI-encode its input relpath.
 
 Step 4:
 
