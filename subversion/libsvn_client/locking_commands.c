@@ -209,7 +209,7 @@ organize_lock_targets(const char **common_parent_url,
         {
           svn_url_split(&parent, &base, *common_parent_url, 
                         result_pool);
-          svn_path_uri_encode(base, result_pool);
+          base = svn_path_uri_encode(base, result_pool);
         }
       else
         {
