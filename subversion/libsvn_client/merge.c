@@ -6184,8 +6184,8 @@ remove_noop_merge_ranges(apr_array_header_t **operative_ranges_p,
 
   /* Get logs across those ranges, recording which revisions hold
      changes to our object's history. */
-  SVN_ERR(svn_ra_get_log2(ra_session, log_targets, youngest_rev,
-                          oldest_rev, 0, FALSE, FALSE, FALSE,
+  SVN_ERR(svn_ra_get_log3(ra_session, log_targets, youngest_rev,
+                          oldest_rev, 0, FALSE, FALSE, FALSE, NULL,
                           apr_array_make(pool, 0, sizeof(const char *)),
                           log_changed_revs, changed_revs, pool));
 
@@ -7406,8 +7406,8 @@ get_inoperative_immediate_children(apr_hash_t **immediate_children,
       apr_array_header_t *log_targets = apr_array_make(scratch_pool, 1,
                                                        sizeof(const char *));
       APR_ARRAY_PUSH(log_targets, const char *) = "";
-      SVN_ERR(svn_ra_get_log2(ra_session, log_targets, youngest_rev,
-                              oldest_rev, 0, TRUE, FALSE, FALSE,
+      SVN_ERR(svn_ra_get_log3(ra_session, log_targets, youngest_rev,
+                              oldest_rev, 0, TRUE, FALSE, FALSE, NULL,
                               NULL, log_find_operative_subtree_revs,
                               *immediate_children, scratch_pool));
     }
@@ -8089,10 +8089,10 @@ remove_noop_subtree_ranges(const char *url1,
 
   APR_ARRAY_PUSH(log_targets, const char *) = "";
 
-  SVN_ERR(svn_ra_get_log2(ra_session, log_targets, youngest_gap_rev->end,
+  SVN_ERR(svn_ra_get_log3(ra_session, log_targets, youngest_gap_rev->end,
                           oldest_gap_rev->start + 1, 0, TRUE, TRUE, FALSE,
-                          apr_array_make(scratch_pool, 0,
-                                         sizeof(const char *)),
+                          NULL, apr_array_make(scratch_pool, 0,
+                                               sizeof(const char *)),
                           log_noop_revs, &log_gap_baton, scratch_pool));
 
   inoperative_ranges = svn_rangelist__initialize(oldest_gap_rev->start,
@@ -9745,8 +9745,8 @@ find_unsynced_ranges(const char *source_repos_rel_path,
 
       APR_ARRAY_PUSH(log_targets, const char *) = "";
 
-      SVN_ERR(svn_ra_get_log2(ra_session, log_targets, youngest_rev,
-                              oldest_rev, 0, TRUE, FALSE, FALSE,
+      SVN_ERR(svn_ra_get_log3(ra_session, log_targets, youngest_rev,
+                              oldest_rev, 0, TRUE, FALSE, FALSE, NULL,
                               NULL, log_find_operative_revs, &log_baton,
                               scratch_pool));
     }
