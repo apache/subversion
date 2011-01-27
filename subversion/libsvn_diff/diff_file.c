@@ -1064,7 +1064,7 @@ token_discard_all(void *baton)
 static const svn_diff_fns_t svn_diff__file_vtable =
 {
   datasource_open,
-  datasources_open,
+  /*datasources_open,*/
   datasource_close,
   datasource_get_next_token,
   token_compare,
