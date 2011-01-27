@@ -29,7 +29,7 @@ TODO:
      (offers another 10% speedup)
   * integrate (some of the) low-level optimizations for prefix/suffix
     scanning, proposed by stefan2 [2]          []
-  * revv svn_diff.h#svn_diff_fns_t             []
+  * revv svn_diff.h#svn_diff_fns_t             [DONE]
 
 Other wild ideas (may or may not be worth pursuing):
   * Take advantage of the fact that matching lines often come in batches: when
