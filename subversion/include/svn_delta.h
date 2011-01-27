@@ -1058,7 +1058,7 @@ svn_delta_get_cancellation_editor(svn_cancel_func_t cancel_func,
  * #svn_depth_infinity, #svn_depth_empty, #svn_depth_files,
  * #svn_depth_immediates, or #svn_depth_unknown.
  *
- * If filtering is deemed unncessary (or if @a requested_depth is
+ * If filtering is deemed unnecessary (or if @a requested_depth is
  * #svn_depth_unknown), @a *editor and @a *edit_baton will be set to @a
  * wrapped_editor and @a wrapped_baton, respectively; otherwise,
  * they'll be set to new objects allocated from @a pool.
@@ -1195,7 +1195,7 @@ typedef svn_error_t *(*svn_file_rev_handler_t)(
  * reproduced here for dependency reasons.
  *
  * @deprecated This type is provided for the svn_compat_wrap_file_rev_handler()
- * compatibilty wrapper, and should not be used for new development.
+ * compatibility wrapper, and should not be used for new development.
  * @since New in 1.5.
  */
 typedef svn_error_t *(*svn_file_rev_handler_old_t)(

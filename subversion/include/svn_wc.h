@@ -265,7 +265,7 @@ typedef struct svn_wc_adm_access_t svn_wc_adm_access_t;
  * subdirectory of @a path is already write locked.
  *
  * If @a cancel_func is non-NULL, call it with @a cancel_baton to determine
- * if the client has cancelled the operation.
+ * if the client has canceled the operation.
  *
  * @a pool will be used to allocate memory for the baton and any subsequently
  * cached items.  If @a adm_access has not been closed when the pool is
@@ -395,7 +395,7 @@ svn_wc_adm_probe_open(svn_wc_adm_access_t **adm_access,
  * will hold write locks.
  *
  * If @a cancel_func is non-NULL, call it with @a cancel_baton to determine
- * if the client has cancelled the operation.
+ * if the client has canceled the operation.
  *
  * This function is essentially a combination of svn_wc_adm_open3() and
  * svn_wc_get_actual_target(), with the emphasis on reducing physical IO.
@@ -469,7 +469,7 @@ svn_wc_adm_probe_retrieve(svn_wc_adm_access_t **adm_access,
  * @a associated.
  *
  * If @a cancel_func is non-NULL, call it with @a cancel_baton to determine
- * if the client has cancelled the operation.
+ * if the client has canceled the operation.
  *
  * Use @a pool only for local processing, not to allocate @a *adm_access.
  *
@@ -539,7 +539,7 @@ svn_wc_adm_close2(svn_wc_adm_access_t *adm_access,
  * Similar to svn_wc_adm_close2(), but with the internal pool of @a adm_access
  * used for temporary allocations.
  *
- * @deprecated Provided for backward compabibility with the 1.5 API.
+ * @deprecated Provided for backward compatibility with the 1.5 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -583,7 +583,7 @@ svn_wc_adm_locked(const svn_wc_adm_access_t *adm_access);
  * write_lock on @a local_abspath
  *
  * @a locked_here and/or @a locked can be NULL when you are not
- * interrested in a specific value
+ * interested in a specific value
  *
  * @since New in 1.7.
  */
@@ -1228,7 +1228,7 @@ typedef struct svn_wc_notify_t {
 
   /** Path, either absolute or relative to the current working directory
    * (i.e., not relative to an anchor).  @c path is "." or another valid path
-   * value for compatibilty reasons when the real target is an url that
+   * value for compatibility reasons when the real target is an url that
    * is available in @c url. */
   const char *path;
 
@@ -1994,7 +1994,7 @@ svn_wc_create_conflict_result(svn_wc_conflict_choice_t choice,
  * Implementations of this callback are free to present the conflict
  * using any user interface.  This may include simple contextual
  * conflicts in a file's text or properties, or more complex
- * 'tree'-based conflcts related to obstructed additions, deletions,
+ * 'tree'-based conflicts related to obstructed additions, deletions,
  * and edits.  The callback implementation is free to decide which
  * sorts of conflicts to handle; it's also free to decide which types
  * of conflicts are automatically resolvable and which require user
@@ -3083,7 +3083,7 @@ typedef struct svn_wc_entry_callbacks_t
  * If #svn_depth_infinity, recurse fully starting from @a path.
  *
  * If @a cancel_func is non-NULL, call it with @a cancel_baton to determine
- * if the client has cancelled the operation.
+ * if the client has canceled the operation.
  *
  * Like our other entries interfaces, entries that are in a 'excluded',
  * 'deleted' or 'absent' state (and not scheduled for re-addition) are not
@@ -3284,7 +3284,7 @@ svn_wc_maybe_set_repos_root(svn_wc_adm_access_t *adm_access,
  * We have three functions for getting working copy status: one function
  * for getting the status of exactly one thing, another for
  * getting the statuses of (potentially) multiple things and a third for
- * gettting the working copy out-of-dateness with respect to the repository.
+ * getting the working copy out-of-dateness with respect to the repository.
  *
  * Why do we have two different functions for getting working copy status?
  * The concept of depth, as explained in the documentation for
@@ -3380,7 +3380,7 @@ typedef struct svn_wc_status3_t
   /** Set to TRUE if the item is the victim of a conflict. */
   svn_boolean_t conflicted;
 
-  /** The status of the node itself. In order of precendence: Tree conflicts,
+  /** The status of the node itself. In order of precedence: Tree conflicts,
    * structural changes, text changes (including text conflicts). */
   enum svn_wc_status_kind node_status;
 
@@ -3807,7 +3807,7 @@ typedef void (*svn_wc_status_func_t)(void *baton,
  * or @c NULL if the default set of ignorable file patterns should be used.
  *
  * If @a cancel_func is non-NULL, call it with @a cancel_baton while walking
- * to determine if the client has cancelled the operation.
+ * to determine if the client has canceled the operation.
  *
  * If @a external_func is non-NULL and an external definition is found
  * while walking @a local_abspath, call @a external_func with @a
@@ -3881,7 +3881,7 @@ svn_wc_walk_status(svn_wc_context_t *wc_ctx,
  * or @c NULL if the default set of ignorable file patterns should be used.
  *
  * If @a cancel_func is non-NULL, call it with @a cancel_baton while building
- * the @a statushash to determine if the client has cancelled the operation.
+ * the @a statushash to determine if the client has canceled the operation.
  *
  * If @a traversal_info is non-NULL, then record pre-update traversal
  * state in it.  (Caller should obtain @a traversal_info from
@@ -4695,7 +4695,7 @@ typedef struct svn_wc_committed_queue_t svn_wc_committed_queue_t;
  * Create a queue for use with svn_wc_queue_committed() and
  * svn_wc_process_committed_queue().
  *
- * The returned queue and all further allocations required for queueing
+ * The returned queue and all further allocations required for queuing
  * new items will also be done from @a pool.
  *
  * @since New in 1.5.
@@ -6576,7 +6576,7 @@ svn_wc_cleanup3(svn_wc_context_t *wc_ctx,
  * swn_wc_context_t.
  *
  * @since New in 1.2.
- * @deprecated Provided for backward compability with the 1.6 API.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -6946,7 +6946,7 @@ svn_wc_create_tmp_file(apr_file_t **fp,
  * as requested by @a flags.
  *
  * If @a cancel_func is non-NULL, call it with @a cancel_baton to determine
- * if the client has cancelled the operation.
+ * if the client has canceled the operation.
  *
  * When translating to the normal form, inconsistent eol styles will be
  * repaired when appropriate for the given setting.  When translating
@@ -7167,7 +7167,7 @@ svn_wc_get_default_ignores(apr_array_header_t **patterns,
  * @a config hash and the local ignore patterns from the directory
  * at @a local_abspath, using @a wc_ctx, and store them in @a *patterns.
  * Allocate @a *patterns and its contents in @a result_pool, use @a
- * scrach_pool for temporary allocations.
+ * scratch_pool for temporary allocations.
  *
  * @since New in 1.7.
  */
@@ -7310,7 +7310,7 @@ typedef struct svn_wc_revision_status_t
  * modified.
  *
  * If @a cancel_func is non-NULL, call it with @a cancel_baton to determine
- * if the client has cancelled the operation.
+ * if the client has canceled the operation.
  *
  * Allocate *result_p in @a result_pool, use @a scratch_pool for temporary
  * allocations.
@@ -7355,7 +7355,7 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
  * be the empty string.
  *
  * If @a cancel_func is not @c NULL, call it with @a cancel_baton to
- * determine if the client has cancelled the operation.
+ * determine if the client has canceled the operation.
  *
  * If @a notify_func is not @c NULL, call it with @a notify_baton to
  * report the change (using notification types
@@ -7421,7 +7421,7 @@ svn_wc_set_changelist(const char *path,
  * which will be used as the root of this operation.
  *
  * If @a cancel_func is not @c NULL, call it with @a cancel_baton at
- * various points to determine if the client has cancelled the operation.
+ * various points to determine if the client has canceled the operation.
  *
  * If @a notify_func is not @c NULL, call it with @a notify_baton to
  * report changes as they are made.
@@ -7473,7 +7473,7 @@ svn_wc_crop_tree(svn_wc_adm_access_t *anchor,
  * report changes as they are made.
  *
  * If @a cancel_func is not @c NULL, call it with @a cancel_baton at
- * various points to determine if the client has cancelled the operation.
+ * various points to determine if the client has canceled the operation.
  *
  *
  * @since New in 1.7
