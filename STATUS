@@ -247,6 +247,17 @@ Candidate changes:
    Votes:
      +1: pburba
 
+ * 1.6.x-fsfs-begin-txn-deadlock
+   Fix a deadlock that can occur when two or more multithreaded
+   Subversion servers on the same system serve two or more fsfs
+   repositories.
+   Justification:
+     Avoiding deadlocks is a good thing.
+   Branch:
+    ^/subversion/branches/1.6.x-fsfs-begin-txn-deadlock
+   Votes:
+     +1: blair
+
 Veto-blocked changes:
 =====================
 
