@@ -308,7 +308,7 @@ svn_error_t *svn_ra_get_log2(svn_ra_session_t *session,
 {
   return svn_ra_get_log3(session, paths, start, end, limit,
                          discover_changed_paths, strict_node_history,
-                         include_merged_revisions, FALSE, revprops, receiver,
+                         include_merged_revisions, NULL, revprops, receiver,
                          receiver_baton, pool);
 }
 
