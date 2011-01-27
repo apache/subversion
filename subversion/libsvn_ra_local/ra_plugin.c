@@ -908,7 +908,7 @@ svn_ra_local__get_log(svn_ra_session_t *session,
       receiver_baton = &lb;
     }
 
-  return svn_repos_get_logs4(sess->repos,
+  return svn_repos_get_logs5(sess->repos,
                              abs_paths,
                              start,
                              end,
@@ -916,6 +916,7 @@ svn_ra_local__get_log(svn_ra_session_t *session,
                              discover_changed_paths,
                              strict_node_history,
                              include_merged_revisions,
+                             ignored_prop_mods,
                              revprops,
                              NULL, NULL,
                              receiver,
