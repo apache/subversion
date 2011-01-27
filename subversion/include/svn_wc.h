@@ -104,7 +104,7 @@ svn_wc_version(void);
  * @{
  */
 
-/** Flags for use with svn_wc_translated_file2
+/** Flags for use with svn_wc_translated_file2() and svn_wc_translated_stream().
  *
  * @defgroup translate_flags Translation flags
  *
@@ -172,6 +172,8 @@ svn_wc_version(void);
  * @note: #svn_wc_context_t should be passed by non-const pointer in all
  * APIs, even for read-only operations, as it contains mutable data (caching,
  * etc.).
+ *
+ * @since New in 1.7.
  */
 typedef struct svn_wc_context_t svn_wc_context_t;
 
@@ -217,12 +219,14 @@ svn_wc_context_destroy(svn_wc_context_t *wc_ctx);
 
 /** Baton for access to a working copy administrative area.
  *
- * One day all such access will require a baton, we're not there yet.
- *
  * Access batons can be grouped into sets, by passing an existing open
  * baton when opening a new baton.  Given one baton in a set, other batons
  * may be retrieved.  This allows an entire hierarchy to be locked, and
  * then the set of batons can be passed around by passing a single baton.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ *    New code should use a #svn_wc_context_t object to access the working
+ *    copy.
  */
 typedef struct svn_wc_adm_access_t svn_wc_adm_access_t;
 
@@ -414,6 +418,8 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
  * absent from, @a associated, return #SVN_ERR_WC_NOT_LOCKED.
  *
  * @a pool is used only for local processing, it is not used for the batons.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -428,6 +434,8 @@ svn_wc_adm_retrieve(svn_wc_adm_access_t **adm_access,
  * directory, or does not exist, then the behaviour is like that of
  * svn_wc_adm_retrieve() with @a path replaced by the parent directory of
  * @a path.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -513,6 +521,7 @@ svn_wc_adm_probe_try(svn_wc_adm_access_t **adm_access,
  * Any temporary allocations are performed using @a scratch_pool.
  *
  * @since New in 1.6
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -529,12 +538,18 @@ SVN_DEPRECATED
 svn_error_t *
 svn_wc_adm_close(svn_wc_adm_access_t *adm_access);
 
-/** Return the path used to open the access baton @a adm_access */
+/** Return the path used to open the access baton @a adm_access.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
 SVN_DEPRECATED
 const char *
 svn_wc_adm_access_path(const svn_wc_adm_access_t *adm_access);
 
-/** Return the pool used by access baton @a adm_access */
+/** Return the pool used by access baton @a adm_access.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
 SVN_DEPRECATED
 apr_pool_t *
 svn_wc_adm_access_pool(const svn_wc_adm_access_t *adm_access);
@@ -543,6 +558,7 @@ svn_wc_adm_access_pool(const svn_wc_adm_access_t *adm_access);
  * @c FALSE otherwise. Compared to svn_wc_locked() this is a cheap, fast
  * function that doesn't access the filesystem.
  *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  * New code should use svn_wc_locked2() instead.
  */
 SVN_DEPRECATED
@@ -582,7 +598,7 @@ svn_wc_locked(svn_boolean_t *locked,
 
 
 
-/** Administrative subdir.
+/** The default name of the administrative subdirectory.
  *
  * Ideally, this would be completely private to wc internals (in fact,
  * it used to be that adm_subdir() in adm_files.c was the only function
@@ -2573,19 +2589,12 @@ typedef enum svn_wc_schedule_t
  * when it isn't set to the actual size value of the unchanged
  * working file.
  *
- * @defgroup svn_wc_entry_working_size_constants Working size constants
- *
- * @{
- */
-
-/** The value of the working size is unknown (hasn't been
+ *  The value of the working size is unknown (hasn't been
  *  calculated and stored in the past for whatever reason).
  *
  * @since New in 1.5
  */
 #define SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN (-1)
-
-/** @} */
 
 /** A working copy entry -- that is, revision control information about
  * one versioned entity.
@@ -6953,7 +6962,7 @@ svn_wc_translated_file(const char **xlated_p,
  * @a local_abspath; stream write operations are not supported.
  *
  * The @a flags are the same constants as those used for
- * svn_wc_translated_file().
+ * svn_wc_translated_file2().
  *
  * @since New in 1.5.
  * @deprecated Provided for compatibility with the 1.6 API.
