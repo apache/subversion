@@ -214,7 +214,7 @@ map_or_read_file(apr_file_t **file,
  * Open the file at FILE.path; initialize FILE.file, FILE.size, FILE.buffer,
  * FILE.curp and FILE.endp; allocate a buffer and read the first chunk.
  *
- * Implements svn_diff_fns_t::datasource_open. */
+ * Implements svn_diff_fns2_t::datasource_open. */
 static svn_error_t *
 datasource_open(void *baton, svn_diff_datasource_e datasource)
 {
@@ -713,7 +713,7 @@ find_identical_suffix(struct file_info file[], apr_size_t file_len,
  * rest of the diff algorithm, which increases performance by reducing the 
  * problem space.
  *
- * Implements svn_diff_fns_t::datasources_open. */
+ * Implements svn_diff_fns2_t::datasources_open. */
 static svn_error_t *
 datasources_open(void *baton, apr_off_t *prefix_lines,
                  svn_diff_datasource_e datasource[],
@@ -767,7 +767,7 @@ datasources_open(void *baton, apr_off_t *prefix_lines,
 }
 
 
-/* Implements svn_diff_fns_t::datasource_close */
+/* Implements svn_diff_fns2_t::datasource_close */
 static svn_error_t *
 datasource_close(void *baton, svn_diff_datasource_e datasource)
 {
@@ -778,7 +778,7 @@ datasource_close(void *baton, svn_diff_datasource_e datasource)
   return SVN_NO_ERROR;
 }
 
-/* Implements svn_diff_fns_t::datasource_get_next_token */
+/* Implements svn_diff_fns2_t::datasource_get_next_token */
 static svn_error_t *
 datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
                           svn_diff_datasource_e datasource)
@@ -916,7 +916,7 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
 
 #define COMPARE_CHUNK_SIZE 4096
 
-/* Implements svn_diff_fns_t::token_compare */
+/* Implements svn_diff_fns2_t::token_compare */
 static svn_error_t *
 token_compare(void *baton, void *token1, void *token2, int *compare)
 {
@@ -1037,7 +1037,7 @@ token_compare(void *baton, void *token1, void *token2, int *compare)
 }
 
 
-/* Implements svn_diff_fns_t::token_discard */
+/* Implements svn_diff_fns2_t::token_discard */
 static void
 token_discard(void *baton, void *token)
 {
@@ -1050,7 +1050,7 @@ token_discard(void *baton, void *token)
 }
 
 
-/* Implements svn_diff_fns_t::token_discard_all */
+/* Implements svn_diff_fns2_t::token_discard_all */
 static void
 token_discard_all(void *baton)
 {
@@ -1061,10 +1061,10 @@ token_discard_all(void *baton)
 }
 
 
-static const svn_diff_fns_t svn_diff__file_vtable =
+static const svn_diff_fns2_t svn_diff__file_vtable =
 {
   datasource_open,
-  /*datasources_open,*/
+  datasources_open,
   datasource_close,
   datasource_get_next_token,
   token_compare,
@@ -1206,7 +1206,7 @@ svn_diff_file_diff_2(svn_diff_t **diff,
   baton.files[1].path = modified;
   baton.pool = svn_pool_create(pool);
 
-  SVN_ERR(svn_diff_diff(diff, &baton, &svn_diff__file_vtable, pool));
+  SVN_ERR(svn_diff_diff_2(diff, &baton, &svn_diff__file_vtable, pool));
 
   svn_pool_destroy(baton.pool);
   return SVN_NO_ERROR;
@@ -1229,7 +1229,7 @@ svn_diff_file_diff3_2(svn_diff_t **diff,
   baton.files[2].path = latest;
   baton.pool = svn_pool_create(pool);
 
-  SVN_ERR(svn_diff_diff3(diff, &baton, &svn_diff__file_vtable, pool));
+  SVN_ERR(svn_diff_diff3_2(diff, &baton, &svn_diff__file_vtable, pool));
 
   svn_pool_destroy(baton.pool);
   return SVN_NO_ERROR;
@@ -1254,7 +1254,7 @@ svn_diff_file_diff4_2(svn_diff_t **diff,
   baton.files[3].path = ancestor;
   baton.pool = svn_pool_create(pool);
 
-  SVN_ERR(svn_diff_diff4(diff, &baton, &svn_diff__file_vtable, pool));
+  SVN_ERR(svn_diff_diff4_2(diff, &baton, &svn_diff__file_vtable, pool));
 
   svn_pool_destroy(baton.pool);
   return SVN_NO_ERROR;
