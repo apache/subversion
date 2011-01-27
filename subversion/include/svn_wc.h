@@ -581,6 +581,20 @@ svn_wc_locked(svn_boolean_t *locked,
               apr_pool_t *pool);
 
 
+
+/** Administrative subdir.
+ *
+ * Ideally, this would be completely private to wc internals (in fact,
+ * it used to be that adm_subdir() in adm_files.c was the only function
+ * who knew the adm subdir's name).  However, import wants to protect
+ * against importing administrative subdirs, so now the name is a
+ * matter of public record.
+ *
+ * @deprecated Provided for backward compatibility with the 1.2 API.
+ */
+#define SVN_WC_ADM_DIR_NAME   ".svn"
+
+
 /**
  * Return @c TRUE if @a name is the name of the WC administrative
  * directory.  Use @a pool for any temporary allocations.  Only works
@@ -2550,20 +2564,6 @@ svn_wc_props_modified_p(svn_boolean_t *modified_p,
                         svn_wc_adm_access_t *adm_access,
                         apr_pool_t *pool);
 
-
-
-
-/** Administrative subdir.
- *
- * Ideally, this would be completely private to wc internals (in fact,
- * it used to be that adm_subdir() in adm_files.c was the only function
- * who knew the adm subdir's name).  However, import wants to protect
- * against importing administrative subdirs, so now the name is a
- * matter of public record.
- *
- * @deprecated Provided for backward compatibility with the 1.2 API.
- */
-#define SVN_WC_ADM_DIR_NAME   ".svn"
 
 
 
