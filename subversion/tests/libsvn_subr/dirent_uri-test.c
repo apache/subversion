@@ -495,6 +495,7 @@ test_uri_basename(apr_pool_t *pool)
   } tests[] = {
     { "http://s/file", "file" },
     { "http://s/dir/file", "file" },
+    { "http://s/some%20dir/other%20file", "other file" },
     { "http://s", "" },
     { "file://", "" },
     { "file:///a", "a" },
@@ -1277,6 +1278,7 @@ test_uri_split(apr_pool_t *pool)
   static const char * const paths[][3] = {
     { "http://server/foo/bar", "http://server/foo", "bar" },
     { "http://server/dir/foo/bar", "http://server/dir/foo", "bar" },
+    { "http://server/some%20dir/foo%20bar", "http://server/some%20dir", "foo bar" },
     { "http://server/foo", "http://server", "foo" },
     { "http://server", "http://server", "" },
     { "file://", "file://", "" },

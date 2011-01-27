@@ -163,7 +163,8 @@ delete_urls(const apr_array_header_t *paths,
     {
       const char *bname;
       svn_url_split(&common, &bname, common, pool);
-      APR_ARRAY_PUSH(targets, const char *) = bname;
+      APR_ARRAY_PUSH(targets, const char *) = 
+        svn_path_uri_encode(bname, pool);
     }
 
   /* Create new commit items and add them to the array. */

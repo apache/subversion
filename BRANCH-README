@@ -67,9 +67,10 @@ Step 3:
    Return URI-decoded relpaths (instead of URI-encoded ones) from some
    of these APIs:
 
-      svn_url_split
-      svn_url_basename
+      svn_url_basename [DONE]
+      svn_url_condense_targets
       svn_url_is_child
+      svn_url_split [DONE]
 
    Make svn_url_join_relpath() URI-encoded its input relpath.
 

@@ -1970,9 +1970,6 @@ try_copy(const apr_array_header_t *sources,
                                             TRUE,
                                             iterpool));
 
-          if (srcs_are_urls && ! dst_is_url)
-            src_basename = svn_path_uri_decode(src_basename, iterpool);
-
           /* Check to see if all the sources are urls or all working copy
            * paths. */
           if (src_is_url != srcs_are_urls)
@@ -1981,8 +1978,8 @@ try_copy(const apr_array_header_t *sources,
                _("Cannot mix repository and working copy sources"));
 
           if (dst_is_url)
-            pair->dst_abspath_or_url = svn_url_join_relpath(dst_path_in,
-                                                            src_basename, pool);
+            pair->dst_abspath_or_url = 
+              svn_path_url_add_component2(dst_path_in, src_basename, pool);
           else
             pair->dst_abspath_or_url = svn_dirent_join(dst_path_in,
                                                        src_basename, pool);
@@ -2274,13 +2271,11 @@ svn_client_copy6(const apr_array_header_t *sources,
 
       src_basename = src_is_url ? svn_url_basename(src_path, subpool)
                                 : svn_dirent_basename(src_path, subpool);
-      if (svn_path_is_url(src_path) && ! svn_path_is_url(dst_path))
-        src_basename = svn_path_uri_decode(src_basename, subpool);
 
       err = try_copy(sources,
                      dst_is_url
-                         ? svn_url_join_relpath(dst_path, src_basename,
-                                                subpool)
+                         ? svn_path_url_add_component2(dst_path, src_basename,
+                                                       subpool)
                          : svn_dirent_join(dst_path, src_basename, subpool),
                      FALSE /* is_move */,
                      make_parents,
@@ -2360,7 +2355,8 @@ svn_client_move6(const apr_array_header_t *src_paths,
 
       err = try_copy(sources,
                      dst_is_url
-                         ? svn_url_join_relpath(dst_path, src_basename, pool)
+                         ? svn_path_url_add_component2(dst_path, 
+                                                       src_basename, pool)
                          : svn_dirent_join(dst_path, src_basename, pool),
                      TRUE /* is_move */,
                      make_parents,

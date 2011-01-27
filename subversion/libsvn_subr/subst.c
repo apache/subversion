@@ -173,8 +173,7 @@ keyword_printf(const char *fmt,
         case 'b': /* basename of this file */
           if (url && *url)
             {
-              const char *base_name
-                = svn_path_uri_decode(svn_url_basename(url, pool), pool);
+              const char *base_name = svn_url_basename(url, pool);
               svn_stringbuf_appendcstr(value, base_name);
             }
           break;
