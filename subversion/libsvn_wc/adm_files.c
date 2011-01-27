@@ -607,8 +607,6 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
   repos_relpath = svn_url_is_child(repos_root_url, url, scratch_pool);
   if (repos_relpath == NULL)
     repos_relpath = "";
-  else
-    repos_relpath = svn_path_uri_decode(repos_relpath, scratch_pool);
 
   /* Early out: we know we're not dealing with an existing wc, so
      just create one. */

@@ -2149,16 +2149,14 @@ svn_wc__set_file_external_location(svn_wc_context_t *wc_ctx,
 
   if (url)
     {
-      external_repos_relpath = svn_url_is_child(repos_root_url, url, NULL);
+      external_repos_relpath = svn_url_is_child(repos_root_url, url,
+                                                scratch_pool);
 
       if (external_repos_relpath == NULL)
           return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
                                    _("Can't add a file external to '%s' as it"
                                      " is not a file in repository '%s'."),
                                    url, repos_root_url);
-
-      external_repos_relpath = svn_path_uri_decode(external_repos_relpath,
-                                                   scratch_pool);
 
       SVN_ERR_ASSERT(peg_rev != NULL);
       SVN_ERR_ASSERT(rev != NULL);

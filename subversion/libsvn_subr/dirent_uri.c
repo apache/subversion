@@ -1476,8 +1476,8 @@ svn_url_is_child(const char *parent_uri,
   assert(svn_url_is_canonical(child_uri, NULL));
 
   relpath = is_child(type_uri, parent_uri, child_uri, pool);
-
-  /* ### TODO: URI decode a non-NULL relpath? */
+  if (relpath)
+    relpath = svn_path_uri_decode(relpath, pool);
   return relpath;
 }
 

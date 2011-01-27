@@ -69,7 +69,7 @@ Step 3:
 
       svn_url_basename [DONE]
       svn_url_condense_targets
-      svn_url_is_child
+      svn_url_is_child [DONE]
       svn_url_split [DONE]
 
    Make svn_url_join_relpath() URI-encoded its input relpath.

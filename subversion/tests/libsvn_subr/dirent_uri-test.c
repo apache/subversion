@@ -1958,21 +1958,23 @@ test_uri_is_child(apr_pool_t *pool)
 
   static const char * const paths[] = {
     "http://foo/bar",
+    "http://foo/bar%20bell",
     "http://foo/baz",
     "http://foo",
     "http://f",
     "file://foo/bar",
-    "file://foo/bar/baz",
+    "file://foo/bar/baz%20bol",
     };
 
   static const char * const
     remainders[COUNT_OF(paths)][COUNT_OF(paths)] = {
-    { 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0 },
-    { "bar", "baz", 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, "baz" },
-    { 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0 },
+    { "bar", "bar bell", "baz", 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, "baz bol" },
+    { 0, 0, 0, 0, 0, 0, 0 },
   };
 
   for (i = 0; i < COUNT_OF(paths); i++)

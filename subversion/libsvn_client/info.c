@@ -34,6 +34,7 @@
 #include "svn_wc.h"
 
 #include "svn_private_config.h"
+#include "private/svn_fspath.h"
 #include "private/svn_wc_private.h"
 
 
@@ -289,11 +290,9 @@ push_dir_info(svn_ra_session_t *ra_session,
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
       path = svn_relpath_join(dir, name, subpool);
-      URL  = svn_path_url_add_component2(session_URL, name, subpool);
-
-      fs_path = svn_url_is_child(repos_root, URL, subpool);
-      fs_path = apr_pstrcat(subpool, "/", fs_path, (char *)NULL);
-      fs_path = svn_path_uri_decode(fs_path, subpool);
+      URL = svn_path_url_add_component2(session_URL, name, subpool);
+      fs_path = svn_fspath__canonicalize(svn_url_is_child(repos_root, URL,
+                                                          subpool), subpool);
 
       lock = apr_hash_get(locks, fs_path, APR_HASH_KEY_STRING);
 

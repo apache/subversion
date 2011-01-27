@@ -580,7 +580,6 @@ svn_error_t *svn_ra_get_path_relative_to_session(svn_ra_session_t *session,
         return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                                  _("'%s' isn't a child of session URL '%s'"),
                                  url, sess_url);
-      *rel_path = svn_path_uri_decode(*rel_path, pool);
     }
   return SVN_NO_ERROR;
 }
@@ -604,7 +603,6 @@ svn_error_t *svn_ra_get_path_relative_to_root(svn_ra_session_t *session,
                                  _("'%s' isn't a child of repository root "
                                    "URL '%s'"),
                                  url, root_url);
-      *rel_path = svn_path_uri_decode(*rel_path, pool);
     }
 
   return SVN_NO_ERROR;

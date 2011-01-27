@@ -509,9 +509,8 @@ svn_ra_local__reparent(svn_ra_session_t *session,
 
   /* Update our FS_PATH sess member to point to our new
      relative-URL-turned-absolute-filesystem-path. */
-  relpath = apr_pstrcat(pool, "/", svn_path_uri_decode(relpath, pool),
-                        (char *)NULL);
-  svn_stringbuf_set(sess->fs_path, relpath);
+  svn_stringbuf_set(sess->fs_path,
+                    svn_fspath__canonicalize(relpath, pool));
 
   return SVN_NO_ERROR;
 }

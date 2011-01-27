@@ -2282,7 +2282,6 @@ static svn_error_t *path_relative_to_root(svn_ra_session_t *session,
                                  _("'%s' isn't a child of repository root "
                                    "URL '%s'"),
                                  url, root_url);
-      *rel_path = svn_path_uri_decode(*rel_path, pool);
     }
   return SVN_NO_ERROR;
 }
