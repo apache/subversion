@@ -389,6 +389,7 @@ static svn_error_t *compat_get_log(void *session_baton,
   return VTBL.get_log(session_baton, paths, start, end, 0, /* limit */
                       discover_changed_paths, strict_node_history,
                       FALSE, /* include_merged_revisions */
+                      NULL, /* ignored_prop_mods */
                       svn_compat_log_revprops_in(pool), /* revprops */
                       receiver2, receiver2_baton, pool);
 }

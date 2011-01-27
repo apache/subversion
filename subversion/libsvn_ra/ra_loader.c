@@ -910,7 +910,8 @@ svn_error_t *svn_ra_get_log3(svn_ra_session_t *session,
 
   return session->vtable->get_log(session, paths, start, end, limit,
                                   discover_changed_paths, strict_node_history,
-                                  include_merged_revisions, revprops,
+                                  include_merged_revisions,
+                                  ignored_prop_mods, revprops,
                                   receiver, receiver_baton, pool);
 }
 
