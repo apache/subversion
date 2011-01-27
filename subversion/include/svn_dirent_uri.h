@@ -711,12 +711,12 @@ svn_dirent_condense_targets(const char **pcommon,
  *     string.
  *
  *   - If @a pcondensed_targets is non-NULL, set @a *pcondensed_targets
- *     to an array of targets relative to @a *pcommon, and if @a
- *     remove_redundancies is TRUE, omit any uris that are descendants of
- *     another uri in @a targets.  If *pcommon is empty, @a
- *     *pcondensed_targets will contain absolute uris; redundancies
- *     can still be removed.  If @a pcondensed_targets is NULL, leave it
- *     alone.
+ *     to an array of URI-decoded targets relative to @a *pcommon, and
+ *     if @a remove_redundancies is TRUE, omit any uris that are
+ *     descendants of another uri in @a targets.  If *pcommon is
+ *     empty, @a *pcondensed_targets will contain absolute uris;
+ *     redundancies can still be removed.  If @a pcondensed_targets is
+ *     NULL, leave it alone.
  *
  * Else if there is exactly one target, then
  *

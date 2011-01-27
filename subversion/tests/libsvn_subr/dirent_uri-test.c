@@ -2227,10 +2227,25 @@ test_uri_condense_targets(apr_pool_t *pool)
     const char *common;
     const char *results[8]; /* must be same size as paths */
   } tests[] = {
-    { { "sc://s/A", "sc://s/B", "sc://s" },  "sc://s",   { "A", "B", "" } },
-    { { "sc://S/A", "sc://S/B", "sc://S" },  "sc://s",   { "A", "B", "" } },
-    { { "sc://A/A", "sc://B/B", "sc://s" },  "",         { "sc://a/A", "sc://b/B", "sc://s"} },
-    { { "sc://A/A", "sc://A/a/B", "sc://a/Q" }, "sc://a",{ "A", "a/B", "Q"} },
+    /* { { url1, url2, url3 },
+           common_url,
+         { relpath1, relpath2, relpath3 } }
+    */
+    { { "sc://s/A", "sc://s/B", "sc://s" },
+        "sc://s",
+      { "A", "B", "" } },
+    { { "sc://S/A", "sc://S/B", "sc://S" },
+        "sc://s",
+      { "A", "B", "" } },
+    { { "sc://A/A", "sc://B/B", "sc://s" },
+        "",
+      { "sc://a/A", "sc://b/B", "sc://s" } },
+    { { "sc://A/A", "sc://A/a/B", "sc://a/Q" },
+        "sc://a",
+      { "A", "a/B", "Q"} },
+    { { "sc://server/foo%20bar", "sc://server/baz", "sc://server/blarg" },
+        "sc://server",
+      { "foo bar", "baz", "blarg"} },
   };
 
   for (i = 0; i < COUNT_OF(tests); i++)

@@ -2232,7 +2232,7 @@ svn_url_condense_targets(const char **pcommon,
             }
 
           APR_ARRAY_PUSH(*pcondensed_targets, const char *)
-            = apr_pstrdup(result_pool, rel_item);
+            = svn_path_uri_decode(rel_item, result_pool);
         }
     }
 
