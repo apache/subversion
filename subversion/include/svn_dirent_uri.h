@@ -547,25 +547,16 @@ svn_dirent_get_absolute(const char **pabsolute,
                         const char *relative,
                         apr_pool_t *pool);
 
-/** Test if @a child_uri is a child of @a parent_uri.
- * If not, return @c NULL.
- * If so, return a copy of the remainder uri, allocated in @a pool.
- * (The remainder is the component which, added to @a parent_uri, yields
- * @a child_uri.  The remainder does not begin with a dir separator.)
+/** Test if @a child_uri is a child of @a parent_uri.  If not, return
+ * @c NULL.  If so, return a URI-decoded copy of the remainder uri,
+ * allocated in @a pool.  (The remainder is the component which, added
+ * to @a parent_uri, yields @a child_uri.  The remainder does not
+ * begin with a dir separator.)
  *
- * Both uris must be in canonical form, and must either be absolute,
- * or contain no ".." components.
+ * Both uris must be in canonical form.
  *
  * If @a child_uri is the same as @a parent_uri, it is not considered a child,
  * so the result is @c NULL; an empty string is never returned.
- *
- * If @a pool is @c NULL , a pointer into @a child_uri will be returned to
- *       identify the remainder uri.
- *
- * ### @todo the ".." restriction is unfortunate, and would ideally
- * be lifted by making the implementation smarter.  But this is not
- * trivial: if the uri is "../foo", how do you know whether or not
- * the current directory is named "foo" in its parent?
  *
  * @since New in 1.7.
  */
