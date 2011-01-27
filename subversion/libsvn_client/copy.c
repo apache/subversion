@@ -931,13 +931,12 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
             apr_array_make(pool, 0, sizeof(const char *));
           SVN_ERR(find_absent_parents2(ra_session, &top_url, new_urls, pool));
 
-          /* Convert absolute URLs into URLs relative to TOP_URL. */
+          /* Convert absolute URLs into relpaths relative to TOP_URL. */
           for (i = 0; i < new_urls->nelts; i++)
             {
               const char *new_url = APR_ARRAY_IDX(new_urls, i, const char *);
               dir = svn_url_is_child(top_url, new_url, pool);
-              APR_ARRAY_PUSH(new_dirs, const char *) =
-                dir ? svn_path_uri_encode(dir, pool) : "";
+              APR_ARRAY_PUSH(new_dirs, const char *) = dir ? dir : "";
             }
         }
     }
@@ -1026,8 +1025,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
       info->src_path = src_rel;
       info->dst_path = dst_rel;
 
-      apr_hash_set(action_hash, info->dst_path, APR_HASH_KEY_STRING,
-                       info);
+      apr_hash_set(action_hash, info->dst_path, APR_HASH_KEY_STRING, info);
       if (is_move && (! info->resurrection))
         apr_hash_set(action_hash, info->src_path, APR_HASH_KEY_STRING, info);
     }
@@ -1046,10 +1044,10 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
         {
           for (i = 0; i < new_dirs->nelts; i++)
             {
-              const char *url = APR_ARRAY_IDX(new_dirs, i, const char *);
+              const char *relpath = APR_ARRAY_IDX(new_dirs, i, const char *);
 
               item = svn_client_commit_item3_create(pool);
-              item->url = svn_url_join_relpath(top_url, url, pool);
+              item->url = svn_path_url_add_component2(top_url, relpath, pool);
               item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
               APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
             }
@@ -1061,14 +1059,14 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
                                                    path_driver_info_t *);
 
           item = svn_client_commit_item3_create(pool);
-          item->url = svn_url_join_relpath(top_url, info->dst_path, pool);
+          item->url = svn_path_url_add_component2(top_url, info->dst_path, pool);
           item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
           APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
 
           if (is_move && (! info->resurrection))
             {
               item = apr_pcalloc(pool, sizeof(*item));
-              item->url = svn_url_join_relpath(top_url, info->src_path, pool);
+              item->url = svn_path_url_add_component2(top_url, info->src_path, pool);
               item->state_flags = SVN_CLIENT_COMMIT_ITEM_DELETE;
               APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
             }
@@ -1088,14 +1086,14 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
     {
       for (i = 0; i < new_dirs->nelts; i++)
         {
-          const char *url = APR_ARRAY_IDX(new_dirs, i, const char *);
+          const char *relpath = APR_ARRAY_IDX(new_dirs, i, const char *);
           path_driver_info_t *info = apr_pcalloc(pool, sizeof(*info));
 
-          info->dst_path = url;
+          info->dst_path = relpath;
           info->dir_add = TRUE;
 
-          APR_ARRAY_PUSH(paths, const char *) = url;
-          apr_hash_set(action_hash, url, APR_HASH_KEY_STRING, info);
+          APR_ARRAY_PUSH(paths, const char *) = relpath;
+          apr_hash_set(action_hash, relpath, APR_HASH_KEY_STRING, info);
         }
     }
 

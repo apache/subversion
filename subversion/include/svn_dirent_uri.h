@@ -197,19 +197,6 @@ svn_relpath_join(const char *base,
                  const char *component,
                  apr_pool_t *pool);
 
-/** Join a base uri (@a base) with a relpath (@a relpath), allocating
- * the result in @a pool.  This function does NOT URI-encode relpath;
- * it is assumed that the caller has handled this already.  (For
- * another function that does this encoding for you, see
- * svn_path_url_add_component2().)
- *
- * @since New in 1.7.
- */
-char *
-svn_url_join_relpath(const char *base,
-                     const char *relpath,
-                     apr_pool_t *pool);
-
 /** Gets the name of the specified canonicalized @a dirent as it is known
  * within its parent directory. If the @a dirent is root, return "". The
  * returned value will not have slashes in it.

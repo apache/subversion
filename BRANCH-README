@@ -62,7 +62,7 @@ Step 2:  [DONE]
       This says it's not to be used with URLs, but why not?  Make it
       handle URLs.
 
-Step 3:
+Step 3:  [DONE]
 
    Return URI-decoded relpaths (instead of URI-encoded ones) from some
    of these APIs:
@@ -72,7 +72,7 @@ Step 3:
       svn_url_is_child [DONE]
       svn_url_split [DONE]
 
-   Make svn_url_join_relpath() URI-encode its input relpath.
+   Remove svn_url_join_relpath() as unused. [DONE]
 
 Step 4:
 
