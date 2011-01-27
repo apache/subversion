@@ -98,10 +98,10 @@ svn_diff__diff(svn_diff__lcs_t *lcs,
 
 
 svn_error_t *
-svn_diff_diff(svn_diff_t **diff,
-              void *diff_baton,
-              const svn_diff_fns_t *vtable,
-              apr_pool_t *pool)
+svn_diff_diff_2(svn_diff_t **diff,
+                void *diff_baton,
+                const svn_diff_fns2_t *vtable,
+                apr_pool_t *pool)
 {
   svn_diff__tree_t *tree;
   svn_diff__position_t *position_list[2];
