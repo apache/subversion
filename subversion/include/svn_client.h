@@ -2341,7 +2341,7 @@ svn_client_status(svn_revnum_t *result_rev,
  * If @a include_merged_revisions is set, log information for revisions
  * which have been merged to @a targets will also be returned.
  *
- * @a ignore_prop_mods is an optional hash of property names, with keys of
+ * @a ignored_prop_mods is an optional hash of property names, with keys of
  * type 'const char *' and values of type 'void *'.  (The values are never
  * read, but must be non-NULL for the key to be recorded in the hash.)  If
  * non-NULL, log will ignore any changes to properties names as the keys
@@ -2372,7 +2372,7 @@ svn_client_log6(const apr_array_header_t *targets,
                 svn_boolean_t discover_changed_paths,
                 svn_boolean_t strict_node_history,
                 svn_boolean_t include_merged_revisions,
-                const apr_hash_t *ignore_prop_mods,
+                const apr_hash_t *ignored_prop_mods,
                 const apr_array_header_t *revprops,
                 svn_log_entry_receiver_t receiver,
                 void *receiver_baton,
@@ -2380,8 +2380,8 @@ svn_client_log6(const apr_array_header_t *targets,
                 apr_pool_t *pool);
 
 /**
- * Similar to svn_client_log6(), but with @a ignore_mergeinfo_changes
- * always @c FALSE.
+ * Similar to svn_client_log6(), but with @a ignored_prop_mods always
+ * @c NULL.
  *
  * @deprecated Provided for compatibility with the 1.6 API.
  * @since New in 1.6.
