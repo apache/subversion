@@ -34,6 +34,7 @@
 #include "svn_delta.h"
 #include "svn_dirent_uri.h"
 #include "svn_ra_svn.h"
+#include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_private_config.h"
 
@@ -523,8 +524,17 @@ static svn_error_t *ra_svn_handle_add_dir(svn_ra_svn_conn_t *conn,
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
   subpool = svn_pool_create(entry->pool);
   path = svn_relpath_canonicalize(path, pool);
+
+  /* Some operations pass COPY_PATH as a full URL (commits, etc.).
+     Others (replay, e.g.) deliver an fspath.  That's ... annoying. */
   if (copy_path)
-    copy_path = svn_url_canonicalize(copy_path, pool);
+    {
+      if (svn_path_is_url(copy_path))
+        copy_path = svn_url_canonicalize(copy_path, pool);
+      else
+        copy_path = svn_fspath__canonicalize(copy_path, pool);
+    }
+
   SVN_CMD_ERR(ds->editor->add_directory(path, entry->baton, copy_path,
                                         copy_rev, subpool, &child_baton));
   store_token(ds, child_baton, child_token, FALSE, subpool);
@@ -621,8 +631,17 @@ static svn_error_t *ra_svn_handle_add_file(svn_ra_svn_conn_t *conn,
   SVN_ERR(lookup_token(ds, token, FALSE, &entry));
   ds->file_refs++;
   path = svn_relpath_canonicalize(path, pool);
+
+  /* Some operations pass COPY_PATH as a full URL (commits, etc.).
+     Others (replay, e.g.) deliver an fspath.  That's ... annoying. */
   if (copy_path)
-    copy_path = svn_url_canonicalize(copy_path, pool);
+    {
+      if (svn_path_is_url(copy_path))
+        copy_path = svn_url_canonicalize(copy_path, pool);
+      else
+        copy_path = svn_fspath__canonicalize(copy_path, pool);
+    }
+
   file_entry = store_token(ds, NULL, file_token, TRUE, ds->file_pool);
   SVN_CMD_ERR(ds->editor->add_file(path, entry->baton, copy_path, copy_rev,
                                    ds->file_pool, &file_entry->baton));
