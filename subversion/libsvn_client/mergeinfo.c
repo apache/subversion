@@ -1559,9 +1559,9 @@ logs_for_mergeinfo_rangelist(const char *source_url,
   range->end = youngest_rev;
   range->start = oldest_rev;
   APR_ARRAY_PUSH(revision_ranges, svn_opt_revision_range_t *) = range;
-  SVN_ERR(svn_client_log5(target, &youngest_rev, revision_ranges,
-                          0, discover_changed_paths, FALSE, FALSE, revprops,
-                          filter_log_entry_with_rangelist, &fleb, ctx,
+  SVN_ERR(svn_client_log6(target, &youngest_rev, revision_ranges,
+                          0, discover_changed_paths, FALSE, FALSE, NULL,
+                          revprops, filter_log_entry_with_rangelist, &fleb, ctx,
                           scratch_pool));
 
   /* Check for cancellation. */
