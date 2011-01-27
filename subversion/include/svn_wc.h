@@ -1374,25 +1374,6 @@ typedef void (*svn_wc_notify_func_t)(void *baton,
 
 
 /**
- * A simple callback type to wrap svn_ra_get_file();  see that
- * docstring for more information.
- *
- * This technique allows libsvn_client to 'wrap' svn_ra_get_file() and
- * pass it down into libsvn_wc functions, thus allowing the WC layer
- * to legally call the RA function via (blind) callback.
- *
- * @since New in 1.5
- */
-typedef svn_error_t *(*svn_wc_get_file_t)(void *baton,
-                                          const char *path,
-                                          svn_revnum_t revision,
-                                          svn_stream_t *stream,
-                                          svn_revnum_t *fetched_rev,
-                                          apr_hash_t **props,
-                                          apr_pool_t *pool);
-
-
-/**
  * Interactive conflict handling
  *
  * @defgroup svn_wc_conflict Conflict callback functionality
@@ -5187,6 +5168,25 @@ svn_wc_get_actual_target(const char *path,
 
 
 /* Update and update-like functionality. */
+
+/**
+ * A simple callback type to wrap svn_ra_get_file();  see that
+ * docstring for more information.
+ *
+ * This technique allows libsvn_client to 'wrap' svn_ra_get_file() and
+ * pass it down into libsvn_wc functions, thus allowing the WC layer
+ * to legally call the RA function via (blind) callback.
+ *
+ * @since New in 1.5
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+typedef svn_error_t *(*svn_wc_get_file_t)(void *baton,
+                                          const char *path,
+                                          svn_revnum_t revision,
+                                          svn_stream_t *stream,
+                                          svn_revnum_t *fetched_rev,
+                                          apr_hash_t **props,
+                                          apr_pool_t *pool);
 
 /**
  * Set @a *editor and @a *edit_baton to an editor and baton for updating a
