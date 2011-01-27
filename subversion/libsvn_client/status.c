@@ -585,6 +585,9 @@ svn_client_status_dup(const svn_client_status_t *status,
   if (status->changelist)
     st->changelist = apr_pstrdup(result_pool, status->changelist);
 
+  if (status->ood_changed_author)
+    st->ood_changed_author = apr_pstrdup(result_pool, status->ood_changed_author);
+
   if (status->repos_lock)
     st->repos_lock = svn_lock_dup(status->repos_lock, result_pool);
 
