@@ -7341,7 +7341,7 @@ svn_wc_set_changelist(const char *path,
  * (e.g., #svn_depth_infinity).
  *
  * @a wc_ctx contains a tree lock, for the local path to the working copy
- *  which will be used as the root of this operation.  If
+ * which will be used as the root of this operation.
  *
  * If @a cancel_func is not @c NULL, call it with @a cancel_baton at
  * various points to determine if the client has cancelled the operation.
