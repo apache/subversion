@@ -101,33 +101,41 @@ Commit access for specific areas:
 
   Miscellaneous:
 
-      kbohling   Kirby C. Bohling <kbohling@birddog.com>     (tools/dev)
+      kbohling   Kirby C. Bohling <kbohling@birddog.com>     (tools/dev) [EMAIL
+                                                             IS BOUNCING]
            nsd   Nick Duffek <nick@duffek.com>               (doc)
         xsteve   Stefan Reichör <stefan@xsteve.at>           (psvn.el)
       josander   Jostein Andersen <jostein@vait.se>          (various)
       niemeyer   Gustavo Niemeyer <niemeyer@conectiva.com>   (svnperms.py)
-        zbrown   Zack Brown <zbrown@tumblerings.org>         (doc)
+                                                             [EMAIL IS BOUNCING]
+        zbrown   Zack Brown <zbrown@tumblerings.org>         (doc) [EMAIL IS
+                                                             BOUNCING]
         mprice   Michael Price <ectospheno@gmail.com>        (releases)
     jrepenning   Jack Repenning <jrepenning@collab.net>      (tools/dev)
-      lonestar   Martin Maurer <martin.maurer@email.de>      (svnshow)
-       shlomif   Shlomi Fish <shlomif@vipe.technion.ac.il>   (svn-push)
+      jlonestar   Martin Maurer <martin.maurer@email.de>      (svnshow) [EMAIL
+                                                             IS BOUNCING]
+       shlomif   Shlomi Fish <shlomif@vipe.technion.ac.il>   (svn-push) [EMAIL
+                                                             IS BOUNCING]
        mthelen   Michael W Thelen <mike@pietdepsi.com>       (doc)
   jeremybettis   Jeremy Bettis <jeremy@deadbeef.com>         (case-insensitive)
       martinto   Martin Tomes <lists@tomes.org>              (case-insensitive)
         danpat   Daniel Patterson <danpat@danpat.net>        (svn-graph.pl)
-   archiecobbs   Archie Cobbs <archie@awarix.com>            (svnmerge)
+   archiecobbs   Archie Cobbs <archie@awarix.com>            (svnmerge) [EMAIL
+                                                             IS BOUNCING]
   giovannibajo   Giovanni Bajo <rasky@develer.com>           (svnmerge)
         offby1   Eric Hanchrow <offby1@blarg.net>            (doc)
        nomis80   Simon Perreault <nomis80@nomis80.org>       (svn-clean)
       jlvarner   Joshua Varner <jlvarner@gmail.com>          (doc)
           nori   Kobayashi Noritada <nori1@dolphin.c.u-tokyo.ac.jp> (Ruby tools,
-                                                              po: ja)
+                                                              po: ja) [EMAIL IS
+                                                              BOUNCING]
             mf   Martin Furter <mf@rola.ch>                  (svnmirror.sh
                                                           svn-backup-dumps.py)
        adejong   Arthur de Jong <arthur@ch.tudelft.nl>       (svn2cl)
       wsanchez   Wilfredo Sánchez <wsanchez@wsanchez.net>    (various contrib)
        mhagger   Michael Haggerty <mhagger@alum.mit.edu>     (svntest)
-       madanus   Madan U S <madan@collab.net>                (svnmerge)
+       madanus   Madan U S <madan@collab.net>                (svnmerge) [EMAIL
+                                                             IS BOUNCING]
           wein   Mathias Weinert <wein@mccw.de>              (mailer)
         bhuvan   Bhuvaneswaran <bhuvan@collab.net>           (svn2feed.py,
                                                               build/hudson)
@@ -156,13 +164,16 @@ Commit access for specific areas:
         jzgoda   Jaroslaw Zgoda <jzgoda@o2.pl>               (po: pl)
       karolszk   Karol Szkudlarek <karol@mikronika.com.pl>   (po: pl)
         plasma   Wei-Hon Chen <plasma@ms9.hinet.net>         (po: zh_TW)
-       jihuang   June-Yen Huang <jihuang@iis.sinica.edu.tw>  (po: zh_TW)
+       jihuang   June-Yen Huang <jihuang@iis.sinica.edu.tw>  (po: zh_TW) [EMAIL
+                                                             IS BOUNCING]
        marcosc   Marcos Chaves <marcos.nospam@gmail.com>     (po: pt_BR)
         pynoos   Hojin Choi <hojin.choi@gmail.com>           (po: ko)
        blueboh   Jeong Seolin <blueboh@gmail.com>            (po: ko)
      dongsheng   Dongsheng Song <songdongsheng@live.cn>      (po: zh_CN)
-        hynnet   YingNing Huang <hyn@bao.hynnet.com>         (po: zh_CN)
-          lark   Wang Jian <lark@linux.net.cn>               (po: zh_CN)
+        hynnet   YingNing Huang <hyn@bao.hynnet.com>         (po: zh_CN) [EMAIL
+                                                             IS BOUNCING]
+          lark   Wang Jian <lark@linux.net.cn>               (po: zh_CN) [EMAIL
+                                                             IS BOUNCING]
 giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
         nebiac   Federico Nebiacolombo <cint1@amsjv.it>      (po: it)
         fabien   Fabien Coelho <fabien@coelho.net>           (po: fr)
