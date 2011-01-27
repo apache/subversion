@@ -889,19 +889,12 @@ svn_error_t *svn_ra_get_log3(svn_ra_session_t *session,
                              svn_boolean_t discover_changed_paths,
                              svn_boolean_t strict_node_history,
                              svn_boolean_t include_merged_revisions,
-                             svn_boolean_t ignore_mergeinfo,
+                             const apr_hash_t *ignored_prop_mods,
                              const apr_array_header_t *revprops,
                              svn_log_entry_receiver_t receiver,
                              void *receiver_baton,
                              apr_pool_t *pool)
 {
-  /* Including merged revisions and ignoring mergeinfo simultaneously is
-     nonsensical, so prohibit it. */
-  if (include_merged_revisions && ignore_mergeinfo)
-    return svn_error_create
-      (SVN_ERR_NONSENSICAL_OPTIONS, NULL,
-       _("Can't ignore mergeinfo and include merged revisions simultaneously"));
-
   if (paths)
     {
       int i;
