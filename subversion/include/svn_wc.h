@@ -99,15 +99,16 @@ extern "C" {
 const svn_version_t *
 svn_wc_version(void);
 
+
 /**
  * @defgroup svn_wc  Working copy management
  * @{
  */
 
+
 /** Flags for use with svn_wc_translated_file2() and svn_wc_translated_stream().
  *
  * @defgroup translate_flags Translation flags
- *
  * @{
  */
 
@@ -155,6 +156,7 @@ svn_wc_version(void);
 #define SVN_WC_TRANSLATE_USE_GLOBAL_TMP          0x00000010
 
 /** @} */
+
 
 /**
  * @defgroup svn_wc_context  Working copy context
@@ -215,7 +217,12 @@ svn_wc_context_destroy(svn_wc_context_t *wc_ctx);
 /** @} */
 
 
-/* Locking/Opening/Closing */
+/**
+ * Locking/Opening/Closing using adm access batons.
+ *
+ * @defgroup svn_wc_adm_access Adm access batons (deprecated)
+ * @{
+ */
 
 /** Baton for access to a working copy administrative area.
  *
@@ -565,6 +572,9 @@ SVN_DEPRECATED
 svn_boolean_t
 svn_wc_adm_locked(const svn_wc_adm_access_t *adm_access);
 
+/** @} */
+
+
 /** Gets up to two booleans indicating whether a path is locked for
  * writing.
  *
@@ -597,7 +607,11 @@ svn_wc_locked(svn_boolean_t *locked,
               apr_pool_t *pool);
 
 
-
+/**
+ * @defgroup svn_wc_adm_dir_name Name of Subversion's admin dir
+ * @{
+ */
+
 /** The default name of the administrative subdirectory.
  *
  * Ideally, this would be completely private to wc internals (in fact,
@@ -656,8 +670,13 @@ svn_error_t *
 svn_wc_set_adm_dir(const char *name,
                    apr_pool_t *pool);
 
+/** @} */
 
-
+
+/**
+ * @defgroup svn_wc_externals Externals
+ * @{
+ */
 
 /** Callback for external definitions updates
  *
@@ -910,9 +929,8 @@ svn_wc_parse_externals_description(apr_hash_t **externals_p,
                                    const char *desc,
                                    apr_pool_t *pool);
 
-
+/** @} */
 
-/* Notification/callback handling. */
 
 /**
  * @defgroup svn_wc_notifications Notification callback handling
@@ -1393,7 +1411,6 @@ typedef void (*svn_wc_notify_func_t)(void *baton,
  * Interactive conflict handling
  *
  * @defgroup svn_wc_conflict Conflict callback functionality
- *
  * @{
  *
  * This API gives a Subversion client application the opportunity to
@@ -2562,9 +2579,10 @@ svn_wc_props_modified_p(svn_boolean_t *modified_p,
                         apr_pool_t *pool);
 
 
-
-
-/* Entries and status. */
+/**
+* @defgroup svn_wc_entries Entries and status (deprecated)
+ * @{
+ */
 
 /** The schedule states an entry can be in. */
 typedef enum svn_wc_schedule_t
@@ -2922,6 +2940,8 @@ svn_wc_entries_read(apr_hash_t **entries,
 svn_wc_entry_t *
 svn_wc_entry_dup(const svn_wc_entry_t *entry,
                  apr_pool_t *pool);
+
+/** @} */
 
 
 /** Given @a local_abspath in a dir under version control, decide if it is
@@ -5078,7 +5098,10 @@ svn_wc_crawl_revisions(const char *path,
                        apr_pool_t *pool);
 
 
-/* Working copy roots. */
+/**
+ * @defgroup svn_wc_roots Working copy roots
+ * @{
+ */
 
 /** Set @a *wc_root to @c TRUE if @a local_abspath represents a "working copy
  * root", @c FALSE otherwise. Here, @a local_abspath is a "working copy root"
@@ -5127,7 +5150,9 @@ svn_wc_get_wc_root(const char **wcroot_abspath,
                    apr_pool_t *scratch_pool,
                    apr_pool_t *result_pool);
 
-
+/** @} */
+
+
 /* Updates. */
 
 /** Conditionally split @a path into an @a anchor and @a target for the
@@ -5175,8 +5200,10 @@ svn_wc_get_actual_target(const char *path,
                          apr_pool_t *pool);
 
 
-
-/* Update and update-like functionality. */
+/**
+ * @defgroup svn_wc_update_switch Update and switch (update-like functionality)
+ * @{
+ */
 
 /**
  * A simple callback type to wrap svn_ra_get_file();  see that
@@ -5498,8 +5525,14 @@ svn_wc_get_switch_editor(svn_revnum_t *target_revision,
                          svn_wc_traversal_info_t *ti,
                          apr_pool_t *pool);
 
+/** @} */
 
-
+
+/**
+ * @defgroup svn_wc_properties Properties
+ * @{
+ */
+
 /* A word about the implementation of working copy property storage:
  *
  * Since properties are key/val pairs, you'd think we store them in
@@ -5782,10 +5815,13 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
                              void *getter_baton,
                              apr_pool_t *pool);
 
+/** @} */
 
 
-/* Diffs */
-
+/**
+ * @defgroup svn_wc_diffs Diffs
+ * @{
+ */
 
 /**
  * Return an @a editor/@a edit_baton for diffing a working copy against the
@@ -6156,6 +6192,13 @@ svn_wc_get_prop_diffs(apr_array_header_t **propchanges,
                       svn_wc_adm_access_t *adm_access,
                       apr_pool_t *pool);
 
+/** @} */
+
+
+/**
+ * @defgroup svn_wc_merging Merging
+ * @{
+ */
 
 /** The outcome of a merge carried out (or tried as a dry-run) by
  * svn_wc_merge()
@@ -6440,6 +6483,8 @@ svn_wc_merge_prop_diffs(svn_wc_notify_state_t *state,
                         svn_boolean_t base_merge,
                         svn_boolean_t dry_run,
                         apr_pool_t *pool);
+
+/** @} */
 
 
 /** Given a @a path to a wc file, return in @a *contents a readonly stream to
@@ -6887,8 +6932,11 @@ svn_wc_create_tmp_file(apr_file_t **fp,
                        apr_pool_t *pool);
 
 
-
-/* EOL conversion and keyword expansion. */
+/**
+ * @defgroup svn_wc_translate EOL conversion and keyword expansion
+ * @{
+ */
+
 
 /** Set @a xlated_path to a translated copy of @a src
  * or to @a src itself if no translation is necessary.
@@ -6976,9 +7024,13 @@ svn_wc_translated_stream(svn_stream_t **stream,
                          apr_uint32_t flags,
                          apr_pool_t *pool);
 
-
-/* Text/Prop Deltas Using an Editor */
+/** @} */
 
+
+/**
+ * @defgroup svn_wc_deltas Text/Prop Deltas Using an Editor
+ * @{
+ */
 
 /** Send the local modifications for versioned file @a local_abspath (with
  * matching @a file_baton) through @a editor, then close @a file_baton
@@ -7094,6 +7146,13 @@ svn_wc_transmit_prop_deltas(const char *path,
                             const char **tempfile,
                             apr_pool_t *pool);
 
+/** @} */
+
+
+/**
+ * @defgroup svn_wc_ignore Ignoring unversioned files and directories
+ * @{
+ */
 
 /** Get the run-time configured list of ignore patterns from the
  * #svn_config_t's in the @a config hash, and store them in @a *patterns.
@@ -7143,7 +7202,14 @@ svn_wc_match_ignore_list(const char *str,
                          const apr_array_header_t *list,
                          apr_pool_t *pool);
 
-
+/** @} */
+
+
+/**
+ * @defgroup svn_wc_repos_locks Repository locks
+ * @{
+ */
+
 /** Add @a lock to the working copy for @a local_abspath.  If @a
  * local_abspath is read-only, due to locking properties, make it writable.
  * Perform temporary allocations in @a scratch_pool.
@@ -7195,7 +7261,9 @@ svn_wc_remove_lock(const char *path,
                    svn_wc_adm_access_t *adm_access,
                    apr_pool_t *pool);
 
-
+/** @} */
+
+
 /** A structure to report a summary of a working copy, including the
  * mix of revisions found within it, whether any parts are switched or
  * locally modified, and whether it is a sparse checkout.
