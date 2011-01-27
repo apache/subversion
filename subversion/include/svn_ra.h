@@ -1465,7 +1465,7 @@ svn_ra_do_diff(svn_ra_session_t *session,
  * revprops is NULL or contains a revprop other than svn:author, svn:date,
  * or svn:log, an @c SVN_ERR_RA_NOT_IMPLEMENTED error is returned.
  *
- * @since New in 1.6.
+ * @since New in 1.7.
  */
 svn_error_t *
 svn_ra_get_log3(svn_ra_session_t *session,
