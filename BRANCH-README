@@ -5,6 +5,7 @@ from various reporting operations, thus allowing them to more easily detect
 
  * 'log'
    - Retrieve logs from the server
+   (The ignore-mergeinfo-log branch is currently implementing this mode.)
 
  * 'diff'
    - Local diff
