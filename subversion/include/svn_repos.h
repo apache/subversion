@@ -1579,6 +1579,12 @@ svn_repos_node_location_segments(svn_repos_t *repos,
  * If @a include_merged_revisions is set, log information for revisions
  * which have been merged to @a targets will also be returned.
  *
+ * @a ignored_prop_mods is an optional hash of property names, with keys of
+ * type 'const char *' and values of type 'void *'.  (The values are never
+ * read, but must be non-NULL for the key to be recorded in the hash.)  If
+ * non-NULL, log will ignore any changes to properties names as the keys
+ * of the hash when determining which revisions to return.
+ *
  * If @a revprops is NULL, retrieve all revprops; else, retrieve only the
  * revprops named in the array (i.e. retrieve none if the array is empty).
  *
@@ -1613,7 +1619,7 @@ svn_repos_get_logs5(svn_repos_t *repos,
                     svn_boolean_t discover_changed_paths,
                     svn_boolean_t strict_node_history,
                     svn_boolean_t include_merged_revisions,
-                    svn_boolean_t ignore_mergeinfo,
+                    const apr_hash_t *ignored_prop_mods,
                     const apr_array_header_t *revprops,
                     svn_repos_authz_func_t authz_read_func,
                     void *authz_read_baton,
@@ -1622,8 +1628,8 @@ svn_repos_get_logs5(svn_repos_t *repos,
                     apr_pool_t *pool);
 
 /**
- * Similar to svn_repos_get_logs5(), but with @a ignore_mergeinfo set to
- * @c FALSE.
+ * Similar to svn_repos_get_logs5(), but with @a ignored_prop_mods set to
+ * @c NULL.
  *
  * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.6 API.

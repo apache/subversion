@@ -445,7 +445,7 @@ svn_repos_get_logs4(svn_repos_t *repos,
 {
   return svn_repos_get_logs5(repos, paths, start, end, limit,
                              discover_changed_paths, strict_node_history,
-                             include_merged_revisions, FALSE, revprops,
+                             include_merged_revisions, NULL, revprops,
                              authz_read_func, authz_read_baton, receiver,
                              receiver_baton, pool);
 }
