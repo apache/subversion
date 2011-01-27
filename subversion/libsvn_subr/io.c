@@ -85,19 +85,14 @@
 #define RETRY_INITIAL_SLEEP 1000
 #define RETRY_MAX_SLEEP 128000
 
-#ifndef WIN32_RETRY_LOOP
-#if defined(WIN32) && !defined(SVN_NO_WIN32_RETRY_LOOP)
-#define WIN32_RETRY_LOOP(err, expr)                                        \
+#define RETRY_LOOP(err, expr, test)                                        \
   do                                                                       \
     {                                                                      \
       apr_status_t os_err = APR_TO_OS_ERROR(err);                          \
       int sleep_count = RETRY_INITIAL_SLEEP;                               \
       int retries;                                                         \
       for (retries = 0;                                                    \
-           retries < RETRY_MAX_ATTEMPTS &&                                 \
-           (os_err == ERROR_ACCESS_DENIED                                  \
-            || os_err == ERROR_SHARING_VIOLATION                           \
-            || os_err == ERROR_DIR_NOT_EMPTY);                             \
+           retries < RETRY_MAX_ATTEMPTS && (test);                         \
            ++retries, os_err = APR_TO_OS_ERROR(err))                       \
         {                                                                  \
           apr_sleep(sleep_count);                                          \
@@ -107,6 +102,20 @@
         }                                                                  \
     }                                                                      \
   while (0)
+
+#if defined(EDEADLK) && APR_HAS_THREADS
+#define EDEADLK_RETRY_LOOP(err, expr)                                      \
+  RETRY_LOOP(err, expr, (os_err == EDEADLK))
+#else
+#define EDEADLK_RETRY_LOOP(err, expr) ((void)0)
+#endif
+
+#ifndef WIN32_RETRY_LOOP
+#if defined(WIN32) && !defined(SVN_NO_WIN32_RETRY_LOOP)
+#define WIN32_RETRY_LOOP(err, expr)                                        \
+  RETRY_LOOP(err, expr, (os_err == ERROR_ACCESS_DENIED                     \
+                         || os_err == ERROR_SHARING_VIOLATION              \
+                         || os_err == ERROR_DIR_NOT_EMPTY))
 #else
 #define WIN32_RETRY_LOOP(err, expr) ((void)0)
 #endif
@@ -1695,6 +1704,22 @@ svn_io_file_lock2(const char *lock_file,
 
   /* Get lock on the filehandle. */
   apr_err = apr_file_lock(lockfile_handle, locktype);
+
+  /* In deployments with two or more multithreaded servers running on
+     the same system serving two or more fsfs repositories it is
+     possible for a deadlock to occur when getting a write lock on
+     db/txn-current-lock:
+
+     Process 1                         Process 2
+     ---------                         ---------
+     thread 1: get lock in repos A
+                                       thread 1: get lock in repos B
+                                       thread 2: block getting lock in repos A
+     thread 2: try to get lock in B *** deadlock ***
+
+     Retry for a while for the deadlock to clear. */
+  EDEADLK_RETRY_LOOP(apr_err, apr_file_lock(lockfile_handle, locktype));
+
   if (apr_err)
     {
       switch (locktype & APR_FLOCK_TYPEMASK)

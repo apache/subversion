@@ -503,7 +503,7 @@ typedef struct svn_ra_callbacks2_t
   /** Notification callback baton, used with progress_func. */
   void *progress_baton;
 
-  /** Cancelation function
+  /** Cancellation function
    *
    * As its baton, the general callback baton is used
    *
@@ -638,7 +638,7 @@ svn_ra_open3(svn_ra_session_t **session_p,
              apr_pool_t *pool);
 
 /**
- * Similiar to svn_ra_open3(), but with @a uuid set to @c NULL.
+ * Similar to svn_ra_open3(), but with @a uuid set to @c NULL.
  *
  * @since New in 1.3.
  * @deprecated Provided for backward compatibility with the 1.4 API.
@@ -1671,7 +1671,7 @@ svn_ra_get_file_revs2(svn_ra_session_t *session,
                       apr_pool_t *pool);
 
 /**
- * Similiar to svn_ra_get_file_revs2(), but with @a include_merged_revisions
+ * Similar to svn_ra_get_file_revs2(), but with @a include_merged_revisions
  * set to FALSE.
  *
  * @since New in 1.2.

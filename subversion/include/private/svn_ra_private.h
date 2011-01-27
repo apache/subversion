@@ -37,7 +37,7 @@ extern "C" {
 #endif /* __cplusplus */
 
 /* Return an error with code SVN_ERR_UNSUPPORTED_FEATURE, and an error
-   message referencing PATH_OR_URL, if the "server" pointed to be
+   message referencing PATH_OR_URL, if the "server" pointed to by
    RA_SESSION doesn't support Merge Tracking (e.g. is pre-1.5).
    Perform temporary allocations in POOL. */
 svn_error_t *

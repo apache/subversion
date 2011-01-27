@@ -860,6 +860,8 @@ int svn_client__sort_commit_item_urls(const void *a, const void *b);
    a common *BASE_URL for the items in the array, and rewrite those
    items' URLs to be relative to that *BASE_URL.
 
+   COMMIT_ITEMS is an array of (svn_client_commit_item3_t *) items.
+
    Afterwards, some of the items in COMMIT_ITEMS may contain data
    allocated in POOL. */
 svn_error_t *
@@ -871,7 +873,9 @@ svn_client__condense_commit_items(const char **base_url,
 /* Commit the items in the COMMIT_ITEMS array using EDITOR/EDIT_BATON
    to describe the committed local mods.  Prior to this call,
    COMMIT_ITEMS should have been run through (and BASE_URL generated
-   by) svn_client__condense_commit_items.
+   by) svn_client__condense_commit_items().
+
+   COMMIT_ITEMS is an array of (svn_client_commit_item3_t *) items.
 
    CTX->NOTIFY_FUNC/CTX->BATON will be called as the commit progresses, as
    a way of describing actions to the application layer (if non NULL).

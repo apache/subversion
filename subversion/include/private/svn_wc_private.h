@@ -571,7 +571,7 @@ svn_wc__node_is_file_external(svn_boolean_t *file_external,
  * that there can be multiple prop conflicts.
  *
  * One or two of @a prop_conflicted, @a text_conflicted and @a
- * tree_conflicted can be NULL if we're not interrested in that particular
+ * tree_conflicted can be NULL if we're not interested in that particular
  * value.
  */
 svn_error_t *

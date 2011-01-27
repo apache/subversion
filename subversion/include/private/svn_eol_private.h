@@ -49,7 +49,7 @@ char *
 svn_eol__find_eol_start(char *buf, apr_size_t len);
 
 /* Return the first eol marker found in [@a buf, @a endp) as a
- * NUL-terminated string, or NULL if no eol marker is found.
+ * NULL-terminated string, or NULL if no eol marker is found.
  *
  * If the last valid character of @a buf is the first byte of a
  * potentially two-byte eol sequence, just return that single-character

@@ -2813,7 +2813,7 @@ svn_client_diff(const apr_array_header_t *diff_options,
  *
  * If @a peg_revision is #svn_opt_revision_unspecified, behave
  * identically to svn_client_diff5(), using @a path for both of that
- * function's @a path1 and @a path2 argments.
+ * function's @a path1 and @a path2 arguments.
  *
  * All other options are handled identically to svn_client_diff5().
  *
@@ -2996,7 +2996,7 @@ svn_client_diff_summarize(const char *path1,
  *
  * If @a peg_revision is #svn_opt_revision_unspecified, behave
  * identically to svn_client_diff_summarize2(), using @a path for both
- * of that function's @a path1 and @a path2 argments.
+ * of that function's @a path1 and @a path2 arguments.
  *
  * The function may report false positives if @a ignore_ancestry is false,
  * as described in the documentation for svn_client_diff_summarize2().
@@ -4378,7 +4378,7 @@ svn_client_revprop_get(const char *propname,
                        apr_pool_t *pool);
 
 /**
- * Invoke @a receiver with @a receiver_baton to return the regular properies
+ * Invoke @a receiver with @a receiver_baton to return the regular properties
  * of @a target, a URL or working copy path.  @a receiver will be called
  * for each path encountered.
  *
@@ -4434,7 +4434,7 @@ svn_client_proplist3(const char *target,
  *
  * @since New in 1.2.
  *
- * @deprecated Provided for backward compatiblility with the 1.4 API.
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -5442,10 +5442,10 @@ svn_client_url_from_path2(const char **url,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);
 
-/** Simlar to svn_client_url_from_path2(), but without a context argument.
+/** Similar to svn_client_url_from_path2(), but without a context argument.
  *
  * @since New in 1.5.
- * @deprecated Provided for backward compatilibity with the 1.6 API.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -5503,7 +5503,7 @@ svn_client_uuid_from_path2(const char **uuid,
 /** Similar to svn_client_uuid_from_path2(), but with a relative path and
  * an access baton.
  *
- * @deprecated Provided for backward compatilibity with the 1.6 API.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
 SVN_DEPRECATED
 svn_error_t *

@@ -309,7 +309,7 @@ typedef svn_boolean_t (*svn_config_section_enumerator_t)(const char *name,
                                                          void *baton);
 
 /** Similar to svn_config_enumerate_sections2(), but uses a memory pool of
- * @a cfg instead of one that is explicitely provided.
+ * @a cfg instead of one that is explicitly provided.
  *
  * @deprecated Provided for backwards compatibility with the 1.2 API.
  */
@@ -356,7 +356,7 @@ typedef svn_boolean_t (*svn_config_enumerator_t)(const char *name,
                                                  void *baton);
 
 /** Similar to svn_config_enumerate2(), but uses a memory pool of
- * @a cfg instead of one that is explicitely provided.
+ * @a cfg instead of one that is explicitly provided.
  *
  * @deprecated Provided for backwards compatibility with the 1.2 API.
  */

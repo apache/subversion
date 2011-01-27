@@ -362,7 +362,7 @@ svn_subst_read_specialfile(svn_stream_t **stream,
                            apr_pool_t *scratch_pool);
 
 
-/** Set @a *stream to a writeable stream that accepts content in
+/** Set @a *stream to a writable stream that accepts content in
  * the "normal form" for a special file, to be located at @a path, and
  * will create that file when the stream is closed. The stream will be
  * allocated in @a result_pool, and any temporary allocations will be

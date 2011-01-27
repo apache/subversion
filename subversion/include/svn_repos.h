@@ -185,7 +185,7 @@ typedef svn_error_t *(*svn_repos_file_rev_handler_t)
 
 /* Notification system. */
 
-/** The type of action occuring.
+/** The type of action occurring.
  *
  * @since New in 1.7.
  */
@@ -1067,7 +1067,7 @@ svn_repos_abort_report(void *report_baton,
  * proportional to the greatest depth of the tree under @a tgt_root, not
  * the total size of the delta.
  *
- * ### svn_repos_dir_delta2 is mostly superceded by the reporter
+ * ### svn_repos_dir_delta2 is mostly superseded by the reporter
  * ### functionality (svn_repos_begin_report2 and friends).
  * ### svn_repos_dir_delta2 does allow the roots to be transaction
  * ### roots rather than just revision roots, and it has the
