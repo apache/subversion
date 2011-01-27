@@ -327,8 +327,8 @@ svn_relpath_dirname(const char *relpath,
                     apr_pool_t *pool);
 
 
-/** Divide the canonicalized @a uri into @a *dirpath and @a
- * *base_name, allocated in @a pool.
+/** Divide the canonicalized @a uri into a uri @a *dirpath and a
+ * (URI-decoded) relpath @a *base_name, allocated in @a pool.
  *
  * If @a dirpath or @a base_name is NULL, then don't set that one.
  *
@@ -349,15 +349,14 @@ svn_url_split(const char **dirpath,
               const char *uri,
               apr_pool_t *pool);
 
-/** Get the basename of the specified canonicalized @a uri.  The
- * basename is defined as the last component of the uri.  If the @a uri
- * is root then that is returned. Otherwise, the returned value will have no
- * slashes in it.
+/** Get the (URI-decoded) basename of the specified canonicalized @a
+ * uri.  The basename is defined as the last component of the uri.  If
+ * the @a uri is root then that is returned.  Otherwise, the returned
+ * value will have no slashes in it.
  *
  * Example: svn_uri_basename("http://server/foo/bar") -> "bar"
  *
- * The returned basename will be allocated in @a pool. If @a pool is NULL
- * a pointer to the basename in @a uri is returned.
+ * The returned basename will be allocated in @a pool.
  *
  * @since New in 1.7.
  */

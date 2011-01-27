@@ -537,7 +537,6 @@ svn_client_info3(const char *abspath_or_url,
   SVN_ERR(svn_ra_get_uuid2(ra_session, &repos_UUID, pool));
 
   svn_url_split(&parent_url, &base_name, url, pool);
-  base_name = svn_path_uri_decode(base_name, pool);
 
   /* Get the dirent for the URL itself. */
   err = svn_ra_stat(ra_session, "", rev, &the_ent, pool);

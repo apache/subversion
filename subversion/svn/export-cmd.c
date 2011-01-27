@@ -75,7 +75,7 @@ svn_cl__export(apr_getopt_t *os,
   if (targets->nelts == 1)
     {
       if (svn_path_is_url(truefrom))
-        to = svn_path_uri_decode(svn_url_basename(truefrom, pool), pool);
+        to = svn_url_basename(truefrom, pool);
       else
         to = svn_dirent_basename(truefrom, pool);
     }

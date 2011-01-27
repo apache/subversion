@@ -206,9 +206,16 @@ organize_lock_targets(const char **common_parent_url,
     {
       const char *parent, *base;
       if (url_mode)
-        svn_url_split(&parent, &base, *common_parent_url, result_pool);
+        {
+          svn_url_split(&parent, &base, *common_parent_url, 
+                        result_pool);
+          svn_path_uri_encode(base, result_pool);
+        }
       else
-        svn_dirent_split(&parent, &base, *common_parent_url, result_pool);
+        {
+          svn_dirent_split(&parent, &base, *common_parent_url, 
+                           result_pool);
+        }
 
       *common_parent_url = parent;
       APR_ARRAY_PUSH(rel_targets, const char *) = base;
@@ -278,9 +285,12 @@ organize_lock_targets(const char **common_parent_url,
          had 1 member, so we special case that (again). */
       if (apr_is_empty_array(rel_urls))
         {
-          const char *base_name = svn_url_basename(common_url, scratch_pool);
+          const char *base_name;
+
+          base_name = svn_url_basename(common_url, scratch_pool);
+          APR_ARRAY_PUSH(rel_urls, const char *) = 
+            svn_path_uri_encode(base_name, result_pool);
           common_url = svn_url_dirname(common_url, result_pool);
-          APR_ARRAY_PUSH(rel_urls, const char *) = base_name;
         }
 
       /* If we have no common URL parent, bail (cross-repos lock attempt) */

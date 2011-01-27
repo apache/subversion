@@ -1365,8 +1365,7 @@ svn_url_basename(const char *uri, apr_pool_t *pool)
   else
     base_name = uri + start;
 
-  /* ### TODO: URI decode a non-NULL base_name? */
-  return base_name;
+  return svn_path_uri_decode(base_name, pool);
 }
 
 void
