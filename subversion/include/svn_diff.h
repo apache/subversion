@@ -490,7 +490,7 @@ svn_diff_file_diff4_2(svn_diff_t **diff,
                       const svn_diff_file_options_t *options,
                       apr_pool_t *pool);
 
-/** Simliar to svn_file_diff4_2(), but with @a options set to a struct with
+/** Similar to svn_file_diff4_2(), but with @a options set to a struct with
  * default options.
  *
  * @deprecated Provided for backwards compatibility with the 1.3 API.
@@ -639,7 +639,7 @@ svn_diff_mem_string_diff(svn_diff_t **diff,
                          apr_pool_t *pool);
 
 
-/** Generate @a diff output from the @a orginal, @a modified and @a latest
+/** Generate @a diff output from the @a original, @a modified and @a latest
  * in-memory strings.  @a diff will be allocated in @a pool.
  *
  * @since New in 1.5.

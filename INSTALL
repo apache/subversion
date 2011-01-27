@@ -322,7 +322,7 @@ I.    INTRODUCTION
       newer. The autogen.sh script knows about that.
 
 
-      5.  An HTTP client libary:  serf.  (OPTIONAL)
+      5.  An HTTP client library:  serf.  (OPTIONAL)
 
       If you want your client to be able to speak to an Apache
       server (via a http:// or https:// URL), you must link against
