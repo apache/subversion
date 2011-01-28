@@ -208,46 +208,6 @@ map_or_read_file(apr_file_t **file,
 }
 
 
-/* Let FILE stand for the file_info struct element of BATON->files that is
- * indexed by DATASOURCE.  BATON's type is (svn_diff__file_baton_t *).
- *
- * Open the file at FILE.path; initialize FILE.file, FILE.size, FILE.buffer,
- * FILE.curp and FILE.endp; allocate a buffer and read the first chunk.
- *
- * Implements svn_diff_fns2_t::datasource_open. */
-static svn_error_t *
-datasource_open(void *baton, svn_diff_datasource_e datasource)
-{
-  svn_diff__file_baton_t *file_baton = baton;
-  struct file_info *file = &file_baton->files[datasource_to_index(datasource)];
-  apr_finfo_t finfo;
-  apr_off_t length;
-  char *curp;
-  char *endp;
-
-  SVN_ERR(svn_io_file_open(&file->file, file->path,
-                           APR_READ, APR_OS_DEFAULT, file_baton->pool));
-
-  SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_SIZE,
-                               file->file, file_baton->pool));
-
-  file->size = finfo.size;
-  length = finfo.size > CHUNK_SIZE ? CHUNK_SIZE : finfo.size;
-
-  if (length == 0)
-    return SVN_NO_ERROR;
-
-  endp = curp = apr_palloc(file_baton->pool, (apr_size_t) length);
-  endp += length;
-
-  file->buffer = file->curp = curp;
-  file->endp = endp;
-
-  return read_chunk(file->file, file->path,
-                    curp, length, 0, file_baton->pool);
-}
-
-
 /* For all files in the FILE array, increment the curp pointer.  If a file
  * points before the beginning of file, let it point at the first byte again.
  * If the end of the current chunk is reached, read the next chunk in the
@@ -1063,7 +1023,6 @@ token_discard_all(void *baton)
 
 static const svn_diff_fns2_t svn_diff__file_vtable =
 {
-  datasource_open,
   datasources_open,
   datasource_close,
   datasource_get_next_token,
