@@ -677,7 +677,7 @@ svn_ra__file_revs_from_log(svn_ra_session_t *ra_session,
   condensed_targets = apr_array_make(pool, 1, sizeof(const char *));
   APR_ARRAY_PUSH(condensed_targets, const char *) = path;
 
-  lmb.path = svn_fspath__canonicalize(svn_url_is_child(repos_url, session_url,
+  lmb.path = svn_fspath__canonicalize(svn_uri_is_child(repos_url, session_url,
                                                        pool), pool);
   lmb.eldest = NULL;
   lmb.pool = pool;

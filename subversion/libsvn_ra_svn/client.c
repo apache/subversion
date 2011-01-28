@@ -648,7 +648,7 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
 
   if (conn->repos_root)
     {
-      conn->repos_root = svn_url_canonicalize(conn->repos_root, pool);
+      conn->repos_root = svn_uri_canonicalize(conn->repos_root, pool);
       /* We should check that the returned string is a prefix of url, since
          that's the API guarantee, but this isn't true for 1.0 servers.
          Checking the length prevents client crashes. */
@@ -2276,7 +2276,7 @@ static svn_error_t *path_relative_to_root(svn_ra_session_t *session,
     }
   else
     {
-      *rel_path = svn_url_is_child(root_url, url, pool);
+      *rel_path = svn_uri_is_child(root_url, url, pool);
       if (! *rel_path)
         return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                                  _("'%s' isn't a child of repository root "

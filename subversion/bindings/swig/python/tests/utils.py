@@ -50,7 +50,7 @@ class Temper(object):
        file: URI in canonical internal form."""
     temp_path = tempfile.mkdtemp(suffix)
     repo_path = core.svn_dirent_internal_style(temp_path)
-    repo_uri = core.svn_url_canonicalize(file_uri_for_path(temp_path))
+    repo_uri = core.svn_uri_canonicalize(file_uri_for_path(temp_path))
     handle = repos.create(repo_path, None, None, None, None)
     self._cleanup_list.append((repo_path, repos.svn_repos_delete))
     return (handle, repo_path, repo_uri)

@@ -85,7 +85,7 @@ else:
   # extra slashes to make it a valid 'file://' URL
   REPOS_URL = "file://" + REPOS_URL
 
-REPOS_URL = core.svn_url_canonicalize(REPOS_URL)
+REPOS_URL = core.svn_uri_canonicalize(REPOS_URL)
 
 class SubversionRepositoryTestSetup(TestSetup):
 

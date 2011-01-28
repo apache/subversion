@@ -217,7 +217,7 @@ switch_dir_external(const char *path,
             {
               /* URLs don't match.  Try to relocate (if necessary) and then
                  switch. */
-              if (! svn_url_is_ancestor(repos_root_url, url))
+              if (! svn_uri_is_ancestor(repos_root_url, url))
                 {
                   const char *repos_root;
                   svn_ra_session_t *ra_session;
@@ -572,7 +572,7 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
   if (svn_path_is_url(url))
     {
       /* "http://server/path" */
-      item->url = svn_url_canonicalize(url, pool);
+      item->url = svn_uri_canonicalize(url, pool);
       return SVN_NO_ERROR;
     }
 
@@ -675,7 +675,7 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
         }
 
       parent_dir_uri.path = (char *)svn_path_compose(base_components, pool);
-      item->url = svn_url_canonicalize(apr_uri_unparse(pool, &parent_dir_uri,
+      item->url = svn_uri_canonicalize(apr_uri_unparse(pool, &parent_dir_uri,
                                                        0), pool);
       return SVN_NO_ERROR;
     }
@@ -695,7 +695,7 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
       const char *scheme;
 
       SVN_ERR(uri_scheme(&scheme, repos_root_url, pool));
-      item->url = svn_url_canonicalize(apr_pstrcat(pool, scheme, ":",
+      item->url = svn_uri_canonicalize(apr_pstrcat(pool, scheme, ":",
                                                    url, NULL), pool);
       return SVN_NO_ERROR;
     }
@@ -705,7 +705,7 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
   if (url[0] == '/')
     {
       parent_dir_uri.path = (char *)url;
-      item->url = svn_url_canonicalize(apr_uri_unparse(pool, &parent_dir_uri,
+      item->url = svn_uri_canonicalize(apr_uri_unparse(pool, &parent_dir_uri,
                                                        0), pool);
       return SVN_NO_ERROR;
     }

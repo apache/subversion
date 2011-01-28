@@ -1004,7 +1004,7 @@ const char *
 svn_path_internal_style(const char *path, apr_pool_t *pool)
 {
   if (svn_path_is_url(path))
-    return svn_url_canonicalize(path, pool);
+    return svn_uri_canonicalize(path, pool);
   else
     return svn_dirent_internal_style(path, pool);
 }
@@ -1023,7 +1023,7 @@ const char *
 svn_path_canonicalize(const char *path, apr_pool_t *pool)
 {
   if (svn_path_is_url(path))
-    return svn_url_canonicalize(path, pool);
+    return svn_uri_canonicalize(path, pool);
   else
     return svn_dirent_canonicalize(path, pool);
 }
@@ -1031,7 +1031,7 @@ svn_path_canonicalize(const char *path, apr_pool_t *pool)
 svn_boolean_t
 svn_path_is_canonical(const char *path, apr_pool_t *pool)
 {
-  return svn_url_is_canonical(path, pool) ||
+  return svn_uri_is_canonical(path, pool) ||
       svn_dirent_is_canonical(path, pool) ||
       svn_relpath_is_canonical(path, pool);
 }

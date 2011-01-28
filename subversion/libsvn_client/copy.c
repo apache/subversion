@@ -201,7 +201,7 @@ get_copy_pair_ancestors(const apr_array_header_t *copy_pairs,
   if (copy_pairs->nelts == 1)
     top_dst = apr_pstrdup(subpool, first_dst);
   else
-    top_dst = dst_is_url ? svn_url_dirname(first_dst, subpool)
+    top_dst = dst_is_url ? svn_uri_dirname(first_dst, subpool)
                          : svn_dirent_dirname(first_dst, subpool);
 
   /* Sources can came from anywhere, so we have to actually do some
@@ -224,7 +224,7 @@ get_copy_pair_ancestors(const apr_array_header_t *copy_pairs,
         APR_ARRAY_IDX(copy_pairs, i, svn_client__copy_pair_t *);
 
       top_src = src_is_url
-        ? svn_url_get_longest_ancestor(top_src, pair->src_abspath_or_url,
+        ? svn_uri_get_longest_ancestor(top_src, pair->src_abspath_or_url,
                                        subpool)
         : svn_dirent_get_longest_ancestor(top_src, pair->src_abspath_or_url,
                                           subpool);
@@ -239,7 +239,7 @@ get_copy_pair_ancestors(const apr_array_header_t *copy_pairs,
   if (common_ancestor)
     *common_ancestor =
                src_is_url
-                    ? svn_url_get_longest_ancestor(top_src, top_dst, pool)
+                    ? svn_uri_get_longest_ancestor(top_src, top_dst, pool)
                     : svn_dirent_get_longest_ancestor(top_src, top_dst, pool);
 
   svn_pool_destroy(subpool);
@@ -708,7 +708,7 @@ find_absent_parents2(svn_ra_session_t *ra_session,
   while (kind == svn_node_none)
     {
       APR_ARRAY_PUSH(new_dirs, const char *) = root_url;
-      root_url = svn_url_dirname(root_url, pool);
+      root_url = svn_uri_dirname(root_url, pool);
 
       SVN_ERR(svn_ra_reparent(ra_session, root_url, pool));
       SVN_ERR(svn_ra_check_path(ra_session, "", SVN_INVALID_REVNUM, &kind,
@@ -778,8 +778,8 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
       dead_end_rev.kind = svn_opt_revision_unspecified;
 
       /* Are the source and destination URLs at or under REPOS_ROOT? */
-      if (! (svn_url_is_ancestor(repos_root, pair->src_abspath_or_url)
-             && svn_url_is_ancestor(repos_root, pair->dst_abspath_or_url)))
+      if (! (svn_uri_is_ancestor(repos_root, pair->src_abspath_or_url)
+             && svn_uri_is_ancestor(repos_root, pair->dst_abspath_or_url)))
         return svn_error_create
           (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
            _("Source and destination URLs appear not to all point to the "
@@ -863,13 +863,13 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
       if ((strcmp(top_url, pair->dst_abspath_or_url) == 0)
           && (strcmp(top_url, repos_root) != 0))
         {
-          top_url = svn_url_dirname(top_url, pool);
+          top_url = svn_uri_dirname(top_url, pool);
         }
       if (is_move
           && (strcmp(top_url, pair->src_abspath_or_url) == 0)
           && (strcmp(top_url, repos_root) != 0))
         {
-          top_url = svn_url_dirname(top_url, pool);
+          top_url = svn_uri_dirname(top_url, pool);
         }
     }
 
@@ -912,9 +912,9 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
              case, do not try to add dst to the NEW_DIRS list since it
              will be added to the commit items array later in this
              function. */
-          dir = svn_url_is_child(
+          dir = svn_uri_is_child(
                   top_url,
-                  svn_url_dirname(first_pair->dst_abspath_or_url, pool),
+                  svn_uri_dirname(first_pair->dst_abspath_or_url, pool),
                   pool);
           if (dir)
             SVN_ERR(find_absent_parents1(ra_session, dir, new_dirs, pool));
@@ -935,7 +935,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
           for (i = 0; i < new_urls->nelts; i++)
             {
               const char *new_url = APR_ARRAY_IDX(new_urls, i, const char *);
-              dir = svn_url_is_child(top_url, new_url, pool);
+              dir = svn_uri_is_child(top_url, new_url, pool);
               APR_ARRAY_PUSH(new_dirs, const char *) = dir ? dir : "";
             }
         }
@@ -954,11 +954,11 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
                                                path_driver_info_t *);
 
       if ((strcmp(pair->dst_abspath_or_url, repos_root) != 0)
-          && (svn_url_is_child(pair->dst_abspath_or_url,
+          && (svn_uri_is_child(pair->dst_abspath_or_url,
                                pair->src_abspath_or_url, pool) != NULL))
         {
           info->resurrection = TRUE;
-          top_url = svn_url_dirname(top_url, pool);
+          top_url = svn_uri_dirname(top_url, pool);
           SVN_ERR(svn_ra_reparent(ra_session, top_url, pool));
         }
     }
@@ -979,7 +979,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
       svn_node_kind_t dst_kind;
       const char *src_rel, *dst_rel;
 
-      src_rel = svn_url_is_child(top_url, pair->src_abspath_or_url, pool);
+      src_rel = svn_uri_is_child(top_url, pair->src_abspath_or_url, pool);
       if (src_rel)
         {
           SVN_ERR(svn_ra_check_path(ra_session, src_rel, pair->src_revnum,
@@ -1012,7 +1012,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
 
       /* Figure out the basename that will result from this operation,
          and ensure that we aren't trying to overwrite existing paths.  */
-      dst_rel = svn_url_is_child(top_url, pair->dst_abspath_or_url, pool);
+      dst_rel = svn_uri_is_child(top_url, pair->dst_abspath_or_url, pool);
       if (! dst_rel)
         dst_rel = "";
       SVN_ERR(svn_ra_check_path(ra_session, dst_rel, youngest,
@@ -1201,12 +1201,12 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
    *     It looks like the entire block of code hanging off this comment
    *     is redundant. */
   first_pair = APR_ARRAY_IDX(copy_pairs, 0, svn_client__copy_pair_t *);
-  top_dst_url = svn_url_dirname(first_pair->dst_abspath_or_url, pool);
+  top_dst_url = svn_uri_dirname(first_pair->dst_abspath_or_url, pool);
   for (i = 1; i < copy_pairs->nelts; i++)
     {
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
-      top_dst_url = svn_url_get_longest_ancestor(top_dst_url,
+      top_dst_url = svn_uri_get_longest_ancestor(top_dst_url,
                                                  pair->dst_abspath_or_url,
                                                  pool);
     }
@@ -1234,7 +1234,7 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
         APR_ARRAY_IDX(copy_pairs, i, svn_client__copy_pair_t *);
 
       svn_pool_clear(iterpool);
-      dst_rel = svn_url_is_child(top_dst_url,
+      dst_rel = svn_uri_is_child(top_dst_url,
                                  pair->dst_abspath_or_url,
                                  iterpool);
       SVN_ERR(svn_ra_check_path(ra_session, dst_rel, SVN_INVALID_REVNUM,
@@ -1795,7 +1795,7 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
   lock_abspath = top_dst_path;
   if (copy_pairs->nelts == 1)
     {
-      top_src_url = svn_url_dirname(top_src_url, pool);
+      top_src_url = svn_uri_dirname(top_src_url, pool);
       lock_abspath = svn_dirent_dirname(top_dst_path, pool);
     }
 
@@ -1943,7 +1943,7 @@ try_copy(const apr_array_header_t *sources,
           if (src_is_url)
             {
               pair->src_abspath_or_url = apr_pstrdup(pool, source->path);
-              src_basename = svn_url_basename(pair->src_abspath_or_url,
+              src_basename = svn_uri_basename(pair->src_abspath_or_url,
                                               iterpool);
             }
           else
@@ -2262,7 +2262,7 @@ svn_client_copy6(const apr_array_header_t *sources,
       svn_error_clear(err);
       svn_pool_clear(subpool);
 
-      src_basename = src_is_url ? svn_url_basename(src_path, subpool)
+      src_basename = src_is_url ? svn_uri_basename(src_path, subpool)
                                 : svn_dirent_basename(src_path, subpool);
 
       err = try_copy(sources,
@@ -2343,7 +2343,7 @@ svn_client_move6(const apr_array_header_t *src_paths,
       svn_error_clear(err);
       svn_pool_clear(subpool);
 
-      src_basename = src_is_url ? svn_url_basename(src_path, pool)
+      src_basename = src_is_url ? svn_uri_basename(src_path, pool)
                                 : svn_dirent_basename(src_path, pool);
 
       err = try_copy(sources,

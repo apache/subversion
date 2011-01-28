@@ -458,7 +458,7 @@ svn_client_log5(const apr_array_header_t *targets,
         return SVN_NO_ERROR;
 
       /* Find the base URL and condensed targets relative to it. */
-      SVN_ERR(svn_url_condense_targets(&url_or_path, &condensed_targets,
+      SVN_ERR(svn_uri_condense_targets(&url_or_path, &condensed_targets,
                                        target_urls, TRUE, pool, iterpool));
 
       if (condensed_targets->nelts == 0)

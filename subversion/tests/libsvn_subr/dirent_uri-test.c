@@ -118,7 +118,7 @@ test_uri_is_root(apr_pool_t *pool)
     {
       svn_boolean_t retval;
 
-      retval = svn_url_is_root(tests[i].path, strlen(tests[i].path));
+      retval = svn_uri_is_root(tests[i].path, strlen(tests[i].path));
       if (tests[i].result != retval)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
@@ -507,7 +507,7 @@ test_uri_basename(apr_pool_t *pool)
       const char *path = tests[i].path;
       const char *expect = tests[i].result;
 
-      result = svn_url_basename(path, pool);
+      result = svn_uri_basename(path, pool);
       if (strcmp(result, expect))
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "svn_uri_basename(\"%s\") returned "
@@ -625,7 +625,7 @@ test_uri_dirname(apr_pool_t *pool)
       const char *path = tests[i].path;
       const char *expect = tests[i].result;
 
-      result = svn_url_dirname(path, pool);
+      result = svn_uri_dirname(path, pool);
       if (strcmp(result, expect))
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "svn_uri_dirname(\"%s\") returned "
@@ -843,7 +843,7 @@ test_uri_canonicalize(apr_pool_t *pool)
   for (i = 0; i < COUNT_OF(tests); i++)
 
     {
-      const char *canonical = svn_url_canonicalize(tests[i].path, pool);
+      const char *canonical = svn_uri_canonicalize(tests[i].path, pool);
 
       if (strcmp(canonical, tests[i].result))
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
@@ -1152,7 +1152,7 @@ test_uri_is_canonical(apr_pool_t *pool)
       svn_boolean_t canonical;
       const char* canonicalized;
 
-      canonical = svn_url_is_canonical(tests[i].path, pool);
+      canonical = svn_uri_is_canonical(tests[i].path, pool);
       if (tests[i].canonical != canonical)
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "svn_uri_is_canonical(\"%s\") returned "
@@ -1163,7 +1163,7 @@ test_uri_is_canonical(apr_pool_t *pool)
       if (! tests[i].canonicalizable)
         continue;
 
-      canonicalized = svn_url_canonicalize(tests[i].path, pool);
+      canonicalized = svn_uri_canonicalize(tests[i].path, pool);
 
       if (canonical && (strcmp(tests[i].path, canonicalized) != 0))
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
@@ -1289,7 +1289,7 @@ test_uri_split(apr_pool_t *pool)
     {
       const char *dir, *base_name;
 
-      svn_url_split(&dir, &base_name, paths[i][0], pool);
+      svn_uri_split(&dir, &base_name, paths[i][0], pool);
       if (strcmp(dir, paths[i][1]))
         {
           return svn_error_createf
@@ -1431,7 +1431,7 @@ test_uri_is_ancestor(apr_pool_t *pool)
     {
       svn_boolean_t retval;
 
-      retval = svn_url_is_ancestor(tests[i].path1, tests[i].path2);
+      retval = svn_uri_is_ancestor(tests[i].path1, tests[i].path2);
       if (tests[i].result != retval)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
@@ -1554,7 +1554,7 @@ test_uri_skip_ancestor(apr_pool_t *pool)
     {
       const char* retval;
 
-      retval = svn_url_skip_ancestor(tests[i].path1, tests[i].path2);
+      retval = svn_uri_skip_ancestor(tests[i].path1, tests[i].path2);
       if (strcmp(tests[i].result, retval))
         return svn_error_createf(
              SVN_ERR_TEST_FAILED, NULL,
@@ -1729,7 +1729,7 @@ test_uri_get_longest_ancestor(apr_pool_t *pool)
     {
       const char *retval;
 
-      retval = svn_url_get_longest_ancestor(tests[i].path1, tests[i].path2,
+      retval = svn_uri_get_longest_ancestor(tests[i].path1, tests[i].path2,
                                              pool);
 
       if (strcmp(tests[i].result, retval))
@@ -1739,7 +1739,7 @@ test_uri_get_longest_ancestor(apr_pool_t *pool)
            tests[i].path1, tests[i].path2, retval, tests[i].result);
 
       /* changing the order of the paths should return the same results */
-      retval = svn_url_get_longest_ancestor(tests[i].path2, tests[i].path1,
+      retval = svn_uri_get_longest_ancestor(tests[i].path2, tests[i].path1,
                                              pool);
 
       if (strcmp(tests[i].result, retval))
@@ -1983,7 +1983,7 @@ test_uri_is_child(apr_pool_t *pool)
         {
           const char *remainder;
 
-          remainder = svn_url_is_child(paths[i], paths[j], pool);
+          remainder = svn_uri_is_child(paths[i], paths[j], pool);
 
           if (((remainder) && (! remainders[i][j]))
               || ((! remainder) && (remainders[i][j]))
@@ -2263,7 +2263,7 @@ test_uri_condense_targets(apr_pool_t *pool)
             break;
         }
 
-      SVN_ERR(svn_url_condense_targets(&common, &condensed, hdr,
+      SVN_ERR(svn_uri_condense_targets(&common, &condensed, hdr,
                                        FALSE, pool, pool));
 
       if (tests[i].common != NULL && strcmp(common, tests[i].common))
@@ -2482,7 +2482,7 @@ test_dirent_from_file_url(apr_pool_t *pool)
     {
       const char *result;
 
-      SVN_ERR(svn_url_get_dirent_from_file_url(&result, tests[i].url, pool));
+      SVN_ERR(svn_uri_get_dirent_from_file_url(&result, tests[i].url, pool));
 
       if (strcmp(result, tests[i].result))
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
@@ -2512,7 +2512,7 @@ test_dirent_from_file_url_errors(apr_pool_t *pool)
       const char *result;
       svn_error_t *err;
 
-      err = svn_url_get_dirent_from_file_url(&result, bad_file_urls[i],
+      err = svn_uri_get_dirent_from_file_url(&result, bad_file_urls[i],
                                              pool);
 
       if (err == NULL)
@@ -2554,7 +2554,7 @@ test_file_url_from_dirent(apr_pool_t *pool)
     {
       const char *result;
 
-      SVN_ERR(svn_url_get_file_url_from_dirent(&result, tests[i].dirent,
+      SVN_ERR(svn_uri_get_file_url_from_dirent(&result, tests[i].dirent,
                                                pool));
 
       if (strcmp(result, tests[i].result))

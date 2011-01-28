@@ -157,7 +157,7 @@ condense_targets(const char **common_parent,
 {
   if (targets_are_uris)
     {
-      SVN_ERR(svn_url_condense_targets(common_parent, target_relpaths,
+      SVN_ERR(svn_uri_condense_targets(common_parent, target_relpaths,
                                        targets, remove_redundancies,
                                        result_pool, scratch_pool));
     }
@@ -176,7 +176,7 @@ condense_targets(const char **common_parent,
 
       if (targets_are_uris)
         {
-          svn_url_split(common_parent, &base_name,
+          svn_uri_split(common_parent, &base_name,
                         *common_parent, result_pool);
         }
       else

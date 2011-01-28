@@ -219,7 +219,7 @@ read_url(const char **result,
   /* Always canonicalize the url, as we have stricter canonicalization rules
      in 1.7+ then before */
   if (*result && **result)
-    *result = svn_url_canonicalize(*result, pool);
+    *result = svn_uri_canonicalize(*result, pool);
 
   return SVN_NO_ERROR;
 }
@@ -504,7 +504,7 @@ read_entry(svn_wc_entry_t **new_entry,
   /* Set up repository root.  Make sure it is a prefix of url. */
   SVN_ERR(read_url(&entry->repos, buf, end, entries_format, pool));
   if (entry->repos && entry->url
-      && ! svn_url_is_ancestor(entry->repos, entry->url))
+      && ! svn_uri_is_ancestor(entry->repos, entry->url))
     return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
                              _("Entry for '%s' has invalid repository "
                                "root"),
@@ -817,7 +817,7 @@ atts_to_entry(svn_wc_entry_t **new_entry,
   entry->repos = extract_string(atts, ENTRIES_ATTR_REPOS, pool);
 
   if (entry->url && entry->repos
-      && !svn_url_is_ancestor(entry->repos, entry->url))
+      && !svn_uri_is_ancestor(entry->repos, entry->url))
     return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
                              _("Entry for '%s' has invalid repository "
                                "root"),

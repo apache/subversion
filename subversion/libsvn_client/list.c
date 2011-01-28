@@ -180,7 +180,7 @@ svn_client_list2(const char *path_or_url,
 
               /* Open another session to the path's parent.  This server
                  doesn't support svn_ra_reparent anyway, so don't try it. */
-              svn_url_split(&parent_url, &base_name, url, pool);
+              svn_uri_split(&parent_url, &base_name, url, pool);
 
               SVN_ERR(svn_client__open_ra_session_internal(&parent_session,
                                                            NULL, parent_url,

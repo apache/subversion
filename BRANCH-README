@@ -74,7 +74,7 @@ Step 3:  [DONE]
 
    Remove svn_url_join_relpath() as unused. [DONE]
 
-Step 4:
+Step 4:  [DONE]
 
    Rename svn_url_* back to svn_uri_*.
 

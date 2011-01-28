@@ -151,7 +151,7 @@ svn_cl__switch(apr_getopt_t *os,
                              target);
 
   /* Canonicalize the URL. */
-  switch_url = svn_url_canonicalize(switch_url, scratch_pool);
+  switch_url = svn_uri_canonicalize(switch_url, scratch_pool);
 
   /* Deal with depthstuffs. */
   if (opt_state->set_depth != svn_depth_unknown)

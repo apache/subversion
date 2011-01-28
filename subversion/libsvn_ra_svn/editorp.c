@@ -530,7 +530,7 @@ static svn_error_t *ra_svn_handle_add_dir(svn_ra_svn_conn_t *conn,
   if (copy_path)
     {
       if (svn_path_is_url(copy_path))
-        copy_path = svn_url_canonicalize(copy_path, pool);
+        copy_path = svn_uri_canonicalize(copy_path, pool);
       else
         copy_path = svn_fspath__canonicalize(copy_path, pool);
     }
@@ -637,7 +637,7 @@ static svn_error_t *ra_svn_handle_add_file(svn_ra_svn_conn_t *conn,
   if (copy_path)
     {
       if (svn_path_is_url(copy_path))
-        copy_path = svn_url_canonicalize(copy_path, pool);
+        copy_path = svn_uri_canonicalize(copy_path, pool);
       else
         copy_path = svn_fspath__canonicalize(copy_path, pool);
     }

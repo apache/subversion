@@ -322,7 +322,7 @@ log_entry_receiver(void *baton,
 
               svn_error_clear(err);
 
-              parent = svn_url_dirname(lb->target_url, pool);
+              parent = svn_uri_dirname(lb->target_url, pool);
               iterpool = svn_pool_create(pool);
               while (strcmp(parent, lb->target_url) != 0)
                 {
@@ -351,7 +351,7 @@ log_entry_receiver(void *baton,
                       if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
                         {
                           svn_error_clear(err);
-                          parent = svn_url_dirname(parent, pool);
+                          parent = svn_uri_dirname(parent, pool);
                           continue;
                         }
                       if (err->apr_err == SVN_ERR_RA_ILLEGAL_URL ||

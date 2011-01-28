@@ -244,8 +244,8 @@ svn_cl__merge(apr_getopt_t *os,
          the directory structure. */
       if (svn_path_is_url(sourcepath1))
         {
-          const char *sp1_basename = svn_url_basename(sourcepath1, pool);
-          const char *sp2_basename = svn_url_basename(sourcepath2, pool);
+          const char *sp1_basename = svn_uri_basename(sourcepath1, pool);
+          const char *sp2_basename = svn_uri_basename(sourcepath2, pool);
 
           if (strcmp(sp1_basename, sp2_basename) == 0)
             {

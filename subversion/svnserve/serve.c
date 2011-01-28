@@ -807,7 +807,7 @@ static svn_error_t *link_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* ### WHAT?!  The link path is an absolute URL?!  Didn't see that
      coming...   -- cmpilato  */
   path = svn_relpath_canonicalize(path, pool);
-  url = svn_url_canonicalize(url, pool);
+  url = svn_uri_canonicalize(url, pool);
   if (depth_word)
     depth = svn_depth_from_word(depth_word);
   if (!b->err)
@@ -999,7 +999,7 @@ static svn_error_t *reparent(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   const char *fs_path;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c", &url));
-  url = svn_url_canonicalize(url, pool);
+  url = svn_uri_canonicalize(url, pool);
   SVN_ERR(trivial_auth_request(conn, pool, b));
   SVN_CMD_ERR(get_fs_path(svn_path_uri_decode(b->repos_url, pool),
                           svn_path_uri_decode(url, pool),
@@ -1705,7 +1705,7 @@ static svn_error_t *switch_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cbc?w", &rev, &target,
                                  &recurse, &switch_url, &depth_word));
   target = svn_relpath_canonicalize(target, pool);
-  switch_url = svn_url_canonicalize(switch_url, pool);
+  switch_url = svn_uri_canonicalize(switch_url, pool);
 
   if (depth_word)
     depth = svn_depth_from_word(depth_word);
@@ -1798,7 +1798,7 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                      &text_deltas, &depth_word));
     }
   target = svn_relpath_canonicalize(target, pool);
-  versus_url = svn_url_canonicalize(versus_url, pool);
+  versus_url = svn_uri_canonicalize(versus_url, pool);
 
   if (depth_word)
     depth = svn_depth_from_word(depth_word);
@@ -3111,7 +3111,7 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
   if (ver != 2)
     return SVN_NO_ERROR;
 
-  client_url = svn_url_canonicalize(client_url, pool);
+  client_url = svn_uri_canonicalize(client_url, pool);
   SVN_ERR(svn_ra_svn_set_capabilities(conn, caplist));
 
   /* All released versions of Subversion support edit-pipeline,

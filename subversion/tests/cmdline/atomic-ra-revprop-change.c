@@ -236,7 +236,7 @@ main(int argc, const char *argv[])
   pool = svn_pool_create(NULL);
 
   /* Parse argv. */
-  url = svn_url_canonicalize(argv[1], pool);
+  url = svn_uri_canonicalize(argv[1], pool);
   revision = strtol(argv[2], &digits_end, 10);
   propname = argv[3];
   SVN_INT_ERR(extract_values_from_skel(&old_propval, &propval, argv[4], pool));

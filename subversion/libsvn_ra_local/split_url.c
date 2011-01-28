@@ -40,7 +40,7 @@ svn_ra_local__split_URL(svn_repos_t **repos,
   const char *repos_root_dirent;
   svn_stringbuf_t *urlbuf;
 
-  SVN_ERR(svn_url_get_dirent_from_file_url(&repos_dirent, URL, pool));
+  SVN_ERR(svn_uri_get_dirent_from_file_url(&repos_dirent, URL, pool));
 
   /* Search for a repository in the full path. */
   repos_root_dirent = svn_repos_find_root_path(repos_dirent, pool);
