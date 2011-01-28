@@ -39,6 +39,7 @@
 #include "svn_version.h"
 #include "svn_dirent_uri.h"
 #include "svn_private_config.h"
+#include "private/svn_fspath.h"
 
 #include "ra_serf.h"
 
@@ -187,9 +188,7 @@ end_options(svn_ra_serf__xml_parser_t *parser,
     {
       options_ctx->collect_cdata = FALSE;
       options_ctx->activity_collection =
-        svn_ra_serf__uri_canonicalize(options_ctx->attr_val,
-                                      options_ctx->pool,
-                                      options_ctx->pool);
+        svn_urlpath__canonicalize(options_ctx->attr_val, options_ctx->pool);
       pop_state(options_ctx);
     }
 
@@ -338,11 +337,10 @@ capabilities_headers_iterator_callback(void *baton,
           orc->session->repos_root = orc->session->repos_url;
           orc->session->repos_root.path = apr_pstrdup(orc->session->pool, val);
           orc->session->repos_root_str =
-            svn_ra_serf__uri_canonicalize(
+            svn_urlpath__canonicalize(
                 apr_uri_unparse(orc->session->pool,
                                 &orc->session->repos_root,
                                 0),
-                orc->session->pool,
                 orc->session->pool);
         }
       else if (svn_cstring_casecmp(key, SVN_DAV_ME_RESOURCE_HEADER) == 0)

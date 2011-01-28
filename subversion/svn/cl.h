@@ -754,18 +754,6 @@ svn_cl__node_description(const svn_wc_conflict_version_t *node,
                          const char *wc_repos_root_URL,
                          apr_pool_t *pool);
 
-/* Join a BASE path with a COMPONENT, allocating the result in POOL.
- * COMPONENT need not be a single single component: it can be any path,
- * absolute or relative to BASE.
- *
- * This function exists to gather the cases when it could not be determined
- * if BASE is an uri, dirent or relative.
- */
-const char *
-svn_cl__path_join(const char *base,
-                  const char *component,
-                  apr_pool_t *pool);
-
 /* Return, in @a *true_targets_p, a copy of @a targets with peg revision
  * specifiers snipped off the end of each element.
  *

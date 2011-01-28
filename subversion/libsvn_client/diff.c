@@ -1533,9 +1533,7 @@ diff_prepare_repos_repos(const char **url1,
   if ((kind1 == svn_node_file) || (kind2 == svn_node_file))
     {
       svn_uri_split(anchor1, target1, *url1, pool);
-      *target1 = svn_path_uri_decode(*target1, pool);
       svn_uri_split(anchor2, target2, *url2, pool);
-      *target2 = svn_path_uri_decode(*target2, pool);
       if (*base_path)
         *base_path = svn_dirent_dirname(*base_path, pool);
       SVN_ERR(svn_ra_reparent(*ra_session, *anchor1, pool));
@@ -1830,11 +1828,13 @@ diff_repos_wc(const char *path1,
       if (!reverse)
         {
           callback_baton->orig_path_1 = url1;
-          callback_baton->orig_path_2 = svn_uri_join(anchor_url, target, pool);
+          callback_baton->orig_path_2 =
+            svn_path_url_add_component2(anchor_url, target, pool);
         }
       else
         {
-          callback_baton->orig_path_1 = svn_uri_join(anchor_url, target, pool);
+          callback_baton->orig_path_1 =
+            svn_path_url_add_component2(anchor_url, target, pool);
           callback_baton->orig_path_2 = url1;
         }
     }
@@ -1876,7 +1876,7 @@ diff_repos_wc(const char *path1,
   SVN_ERR(svn_ra_do_diff3(ra_session,
                           &reporter, &reporter_baton,
                           rev,
-                          target ? svn_path_uri_decode(target, pool) : NULL,
+                          target,
                           depth,
                           ignore_ancestry,
                           TRUE,  /* text_deltas */

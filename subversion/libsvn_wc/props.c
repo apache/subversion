@@ -2647,7 +2647,16 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
            item->target_dir);
 
       if (canonicalize_url)
-          item->url = svn_uri_canonicalize(item->url, pool);
+        {
+          /* Uh... this is stupid.  But it's consistent with what our
+             code did before we split up the relpath/dirent/uri APIs.
+             Still, given this, it's no wonder that our own libraries
+             don't ask this function to canonicalize the results.  */
+          if (svn_path_is_url(item->url))
+            item->url = svn_uri_canonicalize(item->url, pool);
+          else
+            item->url = svn_dirent_canonicalize(item->url, pool);
+        }
 
       if (externals_p)
         APR_ARRAY_PUSH(*externals_p, svn_wc_external_item2_t *) = item;

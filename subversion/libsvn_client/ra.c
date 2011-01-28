@@ -759,20 +759,10 @@ svn_client__repos_locations(const char **start_url,
          "repository or refers to an unrelated object"),
        path_or_url_local_style(path, pool), end_revnum);
 
-  /* Repository paths might be absolute, but we want to treat them as
-     relative.
-     ### Aren't they always absolute? */
-  if (start_path[0] == '/')
-    start_path = start_path + 1;
-  if (end_path[0] == '/')
-    end_path = end_path + 1;
-
   /* Set our return variables */
-  *start_url = svn_uri_join(repos_url, svn_path_uri_encode(start_path,
-                                                            pool), pool);
+  *start_url = svn_path_url_add_component2(repos_url, start_path + 1, pool);
   if (end->kind != svn_opt_revision_unspecified)
-    *end_url = svn_uri_join(repos_url, svn_path_uri_encode(end_path,
-                                                            pool), pool);
+    *end_url = svn_path_url_add_component2(repos_url, end_path + 1, pool);
 
   svn_pool_destroy(subpool);
   return SVN_NO_ERROR;

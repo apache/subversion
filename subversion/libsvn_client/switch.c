@@ -170,11 +170,9 @@ switch_internal(svn_revnum_t *result_rev,
   /* Disallow a switch operation to change the repository root of the
      target. */
   if (! svn_uri_is_ancestor(source_root, url))
-    return svn_error_createf
-      (SVN_ERR_WC_INVALID_SWITCH, NULL,
-       _("'%s'\n"
-         "is not the same repository as\n"
-         "'%s'"), url, source_root);
+    return svn_error_createf(SVN_ERR_WC_INVALID_SWITCH, NULL,
+                             _("'%s'\nis not the same repository as\n'%s'"),
+                             url, source_root);
 
   SVN_ERR(svn_ra_reparent(ra_session, url, pool));
 

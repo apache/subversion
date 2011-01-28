@@ -41,6 +41,7 @@
 #include "svn_time.h"
 
 #include "private/svn_dav_protocol.h"
+#include "private/svn_fspath.h"
 #include "svn_private_config.h"
 
 #include "ra_serf.h"
@@ -203,10 +204,10 @@ end_getlocks(svn_ra_serf__xml_parser_t *parser,
       else if ((lock_ctx->requested_depth == svn_depth_files) ||
                (lock_ctx->requested_depth == svn_depth_immediates))
         {
-          const char *rel_uri = svn_uri_is_child(lock_ctx->path,
-                                                 info->lock->path,
-                                                 info->pool);
-          if (rel_uri && (svn_path_component_count(rel_uri) == 1))
+          const char *rel_path = svn_fspath__is_child(lock_ctx->path,
+                                                      info->lock->path,
+                                                      info->pool);
+          if (rel_path && (svn_path_component_count(rel_path) == 1))
             apr_hash_set(lock_ctx->hash, info->lock->path,
                          APR_HASH_KEY_STRING, info->lock);
         }

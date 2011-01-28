@@ -692,7 +692,9 @@ repo_wc_copies(wc_baton_t *b)
         apr_array_header_t *sources
           = apr_array_make(b->pool, 0, sizeof(svn_client_copy_source_t *));
 
-        source.path = svn_uri_join(b->repos_url, subtest->from_path, b->pool);
+        source.path = svn_path_url_add_component2(b->repos_url,
+                                                  subtest->from_path,
+                                                  b->pool);
         APR_ARRAY_PUSH(sources, svn_client_copy_source_t *) = &source;
         SVN_ERR(svn_client_copy6(sources,
                                  wc_path(b, subtest->to_path),
