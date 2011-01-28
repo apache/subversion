@@ -40,6 +40,7 @@
 #include "private/svn_repos_private.h"
 #include "private/svn_dav_protocol.h"
 #include "private/svn_log.h"
+#include "private/svn_fspath.h"
 
 #include "dav_svn.h"
 
@@ -1234,7 +1235,7 @@ dav_svn__build_lock_hash(apr_hash_t **locks,
                 return derr;
 
               /* Create an absolute fs-path */
-              lockpath = svn_uri_join(path_prefix, cdata, pool);
+              lockpath = svn_fspath__join(path_prefix, cdata, pool);
               if (lockpath && locktoken)
                 {
                   apr_hash_set(hash, lockpath, APR_HASH_KEY_STRING, locktoken);

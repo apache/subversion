@@ -30,6 +30,8 @@
 #include "svn_subst.h"
 #include "svn_dirent_uri.h"
 
+#include "private/svn_fspath.h"
+
 #include "dump_editor.h"
 
 #define ARE_VALID_COPY_ARGS(p,r) ((p) && SVN_IS_VALID_REVNUM(r))
@@ -132,19 +134,18 @@ make_dir_baton(const char *path,
   const char *abspath;
 
   /* Construct the full path of this node. */
+  /* ### FIXME: Not sure why we use an abspath here.  If I understand
+     ### correctly, the only place we used this path is in dump_node(),
+     ### which immediately converts it into a relpath.  -- cmpilato.  */
   if (pb)
-    {
-      if (path[0] != '/')
-        abspath = apr_pstrcat(pool, "/", path, (char *)NULL);
-    }
+    abspath = svn_fspath__canonicalize(path, pool);
   else
     abspath = "/";
 
   /* Strip leading slash from copyfrom_path so that the path is
      canonical and svn_relpath_join can be used */
   if (copyfrom_path)
-    copyfrom_path = ((*copyfrom_path == '/') ?
-                     copyfrom_path + 1 : copyfrom_path);
+    copyfrom_path = svn_relpath_canonicalize(copyfrom_path, pool);
 
   new_db->eb = eb;
   new_db->parent_dir_baton = pb;
@@ -252,11 +253,10 @@ dump_node(struct dump_edit_baton *eb,
 {
   /* Remove leading slashes from path and copyfrom_path */
   if (path)
-    path = ((*path == '/') ? path + 1 : path);
+    path = svn_relpath_canonicalize(path, pool);
 
   if (copyfrom_path)
-    copyfrom_path = ((*copyfrom_path == '/') ?
-                     copyfrom_path + 1 : copyfrom_path);
+    copyfrom_path = svn_relpath_canonicalize(copyfrom_path, pool);
 
   /* Node-path: commons/STATUS */
   SVN_ERR(svn_stream_printf(eb->stream, pool,
@@ -484,9 +484,9 @@ open_directory(const char *path,
      record the same for this one. */
   if (pb && ARE_VALID_COPY_ARGS(pb->copyfrom_path, pb->copyfrom_rev))
     {
-      copyfrom_path = svn_uri_join(pb->copyfrom_path,
-                                   svn_relpath_basename(path, NULL),
-                                   pb->eb->pool);
+      copyfrom_path = svn_relpath_join(pb->copyfrom_path,
+                                       svn_relpath_basename(path, NULL),
+                                       pb->eb->pool);
       copyfrom_rev = pb->copyfrom_rev;
     }
 

@@ -44,6 +44,7 @@
 #include "svn_time.h"
 
 #include "private/svn_dav_protocol.h"
+#include "private/svn_fspath.h"
 #include "svn_private_config.h"
 
 #include "ra_neon.h"
@@ -121,7 +122,7 @@ static const svn_ra_neon__xml_elm_t getlocks_report_elements[] =
 
 /* Context for parsing server's response. */
 typedef struct get_locks_baton_t {
-  const char *path;                /* target of the report */
+  const char *path;                /* fspath target of the report */
   svn_depth_t requested_depth;     /* requested depth of the report */
   svn_lock_t *current_lock;        /* the lock being constructed */
   svn_stringbuf_t *cdata_accum;    /* a place to accumulate cdata */
@@ -256,9 +257,9 @@ getlocks_end_element(void *userdata, int state,
       else if ((baton->requested_depth == svn_depth_files) ||
                (baton->requested_depth == svn_depth_immediates))
         {
-          const char *rel_uri = svn_uri_is_child(baton->path,
-                                                 baton->current_lock->path,
-                                                 baton->scratchpool);
+          const char *rel_uri = svn_fspath__is_child(baton->path,
+                                                     baton->current_lock->path,
+                                                     baton->scratchpool);
           if (rel_uri && (svn_path_component_count(rel_uri) == 1))
             apr_hash_set(baton->lock_hash, baton->current_lock->path,
                          APR_HASH_KEY_STRING, baton->current_lock);
@@ -268,9 +269,12 @@ getlocks_end_element(void *userdata, int state,
 
     case ELEM_lock_path:
       /* neon has already xml-unescaped the cdata for us. */
-      baton->current_lock->path = apr_pstrmemdup(baton->pool,
-                                                 baton->cdata_accum->data,
-                                                 baton->cdata_accum->len);
+      baton->current_lock->path =
+        svn_fspath__canonicalize(apr_pstrmemdup(baton->scratchpool,
+                                                baton->cdata_accum->data,
+                                                baton->cdata_accum->len),
+                                 baton->pool);
+
       /* clean up the accumulator. */
       svn_stringbuf_setempty(baton->cdata_accum);
       svn_pool_clear(baton->scratchpool);
@@ -379,7 +383,7 @@ svn_ra_neon__get_locks(svn_ra_session_t *session,
                                                  url, pool));
 
   baton.lock_hash = apr_hash_make(pool);
-  baton.path = apr_pstrcat(pool, "/", rel_path, (char *)NULL);
+  baton.path = svn_fspath__canonicalize(rel_path, pool);
   baton.requested_depth = depth;
   baton.pool = pool;
   baton.scratchpool = svn_pool_create(pool);

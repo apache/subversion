@@ -28,6 +28,8 @@
 #include <httpd.h>
 #include <http_core.h>
 
+#include "private/svn_fspath.h"
+
 #include "dav_svn.h"
 
 
@@ -148,7 +150,7 @@ apr_status_t dav_svn__location_in_filter(ap_filter_t *f,
     apr_uri_parse(r->pool, master_uri, &uri);
     root_dir = dav_svn__get_root_dir(r);
     if (uri.path)
-        canonicalized_uri = svn_uri_canonicalize(uri.path, r->pool);
+        canonicalized_uri = svn_urlpath__canonicalize(uri.path, r->pool);
     else
         canonicalized_uri = uri.path;
     if (strcmp(canonicalized_uri, root_dir) == 0) {
@@ -270,7 +272,7 @@ apr_status_t dav_svn__location_body_filter(ap_filter_t *f,
     apr_uri_parse(r->pool, master_uri, &uri);
     root_dir = dav_svn__get_root_dir(r);
     if (uri.path)
-        canonicalized_uri = svn_uri_canonicalize(uri.path, r->pool);
+        canonicalized_uri = svn_urlpath__canonicalize(uri.path, r->pool);
     else
         canonicalized_uri = uri.path;
     if (strcmp(canonicalized_uri, root_dir) == 0) {

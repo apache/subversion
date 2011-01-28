@@ -746,6 +746,9 @@ remote_propget(apr_hash_t *props,
 {
   apr_hash_t *dirents;
   apr_hash_t *prop_hash;
+  const svn_string_t *val;
+  const char *target_full_url =
+    svn_path_url_add_component2(target_prefix, target_relative, work_pool);
 
   if (kind == svn_node_dir)
     {
@@ -761,29 +764,22 @@ remote_propget(apr_hash_t *props,
     }
   else if (kind == svn_node_none)
     {
-      return svn_error_createf
-        (SVN_ERR_ENTRY_NOT_FOUND, NULL,
-         _("'%s' does not exist in revision %ld"),
-         svn_uri_join(target_prefix, target_relative, work_pool), revnum);
+      return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
+                               _("'%s' does not exist in revision %ld"),
+                               target_full_url, revnum);
     }
   else
     {
-      return svn_error_createf
-        (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
-         _("Unknown node kind for '%s'"),
-         svn_uri_join(target_prefix, target_relative, work_pool));
+      return svn_error_createf(SVN_ERR_NODE_UNKNOWN_KIND, NULL,
+                               _("Unknown node kind for '%s'"),
+                               target_full_url);
     }
 
-  {
-    svn_string_t *val = apr_hash_get(prop_hash, propname,
-                                     APR_HASH_KEY_STRING);
-    if (val)
-      {
-        apr_hash_set(props,
-                     svn_uri_join(target_prefix, target_relative, perm_pool),
-                     APR_HASH_KEY_STRING, svn_string_dup(val, perm_pool));
-      }
-  }
+  if ((val = apr_hash_get(prop_hash, propname, APR_HASH_KEY_STRING)))
+    {
+      apr_hash_set(props, apr_pstrdup(perm_pool, target_full_url),
+                   APR_HASH_KEY_STRING, svn_string_dup(val, perm_pool));
+    }
 
   if (depth >= svn_depth_files
       && kind == svn_node_dir
@@ -1071,6 +1067,8 @@ remote_proplist(const char *target_prefix,
   apr_hash_t *dirents;
   apr_hash_t *prop_hash, *final_hash;
   apr_hash_index_t *hi;
+  const char *target_full_url =
+    svn_path_url_add_component2(target_prefix, target_relative, scratchpool);
 
   if (kind == svn_node_dir)
     {
@@ -1086,10 +1084,9 @@ remote_proplist(const char *target_prefix,
     }
   else
     {
-      return svn_error_createf
-        (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
-         _("Unknown node kind for '%s'"),
-         svn_uri_join(target_prefix, target_relative, pool));
+      return svn_error_createf(SVN_ERR_NODE_UNKNOWN_KIND, NULL,
+                               _("Unknown node kind for '%s'"),
+                               target_full_url);
     }
 
   /* Filter out non-regular properties, since the RA layer returns all
@@ -1115,9 +1112,7 @@ remote_proplist(const char *target_prefix,
         }
     }
 
-  call_receiver(svn_uri_join(target_prefix, target_relative, scratchpool),
-                final_hash, receiver, receiver_baton,
-                pool);
+  call_receiver(target_full_url, final_hash, receiver, receiver_baton, pool);
 
   if (depth > svn_depth_empty
       && (kind == svn_node_dir) && (apr_hash_count(dirents) > 0))

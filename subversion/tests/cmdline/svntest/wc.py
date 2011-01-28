@@ -592,7 +592,7 @@ class State:
         item = StateItem.from_entry(entry)
         if name:
           desc[repos_join(parent, name)] = item
-          implied_url = repos_join(parent_url, svn_url_quote(name))
+          implied_url = repos_join(parent_url, svn_uri_quote(name))
         else:
           item._url = entry.url  # attach URL to directory StateItems
           desc[parent] = item
@@ -600,7 +600,7 @@ class State:
           grandpa, this_name = repos_split(parent)
           if grandpa in desc:
             implied_url = repos_join(desc[grandpa]._url,
-                                     svn_url_quote(this_name))
+                                     svn_uri_quote(this_name))
           else:
             implied_url = None
 
@@ -808,7 +808,7 @@ def repos_join(base, path):
   return base + '/' + path
 
 
-def svn_url_quote(url):
+def svn_uri_quote(url):
   # svn defines a different set of "safe" characters than Python does, so
   # we need to avoid escaping them. see subr/path.c:uri_char_validity[]
   return urllib.quote(url, "!$&'()*+,-./:=@_~")

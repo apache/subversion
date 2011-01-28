@@ -681,7 +681,6 @@ add_url_parents(svn_ra_session_t *ra_session,
   svn_node_kind_t kind;
   const char *parent_url = svn_uri_dirname(url, pool);
 
-
   SVN_ERR(svn_ra_reparent(ra_session, parent_url, temppool));
   SVN_ERR(svn_ra_check_path(ra_session, "", SVN_INVALID_REVNUM, &kind,
                             temppool));
@@ -775,6 +774,7 @@ mkdir_urls(const apr_array_header_t *urls,
         {
           const char *bname;
           svn_uri_split(&common, &bname, common, pool);
+          bname = svn_path_uri_encode(bname, pool);
           for (i = 0; i < targets->nelts; i++)
             {
               const char *path = APR_ARRAY_IDX(targets, i, const char *);
@@ -804,7 +804,7 @@ mkdir_urls(const apr_array_header_t *urls,
           const char *path = APR_ARRAY_IDX(targets, i, const char *);
 
           item = svn_client_commit_item3_create(pool);
-          item->url = svn_uri_join(common, path, pool);
+          item->url = svn_path_url_add_component2(common, path, pool);
           item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
           APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
         }
@@ -827,14 +827,6 @@ mkdir_urls(const apr_array_header_t *urls,
     SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, common,
                                                  NULL, NULL, FALSE, TRUE,
                                                  ctx, pool));
-
-  /* URI-decode each target. */
-  for (i = 0; i < targets->nelts; i++)
-    {
-      const char *path = APR_ARRAY_IDX(targets, i, const char *);
-      path = svn_path_uri_decode(path, pool);
-      APR_ARRAY_IDX(targets, i, const char *) = path;
-    }
 
   /* Fetch RA commit editor */
   SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,

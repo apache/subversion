@@ -945,7 +945,7 @@ svn_error_t *svn_ra_neon__get_dir(svn_ra_session_t *session,
           svn_dirent_t *entry;
 
           apr_hash_this(hi, &key, NULL, &val);
-          childname =  key;
+          childname = svn_relpath_canonicalize(key, pool);
           resource = val;
 
           /* Skip the effective '.' entry that comes back from
@@ -1052,7 +1052,8 @@ svn_error_t *svn_ra_neon__get_dir(svn_ra_session_t *session,
             }
 
           apr_hash_set(*dirents,
-                       svn_path_uri_decode(svn_uri_basename(childname, pool),
+                       svn_path_uri_decode(svn_relpath_basename(childname,
+                                                                pool),
                                            pool),
                        APR_HASH_KEY_STRING, entry);
         }

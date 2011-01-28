@@ -1433,7 +1433,7 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(repos_relpath != NULL);
-  SVN_ERR_ASSERT(svn_uri_is_absolute(repos_root_url));
+  SVN_ERR_ASSERT(svn_uri_is_canonical(repos_root_url, scratch_pool));
   SVN_ERR_ASSERT(repos_uuid != NULL);
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
   SVN_ERR_ASSERT(props != NULL);
@@ -1511,7 +1511,7 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(repos_relpath != NULL);
-  SVN_ERR_ASSERT(svn_uri_is_absolute(repos_root_url));
+  SVN_ERR_ASSERT(svn_uri_is_canonical(repos_root_url, scratch_pool));
   SVN_ERR_ASSERT(repos_uuid != NULL);
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
   SVN_ERR_ASSERT(props != NULL);
@@ -1585,7 +1585,7 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(repos_relpath != NULL);
-  SVN_ERR_ASSERT(svn_uri_is_absolute(repos_root_url));
+  SVN_ERR_ASSERT(svn_uri_is_canonical(repos_root_url, scratch_pool));
   SVN_ERR_ASSERT(repos_uuid != NULL);
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
   SVN_ERR_ASSERT(props != NULL);
@@ -1654,7 +1654,7 @@ add_absent_excluded_not_present_node(svn_wc__db_t *db,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(repos_relpath != NULL);
-  SVN_ERR_ASSERT(svn_uri_is_absolute(repos_root_url));
+  SVN_ERR_ASSERT(svn_uri_is_canonical(repos_root_url, scratch_pool));
   SVN_ERR_ASSERT(repos_uuid != NULL);
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
   SVN_ERR_ASSERT(status == svn_wc__db_status_absent
