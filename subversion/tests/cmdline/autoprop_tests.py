@@ -307,9 +307,9 @@ def fail_add_mixed_eol_style(sbox):
 
   svntest.main.file_write(filepath, 'foo\nbar\r\nbaz\r')
 
-  expected_stderr = "svn: E200009: File '.*/" + filename + \
+  expected_stderr = "svn: E200009: File '.*" + filename + \
                     "' has inconsistent newlines" + \
-                    "|" + "svn: Inconsistent line ending style\n"
+                    "|" + "svn: E135000: Inconsistent line ending style\n"
   run_and_verify_svn(None, [], expected_stderr,
                      'add', filepath, *parameters)
 
