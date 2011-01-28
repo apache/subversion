@@ -56,6 +56,15 @@ Candidate changes:
            separate these changes and clearly describe each one? And update
            the r878607 log msg.)
 
+ * r902467
+   Fix broken svn_ra_get_mergeinfo API promise in serf and neon
+   implementations -- return a null mergeinfo catalog if there is
+   no mergeinfo, as per svn_ra_get_mergeinfo's API
+   Justification:
+     Fixes an uninitialized variable that can result in a segfault.
+   Votes:
+     +1: pburba
+
  * r916286, r917512
    Fixes failing commmits (with vague error messages) seen on client
    side for WebDAV proxy configurations such as the following (note
