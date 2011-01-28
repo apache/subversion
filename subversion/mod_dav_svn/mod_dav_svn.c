@@ -228,6 +228,8 @@ static const char *
 SVNMasterURI_cmd(cmd_parms *cmd, void *config, const char *arg1)
 {
   dir_conf_t *conf = config;
+  apr_uri_t parsed_uri;
+  const char *uri_base_name = "";
 
   /* SVNMasterURI requires mod_proxy and mod_proxy_http
    * (r->handler = "proxy-server" in mirror.c), make sure
@@ -236,7 +238,15 @@ SVNMasterURI_cmd(cmd_parms *cmd, void *config, const char *arg1)
     return "module mod_proxy not loaded, required for SVNMasterURI";
   if (ap_find_linked_module("mod_proxy_http.c") == NULL)
     return "module mod_proxy_http not loaded, required for SVNMasterURI";
-
+  if (APR_SUCCESS != apr_uri_parse(cmd->pool, arg1, &parsed_uri))
+    return "unable to parse SVNMasterURI value";
+  if (parsed_uri.path)
+    uri_base_name = svn_urlpath__basename(
+                        svn_urlpath__canonicalize(parsed_uri.path, cmd->pool),
+                        cmd->pool);
+  if (! *uri_base_name)
+    return "SVNMasterURI value must not be a server root";
+  
   conf->master_uri = apr_pstrdup(cmd->pool, arg1);
 
   return NULL;
