@@ -1319,6 +1319,8 @@ modcheck_found_node(const char *local_abspath,
   else if (!baton->found_mod || baton->all_edits_are_deletes)
     SVN_ERR(entry_has_local_mods(&modified, baton->db, local_abspath,
                                  db_kind, scratch_pool));
+  else
+    modified = FALSE;
 
   if (modified)
     {
