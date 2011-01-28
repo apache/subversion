@@ -398,8 +398,8 @@ authz_get_any_access_parser_cb(const char *section_name, void *baton,
 
   /* Does the section apply to the query? */
   if (section_name[0] == '/'
-      || strncasecmp(section_name, b->repos_path,
-                     strlen(b->repos_path)) == 0)
+      || strncmp(section_name, b->repos_path,
+                 strlen(b->repos_path)) == 0)
     {
       b->allow = b->deny = svn_authz_none;
 
