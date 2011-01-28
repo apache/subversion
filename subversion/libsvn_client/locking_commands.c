@@ -138,6 +138,58 @@ store_locks_callback(void *baton,
 }
 
 
+/* This is a wrapper around svn_uri_condense_targets() and
+ * svn_dirent_condense_targets() (the choice of which is made based on
+ * the value of TARGETS_ARE_URIS) which takes care of the
+ * single-target special case.
+ *
+ * Callers are expected to check for an empty *COMMON_PARENT (which
+ * means, "there was nothing common") for themselves.
+ */
+static svn_error_t *
+condense_targets(const char **common_parent,
+                 apr_array_header_t **target_relpaths,
+                 const apr_array_header_t *targets,
+                 svn_boolean_t targets_are_uris,
+                 svn_boolean_t remove_redundancies,
+                 apr_pool_t *scratch_pool,
+                 apr_pool_t *result_pool)
+{
+  if (targets_are_uris)
+    {
+      SVN_ERR(svn_uri_condense_targets(common_parent, target_relpaths,
+                                       targets, remove_redundancies,
+                                       result_pool, scratch_pool));
+    }
+  else
+    {
+      SVN_ERR(svn_dirent_condense_targets(common_parent, target_relpaths,
+                                          targets, remove_redundancies,
+                                          result_pool, scratch_pool));
+    }
+
+  /* svn_*_condense_targets leaves *TARGET_RELPATHS empty if TARGETS only
+     had 1 member, so we special case that. */
+  if (apr_is_empty_array(*target_relpaths))
+    {
+      const char *base_name;
+
+      if (targets_are_uris)
+        {
+          svn_uri_split(common_parent, &base_name,
+                        *common_parent, result_pool);
+        }
+      else
+        {
+          svn_dirent_split(common_parent, &base_name,
+                           *common_parent, result_pool);
+        }
+      APR_ARRAY_PUSH(*target_relpaths, const char *) = base_name;
+    }
+  
+  return SVN_NO_ERROR;
+}
+
 /* Set *COMMON_PARENT_URL to the nearest common parent URL of all TARGETS.
  * If TARGETS are local paths, then the entry for each path is examined
  * and *COMMON_PARENT is set to the common parent URL for all the
@@ -178,133 +230,114 @@ organize_lock_targets(const char **common_parent_url,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
 {
-  int i;
-  apr_array_header_t *rel_targets = apr_array_make(result_pool, 1,
-                                                   sizeof(const char *));
+  const char *common_url = NULL;
+  const char *common_dirent = NULL;
   apr_hash_t *rel_targets_ret = apr_hash_make(result_pool);
+  apr_hash_t *rel_fs_paths = NULL;
+  apr_array_header_t *rel_targets;
   svn_boolean_t url_mode;
+  int i;
 
+  SVN_ERR_ASSERT(targets->nelts);
   SVN_ERR(svn_client__assert_homogeneous_target_type(targets));
 
-  url_mode = ((targets->nelts >= 1) &&
-              svn_path_is_url(APR_ARRAY_IDX(targets, 0, const char *)));
-
-  /* Get the common parent and all paths */
-  if (url_mode)
-    SVN_ERR(svn_uri_condense_targets(common_parent_url, &rel_targets,
-                                     targets, TRUE, result_pool,
-                                     scratch_pool));
-  else
-    SVN_ERR(svn_dirent_condense_targets(common_parent_url, &rel_targets,
-                                        targets, TRUE, result_pool,
-                                        scratch_pool));
-
-  /* svn_uri_condense_targets and svn_dirent_condense_targets leaves
-     URLs/paths empty if TARGETS only had 1 member, so we special case
-     that. */
-  if (apr_is_empty_array(rel_targets))
-    {
-      const char *parent, *base;
-      if (url_mode)
-        svn_uri_split(&parent, &base, *common_parent_url, result_pool);
-      else
-        svn_dirent_split(&parent, &base, *common_parent_url, result_pool);
-
-      *common_parent_url = parent;
-      APR_ARRAY_PUSH(rel_targets, const char *) = base;
-    }
-
-  if (*common_parent_url == NULL || (*common_parent_url)[0] == '\0')
-    return svn_error_create
-      (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-       _("No common parent found, unable to operate on disjoint arguments"));
+  url_mode = svn_path_is_url(APR_ARRAY_IDX(targets, 0, const char *));
 
   if (url_mode)
     {
-      svn_revnum_t *invalid_revnum;
-      invalid_revnum = apr_palloc(result_pool, sizeof(*invalid_revnum));
+      svn_revnum_t *invalid_revnum =
+        apr_palloc(result_pool, sizeof(*invalid_revnum));
+
       *invalid_revnum = SVN_INVALID_REVNUM;
-      *base_dir = NULL;
 
+      /* Get the common parent URL and a bunch of relpaths, one per target. */
+      SVN_ERR(condense_targets(&common_url, &rel_targets, targets,
+                               TRUE, TRUE, scratch_pool, result_pool));
+      if (! (common_url && *common_url))
+        return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                _("No common parent found, unable to operate "
+                                  "on disjoint arguments"));
+
+      /* Create mapping of the target relpaths to either
+         SVN_INVALID_REVNUM (if our caller is locking) or to an empty
+         lock token string (if the caller is unlocking). */
       for (i = 0; i < rel_targets->nelts; i++)
         {
-          const char *target = APR_ARRAY_IDX(rel_targets, i, const char *);
           apr_hash_set(rel_targets_ret,
-                       svn_path_uri_decode(target, result_pool),
+                       APR_ARRAY_IDX(rel_targets, i, const char *),
                        APR_HASH_KEY_STRING,
-                       do_lock ? (const void *) invalid_revnum
-                       : (const void *) "");
+                       do_lock ? (const void *)invalid_revnum
+                               : (const void *)"");
         }
-      *rel_fs_paths_p = NULL;
     }
-  else  /* common parent is a local path */
+  else
     {
-      apr_array_header_t *rel_urls;
-      apr_array_header_t *urls = apr_array_make(scratch_pool, 1,
-                                                sizeof(const char *));
-      apr_hash_t *urls_hash = apr_hash_make(scratch_pool);
+      apr_array_header_t *rel_urls, *target_urls;
       apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-      const char *common_url;
+      
+      /* Get the common parent dirent and a bunch of relpaths, one per
+         target. */
+      SVN_ERR(condense_targets(&common_dirent, &rel_targets, targets,
+                               FALSE, TRUE, scratch_pool, result_pool));
+      if (! (common_dirent && *common_dirent))
+        return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                _("No common parent found, unable to operate "
+                                  "on disjoint arguments"));
 
-      *base_dir = *common_parent_url;
-
-      /* Get the url for each target and verify all paths. */
+      /* Get the URL for each target (which also serves to verify that
+         the dirent targets are sane).  */
+      target_urls = apr_array_make(scratch_pool, rel_targets->nelts,
+                                   sizeof(const char *));
       for (i = 0; i < rel_targets->nelts; i++)
         {
-          const char *target = APR_ARRAY_IDX(rel_targets, i, const char *);
-          const char *local_abspath;
-          const char *url;
+          const char *rel_target, *local_abspath, *target_url;
 
           svn_pool_clear(iterpool);
 
-          local_abspath = svn_dirent_join(*common_parent_url, target, iterpool);
-
-          SVN_ERR(svn_wc__node_get_url(&url, ctx->wc_ctx, local_abspath,
+          rel_target = APR_ARRAY_IDX(rel_targets, i, const char *);
+          local_abspath = svn_dirent_join(common_dirent, rel_target, iterpool);
+          SVN_ERR(svn_wc__node_get_url(&target_url, ctx->wc_ctx, local_abspath,
                                        scratch_pool, iterpool));
-
-          if (! url)
+          if (! target_url)
             return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                                      _("'%s' has no URL"),
-                                     svn_dirent_local_style(target, iterpool));
+                                     svn_dirent_local_style(local_abspath,
+                                                            iterpool));
 
-          APR_ARRAY_PUSH(urls, const char *) = url;
+          APR_ARRAY_PUSH(target_urls, const char *) = target_url;
         }
 
-      /* Condense our absolute urls and get the relative urls. */
-      SVN_ERR(svn_uri_condense_targets(&common_url, &rel_urls, urls,
-                                       FALSE, result_pool, scratch_pool));
+      /* Now that we have a bunch of URLs for our dirent targets,
+         condense those into a single common parent URL and a bunch of
+         paths relative to that. */
+      SVN_ERR(condense_targets(&common_url, &rel_urls, target_urls,
+                               TRUE, FALSE, scratch_pool, result_pool));
+      if (! (common_url && *common_url))
+        return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                _("Unable to lock/unlock across multiple "
+                                  "repositories"));
 
-      /* svn_uri_condense_targets leaves URLs empty if TARGETS only
-         had 1 member, so we special case that (again). */
-      if (apr_is_empty_array(rel_urls))
-        {
-          const char *base_name = svn_uri_basename(common_url, scratch_pool);
-          common_url = svn_uri_dirname(common_url, result_pool);
-          APR_ARRAY_PUSH(rel_urls, const char *) = base_name;
-        }
-
-      /* If we have no common URL parent, bail (cross-repos lock attempt) */
-      if (common_url == NULL || (common_url)[0] == '\0')
-        return svn_error_create
-          (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-           _("Unable to lock/unlock across multiple repositories"));
-
-      /* Now that we've got the relative URLs, gather our targets and
-         store the mapping between relative repository path and WC path. */
+      /* Now we need to create a couple of different hash mappings. */
+      rel_fs_paths = apr_hash_make(result_pool);
       for (i = 0; i < rel_targets->nelts; i++)
         {
-          const char *target = APR_ARRAY_IDX(rel_targets, i, const char *);
-          const char *url = APR_ARRAY_IDX(rel_urls, i, const char *);
-          const char *abs_path;
-          const char *decoded_url = svn_path_uri_decode(url, scratch_pool);
+          const char *rel_target, *rel_url, *abs_path;
 
           svn_pool_clear(iterpool);
 
-          apr_hash_set(urls_hash, decoded_url,
-                       APR_HASH_KEY_STRING,
-                       apr_pstrdup(scratch_pool, target));
+          /* First, we need to map our REL_URL (which is relative to
+             COMMON_URL) to our REL_TARGET (which is relative to
+             COMMON_DIRENT). */
+          rel_target = APR_ARRAY_IDX(rel_targets, i, const char *);
+          rel_url = APR_ARRAY_IDX(rel_urls, i, const char *);
+          apr_hash_set(rel_fs_paths, rel_url, APR_HASH_KEY_STRING,
+                       apr_pstrdup(result_pool, rel_target));
 
-          abs_path = svn_dirent_join(*common_parent_url, target, iterpool);
+          /* Then, we map our REL_URL (again) to either the base
+             revision of the dirent target with which it is associated
+             (if our caller is locking) or to a (possible empty) lock
+             token string (if the caller is unlocking). */
+          abs_path = svn_dirent_join(common_dirent, rel_target, iterpool);
 
           if (do_lock) /* Lock. */
             {
@@ -312,44 +345,42 @@ organize_lock_targets(const char **common_parent_url,
               revnum = apr_palloc(result_pool, sizeof(* revnum));
               SVN_ERR(svn_wc__node_get_base_rev(revnum, ctx->wc_ctx,
                                                 abs_path, result_pool));
-              apr_hash_set(rel_targets_ret, decoded_url,
+              apr_hash_set(rel_targets_ret, rel_url,
                            APR_HASH_KEY_STRING, revnum);
             }
           else /* Unlock. */
             {
-              /* If not force, get the lock token. */
+              const char *lock_token = NULL;
+
+              /* If not forcing the unlock, get the lock token. */
               if (! force)
                 {
-                  const char *lock_token;
-
                   SVN_ERR(svn_wc__node_get_lock_info(&lock_token, NULL, NULL,
                                                      NULL, ctx->wc_ctx,
                                                      abs_path, result_pool,
                                                      iterpool));
                   if (! lock_token)
-                    return svn_error_createf
-                      (SVN_ERR_CLIENT_MISSING_LOCK_TOKEN, NULL,
-                       _("'%s' is not locked in this working copy"), target);
+                    return svn_error_createf(
+                               SVN_ERR_CLIENT_MISSING_LOCK_TOKEN, NULL,
+                               _("'%s' is not locked in this working copy"),
+                               abs_path);
+                }
 
-                  apr_hash_set(rel_targets_ret, decoded_url,
-                               APR_HASH_KEY_STRING,
-                               lock_token);
-                }
-              else
-                {
-                  /* If breaking a lock, we shouldn't pass any lock token. */
-                  apr_hash_set(rel_targets_ret, decoded_url,
-                               APR_HASH_KEY_STRING, "");
-                }
+              /* If breaking a lock, we shouldn't pass any lock token. */
+              apr_hash_set(rel_targets_ret, rel_url, APR_HASH_KEY_STRING,
+                           lock_token ? lock_token : "");
             }
         }
 
-      *rel_fs_paths_p = urls_hash;
-      *common_parent_url = common_url;
       svn_pool_destroy(iterpool);
     }
 
+  /* Set our return variables. */
+  *common_parent_url = common_url;
+  *base_dir = common_dirent;
   *rel_targets_p = rel_targets_ret;
+  *rel_fs_paths_p = rel_fs_paths;
+
   return SVN_NO_ERROR;
 }
 

@@ -607,8 +607,6 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
   repos_relpath = svn_uri_is_child(repos_root_url, url, scratch_pool);
   if (repos_relpath == NULL)
     repos_relpath = "";
-  else
-    repos_relpath = svn_path_uri_decode(repos_relpath, scratch_pool);
 
   /* Early out: we know we're not dealing with an existing wc, so
      just create one. */
@@ -685,8 +683,9 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
                                 _("URL '%s' doesn't match existing "
                                   "URL '%s' in '%s'"),
                                 url,
-                                svn_uri_join(db_repos_root_url,
-                                             db_repos_relpath, scratch_pool),
+                                svn_path_url_add_component2(db_repos_root_url,
+                                                            db_repos_relpath,
+                                                            scratch_pool),
                                 local_abspath);
         }
     }

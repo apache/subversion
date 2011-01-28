@@ -48,6 +48,19 @@ svn_boolean_t
 svn_fspath__is_canonical(const char *fspath);
 
 
+/** This function is similar to svn_relpath_canonicalize(), except
+ * that it returns an fspath (which is essentially just a relpath
+ * tacked onto a leading forward slash).
+ *
+ * The returned fspath may be statically allocated or allocated from
+ * @a pool.
+ *
+ * @since New in 1.7.
+ */
+const char *
+svn_fspath__canonicalize(const char *fspath,
+                         apr_pool_t *pool);
+
 /** Return the dirname of @a fspath, defined as the path with its basename
  * removed.  If @a fspath is "/", return "/".
  *
@@ -101,6 +114,15 @@ svn_fspath__join(const char *fspath,
                  apr_pool_t *result_pool);
 
 
+/** Return TRUE if @a fspath (with length @a len) is the root
+ * directory; return FALSE otherwise.
+ *
+ * @since New in 1.7.
+ */
+svn_boolean_t
+svn_fspath__is_root(const char *fspath,
+                    apr_size_t len);
+
 /** Test if @a child_fspath is a child of @a parent_fspath.  If not, return
  * NULL.  If so, return the relpath which, if joined to @a parent_fspath,
  * would yield @a child_fspath.
@@ -149,6 +171,28 @@ char *
 svn_fspath__get_longest_ancestor(const char *fspath1,
                                  const char *fspath2,
                                  apr_pool_t *result_pool);
+
+
+
+
+/** A faux fspath API used by the DAV modules to help us distinguish
+ * between real URI-decoded fspaths and URI-encoded URL path-portions.
+ */
+#define svn_urlpath__basename             svn_fspath__basename
+#define svn_urlpath__dirname              svn_fspath__dirname
+#define svn_urlpath__get_longest_ancestor svn_fspath__get_longest_ancestor
+#define svn_urlpath__is_ancestor          svn_fspath__is_ancestor
+#define svn_urlpath__is_canonical         svn_fspath__is_canonical
+#define svn_urlpath__is_child             svn_fspath__is_child
+#define svn_urlpath__is_root              svn_fspath__is_root
+#define svn_urlpath__join                 svn_fspath__join
+#define svn_urlpath__skip_ancestor        svn_fspath__skip_ancestor
+#define svn_urlpath__split                svn_fspath__split
+
+/* Like svn_fspath__canonicalize(), but this one accepts both full
+   URLs and URL path-portions. */
+const char *
+svn_urlpath__canonicalize(const char *uri, apr_pool_t *pool);
 
 
 #ifdef __cplusplus

@@ -872,9 +872,7 @@ svn_wc_external_item_dup(const svn_wc_external_item_t *item,
 
 /**
  * If @a externals_p is non-NULL, set @a *externals_p to an array of
- * #svn_wc_external_item2_t * objects based on @a desc.  The @a url
- * member of the objects will be canonicalized if @a canonicalize_url
- * is @c TRUE.
+ * #svn_wc_external_item2_t * objects based on @a desc.
  *
  * If the format of @a desc is invalid, don't touch @a *externals_p and
  * return #SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION.  Thus, if
@@ -883,6 +881,15 @@ svn_wc_external_item_dup(const svn_wc_external_item_t *item,
  *
  * The format of @a desc is the same as for values of the directory
  * property #SVN_PROP_EXTERNALS.  Look there for more details.
+ *
+ * If @a canonicalize_url is @c TRUE, canonicalize the @a url member
+ * of those objects.  If the @a url member refers to an absolute URL,
+ * it will be canonicalized as URL consistent with the way URLs are
+ * canonicalized throughout the Subversion API.  If, however, the
+ * @a url member makes use of the recognized (and proprietary)
+ * relative URL syntax, "canonicalization" is a less easily-defined
+ * concept which may even result in munging the relative URL syntax
+ * beyond recognition.  You've been warned.
  *
  * Allocate the table, keys, and values in @a pool.
  *

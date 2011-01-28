@@ -41,6 +41,7 @@
 #include "../libsvn_ra/ra_loader.h"
 
 #include "private/svn_dav_protocol.h"
+#include "private/svn_fspath.h"
 #include "svn_private_config.h"
 
 #include "ra_neon.h"
@@ -413,7 +414,8 @@ static svn_error_t * end_element(void *baton, int state,
     case ELEM_href:
       /* Special handling for <href> that belongs to the <response> tag. */
       if (rsrc->href_parent == ELEM_response)
-        return assign_rsrc_url(pc->rsrc, svn_uri_canonicalize(cdata, pc->pool),
+        return assign_rsrc_url(pc->rsrc,
+                               svn_urlpath__canonicalize(cdata, pc->pool),
                                pc->pool);
 
       /* Use the parent element's name, not the href. */
@@ -425,7 +427,7 @@ static svn_error_t * end_element(void *baton, int state,
 
       /* All other href's we'll treat as property values. */
       name = parent_defn->name;
-      value = svn_string_create(svn_uri_canonicalize(cdata, pc->pool),
+      value = svn_string_create(svn_urlpath__canonicalize(cdata, pc->pool),
                                 pc->pool);
       break;
 
@@ -723,8 +725,10 @@ svn_ra_neon__search_for_starting_props(svn_ra_neon__resource_t **rsrc,
         return err;  /* found a _real_ error */
 
       /* else... lop off the basename and try again. */
+      /* ### TODO: path_s is an absolute, schema-less URI, but
+         ### technically not an FS_PATH. */
       svn_stringbuf_set(lopped_path,
-                        svn_path_join(svn_uri_basename(path_s->data, iterpool),
+                        svn_path_join(svn_path_basename(path_s->data, iterpool),
                                       lopped_path->data, iterpool));
 
       len = path_s->len;

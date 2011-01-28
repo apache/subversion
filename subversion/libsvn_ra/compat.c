@@ -33,6 +33,7 @@
 #include "svn_compat.h"
 #include "svn_props.h"
 
+#include "private/svn_fspath.h"
 #include "ra_loader.h"
 #include "svn_private_config.h"
 
@@ -673,16 +674,11 @@ svn_ra__file_revs_from_log(svn_ra_session_t *ra_session,
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_url, pool));
   SVN_ERR(svn_ra_get_session_url(ra_session, &session_url, pool));
 
-  /* Create the initial path, using the repos_url and session_url */
-  tmp = svn_uri_is_child(repos_url, session_url, pool);
-  repos_abs_path = apr_palloc(pool, strlen(tmp) + 1);
-  repos_abs_path[0] = '/';
-  memcpy(repos_abs_path + 1, tmp, strlen(tmp));
-
   condensed_targets = apr_array_make(pool, 1, sizeof(const char *));
   APR_ARRAY_PUSH(condensed_targets, const char *) = path;
 
-  lmb.path = svn_path_uri_decode(repos_abs_path, pool);
+  lmb.path = svn_fspath__canonicalize(svn_uri_is_child(repos_url, session_url,
+                                                       pool), pool);
   lmb.eldest = NULL;
   lmb.pool = pool;
 

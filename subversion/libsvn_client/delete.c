@@ -176,10 +176,10 @@ delete_urls(const apr_array_header_t *paths,
 
       for (i = 0; i < targets->nelts; i++)
         {
-          const char *path = APR_ARRAY_IDX(targets, i, const char *);
+          const char *relpath = APR_ARRAY_IDX(targets, i, const char *);
 
           item = svn_client_commit_item3_create(pool);
-          item->url = svn_uri_join(common, path, pool);
+          item->url = svn_path_url_add_component2(common, relpath, pool);
           item->state_flags = SVN_CLIENT_COMMIT_ITEM_DELETE;
           APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
         }
@@ -199,17 +199,14 @@ delete_urls(const apr_array_header_t *paths,
 
   /* Verify that each thing to be deleted actually exists (to prevent
      the creation of a revision that has no changes, since the
-     filesystem allows for no-op deletes).  While here, we'll
-     URI-decode our targets.  */
+     filesystem allows for no-op deletes).  */
   for (i = 0; i < targets->nelts; i++)
     {
-      const char *path = APR_ARRAY_IDX(targets, i, const char *);
+      const char *relpath = APR_ARRAY_IDX(targets, i, const char *);
       const char *item_url;
 
       svn_pool_clear(subpool);
-      item_url = svn_uri_join(common, path, subpool);
-      path = svn_path_uri_decode(path, pool);
-      APR_ARRAY_IDX(targets, i, const char *) = path;
+      item_url = svn_path_url_add_component2(common, relpath, subpool);
 
       /* If we've not yet done so, open an RA session for the
          URL. Note that we don't have a local directory, nor a place

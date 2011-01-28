@@ -39,6 +39,7 @@
 #include "svn_string.h"
 #include "svn_xml.h"
 #include "private/svn_dep_compat.h"
+#include "private/svn_fspath.h"
 
 #include "ra_serf.h"
 
@@ -914,7 +915,7 @@ svn_ra_serf__response_get_location(serf_bucket_t *response,
 
   headers = serf_bucket_response_get_headers(response);
   val = serf_bucket_headers_get(headers, "Location");
-  return val ? svn_ra_serf__uri_canonicalize(val, pool, pool) : NULL;
+  return val ? svn_urlpath__canonicalize(val, pool) : NULL;
 }
 
 /* Implements svn_ra_serf__response_handler_t */
@@ -1745,7 +1746,7 @@ svn_ra_serf__discover_vcc(const char **vcc_url,
                           apr_pool_t *pool)
 {
   apr_hash_t *props;
-  const char *path, *relative_path, *present_path = "", *uuid;
+  const char *path, *relative_path, *uuid;
 
   /* If we've already got the information our caller seeks, just return it.  */
   if (session->vcc_url && session->repos_root_str)
@@ -1800,14 +1801,13 @@ svn_ra_serf__discover_vcc(const char **vcc_url,
               /* This happens when the file is missing in HEAD. */
               svn_error_clear(err);
 
-              /* Okay, strip off. */
-              present_path = svn_uri_join(svn_uri_basename(path, pool),
-                                          present_path, pool);
-              path = svn_uri_dirname(path, pool);
+              /* Okay, strip off a component from PATH. */
+              path = svn_urlpath__dirname(path, pool);
             }
         }
     }
-  while (!svn_path_is_empty(path));
+  while ((path[0] != '\0')
+         && (! (path[0] == '/') && (path[1] == '\0')));
 
   if (!*vcc_url)
     {
@@ -1837,9 +1837,9 @@ svn_ra_serf__discover_vcc(const char **vcc_url,
       session->repos_root = session->repos_url;
       session->repos_root.path = apr_pstrdup(session->pool, url_buf->data);
       session->repos_root_str =
-        svn_ra_serf__uri_canonicalize(apr_uri_unparse(session->pool,
-                                                      &session->repos_root, 0),
-                                      pool, session->pool);
+        svn_urlpath__canonicalize(apr_uri_unparse(session->pool,
+                                                  &session->repos_root, 0),
+                                  session->pool);
     }
 
   /* Store the repository UUID in the cache. */
@@ -1884,7 +1884,7 @@ svn_ra_serf__get_relative_path(const char **rel_path,
     }
   else
     {
-      *rel_path = svn_uri_is_child(decoded_root, decoded_orig, pool);
+      *rel_path = svn_urlpath__is_child(decoded_root, decoded_orig, pool);
       SVN_ERR_ASSERT(*rel_path != NULL);
     }
   return SVN_NO_ERROR;
@@ -1933,36 +1933,4 @@ svn_ra_serf__error_on_status(int status_code,
     }
 
   return SVN_NO_ERROR;
-}
-
-
-static const char *
-relative_uri_normalize(const char *relpath,
-                       apr_pool_t *scratch_pool,
-                       apr_pool_t *result_pool)
-{
-  return svn_path_uri_encode(
-             svn_relpath_canonicalize(
-                 svn_path_uri_decode(relpath, scratch_pool),
-                 scratch_pool),
-             result_pool);
-}
-
-
-const char *
-svn_ra_serf__uri_canonicalize(const char *uri,
-                              apr_pool_t *scratch_pool,
-                              apr_pool_t *result_pool)
-{
-  if (svn_path_is_url(uri))
-    return svn_uri_canonicalize(uri, result_pool);
-
-  if (uri[0] == '/')
-    return apr_pstrcat(result_pool, "/", 
-                       relative_uri_normalize(uri + 1,
-                                              scratch_pool,
-                                              scratch_pool),
-                       NULL);
-  
-  return relative_uri_normalize(uri, scratch_pool, result_pool);
 }

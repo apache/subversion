@@ -1296,17 +1296,6 @@ svn_cl__node_description(const svn_wc_conflict_version_t *node,
                       node->peg_rev);
 }
 
-const char *
-svn_cl__path_join(const char *base,
-                  const char *component,
-                  apr_pool_t *pool)
-{
-  if (svn_path_is_url(base))
-    return svn_uri_join(base, component, pool);
-  else
-    return svn_dirent_join(base, component, pool);
-}
-
 svn_error_t *
 svn_cl__eat_peg_revisions(apr_array_header_t **true_targets_p,
                           const apr_array_header_t *targets,
