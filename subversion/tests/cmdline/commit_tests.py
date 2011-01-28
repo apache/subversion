@@ -1273,7 +1273,8 @@ def commit_with_lock(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         None,
                                         None,
-                                        'svn: Working copy \'.*\' locked',
+                                        'svn: E155004: '
+                                        'Working copy \'.*\' locked',
                                         wc_dir)
 
   # unlock directory
@@ -2445,7 +2446,8 @@ def set_invalid_revprops(sbox):
 
   # Empty revprop pair.
   svntest.actions.run_and_verify_svn(None, [],
-                                     'svn: Revision property pair is empty',
+                                     'svn: E205000: '
+                                     'Revision property pair is empty',
                                      'mkdir', '-m', 'msg',
                                      '--with-revprop', '',
                                      remote_dir)
@@ -2482,7 +2484,7 @@ def start_commit_hook_test(sbox):
   # contain source code file and line numbers.
   if len(actual_stderr) > 2:
     actual_stderr = actual_stderr[-2:]
-  expected_stderr = [ "svn: " +
+  expected_stderr = [ "svn: E165001: " +
                         svntest.actions.hook_failure_message('start-commit'),
                       error_msg + "\n",
                     ]
@@ -2522,7 +2524,7 @@ def pre_commit_hook_test(sbox):
   # contain source code file and line numbers.
   if len(actual_stderr) > 2:
     actual_stderr = actual_stderr[-2:]
-  expected_stderr = [ "svn: " +
+  expected_stderr = [ "svn: E165001: " +
                         svntest.actions.hook_failure_message('pre-commit'),
                       error_msg + "\n",
                     ]
@@ -2676,7 +2678,7 @@ def commit_url(sbox):
   url = sbox.repo_url
 
   # Commit directly to a URL
-  expected_error = ("svn: '" + url +
+  expected_error = ("svn: E205000: '" + url +
                     "' is a URL, but URLs cannot be commit targets")
   svntest.actions.run_and_verify_commit(None,
                                         None,

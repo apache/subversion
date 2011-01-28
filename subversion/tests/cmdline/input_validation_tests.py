@@ -87,14 +87,14 @@ def invalid_wcpath_commit(sbox):
   "non-working copy paths for 'commit'"
   sbox.build(read_only=True)
   for target in _invalid_wc_path_targets:
-    run_and_verify_svn_in_wc(sbox, "svn: '.*' is a URL, but URLs cannot be " +
+    run_and_verify_svn_in_wc(sbox, "svn: E205000: '.*' is a URL, but URLs cannot be " +
                              "commit targets", 'commit', target)
 
 def invalid_copy_sources(sbox):
   "invalid sources for 'copy'"
   sbox.build(read_only=True)
   for (src1, src2) in [("iota", "^/"), ("^/", "iota"), ("file://", "iota")]:
-    run_and_verify_svn_in_wc(sbox, "svn: Cannot mix repository and working " +
+    run_and_verify_svn_in_wc(sbox, "svn: E200007: Cannot mix repository and working " +
                              "copy sources", 'copy', src1, src2, "A")
 
 def invalid_copy_target(sbox):
@@ -102,30 +102,30 @@ def invalid_copy_target(sbox):
   sbox.build(read_only=True)
   mu_path = os.path.join('A', 'mu')
   C_path = os.path.join('A', 'C')
-  run_and_verify_svn_in_wc(sbox, "svn: Path '.*' is not a directory",
+  run_and_verify_svn_in_wc(sbox, "svn: E155007: Path '.*' is not a directory",
                            'copy', mu_path, C_path, "iota")
 
 def invalid_delete_targets(sbox):
   "invalid targets for 'delete'"
   sbox.build(read_only=True)
   for (target1, target2) in [("iota", "^/"), ("file://", "iota")]:
-    run_and_verify_svn_in_wc(sbox, "svn: Cannot mix repository and working "
+    run_and_verify_svn_in_wc(sbox, "svn: E205000: Cannot mix repository and working "
                              "copy targets", 'delete', target1, target2)
 
 def invalid_diff_targets(sbox):
   "invalid targets for 'diff'"
   sbox.build(read_only=True)
   for (target1, target2) in [("iota", "^/"), ("file://", "iota")]:
-    run_and_verify_svn_in_wc(sbox, "svn: Cannot mix repository and working "
+    run_and_verify_svn_in_wc(sbox, "svn: E205000: Cannot mix repository and working "
                              "copy targets", 'diff', target1, target2)
-  run_and_verify_svn_in_wc(sbox, "svn: Summarizing diff can only compare "
+  run_and_verify_svn_in_wc(sbox, "svn: E200007: Summarizing diff can only compare "
                            "repository to repository",
                            'diff', '--summarize', "iota", "A")
 
 def invalid_export_targets(sbox):
   "invalid targets for 'export'"
   sbox.build(read_only=True)
-  run_and_verify_svn_in_wc(sbox, "svn: Can't create directory 'iota':.*",
+  run_and_verify_svn_in_wc(sbox, "svn: E000017: Can't create directory 'iota':.*",
                            'export', '.', 'iota')
   for target in ["^/", "file://"]:
     run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path",
@@ -138,32 +138,32 @@ def invalid_import_args(sbox):
                            'import', '^/', '^/')
   run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path",
                            'import', '^/', 'iota')
-  run_and_verify_svn_in_wc(sbox, "svn: Invalid URL 'iota'",
+  run_and_verify_svn_in_wc(sbox, "svn: E205000: Invalid URL 'iota'",
                            'import', 'iota', 'iota')
 
 def invalid_log_targets(sbox):
   "invalid targets for 'log'"
   sbox.build(read_only=True)
   for (target1, target2) in [('^/', '/a/b/c'), ('^/', '^/'), ('^/', 'file://')]:
-    run_and_verify_svn_in_wc(sbox, "svn: Only relative paths can be " +
+    run_and_verify_svn_in_wc(sbox, "svn: E205000: Only relative paths can be " +
                              "specified after a URL for 'svn log', but.*is " +
                              "not a relative path", 'log', target1, target2)
 
 def invalid_merge_args(sbox):
   "invalid arguments for 'merge'"
   sbox.build(read_only=True)
-  run_and_verify_svn_in_wc(sbox, "svn: A working copy merge source needs "
+  run_and_verify_svn_in_wc(sbox, "svn: E195002: A working copy merge source needs "
                            "an explicit revision", 'merge', 'iota', '^/')
   for (src, target) in [('iota@HEAD', '^/'), ('iota@BASE', 'file://')]:
-    run_and_verify_svn_in_wc(sbox, "svn: Merge sources must both be either "
+    run_and_verify_svn_in_wc(sbox, "svn: E205000: Merge sources must both be either "
                              "paths or URLs", 'merge', src, target)
-  run_and_verify_svn_in_wc(sbox, "svn: Path '.*' does not exist",
+  run_and_verify_svn_in_wc(sbox, "svn: E155010: Path '.*' does not exist",
                            'merge', 'iota@BASE', 'iota@HEAD', 'nonexistent')
-  run_and_verify_svn_in_wc(sbox, "svn: Too many arguments given",
+  run_and_verify_svn_in_wc(sbox, "svn: E205000: Too many arguments given",
                           'merge', '-c42', '^/A/B', '^/A/C', 'iota')
-  run_and_verify_svn_in_wc(sbox, "svn: Cannot specify a revision range with" +
+  run_and_verify_svn_in_wc(sbox, "svn: E205000: Cannot specify a revision range with" +
                            " two URLs", 'merge', '-c42', '^/mu', '^/')
-  run_and_verify_svn_in_wc(sbox, "svn: Path '.*' does not exist",
+  run_and_verify_svn_in_wc(sbox, "svn: E155010: Path '.*' does not exist",
                            'merge', '-c42', '^/mu', 'nonexistent')
 
 def invalid_wcpath_upgrade(sbox):
@@ -198,14 +198,14 @@ def invalid_lock_targets(sbox):
   "wc paths and repo URL target mixture for 'lock'"
   sbox.build(read_only=True)
   for (target1, target2) in [("iota", "^/"), ("file://", "iota")]:
-    run_and_verify_svn_in_wc(sbox, "svn: Cannot mix repository and working "
+    run_and_verify_svn_in_wc(sbox, "svn: E205000: Cannot mix repository and working "
                              "copy targets", 'lock', target1, target2)
 
 def invalid_unlock_targets(sbox):
   "wc paths and repo URL target mixture for 'unlock'"
   sbox.build(read_only=True)
   for (target1, target2) in [("iota", "^/"), ("file://", "iota")]:
-    run_and_verify_svn_in_wc(sbox, "svn: Cannot mix repository and working "
+    run_and_verify_svn_in_wc(sbox, "svn: E205000: Cannot mix repository and working "
                              "copy targets", 'unlock', target1, target2)
 
 def invalid_status_targets(sbox):
@@ -239,7 +239,7 @@ def invalid_relocate_targets(sbox):
 def invalid_mkdir_targets(sbox):
   "invalid targets for 'mkdir'"
   sbox.build(read_only=True)
-  run_and_verify_svn_in_wc(sbox, "svn: Cannot mix repository and working "
+  run_and_verify_svn_in_wc(sbox, "svn: E205000: Cannot mix repository and working "
                            "copy targets", 'mkdir', "folder", "^/folder")
 
 def invalid_update_targets(sbox):

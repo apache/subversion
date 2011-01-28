@@ -2334,7 +2334,7 @@ def exclude_keeps_hidden_entries(sbox):
   svntest.main.run_svn(None, 'up', '--set-depth', 'exclude', 'D')
   # we could grep the 'entries' file, but...
   # or we could use 'info', but info_excluded() is XFail.
-  expected_stderr = ".*svn: '.*C' is already under version control.*"
+  expected_stderr = ".*svn: E150002: '.*C' is already under version control.*"
   svntest.actions.run_and_verify_svn(None, None, expected_stderr,
                                      'mkdir', 'C')
 
