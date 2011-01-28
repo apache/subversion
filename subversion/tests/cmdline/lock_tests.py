@@ -359,7 +359,7 @@ def enforce_lock(sbox):
   # svn:needs-lock value should be forced to a '*'
   svntest.actions.set_prop('svn:needs-lock', 'foo', iota_path)
   svntest.actions.set_prop('svn:needs-lock', '*', lambda_path)
-  expected_err = ".*svn: warning: To turn off the svn:needs-lock property,.*"
+  expected_err = ".*svn: warning: W125005: To turn off the svn:needs-lock property,.*"
   svntest.actions.set_prop('svn:needs-lock', '      ', mu_path, expected_err)
 
   # Check svn:needs-lock
@@ -967,11 +967,11 @@ def lock_and_exebit1(sbox):
 
   gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
 
-  expected_err = ".*svn: warning: To turn off the svn:needs-lock property,.*"
+  expected_err = ".*svn: warning: W125005: To turn off the svn:needs-lock property,.*"
   svntest.actions.run_and_verify_svn2(None, None, expected_err, 0,
                                       'ps', 'svn:needs-lock', ' ', gamma_path)
 
-  expected_err = ".*svn: warning: To turn off the svn:executable property,.*"
+  expected_err = ".*svn: warning: W125005: To turn off the svn:executable property,.*"
   svntest.actions.run_and_verify_svn2(None, None, expected_err, 0,
                                       'ps', 'svn:executable', ' ', gamma_path)
 
@@ -1043,11 +1043,11 @@ def lock_and_exebit2(sbox):
 
   gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
 
-  expected_err = ".*svn: warning: To turn off the svn:needs-lock property,.*"
+  expected_err = ".*svn: warning: W125005: To turn off the svn:needs-lock property,.*"
   svntest.actions.run_and_verify_svn2(None, None, expected_err, 0,
                                       'ps', 'svn:needs-lock', ' ', gamma_path)
 
-  expected_err = ".*svn: warning: To turn off the svn:executable property,.*"
+  expected_err = ".*svn: warning: W125005: To turn off the svn:executable property,.*"
   svntest.actions.run_and_verify_svn2(None, None, expected_err, 0,
                                      'ps', 'svn:executable', ' ', gamma_path)
 
@@ -1390,7 +1390,7 @@ def unlocked_lock_of_other_user(sbox):
   if sbox.repo_url.startswith("http"):
     expected_err = ".*403 Forbidden.*"
   else:
-    expected_err = "svn: warning: User '%s' is trying to use a lock owned by "\
+    expected_err = "svn: warning: W160039: User '%s' is trying to use a lock owned by "\
                    "'%s'.*" % (svntest.main.wc_author2, svntest.main.wc_author)
   svntest.actions.run_and_verify_svn2(None, [], expected_err, 0,
                                       'unlock',

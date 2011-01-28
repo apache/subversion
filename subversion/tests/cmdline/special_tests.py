@@ -153,7 +153,7 @@ def replace_file_with_symlink(sbox):
                                                                'log msg',
                                                                wc_dir)
 
-  regex = 'svn: Commit failed'
+  regex = 'svn: E145001: Commit failed'
   for line in stderr_lines:
     if re.match(regex, line):
       break
@@ -305,7 +305,7 @@ def replace_symlink_with_file(sbox):
                                                                'log msg',
                                                                wc_dir)
 
-  regex = 'svn: Commit failed'
+  regex = 'svn: E145001: Commit failed'
   for line in stderr_lines:
     if re.match(regex, line):
       break
@@ -624,7 +624,7 @@ def warn_on_reserved_name(sbox):
   svntest.actions.run_and_verify_svn(
     "Locking a file with a reserved name failed to result in an error",
     None,
-    ".*Skipping argument: '.+' ends in a reserved name.*",
+    ".*Skipping argument: E200025: '.+' ends in a reserved name.*",
     'lock', reserved_path)
 
 

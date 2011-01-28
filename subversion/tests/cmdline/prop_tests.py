@@ -674,18 +674,18 @@ def inappropriate_props(sbox):
 
   # ...grammatically incorrect
   svntest.actions.run_and_verify_svn('illegal grammar', None,
-                                     "svn: Pathname not terminated by ':'\n",
+                                     "svn: E200020: Pathname not terminated by ':'\n",
                                      'propset', SVN_PROP_MERGEINFO, '/trunk',
                                      path)
   svntest.actions.run_and_verify_svn('illegal grammar', None,
-                                     "svn: Invalid revision number found "
+                                     "svn: E200022: Invalid revision number found "
                                       "parsing 'one'\n",
                                      'propset', SVN_PROP_MERGEINFO,
                                      '/trunk:one', path)
 
   # ...contain overlapping revision ranges of differing inheritability.
   svntest.actions.run_and_verify_svn('overlapping ranges', None,
-                                     "svn: Unable to parse overlapping "
+                                     "svn: E200020: Unable to parse overlapping "
                                      "revision ranges '9-20\\*' and "
                                      "'18-22' with different "
                                      "inheritance types\n",
@@ -693,7 +693,7 @@ def inappropriate_props(sbox):
                                      '/branch:5-7,9-20*,18-22', path)
 
   svntest.actions.run_and_verify_svn('overlapping ranges', None,
-                                     "svn: Unable to parse overlapping "
+                                     "svn: E200020: Unable to parse overlapping "
                                      "revision ranges "
                                      "(('3' and '3\\*')|('3\\*' and '3')) "
                                      "with different "
@@ -704,21 +704,21 @@ def inappropriate_props(sbox):
   # ...contain revision ranges with start revisions greater than or
   #    equal to end revisions.
   svntest.actions.run_and_verify_svn('range start >= range end', None,
-                                     "svn: Unable to parse reversed "
+                                     "svn: E200020: Unable to parse reversed "
                                       "revision range '20-5'\n",
                                      'propset', SVN_PROP_MERGEINFO,
                                      '/featureX:4,20-5', path)
 
   # ...contain paths mapped to empty revision ranges
   svntest.actions.run_and_verify_svn('empty ranges', None,
-                                     "svn: Mergeinfo for '/trunk' maps to "
+                                     "svn: E200020: Mergeinfo for '/trunk' maps to "
                                       "an empty revision range\n",
                                      'propset', SVN_PROP_MERGEINFO,
                                      '/trunk:', path)
 
   # ...contain non-inheritable ranges when the target is a file.
   svntest.actions.run_and_verify_svn('empty ranges', None,
-                                     "svn: Cannot set non-inheritable "
+                                     "svn: E200020: Cannot set non-inheritable "
                                      "mergeinfo on a non-directory*",
                                      'propset', SVN_PROP_MERGEINFO,
                                      '/A/D/H/psi:1*', iota_path)
@@ -1711,7 +1711,7 @@ def post_revprop_change_hook(sbox):
 
   # serf/neon/mod_dav_svn splits the "svn: hook failed" line
   expected_error = svntest.verify.RegexOutput([
-    '(svn: |)post-revprop-change hook failed',
+    '(svn: E165001: |)post-revprop-change hook failed',
     error_msg + "\n",
   ], match_all = False)
 

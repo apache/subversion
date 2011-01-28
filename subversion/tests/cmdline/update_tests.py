@@ -2311,7 +2311,7 @@ def forced_update_failures(sbox):
 
   # svn up --force wc_dir_backup/A/C
   expected_error = (
-    "svn: Failed to add directory .*I.*working copy with the same name "
+    "svn: E155000: Failed to add directory .*I.*working copy with the same name "
     + "already exists"
   )
 
@@ -5092,7 +5092,7 @@ def update_wc_of_dir_to_rev_not_containing_this_dir(sbox):
 
   # Try to update working copy of 'A' directory
   svntest.actions.run_and_verify_svn(None, None,
-                                     "svn: Target path '/A' does not exist",
+                                     "svn: E160005: Target path '/A' does not exist",
                                      "up", other_wc_dir)
 
 #----------------------------------------------------------------------

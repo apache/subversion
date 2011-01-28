@@ -791,7 +791,7 @@ def status_on_unversioned_dotdot(sbox):
 
   exit_code, out, err = svntest.main.run_svn(1, 'st', '..')
   for line in err:
-    if line.find('svn: warning: \'..\' is not a working copy') != -1:
+    if line.find('svn: warning: W155007: \'..\' is not a working copy') != -1:
       break
   else:
     raise svntest.Failure
@@ -964,7 +964,7 @@ def status_unversioned_dir(sbox):
   "status on unversioned dir (issue 2030)"
   sbox.build(read_only = True)
   dir = sbox.repo_dir
-  expected_err = "svn: warning: '.*(/|\\\\)" + os.path.basename(dir) + \
+  expected_err = "svn: warning: W155007: '.*(/|\\\\)" + os.path.basename(dir) + \
                  "' is not a working copy"
   svntest.actions.run_and_verify_svn2(None, [], expected_err, 0,
                                       "status", dir, dir)

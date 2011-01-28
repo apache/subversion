@@ -113,12 +113,12 @@ def cat_skip_uncattable(sbox):
       continue
     item_to_cat = os.path.join(dir_path, file)
     if item_to_cat == new_file_path:
-      expected_err = ["svn: warning: '" + os.path.abspath(item_to_cat) + "'" + \
+      expected_err = ["svn: warning: W200005: '" + os.path.abspath(item_to_cat) + "'" + \
                      " is not under version control\n"]
       svntest.actions.run_and_verify_svn2(None, None, expected_err, 0,
                                           'cat', item_to_cat)
     elif os.path.isdir(item_to_cat):
-      expected_err = ["svn: warning: '" + os.path.abspath(item_to_cat) + "'" + \
+      expected_err = ["svn: warning: W195007: '" + os.path.abspath(item_to_cat) + "'" + \
                      " refers to a directory\n"]
       svntest.actions.run_and_verify_svn2(None, None, expected_err, 0,
                                           'cat', item_to_cat)
@@ -131,12 +131,12 @@ def cat_skip_uncattable(sbox):
   rho_path = os.path.join(G_path, 'rho')
 
   expected_out = ["This is the file 'rho'.\n"]
-  expected_err1 = ["svn: warning: '" + os.path.abspath(G_path) + "'"
+  expected_err1 = ["svn: warning: W195007: '" + os.path.abspath(G_path) + "'"
                    + " refers to a directory\n"]
   svntest.actions.run_and_verify_svn2(None, expected_out, expected_err1, 0,
                                       'cat', rho_path, G_path)
 
-  expected_err2 = ["svn: warning: '" + os.path.abspath(new_file_path) + "'"
+  expected_err2 = ["svn: warning: W200005: '" + os.path.abspath(new_file_path) + "'"
                    + " is not under version control\n"]
   svntest.actions.run_and_verify_svn2(None, expected_out, expected_err2, 0,
                                       'cat', rho_path, new_file_path)
@@ -162,7 +162,7 @@ def cat_unversioned_file(sbox):
                                       iota_path)
 
   # Now try to cat the deleted file, it should be reported as unversioned.
-  expected_error = ["svn: warning: '" + os.path.abspath(iota_path) + "'"
+  expected_error = ["svn: warning: W200005: '" + os.path.abspath(iota_path) + "'"
                     + " is not under version control\n"]
   svntest.actions.run_and_verify_svn2(None, [], expected_error, 0,
                                       'cat', iota_path)
@@ -204,7 +204,7 @@ def cat_url_special_characters(sbox):
   special_urls = [sbox.repo_url + '/A' + '/%2E',
                   sbox.repo_url + '%2F' + 'A']
 
-  expected_err = ["svn: warning: URL '" + sbox.repo_url + '/A'  + "'"
+  expected_err = ["svn: warning: W195007: URL '" + sbox.repo_url + '/A'  + "'"
                    + " refers to a directory\n"]
 
   for url in special_urls:
