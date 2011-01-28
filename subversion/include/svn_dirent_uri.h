@@ -68,31 +68,62 @@
  *    - @c svn_uri_canonicalize()
  *    - @c svn_uri_is_canonical()
  *
- * The Subversion codebase also recognizes another class of path.  A
- * Subversion filesystem path (fspath) -- otherwise known as a path
- * within a repository -- is a path relative to the root of the
- * repository filesystem, that starts with a slash ("/").  The rules
- * for a fspath are the same as for a relpath except for the leading
- * '/'.  A fspath never ends with '/' except when the whole path is
- * just '/'.  The fspath API is private (see private/svn_fspath.h).
+ * The Subversion codebase also recognizes some other classes of path:
  *
- * Code that works with a path-in-repository should use, in order of
- * preference: a relpath (preferred), or a fspath (widely used by legacy
- * code), or a relative URI (not recommended except in the context of
- * splitting or joining to a full URL).
+ *  - A Subversion filesystem path (fspath) -- otherwise known as a
+ *    path within a repository -- is a path relative to the root of
+ *    the repository filesystem, that starts with a slash ("/").  The
+ *    rules for a fspath are the same as for a relpath except for the
+ *    leading '/'.  A fspath never ends with '/' except when the whole
+ *    path is just '/'.  The fspath API is private (see
+ *    private/svn_fspath.h).
  *
- * All code that works with local files, MUST USE the dirent apis.
+ *  - A URL path (urlpath) is just the path part of a URL (the part
+ *    that follows the schema, username, hostname, and port).  These
+ *    are also like relpaths, except that they have a leading slash
+ *    (like fspaths) and are URI-encoded.  The urlpath API is also
+ *    private (see private/svn_fspath.h)
+ *    Example:
+ *       "/svn/repos/trunk/README",
+ *       "/svn/repos/!svn/bc/45/file%20with%20spaces.txt"
+ *
+ * So, which path API is appropriate for your use-case?
+ *
+ *  - If your path refers to a local file, directory, symlink, etc. of
+ *    the sort that you can examine and operate on with other software
+ *    on your computer, it's a dirent.
+ *
+ *  - If your path is a full URL -- with a schema, hostname (maybe),
+ *    and path portion -- it's a uri.
+ *
+ *  - If your path is relative, and is somewhat ambiguous unless it's
+ *    joined to some other more explicit (possible absolute) base
+ *    (such as a dirent or URL), it's a relpath.
+ *
+ *  - If your path is the virtual path of a versioned object inside a
+ *    Subversion repository, it could be one of two different types of
+ *    paths.  We'd prefer to use relpaths (relative to the root
+ *    directory of the virtual repository filesystem) for that stuff,
+ *    but some legacy code uses fspaths.  You'll need to figure out if
+ *    your code expects repository paths to have a leading '/' or not.
+ *    If so, they are fspaths; otherwise they are relpaths.
+ *
+ *  - If your path refers only to the path part of URL -- as if
+ *    someone hacked off the initial schema and hostname portion --
+ *    it's a urlpath.  To date, the ra_dav modules are the only ones
+ *    within Subversion that make use of urlpaths, and this is because
+ *    WebDAV makes heavy use of that form of path specification.
  *
  * When translating between local paths (dirents) and uris code should
- * always go via the relative path format.
- * E.g.
- *  - by truncating a parent portion from a path with svn_*_skip_ancestor(),
- *  - or by converting portions to basenames and then joining to existing paths.
+ * always go via the relative path format, perhaps by truncating a
+ * parent portion from a path with svn_*_skip_ancestor(), or by
+ * converting portions to basenames and then joining to existing
+ * paths.
  *
- * SECURITY WARNING: If a path that is received from an untrusted source -like
- * from the network- is converted to a dirent it should be tested with
- * svn_dirent_is_under_root() before you can assume the path to be a safe local
- * path.
+ * SECURITY WARNING: If a path that is received from an untrusted
+ * source -- such as from the network -- is converted to a dirent it
+ * should be tested with svn_dirent_is_under_root() before you can
+ * assume the path to be a safe local path.
  */
 
 #ifndef SVN_DIRENT_URI_H
