@@ -1389,12 +1389,27 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
               && strcmp(name, SVN_PROP_REVISION_LOG) != 0)
             want_custom_revprops = TRUE;
         }
+      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)!"));
+    }
+  else
+    {
+      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!w()!", "all-revprops"));
+      want_custom_revprops = TRUE;
+    }
+
+  if (ignored_prop_mods)
+    {
+      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!(!"));
+      for (i = 0; i < ignored_prop_mods->nelts; i++)
+        {
+          name = APR_ARRAY_IDX(ignored_prop_mods, i, char *);
+          SVN_ERR(svn_ra_svn_write_cstring(conn, pool, name));
+        }
       SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
     }
   else
     {
-      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!w())", "all-revprops"));
-      want_custom_revprops = TRUE;
+      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!())"));
     }
 
   SVN_ERR(handle_auth_request(sess_baton, pool));

@@ -1984,17 +1984,20 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   const char *full_path;
   svn_boolean_t changed_paths, strict_node, include_merged_revisions;
   apr_array_header_t *paths, *full_paths, *revprop_items, *revprops;
+  apr_array_header_t *ignored_prop_mods_items;
+  apr_array_header_t *ignored_prop_mods;
   char *revprop_word;
   svn_ra_svn_item_t *elt;
   int i;
   apr_uint64_t limit, include_merged_revs_param;
   log_baton_t lb;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)(?r)bb?n?Bwl", &paths,
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)(?r)bb?n?Bwl?l", &paths,
                                  &start_rev, &end_rev, &changed_paths,
                                  &strict_node, &limit,
                                  &include_merged_revs_param,
-                                 &revprop_word, &revprop_items));
+                                 &revprop_word, &revprop_items,
+                                 &ignored_prop_mods_items));
 
   if (include_merged_revs_param == SVN_RA_SVN_UNSPECIFIED_NUMBER)
     include_merged_revisions = FALSE;
@@ -2027,6 +2030,25 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                              _("Unknown revprop word '%s' in log command"),
                              revprop_word);
 
+  if (ignored_prop_mods_items)
+    {
+      ignored_prop_mods = apr_array_make(pool, ignored_prop_mods_items->nelts,
+                                         sizeof(char *));
+      for (i = 0; i < ignored_prop_mods_items->nelts; i++)
+        {
+          elt = &APR_ARRAY_IDX(ignored_prop_mods_items, i, svn_ra_svn_item_t);
+          if (elt->kind != SVN_RA_SVN_STRING)
+            return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                                    _("Propname entry not a string"));
+          APR_ARRAY_PUSH(ignored_prop_mods, const char *) =
+                                                        elt->u.string->data;
+        }
+    }
+  else
+    {
+      ignored_prop_mods = NULL;
+    }
+
   /* If we got an unspecified number then the user didn't send us anything,
      so we assume no limit.  If it's larger than INT_MAX then someone is
      messing with us, since we know the svn client libraries will never send
@@ -2057,11 +2079,11 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   lb.fs_path = b->fs_path->data;
   lb.conn = conn;
   lb.stack_depth = 0;
-  err = svn_repos_get_logs4(b->repos, full_paths, start_rev, end_rev,
+  err = svn_repos_get_logs5(b->repos, full_paths, start_rev, end_rev,
                             (int) limit, changed_paths, strict_node,
-                            include_merged_revisions, revprops,
-                            authz_check_access_cb_func(b), b, log_receiver,
-                            &lb, pool);
+                            include_merged_revisions, ignored_prop_mods,
+                            revprops, authz_check_access_cb_func(b), b,
+                            log_receiver, &lb, pool);
 
   write_err = svn_ra_svn_write_word(conn, pool, "done");
   if (write_err)
