@@ -39,6 +39,7 @@
 #include "svn_dav.h"
 #include "svn_props.h"
 #include "private/svn_log.h"
+#include "private/svn_fspath.h"
 
 #include "../dav_svn.h"
 
@@ -178,19 +179,19 @@ make_child_baton(item_baton_t *parent, const char *path, apr_pool_t *pool)
   baton->parent = parent;
 
   /* Telescope the path based on uc->anchor.  */
-  baton->path = svn_uri_join(parent->path, baton->name, pool);
+  baton->path = svn_fspath__join(parent->path, baton->name, pool);
 
   /* Telescope the path based on uc->dst_path in the exact same way. */
-  baton->path2 = svn_uri_join(parent->path2, baton->name, pool);
+  baton->path2 = svn_fspath__join(parent->path2, baton->name, pool);
 
   /* Telescope the third path:  it's relative, not absolute, to
      dst_path.  Now, we gotta be careful here, because if this
      operation had a target, and we're it, then we have to use the
      basename of our source reflection instead of our own.  */
   if ((*baton->uc->target) && (! parent->parent))
-    baton->path3 = svn_path_join(parent->path3, baton->uc->target, pool);
+    baton->path3 = svn_relpath_join(parent->path3, baton->uc->target, pool);
   else
-    baton->path3 = svn_path_join(parent->path3, baton->name, pool);
+    baton->path3 = svn_relpath_join(parent->path3, baton->name, pool);
 
   return baton;
 }

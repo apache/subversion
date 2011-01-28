@@ -32,6 +32,7 @@
 #include "svn_dirent_uri.h"
 
 #include "private/svn_dav_protocol.h"
+#include "private/svn_fspath.h"
 #include "svn_private_config.h"
 
 #include "ra_serf.h"
@@ -344,7 +345,7 @@ end_propfind(svn_ra_serf__xml_parser_t *parser,
           if (strcmp(ctx->depth, "1") == 0)
             {
               ctx->current_path =
-                svn_ra_serf__uri_canonicalize(info->val, ctx->pool, ctx->pool);
+                svn_urlpath__canonicalize(info->val, ctx->pool);
             }
           else
             {
@@ -1034,8 +1035,7 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
                                         "the requested checked-in value"));
             }
 
-          baseline_url = svn_ra_serf__uri_canonicalize(baseline_url,
-                                                       pool, pool);
+          baseline_url = svn_urlpath__canonicalize(baseline_url, pool);
 
           SVN_ERR(svn_ra_serf__retrieve_props(props, session, conn,
                                               baseline_url, revision, "0",
@@ -1052,8 +1052,7 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
                                     "requested baseline-collection value"));
         }
 
-      basecoll_url = svn_ra_serf__uri_canonicalize(basecoll_url,
-                                                   pool, pool);
+      basecoll_url = svn_urlpath__canonicalize(basecoll_url, pool);
 
       if (latest_revnum)
         {

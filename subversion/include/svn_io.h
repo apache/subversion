@@ -738,7 +738,7 @@ svn_io_dir_file_copy(const char *src_path,
  *
  * In Subversion 1.7 reset support was added as an optional feature of
  * streams. If a stream implements resetting it allows reading the data
- * again after a successfull call to svn_stream_reset().
+ * again after a successful call to svn_stream_reset().
  */
 typedef struct svn_stream_t svn_stream_t;
 
@@ -1304,7 +1304,7 @@ svn_io_remove_file(const char *path,
  * doesn't exist.  Use @a pool for temporary allocations.
  *
  * Because recursive delete of a directory tree can be a lengthy operation,
- * provide @a cancel_func and @a cancel_baton for interruptability.
+ * provide @a cancel_func and @a cancel_baton for interruptibility.
  *
  * @since New in 1.5.
  */

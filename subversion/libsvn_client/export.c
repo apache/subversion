@@ -110,16 +110,15 @@ append_basename_if_dir(const char **appendable_dirent_p,
   SVN_ERR(svn_io_check_resolved_path(*appendable_dirent_p, &local_kind, pool));
   if (local_kind == svn_node_dir)
     {
-      const char *basename2; /* _2 because it shadows basename() */
+      const char *base_name;
 
       if (is_uri)
-        basename2 = svn_path_uri_decode(svn_uri_basename(basename_of, NULL), pool);
+        base_name = svn_uri_basename(basename_of, pool);
       else
-        basename2 = svn_dirent_basename(basename_of, NULL);
+        base_name = svn_dirent_basename(basename_of, NULL);
 
       *appendable_dirent_p = svn_dirent_join(*appendable_dirent_p,
-                                             basename2,
-                                             pool);
+                                             base_name, pool);
     }
 
   return SVN_NO_ERROR;
@@ -984,6 +983,7 @@ svn_client_export5(svn_revnum_t *result_rev,
 {
   svn_revnum_t edit_revision = SVN_INVALID_REVNUM;
   const char *url;
+  svn_boolean_t from_is_url = svn_path_is_url(from_path_or_url);
 
   SVN_ERR_ASSERT(peg_revision != NULL);
   SVN_ERR_ASSERT(revision != NULL);
@@ -996,8 +996,7 @@ svn_client_export5(svn_revnum_t *result_rev,
                                                         from_path_or_url);
   revision = svn_cl__rev_default_to_peg(revision, peg_revision);
 
-  if (svn_path_is_url(from_path_or_url) ||
-      ! SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(revision->kind))
+  if (from_is_url || ! SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(revision->kind))
     {
       svn_revnum_t revnum;
       svn_ra_session_t *ra_session;
@@ -1036,14 +1035,16 @@ svn_client_export5(svn_revnum_t *result_rev,
 
           if (svn_path_is_empty(to_path))
             {
-              to_path = svn_path_uri_decode(svn_uri_basename(from_path_or_url,
-                                                             NULL), pool);
+              if (from_is_url)
+                to_path = svn_uri_basename(from_path_or_url, pool);
+              else
+                to_path = svn_dirent_basename(from_path_or_url, NULL);
               eb->root_path = to_path;
             }
           else
             {
               SVN_ERR(append_basename_if_dir(&to_path, from_path_or_url,
-                                             TRUE, pool));
+                                             from_is_url, pool));
               eb->root_path = to_path;
             }
 

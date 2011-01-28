@@ -93,11 +93,18 @@ summarize_xml(const svn_client_diff_summarize_t *summary,
 
   /* Tack on the target path, so we can differentiate between different parts
    * of the output when we're given multiple targets. */
-  path = svn_cl__path_join(path, summary->path, pool);
+  if (svn_path_is_url(path))
+    {
+      path = svn_path_url_add_component2(path, summary->path, pool);
+    }
+  else
+    {
+      path = svn_dirent_join(path, summary->path, pool);
 
-  /* Convert non-urls to local style, so that things like "" show up as "." */
-  if (! svn_path_is_url(path))
-    path = svn_dirent_local_style(path, pool);
+      /* Convert non-urls to local style, so that things like "" 
+         show up as "." */
+      path = svn_dirent_local_style(path, pool);
+    }
 
   svn_xml_make_open_tag(&sb, pool, svn_xml_protect_pcdata, "path",
                         "kind", svn_cl__node_kind_str_xml(summary->node_kind),
@@ -122,11 +129,18 @@ summarize_regular(const svn_client_diff_summarize_t *summary,
 
   /* Tack on the target path, so we can differentiate between different parts
    * of the output when we're given multiple targets. */
-  path = svn_uri_join(path, summary->path, pool);
+  if (svn_path_is_url(path))
+    {
+      path = svn_path_url_add_component2(path, summary->path, pool);
+    }
+  else
+    {
+      path = svn_dirent_join(path, summary->path, pool);
 
-  /* Convert non-urls to local style, so that things like "" show up as "." */
-  if (! svn_path_is_url(path))
-    path = svn_dirent_local_style(path, pool);
+      /* Convert non-urls to local style, so that things like "" 
+         show up as "." */
+      path = svn_dirent_local_style(path, pool);
+    }
 
   /* Note: This output format tries to look like the output of 'svn status',
    *       thus the blank spaces where information that is not relevant to
@@ -311,8 +325,15 @@ svn_cl__diff(apr_getopt_t *os,
                                      _("Path '%s' not relative to base URLs"),
                                      path);
 
-          target1 = svn_cl__path_join(old_target, path, iterpool);
-          target2 = svn_cl__path_join(new_target, path, iterpool);
+          path = svn_relpath_canonicalize(path, iterpool);
+          if (svn_path_is_url(old_target))
+            target1 = svn_path_url_add_component2(old_target, path, iterpool);
+          else
+            target1 = svn_dirent_join(old_target, path, iterpool);
+          if (svn_path_is_url(old_target))
+            target2 = svn_path_url_add_component2(new_target, path, iterpool);
+          else
+            target2 = svn_dirent_join(new_target, path, iterpool);
 
           if (opt_state->summarize)
             SVN_ERR(svn_client_diff_summarize2

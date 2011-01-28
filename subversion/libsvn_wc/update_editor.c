@@ -4879,11 +4879,9 @@ make_editor(svn_revnum_t *target_revision,
   /* Disallow a switch operation to change the repository root of the target,
      if that is known. */
   if (switch_url && !svn_uri_is_ancestor(repos_root, switch_url))
-    return svn_error_createf(
-       SVN_ERR_WC_INVALID_SWITCH, NULL,
-       _("'%s'\n"
-         "is not the same repository as\n"
-         "'%s'"), switch_url, repos_root);
+    return svn_error_createf(SVN_ERR_WC_INVALID_SWITCH, NULL,
+                             _("'%s'\nis not the same repository as\n'%s'"),
+                             switch_url, repos_root);
 
   /* Construct an edit baton. */
   eb = apr_pcalloc(edit_pool, sizeof(*eb));
@@ -4898,12 +4896,11 @@ make_editor(svn_revnum_t *target_revision,
   eb->anchor_abspath           = anchor_abspath;
 
   if (switch_url)
-    eb->switch_relpath         = svn_path_uri_decode(
-                                    svn_uri_skip_ancestor(repos_root,
-                                                          switch_url),
-                                    scratch_pool);
+    eb->switch_relpath =
+      svn_path_uri_decode(svn_uri_skip_ancestor(repos_root, switch_url),
+                          scratch_pool);
   else
-    eb->switch_relpath         = NULL;
+    eb->switch_relpath = NULL;
 
   if (svn_path_is_empty(target_basename))
     eb->target_abspath = eb->anchor_abspath;
@@ -5472,8 +5469,6 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
      copyfrom URL to be in the same repository. */
   if (copyfrom_url != NULL)
     {
-      const char *relative_url;
-
       /* Find the repository_root via the parent directory, which
          is always versioned before this function is called */
       SVN_ERR(svn_wc__node_get_repos_info(&original_root_url,
@@ -5490,8 +5485,9 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                                    " root than '%s'"),
                                  copyfrom_url, original_root_url);
 
-      relative_url = svn_uri_skip_ancestor(original_root_url, copyfrom_url);
-      original_repos_relpath = svn_path_uri_decode(relative_url, pool);
+      original_repos_relpath =
+        svn_path_uri_decode(svn_uri_skip_ancestor(original_root_url,
+                                                  copyfrom_url), pool);
     }
   else
     {

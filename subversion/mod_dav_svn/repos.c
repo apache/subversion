@@ -49,6 +49,7 @@
 #include "svn_ra.h"  /* for SVN_RA_CAPABILITY_* */
 #include "svn_dirent_uri.h"
 #include "private/svn_log.h"
+#include "private/svn_fspath.h"
 
 #include "dav_svn.h"
 
@@ -1937,7 +1938,7 @@ get_resource(request_rec *r,
     {
       /* ...then the URL to the repository is actually one implicit
          component longer... */
-      root_path = svn_uri_join(root_path, repo_basename, r->pool);
+      root_path = svn_urlpath__join(root_path, repo_basename, r->pool);
       /* ...and we need to specify exactly what repository to open. */
       fs_path = svn_dirent_join(fs_parent_path, repo_basename, r->pool);
     }
@@ -2299,11 +2300,11 @@ get_parent_path(const char *path, apr_pool_t *pool)
 
   if (len > 0)
     {
-      /* Remove any trailing slash; else svn_uri_dirname() asserts. */
+      /* Remove any trailing slash; else svn_path_dirname() asserts. */
       if (tmp[len-1] == '/')
         tmp[len-1] = '\0';
 
-      return svn_uri_dirname(tmp, pool);
+      return svn_path_dirname(tmp, pool);
     }
 
   return path;

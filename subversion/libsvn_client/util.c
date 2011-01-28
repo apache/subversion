@@ -36,6 +36,7 @@
 
 #include "private/svn_client_private.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_fspath.h"
 
 #include "client.h"
 
@@ -217,11 +218,10 @@ svn_client__path_relative_to_root(const char **rel_path,
                                      "root URL '%s'"),
                                    abspath_or_url, repos_root);
         }
-      rel_url = svn_path_uri_decode(rel_url, result_pool);
-      *rel_path = include_leading_slash
-                    ? apr_pstrcat(result_pool, "/", rel_url,
-                                  (char *)NULL)
-                    : rel_url;
+      if (include_leading_slash)
+        *rel_path = svn_fspath__canonicalize(rel_url, result_pool);
+      else
+        *rel_path = apr_pstrdup(result_pool, rel_url);
     }
 
   return SVN_NO_ERROR;
