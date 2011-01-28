@@ -2008,18 +2008,17 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     revprops = NULL;
   else if (strcmp(revprop_word, "revprops") == 0)
     {
+      SVN_ERR_ASSERT(revprop_items);
+
       revprops = apr_array_make(pool, revprop_items->nelts,
                                 sizeof(char *));
-      if (revprop_items)
+      for (i = 0; i < revprop_items->nelts; i++)
         {
-          for (i = 0; i < revprop_items->nelts; i++)
-            {
-              elt = &APR_ARRAY_IDX(revprop_items, i, svn_ra_svn_item_t);
-              if (elt->kind != SVN_RA_SVN_STRING)
-                return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                                        _("Log revprop entry not a string"));
-              APR_ARRAY_PUSH(revprops, const char *) = elt->u.string->data;
-            }
+          elt = &APR_ARRAY_IDX(revprop_items, i, svn_ra_svn_item_t);
+          if (elt->kind != SVN_RA_SVN_STRING)
+            return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                                    _("Log revprop entry not a string"));
+          APR_ARRAY_PUSH(revprops, const char *) = elt->u.string->data;
         }
     }
   else
