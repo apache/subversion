@@ -51,14 +51,6 @@ struct fns_wrapper_baton
 };
 
 static svn_error_t *
-datasource_open(void *baton,
-                svn_diff_datasource_e datasource)
-{
-  struct fns_wrapper_baton *fwb = baton;
-  return fwb->vtable->datasource_open(fwb->old_baton, datasource);
-}
-
-static svn_error_t *
 datasources_open(void *baton, apr_off_t *prefix_lines,
                  svn_diff_datasource_e datasources[],
                  apr_size_t datasource_len)
@@ -133,7 +125,6 @@ wrap_diff_fns(svn_diff_fns2_t **diff_fns2,
   /* Initialize the return vtable. */
   *diff_fns2 = apr_palloc(result_pool, sizeof(**diff_fns2));
 
-  (*diff_fns2)->datasource_open = datasource_open;
   (*diff_fns2)->datasources_open = datasources_open;
   (*diff_fns2)->datasource_close = datasource_close;
   (*diff_fns2)->datasource_get_next_token = datasource_get_next_token;

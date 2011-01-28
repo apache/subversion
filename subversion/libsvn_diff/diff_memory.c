@@ -88,15 +88,6 @@ datasource_to_index(svn_diff_datasource_e datasource)
 }
 
 
-/* Implements svn_diff_fns2_t::datasource_open */
-static svn_error_t *
-datasource_open(void *baton, svn_diff_datasource_e datasource)
-{
-  /* Do nothing: everything is already there and initialized to 0 */
-  return SVN_NO_ERROR;
-}
-
-
 /* Implements svn_diff_fns2_t::datasources_open */
 static svn_error_t *
 datasources_open(void *baton, apr_off_t *prefix_lines,
@@ -201,7 +192,6 @@ token_discard_all(void *baton)
 
 static const svn_diff_fns2_t svn_diff__mem_vtable =
 {
-  datasource_open,
   datasources_open,
   datasource_close,
   datasource_get_next_token,
