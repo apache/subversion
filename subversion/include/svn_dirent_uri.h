@@ -40,9 +40,6 @@
  *       "svn+ssh://user@host:123/My%20Stuff/file.doc"
  *    But not:
  *       "file", "dir/file", "A:/dir", "/My%20Stuff/file.doc"
- *    ### Currently the uri implementation still allows relative URIs
- *    ### (carrying both relative and absolute path data) as valid
- *    ### uris, but this will change soon.
  *
  *  - a relative path (relpath) is an unrooted path that can be joined
  *    to any other relative path, uri or dirent. A relative path is
