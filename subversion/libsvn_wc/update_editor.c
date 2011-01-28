@@ -4878,7 +4878,7 @@ make_editor(svn_revnum_t *target_revision,
 
   /* Disallow a switch operation to change the repository root of the target,
      if that is known. */
-  if (switch_url && !svn_url_is_ancestor(repos_root, switch_url))
+  if (switch_url && !svn_uri_is_ancestor(repos_root, switch_url))
     return svn_error_createf(SVN_ERR_WC_INVALID_SWITCH, NULL,
                              _("'%s'\nis not the same repository as\n'%s'"),
                              switch_url, repos_root);
@@ -4897,7 +4897,7 @@ make_editor(svn_revnum_t *target_revision,
 
   if (switch_url)
     eb->switch_relpath =
-      svn_path_uri_decode(svn_url_skip_ancestor(repos_root, switch_url),
+      svn_path_uri_decode(svn_uri_skip_ancestor(repos_root, switch_url),
                           scratch_pool);
   else
     eb->switch_relpath = NULL;
@@ -5035,7 +5035,7 @@ svn_wc_get_switch_editor4(const svn_delta_editor_t **editor,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
-  SVN_ERR_ASSERT(switch_url && svn_url_is_canonical(switch_url, scratch_pool));
+  SVN_ERR_ASSERT(switch_url && svn_uri_is_canonical(switch_url, scratch_pool));
 
   return make_editor(target_revision, wc_ctx, anchor_abspath,
                      target_basename, use_commit_times,
@@ -5479,14 +5479,14 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                                           FALSE /* scan_deleted */,
                                           pool, pool));
 
-      if (!svn_url_is_ancestor(original_root_url, copyfrom_url))
+      if (!svn_uri_is_ancestor(original_root_url, copyfrom_url))
         return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                                  _("Copyfrom-url '%s' has different repository"
                                    " root than '%s'"),
                                  copyfrom_url, original_root_url);
 
       original_repos_relpath =
-        svn_path_uri_decode(svn_url_skip_ancestor(original_root_url,
+        svn_path_uri_decode(svn_uri_skip_ancestor(original_root_url,
                                                   copyfrom_url), pool);
     }
   else

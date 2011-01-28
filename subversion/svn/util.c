@@ -1331,7 +1331,7 @@ svn_cl__opt_parse_path(svn_opt_revision_t *rev,
   SVN_ERR(svn_opt_parse_path(rev, truepath, path, pool));
 
   if (svn_path_is_url(*truepath))
-    *truepath = svn_url_canonicalize(*truepath, pool);
+    *truepath = svn_uri_canonicalize(*truepath, pool);
   else
     *truepath = svn_dirent_canonicalize(*truepath, pool);
 

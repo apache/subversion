@@ -52,7 +52,7 @@ svn_test__create_repos_and_wc(const char **repos_url,
     svn_repos_t *repos;
 
     SVN_ERR(svn_test__create_repos(&repos, repos_path, opts, pool));
-    SVN_ERR(svn_url_get_file_url_from_dirent(repos_url, repos_path, pool));
+    SVN_ERR(svn_uri_get_file_url_from_dirent(repos_url, repos_path, pool));
   }
 
   /* Create a WC */

@@ -1532,8 +1532,8 @@ diff_prepare_repos_repos(const char **url1,
   *target2 = "";
   if ((kind1 == svn_node_file) || (kind2 == svn_node_file))
     {
-      svn_url_split(anchor1, target1, *url1, pool);
-      svn_url_split(anchor2, target2, *url2, pool);
+      svn_uri_split(anchor1, target1, *url1, pool);
+      svn_uri_split(anchor2, target2, *url2, pool);
       if (*base_path)
         *base_path = svn_dirent_dirname(*base_path, pool);
       SVN_ERR(svn_ra_reparent(*ra_session, *anchor1, pool));

@@ -679,7 +679,7 @@ add_url_parents(svn_ra_session_t *ra_session,
                 apr_pool_t *pool)
 {
   svn_node_kind_t kind;
-  const char *parent_url = svn_url_dirname(url, pool);
+  const char *parent_url = svn_uri_dirname(url, pool);
 
   SVN_ERR(svn_ra_reparent(ra_session, parent_url, temppool));
   SVN_ERR(svn_ra_check_path(ra_session, "", SVN_INVALID_REVNUM, &kind,
@@ -739,7 +739,7 @@ mkdir_urls(const apr_array_header_t *urls,
     }
 
   /* Condense our list of mkdir targets. */
-  SVN_ERR(svn_url_condense_targets(&common, &targets, urls, FALSE,
+  SVN_ERR(svn_uri_condense_targets(&common, &targets, urls, FALSE,
                                    pool, pool));
 
   /* ### BH: This looks unnecessary, because the hash is not used and
@@ -751,7 +751,7 @@ mkdir_urls(const apr_array_header_t *urls,
   if (! targets->nelts)
     {
       const char *bname;
-      svn_url_split(&common, &bname, common, pool);
+      svn_uri_split(&common, &bname, common, pool);
       APR_ARRAY_PUSH(targets, const char *) = bname;
     }
   else
@@ -773,7 +773,7 @@ mkdir_urls(const apr_array_header_t *urls,
       if (resplit)
         {
           const char *bname;
-          svn_url_split(&common, &bname, common, pool);
+          svn_uri_split(&common, &bname, common, pool);
           bname = svn_path_uri_encode(bname, pool);
           for (i = 0; i < targets->nelts; i++)
             {

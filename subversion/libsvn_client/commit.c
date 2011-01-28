@@ -757,7 +757,7 @@ svn_client_import4(const char *path,
           else
             svn_error_clear(err);
 
-          svn_url_split(&temp, &dir, url, pool);
+          svn_uri_split(&temp, &dir, url, pool);
           APR_ARRAY_PUSH(new_entries, const char *) = dir;
           url = temp;
         }

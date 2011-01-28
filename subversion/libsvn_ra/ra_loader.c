@@ -513,7 +513,7 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
           corrected_URI.path = (char *)corrected_url;
           corrected_url = apr_uri_unparse(pool, &corrected_URI, 0);
         }
-      *corrected_url_p = svn_url_canonicalize(corrected_url, pool);
+      *corrected_url_p = svn_uri_canonicalize(corrected_url, pool);
       svn_pool_destroy(sesspool);
       return SVN_NO_ERROR;
     }
@@ -547,7 +547,7 @@ svn_error_t *svn_ra_reparent(svn_ra_session_t *session,
   /* Make sure the new URL is in the same repository, so that the
      implementations don't have to do it. */
   SVN_ERR(svn_ra_get_repos_root2(session, &repos_root, pool));
-  if (! svn_url_is_ancestor(repos_root, url))
+  if (! svn_uri_is_ancestor(repos_root, url))
     return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                              _("'%s' isn't in the same repository as '%s'"),
                              url, repos_root);
@@ -575,7 +575,7 @@ svn_error_t *svn_ra_get_path_relative_to_session(svn_ra_session_t *session,
     }
   else
     {
-      *rel_path = svn_url_is_child(sess_url, url, pool);
+      *rel_path = svn_uri_is_child(sess_url, url, pool);
       if (! *rel_path)
         return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                                  _("'%s' isn't a child of session URL '%s'"),
@@ -597,7 +597,7 @@ svn_error_t *svn_ra_get_path_relative_to_root(svn_ra_session_t *session,
     }
   else
     {
-      *rel_path = svn_url_is_child(root_url, url, pool);
+      *rel_path = svn_uri_is_child(root_url, url, pool);
       if (! *rel_path)
         return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                                  _("'%s' isn't a child of repository root "

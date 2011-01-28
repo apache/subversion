@@ -113,7 +113,7 @@ append_basename_if_dir(const char **appendable_dirent_p,
       const char *base_name;
 
       if (is_uri)
-        base_name = svn_url_basename(basename_of, pool);
+        base_name = svn_uri_basename(basename_of, pool);
       else
         base_name = svn_dirent_basename(basename_of, NULL);
 
@@ -1036,7 +1036,7 @@ svn_client_export5(svn_revnum_t *result_rev,
           if (svn_path_is_empty(to_path))
             {
               if (from_is_url)
-                to_path = svn_url_basename(from_path_or_url, pool);
+                to_path = svn_uri_basename(from_path_or_url, pool);
               else
                 to_path = svn_dirent_basename(from_path_or_url, NULL);
               eb->root_path = to_path;

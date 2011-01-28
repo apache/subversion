@@ -793,7 +793,7 @@ svn_ra_neon__open(svn_ra_session_t *session,
   const char *client_string = NULL;
   svn_revnum_t ignored_revnum;
 
-  SVN_ERR_ASSERT(svn_url_is_canonical(repos_URL, pool));
+  SVN_ERR_ASSERT(svn_uri_is_canonical(repos_URL, pool));
 
   if (callbacks->get_client_string)
     callbacks->get_client_string(callback_baton, &client_string, pool);
@@ -1149,7 +1149,7 @@ svn_ra_neon__get_path_relative_to_root(svn_ra_session_t *session,
     }
   else
     {
-      *rel_path = svn_url_is_child(root_url, url, pool);
+      *rel_path = svn_uri_is_child(root_url, url, pool);
       if (! *rel_path)
         return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                                  _("'%s' isn't a child of repository root "

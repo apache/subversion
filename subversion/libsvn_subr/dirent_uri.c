@@ -98,7 +98,7 @@ internal_style(path_type_t type, const char *path, apr_pool_t *pool)
   switch (type)
     {
       case type_uri:
-        return svn_url_canonicalize(path, pool);
+        return svn_uri_canonicalize(path, pool);
       case type_relpath:
         return svn_relpath_canonicalize(path, pool);
       case type_dirent:
@@ -976,9 +976,9 @@ svn_dirent_is_root(const char *dirent, apr_size_t len)
 }
 
 svn_boolean_t
-svn_url_is_root(const char *uri, apr_size_t len)
+svn_uri_is_root(const char *uri, apr_size_t len)
 {
-  assert(svn_url_is_canonical(uri, NULL));
+  assert(svn_uri_is_canonical(uri, NULL));
   return (len == uri_schema_root_length(uri, len));
 }
 
@@ -1317,28 +1317,28 @@ svn_relpath_split(const char **dirpath,
 }
 
 char *
-svn_url_dirname(const char *uri, apr_pool_t *pool)
+svn_uri_dirname(const char *uri, apr_pool_t *pool)
 {
   apr_size_t len = strlen(uri);
 
-  assert(svn_url_is_canonical(uri, pool));
+  assert(svn_uri_is_canonical(uri, pool));
 
-  if (svn_url_is_root(uri, len))
+  if (svn_uri_is_root(uri, len))
     return apr_pstrmemdup(pool, uri, len);
   else
     return apr_pstrmemdup(pool, uri, uri_previous_segment(uri, len));
 }
 
 const char *
-svn_url_basename(const char *uri, apr_pool_t *pool)
+svn_uri_basename(const char *uri, apr_pool_t *pool)
 {
   apr_size_t len = strlen(uri);
   apr_size_t start;
   const char *base_name;
 
-  assert(svn_url_is_canonical(uri, NULL));
+  assert(svn_uri_is_canonical(uri, NULL));
 
-  if (svn_url_is_root(uri, len))
+  if (svn_uri_is_root(uri, len))
     return "";
   else
     {
@@ -1356,7 +1356,7 @@ svn_url_basename(const char *uri, apr_pool_t *pool)
 }
 
 void
-svn_url_split(const char **dirpath,
+svn_uri_split(const char **dirpath,
               const char **base_name,
               const char *uri,
               apr_pool_t *pool)
@@ -1364,10 +1364,10 @@ svn_url_split(const char **dirpath,
   assert(dirpath != base_name);
 
   if (dirpath)
-    *dirpath = svn_url_dirname(uri, pool);
+    *dirpath = svn_uri_dirname(uri, pool);
 
   if (base_name)
-    *base_name = svn_url_basename(uri, pool);
+    *base_name = svn_uri_basename(uri, pool);
 }
 
 char *
@@ -1394,7 +1394,7 @@ svn_relpath_get_longest_ancestor(const char *relpath1,
 }
 
 char *
-svn_url_get_longest_ancestor(const char *uri1,
+svn_uri_get_longest_ancestor(const char *uri1,
                              const char *uri2,
                              apr_pool_t *pool)
 {
@@ -1453,14 +1453,14 @@ svn_relpath_is_child(const char *parent_relpath,
 }
 
 const char *
-svn_url_is_child(const char *parent_uri,
+svn_uri_is_child(const char *parent_uri,
                  const char *child_uri,
                  apr_pool_t *pool)
 {
   const char *relpath;
 
-  assert(svn_url_is_canonical(parent_uri, NULL));
-  assert(svn_url_is_canonical(child_uri, NULL));
+  assert(svn_uri_is_canonical(parent_uri, NULL));
+  assert(svn_uri_is_canonical(child_uri, NULL));
 
   relpath = is_child(type_uri, parent_uri, child_uri, pool);
   if (relpath)
@@ -1484,10 +1484,10 @@ svn_relpath_is_ancestor(const char *parent_relpath, const char *child_relpath)
 }
 
 svn_boolean_t
-svn_url_is_ancestor(const char *parent_uri, const char *child_uri)
+svn_uri_is_ancestor(const char *parent_uri, const char *child_uri)
 {
-  assert(svn_url_is_canonical(parent_uri, NULL));
-  assert(svn_url_is_canonical(child_uri, NULL));
+  assert(svn_uri_is_canonical(parent_uri, NULL));
+  assert(svn_uri_is_canonical(child_uri, NULL));
 
   return is_ancestor(type_uri, parent_uri, child_uri);
 }
@@ -1546,13 +1546,13 @@ svn_relpath_skip_ancestor(const char *parent_relpath,
 
 
 const char *
-svn_url_skip_ancestor(const char *parent_uri,
+svn_uri_skip_ancestor(const char *parent_uri,
                       const char *child_uri)
 {
   apr_size_t len = strlen(parent_uri);
 
-  assert(svn_url_is_canonical(parent_uri, NULL));
-  assert(svn_url_is_canonical(child_uri, NULL));
+  assert(svn_uri_is_canonical(parent_uri, NULL));
+  assert(svn_uri_is_canonical(child_uri, NULL));
 
   if (0 != memcmp(parent_uri, child_uri, len))
     return child_uri; /* parent_uri is no ancestor of child_uri */
@@ -1625,7 +1625,7 @@ svn_dirent_get_absolute(const char **pabsolute,
 }
 
 const char *
-svn_url_canonicalize(const char *uri, apr_pool_t *pool)
+svn_uri_canonicalize(const char *uri, apr_pool_t *pool)
 {
   return canonicalize(type_uri, uri, pool);
 }
@@ -1751,7 +1751,7 @@ svn_relpath_is_canonical(const char *relpath,
 }
 
 svn_boolean_t
-svn_url_is_canonical(const char *uri, apr_pool_t *pool)
+svn_uri_is_canonical(const char *uri, apr_pool_t *pool)
 {
   const char *ptr = uri, *seg = uri;
   const char *schema_data = NULL;
@@ -2054,7 +2054,7 @@ svn_dirent_condense_targets(const char **pcommon,
 }
 
 svn_error_t *
-svn_url_condense_targets(const char **pcommon,
+svn_uri_condense_targets(const char **pcommon,
                          apr_array_header_t **pcondensed_targets,
                          const apr_array_header_t *targets,
                          svn_boolean_t remove_redundancies,
@@ -2074,7 +2074,7 @@ svn_url_condense_targets(const char **pcommon,
       return SVN_NO_ERROR;
     }
 
-  *pcommon = svn_url_canonicalize(APR_ARRAY_IDX(targets, 0, const char *),
+  *pcommon = svn_uri_canonicalize(APR_ARRAY_IDX(targets, 0, const char *),
                                   scratch_pool);
 
   /* Early exit when there's only one uri to work on. */
@@ -2103,7 +2103,7 @@ svn_url_condense_targets(const char **pcommon,
 
   for (i = 1; i < targets->nelts; ++i)
     {
-      const char *uri = svn_url_canonicalize(
+      const char *uri = svn_uri_canonicalize(
                            APR_ARRAY_IDX(targets, i, const char *),
                            scratch_pool);
       APR_ARRAY_PUSH(uri_targets, const char *) = uri;
@@ -2113,7 +2113,7 @@ svn_url_condense_targets(const char **pcommon,
          we'll keep looping for the sake of canonicalizing the
          targets, I suppose.  */
       if (**pcommon != '\0')
-        *pcommon = svn_url_get_longest_ancestor(*pcommon, uri,
+        *pcommon = svn_uri_get_longest_ancestor(*pcommon, uri,
                                                 scratch_pool);
     }
 
@@ -2151,7 +2151,7 @@ svn_url_condense_targets(const char **pcommon,
                   uri_i = APR_ARRAY_IDX(uri_targets, i, const char *);
                   uri_j = APR_ARRAY_IDX(uri_targets, j, const char *);
 
-                  ancestor = svn_url_get_longest_ancestor(uri_i,
+                  ancestor = svn_uri_get_longest_ancestor(uri_i,
                                                           uri_j,
                                                           scratch_pool);
 
@@ -2212,7 +2212,7 @@ svn_url_condense_targets(const char **pcommon,
                  */
               rel_item += basedir_len;
               if ((rel_item[0] == '/') ||
-                  (rel_item[0] && !svn_url_is_root(*pcommon, basedir_len)))
+                  (rel_item[0] && !svn_uri_is_root(*pcommon, basedir_len)))
                 {
                   rel_item++;
                 }
@@ -2265,13 +2265,13 @@ svn_dirent_is_under_root(svn_boolean_t *under_root,
 }
 
 svn_error_t *
-svn_url_get_dirent_from_file_url(const char **dirent,
+svn_uri_get_dirent_from_file_url(const char **dirent,
                                  const char *url,
                                  apr_pool_t *pool)
 {
   const char *hostname, *path;
 
-  SVN_ERR_ASSERT(svn_url_is_canonical(url, pool));
+  SVN_ERR_ASSERT(svn_uri_is_canonical(url, pool));
 
   /* Verify that the URL is well-formed (loosely) */
 
@@ -2380,7 +2380,7 @@ svn_url_get_dirent_from_file_url(const char **dirent,
 }
 
 svn_error_t *
-svn_url_get_file_url_from_dirent(const char **url,
+svn_uri_get_file_url_from_dirent(const char **url,
                                  const char *dirent,
                                  apr_pool_t *pool)
 {
@@ -2574,7 +2574,7 @@ svn_urlpath__canonicalize(const char *uri,
 {
   if (svn_path_is_url(uri))
     {
-      uri = svn_url_canonicalize(uri, pool);
+      uri = svn_uri_canonicalize(uri, pool);
     }
   else
     {

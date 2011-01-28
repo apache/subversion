@@ -581,7 +581,7 @@ ensure_repos_info(svn_wc_entry_t *entry,
       for (hi = apr_hash_first(scratch_pool, repos_cache);
            hi; hi = apr_hash_next(hi))
         {
-          if (svn_url_is_child(svn__apr_hash_index_key(hi), entry->url,
+          if (svn_uri_is_child(svn__apr_hash_index_key(hi), entry->url,
                                scratch_pool))
             {
               if (!entry->repos)

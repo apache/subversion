@@ -157,12 +157,12 @@ delete_urls(const apr_array_header_t *paths,
   apr_pool_t *subpool = svn_pool_create(pool);
 
   /* Condense our list of deletion targets. */
-  SVN_ERR(svn_url_condense_targets(&common, &targets, paths, TRUE,
+  SVN_ERR(svn_uri_condense_targets(&common, &targets, paths, TRUE,
                                    pool, subpool));
   if (! targets->nelts)
     {
       const char *bname;
-      svn_url_split(&common, &bname, common, pool);
+      svn_uri_split(&common, &bname, common, pool);
       APR_ARRAY_PUSH(targets, const char *) = bname;
     }
 
