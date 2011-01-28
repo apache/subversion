@@ -655,8 +655,6 @@ svn_ra__file_revs_from_log(svn_ra_session_t *ra_session,
   svn_node_kind_t kind;
   const char *repos_url;
   const char *session_url;
-  const char *tmp;
-  char *repos_abs_path;
   apr_array_header_t *condensed_targets;
   struct fr_log_message_baton lmb;
   struct rev *rev;
