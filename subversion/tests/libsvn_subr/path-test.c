@@ -1124,7 +1124,7 @@ test_path_get_longest_ancestor(apr_pool_t *pool)
     { "http://test",    "http://taste",    ""},
     { "http://test",    "http://test/foo", "http://test"},
     { "http://test",    "file://test/foo", ""},
-    { "http://test",    "http://testF",    ""},
+    { "http://test",    "http://tests",    ""},
     { "http://",        "http://test",     ""},
     { "file:///A/C",    "file:///B/D",     ""},
     { "file:///A/C",    "file:///A/D",     "file:///A"},

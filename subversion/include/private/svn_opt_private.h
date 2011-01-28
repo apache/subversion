@@ -79,9 +79,9 @@ svn_opt__arg_canonicalize_url(const char **url_out,
 /*
  * Attempt to transform PATH_IN, which is a local path-like user input, into a
  * valid local path:
- *   - Attempt to get the correct capitialization by trying to actually find
+ *   - Attempt to get the correct capitalization by trying to actually find
  *     the path specified.
- *   - If the path does not exist (which is valid) the given capitialization
+ *   - If the path does not exist (which is valid) the given capitalization
  *     is used.
  *   - canonicalize the separator ("/") characters
  * PATH_IN is in UTF-8 encoding and has no peg revision specifier.

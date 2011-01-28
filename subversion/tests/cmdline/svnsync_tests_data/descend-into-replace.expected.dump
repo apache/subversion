@@ -234,21 +234,21 @@ This is the file 'mu'.
 
 
 Revision-number: 4
-Prop-content-length: 108
-Content-length: 108
+Prop-content-length: 103
+Content-length: 103
 
 K 10
 svn:author
-V 7
-jrandom
+V 6
+pburba
 K 8
 svn:date
 V 27
-2010-11-22T15:40:03.023927Z
+2010-11-20T17:10:31.620281Z
 K 7
 svn:log
-V 7
-log msg
+V 3
+mmm
 PROPS-END
 
 Node-path: trunk/H/Z

@@ -1219,7 +1219,7 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   svntest.verify.verify_outputs("Reintegrate failed but not "
                                 "in the way expected",
                                 err, None,
-                                "(svn: Reintegrate can only be used if "
+                                "(svn: E195016: Reintegrate can only be used if "
                                 "revisions 2 through 15 were previously "
                                 "merged from .*/A to the reintegrate source, "
                                 "but this is not the case:\n)"

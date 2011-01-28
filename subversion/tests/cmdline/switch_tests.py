@@ -193,7 +193,7 @@ def commit_routine_switching(wc_dir, verify):
   # same URL.  We don't allow this.
   svntest.actions.run_and_verify_commit(
     wc_dir, None, None,
-    "svn: Cannot commit both .* as they refer to the same URL$",
+    "svn: E195003: Cannot commit both .* as they refer to the same URL$",
     wc_dir)
 
   # Okay, that all taken care of, let's revert the A/D/G/pi path and

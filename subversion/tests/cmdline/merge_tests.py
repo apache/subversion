@@ -16078,7 +16078,7 @@ def merge_with_os_deleted_subtrees(sbox):
     re_sep = os.sep
 
   # Common part of the expected error message for all cases we will test.
-  err_re = "svn: Merge tracking not allowed with missing subtrees; " + \
+  err_re = "svn: E195016: Merge tracking not allowed with missing subtrees; " + \
            "try restoring these items first:"                        + \
            "|(\n)"                                                   + \
            "|(.*apr_err.*\n)" # In case of debug build

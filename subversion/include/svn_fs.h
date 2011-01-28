@@ -1524,7 +1524,7 @@ svn_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
  * mergeinfo hash.  If @a mergeinfo is NULL then @a *validated_mergeinfo is
  * set to NULL.
  *
- * @a *validated_mergeinfo is allocated in @a result_pool.  All tempporary
+ * @a *validated_mergeinfo is allocated in @a result_pool.  All temporary
  * allocations are performed in @a scratch_pool.
  *
  * @since New in 1.7.

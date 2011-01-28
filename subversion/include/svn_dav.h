@@ -92,12 +92,12 @@ extern "C" {
     universe of svn_lock_t->owner.)  */
 #define SVN_DAV_LOCK_OWNER_HEADER "X-SVN-Lock-Owner"
 
-/** Assuming the OPTIONS was performed againts a resource within a
+/** Assuming the OPTIONS was performed against a resource within a
  * Subversion repository, then this header indicates the youngest
  * revision in the repository.  */
 #define SVN_DAV_YOUNGEST_REV_HEADER "SVN-Youngest-Rev"
 
-/** Assuming the OPTIONS was performed againts a resource within a
+/** Assuming the OPTIONS was performed against a resource within a
  * Subversion repository, then this header indicates the UUID of the
  * repository.  */
 #define SVN_DAV_REPOS_UUID_HEADER "SVN-Repository-UUID"

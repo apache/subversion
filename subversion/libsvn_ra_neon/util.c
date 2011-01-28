@@ -39,6 +39,7 @@
 #include "svn_xml.h"
 #include "svn_props.h"
 
+#include "private/svn_fspath.h"
 #include "svn_private_config.h"
 
 #include "ra_neon.h"
@@ -1570,8 +1571,5 @@ svn_ra_neon__request_get_location(svn_ra_neon__request_t *request,
                                   apr_pool_t *pool)
 {
   const char *val = ne_get_response_header(request->ne_req, "Location");
-  return val ? svn_uri_join(request->url,
-                            svn_uri_canonicalize(val, pool),
-                            pool)
-             : NULL;
+  return val ? svn_urlpath__canonicalize(val, pool) : NULL;
 }

@@ -37,6 +37,8 @@
 #include "svn_dso.h"
 #include "mod_dav_svn.h"
 
+#include "private/svn_fspath.h"
+
 #include "dav_svn.h"
 #include "mod_authz_svn.h"
 
@@ -172,10 +174,10 @@ create_dir_config(apr_pool_t *p, char *dir)
   /* NOTE: dir==NULL creates the default per-dir config */
   dir_conf_t *conf = apr_pcalloc(p, sizeof(*conf));
 
-  /*In subversion context dir is always considered to be coming from
-   <Location /blah> directive. So we treat it as URI. */
+  /* In subversion context dir is always considered to be coming from
+     <Location /blah> directive. So we treat it as a urlpath. */
   if (dir)
-    conf->root_dir = svn_uri_canonicalize(dir, p);
+    conf->root_dir = svn_urlpath__canonicalize(dir, p);
   conf->bulk_updates = CONF_FLAG_ON;
   conf->v2_protocol = CONF_FLAG_ON;
 

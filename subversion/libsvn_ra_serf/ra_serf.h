@@ -36,6 +36,7 @@
 #include "svn_delta.h"
 #include "svn_version.h"
 #include "svn_dav.h"
+#include "svn_dirent_uri.h"
 
 #include "private/svn_dav_protocol.h"
 
@@ -800,10 +801,6 @@ svn_ra_serf__response_get_location(serf_bucket_t *response,
  * URI-encoded identifier of *some sort*, as will be the returned form
  * thereof.
  */
-const char *
-svn_ra_serf__uri_canonicalize(const char *uri,
-                              apr_pool_t *scratch_pool,
-                              apr_pool_t *result_pool);
 
 /** XML helper functions. **/
 

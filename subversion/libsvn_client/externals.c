@@ -565,23 +565,35 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
                               apr_pool_t *pool)
 {
   const char *url = item->url;
-  apr_uri_t parent_dir_parsed_uri;
+  apr_uri_t parent_dir_uri;
   apr_status_t status;
 
-  if ((url[0] == '/') && (url[1] == '/'))
+  /* If the URL is already absolute, there is nothing to do. */
+  if (svn_path_is_url(url))
     {
+      /* "http://server/path" */
+      item->url = svn_uri_canonicalize(url, pool);
+      return SVN_NO_ERROR;
+    }
+
+  if (url[0] == '/')
+    {
+      /* "/path", "//path", and "///path" */
+      int num_leading_slashes = 1;
+      if (url[1] == '/')
+        {
+          num_leading_slashes++;
+          if (url[2] == '/')
+            num_leading_slashes++;
+        }
+
       /* "//schema-relative" and in some cases "///schema-relative".
          This last format is supported on file:// schema relative. */
-      url = apr_pstrcat(
-                        pool,
-                        url[2] == '/' ? "///" : "//",
-                        svn_relpath_canonicalize(url+2, pool),
-                        (char *)NULL);
-    }
-  else if (svn_path_is_url(url) || *url == '/')
-    {
-      /* "http://server/path" and "/path" */
-      url = svn_uri_canonicalize(url, pool);
+      url = apr_pstrcat(pool,
+                        apr_pstrndup(pool, url, num_leading_slashes),
+                        svn_relpath_canonicalize(url + num_leading_slashes,
+                                                 pool),
+                        NULL);
     }
   else
     {
@@ -589,15 +601,8 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
       url = svn_relpath_canonicalize(url, pool);
     }
 
-  /* If the URL is already absolute, there is nothing to do. */
-  if (svn_path_is_url(url))
-    {
-      item->url = url;
-      return SVN_NO_ERROR;
-    }
-
   /* Parse the parent directory URL into its parts. */
-  status = apr_uri_parse(pool, parent_dir_url, &parent_dir_parsed_uri);
+  status = apr_uri_parse(pool, parent_dir_url, &parent_dir_uri);
   if (status)
     return svn_error_createf(SVN_ERR_BAD_URL, 0,
                              _("Illegal parent directory URL '%s'"),
@@ -606,8 +611,10 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
   /* If the parent directory URL is at the server root, then the URL
      may have no / after the hostname so apr_uri_parse() will leave
      the URL's path as NULL. */
-  if (! parent_dir_parsed_uri.path)
-    parent_dir_parsed_uri.path = apr_pstrmemdup(pool, "/", 1);
+  if (! parent_dir_uri.path)
+    parent_dir_uri.path = apr_pstrmemdup(pool, "/", 1);
+  parent_dir_uri.query = NULL;
+  parent_dir_uri.fragment = NULL;
 
   /* Handle URLs relative to the current directory or to the
      repository root.  The backpaths may only remove path elements,
@@ -625,15 +632,14 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
          repository root's URL path into components.  */
       if (0 == strncmp("../", url, 3))
         {
-          base_components = svn_path_decompose(parent_dir_parsed_uri.path,
-                                               pool);
+          base_components = svn_path_decompose(parent_dir_uri.path, pool);
           relative_components = svn_path_decompose(url, pool);
         }
       else
         {
-          apr_uri_t repos_root_parsed_uri;
+          apr_uri_t repos_root_uri;
 
-          status = apr_uri_parse(pool, repos_root_url, &repos_root_parsed_uri);
+          status = apr_uri_parse(pool, repos_root_url, &repos_root_uri);
           if (status)
             return svn_error_createf(SVN_ERR_BAD_URL, 0,
                                      _("Illegal repository root URL '%s'"),
@@ -642,10 +648,10 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
           /* If the repository root URL is at the server root, then
              the URL may have no / after the hostname so
              apr_uri_parse() will leave the URL's path as NULL. */
-          if (! repos_root_parsed_uri.path)
-            repos_root_parsed_uri.path = apr_pstrmemdup(pool, "/", 1);
+          if (! repos_root_uri.path)
+            repos_root_uri.path = apr_pstrmemdup(pool, "/", 1);
 
-          base_components = svn_path_decompose(repos_root_parsed_uri.path,
+          base_components = svn_path_decompose(repos_root_uri.path,
                                                pool);
           relative_components = svn_path_decompose(url + 2, pool);
         }
@@ -668,13 +674,9 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
             APR_ARRAY_PUSH(base_components, const char *) = component;
         }
 
-      parent_dir_parsed_uri.path = (char *)svn_path_compose(base_components,
-                                                            pool);
-      parent_dir_parsed_uri.query = NULL;
-      parent_dir_parsed_uri.fragment = NULL;
-
-      item->url = apr_uri_unparse(pool, &parent_dir_parsed_uri, 0);
-
+      parent_dir_uri.path = (char *)svn_path_compose(base_components, pool);
+      item->url = svn_uri_canonicalize(apr_uri_unparse(pool, &parent_dir_uri,
+                                                       0), pool);
       return SVN_NO_ERROR;
     }
 
@@ -687,26 +689,24 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
                                "backpaths, i.e. '..'"),
                              item->url);
 
-  /* Relative to the scheme. */
+  /* Relative to the scheme: Build a new URL from the parts we know.  */
   if (0 == strncmp("//", url, 2))
     {
       const char *scheme;
 
       SVN_ERR(uri_scheme(&scheme, repos_root_url, pool));
-      item->url = svn_uri_canonicalize(apr_pstrcat(pool,
-                                                   scheme,
-                                                   ":",
-                                                   url,
-                                                   (char *)NULL),
-                                       pool);
+      item->url = svn_uri_canonicalize(apr_pstrcat(pool, scheme, ":",
+                                                   url, NULL), pool);
       return SVN_NO_ERROR;
     }
 
-  /* Relative to the server root. */
+  /* Relative to the server root: Just replace the path portion of the
+     parent's URL.  */
   if (url[0] == '/')
     {
-      item->url = svn_uri_join(parent_dir_url, url, pool);
-
+      parent_dir_uri.path = (char *)url;
+      item->url = svn_uri_canonicalize(apr_uri_unparse(pool, &parent_dir_uri,
+                                                       0), pool);
       return SVN_NO_ERROR;
     }
 

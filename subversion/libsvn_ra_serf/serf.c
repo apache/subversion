@@ -46,6 +46,7 @@
 
 #include "private/svn_dav_protocol.h"
 #include "private/svn_dep_compat.h"
+#include "private/svn_fspath.h"
 #include "svn_private_config.h"
 
 #include "ra_serf.h"
@@ -773,7 +774,8 @@ path_dirent_walker(void *baton,
 
       apr_hash_set(dirents->full_paths, path, path_len, entry);
 
-      base_name = svn_path_uri_decode(svn_uri_basename(path, pool), pool);
+      base_name = svn_path_uri_decode(svn_urlpath__basename(path, pool),
+                                      pool);
 
       apr_hash_set(dirents->base_paths, base_name, APR_HASH_KEY_STRING, entry);
     }
@@ -906,7 +908,7 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
        */
       dirent_walk.full_paths = apr_hash_make(pool);
       dirent_walk.base_paths = apr_hash_make(pool);
-      dirent_walk.orig_path = svn_ra_serf__uri_canonicalize(path, pool, pool);
+      dirent_walk.orig_path = svn_urlpath__canonicalize(path, pool);
 
       SVN_ERR(svn_ra_serf__walk_all_paths(props, revision, path_dirent_walker,
                                           &dirent_walk, pool));

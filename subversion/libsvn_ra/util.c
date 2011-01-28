@@ -38,10 +38,6 @@
 #include "svn_private_config.h"
 #include "private/svn_ra_private.h"
 
-/* Return an error with code SVN_ERR_UNSUPPORTED_FEATURE, and an error
-   message referencing PATH_OR_URL, if the "server" pointed to be
-   RA_SESSION doesn't support Merge Tracking (e.g. is pre-1.5).
-   Perform temporary allocations in POOL. */
 svn_error_t *
 svn_ra__assert_mergeinfo_capable_server(svn_ra_session_t *ra_session,
                                         const char *path_or_url,

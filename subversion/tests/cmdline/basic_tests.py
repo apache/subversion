@@ -397,7 +397,8 @@ def basic_corruption(sbox):
 
   # This commit should fail due to text base corruption.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, "svn: Checksum",
+                                        expected_status,
+                                        "svn: E155017: Checksum",
                                         wc_dir)
 
   # Restore the uncorrupted text base.
@@ -446,7 +447,7 @@ def basic_corruption(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        "svn: Checksum", other_wc)
+                                        "svn: E155017: Checksum", other_wc)
 
   # Restore the uncorrupted text base.
   os.chmod(tb_dir_path, 0777)
@@ -2484,7 +2485,7 @@ def basic_mkdir_mix_targets(sbox):
 
   sbox.build()
   Y_url = sbox.repo_url + '/Y'
-  expected_error = "svn: Cannot mix repository and working copy targets"
+  expected_error = "svn: E200009: Cannot mix repository and working copy targets"
 
   svntest.actions.run_and_verify_svn(None, None, expected_error,
                                      'mkdir', '-m', 'log_msg', Y_url, 'subdir')

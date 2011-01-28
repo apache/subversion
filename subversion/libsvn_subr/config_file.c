@@ -1008,8 +1008,8 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###   accepts the '--diff-program' option."                         NL
         "# diff3-has-program-arg = [yes | no]"                               NL
         "### Set merge-tool-cmd to the command used to invoke your external" NL
-        "### merging tool of choice. Subversion will pass 4 arguments to"    NL
-        "### the specified command: base theirs mine merged"                 NL
+        "### merging tool of choice. Subversion will pass 5 arguments to"    NL
+        "### the specified command: base theirs mine merged wcfile"          NL
         "# merge-tool-cmd = merge_command"                                   NL
         ""                                                                   NL
         "### Section for configuring tunnel agents."                         NL
