@@ -1433,11 +1433,9 @@ svn_ra_do_diff(svn_ra_session_t *session,
  * If @a include_merged_revisions is set, log information for revisions
  * which have been merged to @a targets will also be returned.
  *
- * @a ignored_prop_mods is an optional hash of property names, with keys of
- * type 'const char *' and values of type 'void *'.  (The values are never
- * read, but must be non-NULL for the key to be recorded in the hash.)  If
- * non-NULL, log will ignore any changes to properties names as the keys
- * of the hash when determining which revisions to return.
+ * @a ignored_prop_mods is an optional list of property names, of type
+ * 'const char *'.  If non-NULL, log will ignore any changes to these
+ * properties when determining which revisions to return.
  *
  * If @a revprops is NULL, retrieve all revprops; else, retrieve only the
  * revprops named in the array (i.e. retrieve none if the array is empty).
@@ -1476,7 +1474,7 @@ svn_ra_get_log3(svn_ra_session_t *session,
                 svn_boolean_t discover_changed_paths,
                 svn_boolean_t strict_node_history,
                 svn_boolean_t include_merged_revisions,
-                const apr_hash_t *ignored_prop_mods,
+                const apr_array_header_t *ignored_prop_mods,
                 const apr_array_header_t *revprops,
                 svn_log_entry_receiver_t receiver,
                 void *receiver_baton,

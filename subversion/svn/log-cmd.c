@@ -565,7 +565,7 @@ svn_cl__log(apr_getopt_t *os,
   svn_opt_revision_t peg_revision;
   const char *true_path;
   apr_array_header_t *revprops;
-  apr_hash_t *ignored_props = NULL;
+  apr_array_header_t *ignored_props = NULL;
 
   if (!opt_state->xml)
     {
@@ -667,9 +667,8 @@ svn_cl__log(apr_getopt_t *os,
 
   if (opt_state->ignore_mergeinfo)
     {
-      ignored_props = apr_hash_make(pool);
-      apr_hash_set(ignored_props, SVN_PROP_MERGEINFO, APR_HASH_KEY_STRING,
-                   (void *) 0xdeadbeef);
+      ignored_props = apr_array_make(pool, 1, sizeof(const char *));
+      APR_ARRAY_PUSH(ignored_props, const char *) = SVN_PROP_MERGEINFO;
     }
 
   if (opt_state->xml)
