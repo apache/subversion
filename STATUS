@@ -123,6 +123,17 @@ Candidate changes for 1.5.10:
    Votes:
      +1: pburba, hwright
 
+ * r902467
+   Fix broken svn_ra_get_mergeinfo API promise in serf and neon
+   implementations -- return a null mergeinfo catalog if there is
+   no mergeinfo, as per svn_ra_get_mergeinfo's API
+   Justification:
+     Fixes an uninitialized variable that can result in a segfault.
+   Branch:
+     ^/branches/1.5.x-r902467
+   Votes:
+     +1: pburba
+
   * r1028084, r1028125, r1041638
     Fix JVM recognition on OS X Snow Leopard (10.6).
     Justification:
