@@ -454,7 +454,7 @@ print_error(svn_error_t *err, FILE *stream, const char *prefix)
   else if (err->message)
     {
       svn_error_clear(svn_cmdline_fprintf(stream, err->pool,
-                                          "%sE%d: %s\n",
+                                          "%sE%06d: %s\n",
                                           prefix, err->apr_err, err->message));
     }
   else
@@ -473,7 +473,7 @@ print_error(svn_error_t *err, FILE *stream, const char *prefix)
         }
 
       svn_error_clear(svn_cmdline_fprintf(stream, err->pool,
-                                          "%sE%d: %s\n",
+                                          "%sE%06d: %s\n",
                                           prefix, err->apr_err, err_string));
     }
 }
@@ -569,7 +569,7 @@ svn_handle_warning2(FILE *stream, svn_error_t *err, const char *prefix)
 
   svn_error_clear(svn_cmdline_fprintf
                   (stream, err->pool,
-                   _("%swarning: W%d: %s\n"),
+                   _("%swarning: W%06d: %s\n"),
                    prefix, err->apr_err,
                    svn_err_best_message(err, buf, sizeof(buf))));
   fflush(stream);
