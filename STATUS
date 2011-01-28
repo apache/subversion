@@ -267,6 +267,14 @@ Candidate changes:
    Votes:
      +1: blair
 
+ * r1064839
+   Additional fixes for issue #3270, required when the log is traversing
+   complex histories that max out our internal history cache.
+   Justification:
+     We backported part of this fix already -- we should finish the job.
+   Votes:
+     +1: cmpilato
+
 Veto-blocked changes:
 =====================
 
