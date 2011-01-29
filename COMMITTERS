@@ -56,6 +56,7 @@ Blanket commit access:
        sbutler   Stephen Butler <sbutler@elego.de>
         dannas   Daniel Näslund <dannas@dannas.name>
        stefan2   Stefan Fuhrmann <stefanfuhrmann@alice-dsl.de>
+       jcorvel   Johan Corveleyn <jcorvel@gmail.com>
 
 [[END ACTIVE FULL COMMITTERS.  LEAVE THIS LINE HERE; SCRIPTS LOOK FOR IT.]]
 
@@ -191,8 +192,6 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
        cacknin   Charles Acknin <charlesacknin@gmail.com>    (svnpatch-diff 
                                                               br.)
         holden   Holden Karau <holden@pigscanfly.ca>         (scheme-bindings br.)
-       jcorvel   Johan Corveleyn <jcorvel@gmail.com>         (diff-
-                                                              optimizations br.)
 
   Subprojects that are complete, abandoned or have moved elsewhere:
 
