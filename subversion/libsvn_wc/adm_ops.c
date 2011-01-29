@@ -129,7 +129,6 @@ process_committed_leaf(svn_wc__db_t *db,
   svn_wc__db_kind_t kind;
   const svn_checksum_t *copied_checksum;
   const char *adm_abspath;
-  const char *tmp_text_base_abspath;
   svn_revnum_t new_changed_rev = new_revnum;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
@@ -211,12 +210,8 @@ process_committed_leaf(svn_wc__db_t *db,
          ### value, like how we handle files. */
     }
 
-  /* Set TMP_TEXT_BASE_ABSPATH to NULL.  The new text base will be found in
-     the pristine store by its checksum. */
-  /* ### TODO: Remove this parameter. */
-  tmp_text_base_abspath = NULL;
-
-  SVN_ERR(svn_wc__wq_add_postcommit(db, local_abspath, tmp_text_base_abspath,
+  /* The new text base will be found in the pristine store by its checksum. */
+  SVN_ERR(svn_wc__wq_add_postcommit(db, local_abspath, 
                                     new_revnum,
                                     new_changed_rev, new_changed_date,
                                     new_changed_author, checksum,

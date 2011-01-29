@@ -46,7 +46,7 @@
 #define OP_DELETION_POSTCOMMIT "deletion-postcommit"
 /* Arguments of OP_POSTCOMMIT:
  *   (local_abspath, revnum, date, [author], [checksum],
- *    [dav_cache/wc_props], keep_changelist, [tmp_text_base_abspath]). */
+ *    [dav_cache/wc_props], keep_changelist, no_unlock, changed_rev). */
 #define OP_POSTCOMMIT "postcommit"
 #define OP_FILE_INSTALL "file-install"
 #define OP_FILE_REMOVE "file-remove"
@@ -761,10 +761,9 @@ svn_wc__wq_add_deletion_postcommit(svn_wc__db_t *db,
 /* OP_POSTCOMMIT  */
 
 
-/* If TMP_TEXT_BASE_ABSPATH is not NULL, then assume that it is a copy of
- * the new text base of the newly-committed versioned file FILE_ABSPATH,
- * and adjust the working file accordingly.  TMP_TEXT_BASE_ABSPATH is in
- * repository-normal form (aka "detranslated" form).
+/* FILE_ABSPATH is the new text base of the newly-committed versioned file,
+ * in repository-normal form (aka "detranslated" form).  Adjust the working
+ * file accordingly.
  *
  * If eol and/or keyword translation would cause the working file to
  * change, then overwrite the working file with a translated copy of
@@ -790,7 +789,6 @@ static svn_error_t *
 install_committed_file(svn_boolean_t *overwrote_working,
                        svn_wc__db_t *db,
                        const char *file_abspath,
-                       const char *tmp_text_base_abspath,
                        svn_boolean_t remove_executable,
                        svn_boolean_t remove_read_only,
                        svn_cancel_func_t cancel_func,
@@ -830,8 +828,7 @@ install_committed_file(svn_boolean_t *overwrote_working,
    * text is the same as the old working text (or TRUE if it's a special
    * file). */
   {
-    const char *tmp
-      = (tmp_text_base_abspath != NULL) ? tmp_text_base_abspath : file_abspath;
+    const char *tmp = file_abspath;
 
     /* Copy and translate, if necessary. The output file will be deleted at
      * scratch_pool cleanup.
@@ -857,6 +854,7 @@ install_committed_file(svn_boolean_t *overwrote_working,
                                        &special,
                                        db, file_abspath,
                                        scratch_pool, scratch_pool));
+    /* ### Should this be a strcmp()? */
     if (! special && tmp != tmp_wfile)
       SVN_ERR(svn_io_files_contents_same_p(&same, tmp_wfile,
                                            file_abspath, scratch_pool));
@@ -925,13 +923,12 @@ install_committed_file(svn_boolean_t *overwrote_working,
  * - Remove children that are marked deleted (if it's a dir)
  * - Install the new base props
  * - Install the new tree state
- * - Install the new base text (if it's a file) from TMP_TEXT_BASE_ABSPATH
+ * - Install the new base text (if it's a file)
  * - Adjust the parent (if it's a dir)
  * */
 static svn_error_t *
 log_do_committed(svn_wc__db_t *db,
                  const char *local_abspath,
-                 const char *tmp_text_base_abspath,
                  svn_revnum_t new_revision,
                  svn_revnum_t changed_rev,
                  apr_time_t changed_date,
@@ -1110,7 +1107,7 @@ log_do_committed(svn_wc__db_t *db,
          by then will have moved to `text-base'. */
 
       SVN_ERR(install_committed_file(&overwrote_working, db,
-                                     local_abspath, tmp_text_base_abspath,
+                                     local_abspath,
                                      remove_executable, set_read_write,
                                      cancel_func, cancel_baton,
                                      pool));
@@ -1222,7 +1219,6 @@ run_postcommit(svn_wc__db_t *db,
   const svn_checksum_t *new_checksum;
   apr_hash_t *new_dav_cache;
   svn_boolean_t keep_changelist, no_unlock;
-  const char *tmp_text_base_abspath;
   svn_error_t *err;
   apr_int64_t val;
 
@@ -1258,32 +1254,26 @@ run_postcommit(svn_wc__db_t *db,
   /* Before r927056, this WQ item didn't have this next field.  Catch any
    * attempt to run this code on a WC having a stale WQ item in it. */
   SVN_ERR_ASSERT(arg5->next->next->next != NULL);
-  if (arg5->next->next->next->len == 0)
-    tmp_text_base_abspath = NULL;
-  else
-    tmp_text_base_abspath = apr_pstrmemdup(scratch_pool,
-                                           arg5->next->next->next->data,
-                                           arg5->next->next->next->len);
 
-  if (arg5->next->next->next->next)
+  if (arg5->next->next->next)
     {
-      SVN_ERR(svn_skel__parse_int(&val, arg5->next->next->next->next,
+      SVN_ERR(svn_skel__parse_int(&val, arg5->next->next->next,
                                   scratch_pool));
       no_unlock = (val != 0);
     }
   else
     no_unlock = TRUE;
 
-  if (arg5->next->next->next->next->next)
+  if (arg5->next->next->next->next)
     {
-      SVN_ERR(svn_skel__parse_int(&val, arg5->next->next->next->next->next,
+      SVN_ERR(svn_skel__parse_int(&val, arg5->next->next->next->next,
                                   scratch_pool));
       changed_rev = (svn_revnum_t)val;
     }
   else
     changed_rev = new_revision; /* Behavior before fixing issue #3676 */
 
-  err = log_do_committed(db, local_abspath, tmp_text_base_abspath,
+  err = log_do_committed(db, local_abspath,
                          new_revision, changed_rev, changed_date,
                          changed_author, new_checksum, new_dav_cache,
                          keep_changelist, no_unlock,
@@ -1302,7 +1292,6 @@ run_postcommit(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__wq_add_postcommit(svn_wc__db_t *db,
                           const char *local_abspath,
-                          const char *tmp_text_base_abspath,
                           svn_revnum_t new_revision,
                           svn_revnum_t changed_rev,
                           apr_time_t changed_date,
@@ -1317,8 +1306,6 @@ svn_wc__wq_add_postcommit(svn_wc__db_t *db,
 
   svn_skel__prepend_int(changed_rev, work_item, scratch_pool);
   svn_skel__prepend_int(no_unlock, work_item, scratch_pool);
-  svn_skel__prepend_str(tmp_text_base_abspath ? tmp_text_base_abspath : "",
-                        work_item, scratch_pool);
   svn_skel__prepend_int(keep_changelist, work_item, scratch_pool);
   if (new_dav_cache == NULL || apr_hash_count(new_dav_cache) == 0)
     {
