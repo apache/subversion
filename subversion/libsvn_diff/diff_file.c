@@ -387,6 +387,8 @@ find_identical_prefix(svn_boolean_t *reached_one_eof, apr_off_t *prefix_lines,
     is_match = is_match && *file[0].curp == *file[i].curp;
   while (is_match)
     {
+      apr_off_t max_delta, delta;
+
       /* ### TODO: see if we can take advantage of 
          diff options like ignore_eol_style or ignore_space. */
       /* check for eol, and count */
@@ -560,6 +562,7 @@ find_identical_suffix(struct file_info file[], apr_size_t file_len,
     {
       /* Initialize the minimum pointer positions. */
       const char *min_curp[4];
+      svn_boolean_t can_read_word;
 
       min_curp[0] = file_for_suffix[0].chunk == suffix_min_chunk0
                   ? file_for_suffix[0].buffer + suffix_min_offset0 + 1
