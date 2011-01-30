@@ -686,6 +686,10 @@ datasources_open(void *baton, apr_off_t *prefix_lines,
   svn_boolean_t reached_one_eof;
   apr_size_t i;
 
+  /* Make sure prefix_lines is set correctly, even if we exit early because
+   * one of the files is empty. */
+  *prefix_lines = 0;
+
   /* Open datasources and read first chunk */
   for (i = 0; i < datasource_len; i++)
     {
@@ -702,6 +706,11 @@ datasources_open(void *baton, apr_off_t *prefix_lines,
                          length[i], 0, file_baton->pool));
       file->endp = file->buffer + length[i];
       file->curp = file->buffer;
+      /* Set suffix_start_chunk to a guard value, so if suffix scanning is
+       * skipped because one of the files is empty, or because of
+       * reached_one_eof, we can still easily check for the suffix during
+       * token reading (datasource_get_next_token). */
+      file->suffix_start_chunk = -1;
 
       files[i] = *file;
     }
@@ -768,11 +777,12 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
       return SVN_NO_ERROR;
     }
 
-  /* If identical suffix is defined, stop when we encounter it */
-  if (file->suffix_start_chunk || file->suffix_offset_in_chunk)
-    if (file->chunk == file->suffix_start_chunk
-        && (curp - file->buffer) == file->suffix_offset_in_chunk)
-      return SVN_NO_ERROR;
+  /* Stop when we encounter the identical suffix. If suffix scanning was not
+   * performed, suffix_start_chunk will be -1, so this condition will never
+   * be true. */
+  if (file->chunk == file->suffix_start_chunk
+      && curp - file->buffer == file->suffix_offset_in_chunk)
+    return SVN_NO_ERROR;
 
   /* Allocate a new token, or fetch one from the "reusable tokens" list. */
   file_token = file_baton->tokens;
