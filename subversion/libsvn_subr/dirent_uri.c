@@ -2232,7 +2232,6 @@ svn_dirent_is_under_root(svn_boolean_t *under_root,
                          const char *base_path,
                          const char *path,
                          apr_pool_t *pool)
-
 {
   apr_status_t status;
   char *full_path;

@@ -757,9 +757,9 @@ svn_uri_condense_targets(const char **pcommon,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
-/** Check that when @a path is joined to @a base_path, the resulting path
- * is still under BASE_PATH in the local filesystem. If not, set @a under_root
- * to @c FALSE. If @a under_root is @c TRUE is returned, and @a result_path is
+/** Check that when @a path is joined to @a base_path, the resulting path is
+ * still under @a base_path in the local filesystem. If not, set @a under_root
+ * to @c FALSE. If @a under_root of @c TRUE is returned, and @a result_path is
  * not @c NULL, then @a *result_path will be set to the absolute path of @a
  * path, allocated in @a result_pool.
  *
