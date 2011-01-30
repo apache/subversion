@@ -338,6 +338,7 @@ is_one_at_eof(struct file_info file[], apr_size_t file_len)
 /* Quickly determine whether there is a eol char in CHUNK.
  * (mainly copy-n-paste from eol.c#svn_eol__find_eol_start).
  */
+#if SVN_UNALIGNED_ACCESS_IS_OK
 #if APR_SIZEOF_VOIDP == 8
 #  define LOWER_7BITS_SET 0x7f7f7f7f7f7f7f7f
 #  define BIT_7_SET       0x8080808080808080
@@ -349,7 +350,9 @@ is_one_at_eof(struct file_info file[], apr_size_t file_len)
 #  define R_MASK          0x0a0a0a0a
 #  define N_MASK          0x0d0d0d0d
 #endif
+#endif
 
+#if SVN_UNALIGNED_ACCESS_IS_OK
 static svn_boolean_t contains_eol(apr_size_t chunk)
 {
   apr_size_t r_test = chunk ^ R_MASK;
@@ -360,6 +363,7 @@ static svn_boolean_t contains_eol(apr_size_t chunk)
 
   return (r_test & n_test & BIT_7_SET) != BIT_7_SET;
 }
+#endif
 
 /* Find the prefix which is identical between all elements of the FILE array.
  * Return the number of prefix lines in PREFIX_LINES.  REACHED_ONE_EOF will be
@@ -377,7 +381,6 @@ find_identical_prefix(svn_boolean_t *reached_one_eof, apr_off_t *prefix_lines,
   svn_boolean_t had_cr = FALSE;
   svn_boolean_t is_match;
   apr_off_t lines = 0;
-  apr_ssize_t max_delta, delta;
   apr_size_t i;
 
   for (i = 1, is_match = TRUE; i < file_len; i++)
@@ -503,7 +506,7 @@ find_identical_suffix(struct file_info file[], apr_size_t file_len,
   apr_off_t suffix_min_offset0;
   apr_off_t min_file_size;
   int suffix_lines_to_keep = SUFFIX_LINES_TO_KEEP;
-  svn_boolean_t is_match, can_read, can_read_word, reached_prefix;
+  svn_boolean_t is_match, can_read, reached_prefix;
   apr_size_t i;
 
   memset(file_for_suffix, 0, sizeof(file_for_suffix));

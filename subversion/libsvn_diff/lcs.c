@@ -217,10 +217,12 @@ svn_diff__lcs(svn_diff__position_t *position_list1, /* pointer to tail (ring) */
   lcs->next = NULL;
 
   if (position_list1 == NULL || position_list2 == NULL)
-    if (prefix_lines)
-      return prepend_prefix_lcs(lcs, prefix_lines, pool);
-    else
-      return lcs;
+    {
+      if (prefix_lines)
+        return prepend_prefix_lcs(lcs, prefix_lines, pool);
+      else
+        return lcs;
+    }
 
   /* Calculate length of both sequences to be compared */
   length[0] = position_list1->offset - position_list1->next->offset + 1;
