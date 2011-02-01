@@ -2490,14 +2490,13 @@ const char *
 svn_fspath__dirname(const char *fspath,
                     apr_pool_t *pool)
 {
-  const char *result;
   assert(svn_fspath__is_canonical(fspath));
 
-  result = apr_pstrcat(pool, "/", svn_relpath_dirname(fspath + 1, pool),
+  if (fspath[0] == '/' && fspath[1] == '\0')
+    return apr_pstrdup(pool, fspath);
+  else
+    return apr_pstrcat(pool, "/", svn_relpath_dirname(fspath + 1, pool),
                        (char *)NULL);
-
-  assert(svn_fspath__is_canonical(result));
-  return result;
 }
 
 
