@@ -1407,8 +1407,8 @@ svn_uri_get_longest_ancestor(const char *uri1,
   apr_size_t uri_ancestor_len;
   apr_size_t i = 0;
 
-  assert(svn_path_is_canonical(uri1, NULL));
-  assert(svn_path_is_canonical(uri2, NULL));
+  assert(svn_uri_is_canonical(uri1, NULL));
+  assert(svn_uri_is_canonical(uri2, NULL));
 
   /* Find ':' */
   while (1)
