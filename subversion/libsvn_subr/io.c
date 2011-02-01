@@ -93,10 +93,11 @@
       int retries;                                                         \
       for (retries = 0;                                                    \
            retries < RETRY_MAX_ATTEMPTS && (retry_test);                   \
-           ++retries, os_err = APR_TO_OS_ERROR(err))                       \
+           os_err = APR_TO_OS_ERROR(err))                                  \
         {                                                                  \
           if (sleep_test)                                                  \
             {                                                              \
+              ++retries;                                                   \
               apr_sleep(sleep_count);                                      \
               if (sleep_count < RETRY_MAX_SLEEP)                           \
                 sleep_count *= 2;                                          \
