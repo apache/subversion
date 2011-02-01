@@ -279,6 +279,7 @@ dav_svn__log_report(const dav_resource *resource,
   svn_boolean_t include_merged_revisions = FALSE;    /* off by default */
   apr_array_header_t *revprops = apr_array_make(resource->pool, 3,
                                                 sizeof(const char *));
+  apr_array_header_t *ignored_prop_mods = NULL;
   apr_array_header_t *paths
     = apr_array_make(resource->pool, 1, sizeof(const char *));
 
@@ -363,6 +364,14 @@ dav_svn__log_report(const dav_resource *resource,
                                  resource->pool);
           APR_ARRAY_PUSH(paths, const char *) = target;
         }
+      else if (strcmp(child->name, "ignore-prop") == 0)
+        {
+          const char *name = dav_xml_get_cdata(child, resource->pool, 0);
+          if (!ignored_prop_mods)
+            ignored_prop_mods = apr_array_make(resource->pool, 1,
+                                               sizeof(const char *));
+          APR_ARRAY_PUSH(ignored_prop_mods, const char *) = name;
+        }
       /* else unknown element; skip it */
     }
 
@@ -392,7 +401,7 @@ dav_svn__log_report(const dav_resource *resource,
      flag in our log_receiver_baton structure). */
 
   /* Send zero or more log items. */
-  serr = svn_repos_get_logs4(repos->repos,
+  serr = svn_repos_get_logs5(repos->repos,
                              paths,
                              start,
                              end,
@@ -400,6 +409,7 @@ dav_svn__log_report(const dav_resource *resource,
                              discover_changed_paths,
                              strict_node_history,
                              include_merged_revisions,
+                             ignored_prop_mods,
                              revprops,
                              dav_svn__authz_read_func(&arb),
                              &arb,
