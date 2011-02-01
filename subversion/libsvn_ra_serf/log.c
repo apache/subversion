@@ -94,6 +94,7 @@ typedef struct log_context_t {
   svn_boolean_t strict_node_history;
   svn_boolean_t include_merged_revisions;
   const apr_array_header_t *revprops;
+  const apr_array_header_t *ignored_prop_mods;
   int nest_level; /* used to track mergeinfo nesting levels */
   int count; /* only incremented when nest_level == 0 */
 
@@ -536,6 +537,19 @@ create_log_body(serf_bucket_t **body_bkt,
                                    alloc);
     }
 
+  if (log_ctx->ignored_prop_mods)
+    {
+      int i;
+      for (i = 0; i < log_ctx->ignored_prop_mods->nelts; i++)
+        {
+          char *name = APR_ARRAY_IDX(log_ctx->revprops, i, char *);
+         
+          svn_ra_serf__add_tag_buckets(buckets,
+                                       "S:ignored-prop", name,
+                                       alloc);
+        }
+    }
+
   if (log_ctx->paths)
     {
       int i;
@@ -590,6 +604,7 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
   log_ctx->strict_node_history = strict_node_history;
   log_ctx->include_merged_revisions = include_merged_revisions;
   log_ctx->revprops = revprops;
+  log_ctx->ignored_prop_mods = ignored_prop_mods;
   log_ctx->nest_level = 0;
   log_ctx->done = FALSE;
 

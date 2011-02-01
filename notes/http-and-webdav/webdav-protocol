@@ -356,6 +356,7 @@ Request:
     <S:include-merged-revisions/> (optional)
     <S:revprop>REVPROP</S:revprop>... | <S:all-revprops/> | <S:no-revprops/>
       ('revprop', 'all-revprops', and 'no-revprops' are all optional)
+    <S:ignored-prop>PROP</S:ignored-prop>... (optional)
     <S:path></S:path>... (optional)
   </S:log-report>
 

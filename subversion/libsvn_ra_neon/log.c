@@ -450,6 +450,18 @@ svn_error_t * svn_ra_neon__get_log(svn_ra_session_t *session,
       want_custom_revprops = TRUE;
     }
 
+  if (ignored_prop_mods)
+    {
+      for (i = 0; i < ignored_prop_mods; i++)
+        {
+          char *name = APR_ARRAY_IDX(ignored_prop_mods, i, char *);
+
+          svn_stringbuf_appendcstr(request_body, "<S:ignored-prop>");
+          svn_stringbuf_appendcstr(request_body, name);
+          svn_stringbuf_appendcstr(request_body, "</S:ignored-prop>");
+        }
+    }
+
   if (want_custom_revprops)
     {
       svn_boolean_t has_log_revprops;
