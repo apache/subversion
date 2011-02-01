@@ -166,6 +166,144 @@ check_authz(struct edit_baton *editor_baton, const char *path,
   return SVN_NO_ERROR;
 }
 
+
+/* Return a directory baton allocated in POOL which represents
+   FULL_PATH, which is the immediate directory child of the directory
+   represented by PARENT_BATON.  EDIT_BATON is the commit editor
+   baton.  WAS_COPIED reveals whether or not this directory is the
+   result of a copy operation.  BASE_REVISION is the base revision of
+   the directory. */
+static struct dir_baton *
+make_dir_baton(struct edit_baton *edit_baton,
+               struct dir_baton *parent_baton,
+               const char *full_path,
+               svn_boolean_t was_copied,
+               svn_revnum_t base_revision,
+               apr_pool_t *pool)
+{
+  struct dir_baton *db;
+  db = apr_pcalloc(pool, sizeof(*db));
+  db->edit_baton = edit_baton;
+  db->parent = parent_baton;
+  db->pool = pool;
+  db->path = full_path;
+  db->was_copied = was_copied;
+  db->base_rev = base_revision;
+  return db;
+}
+
+
+/* This function is the shared guts of add_file() and add_directory(),
+   which see for the meanings of the parameters.  The only extra
+   parameter here is IS_DIR, which is TRUE when adding a directory,
+   and FALSE when adding a file.  */
+static svn_error_t *
+add_file_or_directory(const char *path,
+                      void *parent_baton,
+                      const char *copy_path,
+                      svn_revnum_t copy_revision,
+                      svn_boolean_t is_dir,
+                      apr_pool_t *pool,
+                      void **return_baton)
+{
+  struct dir_baton *pb = parent_baton;
+  struct edit_baton *eb = pb->edit_baton;
+  const char *full_path = svn_fspath__join(eb->base_path, path, pool);
+  apr_pool_t *subpool = svn_pool_create(pool);
+  svn_boolean_t was_copied = FALSE;
+
+  /* Sanity check. */
+  if (copy_path && (! SVN_IS_VALID_REVNUM(copy_revision)))
+    return svn_error_createf
+      (SVN_ERR_FS_GENERAL, NULL,
+       _("Got source path but no source revision for '%s'"), full_path);
+
+  if (copy_path)
+    {
+      const char *fs_path;
+      svn_fs_root_t *copy_root;
+      svn_node_kind_t kind;
+      size_t repos_url_len;
+      svn_repos_authz_access_t required;
+
+      /* Copy requires recursive write access to the destination path
+         and write access to the parent path. */
+      required = svn_authz_write | (is_dir ? svn_authz_recursive : 0);
+      SVN_ERR(check_authz(eb, full_path, eb->txn_root,
+                          required, subpool));
+      SVN_ERR(check_authz(eb, pb->path, eb->txn_root,
+                          svn_authz_write, subpool));
+
+      /* Check PATH in our transaction.  Make sure it does not exist
+         unless its parent directory was copied (in which case, the
+         thing might have been copied in as well), else return an
+         out-of-dateness error. */
+      SVN_ERR(svn_fs_check_path(&kind, eb->txn_root, full_path, subpool));
+      if ((kind != svn_node_none) && (! pb->was_copied))
+        return out_of_date(full_path, kind);
+
+      /* For now, require that the url come from the same repository
+         that this commit is operating on. */
+      copy_path = svn_path_uri_decode(copy_path, subpool);
+      repos_url_len = strlen(eb->repos_url);
+      if (strncmp(copy_path, eb->repos_url, repos_url_len) != 0)
+        return svn_error_createf
+          (SVN_ERR_FS_GENERAL, NULL,
+           _("Source url '%s' is from different repository"), copy_path);
+
+      fs_path = apr_pstrdup(subpool, copy_path + repos_url_len);
+
+      /* Now use the "fs_path" as an absolute path within the
+         repository to make the copy from. */
+      SVN_ERR(svn_fs_revision_root(&copy_root, eb->fs,
+                                   copy_revision, subpool));
+
+      /* Copy also requires (recursive) read access to the source */
+      required = svn_authz_read | (is_dir ? svn_authz_recursive : 0);
+      SVN_ERR(check_authz(eb, fs_path, copy_root, required, subpool));
+
+      SVN_ERR(svn_fs_copy(copy_root, fs_path,
+                          eb->txn_root, full_path, subpool));
+      was_copied = TRUE;
+    }
+  else
+    {
+      /* No ancestry given, just make a new directory or empty file.
+         Note that we don't perform an existence check here like the
+         copy-from case does -- that's because svn_fs_make_*()
+         already errors out if the file already exists.  Verify write
+         access to the full path and to the parent. */
+      SVN_ERR(check_authz(eb, full_path, eb->txn_root,
+                          svn_authz_write, subpool));
+      SVN_ERR(check_authz(eb, pb->path, eb->txn_root,
+                          svn_authz_write, subpool));
+      if (is_dir)
+        SVN_ERR(svn_fs_make_dir(eb->txn_root, full_path, subpool));
+      else
+        SVN_ERR(svn_fs_make_file(eb->txn_root, full_path, subpool));
+    }
+
+  /* Cleanup our temporary subpool. */
+  svn_pool_destroy(subpool);
+
+  /* Build a new child baton. */
+  if (is_dir)
+    {
+      *return_baton = make_dir_baton(eb, pb, full_path, was_copied,
+                                     SVN_INVALID_REVNUM, pool);
+    }
+  else
+    {
+      struct file_baton *new_fb = apr_pcalloc(pool, sizeof(*new_fb));
+      new_fb->edit_baton = eb;
+      new_fb->path = full_path;
+      *return_baton = new_fb;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 
 /*** Editor functions ***/
 
@@ -263,26 +401,6 @@ delete_entry(const char *path,
 }
 
 
-static struct dir_baton *
-make_dir_baton(struct edit_baton *edit_baton,
-               struct dir_baton *parent_baton,
-               const char *full_path,
-               svn_boolean_t was_copied,
-               svn_revnum_t base_revision,
-               apr_pool_t *pool)
-{
-  struct dir_baton *db;
-  db = apr_pcalloc(pool, sizeof(*db));
-  db->edit_baton = edit_baton;
-  db->parent = parent_baton;
-  db->pool = pool;
-  db->path = full_path;
-  db->was_copied = was_copied;
-  db->base_rev = base_revision;
-  return db;
-}
-
-
 static svn_error_t *
 add_directory(const char *path,
               void *parent_baton,
@@ -291,88 +409,8 @@ add_directory(const char *path,
               apr_pool_t *pool,
               void **child_baton)
 {
-  struct dir_baton *pb = parent_baton;
-  struct edit_baton *eb = pb->edit_baton;
-  const char *full_path = svn_fspath__join(eb->base_path, path, pool);
-  apr_pool_t *subpool = svn_pool_create(pool);
-  svn_boolean_t was_copied = FALSE;
-
-  /* Sanity check. */
-  if (copy_path && (! SVN_IS_VALID_REVNUM(copy_revision)))
-    return svn_error_createf
-      (SVN_ERR_FS_GENERAL, NULL,
-       _("Got source path but no source revision for '%s'"), full_path);
-
-  if (copy_path)
-    {
-      const char *fs_path;
-      svn_fs_root_t *copy_root;
-      svn_node_kind_t kind;
-      size_t repos_url_len;
-
-      /* Copy requires recursive write access to the destination path
-         and write access to the parent path. */
-      SVN_ERR(check_authz(eb, full_path, eb->txn_root,
-                          svn_authz_write | svn_authz_recursive,
-                          subpool));
-      SVN_ERR(check_authz(eb, pb->path, eb->txn_root,
-                          svn_authz_write, subpool));
-
-      /* Check PATH in our transaction.  Make sure it does not exist
-         unless its parent directory was copied (in which case, the
-         thing might have been copied in as well), else return an
-         out-of-dateness error. */
-      SVN_ERR(svn_fs_check_path(&kind, eb->txn_root, full_path, subpool));
-      if ((kind != svn_node_none) && (! pb->was_copied))
-        return out_of_date(full_path, kind);
-
-      /* For now, require that the url come from the same repository
-         that this commit is operating on. */
-      copy_path = svn_path_uri_decode(copy_path, subpool);
-      repos_url_len = strlen(eb->repos_url);
-      if (strncmp(copy_path, eb->repos_url, repos_url_len) != 0)
-        return svn_error_createf
-          (SVN_ERR_FS_GENERAL, NULL,
-           _("Source url '%s' is from different repository"), copy_path);
-
-      fs_path = apr_pstrdup(subpool, copy_path + repos_url_len);
-
-      /* Now use the "fs_path" as an absolute path within the
-         repository to make the copy from. */
-      SVN_ERR(svn_fs_revision_root(&copy_root, eb->fs,
-                                   copy_revision, subpool));
-
-      /* Copy also requires recursive read access to the source
-         path. */
-      SVN_ERR(check_authz(eb, fs_path, copy_root,
-                          svn_authz_read | svn_authz_recursive,
-                          subpool));
-
-      SVN_ERR(svn_fs_copy(copy_root, fs_path,
-                          eb->txn_root, full_path, subpool));
-      was_copied = TRUE;
-    }
-  else
-    {
-      /* No ancestry given, just make a new directory.  We don't
-         bother with an out-of-dateness check here because
-         svn_fs_make_dir will error out if PATH already exists.
-         Verify write access to the full path and the parent
-         directory. */
-      SVN_ERR(check_authz(eb, full_path, eb->txn_root,
-                          svn_authz_write, subpool));
-      SVN_ERR(check_authz(eb, pb->path, eb->txn_root,
-                          svn_authz_write, subpool));
-      SVN_ERR(svn_fs_make_dir(eb->txn_root, full_path, subpool));
-    }
-
-  /* Cleanup our temporary subpool. */
-  svn_pool_destroy(subpool);
-
-  /* Build a new dir baton for this directory. */
-  *child_baton = make_dir_baton(eb, pb, full_path, was_copied,
-                                SVN_INVALID_REVNUM, pool);
-  return SVN_NO_ERROR;
+  return add_file_or_directory(path, parent_baton, copy_path, copy_revision,
+                               TRUE /* is_dir */, pool, child_baton);
 }
 
 
@@ -426,8 +464,6 @@ apply_textdelta(void *file_baton,
 }
 
 
-
-
 static svn_error_t *
 add_file(const char *path,
          void *parent_baton,
@@ -436,90 +472,9 @@ add_file(const char *path,
          apr_pool_t *pool,
          void **file_baton)
 {
-  struct file_baton *new_fb;
-  struct dir_baton *pb = parent_baton;
-  struct edit_baton *eb = pb->edit_baton;
-  const char *full_path = svn_fspath__join(eb->base_path, path, pool);
-  apr_pool_t *subpool = svn_pool_create(pool);
-
-  /* Sanity check. */
-  if (copy_path && (! SVN_IS_VALID_REVNUM(copy_revision)))
-    return svn_error_createf
-      (SVN_ERR_FS_GENERAL, NULL,
-       _("Got source path but no source revision for '%s'"), full_path);
-
-  if (copy_path)
-    {
-      const char *fs_path;
-      svn_fs_root_t *copy_root;
-      svn_node_kind_t kind;
-      size_t repos_url_len;
-
-      /* Copy requires recursive write to the destination path and
-         parent path. */
-      SVN_ERR(check_authz(eb, full_path, eb->txn_root,
-                          svn_authz_write, subpool));
-      SVN_ERR(check_authz(eb, pb->path, eb->txn_root,
-                          svn_authz_write, subpool));
-
-      /* Check PATH in our transaction.  Make sure it does not exist
-         unless its parent directory was copied (in which case, the
-         thing might have been copied in as well), else return an
-         out-of-dateness error. */
-      SVN_ERR(svn_fs_check_path(&kind, eb->txn_root, full_path, subpool));
-      if ((kind != svn_node_none) && (! pb->was_copied))
-        return out_of_date(full_path, kind);
-
-      /* For now, require that the url come from the same repository
-         that this commit is operating on. */
-      copy_path = svn_path_uri_decode(copy_path, subpool);
-      repos_url_len = strlen(eb->repos_url);
-      if (strncmp(copy_path, eb->repos_url, repos_url_len) != 0)
-            return svn_error_createf
-              (SVN_ERR_FS_GENERAL, NULL,
-               _("Source url '%s' is from different repository"), copy_path);
-
-      fs_path = apr_pstrdup(subpool, copy_path + repos_url_len);
-
-      /* Now use the "fs_path" as an absolute path within the
-         repository to make the copy from. */
-      SVN_ERR(svn_fs_revision_root(&copy_root, eb->fs,
-                                   copy_revision, subpool));
-
-      /* Copy also requires read access to the source */
-      SVN_ERR(check_authz(eb, fs_path, copy_root,
-                          svn_authz_read, subpool));
-
-      SVN_ERR(svn_fs_copy(copy_root, fs_path,
-                          eb->txn_root, full_path, subpool));
-    }
-  else
-    {
-      /* No ancestry given, just make a new, empty file.  Note that we
-         don't perform an existence check here like the copy-from case
-         does -- that's because svn_fs_make_file() already errors out
-         if the file already exists.  Verify write access to the full
-         path and to the parent. */
-      SVN_ERR(check_authz(eb, full_path, eb->txn_root, svn_authz_write,
-                          subpool));
-      SVN_ERR(check_authz(eb, pb->path, eb->txn_root, svn_authz_write,
-                          subpool));
-      SVN_ERR(svn_fs_make_file(eb->txn_root, full_path, subpool));
-    }
-
-  /* Cleanup our temporary subpool. */
-  svn_pool_destroy(subpool);
-
-  /* Build a new file baton */
-  new_fb = apr_pcalloc(pool, sizeof(*new_fb));
-  new_fb->edit_baton = eb;
-  new_fb->path = full_path;
-
-  *file_baton = new_fb;
-  return SVN_NO_ERROR;
+  return add_file_or_directory(path, parent_baton, copy_path, copy_revision,
+                               FALSE /* is_dir */, pool, file_baton);
 }
-
-
 
 
 static svn_error_t *
