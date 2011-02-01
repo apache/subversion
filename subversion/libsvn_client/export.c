@@ -881,11 +881,13 @@ change_dir_prop(void *dir_baton,
 /* Move the tmpfile to file, and send feedback. */
 static svn_error_t *
 close_file(void *file_baton,
-           const char *text_checksum,
+           const char *text_digest,
            apr_pool_t *pool)
 {
   struct file_baton *fb = file_baton;
   struct edit_baton *eb = fb->edit_baton;
+  svn_checksum_t *text_checksum;
+  svn_checksum_t *actual_checksum;
 
   /* Was a txdelta even sent? */
   if (! fb->tmppath)
@@ -893,22 +895,21 @@ close_file(void *file_baton,
 
   SVN_ERR(svn_stream_close(fb->tmp_stream));
 
-  if (text_checksum)
-    {
-      const char *actual_checksum =
-        svn_checksum_to_cstring(svn_checksum__from_digest(fb->text_digest,
-                                                          svn_checksum_md5,
-                                                          pool), pool);
+  SVN_ERR(svn_checksum_parse_hex(&text_checksum, svn_checksum_md5, text_digest,
+                                 pool));
+  actual_checksum = svn_checksum__from_digest(fb->text_digest,
+                                              svn_checksum_md5, pool);
 
-      if (actual_checksum && (strcmp(text_checksum, actual_checksum) != 0))
-        {
-          return svn_error_createf(SVN_ERR_CHECKSUM_MISMATCH, NULL,
+  if (!svn_checksum_match(text_checksum, actual_checksum))
+    {
+      return svn_error_createf(SVN_ERR_CHECKSUM_MISMATCH, NULL,
                           _("Checksum mismatch for '%s':\n"
                             "   expected:  %s\n"
                             "     actual:  %s\n"),
                           svn_dirent_local_style(fb->path, pool),
-                          text_checksum, actual_checksum);
-        }
+                          svn_checksum_to_cstring_display(text_checksum, pool),
+                          svn_checksum_to_cstring_display(actual_checksum,
+                                                          pool));
     }
 
   if ((! fb->eol_style_val) && (! fb->keywords_val) && (! fb->special))
