@@ -5139,10 +5139,10 @@ def update_deleted_locked_files(sbox):
                                         expected_status)
 
 #----------------------------------------------------------------------
-# Test for issue #3659 svn update --depth <DEPTH> allows making a working
+# Test for issue #3569 svn update --depth <DEPTH> allows making a working
 # copy incomplete.
 #
-# XFail until issue #3659 is fixed.  This test needs extension to map some
+# XFail until issue #3569 is fixed.  This test needs extension to map some
 # real use cases (all add operations are missing if a directory is updated
 # without its children.)
 def update_empty_hides_entries(sbox):

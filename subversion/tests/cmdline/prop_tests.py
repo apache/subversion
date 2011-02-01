@@ -790,7 +790,8 @@ def copy_inherits_special_props(sbox):
       raise svntest.verify.SVNUnexpectedOutput
 
 #----------------------------------------------------------------------
-
+# Test for issue #3086 'mod-dav-svn ignores pre-revprop-change failure
+# on revprop delete'
 def revprop_change(sbox):
   "set, get, and delete a revprop change"
 

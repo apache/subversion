@@ -685,6 +685,7 @@ def merge_dir_mod_onto_not_dir(sbox):
   test_tc_merge(sbox, d_mods, br_scen = d_dels + d_rpl_f)
   test_tc_merge(sbox2, d_mods, wc_scen = d_dels)
 
+# Test for issue #3150 'tree conflicts with directories as victims'.
 def merge_dir_del_onto_not_same(sbox):
   "merge dir: del/rpl/mv onto not-same"
   sbox2 = sbox.clone_dependent()
