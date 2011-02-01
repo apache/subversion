@@ -176,7 +176,8 @@ Commit access for specific areas:
           lark   Wang Jian <lark@linux.net.cn>               (po: zh_CN) [EMAIL
                                                              IS BOUNCING]
 giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
-        nebiac   Federico Nebiacolombo <cint1@amsjv.it>      (po: it)
+        nebiac   Federico Nebiacolombo <cint1@amsjv.it>      (po: it) [EMAIL
+                                                             IS BOUNCING]
         fabien   Fabien Coelho <fabien@coelho.net>           (po: fr)
        marcelg   Marcel Gosselin <marcel.gosselin@polymtl.ca> (po: fr)
 
@@ -184,6 +185,7 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
 
      gthompson   Glenn A. Thompson <gthompson@cdr.net>       (pluggable-db br.)
        sigfred   Sigfred Håversen <bsdlist@mumak.com>        (svnserve-ssl br.)
+                                                             [EMAIL IS BOUNCING]
         pmarek   Ph. Marek <philipp@marek.priv.at>           (meta-data-v br.)
       jpeacock   John Peacock <jpeacock@rowman.com>          (perl-bindings-
                                                               improvements br.)
