@@ -484,6 +484,12 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
         {
           /* Noop segment, so do nothing. */
         }
+      else if (type == type_uri && seglen == 3
+               && src[0] == '%' && src[1] == '2'
+               && canonicalize_to_upper(src[2]) == 'E')
+        {
+          /* '%2E' is equivalent to '.', so this is a noop segment */
+        }
 #ifdef SVN_USE_DOS_PATHS
       /* If this is the first path segment of a file:// URI and it contains a
          windows drive letter, convert the drive letter to upper case. */
