@@ -38,6 +38,7 @@
 #include "svn_props.h"
 #include "repos.h"
 #include "svn_private_config.h"
+#include "private/svn_fspath.h"
 #include "private/svn_repos_private.h"
 
 
@@ -231,7 +232,7 @@ delete_entry(const char *path,
   svn_node_kind_t kind;
   svn_revnum_t cr_rev;
   svn_repos_authz_access_t required = svn_authz_write;
-  const char *full_path = svn_path_join(eb->base_path, path, pool);
+  const char *full_path = svn_fspath__join(eb->base_path, path, pool);
 
   /* Check PATH in our transaction.  */
   SVN_ERR(svn_fs_check_path(&kind, eb->txn_root, full_path, pool));
@@ -292,7 +293,7 @@ add_directory(const char *path,
 {
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
-  const char *full_path = svn_path_join(eb->base_path, path, pool);
+  const char *full_path = svn_fspath__join(eb->base_path, path, pool);
   apr_pool_t *subpool = svn_pool_create(pool);
   svn_boolean_t was_copied = FALSE;
 
@@ -385,7 +386,7 @@ open_directory(const char *path,
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
   svn_node_kind_t kind;
-  const char *full_path = svn_path_join(eb->base_path, path, pool);
+  const char *full_path = svn_fspath__join(eb->base_path, path, pool);
 
   /* Check PATH in our transaction.  If it does not exist,
      return a 'Path not present' error. */
@@ -438,7 +439,7 @@ add_file(const char *path,
   struct file_baton *new_fb;
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
-  const char *full_path = svn_path_join(eb->base_path, path, pool);
+  const char *full_path = svn_fspath__join(eb->base_path, path, pool);
   apr_pool_t *subpool = svn_pool_create(pool);
 
   /* Sanity check. */
@@ -533,7 +534,7 @@ open_file(const char *path,
   struct edit_baton *eb = pb->edit_baton;
   svn_revnum_t cr_rev;
   apr_pool_t *subpool = svn_pool_create(pool);
-  const char *full_path = svn_path_join(eb->base_path, path, pool);
+  const char *full_path = svn_fspath__join(eb->base_path, path, pool);
 
   /* Check for read authorization. */
   SVN_ERR(check_authz(eb, full_path, eb->txn_root,
@@ -873,7 +874,7 @@ svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
   eb->commit_callback_baton = callback_baton;
   eb->authz_callback = authz_callback;
   eb->authz_baton = authz_baton;
-  eb->base_path = apr_pstrdup(subpool, base_path);
+  eb->base_path = svn_fspath__canonicalize(base_path, subpool);
   eb->repos = repos;
   eb->repos_url = repos_url;
   eb->repos_name = svn_dirent_basename(svn_repos_path(repos, subpool),
