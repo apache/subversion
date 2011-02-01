@@ -63,7 +63,10 @@ svn_path_condense_targets(const char **pcommon,
   first_target = APR_ARRAY_IDX(targets, 0, const char *);
   first_target_is_url = svn_path_is_url(first_target);
   if (first_target_is_url)
-    first_target = apr_pstrdup(pool, first_target);
+    {
+      first_target = apr_pstrdup(pool, first_target);
+      *pcommon = first_target;
+    }
   else
     SVN_ERR(svn_dirent_get_absolute(pcommon, first_target, pool));
 
