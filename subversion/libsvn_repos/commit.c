@@ -208,9 +208,12 @@ add_file_or_directory(const char *path,
 {
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
-  const char *full_path = svn_fspath__join(eb->base_path, path, pool);
   apr_pool_t *subpool = svn_pool_create(pool);
   svn_boolean_t was_copied = FALSE;
+  const char *full_path;
+
+  full_path = svn_fspath__join(eb->base_path,
+                               svn_relpath_canonicalize(path, pool), pool);
 
   /* Sanity check. */
   if (copy_path && (! SVN_IS_VALID_REVNUM(copy_revision)))
@@ -370,7 +373,10 @@ delete_entry(const char *path,
   svn_node_kind_t kind;
   svn_revnum_t cr_rev;
   svn_repos_authz_access_t required = svn_authz_write;
-  const char *full_path = svn_fspath__join(eb->base_path, path, pool);
+  const char *full_path;
+
+  full_path = svn_fspath__join(eb->base_path,
+                               svn_relpath_canonicalize(path, pool), pool);
 
   /* Check PATH in our transaction.  */
   SVN_ERR(svn_fs_check_path(&kind, eb->txn_root, full_path, pool));
@@ -424,7 +430,10 @@ open_directory(const char *path,
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
   svn_node_kind_t kind;
-  const char *full_path = svn_fspath__join(eb->base_path, path, pool);
+  const char *full_path;
+
+  full_path = svn_fspath__join(eb->base_path,
+                               svn_relpath_canonicalize(path, pool), pool);
 
   /* Check PATH in our transaction.  If it does not exist,
      return a 'Path not present' error. */
@@ -489,7 +498,10 @@ open_file(const char *path,
   struct edit_baton *eb = pb->edit_baton;
   svn_revnum_t cr_rev;
   apr_pool_t *subpool = svn_pool_create(pool);
-  const char *full_path = svn_fspath__join(eb->base_path, path, pool);
+  const char *full_path;
+
+  full_path = svn_fspath__join(eb->base_path,
+                               svn_relpath_canonicalize(path, pool), pool);
 
   /* Check for read authorization. */
   SVN_ERR(check_authz(eb, full_path, eb->txn_root,
