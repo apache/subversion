@@ -371,7 +371,8 @@ second place for auth-request point as noted below.
                 ? limit:number
                 ? include-merged-revisions:bool
                 all-revprops | revprops
-                ? ( revprop:string ... ) )
+                ? ( revprop:string ... )
+                ? ( prop:string ... )
     Before sending response, server sends log entries, ending with "done".
     If a client does not want to specify a limit, it should send 0 as the
     limit parameter.  rev-props excludes author, date, and log; they are
