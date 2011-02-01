@@ -85,29 +85,38 @@
 #define RETRY_INITIAL_SLEEP 1000
 #define RETRY_MAX_SLEEP 128000
 
-#define RETRY_LOOP(err, expr, test)                                        \
+#define RETRY_LOOP(err, expr, retry_test, sleep_test)                      \
   do                                                                       \
     {                                                                      \
       apr_status_t os_err = APR_TO_OS_ERROR(err);                          \
       int sleep_count = RETRY_INITIAL_SLEEP;                               \
       int retries;                                                         \
       for (retries = 0;                                                    \
-           retries < RETRY_MAX_ATTEMPTS && (test);                         \
+           retries < RETRY_MAX_ATTEMPTS && (retry_test);                   \
            ++retries, os_err = APR_TO_OS_ERROR(err))                       \
         {                                                                  \
-          apr_sleep(sleep_count);                                          \
-          if (sleep_count < RETRY_MAX_SLEEP)                               \
-            sleep_count *= 2;                                              \
+          if (sleep_test)                                                  \
+            {                                                              \
+              apr_sleep(sleep_count);                                      \
+              if (sleep_count < RETRY_MAX_SLEEP)                           \
+                sleep_count *= 2;                                          \
+            }                                                              \
           (err) = (expr);                                                  \
         }                                                                  \
     }                                                                      \
   while (0)
 
 #if defined(EDEADLK) && APR_HAS_THREADS
-#define EDEADLK_RETRY_LOOP(err, expr)                                      \
-  RETRY_LOOP(err, expr, (os_err == EDEADLK))
+#define FILE_LOCK_RETRY_LOOP(err, expr)                                    \
+  RETRY_LOOP(err,                                                          \
+             expr,                                                         \
+             (APR_STATUS_IS_EINTR(err) || os_err == EDEADLK),              \
+             (!APR_STATUS_IS_EINTR(err)))
 #else
-#define EDEADLK_RETRY_LOOP(err, expr) ((void)0)
+  RETRY_LOOP(err,                                                          \
+             expr,                                                         \
+             (APR_STATUS_IS_EINTR(err)),                                   \
+             0)
 #endif
 
 #ifndef WIN32_RETRY_LOOP
@@ -115,7 +124,8 @@
 #define WIN32_RETRY_LOOP(err, expr)                                        \
   RETRY_LOOP(err, expr, (os_err == ERROR_ACCESS_DENIED                     \
                          || os_err == ERROR_SHARING_VIOLATION              \
-                         || os_err == ERROR_DIR_NOT_EMPTY))
+                         || os_err == ERROR_DIR_NOT_EMPTY),                \
+             1)
 #else
 #define WIN32_RETRY_LOOP(err, expr) ((void)0)
 #endif
@@ -1718,7 +1728,7 @@ svn_io_file_lock2(const char *lock_file,
      thread 2: try to get lock in B *** deadlock ***
 
      Retry for a while for the deadlock to clear. */
-  EDEADLK_RETRY_LOOP(apr_err, apr_file_lock(lockfile_handle, locktype));
+  FILE_LOCK_RETRY_LOOP(apr_err, apr_file_lock(lockfile_handle, locktype));
 
   if (apr_err)
     {
