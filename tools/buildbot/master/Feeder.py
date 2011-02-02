@@ -167,7 +167,7 @@ class FeedResource(XmlResource):
             projectName = self.status.getProjectName()
             link = re.sub(r'index.html', "", self.status.getURLForThing(build))
 
-            # title: trunk r22191 (plus patch) failed on 'i686-debian-sarge1 shared gcc-3.3.5'
+            # title: trunk r862265 (plus patch) failed on 'i686-debian-sarge1 shared gcc-3.3.5'
             ss = build.getSourceStamp()
             source = ""
             if ss.branch:

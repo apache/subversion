@@ -703,7 +703,7 @@ copy_source_ops(apr_size_t offset, apr_size_t limit,
 
               /* ### FIXME: ptn_overlap is unsigned, so the if() condition
                  below is always true!  Either it should be '> 0', or the
-                 code block should be unconditional.  See also r2288. */
+                 code block should be unconditional.  See also r842362. */
               if (ptn_overlap >= 0)
                 {
                   /* Issue second subrange in the pattern. */

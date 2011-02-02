@@ -383,8 +383,8 @@ def reintegrate_with_rename(sbox):
 
   # Update the wcs again.
   #
-  # Note: this update had to be added because of r28942 (which was
-  # merged into the reintegrate branch in r28947).  Without this
+  # Note: this update had to be added because of r869016 (which was
+  # merged into the reintegrate branch in r869021).  Without this
   # update, the mergeinfo will not be inherited properly as part of
   # the 'svn cp tau tauprime' step, and later (during the post-commit
   # update, with the new expected_disk) we'll get an error like this:
@@ -1253,7 +1253,7 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   #      of 'trunk' was previously merged to 'branch'
 
   # r16 - A) REPOS-to-REPOS rename of A/D/gamma to A/D/gamma_moved.  Since
-  # r34184 WC-to-WC moves won't create mergeinfo on the dest if the source
+  # r874258 WC-to-WC moves won't create mergeinfo on the dest if the source
   # doesn't have any.  So do a repos-to-repos move so explicit mergeinfo
   # *is* created on the destination.
   svntest.actions.run_and_verify_svn(None, None,[], 'move',

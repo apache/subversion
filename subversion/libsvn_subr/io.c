@@ -3935,7 +3935,7 @@ svn_io_open_unique_file3(apr_file_t **file,
    * ### This will cause working files having mode 0600 while users might
    * ### expect to see 644 or 664. Ideally, permissions should be tweaked
    * ### by our callers after installing tempfiles in the WC, but until
-   * ### that's done we need to avoid breaking pre-r40264 behaviour.
+   * ### that's done we need to avoid breaking pre-r880338 behaviour.
    * ### So we tweak perms of the tempfile here, but only if the umask
    * ### allows it. */
   SVN_ERR(merge_default_file_perms(tempfile, &perms, scratch_pool));
