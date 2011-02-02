@@ -2241,15 +2241,14 @@ add_directory(const char *path,
 
       svn_boolean_t local_is_dir;
       svn_boolean_t local_is_non_dir;
-      const char *local_is_copy = NULL;
+      svn_wc__db_status_t add_status;
 
       /* Is the local add a copy? */
       if (status == svn_wc__db_status_added)
-        SVN_ERR(svn_wc__node_get_copyfrom_info(&local_is_copy,
-                                               NULL, NULL, NULL, NULL,
-                                               eb->wc_ctx,
-                                               db->local_abspath,
-                                               pool, pool));
+        SVN_ERR(svn_wc__db_scan_addition(&add_status, NULL, NULL, NULL, NULL,
+                                         NULL, NULL, NULL, NULL,
+                                         eb->db, db->local_abspath,
+                                         pool, pool));
 
 
       /* Is there something that is a file? */
@@ -2338,7 +2337,8 @@ add_directory(const char *path,
       if (! pb->in_deleted_and_tree_conflicted_subtree
           && (eb->switch_relpath != NULL
               || local_is_non_dir
-              || local_is_copy
+              || add_status == svn_wc__db_status_copied
+              || add_status == svn_wc__db_status_moved_here
              )
          )
         {
