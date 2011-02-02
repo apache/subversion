@@ -997,8 +997,8 @@ def up_add_onto_add_revert(sbox):
 
   expected_status = get_virginal_state(wc2_dir, 2)
   expected_status.add({
-    'newfile' : Item(status='A ', copied='+', treeconflict='C', wc_rev='-'),
-    'NewDir'  : Item(status='A ', copied='+', treeconflict='C', wc_rev='-'),
+    'newfile' : Item(status='R ', copied='+', treeconflict='C', wc_rev='-'),
+    'NewDir'  : Item(status='R ', copied='+', treeconflict='C', wc_rev='-'),
     })
 
   run_and_verify_update(wc2_dir,
