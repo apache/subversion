@@ -1924,6 +1924,10 @@ svn_ra_serf__error_on_status(int status_code,
                                      " please relocate")
                                  : _("Repository moved temporarily to '%s';"
                                      " please relocate"), location);
+      case 403:
+        return svn_error_createf(SVN_ERR_RA_DAV_FORBIDDEN, NULL,
+                                 _("Access to '%s' forbidden"), path);
+
       case 404:
         return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
                                  _("'%s' path not found"), path);
