@@ -105,6 +105,7 @@
              (APR_STATUS_IS_EINTR(err) || os_err == EDEADLK),              \
              (!APR_STATUS_IS_EINTR(err)))
 #else
+#define FILE_LOCK_RETRY_LOOP(err, expr)                                    \
   RETRY_LOOP(err,                                                          \
              expr,                                                         \
              (APR_STATUS_IS_EINTR(err)),                                   \
