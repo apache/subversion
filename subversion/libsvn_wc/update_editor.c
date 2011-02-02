@@ -2241,7 +2241,7 @@ add_directory(const char *path,
 
       svn_boolean_t local_is_dir;
       svn_boolean_t local_is_non_dir;
-      svn_wc__db_status_t add_status;
+      svn_wc__db_status_t add_status = svn_wc__db_status_normal;
 
       /* Is the local add a copy? */
       if (status == svn_wc__db_status_added)
