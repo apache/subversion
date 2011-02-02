@@ -5056,6 +5056,216 @@ svn_wc__db_read_props(apr_hash_t **props,
   return SVN_NO_ERROR;
 }
 
+/* Parse a node's PROP_DATA (which is PROP_DATA_LEN bytes long)
+ * into a hash table keyed by property names and containing property values.
+ *
+ * If parsing succeeds, and the set of properties is not empty,
+ * add the hash table to PROPS_PER_CHILD, keyed by the absolute path
+ * of the node CHILD_RELPATH within the working copy at WCROOT_ABSPATH.
+ *
+ * If the set of properties is empty, and PROPS_PER_CHILD already contains
+ * an entry for the node, clear the entry. This facilitates overriding
+ * properties retrieved from the NODES table with empty sets of properties
+ * stored in the ACTUAL_NODE table. */
+static svn_error_t *
+maybe_add_child_props(apr_hash_t *props_per_child,
+                      const char *prop_data,
+                      apr_size_t prop_data_len,
+                      const char *child_relpath,
+                      const char *wcroot_abspath,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
+{
+  const char *child_abspath;
+  apr_hash_t *props;
+  svn_skel_t *prop_skel;
+
+  prop_skel = svn_skel__parse(prop_data, prop_data_len, scratch_pool);
+  if (svn_skel__list_length(prop_skel) == 0)
+    return SVN_NO_ERROR;
+
+  child_abspath = svn_dirent_join(wcroot_abspath, child_relpath, result_pool);
+  SVN_ERR(svn_skel__parse_proplist(&props, prop_skel, result_pool));
+  if (apr_hash_count(props))
+    apr_hash_set(props_per_child, child_abspath, APR_HASH_KEY_STRING, props);
+  else
+    apr_hash_set(props_per_child, child_abspath, APR_HASH_KEY_STRING, NULL);
+
+  return SVN_NO_ERROR;
+}
+
+/* Call RECEIVER_FUNC, passing RECEIVER_BATON, an absolute path, and
+ * a hash table mapping <tt>char *</tt> names onto svn_string_t *
+ * values for any properties of immediate child nodes of LOCAL_ABSPATH.
+ * If FILES_ONLY is true, only report properties for file child nodes.
+ */
+static svn_error_t *
+read_props_of_children(svn_wc__db_t *db,
+                       const char *local_abspath,
+                       svn_boolean_t files_only,
+                       svn_wc__proplist_receiver_t receiver_func,
+                       void *receiver_baton,
+                       apr_pool_t *scratch_pool)
+{
+  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  const char *prev_child_relpath;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  apr_hash_t *props_per_child;
+  apr_hash_t *files;
+  apr_hash_t *not_present;
+  apr_hash_index_t *hi;
+  apr_pool_t *iterpool;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR_ASSERT(receiver_func);
+
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+                                             local_abspath,
+                                             svn_sqlite__mode_readwrite,
+                                             scratch_pool, scratch_pool));
+  VERIFY_USABLE_PDH(pdh);
+
+  props_per_child = apr_hash_make(scratch_pool);
+  not_present = apr_hash_make(scratch_pool);
+  if (files_only)
+    files = apr_hash_make(scratch_pool);
+  else
+    files = NULL;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_SELECT_NODE_PROPS_OF_CHILDREN));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  prev_child_relpath = NULL;
+  while (have_row)
+    {
+      svn_wc__db_status_t child_presence;
+      const char *child_relpath;
+      const char *prop_data;
+      apr_size_t len;
+
+      child_relpath = svn_sqlite__column_text(stmt, 2, scratch_pool);
+
+      if (prev_child_relpath && strcmp(child_relpath, prev_child_relpath) == 0)
+        {
+          /* Same child, but lower op_depth -- skip this row. */
+          SVN_ERR(svn_sqlite__step(&have_row, stmt));
+          continue;
+        }
+      prev_child_relpath = child_relpath;
+
+      child_presence = svn_sqlite__column_token(stmt, 1, presence_map);
+      if (child_presence != svn_wc__db_status_normal)
+        {
+          apr_hash_set(not_present, child_relpath, APR_HASH_KEY_STRING, "");
+          SVN_ERR(svn_sqlite__step(&have_row, stmt));
+          continue;
+        }
+
+      prop_data = svn_sqlite__column_blob(stmt, 0, &len, NULL);
+      if (prop_data)
+        {
+          if (files_only)
+            {
+              svn_wc__db_kind_t child_kind;
+
+              child_kind = svn_sqlite__column_token(stmt, 3, kind_map);
+              if (child_kind != svn_wc__db_kind_file &&
+                  child_kind != svn_wc__db_kind_symlink)
+                {
+                  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+                  continue;
+                }
+              apr_hash_set(files, child_relpath, APR_HASH_KEY_STRING, NULL);
+            }
+
+          SVN_ERR(maybe_add_child_props(props_per_child, prop_data, len,
+                                        child_relpath, pdh->wcroot->abspath,
+                                        scratch_pool, scratch_pool));
+        }
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                    STMT_SELECT_ACTUAL_PROPS_OF_CHILDREN));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  while (have_row)
+    {
+      const char *child_relpath;
+      const char *prop_data;
+      apr_size_t len;
+
+      prop_data = svn_sqlite__column_blob(stmt, 0, &len, NULL);
+      if (prop_data)
+        {
+          child_relpath = svn_sqlite__column_text(stmt, 1, scratch_pool);
+
+          if (apr_hash_get(not_present, child_relpath, APR_HASH_KEY_STRING) ||
+              (files_only &&
+               apr_hash_get(files, child_relpath, APR_HASH_KEY_STRING) == NULL))
+            {
+                SVN_ERR(svn_sqlite__step(&have_row, stmt));
+                continue;
+            }
+          SVN_ERR(maybe_add_child_props(props_per_child, prop_data, len,
+                                        child_relpath, pdh->wcroot->abspath,
+                                        scratch_pool, scratch_pool));
+        }
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  iterpool = svn_pool_create(scratch_pool);
+  for (hi = apr_hash_first(scratch_pool, props_per_child);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *child_abspath = svn__apr_hash_index_key(hi);
+      apr_hash_t *child_props = svn__apr_hash_index_val(hi);
+
+      svn_pool_clear(iterpool);
+
+      if (child_props)
+        SVN_ERR((*receiver_func)(receiver_baton, child_abspath, child_props,
+                                 iterpool));
+    }
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__db_read_props_of_files(svn_wc__db_t *db,
+                               const char *local_abspath,
+                               svn_wc__proplist_receiver_t receiver_func,
+                               void *receiver_baton,
+                               apr_pool_t *scratch_pool)
+{
+  return svn_error_return(read_props_of_children(db, local_abspath, TRUE,
+                                                 receiver_func, receiver_baton,
+                                                 scratch_pool));
+}
+
+svn_error_t *
+svn_wc__db_read_props_of_immediates(svn_wc__db_t *db,
+                                    const char *local_abspath,
+                                    svn_wc__proplist_receiver_t receiver_func,
+                                    void *receiver_baton,
+                                    apr_pool_t *scratch_pool)
+{
+  return svn_error_return(read_props_of_children(db, local_abspath, FALSE,
+                                                 receiver_func, receiver_baton,
+                                                 scratch_pool));
+}
+
 
 static svn_error_t *
 db_read_pristine_props(apr_hash_t **props,
