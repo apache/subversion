@@ -104,14 +104,14 @@ Test #  Mode   Test Description
 ------  -----  ----------------
   25    XFAIL  commit from two nested working copies
   Issue #: 2381
-  Target Milestone: 1.7-consider 
+  Target Milestone: 1.8-consider 
   Thread: http://svn.haxx.se/dev/archive-2009-05/0509.shtml
   Log: r878104
   Point Person: stsp (Issue was assigned to GSoC student Hui Huang).
 
   26    XFAIL  commit from two working copies
   Issue #: 2381
-  Target Milestone: 1.7-consider 
+  Target Milestone: 1.8-consider 
   Thread: http://svn.haxx.se/dev/archive-2009-05/0509.shtml
   Log: r878104
   Point Person: stsp (Issue was assigned to GSoC student Hui Huang).
