@@ -61,17 +61,6 @@ Test #  Mode   Test Description
   Log: r960833
   Point Person: dannas
   
-LISTING: stream-test.exe
-
-Test #  Mode   Test Description
-------  -----  ----------------
-   6    XFAIL  test stream seeking for translated streams
-  Issue #: 3616
-  Target Milestone: 1.7.0
-  Thread: N/A
-  Log: r936844
-  Point Person: stsp
-
 LISTING: authz_tests.py
 
 Test #  Mode   Test Description
