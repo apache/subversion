@@ -243,8 +243,8 @@ def blame_in_xml(sbox):
 
 
 # For a line changed before the requested start revision, blame should not
-# print a revision number (as fixed in r8035) or crash (as it did with
-# "--verbose" before being fixed in r9890).
+# print a revision number (as fixed in r848109) or crash (as it did with
+# "--verbose" before being fixed in r849964).
 #
 def blame_on_unknown_revision(sbox):
   "blame lines from unknown revisions"

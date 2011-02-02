@@ -5232,7 +5232,7 @@ def mergeinfo_inheritance_and_discontinuous_ranges(sbox):
 
   # Wipe the memory of a portion of the previous merge...
   ### It'd be nice to use 'merge --record-only' here, but we can't (yet)
-  ### wipe all ranges for a file due to the bug pointed out in r24645.
+  ### wipe all ranges for a file due to the bug pointed out in r864719.
   mu_copy_path = os.path.join(A_COPY_path, 'mu')
   svntest.actions.run_and_verify_svn(None,
                                      ["property '" + SVN_PROP_MERGEINFO

@@ -3936,7 +3936,7 @@ def update_accept_conflicts(sbox):
                                         extra_files)
 
 # Test for a wc corruption race condition (possibly introduced in
-# r23342) which is easy to trigger if interactive conflict resolution
+# r863416) which is easy to trigger if interactive conflict resolution
 # dies in the middle of prompting.  Specifically, we run an update
 # with interactive-conflicts on but close stdin immediately, so the
 # prompt errors out; then the dir_baton pool cleanup handlers in the

@@ -954,7 +954,7 @@ def lock_uri_encoded(sbox):
 
 #----------------------------------------------------------------------
 # A regression test for a bug when svn:needs-lock and svn:executable
-# interact badly. The bug was fixed in trunk @ r14859.
+# interact badly. The bug was fixed in trunk @ r854933.
 def lock_and_exebit1(sbox):
   "svn:needs-lock and svn:executable, part I"
 

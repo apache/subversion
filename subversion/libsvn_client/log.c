@@ -527,13 +527,13 @@ svn_client_log5(const apr_array_header_t *targets,
    * the named range.  This led to revisions being printed in strange
    * order or being printed more than once.  This is issue 1550.
    *
-   * In r11599, jpieper blocked multiple wc targets in svn/log-cmd.c,
+   * In r851673, jpieper blocked multiple wc targets in svn/log-cmd.c,
    * meaning this block not only doesn't work right in that case, but isn't
    * even testable that way (svn has no unit test suite; we can only test
    * via the svn command).  So, that check is now moved into this function
    * (see above).
    *
-   * kfogel ponders future enhancements in r4186:
+   * kfogel ponders future enhancements in r844260:
    * I think that's okay behavior, since the sense of the command is
    * that one wants a particular range of logs for *this* file, then
    * another range for *that* file, and so on.  But we should

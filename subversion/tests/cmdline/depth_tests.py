@@ -2319,7 +2319,7 @@ def excluded_receive_remote_removal(sbox):
                                      'cp', C_path, B_path)
 
 
-# Regression test for r36686.
+# Regression test for r876760.
 def exclude_keeps_hidden_entries(sbox):
   "'up --set-depth exclude' doesn't lose entries"
 
