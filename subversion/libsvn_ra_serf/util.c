@@ -1807,12 +1807,12 @@ svn_ra_serf__discover_vcc(const char **vcc_url,
         }
     }
   while ((path[0] != '\0')
-         && (! (path[0] == '/') && (path[1] == '\0')));
+         && (! (path[0] == '/' && path[1] == '\0')));
 
   if (!*vcc_url)
     {
       return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
-                              _("The OPTIONS response did not include the "
+                              _("The PROPFIND response did not include the "
                                 "requested version-controlled-configuration "
                                 "value"));
     }
