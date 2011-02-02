@@ -37,6 +37,8 @@
 #include "svn_dso.h"
 #include "mod_dav_svn.h"
 
+#include "private/svn_fspath.h"
+
 #include "dav_svn.h"
 #include "mod_authz_svn.h"
 
@@ -172,10 +174,10 @@ create_dir_config(apr_pool_t *p, char *dir)
   /* NOTE: dir==NULL creates the default per-dir config */
   dir_conf_t *conf = apr_pcalloc(p, sizeof(*conf));
 
-  /*In subversion context dir is always considered to be coming from
-   <Location /blah> directive. So we treat it as URI. */
+  /* In subversion context dir is always considered to be coming from
+     <Location /blah> directive. So we treat it as a urlpath. */
   if (dir)
-    conf->root_dir = svn_uri_canonicalize(dir, p);
+    conf->root_dir = svn_urlpath__canonicalize(dir, p);
   conf->bulk_updates = CONF_FLAG_ON;
   conf->v2_protocol = CONF_FLAG_ON;
 
@@ -226,6 +228,8 @@ static const char *
 SVNMasterURI_cmd(cmd_parms *cmd, void *config, const char *arg1)
 {
   dir_conf_t *conf = config;
+  apr_uri_t parsed_uri;
+  const char *uri_base_name = "";
 
   /* SVNMasterURI requires mod_proxy and mod_proxy_http
    * (r->handler = "proxy-server" in mirror.c), make sure
@@ -234,7 +238,15 @@ SVNMasterURI_cmd(cmd_parms *cmd, void *config, const char *arg1)
     return "module mod_proxy not loaded, required for SVNMasterURI";
   if (ap_find_linked_module("mod_proxy_http.c") == NULL)
     return "module mod_proxy_http not loaded, required for SVNMasterURI";
-
+  if (APR_SUCCESS != apr_uri_parse(cmd->pool, arg1, &parsed_uri))
+    return "unable to parse SVNMasterURI value";
+  if (parsed_uri.path)
+    uri_base_name = svn_urlpath__basename(
+                        svn_urlpath__canonicalize(parsed_uri.path, cmd->pool),
+                        cmd->pool);
+  if (! *uri_base_name)
+    return "SVNMasterURI value must not be a server root";
+  
   conf->master_uri = apr_pstrdup(cmd->pool, arg1);
 
   return NULL;

@@ -61,7 +61,7 @@ extern "C" {
  *
  * If a path has no @c SVN_PROP_MERGEINFO of its own, it inherits mergeinfo
  * from its nearest parent that has @c SVN_PROP_MERGEINFO set.  The
- * exception to this is @c SVN_PROP_MERGEINFO with non-ineritable revision
+ * exception to this is @c SVN_PROP_MERGEINFO with non-inheritable revision
  * ranges.  These non-inheritable ranges apply only to the path which they
  * are set on.
  *
@@ -518,7 +518,7 @@ typedef enum svn_mergeinfo_inheritance_t
   svn_mergeinfo_inherited,
 
   /** Mergeinfo on target's nearest (path-wise, not history-wise)
-      ancestor, regardless of whether target has explict mergeinfo. */
+      ancestor, regardless of whether target has explicit mergeinfo. */
   svn_mergeinfo_nearest_ancestor
 } svn_mergeinfo_inheritance_t;
 

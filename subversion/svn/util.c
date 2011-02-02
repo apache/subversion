@@ -485,8 +485,8 @@ svn_cl__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
       if (as_text)
         {
           err = svn_subst_translate_string2(edited_contents, FALSE, FALSE,
-                                            *edited_contents, encoding, pool,
-                                            pool);
+                                            *edited_contents, encoding, FALSE,
+                                            pool, pool);
           if (err)
             {
               err = svn_error_quick_wrap
@@ -713,7 +713,7 @@ svn_cl__get_log_message(const char **log_msg,
       log_msg_str->len = log_msg_buf->len;
       SVN_ERR_W(svn_subst_translate_string2(&log_msg_str, FALSE, FALSE,
                                             log_msg_str, lmb->message_encoding,
-                                            pool, pool),
+                                            FALSE, pool, pool),
                 _("Error normalizing log message to internal format"));
 
       *log_msg = log_msg_str->data;
@@ -1294,17 +1294,6 @@ svn_cl__node_description(const svn_wc_conflict_version_t *node,
                       svn_cl__node_kind_str_human_readable(node->node_kind),
                       svn_path_url_add_component2(root_str, path_str, pool),
                       node->peg_rev);
-}
-
-const char *
-svn_cl__path_join(const char *base,
-                  const char *component,
-                  apr_pool_t *pool)
-{
-  if (svn_path_is_url(base))
-    return svn_uri_join(base, component, pool);
-  else
-    return svn_dirent_join(base, component, pool);
 }
 
 svn_error_t *

@@ -336,12 +336,14 @@ create_fake_wc(const char *subdir, int format, apr_pool_t *scratch_pool)
   const char * const my_statements[] = {
     statements[STMT_CREATE_SCHEMA],
     statements[STMT_CREATE_NODES],
+    statements[STMT_CREATE_NODES_TRIGGERS],
     TESTING_DATA,
     NULL
   };
   const char * const M_statements[] = {
     statements[STMT_CREATE_SCHEMA],
     statements[STMT_CREATE_NODES],
+    statements[STMT_CREATE_NODES_TRIGGERS],
     M_TESTING_DATA,
     NULL
   };
@@ -640,7 +642,7 @@ test_access_baton_like_locking(apr_pool_t *pool)
 
     SVN_ERR(svn_io_make_dir_recursively(subdir, pool));
     SVN_ERR(svn_wc_ensure_adm3(subdir, repos_uuid,
-                               svn_uri_join(url, "sub-wc", pool),
+                               svn_path_url_add_component2(url, "sub-wc", pool),
                                repos_root_url, 0, svn_depth_infinity,
                                pool));
 

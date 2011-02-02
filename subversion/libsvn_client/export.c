@@ -110,16 +110,15 @@ append_basename_if_dir(const char **appendable_dirent_p,
   SVN_ERR(svn_io_check_resolved_path(*appendable_dirent_p, &local_kind, pool));
   if (local_kind == svn_node_dir)
     {
-      const char *basename2; /* _2 because it shadows basename() */
+      const char *base_name;
 
       if (is_uri)
-        basename2 = svn_path_uri_decode(svn_uri_basename(basename_of, NULL), pool);
+        base_name = svn_uri_basename(basename_of, pool);
       else
-        basename2 = svn_dirent_basename(basename_of, NULL);
+        base_name = svn_dirent_basename(basename_of, NULL);
 
       *appendable_dirent_p = svn_dirent_join(*appendable_dirent_p,
-                                             basename2,
-                                             pool);
+                                             base_name, pool);
     }
 
   return SVN_NO_ERROR;
@@ -882,11 +881,13 @@ change_dir_prop(void *dir_baton,
 /* Move the tmpfile to file, and send feedback. */
 static svn_error_t *
 close_file(void *file_baton,
-           const char *text_checksum,
+           const char *text_digest,
            apr_pool_t *pool)
 {
   struct file_baton *fb = file_baton;
   struct edit_baton *eb = fb->edit_baton;
+  svn_checksum_t *text_checksum;
+  svn_checksum_t *actual_checksum;
 
   /* Was a txdelta even sent? */
   if (! fb->tmppath)
@@ -894,22 +895,21 @@ close_file(void *file_baton,
 
   SVN_ERR(svn_stream_close(fb->tmp_stream));
 
-  if (text_checksum)
-    {
-      const char *actual_checksum =
-        svn_checksum_to_cstring(svn_checksum__from_digest(fb->text_digest,
-                                                          svn_checksum_md5,
-                                                          pool), pool);
+  SVN_ERR(svn_checksum_parse_hex(&text_checksum, svn_checksum_md5, text_digest,
+                                 pool));
+  actual_checksum = svn_checksum__from_digest(fb->text_digest,
+                                              svn_checksum_md5, pool);
 
-      if (actual_checksum && (strcmp(text_checksum, actual_checksum) != 0))
-        {
-          return svn_error_createf(SVN_ERR_CHECKSUM_MISMATCH, NULL,
+  if (!svn_checksum_match(text_checksum, actual_checksum))
+    {
+      return svn_error_createf(SVN_ERR_CHECKSUM_MISMATCH, NULL,
                           _("Checksum mismatch for '%s':\n"
                             "   expected:  %s\n"
                             "     actual:  %s\n"),
                           svn_dirent_local_style(fb->path, pool),
-                          text_checksum, actual_checksum);
-        }
+                          svn_checksum_to_cstring_display(text_checksum, pool),
+                          svn_checksum_to_cstring_display(actual_checksum,
+                                                          pool));
     }
 
   if ((! fb->eol_style_val) && (! fb->keywords_val) && (! fb->special))
@@ -984,6 +984,7 @@ svn_client_export5(svn_revnum_t *result_rev,
 {
   svn_revnum_t edit_revision = SVN_INVALID_REVNUM;
   const char *url;
+  svn_boolean_t from_is_url = svn_path_is_url(from_path_or_url);
 
   SVN_ERR_ASSERT(peg_revision != NULL);
   SVN_ERR_ASSERT(revision != NULL);
@@ -996,8 +997,7 @@ svn_client_export5(svn_revnum_t *result_rev,
                                                         from_path_or_url);
   revision = svn_cl__rev_default_to_peg(revision, peg_revision);
 
-  if (svn_path_is_url(from_path_or_url) ||
-      ! SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(revision->kind))
+  if (from_is_url || ! SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(revision->kind))
     {
       svn_revnum_t revnum;
       svn_ra_session_t *ra_session;
@@ -1036,14 +1036,16 @@ svn_client_export5(svn_revnum_t *result_rev,
 
           if (svn_path_is_empty(to_path))
             {
-              to_path = svn_path_uri_decode(svn_uri_basename(from_path_or_url,
-                                                             NULL), pool);
+              if (from_is_url)
+                to_path = svn_uri_basename(from_path_or_url, pool);
+              else
+                to_path = svn_dirent_basename(from_path_or_url, NULL);
               eb->root_path = to_path;
             }
           else
             {
               SVN_ERR(append_basename_if_dir(&to_path, from_path_or_url,
-                                             TRUE, pool));
+                                             from_is_url, pool));
               eb->root_path = to_path;
             }
 

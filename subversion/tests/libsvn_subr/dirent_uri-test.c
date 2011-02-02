@@ -36,6 +36,7 @@
 
 #include "svn_pools.h"
 #include "svn_dirent_uri.h"
+#include "private/svn_fspath.h"
 
 #include "../svn_test.h"
 
@@ -104,18 +105,10 @@ test_uri_is_root(apr_pool_t *pool)
     const char *path;
     svn_boolean_t result;
   } tests[] = {
-    { "/foo/bar",      FALSE },
-    { "/foo",          FALSE },
-    { "/",             TRUE },
-    { "",              FALSE },
-    { "X:/foo",        FALSE },
-    { "X:/",           FALSE },
-    { "X:foo",         FALSE },
-    { "X:",            FALSE },
     { "file://",       TRUE },
     { "file://a",      FALSE },
     { "file:///a",     FALSE },
-    { "file:///A:/",   FALSE },
+    { "file:///A:",    FALSE },
     { "http://server", TRUE },
     { "http://server/file", FALSE },
     { "http://",       TRUE },
@@ -204,47 +197,6 @@ test_dirent_is_absolute(apr_pool_t *pool)
                           tests[i].path,
                           abspath);
         }
-    }
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-test_uri_is_absolute(apr_pool_t *pool)
-{
-  apr_size_t i;
-
-  /* Paths to test and their expected results. */
-  struct {
-    const char *path;
-    svn_boolean_t result;
-  } tests[] = {
-    { "/foo/bar",      TRUE },
-    { "/foo",          TRUE },
-    { "/",             TRUE },
-    { "foo/bar",       FALSE },
-    { "foo",           FALSE },
-    { "",              FALSE },
-    { "X:/foo",        FALSE },
-    { "X:foo",         FALSE },
-    { "X:foo/bar",     FALSE },
-    { "X:",            FALSE },
-    { "http://",       TRUE },
-    { "http://test",   TRUE },
-    { "http://foo/bar",TRUE },
-  };
-
-  for (i = 0; i < COUNT_OF(tests); i++)
-    {
-      svn_boolean_t retval;
-
-      retval = svn_uri_is_absolute(tests[i].path);
-      if (tests[i].result != retval)
-        return svn_error_createf
-          (SVN_ERR_TEST_FAILED, NULL,
-           "svn_uri_is_absolute (%s) returned %s instead of %s",
-           tests[i].path, retval ? "TRUE" : "FALSE",
-           tests[i].result ? "TRUE" : "FALSE");
     }
 
   return SVN_NO_ERROR;
@@ -446,59 +398,6 @@ test_relpath_join(apr_pool_t *pool)
 }
 
 static svn_error_t *
-test_uri_join(apr_pool_t *pool)
-{
-  int i;
-  char *result;
-
-  static const char * const joins[][3] = {
-    { "abc", "def", "abc/def" },
-    { "a", "def", "a/def" },
-    { "a", "d", "a/d" },
-    { "/", "d", "/d" },
-    { "/abc", "d", "/abc/d" },
-    { "/abc", "def", "/abc/def" },
-    { "/abc", "/def", "/def" },
-    { "/abc", "/d", "/d" },
-    { "/abc", "/", "/" },
-    { SVN_EMPTY_PATH, "/", "/" },
-    { "/", SVN_EMPTY_PATH, "/" },
-    { SVN_EMPTY_PATH, "abc", "abc" },
-    { "abc", SVN_EMPTY_PATH, "abc" },
-    { SVN_EMPTY_PATH, "/abc", "/abc" },
-    { SVN_EMPTY_PATH, SVN_EMPTY_PATH, SVN_EMPTY_PATH },
-    { "http://server/dir", "file", "http://server/dir/file" },
-    { "svn+ssh://user@host", "abc", "svn+ssh://user@host/abc" },
-    { "http://server/dir", "/file", "http://server/file" },
-    { "http://server/dir", "svn://server2", "svn://server2" },
-    { "file:///etc/rc.d", "/shr", "file:///shr" },
-  };
-
-  for (i = 0; i < COUNT_OF(joins); i++)
-    {
-      const char *base = joins[i][0];
-      const char *comp = joins[i][1];
-      const char *expect = joins[i][2];
-
-      result = svn_uri_join(base, comp, pool);
-      if (strcmp(result, expect))
-        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                                 "svn_uri_join(\"%s\", \"%s\") returned "
-                                 "\"%s\". expected \"%s\"",
-                                 base, comp, result, expect);
-
-      /*result = svn_uri_join_many(pool, base, comp, NULL);
-      if (strcmp(result, expect))
-        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                                 "svn_dirent_join_many(\"%s\", \"%s\") returned "
-                                 "\"%s\". expected \"%s\"",
-                                 base, comp, result, expect);*/
-    }
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
 test_dirent_basename(apr_pool_t *pool)
 {
   int i;
@@ -594,10 +493,9 @@ test_uri_basename(apr_pool_t *pool)
     const char *path;
     const char *result;
   } tests[] = {
-    { "/", "" },
-    { SVN_EMPTY_PATH, SVN_EMPTY_PATH },
     { "http://s/file", "file" },
     { "http://s/dir/file", "file" },
+    { "http://s/some%20dir/other%20file", "other file" },
     { "http://s", "" },
     { "file://", "" },
     { "file:///a", "a" },
@@ -715,10 +613,6 @@ test_uri_dirname(apr_pool_t *pool)
     const char *path;
     const char *result;
   } tests[] = {
-    { "/", "/" },
-    { "/a", "/" },
-    { "/a/b", "/a" },
-    { SVN_EMPTY_PATH, SVN_EMPTY_PATH },
     { "http://server/dir", "http://server" },
     { "http://server/dir/file", "http://server/dir" },
     { "http://server", "http://server" },
@@ -909,40 +803,6 @@ test_uri_canonicalize(apr_pool_t *pool)
     const char *path;
     const char *result;
   } tests[] = {
-    { "",                     "" },
-    { ".",                    "" },
-    { "/",                    "/" },
-    { "/.",                   "/" },
-    { "./",                   "" },
-    { "./.",                  "" },
-    { "//",                   "/" },
-    { "/////",                "/" },
-    { "./././.",              "" },
-    { "////././.",            "/" },
-    { "foo",                  "foo" },
-    { ".foo",                 ".foo" },
-    { "foo.",                 "foo." },
-    { "/foo",                 "/foo" },
-    { "foo/",                 "foo" },
-    { "foo./",                "foo." },
-    { "foo./.",               "foo." },
-    { "foo././/.",            "foo." },
-    { "/foo/bar",             "/foo/bar" },
-    { "foo/..",               "foo/.." },
-    { "foo/../",              "foo/.." },
-    { "foo/../.",             "foo/.." },
-    { "foo//.//bar",          "foo/bar" },
-    { "///foo",               "/foo" },
-    { "/.//./.foo",           "/.foo" },
-    { ".///.foo",             ".foo" },
-    { "../foo",               "../foo" },
-    { "../../foo/",           "../../foo" },
-    { "../../foo/..",         "../../foo/.." },
-    { "/../../",              "/../.." },
-    { "X:/foo",               "X:/foo" },
-    { "X:",                   "X:" },
-    { "X:foo",                "X:foo" },
-    { "C:/folder/subfolder/file", "C:/folder/subfolder/file" },
     { "http://hst",           "http://hst" },
     { "http://hst/foo/../bar","http://hst/foo/../bar" },
     { "http://hst/",          "http://hst" },
@@ -965,11 +825,25 @@ test_uri_canonicalize(apr_pool_t *pool)
     { "http://server////",     "http://server" },
     { "http://server/file//",  "http://server/file" },
     { "http://server//.//f//", "http://server/f" },
-    { "s://d/%KK",             "s://d/%25KK" }, /* Make bad escapings safe */
-    { "s://d/c%3A",            "s://d/c:" },
-    { "s://d/c#",              "s://d/c%23" }, /* Escape schema separator */
-    { "s://d/c($) .+?",        "s://d/c($)%20.+%3F" }, /* Test special chars */
+    { "http://server/d/.",     "http://server/d" },
+    { "http://server/d/%2E",   "http://server/d" },
+    { "http://server/d/./q",   "http://server/d/q" },
+    { "http://server/d/%2E/q", "http://server/d/q" },
+    { "http://server/%",       "http://server/%25" },
+    { "http://server/%25",     "http://server/%25" },
+    { "http://server/%/d",     "http://server/%25/d" },
+    { "http://server/%25/d",   "http://server/%25/d" },
+    { "http://server/+",       "http://server/+" },
+    { "http://server/%2B",     "http://server/+" },
+    { "http://server/ ",       "http://server/%20" },
+    { "http://server/#",       "http://server/%23" },
+    { "http://server/d/a%2Fb", "http://server/d/a/b" },
+    /* ### These tests fail to notice that %2F is '/'.
+    { "http://server/d/.%2F.", "http://server/d" },
+    { "http://server/d/%25%2F%25", "http://server/d" }, */
     { "file:///C%3a/temp",     "file:///C:/temp" },
+    { "http://server/cr%AB",   "http://server/cr%AB" },
+    { "http://server/cr%ab",   "http://server/cr%AB" },
 #ifdef SVN_USE_DOS_PATHS
     { "file:///c:/temp/repos", "file:///C:/temp/repos" },
     { "file:///c:/temp/REPOS", "file:///C:/temp/REPOS" },
@@ -1196,87 +1070,102 @@ test_relpath_is_canonical(apr_pool_t *pool)
 static svn_error_t *
 test_uri_is_canonical(apr_pool_t *pool)
 {
+  /* svn_uri_is_canonical() was a private function in the 1.6 API, and
+     has since taken a MAJOR change of direction, namely that only
+     absolute URLs are considered canonical uris now. */
   struct {
     const char *path;
     svn_boolean_t canonical;
+    svn_boolean_t canonicalizable;
   } tests[] = {
-    { "",                      TRUE },
-    { ".",                     FALSE },
-    { "/",                     TRUE },
-    { "/.",                    FALSE },
-    { "./",                    FALSE },
-    { "./.",                   FALSE },
-    { "//",                    FALSE },
-    { "/////",                 FALSE },
-    { "./././.",               FALSE },
-    { "////././.",             FALSE },
-    { "foo",                   TRUE },
-    { ".foo",                  TRUE },
-    { "foo.",                  TRUE },
-    { "/foo",                  TRUE },
-    { "foo/",                  FALSE },
-    { "foo./",                 FALSE },
-    { "foo./.",                FALSE },
-    { "foo././/.",             FALSE },
-    { "/foo/bar",              TRUE },
-    { "foo/..",                TRUE },
-    { "foo/../",               FALSE },
-    { "foo/../.",              FALSE },
-    { "foo//.//bar",           FALSE },
-    { "///foo",                FALSE },
-    { "/.//./.foo",            FALSE },
-    { ".///.foo",              FALSE },
-    { "../foo",                TRUE },
-    { "../../foo/",            FALSE },
-    { "../../foo/..",          TRUE },
-    { "/../../",               FALSE },
-    { "dirA",                  TRUE },
-    { "foo/dirA",              TRUE },
-    { "foo/./bar",             FALSE },
-    { "http://hst",            TRUE },
-    { "http://hst/foo/../bar", TRUE },
-    { "http://hst/foo/bar/",   FALSE },
-    { "http://hst/",           FALSE },
-    { "http://HST/",           FALSE },
-    { "http://HST/FOO/BaR",    FALSE },
-    { "http://hst/foo/./bar",  FALSE },
-    { "hTTp://hst/foo/bar",   FALSE },
-    { "http://hst/foo/bar/",   FALSE },
-    { "svn+ssh://jens@10.0.1.1", TRUE },
-    { "svn+ssh://j.raNDom@HST/BaR", FALSE },
-    { "svn+SSH://j.random:jRaY@HST/BaR", FALSE },
-    { "SVN+ssh://j.raNDom:jray@HST/BaR", FALSE },
-    { "svn+ssh://j.raNDom:jray@hst/BaR", TRUE },
-    { "fILe:///Users/jrandom/wc", FALSE },
-    { "fiLE:///",              FALSE },
-    { "fiLE://",               FALSE },
-    { "C:/folder/subfolder/file", TRUE },
-    { "X:/foo",                TRUE },
-    { "X:",                    TRUE },
-    { "X:foo",                 TRUE },
-    { "X:foo/",                FALSE },
+    { "",                                FALSE, FALSE },
+    { ".",                               FALSE, FALSE },
+    { "/",                               FALSE, FALSE },
+    { "/.",                              FALSE, FALSE },
+    { "./",                              FALSE, FALSE },
+    { "./.",                             FALSE, FALSE },
+    { "//",                              FALSE, FALSE },
+    { "/////",                           FALSE, FALSE },
+    { "./././.",                         FALSE, FALSE },
+    { "////././.",                       FALSE, FALSE },
+    { "foo",                             FALSE, FALSE },
+    { ".foo",                            FALSE, FALSE },
+    { "foo.",                            FALSE, FALSE },
+    { "/foo",                            FALSE, FALSE },
+    { "foo/",                            FALSE, FALSE },
+    { "foo./",                           FALSE, FALSE },
+    { "foo./.",                          FALSE, FALSE },
+    { "foo././/.",                       FALSE, FALSE },
+    { "/foo/bar",                        FALSE, FALSE },
+    { "foo/..",                          FALSE, FALSE },
+    { "foo/../",                         FALSE, FALSE },
+    { "foo/../.",                        FALSE, FALSE },
+    { "foo//.//bar",                     FALSE, FALSE },
+    { "///foo",                          FALSE, FALSE },
+    { "/.//./.foo",                      FALSE, FALSE },
+    { ".///.foo",                        FALSE, FALSE },
+    { "../foo",                          FALSE, FALSE },
+    { "../../foo/",                      FALSE, FALSE },
+    { "../../foo/..",                    FALSE, FALSE },
+    { "/../../",                         FALSE, FALSE },
+    { "dirA",                            FALSE, FALSE },
+    { "foo/dirA",                        FALSE, FALSE },
+    { "foo/./bar",                       FALSE, FALSE },
+    { "http://hst",                      TRUE,  TRUE  },
+    { "http://hst/foo/../bar",           TRUE,  TRUE  },
+    { "http://hst/foo/bar/",             FALSE, TRUE  },
+    { "http://hst/",                     FALSE, TRUE  },
+    { "http://hst/foo/.",                FALSE, TRUE  },
+    { "http://hst/foo/%2E",              FALSE, TRUE  },
+    { "http://hst/%",                    FALSE, TRUE  },
+    { "http://hst/+",                    TRUE,  TRUE  },
+    { "http://hst/#",                    FALSE, TRUE  },
+    { "http://hst/ ",                    FALSE, TRUE  },
+    { "http://hst/%2B",                  FALSE, TRUE  },
+    { "http://HST",                      FALSE, TRUE  },
+    { "http://HST/",                     FALSE, TRUE  },
+    { "http://HST/FOO/BaR",              FALSE, TRUE  },
+    { "http://hst/foo/./bar",            FALSE, TRUE  },
+    { "hTTp://hst/foo/bar",              FALSE, TRUE  },
+    { "http://hst/foo/bar/",             FALSE, TRUE  },
+    { "svn+ssh://jens@10.0.1.1",         TRUE,  TRUE  },
+    { "svn+ssh://j.raNDom@HST/BaR",      FALSE, TRUE  },
+    { "svn+SSH://j.random:jRaY@HST/BaR", FALSE, TRUE  },
+    { "SVN+ssh://j.raNDom:jray@HST/BaR", FALSE, TRUE  },
+    { "svn+ssh://j.raNDom:jray@hst/BaR", TRUE,  TRUE  },
+    { "fILe:///Users/jrandom/wc",        FALSE, TRUE  },
+    { "fiLE:///",                        FALSE, TRUE  },
+    { "fiLE://",                         FALSE, TRUE  },
+    { "C:/folder/subfolder/file",        FALSE, FALSE },
+    { "X:/foo",                          FALSE, FALSE },
+    { "X:",                              FALSE, FALSE },
+    { "X:foo",                           FALSE, FALSE },
+    { "X:foo/",                          FALSE, FALSE },
     /* Some people use colons in their filenames. */
-    { ":", TRUE },
-    { ".:", TRUE },
-    { "foo/.:", TRUE },
-    { "file://SRV/share/repos", FALSE },
-    { "file://srv/SHARE/repos", TRUE },
-    { "file://srv/share/repos", TRUE },
-    { "file://srv/share/repos/", FALSE },
-    { "//server/share",         FALSE }, /* Only valid as dirent */
-    { "//server",               FALSE },
-    { "//",                     FALSE },
-    { "file:///folder/c#",      FALSE }, /* # needs escaping */
-    { "file:///fld/with space", FALSE }, /* # needs escaping */
-    { "file:///fld/c%23",       TRUE }, /* Properly escaped C# */
+    { ":",                               FALSE, FALSE },
+    { ".:",                              FALSE, FALSE },
+    { "foo/.:",                          FALSE, FALSE },
+    { "file://SRV/share/repo",           FALSE, TRUE  },
+    { "file://srv/SHARE/repo",           TRUE,  TRUE  },
+    { "file://srv/share/repo",           TRUE,  TRUE  },
+    { "file://srv/share/repo/",          FALSE, TRUE  },
+    { "//server/share",                  FALSE, FALSE }, /* Only valid as dirent */
+    { "//server",                        FALSE, FALSE },
+    { "//",                              FALSE, FALSE },
+    { "file:///folder/c#",               FALSE, TRUE  }, /* # needs escaping */
+    { "file:///fld/with space",          FALSE, TRUE  }, /* # needs escaping */
+    { "file:///fld/c%23",                TRUE,  TRUE  }, /* Properly escaped C# */
+    { "file:///%DE%AD%BE%EF",            TRUE,  TRUE  },
+    { "file:///%de%ad%be%ef",            FALSE, TRUE  },
+    { "file:///%DE%ad%BE%ef",            FALSE, TRUE  },
 #ifdef SVN_USE_DOS_PATHS
-    { "file:///c:/temp/repos", FALSE },
-    { "file:///c:/temp/REPOS", FALSE },
-    { "file:///C:/temp/REPOS", TRUE },
+    { "file:///c:/temp/repos",           FALSE, TRUE  },
+    { "file:///c:/temp/REPOS",           FALSE, TRUE  },
+    { "file:///C:/temp/REPOS",           TRUE,  TRUE  },
 #else /* !SVN_USE_DOS_PATHS */
-    { "file:///c:/temp/repos", TRUE },
-    { "file:///c:/temp/REPOS", TRUE },
-    { "file:///C:/temp/REPOS", TRUE },
+    { "file:///c:/temp/repos",           TRUE,  TRUE  },
+    { "file:///c:/temp/REPOS",           TRUE,  TRUE  },
+    { "file:///C:/temp/REPOS",           TRUE,  TRUE  },
 #endif /* SVN_USE_DOS_PATHS */
   };
   int i;
@@ -1294,6 +1183,8 @@ test_uri_is_canonical(apr_pool_t *pool)
                                  tests[i].path,
                                  canonical ? "TRUE" : "FALSE",
                                  tests[i].canonical ? "TRUE" : "FALSE");
+      if (! tests[i].canonicalizable)
+        continue;
 
       canonicalized = svn_uri_canonicalize(tests[i].path, pool);
 
@@ -1410,9 +1301,9 @@ test_uri_split(apr_pool_t *pool)
   static const char * const paths[][3] = {
     { "http://server/foo/bar", "http://server/foo", "bar" },
     { "http://server/dir/foo/bar", "http://server/dir/foo", "bar" },
+    { "http://server/some%20dir/foo%20bar", "http://server/some%20dir", "foo bar" },
     { "http://server/foo", "http://server", "foo" },
     { "http://server", "http://server", "" },
-    { SVN_EMPTY_PATH,   SVN_EMPTY_PATH,   SVN_EMPTY_PATH },
     { "file://", "file://", "" },
     { "file:///a", "file://", "a" }
   };
@@ -1551,32 +1442,12 @@ test_uri_is_ancestor(apr_pool_t *pool)
     const char *path2;
     svn_boolean_t result;
   } tests[] = {
-    { "/foo",            "/foo/bar",      TRUE},
-    { "/foo/bar",        "/foo/bar/",     TRUE},
-    { "/",               "/foo",          TRUE},
-    { SVN_EMPTY_PATH,    "foo",           TRUE},
-    { SVN_EMPTY_PATH,    ".bar",          TRUE},
-    { SVN_EMPTY_PATH,    "/",             FALSE},
-    { SVN_EMPTY_PATH,    "/foo",          FALSE},
-    { "/.bar",           "/",             FALSE},
-    { "foo/bar",         "foo",           FALSE},
-    { "/foo/bar",        "/foo",          FALSE},
-    { "foo",             "foo/bar",       TRUE},
-    { "foo.",            "foo./.bar",     TRUE},
-
-    { "../foo",          "..",            FALSE},
-    { SVN_EMPTY_PATH,    SVN_EMPTY_PATH,  TRUE},
-    { "/",               "/",             TRUE},
-
     { "http://test",    "http://test",     TRUE},
     { "http://test",    "http://taste",    FALSE},
     { "http://test",    "http://test/foo", TRUE},
     { "http://test",    "file://test/foo", FALSE},
-    { "http://test",    "http://testF",    FALSE},
+    { "http://test",    "http://testf",    FALSE},
     { "http://",        "http://test",     TRUE},
-    { SVN_EMPTY_PATH,   "http://test",     FALSE},
-    { "X:foo",          "X:bar",           FALSE},
-    { "X:",             "X:foo",           FALSE},
   };
 
   for (i = 0; i < COUNT_OF(tests); i++)
@@ -1698,21 +1569,8 @@ test_uri_skip_ancestor(apr_pool_t *pool)
     const char *path2;
     const char *result;
   } tests[] = {
-    { "/foo",            "/foo/bar",        "bar"},
-    { "/foo/bar",        "/foot/bar",       "/foot/bar"},
-    { "/foo",            "/foo",            ""},
-    { "/foo",            "/foot",           "/foot"},
-    { "/foot",           "/foo",            "/foo"},
-    { "",                "foo",             "foo"},
-    { "",                "/foo",            "/foo"},
-    { "/",               "/foo",            "foo"},
-    { "/foo/bar/bla",    "/foo/bar",        "/foo/bar"},
-    { "/foo/bar",        "/foo/bar/bla",    "bla"},
-    { "foo/bar",         "foo",             "foo"},
-    { "/foo/bar",        "foo",             "foo"},
-    { "/",               "bar/bla",         "bar/bla"},
     { "http://server",   "http://server/q", "q" },
-    { "svn://server",   "http://server/q",  "http://server/q" },
+    { "svn://server",    "http://server/q", "http://server/q" },
   };
 
   for (i = 0; i < COUNT_OF(tests); i++)
@@ -1880,32 +1738,14 @@ test_uri_get_longest_ancestor(apr_pool_t *pool)
     const char *path2;
     const char *result;
   } tests[] = {
-    { "/foo",           "/foo/bar",        "/foo"},
-    { "/foo/bar",       "foo/bar",         SVN_EMPTY_PATH},
-    { "/",              "/foo",            "/"},
-    { SVN_EMPTY_PATH,   "foo",             SVN_EMPTY_PATH},
-    { SVN_EMPTY_PATH,   ".bar",            SVN_EMPTY_PATH},
-    { "/.bar",          "/",               "/"},
-    { "foo/bar",        "foo",             "foo"},
-    { "/foo/bar",       "/foo",            "/foo"},
-    { "/rif",           "/raf",            "/"},
-    { "foo",            "bar",             SVN_EMPTY_PATH},
-    { "foo",            "foo/bar",         "foo"},
-    { "foo.",           "foo./.bar",       "foo."},
-    { SVN_EMPTY_PATH,   SVN_EMPTY_PATH,    SVN_EMPTY_PATH},
-    { "/",              "/",               "/"},
     { "http://test",    "http://test",     "http://test"},
     { "http://test",    "http://taste",    SVN_EMPTY_PATH},
     { "http://test",    "http://test/foo", "http://test"},
     { "http://test",    "file://test/foo", SVN_EMPTY_PATH},
-    { "http://test",    "http://testF",    SVN_EMPTY_PATH},
+    { "http://test",    "http://testf",    SVN_EMPTY_PATH},
     { "http://",        "http://test",     SVN_EMPTY_PATH},
     { "file:///A/C",    "file:///B/D",     SVN_EMPTY_PATH},
     { "file:///A/C",    "file:///A/D",     "file:///A"},
-    { "X:/foo",         "X:",              "X:"},
-    { "X:/folder1",     "X:/folder2",      "X:"},
-    { "X:",             "X:foo",           SVN_EMPTY_PATH},
-    { "X:foo",          "X:bar",           SVN_EMPTY_PATH},
   };
 
   for (i = 0; i < COUNT_OF(tests); i++)
@@ -2139,74 +1979,25 @@ test_uri_is_child(apr_pool_t *pool)
 {
   int i, j;
 
-#define NUM_TEST_PATHS 20
-
   static const char * const paths[] = {
-    "/foo/bar",
-    "/foo/bars",
-    "/foo/baz",
-    "/foo/bar/baz",
-    "/flu/blar/blaz",
-    "/foo/bar/baz/bing/boom",
-    SVN_EMPTY_PATH,
-    "foo",
-    ".foo",
-    "/",
-    "foo2",
     "http://foo/bar",
+    "http://foo/bar%20bell",
     "http://foo/baz",
-    "H:",
     "http://foo",
     "http://f",
-    "H:/foo/bar",
-    "H:/foo/baz",
-    "H:foo",
-    "H:foo/baz",
+    "file://foo/bar",
+    "file://foo/bar/baz%20bol",
     };
 
   static const char * const
     remainders[COUNT_OF(paths)][COUNT_OF(paths)] = {
-    { 0, 0, 0, "baz", 0, "baz/bing/boom", 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, "bing/boom", 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, "foo", ".foo", 0, "foo2",
-      0, 0, "H:", 0, 0, "H:/foo/bar", "H:/foo/baz", "H:foo", "H:foo/baz" },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { "foo/bar", "foo/bars", "foo/baz", "foo/bar/baz", "flu/blar/blaz",
-      "foo/bar/baz/bing/boom", 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, "foo/bar", "foo/baz", 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      "bar", "baz", 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, "baz" },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0, 0, 0 }
+    { 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0 },
+    { "bar", "bar bell", "baz", 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, "baz bol" },
+    { 0, 0, 0, 0, 0, 0, 0 },
   };
 
   for (i = 0; i < COUNT_OF(paths); i++)
@@ -2222,14 +2013,14 @@ test_uri_is_child(apr_pool_t *pool)
               || (remainder && strcmp(remainder, remainders[i][j])))
             return svn_error_createf
               (SVN_ERR_TEST_FAILED, NULL,
-               "svn_uri_is_child (%s, %s) [%d,%d] returned '%s' instead of '%s'",
+               "svn_uri_is_child (%s, %s) [%d,%d] "
+               "returned '%s' instead of '%s'",
                paths[i], paths[j], i, j,
                remainder ? remainder : "(null)",
                remainders[i][j] ? remainders[i][j] : "(null)" );
         }
     }
 
-#undef NUM_TEST_PATHS
   return SVN_NO_ERROR;
 }
 
@@ -2459,17 +2250,25 @@ test_uri_condense_targets(apr_pool_t *pool)
     const char *common;
     const char *results[8]; /* must be same size as paths */
   } tests[] = {
-    { { "/dir", "/dir/file", NULL },         "/dir",     { "", "file" } },
-    { { "dir", "dir/file", NULL },           "dir",      { "", "file" } },
-    { { "/dir1", "/dir2", NULL },            "/",        { "dir1", "dir2" } },
-    { { "dir1", "dir2", NULL },              "",         { "dir1", "dir2" } },
-    { { "/dir", "/dir/file", NULL },         "/dir",     { "", "file" } },
-    { { "/dir1", "/dir2", NULL },            "/",        { "dir1", "dir2" } },
-    { { "/dir1", "dir2", NULL },             "",         { "/dir1", "dir2" } },
-    { { "sc://s/A", "sc://s/B", "sc://s" },  "sc://s",   { "A", "B", "" } },
-    { { "sc://S/A", "sc://S/B", "sc://S" },  "sc://s",   { "A", "B", "" } },
-    { { "sc://A/A", "sc://B/B", "sc://s" },  "",         { "sc://a/A", "sc://b/B", "sc://s"} },
-    { { "sc://A/A", "sc://A/a/B", "sc://a/Q" }, "sc://a",{ "A", "a/B", "Q"} },
+    /* { { url1, url2, url3 },
+           common_url,
+         { relpath1, relpath2, relpath3 } }
+    */
+    { { "sc://s/A", "sc://s/B", "sc://s" },
+        "sc://s",
+      { "A", "B", "" } },
+    { { "sc://S/A", "sc://S/B", "sc://S" },
+        "sc://s",
+      { "A", "B", "" } },
+    { { "sc://A/A", "sc://B/B", "sc://s" },
+        "",
+      { "sc://a/A", "sc://b/B", "sc://s" } },
+    { { "sc://A/A", "sc://A/a/B", "sc://a/Q" },
+        "sc://a",
+      { "A", "a/B", "Q"} },
+    { { "sc://server/foo%20bar", "sc://server/baz", "sc://server/blarg" },
+        "sc://server",
+      { "foo bar", "baz", "blarg"} },
   };
 
   for (i = 0; i < COUNT_OF(tests); i++)
@@ -3062,14 +2861,10 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test svn_uri_is_root"),
     SVN_TEST_PASS2(test_dirent_is_absolute,
                    "test svn_dirent_is_absolute"),
-    SVN_TEST_PASS2(test_uri_is_absolute,
-                   "test svn_uri_is_absolute"),
     SVN_TEST_PASS2(test_dirent_join,
                    "test svn_dirent_join(_many)"),
     SVN_TEST_PASS2(test_relpath_join,
                    "test svn_relpath_join"),
-    SVN_TEST_PASS2(test_uri_join,
-                   "test svn_uri_join"),
     SVN_TEST_PASS2(test_dirent_basename,
                    "test svn_dirent_basename"),
     SVN_TEST_PASS2(test_relpath_basename,

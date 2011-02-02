@@ -362,7 +362,7 @@ svn_subst_read_specialfile(svn_stream_t **stream,
                            apr_pool_t *scratch_pool);
 
 
-/** Set @a *stream to a writeable stream that accepts content in
+/** Set @a *stream to a writable stream that accepts content in
  * the "normal form" for a special file, to be located at @a path, and
  * will create that file when the stream is closed. The stream will be
  * allocated in @a result_pool, and any temporary allocations will be
@@ -615,8 +615,10 @@ svn_error_t *svn_subst_translate_string(svn_string_t **new_value,
  * *translated_line_endings to @c TRUE if at least one line ending was
  * changed to LF, or to @c FALSE otherwise.
  *
- * Recognized line endings are LF, CR, CRLF.  If @a value has inconsistent
- * line endings, return @c SVN_ERR_IO_INCONSISTENT_EOL.
+ * If @a value has an inconsistent line ending style, then: if @a repair
+ * is @c FALSE, return @c SVN_ERR_IO_INCONSISTENT_EOL, else if @a repair is
+ * @c TRUE, convert any line ending in @a value to "\n" in
+ * @a *new_value.  Recognized line endings are: "\n", "\r", and "\r\n".
  *
  * Set @a *new_value to the translated string, allocated in @a result_pool.
  *
@@ -630,6 +632,7 @@ svn_subst_translate_string2(svn_string_t **new_value,
                             svn_boolean_t *translated_line_endings,
                             const svn_string_t *value,
                             const char *encoding,
+                            svn_boolean_t repair,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
 

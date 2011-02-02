@@ -1735,19 +1735,16 @@ write_entry(struct write_baton **entry_node,
     {
       if (entry->copyfrom_url)
         {
-          const char *relative_url;
+          const char *relpath;
 
           working_node->copyfrom_repos_id = repos_id;
-          relative_url = svn_uri_is_child(this_dir->repos, entry->copyfrom_url,
-                                          NULL);
-          if (relative_url == NULL)
+          relpath = svn_uri_is_child(this_dir->repos,
+                                              entry->copyfrom_url,
+                                              result_pool);
+          if (relpath == NULL)
             working_node->copyfrom_repos_path = "";
           else
-            {
-              /* copyfrom_repos_path is NOT a URI. decode into repos path.  */
-              working_node->copyfrom_repos_path =
-                svn_path_uri_decode(relative_url, result_pool);
-            }
+            working_node->copyfrom_repos_path = relpath;
           working_node->copyfrom_revnum = entry->copyfrom_rev;
           working_node->op_depth
             = svn_wc__db_op_depth_for_upgrade(local_relpath);
@@ -1894,31 +1891,23 @@ write_entry(struct write_baton **entry_node,
         {
           base_node->repos_id = repos_id;
 
-          /* repos_relpath is NOT a URI. decode as appropriate.  */
           if (entry->url != NULL)
             {
-              const char *relative_url = svn_uri_is_child(this_dir->repos,
-                                                          entry->url,
-                                                          scratch_pool);
-
-              if (relative_url == NULL)
-                base_node->repos_relpath = "";
-              else
-                base_node->repos_relpath = svn_path_uri_decode(relative_url,
-                                                               result_pool);
+              const char *relpath = svn_uri_is_child(this_dir->repos,
+                                                     entry->url,
+                                                     result_pool);
+              base_node->repos_relpath = relpath ? relpath : "";
             }
           else
             {
-              const char *base_path = svn_uri_is_child(this_dir->repos,
-                                                       this_dir->url,
-                                                       scratch_pool);
-              if (base_path == NULL)
+              const char *relpath = svn_uri_is_child(this_dir->repos,
+                                                     this_dir->url,
+                                                     scratch_pool);
+              if (relpath == NULL)
                 base_node->repos_relpath = entry->name;
               else
                 base_node->repos_relpath =
-                  svn_dirent_join(svn_path_uri_decode(base_path, scratch_pool),
-                                  entry->name,
-                                  result_pool);
+                  svn_dirent_join(relpath, entry->name, result_pool);
             }
         }
 

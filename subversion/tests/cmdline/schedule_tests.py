@@ -671,7 +671,7 @@ def propset_on_deleted_should_fail(sbox):
 
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', iota)
 
-  svntest.actions.run_and_verify_svn(None, None, "svn: Can't set propert.*",
+  svntest.actions.run_and_verify_svn(None, None, "svn: E155023: Can't set propert.*",
                                      'ps', 'prop', 'val', iota)
 
 

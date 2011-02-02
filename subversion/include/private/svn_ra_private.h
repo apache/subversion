@@ -37,7 +37,7 @@ extern "C" {
 #endif /* __cplusplus */
 
 /* Return an error with code SVN_ERR_UNSUPPORTED_FEATURE, and an error
-   message referencing PATH_OR_URL, if the "server" pointed to be
+   message referencing PATH_OR_URL, if the "server" pointed to by
    RA_SESSION doesn't support Merge Tracking (e.g. is pre-1.5).
    Perform temporary allocations in POOL. */
 svn_error_t *
@@ -101,6 +101,11 @@ typedef svn_error_t *(*svn_ra__lock_retry_func_t)(void *baton,
  *
  * Use @a cancel_func and @a cancel_baton to check for early
  * cancellation.
+ *
+ * @note If the server does not support #SVN_RA_CAPABILITY_ATOMIC_REVPROPS
+ * (i.e., is a pre-1.7 server), then this function makes a "best effort"
+ * attempt to obtain the lock, but is susceptible to a race condition; see
+ * issue #3546.
  *
  * @since New in 1.7.
  */

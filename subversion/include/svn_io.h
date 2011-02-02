@@ -738,7 +738,7 @@ svn_io_dir_file_copy(const char *src_path,
  *
  * In Subversion 1.7 reset support was added as an optional feature of
  * streams. If a stream implements resetting it allows reading the data
- * again after a successfull call to svn_stream_reset().
+ * again after a successful call to svn_stream_reset().
  */
 typedef struct svn_stream_t svn_stream_t;
 
@@ -958,40 +958,6 @@ SVN_DEPRECATED
 svn_stream_t *
 svn_stream_from_aprfile(apr_file_t *file,
                         apr_pool_t *pool);
-
-/** Create a stream for reading from a range of an APR file.
- * The stream cannot be written to.
- *
- * @a start and @a end specify the start and end offsets for read
- * operations from @a file, in bytes. @a start marks the first byte
- * to be read from the file. When the stream is first created, the
- * cursor of the underlying file is set to the @a start offset.
- * The byte at @a end, and any bytes past @a end, will never be read.
- *
- * The stream returns 0 bytes if a read operation occurs past of
- * the specified range. If the requested number of bytes in a read
- * operation is larger than the remaining bytes in the range, only
- * the remaining amount of bytes is returned.
- *
- * If @a file is @c NULL, or if @a start is not smaller than @a end,
- * or if @a start is negative, or if @a end is zero or negative,
- * or if the file cursor cannot be set to the @a start offset,
- * an empty stream created by svn_stream_empty() is returned.
- *
- * This function should normally be called with @a disown set to FALSE,
- * in which case closing the stream will also close the underlying file.
- *
- * If @a disown is TRUE, the stream will disown the underlying file,
- * meaning that svn_stream_close() will not close the file.
- *
- * @since New in 1.7.
- */
-svn_stream_t*
-svn_stream_from_aprfile_range_readonly(apr_file_t *file,
-                                       svn_boolean_t disown,
-                                       apr_off_t start,
-                                       apr_off_t end,
-                                       apr_pool_t *pool);
 
 /** Set @a *out to a generic stream connected to stdout, allocated in
  * @a pool.  The stream and its underlying APR handle will be closed
@@ -1389,7 +1355,7 @@ svn_io_remove_file(const char *path,
  * doesn't exist.  Use @a pool for temporary allocations.
  *
  * Because recursive delete of a directory tree can be a lengthy operation,
- * provide @a cancel_func and @a cancel_baton for interruptability.
+ * provide @a cancel_func and @a cancel_baton for interruptibility.
  *
  * @since New in 1.5.
  */

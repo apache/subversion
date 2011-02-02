@@ -2311,7 +2311,7 @@ def forced_update_failures(sbox):
 
   # svn up --force wc_dir_backup/A/C
   expected_error = (
-    "svn: Failed to add directory .*I.*working copy with the same name "
+    "svn: E155000: Failed to add directory .*I.*working copy with the same name "
     + "already exists"
   )
 
@@ -5092,7 +5092,7 @@ def update_wc_of_dir_to_rev_not_containing_this_dir(sbox):
 
   # Try to update working copy of 'A' directory
   svntest.actions.run_and_verify_svn(None, None,
-                                     "svn: Target path '/A' does not exist",
+                                     "svn: E160005: Target path '/A' does not exist",
                                      "up", other_wc_dir)
 
 #----------------------------------------------------------------------
@@ -5139,10 +5139,10 @@ def update_deleted_locked_files(sbox):
                                         expected_status)
 
 #----------------------------------------------------------------------
-# Test for issue #3659 svn update --depth <DEPTH> allows making a working
+# Test for issue #3569 svn update --depth <DEPTH> allows making a working
 # copy incomplete.
 #
-# XFail until issue #3659 is fixed.  This test needs extension to map some
+# XFail until issue #3569 is fixed.  This test needs extension to map some
 # real use cases (all add operations are missing if a directory is updated
 # without its children.)
 def update_empty_hides_entries(sbox):

@@ -44,10 +44,10 @@ struct dir_baton
   svn_boolean_t written_out;
 
   /* the absolute path to this directory */
-  const char *abspath;
+  const char *abspath; /* an fspath */
 
-  /* Copyfrom info for the node, if any */
-  const char *copyfrom_path;
+  /* Copyfrom info for the node, if any. */
+  const char *copyfrom_path; /* a relpath */
   svn_revnum_t copyfrom_rev;
 
   /* Hash of paths that need to be deleted, though some -might- be

@@ -411,7 +411,7 @@ DELETE FROM work_queue WHERE id = ?1;
 
 -- STMT_INSERT_PRISTINE
 INSERT OR IGNORE INTO pristine (checksum, md5_checksum, size, refcount)
-VALUES (?1, ?2, ?3, 1);
+VALUES (?1, ?2, ?3, 0);
 
 -- STMT_SELECT_PRISTINE_MD5_CHECKSUM
 SELECT md5_checksum
@@ -423,35 +423,14 @@ SELECT checksum
 FROM pristine
 WHERE md5_checksum = ?1
 
--- STMT_SELECT_ANY_PRISTINE_REFERENCE
-SELECT 1 FROM nodes
-  WHERE checksum = ?1 OR checksum = ?2
-UNION ALL
-SELECT 1 FROM actual_node
-  WHERE older_checksum = ?1 OR older_checksum = ?2
-    OR  left_checksum  = ?1 OR left_checksum  = ?2
-    OR  right_checksum = ?1 OR right_checksum = ?2
-LIMIT 1
-
 -- STMT_SELECT_UNREFERENCED_PRISTINES
 SELECT checksum
 FROM pristine
-EXCEPT
-SELECT checksum FROM nodes
-  WHERE checksum IS NOT NULL
-EXCEPT
-SELECT older_checksum FROM actual_node
-  WHERE older_checksum IS NOT NULL
-EXCEPT
-SELECT left_checksum FROM actual_node
-  WHERE left_checksum  IS NOT NULL
-EXCEPT
-SELECT right_checksum FROM actual_node
-  WHERE right_checksum IS NOT NULL
+WHERE refcount = 0
 
--- STMT_DELETE_PRISTINE
+-- STMT_DELETE_PRISTINE_IF_UNREFERENCED
 DELETE FROM pristine
-WHERE checksum = ?1
+WHERE checksum = ?1 AND refcount = 0
 
 -- STMT_SELECT_ACTUAL_CONFLICT_VICTIMS
 SELECT local_relpath

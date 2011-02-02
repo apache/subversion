@@ -42,6 +42,8 @@
 #include "svn_config.h"
 #include "svn_string.h"
 #include "svn_repos.h"
+#include "svn_dirent_uri.h"
+#include "private/svn_fspath.h"
 
 
 extern module AP_MODULE_DECLARE_DATA authz_svn_module;
@@ -68,7 +70,7 @@ create_authz_svn_dir_config(apr_pool_t *p, char *d)
   conf->base_path = d;
 
   if (d)
-    conf->base_path = svn_uri_canonicalize(d, p);
+    conf->base_path = svn_urlpath__canonicalize(d, p);
 
   /* By default keep the fortress secure */
   conf->authoritative = 1;
@@ -274,7 +276,6 @@ req_check_access(request_rec *r,
   svn_authz_t *access_conf = NULL;
   svn_error_t *svn_err;
   char errbuf[256];
-  const char *canonicalized_uri;
   const char *username_to_authorize = get_username_to_authorize(r, conf);
 
   switch (r->method_number)
@@ -314,8 +315,7 @@ req_check_access(request_rec *r,
         break;
     }
 
-  canonicalized_uri = svn_uri_canonicalize(r->uri, r->pool);
-  if (strcmp(canonicalized_uri, conf->base_path) == 0)
+  if (strcmp(svn_urlpath__canonicalize(r->uri, r->pool), conf->base_path) == 0)
     {
       /* Do no access control when conf->base_path(as configured in <Location>)
        * and given uri are same. The reason for such relaxation of access
@@ -357,7 +357,7 @@ req_check_access(request_rec *r,
     repos_path = NULL;
 
   if (repos_path)
-    repos_path = svn_path_join("/", repos_path, r->pool);
+    repos_path = svn_fspath__canonicalize(repos_path, r->pool);
 
   *repos_path_ref = apr_pstrcat(r->pool, repos_name, ":", repos_path,
                                 (char *)NULL);
@@ -405,7 +405,7 @@ req_check_access(request_rec *r,
         }
 
       if (dest_repos_path)
-        dest_repos_path = svn_path_join("/", dest_repos_path, r->pool);
+        dest_repos_path = svn_fspath__canonicalize(dest_repos_path, r->pool);
 
       *dest_repos_path_ref = apr_pstrcat(r->pool, dest_repos_name, ":",
                                          dest_repos_path, (char *)NULL);

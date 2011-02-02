@@ -69,10 +69,10 @@ svn_diff__tree_create(svn_diff__tree_t **tree, apr_pool_t *pool)
 
 
 static svn_error_t *
-svn_diff__tree_insert_token(svn_diff__node_t **node, svn_diff__tree_t *tree,
-                            void *diff_baton,
-                            const svn_diff_fns_t *vtable,
-                            apr_uint32_t hash, void *token)
+tree_insert_token(svn_diff__node_t **node, svn_diff__tree_t *tree,
+                  void *diff_baton,
+                  const svn_diff_fns_t *vtable,
+                  apr_uint32_t hash, void *token)
 {
   svn_diff__node_t *new_node;
   svn_diff__node_t **node_ref;
@@ -165,9 +165,7 @@ svn_diff__get_tokens(svn_diff__position_t **position_list,
         break;
 
       offset++;
-      SVN_ERR(svn_diff__tree_insert_token(&node, tree,
-                                          diff_baton, vtable,
-                                          hash, token));
+      SVN_ERR(tree_insert_token(&node, tree, diff_baton, vtable, hash, token));
 
       /* Create a new position */
       position = apr_palloc(pool, sizeof(*position));

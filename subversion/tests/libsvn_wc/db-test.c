@@ -329,6 +329,7 @@ create_fake_wc(const char *subdir, int format, apr_pool_t *scratch_pool)
   const char * const my_statements[] = {
     statements[STMT_CREATE_SCHEMA],
     statements[STMT_CREATE_NODES],
+    statements[STMT_CREATE_NODES_TRIGGERS],
     TESTING_DATA,
     NULL
   };

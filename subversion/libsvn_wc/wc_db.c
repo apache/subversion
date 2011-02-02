@@ -61,8 +61,6 @@
 #define SDB_FILE  "wc.db"
 #define SDB_FILE_UPGRADE "wc.db.upgrade"
 
-#define PRISTINE_STORAGE_RELPATH "pristine"
-#define PRISTINE_TEMPDIR_RELPATH ""
 #define WCROOT_TEMPDIR_RELPATH   "tmp"
 
 
@@ -419,77 +417,6 @@ static const char *construct_like_arg(const char *local_relpath,
                      "/%", (char *)NULL);
 }
 
-
-
-/* Returns in PRISTINE_ABSPATH a new string allocated from RESULT_POOL,
-   holding the local absolute path to the file location that is dedicated
-   to hold CHECKSUM's pristine file, relating to the pristine store
-   configured for the working copy indicated by PDH. The returned path
-   does not necessarily currently exist.
-
-   Iff CREATE_SUBDIR is TRUE, then this function will make sure that the
-   parent directory of PRISTINE_ABSPATH exists. This is only useful when
-   about to create a new pristine.
-
-   Any other allocations are made in SCRATCH_POOL. */
-static svn_error_t *
-get_pristine_fname(const char **pristine_abspath,
-                   const char *wcroot_abspath,
-                   const svn_checksum_t *sha1_checksum,
-                   svn_boolean_t create_subdir,
-                   apr_pool_t *result_pool,
-                   apr_pool_t *scratch_pool)
-{
-  const char *base_dir_abspath;
-  const char *hexdigest = svn_checksum_to_cstring(sha1_checksum, scratch_pool);
-  char subdir[3];
-
-  /* ### code is in transition. make sure we have the proper data.  */
-  SVN_ERR_ASSERT(pristine_abspath != NULL);
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(wcroot_abspath));
-  SVN_ERR_ASSERT(sha1_checksum != NULL);
-  SVN_ERR_ASSERT(sha1_checksum->kind == svn_checksum_sha1);
-
-  /* ### need to fix this to use a symbol for ".svn". we don't need
-     ### to use join_many since we know "/" is the separator for
-     ### internal canonical paths */
-  base_dir_abspath = svn_dirent_join_many(scratch_pool,
-                                          wcroot_abspath,
-                                          svn_wc_get_adm_dir(scratch_pool),
-                                          PRISTINE_STORAGE_RELPATH,
-                                          NULL);
-
-  /* We should have a valid checksum and (thus) a valid digest. */
-  SVN_ERR_ASSERT(hexdigest != NULL);
-
-  /* Get the first two characters of the digest, for the subdir. */
-  subdir[0] = hexdigest[0];
-  subdir[1] = hexdigest[1];
-  subdir[2] = '\0';
-
-  if (create_subdir)
-    {
-      const char *subdir_abspath = svn_dirent_join(base_dir_abspath, subdir,
-                                                   scratch_pool);
-      svn_error_t *err;
-
-      err = svn_io_dir_make(subdir_abspath, APR_OS_DEFAULT, scratch_pool);
-
-      /* Whatever error may have occurred... ignore it. Typically, this
-         will be "directory already exists", but if it is something
-         *different*, then presumably another error will follow when we
-         try to access the file within this (missing?) pristine subdir. */
-      svn_error_clear(err);
-    }
-
-  /* The file is located at DIR/.svn/pristine/XX/XXYYZZ... */
-  *pristine_abspath = svn_dirent_join_many(result_pool,
-                                           base_dir_abspath,
-                                           subdir,
-                                           hexdigest,
-                                           NULL);
-  return SVN_NO_ERROR;
-}
 
 
 /* Look up REPOS_ID in SDB and set *REPOS_ROOT_URL and/or *REPOS_UUID to
@@ -856,11 +783,12 @@ insert_base_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
                             (pibb->kind == svn_wc__db_kind_symlink) ?
                                 pibb->target : NULL)); /* 19 */
 
-  if (pibb->kind == svn_wc__db_kind_file) {
-    SVN_ERR(svn_sqlite__bind_checksum(stmt, 14, pibb->checksum, scratch_pool));
-    if (pibb->translated_size != SVN_INVALID_FILESIZE)
-      SVN_ERR(svn_sqlite__bind_int64(stmt, 16, pibb->translated_size));
-  }
+  if (pibb->kind == svn_wc__db_kind_file)
+    {
+      SVN_ERR(svn_sqlite__bind_checksum(stmt, 14, pibb->checksum, scratch_pool));
+      if (pibb->translated_size != SVN_INVALID_FILESIZE)
+        SVN_ERR(svn_sqlite__bind_int64(stmt, 16, pibb->translated_size));
+    }
 
   SVN_ERR(svn_sqlite__bind_properties(stmt, 15, pibb->props,
                                       scratch_pool));
@@ -1272,9 +1200,8 @@ create_db(svn_sqlite__db_t **sdb,
 
   /* Create the database's schema.  */
   SVN_ERR(svn_sqlite__exec_statements(*sdb, STMT_CREATE_SCHEMA));
-
-  /* Create the NODES table for the experimental schema */
   SVN_ERR(svn_sqlite__exec_statements(*sdb, STMT_CREATE_NODES));
+  SVN_ERR(svn_sqlite__exec_statements(*sdb, STMT_CREATE_NODES_TRIGGERS));
 
   /* Insert the repository. */
   SVN_ERR(create_repos_id(repos_id, repos_root_url, repos_uuid, *sdb,
@@ -1506,7 +1433,7 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(repos_relpath != NULL);
-  SVN_ERR_ASSERT(svn_uri_is_absolute(repos_root_url));
+  SVN_ERR_ASSERT(svn_uri_is_canonical(repos_root_url, scratch_pool));
   SVN_ERR_ASSERT(repos_uuid != NULL);
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
   SVN_ERR_ASSERT(props != NULL);
@@ -1584,7 +1511,7 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(repos_relpath != NULL);
-  SVN_ERR_ASSERT(svn_uri_is_absolute(repos_root_url));
+  SVN_ERR_ASSERT(svn_uri_is_canonical(repos_root_url, scratch_pool));
   SVN_ERR_ASSERT(repos_uuid != NULL);
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
   SVN_ERR_ASSERT(props != NULL);
@@ -1658,7 +1585,7 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(repos_relpath != NULL);
-  SVN_ERR_ASSERT(svn_uri_is_absolute(repos_root_url));
+  SVN_ERR_ASSERT(svn_uri_is_canonical(repos_root_url, scratch_pool));
   SVN_ERR_ASSERT(repos_uuid != NULL);
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
   SVN_ERR_ASSERT(props != NULL);
@@ -1727,7 +1654,7 @@ add_absent_excluded_not_present_node(svn_wc__db_t *db,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(repos_relpath != NULL);
-  SVN_ERR_ASSERT(svn_uri_is_absolute(repos_root_url));
+  SVN_ERR_ASSERT(svn_uri_is_canonical(repos_root_url, scratch_pool));
   SVN_ERR_ASSERT(repos_uuid != NULL);
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
   SVN_ERR_ASSERT(status == svn_wc__db_status_absent
@@ -2216,478 +2143,6 @@ svn_wc__db_base_clear_dav_cache_recursive(svn_wc__db_t *db,
 
   return SVN_NO_ERROR;
 }
-
-svn_error_t *
-svn_wc__db_pristine_get_path(const char **pristine_abspath,
-                             svn_wc__db_t *db,
-                             const char *wri_abspath,
-                             const svn_checksum_t *sha1_checksum,
-                             apr_pool_t *result_pool,
-                             apr_pool_t *scratch_pool)
-{
-  svn_wc__db_pdh_t *pdh;
-  const char *local_relpath;
-  svn_boolean_t present;
-
-  SVN_ERR_ASSERT(pristine_abspath != NULL);
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
-  SVN_ERR_ASSERT(sha1_checksum != NULL);
-  /* ### Transitional: accept MD-5 and look up the SHA-1.  Return an error
-   * if the pristine text is not in the store. */
-  if (sha1_checksum->kind != svn_checksum_sha1)
-    SVN_ERR(svn_wc__db_pristine_get_sha1(&sha1_checksum, db, wri_abspath,
-                                         sha1_checksum,
-                                         scratch_pool, scratch_pool));
-  SVN_ERR_ASSERT(sha1_checksum->kind == svn_checksum_sha1);
-
-  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath,
-                                             db, wri_abspath,
-                                             svn_sqlite__mode_readonly,
-                                             scratch_pool, scratch_pool));
-  VERIFY_USABLE_PDH(pdh);
-
-  SVN_ERR(svn_wc__db_pristine_check(&present, db, wri_abspath, sha1_checksum,
-                                    scratch_pool));
-  if (! present)
-    return svn_error_createf(SVN_ERR_WC_DB_ERROR, NULL,
-                             _("Pristine text not found"));
-
-  SVN_ERR(get_pristine_fname(pristine_abspath, pdh->wcroot->abspath,
-                             sha1_checksum,
-                             FALSE /* create_subdir */,
-                             result_pool, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_wc__db_pristine_get_future_path(const char **pristine_abspath,
-                                    const char *wcroot_abspath,
-                                    svn_checksum_t *sha1_checksum,
-                                    apr_pool_t *result_pool,
-                                    apr_pool_t *scratch_pool)
-{
-  SVN_ERR(get_pristine_fname(pristine_abspath, wcroot_abspath,
-                             sha1_checksum,
-                             FALSE /* create_subdir */,
-                             result_pool, scratch_pool));
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_wc__db_pristine_read(svn_stream_t **contents,
-                         svn_wc__db_t *db,
-                         const char *wri_abspath,
-                         const svn_checksum_t *sha1_checksum,
-                         apr_pool_t *result_pool,
-                         apr_pool_t *scratch_pool)
-{
-  svn_wc__db_pdh_t *pdh;
-  const char *local_relpath;
-  const char *pristine_abspath;
-
-  SVN_ERR_ASSERT(contents != NULL);
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
-  SVN_ERR_ASSERT(sha1_checksum != NULL);
-  /* ### Transitional: accept MD-5 and look up the SHA-1.  Return an error
-   * if the pristine text is not in the store. */
-  if (sha1_checksum->kind != svn_checksum_sha1)
-    SVN_ERR(svn_wc__db_pristine_get_sha1(&sha1_checksum, db, wri_abspath,
-                                         sha1_checksum,
-                                         scratch_pool, scratch_pool));
-  SVN_ERR_ASSERT(sha1_checksum->kind == svn_checksum_sha1);
-
-  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
-                              wri_abspath, svn_sqlite__mode_readonly,
-                              scratch_pool, scratch_pool));
-  VERIFY_USABLE_PDH(pdh);
-
-  /* ### should we look in the PRISTINE table for anything?  */
-
-  SVN_ERR(get_pristine_fname(&pristine_abspath, pdh->wcroot->abspath,
-                             sha1_checksum,
-                             FALSE /* create_subdir */,
-                             scratch_pool, scratch_pool));
-  return svn_error_return(svn_stream_open_readonly(
-                            contents, pristine_abspath,
-                            result_pool, scratch_pool));
-}
-
-
-svn_error_t *
-svn_wc__db_pristine_get_tempdir(const char **temp_dir_abspath,
-                                svn_wc__db_t *db,
-                                const char *wri_abspath,
-                                apr_pool_t *result_pool,
-                                apr_pool_t *scratch_pool)
-{
-  svn_wc__db_pdh_t *pdh;
-  const char *local_relpath;
-
-  SVN_ERR_ASSERT(temp_dir_abspath != NULL);
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
-
-  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
-                              wri_abspath, svn_sqlite__mode_readonly,
-                              scratch_pool, scratch_pool));
-  VERIFY_USABLE_PDH(pdh);
-
-  *temp_dir_abspath = svn_dirent_join_many(result_pool,
-                                           pdh->wcroot->abspath,
-                                           svn_wc_get_adm_dir(scratch_pool),
-                                           PRISTINE_TEMPDIR_RELPATH,
-                                           NULL);
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc__db_pristine_install(svn_wc__db_t *db,
-                            const char *tempfile_abspath,
-                            const svn_checksum_t *sha1_checksum,
-                            const svn_checksum_t *md5_checksum,
-                            apr_pool_t *scratch_pool)
-{
-  svn_wc__db_pdh_t *pdh;
-  const char *local_relpath;
-  const char *wri_abspath;
-  const char *pristine_abspath;
-  apr_finfo_t finfo;
-  svn_sqlite__stmt_t *stmt;
-  svn_node_kind_t kind;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(tempfile_abspath));
-  SVN_ERR_ASSERT(sha1_checksum != NULL);
-  SVN_ERR_ASSERT(sha1_checksum->kind == svn_checksum_sha1);
-  SVN_ERR_ASSERT(md5_checksum != NULL);
-  SVN_ERR_ASSERT(md5_checksum->kind == svn_checksum_md5);
-
-  /* ### this logic assumes that TEMPFILE_ABSPATH follows this pattern:
-     ###   WCROOT_ABSPATH/COMPONENT/TEMPFNAME
-     ### if we change this (see PRISTINE_TEMPDIR_RELPATH), then this
-     ### logic should change.  */
-  wri_abspath = svn_dirent_dirname(svn_dirent_dirname(tempfile_abspath,
-                                                      scratch_pool),
-                                   scratch_pool);
-
-  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
-                              wri_abspath, svn_sqlite__mode_readonly,
-                              scratch_pool, scratch_pool));
-  VERIFY_USABLE_PDH(pdh);
-
-  SVN_ERR(get_pristine_fname(&pristine_abspath, pdh->wcroot->abspath,
-                             sha1_checksum,
-                             TRUE /* create_subdir */,
-                             scratch_pool, scratch_pool));
-
-
-  SVN_ERR(svn_io_check_path(pristine_abspath, &kind, scratch_pool));
-
-  if (kind == svn_node_file)
-    {
-      /* Remove the tempfile, it's already there */
-      return svn_error_return(
-                  svn_io_remove_file2(tempfile_abspath,
-                                      FALSE, scratch_pool));
-    }
-
-  /* Put the file into its target location.  */
-    SVN_ERR(svn_io_file_rename(tempfile_abspath, pristine_abspath,
-                               scratch_pool));
-
-  SVN_ERR(svn_io_stat(&finfo, pristine_abspath, APR_FINFO_SIZE,
-                      scratch_pool));
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
-                                    STMT_INSERT_PRISTINE));
-  SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, sha1_checksum, scratch_pool));
-  SVN_ERR(svn_sqlite__bind_checksum(stmt, 2, md5_checksum, scratch_pool));
-  SVN_ERR(svn_sqlite__bind_int64(stmt, 3, finfo.size));
-  SVN_ERR(svn_sqlite__insert(NULL, stmt));
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc__db_pristine_get_md5(const svn_checksum_t **md5_checksum,
-                            svn_wc__db_t *db,
-                            const char *wri_abspath,
-                            const svn_checksum_t *sha1_checksum,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool)
-{
-  svn_wc__db_pdh_t *pdh;
-  const char *local_relpath;
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
-  SVN_ERR_ASSERT(sha1_checksum != NULL);
-  SVN_ERR_ASSERT(sha1_checksum->kind == svn_checksum_sha1);
-
-  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
-                              wri_abspath, svn_sqlite__mode_readonly,
-                              scratch_pool, scratch_pool));
-  VERIFY_USABLE_PDH(pdh);
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
-                                    STMT_SELECT_PRISTINE_MD5_CHECKSUM));
-  SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, sha1_checksum, scratch_pool));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  if (!have_row)
-    return svn_error_createf(SVN_ERR_WC_DB_ERROR, svn_sqlite__reset(stmt),
-                             _("The pristine text with checksum '%s' was "
-                               "not found"),
-                             svn_checksum_to_cstring_display(sha1_checksum,
-                                                             scratch_pool));
-
-  SVN_ERR(svn_sqlite__column_checksum(md5_checksum, stmt, 0, result_pool));
-  SVN_ERR_ASSERT((*md5_checksum)->kind == svn_checksum_md5);
-
-  return svn_error_return(svn_sqlite__reset(stmt));
-}
-
-
-svn_error_t *
-svn_wc__db_pristine_get_sha1(const svn_checksum_t **sha1_checksum,
-                             svn_wc__db_t *db,
-                             const char *wri_abspath,
-                             const svn_checksum_t *md5_checksum,
-                             apr_pool_t *result_pool,
-                             apr_pool_t *scratch_pool)
-{
-  svn_wc__db_pdh_t *pdh;
-  const char *local_relpath;
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
-  SVN_ERR_ASSERT(sha1_checksum != NULL);
-  SVN_ERR_ASSERT(md5_checksum->kind == svn_checksum_md5);
-
-  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
-                              wri_abspath, svn_sqlite__mode_readonly,
-                              scratch_pool, scratch_pool));
-  VERIFY_USABLE_PDH(pdh);
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
-                                    STMT_SELECT_PRISTINE_SHA1_CHECKSUM));
-  SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, md5_checksum, scratch_pool));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  if (!have_row)
-    return svn_error_createf(SVN_ERR_WC_DB_ERROR, svn_sqlite__reset(stmt),
-                             _("The pristine text with MD5 checksum '%s' was "
-                               "not found"),
-                             svn_checksum_to_cstring_display(md5_checksum,
-                                                             scratch_pool));
-
-  SVN_ERR(svn_sqlite__column_checksum(sha1_checksum, stmt, 0, result_pool));
-  SVN_ERR_ASSERT((*sha1_checksum)->kind == svn_checksum_sha1);
-
-  return svn_error_return(svn_sqlite__reset(stmt));
-}
-
-
-/* Delete the pristine text referenced by SHA1_CHECKSUM from the pristine
- * store of WCROOT.  Delete both the database row and the file on disk. */
-static svn_error_t *
-pristine_remove(svn_wc__db_wcroot_t *wcroot,
-                const svn_checksum_t *sha1_checksum,
-                apr_pool_t *scratch_pool)
-{
-  svn_sqlite__stmt_t *stmt;
-  const char *pristine_abspath;
-
-  /* Remove the DB row. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_DELETE_PRISTINE));
-  SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, sha1_checksum, scratch_pool));
-  SVN_ERR(svn_sqlite__update(NULL, stmt));
-
-  /* Remove the file */
-  SVN_ERR(get_pristine_fname(&pristine_abspath, wcroot->abspath,
-                             sha1_checksum, TRUE /* create_subdir */,
-                             scratch_pool, scratch_pool));
-  SVN_ERR(svn_io_remove_file2(pristine_abspath, TRUE /* ignore_enoent */,
-                              scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_wc__db_pristine_remove(svn_wc__db_t *db,
-                           const char *wri_abspath,
-                           const svn_checksum_t *sha1_checksum,
-                           apr_pool_t *scratch_pool)
-{
-  svn_wc__db_pdh_t *pdh;
-  const char *local_relpath;
-  svn_boolean_t is_referenced;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
-  SVN_ERR_ASSERT(sha1_checksum != NULL);
-  /* ### Transitional: accept MD-5 and look up the SHA-1.  Return an error
-   * if the pristine text is not in the store. */
-  if (sha1_checksum->kind != svn_checksum_sha1)
-    SVN_ERR(svn_wc__db_pristine_get_sha1(&sha1_checksum, db, wri_abspath,
-                                         sha1_checksum,
-                                         scratch_pool, scratch_pool));
-  SVN_ERR_ASSERT(sha1_checksum->kind == svn_checksum_sha1);
-
-  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
-                              wri_abspath, svn_sqlite__mode_readwrite,
-                              scratch_pool, scratch_pool));
-  VERIFY_USABLE_PDH(pdh);
-
-  /* If the work queue is not empty, don't delete any pristine text because
-   * the work queue may contain a reference to it. */
-  {
-    svn_sqlite__stmt_t *stmt;
-    svn_boolean_t have_row;
-
-    SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
-                                      STMT_LOOK_FOR_WORK));
-    SVN_ERR(svn_sqlite__step(&have_row, stmt));
-    SVN_ERR(svn_sqlite__reset(stmt));
-
-    if (have_row)
-      return SVN_NO_ERROR;
-  }
-
-  /* Find whether the SHA-1 (or the MD-5) is referenced; set IS_REFERENCED. */
-  {
-    const svn_checksum_t *md5_checksum;
-    svn_sqlite__stmt_t *stmt;
-
-    /* ### Transitional: look for references to its MD-5 as well. */
-    SVN_ERR(svn_wc__db_pristine_get_md5(&md5_checksum, db, wri_abspath,
-                                        sha1_checksum, scratch_pool,
-                                        scratch_pool));
-
-    SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
-                                      STMT_SELECT_ANY_PRISTINE_REFERENCE));
-    SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, sha1_checksum, scratch_pool));
-    SVN_ERR(svn_sqlite__bind_checksum(stmt, 2, md5_checksum, scratch_pool));
-    SVN_ERR(svn_sqlite__step(&is_referenced, stmt));
-
-    SVN_ERR(svn_sqlite__reset(stmt));
-  }
-
-  /* If not referenced, remove the PRISTINE table row and the file. */
-  if (! is_referenced)
-    {
-      SVN_ERR(pristine_remove(pdh->wcroot, sha1_checksum, scratch_pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-pristine_cleanup_wcroot(svn_wc__db_wcroot_t *wcroot,
-                        apr_pool_t *scratch_pool)
-{
-  svn_sqlite__stmt_t *stmt;
-
-  /* Find each unreferenced pristine in the DB and remove it. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_UNREFERENCED_PRISTINES));
-  while (1)
-    {
-      svn_boolean_t have_row;
-      const svn_checksum_t *sha1_checksum;
-
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
-      if (! have_row)
-        break;
-
-      SVN_ERR(svn_sqlite__column_checksum(&sha1_checksum, stmt, 0,
-                                          scratch_pool));
-      SVN_ERR(pristine_remove(wcroot, sha1_checksum, scratch_pool));
-    }
-  SVN_ERR(svn_sqlite__reset(stmt));
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc__db_pristine_cleanup(svn_wc__db_t *db,
-                            const char *wri_abspath,
-                            apr_pool_t *scratch_pool)
-{
-  svn_wc__db_pdh_t *pdh;
-  const char *local_relpath;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
-
-  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
-                              wri_abspath, svn_sqlite__mode_readonly,
-                              scratch_pool, scratch_pool));
-  VERIFY_USABLE_PDH(pdh);
-
-  SVN_ERR(pristine_cleanup_wcroot(pdh->wcroot, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc__db_pristine_check(svn_boolean_t *present,
-                          svn_wc__db_t *db,
-                          const char *wri_abspath,
-                          const svn_checksum_t *sha1_checksum,
-                          apr_pool_t *scratch_pool)
-{
-  svn_wc__db_pdh_t *pdh;
-  const char *local_relpath;
-  const char *pristine_abspath;
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
-  svn_node_kind_t kind_on_disk;
-
-  SVN_ERR_ASSERT(present != NULL);
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
-  SVN_ERR_ASSERT(sha1_checksum != NULL);
-  /* ### Transitional: accept MD-5 and look up the SHA-1.  Return an error
-   * if the pristine text is not in the store. */
-  if (sha1_checksum->kind != svn_checksum_sha1)
-    SVN_ERR(svn_wc__db_pristine_get_sha1(&sha1_checksum, db, wri_abspath,
-                                         sha1_checksum,
-                                         scratch_pool, scratch_pool));
-  SVN_ERR_ASSERT(sha1_checksum->kind == svn_checksum_sha1);
-
-  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
-                              wri_abspath, svn_sqlite__mode_readonly,
-                              scratch_pool, scratch_pool));
-  VERIFY_USABLE_PDH(pdh);
-
-  /* Check that there is an entry in the PRISTINE table. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
-                                    STMT_SELECT_PRISTINE_MD5_CHECKSUM));
-  SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, sha1_checksum, scratch_pool));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  SVN_ERR(svn_sqlite__reset(stmt));
-
-  /* Check that the pristine text file exists. */
-  SVN_ERR(get_pristine_fname(&pristine_abspath, pdh->wcroot->abspath,
-                             sha1_checksum,
-                             FALSE /* create_subdir */,
-                             scratch_pool, scratch_pool));
-  SVN_ERR(svn_io_check_path(pristine_abspath, &kind_on_disk, scratch_pool));
-
-  if (kind_on_disk != (have_row ? svn_node_file : svn_node_none))
-    return svn_error_createf(SVN_ERR_WC_DB_ERROR, svn_sqlite__reset(stmt),
-                             _("The pristine text with checksum '%s' was "
-                               "found in the DB or on disk but not both"),
-                             svn_checksum_to_cstring_display(sha1_checksum,
-                                                             scratch_pool));
-
-  *present = have_row;
-  return SVN_NO_ERROR;
-}
-
 
 /* Helper for svn_wc__db_op_copy to handle copying from one db to
    another */
@@ -4062,17 +3517,18 @@ svn_wc__db_op_revert_actual(svn_wc__db_t *db,
   SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
 
-  if (affected_rows == 0) {
-    /* Failed to delete the row.
-       Presumably because there was a changelist set on it */
+  if (affected_rows == 0)
+    {
+      /* Failed to delete the row.
+         Presumably because there was a changelist set on it */
 
-    SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
-                               STMT_CLEAR_ACTUAL_NODE_LEAVING_CHANGELIST));
-    SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
-    SVN_ERR(svn_sqlite__step_done(stmt));
-    /* We're not interested here if there was an affected row or not:
-       If there isn't by now, then there simply was no row to begin with */
-  }
+      SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+                                 STMT_CLEAR_ACTUAL_NODE_LEAVING_CHANGELIST));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+      /* We're not interested here if there was an affected row or not:
+         If there isn't by now, then there simply was no row to begin with */
+    }
 
   /* Some entries have cached the above values. Kapow!!  */
   SVN_ERR(flush_entries(db, pdh, local_abspath, scratch_pool));

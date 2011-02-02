@@ -226,88 +226,6 @@ test_stream_compressed(apr_pool_t *pool)
 }
 
 static svn_error_t *
-test_stream_range(apr_pool_t *pool)
-{
-  static const char *file_data[3] = {"Before", "Now", "After"};
-  const char *before, *now;
-  char buf[14 + 1] = {0}; /* Enough to hold file data + '\0' */
-  static const char *fname = "test_stream_range.txt";
-  apr_off_t start, end;
-  apr_file_t *f;
-  apr_status_t status;
-  unsigned int i, j;
-  apr_size_t len;
-  svn_stream_t *stream;
-
-  status = apr_file_open(&f, fname, (APR_READ | APR_WRITE | APR_CREATE |
-                         APR_TRUNCATE | APR_DELONCLOSE), APR_OS_DEFAULT, pool);
-  if (status != APR_SUCCESS)
-    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL, "Cannot open '%s'",
-                             fname);
-
-  /* Create the file. */
-  for (j = 0; j < 3; j++)
-    {
-      len = strlen(file_data[j]);
-      status = apr_file_write(f, file_data[j], &len);
-      if (status || len != strlen(file_data[j]))
-        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                                 "Cannot write to '%s'", fname);
-    }
-
-    /* Create a stream to read from a range of the file. */
-    before = file_data[0];
-    now = file_data[1];
-
-    start = strlen(before);
-    end = start + strlen(now);
-
-    stream = svn_stream_from_aprfile_range_readonly(f, TRUE, start, end, pool);
-
-    /* Even when requesting more data than contained in the range,
-     * we should only receive data from the range. */
-    for (i = 0; i < 2; i++)
-      {
-        /* Try to read from "Now", up to and past the end of the range. */
-        len = strlen(now) + 1;
-        SVN_ERR(svn_stream_read(stream, buf, &len));
-        if (len != strlen(now))
-          return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                                   "Read past (or not all of) range");
-        if (strcmp(buf, now))
-          return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                                   "Unexpected data");
-
-        /* Try to read from the end of the range - should be impossible. */
-        len = 1;
-        SVN_ERR(svn_stream_read(stream, buf, &len));
-        if (len != 0)
-          return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                                   "Read past range");
-
-        /* Resetting the stream should allow us to read the range again. */
-        SVN_ERR(svn_stream_reset(stream));
-      }
-
-    SVN_ERR(svn_stream_close(stream));
-
-    /* The attempt to create a stream with invalid ranges should result
-     * in an empty stream. */
-    stream = svn_stream_from_aprfile_range_readonly(f, TRUE, 0, -1, pool);
-    len = 42;
-    SVN_ERR(svn_stream_read(stream, buf, &len));
-    SVN_TEST_ASSERT(len == 0);
-    stream = svn_stream_from_aprfile_range_readonly(f, TRUE, -1, 0, pool);
-    len = 42;
-    SVN_ERR(svn_stream_read(stream, buf, &len));
-    SVN_TEST_ASSERT(len == 0);
-
-    SVN_ERR(svn_stream_close(stream));
-    apr_file_close(f);
-    return SVN_NO_ERROR;
-}
-
-static svn_error_t *
 test_stream_tee(apr_pool_t *pool)
 {
   svn_stringbuf_t *test_bytes = generate_test_bytes(100, pool);
@@ -424,71 +342,72 @@ test_stream_seek_translated(apr_pool_t *pool)
 {
   svn_stream_t *stream, *translated_stream;
   svn_stringbuf_t *stringbuf;
-  char buf[23];
+  char buf[44]; /* strlen("One$MyKeyword: my keyword was expanded $Two") + \0 */
   apr_size_t len;
-  svn_stream_mark_t *mark, *mark2;
+  svn_stream_mark_t *mark;
   apr_hash_t *keywords;
   svn_string_t *keyword_val;
 
   keywords = apr_hash_make(pool);
-  keyword_val = svn_string_create("my key word was expanded", pool);
+  keyword_val = svn_string_create("my keyword was expanded", pool);
   apr_hash_set(keywords, "MyKeyword", APR_HASH_KEY_STRING, keyword_val);
   stringbuf = svn_stringbuf_create("One$MyKeyword$Two", pool);
   stream = svn_stream_from_stringbuf(stringbuf, pool);
   translated_stream = svn_subst_stream_translated(stream, APR_EOL_STR,
                                                   FALSE, keywords, TRUE, pool);
-  len = 3;
-  SVN_ERR(svn_stream_read(translated_stream, buf, &len));
-  SVN_TEST_ASSERT(len == 3);
-  buf[3] = '\0';
-  SVN_TEST_STRING_ASSERT(buf, "One");
-
   /* Seek from outside of keyword to inside of keyword. */
-  SVN_ERR(svn_stream_mark(translated_stream, &mark, pool));
-  len = 3;
+  len = 25;
   SVN_ERR(svn_stream_read(translated_stream, buf, &len));
-  SVN_TEST_ASSERT(len == 3);
-  buf[3] = '\0';
-  /* ### The test currently fails here because the keyword isn't
-   * ### expanded correctly. buf contains "$My\0" */
-  SVN_TEST_STRING_ASSERT(buf, "my ");
-  SVN_ERR(svn_stream_seek(stream, mark));
-  len = 3;
-  SVN_ERR(svn_stream_read(stream, buf, &len));
-  SVN_TEST_ASSERT(len == 3);
-  buf[3] = '\0';
-  SVN_TEST_STRING_ASSERT(buf, "my ");
+  SVN_TEST_ASSERT(len == 25);
+  buf[25] = '\0';
+  SVN_TEST_STRING_ASSERT(buf, "One$MyKeyword: my keyword");
+  SVN_ERR(svn_stream_mark(translated_stream, &mark, pool));
+  SVN_ERR(svn_stream_reset(translated_stream));
+  SVN_ERR(svn_stream_seek(translated_stream, mark));
+  len = 4;
+  SVN_ERR(svn_stream_read(translated_stream, buf, &len));
+  SVN_TEST_ASSERT(len == 4);
+  buf[4] = '\0';
+  SVN_TEST_STRING_ASSERT(buf, " was");
 
   /* Seek from inside of keyword to inside of keyword. */
   SVN_ERR(svn_stream_mark(translated_stream, &mark, pool));
-  len = 3;
+  len = 9;
   SVN_ERR(svn_stream_read(translated_stream, buf, &len));
-  SVN_TEST_ASSERT(len == 3);
-  buf[3] = '\0';
-  SVN_TEST_STRING_ASSERT(buf, "key");
-  SVN_ERR(svn_stream_seek(stream, mark));
-  len = 3;
-  SVN_ERR(svn_stream_read(stream, buf, &len));
-  SVN_TEST_ASSERT(len == 3);
-  buf[3] = '\0';
-  SVN_TEST_STRING_ASSERT(buf, "my ");
+  SVN_TEST_ASSERT(len == 9);
+  buf[9] = '\0';
+  SVN_TEST_STRING_ASSERT(buf, " expanded");
+  SVN_ERR(svn_stream_seek(translated_stream, mark));
+  len = 9;
+  SVN_ERR(svn_stream_read(translated_stream, buf, &len));
+  SVN_TEST_ASSERT(len == 9);
+  buf[9] = '\0';
+  SVN_TEST_STRING_ASSERT(buf, " expanded");
 
   /* Seek from inside of keyword to outside of keyword. */
-  len = 22;
+  SVN_ERR(svn_stream_mark(translated_stream, &mark, pool));
+  len = 4;
   SVN_ERR(svn_stream_read(translated_stream, buf, &len));
-  SVN_TEST_ASSERT(len == 22);
-  buf[22] = '\0';
-  SVN_TEST_STRING_ASSERT(buf, "keyword was expandedTw");
-  SVN_ERR(svn_stream_mark(translated_stream, &mark2, pool));
-  SVN_ERR(svn_stream_seek(stream, mark));
-  len = 3;
-  SVN_ERR(svn_stream_read(stream, buf, &len));
-  SVN_TEST_ASSERT(len == 3);
-  buf[3] = '\0';
-  SVN_TEST_STRING_ASSERT(buf, "my ");
-  SVN_ERR(svn_stream_seek(stream, mark2));
+  SVN_TEST_ASSERT(len == 4);
+  buf[4] = '\0';
+  SVN_TEST_STRING_ASSERT(buf, " $Tw");
+  SVN_ERR(svn_stream_seek(translated_stream, mark));
+  len = 4;
+  SVN_ERR(svn_stream_read(translated_stream, buf, &len));
+  SVN_TEST_ASSERT(len == 4);
+  buf[4] = '\0';
+  SVN_TEST_STRING_ASSERT(buf, " $Tw");
+
+  /* Seek from outside of keyword to outside of keyword. */
+  SVN_ERR(svn_stream_mark(translated_stream, &mark, pool));
   len = 1;
-  SVN_ERR(svn_stream_read(stream, buf, &len));
+  SVN_ERR(svn_stream_read(translated_stream, buf, &len));
+  SVN_TEST_ASSERT(len == 1);
+  buf[1] = '\0';
+  SVN_TEST_STRING_ASSERT(buf, "o");
+  SVN_ERR(svn_stream_seek(translated_stream, mark));
+  len = 1;
+  SVN_ERR(svn_stream_read(translated_stream, buf, &len));
   SVN_TEST_ASSERT(len == 1);
   buf[1] = '\0';
   SVN_TEST_STRING_ASSERT(buf, "o");
@@ -509,15 +428,13 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test svn_stream_from_string"),
     SVN_TEST_PASS2(test_stream_compressed,
                    "test compressed streams"),
-    SVN_TEST_PASS2(test_stream_range,
-                   "test streams reading from range of file"),
     SVN_TEST_PASS2(test_stream_tee,
                    "test 'tee' streams"),
     SVN_TEST_PASS2(test_stream_seek_file,
                    "test stream seeking for files"),
     SVN_TEST_PASS2(test_stream_seek_stringbuf,
                    "test stream seeking for stringbufs"),
-    SVN_TEST_XFAIL2(test_stream_seek_translated,
-                    "test stream seeking for translated streams"),
+    SVN_TEST_PASS2(test_stream_seek_translated,
+                   "test stream seeking for translated streams"),
     SVN_TEST_NULL
   };

@@ -40,6 +40,7 @@
 #include "../libsvn_fs/fs-loader.h"
 
 #include "private/svn_fs_util.h"
+#include "private/svn_fspath.h"
 #include "svn_private_config.h"
 
 /* Names of hash keys used to store a lock for writing to disk. */
@@ -396,7 +397,7 @@ set_lock(const char *fs_path,
                                 digest_path, perms_reference, subpool));
 
       /* Prep for next iteration, or bail if we're done. */
-      if (svn_uri_is_root(this_path->data, this_path->len))
+      if (svn_fspath__is_root(this_path->data, this_path->len))
         break;
       svn_stringbuf_set(this_path,
                         svn_fspath__dirname(this_path->data, subpool));
@@ -464,7 +465,7 @@ delete_lock(svn_fs_t *fs,
         }
 
       /* Prep for next iteration, or bail if we're done. */
-      if (svn_uri_is_root(this_path->data, this_path->len))
+      if (svn_fspath__is_root(this_path->data, this_path->len))
         break;
       svn_stringbuf_set(this_path,
                         svn_fspath__dirname(this_path->data, subpool));

@@ -1524,7 +1524,7 @@ svn_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
  * mergeinfo hash.  If @a mergeinfo is NULL then @a *validated_mergeinfo is
  * set to NULL.
  *
- * @a *validated_mergeinfo is allocated in @a result_pool.  All tempporary
+ * @a *validated_mergeinfo is allocated in @a result_pool.  All temporary
  * allocations are performed in @a scratch_pool.
  *
  * @since New in 1.7.
@@ -2176,13 +2176,10 @@ typedef svn_error_t *(*svn_fs_get_locks_callback_t)(void *baton,
  * lock iteration will terminate and that error will be returned by
  * this function.
  *
- * @note On Berkeley-DB-backed filesystems, the @a get_locks_func
- * callback will be invoked from within a Berkeley-DB transaction trail.
- * Implementors of the callback are, as a result, forbidden from
- * calling any svn_fs API functions which might themselves attempt to
- * start a new Berkeley DB transaction (which is most of this svn_fs
- * API).  Yes, this is a nasty implementation detail to have to be
- * aware of.  We hope to fix this problem in the future.
+ * @note Over the course of this function's invocation, locks might be
+ * added, removed, or modified by concurrent processes.  Callers need
+ * to anticipate and gracefully handle the transience of this
+ * information.
  *
  * @since New in 1.7.
  */
@@ -2194,9 +2191,17 @@ svn_fs_get_locks2(svn_fs_t *fs,
                   void *get_locks_baton,
                   apr_pool_t *pool);
 
-/**
- * Similar to svn_fs_get_locks2(), but with @a depth always passed as
- * svn_depth_infinity.
+/** Similar to svn_fs_get_locks2(), but with @a depth always passed as
+ * svn_depth_infinity, and with the following known problem (which is
+ * not present in svn_fs_get_locks2()):
+ *
+ * @note On Berkeley-DB-backed filesystems in Subversion 1.6 and
+ * prior, the @a get_locks_func callback will be invoked from within a
+ * Berkeley-DB transaction trail.  Implementors of the callback are,
+ * as a result, forbidden from calling any svn_fs API functions which
+ * might themselves attempt to start a new Berkeley DB transaction
+ * (which is most of this svn_fs API).  Yes, this is a nasty
+ * implementation detail to have to be aware of.
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
  */

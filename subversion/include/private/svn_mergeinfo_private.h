@@ -54,14 +54,14 @@ svn_mergeinfo__set_inheritance(svn_mergeinfo_t mergeinfo,
 
 /* Return whether INFO1 and INFO2 are equal in *IS_EQUAL.
 
-   CONSIDER_INERITANCE determines how the rangelists in the two
-   hashes are compared for equality.  If CONSIDER_INERITANCE is FALSE,
+   CONSIDER_INHERITANCE determines how the rangelists in the two
+   hashes are compared for equality.  If CONSIDER_INHERITANCE is FALSE,
    then the start and end revisions of the svn_merge_range_t's being
    compared are the only factors considered when determining equality.
 
      e.g. '/trunk: 1,3-4*,5' == '/trunk: 1,3-5'
 
-   If CONSIDER_INERITANCE is TRUE, then the inheritability of the
+   If CONSIDER_INHERITANCE is TRUE, then the inheritability of the
    svn_merge_range_t's is also considered and must be the same for two
    otherwise identical ranges to be judged equal.
 
@@ -168,8 +168,8 @@ svn_mergeinfo__get_range_endpoints(svn_revnum_t *youngest_rev,
 
 /* Set *FILTERED_MERGEINFO to a deep copy of MERGEINFO, allocated in
    RESULT_POOL, less any rangelists that fall outside of the range
-   OLDEST_REV:YOUGEST_REV (inclusive) if INCLUDE_RANGE is true, or less
-   any rangelists within the range OLDEST_REV:YOUGEST_REV if INCLUDE_RANGE
+   OLDEST_REV:YOUNGEST_REV (inclusive) if INCLUDE_RANGE is true, or less
+   any rangelists within the range OLDEST_REV:YOUNGEST_REV if INCLUDE_RANGE
    is false.  If all the rangelists mapped to a given path are filtered
    then filter that path as well.  If all paths are filtered or MERGEINFO is
    empty or NULL then *FILTERED_MERGEINFO is set to an empty hash.

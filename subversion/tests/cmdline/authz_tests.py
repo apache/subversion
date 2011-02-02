@@ -160,7 +160,7 @@ def authz_read_access(sbox):
   if sbox.repo_url.startswith("http"):
     expected_err = ".*[Ff]orbidden.*"
   else:
-    expected_err = ".*svn: Authorization failed.*"
+    expected_err = ".*svn: E170001: Authorization failed.*"
 
   # create some folders with spaces in their names
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -284,7 +284,7 @@ def authz_write_access(sbox):
   if sbox.repo_url.startswith('http'):
     expected_err = ".*[Ff]orbidden.*"
   else:
-    expected_err = ".*svn: Access denied.*"
+    expected_err = ".*svn: E220004: Access denied.*"
 
   write_authz_file(sbox, { "/": "* = r",
                            "/A/B": "* = rw",
@@ -379,7 +379,7 @@ def authz_checkout_test(sbox):
   if sbox.repo_url.startswith('http'):
     expected_err = ".*[Ff]orbidden.*"
   else:
-    expected_err = ".*svn: Authorization failed.*"
+    expected_err = ".*svn: E170001: Authorization failed.*"
 
   write_authz_file(sbox, { "/": "* ="})
 
@@ -513,7 +513,7 @@ def authz_log_and_tracing_test(sbox):
   if sbox.repo_url.startswith('http'):
     expected_err = ".*[Ff]orbidden.*"
   else:
-    expected_err = ".*svn: Authorization failed.*"
+    expected_err = ".*svn: E170001: Authorization failed.*"
 
   write_authz_file(sbox, { "/": "* = rw\n" })
 
@@ -544,7 +544,7 @@ def authz_log_and_tracing_test(sbox):
   if sbox.repo_url.startswith('http'):
     expected_err = ".*[Ff]orbidden.*"
   else:
-    expected_err = ".*svn: Authorization failed.*"
+    expected_err = ".*svn: E170001: Authorization failed.*"
 
   authz = { "/": "* = rw",
             "/A/D/G": "* ="}
@@ -563,7 +563,7 @@ def authz_log_and_tracing_test(sbox):
   if sbox.repo_url.startswith('http'):
     expected_err2 = expected_err
   else:
-    expected_err2 = ".*svn: Item is not readable.*"
+    expected_err2 = ".*svn: E220001: Item is not readable.*"
 
   # if we do the same thing directly on the unreadable file, we get:
   # svn: Item is not readable
@@ -602,7 +602,7 @@ def authz_log_and_tracing_test(sbox):
   if sbox.repo_url.startswith('http'):
     expected_err2 = expected_err
   else:
-    expected_err2 = ".*svn: Unreadable path encountered; access denied.*"
+    expected_err2 = ".*svn: E220001: Unreadable path encountered; access denied.*"
 
   svntest.actions.run_and_verify_svn(None, None, expected_err2,
                                      'cat', '-r', '2', G_url+'/rho')
@@ -630,7 +630,7 @@ def authz_aliases(sbox):
   if sbox.repo_url.startswith("http"):
     expected_err = ".*[Ff]orbidden.*"
   else:
-    expected_err = ".*svn: Authorization failed.*"
+    expected_err = ".*svn: E170001: Authorization failed.*"
 
   write_authz_file(sbox, { "/" : "* = r",
                            "/A/B" : "&jray = rw" },
@@ -733,7 +733,7 @@ def authz_locking(sbox):
   if sbox.repo_url.startswith('http'):
     expected_err = ".*[Ff]orbidden.*"
   else:
-    expected_err = ".*svn: Authorization failed.*"
+    expected_err = ".*svn: E170001: Authorization failed.*"
 
   root_url = sbox.repo_url
   wc_dir = sbox.wc_dir
@@ -950,7 +950,7 @@ def multiple_matches(sbox):
   if sbox.repo_url.startswith("http"):
     expected_err = ".*[Ff]orbidden.*"
   else:
-    expected_err = ".*svn: Authorization failed.*"
+    expected_err = ".*svn: E170001: Authorization failed.*"
 
   # Prohibit access and commit fails
   write_authz_file(sbox, {'/': 'jrandom ='})
@@ -1000,7 +1000,7 @@ def wc_wc_copy(sbox):
   svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
 
   svntest.actions.run_and_verify_svn(None, None,
-                                     'svn: Cannot copy.*excluded by server',
+                                     'svn: E220001: Cannot copy.*excluded by server',
                                      'cp', sbox.ospath('A'), sbox.ospath('A2'))
 
 

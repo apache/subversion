@@ -33,6 +33,7 @@
 #include "repos.h"
 #include "svn_private_config.h"
 #include "private/svn_dep_compat.h"
+#include "private/svn_fspath.h"
 
 #define NUM_CACHED_SOURCE_ROOTS 4
 

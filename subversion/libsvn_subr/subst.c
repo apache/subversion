@@ -171,10 +171,9 @@ keyword_printf(const char *fmt,
             svn_stringbuf_appendcstr(value, author);
           break;
         case 'b': /* basename of this file */
-          if (url)
+          if (url && *url)
             {
-              const char *base_name
-                = svn_path_uri_decode(svn_uri_basename(url, pool), pool);
+              const char *base_name = svn_uri_basename(url, pool);
               svn_stringbuf_appendcstr(value, base_name);
             }
           break;
@@ -1894,6 +1893,7 @@ svn_subst_translate_string2(svn_string_t **new_value,
                             svn_boolean_t *translated_line_endings,
                             const svn_string_t *value,
                             const char *encoding,
+                            svn_boolean_t repair,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool)
 {
@@ -1923,7 +1923,7 @@ svn_subst_translate_string2(svn_string_t **new_value,
                             translated_line_endings,
                             val_utf8,
                             "\n",  /* translate to LF */
-                            FALSE, /* no repair */
+                            repair,
                             NULL,  /* no keywords */
                             FALSE, /* no expansion */
                             scratch_pool));

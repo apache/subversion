@@ -1235,7 +1235,7 @@ def diff_targets(sbox):
                                                             update_path,
                                                             add_path)
 
-  regex = 'svn: Unable to find repository location for \'.*\''
+  regex = 'svn: E195012: Unable to find repository location for \'.*\''
   for line in err_output:
     if re.match(regex, line):
       break
@@ -1254,7 +1254,7 @@ def diff_targets(sbox):
   exit_code, diff_output, err_output = svntest.main.run_svn(
     1, 'diff', '-r1:2', '--old', parent_path, 'alpha', 'theta')
 
-  regex = 'svn: \'.*\' was not found in the repository'
+  regex = 'svn: E160013: \'.*\' was not found in the repository'
   for line in err_output:
     if re.match(regex, line):
       break
@@ -3240,7 +3240,7 @@ def diff_wrong_extension_type(sbox):
   "'svn diff -x wc -r#' should return error"
 
   sbox.build(read_only = True)
-  expected_error = "(.*svn: Invalid argument .* in diff options.*)|" \
+  expected_error = "(.*svn: E200016: Invalid argument .* in diff options.*)|" \
                    "(svn: '.' is not a working copy)"
   svntest.actions.run_and_verify_svn(None, [], expected_error,
                                      'diff', '-x', sbox.wc_dir, '-r', '1')

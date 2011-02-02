@@ -152,7 +152,7 @@ dnl Find Apache with a recent-enough magic module number
 SVN_FIND_APACHE(20020903)
 
 dnl Search for SQLite
-SQLITE_MINIMUM_VER="3.4.0"
+SQLITE_MINIMUM_VER="3.6.18"
 SQLITE_RECOMMENDED_VER="3.7.2"
 SQLITE_URL="http://www.sqlite.org/sqlite-amalgamation-${SQLITE_RECOMMENDED_VER}.tar.gz"
 SVN_LIB_SQLITE(${SQLITE_MINIMUM_VER}, ${SQLITE_RECOMMENDED_VER},

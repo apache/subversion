@@ -286,10 +286,11 @@ svn_wc__wq_add_deletion_postcommit(svn_wc__db_t *db,
                                    apr_pool_t *scratch_pool);
 
 
+/* Queue a work item that will call log_do_committed() with all of these
+ * parameters.  See log_do_committed(). */
 svn_error_t *
 svn_wc__wq_add_postcommit(svn_wc__db_t *db,
                           const char *local_abspath,
-                          const char *tmp_text_base_abspath,
                           svn_revnum_t new_revision,
                           svn_revnum_t changed_rev,
                           apr_time_t changed_date,

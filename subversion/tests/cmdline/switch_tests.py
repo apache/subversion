@@ -193,7 +193,7 @@ def commit_routine_switching(wc_dir, verify):
   # same URL.  We don't allow this.
   svntest.actions.run_and_verify_commit(
     wc_dir, None, None,
-    "svn: Cannot commit both .* as they refer to the same URL$",
+    "svn: E195003: Cannot commit both .* as they refer to the same URL$",
     wc_dir)
 
   # Okay, that all taken care of, let's revert the A/D/G/pi path and
@@ -1072,7 +1072,7 @@ def relocate_beyond_repos_root(sbox):
   # A relocate that changes the repo path part of the URL shouldn't work.
   # This tests for issue #2380.
   svntest.actions.run_and_verify_svn(None, None,
-                                     ".*Invalid destination URL.*",
+                                     ".*Invalid relocation destination.*",
                                      'switch', '--relocate',
                                      A_url, other_B_url, A_wc_dir)
 

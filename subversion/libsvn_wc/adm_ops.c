@@ -129,7 +129,6 @@ process_committed_leaf(svn_wc__db_t *db,
   svn_wc__db_kind_t kind;
   const svn_checksum_t *copied_checksum;
   const char *adm_abspath;
-  const char *tmp_text_base_abspath;
   svn_revnum_t new_changed_rev = new_revnum;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
@@ -211,12 +210,8 @@ process_committed_leaf(svn_wc__db_t *db,
          ### value, like how we handle files. */
     }
 
-  /* Set TMP_TEXT_BASE_ABSPATH to NULL.  The new text base will be found in
-     the pristine store by its checksum. */
-  /* ### TODO: Remove this parameter. */
-  tmp_text_base_abspath = NULL;
-
-  SVN_ERR(svn_wc__wq_add_postcommit(db, local_abspath, tmp_text_base_abspath,
+  /* The new text base will be found in the pristine store by its checksum. */
+  SVN_ERR(svn_wc__wq_add_postcommit(db, local_abspath, 
                                     new_revnum,
                                     new_changed_rev, new_changed_date,
                                     new_changed_author, checksum,
@@ -1042,8 +1037,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
 
   /* If we're performing a repos-to-WC copy, check that the copyfrom
      repository is the same as the parent dir's repository. */
-  if (copyfrom_url
-      && !svn_uri_is_ancestor(repos_root_url, copyfrom_url))
+  if (copyfrom_url && !svn_uri_is_ancestor(repos_root_url, copyfrom_url))
     return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                              _("The URL '%s' has a different repository "
                                "root than its parent"), copyfrom_url);
@@ -1120,19 +1114,23 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
                                          scratch_pool));
         }
       else
-        SVN_ERR(svn_wc__db_op_copy_dir(db, local_abspath,
-                                       apr_hash_make(scratch_pool),
-                                       copyfrom_rev, 0, NULL,
-                                       svn_path_uri_decode(
-                                         svn_uri_skip_ancestor(repos_root_url,
-                                                               copyfrom_url),
-                                         scratch_pool),
-                                       repos_root_url, repos_uuid,
-                                       copyfrom_rev,
-                                       NULL /* children */, depth,
-                                       NULL /* conflicts */,
-                                       NULL /* work items */,
-                                       scratch_pool));
+        {
+          const char *repos_relpath =
+            svn_path_uri_decode(svn_uri_skip_ancestor(repos_root_url,
+                                                      copyfrom_url),
+                                scratch_pool);
+
+          SVN_ERR(svn_wc__db_op_copy_dir(db, local_abspath,
+                                         apr_hash_make(scratch_pool),
+                                         copyfrom_rev, 0, NULL,
+                                         repos_relpath,
+                                         repos_root_url, repos_uuid,
+                                         copyfrom_rev,
+                                         NULL /* children */, depth,
+                                         NULL /* conflicts */,
+                                         NULL /* work items */,
+                                         scratch_pool));
+        }
     }
   else  /* Case 1: Integrating a separate WC into this one, in place */
     {
@@ -2146,16 +2144,14 @@ svn_wc__set_file_external_location(svn_wc_context_t *wc_ctx,
 
   if (url)
     {
-      external_repos_relpath = svn_uri_is_child(repos_root_url, url, NULL);
+      external_repos_relpath = svn_uri_is_child(repos_root_url, url,
+                                                scratch_pool);
 
       if (external_repos_relpath == NULL)
           return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
                                    _("Can't add a file external to '%s' as it"
                                      " is not a file in repository '%s'."),
                                    url, repos_root_url);
-
-      external_repos_relpath = svn_path_uri_decode(external_repos_relpath,
-                                                   scratch_pool);
 
       SVN_ERR_ASSERT(peg_rev != NULL);
       SVN_ERR_ASSERT(rev != NULL);

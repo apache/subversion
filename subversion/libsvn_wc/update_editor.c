@@ -1314,11 +1314,12 @@ modcheck_found_node(const char *local_abspath,
 
   if (status != svn_wc__db_status_normal)
     modified = TRUE;
-  /* No need to check if we already have at least one non-delete
-     modification */
-  else if (!baton->found_mod || baton->all_edits_are_deletes)
+  /* No need to check if we already have at least one modification */
+  else if (!baton->found_mod)
     SVN_ERR(entry_has_local_mods(&modified, baton->db, local_abspath,
                                  db_kind, scratch_pool));
+  else
+    modified = FALSE;
 
   if (modified)
     {
@@ -2240,15 +2241,14 @@ add_directory(const char *path,
 
       svn_boolean_t local_is_dir;
       svn_boolean_t local_is_non_dir;
-      const char *local_is_copy = NULL;
+      svn_wc__db_status_t add_status = svn_wc__db_status_normal;
 
       /* Is the local add a copy? */
       if (status == svn_wc__db_status_added)
-        SVN_ERR(svn_wc__node_get_copyfrom_info(&local_is_copy,
-                                               NULL, NULL, NULL, NULL,
-                                               eb->wc_ctx,
-                                               db->local_abspath,
-                                               pool, pool));
+        SVN_ERR(svn_wc__db_scan_addition(&add_status, NULL, NULL, NULL, NULL,
+                                         NULL, NULL, NULL, NULL,
+                                         eb->db, db->local_abspath,
+                                         pool, pool));
 
 
       /* Is there something that is a file? */
@@ -2337,7 +2337,8 @@ add_directory(const char *path,
       if (! pb->in_deleted_and_tree_conflicted_subtree
           && (eb->switch_relpath != NULL
               || local_is_non_dir
-              || local_is_copy
+              || add_status == svn_wc__db_status_copied
+              || add_status == svn_wc__db_status_moved_here
              )
          )
         {
@@ -4879,11 +4880,9 @@ make_editor(svn_revnum_t *target_revision,
   /* Disallow a switch operation to change the repository root of the target,
      if that is known. */
   if (switch_url && !svn_uri_is_ancestor(repos_root, switch_url))
-    return svn_error_createf(
-       SVN_ERR_WC_INVALID_SWITCH, NULL,
-       _("'%s'\n"
-         "is not the same repository as\n"
-         "'%s'"), switch_url, repos_root);
+    return svn_error_createf(SVN_ERR_WC_INVALID_SWITCH, NULL,
+                             _("'%s'\nis not the same repository as\n'%s'"),
+                             switch_url, repos_root);
 
   /* Construct an edit baton. */
   eb = apr_pcalloc(edit_pool, sizeof(*eb));
@@ -4898,12 +4897,11 @@ make_editor(svn_revnum_t *target_revision,
   eb->anchor_abspath           = anchor_abspath;
 
   if (switch_url)
-    eb->switch_relpath         = svn_path_uri_decode(
-                                    svn_uri_skip_ancestor(repos_root,
-                                                          switch_url),
-                                    scratch_pool);
+    eb->switch_relpath =
+      svn_path_uri_decode(svn_uri_skip_ancestor(repos_root, switch_url),
+                          scratch_pool);
   else
-    eb->switch_relpath         = NULL;
+    eb->switch_relpath = NULL;
 
   if (svn_path_is_empty(target_basename))
     eb->target_abspath = eb->anchor_abspath;
@@ -5472,8 +5470,6 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
      copyfrom URL to be in the same repository. */
   if (copyfrom_url != NULL)
     {
-      const char *relative_url;
-
       /* Find the repository_root via the parent directory, which
          is always versioned before this function is called */
       SVN_ERR(svn_wc__node_get_repos_info(&original_root_url,
@@ -5490,8 +5486,9 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                                    " root than '%s'"),
                                  copyfrom_url, original_root_url);
 
-      relative_url = svn_uri_skip_ancestor(original_root_url, copyfrom_url);
-      original_repos_relpath = svn_path_uri_decode(relative_url, pool);
+      original_repos_relpath =
+        svn_path_uri_decode(svn_uri_skip_ancestor(original_root_url,
+                                                  copyfrom_url), pool);
     }
   else
     {

@@ -1969,7 +1969,7 @@ open_pack_or_rev_file(svn_file_handle_cache__handle_t **file,
         }
 
       if (err && APR_STATUS_IS_ENOENT(err->apr_err)
-      	  && ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
+          && ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
         {
           /* Could not open the file. This may happen if the
            * file once existed but got packed later. Note that

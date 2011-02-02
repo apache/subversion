@@ -89,7 +89,7 @@ extern "C" {
  *
  * HISTORY
  *
- * Classicaly, Subversion had a notion of a "tree delta" which could be
+ * Classically, Subversion had a notion of a "tree delta" which could be
  * passed around as an independent entity. Theory implied this delta was an
  * entity in its own right, to be used when and where necessary.
  * Unfortunately, this theory did not work well in practice. The producer
@@ -105,7 +105,7 @@ extern "C" {
  * a set of operations describing the change, and a "receiver" accepts and
  * applies them to its tree.
  *
- * The classic interace was named "@c svn_delta_editor_t" and was described
+ * The classic interface was named "@c svn_delta_editor_t" and was described
  * idiomatically as the "editor interface". This generation of the interface
  * retains the "editor" name for that reason. All notions of a "tree delta"
  * structure are no longer part of this interface.

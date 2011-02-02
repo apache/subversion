@@ -31,6 +31,7 @@
 
 #include "client.h"
 
+#include "private/svn_fspath.h"
 #include "svn_private_config.h"
 
 /* Get the directory entries of DIR at REV (relative to the root of
@@ -180,11 +181,6 @@ svn_client_list2(const char *path_or_url,
               /* Open another session to the path's parent.  This server
                  doesn't support svn_ra_reparent anyway, so don't try it. */
               svn_uri_split(&parent_url, &base_name, url, pool);
-
-              /* 'base_name' is now the last component of an URL, but we want
-                 to use it as a plain file name. Therefore, we must URI-decode
-                 it. */
-              base_name = svn_path_uri_decode(base_name, pool);
 
               SVN_ERR(svn_client__open_ra_session_internal(&parent_session,
                                                            NULL, parent_url,
