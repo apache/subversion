@@ -739,7 +739,11 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     branch and run the following command in the top-level directory\n"
      "     of the working copy:\n"
      "\n"
+#ifdef WIN32
+     "         svn merge ^^/trunk\n"
+#else
      "         svn merge ^/trunk\n"
+#endif
      "\n"
      "     The default revision range is -r0:HEAD, so any unmerged changes\n"
      "     will be merged.\n"
@@ -764,12 +768,20 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     branch and run the following command in the top-level directory\n"
      "     of the working copy:\n"
      "\n"
+#ifdef WIN32
+     "         svn merge -c50 ^^/trunk\n"
+#else
      "         svn merge -c50 ^/trunk\n"
+#endif
      "\n"
      "     If several commits to trunk were related to the fix, multiple\n"
      "     revisions can be merged:\n"
      "\n"
+#ifdef WIN32
+     "         svn merge -c50,54,60 ^^/trunk\n"
+#else
      "         svn merge -c50,54,60 ^/trunk\n"
+#endif
      "\n"
      "\n"
      "  2. The second form is called a \"reintegrate merge\":\n"
@@ -810,7 +822,11 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     To perform the merge, check out a working copy of the trunk, and run\n"
      "     the following command in the top-level directory of the working copy:\n"
      "\n"
+#ifdef WIN32
+     "         svn merge --reintegrate ^^/feature\n"
+#else
      "         svn merge --reintegrate ^/feature\n"
+#endif
      "\n"
      "     To prevent unnecessary merge conflicts, reintegrate merges require\n"
      "     that TARGET_WCPATH is not a mixed-revision working copy, has no\n"
@@ -884,14 +900,22 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     branch and run the following command in the top-level directory\n"
      "     of the working copy:\n"
      "       \n"
+#ifdef WIN32
+     "         svn merge ^^/trunk@500 ^^/feature\n"
+#else
      "         svn merge ^/trunk@500 ^/feature\n"
+#endif
      "\n"
      "     Before performing a 2-UL merge, it is a good idea to preview the\n"
      "     changes which will be merged, because there is no guarantee that\n"
      "     the merge will be free of conflicts. The preview can be done with\n"
      "     the svn diff command:\n"
      "\n"
+#ifdef WIN32
+     "         svn diff ^^/trunk@500 ^^/feature@HEAD\n"
+#else
      "         svn diff ^/trunk@500 ^/feature@HEAD\n"
+#endif
      "\n"
      "\n"
      "  The following applies to all types of merges:\n"
