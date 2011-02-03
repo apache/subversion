@@ -2339,6 +2339,7 @@ def exclude_keeps_hidden_entries(sbox):
                                      'mkdir', 'C')
 
 
+# Issue 3792.
 def info_excluded(sbox):
   "'info' should treat excluded item as versioned"
 
