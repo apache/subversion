@@ -773,8 +773,8 @@ mkdir_urls(const apr_array_header_t *urls,
       if (resplit)
         {
           const char *bname;
+
           svn_uri_split(&common, &bname, common, pool);
-          bname = svn_path_uri_encode(bname, pool);
           for (i = 0; i < targets->nelts; i++)
             {
               const char *path = APR_ARRAY_IDX(targets, i, const char *);
