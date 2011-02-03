@@ -6,21 +6,65 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.0
   - General:
 
   - Major new features:
+    * Less verbose HTTP-based repository access protocol (issue #1161, #3371)
+    * Rewritten working copy metadata storage (issue #3357)
+    * 'svn patch' and git extensions for 'svn diff'
 
   - Minor new features and improvements:
+    * Better handling of HTTP redirects (issue #2779)
+    * Improved and much more consistent path handling (issue #2028, and others)
+    * 'svnadmin load' rewrites changed revnums in mergeinfo (issue #3020)
+    * Error message improvements
 
   - Client-side bugfixes:
+    * 'svn cp A B; svn mv B C' is equavalient to 'svn cp A C' (issue #756)
+    * revert fetches missing directories from the server (issue #1040)
+    * allow subdirs of moved dirs to be moved and committed (issue #1259)
+    * improved performance of 'svn mv' with whole directories (issue #1284)
+    * 'svn rm B; svn cp A B' now works (issue #1516)
+    * 'svn diff URL1 URL2' now reverse of 'svn diff URL2 URL1) (issue #2333)
+    * error if relocating to an unused URL (issue #2531)
+    * 'svn blame -rWORKING' is now supported (issue #2544)
+    * improve correctness of commit on a relocated wc over ra_dav (issue #2578)
+    * add early error to 'svn add --auto-props' with mixed eols (issue #2713)
+    * allow 'svn diff' to accept symlinks as targets (issue #2716)
+    * don't lose props for replaced items (issue #2743)
+    * handle mergeinfo for subtrees removed outside of svn (issue #2915)
+    * add ability to force 'svn diff' to use internal diff (issue #3701)
+    * correctly recover a schedule-for-delete rm'd outside of svn (issue #3106)
+    * don't create self-referential mergeinfo from own history (issue #3157)
+    * improve 'svn log -g' handling of bad mergeinfo source paths (issue #3270)
+    * fixed: wc-to-wc copy of a switch source (issue #1802)
+    * fixed: 'svn st' reports symlinks as obstructed items (issue #2284)
+    * fixed: 'cd e:\; svn up e:\' fails (issue #2556)
+    * fixed: removing a dir scheduled for deletion corrupts wc (issue #2741)
+    * fixed: 'svn cleanup' fails on obstructed paths (issue #2867)
+    * fixed: case-only renames resulting from merges don't work (issue #3115)
+    * fixed: 'svn mergeinfo' ignores peg rev for wc target (issue #3180)
+    * fixed: unable to merge to wc of deleted branch (issue #3221)
   
   - Server-side bugfixes:
+    * mod_dav_svn is less strict about auto-merging for commits (issue #1704)
+    * allow SVNListParentPath to be used with authz (issue #2753)
+    * allow nav to repo list from repo top with SVNListParentPath (issue #3159)
+    * fixed: 'svnadmin hotcopy' does not duplicate symlinks (issue #2591)
+    * fixed: post-revprop-change errors cancel commit (issue #2990)
+    * fixed: mod_dav_svn runs pre-revprop-change hook twice (issue #3085)
+    * fixed: mod_dav_svn doesn't return stderr to user on failure (issue #3112)
 
-  - Contributed tools improvements and bugfixes:
+  - Other tool improvements and bugfixes:
+    * svnsync now takes the '--config-option' argument (issue #2027)
 
  Developer-visible changes:
   - General:
 
   - API changes:
+    * don't crash svn_client_copy if ctx->log_msg_func is NULL (issue #3234)
+    * fixed: svn_ra_local__get_file() leaks file descriptors (issue #3290)
 
   - Bindings:
+    * New JavaHL package: org.apache.subversion
+    * Deprecate the SVNClientSynchronized class in JavaHL (issue #2755)
 
 
 Version 1.6.15
