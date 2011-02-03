@@ -130,7 +130,7 @@ def mergeinfo_non_source(sbox):
 
   # Check on a source we haven't "merged" from.
   svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
-                                           ['2'], H2_url, H_path)
+                                           [], H2_url, H_path)
 
 #----------------------------------------------------------------------
 # Issue #3138
@@ -488,7 +488,7 @@ test_list = [ None,
               no_mergeinfo,
               mergeinfo,
               SkipUnless(explicit_mergeinfo_source, server_has_mergeinfo),
-              XFail(mergeinfo_non_source, server_has_mergeinfo),
+              SkipUnless(mergeinfo_non_source, server_has_mergeinfo),
               mergeinfo_on_unknown_url,
               non_inheritable_mergeinfo,
               SkipUnless(recursive_mergeinfo, server_has_mergeinfo),
