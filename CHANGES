@@ -1,3 +1,28 @@
+Version 1.7.0
+(?? ??? 2011, from /branches/1.7.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.7.0
+
+ User-visible changes:
+  - General:
+
+  - Major new features:
+
+  - Minor new features and improvements:
+
+  - Client-side bugfixes:
+  
+  - Server-side bugfixes:
+
+  - Contributed tools improvements and bugfixes:
+
+ Developer-visible changes:
+  - General:
+
+  - API changes:
+
+  - Bindings:
+
+
 Version 1.6.15
 (26 Nov 2010, from /branches/1.6.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.6.15
