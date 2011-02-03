@@ -251,17 +251,17 @@ Test #  Mode   Test Description
 ------  -----  ----------------
   49    XFAIL  avoid repeated merges for cyclic merging
   Issue #: 2897
-  Target Milestone: 1.7-consider
+  Target Milestone: 1.8-consider
   Thread: N/A
   Log: r865371
-  Point Person: kameshj/pburba
+  Point Person: Unassigned
 
   64    XFAIL  merge target with non inheritable mergeinfo
   Issue #: 2970
-  Target Milestone: 1.8-consider 
+  Target Milestone: blue-sky
   Thread: N/A
   Log: N/A
-  Point Person: pburba 
+  Point Person: Unassigned
 
   75    XFAIL  merge added subtree
   Issue #: 1962
@@ -322,17 +322,6 @@ Test #  Mode   Test Description
   Thread: N/A
   Log: r879162
   Point Person: neels
-
-LISTING: mergeinfo_tests.py
-
-Test #  Mode   Test Description
-------  -----  ----------------
-   4    XFAIL  'mergeinfo' with uninteresting source selection
-  Issue #: None
-  Target Milestone: N/A 
-  Thread: N/A
-  Log: r874947
-  Point Person: pburba
 
 LISTING: patch_tests.py
 
@@ -406,13 +395,6 @@ Test #  Mode   Test Description
   Thread: N/A
   Log: r847437
   Point Person: Unassigned 
-
-  21    XFAIL  forced switch detects tree conflicts
-  Issue #: None
-  Target Milestone: N/A 
-  Thread: N/A
-  Log: r875936
-  Point Person: pburba
   
   38    XFAIL  copy directory with switched subdir
   Issue #: None
