@@ -594,7 +594,7 @@ generate_error(svn_ra_neon__request_t *req, apr_pool_t *pool)
                                                req->url));
         case 403:
           return svn_error_create(SVN_ERR_RA_DAV_FORBIDDEN, NULL,
-                                  apr_psprintf(pool, _("access to '%s' forbidden"),
+                                  apr_psprintf(pool, _("Access to '%s' forbidden"),
                                                req->url));
 
         case 301:
