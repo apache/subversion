@@ -8,16 +8,18 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.0
   - Major new features:
     * Less verbose HTTP-based repository access protocol (issue #1161, #3371)
     * Rewritten working copy metadata storage (issue #3357)
-    * 'svn patch' and git extensions for 'svn diff'
+    * New 'svn patch' subcommand (issue #511)
 
   - Minor new features and improvements:
     * Better handling of HTTP redirects (issue #2779)
     * Improved and much more consistent path handling (issue #2028, and others)
     * 'svnadmin load' rewrites changed revnums in mergeinfo (issue #3020)
     * Error message improvements
+    * 'svn log' can print unidiff of changes made in a revision (issue #2909)
+    * 'svn diff' can print git-style unidiff annotations 
 
   - Client-side bugfixes:
-    * 'svn cp A B; svn mv B C' is equavalient to 'svn cp A C' (issue #756)
+    * 'svn cp A B; svn mv B C' is equivalent to 'svn cp A C' (issue #756)
     * revert fetches missing directories from the server (issue #1040)
     * allow subdirs of moved dirs to be moved and committed (issue #1259)
     * improved performance of 'svn mv' with whole directories (issue #1284)
