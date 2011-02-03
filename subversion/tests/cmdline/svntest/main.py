@@ -1157,15 +1157,16 @@ class TestRunner:
        or options.mode_filter.upper() == self.pred.list_mode().upper() \
        or (options.mode_filter.upper() == 'PASS' \
            and self.pred.list_mode() == ''):
+      tail = ''
+      if self.pred.issues:
+        tail += " [%s]" % ','.join(['#%d' % i for i in self.pred.issues])
       if options.verbose and self.pred.inprogress:
-        print(" %3d    %-5s  %s [[%s]]" % (self.index,
-                                           self.pred.list_mode(),
-                                           self.pred.description,
-                                           self.pred.inprogress))
+        tail += " [[%s]]" % self.pred.inprogress
       else:
-        print(" %3d    %-5s  %s" % (self.index,
-                                    self.pred.list_mode(),
-                                    self.pred.description))
+        print(" %3d    %-5s  %s%s" % (self.index,
+                                      self.pred.list_mode(),
+                                      self.pred.description,
+                                      tail))
     sys.stdout.flush()
 
   def get_mode(self):
