@@ -1792,7 +1792,8 @@ svn_ra_serf__discover_vcc(const char **vcc_url,
         }
       else
         {
-          if (err->apr_err != SVN_ERR_FS_NOT_FOUND)
+          if ((err->apr_err != SVN_ERR_FS_NOT_FOUND) &&
+              (err->apr_err != SVN_ERR_RA_DAV_FORBIDDEN))
             {
               return err;  /* found a _real_ error */
             }
@@ -1803,6 +1804,13 @@ svn_ra_serf__discover_vcc(const char **vcc_url,
 
               /* Okay, strip off a component from PATH. */
               path = svn_urlpath__dirname(path, pool);
+
+#if SERF_VERSION_AT_LEAST(0, 4, 0)
+              /* An error occurred on conns. serf 0.4.0 remembers that
+                 the connection had a problem. We need to reset it, in
+                 order to use it again.  */
+              serf_connection_reset(conn->conn);
+#endif
             }
         }
     }
