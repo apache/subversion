@@ -160,7 +160,7 @@ LISTING: depth_tests.py
 Test #  Mode   Test Description
 ------  -----  ----------------
   36    XFAIL  'info' should treat excluded item as versioned
-  Issue #: None
+  Issue #: 3792
   Target Milestone: N/A 
   Thread: N/A
   Log: r876772
