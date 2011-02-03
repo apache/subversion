@@ -1350,8 +1350,6 @@ def forced_switch(sbox):
                                         '--force')
 
 #----------------------------------------------------------------------
-# This test currently XFails for serf as the different order of
-# operations is not handled here.
 def forced_switch_failures(sbox):
   "forced switch detects tree conflicts"
   #  svntest.factory.make(sbox,
@@ -1559,6 +1557,12 @@ def forced_switch_failures(sbox):
     'A/B/F/pi'          : Item(status='A '),
   })
 
+  # When running the tests over ra_serf, 'A/D/G/omega' and 'A/D/G/psi' do
+  # manage to get added before the forced switch above errors out.  So don't
+  # expect those two paths to appear in the output of the final update.
+  if svntest.main.is_ra_type_dav_serf():
+    expected_output.remove('A/D/G/omega', 'A/D/G/psi')
+    
   expected_disk.remove('A/D/G/tau', 'A/D/G/rho', 'A/D/G/pi')
   expected_disk.add({
     'A/D/H/I'           : Item(),
@@ -3153,8 +3157,7 @@ test_list = [ None,
               switch_change_repos_root,
               relocate_and_propset,
               forced_switch,
-              XFail(forced_switch_failures,
-                    svntest.main.is_ra_type_dav_serf),
+              forced_switch_failures,
               switch_scheduled_add,
               SkipUnless(mergeinfo_switch_elision, server_has_mergeinfo),
               switch_with_obstructing_local_adds,
