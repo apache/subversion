@@ -65,13 +65,6 @@ LISTING: authz_tests.py
 
 Test #  Mode   Test Description
 ------  -----  ----------------
-   4    XFAIL  (DAV and ra_svn only) test authz for read operations
-  Issue #: 3242
-  Target Milestone: 1.6.13 (Status Resolved)
-  Thread: N/A
-  Log: r876530
-  Point Person: cmpilato 
-
   13    XFAIL  (ra_svn only) authz issue #2712
   Issue #: 2712
   Target Milestone: Unscheduled
