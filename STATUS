@@ -275,6 +275,15 @@ Candidate changes:
    Votes:
      +1: cmpilato
 
+ * r880146
+   When in `--dry-run' mode of `svn merge' command, property conflicts made an
+   interactive callback to the user to resolve the conflicts, unlike the text
+   conflicts. Suppress the interactive callback in `--dry-run' mode.
+   Justification:
+     Consistency. Simple patch.
+   Votes:
+     +1: julianfoad
+
 Veto-blocked changes:
 =====================
 
