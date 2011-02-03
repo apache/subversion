@@ -710,18 +710,19 @@ svn_ra_neon__search_for_starting_props(svn_ra_neon__resource_t **rsrc,
   ne_uri_free(&parsed_url);
 
   /* Try to get the starting_props from the public url.  If the
-     resource no longer exists in HEAD, we'll get a failure.  That's
-     fine: just keep removing components and trying to get the
-     starting_props from parent directories. */
+     resource no longer exists in HEAD or is forbidden, we'll get a
+     failure.  That's fine: just keep removing components and trying
+     to get the starting_props from parent directories. */
   while (! svn_path_is_empty(path_s->data))
     {
       svn_pool_clear(iterpool);
       err = svn_ra_neon__get_starting_props(rsrc, sess, path_s->data,
                                             NULL, iterpool);
       if (! err)
-        break;   /* found an existing parent! */
+        break;   /* found an existing, readable parent! */
 
-      if (err->apr_err != SVN_ERR_FS_NOT_FOUND)
+      if ((err->apr_err != SVN_ERR_FS_NOT_FOUND) &&
+          (err->apr_err != SVN_ERR_RA_DAV_FORBIDDEN))
         return err;  /* found a _real_ error */
 
       /* else... lop off the basename and try again. */
