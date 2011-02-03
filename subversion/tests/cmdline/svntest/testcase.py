@@ -70,7 +70,8 @@ class TestCase:
     RESULT_SKIP: (2, TextColors.success('SKIP: '), True),
     }
 
-  def __init__(self, delegate=None, cond_func=lambda: True, doc=None, wip=None):
+  def __init__(self, delegate=None, cond_func=lambda: True, doc=None, wip=None,
+               issues=None):
     """Create a test case instance based on DELEGATE.
 
     COND_FUNC is a callable that is evaluated at test run time and should
@@ -91,6 +92,10 @@ class TestCase:
     self._cond_func = cond_func
     self.description = doc or delegate.description
     self.inprogress = wip
+    if type(issues) == type(0):
+      self.issues = [issues]
+    else:
+      self.issues = issues
 
   def get_function_name(self):
     """Return the name of the python function implementing the test."""
@@ -179,7 +184,8 @@ class XFail(TestCase):
     RESULT_SKIP: (2, TextColors.success('SKIP: '), True),
     }
 
-  def __init__(self, test_case, cond_func=lambda: True, wip=None):
+  def __init__(self, test_case, cond_func=lambda: True, wip=None,
+               issues=None):
     """Create an XFail instance based on TEST_CASE.  COND_FUNC is a
     callable that is evaluated at test run time and should return a
     boolean value.  If COND_FUNC returns true, then TEST_CASE is
@@ -189,9 +195,12 @@ class XFail(TestCase):
     information that are not available at __init__ time (like the fact
     that we're running over a particular RA layer).
 
-    WIP is ..."""
+    WIP is ...
+    
+    ISSUES is an issue number (or a list of issue numbers) tracking this."""
 
-    TestCase.__init__(self, create_test_case(test_case), cond_func, wip=wip)
+    TestCase.__init__(self, create_test_case(test_case), cond_func, wip=wip,
+                      issues=issues)
 
   def list_mode(self):
     # basically, the only possible delegate is a Skip test. favor that mode.
