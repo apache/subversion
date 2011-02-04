@@ -206,8 +206,8 @@ add_lock_token(const char *local_abspath,
 {
   struct add_lock_token_baton *altb = walk_baton;
   apr_pool_t *token_pool = apr_hash_pool_get(altb->lock_tokens);
-  const char* lock_token;
-  const char* url;
+  const char *lock_token;
+  const char *url;
 
   /* I want every lock-token I can get my dirty hands on!
      If this entry is switched, so what.  We will send an irrelevant lock
@@ -746,15 +746,11 @@ harvest_committables(apr_hash_t *committables,
                                   state_flags,
                                   result_pool, scratch_pool));
           if (state_flags & SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN)
-            {
-              const char *url = svn_path_url_add_component2(
-                                  repos_root_url,
-                                  repos_relpath, scratch_pool);
-
-              apr_hash_set(lock_tokens,
-                         apr_pstrdup(apr_hash_pool_get(lock_tokens), url),
+            apr_hash_set(lock_tokens,
+                         svn_path_url_add_component2(
+                             repos_root_url, repos_relpath,
+                             apr_hash_pool_get(lock_tokens)),
                          APR_HASH_KEY_STRING, entry_lock_token);
-            }
         }
     }
 
