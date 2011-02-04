@@ -161,8 +161,8 @@ prev_log_path(const char **prev_path_p,
                     *action_p = change->action;
                   if (copyfrom_rev_p)
                     *copyfrom_rev_p = change->copyfrom_rev;
-                  prev_path = svn_path_join(change->copyfrom_path,
-                                            path + len + 1, pool);
+                  prev_path = svn_fspath__join(change->copyfrom_path,
+                                               path + len + 1, pool);
                   break;
                 }
             }
@@ -184,6 +184,26 @@ prev_log_path(const char **prev_path_p,
     }
 
   *prev_path_p = prev_path;
+  return SVN_NO_ERROR;
+}
+
+
+/* Set *FS_PATH_P to the absolute filesystem path associated with the
+   URL built from SESSION's URL and REL_PATH (which is relative to
+   session's URL.  Use POOL for allocations. */
+static svn_error_t *
+get_fs_path(const char **fs_path_p,
+            svn_ra_session_t *session,
+            const char *rel_path,
+            apr_pool_t *pool)
+{
+  const char *url, *fs_path;
+
+  SVN_ERR(svn_ra_get_session_url(session, &url, pool));
+  SVN_ERR(svn_ra_get_path_relative_to_root(session, &fs_path, url, pool));
+  *fs_path_p = svn_fspath__canonicalize(svn_relpath_join(fs_path,
+                                                         rel_path, pool),
+                                        pool);
   return SVN_NO_ERROR;
 }
 
@@ -293,20 +313,17 @@ svn_ra__locations_from_log(svn_ra_session_t *session,
   apr_array_header_t *targets;
   svn_revnum_t youngest_requested, oldest_requested, youngest, oldest;
   svn_node_kind_t kind;
-  const char *root_url, *url, *rel_path;
+  const char *fs_path;
 
-  /* Fetch the repository root URL and relative path. */
-  SVN_ERR(svn_ra_get_repos_root2(session, &root_url, pool));
-  SVN_ERR(svn_ra_get_session_url(session, &url, pool));
-  url = svn_path_join(url, path, pool);
-  rel_path = svn_path_uri_decode(url + strlen(root_url), pool);
-
+  /* Fetch the absolute FS path associated with PATH. */
+  SVN_ERR(get_fs_path(&fs_path, session, path, pool));
+  
   /* Sanity check: verify that the peg-object exists in repos. */
   SVN_ERR(svn_ra_check_path(session, path, peg_revision, &kind, pool));
   if (kind == svn_node_none)
     return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
                              _("Path '%s' doesn't exist in revision %ld"),
-                             rel_path, peg_revision);
+                             fs_path, peg_revision);
 
   /* Easy out: no location revisions. */
   if (! location_revisions->nelts)
@@ -333,7 +350,7 @@ svn_ra__locations_from_log(svn_ra_session_t *session,
 
   /* Populate most of our log receiver baton structure. */
   lrb.kind = kind;
-  lrb.last_path = rel_path;
+  lrb.last_path = fs_path;
   lrb.location_revisions = apr_array_copy(pool, location_revisions);
   lrb.peg_revision = peg_revision;
   lrb.peg_path = NULL;
@@ -352,7 +369,7 @@ svn_ra__locations_from_log(svn_ra_session_t *session,
 
   /* If the received log information did not cover any of the
      requested revisions, use the last known path.  (This normally
-     just means that ABS_PATH was not modified between the requested
+     just means that FS_PATH was not modified between the requested
      revision and OLDEST.  If the file was created at some point after
      OLDEST, then lrb.last_path should be NULL.) */
   if (! lrb.peg_path)
@@ -375,15 +392,15 @@ svn_ra__locations_from_log(svn_ra_session_t *session,
     return svn_error_createf
       (APR_EGENERAL, NULL,
        _("Unable to find repository location for '%s' in revision %ld"),
-       rel_path, peg_revision);
+       fs_path, peg_revision);
 
   /* Sanity check: make sure that our calculated peg path is the same
      as what we expected it to be. */
-  if (strcmp(rel_path, lrb.peg_path) != 0)
+  if (strcmp(fs_path, lrb.peg_path) != 0)
     return svn_error_createf
       (SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
        _("'%s' in revision %ld is an unrelated object"),
-       rel_path, youngest);
+       fs_path, youngest);
 
   *locations_p = locations;
   return SVN_NO_ERROR;
@@ -517,13 +534,10 @@ svn_ra__location_segments_from_log(svn_ra_session_t *session,
   apr_array_header_t *targets;
   svn_node_kind_t kind;
   svn_revnum_t youngest_rev = SVN_INVALID_REVNUM;
-  const char *root_url, *url, *rel_path;
+  const char *fs_path;
 
-  /* Fetch the repository root URL and relative path. */
-  SVN_ERR(svn_ra_get_repos_root2(session, &root_url, pool));
-  SVN_ERR(svn_ra_get_session_url(session, &url, pool));
-  url = svn_path_join(url, path, pool);
-  rel_path = svn_path_uri_decode(url + strlen(root_url), pool);
+  /* Fetch the absolute FS path associated with PATH. */
+  SVN_ERR(get_fs_path(&fs_path, session, path, pool));
 
   /* If PEG_REVISION is invalid, it means HEAD.  If START_REV is
      invalid, it means HEAD.  If END_REV is SVN_INVALID_REVNUM, we'll
@@ -553,11 +567,11 @@ svn_ra__location_segments_from_log(svn_ra_session_t *session,
   if (kind == svn_node_none)
     return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
                              _("Path '%s' doesn't exist in revision %ld"),
-                             rel_path, start_rev);
+                             fs_path, start_rev);
 
   /* Populate most of our log receiver baton structure. */
   lrb.kind = kind;
-  lrb.last_path = rel_path;
+  lrb.last_path = fs_path;
   lrb.done = FALSE;
   lrb.start_rev = start_rev;
   lrb.range_end = start_rev;
@@ -653,8 +667,7 @@ svn_ra__file_revs_from_log(svn_ra_session_t *ra_session,
                            apr_pool_t *pool)
 {
   svn_node_kind_t kind;
-  const char *repos_url;
-  const char *session_url;
+  const char *repos_url, *session_url, *fs_path;
   apr_array_header_t *condensed_targets;
   struct fr_log_message_baton lmb;
   struct rev *rev;
@@ -662,21 +675,19 @@ svn_ra__file_revs_from_log(svn_ra_session_t *ra_session,
   svn_stream_t *last_stream;
   apr_pool_t *currpool, *lastpool;
 
+  /* Fetch the absolute FS path associated with PATH. */
+  SVN_ERR(get_fs_path(&fs_path, ra_session, path, pool));
+
   /* Check to make sure we're dealing with a file. */
   SVN_ERR(svn_ra_check_path(ra_session, path, end, &kind, pool));
-
   if (kind == svn_node_dir)
     return svn_error_createf(SVN_ERR_FS_NOT_FILE, NULL,
-                             _("'%s' is not a file"), path);
-
-  SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_url, pool));
-  SVN_ERR(svn_ra_get_session_url(ra_session, &session_url, pool));
+                             _("'%s' is not a file"), fs_path);
 
   condensed_targets = apr_array_make(pool, 1, sizeof(const char *));
   APR_ARRAY_PUSH(condensed_targets, const char *) = path;
 
-  lmb.path = svn_fspath__canonicalize(svn_uri_is_child(repos_url, session_url,
-                                                       pool), pool);
+  lmb.path = fs_path;
   lmb.eldest = NULL;
   lmb.pool = pool;
 
@@ -691,6 +702,8 @@ svn_ra__file_revs_from_log(svn_ra_session_t *ra_session,
                           pool));
 
   /* Reparent the session while we go back through the history. */
+  SVN_ERR(svn_ra_get_session_url(ra_session, &session_url, pool));
+  SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_url, pool));
   SVN_ERR(svn_ra_reparent(ra_session, repos_url, pool));
 
   currpool = svn_pool_create(pool);
@@ -828,10 +841,11 @@ svn_ra__get_deleted_rev_from_log(svn_ra_session_t *session,
                                  svn_revnum_t *revision_deleted,
                                  apr_pool_t *pool)
 {
-  const char *session_url, *source_root_url, *rel_path_url, *abs_del_path;
+  const char *fs_path;
   log_path_del_rev_t log_path_deleted_baton;
 
-  SVN_ERR_ASSERT(*rel_deleted_path != '/');
+  /* Fetch the absolute FS path associated with PATH. */
+  SVN_ERR(get_fs_path(&fs_path, session, rel_deleted_path, pool));
 
   if (!SVN_IS_VALID_REVNUM(peg_revision))
     return svn_error_createf(SVN_ERR_CLIENT_BAD_REVISION, NULL,
@@ -843,12 +857,7 @@ svn_ra__get_deleted_rev_from_log(svn_ra_session_t *session,
     return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL,
                             _("Peg revision must precede end revision"));
 
-  SVN_ERR(svn_ra_get_session_url(session, &session_url, pool));
-  SVN_ERR(svn_ra_get_repos_root2(session, &source_root_url, pool));
-  rel_path_url = svn_path_url_add_component2(session_url, rel_deleted_path,
-                                             pool);
-  abs_del_path = svn_path_uri_decode(rel_path_url + strlen(source_root_url), pool);
-  log_path_deleted_baton.path = abs_del_path;
+  log_path_deleted_baton.path = fs_path;
   log_path_deleted_baton.revision_deleted = SVN_INVALID_REVNUM;
 
   /* Examine the logs of SESSION's URL to find when DELETED_PATH was first
