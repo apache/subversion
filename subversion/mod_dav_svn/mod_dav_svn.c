@@ -368,7 +368,7 @@ SVNPath_cmd(cmd_parms *cmd, void *config, const char *arg1)
   if (conf->fs_parent_path != NULL)
     return "SVNPath cannot be defined at same time as SVNParentPath.";
 
-  conf->fs_path = svn_urlpath__internal_style(arg1, cmd->pool);
+  conf->fs_path = svn_dirent_internal_style(arg1, cmd->pool);
 
   return NULL;
 }
@@ -382,7 +382,7 @@ SVNParentPath_cmd(cmd_parms *cmd, void *config, const char *arg1)
   if (conf->fs_path != NULL)
     return "SVNParentPath cannot be defined at same time as SVNPath.";
 
-  conf->fs_parent_path = svn_urlpath__internal_style(arg1, cmd->pool);
+  conf->fs_parent_path = svn_dirent_internal_style(arg1, cmd->pool);
 
   return NULL;
 }
