@@ -1271,7 +1271,7 @@ find_nearest_ancestor(const apr_array_header_t *depth_first_catalog_index,
         {
           svn_sort__item_t item = APR_ARRAY_IDX(depth_first_catalog_index, i,
                                                 svn_sort__item_t);
-          if (svn_path_is_ancestor(item.key, abs_repos_path)
+          if (svn_fspath__is_ancestor(item.key, abs_repos_path)
               || svn_path_compare_paths(item.key, abs_repos_path) == 0)
             ancestor_index = i;
         }
