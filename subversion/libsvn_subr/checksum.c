@@ -402,21 +402,28 @@ svn_checksum_size(const svn_checksum_t *checksum)
 }
 
 svn_error_t *
-svn_checksum_mismatch_err(const char *object_label,
-                          const svn_checksum_t *expected,
+svn_checksum_mismatch_err(const svn_checksum_t *expected,
                           const svn_checksum_t *actual,
-                          apr_pool_t *scratch_pool)
+                          apr_pool_t *scratch_pool,
+                          const char *fmt,
+                          ...)
 {
   if (!svn_checksum_match(expected, actual))
     {
+      va_list ap;
+      const char *desc;
+
+      va_start(ap, fmt);
+      desc = apr_pvsprintf(scratch_pool, fmt, ap);
+      va_end(ap);
+    
       return svn_error_createf(SVN_ERR_CHECKSUM_MISMATCH, NULL,
-             apr_psprintf(scratch_pool, "%s:\n%s\n%s\n",
-                          _("Checksum mismatch for '%s'\n"),
-                          _("   expected:  %s"),
-                          _("     actual:  %s")),
-             object_label,
-             svn_checksum_to_cstring_display(expected, scratch_pool),
-             svn_checksum_to_cstring_display(actual, scratch_pool));
+                               _("%s:\n"
+                                 "   expected:  %s\n"
+                                 "     actual:  %s\n"),
+                    desc,               
+                    svn_checksum_to_cstring_display(expected, scratch_pool),
+                    svn_checksum_to_cstring_display(actual, scratch_pool));
     }
   else
     return SVN_NO_ERROR;
