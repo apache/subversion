@@ -108,6 +108,13 @@ class TestCase:
     """
     return self._delegate.get_sandbox_name()
 
+  def set_issues(self, issues):
+    """Set the issues associated with this test."""
+    if type(issues) == type(0):
+      self.issues = [issues]
+    else:
+      self.issues = issues
+
   def run(self, sandbox):
     """Run the test within the given sandbox."""
     return self._delegate.run(sandbox)
@@ -134,7 +141,7 @@ class FunctionTestCase(TestCase):
   is derived from the file name in which FUNC was defined)
   """
 
-  def __init__(self, func):
+  def __init__(self, func, issues=None):
     # it better be a function that accepts an sbox parameter and has a
     # docstring on it.
     assert isinstance(func, types.FunctionType)
@@ -158,7 +165,7 @@ class FunctionTestCase(TestCase):
     assert doc[0].lower() == doc[0], \
         "%s's docstring should not be capitalized" % name
 
-    TestCase.__init__(self, doc=doc)
+    TestCase.__init__(self, doc=doc, issues=issues)
     self.func = func
 
   def get_function_name(self):
@@ -259,8 +266,47 @@ class SkipUnless(Skip):
     Skip.__init__(self, test_case, lambda c=cond_func: not c())
 
 
-def create_test_case(func):
+def create_test_case(func, issues=None):
   if isinstance(func, TestCase):
     return func
   else:
-    return FunctionTestCase(func)
+    return FunctionTestCase(func, issues=issues)
+
+
+# Various decorators to make declaring tests as such simpler
+def XFail_deco(func):
+  if isinstance(func, TestCase):
+    return XFail(func, issues=func.issues)
+  else:
+    return XFail(func)
+
+
+def Skip_deco(cond_func):
+  def _second(func):
+    return Skip(func, cond_func)
+
+  return _second
+
+
+def SkipUnless_deco(cond_func):
+  def _second(func):
+    return Skip(func, lambda c=cond_func: not c())
+
+  return _second
+
+
+def Issues_deco(issues):
+  def _second(func):
+    if isinstance(func, TestCase):
+      # if the wrapped thing is already a test case, just set the issues
+      func.set_issues(issues)
+      return func
+
+    else:
+      # we need to wrap the function 
+      return create_test_case(func, issues=issues)
+
+  return _second
+
+# Create a singular alias, for linguistic correctness
+Issue_deco = Issues_deco
