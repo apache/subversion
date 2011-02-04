@@ -135,7 +135,7 @@ Test #  Mode   Test Description
   Point Person: rhuijben
   
   89    XFAIL  copy mixed-rev and delete children
-  Issue #: None
+  Issue #: 3314
   Target Milestone: N/A 
   Thread: N/A
   Log: r1004629

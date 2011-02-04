@@ -4761,6 +4761,7 @@ def mixed_rev_copy_del(sbox):
   # must delete beta.  In 1.6 both alpha and beta were deleted and the
   # commit failed.  It's not clear how the client can determine that
   # alpha and beta should be treated differently.
+  # See issue 3314
   expected_output = svntest.wc.State(wc_dir, {
     'A/B/E_copy'      : Item(verb='Adding'),
     'A/B/E_copy/beta' : Item(verb='Deleting'),
