@@ -28,7 +28,6 @@
 #include "svn_fs.h"
 #include "svn_repos.h"
 #include "svn_string.h"
-#include "svn_path.h"
 #include "svn_props.h"
 #include "repos.h"
 #include "svn_private_config.h"
@@ -36,9 +35,11 @@
 #include "svn_checksum.h"
 #include "svn_subst.h"
 #include "svn_ctype.h"
+#include "svn_dirent_uri.h"
 
 #include <apr_lib.h>
 
+#include "private/svn_fspath.h"
 #include "private/svn_dep_compat.h"
 #include "private/svn_mergeinfo_private.h"
 
@@ -56,7 +57,7 @@ struct parse_baton
   svn_boolean_t use_pre_commit_hook;
   svn_boolean_t use_post_commit_hook;
   enum svn_repos_load_uuid uuid_action;
-  const char *parent_dir;
+  const char *parent_dir; /* repository relpath, or NULL */
   svn_repos_notify_func_t notify_func;
   void *notify_baton;
   svn_repos_notify_t *notify;
@@ -170,16 +171,12 @@ prefix_mergeinfo_paths(svn_string_t **mergeinfo_val,
       const char *path, *merge_source;
 
       apr_hash_this(hi, &key, NULL, &rangelist);
-      merge_source = key;
+      merge_source = svn_relpath_canonicalize(key, pool);
 
-      /* The svn:mergeinfo property syntax demands absolute repository
-         paths, so prepend a leading slash if PARENT_DIR lacks one.  */
-      if (*parent_dir != '/')
-        path = svn_path_join_many(pool, "/", parent_dir,
-                                  merge_source + 1, NULL);
-      else
-        path = svn_path_join(parent_dir, merge_source + 1, pool);
-
+      /* The svn:mergeinfo property syntax demands a repos abspath */
+      path = svn_fspath__canonicalize(svn_relpath_join(parent_dir,
+                                                       merge_source, pool),
+                                      pool);
       apr_hash_set(prefixed_mergeinfo, path, APR_HASH_KEY_STRING, rangelist);
     }
   return svn_mergeinfo_to_string(mergeinfo_val, prefixed_mergeinfo, pool);
@@ -336,10 +333,11 @@ make_node_baton(struct node_baton **node_baton_p,
   if ((val = apr_hash_get(headers, SVN_REPOS_DUMPFILE_NODE_PATH,
                           APR_HASH_KEY_STRING)))
   {
+    val = svn_relpath_canonicalize(val, pool);
     if (rb->pb->parent_dir)
-      nb->path = svn_path_join(rb->pb->parent_dir, val, pool);
+      nb->path = svn_relpath_join(rb->pb->parent_dir, val, pool);
     else
-      nb->path = apr_pstrdup(pool, val);
+      nb->path = val;
   }
 
   if ((val = apr_hash_get(headers, SVN_REPOS_DUMPFILE_NODE_KIND,
@@ -374,11 +372,11 @@ make_node_baton(struct node_baton **node_baton_p,
   if ((val = apr_hash_get(headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH,
                           APR_HASH_KEY_STRING)))
     {
+      val = svn_relpath_canonicalize(val, pool);
       if (rb->pb->parent_dir)
-        nb->copyfrom_path = svn_path_join(rb->pb->parent_dir,
-                                          (*val == '/' ? val + 1 : val), pool);
+        nb->copyfrom_path = svn_relpath_join(rb->pb->parent_dir, val, pool);
       else
-        nb->copyfrom_path = apr_pstrdup(pool, val);
+        nb->copyfrom_path = val;
     }
 
   if ((val = apr_hash_get(headers, SVN_REPOS_DUMPFILE_TEXT_CONTENT_CHECKSUM,
@@ -667,7 +665,6 @@ set_node_property(void *baton,
   struct node_baton *nb = baton;
   struct revision_baton *rb = nb->rb;
   struct parse_baton *pb = rb->pb;
-  const char *parent_dir = pb->parent_dir;
 
   if (strcmp(name, SVN_PROP_MERGEINFO) == 0)
     {
@@ -706,13 +703,13 @@ set_node_property(void *baton,
       SVN_ERR(renumber_mergeinfo_revs(&renumbered_mergeinfo, prop_val, rb,
                                       nb->pool));
       value = renumbered_mergeinfo;
-      if (parent_dir)
+      if (pb->parent_dir)
         {
-          /* Prefix the merge source paths with PARENT_DIR. */
+          /* Prefix the merge source paths with PB->parent_dir. */
           /* ASSUMPTION: All source paths are included in the dump stream. */
           svn_string_t *mergeinfo_val;
-          SVN_ERR(prefix_mergeinfo_paths(&mergeinfo_val, value, parent_dir,
-                                         nb->pool));
+          SVN_ERR(prefix_mergeinfo_paths(&mergeinfo_val, value,
+                                         pb->parent_dir, nb->pool));
           value = mergeinfo_val;
         }
     }
@@ -944,6 +941,9 @@ svn_repos_get_fs_build_parser3(const svn_repos_parse_fns2_t **callbacks,
 {
   svn_repos_parse_fns2_t *parser = apr_pcalloc(pool, sizeof(*parser));
   struct parse_baton *pb = apr_pcalloc(pool, sizeof(*pb));
+
+  if (parent_dir)
+    parent_dir = svn_relpath_canonicalize(parent_dir, pool);
 
   parser->new_revision_record = new_revision_record;
   parser->new_node_record = new_node_record;
