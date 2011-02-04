@@ -1678,7 +1678,7 @@ test_list = [ None,
               lock_path_not_in_head,
               verify_path_escaping,
               XFail(replace_and_propset_locked_path,
-                    svntest.main.is_ra_type_dav),
+                    svntest.main.is_ra_type_dav, issues=3674),
               cp_isnt_ro,
             ]
 

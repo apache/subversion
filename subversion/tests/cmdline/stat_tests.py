@@ -1832,7 +1832,7 @@ test_list = [ None,
               status_depth_update,
               status_dash_u_type_change,
               status_with_tree_conflicts,
-              XFail(status_nested_wc_old_format),
+              XFail(status_nested_wc_old_format, issues=3742),
              ]
 
 if __name__ == '__main__':
