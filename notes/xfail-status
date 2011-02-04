@@ -114,8 +114,8 @@ LISTING: copy_tests.py
 Test #  Mode   Test Description
 ------  -----  ----------------
   24    XFAIL  wc to wc copy with deleted=true items
-  Issue #: 2101, 2020
-  Target Milestone: Unscheduled (But both issues marked as resolved).
+  Issue #: 3776
+  Target Milestone: 1.7
   Thread: N/A
   Log: r879708, r959450
   Point Person: philip, gstein

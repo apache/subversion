@@ -1493,7 +1493,7 @@ def wc_to_wc_copy_between_different_repos(sbox):
     raise svntest.Failure
 
 #----------------------------------------------------------------------
-#  Regression test for issues 2101 and 2020
+#  Regression test for issues 2101, 2020 and 3776
 
 def wc_to_wc_copy_deleted(sbox):
   "wc to wc copy with deleted=true items"
