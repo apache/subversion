@@ -900,17 +900,8 @@ close_file(void *file_baton,
   actual_checksum = svn_checksum__from_digest(fb->text_digest,
                                               svn_checksum_md5, pool);
 
-  if (!svn_checksum_match(text_checksum, actual_checksum))
-    {
-      return svn_error_createf(SVN_ERR_CHECKSUM_MISMATCH, NULL,
-                          _("Checksum mismatch for '%s':\n"
-                            "   expected:  %s\n"
-                            "     actual:  %s\n"),
-                          svn_dirent_local_style(fb->path, pool),
-                          svn_checksum_to_cstring_display(text_checksum, pool),
-                          svn_checksum_to_cstring_display(actual_checksum,
-                                                          pool));
-    }
+  SVN_ERR(svn_checksum_mismatch_err(svn_dirent_local_style(fb->path, pool),
+                                    text_checksum, actual_checksum, pool));
 
   if ((! fb->eol_style_val) && (! fb->keywords_val) && (! fb->special))
     {
