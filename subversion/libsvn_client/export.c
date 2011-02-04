@@ -900,8 +900,9 @@ close_file(void *file_baton,
   actual_checksum = svn_checksum__from_digest(fb->text_digest,
                                               svn_checksum_md5, pool);
 
-  SVN_ERR(svn_checksum_mismatch_err(svn_dirent_local_style(fb->path, pool),
-                                    text_checksum, actual_checksum, pool));
+  SVN_ERR(svn_checksum_mismatch_err(text_checksum, actual_checksum, pool,
+                                    _("Checksum mismatch for '%s'"),
+                                    svn_dirent_local_style(fb->path, pool)));
 
   if ((! fb->eol_style_val) && (! fb->keywords_val) && (! fb->special))
     {
