@@ -997,8 +997,6 @@ stream_from_aprfile(struct baton_apr **baton,
   new_baton->file = file;
   new_baton->cached_handle = NULL; /* default */
   new_baton->pool = pool;
-  new_baton->start = -1;
-  new_baton->end = -1;
 
   /* construct the stream vtable, except for the close() function */
   stream = svn_stream_create(new_baton, pool);
@@ -1068,46 +1066,6 @@ svn_stream__from_cached_file_handle(svn_file_handle_cache__handle_t *file,
     svn_stream_set_close(stream, close_handler_cached_handle);
 
   return stream;
-}
-
-/* A skip data handler (#svn_skip_fn_t) that forwards to skip_handler_apr()
-   but only allows reading between BATON->start and BATON->end. */
-static svn_error_t *
-skip_range_handler_apr(void *baton, apr_size_t *count)
-{
-  struct baton_apr *btn = baton;
-
-  /* ### BH: I think this can be simplified/optimized by just keeping
-             track of the current position. */
-
-  /* Check for range restriction. */
-  if (btn->start >= 0 && btn->end > 0)
-    {
-      /* Get the current file position and make sure it is in range. */
-      apr_off_t pos;
-
-      pos = 0;
-      SVN_ERR(svn_io_file_seek(btn->file, APR_CUR, &pos, btn->pool));
-      if (pos < btn->start)
-        {
-          /* We're before the range, so forward the file cursor to
-           * the start of the range. */
-          pos = btn->start;
-          SVN_ERR(svn_io_file_seek(btn->file, APR_SET, &pos, btn->pool));
-        }
-      else if (pos >= btn->end)
-        {
-          /* We're past the range, indicate that no bytes can be read. */
-          *count = 0;
-          return SVN_NO_ERROR;
-        }
-
-      /* We're in range, but don't read over the end of the range. */
-      if (pos + *count > btn->end)
-        *count = (apr_size_t)(btn->end - pos);
-    }
-
-  return skip_handler_apr(baton, count);
 }
 
 
