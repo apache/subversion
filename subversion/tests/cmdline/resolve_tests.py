@@ -246,7 +246,7 @@ def prop_conflict_resolution(sbox):
 # list all tests here, starting with None:
 test_list = [ None,
               automatic_conflict_resolution,
-              XFail(prop_conflict_resolution),
+              XFail(prop_conflict_resolution, issues=3707),
              ]
 
 if __name__ == '__main__':
