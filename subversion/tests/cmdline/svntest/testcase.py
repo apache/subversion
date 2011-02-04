@@ -281,6 +281,13 @@ def XFail_deco(func):
     return XFail(func)
 
 
+def Wimp_deco(func):
+  if isinstance(func, TestCase):
+    return Wimp(func, issues=func.issues)
+  else:
+    return Wimp(func)
+
+
 def Skip_deco(cond_func):
   def _second(func):
     return Skip(func, cond_func)
