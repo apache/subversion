@@ -2589,3 +2589,14 @@ svn_urlpath__canonicalize(const char *uri,
     }
   return uri;
 }
+
+const char *
+svn_urlpath__internal_style(const char *uri,
+                            apr_pool_t *pool)
+{
+  return svn_urlpath__canonicalize(
+             svn_relpath_internal_style(
+                 svn_relpath_canonicalize(uri + 1, pool),
+                 pool),
+             pool);
+}

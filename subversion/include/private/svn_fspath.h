@@ -194,6 +194,10 @@ svn_fspath__get_longest_ancestor(const char *fspath1,
 const char *
 svn_urlpath__canonicalize(const char *uri, apr_pool_t *pool);
 
+/* Like svn_relpath_internal_style(), but for urlpaths. */
+const char *
+svn_urlpath__internal_style(const char *uri, apr_pool_t *pool);
+
 
 #ifdef __cplusplus
 }
