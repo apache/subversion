@@ -371,7 +371,7 @@ static svn_error_t * add_child(version_rsrc_t **child,
   rsrc->revision = revision;
   rsrc->name = name;
   rsrc->url = svn_path_url_add_component2(parent->url, name, pool);
-  rsrc->local_path = svn_path_join(parent->local_path, name, pool);
+  rsrc->local_path = svn_relpath_join(parent->local_path, name, pool);
 
   /* Case 1:  the resource is truly "new".  Either it was added as a
      completely new object, or implicitly created via a COPY.  Either
@@ -501,7 +501,7 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc,
         return svn_error_createf
           (err->apr_err, err,
            _("File or directory '%s' is out of date; try updating"),
-           svn_path_local_style(rsrc->local_path, pool));
+           svn_relpath_local_style(rsrc->local_path, pool));
       return err;
     }
 
@@ -682,7 +682,7 @@ static apr_hash_t *get_child_tokens(apr_hash_t *lock_tokens,
       svn_pool_clear(subpool);
       apr_hash_this(hi, &key, &klen, &val);
 
-      if (svn_path_is_child(dir, key, subpool))
+      if (svn_relpath_is_child(dir, key, subpool))
         apr_hash_set(tokens, key, klen, val);
     }
 

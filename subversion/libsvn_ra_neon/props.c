@@ -729,8 +729,9 @@ svn_ra_neon__search_for_starting_props(svn_ra_neon__resource_t **rsrc,
       /* ### TODO: path_s is an absolute, schema-less URI, but
          ### technically not an FS_PATH. */
       svn_stringbuf_set(lopped_path,
-                        svn_path_join(svn_path_basename(path_s->data, iterpool),
-                                      lopped_path->data, iterpool));
+                        svn_relpath_join(svn_urlpath__basename(path_s->data,
+                                                               iterpool),
+                                         lopped_path->data, iterpool));
 
       len = path_s->len;
       svn_path_remove_component(path_s);
@@ -879,9 +880,9 @@ svn_error_t *svn_ra_neon__get_baseline_props(svn_string_t *bc_relative,
   /* don't forget to tack on the parts we lopped off in order to find
      the VCC...  We are expected to return a URI decoded relative
      path, so decode the lopped path first. */
-  my_bc_relative = svn_path_join(relative_path->data,
-                                 svn_path_uri_decode(lopped_path, pool),
-                                 pool);
+  my_bc_relative = svn_relpath_join(relative_path->data,
+                                    svn_path_uri_decode(lopped_path, pool),
+                                    pool);
 
   /* if they want the relative path (could be, they're just trying to find
      the baseline collection), then return it */
