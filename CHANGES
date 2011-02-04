@@ -9,14 +9,24 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.0
     * Less verbose HTTP-based repository access protocol (issue #1161, #3371)
     * Rewritten working copy metadata storage (issue #3357)
     * New 'svn patch' subcommand (issue #511)
+    * Property packing on FSFS backends (issue #3444)
 
   - Minor new features and improvements:
     * Better handling of HTTP redirects (issue #2779)
     * Improved and much more consistent path handling (issue #2028, and others)
     * 'svnadmin load' rewrites changed revnums in mergeinfo (issue #3020)
-    * Error message improvements
+    * Error message and help text improvements
     * 'svn log' can print unidiff of changes made in a revision (issue #2909)
     * 'svn diff' can print git-style unidiff annotations 
+    * svnsync can now steal locks on a mirror repository (issue #3309)
+    * display the wc root in the output of 'svn info' (issue #3355)
+    * add '--ie' as an alias for '--ignore-externals' (issue #3436)
+    * add 'svnlook filesize' (issue #3509)
+    * add 'svnsync --disable-locking' (issue #3545)
+    * 'svn --relocate' updates relative externals (issue #3597)
+    * allow svnsync users to specify the source repo (issue #3637)
+    * 'svn export' into the current directory (issue #3727)
+    * added '--parents' to 'svn update' (issue #3748)
 
   - Client-side bugfixes:
     * 'svn cp A B; svn mv B C' is equivalent to 'svn cp A C' (issue #756)
@@ -36,32 +46,59 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.0
     * correctly recover a schedule-for-delete rm'd outside of svn (issue #3106)
     * don't create self-referential mergeinfo from own history (issue #3157)
     * improve 'svn log -g' handling of bad mergeinfo source paths (issue #3270)
+    * better conflict stat printing (issue #3342, issue #3594)
+    * 'svn update' restores excluded files (issue #3544)
+    * allow reintegrate merges into WCs with missing subtrees (issue #3603)
+    * more gracefully error when given back cmdline input (issue #3620)
+    * update exit codes to reflect command failure (issue #3622)
+    * don't double-update file externals (issue #3665)
+    * improve output of multi-target update (issue #3693)
+    * make 'svn up --set-depth=exclude FILE' work (issue #3736)
     * fixed: wc-to-wc copy of a switch source (issue #1802)
     * fixed: 'svn st' reports symlinks as obstructed items (issue #2284)
     * fixed: 'cd e:\; svn up e:\' fails (issue #2556)
+    * fixed: svn aborts on commiting from root dir on windows (issue #3346)
     * fixed: removing a dir scheduled for deletion corrupts wc (issue #2741)
     * fixed: 'svn cleanup' fails on obstructed paths (issue #2867)
     * fixed: case-only renames resulting from merges don't work (issue #3115)
     * fixed: 'svn mergeinfo' ignores peg rev for wc target (issue #3180)
     * fixed: unable to merge to wc of deleted branch (issue #3221)
+    * fixed: ra_serf does not honor http-proxy-exceptions (issue #3428)
+    * fixed: 'svn mv A B; svn mv B A' loses history (issue #3429)
+    * fixed: ra_serf doesn't support http-auth-types config (issue #3435)
+    * fixed: ra_serf inconsistent handling of cached authn creds (issue #3450)
+    * fixed: excluded subtrees are not detected by svnversion (issue #3461)
+    * fixed: submitting a changelist while obstructed item exists (issue #3484)
+    * fixed: crash when changing an external's URL (issue #3530)
+    * fixed: potential race condition in svnsync (issue #3546)
+    * fixed: repeat merge is not a no-op (issue #3564)
+    * fixed: memory leaks in ra_serf (issue #3684)
+    * fixed: corruption of 'svn pg' output for large properties (issue #3721)
+    * fixed: 'svnsync copy-revprops' doesn't sync revprop dels (issue #3728)
   
   - Server-side bugfixes:
     * mod_dav_svn is less strict about auto-merging for commits (issue #1704)
     * allow SVNListParentPath to be used with authz (issue #2753)
     * allow nav to repo list from repo top with SVNListParentPath (issue #3159)
+    * allow repositories in the root of a drive on windows (issue #3535)
+    * don't destroy mergeinnfo with 'svnadmin load --parent-dir' (issue #3547)
     * fixed: 'svnadmin hotcopy' does not duplicate symlinks (issue #2591)
     * fixed: post-revprop-change errors cancel commit (issue #2990)
     * fixed: mod_dav_svn runs pre-revprop-change hook twice (issue #3085)
     * fixed: mod_dav_svn doesn't return stderr to user on failure (issue #3112)
+    * fixed: hotcopy may corrupt target rep-cache.db (issue #3596)
 
   - Other tool improvements and bugfixes:
     * svnsync now takes the '--config-option' argument (issue #2027)
 
  Developer-visible changes:
   - General:
+    * improve building with sqlite on Windows (issue #3364)
+    * allow mod_dav_svn to compile against Apache 2.4 (issue #3548)
 
   - API changes:
     * don't crash svn_client_copy if ctx->log_msg_func is NULL (issue #3234)
+    * ra_serf now uses svn_error_t throughout (issue #3375)
     * fixed: svn_ra_local__get_file() leaks file descriptors (issue #3290)
 
   - Bindings:
