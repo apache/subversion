@@ -37,7 +37,7 @@ SkipUnless = svntest.testcase.SkipUnless_deco
 XFail = svntest.testcase.XFail_deco
 Issues = svntest.testcase.Issues_deco
 Issue = svntest.testcase.Issue_deco
-Wimp = svntest.testcase.Wimp
+Wimp = svntest.testcase.Wimp_deco
 Item = wc.StateItem
 
 # Generic UUID-matching regular expression
