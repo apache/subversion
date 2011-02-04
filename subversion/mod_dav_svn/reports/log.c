@@ -37,6 +37,7 @@
 #include "svn_props.h"
 
 #include "private/svn_log.h"
+#include "private/svn_fspath.h"
 
 #include "../dav_svn.h"
 
@@ -359,8 +360,14 @@ dav_svn__log_report(const dav_resource *resource,
           const char *rel_path = dav_xml_get_cdata(child, resource->pool, 0);
           if ((derr = dav_svn__test_canonical(rel_path, resource->pool)))
             return derr;
-          target = svn_path_join(resource->info->repos_path, rel_path,
-                                 resource->pool);
+
+          /* Force REL_PATH to be a relative path, not an fspath. */
+          rel_path = svn_relpath_canonicalize(rel_path, resource->pool);
+
+          /* Append the REL_PATH to the base FS path to get an
+             absolute repository path. */
+          target = svn_fspath__join(resource->info->repos_path, rel_path,
+                                    resource->pool);
           APR_ARRAY_PUSH(paths, const char *) = target;
         }
       /* else unknown element; skip it */

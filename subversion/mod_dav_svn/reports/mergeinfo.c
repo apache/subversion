@@ -34,6 +34,8 @@
 #include "svn_xml.h"
 #include "svn_path.h"
 #include "svn_dav.h"
+
+#include "private/svn_fspath.h"
 #include "private/svn_dav_protocol.h"
 #include "private/svn_log.h"
 #include "private/svn_mergeinfo_private.h"
@@ -96,8 +98,14 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
           const char *rel_path = dav_xml_get_cdata(child, resource->pool, 0);
           if ((derr = dav_svn__test_canonical(rel_path, resource->pool)))
             return derr;
-          target = svn_path_join(resource->info->repos_path, rel_path,
-                                 resource->pool);
+
+          /* Force REL_PATH to be a relative path, not an fspath. */
+          rel_path = svn_relpath_canonicalize(rel_path, resource->pool);
+
+          /* Append the REL_PATH to the base FS path to get an
+             absolute repository path. */
+          target = svn_fspath__join(resource->info->repos_path, rel_path,
+                                    resource->pool);
           (*((const char **)(apr_array_push(paths)))) = target;
         }
       else if (strcmp(child->name, SVN_DAV__VALIDATE_INHERITED) == 0)

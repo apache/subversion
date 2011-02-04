@@ -368,8 +368,7 @@ SVNPath_cmd(cmd_parms *cmd, void *config, const char *arg1)
   if (conf->fs_parent_path != NULL)
     return "SVNPath cannot be defined at same time as SVNParentPath.";
 
-  conf->fs_path = svn_path_internal_style(apr_pstrdup(cmd->pool, arg1),
-                                          cmd->pool);
+  conf->fs_path = svn_urlpath__internal_style(arg1, cmd->pool);
 
   return NULL;
 }
@@ -383,8 +382,7 @@ SVNParentPath_cmd(cmd_parms *cmd, void *config, const char *arg1)
   if (conf->fs_path != NULL)
     return "SVNParentPath cannot be defined at same time as SVNPath.";
 
-  conf->fs_parent_path = svn_path_internal_style(apr_pstrdup(cmd->pool, arg1),
-                                                 cmd->pool);
+  conf->fs_parent_path = svn_urlpath__internal_style(arg1, cmd->pool);
 
   return NULL;
 }
@@ -484,7 +482,7 @@ dav_svn_get_repos_path(request_rec *r,
 
   /* Construct the full path from the parent path base directory
      and the repository name. */
-  *repos_path = svn_path_join(fs_parent_path, repos_name, r->pool);
+  *repos_path = svn_urlpath__join(fs_parent_path, repos_name, r->pool);
   return NULL;
 }
 
