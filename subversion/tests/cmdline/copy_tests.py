@@ -33,10 +33,12 @@ from svntest import main
 from svntest.main import SVN_PROP_MERGEINFO
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-SkipUnless = svntest.testcase.SkipUnless
-XFail = svntest.testcase.XFail
-Wimp = svntest.testcase.Wimp
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 exp_noop_up_out = svntest.actions.expected_noop_update_output
 
@@ -253,7 +255,7 @@ def copy_replace_with_props(sbox, wc_copy):
 
 
 #----------------------------------------------------------------------
-
+@Issue(1091)
 def basic_copy_and_move_files(sbox):
   "basic copy and move commands -- on files only"
 
@@ -433,7 +435,7 @@ def receive_copy_in_update(sbox):
 # entry for G.  The entry-merge wasn't overwriting the 'deleted'
 # attribute, and thus the newly-added G was ending up disconnected
 # from D.)
-
+@Issue(683)
 def resurrect_deleted_dir(sbox):
   "resurrect a deleted directory"
 
@@ -559,7 +561,7 @@ def no_copy_overwrites(sbox):
 #----------------------------------------------------------------------
 
 # Issue 845. WC -> WC copy should not overwrite base text-base
-
+@Issue(845)
 def no_wc_copy_overwrites(sbox):
   "svn cp PATH PATH cannot overwrite destination"
 
@@ -590,6 +592,7 @@ def no_wc_copy_overwrites(sbox):
 
 # Takes out working-copy locks for A/B2 and child A/B2/E. At one stage
 # during issue 749 the second lock cause an already-locked error.
+@Issue(749)
 def copy_modify_commit(sbox):
   "copy a tree and modify before commit"
 
@@ -619,7 +622,7 @@ def copy_modify_commit(sbox):
 
 # Issue 591, at one point copying a file from URL to WC didn't copy
 # properties.
-
+@Issue(591)
 def copy_files_with_properties(sbox):
   "copy files with properties"
 
@@ -691,6 +694,7 @@ def copy_files_with_properties(sbox):
 #----------------------------------------------------------------------
 
 # Issue 918
+@Issue(918)
 def copy_delete_commit(sbox):
   "copy a tree and delete part of it before commit"
 
@@ -743,6 +747,7 @@ def copy_delete_commit(sbox):
 
 
 #----------------------------------------------------------------------
+@Issues([931,932])
 def mv_and_revert_directory(sbox):
   "move and revert a directory"
 
@@ -774,6 +779,8 @@ def mv_and_revert_directory(sbox):
 #----------------------------------------------------------------------
 # Issue 982.  When copying a file with the executable bit set, the copied
 # file should also have its executable bit set.
+@Issue(982)
+@SkipUnless(svntest.main.is_posix_os)
 def copy_preserve_executable_bit(sbox):
   "executable bit should be preserved when copying"
 
@@ -819,6 +826,7 @@ def copy_preserve_executable_bit(sbox):
 
 #----------------------------------------------------------------------
 # Issue 1029, copy failed with a "working copy not locked" error
+@Issue(1029)
 def wc_to_repos(sbox):
   "working-copy to repository copy"
 
@@ -890,7 +898,7 @@ def wc_to_repos(sbox):
 #----------------------------------------------------------------------
 # Issue 1090: various use-cases of 'svn cp URL wc' where the
 # repositories might be different, or be the same repository.
-
+@Issues([1090,1444])
 def repos_to_wc(sbox):
   "repository to working-copy copy"
 
@@ -1016,7 +1024,7 @@ def repos_to_wc(sbox):
 
 #----------------------------------------------------------------------
 # Issue 1084: ra_svn move/copy bug
-
+@Issue(1084)
 def copy_to_root(sbox):
   'copy item to root of repository'
 
@@ -1053,6 +1061,7 @@ def copy_to_root(sbox):
                                         expected_status)
 
 #----------------------------------------------------------------------
+@Issue(1367)
 def url_copy_parent_into_child(sbox):
   "copy URL URL/subdir"
 
@@ -1102,6 +1111,7 @@ def url_copy_parent_into_child(sbox):
                                         expected_status)
 
 #----------------------------------------------------------------------
+@Issue(1367)
 def wc_copy_parent_into_child(sbox):
   "copy WC URL/subdir"
 
@@ -1176,7 +1186,7 @@ def wc_copy_parent_into_child(sbox):
 # Issue 1419: at one point ra_neon->get_uuid() was failing on a
 # non-existent public URL, which prevented us from resurrecting files
 # (svn cp -rOLD URL wc).
-
+@Issue(1419)
 def resurrect_deleted_file(sbox):
   "resurrect a deleted file"
 
@@ -1215,7 +1225,7 @@ def resurrect_deleted_file(sbox):
 # Regression tests for Issue #1297:
 # svn diff failed after a repository to WC copy of a single file
 # This test checks just that.
-
+@Issue(1297)
 def diff_repos_to_wc_copy(sbox):
   "copy file from repos to working copy and run diff"
 
@@ -1234,7 +1244,7 @@ def diff_repos_to_wc_copy(sbox):
 
 
 #-------------------------------------------------------------
-
+@Issue(1473)
 def repos_to_wc_copy_eol_keywords(sbox):
   "repos->WC copy with keyword or eol property set"
 
@@ -1360,7 +1370,7 @@ def revision_kinds_local_source(sbox):
 
 #-------------------------------------------------------------
 # Regression test for issue 1581.
-
+@Issue(1581)
 def copy_over_missing_file(sbox):
   "copy over a missing file"
   sbox.build(read_only = True)
@@ -1393,7 +1403,7 @@ def copy_over_missing_file(sbox):
 
 #----------------------------------------------------------------------
 #  Regression test for issue 1634
-
+@Issue(1634)
 def repos_to_wc_1634(sbox):
   "copy a deleted directory back from the repos"
 
@@ -1435,7 +1445,7 @@ def repos_to_wc_1634(sbox):
 
 #----------------------------------------------------------------------
 #  Regression test for issue 1814
-
+@Issue(1814)
 def double_uri_escaping_1814(sbox):
   "check for double URI escaping in svn ls -R"
 
@@ -1471,7 +1481,7 @@ def double_uri_escaping_1814(sbox):
 
 #----------------------------------------------------------------------
 #  Regression test for issues 2404
-
+@Issue(2404)
 def wc_to_wc_copy_between_different_repos(sbox):
   "wc to wc copy attempts between different repos"
 
@@ -1494,7 +1504,8 @@ def wc_to_wc_copy_between_different_repos(sbox):
 
 #----------------------------------------------------------------------
 #  Regression test for issues 2101, 2020 and 3776
-
+@XFail()
+@Issues([2101,2020,3776])
 def wc_to_wc_copy_deleted(sbox):
   "wc to wc copy with deleted=true items"
 
@@ -1704,6 +1715,7 @@ def old_dir_url_to_url(sbox):
 #----------------------------------------------------------------------
 # Test fix for issue 2224 - copying wc dir to itself causes endless
 # recursion
+@Issue(2224)
 def wc_copy_dir_to_itself(sbox):
   "copy wc dir to itself"
 
@@ -1721,7 +1733,7 @@ def wc_copy_dir_to_itself(sbox):
 
 
 #----------------------------------------------------------------------
-
+@Issue(2153)
 def mixed_wc_to_url(sbox):
   "copy a complex mixed-rev wc"
 
@@ -1822,7 +1834,7 @@ def mixed_wc_to_url(sbox):
 
 # Issue 845 and 1516: WC replacement of files requires
 # a second text-base and prop-base
-
+@Issues([845,1516])
 def wc_copy_replacement(sbox):
   "svn cp PATH PATH replace file"
 
@@ -1877,6 +1889,7 @@ def delete_replaced_file(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
+@Issue(2436)
 def mv_unversioned_file(sbox):
   "move an unversioned file"
   # Issue #2436: Attempting to move an unversioned file would seg fault.
@@ -1902,6 +1915,7 @@ def mv_unversioned_file(sbox):
                                      'mv',
                                      unver_path_2, dest_path_2)
 
+@Issue(2435)
 def force_move(sbox):
   "'move' should not lose local mods"
   # Issue #2435: 'svn move' / 'svn mv' can lose local modifications.
@@ -2413,6 +2427,7 @@ def move_dir_out_of_moved_dir(sbox):
 
 # Includes regression testing for issue #3429 ("svn mv A B; svn mv B A"
 # generates replace without history).
+@Issue(3429)
 def move_file_back_and_forth(sbox):
   "move a moved file back to original location"
 
@@ -2452,6 +2467,7 @@ def move_file_back_and_forth(sbox):
 
 # Includes regression testing for issue #3429 ("svn mv A B; svn mv B A"
 # generates replace without history).
+@Issue(3429)
 def move_dir_back_and_forth(sbox):
   "move a moved dir back to original location"
 
@@ -2865,6 +2881,7 @@ def copy_added_paths_to_URL(sbox):
 
 
 # Issue #1869.
+@Issue(1869)
 def move_to_relative_paths(sbox):
   "move file using relative dst path names"
 
@@ -3179,7 +3196,7 @@ def copy_multiple_repo(sbox):
 #----------------------------------------------------------------------
 
 # Test moving copying multiple files from a repo to a wc
-
+@Issue(2955)
 def copy_multiple_repo_wc(sbox):
   "copy multiple files from a repo to a wc"
 
@@ -3287,6 +3304,7 @@ def copy_multiple_wc_repo(sbox):
 
 # Test copying local files using peg revision syntax
 # (Issue 2546)
+@Issue(2546)
 def copy_peg_rev_local_files(sbox):
   "copy local files using peg rev syntax"
 
@@ -3343,6 +3361,7 @@ def copy_peg_rev_local_files(sbox):
 
 # Test copying local directories using peg revision syntax
 # (Issue 2546)
+@Issue(2546)
 def copy_peg_rev_local_dirs(sbox):
   "copy local dirs using peg rev syntax"
 
@@ -3425,6 +3444,7 @@ def copy_peg_rev_local_dirs(sbox):
 
 # Test copying urls using peg revision syntax
 # (Issue 2546)
+@Issues([2546,3651])
 def copy_peg_rev_url(sbox):
   "copy urls using peg rev syntax"
 
@@ -3711,6 +3731,7 @@ def copy_make_parents_repo_repo(sbox):
 
 # Test for issue #2894
 # Can't perform URL to WC copy if URL needs URI encoding.
+@Issue(2894)
 def URI_encoded_repos_to_wc(sbox):
   "copy a URL that needs URI encoding to WC"
 
@@ -3803,6 +3824,7 @@ def URI_encoded_repos_to_wc(sbox):
 
 #----------------------------------------------------------------------
 # Issue #3068: copy source parent may be unversioned
+@Issue(3068)
 def allow_unversioned_parent_for_copy_src(sbox):
   "copy wc in unversioned parent to other wc"
 
@@ -4004,6 +4026,7 @@ def change_case_of_hostname(input):
   return scheme + host + path
 
 # regression test for issue #2475 - move file and folder
+@Issue(2475)
 def path_move_and_copy_between_wcs_2475(sbox):
   "issue #2475 - move and copy between working copies"
   sbox.build()
@@ -4066,6 +4089,7 @@ def path_move_and_copy_between_wcs_2475(sbox):
 
 # regression test for issue #2475 - direct copy in the repository
 # this test handles the 'direct move' case too, that uses the same code.
+@Issue(2475)
 def path_copy_in_repo_2475(sbox):
   "issue #2475 - direct copy in the repository"
   sbox.build()
@@ -4288,6 +4312,7 @@ def reverse_merge_move(sbox):
                                         None,
                                         None)
 
+@XFail()
 def nonrecursive_commit_of_copy(sbox):
   """commit only top of copy; check child behavior"""
 
@@ -4357,6 +4382,7 @@ def nonrecursive_commit_of_copy(sbox):
 
 # Regression test for issue #3474 - making a new subdir, moving files into it
 # and then renaming the subdir, breaks history of the moved files.
+@Issue(3474)
 def copy_added_dir_with_copy(sbox):
   """copy of new dir with copied file keeps history"""
 
@@ -4386,6 +4412,8 @@ def copy_added_dir_with_copy(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
+@SkipUnless(svntest.main.is_posix_os)
+@Issue(3303)
 def copy_broken_symlink(sbox):
   """copy broken symlink"""
 
@@ -4598,6 +4626,7 @@ def copy_dir_with_space(sbox):
                                         None, wc_dir)
 
 # Regression test for issue #3676
+@Issue(3676)
 def changed_data_should_match_checkout(sbox):
   """changed data after commit should match checkout"""
 
@@ -4628,6 +4657,8 @@ def changed_data_should_match_checkout(sbox):
   os.chdir(was_cwd)
 
 # Regression test for issue #3676 for copies including directories
+@XFail()
+@Issue(3676)
 def changed_dir_data_should_match_checkout(sbox):
   """changed dir after commit should match checkout"""
 
@@ -4701,6 +4732,8 @@ def copy_over_deleted_dir(sbox):
   main.run_svn(None, 'cp', os.path.join(sbox.wc_dir, 'A/D'),
                os.path.join(sbox.wc_dir, 'A/B'))
 
+@XFail()
+@Issue(3314)
 def mixed_rev_copy_del(sbox):
   """copy mixed-rev and delete children"""
 
@@ -4822,6 +4855,7 @@ def copy_delete_delete(sbox):
   "copy, delete child, delete copy"
   copy_delete_undo(sbox, False)
 
+@XFail()
 def copy_delete_revert(sbox):
   "copy, delete child, revert copy"
   copy_delete_undo(sbox, True)
@@ -4974,7 +5008,7 @@ test_list = [ None,
               copy_files_with_properties,
               copy_delete_commit,
               mv_and_revert_directory,
-              SkipUnless(copy_preserve_executable_bit, svntest.main.is_posix_os),
+              copy_preserve_executable_bit,
               wc_to_repos,
               repos_to_wc,
               copy_to_root,
@@ -4988,7 +5022,7 @@ test_list = [ None,
               repos_to_wc_1634,
               double_uri_escaping_1814,
               wc_to_wc_copy_between_different_repos,
-              XFail(wc_to_wc_copy_deleted, issues=3776),
+              wc_to_wc_copy_deleted,
               url_to_non_existent_url_path,
               non_existent_url_to_url,
               old_dir_url_to_url,
@@ -5044,18 +5078,18 @@ test_list = [ None,
               copy_below_copy,
               move_below_move,
               reverse_merge_move,
-              XFail(nonrecursive_commit_of_copy),
+              nonrecursive_commit_of_copy,
               copy_added_dir_with_copy,
-              SkipUnless(copy_broken_symlink, svntest.main.is_posix_os),
+              copy_broken_symlink,
               move_dir_containing_move,
               copy_dir_with_space,
               changed_data_should_match_checkout,
-              XFail(changed_dir_data_should_match_checkout, issues=3676),
+              changed_dir_data_should_match_checkout,
               move_added_nodes,
               copy_over_deleted_dir,
-              XFail(mixed_rev_copy_del, issues=3314),
+              mixed_rev_copy_del,
               copy_delete_delete,
-              XFail(copy_delete_revert),
+              copy_delete_revert,
               delete_replace_delete,
               copy_repos_over_deleted_same_kind,
               copy_repos_over_deleted_other_kind,

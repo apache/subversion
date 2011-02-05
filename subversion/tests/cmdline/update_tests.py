@@ -35,10 +35,12 @@ from merge_tests import expected_merge_output
 from merge_tests import set_up_branch
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-SkipUnless = svntest.testcase.SkipUnless
-XFail = svntest.testcase.XFail
-Wimp = svntest.testcase.Wimp
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 exp_noop_up_out = svntest.actions.expected_noop_update_output
 
@@ -3115,6 +3117,7 @@ def update_conflicted(sbox):
                                         None, None, 1)
 
 #----------------------------------------------------------------------
+@SkipUnless(server_has_mergeinfo)
 def mergeinfo_update_elision(sbox):
   "mergeinfo does not elide after update"
 
@@ -4564,6 +4567,8 @@ def tree_conflicts_on_update_2_2(sbox):
 # conflicts'
 #
 # Marked as XFail until issue #3329 is resolved.
+@Issue(3329)
+@XFail()
 def tree_conflicts_on_update_2_3(sbox):
   "tree conflicts 2.3: skip on 2nd update"
 
@@ -4846,6 +4851,8 @@ def tree_conflict_uc1_update_deleted_tree(sbox):
 
 # Issue #3334: a delete-onto-modified tree conflict should leave the node
 # scheduled for re-addition.
+@Issue(3334)
+@XFail()
 def tree_conflict_uc2_schedule_re_add(sbox):
   "tree conflicts on update UC2, schedule re-add"
   sbox.build()
@@ -5100,6 +5107,8 @@ def update_wc_of_dir_to_rev_not_containing_this_dir(sbox):
 # tree conflict'
 #
 # Marked as XFail until that issue is fixed.
+@Issue(3525)
+@XFail()
 def update_deleted_locked_files(sbox):
   "verify update of deleted locked files"
 
@@ -5145,6 +5154,8 @@ def update_deleted_locked_files(sbox):
 # XFail until issue #3569 is fixed.  This test needs extension to map some
 # real use cases (all add operations are missing if a directory is updated
 # without its children.)
+@XFail()
+@Issue(3569)
 def update_empty_hides_entries(sbox):
   "svn up --depth empty hides entries for next update"
   sbox.build()
@@ -5306,6 +5317,8 @@ def update_with_excluded_subdir(sbox):
 # Test for issue #3471 'svn up touches file w/ lock & svn:keywords property'
 #
 # Marked as XFail until the issue is fixed.
+@XFail()
+@Issue(3471)
 def update_with_file_lock_and_keywords_property_set(sbox):
   """update with file lock & keywords property set"""
   sbox.build()
@@ -5333,6 +5346,7 @@ def update_with_file_lock_and_keywords_property_set(sbox):
 # Updating a nonexistent or deleted path should be a successful no-op,
 # when there is no incoming change.  In trunk@1035343, such an update
 # within a copied directory triggered an assertion failure.
+@XFail()
 def update_nonexistent_child_of_copy(sbox):
   """update a nonexistent child of a copied dir"""
   sbox.build()
@@ -5388,8 +5402,7 @@ test_list = [ None,
               update_wc_with_replaced_file,
               update_with_obstructing_additions,
               update_conflicted,
-              SkipUnless(mergeinfo_update_elision,
-                         server_has_mergeinfo),
+              mergeinfo_update_elision,
               update_copied_from_replaced_and_changed,
               update_copied_and_deleted_prop,
               update_accept_conflicts,
@@ -5400,19 +5413,18 @@ test_list = [ None,
               tree_conflicts_on_update_1_2,
               tree_conflicts_on_update_2_1,
               tree_conflicts_on_update_2_2,
-              XFail(tree_conflicts_on_update_2_3, issues=3329),
+              tree_conflicts_on_update_2_3,
               tree_conflicts_on_update_3,
               tree_conflict_uc1_update_deleted_tree,
-              XFail(tree_conflict_uc2_schedule_re_add, issues=3334),
+              tree_conflict_uc2_schedule_re_add,
               set_deep_depth_on_target_with_shallow_children,
               update_wc_of_dir_to_rev_not_containing_this_dir,
-              XFail(update_deleted_locked_files, issues=3525),
-              XFail(update_empty_hides_entries, issues=3569),
+              update_deleted_locked_files,
+              update_empty_hides_entries,
               mergeinfo_updates_merge_with_local_mods,
               update_with_excluded_subdir,
-              XFail(update_with_file_lock_and_keywords_property_set,
-                    issues=3471),
-              XFail(update_nonexistent_child_of_copy),
+              update_with_file_lock_and_keywords_property_set,
+              update_nonexistent_child_of_copy,
              ]
 
 if __name__ == '__main__':

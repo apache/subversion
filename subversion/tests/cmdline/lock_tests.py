@@ -31,9 +31,12 @@ import re, os, stat
 import svntest
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-SkipUnless = svntest.testcase.SkipUnless
-XFail = svntest.testcase.XFail
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 
 ######################################################################
@@ -408,6 +411,7 @@ def enforce_lock(sbox):
 # Test that updating a file with the "svn:needs-lock" property works,
 # especially on Windows, where renaming A to B fails if B already
 # exists and has its read-only bit set.  See also issue #2278.
+@Issue(2278)
 def update_while_needing_lock(sbox):
   "update handles svn:needs-lock correctly"
 
@@ -955,6 +959,7 @@ def lock_uri_encoded(sbox):
 #----------------------------------------------------------------------
 # A regression test for a bug when svn:needs-lock and svn:executable
 # interact badly. The bug was fixed in trunk @ r854933.
+@SkipUnless(svntest.main.is_posix_os)
 def lock_and_exebit1(sbox):
   "svn:needs-lock and svn:executable, part I"
 
@@ -1031,6 +1036,7 @@ def lock_and_exebit1(sbox):
 
 #----------------------------------------------------------------------
 # A variant of lock_and_exebit1: same test without unlock
+@SkipUnless(svntest.main.is_posix_os)
 def lock_and_exebit2(sbox):
   "svn:needs-lock and svn:executable, part II"
 
@@ -1310,6 +1316,7 @@ def ls_url_encoded(sbox):
 
 #----------------------------------------------------------------------
 # Make sure unlocking a path with the wrong lock token fails.
+@XFail(svntest.main.is_ra_type_dav)
 def unlock_wrong_token(sbox):
   "verify unlocking with wrong lock token"
 
@@ -1370,6 +1377,7 @@ def examine_lock_encoded_recurse(sbox):
                                         svntest.main.wc_author)
 
 # Trying to unlock someone else's lock with --force should fail.
+@XFail(svntest.main.is_ra_type_dav)
 def unlocked_lock_of_other_user(sbox):
   "unlock file locked by other user"
 
@@ -1468,6 +1476,7 @@ def lock_twice_in_one_wc(sbox):
 #----------------------------------------------------------------------
 # Test for issue #3524 'Locking path via ra_serf which doesn't exist in
 # HEAD triggers assert'
+@Issue(3524)
 def lock_path_not_in_head(sbox):
   "lock path that does not exist in HEAD"
 
@@ -1544,6 +1553,8 @@ def verify_path_escaping(sbox):
 
 #----------------------------------------------------------------------
 # Issue #3674: Replace + propset of locked file fails over DAV
+@XFail(svntest.main.is_ra_type_dav)
+@Issue(3674)
 def replace_and_propset_locked_path(sbox):
   "test replace + propset of locked file"
 
@@ -1662,23 +1673,21 @@ test_list = [ None,
               lock_several_files,
               lock_switched_files,
               lock_uri_encoded,
-              SkipUnless(lock_and_exebit1, svntest.main.is_posix_os),
-              SkipUnless(lock_and_exebit2, svntest.main.is_posix_os),
+              lock_and_exebit1,
+              lock_and_exebit2,
               commit_xml_unsafe_file_unlock,
               repos_lock_with_info,
               unlock_already_unlocked_files,
               info_moved_path,
               ls_url_encoded,
-              XFail(unlock_wrong_token, svntest.main.is_ra_type_dav),
+              unlock_wrong_token,
               examine_lock_encoded_recurse,
-              XFail(unlocked_lock_of_other_user,
-                    svntest.main.is_ra_type_dav),
+              unlocked_lock_of_other_user,
               lock_funky_comment_chars,
               lock_twice_in_one_wc,
               lock_path_not_in_head,
               verify_path_escaping,
-              XFail(replace_and_propset_locked_path,
-                    svntest.main.is_ra_type_dav, issues=3674),
+              replace_and_propset_locked_path,
               cp_isnt_ro,
             ]
 

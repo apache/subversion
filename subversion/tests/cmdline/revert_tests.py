@@ -34,9 +34,12 @@ from svntest.actions import run_and_verify_svn
 
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-XFail = svntest.testcase.XFail
-Wimp = svntest.testcase.Wimp
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 
 
@@ -229,6 +232,7 @@ def revert_from_wc_root(sbox):
   svntest.actions.run_and_verify_status('', expected_output)
 
 
+@Issue(1663)
 def revert_reexpand_keyword(sbox):
   "revert reexpands manually contracted keyword"
 
@@ -289,6 +293,7 @@ def revert_reexpand_keyword(sbox):
 #----------------------------------------------------------------------
 # Regression test for issue #1775:
 # Should be able to revert a file with no properties i.e. no prop-base
+@Issue(1775)
 def revert_replaced_file_without_props(sbox):
   "revert a replaced file with no properties"
 
@@ -340,6 +345,8 @@ def revert_replaced_file_without_props(sbox):
 #----------------------------------------------------------------------
 # Regression test for issue #876:
 # svn revert of an svn move'd file does not revert the file
+@XFail()
+@Issue(876)
 def revert_moved_file(sbox):
     "revert a moved file"
 
@@ -374,7 +381,7 @@ def revert_moved_file(sbox):
 #
 # It is like merge_file_replace (in merge_tests.py), but reverts file
 # instead of commit.
-
+@Issue(2135)
 def revert_file_merge_replace_with_history(sbox):
   "revert a merge replacement of file with history"
 
@@ -537,7 +544,7 @@ def revert_after_second_replace(sbox):
 # Tests for issue #2517.
 #
 # Manual conflict resolution leads to spurious revert report.
-
+@Issue(2517)
 def revert_after_manual_conflict_resolution__text(sbox):
   "revert after manual text-conflict resolution"
 
@@ -728,6 +735,7 @@ def revert_replaced_with_history_file_1(sbox):
 
 #----------------------------------------------------------------------
 # Test for issue #2804.
+@Issue(2804)
 def status_of_missing_dir_after_revert(sbox):
   "status after schedule-delete, revert, and local rm"
 
@@ -771,6 +779,7 @@ def status_of_missing_dir_after_revert(sbox):
 
 #----------------------------------------------------------------------
 # Test for issue #2804 with replaced directory
+@Issue(2804)
 def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
   "status after replace+, revert, and local rm"
 
@@ -878,6 +887,7 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
                                      wc_dir)
 
 # Test for issue #2928.
+@Issue(2928)
 def revert_replaced_with_history_file_2(sbox):
   "reverted replace with history restores checksum"
 
@@ -1041,7 +1051,7 @@ test_list = [ None,
               revert_from_wc_root,
               revert_reexpand_keyword,
               revert_replaced_file_without_props,
-              XFail(revert_moved_file, issues=876),
+              revert_moved_file,
               revert_wc_to_wc_replace_with_props,
               revert_file_merge_replace_with_history,
               revert_repos_to_wc_replace_with_props,

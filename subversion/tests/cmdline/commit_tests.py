@@ -32,9 +32,12 @@ import svntest
 from svntest import wc
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-SkipUnless = svntest.testcase.SkipUnless
-XFail = svntest.testcase.XFail
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 
 from svntest.main import server_has_revprop_commit, \
@@ -1174,6 +1177,7 @@ def commit_rmd_and_deleted_file(sbox):
 #----------------------------------------------------------------------
 
 # Issue #644 which failed over ra_neon.
+@Issue(644)
 def commit_add_file_twice(sbox):
   "issue 644 attempt to add a file twice"
 
@@ -1373,7 +1377,8 @@ def failed_commit(sbox):
 # Also related to issue #959, this test here doesn't use svn:externals
 # but the behaviour needs to be considered.
 # In this test two WCs are nested, one WC is child of the other.
-
+@XFail()
+@Issue(2381)
 def commit_multiple_wc_nested(sbox):
   "commit from two nested working copies"
 
@@ -1415,6 +1420,8 @@ def commit_multiple_wc_nested(sbox):
   svntest.actions.run_and_verify_status(wc2_dir, expected_status2)
 
 # Same as commit_multiple_wc_nested except that the two WCs are not nested.
+@XFail()
+@Issue(2381)
 def commit_multiple_wc(sbox):
   "commit from two working copies"
 
@@ -1466,6 +1473,7 @@ def commit_multiple_wc(sbox):
 # Same as commit_multiple_wc except that the two WCs come
 # from different repositories. Commits to multiple repositories
 # are outside the scope of issue #2381.
+@Issue(2381)
 def commit_multiple_wc_multiple_repos(sbox):
   "committing two WCs from different repos fails"
 
@@ -1521,9 +1529,9 @@ def commit_multiple_wc_multiple_repos(sbox):
   svntest.actions.run_and_verify_status(wc2_dir, expected_status2)
 
 #----------------------------------------------------------------------
-
+@Issues([1195,1239])
 def commit_nonrecursive(sbox):
-  "commit named targets with -N (issues #1195, #1239)"
+  "commit named targets with -N"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -1982,7 +1990,8 @@ def mods_in_schedule_delete(sbox):
 
 
 #----------------------------------------------------------------------
-
+@Skip(is_non_posix_os_or_cygwin_platform)
+@Issue(1954)
 def tab_test(sbox):
   "tabs in paths"
   # For issue #1954.
@@ -2033,7 +2042,7 @@ def tab_test(sbox):
   match_bad_tab_path(tab_dir, errlines)
 
 #----------------------------------------------------------------------
-
+@Issue(2285)
 def local_mods_are_not_commits(sbox):
   "local ops should not be treated like commits"
 
@@ -2084,7 +2093,7 @@ def local_mods_are_not_commits(sbox):
 #----------------------------------------------------------------------
 # Test if the post-commit error message is returned back to the svn
 # client and is displayed as a warning.
-#
+@Issue(3553)
 def post_commit_hook_test(sbox):
   "post commit hook failure case testing"
 
@@ -2153,6 +2162,7 @@ def commit_same_folder_in_targets(sbox):
 # test for issue 2459: verify that commit fails when a file with mixed
 # eol-styles is included, and show an error message which includes the
 # filename.
+@Issue(2459)
 def commit_inconsistent_eol(sbox):
   "commit files with inconsistent eol should fail"
 
@@ -2176,6 +2186,7 @@ def commit_inconsistent_eol(sbox):
                                      wc_dir)
 
 
+@SkipUnless(server_has_revprop_commit)
 def mkdir_with_revprop(sbox):
   "set revision props during remote mkdir"
 
@@ -2195,6 +2206,7 @@ def mkdir_with_revprop(sbox):
                                      '--revprop', '-r', 2, sbox.repo_url)
 
 
+@SkipUnless(server_has_revprop_commit)
 def delete_with_revprop(sbox):
   "set revision props during remote delete"
 
@@ -2216,6 +2228,7 @@ def delete_with_revprop(sbox):
                                      '--revprop', '-r', 3, sbox.repo_url)
 
 
+@SkipUnless(server_has_revprop_commit)
 def commit_with_revprop(sbox):
   "set revision props during commit"
 
@@ -2251,6 +2264,7 @@ def commit_with_revprop(sbox):
                                      '--revprop', '-r', 2, sbox.repo_url)
 
 
+@SkipUnless(server_has_revprop_commit)
 def import_with_revprop(sbox):
   "set revision props during import"
 
@@ -2274,6 +2288,7 @@ def import_with_revprop(sbox):
                                      '--revprop', '-r', 2, sbox.repo_url)
 
 
+@SkipUnless(server_has_revprop_commit)
 def copy_R2R_with_revprop(sbox):
   "set revision props during repos-to-repos copy"
 
@@ -2297,6 +2312,7 @@ def copy_R2R_with_revprop(sbox):
                                      '--revprop', '-r', 3, sbox.repo_url)
 
 
+@SkipUnless(server_has_revprop_commit)
 def copy_WC2R_with_revprop(sbox):
   "set revision props during wc-to-repos copy"
 
@@ -2320,6 +2336,7 @@ def copy_WC2R_with_revprop(sbox):
                                      '--revprop', '-r', 2, sbox.repo_url)
 
 
+@SkipUnless(server_has_revprop_commit)
 def move_R2R_with_revprop(sbox):
   "set revision props during repos-to-repos move"
 
@@ -2343,6 +2360,7 @@ def move_R2R_with_revprop(sbox):
                                      '--revprop', '-r', 3, sbox.repo_url)
 
 
+@SkipUnless(server_has_revprop_commit)
 def propedit_with_revprop(sbox):
   "set revision props during remote property edit"
 
@@ -2363,6 +2381,7 @@ def propedit_with_revprop(sbox):
                                      '--revprop', '-r', 2, sbox.repo_url)
 
 
+@SkipUnless(server_has_revprop_commit)
 def set_multiple_props_with_revprop(sbox):
   "set multiple revision props during remote mkdir"
 
@@ -2385,6 +2404,7 @@ def set_multiple_props_with_revprop(sbox):
                                      '--revprop', '-r', 2, sbox.repo_url)
 
 
+@SkipUnless(server_has_revprop_commit)
 def use_empty_value_in_revprop_pair(sbox):
   "set revprop without value ('') during remote mkdir"
 
@@ -2407,6 +2427,7 @@ def use_empty_value_in_revprop_pair(sbox):
                                      '--revprop', '-r', 2, sbox.repo_url)
 
 
+@SkipUnless(server_has_revprop_commit)
 def no_equals_in_revprop_pair(sbox):
   "set revprop without '=' during remote mkdir"
 
@@ -2428,6 +2449,7 @@ def no_equals_in_revprop_pair(sbox):
                                      '--revprop', '-r', 2, sbox.repo_url)
 
 
+@SkipUnless(server_has_revprop_commit)
 def set_invalid_revprops(sbox):
   "set invalid revision props during remote mkdir"
 
@@ -2453,7 +2475,7 @@ def set_invalid_revprops(sbox):
                                      remote_dir)
 
 #----------------------------------------------------------------------
-
+@Issue(3553)
 def start_commit_hook_test(sbox):
   "start-commit hook failure case testing"
 
@@ -2493,7 +2515,7 @@ def start_commit_hook_test(sbox):
                                            expected_stderr, actual_stderr)
 
 #----------------------------------------------------------------------
-
+@Issue(3553)
 def pre_commit_hook_test(sbox):
   "pre-commit hook failure case testing"
 
@@ -2637,6 +2659,8 @@ def commit_out_of_date_file(sbox):
                                      'commit', '-m', 'log message',
                                      wc_backup)
 
+@SkipUnless(server_gets_client_capabilities)
+@Issue(2991)
 def start_commit_detect_capabilities(sbox):
   "start-commit hook sees client capabilities"  # Issue #2991
   sbox.build()
@@ -2687,6 +2711,7 @@ def commit_url(sbox):
                                         url)
 
 # Test for issue #3198
+@Issue(3198)
 def commit_added_missing(sbox):
   "commit a missing to-be-added file should fail"
 
@@ -2803,8 +2828,8 @@ test_list = [ None,
               commit_from_long_dir,
               commit_with_lock,
               commit_current_dir,
-              XFail(commit_multiple_wc_nested, issues=2381),
-              XFail(commit_multiple_wc, issues=2381),
+              commit_multiple_wc_nested,
+              commit_multiple_wc,
               commit_multiple_wc_multiple_repos,
               commit_nonrecursive,
               failed_commit,
@@ -2814,32 +2839,29 @@ test_list = [ None,
               commit_with_mixed_line_endings_in_ignored_part,
               from_wc_top_with_bad_editor,
               mods_in_schedule_delete,
-              Skip(tab_test, is_non_posix_os_or_cygwin_platform),
+              tab_test,
               local_mods_are_not_commits,
               post_commit_hook_test,
               commit_same_folder_in_targets,
               commit_inconsistent_eol,
-              SkipUnless(mkdir_with_revprop, server_has_revprop_commit),
-              SkipUnless(delete_with_revprop, server_has_revprop_commit),
-              SkipUnless(commit_with_revprop, server_has_revprop_commit),
-              SkipUnless(import_with_revprop, server_has_revprop_commit),
-              SkipUnless(copy_R2R_with_revprop, server_has_revprop_commit),
-              SkipUnless(copy_WC2R_with_revprop, server_has_revprop_commit),
-              SkipUnless(move_R2R_with_revprop, server_has_revprop_commit),
-              SkipUnless(propedit_with_revprop, server_has_revprop_commit),
-              SkipUnless(set_multiple_props_with_revprop,
-                         server_has_revprop_commit),
-              SkipUnless(use_empty_value_in_revprop_pair,
-                         server_has_revprop_commit),
-              SkipUnless(no_equals_in_revprop_pair, server_has_revprop_commit),
-              SkipUnless(set_invalid_revprops, server_has_revprop_commit),
+              mkdir_with_revprop,
+              delete_with_revprop,
+              commit_with_revprop,
+              import_with_revprop,
+              copy_R2R_with_revprop,
+              copy_WC2R_with_revprop,
+              move_R2R_with_revprop,
+              propedit_with_revprop,
+              set_multiple_props_with_revprop,
+              use_empty_value_in_revprop_pair,
+              no_equals_in_revprop_pair,
+              set_invalid_revprops,
               start_commit_hook_test,
               pre_commit_hook_test,
               versioned_log_message,
               changelist_near_conflict,
               commit_out_of_date_file,
-              SkipUnless(start_commit_detect_capabilities,
-                         server_gets_client_capabilities),
+              start_commit_detect_capabilities,
               commit_url,
               commit_added_missing,
               tree_conflicts_block_commit,

@@ -32,9 +32,12 @@ import sys, re, os, time
 import svntest
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-XFail = svntest.testcase.XFail
-Wimp = svntest.testcase.Wimp
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 
 
@@ -786,7 +789,7 @@ def diff_only_property_change(sbox):
 # Regression test for issue #1019: make sure we don't try to display
 # diffs when the file is marked as a binary type.  This tests all 3
 # uses of 'svn diff':  wc-wc, wc-repos, repos-repos.
-
+@Issue(1019)
 def dont_diff_binary_file(sbox):
   "don't diff file marked as binary type"
 
@@ -938,7 +941,7 @@ def diff_head_of_moved_file(sbox):
 # Regression test for issue #977: make 'svn diff -r BASE:N' compare a
 # repository tree against the wc's text-bases, rather than the wc's
 # working files.  This is a long test, which checks many variations.
-
+@Issue(977)
 def diff_base_to_repos(sbox):
   "diff text-bases against repository"
 
@@ -1136,7 +1139,7 @@ def diff_base_to_repos(sbox):
 #----------------------------------------------------------------------
 # This is a simple regression test for issue #891, whereby ra_neon's
 # REPORT request would fail, because the object no longer exists in HEAD.
-
+@Issue(891)
 def diff_deleted_in_head(sbox):
   "repos-repos diff on item deleted from HEAD"
 
@@ -1385,8 +1388,9 @@ def diff_repos_and_wc(sbox):
   verify_expected_output(diff_output, "+zig")
 
 #----------------------------------------------------------------------
+@Issue(1311)
 def diff_file_urls(sbox):
-  "diff between two file URLs (issue #1311)"
+  "diff between two file URLs"
 
   sbox.build()
 
@@ -1899,6 +1903,7 @@ def diff_force(sbox):
 #----------------------------------------------------------------------
 # Regression test for issue #2333: Renaming a directory should produce
 # deletion and addition diffs for each included file.
+@Issue(2333)
 def diff_renamed_dir(sbox):
   "diff a renamed directory"
 
@@ -2728,6 +2733,7 @@ def diff_weird_author(sbox):
                                      'diff', '-r1:2', sbox.repo_url)
 
 # test for issue 2121, use -x -w option for ignoring whitespace during diff
+@Issue(2121)
 def diff_ignore_whitespace(sbox):
   "ignore whitespace when diffing"
 
@@ -2813,6 +2819,7 @@ def diff_ignore_eolstyle(sbox):
                                      file_path)
 
 # test for issue 2600, diff revision of a file in a renamed folder
+@Issue(2600)
 def diff_in_renamed_folder(sbox):
   "diff a revision of a file in a renamed folder"
 
@@ -3059,6 +3066,7 @@ def diff_with_depth(sbox):
                                      'diff', '-rHEAD', '--depth', 'infinity')
 
 # test for issue 2920: ignore eol-style on empty lines
+@Issue(2920)
 def diff_ignore_eolstyle_empty_lines(sbox):
   "ignore eol styles when diffing empty lines"
 
@@ -3303,6 +3311,8 @@ def make_file_edit_del_add(dir):
   svntest.main.run_svn(None, 'add', theta)
 
 
+@XFail()
+@Issue(3295)
 def diff_url_against_local_mods(sbox):
   "diff URL against working copy with local mods"
 
@@ -3340,7 +3350,8 @@ def diff_url_against_local_mods(sbox):
 #----------------------------------------------------------------------
 # Diff against old revision of the parent directory of a removed and
 # locally re-added file.
-
+@XFail()
+@Issue(1675)
 def diff_preexisting_rev_against_local_add(sbox):
   "diff -r1 of dir with removed-then-readded file"
   sbox.build()
@@ -3804,8 +3815,8 @@ test_list = [ None,
               diff_file_depth_empty,
               diff_wrong_extension_type,
               diff_external_diffcmd,
-              XFail(diff_url_against_local_mods, issues=3295),
-              XFail(diff_preexisting_rev_against_local_add, issues=1675),
+              diff_url_against_local_mods,
+              diff_preexisting_rev_against_local_add,
               diff_git_format_wc_wc,
               diff_git_format_url_wc,
               diff_git_format_url_url,

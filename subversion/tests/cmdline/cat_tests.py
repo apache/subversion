@@ -32,8 +32,12 @@ import svntest
 
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-XFail = svntest.testcase.XFail
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 
 
@@ -148,6 +152,7 @@ def cat_skip_uncattable(sbox):
 
 # Test for issue #3560 'svn_wc_status3() returns incorrect status for
 # unversioned files'.
+@Issue(3560)
 def cat_unversioned_file(sbox):
   "cat an unversioned file parent dir thinks exists"
   sbox.build()

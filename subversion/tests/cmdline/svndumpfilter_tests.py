@@ -37,9 +37,12 @@ from svntest.verify import SVNExpectedStdout, SVNExpectedStderr
 from svnadmin_tests import load_and_verify_dumpstream, test_create
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-SkipUnless = svntest.testcase.SkipUnless
-XFail = svntest.testcase.XFail
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 
 
@@ -80,7 +83,7 @@ def filter_and_return_output(dump, bufsize=0, *varargs):
 ######################################################################
 # Tests
 
-
+@Issue(2982)
 def reflect_dropped_renumbered_revs(sbox):
   "reflect dropped renumbered revs in svn:mergeinfo"
 
@@ -132,6 +135,7 @@ def reflect_dropped_renumbered_revs(sbox):
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)
 
+@Issue(3181)
 def svndumpfilter_loses_mergeinfo(sbox):
   "svndumpfilter loses mergeinfo"
   #svndumpfilter loses mergeinfo if invoked without --renumber-revs
@@ -214,6 +218,7 @@ def _simple_dumpfilter_test(sbox, dumpfile, *dumpargs):
                                         expected_status)
 
 
+@Issue(2697)
 def dumpfilter_with_targets(sbox):
   "svndumpfilter --targets blah"
   ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2697. ##
@@ -257,6 +262,7 @@ def dumpfilter_with_patterns(sbox):
 # Specifically, test that svndumpfilter, when used with the
 # --skip-missing-merge-sources option, removes mergeinfo that refers to
 # revisions that are older than the oldest revision in the dump stream.
+@Issue(3020)
 def filter_mergeinfo_revs_outside_of_dump_stream(sbox):
   "filter mergeinfo revs outside of dump stream"
 
@@ -491,6 +497,7 @@ def filter_mergeinfo_revs_outside_of_dump_stream(sbox):
 # --renumber-revs option, can create a dump with non-contiguous revisions.
 # Such dumps should not interfere with the correct remapping of mergeinfo
 # source revisions.
+@Issue(3020)
 def dropped_but_not_renumbered_empty_revs(sbox):
   "mergeinfo maps correctly when dropping revs"
 

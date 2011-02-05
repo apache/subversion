@@ -33,9 +33,12 @@ import svntest
 from svntest.main import SVN_PROP_MERGEINFO
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-SkipUnless = svntest.testcase.SkipUnless
-XFail = svntest.testcase.XFail
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 
 def is_non_posix_and_non_windows_os():
@@ -373,6 +376,7 @@ def update_conflict_props(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 #----------------------------------------------------------------------
+@Issue(2608)
 def commit_conflict_dirprops(sbox):
   "commit with conflicting dirprops"
 
@@ -406,7 +410,7 @@ def commit_conflict_dirprops(sbox):
 # svn_wc_props_modified_p and svn_wc_transmit_prop_deltas to *ignore*
 # leftover base-props when a file is scheduled for replacement.  (When
 # we svn_wc_add a file, it starts life with no working props.)
-
+@Issue(742)
 def commit_replacement_props(sbox):
   "props work when committing a replacement"
 
@@ -525,7 +529,7 @@ def revert_replacement_props(sbox):
                                         1)
 
 #----------------------------------------------------------------------
-
+@Issues([920,2065])
 def inappropriate_props(sbox):
   "try to set inappropriate props"
 
@@ -728,7 +732,7 @@ def inappropriate_props(sbox):
 # Issue #976.  When copying a file, do not determine svn:executable
 # and svn:mime-type values as though the file is brand new, instead
 # use the copied file's property values.
-
+@Issue(976)
 def copy_inherits_special_props(sbox):
   "file copies inherit (not re-derive) special props"
 
@@ -792,6 +796,12 @@ def copy_inherits_special_props(sbox):
 #----------------------------------------------------------------------
 # Test for issue #3086 'mod-dav-svn ignores pre-revprop-change failure
 # on revprop delete'
+#
+# If we learn how to write a pre-revprop-change hook for
+# non-Posix platforms, we won't have to skip here:
+@Skip(is_non_posix_and_non_windows_os)
+@Issue(3086)
+@XFail(svntest.main.is_ra_type_dav)
 def revprop_change(sbox):
   "set, get, and delete a revprop change"
 
@@ -1043,6 +1053,7 @@ def verify_output(expected_out, output, errput):
       raise svntest.Failure
     ln = ln + 1
 
+@Issue(1794)
 def recursive_base_wc_ops(sbox):
   "recursive property operations in BASE and WC"
 
@@ -1281,6 +1292,7 @@ def update_props_on_wc_root(sbox):
                                         None, None, None, None, None, 1)
 
 # test for issue 2743
+@Issue(2743)
 def props_on_replaced_file(sbox):
   """test properties on replaced files"""
 
@@ -1451,8 +1463,10 @@ def invalid_propnames(sbox):
 
   os.chdir(cwd)
 
+@SkipUnless(svntest.main.is_posix_os)
+@Issue(2581)
 def perms_on_symlink(sbox):
-  "issue #2581: propset shouldn't touch symlink perms"
+  "propset shouldn't touch symlink perms"
   sbox.build()
   # We can't just run commands on absolute paths in the usual way
   # (e.g., os.path.join(sbox.wc_dir, 'newdir')), because for some
@@ -1609,6 +1623,10 @@ def props_over_time(sbox):
           svntest.actions.run_and_verify_svn(None, plist_expected, [],
                                              'proplist', '-v', peg_path)
 
+
+# XFail the same reason revprop_change() is.
+@SkipUnless(svntest.main.server_enforces_date_syntax)
+@XFail(svntest.main.is_ra_type_dav)
 def invalid_propvalues(sbox):
   "test handling invalid svn:* property values"
 
@@ -1624,6 +1642,7 @@ def invalid_propvalues(sbox):
                                      'svn:date', 'Sat May 10 12:12:31 2008',
                                      repo_url)
 
+@Issue(3282)
 def same_replacement_props(sbox):
   "commit replacement props when same as old props"
   # issue #3282
@@ -1682,6 +1701,7 @@ def added_moved_file(sbox):
 
 
 # Issue 2220, deleting a non-existent property should error
+@Issue(2220)
 def delete_nonexistent_property(sbox):
   "remove a property which doesn't exist"
 
@@ -1696,6 +1716,7 @@ def delete_nonexistent_property(sbox):
                                      os.path.join(wc_dir, 'A', 'D', 'G'))
 
 #----------------------------------------------------------------------
+@Issue(3553)
 def post_revprop_change_hook(sbox):
   "post-revprop-change hook"
 
@@ -2053,6 +2074,7 @@ def atomic_over_ra(sbox):
 
 # Test for issue #3721 'redirection of svn propget output corrupted with
 # large property values'
+@Issue(3721)
 def propget_redirection(sbox):
   """pg of large text properties redirects properly"""
 
@@ -2352,11 +2374,7 @@ test_list = [ None,
               revert_replacement_props,
               inappropriate_props,
               copy_inherits_special_props,
-              # If we learn how to write a pre-revprop-change hook for
-              # non-Posix platforms, we won't have to skip here:
-              Skip(XFail(revprop_change, svntest.main.is_ra_type_dav,
-                         issues=3086),
-                   is_non_posix_and_non_windows_os),
+              revprop_change,
               prop_value_conversions,
               binary_props,
               recursive_base_wc_ops,
@@ -2367,12 +2385,10 @@ test_list = [ None,
               depthy_wc_proplist,
               depthy_url_proplist,
               invalid_propnames,
-              SkipUnless(perms_on_symlink, svntest.main.is_posix_os),
+              perms_on_symlink,
               remove_custom_ns_props,
               props_over_time,
-              # XFail the same reason revprop_change() is.
-              SkipUnless(XFail(invalid_propvalues, svntest.main.is_ra_type_dav),
-                    svntest.main.server_enforces_date_syntax),
+              invalid_propvalues,
               same_replacement_props,
               added_moved_file,
               delete_nonexistent_property,

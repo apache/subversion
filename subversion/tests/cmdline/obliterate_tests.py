@@ -33,14 +33,25 @@ from svntest import main, actions, wc, objects
 
 # (abbreviation)
 Item = wc.StateItem
-XFail = svntest.testcase.XFail
-Skip = svntest.testcase.Skip
-SkipUnless = svntest.testcase.SkipUnless
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 
 
 ######################################################################
 # Test utilities
 #
+
+def supports_obliterate():
+  if svntest.main.is_ra_type_file() and not svntest.main.is_fs_type_fsfs():
+    code, output, error = svntest.main.run_svn(None, "help")
+    for line in output:
+      if line.find("obliterate") != -1:
+        return True
+  return False
 
 #obliteration_dirs = ['f-mod', 'f-add', 'f-del', 'f-rpl', 'f-mov']
 obliteration_dirs = ['f-mod']
@@ -118,6 +129,7 @@ def hook_enable(repo):
 
 #----------------------------------------------------------------------
 
+@SkipUnless(supports_obliterate)
 def obliterate_1(sbox):
   "test svn obliterate"
 
@@ -155,6 +167,7 @@ def obliterate_1(sbox):
   except:
     pass
 
+@SkipUnless(supports_obliterate)
 def pre_obliterate_hook(sbox):
   "test the pre-obliterate hook"
 
@@ -200,19 +213,11 @@ def pre_obliterate_hook(sbox):
 ########################################################################
 # Run the tests
 
-def supports_obliterate():
-  if svntest.main.is_ra_type_file() and not svntest.main.is_fs_type_fsfs():
-    code, output, error = svntest.main.run_svn(None, "help")
-    for line in output:
-      if line.find("obliterate") != -1:
-        return True
-  return False
-
 
 # list all tests here, starting with None:
 test_list = [ None,
-              SkipUnless(obliterate_1, supports_obliterate),
-              SkipUnless(pre_obliterate_hook, supports_obliterate),
+              obliterate_1,
+              pre_obliterate_hook,
              ]
 
 if __name__ == '__main__':
