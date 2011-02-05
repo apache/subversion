@@ -33,8 +33,12 @@ import svntest
 from svntest import wc
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-XFail = svntest.testcase.XFail
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 
 #----------------------------------------------------------------------
@@ -207,6 +211,7 @@ def ignore_externals(sbox):
 #----------------------------------------------------------------------
 
 # Test for issue #3461 'excluded subtrees are not detected by svnversion'
+@Issue(3461)
 def svnversion_with_excluded_subtrees(sbox):
   "test 'svnversion' with excluded subtrees"
   sbox.build()

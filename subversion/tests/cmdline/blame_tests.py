@@ -32,9 +32,12 @@ import svntest
 from svntest.main import server_has_mergeinfo
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-SkipUnless = svntest.testcase.SkipUnless
-XFail = svntest.testcase.XFail
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 
 # Helper function to validate the output of a particular run of blame.
@@ -147,6 +150,7 @@ def blame_binary(sbox):
 # (change needed if the desired behavior is to
 #  run blame recursively on all the files in it)
 #
+@Issue(2154)
 def blame_directory(sbox):
   "annotating a directory not allowed"
 
@@ -454,6 +458,7 @@ def blame_ignore_eolstyle(sbox):
     'blame', '-x', '--ignore-eol-style', file_path)
 
 
+@SkipUnless(server_has_mergeinfo)
 def blame_merge_info(sbox):
   "test 'svn blame -g'"
 
@@ -521,6 +526,7 @@ def blame_merge_info(sbox):
   parse_and_verify_blame(output, expected_blame, 1)
 
 
+@SkipUnless(server_has_mergeinfo)
 def blame_merge_out_of_range(sbox):
   "don't look for merged files out of range"
 
@@ -549,6 +555,7 @@ def blame_merge_out_of_range(sbox):
   parse_and_verify_blame(output, expected_blame, 1)
 
 # test for issue #2888: 'svn blame' aborts over ra_serf
+@Issue(2888)
 def blame_peg_rev_file_not_in_head(sbox):
   "blame target not in HEAD with peg-revisions"
 
@@ -719,8 +726,8 @@ test_list = [ None,
               blame_eol_styles,
               blame_ignore_whitespace,
               blame_ignore_eolstyle,
-              SkipUnless(blame_merge_info, server_has_mergeinfo),
-              SkipUnless(blame_merge_out_of_range, server_has_mergeinfo),
+              blame_merge_info,
+              blame_merge_out_of_range,
               blame_peg_rev_file_not_in_head,
               blame_file_not_in_head,
               blame_output_after_merge,

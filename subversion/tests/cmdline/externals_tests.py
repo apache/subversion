@@ -34,10 +34,13 @@ import tempfile
 import svntest
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-XFail = svntest.testcase.XFail
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
-
 
 ######################################################################
 # Tests
@@ -733,6 +736,7 @@ def export_with_externals(sbox):
 #----------------------------------------------------------------------
 
 # Test for issue #2429
+@Issue(2429)
 def export_wc_with_externals(sbox):
   "test exports from working copies with externals"
 
@@ -1067,6 +1071,7 @@ def can_place_file_external_into_dir_external(sbox):
 #----------------------------------------------------------------------
 
 # Issue #2461.
+@Issue(2461)
 def external_into_path_with_spaces(sbox):
   "allow spaces in external local paths"
 
@@ -1088,6 +1093,7 @@ def external_into_path_with_spaces(sbox):
 #----------------------------------------------------------------------
 
 # Issue #3368
+@Issue(3368)
 def binary_file_externals(sbox):
   "binary file externals"
 
@@ -1158,6 +1164,8 @@ def binary_file_externals(sbox):
 #----------------------------------------------------------------------
 
 # Issue #3351.
+@Issue(3351)
+@XFail()
 def update_lose_file_external(sbox):
   "delete a file external"
 
@@ -1236,6 +1244,7 @@ def update_lose_file_external(sbox):
 #----------------------------------------------------------------------
 
 # Issue #3351.
+@Issue(3351)
 def switch_relative_external(sbox):
   "switch a relative external"
 
@@ -1368,6 +1377,7 @@ def relegate_external(sbox):
 #----------------------------------------------------------------------
 
 # Issue #3552
+@Issue(3552)
 def wc_repos_file_externals(sbox):
   "tag directory with file externals from wc to url"
 
@@ -1589,7 +1599,7 @@ test_list = [ None,
               can_place_file_external_into_dir_external,
               external_into_path_with_spaces,
               binary_file_externals,
-              XFail(update_lose_file_external, issues=3351),
+              update_lose_file_external,
               switch_relative_external,
               export_sparse_wc_with_externals,
               relegate_external,

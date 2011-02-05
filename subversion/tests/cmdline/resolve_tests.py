@@ -34,9 +34,12 @@ from svntest import wc
 
 # (abbreviation)
 Item = wc.StateItem
-XFail = svntest.testcase.XFail
-Skip = svntest.testcase.Skip
-SkipUnless = svntest.testcase.SkipUnless
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 
 from merge_tests import set_up_branch
 
@@ -103,6 +106,8 @@ def automatic_conflict_resolution(sbox):
 #----------------------------------------------------------------------
 # Test for issue #3707 'property conflicts not handled correctly by
 # svn resolve'.
+@Issue(3707)
+@XFail()
 def prop_conflict_resolution(sbox):
   "resolving prop conflicts"
 
@@ -246,7 +251,7 @@ def prop_conflict_resolution(sbox):
 # list all tests here, starting with None:
 test_list = [ None,
               automatic_conflict_resolution,
-              XFail(prop_conflict_resolution, issues=3707),
+              prop_conflict_resolution,
              ]
 
 if __name__ == '__main__':

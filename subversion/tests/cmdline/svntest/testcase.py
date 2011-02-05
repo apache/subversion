@@ -28,7 +28,7 @@ import os, types, sys
 import svntest
 
 # if somebody does a "from testcase import *", they only get these names
-__all__ = ['XFail', 'Wimp', 'Skip', 'SkipUnless']
+__all__ = ['_XFail', '_Wimp', '_Skip', '_SkipUnless']
 
 RESULT_OK = 'ok'
 RESULT_FAIL = 'fail'
@@ -182,7 +182,7 @@ class FunctionTestCase(TestCase):
     return self.func(sandbox)
 
 
-class XFail(TestCase):
+class _XFail(TestCase):
   """A test that is expected to fail, if its condition is true."""
 
   _result_map = {
@@ -214,7 +214,7 @@ class XFail(TestCase):
     return self._delegate.list_mode() or 'XFAIL'
 
 
-class Wimp(XFail):
+class _Wimp(_XFail):
   """Like XFail, but indicates a work-in-progress: an unexpected pass
   is not considered a test failure."""
 
@@ -225,13 +225,13 @@ class Wimp(XFail):
     }
 
   def __init__(self, wip, test_case, cond_func=lambda: True):
-    XFail.__init__(self, test_case, cond_func, wip)
+    _XFail.__init__(self, test_case, cond_func, wip)
 
 
-class Skip(TestCase):
+class _Skip(TestCase):
   """A test that will be skipped if its conditional is true."""
 
-  def __init__(self, test_case, cond_func=lambda: True):
+  def __init__(self, test_case, cond_func=lambda: True, issues=None):
     """Create a Skip instance based on TEST_CASE.  COND_FUNC is a
     callable that is evaluated at test run time and should return a
     boolean value.  If COND_FUNC returns true, then TEST_CASE is
@@ -241,7 +241,8 @@ class Skip(TestCase):
     __init__ time (like the fact that we're running over a
     particular RA layer)."""
 
-    TestCase.__init__(self, create_test_case(test_case), cond_func)
+    TestCase.__init__(self, create_test_case(test_case), cond_func,
+                      issues=issues)
 
   def list_mode(self):
     if self._cond_func():
@@ -259,11 +260,11 @@ class Skip(TestCase):
     return self._delegate.run(sandbox)
 
 
-class SkipUnless(Skip):
+class _SkipUnless(_Skip):
   """A test that will be skipped if its conditional is false."""
 
   def __init__(self, test_case, cond_func):
-    Skip.__init__(self, test_case, lambda c=cond_func: not c())
+    _Skip.__init__(self, test_case, lambda c=cond_func: not c())
 
 
 def create_test_case(func, issues=None):
@@ -274,30 +275,39 @@ def create_test_case(func, issues=None):
 
 
 # Various decorators to make declaring tests as such simpler
-def XFail_deco(func):
-  if isinstance(func, TestCase):
-    return XFail(func, issues=func.issues)
-  else:
-    return XFail(func)
+def XFail_deco(cond_func = lambda: True):
+  def _second(func):
+    if isinstance(func, TestCase):
+      return _XFail(func, cond_func, issues=func.issues)
+    else:
+      return _XFail(func, cond_func)
+
+  return _second
 
 
 def Wimp_deco(func):
   if isinstance(func, TestCase):
-    return Wimp(func, issues=func.issues)
+    return _Wimp(func, issues=func.issues)
   else:
-    return Wimp(func)
+    return _Wimp(func)
 
 
-def Skip_deco(cond_func):
+def Skip_deco(cond_func = lambda: True):
   def _second(func):
-    return Skip(func, cond_func)
+    if isinstance(func, TestCase):
+      return _Skip(func, cond_func, issues=func.issues)
+    else:
+      return _Skip(func, cond_func)
 
   return _second
 
 
 def SkipUnless_deco(cond_func):
   def _second(func):
-    return Skip(func, lambda c=cond_func: not c())
+    if isinstance(func, TestCase):
+      return _Skip(func, lambda c=cond_func: not c(), issues=func.issues)
+    else:
+      return _Skip(func, lambda c=cond_func: not c())
 
   return _second
 

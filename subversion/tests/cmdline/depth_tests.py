@@ -35,8 +35,12 @@ import svntest
 from svntest import wc
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-XFail = svntest.testcase.XFail
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = wc.StateItem
 
 # For errors setting up the depthy working copies.
@@ -1015,6 +1019,7 @@ def commit_propmods_with_depth_empty(sbox):
   commit_propmods_with_depth_empty_helper(sbox2, '--depth=empty')
 
 # Test for issue #2845.
+@Issue(2845)
 def diff_in_depthy_wc(sbox):
   "diff at various depths in non-infinity wc"
 
@@ -1119,6 +1124,7 @@ def diff_in_depthy_wc(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                     'diff', '--depth', 'immediates', '-rHEAD')
 
+@Issue(2882)
 def commit_depth_immediates(sbox):
   "commit some files with --depth=immediates"
   sbox.build()
@@ -1242,6 +1248,7 @@ def depth_immediates_receive_new_dir(sbox):
   # Check that the new directory was added at depth=empty.
   verify_depth(None, "empty", other_I_path)
 
+@Issue(2931)
 def add_tree_with_depth(sbox):
   "add multi-subdir tree with --depth options"  # For issue #2931
   sbox.build()
@@ -1415,6 +1422,7 @@ def status_in_depthy_wc(sbox):
 #----------------------------------------------------------------------
 
 # Issue #3039.
+@Issue(3039)
 def depthy_update_above_dir_to_be_deleted(sbox):
   "'update -N' above a WC path deleted in repos HEAD"
   sbox.build()
@@ -2058,6 +2066,7 @@ def depth_empty_update_on_file(sbox):
   svntest.actions.run_and_verify_info([expected_infos], iota_path)
 
 
+@Issue(3544)
 def excluded_path_update_operation(sbox):
   """make sure update handle svn_depth_exclude properly"""
 
@@ -2340,6 +2349,8 @@ def exclude_keeps_hidden_entries(sbox):
 
 
 # Issue 3792.
+@XFail()
+@Issue(3792)
 def info_excluded(sbox):
   "'info' should treat excluded item as versioned"
 
@@ -2841,7 +2852,7 @@ test_list = [ None,
               excluded_path_misc_operation,
               excluded_receive_remote_removal,
               exclude_keeps_hidden_entries,
-              XFail(info_excluded, issues=3792),
+              info_excluded,
               tree_conflicts_resolved_depth_empty,
               tree_conflicts_resolved_depth_files,
               tree_conflicts_resolved_depth_immediates,

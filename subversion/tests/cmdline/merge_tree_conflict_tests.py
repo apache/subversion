@@ -34,10 +34,12 @@ from svntest import main, wc, verify, actions
 
 # (abbreviation)
 Item = wc.StateItem
-XFail = svntest.testcase.XFail
-Wimp = svntest.testcase.Wimp
-Skip = svntest.testcase.Skip
-SkipUnless = svntest.testcase.SkipUnless
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 
 from svntest.main import SVN_PROP_MERGEINFO
 from svntest.main import server_has_mergeinfo
@@ -48,6 +50,7 @@ from merge_tests import svn_copy
 from merge_tests import svn_merge
 
 #----------------------------------------------------------------------
+@SkipUnless(server_has_mergeinfo)
 def delete_file_and_dir(sbox):
   "merge that deletes items"
 
@@ -160,6 +163,8 @@ def delete_file_and_dir(sbox):
 
 #----------------------------------------------------------------------
 # This is a regression for issue #1176.
+@Issue(1176)
+@SkipUnless(server_has_mergeinfo)
 def merge_catches_nonexistent_target(sbox):
   "merge should not die if a target file is absent"
 
@@ -262,6 +267,7 @@ def merge_catches_nonexistent_target(sbox):
   svntest.actions.run_and_verify_unquiet_status('', expected_status)
 
 #----------------------------------------------------------------------
+@SkipUnless(server_has_mergeinfo)
 def merge_tree_deleted_in_target(sbox):
   "merge on deleted directory in target"
 
@@ -338,6 +344,8 @@ def merge_tree_deleted_in_target(sbox):
 #----------------------------------------------------------------------
 # Regression test for issue #2403: Incorrect 3-way merge of "added"
 # binary file which already exists (unmodified) in the WC
+@SkipUnless(server_has_mergeinfo)
+@Issue(2403)
 def three_way_merge_add_of_existing_binary_file(sbox):
   "3-way merge of 'file add' into existing binary"
 
@@ -421,6 +429,7 @@ def three_way_merge_add_of_existing_binary_file(sbox):
 
 #----------------------------------------------------------------------
 # Issue #2515
+@Issue(2515)
 def merge_added_dir_to_deleted_in_target(sbox):
   "merge an added dir on a deleted dir in target"
 
@@ -480,6 +489,8 @@ def merge_added_dir_to_deleted_in_target(sbox):
 
 #----------------------------------------------------------------------
 # Issue 2584
+@Issue(2584)
+@SkipUnless(server_has_mergeinfo)
 def merge_add_over_versioned_file_conflicts(sbox):
   "conflict from merge of add over versioned file"
 
@@ -537,6 +548,8 @@ def merge_add_over_versioned_file_conflicts(sbox):
                                        expected_skip)
 
 #----------------------------------------------------------------------
+@SkipUnless(server_has_mergeinfo)
+@Issue(2829)
 def mergeinfo_recording_in_skipped_merge(sbox):
   "mergeinfo recording in skipped merge"
 
@@ -722,6 +735,7 @@ def del_differing_file(sbox):
 
 #----------------------------------------------------------------------
 # This test used to involve tree conflicts, hence its name.
+@Issue(3146)
 def tree_conflicts_and_obstructions(sbox):
   "tree conflicts and obstructions"
 
@@ -895,6 +909,8 @@ def tree_conflicts_on_merge_local_ci_4_2(sbox):
                         expected_skip) ], True)
 
 #----------------------------------------------------------------------
+@XFail()
+@Issue(2282)
 def tree_conflicts_on_merge_local_ci_5_1(sbox):
   "tree conflicts 5.1: leaf edit, tree del"
 
@@ -946,6 +962,8 @@ def tree_conflicts_on_merge_local_ci_5_1(sbox):
                         expected_skip) ], True)
 
 #----------------------------------------------------------------------
+@XFail()
+@Issue(2282)
 def tree_conflicts_on_merge_local_ci_5_2(sbox):
   "tree conflicts 5.2: leaf del, tree del"
 
@@ -1173,6 +1191,8 @@ def tree_conflicts_on_merge_no_local_ci_5_1(sbox):
              ) ], False)
 
 #----------------------------------------------------------------------
+@XFail()
+@Issue(2282)
 def tree_conflicts_on_merge_no_local_ci_5_2(sbox):
   "tree conflicts 5.2: leaf del (no ci), tree del"
 
@@ -1653,6 +1673,8 @@ def merge_replace_setup(sbox):
   return expected_disk, expected_status
 
 #----------------------------------------------------------------------
+# ra_serf causes duplicate notifications with this test:
+@XFail(svntest.main.is_ra_type_dav_serf)
 def merge_replace_causes_tree_conflict(sbox):
   "replace vs. edit tree-conflicts"
 
@@ -1727,6 +1749,7 @@ def merge_replace_causes_tree_conflict(sbox):
   actions.run_and_verify_status(wc_dir, expected_status)
 
 #----------------------------------------------------------------------
+@XFail()
 def merge_replace_causes_tree_conflict2(sbox):
   "replace vs. delete tree-conflicts"
 
@@ -1876,37 +1899,29 @@ def merge_replace_causes_tree_conflict2(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              SkipUnless(delete_file_and_dir,
-                         server_has_mergeinfo),
-              SkipUnless(merge_catches_nonexistent_target,
-                         server_has_mergeinfo),
-              SkipUnless(merge_tree_deleted_in_target,
-                         server_has_mergeinfo),
-              SkipUnless(three_way_merge_add_of_existing_binary_file,
-                         server_has_mergeinfo),
+              delete_file_and_dir,
+              merge_catches_nonexistent_target,
+              merge_tree_deleted_in_target,
+              three_way_merge_add_of_existing_binary_file,
               merge_added_dir_to_deleted_in_target,
-              SkipUnless(merge_add_over_versioned_file_conflicts,
-                         server_has_mergeinfo),
-              SkipUnless(mergeinfo_recording_in_skipped_merge,
-                         server_has_mergeinfo),
+              merge_add_over_versioned_file_conflicts,
+              mergeinfo_recording_in_skipped_merge,
               del_differing_file,
               tree_conflicts_and_obstructions,
               tree_conflicts_on_merge_local_ci_4_1,
               tree_conflicts_on_merge_local_ci_4_2,
-              XFail(tree_conflicts_on_merge_local_ci_5_1, issues=2282),
-              XFail(tree_conflicts_on_merge_local_ci_5_2, issues=2282),
+              tree_conflicts_on_merge_local_ci_5_1,
+              tree_conflicts_on_merge_local_ci_5_2,
               tree_conflicts_on_merge_local_ci_6,
               tree_conflicts_on_merge_no_local_ci_4_1,
               tree_conflicts_on_merge_no_local_ci_4_2,
               tree_conflicts_on_merge_no_local_ci_5_1,
-              XFail(tree_conflicts_on_merge_no_local_ci_5_2, issues=2282),
+              tree_conflicts_on_merge_no_local_ci_5_2,
               tree_conflicts_on_merge_no_local_ci_6,
               tree_conflicts_merge_edit_onto_missing,
               tree_conflicts_merge_del_onto_missing,
-              # ra_serf causes duplicate notifications with this test:
-              XFail(merge_replace_causes_tree_conflict,
-                    svntest.main.is_ra_type_dav_serf),
-              XFail(merge_replace_causes_tree_conflict2),
+              merge_replace_causes_tree_conflict,
+              merge_replace_causes_tree_conflict2,
              ]
 
 if __name__ == '__main__':

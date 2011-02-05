@@ -33,9 +33,12 @@ from svntest import wc
 
 # (abbreviation)
 Item = wc.StateItem
-XFail = svntest.testcase.XFail
-Skip = svntest.testcase.Skip
-SkipUnless = svntest.testcase.SkipUnless
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 exp_noop_up_out = svntest.actions.expected_noop_update_output
 
 from svntest.main import SVN_PROP_MERGEINFO
@@ -80,6 +83,7 @@ def mergeinfo(sbox):
   svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
                                            ['1'], sbox.repo_url, wc_dir)
 
+@SkipUnless(server_has_mergeinfo)
 def explicit_mergeinfo_source(sbox):
   "'mergeinfo' with source selection"
 
@@ -109,6 +113,7 @@ def explicit_mergeinfo_source(sbox):
   svntest.actions.run_and_verify_mergeinfo(adjust_error_for_server_version(""),
                                            ['1'], G_path, H_path)
 
+@SkipUnless(server_has_mergeinfo)
 def mergeinfo_non_source(sbox):
   "'mergeinfo' with uninteresting source selection"
 
@@ -134,6 +139,7 @@ def mergeinfo_non_source(sbox):
 
 #----------------------------------------------------------------------
 # Issue #3138
+@Issue(3138)
 def mergeinfo_on_unknown_url(sbox):
   "mergeinfo of an unknown url should return error"
 
@@ -156,6 +162,7 @@ def mergeinfo_on_unknown_url(sbox):
 # Test for issue #3126 'svn mergeinfo shows too few or too many
 # eligible revisions'.  Specifically
 # http://subversion.tigris.org/issues/show_bug.cgi?id=3126#desc5.
+@Issue(3126)
 def non_inheritable_mergeinfo(sbox):
   "non-inheritable mergeinfo shows as merged"
 
@@ -226,6 +233,8 @@ def non_inheritable_mergeinfo(sbox):
 #
 # Test for issue #3242 'Subversion demands unnecessary access to parent
 # directories of operations'
+@Issue(3242)
+@SkipUnless(server_has_mergeinfo)
 def recursive_mergeinfo(sbox):
   "test svn mergeinfo -R"
 
@@ -378,6 +387,7 @@ def recursive_mergeinfo(sbox):
     '--show-revs', 'merged')
 
 # Test for issue #3180 'svn mergeinfo ignores peg rev for WC target'.
+@SkipUnless(server_has_mergeinfo)
 def mergeinfo_on_pegged_wc_path(sbox):
   "svn mergeinfo on pegged working copy target"
 
@@ -487,13 +497,12 @@ def mergeinfo_on_pegged_wc_path(sbox):
 test_list = [ None,
               no_mergeinfo,
               mergeinfo,
-              SkipUnless(explicit_mergeinfo_source, server_has_mergeinfo),
-              SkipUnless(mergeinfo_non_source, server_has_mergeinfo),
+              explicit_mergeinfo_source,
+              mergeinfo_non_source,
               mergeinfo_on_unknown_url,
               non_inheritable_mergeinfo,
-              SkipUnless(recursive_mergeinfo, server_has_mergeinfo),
-              SkipUnless(mergeinfo_on_pegged_wc_path,
-                         server_has_mergeinfo),
+              recursive_mergeinfo,
+              mergeinfo_on_pegged_wc_path,
              ]
 
 if __name__ == '__main__':

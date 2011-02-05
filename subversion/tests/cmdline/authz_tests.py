@@ -36,10 +36,12 @@ from svntest.main import server_authz_has_aliases
 
 # (abbreviation)
 Item = svntest.wc.StateItem
-XFail = svntest.testcase.XFail
-Wimp = svntest.testcase.Wimp
-Skip = svntest.testcase.Skip
-SkipUnless = svntest.testcase.SkipUnless
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 
 ######################################################################
 # Tests
@@ -50,7 +52,8 @@ SkipUnless = svntest.testcase.SkipUnless
 #----------------------------------------------------------------------
 
 # regression test for issue #2486 - part 1: open_root
-
+@Issue(2486)
+@Skip(svntest.main.is_ra_type_file)
 def authz_open_root(sbox):
   "authz issue #2486 - open root"
 
@@ -82,7 +85,8 @@ def authz_open_root(sbox):
 #----------------------------------------------------------------------
 
 # regression test for issue #2486 - part 2: open_directory
-
+@Issue(2486)
+@Skip(svntest.main.is_ra_type_file)
 def authz_open_directory(sbox):
   "authz issue #2486 - open directory"
 
@@ -115,6 +119,7 @@ def authz_open_directory(sbox):
                                         None,
                                         wc_dir)
 
+@Skip(svntest.main.is_ra_type_file)
 def broken_authz_file(sbox):
   "broken authz files cause errors"
 
@@ -136,6 +141,7 @@ def broken_authz_file(sbox):
     raise svntest.verify.SVNUnexpectedStderr("Missing stderr")
 
 # test whether read access is correctly granted and denied
+@Skip(svntest.main.is_ra_type_file)
 def authz_read_access(sbox):
   "test authz for read operations"
 
@@ -273,6 +279,7 @@ def authz_read_access(sbox):
 
 
 # test whether write access is correctly granted and denied
+@Skip(svntest.main.is_ra_type_file)
 def authz_write_access(sbox):
   "test authz for write operations"
 
@@ -364,6 +371,7 @@ def authz_write_access(sbox):
 
 #----------------------------------------------------------------------
 
+@Skip(svntest.main.is_ra_type_file)
 def authz_checkout_test(sbox):
   "test authz for checkout"
 
@@ -402,6 +410,7 @@ def authz_checkout_test(sbox):
                           expected_output,
                           expected_wc)
 
+@Skip(svntest.main.is_ra_type_file)
 def authz_checkout_and_update_test(sbox):
   "test authz for checkout and update"
 
@@ -465,6 +474,7 @@ def authz_checkout_and_update_test(sbox):
                                         None, None,
                                         None, None, 1)
 
+@Skip(svntest.main.is_ra_type_file)
 def authz_partial_export_test(sbox):
   "test authz for export with unreadable subfolder"
 
@@ -500,6 +510,7 @@ def authz_partial_export_test(sbox):
 
 #----------------------------------------------------------------------
 
+@Skip(svntest.main.is_ra_type_file)
 def authz_log_and_tracing_test(sbox):
   "test authz for log and tracing path changes"
 
@@ -619,6 +630,8 @@ def authz_log_and_tracing_test(sbox):
                                      'diff', '-r', '2:4', D_url+'/rho')
 
 # test whether read access is correctly granted and denied
+@SkipUnless(server_authz_has_aliases)
+@Skip(svntest.main.is_ra_type_file)
 def authz_aliases(sbox):
   "test authz for aliases"
 
@@ -655,6 +668,8 @@ def authz_aliases(sbox):
                                      '-m', 'logmsg',
                                      iota_url, B_url)
 
+@Skip(svntest.main.is_ra_type_file)
+@Issue(2486)
 def authz_validate(sbox):
   "test the authz validation rules"
 
@@ -721,6 +736,8 @@ users = @devs1, @devs2, user1, user2""" })
                                      A_url)
 
 # test locking/unlocking with authz
+@Skip(svntest.main.is_ra_type_file)
+@Issue(2700)
 def authz_locking(sbox):
   "test authz for locking"
 
@@ -780,6 +797,9 @@ def authz_locking(sbox):
 # test for issue #2712: if anon-access == read, svnserve should also check
 # authz to determine whether a checkout/update is actually allowed for
 # anonymous users, and, if not, attempt authentication.
+@XFail()
+@Issue(2712)
+@SkipUnless(svntest.main.is_ra_type_svn)
 def authz_svnserve_anon_access_read(sbox):
   "authz issue #2712"
 
@@ -842,6 +862,8 @@ def authz_svnserve_anon_access_read(sbox):
                                      'merge', '-c', '2',
                                      B_url, B_path)
 
+@XFail()
+@Skip(svntest.main.is_ra_type_file)
 def authz_switch_to_directory(sbox):
   "switched to directory, no read access on parents"
 
@@ -862,6 +884,8 @@ def authz_switch_to_directory(sbox):
 # Test to reproduce the problem identified by Issue 3242 in which
 # Subversion's authz, as of Subversion 1.5, requires access to the
 # repository root for copy and move operations.
+@Skip(svntest.main.is_ra_type_file)
+@Issue(3242)
 def authz_access_required_at_repo_root(sbox):
   "authz issue #3242 - access required at repo root"
 
@@ -903,6 +927,8 @@ def authz_access_required_at_repo_root(sbox):
                        root_url + '/A-copy/B/E/beta',
                        root_url + '/A-copy/C')
 
+@Skip(svntest.main.is_ra_type_file)
+@Issue(3242)
 def authz_access_required_at_repo_root2(sbox):
   "more authz issue #3242 - update to renamed file"
 
@@ -940,6 +966,7 @@ def authz_access_required_at_repo_root2(sbox):
   svntest.main.run_svn(None, 'co', '-r', '1', root_url + '/A/D', wc_dir)
   svntest.main.run_svn(None, 'up', wc_dir)
 
+@Skip(svntest.main.is_ra_type_file)
 def multiple_matches(sbox):
   "multiple lines matching a user"
 
@@ -973,6 +1000,7 @@ def multiple_matches(sbox):
                        '-m', 'second copy',
                        root_url, root_url + '/second')
 
+@Skip(svntest.main.is_ra_type_file)
 def wc_wc_copy(sbox):
   "wc-to-wc copy with absent nodes"
 
@@ -1014,6 +1042,7 @@ def wc_wc_copy(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'st', '--verbose', sbox.ospath('A2'))
 
+@Skip(svntest.main.is_ra_type_file)
 def wc_wc_copy_revert(sbox):
   "wc-to-wc-copy with absent nodes and then revert"
 
@@ -1026,6 +1055,7 @@ def wc_wc_copy_revert(sbox):
   expected_status.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
   svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
 
+@Skip(svntest.main.is_ra_type_file)
 def authz_recursive_ls(sbox):
   "recursive ls with private subtrees"
 
@@ -1065,33 +1095,26 @@ def authz_recursive_ls(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              Skip(authz_open_root, svntest.main.is_ra_type_file),
-              Skip(authz_open_directory, svntest.main.is_ra_type_file),
-              Skip(broken_authz_file, svntest.main.is_ra_type_file),
-              Skip(authz_read_access, svntest.main.is_ra_type_file),
-              Skip(authz_write_access, svntest.main.is_ra_type_file),
-              Skip(authz_checkout_test, svntest.main.is_ra_type_file),
-              Skip(authz_log_and_tracing_test, svntest.main.is_ra_type_file),
-              Skip(authz_checkout_and_update_test,
-                   svntest.main.is_ra_type_file),
-              Skip(authz_partial_export_test, svntest.main.is_ra_type_file),
-              SkipUnless(Skip(authz_aliases, svntest.main.is_ra_type_file),
-                         server_authz_has_aliases),
-              Skip(authz_validate, svntest.main.is_ra_type_file),
-              Skip(authz_locking, svntest.main.is_ra_type_file),
-              XFail(SkipUnless(authz_svnserve_anon_access_read,
-                               svntest.main.is_ra_type_svn), issues=2712),
-              XFail(Skip(authz_switch_to_directory,
-                         svntest.main.is_ra_type_file)),
-              Skip(authz_access_required_at_repo_root,
-                   svntest.main.is_ra_type_file),
-              Skip(authz_access_required_at_repo_root2,
-                   svntest.main.is_ra_type_file),
-              Skip(multiple_matches, svntest.main.is_ra_type_file),
-              Skip(wc_wc_copy, svntest.main.is_ra_type_file),
-              Skip(wc_wc_copy_revert, svntest.main.is_ra_type_file),
-              Skip(authz_recursive_ls,
-                   svntest.main.is_ra_type_file),
+              authz_open_root,
+              authz_open_directory,
+              broken_authz_file,
+              authz_read_access,
+              authz_write_access,
+              authz_checkout_test,
+              authz_log_and_tracing_test,
+              authz_checkout_and_update_test,
+              authz_partial_export_test,
+              authz_aliases,
+              authz_validate,
+              authz_locking,
+              authz_svnserve_anon_access_read,
+              authz_switch_to_directory,
+              authz_access_required_at_repo_root,
+              authz_access_required_at_repo_root2,
+              multiple_matches,
+              wc_wc_copy,
+              wc_wc_copy_revert,
+              authz_recursive_ls,
              ]
 serial_only = True
 

@@ -34,9 +34,12 @@ from svntest import main, wc, verify, actions
 
 # (abbreviation)
 Item = wc.StateItem
-XFail = svntest.testcase.XFail
-Skip = svntest.testcase.Skip
-SkipUnless = svntest.testcase.SkipUnless
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 exp_noop_up_out = svntest.actions.expected_noop_update_output
 
 from svntest.main import SVN_PROP_MERGEINFO
@@ -45,6 +48,8 @@ from merge_tests import set_up_branch
 from merge_tests import expected_merge_output
 
 #----------------------------------------------------------------------
+@SkipUnless(server_has_mergeinfo)
+@Issue(3640)
 def basic_reintegrate(sbox):
   "basic merge --reintegrate support"
 
@@ -744,6 +749,7 @@ def reintegrate_fail_on_switched_wc(sbox):
 #----------------------------------------------------------------------
 # Test for issue #3603 'allow reintegrate merges into WCs with
 # missing subtrees'.
+@Issue(3603)
 def reintegrate_on_shallow_wc(sbox):
   "merge --reintegrate in shallow wc"
 
@@ -852,6 +858,7 @@ def reintegrate_on_shallow_wc(sbox):
                                        None, 1, 1, "--reintegrate", A_path)
 
 #----------------------------------------------------------------------
+@SkipUnless(server_has_mergeinfo)
 def reintegrate_fail_on_stale_source(sbox):
   "merge --reintegrate should fail on stale source"
   sbox.build()
@@ -961,6 +968,7 @@ def merge_file_with_space_in_its_path(sbox):
                                      file1)
 
 #----------------------------------------------------------------------
+@SkipUnless(server_has_mergeinfo)
 def reintegrate_with_subtree_mergeinfo(sbox):
   "merge --reintegrate with subtree mergeinfo"
 
@@ -1433,6 +1441,7 @@ def reintegrate_with_subtree_mergeinfo(sbox):
                                        None, 1, 1, "--reintegrate", A_path)
 
 #----------------------------------------------------------------------
+@SkipUnless(server_has_mergeinfo)
 def multiple_reintegrates_from_the_same_branch(sbox):
   "multiple reintegrates create self-referential"
 
@@ -1621,6 +1630,7 @@ def multiple_reintegrates_from_the_same_branch(sbox):
 #
 # Also tests Issue #3591 'reintegrate merges update subtree mergeinfo
 # unconditionally'.
+@Issue(3591)
 def reintegrate_with_self_referential_mergeinfo(sbox):
   "source has target's history as explicit mergeinfo"
 
@@ -1750,6 +1760,7 @@ def reintegrate_with_self_referential_mergeinfo(sbox):
 
 #----------------------------------------------------------------------
 # Test for issue #3577 '1.7 subtree mergeinfo recording breaks reintegrate'.
+@Issue(3577)
 def reintegrate_with_subtree_merges(sbox):
   "reintegrate with prior subtree merges to source"
 
@@ -1881,6 +1892,7 @@ def reintegrate_with_subtree_merges(sbox):
 
 #----------------------------------------------------------------------
 # Test for issue #3654 'added subtrees with mergeinfo break reintegrate'.
+@Issue(3654)
 def added_subtrees_with_mergeinfo_break_reintegrate(sbox):
   "added subtrees with mergeinfo break reintegrate"
 
@@ -2076,6 +2088,7 @@ def added_subtrees_with_mergeinfo_break_reintegrate(sbox):
 #----------------------------------------------------------------------
 # Test for issue #3648 '2-URL merges incorrectly reverse-merge mergeinfo
 # for merge target'.
+@Issue(3648)
 def two_URL_merge_removes_valid_mergeinfo_from_target(sbox):
   "2-URL merge removes valid mergeinfo from target"
 
@@ -2238,21 +2251,17 @@ def two_URL_merge_removes_valid_mergeinfo_from_target(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              SkipUnless(basic_reintegrate,
-                         server_has_mergeinfo),
+              basic_reintegrate,
               reintegrate_with_rename,
               reintegrate_branch_never_merged_to,
               reintegrate_fail_on_modified_wc,
               reintegrate_fail_on_mixed_rev_wc,
               reintegrate_fail_on_switched_wc,
               reintegrate_on_shallow_wc,
-              SkipUnless(reintegrate_fail_on_stale_source,
-                         server_has_mergeinfo),
+              reintegrate_fail_on_stale_source,
               merge_file_with_space_in_its_path,
-              SkipUnless(reintegrate_with_subtree_mergeinfo,
-                         server_has_mergeinfo),
-              SkipUnless(multiple_reintegrates_from_the_same_branch,
-                         server_has_mergeinfo),
+              reintegrate_with_subtree_mergeinfo,
+              multiple_reintegrates_from_the_same_branch,
               reintegrate_with_self_referential_mergeinfo,
               added_subtrees_with_mergeinfo_break_reintegrate,
               two_URL_merge_removes_valid_mergeinfo_from_target,
