@@ -189,6 +189,16 @@ static const apr_getopt_option_t svnserve__options[] =
         "at the same time is not supported in daemon mode.\n"
         "                             "
         "Use inetd mode or tunnel mode if you need this.]")},
+    {"memory-cache-size", 'M', 1, 
+     N_("size of the extra in-memory cache in MB used to\n"
+        "                             "
+        "minimize redundant operations.\n"
+        "                             "
+        "Default is 128 for threaded and 16 for non-\n"
+        "                             "
+        "threaded mode.\n"
+        "                             "
+        "[used for FSFS repositories only]")},
 #ifdef CONNECTION_HAVE_THREAD_OPTION
     /* ### Making the assumption here that WIN32 never has fork and so
      * ### this option never exists when --service exists. */
@@ -437,6 +447,7 @@ int main(int argc, const char *argv[])
   params.authzdb = NULL;
   params.log_file = NULL;
   params.username_case = CASE_ASIS;
+  params.memory_cache_size = (apr_uint64_t)-1;
 
   while (1)
     {
@@ -547,6 +558,10 @@ int main(int argc, const char *argv[])
 
         case 'T':
           handling_mode = connection_mode_thread;
+          break;
+
+        case 'M':
+          params.memory_cache_size = 0x100000 * apr_strtoi64(arg, NULL, 0);
           break;
 
 #ifdef WIN32
@@ -801,6 +816,25 @@ int main(int argc, const char *argv[])
   if (run_mode == run_mode_service)
     winservice_running();
 #endif
+
+  /* Configure FS caches for maximum efficiency with svnserve. 
+   * For pre-forked (i.e. multi-processed) mode of operation,
+   * keep the per-process caches smaller than the default.
+   * Also, apply the respective command line parameters, if given. */
+  {
+    svn_fs_cache_config_t settings = *svn_fs_get_cache_config();
+
+    if (params.memory_cache_size != -1)
+      settings.cache_size = params.memory_cache_size;
+    else if (handling_mode != connection_mode_thread)
+      settings.cache_size = 0x1000000;
+
+    settings.cache_fulltexts = TRUE;
+    settings.cache_txdeltas = FALSE;
+    settings.single_threaded = handling_mode != connection_mode_thread;
+
+    svn_fs_set_cache_config(&settings);
+  }
 
   while (1)
     {
