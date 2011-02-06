@@ -32,9 +32,9 @@ static svn_fs_cache_config_t cache_settings =
   {
     /* default configuration:
      */
-    0x8000000,   /* 128 MB for caches */
+    0x1000000,   /* 16 MB for caches */
     16,          /* up to 16 files kept open */
-    FALSE,       /* don't cache fulltexts */
+    TRUE,        /* cache fulltexts */
     FALSE,       /* don't cache text deltas */
     FALSE        /* assume multi-threaded operation */
   };
