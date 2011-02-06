@@ -36,6 +36,7 @@
 
 #include "dav_svn.h"
 
+#include "private/svn_fspath.h"
 
 /* #################################################################
 
@@ -184,7 +185,7 @@ do_resources(const dav_svn_repos *repos,
              (and then remember that you sent it).  Allocate parent in
              pool, not subpool, because it stays in the sent hash
              afterwards. */
-          const char *parent = svn_path_dirname(path, pool);
+          const char *parent = svn_fspath__dirname(path, pool);
           if (! apr_hash_get(sent, parent, APR_HASH_KEY_STRING))
             {
               SVN_ERR(send_response(repos, root, parent,

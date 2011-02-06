@@ -254,6 +254,8 @@ svn_handle_error(svn_error_t *error,
  * stdio stream @a stream, prefixed by @a prefix.  Allocations are
  * performed in the error's pool.
  *
+ * @a error may not be @c NULL.
+ *
  * @since New in 1.2.
  */
 void

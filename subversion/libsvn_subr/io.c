@@ -85,29 +85,40 @@
 #define RETRY_INITIAL_SLEEP 1000
 #define RETRY_MAX_SLEEP 128000
 
-#define RETRY_LOOP(err, expr, test)                                        \
+#define RETRY_LOOP(err, expr, retry_test, sleep_test)                      \
   do                                                                       \
     {                                                                      \
       apr_status_t os_err = APR_TO_OS_ERROR(err);                          \
       int sleep_count = RETRY_INITIAL_SLEEP;                               \
       int retries;                                                         \
       for (retries = 0;                                                    \
-           retries < RETRY_MAX_ATTEMPTS && (test);                         \
-           ++retries, os_err = APR_TO_OS_ERROR(err))                       \
+           retries < RETRY_MAX_ATTEMPTS && (retry_test);                   \
+           os_err = APR_TO_OS_ERROR(err))                                  \
         {                                                                  \
-          apr_sleep(sleep_count);                                          \
-          if (sleep_count < RETRY_MAX_SLEEP)                               \
-            sleep_count *= 2;                                              \
+          if (sleep_test)                                                  \
+            {                                                              \
+              ++retries;                                                   \
+              apr_sleep(sleep_count);                                      \
+              if (sleep_count < RETRY_MAX_SLEEP)                           \
+                sleep_count *= 2;                                          \
+            }                                                              \
           (err) = (expr);                                                  \
         }                                                                  \
     }                                                                      \
   while (0)
 
 #if defined(EDEADLK) && APR_HAS_THREADS
-#define EDEADLK_RETRY_LOOP(err, expr)                                      \
-  RETRY_LOOP(err, expr, (os_err == EDEADLK))
+#define FILE_LOCK_RETRY_LOOP(err, expr)                                    \
+  RETRY_LOOP(err,                                                          \
+             expr,                                                         \
+             (APR_STATUS_IS_EINTR(err) || os_err == EDEADLK),              \
+             (!APR_STATUS_IS_EINTR(err)))
 #else
-#define EDEADLK_RETRY_LOOP(err, expr) ((void)0)
+#define FILE_LOCK_RETRY_LOOP(err, expr)                                    \
+  RETRY_LOOP(err,                                                          \
+             expr,                                                         \
+             (APR_STATUS_IS_EINTR(err)),                                   \
+             0)
 #endif
 
 #ifndef WIN32_RETRY_LOOP
@@ -115,7 +126,8 @@
 #define WIN32_RETRY_LOOP(err, expr)                                        \
   RETRY_LOOP(err, expr, (os_err == ERROR_ACCESS_DENIED                     \
                          || os_err == ERROR_SHARING_VIOLATION              \
-                         || os_err == ERROR_DIR_NOT_EMPTY))
+                         || os_err == ERROR_DIR_NOT_EMPTY),                \
+             1)
 #else
 #define WIN32_RETRY_LOOP(err, expr) ((void)0)
 #endif
@@ -1718,7 +1730,7 @@ svn_io_file_lock2(const char *lock_file,
      thread 2: try to get lock in B *** deadlock ***
 
      Retry for a while for the deadlock to clear. */
-  EDEADLK_RETRY_LOOP(apr_err, apr_file_lock(lockfile_handle, locktype));
+  FILE_LOCK_RETRY_LOOP(apr_err, apr_file_lock(lockfile_handle, locktype));
 
   if (apr_err)
     {
@@ -3923,7 +3935,7 @@ svn_io_open_unique_file3(apr_file_t **file,
    * ### This will cause working files having mode 0600 while users might
    * ### expect to see 644 or 664. Ideally, permissions should be tweaked
    * ### by our callers after installing tempfiles in the WC, but until
-   * ### that's done we need to avoid breaking pre-r40264 behaviour.
+   * ### that's done we need to avoid breaking pre-r880338 behaviour.
    * ### So we tweak perms of the tempfile here, but only if the umask
    * ### allows it. */
   SVN_ERR(merge_default_file_perms(tempfile, &perms, scratch_pool));

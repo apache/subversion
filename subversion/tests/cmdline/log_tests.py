@@ -36,6 +36,12 @@ from svntest.main import SVN_PROP_MERGEINFO
 from merge_tests import set_up_branch
 
 # (abbreviation)
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 exp_noop_up_out = svntest.actions.expected_noop_update_output
 
 ######################################################################
@@ -68,10 +74,6 @@ msg_separator = '------------------------------------' \
 
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-SkipUnless = svntest.testcase.SkipUnless
-XFail = svntest.testcase.XFail
-Wimp = svntest.testcase.Wimp
 Item = svntest.wc.StateItem
 
 
@@ -1144,6 +1146,7 @@ def check_merge_results(log_chain, expected_merges):
       raise SVNUnexpectedLogs("Merged revision '%d' missing" % rev, log_chain)
 
 
+@SkipUnless(server_has_mergeinfo)
 def merge_sensitive_log_single_revision(sbox):
   "test 'svn log -g' on a single revision"
 
@@ -1204,6 +1207,7 @@ def merge_sensitive_log_single_revision(sbox):
   check_merge_results(log_chain, expected_merges)
 
 
+@SkipUnless(server_has_mergeinfo)
 def merge_sensitive_log_branching_revision(sbox):
   "test 'svn log -g' on a branching revision"
 
@@ -1227,6 +1231,7 @@ def merge_sensitive_log_branching_revision(sbox):
   check_merge_results(log_chain, expected_merges)
 
 
+@SkipUnless(server_has_mergeinfo)
 def merge_sensitive_log_non_branching_revision(sbox):
   "test 'svn log -g' on a non-branching revision"
 
@@ -1250,6 +1255,7 @@ def merge_sensitive_log_non_branching_revision(sbox):
   check_merge_results(log_chain, expected_merges)
 
 
+@SkipUnless(server_has_mergeinfo)
 def merge_sensitive_log_added_path(sbox):
   "test 'svn log -g' a path added before merge"
 
@@ -1436,8 +1442,9 @@ def retrieve_revprops(sbox):
     args=['-r1', '--with-revprop', custom_name])
 
 
+@Issue(2866)
 def log_xml_with_bad_data(sbox):
-  "log --xml escapes non-utf8 data (issue #2866)"
+  "log --xml escapes non-utf8 data"
   svntest.actions.load_repo(sbox, os.path.join(os.path.dirname(sys.argv[0]),
                                                'log_tests_data',
                                                'xml-invalid-chars.dump'))
@@ -1449,6 +1456,8 @@ def log_xml_with_bad_data(sbox):
   svntest.actions.run_and_verify_log_xml(
     expected_revprops=(r0_props,), args=[sbox.repo_url])
 
+@SkipUnless(server_has_mergeinfo)
+@Issue(3172)
 def merge_sensitive_log_target_with_bogus_mergeinfo(sbox):
   "'svn log -g target_with_bogus_mergeinfo'"
   # A test for issue #3172 'svn log -g' seems to encounter error on server':
@@ -1481,6 +1490,8 @@ def merge_sensitive_log_target_with_bogus_mergeinfo(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'log', '-g', C_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'log', '-g', D_path)
 
+@SkipUnless(server_has_mergeinfo)
+@Issue(3235)
 def merge_sensitive_log_added_mergeinfo_replaces_inherited(sbox):
   "log -g and explicit mergeinfo replacing inherited"
 
@@ -1646,6 +1657,8 @@ def merge_sensitive_log_added_mergeinfo_replaces_inherited(sbox):
 
 #----------------------------------------------------------------------
 
+@SkipUnless(server_has_mergeinfo)
+@Issue(3285)
 def merge_sensitive_log_propmod_merge_inheriting_path(sbox):
   "log -g and simple propmod to merge-inheriting path"
 
@@ -1770,14 +1783,10 @@ test_list = [ None,
               log_base_peg,
               log_verbose,
               log_parser,
-              SkipUnless(merge_sensitive_log_single_revision,
-                         server_has_mergeinfo),
-              SkipUnless(merge_sensitive_log_branching_revision,
-                         server_has_mergeinfo),
-              SkipUnless(merge_sensitive_log_non_branching_revision,
-                         server_has_mergeinfo),
-              SkipUnless(merge_sensitive_log_added_path,
-                         server_has_mergeinfo),
+              merge_sensitive_log_single_revision,
+              merge_sensitive_log_branching_revision,
+              merge_sensitive_log_non_branching_revision,
+              merge_sensitive_log_added_path,
               log_single_change,
               log_changes_range,
               log_changes_list,
@@ -1785,12 +1794,9 @@ test_list = [ None,
               only_one_wc_path,
               retrieve_revprops,
               log_xml_with_bad_data,
-              SkipUnless(merge_sensitive_log_target_with_bogus_mergeinfo,
-                              server_has_mergeinfo),
-              SkipUnless(merge_sensitive_log_added_mergeinfo_replaces_inherited,
-                         server_has_mergeinfo),
-              SkipUnless(merge_sensitive_log_propmod_merge_inheriting_path,
-                         server_has_mergeinfo),
+              merge_sensitive_log_target_with_bogus_mergeinfo,
+              merge_sensitive_log_added_mergeinfo_replaces_inherited,
+              merge_sensitive_log_propmod_merge_inheriting_path,
               log_of_local_copy,
              ]
 

@@ -37,6 +37,7 @@
 #include "svn_props.h"
 #include "svn_mergeinfo.h"
 #include "repos.h"
+#include "private/svn_fspath.h"
 
 
 /* Note:  this binary search assumes that the datestamp properties on
@@ -624,9 +625,9 @@ svn_repos__prev_location(svn_revnum_t *appeared_rev,
   SVN_ERR(svn_fs_copied_from(&copy_src_rev, &copy_src_path,
                              copy_root, copy_path, pool));
   if (! strcmp(copy_path, path) == 0)
-    remainder = svn_path_is_child(copy_path, path, pool);
+    remainder = svn_fspath__is_child(copy_path, path, pool);
   if (prev_path)
-    *prev_path = svn_path_join(copy_src_path, remainder, pool);
+    *prev_path = svn_fspath__join(copy_src_path, remainder, pool);
   if (appeared_rev)
     *appeared_rev = svn_fs_revision_root_revision(copy_root);
   if (prev_rev)

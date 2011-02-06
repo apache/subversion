@@ -36,7 +36,7 @@
 #include "svn_base64.h"
 
 #include "dav_svn.h"
-
+#include "private/svn_fspath.h"
 
 dav_error *
 dav_svn__new_error(apr_pool_t *pool,
@@ -489,9 +489,15 @@ dav_svn__brigade_printf(apr_bucket_brigade *bb,
 dav_error *
 dav_svn__test_canonical(const char *path, apr_pool_t *pool)
 {
-  if (svn_path_is_canonical(path, pool))
+  if (path[0] == '\0')
     return NULL;
-
+  if (svn_path_is_url(path) && svn_uri_is_canonical(path, pool))
+    return NULL;
+  if ((path[0] == '/') && svn_fspath__is_canonical(path))
+    return NULL;
+  if (svn_relpath_is_canonical(path, pool))
+    return NULL;
+      
   /* Otherwise, generate a generic HTTP_BAD_REQUEST error. */
   return dav_svn__new_error_tag
     (pool, HTTP_BAD_REQUEST, 0,

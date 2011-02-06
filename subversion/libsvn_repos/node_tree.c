@@ -41,6 +41,7 @@
 #include "svn_repos.h"
 #include "repos.h"
 #include "svn_private_config.h"
+#include "private/svn_fspath.h"
 
 /*** NOTE: This editor is unique in that it currently is hard-coded to
      be anchored at the root directory of the filesystem.  This
@@ -161,7 +162,7 @@ find_real_base_location(const char **path_p,
       svn_revnum_t rev;
 
       find_real_base_location(&path, &rev, node->parent, pool);
-      *path_p = svn_path_join(path, node->name, pool);
+      *path_p = svn_fspath__join(path, node->name, pool);
       *rev_p = rev;
       return;
     }

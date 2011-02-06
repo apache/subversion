@@ -38,9 +38,12 @@ from svntest.actions import run_and_verify_status
 from svntest.actions import get_virginal_state
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-SkipUnless = svntest.testcase.SkipUnless
-XFail = svntest.testcase.XFail
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 AnyOutput = svntest.verify.AnyOutput
 
@@ -637,6 +640,8 @@ def up_sw_dir_del_onto_del(sbox):
 #   Adding         branch1\dC\D
 #
 #   Committed revision 4.
+@XFail(svntest.main.is_ra_type_dav)
+@Issue(3314)
 def up_sw_dir_add_onto_add(sbox):
   "up/sw dir: add onto add"
   # WC state: as scheduled (no obstruction)
@@ -685,6 +690,9 @@ def merge_dir_mod_onto_not_dir(sbox):
   test_tc_merge(sbox, d_mods, br_scen = d_dels + d_rpl_f)
   test_tc_merge(sbox2, d_mods, wc_scen = d_dels)
 
+# Test for issue #3150 'tree conflicts with directories as victims'.
+@XFail()
+@Issue(3150)
 def merge_dir_del_onto_not_same(sbox):
   "merge dir: del/rpl/mv onto not-same"
   sbox2 = sbox.clone_dependent()
@@ -705,6 +713,7 @@ def merge_dir_add_onto_not_none(sbox):
 
 #----------------------------------------------------------------------
 
+@XFail()
 def force_del_tc_inside(sbox):
   "--force del on dir with TCs inside"
   ### This test is currently marked XFail because we don't remove tree
@@ -797,6 +806,7 @@ def force_del_tc_inside(sbox):
 
 #----------------------------------------------------------------------
 
+@XFail()
 def force_del_tc_is_target(sbox):
   "--force del on tree-conflicted targets"
   #          A/C
@@ -965,6 +975,8 @@ def query_absent_tree_conflicted_dir(sbox):
 
 #----------------------------------------------------------------------
 
+@XFail()
+@Issue(3608)
 def up_add_onto_add_revert(sbox):
   "issue #3608: reverting an add onto add conflict"
 
@@ -996,8 +1008,8 @@ def up_add_onto_add_revert(sbox):
 
   expected_status = get_virginal_state(wc2_dir, 2)
   expected_status.add({
-    'newfile' : Item(status='A ', copied='+', treeconflict='C', wc_rev='-'),
-    'NewDir'  : Item(status='A ', copied='+', treeconflict='C', wc_rev='-'),
+    'newfile' : Item(status='R ', copied='+', treeconflict='C', wc_rev='-'),
+    'NewDir'  : Item(status='R ', copied='+', treeconflict='C', wc_rev='-'),
     })
 
   run_and_verify_update(wc2_dir,
@@ -1027,6 +1039,8 @@ def up_add_onto_add_revert(sbox):
 #----------------------------------------------------------------------
 # Regression test for issue #3525 and #3533
 #
+@XFail()
+@Issues([3525,3533])
 def lock_update_only(sbox):
   "lock status update shouldn't flag tree conflict"
 
@@ -1074,21 +1088,20 @@ test_list = [ None,
               up_sw_dir_mod_onto_del,
               up_sw_dir_del_onto_mod,
               up_sw_dir_del_onto_del,
-              XFail(up_sw_dir_add_onto_add,
-                    svntest.main.is_ra_type_dav),
+              up_sw_dir_add_onto_add,
               merge_file_mod_onto_not_file,
               merge_file_del_onto_not_same,
               merge_file_del_onto_not_file,
               merge_file_add_onto_not_none,
               merge_dir_mod_onto_not_dir,
-              XFail(merge_dir_del_onto_not_same),
+              merge_dir_del_onto_not_same,
               merge_dir_del_onto_not_dir,
               merge_dir_add_onto_not_none,
-              XFail(force_del_tc_inside),
-              XFail(force_del_tc_is_target),
+              force_del_tc_inside,
+              force_del_tc_is_target,
               query_absent_tree_conflicted_dir,
-              XFail(up_add_onto_add_revert),
-              XFail(lock_update_only),
+              up_add_onto_add_revert,
+              lock_update_only,
              ]
 
 if __name__ == '__main__':

@@ -32,8 +32,12 @@ import svntest
 
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-XFail = svntest.testcase.XFail
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 
 
@@ -291,6 +295,7 @@ def autoprops_imp_dir(sbox):
 # Issue #2713: adding a file with an svn:eol-style property, svn should abort
 # if the file has mixed EOL style. Previously, svn aborted but had added the
 # file anyway.
+@Issue(2713)
 def fail_add_mixed_eol_style(sbox):
   "fail to add a file with mixed EOL style"
 
@@ -307,9 +312,9 @@ def fail_add_mixed_eol_style(sbox):
 
   svntest.main.file_write(filepath, 'foo\nbar\r\nbaz\r')
 
-  expected_stderr = "svn: File '.*/" + filename + \
+  expected_stderr = "svn: E200009: File '.*" + filename + \
                     "' has inconsistent newlines" + \
-                    "|" + "svn: Inconsistent line ending style\n"
+                    "|" + "svn: E135000: Inconsistent line ending style\n"
   run_and_verify_svn(None, [], expected_stderr,
                      'add', filepath, *parameters)
 

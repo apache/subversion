@@ -390,11 +390,17 @@ class TestHarness:
       prog_f = None
     else:
       prog_f = progress_func
+      
+    if test_nums:
+      test_selection = [test_nums]
+    else:
+      test_selection = []
 
     failed = svntest.main.execute_tests(prog_mod.test_list,
                                         serial_only=serial_only,
                                         test_name=progbase,
-                                        progress_func=prog_f)
+                                        progress_func=prog_f,
+                                        test_selection=test_selection)
 
     # restore some values
     sys.path = old_path

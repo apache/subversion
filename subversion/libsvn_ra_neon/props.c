@@ -710,26 +710,28 @@ svn_ra_neon__search_for_starting_props(svn_ra_neon__resource_t **rsrc,
   ne_uri_free(&parsed_url);
 
   /* Try to get the starting_props from the public url.  If the
-     resource no longer exists in HEAD, we'll get a failure.  That's
-     fine: just keep removing components and trying to get the
-     starting_props from parent directories. */
+     resource no longer exists in HEAD or is forbidden, we'll get a
+     failure.  That's fine: just keep removing components and trying
+     to get the starting_props from parent directories. */
   while (! svn_path_is_empty(path_s->data))
     {
       svn_pool_clear(iterpool);
       err = svn_ra_neon__get_starting_props(rsrc, sess, path_s->data,
                                             NULL, iterpool);
       if (! err)
-        break;   /* found an existing parent! */
+        break;   /* found an existing, readable parent! */
 
-      if (err->apr_err != SVN_ERR_FS_NOT_FOUND)
+      if ((err->apr_err != SVN_ERR_FS_NOT_FOUND) &&
+          (err->apr_err != SVN_ERR_RA_DAV_FORBIDDEN))
         return err;  /* found a _real_ error */
 
       /* else... lop off the basename and try again. */
       /* ### TODO: path_s is an absolute, schema-less URI, but
          ### technically not an FS_PATH. */
       svn_stringbuf_set(lopped_path,
-                        svn_path_join(svn_path_basename(path_s->data, iterpool),
-                                      lopped_path->data, iterpool));
+                        svn_relpath_join(svn_urlpath__basename(path_s->data,
+                                                               iterpool),
+                                         lopped_path->data, iterpool));
 
       len = path_s->len;
       svn_path_remove_component(path_s);
@@ -878,9 +880,9 @@ svn_error_t *svn_ra_neon__get_baseline_props(svn_string_t *bc_relative,
   /* don't forget to tack on the parts we lopped off in order to find
      the VCC...  We are expected to return a URI decoded relative
      path, so decode the lopped path first. */
-  my_bc_relative = svn_path_join(relative_path->data,
-                                 svn_path_uri_decode(lopped_path, pool),
-                                 pool);
+  my_bc_relative = svn_relpath_join(relative_path->data,
+                                    svn_path_uri_decode(lopped_path, pool),
+                                    pool);
 
   /* if they want the relative path (could be, they're just trying to find
      the baseline collection), then return it */

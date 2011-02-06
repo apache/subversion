@@ -33,8 +33,12 @@ import svntest
 from svntest import wc, actions
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-XFail = svntest.testcase.XFail
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = wc.StateItem
 
 #----------------------------------------------------------------------
@@ -557,6 +561,7 @@ def import_and_checkout(sbox):
 
 #----------------------------------------------------------------------
 # Issue #2529.
+@Issue(2529)
 def checkout_broken_eol(sbox):
   "checkout file with broken eol style"
 
@@ -630,6 +635,7 @@ def checkout_peg_rev(sbox):
 
 #----------------------------------------------------------------------
 # Issue 2602: Test that peg revision dates are correctly supported.
+@Issue(2602)
 def checkout_peg_rev_date(sbox):
   "checkout with peg revision date"
 

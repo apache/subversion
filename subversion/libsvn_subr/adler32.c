@@ -1,5 +1,5 @@
 /*
- * adler32.c :  routines for doing diffs
+ * adler32.c :  routines for handling Adler-32 checksums
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one

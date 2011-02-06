@@ -34,6 +34,8 @@
 #include "sha1.h"
 #include "md5.h"
 
+#include "svn_private_config.h"
+
 
 
 /* Returns the digest size of it's argument. */
@@ -397,4 +399,32 @@ apr_size_t
 svn_checksum_size(const svn_checksum_t *checksum)
 {
   return DIGESTSIZE(checksum->kind);
+}
+
+svn_error_t *
+svn_checksum_mismatch_err(const svn_checksum_t *expected,
+                          const svn_checksum_t *actual,
+                          apr_pool_t *scratch_pool,
+                          const char *fmt,
+                          ...)
+{
+  if (!svn_checksum_match(expected, actual))
+    {
+      va_list ap;
+      const char *desc;
+
+      va_start(ap, fmt);
+      desc = apr_pvsprintf(scratch_pool, fmt, ap);
+      va_end(ap);
+    
+      return svn_error_createf(SVN_ERR_CHECKSUM_MISMATCH, NULL,
+                               _("%s:\n"
+                                 "   expected:  %s\n"
+                                 "     actual:  %s\n"),
+                    desc,               
+                    svn_checksum_to_cstring_display(expected, scratch_pool),
+                    svn_checksum_to_cstring_display(actual, scratch_pool));
+    }
+  else
+    return SVN_NO_ERROR;
 }

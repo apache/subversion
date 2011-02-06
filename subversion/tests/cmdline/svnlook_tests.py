@@ -32,8 +32,12 @@ import svntest
 
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-XFail = svntest.testcase.XFail
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 
 
@@ -185,6 +189,7 @@ def test_misc(sbox):
 
 #----------------------------------------------------------------------
 # Issue 1089
+@Issue(1089)
 def delete_file_in_moved_dir(sbox):
   "delete file in moved dir"
 
@@ -239,6 +244,7 @@ def delete_file_in_moved_dir(sbox):
 
 #----------------------------------------------------------------------
 # Issue 1241
+@Issue(1241)
 def test_print_property_diffs(sbox):
   "test the printing of property diffs"
 
@@ -390,6 +396,7 @@ def changed_copy_info(sbox):
 
 #----------------------------------------------------------------------
 # Issue 2663
+@Issue(2663)
 def tree_non_recursive(sbox):
   "test 'svnlook tree --non-recursive'"
 
