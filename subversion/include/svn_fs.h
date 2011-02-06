@@ -2270,7 +2270,51 @@ svn_fs_pack(const char *db_path,
             apr_pool_t *pool);
 
 
+/** @defgroup svn_fs_cach_config Filesystem caching configuration
+ * @{
+ * @since New in 1.7. */
+
+/* FSFS cache settings. It controls what caches, in what size and
+   how they will be created. The settings apply for the whole process.
+ */
+typedef struct svn_fs_cache_config_t
+{
+  /* total cache size in bytes. May be 0, resulting in no cache being used */
+  apr_uint64_t cache_size;
+
+  /* maximum number of files kept open */
+  apr_size_t file_handle_count;
+
+  /* shall fulltexts be cached? */
+  svn_boolean_t cache_fulltexts;
+
+  /* shall text deltas be cached? */
+  svn_boolean_t cache_txdeltas;
+
+  /* is this a guaranteed single-threaded application? */
+  svn_boolean_t single_threaded;
+} svn_fs_cache_config_t;
+
+/* Get the current FSFS cache configuration. If it has not been set,
+   this function will return the default settings.
+ */
+const svn_fs_cache_config_t *
+svn_fs_get_cache_config(void);
+
+/* Set the FSFS cache configuration. Please note that it may not change
+   the actual configuration *in use*. Therefore, call it before reading
+   data from any FSFS repo and call it only once.
+
+   This function is not thread-safe. Therefore, it should be called once
+   from the processes' initialization code only.
+ */
+void
+svn_fs_set_cache_config(const svn_fs_cache_config_t *settings);
+
 /** @} */
+
+/** @} */
+
 
 #ifdef __cplusplus
 }
