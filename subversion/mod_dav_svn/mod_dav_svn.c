@@ -880,10 +880,10 @@ static const command_rec cmds[] =
 
   /* per server */
   AP_INIT_TAKE1("SVNInMemoryCacheSize", SVNInMemoryCacheSize_cmd, NULL,
-               RSRC_CONF,
-               "specify the maximum size im MB per process of Subversion's "
-               "in-memory object cache (default values is 128 if threading "
-               "is supported, 16 if not; 0 deactivates the cache)."),
+                RSRC_CONF,
+                "specify the maximum size im MB per process of Subversion's "
+                "in-memory object cache (default value is 16; 0 deactivates "
+                "the cache)."),
 
   { NULL }
 };
