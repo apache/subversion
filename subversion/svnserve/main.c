@@ -831,7 +831,21 @@ int main(int argc, const char *argv[])
 
     settings.cache_fulltexts = TRUE;
     settings.cache_txdeltas = FALSE;
-    settings.single_threaded = handling_mode != connection_mode_thread;
+    settings.single_threaded = TRUE;
+
+    if (handling_mode == connection_mode_thread)
+      {
+#ifdef APR_HAS_THREADS
+        settings.single_threaded = FALSE;
+#else
+        /* No requests will be processed at all
+         * (see "switch (handling_mode)" code further down).
+         * But if they were, some other synchronization code
+         * would need to take care of securing integrity of
+         * APR-based structures. That would include our caches.
+         */
+#endif
+      }
 
     svn_fs_set_cache_config(&settings);
   }
