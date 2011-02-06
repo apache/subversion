@@ -2289,9 +2289,13 @@ get_resource(request_rec *r,
 }
 
 
-/* Helper func:  return the parent of PATH, allocated in POOL. */
+/* Helper func:  return the parent of PATH, allocated in POOL.  If
+   IS_URLPATH is set, PATH is a urlpath; otherwise, it's either a
+   relpath or an fspath. */
 static const char *
-get_parent_path(const char *path, apr_pool_t *pool)
+get_parent_path(const char *path,
+                svn_boolean_t is_urlpath,
+                apr_pool_t *pool)
 {
   apr_size_t len;
   char *tmp = apr_pstrdup(pool, path);
@@ -2303,8 +2307,11 @@ get_parent_path(const char *path, apr_pool_t *pool)
       /* Remove any trailing slash; else svn_path_dirname() asserts. */
       if (tmp[len-1] == '/')
         tmp[len-1] = '\0';
-
-      return svn_path_dirname(tmp, pool);
+     
+      if (is_urlpath)
+        return svn_urlpath__dirname(tmp, pool);
+      else
+        return svn_fspath__dirname(tmp, pool);
     }
 
   return path;
@@ -2340,19 +2347,20 @@ get_parent_resource(const dav_resource *resource,
       parent->versioned = 1;
       parent->hooks = resource->hooks;
       parent->pool = resource->pool;
-      parent->uri = get_parent_path(resource->uri, resource->pool);
+      parent->uri = get_parent_path(resource->uri, TRUE, resource->pool);
       parent->info = parentinfo;
 
       parentinfo->pool = resource->info->pool;
       parentinfo->uri_path =
         svn_stringbuf_create(get_parent_path(resource->info->uri_path->data,
-                                             resource->pool), resource->pool);
+                                             TRUE, resource->pool),
+                             resource->pool);
       parentinfo->repos = resource->info->repos;
       parentinfo->root = resource->info->root;
       parentinfo->r = resource->info->r;
       parentinfo->svn_client_options = resource->info->svn_client_options;
       parentinfo->repos_path = get_parent_path(resource->info->repos_path,
-                                               resource->pool);
+                                               FALSE, resource->pool);
 
       *parent_resource = parent;
       break;
@@ -3316,8 +3324,8 @@ deliver(const dav_resource *resource, ap_filter_t *output)
              looking at a parent-path listing. */
           if (SVN_IS_VALID_REVNUM(dir_rev))
             {
-              repos_relpath = svn_path_join(resource->info->repos_path,
-                                            name, entry_pool);
+              repos_relpath = svn_fspath__join(resource->info->repos_path,
+                                               name, entry_pool);
               if (! dav_svn__allow_read(resource->info->r,
                                         resource->info->repos,
                                         repos_relpath,

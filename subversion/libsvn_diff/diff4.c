@@ -36,7 +36,7 @@
 /*
  * Variance adjustment rules:
  *
- * http://subversion.tigris.org/variance-adjusted-patching.html
+ * See notes/variance-adjusted-patching.html
  *
  * ###: Expand this comment to contain the full set of adjustment
  * ###: rules instead of pointing to a webpage.

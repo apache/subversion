@@ -68,6 +68,19 @@ typedef svn_error_t *(*svn_cache__deserialize_func_t)(void **out,
                                                       apr_pool_t *pool);
 
 /**
+ * A function type for deserializing an object @a *out from the string
+ * @a data of length @a data_len in the pool @a pool. The extra information
+ * @a baton passed into can be used to deserialize only a specific part or
+ * sub-structure or to perform any other non-modifying operation that may
+ * not require the whole structure to be processed.
+ */
+typedef svn_error_t *(*svn_cache__partial_getter_func_t)(void **out,
+                                                         const char *data,
+                                                         apr_size_t data_len,
+                                                         void *baton,
+                                                         apr_pool_t *pool);
+
+/**
  * A function type for serializing an object @a in into bytes.  The
  * function should allocate the serialized value in @a pool, set @a
  * *data to the serialized value, and set *data_len to its length.
@@ -91,6 +104,11 @@ typedef svn_error_t *(*svn_cache__error_handler_t)(svn_error_t *err,
  * access to the APR memcache libraries.
  */
 typedef struct svn_memcache_t svn_memcache_t;
+
+/**
+ * An opaque structure representing a membuffer cache object.
+ */
+typedef struct svn_membuffer_t svn_membuffer_t;
 
 /**
  * Opaque type for an in-memory cache.
@@ -172,6 +190,57 @@ svn_error_t *
 svn_cache__make_memcache_from_config(svn_memcache_t **memcache_p,
                                      svn_config_t *config,
                                      apr_pool_t *pool);
+
+/**
+ * Creates a new membuffer cache object in @a *cache. It will contain
+ * up to @a total_size bytes of data, using @a directory_size bytes 
+ * for index information and the remainder for serialized objects.
+ *
+ * Since each index entry is about 50 bytes long, 1 to 10 percent of
+ * the @a total_size should be allocated to the @a directory_size,
+ * depending on the average serialized object size. Higher percentages
+ * will generally result in higher hit rates and reduced conflict
+ * resolution overhead.
+ *
+ * If access to the resulting cache object is guranteed to be serialized,
+ * @a thread_safe may be set to @a FALSE for maximum performance.
+ *
+ * Allocations will be made in @a pool, in particular the data buffers.
+ */
+svn_error_t* 
+svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
+                                  apr_size_t total_size,
+                                  apr_size_t directory_size,
+                                  svn_boolean_t thread_safe,
+                                  apr_pool_t *pool);
+
+/**
+ * Creates a new cache in @a *cache_p, storing the data in a potentially
+ * shared @a membuffer object.  The elements in the cache will be indexed
+ * by keys of length @a klen, which may be APR_HASH_KEY_STRING if they
+ * are strings.  Values will be serialized for the memcache using @a
+ * serialize_func and deserialized using @a deserialize_func.  Because
+ * the same memcache object may cache many different kinds of values
+ * form multiple caches, @a prefix should be specified to differentiate 
+ * this cache from other caches.  @a *cache_p will be allocated in @a pool.
+ *
+ * If @a deserialize_func is NULL, then the data is returned as an
+ * svn_string_t; if @a serialize_func is NULL, then the data is
+ * assumed to be an svn_stringbuf_t.
+ *
+ * These caches themselves are thread safe, the shared @a memcache may
+ * be not, depending on its creation parameters.
+ *
+ * These caches do not support svn_cache__iter.
+ */
+svn_error_t *
+svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
+                                  svn_membuffer_t *membuffer,
+                                  svn_cache__serialize_func_t serialize,
+                                  svn_cache__deserialize_func_t deserialize,
+                                  apr_ssize_t klen,
+                                  const char *prefix,
+                                  apr_pool_t *pool);
 
 /**
  * Sets @a handler to be @a cache's error handling routine.  If any

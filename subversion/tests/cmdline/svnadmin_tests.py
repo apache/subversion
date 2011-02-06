@@ -36,9 +36,12 @@ from svntest.verify import SVNUnexpectedStderr
 from svntest.main import SVN_PROP_MERGEINFO
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-SkipUnless = svntest.testcase.SkipUnless
-XFail = svntest.testcase.XFail
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 
 
@@ -248,8 +251,9 @@ def inconsistent_headers(sbox):
 #----------------------------------------------------------------------
 # Test for issue #2729: Datestamp-less revisions in dump streams do
 # not remain so after load
+@Issue(2729)
 def empty_date(sbox):
-  "preserve date-less revisions in load (issue #2729)"
+  "preserve date-less revisions in load"
 
   test_create(sbox)
 
@@ -477,6 +481,7 @@ def fsfs_file(repo_dir, kind, rev):
     return os.path.join(repo_dir, 'db', kind, rev)
 
 
+@SkipUnless(svntest.main.is_fs_type_fsfs)
 def verify_incremental_fsfs(sbox):
   """svnadmin verify detects corruption dump can't"""
 
@@ -612,6 +617,7 @@ _0.0.t1-1 add false false /A/B/E/bravo
 
 #----------------------------------------------------------------------
 
+@SkipUnless(svntest.main.is_fs_type_fsfs)
 def recover_fsfs(sbox):
   "recover a repository (FSFS only)"
   sbox.build()
@@ -690,7 +696,7 @@ def recover_fsfs(sbox):
     'db/current', expected_current_contents, actual_current_contents)
 
 #----------------------------------------------------------------------
-
+@Issue(2983)
 def load_with_parent_dir(sbox):
   "'svnadmin load --parent-dir' reparents mergeinfo"
 
@@ -787,7 +793,7 @@ def set_uuid(sbox):
     raise svntest.Failure
 
 #----------------------------------------------------------------------
-
+@Issue(3020)
 def reflect_dropped_renumbered_revs(sbox):
   "reflect dropped renumbered revs in svn:mergeinfo"
 
@@ -824,6 +830,8 @@ def reflect_dropped_renumbered_revs(sbox):
 
 #----------------------------------------------------------------------
 
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+@Issue(2992)
 def fsfs_recover_handle_missing_revs_or_revprops_file(sbox):
   """fsfs recovery checks missing revs / revprops files"""
   # Set up a repository containing the greek tree.
@@ -916,6 +924,7 @@ def create_in_repo_subdir(sbox):
   # No SVNRepositoryCreateFailure raised?
   raise svntest.Failure
 
+@SkipUnless(svntest.main.is_fs_type_fsfs)
 def verify_with_invalid_revprops(sbox):
   "svnadmin verify detects invalid revprops file"
 
@@ -968,6 +977,7 @@ def verify_with_invalid_revprops(sbox):
 #      each of them to 'TARGET-REPOS'.
 #
 # See http://subversion.tigris.org/issues/show_bug.cgi?id=3020#desc13
+@Issue(3020)
 def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   "don't filter mergeinfo revs from incremental dump"
 
@@ -1168,6 +1178,8 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
                                      sbox.repo_url)
 
 
+@SkipUnless(svntest.main.is_posix_os)
+@Issue(2591)
 def hotcopy_symlink(sbox):
   "'svnadmin hotcopy' replicates symlink"
 
@@ -1306,18 +1318,16 @@ test_list = [ None,
               hotcopy_format,
               setrevprop,
               verify_windows_paths_in_repos,
-              SkipUnless(verify_incremental_fsfs, svntest.main.is_fs_type_fsfs),
-              SkipUnless(recover_fsfs, svntest.main.is_fs_type_fsfs),
+              verify_incremental_fsfs,
+              recover_fsfs,
               load_with_parent_dir,
               set_uuid,
               reflect_dropped_renumbered_revs,
-              SkipUnless(fsfs_recover_handle_missing_revs_or_revprops_file,
-                         svntest.main.is_fs_type_fsfs),
+              fsfs_recover_handle_missing_revs_or_revprops_file,
               create_in_repo_subdir,
-              SkipUnless(verify_with_invalid_revprops,
-                         svntest.main.is_fs_type_fsfs),
+              verify_with_invalid_revprops,
               dont_drop_valid_mergeinfo_during_incremental_loads,
-              SkipUnless(hotcopy_symlink, svntest.main.is_posix_os),
+              hotcopy_symlink,
               load_bad_props,
              ]
 

@@ -41,10 +41,13 @@ from svntest import wc
 from svntest.main import SVN_PROP_MERGEINFO, is_os_windows
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-SkipUnless = svntest.testcase.SkipUnless
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
-XFail = svntest.testcase.XFail
 
 def make_patch_path(sbox, name='my.patch'):
   dir = sbox.add_wc_path('patches')
@@ -3424,11 +3427,14 @@ def patch_strip_cwd(sbox):
   "patch --strip propchanges cwd"
   return patch_one_property(sbox, True)
 
+@XFail()
 def patch_set_prop_no_eol(sbox):
   "patch doesn't append newline to properties"
   return patch_one_property(sbox, False)
 
 # Regression test for issue #3697
+@SkipUnless(svntest.main.is_posix_os)
+@Issue(3697)
 def patch_add_symlink(sbox):
   "patch that adds a symlink"
 
@@ -3511,8 +3517,8 @@ test_list = [ None,
               patch_old_target_names,
               patch_reverse_revert,
               patch_strip_cwd,
-              XFail(patch_set_prop_no_eol),
-              SkipUnless(patch_add_symlink, svntest.main.is_posix_os),
+              patch_set_prop_no_eol,
+              patch_add_symlink,
             ]
 
 if __name__ == '__main__':

@@ -32,10 +32,12 @@ import svntest
 from svntest import verify, actions, main
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-SkipUnless = svntest.testcase.SkipUnless
-XFail = svntest.testcase.XFail
-Wimp = svntest.testcase.Wimp
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 
 from svntest.main import SVN_PROP_MERGEINFO, server_has_mergeinfo
@@ -193,7 +195,7 @@ def commit_routine_switching(wc_dir, verify):
   # same URL.  We don't allow this.
   svntest.actions.run_and_verify_commit(
     wc_dir, None, None,
-    "svn: Cannot commit both .* as they refer to the same URL$",
+    "svn: E195003: Cannot commit both .* as they refer to the same URL$",
     wc_dir)
 
   # Okay, that all taken care of, let's revert the A/D/G/pi path and
@@ -673,7 +675,8 @@ def delete_subdir(sbox):
 
 #----------------------------------------------------------------------
 # Issue 1532: Switch a file to a dir: can't switch it back to the file
-
+@XFail()
+@Issue(1532)
 def file_dir_file(sbox):
   "switch a file to a dir and back to the file"
   sbox.build(read_only = True)
@@ -908,7 +911,7 @@ def bad_intermediate_urls(sbox):
 #----------------------------------------------------------------------
 # Regression test for issue #1825: failed switch may corrupt
 # working copy
-
+@Issue(1825)
 def obstructed_switch(sbox):
   "obstructed switch"
   #svntest.factory.make(sbox, """svn cp -m msgcopy url/A/B/E url/A/B/Esave
@@ -1048,6 +1051,7 @@ def commit_mods_below_switch(sbox):
                                         expected_output, expected_status,
                                         None, C_path, D_path)
 
+@Issue(2380)
 def relocate_beyond_repos_root(sbox):
   "relocate with prefixes longer than repo root"
   sbox.build(read_only=True, create_wc=False)
@@ -1350,8 +1354,6 @@ def forced_switch(sbox):
                                         '--force')
 
 #----------------------------------------------------------------------
-# This test currently XFails for serf as the different order of
-# operations is not handled here.
 def forced_switch_failures(sbox):
   "forced switch detects tree conflicts"
   #  svntest.factory.make(sbox,
@@ -1559,6 +1561,12 @@ def forced_switch_failures(sbox):
     'A/B/F/pi'          : Item(status='A '),
   })
 
+  # When running the tests over ra_serf, 'A/D/G/omega' and 'A/D/G/psi' do
+  # manage to get added before the forced switch above errors out.  So don't
+  # expect those two paths to appear in the output of the final update.
+  if svntest.main.is_ra_type_dav_serf():
+    expected_output.remove('A/D/G/omega', 'A/D/G/psi')
+    
   expected_disk.remove('A/D/G/tau', 'A/D/G/rho', 'A/D/G/pi')
   expected_disk.add({
     'A/D/H/I'           : Item(),
@@ -1697,7 +1705,7 @@ def switch_scheduled_add(sbox):
                                      'switch', switch_url, file_path)
 
 #----------------------------------------------------------------------
-
+@SkipUnless(server_has_mergeinfo)
 def mergeinfo_switch_elision(sbox):
   "mergeinfo does not elide post switch"
 
@@ -2566,6 +2574,7 @@ def tree_conflicts_on_switch_1_1(sbox):
                         expected_info = expected_info) ] )
 
 
+@Issue(3334)
 def tree_conflicts_on_switch_1_2(sbox):
   "tree conflicts 1.2: tree del, leaf del on switch"
 
@@ -2664,6 +2673,7 @@ def tree_conflicts_on_switch_1_2(sbox):
                         expected_info = expected_info) ] )
 
 
+@Issue(3334)
 def tree_conflicts_on_switch_2_1(sbox):
   "tree conflicts 2.1: leaf edit, tree del on switch"
 
@@ -3020,6 +3030,7 @@ def relocate_with_switched_children(sbox):
     expected_info = { 'URL' : pattern }
     svntest.actions.run_and_verify_info([expected_info], path)
 
+@XFail()
 def copy_with_switched_subdir(sbox):
   "copy directory with switched subdir"
   sbox.build()
@@ -3098,6 +3109,7 @@ def copy_with_switched_subdir(sbox):
   svntest.actions.run_and_verify_status(wc_dir, state)
 
 ### regression test for issue #3597
+@Issue(3597)
 def relocate_with_relative_externals(sbox):
   "relocate a directory containing relative externals"
 
@@ -3142,7 +3154,7 @@ test_list = [ None,
               log_switched_file,
               relocate_deleted_missing_copied,
               delete_subdir,
-              XFail(file_dir_file),
+              file_dir_file,
               nonrecursive_switching,
               failed_anchor_is_target,
               bad_intermediate_urls,
@@ -3153,10 +3165,9 @@ test_list = [ None,
               switch_change_repos_root,
               relocate_and_propset,
               forced_switch,
-              XFail(forced_switch_failures,
-                    svntest.main.is_ra_type_dav_serf),
+              forced_switch_failures,
               switch_scheduled_add,
-              SkipUnless(mergeinfo_switch_elision, server_has_mergeinfo),
+              mergeinfo_switch_elision,
               switch_with_obstructing_local_adds,
               switch_with_depth,
               switch_to_dir_with_peg_rev,
@@ -3171,7 +3182,7 @@ test_list = [ None,
               tree_conflicts_on_switch_3,
               single_file_relocate,
               relocate_with_switched_children,
-              XFail(copy_with_switched_subdir),
+              copy_with_switched_subdir,
               relocate_with_relative_externals,
               ]
 

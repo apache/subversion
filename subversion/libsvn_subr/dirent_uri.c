@@ -484,6 +484,12 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
         {
           /* Noop segment, so do nothing. */
         }
+      else if (type == type_uri && seglen == 3
+               && src[0] == '%' && src[1] == '2'
+               && canonicalize_to_upper(src[2]) == 'E')
+        {
+          /* '%2E' is equivalent to '.', so this is a noop segment */
+        }
 #ifdef SVN_USE_DOS_PATHS
       /* If this is the first path segment of a file:// URI and it contains a
          windows drive letter, convert the drive letter to upper case. */
@@ -1401,8 +1407,8 @@ svn_uri_get_longest_ancestor(const char *uri1,
   apr_size_t uri_ancestor_len;
   apr_size_t i = 0;
 
-  assert(svn_path_is_canonical(uri1, NULL));
-  assert(svn_path_is_canonical(uri2, NULL));
+  assert(svn_uri_is_canonical(uri1, NULL));
+  assert(svn_uri_is_canonical(uri2, NULL));
 
   /* Find ':' */
   while (1)
@@ -2232,7 +2238,6 @@ svn_dirent_is_under_root(svn_boolean_t *under_root,
                          const char *base_path,
                          const char *path,
                          apr_pool_t *pool)
-
 {
   apr_status_t status;
   char *full_path;
@@ -2485,14 +2490,13 @@ const char *
 svn_fspath__dirname(const char *fspath,
                     apr_pool_t *pool)
 {
-  const char *result;
   assert(svn_fspath__is_canonical(fspath));
 
-  result = apr_pstrcat(pool, "/", svn_relpath_dirname(fspath + 1, pool),
+  if (fspath[0] == '/' && fspath[1] == '\0')
+    return apr_pstrdup(pool, fspath);
+  else
+    return apr_pstrcat(pool, "/", svn_relpath_dirname(fspath + 1, pool),
                        (char *)NULL);
-
-  assert(svn_fspath__is_canonical(result));
-  return result;
 }
 
 

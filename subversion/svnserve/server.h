@@ -109,6 +109,9 @@ typedef struct serve_params_t {
   /* Username case normalization style. */
   enum username_case_type username_case;
 
+  /* Size of the in-memory cache (used by FSFS only). */
+  apr_uint64_t memory_cache_size;
+
 } serve_params_t;
 
 /* Serve the connection CONN according to the parameters PARAMS. */

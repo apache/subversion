@@ -31,9 +31,12 @@ import string, sys, os, re
 import svntest
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-SkipUnless = svntest.testcase.SkipUnless
-XFail = svntest.testcase.XFail
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 
 
@@ -871,7 +874,7 @@ def tree_conflicts_and_changelists_on_commit1(sbox):
   # item.
   svntest.main.run_svn(None, "changelist", "list", iota, rho)
 
-  expected_error = ("svn: Aborting commit: '.*" + re.escape(rho)
+  expected_error = ("svn: E155015: Aborting commit: '.*" + re.escape(rho)
                     + "' remains in .*conflict")
 
   svntest.actions.run_and_verify_commit(wc_dir,
@@ -960,7 +963,7 @@ def tree_conflicts_and_changelists_on_commit2(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Verify that the current situation does not commit.
-  expected_error = "svn: Aborting commit:.* remains in .*conflict";
+  expected_error = "svn: E155015: Aborting commit:.* remains in .*conflict";
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         None, None,
@@ -1043,7 +1046,7 @@ def tree_conflicts_and_changelists_on_commit3(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Verify that the current situation does not commit.
-  expected_error = "svn: Aborting commit:.* remains in .*conflict";
+  expected_error = "svn: E155015: Aborting commit:.* remains in .*conflict";
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         None, None,

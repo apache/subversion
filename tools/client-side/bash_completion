@@ -166,8 +166,8 @@ _svn()
 	cmds="$cmds commit ci copy cp delete remove rm diff export help import"
 	cmds="$cmds info list ls lock log merge mergeinfo mkdir move mv rename"
 	cmds="$cmds patch propdel pdel propedit pedit propget pget proplist"
-	cmds="$cmds plist propset pset resolve resolved revert status switch"
-	cmds="$cmds unlock update"
+	cmds="$cmds plist propset pset relocate resolve resolved revert status"
+	cmds="$cmds  switch unlock update"
 
 	# help options have a strange command status...
 	local helpOpts='--help -h'
@@ -909,6 +909,9 @@ _svn()
 		[[ $isRevProp || ! $prop ]] && \
 		    cmdOpts="$cmdOpts --revprop $rOpts"
 		[[ $val ]] || cmdOpts="$cmdOpts -F --file"
+		;;
+        relocate)
+		cmdOpts="--ignore-externals"
 		;;
         resolve)
                 cmdOpts="--targets -R --recursive $qOpts $pOpts --accept \

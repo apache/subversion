@@ -32,10 +32,12 @@ import svntest
 from svntest import wc
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-SkipUnless = svntest.testcase.SkipUnless
-XFail = svntest.testcase.XFail
-Wimp = svntest.testcase.Wimp
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = wc.StateItem
 
 # Generic UUID-matching regular expression
@@ -397,7 +399,8 @@ def basic_corruption(sbox):
 
   # This commit should fail due to text base corruption.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, "svn: Checksum",
+                                        expected_status,
+                                        "svn: E155017: Checksum",
                                         wc_dir)
 
   # Restore the uncorrupted text base.
@@ -446,7 +449,7 @@ def basic_corruption(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        "svn: Checksum", other_wc)
+                                        "svn: E155017: Checksum", other_wc)
 
   # Restore the uncorrupted text base.
   os.chmod(tb_dir_path, 0777)
@@ -1208,7 +1211,7 @@ def basic_checkout_deleted(sbox):
 
 # Issue 846, changing a deleted file to an added directory was not
 # supported before WC-NG. But we can handle it.
-
+@Issue(846)
 def basic_node_kind_change(sbox):
   "attempt to change node kind"
 
@@ -1427,6 +1430,7 @@ def nonexistent_repository(sbox):
 #----------------------------------------------------------------------
 # Issue 1064. This test is only useful if running over a non-local RA
 # with authentication enabled, otherwise it will pass trivially.
+@Issue(1064)
 def basic_auth_cache(sbox):
   "basic auth caching"
 
@@ -1492,6 +1496,7 @@ def basic_add_ignores(sbox):
 
 
 #----------------------------------------------------------------------
+@Issue(2243)
 def basic_add_local_ignores(sbox):
   'ignore files matching local ignores in added dirs'
 
@@ -1767,6 +1772,7 @@ def info_nonhead(sbox):
 
 #----------------------------------------------------------------------
 # Issue #2442.
+@Issue(2442)
 def ls_nonhead(sbox):
   "ls a path no longer in HEAD"
 
@@ -1797,6 +1803,7 @@ def ls_nonhead(sbox):
 
 #----------------------------------------------------------------------
 # Issue #2315.
+@Issue(2315)
 def cat_added_PREV(sbox):
   "cat added file using -rPREV"
 
@@ -1815,6 +1822,7 @@ def cat_added_PREV(sbox):
                                      'cat', '-rPREV', f_path)
 
 # Issue #2612.
+@Issue(2612)
 def ls_space_in_repo_name(sbox):
   'basic ls of repos with space in name'
 
@@ -1960,6 +1968,8 @@ def basic_rm_urls_one_repo(sbox):
                                         expected_status)
 
 # Test for issue #1199
+@XFail()
+@Issue(1199)
 def basic_rm_urls_multi_repos(sbox):
   "remotely remove directories from two repositories"
 
@@ -2419,6 +2429,7 @@ def basic_relative_url_with_peg_revisions(sbox):
 
 
 # Issue 2242, auth cache picking up password from wrong username entry
+@Issue(2242)
 def basic_auth_test(sbox):
   "basic auth test"
 
@@ -2479,12 +2490,13 @@ def basic_add_svn_format_file(sbox):
 # Issue 2586, Unhelpful error message: Unrecognized URL scheme for ''
 # See also input_validation_tests.py:invalid_mkdir_targets(), which tests
 # the same thing the other way around.
+@Issue(2586)
 def basic_mkdir_mix_targets(sbox):
   "mkdir mix url and local path should error"
 
   sbox.build()
   Y_url = sbox.repo_url + '/Y'
-  expected_error = "svn: Cannot mix repository and working copy targets"
+  expected_error = "svn: E200009: Cannot mix repository and working copy targets"
 
   svntest.actions.run_and_verify_svn(None, None, expected_error,
                                      'mkdir', '-m', 'log_msg', Y_url, 'subdir')
@@ -2509,6 +2521,7 @@ def delete_from_url_with_spaces(sbox):
                                       'rm', sbox.repo_url + '/Dir%20With/Spaces',
                                       '-m', 'Deleted')
 
+@SkipUnless(svntest.main.is_ra_type_dav)
 def meta_correct_library_being_used(sbox):
   "verify that neon/serf are compiled if tested"
   expected_re = (r'^\* ra_%s :' % svntest.main.options.http_library)
@@ -2720,7 +2733,7 @@ test_list = [ None,
               delete_keep_local_twice,
               windows_paths_in_repos,
               basic_rm_urls_one_repo,
-              XFail(basic_rm_urls_multi_repos),
+              basic_rm_urls_multi_repos,
               automatic_conflict_resolution,
               info_nonexisting_file,
               basic_relative_url_using_current_dir,
@@ -2732,8 +2745,7 @@ test_list = [ None,
               basic_add_svn_format_file,
               basic_mkdir_mix_targets,
               delete_from_url_with_spaces,
-              SkipUnless(meta_correct_library_being_used,
-                         svntest.main.is_ra_type_dav),
+              meta_correct_library_being_used,
               delete_and_add_same_file,
               delete_child_parent_update,
               basic_relocate,

@@ -294,29 +294,29 @@ def main():
               'propsetf', 'testprop', sys.argv[0], 'foo/foo')
 
   # Expected missing revision error
-  xrun_svnmucc(['svnmucc: \'a\' is not a revision'
+  xrun_svnmucc(["svnmucc: E200004: 'a' is not a revision"
                 ], #---------
               'cp', 'a', 'b')
 
   # Expected cannot be younger error
-  xrun_svnmucc(['svnmucc: Copy source revision cannot be younger ' +
+  xrun_svnmucc(['svnmucc: E205000: Copy source revision cannot be younger ' +
                 'than base revision',
                 ], #---------
               'cp', '42', 'a', 'b')
 
   # Expected already exists error
-  xrun_svnmucc(["svnmucc: 'foo' already exists",
+  xrun_svnmucc(["svnmucc: E125002: 'foo' already exists",
                 ], #---------
               'cp', '17', 'a', 'foo')
 
   # Expected copy_src already exists error
-  xrun_svnmucc(["svnmucc: 'a/bar' (from 'foo/bar:17') already exists",
+  xrun_svnmucc(["svnmucc: E125002: 'a/bar' (from 'foo/bar:17') already exists",
                 ], #---------
               'cp', '17', 'foo', 'a',
               'cp', '17', 'foo/foo', 'a/bar')
 
   # Expected not found error
-  xrun_svnmucc(['svnmucc: \'a\' not found',
+  xrun_svnmucc(["svnmucc: E125002: 'a' not found",
                 ], #---------
               'cp', '17', 'a', 'b')
 

@@ -37,6 +37,8 @@
 #include "svn_xml.h"
 
 #include "private/svn_dav_protocol.h"
+#include "private/svn_fspath.h"
+
 #include "svn_private_config.h"
 
 #include "ra_neon.h"
@@ -257,7 +259,7 @@ static svn_error_t * handle_resource(merge_ctx_t *mc,
     }
 
   /* a collection or regular resource */
-  if (! svn_path_is_ancestor(mc->base_href, mc->href->data))
+  if (! svn_urlpath__is_ancestor(mc->base_href, mc->href->data))
     {
       /* ### need something better than APR_EGENERAL */
       return svn_error_createf(APR_EGENERAL, NULL,
@@ -267,7 +269,7 @@ static svn_error_t * handle_resource(merge_ctx_t *mc,
     }
 
   /* given HREF of the form: BASE "/" RELATIVE, extract the relative portion */
-  relative = svn_path_is_child(mc->base_href, mc->href->data, NULL);
+  relative = svn_urlpath__is_child(mc->base_href, mc->href->data, NULL);
   if (! relative) /* the paths are equal */
     relative = "";
 

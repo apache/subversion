@@ -33,8 +33,12 @@ import svntest
 
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-XFail = svntest.testcase.XFail
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 
 
@@ -262,6 +266,7 @@ def export_working_copy_with_property_mods(sbox):
                                         svntest.wc.State(sbox.wc_dir, {}),
                                         expected_disk)
 
+@XFail()
 def export_working_copy_at_base_revision(sbox):
   "export working copy at base revision"
   sbox.build(read_only = True)
@@ -451,6 +456,7 @@ def export_file_to_explicit_cwd(sbox):
                                         '.', expected_output,
                                         expected_disk)
 
+@XFail()
 def export_file_overwrite_fails(sbox):
   "exporting a file refuses to silently overwrite"
   sbox.build(create_wc = True, read_only = True)
@@ -535,6 +541,7 @@ def export_working_copy_ignoring_keyword_translation(sbox):
 
 # This is test for issue #3683 - 'Escape unsafe charaters in a URL during
 # export'
+@Issue(3683)
 def export_with_url_unsafe_characters(sbox):
   "export file with URL unsafe characters"
 
@@ -561,6 +568,7 @@ def export_with_url_unsafe_characters(sbox):
   if not os.path.exists(export_target):
     raise svntest.Failure("export did not fetch file with URL unsafe path")
 
+@XFail()
 def export_working_copy_with_depths(sbox):
   "export working copy with different depths"
   sbox.build(read_only = True)
@@ -662,6 +670,7 @@ def export_externals_with_native_eol(sbox):
                                         expected_disk,
                                         '--native-eol', 'CR')
 
+@Issue(3727)
 def export_to_current_dir(sbox):
   "export to current dir"
   # Issue 3727: Forced export in current dir creates unexpected subdir.
@@ -708,7 +717,7 @@ test_list = [ None,
               export_eol_translation,
               export_working_copy_with_keyword_translation,
               export_working_copy_with_property_mods,
-              XFail(export_working_copy_at_base_revision),
+              export_working_copy_at_base_revision,
               export_native_eol_option,
               export_nonexistent_file,
               export_unversioned_file,
@@ -717,11 +726,11 @@ test_list = [ None,
               export_HEADplus1_fails,
               export_url_to_explicit_cwd,
               export_file_to_explicit_cwd,
-              XFail(export_file_overwrite_fails),
+              export_file_overwrite_fails,
               export_ignoring_keyword_translation,
               export_working_copy_ignoring_keyword_translation,
               export_with_url_unsafe_characters,
-              XFail(export_working_copy_with_depths),
+              export_working_copy_with_depths,
               export_externals_with_native_eol,
               export_to_current_dir,
              ]

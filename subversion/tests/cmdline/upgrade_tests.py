@@ -40,8 +40,12 @@ import svntest
 from svntest import wc
 
 Item = svntest.wc.StateItem
-XFail = svntest.testcase.XFail
-SkipUnless = svntest.testcase.SkipUnless
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 
 wc_is_too_old_regex = (".*Working copy '.*' is too old \(format \d+.*\).*")
 
@@ -550,6 +554,7 @@ def do_x3_upgrade(sbox):
       'A/B/E/alpha'       : {'svn:eol-style': 'native'}
   })
 
+@XFail()
 def x3_1_4_0(sbox):
   "3x same wc upgrade 1.4.0 test"
 
@@ -640,6 +645,7 @@ def missing_dirs2(sbox):
     expected_status.tweak('A/D', 'A/B_new/F', status='! ')
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 
+@XFail()
 def delete_and_keep_local(sbox):
   "check status delete and delete --keep-local"
 
@@ -855,12 +861,12 @@ test_list = [ None,
               basic_upgrade_1_0,
               # Upgrading from 1.4.0-1.4.5 with specific states fails
               # See issue #2530
-              XFail(x3_1_4_0),
+              x3_1_4_0,
               x3_1_4_6,
               x3_1_6_12,
               missing_dirs,
               missing_dirs2,
-              XFail(delete_and_keep_local),
+              delete_and_keep_local,
               dirs_only_upgrade,
               upgrade_tree_conflict_data,
               delete_in_copy_upgrade,

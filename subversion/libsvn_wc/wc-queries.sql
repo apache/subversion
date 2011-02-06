@@ -158,9 +158,18 @@ SELECT properties, presence FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2
 ORDER BY op_depth DESC;
 
+-- STMT_SELECT_NODE_PROPS_OF_CHILDREN
+SELECT properties, presence, local_relpath, kind FROM nodes
+WHERE wc_id = ?1 AND parent_relpath = ?2
+ORDER BY local_relpath, op_depth DESC;
+
 -- STMT_SELECT_ACTUAL_PROPS
 SELECT properties FROM actual_node
 WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_SELECT_ACTUAL_PROPS_OF_CHILDREN
+SELECT properties, local_relpath FROM actual_node
+WHERE wc_id = ?1 AND parent_relpath = ?2;
 
 -- STMT_UPDATE_NODE_BASE_PROPS
 UPDATE nodes SET properties = ?3

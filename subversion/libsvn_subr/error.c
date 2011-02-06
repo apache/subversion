@@ -453,8 +453,9 @@ print_error(svn_error_t *err, FILE *stream, const char *prefix)
   /* Only print the same APR error string once. */
   else if (err->message)
     {
-      svn_error_clear(svn_cmdline_fprintf(stream, err->pool, "%s%s\n",
-                                          prefix, err->message));
+      svn_error_clear(svn_cmdline_fprintf(stream, err->pool,
+                                          "%sE%06d: %s\n",
+                                          prefix, err->apr_err, err->message));
     }
   else
     {
@@ -472,7 +473,8 @@ print_error(svn_error_t *err, FILE *stream, const char *prefix)
         }
 
       svn_error_clear(svn_cmdline_fprintf(stream, err->pool,
-                                          "%s%s\n", prefix, err_string));
+                                          "%sE%06d: %s\n",
+                                          prefix, err->apr_err, err_string));
     }
 }
 
@@ -503,7 +505,7 @@ svn_handle_error2(svn_error_t *err,
 
   /* ### The rest of this file carefully avoids using svn_pool_*(),
      preferring apr_pool_*() instead.  I can't remember why -- it may
-     be an artifact of r3719, or it may be for some deeper reason --
+     be an artifact of r843793, or it may be for some deeper reason --
      but I'm playing it safe and using apr_pool_*() here too. */
   apr_pool_create(&subpool, err->pool);
   empties = apr_array_make(subpool, 0, sizeof(apr_status_t));
@@ -567,8 +569,9 @@ svn_handle_warning2(FILE *stream, svn_error_t *err, const char *prefix)
 
   svn_error_clear(svn_cmdline_fprintf
                   (stream, err->pool,
-                   _("%swarning: %s\n"),
-                   prefix, svn_err_best_message(err, buf, sizeof(buf))));
+                   _("%swarning: W%06d: %s\n"),
+                   prefix, err->apr_err,
+                   svn_err_best_message(err, buf, sizeof(buf))));
   fflush(stream);
 }
 

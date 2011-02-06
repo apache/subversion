@@ -259,8 +259,8 @@ svn_error_t *load_configs(svn_config_t **cfg,
              proceed without it anyway.
 
              ### Not entirely sure why SVN_ERR_BAD_FILENAME is checked
-             ### for here.  That seems to have been introduced in r16840,
-             ### and only in r30868 was the APR_EACCES check introduced. */
+             ### for here.  That seems to have been introduced in r856914,
+             ### and only in r870942 was the APR_EACCES check introduced. */
           if (err->apr_err != SVN_ERR_BAD_FILENAME
               && ! APR_STATUS_IS_EACCES(err->apr_err))
             {
@@ -2008,18 +2008,17 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     revprops = NULL;
   else if (strcmp(revprop_word, "revprops") == 0)
     {
+      SVN_ERR_ASSERT(revprop_items);
+
       revprops = apr_array_make(pool, revprop_items->nelts,
                                 sizeof(char *));
-      if (revprop_items)
+      for (i = 0; i < revprop_items->nelts; i++)
         {
-          for (i = 0; i < revprop_items->nelts; i++)
-            {
-              elt = &APR_ARRAY_IDX(revprop_items, i, svn_ra_svn_item_t);
-              if (elt->kind != SVN_RA_SVN_STRING)
-                return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                                        _("Log revprop entry not a string"));
-              APR_ARRAY_PUSH(revprops, const char *) = elt->u.string->data;
-            }
+          elt = &APR_ARRAY_IDX(revprop_items, i, svn_ra_svn_item_t);
+          if (elt->kind != SVN_RA_SVN_STRING)
+            return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                                    _("Log revprop entry not a string"));
+          APR_ARRAY_PUSH(revprops, const char *) = elt->u.string->data;
         }
     }
   else
@@ -2998,9 +2997,9 @@ static svn_error_t *find_repos(const char *url, const char *root,
   svn_path_remove_components(url_buf,
                              svn_path_component_count(b->fs_path->data));
   b->repos_url = url_buf->data;
-  b->authz_repos_name = svn_fspath__is_child(root, repos_root, pool);
+  b->authz_repos_name = svn_dirent_is_child(root, repos_root, pool);
   if (b->authz_repos_name == NULL)
-    b->repos_name = svn_fspath__basename(repos_root, pool);
+    b->repos_name = svn_dirent_basename(repos_root, pool);
   else
     b->repos_name = b->authz_repos_name;
   b->repos_name = svn_path_uri_encode(b->repos_name, pool);

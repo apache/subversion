@@ -241,6 +241,25 @@ svn_checksum_size(const svn_checksum_t *checksum);
 
 
 /**
+ * Return an error of type #SVN_ERR_CHECKSUM_MISMATCH if @a actual and 
+ * @a expected checksums do not match, otherwise, return #SVN_NO_ERROR.
+ * Use @a fmt, and the following parameters to populate the error message.
+ *
+ * @a scratch_pool is used for temporary allocations; the returned error
+ * will be allocated in its own pool (as is typical).
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_checksum_mismatch_err(const svn_checksum_t *expected,
+                          const svn_checksum_t *actual,
+                          apr_pool_t *scratch_pool,
+                          const char *fmt,
+                          ...)
+  __attribute__ ((format(printf, 4, 5)));
+
+
+/**
  * Internal function for creating a checksum from a binary digest.
  *
  * @since New in 1.6

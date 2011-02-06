@@ -32,8 +32,12 @@ import svntest
 from svntest import wc
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-XFail = svntest.testcase.XFail
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 
 
@@ -446,6 +450,7 @@ def keywords_from_birth(sbox):
 def do_nothing(x, y):
   return 0
 
+@Issue(631)
 def update_modified_with_translation(sbox):
   "update modified file with eol-style 'native'"
 
@@ -534,7 +539,7 @@ def update_modified_with_translation(sbox):
 # contents are transmitted to the server during commit, and b) that
 # after the commit, the file and its text-base have been changed to
 # have the new line-ending style.
-
+@Issue(1085)
 def eol_change_is_text_mod(sbox):
   "committing eol-style change forces text send"
 
@@ -588,7 +593,7 @@ def eol_change_is_text_mod(sbox):
 #----------------------------------------------------------------------
 # Regression test for issue #1151.  A single file in a directory
 # didn't get keywords expanded on checkout.
-
+@Issue(1151)
 def keyword_expanded_on_checkout(sbox):
   "keyword expansion for lone file in directory"
 

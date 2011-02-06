@@ -89,8 +89,8 @@ store_delta(apr_file_t **tempfile, svn_filesize_t *len,
 
 struct edit_baton
 {
-  /* The path which implicitly prepends all full paths coming into
-     this editor.  This will almost always be "" or "/".  */
+  /* The relpath which implicitly prepends all full paths coming into
+     this editor.  This will almost always be "".  */
   const char *path;
 
   /* The stream to dump to. */
@@ -137,13 +137,13 @@ struct dir_baton
   /* has this directory been written to the output stream? */
   svn_boolean_t written_out;
 
-  /* the absolute path to this directory */
+  /* the repository relpath associated with this directory */
   const char *path;
 
-  /* the comparison path and revision of this directory.  if both of
-     these are valid, use them as a source against which to compare
-     the directory instead of the default comparison source of PATH in
-     the previous revision. */
+  /* The comparison repository relpath and revision of this directory.
+     If both of these are valid, use them as a source against which to
+     compare the directory instead of the default comparison source of
+     PATH in the previous revision. */
   const char *cmp_path;
   svn_revnum_t cmp_rev;
 
@@ -189,18 +189,18 @@ make_dir_baton(const char *path,
 
   /* Construct the full path of this node. */
   if (pb)
-    full_path = svn_path_join(eb->path, path, pool);
+    full_path = svn_relpath_join(eb->path, path, pool);
   else
     full_path = apr_pstrdup(pool, eb->path);
 
   /* Remove leading slashes from copyfrom paths. */
   if (cmp_path)
-    cmp_path = ((*cmp_path == '/') ? cmp_path + 1 : cmp_path);
+    cmp_path = svn_relpath_canonicalize(cmp_path, pool);
 
   new_db->edit_baton = eb;
   new_db->parent_dir_baton = pb;
   new_db->path = full_path;
-  new_db->cmp_path = cmp_path ? apr_pstrdup(pool, cmp_path) : NULL;
+  new_db->cmp_path = cmp_path;
   new_db->cmp_rev = cmp_rev;
   new_db->added = added;
   new_db->written_out = FALSE;
@@ -225,7 +225,7 @@ make_dir_baton(const char *path,
   */
 static svn_error_t *
 dump_node(struct edit_baton *eb,
-          const char *path,    /* an absolute path. */
+          const char *path,
           svn_node_kind_t kind,
           enum svn_node_action action,
           svn_boolean_t is_copy,
@@ -245,7 +245,7 @@ dump_node(struct edit_baton *eb,
   /* Write out metadata headers for this file node. */
   SVN_ERR(svn_stream_printf(eb->stream, pool,
                             SVN_REPOS_DUMPFILE_NODE_PATH ": %s\n",
-                            (*path == '/') ? path + 1 : path));
+                            path));
   if (kind == svn_node_file)
     SVN_ERR(svn_stream_printf(eb->stream, pool,
                               SVN_REPOS_DUMPFILE_NODE_KIND ": file\n"));
@@ -255,7 +255,7 @@ dump_node(struct edit_baton *eb,
 
   /* Remove leading slashes from copyfrom paths. */
   if (cmp_path)
-    cmp_path = ((*cmp_path == '/') ? cmp_path + 1 : cmp_path);
+    cmp_path = svn_relpath_canonicalize(cmp_path, pool);
 
   /* Validate the comparison path/rev. */
   if (ARE_VALID_COPY_ARGS(cmp_path, cmp_rev))
@@ -682,8 +682,8 @@ open_directory(const char *path,
      record the same for this one. */
   if (pb && ARE_VALID_COPY_ARGS(pb->cmp_path, pb->cmp_rev))
     {
-      cmp_path = svn_path_join(pb->cmp_path,
-                               svn_dirent_basename(path, pool), pool);
+      cmp_path = svn_relpath_join(pb->cmp_path,
+                                  svn_relpath_basename(path, pool), pool);
       cmp_rev = pb->cmp_rev;
     }
 
@@ -779,8 +779,8 @@ open_file(const char *path,
      record the same for this one. */
   if (pb && ARE_VALID_COPY_ARGS(pb->cmp_path, pb->cmp_rev))
     {
-      cmp_path = svn_path_join(pb->cmp_path,
-                               svn_dirent_basename(path, pool), pool);
+      cmp_path = svn_relpath_join(pb->cmp_path,
+                                  svn_relpath_basename(path, pool), pool);
       cmp_rev = pb->cmp_rev;
     }
 
@@ -1059,7 +1059,7 @@ svn_repos_dump_fs3(svn_repos_t *repos,
          non-incremental dump. */
       use_deltas_for_rev = use_deltas && (incremental || i != start_rev);
       SVN_ERR(get_dump_editor(&dump_editor, &dump_edit_baton, fs, to_rev,
-                              "/", stream, notify_func, notify_baton,
+                              "", stream, notify_func, notify_baton,
                               start_rev, use_deltas_for_rev, FALSE, subpool));
 
       /* Drive the editor in one way or another. */
@@ -1072,8 +1072,8 @@ svn_repos_dump_fs3(svn_repos_t *repos,
         {
           svn_fs_root_t *from_root;
           SVN_ERR(svn_fs_revision_root(&from_root, fs, from_rev, subpool));
-          SVN_ERR(svn_repos_dir_delta2(from_root, "/", "",
-                                       to_root, "/",
+          SVN_ERR(svn_repos_dir_delta2(from_root, "", "",
+                                       to_root, "",
                                        dump_editor, dump_edit_baton,
                                        NULL,
                                        NULL,
@@ -1166,7 +1166,7 @@ verify_directory_entry(void *baton, const void *key, apr_ssize_t klen,
                        void *val, apr_pool_t *pool)
 {
   struct dir_baton *db = baton;
-  char *path = svn_path_join(db->path, (const char *)key, pool);
+  char *path = svn_relpath_join(db->path, (const char *)key, pool);
   svn_node_kind_t kind;
   apr_hash_t *dirents;
   svn_filesize_t len;
