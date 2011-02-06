@@ -43,6 +43,7 @@ static svn_fs_cache_config_t cache_settings =
     FALSE        /* assume multi-threaded operation */
 #else
     TRUE         /* single-threaded is the only supported mode of operation */
+#endif
 };
 
 /* Get the current FSFS cache configuration. */
@@ -60,7 +61,7 @@ svn_fs_get_cache_config(void)
 svn_membuffer_t *
 svn_fs__get_global_membuffer_cache(void)
 {
-  static volatile svn_membuffer_t *cache = NULL;
+  static svn_membuffer_t * volatile cache = NULL;
 
   apr_uint64_t cache_size = cache_settings.cache_size;
   if (!cache && cache_size)
@@ -85,7 +86,7 @@ svn_fs__get_global_membuffer_cache(void)
       pool = svn_pool_create_ex(NULL, allocator);
 
       svn_error_clear(svn_cache__membuffer_cache_create(
-          &cache,
+          &old_cache,
           (apr_size_t)cache_size,
           (apr_size_t)(cache_size / 16),
           ! svn_fs_get_cache_config()->single_threaded,
@@ -95,7 +96,7 @@ svn_fs__get_global_membuffer_cache(void)
        * cache object, make it our global singleton. Otherwise,
        * discard the new cache and keep the existing one.
        */
-      old_cache = apr_atomic_casptr(&cache, new_cache, NULL);
+      old_cache = apr_atomic_casptr((volatile void **)&cache, new_cache, NULL);
       if (old_cache != NULL)
         apr_pool_destroy(pool);
     }
