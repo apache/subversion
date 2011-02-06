@@ -38,8 +38,12 @@ static svn_fs_cache_config_t cache_settings =
     16,          /* up to 16 files kept open */
     TRUE,        /* cache fulltexts */
     FALSE,       /* don't cache text deltas */
+
+#ifdef APR_HAS_THREADS
     FALSE        /* assume multi-threaded operation */
-  };
+#else
+    TRUE         /* single-threaded is the only supported mode of operation */
+};
 
 /* Get the current FSFS cache configuration. */
 const svn_fs_cache_config_t *
@@ -50,7 +54,8 @@ svn_fs_get_cache_config(void)
 
 /* Access the process-global (singleton) membuffer cache. The first call
  * will automatically allocate the cache using the current cache config.
- * NULL will be returned if the desired cache size is 0.
+ * NULL will be returned if the desired cache size is 0 or if the cache
+ * could not be created for some reason.
  */
 svn_membuffer_t *
 svn_fs__get_global_membuffer_cache(void)
@@ -79,12 +84,12 @@ svn_fs__get_global_membuffer_cache(void)
       apr_allocator_max_free_set(allocator, 1);
       pool = svn_pool_create_ex(NULL, allocator);
 
-      svn_cache__membuffer_cache_create
-          (&new_cache,
-           (apr_size_t)cache_size,
-           (apr_size_t)cache_size / 16,
-           ! svn_fs_get_cache_config()->single_threaded,
-           pool);
+      svn_error_clear(svn_cache__membuffer_cache_create(
+          &cache,
+          (apr_size_t)cache_size,
+          (apr_size_t)(cache_size / 16),
+          ! svn_fs_get_cache_config()->single_threaded,
+          pool));
 
       /* Handle race condition: if we are the first to create a
        * cache object, make it our global singleton. Otherwise,
