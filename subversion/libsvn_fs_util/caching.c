@@ -20,6 +20,8 @@
  * ====================================================================
  */
 
+#include <apr_atomic.h>
+
 #include "svn_fs.h"
 #include "private/svn_fs_private.h"
 #include "private/svn_cache.h"
@@ -53,11 +55,14 @@ svn_fs_get_cache_config(void)
 svn_membuffer_t *
 svn_fs__get_global_membuffer_cache(void)
 {
-  static svn_membuffer_t *cache = NULL;
+  static volatile svn_membuffer_t *cache = NULL;
 
   apr_uint64_t cache_size = cache_settings.cache_size;
   if (!cache && cache_size)
     {
+      svn_membuffer_t *old_cache = NULL;
+      svn_membuffer_t *new_cache = NULL;
+
       /* auto-allocate cache*/
       apr_allocator_t *allocator = NULL;
       apr_pool_t *pool = NULL;
@@ -75,23 +80,27 @@ svn_fs__get_global_membuffer_cache(void)
       pool = svn_pool_create_ex(NULL, allocator);
 
       svn_cache__membuffer_cache_create
-          (&cache,
+          (&new_cache,
            (apr_size_t)cache_size,
            (apr_size_t)cache_size / 16,
            ! svn_fs_get_cache_config()->single_threaded,
            pool);
+
+      /* Handle race condition: if we are the first to create a
+       * cache object, make it our global singleton. Otherwise,
+       * discard the new cache and keep the existing one.
+       */
+      old_cache = apr_atomic_casptr(&cache, new_cache, NULL);
+      if (old_cache != NULL)
+        apr_pool_destroy(pool);
     }
 
   return cache;
 }
 
-void 
+void
 svn_fs_set_cache_config(const svn_fs_cache_config_t *settings)
 {
   cache_settings = *settings;
-
-  /* Allocate global membuffer cache as a side-effect.
-   * Only the first call will actually take affect. */
-  svn_fs__get_global_membuffer_cache();
 }
 
