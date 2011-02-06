@@ -88,16 +88,19 @@ datasource_to_index(svn_diff_datasource_e datasource)
 }
 
 
-/* Implements svn_diff_fns_t::datasource_open */
+/* Implements svn_diff_fns2_t::datasources_open */
 static svn_error_t *
-datasource_open(void *baton, svn_diff_datasource_e datasource)
+datasources_open(void *baton, apr_off_t *prefix_lines,
+                 svn_diff_datasource_e datasource[], 
+                 apr_size_t datasource_len)
 {
   /* Do nothing: everything is already there and initialized to 0 */
+  *prefix_lines = 0;
   return SVN_NO_ERROR;
 }
 
 
-/* Implements svn_diff_fns_t::datasource_close */
+/* Implements svn_diff_fns2_t::datasource_close */
 static svn_error_t *
 datasource_close(void *baton, svn_diff_datasource_e datasource)
 {
@@ -109,7 +112,7 @@ datasource_close(void *baton, svn_diff_datasource_e datasource)
 }
 
 
-/* Implements svn_diff_fns_t::datasource_get_next_token */
+/* Implements svn_diff_fns2_t::datasource_get_next_token */
 static svn_error_t *
 datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
                           svn_diff_datasource_e datasource)
@@ -138,7 +141,7 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
   return SVN_NO_ERROR;
 }
 
-/* Implements svn_diff_fns_t::token_compare */
+/* Implements svn_diff_fns2_t::token_compare */
 static svn_error_t *
 token_compare(void *baton, void *token1, void *token2, int *result)
 {
@@ -167,7 +170,7 @@ token_compare(void *baton, void *token1, void *token2, int *result)
   return SVN_NO_ERROR;
 }
 
-/* Implements svn_diff_fns_t::token_discard */
+/* Implements svn_diff_fns2_t::token_discard */
 static void
 token_discard(void *baton, void *token)
 {
@@ -175,7 +178,7 @@ token_discard(void *baton, void *token)
 }
 
 
-/* Implements svn_diff_fns_t::token_discard_all */
+/* Implements svn_diff_fns2_t::token_discard_all */
 static void
 token_discard_all(void *baton)
 {
@@ -187,9 +190,9 @@ token_discard_all(void *baton)
 }
 
 
-static const svn_diff_fns_t svn_diff__mem_vtable =
+static const svn_diff_fns2_t svn_diff__mem_vtable =
 {
-  datasource_open,
+  datasources_open,
   datasource_close,
   datasource_get_next_token,
   token_compare,
@@ -284,7 +287,7 @@ svn_diff_mem_string_diff(svn_diff_t **diff,
 
   baton.normalization_options = options;
 
-  return svn_diff_diff(diff, &baton, &svn_diff__mem_vtable, pool);
+  return svn_diff_diff_2(diff, &baton, &svn_diff__mem_vtable, pool);
 }
 
 svn_error_t *
@@ -304,7 +307,7 @@ svn_diff_mem_string_diff3(svn_diff_t **diff,
 
   baton.normalization_options = options;
 
-  return svn_diff_diff3(diff, &baton, &svn_diff__mem_vtable, pool);
+  return svn_diff_diff3_2(diff, &baton, &svn_diff__mem_vtable, pool);
 }
 
 
@@ -327,7 +330,7 @@ svn_diff_mem_string_diff4(svn_diff_t **diff,
 
   baton.normalization_options = options;
 
-  return svn_diff_diff4(diff, &baton, &svn_diff__mem_vtable, pool);
+  return svn_diff_diff4_2(diff, &baton, &svn_diff__mem_vtable, pool);
 }
 
 

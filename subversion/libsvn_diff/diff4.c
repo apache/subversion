@@ -166,13 +166,17 @@ adjust_diff(svn_diff_t *diff, svn_diff_t *adjust)
 }
 
 svn_error_t *
-svn_diff_diff4(svn_diff_t **diff,
-               void *diff_baton,
-               const svn_diff_fns_t *vtable,
-               apr_pool_t *pool)
+svn_diff_diff4_2(svn_diff_t **diff,
+                 void *diff_baton,
+                 const svn_diff_fns2_t *vtable,
+                 apr_pool_t *pool)
 {
   svn_diff__tree_t *tree;
   svn_diff__position_t *position_list[4];
+  svn_diff_datasource_e datasource[] = {svn_diff_datasource_original,
+                                        svn_diff_datasource_modified,
+                                        svn_diff_datasource_latest,
+                                        svn_diff_datasource_ancestor};
   svn_diff__lcs_t *lcs_ol;
   svn_diff__lcs_t *lcs_adjust;
   svn_diff_t *diff_ol;
@@ -181,6 +185,7 @@ svn_diff_diff4(svn_diff_t **diff,
   apr_pool_t *subpool;
   apr_pool_t *subpool2;
   apr_pool_t *subpool3;
+  apr_off_t prefix_lines = 0;
 
   *diff = NULL;
 
@@ -190,28 +195,34 @@ svn_diff_diff4(svn_diff_t **diff,
 
   svn_diff__tree_create(&tree, subpool3);
 
+  SVN_ERR(vtable->datasources_open(diff_baton, &prefix_lines, datasource, 4));
+
   SVN_ERR(svn_diff__get_tokens(&position_list[0],
                                tree,
                                diff_baton, vtable,
                                svn_diff_datasource_original,
+                               prefix_lines,
                                subpool2));
 
   SVN_ERR(svn_diff__get_tokens(&position_list[1],
                                tree,
                                diff_baton, vtable,
                                svn_diff_datasource_modified,
+                               prefix_lines,
                                subpool));
 
   SVN_ERR(svn_diff__get_tokens(&position_list[2],
                                tree,
                                diff_baton, vtable,
                                svn_diff_datasource_latest,
+                               prefix_lines,
                                subpool));
 
   SVN_ERR(svn_diff__get_tokens(&position_list[3],
                                tree,
                                diff_baton, vtable,
                                svn_diff_datasource_ancestor,
+                               prefix_lines,
                                subpool2));
 
   /* Get rid of the tokens, we don't need them to calc the diff */
@@ -222,7 +233,8 @@ svn_diff_diff4(svn_diff_t **diff,
   svn_pool_clear(subpool3);
 
   /* Get the lcs for original - latest */
-  lcs_ol = svn_diff__lcs(position_list[0], position_list[2], subpool3);
+  lcs_ol = svn_diff__lcs(position_list[0], position_list[2], prefix_lines,
+                         subpool3);
   diff_ol = svn_diff__diff(lcs_ol, 1, 1, TRUE, pool);
 
   svn_pool_clear(subpool3);
@@ -243,7 +255,8 @@ svn_diff_diff4(svn_diff_t **diff,
   /* Get the lcs for common ancestor - original
    * Do reverse adjustements
    */
-  lcs_adjust = svn_diff__lcs(position_list[3], position_list[2], subpool3);
+  lcs_adjust = svn_diff__lcs(position_list[3], position_list[2], prefix_lines,
+                             subpool3);
   diff_adjust = svn_diff__diff(lcs_adjust, 1, 1, FALSE, subpool3);
   adjust_diff(diff_ol, diff_adjust);
 
@@ -252,7 +265,8 @@ svn_diff_diff4(svn_diff_t **diff,
   /* Get the lcs for modified - common ancestor
    * Do forward adjustments
    */
-  lcs_adjust = svn_diff__lcs(position_list[1], position_list[3], subpool3);
+  lcs_adjust = svn_diff__lcs(position_list[1], position_list[3], prefix_lines,
+                             subpool3);
   diff_adjust = svn_diff__diff(lcs_adjust, 1, 1, FALSE, subpool3);
   adjust_diff(diff_ol, diff_adjust);
 
