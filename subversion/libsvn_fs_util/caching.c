@@ -20,6 +20,8 @@
  * ====================================================================
  */
 
+#include <apr_atomic.h>
+
 #include "svn_fs.h"
 #include "private/svn_fs_private.h"
 #include "private/svn_cache.h"
@@ -33,9 +35,9 @@ static svn_fs_cache_config_t cache_settings =
   {
     /* default configuration:
      */
-    0x8000000,   /* 128 MB for caches */
+    0x1000000,   /* 16 MB for caches */
     16,          /* up to 16 files kept open */
-    FALSE,       /* don't cache fulltexts */
+    TRUE,        /* cache fulltexts */
     FALSE,       /* don't cache text deltas */
 
 #ifdef APR_HAS_THREADS
@@ -60,11 +62,14 @@ svn_fs_get_cache_config(void)
 svn_membuffer_t *
 svn_fs__get_global_membuffer_cache(void)
 {
-  static svn_membuffer_t *cache = NULL;
+  static volatile svn_membuffer_t *cache = NULL;
 
   apr_uint64_t cache_size = cache_settings.cache_size;
   if (!cache && cache_size)
     {
+      svn_membuffer_t *old_cache = NULL;
+      svn_membuffer_t *new_cache = NULL;
+
       /* auto-allocate cache*/
       apr_allocator_t *allocator = NULL;
       apr_pool_t *pool = NULL;
@@ -81,12 +86,20 @@ svn_fs__get_global_membuffer_cache(void)
       apr_allocator_max_free_set(allocator, 1);
       pool = svn_pool_create_ex(NULL, allocator);
 
-      svn_error_clear(svn_cache__membuffer_cache_create(
-          &cache,
-          (apr_size_t)cache_size,
-          (apr_size_t)(cache_size / 16),
-          ! svn_fs_get_cache_config()->single_threaded,
-          pool));
+      svn_cache__membuffer_cache_create
+          (&new_cache,
+           (apr_size_t)cache_size,
+           (apr_size_t)cache_size / 16,
+           ! svn_fs_get_cache_config()->single_threaded,
+           pool);
+
+      /* Handle race condition: if we are the first to create a
+       * cache object, make it our global singleton. Otherwise,
+       * discard the new cache and keep the existing one.
+       */
+      old_cache = apr_atomic_casptr(&cache, new_cache, NULL);
+      if (old_cache != NULL)
+        apr_pool_destroy(pool);
     }
 
   return cache;
@@ -133,12 +146,5 @@ void
 svn_fs_set_cache_config(const svn_fs_cache_config_t *settings)
 {
   cache_settings = *settings;
-
-  /* Allocate global membuffer cache as a side-effect.
-   * Only the first call will actually have an effect. */
-  svn_fs__get_global_membuffer_cache();
-
-  /* Same for the file handle cache. */
-  svn_fs__get_global_file_handle_cache();
 }
 

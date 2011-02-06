@@ -200,7 +200,7 @@ raise_tree_conflict(int argc, const char **argv, apr_pool_t *pool)
                             "Wrong number of arguments");
 
   /* Read the parameters */
-  wc_path = svn_path_internal_style(argv[i++], pool);
+  wc_path = svn_dirent_internal_style(argv[i++], pool);
   SVN_ERR(read_enum_field(&kind, node_kind_map, argv[i++], pool));
   SVN_ERR(read_enum_field(&operation, operation_map, argv[i++], pool));
   SVN_ERR(read_enum_field(&action, action_map, argv[i++], pool));

@@ -358,7 +358,7 @@ get_operation(const char *path,
   return child;
 }
 
-/* Return the portion of URL that is relative to ANCHOR. */
+/* Return the portion of URL that is relative to ANCHOR (URI-decoded). */
 static const char *
 subtract_anchor(const char *anchor, const char *url, apr_pool_t *pool)
 {
@@ -412,7 +412,7 @@ build(action_code_t action,
   for (i = 0; i < path_bits->nelts; ++i)
     {
       const char *path_bit = APR_ARRAY_IDX(path_bits, i, const char *);
-      path_so_far = svn_path_join(path_so_far, path_bit, pool);
+      path_so_far = svn_relpath_join(path_so_far, path_bit, pool);
       operation = get_operation(path_so_far, operation, pool);
 
       /* If we cross a replace- or add-with-history, remember the
@@ -431,7 +431,7 @@ build(action_code_t action,
         }
       else if (copy_src)
         {
-          copy_src = svn_path_join(copy_src, path_bit, pool);
+          copy_src = svn_relpath_join(copy_src, path_bit, pool);
         }
     }
 
@@ -733,6 +733,18 @@ read_propvalue_file(const svn_string_t **value_p,
   return SVN_NO_ERROR;
 }
 
+/* Perform the typical suite of manipulations for user-provided URLs
+   on URL, returning the result (allocated from POOL): IRI-to-URI
+   conversion, auto-escaping, and canonicalization. */
+static const char *
+sanitize_url(const char *url,
+             apr_pool_t *pool)
+{
+  url = svn_path_uri_from_iri(url, pool);
+  url = svn_path_uri_autoescape(url, pool);
+  return svn_uri_canonicalize(url, pool);
+}
+
 static void
 usage(apr_pool_t *pool, int exit_val)
 {
@@ -855,11 +867,11 @@ main(int argc, const char **argv)
           err = svn_utf_cstring_to_utf8(&root_url, arg, pool);
           if (err)
             handle_error(err, pool);
-          root_url = svn_path_canonicalize(root_url, pool);
           if (! svn_path_is_url(root_url))
             handle_error(svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
                                            "'%s' is not a URL\n", root_url),
                          pool);
+          root_url = sanitize_url(root_url, pool);
           break;
         case 'r':
           {
@@ -984,10 +996,9 @@ main(int argc, const char **argv)
       /* For puts, there should be a local file next. */
       if (action->action == ACTION_PUT)
         {
-          action->path[1] = svn_path_canonicalize(APR_ARRAY_IDX(action_args,
-                                                                i,
-                                                                const char *),
-                                                  pool);
+          action->path[1] =
+            svn_dirent_canonicalize(APR_ARRAY_IDX(action_args, i,
+                                                  const char *), pool);
           if (++i == action_args->nelts)
             insufficient(pool);
         }
@@ -1017,13 +1028,14 @@ main(int argc, const char **argv)
           else
             {
               const char *propval_file =
-                svn_path_canonicalize(APR_ARRAY_IDX(action_args, i,
-                                                    const char *), pool);
+                svn_dirent_canonicalize(APR_ARRAY_IDX(action_args, i,
+                                                      const char *), pool);
 
               if (++i == action_args->nelts)
                 insufficient(pool);
 
-              err = read_propvalue_file(&(action->prop_value), propval_file, pool);
+              err = read_propvalue_file(&(action->prop_value),
+                                        propval_file, pool);
               if (err)
                 handle_error(err, pool);
 
@@ -1047,26 +1059,32 @@ main(int argc, const char **argv)
         {
           const char *url = APR_ARRAY_IDX(action_args, i, const char *);
 
-          /* If there's a root URL, we expect this to be a path
-             relative to that URL.  Otherwise, it should be a full URL. */
-          if (root_url)
-            url = svn_path_join(root_url, url, pool);
-          else if (! svn_path_is_url(url))
-            handle_error(svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                                           "'%s' is not a URL\n", url), pool);
-          url = svn_path_uri_from_iri(url, pool);
-          url = svn_path_uri_autoescape(url, pool);
-          url = svn_path_canonicalize(url, pool);
+          /* If there's a ROOT_URL, we expect URL to be a path
+             relative to ROOT_URL (and we build a full url from the
+             combination of the two).  Otherwise, it should be a full
+             url. */
+          if (! svn_path_is_url(url))
+            {
+              if (! root_url)
+                handle_error(svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                               "'%s' is not a URL, and "
+                                               "--root-url (-U) not provided\n",
+                                               url), pool);
+              /* ### These relpaths are already URI-encoded. */
+              url = apr_pstrcat(pool, root_url, "/",
+                                svn_relpath_canonicalize(url, pool), NULL);
+            }
+          url = sanitize_url(url, pool);
           action->path[j] = url;
 
           /* The cp source could be the anchor, but the other URLs should be
              children of the anchor. */
           if (! (action->action == ACTION_CP && j == 0))
-            url = svn_path_dirname(url, pool);
+            url = svn_uri_dirname(url, pool);
           if (! anchor)
             anchor = url;
           else
-            anchor = svn_path_get_longest_ancestor(anchor, url, pool);
+            anchor = svn_uri_get_longest_ancestor(anchor, url, pool);
 
           if ((++i == action_args->nelts) && (j >= num_url_args))
             insufficient(pool);

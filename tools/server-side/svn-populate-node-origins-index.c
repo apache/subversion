@@ -178,8 +178,8 @@ main(int argc, const char **argv)
   /* Convert argv[1] into a UTF8, internal-format, canonicalized path. */
   if ((err = svn_utf_cstring_to_utf8(&repos_path, argv[1], pool)))
     goto cleanup;
-  repos_path = svn_path_internal_style(repos_path, pool);
-  repos_path = svn_path_canonicalize(repos_path, pool);
+  repos_path = svn_dirent_internal_style(repos_path, pool);
+  repos_path = svn_dirent_canonicalize(repos_path, pool);
 
   if ((err = build_index(repos_path, pool)))
     goto cleanup;

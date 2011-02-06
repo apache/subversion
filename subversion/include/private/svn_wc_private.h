@@ -713,6 +713,42 @@ svn_wc__get_mergeinfo_walk_info(svn_boolean_t *is_present,
                                 const char *local_abspath,
                                 apr_pool_t *scratch_pool);
 
+/** A callback invoked by svn_wc__prop_list_recursive().
+ * It is equivalent to svn_proplist_receiver_t declared in svn_client.h,
+ * but kept private within the svn_wc__ namespace because it is used within
+ * the bowels of libsvn_wc which don't include svn_client.h.
+ *
+ * @since New in 1.7. */
+typedef svn_error_t *(*svn_wc__proplist_receiver_t)(void *baton,
+                                                    const char *local_abspath,
+                                                    apr_hash_t *props,
+                                                    apr_pool_t *scratch_pool);
+
+/** Call @a receiver_func, passing @a receiver_baton, an absolute path, and
+ * a hash table mapping <tt>char *</tt> names onto <tt>svn_string_t *</tt>
+ * values for all the regular properties of the node at @a local_abspath
+ * and any node beneath @a local_abspath within the specified @a depth.
+ *
+ * If a node has no properties, @a receiver_func is not called for the node.
+ *
+ * Use @a wc_ctx to access the working copy, and @a scratch_pool for
+ * temporary allocations.
+ *
+ * If the node at @a local_abspath does not exist,
+ * #SVN_ERR_WC_PATH_NOT_FOUND is returned.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_wc__prop_list_recursive(svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
+                            svn_depth_t depth,
+                            svn_wc__proplist_receiver_t receiver_func,
+                            void *receiver_baton,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
+                            apr_pool_t *scratch_pool);
+
 
 /**
  * For use by entries.c and entries-dump.c to read old-format working copies.

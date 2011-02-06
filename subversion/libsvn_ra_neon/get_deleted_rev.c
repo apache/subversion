@@ -137,8 +137,8 @@ svn_ra_neon__get_deleted_rev(svn_ra_session_t *session,
                                          ras, ras->url->data,
                                          peg_revision,
                                          pool));
-  final_bc_url = svn_path_url_add_component(bc_url.data, bc_relative.data,
-                                            pool);
+  final_bc_url = svn_path_url_add_component2(bc_url.data, bc_relative.data,
+                                             pool);
 
   body = apr_psprintf(pool,
                       "<?xml version=\"1.0\" encoding=\"utf-8\"?>"

@@ -1157,15 +1157,16 @@ class TestRunner:
        or options.mode_filter.upper() == self.pred.list_mode().upper() \
        or (options.mode_filter.upper() == 'PASS' \
            and self.pred.list_mode() == ''):
+      tail = ''
+      if self.pred.issues:
+        tail += " [%s]" % ','.join(['#%d' % i for i in self.pred.issues])
       if options.verbose and self.pred.inprogress:
-        print(" %3d    %-5s  %s [[%s]]" % (self.index,
-                                           self.pred.list_mode(),
-                                           self.pred.description,
-                                           self.pred.inprogress))
+        tail += " [[%s]]" % self.pred.inprogress
       else:
-        print(" %3d    %-5s  %s" % (self.index,
-                                    self.pred.list_mode(),
-                                    self.pred.description))
+        print(" %3d    %-5s  %s%s" % (self.index,
+                                      self.pred.list_mode(),
+                                      self.pred.description,
+                                      tail))
     sys.stdout.flush()
 
   def get_mode(self):
@@ -1475,7 +1476,7 @@ def run_tests(test_list, serial_only = False):
 #
 # This routine parses sys.argv to decide what to do.
 def execute_tests(test_list, serial_only = False, test_name = None,
-                  progress_func = None):
+                  progress_func = None, test_selection = []):
   """Similar to run_tests(), but just returns the exit code, rather than
   exiting the process.  This function can be used when a caller doesn't
   want the process to die."""
@@ -1496,13 +1497,14 @@ def execute_tests(test_list, serial_only = False, test_name = None,
   testnums = []
 
   if not options:
+    # Override which tests to run from the commandline
     (parser, args) = _parse_options()
+    test_selection = args
   else:
-    args = []
     parser = _create_parser()
 
   # parse the positional arguments (test nums, names)
-  for arg in args:
+  for arg in test_selection:
     appended = False
     try:
       testnums.append(int(arg))

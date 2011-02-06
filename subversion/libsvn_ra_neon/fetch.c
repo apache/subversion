@@ -1997,8 +1997,8 @@ cdata_handler(void *userdata, int state, const char *cdata, size_t len)
             /* Short write without associated error?  "Can't happen." */
             return svn_error_createf(SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
                                      _("Error writing to '%s': unexpected EOF"),
-                                     svn_path_local_style(rb->namestr->data,
-                                                          rb->pool));
+                                     svn_relpath_local_style(rb->namestr->data,
+                                                             rb->pool));
           }
       }
       break;

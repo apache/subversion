@@ -2106,7 +2106,7 @@ reporter_depth_exclude(const svn_test_opts_t *opts,
                               FALSE, NULL, subpool));
 
   /* This is the illegal call, since A/D was excluded above; the call
-     itself will not error, but finish_report() will.  As of r28098,
+     itself will not error, but finish_report() will.  As of r868172,
      this delayed error behavior is not actually promised by the
      reporter API, which merely warns callers not to touch a path
      underneath a previously excluded path without defining what will

@@ -242,8 +242,8 @@ svn_client_list2(const char *path_or_url,
 
   if (! dirent)
     return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
-                             _("URL '%s' non-existent in that revision"),
-                             url);
+                             _("URL '%s' non-existent in revision %ld"),
+                             url, rev);
 
   /* Maybe get all locks under url. */
   if (fetch_locks)
