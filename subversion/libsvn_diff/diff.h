@@ -91,6 +91,7 @@ typedef enum svn_diff__normalize_state_t
 svn_diff__lcs_t *
 svn_diff__lcs(svn_diff__position_t *position_list1, /* pointer to tail (ring) */
               svn_diff__position_t *position_list2, /* pointer to tail (ring) */
+              apr_off_t prefix_lines,
               apr_pool_t *pool);
 
 
@@ -109,8 +110,9 @@ svn_error_t *
 svn_diff__get_tokens(svn_diff__position_t **position_list,
                      svn_diff__tree_t *tree,
                      void *diff_baton,
-                     const svn_diff_fns_t *vtable,
+                     const svn_diff_fns2_t *vtable,
                      svn_diff_datasource_e datasource,
+                     apr_off_t prefix_lines,
                      apr_pool_t *pool);
 
 
