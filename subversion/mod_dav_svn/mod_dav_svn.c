@@ -420,25 +420,18 @@ SVNSpecialURI_cmd(cmd_parms *cmd, void *config, const char *arg1)
   return NULL;
 }
 
-static apr_uint64_t
-parse_number(const char *arg)
-{
-  const char *c;
-  for (c = arg; *c != 0; ++c)
-    if (!svn_ctype_isdigit (*c))
-      return (apr_uint64_t)(-1);
-
-  return apr_strtoi64(arg, NULL, 0);
-}
-
 static const char *
 SVNInMemoryCacheSize_cmd(cmd_parms *cmd, void *config, const char *arg1)
 {
   svn_fs_cache_config_t settings = *svn_fs_get_cache_config();
 
-  apr_uint64_t value = parse_number(arg1);
-  if (value == (apr_uint64_t)(-1))
-    return "Invalid decimal number for the SVN cache size.";
+  apr_uint64_t value = 0;
+  svn_error_t *err = svn_cstring_atoui64(&value, arg1);
+  if (err)
+    {
+      svn_error_clear(err);
+      return "Invalid decimal number for the SVN cache size.";
+    }
 
   settings.cache_size = value * 0x100000;
 
