@@ -29,6 +29,7 @@
 #include "svn_private_config.h"
 #include "cache.h"
 #include "svn_string.h"
+#include "private/svn_dep_compat.h"
 
 /*
  * A membuffer cache consists of two parts:
