@@ -34,6 +34,7 @@
 #include "svn_version.h"
 #include "svn_fs.h"
 #include "svn_utf.h"
+#include "svn_ctype.h"
 #include "svn_dso.h"
 #include "mod_dav_svn.h"
 
@@ -415,6 +416,33 @@ SVNSpecialURI_cmd(cmd_parms *cmd, void *config, const char *arg1)
   conf = ap_get_module_config(cmd->server->module_config,
                               &dav_svn_module);
   conf->special_uri = uri;
+
+  return NULL;
+}
+
+static apr_uint64_t
+parse_number(const char *arg)
+{
+  const char *c;
+  for (c = arg; *c != 0; ++c)
+    if (!svn_ctype_isdigit (*c))
+      return (apr_uint64_t)(-1);
+
+  return apr_strtoi64(arg, NULL, 0);
+}
+
+static const char *
+SVNInMemoryCacheSize_cmd(cmd_parms *cmd, void *config, const char *arg1)
+{
+  svn_fs_cache_config_t settings = *svn_fs_get_cache_config();
+
+  apr_uint64_t value = parse_number(arg1);
+  if (value == (apr_uint64_t)(-1))
+    return "Invalid decimal number for the SVN cache size.";
+
+  settings.cache_size = value * 0x100000;
+
+  svn_fs_set_cache_config(&settings);
 
   return NULL;
 }
@@ -856,6 +884,13 @@ static const command_rec cmds[] =
                ACCESS_CONF|RSRC_CONF,
                "enables server advertising of support for version 2 of "
                "Subversion's HTTP protocol (default values is On)."),
+
+  /* per server */
+  AP_INIT_TAKE1("SVNInMemoryCacheSize", SVNInMemoryCacheSize_cmd, NULL,
+               RSRC_CONF,
+               "specify the maximum size im MB per process of Subversion's "
+               "in-memory object cache (default values is 128 if threading "
+               "is supported, 16 if not; 0 deactivates the cache)."),
 
   { NULL }
 };
