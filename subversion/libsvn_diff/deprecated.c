@@ -52,7 +52,7 @@ struct fns_wrapper_baton
 
 static svn_error_t *
 datasources_open(void *baton, apr_off_t *prefix_lines,
-                 svn_diff_datasource_e datasources[],
+                 const svn_diff_datasource_e *datasources,
                  apr_size_t datasource_len)
 {
   struct fns_wrapper_baton *fwb = baton;
