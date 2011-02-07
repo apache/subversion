@@ -1317,6 +1317,7 @@ def ls_url_encoded(sbox):
 #----------------------------------------------------------------------
 # Make sure unlocking a path with the wrong lock token fails.
 @XFail(svntest.main.is_ra_type_dav)
+@Issue(3794)
 def unlock_wrong_token(sbox):
   "verify unlocking with wrong lock token"
 
@@ -1334,7 +1335,7 @@ def unlock_wrong_token(sbox):
   # Steal the lock as the same author, but using an URL to keep the old token
   # in the WC.
   svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
-                                     "--force", file_url)
+                                    "--force", file_url)
 
   # Then, unlocking the WC path should fail.
   ### The error message returned is actually this, but let's worry about that
