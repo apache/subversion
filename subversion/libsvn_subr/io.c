@@ -47,6 +47,10 @@
 #include <apr_portable.h>
 #include <apr_md5.h>
 
+#ifdef WIN32
+#include <arch/win32/apr_arch_file_io.h>
+#endif
+
 #include "svn_types.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
@@ -1539,6 +1543,131 @@ io_set_file_perms(const char *path,
 }
 #endif /* !WIN32 && !__OS2__ */
 
+#ifdef WIN32
+#if APR_HAS_UNICODE_FS
+/* copy of the apr function utf8_to_unicode_path since apr doesn't export this one */
+apr_status_t svn_utf8_to_unicode_path(apr_wchar_t* retstr, apr_size_t retlen, 
+                                  const char* srcstr)
+{
+    /* TODO: The computations could preconvert the string to determine
+     * the true size of the retstr, but that's a memory over speed
+     * tradeoff that isn't appropriate this early in development.
+     *
+     * Allocate the maximum string length based on leading 4 
+     * characters of \\?\ (allowing nearly unlimited path lengths) 
+     * plus the trailing null, then transform /'s into \\'s since
+     * the \\?\ form doesn't allow '/' path seperators.
+     *
+     * Note that the \\?\ form only works for local drive paths, and
+     * \\?\UNC\ is needed UNC paths.
+     */
+    apr_size_t srcremains = strlen(srcstr) + 1;
+    apr_wchar_t *t = retstr;
+    apr_status_t rv;
+
+    /* This is correct, we don't twist the filename if it is will
+     * definately be shorter than 248 characters.  It merits some 
+     * performance testing to see if this has any effect, but there
+     * seem to be applications that get confused by the resulting
+     * Unicode \\?\ style file names, especially if they use argv[0]
+     * or call the Win32 API functions such as GetModuleName, etc.
+     * Not every application is prepared to handle such names.
+     * 
+     * Note also this is shorter than MAX_PATH, as directory paths 
+     * are actually limited to 248 characters. 
+     *
+     * Note that a utf-8 name can never result in more wide chars
+     * than the original number of utf-8 narrow chars.
+     */
+    if (srcremains > 248) {
+        if (srcstr[1] == ':' && (srcstr[2] == '/' || srcstr[2] == '\\')) {
+            wcscpy (retstr, L"\\\\?\\");
+            retlen -= 4;
+            t += 4;
+        }
+        else if ((srcstr[0] == '/' || srcstr[0] == '\\')
+              && (srcstr[1] == '/' || srcstr[1] == '\\')
+              && (srcstr[2] != '?')) {
+            /* Skip the slashes */
+            srcstr += 2;
+            srcremains -= 2;
+            wcscpy (retstr, L"\\\\?\\UNC\\");
+            retlen -= 8;
+            t += 8;
+        }
+    }
+
+    if (rv = apr_conv_utf8_to_ucs2(srcstr, &srcremains, t, &retlen)) {
+        return (rv == APR_INCOMPLETE) ? APR_EINVAL : rv;
+    }
+    if (srcremains) {
+        return APR_ENAMETOOLONG;
+    }
+    for (; *t; ++t)
+        if (*t == L'/')
+            *t = L'\\';
+    return APR_SUCCESS;
+}
+#endif
+
+apr_status_t apr_win_file_attrs_set(const char *fname,
+                                    DWORD attributes,
+                                    DWORD attr_mask,
+                                    apr_pool_t *pool)
+{
+    /* this is an implementation of apr_file_attrs_set() but one
+       that uses the proper Windows attributes instead of the apr
+       attributes. This way, we can apply any Windows file and
+       folder attributes even if apr doesn't implement them */
+    DWORD flags;
+    apr_status_t rv;
+#if APR_HAS_UNICODE_FS
+    apr_wchar_t wfname[APR_PATH_MAX];
+#endif
+
+#if APR_HAS_UNICODE_FS
+    IF_WIN_OS_IS_UNICODE
+    {
+        if (rv = svn_utf8_to_unicode_path(wfname,
+                                          sizeof(wfname) / sizeof(wfname[0]),
+                                          fname))
+            return rv;
+        flags = GetFileAttributesW(wfname);
+    }
+#endif
+#if APR_HAS_ANSI_FS
+    ELSE_WIN_OS_IS_ANSI
+    {
+        flags = GetFileAttributesA(fname);
+    }
+#endif
+
+    if (flags == 0xFFFFFFFF)
+        return apr_get_os_error();
+
+    flags |= (attributes & attr_mask);
+    flags &= ~attr_mask;
+
+#if APR_HAS_UNICODE_FS
+    IF_WIN_OS_IS_UNICODE
+    {
+        rv = SetFileAttributesW(wfname, flags);
+    }
+#endif
+#if APR_HAS_ANSI_FS
+    ELSE_WIN_OS_IS_ANSI
+    {
+        rv = SetFileAttributesA(fname, flags);
+    }
+#endif
+
+    if (rv == 0)
+        return apr_get_os_error();
+
+    return APR_SUCCESS;
+}
+
+#endif
 
 svn_error_t *
 svn_io_set_file_read_write_carefully(const char *path,
@@ -3197,10 +3326,24 @@ dir_make(const char *path, apr_fileperms_t perm,
 #ifdef APR_FILE_ATTR_HIDDEN
   if (hidden)
     {
+#ifndef WIN32
       status = apr_file_attrs_set(path_apr,
                                   APR_FILE_ATTR_HIDDEN,
                                   APR_FILE_ATTR_HIDDEN,
                                   pool);
+#else 
+    /* on Windows, use our wrapper so we can also set the 
+       FILE_ATTRIBUTE_NOT_CONTENT_INDEXED attribute */
+    status = apr_win_file_attrs_set(path_apr,
+                                    FILE_ATTRIBUTE_HIDDEN | 
+                                    FILE_ATTRIBUTE_NOT_CONTENT_INDEXED |
+                                    FILE_ATTRIBUTE_DIRECTORY,
+                                    FILE_ATTRIBUTE_HIDDEN | 
+                                    FILE_ATTRIBUTE_NOT_CONTENT_INDEXED |
+                                    FILE_ATTRIBUTE_DIRECTORY,
+                                    pool);
+
+#endif
       if (status)
         return svn_error_wrap_apr(status, _("Can't hide directory '%s'"),
                                   svn_dirent_local_style(path, pool));
