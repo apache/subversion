@@ -7,8 +7,8 @@ LISTING: dirent_uri-test.exe
 Test #  Mode   Test Description
 ------  -----  ----------------
   34    XFAIL  test svn_dirent_get_absolute with lc drive
-  Issue #: None
-  Target Milestone: N/A
+  Issue #: 3795
+  Target Milestone: Unscheduled
   Thread: http://svn.haxx.se/dev/archive-2009-10/0682.shtml
   Log: r880444
   Point Person: rhuijben
@@ -40,14 +40,14 @@ Test #  Mode   Test Description
   Issue #: None
   Target Milestone: None
   Thread: N/A
-  Log: r853631
+  Log: http://svn.apache.org/viewvc?view=revision&revision=853631
   Point Person: cmpilato
   
   10    XFAIL  directory locks (kinda)
   Issue #: None
   Target Milestone: None 
   Thread: N/A
-  Log: r853631
+  Log: http://svn.apache.org/viewvc?view=revision&revision=853631
   Point Person: cmpilato
   
 LISTING: parse-diff-test.exe
@@ -218,11 +218,11 @@ LISTING: lock_tests.py
 Test #  Mode   Test Description
 ------  -----  ----------------
   32    XFAIL  verify unlocking with wrong lock token
-  Issue #: None
-  Target Milestone: N/A
+  Issue #: 3794
+  Target Milestone: Unscheduled
   Thread: None
   Log: r858765, r869893
-  Point Person: None (test was committed by lundblad)
+  Point Person: None
 
   34    XFAIL  unlock file locked by other user
   Issue #: None
