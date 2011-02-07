@@ -33,14 +33,44 @@
 static svn_fs_cache_config_t cache_settings =
   {
     /* default configuration:
+     *
+     * Please note that the resources listed below will be allocated
+     * PER PROCESS. Thus, the defaults chosen here are kept deliberately
+     * low to still make a difference yet to ensure that pre-fork servers
+     * on machines with small amounts of RAM aren't severely impacted.
      */
-    0x1000000,   /* 16 MB for caches */
-    16,          /* up to 16 files kept open */
-    TRUE,        /* cache fulltexts */
-    FALSE,       /* don't cache text deltas */
-
+    0x1000000,   /* 16 MB for caches.
+                  * If you are running a single server process,
+                  * you may easily increase that to 50+% of your RAM
+                  * using svn_fs_set_cache_config().
+                  */
+    16,          /* up to 16 files kept open.
+                  * Most OS restrict the number of open file handles to
+                  * about 1000. To minimize I/O and OS overhead, values
+                  * of 500+ can be beneficial (use svn_fs_set_cache_config()
+                  * to change the configuration).
+                  * When running with a huge in-process cache, this number
+                  * has little impact on performance and a more modest
+                  * value (< 100) may be more suitable.
+                  */
+    TRUE,        /* cache fulltexts.
+                  * Most SVN tools care about reconstructed file content.
+                  * Thus, this is a reasonable default.
+                  * SVN admin tools may set that to FALSE because fulltexts
+                  * won't be re-used rendering the cache less effective
+                  * by squeezing wanted data out.
+                  */
+    FALSE,       /* don't cache text deltas.
+                  * Once we reconstructed the fulltexts from the deltas,
+                  * these deltas are rarely re-used. Therefore, only tools
+                  * like svnadmin will activate this to speed up operations
+                  * dump and verify.
+                  */
 #ifdef APR_HAS_THREADS
-    FALSE        /* assume multi-threaded operation */
+    FALSE        /* assume multi-threaded operation.
+                  * Because this simply activates proper synchronization
+                  * between threads, it is a safe default.
+                  */
 #else
     TRUE         /* single-threaded is the only supported mode of operation */
 #endif
