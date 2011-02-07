@@ -1256,7 +1256,7 @@ svn_client__handle_externals(apr_hash_t *externals_old,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(to_abspath));
 
-  /* Sanity check; see r30124. */
+  /* Sanity check; see r870198. */
   if (! svn_path_is_url(from_url))
     return svn_error_createf
       (SVN_ERR_BAD_URL, NULL, _("'%s' is not a URL"), from_url);

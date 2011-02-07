@@ -160,9 +160,36 @@ svn_diff__lcs_reverse(svn_diff__lcs_t *lcs)
 }
 
 
+/* Prepends a new lcs chunk for the amount of PREFIX_LINES to the given LCS
+ * chain, and returns it. This function assumes PREFIX_LINES > 0. */
+static svn_diff__lcs_t *
+prepend_prefix_lcs(svn_diff__lcs_t *lcs,
+                   apr_off_t prefix_lines,
+                   apr_pool_t *pool)
+{
+  svn_diff__lcs_t *prefix_lcs;
+
+  SVN_ERR_ASSERT_NO_RETURN(prefix_lines > 0);
+
+  prefix_lcs = apr_palloc(pool, sizeof(*prefix_lcs));
+  prefix_lcs->position[0] = apr_pcalloc(pool, 
+                                        sizeof(*prefix_lcs->position[0]));
+  prefix_lcs->position[0]->offset = 1;
+  prefix_lcs->position[1] = apr_pcalloc(pool,
+                                        sizeof(*prefix_lcs->position[1]));
+  prefix_lcs->position[1]->offset = 1;
+  prefix_lcs->length = prefix_lines;
+  prefix_lcs->refcount = 1;
+  prefix_lcs->next = lcs;
+
+  return prefix_lcs;
+}
+
+
 svn_diff__lcs_t *
 svn_diff__lcs(svn_diff__position_t *position_list1, /* pointer to tail (ring) */
               svn_diff__position_t *position_list2, /* pointer to tail (ring) */
+              apr_off_t prefix_lines,
               apr_pool_t *pool)
 {
   int idx;
@@ -180,15 +207,22 @@ svn_diff__lcs(svn_diff__position_t *position_list1, /* pointer to tail (ring) */
    */
   lcs = apr_palloc(pool, sizeof(*lcs));
   lcs->position[0] = apr_pcalloc(pool, sizeof(*lcs->position[0]));
-  lcs->position[0]->offset = position_list1 ? position_list1->offset + 1 : 1;
+  lcs->position[0]->offset = position_list1 ? 
+    position_list1->offset + 1 : prefix_lines + 1;
   lcs->position[1] = apr_pcalloc(pool, sizeof(*lcs->position[1]));
-  lcs->position[1]->offset = position_list2 ? position_list2->offset + 1 : 1;
+  lcs->position[1]->offset = position_list2 ?
+    position_list2->offset + 1 : prefix_lines + 1;
   lcs->length = 0;
   lcs->refcount = 1;
   lcs->next = NULL;
 
   if (position_list1 == NULL || position_list2 == NULL)
-    return lcs;
+    {
+      if (prefix_lines)
+        return prepend_prefix_lcs(lcs, prefix_lines, pool);
+      else
+        return lcs;
+    }
 
   /* Calculate length of both sequences to be compared */
   length[0] = position_list1->offset - position_list1->next->offset + 1;
@@ -249,5 +283,8 @@ svn_diff__lcs(svn_diff__position_t *position_list1, /* pointer to tail (ring) */
   position_list1->next = sentinel_position[idx].next;
   position_list2->next = sentinel_position[abs(1 - idx)].next;
 
-  return lcs;
+  if (prefix_lines)
+    return prepend_prefix_lcs(lcs, prefix_lines, pool);
+  else
+    return lcs;
 }

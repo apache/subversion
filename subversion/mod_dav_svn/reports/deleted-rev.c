@@ -32,6 +32,7 @@
 #include "svn_dav.h"
 #include "svn_pools.h"
 
+#include "private/svn_fspath.h"
 #include "private/svn_dav_protocol.h"
 
 #include "../dav_svn.h"
@@ -84,11 +85,18 @@ dav_svn__get_deleted_rev_report(const dav_resource *resource,
           rel_path = dav_xml_get_cdata(child, resource->pool, 0);
           if ((derr = dav_svn__test_canonical(rel_path, resource->pool)))
             return derr;
+          /* Force REL_PATH to be a relative path, not an fspath. */
+          rel_path = svn_relpath_canonicalize(rel_path, resource->pool);
+
+          /* Append REL_PATH to the base FS path to get an absolute
+             repository path. */
+          abs_path = svn_fspath__join(resource->info->repos_path, rel_path,
+                                      resource->pool);
         }
     }
 
-    /* Check that all parameters are present. */
-  if (! (rel_path
+  /* Check that all parameters are present and valid. */
+  if (! (abs_path
          && SVN_IS_VALID_REVNUM(peg_rev)
          && SVN_IS_VALID_REVNUM(end_rev)))
     {
@@ -97,11 +105,6 @@ dav_svn__get_deleted_rev_report(const dav_resource *resource,
                                     SVN_DAV_ERROR_NAMESPACE,
                                     SVN_DAV_ERROR_TAG);
     }
-
-  /* Append the relative path to the base FS path to get an absolute
-     repository path. */
-  abs_path = svn_path_join(resource->info->repos_path, rel_path,
-                           resource->pool);
 
   /* Do what we actually came here for: Find the rev abs_path was deleted. */
   err = svn_repos_deleted_rev(resource->info->repos->fs,

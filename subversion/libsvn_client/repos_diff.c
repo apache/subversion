@@ -419,7 +419,7 @@ get_empty_file(struct edit_baton *eb,
                const char **empty_file_path)
 {
   /* Create the file if it does not exist */
-  /* Note that we tried to use /dev/null in r17220, but
+  /* Note that we tried to use /dev/null in r857294, but
      that won't work on Windows: it's impossible to stat NUL */
   if (!eb->empty_file)
     SVN_ERR(svn_io_open_unique_file3(NULL, &(eb->empty_file), NULL,

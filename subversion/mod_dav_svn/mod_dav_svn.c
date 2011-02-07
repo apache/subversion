@@ -34,6 +34,7 @@
 #include "svn_version.h"
 #include "svn_fs.h"
 #include "svn_utf.h"
+#include "svn_ctype.h"
 #include "svn_dso.h"
 #include "mod_dav_svn.h"
 
@@ -368,8 +369,7 @@ SVNPath_cmd(cmd_parms *cmd, void *config, const char *arg1)
   if (conf->fs_parent_path != NULL)
     return "SVNPath cannot be defined at same time as SVNParentPath.";
 
-  conf->fs_path = svn_path_internal_style(apr_pstrdup(cmd->pool, arg1),
-                                          cmd->pool);
+  conf->fs_path = svn_dirent_internal_style(arg1, cmd->pool);
 
   return NULL;
 }
@@ -383,8 +383,7 @@ SVNParentPath_cmd(cmd_parms *cmd, void *config, const char *arg1)
   if (conf->fs_path != NULL)
     return "SVNParentPath cannot be defined at same time as SVNPath.";
 
-  conf->fs_parent_path = svn_path_internal_style(apr_pstrdup(cmd->pool, arg1),
-                                                 cmd->pool);
+  conf->fs_parent_path = svn_dirent_internal_style(arg1, cmd->pool);
 
   return NULL;
 }
@@ -417,6 +416,26 @@ SVNSpecialURI_cmd(cmd_parms *cmd, void *config, const char *arg1)
   conf = ap_get_module_config(cmd->server->module_config,
                               &dav_svn_module);
   conf->special_uri = uri;
+
+  return NULL;
+}
+
+static const char *
+SVNInMemoryCacheSize_cmd(cmd_parms *cmd, void *config, const char *arg1)
+{
+  svn_fs_cache_config_t settings = *svn_fs_get_cache_config();
+
+  apr_uint64_t value = 0;
+  svn_error_t *err = svn_cstring_atoui64(&value, arg1);
+  if (err)
+    {
+      svn_error_clear(err);
+      return "Invalid decimal number for the SVN cache size.";
+    }
+
+  settings.cache_size = value * 0x100000;
+
+  svn_fs_set_cache_config(&settings);
 
   return NULL;
 }
@@ -484,7 +503,7 @@ dav_svn_get_repos_path(request_rec *r,
 
   /* Construct the full path from the parent path base directory
      and the repository name. */
-  *repos_path = svn_path_join(fs_parent_path, repos_name, r->pool);
+  *repos_path = svn_urlpath__join(fs_parent_path, repos_name, r->pool);
   return NULL;
 }
 
@@ -858,6 +877,13 @@ static const command_rec cmds[] =
                ACCESS_CONF|RSRC_CONF,
                "enables server advertising of support for version 2 of "
                "Subversion's HTTP protocol (default values is On)."),
+
+  /* per server */
+  AP_INIT_TAKE1("SVNInMemoryCacheSize", SVNInMemoryCacheSize_cmd, NULL,
+                RSRC_CONF,
+                "specify the maximum size im MB per process of Subversion's "
+                "in-memory object cache (default value is 16; 0 deactivates "
+                "the cache)."),
 
   { NULL }
 };

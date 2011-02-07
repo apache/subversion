@@ -38,6 +38,7 @@
 #include "svn_path.h"
 #include "svn_dav.h"
 #include "svn_props.h"
+
 #include "private/svn_log.h"
 #include "private/svn_fspath.h"
 
@@ -155,7 +156,7 @@ get_from_path_map(apr_hash_t *hash, const char *path, apr_pool_t *pool)
           /* we found a mapping ... but of one of PATH's parents.
              soooo, we get to re-append the chunks of PATH that we
              broke off to the REPOS_PATH we found. */
-          return svn_path_join(repos_path, path + my_path->len + 1, pool);
+          return svn_fspath__join(repos_path, path + my_path->len + 1, pool);
         }
     }
   while (! svn_path_is_empty(my_path->data)
@@ -316,12 +317,16 @@ add_helper(svn_boolean_t is_dir,
                                       DAV_SVN__BUILD_URI_BC,
                                       revision, real_path,
                                       0 /* add_href */, pool);
+          bc_url = svn_urlpath__canonicalize(bc_url, pool);
 
           /* ugh, build_uri ignores the path and just builds the root
              of the baseline collection.  we have to tack the
              real_path on manually, ignoring its leading slash. */
           if (real_path && (! svn_path_is_empty(real_path)))
-            bc_url = svn_path_url_add_component(bc_url, real_path+1, pool);
+            bc_url = svn_urlpath__join(bc_url,
+                                       svn_path_uri_encode(real_path + 1,
+                                                           pool),
+                                       pool);
 
           /* make sure that the BC_URL is xml attribute safe. */
           bc_url = apr_xml_quote_string(pool, bc_url, 1);
@@ -1069,14 +1074,14 @@ dav_svn__update_report(const dav_resource *resource,
         {
           /* if the src is split into anchor/target, so must the
              telescoping dst_path be. */
-          uc.dst_path = svn_path_dirname(dst_path, resource->pool);
+          uc.dst_path = svn_fspath__dirname(dst_path, resource->pool);
 
           /* Also, the svn_repos_dir_delta2() is going to preserve our
              target's name, so we need a pathmap entry for that. */
           if (! uc.pathmap)
             uc.pathmap = apr_hash_make(resource->pool);
           add_to_path_map(uc.pathmap,
-                          svn_path_join(src_path, target, resource->pool),
+                          svn_fspath__join(src_path, target, resource->pool),
                           dst_path);
         }
       else
@@ -1240,8 +1245,8 @@ dav_svn__update_report(const dav_resource *resource,
                 const char *this_path;
                 if (! uc.pathmap)
                   uc.pathmap = apr_hash_make(resource->pool);
-                this_path = svn_path_join_many(apr_hash_pool_get(uc.pathmap),
-                                               src_path, target, path, NULL);
+                this_path = svn_fspath__join(src_path, target, resource->pool);
+                this_path = svn_fspath__join(this_path, path, resource->pool);
                 add_to_path_map(uc.pathmap, this_path, linkpath);
               }
           }
@@ -1268,7 +1273,7 @@ dav_svn__update_report(const dav_resource *resource,
     const char *action, *spath;
 
     if (target)
-      spath = svn_path_join(src_path, target, resource->pool);
+      spath = svn_fspath__join(src_path, target, resource->pool);
     else
       spath = src_path;
 

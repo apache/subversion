@@ -35,11 +35,13 @@ from svntest.main import write_restrictive_svnserve_conf
 from svntest.main import server_has_partial_replay
 
 # (abbreviation)
-Skip = svntest.testcase.Skip
-SkipUnless = svntest.testcase.SkipUnless
-XFail = svntest.testcase.XFail
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
-Wimp = svntest.testcase.Wimp
 
 ######################################################################
 # Helper routines
@@ -338,7 +340,7 @@ def detect_meddling(sbox):
            ".*Destination HEAD \\(2\\) is not the last merged revision \\(1\\).*")
 
 #----------------------------------------------------------------------
-
+@Skip(svntest.main.is_ra_type_file)
 def basic_authz(sbox):
   "verify that unreadable content is not synced"
 
@@ -374,7 +376,7 @@ def basic_authz(sbox):
                                      lambda_url)
 
 #----------------------------------------------------------------------
-
+@Skip(svntest.main.is_ra_type_file)
 def copy_from_unreadable_dir(sbox):
   "verify that copies from unreadable dirs work"
 
@@ -493,6 +495,8 @@ def copy_from_unreadable_dir(sbox):
                                      dest_sbox.repo_url + '/A/P')
 
 # Issue 2705.
+@Issue(2705)
+@Skip(svntest.main.is_ra_type_file)
 def copy_with_mod_from_unreadable_dir(sbox):
   "verify copies with mods from unreadable dirs"
 
@@ -611,6 +615,8 @@ def copy_with_mod_from_unreadable_dir(sbox):
                                      dest_sbox.repo_url + '/A/P/lambda')
 
 # Issue 2705.
+@Issue(2705)
+@Skip(svntest.main.is_ra_type_file)
 def copy_with_mod_from_unreadable_dir_and_copy(sbox):
   "verify copies with mods from unreadable dirs +copy"
 
@@ -721,17 +727,20 @@ def copy_revprops(sbox):
   "test copying revprops other than svn:*"
   run_test(sbox, "revprops.dump")
 
+@SkipUnless(server_has_partial_replay)
 def only_trunk(sbox):
   "test syncing subdirectories"
   run_test(sbox, "svnsync-trunk-only.dump", "/trunk",
            "svnsync-trunk-only.expected.dump")
 
+@SkipUnless(server_has_partial_replay)
 def only_trunk_A_with_changes(sbox):
   "test syncing subdirectories with changes on root"
   run_test(sbox, "svnsync-trunk-A-changes.dump", "/trunk/A",
            "svnsync-trunk-A-changes.expected.dump")
 
 # test for issue #2904
+@Issue(2904)
 def move_and_modify_in_the_same_revision(sbox):
   "test move parent and modify child file in same rev"
   run_test(sbox, "svnsync-move-and-modify.dump")
@@ -791,6 +800,7 @@ def delete_svn_props(sbox):
   "copy with svn:prop deletions"
   run_test(sbox, "delete-svn-props.dump")
 
+@Issue(3438)
 def commit_a_copy_of_root(sbox):
   "commit a copy of root causes sync to fail"
   #Testcase for issue 3438.
@@ -832,12 +842,14 @@ def commit_a_copy_of_root(sbox):
 # svnmucc.exe -mm cp head %ROOT_URL%/trunk/A %ROOT_URL%/trunk/H/Z
 #                 rm %ROOT_URL%/trunk/H/Z/B
 #                 mkdir %ROOT_URL%/trunk/H/Z/B
+@Issue(3641)
 def descend_into_replace(sbox):
   "descending into replaced dir looks in src"
   run_test(sbox, "descend-into-replace.dump", subdir='/trunk/H',
            exp_dump_file_name = "descend-into-replace.expected.dump")
 
 # issue #3728
+@Issue(3728)
 def delete_revprops(sbox):
   "copy-revprops with removals"
   svnsync_tests_dir = os.path.join(os.path.dirname(sys.argv[0]),
@@ -887,19 +899,15 @@ test_list = [ None,
               file_dir_file,
               copy_parent_modify_prop,
               detect_meddling,
-              Skip(basic_authz, svntest.main.is_ra_type_file),
-              Skip(copy_from_unreadable_dir, svntest.main.is_ra_type_file),
-              Skip(copy_with_mod_from_unreadable_dir,
-                   svntest.main.is_ra_type_file),
-              Skip(copy_with_mod_from_unreadable_dir_and_copy,
-                   svntest.main.is_ra_type_file),
+              basic_authz,
+              copy_from_unreadable_dir,
+              copy_with_mod_from_unreadable_dir,
+              copy_with_mod_from_unreadable_dir_and_copy,
               url_encoding,
               no_author,
               copy_revprops,
-              SkipUnless(only_trunk,
-                         server_has_partial_replay),
-              SkipUnless(only_trunk_A_with_changes,
-                         server_has_partial_replay),
+              only_trunk,
+              only_trunk_A_with_changes,
               move_and_modify_in_the_same_revision,
               info_synchronized,
               info_not_synchronized,

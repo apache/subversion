@@ -31,10 +31,12 @@ import os, re
 import svntest
 
 # (abbreviations)
-Skip = svntest.testcase.Skip
-SkipUnless = svntest.testcase.SkipUnless
-XFail = svntest.testcase.XFail
-Wimp = svntest.testcase.Wimp
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 
 # Regular expression which matches the redirection notification
 redirect_regex = re.compile(r"^Redirecting to URL '.*'")
@@ -66,7 +68,7 @@ def verify_url(wc_path, url, wc_path_is_file=False):
 #   Each test must return on success or raise on failure.
 
 #----------------------------------------------------------------------
-
+@SkipUnless(svntest.main.is_ra_type_dav)
 def temporary_redirect(sbox):
   "temporary redirect should error out"
 
@@ -88,7 +90,7 @@ def temporary_redirect(sbox):
                                              co_url + '/iota')
 
 #----------------------------------------------------------------------
-
+@SkipUnless(svntest.main.is_ra_type_dav)
 def redirected_checkout(sbox):
   "redirected checkout"
 
@@ -107,7 +109,7 @@ def redirected_checkout(sbox):
   verify_url(wc_dir, sbox.repo_url)
 
 #----------------------------------------------------------------------
-
+@SkipUnless(svntest.main.is_ra_type_dav)
 def redirected_update(sbox):
   "redirected update"
 
@@ -144,12 +146,9 @@ def redirected_update(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              SkipUnless(temporary_redirect,
-                         svntest.main.is_ra_type_dav),
-              SkipUnless(redirected_checkout,
-                         svntest.main.is_ra_type_dav),
-              SkipUnless(redirected_update,
-                         svntest.main.is_ra_type_dav),
+              temporary_redirect,
+              redirected_checkout,
+              redirected_update,
              ]
 
 if __name__ == '__main__':

@@ -259,8 +259,8 @@ svn_error_t *load_configs(svn_config_t **cfg,
              proceed without it anyway.
 
              ### Not entirely sure why SVN_ERR_BAD_FILENAME is checked
-             ### for here.  That seems to have been introduced in r16840,
-             ### and only in r30868 was the APR_EACCES check introduced. */
+             ### for here.  That seems to have been introduced in r856914,
+             ### and only in r870942 was the APR_EACCES check introduced. */
           if (err->apr_err != SVN_ERR_BAD_FILENAME
               && ! APR_STATUS_IS_EACCES(err->apr_err))
             {

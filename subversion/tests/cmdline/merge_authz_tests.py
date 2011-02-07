@@ -34,9 +34,12 @@ from svntest import wc
 
 # (abbreviation)
 Item = wc.StateItem
-XFail = svntest.testcase.XFail
-Skip = svntest.testcase.Skip
-SkipUnless = svntest.testcase.SkipUnless
+Skip = svntest.testcase.Skip_deco
+SkipUnless = svntest.testcase.SkipUnless_deco
+XFail = svntest.testcase.XFail_deco
+Issues = svntest.testcase.Issues_deco
+Issue = svntest.testcase.Issue_deco
+Wimp = svntest.testcase.Wimp_deco
 
 from merge_tests import set_up_branch
 from merge_tests import expected_merge_output
@@ -70,6 +73,9 @@ from svntest.actions import inject_conflict_into_expected_state
 #         This is *not* a full test of issue #2829, see also merge_tests.py,
 #         search for "2829".  This tests the problem where a merge adds a path
 #         with a missing sibling and so needs its own explicit mergeinfo.
+@Issue([2893,2997,2829])
+@SkipUnless(svntest.main.server_has_mergeinfo)
+@Skip(svntest.main.is_ra_type_file)
 def mergeinfo_and_skipped_paths(sbox):
   "skipped paths get overriding mergeinfo"
 
@@ -428,6 +434,8 @@ def mergeinfo_and_skipped_paths(sbox):
                                        None, None, None, None,
                                        None, 1, 0)
 
+@SkipUnless(server_has_mergeinfo)
+@Issue(2876)
 def merge_fails_if_subtree_is_deleted_on_src(sbox):
   "merge fails if subtree is deleted on src"
 
@@ -550,6 +558,9 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
     [], 'merge', '-r1:6', '--force',
     A_url, Acopy_path)
 
+@SkipUnless(svntest.main.server_has_mergeinfo)
+@Skip(svntest.main.is_ra_type_file)
+@Issue(3242)
 def reintegrate_fails_if_no_root_access(sbox):
   "reintegrate fails if no root access"
 
@@ -680,14 +691,9 @@ def reintegrate_fails_if_no_root_access(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              SkipUnless(Skip(mergeinfo_and_skipped_paths,
-                              svntest.main.is_ra_type_file),
-                         svntest.main.server_has_mergeinfo),
-              SkipUnless(merge_fails_if_subtree_is_deleted_on_src,
-                         server_has_mergeinfo),
-              SkipUnless(Skip(reintegrate_fails_if_no_root_access,
-                              svntest.main.is_ra_type_file),
-                         svntest.main.server_has_mergeinfo),
+              mergeinfo_and_skipped_paths,
+              merge_fails_if_subtree_is_deleted_on_src,
+              reintegrate_fails_if_no_root_access,
              ]
 serial_only = True
 

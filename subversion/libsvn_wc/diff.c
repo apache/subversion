@@ -486,7 +486,7 @@ get_empty_file(struct edit_baton *b,
                const char **empty_file)
 {
   /* Create the file if it does not exist */
-  /* Note that we tried to use /dev/null in r17220, but
+  /* Note that we tried to use /dev/null in r857294, but
      that won't work on Windows: it's impossible to stat NUL */
   if (!b->empty_file)
     {

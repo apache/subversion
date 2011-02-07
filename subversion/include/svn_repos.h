@@ -1221,6 +1221,9 @@ svn_repos_replay(svn_fs_root_t *root,
  * for cleaning them up (either by committing them, or aborting them).
  *
  * @since New in 1.5.
+ *
+ * @note Yes, @a repos_url is a <em>decoded</em> URL.  We realize
+ * that's sorta wonky.  Sorry about that.
  */
 svn_error_t *
 svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
