@@ -86,7 +86,7 @@ svn_fs__get_global_membuffer_cache(void)
       pool = svn_pool_create_ex(NULL, allocator);
 
       svn_error_clear(svn_cache__membuffer_cache_create(
-          &old_cache,
+          &new_cache,
           (apr_size_t)cache_size,
           (apr_size_t)(cache_size / 16),
           ! svn_fs_get_cache_config()->single_threaded,
