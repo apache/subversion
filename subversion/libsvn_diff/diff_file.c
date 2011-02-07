@@ -388,7 +388,7 @@ find_identical_prefix(svn_boolean_t *reached_one_eof, apr_off_t *prefix_lines,
   while (is_match)
     {
 #if SVN_UNALIGNED_ACCESS_IS_OK
-      apr_off_t max_delta, delta;
+      apr_ssize_t max_delta, delta;
 #endif /* SVN_UNALIGNED_ACCESS_IS_OK */
 
       /* ### TODO: see if we can take advantage of 
