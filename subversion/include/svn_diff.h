@@ -110,7 +110,7 @@ typedef struct svn_diff_fns2_t
 {
   /** Open the datasources of type @a datasources. */
   svn_error_t *(*datasources_open)(void *diff_baton, apr_off_t *prefix_lines,
-                                   svn_diff_datasource_e datasources[],
+                                   svn_diff_datasource_e *datasources,
                                    apr_size_t datasources_len);
 
   /** Close the datasource of type @a datasource. */

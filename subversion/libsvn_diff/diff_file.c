@@ -686,7 +686,7 @@ find_identical_suffix(struct file_info file[], apr_size_t file_len,
  * Implements svn_diff_fns2_t::datasources_open. */
 static svn_error_t *
 datasources_open(void *baton, apr_off_t *prefix_lines,
-                 svn_diff_datasource_e datasources[],
+                 svn_diff_datasource_e *datasources,
                  apr_size_t datasources_len)
 {
   svn_diff__file_baton_t *file_baton = baton;
