@@ -1001,8 +1001,8 @@ def multiple_matches(sbox):
                        root_url, root_url + '/second')
 
 @Skip(svntest.main.is_ra_type_file)
-def wc_wc_copy(sbox):
-  "wc-to-wc copy with absent nodes"
+def wc_wc_copy_revert(sbox):
+  "wc-to-wc-copy with absent nodes and then revert"
 
   sbox.build(create_wc = False)
   local_dir = sbox.wc_dir
@@ -1041,12 +1041,6 @@ def wc_wc_copy(sbox):
   expected_output.match_all = False
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'st', '--verbose', sbox.ospath('A2'))
-
-@Skip(svntest.main.is_ra_type_file)
-def wc_wc_copy_revert(sbox):
-  "wc-to-wc-copy with absent nodes and then revert"
-
-  wc_wc_copy(sbox)
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'revert', '--recursive', sbox.ospath('A2'))
@@ -1112,7 +1106,6 @@ test_list = [ None,
               authz_access_required_at_repo_root,
               authz_access_required_at_repo_root2,
               multiple_matches,
-              wc_wc_copy,
               wc_wc_copy_revert,
               authz_recursive_ls,
              ]
