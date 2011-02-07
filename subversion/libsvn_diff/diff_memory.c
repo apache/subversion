@@ -91,7 +91,7 @@ datasource_to_index(svn_diff_datasource_e datasource)
 /* Implements svn_diff_fns2_t::datasources_open */
 static svn_error_t *
 datasources_open(void *baton, apr_off_t *prefix_lines,
-                 svn_diff_datasource_e datasources[],
+                 svn_diff_datasource_e *datasources,
                  apr_size_t datasources_len)
 {
   /* Do nothing: everything is already there and initialized to 0 */
