@@ -4313,6 +4313,7 @@ def reverse_merge_move(sbox):
                                         None)
 
 @XFail()
+@Issue(3699)
 def nonrecursive_commit_of_copy(sbox):
   """commit only top of copy; check child behavior"""
 

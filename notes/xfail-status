@@ -121,8 +121,8 @@ Test #  Mode   Test Description
   Point Person: philip, gstein
   
   80    XFAIL  commit only top of copy; check child behavior
-  Issue #: None
-  Target Milestone: N/A 
+  Issue #: 3699
+  Target Milestone: 1.7-consider
   Thread: None
   Log: r927469
   Point Person: rhuijben 
