@@ -39,7 +39,7 @@ struct svn_wc__db_t {
 
   /* We need the config whenever we run into a new WC directory, in order
      to figure out where we should look for the corresponding datastore. */
-  svn_config_t *config;
+  const svn_config_t *config;
 
   /* Should we attempt to automatically upgrade the database when it is
      opened, and found to be not-current?  */
