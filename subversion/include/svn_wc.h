@@ -200,7 +200,7 @@ typedef struct svn_wc_context_t svn_wc_context_t;
  */
 svn_error_t *
 svn_wc_context_create(svn_wc_context_t **wc_ctx,
-                      svn_config_t *config,
+                      const svn_config_t *config,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool);
 

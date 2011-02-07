@@ -158,7 +158,7 @@ svn_wc__db_pdh_get_or_create(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_open(svn_wc__db_t **db,
                 svn_wc__db_openmode_t mode,
-                svn_config_t *config,
+                const svn_config_t *config,
                 svn_boolean_t auto_upgrade,
                 svn_boolean_t enforce_empty_wq,
                 apr_pool_t *result_pool,
