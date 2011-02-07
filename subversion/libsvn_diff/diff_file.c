@@ -686,8 +686,8 @@ find_identical_suffix(struct file_info file[], apr_size_t file_len,
  * Implements svn_diff_fns2_t::datasources_open. */
 static svn_error_t *
 datasources_open(void *baton, apr_off_t *prefix_lines,
-                 svn_diff_datasource_e datasource[],
-                 apr_size_t datasource_len)
+                 svn_diff_datasource_e datasources[],
+                 apr_size_t datasources_len)
 {
   svn_diff__file_baton_t *file_baton = baton;
   struct file_info files[4];
@@ -701,10 +701,10 @@ datasources_open(void *baton, apr_off_t *prefix_lines,
   *prefix_lines = 0;
 
   /* Open datasources and read first chunk */
-  for (i = 0; i < datasource_len; i++)
+  for (i = 0; i < datasources_len; i++)
     {
       struct file_info *file
-          = &file_baton->files[datasource_to_index(datasource[i])];
+          = &file_baton->files[datasource_to_index(datasources[i])];
       SVN_ERR(svn_io_file_open(&file->file, file->path,
                                APR_READ, APR_OS_DEFAULT, file_baton->pool));
       SVN_ERR(svn_io_file_info_get(&finfo[i], APR_FINFO_SIZE,
@@ -725,22 +725,22 @@ datasources_open(void *baton, apr_off_t *prefix_lines,
       files[i] = *file;
     }
 
-  for (i = 0; i < datasource_len; i++)
+  for (i = 0; i < datasources_len; i++)
     if (length[i] == 0)
       /* There will not be any identical prefix/suffix, so we're done. */
       return SVN_NO_ERROR;
 
   SVN_ERR(find_identical_prefix(&reached_one_eof, prefix_lines,
-                                files, datasource_len, file_baton->pool));
+                                files, datasources_len, file_baton->pool));
 
   if (!reached_one_eof)
     /* No file consisted totally of identical prefix,
      * so there may be some identical suffix.  */
-    SVN_ERR(find_identical_suffix(files, datasource_len, file_baton->pool));
+    SVN_ERR(find_identical_suffix(files, datasources_len, file_baton->pool));
 
   /* Copy local results back to baton. */
-  for (i = 0; i < datasource_len; i++)
-    file_baton->files[datasource_to_index(datasource[i])] = files[i];
+  for (i = 0; i < datasources_len; i++)
+    file_baton->files[datasource_to_index(datasources[i])] = files[i];
 
   return SVN_NO_ERROR;
 }
