@@ -208,7 +208,7 @@ Test #  Mode   Test Description
 ------  -----  ----------------
   19    XFAIL  delete a file external
   Issue #: 3351
-  Target Milestone: --- 
+  Target Milestone: Unscheduled
   Thread: N/A
   Log: 876918
   Point Person: neels
@@ -272,7 +272,7 @@ Test #  Mode   Test Description
 
  116    XFAIL  (Posix only) executable flag is maintained during binary merge
   Issue #: 3686
-  Target Milestone: ---
+  Target Milestone: Unscheduled
   Thread: N/A
   Log: N/A 
   Point Person: Unassigned
@@ -437,7 +437,7 @@ Test #  Mode   Test Description
 
   21    XFAIL  lock status update shouldn't flag tree conflict
   Issue #: 3525 and 3533
-  Target Milestone: 1.7-consider (3525) and --- (3533)
+  Target Milestone: 1.7-consider (3525) and unscheduled (3533)
   Thread: N/A
   Log: r954016
   Point Person: Unassigned
