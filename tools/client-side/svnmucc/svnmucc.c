@@ -298,10 +298,9 @@ drive(struct operation *operation,
               if (apr_err)
                 return svn_error_wrap_apr(apr_err, "Can't open stdin");
             }
-          contents = svn_stream_from_aprfile(f, pool);
+          contents = svn_stream_from_aprfile2(f, FALSE, pool);
           SVN_ERR(svn_txdelta_send_stream(contents, handler,
                                           handler_baton, NULL, pool));
-          SVN_ERR(svn_io_file_close(f, pool));
         }
       /* If we opened a file, we need to apply outstanding propmods,
          then close it. */
@@ -631,7 +630,7 @@ execute(const apr_array_header_t *actions,
   SVN_ERR(svn_config_get_config(&config, config_dir, pool));
   SVN_ERR(create_ra_callbacks(&ra_callbacks, username, password,
                               non_interactive, pool));
-  SVN_ERR(svn_ra_open3(&session, anchor, NULL, ra_callbacks,
+  SVN_ERR(svn_ra_open4(&session, NULL, anchor, NULL, ra_callbacks,
                        NULL, config, pool));
 
   SVN_ERR(svn_ra_get_latest_revnum(session, &head, pool));
@@ -850,7 +849,7 @@ main(int argc, const char **argv)
             svn_stringbuf_t *contents;
             err = svn_utf_cstring_to_utf8(&arg_utf8, arg, pool);
             if (! err)
-              err = svn_stringbuf_from_file(&contents, arg, pool);
+              err = svn_stringbuf_from_file2(&contents, arg, pool);
             if (! err)
               err = svn_utf_cstring_to_utf8(&message, contents->data, pool);
             if (err)
