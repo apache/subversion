@@ -1764,6 +1764,8 @@ def log_of_local_copy(sbox):
                           % (psi_moved_path, psi_path))
 
 
+@XFail()
+@SkipUnless(server_has_mergeinfo)
 def ignore_mergeinfo_log(sbox):
   "'svn log --ignore-mergeinfo' scenarios"
 
@@ -1844,7 +1846,7 @@ test_list = [ None,
               merge_sensitive_log_added_mergeinfo_replaces_inherited,
               merge_sensitive_log_propmod_merge_inheriting_path,
               log_of_local_copy,
-              SkipUnless(XFail(ignore_mergeinfo_log), server_has_mergeinfo),
+              ignore_mergeinfo_log,
              ]
 
 if __name__ == '__main__':
