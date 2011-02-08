@@ -89,8 +89,9 @@ main(int argc, char **argv)
 #else
   encoder = svn_base64_encode(stdout_stream, pool);
 #endif
-  svn_txdelta_to_svndiff2(&svndiff_handler, &svndiff_baton,
-                          encoder, version, pool);
+  /* use maximum compression level */
+  svn_txdelta_to_svndiff3(&svndiff_handler, &svndiff_baton,
+                          encoder, version, 9, pool);
   err = svn_txdelta_send_txstream(txdelta_stream,
                                   svndiff_handler,
                                   svndiff_baton,
