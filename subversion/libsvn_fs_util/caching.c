@@ -96,10 +96,12 @@ svn_fs__get_global_membuffer_cache(void)
   apr_uint64_t cache_size = cache_settings.cache_size;
   if (!cache && cache_size)
     {
+      svn_error_t *err;
+
       svn_membuffer_t *old_cache = NULL;
       svn_membuffer_t *new_cache = NULL;
 
-      /* auto-allocate cache*/
+      /* auto-allocate cache */
       apr_allocator_t *allocator = NULL;
       apr_pool_t *pool = NULL;
 
@@ -111,16 +113,49 @@ svn_fs__get_global_membuffer_cache(void)
        * in its full size, the create() function will clear the pool
        * explicitly. The allocator will make sure that any memory no
        * longer used by the pool will actually be returned to the OS.
+       *
+       * Please note that this pool and allocator is used *only* to
+       * allocate the large membuffer. All later dynamic allocations
+       * come from other, temporary pools and allocators.
        */
       apr_allocator_max_free_set(allocator, 1);
-      pool = svn_pool_create_ex(NULL, allocator);
 
-      svn_error_clear(svn_cache__membuffer_cache_create(
+      /* don't terminate upon OOM but make pool return a NULL pointer
+       * instead so we can disable caching gracefully and continue
+       * operation without membuffer caches.
+       */
+      apr_pool_create_ex(&pool, NULL, NULL, allocator);
+      if (pool == NULL)
+        return NULL;
+
+      err = svn_cache__membuffer_cache_create(
           &new_cache,
           (apr_size_t)cache_size,
           (apr_size_t)(cache_size / 16),
           ! svn_fs_get_cache_config()->single_threaded,
-          pool));
+          pool);
+
+      /* Some error occured. Most likely it's an OOM error but we don't
+       * really care. Simply release all cache memory and disable caching
+       */
+      if (err)
+        {
+          /* Memory and error cleanup */
+          svn_error_clear(err);
+          apr_pool_destroy(pool);
+
+          /* Prevent future attempts to create the cache. However, an
+           * existing cache instance (see next comment) remains valid.
+           */
+          cache_settings.cache_size = 0;
+
+          /* The current caller won't get the cache object.
+           * However, a concurrent call might have succeeded in creating
+           * the cache object. That call and all following ones will then
+           * use the successfully created cache instance.
+           */
+          return NULL;
+        }
 
       /* Handle race condition: if we are the first to create a
        * cache object, make it our global singleton. Otherwise,
