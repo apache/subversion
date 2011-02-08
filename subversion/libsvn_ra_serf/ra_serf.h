@@ -46,8 +46,8 @@ extern "C" {
 
 
 /* Enforce the minimum version of serf. */
-#if !SERF_VERSION_AT_LEAST(0, 3, 0)
-#error Please update your version of serf to at least 0.3.0.
+#if !SERF_VERSION_AT_LEAST(0, 7, 1)
+#error Please update your version of serf to at least 0.7.1.
 #endif
 
 /** Use this to silence compiler warnings about unused parameters. */
