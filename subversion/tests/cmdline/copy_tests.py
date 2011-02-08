@@ -747,7 +747,7 @@ def copy_delete_commit(sbox):
 
 
 #----------------------------------------------------------------------
-@Issues([931,932])
+@Issues(931,932)
 def mv_and_revert_directory(sbox):
   "move and revert a directory"
 
@@ -898,7 +898,7 @@ def wc_to_repos(sbox):
 #----------------------------------------------------------------------
 # Issue 1090: various use-cases of 'svn cp URL wc' where the
 # repositories might be different, or be the same repository.
-@Issues([1090,1444])
+@Issues(1090,1444)
 def repos_to_wc(sbox):
   "repository to working-copy copy"
 
@@ -1505,7 +1505,7 @@ def wc_to_wc_copy_between_different_repos(sbox):
 #----------------------------------------------------------------------
 #  Regression test for issues 2101, 2020 and 3776
 @XFail()
-@Issues([2101,2020,3776])
+@Issues(2101,2020,3776)
 def wc_to_wc_copy_deleted(sbox):
   "wc to wc copy with deleted=true items"
 
@@ -1834,7 +1834,7 @@ def mixed_wc_to_url(sbox):
 
 # Issue 845 and 1516: WC replacement of files requires
 # a second text-base and prop-base
-@Issues([845,1516])
+@Issues(845,1516)
 def wc_copy_replacement(sbox):
   "svn cp PATH PATH replace file"
 
@@ -3444,7 +3444,7 @@ def copy_peg_rev_local_dirs(sbox):
 
 # Test copying urls using peg revision syntax
 # (Issue 2546)
-@Issues([2546,3651])
+@Issues(2546,3651)
 def copy_peg_rev_url(sbox):
   "copy urls using peg rev syntax"
 

@@ -1376,7 +1376,7 @@ def merge_in_new_file_and_diff(sbox):
 # This test involves tree conflicts. - but attempting to test for
 # pre-tree-conflict behaviour
 @SkipUnless(server_has_mergeinfo)
-@Issue([1425, 2898])
+@Issues(1425, 2898)
 def merge_skips_obstructions(sbox):
   "merge should skip over unversioned obstructions"
 
@@ -4590,7 +4590,7 @@ def set_up_branch(sbox, branch_only = False, nbr_of_branches = 1):
 
 #----------------------------------------------------------------------
 @SkipUnless(server_has_mergeinfo)
-@Issue([2733,2734])
+@Issues(2733,2734)
 def mergeinfo_inheritance(sbox):
   "target inherits mergeinfo from nearest ancestor"
 
@@ -5568,7 +5568,7 @@ def merge_to_switched_path(sbox):
 #   3188: Mergeinfo on switched targets/subtrees should
 #         elide to repos
 @SkipUnless(server_has_mergeinfo)
-@Issue([2823,2839,3187,3188])
+@Issue(2823,2839,3187,3188)
 def merge_to_path_with_switched_children(sbox):
   "merge to path with switched children"
 
@@ -6365,7 +6365,7 @@ def prop_add_to_child_with_mergeinfo(sbox):
                                        None, 1)
 
 #----------------------------------------------------------------------
-@Issue([2788,3383])
+@Issue(2788,3383)
 def foreign_repos_does_not_update_mergeinfo(sbox):
   "set no mergeinfo when merging from foreign repos"
 
@@ -7250,7 +7250,7 @@ def merge_with_depth_files(sbox):
 #
 # Test issue #3407 'Shallow merges incorrectly set mergeinfo on children'.
 @SkipUnless(server_has_mergeinfo)
-@Issues([2976,3392,3407])
+@Issues(2976,3392,3407)
 def merge_away_subtrees_noninheritable_ranges(sbox):
   "subtrees can lose non-inheritable ranges"
 
@@ -8997,7 +8997,7 @@ def reverse_merge_prop_add_on_child(sbox):
 
 #----------------------------------------------------------------------
 @XFail()
-@Issue([2970,3642])
+@Issues(2970,3642)
 def merge_target_with_non_inheritable_mergeinfo(sbox):
   "merge target with non inheritable mergeinfo"
 
@@ -11019,7 +11019,7 @@ def reverse_merge_away_all_mergeinfo(sbox):
 # merge'.  Specifically see
 # http://subversion.tigris.org/issues/show_bug.cgi?id=3067#desc5
 @SkipUnless(server_has_mergeinfo)
-@Issue([3138,3067])
+@Issues(3138,3067)
 def dont_merge_revs_into_subtree_that_predate_it(sbox):
   "dont merge revs into a subtree that predate it"
 

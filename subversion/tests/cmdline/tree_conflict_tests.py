@@ -1040,7 +1040,7 @@ def up_add_onto_add_revert(sbox):
 # Regression test for issue #3525 and #3533
 #
 @XFail()
-@Issues([3525,3533])
+@Issues(3525,3533)
 def lock_update_only(sbox):
   "lock status update shouldn't flag tree conflict"
 
