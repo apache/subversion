@@ -2,6 +2,9 @@ Version 1.7.0
 (?? ??? 2011, from /branches/1.7.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.7.0
 
+See the 1.7 release notes for a more verbose overview of the changes since
+the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
+
  User-visible changes:
   - General:
 
