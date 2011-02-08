@@ -307,12 +307,10 @@ load_config(svn_ra_serf__session_t *session,
   /* Setup authentication. */
   SVN_ERR(load_http_auth_types(pool, config, server_group,
                                &session->authn_types));
-#if SERF_VERSION_AT_LEAST(0, 4, 0)
   /* TODO: convert string authn types to SERF_AUTHN bitmask.
      serf_config_authn_types(session->context, session->authn_types);*/
   serf_config_credentials_callback(session->context,
                                    svn_ra_serf__credentials_callback);
-#endif
 
   return SVN_NO_ERROR;
 }
