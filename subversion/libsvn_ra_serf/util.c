@@ -326,10 +326,6 @@ conn_setup(apr_socket_t *sock,
   return SVN_NO_ERROR;
 }
 
-#if SERF_VERSION_AT_LEAST(0, 4, 0)
-/* This ugly ifdef construction can be cleaned up as soon as serf >= 0.4
-   gets the minimum supported serf version! */
-
 /* svn_ra_serf__conn_setup is a callback for serf. This function
    creates a read bucket and will wrap the write bucket if SSL
    is needed. */
@@ -340,18 +336,6 @@ svn_ra_serf__conn_setup(apr_socket_t *sock,
                         void *baton,
                         apr_pool_t *pool)
 {
-#else
-/* This is the old API, for compatibility with serf
-   versions <= 0.3. */
-serf_bucket_t *
-svn_ra_serf__conn_setup(apr_socket_t *sock,
-                        void *baton,
-                        apr_pool_t *pool)
-{
-  serf_bucket_t **write_bkt = NULL;
-  serf_bucket_t *rb = NULL;
-  serf_bucket_t **read_bkt = &rb;
-#endif
   svn_ra_serf__connection_t *conn = baton;
   svn_ra_serf__session_t *session = conn->session;
   apr_status_t status = SVN_NO_ERROR;
@@ -371,12 +355,7 @@ svn_ra_serf__conn_setup(apr_socket_t *sock,
       status = session->pending_error->apr_err;
     }
 
-#if ! SERF_VERSION_AT_LEAST(0, 4, 0)
-  SVN_ERR_ASSERT_NO_RETURN(rb != NULL);
-  return rb;
-#else
   return status;
-#endif
 }
 
 serf_bucket_t*
@@ -630,26 +609,6 @@ svn_ra_serf__setup_serf_req(serf_request_t *request,
                                                                    method,
                                                                    url,
                                                                    hdrs_bkt));
-
-#if ! SERF_VERSION_AT_LEAST(0, 4, 0)
-  /* Set up SSL if we need to */
-  if (conn->using_ssl)
-    {
-      *req_bkt = serf_bucket_ssl_encrypt_create(*req_bkt, conn->ssl_context,
-                                            serf_request_get_alloc(request));
-      if (!conn->ssl_context)
-        {
-          conn->ssl_context = serf_bucket_ssl_encrypt_context_get(*req_bkt);
-
-          serf_ssl_client_cert_provider_set(conn->ssl_context,
-                                            svn_ra_serf__handle_client_cert,
-                                            conn, conn->session->pool);
-          serf_ssl_client_cert_password_set(conn->ssl_context,
-                                            svn_ra_serf__handle_client_cert_pw,
-                                            conn, conn->session->pool);
-        }
-    }
-#endif
 
   if (ret_hdrs_bkt)
     {
@@ -1805,12 +1764,10 @@ svn_ra_serf__discover_vcc(const char **vcc_url,
               /* Okay, strip off a component from PATH. */
               path = svn_urlpath__dirname(path, pool);
 
-#if SERF_VERSION_AT_LEAST(0, 4, 0)
               /* An error occurred on conns. serf 0.4.0 remembers that
                  the connection had a problem. We need to reset it, in
                  order to use it again.  */
               serf_connection_reset(conn->conn);
-#endif
             }
         }
     }
