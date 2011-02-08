@@ -2569,7 +2569,7 @@ svn_wc_text_modified_p(svn_boolean_t *modified_p,
  */
 svn_error_t *
 svn_wc_props_modified_p2(svn_boolean_t *modified_p,
-                         svn_wc_context_t* wc_ctx,
+                         svn_wc_context_t *wc_ctx,
                          const char *local_abspath,
                           apr_pool_t *scratch_pool);
 
