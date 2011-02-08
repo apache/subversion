@@ -840,7 +840,7 @@ test_uri_canonicalize(apr_pool_t *pool)
     { "http://server/d/a%2Fb", "http://server/d/a/b" },
     /* ### These tests fail to notice that %2F is '/'.
     { "http://server/d/.%2F.", "http://server/d" },
-    { "http://server/d/%25%2F%25", "http://server/d" }, */
+    { "http://server/d/%2E%2F%2E", "http://server/d" }, */
     { "file:///C%3a/temp",     "file:///C:/temp" },
     { "http://server/cr%AB",   "http://server/cr%AB" },
     { "http://server/cr%ab",   "http://server/cr%AB" },
