@@ -611,19 +611,9 @@ static svn_error_t *
 seek_handler_apr(void *baton, svn_stream_mark_t *mark)
 {
   struct baton_apr *btn = baton;
+  apr_off_t offset = (mark != NULL) ? ((const struct mark_apr *)mark)->off : 0;
 
-  if (mark != NULL)
-    {
-      struct mark_apr *mark_apr;
-
-      mark_apr = (struct mark_apr *)mark;
-      SVN_ERR(svn_io_file_seek(btn->file, APR_SET, &mark_apr->off, btn->pool));
-    }
-  else
-    {
-      apr_off_t offset = 0;
-      SVN_ERR(svn_io_file_seek(btn->file, APR_SET, &offset, btn->pool));
-    }
+  SVN_ERR(svn_io_file_seek(btn->file, APR_SET, &offset, btn->pool));
 
   return SVN_NO_ERROR;
 }
