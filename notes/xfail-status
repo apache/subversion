@@ -124,8 +124,8 @@ Test #  Mode   Test Description
   Point Person: philip 
   
   91    XFAIL  copy, delete child, revert copy
-  Issue #: None
-  Target Milestone: N/A
+  Issue #: 3784
+  Target Milestone: 1.7.0
   Thread: N/A
   Log: r1027031
   Point Person: philip
