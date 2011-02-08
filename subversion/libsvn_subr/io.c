@@ -1546,8 +1546,8 @@ io_set_file_perms(const char *path,
 #ifdef WIN32
 #if APR_HAS_UNICODE_FS
 /* copy of the apr function utf8_to_unicode_path since apr doesn't export this one */
-apr_status_t svn_utf8_to_unicode_path(apr_wchar_t* retstr, apr_size_t retlen, 
-                                  const char* srcstr)
+static apr_status_t io_utf8_to_unicode_path(apr_wchar_t* retstr, apr_size_t retlen, 
+                                            const char* srcstr)
 {
     /* TODO: The computations could preconvert the string to determine
      * the true size of the retstr, but that's a memory over speed
@@ -1565,7 +1565,7 @@ apr_status_t svn_utf8_to_unicode_path(apr_wchar_t* retstr, apr_size_t retlen,
     apr_wchar_t *t = retstr;
     apr_status_t rv;
 
-    /* This is correct, we don't twist the filename if it is will
+    /* This is correct, we don't twist the filename if it will
      * definately be shorter than 248 characters.  It merits some 
      * performance testing to see if this has any effect, but there
      * seem to be applications that get confused by the resulting
@@ -1610,10 +1610,10 @@ apr_status_t svn_utf8_to_unicode_path(apr_wchar_t* retstr, apr_size_t retlen,
 }
 #endif
 
-apr_status_t apr_win_file_attrs_set(const char *fname,
-                                    DWORD attributes,
-                                    DWORD attr_mask,
-                                    apr_pool_t *pool)
+static apr_status_t io_win_file_attrs_set(const char *fname,
+                                          DWORD attributes,
+                                          DWORD attr_mask,
+                                          apr_pool_t *pool)
 {
     /* this is an implementation of apr_file_attrs_set() but one
        that uses the proper Windows attributes instead of the apr
@@ -1628,9 +1628,9 @@ apr_status_t apr_win_file_attrs_set(const char *fname,
 #if APR_HAS_UNICODE_FS
     IF_WIN_OS_IS_UNICODE
     {
-        if (rv = svn_utf8_to_unicode_path(wfname,
-                                          sizeof(wfname) / sizeof(wfname[0]),
-                                          fname))
+        if (rv = io_utf8_to_unicode_path(wfname,
+                                         sizeof(wfname) / sizeof(wfname[0]),
+                                         fname))
             return rv;
         flags = GetFileAttributesW(wfname);
     }
@@ -3334,14 +3334,14 @@ dir_make(const char *path, apr_fileperms_t perm,
 #else 
     /* on Windows, use our wrapper so we can also set the 
        FILE_ATTRIBUTE_NOT_CONTENT_INDEXED attribute */
-    status = apr_win_file_attrs_set(path_apr,
-                                    FILE_ATTRIBUTE_HIDDEN | 
-                                    FILE_ATTRIBUTE_NOT_CONTENT_INDEXED |
-                                    FILE_ATTRIBUTE_DIRECTORY,
-                                    FILE_ATTRIBUTE_HIDDEN | 
-                                    FILE_ATTRIBUTE_NOT_CONTENT_INDEXED |
-                                    FILE_ATTRIBUTE_DIRECTORY,
-                                    pool);
+    status = io_win_file_attrs_set(path_apr,
+                                   FILE_ATTRIBUTE_HIDDEN | 
+                                   FILE_ATTRIBUTE_NOT_CONTENT_INDEXED |
+                                   FILE_ATTRIBUTE_DIRECTORY,
+                                   FILE_ATTRIBUTE_HIDDEN | 
+                                   FILE_ATTRIBUTE_NOT_CONTENT_INDEXED |
+                                   FILE_ATTRIBUTE_DIRECTORY,
+                                   pool);
 
 #endif
       if (status)
