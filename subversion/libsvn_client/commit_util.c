@@ -242,10 +242,7 @@ add_lock_token(const char *local_abspath,
  * information in its parent dir is the only indication that the node
  * is under version control. This function is necessary for this
  * particular case. In all other cases, this simply bails out a little
- * bit earlier.
- *
- * Note: Tree-conflicts info can only be found in "THIS_DIR" entries,
- * where each THIS_DIR will only hold tree-conflicts on its children. */
+ * bit earlier. */
 static svn_error_t *
 bail_on_tree_conflicted_children(svn_wc_context_t *wc_ctx,
                                  const char *local_abspath,
