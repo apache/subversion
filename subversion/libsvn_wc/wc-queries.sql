@@ -557,9 +557,13 @@ WHERE wc_id = ?1 AND local_relpath = ?2;
   AND op_depth = (SELECT MAX(op_depth) FROM nodes
                   WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0);
 
--- STMT_UPDATE_OP_DEPTH_RECURSIVE
-UPDATE nodes SET op_depth = ?3
-WHERE wc_id = ?1 AND local_relpath LIKE ?2 ESCAPE '#' AND op_depth = ?3 + 1;
+-- STMT_UPDATE_OP_DEPTH_REDUCE_RECURSIVE
+UPDATE nodes SET op_depth = ?3 - 1
+WHERE wc_id = ?1 AND local_relpath LIKE ?2 ESCAPE '#' AND op_depth = ?3;
+
+-- STMT_UPDATE_OP_DEPTH_INCREASE_RECURSIVE
+UPDATE nodes SET op_depth = ?3 + 1
+WHERE wc_id = ?1 AND local_relpath LIKE ?2 ESCAPE '#' AND op_depth = ?3;
 
 -- STMT_UPDATE_OP_DEPTH
 UPDATE nodes SET op_depth = ?4
@@ -647,6 +651,12 @@ SELECT 1
 FROM actual_node
 WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
   AND tree_conflict_data IS NULL;
+
+-- STMT_DETERMINE_REVERTABLE
+SELECT op_depth FROM NODES
+WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth >
+ORDER BY op_depth DESC
+LIMIT 1;
 
 /* ------------------------------------------------------------------------- */
 
