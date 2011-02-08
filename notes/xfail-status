@@ -56,11 +56,11 @@ Test #  Mode   Test Description
 
   14    XFAIL  (DAV and ra_svn only) switched to directory, no read access
                on parents
-  Issue #: None
-  Target Milestone: None 
+  Issue #: 3796
+  Target Milestone: Unscheduled
   Thread: N/A
   Log: r867298
-  Point Person: lgo 
+  Point Person: lgo
 
 LISTING: basic_tests.py
 
@@ -111,14 +111,14 @@ Test #  Mode   Test Description
   
   86    XFAIL  changed dir after commit should match checkout
   Issue #: 3676
-  Target Milestone: ---
+  Target Milestone: Unscheduled
   Thread: N/A
   Log: r961831
   Point Person: rhuijben
   
   89    XFAIL  copy mixed-rev and delete children
   Issue #: 3314
-  Target Milestone: N/A 
+  Target Milestone: ---
   Thread: N/A
   Log: r1004629
   Point Person: philip 
@@ -136,7 +136,7 @@ Test #  Mode   Test Description
 ------  -----  ----------------
   36    XFAIL  'info' should treat excluded item as versioned
   Issue #: 3792
-  Target Milestone: N/A 
+  Target Milestone: ---
   Thread: N/A
   Log: r876772
   Point Person: danielsh 
