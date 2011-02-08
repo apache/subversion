@@ -736,7 +736,11 @@ datasources_open(void *baton, apr_off_t *prefix_lines,
   if (!reached_one_eof)
     /* No file consisted totally of identical prefix,
      * so there may be some identical suffix.  */
-    SVN_ERR(find_identical_suffix(files, datasources_len, file_baton->pool));
+    /* ### jcorve0: disable for now, because this causes wc corruption
+     * when merging files with more than 50 lines of identical suffix
+     * (identical suffix is truncated after the 50th common line). */
+    if (FALSE)
+      SVN_ERR(find_identical_suffix(files, datasources_len, file_baton->pool));
 
   /* Copy local results back to baton. */
   for (i = 0; i < datasources_len; i++)
