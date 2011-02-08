@@ -779,7 +779,7 @@ typedef svn_error_t *(*svn_io_mark_fn_t)(void *baton,
  * @since New in 1.7.
  */
 typedef svn_error_t *(*svn_io_seek_fn_t)(void *baton,
-                                         svn_stream_mark_t *mark);
+                                         const svn_stream_mark_t *mark);
 
 /** Create a generic stream.  @see svn_stream_t. */
 svn_stream_t *
@@ -1060,7 +1060,7 @@ svn_stream_mark(svn_stream_t *stream,
  * @since New in 1.7.
  */
 svn_error_t *
-svn_stream_seek(svn_stream_t *stream, svn_stream_mark_t *mark);
+svn_stream_seek(svn_stream_t *stream, const svn_stream_mark_t *mark);
 
 /** Return a writable stream which, when written to, writes to both of the
  * underlying streams.  Both of these streams will be closed upon closure of
