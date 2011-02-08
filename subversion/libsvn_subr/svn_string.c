@@ -28,7 +28,6 @@
 #include <apr.h>
 
 #include <string.h>      /* for memcpy(), memcmp(), strlen() */
-#include <apr_lib.h>     /* for apr_isspace() */
 #include <apr_fnmatch.h>
 #include "svn_string.h"  /* loads "svn_types.h" and <apr_pools.h> */
 #include "svn_ctype.h"
@@ -245,6 +244,12 @@ create_stringbuf(char *data, apr_size_t size, apr_size_t blocksize,
   new_string->pool = pool;
 
   return new_string;
+}
+
+svn_stringbuf_t *
+svn_stringbuf_create_empty(apr_pool_t *pool)
+{
+  return create_stringbuf((char*)"", 0, 0, pool);
 }
 
 svn_stringbuf_t *
