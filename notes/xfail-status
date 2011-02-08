@@ -153,8 +153,8 @@ Test #  Mode   Test Description
   Point Person: neels
 
   50    XFAIL  diff -r1 of dir with removed-then-readded file
-  Issue #: 1675
-  Target Milestone: Unscheduled (Issue is marked as RESOLVED).
+  Issue #: None
+  Target Milestone: N/A
   Thread: N/A
   Log: r873641
   Point Person: neels
