@@ -140,7 +140,8 @@ read_chunk(apr_file_t *file, const char *path,
    * XXX: Check.
    */
   SVN_ERR(svn_io_file_seek(file, APR_SET, &offset, pool));
-  return svn_io_file_read_full(file, buffer, (apr_size_t) length, NULL, pool);
+  return svn_io_file_read_full2(file, buffer, (apr_size_t) length,
+                                NULL, NULL, pool);
 }
 
 
@@ -191,8 +192,8 @@ map_or_read_file(apr_file_t **file,
     {
       *buffer = apr_palloc(pool, (apr_size_t) finfo.size);
 
-      SVN_ERR(svn_io_file_read_full(*file, *buffer, (apr_size_t) finfo.size,
-                                    NULL, pool));
+      SVN_ERR(svn_io_file_read_full2(*file, *buffer, (apr_size_t) finfo.size,
+                                     NULL, NULL, pool));
 
       /* Since we have the entire contents of the file we can
        * close it now.
