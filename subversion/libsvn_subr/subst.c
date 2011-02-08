@@ -1316,13 +1316,13 @@ translated_stream_mark(void *baton, svn_stream_mark_t **mark, apr_pool_t *pool)
 
 /* Implements svn_io_seek_fn_t. */
 static svn_error_t *
-translated_stream_seek(void *baton, svn_stream_mark_t *mark)
+translated_stream_seek(void *baton, const svn_stream_mark_t *mark)
 {
   struct translated_stream_baton *b = baton;
 
   if (mark != NULL)
     {
-      mark_translated_t *mt = (mark_translated_t *)mark;
+      const mark_translated_t *mt = (const mark_translated_t *)mark;
 
       /* Flush output buffer if necessary. */
       if (b->written)

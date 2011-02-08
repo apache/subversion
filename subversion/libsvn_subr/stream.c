@@ -145,7 +145,7 @@ svn_stream_mark(svn_stream_t *stream, svn_stream_mark_t **mark,
 }
 
 svn_error_t *
-svn_stream_seek(svn_stream_t *stream, svn_stream_mark_t *mark)
+svn_stream_seek(svn_stream_t *stream, const svn_stream_mark_t *mark)
 {
   if (stream->seek_fn == NULL)
     return svn_error_create(SVN_ERR_STREAM_SEEK_NOT_SUPPORTED, NULL, NULL);
@@ -432,7 +432,7 @@ mark_handler_empty(void *baton, svn_stream_mark_t **mark, apr_pool_t *pool)
 }
 
 static svn_error_t *
-seek_handler_empty(void *baton, svn_stream_mark_t *mark)
+seek_handler_empty(void *baton, const svn_stream_mark_t *mark)
 {
   return SVN_NO_ERROR;
 }
@@ -531,7 +531,7 @@ mark_handler_disown(void *baton, svn_stream_mark_t **mark, apr_pool_t *pool)
 }
 
 static svn_error_t *
-seek_handler_disown(void *baton, svn_stream_mark_t *mark)
+seek_handler_disown(void *baton, const svn_stream_mark_t *mark)
 {
   return svn_stream_seek(baton, mark);
 }
@@ -608,7 +608,7 @@ mark_handler_apr(void *baton, svn_stream_mark_t **mark, apr_pool_t *pool)
 }
 
 static svn_error_t *
-seek_handler_apr(void *baton, svn_stream_mark_t *mark)
+seek_handler_apr(void *baton, const svn_stream_mark_t *mark)
 {
   struct baton_apr *btn = baton;
   apr_off_t offset = (mark != NULL) ? ((const struct mark_apr *)mark)->off : 0;
@@ -1232,15 +1232,15 @@ mark_handler_stringbuf(void *baton, svn_stream_mark_t **mark, apr_pool_t *pool)
 }
 
 static svn_error_t *
-seek_handler_stringbuf(void *baton, svn_stream_mark_t *mark)
+seek_handler_stringbuf(void *baton, const svn_stream_mark_t *mark)
 {
   struct stringbuf_stream_baton *btn = baton;
 
   if (mark != NULL)
     {
-      struct stringbuf_stream_mark *stringbuf_stream_mark;
+      const struct stringbuf_stream_mark *stringbuf_stream_mark;
 
-      stringbuf_stream_mark = (struct stringbuf_stream_mark *)mark;
+      stringbuf_stream_mark = (const struct stringbuf_stream_mark *)mark;
       btn->amt_read = stringbuf_stream_mark->pos;
     }
   else
@@ -1308,15 +1308,15 @@ mark_handler_string(void *baton, svn_stream_mark_t **mark, apr_pool_t *pool)
 }
 
 static svn_error_t *
-seek_handler_string(void *baton, svn_stream_mark_t *mark)
+seek_handler_string(void *baton, const svn_stream_mark_t *mark)
 {
   struct string_stream_baton *btn = baton;
 
   if (mark != NULL)
     {
-      struct string_stream_mark *marker;
+      const struct string_stream_mark *marker;
 
-      marker = (struct string_stream_mark *)mark;
+      marker = (const struct string_stream_mark *)mark;
       btn->amt_read = marker->pos;
     }
   else
