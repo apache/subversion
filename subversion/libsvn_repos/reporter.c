@@ -201,7 +201,7 @@ read_string(const char **str, apr_file_t *temp, apr_pool_t *pool)
 
   size = (apr_size_t)len;
   buf = apr_palloc(pool, size+1);
-  SVN_ERR(svn_io_file_read_full(temp, buf, size, NULL, pool));
+  SVN_ERR(svn_io_file_read_full2(temp, buf, size, NULL, NULL, pool));
   buf[len] = 0;
   *str = buf;
   return SVN_NO_ERROR;

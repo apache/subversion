@@ -354,8 +354,9 @@ svn_hash_read(apr_hash_t *hash,
 
           /* Now read that much into a buffer, + 1 byte for null terminator */
           keybuf = apr_palloc(pool, keylen + 1);
-          SVN_ERR(svn_io_file_read_full(srcfile,
-                                        keybuf, keylen, &num_read, pool));
+          SVN_ERR(svn_io_file_read_full2(srcfile,
+                                         keybuf, keylen,
+                                         &num_read, NULL, pool));
           ((char *) keybuf)[keylen] = '\0';
 
           /* Suck up extra newline after key data */
@@ -379,9 +380,9 @@ svn_hash_read(apr_hash_t *hash,
 
               /* Again, 1 extra byte for the null termination. */
               valbuf = apr_palloc(pool, vallen + 1);
-              SVN_ERR(svn_io_file_read_full(srcfile,
-                                            valbuf, vallen,
-                                            &num_read, pool));
+              SVN_ERR(svn_io_file_read_full2(srcfile,
+                                             valbuf, vallen,
+                                             &num_read, NULL, pool));
               ((char *) valbuf)[vallen] = '\0';
 
               /* Suck up extra newline after val data */
