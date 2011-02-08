@@ -1454,7 +1454,7 @@ svn_repos_begin_report2(void **report_baton,
   b->s_operand = apr_pstrdup(pool, s_operand);
   b->t_rev = revnum;
   b->t_path = switch_path ? svn_fspath__canonicalize(switch_path, pool)
-                          : svn_fspath__join(fs_base, s_operand, pool);
+                          : svn_fspath__join(b->fs_base, s_operand, pool);
   b->text_deltas = text_deltas;
   b->requested_depth = depth;
   b->ignore_ancestry = ignore_ancestry;
