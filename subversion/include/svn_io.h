@@ -757,7 +757,9 @@ typedef svn_error_t *(*svn_write_fn_t)(void *baton,
 /** Close handler function for a generic stream.  @see svn_stream_t. */
 typedef svn_error_t *(*svn_close_fn_t)(void *baton);
 
-/** An opaque type which represents a mark on a stream.
+/** An opaque type which represents a mark on a stream.  There is no
+ * concrete definition of this type, it is a named type for stream
+ * implementation specific baton pointers.
  *
  * @see svn_stream_mark().
  * @since New in 1.7.
