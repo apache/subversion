@@ -712,6 +712,24 @@ ensure_data_insertable(svn_membuffer_t *cache, apr_size_t size)
   return FALSE;
 }
 
+/* Mimic apr_pcalloc in APR_POOL_DEBUG mode, i.e. handle failed allocations
+ * (e.g. OOM) properly: Allocate at least SIZE bytes from POOL and zero
+ * the content of the allocated memory. If the allocation fails, return NULL.
+ *
+ * Also, satisfy our buffer alignment needs for performance reasons.
+ */
+static void* secure_aligned_pcalloc(apr_pool_t *pool, apr_size_t size)
+{
+  char* memory = apr_palloc(pool, (apr_size_t)size + ITEM_ALIGNMENT);
+  if (memory != NULL)
+    {
+      memory = (char *)ALIGN_POINTER(memory);
+      memset(memory, 0, size);
+    }
+
+  return memory;
+}
+
 /* Create a new membuffer cache instance. If the TOTAL_SIZE of the
  * memory i too small to accomodate the DICTIONARY_SIZE, the latte
  * will be resized automatically. Also, a minumum size is assured
@@ -729,15 +747,10 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
                                   apr_pool_t *pool)
 {
   /* allocate cache as an array of segments / cache objects */
-  svn_membuffer_t *c = apr_palloc(pool, CACHE_SEGMENTS * sizeof(*c));
+  svn_membuffer_t *c = apr_pcalloc(pool, CACHE_SEGMENTS * sizeof(*c));
   apr_uint32_t seg;
   apr_uint32_t group_count;
   apr_uint64_t data_size;
-
-  /* We use this sub-pool to allocate the data buffer and the dictionary
-   * so that we can release this memory easily upon OOM.
-   */
-  apr_pool_t *sub_pool = svn_pool_create(pool);
 
   /* Split total cache size into segments of equal size
    */
@@ -779,15 +792,13 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
        */
       c[seg].group_count = group_count;
       c[seg].directory =
-          apr_palloc(sub_pool, group_count * sizeof(entry_group_t));
+          secure_aligned_pcalloc(pool, group_count * sizeof(entry_group_t));
       c[seg].first = NO_INDEX;
       c[seg].last = NO_INDEX;
       c[seg].next = NO_INDEX;
 
       c[seg].data_size = data_size;
-      c[seg].data = apr_palloc(sub_pool, (apr_size_t)data_size);
-      c[seg].data = (unsigned char *)ALIGN_POINTER(c[seg].data);
-      c[seg].data_size -= ITEM_ALIGNMENT;
+      c[seg].data = secure_aligned_pcalloc(pool, (apr_size_t)data_size);
       c[seg].current_data = 0;
       c[seg].data_used = 0;
 
@@ -802,21 +813,9 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
        */
       if (c[seg].data == NULL || c[seg].directory == NULL)
         {
-          /* in case we successfully allocated one part of the cache
-           * make sure we release it asap.
+          /* We are OOM. There is no need to proceed with "half a cache".
            */
-          svn_pool_destroy(sub_pool);
-
-          c[seg].group_count = 1;
-          c[seg].data_size = 0;
-
-          if (c[seg].directory == NULL)
-            c[seg].directory = apr_palloc(pool, sizeof(entry_group_t));
-
-          /* if that modest allocation failed as well, we definitly are OOM.
-           */
-          if (c[seg].directory == NULL)
-            return svn_error_wrap_apr(APR_ENOMEM, _("OOM"));
+          return svn_error_wrap_apr(APR_ENOMEM, _("OOM"));
         }
 
       /* initialize directory entries as "unused"
