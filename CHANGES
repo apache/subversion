@@ -16,6 +16,7 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
 
   - Minor new features and improvements:
     * Better handling of HTTP redirects (issue #2779)
+    * make Serf the default DAV access method, if available (r875974)
     * Improved and much more consistent path handling (issue #2028, and others)
     * 'svnadmin load' rewrites changed revnums in mergeinfo (issue #3020)
     * Error message and help text improvements
@@ -32,6 +33,8 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * remove redundant mergeinfo notifications for 2-URL merges (issue #3671)
     * 'svn export' into the current directory (issue #3727)
     * added '--parents' to 'svn update' (issue #3748)
+    * allow configurable connection timeout in ra_serf (r876161)
+    * add digest authentication in ra_serf (r876405)
 
   - Client-side bugfixes:
     * 'svn cp A B; svn mv B C' is equivalent to 'svn cp A C' (issue #756)
@@ -86,6 +89,7 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * fixed: memory leaks in ra_serf (issue #3684)
     * fixed: corruption of 'svn pg' output for large properties (issue #3721)
     * fixed: 'svnsync copy-revprops' doesn't sync revprop dels (issue #3728)
+    * many other minor bugfixes, optimizations, plugs of memory leaks, etc
   
   - Server-side bugfixes:
     * mod_dav_svn is less strict about auto-merging for commits (issue #1704)
@@ -99,18 +103,23 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * fixed: mod_dav_svn doesn't return stderr to user on failure (issue #3112)
     * fixed: hotcopy may corrupt target rep-cache.db (issue #3596)
     * fixed: mod_dav_svn can cause spurious merge conflicts (issue #3657)
+    * many other minor bugfixes too numerous to list here
 
   - Other tool improvements and bugfixes:
     * svnsync now takes the '--config-option' argument (issue #2027)
 
  Developer-visible changes:
   - General:
+    * improved output of 'make check'
     * improve building with sqlite on Windows (issue #3364)
     * allow mod_dav_svn to compile against Apache 2.4 (issue #3548)
+    * support running tests against older servers (r876016)
 
   - API changes:
     * don't crash svn_client_copy if ctx->log_msg_func is NULL (issue #3234)
-    * ra_serf now uses svn_error_t throughout (issue #3375)
+    * much improved ra_serf error handling (issue #3375)
+    * provide clients with old and new revision on update (r876515)
+    * added 'work-in-progress' XFail test status (r876549)
     * fixed: svn_ra_local__get_file() leaks file descriptors (issue #3290)
 
   - Bindings:
