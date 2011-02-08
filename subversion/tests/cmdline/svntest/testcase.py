@@ -92,10 +92,7 @@ class TestCase:
     self._cond_func = cond_func
     self.description = doc or delegate.description
     self.inprogress = wip
-    if type(issues) == type(0):
-      self.issues = [issues]
-    else:
-      self.issues = issues
+    self.issues = issues
 
   def get_function_name(self):
     """Return the name of the python function implementing the test."""
@@ -110,10 +107,7 @@ class TestCase:
 
   def set_issues(self, issues):
     """Set the issues associated with this test."""
-    if type(issues) == type(0):
-      self.issues = [issues]
-    else:
-      self.issues = issues
+    self.issues = issues
 
   def run(self, sandbox):
     """Run the test within the given sandbox."""
@@ -312,7 +306,7 @@ def SkipUnless_deco(cond_func):
   return _second
 
 
-def Issues_deco(issues):
+def Issues_deco(*issues):
   def _second(func):
     if isinstance(func, TestCase):
       # if the wrapped thing is already a test case, just set the issues

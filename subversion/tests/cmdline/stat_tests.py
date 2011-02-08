@@ -780,7 +780,7 @@ use-commit-times = yes
 
 #----------------------------------------------------------------------
 
-@Issues([1617,2030])
+@Issues(1617,2030)
 def status_on_unversioned_dotdot(sbox):
   "status on '..' where '..' is not versioned"
   # See issue #1617 (and #2030).

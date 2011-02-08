@@ -529,7 +529,7 @@ def revert_replacement_props(sbox):
                                         1)
 
 #----------------------------------------------------------------------
-@Issues([920,2065])
+@Issues(920,2065)
 def inappropriate_props(sbox):
   "try to set inappropriate props"
 
