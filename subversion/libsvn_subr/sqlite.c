@@ -63,6 +63,15 @@ sqlite_tracer(void *data, const char *sql)
 }
 #endif
 
+#ifdef SQLITE3_PROFILE
+/* An sqlite execution timing callback. */
+static void
+sqlite_profiler(void *data, const char *sql, sqlite3_uint64 duration)
+{
+  /*  sqlite3 *db3 = data; */
+  SVN_DBG(("[%.3f] sql=\"%s\"\n", 1e-9 * duration, sql));
+}
+#endif
 
 struct svn_sqlite__db_t
 {
@@ -916,6 +925,9 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
 
 #ifdef SQLITE3_DEBUG
   sqlite3_trace((*db)->db3, sqlite_tracer, (*db)->db3);
+#endif
+#ifdef SQLITE3_PROFILE
+  sqlite3_profile((*db)->db3, sqlite_profiler, (*db)->db3);
 #endif
 
   SVN_ERR(exec_sql(*db,
