@@ -386,10 +386,8 @@ class SvnReposTest < Test::Unit::TestCase
 
   def assert_report
     file = "file"
-    file2 = "file2"
-    fs_base = "base"
+    fs_base = "/"
     path = File.join(@wc_path, file)
-    path2 = File.join(@wc_path, file2)
     source = "sample source"
     log = "sample log"
     make_context(log) do |ctx|
@@ -405,7 +403,7 @@ class SvnReposTest < Test::Unit::TestCase
         :revision => rev,
         :user_name => @author,
         :fs_base => fs_base,
-        :target => "/",
+        :target => "",
         :target_path => nil,
         :editor => editor,
         :text_deltas => true,
@@ -413,17 +411,23 @@ class SvnReposTest < Test::Unit::TestCase
         :ignore_ancestry => false,
       }
       callback = Proc.new do |baton|
-        baton.link_path(file, file2, rev)
-        baton.delete_path(file)
       end
       yield(@repos, args, callback)
+      editor_seq = editor.sequence.collect{|meth, *args| meth}
+
+      # Delete change_file_prop() and change_dir_prop() calls from the
+      # actual editor sequence, as they can vary in ways not easily
+      # determined by a black-box test author.
+      editor_seq.delete(:change_file_prop)
+      editor_seq.delete(:change_dir_prop)
+
       assert_equal([
                      :set_target_revision,
                      :open_root,
                      :close_directory,
                      :close_edit,
                    ],
-                   editor.sequence.collect{|meth, *args| meth})
+                   editor_seq)
     end
   end
 
