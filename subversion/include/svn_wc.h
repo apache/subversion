@@ -2571,7 +2571,7 @@ svn_error_t *
 svn_wc_props_modified_p2(svn_boolean_t *modified_p,
                          svn_wc_context_t *wc_ctx,
                          const char *local_abspath,
-                          apr_pool_t *scratch_pool);
+                         apr_pool_t *scratch_pool);
 
 /** Similar to svn_wc_props_modified_p2(), but with a relative path and
  * adm_access baton.
