@@ -32,24 +32,6 @@ Test #  Mode   Test Description
   Log: N/A
   Point Person: julianfoad
 
-LISTING: locks-test.exe
-
-Test #  Mode   Test Description
-------  -----  ----------------
-   9    XFAIL  able to reserve a name (lock non-existent path)
-  Issue #: None
-  Target Milestone: None
-  Thread: N/A
-  Log: http://svn.apache.org/viewvc?view=revision&revision=853631
-  Point Person: cmpilato
-  
-  10    XFAIL  directory locks (kinda)
-  Issue #: None
-  Target Milestone: None 
-  Thread: N/A
-  Log: http://svn.apache.org/viewvc?view=revision&revision=853631
-  Point Person: cmpilato
-  
 LISTING: parse-diff-test.exe
 
 Test #  Mode   Test Description
