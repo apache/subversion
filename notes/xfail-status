@@ -136,7 +136,7 @@ Test #  Mode   Test Description
 ------  -----  ----------------
   36    XFAIL  'info' should treat excluded item as versioned
   Issue #: 3792
-  Target Milestone: ---
+  Target Milestone: Unscheduled
   Thread: N/A
   Log: r876772
   Point Person: danielsh 
@@ -147,7 +147,7 @@ Test #  Mode   Test Description
 ------  -----  ----------------
   49    XFAIL  diff URL against working copy with local mods
   Issue #: 3295
-  Target Milestone: ---
+  Target Milestone: Unscheduled
   Thread: N/A
   Log: r873641
   Point Person: neels
