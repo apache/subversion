@@ -1084,6 +1084,101 @@ def authz_recursive_ls(sbox):
                                      [], 'ls', '-R',
                                      sbox.repo_url)
 
+@XFail()
+@Issue(3781)
+@Skip(svntest.main.is_ra_type_file)
+def case_sensitive_authz(sbox):
+  "authz issue #3781, check case sensitiveness"
+
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+  write_restrictive_svnserve_conf(sbox.repo_dir)
+
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  mu_url = sbox.repo_url + '/A/mu'
+  mu_repo_path = sbox.repo_dir + "/A/mu"
+  svntest.main.file_append(mu_path, "hi")
+
+  # Create expected output tree.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu' : Item(verb='Sending'),
+    })
+
+  # error messages
+  expected_error_for_commit = "Commit failed"
+  expected_error_for_cat = "svn: E175013: Unable to connect to a repository"+ \
+                            " at URL '" + mu_url + "'\n" + \
+                            "svn: E175013: Access to '/" + mu_repo_path + \
+                            "' forbidden\n" + \
+                            "svn: E175009: XML parsing failed: (403 Forbidden)"
+
+  # test the case-sensitivity of the path inside the repo
+  write_authz_file(sbox, {"/": "jrandom = r",
+                          "/A/mu": "jrandom =", "/a/Mu": "jrandom = rw"})
+  svntest.actions.run_and_verify_svn2(None, None,
+                                      expected_error_for_cat,
+                                      1, 'cat', mu_url)
+
+  write_authz_file(sbox, {"/": "jrandom = r",
+                          "/A": "jrandom = r",
+                          "/a/Mu": "jrandom = rw"})
+  # Commit the file.
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        None,
+                                        None,
+                                        expected_error_for_commit,
+                                        mu_path)
+
+  def mixcases(repo_name):
+    mixed_repo_name = ''
+    for i in range(0, len(repo_name)):
+      if i % 2 == 0:
+        mixed_val = repo_name[i].upper()
+        mixed_repo_name = mixed_repo_name + mixed_val
+      else:
+        mixed_val = repo_name[i].lower()
+        mixed_repo_name = mixed_repo_name + mixed_val
+    return mixed_repo_name 
+
+  mixed_case_repo_dir = mixcases(os.path.basename(sbox.repo_dir))
+
+  # test the case-sensitivity of the repo name
+  sec_mixed_case = {mixed_case_repo_dir + ":/": "jrandom = r",
+                    mixed_case_repo_dir + ":/A": "jrandom = r",
+                    os.path.basename(sbox.repo_dir) + ":/A/mu": "jrandom =",
+                    mixed_case_repo_dir + ":/A/mu": "jrandom = rw"}
+  write_authz_file(sbox, {}, sec_mixed_case)
+  svntest.actions.run_and_verify_svn2(None, None,
+                                      expected_error_for_cat,
+                                      1, 'cat', mu_url)
+
+  write_authz_file(sbox, {},
+                   sections = {mixed_case_repo_dir + ":/": "jrandom = r",
+                               mixed_case_repo_dir + ":/A": "jrandom = r",
+                               mixed_case_repo_dir + ":/A/mu": "jrandom = rw"})
+
+  # Commit the file again.
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        None,
+                                        None,
+                                        expected_error_for_commit,
+                                        mu_path)
+
+  # test the case-sensitivity
+  write_authz_file(sbox, {"/": "jrandom = r",
+                          "/A": "jrandom = r", "/A/mu": "jrandom = rw"})
+
+  svntest.actions.run_and_verify_svn2('No error',
+                                      svntest.verify.AnyOutput, [],
+                                      0, 'cat', mu_url)
+  # Commit the file.
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        None,
+                                        None,
+                                        mu_path)
+
 ########################################################################
 # Run the tests
 
@@ -1108,6 +1203,7 @@ test_list = [ None,
               multiple_matches,
               wc_wc_copy_revert,
               authz_recursive_ls,
+              case_sensitive_authz,
              ]
 serial_only = True
 
