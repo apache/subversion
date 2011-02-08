@@ -2668,7 +2668,9 @@ op_depth_for_copy(apr_int64_t *op_depth,
     {
       svn_wc__db_status_t status = svn_sqlite__column_token(stmt, 1,
                                                             presence_map);
-      SVN_ERR(convert_to_working_status(&status, status));
+      svn_error_t *err = convert_to_working_status(&status, status);
+      if (err)
+        SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
       if (status == svn_wc__db_status_added)
         {
           apr_int64_t parent_copyfrom_repos_id
@@ -4297,11 +4299,12 @@ info_below_working(svn_boolean_t *have_base,
             *have_base = TRUE;
 
           *status = svn_sqlite__column_token(stmt, 3, presence_map);
-          if (op_depth > 0)
-            SVN_ERR(convert_to_working_status(status, *status));
         }
     }
   SVN_ERR(svn_sqlite__reset(stmt));
+
+  if (*have_work)
+    SVN_ERR(convert_to_working_status(status, *status));
 
   return SVN_NO_ERROR;
 }
@@ -4505,7 +4508,9 @@ read_info(svn_wc__db_status_t *status,
           *status = svn_sqlite__column_token(stmt_info, 3, presence_map);
 
           if (op_depth != 0) /* WORKING */
-            SVN_ERR(convert_to_working_status(status, *status));
+            err = svn_error_compose_create(err,
+                                           convert_to_working_status(status,
+                                                                     *status));
         }
       if (kind)
         {
@@ -4867,7 +4872,11 @@ svn_wc__db_read_children_info(apr_hash_t **nodes,
 
           child->status = svn_sqlite__column_token(stmt, 3, presence_map);
           if (*op_depth != 0)
-            SVN_ERR(convert_to_working_status(&child->status, child->status));
+            {
+              err = convert_to_working_status(&child->status, child->status);
+              if (err)
+                SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
+            }
 
           if (*op_depth != 0)
             child->revnum = SVN_INVALID_REVNUM;
@@ -5061,7 +5070,11 @@ svn_wc__db_read_children_walker_info(apr_hash_t **nodes,
       op_depth = svn_sqlite__column_int(stmt, 1);
       child->status = svn_sqlite__column_token(stmt, 2, presence_map);
       if (op_depth > 0)
-        SVN_ERR(convert_to_working_status(&child->status, child->status));
+        {
+          err = convert_to_working_status(&child->status, child->status);
+          if (err)
+            SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
+        }
       child->kind = svn_sqlite__column_token(stmt, 3, kind_map);
       apr_hash_set(*nodes, apr_pstrdup(result_pool, name),
                    APR_HASH_KEY_STRING, child);
