@@ -2303,14 +2303,6 @@ svn_wc__db_temp_get_format(int *format,
                            const char *local_dir_abspath,
                            apr_pool_t *scratch_pool);
 
-/* ### reset any cached format version. it has probably changed.  */
-svn_error_t *
-svn_wc__db_temp_reset_format(int format,
-                             svn_wc__db_t *db,
-                             const char *local_dir_abspath,
-                             apr_pool_t *scratch_pool);
-
-
 /* ### temp functions to manage/store access batons within the DB.  */
 svn_wc_adm_access_t *
 svn_wc__db_temp_get_access(svn_wc__db_t *db,

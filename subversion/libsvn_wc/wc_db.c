@@ -7225,41 +7225,6 @@ svn_wc__db_temp_get_format(int *format,
   return SVN_NO_ERROR;
 }
 
-
-/* ### temporary API. remove before release.  */
-svn_error_t *
-svn_wc__db_temp_reset_format(int format,
-                             svn_wc__db_t *db,
-                             const char *local_dir_abspath,
-                             apr_pool_t *scratch_pool)
-{
-  svn_wc__db_pdh_t *pdh;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_dir_abspath));
-  SVN_ERR_ASSERT(format >= 1);
-  /* ### assert that we were passed a directory?  */
-
-  /* Do not create a PDH. If we don't have one, then we don't have any
-     cached version information.  */
-  pdh = svn_wc__db_pdh_get_or_create(db, local_dir_abspath, FALSE,
-                                     scratch_pool);
-  if (pdh != NULL)
-    {
-      /* ### ideally, we would reset this to UNKNOWN, and then read the working
-         ### copy to see what format it is in. however, we typically *write*
-         ### whatever we *read*. so to break the cycle and write a different
-         ### version (during upgrade), then we have to force a new format.  */
-
-      /* ### since this is a temporary API, I feel I can indulge in a hack
-         ### here.  If we are upgrading *to* wc-ng, we need to blow away the
-         ### pdh->wcroot member.  If we are upgrading to format 11 (pre-wc-ng),
-         ### we just need to store the format number.  */
-      pdh->wcroot = NULL;
-    }
-
-  return SVN_NO_ERROR;
-}
-
 /* ### temporary API. remove before release.  */
 svn_error_t *
 svn_wc__db_temp_forget_directory(svn_wc__db_t *db,
