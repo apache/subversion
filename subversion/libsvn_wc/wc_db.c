@@ -554,18 +554,18 @@ get_statement_for_path(svn_sqlite__stmt_t **stmt,
                        int stmt_idx,
                        apr_pool_t *scratch_pool)
 {
-  svn_wc__db_pdh_t *pdh;
+  svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
                               local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
-  VERIFY_USABLE_PDH(pdh);
+  VERIFY_USABLE_WCROOT(wcroot);
 
-  SVN_ERR(svn_sqlite__get_statement(stmt, pdh->wcroot->sdb, stmt_idx));
-  SVN_ERR(svn_sqlite__bindf(*stmt, "is", pdh->wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__get_statement(stmt, wcroot->sdb, stmt_idx));
+  SVN_ERR(svn_sqlite__bindf(*stmt, "is", wcroot->wc_id, local_relpath));
 
   return SVN_NO_ERROR;
 }

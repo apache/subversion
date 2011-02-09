@@ -159,6 +159,17 @@ svn_wc__db_pdh_parse_local_abspath(svn_wc__db_pdh_t **pdh,
                                    apr_pool_t *result_pool,
                                    apr_pool_t *scratch_pool);
 
+/* Similar to svn_wc__db_pdh_parse_local_abspath(), but only return the WCROOT,
+   rather than a full PDH. */
+svn_error_t *
+svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
+                                      const char **local_relpath,
+                                      svn_wc__db_t *db,
+                                      const char *local_abspath,
+                                      svn_sqlite__mode_t smode,
+                                      apr_pool_t *result_pool,
+                                      apr_pool_t *scratch_pool);
+
 /* POOL may be NULL if the lifetime of LOCAL_ABSPATH is sufficient.  */
 const char *
 svn_wc__db_pdh_compute_relpath(const svn_wc__db_pdh_t *pdh,
@@ -178,6 +189,11 @@ svn_wc__db_pdh_navigate_to_parent(svn_wc__db_pdh_t **parent_pdh,
 #define VERIFY_USABLE_PDH(pdh) SVN_ERR_ASSERT(  \
     (pdh)->wcroot != NULL                       \
     && (pdh)->wcroot->format == SVN_WC__VERSION)
+
+/* Assert that the given WCROOT is usable.
+   NOTE: the expression is multiply-evaluated!!  */
+#define VERIFY_USABLE_WCROOT(wcroot)  SVN_ERR_ASSERT(               \
+    (wcroot) != NULL && (wcroot)->format == SVN_WC__VERSION)
 
 /* */
 svn_error_t *
