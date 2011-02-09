@@ -631,6 +631,22 @@ svn_boolean_t svn_cstring_match_glob_list(const char *str,
   return FALSE;
 }
 
+svn_boolean_t
+svn_cstring_match_list(const char *str, const apr_array_header_t *list)
+{
+  int i;
+
+  for (i = 0; i < list->nelts; i++)
+    {
+      const char *this_str = APR_ARRAY_IDX(list, i, char *);
+
+      if (strcmp(this_str, str) == 0)
+        return TRUE;
+    }
+
+  return FALSE;
+}
+
 int svn_cstring_count_newlines(const char *msg)
 {
   int count = 0;

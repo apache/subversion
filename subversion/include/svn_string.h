@@ -366,6 +366,13 @@ svn_cstring_split_append(apr_array_header_t *array,
 svn_boolean_t
 svn_cstring_match_glob_list(const char *str, const apr_array_header_t *list);
 
+/** Return @c TRUE iff @a str exactly matches any of the elements of @a list.
+ *
+ * @since new in 1.7
+ */
+svn_boolean_t
+svn_cstring_match_list(const char *str, const apr_array_header_t *list);
+
 /**
  * Return the number of line breaks in @a msg, allowing any kind of newline
  * termination (CR, LF, CRLF, or LFCR), even inconsistent.
