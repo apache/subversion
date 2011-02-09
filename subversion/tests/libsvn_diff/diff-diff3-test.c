@@ -2239,7 +2239,7 @@ random_three_way_merge(apr_pool_t *pool)
          gets triggered with reasonable probability.  (Currently it ignores
          50 lines or more, and empirically N=400 suffices to trigger that 
          behaviour about half the time.) */
-      int num_lines = 400, num_src = 10, num_dst = 10;
+      int num_lines = 4000, num_src = 10, num_dst = 10;
       svn_boolean_t *lines = apr_pcalloc(subpool, sizeof(*lines) * num_lines);
       struct random_mod *src_lines = apr_palloc(subpool,
                                                 sizeof(*src_lines) * num_src);
