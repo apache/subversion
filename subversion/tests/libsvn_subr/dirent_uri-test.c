@@ -2921,8 +2921,9 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS2(test_dirent_get_absolute,
                    "test svn_dirent_get_absolute"),
 #ifdef WIN32
-    SVN_TEST_XFAIL2(test_dirent_get_absolute_from_lc_drive,
-                   "test svn_dirent_get_absolute with lc drive"),
+    SVN_TEST_WIMP(test_dirent_get_absolute_from_lc_drive,
+                   "test svn_dirent_get_absolute with lc drive",
+                   "Requires patch from apr-trunk"),
 #endif
     SVN_TEST_PASS2(test_dirent_condense_targets,
                    "test svn_dirent_condense_targets"),
