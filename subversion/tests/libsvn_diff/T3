@@ -1,0 +1,16 @@
+#include <stdio.h>
+
+int main (int argc, char **argv)
+{
+  /* line minus-five of context */
+  /* line minus-four of context */
+  /* line minus-three of context */
+  /* line minus-two of context */
+  /* line minus-one of context */
+  printf ("Good-bye, cruel world!\n");
+  /* line plus-one of context */
+  /* line plus-two of context */
+  /* line plus-three of context */
+  /* line plus-four of context */
+  /* line plus-five of context */
+}
