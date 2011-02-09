@@ -1830,6 +1830,9 @@ def merge_replace_causes_tree_conflict2(sbox):
   expected_stdout = verify.UnorderedOutput([
     "--- Merging differences between repository URLs into '" + A_B + "':\n",
     '   C ' + A_B_E + '\n',
+    "--- Recording mergeinfo for merge between repository URLs into '" +
+      A_B + "':\n",
+    " U   " + A_B + "\n",
     'Summary of conflicts:\n',
     '  Tree conflicts: 1\n',
   ])
@@ -1841,6 +1844,10 @@ def merge_replace_causes_tree_conflict2(sbox):
   expected_stdout = verify.UnorderedOutput([
     "--- Merging differences between repository URLs into '" + A_D + "':\n",
     '   C ' + A_D_H + '\n',
+    "--- Recording mergeinfo for merge between repository URLs into '" +
+      A_D + "':\n",
+    " U   " + A_D + "\n",
+    " U   " + A_D_G + "\n",
     'Summary of conflicts:\n',
     '  Tree conflicts: 1\n',
   ])
@@ -1853,6 +1860,13 @@ def merge_replace_causes_tree_conflict2(sbox):
     "--- Merging differences between repository URLs into '" + A_D_G +
     "':\n",
     '   C ' + A_D_G_pi + '\n',
+    "--- Recording mergeinfo for merge between repository URLs into '" +
+      A_D_G + "':\n",
+    "--- Eliding mergeinfo from '" + A_D_G_pi + "':\n",
+    " U   " + A_D_G_pi + "\n",
+    "--- Eliding mergeinfo from '" + A_D_G_pi + "':\n",
+    " U   " + A_D_G_pi + "\n",
+    " G   " + A_D_G + "\n",
     'Summary of conflicts:\n',
     '  Tree conflicts: 1\n',
   ])
