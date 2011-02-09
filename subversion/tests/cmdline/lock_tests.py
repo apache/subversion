@@ -1379,6 +1379,7 @@ def examine_lock_encoded_recurse(sbox):
 
 # Trying to unlock someone else's lock with --force should fail.
 @XFail(svntest.main.is_ra_type_dav)
+@Issue(3801)
 def unlocked_lock_of_other_user(sbox):
   "unlock file locked by other user"
 

@@ -457,6 +457,7 @@ def export_file_to_explicit_cwd(sbox):
                                         expected_disk)
 
 @XFail()
+@Issue(3799)
 def export_file_overwrite_fails(sbox):
   "exporting a file refuses to silently overwrite"
   sbox.build(create_wc = True, read_only = True)
@@ -569,6 +570,7 @@ def export_with_url_unsafe_characters(sbox):
     raise svntest.Failure("export did not fetch file with URL unsafe path")
 
 @XFail()
+@Issue(3800)
 def export_working_copy_with_depths(sbox):
   "export working copy with different depths"
   sbox.build(read_only = True)

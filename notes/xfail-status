@@ -8,7 +8,7 @@ Test #  Mode   Test Description
 ------  -----  ----------------
   34    XFAIL  test svn_dirent_get_absolute with lc drive
   Issue #: 3795
-  Target Milestone: Unscheduled
+  Target Milestone: 1.7.0
   Thread: http://svn.haxx.se/dev/archive-2009-10/0682.shtml
   Log: r880444
   Point Person: rhuijben
@@ -153,8 +153,8 @@ Test #  Mode   Test Description
   Point Person: neels
 
   50    XFAIL  diff -r1 of dir with removed-then-readded file
-  Issue #: None
-  Target Milestone: N/A
+  Issue #: 3797
+  Target Milestone: Unscheduled
   Thread: N/A
   Log: r873641
   Point Person: neels
@@ -164,22 +164,22 @@ LISTING: export_tests.py
 Test #  Mode   Test Description
 ------  -----  ----------------
   11    XFAIL  export working copy at base revision
-  Issue #: None
-  Target Milestone: N/A
+  Issue #: 3798
+  Target Milestone: Unscheduled
   Thread: N/A
   Log: r980465
   Point Person: julianfoad
 
   20    XFAIL  exporting a file refuses to silently overwrite
-  Issue #: None
-  Target Milestone: N/A
+  Issue #: 3799
+  Target Milestone: Unscheduled
   Thread: N/A
   Log: r1037998
   Point Person: danielsh
   
   24    XFAIL  export working copy with different depths
-  Issue #: None
-  Target Milestone: N/A
+  Issue #: 3800
+  Target Milestone: Unscheduled
   Thread: N/A
   Log: r980497
   Point Person: julianfoad
@@ -207,8 +207,8 @@ Test #  Mode   Test Description
   Point Person: None
 
   34    XFAIL  unlock file locked by other user
-  Issue #: None
-  Target Milestone: N/A 
+  Issue #: 3801
+  Target Milestone: Unscheduled 
   Thread: None
   Log: r865614
   Point Person: lgo
@@ -284,9 +284,9 @@ Test #  Mode   Test Description
   Log: N/A
   Point Person: Unassigned
   
-  22    XFAIL  replace vs. edit tree-conflicts
-  Issue #: None
-  Target Milestone: N/A 
+  22    XFAIL  (serf only) replace vs. edit tree-conflicts
+  Issue #: 3802
+  Target Milestone: Unscheduled 
   Thread: N/A
   Log: r879723
   Point Person: julianfoad
