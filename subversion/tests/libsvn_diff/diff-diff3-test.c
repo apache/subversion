@@ -2050,6 +2050,39 @@ test_three_way_merge_conflict_styles(apr_pool_t *pool)
 
 
 static svn_error_t *
+test_diff4(apr_pool_t *pool)
+{
+  svn_diff_t *diff;
+  svn_stream_t *actual, *expected;
+  svn_boolean_t same;
+
+  /* Usage: tools/diff/diff4 <mine> <older> <yours> <ancestor> */
+  /* tools/diff/diff4 B2 T2 T3 T1 > B2new */
+  SVN_ERR(svn_diff_file_diff4(&diff, "T2", "B2", "T3", "T1", pool));
+
+  /* Sanity. */
+  SVN_TEST_ASSERT(! svn_diff_contains_conflicts(diff));
+  SVN_TEST_ASSERT(svn_diff_contains_diffs(diff));
+
+  /* Comparison. */
+  SVN_ERR(svn_stream_open_readonly(&expected, "B2new", pool, pool));
+  actual = svn_stream_from_stringbuf(
+             svn_stringbuf_create_ensure(417, pool), /* 417 == wc -c < B2new */
+             pool);
+  SVN_ERR(svn_diff_file_output_merge(actual, diff,
+                                     "T2", "B2", "T3",
+                                     NULL, NULL, NULL, NULL,
+                                     FALSE,
+                                     FALSE,
+                                     pool));
+  SVN_ERR(svn_stream_contents_same2(&same, actual, expected, pool));
+  SVN_TEST_ASSERT(same);
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
 random_trivial_merge(apr_pool_t *pool)
 {
   int i;
@@ -2300,5 +2333,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "3-way merge, adjacent changes"),
     SVN_TEST_PASS2(test_three_way_merge_conflict_styles,
                    "3-way merge with conflict styles"),
+    SVN_TEST_PASS2(test_diff4,
+                   "4-way merge; see variance-adjusted-patching.html"),
     SVN_TEST_NULL
   };
