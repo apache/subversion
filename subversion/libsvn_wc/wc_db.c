@@ -3585,6 +3585,23 @@ op_revert_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
                                                     b->local_relpath,
                                                     scratch_pool));
 
+  /* Check for higher op-depth children */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, b->pdh->wcroot->sdb,
+                                    STMT_SELECT_NODES_GE_OP_DEPTH_RECURSIVE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "issi", b->pdh->wcroot->wc_id,
+                            b->local_relpath,
+                            construct_like_arg(b->local_relpath, scratch_pool),
+                            op_depth + 1));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (have_row)
+    return svn_error_createf(SVN_ERR_WC_INVALID_OPERATION_DEPTH, NULL,
+                             _("Can't revert tree change for '%s' without"
+                               " reverting children"),
+                             path_for_error_message(b->pdh->wcroot,
+                                                    b->local_relpath,
+                                                    scratch_pool));
+
+  /* Do the revert */
   SVN_ERR(svn_sqlite__get_statement(&stmt, b->pdh->wcroot->sdb,
                                     STMT_DELETE_ACTUAL_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", b->pdh->wcroot->wc_id,
