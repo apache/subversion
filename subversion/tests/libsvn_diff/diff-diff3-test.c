@@ -2049,12 +2049,97 @@ test_three_way_merge_conflict_styles(apr_pool_t *pool)
 }
 
 
+#define MAKE_STRING(cstr) { (cstr), sizeof((cstr))-1 }
+
 static svn_error_t *
 test_diff4(apr_pool_t *pool)
 {
   svn_diff_t *diff;
   svn_stream_t *actual, *expected;
   svn_boolean_t same;
+  static svn_string_t B2 = MAKE_STRING(
+    "int main (int argc, char **argv)\n"
+    "{\n"
+    "  /* line minus-five of context */\n"
+    "  /* line minus-four of context */\n"
+    "  /* line minus-three of context */\n"
+    "  /* line -1 of context */\n"
+    "  printf (\"Hello, world!\\n\");\n"
+    "  /* newly inserted line of context */\n"
+    "  /* line plus-one of context */\n"
+    "  /* line plus-two of context */\n"
+    "  /* line plus-three of context */\n"
+    "  /* line plus-four of context */\n"
+    "  /* line plus-five of context */\n"
+    "}\n");
+  static svn_string_t B2new = MAKE_STRING(
+    "int main (int argc, char **argv)\n"
+    "{\n"
+    "  /* line minus-five of context */\n"
+    "  /* line minus-four of context */\n"
+    "  /* line minus-three of context */\n"
+    "  /* line -1 of context */\n"
+    "  printf (\"Good-bye, cruel world!\\n\");\n"
+    "  /* newly inserted line of context */\n"
+    "  /* line plus-one of context */\n"
+    "  /* line plus-two of context */\n"
+    "  /* line plus-three of context */\n"
+    "  /* line plus-four of context */\n"
+    "  /* line plus-five of context */\n"
+    "}\n");
+  static svn_string_t T1 = MAKE_STRING(
+    "int main (int argc, char **argv)\n"
+    "{\n"
+    "  /* line minus-five of context */\n"
+    "  /* line minus-four of context */\n"
+    "  /* line minus-three of context */\n"
+    "  /* line minus-two of context */\n"
+    "  /* line minus-one of context */\n"
+    "  printf (\"Hello, world!\\n\");\n"
+    "  /* line plus-one of context */\n"
+    "  /* line plus-two of context */\n"
+    "  /* line plus-three of context */\n"
+    "  /* line plus-four of context */\n"
+    "  /* line plus-five of context */\n"
+    "}\n");
+  static svn_string_t T2 = MAKE_STRING(
+    "#include <stdio.h>\n"
+    "\n"
+    "int main (int argc, char **argv)\n"
+    "{\n"
+    "  /* line minus-five of context */\n"
+    "  /* line minus-four of context */\n"
+    "  /* line minus-three of context */\n"
+    "  /* line minus-two of context */\n"
+    "  /* line minus-one of context */\n"
+    "  printf (\"Hello, world!\\n\");\n"
+    "  /* line plus-one of context */\n"
+    "  /* line plus-two of context */\n"
+    "  /* line plus-three of context */\n"
+    "  /* line plus-four of context */\n"
+    "  /* line plus-five of context */\n"
+    "}\n");
+  static svn_string_t T3 = MAKE_STRING(
+    "#include <stdio.h>\n"
+    "\n"
+    "int main (int argc, char **argv)\n"
+    "{\n"
+    "  /* line minus-five of context */\n"
+    "  /* line minus-four of context */\n"
+    "  /* line minus-three of context */\n"
+    "  /* line minus-two of context */\n"
+    "  /* line minus-one of context */\n"
+    "  printf (\"Good-bye, cruel world!\\n\");\n"
+    "  /* line plus-one of context */\n"
+    "  /* line plus-two of context */\n"
+    "  /* line plus-three of context */\n"
+    "  /* line plus-four of context */\n"
+    "  /* line plus-five of context */\n"
+    "}\n");
+  SVN_ERR(make_file("B2", B2.data, pool));
+  SVN_ERR(make_file("T1", T1.data, pool));
+  SVN_ERR(make_file("T2", T2.data, pool));
+  SVN_ERR(make_file("T3", T3.data, pool));
 
   /* Usage: tools/diff/diff4 <mine> <older> <yours> <ancestor> */
   /* tools/diff/diff4 B2 T2 T3 T1 > B2new */
@@ -2065,7 +2150,8 @@ test_diff4(apr_pool_t *pool)
   SVN_TEST_ASSERT(svn_diff_contains_diffs(diff));
 
   /* Comparison. */
-  SVN_ERR(svn_stream_open_readonly(&expected, "B2new", pool, pool));
+  expected = svn_stream_from_string(&B2new, pool);
+
   actual = svn_stream_from_stringbuf(
              svn_stringbuf_create_ensure(417, pool), /* 417 == wc -c < B2new */
              pool);
