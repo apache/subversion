@@ -88,23 +88,23 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
    * default pool size is 8192, so about a hundred should fit
    * comfortably. */
   if (svn_fs__get_global_membuffer_cache())
-    SVN_ERR(svn_cache__create_membuffer_cache(&(ffd->rev_root_id_cache),
-                                              svn_fs__get_global_membuffer_cache(),
-                                              svn_fs_fs__serialize_id,
-                                              svn_fs_fs__deserialize_id,
-                                              sizeof(svn_revnum_t),
-                                              apr_pstrcat(pool, prefix, "RRI",
-                                                          (char *)NULL),
-                                              fs->pool));
+      SVN_ERR(svn_cache__create_membuffer_cache(&(ffd->rev_root_id_cache),
+                                                svn_fs__get_global_membuffer_cache(),
+                                                svn_fs_fs__serialize_id,
+                                                svn_fs_fs__deserialize_id,
+                                                sizeof(svn_revnum_t),
+                                                apr_pstrcat(pool, prefix, "RRI",
+                                                            (char *)NULL),
+                                                fs->pool));
   else
-    SVN_ERR(svn_cache__create_inprocess(&(ffd->rev_root_id_cache),
-                                        svn_fs_fs__serialize_id,
-                                        svn_fs_fs__deserialize_id,
-                                        sizeof(svn_revnum_t),
-                                        1, 100, FALSE, fs->pool));
+      SVN_ERR(svn_cache__create_inprocess(&(ffd->rev_root_id_cache),
+                                          svn_fs_fs__serialize_id,
+                                          svn_fs_fs__deserialize_id,
+                                          sizeof(svn_revnum_t),
+                                          1, 100, FALSE, fs->pool));
   if (! no_handler)
-    SVN_ERR(svn_cache__set_error_handler(ffd->rev_root_id_cache,
-                                         warn_on_cache_errors, fs, pool));
+      SVN_ERR(svn_cache__set_error_handler(ffd->rev_root_id_cache,
+                                          warn_on_cache_errors, fs, pool));
 
 
   /* Rough estimate: revision DAG nodes have size around 320 bytes, so
