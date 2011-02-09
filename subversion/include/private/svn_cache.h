@@ -120,7 +120,7 @@ typedef struct svn_cache__t svn_cache__t;
  * for all of its storage needs.  The elements in the cache will be
  * indexed by keys of length @a klen, which may be APR_HASH_KEY_STRING
  * if they are strings.  Cached values will be copied in and out of
- * the cache using @a dup_func.
+ * the cache using @a serialize_func and @a deserialize_func, respectively.
  *
  * The cache stores up to @a pages * @a items_per_page items at a
  * time.  The exact cache invalidation strategy is not defined here,
@@ -140,7 +140,8 @@ typedef struct svn_cache__t svn_cache__t;
  */
 svn_error_t *
 svn_cache__create_inprocess(svn_cache__t **cache_p,
-                            svn_cache__dup_func_t dup_func,
+                            svn_cache__serialize_func_t serialize_func,
+                            svn_cache__deserialize_func_t deserialize_func,
                             apr_ssize_t klen,
                             apr_int64_t pages,
                             apr_int64_t items_per_page,
@@ -207,7 +208,7 @@ svn_cache__make_memcache_from_config(svn_memcache_t **memcache_p,
  *
  * Allocations will be made in @a pool, in particular the data buffers.
  */
-svn_error_t* 
+svn_error_t *
 svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
                                   apr_size_t total_size,
                                   apr_size_t directory_size,

@@ -25,7 +25,7 @@
 
 #include "id.h"
 #include "../libsvn_fs/fs-loader.h"
-
+#include "private/svn_temp_serializer.h"
 
 
 typedef struct id_private_t {
@@ -309,3 +309,88 @@ svn_fs_fs__id_parse(const char *data,
 
   return id;
 }
+
+/* (de-)serialization support */
+
+/* Serialization of the PVT sub-structure within the CONTEXT.
+ */
+static void
+serialize_id_private(svn_temp_serializer__context_t *context,
+                     const id_private_t * const *pvt)
+{
+  const id_private_t *private = *pvt;
+
+  /* serialize the pvt data struct itself */
+  svn_temp_serializer__push(context,
+                            (const void * const *)pvt,
+                            sizeof(*private));
+
+  /* append the referenced strings */
+  svn_temp_serializer__add_string(context, &private->node_id);
+  svn_temp_serializer__add_string(context, &private->copy_id);
+  svn_temp_serializer__add_string(context, &private->txn_id);
+
+  /* return to caller's nesting level */
+  svn_temp_serializer__pop(context);
+}
+
+/* Serialize an ID within the serialization CONTECT.
+ */
+void
+svn_fs_fs__id_serialize(svn_temp_serializer__context_t *context,
+                        const struct svn_fs_id_t * const *id)
+{
+  /* nothing to do for NULL ids */
+  if (*id == NULL)
+    return;
+
+  /* serialize the id data struct itself */
+  svn_temp_serializer__push(context,
+                            (const void * const *)id,
+                            sizeof(**id));
+
+  /* serialize the id_private_t data sub-struct */
+  serialize_id_private(context,
+                       (const id_private_t * const *)&(*id)->fsap_data);
+
+  /* return to caller's nesting level */
+  svn_temp_serializer__pop(context);
+}
+
+/* Deserialization of the PVT sub-structure in BUFFER.
+ */
+static void
+deserialize_id_private(void *buffer, id_private_t **pvt)
+{
+  /* fixup the reference to the only sub-structure */
+  id_private_t *private;
+  svn_temp_deserializer__resolve(buffer, (void**)pvt);
+
+  /* fixup the sub-structure itself */
+  private = *pvt;
+  svn_temp_deserializer__resolve(private, (void**)&private->node_id);
+  svn_temp_deserializer__resolve(private, (void**)&private->copy_id);
+  svn_temp_deserializer__resolve(private, (void**)&private->txn_id);
+}
+
+/* Deserialize an ID inside the BUFFER.
+ */
+void
+svn_fs_fs__id_deserialize(void *buffer, svn_fs_id_t **id)
+{
+  /* The id maybe all what is in the whole buffer.
+   * Don't try to fixup the pointer in that case*/
+  if (*id != buffer)
+    svn_temp_deserializer__resolve(buffer, (void**)id);
+
+  /* no id, no sub-structure fixup necessary */
+  if (*id == NULL)
+    return;
+
+  /* the stored vtable is bogus at best -> set the right one */
+  (*id)->vtable = &id_vtable;
+
+  /* handle sub-structures */
+  deserialize_id_private(*id, (id_private_t **)&(*id)->fsap_data);
+}
+
