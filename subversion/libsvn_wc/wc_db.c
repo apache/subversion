@@ -3574,69 +3574,70 @@ op_revert_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   status = svn_sqlite__column_token(stmt, 3, presence_map);
   SVN_ERR(svn_sqlite__reset(stmt));
 
-  if (!op_depth)
-    return SVN_NO_ERROR;
-
-  if (op_depth != relpath_depth(b->local_relpath))
-    return svn_error_createf(SVN_ERR_WC_INVALID_OPERATION_DEPTH, NULL,
-                             _("Can't revert tree change for '%s' without"
-                               " reverting parent"),
-                             path_for_error_message(b->pdh->wcroot,
-                                                    b->local_relpath,
-                                                    scratch_pool));
-
-  /* Check for higher op-depth children */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, b->pdh->wcroot->sdb,
-                                    STMT_SELECT_NODES_GE_OP_DEPTH_RECURSIVE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "issi", b->pdh->wcroot->wc_id,
-                            b->local_relpath,
-                            construct_like_arg(b->local_relpath, scratch_pool),
-                            op_depth + 1));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  if (have_row)
-    return svn_error_createf(SVN_ERR_WC_INVALID_OPERATION_DEPTH, NULL,
-                             _("Can't revert tree change for '%s' without"
-                               " reverting children"),
-                             path_for_error_message(b->pdh->wcroot,
-                                                    b->local_relpath,
-                                                    scratch_pool));
-
-  /* Do the revert */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, b->pdh->wcroot->sdb,
-                                    STMT_DELETE_ACTUAL_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", b->pdh->wcroot->wc_id,
-                            b->local_relpath));
-  SVN_ERR(svn_sqlite__step_done(stmt));
-
-  SVN_ERR(convert_to_working_status(&status, status));
-
-  if (status == svn_wc__db_status_added)
+  if (op_depth > 0)
     {
-      SVN_ERR(remove_children(b->pdh, b->local_relpath,
-                              svn_wc__db_status_normal,
-                              op_depth, scratch_pool));
-      SVN_ERR(remove_children(b->pdh, b->local_relpath,
-                              svn_wc__db_status_not_present,
-                              op_depth, scratch_pool));
-      SVN_ERR(remove_children(b->pdh, b->local_relpath,
-                              svn_wc__db_status_incomplete,
-                              op_depth, scratch_pool));
-    }
-  else if (status == svn_wc__db_status_deleted)
-    {
-      /* Rewrite the op-depth of all deleted children making the
-         direct children into roots of deletes. */
-      const char *like_arg = construct_like_arg(b->local_relpath, scratch_pool);
+      if (op_depth != relpath_depth(b->local_relpath))
+        return svn_error_createf(SVN_ERR_WC_INVALID_OPERATION_DEPTH, NULL,
+                                 _("Can't revert tree change for '%s' without"
+                                   " reverting parent"),
+                                 path_for_error_message(b->pdh->wcroot,
+                                                        b->local_relpath,
+                                                        scratch_pool));
+
+      /* Check for higher op-depth children */
+      SVN_ERR(svn_sqlite__get_statement(&stmt, b->pdh->wcroot->sdb,
+                                     STMT_SELECT_NODES_GE_OP_DEPTH_RECURSIVE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "issi", b->pdh->wcroot->wc_id,
+                                b->local_relpath,
+                                construct_like_arg(b->local_relpath,
+                                                   scratch_pool),
+                                op_depth + 1));
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+      if (have_row)
+        return svn_error_createf(SVN_ERR_WC_INVALID_OPERATION_DEPTH, NULL,
+                                 _("Can't revert tree change for '%s' without"
+                                   " reverting children"),
+                                 path_for_error_message(b->pdh->wcroot,
+                                                        b->local_relpath,
+                                                        scratch_pool));
+
+      SVN_ERR(convert_to_working_status(&status, status));
+
+      if (status == svn_wc__db_status_added)
+        {
+          SVN_ERR(remove_children(b->pdh, b->local_relpath,
+                                  svn_wc__db_status_normal,
+                                  op_depth, scratch_pool));
+          SVN_ERR(remove_children(b->pdh, b->local_relpath,
+                                  svn_wc__db_status_not_present,
+                                  op_depth, scratch_pool));
+          SVN_ERR(remove_children(b->pdh, b->local_relpath,
+                                  svn_wc__db_status_incomplete,
+                                  op_depth, scratch_pool));
+        }
+      else if (status == svn_wc__db_status_deleted)
+        {
+          /* Rewrite the op-depth of all deleted children making the
+             direct children into roots of deletes. */
+          const char *like_arg = construct_like_arg(b->local_relpath,
+                                                    scratch_pool);
+          
+          SVN_ERR(svn_sqlite__get_statement(&stmt, b->pdh->wcroot->sdb,
+                                      STMT_UPDATE_OP_DEPTH_INCREASE_RECURSIVE));
+          SVN_ERR(svn_sqlite__bindf(stmt, "isi", b->pdh->wcroot->wc_id,
+                                    like_arg, op_depth));
+          SVN_ERR(svn_sqlite__step_done(stmt));
+        }
 
       SVN_ERR(svn_sqlite__get_statement(&stmt, b->pdh->wcroot->sdb,
-                                      STMT_UPDATE_OP_DEPTH_INCREASE_RECURSIVE));
-      SVN_ERR(svn_sqlite__bindf(stmt, "isi",
-                                b->pdh->wcroot->wc_id, like_arg, op_depth));
+                                        STMT_DELETE_WORKING_NODE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", b->pdh->wcroot->wc_id,
+                                b->local_relpath));
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, b->pdh->wcroot->sdb,
-                                    STMT_DELETE_WORKING_NODE));
+                                    STMT_DELETE_ACTUAL_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", b->pdh->wcroot->wc_id,
                             b->local_relpath));
   SVN_ERR(svn_sqlite__step_done(stmt));
@@ -3648,7 +3649,6 @@ op_revert_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 svn_error_t *
 svn_wc__db_op_revert(svn_wc__db_t *db,
                      const char *local_abspath,
-                     svn_depth_t depth,
                      apr_pool_t *scratch_pool)
 {
   struct op_revert_baton b;

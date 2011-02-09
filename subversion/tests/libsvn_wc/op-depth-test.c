@@ -1919,7 +1919,6 @@ test_del_replace_not_present(const svn_test_opts_t *opts, apr_pool_t *pool)
 static svn_error_t *
 revert(wc_baton_t *b,
        const char *local_relpath,
-       svn_depth_t depth,
        nodes_row_t *before,
        nodes_row_t *after)
 {
@@ -1928,7 +1927,7 @@ revert(wc_baton_t *b,
 
   SVN_ERR(insert_dirs(b, before));
   SVN_ERR(check_db_rows(b, "", before));
-  err = svn_wc__db_op_revert(b->wc_ctx->db, local_abspath, depth, b->pool);
+  err = svn_wc__db_op_revert(b->wc_ctx->db, local_abspath, b->pool);
   if (err)
     /* If db_op_revert returns an error the DB should be unchanged so
        verify and return a verification error if a change is detected
@@ -1961,7 +1960,7 @@ test_op_revert(const svn_test_opts_t *opts, apr_pool_t *pool)
       { 0, "A",   "normal", 4, "A" },
       { 0 },
     };
-    SVN_ERR(revert(&b, "A/B", svn_depth_infinity, before, after));
+    SVN_ERR(revert(&b, "A/B", before, after));
   }
 
   {
@@ -1978,7 +1977,7 @@ test_op_revert(const svn_test_opts_t *opts, apr_pool_t *pool)
       { 0, "A",   "normal", 4, "A" },
       { 0 },
     };
-    SVN_ERR(revert(&b, "A/B", svn_depth_infinity, before, after));
+    SVN_ERR(revert(&b, "A/B", before, after));
   }
 
   {
@@ -1997,7 +1996,7 @@ test_op_revert(const svn_test_opts_t *opts, apr_pool_t *pool)
       { 0, "A/B/C",   "normal", 4, "A/B" },
       { 0 },
     };
-    SVN_ERR(revert(&b, "A/B/C", svn_depth_infinity, before, after));
+    SVN_ERR(revert(&b, "A/B/C", before, after));
   }
 
   {
@@ -2018,7 +2017,7 @@ test_op_revert(const svn_test_opts_t *opts, apr_pool_t *pool)
       { 3, "A/B/C",   "base-deleted", NO_COPY_FROM },
       { 0 },
     };
-    SVN_ERR(revert(&b, "A/B", svn_depth_infinity, before, after));
+    SVN_ERR(revert(&b, "A/B", before, after));
   }
 
   {
@@ -2034,11 +2033,11 @@ test_op_revert(const svn_test_opts_t *opts, apr_pool_t *pool)
       { 0 },
     };
 
-    err = revert(&b, "A/B/C", svn_depth_infinity, common, common);
+    err = revert(&b, "A/B/C", common, common);
     SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH);
     svn_error_clear(err);
 
-    err = revert(&b, "X", svn_depth_infinity, common, common);
+    err = revert(&b, "X", common, common);
     SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH);
     svn_error_clear(err);
   }
