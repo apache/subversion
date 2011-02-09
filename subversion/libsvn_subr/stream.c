@@ -1363,6 +1363,22 @@ svn_stream_for_stdout(svn_stream_t **out, apr_pool_t *pool)
 
 
 svn_error_t *
+svn_stream_for_stderr(svn_stream_t **err, apr_pool_t *pool)
+{
+  apr_file_t *stderr_file;
+  apr_status_t apr_err;
+
+  apr_err = apr_file_open_stderr(&stderr_file, pool);
+  if (apr_err)
+    return svn_error_wrap_apr(apr_err, "Can't open stderr");
+
+  *err = svn_stream_from_aprfile2(stderr_file, TRUE, pool);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_string_from_stream(svn_string_t **result,
                        svn_stream_t *stream,
                        apr_pool_t *result_pool,
