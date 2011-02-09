@@ -1263,8 +1263,6 @@ upgrade_to_wcng(void **dir_baton,
          entries_write_new() writes in current format rather than
          f12. Thus, this function bumps a working copy all the way to
          current.  */
-      SVN_ERR(svn_wc__db_temp_reset_format(SVN_WC__VERSION, db,
-                                           data->root_abspath, scratch_pool));
       SVN_ERR(svn_wc__db_wclock_obtain(db, data->root_abspath, 0, FALSE,
                                        scratch_pool));
     }
