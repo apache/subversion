@@ -1107,11 +1107,11 @@ def case_sensitive_authz(sbox):
 
   # error messages
   expected_error_for_commit = "Commit failed"
-  expected_error_for_cat = "svn: E175013: Unable to connect to a repository"+ \
-                            " at URL '" + mu_url + "'\n" + \
-                            "svn: E175013: Access to '/" + mu_repo_path + \
-                            "' forbidden\n" + \
-                            "svn: E175009: XML parsing failed: (403 Forbidden)"
+
+  if sbox.repo_url.startswith("http"):
+    expected_error_for_cat = ".*[Ff]orbidden.*"
+  else:
+    expected_error_for_cat = ".*svn: E170001: Authorization failed.*"
 
   # test the case-sensitivity of the path inside the repo
   write_authz_file(sbox, {"/": "jrandom = r",
