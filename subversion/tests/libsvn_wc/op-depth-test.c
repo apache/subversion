@@ -1930,6 +1930,7 @@ revert(wc_baton_t *b,
   apr_int64_t num_rem = count_rows(removed);
   apr_int64_t num_add = count_rows(added);
   int i;
+  svn_error_t *err;
 
   before = apr_palloc(b->pool, sizeof(*before) * (num_com + num_rem + 1));
   for (i = 0; i < num_com; ++i)
@@ -1947,7 +1948,12 @@ revert(wc_baton_t *b,
 
   SVN_ERR(insert_dirs(b, before));
   SVN_ERR(check_db_rows(b, "", before));
-  SVN_ERR(svn_wc__db_op_revert(b->wc_ctx->db, local_abspath, depth, b->pool));
+  err = svn_wc__db_op_revert(b->wc_ctx->db, local_abspath, depth, b->pool);
+  if (err)
+    /* If db_op_revert returns an error the DB should be unchanged so
+       verify and return a verification error if a change is detected
+       or the revert error if unchanged. */
+    return svn_error_compose_create(check_db_rows(b, "", before), err);
   SVN_ERR(check_db_rows(b, "", after));
 
   return SVN_NO_ERROR;
@@ -2013,6 +2019,28 @@ test_op_revert(const svn_test_opts_t *opts, apr_pool_t *pool)
 
     SVN_ERR(revert(&b, "A/B/C", svn_depth_infinity, common, removed1, no_rows));
     SVN_ERR(revert(&b, "A/B", svn_depth_infinity, common, removed2, added2));
+  }
+
+  {
+    svn_error_t *err;
+    nodes_row_t common[] = {
+      { 0, "",        "normal", 4, "" },
+      { 0, "A",       "normal", 4, "A" },
+      { 2, "A/B",     "normal", 2, "X/B" },
+      { 2, "A/B/C",   "normal", 2, "X/B/C" },
+      { 2, "A/B/C/D", "normal", 2, "X/B/C/D" },
+      { 1, "X",       "normal", NO_COPY_FROM },
+      { 2, "X/Y",     "normal", NO_COPY_FROM },
+      { 0 },
+    };
+
+    err = revert(&b, "A/B/C", svn_depth_infinity, common, no_rows, no_rows);
+    SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH);
+    svn_error_clear(err);
+
+    err = revert(&b, "X", svn_depth_infinity, common, no_rows, no_rows);
+    SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH);
+    svn_error_clear(err);
   }
 
   return SVN_NO_ERROR;
