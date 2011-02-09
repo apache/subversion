@@ -799,7 +799,7 @@ svn_stream_from_aprfile2(apr_file_t *file,
   stream = svn_stream_create(baton, pool);
   svn_stream_set_read(stream, read_handler_apr);
   svn_stream_set_write(stream, write_handler_apr);
-  svn_stream_set_skip(stream, skip_range_handler_apr);
+  svn_stream_set_skip(stream, skip_handler_apr);
   svn_stream_set_mark(stream, mark_handler_apr);
   svn_stream_set_seek(stream, seek_handler_apr);
   svn_stream_set_buffered(stream, buffered_handler_apr);
