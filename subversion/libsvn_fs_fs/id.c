@@ -187,6 +187,7 @@ svn_fs_fs__id_txn_create(const char *node_id,
   pvt->txn_id = apr_pstrdup(pool, txn_id);
   pvt->rev = SVN_INVALID_REVNUM;
   pvt->offset = -1;
+
   id->vtable = &id_vtable;
   id->fsap_data = pvt;
   return id;
@@ -208,6 +209,7 @@ svn_fs_fs__id_rev_create(const char *node_id,
   pvt->txn_id = NULL;
   pvt->rev = rev;
   pvt->offset = offset;
+
   id->vtable = &id_vtable;
   id->fsap_data = pvt;
   return id;
@@ -226,6 +228,7 @@ svn_fs_fs__id_copy(const svn_fs_id_t *id, apr_pool_t *pool)
   new_pvt->txn_id = pvt->txn_id ? apr_pstrdup(pool, pvt->txn_id) : NULL;
   new_pvt->rev = pvt->rev;
   new_pvt->offset = pvt->offset;
+
   new_id->vtable = &id_vtable;
   new_id->fsap_data = new_pvt;
   return new_id;
