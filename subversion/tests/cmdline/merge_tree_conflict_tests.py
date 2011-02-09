@@ -1760,9 +1760,8 @@ def merge_replace_causes_tree_conflict2(sbox):
   #      # ACTIONS ON THE MERGE TARGET (A)
   #      # local mods to conflict with merge source
   #      # Delete each of the files and dirs to be replaced by the merge.
-  #      svn delete A/mu A/B/E A/D/G/pi A/D/H
+  #      svn delete A/B/E A/D/G/pi A/D/H
   #      # Merge them one by one to see all the errors.
-  #      svn merge $URL/A/mu $URL/branch/mu A/mu
   #      svn merge $URL/A/B $URL/branch/B A/B
   #      svn merge --depth=immediates $URL/A/D $URL/branch/D A/D
   #      svn merge $URL/A/D/G $URL/branch/D/G A/D/G
@@ -1778,22 +1777,18 @@ def merge_replace_causes_tree_conflict2(sbox):
   A_D_G = os.path.join(wc_dir, 'A', 'D', 'G')
   A_D_G_pi = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
   A_D_H = os.path.join(wc_dir, 'A', 'D', 'H')
-  A_mu = os.path.join(wc_dir, 'A', 'mu')
   url_A_B = url + '/A/B'
   url_A_D = url + '/A/D'
   url_A_D_G = url + '/A/D/G'
-  url_A_mu = url + '/A/mu'
   url_branch_B = url + '/branch/B'
   url_branch_D = url + '/branch/D'
   url_branch_D_G = url + '/branch/D/G'
-  url_branch_mu = url + '/branch/mu'
 
   # ACTIONS ON THE MERGE TARGET (A)
   # local mods to conflict with merge source
   # Delete each of the files and dirs to be replaced by the merge.
-  # svn delete A/mu A/B/E A/D/G/pi A/D/H
+  # svn delete A/B/E A/D/G/pi A/D/H
   expected_stdout = verify.UnorderedOutput([
-    'D         ' + A_mu + '\n',
     'D         ' + os.path.join(A_B_E, 'alpha') + '\n',
     'D         ' + os.path.join(A_B_E, 'beta') + '\n',
     'D         ' + A_B_E + '\n',
@@ -1805,26 +1800,9 @@ def merge_replace_causes_tree_conflict2(sbox):
   ])
 
   actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'delete',
-    A_mu, A_B_E, A_D_G_pi, A_D_H)
+    A_B_E, A_D_G_pi, A_D_H)
 
   # Merge them one by one to see all the errors.
-  # svn merge $URL/A/mu $URL/branch/mu A/mu
-  expected_stdout = verify.UnorderedOutput([
-    "--- Merging differences between repository URLs into '" + A_mu + "':\n",
-    '   C ' + A_mu + '\n',
-    'Summary of conflicts:\n',
-    '  Tree conflicts: 1\n',
-  ])
-  ### This currently says:
-  # "Skipped missing target: '" + A_mu + "'\n",
-  # "--- Merging differences between repository URLs into '" + A_mu + "':\n",
-  # 'A    ' + A_mu + '\n',
-  # 'Summary of conflicts:\n',
-  # '  Skipped paths: 1\n',
-  ###
-
-  actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'merge',
-    url_A_mu, url_branch_mu, A_mu)
 
   # svn merge $URL/A/B $URL/branch/B A/B
   expected_stdout = verify.UnorderedOutput([
@@ -1894,11 +1872,11 @@ def merge_replace_causes_tree_conflict2(sbox):
     url_A_D_G, url_branch_D_G, A_D_G)
 
   # svn st
-  expected_status.tweak('A/mu', 'A/B/E', 'A/D/G/pi', 'A/D/H', status='R ',
+  expected_status.tweak('A/B/E', 'A/D/G/pi', 'A/D/H', status='R ',
     wc_rev='-', treeconflict='C')
   ### This currently says:
   # expected_status.remove('A/D/G/pi')
-  # expected_status.tweak('A/mu', 'A/B/E', status='R ', wc_rev='-', copied='+',
+  # expected_status.tweak('A/B/E', status='R ', wc_rev='-', copied='+',
   #   treeconflict='C')
   # expected_status.tweak('A/D/H', status='D ', treeconflict='C')
   ###
