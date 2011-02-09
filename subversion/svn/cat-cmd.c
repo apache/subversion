@@ -47,6 +47,7 @@ svn_cl__cat(apr_getopt_t *os,
   int i;
   svn_stream_t *out;
   apr_pool_t *subpool = svn_pool_create(pool);
+  svn_boolean_t saw_a_problem = FALSE;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
@@ -63,6 +64,7 @@ svn_cl__cat(apr_getopt_t *os,
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
       const char *truepath;
       svn_opt_revision_t peg_revision;
+      svn_boolean_t success;
 
       svn_pool_clear(subpool);
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
@@ -74,13 +76,19 @@ svn_cl__cat(apr_getopt_t *os,
       SVN_ERR(svn_cl__try(svn_client_cat2(out, truepath, &peg_revision,
                                           &(opt_state->start_revision),
                                           ctx, subpool),
-                           NULL, opt_state->quiet,
+                           &success, opt_state->quiet,
                            SVN_ERR_UNVERSIONED_RESOURCE,
                            SVN_ERR_ENTRY_NOT_FOUND,
                            SVN_ERR_CLIENT_IS_DIRECTORY,
+                           SVN_ERR_FS_NOT_FOUND,
                            SVN_NO_ERROR));
+      if (! success)
+        saw_a_problem = TRUE;
     }
   svn_pool_destroy(subpool);
 
-  return SVN_NO_ERROR;
+  if (saw_a_problem)
+    return svn_error_create(SVN_ERR_BASE, NULL, NULL);
+  else
+    return SVN_NO_ERROR;
 }
