@@ -3589,9 +3589,9 @@ op_revert_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
         {
           /* Check for children */
           SVN_ERR(svn_sqlite__get_statement(&stmt, b->pdh->wcroot->sdb,
-                                            STMT_SELECT_NODE_CHILDREN));
-          SVN_ERR(svn_sqlite__bindf(stmt, "is", b->pdh->wcroot->wc_id,
-                                    b->local_relpath));
+                                            STMT_SELECT_GE_OP_DEPTH_CHILDREN));
+          SVN_ERR(svn_sqlite__bindf(stmt, "isi", b->pdh->wcroot->wc_id,
+                                    b->local_relpath, op_depth));
           SVN_ERR(svn_sqlite__step(&have_row, stmt));
           SVN_ERR(svn_sqlite__reset(stmt));
           if (have_row)
