@@ -1942,6 +1942,7 @@ static svn_error_t *
 test_op_revert(const svn_test_opts_t *opts, apr_pool_t *pool)
 {
   wc_baton_t b;
+  svn_error_t *err;
 
   b.pool = pool;
   SVN_ERR(svn_test__create_repos_and_wc(&b.repos_url, &b.wc_abspath,
@@ -1964,7 +1965,6 @@ test_op_revert(const svn_test_opts_t *opts, apr_pool_t *pool)
   }
 
   {
-    svn_error_t *err;
     nodes_row_t common[] = {
       { 0, "",        "normal", 4, "" },
       { 0, "A",       "normal", 4, "A" },
@@ -2005,7 +2005,7 @@ test_op_revert(const svn_test_opts_t *opts, apr_pool_t *pool)
       { 0, "",        "normal", 4, "" },
       { 0, "A",       "normal", 4, "A" },
       { 0, "A/B",     "normal", 4, "A/B" },
-      { 0, "A/B/C",   "normal", 4, "A/B" },
+      { 0, "A/B/C",   "normal", 4, "A/B/C" },
       { 3, "A/B/C",   "base-deleted", NO_COPY_FROM },
       { 0 },
     };
@@ -2013,7 +2013,7 @@ test_op_revert(const svn_test_opts_t *opts, apr_pool_t *pool)
       { 0, "",        "normal", 4, "" },
       { 0, "A",       "normal", 4, "A" },
       { 0, "A/B",     "normal", 4, "A/B" },
-      { 0, "A/B/C",   "normal", 4, "A/B" },
+      { 0, "A/B/C",   "normal", 4, "A/B/C" },
       { 0 },
     };
     SVN_ERR(revert(&b, "A/B/C", before, after));
@@ -2024,7 +2024,7 @@ test_op_revert(const svn_test_opts_t *opts, apr_pool_t *pool)
       { 0, "",        "normal", 4, "" },
       { 0, "A",       "normal", 4, "A" },
       { 0, "A/B",     "normal", 4, "A/B" },
-      { 0, "A/B/C",   "normal", 4, "A/B" },
+      { 0, "A/B/C",   "normal", 4, "A/B/C" },
       { 2, "A/B",     "base-deleted", NO_COPY_FROM },
       { 2, "A/B/C",   "base-deleted", NO_COPY_FROM },
       { 2, "A/B/C/D", "base-deleted", NO_COPY_FROM },
@@ -2034,7 +2034,7 @@ test_op_revert(const svn_test_opts_t *opts, apr_pool_t *pool)
       { 0, "",        "normal", 4, "" },
       { 0, "A",       "normal", 4, "A" },
       { 0, "A/B",     "normal", 4, "A/B" },
-      { 0, "A/B/C",   "normal", 4, "A/B" },
+      { 0, "A/B/C",   "normal", 4, "A/B/C" },
       { 3, "A/B/C",   "base-deleted", NO_COPY_FROM },
       { 3, "A/B/C/D", "base-deleted", NO_COPY_FROM },
       { 0 },
@@ -2047,7 +2047,7 @@ test_op_revert(const svn_test_opts_t *opts, apr_pool_t *pool)
       { 0, "",        "normal", 4, "" },
       { 0, "A",       "normal", 4, "A" },
       { 0, "A/B",     "normal", 4, "A/B" },
-      { 0, "A/B/C",   "normal", 4, "A/B" },
+      { 0, "A/B/C",   "normal", 4, "A/B/C" },
       { 1, "A",       "normal", NO_COPY_FROM },
       { 1, "A/B",     "base-deleted", NO_COPY_FROM },
       { 1, "A/B/C",   "base-deleted", NO_COPY_FROM },
@@ -2059,7 +2059,7 @@ test_op_revert(const svn_test_opts_t *opts, apr_pool_t *pool)
       { 0, "",        "normal", 4, "" },
       { 0, "A",       "normal", 4, "A" },
       { 0, "A/B",     "normal", 4, "A/B" },
-      { 0, "A/B/C",   "normal", 4, "A/B" },
+      { 0, "A/B/C",   "normal", 4, "A/B/C" },
       { 1, "A",       "normal", NO_COPY_FROM },
       { 1, "A/B",     "base-deleted", NO_COPY_FROM },
       { 1, "A/B/C",   "base-deleted", NO_COPY_FROM },
@@ -2070,7 +2070,7 @@ test_op_revert(const svn_test_opts_t *opts, apr_pool_t *pool)
       { 0, "",        "normal", 4, "" },
       { 0, "A",       "normal", 4, "A" },
       { 0, "A/B",     "normal", 4, "A/B" },
-      { 0, "A/B/C",   "normal", 4, "A/B" },
+      { 0, "A/B/C",   "normal", 4, "A/B/C" },
       { 1, "A",       "normal", NO_COPY_FROM },
       { 1, "A/B",     "base-deleted", NO_COPY_FROM },
       { 1, "A/B/C",   "base-deleted", NO_COPY_FROM },
@@ -2078,6 +2078,49 @@ test_op_revert(const svn_test_opts_t *opts, apr_pool_t *pool)
     };
     SVN_ERR(revert(&b, "A/B/C", before, after1));
     SVN_ERR(revert(&b, "A/B", after1, after2));
+  }
+
+  {
+    nodes_row_t before[] = {
+      { 0, "",        "normal", 4, "" },
+      { 0, "A",       "normal", 4, "A" },
+      { 0, "A/B",     "normal", 4, "A/B" },
+      { 0, "A/B/C",   "normal", 4, "A/B/C" },
+      { 0, "A/B/C/D", "normal", 4, "A/B/C/D" },
+      { 2, "A/B",     "normal", NO_COPY_FROM },
+      { 2, "A/B/C",   "base-deleted", NO_COPY_FROM },
+      { 2, "A/B/C/D", "base-deleted", NO_COPY_FROM },
+      { 0 },
+    };
+    nodes_row_t after[] = {
+      { 0, "",        "normal", 4, "" },
+      { 0, "A",       "normal", 4, "A" },
+      { 0, "A/B",     "normal", 4, "A/B" },
+      { 0, "A/B/C",   "normal", 4, "A/B/C" },
+      { 0, "A/B/C/D", "normal", 4, "A/B/C/D" },
+      { 3, "A/B/C",   "base-deleted", NO_COPY_FROM },
+      { 3, "A/B/C/D", "base-deleted", NO_COPY_FROM },
+      { 0 },
+    };
+    SVN_ERR(revert(&b, "A/B", before, after));
+  }
+
+  {
+    nodes_row_t common[] = {
+      { 0, "",        "normal", 4, "" },
+      { 0, "A",       "normal", 4, "A" },
+      { 0, "A/B",     "normal", 4, "A/B" },
+      { 0, "A/B/C",   "normal", 4, "A/B/C" },
+      { 0, "A/B/C/D", "normal", 4, "A/B/C/D" },
+      { 1, "A",       "normal", 2, "X/Y" },
+      { 1, "A/B",     "normal", 2, "X/Y/B" },
+      { 1, "A/B/C",   "base-deleted", NO_COPY_FROM },
+      { 1, "A/B/C/D", "base-deleted", NO_COPY_FROM },
+      { 0 },
+    };
+    err = revert(&b, "A", common, common);
+    SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH);
+    svn_error_clear(err);
   }
 
   return SVN_NO_ERROR;
