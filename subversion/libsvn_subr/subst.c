@@ -1258,12 +1258,14 @@ translated_stream_skip(void *baton,
   apr_size_t bytes_read;
   char buffer[SVN__STREAM_CHUNK_SIZE];
   svn_error_t *err = SVN_NO_ERROR;
+  apr_size_t to_read = *count;
 
-  while ((total_bytes_read < *count) && !err)
+  while ((to_read > 0) && !err)
     {
-      bytes_read = sizeof(buffer) < *count ? sizeof(buffer) : *count;
+      bytes_read = sizeof(buffer) < to_read ? sizeof(buffer) : to_read;
       err = translated_stream_read(baton, buffer, &bytes_read);
       total_bytes_read += bytes_read;
+      to_read -= bytes_read;
     }
 
   *count = total_bytes_read;

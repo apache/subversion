@@ -1047,7 +1047,17 @@ svn_stream_read(svn_stream_t *stream,
                 char *buffer,
                 apr_size_t *len);
 
-/** Skip data from a generic stream. @see svn_stream_t. */
+/**
+ * Skip COUNT bytes from a generic STREAM. If the stream is exhausted
+ * before COUNT bytes have been read, an error will be returned and
+ * COUNT will be changed to the actual number of bytes skipped.
+ *
+ * NOTE. No assumption can be made on the semantics of this function
+ * other than that the stream read pointer will be advanced by *count
+ * bytes. Depending on the capabilities of the underlying stream
+ * implementation, this may for instance be translated into a sequence
+ * of reads or a simple seek operation.
+ */
 svn_error_t *
 svn_stream_skip(svn_stream_t *stream,
                 apr_size_t *count);

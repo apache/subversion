@@ -456,12 +456,14 @@ skip_default_handler(void *baton, apr_size_t *count, svn_read_fn_t read_fn)
   apr_size_t bytes_read;
   char buffer[4096];
   svn_error_t *err = SVN_NO_ERROR;
+  apr_size_t to_read = *count;
 
-  while ((total_bytes_read < *count) && !err)
+  while ((to_read > 0) && !err)
     {
-      bytes_read = sizeof(buffer) < *count ? sizeof(buffer) : *count;
+      bytes_read = sizeof(buffer) < to_read ? sizeof(buffer) : to_read;
       err = read_fn(baton, buffer, &bytes_read);
       total_bytes_read += bytes_read;
+      to_read -= bytes_read;
     }
 
   *count = total_bytes_read;
@@ -673,9 +675,11 @@ skip_handler_apr(void *baton, apr_size_t *count)
 {
   struct baton_apr *btn = baton;
   apr_off_t offset = *count;
+  apr_off_t current = 0;
 
-  SVN_ERR(svn_io_file_seek(btn->file, SEEK_CUR, &offset, btn->pool));
-  *count = offset;
+  SVN_ERR(svn_io_file_seek(btn->file, APR_CUR, &current, btn->pool));
+  SVN_ERR(svn_io_file_seek(btn->file, APR_CUR, &offset, btn->pool));
+  *count = offset - current;
 
   return SVN_NO_ERROR;
 }
@@ -724,7 +728,7 @@ static svn_boolean_t
 buffered_handler_apr(void *baton)
 {
   struct baton_apr *btn = baton;
-  return apr_file_buffer_size_get(btn->file) != 0;
+  return (apr_file_flags_get(btn->file) & APR_BUFFERED) != 0;
 }
 
 svn_error_t *
