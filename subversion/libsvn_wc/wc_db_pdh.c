@@ -666,7 +666,7 @@ svn_wc__db_pdh_navigate_to_parent(svn_wc__db_pdh_t **parent_pdh,
   SVN_ERR(svn_wc__db_pdh_parse_local_abspath(parent_pdh, &local_relpath, db,
                               parent_abspath, smode,
                               scratch_pool, scratch_pool));
-  VERIFY_USABLE_PDH(*parent_pdh);
+  VERIFY_USABLE_WCROOT((*parent_pdh)->wcroot);
 
   child_pdh->parent = *parent_pdh;
 

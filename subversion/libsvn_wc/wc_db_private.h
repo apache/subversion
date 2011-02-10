@@ -184,12 +184,6 @@ svn_wc__db_pdh_navigate_to_parent(svn_wc__db_pdh_t **parent_pdh,
                                   svn_sqlite__mode_t smode,
                                   apr_pool_t *scratch_pool);
 
-/* Assert that the given PDH is usable.
-   NOTE: the expression is multiply-evaluated!!  */
-#define VERIFY_USABLE_PDH(pdh) SVN_ERR_ASSERT(  \
-    (pdh)->wcroot != NULL                       \
-    && (pdh)->wcroot->format == SVN_WC__VERSION)
-
 /* Assert that the given WCROOT is usable.
    NOTE: the expression is multiply-evaluated!!  */
 #define VERIFY_USABLE_WCROOT(wcroot)  SVN_ERR_ASSERT(               \
