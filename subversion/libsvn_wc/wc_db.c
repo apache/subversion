@@ -3602,19 +3602,17 @@ op_revert_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
                                                             b->local_relpath,
                                                             scratch_pool));
         }
-      else if (status == svn_wc__db_status_deleted)
-        {
-          /* Rewrite the op-depth of all deleted children making the
-             direct children into roots of deletes. */
-          const char *like_arg = construct_like_arg(b->local_relpath,
-                                                    scratch_pool);
+
+      /* Rewrite the op-depth of all deleted children making the
+         direct children into roots of deletes. */
           
-          SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
-                                      STMT_UPDATE_OP_DEPTH_INCREASE_RECURSIVE));
-          SVN_ERR(svn_sqlite__bindf(stmt, "isi", b->wcroot->wc_id,
-                                    like_arg, op_depth));
-          SVN_ERR(svn_sqlite__step_done(stmt));
-        }
+      SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
+                                     STMT_UPDATE_OP_DEPTH_INCREASE_RECURSIVE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isi", b->wcroot->wc_id,
+                                construct_like_arg(b->local_relpath,
+                                                   scratch_pool),
+                                op_depth));
+      SVN_ERR(svn_sqlite__step_done(stmt));
 
       SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
                                         STMT_DELETE_WORKING_NODE));
