@@ -839,6 +839,9 @@ typedef struct svn_log_entry_t
    * value as changed_paths for compatibility with users assuming an older
    * version.
    *
+   * @note See http://svn.haxx.se/dev/archive-2010-08/0362.shtml for
+   * further explanation.
+   *
    * @since New in 1.6.
    */
   apr_hash_t *changed_paths2;
