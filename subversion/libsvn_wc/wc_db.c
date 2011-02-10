@@ -470,7 +470,6 @@ static svn_error_t *
 repos_location_from_columns(apr_int64_t *repos_id,
                             svn_revnum_t *revision,
                             const char **repos_relpath,
-                            svn_wc__db_pdh_t *pdh,
                             svn_sqlite__stmt_t *stmt,
                             int col_repos_id,
                             int col_revision,
@@ -1852,7 +1851,7 @@ base_get_info(svn_wc__db_status_t *status,
           *status = svn_sqlite__column_token(stmt, 2, presence_map);
         }
       err = repos_location_from_columns(repos_id, revision, repos_relpath,
-                                        pdh, stmt, 0, 4, 1, result_pool);
+                                        stmt, 0, 4, 1, result_pool);
       SVN_ERR_ASSERT(!repos_id || *repos_id != INVALID_REPOS_ID);
       SVN_ERR_ASSERT(!repos_relpath || *repos_relpath);
       if (lock)
@@ -4541,8 +4540,7 @@ read_info(svn_wc__db_status_t *status,
              caller can scan upwards to locate the repository.  */
           err = svn_error_compose_create(
             err, repos_location_from_columns(repos_id, revision, repos_relpath,
-                                             pdh, stmt_info, 1, 5, 2,
-                                             result_pool));
+                                             stmt_info, 1, 5, 2, result_pool));
         }
       if (changed_rev)
         {
@@ -4634,8 +4632,7 @@ read_info(svn_wc__db_status_t *status,
           err = svn_error_compose_create(
             err, repos_location_from_columns(original_repos_id, original_revision,
                                              original_repos_relpath,
-                                             pdh, stmt_info, 1, 5, 2,
-                                             result_pool));
+                                             stmt_info, 1, 5, 2, result_pool));
         }
       if (props_mod)
         {
