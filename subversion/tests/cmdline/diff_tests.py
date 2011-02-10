@@ -30,6 +30,7 @@ import sys, re, os, time
 
 # Our testing module
 import svntest
+from svntest import err
 
 # (abbreviation)
 Skip = svntest.testcase.Skip_deco
@@ -3248,9 +3249,7 @@ def diff_wrong_extension_type(sbox):
   "'svn diff -x wc -r#' should return error"
 
   sbox.build(read_only = True)
-  expected_error = "(.*svn: E200016: Invalid argument .* in diff options.*)|" \
-                   "(svn: '.' is not a working copy)"
-  svntest.actions.run_and_verify_svn(None, [], expected_error,
+  svntest.actions.run_and_verify_svn(None, [], err.INVALID_DIFF_OPTION,
                                      'diff', '-x', sbox.wc_dir, '-r', '1')
 
 # Check the order of the arguments for an external diff tool
