@@ -145,6 +145,10 @@ VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14,
 SELECT local_relpath FROM nodes
 WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth = ?3;
 
+-- STMT_SELECT_GE_OP_DEPTH_CHILDREN
+SELECT 1 FROM nodes
+WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth >= ?3;
+
 -- STMT_SELECT_NODE_CHILDREN
 SELECT local_relpath FROM nodes
 WHERE wc_id = ?1 AND parent_relpath = ?2;
