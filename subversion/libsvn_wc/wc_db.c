@@ -3577,7 +3577,7 @@ op_revert_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
     {
       if (op_depth != relpath_depth(b->local_relpath))
         return svn_error_createf(SVN_ERR_WC_INVALID_OPERATION_DEPTH, NULL,
-                                 _("Can't revert tree change for '%s' without"
+                                 _("Can't revert '%s' without"
                                    " reverting parent"),
                                  path_for_error_message(b->pdh->wcroot,
                                                         b->local_relpath,
@@ -3596,8 +3596,8 @@ op_revert_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
           SVN_ERR(svn_sqlite__reset(stmt));
           if (have_row)
             return svn_error_createf(SVN_ERR_WC_INVALID_OPERATION_DEPTH, NULL,
-                                     _("Can't revert tree change for '%s'"
-                                       " without reverting children"),
+                                     _("Can't revert '%s' without"
+                                       " reverting children"),
                                      path_for_error_message(b->pdh->wcroot,
                                                             b->local_relpath,
                                                             scratch_pool));
