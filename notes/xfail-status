@@ -215,7 +215,7 @@ Test #  Mode   Test Description
   
   39    XFAIL  test replace + propset of locked file
   Issue #: 3674
-  Target Milestone: --- 
+  Target Milestone: Unscheduled
   Thread: N/A
   Log: r961442
   Point Person: cmpilato 
@@ -397,15 +397,15 @@ Test #  Mode   Test Description
   Point Person: Unassigned
 
   17    XFAIL  --force del on dir with TCs inside
-  Issue #: None
-  Target Milestone: N/A 
+  Issue #: 3805
+  Target Milestone: Unscheduled 
   Thread: N/A
   Log: r878027
   Point Person: neels
 
   18    XFAIL  --force del on tree-conflicted targets
-  Issue #: None
-  Target Milestone: N/A 
+  Issue #: 3805
+  Target Milestone: Unscheduled
   Thread: N/A
   Log: r878028
   Point Person: neels
@@ -458,7 +458,7 @@ Test #  Mode   Test Description
 
   57    XFAIL  update with file lock & keywords property set
   Issue #: 3471 
-  Target Milestone: 
+  Target Milestone: ---
   Thread: http://subversion.tigris.org/ds/viewMessage.do?
     dsForumId=1065&dsMessageId=2385406
   Log: r995388
