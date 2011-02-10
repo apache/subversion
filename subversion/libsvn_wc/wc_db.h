@@ -1246,12 +1246,11 @@ svn_wc__db_op_revert_actual(svn_wc__db_t *db,
 /* Revert all local changes which are being maintained in the database,
  * including conflict storage, properties and text modification status.
  *
- * This is a non-recursive operation except that reverting the root of
- * a copy will revert the whole copy.
+ * This is a non-recursive operation.
  *
  * Returns SVN_ERR_WC_INVALID_OPERATION_DEPTH if the revert is not
- * possible, e.g. copy/delete but not a root, or if there are higher
- * op-depth children.
+ * possible, e.g. copy/delete but not a root, or a copy root with
+ * children.
  */
 svn_error_t *
 svn_wc__db_op_revert(svn_wc__db_t *db,
