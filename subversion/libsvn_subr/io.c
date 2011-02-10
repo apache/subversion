@@ -1645,8 +1645,8 @@ static apr_status_t io_win_file_attrs_set(const char *fname,
     if (flags == 0xFFFFFFFF)
         return apr_get_os_error();
 
-    flags |= (attributes & attr_mask);
     flags &= ~attr_mask;
+    flags |= (attributes & attr_mask);
 
 #if APR_HAS_UNICODE_FS
     IF_WIN_OS_IS_UNICODE
@@ -3336,11 +3336,9 @@ dir_make(const char *path, apr_fileperms_t perm,
        FILE_ATTRIBUTE_NOT_CONTENT_INDEXED attribute */
     status = io_win_file_attrs_set(path_apr,
                                    FILE_ATTRIBUTE_HIDDEN | 
-                                   FILE_ATTRIBUTE_NOT_CONTENT_INDEXED |
-                                   FILE_ATTRIBUTE_DIRECTORY,
+                                   FILE_ATTRIBUTE_NOT_CONTENT_INDEXED,
                                    FILE_ATTRIBUTE_HIDDEN | 
-                                   FILE_ATTRIBUTE_NOT_CONTENT_INDEXED |
-                                   FILE_ATTRIBUTE_DIRECTORY,
+                                   FILE_ATTRIBUTE_NOT_CONTENT_INDEXED,
                                    pool);
 
 #endif
