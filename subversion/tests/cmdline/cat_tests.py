@@ -55,8 +55,9 @@ def cat_local_directory(sbox):
 
   A_path = os.path.join(sbox.wc_dir, 'A')
 
-  expected_err = "svn: warning: W195007: '" + os.path.abspath(A_path) + \
-      "' refers to a directory\n.*"
+  expected_err = "svn: warning: W195007: '" + \
+                 re.escape(os.path.abspath(A_path)) + \
+                 "' refers to a directory"
 
   svntest.actions.run_and_verify_svn2(None, None, expected_err,
                                       1, 'cat', A_path)
@@ -96,8 +97,9 @@ def cat_nonexistent_file(sbox):
   wc_dir = sbox.wc_dir
 
   bogus_path = os.path.join(wc_dir, 'A', 'bogus')
-  expected_err = "svn: warning: W200005: '" + os.path.abspath(bogus_path) + \
-      "' is not under version control\n.*"
+  expected_err = "svn: warning: W200005: '" + \
+                 re.escape(os.path.abspath(bogus_path)) + \
+                 "' is not under version control"
 
   svntest.actions.run_and_verify_svn2(None, None, expected_err, 1,
                                       'cat', bogus_path)
@@ -123,14 +125,16 @@ def cat_skip_uncattable(sbox):
       continue
     item_to_cat = os.path.join(dir_path, file)
     if item_to_cat == new_file_path:
-      expected_err = "svn: warning: W200005: '" + os.path.abspath(item_to_cat) + "'" + \
-          " is not under version control\n.*"
+      expected_err = "svn: warning: W200005: '" + \
+                     re.escape(os.path.abspath(item_to_cat)) + \
+                     "' is not under version control"
       svntest.actions.run_and_verify_svn2(None, None, expected_err, 1,
                                            'cat', item_to_cat)
 
     elif os.path.isdir(item_to_cat):
       expected_err = "svn: warning: W195007: '" + \
-          os.path.abspath(item_to_cat) + "' refers to a directory\n.*"
+                     re.escape(os.path.abspath(item_to_cat)) + \
+                     "' refers to a directory"
       svntest.actions.run_and_verify_svn2(None, None, expected_err, 1,
                                            'cat', item_to_cat)
     else:
@@ -142,13 +146,15 @@ def cat_skip_uncattable(sbox):
   rho_path = os.path.join(G_path, 'rho')
 
   expected_out = "This is the file 'rho'.\n"
-  expected_err1 = "svn: warning: W195007: '" + os.path.abspath(G_path) + \
-      "' refers to a directory\n"
+  expected_err1 = "svn: warning: W195007: '" + \
+                  re.escape(os.path.abspath(G_path)) + \
+                  "' refers to a directory\n"
   svntest.actions.run_and_verify_svn2(None, expected_out, expected_err1, 1,
                                        'cat', rho_path, G_path)
 
-  expected_err2 = "svn: warning: W200005: '" + os.path.abspath(new_file_path) + \
-      "' is not under version control\n"
+  expected_err2 = "svn: warning: W200005: '" + \
+                  re.escape(os.path.abspath(new_file_path)) + \
+                  "' is not under version control\n"
   svntest.actions.run_and_verify_svn2(None, expected_out, expected_err2, 1,
                                        'cat', rho_path, new_file_path)
 
@@ -185,8 +191,9 @@ def cat_unversioned_file(sbox):
                                       iota_path)
 
   # Now try to cat the deleted file, it should be reported as unversioned.
-  expected_error = "svn: warning: W200005: '" + os.path.abspath(iota_path) + \
-      "' is not under version control\n.*"
+  expected_error = "svn: warning: W200005: '" + \
+                   re.escape(os.path.abspath(iota_path)) + \
+                   "' is not under version control"
   svntest.actions.run_and_verify_svn2(None, [], expected_error, 1,
                                        'cat', iota_path)
 
