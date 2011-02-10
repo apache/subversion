@@ -133,7 +133,7 @@ svn_wc__db_pristine_get_path(const char **pristine_abspath,
                                              db, wri_abspath,
                                              svn_sqlite__mode_readonly,
                                              scratch_pool, scratch_pool));
-  VERIFY_USABLE_PDH(pdh);
+  VERIFY_USABLE_WCROOT(pdh->wcroot);
 
   SVN_ERR(svn_wc__db_pristine_check(&present, db, wri_abspath, sha1_checksum,
                                     scratch_pool));
@@ -189,7 +189,7 @@ svn_wc__db_pristine_read(svn_stream_t **contents,
   SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
                               wri_abspath, svn_sqlite__mode_readonly,
                               scratch_pool, scratch_pool));
-  VERIFY_USABLE_PDH(pdh);
+  VERIFY_USABLE_WCROOT(pdh->wcroot);
 
   /* ### should we look in the PRISTINE table for anything?  */
 
@@ -219,7 +219,7 @@ svn_wc__db_pristine_get_tempdir(const char **temp_dir_abspath,
   SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
                               wri_abspath, svn_sqlite__mode_readonly,
                               scratch_pool, scratch_pool));
-  VERIFY_USABLE_PDH(pdh);
+  VERIFY_USABLE_WCROOT(pdh->wcroot);
 
   *temp_dir_abspath = svn_dirent_join_many(result_pool,
                                            pdh->wcroot->abspath,
@@ -262,7 +262,7 @@ svn_wc__db_pristine_install(svn_wc__db_t *db,
   SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
                               wri_abspath, svn_sqlite__mode_readonly,
                               scratch_pool, scratch_pool));
-  VERIFY_USABLE_PDH(pdh);
+  VERIFY_USABLE_WCROOT(pdh->wcroot);
 
   SVN_ERR(get_pristine_fname(&pristine_abspath, pdh->wcroot->abspath,
                              sha1_checksum,
@@ -318,7 +318,7 @@ svn_wc__db_pristine_get_md5(const svn_checksum_t **md5_checksum,
   SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
                               wri_abspath, svn_sqlite__mode_readonly,
                               scratch_pool, scratch_pool));
-  VERIFY_USABLE_PDH(pdh);
+  VERIFY_USABLE_WCROOT(pdh->wcroot);
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                     STMT_SELECT_PRISTINE_MD5_CHECKSUM));
@@ -358,7 +358,7 @@ svn_wc__db_pristine_get_sha1(const svn_checksum_t **sha1_checksum,
   SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
                               wri_abspath, svn_sqlite__mode_readonly,
                               scratch_pool, scratch_pool));
-  VERIFY_USABLE_PDH(pdh);
+  VERIFY_USABLE_WCROOT(pdh->wcroot);
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
                                     STMT_SELECT_PRISTINE_SHA1_CHECKSUM));
@@ -431,7 +431,7 @@ svn_wc__db_pristine_remove(svn_wc__db_t *db,
   SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
                               wri_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
-  VERIFY_USABLE_PDH(pdh);
+  VERIFY_USABLE_WCROOT(pdh->wcroot);
 
   /* If the work queue is not empty, don't delete any pristine text because
    * the work queue may contain a reference to it. */
@@ -498,7 +498,7 @@ svn_wc__db_pristine_cleanup(svn_wc__db_t *db,
   SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
                               wri_abspath, svn_sqlite__mode_readonly,
                               scratch_pool, scratch_pool));
-  VERIFY_USABLE_PDH(pdh);
+  VERIFY_USABLE_WCROOT(pdh->wcroot);
 
   SVN_ERR(pristine_cleanup_wcroot(pdh->wcroot, scratch_pool));
 
@@ -534,7 +534,7 @@ svn_wc__db_pristine_check(svn_boolean_t *present,
   SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
                               wri_abspath, svn_sqlite__mode_readonly,
                               scratch_pool, scratch_pool));
-  VERIFY_USABLE_PDH(pdh);
+  VERIFY_USABLE_WCROOT(pdh->wcroot);
 
   /* Check that there is an entry in the PRISTINE table. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
