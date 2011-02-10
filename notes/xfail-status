@@ -321,8 +321,8 @@ Test #  Mode   Test Description
   Point Person: Unassigned
   
   26    XFAIL  test handling invalid svn:* property values
-  Issue #: None
-  Target Milestone: N/A 
+  Issue #: 3086
+  Target Milestone: 1.8-consider
   Thread: N/A
   Log: r871212
   Point Person: danielsh 
