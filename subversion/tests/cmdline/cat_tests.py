@@ -238,7 +238,7 @@ def cat_non_existing_remote_file(sbox):
   sbox.build(create_wc = False)
   non_existing_path = sbox.repo_url + '/non-existing'
   
-  expected_err = "svn: warning: W160013: File not found.*" + \
+  expected_err = "svn: warning: W160013: .*not found.*" + \
       non_existing_path.split('/')[1]
 
   # cat operation on non-existing remote path should return 1
