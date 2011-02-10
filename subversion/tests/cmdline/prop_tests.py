@@ -1627,6 +1627,7 @@ def props_over_time(sbox):
 # XFail the same reason revprop_change() is.
 @SkipUnless(svntest.main.server_enforces_date_syntax)
 @XFail(svntest.main.is_ra_type_dav)
+@Issue(3086)
 def invalid_propvalues(sbox):
   "test handling invalid svn:* property values"
 
