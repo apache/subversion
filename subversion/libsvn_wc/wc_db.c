@@ -1060,29 +1060,30 @@ flush_entries(svn_wc__db_t *db,
               const char *local_abspath,
               apr_pool_t *scratch_pool)
 {
-  svn_wc__db_pdh_t *pdh;
+  svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
+  svn_wc_adm_access_t *adm_access;
+  const char *parent_abspath;
 
-  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
                               local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
 
-  if (pdh->adm_access)
-    svn_wc__adm_access_set_entries(pdh->adm_access, NULL);
+  adm_access = apr_hash_get(wcroot->access_cache, local_abspath,
+                            APR_HASH_KEY_STRING);
 
-  if (local_abspath
-      && strcmp(local_abspath, pdh->local_abspath) == 0
-      && strcmp(local_abspath, pdh->wcroot->abspath) != 0)
-    {
-      svn_wc__db_pdh_t *parent_pdh;
+  if (adm_access)
+    svn_wc__adm_access_set_entries(adm_access, NULL);
 
-      SVN_ERR(svn_wc__db_pdh_navigate_to_parent(&parent_pdh, db, pdh,
-                                                svn_sqlite__mode_readonly,
-                                                scratch_pool));
+  /* We're going to be overly aggressive here and just flush the parent
+     without doing much checking.  This may hurt performance for
+     legacy API consumers, but that's not our problem. :) */
+  parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+  adm_access = apr_hash_get(wcroot->access_cache, parent_abspath,
+                            APR_HASH_KEY_STRING);
 
-      if (parent_pdh->adm_access)
-        svn_wc__adm_access_set_entries(parent_pdh->adm_access, NULL);
-    }
+  if (adm_access)
+    svn_wc__adm_access_set_entries(adm_access, NULL);
 
   return SVN_NO_ERROR;
 }
@@ -7240,7 +7241,8 @@ svn_wc__db_temp_get_access(svn_wc__db_t *db,
                            const char *local_dir_abspath,
                            apr_pool_t *scratch_pool)
 {
-  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  svn_wc__db_wcroot_t *wcroot;
 
   SVN_ERR_ASSERT_NO_RETURN(svn_dirent_is_absolute(local_dir_abspath));
 
@@ -7249,12 +7251,15 @@ svn_wc__db_temp_get_access(svn_wc__db_t *db,
      ### for an access baton for it. we should definitely return NULL, but
      ### ideally: the caller would never ask us about a non-directory.  */
 
-  /* Do not create a PDH. If we don't have one, then we don't have an
-     access baton.  */
-  pdh = svn_wc__db_pdh_get_or_create(db, local_dir_abspath, FALSE,
-                                     scratch_pool);
+  svn_error_clear(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
+                            db, local_dir_abspath, svn_sqlite__mode_readwrite,
+                            scratch_pool, scratch_pool));
 
-  return pdh ? pdh->adm_access : NULL;
+  if (!wcroot)
+    return NULL;
+
+  return apr_hash_get(wcroot->access_cache, local_dir_abspath,
+                      APR_HASH_KEY_STRING);
 }
 
 
@@ -7265,17 +7270,22 @@ svn_wc__db_temp_set_access(svn_wc__db_t *db,
                            svn_wc_adm_access_t *adm_access,
                            apr_pool_t *scratch_pool)
 {
-  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  svn_wc__db_wcroot_t *wcroot;
 
   SVN_ERR_ASSERT_NO_RETURN(svn_dirent_is_absolute(local_dir_abspath));
   /* ### assert that we were passed a directory?  */
 
-  pdh = svn_wc__db_pdh_get_or_create(db, local_dir_abspath, TRUE,
-                                     scratch_pool);
+  svn_error_clear(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
+                            db, local_dir_abspath, svn_sqlite__mode_readwrite,
+                            scratch_pool, scratch_pool));
 
   /* Better not override something already there.  */
-  SVN_ERR_ASSERT_NO_RETURN(pdh->adm_access == NULL);
-  pdh->adm_access = adm_access;
+  SVN_ERR_ASSERT_NO_RETURN(apr_hash_get(wcroot->access_cache,
+                                        local_dir_abspath,
+                                        APR_HASH_KEY_STRING) == NULL);
+  apr_hash_set(wcroot->access_cache, local_dir_abspath,
+               APR_HASH_KEY_STRING, adm_access);
 }
 
 
@@ -7286,22 +7296,17 @@ svn_wc__db_temp_close_access(svn_wc__db_t *db,
                              svn_wc_adm_access_t *adm_access,
                              apr_pool_t *scratch_pool)
 {
-  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  svn_wc__db_wcroot_t *wcroot;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_dir_abspath));
   /* ### assert that we were passed a directory?  */
 
-  /* Do not create a PDH. If we don't have one, then we don't have an
-     access baton to close.  */
-  pdh = svn_wc__db_pdh_get_or_create(db, local_dir_abspath, FALSE,
-                                     scratch_pool);
-  if (pdh != NULL)
-    {
-      /* We should be closing the correct one, *or* it's already closed.  */
-      SVN_ERR_ASSERT_NO_RETURN(pdh->adm_access == adm_access
-                               || pdh->adm_access == NULL);
-      pdh->adm_access = NULL;
-    }
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
+                              local_dir_abspath, svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+  apr_hash_set(wcroot->access_cache, local_dir_abspath,
+               APR_HASH_KEY_STRING, NULL);
 
   return SVN_NO_ERROR;
 }
@@ -7313,17 +7318,18 @@ svn_wc__db_temp_clear_access(svn_wc__db_t *db,
                              const char *local_dir_abspath,
                              apr_pool_t *scratch_pool)
 {
-  svn_wc__db_pdh_t *pdh;
+  const char *local_relpath;
+  svn_wc__db_wcroot_t *wcroot;
 
   SVN_ERR_ASSERT_NO_RETURN(svn_dirent_is_absolute(local_dir_abspath));
   /* ### assert that we were passed a directory?  */
 
-  /* Do not create a PDH. If we don't have one, then we don't have an
-     access baton to clear out.  */
-  pdh = svn_wc__db_pdh_get_or_create(db, local_dir_abspath, FALSE,
-                                     scratch_pool);
-  if (pdh != NULL)
-    pdh->adm_access = NULL;
+  svn_error_clear(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
+                            db, local_dir_abspath, svn_sqlite__mode_readwrite,
+                            scratch_pool, scratch_pool));
+
+  apr_hash_set(wcroot->access_cache, local_dir_abspath,
+               APR_HASH_KEY_STRING, NULL);
 }
 
 
@@ -7338,11 +7344,12 @@ svn_wc__db_temp_get_all_access(svn_wc__db_t *db,
        hi;
        hi = apr_hash_next(hi))
     {
-      const void *key = svn__apr_hash_index_key(hi);
       const svn_wc__db_pdh_t *pdh = svn__apr_hash_index_val(hi);
 
-      if (pdh->adm_access != NULL)
-        apr_hash_set(result, key, APR_HASH_KEY_STRING, pdh->adm_access);
+      /* This is highly redundant, 'cause many PDHs will have the same
+         WCROOT. */
+      result = apr_hash_overlay(result_pool, result,
+                                pdh->wcroot->access_cache);
     }
 
   return result;
