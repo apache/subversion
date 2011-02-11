@@ -472,11 +472,11 @@ svn_txdelta_to_svndiff3(svn_txdelta_window_handler_t *handler,
                         int compression_level,
                         apr_pool_t *pool);
 
- /** Similar to svn_txdelta_to_svndiff3, but always using the SVN default
-  * compression level (@ref SVNDIFF1_COMPRESS_LEVEL).
-  *
-  * @since New in 1.4.
-  */
+/** Similar to svn_txdelta_to_svndiff3, but always using the SVN default
+ * compression level (@ref SVNDIFF1_COMPRESS_LEVEL).
+ *
+ * @since New in 1.4.
+ */
 void
 svn_txdelta_to_svndiff2(svn_txdelta_window_handler_t *handler,
                         void **handler_baton,
