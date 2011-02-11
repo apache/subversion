@@ -235,7 +235,7 @@ svn_error_t *load_configs(svn_config_t **cfg,
   const char *pwdb_path, *authzdb_path;
   svn_error_t *err;
 
-  SVN_ERR(svn_config_read(cfg, filename, must_exist, pool));
+  SVN_ERR(svn_config_read2(cfg, filename, must_exist, FALSE, pool));
 
   svn_config_get(*cfg, &pwdb_path, SVN_CONFIG_SECTION_GENERAL,
                  SVN_CONFIG_OPTION_PASSWORD_DB, NULL);
@@ -245,7 +245,7 @@ svn_error_t *load_configs(svn_config_t **cfg,
     {
       pwdb_path = svn_dirent_join(base, pwdb_path, pool);
 
-      err = svn_config_read(pwdb, pwdb_path, TRUE, pool);
+      err = svn_config_read2(pwdb, pwdb_path, TRUE, FALSE, pool);
       if (err)
         {
           if (server)

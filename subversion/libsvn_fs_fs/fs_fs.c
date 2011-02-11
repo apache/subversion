@@ -1074,9 +1074,9 @@ read_config(svn_fs_t *fs,
 {
   fs_fs_data_t *ffd = fs->fsap_data;
 
-  SVN_ERR(svn_config_read(&ffd->config,
-                          svn_dirent_join(fs->path, PATH_CONFIG, pool),
-                          FALSE, fs->pool));
+  SVN_ERR(svn_config_read2(&ffd->config,
+                           svn_dirent_join(fs->path, PATH_CONFIG, pool),
+                           FALSE, FALSE, fs->pool));
 
   /* Initialize ffd->rep_sharing_allowed. */
   if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT)
