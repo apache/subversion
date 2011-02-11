@@ -1084,7 +1084,6 @@ def authz_recursive_ls(sbox):
                                      [], 'ls', '-R',
                                      sbox.repo_url)
 
-@XFail()
 @Issue(3781)
 @Skip(svntest.main.is_ra_type_file)
 def case_sensitive_authz(sbox):

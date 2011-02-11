@@ -746,7 +746,7 @@ svn_repos_authz_read(svn_authz_t **authz_p, const char *file,
   baton.err = SVN_NO_ERROR;
 
   /* Load the rule file. */
-  SVN_ERR(svn_config_read(&authz->cfg, file, must_exist, pool));
+  SVN_ERR(svn_config_read2(&authz->cfg, file, must_exist, TRUE, pool));
   baton.config = authz->cfg;
 
   /* Step through the entire rule file, stopping on error. */
