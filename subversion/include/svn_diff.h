@@ -109,7 +109,9 @@ typedef enum svn_diff_datasource_e
 typedef struct svn_diff_fns2_t
 {
   /** Open the datasources of type @a datasources. */
-  svn_error_t *(*datasources_open)(void *diff_baton, apr_off_t *prefix_lines,
+  svn_error_t *(*datasources_open)(void *diff_baton,
+                                   apr_off_t *prefix_lines,
+                                   apr_off_t *suffix_lines,
                                    const svn_diff_datasource_e *datasources,
                                    apr_size_t datasources_len);
 

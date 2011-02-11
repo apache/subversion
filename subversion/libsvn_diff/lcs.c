@@ -160,29 +160,28 @@ svn_diff__lcs_reverse(svn_diff__lcs_t *lcs)
 }
 
 
-/* Prepends a new lcs chunk for the amount of PREFIX_LINES to the given LCS
- * chain, and returns it. This function assumes PREFIX_LINES > 0. */
+/* Prepends a new lcs chunk for the amount of LINES at the given positions
+ * POS0_OFFSET and POS1_OFFSET to the given LCS chain, and returns it.
+ * This function assumes LINES > 0. */
 static svn_diff__lcs_t *
-prepend_prefix_lcs(svn_diff__lcs_t *lcs,
-                   apr_off_t prefix_lines,
-                   apr_pool_t *pool)
+prepend_lcs(svn_diff__lcs_t *lcs, apr_off_t lines,
+            apr_off_t pos0_offset, apr_off_t pos1_offset,
+            apr_pool_t *pool)
 {
-  svn_diff__lcs_t *prefix_lcs;
+  svn_diff__lcs_t *new_lcs;
 
-  SVN_ERR_ASSERT_NO_RETURN(prefix_lines > 0);
+  SVN_ERR_ASSERT_NO_RETURN(lines > 0);
 
-  prefix_lcs = apr_palloc(pool, sizeof(*prefix_lcs));
-  prefix_lcs->position[0] = apr_pcalloc(pool, 
-                                        sizeof(*prefix_lcs->position[0]));
-  prefix_lcs->position[0]->offset = 1;
-  prefix_lcs->position[1] = apr_pcalloc(pool,
-                                        sizeof(*prefix_lcs->position[1]));
-  prefix_lcs->position[1]->offset = 1;
-  prefix_lcs->length = prefix_lines;
-  prefix_lcs->refcount = 1;
-  prefix_lcs->next = lcs;
+  new_lcs = apr_palloc(pool, sizeof(*new_lcs));
+  new_lcs->position[0] = apr_pcalloc(pool, sizeof(*new_lcs->position[0]));
+  new_lcs->position[0]->offset = pos0_offset;
+  new_lcs->position[1] = apr_pcalloc(pool, sizeof(*new_lcs->position[1]));
+  new_lcs->position[1]->offset = pos1_offset;
+  new_lcs->length = lines;
+  new_lcs->refcount = 1;
+  new_lcs->next = lcs;
 
-  return prefix_lcs;
+  return new_lcs;
 }
 
 
@@ -190,6 +189,7 @@ svn_diff__lcs_t *
 svn_diff__lcs(svn_diff__position_t *position_list1, /* pointer to tail (ring) */
               svn_diff__position_t *position_list2, /* pointer to tail (ring) */
               apr_off_t prefix_lines,
+              apr_off_t suffix_lines,
               apr_pool_t *pool)
 {
   int idx;
@@ -207,21 +207,28 @@ svn_diff__lcs(svn_diff__position_t *position_list1, /* pointer to tail (ring) */
    */
   lcs = apr_palloc(pool, sizeof(*lcs));
   lcs->position[0] = apr_pcalloc(pool, sizeof(*lcs->position[0]));
-  lcs->position[0]->offset = position_list1 ? 
-    position_list1->offset + 1 : prefix_lines + 1;
+  lcs->position[0]->offset = position_list1
+                             ? position_list1->offset + suffix_lines + 1
+                             : prefix_lines + suffix_lines + 1;
   lcs->position[1] = apr_pcalloc(pool, sizeof(*lcs->position[1]));
-  lcs->position[1]->offset = position_list2 ?
-    position_list2->offset + 1 : prefix_lines + 1;
+  lcs->position[1]->offset = position_list2
+                             ? position_list2->offset + suffix_lines + 1
+                             : prefix_lines + suffix_lines + 1;
   lcs->length = 0;
   lcs->refcount = 1;
   lcs->next = NULL;
 
   if (position_list1 == NULL || position_list2 == NULL)
     {
+      if (suffix_lines)
+        lcs = prepend_lcs(lcs, suffix_lines, 
+                          lcs->position[0]->offset - suffix_lines,
+                          lcs->position[1]->offset - suffix_lines,
+                          pool);
       if (prefix_lines)
-        return prepend_prefix_lcs(lcs, prefix_lines, pool);
-      else
-        return lcs;
+        lcs = prepend_lcs(lcs, prefix_lines, 1, 1, pool);
+
+      return lcs;
     }
 
   /* Calculate length of both sequences to be compared */
@@ -277,14 +284,21 @@ svn_diff__lcs(svn_diff__position_t *position_list1, /* pointer to tail (ring) */
     }
   while (fp[d].position[1] != &sentinel_position[1]);
 
-  lcs->next = fp[d].lcs;
+  if (suffix_lines)
+    lcs->next = prepend_lcs(fp[d].lcs, suffix_lines,
+                            lcs->position[0]->offset - suffix_lines,
+                            lcs->position[1]->offset - suffix_lines,
+                            pool);
+  else
+    lcs->next = fp[d].lcs;
+  
   lcs = svn_diff__lcs_reverse(lcs);
 
   position_list1->next = sentinel_position[idx].next;
   position_list2->next = sentinel_position[abs(1 - idx)].next;
 
   if (prefix_lines)
-    return prepend_prefix_lcs(lcs, prefix_lines, pool);
+    return prepend_lcs(lcs, prefix_lines, 1, 1, pool);
   else
     return lcs;
 }
