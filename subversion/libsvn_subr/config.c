@@ -159,7 +159,7 @@ read_all(svn_config_t **cfgp,
 #ifdef WIN32
   if (sys_registry_path)
     {
-      SVN_ERR(svn_config_read(cfgp, sys_registry_path, FALSE, pool));
+      SVN_ERR(svn_config_read2(cfgp, sys_registry_path, FALSE, FALSE, pool));
       red_config = TRUE;
     }
 #endif /* WIN32 */
@@ -170,7 +170,7 @@ read_all(svn_config_t **cfgp,
         SVN_ERR(svn_config_merge(*cfgp, sys_file_path, FALSE));
       else
         {
-          SVN_ERR(svn_config_read(cfgp, sys_file_path, FALSE, pool));
+          SVN_ERR(svn_config_read2(cfgp, sys_file_path, FALSE, FALSE, pool));
           red_config = TRUE;
         }
     }
@@ -184,7 +184,8 @@ read_all(svn_config_t **cfgp,
         SVN_ERR(svn_config_merge(*cfgp, usr_registry_path, FALSE));
       else
         {
-          SVN_ERR(svn_config_read(cfgp, usr_registry_path, FALSE, pool));
+          SVN_ERR(svn_config_read2(cfgp, usr_registry_path,
+                                   FALSE, FALSE, pool));
           red_config = TRUE;
         }
     }
@@ -196,7 +197,7 @@ read_all(svn_config_t **cfgp,
         SVN_ERR(svn_config_merge(*cfgp, usr_file_path, FALSE));
       else
         {
-          SVN_ERR(svn_config_read(cfgp, usr_file_path, FALSE, pool));
+          SVN_ERR(svn_config_read2(cfgp, usr_file_path, FALSE, FALSE, pool));
           red_config = TRUE;
         }
     }
@@ -332,7 +333,7 @@ svn_config_merge(svn_config_t *cfg, const char *file,
      ### We could use a tmp subpool for this, since merge_cfg is going
      to be tossed afterwards.  Premature optimization, though? */
   svn_config_t *merge_cfg;
-  SVN_ERR(svn_config_read(&merge_cfg, file, must_exist, cfg->pool));
+  SVN_ERR(svn_config_read2(&merge_cfg, file, must_exist, FALSE, cfg->pool));
 
   /* Now copy the new options into the original table. */
   for_each_option(merge_cfg, cfg, merge_cfg->pool, merge_callback);
