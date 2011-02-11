@@ -4233,7 +4233,7 @@ close_file(void *file_baton,
              from some random file means the fileinfo does NOT correspond to
              the pristine (in which case, the fileinfo will be cleared for
              safety's sake).  */
-          record_fileinfo = install_from == NULL;
+          record_fileinfo = (install_from == NULL);
 
           SVN_ERR(svn_wc__wq_build_file_install(&work_item,
                                                 eb->db,
@@ -5596,7 +5596,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
     /* If new contents were provided, then we do NOT want to record the
        file information. We assume the new contents do not match the
        "proper" values for TRANSLATED_SIZE and LAST_MOD_TIME.  */
-    record_fileinfo = new_contents == NULL;
+    record_fileinfo = (new_contents == NULL);
 
     /* Install the working copy file (with appropriate translation) from
        the appropriate source. SOURCE_ABSPATH will be NULL, indicating an
