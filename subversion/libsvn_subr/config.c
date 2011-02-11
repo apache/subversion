@@ -78,7 +78,9 @@ struct cfg_option_t
 
 
 svn_error_t *
-svn_config_create(svn_config_t **cfgp, apr_pool_t *result_pool)
+svn_config_create(svn_config_t **cfgp,
+                  svn_boolean_t section_names_case_sensitive,
+                  apr_pool_t *result_pool)
 {
   svn_config_t *cfg = apr_palloc(result_pool, sizeof(*cfg));
 
@@ -88,19 +90,22 @@ svn_config_create(svn_config_t **cfgp, apr_pool_t *result_pool)
   cfg->x_values = FALSE;
   cfg->tmp_key = svn_stringbuf_create("", result_pool);
   cfg->tmp_value = svn_stringbuf_create("", result_pool);
-
+  cfg->section_names_case_sensitive = section_names_case_sensitive;
+  
   *cfgp = cfg;
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_config_read(svn_config_t **cfgp, const char *file,
-                svn_boolean_t must_exist, apr_pool_t *pool)
+svn_config_read2(svn_config_t **cfgp, const char *file,
+                 svn_boolean_t must_exist,
+                 svn_boolean_t section_names_case_sensitive,
+                 apr_pool_t *pool)
 {
   svn_config_t *cfg;
   svn_error_t *err;
 
-  SVN_ERR(svn_config_create(&cfg, pool));
+  SVN_ERR(svn_config_create(&cfg, section_names_case_sensitive, pool));
 
   /* Yes, this is platform-specific code in Subversion, but there's no
      practical way to migrate it into APR, as it's simultaneously
@@ -387,7 +392,8 @@ find_option(svn_config_t *cfg, const char *section, const char *option,
 
   /* Canonicalize the hash key */
   svn_stringbuf_set(cfg->tmp_key, section);
-  make_hash_key(cfg->tmp_key->data);
+  if (! cfg->section_names_case_sensitive)
+    make_hash_key(cfg->tmp_key->data);
 
   sec_ptr = apr_hash_get(cfg->sections, cfg->tmp_key->data,
                          cfg->tmp_key->len);
@@ -618,7 +624,10 @@ svn_config_set(svn_config_t *cfg,
       /* Even the section doesn't exist. Create it. */
       sec = apr_palloc(cfg->pool, sizeof(*sec));
       sec->name = apr_pstrdup(cfg->pool, section);
-      sec->hash_key = make_hash_key(apr_pstrdup(cfg->pool, section));
+      if(cfg->section_names_case_sensitive)
+        sec->hash_key = sec->name;
+      else
+        sec->hash_key = make_hash_key(apr_pstrdup(cfg->pool, section));
       sec->options = apr_hash_make(cfg->pool);
       apr_hash_set(cfg->sections, sec->hash_key, APR_HASH_KEY_STRING, sec);
     }

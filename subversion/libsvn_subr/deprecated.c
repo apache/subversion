@@ -1064,3 +1064,16 @@ svn_rangelist_inheritable(apr_array_header_t **inheritable_rangelist,
                                                      start, end, TRUE,
                                                      pool, pool));
 }
+
+/*** From config.c ***/
+
+svn_error_t *
+svn_config_read(svn_config_t **cfgp, const char *file,
+                svn_boolean_t must_exist,
+                apr_pool_t *pool)
+{
+  return svn_error_return(svn_config_read2(cfgp, file,
+                                           must_exist,
+                                           FALSE,
+                                           pool));
+}

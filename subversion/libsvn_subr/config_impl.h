@@ -63,6 +63,9 @@ struct svn_config_t
   /* Temporary value used for expanded default values in svn_config_get.
      (Using a stringbuf so that frequent resetting is efficient.) */
   svn_stringbuf_t *tmp_value;
+
+  /* Specifies whether section names are populated case sensitively. */
+  svn_boolean_t section_names_case_sensitive;
 };
 
 
