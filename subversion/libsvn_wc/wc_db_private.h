@@ -88,6 +88,10 @@ typedef struct svn_wc__db_wcroot_t {
      Typically just one or two locks maximum. */
   apr_array_header_t *owned_locks;
 
+  /* Map a working copy diretory to a cached adm_access baton.
+     const char *local_abspath -> svn_wc_adm_access_t *adm_access */
+  apr_hash_t *access_cache;
+
 } svn_wc__db_wcroot_t;
 
 /**  Pristine Directory Handle
@@ -105,9 +109,6 @@ typedef struct svn_wc__db_pdh_t {
 
   /* The parent directory's per-dir information. */
   struct svn_wc__db_pdh_t *parent;
-
-  /* Hold onto the old-style access baton that corresponds to this PDH.  */
-  svn_wc_adm_access_t *adm_access;
 } svn_wc__db_pdh_t;
 
 

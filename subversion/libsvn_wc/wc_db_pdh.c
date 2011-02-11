@@ -284,6 +284,7 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
      uses. */
   (*wcroot)->owned_locks = apr_array_make(result_pool, 8,
                                           sizeof(svn_wc__db_wclock_t));
+  (*wcroot)->access_cache = apr_hash_make(result_pool);
 
   /* SDB will be NULL for pre-NG working copies. We only need to run a
      cleanup when the SDB is present.  */
