@@ -2237,8 +2237,8 @@ random_three_way_merge(apr_pool_t *pool)
       svn_stringbuf_t *original, *modified1, *modified2, *combined;
       /* Pick NUM_LINES large enough so that the 'strip identical suffix' code
          gets triggered with reasonable probability.  (Currently it ignores
-         50 lines or more, and empirically N=400 suffices to trigger that 
-         behaviour about half the time.) */
+         50 lines or more, and empirically N=4000 suffices to trigger that 
+         behaviour most of the time.) */
       int num_lines = 4000, num_src = 10, num_dst = 10;
       svn_boolean_t *lines = apr_pcalloc(subpool, sizeof(*lines) * num_lines);
       struct random_mod *src_lines = apr_palloc(subpool,
@@ -2415,9 +2415,8 @@ struct svn_test_descriptor_t test_funcs[] =
                    "3-way merge, conflicting overlapping changes"),
     SVN_TEST_PASS2(random_trivial_merge,
                    "random trivial merge"),
-    SVN_TEST_WIMP(random_three_way_merge,
-                   "random 3-way merge",
-                   "find_identical_suffix() bug from dev@"),
+    SVN_TEST_PASS2(random_three_way_merge,
+                   "random 3-way merge"),
     SVN_TEST_PASS2(merge_with_part_already_present,
                    "merge with part already present"),
     SVN_TEST_PASS2(merge_adjacent_changes,
