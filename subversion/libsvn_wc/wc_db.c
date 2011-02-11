@@ -7243,6 +7243,7 @@ svn_wc__db_temp_get_access(svn_wc__db_t *db,
 {
   const char *local_relpath;
   svn_wc__db_wcroot_t *wcroot;
+  svn_error_t *err;
 
   SVN_ERR_ASSERT_NO_RETURN(svn_dirent_is_absolute(local_dir_abspath));
 
@@ -7251,9 +7252,14 @@ svn_wc__db_temp_get_access(svn_wc__db_t *db,
      ### for an access baton for it. we should definitely return NULL, but
      ### ideally: the caller would never ask us about a non-directory.  */
 
-  svn_error_clear(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
+  err = svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
                             db, local_dir_abspath, svn_sqlite__mode_readwrite,
-                            scratch_pool, scratch_pool));
+                            scratch_pool, scratch_pool);
+  if (err)
+    {
+      svn_error_clear(err);
+      return NULL;
+    }
 
   if (!wcroot)
     return NULL;
