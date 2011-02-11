@@ -675,13 +675,24 @@ skip_handler_apr(void *baton, apr_size_t *count)
 {
   struct baton_apr *btn = baton;
   apr_off_t offset = *count;
+  apr_off_t new_pos = *count;
   apr_off_t current = 0;
+  svn_error_t *err;
+
+  /* so far, we have not moved anything */
+  *count = 0;
 
   SVN_ERR(svn_io_file_seek(btn->file, APR_CUR, &current, btn->pool));
-  SVN_ERR(svn_io_file_seek(btn->file, APR_CUR, &offset, btn->pool));
-  *count = offset - current;
+  err = svn_io_file_seek(btn->file, APR_CUR, &new_pos, btn->pool);
 
-  return SVN_NO_ERROR;
+  /* Irrespective of errors, return the number of bytes we actually moved.
+   * If no new position has been returned from seek(), assume that no move
+   * happend and keep the *count==0 set earlier.
+   */
+  if ((offset != new_pos) || (current == 0))
+    *count = new_pos - current;
+
+  return err;
 }
 
 static svn_error_t *
