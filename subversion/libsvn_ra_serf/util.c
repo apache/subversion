@@ -404,12 +404,6 @@ connection_closed(serf_connection_t *conn,
   if (sc->using_ssl)
       sc->ssl_context = NULL;
 
-  /* Restart the authentication phase on this new connection. */
-  if (sc->session->auth_protocol)
-    SVN_ERR(sc->session->auth_protocol->init_conn_func(sc->session,
-                                                       sc,
-                                                       sc->session->pool));
-
   return SVN_NO_ERROR;
 }
 
@@ -597,18 +591,6 @@ svn_ra_serf__setup_serf_req(serf_request_t *request,
   serf_bucket_headers_set(hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_DEPTH);
   serf_bucket_headers_set(hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_MERGEINFO);
   serf_bucket_headers_set(hdrs_bkt, "DAV", SVN_DAV_NS_DAV_SVN_LOG_REVPROPS);
-
-  /* Setup server authorization headers */
-  if (conn->session->auth_protocol)
-    SVN_ERR(conn->session->auth_protocol->setup_request_func(conn, method, url,
-                                                             hdrs_bkt));
-
-  /* Setup proxy authorization headers */
-  if (conn->session->proxy_auth_protocol)
-    SVN_ERR(conn->session->proxy_auth_protocol->setup_request_func(conn,
-                                                                   method,
-                                                                   url,
-                                                                   hdrs_bkt));
 
   if (ret_hdrs_bkt)
     {
@@ -1467,34 +1449,11 @@ handle_response(serf_request_t *request,
                                         ctx->session->pool));
       ctx->session->auth_attempts = 0;
       ctx->session->auth_state = NULL;
-      ctx->session->realm = NULL;
     }
 
   ctx->conn->last_status_code = sl.code;
 
-  if (sl.code == 401 || sl.code == 407)
-    {
-      /* 401 Authorization or 407 Proxy-Authentication required */
-      status = svn_ra_serf__response_discard_handler(request, response, NULL, pool);
-
-      /* Don't bother handling the authentication request if the response
-         wasn't received completely yet. Serf will call handle_response
-         again when more data is received. */
-      if (APR_STATUS_IS_EAGAIN(status))
-        {
-          *serf_status = status;
-          return SVN_NO_ERROR;
-        }
-
-      SVN_ERR(svn_ra_serf__handle_auth(sl.code, ctx,
-                                       request, response, pool));
-
-      svn_ra_serf__priority_request_create(ctx);
-
-      *serf_status = status;
-      return SVN_NO_ERROR;
-    }
-  else if (sl.code == 409 || sl.code >= 500)
+  if (sl.code == 409 || sl.code >= 500)
     {
       /* 409 Conflict: can indicate a hook error.
          5xx (Internal) Server error. */
@@ -1512,28 +1471,6 @@ handle_response(serf_request_t *request,
   else
     {
       svn_error_t *err;
-
-      /* Validate this response message. */
-      if (ctx->session->auth_protocol ||
-          ctx->session->proxy_auth_protocol)
-        {
-          const svn_ra_serf__auth_protocol_t *prot;
-
-          if (ctx->session->auth_protocol)
-            prot = ctx->session->auth_protocol;
-          else
-            prot = ctx->session->proxy_auth_protocol;
-
-          err = prot->validate_response_func(ctx, request, response, pool);
-          if (err)
-            {
-              svn_ra_serf__response_discard_handler(request, response, NULL,
-                                                    pool);
-              /* Ignore serf status code, just return the real error */
-
-              return svn_error_return(err);
-            }
-        }
 
       err = ctx->response_handler(request,response, ctx->response_baton, pool);
 

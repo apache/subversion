@@ -2198,8 +2198,6 @@ open_connection_if_needed(svn_ra_serf__session_t *sess, int active_reqs)
       sess->conns[cur]->hostinfo = sess->conns[0]->hostinfo;
       sess->conns[cur]->using_ssl = sess->conns[0]->using_ssl;
       sess->conns[cur]->using_compression = sess->conns[0]->using_compression;
-      sess->conns[cur]->proxy_auth_header = sess->conns[0]->proxy_auth_header;
-      sess->conns[cur]->proxy_auth_value = sess->conns[0]->proxy_auth_value;
       sess->conns[cur]->useragent = sess->conns[0]->useragent;
       sess->conns[cur]->last_status_code = -1;
       sess->conns[cur]->ssl_context = NULL;
@@ -2216,15 +2214,6 @@ open_connection_if_needed(svn_ra_serf__session_t *sess, int active_reqs)
         return svn_error_wrap_apr(status, NULL);
 
       sess->num_conns++;
-
-      /* Authentication protocol specific initalization. */
-      if (sess->auth_protocol)
-        SVN_ERR(sess->auth_protocol->init_conn_func(sess, sess->conns[cur],
-                                                    sess->pool));
-      if (sess->proxy_auth_protocol)
-        SVN_ERR(sess->proxy_auth_protocol->init_conn_func(sess,
-                                                          sess->conns[cur],
-                                                          sess->pool));
     }
 
   return SVN_NO_ERROR;
