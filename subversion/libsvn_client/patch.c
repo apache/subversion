@@ -2744,23 +2744,32 @@ svn_client_patch(const char *patch_abspath,
 
   if (svn_path_is_url(local_abspath))
     return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                             _("'%s' is not a local path"), local_abspath);
+                             _("'%s' is not a local path"),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
 
   SVN_ERR(svn_io_check_path(patch_abspath, &kind, scratch_pool));
   if (kind == svn_node_none)
     return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                             _("'%s' does not exist"), patch_abspath);
+                             _("'%s' does not exist"),
+                             svn_dirent_dirname(patch_abspath, scratch_pool));
   if (kind != svn_node_file)
     return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                             _("'%s' is not a file"), patch_abspath);
+                             _("'%s' is not a file"),
+                             svn_dirent_local_style(patch_abspath,
+                                                    scratch_pool));
 
   SVN_ERR(svn_io_check_path(local_abspath, &kind, scratch_pool));
   if (kind == svn_node_none)
     return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                             _("'%s' does not exist"), local_abspath);
+                             _("'%s' does not exist"),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
   if (kind != svn_node_dir)
     return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                             _("'%s' is not a directory"), local_abspath);
+                             _("'%s' is not a directory"),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
 
   baton.patch_abspath = patch_abspath;
   baton.abs_wc_path = local_abspath;
