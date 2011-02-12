@@ -422,8 +422,6 @@ svn_ra_serf__open(svn_ra_session_t *session,
   serf_sess->conns[0]->using_ssl = serf_sess->using_ssl;
   serf_sess->conns[0]->using_compression = serf_sess->using_compression;
   serf_sess->conns[0]->hostinfo = url.hostinfo;
-  serf_sess->conns[0]->auth_header = NULL;
-  serf_sess->conns[0]->auth_value = NULL;
   serf_sess->conns[0]->useragent = NULL;
 
   /* create the user agent string */

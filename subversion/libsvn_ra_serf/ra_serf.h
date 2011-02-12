@@ -59,14 +59,9 @@ extern "C" {
                    APR_STRINGIFY(SERF_MINOR_VERSION) "." \
                    APR_STRINGIFY(SERF_PATCH_VERSION)
 
-#ifdef WIN32
-#define SVN_RA_SERF_SSPI_ENABLED
-#endif
-
 
 /* Forward declarations. */
 typedef struct svn_ra_serf__session_t svn_ra_serf__session_t;
-typedef struct svn_ra_serf__auth_protocol_t svn_ra_serf__auth_protocol_t;
 
 typedef enum svn_ra_serf__authn_types
 {
@@ -101,30 +96,12 @@ typedef struct svn_ra_serf__connection_t {
   /* What was the last HTTP status code we got on this connection? */
   int last_status_code;
 
-  /* Current authorization header used for this connection; may be NULL */
-  const char *auth_header;
-
-  /* Current authorization value used for this connection; may be NULL */
-  const char *auth_value;
-
   /* Optional SSL context for this connection. */
   serf_ssl_context_t *ssl_context;
   svn_auth_iterstate_t *ssl_client_auth_state;
   svn_auth_iterstate_t *ssl_client_pw_auth_state;
 
   svn_ra_serf__session_t *session;
-
-  /* Baton used to store connection specific authn/authz data */
-  void *auth_context;
-
-  /* Baton used to store proxy specific authn/authz data */
-  void *proxy_auth_context;
-
-  /* Current authorization header used for the proxy server; may be NULL */
-  const char *proxy_auth_header;
-
-  /* Current authorization value used for the proxy server; may be NULL */
-  const char *proxy_auth_value;
 
   /* user agent string */
   const char *useragent;
@@ -172,9 +149,6 @@ struct svn_ra_serf__session_t {
   apr_hash_t *cached_props;
 
   /* Authentication related properties. */
-  const char *realm;
-  const char *auth_header;
-  const char *auth_value;
   svn_auth_iterstate_t *auth_state;
   int auth_attempts;
 
@@ -188,9 +162,6 @@ struct svn_ra_serf__session_t {
 
   /* Error that we've received but not yet returned upstream. */
   svn_error_t *pending_error;
-
-  /* vtable and info object handling the authentication */
-  const svn_ra_serf__auth_protocol_t *auth_protocol;
 
   /* List of authn types supported by the client.*/
   svn_ra_serf__authn_types authn_types;
@@ -206,11 +177,6 @@ struct svn_ra_serf__session_t {
 
   /* Are we using a proxy? */
   int using_proxy;
-
-  /* Proxy Authentication related properties */
-  const char *proxy_auth_header;
-  const char *proxy_auth_value;
-  const svn_ra_serf__auth_protocol_t *proxy_auth_protocol;
 
   const char *proxy_username;
   const char *proxy_password;
@@ -1444,105 +1410,6 @@ svn_ra_serf__credentials_callback(char **username, char **password,
                                   int code, const char *authn_type,
                                   const char *realm,
                                   apr_pool_t *pool);
-/**
- * For each authentication protocol we need a handler function of type
- * svn_serf__auth_handler_func_t. This function will be called when an
- * authentication challenge is received in a session.
- */
-typedef svn_error_t *
-(*svn_serf__auth_handler_func_t)(svn_ra_serf__handler_t *ctx,
-                                 serf_request_t *request,
-                                 serf_bucket_t *response,
-                                 const char *auth_hdr,
-                                 const char *auth_attr,
-                                 apr_pool_t *pool);
-
-/**
- * For each authentication protocol we need an initialization function of type
- * svn_serf__init_conn_func_t. This function will be called when a new
- * connection is opened.
- */
-typedef svn_error_t *
-(*svn_serf__init_conn_func_t)(svn_ra_serf__session_t *session,
-                              svn_ra_serf__connection_t *conn,
-                              apr_pool_t *pool);
-
-/**
- * For each authentication protocol we need a setup_request function of type
- * svn_serf__setup_request_func_t. This function will be called when a
- * new serf_request_t object is created and should fill in the correct
- * authentication headers (if needed).
- */
-typedef svn_error_t *
-(*svn_serf__setup_request_func_t)(svn_ra_serf__connection_t *conn,
-                                  const char *method,
-                                  const char *uri,
-                                  serf_bucket_t *hdrs_bkt);
-
-/**
- * This function will be called when a response is received, so that the
- * protocol handler can validate the Authentication related response headers
- * (if needed).
- */
-typedef svn_error_t *
-(*svn_serf__validate_response_func_t)(svn_ra_serf__handler_t *ctx,
-                                      serf_request_t *request,
-                                      serf_bucket_t *response,
-                                      apr_pool_t *pool);
-
-/**
- * svn_ra_serf__auth_protocol_t: vtable for an authn protocol provider.
- *
- */
-struct svn_ra_serf__auth_protocol_t {
-  /* The http status code that's handled by this authentication protocol.
-     Normal values are 401 for server authentication and 407 for proxy
-     authentication */
-  int code;
-
-  /* The name of this authentication protocol. This should be a case
-     sensitive match of the string sent in the HTTP authentication header. */
-  const char *auth_name;
-
-  /* Internal code used for this authn type. */
-  svn_ra_serf__authn_types auth_type;
-
-  /* The initialization function if any; otherwise, NULL */
-  svn_serf__init_conn_func_t init_conn_func;
-
-  /* The authentication handler function */
-  svn_serf__auth_handler_func_t handle_func;
-
-  /* Function to set up the authentication header of a request */
-  svn_serf__setup_request_func_t setup_request_func;
-
-  /* Function to validate the authentication header of a response */
-  svn_serf__validate_response_func_t validate_response_func;
-};
-
-/**
- * This function will be called when an authentication challenge is
- * received. Based on the challenge, handle_auth will pick the needed
- * authn implementation and forward the call to its authn handler.
- */
-svn_error_t *
-svn_ra_serf__handle_auth(int code,
-                         svn_ra_serf__handler_t *ctx,
-                         serf_request_t *request,
-                         serf_bucket_t *response,
-                         apr_pool_t *pool);
-
-/**
- * encode_auth_header: base64 encodes the authentication data and builds an
- * authentication header in this format:
- * [PROTOCOL] [BASE64 AUTH DATA]
- */
-void
-svn_ra_serf__encode_auth_header(const char *protocol,
-                                const char **header,
-                                const char *data,
-                                apr_size_t data_len,
-                                apr_pool_t *pool);
 
 
 /*** General utility functions ***/
