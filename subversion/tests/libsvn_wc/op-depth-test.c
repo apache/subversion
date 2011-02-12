@@ -1917,23 +1917,143 @@ test_del_replace_not_present(const svn_test_opts_t *opts, apr_pool_t *pool)
 }
 
 static svn_error_t *
+insert_actual(wc_baton_t *b,
+              const char **local_relpaths)
+{
+  svn_sqlite__db_t *sdb;
+  svn_sqlite__stmt_t *stmt;
+  const char *dbpath = svn_dirent_join_many(b->pool,
+                                            b->wc_abspath, ".svn", "wc.db",
+                                            NULL);
+  const char * const statements[] = {
+    "DELETE FROM actual_node;",
+    "INSERT INTO actual_node (local_relpath, wc_id) VALUES (?1, 1);",
+    "INSERT INTO actual_node (local_relpath, parent_relpath, wc_id)"
+    "                 VALUES (?1, ?2, 1)",
+    NULL,
+  };
+
+  if (!local_relpaths)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_sqlite__open(&sdb, dbpath, svn_sqlite__mode_readwrite,
+                           statements, 0, NULL,
+                           b->pool, b->pool));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, 0));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  while(*local_relpaths)
+    {
+      if (**local_relpaths)
+        {
+          SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, 2));
+          SVN_ERR(svn_sqlite__bindf(stmt, "ss",
+                                    *local_relpaths,
+                                    svn_relpath_dirname(*local_relpaths,
+                                                        b->pool)));
+        }
+      else
+        {
+          SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, 2));
+          SVN_ERR(svn_sqlite__bindf(stmt, "s", *local_relpaths));
+        }
+      SVN_ERR(svn_sqlite__step_done(stmt));
+      ++local_relpaths;
+    }
+  SVN_ERR(svn_sqlite__close(sdb));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+check_db_actual(wc_baton_t* b,
+                const char **local_relpaths)
+{
+  svn_sqlite__db_t *sdb;
+  svn_sqlite__stmt_t *stmt;
+  const char *dbpath = svn_dirent_join_many(b->pool,
+                                            b->wc_abspath, ".svn", "wc.db",
+                                            NULL);
+  const char * const statements[] = {
+    "SELECT local_relpath FROM actual_node WHERE wc_id = 1;",
+    NULL,
+  };
+  svn_boolean_t have_row;
+  apr_hash_t *path_hash = apr_hash_make(b->pool);
+
+  if (!local_relpaths)
+    return SVN_NO_ERROR;
+
+  while(*local_relpaths)
+    {
+      apr_hash_set(path_hash, *local_relpaths, APR_HASH_KEY_STRING, (void*)1);
+      ++local_relpaths;
+    }
+
+  SVN_ERR(svn_sqlite__open(&sdb, dbpath, svn_sqlite__mode_readwrite,
+                           statements, 0, NULL,
+                           b->pool, b->pool));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, 0));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  while (have_row)
+    {
+      const char *local_relpath = svn_sqlite__column_text(stmt, 0, NULL);
+      if (!apr_hash_get(path_hash, local_relpath, APR_HASH_KEY_STRING))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, svn_sqlite__reset(stmt),
+                                 "actual '%s' unexpected", local_relpath);
+      apr_hash_set(path_hash, local_relpath, APR_HASH_KEY_STRING, NULL);
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+
+  if (apr_hash_count(path_hash))
+    {
+      const char *local_relpath
+        = svn__apr_hash_index_key(apr_hash_first(b->pool, path_hash));
+      return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                               "actual '%s' expected", local_relpath);
+    }
+
+  SVN_ERR(svn_sqlite__reset(stmt));
+  SVN_ERR(svn_sqlite__close(sdb));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 revert(wc_baton_t *b,
        const char *local_relpath,
-       nodes_row_t *before,
-       nodes_row_t *after)
+       nodes_row_t *before_nodes,
+       nodes_row_t *after_nodes,
+       const char **before_actual,
+       const char **after_actual)
 {
   const char *local_abspath = wc_path(b, local_relpath);
   svn_error_t *err;
 
-  SVN_ERR(insert_dirs(b, before));
-  SVN_ERR(check_db_rows(b, "", before));
+  if (!before_actual)
+    {
+      const char *actual[] = { NULL };
+      SVN_ERR(insert_actual(b, actual));
+    }
+
+  SVN_ERR(insert_dirs(b, before_nodes));
+  SVN_ERR(insert_actual(b, before_actual));
+  SVN_ERR(check_db_rows(b, "", before_nodes));
+  SVN_ERR(check_db_actual(b, before_actual));
   err = svn_wc__db_op_revert(b->wc_ctx->db, local_abspath, b->pool);
   if (err)
-    /* If db_op_revert returns an error the DB should be unchanged so
-       verify and return a verification error if a change is detected
-       or the revert error if unchanged. */
-    return svn_error_compose_create(check_db_rows(b, "", before), err);
-  SVN_ERR(check_db_rows(b, "", after));
+    {
+      /* If db_op_revert returns an error the DB should be unchanged so
+         verify and return a verification error if a change is detected
+         or the revert error if unchanged. */
+      err = svn_error_compose_create(check_db_rows(b, "", before_nodes), err);
+      err = svn_error_compose_create(check_db_actual(b, before_actual), err);
+      return err;
+    }
+  SVN_ERR(check_db_rows(b, "", after_nodes));
+  SVN_ERR(check_db_actual(b, after_actual));
 
   return SVN_NO_ERROR;
 }
@@ -1961,7 +2081,19 @@ test_op_revert(const svn_test_opts_t *opts, apr_pool_t *pool)
       { 0, "A",   "normal", 4, "A" },
       { 0 },
     };
-    SVN_ERR(revert(&b, "A/B", before, after));
+    const char *before_actual1[] = { "A/B", "A/B/C", NULL };
+    const char *after_actual1[] = { "A/B/C", NULL };
+    const char *before_actual2[] = { "A/B", "A/B/C", NULL };
+    const char *after_actual2[] = { "A/B", NULL };
+    const char *before_actual3[] = { "", "A", "A/B", NULL };
+    const char *after_actual3[] = { "", "A/B", NULL };
+    const char *before_actual4[] = { "", "A/B", NULL };
+    const char *after_actual4[] = { "A/B", NULL };
+    SVN_ERR(revert(&b, "A/B", before, after, NULL, NULL));
+    SVN_ERR(revert(&b, "A/B", before, after, before_actual1, after_actual1));
+    SVN_ERR(revert(&b, "A/B/C", before, before, before_actual2, after_actual2));
+    SVN_ERR(revert(&b, "A", before, before, before_actual3, after_actual3));
+    SVN_ERR(revert(&b, "", before, before, before_actual4, after_actual4));
   }
 
   {
@@ -1979,23 +2111,40 @@ test_op_revert(const svn_test_opts_t *opts, apr_pool_t *pool)
       { 2, "X/Y",     "normal", NO_COPY_FROM },
       { 0 },
     };
-    err = revert(&b, "A/B/C/D", common, common);
+    const char *common_actual[] = { "A/B/C/D", "A/B/C", "A/B", "P", "X", NULL};
+
+    err = revert(&b, "A/B/C/D", common, common, NULL, NULL);
+    SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH);
+    svn_error_clear(err);
+    err = revert(&b, "A/B/C/D", common, common, common_actual, common_actual);
     SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH);
     svn_error_clear(err);
 
-    err = revert(&b, "A/B/C", common, common);
+    err = revert(&b, "A/B/C", common, common, NULL, NULL);
+    SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH);
+    svn_error_clear(err);
+    err = revert(&b, "A/B/C", common, common, common_actual, common_actual);
     SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH);
     svn_error_clear(err);
 
-    err = revert(&b, "A/B", common, common);
+    err = revert(&b, "A/B", common, common, NULL, NULL);
+    SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH);
+    svn_error_clear(err);
+    err = revert(&b, "A/B", common, common, common_actual, common_actual);
     SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH);
     svn_error_clear(err);
 
-    err = revert(&b, "P", common, common);
+    err = revert(&b, "P", common, common, NULL, NULL);
+    SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH);
+    svn_error_clear(err);
+    err = revert(&b, "P", common, common, common_actual, common_actual);
     SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH);
     svn_error_clear(err);
 
-    err = revert(&b, "X", common, common);
+    err = revert(&b, "X", common, common, NULL, NULL);
+    SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH);
+    svn_error_clear(err);
+    err = revert(&b, "X", common, common, common_actual, common_actual);
     SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH);
     svn_error_clear(err);
   }
@@ -2016,7 +2165,10 @@ test_op_revert(const svn_test_opts_t *opts, apr_pool_t *pool)
       { 0, "A/B/C",   "normal", 4, "A/B/C" },
       { 0 },
     };
-    SVN_ERR(revert(&b, "A/B/C", before, after));
+    const char *before_actual[] = { "A/B", "A/B/C", "A/B/C/D", NULL };
+    const char *after_actual[] = {"A/B", "A/B/C/D", NULL };
+    SVN_ERR(revert(&b, "A/B/C", before, after, NULL, NULL));
+    SVN_ERR(revert(&b, "A/B/C", before, after, before_actual, after_actual));
   }
 
   {
@@ -2039,7 +2191,7 @@ test_op_revert(const svn_test_opts_t *opts, apr_pool_t *pool)
       { 3, "A/B/C/D", "base-deleted", NO_COPY_FROM },
       { 0 },
     };
-    SVN_ERR(revert(&b, "A/B", before, after));
+    SVN_ERR(revert(&b, "A/B", before, after, NULL, NULL));
   }
 
   {
@@ -2076,8 +2228,8 @@ test_op_revert(const svn_test_opts_t *opts, apr_pool_t *pool)
       { 1, "A/B/C",   "base-deleted", NO_COPY_FROM },
       { 0 },
     };
-    SVN_ERR(revert(&b, "A/B/C", before, after1));
-    SVN_ERR(revert(&b, "A/B", after1, after2));
+    SVN_ERR(revert(&b, "A/B/C", before, after1, NULL, NULL));
+    SVN_ERR(revert(&b, "A/B", after1, after2, NULL, NULL));
   }
 
   {
@@ -2102,7 +2254,7 @@ test_op_revert(const svn_test_opts_t *opts, apr_pool_t *pool)
       { 3, "A/B/C/D", "base-deleted", NO_COPY_FROM },
       { 0 },
     };
-    SVN_ERR(revert(&b, "A/B", before, after));
+    SVN_ERR(revert(&b, "A/B", before, after, NULL, NULL));
   }
 
   {
@@ -2118,7 +2270,7 @@ test_op_revert(const svn_test_opts_t *opts, apr_pool_t *pool)
       { 1, "A/B/C/D", "base-deleted", NO_COPY_FROM },
       { 0 },
     };
-    err = revert(&b, "A", common, common);
+    err = revert(&b, "A", common, common, NULL, NULL);
     SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH);
     svn_error_clear(err);
   }
