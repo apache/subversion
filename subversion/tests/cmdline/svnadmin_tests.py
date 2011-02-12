@@ -924,7 +924,7 @@ def create_in_repo_subdir(sbox):
   cwd = os.getcwd()
   try:
     # This should fail, too
-    subdir = os.path.join(repo_dir, 'db', 'revs')
+    subdir = os.path.join(repo_dir, 'conf')
     os.chdir(subdir)
     svntest.main.create_repos('Z')
     os.chdir(cwd)
