@@ -1628,13 +1628,6 @@ svn_ra_serf__request_create(svn_ra_serf__handler_t *handler)
                                         setup_request_cb, handler);
 }
 
-serf_request_t *
-svn_ra_serf__priority_request_create(svn_ra_serf__handler_t *handler)
-{
-  return serf_connection_priority_request_create(handler->conn->conn,
-                                                 setup_request_cb, handler);
-}
-
 svn_error_t *
 svn_ra_serf__discover_vcc(const char **vcc_url,
                           svn_ra_serf__session_t *session,
