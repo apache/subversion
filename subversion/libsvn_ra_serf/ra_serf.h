@@ -496,9 +496,6 @@ typedef struct svn_ra_serf__handler_t {
 serf_request_t*
 svn_ra_serf__request_create(svn_ra_serf__handler_t *handler);
 
-serf_request_t*
-svn_ra_serf__priority_request_create(svn_ra_serf__handler_t *handler);
-
 /* XML helper callbacks. */
 
 typedef struct svn_ra_serf__xml_state_t {
