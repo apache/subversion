@@ -1369,6 +1369,7 @@ svn_repos_create(svn_repos_t **repos_p,
   svn_repos_t *repos;
   svn_error_t *err;
   const char *root_path;
+  const char *local_abspath;
 
   /* Allocate a repository object, filling in the format we will create. */
   repos = create_svn_repos_t(path, pool);
@@ -1388,13 +1389,21 @@ svn_repos_create(svn_repos_t **repos_p,
     repos->fs_type = DEFAULT_FS_TYPE;
 
   /* Don't create a repository inside another repository. */
-  root_path = svn_repos_find_root_path(path, pool);
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  root_path = svn_repos_find_root_path(local_abspath, pool);
   if (root_path != NULL)
-    return svn_error_createf(SVN_ERR_REPOS_BAD_ARGS, NULL, _("'%s' is a "
-                              "subdirectory of an existing repository rooted "
-                              "at '%s'"),
-                              svn_dirent_local_style(path, pool),
-                              svn_dirent_local_style(root_path, pool));
+    {
+      if (strcmp(root_path, local_abspath) == 0)
+        return svn_error_createf(SVN_ERR_REPOS_BAD_ARGS, NULL,
+                                 _("'%s' is an existing repository"),
+                                 svn_dirent_local_style(root_path, pool));
+      else
+        return svn_error_createf(SVN_ERR_REPOS_BAD_ARGS, NULL,
+                                 _("'%s' is a subdirectory of an existing "
+                                   "repository " "rooted at '%s'"),
+                                 svn_dirent_local_style(local_abspath, pool),
+                                 svn_dirent_local_style(root_path, pool));
+    }
 
   /* Create the various files and subdirectories for the repository. */
   SVN_ERR_W(create_repos_structure(repos, path, fs_config, pool),
