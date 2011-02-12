@@ -3560,6 +3560,13 @@ op_revert_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   svn_boolean_t have_row;
   apr_int64_t op_depth;
   svn_wc__db_status_t status;
+  int affected_rows;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
+                                    STMT_DELETE_ACTUAL_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", b->wcroot->wc_id,
+                            b->local_relpath));
+  SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
                                     STMT_SELECT_NODE_INFO));
@@ -3567,11 +3574,18 @@ op_revert_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
                             b->local_relpath));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (!have_row)
-    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, svn_sqlite__reset(stmt),
-                             _("The node '%s' was not found."),
-                             path_for_error_message(b->wcroot,
-                                                    b->local_relpath,
-                                                    scratch_pool));
+    {
+      SVN_ERR(svn_sqlite__reset(stmt));
+      if (affected_rows)
+        return SVN_NO_ERROR; /* actual-only revert */
+
+      return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                               _("The node '%s' was not found."),
+                               path_for_error_message(b->wcroot,
+                                                      b->local_relpath,
+                                                      scratch_pool));
+    }
+
   op_depth = svn_sqlite__column_int64(stmt, 0);
   status = svn_sqlite__column_token(stmt, 3, presence_map);
   SVN_ERR(svn_sqlite__reset(stmt));
@@ -3623,12 +3637,6 @@ op_revert_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
                                 b->local_relpath));
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
-                                    STMT_DELETE_ACTUAL_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", b->wcroot->wc_id,
-                            b->local_relpath));
-  SVN_ERR(svn_sqlite__step_done(stmt));
 
   return SVN_NO_ERROR;
 }
