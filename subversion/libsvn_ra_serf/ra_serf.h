@@ -63,16 +63,6 @@ extern "C" {
 /* Forward declarations. */
 typedef struct svn_ra_serf__session_t svn_ra_serf__session_t;
 
-typedef enum svn_ra_serf__authn_types
-{
-  svn_ra_serf__authn_none      = 0x00,
-  svn_ra_serf__authn_basic     = 0x01,
-  svn_ra_serf__authn_digest    = 0x02,
-  svn_ra_serf__authn_ntlm      = 0x04,
-  svn_ra_serf__authn_negotiate = 0x08,
-  svn_ra_serf__authn_all       = 0xFF,
-} svn_ra_serf__authn_types;
-
 /* A serf connection and optionally associated SSL context.  */
 typedef struct svn_ra_serf__connection_t {
   /* Our connection to a server. */
@@ -164,7 +154,7 @@ struct svn_ra_serf__session_t {
   svn_error_t *pending_error;
 
   /* List of authn types supported by the client.*/
-  svn_ra_serf__authn_types authn_types;
+  int authn_types;
 
   /* Maps SVN_RA_CAPABILITY_foo keys to "yes" or "no" values.
      If a capability is not yet discovered, it is absent from the table.

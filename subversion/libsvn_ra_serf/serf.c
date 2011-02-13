@@ -86,10 +86,10 @@ ra_serf_get_schemes(apr_pool_t *pool)
 static svn_error_t *
 load_http_auth_types(apr_pool_t *pool, svn_config_t *config,
                      const char *server_group,
-                     svn_ra_serf__authn_types *authn_types)
+                     int *authn_types)
 {
   const char *http_auth_types = NULL;
-  *authn_types = svn_ra_serf__authn_none;
+  *authn_types = SERF_AUTHN_NONE;
 
   svn_config_get(config, &http_auth_types, SVN_CONFIG_SECTION_GLOBAL,
                SVN_CONFIG_OPTION_HTTP_AUTH_TYPES, NULL);
@@ -109,13 +109,13 @@ load_http_auth_types(apr_pool_t *pool, svn_config_t *config,
         {
           auth_types_list = NULL;
           if (svn_cstring_casecmp("basic", token) == 0)
-            *authn_types |= svn_ra_serf__authn_basic;
+            *authn_types |= SERF_AUTHN_BASIC;
           else if (svn_cstring_casecmp("digest", token) == 0)
-            *authn_types |= svn_ra_serf__authn_digest;
+            *authn_types |= SERF_AUTHN_DIGEST;
           else if (svn_cstring_casecmp("ntlm", token) == 0)
-            *authn_types |= svn_ra_serf__authn_ntlm;
+            *authn_types |= SERF_AUTHN_NTLM;
           else if (svn_cstring_casecmp("negotiate", token) == 0)
-            *authn_types |= svn_ra_serf__authn_negotiate;
+            *authn_types |= SERF_AUTHN_NEGOTIATE;
           else
             return svn_error_createf(SVN_ERR_BAD_CONFIG_VALUE, NULL,
                                      _("Invalid config: unknown http auth"
@@ -125,7 +125,7 @@ load_http_auth_types(apr_pool_t *pool, svn_config_t *config,
   else
     {
       /* Nothing specified by the user, so accept all types. */
-      *authn_types = svn_ra_serf__authn_all;
+      *authn_types = SERF_AUTHN_ALL;
     }
 
   return SVN_NO_ERROR;
@@ -307,8 +307,7 @@ load_config(svn_ra_serf__session_t *session,
   /* Setup authentication. */
   SVN_ERR(load_http_auth_types(pool, config, server_group,
                                &session->authn_types));
-  /* TODO: convert string authn types to SERF_AUTHN bitmask.
-     serf_config_authn_types(session->context, session->authn_types);*/
+  serf_config_authn_types(session->context, session->authn_types);
   serf_config_credentials_callback(session->context,
                                    svn_ra_serf__credentials_callback);
 
