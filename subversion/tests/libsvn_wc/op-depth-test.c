@@ -2081,19 +2081,27 @@ test_op_revert(const svn_test_opts_t *opts, apr_pool_t *pool)
       { 0, "A",   "normal", 4, "A" },
       { 0 },
     };
-    const char *before_actual1[] = { "A/B", "A/B/C", NULL };
-    const char *after_actual1[] = { "A/B/C", NULL };
+    const char *before_actual1[] = { "A", "A/B", NULL };
+    const char *after_actual1[] = { "A", NULL };
     const char *before_actual2[] = { "A/B", "A/B/C", NULL };
     const char *after_actual2[] = { "A/B", NULL };
     const char *before_actual3[] = { "", "A", "A/B", NULL };
     const char *after_actual3[] = { "", "A/B", NULL };
     const char *before_actual4[] = { "", "A/B", NULL };
     const char *after_actual4[] = { "A/B", NULL };
+    const char *common_actual5[] = { "A/B", "A/B/C", NULL };
+    const char *common_actual6[] = { "A/B", "A/B/C", "A/B/C/D", NULL };
     SVN_ERR(revert(&b, "A/B", before, after, NULL, NULL));
     SVN_ERR(revert(&b, "A/B", before, after, before_actual1, after_actual1));
     SVN_ERR(revert(&b, "A/B/C", before, before, before_actual2, after_actual2));
     SVN_ERR(revert(&b, "A", before, before, before_actual3, after_actual3));
     SVN_ERR(revert(&b, "", before, before, before_actual4, after_actual4));
+    err = revert(&b, "A/B", before, before, common_actual5, common_actual5);
+    SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH);
+    svn_error_clear(err);
+    err = revert(&b, "A/B/C", before, before, common_actual6, common_actual6);
+    SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH);
+    svn_error_clear(err);
   }
 
   {
@@ -2165,8 +2173,8 @@ test_op_revert(const svn_test_opts_t *opts, apr_pool_t *pool)
       { 0, "A/B/C",   "normal", 4, "A/B/C" },
       { 0 },
     };
-    const char *before_actual[] = { "A/B", "A/B/C", "A/B/C/D", NULL };
-    const char *after_actual[] = {"A/B", "A/B/C/D", NULL };
+    const char *before_actual[] = { "A/B", "A/B/C", NULL };
+    const char *after_actual[] = {"A/B", NULL };
     SVN_ERR(revert(&b, "A/B/C", before, after, NULL, NULL));
     SVN_ERR(revert(&b, "A/B/C", before, after, before_actual, after_actual));
   }

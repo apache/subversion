@@ -148,7 +148,10 @@ WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth = ?3;
 -- STMT_SELECT_GE_OP_DEPTH_CHILDREN
 SELECT 1 FROM nodes
 WHERE wc_id = ?1 AND parent_relpath = ?2
-  AND (op_depth > ?3 OR (op_depth = ?3 AND presence != 'base-deleted'));
+  AND (op_depth > ?3 OR (op_depth = ?3 AND presence != 'base-deleted'))
+UNION
+SELECT 1 FROM ACTUAL_NODE
+WHERE wc_id = ?1 AND parent_relpath = ?2;
 
 -- STMT_SELECT_NODE_CHILDREN
 SELECT local_relpath FROM nodes
@@ -656,6 +659,9 @@ SELECT 1
 FROM actual_node
 WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
   AND tree_conflict_data IS NULL;
+
+-- STMT_SELECT_ACTUAL_CHILDREN
+SELECT 1 FROM actual_node WHERE wc_id = ?1 AND parent_relpath = ?2;
 
 /* ------------------------------------------------------------------------- */
 
