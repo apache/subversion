@@ -3577,7 +3577,24 @@ op_revert_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
     {
       SVN_ERR(svn_sqlite__reset(stmt));
       if (affected_rows)
-        return SVN_NO_ERROR; /* actual-only revert */
+        {
+          /* Can't do non-recursive actual-only revert if actual-only
+             children exist */
+          SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
+                                            STMT_SELECT_ACTUAL_CHILDREN));
+          SVN_ERR(svn_sqlite__bindf(stmt, "is", b->wcroot->wc_id,
+                                    b->local_relpath));
+          SVN_ERR(svn_sqlite__step(&have_row, stmt));
+          SVN_ERR(svn_sqlite__reset(stmt));
+          if (have_row)
+            return svn_error_createf(SVN_ERR_WC_INVALID_OPERATION_DEPTH, NULL,
+                                     _("Can't revert '%s' without"
+                                       " reverting children"),
+                                     path_for_error_message(b->wcroot,
+                                                            b->local_relpath,
+                                                            scratch_pool));
+          return SVN_NO_ERROR;
+        }
 
       return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                                _("The node '%s' was not found."),
@@ -3602,27 +3619,23 @@ op_revert_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 
       SVN_ERR(convert_to_working_status(&status, status));
 
-      if (status == svn_wc__db_status_added)
-        {
-          /* Check for children */
-          SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
-                                            STMT_SELECT_GE_OP_DEPTH_CHILDREN));
-          SVN_ERR(svn_sqlite__bindf(stmt, "isi", b->wcroot->wc_id,
-                                    b->local_relpath, op_depth));
-          SVN_ERR(svn_sqlite__step(&have_row, stmt));
-          SVN_ERR(svn_sqlite__reset(stmt));
-          if (have_row)
-            return svn_error_createf(SVN_ERR_WC_INVALID_OPERATION_DEPTH, NULL,
-                                     _("Can't revert '%s' without"
-                                       " reverting children"),
-                                     path_for_error_message(b->wcroot,
-                                                            b->local_relpath,
-                                                            scratch_pool));
-        }
+      /* Can't do non-recursive revert if children exist */
+      SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
+                                        STMT_SELECT_GE_OP_DEPTH_CHILDREN));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isi", b->wcroot->wc_id,
+                                b->local_relpath, op_depth));
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+      SVN_ERR(svn_sqlite__reset(stmt));
+      if (have_row)
+        return svn_error_createf(SVN_ERR_WC_INVALID_OPERATION_DEPTH, NULL,
+                                 _("Can't revert '%s' without"
+                                   " reverting children"),
+                                 path_for_error_message(b->wcroot,
+                                                        b->local_relpath,
+                                                        scratch_pool));
 
       /* Rewrite the op-depth of all deleted children making the
          direct children into roots of deletes. */
-          
       SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
                                      STMT_UPDATE_OP_DEPTH_INCREASE_RECURSIVE));
       SVN_ERR(svn_sqlite__bindf(stmt, "isi", b->wcroot->wc_id,
