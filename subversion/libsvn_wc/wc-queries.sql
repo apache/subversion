@@ -657,12 +657,6 @@ FROM actual_node
 WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
   AND tree_conflict_data IS NULL;
 
--- STMT_DETERMINE_REVERTABLE
-SELECT op_depth FROM NODES
-WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth >
-ORDER BY op_depth DESC
-LIMIT 1;
-
 /* ------------------------------------------------------------------------- */
 
 /* these are used in entries.c  */
