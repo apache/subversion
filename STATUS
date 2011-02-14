@@ -114,6 +114,7 @@ Candidate changes:
      Require less typing to resolve conflicts.
    Votes:
      +1: danielsh, blair
+     -0: rhuijben (Should we apply a change like this in a patch release?)
 
  * r1036429
    Fix svnsync_tests 29 for BDB.
@@ -145,34 +146,6 @@ Candidate changes:
      +0.9: blair, I tested this on Snow Leopard and it worked, but
            didn't do a line-by-line review of the changes
      +0: danielsh (only touches java.m4)
-
- * r1053208
-   svn_error_raise_on_malfunction() needs to call svn_error__locate().
-   Justification:
-     If this is not done, then svn_error_raise_on_malfunction() will
-     not properly set the filename and line number in the svn_error_t
-     it creates.
-   Votes:
-     +1: blair, danielsh
-
- * r1051632, r1051638
-   Ensure that *new_rev is set to an invalid revision before
-   attempting a commit, this helps implement svn_fs_commit_txn() and
-   svn_repos_fs_commit_txn()'s contract.
-   Justification:
-     Having the code implementing the documented API is a good thing.
-   Votes:
-     +1: blair, danielsh
-
- * r1051751
-   In a fsfs repository executing svn_fs_commit_txn(), ensure that
-   *new_rev is set to a valid revision as soon as the commit becomes
-   globally visible.  Any errors in post commit FS processing should
-   not affect *new_rev.
-   Justification:
-     Having the code implement the documented API is a good thing.
-   Votes:
-     +1: blair, danielsh
 
  * r1051744, r1051745, r1053185, r1053241
    Add additional assertions to the unit tests that use
@@ -245,18 +218,7 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r1058722
-   Initialize report_info_t's prop_encoding member in
-   libsvn_ra_serf/update.c:start_report() rather than using what was
-   previously in shared memory.
-   Justification:
-     No known problems with this, but using an unitialized struct member
-     is asking for problems.
-   Votes:
-     +1: pburba
-     +1: danielsh
-
- * 1.6.x-fsfs-begin-txn-deadlock
+  * 1.6.x-fsfs-begin-txn-deadlock
    Fix a deadlock that can occur when two or more multithreaded
    Subversion servers on the same system serve two or more fsfs
    repositories.
@@ -399,3 +361,40 @@ Approved changes:
    Votes:
      +1: stsp, blair
 
+ * r1051632, r1051638
+   Ensure that *new_rev is set to an invalid revision before
+   attempting a commit, this helps implement svn_fs_commit_txn() and
+   svn_repos_fs_commit_txn()'s contract.
+   Justification:
+     Having the code implementing the documented API is a good thing.
+   Votes:
+     +1: blair, danielsh, rhuijben
+
+ * r1051751
+   In a fsfs repository executing svn_fs_commit_txn(), ensure that
+   *new_rev is set to a valid revision as soon as the commit becomes
+   globally visible.  Any errors in post commit FS processing should
+   not affect *new_rev.
+   Justification:
+     Having the code implement the documented API is a good thing.
+   Votes:
+     +1: blair, danielsh, rhuijben
+
+ * r1053208
+   svn_error_raise_on_malfunction() needs to call svn_error__locate().
+   Justification:
+     If this is not done, then svn_error_raise_on_malfunction() will
+     not properly set the filename and line number in the svn_error_t
+     it creates.
+   Votes:
+     +1: blair, danielsh, rhuijben
+
+* r1058722
+   Initialize report_info_t's prop_encoding member in
+   libsvn_ra_serf/update.c:start_report() rather than using what was
+   previously in shared memory.
+   Justification:
+     No known problems with this, but using an unitialized struct member
+     is asking for problems.
+   Votes:
+     +1: pburba, danielsh, rhuijben
