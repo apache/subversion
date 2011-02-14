@@ -64,7 +64,6 @@ Candidate changes:
      Fixes an uninitialized variable that can result in a segfault.
    Votes:
      +1: pburba
-     +1: danielsh
 
  * r916286, r917512
    Fixes failing commmits (with vague error messages) seen on client
@@ -235,6 +234,7 @@ Candidate changes:
    Justification:
      Local fix.  users@ reports.
    Votes:
+     +0: danielsh
 
  * r1058269
    Fix issue #3486, "attempt to add tree conflict that already exists" again.
@@ -254,6 +254,7 @@ Candidate changes:
      is asking for problems.
    Votes:
      +1: pburba
+     +1: danielsh
 
  * 1.6.x-fsfs-begin-txn-deadlock
    Fix a deadlock that can occur when two or more multithreaded
