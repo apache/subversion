@@ -658,6 +658,7 @@ svn_fs_commit_txn(const char **conflict_p, svn_revnum_t *new_rev,
   svn_fs_t *fs;
   const char *fs_path;
 
+  *new_rev = SVN_INVALID_REVNUM;
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
   fs = svn_fs_root_fs(txn_root);
   fs_path = svn_fs_path(fs, pool);

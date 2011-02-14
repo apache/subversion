@@ -43,6 +43,8 @@ svn_repos_fs_commit_txn(const char **conflict_p,
   svn_error_t *err;
   const char *txn_name;
 
+  *new_rev = SVN_INVALID_REVNUM;
+
   /* Run pre-commit hooks. */
   SVN_ERR(svn_fs_txn_name(&txn_name, txn, pool));
   SVN_ERR(svn_repos__hooks_pre_commit(repos, txn_name, pool));
