@@ -2690,6 +2690,87 @@ def ls_url_special_characters(sbox):
                                        [], 'ls',
                                        url)
 
+def ls_non_existent_wc_target(sbox):
+  "ls a non-existent wc target"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  non_existent_path = os.path.join(wc_dir, 'non-existent')
+
+  expected_err = "svn: warning: W155010: The node '" + \
+      re.escape(os.path.abspath(non_existent_path)) + "' was not found"
+
+  svntest.actions.run_and_verify_svn2(None, None, expected_err,
+                                      1, 'ls', non_existent_path)
+
+def ls_non_existent_url_target(sbox):
+  "ls a non-existent url target"
+
+  sbox.build(read_only = True, create_wc = False)
+
+  non_existent_url = sbox.repo_url + '/non-existent'
+  expected_err = "svn: warning: W160013: .*"
+
+  svntest.actions.run_and_verify_svn2(None, None, expected_err,
+                                      1, 'ls', non_existent_url)
+
+def ls_multiple_wc_targets(sbox):
+  "ls multiple wc targets"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  alpha = sbox.ospath('A/B/E/alpha')
+  beta = sbox.ospath('A/B/E/beta')
+  non_existent_path = os.path.join(wc_dir, 'non-existent')
+
+  # All targets are existing
+  svntest.actions.run_and_verify_svn2(None, None, [],
+                                      0, 'ls', alpha, beta)
+
+  # One non-existing target
+  expected_err = "svn: warning: W155010: The node '" + \
+      re.escape(os.path.abspath(non_existent_path)) + "' was not found.\n" + \
+      ".*\nsvn: E200009: Could not list all targets because some targets " + \
+      "don't exist\n"
+  expected_err_re = re.compile(expected_err)
+
+  exit_code, output, error = svntest.main.run_svn(1, 'ls', alpha, 
+                                                  non_existent_path, beta)
+
+  # Verify error
+  if not expected_err_re.match("".join(error)):
+    raise svntest.Failure('Cat failed: expected error "%s", but received '
+                          '"%s"' % (expected_err, "".join(error)))
+
+def ls_multiple_url_targets(sbox):
+  "ls multiple url targets"
+
+  sbox.build(read_only = True, create_wc = False)
+
+  alpha = sbox.repo_url +  '/A/B/E/alpha'
+  beta = sbox.repo_url +  '/A/B/E/beta'
+  non_existent_url = sbox.repo_url +  '/non-existent'
+
+  # All targets are existing
+  svntest.actions.run_and_verify_svn2(None, None, [],
+                                      0, 'ls', alpha, beta)
+
+  # One non-existing target
+  expected_err = "svn: warning: W160013: .*\n" + \
+      ".*\nsvn: E200009: Could not list all targets because some targets " + \
+      "don't exist\n"
+  expected_err_re = re.compile(expected_err)
+
+  exit_code, output, error = svntest.main.run_svn(1, 'ls', alpha, 
+                                                  non_existent_url, beta)
+
+  # Verify error
+  if not expected_err_re.match("".join(error)):
+    raise svntest.Failure('Cat failed: expected error "%s", but received "%s"' % \
+                          (expected_err, "".join(error)))
+
 ########################################################################
 # Run the tests
 
@@ -2751,6 +2832,10 @@ test_list = [ None,
               basic_relocate,
               delete_urls_with_spaces,
               ls_url_special_characters,
+              ls_non_existent_wc_target,
+              ls_non_existent_url_target,
+              ls_multiple_wc_targets,
+              ls_multiple_url_targets,
              ]
 
 if __name__ == '__main__':
