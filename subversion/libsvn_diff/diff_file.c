@@ -503,7 +503,9 @@ find_identical_prefix(svn_boolean_t *reached_one_eof, apr_off_t *prefix_lines,
  * The number 50 is more or less arbitrary, based on some real-world tests
  * with big files (and then doubling the required number to be on the safe
  * side). This has a negligible effect on the power of the optimization. */
+#ifndef SUFFIX_LINES_TO_KEEP
 #define SUFFIX_LINES_TO_KEEP 50
+#endif
 
 /* Find the suffix which is identical between all elements of the FILE array.
  * Return the number of suffix lines in SUFFIX_LINES.
