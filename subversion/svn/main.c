@@ -1286,7 +1286,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "          >   local missing, incoming edit upon update\n"
      "    D       wc/qax.c\n"),
     { 'u', 'v', 'N', opt_depth, 'q', opt_no_ignore, opt_incremental, opt_xml,
-      opt_ignore_externals, opt_changelist} },
+      opt_ignore_externals, opt_changelist},
+    {{'q', N_("don't print unversioned items")}} },
 
   { "switch", svn_cl__switch, {"sw"}, N_
     ("Update the working copy to a different URL within the same repository.\n"
