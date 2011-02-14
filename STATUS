@@ -361,16 +361,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1051751
-   In a fsfs repository executing svn_fs_commit_txn(), ensure that
-   *new_rev is set to a valid revision as soon as the commit becomes
-   globally visible.  Any errors in post commit FS processing should
-   not affect *new_rev.
-   Justification:
-     Having the code implement the documented API is a good thing.
-   Votes:
-     +1: blair, danielsh, rhuijben
-
  * r1053208
    svn_error_raise_on_malfunction() needs to call svn_error__locate().
    Justification:

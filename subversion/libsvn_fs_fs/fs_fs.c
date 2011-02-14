@@ -5903,12 +5903,18 @@ commit_body(void *baton, apr_pool_t *pool)
   /* Update the 'current' file. */
   SVN_ERR(write_final_current(cb->fs, cb->txn->id, new_rev, start_node_id,
                               start_copy_id, pool));
+
+  /* At this point the new revision is committed and globally visible
+     so let the caller know it succeeded by giving it the new revision
+     number, which fulfills svn_fs_commit_txn() contract.  Any errors
+     after this point do not change the fact that a new revision was
+     created. */
+  *cb->new_rev_p = new_rev;
+
   ffd->youngest_rev_cache = new_rev;
 
   /* Remove this transaction directory. */
   SVN_ERR(svn_fs_fs__purge_txn(cb->fs, cb->txn->id, pool));
-
-  *cb->new_rev_p = new_rev;
 
   return SVN_NO_ERROR;
 }
