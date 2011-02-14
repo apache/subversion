@@ -110,6 +110,23 @@ end_element(void *baton, int state,
 
 /** Capabilities exchange. */
 
+/* Return TRUE iff STR exactly matches any of the elements of LIST. */
+static svn_boolean_t
+match_list(const char *str, const apr_array_header_t *list)
+{
+  int i;
+
+  for (i = 0; i < list->nelts; i++)
+    {
+      const char *this_str = APR_ARRAY_IDX(list, i, char *);
+
+      if (strcmp(this_str, str) == 0)
+        return TRUE;
+    }
+
+  return FALSE;
+}
+
 /* Both server and repository support the capability. */
 static const char *capability_yes = "yes";
 /* Either server or repository does not support the capability. */
@@ -167,22 +184,21 @@ parse_capabilities(ne_request *req,
          slightly more efficiently, but that wouldn't be worth it
          until we have many more capabilities. */
 
-      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_DEPTH, vals))
+      if (match_list(SVN_DAV_NS_DAV_SVN_DEPTH, vals))
         apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_DEPTH,
                      APR_HASH_KEY_STRING, capability_yes);
 
-      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_MERGEINFO, vals))
+      if (match_list(SVN_DAV_NS_DAV_SVN_MERGEINFO, vals))
         /* The server doesn't know what repository we're referring
            to, so it can't just say capability_yes. */
         apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
                      APR_HASH_KEY_STRING, capability_server_yes);
 
-      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_LOG_REVPROPS, vals))
+      if (match_list(SVN_DAV_NS_DAV_SVN_LOG_REVPROPS, vals))
         apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
                      APR_HASH_KEY_STRING, capability_yes);
 
-      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_PARTIAL_REPLAY,
-                                      vals))
+      if (match_list(SVN_DAV_NS_DAV_SVN_PARTIAL_REPLAY, vals))
         apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_PARTIAL_REPLAY,
                      APR_HASH_KEY_STRING, capability_yes);
     }
