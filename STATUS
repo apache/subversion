@@ -361,13 +361,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1038792
-   Fix sporadic ruby test failures due to "Connection refused" errors.
-   Justification:
-     Tests failing for the wrong reason are irritating.
-   Votes:
-     +1: stsp, blair
-
  * r1051632, r1051638
    Ensure that *new_rev is set to an invalid revision before
    attempting a commit, this helps implement svn_fs_commit_txn() and
