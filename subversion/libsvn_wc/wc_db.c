@@ -1057,17 +1057,12 @@ gather_repo_children(const apr_array_header_t **children,
 /* */
 static svn_error_t *
 flush_entries(svn_wc__db_t *db,
+              svn_wc__db_wcroot_t *wcroot,
               const char *local_abspath,
               apr_pool_t *scratch_pool)
 {
-  svn_wc__db_wcroot_t *wcroot;
-  const char *local_relpath;
   svn_wc_adm_access_t *adm_access;
   const char *parent_abspath;
-
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
-                              local_abspath, svn_sqlite__mode_readwrite,
-                              scratch_pool, scratch_pool));
 
   adm_access = apr_hash_get(wcroot->access_cache, local_abspath,
                             APR_HASH_KEY_STRING);
@@ -1487,7 +1482,7 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
                                        scratch_pool));
 
   /* ### worry about flushing child subdirs?  */
-  SVN_ERR(flush_entries(db, local_abspath, scratch_pool));
+  SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -1562,7 +1557,7 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
                                        insert_base_node, &ibb,
                                        scratch_pool));
 
-  SVN_ERR(flush_entries(db, local_abspath, scratch_pool));
+  SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -1635,7 +1630,7 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
                                        insert_base_node, &ibb,
                                        scratch_pool));
 
-  SVN_ERR(flush_entries(db, local_abspath, scratch_pool));
+  SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -1703,7 +1698,7 @@ add_absent_excluded_not_present_node(svn_wc__db_t *db,
                                        insert_base_node, &ibb,
                                        scratch_pool));
 
-  SVN_ERR(flush_entries(db, local_abspath, scratch_pool));
+  SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1807,7 +1802,7 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
                                        db_base_remove, &brb,
                                        scratch_pool));
 
-  SVN_ERR(flush_entries(db, local_abspath, scratch_pool));
+  SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -2767,7 +2762,7 @@ svn_wc__db_op_copy_dir(svn_wc__db_t *db,
 
   SVN_ERR(svn_sqlite__with_transaction(wcroot->sdb, insert_working_node, &iwb,
                                        scratch_pool));
-  SVN_ERR(flush_entries(db, local_abspath, scratch_pool));
+  SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -2842,7 +2837,7 @@ svn_wc__db_op_copy_file(svn_wc__db_t *db,
 
   SVN_ERR(svn_sqlite__with_transaction(wcroot->sdb, insert_working_node, &iwb,
                                        scratch_pool));
-  SVN_ERR(flush_entries(db, local_abspath, scratch_pool));
+  SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -2914,7 +2909,7 @@ svn_wc__db_op_copy_symlink(svn_wc__db_t *db,
   SVN_ERR(svn_sqlite__with_transaction(wcroot->sdb,
                                        insert_working_node, &iwb,
                                        scratch_pool));
-  SVN_ERR(flush_entries(db, local_abspath, scratch_pool));
+  SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -2950,7 +2945,7 @@ svn_wc__db_op_add_directory(svn_wc__db_t *db,
   SVN_ERR(svn_sqlite__with_transaction(wcroot->sdb,
                                        insert_working_node, &iwb,
                                        scratch_pool));
-  SVN_ERR(flush_entries(db, local_abspath, scratch_pool));
+  SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -2986,7 +2981,7 @@ svn_wc__db_op_add_file(svn_wc__db_t *db,
   SVN_ERR(svn_sqlite__with_transaction(wcroot->sdb,
                                        insert_working_node, &iwb,
                                        scratch_pool));
-  SVN_ERR(flush_entries(db, local_abspath, scratch_pool));
+  SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -3026,7 +3021,7 @@ svn_wc__db_op_add_symlink(svn_wc__db_t *db,
   SVN_ERR(svn_sqlite__with_transaction(wcroot->sdb,
                                        insert_working_node, &iwb,
                                        scratch_pool));
-  SVN_ERR(flush_entries(db, local_abspath, scratch_pool));
+  SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -3325,7 +3320,7 @@ svn_wc__db_op_set_changelist(svn_wc__db_t *db,
 
   /* No need to flush the parent entries; changelists were not stored in the
      stub */
-  SVN_ERR(flush_entries(db, local_abspath, scratch_pool));
+  SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -3385,7 +3380,7 @@ svn_wc__db_op_mark_resolved(svn_wc__db_t *db,
     }
 
   /* Some entries have cached the above values. Kapow!!  */
-  SVN_ERR(flush_entries(db, local_abspath, scratch_pool));
+  SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -3493,7 +3488,7 @@ svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
                                        scratch_pool));
 
   /* There may be some entries, and the lock info is now out of date.  */
-  SVN_ERR(flush_entries(db, local_abspath, scratch_pool));
+  SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -3535,7 +3530,7 @@ svn_wc__db_op_revert_actual(svn_wc__db_t *db,
     }
 
   /* Some entries have cached the above values. Kapow!!  */
-  SVN_ERR(flush_entries(db, local_abspath, scratch_pool));
+  SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -3826,7 +3821,7 @@ svn_wc__db_temp_op_remove_entry(svn_wc__db_t *db,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  SVN_ERR(flush_entries(db, local_abspath, scratch_pool));
+  SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_DELETE_NODES));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
@@ -3858,7 +3853,7 @@ svn_wc__db_temp_op_remove_working(svn_wc__db_t *db,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  SVN_ERR(flush_entries(db, local_abspath, scratch_pool));
+  SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_DELETE_WORKING_NODE));
@@ -3881,7 +3876,7 @@ update_depth_values(svn_wc__db_t *db,
   svn_sqlite__stmt_t *stmt;
 
   /* Flush any entries before we start monkeying the database.  */
-  SVN_ERR(flush_entries(db, local_abspath, scratch_pool));
+  SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     excluded
@@ -4450,7 +4445,7 @@ svn_wc__db_temp_op_delete(svn_wc__db_t *db,
   SVN_ERR(svn_sqlite__with_transaction(b.wcroot->sdb, temp_op_delete_txn,
                                        &b, scratch_pool));
 
-  SVN_ERR(flush_entries(db, local_abspath, scratch_pool));
+  SVN_ERR(flush_entries(db, b.wcroot, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -5997,7 +5992,7 @@ svn_wc__db_global_commit(svn_wc__db_t *db,
                                        scratch_pool));
 
   /* We *totally* monkeyed the entries. Toss 'em.  */
-  SVN_ERR(flush_entries(db, local_abspath, scratch_pool));
+  SVN_ERR(flush_entries(db, cb.wcroot, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -6086,7 +6081,7 @@ svn_wc__db_global_update(svn_wc__db_t *db,
 #endif
 
   /* We *totally* monkeyed the entries. Toss 'em.  */
-  SVN_ERR(flush_entries(db, local_abspath, scratch_pool));
+  SVN_ERR(flush_entries(db, ub.wcroot, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -6147,7 +6142,7 @@ svn_wc__db_global_record_fileinfo(svn_wc__db_t *db,
                                        scratch_pool));
 
   /* We *totally* monkeyed the entries. Toss 'em.  */
-  SVN_ERR(flush_entries(db, local_abspath, scratch_pool));
+  SVN_ERR(flush_entries(db, rb.wcroot, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -6193,7 +6188,7 @@ svn_wc__db_lock_add(svn_wc__db_t *db,
   SVN_ERR(svn_sqlite__insert(NULL, stmt));
 
   /* There may be some entries, and the lock info is now out of date.  */
-  SVN_ERR(flush_entries(db, local_abspath, scratch_pool));
+  SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -6228,7 +6223,7 @@ svn_wc__db_lock_remove(svn_wc__db_t *db,
   SVN_ERR(svn_sqlite__step_done(stmt));
 
   /* There may be some entries, and the lock info is now out of date.  */
-  SVN_ERR(flush_entries(db, local_abspath, scratch_pool));
+  SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -8191,7 +8186,8 @@ svn_wc__db_temp_op_set_base_incomplete(svn_wc__db_t *db,
                                     local_dir_abspath, FALSE, scratch_pool);
 
      if (pdh != NULL)
-       SVN_ERR(flush_entries(db, local_dir_abspath, scratch_pool));
+       SVN_ERR(flush_entries(db, pdh->wcroot, local_dir_abspath,
+                             scratch_pool));
    }
 
   return SVN_NO_ERROR;
@@ -8261,7 +8257,7 @@ svn_wc__db_temp_op_start_directory_update(svn_wc__db_t *db,
                                        start_directory_update_txn, &du,
                                        scratch_pool));
 
-  SVN_ERR(flush_entries(db, local_abspath, scratch_pool));
+  SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -8412,7 +8408,7 @@ make_copy_txn(void *baton,
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
 
-  SVN_ERR(flush_entries(mcb->db, mcb->local_abspath, iterpool));
+  SVN_ERR(flush_entries(mcb->db, mcb->wcroot, mcb->local_abspath, iterpool));
 
   svn_pool_destroy(iterpool);
 
@@ -8585,7 +8581,7 @@ svn_wc__db_temp_op_set_file_external(svn_wc__db_t *db,
     }
   SVN_ERR(svn_sqlite__step_done(stmt));
 
-  SVN_ERR(flush_entries(db, local_abspath, scratch_pool));
+  SVN_ERR(flush_entries(db, pdh->wcroot, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -8790,7 +8786,7 @@ svn_wc__db_temp_op_set_rev_and_repos_relpath(svn_wc__db_t *db,
 
   VERIFY_USABLE_WCROOT(baton.wcroot);
 
-  SVN_ERR(flush_entries(db, local_abspath, scratch_pool));
+  SVN_ERR(flush_entries(db, baton.wcroot, local_abspath, scratch_pool));
 
   SVN_ERR(svn_sqlite__with_transaction(baton.wcroot->sdb,
                                        set_rev_relpath_txn,
@@ -8884,7 +8880,7 @@ svn_wc__db_temp_op_set_new_dir_to_incomplete(svn_wc__db_t *db,
 
   VERIFY_USABLE_WCROOT(baton.wcroot);
 
-  SVN_ERR(flush_entries(db, local_abspath, scratch_pool));
+  SVN_ERR(flush_entries(db, baton.wcroot, local_abspath, scratch_pool));
 
   SVN_ERR(svn_sqlite__with_transaction(baton.wcroot->sdb,
                                        set_new_dir_to_incomplete_txn,
