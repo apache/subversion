@@ -361,15 +361,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1053208
-   svn_error_raise_on_malfunction() needs to call svn_error__locate().
-   Justification:
-     If this is not done, then svn_error_raise_on_malfunction() will
-     not properly set the filename and line number in the svn_error_t
-     it creates.
-   Votes:
-     +1: blair, danielsh, rhuijben
-
 * r1058722
    Initialize report_info_t's prop_encoding member in
    libsvn_ra_serf/update.c:start_report() rather than using what was

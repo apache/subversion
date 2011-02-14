@@ -36,7 +36,15 @@ static const char SVN_FILE_LINE_UNDEFINED[] = "svn:<undefined>";
 #include "svn_private_config.h"
 
 
-/*** Helpers for creating errors ***/
+/*
+ * Undefine the helpers for creating errors.
+ *
+ * *NOTE*: Any use of these functions in any other function may need
+ * to call svn_error__locate() because the macro that would otherwise
+ * do this is being undefined and the filename and line number will
+ * not be properly set in the static error_file and error_line
+ * variables.
+ */
 #undef svn_error_create
 #undef svn_error_createf
 #undef svn_error_quick_wrap
@@ -503,6 +511,11 @@ svn_error_raise_on_malfunction(svn_boolean_t can_return,
 {
   if (!can_return)
     abort(); /* Nothing else we can do as a library */
+
+  /* The filename and line number of the error source needs to be set
+     here because svn_error_createf() is not the macro defined in
+     svn_error.h but the real function. */
+  svn_error__locate(file, line);
 
   if (expr)
     return svn_error_createf(SVN_ERR_ASSERTION_FAIL, NULL,
