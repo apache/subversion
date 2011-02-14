@@ -107,8 +107,6 @@ typedef struct svn_wc__db_pdh_t {
   /* What wcroot does this directory belong to?  */
   svn_wc__db_wcroot_t *wcroot;
 
-  /* The parent directory's per-dir information. */
-  struct svn_wc__db_pdh_t *parent;
 } svn_wc__db_pdh_t;
 
 
