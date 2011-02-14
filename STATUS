@@ -246,6 +246,13 @@ Candidate changes:
    Votes:
      +1: julianfoad
 
+ * r1068988
+   Don't use globbing where it's not necessary.
+   Justification:
+     It's an easy optimisation well worth doing!
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
