@@ -646,35 +646,6 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
 }
 
 svn_error_t *
-svn_wc__db_pdh_navigate_to_parent(svn_wc__db_pdh_t **parent_pdh,
-                                  svn_wc__db_t *db,
-                                  svn_wc__db_pdh_t *child_pdh,
-                                  svn_sqlite__mode_t smode,
-                                  apr_pool_t *scratch_pool)
-{
-  const char *parent_abspath;
-  const char *local_relpath;
-
-  if ((*parent_pdh = child_pdh->parent) != NULL
-      && (*parent_pdh)->wcroot != NULL)
-    return SVN_NO_ERROR;
-
-  /* Make sure we don't see the root as its own parent */
-  SVN_ERR_ASSERT(!svn_dirent_is_root(child_pdh->local_abspath,
-                                     strlen(child_pdh->local_abspath)));
-
-  parent_abspath = svn_dirent_dirname(child_pdh->local_abspath, scratch_pool);
-  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(parent_pdh, &local_relpath, db,
-                              parent_abspath, smode,
-                              scratch_pool, scratch_pool));
-  VERIFY_USABLE_WCROOT((*parent_pdh)->wcroot);
-
-  child_pdh->parent = *parent_pdh;
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
 svn_wc__db_drop_root(svn_wc__db_t *db,
                      const char *local_abspath,
                      apr_pool_t *scratch_pool)
