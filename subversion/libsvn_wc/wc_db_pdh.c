@@ -608,7 +608,6 @@ svn_wc__db_pdh_parse_local_abspath(svn_wc__db_pdh_t **pdh,
 
       /* Point the child PDH at this (new) parent PDH. This will allow for
          easy traversals without path munging.  */
-      child_pdh->parent = parent_pdh;
       child_pdh = parent_pdh;
 
       /* Loop if we haven't reached the PDH we found, or the abspath
