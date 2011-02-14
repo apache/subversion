@@ -465,26 +465,26 @@ Test #  Mode   Test Description
   Point Person: Unassigned
 
   58    XFAIL  update a nonexistent child of a copied dir
-  Issue #: None
-  Target Milestone: N/A 
+  Issue #: 3807
+  Target Milestone: 1.7.0
   Thread: None
   Log: r1035347
-  Point Person: julianfoad
+  Point Person:
 
 LISTING: upgrade_tests.py
 
 Test #  Mode   Test Description
 ------  -----  ----------------
    8    XFAIL  3x same wc upgrade 1.4.0 test
-  Issue #: None
-  Target Milestone: N/A
+  Issue #: 2530
+  Target Milestone: Unscheduled
   Thread: N/A
   Log: r959804
   Point Person: rhuijben
 
   13    XFAIL  check status delete and delete --keep-local
-  Issue #: None
-  Target Milestone: N/A
+  Issue #: 3808
+  Target Milestone: 1.7.0
   Thread: N/A
   Log: r991512
-  Point Person: rhuijben
+  Point Person: N/A
