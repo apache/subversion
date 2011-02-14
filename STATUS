@@ -64,6 +64,7 @@ Candidate changes:
      Fixes an uninitialized variable that can result in a segfault.
    Votes:
      +1: pburba
+     +1: danielsh
 
  * r916286, r917512
    Fixes failing commmits (with vague error messages) seen on client
