@@ -1751,6 +1751,7 @@ def merge_replace_causes_tree_conflict(sbox):
 
 #----------------------------------------------------------------------
 @XFail()
+@Issue(3806)
 def merge_replace_causes_tree_conflict2(sbox):
   "replace vs. delete tree-conflicts"
 

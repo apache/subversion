@@ -292,11 +292,11 @@ Test #  Mode   Test Description
   Point Person: julianfoad
   
   23    XFAIL  replace vs. delete tree-conflicts
-  Issue #: None
-  Target Milestone: N/A
+  Issue #: 3806
+  Target Milestone: Unscheduled
   Thread: N/A
   Log: r879162
-  Point Person: neels
+  Point Person:
 
 LISTING: patch_tests.py
 
