@@ -298,6 +298,12 @@ load_config(svn_ra_serf__session_t *session,
       status = apr_sockaddr_info_get(&proxy_addr, proxy_host,
                                      APR_UNSPEC, proxy_port, 0,
                                      session->pool);
+      if (status)
+        {
+          return svn_error_wrap_apr(status,
+                                    _("Could not resolve proxy server '%s'"),
+                                    proxy_host);
+        }
       session->using_proxy = TRUE;
       serf_config_proxy(session->context, proxy_addr);
     }
