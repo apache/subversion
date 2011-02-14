@@ -2194,7 +2194,6 @@ open_connection_if_needed(svn_ra_serf__session_t *sess, int active_reqs)
       sess->conns[cur] = apr_palloc(sess->pool, sizeof(*sess->conns[cur]));
       sess->conns[cur]->bkt_alloc = serf_bucket_allocator_create(sess->pool,
                                                                  NULL, NULL);
-      sess->conns[cur]->address = sess->conns[0]->address;
       sess->conns[cur]->hostinfo = sess->conns[0]->hostinfo;
       sess->conns[cur]->using_ssl = sess->conns[0]->using_ssl;
       sess->conns[cur]->using_compression = sess->conns[0]->using_compression;

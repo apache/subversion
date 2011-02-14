@@ -74,9 +74,6 @@ typedef struct svn_ra_serf__connection_t {
   /* Host name */
   const char *hostinfo;
 
-  /* The address where the connections are made to */
-  apr_sockaddr_t *address;
-
   /* Are we using ssl */
   svn_boolean_t using_ssl;
 
