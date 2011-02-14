@@ -176,15 +176,6 @@ const char *
 svn_wc__db_pdh_compute_relpath(const svn_wc__db_pdh_t *pdh,
                                apr_pool_t *result_pool);
 
-/* Gets or opens the PDH of the parent directory of CHILD_PDH.
-   (This function doesn't verify if the PDHs are related) */
-svn_error_t *
-svn_wc__db_pdh_navigate_to_parent(svn_wc__db_pdh_t **parent_pdh,
-                                  svn_wc__db_t *db,
-                                  svn_wc__db_pdh_t *child_pdh,
-                                  svn_sqlite__mode_t smode,
-                                  apr_pool_t *scratch_pool);
-
 /* Assert that the given WCROOT is usable.
    NOTE: the expression is multiply-evaluated!!  */
 #define VERIFY_USABLE_WCROOT(wcroot)  SVN_ERR_ASSERT(               \
