@@ -62,6 +62,7 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * don't double-update file externals (issue #3665)
     * improve output of multi-target update (issue #3693)
     * make 'svn up --set-depth=exclude FILE' work (issue #3736)
+    * return correct error code for 'svn cat' on nonexisting file (issue #3713)
     * fixed: wc-to-wc copy of a switch source (issue #1802)
     * fixed: 'svn st' reports symlinks as obstructed items (issue #2284)
     * fixed: 'cd e:\; svn up e:\' fails (issue #2556)
