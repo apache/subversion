@@ -2741,7 +2741,7 @@ def ls_multiple_wc_targets(sbox):
 
   # Verify error
   if not expected_err_re.match("".join(error)):
-    raise svntest.Failure('Cat failed: expected error "%s", but received '
+    raise svntest.Failure('ls failed: expected error "%s", but received '
                           '"%s"' % (expected_err, "".join(error)))
 
 def ls_multiple_url_targets(sbox):
@@ -2768,7 +2768,7 @@ def ls_multiple_url_targets(sbox):
 
   # Verify error
   if not expected_err_re.match("".join(error)):
-    raise svntest.Failure('Cat failed: expected error "%s", but received "%s"' % \
+    raise svntest.Failure('ls failed: expected error "%s", but received "%s"' % \
                           (expected_err, "".join(error)))
 
 ########################################################################
