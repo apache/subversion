@@ -1633,7 +1633,8 @@ start_report(svn_ra_serf__xml_parser_t *parser,
     }
   else if (state == IGNORE_PROP_NAME)
     {
-      push_state(parser, ctx, PROP);
+      report_info_t *info = push_state(parser, ctx, PROP);
+      info->prop_encoding = svn_xml_get_attr_value("encoding", attrs);
     }
   else if (state == NEED_PROP_NAME)
     {
@@ -1643,6 +1644,7 @@ start_report(svn_ra_serf__xml_parser_t *parser,
 
       info->prop_ns = name.namespace;
       info->prop_name = apr_pstrdup(parser->state->pool, name.name);
+      info->prop_encoding = svn_xml_get_attr_value("encoding", attrs);
       info->prop_val = NULL;
       info->prop_val_len = 0;
     }
