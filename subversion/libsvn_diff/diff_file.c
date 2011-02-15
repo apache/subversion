@@ -518,7 +518,7 @@ static svn_error_t *
 find_identical_suffix(apr_off_t *suffix_lines, struct file_info file[],
                       apr_size_t file_len, apr_pool_t *pool)
 {
-  struct file_info file_for_suffix[4];
+  struct file_info file_for_suffix[4] = { { 0 }  };
   apr_off_t length[4];
   apr_off_t suffix_min_chunk0;
   apr_off_t suffix_min_offset0;
@@ -528,8 +528,6 @@ find_identical_suffix(apr_off_t *suffix_lines, struct file_info file[],
   apr_off_t lines = 0;
   svn_boolean_t had_cr, had_nl;
   apr_size_t i;
-
-  memset(file_for_suffix, 0, sizeof(file_for_suffix));
 
   /* Initialize file_for_suffix[].
      Read last chunk, position curp at last byte. */
@@ -1227,9 +1225,8 @@ svn_diff_file_diff_2(svn_diff_t **diff,
                      const svn_diff_file_options_t *options,
                      apr_pool_t *pool)
 {
-  svn_diff__file_baton_t baton;
+  svn_diff__file_baton_t baton = { 0 };
 
-  memset(&baton, 0, sizeof(baton));
   baton.options = options;
   baton.files[0].path = original;
   baton.files[1].path = modified;
@@ -1249,9 +1246,8 @@ svn_diff_file_diff3_2(svn_diff_t **diff,
                       const svn_diff_file_options_t *options,
                       apr_pool_t *pool)
 {
-  svn_diff__file_baton_t baton;
+  svn_diff__file_baton_t baton = { 0 };
 
-  memset(&baton, 0, sizeof(baton));
   baton.options = options;
   baton.files[0].path = original;
   baton.files[1].path = modified;
@@ -1273,9 +1269,8 @@ svn_diff_file_diff4_2(svn_diff_t **diff,
                       const svn_diff_file_options_t *options,
                       apr_pool_t *pool)
 {
-  svn_diff__file_baton_t baton;
+  svn_diff__file_baton_t baton = { 0 };
 
-  memset(&baton, 0, sizeof(baton));
   baton.options = options;
   baton.files[0].path = original;
   baton.files[1].path = modified;
