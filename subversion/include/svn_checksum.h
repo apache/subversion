@@ -241,9 +241,12 @@ svn_checksum_size(const svn_checksum_t *checksum);
 
 
 /**
- * Return an error of type #SVN_ERR_CHECKSUM_MISMATCH if @a actual and 
- * @a expected checksums do not match, otherwise, return #SVN_NO_ERROR.
- * Use @a fmt, and the following parameters to populate the error message.
+ * Return an error of type #SVN_ERR_CHECKSUM_MISMATCH for @a actual and 
+ * @a expected checksums which do not match.  Use @a fmt, and the following
+ * parameters to populate the error message.
+ *
+ * @note This function does not actually check for the mismatch, it just
+ * constructs the error.
  *
  * @a scratch_pool is used for temporary allocations; the returned error
  * will be allocated in its own pool (as is typical).
