@@ -4046,14 +4046,10 @@ close_file(void *file_baton,
   if (fb->new_text_base_md5_checksum && expected_md5_checksum
       && !svn_checksum_match(expected_md5_checksum,
                              fb->new_text_base_md5_checksum))
-    return svn_error_createf(SVN_ERR_CHECKSUM_MISMATCH, NULL,
-            _("Checksum mismatch for '%s':\n"
-              "   expected:  %s\n"
-              "     actual:  %s\n"),
-            svn_dirent_local_style(fb->local_abspath, pool),
-            expected_md5_digest,
-            svn_checksum_to_cstring_display(fb->new_text_base_md5_checksum,
-                                            pool));
+    return svn_checksum_mismatch_err(expected_md5_checksum,
+                            fb->new_text_base_md5_checksum, pool,
+                            _("Checksum mismatch for '%s'"),
+                            svn_dirent_local_style(fb->local_abspath, pool));
 
   SVN_ERR(svn_wc_read_kind(&kind, eb->wc_ctx, fb->local_abspath, TRUE, pool));
   if (kind == svn_node_none && ! fb->adding_file)

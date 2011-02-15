@@ -3875,16 +3875,10 @@ txn_body_apply_textdelta(void *baton, trail_t *trail)
          check could be more comprehensive? */
       if (tb->base_checksum->kind == checksum->kind
             && !svn_checksum_match(tb->base_checksum, checksum))
-        return svn_error_createf
-          (SVN_ERR_CHECKSUM_MISMATCH,
-           NULL,
-           apr_psprintf(trail->pool, "%s:\n%s\n%s\n",
-                        _("Base checksum mismatch on '%s'"),
-                        _("   expected:  %s"),
-                        _("     actual:  %s")),
-           tb->path,
-           svn_checksum_to_cstring_display(tb->base_checksum, trail->pool),
-           svn_checksum_to_cstring_display(checksum, trail->pool));
+        return svn_checksum_mismatch_err(tb->base_checksum, checksum,
+                            trail->pool,
+                            _("Base checksum mismatch on '%s'"),
+                            tb->path);
     }
 
   /* Make a readable "source" stream out of the current contents of

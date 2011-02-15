@@ -1275,15 +1275,9 @@ svn_fs_base__dag_finalize_edits(dag_node_t *file,
         return svn_error_create(SVN_ERR_BAD_CHECKSUM_KIND, NULL, NULL);
 
       if (! svn_checksum_match(checksum, test_checksum))
-        return svn_error_createf
-          (SVN_ERR_CHECKSUM_MISMATCH, NULL,
-           apr_psprintf(pool, "%s:\n%s\n%s\n",
+        return svn_checksum_mismatch_err(checksum, test_checksum, pool,
                         _("Checksum mismatch on representation '%s'"),
-                        _("   expected:  %s"),
-                        _("     actual:  %s")),
-           noderev->edit_key,
-           svn_checksum_to_cstring_display(checksum, pool),
-           svn_checksum_to_cstring_display(test_checksum, pool));
+                        noderev->edit_key);
     }
 
   /* Now, we want to delete the old representation and replace it with

@@ -1022,16 +1022,9 @@ svn_fs_fs__dag_finalize_edits(dag_node_t *file,
       SVN_ERR(svn_fs_fs__dag_file_checksum(&file_checksum, file,
                                            checksum->kind, pool));
       if (!svn_checksum_match(checksum, file_checksum))
-        return svn_error_createf(SVN_ERR_CHECKSUM_MISMATCH, NULL,
-                                 apr_psprintf(pool, "%s:\n%s\n%s\n",
-                                              _("Checksum mismatch for '%s'"),
-                                              _("   expected:  %s"),
-                                              _("     actual:  %s")),
-                                 file->created_path,
-                                 svn_checksum_to_cstring_display(checksum,
-                                                                 pool),
-                                 svn_checksum_to_cstring_display(file_checksum,
-                                                                 pool));
+        return svn_checksum_mismatch_err(checksum, file_checksum, pool,
+                                         _("Checksum mismatch for '%s'"),
+                                         file->created_path);
     }
 
   return SVN_NO_ERROR;
