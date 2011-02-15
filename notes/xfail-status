@@ -305,7 +305,7 @@ Test #  Mode   Test Description
   29    XFAIL  patch doesn't append newline to properties
   Issue #: None 
   Target Milestone: N/A 
-  Thread: N/A
+  Thread: http://svn.haxx.se/dev/archive-2011-02/0350.shtml
   Log: r1033709
   Point Person: danielsh
 
@@ -374,7 +374,7 @@ Test #  Mode   Test Description
   38    XFAIL  copy directory with switched subdir
   Issue #: None
   Target Milestone: N/A 
-  Thread: N/A
+  Thread: http://svn.haxx.se/dev/archive-2011-02/0360.shtml
   Log: r879627
   Point Person: rhuijben
   
