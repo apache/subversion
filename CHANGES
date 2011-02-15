@@ -128,6 +128,25 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * Deprecate the SVNClientSynchronized class in JavaHL (issue #2755)
 
 
+Version 1.6.16
+(?? Feb 2011, from /branches/1.6.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.6.16
+
+  User-visible changes:
+   * more improvement to the 'blame -g' memory leak from 1.6.15 (r1041438)
+
+  Developer-visible changes:
+   * ensure report_info_t is properly initialized by ra_serf (r1058722)
+   * locate errors properly on a malfunction (r1053208)
+   * fix output param timing of svn_fs_commit_txn() on fsfs (r1051751)
+   * for svn_fs_commit_txn(), set invalid rev on failed commit (r1051632, -8)
+   * fix sporadic Ruby bindings test failures (r1038792)
+   * fix JavaHL JVM object leak when dumping large revisions (r947006)
+   * use Perl to resolve symlinks when building swig-pl (r1039040)
+   * allow Perl bindings to build within a symlinked working copy (r1036534)
+   * don't overwrite the LD_LIBRARY_PATH during make check-swig-pl (r946355)
+
+
 Version 1.6.15
 (26 Nov 2010, from /branches/1.6.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.6.15
