@@ -338,6 +338,63 @@ def info_url_special_characters(sbox):
   for url in special_urls:
     svntest.actions.run_and_verify_info([expected], url)
 
+def info_multiple_wc_targets(sbox):
+  "info multiple wc targets"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  alpha = sbox.ospath('A/B/E/alpha')
+  beta = sbox.ospath('A/B/E/beta')
+  non_existent_path = os.path.join(wc_dir, 'non-existent')
+
+  # All targets are existing
+  svntest.actions.run_and_verify_svn2(None, None, [],
+                                      0, 'info', alpha, beta)
+
+  # One non-existing target
+  expected_err = "svn: warning: W155010: The node '" + \
+      re.escape(os.path.abspath(non_existent_path)) + \
+      "' was not found.\n" + ".*\n" + \
+      ".*\nsvn: E200009: Could not display info for all targets because " + \
+      "some targets don't exist\n"
+  expected_err_re = re.compile(expected_err)
+
+  exit_code, output, error = svntest.main.run_svn(1, 'info', alpha, 
+                                                  non_existent_path, beta)
+
+  # Verify error
+  if not expected_err_re.match("".join(error)):
+    raise svntest.Failure('info failed: expected error "%s", but received '
+                          '"%s"' % (expected_err, "".join(error)))
+
+def info_multiple_url_targets(sbox):
+  "info multiple url targets"
+
+  sbox.build(read_only = True, create_wc = False)
+
+  alpha = sbox.repo_url +  '/A/B/E/alpha'
+  beta = sbox.repo_url +  '/A/B/E/beta'
+  non_existent_url = sbox.repo_url +  '/non-existent'
+
+  # All targets are existing
+  svntest.actions.run_and_verify_svn2(None, None, [],
+                                      0, 'info', alpha, beta)
+
+  # One non-existing target
+  expected_err = "svn: warning: W170000: .*\n" + ".*\n" + \
+      ".*\nsvn: E200009: Could not display info for all targets because " + \
+      "some targets don't exist\n"
+  expected_err_re = re.compile(expected_err)
+
+  exit_code, output, error = svntest.main.run_svn(1, 'info', alpha, 
+                                                  non_existent_url, beta)
+
+  # Verify error
+  if not expected_err_re.match("".join(error)):
+    raise svntest.Failure('info failed: expected error "%s", but received "%s"' % \
+                          (expected_err, "".join(error)))
+
 ########################################################################
 # Run the tests
 
@@ -348,6 +405,8 @@ test_list = [ None,
               info_on_mkdir,
               info_wcroot_abspaths,
               info_url_special_characters,
+              info_multiple_wc_targets,
+              info_multiple_url_targets,
              ]
 
 if __name__ == '__main__':
