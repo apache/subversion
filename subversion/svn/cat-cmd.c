@@ -32,6 +32,8 @@
 #include "svn_error.h"
 #include "cl.h"
 
+#include "svn_private_config.h"
+
 
 /*** Code. ***/
 
@@ -47,7 +49,7 @@ svn_cl__cat(apr_getopt_t *os,
   int i;
   svn_stream_t *out;
   apr_pool_t *subpool = svn_pool_create(pool);
-  svn_boolean_t saw_a_problem = FALSE;
+  svn_boolean_t seen_nonexistent_target = FALSE;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
@@ -83,12 +85,14 @@ svn_cl__cat(apr_getopt_t *os,
                            SVN_ERR_FS_NOT_FOUND,
                            SVN_NO_ERROR));
       if (! success)
-        saw_a_problem = TRUE;
+        seen_nonexistent_target = TRUE;
     }
   svn_pool_destroy(subpool);
 
-  if (saw_a_problem)
-    return svn_error_create(SVN_ERR_BASE, NULL, NULL);
+  if (seen_nonexistent_target)
+    return svn_error_create(
+      SVN_ERR_ILLEGAL_TARGET, NULL, 
+      _("Could not cat all targets because some targets don't exist"));
   else
     return SVN_NO_ERROR;
 }
