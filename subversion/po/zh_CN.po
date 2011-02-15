@@ -55,8 +55,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.7\n"
 "Report-Msgid-Bugs-To: dev@subversion.apache.org\n"
-"POT-Creation-Date: 2011-02-04 14:37+0800\n"
-"PO-Revision-Date: 2011-02-04 14:34+0800\n"
+"POT-Creation-Date: 2011-02-15 15:12+0800\n"
+"PO-Revision-Date: 2011-02-15 15:11+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.apache.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.apache.org>\n"
 "Language: \n"
@@ -1282,14 +1282,8 @@ msgid "'%s' already exists"
 msgstr "“%s” 已存在"
 
 #, c-format
-msgid ""
-"Checksum mismatch for '%s':\n"
-"   expected:  %s\n"
-"     actual:  %s\n"
-msgstr ""
-"'%s' 的校验和不匹配:\n"
-"      期望:  %s\n"
-"      实际:  %s\n"
+msgid "Checksum mismatch for '%s'"
+msgstr "'%s' 的校验和不匹配"
 
 #, c-format
 msgid ""
@@ -2298,10 +2292,6 @@ msgid ""
 "Can't increment mergeinfo count on *file* node-revision %%s to %%%s (> 1)"
 msgstr "不能在*文件*修订节点增加合并信息计数 %%s 到 %%%s (> 1)"
 
-#, c-format
-msgid "Checksum mismatch for '%s'"
-msgstr "'%s' 的校验和不匹配"
-
 msgid "Empty noderev in cache"
 msgstr "缓存中 noderev 为空"
 
@@ -3131,44 +3121,6 @@ msgid "Error reading spooled %s request response"
 msgstr "读取请求 %s 响应的脱机数据时出现错误"
 
 #, c-format
-msgid "%s Authentication failed"
-msgstr "%s 认证失败"
-
-#, c-format
-msgid ""
-"%s authentication not supported.\n"
-"Authentication failed"
-msgstr ""
-"不支持 %s 认证。\n"
-"认证失败"
-
-msgid "Missing 'realm' attribute in Authorization header"
-msgstr "授权头丢失属性 “realm”"
-
-msgid ""
-"No more credentials or we tried too many times.\n"
-"Authentication failed"
-msgstr ""
-"没有凭证或已经试了太多次。\n"
-"认证失败"
-
-msgid "Proxy authentication failed"
-msgstr "代理认证失败"
-
-msgid "Incorrect response-digest in Authentication-Info header."
-msgstr "认证信息头中的 response-digest 错误"
-
-#, c-format
-msgid ""
-"Initialization of the GSSAPI context failed.\n"
-" %s\n"
-" %s\n"
-msgstr ""
-"初始化 GSSAPI 失败。\n"
-" %s\n"
-" %s\n"
-
-#, c-format
 msgid "%s of '%s': %d %s"
 msgstr "%s 于 '%s': %d %s"
 
@@ -3256,8 +3208,8 @@ msgid "Module for accessing a repository via WebDAV protocol using serf."
 msgstr "通过 WebDAV 协议使用 serf 访问版本库的模块。"
 
 #, c-format
-msgid "Could not lookup hostname `%s'"
-msgstr "无法解析主机 “%s” 的地址"
+msgid "Could not resolve proxy server '%s'"
+msgstr "不能解析代理服务器“%s”"
 
 msgid "The OPTIONS response did not include the requested resourcetype value"
 msgstr "OPTIONS 响应中没有包含请求的 resourcetype 值。"
@@ -3289,6 +3241,16 @@ msgstr "非法 DAV:status CDATA '%s'"
 msgid "XML parsing failed: (%d %s)"
 msgstr "XML 解析失败: (%d %s)"
 
+msgid ""
+"No more credentials or we tried too many times.\n"
+"Authentication failed"
+msgstr ""
+"没有凭证或已经试了太多次。\n"
+"认证失败"
+
+msgid "Proxy authentication failed"
+msgstr "代理认证失败"
+
 #, c-format
 msgid "Premature EOF seen from server (http status=%d)"
 msgstr "从服务器发现 EOF 太早 (http status=%d)"
@@ -3305,14 +3267,6 @@ msgstr "PROPFIND 响应中没有包含请求的 version-controlled-configuration
 #, c-format
 msgid "'%s': no lock token available"
 msgstr "“%s”：没有可用的锁定令牌"
-
-#, c-format
-msgid "SSPI Initialization failed."
-msgstr "SSPI初始化失败"
-
-#, c-format
-msgid "Authentication failed with error 0x%x."
-msgstr "认证失败，错误代码 0x%x 。"
 
 #, c-format
 msgid "Unknown hostname '%s'"
@@ -3961,6 +3915,10 @@ msgid "Error opening db lockfile"
 msgstr "打开数据库锁文件出错"
 
 #, c-format
+msgid "'%s' is an existing repository"
+msgstr "版本库的“%s”已经存在"
+
+#, c-format
 msgid "'%s' is a subdirectory of an existing repository rooted at '%s'"
 msgstr "“%s” 是当前根为 “%s” 的版本库的子目录"
 
@@ -4010,6 +3968,19 @@ msgstr "不能解锁缓存互斥体"
 msgid "Can't create cache mutex"
 msgstr "不能创建缓存互斥体"
 
+#. We are OOM. There is no need to proceed with "half a cache".
+#.
+#, c-format
+msgid "OOM"
+msgstr "内存不足"
+
+#, c-format
+msgid "APR doesn't support threads"
+msgstr "APR 不支持 线程"
+
+msgid "Can't iterate a membuffer-based cache"
+msgstr "不能迭代基于内存的缓存"
+
 #, c-format
 msgid "Unknown memcached error while reading"
 msgstr "当读取时出现未知的 memcached 错误"
@@ -4044,6 +4015,16 @@ msgstr "增加 memcache 服务器时出现未知错误"
 #, c-format
 msgid "Unknown error creating apr_memcache_t"
 msgstr "创建 memcache apr_memcache_t 时出现未知错误"
+
+#, c-format
+msgid ""
+"%s:\n"
+"   expected:  %s\n"
+"     actual:  %s\n"
+msgstr ""
+"%s:\n"
+"      期望:  %s\n"
+"      实际:  %s\n"
 
 #, c-format
 msgid "Error initializing command line arguments"
@@ -5539,6 +5520,16 @@ msgstr ""
 "       记录:  %s\n"
 
 #, c-format
+msgid ""
+"Checksum mismatch for '%s':\n"
+"   expected:  %s\n"
+"     actual:  %s\n"
+msgstr ""
+"'%s' 的校验和不匹配:\n"
+"      期望:  %s\n"
+"      实际:  %s\n"
+
+#, c-format
 msgid "Unrecognized node kind: '%s'"
 msgstr "无法识别的节点种类: “%s”"
 
@@ -5629,6 +5620,14 @@ msgstr "不能处理“%s”的状态"
 #, c-format
 msgid "Can't store properties for '%s' in '%s'."
 msgstr "不能存储 '%s' 的属性，在 '%s' 中。"
+
+#, c-format
+msgid "Can't revert '%s' without reverting children"
+msgstr "不能恢复 '%s'，而不恢复孩子。"
+
+#, c-format
+msgid "Can't revert '%s' without reverting parent"
+msgstr "不能恢复 '%s'，而不恢复父亲。"
 
 #, c-format
 msgid "Corrupt data for '%s'"
@@ -5742,6 +5741,9 @@ msgstr "为 '%s' 处理 post-commit 出错"
 #, c-format
 msgid "Unrecognized work item in the queue associated with '%s'"
 msgstr "“%s” 关联的队列中的项目无法识别"
+
+msgid "Could not add all targets because some targets don't exist"
+msgstr "因为一些目标不存在，所以不能增加全部目标"
 
 msgid "'verbose' option invalid in XML mode"
 msgstr "在XML模式中“verbose”选项无效"
@@ -6223,6 +6225,9 @@ msgstr "%b %d %H:%M"
 
 msgid "%b %d  %Y"
 msgstr "%Y-%m-%d"
+
+msgid "Could not list all targets because some targets don't exist"
+msgstr "因为一些目标不存在，所以不能列出全部目标"
 
 msgid "Lock comment contains a zero byte"
 msgstr "加锁注释中有一个零字节"
@@ -7906,6 +7911,9 @@ msgstr ""
 "    !     C wc/qaz.c\n"
 "          >   local missing, incoming edit upon update\n"
 "    D       wc/qax.c\n"
+
+msgid "don't print unversioned items"
+msgstr "不打印未版本控制的条目"
 
 #, fuzzy
 msgid ""
@@ -10054,8 +10062,20 @@ msgid ""
 msgstr ""
 "在使用主机名称监听时，首选 IPv6\n"
 "                             [默认首选 IPv4。不支持在守护进程模式中同时使用 "
-"IPv4 和 IPv6\n"
-"                             如果需要，请使用 inetd 模式或隧道模式。]"
+"IPv4\n"
+"                             和 IPv6。如果需要，请使用 inetd 模式或隧道模式。]"
+
+msgid ""
+"size of the extra in-memory cache in MB used to\n"
+"                             minimize redundant operations.\n"
+"                             Default is 128 for threaded and 16 for non-\n"
+"                             threaded mode.\n"
+"                             [used for FSFS repositories only]"
+msgstr ""
+"用来减少冗余操作的内存中的额外高速缓存的大小(MB)\n"
+"                             线程模型的默认值是 128，非线程模型的默认值是 "
+"16。\n"
+"                             [仅用于 FSFS 仓库]"
 
 #. ### Making the assumption here that WIN32 never has fork and so
 #. * ### this option never exists when --service exists.
