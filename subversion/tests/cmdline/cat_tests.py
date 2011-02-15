@@ -158,8 +158,9 @@ def cat_skip_uncattable(sbox):
   svntest.actions.run_and_verify_svn2(None, expected_out, expected_err2, 1,
                                        'cat', rho_path, new_file_path)
 
-  expected_err3 = expected_err1 + expected_err2 + ".*\n" + \
-      "svn: E200000: A problem occurred; see other errors for details\n"
+  expected_err3 = expected_err1 + expected_err2 + \
+      ".*\nsvn: E200009: Could not cat all targets because some targets " + \
+      "don't exist\n"
   expected_err_re = re.compile(expected_err3)
 
   exit_code, output, error = svntest.main.run_svn(1, 'cat', rho_path, G_path, new_file_path)
