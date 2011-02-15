@@ -87,9 +87,6 @@ struct svn_ra_serf__propfind_context_t {
   /* the list of requested properties */
   const svn_ra_serf__dav_props_t *find_props;
 
-  /* should we cache the values of this propfind in our session? */
-  svn_boolean_t cache_props;
-
   /* hash table that will be updated with the properties
    *
    * This can be shared between multiple svn_ra_serf__propfind_context_t
@@ -385,18 +382,6 @@ end_propfind(svn_ra_serf__xml_parser_t *parser,
                                 ctx->current_path, ctx->rev,
                                 ns, pname, val_str,
                                 ctx->pool);
-      if (ctx->cache_props)
-        {
-          ns = apr_pstrdup(ctx->sess->pool, info->ns);
-          pname = apr_pstrdup(ctx->sess->pool, info->name);
-          val = apr_pmemdup(ctx->sess->pool, info->val, info->val_len);
-          val_str = svn_string_ncreate(val, info->val_len, ctx->sess->pool);
-
-          svn_ra_serf__set_ver_prop(ctx->sess->cached_props,
-                                    ctx->current_path, ctx->rev,
-                                    ns, pname, val_str,
-                                    ctx->sess->pool);
-        }
 
       svn_ra_serf__xml_pop_state(parser);
     }
@@ -533,40 +518,6 @@ create_propfind_body(serf_bucket_t **bkt,
   return SVN_NO_ERROR;
 }
 
-static svn_boolean_t
-check_cache(apr_hash_t *ret_props,
-            svn_ra_serf__session_t *sess,
-            const char *path,
-            svn_revnum_t rev,
-            const svn_ra_serf__dav_props_t *find_props,
-            apr_pool_t *pool)
-{
-  svn_boolean_t cache_hit = TRUE;
-  const svn_ra_serf__dav_props_t *prop;
-
-  /* check to see if we have any of this information cached */
-  prop = find_props;
-  while (prop && prop->namespace)
-    {
-      const svn_string_t *val;
-
-      val = svn_ra_serf__get_ver_prop_string(sess->cached_props, path, rev,
-                                             prop->namespace, prop->name);
-      if (val)
-        {
-          svn_ra_serf__set_ver_prop(ret_props, path, rev,
-                                    prop->namespace, prop->name, val, pool);
-        }
-      else
-        {
-          cache_hit = FALSE;
-        }
-      prop++;
-    }
-
-  return cache_hit;
-}
-
 /*
  * This function will deliver a PROP_CTX PROPFIND request in the SESS
  * serf context for the properties listed in LOOKUP_PROPS at URL for
@@ -597,25 +548,10 @@ svn_ra_serf__deliver_props(svn_ra_serf__propfind_context_t **prop_ctx,
       svn_ra_serf__handler_t *handler;
       svn_ra_serf__xml_parser_t *parser_ctx;
 
-      if (cache_props)
-        {
-          svn_boolean_t cache_satisfy;
-
-          cache_satisfy = check_cache(ret_props, sess, path, rev, find_props,
-                                      pool);
-
-          if (cache_satisfy)
-            {
-              *prop_ctx = NULL;
-              return SVN_NO_ERROR;
-            }
-        }
-
       new_prop_ctx = apr_pcalloc(pool, sizeof(*new_prop_ctx));
 
       new_prop_ctx->pool = apr_hash_pool_get(ret_props);
       new_prop_ctx->path = path;
-      new_prop_ctx->cache_props = cache_props;
       new_prop_ctx->find_props = find_props;
       new_prop_ctx->ret_props = ret_props;
       new_prop_ctx->depth = depth;
