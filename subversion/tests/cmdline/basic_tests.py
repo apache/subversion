@@ -2771,6 +2771,47 @@ def ls_multiple_url_targets(sbox):
     raise svntest.Failure('ls failed: expected error "%s", but received "%s"' % \
                           (expected_err, "".join(error)))
 
+def add_multiple_targets(sbox):
+  "add multiple targets"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  file1 = sbox.ospath('file1')
+  file2 = sbox.ospath('file2')
+  non_existent_path = os.path.join(wc_dir, 'non-existent')
+
+  svntest.main.file_write(file1, "file1 contents", 'w+')
+  svntest.main.file_write(file2, "file2 contents", 'w+')
+
+  # One non-existing target
+  expected_err = "svn: warning: W155010: '" + \
+      re.escape(os.path.abspath(non_existent_path)) + "' not found\n" + \
+      ".*\nsvn: E200009: Could not add all targets because some targets " + \
+      "don't exist\n"
+  expected_err_re = re.compile(expected_err)
+
+  # Build expected state
+  expected_output = wc.State(wc_dir, {
+      'file1' : Item(verb='Adding'),
+      'file2' : Item(verb='Adding'),
+    })
+
+  exit_code, output, error = svntest.main.run_svn(1, 'add', file1, 
+                                                  non_existent_path, file2)
+
+  # Verify error
+  if not expected_err_re.match("".join(error)):
+    raise svntest.Failure('add failed: expected error "%s", but received '
+                          '"%s"' % (expected_err, "".join(error)))
+
+  # Verify status
+  expected_status = svntest.verify.UnorderedOutput(
+        ['A       ' + file1 + '\n',
+         'A       ' + file2 + '\n'])
+  svntest.actions.run_and_verify_svn(None, expected_status, [],
+                                     'status', wc_dir)
+
 ########################################################################
 # Run the tests
 
@@ -2836,6 +2877,7 @@ test_list = [ None,
               ls_non_existent_url_target,
               ls_multiple_wc_targets,
               ls_multiple_url_targets,
+              add_multiple_targets,
              ]
 
 if __name__ == '__main__':
