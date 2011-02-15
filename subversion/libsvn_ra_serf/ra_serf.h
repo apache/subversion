@@ -132,9 +132,6 @@ struct svn_ra_serf__session_t {
   /* Our Version-Controlled-Configuration; may be NULL until we know it. */
   const char *vcc_url;
 
-  /* Cached properties */
-  apr_hash_t *cached_props;
-
   /* Authentication related properties. */
   svn_auth_iterstate_t *auth_state;
   int auth_attempts;
