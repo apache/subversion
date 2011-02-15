@@ -2250,6 +2250,7 @@ finish_report(void *report_baton,
   svn_boolean_t closed_root;
   int status_code, i;
   svn_stringbuf_t *buf = NULL;
+  apr_pool_t *iterpool;
 
   svn_xml_make_close_tag(&buf, pool, "S:update-report");
   SVN_ERR(svn_io_file_write_full(report->body_file, buf->data, buf->len,
@@ -2307,10 +2308,14 @@ finish_report(void *report_baton,
   sess->cur_conn = 1;
   closed_root = FALSE;
 
+  iterpool = svn_pool_create(pool);
   while (!report->done || report->active_fetches || report->active_propfinds)
     {
       svn_error_t *err;
-      status = serf_context_run(sess->context, sess->timeout, pool);
+
+      svn_pool_clear(iterpool);
+
+      status = serf_context_run(sess->context, sess->timeout, iterpool);
 
       err = sess->pending_error;
       sess->pending_error = SVN_NO_ERROR;
@@ -2442,6 +2447,7 @@ finish_report(void *report_baton,
          serf_debug__closed_conn(sess->conns[i]->bkt_alloc);
         }
     }
+  svn_pool_destroy(iterpool);
 
   /* Ensure that we opened and closed our root dir and that we closed
    * all of our children. */
