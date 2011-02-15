@@ -509,7 +509,9 @@ close_node(void *baton)
   nb = baton;
   commit_editor = nb->rb->pb->commit_editor;
 
-  if (nb->kind == svn_node_file)
+  /* Pass a file node closure through to the editor *unless* we
+     deleted the file (which doesn't require us to open it). */
+  if ((nb->kind == svn_node_file) && (nb->file_baton))
     {
       LDR_DBG(("Closing file %p\n", nb->file_baton));
       SVN_ERR(commit_editor->close_file(nb->file_baton, NULL, nb->rb->pool));
