@@ -580,7 +580,7 @@ fetch_path_props(svn_ra_serf__propfind_context_t **ret_prop_ctx,
       SVN_ERR(svn_ra_serf__deliver_props(&prop_ctx, props, session,
                                          session->conns[0], path, revision,
                                          "0", desired_props, TRUE, NULL,
-                                         session->pool));
+                                         pool));
     }
   else
     {
@@ -600,7 +600,7 @@ fetch_path_props(svn_ra_serf__propfind_context_t **ret_prop_ctx,
       SVN_ERR(svn_ra_serf__deliver_props(&prop_ctx, props, session,
                                          session->conns[0], path, revision,
                                          "0", desired_props, TRUE, NULL,
-                                         session->pool));
+                                         pool));
     }
 
   if (prop_ctx)
@@ -873,7 +873,7 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
 
       SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
                                           path, revision, "1", all_props,
-                                          session->pool));
+                                          pool));
 
       /* Check if the path is really a directory. */
       SVN_ERR(resource_is_directory (props, path, revision));
