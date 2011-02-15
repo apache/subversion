@@ -400,7 +400,7 @@ def basic_corruption(sbox):
   # This commit should fail due to text base corruption.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status,
-                                        "svn: E155017: Checksum",
+                                        "svn: E200014: Checksum",
                                         wc_dir)
 
   # Restore the uncorrupted text base.

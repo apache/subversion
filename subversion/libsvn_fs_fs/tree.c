@@ -2454,16 +2454,9 @@ apply_textdelta(void *baton, apr_pool_t *pool)
       SVN_ERR(svn_fs_fs__dag_file_checksum(&checksum, tb->node,
                                            tb->base_checksum->kind, pool));
       if (!svn_checksum_match(tb->base_checksum, checksum))
-        return svn_error_createf
-          (SVN_ERR_CHECKSUM_MISMATCH,
-           NULL,
-           apr_psprintf(pool, "%s:\n%s\n%s\n",
-                        _("Base checksum mismatch on '%s'"),
-                        _("   expected:  %s"),
-                        _("     actual:  %s")),
-           tb->path,
-           svn_checksum_to_cstring_display(tb->base_checksum, pool),
-           svn_checksum_to_cstring_display(checksum, pool));
+        return svn_checksum_mismatch_err(tb->base_checksum, checksum, pool,
+                                         _("Base checksum mismatch on '%s'"),
+                                         tb->path);
     }
 
   /* Make a readable "source" stream out of the current contents of
