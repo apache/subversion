@@ -683,6 +683,15 @@ dirent_walker(void *baton,
     {
       entry->has_props = TRUE;
     }
+  else if (strcmp(ns, SVN_DAV_PROP_NS_DAV) == 0)
+    {
+      if(strcmp(name, "deadprop-count") == 0)
+        {
+          apr_int64_t deadprop_count;
+          SVN_ERR(svn_cstring_atoi64(&deadprop_count, val->data));
+          entry->has_props = deadprop_count > 0;
+        }
+    }
   else if (strcmp(ns, "DAV:") == 0)
     {
       if (strcmp(name, SVN_DAV__VERSION_NAME) == 0)
@@ -699,7 +708,11 @@ dirent_walker(void *baton,
         }
       else if (strcmp(name, "getcontentlength") == 0)
         {
-          SVN_ERR(svn_cstring_atoi64(&entry->size, val->data));
+          /* 'getcontentlength' property is empty for directories. */
+          if (val->len)
+            {
+              SVN_ERR(svn_cstring_atoi64(&entry->size, val->data));
+            }
         }
       else if (strcmp(name, "resourcetype") == 0)
         {
@@ -759,6 +772,62 @@ path_dirent_walker(void *baton,
   return dirent_walker(entry, ns, ns_len, name, name_len, val, pool);
 }
 
+static const svn_ra_serf__dav_props_t *
+get_dirent_props(apr_uint32_t dirent_fields, apr_pool_t *pool)
+{
+  svn_ra_serf__dav_props_t *prop;
+  apr_array_header_t *props = apr_array_make
+    (pool, 7, sizeof(svn_ra_serf__dav_props_t));
+
+  if (dirent_fields & SVN_DIRENT_KIND) 
+    {
+      prop = apr_array_push(props);
+      prop->namespace = "DAV:";
+      prop->name = "resourcetype";
+    }
+
+  if (dirent_fields & SVN_DIRENT_SIZE)
+    {
+      prop = apr_array_push(props);
+      prop->namespace = "DAV:";
+      prop->name = "getcontentlength";
+    }
+  
+  if (dirent_fields & SVN_DIRENT_HAS_PROPS)
+    {
+      prop = apr_array_push(props);
+      prop->namespace = SVN_DAV_PROP_NS_DAV;
+      prop->name = "deadprop-count";
+    }
+
+  if (dirent_fields & SVN_DIRENT_CREATED_REV)
+    {
+      svn_ra_serf__dav_props_t *p = apr_array_push(props);
+      p->namespace = "DAV:";
+      p->name = SVN_DAV__VERSION_NAME;
+    }
+
+  if (dirent_fields & SVN_DIRENT_TIME)
+    {
+      prop = apr_array_push(props);
+      prop->namespace = "DAV:";
+      prop->name = SVN_DAV__CREATIONDATE;
+    }
+
+  if (dirent_fields & SVN_DIRENT_LAST_AUTHOR)
+    {
+      prop = apr_array_push(props);
+      prop->namespace = "DAV:";
+      prop->name = "creator-displayname";
+    }
+
+  prop = apr_array_push(props);
+  prop->namespace = NULL;
+  prop->name = NULL;
+
+  return (svn_ra_serf__dav_props_t *) props->elts;
+}
+
 static svn_error_t *
 svn_ra_serf__stat(svn_ra_session_t *ra_session,
                   const char *rel_path,
@@ -775,7 +844,8 @@ svn_ra_serf__stat(svn_ra_session_t *ra_session,
   svn_error_t *err;
 
   err = fetch_path_props(&prop_ctx, &props, &path, &fetched_rev,
-                         session, rel_path, revision, all_props, pool);
+                         session, rel_path, revision,
+                         get_dirent_props(SVN_DIRENT_ALL, pool), pool);
   if (err)
     {
       if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
@@ -871,8 +941,14 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
     {
       struct path_dirent_visitor_t dirent_walk;
 
+      /* Always request node kind to check that path is really a
+       * directory.
+       */
+      dirent_fields |= SVN_DIRENT_KIND;
       SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
-                                          path, revision, "1", all_props,
+                                          path, revision, "1",
+                                          get_dirent_props(dirent_fields,
+                                                           pool),
                                           pool));
 
       /* Check if the path is really a directory. */
