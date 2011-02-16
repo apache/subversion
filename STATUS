@@ -274,7 +274,7 @@ Candidate changes:
      I think it can only happen during commit to a server that doesn't require
      authn, but a server SEGV is bad.
    Votes:
-    +1: philip
+    +1: philip, stsp
 
 Veto-blocked changes:
 =====================
