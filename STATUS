@@ -258,6 +258,16 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r962377, r962378, r1063572, r1063573, r1063592
+   Fix svnsync handling of directory copyfrom.
+   Justification:
+     Could lead to sync'd repositories being different from the master.
+   Concerns:
+     http://article.gmane.org/gmane.comp.version-control.subversion.devel/120590
+   Votes:
+     +1: cmpilato (r962377, r962378 only)
+     -0: danielsh (authz concerns)
+
 Veto-blocked changes:
 =====================
 
@@ -351,17 +361,6 @@ Veto-blocked changes:
            svn_io_dir_walk() which we should not do in a back-port.
            Discussing on list.)
      -1: cmpilato (Changes semantics of svn_io_dir_walk()).
-
- * r962377, r962378
-   Fix svnsync handling of directory copyfrom.
-   Justification:
-     Could lead to sync'd repositories being different from the master.
-   Concerns:
-     http://article.gmane.org/gmane.comp.version-control.subversion.devel/120590
-   Votes:
-     +1: cmpilato
-     -0: danielsh (authz concerns)
-     -1: philip (svnsync_tests.py descend_into_replace is XFail)
 
 Approved changes:
 =================
