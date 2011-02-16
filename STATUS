@@ -160,6 +160,14 @@ Candidate changes for 1.5.10:
    Votes:
      +1: pburba
 
+ * r1071239, r1071307
+   Locks without athn SEGV in mod_dav_svn
+   Justification:
+     I think it can only happen during commit to a server that doesn't require
+     authn, but a server SEGV is bad.
+   Votes:
+    +1: philip, stsp
+
 Approved changes:
 =================
 
