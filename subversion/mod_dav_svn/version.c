@@ -1271,7 +1271,7 @@ dav_svn__push_locks(dav_resource *resource,
   svn_error_t *serr;
 
   serr = svn_fs_get_access(&fsaccess, resource->info->repos->fs);
-  if (serr)
+  if (serr || !fsaccess)
     {
       /* If an authenticated user name was attached to the request,
          then dav_svn_get_resource() should have already noticed and
