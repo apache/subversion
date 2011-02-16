@@ -265,8 +265,16 @@ Candidate changes:
    Concerns:
      http://article.gmane.org/gmane.comp.version-control.subversion.devel/120590
    Votes:
-     +1: cmpilato (r962377, r962378 only)
+     +1: cmpilato (r962377, r962378 only), philip
      -0: danielsh (authz concerns)
+
+ * r1071239
+   Locks without athn SEGV in mod_dav_svn
+   Justification:
+     I think it can only happen during commit to a server that doesn't require
+     authn, but a server SEGV is bad.
+   Votes:
+    +1: philip
 
 Veto-blocked changes:
 =====================
