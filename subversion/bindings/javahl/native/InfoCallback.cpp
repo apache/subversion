@@ -85,7 +85,7 @@ InfoCallback::singleInfo(const char *path,
         POP_AND_RETURN(SVN_NO_ERROR);
 
       mid = env->GetMethodID(clazz, "singleInfo",
-                             "(L"JAVA_PACKAGE"/Info;)V");
+                             "(L"JAVA_PACKAGE"/types/Info;)V");
       if (JNIUtil::isJavaExceptionThrown() || mid == 0)
         POP_AND_RETURN(SVN_NO_ERROR);
     }
