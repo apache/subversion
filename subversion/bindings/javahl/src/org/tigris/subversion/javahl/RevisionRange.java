@@ -57,7 +57,7 @@ public class RevisionRange implements Comparable, java.io.Serializable
         this.to = to;
     }
 
-    public RevisionRange(org.apache.subversion.javahl.RevisionRange aRange)
+    public RevisionRange(org.apache.subversion.javahl.types.RevisionRange aRange)
     {
         this(Revision.createFromApache(aRange.getFromRevision()),
              Revision.createFromApache(aRange.getToRevision()));
@@ -109,9 +109,9 @@ public class RevisionRange implements Comparable, java.io.Serializable
         }
     }
 
-    public org.apache.subversion.javahl.RevisionRange toApache()
+    public org.apache.subversion.javahl.types.RevisionRange toApache()
     {
-        return new org.apache.subversion.javahl.RevisionRange(
+        return new org.apache.subversion.javahl.types.RevisionRange(
                 from == null ? null : from.toApache(),
                 to == null ? null : to.toApache());
     }
