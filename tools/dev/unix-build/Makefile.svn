@@ -495,7 +495,7 @@ $(HTTPD_OBJDIR)/.retrieved: $(DISTDIR)/$(HTTPD_DIST)
 # configure httpd
 $(HTTPD_OBJDIR)/.configured: $(HTTPD_OBJDIR)/.retrieved
 	cd $(HTTPD_OBJDIR) \
-		&& CFLAGS="$(PROFILE_CFLAGS)" \
+		&& CFLAGS="-g $(PROFILE_CFLAGS)" \
 		$(HTTPD_SRCDIR)/configure \
 		--prefix=$(PREFIX)/httpd \
 		--enable-maintainer-mode \
@@ -1049,6 +1049,7 @@ HTTPD_CMD = env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
 			$(PREFIX)/httpd/bin/apachectl \
 			-f conf/httpd-svn-check-$(WC).conf
 HTTPD_START_CMD = $(HTTPD_CMD) -k start
+HTTPD_START_CMD_DEBUG = $(HTTPD_START_CMD) -X
 HTTPD_STOP_CMD = $(HTTPD_CMD) -k stop; sleep 3
 
 SVNSERVE_START_CMD = $(SVN_PREFIX)/bin/svnserve \
@@ -1064,6 +1065,16 @@ start-httpd: httpd-conf
 	@echo "    make check BASE_URL=http://localhost:$(HTTPD_CHECK_PORT)"
 	@echo "The URL http://localhost:$(HTTPD_CHECK_PORT)/svn/"
 	@echo "lets you access repositories dropped into /tmp"
+
+start-httpd-debug: httpd-conf
+	$(HTTPD_START_CMD_DEBUG) &
+	@echo "To run tests over http, run:"
+	@echo "    make check BASE_URL=http://localhost:$(HTTPD_CHECK_PORT)"
+	@echo "The URL http://localhost:$(HTTPD_CHECK_PORT)/svn/"
+	@echo "lets you access repositories dropped into /tmp"
+	@echo "Trying to attach gdb to httpd..."
+	@sleep 1
+	gdb $(PREFIX)/httpd/bin/httpd `cat $(PREFIX)/httpd/logs/httpd.pid`
 
 stop-httpd:
 	$(HTTPD_STOP_CMD)
