@@ -1793,7 +1793,6 @@ def status_with_tree_conflicts(sbox):
 
 #----------------------------------------------------------------------
 # Regression for issue #3742
-@XFail()
 @Issue(3742)
 def status_nested_wc_old_format(sbox):
   "status on wc with nested old-format wc"
