@@ -741,6 +741,61 @@ SELECT 1 FROM nodes WHERE op_depth > 0;
 UPDATE nodes SET checksum = ?4
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3;
 
+/* ------------------------------------------------------------------------- */
+/* PROOF OF CONCEPT: Complex queries for callback walks, caching results
+                     in a temporary table. */
+
+-- STMT_CLEAR_NODE_PROPS_CACHE
+DROP TABLE IF EXISTS temp__node_props_cache;
+
+-- STMT_CACHE_NODE_PROPS_RECURSIVE
+CREATE TEMPORARY TABLE temp__node_props_cache AS
+  SELECT local_relpath, kind, properties FROM nodes_current
+  WHERE wc_id = ?1
+    AND (?2 = '' OR local_relpath = ?2 OR local_relpath LIKE ?2 || '/%')
+    AND local_relpath NOT IN (
+      SELECT local_relpath FROM actual_node WHERE wc_id = ?1)
+    AND (presence = 'normal' OR presence = 'incomplete');
+CREATE UNIQUE INDEX temp__node_props_cache_unique
+  ON temp__node_props_cache (local_relpath);
+
+-- STMT_CACHE_ACTUAL_PROPS_RECURSIVE
+INSERT INTO temp__node_props_cache (local_relpath, kind, properties)
+  SELECT A.local_relpath, N.kind, A.properties
+  FROM actual_node AS A JOIN nodes_current AS N
+    ON A.wc_id = N.wc_id AND A.local_relpath = N.local_relpath
+       AND (N.presence = 'normal' OR N.presence = 'incomplete')
+  WHERE A.wc_id = ?1
+    AND (?2 = '' OR A.local_relpath = ?2 OR A.local_relpath LIKE ?2 || '/%')
+    AND A.local_relpath NOT IN
+      (SELECT local_relpath FROM temp__node_props_cache);
+
+-- STMT_CACHE_NODE_PROPS_OF_CHILDREN
+CREATE TEMPORARY TABLE temp__node_props_cache AS
+  SELECT local_relpath, kind, properties FROM nodes_current
+  WHERE wc_id = ?1
+    AND (local_relpath = ?2 OR parent_relpath = ?2)
+    AND local_relpath NOT IN (
+      SELECT local_relpath FROM actual_node WHERE wc_id = ?1)
+    AND (presence = 'normal' OR presence = 'incomplete');
+CREATE UNIQUE INDEX temp__node_props_cache_unique
+  ON temp__node_props_cache (local_relpath);
+
+-- STMT_CACHE_ACTUAL_PROPS_OF_CHILDREN
+INSERT INTO temp__node_props_cache (local_relpath, kind, properties)
+  SELECT A.local_relpath, N.kind, A.properties
+  FROM actual_node AS A JOIN nodes_current AS N
+    ON A.wc_id = N.wc_id AND A.local_relpath = N.local_relpath
+       AND (N.presence = 'normal' OR N.presence = 'incomplete')
+  WHERE A.wc_id = ?1
+    AND (A.local_relpath = ?2 OR A.parent_relpath = ?2)
+    AND A.local_relpath NOT IN
+      (SELECT local_relpath FROM temp__node_props_cache);
+
+-- STMT_SELECT_RELEVANT_PROPS_FROM_CACHE
+SELECT local_relpath, kind, properties FROM temp__node_props_cache
+ORDER BY local_relpath;
+
 
 /* ------------------------------------------------------------------------- */
 
