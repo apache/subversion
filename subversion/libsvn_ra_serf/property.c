@@ -537,7 +537,6 @@ svn_ra_serf__deliver_props(svn_ra_serf__propfind_context_t **prop_ctx,
                            svn_revnum_t rev,
                            const char *depth,
                            const svn_ra_serf__dav_props_t *find_props,
-                           svn_boolean_t cache_props,
                            svn_ra_serf__list_t **done_list,
                            apr_pool_t *pool)
 {
@@ -678,7 +677,7 @@ svn_ra_serf__retrieve_props(apr_hash_t *prop_vals,
   svn_ra_serf__propfind_context_t *prop_ctx = NULL;
 
   SVN_ERR(svn_ra_serf__deliver_props(&prop_ctx, prop_vals, sess, conn, url,
-                                     rev, depth, props, TRUE, NULL, pool));
+                                     rev, depth, props, NULL, pool));
   if (prop_ctx)
     {
       SVN_ERR(svn_ra_serf__wait_for_props(prop_ctx, sess, pool));
