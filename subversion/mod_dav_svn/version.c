@@ -1276,6 +1276,8 @@ dav_svn__push_locks(dav_resource *resource,
       /* If an authenticated user name was attached to the request,
          then dav_svn_get_resource() should have already noticed and
          created an fs_access_t in the filesystem.  */
+      if (serr == NULL)
+        serr = svn_error_create(SVN_ERR_FS_LOCK_OWNER_MISMATCH, NULL, NULL);
       return dav_svn__sanitize_error(serr, "Lock token(s) in request, but "
                                      "missing an user name", HTTP_BAD_REQUEST,
                                      resource->info->r);
