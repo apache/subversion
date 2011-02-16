@@ -21,9 +21,8 @@
  * @endcopyright
  */
 
-package org.apache.subversion.javahl;
+package org.apache.subversion.javahl.types;
 
-import org.apache.subversion.javahl.types.Revision;
 
 /**
  * Object that describes a revision range

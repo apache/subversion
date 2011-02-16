@@ -567,8 +567,8 @@ public class SVNClient implements SVNClientInterface
 
         try
         {
-            List<org.apache.subversion.javahl.RevisionRange> aRevisions =
-              new ArrayList<org.apache.subversion.javahl.RevisionRange>(revisionRanges.length);
+            List<org.apache.subversion.javahl.types.RevisionRange> aRevisions =
+              new ArrayList<org.apache.subversion.javahl.types.RevisionRange>(revisionRanges.length);
 
             for (RevisionRange range : revisionRanges)
             {
@@ -980,8 +980,8 @@ public class SVNClient implements SVNClientInterface
     {
         try
         {
-            List<org.apache.subversion.javahl.CopySource> aCopySources =
-                new ArrayList<org.apache.subversion.javahl.CopySource>(
+            List<org.apache.subversion.javahl.types.CopySource> aCopySources =
+                new ArrayList<org.apache.subversion.javahl.types.CopySource>(
                                                             sources.length);
 
             for (CopySource src : sources)
@@ -1382,8 +1382,8 @@ public class SVNClient implements SVNClientInterface
     {
         try
         {
-            List<org.apache.subversion.javahl.RevisionRange> aRevisions =
-              new ArrayList<org.apache.subversion.javahl.RevisionRange>(revisions.length);
+            List<org.apache.subversion.javahl.types.RevisionRange> aRevisions =
+              new ArrayList<org.apache.subversion.javahl.types.RevisionRange>(revisions.length);
 
             for (RevisionRange range : revisions )
             {
@@ -1428,7 +1428,7 @@ public class SVNClient implements SVNClientInterface
     {
         try
         {
-            org.apache.subversion.javahl.Mergeinfo aMergeinfo =
+            org.apache.subversion.javahl.types.Mergeinfo aMergeinfo =
                          aSVNClient.getMergeinfo(path,
                          pegRevision == null ? null : pegRevision.toApache());
 
@@ -1489,7 +1489,7 @@ public class SVNClient implements SVNClientInterface
         try
         {
             aSVNClient.getMergeinfoLog(
-                org.apache.subversion.javahl.Mergeinfo.LogKind.values()[kind],
+                org.apache.subversion.javahl.types.Mergeinfo.LogKind.values()[kind],
                 pathOrUrl, pegRevision == null ? null : pegRevision.toApache(),
                 mergeSourceUrl,
                 srcPegRevision == null ? null : srcPegRevision.toApache(),
@@ -2350,15 +2350,15 @@ public class SVNClient implements SVNClientInterface
     {
         try
         {
-        	final List<org.apache.subversion.javahl.Info> infos =
-        		new ArrayList<org.apache.subversion.javahl.Info>();
+        	final List<org.apache.subversion.javahl.types.Info> infos =
+        		new ArrayList<org.apache.subversion.javahl.types.Info>();
         	aSVNClient.info2(path,
         					org.apache.subversion.javahl.types.Revision.HEAD,
         					org.apache.subversion.javahl.types.Revision.HEAD,
         					org.apache.subversion.javahl.types.Depth.empty,
         				    null, new org.apache.subversion.javahl.callback.InfoCallback()
         	{
-				public void singleInfo(org.apache.subversion.javahl.Info info) {
+				public void singleInfo(org.apache.subversion.javahl.types.Info info) {
 					infos.add(info);
 				}
         	});
@@ -2595,7 +2595,7 @@ public class SVNClient implements SVNClientInterface
                           Depth.toADepth(depth), changelists == null ? null
                             : Arrays.asList(changelists),
         new org.apache.subversion.javahl.callback.InfoCallback () {
-            public void singleInfo(org.apache.subversion.javahl.Info aInfo)
+            public void singleInfo(org.apache.subversion.javahl.types.Info aInfo)
             {
                 callback.singleInfo(aInfo == null ? null : new Info2(aInfo));
             }
