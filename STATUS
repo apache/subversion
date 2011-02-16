@@ -268,7 +268,7 @@ Candidate changes:
      +1: cmpilato (r962377, r962378 only), philip
      -0: danielsh (authz concerns)
 
- * r1071239
+ * r1071239, r1071307
    Locks without athn SEGV in mod_dav_svn
    Justification:
      I think it can only happen during commit to a server that doesn't require
