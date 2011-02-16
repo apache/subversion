@@ -132,6 +132,7 @@ create_packed_filesystem(const char *dir,
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
   SVN_ERR(svn_test__create_greek_tree(txn_root, subpool));
   SVN_ERR(svn_fs_commit_txn(&conflict, &after_rev, txn, subpool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(after_rev));
 
   /* Revisions 2-11: A bunch of random changes. */
   iterpool = svn_pool_create(subpool);
@@ -145,6 +146,7 @@ create_packed_filesystem(const char *dir,
                                                            iterpool),
                                           iterpool));
       SVN_ERR(svn_fs_commit_txn(&conflict, &after_rev, txn, iterpool));
+      SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(after_rev));
     }
   svn_pool_destroy(iterpool);
   svn_pool_destroy(subpool);
@@ -363,6 +365,7 @@ commit_packed_fs(const char **msg,
           "How much better is it to get wisdom than gold! and to get "
           "understanding rather to be chosen than silver!", pool));
   SVN_ERR(svn_fs_commit_txn(&conflict, &after_rev, txn, pool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(after_rev));
 
   return SVN_NO_ERROR;
 }

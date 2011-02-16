@@ -595,6 +595,7 @@ changes_fetch_ordering(const char **msg,
     SVN_ERR(svn_test__txn_script_exec(txn_root, script_entries, 5, subpool));
   }
   SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, subpool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
   svn_pool_clear(subpool);
 
   /*** REVISION 2: Delete and add some stuff, non-depth-first. ***/
@@ -615,6 +616,7 @@ changes_fetch_ordering(const char **msg,
     SVN_ERR(svn_test__txn_script_exec(txn_root, script_entries, 7, subpool));
   }
   SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, subpool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
   svn_pool_clear(subpool);
 
   /*** TEST:  We should have only three changes, the deletion of 'file1'
@@ -663,6 +665,7 @@ changes_fetch_ordering(const char **msg,
     SVN_ERR(svn_test__txn_script_exec(txn_root, script_entries, 5, subpool));
   }
   SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, subpool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
   svn_pool_clear(subpool);
 
   /*** REVISION 4: Do the same stuff as in revision 2, but use a copy
@@ -687,6 +690,7 @@ changes_fetch_ordering(const char **msg,
     SVN_ERR(svn_fs_make_dir(txn_root, "dir4", subpool));
   }
   SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, subpool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
   svn_pool_clear(subpool);
 
   /*** TEST:  We should have only three changes, the deletion of 'file1'

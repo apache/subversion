@@ -476,6 +476,7 @@ abort_txn(const char **msg,
     SVN_ERR(svn_fs_begin_txn(&txn4, fs, 0, pool));
     SVN_ERR(svn_fs_txn_name(&txn4_name, txn4, pool));
     SVN_ERR(svn_fs_commit_txn(&conflict, &new_rev, txn4, pool));
+    SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(new_rev));
     err = svn_fs_abort_txn(txn4, pool);
     if (! err)
       return svn_error_create
@@ -874,6 +875,7 @@ delete(const char **msg,
 
   /* Commit the greek tree. */
   SVN_ERR(svn_fs_commit_txn(NULL, &new_rev, txn, pool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(new_rev));
 
   /* Create new transaction. */
   SVN_ERR(svn_fs_begin_txn(&txn, fs, new_rev, pool));
@@ -1208,6 +1210,7 @@ create_within_copy(const char **msg,
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, spool));
   SVN_ERR(svn_test__create_greek_tree(txn_root, spool));
   SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, spool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
   svn_pool_clear(spool);
 
   /*** Revision 2:  Copy A/D to A/D3 ***/
@@ -1216,6 +1219,7 @@ create_within_copy(const char **msg,
   SVN_ERR(svn_fs_revision_root(&rev_root, fs, youngest_rev, spool));
   SVN_ERR(svn_fs_copy(rev_root, "A/D", txn_root, "A/D3", spool));
   SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, spool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
   svn_pool_clear(spool);
 
   /*** Revision 3:  Copy A/D/G to A/D/G2 ***/
@@ -1224,6 +1228,7 @@ create_within_copy(const char **msg,
   SVN_ERR(svn_fs_revision_root(&rev_root, fs, youngest_rev, spool));
   SVN_ERR(svn_fs_copy(rev_root, "A/D/G", txn_root, "A/D/G2", spool));
   SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, spool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
   svn_pool_clear(spool);
 
   /*** Revision 4: Copy A/D to A/D2 and create up and I in the existing
@@ -1239,6 +1244,7 @@ create_within_copy(const char **msg,
   SVN_ERR(svn_fs_make_dir(txn_root, "A/D2/G2/I", spool));
   SVN_ERR(svn_fs_make_file(txn_root, "A/D2/G2/up", spool));
   SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, spool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
   svn_pool_clear(spool);
 
   /*** Revision 5:  Create A/D3/down and A/D3/J ***/
@@ -1247,6 +1253,7 @@ create_within_copy(const char **msg,
   SVN_ERR(svn_fs_make_file(txn_root, "A/D3/down", spool));
   SVN_ERR(svn_fs_make_dir(txn_root, "A/D3/J", spool));
   SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, spool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
   svn_pool_clear(spool);
 
   {
@@ -1338,6 +1345,7 @@ skip_deltas(const char **msg,
   SVN_ERR(svn_fs_make_file(txn_root, "f", subpool));
   SVN_ERR(svn_test__set_file_contents(txn_root, "f", f->data, subpool));
   SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, subpool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
   SVN_ERR(svn_fs_deltify_revision(fs, youngest_rev, subpool));
   svn_pool_clear(subpool);
 
@@ -1352,6 +1360,7 @@ skip_deltas(const char **msg,
       SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
       SVN_ERR(svn_test__set_file_contents(txn_root, "f", f->data, subpool));
       SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, subpool));
+      SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
       SVN_ERR(svn_fs_deltify_revision(fs, youngest_rev, subpool));
       svn_pool_clear(subpool);
     }
@@ -1416,6 +1425,7 @@ redundant_copy(const char **msg,
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
   SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
   SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, pool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
 
   /* In a transaction, copy A to Z. */
   SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, pool));
@@ -1491,6 +1501,7 @@ orphaned_textmod_change(const char **msg,
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
   SVN_ERR(svn_test__create_greek_tree(txn_root, subpool));
   SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, subpool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
   svn_pool_clear(subpool);
 
   /* Revision 2:  Start to change "iota", but don't complete the work. */
@@ -1507,6 +1518,7 @@ orphaned_textmod_change(const char **msg,
      testing that misbehaving callers don't introduce more damage to
      the repository than they have to. */
   SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, subpool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
   svn_pool_clear(subpool);
 
   /* Fetch changed paths for the youngest revision.  We should find none. */

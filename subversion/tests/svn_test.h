@@ -35,6 +35,17 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+/** Handy macro to test a condition, returning SVN_ERR_TEST_FAILED if FALSE
+ *
+ * This macro should be used in place of SVN_ERR_ASSERT() since we don't
+ * want to core-dump the test.
+ */
+#define SVN_TEST_ASSERT(expr)                                     \
+  do {                                                            \
+    if (!(expr))                                                  \
+      return svn_error_create(SVN_ERR_TEST_FAILED, NULL, #expr);  \
+  } while (0)
+
 /* Baton for any arguments that need to be passed from main() to svn
  * test functions.
  */
