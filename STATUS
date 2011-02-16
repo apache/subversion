@@ -198,8 +198,13 @@ Candidate changes:
      This merge doesn't address the client side behavior.
    Branch:
      ^/subversion/branches/1.6.x-svn_fs_commit_txn
+   Note:
+     Adds a new private API, which would break 1.6.16 mod_dav_svn with
+     1.6.15 libsvn_repos; thread:
+     http://mid.gmane.org/20110214164421.GB19247@daniel3.local
    Votes:
      +1: blair
+     =0: danielsh (haven't reviewed it yet)
 
  * r1053984
    Fix bug where committing a changelist was prevented by a file outside that
