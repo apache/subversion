@@ -781,7 +781,7 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
                                              replay_ctx->revprop_target,
                                              replay_ctx->revprop_rev,
                                              "0", all_props,
-                                             TRUE, NULL,
+                                             NULL,
                                              replay_ctx->src_rev_pool));
 
           replay_ctx->prop_ctx = prop_ctx;

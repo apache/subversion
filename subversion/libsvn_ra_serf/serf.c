@@ -579,7 +579,7 @@ fetch_path_props(svn_ra_serf__propfind_context_t **ret_prop_ctx,
     {
       SVN_ERR(svn_ra_serf__deliver_props(&prop_ctx, props, session,
                                          session->conns[0], path, revision,
-                                         "0", desired_props, TRUE, NULL,
+                                         "0", desired_props, NULL,
                                          pool));
     }
   else
@@ -599,7 +599,7 @@ fetch_path_props(svn_ra_serf__propfind_context_t **ret_prop_ctx,
       revision = SVN_INVALID_REVNUM;
       SVN_ERR(svn_ra_serf__deliver_props(&prop_ctx, props, session,
                                          session->conns[0], path, revision,
-                                         "0", desired_props, TRUE, NULL,
+                                         "0", desired_props, NULL,
                                          pool));
     }
 

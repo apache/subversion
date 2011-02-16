@@ -529,7 +529,7 @@ get_version_url(const char **checked_in_url,
 
       SVN_ERR(svn_ra_serf__deliver_props(&propfind_ctx, props, session, conn,
                                          propfind_url, base_revision, "0",
-                                         checked_in_props, FALSE, NULL, pool));
+                                         checked_in_props, NULL, pool));
 
       SVN_ERR(svn_ra_serf__wait_for_props(propfind_ctx, session, pool));
 
@@ -2402,7 +2402,7 @@ svn_ra_serf__change_rev_prop(svn_ra_session_t *ra_session,
       propfind_ctx = NULL;
       SVN_ERR(svn_ra_serf__deliver_props(&propfind_ctx, props, commit->session,
                                          commit->conn, vcc_url, rev, "0",
-                                         checked_in_props, FALSE, NULL, pool));
+                                         checked_in_props, NULL, pool));
 
       SVN_ERR(svn_ra_serf__wait_for_props(propfind_ctx, commit->session, pool));
 
