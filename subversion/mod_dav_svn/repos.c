@@ -2185,7 +2185,7 @@ get_resource(request_rec *r,
       dav_locktoken_list *list = ltl;
 
       serr = svn_fs_get_access(&access_ctx, repos->fs);
-      if (serr)
+      if (serr || !access_ctx)
         {
           return dav_svn__sanitize_error(serr, "Lock token is in request, "
                                          "but no user name",
