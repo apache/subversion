@@ -1711,6 +1711,7 @@ read_dir_props(const char *local_abspath,
   SVN_ERR(svn_wc__db_read_props_of_immediates(b->db, local_abspath,
                                               b->receiver_func,
                                               b->receiver_baton,
+                                              NULL, NULL,
                                               scratch_pool));
   return SVN_NO_ERROR;
 }
@@ -1725,47 +1726,41 @@ svn_wc__prop_list_recursive(svn_wc_context_t *wc_ctx,
                             void *cancel_baton,
                             apr_pool_t *scratch_pool)
 {
-  struct read_dir_props_baton read_dir_baton;
-
-  if (depth <= svn_depth_immediates)
+  switch (depth)
     {
-      apr_hash_t *props;
+    case svn_depth_empty:
+      {
+        apr_hash_t *props;
 
-      SVN_ERR(svn_wc__db_read_props(&props, wc_ctx->db, local_abspath,
-                                    scratch_pool, scratch_pool));
-      if (receiver_func && props && apr_hash_count(props) > 0)
-        SVN_ERR((*receiver_func)(receiver_baton, local_abspath, props,
-                                 scratch_pool));
-      if (depth == svn_depth_empty)
-        return SVN_NO_ERROR;
-    }
-
-  if (depth == svn_depth_files)
-    {
+        SVN_ERR(svn_wc__db_read_props(&props, wc_ctx->db, local_abspath,
+                                      scratch_pool, scratch_pool));
+        if (receiver_func && props && apr_hash_count(props) > 0)
+          SVN_ERR((*receiver_func)(receiver_baton, local_abspath, props,
+                                   scratch_pool));
+      }
+      break;
+    case  svn_depth_files:
       SVN_ERR(svn_wc__db_read_props_of_files(wc_ctx->db, local_abspath,
                                              receiver_func, receiver_baton,
+                                             cancel_func, cancel_baton,
                                              scratch_pool));
-      return SVN_NO_ERROR;
-    }
-
-  if (depth == svn_depth_immediates)
-    {
+      break;
+    case svn_depth_immediates:
       SVN_ERR(svn_wc__db_read_props_of_immediates(wc_ctx->db, local_abspath,
-                                                  receiver_func,
-                                                  receiver_baton,
+                                                  receiver_func, receiver_baton,
+                                                  cancel_func, cancel_baton,
                                                   scratch_pool));
-      return SVN_NO_ERROR;
+      break;
+    case svn_depth_infinity:
+      SVN_ERR(svn_wc__db_read_props_recursive(wc_ctx->db, local_abspath,
+                                              receiver_func, receiver_baton,
+                                              cancel_func, cancel_baton,
+                                              scratch_pool));
+      break;
+    default:
+      SVN_ERR_MALFUNCTION();
     }
 
-  read_dir_baton.db = wc_ctx->db;
-  read_dir_baton.root_abspath = local_abspath;
-  read_dir_baton.receiver_func = receiver_func;
-  read_dir_baton.receiver_baton = receiver_baton;
-
-  SVN_ERR(svn_wc__internal_walk_children(wc_ctx->db, local_abspath, FALSE,
-                                         read_dir_props, &read_dir_baton,
-                                         depth, cancel_func, cancel_baton,
-                                         scratch_pool));
   return SVN_NO_ERROR;
 }
 

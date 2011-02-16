@@ -483,6 +483,16 @@ CREATE TABLE NODES (
 
 CREATE INDEX I_NODES_PARENT ON NODES (wc_id, parent_relpath, op_depth);
 
+/* Many queries have to filter the nodes table to pick only that version
+   of each node with the highest (most "current") op_depth.  This view
+   does the heavy lifting for such queries. */
+CREATE VIEW NODES_CURRENT AS
+  SELECT * FROM nodes
+    JOIN (SELECT wc_id, local_relpath, MAX(op_depth) AS op_depth FROM nodes
+          GROUP BY wc_id, local_relpath) AS filter
+    ON nodes.wc_id = filter.wc_id
+      AND nodes.local_relpath = filter.local_relpath
+      AND nodes.op_depth = filter.op_depth;
 
 -- STMT_CREATE_NODES_TRIGGERS
 
@@ -595,6 +605,21 @@ UPDATE pristine SET refcount =
 
 PRAGMA user_version = 24;
 
+/* ------------------------------------------------------------------------- */
+
+/* Format 25 introduces the NODES_CURRENT view. */
+
+-- STMT_UPGRADE_TO_25
+DROP VIEW IF EXISTS NODES_CURRENT;
+CREATE VIEW NODES_CURRENT AS
+  SELECT * FROM nodes
+    JOIN (SELECT wc_id, local_relpath, MAX(op_depth) AS op_depth FROM nodes
+          GROUP BY wc_id, local_relpath) AS filter
+    ON nodes.wc_id = filter.wc_id
+      AND nodes.local_relpath = filter.local_relpath
+      AND nodes.op_depth = filter.op_depth;
+
+PRAGMA user_version = 25;
 
 /* ------------------------------------------------------------------------- */
 

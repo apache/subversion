@@ -5175,189 +5175,155 @@ svn_wc__db_read_props(apr_hash_t **props,
   return SVN_NO_ERROR;
 }
 
-/* Parse a node's PROP_DATA (which is PROP_DATA_LEN bytes long)
- * into a hash table keyed by property names and containing property values.
- *
- * If parsing succeeds, and the set of properties is not empty,
- * add the hash table to PROPS_PER_CHILD, keyed by the absolute path
- * of the node CHILD_RELPATH within the working copy at WCROOT_ABSPATH.
- *
- * If the set of properties is empty, and PROPS_PER_CHILD already contains
- * an entry for the node, clear the entry. This facilitates overriding
- * properties retrieved from the NODES table with empty sets of properties
- * stored in the ACTUAL_NODE table. */
+/* Call RECEIVER_FUNC, passing RECEIVER_BATON, an absolute path, and
+ * a hash table mapping <tt>char *</tt> names onto svn_string_t *
+ * values for any properties of immediate or recursive child nodes of
+ * LOCAL_ABSPATH, the actual query being determined by STMT_IDX.
+ * If FILES_ONLY is true, only report properties for file child nodes.
+ * Check for cancellation between calls of RECEIVER_FUNC.
+ */
+typedef struct cache_props_baton_t
+{
+  int stmt_node_props_ndx;
+  int stmt_actual_props_ndx;
+  apr_int64_t wc_id;
+  const char *local_relpath;
+  svn_cancel_func_t cancel_func;
+  void *cancel_baton;
+} cache_props_baton_t;
+
 static svn_error_t *
-maybe_add_child_props(apr_hash_t *props_per_child,
-                      const char *prop_data,
-                      apr_size_t prop_data_len,
-                      const char *child_relpath,
-                      const char *wcroot_abspath,
-                      apr_pool_t *result_pool,
+cache_props_recursive(void *cb_baton,
+                      svn_sqlite__db_t *db,
                       apr_pool_t *scratch_pool)
 {
-  const char *child_abspath;
-  apr_hash_t *props;
-  svn_skel_t *prop_skel;
+  cache_props_baton_t *baton = cb_baton;
+  svn_sqlite__stmt_t *stmt;
 
-  prop_skel = svn_skel__parse(prop_data, prop_data_len, scratch_pool);
-  if (svn_skel__list_length(prop_skel) == 0)
-    return SVN_NO_ERROR;
+  SVN_ERR(svn_sqlite__get_statement(&stmt, db, baton->stmt_node_props_ndx));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", baton->wc_id, baton->local_relpath));
+  SVN_ERR(svn_sqlite__step_done(stmt));
 
-  child_abspath = svn_dirent_join(wcroot_abspath, child_relpath, result_pool);
-  SVN_ERR(svn_skel__parse_proplist(&props, prop_skel, result_pool));
-  if (apr_hash_count(props))
-    apr_hash_set(props_per_child, child_abspath, APR_HASH_KEY_STRING, props);
-  else
-    apr_hash_set(props_per_child, child_abspath, APR_HASH_KEY_STRING, NULL);
+  if (baton->cancel_func)
+    SVN_ERR(baton->cancel_func(baton->cancel_baton));
+ 
+  SVN_ERR(svn_sqlite__get_statement(&stmt, db, baton->stmt_actual_props_ndx));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", baton->wc_id, baton->local_relpath));
+  SVN_ERR(svn_sqlite__step_done(stmt));
 
   return SVN_NO_ERROR;
 }
 
-/* Call RECEIVER_FUNC, passing RECEIVER_BATON, an absolute path, and
- * a hash table mapping <tt>char *</tt> names onto svn_string_t *
- * values for any properties of immediate child nodes of LOCAL_ABSPATH.
- * If FILES_ONLY is true, only report properties for file child nodes.
- */
 static svn_error_t *
-read_props_of_children(svn_wc__db_t *db,
-                       const char *local_abspath,
-                       svn_boolean_t files_only,
-                       svn_wc__proplist_receiver_t receiver_func,
-                       void *receiver_baton,
-                       apr_pool_t *scratch_pool)
+read_props_recursive(svn_wc__db_t *db,
+                     const char *local_abspath,
+                     svn_boolean_t files_only,
+                     svn_boolean_t immediates_only,
+                     svn_wc__proplist_receiver_t receiver_func,
+                     void *receiver_baton,
+                     svn_cancel_func_t cancel_func,
+                     void *cancel_baton,
+                     apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
-  const char *local_relpath;
-  const char *prev_child_relpath;
   svn_sqlite__stmt_t *stmt;
+  cache_props_baton_t baton;
   svn_boolean_t have_row;
-  apr_hash_t *props_per_child;
-  apr_hash_t *files;
-  apr_hash_t *not_present;
-  apr_hash_index_t *hi;
+  int row_number;
   apr_pool_t *iterpool;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(receiver_func);
 
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
-                                             local_abspath,
-                                             svn_sqlite__mode_readwrite,
-                                             scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &baton.local_relpath,
+                                                db, local_abspath,
+                                                svn_sqlite__mode_readwrite,
+                                                scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  props_per_child = apr_hash_make(scratch_pool);
-  not_present = apr_hash_make(scratch_pool);
-  if (files_only)
-    files = apr_hash_make(scratch_pool);
+  SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb,
+                                      STMT_CLEAR_NODE_PROPS_CACHE));
+
+  if (immediates_only)
+    {
+      baton.stmt_node_props_ndx = STMT_CACHE_NODE_PROPS_OF_CHILDREN;
+      baton.stmt_actual_props_ndx = STMT_CACHE_ACTUAL_PROPS_OF_CHILDREN;
+    }
   else
-    files = NULL;
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_NODE_PROPS_OF_CHILDREN));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  prev_child_relpath = NULL;
-  while (have_row)
     {
-      svn_wc__db_status_t child_presence;
-      const char *child_relpath;
-      const char *prop_data;
-      apr_size_t len;
-
-      child_relpath = svn_sqlite__column_text(stmt, 2, scratch_pool);
-
-      if (prev_child_relpath && strcmp(child_relpath, prev_child_relpath) == 0)
-        {
-          /* Same child, but lower op_depth -- skip this row. */
-          SVN_ERR(svn_sqlite__step(&have_row, stmt));
-          continue;
-        }
-      prev_child_relpath = child_relpath;
-
-      child_presence = svn_sqlite__column_token(stmt, 1, presence_map);
-      if (child_presence != svn_wc__db_status_normal)
-        {
-          apr_hash_set(not_present, child_relpath, APR_HASH_KEY_STRING, "");
-          SVN_ERR(svn_sqlite__step(&have_row, stmt));
-          continue;
-        }
-
-      prop_data = svn_sqlite__column_blob(stmt, 0, &len, NULL);
-      if (prop_data)
-        {
-          if (files_only)
-            {
-              svn_wc__db_kind_t child_kind;
-
-              child_kind = svn_sqlite__column_token(stmt, 3, kind_map);
-              if (child_kind != svn_wc__db_kind_file &&
-                  child_kind != svn_wc__db_kind_symlink)
-                {
-                  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-                  continue;
-                }
-              apr_hash_set(files, child_relpath, APR_HASH_KEY_STRING, NULL);
-            }
-
-          SVN_ERR(maybe_add_child_props(props_per_child, prop_data, len,
-                                        child_relpath, wcroot->abspath,
-                                        scratch_pool, scratch_pool));
-        }
-
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+      baton.stmt_node_props_ndx = STMT_CACHE_NODE_PROPS_RECURSIVE;
+      baton.stmt_actual_props_ndx = STMT_CACHE_ACTUAL_PROPS_RECURSIVE;
     }
-
-  SVN_ERR(svn_sqlite__reset(stmt));
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_ACTUAL_PROPS_OF_CHILDREN));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  while (have_row)
-    {
-      const char *child_relpath;
-      const char *prop_data;
-      apr_size_t len;
-
-      prop_data = svn_sqlite__column_blob(stmt, 0, &len, NULL);
-      if (prop_data)
-        {
-          child_relpath = svn_sqlite__column_text(stmt, 1, scratch_pool);
-
-          if (apr_hash_get(not_present, child_relpath, APR_HASH_KEY_STRING) ||
-              (files_only &&
-               apr_hash_get(files, child_relpath, APR_HASH_KEY_STRING) == NULL))
-            {
-                SVN_ERR(svn_sqlite__step(&have_row, stmt));
-                continue;
-            }
-          SVN_ERR(maybe_add_child_props(props_per_child, prop_data, len,
-                                        child_relpath, wcroot->abspath,
-                                        scratch_pool, scratch_pool));
-        }
-
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
-    }
-
-  SVN_ERR(svn_sqlite__reset(stmt));
+  baton.wc_id = wcroot->wc_id;
+  baton.cancel_func = cancel_func;
+  baton.cancel_baton = cancel_baton;
+  SVN_ERR(svn_sqlite__with_transaction(wcroot->sdb,
+                                       cache_props_recursive,
+                                       &baton, scratch_pool));
 
   iterpool = svn_pool_create(scratch_pool);
-  for (hi = apr_hash_first(scratch_pool, props_per_child);
-       hi;
-       hi = apr_hash_next(hi))
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_RELEVANT_PROPS_FROM_CACHE));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  for (row_number = 0; have_row; ++row_number)
     {
-      const char *child_abspath = svn__apr_hash_index_key(hi);
-      apr_hash_t *child_props = svn__apr_hash_index_val(hi);
+      const char *prop_data;
+      apr_size_t len;
+
+      if (files_only && row_number > 0)
+        {
+          svn_wc__db_kind_t child_kind;
+
+          child_kind = svn_sqlite__column_token(stmt, 1, kind_map);
+          if (child_kind != svn_wc__db_kind_file &&
+              child_kind != svn_wc__db_kind_symlink)
+            {
+              SVN_ERR(svn_sqlite__step(&have_row, stmt));
+              continue;
+            }
+        }
 
       svn_pool_clear(iterpool);
 
-      if (child_props)
-        SVN_ERR((*receiver_func)(receiver_baton, child_abspath, child_props,
-                                 iterpool));
+      /* see if someone wants to cancel this operation. */
+      if (cancel_func)
+        SVN_ERR(cancel_func(cancel_baton));
+
+      prop_data = svn_sqlite__column_blob(stmt, 2, &len, NULL);
+      if (prop_data)
+        {
+          svn_skel_t *prop_skel;
+
+          prop_skel = svn_skel__parse(prop_data, len, iterpool);
+          if (svn_skel__list_length(prop_skel) != 0)
+            {
+              const char *child_relpath;
+              const char *child_abspath;
+              apr_hash_t *props;
+
+              child_relpath = svn_sqlite__column_text(stmt, 0, NULL);
+              child_abspath = svn_dirent_join(wcroot->abspath,
+                                              child_relpath, iterpool);
+              SVN_ERR(svn_skel__parse_proplist(&props, prop_skel, iterpool));
+              if (receiver_func && apr_hash_count(props) != 0)
+                {
+                  SVN_ERR((*receiver_func)(receiver_baton,
+                                           child_abspath, props,
+                                           iterpool));
+                }
+            }
+        }
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
+
+  SVN_ERR(svn_sqlite__reset(stmt));
+
   svn_pool_destroy(iterpool);
 
+  SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb,
+                                      STMT_CLEAR_NODE_PROPS_CACHE));
   return SVN_NO_ERROR;
 }
 
@@ -5366,11 +5332,15 @@ svn_wc__db_read_props_of_files(svn_wc__db_t *db,
                                const char *local_abspath,
                                svn_wc__proplist_receiver_t receiver_func,
                                void *receiver_baton,
+                               svn_cancel_func_t cancel_func,
+                               void *cancel_baton,
                                apr_pool_t *scratch_pool)
 {
-  return svn_error_return(read_props_of_children(db, local_abspath, TRUE,
-                                                 receiver_func, receiver_baton,
-                                                 scratch_pool));
+  SVN_ERR(read_props_recursive(db, local_abspath, TRUE, TRUE,
+                               receiver_func, receiver_baton,
+                               cancel_func, cancel_baton,
+                               scratch_pool));
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -5378,13 +5348,32 @@ svn_wc__db_read_props_of_immediates(svn_wc__db_t *db,
                                     const char *local_abspath,
                                     svn_wc__proplist_receiver_t receiver_func,
                                     void *receiver_baton,
+                                    svn_cancel_func_t cancel_func,
+                                    void *cancel_baton,
                                     apr_pool_t *scratch_pool)
 {
-  return svn_error_return(read_props_of_children(db, local_abspath, FALSE,
-                                                 receiver_func, receiver_baton,
-                                                 scratch_pool));
+  SVN_ERR(read_props_recursive(db, local_abspath, FALSE, TRUE,
+                               receiver_func, receiver_baton,
+                               cancel_func, cancel_baton,
+                               scratch_pool));
+  return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc__db_read_props_recursive(svn_wc__db_t *db,
+                                const char *local_abspath,
+                                svn_wc__proplist_receiver_t receiver_func,
+                                void *receiver_baton,
+                                svn_cancel_func_t cancel_func,
+                                void *cancel_baton,
+                                apr_pool_t *scratch_pool)
+{
+  SVN_ERR(read_props_recursive(db, local_abspath, FALSE, FALSE,
+                               receiver_func, receiver_baton,
+                               cancel_func, cancel_baton,
+                               scratch_pool));
+  return SVN_NO_ERROR;
+}
 
 static svn_error_t *
 db_read_pristine_props(apr_hash_t **props,
