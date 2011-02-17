@@ -1,7 +1,7 @@
-THE PRISTINE STORE
-==================
+A. THE PRISTINE STORE
+=====================
 
-=== Introduction ===
+=== A-1. Introduction ===
 
 The Pristine Store is the part of the Working Copy metadata that holds
 a local copy of the full text of the base version of each WC file.
@@ -18,49 +18,56 @@ The Pristine Store data is held in
 This specification uses SDB transactions to ensure the consistency of
 writes and reads.
 
-==== Invariants ====
+==== A-2. Invariants ====
 
 The operating procedures below maintain the following invariants.
 These invariants apply at all times except within the SDB txns defined
 below.
 
-* Each row in the PRISTINE table has an associated pristine text file
+(a) Each row in the PRISTINE table has an associated pristine text file
   that is not open for writing and is available for reading and whose
   content matches the columns 'size', 'checksum', 'md5_checksum'.
 
-==== Operating Procedures ====
+==== A-3. Operating Procedures ====
 
-The steps should be carried out in the order specified.  (See rationale.)
+The numbered steps should be carried out in the order specified.  (See
+rationale.)
 
-* To add a pristine, do the following inside an SDB txn:
-     * Add the table row, and set the refcount as desired.  If a row
+(a) To add a pristine, do the following inside an SDB txn:
+    1. Add the table row, and set the refcount as desired.  If a row
        already exists, add the desired refcount to its refcount, and
        preferably verify the old row matches the new metadata.
-     * Create the file. Creation should be fs-atomic, e.g. by moving a
+    2. Create the file. Creation should be fs-atomic, e.g. by moving a
        new file into place, so as never to orphan a partial file.  If a
        file already exists, preferably leave it rather than replace it,
        and optionally verify it matches the new metadata (e.g. length).
 
-* To remove a pristine, do the following inside an SDB txn:
-     * First, check refcount == 0, and abort if not.
-     * Delete the table row.
-     * Delete the file or move it away. (If not present, log a
+(b) To remove a pristine, do the following inside an SDB txn:
+    1. First, check refcount == 0, and abort if not.
+    2. Delete the table row.
+    3. Delete the file or move it away. (If not present, log a
        consistency error but, in a release build, return success.)
 
-* To query a pristine's existence or SDB metadata, the reader must:
-     * Ensure no pristine-remove txn is in progress while querying it.
+(c) To query a pristine's existence or SDB metadata, the reader must:
+    1. Ensure no pristine-remove txn (as defined just above) is in
+       progress while querying it.  The obvious way to ensure it's not in
+       progress would be to do this query in an SDB txn with a suitable
+       lock (and I think the default lock type that you get in a txn would
+       be sufficient).
 
-* To read a pristine text, the reader must:
-     * Ensure no pristine-remove txn is in progress while querying and
+(d) To read a pristine text, the reader must:
+    1. Ensure no pristine-remove txn is in progress while querying and
        opening it.
-     * Ensure the pristine text remains in the store continuously from
+    2. Ensure the pristine text remains in the store continuously from
        opening it for the duration of the read. (Perhaps by ensuring
        refcount remains >= 1 and/or by cooperating with the clean-up
-       code.)
+       code.  Under spec B, the clean-up code is controlled by rule
+       B-3(c), so holding any WC lock would prevent a pristine from being
+       deleted.)
 
-==== Rationale ====
+==== A-4. Rationale ====
 
-* Adding a pristine:
+(a) Adding a pristine:
      * We can't add the file *before* the SDB txn takes out a lock,
        because that would leave a gap in which another process could
        see this file as an orphan and delete it.
@@ -74,7 +81,7 @@ The steps should be carried out in the order specified.  (See rationale.)
        might also be acceptable, but that would need further
        investigation.
 
-* Removing a pristine:
+(b) Removing a pristine:
      * We can't remove the file *after* the SDB txn that updates the
        table, because that would leave a gap in which another process
        might re-add this same pristine file and then we would delete it.
@@ -85,30 +92,38 @@ The steps should be carried out in the order specified.  (See rationale.)
        nevertheless it may have changed and so must be checked again
        inside the txn.
 
-* In the add and remove txns, we need to acquire an SDB 'RESERVED'
+(c) In the add and remove txns, we need to acquire an SDB 'RESERVED'
   lock before adding or removing the file.  This can be done by starting
   the txn with 'BEGIN IMMEDIATE' and/or by performing an SDB write (such
   as the table row update).  ### Would a 'SHARED' lock be sufficient,
   and if so would it be noticably better?
 
-==== Notes ====
+==== A-5. Notes ====
 
-* This procedure can leave orphaned pristine files (files without a
-  corresponding SDB row) if Subvsersion crashes.  The Pristine Store
-  will still operate correctly.  It should be easy to teach "svn cleanup"
-  to safely delete these.  ### Do we need to define the clean-up
-  procedure here?
+(a) This procedure can leave orphaned pristine files (files without a
+    corresponding SDB row) if Subvsersion crashes.  The Pristine Store
+    will still operate correctly.  It should be easy to teach "svn
+    cleanup" to safely delete these.  ### Do we need to define the
+    clean-up procedure here?
 
-* This specification is conceptually simple, but requires completing disk
-  operations within SDB transactions, which may make it too inefficient
-  in practice.  An alternative specification could use the Work Queue to
-  enable more efficient processing of multiple transactions.
+(b) This specification is conceptually simple, but requires completing disk
+    operations within SDB transactions, which may make it too inefficient
+    in practice.  An alternative specification could use the Work Queue to
+    enable more efficient processing of multiple transactions.
+
+(c) [G Stein] Note that my initial design for the pristine inserted a row
+    which effectively said "we know about this pristine, but it hasn't
+    been written yet". The file would be put into place, then the row
+    would get tweaked to say "it is now there". That avoids the disk I/O
+    within a sqlite txn.
 
 
-REFERENCE COUNTING
-==================
+B. REFERENCE COUNTING
+=====================
 
-The Pristine Store spec above defines how texts are added and removed
+=== B-1. Introduction ===
+
+The Pristine Store spec 'A' above defines how texts are added and removed
 from the store.  This spec defines how the addition and removal of
 pristine text references within the WC DB are co-ordinated with the
 addition and removal of the pristine texts themselves.
@@ -162,45 +177,53 @@ Method (c):
 We choose method (b).
 
 
-=== Invariants in a Valid WC DB State ===
+=== B-2. Invariants in a Valid WC DB State ===
 
-* No pristine text, even if refcount == 0, will be deleted from the store
-  as long as any process holds any WC lock in this WC.
+  (a) No pristine text, even if refcount == 0, will be deleted from the
+      store as long as any process holds any WC lock in this WC.
 
 The following conditions are always true outside of a SQL txn:
 
-  * The 'checksum' column in each NODES table row is either NULL or
-    references a primary key in the 'pristine' table.
+  (b) The 'checksum' column in each NODES table row is either NULL or
+      references a primary key in the 'pristine' table.
 
-  * The 'refcount' column in each PRISTINE table row is equal to the
-    number of NODES table rows whose 'checksum' column references this
-    pristine row.
+  (c) The 'refcount' column in each PRISTINE table row is equal to the
+      number of NODES table rows whose 'checksum' column references this
+      pristine row.  (Note: The ACTUAL_NODE table is designed to be able
+      to hold references to pristine texts involved in conflicts, but this
+      functionality is not implemented yet and is not yet included in this
+      spec.)
 
 The following conditions are always true
     outside of a SQL txn,
     when the Work Queue is empty:
     (### ?) when no WC locks are held by any process:
 
-  * The 'refcount' column in a PRISTINE table row equals the number of
-    NODES table rows whose 'checksum' column references that pristine row.
-    It may be zero.
+  (d) The 'refcount' column in a PRISTINE table row equals the number of
+      NODES table rows whose 'checksum' column references that pristine
+      row.  It may be zero.
 
-==== Operating Procedures ====
+==== B-3. Operating Procedures ====
 
-The steps should be carried out in the order specified.
+This section defines operations on the WC metadata that involve adding and
+removing a pristine text along with a NODES table row that refers to it.
+These operations are a layer above, and built on top of, those defined in
+section A-3.
 
-* To add a pristine text reference to the WC, obtain the text and its
-  checksum, and then do this while holding a WC lock:
-    * Add the pristine text to the Pristine Store, setting the desired
-      refcount >= 1.
-    * Add the reference(s) in the NODES table.
+The numbered steps should be carried out in the order specified.
 
-* To remove a pristine text reference from the WC, do this while holding
-  a WC lock:
-    * Remove the reference(s) in the NODES table.
-    * Decrement the pristine text's 'refcount' column.
+(a) To add a pristine text reference to the WC, obtain the text and its
+    checksum, and then do this while holding a WC lock:
+    (1) Add the pristine text to the Pristine Store, setting the desired
+        refcount >= 1.
+    (2) Add the reference(s) in the NODES table.
 
-* To purge an unreferenced pristine text, do this with an *exclusive*
-  WC lock:
-    * Check refcount == 0; skip if not.
-    * Remove it from the pristine store.
+(b) To remove a pristine text reference from the WC, do this while holding
+    a WC lock:
+    (1) Remove the reference(s) in the NODES table.
+    (2) Decrement the pristine text's 'refcount' column.
+
+(c) To purge an unreferenced pristine text, do this with an *exclusive*
+    WC lock:
+    (1) Check refcount == 0; skip if not.
+    (2) Remove it from the pristine store.
