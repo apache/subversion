@@ -224,7 +224,9 @@ Candidate changes:
    interactive callback to the user to resolve the conflicts, unlike the text
    conflicts. Suppress the interactive callback in `--dry-run' mode.
    Justification:
-     Consistency. Simple patch.
+     Consistency. Removes an annoyance. Simple patch.
+   Branch:
+     ^/subversion/branches/1.6.x-r880146
    Votes:
      +1: julianfoad
      -0: stsp (Doesn't merge cleanly. Please create a backport branch.)
