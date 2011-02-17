@@ -378,7 +378,7 @@ svn_cl__blame(apr_getopt_t *os,
                                           _("Skipping binary file: '%s'\n"),
                                           target));
             }
-	  else if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND ||
+          else if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND ||
                    err->apr_err == SVN_ERR_FS_NOT_FILE ||
                    err->apr_err == SVN_ERR_FS_NOT_FOUND)
             {
