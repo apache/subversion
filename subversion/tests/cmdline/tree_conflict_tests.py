@@ -714,7 +714,7 @@ def merge_dir_add_onto_not_none(sbox):
 #----------------------------------------------------------------------
 
 @XFail()
-@Issue(3508)
+@Issue(3805)
 def force_del_tc_inside(sbox):
   "--force del on dir with TCs inside"
   ### This test is currently marked XFail because we don't remove tree
@@ -808,7 +808,7 @@ def force_del_tc_inside(sbox):
 #----------------------------------------------------------------------
 
 @XFail()
-@Issue(3508)
+@Issue(3805)
 def force_del_tc_is_target(sbox):
   "--force del on tree-conflicted targets"
   #          A/C
