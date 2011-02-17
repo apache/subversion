@@ -741,6 +741,7 @@ def blame_non_existent_wc_target(sbox):
     raise svntest.Failure('blame failed: expected error "%s", but received '
                           '"%s"' % (expected_err, "".join(error)))
 
+@XFail(svntest.main.is_ra_type_dav)
 def blame_non_existent_url_target(sbox):
   "blame non existent url target"
 
