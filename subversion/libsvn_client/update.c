@@ -44,6 +44,58 @@
 
 /*** Code. ***/
 
+/* Helper function to fix issue #2267,
+ * "support svn:externals on locally added directories".
+ *
+ * Crawl all externals beneath ANCHOR_ABSPATH (this is cheap because we're
+ * only crawling the WC DB itself). If there are externals within the
+ * REQUESTED_DEPTH that weren't already picked up while we were crawling
+ * the BASE tree, add them to the EXTERNALS_NEW hash with ambient depth
+ * infinity. Facilitates populating externals in locally added directories.
+ *
+ * ### This is a bit of a hack. We should try to find a better solution
+ * ### to this problem. */
+static svn_error_t *
+gather_externals_in_locally_added_dirs(apr_hash_t *externals_new,
+                                       apr_hash_t *ambient_depths,
+                                       const char *anchor_abspath,
+                                       svn_depth_t requested_depth,
+                                       svn_client_ctx_t *ctx,
+                                       apr_pool_t *scratch_pool)
+{
+  apr_hash_t *all_externals;
+  apr_hash_index_t *hi;
+
+  /* If there was no requested depth for this operation, use infinity.
+   * svn_client__crawl_for_externals() doesn't like depth 'unknown'. */
+  if (requested_depth == svn_depth_unknown)
+    requested_depth = svn_depth_infinity;
+
+  SVN_ERR(svn_client__crawl_for_externals(&all_externals, anchor_abspath,
+                                          requested_depth, ctx, scratch_pool,
+                                          scratch_pool));
+
+  for (hi = apr_hash_first(scratch_pool, all_externals);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *local_abspath = svn__apr_hash_index_key(hi);
+
+      if (! apr_hash_get(externals_new, local_abspath, APR_HASH_KEY_STRING))
+        {
+          apr_pool_t *hash_pool = apr_hash_pool_get(externals_new);
+          svn_string_t *propval = svn__apr_hash_index_val(hi);
+
+          apr_hash_set(externals_new, local_abspath, APR_HASH_KEY_STRING,
+                       apr_pstrdup(hash_pool, propval->data));
+          apr_hash_set(ambient_depths, local_abspath, APR_HASH_KEY_STRING,
+                       svn_depth_to_word(svn_depth_infinity));
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* This is a helper for svn_client__update_internal(), which see for
    an explanation of most of these parameters.  Some stuff that's
    unique is as follows:
@@ -250,6 +302,10 @@ update_internal(svn_revnum_t *result_rev,
      the primary operation.  */
   if (SVN_DEPTH_IS_RECURSIVE(depth) && (! ignore_externals))
     {
+      SVN_ERR(gather_externals_in_locally_added_dirs(efb.externals_new,
+                                                     efb.ambient_depths,
+                                                     anchor_abspath,
+                                                     depth, ctx, pool));
       SVN_ERR(svn_client__handle_externals(efb.externals_old,
                                            efb.externals_new,
                                            efb.ambient_depths,
