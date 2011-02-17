@@ -157,6 +157,7 @@ relocate_externals(const char *local_abspath,
         APR_ARRAY_IDX(ext_desc, i, svn_wc_external_item2_t *);
       const char *target_repos_root_url;
       const char *target_abspath;
+      svn_error_t *err;
 
       svn_pool_clear(iterpool);
 
@@ -181,8 +182,19 @@ relocate_externals(const char *local_abspath,
                                                       ext_item->target_dir,
                                                       iterpool),
                                       iterpool));
-      SVN_ERR(svn_client_root_url_from_path(&target_repos_root_url,
-                                            target_abspath, ctx, iterpool));
+      err = svn_client_root_url_from_path(&target_repos_root_url,
+                                          target_abspath, ctx, iterpool);
+
+      /* Ignore externals that aren't present in the working copy.
+       * This can happen if an external is deleted from disk accidentally,
+       * or if an external is configured on a locally added directory. */
+      if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+        {
+          svn_error_clear(err);
+          continue;
+        }
+      else
+        SVN_ERR(err);
 
       if (strcmp(target_repos_root_url, old_parent_repos_root_url) == 0)
         SVN_ERR(svn_client_relocate2(target_abspath,
