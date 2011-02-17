@@ -235,6 +235,8 @@ Candidate changes:
    Don't use globbing where it's not necessary.
    Justification:
      It's an easy optimisation well worth doing!
+   Branch:
+     ^/subversion/branches/1.6.x-r1068988
    Votes:
      +1: stsp
 
