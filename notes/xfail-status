@@ -349,17 +349,6 @@ Test #  Mode   Test Description
   Log: N/A
   Point Person: Unassigned
 
-LISTING: stat_tests.py
-
-Test #  Mode   Test Description
-------  -----  ----------------
-  32    XFAIL  status on wc with nested old-format wc
-  Issue #: 3742
-  Target Milestone: 1.7.0 
-  Thread: N/A
-  Log: r1027732
-  Point Person: Unassigned
-
 LISTING: switch_tests.py
 
 Test #  Mode   Test Description
