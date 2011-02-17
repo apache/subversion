@@ -85,8 +85,8 @@ AuthzSVNAccessFile_cmd(cmd_parms *cmd, void *config, const char *arg1)
   authz_svn_config_rec *conf = config;
 
   if (conf->repo_relative_access_file != NULL)
-    return "AuthzSVNAccessFile cannot be defined at "
-           "same time as AuthzSVNReposRelativeAccessFile.";
+    return "AuthzSVNAccessFile and AuthzSVNReposRelativeAccessFile "
+           "directives are mutually exclusive.";
 
   conf->access_file = ap_server_root_relative(cmd->pool, arg1);
 
@@ -102,8 +102,8 @@ AuthzSVNReposRelativeAccessFile_cmd(cmd_parms *cmd,
   authz_svn_config_rec *conf = config;
 
   if (conf->access_file != NULL)
-    return "AuthzSVNReposRelativeAccessFile cannot be defined at "
-           "same time as AuthzSVNAccessFile.";
+    return "AuthzSVNAccessFile and AuthzSVNReposRelativeAccessFile "
+           "directives are mutually exclusive.";
 
   conf->repo_relative_access_file = arg1;
 
@@ -577,15 +577,15 @@ subreq_bypass(request_rec *r,
   username_to_authorize = get_username_to_authorize(r, conf);
 
   /* If configured properly, this should never be true, but just in case. */
-  if (!conf->anonymous || !conf->access_file
-      || !conf->repo_relative_access_file)
+  if (!conf->anonymous
+      || (! (conf->access_file || conf->repo_relative_access_file)))
     {
       log_access_verdict(APLOG_MARK, r, 0, repos_path, NULL);
       return HTTP_FORBIDDEN;
     }
 
   /* Retrieve authorization file */
-  access_conf = get_access_conf(r,conf);
+  access_conf = get_access_conf(r, conf);
   if (access_conf == NULL)
     return HTTP_FORBIDDEN;
 
@@ -643,7 +643,7 @@ access_checker(request_rec *r)
 
   /* We are not configured to run */
   if (!conf->anonymous
-      || (!conf->access_file && !conf->repo_relative_access_file))
+      || (! (conf->access_file || conf->repo_relative_access_file)))
     return DECLINED;
 
   if (ap_some_auth_required(r))
@@ -701,8 +701,8 @@ check_user_id(request_rec *r)
 
   /* We are not configured to run, or, an earlier module has already
    * authenticated this request. */
-  if ((!conf->access_file && !conf->repo_relative_access_file)
-      || !conf->no_auth_when_anon_ok || r->user)
+  if (!conf->no_auth_when_anon_ok || r->user
+      || (! (conf->access_file || conf->repo_relative_access_file)))
     return DECLINED;
 
   /* If anon access is allowed, return OK, preventing later modules
@@ -729,7 +729,7 @@ auth_checker(request_rec *r)
   int status;
 
   /* We are not configured to run */
-  if (!conf->access_file && !conf->repo_relative_access_file)
+  if (! (conf->access_file || conf->repo_relative_access_file))
     return DECLINED;
 
   /* Previous hook (check_user_id) already did all the work,
