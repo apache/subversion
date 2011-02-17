@@ -741,7 +741,6 @@ def blame_non_existent_wc_target(sbox):
     raise svntest.Failure('blame failed: expected error "%s", but received '
                           '"%s"' % (expected_err, "".join(error)))
 
-@XFail(svntest.main.is_ra_type_dav)
 def blame_non_existent_url_target(sbox):
   "blame non existent url target"
 
@@ -760,8 +759,7 @@ def blame_non_existent_url_target(sbox):
     "     2    jrandom New contents for iota\n",
     ]
 
-  expected_err = "svn: warning: W160017: '/non-existent' " +  \
-      "is not a file in revision 2\n" + \
+  expected_err = "svn: warning: (W160017|W160013): .*\n" +  \
       ".*\nsvn: E200009: Could not perform blame on all targets " + \
       "because some targets don't exist\n"
   expected_err_re = re.compile(expected_err)
