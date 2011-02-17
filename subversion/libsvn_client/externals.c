@@ -593,7 +593,7 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
                         apr_pstrndup(pool, url, num_leading_slashes),
                         svn_relpath_canonicalize(url + num_leading_slashes,
                                                  pool),
-                        NULL);
+                        (char*)NULL);
     }
   else
     {
@@ -696,7 +696,7 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
 
       SVN_ERR(uri_scheme(&scheme, repos_root_url, pool));
       item->url = svn_uri_canonicalize(apr_pstrcat(pool, scheme, ":",
-                                                   url, NULL), pool);
+                                                   url, (char *)NULL), pool);
       return SVN_NO_ERROR;
     }
 
