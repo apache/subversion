@@ -1575,6 +1575,8 @@ def update_modify_file_external(sbox):
                                         None, None, None, None, None,
                                         True)
 
+# Test for issue #2267
+@Issue(2267)
 def update_external_on_locally_added_dir(sbox):
   "update an external on a locally added dir"
 
