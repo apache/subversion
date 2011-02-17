@@ -1135,6 +1135,7 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
                             const svn_string_t *working_val,
                             svn_wc_conflict_resolver_func_t conflict_func,
                             void *conflict_baton,
+                            svn_boolean_t dry_run,
                             apr_pool_t *pool)
 {
   svn_wc_conflict_result_t *result = NULL;
@@ -1143,7 +1144,7 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
   svn_wc_conflict_description_t *cdesc;
   const char *dirpath = svn_path_dirname(path, filepool);
 
-  if (! conflict_func)
+  if (! conflict_func || dry_run)
     {
       /* Just postpone the conflict. */
       *conflict_remains = TRUE;
@@ -1364,6 +1365,7 @@ apply_single_prop_add(svn_wc_notify_state_t *state,
                       const svn_string_t *new_val,
                       svn_wc_conflict_resolver_func_t conflict_func,
                       void *conflict_baton,
+                      svn_boolean_t dry_run,
                       svn_wc_adm_access_t *adm_access,
                       apr_pool_t *pool)
 
@@ -1400,7 +1402,7 @@ apply_single_prop_add(svn_wc_notify_state_t *state,
                                                   NULL, new_val,
                                                   base_val, working_val,
                                                   conflict_func, conflict_baton,
-                                                  pool));
+                                                  dry_run, pool));
               if (got_conflict)
                 *conflict = svn_string_createf
                     (pool,
@@ -1416,7 +1418,8 @@ apply_single_prop_add(svn_wc_notify_state_t *state,
                                           is_dir, propname,
                                           working_props, NULL, new_val,
                                           base_val, NULL,
-                                          conflict_func, conflict_baton, pool));
+                                          conflict_func, conflict_baton,
+                                          dry_run, pool));
       if (got_conflict)
         *conflict = svn_string_createf
             (pool, _("Trying to create property '%s' with value '%s',\n"
@@ -1459,6 +1462,7 @@ apply_single_prop_delete(svn_wc_notify_state_t *state,
                          const svn_string_t *old_val,
                          svn_wc_conflict_resolver_func_t conflict_func,
                          void *conflict_baton,
+                         svn_boolean_t dry_run,
                          svn_wc_adm_access_t *adm_access,
                          apr_pool_t *pool)
 {
@@ -1489,7 +1493,7 @@ apply_single_prop_delete(svn_wc_notify_state_t *state,
                                                    old_val, NULL,
                                                    base_val, working_val,
                                                    conflict_func, conflict_baton,
-                                                   pool));
+                                                   dry_run, pool));
                if (got_conflict)
                  *conflict = svn_string_createf
                      (pool,
@@ -1510,7 +1514,8 @@ apply_single_prop_delete(svn_wc_notify_state_t *state,
                                           is_dir, propname,
                                           working_props, old_val, NULL,
                                           base_val, working_val,
-                                          conflict_func, conflict_baton, pool));
+                                          conflict_func, conflict_baton,
+                                          dry_run, pool));
       if (got_conflict)
         *conflict = svn_string_createf
             (pool,
@@ -1542,6 +1547,7 @@ apply_single_mergeinfo_prop_change(svn_wc_notify_state_t *state,
                                    const svn_string_t *new_val,
                                    svn_wc_conflict_resolver_func_t conflict_func,
                                    void *conflict_baton,
+                                   svn_boolean_t dry_run,
                                    svn_wc_adm_access_t *adm_access,
                                    apr_pool_t *pool)
 {
@@ -1583,7 +1589,7 @@ apply_single_mergeinfo_prop_change(svn_wc_notify_state_t *state,
                                               old_val, new_val,
                                               base_val, working_val,
                                               conflict_func, conflict_baton,
-                                              pool));
+                                              dry_run, pool));
           if (got_conflict)
             *conflict = svn_string_createf
                 (pool,
@@ -1648,6 +1654,7 @@ apply_single_generic_prop_change(svn_wc_notify_state_t *state,
                                  const svn_string_t *new_val,
                                  svn_wc_conflict_resolver_func_t conflict_func,
                                  void *conflict_baton,
+                                 svn_boolean_t dry_run,
                                  svn_wc_adm_access_t *adm_access,
                                  apr_pool_t *pool)
 {
@@ -1671,7 +1678,7 @@ apply_single_generic_prop_change(svn_wc_notify_state_t *state,
                                           old_val, new_val,
                                           base_val, working_val,
                                           conflict_func, conflict_baton,
-                                          pool));
+                                          dry_run, pool));
       if (got_conflict)
         {
           /* Describe the conflict, referring to base_val as well as
@@ -1746,6 +1753,7 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
                          const svn_string_t *new_val,
                          svn_wc_conflict_resolver_func_t conflict_func,
                          void *conflict_baton,
+                         svn_boolean_t dry_run,
                          svn_wc_adm_access_t *adm_access,
                          apr_pool_t *pool)
 {
@@ -1764,8 +1772,8 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
                                                  working_props, conflict,
                                                  propname, base_val, old_val,
                                                  new_val, conflict_func,
-                                                 conflict_baton, adm_access,
-                                                 pool));
+                                                 conflict_baton,
+                                                 dry_run, adm_access, pool));
     }
   else
     {
@@ -1776,8 +1784,8 @@ apply_single_prop_change(svn_wc_notify_state_t *state,
                                                working_props, conflict,
                                                propname, base_val, old_val,
                                                new_val, conflict_func,
-                                               conflict_baton, adm_access,
-                                               pool));
+                                               conflict_baton,
+                                               dry_run, adm_access, pool));
     }
 
   return SVN_NO_ERROR;
@@ -1862,21 +1870,21 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
                                       working_props, &conflict,
                                       propname, base_val, to_val,
                                       conflict_func, conflict_baton,
-                                      adm_access, pool));
+                                      dry_run, adm_access, pool));
 
       else if (! to_val) /* delete an existing property */
         SVN_ERR(apply_single_prop_delete(is_normal ? state : NULL, path, is_dir,
                                          working_props, &conflict,
                                          propname, base_val, from_val,
                                          conflict_func, conflict_baton,
-                                         adm_access, pool));
+                                         dry_run, adm_access, pool));
 
       else  /* changing an existing property */
         SVN_ERR(apply_single_prop_change(is_normal ? state : NULL, path, is_dir,
                                          working_props, &conflict,
                                          propname, base_val, from_val, to_val,
                                          conflict_func, conflict_baton,
-                                         adm_access, pool));
+                                         dry_run, adm_access, pool));
 
 
       /* merging logic complete, now we need to possibly log conflict
