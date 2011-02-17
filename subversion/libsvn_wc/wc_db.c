@@ -3554,7 +3554,6 @@ op_revert_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
   apr_int64_t op_depth;
-  svn_wc__db_status_t status;
   int affected_rows;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
@@ -3599,7 +3598,6 @@ op_revert_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
     }
 
   op_depth = svn_sqlite__column_int64(stmt, 0);
-  status = svn_sqlite__column_token(stmt, 3, presence_map);
   SVN_ERR(svn_sqlite__reset(stmt));
 
   if (op_depth > 0)
@@ -3611,8 +3609,6 @@ op_revert_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
                                  path_for_error_message(b->wcroot,
                                                         b->local_relpath,
                                                         scratch_pool));
-
-      SVN_ERR(convert_to_working_status(&status, status));
 
       /* Can't do non-recursive revert if children exist */
       SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
