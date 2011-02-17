@@ -1875,7 +1875,7 @@ main(int argc, const char *argv[])
           return svn_cmdline_handle_exit_error(err, pool, "svnadmin: ");
         }
 
-      opt_state.repository_path = repos_path;
+      opt_state.repository_path = svn_dirent_internal_style(repos_path, pool);
     }
 
   /* Check that the subcommand wasn't passed any inappropriate options. */
