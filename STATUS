@@ -229,8 +229,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.6.x-r880146
    Votes:
-     +1: julianfoad
-     -0: stsp (Doesn't merge cleanly. Please create a backport branch.)
+     +1: julianfoad, stsp
 
  * r1068988
    Don't use globbing where it's not necessary.
