@@ -1575,6 +1575,44 @@ def update_modify_file_external(sbox):
                                         None, None, None, None, None,
                                         True)
 
+def update_external_on_locally_added_dir(sbox):
+  "update an external on a locally added dir"
+
+  external_url_for = externals_test_setup(sbox)
+  wc_dir         = sbox.wc_dir
+
+  repo_url       = sbox.repo_url
+  other_repo_url = repo_url + ".other"
+
+  # Checkout a working copy
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'checkout',
+                                     repo_url, wc_dir)
+
+  # Add one new external item to the property on A/foo.  The new item is
+  # "exdir_E", deliberately added in the middle not at the end.
+  new_externals_desc = \
+           external_url_for["A/D/exdir_A"] + " exdir_A"           + \
+           "\n"                                                   + \
+           external_url_for["A/D/exdir_A/G/"] + " exdir_A/G/"     + \
+           "\n"                                                   + \
+           "exdir_E           " + other_repo_url + "/A/B/E"       + \
+           "\n"                                                   + \
+           "exdir_A/H -r 1 " + external_url_for["A/D/exdir_A/H"]  + \
+           "\n"                                                   + \
+           external_url_for["A/D/x/y/z/blah"] + " x/y/z/blah"     + \
+           "\n"
+
+  # Add A/foo and set the property on it
+  new_dir = sbox.ospath("A/foo")
+  sbox.simple_mkdir("A/foo")
+  change_external(new_dir, new_externals_desc, commit=False)
+
+  # Update the working copy, see if we get the new item.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  probe_paths_exist([os.path.join(wc_dir, "A", "foo", "exdir_E")])
+
 ########################################################################
 # Run the tests
 
@@ -1606,6 +1644,7 @@ test_list = [ None,
               wc_repos_file_externals,
               merge_target_with_externals,
               update_modify_file_external,
+              update_external_on_locally_added_dir,
              ]
 
 if __name__ == '__main__':
