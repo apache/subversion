@@ -237,6 +237,10 @@ Revision-number: 4
 Prop-content-length: 103
 Content-length: 103
 
+K 7
+svn:log
+V 3
+mmm
 K 10
 svn:author
 V 6
@@ -245,10 +249,6 @@ K 8
 svn:date
 V 27
 2010-11-20T17:10:31.620281Z
-K 7
-svn:log
-V 3
-mmm
 PROPS-END
 
 Node-path: trunk/H/Z
