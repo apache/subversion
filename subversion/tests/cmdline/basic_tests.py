@@ -2690,86 +2690,77 @@ def ls_url_special_characters(sbox):
                                        [], 'ls',
                                        url)
 
-def ls_non_existent_wc_target(sbox):
-  "ls a non-existent wc target"
+def ls_multiple_and_non_existent_targets(sbox):
+  "ls multiple and non-existent targets"
 
   sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
+  
+  def non_existent_wc_target():
+    "non-existent wc target"
+    non_existent_path = os.path.join(wc_dir, 'non-existent')
 
-  non_existent_path = os.path.join(wc_dir, 'non-existent')
+    expected_err = ".*W155010.*"
+    svntest.actions.run_and_verify_svn2(None, None, expected_err,
+                                        1, 'ls', non_existent_path)
 
-  expected_err = "svn: warning: W155010: The node '" + \
-      re.escape(os.path.abspath(non_existent_path)) + "' was not found"
+  def non_existent_url_target():
+    "non-existent url target"
+    non_existent_url = sbox.repo_url + '/non-existent'
+    expected_err = ".*W160013.*"
+    
+    svntest.actions.run_and_verify_svn2(None, None, expected_err,
+                                        1, 'ls', non_existent_url)
+  def multiple_wc_targets():
+    "multiple wc targets"
 
-  svntest.actions.run_and_verify_svn2(None, None, expected_err,
-                                      1, 'ls', non_existent_path)
+    alpha = sbox.ospath('A/B/E/alpha')
+    beta = sbox.ospath('A/B/E/beta')
+    non_existent_path = os.path.join(wc_dir, 'non-existent')
 
-def ls_non_existent_url_target(sbox):
-  "ls a non-existent url target"
+    # All targets are existing
+    svntest.actions.run_and_verify_svn2(None, None, [],
+                                        0, 'ls', alpha, beta)
 
-  sbox.build(read_only = True, create_wc = False)
+    # One non-existing target
+    expected_err = ".*W155010.*\n.*\n.*E200009.*"
+    expected_err_re = re.compile(expected_err)
 
-  non_existent_url = sbox.repo_url + '/non-existent'
-  expected_err = "svn: warning: W160013: .*"
+    exit_code, output, error = svntest.main.run_svn(1, 'ls', alpha, 
+                                                    non_existent_path, beta)
 
-  svntest.actions.run_and_verify_svn2(None, None, expected_err,
-                                      1, 'ls', non_existent_url)
+    # Verify error
+    if not expected_err_re.match("".join(error)):
+      raise svntest.Failure('ls failed: expected error "%s", but received '
+                            '"%s"' % (expected_err, "".join(error)))
 
-def ls_multiple_wc_targets(sbox):
-  "ls multiple wc targets"
+  def multiple_url_targets():
+    "multiple url targets"
 
-  sbox.build(read_only = True)
-  wc_dir = sbox.wc_dir
+    alpha = sbox.repo_url +  '/A/B/E/alpha'
+    beta = sbox.repo_url +  '/A/B/E/beta'
+    non_existent_url = sbox.repo_url +  '/non-existent'
 
-  alpha = sbox.ospath('A/B/E/alpha')
-  beta = sbox.ospath('A/B/E/beta')
-  non_existent_path = os.path.join(wc_dir, 'non-existent')
+    # All targets are existing
+    svntest.actions.run_and_verify_svn2(None, None, [],
+                                        0, 'ls', alpha, beta)
 
-  # All targets are existing
-  svntest.actions.run_and_verify_svn2(None, None, [],
-                                      0, 'ls', alpha, beta)
+    # One non-existing target
+    expected_err = ".*W160013.*\n.*\n.*E200009.*"
+    expected_err_re = re.compile(expected_err)
 
-  # One non-existing target
-  expected_err = "svn: warning: W155010: The node '" + \
-      re.escape(os.path.abspath(non_existent_path)) + "' was not found.\n" + \
-      ".*\nsvn: E200009: Could not list all targets because some targets " + \
-      "don't exist\n"
-  expected_err_re = re.compile(expected_err)
+    exit_code, output, error = svntest.main.run_svn(1, 'ls', alpha, 
+                                                    non_existent_url, beta)
 
-  exit_code, output, error = svntest.main.run_svn(1, 'ls', alpha, 
-                                                  non_existent_path, beta)
-
-  # Verify error
-  if not expected_err_re.match("".join(error)):
-    raise svntest.Failure('ls failed: expected error "%s", but received '
-                          '"%s"' % (expected_err, "".join(error)))
-
-def ls_multiple_url_targets(sbox):
-  "ls multiple url targets"
-
-  sbox.build(read_only = True, create_wc = False)
-
-  alpha = sbox.repo_url +  '/A/B/E/alpha'
-  beta = sbox.repo_url +  '/A/B/E/beta'
-  non_existent_url = sbox.repo_url +  '/non-existent'
-
-  # All targets are existing
-  svntest.actions.run_and_verify_svn2(None, None, [],
-                                      0, 'ls', alpha, beta)
-
-  # One non-existing target
-  expected_err = "svn: warning: W160013: .*\n" + \
-      ".*\nsvn: E200009: Could not list all targets because some targets " + \
-      "don't exist\n"
-  expected_err_re = re.compile(expected_err)
-
-  exit_code, output, error = svntest.main.run_svn(1, 'ls', alpha, 
-                                                  non_existent_url, beta)
-
-  # Verify error
-  if not expected_err_re.match("".join(error)):
-    raise svntest.Failure('ls failed: expected error "%s", but received "%s"' % \
-                          (expected_err, "".join(error)))
+    # Verify error
+    if not expected_err_re.match("".join(error)):
+      raise svntest.Failure('ls failed: expected error "%s", but received '
+                            '"%s"' % (expected_err, "".join(error)))
+  # Test one by one
+  non_existent_wc_target()
+  non_existent_url_target()
+  multiple_wc_targets()
+  multiple_url_targets()
 
 def add_multiple_targets(sbox):
   "add multiple targets"
@@ -2785,10 +2776,7 @@ def add_multiple_targets(sbox):
   svntest.main.file_write(file2, "file2 contents", 'w+')
 
   # One non-existing target
-  expected_err = "svn: warning: W155010: '" + \
-      re.escape(os.path.abspath(non_existent_path)) + "' not found\n" + \
-      ".*\nsvn: E200009: Could not add all targets because some targets " + \
-      "don't exist\n"
+  expected_err = ".*W155010.*\n.*\n.*E200009.*"
   expected_err_re = re.compile(expected_err)
 
   # Build expected state
@@ -2812,6 +2800,123 @@ def add_multiple_targets(sbox):
   svntest.actions.run_and_verify_svn(None, expected_status, [],
                                      'status', wc_dir)
 
+def info_multiple_targets(sbox):
+  "info multiple targets"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  def multiple_wc_targets():
+    "multiple wc targets"
+
+    alpha = sbox.ospath('A/B/E/alpha')
+    beta = sbox.ospath('A/B/E/beta')
+    non_existent_path = os.path.join(wc_dir, 'non-existent')
+
+    # All targets are existing
+    svntest.actions.run_and_verify_svn2(None, None, [],
+                                        0, 'info', alpha, beta)
+
+    # One non-existing target
+    expected_err = ".*W155010.*\n\n.*\n.*E200009.*"
+    expected_err_re = re.compile(expected_err)
+
+    exit_code, output, error = svntest.main.run_svn(1, 'info', alpha, 
+                                                    non_existent_path, beta)
+
+    # Verify error
+    if not expected_err_re.match("".join(error)):
+      raise svntest.Failure('info failed: expected error "%s", but received '
+                            '"%s"' % (expected_err, "".join(error)))
+
+  def multiple_url_targets():
+    "multiple url targets"
+
+    alpha = sbox.repo_url +  '/A/B/E/alpha'
+    beta = sbox.repo_url +  '/A/B/E/beta'
+    non_existent_url = sbox.repo_url +  '/non-existent'
+
+    # All targets are existing
+    svntest.actions.run_and_verify_svn2(None, None, [],
+                                        0, 'info', alpha, beta)
+
+    # One non-existing target
+    expected_err = ".*W170000.*\n\n.*\n.*E200009.*"
+    expected_err_re = re.compile(expected_err)
+
+    exit_code, output, error = svntest.main.run_svn(1, 'info', alpha, 
+                                                    non_existent_url, beta)
+
+    # Verify error
+    if not expected_err_re.match("".join(error)):
+      raise svntest.Failure('info failed: expected error "%s", but received '
+                            '"%s"' % (expected_err, "".join(error)))
+  # Test one by one
+  multiple_wc_targets()
+  multiple_url_targets()
+
+def blame_multiple_targets(sbox):
+  "blame multiple target"
+
+  sbox.build()
+
+  def multiple_wc_targets():
+    "multiple wc targets"
+    
+    # First, make a new revision of iota.
+    iota = os.path.join(sbox.wc_dir, 'iota')
+    non_existent = os.path.join(sbox.wc_dir, 'non-existent')
+    svntest.main.file_append(iota, "New contents for iota\n")
+    svntest.main.run_svn(None, 'ci',
+                         '-m', '', iota)
+
+    expected_output = [
+      "     1    jrandom This is the file 'iota'.\n",
+      "     2    jrandom New contents for iota\n",
+      ]
+
+    expected_err = ".*W155010.*\n.*\n.*E200009.*"
+    expected_err_re = re.compile(expected_err)
+
+    exit_code, output, error = svntest.main.run_svn(1, 'blame', 
+                                                    non_existent, iota)
+
+    # Verify error
+    if not expected_err_re.match("".join(error)):
+      raise svntest.Failure('blame failed: expected error "%s", but received '
+                            '"%s"' % (expected_err, "".join(error)))
+
+  def multiple_url_targets():
+    "multiple url targets"
+
+    # First, make a new revision of iota.
+    iota = os.path.join(sbox.wc_dir, 'iota')
+    iota_url = sbox.repo_url + '/iota'
+    non_existent = sbox.repo_url + '/non-existent'
+    svntest.main.file_append(iota, "New contents for iota\n")
+    svntest.main.run_svn(None, 'ci',
+                         '-m', '', iota)
+
+    expected_output = [
+      "     1    jrandom This is the file 'iota'.\n",
+      "     2    jrandom New contents for iota\n",
+      ]
+
+    expected_err = ".*(W160017|W160013).*\n.*\n.*E200009.*"
+    expected_err_re = re.compile(expected_err)
+
+    exit_code, output, error = svntest.main.run_svn(1, 'blame', 
+                                                    non_existent, iota_url)
+
+    # Verify error
+    if not expected_err_re.match("".join(error)):
+      raise svntest.Failure('blame failed: expected error "%s", but received '
+                            '"%s"' % (expected_err, "".join(error)))
+
+  # Test one by one
+  multiple_wc_targets()
+  multiple_url_targets()
+  
 ########################################################################
 # Run the tests
 
@@ -2873,11 +2978,10 @@ test_list = [ None,
               basic_relocate,
               delete_urls_with_spaces,
               ls_url_special_characters,
-              ls_non_existent_wc_target,
-              ls_non_existent_url_target,
-              ls_multiple_wc_targets,
-              ls_multiple_url_targets,
+              ls_multiple_and_non_existent_targets,
               add_multiple_targets,
+              info_multiple_targets,
+              blame_multiple_targets,
              ]
 
 if __name__ == '__main__':
