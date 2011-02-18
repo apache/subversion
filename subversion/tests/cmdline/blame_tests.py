@@ -710,68 +710,6 @@ def blame_output_after_merge(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                     'blame', '-g', mu_path)
 
-def blame_non_existent_wc_target(sbox):
-  "blame non existent wc target"
-
-  sbox.build()
-
-  # First, make a new revision of iota.
-  iota = os.path.join(sbox.wc_dir, 'iota')
-  non_existent = os.path.join(sbox.wc_dir, 'non-existent')
-  svntest.main.file_append(iota, "New contents for iota\n")
-  svntest.main.run_svn(None, 'ci',
-                       '-m', '', iota)
-
-  expected_output = [
-    "     1    jrandom This is the file 'iota'.\n",
-    "     2    jrandom New contents for iota\n",
-    ]
-
-  expected_err = "svn: warning: W155010: The node '" + \
-      re.escape(os.path.abspath(non_existent)) + "' was not found.\n" + \
-      ".*\nsvn: E200009: Could not perform blame on all targets " + \
-      "because some targets don't exist\n"
-  expected_err_re = re.compile(expected_err)
-
-  exit_code, output, error = svntest.main.run_svn(1, 'blame', 
-                                                  non_existent, iota)
-
-  # Verify error
-  if not expected_err_re.match("".join(error)):
-    raise svntest.Failure('blame failed: expected error "%s", but received '
-                          '"%s"' % (expected_err, "".join(error)))
-
-def blame_non_existent_url_target(sbox):
-  "blame non existent url target"
-
-  sbox.build()
-
-  # First, make a new revision of iota.
-  iota = os.path.join(sbox.wc_dir, 'iota')
-  iota_url = sbox.repo_url + '/iota'
-  non_existent = sbox.repo_url + '/non-existent'
-  svntest.main.file_append(iota, "New contents for iota\n")
-  svntest.main.run_svn(None, 'ci',
-                       '-m', '', iota)
-
-  expected_output = [
-    "     1    jrandom This is the file 'iota'.\n",
-    "     2    jrandom New contents for iota\n",
-    ]
-
-  expected_err = "svn: warning: (W160017|W160013): .*\n" +  \
-      ".*\nsvn: E200009: Could not perform blame on all targets " + \
-      "because some targets don't exist\n"
-  expected_err_re = re.compile(expected_err)
-
-  exit_code, output, error = svntest.main.run_svn(1, 'blame', 
-                                                  non_existent, iota_url)
-
-  # Verify error
-  if not expected_err_re.match("".join(error)):
-    raise svntest.Failure('blame failed: expected error "%s", but received '
-                          '"%s"' % (expected_err, "".join(error)))
-
 ########################################################################
 # Run the tests
 
@@ -792,8 +730,6 @@ test_list = [ None,
               blame_peg_rev_file_not_in_head,
               blame_file_not_in_head,
               blame_output_after_merge,
-              blame_non_existent_wc_target,
-              blame_non_existent_url_target,
              ]
 
 if __name__ == '__main__':
