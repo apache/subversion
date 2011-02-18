@@ -116,10 +116,11 @@ Candidate changes:
      +1: philip
      +0: stsp (it fixes the test, but pburba asked on IRC how this change
                will affect replaced directories and I'm not sure about that)
-     +0: pburba (since we reverted r962377-962378 in r1037005 - see
+     +1: pburba (since we reverted r962377-962378 in r1037005 - see
                  http://svn.haxx.se/dev/archive-2010-11/0412.shtml, this
                  change is now dependent on the new set of issue #3641 fixes
-                 that are currently nominated.)
+                 that are currently nominated...so my +1 is conditional on
+                 that fix being applied first.)
      +1: danielsh (pburba: a fix to #3641 was committed to trunk)
 
  * r1028084, r1028125, r1041638
