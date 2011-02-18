@@ -107,6 +107,7 @@ Candidate changes:
      +1: danielsh, blair
      -0: rhuijben (Should we apply a change like this in a patch release?)
      -0:  stsp (I'd say no...)
+     -0: pburba (I see no harm, but have to agree with stsp)
 
  * r1036429
    Fix svnsync_tests 29 for BDB.
@@ -194,18 +195,6 @@ Candidate changes:
    Votes:
      +1: blair
 
- * r880146
-   When in `--dry-run' mode of `svn merge' command, property conflicts made an
-   interactive callback to the user to resolve the conflicts, unlike the text
-   conflicts. Suppress the interactive callback in `--dry-run' mode.
-   Justification:
-     A user asked me for it recently. Consistency. Removes an annoyance.
-     Simple patch.
-   Branch:
-     ^/subversion/branches/1.6.x-r880146
-   Votes:
-     +1: julianfoad, stsp
-
  * r962377, r962378, r1036978, r1037762, r1063572, r1063573, r1063592
    Fix issue #3641 svnsync handling of directory copyfrom.
    Justification:
@@ -230,6 +219,7 @@ Candidate changes:
      Data loss --- I already lost two log messages to this bug.
    Votes:
      +1: danielsh
+     -0: ptb (this doesn't merge cleanly; please make a backport branch)
 
 Veto-blocked changes:
 =====================
@@ -327,6 +317,18 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r880146
+   When in `--dry-run' mode of `svn merge' command, property conflicts made an
+   interactive callback to the user to resolve the conflicts, unlike the text
+   conflicts. Suppress the interactive callback in `--dry-run' mode.
+   Justification:
+     A user asked me for it recently. Consistency. Removes an annoyance.
+     Simple patch.
+   Branch:
+     ^/subversion/branches/1.6.x-r880146
+   Votes:
+     +1: julianfoad, stsp, pburba
 
  * r902467
    Fix broken svn_ra_get_mergeinfo API promise in serf and neon
