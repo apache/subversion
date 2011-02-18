@@ -194,6 +194,8 @@ add_subdir(svn_fs_root_t *source_root,
       svn_fs_path_change2_t *change;
       svn_boolean_t readable = TRUE;
       svn_fs_dirent_t *dent;
+      const char *copyfrom_path = NULL;
+      svn_revnum_t copyfrom_rev = SVN_INVALID_REVNUM;
       const char *new_path;
       void *val;
 
@@ -216,6 +218,13 @@ add_subdir(svn_fs_root_t *source_root,
           /* If it's a delete, skip this entry. */
           if (change->change_kind == svn_fs_path_change_delete)
             continue;
+          else if (change->change_kind == svn_fs_path_change_replace)
+            {
+              /* ### Can this assert fail? */
+              SVN_ERR_ASSERT(change->copyfrom_known);
+              copyfrom_path = change->copyfrom_path;
+              copyfrom_rev = change->copyfrom_rev;
+            }
         }
 
       if (authz_read_func)
@@ -227,14 +236,43 @@ add_subdir(svn_fs_root_t *source_root,
 
       if (dent->kind == svn_node_dir)
         {
+          svn_fs_root_t *new_source_root;
+          const char *new_source_path;
           void *new_dir_baton;
 
-          SVN_ERR(add_subdir(source_root, target_root, editor, edit_baton,
-                             new_path, *dir_baton,
-                             svn_path_join(source_path, dent->name,
-                                           subpool),
-                             authz_read_func, authz_read_baton,
-                             changed_paths, subpool, &new_dir_baton));
+          if (copyfrom_path)
+            {
+              svn_fs_t *fs = svn_fs_root_fs(source_root);
+              SVN_ERR(svn_fs_revision_root(&new_source_root, fs, copyfrom_rev, pool));
+              new_source_path = copyfrom_path;
+            }
+          else
+            {
+              new_source_root = source_root;
+              new_source_path = svn_path_join(source_path, dent->name,
+                                              subpool);
+            }
+
+          /* ### authz considerations?
+           *
+           * I think not; when path_driver_cb_func() calls add_subdir(), it
+           * passes SOURCE_ROOT and SOURCE_PATH that are unreadable.
+           */
+          if (change && change->change_kind == svn_fs_path_change_replace
+              && copyfrom_path == NULL)
+            {
+              SVN_ERR(editor->add_directory(new_path, *dir_baton,
+                                            NULL, SVN_INVALID_REVNUM,
+                                            subpool, &new_dir_baton));
+            }
+          else
+            {
+              SVN_ERR(add_subdir(new_source_root, target_root, editor, edit_baton,
+                                 new_path, *dir_baton,
+                                 new_source_path,
+                                 authz_read_func, authz_read_baton,
+                                 changed_paths, subpool, &new_dir_baton));
+            }
 
           SVN_ERR(editor->close_directory(new_dir_baton, subpool));
         }
