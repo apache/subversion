@@ -502,7 +502,9 @@ make_tree_conflict(svn_wc_conflict_description_t **conflict,
 }
 
 /* Record a tree conflict in the WC, unless this is a dry run or a record-
- * only merge.
+ * only merge, or if a tree conflict is already flagged for the VICTIM_PATH.
+ * (The latter can happen if a merge-tracking-aware merge is doing multiple
+ * editor drives because of a gap in the range of eligible revisions.)
  *
  * The tree conflict, with its victim specified by VICTIM_PATH, is
  * assumed to have happened during a merge using merge baton MERGE_B.
@@ -523,16 +525,22 @@ tree_conflict(merge_cmd_baton_t *merge_b,
               svn_wc_conflict_action_t action,
               svn_wc_conflict_reason_t reason)
 {
+  svn_wc_conflict_description_t *existing_conflict;
   svn_wc_conflict_description_t *conflict;
 
   if (merge_b->record_only || merge_b->dry_run)
     return SVN_NO_ERROR;
 
-  /* Construct the new conflict first to get the proper conflict->path */
-  SVN_ERR(make_tree_conflict(&conflict, merge_b, adm_access, victim_path,
-                             node_kind, action, reason));
+  SVN_ERR(svn_wc__get_tree_conflict(&existing_conflict, victim_path,
+                                    adm_access, merge_b->pool));
+  if (existing_conflict == NULL)
+    {
+      /* There is no existing tree conflict so it is safe to add one. */
+      SVN_ERR(make_tree_conflict(&conflict, merge_b, adm_access, victim_path,
+                                 node_kind, action, reason));
+      SVN_ERR(svn_wc__add_tree_conflict(conflict, adm_access, merge_b->pool));
+    }
 
-  SVN_ERR(svn_wc__add_tree_conflict(conflict, adm_access, merge_b->pool));
   return SVN_NO_ERROR;
 }
 
