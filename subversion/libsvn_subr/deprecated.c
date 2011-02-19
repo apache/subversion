@@ -779,6 +779,13 @@ svn_io_start_cmd(apr_proc_t *cmd_proc,
                            infile, FALSE, outfile, FALSE, errfile, pool);
 }
 
+svn_error_t *
+svn_io_file_read_full(apr_file_t *file, void *buf,
+                      apr_size_t nbytes, apr_size_t *bytes_read,
+                      apr_pool_t *pool)
+{
+  return svn_io_file_read_full2(file, buf, nbytes, bytes_read, NULL, pool);
+}
 
 struct walk_func_filter_baton_t
 {
