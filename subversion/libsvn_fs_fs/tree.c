@@ -3707,7 +3707,8 @@ get_mergeinfo_for_path(svn_mergeinfo_t *mergeinfo,
 
       if (validate_inherited_mergeinfo)
         SVN_ERR(svn_fs_fs__validate_mergeinfo(mergeinfo, rev_root->fs,
-                                              *mergeinfo, pool, iterpool));
+                                              *mergeinfo, result_pool,
+                                              iterpool));
       svn_pool_destroy(iterpool);
       return SVN_NO_ERROR;
     }
