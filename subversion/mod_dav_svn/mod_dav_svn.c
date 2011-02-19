@@ -706,7 +706,7 @@ dav_svn__get_activities_db(request_rec *r)
 
 
 int
-dav_svn__get_compression_level()
+dav_svn__get_compression_level(void)
 {
   return svn__compression_level;
 }
