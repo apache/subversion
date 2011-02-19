@@ -970,19 +970,26 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
 
       if (latest_revnum)
         {
-          svn_ra_serf__options_context_t *opt_ctx;
+          if (SVN_IS_VALID_REVNUM(revision))
+            {
+              *latest_revnum = revision;
+            }
+          else
+           {
+              svn_ra_serf__options_context_t *opt_ctx;
 
-          SVN_ERR(svn_ra_serf__create_options_req(&opt_ctx, session, conn,
+              SVN_ERR(svn_ra_serf__create_options_req(&opt_ctx, session, conn,
                                                   session->repos_url.path,
                                                   pool));
-          SVN_ERR(svn_ra_serf__context_run_wait(
-            svn_ra_serf__get_options_done_ptr(opt_ctx), session, pool));
+              SVN_ERR(svn_ra_serf__context_run_wait(
+                svn_ra_serf__get_options_done_ptr(opt_ctx), session, pool));
 
-          *latest_revnum = svn_ra_serf__options_get_youngest_rev(opt_ctx);
-          if (! SVN_IS_VALID_REVNUM(*latest_revnum))
-            return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
-                                    _("The OPTIONS response did not include "
-                                      "the youngest revision"));
+             *latest_revnum = svn_ra_serf__options_get_youngest_rev(opt_ctx);
+             if (! SVN_IS_VALID_REVNUM(*latest_revnum))
+               return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+                                       _("The OPTIONS response did not include "
+                                         "the youngest revision"));
+          }
         }
     }
 

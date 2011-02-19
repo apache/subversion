@@ -2715,13 +2715,13 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
    * Otherwise, we need to get the baseline version for this particular
    * revision and then fetch that file.
    */
-  if (SVN_IS_VALID_REVNUM(revision))
+  if (SVN_IS_VALID_REVNUM(revision) || fetched_rev)
     {
       const char *baseline_url, *rel_path;
 
       SVN_ERR(svn_ra_serf__get_baseline_info(&baseline_url, &rel_path,
                                              session, conn, fetch_url,
-                                             revision, NULL, pool));
+                                             revision, fetched_rev, pool));
       fetch_url = svn_path_url_add_component2(baseline_url, rel_path, pool);
       revision = SVN_INVALID_REVNUM;
     }
