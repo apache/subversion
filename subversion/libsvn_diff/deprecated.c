@@ -56,7 +56,7 @@ datasources_open(void *baton, apr_off_t *prefix_lines,
                  apr_size_t datasource_len)
 {
   struct fns_wrapper_baton *fwb = baton;
-  int i;
+  apr_size_t i;
 
   /* Just iterate over the datasources, using the old singular version. */
   for (i = 0; i < datasource_len; i++)
@@ -104,14 +104,14 @@ token_discard(void *baton,
               void *token)
 {
   struct fns_wrapper_baton *fwb = baton;
-  return fwb->vtable->token_discard(fwb->old_baton, token);
+  fwb->vtable->token_discard(fwb->old_baton, token);
 }
 
 static void
 token_discard_all(void *baton)
 {
   struct fns_wrapper_baton *fwb = baton;
-  return fwb->vtable->token_discard_all(fwb->old_baton);
+  fwb->vtable->token_discard_all(fwb->old_baton);
 }
 
 
