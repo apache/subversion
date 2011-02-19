@@ -189,6 +189,12 @@ static const apr_getopt_option_t svnserve__options[] =
         "at the same time is not supported in daemon mode.\n"
         "                             "
         "Use inetd mode or tunnel mode if you need this.]")},
+    {"compression",      'c', 1,
+     N_("compression level to use for network transmissions\n"
+        "                             "
+        "[0 .. no compression, 5 .. default, \n"
+        "                             "
+        " 9 .. maximum compresssion]")},
     {"memory-cache-size", 'M', 1, 
      N_("size of the extra in-memory cache in MB used to\n"
         "                             "
@@ -445,6 +451,7 @@ int main(int argc, const char *argv[])
   params.cfg = NULL;
   params.pwdb = NULL;
   params.authzdb = NULL;
+  params.compression_level = SVN_DEFAULT_COMPRESSSION_LEVEL;
   params.log_file = NULL;
   params.username_case = CASE_ASIS;
   params.memory_cache_size = (apr_uint64_t)-1;
@@ -560,6 +567,14 @@ int main(int argc, const char *argv[])
           handling_mode = connection_mode_thread;
           break;
 
+        case 'c':
+          params.compression_level = atoi(arg);
+          if (params.compression_level < SVN_NO_COMPRESSION_LEVEL)
+            params.compression_level = SVN_NO_COMPRESSION_LEVEL;
+          if (params.compression_level > SVN_BEST_COMPRESSION_LEVEL)
+            params.compression_level = SVN_BEST_COMPRESSION_LEVEL;
+          break;
+
         case 'M':
           params.memory_cache_size = 0x100000 * apr_strtoi64(arg, NULL, 0);
           break;
@@ -662,7 +677,8 @@ int main(int argc, const char *argv[])
           return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
         }
 
-      conn = svn_ra_svn_create_conn(NULL, in_file, out_file, pool);
+      conn = svn_ra_svn_create_conn2(NULL, in_file, out_file, 
+                                     params.compression_level, pool);
       svn_error_clear(serve(conn, &params, pool));
       exit(0);
     }
@@ -908,7 +924,9 @@ int main(int argc, const char *argv[])
           /* It's not a fatal error if we cannot enable keep-alives. */
         }
 
-      conn = svn_ra_svn_create_conn(usock, NULL, NULL, connection_pool);
+      conn = svn_ra_svn_create_conn2(usock, NULL, NULL,
+                                     params.compression_level,
+                                     connection_pool);
 
       if (run_mode == run_mode_listen_once)
         {

@@ -42,23 +42,16 @@
    be compressed using zlib as a secondary compressor.  */
 #define MIN_COMPRESS_SIZE 512
 
-/* For svndiff, this is the compression level we pass to zlib.  It
-   should be between 0 and 9, with higher numbers being greater
-   compression.  */
-#define SVNDIFF1_COMPRESS_LEVEL 5
-#define NORMAL_BITS 7
-#define LENGTH_BITS 5
-
-
 /* ----- Text delta to svndiff ----- */
 
 /* We make one of these and get it passed back to us in calls to the
    window handler.  We only use it to record the write function and
-   baton passed to svn_txdelta_to_svndiff2().  */
+   baton passed to svn_txdelta_to_svndiff3().  */
 struct encoder_baton {
   svn_stream_t *output;
   svn_boolean_t header_done;
   int version;
+  int compression_level;
   apr_pool_t *pool;
 };
 
@@ -140,7 +133,10 @@ append_encoded_int(svn_stringbuf_t *header, svn_filesize_t val)
    version of IN was no smaller than the original IN, OUT will be a copy
    of IN with the size prepended as an integer. */
 static svn_error_t *
-zlib_encode(const char *data, apr_size_t len, svn_stringbuf_t *out)
+zlib_encode(const char *data,
+            apr_size_t len,
+            svn_stringbuf_t *out,
+            int compression_level)
 {
   unsigned long endlen;
   apr_size_t intlen;
@@ -159,7 +155,7 @@ zlib_encode(const char *data, apr_size_t len, svn_stringbuf_t *out)
 
       if (compress2((unsigned char *)out->data + intlen, &endlen,
                     (const unsigned char *)data, len,
-                    SVNDIFF1_COMPRESS_LEVEL) != Z_OK)
+                    compression_level) != Z_OK)
         return svn_error_create(SVN_ERR_SVNDIFF_INVALID_COMPRESSED_DATA,
                                 NULL,
                                 _("Compression of svndiff data failed"));
@@ -245,7 +241,8 @@ window_handler(svn_txdelta_window_t *window, void *baton)
   append_encoded_int(header, window->tview_len);
   if (eb->version == 1)
     {
-      SVN_ERR(zlib_encode(instructions->data, instructions->len, i1));
+      SVN_ERR(zlib_encode(instructions->data, instructions->len,
+                          i1, eb->compression_level));
       instructions = i1;
     }
   append_encoded_int(header, instructions->len);
@@ -254,7 +251,7 @@ window_handler(svn_txdelta_window_t *window, void *baton)
       svn_stringbuf_t *temp = svn_stringbuf_create("", pool);
       svn_string_t *tempstr = svn_string_create("", pool);
       SVN_ERR(zlib_encode(window->new_data->data, window->new_data->len,
-                          temp));
+                          temp, eb->compression_level));
       tempstr->data = temp->data;
       tempstr->len = temp->len;
       newdata = tempstr;
@@ -283,10 +280,11 @@ window_handler(svn_txdelta_window_t *window, void *baton)
 }
 
 void
-svn_txdelta_to_svndiff2(svn_txdelta_window_handler_t *handler,
+svn_txdelta_to_svndiff3(svn_txdelta_window_handler_t *handler,
                         void **handler_baton,
                         svn_stream_t *output,
                         int svndiff_version,
+                        int compression_level,
                         apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create(pool);
@@ -297,9 +295,21 @@ svn_txdelta_to_svndiff2(svn_txdelta_window_handler_t *handler,
   eb->header_done = FALSE;
   eb->pool = subpool;
   eb->version = svndiff_version;
+  eb->compression_level = compression_level;
 
   *handler = window_handler;
   *handler_baton = eb;
+}
+
+void
+svn_txdelta_to_svndiff2(svn_txdelta_window_handler_t *handler,
+                        void **handler_baton,
+                        svn_stream_t *output,
+                        int svndiff_version,
+                        apr_pool_t *pool)
+{
+  svn_txdelta_to_svndiff3(handler, handler_baton, output,
+                          svndiff_version, SVN_DEFAULT_COMPRESSSION_LEVEL, pool);
 }
 
 void
@@ -308,7 +318,8 @@ svn_txdelta_to_svndiff(svn_stream_t *output,
                        svn_txdelta_window_handler_t *handler,
                        void **handler_baton)
 {
-  svn_txdelta_to_svndiff2(handler, handler_baton, output, 0, pool);
+  svn_txdelta_to_svndiff3(handler, handler_baton, output,
+                          0, SVN_DEFAULT_COMPRESSSION_LEVEL, pool);
 }
 
 

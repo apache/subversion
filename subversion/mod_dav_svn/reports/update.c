@@ -779,9 +779,9 @@ upd_apply_textdelta(void *file_baton,
                                                      wb->uc->output,
                                                      file->pool);
 
-  svn_txdelta_to_svndiff2(&(wb->handler), &(wb->handler_baton),
+  svn_txdelta_to_svndiff3(&(wb->handler), &(wb->handler_baton),
                           base64_stream, file->uc->svndiff_version,
-                          file->pool);
+                          dav_svn__get_compression_level(), file->pool);
 
   *handler = window_handler;
   *handler_baton = wb;
