@@ -2366,10 +2366,15 @@ static svn_error_t *file_rev_handler(void *baton, const char *path,
       svn_stream_set_write(stream, svndiff_handler);
       svn_stream_set_close(stream, svndiff_close_handler);
 
-      if (svn_ra_svn_has_capability(frb->conn, SVN_RA_SVN_CAP_SVNDIFF1))
-        svn_txdelta_to_svndiff2(d_handler, d_baton, stream, 1, pool);
+      /* If the connection does not support SVNDIFF1 or if we don't want to use
+       * compression, use the non-compressing "version 0" implementation */ 
+      if (   svn_ra_svn_compression_level(frb->conn) > 0
+          && svn_ra_svn_has_capability(frb->conn, SVN_RA_SVN_CAP_SVNDIFF1))
+        svn_txdelta_to_svndiff3(d_handler, d_baton, stream, 1,
+                                svn_ra_svn_compression_level(frb->conn), pool);
       else
-        svn_txdelta_to_svndiff2(d_handler, d_baton, stream, 0, pool);
+        svn_txdelta_to_svndiff3(d_handler, d_baton, stream, 0,
+                                svn_ra_svn_compression_level(frb->conn), pool);
     }
   else
     SVN_ERR(svn_ra_svn_write_cstring(frb->conn, pool, ""));
@@ -3091,17 +3096,27 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
 
   /* Send greeting.  We don't support version 1 any more, so we can
    * send an empty mechlist. */
-  /* Server-side capabilities list: */
-  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "nn()(wwwwwwww)",
-                                        (apr_uint64_t) 2, (apr_uint64_t) 2,
-                                        SVN_RA_SVN_CAP_EDIT_PIPELINE,
-                                        SVN_RA_SVN_CAP_SVNDIFF1,
-                                        SVN_RA_SVN_CAP_ABSENT_ENTRIES,
-                                        SVN_RA_SVN_CAP_COMMIT_REVPROPS,
-                                        SVN_RA_SVN_CAP_DEPTH,
-                                        SVN_RA_SVN_CAP_LOG_REVPROPS,
-                                        SVN_RA_SVN_CAP_ATOMIC_REVPROPS,
-                                        SVN_RA_SVN_CAP_PARTIAL_REPLAY));
+  if (params->compression_level > 0)
+    SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "nn()(wwwwwwww)",
+                                          (apr_uint64_t) 2, (apr_uint64_t) 2,
+                                          SVN_RA_SVN_CAP_EDIT_PIPELINE,
+                                          SVN_RA_SVN_CAP_SVNDIFF1,
+                                          SVN_RA_SVN_CAP_ABSENT_ENTRIES,
+                                          SVN_RA_SVN_CAP_COMMIT_REVPROPS,
+                                          SVN_RA_SVN_CAP_DEPTH,
+                                          SVN_RA_SVN_CAP_LOG_REVPROPS,
+                                          SVN_RA_SVN_CAP_ATOMIC_REVPROPS,
+                                          SVN_RA_SVN_CAP_PARTIAL_REPLAY));
+  else
+    SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "nn()(wwwwwww)",
+                                          (apr_uint64_t) 2, (apr_uint64_t) 2,
+                                          SVN_RA_SVN_CAP_EDIT_PIPELINE,
+                                          SVN_RA_SVN_CAP_ABSENT_ENTRIES,
+                                          SVN_RA_SVN_CAP_COMMIT_REVPROPS,
+                                          SVN_RA_SVN_CAP_DEPTH,
+                                          SVN_RA_SVN_CAP_LOG_REVPROPS,
+                                          SVN_RA_SVN_CAP_ATOMIC_REVPROPS,
+                                          SVN_RA_SVN_CAP_PARTIAL_REPLAY));
 
   /* Read client response, which we assume to be in version 2 format:
    * version, capability list, and client URL; then we do an auth

@@ -370,6 +370,8 @@ const char *dav_svn__get_activities_db(request_rec *r);
 /* ### Is this assumed to be URI-encoded? */
 const char *dav_svn__get_root_dir(request_rec *r);
 
+/* Return the data compression level to be used over the wire. */
+int dav_svn__get_compression_level();
 
 /** For HTTP protocol v2, these are the new URIs and URI stubs
     returned to the client in our OPTIONS response.  They all depend

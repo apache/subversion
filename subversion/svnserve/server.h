@@ -112,6 +112,12 @@ typedef struct serve_params_t {
   /* Size of the in-memory cache (used by FSFS only). */
   apr_uint64_t memory_cache_size;
 
+  /* Data compression level to reduce for network traffic. If this
+     is 0, no compression should be applied and the protocol may
+     fall back to svndiff "version 0" bypassing zlib entirely.
+     Defaults to SVN_DEFAULT_COMPRESSSION_LEVEL. */
+  int compression_level;
+
 } serve_params_t;
 
 /* Serve the connection CONN according to the parameters PARAMS. */

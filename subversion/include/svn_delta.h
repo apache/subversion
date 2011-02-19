@@ -49,6 +49,21 @@ extern "C" {
 
 
 
+/** This compression level effectively disables data compression.
+ * However, the data pre-processing costs may still not be zero.
+ */
+#define SVN_NO_COMPRESSION_LEVEL 0
+
+/** This is the maximum compression level we can pass to zlib.
+ */
+#define SVN_BEST_COMPRESSION_LEVEL 9
+
+/** This is the default compression level we pass to zlib.  It
+ * should be between 0 and 9, with higher numbers resulting in
+ * better compression rates but slower operation.
+ */
+#define SVN_DEFAULT_COMPRESSSION_LEVEL 5
+
 /**
  * Get libsvn_delta version information.
  *
@@ -453,7 +468,21 @@ svn_txdelta_apply(svn_stream_t *source,
  * Allocation takes place in a sub-pool of @a pool.  On return, @a *handler
  * is set to a window handler function and @a *handler_baton is set to
  * the value to pass as the @a baton argument to @a *handler. The svndiff
- * version is @a svndiff_version.
+ * version is @a svndiff_version. @a compression_level is the zlib
+ * compression level from 0 (no compression) and 9 (maximum compression).
+ *
+ * @since New in 1.7.
+ */
+void
+svn_txdelta_to_svndiff3(svn_txdelta_window_handler_t *handler,
+                        void **handler_baton,
+                        svn_stream_t *output,
+                        int svndiff_version,
+                        int compression_level,
+                        apr_pool_t *pool);
+
+/** Similar to svn_txdelta_to_svndiff3, but always using the SVN default
+ * compression level (@ref SVN_DEFAULT_COMPRESSSION_LEVEL).
  *
  * @since New in 1.4.
  */

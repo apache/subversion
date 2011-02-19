@@ -161,7 +161,25 @@ typedef svn_error_t *(*svn_ra_svn_edit_callback)(void *baton);
  * input/output files.
  *
  * Either @a sock or @a in_file/@a out_file must be set, not both.
+ * Specify the desired network data compression level (zlib) from
+ * 0 (no compression) to 9 (best but slowest).
+ *
+ * @since New in 1.7.
  */
+svn_ra_svn_conn_t *
+svn_ra_svn_create_conn2(apr_socket_t *sock,
+                        apr_file_t *in_file,
+                        apr_file_t *out_file,
+                        int compression_level,
+                        apr_pool_t *pool);
+
+/** Similar to @ref svn_ra_svn_create_conn2() but uses default
+ * compression level (@ref SVN_DEFAULT_COMPRESSSION_LEVEL) for network
+ * transmissions.
+ * 
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_ra_svn_conn_t *
 svn_ra_svn_create_conn(apr_socket_t *sock,
                        apr_file_t *in_file,
@@ -184,6 +202,13 @@ svn_ra_svn_set_capabilities(svn_ra_svn_conn_t *conn,
 svn_boolean_t
 svn_ra_svn_has_capability(svn_ra_svn_conn_t *conn,
                           const char *capability);
+
+/** Return the data compression level to use for network transmissions
+ * 
+ * @since New in 1.7.
+ */
+int
+svn_ra_svn_compression_level(svn_ra_svn_conn_t *conn);
 
 /** Returns the remote address of the connection as a string, if known,
  *  or NULL if inapplicable. */
