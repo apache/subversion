@@ -34,22 +34,6 @@
 
 #include "../svn_test.h"
 
-/* Implements svn_cache__dup_func_t */
-static svn_error_t *
-dup_revnum(void **out,
-           const void *in,
-           apr_pool_t *pool)
-{
-  const svn_revnum_t *in_rn = in;
-  svn_revnum_t *duped = apr_palloc(pool, sizeof(*duped));
-
-  *duped = *in_rn;
-
-  *out = duped;
-
-  return SVN_NO_ERROR;
-}
-
 /* Implements svn_cache__serialize_func_t */
 static svn_error_t *
 serialize_revnum(char **data,
@@ -146,12 +130,13 @@ test_inprocess_cache_basic(apr_pool_t *pool)
 
   /* Create a cache with just one entry. */
   SVN_ERR(svn_cache__create_inprocess(&cache,
-                                     dup_revnum,
-                                     APR_HASH_KEY_STRING,
-                                     1,
-                                     1,
-                                     TRUE,
-                                     pool));
+                                      serialize_revnum,
+                                      deserialize_revnum,
+                                      APR_HASH_KEY_STRING,
+                                      1,
+                                      1,
+                                      TRUE,
+                                      pool));
 
   return basic_cache_test(cache, TRUE, pool);
 }

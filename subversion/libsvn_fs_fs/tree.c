@@ -3910,9 +3910,10 @@ make_txn_root(svn_fs_root_t **root_p,
      Note that since dag_node_cache_invalidate uses svn_cache__iter,
      this *cannot* be a memcache-based cache.  */
   SVN_ERR(svn_cache__create_inprocess(&(frd->txn_node_cache),
-                                     svn_fs_fs__dag_dup_for_cache,
-                                     APR_HASH_KEY_STRING,
-                                     32, 20, FALSE, root->pool));
+                                      svn_fs_fs__dag_serialize,
+                                      svn_fs_fs__dag_deserialize,
+                                      APR_HASH_KEY_STRING,
+                                      32, 20, FALSE, root->pool));
 
   root->fsap_data = frd;
 
