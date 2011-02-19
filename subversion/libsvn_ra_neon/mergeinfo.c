@@ -171,6 +171,8 @@ svn_ra_neon__get_mergeinfo(svn_ra_session_t *session,
   static const char minfo_report_tail[] =
     "</S:" SVN_DAV__MERGEINFO_REPORT ">" DEBUG_CR;
 
+  *catalog = NULL;
+
   /* Construct the request body. */
   svn_stringbuf_appendcstr(request_body, minfo_report_head);
   svn_stringbuf_appendcstr(request_body,
@@ -237,7 +239,7 @@ svn_ra_neon__get_mergeinfo(svn_ra_session_t *session,
                                       FALSE,
                                       pool));
 
-  if (mb.err == SVN_NO_ERROR)
+  if (mb.err == SVN_NO_ERROR && apr_hash_count(mb.catalog))
     *catalog = mb.catalog;
 
   return mb.err;

@@ -326,12 +326,3 @@ Approved changes:
      ^/subversion/branches/1.6.x-r880146
    Votes:
      +1: julianfoad, stsp, pburba
-
- * r902467
-   Fix broken svn_ra_get_mergeinfo API promise in serf and neon
-   implementations -- return a null mergeinfo catalog if there is
-   no mergeinfo, as per svn_ra_get_mergeinfo's API
-   Justification:
-     Fixes an uninitialized variable that can result in a segfault.
-   Votes:
-     +1: pburba, stsp, rhuijben
