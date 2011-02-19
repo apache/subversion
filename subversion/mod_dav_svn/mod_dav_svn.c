@@ -101,6 +101,10 @@ extern module AP_MODULE_DECLARE_DATA dav_svn_module;
 /* The authz_svn provider for bypassing path authz. */
 static authz_svn__subreq_bypass_func_t pathauthz_bypass_func = NULL;
 
+/* The compression level we will pass to svn_txdelta_to_svndiff3()
+ * for wire-compression */
+static int svn__compression_level = SVN_DEFAULT_COMPRESSSION_LEVEL;
+
 static int
 init(apr_pool_t *p, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s)
 {
@@ -440,6 +444,32 @@ SVNInMemoryCacheSize_cmd(cmd_parms *cmd, void *config, const char *arg1)
   return NULL;
 }
 
+static const char *
+SVNCompressionLevel_cmd(cmd_parms *cmd, void *config, const char *arg1)
+{
+  svn_fs_cache_config_t settings = *svn_fs_get_cache_config();
+
+  int value = 0;
+  svn_error_t *err = svn_cstring_atoi(&value, arg1);
+  if (err)
+    {
+      svn_error_clear(err);
+      return "Invalid decimal number for the SVN compression level.";
+    }
+
+  if ((value < SVN_NO_COMPRESSION_LEVEL) || (value > SVN_BEST_COMPRESSION_LEVEL))
+    return apr_psprintf(cmd->pool,
+                        "%d is not a valid compression level. "
+                        "The valid range is %d .. %d.",
+                        value,
+                        (int)SVN_NO_COMPRESSION_LEVEL,
+                        (int)SVN_BEST_COMPRESSION_LEVEL);
+
+  svn__compression_level = value;
+
+  return NULL;
+}
+
 
 /** Accessor functions for the module's configuration state **/
 
@@ -675,6 +705,12 @@ dav_svn__get_activities_db(request_rec *r)
 }
 
 
+int
+dav_svn__get_compression_level()
+{
+  return svn__compression_level;
+}
+
 static void
 merge_xml_filter_insert(request_rec *r)
 {
@@ -881,9 +917,15 @@ static const command_rec cmds[] =
   /* per server */
   AP_INIT_TAKE1("SVNInMemoryCacheSize", SVNInMemoryCacheSize_cmd, NULL,
                 RSRC_CONF,
-                "specify the maximum size im MB per process of Subversion's "
+                "specifies the maximum size im MB per process of Subversion's "
                 "in-memory object cache (default value is 16; 0 deactivates "
                 "the cache)."),
+  /* per server */
+  AP_INIT_TAKE1("SVNCompressionLevel", SVNCompressionLevel_cmd, NULL,
+                RSRC_CONF,
+                "specifies the ZIP compression level used before sending file "
+                "content over the network (0 for no compression, 9 for best, "
+                "5 is default)."),
 
   { NULL }
 };

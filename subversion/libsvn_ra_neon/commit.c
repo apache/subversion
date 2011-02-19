@@ -1215,7 +1215,8 @@ commit_apply_txdelta(void *file_baton,
   stream = svn_stream_create(baton, pool);
   svn_stream_set_write(stream, commit_stream_write);
 
-  svn_txdelta_to_svndiff2(handler, handler_baton, stream, 0, pool);
+  svn_txdelta_to_svndiff3(handler, handler_baton, stream, 0,
+                          dav_svn__get_compression_level(), pool);
 
   /* Add this path to the valid targets hash. */
   add_valid_target(file->cc, file->rsrc->local_path, svn_nonrecursive);

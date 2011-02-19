@@ -320,12 +320,13 @@ apply_textdelta(void *file_baton,
   else
     SVN_ERR(dav_svn__brigade_puts(eb->bb, eb->output, ">"));
 
-  svn_txdelta_to_svndiff2(handler,
+  svn_txdelta_to_svndiff3(handler,
                           handler_baton,
                           dav_svn__make_base64_output_stream(eb->bb,
                                                              eb->output,
                                                              pool),
                           0,
+                          dav_svn__get_compression_level(),
                           pool);
 
   eb->sending_textdelta = TRUE;
