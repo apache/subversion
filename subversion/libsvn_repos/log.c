@@ -1043,6 +1043,7 @@ get_path_histories(apr_array_header_t **histories,
 {
   svn_fs_root_t *root;
   apr_pool_t *iterpool;
+  svn_error_t *err;
   int i;
 
   /* Create a history object for each path so we can walk through
@@ -1084,7 +1085,6 @@ get_path_histories(apr_array_header_t **histories,
 
       if (i < MAX_OPEN_HISTORIES)
         {
-          svn_error_t *err;
           err = svn_fs_node_history(&info->hist, root, this_path, pool);
           if (err
               && ignore_missing_locations
@@ -1106,10 +1106,20 @@ get_path_histories(apr_array_header_t **histories,
           info->newpool = NULL;
         }
 
-      SVN_ERR(get_history(info, fs,
-                          strict_node_history,
-                          authz_read_func, authz_read_baton,
-                          hist_start, pool));
+      err = get_history(info, fs,
+                        strict_node_history,
+                        authz_read_func, authz_read_baton,
+                        hist_start, pool);
+      if (err
+          && ignore_missing_locations
+          && (err->apr_err == SVN_ERR_FS_NOT_FOUND ||
+              err->apr_err == SVN_ERR_FS_NOT_DIRECTORY ||
+              err->apr_err == SVN_ERR_FS_NO_SUCH_REVISION))
+        {
+          svn_error_clear(err);
+          continue;
+        }
+      SVN_ERR(err);
       APR_ARRAY_PUSH(*histories, struct path_info *) = info;
     }
   svn_pool_destroy(iterpool);
