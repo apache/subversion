@@ -144,7 +144,7 @@ memcache_get(void **value_p,
   SVN_ERR(build_key(&mc_key, cache, key, subpool));
 
   apr_err = apr_memcache_getp(cache->memcache,
-                              (cache->deserialize_func ? subpool : pool),
+                              pool,
                               mc_key,
                               &data,
                               &data_len,

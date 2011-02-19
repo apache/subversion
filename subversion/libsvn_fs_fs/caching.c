@@ -24,137 +24,12 @@
 #include "fs_fs.h"
 #include "id.h"
 #include "dag.h"
+#include "temp_serializer.h"
 #include "../libsvn_fs/fs-loader.h"
 
 #include "svn_config.h"
 
 #include "svn_private_config.h"
-
-/*** Dup/serialize/deserialize functions. ***/
-
-
-/** Caching SVN_FS_ID_T values. **/
-/* Implements svn_cache__dup_func_t */
-static svn_error_t *
-dup_id(void **out,
-       const void *in,
-       apr_pool_t *pool)
-{
-  const svn_fs_id_t *id = in;
-  *out = svn_fs_fs__id_copy(id, pool);
-  return SVN_NO_ERROR;
-}
-
-/* Implements svn_cache__serialize_func_t */
-static svn_error_t *
-serialize_id(char **data,
-             apr_size_t *data_len,
-             void *in,
-             apr_pool_t *pool)
-{
-  svn_fs_id_t *id = in;
-  svn_string_t *id_str = svn_fs_fs__id_unparse(id, pool);
-  *data = (char *) id_str->data;
-  *data_len = id_str->len;
-
-  return SVN_NO_ERROR;
-}
-
-
-/* Implements svn_cache__deserialize_func_t */
-static svn_error_t *
-deserialize_id(void **out,
-               const char *data,
-               apr_size_t data_len,
-               apr_pool_t *pool)
-{
-  svn_fs_id_t *id = svn_fs_fs__id_parse(data, data_len, pool);
-  if (id == NULL)
-    {
-      return svn_error_create(SVN_ERR_FS_NOT_ID, NULL,
-                              _("Bad ID in cache"));
-    }
-
-  *out = id;
-  return SVN_NO_ERROR;
-}
-
-
-/** Caching directory listings. **/
-/* Implements svn_cache__dup_func_t */
-static svn_error_t *
-dup_dir_listing(void **out,
-                const void *in,
-                apr_pool_t *pool)
-{
-  apr_hash_t *new_entries = apr_hash_make(pool);
-  apr_hash_t *entries = (void*)in; /* Cast away const only */
-  apr_hash_index_t *hi;
-
-  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
-    {
-      svn_fs_dirent_t *dirent = svn__apr_hash_index_val(hi);
-      svn_fs_dirent_t *new_dirent;
-
-      new_dirent = apr_palloc(pool, sizeof(*new_dirent));
-      new_dirent->name = apr_pstrdup(pool, dirent->name);
-      new_dirent->kind = dirent->kind;
-      new_dirent->id = svn_fs_fs__id_copy(dirent->id, pool);
-      apr_hash_set(new_entries, new_dirent->name, APR_HASH_KEY_STRING,
-                   new_dirent);
-    }
-
-  *out = new_entries;
-  return SVN_NO_ERROR;
-}
-
-
-/** Caching packed rev offsets. **/
-/* Implements svn_cache__serialize_func_t */
-static svn_error_t *
-manifest_serialize(char **data,
-                   apr_size_t *data_len,
-                   void *in,
-                   apr_pool_t *pool)
-{
-  apr_array_header_t *manifest = in;
-
-  *data_len = sizeof(apr_off_t) * manifest->nelts;
-  *data = apr_palloc(pool, *data_len);
-  memcpy(*data, manifest->elts, *data_len);
-
-  return SVN_NO_ERROR;
-}
-
-/* Implements svn_cache__deserialize_func_t */
-static svn_error_t *
-manifest_deserialize(void **out,
-                     const char *data,
-                     apr_size_t data_len,
-                     apr_pool_t *pool)
-{
-  apr_array_header_t *manifest = apr_array_make(pool,
-                                       (int) (data_len / sizeof(apr_off_t)),
-                                       sizeof(apr_off_t));
-  memcpy(manifest->elts, data, data_len);
-  manifest->nelts = (int) (data_len / sizeof(apr_off_t));
-  *out = manifest;
-
-  return SVN_NO_ERROR;
-}
-
-/* Implements svn_cache__dup_func_t */
-static svn_error_t *
-dup_pack_manifest(void **out,
-                  const void *in,
-                  apr_pool_t *pool)
-{
-  const apr_array_header_t *manifest = in;
-
-  *out = apr_array_copy(pool, manifest);
-  return SVN_NO_ERROR;
-}
-
 
 /* Return a memcache in *MEMCACHE_P for FS if it's configured to use
    memcached, or NULL otherwise.  Also, sets *FAIL_STOP to a boolean
@@ -212,38 +87,41 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
    * id_private_t + 3 strings for value, and the cache_entry); the
    * default pool size is 8192, so about a hundred should fit
    * comfortably. */
-  if (memcache)
-    SVN_ERR(svn_cache__create_memcache(&(ffd->rev_root_id_cache),
-                                       memcache,
-                                       serialize_id,
-                                       deserialize_id,
-                                       sizeof(svn_revnum_t),
-                                       apr_pstrcat(pool, prefix, "RRI",
-                                                   (char *)NULL),
-                                       fs->pool));
+  if (svn_fs__get_global_membuffer_cache())
+      SVN_ERR(svn_cache__create_membuffer_cache(&(ffd->rev_root_id_cache),
+                                                svn_fs__get_global_membuffer_cache(),
+                                                svn_fs_fs__serialize_id,
+                                                svn_fs_fs__deserialize_id,
+                                                sizeof(svn_revnum_t),
+                                                apr_pstrcat(pool, prefix, "RRI",
+                                                            (char *)NULL),
+                                                fs->pool));
   else
-    SVN_ERR(svn_cache__create_inprocess(&(ffd->rev_root_id_cache),
-                                        dup_id, sizeof(svn_revnum_t),
-                                        1, 100, FALSE, fs->pool));
+      SVN_ERR(svn_cache__create_inprocess(&(ffd->rev_root_id_cache),
+                                          svn_fs_fs__serialize_id,
+                                          svn_fs_fs__deserialize_id,
+                                          sizeof(svn_revnum_t),
+                                          1, 100, FALSE, fs->pool));
   if (! no_handler)
-    SVN_ERR(svn_cache__set_error_handler(ffd->rev_root_id_cache,
-                                         warn_on_cache_errors, fs, pool));
+      SVN_ERR(svn_cache__set_error_handler(ffd->rev_root_id_cache,
+                                          warn_on_cache_errors, fs, pool));
 
 
   /* Rough estimate: revision DAG nodes have size around 320 bytes, so
    * let's put 16 on a page. */
-  if (memcache)
-    SVN_ERR(svn_cache__create_memcache(&(ffd->rev_node_cache),
-                                       memcache,
-                                       svn_fs_fs__dag_serialize,
-                                       svn_fs_fs__dag_deserialize,
-                                       APR_HASH_KEY_STRING,
-                                       apr_pstrcat(pool, prefix, "DAG",
-                                                   (char *)NULL),
-                                       fs->pool));
+  if (svn_fs__get_global_membuffer_cache())
+    SVN_ERR(svn_cache__create_membuffer_cache(&(ffd->rev_node_cache),
+                                              svn_fs__get_global_membuffer_cache(),
+                                              svn_fs_fs__dag_serialize,
+                                              svn_fs_fs__dag_deserialize,
+                                              APR_HASH_KEY_STRING,
+                                              apr_pstrcat(pool, prefix, "DAG",
+                                                          (char *)NULL),
+                                              fs->pool));
   else
     SVN_ERR(svn_cache__create_inprocess(&(ffd->rev_node_cache),
-                                        svn_fs_fs__dag_dup_for_cache,
+                                        svn_fs_fs__dag_serialize,
+                                        svn_fs_fs__dag_deserialize,
                                         APR_HASH_KEY_STRING,
                                         1024, 16, FALSE, fs->pool));
   if (! no_handler)
@@ -252,18 +130,20 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
 
 
   /* Very rough estimate: 1K per directory. */
-  if (memcache)
-    SVN_ERR(svn_cache__create_memcache(&(ffd->dir_cache),
-                                       memcache,
-                                       svn_fs_fs__dir_entries_serialize,
-                                       svn_fs_fs__dir_entries_deserialize,
-                                       APR_HASH_KEY_STRING,
-                                       apr_pstrcat(pool, prefix, "DIR",
-                                                   (char *)NULL),
-                                       fs->pool));
+  if (svn_fs__get_global_membuffer_cache())
+    SVN_ERR(svn_cache__create_membuffer_cache(&(ffd->dir_cache),
+                                              svn_fs__get_global_membuffer_cache(),
+                                              svn_fs_fs__serialize_dir_entries,
+                                              svn_fs_fs__deserialize_dir_entries,
+                                              APR_HASH_KEY_STRING,
+                                              apr_pstrcat(pool, prefix, "DIR",
+                                                          (char *)NULL),
+                                              fs->pool));
   else
     SVN_ERR(svn_cache__create_inprocess(&(ffd->dir_cache),
-                                        dup_dir_listing, APR_HASH_KEY_STRING,
+                                        svn_fs_fs__serialize_dir_entries,
+                                        svn_fs_fs__deserialize_dir_entries,
+                                        APR_HASH_KEY_STRING,
                                         1024, 8, FALSE, fs->pool));
 
   if (! no_handler)
@@ -272,24 +152,27 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
 
   /* Only 16 bytes per entry (a revision number + the corresponding offset).
      Since we want ~8k pages, that means 512 entries per page. */
-  if (memcache)
-    SVN_ERR(svn_cache__create_memcache(&(ffd->packed_offset_cache),
-                                       memcache,
-                                       manifest_serialize,
-                                       manifest_deserialize,
-                                       sizeof(svn_revnum_t),
-                                       apr_pstrcat(pool, prefix, "PACK-MANIFEST",
-                                                   (char *)NULL),
-                                       fs->pool));
+  if (svn_fs__get_global_membuffer_cache())
+    SVN_ERR(svn_cache__create_membuffer_cache(&(ffd->packed_offset_cache),
+                                              svn_fs__get_global_membuffer_cache(),
+                                              svn_fs_fs__serialize_manifest,
+                                              svn_fs_fs__deserialize_manifest,
+                                              sizeof(svn_revnum_t),
+                                              apr_pstrcat(pool, prefix, "PACK-MANIFEST",
+                                                          (char *)NULL),
+                                              fs->pool));
   else
     SVN_ERR(svn_cache__create_inprocess(&(ffd->packed_offset_cache),
-                                        dup_pack_manifest, sizeof(svn_revnum_t),
+                                        svn_fs_fs__serialize_manifest,
+                                        svn_fs_fs__deserialize_manifest,
+                                        sizeof(svn_revnum_t),
                                         32, 1, FALSE, fs->pool));
 
   if (! no_handler)
     SVN_ERR(svn_cache__set_error_handler(ffd->packed_offset_cache,
                                          warn_on_cache_errors, fs, pool));
 
+  /* initialize fulltext cache as configured */
   if (memcache)
     {
       SVN_ERR(svn_cache__create_memcache(&(ffd->fulltext_cache),

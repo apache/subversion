@@ -37,8 +37,11 @@ typedef struct inprocess_cache_t {
   apr_hash_t *hash;
   apr_ssize_t klen;
 
-  /* Used to copy values in and out of the cache. */
-  svn_cache__dup_func_t dup_func;
+  /* Used to copy values into the cache. */
+  svn_cache__serialize_func_t serialize_func;
+
+  /* Used to copy values out of the cache. */
+  svn_cache__deserialize_func_t deserialize_func;
 
   /* The number of pages we're allowed to allocate before having to
    * try to reuse one. */
@@ -94,7 +97,12 @@ struct cache_page {
 /* An cache entry. */
 struct cache_entry {
   const void *key;
+
+  /* serialized value */
   void *value;
+
+  /* length of the serialized value in bytes */
+  apr_size_t size;
 
   /* The page it's on (needed so that the LRU list can be
    * maintained). */
@@ -140,21 +148,6 @@ move_page_to_front(inprocess_cache_t *cache,
 
   remove_page_from_list(page);
   insert_page(cache, page);
-}
-
-/* Uses CACHE->dup_func to copy VALUE into *VALUE_P inside POOL, or
-   just sets *VALUE_P to NULL if VALUE is NULL. */
-static svn_error_t *
-duplicate_value(void **value_p,
-                inprocess_cache_t *cache,
-                void *value,
-                apr_pool_t *pool)
-{
-  if (value)
-    SVN_ERR((cache->dup_func)(value_p, value, pool));
-  else
-    *value_p = NULL;
-  return SVN_NO_ERROR;
 }
 
 /* Return a copy of KEY inside POOL, using CACHE->KLEN to figure out
@@ -214,7 +207,7 @@ inprocess_cache_get(void **value_p,
 {
   inprocess_cache_t *cache = cache_void;
   struct cache_entry *entry;
-  svn_error_t *err;
+  char* buffer;
 
   SVN_ERR(lock_cache(cache));
 
@@ -227,9 +220,23 @@ inprocess_cache_get(void **value_p,
 
   move_page_to_front(cache, entry->page);
 
+  /* duplicate the buffer entry */
+  buffer = apr_palloc(pool, entry->size);
+  memcpy(buffer, entry->value, entry->size);
+
+  /* the cache is no longer being accessed */
+  SVN_ERR(unlock_cache(cache, SVN_NO_ERROR));
+
+  /* deserialize the buffer content. Usually, this will directly
+     modify the buffer content directly.
+   */
   *found = TRUE;
-  err = duplicate_value(value_p, cache, entry->value, pool);
-  return unlock_cache(cache, err);
+  if (entry->value)
+    return cache->deserialize_func(value_p, buffer, entry->size, pool);
+  else
+    *value_p = NULL;
+
+  return unlock_cache(cache, SVN_NO_ERROR);
 }
 
 /* Removes PAGE from the LRU list, removes all of its entries from
@@ -302,8 +309,19 @@ inprocess_cache_set(void *cache_void,
       struct cache_page *page = existing_entry->page;
 
       move_page_to_front(cache, page);
-      err = duplicate_value(&(existing_entry->value), cache,
-                            value, page->page_pool);
+      if (value)
+        {
+          err = cache->serialize_func((char **)&existing_entry->value,
+                                      &existing_entry->size,
+                                      value,
+                                      page->page_pool);
+        }
+      else
+        {
+          existing_entry->value = NULL;
+          existing_entry->size = 0;
+        }
+
       goto cleanup;
     }
 
@@ -340,8 +358,19 @@ inprocess_cache_set(void *cache_void,
 
     /* Copy the key and value into the page's pool.  */
     new_entry->key = duplicate_key(cache, key, page->page_pool);
-    err = duplicate_value(&(new_entry->value), cache, value,
-                          page->page_pool);
+    if (value)
+      {
+        err = cache->serialize_func((char **)&new_entry->value,
+                                    &new_entry->size,
+                                    value,
+                                    page->page_pool);
+      }
+    else
+      {
+        new_entry->value = NULL;
+        new_entry->size = 0;
+      }
+
     if (err)
       goto cleanup;
 
@@ -417,7 +446,8 @@ static svn_cache__vtable_t inprocess_cache_vtable = {
 
 svn_error_t *
 svn_cache__create_inprocess(svn_cache__t **cache_p,
-                            svn_cache__dup_func_t dup_func,
+                            svn_cache__serialize_func_t serialize,
+                            svn_cache__deserialize_func_t deserialize,
                             apr_ssize_t klen,
                             apr_int64_t pages,
                             apr_int64_t items_per_page,
@@ -430,7 +460,8 @@ svn_cache__create_inprocess(svn_cache__t **cache_p,
   cache->hash = apr_hash_make(pool);
   cache->klen = klen;
 
-  cache->dup_func = dup_func;
+  cache->serialize_func = serialize;
+  cache->deserialize_func = deserialize;
 
   SVN_ERR_ASSERT(pages >= 1);
   cache->unallocated_pages = pages;

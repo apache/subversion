@@ -3746,26 +3746,6 @@ unparse_dir_entries(apr_hash_t **str_entries_p,
 }
 
 
-svn_error_t *
-svn_fs_fs__dir_entries_serialize(char **data,
-                                 apr_size_t *data_len,
-                                 void *in,
-                                 apr_pool_t *pool)
-{
-  apr_hash_t *entries = in;
-  svn_stringbuf_t *buf = svn_stringbuf_create("", pool);
-  svn_stream_t *stream = svn_stream_from_stringbuf(buf, pool);
-
-  SVN_ERR(unparse_dir_entries(&entries, entries, pool));
-  SVN_ERR(svn_hash_write2(entries, stream, SVN_HASH_TERMINATOR, pool));
-
-  *data = buf->data;
-  *data_len = buf->len;
-
-  return SVN_NO_ERROR;
-}
-
-
 /* Given a hash STR_ENTRIES with values as svn_string_t as specified
    in an FSFS directory contents listing, return a hash of dirents in
    *ENTRIES_P.  Perform allocations in POOL. */
@@ -3820,24 +3800,6 @@ parse_dir_entries(apr_hash_t **entries_p,
 
   return SVN_NO_ERROR;
 }
-
-svn_error_t *
-svn_fs_fs__dir_entries_deserialize(void **out,
-                                   const char *data,
-                                   apr_size_t data_len,
-                                   apr_pool_t *pool)
-{
-  apr_hash_t *entries = apr_hash_make(pool);
-  svn_stringbuf_t *buf = svn_stringbuf_ncreate(data, data_len, pool);
-  svn_stream_t *stream = svn_stream_from_stringbuf(buf, pool);
-
-  SVN_ERR(svn_hash_read2(entries, stream, SVN_HASH_TERMINATOR, pool));
-  SVN_ERR(parse_dir_entries(&entries, entries, pool));
-
-  *out = entries;
-  return SVN_NO_ERROR;
-}
-
 
 svn_error_t *
 svn_fs_fs__rep_contents_dir(apr_hash_t **entries_p,
