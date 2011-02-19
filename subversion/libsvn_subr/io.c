@@ -3831,6 +3831,11 @@ contents_identical_p(svn_boolean_t *identical_p,
         }
     }
 
+  /* Special case: one file being a prefix of the other and the shorter
+   * file's size is a multiple of SVN__STREAM_CHUNK_SIZE. */
+  if (!err && (eof1 != eof2))
+    *identical_p = FALSE;
+
   return svn_error_return(
            svn_error_compose_create(
                 err,
