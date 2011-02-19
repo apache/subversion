@@ -852,37 +852,49 @@ $(SVN_OBJDIR)/.retrieved:
 	fi
 	touch $@
 
-ifeq ($(BRANCH_MAJOR),1.5)
+ifeq ($(BRANCH_MAJOR),1.6)
+BDB_FLAG=db.h:$(PREFIX)/bdb/include:$(PREFIX)/bdb/lib:db-$(BDB_MAJOR_VER)
+SERF_FLAG=--with-serf="$(PREFIX)/serf"
+MOD_DAV_SVN=modules/svn-$(WC)/mod_dav_svn.so
+MOD_AUTHZ_SVN=modules/svn-$(WC)/mod_authz_svn.so
+W_NO_SYSTEM_HEADERS=-Wno-system-headers
+else ifeq ($(BRANCH_MAJOR),1.5)
 BDB_FLAG=$(PREFIX)/bdb
 SERF_FLAG=--with-serf="$(PREFIX)/serf-old"
 MOD_DAV_SVN=modules/mod_dav_svn.so
 MOD_AUTHZ_SVN=modules/mod_authz_svn.so
 DISABLE_NEON_VERSION_CHECK=--disable-neon-version-check
+W_NO_SYSTEM_HEADERS=-Wno-system-headers
 else ifeq ($(BRANCH_MAJOR),1.4)
 BDB_FLAG=$(PREFIX)/bdb
 MOD_DAV_SVN=modules/mod_dav_svn.so
 MOD_AUTHZ_SVN=modules/mod_authz_svn.so
 DISABLE_NEON_VERSION_CHECK=--disable-neon-version-check
+W_NO_SYSTEM_HEADERS=-Wno-system-headers
 else ifeq ($(BRANCH_MAJOR),1.3)
 BDB_FLAG=$(PREFIX)/bdb
 MOD_DAV_SVN=modules/mod_dav_svn.so
 MOD_AUTHZ_SVN=modules/mod_authz_svn.so
 DISABLE_NEON_VERSION_CHECK=--disable-neon-version-check
+W_NO_SYSTEM_HEADERS=-Wno-system-headers
 else ifeq ($(BRANCH_MAJOR),1.2)
 BDB_FLAG=$(PREFIX)/bdb
 MOD_DAV_SVN=modules/mod_dav_svn.so
 MOD_AUTHZ_SVN=modules/mod_authz_svn.so
 DISABLE_NEON_VERSION_CHECK=--disable-neon-version-check
+W_NO_SYSTEM_HEADERS=-Wno-system-headers
 else ifeq ($(BRANCH_MAJOR),1.1)
 BDB_FLAG=$(PREFIX)/bdb
 MOD_DAV_SVN=modules/mod_dav_svn.so
 MOD_AUTHZ_SVN=modules/mod_authz_svn.so
 DISABLE_NEON_VERSION_CHECK=--disable-neon-version-check
+W_NO_SYSTEM_HEADERS=-Wno-system-headers
 else ifeq ($(BRANCH_MAJOR),1.0)
 BDB_FLAG=$(PREFIX)/bdb
 MOD_DAV_SVN=modules/mod_dav_svn.so
 MOD_AUTHZ_SVN=modules/mod_authz_svn.so
 DISABLE_NEON_VERSION_CHECK=--disable-neon-version-check
+W_NO_SYSTEM_HEADERS=-Wno-system-headers
 else
 BDB_FLAG=db.h:$(PREFIX)/bdb/include:$(PREFIX)/bdb/lib:db-$(BDB_MAJOR_VER)
 SERF_FLAG=--with-serf="$(PREFIX)/serf"
@@ -939,7 +951,7 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved
 # compile svn
 $(SVN_OBJDIR)/.compiled: $(SVN_OBJDIR)/.configured
 	cd $(svn_builddir) \
-		&& make EXTRA_CFLAGS="$(PROFILE_CFLAGS)"
+		&& make EXTRA_CFLAGS="$(PROFILE_CFLAGS) $(W_NO_SYSTEM_HEADERS)"
 	touch $@
 
 # install svn
