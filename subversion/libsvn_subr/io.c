@@ -3016,6 +3016,17 @@ svn_io_file_getc(char *ch, apr_file_t *file, apr_pool_t *pool)
 
 
 svn_error_t *
+svn_io_file_putc(char ch, apr_file_t *file, apr_pool_t *pool)
+{
+  return do_io_file_wrapper_cleanup
+    (file, apr_file_putc(ch, file),
+     N_("Can't write file '%s'"),
+     N_("Can't write stream"),
+     pool);
+}
+
+
+svn_error_t *
 svn_io_file_info_get(apr_finfo_t *finfo, apr_int32_t wanted,
                      apr_file_t *file, apr_pool_t *pool)
 {
@@ -3040,12 +3051,23 @@ svn_io_file_read(apr_file_t *file, void *buf,
 
 
 svn_error_t *
-svn_io_file_read_full(apr_file_t *file, void *buf,
-                      apr_size_t nbytes, apr_size_t *bytes_read,
-                      apr_pool_t *pool)
+svn_io_file_read_full2(apr_file_t *file, void *buf,
+                       apr_size_t nbytes, apr_size_t *bytes_read,
+                       svn_boolean_t *hit_eof,
+                       apr_pool_t *pool)
 {
+  apr_status_t status = apr_file_read_full(file, buf, nbytes, bytes_read);
+  if (hit_eof)
+    if (APR_STATUS_IS_EOF(status))
+      {
+        *hit_eof = TRUE;
+        return SVN_NO_ERROR;
+      }
+    else
+      *hit_eof = FALSE;
+
   return do_io_file_wrapper_cleanup
-    (file, apr_file_read_full(file, buf, nbytes, bytes_read),
+    (file, status,
      N_("Can't read file '%s'"),
      N_("Can't read stream"),
      pool);
@@ -3081,25 +3103,25 @@ svn_io_file_write_full(apr_file_t *file, const void *buf,
                        apr_size_t nbytes, apr_size_t *bytes_written,
                        apr_pool_t *pool)
 {
-  apr_status_t rv = apr_file_write_full(file, buf, nbytes, bytes_written);
-
 #ifdef WIN32
 #define MAXBUFSIZE 30*1024
-  if (rv == APR_FROM_OS_ERROR(ERROR_NOT_ENOUGH_MEMORY)
-      && nbytes > MAXBUFSIZE)
-    {
-      apr_size_t bw = 0;
-      *bytes_written = 0;
+  apr_status_t rv;
+  apr_size_t bw = 0;
+  apr_size_t to_write = nbytes;
 
-      do {
-        rv = apr_file_write_full(file, buf,
-                                 nbytes > MAXBUFSIZE ? MAXBUFSIZE : nbytes, &bw);
-        *bytes_written += bw;
-        buf = (char *)buf + bw;
-        nbytes -= bw;
-      } while (rv == APR_SUCCESS && nbytes > 0);
-    }
+  do {
+    bw = to_write > MAXBUFSIZE ? MAXBUFSIZE : to_write;
+    rv = apr_file_write(file, buf, &bw);
+    buf = (char *)buf + bw;
+    to_write -= bw;
+  } while (rv == APR_SUCCESS && to_write > 0);
+
+  /* bytes_written may actually be NULL */
+  if (bytes_written)
+    *bytes_written = nbytes - to_write;
 #undef MAXBUFSIZE
+#else
+  apr_status_t rv = apr_file_write_full(file, buf, nbytes, bytes_written);
 #endif
 
   return svn_error_return(do_io_file_wrapper_cleanup(
@@ -3771,8 +3793,8 @@ contents_identical_p(svn_boolean_t *identical_p,
   char *buf2 = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
   apr_file_t *file1_h = NULL;
   apr_file_t *file2_h = NULL;
-  svn_boolean_t done1 = FALSE;
-  svn_boolean_t done2 = FALSE;
+  svn_boolean_t eof1 = FALSE;
+  svn_boolean_t eof2 = FALSE;
 
   SVN_ERR(svn_io_file_open(&file1_h, file1, APR_READ, APR_OS_DEFAULT,
                            pool));
@@ -3786,38 +3808,31 @@ contents_identical_p(svn_boolean_t *identical_p,
                                         svn_io_file_close(file1_h, pool)));
 
   *identical_p = TRUE;  /* assume TRUE, until disproved below */
-  while (! (done1 || done2))
+  while (!err && !eof1 && !eof2)
     {
-      err = svn_io_file_read_full(file1_h, buf1,
-                                  SVN__STREAM_CHUNK_SIZE, &bytes_read1, pool);
-      if (err && APR_STATUS_IS_EOF(err->apr_err))
-        {
-          svn_error_clear(err);
-          err = NULL;
-          done1 = TRUE;
-        }
-      else if (err)
-        break;
+      err = svn_io_file_read_full2(file1_h, buf1,
+                                   SVN__STREAM_CHUNK_SIZE, &bytes_read1,
+                                   &eof1, pool);
+      if (err)
+          break;
 
-      err = svn_io_file_read_full(file2_h, buf2,
-                                  SVN__STREAM_CHUNK_SIZE, &bytes_read2, pool);
-      if (err && APR_STATUS_IS_EOF(err->apr_err))
-        {
-          svn_error_clear(err);
-          err = NULL;
-          done2 = TRUE;
-        }
-      else if (err)
-        break;
+      err = svn_io_file_read_full2(file2_h, buf2,
+                                   SVN__STREAM_CHUNK_SIZE, &bytes_read2,
+                                   &eof2, pool);
+      if (err)
+          break;
 
-      if ((bytes_read1 != bytes_read2)
-          || (done1 != done2)
-          || (memcmp(buf1, buf2, bytes_read1)))
+      if ((bytes_read1 != bytes_read2) || memcmp(buf1, buf2, bytes_read1))
         {
           *identical_p = FALSE;
           break;
         }
     }
+
+  /* Special case: one file being a prefix of the other and the shorter
+   * file's size is a multiple of SVN__STREAM_CHUNK_SIZE. */
+  if (!err && (eof1 != eof2))
+    *identical_p = FALSE;
 
   return svn_error_return(
            svn_error_compose_create(

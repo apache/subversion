@@ -1770,6 +1770,15 @@ svn_io_file_getc(char *ch,
                  apr_pool_t *pool);
 
 
+/** Wrapper for apr_file_putc(). 
+  * @since New in 1.7
+  */
+svn_error_t *
+svn_io_file_putc(char ch,
+                 apr_file_t *file,
+                 apr_pool_t *pool);
+
+
 /** Wrapper for apr_file_info_get(). */
 svn_error_t *
 svn_io_file_info_get(apr_finfo_t *finfo,
@@ -1786,7 +1795,28 @@ svn_io_file_read(apr_file_t *file,
                  apr_pool_t *pool);
 
 
-/** Wrapper for apr_file_read_full(). */
+/** Wrapper for apr_file_read_full().
+ *
+ * If @a hit_eof is not NULL, EOF will be indicated there and no
+ * svn_error_t error object will be created upon EOF.
+ *
+ * @since New in 1.7
+ */
+svn_error_t *
+svn_io_file_read_full2(apr_file_t *file,
+                       void *buf,
+                       apr_size_t nbytes,
+                       apr_size_t *bytes_read,
+                       svn_boolean_t *hit_eof,
+                       apr_pool_t *pool);
+
+
+/** Similar to svn_io_file_read_full2 with hit_eof being set
+ * to @c NULL.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_io_file_read_full(apr_file_t *file,
                       void *buf,
