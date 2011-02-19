@@ -314,15 +314,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r880146
-   When in `--dry-run' mode of `svn merge' command, property conflicts made an
-   interactive callback to the user to resolve the conflicts, unlike the text
-   conflicts. Suppress the interactive callback in `--dry-run' mode.
-   Justification:
-     A user asked me for it recently. Consistency. Removes an annoyance.
-     Simple patch.
-   Branch:
-     ^/subversion/branches/1.6.x-r880146
-   Votes:
-     +1: julianfoad, stsp, pburba
