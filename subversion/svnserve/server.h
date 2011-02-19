@@ -114,7 +114,7 @@ typedef struct serve_params_t {
 
   /* Data compression level to reduce for network traffic. If this
      is 0, no compression should be applied and the protocol may
-     fall back to txdelta "version 0" bypassing zlib entirely.
+     fall back to svndiff "version 0" bypassing zlib entirely.
      Defaults to SVN_DEFAULT_COMPRESSSION_LEVEL. */
   int compression_level;
 
