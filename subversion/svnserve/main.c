@@ -451,7 +451,7 @@ int main(int argc, const char *argv[])
   params.cfg = NULL;
   params.pwdb = NULL;
   params.authzdb = NULL;
-  params.compression_level = SVNDIFF1_COMPRESS_LEVEL;
+  params.compression_level = SVN_DEFAULT_COMPRESSSION_LEVEL;
   params.log_file = NULL;
   params.username_case = CASE_ASIS;
   params.memory_cache_size = (apr_uint64_t)-1;
