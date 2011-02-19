@@ -173,8 +173,9 @@ svn_ra_svn_create_conn2(apr_socket_t *sock,
                         int compression_level,
                         apr_pool_t *pool);
 
-/** Similar to @ref svn_ra_svn_create_conn2() but uses default 
- * compression level (#SVNDIFF1_COMPRESS_LEVEL) for network transmissions.
+/** Similar to @ref svn_ra_svn_create_conn2() but uses default
+ * compression level (@ref SVN_DEFAULT_COMPRESSSION_LEVEL) for network
+ * transmissions.
  * 
  * @deprecated Provided for backward compatibility with the 1.6 API.
  */
