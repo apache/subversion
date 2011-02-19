@@ -51,7 +51,9 @@ struct fns_wrapper_baton
 };
 
 static svn_error_t *
-datasources_open(void *baton, apr_off_t *prefix_lines,
+datasources_open(void *baton,
+                 apr_off_t *prefix_lines,
+                 apr_off_t *suffix_lines,
                  const svn_diff_datasource_e *datasources,
                  apr_size_t datasource_len)
 {
@@ -64,8 +66,9 @@ datasources_open(void *baton, apr_off_t *prefix_lines,
       SVN_ERR(fwb->vtable->datasource_open(fwb->old_baton, datasources[i]));
     }
 
-  /* Don't claim any prefix matches. */
+  /* Don't claim any prefix or suffix matches. */
   *prefix_lines = 0;
+  *suffix_lines = 0;
 
   return SVN_NO_ERROR;
 }
