@@ -894,6 +894,50 @@ svn_ra_serf__set_bare_props(void *baton,
                         ns, ns_len, name, name_len, val, pool);
 }
 
+static svn_error_t *
+retrieve_baseline_info(svn_revnum_t *actual_revision,
+                       const char **basecoll_url_p,
+                       svn_ra_serf__session_t *session,
+                       svn_ra_serf__connection_t *conn,
+                       const char *baseline_url,
+                       svn_revnum_t revision,                       
+                       apr_pool_t  *pool)
+{
+  apr_hash_t *props = apr_hash_make(pool);
+  const char *basecoll_url;
+  const char *version_name;
+
+  SVN_ERR(svn_ra_serf__retrieve_props(props, session, conn,
+                                      baseline_url, revision, "0",
+                                      baseline_props, pool));
+
+  basecoll_url  = svn_ra_serf__get_ver_prop(props, baseline_url, revision,
+                                            "DAV:",
+                                            "baseline-collection");
+
+  if (!basecoll_url)
+    {
+      return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+                              _("The PROPFIND response did not include "
+                                "the requested baseline-collection value"));
+    }
+
+  *basecoll_url_p = svn_urlpath__canonicalize(basecoll_url, pool);
+
+  version_name = svn_ra_serf__get_ver_prop(props, baseline_url, revision,
+                                       "DAV:", SVN_DAV__VERSION_NAME);
+  if (!version_name)
+    {
+      return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+                              _("The PROPFIND response did not include "
+                              "the requested version-name value"));
+    }
+
+  *actual_revision = SVN_STR_TO_REV(version_name);
+  
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_ra_serf__get_baseline_info(const char **bc_url,
                                const char **bc_relative,
@@ -945,16 +989,16 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
   /* Otherwise, we fall back to the old VCC_URL PROPFIND hunt.  */
   else
     {
+      svn_revnum_t actual_revision;
+
       SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session, conn, pool));
 
       if (revision != SVN_INVALID_REVNUM)
         {
-          SVN_ERR(svn_ra_serf__retrieve_props(props, session, conn,
-                                              vcc_url, revision, "0",
-                                              baseline_props, pool));
-          basecoll_url = svn_ra_serf__get_ver_prop(props, vcc_url, revision,
-                                                   "DAV:",
-                                                   "baseline-collection");
+          SVN_ERR(retrieve_baseline_info(&actual_revision, &basecoll_url,
+                                         session, conn,
+                                         vcc_url, revision,
+                                         pool));
         }
       else
         {
@@ -972,38 +1016,14 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
 
           baseline_url = svn_urlpath__canonicalize(baseline_url, pool);
 
-          SVN_ERR(svn_ra_serf__retrieve_props(props, session, conn,
-                                              baseline_url, revision, "0",
-                                              baseline_props, pool));
-          basecoll_url = svn_ra_serf__get_ver_prop(props, baseline_url,
-                                                   revision, "DAV:",
-                                                   "baseline-collection");
+          SVN_ERR(retrieve_baseline_info(&actual_revision, &basecoll_url,
+                                         session, conn,
+                                         baseline_url, revision, pool));
         }
-
-      if (!basecoll_url)
-        {
-          return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
-                                  _("The OPTIONS response did not include the "
-                                    "requested baseline-collection value"));
-        }
-
-      basecoll_url = svn_urlpath__canonicalize(basecoll_url, pool);
 
       if (latest_revnum)
         {
-          const char *version_name;
-
-          version_name = svn_ra_serf__get_prop(props, baseline_url,
-                                               "DAV:", SVN_DAV__VERSION_NAME);
-
-          if (!version_name)
-            {
-              return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
-                                      _("The OPTIONS response did not include "
-                                        "the requested version-name value"));
-            }
-
-          *latest_revnum = SVN_STR_TO_REV(version_name);
+          *latest_revnum = actual_revision;
         }
     }
 
