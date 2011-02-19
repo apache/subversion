@@ -917,7 +917,7 @@ retrieve_baseline_info(svn_revnum_t *actual_revision,
 
   if (!basecoll_url)
     {
-      return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+      return svn_error_create(SVN_ERR_RA_DAV_PROPS_NOT_FOUND, NULL,
                               _("The PROPFIND response did not include "
                                 "the requested baseline-collection value"));
     }
@@ -928,7 +928,7 @@ retrieve_baseline_info(svn_revnum_t *actual_revision,
                                        "DAV:", SVN_DAV__VERSION_NAME);
   if (!version_name)
     {
-      return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+      return svn_error_create(SVN_ERR_RA_DAV_PROPS_NOT_FOUND, NULL,
                               _("The PROPFIND response did not include "
                               "the requested version-name value"));
     }
