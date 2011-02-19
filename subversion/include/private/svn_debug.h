@@ -74,6 +74,19 @@ svn_dbg__printf(const char *fmt, ...)
 
 #else
 
+/** Debug aid macro that prints the file:line of the call and printf-like
+ * arguments to the #SVN_DBG_OUTPUT stdio stream.  Typical usage:
+ *
+ * <pre>
+ *   SVN_DBG(("path='%s' rev=%ld\n", dirent, revnum));
+ * </pre>
+ *
+ * outputs:
+ *
+ * <pre>
+ *   kitchensink.c:42:path='/tmp/svn/wc1/iota' rev=3141592
+ * </pre>
+ */
 #define SVN_DBG(ARGS) (svn_dbg__preamble(__FILE__, __LINE__, SVN_DBG_OUTPUT), \
                        svn_dbg__printf ARGS)
 
