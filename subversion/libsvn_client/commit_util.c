@@ -407,6 +407,7 @@ harvest_committables(apr_hash_t *committables,
   const char *cf_url = NULL;
   svn_revnum_t cf_rev = entry->copyfrom_rev;
   const svn_string_t *propval;
+  svn_boolean_t matches_changelists;
   svn_boolean_t is_special;
   apr_pool_t *token_pool = (lock_tokens ? apr_hash_pool_get(lock_tokens)
                             : NULL);
@@ -433,6 +434,16 @@ harvest_committables(apr_hash_t *committables,
        svn_path_local_style(path, scratch_pool));
 
   SVN_ERR(svn_io_check_special_path(path, &kind, &is_special, scratch_pool));
+
+  /* Save the result for reuse. */
+  matches_changelists = SVN_WC__CL_MATCH(changelists, entry);
+
+  /* Early exit. */
+  if (kind != svn_node_dir && kind != svn_node_none
+      && ! matches_changelists)
+    {
+      return SVN_NO_ERROR;
+    }
 
   if ((kind != svn_node_file)
       && (kind != svn_node_dir)
