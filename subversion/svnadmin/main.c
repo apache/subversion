@@ -549,7 +549,7 @@ parse_args(apr_array_header_t **args,
            int max_expected,
            apr_pool_t *pool)
 {
-  int num_args = os->argc - os->ind;
+  int num_args = os ? (os->argc - os->ind) : 0;
 
   if (min_expected || max_expected)
     SVN_ERR_ASSERT(args);
