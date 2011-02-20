@@ -47,6 +47,9 @@ typedef struct svn_cache__vtable_t {
                        svn_iter_apr_hash_cb_t func,
                        void *baton,
                        apr_pool_t *pool);
+
+  svn_boolean_t (*is_cachable)(void *cache_implementation,
+                               apr_size_t size);
 } svn_cache__vtable_t;
 
 struct svn_cache__t {

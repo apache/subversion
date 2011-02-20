@@ -258,6 +258,16 @@ svn_cache__set_error_handler(svn_cache__t *cache,
                              void *baton,
                              apr_pool_t *pool);
 
+/**
+ * Returns @c TRUE if the @a cache supports objects of the given @a size.
+ * There is no guarantee, that @ref svn_cache__set will actually store the
+ * respective object in that case. However, a @c FALSE return value indicates
+ * that an attempt to cache the item will either fail or impair the overall
+ * cache performance. @c FALSE will also be returned if @a cache is @c NULL.
+ */
+svn_boolean_t
+svn_cache__is_cachable(svn_cache__t *cache,
+                       apr_size_t size);
 
 #define SVN_CACHE_CONFIG_CATEGORY_MEMCACHED_SERVERS "memcached-servers"
 

@@ -1267,7 +1267,8 @@ svn_membuffer_cache_is_cachable(void *cache_void, apr_size_t size)
 static svn_cache__vtable_t membuffer_cache_vtable = {
   svn_membuffer_cache_get,
   svn_membuffer_cache_set,
-  svn_membuffer_cache_iter
+  svn_membuffer_cache_iter,
+  svn_membuffer_cache_is_cachable
 };
 
 /* standard serialization function for svn_stringbuf_t items
