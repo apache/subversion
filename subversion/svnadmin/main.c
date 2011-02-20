@@ -1938,15 +1938,14 @@ main(int argc, const char *argv[])
   /* Configure FSFS caches for maximum efficiency with svnadmin.
    * Also, apply the respective command line parameters, if given. */
   {
-    svn_fs_fs__cache_config_t settings = *svn_fs_fs__get_cache_config();
+    svn_fs_cache_config_t settings = *svn_fs_get_cache_config();
 
     settings.cache_size = opt_state.memory_cache_size;
-    settings.file_handle_count = opt_state.open_file_count;
     settings.cache_fulltexts = subcommand->cmd_func == subcommand_load;
     settings.cache_txdeltas = TRUE;
     settings.single_threaded = TRUE;
 
-    svn_fs_fs__set_cache_config(&settings);
+    svn_fs_set_cache_config(&settings);
   }
 
   /* Run the subcommand. */

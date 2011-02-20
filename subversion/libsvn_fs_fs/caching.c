@@ -206,12 +206,12 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
             warn_on_cache_errors, fs, pool));
 
   /* if enabled, enable the txdelta window cache */
-  if (get_global_membuffer_cache() &&
-      svn_fs_fs__get_cache_config()->cache_txdeltas)
+  if (svn_fs__get_global_membuffer_cache() &&
+      svn_fs_get_cache_config()->cache_txdeltas)
     {
       SVN_ERR(svn_cache__create_membuffer_cache
                 (&(ffd->txdelta_window_cache),
-                 get_global_membuffer_cache(),
+                 svn_fs__get_global_membuffer_cache(),
                  svn_fs_fs__serialize_txdelta_window,
                  svn_fs_fs__deserialize_txdelta_window,
                  APR_HASH_KEY_STRING,
