@@ -475,12 +475,15 @@ SVNMaxOpenFileHandles_cmd(cmd_parms *cmd, void *config, const char *arg1)
 {
   svn_fs_cache_config_t settings = *svn_fs_get_cache_config();
 
-  apr_uint64_t value = parse_number(arg1);
-  if (value == (apr_uint64_t)(-1))
-    return "Invalid decimal number for the open file handle count.";
+  unsigned value;
+  svn_error_t *err = svn_cstring_atoui(&value, arg1);
+  if (err)
+    {
+      svn_error_clear(err);
+      return "Invalid decimal number for the open file handle count.";
+    }
 
-  settings.file_handle_count = (apr_size_t)value;
-
+  settings.file_handle_count = value;
   svn_fs_set_cache_config(&settings);
 
   return NULL;

@@ -1713,17 +1713,6 @@ read_handler_string(void *baton, char *buffer, apr_size_t *len)
 }
 
 static svn_error_t *
-skip_handler_string(void *baton, apr_size_t *count)
-{
-  struct string_stream_baton *btn = baton;
-  apr_size_t left_to_read = btn->str->len - btn->amt_read;
-
-  *count = (*count > left_to_read) ? left_to_read : *count;
-  btn->amt_read += *count;
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
 mark_handler_string(void *baton, svn_stream_mark_t **mark, apr_pool_t *pool)
 {
   struct string_stream_baton *btn;
