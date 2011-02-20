@@ -3215,7 +3215,9 @@ rep_read_get_baton(struct rep_read_baton **rb_p,
   b->filehandle_pool = svn_pool_create(pool);
 
   if (fulltext_cache_key)
-    b->current_fulltext = svn_stringbuf_create("", b->filehandle_pool);
+    b->current_fulltext = svn_stringbuf_create_ensure
+                            ((apr_size_t)rep->expanded_size,
+                             b->filehandle_pool);
   else
     b->current_fulltext = NULL;
 
