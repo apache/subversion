@@ -877,19 +877,30 @@ main(int argc, const char **argv)
       exit(EXIT_SUCCESS);
     }
 
-  /* Only continue if the only not option argument is a url */
-  if ((os->ind != os->argc-1)
-      || !svn_path_is_url(os->argv[os->ind]))
+  /* Expect one more non-option argument:  the repository URL. */
+  if (os->ind != os->argc - 1)
     {
       SVNRDUMP_ERR(usage(argv[0], pool));
       svn_pool_destroy(pool);
       exit(EXIT_FAILURE);
     }
+  else
+    {
+      const char *repos_url;
 
-  SVNRDUMP_ERR(svn_utf_cstring_to_utf8(&(opt_baton->url),
-                                       os->argv[os->ind], pool));
-
-  opt_baton->url = svn_uri_canonicalize(os->argv[os->ind], pool);
+      SVNRDUMP_ERR(svn_utf_cstring_to_utf8(&repos_url,
+                                           os->argv[os->ind], pool));
+      if (! svn_path_is_url(repos_url))
+        {
+          err = svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, 0,
+                                  "Target '%s' is not a URL", 
+                                  repos_url);
+          SVNRDUMP_ERR(err);
+          svn_pool_destroy(pool);
+          exit(EXIT_FAILURE);
+        }
+      opt_baton->url = svn_uri_canonicalize(repos_url, pool);
+    }
 
   SVNRDUMP_ERR(open_connection(&(opt_baton->session),
                                opt_baton->url,

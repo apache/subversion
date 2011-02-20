@@ -1397,8 +1397,9 @@ svn_fs_props_changed(svn_boolean_t *changed_p,
 /** Discover a node's copy ancestry, if any.
  *
  * If the node at @a path in @a root was copied from some other node, set
- * @a *rev_p and @a *path_p to the revision and path of the other node,
- * allocating @a *path_p in @a pool.
+ * @a *rev_p and @a *path_p to the revision and path (expressed as an
+ * absolute filesystem path) of the other node, allocating @a *path_p
+ * in @a pool.
  *
  * Else if there is no copy ancestry for the node, set @a *rev_p to
  * #SVN_INVALID_REVNUM and @a *path_p to NULL.

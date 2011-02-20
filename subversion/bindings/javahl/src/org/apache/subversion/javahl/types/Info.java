@@ -21,11 +21,12 @@
  * @endcopyright
  */
 
-package org.apache.subversion.javahl;
+package org.apache.subversion.javahl.types;
 
 import java.util.Date;
 
-import org.apache.subversion.javahl.types.*;
+import org.apache.subversion.javahl.ConflictDescriptor;
+import org.apache.subversion.javahl.ISVNClient;
 
 /**
  * this class is returned by {@link ISVNClient#info2} and contains information

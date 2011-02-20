@@ -1134,9 +1134,9 @@ read_config(svn_fs_t *fs,
 {
   fs_fs_data_t *ffd = fs->fsap_data;
 
-  SVN_ERR(svn_config_read(&ffd->config,
-                          svn_dirent_join(fs->path, PATH_CONFIG, pool),
-                          FALSE, fs->pool));
+  SVN_ERR(svn_config_read2(&ffd->config,
+                           svn_dirent_join(fs->path, PATH_CONFIG, pool),
+                           FALSE, FALSE, fs->pool));
 
   /* Initialize ffd->rep_sharing_allowed. */
   if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT)
@@ -3847,14 +3847,11 @@ rep_read_contents(void *baton,
           SVN_ERR(svn_checksum_final(&md5_checksum, rb->md5_checksum_ctx,
                                      rb->pool));
           if (!svn_checksum_match(md5_checksum, rb->md5_checksum))
-            return svn_error_createf
-              (SVN_ERR_FS_CORRUPT, NULL,
-               apr_psprintf(rb->pool, "%s:\n%s\n%s\n",
-                            _("Checksum mismatch while reading representation"),
-                            _("   expected:  %s"),
-                            _("     actual:  %s")),
-               svn_checksum_to_cstring_display(rb->md5_checksum, rb->pool),
-               svn_checksum_to_cstring_display(md5_checksum, rb->pool));
+            return svn_error_create(SVN_ERR_FS_CORRUPT,
+                    svn_checksum_mismatch_err(rb->md5_checksum, md5_checksum,
+                        rb->pool,
+                        _("Checksum mismatch while reading representation")),
+                    NULL);
         }
     }
 

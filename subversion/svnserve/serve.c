@@ -235,7 +235,7 @@ svn_error_t *load_configs(svn_config_t **cfg,
   const char *pwdb_path, *authzdb_path;
   svn_error_t *err;
 
-  SVN_ERR(svn_config_read(cfg, filename, must_exist, pool));
+  SVN_ERR(svn_config_read2(cfg, filename, must_exist, FALSE, pool));
 
   svn_config_get(*cfg, &pwdb_path, SVN_CONFIG_SECTION_GENERAL,
                  SVN_CONFIG_OPTION_PASSWORD_DB, NULL);
@@ -245,7 +245,7 @@ svn_error_t *load_configs(svn_config_t **cfg,
     {
       pwdb_path = svn_dirent_join(base, pwdb_path, pool);
 
-      err = svn_config_read(pwdb, pwdb_path, TRUE, pool);
+      err = svn_config_read2(pwdb, pwdb_path, TRUE, FALSE, pool);
       if (err)
         {
           if (server)
@@ -1844,15 +1844,17 @@ static svn_error_t *get_mergeinfo(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   apr_hash_index_t *hi;
   const char *inherit_word;
   svn_mergeinfo_inheritance_t inherit;
-  svn_boolean_t validate_inherited_mergeinfo;
+  apr_uint64_t validate_inherited_mergeinfo;
   svn_boolean_t include_descendants;
   apr_pool_t *iterpool;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)wb?b", &paths, &rev,
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)wb?B", &paths, &rev,
                                  &inherit_word,
                                  &include_descendants,
                                  &validate_inherited_mergeinfo));
   inherit = svn_inheritance_from_word(inherit_word);
+  if (validate_inherited_mergeinfo == SVN_RA_SVN_UNSPECIFIED_NUMBER)
+    validate_inherited_mergeinfo = FALSE;
 
   /* Canonicalize the paths which mergeinfo has been requested for. */
   canonical_paths = apr_array_make(pool, paths->nelts, sizeof(const char *));
@@ -1878,6 +1880,7 @@ static svn_error_t *get_mergeinfo(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_CMD_ERR(svn_repos_fs_get_mergeinfo2(&mergeinfo, b->repos,
                                           canonical_paths, rev,
                                           inherit,
+                                          (svn_boolean_t)
                                           validate_inherited_mergeinfo,
                                           include_descendants,
                                           authz_check_access_cb_func(b), b,

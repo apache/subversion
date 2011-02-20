@@ -2078,8 +2078,7 @@ get_resource(request_rec *r,
             apr_array_header_t *vals
               = svn_cstring_split(val, ",", TRUE, r->pool);
 
-            if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_MERGEINFO,
-                                            vals))
+            if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_MERGEINFO, vals))
               {
                 apr_hash_set(repos->client_capabilities,
                              SVN_RA_CAPABILITY_MERGEINFO,
@@ -2186,8 +2185,10 @@ get_resource(request_rec *r,
       dav_locktoken_list *list = ltl;
 
       serr = svn_fs_get_access(&access_ctx, repos->fs);
-      if (serr)
+      if (serr || !access_ctx)
         {
+          if (serr == NULL)
+            serr = svn_error_create(SVN_ERR_FS_LOCK_OWNER_MISMATCH, NULL, NULL);
           return dav_svn__sanitize_error(serr, "Lock token is in request, "
                                          "but no user name",
                                          HTTP_BAD_REQUEST, r);
@@ -3508,8 +3509,9 @@ deliver(const dav_resource *resource, ap_filter_t *output)
           svn_stream_set_close(o_stream, close_filter);
 
           /* get a handler/baton for writing into the output stream */
-          svn_txdelta_to_svndiff2(&handler, &h_baton,
+          svn_txdelta_to_svndiff3(&handler, &h_baton,
                                   o_stream, resource->info->svndiff_version,
+                                  dav_svn__get_compression_level(),
                                   resource->pool);
 
           /* got everything set up. read in delta windows and shove them into

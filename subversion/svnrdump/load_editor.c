@@ -464,7 +464,20 @@ static svn_error_t *
 set_fulltext(svn_stream_t **stream,
              void *node_baton)
 {
-  /* ### Not implemented */
+  struct node_baton *nb;
+  const struct svn_delta_editor_t *commit_editor;
+  svn_txdelta_window_handler_t handler;
+  void *handler_baton;
+  apr_pool_t *pool;
+
+  nb = node_baton;
+  commit_editor = nb->rb->pb->commit_editor;
+  pool = nb->rb->pool;
+  LDR_DBG(("Setting fulltext for %p\n", nb->file_baton));
+  SVN_ERR(commit_editor->apply_textdelta(nb->file_baton, nb->base_checksum,
+                                         pool, &handler, &handler_baton));
+  *stream = svn_txdelta_target_push(handler, handler_baton,
+                                    svn_stream_empty(pool), pool);
   return SVN_NO_ERROR;
 }
 
@@ -496,7 +509,9 @@ close_node(void *baton)
   nb = baton;
   commit_editor = nb->rb->pb->commit_editor;
 
-  if (nb->kind == svn_node_file)
+  /* Pass a file node closure through to the editor *unless* we
+     deleted the file (which doesn't require us to open it). */
+  if ((nb->kind == svn_node_file) && (nb->file_baton))
     {
       LDR_DBG(("Closing file %p\n", nb->file_baton));
       SVN_ERR(commit_editor->close_file(nb->file_baton, NULL, nb->rb->pool));

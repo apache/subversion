@@ -30,6 +30,7 @@ import sys, re, os, time
 
 # Our testing module
 import svntest
+from svntest import err
 
 # (abbreviation)
 Skip = svntest.testcase.Skip_deco
@@ -3248,9 +3249,7 @@ def diff_wrong_extension_type(sbox):
   "'svn diff -x wc -r#' should return error"
 
   sbox.build(read_only = True)
-  expected_error = "(.*svn: E200016: Invalid argument .* in diff options.*)|" \
-                   "(svn: '.' is not a working copy)"
-  svntest.actions.run_and_verify_svn(None, [], expected_error,
+  svntest.actions.run_and_verify_svn(None, [], err.INVALID_DIFF_OPTION,
                                      'diff', '-x', sbox.wc_dir, '-r', '1')
 
 # Check the order of the arguments for an external diff tool
@@ -3351,7 +3350,7 @@ def diff_url_against_local_mods(sbox):
 # Diff against old revision of the parent directory of a removed and
 # locally re-added file.
 @XFail()
-@Issue(1675)
+@Issue(3797)
 def diff_preexisting_rev_against_local_add(sbox):
   "diff -r1 of dir with removed-then-readded file"
   sbox.build()

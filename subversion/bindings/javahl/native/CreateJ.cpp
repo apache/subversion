@@ -187,7 +187,7 @@ CreateJ::Info(const char *path, const svn_info_t *info)
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
-  jclass clazz = env->FindClass(JAVA_PACKAGE "/Info");
+  jclass clazz = env->FindClass(JAVA_PACKAGE "/types/Info");
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -201,7 +201,7 @@ CreateJ::Info(const char *path, const svn_info_t *info)
                              "Ljava/lang/String;Ljava/lang/String;"
                              "JJLjava/lang/String;"
                              "L"JAVA_PACKAGE"/types/Lock;Z"
-                             "L"JAVA_PACKAGE"/Info$ScheduleKind;"
+                             "L"JAVA_PACKAGE"/types/Info$ScheduleKind;"
                              "Ljava/lang/String;JJJ"
                              "Ljava/lang/String;Ljava/lang/String;"
                              "Ljava/lang/String;Ljava/lang/String;"
@@ -706,7 +706,7 @@ CreateJ::ClientNotifyInformation(const svn_wc_notify_t *wcNotify)
                                "L"JAVA_PACKAGE"/ClientNotifyInformation$Status;"
                                "L"JAVA_PACKAGE"/ClientNotifyInformation$LockStatus;"
                                "JLjava/lang/String;"
-                               "L"JAVA_PACKAGE"/RevisionRange;"
+                               "L"JAVA_PACKAGE"/types/RevisionRange;"
                                "Ljava/lang/String;Ljava/lang/String;"
                                "Ljava/util/Map;JJJJJJI)V");
       if (JNIUtil::isJavaExceptionThrown() || midCT == 0)

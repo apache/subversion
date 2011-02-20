@@ -1137,6 +1137,13 @@ bump_to_24(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+bump_to_25(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_25));
+  return SVN_NO_ERROR;
+}
+
 
 struct upgrade_data_t {
   svn_sqlite__db_t *sdb;
@@ -1263,8 +1270,6 @@ upgrade_to_wcng(void **dir_baton,
          entries_write_new() writes in current format rather than
          f12. Thus, this function bumps a working copy all the way to
          current.  */
-      SVN_ERR(svn_wc__db_temp_reset_format(SVN_WC__VERSION, db,
-                                           data->root_abspath, scratch_pool));
       SVN_ERR(svn_wc__db_wclock_obtain(db, data->root_abspath, 0, FALSE,
                                        scratch_pool));
     }
@@ -1402,6 +1407,12 @@ svn_wc__upgrade_sdb(int *result_format,
         SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_24, &bb,
                                              scratch_pool));
         *result_format = 24;
+        /* FALLTHROUGH  */
+
+      case 24:
+        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_25, &bb,
+                                             scratch_pool));
+        *result_format = 25;
         /* FALLTHROUGH  */
 
       /* ### future bumps go here.  */

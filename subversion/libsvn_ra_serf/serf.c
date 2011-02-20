@@ -86,10 +86,10 @@ ra_serf_get_schemes(apr_pool_t *pool)
 static svn_error_t *
 load_http_auth_types(apr_pool_t *pool, svn_config_t *config,
                      const char *server_group,
-                     svn_ra_serf__authn_types *authn_types)
+                     int *authn_types)
 {
   const char *http_auth_types = NULL;
-  *authn_types = svn_ra_serf__authn_none;
+  *authn_types = SERF_AUTHN_NONE;
 
   svn_config_get(config, &http_auth_types, SVN_CONFIG_SECTION_GLOBAL,
                SVN_CONFIG_OPTION_HTTP_AUTH_TYPES, NULL);
@@ -109,13 +109,13 @@ load_http_auth_types(apr_pool_t *pool, svn_config_t *config,
         {
           auth_types_list = NULL;
           if (svn_cstring_casecmp("basic", token) == 0)
-            *authn_types |= svn_ra_serf__authn_basic;
+            *authn_types |= SERF_AUTHN_BASIC;
           else if (svn_cstring_casecmp("digest", token) == 0)
-            *authn_types |= svn_ra_serf__authn_digest;
+            *authn_types |= SERF_AUTHN_DIGEST;
           else if (svn_cstring_casecmp("ntlm", token) == 0)
-            *authn_types |= svn_ra_serf__authn_ntlm;
+            *authn_types |= SERF_AUTHN_NTLM;
           else if (svn_cstring_casecmp("negotiate", token) == 0)
-            *authn_types |= svn_ra_serf__authn_negotiate;
+            *authn_types |= SERF_AUTHN_NEGOTIATE;
           else
             return svn_error_createf(SVN_ERR_BAD_CONFIG_VALUE, NULL,
                                      _("Invalid config: unknown http auth"
@@ -125,7 +125,7 @@ load_http_auth_types(apr_pool_t *pool, svn_config_t *config,
   else
     {
       /* Nothing specified by the user, so accept all types. */
-      *authn_types = svn_ra_serf__authn_all;
+      *authn_types = SERF_AUTHN_ALL;
     }
 
   return SVN_NO_ERROR;
@@ -298,6 +298,12 @@ load_config(svn_ra_serf__session_t *session,
       status = apr_sockaddr_info_get(&proxy_addr, proxy_host,
                                      APR_UNSPEC, proxy_port, 0,
                                      session->pool);
+      if (status)
+        {
+          return svn_error_wrap_apr(status,
+                                    _("Could not resolve proxy server '%s'"),
+                                    proxy_host);
+        }
       session->using_proxy = TRUE;
       serf_config_proxy(session->context, proxy_addr);
     }
@@ -307,12 +313,9 @@ load_config(svn_ra_serf__session_t *session,
   /* Setup authentication. */
   SVN_ERR(load_http_auth_types(pool, config, server_group,
                                &session->authn_types));
-#if SERF_VERSION_AT_LEAST(0, 4, 0)
-  /* TODO: convert string authn types to SERF_AUTHN bitmask.
-     serf_config_authn_types(session->context, session->authn_types);*/
+  serf_config_authn_types(session->context, session->authn_types);
   serf_config_credentials_callback(session->context,
                                    svn_ra_serf__credentials_callback);
-#endif
 
   return SVN_NO_ERROR;
 }
@@ -351,7 +354,6 @@ svn_ra_serf__open(svn_ra_session_t *session,
   serf_sess->pool = svn_pool_create(pool);
   serf_sess->bkt_alloc = serf_bucket_allocator_create(serf_sess->pool, NULL,
                                                       NULL);
-  serf_sess->cached_props = apr_hash_make(serf_sess->pool);
   serf_sess->wc_callbacks = callbacks;
   serf_sess->wc_callback_baton = callback_baton;
   serf_sess->wc_progress_baton = callbacks->progress_baton;
@@ -397,35 +399,9 @@ svn_ra_serf__open(svn_ra_session_t *session,
   serf_sess->conns[0]->session = serf_sess;
   serf_sess->conns[0]->last_status_code = -1;
 
-  /* Unless we're using a proxy, fetch the DNS record for this host */
-  if (! serf_sess->using_proxy)
-    {
-      status = apr_sockaddr_info_get(&serf_sess->conns[0]->address,
-                                     url.hostname,
-                                     APR_UNSPEC, url.port, 0, serf_sess->pool);
-      if (status)
-        {
-          return svn_error_wrap_apr(status,
-                                    _("Could not lookup hostname `%s'"),
-                                    url.hostname);
-        }
-    }
-  else
-    {
-      /* Create an address with unresolved hostname. */
-      apr_sockaddr_t *sa = apr_pcalloc(serf_sess->pool, sizeof(apr_sockaddr_t));
-      sa->pool = serf_sess->pool;
-      sa->hostname = apr_pstrdup(serf_sess->pool, url.hostname);
-      sa->port = url.port;
-      sa->family = APR_UNSPEC;
-      serf_sess->conns[0]->address = sa;
-    }
-
   serf_sess->conns[0]->using_ssl = serf_sess->using_ssl;
   serf_sess->conns[0]->using_compression = serf_sess->using_compression;
   serf_sess->conns[0]->hostinfo = url.hostinfo;
-  serf_sess->conns[0]->auth_header = NULL;
-  serf_sess->conns[0]->auth_value = NULL;
   serf_sess->conns[0]->useragent = NULL;
 
   /* create the user agent string */
@@ -603,8 +579,8 @@ fetch_path_props(svn_ra_serf__propfind_context_t **ret_prop_ctx,
     {
       SVN_ERR(svn_ra_serf__deliver_props(&prop_ctx, props, session,
                                          session->conns[0], path, revision,
-                                         "0", desired_props, TRUE, NULL,
-                                         session->pool));
+                                         "0", desired_props, NULL,
+                                         pool));
     }
   else
     {
@@ -623,8 +599,8 @@ fetch_path_props(svn_ra_serf__propfind_context_t **ret_prop_ctx,
       revision = SVN_INVALID_REVNUM;
       SVN_ERR(svn_ra_serf__deliver_props(&prop_ctx, props, session,
                                          session->conns[0], path, revision,
-                                         "0", desired_props, TRUE, NULL,
-                                         session->pool));
+                                         "0", desired_props, NULL,
+                                         pool));
     }
 
   if (prop_ctx)
@@ -707,6 +683,15 @@ dirent_walker(void *baton,
     {
       entry->has_props = TRUE;
     }
+  else if (strcmp(ns, SVN_DAV_PROP_NS_DAV) == 0)
+    {
+      if(strcmp(name, "deadprop-count") == 0)
+        {
+          apr_int64_t deadprop_count;
+          SVN_ERR(svn_cstring_atoi64(&deadprop_count, val->data));
+          entry->has_props = deadprop_count > 0;
+        }
+    }
   else if (strcmp(ns, "DAV:") == 0)
     {
       if (strcmp(name, SVN_DAV__VERSION_NAME) == 0)
@@ -723,7 +708,11 @@ dirent_walker(void *baton,
         }
       else if (strcmp(name, "getcontentlength") == 0)
         {
-          SVN_ERR(svn_cstring_atoi64(&entry->size, val->data));
+          /* 'getcontentlength' property is empty for directories. */
+          if (val->len)
+            {
+              SVN_ERR(svn_cstring_atoi64(&entry->size, val->data));
+            }
         }
       else if (strcmp(name, "resourcetype") == 0)
         {
@@ -783,6 +772,62 @@ path_dirent_walker(void *baton,
   return dirent_walker(entry, ns, ns_len, name, name_len, val, pool);
 }
 
+static const svn_ra_serf__dav_props_t *
+get_dirent_props(apr_uint32_t dirent_fields, apr_pool_t *pool)
+{
+  svn_ra_serf__dav_props_t *prop;
+  apr_array_header_t *props = apr_array_make
+    (pool, 7, sizeof(svn_ra_serf__dav_props_t));
+
+  if (dirent_fields & SVN_DIRENT_KIND) 
+    {
+      prop = apr_array_push(props);
+      prop->namespace = "DAV:";
+      prop->name = "resourcetype";
+    }
+
+  if (dirent_fields & SVN_DIRENT_SIZE)
+    {
+      prop = apr_array_push(props);
+      prop->namespace = "DAV:";
+      prop->name = "getcontentlength";
+    }
+  
+  if (dirent_fields & SVN_DIRENT_HAS_PROPS)
+    {
+      prop = apr_array_push(props);
+      prop->namespace = SVN_DAV_PROP_NS_DAV;
+      prop->name = "deadprop-count";
+    }
+
+  if (dirent_fields & SVN_DIRENT_CREATED_REV)
+    {
+      svn_ra_serf__dav_props_t *p = apr_array_push(props);
+      p->namespace = "DAV:";
+      p->name = SVN_DAV__VERSION_NAME;
+    }
+
+  if (dirent_fields & SVN_DIRENT_TIME)
+    {
+      prop = apr_array_push(props);
+      prop->namespace = "DAV:";
+      prop->name = SVN_DAV__CREATIONDATE;
+    }
+
+  if (dirent_fields & SVN_DIRENT_LAST_AUTHOR)
+    {
+      prop = apr_array_push(props);
+      prop->namespace = "DAV:";
+      prop->name = "creator-displayname";
+    }
+
+  prop = apr_array_push(props);
+  prop->namespace = NULL;
+  prop->name = NULL;
+
+  return (svn_ra_serf__dav_props_t *) props->elts;
+}
+
 static svn_error_t *
 svn_ra_serf__stat(svn_ra_session_t *ra_session,
                   const char *rel_path,
@@ -799,7 +844,8 @@ svn_ra_serf__stat(svn_ra_session_t *ra_session,
   svn_error_t *err;
 
   err = fetch_path_props(&prop_ctx, &props, &path, &fetched_rev,
-                         session, rel_path, revision, all_props, pool);
+                         session, rel_path, revision,
+                         get_dirent_props(SVN_DIRENT_ALL, pool), pool);
   if (err)
     {
       if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
@@ -895,9 +941,15 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
     {
       struct path_dirent_visitor_t dirent_walk;
 
+      /* Always request node kind to check that path is really a
+       * directory.
+       */
+      dirent_fields |= SVN_DIRENT_KIND;
       SVN_ERR(svn_ra_serf__retrieve_props(props, session, session->conns[0],
-                                          path, revision, "1", all_props,
-                                          session->pool));
+                                          path, revision, "1",
+                                          get_dirent_props(dirent_fields,
+                                                           pool),
+                                          pool));
 
       /* Check if the path is really a directory. */
       SVN_ERR(resource_is_directory (props, path, revision));

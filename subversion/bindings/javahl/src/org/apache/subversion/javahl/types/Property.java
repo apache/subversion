@@ -21,7 +21,7 @@
  * @endcopyright
  */
 
-package org.apache.subversion.javahl;
+package org.apache.subversion.javahl.types;
 
 /**
  * This class describes standard Subversion known properties

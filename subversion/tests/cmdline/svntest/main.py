@@ -34,6 +34,8 @@ import time    # for time()
 import traceback # for print_exc()
 import threading
 import optparse # for argument parsing
+import xml
+import urllib
 
 try:
   # Python >=3.0
@@ -1132,6 +1134,8 @@ class TestSpawningThread(threading.Thread):
       args.append('--server-minor-version=' + str(options.server_minor_version))
     if options.mode_filter:
       args.append('--mode-filter=' + options.mode_filter)
+    if options.milestone_filter:
+      args.append('--milestone-filter=' + options.milestone_filter)
 
     result, stdout_lines, stderr_lines = spawn_process(command, 0, 0, None,
                                                        *args)
@@ -1152,25 +1156,60 @@ class TestRunner:
     self.pred = svntest.testcase.create_test_case(func)
     self.index = index
 
-  def list(self):
+  def list(self, milestones_dict=None):
+    """Print test doc strings.  MILESTONES_DICT is an optional mapping
+    of issue numbers to target milestones."""
     if options.mode_filter.upper() == 'ALL' \
        or options.mode_filter.upper() == self.pred.list_mode().upper() \
        or (options.mode_filter.upper() == 'PASS' \
            and self.pred.list_mode() == ''):
+      issues = []
       tail = ''
       if self.pred.issues:
-        tail += " [%s]" % ','.join(['#%d' % i for i in self.pred.issues])
-      if options.verbose and self.pred.inprogress:
-        tail += " [[%s]]" % self.pred.inprogress
-      else:
-        print(" %3d    %-5s  %s%s" % (self.index,
-                                      self.pred.list_mode(),
-                                      self.pred.description,
-                                      tail))
+        if not options.milestone_filter or milestones_dict is None:
+          issues = self.pred.issues
+        else: # Limit listing by requested target milestone(s).
+          filter_issues = []
+          matches_filter = False
+
+          # Get the milestones for all the issues associated with this test.
+          # If any one of them matches the MILESTONE_FILTER then we'll print
+          # them all.
+          for issue in self.pred.issues:
+            # A safe starting assumption.
+            milestone = 'unknown'
+            if milestones_dict:
+              if milestones_dict.has_key(str(issue)):
+                milestone = milestones_dict[str(issue)]
+
+            filter_issues.append(str(issue) + '(' + milestone + ')')
+            pattern = re.compile(options.milestone_filter)
+            if pattern.match(milestone):
+              matches_filter = True
+
+          # Did at least one of the associated issues meet our filter?
+          if matches_filter:
+            issues = filter_issues
+
+        tail += " [%s]" % ','.join(['#%s' % str(i) for i in issues])
+
+      # If there is no filter or this test made if through
+      # the filter then print it!
+      if options.milestone_filter is None or len(issues):
+        if options.verbose and self.pred.inprogress:
+          tail += " [[%s]]" % self.pred.inprogress
+        else:
+          print(" %3d    %-5s  %s%s" % (self.index,
+                                        self.pred.list_mode(),
+                                        self.pred.description,
+                                        tail))
     sys.stdout.flush()
 
   def get_mode(self):
     return self.pred.list_mode()
+
+  def get_issues(self):
+    return self.pred.issues
 
   def get_function_name(self):
     return self.pred.get_function_name()
@@ -1376,6 +1415,8 @@ def _create_parser():
   parser = optparse.OptionParser(usage=usage)
   parser.add_option('-l', '--list', action='store_true', dest='list_tests',
                     help='Print test doc strings instead of running them')
+  parser.add_option('--milestone-filter', action='store', dest='milestone_filter',
+                    help='Limit --list to those with target milestone specified')
   parser.add_option('-v', '--verbose', action='store_true', dest='verbose',
                     help='Print binary command-lines (not with --quiet)')
   parser.add_option('-q', '--quiet', action='store_true',
@@ -1470,6 +1511,47 @@ def run_tests(test_list, serial_only = False):
 
   sys.exit(execute_tests(test_list, serial_only))
 
+def get_target_milestones_for_issues(issue_numbers):
+  xml_url = "http://subversion.tigris.org/issues/xml.cgi?id="
+  issue_dict = {}
+
+  if isinstance(issue_numbers, int):
+    issue_numbers = [str(issue_numbers)]
+  elif isinstance(issue_numbers, str):
+    issue_numbers = [issue_numbers]
+
+  if issue_numbers is None or len(issue_numbers) == 0:
+    return issue_dict
+
+  for num in issue_numbers:
+    xml_url += str(num) + ','
+    issue_dict[str(num)] = 'unknown'
+
+  try:
+    # Parse the xml for ISSUE_NO from the issue tracker into a Document.
+    issue_xml_f = urllib.urlopen(xml_url)
+  except:
+    print "WARNING: Unable to contact issue tracker; " \
+          "milestones defaulting to 'unknown'."
+    return issue_dict
+
+  try:
+    xmldoc = xml.dom.minidom.parse(issue_xml_f)
+    issue_xml_f.close()
+  
+    # Get the target milestone for each issue.
+    issue_element = xmldoc.getElementsByTagName('issue')
+    for i in issue_element:
+      issue_id_element = i.getElementsByTagName('issue_id')
+      issue_id = issue_id_element[0].childNodes[0].nodeValue
+      milestone_element = i.getElementsByTagName('target_milestone')
+      milestone = milestone_element[0].childNodes[0].nodeValue
+      issue_dict[issue_id] = milestone
+  except:
+    print "ERROR: Unable to parse target milestones from issue tracker"
+    raise
+
+  return issue_dict
 
 # Main func.  This is the "entry point" that all the test scripts call
 # to run their list of tests.
@@ -1586,6 +1668,23 @@ def execute_tests(test_list, serial_only = False, test_name = None,
     testnums = list(range(1, len(test_list)))
 
   if options.list_tests:
+
+    # If we want to list the target milestones, then get all the issues
+    # associated with all the individual tests.
+    milestones_dict = None
+    if options.milestone_filter:
+      issues_dict = {}
+      for testnum in testnums:
+        issues = TestRunner(test_list[testnum], testnum).get_issues()
+        test_mode = TestRunner(test_list[testnum], testnum).get_mode().upper()
+        if issues:
+          for issue in issues:
+            if (options.mode_filter.upper() == 'ALL' or
+                options.mode_filter.upper() == test_mode or
+                (options.mode_filter.upper() == 'PASS' and test_mode == '')):
+              issues_dict[issue]=issue
+      milestones_dict = get_target_milestones_for_issues(issues_dict.keys())
+
     header = "Test #  Mode   Test Description\n" \
              "------  -----  ----------------"
     printed_header = False
@@ -1597,7 +1696,7 @@ def execute_tests(test_list, serial_only = False, test_name = None,
         if not printed_header:
           print header
           printed_header = True
-        TestRunner(test_list[testnum], testnum).list()
+        TestRunner(test_list[testnum], testnum).list(milestones_dict)
     # We are simply listing the tests so always exit with success.
     return 0
 

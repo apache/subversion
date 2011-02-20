@@ -568,16 +568,9 @@ close_file(void *file_baton,
                                      text_digest, pool));
 
       if (!svn_checksum_match(text_checksum, checksum))
-        {
-          return svn_error_createf
-            (SVN_ERR_CHECKSUM_MISMATCH, NULL,
-             apr_psprintf(pool, "%s:\n%s\n%s\n",
-                          _("Checksum mismatch for resulting fulltext\n(%s)"),
-                          _("   expected:  %s"),
-                          _("     actual:  %s")),
-             fb->path, svn_checksum_to_cstring_display(text_checksum, pool),
-             svn_checksum_to_cstring_display(checksum, pool));
-        }
+        return svn_checksum_mismatch_err(text_checksum, checksum, pool,
+                            _("Checksum mismatch for resulting fulltext\n(%s)"),
+                            fb->path);
     }
 
   return SVN_NO_ERROR;

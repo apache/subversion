@@ -516,18 +516,11 @@ maybe_add_with_history(struct node_baton *nb,
           SVN_ERR(svn_fs_file_checksum(&checksum, svn_checksum_md5, copy_root,
                                        nb->copyfrom_path, TRUE, pool));
           if (!svn_checksum_match(nb->copy_source_checksum, checksum))
-            return svn_error_createf
-              (SVN_ERR_CHECKSUM_MISMATCH,
-               NULL,
-               apr_psprintf(pool, "%s:\n%s\n%s\n",
-                            _("Copy source checksum mismatch on copy from '%s'@%ld\n"
-                              "to '%s' in rev based on r%ld"),
-                            _("   expected:  %s"),
-                            _("     actual:  %s")),
-               nb->copyfrom_path, src_rev,
-               nb->path, rb->rev,
-               svn_checksum_to_cstring_display(nb->copy_source_checksum, pool),
-               svn_checksum_to_cstring_display(checksum, pool));
+            return svn_checksum_mismatch_err(nb->copy_source_checksum,
+                      checksum, pool,
+                      _("Copy source checksum mismatch on copy from '%s'@%ld\n"
+                        "to '%s' in rev based on r%ld"),
+                      nb->copyfrom_path, src_rev, nb->path, rb->rev);
         }
 
       SVN_ERR(svn_fs_copy(copy_root, nb->copyfrom_path,

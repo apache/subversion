@@ -158,7 +158,7 @@ svn_wc__db_pdh_get_or_create(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_open(svn_wc__db_t **db,
                 svn_wc__db_openmode_t mode,
-                svn_config_t *config,
+                const svn_config_t *config,
                 svn_boolean_t auto_upgrade,
                 svn_boolean_t enforce_empty_wq,
                 apr_pool_t *result_pool,
@@ -284,6 +284,7 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
      uses. */
   (*wcroot)->owned_locks = apr_array_make(result_pool, 8,
                                           sizeof(svn_wc__db_wclock_t));
+  (*wcroot)->access_cache = apr_hash_make(result_pool);
 
   /* SDB will be NULL for pre-NG working copies. We only need to run a
      cleanup when the SDB is present.  */
@@ -607,7 +608,6 @@ svn_wc__db_pdh_parse_local_abspath(svn_wc__db_pdh_t **pdh,
 
       /* Point the child PDH at this (new) parent PDH. This will allow for
          easy traversals without path munging.  */
-      child_pdh->parent = parent_pdh;
       child_pdh = parent_pdh;
 
       /* Loop if we haven't reached the PDH we found, or the abspath
@@ -622,30 +622,24 @@ svn_wc__db_pdh_parse_local_abspath(svn_wc__db_pdh_t **pdh,
 }
 
 svn_error_t *
-svn_wc__db_pdh_navigate_to_parent(svn_wc__db_pdh_t **parent_pdh,
-                                  svn_wc__db_t *db,
-                                  svn_wc__db_pdh_t *child_pdh,
-                                  svn_sqlite__mode_t smode,
-                                  apr_pool_t *scratch_pool)
+svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
+                                      const char **local_relpath,
+                                      svn_wc__db_t *db,
+                                      const char *local_abspath,
+                                      svn_sqlite__mode_t smode,
+                                      apr_pool_t *result_pool,
+                                      apr_pool_t *scratch_pool)
 {
-  const char *parent_abspath;
-  const char *local_relpath;
+  svn_wc__db_pdh_t *pdh;
 
-  if ((*parent_pdh = child_pdh->parent) != NULL
-      && (*parent_pdh)->wcroot != NULL)
-    return SVN_NO_ERROR;
-
-  /* Make sure we don't see the root as its own parent */
-  SVN_ERR_ASSERT(!svn_dirent_is_root(child_pdh->local_abspath,
-                                     strlen(child_pdh->local_abspath)));
-
-  parent_abspath = svn_dirent_dirname(child_pdh->local_abspath, scratch_pool);
-  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(parent_pdh, &local_relpath, db,
-                              parent_abspath, smode,
-                              scratch_pool, scratch_pool));
-  VERIFY_USABLE_PDH(*parent_pdh);
-
-  child_pdh->parent = *parent_pdh;
+  /* Ideally, we'd only grab the PDH if requested, rather than unconditionally.
+     That is, we'd call this function from pdh_parse_local_abspath(), instead
+     of the other way around.  However, for the time being, we're going to
+     go with short and simple here. */
+  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, local_relpath, db,
+                                             local_abspath, smode, result_pool,
+                                             scratch_pool));
+  *wcroot = pdh->wcroot;
 
   return SVN_NO_ERROR;
 }

@@ -1255,15 +1255,17 @@ translated_stream_skip(void *baton,
                        apr_size_t *count)
 {
   apr_size_t total_bytes_read = 0;
-  apr_size_t bytes_read;
+  apr_size_t bytes_read = 1;
   char buffer[SVN__STREAM_CHUNK_SIZE];
   svn_error_t *err = SVN_NO_ERROR;
+  apr_size_t to_read = *count;
 
-  while ((total_bytes_read < *count) && !err)
+  while ((to_read > 0) && !err && (bytes_read > 0))
     {
-      bytes_read = sizeof(buffer) < *count ? sizeof(buffer) : *count;
+      bytes_read = sizeof(buffer) < to_read ? sizeof(buffer) : to_read;
       err = translated_stream_read(baton, buffer, &bytes_read);
       total_bytes_read += bytes_read;
+      to_read -= bytes_read;
     }
 
   *count = total_bytes_read;
@@ -1337,13 +1339,13 @@ translated_stream_mark(void *baton, svn_stream_mark_t **mark, apr_pool_t *pool)
 
 /* Implements svn_io_seek_fn_t. */
 static svn_error_t *
-translated_stream_seek(void *baton, svn_stream_mark_t *mark)
+translated_stream_seek(void *baton, const svn_stream_mark_t *mark)
 {
   struct translated_stream_baton *b = baton;
 
   if (mark != NULL)
     {
-      mark_translated_t *mt = (mark_translated_t *)mark;
+      const mark_translated_t *mt = (const mark_translated_t *)mark;
 
       /* Flush output buffer if necessary. */
       if (b->written)

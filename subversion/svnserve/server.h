@@ -109,14 +109,14 @@ typedef struct serve_params_t {
   /* Username case normalization style. */
   enum username_case_type username_case;
 
-  /* Data compression level to reduce for network traffic. If this
-     is 0, no compression should be applied and the protocol may
-     fall back to txdelta "version 0" bypassing zlib entirely.
-     Defaults to SVNDIFF1_COMPRESS_LEVEL. */
-  int compression_level;
-
   /* Size of the in-memory cache (used by FSFS only). */
   apr_uint64_t memory_cache_size;
+
+  /* Data compression level to reduce for network traffic. If this
+     is 0, no compression should be applied and the protocol may
+     fall back to svndiff "version 0" bypassing zlib entirely.
+     Defaults to SVN_DEFAULT_COMPRESSION_LEVEL. */
+  int compression_level;
 
   /* Number of handles kept open independently of there actual use
      (used by FSFS only). */

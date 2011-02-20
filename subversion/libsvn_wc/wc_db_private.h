@@ -39,7 +39,7 @@ struct svn_wc__db_t {
 
   /* We need the config whenever we run into a new WC directory, in order
      to figure out where we should look for the corresponding datastore. */
-  svn_config_t *config;
+  const svn_config_t *config;
 
   /* Should we attempt to automatically upgrade the database when it is
      opened, and found to be not-current?  */
@@ -88,6 +88,10 @@ typedef struct svn_wc__db_wcroot_t {
      Typically just one or two locks maximum. */
   apr_array_header_t *owned_locks;
 
+  /* Map a working copy diretory to a cached adm_access baton.
+     const char *local_abspath -> svn_wc_adm_access_t *adm_access */
+  apr_hash_t *access_cache;
+
 } svn_wc__db_wcroot_t;
 
 /**  Pristine Directory Handle
@@ -103,11 +107,6 @@ typedef struct svn_wc__db_pdh_t {
   /* What wcroot does this directory belong to?  */
   svn_wc__db_wcroot_t *wcroot;
 
-  /* The parent directory's per-dir information. */
-  struct svn_wc__db_pdh_t *parent;
-
-  /* Hold onto the old-style access baton that corresponds to this PDH.  */
-  svn_wc_adm_access_t *adm_access;
 } svn_wc__db_pdh_t;
 
 
@@ -159,25 +158,26 @@ svn_wc__db_pdh_parse_local_abspath(svn_wc__db_pdh_t **pdh,
                                    apr_pool_t *result_pool,
                                    apr_pool_t *scratch_pool);
 
+/* Similar to svn_wc__db_pdh_parse_local_abspath(), but only return the WCROOT,
+   rather than a full PDH. */
+svn_error_t *
+svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
+                                      const char **local_relpath,
+                                      svn_wc__db_t *db,
+                                      const char *local_abspath,
+                                      svn_sqlite__mode_t smode,
+                                      apr_pool_t *result_pool,
+                                      apr_pool_t *scratch_pool);
+
 /* POOL may be NULL if the lifetime of LOCAL_ABSPATH is sufficient.  */
 const char *
 svn_wc__db_pdh_compute_relpath(const svn_wc__db_pdh_t *pdh,
                                apr_pool_t *result_pool);
 
-/* Gets or opens the PDH of the parent directory of CHILD_PDH.
-   (This function doesn't verify if the PDHs are related) */
-svn_error_t *
-svn_wc__db_pdh_navigate_to_parent(svn_wc__db_pdh_t **parent_pdh,
-                                  svn_wc__db_t *db,
-                                  svn_wc__db_pdh_t *child_pdh,
-                                  svn_sqlite__mode_t smode,
-                                  apr_pool_t *scratch_pool);
-
-/* Assert that the given PDH is usable.
+/* Assert that the given WCROOT is usable.
    NOTE: the expression is multiply-evaluated!!  */
-#define VERIFY_USABLE_PDH(pdh) SVN_ERR_ASSERT(  \
-    (pdh)->wcroot != NULL                       \
-    && (pdh)->wcroot->format == SVN_WC__VERSION)
+#define VERIFY_USABLE_WCROOT(wcroot)  SVN_ERR_ASSERT(               \
+    (wcroot) != NULL && (wcroot)->format == SVN_WC__VERSION)
 
 /* */
 svn_error_t *

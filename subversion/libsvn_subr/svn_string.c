@@ -134,9 +134,18 @@ create_string(const char *data, apr_size_t size,
 svn_string_t *
 svn_string_ncreate(const char *bytes, apr_size_t size, apr_pool_t *pool)
 {
+  void *mem;
   char *data;
+  svn_string_t *new_string;
 
-  data = apr_palloc(pool, size + 1);
+  /* Allocate memory for svn_string_t and data in one chunk. */
+  mem = apr_palloc(pool, sizeof(*new_string) + size + 1);
+  data = (char*)mem + sizeof(*new_string);
+
+  new_string = mem;
+  new_string->data = data;
+  new_string->len = size;
+
   memcpy(data, bytes, size);
 
   /* Null termination is the convention -- even if we suspect the data
@@ -144,8 +153,7 @@ svn_string_ncreate(const char *bytes, apr_size_t size, apr_pool_t *pool)
      call.  Heck, that's why they call it the caller! */
   data[size] = '\0';
 
-  /* wrap an svn_string_t around the new data */
-  return create_string(data, size, pool);
+  return new_string;
 }
 
 
@@ -630,6 +638,22 @@ svn_boolean_t svn_cstring_match_glob_list(const char *str,
       const char *this_pattern = APR_ARRAY_IDX(list, i, char *);
 
       if (apr_fnmatch(this_pattern, str, 0) == APR_SUCCESS)
+        return TRUE;
+    }
+
+  return FALSE;
+}
+
+svn_boolean_t
+svn_cstring_match_list(const char *str, const apr_array_header_t *list)
+{
+  int i;
+
+  for (i = 0; i < list->nelts; i++)
+    {
+      const char *this_str = APR_ARRAY_IDX(list, i, char *);
+
+      if (strcmp(this_str, str) == 0)
         return TRUE;
     }
 

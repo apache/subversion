@@ -124,7 +124,7 @@ if test "$svn_lib_neon" = "yes"; then
 fi
 
 dnl Search for serf as an alternative to neon
-SVN_LIB_SERF
+SVN_LIB_SERF(0,7,1)
 
 if test "$svn_lib_serf" = "yes"; then
   AC_DEFINE([SVN_HAVE_SERF], 1,
@@ -903,7 +903,7 @@ AS_HELP_STRING([--enable-maintainer-mode],
         CFLAGS_KEEP="$CFLAGS"
         AC_LANG_PUSH([C])
 
-        CFLAGS="-Wdeclaration-after-statement $CFLAGS_KEEP"
+        CFLAGS="-Werror=declaration-after-statement $CFLAGS_KEEP"
         AC_COMPILE_IFELSE([AC_LANG_SOURCE([[]])], [CFLAGS_KEEP="$CFLAGS"])
 
         CFLAGS="-Wextra-tokens $CFLAGS_KEEP"
@@ -1043,7 +1043,9 @@ AC_PATH_PROG(PERL, perl, none)
 
 AC_PATH_PROGS(RUBY, ruby ruby1.8, none)
 if test "$RUBY" != "none"; then
-  if "$RUBY" -r mkmf -e 'exit(have_func("rb_hash_foreach") ? 0 : 1)'; then
+  AC_MSG_CHECKING([rb_hash_foreach])
+  if "$RUBY" -r mkmf -e 'exit(have_func("rb_hash_foreach") ? 0 : 1)' >/dev/null; then
+    AC_MSG_RESULT([yes])
     AC_PATH_PROG(RDOC, rdoc, none)
     AC_CACHE_CHECK([for Ruby major version], [svn_cv_ruby_major],[
     svn_cv_ruby_major="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(MAJOR))'`"
@@ -1058,6 +1060,7 @@ if test "$RUBY" != "none"; then
     AC_SUBST(RUBY_MAJOR)
     AC_SUBST(RUBY_MINOR)
   else
+    AC_MSG_RESULT([no])
     RUBY="none"
     AC_MSG_WARN([The detected Ruby is too old for Subversion to use])
     AC_MSG_WARN([A Ruby which has rb_hash_foreach is required to use the])

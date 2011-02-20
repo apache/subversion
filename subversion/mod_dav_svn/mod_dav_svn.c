@@ -101,6 +101,10 @@ extern module AP_MODULE_DECLARE_DATA dav_svn_module;
 /* The authz_svn provider for bypassing path authz. */
 static authz_svn__subreq_bypass_func_t pathauthz_bypass_func = NULL;
 
+/* The compression level we will pass to svn_txdelta_to_svndiff3()
+ * for wire-compression */
+static int svn__compression_level = SVN_DEFAULT_COMPRESSION_LEVEL;
+
 static int
 init(apr_pool_t *p, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s)
 {
@@ -420,29 +424,48 @@ SVNSpecialURI_cmd(cmd_parms *cmd, void *config, const char *arg1)
   return NULL;
 }
 
-static apr_uint64_t
-parse_number(const char *arg)
-{
-  const char *c;
-  for (c = arg; *c != 0; ++c)
-    if (!svn_ctype_isdigit (*c))
-      return (apr_uint64_t)(-1);
-
-  return apr_strtoi64(arg, NULL, 0);
-}
-
 static const char *
 SVNInMemoryCacheSize_cmd(cmd_parms *cmd, void *config, const char *arg1)
 {
   svn_fs_cache_config_t settings = *svn_fs_get_cache_config();
 
-  apr_uint64_t value = parse_number(arg1);
-  if (value == (apr_uint64_t)(-1))
-    return "Invalid decimal number for the SVN cache size.";
+  apr_uint64_t value = 0;
+  svn_error_t *err = svn_cstring_atoui64(&value, arg1);
+  if (err)
+    {
+      svn_error_clear(err);
+      return "Invalid decimal number for the SVN cache size.";
+    }
 
   settings.cache_size = value * 0x100000;
 
   svn_fs_set_cache_config(&settings);
+
+  return NULL;
+}
+
+static const char *
+SVNCompressionLevel_cmd(cmd_parms *cmd, void *config, const char *arg1)
+{
+  svn_fs_cache_config_t settings = *svn_fs_get_cache_config();
+
+  int value = 0;
+  svn_error_t *err = svn_cstring_atoi(&value, arg1);
+  if (err)
+    {
+      svn_error_clear(err);
+      return "Invalid decimal number for the SVN compression level.";
+    }
+
+  if ((value < SVN_NO_COMPRESSION_LEVEL) || (value > SVN_BEST_COMPRESSION_LEVEL))
+    return apr_psprintf(cmd->pool,
+                        "%d is not a valid compression level. "
+                        "The valid range is %d .. %d.",
+                        value,
+                        (int)SVN_NO_COMPRESSION_LEVEL,
+                        (int)SVN_BEST_COMPRESSION_LEVEL);
+
+  svn__compression_level = value;
 
   return NULL;
 }
@@ -698,6 +721,12 @@ dav_svn__get_activities_db(request_rec *r)
 }
 
 
+int
+dav_svn__get_compression_level(void)
+{
+  return svn__compression_level;
+}
+
 static void
 merge_xml_filter_insert(request_rec *r)
 {
@@ -903,10 +932,16 @@ static const command_rec cmds[] =
 
   /* per server */
   AP_INIT_TAKE1("SVNInMemoryCacheSize", SVNInMemoryCacheSize_cmd, NULL,
-               RSRC_CONF,
-               "specify the maximum size im MB per process of Subversion's "
-               "in-memory object cache (default values is 128 if threading "
-               "is supported, 16 if not; 0 deactivates the cache)."),
+                RSRC_CONF,
+                "specifies the maximum size im MB per process of Subversion's "
+                "in-memory object cache (default value is 16; 0 deactivates "
+                "the cache)."),
+  /* per server */
+  AP_INIT_TAKE1("SVNCompressionLevel", SVNCompressionLevel_cmd, NULL,
+                RSRC_CONF,
+                "specifies the ZIP compression level used before sending file "
+                "content over the network (0 for no compression, 9 for best, "
+                "5 is default)."),
 
   /* per server */
   AP_INIT_TAKE1("SVNMaxOpenFileHandles", SVNMaxOpenFileHandles_cmd, NULL,

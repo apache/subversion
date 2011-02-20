@@ -132,7 +132,7 @@ jobject EnumMapper::mapNotifyLockState(svn_wc_notify_lock_state_t state)
 jobject EnumMapper::mapScheduleKind(svn_wc_schedule_t schedule)
 {
   // We're assuming a valid value for the C enum above
-  return mapEnum(JAVA_PACKAGE"/Info$ScheduleKind", (int) schedule);
+  return mapEnum(JAVA_PACKAGE"/types/Info$ScheduleKind", (int) schedule);
 }
 
 /**
@@ -165,7 +165,7 @@ jobject EnumMapper::mapConflictReason(svn_wc_conflict_reason_t reason)
 
 int EnumMapper::toMergeinfoLogKind(jobject jLogKind)
 {
-  return getOrdinal(JAVA_PACKAGE"/Mergeinfo$LogKind", jLogKind);
+  return getOrdinal(JAVA_PACKAGE"/types/Mergeinfo$LogKind", jLogKind);
 }
 
 int EnumMapper::toLogLevel(jobject jLogLevel)

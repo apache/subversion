@@ -48,7 +48,7 @@ const svn_opt_revision_range_t *RevisionRange::toRange(SVN::Pool &pool) const
 {
   JNIEnv *env = JNIUtil::getEnv();
 
-  jclass clazz = env->FindClass(JAVA_PACKAGE"/RevisionRange");
+  jclass clazz = env->FindClass(JAVA_PACKAGE"/types/RevisionRange");
   if (JNIUtil::isExceptionThrown())
     return NULL;
 
@@ -105,7 +105,7 @@ RevisionRange::makeJRevisionRange(svn_merge_range_t *range)
 {
     JNIEnv *env = JNIUtil::getEnv();
 
-    jclass rangeClazz = env->FindClass(JAVA_PACKAGE "/RevisionRange");
+    jclass rangeClazz = env->FindClass(JAVA_PACKAGE "/types/RevisionRange");
     if (JNIUtil::isJavaExceptionThrown())
         return NULL;
     static jmethodID rangeCtor = 0;

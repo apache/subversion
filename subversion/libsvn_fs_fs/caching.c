@@ -32,8 +32,6 @@
 
 #include "svn_private_config.h"
 
-/*** Dup/serialize/deserialize functions. ***/
-
 /* Return a memcache in *MEMCACHE_P for FS if it's configured to use
    memcached, or NULL otherwise.  Also, sets *FAIL_STOP to a boolean
    indicating whether cache errors should be returned to the caller or

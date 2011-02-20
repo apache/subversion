@@ -79,7 +79,8 @@ class TestHarness:
                server_minor_version=None, verbose=None,
                cleanup=None, enable_sasl=None, parallel=None, config_file=None,
                fsfs_sharding=None, fsfs_packing=None,
-               list_tests=None, svn_bin=None, mode_filter=None):
+               list_tests=None, svn_bin=None, mode_filter=None,
+               milestone_filter=None):
     '''Construct a TestHarness instance.
 
     ABS_SRCDIR and ABS_BUILDDIR are the source and build directories.
@@ -91,8 +92,12 @@ class TestHarness:
     HTTP_LIBRARY is the HTTP library for DAV-based communications.
     SERVER_MINOR_VERSION is the minor version of the server being tested.
     SVN_BIN is the path where the svn binaries are installed.
-    mode_filter restricts the TestHarness to tests with the expected mode
-    XFail, Skip, Pass, or All tests (default).
+    MODE_FILTER restricts the TestHarness to tests with the expected mode
+    XFail, Skip, Pass, or All tests (default).  MILESTONE_FILTER is a
+    string representation of a valid regular expression pattern; when used
+    in conjunction with LIST_TESTS, the only tests that are listed are
+    those with an associated issue in the tracker which has a target
+    milestone that matches the regex.
     '''
     self.srcdir = abs_srcdir
     self.builddir = abs_builddir
@@ -114,6 +119,7 @@ class TestHarness:
     if config_file is not None:
       self.config_file = os.path.abspath(config_file)
     self.list_tests = list_tests
+    self.milestone_filter = milestone_filter
     self.svn_bin = svn_bin
     self.mode_filter = mode_filter
     self.log = None
@@ -280,6 +286,8 @@ class TestHarness:
     if not self.list_tests:
       sys.stdout.write('.' * dot_count)
       sys.stdout.flush()
+    elif self.milestone_filter:
+      print 'WARNING: --milestone-filter option does not currently work with C tests'
 
     if os.access(progbase, os.X_OK):
       progname = './' + progbase
@@ -349,6 +357,8 @@ class TestHarness:
       svntest.main.options.server_minor_version = self.server_minor_version
     if self.list_tests is not None:
       svntest.main.options.list_tests = True
+    if self.milestone_filter is not None:
+      svntest.main.options.milestone_filter = self.milestone_filter
     if self.svn_bin is not None:
       svntest.main.options.svn_bin = self.svn_bin
     if self.fsfs_sharding is not None:

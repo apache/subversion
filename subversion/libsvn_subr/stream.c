@@ -175,7 +175,7 @@ svn_stream_mark(svn_stream_t *stream, svn_stream_mark_t **mark,
 }
 
 svn_error_t *
-svn_stream_seek(svn_stream_t *stream, svn_stream_mark_t *mark)
+svn_stream_seek(svn_stream_t *stream, const svn_stream_mark_t *mark)
 {
   if (stream->seek_fn == NULL)
     return svn_error_create(SVN_ERR_STREAM_SEEK_NOT_SUPPORTED, NULL, NULL);
@@ -602,7 +602,7 @@ svn_stream_contents_same2(svn_boolean_t *same,
 
 /*** Stream implementation utilities ***/
 
-/* Skip data from a compressed stream by reading and discarding it. */
+/* Skip data from any stream by reading and simply discarding it. */
 static svn_error_t *
 skip_default_handler(void *baton, apr_size_t *count, svn_read_fn_t read_fn)
 {
@@ -610,12 +610,14 @@ skip_default_handler(void *baton, apr_size_t *count, svn_read_fn_t read_fn)
   apr_size_t bytes_read;
   char buffer[4096];
   svn_error_t *err = SVN_NO_ERROR;
+  apr_size_t to_read = *count;
 
-  while ((total_bytes_read < *count) && !err)
+  while ((to_read > 0) && !err)
     {
-      bytes_read = sizeof(buffer) < *count ? sizeof(buffer) : *count;
+      bytes_read = sizeof(buffer) < to_read ? sizeof(buffer) : to_read;
       err = read_fn(baton, buffer, &bytes_read);
       total_bytes_read += bytes_read;
+      to_read -= bytes_read;
     }
 
   *count = total_bytes_read;
@@ -654,7 +656,7 @@ mark_handler_empty(void *baton, svn_stream_mark_t **mark, apr_pool_t *pool)
 }
 
 static svn_error_t *
-seek_handler_empty(void *baton, svn_stream_mark_t *mark)
+seek_handler_empty(void *baton, const svn_stream_mark_t *mark)
 {
   return SVN_NO_ERROR;
 }
@@ -767,7 +769,7 @@ mark_handler_disown(void *baton, svn_stream_mark_t **mark, apr_pool_t *pool)
 }
 
 static svn_error_t *
-seek_handler_disown(void *baton, svn_stream_mark_t *mark)
+seek_handler_disown(void *baton, const svn_stream_mark_t *mark)
 {
   return svn_stream_seek(baton, mark);
 }
@@ -819,10 +821,10 @@ read_handler_apr(void *baton, char *buffer, apr_size_t *len)
 
   if (*len == 1)
     {
-      err = svn_io_file_getc (buffer, btn->file, btn->pool);
+      err = svn_io_file_getc(buffer, btn->file, btn->pool);
       if (err)
         {
-        *len = 0;
+          *len = 0;
           if (APR_STATUS_IS_EOF(err->apr_err))
             {
               svn_error_clear(err);
@@ -842,11 +844,24 @@ skip_handler_apr(void *baton, apr_size_t *count)
 {
   struct baton_apr *btn = baton;
   apr_off_t offset = *count;
+  apr_off_t new_pos = *count;
+  apr_off_t current = 0;
+  svn_error_t *err;
 
-  SVN_ERR(svn_io_file_seek(btn->file, SEEK_CUR, &offset, btn->pool));
-  *count = offset;
+  /* so far, we have not moved anything */
+  *count = 0;
 
-  return SVN_NO_ERROR;
+  SVN_ERR(svn_io_file_seek(btn->file, APR_CUR, &current, btn->pool));
+  err = svn_io_file_seek(btn->file, APR_CUR, &new_pos, btn->pool);
+
+  /* Irrespective of errors, return the number of bytes we actually moved.
+   * If no new position has been returned from seek(), assume that no move
+   * happend and keep the *count==0 set earlier.
+   */
+  if ((offset != new_pos) || (current == 0))
+    *count = new_pos - current;
+
+  return err;
 }
 
 static svn_error_t *
@@ -857,7 +872,7 @@ write_handler_apr(void *baton, const char *data, apr_size_t *len)
 
   if (*len == 1)
     {
-      err = svn_io_file_putc (*data, btn->file, btn->pool);
+      err = svn_io_file_putc(*data, btn->file, btn->pool);
       if (err)
         *len = 0;
     }
@@ -900,22 +915,12 @@ mark_handler_apr(void *baton, svn_stream_mark_t **mark, apr_pool_t *pool)
 }
 
 static svn_error_t *
-seek_handler_apr(void *baton, svn_stream_mark_t *mark)
+seek_handler_apr(void *baton, const svn_stream_mark_t *mark)
 {
   struct baton_apr *btn = baton;
+  apr_off_t offset = (mark != NULL) ? ((const struct mark_apr *)mark)->off : 0;
 
-  if (mark != NULL)
-    {
-      struct mark_apr *mark_apr;
-
-      mark_apr = (struct mark_apr *)mark;
-      SVN_ERR(svn_io_file_seek(btn->file, APR_SET, &mark_apr->off, btn->pool));
-    }
-  else
-    {
-      apr_off_t offset = 0;
-      SVN_ERR(svn_io_file_seek(btn->file, APR_SET, &offset, btn->pool));
-    }
+  SVN_ERR(svn_io_file_seek(btn->file, APR_SET, &offset, btn->pool));
 
   return SVN_NO_ERROR;
 }
@@ -924,7 +929,7 @@ static svn_boolean_t
 buffered_handler_apr(void *baton)
 {
   struct baton_apr *btn = baton;
-  return apr_file_buffer_size_get(btn->file) != 0;
+  return (apr_file_flags_get(btn->file) & APR_BUFFERED) != 0;
 }
 
 svn_error_t *
@@ -1033,8 +1038,10 @@ svn_stream_from_aprfile2(apr_file_t *file,
   stream = svn_stream_create(baton, pool);
   svn_stream_set_read(stream, read_handler_apr);
   svn_stream_set_write(stream, write_handler_apr);
+  svn_stream_set_skip(stream, skip_handler_apr);
   svn_stream_set_mark(stream, mark_handler_apr);
   svn_stream_set_seek(stream, seek_handler_apr);
+  svn_stream_set_buffered(stream, buffered_handler_apr);
 
   /* make sure to close the file handle after use if we own it */
   if (! disown)
@@ -1636,15 +1643,15 @@ mark_handler_stringbuf(void *baton, svn_stream_mark_t **mark, apr_pool_t *pool)
 }
 
 static svn_error_t *
-seek_handler_stringbuf(void *baton, svn_stream_mark_t *mark)
+seek_handler_stringbuf(void *baton, const svn_stream_mark_t *mark)
 {
   struct stringbuf_stream_baton *btn = baton;
 
   if (mark != NULL)
     {
-      struct stringbuf_stream_mark *stringbuf_stream_mark;
+      const struct stringbuf_stream_mark *stringbuf_stream_mark;
 
-      stringbuf_stream_mark = (struct stringbuf_stream_mark *)mark;
+      stringbuf_stream_mark = (const struct stringbuf_stream_mark *)mark;
       btn->amt_read = stringbuf_stream_mark->pos;
     }
   else
@@ -1731,20 +1738,31 @@ mark_handler_string(void *baton, svn_stream_mark_t **mark, apr_pool_t *pool)
 }
 
 static svn_error_t *
-seek_handler_string(void *baton, svn_stream_mark_t *mark)
+seek_handler_string(void *baton, const svn_stream_mark_t *mark)
 {
   struct string_stream_baton *btn = baton;
 
   if (mark != NULL)
     {
-      struct string_stream_mark *marker;
+      const struct string_stream_mark *marker;
 
-      marker = (struct string_stream_mark *)mark;
+      marker = (const struct string_stream_mark *)mark;
       btn->amt_read = marker->pos;
     }
   else
     btn->amt_read = 0;
 
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+skip_handler_string(void *baton, apr_size_t *count)
+{
+  struct string_stream_baton *btn = baton;
+  apr_size_t left_to_read = btn->str->len - btn->amt_read;
+
+  *count = (*count > left_to_read) ? left_to_read : *count;
+  btn->amt_read += *count;
   return SVN_NO_ERROR;
 }
 
@@ -1769,9 +1787,9 @@ svn_stream_from_string(const svn_string_t *str,
   baton->amt_read = 0;
   stream = svn_stream_create(baton, pool);
   svn_stream_set_read(stream, read_handler_string);
-  svn_stream_set_skip(stream, skip_handler_string);
   svn_stream_set_mark(stream, mark_handler_string);
   svn_stream_set_seek(stream, seek_handler_string);
+  svn_stream_set_skip(stream, skip_handler_string);
   svn_stream_set_buffered(stream, buffered_handler_string);
   return stream;
 }
@@ -1788,6 +1806,22 @@ svn_stream_for_stdout(svn_stream_t **out, apr_pool_t *pool)
     return svn_error_wrap_apr(apr_err, "Can't open stdout");
 
   *out = svn_stream_from_aprfile2(stdout_file, TRUE, pool);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_stream_for_stderr(svn_stream_t **err, apr_pool_t *pool)
+{
+  apr_file_t *stderr_file;
+  apr_status_t apr_err;
+
+  apr_err = apr_file_open_stderr(&stderr_file, pool);
+  if (apr_err)
+    return svn_error_wrap_apr(apr_err, "Can't open stderr");
+
+  *err = svn_stream_from_aprfile2(stderr_file, TRUE, pool);
 
   return SVN_NO_ERROR;
 }

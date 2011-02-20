@@ -215,6 +215,8 @@ svn_cl__list(apr_getopt_t *os,
   apr_pool_t *subpool = svn_pool_create(pool);
   apr_uint32_t dirent_fields;
   struct print_baton pb;
+  svn_boolean_t seen_nonexistent_target = FALSE;
+  svn_error_t *err;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
@@ -280,13 +282,28 @@ svn_cl__list(apr_getopt_t *os,
           SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
         }
 
-      SVN_ERR(svn_client_list2(truepath, &peg_revision,
-                               &(opt_state->start_revision),
-                               opt_state->depth,
-                               dirent_fields,
-                               (opt_state->xml || opt_state->verbose),
-                               opt_state->xml ? print_dirent_xml : print_dirent,
-                               &pb, ctx, subpool));
+      err = svn_client_list2(truepath, &peg_revision,
+                             &(opt_state->start_revision),
+                             opt_state->depth,
+                             dirent_fields,
+                             (opt_state->xml || opt_state->verbose),
+                             opt_state->xml ? print_dirent_xml : print_dirent,
+                             &pb, ctx, subpool);
+
+      if (err)
+        {
+          /* If one of the targets is a non-existent URL or wc-entry,
+             don't bail out.  Just warn and move on to the next target. */
+          if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND ||
+              err->apr_err == SVN_ERR_FS_NOT_FOUND)
+              svn_handle_warning2(stderr, err, "svn: ");
+          else
+              return svn_error_return(err);
+
+          svn_error_clear(err);
+          err = NULL;
+          seen_nonexistent_target = TRUE;
+        }
 
       if (opt_state->xml)
         {
@@ -301,5 +318,10 @@ svn_cl__list(apr_getopt_t *os,
   if (opt_state->xml && ! opt_state->incremental)
     SVN_ERR(svn_cl__xml_print_footer("lists", pool));
 
-  return SVN_NO_ERROR;
+  if (seen_nonexistent_target)
+    return svn_error_create(
+      SVN_ERR_ILLEGAL_TARGET, NULL,
+      _("Could not list all targets because some targets don't exist"));
+  else
+    return SVN_NO_ERROR;
 }

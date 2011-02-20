@@ -4046,14 +4046,10 @@ close_file(void *file_baton,
   if (fb->new_text_base_md5_checksum && expected_md5_checksum
       && !svn_checksum_match(expected_md5_checksum,
                              fb->new_text_base_md5_checksum))
-    return svn_error_createf(SVN_ERR_CHECKSUM_MISMATCH, NULL,
-            _("Checksum mismatch for '%s':\n"
-              "   expected:  %s\n"
-              "     actual:  %s\n"),
-            svn_dirent_local_style(fb->local_abspath, pool),
-            expected_md5_digest,
-            svn_checksum_to_cstring_display(fb->new_text_base_md5_checksum,
-                                            pool));
+    return svn_checksum_mismatch_err(expected_md5_checksum,
+                            fb->new_text_base_md5_checksum, pool,
+                            _("Checksum mismatch for '%s'"),
+                            svn_dirent_local_style(fb->local_abspath, pool));
 
   SVN_ERR(svn_wc_read_kind(&kind, eb->wc_ctx, fb->local_abspath, TRUE, pool));
   if (kind == svn_node_none && ! fb->adding_file)
@@ -4233,7 +4229,7 @@ close_file(void *file_baton,
              from some random file means the fileinfo does NOT correspond to
              the pristine (in which case, the fileinfo will be cleared for
              safety's sake).  */
-          record_fileinfo = install_from == NULL;
+          record_fileinfo = (install_from == NULL);
 
           SVN_ERR(svn_wc__wq_build_file_install(&work_item,
                                                 eb->db,
@@ -5596,7 +5592,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
     /* If new contents were provided, then we do NOT want to record the
        file information. We assume the new contents do not match the
        "proper" values for TRANSLATED_SIZE and LAST_MOD_TIME.  */
-    record_fileinfo = new_contents == NULL;
+    record_fileinfo = (new_contents == NULL);
 
     /* Install the working copy file (with appropriate translation) from
        the appropriate source. SOURCE_ABSPATH will be NULL, indicating an

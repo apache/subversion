@@ -189,26 +189,25 @@ parse_capabilities(ne_request *req,
          slightly more efficiently, but that wouldn't be worth it
          until we have many more capabilities. */
 
-      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_DEPTH, vals))
+      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_DEPTH, vals))
         apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_DEPTH,
                      APR_HASH_KEY_STRING, capability_yes);
 
-      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_MERGEINFO, vals))
+      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_MERGEINFO, vals))
         /* The server doesn't know what repository we're referring
            to, so it can't just say capability_yes. */
         apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
                      APR_HASH_KEY_STRING, capability_server_yes);
 
-      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_LOG_REVPROPS, vals))
+      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_LOG_REVPROPS, vals))
         apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_LOG_REVPROPS,
                      APR_HASH_KEY_STRING, capability_yes);
 
-      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_ATOMIC_REVPROPS, vals))
+      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_ATOMIC_REVPROPS, vals))
         apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
                      APR_HASH_KEY_STRING, capability_yes);
 
-      if (svn_cstring_match_glob_list(SVN_DAV_NS_DAV_SVN_PARTIAL_REPLAY,
-                                      vals))
+      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_PARTIAL_REPLAY, vals))
         apr_hash_set(ras->capabilities, SVN_RA_CAPABILITY_PARTIAL_REPLAY,
                      APR_HASH_KEY_STRING, capability_yes);
     }

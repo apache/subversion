@@ -189,10 +189,14 @@ svn_config_get_config(apr_hash_t **cfg_hash,
 /** Set @a *cfgp to an empty @c svn_config_t structure,
  * allocated in @a result_pool.
  *
+ * Pass TRUE to @a section_names_case_sensitive if 
+ * section names are to be populated case sensitively.
+ *
  * @since New in 1.7.
  */
 svn_error_t *
 svn_config_create(svn_config_t **cfgp,
+                  svn_boolean_t section_names_case_sensitive,
                   apr_pool_t *result_pool);
 
 /** Read configuration data from @a file (a file or registry path) into
@@ -200,7 +204,26 @@ svn_config_create(svn_config_t **cfgp,
  *
  * If @a file does not exist, then if @a must_exist, return an error,
  * otherwise return an empty @c svn_config_t.
+ * 
+ * If @a section_names_case_sensitive is TRUE, populate section name hashes 
+ * case sensitively, except for the default SVN_CONFIG__DEFAULT_SECTION.
+ * 
+ * @since New in 1.7.
  */
+
+svn_error_t *
+svn_config_read2(svn_config_t **cfgp,
+                 const char *file,
+                 svn_boolean_t must_exist,
+                 svn_boolean_t section_names_case_sensitive,
+                 apr_pool_t *pool);
+
+/** Similar to svn_config_read2, but always passes FALSE to 
+ * section_names_case_sensitive.
+ *
+ * @deprecated Provided for backward compatibility with 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_config_read(svn_config_t **cfgp,
                 const char *file,

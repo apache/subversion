@@ -17,7 +17,7 @@ dnl   specific language governing permissions and limitations
 dnl   under the License.
 dnl ===================================================================
 dnl
-dnl  SVN_LIB_SERF
+dnl  SVN_LIB_SERF(min_major_num, min_minor_num, min_micro_num)
 dnl
 dnl  Check configure options and assign variables related to
 dnl  the serf library.
@@ -27,9 +27,9 @@ AC_DEFUN(SVN_LIB_SERF,
 [
   serf_found=no
 
-  serf_check_major=0
-  serf_check_minor=3
-  serf_check_patch=1
+  serf_check_major="$1"
+  serf_check_minor="$2"
+  serf_check_patch="$3"
 
   AC_ARG_WITH(serf,AS_HELP_STRING([--with-serf=PREFIX],
                                   [Serf WebDAV client library]),
