@@ -1258,7 +1258,7 @@ svn_membuffer_cache_is_cachable(void *cache_void, apr_size_t size)
    * must be small enough to be stored in a 32 bit value.
    */
   svn_membuffer_cache_t *cache = cache_void;
-  return (size < cache->membuffer->data_size / 4 / CACHE_SEGMENTS)
+  return (size < cache->membuffer->data_size / 4)
       && (size < APR_UINT32_MAX - ITEM_ALIGNMENT);
 }
 
