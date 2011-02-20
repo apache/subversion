@@ -3557,7 +3557,7 @@ read_representation(svn_stream_t **contents_p,
       struct rep_read_baton *rb;
 
       if (ffd->fulltext_cache && SVN_IS_VALID_REVNUM(rep->revision)
-          && fulltext_size_is_cachable(rep->expanded_size))
+          && fulltext_size_is_cachable(ffd, rep->expanded_size))
         {
           svn_string_t *fulltext;
           svn_boolean_t is_cached;
