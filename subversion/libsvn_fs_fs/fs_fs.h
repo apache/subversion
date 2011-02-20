@@ -108,6 +108,20 @@ svn_error_t *svn_fs_fs__rep_contents_dir(apr_hash_t **entries,
                                          node_revision_t *noderev,
                                          apr_pool_t *pool);
 
+/* Set *RESULT_P to the object created by DESERIALIZER when applied
+   to the dirent structs that contain the directory entries of node-
+   revision NODEREV in filesystem FS.  A BATON will be passed to
+   the deserializer callback function to describe the object to find.
+   The returned object is allocated in POOL, which is also used for
+   temporary allocations. */
+svn_error_t *
+svn_fs_fs__rep_contents_dir_partial(void **result_p,
+                                    svn_fs_t *fs,
+                                    node_revision_t *noderev,
+                                    svn_cache__partial_getter_func_t deserializer,
+                                    void *baton,
+                                    apr_pool_t *pool);
+
 /* Set *CONTENTS to be a readable svn_stream_t that receives the text
    representation of node-revision NODEREV as seen in filesystem FS.
    Use POOL for temporary allocations. */

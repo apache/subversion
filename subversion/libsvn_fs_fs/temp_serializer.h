@@ -166,4 +166,27 @@ svn_fs_fs__deserialize_dir_entries(void **out,
                                    apr_size_t data_len,
                                    apr_pool_t *pool);
 
+/**
+ * Implements @ref svn_cache__partial_getter_func_t for a single element
+ * identified by its offset in @a baton within a serialized manifest array.
+ */
+svn_error_t *
+svn_fs_fs__get_sharded_offset(void **out,
+                              const char *data,
+                              apr_size_t data_len,
+                              void *baton,
+                              apr_pool_t *pool);
+
+/**
+ * Implements @ref svn_cache__partial_getter_func_t for a single 
+ * @ref svn_fs_dirent_t within a serialized directory contents hash,
+ * identified by its name in @a baton.
+ */
+svn_error_t *
+svn_fs_fs__extract_dir_entry(void **out,
+                             const char *data,
+                             apr_size_t data_len,
+                             void *baton,
+                             apr_pool_t *pool);
+
 #endif
