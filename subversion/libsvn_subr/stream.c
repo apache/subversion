@@ -369,7 +369,7 @@ stream_readline_chunky(svn_stringbuf_t **stringbuf,
   svn_stream_mark_t *mark;
   apr_size_t numbytes;
   const char *eol_pos;
-  apr_off_t total_parsed = 0;
+  apr_size_t total_parsed = 0;
 
   /* invariant for this call */
   const size_t eol_len = strlen(eol);
@@ -448,8 +448,8 @@ stream_readline_chunky(svn_stringbuf_t **stringbuf,
 
   /* Move the stream read pointer to the first position behind the EOL.
    */
-  SVN_ERR(svn_stream_move_mark(stream, mark, total_parsed));
-  return svn_stream_seek(stream, mark);
+  SVN_ERR(svn_stream_seek(stream, mark));
+  return svn_stream_skip(stream, &total_parsed);
 }
 
 /* Guts of svn_stream_readline() and svn_stream_readline_detect_eol().
