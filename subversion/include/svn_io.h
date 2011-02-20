@@ -749,6 +749,12 @@ typedef svn_error_t *(*svn_read_fn_t)(void *baton,
                                       char *buffer,
                                       apr_size_t *len);
 
+/** Skip data handler function for a generic stream.  @see svn_stream_t.
+ * @since New in 1.7.
+ */
+typedef svn_error_t *(*svn_skip_fn_t)(void *baton,
+                                      apr_size_t *count);
+
 /** Write handler function for a generic stream.  @see svn_stream_t. */
 typedef svn_error_t *(*svn_write_fn_t)(void *baton,
                                        const char *data,
@@ -783,6 +789,13 @@ typedef svn_error_t *(*svn_io_mark_fn_t)(void *baton,
 typedef svn_error_t *(*svn_io_seek_fn_t)(void *baton,
                                          const svn_stream_mark_t *mark);
 
+/** Buffer test handler function for a generic stream. @see svn_stream_t 
+ * and svn_stream_buffered().
+ *
+ * @since New in 1.7.
+ */
+typedef svn_boolean_t (*svn_io_buffered_fn_t)(void *baton);
+
 /** Create a generic stream.  @see svn_stream_t. */
 svn_stream_t *
 svn_stream_create(void *baton,
@@ -797,6 +810,14 @@ svn_stream_set_baton(svn_stream_t *stream,
 void
 svn_stream_set_read(svn_stream_t *stream,
                     svn_read_fn_t read_fn);
+
+/** Set @a stream's skip function to @a skip_fn
+ *
+ * @since New in 1.7
+ */
+void
+svn_stream_set_skip(svn_stream_t *stream,
+                    svn_skip_fn_t skip_fn);
 
 /** Set @a stream's write function to @a write_fn */
 void
@@ -823,6 +844,14 @@ svn_stream_set_mark(svn_stream_t *stream,
 void
 svn_stream_set_seek(svn_stream_t *stream,
                     svn_io_seek_fn_t seek_fn);
+
+/** Set @a stream's buffer test function to @a buffered_fn
+ *
+ * @since New in 1.7.
+ */
+void
+svn_stream_set_buffered(svn_stream_t *stream,
+                        svn_io_buffered_fn_t buffered_fn);
 
 /** Create a stream that is empty for reading and infinite for writing. */
 svn_stream_t *
@@ -1028,6 +1057,21 @@ svn_stream_read(svn_stream_t *stream,
                 char *buffer,
                 apr_size_t *len);
 
+/**
+ * Skip COUNT bytes from a generic STREAM. If the stream is exhausted
+ * before COUNT bytes have been read, an error will be returned and
+ * COUNT will be changed to the actual number of bytes skipped.
+ *
+ * NOTE. No assumption can be made on the semantics of this function
+ * other than that the stream read pointer will be advanced by *count
+ * bytes. Depending on the capabilities of the underlying stream
+ * implementation, this may for instance be translated into a sequence
+ * of reads or a simple seek operation.
+ */
+svn_error_t *
+svn_stream_skip(svn_stream_t *stream,
+                apr_size_t *count);
+
 /** Write to a generic stream. @see svn_stream_t. */
 svn_error_t *
 svn_stream_write(svn_stream_t *stream,
@@ -1047,6 +1091,14 @@ svn_stream_close(svn_stream_t *stream);
  */
 svn_error_t *
 svn_stream_reset(svn_stream_t *stream);
+
+/** Returns @c TRUE if the generic @a stream supports svn_stream_mark().
+ *
+ * @see svn_stream_mark()
+ * @since New in 1.7.
+ */
+svn_boolean_t
+svn_stream_supports_mark(svn_stream_t *stream);
 
 /** Set a @a mark at the current position of a generic @a stream,
  * which can later be sought back to using svn_stream_seek().
@@ -1073,6 +1125,15 @@ svn_stream_mark(svn_stream_t *stream,
  */
 svn_error_t *
 svn_stream_seek(svn_stream_t *stream, const svn_stream_mark_t *mark);
+
+/** Return whether this generic @a stream uses internal buffering.
+ * This may be used to work around subtle differences between buffered
+ * an non-buffered APR files.
+ *
+ * @since New in 1.7.
+ */
+svn_boolean_t 
+svn_stream_buffered(svn_stream_t *stream);
 
 /** Return a writable stream which, when written to, writes to both of the
  * underlying streams.  Both of these streams will be closed upon closure of
