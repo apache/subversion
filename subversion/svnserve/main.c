@@ -194,7 +194,7 @@ static const apr_getopt_option_t svnserve__options[] =
         "                             "
         "[0 .. no compression, 5 .. default, \n"
         "                             "
-        " 9 .. maximum compresssion]")},
+        " 9 .. maximum compression]")},
     {"memory-cache-size", 'M', 1, 
      N_("size of the extra in-memory cache in MB used to\n"
         "                             "
@@ -451,7 +451,7 @@ int main(int argc, const char *argv[])
   params.cfg = NULL;
   params.pwdb = NULL;
   params.authzdb = NULL;
-  params.compression_level = SVN_DEFAULT_COMPRESSSION_LEVEL;
+  params.compression_level = SVN_DEFAULT_COMPRESSION_LEVEL;
   params.log_file = NULL;
   params.username_case = CASE_ASIS;
   params.memory_cache_size = (apr_uint64_t)-1;

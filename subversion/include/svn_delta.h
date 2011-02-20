@@ -62,7 +62,7 @@ extern "C" {
  * should be between 0 and 9, with higher numbers resulting in
  * better compression rates but slower operation.
  */
-#define SVN_DEFAULT_COMPRESSSION_LEVEL 5
+#define SVN_DEFAULT_COMPRESSION_LEVEL 5
 
 /**
  * Get libsvn_delta version information.
@@ -482,7 +482,7 @@ svn_txdelta_to_svndiff3(svn_txdelta_window_handler_t *handler,
                         apr_pool_t *pool);
 
 /** Similar to svn_txdelta_to_svndiff3, but always using the SVN default
- * compression level (@ref SVN_DEFAULT_COMPRESSSION_LEVEL).
+ * compression level (@ref SVN_DEFAULT_COMPRESSION_LEVEL).
  *
  * @since New in 1.4.
  */

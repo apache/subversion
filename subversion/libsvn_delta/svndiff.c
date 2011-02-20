@@ -309,7 +309,7 @@ svn_txdelta_to_svndiff2(svn_txdelta_window_handler_t *handler,
                         apr_pool_t *pool)
 {
   svn_txdelta_to_svndiff3(handler, handler_baton, output,
-                          svndiff_version, SVN_DEFAULT_COMPRESSSION_LEVEL, pool);
+                          svndiff_version, SVN_DEFAULT_COMPRESSION_LEVEL, pool);
 }
 
 void
@@ -319,7 +319,7 @@ svn_txdelta_to_svndiff(svn_stream_t *output,
                        void **handler_baton)
 {
   svn_txdelta_to_svndiff3(handler, handler_baton, output,
-                          0, SVN_DEFAULT_COMPRESSSION_LEVEL, pool);
+                          0, SVN_DEFAULT_COMPRESSION_LEVEL, pool);
 }
 
 
