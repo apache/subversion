@@ -64,6 +64,7 @@
 #include "../libsvn_fs/fs-loader.h"
 
 #include "svn_private_config.h"
+#include "temp_serializer.h"
 
 /* An arbitrary maximum path length, so clients can't run us out of memory
  * by giving us arbitrarily large paths. */
