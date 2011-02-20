@@ -699,7 +699,7 @@ svn_error_t *svn_ra_neon__get_file(svn_ra_session_t *session,
 
   SVN_ERR(svn_ra_neon__get_props_resource(&rsrc, ras, final_url,
                                           NULL,
-                                          props ? restype_props : NULL,
+                                          props ? NULL : restype_props,
                                           pool));
   if (rsrc->is_collection)
     {
