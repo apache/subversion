@@ -447,8 +447,6 @@ SVNInMemoryCacheSize_cmd(cmd_parms *cmd, void *config, const char *arg1)
 static const char *
 SVNCompressionLevel_cmd(cmd_parms *cmd, void *config, const char *arg1)
 {
-  svn_fs_cache_config_t settings = *svn_fs_get_cache_config();
-
   int value = 0;
   svn_error_t *err = svn_cstring_atoi(&value, arg1);
   if (err)
