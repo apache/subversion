@@ -626,7 +626,7 @@ svn_ra_serf__check_path(svn_ra_session_t *ra_session,
   svn_ra_serf__session_t *session = ra_session->priv;
   apr_hash_t *props;
   svn_ra_serf__propfind_context_t *prop_ctx;
-  const char *path, *res_type;
+  const char *path;
   svn_revnum_t fetched_rev;
 
   svn_error_t *err = fetch_path_props(&prop_ctx, &props, &path, &fetched_rev,
@@ -644,23 +644,7 @@ svn_ra_serf__check_path(svn_ra_session_t *ra_session,
       if (err)
         return err;
 
-      res_type = svn_ra_serf__get_ver_prop(props, path, fetched_rev,
-                                           "DAV:", "resourcetype");
-      if (!res_type)
-        {
-          /* How did this happen? */
-          return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
-                                  _("The OPTIONS response did not include the "
-                                    "requested resourcetype value"));
-        }
-      else if (strcmp(res_type, "collection") == 0)
-        {
-          *kind = svn_node_dir;
-        }
-      else
-        {
-          *kind = svn_node_file;
-        }
+      SVN_ERR(svn_ra_serf__get_resource_type(kind, props, path, fetched_rev));
     }
 
   return SVN_NO_ERROR;
@@ -877,21 +861,14 @@ resource_is_directory(apr_hash_t *props,
                       const char *path,
                       svn_revnum_t revision)
 {
-  const char *res_type;
+  svn_node_kind_t kind;
 
-  res_type = svn_ra_serf__get_ver_prop(props, path, revision,
-                                       "DAV:", "resourcetype");
-  if (!res_type)
+  SVN_ERR(svn_ra_serf__get_resource_type(&kind, props, path, revision));
+
+  if (kind != svn_node_dir)
     {
-      /* How did this happen? */
-      return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
-                              _("The PROPFIND response did not include the "
-                                "requested resourcetype value"));
-    }
-  else if (strcmp(res_type, "collection") != 0)
-    {
-    return svn_error_create(SVN_ERR_FS_NOT_DIRECTORY, NULL,
-                            _("Can't get entries of non-directory"));
+      return svn_error_create(SVN_ERR_FS_NOT_DIRECTORY, NULL,
+                              _("Can't get entries of non-directory"));
     }
 
   return SVN_NO_ERROR;
