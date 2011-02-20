@@ -677,3 +677,89 @@ svn_fs_fs__deserialize_dir_entries(void **out,
   return SVN_NO_ERROR;
 }
 
+/* Implements svn_cache__partial_getter_func_t for manifests.
+ */
+svn_error_t *
+svn_fs_fs__get_sharded_offset(void **out,
+                              const char *data,
+                              apr_size_t data_len,
+                              void *baton,
+                              apr_pool_t *pool)
+{
+  apr_off_t *manifest = (apr_off_t *)data;
+  apr_int64_t shard_pos = *(apr_int64_t *)baton;
+
+  *(apr_int64_t *)out = manifest[shard_pos];
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_cache__partial_getter_func_t for a directory contents hash.
+ */
+svn_error_t *
+svn_fs_fs__extract_dir_entry(void **out,
+                             const char *data,
+                             apr_size_t data_len,
+                             void *baton,
+                             apr_pool_t *pool)
+{
+  hash_data_t *hash_data = (hash_data_t *)data;
+  const char* name = baton;
+
+  /* resolve the reference to the entries array */
+  const svn_fs_dirent_t * const *entries =
+      svn_temp_deserializer__ptr(data, (const void **)&hash_data->entries);
+
+  /* binary search for the desired entry by name */
+  apr_size_t lower = 0;
+  apr_size_t upper = hash_data->count;
+  apr_size_t middle;
+
+  for (middle = upper / 2; lower < upper; middle = (upper + lower) / 2)
+    {
+      const svn_fs_dirent_t *entry =
+          svn_temp_deserializer__ptr(entries, (const void **)&entries[middle]);
+      const char* entry_name =
+          svn_temp_deserializer__ptr(entry, (const void **)&entry->name);
+
+      int diff = strcmp(entry_name, name);
+      if (diff < 0)
+        lower = middle + 1;
+      else
+        upper = middle;
+    }
+
+  /* de-serialize that entry or return NULL, if no match has been found */
+  *out = NULL;
+  if (lower < hash_data->count)
+    {
+      const svn_fs_dirent_t *source =
+          svn_temp_deserializer__ptr(entries, (const void **)&entries[lower]);
+
+      /* Entries have been serialized one-by-one, each time including all
+       * nestes structures and strings. Therefore, they occupy a single
+       * block of memory whose end-offset is either the beginning of the
+       * next entry or the end of the buffer
+       */
+      apr_size_t end_offset = lower + 1 < hash_data->count
+                            ? ((apr_size_t*)entries)[lower+1]
+                            : data_len;
+      apr_size_t size = end_offset - ((apr_size_t*)entries)[lower];
+
+      /* copy & deserialize the entry */
+      svn_fs_dirent_t *new_entry = apr_palloc(pool, size);
+      memcpy(new_entry, source, size);
+
+      svn_temp_deserializer__resolve(new_entry, (void **)&new_entry->name);
+      if (strcmp(new_entry->name, name) == 0)
+        {
+          svn_fs_fs__id_deserialize(new_entry, (svn_fs_id_t **)&new_entry->id);
+          *(svn_fs_dirent_t **)out = new_entry;
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+

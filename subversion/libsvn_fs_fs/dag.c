@@ -312,16 +312,10 @@ dir_entry_id_from_node(const svn_fs_id_t **id_p,
                        const char *name,
                        apr_pool_t *pool)
 {
-  apr_hash_t *entries;
   svn_fs_dirent_t *dirent;
   apr_pool_t *subpool = svn_pool_create(pool);
 
-  SVN_ERR(svn_fs_fs__dag_dir_entries(&entries, parent, subpool, pool));
-  if (entries)
-    dirent = apr_hash_get(entries, name, APR_HASH_KEY_STRING);
-  else
-    dirent = NULL;
-
+  SVN_ERR(svn_fs_fs__dag_dir_entry(&dirent, parent, name, subpool, pool));
   *id_p = dirent ? svn_fs_fs__id_copy(dirent->id, pool) : NULL;
 
   svn_pool_destroy(subpool);
@@ -438,6 +432,27 @@ svn_fs_fs__dag_dir_entries(apr_hash_t **entries,
                             _("Can't get entries of non-directory"));
 
   return svn_fs_fs__rep_contents_dir(entries, node->fs, noderev, pool);
+}
+
+svn_error_t *
+svn_fs_fs__dag_dir_entry(svn_fs_dirent_t **dirent,
+                         dag_node_t *node,
+                         const char* name,
+                         apr_pool_t *pool,
+                         apr_pool_t *node_pool)
+{
+  node_revision_t *noderev;
+  SVN_ERR(get_node_revision(&noderev, node, node_pool));
+
+  if (noderev->kind != svn_node_dir)
+    return svn_error_create(SVN_ERR_FS_NOT_DIRECTORY, NULL,
+                            _("Can't get entries of non-directory"));
+
+  /* Get a dirent hash for this directory. */
+  return svn_fs_fs__rep_contents_dir_partial((void **)dirent, node->fs,
+                                             noderev,
+                                             svn_fs_fs__extract_dir_entry,
+                                             (void *)name, pool);
 }
 
 

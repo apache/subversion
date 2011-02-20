@@ -47,6 +47,14 @@ typedef struct svn_cache__vtable_t {
                        svn_iter_apr_hash_cb_t func,
                        void *baton,
                        apr_pool_t *pool);
+
+  svn_error_t *(*get_partial)(void **value,
+                              svn_boolean_t *found,
+                              void *cache_implementation,
+                              const void *key,
+                              svn_cache__partial_getter_func_t func,
+                              void *baton,
+                              apr_pool_t *pool);
 } svn_cache__vtable_t;
 
 struct svn_cache__t {
