@@ -438,10 +438,23 @@ inprocess_cache_iter(svn_boolean_t *completed,
 
 }
 
+static svn_boolean_t
+inprocess_cache_is_cachable(void *cache_void, apr_size_t size)
+{
+  /* Be relatively strict: per page we should not allocate more than
+   * we could spare as "unused" memory.
+   * But in most cases, nobody will ask anyway. And in no case, this
+   * will be used for checks _inside_ the cache code.
+   */
+  inprocess_cache_t *cache = cache_void;
+  return size < SVN_ALLOCATOR_RECOMMENDED_MAX_FREE / cache->items_per_page;
+}
+
 static svn_cache__vtable_t inprocess_cache_vtable = {
   inprocess_cache_get,
   inprocess_cache_set,
-  inprocess_cache_iter
+  inprocess_cache_iter,
+  inprocess_cache_is_cachable
 };
 
 svn_error_t *
