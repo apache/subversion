@@ -1018,6 +1018,7 @@ svn_ra_local__get_file(svn_ra_session_t *session,
   svn_revnum_t youngest_rev;
   svn_ra_local__session_baton_t *sess = session->priv;
   const char *abs_path = svn_fspath__join(sess->fs_path->data, path, pool);
+  svn_node_kind_t node_kind;
 
   /* Open the revision's root. */
   if (! SVN_IS_VALID_REVNUM(revision))
@@ -1029,6 +1030,18 @@ svn_ra_local__get_file(svn_ra_session_t *session,
     }
   else
     SVN_ERR(svn_fs_revision_root(&root, sess->fs, revision, pool));
+
+  SVN_ERR(svn_fs_check_path(&node_kind, root, abs_path, pool));
+  if (node_kind == svn_node_none)
+    {
+      return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
+                               _("'%s' path not found"), abs_path);
+    }
+  else if (node_kind != svn_node_file)
+    {
+      return svn_error_createf(SVN_ERR_FS_NOT_FILE, NULL,
+                               _("'%s' is not a file"), abs_path);
+    }
 
   if (stream)
     {
