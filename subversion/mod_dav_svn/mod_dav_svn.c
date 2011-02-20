@@ -103,7 +103,7 @@ static authz_svn__subreq_bypass_func_t pathauthz_bypass_func = NULL;
 
 /* The compression level we will pass to svn_txdelta_to_svndiff3()
  * for wire-compression */
-static int svn__compression_level = SVN_DEFAULT_COMPRESSSION_LEVEL;
+static int svn__compression_level = SVN_DEFAULT_COMPRESSION_LEVEL;
 
 static int
 init(apr_pool_t *p, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s)
