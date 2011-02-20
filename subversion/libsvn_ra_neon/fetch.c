@@ -654,6 +654,12 @@ filter_props(apr_hash_t *props,
   return SVN_NO_ERROR;
 }
 
+static const ne_propname restype_props[] =
+{
+  { "DAV:", "resourcetype" },
+  { NULL }
+};
+
 svn_error_t *svn_ra_neon__get_file(svn_ra_session_t *session,
                                    const char *path,
                                    svn_revnum_t revision,
@@ -689,6 +695,22 @@ svn_error_t *svn_ra_neon__get_file(svn_ra_session_t *session,
                                               pool);
       if (fetched_rev != NULL)
         *fetched_rev = got_rev;
+    }
+
+  SVN_ERR(svn_ra_neon__get_props_resource(&rsrc, ras, final_url,
+                                          NULL,
+                                          props ? restype_props : NULL,
+                                          pool));
+  if (rsrc->is_collection)
+    {
+      return svn_error_create(SVN_ERR_FS_NOT_FILE, NULL,
+                              _("Can't get text contents of a directory"));
+    }
+
+  if (props)
+    {
+      *props = apr_hash_make(pool);
+      SVN_ERR(filter_props(*props, rsrc, TRUE, pool));
     }
 
   if (stream)
@@ -752,15 +774,6 @@ svn_error_t *svn_ra_neon__get_file(svn_ra_session_t *session,
                             _("     actual:  %s")),
                path, expected_checksum->data, hex_digest);
         }
-    }
-
-  if (props)
-    {
-      SVN_ERR(svn_ra_neon__get_props_resource(&rsrc, ras, final_url,
-                                              NULL, NULL /* all props */,
-                                              pool));
-      *props = apr_hash_make(pool);
-      SVN_ERR(filter_props(*props, rsrc, TRUE, pool));
     }
 
   return SVN_NO_ERROR;
