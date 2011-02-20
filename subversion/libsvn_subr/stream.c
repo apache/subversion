@@ -453,12 +453,12 @@ static svn_error_t *
 skip_default_handler(void *baton, apr_size_t *count, svn_read_fn_t read_fn)
 {
   apr_size_t total_bytes_read = 0;
-  apr_size_t bytes_read;
+  apr_size_t bytes_read = 1;
   char buffer[4096];
   svn_error_t *err = SVN_NO_ERROR;
   apr_size_t to_read = *count;
 
-  while ((to_read > 0) && !err)
+  while ((to_read > 0) && !err && (bytes_read > 0))
     {
       bytes_read = sizeof(buffer) < to_read ? sizeof(buffer) : to_read;
       err = read_fn(baton, buffer, &bytes_read);
@@ -718,8 +718,8 @@ write_handler_apr(void *baton, const char *data, apr_size_t *len)
       if (err)
         *len = 0;
     }
-    else
-      err = svn_io_file_write_full(btn->file, data, *len, len, btn->pool);
+  else
+    err = svn_io_file_write_full(btn->file, data, *len, len, btn->pool);
 
   return err;
 }
