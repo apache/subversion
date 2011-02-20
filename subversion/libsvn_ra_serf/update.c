@@ -2701,6 +2701,7 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
   svn_ra_serf__handler_t *handler;
   const char *fetch_url;
   apr_hash_t *fetch_props;
+  const char *res_type;
 
   /* What connection should we go on? */
   conn = session->conns[session->cur_conn];
@@ -2726,13 +2727,31 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
       revision = SVN_INVALID_REVNUM;
     }
 
+  SVN_ERR(svn_ra_serf__retrieve_props(fetch_props, session, conn, fetch_url,
+                                      revision, "0",
+                                      props ? all_props : check_path_props,
+                                      pool));
+
+  /* Verify that resource type is not colelction. */
+  res_type = svn_ra_serf__get_ver_prop(fetch_props, fetch_url, revision,
+                                       "DAV:", "resourcetype");
+  if (!res_type)
+    {
+      /* How did this happen? */
+        return svn_error_create(SVN_ERR_RA_DAV_PROPS_NOT_FOUND, NULL,
+                              _("The PROPFIND response did not include the "
+                                "requested resourcetype value"));
+    }
+  else if (strcmp(res_type, "collection") == 0)
+    {
+        return svn_error_create(SVN_ERR_FS_NOT_FILE, NULL,
+                                _("Can't get text contents of a directory"));
+    }
+
   /* TODO Filter out all of our props into a usable format. */
   if (props)
     {
       *props = apr_hash_make(pool);
-
-      SVN_ERR(svn_ra_serf__retrieve_props(fetch_props, session, conn, fetch_url,
-                                          revision, "0", all_props, pool));
 
       SVN_ERR(svn_ra_serf__walk_all_props(fetch_props, fetch_url, revision,
                                           svn_ra_serf__set_flat_props, *props, pool));
