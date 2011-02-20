@@ -620,7 +620,7 @@ static svn_error_t *read_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
        * enough to prevent re-allocation as long as the data transmission
        * is not flawed.
        */
-      stringbuf = svn_stringbuf_create_ensure(len, pool);
+      stringbuf = svn_stringbuf_create_ensure((apr_size_t)len, pool);
 
       /* Read the string data directly into the string structure.
        * Do it iteratively, if necessary.
