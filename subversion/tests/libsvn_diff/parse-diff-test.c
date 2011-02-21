@@ -120,7 +120,9 @@ static const char *git_tree_and_text_unidiff =
   ""                                                                    NL;
 
   /* Only the last git diff header is valid. The other ones either misses a
-   * path element or has noise between lines that must be continous. */
+   * path element or has noise between lines that must be continous.  The
+   * test test_bad_git_diff_headers currently fails because the headers with
+   * random noise are tolerated.  See issue #3809. */
 static const char *bad_git_diff_header =
   "Index: iota.copied"                                                  NL
   "===================================================================" NL

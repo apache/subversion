@@ -173,7 +173,7 @@ svn_diff__resolve_conflict(svn_diff_t *hunk,
         position[1]->next = start_position[1];
       }
 
-    *lcs_ref = svn_diff__lcs(position[0], position[1], 0,
+    *lcs_ref = svn_diff__lcs(position[0], position[1], 0, 0,
                              subpool);
 
     /* Fix up the EOF lcs element in case one of
@@ -259,6 +259,7 @@ svn_diff_diff3_2(svn_diff_t **diff,
   apr_pool_t *subpool;
   apr_pool_t *treepool;
   apr_off_t prefix_lines = 0;
+  apr_off_t suffix_lines = 0;
 
   *diff = NULL;
 
@@ -267,7 +268,8 @@ svn_diff_diff3_2(svn_diff_t **diff,
 
   svn_diff__tree_create(&tree, treepool);
 
-  SVN_ERR(vtable->datasources_open(diff_baton, &prefix_lines, datasource, 3));
+  SVN_ERR(vtable->datasources_open(diff_baton, &prefix_lines, &suffix_lines,
+                                   datasource, 3));
 
   SVN_ERR(svn_diff__get_tokens(&position_list[0],
                                tree,
@@ -299,9 +301,9 @@ svn_diff_diff3_2(svn_diff_t **diff,
 
   /* Get the lcs for original-modified and original-latest */
   lcs_om = svn_diff__lcs(position_list[0], position_list[1], prefix_lines,
-                         subpool);
+                         suffix_lines, subpool);
   lcs_ol = svn_diff__lcs(position_list[0], position_list[2], prefix_lines,
-                         subpool);
+                         suffix_lines, subpool);
 
   /* Produce a merged diff */
   {

@@ -780,7 +780,7 @@ use-commit-times = yes
 
 #----------------------------------------------------------------------
 
-@Issues([1617,2030])
+@Issues(1617,2030)
 def status_on_unversioned_dotdot(sbox):
   "status on '..' where '..' is not versioned"
   # See issue #1617 (and #2030).
@@ -1793,7 +1793,6 @@ def status_with_tree_conflicts(sbox):
 
 #----------------------------------------------------------------------
 # Regression for issue #3742
-@XFail()
 @Issue(3742)
 def status_nested_wc_old_format(sbox):
   "status on wc with nested old-format wc"

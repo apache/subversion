@@ -7,8 +7,8 @@ LISTING: dirent_uri-test.exe
 Test #  Mode   Test Description
 ------  -----  ----------------
   34    XFAIL  test svn_dirent_get_absolute with lc drive
-  Issue #: None
-  Target Milestone: N/A
+  Issue #: 3795
+  Target Milestone: 1.7.0
   Thread: http://svn.haxx.se/dev/archive-2009-10/0682.shtml
   Log: r880444
   Point Person: rhuijben
@@ -21,7 +21,7 @@ Test #  Mode   Test Description
                merge() algorithm expectations]]
   Issue #: N/A
   Target Milestone: N/A 
-  Thread: N/A
+  Thread: http://svn.haxx.se/dev/archive-2011-02/0044.shtml
   Log: r875421
   Point Person: cmpilato
   
@@ -32,34 +32,16 @@ Test #  Mode   Test Description
   Log: N/A
   Point Person: julianfoad
 
-LISTING: locks-test.exe
-
-Test #  Mode   Test Description
-------  -----  ----------------
-   9    XFAIL  able to reserve a name (lock non-existent path)
-  Issue #: None
-  Target Milestone: None
-  Thread: N/A
-  Log: r853631
-  Point Person: cmpilato
-  
-  10    XFAIL  directory locks (kinda)
-  Issue #: None
-  Target Milestone: None 
-  Thread: N/A
-  Log: r853631
-  Point Person: cmpilato
-  
 LISTING: parse-diff-test.exe
 
 Test #  Mode   Test Description
 ------  -----  ----------------
    4    XFAIL  test badly formatted git diff headers
-  Issue #: None
-  Target Milestone: None 
+  Issue #: 3809
+  Target Milestone: 1.7.0
   Thread: N/A
   Log: r960833
-  Point Person: dannas
+  Point Person:
   
 LISTING: authz_tests.py
 
@@ -74,11 +56,11 @@ Test #  Mode   Test Description
 
   14    XFAIL  (DAV and ra_svn only) switched to directory, no read access
                on parents
-  Issue #: None
-  Target Milestone: None 
+  Issue #: 3796
+  Target Milestone: Unscheduled
   Thread: N/A
   Log: r867298
-  Point Person: lgo 
+  Point Person: lgo
 
 LISTING: basic_tests.py
 
@@ -121,29 +103,29 @@ Test #  Mode   Test Description
   Point Person: philip, gstein
   
   80    XFAIL  commit only top of copy; check child behavior
-  Issue #: None
-  Target Milestone: N/A 
+  Issue #: 3699
+  Target Milestone: 1.7-consider
   Thread: None
   Log: r927469
   Point Person: rhuijben 
   
   86    XFAIL  changed dir after commit should match checkout
   Issue #: 3676
-  Target Milestone: ---
+  Target Milestone: Unscheduled
   Thread: N/A
   Log: r961831
   Point Person: rhuijben
   
   89    XFAIL  copy mixed-rev and delete children
   Issue #: 3314
-  Target Milestone: N/A 
+  Target Milestone: ---
   Thread: N/A
   Log: r1004629
   Point Person: philip 
   
   91    XFAIL  copy, delete child, revert copy
-  Issue #: None
-  Target Milestone: N/A
+  Issue #: 3784
+  Target Milestone: 1.7.0
   Thread: N/A
   Log: r1027031
   Point Person: philip
@@ -154,7 +136,7 @@ Test #  Mode   Test Description
 ------  -----  ----------------
   36    XFAIL  'info' should treat excluded item as versioned
   Issue #: 3792
-  Target Milestone: N/A 
+  Target Milestone: Unscheduled
   Thread: N/A
   Log: r876772
   Point Person: danielsh 
@@ -165,14 +147,14 @@ Test #  Mode   Test Description
 ------  -----  ----------------
   49    XFAIL  diff URL against working copy with local mods
   Issue #: 3295
-  Target Milestone: ---
+  Target Milestone: Unscheduled
   Thread: N/A
   Log: r873641
   Point Person: neels
 
   50    XFAIL  diff -r1 of dir with removed-then-readded file
-  Issue #: 1675
-  Target Milestone: Unscheduled (Issue is marked as RESOLVED).
+  Issue #: 3797
+  Target Milestone: Unscheduled
   Thread: N/A
   Log: r873641
   Point Person: neels
@@ -182,22 +164,22 @@ LISTING: export_tests.py
 Test #  Mode   Test Description
 ------  -----  ----------------
   11    XFAIL  export working copy at base revision
-  Issue #: None
-  Target Milestone: N/A
+  Issue #: 3798
+  Target Milestone: Unscheduled
   Thread: N/A
   Log: r980465
   Point Person: julianfoad
 
   20    XFAIL  exporting a file refuses to silently overwrite
-  Issue #: None
-  Target Milestone: N/A
+  Issue #: 3799
+  Target Milestone: Unscheduled
   Thread: N/A
   Log: r1037998
   Point Person: danielsh
   
   24    XFAIL  export working copy with different depths
-  Issue #: None
-  Target Milestone: N/A
+  Issue #: 3800
+  Target Milestone: Unscheduled
   Thread: N/A
   Log: r980497
   Point Person: julianfoad
@@ -218,23 +200,23 @@ LISTING: lock_tests.py
 Test #  Mode   Test Description
 ------  -----  ----------------
   32    XFAIL  verify unlocking with wrong lock token
-  Issue #: None
-  Target Milestone: N/A
+  Issue #: 3794
+  Target Milestone: Unscheduled
   Thread: None
   Log: r858765, r869893
-  Point Person: None (test was committed by lundblad)
+  Point Person: None
 
   34    XFAIL  unlock file locked by other user
-  Issue #: None
-  Target Milestone: N/A 
+  Issue #: 3801
+  Target Milestone: Unscheduled 
   Thread: None
   Log: r865614
   Point Person: lgo
   
   39    XFAIL  test replace + propset of locked file
   Issue #: 3674
-  Target Milestone: --- 
-  Thread: N/A
+  Target Milestone: Unscheduled
+  Thread: http://svn.haxx.se/dev/archive-2011-02/0044.shtml
   Log: r961442
   Point Person: cmpilato 
 
@@ -302,19 +284,19 @@ Test #  Mode   Test Description
   Log: N/A
   Point Person: Unassigned
   
-  22    XFAIL  replace vs. edit tree-conflicts
-  Issue #: None
-  Target Milestone: N/A 
+  22    XFAIL  (serf only) replace vs. edit tree-conflicts
+  Issue #: 3802
+  Target Milestone: Unscheduled 
   Thread: N/A
   Log: r879723
   Point Person: julianfoad
   
   23    XFAIL  replace vs. delete tree-conflicts
-  Issue #: None
-  Target Milestone: N/A
+  Issue #: 3806
+  Target Milestone: Unscheduled
   Thread: N/A
   Log: r879162
-  Point Person: neels
+  Point Person:
 
 LISTING: patch_tests.py
 
@@ -323,7 +305,7 @@ Test #  Mode   Test Description
   29    XFAIL  patch doesn't append newline to properties
   Issue #: None 
   Target Milestone: N/A 
-  Thread: N/A
+  Thread: http://svn.haxx.se/dev/archive-2011-02/0350.shtml
   Log: r1033709
   Point Person: danielsh
 
@@ -339,8 +321,8 @@ Test #  Mode   Test Description
   Point Person: Unassigned
   
   26    XFAIL  test handling invalid svn:* property values
-  Issue #: None
-  Target Milestone: N/A 
+  Issue #: 3086
+  Target Milestone: 1.8-consider
   Thread: N/A
   Log: r871212
   Point Person: danielsh 
@@ -367,17 +349,6 @@ Test #  Mode   Test Description
   Log: N/A
   Point Person: Unassigned
 
-LISTING: stat_tests.py
-
-Test #  Mode   Test Description
-------  -----  ----------------
-  32    XFAIL  status on wc with nested old-format wc
-  Issue #: 3742
-  Target Milestone: 1.7.0 
-  Thread: N/A
-  Log: r1027732
-  Point Person: Unassigned
-
 LISTING: switch_tests.py
 
 Test #  Mode   Test Description
@@ -392,7 +363,7 @@ Test #  Mode   Test Description
   38    XFAIL  copy directory with switched subdir
   Issue #: None
   Target Milestone: N/A 
-  Thread: N/A
+  Thread: http://svn.haxx.se/dev/archive-2011-02/0360.shtml
   Log: r879627
   Point Person: rhuijben
   
@@ -415,15 +386,15 @@ Test #  Mode   Test Description
   Point Person: Unassigned
 
   17    XFAIL  --force del on dir with TCs inside
-  Issue #: None
-  Target Milestone: N/A 
+  Issue #: 3805
+  Target Milestone: Unscheduled 
   Thread: N/A
   Log: r878027
   Point Person: neels
 
   18    XFAIL  --force del on tree-conflicted targets
-  Issue #: None
-  Target Milestone: N/A 
+  Issue #: 3805
+  Target Milestone: Unscheduled
   Thread: N/A
   Log: r878028
   Point Person: neels
@@ -476,33 +447,33 @@ Test #  Mode   Test Description
 
   57    XFAIL  update with file lock & keywords property set
   Issue #: 3471 
-  Target Milestone: 
+  Target Milestone: ---
   Thread: http://subversion.tigris.org/ds/viewMessage.do?
     dsForumId=1065&dsMessageId=2385406
   Log: r995388
   Point Person: Unassigned
 
   58    XFAIL  update a nonexistent child of a copied dir
-  Issue #: None
-  Target Milestone: N/A 
+  Issue #: 3807
+  Target Milestone: 1.7.0
   Thread: None
   Log: r1035347
-  Point Person: julianfoad
+  Point Person:
 
 LISTING: upgrade_tests.py
 
 Test #  Mode   Test Description
 ------  -----  ----------------
    8    XFAIL  3x same wc upgrade 1.4.0 test
-  Issue #: None
-  Target Milestone: N/A
+  Issue #: 2530
+  Target Milestone: Unscheduled
   Thread: N/A
   Log: r959804
   Point Person: rhuijben
 
   13    XFAIL  check status delete and delete --keep-local
-  Issue #: None
-  Target Milestone: N/A
+  Issue #: 3808
+  Target Milestone: 1.7.0
   Thread: N/A
   Log: r991512
-  Point Person: rhuijben
+  Point Person: N/A

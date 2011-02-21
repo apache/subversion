@@ -298,7 +298,7 @@ typedef struct svn_wc__db_lock_t {
 svn_error_t *
 svn_wc__db_open(svn_wc__db_t **db,
                 svn_wc__db_openmode_t mode,
-                svn_config_t *config,
+                const svn_config_t *config,
                 svn_boolean_t auto_upgrade,
                 svn_boolean_t enforce_empty_wq,
                 apr_pool_t *result_pool,
@@ -1243,6 +1243,18 @@ svn_wc__db_op_revert_actual(svn_wc__db_t *db,
 
 
 
+/* Revert all local changes which are being maintained in the database,
+ * including conflict storage, properties and text modification status.
+ *
+ * Returns SVN_ERR_WC_INVALID_OPERATION_DEPTH if the revert is not
+ * possible, e.g. copy/delete but not a root, or a copy root with
+ * children.
+ *
+ * At present only depth=empty and depth=infinity are supported.
+ *
+ * ### Need to return the modified paths for notification.  An array
+ * ### or hash?  A temporary SQLite table?
+ */
 svn_error_t *
 svn_wc__db_op_revert(svn_wc__db_t *db,
                      const char *local_abspath,
@@ -1580,9 +1592,10 @@ svn_wc__db_read_props(apr_hash_t **props,
 svn_error_t *
 svn_wc__db_read_props_of_files(svn_wc__db_t *db,
                                const char *local_abspath,
-                               svn_wc__proplist_receiver_t
-                                 receiver_func,
+                               svn_wc__proplist_receiver_t receiver_func,
                                void *receiver_baton,
+                               svn_cancel_func_t cancel_func,
+                               void *cancel_baton,
                                apr_pool_t *scratch_pool);
 
 /* Call RECEIVER_FUNC, passing RECEIVER_BATON, an absolute path, and
@@ -1592,10 +1605,24 @@ svn_wc__db_read_props_of_files(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_read_props_of_immediates(svn_wc__db_t *db,
                                     const char *local_abspath,
-                                    svn_wc__proplist_receiver_t
-                                      receiver_func,
+                                    svn_wc__proplist_receiver_t receiver_func,
                                     void *receiver_baton,
+                                    svn_cancel_func_t cancel_func,
+                                    void *cancel_baton,
                                     apr_pool_t *scratch_pool);
+
+/* Call RECEIVER_FUNC, passing RECEIVER_BATON, an absolute path, and
+ * a hash table mapping <tt>char *</tt> names onto svn_string_t *
+ * values for any properties of all (recursive) child nodes of LOCAL_ABSPATH.
+ */
+svn_error_t *
+svn_wc__db_read_props_recursive(svn_wc__db_t *db,
+                                const char *local_abspath,
+                                svn_wc__proplist_receiver_t receiver_func,
+                                void *receiver_baton,
+                                svn_cancel_func_t cancel_func,
+                                void *cancel_baton,
+                                apr_pool_t *scratch_pool);
 
 /* Set *PROPS to the properties of the node LOCAL_ABSPATH in the WORKING
    tree (looking through to the BASE tree as required).
@@ -2293,14 +2320,6 @@ svn_wc__db_temp_get_format(int *format,
                            svn_wc__db_t *db,
                            const char *local_dir_abspath,
                            apr_pool_t *scratch_pool);
-
-/* ### reset any cached format version. it has probably changed.  */
-svn_error_t *
-svn_wc__db_temp_reset_format(int format,
-                             svn_wc__db_t *db,
-                             const char *local_dir_abspath,
-                             apr_pool_t *scratch_pool);
-
 
 /* ### temp functions to manage/store access batons within the DB.  */
 svn_wc_adm_access_t *

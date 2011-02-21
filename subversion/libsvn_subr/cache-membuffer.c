@@ -32,57 +32,63 @@
 #include "private/svn_dep_compat.h"
 
 /*
+ * This svn_cache__t implementation actually consists of two parts:
+ * a shared (per-process) singleton membuffer cache instance and shallow
+ * svn_cache__t frontend instances that each use different key spaces.
+ * For data management, they all forward to the singleton membuffer cache.
+ *
  * A membuffer cache consists of two parts:
  *
- * 1. A linear data buffer containing a cached items in a serialized
+ * 1. A linear data buffer containing cached items in a serialized
  *    representation. There may be arbitrary gaps between entries.
  * 2. A directory of cache entries. This is organized similar to CPU
  *    data caches: for every possible key, there is exactly one group
  *    of entries that may contain the header info for an item with
  *    that given key. The result is a GROUP_SIZE-way associative cache.
  *
- * Only the begnnings of these two data parts are addressed through a
- * native pointer. All other references are expressed as offsets to
- * these array pointers. With that design, it is relatively easy to
- * share the same data structure between different processes and / or
- * to persist them on disk.
+ * Only the start address of these two data parts are given as a native
+ * pointer. All other references are expressed as offsets to these pointers.
+ * With that design, it is relatively easy to share the same data structure
+ * between different processes and / or to persist them on disk. These
+ * out-of-process features have not been implemented, yet.
  *
  * The data buffer usage information is implicitly given by the directory
- * entries. Every *used* entry has a reference to the previous and the
- * next used dictionary entry - in the order their item data is stored
- * in the data buffer. So, removing data, for instance, is done simply
- * by unlinking it from the chain, marking it as unused and possibly
- * adjusting global list pointers.
+ * entries. Every USED entry has a reference to the previous and the next
+ * used dictionary entry and this double-linked list is ordered by the
+ * offsets of their item data within the the data buffer. So removing data,
+ * for instance, is done simply by unlinking it from the chain, implicitly
+ * marking the entry as well as the data buffer section previously
+ * associated to it as unused.
  *
- * Insertion can occur at one position. It is marked by its offset in
- * the data buffer plus the index of the first used entry equal or
- * larger that position. If this gap is too small to accomodate the
- * new item, the insertion window is extended as described below. The
- * new entry will always be inserted at the bottom end of the window
- * and since the next used entry is known, properly sorted insertion
- * is possible.
+ * Insertion can occur at only one, sliding position. It is marked by its
+ * offset in the data buffer plus the index of the first used entry at or
+ * behind that position. If this gap is too small to accomodate the new
+ * item, the insertion window is extended as described below. The new entry
+ * will always be inserted at the bottom end of the window and since the
+ * next used entry is known, properly sorted insertion is possible.
  *
  * To make the cache perform robustly in a wide range of usage scenarios,
- * a randomized variant of LFU is used. Every item holds a (read)
- * hit counter and there is a global (read) hit counter. The more hits
- * an entry has in relation to the average, the more it is likely to be
- * kept using a rand()-based condition. The test is applied only to the
- * entry at the end of the insertion window. If it doesn't get evicted,
- * its being moved to the begin of that window and this window is moved.
+ * a randomized variant of LFU is used. Every item holds a read hit counter
+ * and there is a global read hit counter. The more hits an entry has in
+ * relation to the average, the more it is likely to be kept using a rand()-
+ * based condition. The test is applied only to the entry following the
+ * insertion window. If it doesn't get evicted, it is moved to the begin of
+ * that window and the window is moved.
  *
- * Moreover, the entry's hits get halfed to make that entry more likely
- * to be removed the next time, the sliding insertion / auto-removal
- * window comes by. As a result, frequently used entries are likely not
- * to be dropped until they get not used for a while. Also, even a cache
- * thrashing situation about 50% of the content survives every 50% of the
- * cache being re-written with new entries. For details on the fine-
- * tuning involved, see the comments in ensure_data_insertable().
+ * Moreover, the entry's hits get halfed to make that entry more likely to
+ * be removed the next time the sliding insertion / removal window comes by.
+ * As a result, frequently used entries are likely not to be dropped until
+ * they get not used for a while. Also, even a cache thrashing situation
+ * about 50% of the content survives every 50% of the cache being re-written
+ * with new entries. For details on the fine-tuning involved, see the
+ * comments in ensure_data_insertable().
  *
- * To limit the entry size and management overhead, the actual item keys
- * will not be stored but only their MD5 checksums, instead. This is
- * reasonably safe to do since users have only limited control over the
- * full keys, even if these are folder paths. So, it is very hard to
- * construct colliding keys.
+ * To limit the entry size and management overhead, not the actual item keys
+ * but only their MD5 checksums will not be stored. This is reasonably safe
+ * to do since users have only limited control over the full keys, even if
+ * these contain folder paths. So, it is very hard to deliberately construct
+ * colliding keys. Random checksum collisions can be shown to be extremely
+ * unlikely.
  *
  * All access to the cached data needs to be serialized. Because we want
  * to scale well despite that bottleneck, we simply segment the cache into
@@ -706,6 +712,24 @@ ensure_data_insertable(svn_membuffer_t *cache, apr_size_t size)
   return FALSE;
 }
 
+/* Mimic apr_pcalloc in APR_POOL_DEBUG mode, i.e. handle failed allocations
+ * (e.g. OOM) properly: Allocate at least SIZE bytes from POOL and zero
+ * the content of the allocated memory. If the allocation fails, return NULL.
+ *
+ * Also, satisfy our buffer alignment needs for performance reasons.
+ */
+static void* secure_aligned_pcalloc(apr_pool_t *pool, apr_size_t size)
+{
+  char* memory = apr_palloc(pool, (apr_size_t)size + ITEM_ALIGNMENT);
+  if (memory != NULL)
+    {
+      memory = (char *)ALIGN_POINTER(memory);
+      memset(memory, 0, size);
+    }
+
+  return memory;
+}
+
 /* Create a new membuffer cache instance. If the TOTAL_SIZE of the
  * memory i too small to accomodate the DICTIONARY_SIZE, the latte
  * will be resized automatically. Also, a minumum size is assured
@@ -723,15 +747,10 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
                                   apr_pool_t *pool)
 {
   /* allocate cache as an array of segments / cache objects */
-  svn_membuffer_t *c = apr_palloc(pool, CACHE_SEGMENTS * sizeof(*c));
+  svn_membuffer_t *c = apr_pcalloc(pool, CACHE_SEGMENTS * sizeof(*c));
   apr_uint32_t seg;
   apr_uint32_t group_count;
   apr_uint64_t data_size;
-
-  /* We use this sub-pool to allocate the data buffer and the dictionary
-   * so that we can release this memory easily upon OOM.
-   */
-  apr_pool_t *sub_pool = svn_pool_create(pool);
 
   /* Split total cache size into segments of equal size
    */
@@ -773,15 +792,13 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
        */
       c[seg].group_count = group_count;
       c[seg].directory =
-          apr_palloc(sub_pool, group_count * sizeof(entry_group_t));
+          secure_aligned_pcalloc(pool, group_count * sizeof(entry_group_t));
       c[seg].first = NO_INDEX;
       c[seg].last = NO_INDEX;
       c[seg].next = NO_INDEX;
 
       c[seg].data_size = data_size;
-      c[seg].data = apr_palloc(sub_pool, (apr_size_t)data_size);
-      c[seg].data = (unsigned char *)ALIGN_POINTER(c[seg].data);
-      c[seg].data_size -= ITEM_ALIGNMENT;
+      c[seg].data = secure_aligned_pcalloc(pool, (apr_size_t)data_size);
       c[seg].current_data = 0;
       c[seg].data_used = 0;
 
@@ -796,21 +813,9 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
        */
       if (c[seg].data == NULL || c[seg].directory == NULL)
         {
-          /* in case we successfully allocated one part of the cache
-           * make sure we release it asap.
+          /* We are OOM. There is no need to proceed with "half a cache".
            */
-          svn_pool_destroy(sub_pool);
-
-          c[seg].group_count = 1;
-          c[seg].data_size = 0;
-
-          if (c[seg].directory == NULL)
-            c[seg].directory = apr_palloc(pool, sizeof(entry_group_t));
-
-          /* if that modest allocation failed as well, we definitly are OOM.
-           */
-          if (c[seg].directory == NULL)
-            return svn_error_wrap_apr(APR_ENOMEM, _("OOM"));
+          return svn_error_wrap_apr(APR_ENOMEM, _("OOM"));
         }
 
       /* initialize directory entries as "unused"
@@ -1253,7 +1258,7 @@ svn_membuffer_cache_is_cachable(void *cache_void, apr_size_t size)
    * must be small enough to be stored in a 32 bit value.
    */
   svn_membuffer_cache_t *cache = cache_void;
-  return (size < cache->membuffer->data_size / 4 / CACHE_SEGMENTS)
+  return (size < cache->membuffer->data_size / 4)
       && (size < APR_UINT32_MAX - ITEM_ALIGNMENT);
 }
 

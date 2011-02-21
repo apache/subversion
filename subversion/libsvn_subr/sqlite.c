@@ -63,6 +63,15 @@ sqlite_tracer(void *data, const char *sql)
 }
 #endif
 
+#ifdef SQLITE3_PROFILE
+/* An sqlite execution timing callback. */
+static void
+sqlite_profiler(void *data, const char *sql, sqlite3_uint64 duration)
+{
+  /*  sqlite3 *db3 = data; */
+  SVN_DBG(("[%.3f] sql=\"%s\"\n", 1e-9 * duration, sql));
+}
+#endif
 
 struct svn_sqlite__db_t
 {
@@ -917,6 +926,9 @@ svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
 #ifdef SQLITE3_DEBUG
   sqlite3_trace((*db)->db3, sqlite_tracer, (*db)->db3);
 #endif
+#ifdef SQLITE3_PROFILE
+  sqlite3_profile((*db)->db3, sqlite_profiler, (*db)->db3);
+#endif
 
   SVN_ERR(exec_sql(*db,
               "PRAGMA case_sensitive_like=1;"
@@ -987,15 +999,16 @@ svn_sqlite__close(svn_sqlite__db_t *db)
   return svn_error_wrap_apr(result, NULL);
 }
 
-svn_error_t *
-svn_sqlite__with_transaction(svn_sqlite__db_t *db,
-                             svn_sqlite__transaction_callback_t cb_func,
-                             void *cb_baton,
-                             apr_pool_t *scratch_pool /* NULL allowed */)
+/* The body of svn_sqlite__with_transaction() and
+   svn_sqlite__with_immediate_transaction(), which see. */
+static svn_error_t *
+with_transaction(svn_sqlite__db_t *db,
+                 svn_sqlite__transaction_callback_t cb_func,
+                 void *cb_baton,
+                 apr_pool_t *scratch_pool /* NULL allowed */)
 {
   svn_error_t *err;
 
-  SVN_ERR(exec_sql(db, "BEGIN TRANSACTION;"));
   err = cb_func(cb_baton, db, scratch_pool);
 
   /* Commit or rollback the sqlite transaction. */
@@ -1048,6 +1061,28 @@ svn_sqlite__with_transaction(svn_sqlite__db_t *db,
     }
 
   return svn_error_return(exec_sql(db, "COMMIT TRANSACTION;"));
+}
+
+svn_error_t *
+svn_sqlite__with_transaction(svn_sqlite__db_t *db,
+                             svn_sqlite__transaction_callback_t cb_func,
+                             void *cb_baton,
+                             apr_pool_t *scratch_pool /* NULL allowed */)
+{
+  SVN_ERR(exec_sql(db, "BEGIN TRANSACTION;"));
+  return svn_error_return(with_transaction(db, cb_func, cb_baton,
+                                           scratch_pool));
+}
+
+svn_error_t *
+svn_sqlite__with_immediate_transaction(svn_sqlite__db_t *db,
+                                       svn_sqlite__transaction_callback_t cb_func,
+                                       void *cb_baton,
+                                       apr_pool_t *scratch_pool /* NULL allowed */)
+{
+  SVN_ERR(exec_sql(db, "BEGIN IMMEDIATE TRANSACTION;"));
+  return svn_error_return(with_transaction(db, cb_func, cb_baton,
+                                           scratch_pool));
 }
 
 svn_error_t *

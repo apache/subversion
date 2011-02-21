@@ -79,6 +79,10 @@ def _usage_exit():
   print("  --http-library         : dav library to use, neon (default) or serf")
   print("  --javahl               : Run the javahl tests instead of the normal tests")
   print("  --list                 : print test doc strings only")
+  print("  --milestone-filter=RE  : RE is a regular expression pattern that (when")
+  print("                           used with --list) limits the tests listed to")
+  print("                           those with an associated issue in the tracker")
+  print("                           which has a target milestone that matches RE.")
   print("  --mode-filter=TYPE     : limit tests to expected TYPE = XFAIL, SKIP, PASS,")
   print("                           or 'ALL' (default)")
   print("  --enable-sasl          : enable Cyrus SASL authentication for")
@@ -123,7 +127,7 @@ opts, args = my_getopt(sys.argv[1:], 'hrdvqct:pu:f:',
                         'fsfs-packing', 'fsfs-sharding=', 'javahl',
                         'list', 'enable-sasl', 'bin=', 'parallel',
                         'config-file=', 'server-minor-version=',
-                        'log-to-stdout', 'mode-filter='])
+                        'log-to-stdout', 'mode-filter=', 'milestone-filter='])
 if len(args) > 1:
   print('Warning: non-option arguments after the first one will be ignored')
 
@@ -140,6 +144,7 @@ httpd_port = None
 httpd_service = None
 http_library = 'neon'
 list_tests = None
+milestone_filter = None
 test_javahl = None
 enable_sasl = None
 svn_bin = None
@@ -195,6 +200,8 @@ for opt, val in opts:
     test_javahl = 1
   elif opt == '--list':
     list_tests = 1
+  elif opt == '--milestone-filter':
+    milestone_filter = val
   elif opt == '--mode-filter':
     mode_filter = val
   elif opt == '--enable-sasl':
@@ -688,7 +695,8 @@ if not test_javahl:
                              server_minor_version, not quiet,
                              cleanup, enable_sasl, parallel, config_file,
                              fsfs_sharding, fsfs_packing,
-                             list_tests, svn_bin, mode_filter)
+                             list_tests, svn_bin, mode_filter,
+                             milestone_filter)
   old_cwd = os.getcwd()
   try:
     os.chdir(abs_builddir)

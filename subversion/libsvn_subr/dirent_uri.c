@@ -473,22 +473,34 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
 
   while (*src)
     {
-      /* Parse each segment, find the closing '/' */
+      /* Parse each segment, finding the closing '/' (which might look
+         like '%2F' for URIs).  */
       const char *next = src;
-      while (*next && (*next != '/'))
-        ++next;
+      apr_size_t slash_len = 0;
 
+      while (*next
+             && (next[0] != '/')
+             && (! (type == type_uri && next[0] == '%' && next[1] == '2' &&
+                    canonicalize_to_upper(next[2]) == 'F')))
+        {
+          ++next;
+        }
+
+      /* Record how long our "slash" is. */
+      if (next[0] == '/')
+        slash_len = 1;
+      else if (type == type_uri && next[0] == '%')
+        slash_len = 3;
+      
       seglen = next - src;
 
-      if (seglen == 0 || (seglen == 1 && src[0] == '.'))
+      if (seglen == 0 
+          || (seglen == 1 && src[0] == '.')
+          || (type == type_uri && seglen == 3 && src[0] == '%' && src[1] == '2'
+              && canonicalize_to_upper(src[2]) == 'E'))
         {
-          /* Noop segment, so do nothing. */
-        }
-      else if (type == type_uri && seglen == 3
-               && src[0] == '%' && src[1] == '2'
-               && canonicalize_to_upper(src[2]) == 'E')
-        {
-          /* '%2E' is equivalent to '.', so this is a noop segment */
+          /* Empty or noop segment, so do nothing.  (For URIs, '%2E'
+             is equivalent to '.').  */
         }
 #ifdef SVN_USE_DOS_PATHS
       /* If this is the first path segment of a file:// URI and it contains a
@@ -507,17 +519,15 @@ canonicalize(path_type_t type, const char *path, apr_pool_t *pool)
       else
         {
           /* An actual segment, append it to the destination path */
-          if (*next)
-            seglen++;
           memcpy(dst, src, seglen);
           dst += seglen;
+          if (slash_len)
+            *(dst++) = '/';
           canon_segments++;
         }
 
       /* Skip over trailing slash to the next segment. */
-      src = next;
-      if (*src)
-        src++;
+      src = next + slash_len;
     }
 
   /* Remove the trailing slash if there was at least one

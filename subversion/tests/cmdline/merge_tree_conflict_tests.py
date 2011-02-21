@@ -1675,6 +1675,7 @@ def merge_replace_setup(sbox):
 #----------------------------------------------------------------------
 # ra_serf causes duplicate notifications with this test:
 @XFail(svntest.main.is_ra_type_dav_serf)
+@Issue(3802)
 def merge_replace_causes_tree_conflict(sbox):
   "replace vs. edit tree-conflicts"
 
@@ -1750,6 +1751,7 @@ def merge_replace_causes_tree_conflict(sbox):
 
 #----------------------------------------------------------------------
 @XFail()
+@Issue(3806)
 def merge_replace_causes_tree_conflict2(sbox):
   "replace vs. delete tree-conflicts"
 
@@ -1777,15 +1779,16 @@ def merge_replace_causes_tree_conflict2(sbox):
   A_D_G = os.path.join(wc_dir, 'A', 'D', 'G')
   A_D_G_pi = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
   A_D_H = os.path.join(wc_dir, 'A', 'D', 'H')
+  A = os.path.join(wc_dir, 'A')
   A_mu = os.path.join(wc_dir, 'A', 'mu')
   url_A_B = url + '/A/B'
   url_A_D = url + '/A/D'
   url_A_D_G = url + '/A/D/G'
-  url_A_mu = url + '/A/mu'
+  url_A = url + '/A'
   url_branch_B = url + '/branch/B'
   url_branch_D = url + '/branch/D'
   url_branch_D_G = url + '/branch/D/G'
-  url_branch_mu = url + '/branch/mu'
+  url_branch = url + '/branch'
 
   # ACTIONS ON THE MERGE TARGET (A)
   # local mods to conflict with merge source
@@ -1802,96 +1805,126 @@ def merge_replace_causes_tree_conflict2(sbox):
     'D         ' + os.path.join(A_D_H, 'psi') + '\n',
     'D         ' + A_D_H + '\n',
   ])
-
   actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'delete',
     A_mu, A_B_E, A_D_G_pi, A_D_H)
+  expected_status.tweak('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', 'A/D/G/pi',
+                        'A/D/H', 'A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi',
+                        status='D ')
 
   # Merge them one by one to see all the errors.
+
+  ### A file-with-file replacement onto a deleted file. 
   # svn merge $URL/A/mu $URL/branch/mu A/mu
   expected_stdout = verify.UnorderedOutput([
-    "--- Merging differences between repository URLs into '" + A_mu + "':\n",
+    "--- Merging differences between repository URLs into '" + A + "':\n",
     '   C ' + A_mu + '\n',
+    "--- Recording mergeinfo for merge between repository URLs into '" +
+      A + "':\n",
+    " U   " + A + "\n",
     'Summary of conflicts:\n',
     '  Tree conflicts: 1\n',
   ])
-  ### This currently says:
-  # "Skipped missing target: '" + A_mu + "'\n",
-  # "--- Merging differences between repository URLs into '" + A_mu + "':\n",
-  # 'A    ' + A_mu + '\n',
-  # 'Summary of conflicts:\n',
-  # '  Skipped paths: 1\n',
-  ###
 
   actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'merge',
-    url_A_mu, url_branch_mu, A_mu)
+    url_A, url_branch, A, '--depth=files')
+  # New mergeinfo describing the merge.
+  expected_status.tweak('A', status=' M')
+  # Currently this fails because the local status is 'D'eleted rather than
+  # 'R'eplaced with history:
+  #
+  #  D     C merge_tree_conflict_tests-23\A\mu
+  #      >   local delete, incoming replace upon merge
+  expected_status.tweak('A/mu', status='R ', wc_rev='-', copied='+',
+                        treeconflict='C')
 
+  ### A dir-with-dir replacement onto a deleted directory.
   # svn merge $URL/A/B $URL/branch/B A/B
   expected_stdout = verify.UnorderedOutput([
     "--- Merging differences between repository URLs into '" + A_B + "':\n",
     '   C ' + A_B_E + '\n',
+    "--- Recording mergeinfo for merge between repository URLs into '" +
+      A_B + "':\n",
+    " U   " + A_B + "\n",
     'Summary of conflicts:\n',
     '  Tree conflicts: 1\n',
   ])
 
   actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'merge',
     url_A_B, url_branch_B, A_B)
+  # New mergeinfo describing the merge.
+  expected_status.tweak('A/B', status=' M')
+  # Currently this fails because the local status shows a property mod (and
+  # the TC type is listed as incoming delete, not incoming replace):
+  #
+  # RM +  C merge_tree_conflict_tests-23\A\B\E
+  #       >   local delete, incoming delete upon merge
+  expected_status.tweak('A/B/E', status='R ', wc_rev='-', copied='+',
+                        treeconflict='C')
 
+  ### A dir-with-file replacement onto a deleted directory.
   # svn merge --depth=immediates $URL/A/D $URL/branch/D A/D
   expected_stdout = verify.UnorderedOutput([
     "--- Merging differences between repository URLs into '" + A_D + "':\n",
     '   C ' + A_D_H + '\n',
+    "--- Recording mergeinfo for merge between repository URLs into '" +
+      A_D + "':\n",
+    " U   " + A_D + "\n",
+    " U   " + A_D_G + "\n",
     'Summary of conflicts:\n',
     '  Tree conflicts: 1\n',
   ])
 
   actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'merge',
     '--depth=immediates', url_A_D, url_branch_D, A_D)
+  # New mergeinfo describing the merge.
+  expected_status.tweak('A/D', 'A/D/G', status=' M')
+  # Currently this fails because the local status is 'D'eleted rather than
+  # 'R'eplaced with history:
+  #
+  # D     C merge_tree_conflict_tests-23\A\D\H
+  #       >   local delete, incoming replace upon merge
+  expected_status.tweak('A/D/H', status='R ', wc_rev='-', copied='+',
+                        treeconflict='C')
 
+  ### A file-with-dir replacement onto a deleted file.
   # svn merge $URL/A/D/G $URL/branch/D/G A/D/G
   expected_stdout = verify.UnorderedOutput([
     "--- Merging differences between repository URLs into '" + A_D_G +
     "':\n",
     '   C ' + A_D_G_pi + '\n',
+    "--- Recording mergeinfo for merge between repository URLs into '" +
+      A_D_G + "':\n",
+    "--- Eliding mergeinfo from '" + A_D_G_pi + "':\n",
+    " U   " + A_D_G_pi + "\n",
+    "--- Eliding mergeinfo from '" + A_D_G_pi + "':\n",
+    " U   " + A_D_G_pi + "\n",
+    " G   " + A_D_G + "\n",
     'Summary of conflicts:\n',
     '  Tree conflicts: 1\n',
   ])
-  ### This currently says:
-  # 'subversion/svn/util.c:898: (apr_err=155018)\n',
-  # 'subversion/libsvn_client/merge.c:8317: (apr_err=155018)\n',
-  # 'subversion/libsvn_client/merge.c:8064: (apr_err=155018)\n',
-  # 'subversion/libsvn_client/merge.c:7928: (apr_err=155018)\n',
-  # 'subversion/libsvn_client/merge.c:4694: (apr_err=155018)\n',
-  # 'subversion/libsvn_repos/reporter.c:1263: (apr_err=155018)\n',
-  # 'subversion/libsvn_repos/reporter.c:1194: (apr_err=155018)\n',
-  # 'subversion/libsvn_repos/reporter.c:1132: (apr_err=155018)\n',
-  # 'subversion/libsvn_repos/reporter.c:847: (apr_err=155018)\n',
-  # 'subversion/libsvn_delta/cancel.c:120: (apr_err=155018)\n',
-  # 'subversion/libsvn_delta/cancel.c:120: (apr_err=155018)\n',
-  # 'subversion/libsvn_client/repos_diff.c:554: (apr_err=155018)\n',
-  # 'subversion/libsvn_client/merge.c:1990: (apr_err=155018)\n',
-  # 'subversion/libsvn_wc/adm_ops.c:1474: (apr_err=155018)\n',
-  # "svn: Can't replace '" + A_D_G_pi + "' with a node of a differing type; t
-  # he deletion must be committed and the parent updated before adding '" +
-  # A_D_G_pi + "'\n",
-  ###
 
   actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'merge',
     url_A_D_G, url_branch_D_G, A_D_G)
+  # New mergeinfo describing the merge.
+  expected_status.tweak('A/D/G', status=' M')
+  # Currently this fails because the local status shows a property mod (and
+  # the TC type is listed as incoming delete, not incoming replace):
+  #
+  # RM +  C merge_tree_conflict_tests-23\A\D\G\pi
+  #       >   local delete, incoming delete upon merge
+  expected_status.tweak('A/D/G/pi', status='R ', wc_rev='-', copied='+',
+                        treeconflict='C')
 
-  # svn st
-  expected_status.tweak('A/mu', 'A/B/E', 'A/D/G/pi', 'A/D/H', status='R ',
-    wc_rev='-', treeconflict='C')
-  ### This currently says:
-  # expected_status.remove('A/D/G/pi')
-  # expected_status.tweak('A/mu', 'A/B/E', status='R ', wc_rev='-', copied='+',
-  #   treeconflict='C')
-  # expected_status.tweak('A/D/H', status='D ', treeconflict='C')
-  ###
-  expected_status.tweak('A/D', 'A/D/G', 'A/B', status=' M')
-  expected_status.tweak('A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi',
-    'A/B/E/alpha', 'A/B/E/beta', status='D ')
-
+  # Check the resulting status:
   actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Check the tree conflict types:
+  expected_stdout = '(R.*)|(Summary of conflicts.*)|(  Tree conflicts.*)' \
+                    '|(.*local delete, incoming replace upon merge.*)'
+  tree_conflicted_path = [A_B_E, A_mu, A_D_G_pi, A_D_H]
+  for path in tree_conflicted_path:
+    actions.run_and_verify_svn2('OUTPUT', expected_stdout, [], 0, 'st',
+                              '--depth=empty', path)
 
 ########################################################################
 # Run the tests

@@ -3428,6 +3428,7 @@ def patch_strip_cwd(sbox):
   return patch_one_property(sbox, True)
 
 @XFail()
+@Issue(3814)
 def patch_set_prop_no_eol(sbox):
   "patch doesn't append newline to properties"
   return patch_one_property(sbox, False)

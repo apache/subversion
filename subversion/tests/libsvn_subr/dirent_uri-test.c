@@ -838,9 +838,8 @@ test_uri_canonicalize(apr_pool_t *pool)
     { "http://server/ ",       "http://server/%20" },
     { "http://server/#",       "http://server/%23" },
     { "http://server/d/a%2Fb", "http://server/d/a/b" },
-    /* ### These tests fail to notice that %2F is '/'.
     { "http://server/d/.%2F.", "http://server/d" },
-    { "http://server/d/%25%2F%25", "http://server/d" }, */
+    { "http://server/d/%2E%2F%2E", "http://server/d" },
     { "file:///C%3a/temp",     "file:///C:/temp" },
     { "http://server/cr%AB",   "http://server/cr%AB" },
     { "http://server/cr%ab",   "http://server/cr%AB" },
@@ -2922,8 +2921,9 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS2(test_dirent_get_absolute,
                    "test svn_dirent_get_absolute"),
 #ifdef WIN32
-    SVN_TEST_XFAIL2(test_dirent_get_absolute_from_lc_drive,
-                   "test svn_dirent_get_absolute with lc drive"),
+    SVN_TEST_WIMP(test_dirent_get_absolute_from_lc_drive,
+                   "test svn_dirent_get_absolute with lc drive",
+                   "Requires patch from apr-trunk"),
 #endif
     SVN_TEST_PASS2(test_dirent_condense_targets,
                    "test svn_dirent_condense_targets"),

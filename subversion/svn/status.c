@@ -150,12 +150,17 @@ print_status(const char *path,
       svn_boolean_t text_conflicted;
       svn_boolean_t prop_conflicted;
       svn_boolean_t tree_conflicted;
+      svn_error_t *err;
 
-      SVN_ERR(svn_wc__node_check_conflicts(&prop_conflicted,
-                                           &text_conflicted,
-                                           &tree_conflicted, ctx->wc_ctx,
-                                           local_abspath, pool, pool));
+      err = svn_wc__node_check_conflicts(&prop_conflicted,
+                                         &text_conflicted,
+                                         &tree_conflicted, ctx->wc_ctx,
+                                         local_abspath, pool, pool);
 
+      if (err && err->apr_err == SVN_ERR_WC_UPGRADE_REQUIRED)
+        svn_error_clear(err);
+      else
+        SVN_ERR(err);
 
       if (tree_conflicted)
         {

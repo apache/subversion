@@ -338,6 +338,7 @@ def info_url_special_characters(sbox):
   for url in special_urls:
     svntest.actions.run_and_verify_info([expected], url)
 
+
 ########################################################################
 # Run the tests
 

@@ -1529,7 +1529,7 @@ def commit_multiple_wc_multiple_repos(sbox):
   svntest.actions.run_and_verify_status(wc2_dir, expected_status2)
 
 #----------------------------------------------------------------------
-@Issues([1195,1239])
+@Issues(1195,1239)
 def commit_nonrecursive(sbox):
   "commit named targets with -N"
 

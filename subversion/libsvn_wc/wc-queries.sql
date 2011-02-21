@@ -145,6 +145,14 @@ VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14,
 SELECT local_relpath FROM nodes
 WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth = ?3;
 
+-- STMT_SELECT_GE_OP_DEPTH_CHILDREN
+SELECT 1 FROM nodes
+WHERE wc_id = ?1 AND parent_relpath = ?2
+  AND (op_depth > ?3 OR (op_depth = ?3 AND presence != 'base-deleted'))
+UNION
+SELECT 1 FROM ACTUAL_NODE
+WHERE wc_id = ?1 AND parent_relpath = ?2;
+
 -- STMT_SELECT_NODE_CHILDREN
 SELECT local_relpath FROM nodes
 WHERE wc_id = ?1 AND parent_relpath = ?2;
@@ -330,9 +338,18 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0;
 DELETE FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
+-- STMT_DELETE_NODES_RECURSIVE
+DELETE FROM nodes
+WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
+  AND op_depth >= ?4;
+
 -- STMT_DELETE_ACTUAL_NODE
 DELETE FROM actual_node
 WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_DELETE_ACTUAL_NODE_RECURSIVE
+DELETE FROM actual_node
+WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#');
 
 -- STMT_DELETE_ACTUAL_NODE_WITHOUT_CONFLICT
 DELETE FROM actual_node
@@ -557,9 +574,13 @@ WHERE wc_id = ?1 AND local_relpath = ?2;
   AND op_depth = (SELECT MAX(op_depth) FROM nodes
                   WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0);
 
--- STMT_UPDATE_OP_DEPTH_RECURSIVE
-UPDATE nodes SET op_depth = ?3
-WHERE wc_id = ?1 AND local_relpath LIKE ?2 ESCAPE '#' AND op_depth = ?3 + 1;
+-- STMT_UPDATE_OP_DEPTH_REDUCE_RECURSIVE
+UPDATE nodes SET op_depth = ?3 - 1
+WHERE wc_id = ?1 AND local_relpath LIKE ?2 ESCAPE '#' AND op_depth = ?3;
+
+-- STMT_UPDATE_OP_DEPTH_INCREASE_RECURSIVE
+UPDATE nodes SET op_depth = ?3 + 1
+WHERE wc_id = ?1 AND local_relpath LIKE ?2 ESCAPE '#' AND op_depth = ?3;
 
 -- STMT_UPDATE_OP_DEPTH
 UPDATE nodes SET op_depth = ?4
@@ -648,6 +669,9 @@ FROM actual_node
 WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
   AND tree_conflict_data IS NULL;
 
+-- STMT_SELECT_ACTUAL_CHILDREN
+SELECT 1 FROM actual_node WHERE wc_id = ?1 AND parent_relpath = ?2;
+
 /* ------------------------------------------------------------------------- */
 
 /* these are used in entries.c  */
@@ -725,6 +749,61 @@ SELECT 1 FROM nodes WHERE op_depth > 0;
 -- STMT_UPDATE_CHECKSUM
 UPDATE nodes SET checksum = ?4
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3;
+
+/* ------------------------------------------------------------------------- */
+/* PROOF OF CONCEPT: Complex queries for callback walks, caching results
+                     in a temporary table. */
+
+-- STMT_CLEAR_NODE_PROPS_CACHE
+DROP TABLE IF EXISTS temp__node_props_cache;
+
+-- STMT_CACHE_NODE_PROPS_RECURSIVE
+CREATE TEMPORARY TABLE temp__node_props_cache AS
+  SELECT local_relpath, kind, properties FROM nodes_current
+  WHERE wc_id = ?1
+    AND (?2 = '' OR local_relpath = ?2 OR local_relpath LIKE ?2 || '/%')
+    AND local_relpath NOT IN (
+      SELECT local_relpath FROM actual_node WHERE wc_id = ?1)
+    AND (presence = 'normal' OR presence = 'incomplete');
+CREATE UNIQUE INDEX temp__node_props_cache_unique
+  ON temp__node_props_cache (local_relpath);
+
+-- STMT_CACHE_ACTUAL_PROPS_RECURSIVE
+INSERT INTO temp__node_props_cache (local_relpath, kind, properties)
+  SELECT A.local_relpath, N.kind, A.properties
+  FROM actual_node AS A JOIN nodes_current AS N
+    ON A.wc_id = N.wc_id AND A.local_relpath = N.local_relpath
+       AND (N.presence = 'normal' OR N.presence = 'incomplete')
+  WHERE A.wc_id = ?1
+    AND (?2 = '' OR A.local_relpath = ?2 OR A.local_relpath LIKE ?2 || '/%')
+    AND A.local_relpath NOT IN
+      (SELECT local_relpath FROM temp__node_props_cache);
+
+-- STMT_CACHE_NODE_PROPS_OF_CHILDREN
+CREATE TEMPORARY TABLE temp__node_props_cache AS
+  SELECT local_relpath, kind, properties FROM nodes_current
+  WHERE wc_id = ?1
+    AND (local_relpath = ?2 OR parent_relpath = ?2)
+    AND local_relpath NOT IN (
+      SELECT local_relpath FROM actual_node WHERE wc_id = ?1)
+    AND (presence = 'normal' OR presence = 'incomplete');
+CREATE UNIQUE INDEX temp__node_props_cache_unique
+  ON temp__node_props_cache (local_relpath);
+
+-- STMT_CACHE_ACTUAL_PROPS_OF_CHILDREN
+INSERT INTO temp__node_props_cache (local_relpath, kind, properties)
+  SELECT A.local_relpath, N.kind, A.properties
+  FROM actual_node AS A JOIN nodes_current AS N
+    ON A.wc_id = N.wc_id AND A.local_relpath = N.local_relpath
+       AND (N.presence = 'normal' OR N.presence = 'incomplete')
+  WHERE A.wc_id = ?1
+    AND (A.local_relpath = ?2 OR A.parent_relpath = ?2)
+    AND A.local_relpath NOT IN
+      (SELECT local_relpath FROM temp__node_props_cache);
+
+-- STMT_SELECT_RELEVANT_PROPS_FROM_CACHE
+SELECT local_relpath, kind, properties FROM temp__node_props_cache
+ORDER BY local_relpath;
 
 
 /* ------------------------------------------------------------------------- */

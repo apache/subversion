@@ -80,6 +80,8 @@ def createExpectedOutput(expected, output_type, match_all=True):
     expected = ExpectedOutput(expected)
   elif isinstance(expected, str):
     expected = RegexOutput(expected, match_all)
+  elif isinstance(expected, int):
+    expected = RegexOutput(".*: E%d:.*" % expected, False)
   elif expected is AnyOutput:
     expected = AnyOutput()
   elif expected is not None and not isinstance(expected, ExpectedOutput):

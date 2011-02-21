@@ -494,7 +494,7 @@ svn_cl__info(apr_getopt_t *os,
   apr_pool_t *subpool = svn_pool_create(pool);
   int i;
   svn_error_t *err;
-  svn_boolean_t saw_a_problem = FALSE;
+  svn_boolean_t seen_nonexistent_target = FALSE;
   svn_opt_revision_t peg_revision;
   svn_info_receiver_t receiver;
   const char *path_prefix;
@@ -579,7 +579,7 @@ svn_cl__info(apr_getopt_t *os,
 
           svn_error_clear(err);
           err = NULL;
-          saw_a_problem = TRUE;
+          seen_nonexistent_target = TRUE;
         }
     }
   svn_pool_destroy(subpool);
@@ -587,8 +587,11 @@ svn_cl__info(apr_getopt_t *os,
   if (opt_state->xml && (! opt_state->incremental))
     SVN_ERR(svn_cl__xml_print_footer("info", pool));
 
-  if (saw_a_problem)
-    return svn_error_create(SVN_ERR_BASE, NULL, NULL);
+  if (seen_nonexistent_target)
+    return svn_error_create(
+      SVN_ERR_ILLEGAL_TARGET, NULL, 
+      _("Could not display info for all targets because some "
+        "targets don't exist"));
   else
     return SVN_NO_ERROR;
 }

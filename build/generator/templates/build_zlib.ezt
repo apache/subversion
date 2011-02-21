@@ -57,7 +57,7 @@ set ASM_OPTS=ASFLAGS="%ASFLAGS%" LOC="%LOC%" OBJA="%OBJA%"
 if /i "%2" == "Win32" (
   set ASM_OPTS=LOC="-DASMV -DASMINF" OBJA="inffas32.obj match686.obj"
 ) else if /i "%2" == "x64" (
-  set ASM_OPTS=LOC="-DASMV -DASMINF" OBJA="inffasx64.obj gvmat64.obj inffas8664.c" AS=ml64 
+  set ASM_OPTS=LOC="-DASMV -DASMINF" OBJA="inffasx64.obj gvmat64.obj inffas8664.obj" AS=ml64 
 )
 [end]
 [end]

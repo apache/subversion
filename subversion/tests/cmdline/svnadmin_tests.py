@@ -914,15 +914,30 @@ def create_in_repo_subdir(sbox):
   # This should succeed
   svntest.main.create_repos(repo_dir)
 
+  success = False
   try:
     # This should fail
     subdir = os.path.join(repo_dir, 'Z')
     svntest.main.create_repos(subdir)
   except svntest.main.SVNRepositoryCreateFailure:
-    return
+    success = True
+  if not success:
+    raise svntest.Failure
 
-  # No SVNRepositoryCreateFailure raised?
-  raise svntest.Failure
+  cwd = os.getcwd()
+  success = False
+  try:
+    # This should fail, too
+    subdir = os.path.join(repo_dir, 'conf')
+    os.chdir(subdir)
+    svntest.main.create_repos('Z')
+    os.chdir(cwd)
+  except svntest.main.SVNRepositoryCreateFailure:
+    success = True
+    os.chdir(cwd)
+  if not success:
+    raise svntest.Failure
+
 
 @SkipUnless(svntest.main.is_fs_type_fsfs)
 def verify_with_invalid_revprops(sbox):

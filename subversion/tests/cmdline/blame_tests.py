@@ -25,7 +25,7 @@
 ######################################################################
 
 # General modules
-import os, sys
+import os, sys, re
 
 # Our testing module
 import svntest
@@ -709,7 +709,6 @@ def blame_output_after_merge(sbox):
 
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                     'blame', '-g', mu_path)
-
 
 ########################################################################
 # Run the tests

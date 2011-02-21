@@ -78,13 +78,6 @@ dag_node_t *
 svn_fs_fs__dag_dup(const dag_node_t *node,
                    apr_pool_t *pool);
 
-/* Like svn_fs_fs__dag_dup, but implementing the svn_cache__dup_func_t
-   prototype, and NULLing the FS field. */
-svn_error_t *
-svn_fs_fs__dag_dup_for_cache(void **out,
-                             const void *in,
-                             apr_pool_t *pool);
-
 /* Serialize a DAG node.
    Implements svn_cache__serialize_func_t */
 svn_error_t *

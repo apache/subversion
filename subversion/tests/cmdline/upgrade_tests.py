@@ -555,6 +555,7 @@ def do_x3_upgrade(sbox):
   })
 
 @XFail()
+@Issue(2530)
 def x3_1_4_0(sbox):
   "3x same wc upgrade 1.4.0 test"
 
@@ -563,6 +564,8 @@ def x3_1_4_0(sbox):
 
   do_x3_upgrade(sbox)
 
+@XFail()
+@Issue(3811)
 def x3_1_4_6(sbox):
   "3x same wc upgrade 1.4.6 test"
 
@@ -571,6 +574,8 @@ def x3_1_4_6(sbox):
 
   do_x3_upgrade(sbox)
 
+@XFail()
+@Issue(3811)
 def x3_1_6_12(sbox):
   "3x same wc upgrade 1.6.12 test"
 
@@ -646,6 +651,7 @@ def missing_dirs2(sbox):
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 
 @XFail()
+@Issue(3808)
 def delete_and_keep_local(sbox):
   "check status delete and delete --keep-local"
 
@@ -669,7 +675,7 @@ def delete_and_keep_local(sbox):
   if not os.path.exists(os.path.join(sbox.wc_dir, 'Deleted-Keep-Local')):
     raise svntest.Failure('wc/Deleted-Keep-Local should exist')
 
-  # Deleted-Keep-Local should be removed after the upgrade as it was
+  # Deleted should be removed after the upgrade as it was
   # schedule delete and doesn't contain unversioned changes.
   if os.path.exists(os.path.join(sbox.wc_dir, 'Deleted')):
     raise svntest.Failure('wc/Deleted should not exist')

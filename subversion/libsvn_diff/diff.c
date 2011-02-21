@@ -111,6 +111,7 @@ svn_diff_diff_2(svn_diff_t **diff,
   apr_pool_t *subpool;
   apr_pool_t *treepool;
   apr_off_t prefix_lines = 0;
+  apr_off_t suffix_lines = 0;
 
   *diff = NULL;
 
@@ -119,7 +120,8 @@ svn_diff_diff_2(svn_diff_t **diff,
 
   svn_diff__tree_create(&tree, treepool);
 
-  SVN_ERR(vtable->datasources_open(diff_baton, &prefix_lines, datasource, 2));
+  SVN_ERR(vtable->datasources_open(diff_baton, &prefix_lines, &suffix_lines,
+                                   datasource, 2));
 
   /* Insert the data into the tree */
   SVN_ERR(svn_diff__get_tokens(&position_list[0],
@@ -146,7 +148,8 @@ svn_diff_diff_2(svn_diff_t **diff,
   svn_pool_destroy(treepool);
 
   /* Get the lcs */
-  lcs = svn_diff__lcs(position_list[0], position_list[1], prefix_lines, subpool);
+  lcs = svn_diff__lcs(position_list[0], position_list[1], prefix_lines,
+                      suffix_lines, subpool);
 
   /* Produce the diff */
   *diff = svn_diff__diff(lcs, 1, 1, TRUE, pool);

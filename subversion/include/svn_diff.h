@@ -109,7 +109,9 @@ typedef enum svn_diff_datasource_e
 typedef struct svn_diff_fns2_t
 {
   /** Open the datasources of type @a datasources. */
-  svn_error_t *(*datasources_open)(void *diff_baton, apr_off_t *prefix_lines,
+  svn_error_t *(*datasources_open)(void *diff_baton,
+                                   apr_off_t *prefix_lines,
+                                   apr_off_t *suffix_lines,
                                    const svn_diff_datasource_e *datasources,
                                    apr_size_t datasources_len);
 
@@ -928,8 +930,8 @@ typedef struct svn_diff_hunk_t svn_diff_hunk_t;
  * text will be returned in reversed form.
  * The line-terminator is detected automatically and stored in @a *eol
  * if @a eol is not NULL.
- * If EOF is reached and the stream does not end with a newline character,
- * and @a eol is not NULL, @a *eol is set to NULL.
+ * If EOF is reached, set @a *eof to TRUE, and set @a *eol to NULL if the
+ * hunk does not end with a newline character and @a eol is not NULL.
  * Temporary allocations will be performed in @a scratch_pool.
  *
  * @since New in 1.7.
@@ -947,8 +949,8 @@ svn_diff_hunk_readline_diff_text(svn_diff_hunk_t *hunk,
  * of the original text of @a hunk.
  * The line-terminator is detected automatically and stored in @a *eol
  * if @a eol is not NULL.
- * If EOF is reached and the stream does not end with a newline character,
- * and @a eol is not NULL, @a *eol is set to NULL.
+ * If EOF is reached, set @a *eof to TRUE, and set @a *eol to NULL if the
+ * hunk text does not end with a newline character and @a eol is not NULL.
  * Temporary allocations will be performed in @a scratch_pool.
  *
  * @see svn_diff_hunk_t

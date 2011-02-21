@@ -408,23 +408,18 @@ svn_checksum_mismatch_err(const svn_checksum_t *expected,
                           const char *fmt,
                           ...)
 {
-  if (!svn_checksum_match(expected, actual))
-    {
-      va_list ap;
-      const char *desc;
+  va_list ap;
+  const char *desc;
 
-      va_start(ap, fmt);
-      desc = apr_pvsprintf(scratch_pool, fmt, ap);
-      va_end(ap);
+  va_start(ap, fmt);
+  desc = apr_pvsprintf(scratch_pool, fmt, ap);
+  va_end(ap);
     
-      return svn_error_createf(SVN_ERR_CHECKSUM_MISMATCH, NULL,
-                               _("%s:\n"
-                                 "   expected:  %s\n"
-                                 "     actual:  %s\n"),
-                    desc,               
-                    svn_checksum_to_cstring_display(expected, scratch_pool),
-                    svn_checksum_to_cstring_display(actual, scratch_pool));
-    }
-  else
-    return SVN_NO_ERROR;
+  return svn_error_createf(SVN_ERR_CHECKSUM_MISMATCH, NULL,
+                           _("%s:\n"
+                             "   expected:  %s\n"
+                             "     actual:  %s\n"),
+                desc,               
+                svn_checksum_to_cstring_display(expected, scratch_pool),
+                svn_checksum_to_cstring_display(actual, scratch_pool));
 }

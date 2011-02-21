@@ -823,15 +823,11 @@ svn_fs_base__rep_contents(svn_string_t *str,
                          pool));
 
     if (! svn_checksum_match(checksum, rep_checksum))
-      return svn_error_createf
-        (SVN_ERR_FS_CORRUPT, NULL,
-         apr_psprintf(pool, "%s:\n%s\n%s\n",
-                      _("Checksum mismatch on representation '%s'"),
-                      _("   expected:  %s"),
-                      _("     actual:  %s")),
-         rep_key,
-         svn_checksum_to_cstring_display(rep_checksum, pool),
-         svn_checksum_to_cstring_display(checksum, pool));
+      return svn_error_create(SVN_ERR_FS_CORRUPT,
+                svn_checksum_mismatch_err(rep_checksum, checksum, pool,
+                            _("Checksum mismatch on representation '%s'"),
+                            rep_key),
+                NULL);
   }
 
   return SVN_NO_ERROR;
@@ -921,32 +917,22 @@ txn_body_read_rep(void *baton, trail_t *trail)
               if (rep->md5_checksum
                   && (! svn_checksum_match(rep->md5_checksum,
                                            args->rb->md5_checksum)))
-                return svn_error_createf
-                  (SVN_ERR_FS_CORRUPT, NULL,
-                   apr_psprintf(trail->pool, "%s:\n%s\n%s\n",
-                                _("MD5 checksum mismatch on representation '%s'"),
-                                _("   expected:  %s"),
-                                _("     actual:  %s")),
-                   args->rb->rep_key,
-                   svn_checksum_to_cstring_display(rep->md5_checksum,
-                                                   trail->pool),
-                   svn_checksum_to_cstring_display(args->rb->md5_checksum,
-                                                   trail->pool));
+                return svn_error_create(SVN_ERR_FS_CORRUPT,
+                        svn_checksum_mismatch_err(rep->md5_checksum,
+                             args->rb->sha1_checksum, trail->pool,
+                             _("MD5 checksum mismatch on representation '%s'"),
+                             args->rb->rep_key),
+                        NULL);
 
               if (rep->sha1_checksum
                   && (! svn_checksum_match(rep->sha1_checksum,
                                            args->rb->sha1_checksum)))
-                return svn_error_createf
-                  (SVN_ERR_FS_CORRUPT, NULL,
-                   apr_psprintf(trail->pool, "%s:\n%s\n%s\n",
-                                _("SHA1 checksum mismatch on representation '%s'"),
-                                _("   expected:  %s"),
-                                _("     actual:  %s")),
-                   args->rb->rep_key,
-                   svn_checksum_to_cstring_display(rep->sha1_checksum,
-                                                   trail->pool),
-                   svn_checksum_to_cstring_display(args->rb->sha1_checksum,
-                                                   trail->pool));
+                return svn_error_createf(SVN_ERR_FS_CORRUPT,
+                        svn_checksum_mismatch_err(rep->sha1_checksum,
+                            args->rb->sha1_checksum, trail->pool,
+                            _("SHA1 checksum mismatch on representation '%s'"),
+                            args->rb->rep_key),
+                        NULL);
             }
         }
     }

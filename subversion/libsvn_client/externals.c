@@ -36,6 +36,7 @@
 #include "svn_error.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
+#include "svn_props.h"
 #include "svn_config.h"
 #include "client.h"
 
@@ -593,7 +594,7 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
                         apr_pstrndup(pool, url, num_leading_slashes),
                         svn_relpath_canonicalize(url + num_leading_slashes,
                                                  pool),
-                        NULL);
+                        (char*)NULL);
     }
   else
     {
@@ -696,7 +697,7 @@ resolve_relative_external_url(svn_wc_external_item2_t *item,
 
       SVN_ERR(uri_scheme(&scheme, repos_root_url, pool));
       item->url = svn_uri_canonicalize(apr_pstrcat(pool, scheme, ":",
-                                                   url, NULL), pool);
+                                                   url, (char *)NULL), pool);
       return SVN_NO_ERROR;
     }
 
@@ -1424,33 +1425,36 @@ svn_client__external_info_gatherer(void *baton,
 }
 
 
-/* Callback of type svn_wc_external_update_t.  Just squirrels away an
+/* An implementation of svn_wc__proplist_receiver_t. Just squirrels away an
    svn:externals property value into BATON (which is an apr_hash_t *
    keyed on local absolute path).  */
 static svn_error_t *
-externals_update_func(void *baton,
-                      const char *local_abspath,
-                      const svn_string_t *old_val,
-                      const svn_string_t *new_val,
-                      svn_depth_t depth,
-                      apr_pool_t *scratch_pool)
+externals_crawl_proplist_receiver(void *baton,
+                                  const char *local_abspath,
+                                  apr_hash_t *props,
+                                  apr_pool_t *scratch_pool)
 {
-  apr_hash_t *externals_hash = baton;
-  apr_pool_t *hash_pool = apr_hash_pool_get(externals_hash);
+  apr_hash_index_t *hi;
+  apr_hash_t *externals_hash = (apr_hash_t*)baton;
 
-  apr_hash_set(externals_hash, apr_pstrdup(hash_pool, local_abspath),
-               APR_HASH_KEY_STRING, svn_string_dup(new_val, hash_pool));
-  return SVN_NO_ERROR;
-}
+  for (hi = apr_hash_first(scratch_pool, props);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *propname;
 
+      propname = svn__apr_hash_index_key(hi);
+      if (strcmp(propname, SVN_PROP_EXTERNALS) == 0)
+        {
+          apr_pool_t *hash_pool = apr_hash_pool_get(externals_hash);
+          svn_string_t *propval = svn__apr_hash_index_val(hi);
 
-/* Callback of type svn_wc_status_func4_t.  Does nothing. */
-static svn_error_t *
-status_noop_func(void *baton,
-                 const char *local_abspath,
-                 const svn_wc_status3_t *status,
-                 apr_pool_t *scratch_pool)
-{
+          apr_hash_set(externals_hash, apr_pstrdup(hash_pool, local_abspath),
+                       APR_HASH_KEY_STRING, svn_string_dup(propval, hash_pool));
+          break;
+        }
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -1465,13 +1469,55 @@ svn_client__crawl_for_externals(apr_hash_t **externals_p,
 {
   apr_hash_t *externals_hash = apr_hash_make(result_pool);
 
-  /* Do a status run just to harvest externals definitions. */
-  SVN_ERR(svn_wc_walk_status(ctx->wc_ctx, local_abspath, depth,
-                             FALSE, FALSE, NULL, status_noop_func, NULL,
-                             externals_update_func, externals_hash,
-                             ctx->cancel_func, ctx->cancel_baton,
-                             scratch_pool));
+  SVN_ERR(svn_wc__prop_list_recursive(ctx->wc_ctx, local_abspath, depth,
+                                      externals_crawl_proplist_receiver,
+                                      externals_hash,
+                                      ctx->cancel_func,
+                                      ctx->cancel_baton,
+                                      scratch_pool));
 
   *externals_p = externals_hash;
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_client__gather_externals_in_locally_added_dirs(apr_hash_t *externals_new,
+                                                   apr_hash_t *ambient_depths,
+                                                   const char *anchor_abspath,
+                                                   svn_depth_t requested_depth,
+                                                   svn_client_ctx_t *ctx,
+                                                   apr_pool_t *scratch_pool)
+{
+  apr_hash_t *all_externals;
+  apr_hash_index_t *hi;
+
+  /* If there was no requested depth for this operation, use infinity.
+   * svn_client__crawl_for_externals() doesn't like depth 'unknown'. */
+  if (requested_depth == svn_depth_unknown)
+    requested_depth = svn_depth_infinity;
+
+  SVN_ERR(svn_client__crawl_for_externals(&all_externals, anchor_abspath,
+                                          requested_depth, ctx, scratch_pool,
+                                          scratch_pool));
+
+  for (hi = apr_hash_first(scratch_pool, all_externals);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *local_abspath = svn__apr_hash_index_key(hi);
+
+      if (! apr_hash_get(externals_new, local_abspath, APR_HASH_KEY_STRING))
+        {
+          apr_pool_t *hash_pool = apr_hash_pool_get(externals_new);
+          svn_string_t *propval = svn__apr_hash_index_val(hi);
+
+          apr_hash_set(externals_new, local_abspath, APR_HASH_KEY_STRING,
+                       apr_pstrdup(hash_pool, propval->data));
+          apr_hash_set(ambient_depths, local_abspath, APR_HASH_KEY_STRING,
+                       svn_depth_to_word(svn_depth_infinity));
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+

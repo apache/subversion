@@ -1041,6 +1041,38 @@ def revert_child_of_copy(sbox):
                                      'revert', sbox.ospath('A/B/E2/beta'))
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+@XFail()
+@Issue(3783)
+def revert_non_recusive_after_delete(sbox):
+  "non-recursive revert after delete"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', sbox.ospath('A/B'))
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/B', 'A/B/E', 'A/B/E/alpha', 'A/B/E/beta', 'A/B/F',
+                        'A/B/lambda', status='D ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # This appears to work but gets the op-depth wrong
+  expected_output = ["Reverted '%s'\n" % sbox.ospath('A/B')]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'revert', sbox.ospath('A/B'))
+  expected_status.tweak('A/B', status='  ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'mkdir', sbox.ospath('A/B/E'))
+  expected_status.tweak('A/B/E', status='R ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Since the op-depth was wrong A/B/E erroneously remains deleted
+  expected_output = ["Reverted '%s'\n" % sbox.ospath('A/B/E')]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'revert', sbox.ospath('A/B/E'))
+  expected_status.tweak('A/B/E', status='  ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 ########################################################################
 # Run the tests
@@ -1070,6 +1102,7 @@ test_list = [ None,
               revert_add_over_not_present_dir,
               revert_added_tree,
               revert_child_of_copy,
+              revert_non_recusive_after_delete,
              ]
 
 if __name__ == '__main__':

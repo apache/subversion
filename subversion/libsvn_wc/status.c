@@ -695,13 +695,21 @@ assemble_unversioned(svn_wc_status3_t **status,
 {
   svn_wc_status3_t *stat;
   const svn_wc_conflict_description2_t *tree_conflict;
+  svn_error_t *err;
 
   /* Find out whether the path is a tree conflict victim.
      This function will set tree_conflict to NULL if the path
      is not a victim. */
-  SVN_ERR(svn_wc__db_op_read_tree_conflict(&tree_conflict,
-                                           db, local_abspath,
-                                           scratch_pool, scratch_pool));
+  err = svn_wc__db_op_read_tree_conflict(&tree_conflict,
+                                         db, local_abspath,
+                                         scratch_pool, scratch_pool);
+  
+  if (path_kind == svn_node_dir && 
+      err && 
+      err->apr_err == SVN_ERR_WC_UPGRADE_REQUIRED)
+    svn_error_clear(err);
+  else
+    SVN_ERR(err);
 
   /* return a fairly blank structure. */
   stat = apr_pcalloc(result_pool, sizeof(**status));

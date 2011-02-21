@@ -198,16 +198,14 @@ compare_and_verify(svn_boolean_t *modified_p,
       if (verify_checksum && node_checksum)
         {
           if (checksum && !svn_checksum_match(checksum, node_checksum))
-            {
-              return svn_error_createf(SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
-                   _("Checksum mismatch indicates corrupt text base for file: "
-                     "'%s':\n"
-                     "   expected:  %s\n"
-                     "     actual:  %s\n"),
-                  svn_dirent_local_style(versioned_file_abspath, scratch_pool),
-                  svn_checksum_to_cstring_display(node_checksum, scratch_pool),
-                  svn_checksum_to_cstring_display(checksum, scratch_pool));
-            }
+            return svn_error_create(SVN_ERR_WC_CORRUPT_TEXT_BASE,
+                    svn_checksum_mismatch_err(node_checksum, checksum,
+                                              scratch_pool,
+                                _("Checksum mismatch indicates corrupt "
+                                  "text base for file: '%s'"),
+                                svn_dirent_local_style(versioned_file_abspath,
+                                                       scratch_pool)),
+                    NULL);
         }
     }
   else

@@ -235,7 +235,7 @@ svn_error_t *load_configs(svn_config_t **cfg,
   const char *pwdb_path, *authzdb_path;
   svn_error_t *err;
 
-  SVN_ERR(svn_config_read(cfg, filename, must_exist, pool));
+  SVN_ERR(svn_config_read2(cfg, filename, must_exist, FALSE, pool));
 
   svn_config_get(*cfg, &pwdb_path, SVN_CONFIG_SECTION_GENERAL,
                  SVN_CONFIG_OPTION_PASSWORD_DB, NULL);
@@ -245,7 +245,7 @@ svn_error_t *load_configs(svn_config_t **cfg,
     {
       pwdb_path = svn_dirent_join(base, pwdb_path, pool);
 
-      err = svn_config_read(pwdb, pwdb_path, TRUE, pool);
+      err = svn_config_read2(pwdb, pwdb_path, TRUE, FALSE, pool);
       if (err)
         {
           if (server)
@@ -1844,15 +1844,17 @@ static svn_error_t *get_mergeinfo(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   apr_hash_index_t *hi;
   const char *inherit_word;
   svn_mergeinfo_inheritance_t inherit;
-  svn_boolean_t validate_inherited_mergeinfo;
+  apr_uint64_t validate_inherited_mergeinfo;
   svn_boolean_t include_descendants;
   apr_pool_t *iterpool;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)wb?b", &paths, &rev,
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)wb?B", &paths, &rev,
                                  &inherit_word,
                                  &include_descendants,
                                  &validate_inherited_mergeinfo));
   inherit = svn_inheritance_from_word(inherit_word);
+  if (validate_inherited_mergeinfo == SVN_RA_SVN_UNSPECIFIED_NUMBER)
+    validate_inherited_mergeinfo = FALSE;
 
   /* Canonicalize the paths which mergeinfo has been requested for. */
   canonical_paths = apr_array_make(pool, paths->nelts, sizeof(const char *));
@@ -1878,6 +1880,7 @@ static svn_error_t *get_mergeinfo(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_CMD_ERR(svn_repos_fs_get_mergeinfo2(&mergeinfo, b->repos,
                                           canonical_paths, rev,
                                           inherit,
+                                          (svn_boolean_t)
                                           validate_inherited_mergeinfo,
                                           include_descendants,
                                           authz_check_access_cb_func(b), b,
@@ -2385,10 +2388,15 @@ static svn_error_t *file_rev_handler(void *baton, const char *path,
       svn_stream_set_write(stream, svndiff_handler);
       svn_stream_set_close(stream, svndiff_close_handler);
 
-      if (svn_ra_svn_has_capability(frb->conn, SVN_RA_SVN_CAP_SVNDIFF1))
-        svn_txdelta_to_svndiff2(d_handler, d_baton, stream, 1, pool);
+      /* If the connection does not support SVNDIFF1 or if we don't want to use
+       * compression, use the non-compressing "version 0" implementation */ 
+      if (   svn_ra_svn_compression_level(frb->conn) > 0
+          && svn_ra_svn_has_capability(frb->conn, SVN_RA_SVN_CAP_SVNDIFF1))
+        svn_txdelta_to_svndiff3(d_handler, d_baton, stream, 1,
+                                svn_ra_svn_compression_level(frb->conn), pool);
       else
-        svn_txdelta_to_svndiff2(d_handler, d_baton, stream, 0, pool);
+        svn_txdelta_to_svndiff3(d_handler, d_baton, stream, 0,
+                                svn_ra_svn_compression_level(frb->conn), pool);
     }
   else
     SVN_ERR(svn_ra_svn_write_cstring(frb->conn, pool, ""));
@@ -3110,17 +3118,27 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
 
   /* Send greeting.  We don't support version 1 any more, so we can
    * send an empty mechlist. */
-  /* Server-side capabilities list: */
-  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "nn()(wwwwwwww)",
-                                        (apr_uint64_t) 2, (apr_uint64_t) 2,
-                                        SVN_RA_SVN_CAP_EDIT_PIPELINE,
-                                        SVN_RA_SVN_CAP_SVNDIFF1,
-                                        SVN_RA_SVN_CAP_ABSENT_ENTRIES,
-                                        SVN_RA_SVN_CAP_COMMIT_REVPROPS,
-                                        SVN_RA_SVN_CAP_DEPTH,
-                                        SVN_RA_SVN_CAP_LOG_REVPROPS,
-                                        SVN_RA_SVN_CAP_ATOMIC_REVPROPS,
-                                        SVN_RA_SVN_CAP_PARTIAL_REPLAY));
+  if (params->compression_level > 0)
+    SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "nn()(wwwwwwww)",
+                                          (apr_uint64_t) 2, (apr_uint64_t) 2,
+                                          SVN_RA_SVN_CAP_EDIT_PIPELINE,
+                                          SVN_RA_SVN_CAP_SVNDIFF1,
+                                          SVN_RA_SVN_CAP_ABSENT_ENTRIES,
+                                          SVN_RA_SVN_CAP_COMMIT_REVPROPS,
+                                          SVN_RA_SVN_CAP_DEPTH,
+                                          SVN_RA_SVN_CAP_LOG_REVPROPS,
+                                          SVN_RA_SVN_CAP_ATOMIC_REVPROPS,
+                                          SVN_RA_SVN_CAP_PARTIAL_REPLAY));
+  else
+    SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "nn()(wwwwwww)",
+                                          (apr_uint64_t) 2, (apr_uint64_t) 2,
+                                          SVN_RA_SVN_CAP_EDIT_PIPELINE,
+                                          SVN_RA_SVN_CAP_ABSENT_ENTRIES,
+                                          SVN_RA_SVN_CAP_COMMIT_REVPROPS,
+                                          SVN_RA_SVN_CAP_DEPTH,
+                                          SVN_RA_SVN_CAP_LOG_REVPROPS,
+                                          SVN_RA_SVN_CAP_ATOMIC_REVPROPS,
+                                          SVN_RA_SVN_CAP_PARTIAL_REPLAY));
 
   /* Read client response, which we assume to be in version 2 format:
    * version, capability list, and client URL; then we do an auth

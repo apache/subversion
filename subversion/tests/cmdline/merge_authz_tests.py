@@ -73,7 +73,7 @@ from svntest.actions import inject_conflict_into_expected_state
 #         This is *not* a full test of issue #2829, see also merge_tests.py,
 #         search for "2829".  This tests the problem where a merge adds a path
 #         with a missing sibling and so needs its own explicit mergeinfo.
-@Issue([2893,2997,2829])
+@Issues(2893,2997,2829)
 @SkipUnless(svntest.main.server_has_mergeinfo)
 @Skip(svntest.main.is_ra_type_file)
 def mergeinfo_and_skipped_paths(sbox):

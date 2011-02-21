@@ -1249,6 +1249,29 @@ translated_stream_read(void *baton,
   return SVN_NO_ERROR;
 }
 
+/* Implements svn_skip_fn_t. */
+static svn_error_t *
+translated_stream_skip(void *baton,
+                       apr_size_t *count)
+{
+  apr_size_t total_bytes_read = 0;
+  apr_size_t bytes_read = 1;
+  char buffer[SVN__STREAM_CHUNK_SIZE];
+  svn_error_t *err = SVN_NO_ERROR;
+  apr_size_t to_read = *count;
+
+  while ((to_read > 0) && !err && (bytes_read > 0))
+    {
+      bytes_read = sizeof(buffer) < to_read ? sizeof(buffer) : to_read;
+      err = translated_stream_read(baton, buffer, &bytes_read);
+      total_bytes_read += bytes_read;
+      to_read -= bytes_read;
+    }
+
+  *count = total_bytes_read;
+  return err;
+}
+
 /* Implements svn_write_fn_t. */
 static svn_error_t *
 translated_stream_write(void *baton,
@@ -1316,13 +1339,13 @@ translated_stream_mark(void *baton, svn_stream_mark_t **mark, apr_pool_t *pool)
 
 /* Implements svn_io_seek_fn_t. */
 static svn_error_t *
-translated_stream_seek(void *baton, svn_stream_mark_t *mark)
+translated_stream_seek(void *baton, const svn_stream_mark_t *mark)
 {
   struct translated_stream_baton *b = baton;
 
   if (mark != NULL)
     {
-      mark_translated_t *mt = (mark_translated_t *)mark;
+      const mark_translated_t *mt = (const mark_translated_t *)mark;
 
       /* Flush output buffer if necessary. */
       if (b->written)
@@ -1358,6 +1381,14 @@ translated_stream_seek(void *baton, svn_stream_mark_t *mark)
     }
 
   return SVN_NO_ERROR;
+}
+
+/* Implements svn_io_buffered_fn_t. */
+static svn_boolean_t
+translated_stream_buffered(void *baton)
+{
+  struct translated_stream_baton *b = baton;
+  return svn_stream_buffered(b->stream);
 }
 
 svn_error_t *
@@ -1465,10 +1496,12 @@ stream_translated(svn_stream_t *stream,
 
   /* Setup the stream methods */
   svn_stream_set_read(s, translated_stream_read);
+  svn_stream_set_skip(s, translated_stream_skip);
   svn_stream_set_write(s, translated_stream_write);
   svn_stream_set_close(s, translated_stream_close);
   svn_stream_set_mark(s, translated_stream_mark);
   svn_stream_set_seek(s, translated_stream_seek);
+  svn_stream_set_buffered(s, translated_stream_buffered);
 
   return s;
 }

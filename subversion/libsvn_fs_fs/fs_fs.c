@@ -1074,9 +1074,9 @@ read_config(svn_fs_t *fs,
 {
   fs_fs_data_t *ffd = fs->fsap_data;
 
-  SVN_ERR(svn_config_read(&ffd->config,
-                          svn_dirent_join(fs->path, PATH_CONFIG, pool),
-                          FALSE, fs->pool));
+  SVN_ERR(svn_config_read2(&ffd->config,
+                           svn_dirent_join(fs->path, PATH_CONFIG, pool),
+                           FALSE, FALSE, fs->pool));
 
   /* Initialize ffd->rep_sharing_allowed. */
   if (ffd->format >= SVN_FS_FS__MIN_REP_SHARING_FORMAT)
@@ -3049,7 +3049,8 @@ create_rep_state_body(struct rep_state **rep_state,
     return SVN_NO_ERROR;
 
   /* We are dealing with a delta, find out what version. */
-  SVN_ERR(svn_io_file_read_full(rs->file, buf, sizeof(buf), NULL, pool));
+  SVN_ERR(svn_io_file_read_full2(rs->file, buf, sizeof(buf),
+                                 NULL, NULL, pool));
   if (! ((buf[0] == 'S') && (buf[1] == 'V') && (buf[2] == 'N')))
     return svn_error_create
       (SVN_ERR_FS_CORRUPT, NULL,
@@ -3214,7 +3215,9 @@ rep_read_get_baton(struct rep_read_baton **rb_p,
   b->filehandle_pool = svn_pool_create(pool);
 
   if (fulltext_cache_key)
-    b->current_fulltext = svn_stringbuf_create("", b->filehandle_pool);
+    b->current_fulltext = svn_stringbuf_create_ensure
+                            ((apr_size_t)rep->expanded_size,
+                             b->filehandle_pool);
   else
     b->current_fulltext = NULL;
 
@@ -3336,8 +3339,8 @@ get_contents(struct rep_read_baton *rb,
       rs = rb->src_state;
       if (((apr_off_t) copy_len) > rs->end - rs->off)
         copy_len = (apr_size_t) (rs->end - rs->off);
-      SVN_ERR(svn_io_file_read_full(rs->file, cur, copy_len, NULL,
-                                    rb->pool));
+      SVN_ERR(svn_io_file_read_full2(rs->file, cur, copy_len, NULL,
+                                     NULL, rb->pool));
       rs->off += copy_len;
       *len = copy_len;
       return SVN_NO_ERROR;
@@ -3412,9 +3415,9 @@ get_contents(struct rep_read_baton *rb,
                       SVN_ERR(svn_io_file_seek(rs->file, APR_SET, &rs->off,
                                                rb->pool));
                     }
-                  SVN_ERR(svn_io_file_read_full(rs->file, sbuf,
-                                                lwindow->sview_len,
-                                                NULL, rb->pool));
+                  SVN_ERR(svn_io_file_read_full2(rs->file, sbuf,
+                                                 lwindow->sview_len,
+                                                 NULL, NULL, rb->pool));
                   rs->off += lwindow->sview_len;
                 }
               else
@@ -3494,14 +3497,11 @@ rep_read_contents(void *baton,
           SVN_ERR(svn_checksum_final(&md5_checksum, rb->md5_checksum_ctx,
                                      rb->pool));
           if (!svn_checksum_match(md5_checksum, rb->md5_checksum))
-            return svn_error_createf
-              (SVN_ERR_FS_CORRUPT, NULL,
-               apr_psprintf(rb->pool, "%s:\n%s\n%s\n",
-                            _("Checksum mismatch while reading representation"),
-                            _("   expected:  %s"),
-                            _("     actual:  %s")),
-               svn_checksum_to_cstring_display(rb->md5_checksum, rb->pool),
-               svn_checksum_to_cstring_display(md5_checksum, rb->pool));
+            return svn_error_create(SVN_ERR_FS_CORRUPT,
+                    svn_checksum_mismatch_err(rb->md5_checksum, md5_checksum,
+                        rb->pool,
+                        _("Checksum mismatch while reading representation")),
+                    NULL);
         }
     }
 
@@ -3748,26 +3748,6 @@ unparse_dir_entries(apr_hash_t **str_entries_p,
 }
 
 
-svn_error_t *
-svn_fs_fs__dir_entries_serialize(char **data,
-                                 apr_size_t *data_len,
-                                 void *in,
-                                 apr_pool_t *pool)
-{
-  apr_hash_t *entries = in;
-  svn_stringbuf_t *buf = svn_stringbuf_create("", pool);
-  svn_stream_t *stream = svn_stream_from_stringbuf(buf, pool);
-
-  SVN_ERR(unparse_dir_entries(&entries, entries, pool));
-  SVN_ERR(svn_hash_write2(entries, stream, SVN_HASH_TERMINATOR, pool));
-
-  *data = buf->data;
-  *data_len = buf->len;
-
-  return SVN_NO_ERROR;
-}
-
-
 /* Given a hash STR_ENTRIES with values as svn_string_t as specified
    in an FSFS directory contents listing, return a hash of dirents in
    *ENTRIES_P.  Perform allocations in POOL. */
@@ -3822,24 +3802,6 @@ parse_dir_entries(apr_hash_t **entries_p,
 
   return SVN_NO_ERROR;
 }
-
-svn_error_t *
-svn_fs_fs__dir_entries_deserialize(void **out,
-                                   const char *data,
-                                   apr_size_t data_len,
-                                   apr_pool_t *pool)
-{
-  apr_hash_t *entries = apr_hash_make(pool);
-  svn_stringbuf_t *buf = svn_stringbuf_ncreate(data, data_len, pool);
-  svn_stream_t *stream = svn_stream_from_stringbuf(buf, pool);
-
-  SVN_ERR(svn_hash_read2(entries, stream, SVN_HASH_TERMINATOR, pool));
-  SVN_ERR(parse_dir_entries(&entries, entries, pool));
-
-  *out = entries;
-  return SVN_NO_ERROR;
-}
-
 
 svn_error_t *
 svn_fs_fs__rep_contents_dir(apr_hash_t **entries_p,
@@ -6697,8 +6659,8 @@ read_handler_recover(void *baton, char *buffer, apr_size_t *len)
     bytes_to_read = b->remaining;
   b->remaining -= bytes_to_read;
 
-  return svn_io_file_read_full(b->file, buffer, (apr_size_t) bytes_to_read,
-                               len, b->pool);
+  return svn_io_file_read_full2(b->file, buffer, (apr_size_t) bytes_to_read,
+                                len, NULL, b->pool);
 }
 
 /* Part of the recovery procedure.  Read the directory noderev at offset

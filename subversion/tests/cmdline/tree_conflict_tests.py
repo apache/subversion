@@ -714,6 +714,7 @@ def merge_dir_add_onto_not_none(sbox):
 #----------------------------------------------------------------------
 
 @XFail()
+@Issue(3805)
 def force_del_tc_inside(sbox):
   "--force del on dir with TCs inside"
   ### This test is currently marked XFail because we don't remove tree
@@ -807,6 +808,7 @@ def force_del_tc_inside(sbox):
 #----------------------------------------------------------------------
 
 @XFail()
+@Issue(3805)
 def force_del_tc_is_target(sbox):
   "--force del on tree-conflicted targets"
   #          A/C
@@ -1040,7 +1042,7 @@ def up_add_onto_add_revert(sbox):
 # Regression test for issue #3525 and #3533
 #
 @XFail()
-@Issues([3525,3533])
+@Issues(3525,3533)
 def lock_update_only(sbox):
   "lock status update shouldn't flag tree conflict"
 

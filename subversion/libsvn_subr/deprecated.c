@@ -779,6 +779,13 @@ svn_io_start_cmd(apr_proc_t *cmd_proc,
                            infile, FALSE, outfile, FALSE, errfile, pool);
 }
 
+svn_error_t *
+svn_io_file_read_full(apr_file_t *file, void *buf,
+                      apr_size_t nbytes, apr_size_t *bytes_read,
+                      apr_pool_t *pool)
+{
+  return svn_io_file_read_full2(file, buf, nbytes, bytes_read, NULL, pool);
+}
 
 struct walk_func_filter_baton_t
 {
@@ -1063,4 +1070,17 @@ svn_rangelist_inheritable(apr_array_header_t **inheritable_rangelist,
                                                      rangelist,
                                                      start, end, TRUE,
                                                      pool, pool));
+}
+
+/*** From config.c ***/
+
+svn_error_t *
+svn_config_read(svn_config_t **cfgp, const char *file,
+                svn_boolean_t must_exist,
+                apr_pool_t *pool)
+{
+  return svn_error_return(svn_config_read2(cfgp, file,
+                                           must_exist,
+                                           FALSE,
+                                           pool));
 }
