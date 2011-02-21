@@ -37,22 +37,6 @@
 extern "C" {
 #endif /* __cplusplus */
 
-/*
- * The primary macro defined by this header is SVN_DBG(). It helps by
- * printing stuff to stdout (or however SVN_DBG_OUTPUT is defined) for
- * debugging purposes. Typical usage is like this:
- *
- *   SVN_DBG(("cleanup. type=%d  path='%s'\n", lock->type, lock->path));
- *
- * producing:
- *
- *   DBG: lock.c: 292: cleanup. type=2  path='include/private'
- *
- * Note that these output lines are filtered by our test suite automatically,
- * so you don't have to worry about throwing off expected output.
- */
-
-
 /* A couple helper functions for the macros below.  */
 void
 svn_dbg__preamble(const char *file, long line, FILE *output);
@@ -75,17 +59,21 @@ svn_dbg__printf(const char *fmt, ...)
 #else
 
 /** Debug aid macro that prints the file:line of the call and printf-like
- * arguments to the #SVN_DBG_OUTPUT stdio stream.  Typical usage:
+ * arguments to the #SVN_DBG_OUTPUT stdio stream (#stdout by default).  Typical
+ * usage:
  *
  * <pre>
- *   SVN_DBG(("path='%s' rev=%ld\n", dirent, revnum));
+ *   SVN_DBG(("rev=%ld kind=%s\n", revnum, svn_kind_to_word(kind)));
  * </pre>
  *
  * outputs:
  *
  * <pre>
- *   kitchensink.c:42:path='/tmp/svn/wc1/iota' rev=3141592
+ *   DBG: kitchensink.c: 42: rev=3141592 kind=file
  * </pre>
+ *
+ * Note that these output lines are filtered by our test suite automatically,
+ * so you don't have to worry about throwing off expected output.
  */
 #define SVN_DBG(ARGS) (svn_dbg__preamble(__FILE__, __LINE__, SVN_DBG_OUTPUT), \
                        svn_dbg__printf ARGS)
