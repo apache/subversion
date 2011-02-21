@@ -56,7 +56,7 @@ extern "C" {
 
 /** This is the maximum compression level we can pass to zlib.
  */
-#define SVN_BEST_COMPRESSION_LEVEL 9
+#define SVN_MAX_COMPRESSION_LEVEL 9
 
 /** This is the default compression level we pass to zlib.  It
  * should be between 0 and 9, with higher numbers resulting in

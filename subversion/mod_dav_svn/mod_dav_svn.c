@@ -455,13 +455,13 @@ SVNCompressionLevel_cmd(cmd_parms *cmd, void *config, const char *arg1)
       return "Invalid decimal number for the SVN compression level.";
     }
 
-  if ((value < SVN_NO_COMPRESSION_LEVEL) || (value > SVN_BEST_COMPRESSION_LEVEL))
+  if ((value < SVN_NO_COMPRESSION_LEVEL) || (value > SVN_MAX_COMPRESSION_LEVEL))
     return apr_psprintf(cmd->pool,
                         "%d is not a valid compression level. "
                         "The valid range is %d .. %d.",
                         value,
                         (int)SVN_NO_COMPRESSION_LEVEL,
-                        (int)SVN_BEST_COMPRESSION_LEVEL);
+                        (int)SVN_MAX_COMPRESSION_LEVEL);
 
   svn__compression_level = value;
 
@@ -921,9 +921,9 @@ static const command_rec cmds[] =
   /* per server */
   AP_INIT_TAKE1("SVNCompressionLevel", SVNCompressionLevel_cmd, NULL,
                 RSRC_CONF,
-                "specifies the ZIP compression level used before sending file "
-                "content over the network (0 for no compression, 9 for best, "
-                "5 is default)."),
+                "specifies the compression level used before sending file "
+                "content over the network (0 for no compression, 9 for "
+                "maximum, 5 is default)."),
 
   { NULL }
 };
