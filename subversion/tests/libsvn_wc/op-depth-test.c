@@ -2024,6 +2024,7 @@ check_db_actual(wc_baton_t* b,
 static svn_error_t *
 revert(wc_baton_t *b,
        const char *local_relpath,
+       svn_depth_t depth,
        nodes_row_t *before_nodes,
        nodes_row_t *after_nodes,
        const char **before_actual,
@@ -2042,7 +2043,7 @@ revert(wc_baton_t *b,
   SVN_ERR(insert_actual(b, before_actual));
   SVN_ERR(check_db_rows(b, "", before_nodes));
   SVN_ERR(check_db_actual(b, before_actual));
-  err = svn_wc__db_op_revert(b->wc_ctx->db, local_abspath, b->pool);
+  err = svn_wc__db_op_revert(b->wc_ctx->db, local_abspath, depth, b->pool);
   if (err)
     {
       /* If db_op_revert returns an error the DB should be unchanged so
@@ -2091,15 +2092,22 @@ test_op_revert(const svn_test_opts_t *opts, apr_pool_t *pool)
     const char *after_actual4[] = { "A/B", NULL };
     const char *common_actual5[] = { "A/B", "A/B/C", NULL };
     const char *common_actual6[] = { "A/B", "A/B/C", "A/B/C/D", NULL };
-    SVN_ERR(revert(&b, "A/B", before, after, NULL, NULL));
-    SVN_ERR(revert(&b, "A/B", before, after, before_actual1, after_actual1));
-    SVN_ERR(revert(&b, "A/B/C", before, before, before_actual2, after_actual2));
-    SVN_ERR(revert(&b, "A", before, before, before_actual3, after_actual3));
-    SVN_ERR(revert(&b, "", before, before, before_actual4, after_actual4));
-    err = revert(&b, "A/B", before, before, common_actual5, common_actual5);
+    SVN_ERR(revert(&b, "A/B", svn_depth_empty,
+                   before, after, NULL, NULL));
+    SVN_ERR(revert(&b, "A/B", svn_depth_empty,
+                   before, after, before_actual1, after_actual1));
+    SVN_ERR(revert(&b, "A/B/C", svn_depth_empty,
+                   before, before, before_actual2, after_actual2));
+    SVN_ERR(revert(&b, "A", svn_depth_empty,
+                   before, before, before_actual3, after_actual3));
+    SVN_ERR(revert(&b, "", svn_depth_empty,
+                   before, before, before_actual4, after_actual4));
+    err = revert(&b, "A/B", svn_depth_empty,
+                 before, before, common_actual5, common_actual5);
     SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH);
     svn_error_clear(err);
-    err = revert(&b, "A/B/C", before, before, common_actual6, common_actual6);
+    err = revert(&b, "A/B/C", svn_depth_empty,
+                 before, before, common_actual6, common_actual6);
     SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH);
     svn_error_clear(err);
   }
@@ -2121,38 +2129,48 @@ test_op_revert(const svn_test_opts_t *opts, apr_pool_t *pool)
     };
     const char *common_actual[] = { "A/B/C/D", "A/B/C", "A/B", "P", "X", NULL};
 
-    err = revert(&b, "A/B/C/D", common, common, NULL, NULL);
+    err = revert(&b, "A/B/C/D", svn_depth_empty,
+                 common, common, NULL, NULL);
     SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH);
     svn_error_clear(err);
-    err = revert(&b, "A/B/C/D", common, common, common_actual, common_actual);
-    SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH);
-    svn_error_clear(err);
-
-    err = revert(&b, "A/B/C", common, common, NULL, NULL);
-    SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH);
-    svn_error_clear(err);
-    err = revert(&b, "A/B/C", common, common, common_actual, common_actual);
+    err = revert(&b, "A/B/C/D", svn_depth_empty,
+                 common, common, common_actual, common_actual);
     SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH);
     svn_error_clear(err);
 
-    err = revert(&b, "A/B", common, common, NULL, NULL);
+    err = revert(&b, "A/B/C", svn_depth_empty,
+                 common, common, NULL, NULL);
     SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH);
     svn_error_clear(err);
-    err = revert(&b, "A/B", common, common, common_actual, common_actual);
-    SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH);
-    svn_error_clear(err);
-
-    err = revert(&b, "P", common, common, NULL, NULL);
-    SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH);
-    svn_error_clear(err);
-    err = revert(&b, "P", common, common, common_actual, common_actual);
+    err = revert(&b, "A/B/C", svn_depth_empty,
+                 common, common, common_actual, common_actual);
     SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH);
     svn_error_clear(err);
 
-    err = revert(&b, "X", common, common, NULL, NULL);
+    err = revert(&b, "A/B", svn_depth_empty,
+                 common, common, NULL, NULL);
     SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH);
     svn_error_clear(err);
-    err = revert(&b, "X", common, common, common_actual, common_actual);
+    err = revert(&b, "A/B", svn_depth_empty,
+                 common, common, common_actual, common_actual);
+    SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH);
+    svn_error_clear(err);
+
+    err = revert(&b, "P", svn_depth_empty,
+                 common, common, NULL, NULL);
+    SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH);
+    svn_error_clear(err);
+    err = revert(&b, "P", svn_depth_empty,
+                 common, common, common_actual, common_actual);
+    SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH);
+    svn_error_clear(err);
+
+    err = revert(&b, "X", svn_depth_empty,
+                 common, common, NULL, NULL);
+    SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH);
+    svn_error_clear(err);
+    err = revert(&b, "X", svn_depth_empty,
+                 common, common, common_actual, common_actual);
     SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH);
     svn_error_clear(err);
   }
@@ -2175,8 +2193,10 @@ test_op_revert(const svn_test_opts_t *opts, apr_pool_t *pool)
     };
     const char *before_actual[] = { "A/B", "A/B/C", NULL };
     const char *after_actual[] = {"A/B", NULL };
-    SVN_ERR(revert(&b, "A/B/C", before, after, NULL, NULL));
-    SVN_ERR(revert(&b, "A/B/C", before, after, before_actual, after_actual));
+    SVN_ERR(revert(&b, "A/B/C", svn_depth_empty,
+                   before, after, NULL, NULL));
+    SVN_ERR(revert(&b, "A/B/C", svn_depth_empty,
+                   before, after, before_actual, after_actual));
   }
 
   {
@@ -2199,7 +2219,8 @@ test_op_revert(const svn_test_opts_t *opts, apr_pool_t *pool)
       { 3, "A/B/C/D", "base-deleted", NO_COPY_FROM },
       { 0 },
     };
-    SVN_ERR(revert(&b, "A/B", before, after, NULL, NULL));
+    SVN_ERR(revert(&b, "A/B", svn_depth_empty,
+                   before, after, NULL, NULL));
   }
 
   {
@@ -2236,8 +2257,10 @@ test_op_revert(const svn_test_opts_t *opts, apr_pool_t *pool)
       { 1, "A/B/C",   "base-deleted", NO_COPY_FROM },
       { 0 },
     };
-    SVN_ERR(revert(&b, "A/B/C", before, after1, NULL, NULL));
-    SVN_ERR(revert(&b, "A/B", after1, after2, NULL, NULL));
+    SVN_ERR(revert(&b, "A/B/C", svn_depth_empty,
+                   before, after1, NULL, NULL));
+    SVN_ERR(revert(&b, "A/B", svn_depth_empty,
+                   after1, after2, NULL, NULL));
   }
 
   {
@@ -2262,7 +2285,8 @@ test_op_revert(const svn_test_opts_t *opts, apr_pool_t *pool)
       { 3, "A/B/C/D", "base-deleted", NO_COPY_FROM },
       { 0 },
     };
-    SVN_ERR(revert(&b, "A/B", before, after, NULL, NULL));
+    SVN_ERR(revert(&b, "A/B", svn_depth_empty,
+                   before, after, NULL, NULL));
   }
 
   {
@@ -2278,7 +2302,49 @@ test_op_revert(const svn_test_opts_t *opts, apr_pool_t *pool)
       { 1, "A/B/C/D", "base-deleted", NO_COPY_FROM },
       { 0 },
     };
-    err = revert(&b, "A", common, common, NULL, NULL);
+    err = revert(&b, "A", svn_depth_empty,
+                 common, common, NULL, NULL);
+    SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH);
+    svn_error_clear(err);
+  }
+
+  {
+    nodes_row_t before[] = {
+      { 0, "",        "normal", 4, "" },
+      { 0, "A",       "normal", 4, "A" },
+      { 0, "A/B",     "normal", 4, "A/B" },
+      { 0, "A/B/C",   "normal", 4, "A/B/C" },
+      { 1, "A",       "normal", NO_COPY_FROM },
+      { 1, "A/B",     "base-deleted", NO_COPY_FROM },
+      { 1, "A/B/C",   "base-deleted", NO_COPY_FROM },
+      { 2, "A/B",     "normal", NO_COPY_FROM },
+      { 0 },
+    };
+    nodes_row_t after1[] = {
+      { 0, "",        "normal", 4, "" },
+      { 0, "A",       "normal", 4, "A" },
+      { 0, "A/B",     "normal", 4, "A/B" },
+      { 0, "A/B/C",   "normal", 4, "A/B/C" },
+      { 0 },
+    };
+    nodes_row_t after2[] = {
+      { 0, "",        "normal", 4, "" },
+      { 0, "A",       "normal", 4, "A" },
+      { 0, "A/B",     "normal", 4, "A/B" },
+      { 0, "A/B/C",   "normal", 4, "A/B/C" },
+      { 1, "A",       "normal", NO_COPY_FROM },
+      { 1, "A/B",     "base-deleted", NO_COPY_FROM },
+      { 1, "A/B/C",   "base-deleted", NO_COPY_FROM },
+      { 0 },
+    };
+    SVN_ERR(revert(&b, "", svn_depth_infinity,
+                   before, after1, NULL, NULL));
+    SVN_ERR(revert(&b, "A", svn_depth_infinity,
+                   before, after1, NULL, NULL));
+    SVN_ERR(revert(&b, "A/B", svn_depth_infinity,
+                   before, after2, NULL, NULL));
+    err = revert(&b, "A/B/C", svn_depth_empty,
+                 before, before, NULL, NULL);
     SVN_TEST_ASSERT(err && err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH);
     svn_error_clear(err);
   }
