@@ -317,6 +317,14 @@ svn_sqlite__with_transaction(svn_sqlite__db_t *db,
                              svn_sqlite__transaction_callback_t cb_func,
                              void *cb_baton, apr_pool_t *scratch_pool);
 
+/* Like svn_sqlite__with_transaction(), but takes out a 'RESERVED' lock
+   immediately, instead of using the default deferred locking scheme. */
+svn_error_t *
+svn_sqlite__with_immediate_transaction(svn_sqlite__db_t *db,
+                                       svn_sqlite__transaction_callback_t cb_func,
+                                       void *cb_baton,
+                                       apr_pool_t *scratch_pool);
+
 
 /* Helper function to handle several SQLite operations inside a shared lock.
    This callback is similar to svn_sqlite__with_transaction(), but can be
