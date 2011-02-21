@@ -231,10 +231,15 @@ switch_internal(svn_revnum_t *result_rev,
      handling external items (and any errors therefrom) doesn't delay
      the primary operation. */
   if (SVN_DEPTH_IS_RECURSIVE(depth) && (! ignore_externals))
-    err = svn_client__handle_externals(efb.externals_old,
-                                       efb.externals_new, efb.ambient_depths,
-                                       switch_url, local_abspath, source_root,
-                                       depth, use_sleep, ctx, pool);
+    {
+      SVN_ERR(svn_client__gather_externals_in_locally_added_dirs(
+                efb.externals_new, efb.ambient_depths, local_abspath,
+                depth, ctx, pool));
+      err = svn_client__handle_externals(efb.externals_old,
+                                         efb.externals_new, efb.ambient_depths,
+                                         switch_url, local_abspath, source_root,
+                                         depth, use_sleep, ctx, pool);
+    }
 
   /* Sleep to ensure timestamp integrity (we do this regardless of
      errors in the actual switch operation(s)). */
