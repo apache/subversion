@@ -47,18 +47,18 @@ typedef enum svn_sqlite__mode_e {
 } svn_sqlite__mode_t;
 
 
-/* Steps the given statement; if it returns SQLITE_DONE, resets the statement.
-   Otherwise, raises an SVN error.  */
+/* Step the given statement; if it returns SQLITE_DONE, reset the statement.
+   Otherwise, raise an SVN error.  */
 svn_error_t *
 svn_sqlite__step_done(svn_sqlite__stmt_t *stmt);
 
-/* Steps the given statement; raises an SVN error (and resets the
+/* Step the given statement; raise an SVN error (and reset the
    statement) if it doesn't return SQLITE_ROW. */
 svn_error_t *
 svn_sqlite__step_row(svn_sqlite__stmt_t *stmt);
 
-/* Steps the given statement; raises an SVN error (and resets the
-   statement) if it doesn't return SQLITE_DONE or SQLITE_ROW.  Sets
+/* Step the given statement; raise an SVN error (and reset the
+   statement) if it doesn't return SQLITE_DONE or SQLITE_ROW.  Set
    *GOT_ROW to true iff it got SQLITE_ROW.
 */
 svn_error_t *
@@ -70,8 +70,8 @@ svn_sqlite__step(svn_boolean_t *got_row, svn_sqlite__stmt_t *stmt);
 svn_error_t *
 svn_sqlite__insert(apr_int64_t *row_id, svn_sqlite__stmt_t *stmt);
 
-/* Perform an an update/delete an then return the number of affected rows.
-   If AFFECTED_ROWS is not NULL, then *AFFECTED_ROWS will be set to the
+/* Perform an update/delete and then return the number of affected rows.
+   If AFFECTED_ROWS is not NULL, then set *AFFECTED_ROWS to the
    number of rows changed.
    STMT will be reset prior to returning. */
 svn_error_t *
@@ -126,14 +126,15 @@ svn_sqlite__close(svn_sqlite__db_t *db);
 svn_error_t *
 svn_sqlite__exec_statements(svn_sqlite__db_t *db, int stmt_idx);
 
-/* Returns the statement in *STMT which has been prepared from the
-   STATEMENTS[STMT_IDX] string.  This statement is allocated in the same
-   pool as the DB, and will be cleaned up with DB is closed. */
+/* Return the statement in *STMT which has been prepared from the
+   STATEMENTS[STMT_IDX] string, where STATEMENTS is the array that was
+   passed to svn_sqlite__open().  This statement is allocated in the same
+   pool as the DB, and will be cleaned up when DB is closed. */
 svn_error_t *
 svn_sqlite__get_statement(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
                           int stmt_idx);
 
-/* Prepares TEXT as a statement in DB, returning a statement in *STMT,
+/* Prepare TEXT as a statement in DB, returning a statement in *STMT,
    allocated in RESULT_POOL. */
 svn_error_t *
 svn_sqlite__prepare(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
@@ -201,7 +202,7 @@ svn_sqlite__bind_revnum(svn_sqlite__stmt_t *stmt, int slot,
                         svn_revnum_t value);
 
 /* Bind a set of properties to the given slot. If PROPS is NULL, then no
-/   binding will occur. PROPS will be stored as a serialized skel. */
+   binding will occur. PROPS will be stored as a serialized skel. */
 svn_error_t *
 svn_sqlite__bind_properties(svn_sqlite__stmt_t *stmt,
                             int slot,
@@ -224,7 +225,7 @@ svn_sqlite__bind_checksum(svn_sqlite__stmt_t *stmt,
 */
 
 /* Wrapper around sqlite3_column_blob and sqlite3_column_bytes. The return
-   value will be NULL if the column is null.If RESULT_POOL is not NULL,
+   value will be NULL if the column is null. If RESULT_POOL is not NULL,
    allocate the return value (if any) in it. Otherwise, the value will
    become invalid on the next invocation of svn_sqlite__column_* */
 const void *
