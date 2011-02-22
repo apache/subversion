@@ -125,9 +125,9 @@ def filter_walk(autoprop_lines, dirname, filenames):
     filenames.remove(SVN_WC_ADM_DIR_NAME)
   except ValueError:
     filenames = []
-    print "Will not process files in '%s' because it does not have a '%s' " \
+    print("Will not process files in '%s' because it does not have a '%s' " \
           "directory." \
-          % (dirname, SVN_WC_ADM_DIR_NAME)
+          % (dirname, SVN_WC_ADM_DIR_NAME))
     return
 
   filenames.sort()
@@ -150,8 +150,8 @@ def filter_walk(autoprop_lines, dirname, filenames):
 
       status = os.spawnvp(os.P_WAIT, 'svn', command)
       if status:
-        print 'Command "%s" failed with exit status %s' \
-              % (command, status)
+        print('Command "%s" failed with exit status %s' \
+              % (command, status))
         sys.exit(1)
 
 def main():
@@ -184,8 +184,8 @@ def main():
   try:
     fd = file(config_filename)
   except IOError:
-    print "Cannot open svn configuration file '%s' for reading: %s" \
-          % (config_filename, sys.exc_value.strerror)
+    print("Cannot open svn configuration file '%s' for reading: %s" \
+          % (config_filename, sys.exc_value.strerror))
     return 1
 
   autoprop_lines = get_autoprop_lines(fd)
