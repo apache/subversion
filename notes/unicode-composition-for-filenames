@@ -102,13 +102,13 @@ which can be located at any server platform.
    Multi-platform: Windows + MacOSX
    --------------------------------
 
-   Consider a file which contains one or more precomposed (NFC)
+   Consider a filename which contains one or more precomposed (NFC)
    characters being committed from Windows.  When the MacOSX developer
    updates, a file is written in NFC form, but as stated in the
    context section, Mac recodes that to NFD.  Now, when comparing what
    comes from the disk (NFD) with what's in the entries file (NFC),
    results in a missing file (the NFC encoded one) and an unversioned
-   file (the NFD encoded one).  Both of these files look exactly the
+   file (the NFD encoded one).  Both of the filenames look exactly the
    same to the person reading the Subversion output on the
    screen. [==> confusion!]
 
@@ -139,7 +139,7 @@ Proposed Support Library
       trim this library down significantly.
 
    2) utf8proc -- a library for processing UTF-8 encoded unicode
-      strings a library specifically targeted at a limited number of
+      strings.  A library specifically targeted at a limited number of
       operations to be performed on UTF-8 encoded strings.  It
       consists of two .c and a single .h file, with a total source
       size of 1MB (compiled less than 0.5MB).
@@ -151,7 +151,7 @@ Proposed Support Library
 Proposed Normal Form
 ====================
 
-The proposed internal normal 'normal form' should be NFC, if only if
+The proposed internal 'normal form' should be NFC, if only if
 it were because it's the most compact form of the two:  when allocating
 memory to store a conversion result, it won't be necessary (ever) to
 allocate more than the size of the input buffer.
@@ -161,26 +161,27 @@ two recoding runs when the buffer is too small:  one to retrieve the
 required buffer size, the second to actually store the result.
 
 
+
 Possible Solutions
 ==================
 
 Several options are available for resolution of this problem, each
 with its pros and cons, to be outlined below.
 
-1) Normalization of (path) input on MacOSX Since the Mac seems to be
+1) Normalization of (path) input on MacOSX.  Since the Mac seems to be
    the only platform which mutilates its pathname input to be NFD,
    this seems like a logical (low impact) solution.
 
-2) Normalization of (path) input on all platforms Since paths can't
+2) Normalization of (path) input on all platforms.  Since paths can't
    differ only in encoding if we standardize on encoding, this seems
    like a logical (relatively low) impact solution.
 
-3) Normalization of path input in the client and server On the server
+3) Normalization of path input in the client and server.  On the server
    side, non-normalized paths may have become part of the repository.
    We can achieve full in-memory standardization by converting any
    path coming from the repository as well as the client.
 
-4) Client and server-side path comparison routines Because paths read
+4) Client and server-side path comparison routines.  Because paths read
    from the repository may be used to access said repository, possibly
    by calculating hash values, paths from can't be munged
    (repository-side).  To eliminate the effect, we acknowledge we're
