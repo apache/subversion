@@ -1668,54 +1668,6 @@ svn_wc_prop_list2(apr_hash_t **props,
                                                    scratch_pool));
 }
 
-/* Baton for read_dir_props. */
-struct read_dir_props_baton
-{
-  /* Working copy db handle. */
-  svn_wc__db_t *db;
-
-  /* The absolute path to the root of the tree being walked. */
-  const char *root_abspath;
-
-  /* The proplist receiver function and baton. */
-  svn_wc__proplist_receiver_t receiver_func;
-  void *receiver_baton;
-};
-
-/* An implementation of svn_wc__node_found_func_t. */
-static svn_error_t *
-read_dir_props(const char *local_abspath,
-               svn_node_kind_t kind,
-               void *baton,
-               apr_pool_t *scratch_pool)
-{
-  struct read_dir_props_baton *b = (struct read_dir_props_baton *)baton;
-
-  /* We only handle directories. */
-  if (kind != svn_node_dir)
-    return SVN_NO_ERROR;
-
-  /* Special case for root node of the tree. */
-  if (strcmp(local_abspath, b->root_abspath) == 0)
-    {
-      apr_hash_t *props;
-
-      SVN_ERR(svn_wc__db_read_props(&props, b->db, local_abspath,
-                                    scratch_pool, scratch_pool));
-      if (b->receiver_func && props && apr_hash_count(props) > 0)
-        SVN_ERR((*b->receiver_func)(b->receiver_baton, local_abspath,
-                                    props, scratch_pool));
-    }
-
-  /* All nodes within the tree are listed recursively as immediates. */
-  SVN_ERR(svn_wc__db_read_props_of_immediates(b->db, local_abspath,
-                                              b->receiver_func,
-                                              b->receiver_baton,
-                                              NULL, NULL,
-                                              scratch_pool));
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *
 svn_wc__prop_list_recursive(svn_wc_context_t *wc_ctx,
                             const char *local_abspath,
