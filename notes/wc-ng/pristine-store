@@ -56,6 +56,7 @@ The numbered steps should be carried out in the order specified.  (See
 rationale.)
 
 (a) To add a pristine, do the following inside an SDB txn:
+    0. Acquire a 'RESERVED' lock.
     1. Add the table row, and set the refcount as desired.  If a row
        already exists, add the desired refcount to its refcount, and
        preferably verify the old row matches the new metadata.
@@ -65,7 +66,8 @@ rationale.)
        and optionally verify it matches the new metadata (e.g. length).
 
 (b) To remove a pristine, do the following inside an SDB txn:
-    1. First, check refcount == 0, and abort if not.
+    0. Acquire a 'RESERVED' lock.
+    1. Check refcount == 0, and abort if not.
     2. Delete the table row.
     3. Delete the file or move it away. (If not present, log a
        consistency error but, in a release build, return success.)
