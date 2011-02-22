@@ -5266,8 +5266,7 @@ svn_wc__db_read_props(apr_hash_t **props,
  */
 typedef struct cache_props_baton_t
 {
-  int stmt_node_props_ndx;
-  int stmt_actual_props_ndx;
+  svn_boolean_t immediates_only;
   apr_int64_t wc_id;
   const char *local_relpath;
   svn_cancel_func_t cancel_func;
@@ -5282,15 +5281,43 @@ cache_props_recursive(void *cb_baton,
   cache_props_baton_t *baton = cb_baton;
   svn_sqlite__stmt_t *stmt;
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, db, baton->stmt_node_props_ndx));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", baton->wc_id, baton->local_relpath));
+  if (baton->immediates_only)
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, db,
+                                        STMT_CACHE_NODE_PROPS_OF_CHILDREN));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is",
+                                baton->wc_id, baton->local_relpath));
+    }
+  else
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, db,
+                                        STMT_CACHE_NODE_PROPS_RECURSIVE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "iss",
+                                baton->wc_id, baton->local_relpath,
+                                construct_like_arg(baton->local_relpath,
+                                                   scratch_pool)));
+    }
   SVN_ERR(svn_sqlite__step_done(stmt));
 
   if (baton->cancel_func)
     SVN_ERR(baton->cancel_func(baton->cancel_baton));
  
-  SVN_ERR(svn_sqlite__get_statement(&stmt, db, baton->stmt_actual_props_ndx));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", baton->wc_id, baton->local_relpath));
+  if (baton->immediates_only)
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, db,
+                                        STMT_CACHE_ACTUAL_PROPS_OF_CHILDREN));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", baton->wc_id,
+                                baton->local_relpath));
+    }
+  else
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, db,
+                                        STMT_CACHE_ACTUAL_PROPS_RECURSIVE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "iss", baton->wc_id,
+                                baton->local_relpath,
+                                construct_like_arg(baton->local_relpath,
+                                                   scratch_pool)));
+    }
   SVN_ERR(svn_sqlite__step_done(stmt));
 
   return SVN_NO_ERROR;
@@ -5326,16 +5353,7 @@ read_props_recursive(svn_wc__db_t *db,
   SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb,
                                       STMT_CLEAR_NODE_PROPS_CACHE));
 
-  if (immediates_only)
-    {
-      baton.stmt_node_props_ndx = STMT_CACHE_NODE_PROPS_OF_CHILDREN;
-      baton.stmt_actual_props_ndx = STMT_CACHE_ACTUAL_PROPS_OF_CHILDREN;
-    }
-  else
-    {
-      baton.stmt_node_props_ndx = STMT_CACHE_NODE_PROPS_RECURSIVE;
-      baton.stmt_actual_props_ndx = STMT_CACHE_ACTUAL_PROPS_RECURSIVE;
-    }
+  baton.immediates_only = immediates_only;
   baton.wc_id = wcroot->wc_id;
   baton.cancel_func = cancel_func;
   baton.cancel_baton = cancel_baton;
