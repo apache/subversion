@@ -51,16 +51,22 @@ extern "C" {
 
 /** This compression level effectively disables data compression.
  * However, the data pre-processing costs may still not be zero.
+ *
+ * @since New in 1.7.
  */
 #define SVN_NO_COMPRESSION_LEVEL 0
 
 /** This is the maximum compression level we can pass to zlib.
+ *
+ * @since New in 1.7.
  */
 #define SVN_MAX_COMPRESSION_LEVEL 9
 
 /** This is the default compression level we pass to zlib.  It
  * should be between 0 and 9, with higher numbers resulting in
  * better compression rates but slower operation.
+ *
+ * @since New in 1.7.
  */
 #define SVN_DEFAULT_COMPRESSION_LEVEL 5
 
