@@ -146,9 +146,8 @@ def filter_walk(autoprop_lines, dirname, filenames):
 
       status = os.spawnvp(os.P_WAIT, 'svn', command)
       if status:
-        print('Command "%s" failed with exit status %s' \
+        print('Command %s failed with exit status %s' \
               % (command, status))
-        sys.exit(1)
 
 def main():
   try:
