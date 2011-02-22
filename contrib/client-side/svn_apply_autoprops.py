@@ -33,9 +33,6 @@ import sys
 # The default path to the Subversion configuration file.
 SVN_CONFIG_FILENAME = os.path.expandvars('$HOME/.subversion/config')
 
-# The name of Subversion's private directory in working copies.
-SVN_WC_ADM_DIR_NAME = '.svn'
-
 # The name this script was invoked as.
 PROGNAME = os.path.basename(sys.argv[0])
 
@@ -120,15 +117,6 @@ def process_autoprop_lines(lines):
   return result
 
 def filter_walk(autoprop_lines, dirname, filenames):
-  # Do no descend into directories that do not have a .svn directory.
-  try:
-    filenames.remove(SVN_WC_ADM_DIR_NAME)
-  except ValueError:
-    filenames = []
-    print("Will not process files in '%s' because it does not have a '%s' " \
-          "directory." \
-          % (dirname, SVN_WC_ADM_DIR_NAME))
-    return
 
   filenames.sort()
 
