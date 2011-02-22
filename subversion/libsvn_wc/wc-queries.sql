@@ -765,7 +765,7 @@ DROP TABLE IF EXISTS temp__node_props_cache;
 CREATE TEMPORARY TABLE temp__node_props_cache AS
   SELECT local_relpath, kind, properties FROM nodes_current
   WHERE wc_id = ?1
-    AND (?2 = '' OR local_relpath = ?2 OR local_relpath LIKE ?2 || '/%')
+    AND (?2 = '' OR local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
     AND local_relpath NOT IN (
       SELECT local_relpath FROM actual_node WHERE wc_id = ?1)
     AND (presence = 'normal' OR presence = 'incomplete');
@@ -779,7 +779,7 @@ INSERT INTO temp__node_props_cache (local_relpath, kind, properties)
     ON A.wc_id = N.wc_id AND A.local_relpath = N.local_relpath
        AND (N.presence = 'normal' OR N.presence = 'incomplete')
   WHERE A.wc_id = ?1
-    AND (?2 = '' OR A.local_relpath = ?2 OR A.local_relpath LIKE ?2 || '/%')
+    AND (?2 = '' OR A.local_relpath = ?2 OR A.local_relpath LIKE ?3 ESCAPE '#')
     AND A.local_relpath NOT IN
       (SELECT local_relpath FROM temp__node_props_cache);
 
