@@ -1,17 +1,7 @@
 #!/usr/bin/env python
 
-# This script reads the auto-properties defined in the
-# $HOME/.subversion/config file and applies them recursively to all
-# the files and directories in the current working copy.  It may
-# behave differently than the Subversion command line; where the
-# subversion command line may only apply a single matching
-# auto-property to a single pathname, this script will apply all
-# matching lines to a single pathname.
-#
 # To do:
 # 1) Switch to using the Subversion Python bindings.
-# 2) Allow a command line option to specify the configuration file to
-#    load the auto-properties from.
 #
 # $HeadURL$
 # $LastChangedRevision$
@@ -34,16 +24,40 @@
 # to the Free Software Foundation, Inc., 59 Temple Place, Suite 330,
 # Boston, MA 02111-1307 USA.
 
+import getopt
 import fnmatch
 import os
 import re
 import sys
 
-# The path to the Subversion configuration file.
-SVN_CONFIG_FILENAME = '$HOME/.subversion/config'
+# The default path to the Subversion configuration file.
+SVN_CONFIG_FILENAME = os.path.expandvars('$HOME/.subversion/config')
 
 # The name of Subversion's private directory in working copies.
 SVN_WC_ADM_DIR_NAME = '.svn'
+
+# The name this script was invoked as.
+PROGNAME = os.path.basename(sys.argv[0])
+
+def usage():
+  print("""This script reads the auto-properties defined in the file
+'%s'
+and applies them recursively to all the files and directories in the
+current working copy.  It may behave differently than the Subversion
+command line; where the subversion command line may only apply a single
+matching auto-property to a single pathname, this script will apply all
+matching lines to a single pathname.
+
+Usage:
+  %s [options] [WC_PATH]
+where WC_PATH is the path to a working copy.
+If WC_PATH is not specified, '.' is assumed.
+
+Valid options are:
+  --help, -h         : Print this help text.
+  --config ARG       : Read the Subversion config file at path ARG
+                       instead of '%s'.
+""" % (SVN_CONFIG_FILENAME, PROGNAME, SVN_CONFIG_FILENAME))
 
 def get_autoprop_lines(fd):
   lines = []
@@ -141,12 +155,38 @@ def filter_walk(autoprop_lines, dirname, filenames):
         sys.exit(1)
 
 def main():
-  config_filename = os.path.expandvars(SVN_CONFIG_FILENAME)
+  try:
+    opts, args = getopt.getopt(sys.argv[1:], 'h', ['help', 'config='])
+  except getopt.GetoptError, e:
+    usage()
+    return 1
+
+  config_filename = None
+  for (o, a) in opts:
+    if o == '-h' or o == '--help':
+      usage()
+      return 0
+    elif o == '--config':
+      config_filename = os.path.abspath(a)
+
+  if not config_filename:
+    config_filename = SVN_CONFIG_FILENAME
+
+  if len(args) == 0:
+    wc_path = '.'
+  elif len(args) == 1:
+    wc_path = args[0]
+  else:
+    usage()
+    print("Too many arguments: %s" % ' '.join(args))
+    return 1
+
   try:
     fd = file(config_filename)
   except IOError:
     print "Cannot open svn configuration file '%s' for reading: %s" \
           % (config_filename, sys.exc_value.strerror)
+    return 1
 
   autoprop_lines = get_autoprop_lines(fd)
 
@@ -154,7 +194,7 @@ def main():
 
   autoprop_lines = process_autoprop_lines(autoprop_lines)
 
-  os.path.walk('.', filter_walk, autoprop_lines)
+  os.path.walk(wc_path, filter_walk, autoprop_lines)
 
 if __name__ == '__main__':
   sys.exit(main())
