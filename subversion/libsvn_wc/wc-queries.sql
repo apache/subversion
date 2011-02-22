@@ -439,6 +439,10 @@ DELETE FROM work_queue WHERE id = ?1;
 INSERT OR IGNORE INTO pristine (checksum, md5_checksum, size, refcount)
 VALUES (?1, ?2, ?3, 0);
 
+-- STMT_INSERT_PRISTINE
+INSERT INTO pristine (checksum, md5_checksum, size, refcount)
+VALUES (?1, ?2, ?3, 0);
+
 -- STMT_SELECT_PRISTINE
 SELECT md5_checksum
 FROM pristine
