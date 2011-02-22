@@ -435,16 +435,16 @@ SELECT id, work FROM work_queue ORDER BY id LIMIT 1;
 -- STMT_DELETE_WORK_ITEM
 DELETE FROM work_queue WHERE id = ?1;
 
--- STMT_INSERT_PRISTINE
+-- STMT_INSERT_OR_IGNORE_PRISTINE
 INSERT OR IGNORE INTO pristine (checksum, md5_checksum, size, refcount)
 VALUES (?1, ?2, ?3, 0);
 
--- STMT_SELECT_PRISTINE_MD5_CHECKSUM
+-- STMT_SELECT_PRISTINE
 SELECT md5_checksum
 FROM pristine
 WHERE checksum = ?1
 
--- STMT_SELECT_PRISTINE_SHA1_CHECKSUM
+-- STMT_SELECT_PRISTINE_BY_MD5
 SELECT checksum
 FROM pristine
 WHERE md5_checksum = ?1

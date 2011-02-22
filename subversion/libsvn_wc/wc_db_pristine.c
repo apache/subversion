@@ -288,7 +288,7 @@ svn_wc__db_pristine_install(svn_wc__db_t *db,
                       scratch_pool));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
-                                    STMT_INSERT_PRISTINE));
+                                    STMT_INSERT_OR_IGNORE_PRISTINE));
   SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, sha1_checksum, scratch_pool));
   SVN_ERR(svn_sqlite__bind_checksum(stmt, 2, md5_checksum, scratch_pool));
   SVN_ERR(svn_sqlite__bind_int64(stmt, 3, finfo.size));
@@ -321,7 +321,7 @@ svn_wc__db_pristine_get_md5(const svn_checksum_t **md5_checksum,
   VERIFY_USABLE_WCROOT(pdh->wcroot);
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
-                                    STMT_SELECT_PRISTINE_MD5_CHECKSUM));
+                                    STMT_SELECT_PRISTINE));
   SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, sha1_checksum, scratch_pool));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (!have_row)
@@ -361,7 +361,7 @@ svn_wc__db_pristine_get_sha1(const svn_checksum_t **sha1_checksum,
   VERIFY_USABLE_WCROOT(pdh->wcroot);
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
-                                    STMT_SELECT_PRISTINE_SHA1_CHECKSUM));
+                                    STMT_SELECT_PRISTINE_BY_MD5));
   SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, md5_checksum, scratch_pool));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (!have_row)
@@ -538,7 +538,7 @@ svn_wc__db_pristine_check(svn_boolean_t *present,
 
   /* Check that there is an entry in the PRISTINE table. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
-                                    STMT_SELECT_PRISTINE_MD5_CHECKSUM));
+                                    STMT_SELECT_PRISTINE));
   SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, sha1_checksum, scratch_pool));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   SVN_ERR(svn_sqlite__reset(stmt));
