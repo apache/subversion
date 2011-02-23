@@ -456,8 +456,14 @@ delete_node_property(void *baton,
 static svn_error_t *
 remove_node_props(void *baton)
 {
-  /* ### Not implemented */
-  return SVN_NO_ERROR;
+  struct node_baton *nb = baton;
+  if ((nb->action == svn_node_action_add || nb->action == svn_node_action_replace)
+      && ! SVN_IS_VALID_REVNUM(nb->copyfrom_rev))
+    /* Add-without-history; no "old" properties to worry about. */
+    return SVN_NO_ERROR;
+  else
+    /* ### TODO */
+    SVN__NOT_IMPLEMENTED();
 }
 
 static svn_error_t *
