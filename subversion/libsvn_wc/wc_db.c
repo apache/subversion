@@ -8623,13 +8623,21 @@ svn_wc__db_temp_op_set_file_external(svn_wc__db_t *db,
   if (!got_row)
     {
       const char *repos_root_url, *repos_uuid;
+      const char *dir_abspath;
+      svn_node_kind_t kind;
       apr_int64_t repos_id;
 
       if (!repos_relpath)
         return SVN_NO_ERROR; /* Don't add a BASE node */
 
+      SVN_ERR(svn_io_check_path(local_abspath, &kind, scratch_pool));
+      if (kind == svn_node_dir)
+        dir_abspath = local_abspath;
+      else
+        dir_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+
       SVN_ERR(svn_wc__db_scan_base_repos(NULL, &repos_root_url,
-                                         &repos_uuid, db, local_abspath,
+                                         &repos_uuid, db, dir_abspath,
                                          scratch_pool, scratch_pool));
 
       SVN_ERR(fetch_repos_id(&repos_id, repos_root_url, repos_uuid,

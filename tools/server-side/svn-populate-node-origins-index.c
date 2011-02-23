@@ -96,8 +96,7 @@ index_revision_adds(int *count, svn_fs_t *fs,
       if ((change->change_kind == svn_fs_path_change_add)
           || (change->change_kind == svn_fs_path_change_replace))
         {
-          if (! (change->copyfrom_path
-                            && SVN_IS_VALID_REVNUM(change->copyfrom_rev)))
+          if (!change->copyfrom_known)
             {
               svn_revnum_t origin;
               SVN_ERR(svn_fs_node_origin_rev(&origin, root, path, subpool));
