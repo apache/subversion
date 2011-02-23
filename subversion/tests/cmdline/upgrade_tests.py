@@ -856,6 +856,20 @@ def upgrade_with_scheduled_change(sbox):
 ########################################################################
 # Run the tests
 
+  # prop states
+  #
+  # .base                      simple checkout
+  # .base, .revert             delete, copy-here
+  # .working                   add, propset
+  # .base, .working            checkout, propset
+  # .base, .revert, .working   delete, copy-here, propset
+  # .revert, .working          delete, add, propset
+  # .revert                    delete, add
+  #
+  # 1.3.x (f4)
+  # 1.4.0 (f8, buggy)
+  # 1.4.6 (f8, fixed)
+
 # list all tests here, starting with None:
 test_list = [ None,
               basic_upgrade,
