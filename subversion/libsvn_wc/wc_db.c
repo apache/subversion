@@ -7383,13 +7383,20 @@ svn_wc__db_temp_set_access(svn_wc__db_t *db,
 {
   const char *local_relpath;
   svn_wc__db_wcroot_t *wcroot;
+  svn_error_t *err;
 
   SVN_ERR_ASSERT_NO_RETURN(svn_dirent_is_absolute(local_dir_abspath));
   /* ### assert that we were passed a directory?  */
 
-  svn_error_clear(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
+  err = svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
                             db, local_dir_abspath, svn_sqlite__mode_readwrite,
-                            scratch_pool, scratch_pool));
+                            scratch_pool, scratch_pool);
+  if (err)
+    {
+      /* We don't even have a wcroot, so just bail. */
+      svn_error_clear(err);
+      return;
+    }
 
   /* Better not override something already there.  */
   SVN_ERR_ASSERT_NO_RETURN(apr_hash_get(wcroot->access_cache,
@@ -7431,13 +7438,19 @@ svn_wc__db_temp_clear_access(svn_wc__db_t *db,
 {
   const char *local_relpath;
   svn_wc__db_wcroot_t *wcroot;
+  svn_error_t *err;
 
   SVN_ERR_ASSERT_NO_RETURN(svn_dirent_is_absolute(local_dir_abspath));
   /* ### assert that we were passed a directory?  */
 
-  svn_error_clear(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
+  err = svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
                             db, local_dir_abspath, svn_sqlite__mode_readwrite,
-                            scratch_pool, scratch_pool));
+                            scratch_pool, scratch_pool);
+  if (err)
+    {
+      svn_error_clear(err);
+      return;
+    }
 
   apr_hash_set(wcroot->access_cache, local_dir_abspath,
                APR_HASH_KEY_STRING, NULL);
