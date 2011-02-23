@@ -3058,13 +3058,15 @@ svn_io_file_read_full2(apr_file_t *file, void *buf,
 {
   apr_status_t status = apr_file_read_full(file, buf, nbytes, bytes_read);
   if (hit_eof)
-    if (APR_STATUS_IS_EOF(status))
-      {
-        *hit_eof = TRUE;
-        return SVN_NO_ERROR;
-      }
-    else
-      *hit_eof = FALSE;
+    {
+      if (APR_STATUS_IS_EOF(status))
+        {
+          *hit_eof = TRUE;
+          return SVN_NO_ERROR;
+        }
+      else
+        *hit_eof = FALSE;
+    }
 
   return do_io_file_wrapper_cleanup
     (file, status,
