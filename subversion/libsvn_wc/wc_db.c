@@ -8252,32 +8252,33 @@ svn_wc__db_temp_op_set_base_incomplete(svn_wc__db_t *db,
   int affected_rows;
   int affected_node_rows;
   svn_wc__db_status_t base_status;
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
 
-  SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL,
-                                   db, local_dir_abspath,
-                                   scratch_pool, scratch_pool));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_dir_abspath));
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
+                              local_dir_abspath, svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  SVN_ERR(base_get_info(&base_status, NULL, NULL, NULL, NULL, NULL,
+                        NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                        wcroot, local_relpath, scratch_pool, scratch_pool));
 
   SVN_ERR_ASSERT(base_status == svn_wc__db_status_normal ||
                  base_status == svn_wc__db_status_incomplete);
 
-  SVN_ERR(get_statement_for_path(&stmt, db, local_dir_abspath,
-                                 STMT_UPDATE_NODE_BASE_PRESENCE, scratch_pool));
-  SVN_ERR(svn_sqlite__bind_text(stmt, 3, incomplete ? "incomplete" : "normal"));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_UPDATE_NODE_BASE_PRESENCE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id, local_relpath,
+                            incomplete ? "incomplete" : "normal"));
   SVN_ERR(svn_sqlite__update(&affected_node_rows, stmt));
 
   affected_rows = affected_node_rows;
 
   if (affected_rows > 0)
-   {
-     svn_wc__db_pdh_t *pdh = svn_wc__db_pdh_get_or_create(db,
-                                    local_dir_abspath, FALSE, scratch_pool);
-
-     if (pdh != NULL)
-       SVN_ERR(flush_entries(db, pdh->wcroot, local_dir_abspath,
-                             scratch_pool));
-   }
+    SVN_ERR(flush_entries(db, wcroot, local_dir_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
