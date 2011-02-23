@@ -8599,7 +8599,7 @@ svn_wc__db_temp_op_set_file_external(svn_wc__db_t *db,
                                      const svn_opt_revision_t *rev,
                                      apr_pool_t *scratch_pool)
 {
-  svn_wc__db_pdh_t *pdh;
+  svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t got_row;
@@ -8608,15 +8608,15 @@ svn_wc__db_temp_op_set_file_external(svn_wc__db_t *db,
   SVN_ERR_ASSERT(!repos_relpath
                  || svn_relpath_is_canonical(repos_relpath, scratch_pool));
 
-  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
                                              local_abspath,
                                              svn_sqlite__mode_readwrite,
                                              scratch_pool, scratch_pool));
-  VERIFY_USABLE_WCROOT(pdh->wcroot);
+  VERIFY_USABLE_WCROOT(wcroot);
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_BASE_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step(&got_row, stmt));
   SVN_ERR(svn_sqlite__reset(stmt));
 
@@ -8629,17 +8629,16 @@ svn_wc__db_temp_op_set_file_external(svn_wc__db_t *db,
         return SVN_NO_ERROR; /* Don't add a BASE node */
 
       SVN_ERR(svn_wc__db_scan_base_repos(NULL, &repos_root_url,
-                                         &repos_uuid, db, pdh->local_abspath,
+                                         &repos_uuid, db, local_abspath,
                                          scratch_pool, scratch_pool));
 
       SVN_ERR(fetch_repos_id(&repos_id, repos_root_url, repos_uuid,
-                             pdh->wcroot->sdb, scratch_pool));
+                             wcroot->sdb, scratch_pool));
 
-      SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
-                                        STMT_INSERT_NODE));
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_INSERT_NODE));
 
       SVN_ERR(svn_sqlite__bindf(stmt, "isisisntnt",
-                                pdh->wcroot->wc_id,
+                                wcroot->wc_id,
                                 local_relpath,
                                 (apr_int64_t)0, /* op_depth == BASE */
                                 svn_relpath_dirname(local_relpath,
@@ -8652,10 +8651,9 @@ svn_wc__db_temp_op_set_file_external(svn_wc__db_t *db,
       SVN_ERR(svn_sqlite__insert(NULL, stmt));
     }
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, pdh->wcroot->sdb,
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_UPDATE_FILE_EXTERNAL));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", pdh->wcroot->wc_id,
-                            local_relpath));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
   if (repos_relpath)
     {
       const char *str;
@@ -8670,7 +8668,7 @@ svn_wc__db_temp_op_set_file_external(svn_wc__db_t *db,
     }
   SVN_ERR(svn_sqlite__step_done(stmt));
 
-  SVN_ERR(flush_entries(db, pdh->wcroot, local_abspath, scratch_pool));
+  SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
