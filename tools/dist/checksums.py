@@ -23,8 +23,8 @@
 # sha1sums as manifests.  Replaces the 'md5sum' and 'sha1sum' commands
 # on systems that do not have them, such as Mac OS X or Windows.
 #
-# Usage: check-sums.py [manifest]
-#   where "os.path.basename(manifest)" is either "md4sums" or "sha1sums"
+# Usage: checksums.py [manifest]
+#   where "os.path.basename(manifest)" is either "md5sums" or "sha1sums"
 #
 # Tested with the following Python versions:
 #        2.4   2.5   2.6   2.7   3.2
