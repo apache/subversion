@@ -169,11 +169,6 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
                                       apr_pool_t *result_pool,
                                       apr_pool_t *scratch_pool);
 
-/* POOL may be NULL if the lifetime of LOCAL_ABSPATH is sufficient.  */
-const char *
-svn_wc__db_pdh_compute_relpath(const svn_wc__db_pdh_t *pdh,
-                               apr_pool_t *result_pool);
-
 /* Assert that the given WCROOT is usable.
    NOTE: the expression is multiply-evaluated!!  */
 #define VERIFY_USABLE_WCROOT(wcroot)  SVN_ERR_ASSERT(               \
