@@ -127,34 +127,6 @@ close_wcroot(void *data)
 }
 
 
-svn_wc__db_pdh_t *
-svn_wc__db_pdh_get_or_create(svn_wc__db_t *db,
-                             const char *local_dir_abspath,
-                             svn_boolean_t create_allowed,
-                             apr_pool_t *scratch_pool)
-{
-  svn_wc__db_pdh_t *pdh = apr_hash_get(db->dir_data,
-                                       local_dir_abspath, APR_HASH_KEY_STRING);
-
-  if (pdh == NULL && create_allowed)
-    {
-      pdh = apr_pcalloc(db->state_pool, sizeof(*pdh));
-
-      /* Copy the path for the proper lifetime.  */
-      pdh->local_abspath = apr_pstrdup(db->state_pool, local_dir_abspath);
-
-      /* We don't know anything about this directory, so we cannot construct
-         a svn_wc__db_wcroot_t for it (yet).  */
-
-      /* ### parent */
-
-      apr_hash_set(db->dir_data, pdh->local_abspath, APR_HASH_KEY_STRING, pdh);
-    }
-
-  return pdh;
-}
-
-
 svn_error_t *
 svn_wc__db_open(svn_wc__db_t **db,
                 svn_wc__db_openmode_t mode,

@@ -112,13 +112,6 @@ typedef struct svn_wc__db_pdh_t {
 
 
 /* */
-svn_wc__db_pdh_t *
-svn_wc__db_pdh_get_or_create(svn_wc__db_t *db,
-                             const char *local_dir_abspath,
-                             svn_boolean_t create_allowed,
-                             apr_pool_t *scratch_pool);
-
-/* */
 svn_error_t *
 svn_wc__db_close_many_wcroots(apr_hash_t *roots,
                               apr_pool_t *state_pool,
