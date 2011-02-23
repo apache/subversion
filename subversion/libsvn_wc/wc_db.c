@@ -7234,58 +7234,41 @@ svn_wc__db_temp_get_format(int *format,
                            const char *local_dir_abspath,
                            apr_pool_t *scratch_pool)
 {
-  svn_wc__db_pdh_t *pdh;
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+  svn_error_t *err;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_dir_abspath));
   /* ### assert that we were passed a directory?  */
 
-  pdh = svn_wc__db_pdh_get_or_create(db, local_dir_abspath, FALSE,
-                                     scratch_pool);
-
-  /* If the PDH isn't present, or have wcroot information, then do a full
-     upward traversal to find the wcroot.  */
-  if (pdh == NULL || pdh->wcroot == NULL)
-    {
-      const char *local_relpath;
-      svn_error_t *err;
-
-      err = svn_wc__db_pdh_parse_local_abspath(&pdh, &local_relpath, db,
+  err = svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
                                 local_dir_abspath, svn_sqlite__mode_readonly,
                                 scratch_pool, scratch_pool);
-      /* NOTE: pdh does *not* have to have a usable format.  */
+  /* NOTE: pdh does *not* have to have a usable format.  */
 
-      /* If we hit an error examining this directory, then declare this
-         directory to not be a working copy.  */
-      /* ### for per-dir layouts, the wcroot should be this directory,
-         ### so bail if the PDH is a parent (and, thus, local_relpath is
-         ### something besides "").  */
-      if (err)
-        {
-          if (err && err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
-            return svn_error_return(err);
-          svn_error_clear(err);
+  /* If we hit an error examining this directory, then declare this
+     directory to not be a working copy.  */
+  /* ### for per-dir layouts, the wcroot should be this directory,
+     ### so bail if the PDH is a parent (and, thus, local_relpath is
+     ### something besides "").  */
+  if (err)
+    {
+      if (err && err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
+        return svn_error_return(err);
+      svn_error_clear(err);
 
-          /* We might turn this directory into a wcroot later, so let's
-             just forget what we (didn't) find. The wcroot is still
-             hanging off a parent though.
-             Don't clear the wcroot of a parent if we just found a
-             relative path here or we get multiple wcroot issues. */
-          pdh->wcroot = NULL;
-
-          /* Remap the returned error.  */
-          *format = 0;
-          return svn_error_createf(SVN_ERR_WC_MISSING, NULL,
-                                   _("'%s' is not a working copy"),
-                                   svn_dirent_local_style(local_dir_abspath,
-                                                          scratch_pool));
-        }
-
-      SVN_ERR_ASSERT(pdh->wcroot != NULL);
+      /* Remap the returned error.  */
+      *format = 0;
+      return svn_error_createf(SVN_ERR_WC_MISSING, NULL,
+                               _("'%s' is not a working copy"),
+                               svn_dirent_local_style(local_dir_abspath,
+                                                      scratch_pool));
     }
 
-  SVN_ERR_ASSERT(pdh->wcroot->format >= 1);
+  SVN_ERR_ASSERT(wcroot != NULL);
+  SVN_ERR_ASSERT(wcroot->format >= 1);
 
-  *format = pdh->wcroot->format;
+  *format = wcroot->format;
 
   return SVN_NO_ERROR;
 }
