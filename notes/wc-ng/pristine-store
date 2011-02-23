@@ -77,6 +77,9 @@ rationale.)
        pristine text is in the store and its metadata is in the row; if
        not, the pristine text is not currently in the store.
 
+       NOTE: If the reader doesn't have an appropriate lock, the pristine
+       text may be removed from the store at any later time.
+
 (d) To read a pristine text, the reader must:
     1. Query the SDB and open the file within the same SDB txn (to ensure
        that no pristine-remove txn (A-3(b)) is in progress at the same
@@ -125,7 +128,7 @@ rationale.)
 
 (c) In both the 'add' (a) and 'remove' (b) txns, we need to acquire a lock
     that blocks both readers and writers (an SQLite 'RESERVED' lock)
-    before adding or removing the file on disk.  We could aquire this
+    before adding or removing the file on disk.  We could acquire this
     explicitly (e.g. by starting the txn with 'BEGIN IMMEDIATE');
     alternatively SQLite will upgrade the default 'SHARED' lock to
     'RESERVED' the first time we write to a table.
