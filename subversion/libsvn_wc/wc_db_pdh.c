@@ -318,11 +318,11 @@ svn_wc__db_close_many_wcroots(apr_hash_t *roots,
 
 /* POOL may be NULL if the lifetime of LOCAL_ABSPATH is sufficient.  */
 static const char *
-compute_relpath(const svn_wc__db_pdh_t *pdh,
+compute_relpath(const svn_wc__db_wcroot_t *wcroot,
+                const char *local_abspath,
                 apr_pool_t *result_pool)
 {
-  const char *relpath = svn_dirent_is_child(pdh->wcroot->abspath,
-                                            pdh->local_abspath,
+  const char *relpath = svn_dirent_is_child(wcroot->abspath, local_abspath,
                                             result_pool);
   if (relpath == NULL)
     return "";
@@ -371,7 +371,8 @@ svn_wc__db_pdh_parse_local_abspath(svn_wc__db_pdh_t **pdh,
          ### DB->mode? (will we record per-dir mode?)  */
 
       /* ### for most callers, we could pass NULL for result_pool.  */
-      *local_relpath = compute_relpath(*pdh, result_pool);
+      *local_relpath = compute_relpath((*pdh)->wcroot, (*pdh)->local_abspath,
+                                       result_pool);
 
       return SVN_NO_ERROR;
     }
@@ -406,7 +407,8 @@ svn_wc__db_pdh_parse_local_abspath(svn_wc__db_pdh_t **pdh,
           const char *dir_relpath;
 
           /* Stashed directory's local_relpath + basename. */
-          dir_relpath = compute_relpath(*pdh, NULL);
+          dir_relpath = compute_relpath((*pdh)->wcroot, (*pdh)->local_abspath,
+                                        NULL);
           *local_relpath = svn_relpath_join(dir_relpath,
                                             build_relpath,
                                             result_pool);
@@ -555,7 +557,7 @@ svn_wc__db_pdh_parse_local_abspath(svn_wc__db_pdh_t **pdh,
 
     /* The subdirectory's relpath is easily computed relative to the
        wcroot that we just found.  */
-    dir_relpath = compute_relpath(*pdh, NULL);
+    dir_relpath = compute_relpath((*pdh)->wcroot, (*pdh)->local_abspath, NULL);
 
     /* And the result local_relpath may include a filename.  */
     *local_relpath = svn_relpath_join(dir_relpath, build_relpath, result_pool);
