@@ -1217,6 +1217,11 @@ svn_membuffer_cache_iter(svn_boolean_t *completed,
                           _("Can't iterate a membuffer-based cache"));
 }
 
+/* get_parial() and is_cachable() will become part of the svn_cache_t
+ * API soon. Disable the code for now to silence compiler warnings. */
+
+#if 0
+
 static svn_error_t *
 svn_membuffer_cache_get_partial(void **value_p,
                                 svn_boolean_t *found,
@@ -1261,6 +1266,8 @@ svn_membuffer_cache_is_cachable(void *cache_void, apr_size_t size)
   return (size < cache->membuffer->data_size / 4)
       && (size < APR_UINT32_MAX - ITEM_ALIGNMENT);
 }
+
+#endif
 
 /* the v-table for membuffer-based caches
  */
