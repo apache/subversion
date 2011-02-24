@@ -3319,9 +3319,7 @@ fulltext_size_is_cachable(fs_fs_data_t *ffd, svn_filesize_t size)
       && svn_cache__is_cachable(ffd->fulltext_cache, (apr_size_t)size);
 }
 
-/* Store fulltext in RB in the fulltext cache used by said RB. Items that
- * are too large to be cached won't. Also, this will be a no-op if no 
- * fulltext cache has been enabled in RB.
+/* Close method used on streams returned by read_representation().
  */
 static svn_error_t *
 rep_read_contents_close(void *baton)
