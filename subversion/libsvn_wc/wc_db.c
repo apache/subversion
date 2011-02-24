@@ -2439,7 +2439,8 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
 {
   const char *copyfrom_relpath;
   svn_revnum_t copyfrom_rev;
-  svn_wc__db_status_t status, dst_status;
+  svn_wc__db_status_t status;
+  svn_wc__db_status_t dst_status;
   svn_boolean_t have_work;
   apr_int64_t copyfrom_id;
   apr_int64_t dst_op_depth;
@@ -4138,7 +4139,8 @@ db_working_update_presence(apr_int64_t op_depth,
         {
           const char *name = APR_ARRAY_IDX(children, i, const char *);
           const char *child_relpath;
-          svn_boolean_t below_base, below_work;
+          svn_boolean_t below_base;
+          svn_boolean_t below_work;
           svn_wc__db_status_t below_status;
 
           svn_pool_clear(iterpool);
@@ -4478,7 +4480,8 @@ temp_op_delete_txn(void *baton,
                    apr_pool_t *scratch_pool)
 {
   struct temp_op_delete_baton *b = baton;
-  svn_wc__db_status_t status, new_working_status;
+  svn_wc__db_status_t status;
+  svn_wc__db_status_t new_working_status;
   svn_boolean_t have_work;
   svn_boolean_t add_work = FALSE;
   svn_boolean_t del_work = FALSE;
@@ -4510,7 +4513,8 @@ temp_op_delete_txn(void *baton,
                                      b->local_relpath, scratch_pool));
       if (add_or_root_of_copy)
         {
-          svn_boolean_t below_base, below_work;
+          svn_boolean_t below_base;
+          svn_boolean_t below_work;
           svn_wc__db_status_t below_status;
 
           SVN_ERR(info_below_working(&below_base, &below_work, &below_status,
@@ -7044,8 +7048,11 @@ svn_wc__db_upgrade_apply_props(svn_sqlite__db_t *sdb,
 {
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
-  apr_int64_t wc_id, top_op_depth = -1, below_op_depth = -1;
-  svn_wc__db_status_t top_presence, below_presence;
+  apr_int64_t wc_id;
+  apr_int64_t top_op_depth = -1;
+  apr_int64_t below_op_depth = -1;
+  svn_wc__db_status_t top_presence;
+  svn_wc__db_status_t below_presence;
   int affected_rows;
 
   /* ### working_props: use set_props_txn.
@@ -7931,7 +7938,9 @@ wclock_obtain_cb(void *baton,
          created?  1.6 used to lock .svn on creation. */
   if (bt->local_relpath[0])
     {
-      svn_boolean_t have_base, have_working;
+      svn_boolean_t have_base;
+      svn_boolean_t have_working;
+
       SVN_ERR(which_trees_exist(&have_base, &have_working, sdb,
                                 bt->wcroot->wc_id, bt->local_relpath));
 
