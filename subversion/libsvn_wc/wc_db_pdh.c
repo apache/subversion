@@ -302,14 +302,14 @@ compute_relpath(const svn_wc__db_wcroot_t *wcroot,
 }
 
 
-svn_error_t *
-svn_wc__db_pdh_parse_local_abspath(svn_wc__db_pdh_t **pdh,
-                                   const char **local_relpath,
-                                   svn_wc__db_t *db,
-                                   const char *local_abspath,
-                                   svn_sqlite__mode_t smode,
-                                   apr_pool_t *result_pool,
-                                   apr_pool_t *scratch_pool)
+static svn_error_t *
+pdh_parse_local_abspath(svn_wc__db_pdh_t **pdh,
+                        const char **local_relpath,
+                        svn_wc__db_t *db,
+                        const char *local_abspath,
+                        svn_sqlite__mode_t smode,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
 {
   const char *original_abspath = local_abspath;
   svn_node_kind_t kind;
@@ -595,6 +595,7 @@ svn_wc__db_pdh_parse_local_abspath(svn_wc__db_pdh_t **pdh,
   return SVN_NO_ERROR;
 }
 
+
 svn_error_t *
 svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
                                       const char **local_relpath,
@@ -610,13 +611,14 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
      That is, we'd call this function from pdh_parse_local_abspath(), instead
      of the other way around.  However, for the time being, we're going to
      go with short and simple here. */
-  SVN_ERR(svn_wc__db_pdh_parse_local_abspath(&pdh, local_relpath, db,
-                                             local_abspath, smode, result_pool,
-                                             scratch_pool));
+  SVN_ERR(pdh_parse_local_abspath(&pdh, local_relpath, db,
+                                  local_abspath, smode, result_pool,
+                                  scratch_pool));
   *wcroot = pdh->wcroot;
 
   return SVN_NO_ERROR;
 }
+
 
 svn_error_t *
 svn_wc__db_drop_root(svn_wc__db_t *db,
