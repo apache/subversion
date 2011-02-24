@@ -1196,8 +1196,6 @@ svn_wc__register_file_external(svn_wc_context_t *wc_ctx,
                                      parent_abspath, scratch_pool,
                                      scratch_pool));
 
-  SVN_ERR(svn_wc__db_op_add_file(wc_ctx->db, local_abspath, NULL, scratch_pool));
-
   SVN_ERR(svn_wc__set_file_external_location(wc_ctx, local_abspath,
                                              external_url, external_peg_rev,
                                              external_rev, repos_root_url,
