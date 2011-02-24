@@ -1448,8 +1448,6 @@ An enum of the following constants:
 $SVN::Client::Summarize::normal, $SVN::Client::Summarize::added,
 $SVN::Client::Summarize::modified, $SVN::Client::Summarize::deleted.
 
-=back
-
 =cut
 
 package _p_svn_client_diff_summarize_t;
