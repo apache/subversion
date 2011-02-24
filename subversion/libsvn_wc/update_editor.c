@@ -3651,19 +3651,8 @@ merge_file(svn_skel_t **work_items,
      different from fb->old_text_base_path if we have a replaced-with-history
      file.  However, in the case we had an obstruction, we check against the
      new text base.
-
-     Special case: The working file is referring to a file external? If so
-                   then we must mark it as unmodified in order to avoid bogus
-                   conflicts, since this file was added as a place holder to
-                   merge externals item from the repository.
-
-     ### Newly added file externals have a svn_wc_schedule_add here. */
-  if (file_external &&
-           status ==svn_wc__db_status_added)
-    {
-      is_locally_modified = FALSE; /* ### Or a conflict will be raised */
-    }
-  else if (! fb->obstruction_found)
+   */
+  if (! fb->obstruction_found)
     {
       /* The working file is not an obstruction. So: is the file modified,
          relative to its ORIGINAL pristine?  */
@@ -3762,30 +3751,13 @@ merge_file(svn_skel_t **work_items,
 
               *install_pristine = TRUE;
 
-              /* ### sheesh. for file externals, there is a WORKING_NODE
-                 ### row (during this transitional state), which means the
-                 ### node is reported as "added". further, this means
-                 ### that the text base will be dropped into the "revert
-                 ### base". even after everything stabilizes, the file
-                 ### external's base will continue to reside in the revert
-                 ### base, but the rest of libsvn_wc appears to compensate
-                 ### for this fact (even tho it is schedule_normal!!).
-                 ### in any case, let's do the working copy file install
-                 ### from the revert base for file externals.
-
-                 ### Sheesh^2: If the file external is based on a copy from
-                 ### a different 'related' location we receive copyfrom info
-                 ### on the add. And in that specific case (externals_tests
-                 ### 25, "update that modifies a file external") we have a
-                 ### status normal instead of added. */
+              /* For file externals there is a not-present node at op-depth 0.
+                 The initial update will then bring in the file external
+               */
               if (file_external)
                 {
-                  SVN_ERR_ASSERT(status == svn_wc__db_status_added
-                                 || status == svn_wc__db_status_normal);
-
-                  /* The revert-base will be installed later in this function.
-                     To tell the caller to install the new working text from
-                     the (revert-)base file, we leave INSTALL_FROM as NULL. */
+                  SVN_ERR_ASSERT(status == svn_wc__db_status_normal
+                                 || status == svn_wc__db_status_not_present);
                 }
             }
         }
