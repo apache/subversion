@@ -66,6 +66,7 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * make 'svn up --set-depth=exclude FILE' work (issue #3736)
     * return correct error code for 'svn cat' on nonexisting file (issue #3713)
     * support svn:externals on locally added directories (issue #2267)
+    * use installed GSSAPI lib for Kerberos in ra_serf (r877381)
     * fixed: wc-to-wc copy of a switch source (issue #1802)
     * fixed: 'svn st' reports symlinks as obstructed items (issue #2284)
     * fixed: 'cd e:\; svn up e:\' fails (issue #2556)
@@ -81,6 +82,7 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * fixed: ra_serf doesn't support http-auth-types config (issue #3435)
     * fixed: merge sets incorrect mergeinfo on skipped paths (issue #3440)
     * fixed: ra_serf inconsistent handling of cached authn creds (issue #3450)
+    * fixed: ra_serf sefault with using NTLM or Negotiate auth (r876910)
     * fixed: excluded subtrees are not detected by svnversion (issue #3461)
     * fixed: submitting a changelist while obstructed item exists (issue #3484)
     * fixed: crash when changing an external's URL (issue #3530)
@@ -115,14 +117,18 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
  Developer-visible changes:
   - General:
     * improved output of 'make check'
+    * introduce scratch_pool/result_pool parameter paradigm
+    * improved error tracing (r877208)
     * improve building with sqlite on Windows (issue #3364)
     * allow mod_dav_svn to compile against Apache 2.4 (issue #3548)
     * support running tests against older servers (r876016)
+    * notification of unversioned obstructions (r877344)
 
   - API changes:
     * don't crash svn_client_copy if ctx->log_msg_func is NULL (issue #3234)
     * much improved ra_serf error handling (issue #3375)
     * provide clients with old and new revision on update (r876515)
+    * close both files, even on error in svn_stream_copy3() (r887262)
     * added 'work-in-progress' XFail test status (r876549)
     * fixed: svn_ra_local__get_file() leaks file descriptors (issue #3290)
 
