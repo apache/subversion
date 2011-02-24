@@ -1664,6 +1664,26 @@ def switch_external_on_locally_added_dir(sbox):
 
   probe_paths_exist([os.path.join(wc_dir, "foo", "exdir_E")])
 
+@XFail()
+@Issue(3819)
+def file_external_in_sibling(sbox):
+  "update a file external in sibling dir"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Setup A2/iota as file external to ^/iota
+  externals_prop = "^/iota iota\n"
+  sbox.simple_mkdir("A2")
+  change_external(sbox.ospath('A2'), externals_prop)
+  sbox.simple_update()
+
+  # TODO: Currently, 'svn up' would fail if change_external() didn't commit
+  #       its change.  That needs a separate test...
+
+  expected_stdout = ["Updating '.' ...\n", "At revision 2.\n"]
+  os.chdir(sbox.ospath("A"))
+  svntest.actions.run_and_verify_svn(None, expected_stdout, [], 'update')
 
 ########################################################################
 # Run the tests
@@ -1698,6 +1718,7 @@ test_list = [ None,
               update_modify_file_external,
               update_external_on_locally_added_dir,
               switch_external_on_locally_added_dir,
+              file_external_in_sibling,
              ]
 
 if __name__ == '__main__':
