@@ -1134,7 +1134,7 @@ def binary_file_externals(sbox):
   # the binary file /A/theta, but the external file is not there yet.
   # Try to actually insert the external file via a verified update:
   expected_output = svntest.wc.State(wc_dir, {
-      'A/C/external'      : Item(status='E '),
+      'A/C/external'      : Item(status='A '),
     })
 
   expected_disk = svntest.main.greek_state.copy()
@@ -1186,7 +1186,7 @@ def update_lose_file_external(sbox):
   # the file /A/mu, but the external file is not there yet.
   # Try to actually insert the external file via an update:
   expected_output = svntest.wc.State(wc_dir, {
-      'A/C/external'      : Item(status='E '),
+      'A/C/external'      : Item(status='A '),
     })
 
   expected_disk = svntest.main.greek_state.copy()
@@ -1419,7 +1419,7 @@ def wc_repos_file_externals(sbox):
   # the file /A/theta, but the external file is not there yet.
   # Try to actually insert the external file via a verified update:
   expected_output = svntest.wc.State(wc_dir, {
-      'A/C/theta'      : Item(status='E '),
+      'A/C/theta'      : Item(status='A '),
     })
 
   expected_disk = svntest.main.greek_state.copy()
@@ -1449,7 +1449,7 @@ def wc_repos_file_externals(sbox):
   # Try to actually insert the external file (A/I/theta) via a verified update:
   expected_output = svntest.wc.State(wc_dir, {
       'A/I'            : Item(status='A '),
-      'A/I/theta'      : Item(status='E '),
+      'A/I/theta'      : Item(status='A '),
     })
 
   expected_disk = svntest.main.greek_state.copy()
@@ -1527,7 +1527,7 @@ def update_modify_file_external(sbox):
   externals_prop = "^/A/mu external\n"
   change_external(sbox.ospath('A'), externals_prop)
   expected_output = svntest.wc.State(wc_dir, {
-      'A/external'      : Item(status='E '),
+      'A/external'      : Item(status='A '),
     })
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
