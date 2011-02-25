@@ -124,6 +124,29 @@ append_basename_if_dir(const char **appendable_dirent_p,
   return SVN_NO_ERROR;
 }
 
+/* Make an unversioned copy of the versioned file at FROM_ABSPATH.  Copy it
+ * to the destination path TO_ABSPATH.
+ *
+ * If REVISION is svn_opt_revision_working, copy the working version,
+ * otherwise copy the base version.
+ *
+ * Expand the file's keywords according to the source file's 'svn:keywords'
+ * property, if present.  If copying a locally modified working version,
+ * append 'M' to the revision number and use '(local)' for the author.
+ *
+ * Translate the file's line endings according to the source file's
+ * 'svn:eol-style' property, if present.  If NATIVE_EOL is not NULL, use it
+ * in place of the native EOL style.  Throw an error if the source file has
+ * inconsistent line endings and EOL translation is attempted.
+ *
+ * Set the destination file's modification time to the source file's
+ * modification time if copying the working version and the working version
+ * is locally modified; otherwise set it to the versioned file's last
+ * changed time.
+ *
+ * Set the destination file's 'executable' flag according to the source
+ * file's 'svn:executable' property.
+ */
 static svn_error_t *
 copy_one_versioned_file(const char *from_abspath,
                         const char *to_abspath,
@@ -310,6 +333,68 @@ copy_one_versioned_file(const char *from_abspath,
   return svn_io_file_rename(dst_tmp, to_abspath, scratch_pool);
 }
 
+/* Make an unversioned copy of the versioned file or directory tree at the
+ * source path FROM.  Copy it to the destination path TO.
+ *
+ * If REVISION is svn_opt_revision_working, copy the working version,
+ * otherwise copy the base version.
+ *
+ * See copy_one_versioned_file() for details of file copying behaviour,
+ * including IGNORE_KEYWORDS and NATIVE_EOL.
+ *
+ * Include externals unless IGNORE_EXTERNALS is true.
+ *
+ * ### [JAF] The intention of the DEPTH parameter is (presumably):
+ *
+ *         Recurse according to DEPTH.
+ *
+ *     If I'm reading the code right, the current behaviour is:
+ *
+ *         If DEPTH is svn_depth_infinity then recurse fully.  Otherwise,
+ *         copy only the node at FROM itself and any immediate children that
+ *         exist as files in the working version (even if we're copying from
+ *         the base version), and ignore any externals.
+ *
+ * ### [JAF] If something already exists on disk at the destination path,
+ *     the behaviour depends on the node kinds of the source and destination
+ *     and on the FORCE flag.  The intention (I guess) is to follow the
+ *     semantics of svn_client_export5(), semantics that are not fully
+ *     documented but would be something like:
+ *
+ *     -----------+---------------------------------------------------------
+ *            Src | DIR                 FILE                SPECIAL
+ *     Dst (disk) +---------------------------------------------------------
+ *     NONE       | simple copy         simple copy         (as src=file?)
+ *     DIR        | merge if forced [2] inside if root [1]  (as src=file?)
+ *     FILE       | err                 overwr if forced[3] (as src=file?)
+ *     SPECIAL    | ???                 ???                 ???
+ *     -----------+---------------------------------------------------------
+ *
+ *     [1] FILE onto DIR case: If this file is the root of the copy and thus
+ *         the only node to be copied, then copy it as a child of the
+ *         directory TO, applying these same rules again except that if this
+ *         case occurs again (the child path is already a directory) then
+ *         error out.  If this file is not the root of the copy (it is
+ *         reached by recursion), then error out.
+ *
+ *     [2] DIR onto DIR case.  If the 'FORCE' flag is true then copy the
+ *         source's children inside the target dir, else error out.  When
+ *         copying the children, apply the same set of rules, except in the
+ *         FILE onto DIR case error out like in note [1].
+ *
+ *     [3] If the 'FORCE' flag is true then overwrite the destination file
+ *         else error out.
+ *
+ *     The reality (apparently, looking at the code) is somewhat different.
+ *     For a start, to detect the source kind, it looks at what is on disk
+ *     rather than the versioned working or base node.
+ *
+ * ### [JAF] To improve the situation, I think the selection of which nodes
+ *       to export should be decoupled from this function and performed
+ *       instead by a WC tree-walk function driving an editor, much like
+ *       (and sharing parts of) the implementation of the export-from-URL
+ *       case.
+ */
 static svn_error_t *
 copy_versioned_files(const char *from,
                      const char *to,
