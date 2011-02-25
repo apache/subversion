@@ -146,7 +146,7 @@ svn_wc_relocate4(svn_wc_context_t *wc_ctx,
   if (old_url_len == from_len)
     new_url = to;
   else
-    new_url = apr_pstrcat(scratch_pool, to, old_url + from_len, NULL);
+    new_url = apr_pstrcat(scratch_pool, to, old_url + from_len, (char *)NULL);
   if (! svn_path_is_url(new_url))
     return svn_error_createf(SVN_ERR_WC_INVALID_RELOCATION, NULL,
                              _("Invalid relocation destination: '%s' "
