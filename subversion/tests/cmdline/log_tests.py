@@ -446,8 +446,11 @@ def parse_log_output(log_lines):
 
   If LOG_LINES contains merge result information, then the hash also contains
 
-     'merges'   ===> list of merging revisions that resulted in this log
-  being part of the list of messages.
+     'merges'   ===> list of forward-merging revisions that resulted in this
+  log being part of the list of messages.
+
+     'reverse_merges'   ===> list of reverse-merging revisions that resulted
+  in this log being part of the list of messages.
      """
 
   # Here's some log output to look at while writing this function:
@@ -499,6 +502,7 @@ def parse_log_output(log_lines):
     match = header_re.search(this_line)
     if match and match.groups():
       is_result = 0
+      is_result_reverse = 0
       this_item = {}
       this_item['revision'] = int(match.group(1))
       this_item['author']   = match.group(2)
@@ -512,8 +516,10 @@ def parse_log_output(log_lines):
         paths = []
         path_line = log_lines.pop(0).strip()
 
-        # Stop on either a blank line or a "Merged via: ..." line
-        while path_line != '' and path_line[0:6] != 'Merged':
+        # Stop on either a blank line or a "(Reverse) Merged via: ..." line
+        while (path_line != ''
+               and path_line[0:6] != 'Merged'
+               and path_line[0:14] != 'Reverse merged'):
           paths.append( (path_line[0], path_line[2:]) )
           path_line = log_lines.pop(0).strip()
 
@@ -522,9 +528,15 @@ def parse_log_output(log_lines):
         if path_line[0:6] == 'Merged':
           is_result = 1
           result_line = path_line
+        elif path_line[0:14] == 'Reverse merged':
+          is_result_reverse = 1
+          result_line = path_line
 
       elif next_line[0:6] == 'Merged':
         is_result = 1
+        result_line = next_line.strip()
+      elif next_line[0:14] == 'Reverse merged':
+        is_result_reverse = 1
         result_line = next_line.strip()
 
       # Parse output of "Merged via: ..." line
@@ -534,6 +546,17 @@ def parse_log_output(log_lines):
         for rev_str in result_line[prefix_len:].split(','):
           merges.append(int(rev_str.strip()[1:]))
         this_item['merges'] = merges
+
+        # Eat blank line
+        log_lines.pop(0)
+
+      # Parse output of "Reverse merged via: ..." line
+      if is_result_reverse:
+        reverse_merges = []
+        prefix_len = len('Reverse merged via: ')
+        for rev_str in result_line[prefix_len:].split(','):
+          reverse_merges.append(int(rev_str.strip()[1:]))
+        this_item['reverse_merges'] = reverse_merges
 
         # Eat blank line
         log_lines.pop(0)
@@ -1117,33 +1140,56 @@ Log message for revision 3.
     log_chain = parse_log_output([line+"\n" for line in log.split("\n")])
 
 
-def check_merge_results(log_chain, expected_merges):
+def check_merge_results(log_chain, expected_merges=None,
+                        expected_reverse_merges=None):
   '''Check LOG_CHAIN to see if the log information contains 'Merged via'
   information indicated by EXPECTED_MERGES.  EXPECTED_MERGES is a dictionary
   whose key is the merged revision, and whose value is the merging revision.'''
 
   # Check to see if the number and values of the revisions is correct
   for log in log_chain:
-    if log['revision'] not in expected_merges:
+    if (log['revision'] not in expected_merges
+        and log['revision'] not in expected_reverse_merges):
       raise SVNUnexpectedLogs("Found unexpected revision %d" %
                               log['revision'], log_chain)
 
   # Check to see that each rev in expected_merges contains the correct data
-  for rev in expected_merges:
-    try:
-      log = [x for x in log_chain if x['revision'] == rev][0]
-      if 'merges' in log.keys():
-        actual = log['merges']
-      else:
-        actual = []
-      expected = expected_merges[rev]
+  if expected_merges:
+    for rev in expected_merges:
+      try:
+        log = [x for x in log_chain if x['revision'] == rev][0]
+        if 'merges' in log.keys():
+          actual = log['merges']
+        else:
+          actual = []
+        expected = expected_merges[rev]
 
-      if actual != expected:
-        raise SVNUnexpectedLogs(("Merging revisions in rev %d not correct; " +
-                                 "expecting %s, found %s") %
+        if actual != expected:
+          raise SVNUnexpectedLogs(("Merging revisions in rev %d not " +
+                                   "correct; expecting %s, found %s") %
+                                  (rev, str(expected), str(actual)), log_chain)
+      except IndexError:
+        raise SVNUnexpectedLogs("Merged revision '%d' missing" % rev,
+                                log_chain)
+
+  # Check to see that each rev in expected_merges contains the correct data
+  if expected_reverse_merges:
+    for rev in expected_reverse_merges:
+      try:
+        log = [x for x in log_chain if x['revision'] == rev][0]
+        if 'reverse_merges' in log.keys():
+          actual = log['reverse_merges']
+        else:
+          actual = []
+        expected = expected_reverse_merges[rev]
+
+        if actual != expected:
+          raise SVNUnexpectedLogs(("Reverse merging revisions in rev %d not " +
+                                 "correct; expecting %s, found %s") %
                                 (rev, str(expected), str(actual)), log_chain)
-    except IndexError:
-      raise SVNUnexpectedLogs("Merged revision '%d' missing" % rev, log_chain)
+      except IndexError:
+        raise SVNUnexpectedLogs("Reverse merged revision '%d' missing" % rev,
+                                log_chain)
 
 
 @SkipUnless(server_has_mergeinfo)
@@ -1763,6 +1809,66 @@ def log_of_local_copy(sbox):
                           "differs from that on move source '%s'"
                           % (psi_moved_path, psi_path))
 
+#----------------------------------------------------------------------
+
+@SkipUnless(server_has_mergeinfo)
+@Issue(3176)
+@XFail()
+def merge_sensitive_log_reverse_merges(sbox):
+  "log -g differentiates forward and reverse merges"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  wc_disk, wc_status = set_up_branch(sbox)
+
+  A_path      = os.path.join(wc_dir, 'A')
+  A_COPY_path = os.path.join(wc_dir, 'A_COPY')
+  D_COPY_path = os.path.join(wc_dir, 'A_COPY', 'D')
+  
+  # Merge -c3,5 from A to A_COPY, commit as r7
+  svntest.main.run_svn(None, 'up', wc_dir)
+  svntest.main.run_svn(None, 'merge', '-c3,5', A_path, A_COPY_path)
+  svntest.main.run_svn(None, 'ci', '-m', 'Merge -c3,5 from A to A_COPY',
+                       wc_dir)
+    
+  # Merge -c-3,-5,4,6 from A to A_COPY, commit as r8
+  svntest.main.run_svn(None, 'up', wc_dir)
+  svntest.main.run_svn(None, 'merge', '-c-3,4,-5,6', A_path, A_COPY_path)
+  svntest.main.run_svn(None, 'ci', '-m', 'Merge -c-3,-5,4,6 from A to A_COPY',
+                       wc_dir)
+
+  # Update so
+  svntest.main.run_svn(None, 'up', wc_dir)
+
+  # Run log -g on path with explicit mergeinfo (A_COPY).
+  exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                           'log', '-g', '-r8',
+                                                           A_COPY_path)
+  # This test currently fails because
+  log_chain = parse_log_output(out)
+  expected_merges = {
+    8 : [],
+    6 : [8],
+    4 : [8],
+  }
+  expected_reverse_merges = {
+    5 : [8],
+    3 : [8],
+  }
+  check_merge_results(log_chain, expected_merges, expected_reverse_merges)
+
+  # Run log -g on path with inherited mergeinfo (A_COPY/D).
+  exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                           'log', '-g', '-r8',
+                                                           D_COPY_path)
+  log_chain = parse_log_output(out)
+  # expected_merges is the same as before.
+  expected_reverse_merges = {
+    # 5 : [8], r5 only affects A_COPY/B/E/beta
+    3 : [8],
+  }
+  check_merge_results(log_chain, expected_merges, expected_reverse_merges)
+
 ########################################################################
 # Run the tests
 
@@ -1798,6 +1904,7 @@ test_list = [ None,
               merge_sensitive_log_added_mergeinfo_replaces_inherited,
               merge_sensitive_log_propmod_merge_inheriting_path,
               log_of_local_copy,
+              merge_sensitive_log_reverse_merges,
              ]
 
 if __name__ == '__main__':
