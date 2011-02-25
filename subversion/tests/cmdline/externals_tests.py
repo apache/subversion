@@ -1678,12 +1678,22 @@ def file_external_in_sibling(sbox):
   change_external(sbox.ospath('A2'), externals_prop)
   sbox.simple_update()
 
-  # TODO: Currently, 'svn up' would fail if change_external() didn't commit
-  #       its change.  That needs a separate test...
-
   expected_stdout = ["Updating '.' ...\n", "At revision 2.\n"]
   os.chdir(sbox.ospath("A"))
   svntest.actions.run_and_verify_svn(None, expected_stdout, [], 'update')
+
+@XFail()
+def file_external_update_without_commit(sbox):
+  "update a file external without committing"
+
+  sbox.build(read_only=True)
+  wc_dir = sbox.wc_dir
+
+  # Setup A2/iota as file external to ^/iota
+  externals_prop = "^/iota iota\n"
+  sbox.simple_mkdir("A2")
+  change_external(sbox.ospath('A2'), externals_prop, commit=False)
+  sbox.simple_update()
 
 ########################################################################
 # Run the tests
@@ -1719,6 +1729,7 @@ test_list = [ None,
               update_external_on_locally_added_dir,
               switch_external_on_locally_added_dir,
               file_external_in_sibling,
+              file_external_update_without_commit,
              ]
 
 if __name__ == '__main__':
