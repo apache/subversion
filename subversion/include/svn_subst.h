@@ -353,6 +353,11 @@ svn_subst_stream_translated_to_normal_form(svn_stream_t **stream,
  * in @a result_pool, and any temporary allocations will be made in
  * @a scratch_pool.
  *
+ * If the file at @a path is in fact a regular file, just read its content,
+ * which should be in the "normal form" for a special file.  This enables
+ * special files to be written and read on platforms that do not treat them
+ * as special.
+ *
  * @since New in 1.6.
  */
 svn_error_t *
@@ -367,6 +372,11 @@ svn_subst_read_specialfile(svn_stream_t **stream,
  * will create that file when the stream is closed. The stream will be
  * allocated in @a result_pool, and any temporary allocations will be
  * made in @a scratch_pool.
+ *
+ * If the platform does not support the semantics of the special file, write
+ * a regular file containing the "normal form" text.  This enables special
+ * files to be written and read on platforms that do not treat them as
+ * special.
  *
  * Note: the target file is created in a temporary location, then renamed
  *   into position, so the creation can be considered "atomic".
