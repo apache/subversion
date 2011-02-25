@@ -190,7 +190,6 @@ class Sandbox:
   def simple_update(self, target=None):
     """Update the WC or TARGET.
        TARGET is a relpath relative to the WC."""
-    assert not self.read_only
     if target is None:
       target = self.wc_dir
     else:
