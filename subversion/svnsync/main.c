@@ -393,11 +393,12 @@ with_locked(svn_ra_session_t *session,
             apr_pool_t *pool)
 {
   const svn_string_t *lock_string;
+  svn_error_t *err;
 
   SVN_ERR(get_lock(&lock_string, session, steal_lock, pool));
 
-  return svn_error_compose_create(
-             func(session, baton, pool),
+  err = func(session, baton, pool);
+  return svn_error_compose_create(err,
              svn_ra__release_operational_lock(session, SVNSYNC_PROP_LOCK,
                                               lock_string, pool));
 }

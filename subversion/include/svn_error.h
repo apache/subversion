@@ -148,6 +148,10 @@ svn_error_quick_wrap(svn_error_t *child,
  * @a err2 may be @c SVN_NO_ERROR.  If both are not @c SVN_NO_ERROR,
  * @a err2 will follow @a err1 in the chain of the returned error.
  *
+ * Either @a err1 or @a err2 can be functions that return svn_error_t*
+ * but if both are functions they can be evaluated in either order as
+ * per the C language rules.
+ *
  * @since New in 1.6.
  */
 svn_error_t *
@@ -157,6 +161,10 @@ svn_error_compose_create(svn_error_t *err1,
 /** Add @a new_err to the end of @a chain's chain of errors.  The @a new_err
  * chain will be copied into @a chain's pool and destroyed, so @a new_err
  * itself becomes invalid after this function.
+ *
+ * Either @a chain or @a new_err can be functions that return svn_error_t*
+ * but if both are functions they can be evaluated in either order as
+ * per the C language rules.
  */
 void
 svn_error_compose(svn_error_t *chain,
