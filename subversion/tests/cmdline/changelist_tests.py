@@ -1129,6 +1129,69 @@ def move_added_keeps_changelist(sbox):
   ]
   svntest.actions.run_and_verify_info(expected_infos, kappa2_path)
 
+@XFail()
+@Issue(3820)  ### Extend to cover a merge that replaces a file with a dir
+def change_to_dir(sbox):
+  "change file in changelist to dir"
+
+  sbox.build(read_only = True)
+
+  # No changelist initially
+  expected_infos = [{'Name' : 'mu', 'Changelist' : None}]
+  svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
+
+  # A/mu visible in changelist
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'changelist', 'qq', sbox.ospath('A/mu'))
+  expected_infos = [{'Name' : 'mu', 'Changelist' : 'qq'}]
+  svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
+
+  # A/mu still visible after delete
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', sbox.ospath('A/mu'))
+  svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
+
+  # A/mu removed from changelist after replace with directory
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'mkdir', sbox.ospath('A/mu'))
+  expected_infos = [{'Changelist' : None}] # No Name for directories?
+  svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
+
+
+@XFail()
+@Issue(3822)
+def revert_deleted_in_changelist(sbox):
+  "revert a deleted file in a changelist"
+
+  sbox.build(read_only = True)
+
+  # No changelist initially
+  expected_infos = [{'Name' : 'mu', 'Changelist' : None}]
+  svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
+
+  # A/mu visible in changelist
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'changelist', 'qq', sbox.ospath('A/mu'))
+  expected_infos = [{'Name' : 'mu', 'Changelist' : 'qq'}]
+  svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
+
+  # A/mu still visible after delete
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', sbox.ospath('A/mu'))
+  svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
+
+  # A/mu still visible after revert
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'revert', sbox.ospath('A/mu'))
+  svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
+
+  # A/mu still visible after parent delete
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', sbox.ospath('A'))
+  svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
+
+  # A/mu still visible after revert
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'revert', '-R', sbox.ospath('A'))
+  svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
+
 
 
 ########################################################################
@@ -1149,6 +1212,8 @@ test_list = [ None,
               tree_conflicts_and_changelists_on_commit3,
               move_keeps_changelist,
               move_added_keeps_changelist,
+              change_to_dir,
+              revert_deleted_in_changelist,
              ]
 
 if __name__ == '__main__':
