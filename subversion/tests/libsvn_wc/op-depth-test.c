@@ -1999,9 +1999,9 @@ check_db_actual(wc_baton_t* b,
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   while (have_row)
     {
-      const char *local_relpath = svn_sqlite__column_text(stmt, 0, NULL);
+      const char *local_relpath = svn_sqlite__column_text(stmt, 0, b->pool);
       if (!apr_hash_get(path_hash, local_relpath, APR_HASH_KEY_STRING))
-        return svn_error_createf(SVN_ERR_TEST_FAILED, svn_sqlite__reset(stmt),
+        return svn_error_createf(SVN_ERR_TEST_FAILED, svn_sqlite__close(sdb),
                                  "actual '%s' unexpected", local_relpath);
       apr_hash_set(path_hash, local_relpath, APR_HASH_KEY_STRING, NULL);
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
@@ -2011,7 +2011,7 @@ check_db_actual(wc_baton_t* b,
     {
       const char *local_relpath
         = svn__apr_hash_index_key(apr_hash_first(b->pool, path_hash));
-      return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+      return svn_error_createf(SVN_ERR_TEST_FAILED, svn_sqlite__close(sdb),
                                "actual '%s' expected", local_relpath);
     }
 
