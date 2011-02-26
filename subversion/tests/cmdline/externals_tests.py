@@ -1683,16 +1683,17 @@ def file_external_in_sibling(sbox):
   svntest.actions.run_and_verify_svn(None, expected_stdout, [], 'update')
 
 @XFail()
+@Issue(3823)
 def file_external_update_without_commit(sbox):
-  "update a file external without committing"
+  "update a file external without committing target"
 
   sbox.build(read_only=True)
-  wc_dir = sbox.wc_dir
 
   # Setup A2/iota as file external to ^/iota
   externals_prop = "^/iota iota\n"
   sbox.simple_mkdir("A2")
   change_external(sbox.ospath('A2'), externals_prop, commit=False)
+  # A2/ is an uncommitted added dir with an svn:externals property set.
   sbox.simple_update()
 
 ########################################################################
