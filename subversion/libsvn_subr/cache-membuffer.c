@@ -987,6 +987,11 @@ membuffer_cache_get(svn_membuffer_t *cache,
   return deserializer(item, buffer, entry->size, pool);
 }
 
+/* get_parial() and is_cachable() will become part of the svn_cache_t
+ * API soon. Disable the code for now to silence compiler warnings. */
+
+#if 0
+
 static svn_error_t *
 membuffer_cache_get_partial(svn_membuffer_t *cache,
                             const void *key,
@@ -1028,6 +1033,8 @@ membuffer_cache_get_partial(svn_membuffer_t *cache,
    */
   return unlock_cache(cache, err);
 }
+
+#endif
 
 /* Implement the svn_cache__t interface on top of a shared membuffer cache.
  *
