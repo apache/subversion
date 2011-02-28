@@ -316,7 +316,6 @@ pristine_install_txn(void *baton,
   apr_finfo_t finfo;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
-  svn_node_kind_t kind;
 
   /* If this pristine text is already present in the store, just keep it:
    * delete the new one and return. */
@@ -326,25 +325,36 @@ pristine_install_txn(void *baton,
   SVN_ERR(svn_sqlite__reset(stmt));
   if (have_row)
     {
+#ifdef SVN_DEBUG
+      /* Consistency checks.  Verify both files exist and match.
+       * ### We could check much more. */
+      {
+        apr_finfo_t finfo1, finfo2;
+        SVN_ERR(svn_io_stat(&finfo1, b->tempfile_abspath, APR_FINFO_SIZE,
+                            scratch_pool));
+        SVN_ERR(svn_io_stat(&finfo2, b->pristine_abspath, APR_FINFO_SIZE,
+                            scratch_pool));
+        if (finfo1.size != finfo2.size)
+          {
+            return svn_error_createf(
+              SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
+              _("New pristine text '%s' has different size: %ld versus %ld"),
+              svn_checksum_to_cstring_display(b->sha1_checksum, scratch_pool),
+              (long int)finfo1.size, (long int)finfo2.size);
+          }
+      }
+#endif
+
       /* Remove the temp file: it's already there */
-      /* ### TODO: Maybe verify the new file matches the existing one. */
-      SVN_ERR(svn_io_remove_file2(b->tempfile_abspath, FALSE, scratch_pool));
+      SVN_ERR(svn_io_remove_file2(b->tempfile_abspath,
+                                  FALSE /* ignore_enoent */, scratch_pool));
       return SVN_NO_ERROR;
     }
 
-  /* Move the file to its target location, or discard it if already there. */
-  SVN_ERR(svn_io_check_path(b->pristine_abspath, &kind, scratch_pool));
-  if (kind == svn_node_file)
-    {
-      /* Remove the temp file: it's already there */
-      /* ### TODO: Maybe verify the new file matches the existing one. */
-      SVN_ERR(svn_io_remove_file2(b->tempfile_abspath, FALSE, scratch_pool));
-    }
-  else
-    {
-      SVN_ERR(svn_io_file_rename(b->tempfile_abspath, b->pristine_abspath,
-                                 scratch_pool));
-    }
+  /* Move the file to its target location.  (If it is already there, it is
+   * an orphan file and it doesn't matter if we overwrite it.) */
+  SVN_ERR(svn_io_file_rename(b->tempfile_abspath, b->pristine_abspath,
+                             scratch_pool));
 
   SVN_ERR(svn_io_stat(&finfo, b->pristine_abspath, APR_FINFO_SIZE,
                       scratch_pool));
@@ -523,9 +533,16 @@ pristine_remove_if_unreferenced_txn(void *baton,
   /* If we removed the DB row, then remove the file. */
   if (affected_rows > 0)
     {
-      /* ### TODO: If file not present, log a consistency error but return
-       * success. */
-      SVN_ERR(svn_io_remove_file2(b->pristine_abspath, FALSE /* ignore_enoent */,
+      /* If the file is not present, something has gone wrong, but at this
+       * point it no longer matters.  In a debug build, raise an error, but
+       * in a release build, it is more helpful to ignore it and continue. */
+#ifdef SVN_DEBUG
+      svn_boolean_t ignore_enoent = FALSE;
+#else
+      svn_boolean_t ignore_enoent = TRUE;
+#endif
+
+      SVN_ERR(svn_io_remove_file2(b->pristine_abspath, ignore_enoent,
                                   scratch_pool));
     }
 
