@@ -1356,6 +1356,9 @@ svn_stringbuf_from_aprfile(svn_stringbuf_t **result,
  * the file is not present (APR_STATUS_IS_ENOENT returns TRUE), then no
  * error will be returned.
  *
+ * The file will be removed even if it is not writable.  (On Windows and
+ * OS/2, this function first clears the file's read-only bit.)
+ *
  * @since New in 1.7.
  */
 svn_error_t *
