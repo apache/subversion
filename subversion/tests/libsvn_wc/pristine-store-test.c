@@ -289,6 +289,120 @@ pristine_get_translated(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+/* Test deleting a pristine text while it is open for reading. */
+static svn_error_t *
+pristine_delete_while_open(const svn_test_opts_t *opts,
+                           apr_pool_t *pool)
+{
+  svn_wc__db_t *db;
+  const char *repos_url;
+  const char *wc_abspath;
+  const char *pristine_tmp_dir;
+  svn_stream_t *contents;
+
+  const char data[] = "Blah";
+  svn_checksum_t *data_sha1, *data_md5;
+
+  SVN_ERR(create_repos_and_wc(&repos_url, &wc_abspath, &db,
+                              "pristine_delete_while_open", opts, pool));
+
+  SVN_ERR(svn_wc__db_pristine_get_tempdir(&pristine_tmp_dir, db,
+                                          wc_abspath, pool, pool));
+
+  /* Install a pristine text. */
+  {
+    const char *path;
+
+    SVN_ERR(write_and_checksum_temp_file(&path, &data_sha1, &data_md5,
+                                         data, pristine_tmp_dir, pool));
+    SVN_ERR(svn_wc__db_pristine_install(db, path, data_sha1, data_md5, pool));
+  }
+
+  /* Open it for reading */
+  SVN_ERR(svn_wc__db_pristine_read(&contents, db, wc_abspath, data_sha1,
+                                   pool, pool));
+
+  /* Delete it */
+  SVN_ERR(svn_wc__db_pristine_remove(db, wc_abspath, data_sha1, pool));
+
+  /* Continue to read from it */
+  {
+    char buffer[4];
+    apr_size_t len = 4;
+
+    SVN_ERR(svn_stream_read(contents, buffer, &len));
+    SVN_TEST_ASSERT(len == 4);
+    SVN_TEST_STRING_ASSERT(buffer, data);
+  }
+
+  /* Ensure it's no longer found in the store. (The file may still exist as
+   * an orphan, depending on the implementation.) */
+  {
+    svn_boolean_t present;
+
+    SVN_ERR(svn_wc__db_pristine_check(&present, db, wc_abspath, data_sha1,
+                                      pool));
+    SVN_TEST_ASSERT(! present);
+  }
+
+  /* Close the read stream */
+  SVN_ERR(svn_stream_close(contents));
+
+  return SVN_NO_ERROR;
+}
+
+/* Check that the store rejects an attempt to replace an existing pristine
+ * text with different text.
+ * 
+ * White-box knowledge: The implementation compares the file sizes but
+ * doesn't compare the text itself, so in this test we ensure the second
+ * text is a different size. */
+static svn_error_t *
+reject_mismatching_text(const svn_test_opts_t *opts,
+                        apr_pool_t *pool)
+{
+  svn_wc__db_t *db;
+  const char *repos_url;
+  const char *wc_abspath;
+  const char *pristine_tmp_dir;
+
+  const char data[] = "Blah";
+  svn_checksum_t *data_sha1, *data_md5;
+
+  const char data2[] = "Baz";
+
+  SVN_ERR(create_repos_and_wc(&repos_url, &wc_abspath, &db,
+                              "reject_mismatching_text", opts, pool));
+
+  SVN_ERR(svn_wc__db_pristine_get_tempdir(&pristine_tmp_dir, db,
+                                          wc_abspath, pool, pool));
+
+  /* Install a pristine text. */
+  {
+    const char *path;
+
+    SVN_ERR(write_and_checksum_temp_file(&path, &data_sha1, &data_md5,
+                                         data, pristine_tmp_dir, pool));
+    SVN_ERR(svn_wc__db_pristine_install(db, path, data_sha1, data_md5, pool));
+  }
+
+  /* Try to install the wrong pristine text against the same checksum.
+   * Should fail. */
+  {
+    svn_error_t *err;
+    const char *path;
+
+    SVN_ERR(write_and_checksum_temp_file(&path, NULL, NULL,
+                                         data2, pristine_tmp_dir, pool));
+    err = svn_wc__db_pristine_install(db, path, data_sha1, data_md5, pool);
+    SVN_TEST_ASSERT(err != NULL);
+    SVN_TEST_ASSERT(err->apr_err == SVN_ERR_WC_CORRUPT_TEXT_BASE);
+    svn_error_clear(err);
+  }
+
+  return SVN_NO_ERROR;
+}
+
 
 struct svn_test_descriptor_t test_funcs[] =
   {
@@ -297,5 +411,9 @@ struct svn_test_descriptor_t test_funcs[] =
                        "pristine_write_read"),
     SVN_TEST_OPTS_PASS(pristine_get_translated,
                        "pristine_get_translated"),
+    SVN_TEST_OPTS_PASS(pristine_delete_while_open,
+                       "pristine_delete_while_open"),
+    SVN_TEST_OPTS_PASS(reject_mismatching_text,
+                       "reject_mismatching_text"),
     SVN_TEST_NULL
   };

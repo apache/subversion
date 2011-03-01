@@ -890,7 +890,11 @@ svn_wc__db_pristine_get_future_path(const char **pristine_abspath,
 
 
 /* Set *CONTENTS to a readable stream that will yield the pristine text
-   identified by CHECKSUM (### which should/must be its SHA-1 checksum?).
+   identified by SHA1_CHECKSUM (### which should/must be its SHA-1 checksum?)
+   within the WC identified by WRI_ABSPATH in DB.
+
+   Even if the pristine text is removed from the store while it is being
+   read, the stream will remain valid and readable until it is closed.
 
    Allocate the stream in RESULT_POOL. */
 svn_error_t *
