@@ -525,7 +525,7 @@ remove_file(const char *file_abspath,
             svn_boolean_t ignore_enoent,
             apr_pool_t *scratch_pool)
 {
-#if 1 /*def WIN32*/
+#ifdef WIN32
   svn_error_t *err;
   const char *temp_abspath;
   const char *temp_dir_abspath
