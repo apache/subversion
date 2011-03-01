@@ -182,6 +182,9 @@ typedef struct pristine_read_baton_t
  * identified by BATON->sha1_checksum can be read from the pristine store of
  * SDB.  If that text is not in the pristine store, return an error.
  *
+ * Even if the pristine text is removed from the store while it is being
+ * read, the stream will remain valid and readable until it is closed.
+ *
  * Allocate the stream in BATON->result_pool.
  *
  * This function expects to be executed inside a SQLite txn.
@@ -211,6 +214,8 @@ pristine_read_txn(void *baton,
                                  b->sha1_checksum, scratch_pool));
     }
 
+  /* Open the file as a readable stream.  It will remain readable even when
+   * deleted from disk; APR guarantees that on Windows as well as Unix. */
   SVN_ERR(svn_stream_open_readonly(b->contents, b->pristine_abspath,
                                    b->result_pool, scratch_pool));
   return SVN_NO_ERROR;
@@ -258,6 +263,18 @@ svn_wc__db_pristine_read(svn_stream_t **contents,
 }
 
 
+/* Return the absolute path to the temporary directory for pristine text
+   files within WCROOT. */
+static char *
+pristine_get_tempdir(svn_wc__db_wcroot_t *wcroot,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
+{
+  return svn_dirent_join_many(result_pool, wcroot->abspath,
+                              svn_wc_get_adm_dir(scratch_pool),
+                              PRISTINE_TEMPDIR_RELPATH, (char *)NULL);
+}
+
 svn_error_t *
 svn_wc__db_pristine_get_tempdir(const char **temp_dir_abspath,
                                 svn_wc__db_t *db,
@@ -276,10 +293,7 @@ svn_wc__db_pristine_get_tempdir(const char **temp_dir_abspath,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  *temp_dir_abspath = svn_dirent_join_many(result_pool, wcroot->abspath,
-                                           svn_wc_get_adm_dir(scratch_pool),
-                                           PRISTINE_TEMPDIR_RELPATH,
-                                           NULL);
+  *temp_dir_abspath = pristine_get_tempdir(wcroot, result_pool, scratch_pool);
   return SVN_NO_ERROR;
 }
 
@@ -499,9 +513,46 @@ svn_wc__db_pristine_get_sha1(const svn_checksum_t **sha1_checksum,
 }
 
 
+/* Remove the file at FILE_ABSPATH in such a way that we could re-create a
+ * new file of the same name at any time thereafter.
+ *
+ * On Windows, the file will not disappear immediately from the directory if
+ * it is still being read so the best thing to do is first rename it to a
+ * unique name. */
+static svn_error_t *
+remove_file(const char *file_abspath,
+            svn_wc__db_wcroot_t *wcroot,
+            svn_boolean_t ignore_enoent,
+            apr_pool_t *scratch_pool)
+{
+#if 1 /*def WIN32*/
+  svn_error_t *err;
+  const char *temp_abspath;
+  const char *temp_dir_abspath
+    = pristine_get_tempdir(wcroot, scratch_pool, scratch_pool);
+
+  /* To rename the file to a unique name in the temp dir, first create a
+   * uniquely named file in the temp dir and then overwrite it. */
+  SVN_ERR(svn_io_open_unique_file3(NULL, &temp_abspath, temp_dir_abspath,
+                                   svn_io_file_del_none,
+                                   scratch_pool, scratch_pool));
+  err = svn_io_file_rename(file_abspath, temp_abspath, scratch_pool);
+  if (err && ignore_enoent && APR_STATUS_IS_ENOENT(err->apr_err))
+    svn_error_clear(err);
+  else
+    SVN_ERR(err);
+  file_abspath = temp_abspath;
+#endif
+
+  SVN_ERR(svn_io_remove_file2(file_abspath, ignore_enoent, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* Data for pristine_remove_if_unreferenced_txn(). */
 typedef struct pristine_remove_baton_t
 {
+  svn_wc__db_wcroot_t *wcroot;
   /* The pristine text's SHA-1 checksum. */
   const svn_checksum_t *sha1_checksum;
   /* The path to the pristine file (within the pristine store). */
@@ -542,8 +593,8 @@ pristine_remove_if_unreferenced_txn(void *baton,
       svn_boolean_t ignore_enoent = TRUE;
 #endif
 
-      SVN_ERR(svn_io_remove_file2(b->pristine_abspath, ignore_enoent,
-                                  scratch_pool));
+      SVN_ERR(remove_file(b->pristine_abspath, b->wcroot, ignore_enoent,
+                          scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -561,6 +612,7 @@ pristine_remove_if_unreferenced(svn_wc__db_wcroot_t *wcroot,
 {
   pristine_remove_baton_t b;
 
+  b.wcroot = wcroot;
   b.sha1_checksum = sha1_checksum;
   SVN_ERR(get_pristine_fname(&b.pristine_abspath, wcroot->abspath,
                              sha1_checksum, FALSE /* create_subdir */,
