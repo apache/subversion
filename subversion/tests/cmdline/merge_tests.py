@@ -16469,7 +16469,6 @@ def subtree_merges_inherit_invalid_working_mergeinfo(sbox):
 #----------------------------------------------------------------------
 # Test for issue #3686 'executable flag not correctly set on merge'
 # See http://subversion.tigris.org/issues/show_bug.cgi?id=3686
-@XFail()
 @Issue(3686)
 @SkipUnless(svntest.main.is_posix_os)
 def merge_change_to_file_with_executable(sbox):
