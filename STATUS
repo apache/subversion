@@ -222,7 +222,9 @@ Candidate changes:
     Fix issue #3719 "Extremely slow checkout on Windows"
     Justification:
       Has been reported to improve checkout performance on Windows
-      by a factor of 10 (85 minutes down to 8).
+      by a factor of 10 for one user (85 minutes down to 8 minutes).
+      The problem is most visible in working copies that have many
+      files in a single directory.
     Notes:
       See the issue for details, and also this thread:
       http://svn.haxx.se/dev/archive-2011-02/0066.shtml
