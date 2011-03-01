@@ -229,6 +229,14 @@ Candidate changes:
     Votes:
       +1: stsp
 
+  * r1074572
+    Allow building on Windows with a recent Expat.
+    Justification:
+      We like building Subversion, even on Windows.  User requested.
+    Votes:
+      +0: hwright (I like the idea, but have no knowledge of the change, or
+                   ability to test it.)
+
 Veto-blocked changes:
 =====================
 
