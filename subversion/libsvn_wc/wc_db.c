@@ -7373,14 +7373,9 @@ svn_wc__db_temp_forget_directory(svn_wc__db_t *db,
        hi;
        hi = apr_hash_next(hi))
     {
-      const void *key;
-      apr_ssize_t klen;
-      void *val;
-      svn_wc__db_pdh_t *pdh;
+      svn_wc__db_pdh_t *pdh = svn__apr_hash_index_val(hi);
+      const char *local_abspath = svn__apr_hash_index_key(hi);
       svn_error_t *err;
-
-      apr_hash_this(hi, &key, &klen, &val);
-      pdh = val;
 
       if (!svn_dirent_is_ancestor(local_dir_abspath, pdh->local_abspath))
         continue;
@@ -7396,7 +7391,7 @@ svn_wc__db_temp_forget_directory(svn_wc__db_t *db,
       else
         SVN_ERR(err);
 
-      apr_hash_set(db->dir_data, key, klen, NULL);
+      apr_hash_set(db->dir_data, local_abspath, APR_HASH_KEY_STRING, NULL);
 
       if (pdh->wcroot && pdh->wcroot->sdb &&
           svn_dirent_is_ancestor(local_dir_abspath, pdh->wcroot->abspath))
