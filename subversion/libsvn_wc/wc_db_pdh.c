@@ -160,19 +160,14 @@ svn_wc__db_close(svn_wc__db_t *db)
        hi;
        hi = apr_hash_next(hi))
     {
-      const void *key;
-      apr_ssize_t klen;
-      void *val;
-      svn_wc__db_pdh_t *pdh;
-
-      apr_hash_this(hi, &key, &klen, &val);
-      pdh = val;
+      svn_wc__db_pdh_t *pdh = svn__apr_hash_index_val(hi);
+      const char *local_abspath = svn__apr_hash_index_key(hi);
 
       if (pdh->wcroot && pdh->wcroot->sdb)
         apr_hash_set(roots, pdh->wcroot->abspath, APR_HASH_KEY_STRING,
                      pdh->wcroot);
 
-      apr_hash_set(db->dir_data, key, klen, NULL);
+      apr_hash_set(db->dir_data, local_abspath, APR_HASH_KEY_STRING, NULL);
     }
 
   /* Run the cleanup for each WCROOT.  */
