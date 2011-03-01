@@ -332,7 +332,7 @@ pristine_delete_while_open(const svn_test_opts_t *opts,
 
     SVN_ERR(svn_stream_read(contents, buffer, &len));
     SVN_TEST_ASSERT(len == 4);
-    SVN_TEST_STRING_ASSERT(buffer, data);
+    SVN_TEST_ASSERT(memcmp(buffer, data, len) == 0);
   }
 
   /* Ensure it's no longer found in the store. (The file may still exist as
