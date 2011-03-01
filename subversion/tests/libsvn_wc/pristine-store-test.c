@@ -74,6 +74,39 @@ create_repos_and_wc(const char **repos_url,
 }
 
 
+/* Write the string DATA into a new unique-named file in the directory
+ * DIR_ABSPATH.  Set *FILE_ABSPATH to its absolute path and *CHECKSUM_SHA1
+ * and *CHECKSUM_MD5 to its SHA-1 and MD-5 checksums.
+ *
+ * CHECKSUM_SHA1 and/or CHECKSUM_MD5 may be null if not required. */
+static svn_error_t *
+write_and_checksum_temp_file(const char **file_abspath,
+                             svn_checksum_t **sha1_checksum,
+                             svn_checksum_t **md5_checksum,
+                             const char *data,
+                             const char *dir_abspath,
+                             apr_pool_t *pool)
+{
+  apr_file_t *file;
+
+  SVN_ERR(svn_io_open_unique_file3(&file, file_abspath,
+                                   dir_abspath, svn_io_file_del_none,
+                                   pool, pool));
+
+  SVN_ERR(svn_io_file_write_full(file, data, strlen(data), NULL, pool));
+  SVN_ERR(svn_io_file_close(file, pool));
+
+  if (sha1_checksum)
+    SVN_ERR(svn_io_file_checksum2(sha1_checksum, *file_abspath,
+                                  svn_checksum_sha1, pool));
+  if (md5_checksum)
+    SVN_ERR(svn_io_file_checksum2(md5_checksum, *file_abspath,
+                                  svn_checksum_md5, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Exercise the pristine text API with a simple write and read. */
 static svn_error_t *
 pristine_write_read(const svn_test_opts_t *opts,
@@ -84,7 +117,6 @@ pristine_write_read(const svn_test_opts_t *opts,
   const char *wc_abspath;
 
   const char *pristine_tmp_abspath;
-  svn_stream_t *pristine_tmp_stream;
 
   const char data[] = "Blah";
   svn_string_t *data_string = svn_string_create(data, pool);
@@ -93,28 +125,16 @@ pristine_write_read(const svn_test_opts_t *opts,
   SVN_ERR(create_repos_and_wc(&repos_url, &wc_abspath, &db,
                               "pristine_write_read", opts, pool));
 
-  /* Make a new temporary pristine file, and set PRISTINE_TMP_STREAM and
-   * PRISTINE_TMP_ABSPATH to access it. */
+  /* Write DATA into a new temporary pristine file, set PRISTINE_TMP_ABSPATH
+   * to its path and set DATA_SHA1 and DATA_MD5 to its checksums. */
   {
     const char *pristine_tmp_dir;
 
     SVN_ERR(svn_wc__db_pristine_get_tempdir(&pristine_tmp_dir, db,
                                             wc_abspath, pool, pool));
-    SVN_ERR(svn_stream_open_unique(&pristine_tmp_stream, &pristine_tmp_abspath,
-                                   pristine_tmp_dir, svn_io_file_del_none,
-                                   pool, pool));
-  }
-
-  /* Copy DATA to PRISTINE_TMP_STREAM and calculate its checksums. */
-  {
-    svn_stream_t *data_stream = svn_stream_from_string(data_string, pool);
-
-    data_stream = svn_stream_checksummed2(data_stream, &data_sha1, NULL,
-                                          svn_checksum_sha1, TRUE, pool);
-    data_stream = svn_stream_checksummed2(data_stream, &data_md5, NULL,
-                                          svn_checksum_md5, TRUE, pool);
-    SVN_ERR(svn_stream_copy3(data_stream, pristine_tmp_stream, NULL, NULL,
-                             pool));
+    SVN_ERR(write_and_checksum_temp_file(&pristine_tmp_abspath,
+                                         &data_sha1, &data_md5,
+                                         data, pristine_tmp_dir, pool));
   }
 
   /* Ensure it's not already in the store. */
@@ -224,28 +244,16 @@ pristine_get_translated(const svn_test_opts_t *opts,
     SVN_ERR(svn_wc__db_wclock_release(wc_ctx->db, dirname, pool));
   }
 
-  /* Store a pristine text, and set DATA_SHA1 and DATA_MD5. */
+  /* Store DATA as a pristine text, and set DATA_SHA1 and DATA_MD5. */
   {
     const char *pristine_tmp_dir;
     const char *pristine_tmp_abspath;
-    svn_stream_t *pristine_tmp_stream;
 
     SVN_ERR(svn_wc__db_pristine_get_tempdir(&pristine_tmp_dir, db,
                                             wc_abspath, pool, pool));
-    SVN_ERR(svn_stream_open_unique(&pristine_tmp_stream, &pristine_tmp_abspath,
-                                   pristine_tmp_dir, svn_io_file_del_none,
-                                   pool, pool));
-
-    pristine_tmp_stream = svn_stream_checksummed2(
-                            pristine_tmp_stream, NULL, &data_sha1,
-                            svn_checksum_sha1, TRUE, pool);
-    pristine_tmp_stream = svn_stream_checksummed2(
-                            pristine_tmp_stream, NULL, &data_md5,
-                            svn_checksum_md5, TRUE, pool);
-
-    SVN_ERR(svn_stream_printf(pristine_tmp_stream, pool, "%s", data));
-    SVN_ERR(svn_stream_close(pristine_tmp_stream));
-
+    SVN_ERR(write_and_checksum_temp_file(&pristine_tmp_abspath,
+                                         &data_sha1, &data_md5,
+                                         data, pristine_tmp_dir, pool));
     SVN_ERR(svn_wc__db_pristine_install(db, pristine_tmp_abspath,
                                         data_sha1, data_md5, pool));
   }
