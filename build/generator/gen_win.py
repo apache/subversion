@@ -584,7 +584,7 @@ class WinGeneratorBase(GeneratorBase):
       for header in target.msvc_export:
         deps.append(self.path('subversion/include', header))
 
-      cbuild = "\"%s\" \"$(InputPath)\" %s > %s" \
+      cbuild = "%s $(InputPath) %s > %s" \
                % (sys.executable, " ".join(deps), def_file)
 
       cdesc = 'Generating %s ' % def_file
