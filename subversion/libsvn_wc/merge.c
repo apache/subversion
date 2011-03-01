@@ -1094,6 +1094,7 @@ merge_binary_file(svn_skel_t **work_items,
                   const char *left_label,
                   const char *right_label,
                   const char *target_label,
+                  svn_boolean_t dry_run,
                   const svn_wc_conflict_version_t *left_version,
                   const svn_wc_conflict_version_t *right_version,
                   const char *detranslated_target_abspath,
@@ -1111,12 +1112,38 @@ merge_binary_file(svn_skel_t **work_items,
   const char *merge_dirpath, *merge_filename;
   const char *conflict_wrk;
   svn_skel_t *work_item;
+  svn_boolean_t same_contents = FALSE;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(target_abspath));
 
   *work_items = NULL;
 
   svn_dirent_split(&merge_dirpath, &merge_filename, target_abspath, pool);
+ 
+  /* Attempt to merge the binary file. At the moment, we can only 
+     handle the special case: if the LEFT side of the merge is equal
+     to WORKING, then we can copy RIGHT directly. */
+  SVN_ERR(svn_io_files_contents_same_p(&same_contents,
+                                      left_abspath,
+                                      target_abspath,
+                                      scratch_pool));
+
+  if (same_contents)
+    {
+      if (!dry_run)
+        {
+          SVN_ERR(svn_wc__wq_build_file_install(&work_item,
+                                                db, target_abspath,
+                                                right_abspath,
+                                                FALSE /* use_commit_times */,
+                                                FALSE /* record_fileinfo */,
+                                                result_pool, scratch_pool));
+          *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
+        }
+
+      *merge_outcome = svn_wc_merge_merged;
+      return SVN_NO_ERROR;
+    }
 
   /* Give the conflict resolution callback a chance to clean
      up the conflict before we mark the file 'conflicted' */
@@ -1357,26 +1384,23 @@ svn_wc__internal_merge(svn_skel_t **work_items,
 
   if (is_binary)
     {
-      if (dry_run)
-        /* in dry-run mode, binary files always conflict */
-        *merge_outcome = svn_wc_merge_conflict;
-      else
-        SVN_ERR(merge_binary_file(work_items,
-                                  merge_outcome,
-                                  db,
-                                  left_abspath,
-                                  right_abspath,
-                                  target_abspath,
-                                  left_label,
-                                  right_label,
-                                  target_label,
-                                  left_version,
-                                  right_version,
-                                  detranslated_target_abspath,
-                                  mimeprop,
-                                  conflict_func,
-                                  conflict_baton,
-                                  result_pool, scratch_pool));
+      SVN_ERR(merge_binary_file(work_items,
+                                merge_outcome,
+                                db,
+                                left_abspath,
+                                right_abspath,
+                                target_abspath,
+                                left_label,
+                                right_label,
+                                target_label,
+                                dry_run,
+                                left_version,
+                                right_version,
+                                detranslated_target_abspath,
+                                mimeprop,
+                                conflict_func,
+                                conflict_baton,
+                                result_pool, scratch_pool));
     }
   else
     {
