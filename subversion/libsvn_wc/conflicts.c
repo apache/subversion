@@ -403,15 +403,15 @@ resolve_one_conflict(svn_wc__db_t *db,
              * or mine-full, etc. Throw an error if the user expects us
              * to be smarter than we really are. */
             if (conflict_choice != svn_wc_conflict_choose_merged)
-            {
-              return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
-                                       NULL,
-                                       _("Tree conflicts can only be resolved "
-                                         "to 'working' state; "
-                                         "'%s' not resolved"),
-                                       svn_dirent_local_style(local_abspath,
-                                                              iterpool));
-            }
+              {
+                return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
+                                         NULL,
+                                         _("Tree conflicts can only be "
+                                           "resolved to 'working' state; "
+                                           "'%s' not resolved"),
+                                         svn_dirent_local_style(local_abspath,
+                                                                iterpool));
+              }
 
             SVN_ERR(svn_wc__db_op_set_tree_conflict(db, local_abspath, NULL,
                                                     iterpool));
