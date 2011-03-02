@@ -137,8 +137,6 @@ typedef struct insert_base_baton_t {
   /* common to all insertions into BASE */
   svn_wc__db_status_t status;
   svn_wc__db_kind_t kind;
-  apr_int64_t wc_id;
-  const char *local_relpath;
   apr_int64_t repos_id;
   const char *repos_relpath;
   svn_revnum_t revision;
@@ -174,8 +172,6 @@ typedef struct insert_working_baton_t {
   /* common to all insertions into WORKING (including NODE_DATA) */
   svn_wc__db_status_t presence;
   svn_wc__db_kind_t kind;
-  apr_int64_t wc_id;
-  const char *local_relpath;
   apr_int64_t op_depth;
 
   /* common to all "normal" presence insertions */
@@ -808,15 +804,18 @@ retract_parent_delete(svn_sqlite__db_t *sdb,
 
 /* */
 static svn_error_t *
-insert_base_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
+insert_base_node(void *baton,
+                 svn_wc__db_wcroot_t *wcroot,
+                 const char *local_relpath,
+                 apr_pool_t *scratch_pool)
 {
   const insert_base_baton_t *pibb = baton;
   svn_sqlite__stmt_t *stmt;
   /* The directory at the WCROOT has a NULL parent_relpath. Otherwise,
      bind the appropriate parent_relpath. */
   const char *parent_relpath =
-    (*pibb->local_relpath == '\0') ? NULL
-    : svn_relpath_dirname(pibb->local_relpath, scratch_pool);
+    (*local_relpath == '\0') ? NULL
+    : svn_relpath_dirname(local_relpath, scratch_pool);
 
   SVN_ERR_ASSERT(pibb->repos_id != INVALID_REPOS_ID);
   SVN_ERR_ASSERT(pibb->repos_relpath != NULL);
@@ -824,12 +823,12 @@ insert_base_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   /* ### we can't handle this right now  */
   SVN_ERR_ASSERT(pibb->conflict == NULL);
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_NODE));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_INSERT_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "isisisr"
                             "tstr"               /* 8 - 11 */
                             "isnnnnns",          /* 12 - 19 */
-                            pibb->wc_id,         /* 1 */
-                            pibb->local_relpath, /* 2 */
+                            wcroot->wc_id,       /* 1 */
+                            local_relpath,       /* 2 */
                             (apr_int64_t)0, /* op_depth is 0 for base */
                             parent_relpath,      /* 4 */
                             pibb->repos_id,
@@ -862,8 +861,8 @@ insert_base_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   SVN_ERR(svn_sqlite__insert(NULL, stmt));
 
   if (pibb->kind == svn_wc__db_kind_dir && pibb->children)
-    SVN_ERR(insert_incomplete_children(sdb, pibb->wc_id,
-                                       pibb->local_relpath,
+    SVN_ERR(insert_incomplete_children(wcroot->sdb, wcroot->wc_id,
+                                       local_relpath,
                                        pibb->repos_id,
                                        pibb->repos_relpath,
                                        pibb->revision,
@@ -872,10 +871,10 @@ insert_base_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
                                        scratch_pool));
 
   if (parent_relpath)
-    SVN_ERR(extend_parent_delete(sdb, pibb->wc_id, pibb->local_relpath,
+    SVN_ERR(extend_parent_delete(wcroot->sdb, wcroot->wc_id, local_relpath,
                                  scratch_pool));
 
-  SVN_ERR(add_work_items(sdb, pibb->work_items, scratch_pool));
+  SVN_ERR(add_work_items(wcroot->sdb, pibb->work_items, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -952,7 +951,8 @@ insert_incomplete_children(svn_sqlite__db_t *sdb,
 /* */
 static svn_error_t *
 insert_working_node(void *baton,
-                    svn_sqlite__db_t *sdb,
+                    svn_wc__db_wcroot_t *wcroot,
+                    const char *local_relpath,
                     apr_pool_t *scratch_pool)
 {
   const insert_working_baton_t *piwb = baton;
@@ -962,14 +962,14 @@ insert_working_node(void *baton,
   SVN_ERR_ASSERT(piwb->op_depth > 0);
 
   /* We cannot insert a WORKING_NODE row at the wcroot.  */
-  SVN_ERR_ASSERT(*piwb->local_relpath != '\0');
-  parent_relpath = svn_relpath_dirname(piwb->local_relpath, scratch_pool);
+  SVN_ERR_ASSERT(*local_relpath != '\0');
+  parent_relpath = svn_relpath_dirname(local_relpath, scratch_pool);
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_NODE));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_INSERT_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "isisnnntstrisn"
                 "nnnn" /* properties translated_size last_mod_time dav_cache */
                 "s",
-                piwb->wc_id, piwb->local_relpath,
+                wcroot->wc_id, local_relpath,
                 piwb->op_depth,
                 parent_relpath,
                 presence_map, piwb->presence,
@@ -1012,8 +1012,8 @@ insert_working_node(void *baton,
      (The only time we'd want a different depth is during a recursive
      simple add, but we never insert children here during a simple add.) */
   if (piwb->kind == svn_wc__db_kind_dir && piwb->children)
-    SVN_ERR(insert_incomplete_children(sdb, piwb->wc_id,
-                                       piwb->local_relpath,
+    SVN_ERR(insert_incomplete_children(wcroot->sdb, wcroot->wc_id,
+                                       local_relpath,
                                        INVALID_REPOS_ID /* inherit repos_id */,
                                        NULL /* inherit repos_path */,
                                        piwb->original_revnum,
@@ -1021,7 +1021,7 @@ insert_working_node(void *baton,
                                        piwb->op_depth,
                                        scratch_pool));
 
-  SVN_ERR(add_work_items(sdb, piwb->work_items, scratch_pool));
+  SVN_ERR(add_work_items(wcroot->sdb, piwb->work_items, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1330,8 +1330,6 @@ svn_wc__db_init(svn_wc__db_t *db,
   else
     ibb.status = svn_wc__db_status_normal;
   ibb.kind = svn_wc__db_kind_dir;
-  ibb.wc_id = wc_id;
-  ibb.local_relpath = "";
   ibb.repos_id = repos_id;
   ibb.repos_relpath = repos_relpath;
   ibb.revision = initial_rev;
@@ -1342,7 +1340,7 @@ svn_wc__db_init(svn_wc__db_t *db,
 
   /* ### no children, conflicts, or work items to install in a txn... */
 
-  return svn_error_return(insert_base_node(&ibb, sdb, scratch_pool));
+  return svn_error_return(insert_base_node(&ibb, wcroot, "", scratch_pool));
 }
 
 
@@ -1523,8 +1521,6 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
 
   ibb.status = svn_wc__db_status_normal;
   ibb.kind = svn_wc__db_kind_dir;
-  ibb.wc_id = wcroot->wc_id;
-  ibb.local_relpath = local_relpath;
   ibb.repos_id = repos_id;
   ibb.repos_relpath = repos_relpath;
   ibb.revision = revision;
@@ -1545,9 +1541,8 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
 
      Note: old children can stick around, even if they are no longer present
      in this directory's revision.  */
-  SVN_ERR(svn_sqlite__with_transaction(wcroot->sdb,
-                                       insert_base_node, &ibb,
-                                       scratch_pool));
+  SVN_ERR(with_db_txn(wcroot, local_relpath, insert_base_node, &ibb,
+                      scratch_pool));
 
   /* ### worry about flushing child subdirs?  */
   SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
@@ -1599,8 +1594,6 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
 
   ibb.status = svn_wc__db_status_normal;
   ibb.kind = svn_wc__db_kind_file;
-  ibb.wc_id = wcroot->wc_id;
-  ibb.local_relpath = local_relpath;
   ibb.repos_id = repos_id;
   ibb.repos_relpath = repos_relpath;
   ibb.revision = revision;
@@ -1621,9 +1614,8 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
      ### or maybe let caller deal with that, if there is a possibility
      ### of a node kind change (rather than eat an extra lookup here).  */
 
-  SVN_ERR(svn_sqlite__with_transaction(wcroot->sdb,
-                                       insert_base_node, &ibb,
-                                       scratch_pool));
+  SVN_ERR(with_db_txn(wcroot, local_relpath, insert_base_node, &ibb,
+                      scratch_pool));
 
   SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
   return SVN_NO_ERROR;
@@ -1673,8 +1665,6 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
 
   ibb.status = svn_wc__db_status_normal;
   ibb.kind = svn_wc__db_kind_symlink;
-  ibb.wc_id = wcroot->wc_id;
-  ibb.local_relpath = local_relpath;
   ibb.repos_id = repos_id;
   ibb.repos_relpath = repos_relpath;
   ibb.revision = revision;
@@ -1694,9 +1684,8 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
      ### or maybe let caller deal with that, if there is a possibility
      ### of a node kind change (rather than eat an extra lookup here).  */
 
-  SVN_ERR(svn_sqlite__with_transaction(wcroot->sdb,
-                                       insert_base_node, &ibb,
-                                       scratch_pool));
+  SVN_ERR(with_db_txn(wcroot, local_relpath, insert_base_node, &ibb,
+                      scratch_pool));
 
   SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
   return SVN_NO_ERROR;
@@ -1742,8 +1731,6 @@ add_absent_excluded_not_present_node(svn_wc__db_t *db,
 
   ibb.status = status;
   ibb.kind = kind;
-  ibb.wc_id = wcroot->wc_id;
-  ibb.local_relpath = local_relpath;
   ibb.repos_id = repos_id;
   ibb.repos_relpath = repos_relpath;
   ibb.revision = revision;
@@ -1762,9 +1749,8 @@ add_absent_excluded_not_present_node(svn_wc__db_t *db,
      ### or maybe let caller deal with that, if there is a possibility
      ### of a node kind change (rather than eat an extra lookup here).  */
 
-  SVN_ERR(svn_sqlite__with_transaction(wcroot->sdb,
-                                       insert_base_node, &ibb,
-                                       scratch_pool));
+  SVN_ERR(with_db_txn(wcroot, local_relpath, insert_base_node, &ibb,
+                      scratch_pool));
 
   SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
 
@@ -2271,8 +2257,6 @@ cross_db_copy(svn_wc__db_wcroot_t *src_wcroot,
   blank_iwb(&iwb);
   iwb.presence = dst_status;
   iwb.kind = kind;
-  iwb.wc_id = dst_wcroot->wc_id;
-  iwb.local_relpath = dst_relpath;
 
   iwb.props = props;
   iwb.changed_rev = changed_rev;
@@ -2289,7 +2273,7 @@ cross_db_copy(svn_wc__db_wcroot_t *src_wcroot,
   iwb.children = children;
   iwb.depth = depth;
 
-  SVN_ERR(insert_working_node(&iwb, dst_wcroot->sdb, scratch_pool));
+  SVN_ERR(insert_working_node(&iwb, dst_wcroot, dst_relpath, scratch_pool));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, src_wcroot->sdb,
                                     STMT_SELECT_ACTUAL_NODE));
@@ -2816,8 +2800,6 @@ svn_wc__db_op_copy_dir(svn_wc__db_t *db,
 
   iwb.presence = svn_wc__db_status_normal;
   iwb.kind = svn_wc__db_kind_dir;
-  iwb.wc_id = wcroot->wc_id;
-  iwb.local_relpath = local_relpath;
 
   iwb.props = props;
   iwb.changed_rev = changed_rev;
@@ -2844,8 +2826,8 @@ svn_wc__db_op_copy_dir(svn_wc__db_t *db,
 
   iwb.work_items = work_items;
 
-  SVN_ERR(svn_sqlite__with_transaction(wcroot->sdb, insert_working_node, &iwb,
-                                       scratch_pool));
+  SVN_ERR(with_db_txn(wcroot, local_relpath, insert_working_node, &iwb,
+                      scratch_pool));
   SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -2892,8 +2874,6 @@ svn_wc__db_op_copy_file(svn_wc__db_t *db,
 
   iwb.presence = svn_wc__db_status_normal;
   iwb.kind = svn_wc__db_kind_file;
-  iwb.wc_id = wcroot->wc_id;
-  iwb.local_relpath = local_relpath;
 
   iwb.props = props;
   iwb.changed_rev = changed_rev;
@@ -2919,8 +2899,8 @@ svn_wc__db_op_copy_file(svn_wc__db_t *db,
 
   iwb.work_items = work_items;
 
-  SVN_ERR(svn_sqlite__with_transaction(wcroot->sdb, insert_working_node, &iwb,
-                                       scratch_pool));
+  SVN_ERR(with_db_txn(wcroot, local_relpath, insert_working_node, &iwb,
+                      scratch_pool));
   SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -2963,8 +2943,6 @@ svn_wc__db_op_copy_symlink(svn_wc__db_t *db,
 
   iwb.presence = svn_wc__db_status_normal;
   iwb.kind = svn_wc__db_kind_symlink;
-  iwb.wc_id = wcroot->wc_id;
-  iwb.local_relpath = local_relpath;
 
   iwb.props = props;
   iwb.changed_rev = changed_rev;
@@ -2990,9 +2968,8 @@ svn_wc__db_op_copy_symlink(svn_wc__db_t *db,
 
   iwb.work_items = work_items;
 
-  SVN_ERR(svn_sqlite__with_transaction(wcroot->sdb,
-                                       insert_working_node, &iwb,
-                                       scratch_pool));
+  SVN_ERR(with_db_txn(wcroot, local_relpath, insert_working_node, &iwb,
+                      scratch_pool));
   SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -3020,15 +2997,12 @@ svn_wc__db_op_add_directory(svn_wc__db_t *db,
 
   iwb.presence = svn_wc__db_status_normal;
   iwb.kind = svn_wc__db_kind_dir;
-  iwb.wc_id = wcroot->wc_id;
-  iwb.local_relpath = local_relpath;
   iwb.op_depth = relpath_depth(local_relpath);
 
   iwb.work_items = work_items;
 
-  SVN_ERR(svn_sqlite__with_transaction(wcroot->sdb,
-                                       insert_working_node, &iwb,
-                                       scratch_pool));
+  SVN_ERR(with_db_txn(wcroot, local_relpath, insert_working_node, &iwb,
+                      scratch_pool));
   SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -3056,15 +3030,12 @@ svn_wc__db_op_add_file(svn_wc__db_t *db,
 
   iwb.presence = svn_wc__db_status_normal;
   iwb.kind = svn_wc__db_kind_file;
-  iwb.wc_id = wcroot->wc_id;
-  iwb.local_relpath = local_relpath;
   iwb.op_depth = relpath_depth(local_relpath);
 
   iwb.work_items = work_items;
 
-  SVN_ERR(svn_sqlite__with_transaction(wcroot->sdb,
-                                       insert_working_node, &iwb,
-                                       scratch_pool));
+  SVN_ERR(with_db_txn(wcroot, local_relpath, insert_working_node, &iwb,
+                      scratch_pool));
   SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -3094,17 +3065,14 @@ svn_wc__db_op_add_symlink(svn_wc__db_t *db,
 
   iwb.presence = svn_wc__db_status_normal;
   iwb.kind = svn_wc__db_kind_symlink;
-  iwb.wc_id = wcroot->wc_id;
-  iwb.local_relpath = local_relpath;
   iwb.op_depth = relpath_depth(local_relpath);
 
   iwb.target = target;
 
   iwb.work_items = work_items;
 
-  SVN_ERR(svn_sqlite__with_transaction(wcroot->sdb,
-                                       insert_working_node, &iwb,
-                                       scratch_pool));
+  SVN_ERR(with_db_txn(wcroot, local_relpath, insert_working_node, &iwb,
+                      scratch_pool));
   SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
