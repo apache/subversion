@@ -559,8 +559,12 @@ pdh_parse_local_abspath(db_pdh_t **pdh,
   }
 
   /* The PDH is complete. Stash it into DB.  */
+  /* ### we may have the path in the right pool already (in another var),
+     ### but this PDH stuff is short-lived. just dup it (for now) into the
+     ### correct lifetime.  */
   apr_hash_set(db->dir_data,
-               (*pdh)->local_abspath, APR_HASH_KEY_STRING,
+               apr_pstrdup(db->state_pool, (*pdh)->local_abspath),
+               APR_HASH_KEY_STRING,
                (*pdh)->wcroot);
 
   /* Did we traverse up to parent directories?  */
