@@ -7327,13 +7327,9 @@ svn_wc__db_temp_get_format(int *format,
   err = svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
                                 local_dir_abspath, svn_sqlite__mode_readonly,
                                 scratch_pool, scratch_pool);
-  /* NOTE: pdh does *not* have to have a usable format.  */
 
   /* If we hit an error examining this directory, then declare this
      directory to not be a working copy.  */
-  /* ### for per-dir layouts, the wcroot should be this directory,
-     ### so bail if the PDH is a parent (and, thus, local_relpath is
-     ### something besides "").  */
   if (err)
     {
       if (err && err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
@@ -7531,8 +7527,8 @@ svn_wc__db_temp_get_all_access(svn_wc__db_t *db,
     {
       const svn_wc__db_wcroot_t *wcroot = svn__apr_hash_index_val(hi);
 
-      /* This is highly redundant, 'cause many PDHs will have the same
-         WCROOT. */
+      /* This is highly redundant, 'cause the same WCROOT will appear many
+         times in dir_data. */
       result = apr_hash_overlay(result_pool, result, wcroot->access_cache);
     }
 
