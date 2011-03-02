@@ -56,14 +56,17 @@ struct svn_wc__db_t {
   apr_pool_t *state_pool;
 };
 
+
 /* Hold information about an owned lock */
 typedef struct svn_wc__db_wclock_t
 {
   /* Relative path of the lock root */
   const char *local_relpath;
+
   /* Number of levels locked (0 for infinity) */
   int levels;
 } svn_wc__db_wclock_t;
+
 
 /** Hold information about a WCROOT.
  *
@@ -84,7 +87,7 @@ typedef struct svn_wc__db_wcroot_t {
      format has not (yet) been determined, this will be UNKNOWN_FORMAT.  */
   int format;
 
-  /* Array of svn_wc__db_wclock_t fields (not pointers!).
+  /* Array of svn_wc__db_wclock_t structures (not pointers!).
      Typically just one or two locks maximum. */
   apr_array_header_t *owned_locks;
 
@@ -93,6 +96,7 @@ typedef struct svn_wc__db_wcroot_t {
   apr_hash_t *access_cache;
 
 } svn_wc__db_wcroot_t;
+
 
 /**  Pristine Directory Handle
  *
