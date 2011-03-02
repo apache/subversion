@@ -3603,12 +3603,6 @@ op_revert_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
          combined? */
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
-                                    STMT_DELETE_ACTUAL_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", b->wcroot->wc_id,
-                            b->local_relpath));
-  SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
                                     STMT_SELECT_NODE_INFO));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", b->wcroot->wc_id,
                             b->local_relpath));
@@ -3616,6 +3610,12 @@ op_revert_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   if (!have_row)
     {
       SVN_ERR(svn_sqlite__reset(stmt));
+
+      SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
+                                        STMT_DELETE_ACTUAL_NODE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", b->wcroot->wc_id,
+                                b->local_relpath));
+      SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
       if (affected_rows)
         {
           /* Can't do non-recursive actual-only revert if actual-only
@@ -3686,6 +3686,20 @@ op_revert_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
       SVN_ERR(svn_sqlite__bindf(stmt, "is", b->wcroot->wc_id,
                                 b->local_relpath));
       SVN_ERR(svn_sqlite__step_done(stmt));
+    }
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
+                                  STMT_DELETE_ACTUAL_NODE_LEAVING_CHANGELIST));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", b->wcroot->wc_id,
+                            b->local_relpath));
+  SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
+  if (!affected_rows)
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
+                                    STMT_CLEAR_ACTUAL_NODE_LEAVING_CHANGELIST));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", b->wcroot->wc_id,
+                                b->local_relpath));
+      SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
     }
 
   return SVN_NO_ERROR;

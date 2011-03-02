@@ -356,6 +356,13 @@ DELETE FROM actual_node
 WHERE wc_id = ?1 AND local_relpath = ?2
       AND tree_conflict_data IS NULL;
 
+-- STMT_DELETE_ACTUAL_NODE_LEAVING_CHANGELIST
+DELETE FROM actual_node
+WHERE wc_id = ?1 AND local_relpath = ?2
+      AND (changelist IS NULL
+           OR 'file' NOT IN (SELECT kind FROM nodes_current
+                             WHERE wc_id  = ?1 AND local_relpath = ?2))
+
 -- STMT_DELETE_CHILD_NODES_RECURSIVE
 DELETE FROM nodes
 WHERE wc_id = ?1 AND local_relpath LIKE ?2 ESCAPE '#' AND op_depth = ?3

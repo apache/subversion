@@ -2638,7 +2638,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test_del_replace_not_present"),
     SVN_TEST_OPTS_PASS(test_op_revert,
                        "test_op_revert"),
-    SVN_TEST_OPTS_WIMP(test_op_revert_changelist,
-                       "test_op_revert_changelist", "needs changelist support"),
+    SVN_TEST_OPTS_PASS(test_op_revert_changelist,
+                       "test_op_revert_changelist"),
     SVN_TEST_NULL
   };
