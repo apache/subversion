@@ -1266,7 +1266,8 @@ svn_wc__db_init(svn_wc__db_t *db,
                         db->state_pool, scratch_pool));
 
   /* The PDH is complete. Stash it into DB.  */
-  apr_hash_set(db->dir_data, pdh->local_abspath, APR_HASH_KEY_STRING, pdh);
+  apr_hash_set(db->dir_data, pdh->local_abspath, APR_HASH_KEY_STRING,
+               pdh->wcroot);
 
   blank_ibb(&ibb);
 
@@ -7373,15 +7374,14 @@ svn_wc__db_temp_forget_directory(svn_wc__db_t *db,
        hi;
        hi = apr_hash_next(hi))
     {
-      svn_wc__db_pdh_t *pdh = svn__apr_hash_index_val(hi);
+      svn_wc__db_wcroot_t *wcroot = svn__apr_hash_index_val(hi);
       const char *local_abspath = svn__apr_hash_index_key(hi);
       svn_error_t *err;
 
-      if (!svn_dirent_is_ancestor(local_dir_abspath, pdh->local_abspath))
+      if (!svn_dirent_is_ancestor(local_dir_abspath, local_abspath))
         continue;
 
-      err = svn_wc__db_wclock_release(db, pdh->local_abspath,
-                                      scratch_pool);
+      err = svn_wc__db_wclock_release(db, local_abspath, scratch_pool);
       if (err
           && (err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY
               || err->apr_err == SVN_ERR_WC_NOT_LOCKED))
@@ -7393,11 +7393,10 @@ svn_wc__db_temp_forget_directory(svn_wc__db_t *db,
 
       apr_hash_set(db->dir_data, local_abspath, APR_HASH_KEY_STRING, NULL);
 
-      if (pdh->wcroot && pdh->wcroot->sdb &&
-          svn_dirent_is_ancestor(local_dir_abspath, pdh->wcroot->abspath))
+      if (wcroot->sdb &&
+          svn_dirent_is_ancestor(local_dir_abspath, wcroot->abspath))
         {
-          apr_hash_set(roots, pdh->wcroot->abspath, APR_HASH_KEY_STRING,
-                       pdh->wcroot);
+          apr_hash_set(roots, wcroot->abspath, APR_HASH_KEY_STRING, wcroot);
         }
     }
 
@@ -7534,12 +7533,11 @@ svn_wc__db_temp_get_all_access(svn_wc__db_t *db,
        hi;
        hi = apr_hash_next(hi))
     {
-      const svn_wc__db_pdh_t *pdh = svn__apr_hash_index_val(hi);
+      const svn_wc__db_wcroot_t *wcroot = svn__apr_hash_index_val(hi);
 
       /* This is highly redundant, 'cause many PDHs will have the same
          WCROOT. */
-      result = apr_hash_overlay(result_pool, result,
-                                pdh->wcroot->access_cache);
+      result = apr_hash_overlay(result_pool, result, wcroot->access_cache);
     }
 
   return result;
