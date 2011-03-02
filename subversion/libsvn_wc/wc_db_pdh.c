@@ -350,7 +350,7 @@ pdh_parse_local_abspath(db_pdh_t **pdh,
   if (wcroot != NULL)
     {
       *pdh = apr_pcalloc(result_pool, sizeof(**pdh));
-      (*pdh)->local_abspath = apr_pstrdup(db->state_pool, local_abspath);
+      (*pdh)->local_abspath = apr_pstrdup(result_pool, local_abspath);
       (*pdh)->wcroot = wcroot;
     }
   else
@@ -397,7 +397,7 @@ pdh_parse_local_abspath(db_pdh_t **pdh,
       if (wcroot != NULL)
         {
           *pdh = apr_pcalloc(result_pool, sizeof(**pdh));
-          (*pdh)->local_abspath = apr_pstrdup(db->state_pool, local_abspath);
+          (*pdh)->local_abspath = apr_pstrdup(result_pool, local_abspath);
           (*pdh)->wcroot = wcroot;
         }
 
@@ -437,7 +437,7 @@ pdh_parse_local_abspath(db_pdh_t **pdh,
   if (*pdh == NULL)
     {
       *pdh = apr_pcalloc(result_pool, sizeof(**pdh));
-      (*pdh)->local_abspath = apr_pstrdup(db->state_pool, local_abspath);
+      (*pdh)->local_abspath = apr_pstrdup(result_pool, local_abspath);
     }
   else
     {
