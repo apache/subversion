@@ -1238,7 +1238,7 @@ svn_wc__db_init(svn_wc__db_t *db,
   svn_sqlite__db_t *sdb;
   apr_int64_t repos_id;
   apr_int64_t wc_id;
-  svn_wc__db_pdh_t *pdh;
+  svn_wc__db_wcroot_t *wcroot;
   insert_base_baton_t ibb;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
@@ -1254,20 +1254,16 @@ svn_wc__db_init(svn_wc__db_t *db,
   SVN_ERR(create_db(&sdb, &repos_id, &wc_id, local_abspath, repos_root_url,
                     repos_uuid, SDB_FILE, db->state_pool, scratch_pool));
 
-  /* Begin construction of the PDH.  */
-  pdh = apr_pcalloc(db->state_pool, sizeof(*pdh));
-  pdh->local_abspath = apr_pstrdup(db->state_pool, local_abspath);
-
   /* Create the WCROOT for this directory.  */
-  SVN_ERR(svn_wc__db_pdh_create_wcroot(&pdh->wcroot, pdh->local_abspath,
+  SVN_ERR(svn_wc__db_pdh_create_wcroot(&wcroot,
+                        apr_pstrdup(db->state_pool, local_abspath),
                         sdb, wc_id, FORMAT_FROM_SDB,
                         FALSE /* auto-upgrade */,
                         FALSE /* enforce_empty_wq */,
                         db->state_pool, scratch_pool));
 
-  /* The PDH is complete. Stash it into DB.  */
-  apr_hash_set(db->dir_data, pdh->local_abspath, APR_HASH_KEY_STRING,
-               pdh->wcroot);
+  /* The WCROOT is complete. Stash it into DB.  */
+  apr_hash_set(db->dir_data, wcroot->abspath, APR_HASH_KEY_STRING, wcroot);
 
   blank_ibb(&ibb);
 
