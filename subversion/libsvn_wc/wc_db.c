@@ -311,6 +311,64 @@ wclock_owns_lock(svn_boolean_t *own_lock,
                  apr_pool_t *scratch_pool);
 
 
+
+/* Some helpful transaction helpers. 
+
+   Instead of directly using SQLite transactions, these wrappers take care of
+   simple cases by allowing consumers to worry about wrapping the wcroot and
+   local_relpath, which are almost always used within the transaction.
+   
+   This also means if we later want to implement some wc_db-specific txn
+   handling, we have a convenient place to do it.
+   */
+
+/* A callback which supplies WCROOTs and LOCAL_RELPATHs. */
+typedef svn_error_t *(*db_txn_callback_t)(void *baton,
+                                          svn_wc__db_wcroot_t *wcroot,
+                                          const char *local_relpath,
+                                          apr_pool_t *scratch_pool);
+
+/* Baton for use with run_txn() and with_db_txn(). */
+struct txn_baton_t
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+
+  db_txn_callback_t cb_func;
+  void *cb_baton;
+};
+
+
+/* Unwrap the sqlite transaction into a wc_db txn.
+   Implements svn_sqlite__transaction_callback_t. */
+static svn_error_t *
+run_txn(void *baton, svn_sqlite__db_t *db, apr_pool_t *scratch_pool)
+{
+  struct txn_baton_t *tb = baton;
+
+  return svn_error_return(
+    tb->cb_func(tb->cb_baton, tb->wcroot, tb->local_relpath, scratch_pool));
+}
+
+
+/* Run CB_FUNC in a SQLite transaction with CB_BATON, using WCROOT and
+   LOCAL_RELPATH.  If callbacks require additional information, they may
+   provide it using CB_BATON. */
+static svn_error_t *
+with_db_txn(svn_wc__db_wcroot_t *wcroot,
+            const char *local_relpath,
+            db_txn_callback_t cb_func,
+            void *cb_baton,
+            apr_pool_t *scratch_pool)
+{
+  struct txn_baton_t tb = { wcroot, local_relpath, cb_func, cb_baton };
+
+  return svn_error_return(
+    svn_sqlite__with_transaction(wcroot->sdb, run_txn, &tb, scratch_pool));
+}
+
+
+
 /* Return the absolute path, in local path style, of LOCAL_RELPATH
    in WCROOT.  */
 static const char *
@@ -1754,37 +1812,36 @@ svn_wc__db_base_add_not_present_node(svn_wc__db_t *db,
 }
 
 
-struct base_remove_baton {
-  const char *local_relpath;
-  apr_int64_t wc_id;
-};
-
-
+/* This implements db_txn_callback_t */
 static svn_error_t *
-db_base_remove(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
+db_base_remove(void *baton,
+               svn_wc__db_wcroot_t *wcroot,
+               const char *local_relpath,
+               apr_pool_t *scratch_pool)
 {
-  struct base_remove_baton *brb = baton;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_DELETE_BASE_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", brb->wc_id, brb->local_relpath));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_DELETE_BASE_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
-  SVN_ERR(retract_parent_delete(sdb, brb->wc_id, brb->local_relpath,
+  SVN_ERR(retract_parent_delete(wcroot->sdb, wcroot->wc_id, local_relpath,
                                 scratch_pool));
 
   /* If there is no working node then any actual node must be deleted,
      unless it marks a conflict */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_WORKING_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", brb->wc_id, brb->local_relpath));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_WORKING_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   SVN_ERR(svn_sqlite__reset(stmt));
   if (!have_row)
     {
-      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_DELETE_ACTUAL_NODE_WITHOUT_CONFLICT));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", brb->wc_id, brb->local_relpath));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
 
@@ -1799,7 +1856,6 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  struct base_remove_baton brb;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -1808,12 +1864,8 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  brb.local_relpath = local_relpath;
-  brb.wc_id = wcroot->wc_id;
-
-  SVN_ERR(svn_sqlite__with_transaction(wcroot->sdb,
-                                       db_base_remove, &brb,
-                                       scratch_pool));
+  SVN_ERR(with_db_txn(wcroot, local_relpath, db_base_remove, NULL,
+                      scratch_pool));
 
   SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
 
@@ -3271,27 +3323,21 @@ svn_wc__db_op_modified(svn_wc__db_t *db,
 }
 
 
-struct set_changelist_baton
-{
-  const char *local_relpath;
-  apr_int64_t wc_id;
-  const char *changelist;
-};
-
-
 /* */
 static svn_error_t *
 set_changelist_txn(void *baton,
-                   svn_sqlite__db_t *sdb,
+                   svn_wc__db_wcroot_t *wcroot,
+                   const char *local_relpath,
                    apr_pool_t *scratch_pool)
 {
-  struct set_changelist_baton *scb = baton;
+  const char *new_changelist = baton;
   const char *existing_changelist;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_ACTUAL_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", scb->wc_id, scb->local_relpath));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_ACTUAL_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (have_row)
     existing_changelist = svn_sqlite__column_text(stmt, 1, scratch_pool);
@@ -3301,17 +3347,17 @@ set_changelist_txn(void *baton,
     {
       /* We need to insert an ACTUAL node, but only if we're not attempting
          to remove a (non-existent) changelist. */
-      if (scb->changelist == NULL)
+      if (new_changelist == NULL)
         return SVN_NO_ERROR;
 
-      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_INSERT_ACTUAL_CHANGELIST));
 
       /* The parent of relpath=="" is null, so we simply skip binding the
          column. Otherwise, bind the proper value to 'parent_relpath'.  */
-      if (*scb->local_relpath != '\0')
+      if (*local_relpath != '\0')
         SVN_ERR(svn_sqlite__bind_text(stmt, 4,
-                                      svn_relpath_dirname(scb->local_relpath,
+                                      svn_relpath_dirname(local_relpath,
                                                           scratch_pool)));
     }
   else
@@ -3319,16 +3365,16 @@ set_changelist_txn(void *baton,
       /* We have an existing row, and it simply needs to be updated, if
          it's different. */
       if (existing_changelist
-            && scb->changelist
-            && strcmp(existing_changelist, scb->changelist) == 0)
+            && new_changelist
+            && strcmp(existing_changelist, new_changelist) == 0)
         return SVN_NO_ERROR;
 
-      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_UPDATE_ACTUAL_CHANGELIST));
     }
 
-  SVN_ERR(svn_sqlite__bindf(stmt, "iss", scb->wc_id, scb->local_relpath,
-                            scb->changelist));
+  SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id, local_relpath,
+                            new_changelist));
 
   return svn_error_return(svn_sqlite__step_done(stmt));
 }
@@ -3341,20 +3387,17 @@ svn_wc__db_op_set_changelist(svn_wc__db_t *db,
                              apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
-  struct set_changelist_baton scb;
+  const char *local_relpath;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &scb.local_relpath,
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
                               db, local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  scb.wc_id = wcroot->wc_id;
-  scb.changelist = changelist;
-
-  SVN_ERR(svn_sqlite__with_transaction(wcroot->sdb, set_changelist_txn,
-                                       &scb, scratch_pool));
+  SVN_ERR(with_db_txn(wcroot, local_relpath, set_changelist_txn, changelist,
+                      scratch_pool));
 
   /* No need to flush the parent entries; changelists were not stored in the
      stub */
@@ -3584,16 +3627,13 @@ remove_children(svn_wc__db_wcroot_t *wcroot,
                 apr_pool_t *scratch_pool);
 
 
-struct op_revert_baton {
-  svn_wc__db_wcroot_t *wcroot;
-  const char *local_relpath;
-};
-
-
+/* This implements db_txn_callback_t */
 static svn_error_t *
-op_revert_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
+op_revert_txn(void *baton,
+              svn_wc__db_wcroot_t *wcroot,
+              const char *local_relpath,
+              apr_pool_t *scratch_pool)
 {
-  struct op_revert_baton *b = baton;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
   apr_int64_t op_depth;
@@ -3602,44 +3642,41 @@ op_revert_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   /* ### Similar structure to op_revert_recursive_txn, should they be
          combined? */
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_NODE_INFO));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", b->wcroot->wc_id,
-                            b->local_relpath));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (!have_row)
     {
       SVN_ERR(svn_sqlite__reset(stmt));
 
-      SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_DELETE_ACTUAL_NODE));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", b->wcroot->wc_id,
-                                b->local_relpath));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
       SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
       if (affected_rows)
         {
           /* Can't do non-recursive actual-only revert if actual-only
              children exist */
-          SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
+          SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                             STMT_SELECT_ACTUAL_CHILDREN));
-          SVN_ERR(svn_sqlite__bindf(stmt, "is", b->wcroot->wc_id,
-                                    b->local_relpath));
+          SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
           SVN_ERR(svn_sqlite__step(&have_row, stmt));
           SVN_ERR(svn_sqlite__reset(stmt));
           if (have_row)
             return svn_error_createf(SVN_ERR_WC_INVALID_OPERATION_DEPTH, NULL,
                                      _("Can't revert '%s' without"
                                        " reverting children"),
-                                     path_for_error_message(b->wcroot,
-                                                            b->local_relpath,
+                                     path_for_error_message(wcroot,
+                                                            local_relpath,
                                                             scratch_pool));
           return SVN_NO_ERROR;
         }
 
       return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                                _("The node '%s' was not found."),
-                               path_for_error_message(b->wcroot,
-                                                      b->local_relpath,
+                               path_for_error_message(wcroot,
+                                                      local_relpath,
                                                       scratch_pool));
     }
 
@@ -3648,57 +3685,54 @@ op_revert_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 
   if (op_depth > 0)
     {
-      if (op_depth != relpath_depth(b->local_relpath))
+      if (op_depth != relpath_depth(local_relpath))
         return svn_error_createf(SVN_ERR_WC_INVALID_OPERATION_DEPTH, NULL,
                                  _("Can't revert '%s' without"
                                    " reverting parent"),
-                                 path_for_error_message(b->wcroot,
-                                                        b->local_relpath,
+                                 path_for_error_message(wcroot,
+                                                        local_relpath,
                                                         scratch_pool));
 
       /* Can't do non-recursive revert if children exist */
-      SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_SELECT_GE_OP_DEPTH_CHILDREN));
-      SVN_ERR(svn_sqlite__bindf(stmt, "isi", b->wcroot->wc_id,
-                                b->local_relpath, op_depth));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isi", wcroot->wc_id,
+                                local_relpath, op_depth));
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
       SVN_ERR(svn_sqlite__reset(stmt));
       if (have_row)
         return svn_error_createf(SVN_ERR_WC_INVALID_OPERATION_DEPTH, NULL,
                                  _("Can't revert '%s' without"
                                    " reverting children"),
-                                 path_for_error_message(b->wcroot,
-                                                        b->local_relpath,
+                                 path_for_error_message(wcroot,
+                                                        local_relpath,
                                                         scratch_pool));
 
       /* Rewrite the op-depth of all deleted children making the
          direct children into roots of deletes. */
-      SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                      STMT_UPDATE_OP_DEPTH_INCREASE_RECURSIVE));
-      SVN_ERR(svn_sqlite__bindf(stmt, "isi", b->wcroot->wc_id,
-                                construct_like_arg(b->local_relpath,
+      SVN_ERR(svn_sqlite__bindf(stmt, "isi", wcroot->wc_id,
+                                construct_like_arg(local_relpath,
                                                    scratch_pool),
                                 op_depth));
       SVN_ERR(svn_sqlite__step_done(stmt));
 
-      SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_DELETE_WORKING_NODE));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", b->wcroot->wc_id,
-                                b->local_relpath));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                   STMT_DELETE_ACTUAL_NODE_LEAVING_CHANGELIST));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", b->wcroot->wc_id,
-                            b->local_relpath));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
   if (!affected_rows)
     {
-      SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_CLEAR_ACTUAL_NODE_LEAVING_CHANGELIST));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", b->wcroot->wc_id,
-                                b->local_relpath));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
       SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
     }
 
@@ -3706,12 +3740,13 @@ op_revert_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 }
 
 
+/* This implements db_txn_callback_t */
 static svn_error_t *
 op_revert_recursive_txn(void *baton,
-                        svn_sqlite__db_t *sdb,
+                        svn_wc__db_wcroot_t *wcroot,
+                        const char *local_relpath,
                         apr_pool_t *scratch_pool)
 {
-  struct op_revert_baton *b = baton;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
   apr_int64_t op_depth;
@@ -3720,18 +3755,16 @@ op_revert_recursive_txn(void *baton,
   /* ### Similar structure to op_revert_txn, should they be
          combined? */
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_DELETE_ACTUAL_NODE_RECURSIVE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "iss", b->wcroot->wc_id,
-                            b->local_relpath,
-                            construct_like_arg(b->local_relpath,
-                                               scratch_pool)));
+  SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id,
+                            local_relpath,
+                            construct_like_arg(local_relpath, scratch_pool)));
   SVN_ERR(svn_sqlite__step(&affected_rows, stmt));
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_NODE_INFO));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", b->wcroot->wc_id,
-                            b->local_relpath));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (!have_row)
     {
@@ -3741,31 +3774,30 @@ op_revert_recursive_txn(void *baton,
 
       return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                                _("The node '%s' was not found."),
-                               path_for_error_message(b->wcroot,
-                                                      b->local_relpath,
+                               path_for_error_message(wcroot,
+                                                      local_relpath,
                                                       scratch_pool));
     }
 
   op_depth = svn_sqlite__column_int64(stmt, 0);
   SVN_ERR(svn_sqlite__reset(stmt));
 
-  if (op_depth > 0 && op_depth != relpath_depth(b->local_relpath))
+  if (op_depth > 0 && op_depth != relpath_depth(local_relpath))
     return svn_error_createf(SVN_ERR_WC_INVALID_OPERATION_DEPTH, NULL,
                              _("Can't revert '%s' without"
                                " reverting parent"),
-                             path_for_error_message(b->wcroot,
-                                                    b->local_relpath,
+                             path_for_error_message(wcroot,
+                                                    local_relpath,
                                                     scratch_pool));
 
   if (!op_depth)
     op_depth = 1; /* Don't delete BASE nodes */
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_DELETE_NODES_RECURSIVE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "issi", b->wcroot->wc_id,
-                            b->local_relpath,
-                            construct_like_arg(b->local_relpath,
-                                               scratch_pool),
+  SVN_ERR(svn_sqlite__bindf(stmt, "issi", wcroot->wc_id,
+                            local_relpath,
+                            construct_like_arg(local_relpath, scratch_pool),
                             op_depth));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
@@ -3779,8 +3811,9 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
                      svn_depth_t depth,
                      apr_pool_t *scratch_pool)
 {
-  struct op_revert_baton b;
-  svn_sqlite__transaction_callback_t txn_func;
+  db_txn_callback_t txn_func;
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -3799,15 +3832,13 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
                                                       scratch_pool));
     }
 
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&b.wcroot, &b.local_relpath,
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
                               db, local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
-  VERIFY_USABLE_WCROOT(b.wcroot);
+  VERIFY_USABLE_WCROOT(wcroot);
 
-  SVN_ERR(svn_sqlite__with_transaction(b.wcroot->sdb, txn_func,
-                                       &b, scratch_pool));
-
-  return SVN_NO_ERROR;
+  return svn_error_return(with_db_txn(wcroot, local_relpath, txn_func, NULL,
+                                      scratch_pool));
 }
 
 
