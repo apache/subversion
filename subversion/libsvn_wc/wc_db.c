@@ -8265,39 +8265,44 @@ wclock_owns_lock(svn_boolean_t *own_lock,
                  apr_pool_t *scratch_pool)
 {
   apr_array_header_t *owned_locks;
-  int lock_level, i;
+  int lock_level;
+  int i;
 
   *own_lock = FALSE;
   owned_locks = wcroot->owned_locks;
   lock_level = relpath_depth(local_relpath);
 
   if (exact)
-    for (i = 0; i < owned_locks->nelts; i++)
-      {
-        svn_wc__db_wclock_t *lock = &APR_ARRAY_IDX(owned_locks, i,
-                                                   svn_wc__db_wclock_t);
+    {
+      for (i = 0; i < owned_locks->nelts; i++)
+        {
+          svn_wc__db_wclock_t *lock = &APR_ARRAY_IDX(owned_locks, i,
+                                                     svn_wc__db_wclock_t);
 
-        if (strcmp(lock->local_relpath, local_relpath) == 0)
-          {
-            *own_lock = TRUE;
-            return SVN_NO_ERROR;
-          }
-      }
+          if (strcmp(lock->local_relpath, local_relpath) == 0)
+            {
+              *own_lock = TRUE;
+              return SVN_NO_ERROR;
+            }
+        }
+    }
   else
-    for (i = 0; i < owned_locks->nelts; i++)
-      {
-        svn_wc__db_wclock_t* lock = &APR_ARRAY_IDX(owned_locks, i,
-                                                   svn_wc__db_wclock_t);
+    {
+      for (i = 0; i < owned_locks->nelts; i++)
+        {
+          svn_wc__db_wclock_t *lock = &APR_ARRAY_IDX(owned_locks, i,
+                                                     svn_wc__db_wclock_t);
 
-        if (svn_relpath_is_ancestor(lock->local_relpath, local_relpath)
-            && (lock->levels == -1
-                || ((relpath_depth(lock->local_relpath) + lock->levels)
-                            >= lock_level)))
-          {
-            *own_lock = TRUE;
-            return SVN_NO_ERROR;
-          }
-      }
+          if (svn_relpath_is_ancestor(lock->local_relpath, local_relpath)
+              && (lock->levels == -1
+                  || ((relpath_depth(lock->local_relpath) + lock->levels)
+                      >= lock_level)))
+            {
+              *own_lock = TRUE;
+              return SVN_NO_ERROR;
+            }
+        }
+    }
 
   return SVN_NO_ERROR;
 }
