@@ -97,23 +97,6 @@ typedef struct svn_wc__db_wcroot_t {
 
 } svn_wc__db_wcroot_t;
 
-
-/**  Pristine Directory Handle
- *
- * This structure records all the information that we need to deal with
- * a given working copy directory.
- */
-typedef struct svn_wc__db_pdh_t {
-
-  /* The absolute path to this working copy directory. */
-  const char *local_abspath;
-
-  /* What wcroot does this directory belong to?  */
-  svn_wc__db_wcroot_t *wcroot;
-
-} svn_wc__db_pdh_t;
-
-
 
 /* */
 svn_error_t *

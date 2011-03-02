@@ -41,7 +41,23 @@
 
 
 
+/**  Pristine Directory Handle
+ *
+ * This structure records all the information that we need to deal with
+ * a given working copy directory.
+ */
+typedef struct db_pdh_t {
 
+  /* The absolute path to this working copy directory. */
+  const char *local_abspath;
+
+  /* What wcroot does this directory belong to?  */
+  svn_wc__db_wcroot_t *wcroot;
+
+} db_pdh_t;
+
+
+
 /* Get the format version from a wc-1 directory. If it is not a working copy
    directory, then it sets VERSION to zero and returns no error.  */
 static svn_error_t *
@@ -297,7 +313,7 @@ compute_relpath(const svn_wc__db_wcroot_t *wcroot,
 
 
 static svn_error_t *
-pdh_parse_local_abspath(svn_wc__db_pdh_t **pdh,
+pdh_parse_local_abspath(db_pdh_t **pdh,
                         const char **local_relpath,
                         svn_wc__db_t *db,
                         const char *local_abspath,
@@ -600,7 +616,7 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
                                       apr_pool_t *result_pool,
                                       apr_pool_t *scratch_pool)
 {
-  svn_wc__db_pdh_t *pdh;
+  db_pdh_t *pdh;
 
   /* Ideally, we'd only grab the PDH if requested, rather than unconditionally.
      That is, we'd call this function from pdh_parse_local_abspath(), instead
