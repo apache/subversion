@@ -3760,6 +3760,20 @@ def diff_git_with_props_on_dir(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff',
                                      '-c2', '--git')
   os.chdir(was_cwd)
+
+@XFail()
+@Issue(3826)
+def diff_abs_localpath_from_wc_folder(sbox):
+  "diff absolute localpath from wc folder"
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  A_path = os.path.join(wc_dir, 'A')
+  B_path = os.path.join(wc_dir, 'A', 'B')
+  os.chdir(os.path.abspath(A_path))
+  svntest.actions.run_and_verify_svn(None, None, [], 'diff',
+                                     os.path.abspath(B_path))
+  
 ########################################################################
 #Run the tests
 
@@ -3824,6 +3838,7 @@ test_list = [ None,
               diff_git_empty_files,
               diff_git_with_props,
               diff_git_with_props_on_dir,
+              diff_abs_localpath_from_wc_folder,
               ]
 
 if __name__ == '__main__':
