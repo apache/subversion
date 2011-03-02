@@ -49,7 +49,7 @@ struct svn_wc__db_t {
   svn_boolean_t enforce_empty_wq;
 
   /* Map a given working copy directory to its relevant data.
-     const char *local_abspath -> svn_wc__db_pdh_t *pdh  */
+     const char *local_abspath -> svn_wc__db_wcroot_t *wcroot  */
   apr_hash_t *dir_data;
 
   /* As we grow the state of this DB, allocate that state here. */
