@@ -1845,7 +1845,8 @@ def merge_sensitive_log_reverse_merges(sbox):
   exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                            'log', '-g', '-r8',
                                                            A_COPY_path)
-  # This test currently fails because
+  # This test currently fails because reverse merges are not differentiated
+  # from forward merges.
   log_chain = parse_log_output(out)
   expected_merges = {
     8 : [],
