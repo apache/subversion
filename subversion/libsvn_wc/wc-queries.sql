@@ -871,6 +871,7 @@ SELECT MIN(revision), MAX(revision) FROM nodes
   WHERE wc_id = ?1
   AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
   AND (presence = 'normal' OR presence = 'incomplete')
+  AND file_external IS NULL
   AND op_depth = 0;
 
 /* Grab all the statements related to the schema.  */
