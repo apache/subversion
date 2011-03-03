@@ -170,7 +170,6 @@ def svnversion_test(sbox):
 
 #----------------------------------------------------------------------
 
-@XFail()
 @Issue(3816)
 def ignore_externals(sbox):
   "test 'svnversion' with svn:externals"
