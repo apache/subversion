@@ -354,10 +354,10 @@ is_one_at_eof(struct file_info file[], apr_size_t file_len)
 #endif
 
 #if SVN_UNALIGNED_ACCESS_IS_OK
-static svn_boolean_t contains_eol(apr_size_t chunk)
+static svn_boolean_t contains_eol(apr_uintptr_t chunk)
 {
-  apr_size_t r_test = chunk ^ R_MASK;
-  apr_size_t n_test = chunk ^ N_MASK;
+  apr_uintptr_t r_test = chunk ^ R_MASK;
+  apr_uintptr_t n_test = chunk ^ N_MASK;
 
   r_test |= (r_test & LOWER_7BITS_SET) + LOWER_7BITS_SET;
   n_test |= (n_test & LOWER_7BITS_SET) + LOWER_7BITS_SET;
@@ -418,18 +418,18 @@ find_identical_prefix(svn_boolean_t *reached_one_eof, apr_off_t *prefix_lines,
        * endp for any of the files.
        * Signedness is important here if curp gets close to endp.
        */
-      max_delta = file[0].endp - file[0].curp - sizeof(apr_size_t);
+      max_delta = file[0].endp - file[0].curp - sizeof(apr_uintptr_t);
       for (i = 1; i < file_len; i++)
         {
-          delta = file[i].endp - file[i].curp - sizeof(apr_size_t);
+          delta = file[i].endp - file[i].curp - sizeof(apr_uintptr_t);
           if (delta < max_delta)
             max_delta = delta;
         }
 
       is_match = TRUE;
-      for (delta = 0; delta < max_delta && is_match; delta += sizeof(apr_size_t))
+      for (delta = 0; delta < max_delta && is_match; delta += sizeof(apr_uintptr_t))
         {
-          apr_size_t chunk = *(const apr_size_t *)(file[0].curp + delta);
+          apr_uintptr_t chunk = *(const apr_size_t *)(file[0].curp + delta);
           if (contains_eol(chunk))
             break;
 
@@ -622,32 +622,32 @@ find_identical_suffix(apr_off_t *suffix_lines, struct file_info file[],
       /* Scan quickly by reading with machine-word granularity. */
       for (i = 0, can_read_word = TRUE; i < file_len; i++)
         can_read_word = can_read_word 
-                        && (   file_for_suffix[i].curp - sizeof(apr_size_t)
+                        && (   file_for_suffix[i].curp - sizeof(apr_uintptr_t)
                             >= min_curp[i]);
       if (can_read_word)
         {
           do
             {
-              apr_size_t chunk;
+              apr_uintptr_t chunk;
               for (i = 0; i < file_len; i++)
-                file_for_suffix[i].curp -= sizeof(apr_size_t);
+                file_for_suffix[i].curp -= sizeof(apr_uintptr_t);
 
-              chunk = *(const apr_size_t *)(file_for_suffix[0].curp + 1);
+              chunk = *(const apr_uintptr_t *)(file_for_suffix[0].curp + 1);
               if (contains_eol(chunk))
                 break;
 
               for (i = 0, can_read_word = TRUE; i < file_len; i++)
                 can_read_word = can_read_word 
-                                && (   file_for_suffix[i].curp - sizeof(apr_size_t)
+                                && (   file_for_suffix[i].curp - sizeof(apr_uintptr_t)
                                     >= min_curp[i]);
               for (i = 1, is_match = TRUE; i < file_len; i++)
                 is_match = is_match
                            && (   chunk
-                               == *(const apr_size_t *)(file_for_suffix[i].curp + 1));
+                               == *(const apr_uintptr_t *)(file_for_suffix[i].curp + 1));
             } while (can_read_word && is_match);
 
             for (i = 0; i < file_len; i++)
-              file_for_suffix[i].curp += sizeof(apr_size_t);
+              file_for_suffix[i].curp += sizeof(apr_uintptr_t);
         }
 
 #endif
