@@ -5355,6 +5355,7 @@ typedef struct cache_props_baton_t
   svn_boolean_t immediates_only;
   apr_int64_t wc_id;
   const char *local_relpath;
+  svn_boolean_t pristine;
   svn_cancel_func_t cancel_func;
   void *cancel_baton;
 } cache_props_baton_t;
@@ -5370,21 +5371,33 @@ cache_props_recursive(void *cb_baton,
 
   if (baton->immediates_only)
     {
-      SVN_ERR(svn_sqlite__get_statement(&stmt, db,
-                                        STMT_CACHE_NODE_PROPS_OF_CHILDREN));
+      if (baton->pristine)
+        SVN_ERR(svn_sqlite__get_statement(
+                  &stmt, db, STMT_CACHE_NODE_BASE_PROPS_OF_CHILDREN));
+      else
+        SVN_ERR(svn_sqlite__get_statement(&stmt, db,
+                                          STMT_CACHE_NODE_PROPS_OF_CHILDREN));
       SVN_ERR(svn_sqlite__bindf(stmt, "is",
                                 baton->wc_id, baton->local_relpath));
     }
   else
     {
-      SVN_ERR(svn_sqlite__get_statement(&stmt, db,
-                                        STMT_CACHE_NODE_PROPS_RECURSIVE));
+      if (baton->pristine)
+        SVN_ERR(svn_sqlite__get_statement(
+                  &stmt, db, STMT_CACHE_NODE_BASE_PROPS_RECURSIVE));
+      else
+        SVN_ERR(svn_sqlite__get_statement(&stmt, db,
+                                          STMT_CACHE_NODE_PROPS_RECURSIVE));
       SVN_ERR(svn_sqlite__bindf(stmt, "iss",
                                 baton->wc_id, baton->local_relpath,
                                 construct_like_arg(baton->local_relpath,
                                                    scratch_pool)));
     }
   SVN_ERR(svn_sqlite__step_done(stmt));
+
+  /* ACTUAL props aren't relevant in the pristine case. */
+  if (baton->pristine)
+    return SVN_NO_ERROR;
 
   if (baton->cancel_func)
     SVN_ERR(baton->cancel_func(baton->cancel_baton));
@@ -5416,6 +5429,7 @@ read_props_recursive(svn_wc__db_t *db,
                      const char *local_abspath,
                      svn_boolean_t files_only,
                      svn_boolean_t immediates_only,
+                     svn_boolean_t pristine,
                      svn_wc__proplist_receiver_t receiver_func,
                      void *receiver_baton,
                      svn_cancel_func_t cancel_func,
@@ -5443,6 +5457,7 @@ read_props_recursive(svn_wc__db_t *db,
 
   baton.immediates_only = immediates_only;
   baton.wc_id = wcroot->wc_id;
+  baton.pristine = pristine;
   baton.cancel_func = cancel_func;
   baton.cancel_baton = cancel_baton;
   SVN_ERR(svn_sqlite__with_transaction(wcroot->sdb,
@@ -5519,6 +5534,7 @@ read_props_recursive(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_read_props_of_files(svn_wc__db_t *db,
                                const char *local_abspath,
+                               svn_boolean_t pristine,
                                svn_wc__proplist_receiver_t receiver_func,
                                void *receiver_baton,
                                svn_cancel_func_t cancel_func,
@@ -5526,7 +5542,7 @@ svn_wc__db_read_props_of_files(svn_wc__db_t *db,
                                apr_pool_t *scratch_pool)
 {
   SVN_ERR(read_props_recursive(db, local_abspath, TRUE, TRUE,
-                               receiver_func, receiver_baton,
+                               pristine, receiver_func, receiver_baton,
                                cancel_func, cancel_baton,
                                scratch_pool));
   return SVN_NO_ERROR;
@@ -5536,6 +5552,7 @@ svn_wc__db_read_props_of_files(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_read_props_of_immediates(svn_wc__db_t *db,
                                     const char *local_abspath,
+                                    svn_boolean_t pristine,
                                     svn_wc__proplist_receiver_t receiver_func,
                                     void *receiver_baton,
                                     svn_cancel_func_t cancel_func,
@@ -5543,7 +5560,7 @@ svn_wc__db_read_props_of_immediates(svn_wc__db_t *db,
                                     apr_pool_t *scratch_pool)
 {
   SVN_ERR(read_props_recursive(db, local_abspath, FALSE, TRUE,
-                               receiver_func, receiver_baton,
+                               pristine, receiver_func, receiver_baton,
                                cancel_func, cancel_baton,
                                scratch_pool));
   return SVN_NO_ERROR;
@@ -5553,6 +5570,7 @@ svn_wc__db_read_props_of_immediates(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_read_props_recursive(svn_wc__db_t *db,
                                 const char *local_abspath,
+                                svn_boolean_t pristine,
                                 svn_wc__proplist_receiver_t receiver_func,
                                 void *receiver_baton,
                                 svn_cancel_func_t cancel_func,
@@ -5560,7 +5578,7 @@ svn_wc__db_read_props_recursive(svn_wc__db_t *db,
                                 apr_pool_t *scratch_pool)
 {
   SVN_ERR(read_props_recursive(db, local_abspath, FALSE, FALSE,
-                               receiver_func, receiver_baton,
+                               pristine, receiver_func, receiver_baton,
                                cancel_func, cancel_baton,
                                scratch_pool));
   return SVN_NO_ERROR;
