@@ -2512,6 +2512,13 @@ svn_wc__db_get_min_max_revisions(svn_revnum_t *min_revision,
                                  const char *local_abspath,
                                  apr_pool_t *scratch_pool);
 
+/* Indicate in *HAS_ABSENT_CHILDREN whether there are any absent children
+ * beneath LOCAL_ABSPATH in the working copy using DB. */
+svn_error_t *
+svn_wc__db_has_absent_children(svn_boolean_t *has_absent_children,
+                               svn_wc__db_t *db,
+                               const char *local_abspath,
+                               apr_pool_t *scratch_pool);
 
 /* @} */
 

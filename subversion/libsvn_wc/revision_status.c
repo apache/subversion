@@ -70,11 +70,10 @@ analyze_status(const char *local_abspath,
                                NULL, NULL, NULL, NULL, wb->db,
                                local_abspath, scratch_pool, scratch_pool));
 
-  /* We need the excluded and absent paths when checking for sparse
-   * checkouts. But only for that. To collect those we're walking all the
-   * hidden nodes. */
-  if (status == svn_wc__db_status_excluded
-      || status == svn_wc__db_status_absent)
+  /* We need the excluded paths when checking for sparse checkouts (absent
+   * paths are already taken care of within svn_wc_revision_status2).
+   * But only for that. To collect those we're walking all the hidden nodes. */
+  if (status == svn_wc__db_status_excluded)
     {
       wb->result->sparse_checkout = TRUE;
       return SVN_NO_ERROR;
@@ -185,6 +184,10 @@ svn_wc_revision_status2(svn_wc_revision_status_t **result_p,
   SVN_ERR(svn_wc__db_get_min_max_revisions(&result->min_rev, &result->max_rev,
                                            wc_ctx->db, local_abspath,
                                            scratch_pool));
+
+  SVN_ERR(svn_wc__db_has_absent_children(&result->sparse_checkout, wc_ctx->db,
+                                         local_abspath, scratch_pool));
+
   SVN_ERR(svn_wc__node_walk_children(wc_ctx,
                                      local_abspath,
                                      TRUE /* show_hidden */,
