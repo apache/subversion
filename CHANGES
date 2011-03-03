@@ -139,12 +139,14 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
 
 
 Version 1.6.16
-(?? Feb 2011, from /branches/1.6.x)
+(02 Mar 2011, from /branches/1.6.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.6.16
 
   User-visible changes:
    * more improvement to the 'blame -g' memory leak from 1.6.15 (r1041438)
    * avoid a crash in mod_dav_svn when using locks (r1071239, -307)
+            See CVE-2011-0715, and descriptive advisory at
+            http://subversion.apache.org/security/CVE-2011-0715-advisory.txt
    * avoid unnecessary globbing for performance (r1068988)
    * don't add tree conflicts when one already exists (issue #3486)
    * fix potential crash when requesting mergeinfo (r902467)
