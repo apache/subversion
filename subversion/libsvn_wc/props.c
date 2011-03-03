@@ -1672,6 +1672,7 @@ svn_error_t *
 svn_wc__prop_list_recursive(svn_wc_context_t *wc_ctx,
                             const char *local_abspath,
                             svn_depth_t depth,
+                            svn_boolean_t pristine,
                             svn_wc__proplist_receiver_t receiver_func,
                             void *receiver_baton,
                             svn_cancel_func_t cancel_func,
@@ -1684,8 +1685,14 @@ svn_wc__prop_list_recursive(svn_wc_context_t *wc_ctx,
       {
         apr_hash_t *props;
 
-        SVN_ERR(svn_wc__db_read_props(&props, wc_ctx->db, local_abspath,
-                                      scratch_pool, scratch_pool));
+        if (pristine)
+          SVN_ERR(svn_wc__db_read_pristine_props(&props, wc_ctx->db,
+                                                 local_abspath,
+                                                 scratch_pool, scratch_pool));
+        else
+          SVN_ERR(svn_wc__db_read_props(&props, wc_ctx->db, local_abspath,
+                                        scratch_pool, scratch_pool));
+
         if (receiver_func && props && apr_hash_count(props) > 0)
           SVN_ERR((*receiver_func)(receiver_baton, local_abspath, props,
                                    scratch_pool));
@@ -1693,18 +1700,21 @@ svn_wc__prop_list_recursive(svn_wc_context_t *wc_ctx,
       break;
     case  svn_depth_files:
       SVN_ERR(svn_wc__db_read_props_of_files(wc_ctx->db, local_abspath,
+                                             pristine,
                                              receiver_func, receiver_baton,
                                              cancel_func, cancel_baton,
                                              scratch_pool));
       break;
     case svn_depth_immediates:
       SVN_ERR(svn_wc__db_read_props_of_immediates(wc_ctx->db, local_abspath,
+                                                  pristine,
                                                   receiver_func, receiver_baton,
                                                   cancel_func, cancel_baton,
                                                   scratch_pool));
       break;
     case svn_depth_infinity:
       SVN_ERR(svn_wc__db_read_props_recursive(wc_ctx->db, local_abspath,
+                                              pristine,
                                               receiver_func, receiver_baton,
                                               cancel_func, cancel_baton,
                                               scratch_pool));

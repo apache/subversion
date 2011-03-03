@@ -1429,6 +1429,7 @@ svn_client__crawl_for_externals(apr_hash_t **externals_p,
   apr_hash_t *externals_hash = apr_hash_make(result_pool);
 
   SVN_ERR(svn_wc__prop_list_recursive(ctx->wc_ctx, local_abspath, depth,
+                                      FALSE, /* pristine */
                                       externals_crawl_proplist_receiver,
                                       externals_hash,
                                       ctx->cancel_func,

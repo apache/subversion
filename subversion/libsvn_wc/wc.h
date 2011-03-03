@@ -136,12 +136,16 @@ extern "C" {
  * The change from 23 to 24 started using the 'refcount' column of the
  * 'pristine' table correctly, instead of always setting it to '1'.
  *
+ * The change from 24 to 25 introduced a NODES_CURRENT view.
+ *
+ * The change from 25 to 26 introduced a NODES_BASE view.
+ *
  * == 1.7.x shipped with format ???
  *
  * Please document any further format changes here.
  */
 
-#define SVN_WC__VERSION 25
+#define SVN_WC__VERSION 26
 
 
 /* Formats <= this have no concept of "revert text-base/props".  */

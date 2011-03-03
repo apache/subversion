@@ -1145,6 +1145,13 @@ bump_to_25(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+bump_to_26(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_26));
+  return SVN_NO_ERROR;
+}
+
 
 struct upgrade_data_t {
   svn_sqlite__db_t *sdb;
@@ -1414,6 +1421,12 @@ svn_wc__upgrade_sdb(int *result_format,
         SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_25, &bb,
                                              scratch_pool));
         *result_format = 25;
+        /* FALLTHROUGH  */
+
+      case 25:
+        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_26, &bb,
+                                             scratch_pool));
+        *result_format = 26;
         /* FALLTHROUGH  */
 
       /* ### future bumps go here.  */
