@@ -825,7 +825,7 @@ typedef struct svn_log_entry_t
    * HAS_CHILDREN flag is always FALSE.
    *
    * For more information see:
-   * http://subversion.tigris.org/merge-tracking/design.html#commutative-reporting
+   * https://svn.apache.org/repos/asf/subversion/trunk/notes/merge-tracking/design.html#commutative-reporting
    */
   svn_boolean_t has_children;
 
