@@ -61,6 +61,7 @@ analyze_status(const char *local_abspath,
   svn_revnum_t revision;
   svn_revnum_t item_rev;
   svn_depth_t depth;
+  svn_boolean_t is_file_external;
   svn_wc__db_status_t status;
 
   SVN_ERR(svn_wc__db_read_info(&status, NULL, &revision, NULL,
@@ -87,6 +88,12 @@ analyze_status(const char *local_abspath,
     {
       wb->result->modified = TRUE;
     }
+
+  /* Ignore file externals. */
+  SVN_ERR(svn_wc__internal_is_file_external(&is_file_external, wb->db,
+                                            local_abspath, scratch_pool));
+  if (is_file_external)
+    return SVN_NO_ERROR;
 
   if (! wb->result->switched)
     {
