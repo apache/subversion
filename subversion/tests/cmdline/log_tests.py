@@ -1149,7 +1149,8 @@ def check_merge_results(log_chain, expected_merges=None,
   # Check to see if the number and values of the revisions is correct
   for log in log_chain:
     if (log['revision'] not in expected_merges
-        and log['revision'] not in expected_reverse_merges):
+        and (expected_reverse_merges is not None
+             and log['revision'] not in expected_reverse_merges)):
       raise SVNUnexpectedLogs("Found unexpected revision %d" %
                               log['revision'], log_chain)
 
