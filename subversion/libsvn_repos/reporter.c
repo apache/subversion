@@ -484,7 +484,7 @@ get_revision_info(report_baton_t *b,
       info->author = author ? svn_string_dup(author, b->pool) : NULL;
 
       /* Cache it */
-      apr_hash_set(b->revision_infos, &rev, sizeof(rev), info);
+      apr_hash_set(b->revision_infos, &info->rev, sizeof(rev), info);
     }
 
   *revision_info = info;
