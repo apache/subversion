@@ -9147,3 +9147,48 @@ svn_wc__db_temp_below_work(svn_boolean_t *have_work,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_wc__db_get_min_max_revisions(svn_revnum_t *min_revision,
+                                 svn_revnum_t *max_revision,
+                                 svn_wc__db_t *db,
+                                 const char *local_abspath,
+                                 apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
+                                                db, local_abspath,
+                                                svn_sqlite__mode_readwrite,
+                                                scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_MIN_MAX_REVISIONS));
+  SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id, local_relpath,
+                            construct_like_arg(local_relpath, scratch_pool)));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (have_row)
+    {
+        *min_revision = svn_sqlite__column_revnum(stmt, 0);
+        *max_revision = svn_sqlite__column_revnum(stmt, 1);
+    }
+  else
+    {
+        *min_revision = SVN_INVALID_REVNUM;
+        *max_revision = SVN_INVALID_REVNUM;
+    }
+
+  /* The statement should only return at most one row. */
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  SVN_ERR_ASSERT(! have_row);
+
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  return SVN_NO_ERROR;
+}
