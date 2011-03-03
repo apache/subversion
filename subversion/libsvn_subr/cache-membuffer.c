@@ -709,7 +709,6 @@ ensure_data_insertable(svn_membuffer_t *cache, apr_size_t size)
 
   /* This will never be reached. But if it was, "can't insert" was the
    * right answer. */
-  return FALSE;
 }
 
 /* Mimic apr_pcalloc in APR_POOL_DEBUG mode, i.e. handle failed allocations
@@ -770,11 +769,10 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
   if (directory_size < sizeof(entry_group_t))
     directory_size = sizeof(entry_group_t);
 
-  /* limit the data size to what we can address
+  /* limit the data size to what we can address.
+   * Note that this cannot overflow since all values are of size_t.
    */
   data_size = total_size - directory_size;
-  if (data_size > APR_SIZE_MAX)
-    data_size = APR_SIZE_MAX;
 
   /* to keep the entries small, we use 32 bit indices only
    * -> we need to ensure that no more then 4G entries exist
