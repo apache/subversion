@@ -170,6 +170,8 @@ def svnversion_test(sbox):
 
 #----------------------------------------------------------------------
 
+@XFail()
+@Issue(3816)
 def ignore_externals(sbox):
   "test 'svnversion' with svn:externals"
   sbox.build()
@@ -178,7 +180,10 @@ def ignore_externals(sbox):
 
   # Set up an external item
   C_path = os.path.join(wc_dir, "A", "C")
-  externals_desc = "ext -r 1 " + repo_url + "/A/D/G" + "\n"
+  externals_desc = """\
+ext-dir -r 1 %s/A/D/G
+ext-file -r 1 %s/A/D/H/omega
+""" % (repo_url, repo_url)
   (fd, tmp_f) = tempfile.mkstemp(dir=wc_dir)
   svntest.main.file_append(tmp_f, externals_desc)
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -198,11 +203,13 @@ def ignore_externals(sbox):
 
   # Update to get it on disk
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
-  ext_path = os.path.join(C_path, 'ext')
+  ext_dir_path = os.path.join(C_path, 'ext-dir')
+  ext_file_path = os.path.join(C_path, 'ext-file')
   expected_infos = [
       { 'Revision' : '^1$' },
+      { 'Revision' : '^1$' },
     ]
-  svntest.actions.run_and_verify_info(expected_infos, ext_path)
+  svntest.actions.run_and_verify_info(expected_infos, ext_dir_path, ext_file_path)
 
   svntest.actions.run_and_verify_svnversion("working copy with svn:externals",
                                             wc_dir, repo_url,
