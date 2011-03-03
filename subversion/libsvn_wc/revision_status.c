@@ -104,19 +104,6 @@ analyze_status(const char *local_abspath,
               ? changed_rev
               : revision);
 
-  /* Added files have a revision of no interest */
-  if (item_rev != SVN_INVALID_REVNUM)
-    {
-
-      if (wb->result->min_rev == SVN_INVALID_REVNUM
-          || item_rev < wb->result->min_rev)
-        wb->result->min_rev = item_rev;
-
-      if (wb->result->max_rev == SVN_INVALID_REVNUM
-          || item_rev > wb->result->max_rev)
-        wb->result->max_rev = item_rev;
-    }
-
   if (! wb->result->modified)
     {
       svn_boolean_t props_mod;
@@ -195,6 +182,9 @@ svn_wc_revision_status2(svn_wc_revision_status_t **result_p,
         }
     }
 
+  SVN_ERR(svn_wc__db_get_min_max_revisions(&result->min_rev, &result->max_rev,
+                                           wc_ctx->db, local_abspath,
+                                           scratch_pool));
   SVN_ERR(svn_wc__node_walk_children(wc_ctx,
                                      local_abspath,
                                      TRUE /* show_hidden */,

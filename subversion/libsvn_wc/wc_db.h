@@ -2500,6 +2500,19 @@ svn_wc__db_temp_below_work(svn_boolean_t *have_work,
                            apr_pool_t *scratch_pool);
 
 
+/* Set *MIN_REVISION and *MAX_REVISION to the lowest and highest revision
+ * numbers found within LOCAL_ABSPATH in the working copy using DB.
+ * Only nodes with op_depth zero and presence 'normal' or 'incomplete'
+ * are considered, so that added, deleted or excluded nodes do not affect
+ * the result. */
+svn_error_t *
+svn_wc__db_get_min_max_revisions(svn_revnum_t *min_revision,
+                                 svn_revnum_t *max_revision,
+                                 svn_wc__db_t *db,
+                                 const char *local_abspath,
+                                 apr_pool_t *scratch_pool);
+
+
 /* @} */
 
 
