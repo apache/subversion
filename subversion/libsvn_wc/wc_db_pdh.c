@@ -321,11 +321,12 @@ pdh_parse_local_abspath(db_pdh_t **pdh,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
+  const char *local_dir_abspath;
   const char *original_abspath = local_abspath;
   svn_node_kind_t kind;
   svn_boolean_t special;
   const char *build_relpath;
-  svn_wc__db_wcroot_t *wcroot;
+  svn_wc__db_wcroot_t *probe_wcroot;
   svn_wc__db_wcroot_t *found_wcroot = NULL;
   const char *child_abspath;
   svn_sqlite__db_t *sdb;
@@ -346,24 +347,20 @@ pdh_parse_local_abspath(db_pdh_t **pdh,
      ### everything in readwrite mode.  */
   smode = svn_sqlite__mode_readwrite;
 
-  wcroot = apr_hash_get(db->dir_data, local_abspath, APR_HASH_KEY_STRING);
-  if (wcroot != NULL)
+  probe_wcroot = apr_hash_get(db->dir_data, local_abspath,
+                              APR_HASH_KEY_STRING);
+  if (probe_wcroot != NULL)
     {
       *pdh = apr_pcalloc(result_pool, sizeof(**pdh));
       (*pdh)->local_abspath = apr_pstrdup(result_pool, local_abspath);
-      (*pdh)->wcroot = wcroot;
-    }
-  else
-    *pdh = NULL;
+      (*pdh)->wcroot = probe_wcroot;
 
-  if (*pdh != NULL && (*pdh)->wcroot != NULL)
-    {
       /* We got lucky. Just return the thing BEFORE performing any I/O.  */
       /* ### validate SMODE against how we opened wcroot->sdb? and against
          ### DB->mode? (will we record per-dir mode?)  */
 
       /* ### for most callers, we could pass NULL for result_pool.  */
-      *local_relpath = compute_relpath((*pdh)->wcroot, (*pdh)->local_abspath,
+      *local_relpath = compute_relpath(probe_wcroot, local_abspath,
                                        result_pool);
 
       return SVN_NO_ERROR;
@@ -385,28 +382,22 @@ pdh_parse_local_abspath(db_pdh_t **pdh,
          For both of these cases, strip the basename off of the path and
          move up one level. Keep record of what we strip, though, since
          we'll need it later to construct local_relpath.  */
-      svn_dirent_split(&local_abspath, &build_relpath, local_abspath,
+      svn_dirent_split(&local_dir_abspath, &build_relpath, local_abspath,
                        scratch_pool);
 
-      /* ### if *pdh != NULL (from further above), then there is (quite
-         ### probably) a bogus value in the DIR_DATA hash table. maybe
-         ### clear it out? but what if there is an access baton?  */
-
       /* Is this directory in our hash?  */
-      wcroot = apr_hash_get(db->dir_data, local_abspath, APR_HASH_KEY_STRING);
-      if (wcroot != NULL)
-        {
-          *pdh = apr_pcalloc(result_pool, sizeof(**pdh));
-          (*pdh)->local_abspath = apr_pstrdup(result_pool, local_abspath);
-          (*pdh)->wcroot = wcroot;
-        }
-
-      if (*pdh != NULL && (*pdh)->wcroot != NULL)
+      probe_wcroot = apr_hash_get(db->dir_data, local_dir_abspath,
+                                  APR_HASH_KEY_STRING);
+      if (probe_wcroot != NULL)
         {
           const char *dir_relpath;
 
+          *pdh = apr_pcalloc(result_pool, sizeof(**pdh));
+          (*pdh)->local_abspath = apr_pstrdup(result_pool, local_dir_abspath);
+          (*pdh)->wcroot = probe_wcroot;
+
           /* Stashed directory's local_relpath + basename. */
-          dir_relpath = compute_relpath((*pdh)->wcroot, (*pdh)->local_abspath,
+          dir_relpath = compute_relpath(probe_wcroot, local_dir_abspath,
                                         NULL);
           *local_relpath = svn_relpath_join(dir_relpath,
                                             build_relpath,
@@ -420,12 +411,18 @@ pdh_parse_local_abspath(db_pdh_t **pdh,
          rather than bailing out after the first check.  */
       if (kind == svn_node_none)
         always_check = TRUE;
+
+      /* Start the scanning at LOCAL_DIR_ABSPATH.  */
+      local_abspath = local_dir_abspath;
     }
   else
     {
       /* Start the local_relpath empty. If *this* directory contains the
          wc.db, then relpath will be the empty string.  */
       build_relpath = "";
+
+      /* Remember the dir containing LOCAL_ABSPATH (they're the same).  */
+      local_dir_abspath = local_abspath;
     }
 
   /* LOCAL_ABSPATH refers to a directory at this point. The PDH corresponding
@@ -434,16 +431,8 @@ pdh_parse_local_abspath(db_pdh_t **pdh,
      table of wcdirs. Let's fill in an existing one, or create one. Then
      go figure out where the WCROOT is.  */
 
-  if (*pdh == NULL)
-    {
-      *pdh = apr_pcalloc(result_pool, sizeof(**pdh));
-      (*pdh)->local_abspath = apr_pstrdup(result_pool, local_abspath);
-    }
-  else
-    {
-      /* The PDH should have been built correctly (so far).  */
-      SVN_ERR_ASSERT(strcmp((*pdh)->local_abspath, local_abspath) == 0);
-    }
+  *pdh = apr_pcalloc(result_pool, sizeof(**pdh));
+  (*pdh)->local_abspath = apr_pstrdup(result_pool, local_abspath);
 
   /* Assume that LOCAL_ABSPATH is a directory, and look for the SQLite
      database in the right place. If we find it... great! If not, then
@@ -552,7 +541,7 @@ pdh_parse_local_abspath(db_pdh_t **pdh,
 
     /* The subdirectory's relpath is easily computed relative to the
        wcroot that we just found.  */
-    dir_relpath = compute_relpath((*pdh)->wcroot, (*pdh)->local_abspath, NULL);
+    dir_relpath = compute_relpath((*pdh)->wcroot, local_dir_abspath, NULL);
 
     /* And the result local_relpath may include a filename.  */
     *local_relpath = svn_relpath_join(dir_relpath, build_relpath, result_pool);
@@ -563,7 +552,7 @@ pdh_parse_local_abspath(db_pdh_t **pdh,
      ### but this PDH stuff is short-lived. just dup it (for now) into the
      ### correct lifetime.  */
   apr_hash_set(db->dir_data,
-               apr_pstrdup(db->state_pool, (*pdh)->local_abspath),
+               apr_pstrdup(db->state_pool, local_dir_abspath),
                APR_HASH_KEY_STRING,
                (*pdh)->wcroot);
 
@@ -581,7 +570,7 @@ pdh_parse_local_abspath(db_pdh_t **pdh,
      We should now create PDH records for each parent directory that does
      not (yet) have one.  */
 
-  child_abspath = (*pdh)->local_abspath;
+  child_abspath = local_dir_abspath;
 
   do
     {
