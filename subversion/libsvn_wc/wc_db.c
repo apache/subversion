@@ -3726,16 +3726,10 @@ op_revert_recursive_txn(void *baton,
   svn_boolean_t have_row;
   apr_int64_t op_depth;
   int affected_rows;
+  const char *like_arg = construct_like_arg(local_relpath, scratch_pool);
 
   /* ### Similar structure to op_revert_txn, should they be
          combined? */
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_DELETE_ACTUAL_NODE_RECURSIVE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id,
-                            local_relpath,
-                            construct_like_arg(local_relpath, scratch_pool)));
-  SVN_ERR(svn_sqlite__step(&affected_rows, stmt));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_NODE_INFO));
@@ -3744,6 +3738,13 @@ op_revert_recursive_txn(void *baton,
   if (!have_row)
     {
       SVN_ERR(svn_sqlite__reset(stmt));
+
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_DELETE_ACTUAL_NODE_RECURSIVE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id,
+                                local_relpath, like_arg));
+      SVN_ERR(svn_sqlite__step(&affected_rows, stmt));
+
       if (affected_rows)
         return SVN_NO_ERROR;  /* actual-only revert */
 
@@ -3771,9 +3772,19 @@ op_revert_recursive_txn(void *baton,
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_DELETE_NODES_RECURSIVE));
   SVN_ERR(svn_sqlite__bindf(stmt, "issi", wcroot->wc_id,
-                            local_relpath,
-                            construct_like_arg(local_relpath, scratch_pool),
-                            op_depth));
+                            local_relpath, like_arg, op_depth));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                        STMT_DELETE_ACTUAL_NODE_LEAVING_CHANGELIST_RECURSIVE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id,
+                            local_relpath, like_arg));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                        STMT_CLEAR_ACTUAL_NODE_LEAVING_CHANGELIST_RECURSIVE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id,
+                            local_relpath, like_arg));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
   return SVN_NO_ERROR;

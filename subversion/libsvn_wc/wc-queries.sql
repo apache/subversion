@@ -360,8 +360,19 @@ WHERE wc_id = ?1 AND local_relpath = ?2
 DELETE FROM actual_node
 WHERE wc_id = ?1 AND local_relpath = ?2
       AND (changelist IS NULL
-           OR 'file' NOT IN (SELECT kind FROM nodes_current
-                             WHERE wc_id  = ?1 AND local_relpath = ?2))
+           OR local_relpath NOT IN (SELECT local_relpath FROM nodes_current
+                                     WHERE wc_id  = ?1 AND local_relpath = ?2
+                                       AND kind = 'file'));
+
+-- STMT_DELETE_ACTUAL_NODE_LEAVING_CHANGELIST_RECURSIVE
+DELETE FROM actual_node
+WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
+      AND (changelist IS NULL
+           OR local_relpath NOT IN (SELECT local_relpath FROM nodes_current
+                                    WHERE wc_id = ?1
+                                      AND (local_relpath = ?2
+                                           OR local_relpath LIKE ?3 ESCAPE '#')
+                                      AND kind = 'file'));
 
 -- STMT_DELETE_CHILD_NODES_RECURSIVE
 DELETE FROM nodes
@@ -381,6 +392,20 @@ SET properties = NULL,
     left_checksum = NULL,
     right_checksum = NULL
 WHERE wc_id = ?1 and local_relpath = ?2;
+
+-- STMT_CLEAR_ACTUAL_NODE_LEAVING_CHANGELIST_RECURSIVE
+UPDATE actual_node
+SET properties = NULL,
+    text_mod = NULL,
+    tree_conflict_data = NULL,
+    conflict_old = NULL,
+    conflict_new = NULL,
+    conflict_working = NULL,
+    prop_reject = NULL,
+    older_checksum = NULL,
+    left_checksum = NULL,
+    right_checksum = NULL
+WHERE wc_id = ?1 and local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#';
 
 -- STMT_CLEAR_ACTUAL_NODE_LEAVING_CONFLICT
 UPDATE actual_node

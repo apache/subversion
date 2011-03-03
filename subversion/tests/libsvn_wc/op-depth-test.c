@@ -2552,6 +2552,10 @@ test_op_revert_changelist(const svn_test_opts_t *opts, apr_pool_t *pool)
     };
     SVN_ERR(revert(&b, "A/f", svn_depth_empty,
                    before, after, before_actual, after_actual));
+    SVN_ERR(revert(&b, "A/f", svn_depth_infinity,
+                   before, after, before_actual, after_actual));
+    SVN_ERR(revert(&b, "", svn_depth_infinity,
+                   before, after, before_actual, after_actual));
   }
 
   {
@@ -2574,6 +2578,10 @@ test_op_revert_changelist(const svn_test_opts_t *opts, apr_pool_t *pool)
     };
     SVN_ERR(revert(&b, "A/f", svn_depth_empty,
                    before, after, common_actual, common_actual));
+    SVN_ERR(revert(&b, "A/f", svn_depth_infinity,
+                   before, after, common_actual, common_actual));
+    SVN_ERR(revert(&b, "", svn_depth_infinity,
+                   before, after, common_actual, common_actual));
   }
 
   {
@@ -2594,6 +2602,10 @@ test_op_revert_changelist(const svn_test_opts_t *opts, apr_pool_t *pool)
       { 0 },
     };
     SVN_ERR(revert(&b, "A/f", svn_depth_empty,
+                   before, after, common_actual, common_actual));
+    SVN_ERR(revert(&b, "A/f", svn_depth_infinity,
+                   before, after, common_actual, common_actual));
+    SVN_ERR(revert(&b, "", svn_depth_infinity,
                    before, after, common_actual, common_actual));
   }
 
