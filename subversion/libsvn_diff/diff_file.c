@@ -46,6 +46,7 @@
 
 #include "private/svn_utf_private.h"
 #include "private/svn_eol_private.h"
+#include "private/svn_dep_compat.h"
 #include "private/svn_adler32.h"
 
 /* A token, i.e. a line read from a file. */

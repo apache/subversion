@@ -28,6 +28,7 @@
 #include <apr_file_io.h>
 #include "svn_io.h"
 #include "private/svn_eol_private.h"
+#include "private/svn_dep_compat.h"
 
 /* Machine-word-sized masks used in svn_eol__find_eol_start.
  */
