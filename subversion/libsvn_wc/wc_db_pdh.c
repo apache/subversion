@@ -593,7 +593,7 @@ svn_wc__db_drop_root(svn_wc__db_t *db,
 
       if (wcroot == root_wcroot)
         apr_hash_set(db->dir_data,
-                     local_abspath, svn__apr_hash_index_klen(hi), NULL);
+                     svn__apr_hash_index_key(hi), APR_HASH_KEY_STRING, NULL);
     }
 
   result = apr_pool_cleanup_run(db->state_pool, root_wcroot, close_wcroot);
