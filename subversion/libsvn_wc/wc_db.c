@@ -8976,8 +8976,6 @@ svn_wc__db_temp_op_set_rev_and_repos_relpath(svn_wc__db_t *db,
 
 struct set_new_dir_to_incomplete_baton
 {
-  svn_wc__db_wcroot_t *wcroot;
-  const char *local_relpath;
   const char *repos_relpath;
   const char *repos_root_url;
   const char *repos_uuid;
@@ -8988,27 +8986,27 @@ struct set_new_dir_to_incomplete_baton
 
 static svn_error_t *
 set_new_dir_to_incomplete_txn(void *baton,
-                              svn_sqlite__db_t *sdb,
+                              svn_wc__db_wcroot_t *wcroot,
+                              const char *local_relpath,
                               apr_pool_t *scratch_pool)
 {
   struct set_new_dir_to_incomplete_baton *dtb = baton;
   svn_sqlite__stmt_t *stmt;
   apr_int64_t repos_id;
-  const char *parent_relpath = (*dtb->local_relpath == '\0')
+  const char *parent_relpath = (*local_relpath == '\0')
                                   ? NULL
-                                  : svn_relpath_dirname(dtb->local_relpath,
+                                  : svn_relpath_dirname(local_relpath,
                                                         scratch_pool);
 
   SVN_ERR(create_repos_id(&repos_id, dtb->repos_root_url, dtb->repos_uuid,
-                          sdb, scratch_pool));
+                          wcroot->sdb, scratch_pool));
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, dtb->wcroot->sdb,
-                                    STMT_INSERT_NODE));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_INSERT_NODE));
 
   SVN_ERR(svn_sqlite__bindf(stmt, "isis" /* 1 - 4 */
                             "isr" "sns", /* 5 - 7, 8, 9(n), 10 */
-                            dtb->wcroot->wc_id,      /* 1 */
-                            dtb->local_relpath,      /* 2 */
+                            wcroot->wc_id,           /* 1 */
+                            local_relpath,           /* 2 */
                             (apr_int64_t)0, /* op_depth == 0; BASE */
                             parent_relpath,          /* 4 */
                             repos_id,
@@ -9024,8 +9022,8 @@ set_new_dir_to_incomplete_txn(void *baton,
   SVN_ERR(svn_sqlite__step_done(stmt));
 
   if (parent_relpath)
-    SVN_ERR(extend_parent_delete(dtb->wcroot->sdb, dtb->wcroot->wc_id,
-                                 dtb->local_relpath, scratch_pool));
+    SVN_ERR(extend_parent_delete(wcroot->sdb, wcroot->wc_id,
+                                 local_relpath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -9041,6 +9039,8 @@ svn_wc__db_temp_op_set_new_dir_to_incomplete(svn_wc__db_t *db,
                                              svn_depth_t depth,
                                              apr_pool_t *scratch_pool)
 {
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
   struct set_new_dir_to_incomplete_baton baton;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
@@ -9053,19 +9053,17 @@ svn_wc__db_temp_op_set_new_dir_to_incomplete(svn_wc__db_t *db,
   baton.revision = revision;
   baton.depth = depth;
 
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&baton.wcroot,
-                                             &baton.local_relpath,
-                                             db, local_abspath,
-                                             svn_sqlite__mode_readwrite,
-                                             scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
+                                                db, local_abspath,
+                                                svn_sqlite__mode_readwrite,
+                                                scratch_pool, scratch_pool));
 
-  VERIFY_USABLE_WCROOT(baton.wcroot);
+  VERIFY_USABLE_WCROOT(wcroot);
 
-  SVN_ERR(flush_entries(db, baton.wcroot, local_abspath, scratch_pool));
+  SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
 
-  SVN_ERR(svn_sqlite__with_transaction(baton.wcroot->sdb,
-                                       set_new_dir_to_incomplete_txn,
-                                       &baton, scratch_pool));
+  SVN_ERR(with_db_txn(wcroot, local_relpath, set_new_dir_to_incomplete_txn,
+                      &baton, scratch_pool));
 
   return SVN_NO_ERROR;
 }
