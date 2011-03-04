@@ -5860,9 +5860,6 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
 
 
 struct commit_baton {
-  svn_wc__db_wcroot_t *wcroot;
-  const char *local_relpath;
-
   svn_revnum_t new_revision;
   svn_revnum_t changed_rev;
   apr_time_t changed_date;
@@ -5882,7 +5879,10 @@ struct commit_baton {
 
 /* */
 static svn_error_t *
-commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
+commit_node(void *baton,
+            svn_wc__db_wcroot_t *wcroot,
+            const char *local_relpath,
+            apr_pool_t *scratch_pool)
 {
   struct commit_baton *cb = baton;
   svn_sqlite__stmt_t *stmt_base;
@@ -5900,21 +5900,19 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   svn_sqlite__stmt_t *stmt;
 
   /* ### is it better to select only the data needed?  */
-  SVN_ERR(svn_sqlite__get_statement(&stmt_base, cb->wcroot->sdb,
+  SVN_ERR(svn_sqlite__get_statement(&stmt_base, wcroot->sdb,
                                     STMT_SELECT_BASE_NODE));
-  SVN_ERR(svn_sqlite__get_statement(&stmt_work, cb->wcroot->sdb,
+  SVN_ERR(svn_sqlite__get_statement(&stmt_work, wcroot->sdb,
                                     STMT_SELECT_WORKING_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt_base, "is",
-                            cb->wcroot->wc_id, cb->local_relpath));
-  SVN_ERR(svn_sqlite__bindf(stmt_work, "is",
-                            cb->wcroot->wc_id, cb->local_relpath));
+  SVN_ERR(svn_sqlite__bindf(stmt_base, "is", wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__bindf(stmt_work, "is", wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step(&have_base, stmt_base));
   SVN_ERR(svn_sqlite__step(&have_work, stmt_work));
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt_act, cb->wcroot->sdb,
+  SVN_ERR(svn_sqlite__get_statement(&stmt_act, wcroot->sdb,
                                     STMT_SELECT_ACTUAL_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt_act, "is",
-                            cb->wcroot->wc_id, cb->local_relpath));
+                            wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step(&have_act, stmt_act));
 
   /* There should be something to commit!  */
@@ -5975,19 +5973,19 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 
   /* Update the BASE_NODE row with all the new information.  */
 
-  if (*cb->local_relpath == '\0')
+  if (*local_relpath == '\0')
     parent_relpath = NULL;
   else
-    parent_relpath = svn_relpath_dirname(cb->local_relpath, scratch_pool);
+    parent_relpath = svn_relpath_dirname(local_relpath, scratch_pool);
 
   /* ### other presences? or reserve that for separate functions?  */
   new_presence = svn_wc__db_status_normal;
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, cb->wcroot->sdb,
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_APPLY_CHANGES_TO_BASE_NODE));
   /* symlink_target not yet used */
   SVN_ERR(svn_sqlite__bindf(stmt, "issisrtstrisnbn",
-                            cb->wcroot->wc_id, cb->local_relpath,
+                            wcroot->wc_id, local_relpath,
                             parent_relpath,
                             cb->repos_id,
                             cb->repos_relpath,
@@ -6011,10 +6009,9 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
     {
       /* This removes all op_depth > 0 and so does both layers of a
          two-layer replace. */
-      SVN_ERR(svn_sqlite__get_statement(&stmt, cb->wcroot->sdb,
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_DELETE_ALL_WORKING_NODES));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is",
-                                cb->wcroot->wc_id, cb->local_relpath));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
 
@@ -6027,11 +6024,11 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
           /* The user told us to keep the changelist. Replace the row in
              ACTUAL_NODE with the basic keys and the changelist.  */
           SVN_ERR(svn_sqlite__get_statement(
-                    &stmt, cb->wcroot->sdb,
+                    &stmt, wcroot->sdb,
                     STMT_RESET_ACTUAL_WITH_CHANGELIST));
           SVN_ERR(svn_sqlite__bindf(stmt, "isss",
-                                    cb->wcroot->wc_id, cb->local_relpath,
-                                    svn_relpath_dirname(cb->local_relpath,
+                                    wcroot->wc_id, local_relpath,
+                                    svn_relpath_dirname(local_relpath,
                                                         scratch_pool),
                                     changelist));
           SVN_ERR(svn_sqlite__step_done(stmt));
@@ -6039,10 +6036,9 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
       else
         {
           /* Toss the ACTUAL_NODE row.  */
-          SVN_ERR(svn_sqlite__get_statement(&stmt, cb->wcroot->sdb,
+          SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                             STMT_DELETE_ACTUAL_NODE));
-          SVN_ERR(svn_sqlite__bindf(stmt, "is",
-                                    cb->wcroot->wc_id, cb->local_relpath));
+          SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
           SVN_ERR(svn_sqlite__step_done(stmt));
         }
     }
@@ -6062,14 +6058,15 @@ commit_node(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
     {
       svn_sqlite__stmt_t *lock_stmt;
 
-      SVN_ERR(svn_sqlite__get_statement(&lock_stmt, sdb, STMT_DELETE_LOCK));
+      SVN_ERR(svn_sqlite__get_statement(&lock_stmt, wcroot->sdb,
+                                        STMT_DELETE_LOCK));
       SVN_ERR(svn_sqlite__bindf(lock_stmt, "is", cb->repos_id,
                                 cb->repos_relpath));
       SVN_ERR(svn_sqlite__step_done(lock_stmt));
     }
 
   /* Install any work items into the queue, as part of this transaction.  */
-  SVN_ERR(add_work_items(sdb, cb->work_items, scratch_pool));
+  SVN_ERR(add_work_items(wcroot->sdb, cb->work_items, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -6144,18 +6141,17 @@ svn_wc__db_global_commit(svn_wc__db_t *db,
                          apr_pool_t *scratch_pool)
 {
   const char *local_relpath;
+  svn_wc__db_wcroot_t *wcroot;
   struct commit_baton cb;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(new_revision));
   SVN_ERR_ASSERT(new_checksum == NULL || new_children == NULL);
 
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&cb.wcroot, &local_relpath, db,
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
                               local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
-  VERIFY_USABLE_WCROOT(cb.wcroot);
-
-  cb.local_relpath = local_relpath;
+  VERIFY_USABLE_WCROOT(wcroot);
 
   cb.new_revision = new_revision;
 
@@ -6176,23 +6172,19 @@ svn_wc__db_global_commit(svn_wc__db_t *db,
      For existing nodes, we should retain the (potentially-switched)
      repository information.  */
   SVN_ERR(determine_repos_info(&cb.repos_id, &cb.repos_relpath,
-                               cb.wcroot, local_relpath,
+                               wcroot, local_relpath,
                                scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_sqlite__with_transaction(cb.wcroot->sdb, commit_node, &cb,
-                                       scratch_pool));
+  SVN_ERR(with_db_txn(wcroot, local_relpath, commit_node, &cb, scratch_pool));
 
   /* We *totally* monkeyed the entries. Toss 'em.  */
-  SVN_ERR(flush_entries(db, cb.wcroot, local_abspath, scratch_pool));
+  SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
 
 struct update_baton {
-  svn_wc__db_wcroot_t *wcroot;
-  const char *local_relpath;
-
   const char *new_repos_relpath;
   svn_revnum_t new_revision;
   const apr_hash_t *new_props;
@@ -6225,6 +6217,7 @@ svn_wc__db_global_update(svn_wc__db_t *db,
                          const svn_skel_t *work_items,
                          apr_pool_t *scratch_pool)
 {
+  svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
   struct update_baton ub;
 
@@ -6244,12 +6237,10 @@ svn_wc__db_global_update(svn_wc__db_t *db,
                      && new_checksum == NULL
                      && new_target != NULL));
 
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&ub.wcroot, &local_relpath, db,
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
                               local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
-  VERIFY_USABLE_WCROOT(ub.wcroot);
-
-  ub.local_relpath = local_relpath;
+  VERIFY_USABLE_WCROOT(wcroot);
 
   ub.new_repos_relpath = new_repos_relpath;
   ub.new_revision = new_revision;
@@ -6267,21 +6258,17 @@ svn_wc__db_global_update(svn_wc__db_t *db,
   NOT_IMPLEMENTED();
 
 #if 0
-  SVN_ERR(svn_sqlite__with_transaction(pdh->wcroot->sdb, update_node, &ub,
-                                       scratch_pool));
+  SVN_ERR(with_db_txn(wcroot, local_relpath, update_node, &ub, scratch_pool));
 #endif
 
   /* We *totally* monkeyed the entries. Toss 'em.  */
-  SVN_ERR(flush_entries(db, ub.wcroot, local_abspath, scratch_pool));
+  SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
 
 struct record_baton {
-  svn_wc__db_wcroot_t *wcroot;
-  const char *local_relpath;
-
   svn_filesize_t translated_size;
   apr_time_t last_mod_time;
 };
@@ -6289,15 +6276,18 @@ struct record_baton {
 
 /* Record TRANSLATED_SIZE and LAST_MOD_TIME into top layer in NODES */
 static svn_error_t *
-record_fileinfo(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
+record_fileinfo(void *baton,
+                svn_wc__db_wcroot_t *wcroot,
+                const char *local_relpath,
+                apr_pool_t *scratch_pool)
 {
   struct record_baton *rb = baton;
   svn_sqlite__stmt_t *stmt;
   int affected_rows;
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_UPDATE_NODE_FILEINFO));
-  SVN_ERR(svn_sqlite__bindf(stmt, "isii",
-                            rb->wcroot->wc_id, rb->local_relpath,
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_UPDATE_NODE_FILEINFO));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isii", wcroot->wc_id, local_relpath,
                             rb->translated_size, rb->last_mod_time));
   SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
 
@@ -6314,26 +6304,25 @@ svn_wc__db_global_record_fileinfo(svn_wc__db_t *db,
                                   apr_time_t last_mod_time,
                                   apr_pool_t *scratch_pool)
 {
+  svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
   struct record_baton rb;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&rb.wcroot, &local_relpath, db,
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
                               local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
-  VERIFY_USABLE_WCROOT(rb.wcroot);
-
-  rb.local_relpath = local_relpath;
+  VERIFY_USABLE_WCROOT(wcroot);
 
   rb.translated_size = translated_size;
   rb.last_mod_time = last_mod_time;
 
-  SVN_ERR(svn_sqlite__with_transaction(rb.wcroot->sdb, record_fileinfo, &rb,
-                                       scratch_pool));
+  SVN_ERR(with_db_txn(wcroot, local_relpath, record_fileinfo, &rb,
+                      scratch_pool));
 
   /* We *totally* monkeyed the entries. Toss 'em.  */
-  SVN_ERR(flush_entries(db, rb.wcroot, local_abspath, scratch_pool));
+  SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
