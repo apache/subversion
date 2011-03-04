@@ -3291,10 +3291,6 @@ svn_wc__db_op_modified(svn_wc__db_t *db,
 }
 
 
-struct set_changelist_baton {
-  const char *changelist;
-};
-
 /* */
 static svn_error_t *
 set_changelist_txn(void *baton,
@@ -3302,7 +3298,7 @@ set_changelist_txn(void *baton,
                    const char *local_relpath,
                    apr_pool_t *scratch_pool)
 {
-  struct set_changelist_baton *b = baton;
+  const char *new_changelist = baton;
   const char *existing_changelist;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
@@ -3319,7 +3315,7 @@ set_changelist_txn(void *baton,
     {
       /* We need to insert an ACTUAL node, but only if we're not attempting
          to remove a (non-existent) changelist. */
-      if (b->changelist == NULL)
+      if (new_changelist == NULL)
         return SVN_NO_ERROR;
 
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
@@ -3337,8 +3333,8 @@ set_changelist_txn(void *baton,
       /* We have an existing row, and it simply needs to be updated, if
          it's different. */
       if (existing_changelist
-            && b->changelist
-            && strcmp(existing_changelist, b->changelist) == 0)
+            && new_changelist
+            && strcmp(existing_changelist, new_changelist) == 0)
         return SVN_NO_ERROR;
 
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
@@ -3346,7 +3342,7 @@ set_changelist_txn(void *baton,
     }
 
   SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id, local_relpath,
-                            b->changelist));
+                            new_changelist));
 
   return svn_error_return(svn_sqlite__step_done(stmt));
 }
@@ -3360,7 +3356,6 @@ svn_wc__db_op_set_changelist(svn_wc__db_t *db,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  struct set_changelist_baton scb;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -3369,10 +3364,8 @@ svn_wc__db_op_set_changelist(svn_wc__db_t *db,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  scb.changelist = changelist;
-
-  SVN_ERR(with_db_txn(wcroot, local_relpath, set_changelist_txn, &scb,
-                      scratch_pool));
+  SVN_ERR(with_db_txn(wcroot, local_relpath, set_changelist_txn,
+                      (void *) changelist, scratch_pool));
 
   /* No need to flush the parent entries; changelists were not stored in the
      stub */
