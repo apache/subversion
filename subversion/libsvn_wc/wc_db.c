@@ -628,26 +628,6 @@ get_statement_for_path(svn_sqlite__stmt_t **stmt,
 }
 
 
-/* For a given REPOS_ROOT_URL/REPOS_UUID pair, set *REPOS_ID to the existing
-   REPOS_ID value. If one does not exist, throw an error. */
-static svn_error_t *
-fetch_repos_id(apr_int64_t *repos_id,
-               const char *repos_root_url,
-               const char *repos_uuid,
-               svn_sqlite__db_t *sdb,
-               apr_pool_t *scratch_pool)
-{
-  svn_sqlite__stmt_t *get_stmt;
-
-  SVN_ERR(svn_sqlite__get_statement(&get_stmt, sdb, STMT_SELECT_REPOSITORY));
-  SVN_ERR(svn_sqlite__bindf(get_stmt, "s", repos_root_url));
-  SVN_ERR(svn_sqlite__step_row(get_stmt));
-
-  *repos_id = svn_sqlite__column_int64(get_stmt, 0);
-  return svn_error_return(svn_sqlite__reset(get_stmt));
-}
-
-
 /* For a given REPOS_ROOT_URL/REPOS_UUID pair, return the existing REPOS_ID
    value. If one does not exist, then create a new one. */
 static svn_error_t *
@@ -8675,9 +8655,6 @@ svn_wc__db_temp_get_file_external(const char **serialized_file_external,
 
 struct set_file_external_baton
 {
-  const char *local_abspath;
-  svn_wc__db_t *db;
-
   const char *repos_relpath;
   const svn_opt_revision_t *peg_rev;
   const svn_opt_revision_t *rev;
@@ -8702,26 +8679,23 @@ set_file_external_txn(void *baton,
 
   if (!got_row)
     {
-      const char *repos_root_url, *repos_uuid;
-      const char *dir_abspath;
+      const char *dir_relpath;
       svn_node_kind_t kind;
       apr_int64_t repos_id;
 
       if (!sfeb->repos_relpath)
         return SVN_NO_ERROR; /* Don't add a BASE node */
 
-      SVN_ERR(svn_io_check_path(sfeb->local_abspath, &kind, scratch_pool));
+      SVN_ERR(svn_io_check_path(svn_dirent_join(wcroot->abspath,
+                                                local_relpath, scratch_pool),
+                                &kind, scratch_pool));
       if (kind == svn_node_dir)
-        dir_abspath = sfeb->local_abspath;
+        dir_relpath = local_relpath;
       else
-        dir_abspath = svn_dirent_dirname(sfeb->local_abspath, scratch_pool);
+        dir_relpath = svn_relpath_dirname(local_relpath, scratch_pool);
 
-      SVN_ERR(svn_wc__db_scan_base_repos(NULL, &repos_root_url,
-                                         &repos_uuid, sfeb->db, dir_abspath,
-                                         scratch_pool, scratch_pool));
-
-      SVN_ERR(fetch_repos_id(&repos_id, repos_root_url, repos_uuid,
-                             wcroot->sdb, scratch_pool));
+      SVN_ERR(scan_upwards_for_repos(&repos_id, NULL, wcroot, dir_relpath,
+                                     scratch_pool, scratch_pool));
 
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_INSERT_NODE));
 
@@ -8782,8 +8756,6 @@ svn_wc__db_temp_op_set_file_external(svn_wc__db_t *db,
                                              scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  sfeb.local_abspath = local_abspath;
-  sfeb.db = db;
   sfeb.repos_relpath = repos_relpath;
   sfeb.peg_rev = peg_rev;
   sfeb.rev = rev;
