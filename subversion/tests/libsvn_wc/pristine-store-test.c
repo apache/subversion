@@ -361,6 +361,7 @@ static svn_error_t *
 reject_mismatching_text(const svn_test_opts_t *opts,
                         apr_pool_t *pool)
 {
+#ifdef SVN_DEBUG  /* The pristine store only checks this in debug mode. */
   svn_wc__db_t *db;
   const char *repos_url;
   const char *wc_abspath;
@@ -401,6 +402,11 @@ reject_mismatching_text(const svn_test_opts_t *opts,
   }
 
   return SVN_NO_ERROR;
+#else
+  return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+                          "The consistency check to be tested is only "
+                          "active in debug-mode builds");
+#endif
 }
 
 
