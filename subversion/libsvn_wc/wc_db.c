@@ -8376,8 +8376,6 @@ svn_wc__db_temp_op_set_base_incomplete(svn_wc__db_t *db,
 
 struct start_directory_update_baton
 {
-  svn_wc__db_t *db;
-  const char *local_abspath;
   svn_revnum_t new_rev;
   const char *new_repos_relpath;
 };
@@ -8429,8 +8427,6 @@ svn_wc__db_temp_op_start_directory_update(svn_wc__db_t *db,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  du.db = db;
-  du.local_abspath = local_abspath;
   du.new_rev = new_rev;
   du.new_repos_relpath = new_repos_relpath;
 
