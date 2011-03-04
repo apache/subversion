@@ -8673,28 +8673,26 @@ svn_wc__db_temp_get_file_external(const char **serialized_file_external,
 }
 
 
-svn_error_t *
-svn_wc__db_temp_op_set_file_external(svn_wc__db_t *db,
-                                     const char *local_abspath,
-                                     const char *repos_relpath,
-                                     const svn_opt_revision_t *peg_rev,
-                                     const svn_opt_revision_t *rev,
-                                     apr_pool_t *scratch_pool)
+struct set_file_external_baton
 {
-  svn_wc__db_wcroot_t *wcroot;
-  const char *local_relpath;
+  const char *local_abspath;
+  svn_wc__db_t *db;
+
+  const char *repos_relpath;
+  const svn_opt_revision_t *peg_rev;
+  const svn_opt_revision_t *rev;
+};
+
+
+static svn_error_t *
+set_file_external_txn(void *baton,
+                      svn_wc__db_wcroot_t *wcroot,
+                      const char *local_relpath,
+                      apr_pool_t *scratch_pool)
+{
+  struct set_file_external_baton *sfeb = baton;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t got_row;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-  SVN_ERR_ASSERT(!repos_relpath
-                 || svn_relpath_is_canonical(repos_relpath, scratch_pool));
-
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
-                                             local_abspath,
-                                             svn_sqlite__mode_readwrite,
-                                             scratch_pool, scratch_pool));
-  VERIFY_USABLE_WCROOT(wcroot);
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_BASE_NODE));
@@ -8709,17 +8707,17 @@ svn_wc__db_temp_op_set_file_external(svn_wc__db_t *db,
       svn_node_kind_t kind;
       apr_int64_t repos_id;
 
-      if (!repos_relpath)
+      if (!sfeb->repos_relpath)
         return SVN_NO_ERROR; /* Don't add a BASE node */
 
-      SVN_ERR(svn_io_check_path(local_abspath, &kind, scratch_pool));
+      SVN_ERR(svn_io_check_path(sfeb->local_abspath, &kind, scratch_pool));
       if (kind == svn_node_dir)
-        dir_abspath = local_abspath;
+        dir_abspath = sfeb->local_abspath;
       else
-        dir_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+        dir_abspath = svn_dirent_dirname(sfeb->local_abspath, scratch_pool);
 
       SVN_ERR(svn_wc__db_scan_base_repos(NULL, &repos_root_url,
-                                         &repos_uuid, db, dir_abspath,
+                                         &repos_uuid, sfeb->db, dir_abspath,
                                          scratch_pool, scratch_pool));
 
       SVN_ERR(fetch_repos_id(&repos_id, repos_root_url, repos_uuid,
@@ -8734,7 +8732,7 @@ svn_wc__db_temp_op_set_file_external(svn_wc__db_t *db,
                                 svn_relpath_dirname(local_relpath,
                                                     scratch_pool),
                                 repos_id,
-                                repos_relpath,
+                                sfeb->repos_relpath,
                                 presence_map, svn_wc__db_status_not_present,
                                 kind_map, svn_wc__db_kind_file));
 
@@ -8744,19 +8742,54 @@ svn_wc__db_temp_op_set_file_external(svn_wc__db_t *db,
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_UPDATE_FILE_EXTERNAL));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-  if (repos_relpath)
+  if (sfeb->repos_relpath)
     {
       const char *str;
 
       SVN_ERR(svn_wc__serialize_file_external(&str,
-                                              repos_relpath,
-                                              peg_rev,
-                                              rev,
+                                              sfeb->repos_relpath,
+                                              sfeb->peg_rev,
+                                              sfeb->rev,
                                               scratch_pool));
 
       SVN_ERR(svn_sqlite__bind_text(stmt, 3, str));
     }
   SVN_ERR(svn_sqlite__step_done(stmt));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__db_temp_op_set_file_external(svn_wc__db_t *db,
+                                     const char *local_abspath,
+                                     const char *repos_relpath,
+                                     const svn_opt_revision_t *peg_rev,
+                                     const svn_opt_revision_t *rev,
+                                     apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+  struct set_file_external_baton sfeb;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR_ASSERT(!repos_relpath
+                 || svn_relpath_is_canonical(repos_relpath, scratch_pool));
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
+                                             local_abspath,
+                                             svn_sqlite__mode_readwrite,
+                                             scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  sfeb.local_abspath = local_abspath;
+  sfeb.db = db;
+  sfeb.repos_relpath = repos_relpath;
+  sfeb.peg_rev = peg_rev;
+  sfeb.rev = rev;
+
+  SVN_ERR(with_db_txn(wcroot, local_relpath, set_file_external_txn,
+                      &sfeb, scratch_pool));
 
   SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
 
