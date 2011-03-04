@@ -743,6 +743,8 @@ def verify_update(actual_output,
                          singleton_handler_a, a_baton,
                          singleton_handler_b, b_baton)
     except tree.SVNTreeUnequal:
+      print("EXPECTED DISK TREE:")
+      tree.dump_tree_script(disk_tree)
       print("ACTUAL DISK TREE:")
       tree.dump_tree_script(actual_disk)
       raise
