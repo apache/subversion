@@ -949,9 +949,6 @@ subcommand_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   svn_stringbuf_t *version_footer;
 
-  /* Expect no more arguments. */
-  SVN_ERR(parse_args(NULL, os, 0, 0, pool));
-
   version_footer = svn_stringbuf_create(fs_desc_start, pool);
   SVN_ERR(svn_fs_print_modules(version_footer, pool));
 
