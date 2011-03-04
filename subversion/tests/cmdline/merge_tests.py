@@ -16534,9 +16534,42 @@ def merge_change_to_file_with_executable(sbox):
   alpha_path = os.path.join(wc_dir, "alpha")
   beta_path = os.path.join(wc_dir, "beta")
 
+  expected_output = wc.State(wc_dir, {
+    'beta'              : Item(status='U '),
+    'alpha'             : Item(status='U '),
+    })
+  expected_mergeinfo_output = wc.State(wc_dir, {
+    ''  : Item(status=' U')
+    })
+  expected_elision_output = wc.State(wc_dir, {
+    })
+  expected_disk = wc.State('', {
+    '.'                 : Item(props={'svn:mergeinfo':'/A/B/E:3-4'}),
+    'alpha' : Item(contents="This is the file 'alpha'.\nappended alpha text",
+                   props={'svn:executable':'*',
+                          'svn:mime-type':'application/octet-stream'}),
+    'beta' : Item(contents="This is the file 'beta'.\nappended beta text",
+                  props={"svn:executable" : '*'}),
+    })
+  expected_status = wc.State(wc_dir, {
+    ''                  : Item(status=' M', wc_rev='4'),
+    'alpha'             : Item(status='M ', wc_rev='4'),
+    'beta'              : Item(status='M ', wc_rev='4'),
+    })
+  expected_skip = wc.State(wc_dir, { })
+
   # Merge the changes across
-  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
-                                     trunk_url, wc_dir)
+  svntest.actions.run_and_verify_merge(wc_dir, None, None,
+                                       trunk_url, None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None,
+                                       None, None, True, True)
+
 
   # Verify the executable bit has been set
   if not os.access(alpha_path, os.X_OK):
