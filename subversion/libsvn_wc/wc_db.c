@@ -3437,11 +3437,8 @@ svn_wc__db_op_mark_resolved(svn_wc__db_t *db,
 
 struct set_tc_baton
 {
-  const char *local_abspath;
   const char *local_relpath;
   apr_int64_t wc_id;
-  const char *parent_relpath;
-  const char *parent_abspath;
   const svn_wc_conflict_description2_t *tree_conflict;
 };
 
@@ -3451,11 +3448,15 @@ static svn_error_t *
 set_tc_txn2(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
   struct set_tc_baton *stb = baton;
+  const char *parent_relpath;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
   const char *tree_conflict_data;
 
-  /* Get existing conflict information for LOCAL_ABSPATH. */
+  /* ### does this work correctly? */
+  parent_relpath = svn_relpath_dirname(stb->local_relpath, scratch_pool);
+
+  /* Get existing conflict information for LOCAL_RELPATH. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_ACTUAL_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", stb->wc_id, stb->local_relpath));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
@@ -3488,7 +3489,7 @@ set_tc_txn2(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   SVN_ERR(svn_sqlite__bindf(stmt, "iss", stb->wc_id, stb->local_relpath,
                             tree_conflict_data));
   if (!have_row)
-    SVN_ERR(svn_sqlite__bind_text(stmt, 4, stb->parent_relpath));
+    SVN_ERR(svn_sqlite__bind_text(stmt, 4, parent_relpath));
 
   SVN_ERR(svn_sqlite__step_done(stmt));
 
@@ -3515,8 +3516,6 @@ svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
   struct set_tc_baton stb;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-  stb.local_abspath = local_abspath;
-  stb.parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
   stb.tree_conflict = tree_conflict;
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &stb.local_relpath,
@@ -3526,14 +3525,6 @@ svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
 
   stb.wc_id = wcroot->wc_id;
 
-  /* ### does this work correctly? */
-  stb.parent_relpath = svn_relpath_dirname(stb.local_relpath, scratch_pool);
-
-  /* Should probably be in the same txn as above, but since we can't
-     guarantee that wcroot->sdb is the same for both, and since
-     the above implementation is going away, we'll fudge a bit here.
-
-     ### Or can we guarantee wcroot->sdb is the same, given single db? */
   SVN_ERR(svn_sqlite__with_transaction(wcroot->sdb, set_tc_txn2, &stb,
                                        scratch_pool));
 
