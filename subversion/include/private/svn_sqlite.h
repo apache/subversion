@@ -332,21 +332,14 @@ svn_sqlite__with_immediate_transaction(svn_sqlite__db_t *db,
    nested (even with a transaction) and changes in the callback are always
    committed when this function returns.
 
-   Behavior on an application crash while this function is running is
-   UNDEFINED: Either everything is committed (for < 3.6.8) or is not (for
-   >= 3.6.8 where this function uses a SAVEPOINT), so this should only be used
-   for operations that are safe under these conditions or just for reading.
-
-   Use a transaction when you need explicit behavior.
-
    For SQLite 3.6.8 and later using this function as a wrapper around a group
    of operations can give a *huge* performance boost as the shared-read lock
    will be shared over multiple statements, instead of being reobtained
    everytime, which requires disk and/or network io.
 
-   ### It might be possible to implement the same lock behavior for < 3.6.8
-       by keeping a read SQLite statement open, but this wouldn't replicate
-       the rollback behavior on crashing. Maybe we should just require 3.6.8?
+   ### Since we now require SQLite >= 3.6.18, this function has the effect of
+       always behaving like a defered transaction.  Can it be combined with
+       svn_sqlite__with_transaction()?
  */
 svn_error_t *
 svn_sqlite__with_lock(svn_sqlite__db_t *db,
