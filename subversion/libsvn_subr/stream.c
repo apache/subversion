@@ -274,6 +274,11 @@ scan_eol(const char **eol, svn_stream_t *stream, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Size that 90% of the lines we encounter will be not longer than.
+   used by stream_readline_bytewise() and stream_readline_chunky().
+ */
+#define LINE_CHUNK_SIZE 80
+
 /* Guts of svn_stream_readline() and svn_stream_readline_detect_eol().
  * Returns the line read from STREAM in *STRINGBUF, and indicates
  * end-of-file in *EOF.  If DETECT_EOL is TRUE, the end-of-line indicator
@@ -281,12 +286,12 @@ scan_eol(const char **eol, svn_stream_t *stream, apr_pool_t *pool)
  * If DETECT_EOL is FALSE, *EOL must point to the desired end-of-line
  * indicator.  STRINGBUF is allocated in POOL. */
 static svn_error_t *
-stream_readline(svn_stringbuf_t **stringbuf,
-                svn_boolean_t *eof,
-                const char **eol,
-                svn_stream_t *stream,
-                svn_boolean_t detect_eol,
-                apr_pool_t *pool)
+stream_readline_bytewise(svn_stringbuf_t **stringbuf,
+                         svn_boolean_t *eof,
+                         const char **eol,
+                         svn_stream_t *stream,
+                         svn_boolean_t detect_eol,
+                         apr_pool_t *pool)
 {
   svn_stringbuf_t *str;
   const char *eol_str;
@@ -298,7 +303,7 @@ stream_readline(svn_stringbuf_t **stringbuf,
      optimize for the 90% case.  90% of the time, we can avoid the
      stringbuf ever having to realloc() itself if we start it out at
      80 chars.  */
-  str = svn_stringbuf_create_ensure(80, pool);
+  str = svn_stringbuf_create_ensure(LINE_CHUNK_SIZE, pool);
 
   if (detect_eol)
     {
@@ -341,6 +346,155 @@ stream_readline(svn_stringbuf_t **stringbuf,
   *eof = FALSE;
   svn_stringbuf_chop(str, match - eol_str);
   *stringbuf = str;
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+stream_readline_chunky(svn_stringbuf_t **stringbuf,
+                       svn_boolean_t *eof,
+                       const char *eol,
+                       svn_stream_t *stream,
+                       apr_pool_t *pool)
+{
+  /* Read larger chunks of data at once into this buffer and scan
+   * that for EOL. A good chunk size should be about 80 chars since
+   * most text lines will be shorter. However, don't use a much
+   * larger value because filling the buffer from the stream takes
+   * time as well.
+   */
+  char buffer[LINE_CHUNK_SIZE+1];
+
+  /* variables */
+  svn_stream_mark_t *mark;
+  apr_size_t numbytes;
+  const char *eol_pos;
+  apr_size_t total_parsed = 0;
+
+  /* invariant for this call */
+  const size_t eol_len = strlen(eol);
+
+  /* Remember the line start so this plus the line length will be
+   * the position to move to at the end of this function.
+   */
+  SVN_ERR(svn_stream_mark(stream, &mark, pool));
+
+  /* Read the first chunk. */
+  numbytes = LINE_CHUNK_SIZE;
+  SVN_ERR(svn_stream_read(stream, buffer, &numbytes));
+  buffer[numbytes] = '\0';
+
+  /* Look for the EOL in this first chunk. If we find it, we are done here.
+   */
+  eol_pos = strstr(buffer, eol);
+  if (eol_pos != NULL)
+    {
+      *stringbuf = svn_stringbuf_ncreate(buffer, eol_pos - buffer, pool);
+      total_parsed = eol_pos - buffer + eol_len;
+    }
+  else if (numbytes < LINE_CHUNK_SIZE)
+    {
+      /* We hit EOF but not EOL.
+       */
+      *stringbuf = svn_stringbuf_ncreate(buffer, numbytes, pool);
+      *eof = TRUE;
+      return SVN_NO_ERROR;
+     }
+  else
+    {
+      /* A larger buffer for the string is needed. */
+      svn_stringbuf_t *str;
+      str = svn_stringbuf_create_ensure(2*LINE_CHUNK_SIZE, pool);
+      svn_stringbuf_appendbytes(str, buffer, numbytes);
+      *stringbuf = str;
+
+      /* Loop reading chunks until an EOL was found. If we hit EOF, fall
+       * back to the standard implementation. */
+      do
+      {
+        /* Append the next chunk to the string read so far.
+         */
+        svn_stringbuf_ensure(str, str->len + LINE_CHUNK_SIZE);
+        numbytes = LINE_CHUNK_SIZE;
+        SVN_ERR(svn_stream_read(stream, str->data + str->len, &numbytes));
+        str->len += numbytes;
+        str->data[str->len] = '\0';
+
+        /* Look for the EOL in the new data plus the last part of the
+         * previous chunk because the EOL may span over the boundary
+         * between both chunks.
+         */
+        eol_pos = strstr(str->data + str->len - numbytes - (eol_len-1), eol);
+
+        if ((numbytes < LINE_CHUNK_SIZE) && (eol_pos == NULL))
+        {
+          /* We hit EOF instead of EOL. */
+          *eof = TRUE;
+          return SVN_NO_ERROR;
+        }
+      }
+      while (eol_pos == NULL);
+
+      /* Number of bytes we actually consumed (i.e. line + EOF).
+       * We need to "return" the rest to the stream by moving its
+       * read pointer.
+       */
+      total_parsed = eol_pos - str->data + eol_len;
+
+      /* Terminate the string at the EOL postion and return it. */
+      str->len = eol_pos - str->data;
+      str->data[str->len] = 0;
+    }
+
+  /* Move the stream read pointer to the first position behind the EOL.
+   */
+  SVN_ERR(svn_stream_seek(stream, mark));
+  return svn_stream_skip(stream, &total_parsed);
+}
+
+/* Guts of svn_stream_readline() and svn_stream_readline_detect_eol().
+ * Returns the line read from STREAM in *STRINGBUF, and indicates
+ * end-of-file in *EOF.  If DETECT_EOL is TRUE, the end-of-line indicator
+ * is detected automatically and returned in *EOL.
+ * If DETECT_EOL is FALSE, *EOL must point to the desired end-of-line
+ * indicator.  STRINGBUF is allocated in POOL. */
+static svn_error_t *
+stream_readline(svn_stringbuf_t **stringbuf,
+                svn_boolean_t *eof,
+                const char **eol,
+                svn_stream_t *stream,
+                svn_boolean_t detect_eol,
+                apr_pool_t *pool)
+{
+  *eof = FALSE;
+
+  /* Often, we operate on APR file or string-based streams and know what
+   * EOL we are looking for. Optimize that common case.
+   */
+  if (svn_stream_supports_mark(stream) &&
+      svn_stream_buffered(stream) &&
+      !detect_eol)
+    {
+      /* We can efficiently read chunks speculatively and reposition the
+       * stream pointer to the end of the line once we found that.
+       */
+      SVN_ERR(stream_readline_chunky(stringbuf,
+                                     eof,
+                                     *eol,
+                                     stream,
+                                     pool));
+    }
+  else
+    {
+      /* Use the standard byte-byte implementation.
+       */
+      SVN_ERR(stream_readline_bytewise(stringbuf,
+                                       eof,
+                                       eol,
+                                       stream,
+                                       detect_eol,
+                                       pool));
+    }
 
   return SVN_NO_ERROR;
 }
