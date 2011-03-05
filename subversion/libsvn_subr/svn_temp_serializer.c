@@ -275,11 +275,22 @@ svn_temp_serializer__get(svn_temp_serializer__context_t *context)
 void
 svn_temp_deserializer__resolve(void *buffer, void **ptr)
 {
-  if ((apr_size_t)*ptr)
+  /* All pointers are stored as offsets to the buffer start
+   * (of the respective serialized sub-struct). */
+  apr_size_t ptr_offset = *(apr_size_t *)ptr;
+  if (ptr_offset)
     {
-      /* replace the offset in *ptr with the pointer to buffer[*ptr] */
-      (*(const char **)ptr) = (const char*)buffer + (apr_size_t)*ptr;
-      assert(*ptr > buffer);
+      /* Reconstruct the original pointer value */
+      const char *target = (const char *)buffer + ptr_offset;
+
+      /* All sub-structs are written _after_ their respective parent.
+       * Thus, all offsets are > 0. If the following assertion is not met,
+       * the data is either corrupt or you tried to resolve the pointer
+       * more than once. */
+      assert(target > buffer);
+
+      /* replace the PTR_OFFSET in *ptr with the pointer to TARGET */
+      (*(const char **)ptr) = target;
     }
   else
     {
