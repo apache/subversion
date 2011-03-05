@@ -57,6 +57,7 @@
 #include "fs_fs.h"
 #include "id.h"
 #include "rep-cache.h"
+#include "temp_serializer.h"
 
 #include "revprops-db.h"
 
@@ -3022,6 +3023,8 @@ svn_fs_fs__revision_proplist(apr_hash_t **proplist_p,
 struct rep_state
 {
   apr_file_t *file;
+                    /* The txdelta window cache to use or NULL. */
+  svn_cache__t *window_cache;
   apr_off_t start;  /* The starting offset for the raw
                        svndiff/plaintext data minus header. */
   apr_off_t off;    /* The current offset into the file. */
@@ -3038,11 +3041,14 @@ create_rep_state_body(struct rep_state **rep_state,
                       svn_fs_t *fs,
                       apr_pool_t *pool)
 {
+  fs_fs_data_t *ffd = fs->fsap_data;
   struct rep_state *rs = apr_pcalloc(pool, sizeof(*rs));
   struct rep_args *ra;
   unsigned char buf[4];
 
   SVN_ERR(open_and_seek_representation(&rs->file, fs, rep, pool));
+  rs->window_cache = ffd->txdelta_window_cache;
+
   SVN_ERR(read_rep_line(&ra, rs->file, pool));
   SVN_ERR(get_file_offset(&rs->start, rs->file, pool));
   rs->off = rs->start;
@@ -3236,6 +3242,113 @@ rep_read_get_baton(struct rep_read_baton **rb_p,
   return SVN_NO_ERROR;
 }
 
+/* Combine the name of the rev file in RS with the given OFFSET to form
+ * a cache lookup key. Allocations will be made from POOL. */
+static const char*
+get_window_key(struct rep_state *rs, apr_off_t offset, apr_pool_t *pool)
+{
+  const char *name;
+  const char *last_part;
+  const char *name_last;
+
+  /* the rev file name containing the txdelta window.
+   * If this fails we are in serious trouble anyways. 
+   * And if nobody else detects the problems, the file content checksum
+   * comparison _will_ find them.
+   */
+  if (apr_file_name_get(&name, rs->file))
+    return "";
+
+  /* We care about the file name only as it represents the start revision
+   * of this rev file.  Handle packed files as well. */
+  name_last = name + strlen(name) - 1;
+  while (! svn_ctype_isdigit(*name_last))
+    --name_last;
+
+  last_part = name_last;
+  while (svn_ctype_isdigit(*last_part))
+    --last_part;
+
+  /* copy one char MORE than the actual number to mark packed files,
+   * i.e. packed revision file content uses different key space then
+   * non-packed ones: keys for packed rev file content ends with a dot
+   * for non-packed rev files they end with a digit. */
+  name = apr_pstrndup(pool, last_part + 1, name_last - last_part);
+  return svn_fs_fs__combine_number_and_string(offset, name, pool);
+}
+
+/* Read the WINDOW_P for the rep state RS from the current FSFS session's 
+ * cache. This will be a no-op and IS_CACHED will be set to FALSE if no
+ * cache has been given. If a cache is available IS_CACHED will inform
+ * the caller about the success of the lookup. Allocations (of the window
+ * in particualar) will be made from POOL. 
+ *
+ * If the information could be found, put RS and the position within the 
+ * rev file into the same state as if the data had just been read from it.  
+ */
+static svn_error_t *
+get_cached_window(svn_txdelta_window_t **window_p,
+                  struct rep_state *rs,
+                  svn_boolean_t *is_cached,
+                  apr_pool_t *pool)
+{
+  if (! rs->window_cache)
+    {
+      /* txdelta window has not been enabled */
+      *is_cached = FALSE;
+    }
+  else
+    {
+      /* ask the cache for the desired txdelta window */
+      svn_fs_fs__txdelta_cached_window_t *cached_window;
+      SVN_ERR(svn_cache__get((void **) &cached_window,
+                             is_cached,
+                             rs->window_cache,
+                             get_window_key(rs, rs->off, pool),
+                             pool));
+
+      if (*is_cached)
+        {
+          /* found it. Pass it back to the caller. */
+          *window_p = cached_window->window;
+
+          /* manipulate the RS as if we just read the data */
+          rs->chunk_index++;
+          rs->off = cached_window->end_offset;
+
+          /* manipulate the rev file as if we just read from it */
+          SVN_ERR(svn_io_file_seek(rs->file, APR_SET, &rs->off, pool));
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Store the WINDOW read at OFFSET for the rep state RS in the current
+ * FSFS session's cache. This will be a no-op if no cache has been given. 
+ * Temporary allocations will be made from SCRATCH_POOL. */
+static svn_error_t *
+set_cached_window(svn_txdelta_window_t *window,
+                  struct rep_state *rs,
+                  apr_off_t offset,
+                  apr_pool_t *scratch_pool)
+{
+  if (rs->window_cache)
+    {
+      /* store the window and the first offset _past_ it */
+      svn_fs_fs__txdelta_cached_window_t cached_window = { window, rs->off };
+
+      /* but key it with the start offset because that is the known state
+       * when we will look it up */
+      return svn_cache__set(rs->window_cache,
+                            get_window_key(rs, offset, scratch_pool),
+                            &cached_window,
+                            scratch_pool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Skip forwards to THIS_CHUNK in REP_STATE and then read the next delta
    window into *NWIN. */
 static svn_error_t *
@@ -3243,6 +3356,8 @@ read_window(svn_txdelta_window_t **nwin, int this_chunk, struct rep_state *rs,
             apr_pool_t *pool)
 {
   svn_stream_t *stream;
+  svn_boolean_t is_cached;
+  apr_off_t old_offset;
 
   SVN_ERR_ASSERT(rs->chunk_index <= this_chunk);
 
@@ -3259,7 +3374,13 @@ read_window(svn_txdelta_window_t **nwin, int this_chunk, struct rep_state *rs,
                                   "representation"));
     }
 
-  /* Read the next window. */
+  /* Read the next window. But first, try to find it in the cache. */
+  SVN_ERR(get_cached_window(nwin, rs, &is_cached, pool));
+  if (is_cached)
+    return SVN_NO_ERROR;
+
+  /* Actually read the next window. */
+  old_offset = rs->off;
   stream = svn_stream_from_aprfile2(rs->file, TRUE, pool);
   SVN_ERR(svn_txdelta_read_svndiff_window(nwin, stream, rs->ver, pool));
   rs->chunk_index++;
@@ -3270,7 +3391,9 @@ read_window(svn_txdelta_window_t **nwin, int this_chunk, struct rep_state *rs,
                             _("Reading one svndiff window read beyond "
                               "the end of the representation"));
 
-  return SVN_NO_ERROR;
+  /* the window has not been cached before, thus cache it now
+   * (if caching is used for them at all) */
+  return set_cached_window(*nwin, rs, old_offset, pool);
 }
 
 /* Get one delta window that is a result of combining all but the last deltas

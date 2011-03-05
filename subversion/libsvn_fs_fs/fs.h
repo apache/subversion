@@ -242,6 +242,9 @@ typedef struct fs_fs_data_t
      pack files. */
   svn_cache__t *packed_offset_cache;
 
+  /* Cache for txdelta_window_t objects; the key is (revFilePath, offset) */
+  svn_cache__t *txdelta_window_cache;
+
   /* Data shared between all svn_fs_t objects for a given filesystem. */
   fs_fs_shared_data_t *shared;
 
