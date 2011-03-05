@@ -462,7 +462,7 @@ inprocess_cache_get_partial(void **value_p,
   move_page_to_front(cache, entry->page);
 
   *found = TRUE;
-  err = func(value_p, entry->value, 0, baton, pool);
+  err = func(value_p, entry->value, entry->size, baton, pool);
   return unlock_cache(cache, err);
 }
 
