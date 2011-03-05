@@ -227,10 +227,22 @@ memcache_iter(svn_boolean_t *completed,
                           _("Can't iterate a memcached cache"));
 }
 
+static svn_boolean_t
+memcache_is_cachable(void *unused, apr_size_t size)
+{
+  (void)unused;  /* silence gcc warning. */
+
+  /* The memcached cutoff seems to be a bit (header length?) under a megabyte.
+   * We round down a little to be safe.
+   */
+  return size < 1000000;
+}
+
 static svn_cache__vtable_t memcache_vtable = {
   memcache_get,
   memcache_set,
-  memcache_iter
+  memcache_iter,
+  memcache_is_cachable
 };
 
 svn_error_t *
