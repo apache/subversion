@@ -215,6 +215,49 @@ memcache_set(void *cache_void,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+memcache_get_partial(void **value_p,
+                     svn_boolean_t *found,
+                     void *cache_void,
+                     const void *key,
+                     svn_cache__partial_getter_func_t func,
+                     void *baton,
+                     apr_pool_t *pool)
+{
+  memcache_t *cache = cache_void;
+  svn_error_t *err;
+  apr_status_t apr_err;
+  char *data;
+  const char *mc_key;
+  apr_size_t data_len;
+  apr_pool_t *subpool = svn_pool_create(pool);
+
+  SVN_ERR(build_key(&mc_key, cache, key, subpool));
+
+  apr_err = apr_memcache_getp(cache->memcache,
+                              subpool,
+                              mc_key,
+                              &data,
+                              &data_len,
+                              NULL /* ignore flags */);
+  if (apr_err == APR_NOTFOUND)
+    {
+      *found = FALSE;
+      svn_pool_destroy(subpool);
+      return SVN_NO_ERROR;
+    }
+  else if (apr_err != APR_SUCCESS || !data)
+    return svn_error_wrap_apr(apr_err,
+                              _("Unknown memcached error while reading"));
+
+  /* We found it! */
+  *found = TRUE;
+  err = func(value_p, data, data_len, baton, pool);
+
+  svn_pool_destroy(subpool);
+  return err;
+}
+
 
 static svn_error_t *
 memcache_iter(svn_boolean_t *completed,
@@ -242,7 +285,8 @@ static svn_cache__vtable_t memcache_vtable = {
   memcache_get,
   memcache_set,
   memcache_iter,
-  memcache_is_cachable
+  memcache_is_cachable,
+  memcache_get_partial
 };
 
 svn_error_t *

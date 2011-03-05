@@ -106,3 +106,21 @@ svn_cache__iter(svn_boolean_t *completed,
                                pool);
 }
 
+svn_error_t *
+svn_cache__get_partial(void **value,
+                       svn_boolean_t *found,
+                       const svn_cache__t *cache,
+                       const void *key,
+                       svn_cache__partial_getter_func_t func,
+                       void *baton,
+                       apr_pool_t *scratch_pool)
+{
+  return (cache->vtable->get_partial)(value,
+                                      found,
+                                      cache->cache_internal,
+                                      key,
+                                      func,
+                                      baton,
+                                      scratch_pool);
+}
+

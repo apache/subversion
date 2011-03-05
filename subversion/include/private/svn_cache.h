@@ -328,6 +328,19 @@ svn_cache__iter(svn_boolean_t *completed,
                 svn_iter_apr_hash_cb_t func,
                 void *baton,
                 apr_pool_t *pool);
+
+/**
+ * Similar to @ref svn_cache__set but will call a specific de-serialization
+ * function @a func.
+ */
+svn_error_t *
+svn_cache__get_partial(void **value,
+                       svn_boolean_t *found,
+                       const svn_cache__t *cache,
+                       const void *key,
+                       svn_cache__partial_getter_func_t func,
+                       void *baton,
+                       apr_pool_t *scratch_pool);
 /** @} */
 
 
