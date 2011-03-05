@@ -435,7 +435,35 @@ inprocess_cache_iter(svn_boolean_t *completed,
   return unlock_cache(cache,
                       svn_iter_apr_hash(completed, cache->hash, iter_cb, &b,
                                         pool));
+}
 
+static svn_error_t *
+inprocess_cache_get_partial(void **value_p,
+                            svn_boolean_t *found,
+                            void *cache_void,
+                            const void *key,
+                            svn_cache__partial_getter_func_t func,
+                            void *baton,
+                            apr_pool_t *pool)
+{
+  inprocess_cache_t *cache = cache_void;
+  struct cache_entry *entry;
+  svn_error_t *err;
+
+  SVN_ERR(lock_cache(cache));
+
+  entry = apr_hash_get(cache->hash, key, cache->klen);
+  if (! entry)
+  {
+    *found = FALSE;
+    return unlock_cache(cache, SVN_NO_ERROR);
+  }
+
+  move_page_to_front(cache, entry->page);
+
+  *found = TRUE;
+  err = func(value_p, entry->value, 0, baton, pool);
+  return unlock_cache(cache, err);
 }
 
 static svn_boolean_t
@@ -454,7 +482,8 @@ static svn_cache__vtable_t inprocess_cache_vtable = {
   inprocess_cache_get,
   inprocess_cache_set,
   inprocess_cache_iter,
-  inprocess_cache_is_cachable
+  inprocess_cache_is_cachable,
+  inprocess_cache_get_partial
 };
 
 svn_error_t *

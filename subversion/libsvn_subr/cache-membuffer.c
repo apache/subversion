@@ -1165,11 +1165,6 @@ membuffer_cache_get(svn_membuffer_t *cache,
   return deserializer(item, buffer, entry->size, pool);
 }
 
-/* get_parial() and is_cachable() will become part of the svn_cache_t
- * API soon. Disable the code for now to silence compiler warnings. */
-
-#if 0
-
 static svn_error_t *
 membuffer_cache_get_partial(svn_membuffer_t *cache,
                             const void *key,
@@ -1230,8 +1225,6 @@ membuffer_cache_get_partial(svn_membuffer_t *cache,
    */
   return unlock_cache(cache, err);
 }
-
-#endif
 
 /* Implement the svn_cache__t interface on top of a shared membuffer cache.
  *
@@ -1434,11 +1427,6 @@ svn_membuffer_cache_iter(svn_boolean_t *completed,
                           _("Can't iterate a membuffer-based cache"));
 }
 
-/* get_parial() will become part of the svn_cache_t
- * API soon. Disable the code for now to silence compiler warnings. */
-
-#if 0
-
 static svn_error_t *
 svn_membuffer_cache_get_partial(void **value_p,
                                 svn_boolean_t *found,
@@ -1475,8 +1463,6 @@ svn_membuffer_cache_get_partial(void **value_p,
   return SVN_NO_ERROR;
 }
 
-#endif
-
 static svn_boolean_t
 svn_membuffer_cache_is_cachable(void *cache_void, apr_size_t size)
 {
@@ -1495,7 +1481,8 @@ static svn_cache__vtable_t membuffer_cache_vtable = {
   svn_membuffer_cache_get,
   svn_membuffer_cache_set,
   svn_membuffer_cache_iter,
-  svn_membuffer_cache_is_cachable
+  svn_membuffer_cache_is_cachable,
+  svn_membuffer_cache_get_partial
 };
 
 /* standard serialization function for svn_stringbuf_t items

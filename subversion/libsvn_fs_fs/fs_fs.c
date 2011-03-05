@@ -64,6 +64,7 @@
 #include "../libsvn_fs/fs-loader.h"
 
 #include "svn_private_config.h"
+#include "temp_serializer.h"
 
 /* An arbitrary maximum path length, so clients can't run us out of memory
  * by giving us arbitrarily large paths. */
@@ -1930,19 +1931,24 @@ get_packed_offset(apr_off_t *rev_offset,
   svn_stream_t *manifest_stream;
   svn_boolean_t is_cached;
   apr_int64_t shard;
+  apr_int64_t shard_pos;
   apr_array_header_t *manifest;
   apr_pool_t *iterpool;
 
   shard = rev / ffd->max_files_per_dir;
-  SVN_ERR(svn_cache__get((void **) &manifest, &is_cached,
-                         ffd->packed_offset_cache, &shard, pool));
+
+  /* position of the shard within the manifest */
+  shard_pos = rev % ffd->max_files_per_dir;
+
+  /* fetch exactly that element into *rev_offset, if the manifest is found
+     in the cache */
+  SVN_ERR(svn_cache__get_partial((void **) rev_offset, &is_cached,
+                                 ffd->packed_offset_cache, &shard,
+                                 svn_fs_fs__get_sharded_offset, &shard_pos,
+                                 pool));
 
   if (is_cached)
-    {
-      *rev_offset = APR_ARRAY_IDX(manifest, rev % ffd->max_files_per_dir,
-                                  apr_off_t);
       return SVN_NO_ERROR;
-    }
 
   /* Open the manifest file. */
   SVN_ERR(svn_stream_open_readonly(&manifest_stream,
@@ -2825,7 +2831,7 @@ svn_fs_fs__rev_get_root(svn_fs_id_t **root_id_p,
   fs_fs_data_t *ffd = fs->fsap_data;
   apr_file_t *revision_file;
   apr_off_t root_offset;
-  svn_fs_id_t *root_id;
+  svn_fs_id_t *root_id = NULL;
   svn_boolean_t is_cached;
 
   SVN_ERR(ensure_revision_exists(fs, rev, pool));
@@ -3810,7 +3816,7 @@ svn_fs_fs__rep_contents_dir(apr_hash_t **entries_p,
                             apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  const char *unparsed_id;
+  const char *unparsed_id = NULL;
   apr_hash_t *unparsed_entries, *parsed_entries;
 
   /* Are we looking for an immutable directory?  We could try the
@@ -3836,6 +3842,65 @@ svn_fs_fs__rep_contents_dir(apr_hash_t **entries_p,
     SVN_ERR(svn_cache__set(ffd->dir_cache, unparsed_id, parsed_entries, pool));
 
   *entries_p = parsed_entries;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__rep_contents_dir_partial(void **result_p,
+                                    svn_fs_t *fs,
+                                    node_revision_t *noderev,
+                                    svn_cache__partial_getter_func_t deserializer,
+                                    void *baton,
+                                    apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  apr_hash_t *entries;
+  svn_boolean_t found = FALSE;
+
+  /* Are we looking for an immutable directory?  We could try the
+   * cache. */
+  if (! svn_fs_fs__id_txn_id(noderev->id))
+    {
+      const char *unparsed_id =
+          svn_fs_fs__id_unparse(noderev->id, pool)->data;
+
+      /* Cache lookup. Return on the requested part of the dir info. */
+      SVN_ERR(svn_cache__get_partial(result_p, &found, ffd->dir_cache,
+                                     unparsed_id, deserializer, baton,
+                                     pool));
+    }
+
+  if (! found)
+    {
+      char *serialized_entries;
+      apr_size_t serialized_len;
+
+      /* since we don't need the directory content later on, put it into
+         some sub-pool that will be reclaimed immedeately after exiting
+         this function successfully. Opon failure, it will live as long
+         as pool.
+       */
+      apr_pool_t *sub_pool = svn_pool_create(pool);
+
+      /* read the dir from the file system. It will probably be put it
+         into the cache for faster lookup in future calls. */
+      SVN_ERR(svn_fs_fs__rep_contents_dir(&entries, fs, noderev, sub_pool));
+
+      /* deserializer works on serialied data only. So, we need to provide
+         serialized dir entries */
+      SVN_ERR(svn_fs_fs__serialize_dir_entries(&serialized_entries,
+                                               &serialized_len,
+                                               entries,
+                                               sub_pool));
+      SVN_ERR(deserializer(result_p,
+                           serialized_entries,
+                           serialized_len,
+                           baton,
+                           pool));
+
+      apr_pool_destroy(sub_pool);
+    }
+
   return SVN_NO_ERROR;
 }
 
