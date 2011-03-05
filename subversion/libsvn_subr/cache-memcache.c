@@ -232,7 +232,7 @@ memcache_get_partial(void **value_p,
   apr_size_t data_len;
   apr_pool_t *subpool = svn_pool_create(pool);
 
-  mc_key = build_key(cache, key, subpool);
+  SVN_ERR(build_key(&mc_key, cache, key, subpool));
 
   apr_err = apr_memcache_getp(cache->memcache,
                               subpool,
@@ -285,8 +285,8 @@ static svn_cache__vtable_t memcache_vtable = {
   memcache_get,
   memcache_set,
   memcache_iter,
-  memcache_get_partial,
-  memcache_is_cachable
+  memcache_is_cachable,
+  memcache_get_partial
 };
 
 svn_error_t *

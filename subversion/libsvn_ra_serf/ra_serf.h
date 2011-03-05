@@ -1003,6 +1003,13 @@ svn_ra_serf__set_prop(apr_hash_t *props, const char *path,
                       const char *ns, const char *name,
                       const svn_string_t *val, apr_pool_t *pool);
 
+svn_error_t *
+svn_ra_serf__get_resource_type(svn_node_kind_t *kind,
+                               apr_hash_t *props,
+                               const char *url,
+                               svn_revnum_t revision);
+
+
 /** MERGE-related functions **/
 
 typedef struct svn_ra_serf__merge_context_t svn_ra_serf__merge_context_t;

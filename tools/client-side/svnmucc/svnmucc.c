@@ -1071,7 +1071,8 @@ main(int argc, const char **argv)
                                                url), pool);
               /* ### These relpaths are already URI-encoded. */
               url = apr_pstrcat(pool, root_url, "/",
-                                svn_relpath_canonicalize(url, pool), NULL);
+                                svn_relpath_canonicalize(url, pool),
+                                (char *)NULL);
             }
           url = sanitize_url(url, pool);
           action->path[j] = url;

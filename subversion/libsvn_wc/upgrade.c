@@ -1020,7 +1020,8 @@ migrate_text_bases(apr_hash_t **text_bases_info,
         SVN_ERR(svn_io_stat(&finfo, text_base_path, APR_FINFO_SIZE, iterpool));
 
         /* Insert a row into the pristine table. */
-        SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_PRISTINE));
+        SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                          STMT_INSERT_OR_IGNORE_PRISTINE));
         SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, sha1_checksum, iterpool));
         SVN_ERR(svn_sqlite__bind_checksum(stmt, 2, md5_checksum, iterpool));
         SVN_ERR(svn_sqlite__bind_int64(stmt, 3, finfo.size));
@@ -1141,6 +1142,13 @@ static svn_error_t *
 bump_to_25(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
   SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_25));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+bump_to_26(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_26));
   return SVN_NO_ERROR;
 }
 
@@ -1413,6 +1421,12 @@ svn_wc__upgrade_sdb(int *result_format,
         SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_25, &bb,
                                              scratch_pool));
         *result_format = 25;
+        /* FALLTHROUGH  */
+
+      case 25:
+        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_26, &bb,
+                                             scratch_pool));
+        *result_format = 26;
         /* FALLTHROUGH  */
 
       /* ### future bumps go here.  */

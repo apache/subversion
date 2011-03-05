@@ -338,14 +338,41 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0;
 DELETE FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
+-- STMT_DELETE_NODES_RECURSIVE
+DELETE FROM nodes
+WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
+  AND op_depth >= ?4;
+
 -- STMT_DELETE_ACTUAL_NODE
 DELETE FROM actual_node
 WHERE wc_id = ?1 AND local_relpath = ?2;
+
+-- STMT_DELETE_ACTUAL_NODE_RECURSIVE
+DELETE FROM actual_node
+WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#');
 
 -- STMT_DELETE_ACTUAL_NODE_WITHOUT_CONFLICT
 DELETE FROM actual_node
 WHERE wc_id = ?1 AND local_relpath = ?2
       AND tree_conflict_data IS NULL;
+
+-- STMT_DELETE_ACTUAL_NODE_LEAVING_CHANGELIST
+DELETE FROM actual_node
+WHERE wc_id = ?1 AND local_relpath = ?2
+      AND (changelist IS NULL
+           OR local_relpath NOT IN (SELECT local_relpath FROM nodes_current
+                                     WHERE wc_id  = ?1 AND local_relpath = ?2
+                                       AND kind = 'file'));
+
+-- STMT_DELETE_ACTUAL_NODE_LEAVING_CHANGELIST_RECURSIVE
+DELETE FROM actual_node
+WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
+      AND (changelist IS NULL
+           OR local_relpath NOT IN (SELECT local_relpath FROM nodes_current
+                                    WHERE wc_id = ?1
+                                      AND (local_relpath = ?2
+                                           OR local_relpath LIKE ?3 ESCAPE '#')
+                                      AND kind = 'file'));
 
 -- STMT_DELETE_CHILD_NODES_RECURSIVE
 DELETE FROM nodes
@@ -365,6 +392,20 @@ SET properties = NULL,
     left_checksum = NULL,
     right_checksum = NULL
 WHERE wc_id = ?1 and local_relpath = ?2;
+
+-- STMT_CLEAR_ACTUAL_NODE_LEAVING_CHANGELIST_RECURSIVE
+UPDATE actual_node
+SET properties = NULL,
+    text_mod = NULL,
+    tree_conflict_data = NULL,
+    conflict_old = NULL,
+    conflict_new = NULL,
+    conflict_working = NULL,
+    prop_reject = NULL,
+    older_checksum = NULL,
+    left_checksum = NULL,
+    right_checksum = NULL
+WHERE wc_id = ?1 and local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#';
 
 -- STMT_CLEAR_ACTUAL_NODE_LEAVING_CONFLICT
 UPDATE actual_node
@@ -426,16 +467,20 @@ SELECT id, work FROM work_queue ORDER BY id LIMIT 1;
 -- STMT_DELETE_WORK_ITEM
 DELETE FROM work_queue WHERE id = ?1;
 
--- STMT_INSERT_PRISTINE
+-- STMT_INSERT_OR_IGNORE_PRISTINE
 INSERT OR IGNORE INTO pristine (checksum, md5_checksum, size, refcount)
 VALUES (?1, ?2, ?3, 0);
 
--- STMT_SELECT_PRISTINE_MD5_CHECKSUM
+-- STMT_INSERT_PRISTINE
+INSERT INTO pristine (checksum, md5_checksum, size, refcount)
+VALUES (?1, ?2, ?3, 0);
+
+-- STMT_SELECT_PRISTINE
 SELECT md5_checksum
 FROM pristine
 WHERE checksum = ?1
 
--- STMT_SELECT_PRISTINE_SHA1_CHECKSUM
+-- STMT_SELECT_PRISTINE_BY_MD5
 SELECT checksum
 FROM pristine
 WHERE md5_checksum = ?1
@@ -752,7 +797,7 @@ DROP TABLE IF EXISTS temp__node_props_cache;
 CREATE TEMPORARY TABLE temp__node_props_cache AS
   SELECT local_relpath, kind, properties FROM nodes_current
   WHERE wc_id = ?1
-    AND (?2 = '' OR local_relpath = ?2 OR local_relpath LIKE ?2 || '/%')
+    AND (?2 = '' OR local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
     AND local_relpath NOT IN (
       SELECT local_relpath FROM actual_node WHERE wc_id = ?1)
     AND (presence = 'normal' OR presence = 'incomplete');
@@ -766,9 +811,20 @@ INSERT INTO temp__node_props_cache (local_relpath, kind, properties)
     ON A.wc_id = N.wc_id AND A.local_relpath = N.local_relpath
        AND (N.presence = 'normal' OR N.presence = 'incomplete')
   WHERE A.wc_id = ?1
-    AND (?2 = '' OR A.local_relpath = ?2 OR A.local_relpath LIKE ?2 || '/%')
+    AND (?2 = '' OR A.local_relpath = ?2 OR A.local_relpath LIKE ?3 ESCAPE '#')
     AND A.local_relpath NOT IN
       (SELECT local_relpath FROM temp__node_props_cache);
+
+-- STMT_CACHE_NODE_BASE_PROPS_RECURSIVE
+CREATE TEMPORARY TABLE temp__node_props_cache AS
+  SELECT local_relpath, kind, properties FROM nodes_base
+  WHERE wc_id = ?1
+    AND (?2 = '' OR local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
+    AND local_relpath NOT IN (
+      SELECT local_relpath FROM actual_node WHERE wc_id = ?1)
+    AND (presence = 'normal' OR presence = 'incomplete');
+CREATE UNIQUE INDEX temp__node_props_cache_unique
+  ON temp__node_props_cache (local_relpath);
 
 -- STMT_CACHE_NODE_PROPS_OF_CHILDREN
 CREATE TEMPORARY TABLE temp__node_props_cache AS
@@ -792,12 +848,31 @@ INSERT INTO temp__node_props_cache (local_relpath, kind, properties)
     AND A.local_relpath NOT IN
       (SELECT local_relpath FROM temp__node_props_cache);
 
+-- STMT_CACHE_NODE_BASE_PROPS_OF_CHILDREN
+CREATE TEMPORARY TABLE temp__node_props_cache AS
+  SELECT local_relpath, kind, properties FROM nodes_base
+  WHERE wc_id = ?1
+    AND (local_relpath = ?2 OR parent_relpath = ?2)
+    AND local_relpath NOT IN (
+      SELECT local_relpath FROM actual_node WHERE wc_id = ?1)
+    AND (presence = 'normal' OR presence = 'incomplete');
+CREATE UNIQUE INDEX temp__node_props_cache_unique
+  ON temp__node_props_cache (local_relpath);
+
 -- STMT_SELECT_RELEVANT_PROPS_FROM_CACHE
 SELECT local_relpath, kind, properties FROM temp__node_props_cache
 ORDER BY local_relpath;
 
 
 /* ------------------------------------------------------------------------- */
+
+-- STMT_SELECT_MIN_MAX_REVISIONS
+SELECT MIN(revision), MAX(revision) FROM nodes
+  WHERE wc_id = ?1
+  AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
+  AND (presence = 'normal' OR presence = 'incomplete')
+  AND file_external IS NULL
+  AND op_depth = 0;
 
 /* Grab all the statements related to the schema.  */
 

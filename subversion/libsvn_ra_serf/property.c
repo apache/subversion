@@ -1043,3 +1043,33 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_ra_serf__get_resource_type(svn_node_kind_t *kind,
+                               apr_hash_t *props,
+                               const char *url,
+                               svn_revnum_t revision)
+{
+  const char *res_type;
+  
+  res_type = svn_ra_serf__get_ver_prop(props, url, revision,
+                                       "DAV:", "resourcetype");
+  if (!res_type)
+    {
+      /* How did this happen? */
+      return svn_error_create(SVN_ERR_RA_DAV_PROPS_NOT_FOUND, NULL,
+                              _("The PROPFIND response did not include the "
+                              "requested resourcetype value"));
+    }
+  
+  if (strcmp(res_type, "collection") == 0)
+    {
+      *kind = svn_node_dir;
+    }
+  else
+    {
+      *kind = svn_node_file;
+    }
+
+  return SVN_NO_ERROR;
+}

@@ -248,7 +248,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                                                 NULL, NULL,
                                                 APR_HASH_KEY_STRING,
                                                 apr_pstrcat(pool, prefix, "TEXT",
-                                                            NULL),
+                                                            (char *)NULL),
                                                 fs->pool));
     }
   else
@@ -273,7 +273,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                  svn_fs_fs__serialize_txdelta_window,
                  svn_fs_fs__deserialize_txdelta_window,
                  APR_HASH_KEY_STRING,
-                 apr_pstrcat(pool, prefix, "TXDELTA_WINDOW", NULL),
+                 apr_pstrcat(pool, prefix, "TXDELTA_WINDOW", (char *)NULL),
                  fs->pool));
     }
   else

@@ -30,8 +30,10 @@
 #include <http_request.h>
 #include <http_protocol.h>
 #include <http_log.h>
+#include <http_config.h>
 #include <ap_config.h>
 #include <ap_provider.h>
+#include <ap_mmn.h>
 #include <apr_uri.h>
 #include <apr_lib.h>
 #include <mod_dav.h>
@@ -47,6 +49,10 @@
 
 
 extern module AP_MODULE_DECLARE_DATA authz_svn_module;
+
+#ifdef APLOG_USE_MODULE
+APLOG_USE_MODULE(authz_svn);
+#endif
 
 typedef struct authz_svn_config_rec {
   int authoritative;
@@ -519,12 +525,26 @@ req_check_access(request_rec *r,
   return OK;
 }
 
+/* The macros LOG_ARGS_SIGNATURE and LOG_ARGS_CASCADE are expanded as formal
+ * and actual parameters to log_access_verdict with respect to HTTPD version.
+ */
+#if AP_MODULE_MAGIC_AT_LEAST(20100606,0)
+#define LOG_ARGS_SIGNATURE const char *file, int line, int module_index
+#define LOG_ARGS_CASCADE file, line, module_index
+#else
+#define LOG_ARGS_SIGNATURE const char *file, int line
+#define LOG_ARGS_CASCADE file, line
+#endif
+
 /* Log a message indicating the access control decision made about a
- * request.  FILE and LINE should be supplied via the APLOG_MARK macro.
- * ALLOWED is boolean.  REPOS_PATH and DEST_REPOS_PATH are information
+ * request.  The macro LOG_ARGS_SIGNATURE expands to FILE, LINE and
+ * MODULE_INDEX in HTTPD 2.3 as APLOG_MARK macro has been changed for
+ * per-module loglevel configuration.  It expands to FILE and LINE 
+ * in older server versions.  ALLOWED is boolean.  
+ * REPOS_PATH and DEST_REPOS_PATH are information
  * about the request.  DEST_REPOS_PATH may be NULL. */
 static void
-log_access_verdict(const char *file, int line,
+log_access_verdict(LOG_ARGS_SIGNATURE,
                    const request_rec *r, int allowed,
                    const char *repos_path, const char *dest_repos_path)
 {
@@ -534,22 +554,22 @@ log_access_verdict(const char *file, int line,
   if (r->user)
     {
       if (dest_repos_path)
-        ap_log_rerror(file, line, level, 0, r,
+        ap_log_rerror(LOG_ARGS_CASCADE, level, 0, r,
                       "Access %s: '%s' %s %s %s", verdict, r->user,
                       r->method, repos_path, dest_repos_path);
       else
-        ap_log_rerror(file, line, level, 0, r,
+        ap_log_rerror(LOG_ARGS_CASCADE, level, 0, r,
                       "Access %s: '%s' %s %s", verdict, r->user,
                       r->method, repos_path);
     }
   else
     {
       if (dest_repos_path)
-        ap_log_rerror(file, line, level, 0, r,
+        ap_log_rerror(LOG_ARGS_CASCADE, level, 0, r,
                       "Access %s: - %s %s %s", verdict,
                       r->method, repos_path, dest_repos_path);
       else
-        ap_log_rerror(file, line, level, 0, r,
+        ap_log_rerror(LOG_ARGS_CASCADE, level, 0, r,
                       "Access %s: - %s %s", verdict,
                       r->method, repos_path);
     }

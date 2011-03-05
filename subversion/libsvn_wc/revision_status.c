@@ -61,6 +61,7 @@ analyze_status(const char *local_abspath,
   svn_revnum_t revision;
   svn_revnum_t item_rev;
   svn_depth_t depth;
+  svn_boolean_t is_file_external;
   svn_wc__db_status_t status;
 
   SVN_ERR(svn_wc__db_read_info(&status, NULL, &revision, NULL,
@@ -89,6 +90,12 @@ analyze_status(const char *local_abspath,
       wb->result->modified = TRUE;
     }
 
+  /* Ignore file externals. */
+  SVN_ERR(svn_wc__internal_is_file_external(&is_file_external, wb->db,
+                                            local_abspath, scratch_pool));
+  if (is_file_external)
+    return SVN_NO_ERROR;
+
   if (! wb->result->switched)
     {
       svn_boolean_t wc_root;
@@ -103,19 +110,6 @@ analyze_status(const char *local_abspath,
   item_rev = (wb->committed
               ? changed_rev
               : revision);
-
-  /* Added files have a revision of no interest */
-  if (item_rev != SVN_INVALID_REVNUM)
-    {
-
-      if (wb->result->min_rev == SVN_INVALID_REVNUM
-          || item_rev < wb->result->min_rev)
-        wb->result->min_rev = item_rev;
-
-      if (wb->result->max_rev == SVN_INVALID_REVNUM
-          || item_rev > wb->result->max_rev)
-        wb->result->max_rev = item_rev;
-    }
 
   if (! wb->result->modified)
     {
@@ -194,6 +188,13 @@ svn_wc_revision_status2(svn_wc_revision_status_t **result_p,
             result->switched = TRUE;
         }
     }
+
+  SVN_ERR(svn_wc__db_get_min_max_revisions(&result->min_rev, &result->max_rev,
+                                           wc_ctx->db, local_abspath,
+                                           scratch_pool));
+
+  SVN_ERR(svn_wc__db_has_absent_children(&result->sparse_checkout, wc_ctx->db,
+                                         local_abspath, scratch_pool));
 
   SVN_ERR(svn_wc__node_walk_children(wc_ctx,
                                      local_abspath,

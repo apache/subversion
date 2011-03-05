@@ -4225,6 +4225,7 @@ svn_wc_delete(const char *path,
               void *notify_baton,
               apr_pool_t *pool);
 
+
 /**
  * Schedule the single node that exists on disk at @a local_abspath for
  * addition to the working copy.  The added node will have no properties.
@@ -4241,6 +4242,8 @@ svn_wc_delete(const char *path,
  * ### TODO: Allow the caller to provide the node's properties?
  *
  * ### TODO: Split into add_dir, add_file, add_symlink?
+ *
+ * @since New in 1.7.
  */
 svn_error_t *
 svn_wc_add_from_disk(svn_wc_context_t *wc_ctx,
@@ -4248,6 +4251,7 @@ svn_wc_add_from_disk(svn_wc_context_t *wc_ctx,
                      svn_wc_notify_func2_t notify_func,
                      void *notify_baton,
                      apr_pool_t *scratch_pool);
+
 
 /**
  * Put @a local_abspath under version control by registering it as addition

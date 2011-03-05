@@ -56,6 +56,7 @@ The numbered steps should be carried out in the order specified.  (See
 rationale.)
 
 (a) To add a pristine, do the following inside an SDB txn:
+    0. Acquire a 'RESERVED' lock.
     1. Add the table row, and set the refcount as desired.  If a row
        already exists, add the desired refcount to its refcount, and
        preferably verify the old row matches the new metadata.
@@ -65,7 +66,8 @@ rationale.)
        and optionally verify it matches the new metadata (e.g. length).
 
 (b) To remove a pristine, do the following inside an SDB txn:
-    1. First, check refcount == 0, and abort if not.
+    0. Acquire a 'RESERVED' lock.
+    1. Check refcount == 0, and abort if not.
     2. Delete the table row.
     3. Delete the file or move it away. (If not present, log a
        consistency error but, in a release build, return success.)
@@ -75,21 +77,22 @@ rationale.)
        pristine text is in the store and its metadata is in the row; if
        not, the pristine text is not currently in the store.
 
+       NOTE: Subject to the higher-level rules in part B, the pristine
+       text may be removed from the store at any later time.
+
 (d) To read a pristine text, the reader must:
     1. Query the SDB and open the file within the same SDB txn (to ensure
        that no pristine-remove txn (A-3(b)) is in progress at the same
        time).
-    2. Ensure the pristine text remains in the store continuously from
-       opening it for the duration of the read. (Perhaps by ensuring
-       refcount remains >= 1 and/or by cooperating with the clean-up
-       code.  Under spec B, the clean-up code is controlled by rule
-       B-3(c), so holding any WC lock would prevent a pristine from being
-       deleted.  An alternative is to use the operating system's ability
-       to keep the file available for reading as long as the file handle
-       is open, even if the file's directory entry is removed.)
+    2. Keep the file handle open until all required data has been read from
+       it. (If the pristine text is removed from the store by procedure (b),
+       the file's data will remain readable as long as the file handle is
+       open, whereas the file's directory entry may disappear.)
+    3. Close the file handle.
 
 (e) To clean up "orphan" pristine files:
-    1. 
+    1. Check that the work queue is empty.
+    2. 
 
 ###?
 
@@ -123,7 +126,7 @@ rationale.)
 
 (c) In both the 'add' (a) and 'remove' (b) txns, we need to acquire a lock
     that blocks both readers and writers (an SQLite 'RESERVED' lock)
-    before adding or removing the file on disk.  We could aquire this
+    before adding or removing the file on disk.  We could acquire this
     explicitly (e.g. by starting the txn with 'BEGIN IMMEDIATE');
     alternatively SQLite will upgrade the default 'SHARED' lock to
     'RESERVED' the first time we write to a table.
@@ -164,7 +167,7 @@ needs to store a file's new pristine text somewhere (and the pristine
 store is an obvious option) and then, when the commit succeeds, update the
 WC to reference it.
 
-Store-then-reference could be achieved by:
+Store-then-reference could be achieved in several different ways, such as:
 
   (a) Store text outside Pristine Store.  When commit succeeds, add it
       to the Pristine Store and reference it in the WC; if commit

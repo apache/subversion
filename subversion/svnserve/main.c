@@ -580,8 +580,8 @@ int main(int argc, const char *argv[])
           params.compression_level = atoi(arg);
           if (params.compression_level < SVN_NO_COMPRESSION_LEVEL)
             params.compression_level = SVN_NO_COMPRESSION_LEVEL;
-          if (params.compression_level > SVN_BEST_COMPRESSION_LEVEL)
-            params.compression_level = SVN_BEST_COMPRESSION_LEVEL;
+          if (params.compression_level > SVN_MAX_COMPRESSION_LEVEL)
+            params.compression_level = SVN_MAX_COMPRESSION_LEVEL;
           break;
 
         case 'M':

@@ -577,7 +577,7 @@ invalid_utf8(const char *data, apr_size_t len, apr_pool_t *pool)
 {
   const char *last = svn_utf__last_valid(data, len);
   const char *valid_txt = "", *invalid_txt = "";
-  int i;
+  apr_size_t i;
   size_t valid, invalid;
 
   /* We will display at most 24 valid octets (this may split a leading

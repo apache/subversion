@@ -323,9 +323,6 @@ switch_file_external(const char *path,
                                                  SVN_CONFIG_CATEGORY_CONFIG,
                                                  APR_HASH_KEY_STRING) : NULL;
   svn_boolean_t use_commit_times;
-  svn_boolean_t unlink_file = FALSE;
-  svn_boolean_t revert_file = FALSE;
-  svn_boolean_t remove_from_revision_control = FALSE;
   svn_boolean_t locked_here;
   svn_error_t *err = NULL;
   svn_node_kind_t kind;
@@ -406,10 +403,10 @@ switch_file_external(const char *path,
     }
   else
     {
-      apr_file_t *f;
       svn_boolean_t text_conflicted;
       svn_boolean_t prop_conflicted;
       svn_boolean_t tree_conflicted;
+      svn_node_kind_t disk_kind;
 
       /* Check for a conflict on the containing directory.  Because a
          switch is done on the added file later, it will leave a
@@ -429,20 +426,19 @@ switch_file_external(const char *path,
              "'%s' remains in conflict"),
           url, path, anchor);
 
-      /* Try to create an empty file.  If there is a file already
-         there, then don't touch it. */
-      err = svn_io_file_open(&f,
-                             local_abspath,
-                             APR_WRITE | APR_CREATE | APR_EXCL,
-                             APR_OS_DEFAULT,
-                             subpool);
+      err = svn_io_check_path(local_abspath, &disk_kind, subpool);
+
       if (err)
         goto cleanup;
 
-      unlink_file = TRUE;
-      err = svn_io_file_close(f, pool);
-      if (err)
-        goto cleanup;
+      if (kind == svn_node_file || kind == svn_node_dir)
+        {
+          err = svn_error_createf(SVN_ERR_WC_PATH_FOUND, NULL,
+                                  _("The file external '%s' can not be "
+                                    "created because the node exists."),
+                                  svn_dirent_local_style(local_abspath,
+                                                         subpool));
+        }
 
       err = svn_wc__register_file_external(ctx->wc_ctx, local_abspath, url,
                                            peg_revision, revision, subpool);
@@ -462,17 +458,6 @@ switch_file_external(const char *path,
   if (err)
     goto cleanup;
 
-  /* Do some additional work if the file external is newly added to
-     the wc. */
-  if (unlink_file)
-    {
-      /* At this point the newly created file external is switched, so
-         if there is an error, to back everything out the file cannot
-         be reverted, it needs to be removed forcibly from the wc.. */
-      revert_file = FALSE;
-      remove_from_revision_control = TRUE;
-  }
-
   if (!locked_here)
     SVN_ERR(svn_wc__release_write_lock(ctx->wc_ctx, anchor_abspath, subpool));
 
@@ -480,32 +465,6 @@ switch_file_external(const char *path,
   return SVN_NO_ERROR;
 
  cleanup:
-  if (revert_file)
-    {
-      svn_error_clear(
-        svn_wc_revert4(ctx->wc_ctx, local_abspath, svn_depth_empty,
-                       use_commit_times,
-                       NULL, /* apr_array_header_t *changelists */
-                       ctx->cancel_func,
-                       ctx->cancel_baton,
-                       NULL, /* svn_wc_notify_func2_t */
-                       NULL, /* void *notify_baton */
-                       subpool));
-    }
-
-  if (remove_from_revision_control)
-    {
-      svn_error_clear(
-        svn_wc_remove_from_revision_control2(ctx->wc_ctx, local_abspath,
-                                             TRUE, FALSE,
-                                             ctx->cancel_func,
-                                             ctx->cancel_baton,
-                                             subpool));
-    }
-
-  if (unlink_file)
-    svn_error_clear(svn_io_remove_file2(path, TRUE, subpool));
-
   if (!locked_here)
     svn_error_clear(svn_wc__release_write_lock(ctx->wc_ctx, anchor_abspath,
                                                subpool));
@@ -1470,6 +1429,7 @@ svn_client__crawl_for_externals(apr_hash_t **externals_p,
   apr_hash_t *externals_hash = apr_hash_make(result_pool);
 
   SVN_ERR(svn_wc__prop_list_recursive(ctx->wc_ctx, local_abspath, depth,
+                                      FALSE, /* pristine */
                                       externals_crawl_proplist_receiver,
                                       externals_hash,
                                       ctx->cancel_func,
@@ -1479,3 +1439,45 @@ svn_client__crawl_for_externals(apr_hash_t **externals_p,
   *externals_p = externals_hash;
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_client__gather_externals_in_locally_added_dirs(apr_hash_t *externals_new,
+                                                   apr_hash_t *ambient_depths,
+                                                   const char *anchor_abspath,
+                                                   svn_depth_t requested_depth,
+                                                   svn_client_ctx_t *ctx,
+                                                   apr_pool_t *scratch_pool)
+{
+  apr_hash_t *all_externals;
+  apr_hash_index_t *hi;
+
+  /* If there was no requested depth for this operation, use infinity.
+   * svn_client__crawl_for_externals() doesn't like depth 'unknown'. */
+  if (requested_depth == svn_depth_unknown)
+    requested_depth = svn_depth_infinity;
+
+  SVN_ERR(svn_client__crawl_for_externals(&all_externals, anchor_abspath,
+                                          requested_depth, ctx, scratch_pool,
+                                          scratch_pool));
+
+  for (hi = apr_hash_first(scratch_pool, all_externals);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *local_abspath = svn__apr_hash_index_key(hi);
+
+      if (! apr_hash_get(externals_new, local_abspath, APR_HASH_KEY_STRING))
+        {
+          apr_pool_t *hash_pool = apr_hash_pool_get(externals_new);
+          svn_string_t *propval = svn__apr_hash_index_val(hi);
+
+          apr_hash_set(externals_new, local_abspath, APR_HASH_KEY_STRING,
+                       apr_pstrdup(hash_pool, propval->data));
+          apr_hash_set(ambient_depths, local_abspath, APR_HASH_KEY_STRING,
+                       svn_depth_to_word(svn_depth_infinity));
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+

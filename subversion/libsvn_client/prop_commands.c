@@ -1160,63 +1160,6 @@ remote_proplist(const char *target_prefix,
 }
 
 
-/* A baton for proplist_walk_cb. */
-struct proplist_walk_baton
-{
-  svn_boolean_t pristine;  /* Select base rather than working props. */
-  apr_hash_t *changelist_hash; /* Keys are changelists to filter on. */
-  svn_wc_context_t *wc_ctx;  /* Context for the tree being walked. */
-  svn_proplist_receiver_t receiver;  /* Proplist receiver to call. */
-  void *receiver_baton;    /* Baton for the proplist receiver. */
-
-  /* Anchor, anchor_abspath pair for converting to relative paths */
-  const char *anchor;
-  const char *anchor_abspath;
-};
-
-/* An entries-walk callback for svn_client_proplist.
- *
- * For the path given by LOCAL_ABSPATH, populate wb->PROPS with a
- * svn_client_proplist_item_t for each path, where "wb" is the WALK_BATON of
- * type "struct proplist_walk_baton *".  If wb->PRISTINE is true, use the base
- * values, else use the working values.
- */
-static svn_error_t *
-proplist_walk_cb(const char *local_abspath,
-                 svn_node_kind_t kind,
-                 void *walk_baton,
-                 apr_pool_t *scratch_pool)
-{
-  struct proplist_walk_baton *wb = walk_baton;
-  apr_hash_t *props;
-  const char *path;
-
-  /* If our entry doesn't pass changelist filtering, get outta here. */
-  if (! svn_wc__changelist_match(wb->wc_ctx, local_abspath,
-                                 wb->changelist_hash, scratch_pool))
-    return SVN_NO_ERROR;
-
-  SVN_ERR(pristine_or_working_props(&props, wb->wc_ctx, local_abspath,
-                                    wb->pristine, scratch_pool, scratch_pool));
-
-  /* Bail if this node is defined to have no properties.  */
-  if (props == NULL)
-    return SVN_NO_ERROR;
-
-  if (wb->anchor && wb->anchor_abspath)
-    {
-      path = svn_dirent_join(wb->anchor,
-                             svn_dirent_skip_ancestor(wb->anchor_abspath,
-                                                      local_abspath),
-                             scratch_pool);
-    }
-  else
-    path = local_abspath;
-
-  return call_receiver(path, props, wb->receiver, wb->receiver_baton,
-                       scratch_pool);
-}
-
 /* Baton for recursive_proplist_receiver(). */
 struct recursive_proplist_receiver_baton
 {
@@ -1261,7 +1204,6 @@ recursive_proplist_receiver(void *baton,
                                               path, props, scratch_pool));
 }
 
-/* Note: this implementation is very similar to svn_client_propget3(). */
 svn_error_t *
 svn_client_proplist3(const char *path_or_url,
                      const svn_opt_revision_t *peg_revision,
@@ -1319,56 +1261,29 @@ svn_client_proplist3(const char *path_or_url,
       /* Fetch, recursively or not. */
       if (kind == svn_node_dir)
         {
-          struct proplist_walk_baton wb;
+          struct recursive_proplist_receiver_baton rb;
 
-          if (! pristine)
-            {
-              struct recursive_proplist_receiver_baton rb;
-
-              rb.wc_ctx = ctx->wc_ctx;
-              rb.changelist_hash = changelist_hash;
-              rb.wrapped_receiver = receiver;
-              rb.wrapped_receiver_baton = receiver_baton;
-
-              if (strcmp(path_or_url, local_abspath) != 0)
-                {
-                  rb.anchor = path_or_url;
-                  rb.anchor_abspath = local_abspath;
-                }
-              else
-                {
-                  rb.anchor = NULL;
-                  rb.anchor_abspath = NULL;
-                }
-
-              return svn_error_return(svn_wc__prop_list_recursive(
-                                        ctx->wc_ctx, local_abspath, depth,
-                                        recursive_proplist_receiver, &rb,
-                                        ctx->cancel_func, ctx->cancel_baton,
-                                        pool));
-            }
-
-          wb.wc_ctx = ctx->wc_ctx;
-          wb.pristine = pristine;
-          wb.changelist_hash = changelist_hash;
-          wb.receiver = receiver;
-          wb.receiver_baton = receiver_baton;
+          rb.wc_ctx = ctx->wc_ctx;
+          rb.changelist_hash = changelist_hash;
+          rb.wrapped_receiver = receiver;
+          rb.wrapped_receiver_baton = receiver_baton;
 
           if (strcmp(path_or_url, local_abspath) != 0)
             {
-              wb.anchor = path_or_url;
-              wb.anchor_abspath = local_abspath;
+              rb.anchor = path_or_url;
+              rb.anchor_abspath = local_abspath;
             }
           else
             {
-              wb.anchor = NULL;
-              wb.anchor_abspath = NULL;
+              rb.anchor = NULL;
+              rb.anchor_abspath = NULL;
             }
 
-          SVN_ERR(svn_wc__node_walk_children(ctx->wc_ctx, local_abspath, FALSE,
-                                             proplist_walk_cb, &wb, depth,
-                                             ctx->cancel_func,
-                                             ctx->cancel_baton, pool));
+          SVN_ERR(svn_wc__prop_list_recursive(ctx->wc_ctx, local_abspath,
+                                              depth, pristine,
+                                              recursive_proplist_receiver, &rb,
+                                              ctx->cancel_func,
+                                              ctx->cancel_baton, pool));
         }
       else if (svn_wc__changelist_match(ctx->wc_ctx, local_abspath,
                                         changelist_hash, pool))

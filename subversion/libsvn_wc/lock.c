@@ -1545,6 +1545,7 @@ svn_wc__acquire_write_lock(const char **lock_root_abspath,
   svn_wc__db_t *db = wc_ctx->db;
   svn_wc__db_kind_t kind;
   svn_error_t *err;
+
   SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, local_abspath,
                                (lock_root_abspath != NULL),
                                scratch_pool));
@@ -1611,7 +1612,9 @@ svn_wc__acquire_write_lock(const char **lock_root_abspath,
   if (lock_root_abspath)
     *lock_root_abspath = apr_pstrdup(result_pool, local_abspath);
 
-  SVN_ERR(svn_wc__db_wclock_obtain(wc_ctx->db, local_abspath, -1, FALSE,
+  SVN_ERR(svn_wc__db_wclock_obtain(wc_ctx->db, local_abspath,
+                                   -1 /* levels_to_lock (infinite) */,
+                                   FALSE /* steal_lock */,
                                    scratch_pool));
 
   return SVN_NO_ERROR;
@@ -1650,6 +1653,7 @@ svn_wc__call_with_write_lock(svn_wc__with_write_lock_func_t func,
 {
   svn_error_t *err1, *err2;
   const char *lock_root_abspath;
+
   SVN_ERR(svn_wc__acquire_write_lock(&lock_root_abspath, wc_ctx, local_abspath,
                                      lock_anchor, scratch_pool, scratch_pool));
   err1 = svn_error_return(func(baton, result_pool, scratch_pool));

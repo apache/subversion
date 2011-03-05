@@ -1134,7 +1134,7 @@ def binary_file_externals(sbox):
   # the binary file /A/theta, but the external file is not there yet.
   # Try to actually insert the external file via a verified update:
   expected_output = svntest.wc.State(wc_dir, {
-      'A/C/external'      : Item(status='E '),
+      'A/C/external'      : Item(status='A '),
     })
 
   expected_disk = svntest.main.greek_state.copy()
@@ -1186,7 +1186,7 @@ def update_lose_file_external(sbox):
   # the file /A/mu, but the external file is not there yet.
   # Try to actually insert the external file via an update:
   expected_output = svntest.wc.State(wc_dir, {
-      'A/C/external'      : Item(status='E '),
+      'A/C/external'      : Item(status='A '),
     })
 
   expected_disk = svntest.main.greek_state.copy()
@@ -1419,7 +1419,7 @@ def wc_repos_file_externals(sbox):
   # the file /A/theta, but the external file is not there yet.
   # Try to actually insert the external file via a verified update:
   expected_output = svntest.wc.State(wc_dir, {
-      'A/C/theta'      : Item(status='E '),
+      'A/C/theta'      : Item(status='A '),
     })
 
   expected_disk = svntest.main.greek_state.copy()
@@ -1449,7 +1449,7 @@ def wc_repos_file_externals(sbox):
   # Try to actually insert the external file (A/I/theta) via a verified update:
   expected_output = svntest.wc.State(wc_dir, {
       'A/I'            : Item(status='A '),
-      'A/I/theta'      : Item(status='E '),
+      'A/I/theta'      : Item(status='A '),
     })
 
   expected_disk = svntest.main.greek_state.copy()
@@ -1527,7 +1527,7 @@ def update_modify_file_external(sbox):
   externals_prop = "^/A/mu external\n"
   change_external(sbox.ospath('A'), externals_prop)
   expected_output = svntest.wc.State(wc_dir, {
-      'A/external'      : Item(status='E '),
+      'A/external'      : Item(status='A '),
     })
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
@@ -1615,6 +1615,87 @@ def update_external_on_locally_added_dir(sbox):
 
   probe_paths_exist([os.path.join(wc_dir, "A", "foo", "exdir_E")])
 
+# Test for issue #2267
+@Issue(2267)
+def switch_external_on_locally_added_dir(sbox):
+  "switch an external on a locally added dir"
+
+  external_url_for = externals_test_setup(sbox)
+  wc_dir         = sbox.wc_dir
+
+  repo_url       = sbox.repo_url
+  other_repo_url = repo_url + ".other"
+  A_path         = repo_url + "/A"
+  A_copy_path    = repo_url + "/A_copy"
+
+  # Create a branch of A
+  # Checkout a working copy
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'copy',
+                                     A_path, A_copy_path,
+                                     '-m', 'Create branch of A')
+
+  # Checkout a working copy
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'checkout',
+                                     A_path, wc_dir)
+
+  # Add one new external item to the property on A/foo.  The new item is
+  # "exdir_E", deliberately added in the middle not at the end.
+  new_externals_desc = \
+           external_url_for["A/D/exdir_A"] + " exdir_A"           + \
+           "\n"                                                   + \
+           external_url_for["A/D/exdir_A/G/"] + " exdir_A/G/"     + \
+           "\n"                                                   + \
+           "exdir_E           " + other_repo_url + "/A/B/E"       + \
+           "\n"                                                   + \
+           "exdir_A/H -r 1 " + external_url_for["A/D/exdir_A/H"]  + \
+           "\n"                                                   + \
+           external_url_for["A/D/x/y/z/blah"] + " x/y/z/blah"     + \
+           "\n"
+
+  # Add A/foo and set the property on it
+  new_dir = sbox.ospath("foo")
+  sbox.simple_mkdir("foo")
+  change_external(new_dir, new_externals_desc, commit=False)
+
+  # Switch the working copy to the branch, see if we get the new item.
+  svntest.actions.run_and_verify_svn(None, None, [], 'sw', A_copy_path, wc_dir)
+
+  probe_paths_exist([os.path.join(wc_dir, "foo", "exdir_E")])
+
+@XFail()
+@Issue(3819)
+def file_external_in_sibling(sbox):
+  "update a file external in sibling dir"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Setup A2/iota as file external to ^/iota
+  externals_prop = "^/iota iota\n"
+  sbox.simple_mkdir("A2")
+  change_external(sbox.ospath('A2'), externals_prop)
+  sbox.simple_update()
+
+  expected_stdout = ["Updating '.' ...\n", "At revision 2.\n"]
+  os.chdir(sbox.ospath("A"))
+  svntest.actions.run_and_verify_svn(None, expected_stdout, [], 'update')
+
+@XFail()
+@Issue(3823)
+def file_external_update_without_commit(sbox):
+  "update a file external without committing target"
+
+  sbox.build(read_only=True)
+
+  # Setup A2/iota as file external to ^/iota
+  externals_prop = "^/iota iota\n"
+  sbox.simple_mkdir("A2")
+  change_external(sbox.ospath('A2'), externals_prop, commit=False)
+  # A2/ is an uncommitted added dir with an svn:externals property set.
+  sbox.simple_update()
+
 ########################################################################
 # Run the tests
 
@@ -1647,6 +1728,9 @@ test_list = [ None,
               merge_target_with_externals,
               update_modify_file_external,
               update_external_on_locally_added_dir,
+              switch_external_on_locally_added_dir,
+              file_external_in_sibling,
+              file_external_update_without_commit,
              ]
 
 if __name__ == '__main__':

@@ -482,8 +482,8 @@ static svn_cache__vtable_t inprocess_cache_vtable = {
   inprocess_cache_get,
   inprocess_cache_set,
   inprocess_cache_iter,
-  inprocess_cache_get_partial,
-  inprocess_cache_is_cachable
+  inprocess_cache_is_cachable,
+  inprocess_cache_get_partial
 };
 
 svn_error_t *

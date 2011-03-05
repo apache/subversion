@@ -1300,7 +1300,6 @@ merge_file_changed(const char *local_dir_abspath,
 {
   merge_cmd_baton_t *merge_b = baton;
   apr_pool_t *subpool = svn_pool_create(merge_b->pool);
-  svn_boolean_t merge_required = TRUE;
   enum svn_wc_merge_outcome_t merge_outcome;
 
   SVN_ERR_ASSERT(mine_abspath && svn_dirent_is_absolute(mine_abspath));
@@ -1449,77 +1448,41 @@ merge_file_changed(const char *local_dir_abspath,
   if (older_abspath)
     {
       svn_boolean_t has_local_mods;
+
+      /* xgettext: the '.working', '.merge-left.r%ld' and
+         '.merge-right.r%ld' strings are used to tag onto a file
+         name in case of a merge conflict */
+      const char *target_label = _(".working");
+      const char *left_label = apr_psprintf(subpool,
+                                            _(".merge-left.r%ld"),
+                                            older_rev);
+      const char *right_label = apr_psprintf(subpool,
+                                             _(".merge-right.r%ld"),
+                                             yours_rev);
+      conflict_resolver_baton_t conflict_baton = { 0 };
+      const svn_wc_conflict_version_t *left;
+      const svn_wc_conflict_version_t *right;
+
       SVN_ERR(svn_wc_text_modified_p2(&has_local_mods, merge_b->ctx->wc_ctx,
                                       mine_abspath, FALSE, subpool));
 
-      /* Special case:  if a binary file's working file is
-         exactly identical to the 'left' side of the merge, then don't
-         allow svn_wc_merge to produce a conflict.  Instead, just
-         overwrite the working file with the 'right' side of the
-         merge.  Why'd we check for local mods above?  Because we want
-         to do a different notification depending on whether or not
-         the file was locally modified.
+      conflict_baton.wrapped_func = merge_b->ctx->conflict_func;
+      conflict_baton.wrapped_baton = merge_b->ctx->conflict_baton;
+      conflict_baton.conflicted_paths = &merge_b->conflicted_paths;
+      conflict_baton.pool = merge_b->pool;
 
-         Alternately, if the 'left' side of the merge doesn't exist in
-         the repository, and the 'right' side of the merge is
-         identical to the WC, pretend we did the merge (a no-op). */
-      if ((mimetype1 && svn_mime_type_is_binary(mimetype1))
-          || (mimetype2 && svn_mime_type_is_binary(mimetype2)))
-        {
-          /* For adds, the 'left' side of the merge doesn't exist. */
-          svn_boolean_t older_revision_exists =
-              !merge_b->add_necessitated_merge;
-          svn_boolean_t same_contents;
-          SVN_ERR(svn_io_files_contents_same_p(&same_contents,
-                                               (older_revision_exists ?
-                                                older_abspath : yours_abspath),
-                                               mine_abspath, subpool));
-          if (same_contents)
-            {
-              if (older_revision_exists && !merge_b->dry_run)
-                {
-                  SVN_ERR(svn_io_file_move(yours_abspath, mine_abspath,
-                                           subpool));
-                }
-              merge_outcome = svn_wc_merge_merged;
-              merge_required = FALSE;
-            }
-        }
-
-      if (merge_required)
-        {
-          /* xgettext: the '.working', '.merge-left.r%ld' and
-             '.merge-right.r%ld' strings are used to tag onto a file
-             name in case of a merge conflict */
-          const char *target_label = _(".working");
-          const char *left_label = apr_psprintf(subpool,
-                                                _(".merge-left.r%ld"),
-                                                older_rev);
-          const char *right_label = apr_psprintf(subpool,
-                                                 _(".merge-right.r%ld"),
-                                                 yours_rev);
-          conflict_resolver_baton_t conflict_baton = { 0 };
-          const svn_wc_conflict_version_t *left;
-          const svn_wc_conflict_version_t *right;
-
-          conflict_baton.wrapped_func = merge_b->ctx->conflict_func;
-          conflict_baton.wrapped_baton = merge_b->ctx->conflict_baton;
-          conflict_baton.conflicted_paths = &merge_b->conflicted_paths;
-          conflict_baton.pool = merge_b->pool;
-
-          SVN_ERR(make_conflict_versions(&left, &right, mine_abspath,
-                                         svn_node_file, merge_b));
-          SVN_ERR(svn_wc_merge4(&merge_outcome, merge_b->ctx->wc_ctx,
-                                older_abspath, yours_abspath, mine_abspath,
-                                left_label, right_label, target_label,
-                                left, right,
-                                merge_b->dry_run, merge_b->diff3_cmd,
-                                merge_b->merge_options, prop_changes,
-                                conflict_resolver, &conflict_baton,
-                                merge_b->ctx->cancel_func,
-                                merge_b->ctx->cancel_baton,
-                                subpool));
-        }
+      SVN_ERR(make_conflict_versions(&left, &right, mine_abspath,
+                                     svn_node_file, merge_b));
+      SVN_ERR(svn_wc_merge4(&merge_outcome, merge_b->ctx->wc_ctx,
+                            older_abspath, yours_abspath, mine_abspath,
+                            left_label, right_label, target_label,
+                            left, right,
+                            merge_b->dry_run, merge_b->diff3_cmd,
+                            merge_b->merge_options, prop_changes,
+                            conflict_resolver, &conflict_baton,
+                            merge_b->ctx->cancel_func,
+                            merge_b->ctx->cancel_baton,
+                            subpool));
 
       if (content_state)
         {

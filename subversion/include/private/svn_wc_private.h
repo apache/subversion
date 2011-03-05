@@ -729,6 +729,10 @@ typedef svn_error_t *(*svn_wc__proplist_receiver_t)(void *baton,
  * values for all the regular properties of the node at @a local_abspath
  * and any node beneath @a local_abspath within the specified @a depth.
  *
+ * If @a pristine is @c TRUE, get the pristine (or "BASE") properties
+ * from the working copy, instead of getting the current (or "WORKING")
+ * properties.
+ *
  * If a node has no properties, @a receiver_func is not called for the node.
  *
  * Use @a wc_ctx to access the working copy, and @a scratch_pool for
@@ -743,6 +747,7 @@ svn_error_t *
 svn_wc__prop_list_recursive(svn_wc_context_t *wc_ctx,
                             const char *local_abspath,
                             svn_depth_t depth,
+                            svn_boolean_t pristine,
                             svn_wc__proplist_receiver_t receiver_func,
                             void *receiver_baton,
                             svn_cancel_func_t cancel_func,

@@ -128,6 +128,154 @@
  */
 #define NO_OFFSET APR_UINT64_MAX 
 
+/* Debugging / corruption detection support.
+ * If you define this macro, the getter functions will performed expensive
+ * checks on the item data, requested keys and entry types. If there is
+ * a mismatch found in any of them when being compared with the values
+ * remembered in the setter function, an error will be returned.
+ */
+#ifdef DEBUG_CACHE_MEMBUFFER
+
+/* The prefix passed to svn_cache__create_membuffer_cache() effectively
+ * defines the type of all items stored by that cache instance. We'll take
+ * the last 7 bytes + \0 as plaintext for easy identification by the dev.
+ */
+#define PREFIX_TAIL_LEN 8
+
+/* This record will be attached to any cache entry. It tracks item data
+ * (content), key and type as hash values and is the baseline against which
+ * the getters will compare their results to detect inconsistencies.
+ */
+typedef struct entry_tag_t
+{
+  /* MD5 checksum over the serialized the item data.
+   */
+  unsigned char content_hash [APR_MD5_DIGESTSIZE];
+
+  /* Hash value of the svn_cache_t instance that wrote the item
+   * (i.e. a combination of type and repository)
+   */
+  unsigned char prefix_hash [APR_MD5_DIGESTSIZE];
+
+  /* Note that this only covers the variable part of the key,
+   * i.e. it will be different from the full key hash used for
+   * cache indexing.
+   */
+  unsigned char key_hash [APR_MD5_DIGESTSIZE];
+
+  /* Last letters from of the key in human readable format
+   * (ends with the type identifier, e.g. "DAG")
+   */
+  char prefix_tail[PREFIX_TAIL_LEN];
+
+  /* Length of the variable key part.
+   */
+  apr_size_t key_len;
+
+} entry_tag_t;
+
+/* Per svn_cache_t instance initialization helper.
+ */
+static void get_prefix_tail(const char *prefix, char *prefix_tail)
+{
+  apr_size_t len = strlen(prefix);
+  apr_size_t to_copy = len > PREFIX_TAIL_LEN-1 ? PREFIX_TAIL_LEN-1 : len;
+
+  memset(prefix_tail, 0, PREFIX_TAIL_LEN);
+  memcpy(prefix_tail, prefix + len - to_copy, to_copy);
+}
+
+/* Initialize all members of TAG except for the content hash.
+ */
+static svn_error_t* store_key_part(entry_tag_t *tag,
+                                   unsigned char *prefix_hash,
+                                   char *prefix_tail,
+                                   const void *key,
+                                   apr_size_t size,
+                                   apr_pool_t *pool)
+{
+  svn_checksum_t *checksum;
+  SVN_ERR(svn_checksum(&checksum,
+                       svn_checksum_md5,
+                       key,
+                       size,
+                       pool));
+
+  memcpy(tag->prefix_hash, prefix_hash, sizeof(tag->prefix_hash));
+  memcpy(tag->key_hash, checksum->digest, sizeof(tag->key_hash));
+  memcpy(tag->prefix_tail, prefix_tail, sizeof(tag->prefix_tail));
+
+  tag->key_len = size;
+
+  return SVN_NO_ERROR;
+}
+
+/* Initialize the content hash member of TAG.
+ */
+static svn_error_t* store_content_part(entry_tag_t *tag,
+                                       const char *data,
+                                       apr_size_t size,
+                                       apr_pool_t *pool)
+{
+  svn_checksum_t *checksum;
+  SVN_ERR(svn_checksum(&checksum,
+                       svn_checksum_md5,
+                       data,
+                       size,
+                       pool));
+
+  memcpy(tag->content_hash, checksum->digest, sizeof(tag->content_hash));
+
+  return SVN_NO_ERROR;
+}
+
+/* Compare two tags and fail with an assertion upon differences.
+ */
+static svn_error_t* assert_equal_tags(const entry_tag_t *lhs,
+                                      const entry_tag_t *rhs)
+{
+  SVN_ERR_ASSERT(memcmp(lhs->content_hash, rhs->content_hash,
+                        sizeof(lhs->content_hash)) == 0);
+  SVN_ERR_ASSERT(memcmp(lhs->prefix_hash, rhs->prefix_hash,
+                        sizeof(lhs->prefix_hash)) == 0);
+  SVN_ERR_ASSERT(memcmp(lhs->key_hash, rhs->key_hash,
+                        sizeof(lhs->key_hash)) == 0);
+  SVN_ERR_ASSERT(memcmp(lhs->prefix_tail, rhs->prefix_tail,
+                        sizeof(lhs->prefix_tail)) == 0);
+
+  SVN_ERR_ASSERT(lhs->key_len == rhs->key_len);
+
+  return SVN_NO_ERROR;
+}
+
+/* Reoccuring code snippets.
+ */
+
+#define DEBUG_CACHE_MEMBUFFER_TAG_ARG entry_tag_t *tag,
+
+#define DEBUG_CACHE_MEMBUFFER_TAG &tag,
+
+#define DEBUG_CACHE_MEMBUFFER_INIT_TAG                         \
+  entry_tag_t tag;                                             \
+  SVN_ERR(store_key_part(&tag,                                 \
+                         cache->prefix,                        \
+                         cache->prefix_tail,                   \
+                         key,                                  \
+                         cache->key_len == APR_HASH_KEY_STRING \
+                             ? strlen((const char *) key)      \
+                             : cache->key_len,                 \
+                         cache->pool));
+
+#else
+
+/* Don't generate any checks if consistency checks have not been enabled.
+ */
+#define DEBUG_CACHE_MEMBUFFER_TAG_ARG
+#define DEBUG_CACHE_MEMBUFFER_TAG
+#define DEBUG_CACHE_MEMBUFFER_INIT_TAG
+
+#endif /* DEBUG_CACHE_MEMBUFFER */
+
 /* A single dictionary entry. Since they are allocated statically, these
  * entries can either be in use or in used state. An entry is unused, iff 
  * the offset member is NO_OFFSET. In that case, it must not be linked in
@@ -168,6 +316,12 @@ typedef struct entry_t
    * Only valid for used entries.
    */
   apr_uint32_t previous;
+
+#ifdef DEBUG_CACHE_MEMBUFFER
+  /* Remember type, content and key hashes.
+   */
+  entry_tag_t tag;
+#endif
 } entry_t;
 
 /* We group dictionary entries to make this GROUP-SIZE-way assicative.
@@ -709,7 +863,6 @@ ensure_data_insertable(svn_membuffer_t *cache, apr_size_t size)
 
   /* This will never be reached. But if it was, "can't insert" was the
    * right answer. */
-  return FALSE;
 }
 
 /* Mimic apr_pcalloc in APR_POOL_DEBUG mode, i.e. handle failed allocations
@@ -770,11 +923,10 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
   if (directory_size < sizeof(entry_group_t))
     directory_size = sizeof(entry_group_t);
 
-  /* limit the data size to what we can address
+  /* limit the data size to what we can address.
+   * Note that this cannot overflow since all values are of size_t.
    */
   data_size = total_size - directory_size;
-  if (data_size > APR_SIZE_MAX)
-    data_size = APR_SIZE_MAX;
 
   /* to keep the entries small, we use 32 bit indices only
    * -> we need to ensure that no more then 4G entries exist
@@ -870,6 +1022,7 @@ membuffer_cache_set(svn_membuffer_t *cache,
                     apr_size_t key_len,
                     void *item,
                     svn_cache__serialize_func_t serializer,
+                    DEBUG_CACHE_MEMBUFFER_TAG_ARG
                     apr_pool_t *pool)
 {
   apr_uint32_t group_index;
@@ -904,6 +1057,15 @@ membuffer_cache_set(svn_membuffer_t *cache,
       entry->size = size;
       entry->offset = cache->current_data;
 
+#ifdef DEBUG_CACHE_MEMBUFFER
+
+      /* Remember original content, type and key (hashes)
+       */
+      SVN_ERR(store_content_part(tag, buffer, size, pool));
+      memcpy(&entry->tag, tag, sizeof(*tag));
+
+#endif
+
       /* Copy the serialized item data into the cache.
        */
       if (size)
@@ -937,6 +1099,7 @@ membuffer_cache_get(svn_membuffer_t *cache,
                     apr_size_t key_len,
                     void **item,
                     svn_cache__deserialize_func_t deserializer,
+                    DEBUG_CACHE_MEMBUFFER_TAG_ARG
                     apr_pool_t *pool)
 {
   apr_uint32_t group_index;
@@ -974,6 +1137,21 @@ membuffer_cache_get(svn_membuffer_t *cache,
   buffer = (char *)ALIGN_POINTER(apr_palloc(pool, size + ITEM_ALIGNMENT-1));
   memcpy(buffer, (const char*)cache->data + entry->offset, size);
 
+#ifdef DEBUG_CACHE_MEMBUFFER
+
+  /* Check for overlapping entries.
+   */
+  SVN_ERR_ASSERT(entry->next == NO_INDEX ||
+                 entry->offset + size
+                    <= get_entry(cache, entry->next)->offset);
+
+  /* Compare original content, type and key (hashes)
+   */
+  SVN_ERR(store_content_part(tag, buffer, entry->size, pool));
+  SVN_ERR(assert_equal_tags(&entry->tag, tag));
+
+#endif
+
   /* update hit statistics
    */
   entry->hit_count++;
@@ -994,6 +1172,7 @@ membuffer_cache_get_partial(svn_membuffer_t *cache,
                             void **item,
                             svn_cache__partial_getter_func_t deserializer,
                             void *baton,
+                            DEBUG_CACHE_MEMBUFFER_TAG_ARG
                             apr_pool_t *pool)
 {
   apr_uint32_t group_index;
@@ -1016,6 +1195,24 @@ membuffer_cache_get_partial(svn_membuffer_t *cache,
       entry->hit_count++;
       cache->hit_count++;
       cache->total_hits++;
+
+#ifdef DEBUG_CACHE_MEMBUFFER
+
+      /* Check for overlapping entries.
+       */
+      SVN_ERR_ASSERT(entry->next == NO_INDEX ||
+                     entry->offset + entry->size
+                        <= get_entry(cache, entry->next)->offset);
+
+      /* Compare original content, type and key (hashes)
+       */
+      SVN_ERR(store_content_part(tag,
+                                 (const char*)cache->data + entry->offset,
+                                 entry->size,
+                                 pool));
+      SVN_ERR(assert_equal_tags(&entry->tag, tag));
+
+#endif
 
       err = deserializer(item,
                          (const char*)cache->data + entry->offset,
@@ -1081,6 +1278,13 @@ typedef struct svn_membuffer_cache_t
    */
   int alloc_counter;
 
+#ifdef DEBUG_CACHE_MEMBUFFER
+
+  /* Invariant tag info for all items stored by this cache instance.
+   */
+  char prefix_tail[PREFIX_TAIL_LEN];
+
+#endif
 } svn_membuffer_cache_t;
 
 /* After an estimated ALLOCATIONS_PER_POOL_CLEAR allocations, we should
@@ -1128,6 +1332,8 @@ svn_membuffer_cache_get(void **value_p,
   void *full_key;
   apr_size_t full_key_len;
 
+  DEBUG_CACHE_MEMBUFFER_INIT_TAG
+
   combine_key(cache->prefix,
               sizeof(cache->prefix),
               key,
@@ -1142,6 +1348,7 @@ svn_membuffer_cache_get(void **value_p,
                               full_key_len,
                               value_p,
                               cache->deserializer,
+                              DEBUG_CACHE_MEMBUFFER_TAG
                               pool));
 
   /* We don't need more the key anymore.
@@ -1172,6 +1379,8 @@ svn_membuffer_cache_set(void *cache_void,
   void *full_key;
   apr_size_t full_key_len;
 
+  DEBUG_CACHE_MEMBUFFER_INIT_TAG
+
   /* we do some allocations below, so increase the allocation counter
    * by a slightly larger amount. Free allocated memory every now and then.
    */
@@ -1201,6 +1410,7 @@ svn_membuffer_cache_set(void *cache_void,
                              full_key_len,
                              value,
                              cache->serializer,
+                             DEBUG_CACHE_MEMBUFFER_TAG
                              cache->pool);
 }
 
@@ -1231,6 +1441,8 @@ svn_membuffer_cache_get_partial(void **value_p,
   void *full_key;
   apr_size_t full_key_len;
 
+  DEBUG_CACHE_MEMBUFFER_INIT_TAG
+
   combine_key(cache->prefix,
               sizeof(cache->prefix),
               key,
@@ -1245,6 +1457,7 @@ svn_membuffer_cache_get_partial(void **value_p,
                                       value_p,
                                       func,
                                       baton,
+                                      DEBUG_CACHE_MEMBUFFER_TAG
                                       pool));
   *found = *value_p != NULL;
   return SVN_NO_ERROR;
@@ -1258,7 +1471,7 @@ svn_membuffer_cache_is_cachable(void *cache_void, apr_size_t size)
    * must be small enough to be stored in a 32 bit value.
    */
   svn_membuffer_cache_t *cache = cache_void;
-  return (size < cache->membuffer->data_size / 4 / CACHE_SEGMENTS)
+  return (size < cache->membuffer->data_size / 4)
       && (size < APR_UINT32_MAX - ITEM_ALIGNMENT);
 }
 
@@ -1268,8 +1481,8 @@ static svn_cache__vtable_t membuffer_cache_vtable = {
   svn_membuffer_cache_get,
   svn_membuffer_cache_set,
   svn_membuffer_cache_iter,
-  svn_membuffer_cache_get_partial,
-  svn_membuffer_cache_is_cachable
+  svn_membuffer_cache_is_cachable,
+  svn_membuffer_cache_get_partial
 };
 
 /* standard serialization function for svn_stringbuf_t items
@@ -1345,6 +1558,14 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
                        strlen(prefix),
                        pool));
   memcpy(cache->prefix, checksum->digest, sizeof(cache->prefix));
+
+#ifdef DEBUG_CACHE_MEMBUFFER
+
+  /* Initialize cache debugging support.
+   */
+  get_prefix_tail(prefix, cache->prefix_tail);
+
+#endif
 
   /* initialize the generic cache wrapper
    */

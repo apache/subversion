@@ -49,21 +49,24 @@ struct svn_wc__db_t {
   svn_boolean_t enforce_empty_wq;
 
   /* Map a given working copy directory to its relevant data.
-     const char *local_abspath -> svn_wc__db_pdh_t *pdh  */
+     const char *local_abspath -> svn_wc__db_wcroot_t *wcroot  */
   apr_hash_t *dir_data;
 
   /* As we grow the state of this DB, allocate that state here. */
   apr_pool_t *state_pool;
 };
 
+
 /* Hold information about an owned lock */
 typedef struct svn_wc__db_wclock_t
 {
   /* Relative path of the lock root */
   const char *local_relpath;
+
   /* Number of levels locked (0 for infinity) */
   int levels;
 } svn_wc__db_wclock_t;
+
 
 /** Hold information about a WCROOT.
  *
@@ -84,7 +87,7 @@ typedef struct svn_wc__db_wcroot_t {
      format has not (yet) been determined, this will be UNKNOWN_FORMAT.  */
   int format;
 
-  /* Array of svn_wc__db_wclock_t fields (not pointers!).
+  /* Array of svn_wc__db_wclock_t structures (not pointers!).
      Typically just one or two locks maximum. */
   apr_array_header_t *owned_locks;
 
@@ -94,30 +97,7 @@ typedef struct svn_wc__db_wcroot_t {
 
 } svn_wc__db_wcroot_t;
 
-/**  Pristine Directory Handle
- *
- * This structure records all the information that we need to deal with
- * a given working copy directory.
- */
-typedef struct svn_wc__db_pdh_t {
-
-  /* The absolute path to this working copy directory. */
-  const char *local_abspath;
-
-  /* What wcroot does this directory belong to?  */
-  svn_wc__db_wcroot_t *wcroot;
-
-} svn_wc__db_pdh_t;
-
-
 
-/* */
-svn_wc__db_pdh_t *
-svn_wc__db_pdh_get_or_create(svn_wc__db_t *db,
-                             const char *local_dir_abspath,
-                             svn_boolean_t create_allowed,
-                             apr_pool_t *scratch_pool);
-
 /* */
 svn_error_t *
 svn_wc__db_close_many_wcroots(apr_hash_t *roots,
@@ -138,28 +118,18 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
 
-/* For a given LOCAL_ABSPATH, figure out what sqlite database (PDH) to
+
+/* For a given LOCAL_ABSPATH, figure out what sqlite database (WCROOT) to
    use and the RELPATH within that wcroot.  If a sqlite database needs
    to be opened, then use SMODE for it.
 
    *LOCAL_RELPATH will be allocated within RESULT_POOL. Temporary allocations
    will be made in SCRATCH_POOL.
 
-   *PDH will be allocated within DB->STATE_POOL.
+   *WCROOT will be allocated within DB->STATE_POOL.
 
    Certain internal structures will be allocated in DB->STATE_POOL.
 */
-svn_error_t *
-svn_wc__db_pdh_parse_local_abspath(svn_wc__db_pdh_t **pdh,
-                                   const char **local_relpath,
-                                   svn_wc__db_t *db,
-                                   const char *local_abspath,
-                                   svn_sqlite__mode_t smode,
-                                   apr_pool_t *result_pool,
-                                   apr_pool_t *scratch_pool);
-
-/* Similar to svn_wc__db_pdh_parse_local_abspath(), but only return the WCROOT,
-   rather than a full PDH. */
 svn_error_t *
 svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
                                       const char **local_relpath,
@@ -169,15 +139,12 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
                                       apr_pool_t *result_pool,
                                       apr_pool_t *scratch_pool);
 
-/* POOL may be NULL if the lifetime of LOCAL_ABSPATH is sufficient.  */
-const char *
-svn_wc__db_pdh_compute_relpath(const svn_wc__db_pdh_t *pdh,
-                               apr_pool_t *result_pool);
 
 /* Assert that the given WCROOT is usable.
    NOTE: the expression is multiply-evaluated!!  */
 #define VERIFY_USABLE_WCROOT(wcroot)  SVN_ERR_ASSERT(               \
     (wcroot) != NULL && (wcroot)->format == SVN_WC__VERSION)
+
 
 /* */
 svn_error_t *

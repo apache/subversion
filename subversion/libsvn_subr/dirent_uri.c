@@ -2440,7 +2440,8 @@ svn_fspath__canonicalize(const char *fspath,
   if ((fspath[0] == '/') && (fspath[1] == '\0'))
     return "/";
 
-  return apr_pstrcat(pool, "/", svn_relpath_canonicalize(fspath, pool), NULL);
+  return apr_pstrcat(pool, "/", svn_relpath_canonicalize(fspath, pool),
+                     (char *)NULL);
 }
 
 
@@ -2571,7 +2572,7 @@ svn_fspath__get_longest_ancestor(const char *fspath1,
                        svn_relpath_get_longest_ancestor(fspath1 + 1,
                                                         fspath2 + 1,
                                                         result_pool),
-                       NULL);
+                       (char *)NULL);
 
   assert(svn_fspath__is_canonical(result));
   return result;

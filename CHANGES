@@ -35,6 +35,8 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * added '--parents' to 'svn update' (issue #3748)
     * allow configurable connection timeout in ra_serf (r876161)
     * add digest authentication in ra_serf (r876405)
+    * add extensive caching support to servers (r1067669, r1067675, r1072302)
+    * make server-side network data compression rate configurable (r1072288)
 
   - Client-side bugfixes:
     * 'svn cp A B; svn mv B C' is equivalent to 'svn cp A C' (issue #756)
@@ -63,6 +65,9 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * improve output of multi-target update (issue #3693)
     * make 'svn up --set-depth=exclude FILE' work (issue #3736)
     * return correct error code for 'svn cat' on nonexisting file (issue #3713)
+    * support svn:externals on locally added directories (issue #2267)
+    * use installed GSSAPI lib for Kerberos in ra_serf (r877381)
+    * don't let file externals make mixed-rev WCs on checkout (issue #3816)
     * fixed: wc-to-wc copy of a switch source (issue #1802)
     * fixed: 'svn st' reports symlinks as obstructed items (issue #2284)
     * fixed: 'cd e:\; svn up e:\' fails (issue #2556)
@@ -78,6 +83,7 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * fixed: ra_serf doesn't support http-auth-types config (issue #3435)
     * fixed: merge sets incorrect mergeinfo on skipped paths (issue #3440)
     * fixed: ra_serf inconsistent handling of cached authn creds (issue #3450)
+    * fixed: ra_serf sefault with using NTLM or Negotiate auth (r876910)
     * fixed: excluded subtrees are not detected by svnversion (issue #3461)
     * fixed: submitting a changelist while obstructed item exists (issue #3484)
     * fixed: crash when changing an external's URL (issue #3530)
@@ -90,6 +96,7 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * fixed: memory leaks in ra_serf (issue #3684)
     * fixed: corruption of 'svn pg' output for large properties (issue #3721)
     * fixed: 'svnsync copy-revprops' doesn't sync revprop dels (issue #3728)
+    * fixed: executable flag not correctly set on merge (issue #3686)
     * many other minor bugfixes, optimizations, plugs of memory leaks, etc
   
   - Server-side bugfixes:
@@ -112,14 +119,18 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
  Developer-visible changes:
   - General:
     * improved output of 'make check'
+    * introduce scratch_pool/result_pool parameter paradigm
+    * improved error tracing (r877208)
     * improve building with sqlite on Windows (issue #3364)
     * allow mod_dav_svn to compile against Apache 2.4 (issue #3548)
     * support running tests against older servers (r876016)
+    * notification of unversioned obstructions (r877344)
 
   - API changes:
     * don't crash svn_client_copy if ctx->log_msg_func is NULL (issue #3234)
     * much improved ra_serf error handling (issue #3375)
     * provide clients with old and new revision on update (r876515)
+    * close both files, even on error in svn_stream_copy3() (r887262)
     * added 'work-in-progress' XFail test status (r876549)
     * fixed: svn_ra_local__get_file() leaks file descriptors (issue #3290)
 
@@ -129,11 +140,19 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
 
 
 Version 1.6.16
-(?? Feb 2011, from /branches/1.6.x)
+(02 Mar 2011, from /branches/1.6.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.6.16
 
   User-visible changes:
    * more improvement to the 'blame -g' memory leak from 1.6.15 (r1041438)
+   * avoid a crash in mod_dav_svn when using locks (r1071239, -307)
+            See CVE-2011-0715, and descriptive advisory at
+            http://subversion.apache.org/security/CVE-2011-0715-advisory.txt
+   * avoid unnecessary globbing for performance (r1068988)
+   * don't add tree conflicts when one already exists (issue #3486)
+   * fix potential crash when requesting mergeinfo (r902467)
+   * don't attempt to resolve prop conflicts in 'merge --dry-run' (r880146)
+   * more fixes for issue #3270.
 
   Developer-visible changes:
    * ensure report_info_t is properly initialized by ra_serf (r1058722)
@@ -145,6 +164,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.16
    * use Perl to resolve symlinks when building swig-pl (r1039040)
    * allow Perl bindings to build within a symlinked working copy (r1036534)
    * don't overwrite the LD_LIBRARY_PATH during make check-swig-pl (r946355)
+   * improve unit tests for some fs functions (r1051744, -5, -3185, -241)
 
 
 Version 1.6.15

@@ -584,8 +584,8 @@ class WinGeneratorBase(GeneratorBase):
       for header in target.msvc_export:
         deps.append(self.path('subversion/include', header))
 
-      cbuild = "python $(InputPath) %s > %s" \
-               % (" ".join(deps), def_file)
+      cbuild = "%s $(InputPath) %s > %s" \
+               % (sys.executable, " ".join(deps), def_file)
 
       cdesc = 'Generating %s ' % def_file
 
@@ -889,6 +889,9 @@ class WinGeneratorBase(GeneratorBase):
 
     if target.name.endswith('svn_subr'):
       fakedefines.append("SVN_USE_WIN32_CRASHHANDLER")
+
+    # use static linking to Expat
+    fakedefines.append("XML_STATIC")
 
     return fakedefines
 

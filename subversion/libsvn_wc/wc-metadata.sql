@@ -494,6 +494,17 @@ CREATE VIEW NODES_CURRENT AS
       AND nodes.local_relpath = filter.local_relpath
       AND nodes.op_depth = filter.op_depth;
 
+/* Many queries have to filter the nodes table to pick only that version
+   of each node with the base (least "current") op_depth.  This view
+   does the heavy lifting for such queries. */
+CREATE VIEW NODES_BASE AS
+  SELECT * FROM nodes
+    JOIN (SELECT wc_id, local_relpath FROM nodes
+          GROUP BY wc_id, local_relpath) AS filter
+    ON nodes.wc_id = filter.wc_id
+      AND nodes.local_relpath = filter.local_relpath
+      AND nodes.op_depth = 0;
+
 -- STMT_CREATE_NODES_TRIGGERS
 
 CREATE TRIGGER nodes_insert_trigger
@@ -620,6 +631,22 @@ CREATE VIEW NODES_CURRENT AS
       AND nodes.op_depth = filter.op_depth;
 
 PRAGMA user_version = 25;
+
+/* ------------------------------------------------------------------------- */
+
+/* Format 26 introduces the NODES_BASE view. */
+
+-- STMT_UPGRADE_TO_26
+DROP VIEW IF EXISTS NODES_BASE;
+CREATE VIEW NODES_BASE AS
+  SELECT * FROM nodes
+    JOIN (SELECT wc_id, local_relpath FROM nodes
+          GROUP BY wc_id, local_relpath) AS filter
+    ON nodes.wc_id = filter.wc_id
+      AND nodes.local_relpath = filter.local_relpath
+      AND nodes.op_depth = 0;
+
+PRAGMA user_version = 26;
 
 /* ------------------------------------------------------------------------- */
 

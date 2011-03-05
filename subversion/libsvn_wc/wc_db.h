@@ -890,7 +890,11 @@ svn_wc__db_pristine_get_future_path(const char **pristine_abspath,
 
 
 /* Set *CONTENTS to a readable stream that will yield the pristine text
-   identified by CHECKSUM (### which should/must be its SHA-1 checksum?).
+   identified by SHA1_CHECKSUM (### which should/must be its SHA-1 checksum?)
+   within the WC identified by WRI_ABSPATH in DB.
+
+   Even if the pristine text is removed from the store while it is being
+   read, the stream will remain valid and readable until it is closed.
 
    Allocate the stream in RESULT_POOL. */
 svn_error_t *
@@ -1246,15 +1250,19 @@ svn_wc__db_op_revert_actual(svn_wc__db_t *db,
 /* Revert all local changes which are being maintained in the database,
  * including conflict storage, properties and text modification status.
  *
- * This is a non-recursive operation.
- *
  * Returns SVN_ERR_WC_INVALID_OPERATION_DEPTH if the revert is not
  * possible, e.g. copy/delete but not a root, or a copy root with
  * children.
+ *
+ * At present only depth=empty and depth=infinity are supported.
+ *
+ * ### Need to return the modified paths for notification.  An array
+ * ### or hash?  A temporary SQLite table?
  */
 svn_error_t *
 svn_wc__db_op_revert(svn_wc__db_t *db,
                      const char *local_abspath,
+                     svn_depth_t depth,
                      apr_pool_t *scratch_pool);
 
 
@@ -1584,10 +1592,12 @@ svn_wc__db_read_props(apr_hash_t **props,
 /* Call RECEIVER_FUNC, passing RECEIVER_BATON, an absolute path, and
  * a hash table mapping <tt>char *</tt> names onto svn_string_t *
  * values for any properties of file child nodes of LOCAL_ABSPATH.
+ * If PRISTINE is TRUE, read the pristine props (op_depth = 0).
  */
 svn_error_t *
 svn_wc__db_read_props_of_files(svn_wc__db_t *db,
                                const char *local_abspath,
+                               svn_boolean_t pristine,
                                svn_wc__proplist_receiver_t receiver_func,
                                void *receiver_baton,
                                svn_cancel_func_t cancel_func,
@@ -1597,10 +1607,12 @@ svn_wc__db_read_props_of_files(svn_wc__db_t *db,
 /* Call RECEIVER_FUNC, passing RECEIVER_BATON, an absolute path, and
  * a hash table mapping <tt>char *</tt> names onto svn_string_t *
  * values for any properties of immediate child nodes of LOCAL_ABSPATH.
+ * If PRISTINE is TRUE, read the pristine props (op_depth = 0).
  */
 svn_error_t *
 svn_wc__db_read_props_of_immediates(svn_wc__db_t *db,
                                     const char *local_abspath,
+                                    svn_boolean_t pristine,
                                     svn_wc__proplist_receiver_t receiver_func,
                                     void *receiver_baton,
                                     svn_cancel_func_t cancel_func,
@@ -1610,10 +1622,12 @@ svn_wc__db_read_props_of_immediates(svn_wc__db_t *db,
 /* Call RECEIVER_FUNC, passing RECEIVER_BATON, an absolute path, and
  * a hash table mapping <tt>char *</tt> names onto svn_string_t *
  * values for any properties of all (recursive) child nodes of LOCAL_ABSPATH.
+ * If PRISTINE is TRUE, read the pristine props (op_depth = 0).
  */
 svn_error_t *
 svn_wc__db_read_props_recursive(svn_wc__db_t *db,
                                 const char *local_abspath,
+                                svn_boolean_t pristine,
                                 svn_wc__proplist_receiver_t receiver_func,
                                 void *receiver_baton,
                                 svn_cancel_func_t cancel_func,
@@ -2485,6 +2499,26 @@ svn_wc__db_temp_below_work(svn_boolean_t *have_work,
                            const char *local_abspath,
                            apr_pool_t *scratch_pool);
 
+
+/* Set *MIN_REVISION and *MAX_REVISION to the lowest and highest revision
+ * numbers found within LOCAL_ABSPATH in the working copy using DB.
+ * Only nodes with op_depth zero and presence 'normal' or 'incomplete'
+ * are considered, so that added, deleted or excluded nodes do not affect
+ * the result. */
+svn_error_t *
+svn_wc__db_get_min_max_revisions(svn_revnum_t *min_revision,
+                                 svn_revnum_t *max_revision,
+                                 svn_wc__db_t *db,
+                                 const char *local_abspath,
+                                 apr_pool_t *scratch_pool);
+
+/* Indicate in *HAS_ABSENT_CHILDREN whether there are any absent children
+ * beneath LOCAL_ABSPATH in the working copy using DB. */
+svn_error_t *
+svn_wc__db_has_absent_children(svn_boolean_t *has_absent_children,
+                               svn_wc__db_t *db,
+                               const char *local_abspath,
+                               apr_pool_t *scratch_pool);
 
 /* @} */
 

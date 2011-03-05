@@ -2701,6 +2701,7 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
   svn_ra_serf__handler_t *handler;
   const char *fetch_url;
   apr_hash_t *fetch_props;
+  svn_node_kind_t res_kind;
 
   /* What connection should we go on? */
   conn = session->conns[session->cur_conn];
@@ -2726,13 +2727,24 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
       revision = SVN_INVALID_REVNUM;
     }
 
+  SVN_ERR(svn_ra_serf__retrieve_props(fetch_props, session, conn, fetch_url,
+                                      revision, "0",
+                                      props ? all_props : check_path_props,
+                                      pool));
+
+  /* Verify that resource type is not colelction. */
+  SVN_ERR(svn_ra_serf__get_resource_type(&res_kind, fetch_props, fetch_url,
+                                         revision));
+  if (res_kind != svn_node_file)
+    {
+      return svn_error_create(SVN_ERR_FS_NOT_FILE, NULL,
+                              _("Can't get text contents of a directory"));
+    }
+
   /* TODO Filter out all of our props into a usable format. */
   if (props)
     {
       *props = apr_hash_make(pool);
-
-      SVN_ERR(svn_ra_serf__retrieve_props(fetch_props, session, conn, fetch_url,
-                                          revision, "0", all_props, pool));
 
       SVN_ERR(svn_ra_serf__walk_all_props(fetch_props, fetch_url, revision,
                                           svn_ra_serf__set_flat_props, *props, pool));

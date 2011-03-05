@@ -162,8 +162,9 @@ send_file_contents(const char *path,
     }
 
   /* Send the file's contents to the delta-window handler. */
-  return svn_txdelta_send_stream(contents, handler, handler_baton,
-                                 digest, pool);
+  return svn_error_return(svn_txdelta_send_stream(contents, handler,
+                                                  handler_baton, digest,
+                                                  pool));
 }
 
 
