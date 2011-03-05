@@ -287,7 +287,7 @@ svn_temp_deserializer__resolve(void *buffer, void **ptr)
        * Thus, all offsets are > 0. If the following assertion is not met,
        * the data is either corrupt or you tried to resolve the pointer
        * more than once. */
-      assert(target > buffer);
+      assert(target > (const char *)buffer);
 
       /* replace the PTR_OFFSET in *ptr with the pointer to TARGET */
       (*(const char **)ptr) = target;
