@@ -34,6 +34,16 @@ svn_cache__set_error_handler(svn_cache__t *cache,
   return SVN_NO_ERROR;
 }
 
+svn_boolean_t
+svn_cache__is_cachable(svn_cache__t *cache,
+                       apr_size_t size)
+{
+  /* having no cache means we can't cache anything */
+  if (cache == NULL)
+    return FALSE;
+
+  return cache->vtable->is_cachable(cache->cache_internal, size);
+}
 
 /* Give the error handler callback a chance to replace or ignore the
    error. */

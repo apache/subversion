@@ -3309,6 +3309,18 @@ get_combined_window(svn_txdelta_window_t **result,
   return SVN_NO_ERROR;
 }
 
+/* Returns whether or not the expanded fulltext of the file is cachable
+ * based on its size SIZE.  The decision depends on the cache used by RB.
+ */
+static svn_boolean_t
+fulltext_size_is_cachable(fs_fs_data_t *ffd, svn_filesize_t size)
+{
+  return (size < APR_SIZE_MAX)
+      && svn_cache__is_cachable(ffd->fulltext_cache, (apr_size_t)size);
+}
+
+/* Close method used on streams returned by read_representation().
+ */
 static svn_error_t *
 rep_read_contents_close(void *baton)
 {
@@ -3517,18 +3529,6 @@ rep_read_contents(void *baton,
 }
 
 
-/* Returns whether or not the expanded fulltext of the file is
- * cachable based on its size SIZE.  Specifically, if it will fit
- * into a memcached value.  The memcached cutoff seems to be a bit
- * (header length?) under a megabyte; we round down a little to be
- * safe.
- */
-static svn_boolean_t
-fulltext_size_is_cachable(svn_filesize_t size)
-{
-  return size < 1000000;
-}
-
 /* Return a stream in *CONTENTS_P that will read the contents of a
    representation stored at the location given by REP.  Appropriate
    for any kind of immutable representation, but only for file
@@ -3555,7 +3555,7 @@ read_representation(svn_stream_t **contents_p,
       struct rep_read_baton *rb;
 
       if (ffd->fulltext_cache && SVN_IS_VALID_REVNUM(rep->revision)
-          && fulltext_size_is_cachable(rep->expanded_size))
+          && fulltext_size_is_cachable(ffd, rep->expanded_size))
         {
           svn_string_t *fulltext;
           svn_boolean_t is_cached;
