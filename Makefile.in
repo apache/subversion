@@ -534,7 +534,6 @@ mkdir-init:
 	@list='$(BUILD_DIRS) $(SCHEMA_DIR) doc';         \
         for i in $$list; do                              \
             if [ ! -d $$i ]; then                        \
-                echo "$(MKDIR) $$i" ;                    \
                 $(MKDIR) $$i ;                           \
             fi;                                          \
         done
