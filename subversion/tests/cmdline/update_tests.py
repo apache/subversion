@@ -5360,6 +5360,29 @@ def update_nonexistent_child_of_copy(sbox):
   # Try updating a deleted path in the copied dir.
   svntest.main.run_svn(None, 'delete', os.path.join('A2', 'mu'))
   svntest.main.run_svn(None, 'update', os.path.join('A2', 'mu'))
+  if os.path.exists('A2/mu'):
+    raise svntest.Failure("A2/mu improperly revived")
+
+@XFail()
+@Issue(3807)
+def revive_children_of_copy(sbox):
+  """undelete a child of a copied dir"""
+  sbox.build()
+  os.chdir(sbox.wc_dir)
+
+  chi2_path = os.path.join('A2/D/H/chi')
+  psi2_path = os.path.join('A2/D/H/psi')
+
+  svntest.main.run_svn(None, 'copy', 'A', 'A2')
+  svntest.main.run_svn(None, 'rm', chi2_path)
+  os.unlink(psi2_path)
+
+  svntest.main.run_svn(None, 'revert', chi2_path, psi2_path)
+  if not os.path.exists(chi2_path):
+    raise svntest.Failure('chi unexpectedly non-existent')
+  if not os.path.exists(psi2_path):
+    raise svntest.Failure('psi unexpectedly non-existent')
+  
 
 #######################################################################
 # Run the tests
@@ -5425,6 +5448,7 @@ test_list = [ None,
               update_with_excluded_subdir,
               update_with_file_lock_and_keywords_property_set,
               update_nonexistent_child_of_copy,
+              revive_children_of_copy,
              ]
 
 if __name__ == '__main__':
