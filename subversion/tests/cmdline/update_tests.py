@@ -5346,7 +5346,6 @@ def update_with_file_lock_and_keywords_property_set(sbox):
 # Updating a nonexistent or deleted path should be a successful no-op,
 # when there is no incoming change.  In trunk@1035343, such an update
 # within a copied directory triggered an assertion failure.
-@XFail()
 @Issue(3807)
 def update_nonexistent_child_of_copy(sbox):
   """update a nonexistent child of a copied dir"""
