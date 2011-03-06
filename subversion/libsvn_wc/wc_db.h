@@ -1238,7 +1238,8 @@ svn_wc__db_op_mark_resolved(svn_wc__db_t *db,
 
 
 /* Revert all local changes which are being maintained in the database,
- * including conflict storage, properties and text modification status.
+ * including conflict storage, properties and text modification status,
+ * but excluding changelist association.
  */
 svn_error_t *
 svn_wc__db_op_revert_actual(svn_wc__db_t *db,

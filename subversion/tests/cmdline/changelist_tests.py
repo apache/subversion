@@ -1157,7 +1157,6 @@ def change_to_dir(sbox):
   svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
 
 
-@XFail()
 @Issue(3822)
 def revert_deleted_in_changelist(sbox):
   "revert a deleted file in a changelist"

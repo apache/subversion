@@ -3523,7 +3523,7 @@ svn_wc__db_op_revert_actual(svn_wc__db_t *db,
   VERIFY_USABLE_WCROOT(wcroot);
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_DELETE_ACTUAL_NODE));
+                                STMT_DELETE_ACTUAL_NODE_LEAVING_CHANGELIST));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
 
