@@ -730,7 +730,6 @@ svn_wc__db_pristine_check(svn_boolean_t *present,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  const char *pristine_abspath;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
 
@@ -760,6 +759,7 @@ svn_wc__db_pristine_check(svn_boolean_t *present,
   /* Check that the pristine text file exists iff the DB says it does. */
   if (have_row)
     {
+      const char *pristine_abspath;
       svn_node_kind_t kind_on_disk;
       SVN_ERR(get_pristine_fname(&pristine_abspath, wcroot->abspath,
                                  sha1_checksum, FALSE /* create_subdir */,
