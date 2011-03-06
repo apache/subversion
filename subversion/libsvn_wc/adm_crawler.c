@@ -786,7 +786,8 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
         status = svn_wc__db_status_not_present; /* As checkout */
     }
 
-  if ((status == svn_wc__db_status_not_present)
+  if (status == svn_wc__db_status_not_present
+      || status == svn_wc__db_status_absent
       || (target_kind == svn_wc__db_kind_dir
           && status != svn_wc__db_status_normal
           && status != svn_wc__db_status_incomplete))

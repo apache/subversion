@@ -600,9 +600,33 @@ make_dir_baton(struct dir_baton **d_p,
         {
           /* Get the original REPOS_RELPATH. An update will not be
              changing its value.  */
-          SVN_ERR(svn_wc__db_scan_base_repos(&d->new_relpath, NULL, NULL,
+          svn_wc__db_status_t status;
+          const char *repos_relpath, *original_repos_relpath;
+          SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, &repos_relpath,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL,
+                                       &original_repos_relpath,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL,
+                                       eb->db, d->local_abspath,
+                                       dir_pool, scratch_pool));
+          if (status == svn_wc__db_status_added)
+            SVN_ERR(svn_wc__db_scan_addition(NULL, NULL,
+                                             &repos_relpath, NULL, NULL,
+                                             &original_repos_relpath, NULL, NULL,
+                                             NULL,
                                              eb->db, d->local_abspath,
                                              dir_pool, scratch_pool));
+
+          if (original_repos_relpath)
+            d->new_relpath = original_repos_relpath;
+          else if (repos_relpath)
+            d->new_relpath = repos_relpath;
+          else
+            SVN_ERR(svn_wc__db_scan_base_repos(&d->new_relpath, NULL, NULL,
+                                               eb->db, d->local_abspath,
+                                               dir_pool, scratch_pool));
+          SVN_ERR_ASSERT(d->new_relpath);
         }
     }
 
@@ -4830,17 +4854,27 @@ make_editor(svn_revnum_t *target_revision,
   svn_delta_editor_t *tree_editor = svn_delta_default_editor(edit_pool);
   const svn_delta_editor_t *inner_editor;
   const char *repos_root, *repos_uuid;
+  svn_wc__db_status_t status;
 
   /* An unknown depth can't be sticky. */
   if (depth == svn_depth_unknown)
     depth_is_sticky = FALSE;
 
   /* Get the anchor's repository root and uuid. */
-  SVN_ERR(svn_wc__db_read_info(NULL,NULL, NULL, NULL, &repos_root, &repos_uuid,
+  SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL,
+                               &repos_root, &repos_uuid,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, wc_ctx->db, anchor_abspath,
                                result_pool, scratch_pool));
+  
+  /* ### For adds, REPOS_ROOT and REPOS_UUID would be NULL now. */
+  if (status == svn_wc__db_status_added)
+    SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL,
+                                     &repos_root, &repos_uuid,
+                                     NULL, NULL, NULL, NULL,
+                                     wc_ctx->db, anchor_abspath,
+                                     result_pool, scratch_pool));
 
   /* With WC-NG we need a valid repository root */
   SVN_ERR_ASSERT(repos_root != NULL && repos_uuid != NULL);
