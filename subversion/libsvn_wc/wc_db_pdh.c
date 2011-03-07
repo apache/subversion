@@ -118,7 +118,7 @@ get_path_kind(svn_wc__db_t *db,
     }
 
   abspath_size = strlen(local_abspath);
-  if (abspath_size > cache_size)
+  if (abspath_size >= cache_size)
     {
       free(cached_abspath);
       cache_size = abspath_size * 2;
