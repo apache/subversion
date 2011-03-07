@@ -85,6 +85,55 @@ get_old_version(int *version,
 }
 
 
+/* A helper function to parse_local_abspath() which returns the on-disk KIND
+   of LOCAL_ABSPATH, using DB and SCRATCH_POOL as needed.
+   
+   This function may do strange things, but at long as it comes up with the
+   Right Answer, we should be happy.  */
+static svn_error_t *
+get_path_kind(svn_wc__db_t *db,
+              const char *local_abspath,
+              svn_node_kind_t *kind,
+              apr_pool_t *scratch_pool)
+{
+  static char *cached_abspath = NULL;
+  static size_t cache_size = 0;
+  static svn_node_kind_t cached_kind;
+
+  svn_boolean_t special;
+  size_t abspath_size;
+
+  /* This implements a *really* simple LRU cache, where "simple" is defined
+     as "only one element".  In other words, we remember the most recently
+     queried path, and nothing else.  This gives >80% cache hits.
+     
+     Using malloc()/free() divorces us from the db->state_pool, and a set
+     of possible memory leaks associated with using it.  */
+
+  if (cached_abspath && strcmp(cached_abspath, local_abspath) == 0)
+    {
+      /* Cache hit! */
+      *kind = cached_kind;
+      return SVN_NO_ERROR;
+    }
+
+  abspath_size = strlen(local_abspath);
+  if (abspath_size > cache_size)
+    {
+      free(cached_abspath);
+      cache_size = abspath_size * 2;
+      cached_abspath = malloc(cache_size);
+    }
+  strcpy(cached_abspath, local_abspath);
+
+  SVN_ERR(svn_io_check_special_path(local_abspath, &cached_kind,
+                                    &special /* unused */, scratch_pool));
+  *kind = cached_kind;
+
+  return SVN_NO_ERROR;
+}
+
+
 /* */
 static svn_error_t *
 verify_no_work(svn_sqlite__db_t *sdb)
@@ -307,7 +356,6 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
   const char *local_dir_abspath;
   const char *original_abspath = local_abspath;
   svn_node_kind_t kind;
-  svn_boolean_t special;
   const char *build_relpath;
   svn_wc__db_wcroot_t *probe_wcroot;
   svn_wc__db_wcroot_t *found_wcroot = NULL;
@@ -351,8 +399,7 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
      ### rid of this stat() call. it is going to happen for EVERY call
      ### into wc_db which references a file. calls for directories could
      ### get an early-exit in the hash lookup just above.  */
-  SVN_ERR(svn_io_check_special_path(local_abspath, &kind,
-                                    &special /* unused */, scratch_pool));
+  SVN_ERR(get_path_kind(db, local_abspath, &kind, scratch_pool));
   if (kind != svn_node_dir)
     {
       /* If the node specified by the path is NOT present, then it cannot
