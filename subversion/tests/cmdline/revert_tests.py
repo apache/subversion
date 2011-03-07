@@ -1046,7 +1046,7 @@ def revert_child_of_copy(sbox):
 def revert_non_recusive_after_delete(sbox):
   "non-recursive revert after delete"
 
-  sbox.build()
+  sbox.build(read_only=True)
   wc_dir = sbox.wc_dir
 
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', sbox.ospath('A/B'))
