@@ -437,7 +437,7 @@ svn_wc__wq_add_revert(svn_boolean_t *will_revert,
 
   if (status == svn_wc__db_status_added)
     {
-      /* When looking at an added, non-replacing node, it's entry
+      /* When looking at an added, non-replacing node, its entry
          will have to be removed after revert: if not, it'll look
          like it's still under version control. */
       const char *op_root_abspath;
