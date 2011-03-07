@@ -2164,6 +2164,64 @@ err_dangling_id(svn_fs_t *fs, const svn_fs_id_t *id)
      id_str->data, fs->path);
 }
 
+/* Return a string that uniquely identifies the noderev with the
+ * given ID, for use as a cache key.
+ */
+static const char *
+get_noderev_cache_key(const svn_fs_id_t *id, apr_pool_t *pool)
+{
+  const svn_string_t *id_unparsed = svn_fs_fs__id_unparse(id, pool);
+  return id_unparsed->data;
+}
+
+/* Look up the NODEREV_P for ID in FS' node revsion cache. If noderev 
+ * caching has been enabled and the data can be found, IS_CACHED will
+ * be set to TRUE. The noderev will be allocated from POOL.
+ *
+ * Non-permanent ids (e.g. ids within a TXN) will not be cached.
+ */
+static svn_error_t *
+get_cached_node_revision_body(node_revision_t **noderev_p,
+                              svn_fs_t *fs,
+                              const svn_fs_id_t *id,
+                              svn_boolean_t *is_cached,
+                              apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  if (! ffd->node_revision_cache || svn_fs_fs__id_txn_id(id))
+    *is_cached = FALSE;
+  else
+    SVN_ERR(svn_cache__get((void **) noderev_p,
+                           is_cached,
+                           ffd->node_revision_cache,
+                           get_noderev_cache_key(id, pool),
+                           pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* If noderev caching has been enabled, store the NODEREV_P for the given ID
+ * in FS' node revsion cache. SCRATCH_POOL is used for temporary allcations.
+ *
+ * Non-permanent ids (e.g. ids within a TXN) will not be cached.
+ */
+static svn_error_t *
+set_cached_node_revision_body(node_revision_t *noderev_p,
+                              svn_fs_t *fs,
+                              const svn_fs_id_t *id,
+                              apr_pool_t *scratch_pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  if (ffd->node_revision_cache && !svn_fs_fs__id_txn_id(id))
+    return svn_cache__set(ffd->node_revision_cache,
+                          get_noderev_cache_key(id, scratch_pool),
+                          noderev_p,
+                          scratch_pool);
+
+  return SVN_NO_ERROR;
+}
+
 /* Get the node-revision for the node ID in FS.
    Set *NODEREV_P to the new node-revision structure, allocated in POOL.
    See svn_fs_fs__get_node_revision, which wraps this and adds another
@@ -2176,6 +2234,12 @@ get_node_revision_body(node_revision_t **noderev_p,
 {
   apr_file_t *revision_file;
   svn_error_t *err;
+  svn_boolean_t is_cached = FALSE;
+
+  /* First, try a cache lookup. If that succeeds, we are done here. */
+  SVN_ERR(get_cached_node_revision_body(noderev_p, fs, id, &is_cached, pool));
+  if (is_cached)
+    return SVN_NO_ERROR;
 
   if (svn_fs_fs__id_txn_id(id))
     {
@@ -2203,10 +2267,13 @@ get_node_revision_body(node_revision_t **noderev_p,
       return svn_error_return(err);
     }
 
-  return svn_fs_fs__read_noderev(noderev_p,
-                                 svn_stream_from_aprfile2(revision_file, FALSE,
-                                                          pool),
-                                 pool);
+  SVN_ERR(svn_fs_fs__read_noderev(noderev_p,
+                                  svn_stream_from_aprfile2(revision_file, FALSE,
+                                                           pool),
+                                  pool));
+
+  /* The noderev is not in cache, yet. Add it, if caching has been enabled. */
+  return set_cached_node_revision_body(*noderev_p, fs, id, pool);
 }
 
 svn_error_t *
