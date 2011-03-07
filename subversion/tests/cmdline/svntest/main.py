@@ -1274,6 +1274,7 @@ class TestRunner:
       # *is* information in the exception's arguments, then print it.
       if ex.__class__ != Failure or ex.args:
         ex_args = str(ex)
+        print('CWD: %s' % os.getcwd())
         if ex_args:
           print('EXCEPTION: %s: %s' % (ex.__class__.__name__, ex_args))
         else:
@@ -1289,6 +1290,7 @@ class TestRunner:
       raise
     except:
       result = svntest.testcase.RESULT_FAIL
+      print('CWD: %s' % os.getcwd())
       print('UNEXPECTED EXCEPTION:')
       traceback.print_exc(file=sys.stdout)
       sys.stdout.flush()
