@@ -121,7 +121,7 @@ get_path_kind(svn_wc__db_t *db,
   if (abspath_size >= cache_size)
     {
       free(cached_abspath);
-      cache_size = abspath_size * 2;
+      cache_size = abspath_size * 2 + 1;
       cached_abspath = malloc(cache_size);
     }
   strcpy(cached_abspath, local_abspath);
