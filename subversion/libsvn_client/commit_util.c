@@ -349,9 +349,9 @@ bail_on_tree_conflicted_ancestor(svn_wc_context_t *wc_ctx,
    lock tokens as commit candidates.
 
    If in COPY_MODE, treat the entry as if it is destined to be added
-   with history as URL, and add 'deleted' entries to COMMITTABLES as
-   items to delete in the copy destination.  URL must be NULL if not in
-   COPY_MODE.  COPY_MODE_ROOT should be set TRUE for the first call for
+   with history as REPOS_RELPATH, and add 'deleted' entries to COMMITTABLES as
+   items to delete in the copy destination. REPOS_RELPATH must be NULL if not
+   in COPY_MODE.  COPY_MODE_ROOT should be set TRUE for the first call for
    which COPY_MODE is TRUE, i.e. not for for the recursive calls, and FALSE
    otherwise.
 
