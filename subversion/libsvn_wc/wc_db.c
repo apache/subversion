@@ -7352,6 +7352,7 @@ svn_wc__db_temp_forget_directory(svn_wc__db_t *db,
 {
   apr_hash_t *roots = apr_hash_make(scratch_pool);
   apr_hash_index_t *hi;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   for (hi = apr_hash_first(scratch_pool, db->dir_data);
        hi;
@@ -7364,7 +7365,9 @@ svn_wc__db_temp_forget_directory(svn_wc__db_t *db,
       if (!svn_dirent_is_ancestor(local_dir_abspath, local_abspath))
         continue;
 
-      err = svn_wc__db_wclock_release(db, local_abspath, scratch_pool);
+      svn_pool_clear(iterpool);
+
+      err = svn_wc__db_wclock_release(db, local_abspath, iterpool);
       if (err
           && (err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY
               || err->apr_err == SVN_ERR_WC_NOT_LOCKED))
