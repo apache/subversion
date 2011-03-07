@@ -1056,12 +1056,15 @@ svn_sqlite__with_lock(svn_sqlite__db_t *db,
   svn_error_t *err2;
   int savepoint = db->savepoint_nr++;
   const char *release_stmt;
+  /* This buffer is plenty big to hold the SAVEPOINT and RELEASE commands. */
+  char buf[32];
 
-  SVN_ERR(exec_sql(db,
-                   apr_psprintf(scratch_pool, "SAVEPOINT s%u;", savepoint)));
+  snprintf(buf, sizeof(buf), "SAVEPOINT s%u", savepoint);
+  SVN_ERR(exec_sql(db, buf));
   err = cb_func(cb_baton, db, scratch_pool);
 
-  release_stmt = apr_psprintf(scratch_pool, "RELEASE s%u;", savepoint);
+  snprintf(buf, sizeof(buf), "RELEASE   s%u", savepoint);
+  release_stmt = buf;
   err2 = exec_sql(db, release_stmt);
 
   if (err2 && err2->apr_err == SVN_ERR_SQLITE_BUSY)
