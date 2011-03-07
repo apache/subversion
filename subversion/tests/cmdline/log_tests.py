@@ -1875,7 +1875,6 @@ def merge_sensitive_log_reverse_merges(sbox):
 
 @SkipUnless(server_has_mergeinfo)
 @Issue(3650)
-@XFail()
 def merge_sensitive_log_ignores_cyclic_merges(sbox):
   "log -g should ignore cyclic merges"
 
@@ -1948,10 +1947,8 @@ def merge_sensitive_log_ignores_cyclic_merges(sbox):
   svntest.main.run_svn(None, 'ci', '-m', '2nd reintegrate of A_COPY to A',
                        wc_dir)
 
-  # Run 'svn log -g A'.  This currently fails because r13, r10, r6, r5, r4,
-  # and r3 are all reported normally (i.e. as part of A's own history), but
-  # they are *also* reported several times as merged via the the
-  # [sync|reintegrate|record-only] merges between A and A_COPY.
+  # Run 'svn log -g A'.  We expect to see r13, r10, r6, r5, r4, and r3 only
+  # once, as part of A's own history, not as merged in from A_COPY.
   expected_merges = {
     15 : [],
     14 : [15],

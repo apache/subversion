@@ -37,6 +37,8 @@
 #include "svn_props.h"
 #include "svn_mergeinfo.h"
 #include "repos.h"
+#include "private/svn_fspath.h"
+#include "private/svn_mergeinfo_private.h"
 
 
 
@@ -992,22 +994,29 @@ fill_log_entry(svn_log_entry_t *log_entry,
 }
 
 /* Send a log message for REV to RECEIVER with its RECEIVER_BATON.
- *
- * FS is used with REV to fetch the interesting history information,
- * such as changed paths, revprops, etc.
- *
- * The detect_changed function is used if either AUTHZ_READ_FUNC is
- * not NULL, or if DISCOVER_CHANGED_PATHS is TRUE.  See it for details.
- *
- * If DESCENDING_ORDER is true, send child messages in descending order.
- *
- * If REVPROPS is NULL, retrieve all revprops; else, retrieve only the
- * revprops named in the array (i.e. retrieve none if the array is empty).
- */
+
+   FS is used with REV to fetch the interesting history information,
+   such as changed paths, revprops, etc.
+
+   The detect_changed function is used if either AUTHZ_READ_FUNC is
+   not NULL, or if DISCOVER_CHANGED_PATHS is TRUE.  See it for details.
+
+   If DESCENDING_ORDER is true, send child messages in descending order.
+
+   If REVPROPS is NULL, retrieve all revprops; else, retrieve only the
+   revprops named in the array (i.e. retrieve none if the array is empty).
+
+   LOG_TARGET_HISTORY_AS_MERGEINFO and HANDLING_MERGED_REVISIONS are as
+   per the arguments of the same name to DO_LOGS.  If
+   HANDLING_MERGED_REVISIONS is true and *all* changed paths within REV are
+   already represented in LOG_TARGET_HISTORY_AS_MERGEINFO, then don't send
+   the log message for REV. */
 static svn_error_t *
 send_log(svn_revnum_t rev,
          svn_fs_t *fs,
+         svn_mergeinfo_t log_target_history_as_mergeinfo,
          svn_boolean_t discover_changed_paths,
+         svn_boolean_t handling_merged_revision,
          const apr_array_header_t *revprops,
          svn_boolean_t has_children,
          svn_log_entry_receiver_t receiver,
@@ -1017,15 +1026,96 @@ send_log(svn_revnum_t rev,
          apr_pool_t *pool)
 {
   svn_log_entry_t *log_entry;
+  /* Assume we want to send the log for REV. */
+  svn_boolean_t found_rev_of_interest = TRUE;
 
   log_entry = svn_log_entry_create(pool);
-  SVN_ERR(fill_log_entry(log_entry, rev, fs, discover_changed_paths,
+  SVN_ERR(fill_log_entry(log_entry, rev, fs,
+                         discover_changed_paths || handling_merged_revision,
                          revprops, authz_read_func, authz_read_baton,
                          pool));
   log_entry->has_children = has_children;
 
-  /* Send the entry to the receiver. */
-  return (*receiver)(receiver_baton, log_entry, pool);
+  /* Is REV a merged revision that is already part of
+     LOG_TARGET_HISTORY_AS_MERGEINFO?  If so then there is no
+     need to send it, since it already was (or will be) sent. */
+  if (handling_merged_revision
+      && log_entry->changed_paths2
+      && log_target_history_as_mergeinfo
+      && apr_hash_count(log_target_history_as_mergeinfo))
+    {
+      svn_boolean_t path_is_in_history = FALSE;
+      apr_hash_index_t *hi;
+      apr_pool_t *subpool = svn_pool_create(pool);
+
+      /* REV was merged in, but it might already be part of the log target's
+         natural history, so change our starting assumption. */
+      found_rev_of_interest = FALSE;
+
+      /* Look at each changed path in REV. */
+      for (hi = apr_hash_first(subpool, log_entry->changed_paths2);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+          const char *changed_path = svn__apr_hash_index_key(hi);
+          apr_hash_index_t *hi2;
+          apr_pool_t *inner_subpool = svn_pool_create(subpool);
+
+          for (hi2 = apr_hash_first(inner_subpool,
+                                    log_target_history_as_mergeinfo);
+               hi2;
+               hi2 = apr_hash_next(hi2))
+            {
+              const char *mergeinfo_path =
+                svn__apr_hash_index_key(hi2);
+              apr_array_header_t *rangelist =
+                svn__apr_hash_index_val(hi2);
+
+              if (svn_fspath__is_ancestor(mergeinfo_path,
+                                          changed_path))
+                {
+                  int i;
+
+                  for (i = 0; i < rangelist->nelts; i++)
+                    {
+                      svn_merge_range_t *range =
+                        APR_ARRAY_IDX(rangelist, i,
+                                      svn_merge_range_t *);
+                      if (rev > range->start && rev <= range->end)
+                        {
+                          path_is_in_history = TRUE;
+                          break;
+                        }
+                    }
+                }
+              if (path_is_in_history)
+                break;
+            }
+          svn_pool_destroy(inner_subpool);
+
+          if (!path_is_in_history)
+            {
+              /* If even one path in LOG_ENTRY->CHANGED_PATHS2 is not part of
+                 LOG_TARGET_HISTORY_AS_MERGEINFO, then we want to send the
+                 log for REV. */
+              found_rev_of_interest = TRUE;
+              break;
+            }
+        }
+      svn_pool_destroy(subpool);
+    }
+    
+  /* If we only got changed paths the sake of detecting redundant merged
+     revisions, then be sure we don't send that info to the receiver. */
+  if (!discover_changed_paths && handling_merged_revision)
+    log_entry->changed_paths = log_entry->changed_paths2 = NULL;
+
+  /* Send the entry to the receiver, unless it is a redundant merged
+     revision. */
+  if (found_rev_of_interest)
+    return (*receiver)(receiver_baton, log_entry, pool);
+  else
+    return SVN_NO_ERROR;
 }
 
 /* This controls how many history objects we keep open.  For any targets
@@ -1355,12 +1445,14 @@ combine_mergeinfo_path_lists(apr_array_header_t **combined_list,
 static svn_error_t *
 do_logs(svn_fs_t *fs,
         const apr_array_header_t *paths,
+        svn_mergeinfo_t log_target_history_as_mergeinfo,
         svn_revnum_t hist_start,
         svn_revnum_t hist_end,
         int limit,
         svn_boolean_t discover_changed_paths,
         svn_boolean_t strict_node_history,
         svn_boolean_t include_merged_revisions,
+        svn_boolean_t handling_merged_revisions,
         svn_boolean_t ignore_missing_locations,
         const apr_array_header_t *revprops,
         svn_boolean_t descending_order,
@@ -1384,6 +1476,7 @@ do_logs(svn_fs_t *fs,
 static svn_error_t *
 handle_merged_revisions(svn_revnum_t rev,
                         svn_fs_t *fs,
+                        svn_mergeinfo_t log_target_history_as_mergeinfo,
                         svn_mergeinfo_t mergeinfo,
                         svn_boolean_t discover_changed_paths,
                         svn_boolean_t strict_node_history,
@@ -1413,9 +1506,10 @@ handle_merged_revisions(svn_revnum_t rev,
         = APR_ARRAY_IDX(combined_list, i, struct path_list_range *);
 
       svn_pool_clear(iterpool);
-      SVN_ERR(do_logs(fs, pl_range->paths, pl_range->range.start,
-                      pl_range->range.end, 0, discover_changed_paths,
-                      strict_node_history, TRUE, TRUE, revprops, TRUE,
+      SVN_ERR(do_logs(fs, pl_range->paths, log_target_history_as_mergeinfo,
+                      pl_range->range.start, pl_range->range.end, 0,
+                      discover_changed_paths, strict_node_history,
+                      TRUE, TRUE, TRUE, revprops, TRUE,
                       receiver, receiver_baton, authz_read_func,
                       authz_read_baton, iterpool));
     }
@@ -1435,17 +1529,26 @@ handle_merged_revisions(svn_revnum_t rev,
    If IGNORE_MISSING_LOCATIONS is set, don't treat requests for bogus
    repository locations as fatal -- just ignore them.
 
+   If LOG_TARGET_HISTORY_AS_MERGEINFO is not NULL then it contains mergeinfo
+   representing the history of PATHS between HIST_START and HIST_END.
+
+   If HANDLING_MERGED_REVISIONS is TRUE then this is a recursive call for
+   merged revisions, see INCLUDE_MERGED_REVISIONS argument to
+   svn_repos_get_logs4().
+
    Other parameters are the same as svn_repos_get_logs4().
  */
 static svn_error_t *
 do_logs(svn_fs_t *fs,
         const apr_array_header_t *paths,
+        svn_mergeinfo_t log_target_history_as_mergeinfo,
         svn_revnum_t hist_start,
         svn_revnum_t hist_end,
         int limit,
         svn_boolean_t discover_changed_paths,
         svn_boolean_t strict_node_history,
         svn_boolean_t include_merged_revisions,
+        svn_boolean_t handling_merged_revisions,
         svn_boolean_t ignore_missing_locations,
         const apr_array_header_t *revprops,
         svn_boolean_t descending_order,
@@ -1530,18 +1633,25 @@ do_logs(svn_fs_t *fs,
              in anyway). */
           if (descending_order)
             {
-              SVN_ERR(send_log(current, fs, discover_changed_paths,
-                               revprops, has_children, receiver, receiver_baton,
+              SVN_ERR(send_log(current, fs,
+                               log_target_history_as_mergeinfo,
+                               discover_changed_paths,
+                               handling_merged_revisions, revprops,
+                               has_children, receiver, receiver_baton,
                                authz_read_func, authz_read_baton, iterpool));
               if (has_children)
                 {
-                  SVN_ERR(handle_merged_revisions(current, fs, mergeinfo,
-                                                  discover_changed_paths,
-                                                  strict_node_history, revprops,
-                                                  receiver, receiver_baton,
-                                                  authz_read_func,
-                                                  authz_read_baton,
-                                                  iterpool));
+                  SVN_ERR(handle_merged_revisions(
+                    current, fs,
+                    log_target_history_as_mergeinfo,
+                    mergeinfo,
+                    discover_changed_paths,
+                    strict_node_history,
+                    revprops,
+                    receiver, receiver_baton,
+                    authz_read_func,
+                    authz_read_baton,
+                    iterpool));
                 }
               if (limit && ++send_count >= limit)
                 break;
@@ -1594,13 +1704,16 @@ do_logs(svn_fs_t *fs,
               has_children = (apr_hash_count(mergeinfo) > 0);
             }
 
-          SVN_ERR(send_log(current, fs,
-                           discover_changed_paths, revprops, has_children,
+          SVN_ERR(send_log(current, fs, log_target_history_as_mergeinfo,
+                           discover_changed_paths, handling_merged_revisions,
+                           revprops, has_children,
                            receiver, receiver_baton, authz_read_func,
                            authz_read_baton, iterpool));
           if (has_children)
             {
-              SVN_ERR(handle_merged_revisions(current, fs, mergeinfo,
+              SVN_ERR(handle_merged_revisions(current, fs,
+                                              log_target_history_as_mergeinfo,
+                                              mergeinfo,
                                               discover_changed_paths,
                                               strict_node_history, revprops,
                                               receiver, receiver_baton,
@@ -1617,6 +1730,91 @@ do_logs(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+struct location_segment_baton
+{
+  apr_array_header_t *history_segments;
+  apr_pool_t *pool;
+};
+
+/* svn_location_segment_receiver_t implementation for svn_repos_get_logs4. */
+static svn_error_t *
+location_segment_receiver(svn_location_segment_t *segment,
+                          void *baton,
+                          apr_pool_t *pool)
+{
+  struct location_segment_baton *b = baton;
+
+  APR_ARRAY_PUSH(b->history_segments, svn_location_segment_t *) =
+    svn_location_segment_dup(segment, b->pool);
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Populate *PATHS_HISTORY_MERGEINFO with mergeinfo representing the combined
+   history of each path in PATHS between START_REV and END_REV in REPOS's
+   filesystem.  START_REV and END_REV must be valid revisions.  RESULT_POOL
+   is used to allocate *PATHS_HISTORY_MERGEINFO, SCRATCH_POOL is used for all
+   other (temporary) allocations.  Other parameters are the same as
+   svn_repos_get_logs4(). */
+static svn_error_t *
+get_paths_history_as_mergeinfo(svn_mergeinfo_t *paths_history_mergeinfo,
+                               svn_repos_t *repos,
+                               const apr_array_header_t *paths,
+                               svn_revnum_t start_rev,
+                               svn_revnum_t end_rev,
+                               svn_repos_authz_func_t authz_read_func,
+                               void *authz_read_baton,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool)
+{
+  int i;
+  svn_mergeinfo_t path_history_mergeinfo;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(start_rev));
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(end_rev));
+
+  /* Ensure START_REV is the oldest revision, as required by
+     svn_repos_node_location_segments, for which this is an iterative
+     wrapper. */
+  if (start_rev < end_rev)
+    {
+      svn_revnum_t tmp_rev = start_rev;
+      start_rev = end_rev;
+      end_rev = tmp_rev;
+    }
+
+  *paths_history_mergeinfo = apr_hash_make(result_pool);
+
+  for (i = 0; i < paths->nelts; i++)
+    {
+      const char *this_path = APR_ARRAY_IDX(paths, i, const char *);
+      struct location_segment_baton loc_seg_baton;
+   
+      svn_pool_clear(iterpool);
+      loc_seg_baton.pool = scratch_pool;
+      loc_seg_baton.history_segments =
+        apr_array_make(iterpool, 4, sizeof(svn_location_segment_t *));
+
+      SVN_ERR(svn_repos_node_location_segments(repos, this_path, start_rev,
+                                               start_rev, end_rev,
+                                               location_segment_receiver,
+                                               &loc_seg_baton,
+                                               authz_read_func,
+                                               authz_read_baton,
+                                               iterpool));
+
+      SVN_ERR(svn_mergeinfo__mergeinfo_from_segments(
+        &path_history_mergeinfo, loc_seg_baton.history_segments, iterpool));
+      SVN_ERR(svn_mergeinfo_merge(*paths_history_mergeinfo,
+                                  svn_mergeinfo_dup(path_history_mergeinfo,
+                                                    result_pool),
+                                  result_pool));
+    }
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_repos_get_logs4(svn_repos_t *repos,
@@ -1637,6 +1835,7 @@ svn_repos_get_logs4(svn_repos_t *repos,
   svn_revnum_t head = SVN_INVALID_REVNUM;
   svn_fs_t *fs = repos->fs;
   svn_boolean_t descending_order;
+  svn_mergeinfo_t paths_history_mergeinfo = NULL;
 
   /* Setup log range. */
   SVN_ERR(svn_fs_youngest_rev(&head, fs, pool));
@@ -1696,7 +1895,8 @@ svn_repos_get_logs4(svn_repos_t *repos,
 
           if (descending_order)
             rev = end - i;
-          SVN_ERR(send_log(rev, fs, discover_changed_paths, revprops, FALSE,
+          SVN_ERR(send_log(rev, fs, NULL, discover_changed_paths, FALSE,
+                           revprops, FALSE,
                            receiver, receiver_baton, authz_read_func,
                            authz_read_baton, iterpool));
         }
@@ -1705,9 +1905,26 @@ svn_repos_get_logs4(svn_repos_t *repos,
       return SVN_NO_ERROR;
     }
 
-  return do_logs(repos->fs, paths, start, end, limit,
-                 discover_changed_paths, strict_node_history,
-                 include_merged_revisions, FALSE, revprops,
+  /* If we are including merged revisions, then create mergeinfo that
+     represents all of PATHS' history between START and END.  We will use
+     this later to squelch duplicate log revisions that might exist in
+     both natural history and merged-in history.  See
+     http://subversion.tigris.org/issues/show_bug.cgi?id=3650#desc5 */
+  if (include_merged_revisions)
+    {
+      apr_pool_t *subpool = svn_pool_create(pool);
+
+      SVN_ERR(get_paths_history_as_mergeinfo(&paths_history_mergeinfo,
+                                             repos, paths, start, end,
+                                             authz_read_func,
+                                             authz_read_baton,
+                                             pool, subpool));
+      svn_pool_destroy(subpool);
+    }
+
+  return do_logs(repos->fs, paths, paths_history_mergeinfo, start, end,
+                 limit, discover_changed_paths, strict_node_history,
+                 include_merged_revisions, FALSE, FALSE, revprops,
                  descending_order, receiver, receiver_baton,
                  authz_read_func, authz_read_baton, pool);
 }
