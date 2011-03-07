@@ -6306,25 +6306,16 @@ svn_wc__db_global_record_fileinfo(svn_wc__db_t *db,
 }
 
 
-svn_error_t *
-svn_wc__db_lock_add(svn_wc__db_t *db,
-                    const char *local_abspath,
-                    const svn_wc__db_lock_t *lock,
-                    apr_pool_t *scratch_pool)
+static svn_error_t *
+lock_add_txn(void *baton,
+             svn_wc__db_wcroot_t *wcroot,
+             const char *local_relpath,
+             apr_pool_t *scratch_pool)
 {
-  svn_wc__db_wcroot_t *wcroot;
-  const char *local_relpath;
+  const svn_wc__db_lock_t *lock = baton;
+  svn_sqlite__stmt_t *stmt;
   const char *repos_relpath;
   apr_int64_t repos_id;
-  svn_sqlite__stmt_t *stmt;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-  SVN_ERR_ASSERT(lock != NULL);
-
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
-                              local_abspath, svn_sqlite__mode_readwrite,
-                              scratch_pool, scratch_pool));
-  VERIFY_USABLE_WCROOT(wcroot);
 
   SVN_ERR(scan_upwards_for_repos(&repos_id, &repos_relpath,
                                  wcroot, local_relpath,
@@ -6345,8 +6336,56 @@ svn_wc__db_lock_add(svn_wc__db_t *db,
 
   SVN_ERR(svn_sqlite__insert(NULL, stmt));
 
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__db_lock_add(svn_wc__db_t *db,
+                    const char *local_abspath,
+                    const svn_wc__db_lock_t *lock,
+                    apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR_ASSERT(lock != NULL);
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  SVN_ERR(with_db_txn(wcroot, local_relpath, lock_add_txn, (void *) lock,
+                      scratch_pool));
+
   /* There may be some entries, and the lock info is now out of date.  */
   SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+lock_remove_txn(void *baton,
+                svn_wc__db_wcroot_t *wcroot,
+                const char *local_relpath,
+                apr_pool_t *scratch_pool)
+{
+  const char *repos_relpath;
+  apr_int64_t repos_id;
+  svn_sqlite__stmt_t *stmt;
+
+  SVN_ERR(scan_upwards_for_repos(&repos_id, &repos_relpath,
+                                 wcroot, local_relpath,
+                                 scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_DELETE_LOCK));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", repos_id, repos_relpath));
+
+  SVN_ERR(svn_sqlite__step_done(stmt));
 
   return SVN_NO_ERROR;
 }
@@ -6359,9 +6398,6 @@ svn_wc__db_lock_remove(svn_wc__db_t *db,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  const char *repos_relpath;
-  apr_int64_t repos_id;
-  svn_sqlite__stmt_t *stmt;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -6370,15 +6406,8 @@ svn_wc__db_lock_remove(svn_wc__db_t *db,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  SVN_ERR(scan_upwards_for_repos(&repos_id, &repos_relpath,
-                                 wcroot, local_relpath,
-                                 scratch_pool, scratch_pool));
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_DELETE_LOCK));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", repos_id, repos_relpath));
-
-  SVN_ERR(svn_sqlite__step_done(stmt));
+  SVN_ERR(with_db_txn(wcroot, local_relpath, lock_remove_txn, NULL,
+                      scratch_pool));
 
   /* There may be some entries, and the lock info is now out of date.  */
   SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
