@@ -7385,6 +7385,7 @@ svn_wc__db_temp_forget_directory(svn_wc__db_t *db,
           apr_hash_set(roots, wcroot->abspath, APR_HASH_KEY_STRING, wcroot);
         }
     }
+  svn_pool_destroy(iterpool);
 
   return svn_error_return(svn_wc__db_close_many_wcroots(roots, db->state_pool,
                                                         scratch_pool));
