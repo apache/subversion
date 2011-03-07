@@ -5839,6 +5839,59 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
 }
 
 
+/* Set *REPOS_ID and *REPOS_RELPATH to the BASE repository location of
+   (WCROOT, LOCAL_RELPATH), directly if its BASE row exists or implied from
+   its parent's BASE row if not. In the latter case, error if the parent
+   BASE row does not exist.  */
+static svn_error_t *
+determine_repos_info(apr_int64_t *repos_id,
+                     const char **repos_relpath,
+                     svn_wc__db_wcroot_t *wcroot,
+                     const char *local_relpath,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  const char *repos_parent_relpath;
+  const char *local_parent_relpath, *name;
+
+  /* ### is it faster to fetch fewer columns? */
+
+  /* Prefer the current node's repository information.  */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_BASE_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  if (have_row)
+    {
+      SVN_ERR_ASSERT(!svn_sqlite__column_is_null(stmt, 0));
+      SVN_ERR_ASSERT(!svn_sqlite__column_is_null(stmt, 1));
+
+      *repos_id = svn_sqlite__column_int64(stmt, 0);
+      *repos_relpath = svn_sqlite__column_text(stmt, 1, result_pool);
+
+      return svn_error_return(svn_sqlite__reset(stmt));
+    }
+
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  /* This was a child node within this wcroot. We want to look at the
+     BASE node of the directory.  */
+  svn_relpath_split(&local_parent_relpath, &name, local_relpath, scratch_pool);
+
+  /* The REPOS_ID will be the same (### until we support mixed-repos)  */
+  SVN_ERR(scan_upwards_for_repos(repos_id, &repos_parent_relpath,
+                                 wcroot, local_parent_relpath,
+                                 scratch_pool, scratch_pool));
+
+  *repos_relpath = svn_relpath_join(repos_parent_relpath, name, result_pool);
+
+  return SVN_NO_ERROR;
+}
+
+
 struct commit_baton {
   svn_revnum_t new_revision;
   svn_revnum_t changed_rev;
@@ -5849,9 +5902,6 @@ struct commit_baton {
   apr_hash_t *new_dav_cache;
   svn_boolean_t keep_changelist;
   svn_boolean_t no_unlock;
-
-  apr_int64_t repos_id;
-  const char *repos_relpath;
 
   const svn_skel_t *work_items;
 };
@@ -5878,6 +5928,18 @@ commit_node(void *baton,
   svn_wc__db_kind_t new_kind;
   const char *new_depth_str = NULL;
   svn_sqlite__stmt_t *stmt;
+  apr_int64_t repos_id;
+  const char *repos_relpath;
+
+    /* If we are adding a file or directory, then we need to get
+     repository information from the parent node since "this node" does
+     not have a BASE).
+
+     For existing nodes, we should retain the (potentially-switched)
+     repository information.  */
+  SVN_ERR(determine_repos_info(&repos_id, &repos_relpath,
+                               wcroot, local_relpath,
+                               scratch_pool, scratch_pool));
 
   /* ### is it better to select only the data needed?  */
   SVN_ERR(svn_sqlite__get_statement(&stmt_base, wcroot->sdb,
@@ -5922,8 +5984,8 @@ commit_node(void *baton,
       SVN_ERR_ASSERT(!svn_sqlite__column_is_null(stmt_base, 1));
 
       /* A commit cannot change these values.  */
-      SVN_ERR_ASSERT(cb->repos_id == svn_sqlite__column_int64(stmt_base, 0));
-      SVN_ERR_ASSERT(strcmp(cb->repos_relpath,
+      SVN_ERR_ASSERT(repos_id == svn_sqlite__column_int64(stmt_base, 0));
+      SVN_ERR_ASSERT(strcmp(repos_relpath,
                             svn_sqlite__column_text(stmt_base, 1, NULL)) == 0);
     }
 
@@ -5967,8 +6029,8 @@ commit_node(void *baton,
   SVN_ERR(svn_sqlite__bindf(stmt, "issisrtstrisnbn",
                             wcroot->wc_id, local_relpath,
                             parent_relpath,
-                            cb->repos_id,
-                            cb->repos_relpath,
+                            repos_id,
+                            repos_relpath,
                             cb->new_revision,
                             presence_map, new_presence,
                             new_depth_str,
@@ -6040,66 +6102,12 @@ commit_node(void *baton,
 
       SVN_ERR(svn_sqlite__get_statement(&lock_stmt, wcroot->sdb,
                                         STMT_DELETE_LOCK));
-      SVN_ERR(svn_sqlite__bindf(lock_stmt, "is", cb->repos_id,
-                                cb->repos_relpath));
+      SVN_ERR(svn_sqlite__bindf(lock_stmt, "is", repos_id, repos_relpath));
       SVN_ERR(svn_sqlite__step_done(lock_stmt));
     }
 
   /* Install any work items into the queue, as part of this transaction.  */
   SVN_ERR(add_work_items(wcroot->sdb, cb->work_items, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-
-/* Set *REPOS_ID and *REPOS_RELPATH to the BASE repository location of
-   (WCROOT, LOCAL_RELPATH), directly if its BASE row exists or implied from
-   its parent's BASE row if not. In the latter case, error if the parent
-   BASE row does not exist.  */
-static svn_error_t *
-determine_repos_info(apr_int64_t *repos_id,
-                     const char **repos_relpath,
-                     svn_wc__db_wcroot_t *wcroot,
-                     const char *local_relpath,
-                     apr_pool_t *result_pool,
-                     apr_pool_t *scratch_pool)
-{
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
-  const char *repos_parent_relpath;
-  const char *local_parent_relpath, *name;
-
-  /* ### is it faster to fetch fewer columns? */
-
-  /* Prefer the current node's repository information.  */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_BASE_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-
-  if (have_row)
-    {
-      SVN_ERR_ASSERT(!svn_sqlite__column_is_null(stmt, 0));
-      SVN_ERR_ASSERT(!svn_sqlite__column_is_null(stmt, 1));
-
-      *repos_id = svn_sqlite__column_int64(stmt, 0);
-      *repos_relpath = svn_sqlite__column_text(stmt, 1, result_pool);
-
-      return svn_error_return(svn_sqlite__reset(stmt));
-    }
-
-  SVN_ERR(svn_sqlite__reset(stmt));
-
-  /* This was a child node within this wcroot. We want to look at the
-     BASE node of the directory.  */
-  svn_relpath_split(&local_parent_relpath, &name, local_relpath, scratch_pool);
-
-  /* The REPOS_ID will be the same (### until we support mixed-repos)  */
-  SVN_ERR(scan_upwards_for_repos(repos_id, &repos_parent_relpath,
-                                 wcroot, local_parent_relpath,
-                                 scratch_pool, scratch_pool));
-
-  *repos_relpath = svn_relpath_join(repos_parent_relpath, name, result_pool);
 
   return SVN_NO_ERROR;
 }
@@ -6144,16 +6152,6 @@ svn_wc__db_global_commit(svn_wc__db_t *db,
   cb.keep_changelist = keep_changelist;
   cb.no_unlock = no_unlock;
   cb.work_items = work_items;
-
-  /* If we are adding a file or directory, then we need to get
-     repository information from the parent node since "this node" does
-     not have a BASE).
-
-     For existing nodes, we should retain the (potentially-switched)
-     repository information.  */
-  SVN_ERR(determine_repos_info(&cb.repos_id, &cb.repos_relpath,
-                               wcroot, local_relpath,
-                               scratch_pool, scratch_pool));
 
   SVN_ERR(with_db_txn(wcroot, local_relpath, commit_node, &cb, scratch_pool));
 
