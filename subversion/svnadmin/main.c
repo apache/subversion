@@ -1656,7 +1656,12 @@ main(int argc, const char *argv[])
   /* Initialize opt_state. */
   opt_state.start_revision.kind = svn_opt_revision_unspecified;
   opt_state.end_revision.kind = svn_opt_revision_unspecified;
-  opt_state.memory_cache_size = 0x10000000; /* 256 MB */
+  /* ### r1078357 set the following as 256MB, but that proved problematic
+     ### for the running of 'make check' and friends.
+     ### See http://svn.haxx.se/dev/archive-2011-03/0229.shtml
+   */
+  /*opt_state.memory_cache_size = 0x10000000;  256 MB */
+  opt_state.memory_cache_size = 0x100000; /* 1 MB */
 
   /* Parse options. */
   err = svn_cmdline__getopt_init(&os, argc, argv, pool);
