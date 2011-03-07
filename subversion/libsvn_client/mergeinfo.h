@@ -276,14 +276,6 @@ svn_client__get_history_as_mergeinfo(svn_mergeinfo_t *mergeinfo_p,
                                      svn_client_ctx_t *ctx,
                                      apr_pool_t *pool);
 
-/* Translates an array SEGMENTS (of svn_location_t *), like the one
-   returned from svn_client__repos_location_segments, into a mergeinfo
-   *MERGEINFO_P, allocated in POOL. */
-svn_error_t *
-svn_client__mergeinfo_from_segments(svn_mergeinfo_t *mergeinfo_p,
-                                    const apr_array_header_t *segments,
-                                    apr_pool_t *pool);
-
 /* Parse any explicit mergeinfo on LOCAL_ABSPATH and store it in
    MERGEINFO.  If no record of any mergeinfo exists, set MERGEINFO to NULL.
    Does not acount for inherited mergeinfo. */
