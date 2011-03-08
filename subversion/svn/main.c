@@ -760,7 +760,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     and R marks the right side of the merge (trunk@50).\n"
      "     The difference between the left and right side is merged into the target.\n"
      "\n"
-     "     To perform the merge, check out a working copy of the feature\n"
+     "     To perform the merge, check out a working copy of the release\n"
      "     branch and run the following command in the top-level directory\n"
      "     of the working copy:\n"
      "\n"
