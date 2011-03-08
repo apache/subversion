@@ -1656,16 +1656,16 @@ repos_to_wc_copy_locked(const apr_array_header_t *copy_pairs,
       if (kind != svn_node_dir)
         {
           svn_boolean_t is_deleted;
-          svn_boolean_t is_present;
+          svn_boolean_t is_not_present;
 
           SVN_ERR(svn_wc__node_is_status_deleted(&is_deleted, ctx->wc_ctx,
                                                  pair->dst_abspath_or_url,
                                                  iterpool));
-          SVN_ERR(svn_wc__node_is_status_present(&is_present,
-                                                 ctx->wc_ctx,
-                                                 pair->dst_abspath_or_url,
-                                                 iterpool));
-          if ((! is_deleted) && is_present)
+          SVN_ERR(svn_wc__node_is_status_not_present(&is_not_present,
+                                                     ctx->wc_ctx,
+                                                     pair->dst_abspath_or_url,
+                                                     iterpool));
+          if ((! is_deleted) && (! is_not_present))
             return svn_error_createf
               (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
                _("Entry for '%s' exists (though the working file is missing)"),
