@@ -1015,7 +1015,8 @@ static svn_error_t *ra_svn_get_file(svn_ra_session_t *session, const char *path,
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
   apr_array_header_t *proplist;
-  const char *expected_checksum;
+  const char *expected_digest;
+  svn_checksum_t *expected_checksum = NULL;
   svn_checksum_ctx_t *checksum_ctx;
   apr_pool_t *iterpool;
 
@@ -1023,7 +1024,7 @@ static svn_error_t *ra_svn_get_file(svn_ra_session_t *session, const char *path,
                                rev, (props != NULL), (stream != NULL)));
   SVN_ERR(handle_auth_request(sess_baton, pool));
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "(?c)rl",
-                                       &expected_checksum,
+                                       &expected_digest,
                                        &rev, &proplist));
 
   if (fetched_rev)
@@ -1035,8 +1036,12 @@ static svn_error_t *ra_svn_get_file(svn_ra_session_t *session, const char *path,
   if (!stream)
     return SVN_NO_ERROR;
 
-  if (expected_checksum)
-    checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
+  if (expected_digest)
+    {
+      SVN_ERR(svn_checksum_parse_hex(&expected_checksum, svn_checksum_md5,
+                                     expected_digest, pool));
+      checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
+    }
 
   /* Read the file's contents. */
   iterpool = svn_pool_create(pool);
@@ -1066,18 +1071,12 @@ static svn_error_t *ra_svn_get_file(svn_ra_session_t *session, const char *path,
   if (expected_checksum)
     {
       svn_checksum_t *checksum;
-      const char *hex_digest;
 
       SVN_ERR(svn_checksum_final(&checksum, checksum_ctx, pool));
-      hex_digest = svn_checksum_to_cstring_display(checksum, pool);
-      if (strcmp(hex_digest, expected_checksum) != 0)
-        return svn_error_createf
-          (SVN_ERR_CHECKSUM_MISMATCH, NULL,
-           apr_psprintf(pool, "%s:\n%s\n%s\n",
-                        _("Checksum mismatch for '%s'"),
-                        _("   expected:  %s"),
-                        _("     actual:  %s")),
-           path, expected_checksum, hex_digest);
+      if (!svn_checksum_match(checksum, expected_checksum))
+        return svn_checksum_mismatch_err(expected_checksum, checksum, pool,
+                                         _("Checksum mismatch for '%s'"),
+                                         path);
     }
 
   return SVN_NO_ERROR;
