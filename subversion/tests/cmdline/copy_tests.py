@@ -1856,8 +1856,9 @@ def repos_to_wc_copy_replace_with_props(sbox):
 
   copy_replace_with_props(sbox, 0)
 
+# See also delete_replace_delete() which does the same for a directory.
 def delete_replaced_file(sbox):
-  "delete file scheduled for replace"
+  "delete a file scheduled for replacement"
 
   sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
@@ -4862,8 +4863,9 @@ def copy_delete_revert(sbox):
   "copy, delete child, revert copy"
   copy_delete_undo(sbox, True)
 
+# See also delete_replaced_file() which does the same for a file.
 def delete_replace_delete(sbox):
-  "delete, replace, delete"
+  "delete a directory scheduled for replacement"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -4890,7 +4892,6 @@ def delete_replace_delete(sbox):
   svntest.main.run_svn(wc_dir, 'rm', '--force', sbox.ospath('A/B/E'))
   expected_status.tweak('A/B/E', status='D ', copied=None, wc_rev='1')
   expected_status.remove('A/B/E/pi', 'A/B/E/rho', 'A/B/E/tau')
-  # Currently fails because pi, rho, tau get left behind
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 A_B_children = ['A/B/lambda', 'A/B/F', 'A/B/E/alpha', 'A/B/E/beta', 'A/B/E']
