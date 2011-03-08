@@ -517,7 +517,7 @@ harvest_committables(apr_hash_t *committables,
     {
       svn_boolean_t is_replaced;
       svn_boolean_t is_status_deleted;
-      svn_boolean_t is_present;
+      svn_boolean_t is_not_present;
 
       /* ### There is room for optimization here, but let's keep it plain
        * while this function is in flux. */
@@ -525,8 +525,8 @@ harvest_committables(apr_hash_t *committables,
                                              local_abspath, scratch_pool));
       SVN_ERR(svn_wc__node_is_replaced(&is_replaced, ctx->wc_ctx,
                                        local_abspath, scratch_pool));
-      SVN_ERR(svn_wc__node_is_status_present(&is_present, ctx->wc_ctx,
-                                             local_abspath, scratch_pool));
+      SVN_ERR(svn_wc__node_is_status_not_present(&is_not_present, ctx->wc_ctx,
+                                                 local_abspath, scratch_pool));
 
       /* ### Catch a mixed-rev copy that replaces. The mixed-rev children are
        * each regarded as op-roots of the replace and result in currently
@@ -547,7 +547,7 @@ harvest_committables(apr_hash_t *committables,
             is_replaced = FALSE;
         }
 
-      if (is_status_deleted || is_replaced || ! is_present)
+      if (is_status_deleted || is_replaced || is_not_present)
         state_flags |= SVN_CLIENT_COMMIT_ITEM_DELETE;
     }
 

@@ -404,16 +404,17 @@ svn_wc__node_is_status_absent(svn_boolean_t *is_absent,
                               apr_pool_t *scratch_pool);
 
 /**
- * Set @a *is_present to whether @a local_abspath is present, using
- * @a wc_ctx.  If @a local_abspath is not in the working copy, return
+ * Set @a *is_not_present to whether the status of @a local_abspath is
+ * #svn_wc__db_status_not_present, using @a wc_ctx.
+ * If @a local_abspath is not in the working copy, return
  * @c SVN_ERR_WC_PATH_NOT_FOUND.  Use @a scratch_pool for all temporary
  * allocations.
  */
 svn_error_t *
-svn_wc__node_is_status_present(svn_boolean_t *is_present,
-                               svn_wc_context_t *wc_ctx,
-                               const char *local_abspath,
-                               apr_pool_t *scratch_pool);
+svn_wc__node_is_status_not_present(svn_boolean_t *is_not_present,
+                                   svn_wc_context_t *wc_ctx,
+                                   const char *local_abspath,
+                                   apr_pool_t *scratch_pool);
 
 /**
  * Set @a *is_added to whether @a local_abspath is added, using
