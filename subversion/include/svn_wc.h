@@ -1144,6 +1144,16 @@ typedef enum svn_wc_notify_action_t
    * @since New in 1.7. */
   svn_wc_notify_patch_hunk_already_applied,
 
+  /** Committing a non-overwriting copy (path is the target of the
+   * copy, not the source).
+   * @since New in 1.7. */
+  svn_wc_notify_commit_copied,
+
+  /** Committing an overwriting (replace) copy (path is the target of
+   * the copy, not the source). 
+   * @since New in 1.7. */
+  svn_wc_notify_commit_copied_replaced,
+
   /** The server has instructed the client to follow a URL
    * redirection.
    * @since New in 1.7. */

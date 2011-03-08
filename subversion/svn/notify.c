@@ -668,6 +668,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       break;
 
     case svn_wc_notify_commit_added:
+    case svn_wc_notify_commit_copied:
       if (n->mime_type && svn_mime_type_is_binary(n->mime_type))
         {
           if ((err = svn_cmdline_printf(pool,
@@ -691,6 +692,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       break;
 
     case svn_wc_notify_commit_replaced:
+    case svn_wc_notify_commit_copied_replaced:
       if ((err = svn_cmdline_printf(pool,
                                     _("Replacing      %s\n"),
                                     path_local)))

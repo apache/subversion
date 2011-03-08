@@ -1850,6 +1850,7 @@ svn_client_import(svn_client_commit_info_t **commit_info_p,
  * @a ctx->notify_baton2 as the commit progresses, with any of the following
  * actions: #svn_wc_notify_commit_modified, #svn_wc_notify_commit_added,
  * #svn_wc_notify_commit_deleted, #svn_wc_notify_commit_replaced,
+ * #svn_wc_notify_commit_copied, #svn_wc_notify_commit_copied_replaced,
  * #svn_wc_notify_commit_postfix_txdelta.
  *
  * If @a depth is #svn_depth_infinity, commit all changes to and
@@ -1895,7 +1896,10 @@ svn_client_commit5(const apr_array_header_t *targets,
 
 /**
  * Similar to svn_client_commit5(), but returns the @a commit_info_p directly,
- * rather than through @a commit_callback.
+ * rather than through @a commit_callback.  Does not make use of
+ * #svn_wc_notify_commit_copied or #svn_wc_notify_commit_copied_replaced
+ * (preferring #svn_wc_notify_commit_added and
+ * #svn_wc_notify_commit_replaced, respectively, instead).
  *
  * Also, if no error is returned and @a (*commit_info_p)->revision is set to
  * #SVN_INVALID_REVNUM, then the commit was a no-op; nothing needed to
