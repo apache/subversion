@@ -639,6 +639,7 @@ SELECT 1 FROM nodes WHERE wc_id = ?1 AND local_relpath = ?2
   AND op_depth = (SELECT MAX(op_depth) FROM nodes
                   WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0);
 
+/* ### This doesn't select all absent nodes, it only selects one of them. */
 -- STMT_SELECT_ABSENT_NODES
 SELECT local_relpath FROM nodes
 WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
