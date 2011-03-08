@@ -17,6 +17,7 @@
 #    specific language governing permissions and limitations
 #    under the License.
 -->
+
 <Include>
 						<Component Guid="E7540A5B-FBB3-49F9-AD3F-5FF7F425EE07" Id="LibaprDll22x" DiskId="1">
 							<File Source="\SubversionBuildEnvironment\work\svn-win32-ap22x\bin\libapr-1.dll" Name="libapr-1.dll" Id="libapr1.dll22x" />
@@ -70,19 +71,6 @@
 							<File Source="\SubversionBuildEnvironment\work\svn-win32-ap22x\bin\mod_dav_svn.so" Name="mod_dav_svn.so" Id="mod_dav_svn.so22x" />
 							<Condition>APACHEVERSION = "Apache22"</Condition>
 						</Component>
-						<Component Guid="2CCAB5D5-9F75-4B0F-92E2-300737B3E195" Id="SvnExe22x" DiskId="1">
-							<File Source="\SubversionBuildEnvironment\work\svn-win32-ap22x\bin\svn.exe" Name="svn.exe" Id="svn.exe22x" />
-							<Environment 
-								Action="set" 
-								Id="SVNPath22x" 
-								Name="PATH" 
-								Part="last" 
-								System="yes"
-								Permanent="no"
-								Value="[INSTALLDIR]bin"
-							/>
-							<Condition>APACHEVERSION = "Apache22"</Condition>
-						</Component>
 						<Component Guid="7BF975D7-0CE3-49FE-B26D-52CB75B8F95B" Id="SvnadminExe22x" DiskId="1">
 							<File Source="\SubversionBuildEnvironment\work\svn-win32-ap22x\bin\svnadmin.exe" Name="svnadmin.exe" Id="svnadmin.exe22x" />
 							<Condition>APACHEVERSION = "Apache22"</Condition>
@@ -123,11 +111,13 @@
 							<File Source="\SubversionBuildEnvironment\work\svn-win32-ap22x\bin\svnauthz-validate.exe" Name="svnauthz-validate.exe" Id="svnauthzvalidate.exe22x" />
 							<Condition>APACHEVERSION = "Apache22"</Condition>
 						</Component>
-						<Component Guid="34395389-E8B9-42E2-9232-D9CEBEF335A0" Id="READMETxtap22x" DiskId="1">
-							<File Source="\SubversionBuildEnvironment\work\svn-win32-ap22x\README.txt" Name="README.txt" Id="flREADMEtxtap22x" KeyPath="yes">
-								<Shortcut Name="README" Id="readmesctap22x" Description="Subversion ReadMe" Directory="SubversionMenuFolder" Advertise="yes" Icon="readmeap22x.ico">
-							    	<Icon Id="readmeap22x.ico" SourceFile="c:\windows\notepad.exe" />
-							    </Shortcut>
+						<Component Guid="34395389-E8B9-42E2-9232-D9CEBEF335A0" Id="READMETxtap22x" Shared="no" Permanent="no" DiskId="1">
+						  	<!-- Registry KeyPath so that we can have un-advertised shortcuts.  The un-advertised shortcuts use system default icons -->
+							<RegistryKey Action="createAndRemoveOnUninstall" Root="HKCU" Key="SOFTWARE\CollabNet\Subversion\Uninstaller">
+							  <RegistryValue Value="" Type="string" KeyPath="yes" />
+							</RegistryKey>
+							<File Source="\SubversionBuildEnvironment\work\svn-win32-ap22x\README.txt" Name="README.txt" Id="flREADMEtxtap22x">
+								<Shortcut Name="README" Id="readmesctap22x" Description="Subversion ReadMe" Directory="SubversionMenuFolder" />
 							</File>
 							<Condition>APACHEVERSION = "Apache22"</Condition>
 							<RemoveFolder Id="RemoveReadmeap22x" On="uninstall" />
