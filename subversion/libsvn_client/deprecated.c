@@ -455,10 +455,11 @@ downgrade_commit_copied_notify_func(void *baton,
       my_notify->action = svn_wc_notify_commit_added;
     }
 
-  /* Call the wrapped notification system with MY_NOTIFY, which is
-     either the original NOTIFY object, or a tweaked deep copy
-     thereof. */
-  b->orig_notify_func2(b->orig_notify_baton2, my_notify, pool);
+  /* Call the wrapped notification system (if any) with MY_NOTIFY,
+     which is either the original NOTIFY object, or a tweaked deep
+     copy thereof. */
+  if (b->orig_notify_func2)
+    b->orig_notify_func2(b->orig_notify_baton2, my_notify, pool);
 }
 
 
