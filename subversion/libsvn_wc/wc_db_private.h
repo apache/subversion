@@ -52,6 +52,15 @@ struct svn_wc__db_t {
      const char *local_abspath -> svn_wc__db_wcroot_t *wcroot  */
   apr_hash_t *dir_data;
 
+  /* A few members to assist with caching of kind values for paths.  See
+     get_path_kind() for use. */
+  struct
+  {
+    char *abspath;
+    size_t size;
+    svn_node_kind_t kind;
+  } parse_cache;
+
   /* As we grow the state of this DB, allocate that state here. */
   apr_pool_t *state_pool;
 };
