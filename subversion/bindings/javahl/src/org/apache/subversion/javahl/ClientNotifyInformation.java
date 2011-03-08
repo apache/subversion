@@ -501,7 +501,22 @@ public class ClientNotifyInformation extends EventObject
         patch_applied_hunk  ("patch applied hunk"),
 
         /** A hunk from a patch was rejected.  */
-        patch_rejected_hunk ("patch rejected hunk");
+        patch_rejected_hunk ("patch rejected hunk"),
+
+        /** A hunk from a patch was found to be already applied. */
+        patch_hunk_already_applied ("patch hunk already applied"),
+
+        /** Committing a non-overwriting copy (path is the target of the
+          * copy, not the source). */
+        commit_copied   ("commit copied"),
+
+        /** Committing an overwriting (replace) copy (path is the target of
+          * the copy, not the source).  */
+        commit_copied_replaced  ("commit copied replaced"),
+
+        /** The server has instructed the client to follow a URL
+          * redirection. */
+        url_redirect    ("url redirect");
 
         /**
          * The description of the action.
