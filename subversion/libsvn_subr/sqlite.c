@@ -1053,9 +1053,7 @@ svn_sqlite__with_lock(svn_sqlite__db_t *db,
                       apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
-  svn_error_t *err2;
   int savepoint = db->savepoint_nr++;
-  const char *release_stmt;
   /* This buffer is plenty big to hold the SAVEPOINT and RELEASE commands. */
   char buf[32];
 
@@ -1063,36 +1061,41 @@ svn_sqlite__with_lock(svn_sqlite__db_t *db,
   SVN_ERR(exec_sql(db, buf));
   err = cb_func(cb_baton, db, scratch_pool);
 
-  snprintf(buf, sizeof(buf), "RELEASE   s%u", savepoint);
-  release_stmt = buf;
-  err2 = exec_sql(db, release_stmt);
-
-  if (err2 && err2->apr_err == SVN_ERR_SQLITE_BUSY)
+  if (err)
     {
-      /* Ok, we have a major problem. Some statement is still open, which
-         makes it impossible to release this savepoint.
+      svn_error_t *err2;
 
-         ### See huge comment in svn_sqlite__with_transaction for
-             further details */
+      snprintf(buf, sizeof(buf), "ROLLBACK  s%u", savepoint);
+      err2 = exec_sql(db, buf);
 
-      int i;
+      if (err2 && err2->apr_err == SVN_ERR_SQLITE_BUSY)
+        {
+          /* Ok, we have a major problem. Some statement is still open, which
+             makes it impossible to release this savepoint.
 
-      err2 = svn_error_compose_create(err2,
+             ### See huge comment in svn_sqlite__with_transaction for
+                 further details */
+
+          int i;
+
+          err2 = svn_error_compose_create(err2,
                    svn_error_create(SVN_ERR_SQLITE_RESETTING_FOR_ROLLBACK,
                                     NULL, NULL));
 
-      for (i = 0; i < db->nbr_statements; i++)
-        if (db->prepared_stmts[i] && db->prepared_stmts[i]->needs_reset)
-          err2 = svn_error_compose_create(
-                     err2,
-                     svn_sqlite__reset(db->prepared_stmts[i]));
+          for (i = 0; i < db->nbr_statements; i++)
+            if (db->prepared_stmts[i] && db->prepared_stmts[i]->needs_reset)
+              err2 = svn_error_compose_create(
+                         err2,
+                         svn_sqlite__reset(db->prepared_stmts[i]));
 
-          err2 = svn_error_compose_create(
-                      exec_sql(db, release_stmt),
-                      err2);
+          err2 = svn_error_compose_create(exec_sql(db, buf), err2);
+        }
+
+      return svn_error_return(svn_error_compose_create(err, err2));
     }
 
-  return svn_error_return(svn_error_compose_create(err, err2));
+  snprintf(buf, sizeof(buf), "RELEASE   s%u", savepoint);
+  return svn_error_return(exec_sql(db, buf));
 }
 
 svn_error_t *
