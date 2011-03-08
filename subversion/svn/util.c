@@ -856,7 +856,7 @@ svn_cl__get_log_message(const char **log_msg,
                      "(a)bort, (c)ontinue, (e)dit:\n"), NULL, pool));
           if (reply)
             {
-              char letter = apr_tolower(reply[0]);
+              int letter = apr_tolower(reply[0]);
 
               /* If the user chooses to abort, we cleanup the
                  temporary file and exit the loop with a NULL
