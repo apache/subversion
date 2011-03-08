@@ -96,10 +96,6 @@ get_path_kind(svn_wc__db_t *db,
               svn_node_kind_t *kind,
               apr_pool_t *scratch_pool)
 {
-  static char *cached_abspath = NULL;
-  static size_t cache_size = 0;
-  static svn_node_kind_t cached_kind;
-
   svn_boolean_t special;
   size_t abspath_size;
 
@@ -110,25 +106,26 @@ get_path_kind(svn_wc__db_t *db,
      Using malloc()/free() divorces us from the db->state_pool, and a set
      of possible memory leaks associated with using it.  */
 
-  if (cached_abspath && strcmp(cached_abspath, local_abspath) == 0)
+  if (db->parse_cache.abspath
+        && strcmp(db->parse_cache.abspath, local_abspath) == 0)
     {
       /* Cache hit! */
-      *kind = cached_kind;
+      *kind = db->parse_cache.kind;
       return SVN_NO_ERROR;
     }
 
   abspath_size = strlen(local_abspath);
-  if (abspath_size >= cache_size)
+  if (abspath_size >= db->parse_cache.size)
     {
-      free(cached_abspath);
-      cache_size = abspath_size * 2 + 1;
-      cached_abspath = malloc(cache_size);
+      db->parse_cache.size = abspath_size * 2 + 1;
+      db->parse_cache.abspath = apr_palloc(db->state_pool,
+                                           db->parse_cache.size);
     }
-  strcpy(cached_abspath, local_abspath);
+  strcpy(db->parse_cache.abspath, local_abspath);
 
-  SVN_ERR(svn_io_check_special_path(local_abspath, &cached_kind,
+  SVN_ERR(svn_io_check_special_path(local_abspath, &db->parse_cache.kind,
                                     &special /* unused */, scratch_pool));
-  *kind = cached_kind;
+  *kind = db->parse_cache.kind;
 
   return SVN_NO_ERROR;
 }
@@ -190,6 +187,9 @@ svn_wc__db_open(svn_wc__db_t **db,
   (*db)->auto_upgrade = auto_upgrade;
   (*db)->enforce_empty_wq = enforce_empty_wq;
   (*db)->dir_data = apr_hash_make(result_pool);
+
+  /* Don't need to initialize (*db)->parse_cache, due to the calloc above */
+
   (*db)->state_pool = result_pool;
 
   return SVN_NO_ERROR;
