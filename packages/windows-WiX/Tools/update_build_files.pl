@@ -26,7 +26,7 @@
 use strict;
 use Cwd;
 use Win32;
-use Win32::Guidgen;
+#use Win32::Guidgen;
 require 'cmn.pl';
 use File::Basename;
 
@@ -51,10 +51,10 @@ sub Main
 {
 	my $SvnVersion=&cmn_ValuePathfile('svn_version.ini', 'svn_version');
 	my $SvnRevision=&cmn_ValuePathfile('svn_version.ini', 'svn_revision');
-	my $guid = Win32::Guidgen::create();
+#	my $guid = Win32::Guidgen::create();
 
 	&UpdateXMLFile('..\\BuildSubversion\\BuildSubversion.wixproj', '/Project/PropertyGroup/OutputName', 'Setup-Subversion-'.$SvnVersion);
 	&UpdateXMLFile('..\\BuildSubversion\\Setup.wxs', '//processing-instruction("define")[2]', 'ProductVersion="'.$SvnVersion.'"', 'y');
 	&UpdateXMLFile('..\\BuildSubversion\\Setup.wxs', '//processing-instruction("define")[3]', 'RevisionNumber="r'.$SvnRevision.'"', 'y');
-	&UpdateXMLFile('..\\BuildSubversion\\Setup.wxs', '//processing-instruction("define")[4]', 'ProductCode="'.$guid.'"', 'y');
+#	&UpdateXMLFile('..\\BuildSubversion\\Setup.wxs', '//processing-instruction("define")[4]', 'ProductCode="'.$guid.'"', 'y');
 }
