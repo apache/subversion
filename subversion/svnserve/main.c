@@ -842,8 +842,6 @@ int main(int argc, const char *argv[])
 
     if (params.memory_cache_size != -1)
       settings.cache_size = params.memory_cache_size;
-    else if (handling_mode != connection_mode_thread)
-      settings.cache_size = 0x1000000;
 
     settings.cache_fulltexts = TRUE;
     settings.cache_txdeltas = FALSE;
