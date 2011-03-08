@@ -425,6 +425,43 @@ svn_client_import(svn_client_commit_info_t **commit_info_p,
   return svn_error_return(err);
 }
 
+
+/* Wrapper notify_func2 function and baton for downgrading
+   svn_wc_notify_commit_copied and svn_wc_notify_commit_copied_replaced
+   to svn_wc_notify_commit_added and svn_wc_notify_commit_replaced,
+   respectively. */
+struct downgrade_commit_copied_notify_baton
+{
+  svn_wc_notify_func2_t orig_notify_func2;
+  void *orig_notify_baton2;
+};
+
+static void
+downgrade_commit_copied_notify_func(void *baton,
+                                    const svn_wc_notify_t *notify,
+                                    apr_pool_t *pool)
+{
+  svn_wc_notify_t *my_notify = (svn_wc_notify_t *)notify;
+  struct downgrade_commit_copied_notify_baton *b = baton;
+
+  if (notify->action == svn_wc_notify_commit_copied)
+    {
+      my_notify = svn_wc_dup_notify(notify, pool);
+      my_notify->action = svn_wc_notify_commit_added;
+    }
+  else if (notify->action == svn_wc_notify_commit_copied)
+    {
+      my_notify = svn_wc_dup_notify(notify, pool);
+      my_notify->action = svn_wc_notify_commit_added;
+    }
+
+  /* Call the wrapped notification system with MY_NOTIFY, which is
+     either the original NOTIFY object, or a tweaked deep copy
+     thereof. */
+  b->orig_notify_func2(b->orig_notify_baton2, my_notify, pool);
+}
+
+
 svn_error_t *
 svn_client_commit4(svn_commit_info_t **commit_info_p,
                    const apr_array_header_t *targets,
@@ -437,14 +474,33 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
                    apr_pool_t *pool)
 {
   struct capture_baton_t cb;
+  struct downgrade_commit_copied_notify_baton notify_baton;
+  svn_error_t *err;
+
+  notify_baton.orig_notify_func2 = ctx->notify_func2;
+  notify_baton.orig_notify_baton2 = ctx->notify_baton2;
 
   *commit_info_p = NULL;
   cb.info = commit_info_p;
   cb.pool = pool;
 
-  SVN_ERR(svn_client_commit5(targets, depth, keep_locks, keep_changelists,
-                             changelists, revprop_table,
-                             capture_commit_info, &cb, ctx, pool));
+  /* Swap out the notification system (if any) with a thin filtering
+     wrapper. */
+  if (ctx->notify_func2)
+    {
+      ctx->notify_func2 = downgrade_commit_copied_notify_func;
+      ctx->notify_baton2 = &notify_baton;
+    }
+
+  err = svn_client_commit5(targets, depth, keep_locks, keep_changelists,
+                           changelists, revprop_table,
+                           capture_commit_info, &cb, ctx, pool);
+
+  /* Ensure that the original notification system is in place. */
+  ctx->notify_func2 = notify_baton.orig_notify_func2;
+  ctx->notify_baton2 = notify_baton.orig_notify_baton2;
+
+  SVN_ERR(err);
 
   if (! *commit_info_p)
     *commit_info_p = svn_create_commit_info(pool);

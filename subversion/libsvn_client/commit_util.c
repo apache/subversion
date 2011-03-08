@@ -1391,8 +1391,14 @@ do_item_commit(void **dir_baton,
           /* We don't print the "(bin)" notice for binary files when
              replacing, only when adding.  So we don't bother to get
              the mime-type here. */
-          notify = svn_wc_create_notify(npath, svn_wc_notify_commit_replaced,
-                                        pool);
+          if (item->copyfrom_url)
+            notify = svn_wc_create_notify(npath,
+                                          svn_wc_notify_commit_copied_replaced,
+                                          pool);
+          else
+            notify = svn_wc_create_notify(npath, svn_wc_notify_commit_replaced,
+                                          pool);
+
         }
       else if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
         {
@@ -1401,8 +1407,13 @@ do_item_commit(void **dir_baton,
         }
       else if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
         {
-          notify = svn_wc_create_notify(npath, svn_wc_notify_commit_added,
-                                        pool);
+          if (item->copyfrom_url)
+            notify = svn_wc_create_notify(npath, svn_wc_notify_commit_copied,
+                                          pool);
+          else
+            notify = svn_wc_create_notify(npath, svn_wc_notify_commit_added,
+                                          pool);
+
           if (item->kind == svn_node_file)
             {
               const svn_string_t *propval;
