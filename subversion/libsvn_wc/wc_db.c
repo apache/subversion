@@ -9132,6 +9132,7 @@ svn_error_t *
 svn_wc__db_revision_status(svn_revnum_t *min_revision,
                            svn_revnum_t *max_revision,
                            svn_boolean_t *is_sparse_checkout,
+                           svn_boolean_t *is_modified,
                            svn_wc__db_t *db,
                            const char *local_abspath,
                            apr_pool_t *scratch_pool)
@@ -9149,6 +9150,7 @@ svn_wc__db_revision_status(svn_revnum_t *min_revision,
                                                 scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
+  /* Determine mixed-revisionness. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_MIN_MAX_REVISIONS));
   SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id, local_relpath,
@@ -9170,6 +9172,7 @@ svn_wc__db_revision_status(svn_revnum_t *min_revision,
   SVN_ERR_ASSERT(! have_row);
   SVN_ERR(svn_sqlite__reset(stmt));
 
+  /* Determine sparseness. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_SPARSE_NODES));
   SVN_ERR(svn_sqlite__bindf(stmt, "iss",
@@ -9180,6 +9183,16 @@ svn_wc__db_revision_status(svn_revnum_t *min_revision,
   /* If this query returns a row, the working copy is sparse. */
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   *is_sparse_checkout = have_row;
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  /* Check for additions or deletions. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_NODES_WITH_TREE_MODIFICATIONS));
+  SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id, local_relpath,
+                            construct_like_arg(local_relpath, scratch_pool)));
+  /* If this query returns a row, the working copy is modified. */
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  *is_modified = have_row;
   SVN_ERR(svn_sqlite__reset(stmt));
 
   return SVN_NO_ERROR;
