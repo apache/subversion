@@ -3326,8 +3326,8 @@ get_window_key(struct rep_state *rs, apr_off_t offset, apr_pool_t *pool)
   if (apr_file_name_get(&name, rs->file))
     return "";
 
-  /* We care about the file name only as it represents the start revision
-   * of this rev file.  Handle packed files as well. */
+  /* Handle packed files as well by scanning backwards until we find the
+   * revision or pack number. */
   name_last = name + strlen(name) - 1;
   while (! svn_ctype_isdigit(*name_last))
     --name_last;
@@ -3335,6 +3335,14 @@ get_window_key(struct rep_state *rs, apr_off_t offset, apr_pool_t *pool)
   last_part = name_last;
   while (svn_ctype_isdigit(*last_part))
     --last_part;
+
+  /* We must differentiate between packed files (as of today, the number
+   * is being followed by a dot) and non-packed files (followed by \0).
+   * Otherwise, there might be overlaps in the numbering range if the
+   * repo is getting packed in the background. 
+   * => add the first non-digit char to the packed number. */
+  if (last_part[1] != '\0')
+    ++last_part;
 
   /* copy one char MORE than the actual number to mark packed files,
    * i.e. packed revision file content uses different key space then
