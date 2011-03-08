@@ -56,8 +56,7 @@ struct svn_wc__db_t {
      get_path_kind() for use. */
   struct
   {
-    char *abspath;
-    size_t size;
+    svn_stringbuf_t *abspath;
     svn_node_kind_t kind;
   } parse_cache;
 

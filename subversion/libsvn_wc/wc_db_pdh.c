@@ -97,28 +97,34 @@ get_path_kind(svn_wc__db_t *db,
               apr_pool_t *scratch_pool)
 {
   svn_boolean_t special;
-  size_t abspath_size;
 
   /* This implements a *really* simple LRU cache, where "simple" is defined
      as "only one element".  In other words, we remember the most recently
      queried path, and nothing else.  This gives >80% cache hits. */
 
   if (db->parse_cache.abspath
-        && strcmp(db->parse_cache.abspath, local_abspath) == 0)
+        && strcmp(db->parse_cache.abspath->data, local_abspath) == 0)
     {
       /* Cache hit! */
       *kind = db->parse_cache.kind;
       return SVN_NO_ERROR;
     }
 
-  abspath_size = strlen(local_abspath);
-  if (abspath_size >= db->parse_cache.size)
+  if (!db->parse_cache.abspath)
     {
-      db->parse_cache.size = abspath_size * 2 + 1;
-      db->parse_cache.abspath = apr_palloc(db->state_pool,
-                                           db->parse_cache.size);
+      db->parse_cache.abspath = svn_stringbuf_create(local_abspath,
+                                                     db->state_pool);
     }
-  strcpy(db->parse_cache.abspath, local_abspath);
+  else
+    {
+      size_t abspath_size = strlen(local_abspath);
+
+      if (abspath_size < db->parse_cache.abspath->blocksize)
+        svn_stringbuf_set(db->parse_cache.abspath, local_abspath);
+      else
+        db->parse_cache.abspath = svn_stringbuf_ncreate(local_abspath,
+                                         abspath_size * 2 + 1, db->state_pool);
+    }
 
   SVN_ERR(svn_io_check_special_path(local_abspath, &db->parse_cache.kind,
                                     &special /* unused */, scratch_pool));
