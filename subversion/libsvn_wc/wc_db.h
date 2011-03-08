@@ -2501,25 +2501,23 @@ svn_wc__db_temp_below_work(svn_boolean_t *have_work,
                            apr_pool_t *scratch_pool);
 
 
-/* Set *MIN_REVISION and *MAX_REVISION to the lowest and highest revision
- * numbers found within LOCAL_ABSPATH in the working copy using DB.
+/* Gather revision status information about a working copy using DB.
+ * 
+ * Set *MIN_REVISION and *MAX_REVISION to the lowest and highest revision
+ * numbers found within LOCAL_ABSPATH.
  * Only nodes with op_depth zero and presence 'normal' or 'incomplete'
  * are considered, so that added, deleted or excluded nodes do not affect
- * the result. */
+ * the result.
+ *
+ * Indicate in *IS_SPARSE_CHECKOUT whether any of the nodes within
+ * LOCAL_ABSPATH is sparse. */
 svn_error_t *
-svn_wc__db_get_min_max_revisions(svn_revnum_t *min_revision,
-                                 svn_revnum_t *max_revision,
-                                 svn_wc__db_t *db,
-                                 const char *local_abspath,
-                                 apr_pool_t *scratch_pool);
-
-/* Indicate in *HAS_ABSENT_CHILDREN whether there are any absent children
- * beneath LOCAL_ABSPATH in the working copy using DB. */
-svn_error_t *
-svn_wc__db_has_absent_children(svn_boolean_t *has_absent_children,
-                               svn_wc__db_t *db,
-                               const char *local_abspath,
-                               apr_pool_t *scratch_pool);
+svn_wc__db_revision_status(svn_revnum_t *min_revision,
+                           svn_revnum_t *max_revision,
+                           svn_boolean_t *is_sparse_checkout,
+                           svn_wc__db_t *db,
+                           const char *local_abspath,
+                           apr_pool_t *scratch_pool);
 
 /* @} */
 
