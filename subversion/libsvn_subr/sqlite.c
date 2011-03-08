@@ -958,6 +958,28 @@ svn_sqlite__close(svn_sqlite__db_t *db)
   return svn_error_wrap_apr(result, NULL);
 }
 
+static svn_error_t *
+reset_all_statements(svn_sqlite__db_t *db,
+                     svn_error_t *error_to_wrap)
+{
+  int i;
+  svn_error_t *err;
+
+  /* ### Should we reorder the errors in this specific case
+     ### to avoid returning the normal error as top level error? */
+
+  err = svn_error_compose_create(error_to_wrap,
+                   svn_error_create(SVN_ERR_SQLITE_RESETTING_FOR_ROLLBACK,
+                                    NULL, NULL));
+
+  for (i = 0; i < db->nbr_statements; i++)
+    if (db->prepared_stmts[i] && db->prepared_stmts[i]->needs_reset)
+      err = svn_error_compose_create(err,
+                                svn_sqlite__reset(db->prepared_stmts[i]));
+
+  return err;
+}
+
 /* The body of svn_sqlite__with_transaction() and
    svn_sqlite__with_immediate_transaction(), which see. */
 static svn_error_t *
@@ -977,8 +999,6 @@ with_transaction(svn_sqlite__db_t *db,
 
       if (err2 && err2->apr_err == SVN_ERR_SQLITE_BUSY)
         {
-          int i;
-
           /* ### Houston, we have a problem!
 
              We are trying to rollback but we can't because some
@@ -998,19 +1018,7 @@ with_transaction(svn_sqlite__db_t *db,
              help diagnosing the original error and help in finding where
              a reset statement is missing. */
 
-          /* ### Should we reorder the errors in this specific case
-             ### to avoid returning the normal error as top level error? */
-
-          err2 = svn_error_compose_create(err2,
-                   svn_error_create(SVN_ERR_SQLITE_RESETTING_FOR_ROLLBACK,
-                                    NULL, NULL));
-
-          for (i = 0; i < db->nbr_statements; i++)
-            if (db->prepared_stmts[i] && db->prepared_stmts[i]->needs_reset)
-              err2 = svn_error_compose_create(
-                         err2,
-                         svn_sqlite__reset(db->prepared_stmts[i]));
-
+          err2 = reset_all_statements(db, err2);
           err2 = svn_error_compose_create(
                       exec_sql(db, "ROLLBACK TRANSACTION;"),
                       err2);
@@ -1076,18 +1084,7 @@ svn_sqlite__with_lock(svn_sqlite__db_t *db,
              ### See huge comment in svn_sqlite__with_transaction for
                  further details */
 
-          int i;
-
-          err2 = svn_error_compose_create(err2,
-                   svn_error_create(SVN_ERR_SQLITE_RESETTING_FOR_ROLLBACK,
-                                    NULL, NULL));
-
-          for (i = 0; i < db->nbr_statements; i++)
-            if (db->prepared_stmts[i] && db->prepared_stmts[i]->needs_reset)
-              err2 = svn_error_compose_create(
-                         err2,
-                         svn_sqlite__reset(db->prepared_stmts[i]));
-
+          err2 = reset_all_statements(db, err2);
           err2 = svn_error_compose_create(exec_sql(db, buf), err2);
         }
 
