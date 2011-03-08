@@ -1065,7 +1065,7 @@ svn_sqlite__with_lock(svn_sqlite__db_t *db,
     {
       svn_error_t *err2;
 
-      snprintf(buf, sizeof(buf), "ROLLBACK  s%u", savepoint);
+      snprintf(buf, sizeof(buf), "ROLLBACK TO s%u", savepoint);
       err2 = exec_sql(db, buf);
 
       if (err2 && err2->apr_err == SVN_ERR_SQLITE_BUSY)
