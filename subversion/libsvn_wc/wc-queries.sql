@@ -867,6 +867,8 @@ ORDER BY local_relpath;
 
 /* ------------------------------------------------------------------------- */
 
+/* Queries for revision status. */
+
 -- STMT_SELECT_MIN_MAX_REVISIONS
 SELECT MIN(revision), MAX(revision) FROM nodes
   WHERE wc_id = ?1
@@ -874,6 +876,14 @@ SELECT MIN(revision), MAX(revision) FROM nodes
   AND (presence = 'normal' OR presence = 'incomplete')
   AND file_external IS NULL
   AND op_depth = 0;
+
+-- STMT_SELECT_SPARSE_NODES
+SELECT local_relpath, presence, depth FROM nodes
+WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
+  AND op_depth = 0
+  AND (presence = 'absent' OR presence = 'excluded' OR
+       (depth != 'infinity' AND depth != 'unknown'))
+  AND file_external IS NULL;
 
 /* Grab all the statements related to the schema.  */
 

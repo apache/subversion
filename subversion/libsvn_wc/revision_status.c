@@ -60,27 +60,17 @@ analyze_status(const char *local_abspath,
   svn_revnum_t changed_rev;
   svn_revnum_t revision;
   svn_revnum_t item_rev;
-  svn_depth_t depth;
   svn_boolean_t is_file_external;
   svn_wc__db_status_t status;
 
   SVN_ERR(svn_wc__db_read_info(&status, NULL, &revision, NULL,
                                NULL, NULL, &changed_rev,
-                               NULL, NULL, NULL, &depth, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, wb->db,
                                local_abspath, scratch_pool, scratch_pool));
 
-  /* We need the excluded and absent paths when checking for sparse
-   * checkouts. But only for that. To collect those we're walking all the
-   * hidden nodes. */
-  if (status == svn_wc__db_status_excluded
-      || status == svn_wc__db_status_absent)
-    {
-      wb->result->sparse_checkout = TRUE;
-      return SVN_NO_ERROR;
-    }
-  else if (status == svn_wc__db_status_not_present)
+  if (status == svn_wc__db_status_not_present)
     {
       return SVN_NO_ERROR;
     }
@@ -132,8 +122,6 @@ analyze_status(const char *local_abspath,
       wb->result->modified |= text_mod;
     }
 
-  wb->result->sparse_checkout |= (depth != svn_depth_infinity
-                                  && depth != svn_depth_unknown);
   return SVN_NO_ERROR;
 }
 
@@ -189,16 +177,13 @@ svn_wc_revision_status2(svn_wc_revision_status_t **result_p,
         }
     }
 
-  SVN_ERR(svn_wc__db_get_min_max_revisions(&result->min_rev, &result->max_rev,
-                                           wc_ctx->db, local_abspath,
-                                           scratch_pool));
-
-  SVN_ERR(svn_wc__db_has_absent_children(&result->sparse_checkout, wc_ctx->db,
-                                         local_abspath, scratch_pool));
+  SVN_ERR(svn_wc__db_revision_status(&result->min_rev, &result->max_rev,
+                                     &result->sparse_checkout, wc_ctx->db,
+                                     local_abspath, scratch_pool));
 
   SVN_ERR(svn_wc__node_walk_children(wc_ctx,
                                      local_abspath,
-                                     TRUE /* show_hidden */,
+                                     FALSE /* show_hidden */,
                                      analyze_status, &wb,
                                      svn_depth_infinity,
                                      cancel_func, cancel_baton,
