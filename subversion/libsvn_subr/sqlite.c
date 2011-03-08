@@ -1091,6 +1091,9 @@ svn_sqlite__with_lock(svn_sqlite__db_t *db,
           err2 = svn_error_compose_create(exec_sql(db, buf), err2);
         }
 
+      snprintf(buf, sizeof(buf), "RELEASE   s%u", savepoint);
+      err2 = svn_error_compose_create(exec_sql(db, buf), err2);
+
       return svn_error_return(svn_error_compose_create(err, err2));
     }
 
