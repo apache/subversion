@@ -74,11 +74,6 @@ analyze_status(const char *local_abspath,
     {
       return SVN_NO_ERROR;
     }
-  else if (status == svn_wc__db_status_added
-           || status == svn_wc__db_status_deleted)
-    {
-      wb->result->modified = TRUE;
-    }
 
   /* Ignore file externals. */
   SVN_ERR(svn_wc__internal_is_file_external(&is_file_external, wb->db,
@@ -178,7 +173,8 @@ svn_wc_revision_status2(svn_wc_revision_status_t **result_p,
     }
 
   SVN_ERR(svn_wc__db_revision_status(&result->min_rev, &result->max_rev,
-                                     &result->sparse_checkout, wc_ctx->db,
+                                     &result->sparse_checkout,
+                                     &result->modified, wc_ctx->db,
                                      local_abspath, scratch_pool));
 
   SVN_ERR(svn_wc__node_walk_children(wc_ctx,

@@ -885,6 +885,13 @@ WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
        (depth != 'infinity' AND depth != 'unknown'))
   AND file_external IS NULL;
 
+-- STMT_SELECT_NODES_WITH_TREE_MODIFICATIONS
+SELECT local_relpath FROM nodes
+WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
+  AND op_depth > 0
+  AND (presence = 'normal' OR presence = 'incomplete')
+  AND file_external IS NULL;
+
 /* Grab all the statements related to the schema.  */
 
 -- include: wc-metadata
