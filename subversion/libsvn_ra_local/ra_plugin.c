@@ -351,8 +351,8 @@ deltify_etc(const svn_commit_info_t *commit_info,
   /* Invoke the original callback first, in case someone's waiting to
      know the revision number so they can go off and annotate an
      issue or something. */
-  if (*db->callback)
-    err1 = (*db->callback)(commit_info, db->callback_baton, pool);
+  if (db->callback)
+    err1 = db->callback(commit_info, db->callback_baton, pool);
 
   /* Maybe unlock the paths. */
   if (db->lock_tokens)
