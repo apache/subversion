@@ -3339,10 +3339,10 @@ get_window_key(struct rep_state *rs, apr_off_t offset, apr_pool_t *pool)
   /* We must differentiate between packed files (as of today, the number
    * is being followed by a dot) and non-packed files (followed by \0).
    * Otherwise, there might be overlaps in the numbering range if the
-   * repo is getting packed in the background. 
+   * repo gets packed after caching the txdeltas of non-packed revs.
    * => add the first non-digit char to the packed number. */
-  if (last_part[1] != '\0')
-    ++last_part;
+  if (name_last[1] != '\0')
+    ++name_last;
 
   /* copy one char MORE than the actual number to mark packed files,
    * i.e. packed revision file content uses different key space then
