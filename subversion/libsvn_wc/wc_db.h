@@ -2511,13 +2511,15 @@ svn_wc__db_temp_below_work(svn_boolean_t *have_work,
  *
  * Indicate in *IS_SPARSE_CHECKOUT whether any of the nodes within
  * LOCAL_ABSPATH is sparse.
- *
- * Indicate in *IS_MODIFIED whether the working copy has local modifications. */
+ * Indicate in *IS_MODIFIED whether the working copy has local modifications.
+ * Indicate in *IS_SWITCHED whether any node beneath LOCAL_ABSPATH
+ * is switched. */
 svn_error_t *
 svn_wc__db_revision_status(svn_revnum_t *min_revision,
                            svn_revnum_t *max_revision,
                            svn_boolean_t *is_sparse_checkout,
                            svn_boolean_t *is_modified,
+                           svn_boolean_t *is_switched,
                            svn_wc__db_t *db,
                            const char *local_abspath,
                            apr_pool_t *scratch_pool);

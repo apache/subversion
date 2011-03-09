@@ -81,17 +81,6 @@ analyze_status(const char *local_abspath,
   if (is_file_external)
     return SVN_NO_ERROR;
 
-  if (! wb->result->switched)
-    {
-      svn_boolean_t wc_root;
-      svn_boolean_t switched;
-
-      SVN_ERR(svn_wc__check_wc_root(&wc_root, NULL, &switched, wb->db,
-                                    local_abspath, scratch_pool));
-
-      wb->result->switched |= switched;
-    }
-
   item_rev = (wb->committed
               ? changed_rev
               : revision);
@@ -132,8 +121,8 @@ svn_wc_revision_status2(svn_wc_revision_status_t **result_p,
                         apr_pool_t *scratch_pool)
 {
   struct walk_baton wb;
-  const char *url;
   svn_wc_revision_status_t *result = apr_palloc(result_pool, sizeof(*result));
+
   *result_p = result;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
@@ -145,20 +134,22 @@ svn_wc_revision_status2(svn_wc_revision_status_t **result_p,
   result->modified = FALSE;
   result->sparse_checkout = FALSE;
 
-  /* initialize walking baton */
-  wb.result = result;
-  wb.committed = committed;
-  wb.local_abspath = local_abspath;
-  wb.db = wc_ctx->db;
+  SVN_ERR(svn_wc__db_revision_status(&result->min_rev, &result->max_rev,
+                                     &result->sparse_checkout,
+                                     &result->modified,
+                                     &result->switched,
+                                     wc_ctx->db,
+                                     local_abspath, scratch_pool));
 
-  SVN_ERR(svn_wc__internal_node_get_url(&url, wc_ctx->db, local_abspath,
-                                        result_pool, scratch_pool));
-
-  if (trail_url != NULL)
+  if (!result->switched && trail_url != NULL)
     {
+      const char *url;
+
       /* If the trailing part of the URL of the working copy directory
          does not match the given trailing URL then the whole working
          copy is switched. */
+      SVN_ERR(svn_wc__internal_node_get_url(&url, wc_ctx->db, local_abspath,
+                                            result_pool, scratch_pool));
       if (! url)
         {
           result->switched = TRUE;
@@ -172,10 +163,11 @@ svn_wc_revision_status2(svn_wc_revision_status_t **result_p,
         }
     }
 
-  SVN_ERR(svn_wc__db_revision_status(&result->min_rev, &result->max_rev,
-                                     &result->sparse_checkout,
-                                     &result->modified, wc_ctx->db,
-                                     local_abspath, scratch_pool));
+  /* initialize walking baton */
+  wb.result = result;
+  wb.committed = committed;
+  wb.local_abspath = local_abspath;
+  wb.db = wc_ctx->db;
 
   SVN_ERR(svn_wc__node_walk_children(wc_ctx,
                                      local_abspath,
