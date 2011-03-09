@@ -862,7 +862,8 @@ enum {
   ELEM_has_children,
   ELEM_merged_revision,
   ELEM_deleted_rev_report,
-  ELEM_validate_inherited_mergeinfo
+  ELEM_validate_inherited_mergeinfo,
+  ELEM_subtractive_merge,
 };
 
 /* ### docco */

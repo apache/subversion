@@ -854,6 +854,13 @@ typedef struct svn_log_entry_t
    */
   svn_boolean_t non_inheritable;
 
+  /**
+   * Whether @a revision is a merged revision resulting from a reverse merge.
+   *
+   * @since New in 1.7.
+   */
+  svn_boolean_t subtractive_merge;
+
   /* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update
      svn_log_entry_dup(). */

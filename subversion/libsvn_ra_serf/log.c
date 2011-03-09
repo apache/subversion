@@ -63,6 +63,7 @@ typedef enum log_state_e {
   REPLACED_PATH,
   DELETED_PATH,
   MODIFIED_PATH,
+  SUBTRACTIVE_MERGE,
 } log_state_e;
 
 typedef struct log_info_t {
@@ -230,6 +231,10 @@ start_log(svn_ra_serf__xml_parser_t *parser,
       else if (strcmp(name.name, "has-children") == 0)
         {
           push_state(parser, log_ctx, HAS_CHILDREN);
+        }
+      else if (strcmp(name.name, "subtractive-merge") == 0)
+        {
+          push_state(parser, log_ctx, SUBTRACTIVE_MERGE);
         }
       else if (strcmp(name.name, "added-path") == 0)
         {
@@ -399,6 +404,12 @@ end_log(svn_ra_serf__xml_parser_t *parser,
            strcmp(name.name, "has-children") == 0)
     {
       info->log_entry->has_children = TRUE;
+      svn_ra_serf__xml_pop_state(parser);
+    }
+  else if (state == SUBTRACTIVE_MERGE &&
+           strcmp(name.name, "subtractive-merge") == 0)
+    {
+      info->log_entry->subtractive_merge = TRUE;
       svn_ra_serf__xml_pop_state(parser);
     }
   else if ((state == ADDED_PATH &&

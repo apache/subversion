@@ -1405,10 +1405,12 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
   while (1)
     {
       apr_uint64_t has_children_param, invalid_revnum_param;
+      apr_uint64_t has_subtractive_merge_param;
       svn_string_t *author, *date, *message;
       apr_array_header_t *cplist, *rplist;
       svn_log_entry_t *log_entry;
       svn_boolean_t has_children;
+      svn_boolean_t subtractive_merge = FALSE;
       apr_uint64_t revprop_count;
       svn_ra_svn_item_t *item;
       apr_hash_t *cphash;
@@ -1423,11 +1425,12 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Log entry not a list"));
       SVN_ERR(svn_ra_svn_parse_tuple(item->u.list, iterpool,
-                                     "lr(?s)(?s)(?s)?BBnl",
+                                     "lr(?s)(?s)(?s)?BBnl?B",
                                      &cplist, &rev, &author, &date,
                                      &message, &has_children_param,
                                      &invalid_revnum_param,
-                                     &revprop_count, &rplist));
+                                     &revprop_count, &rplist,
+                                     &has_subtractive_merge_param));
       if (want_custom_revprops && rplist == NULL)
         {
           /* Caller asked for custom revprops, but server is too old. */
@@ -1440,6 +1443,11 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
         has_children = FALSE;
       else
         has_children = (svn_boolean_t) has_children_param;
+
+      if (has_subtractive_merge_param == SVN_RA_SVN_UNSPECIFIED_NUMBER)
+        subtractive_merge = FALSE;
+      else
+        subtractive_merge = (svn_boolean_t) has_subtractive_merge_param;
 
       /* Because the svn protocol won't let us send an invalid revnum, we have
          to recover that fact using the extra parameter. */
@@ -1493,6 +1501,7 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
           log_entry->changed_paths2 = cphash;
           log_entry->revision = rev;
           log_entry->has_children = has_children;
+          log_entry->subtractive_merge = subtractive_merge;
           if (rplist)
             SVN_ERR(svn_ra_svn_parse_proplist(rplist, pool,
                                               &log_entry->revprops));
