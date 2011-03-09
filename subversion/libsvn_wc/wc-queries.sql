@@ -870,7 +870,8 @@ ORDER BY local_relpath;
 /* Queries for revision status. */
 
 -- STMT_SELECT_MIN_MAX_REVISIONS
-SELECT MIN(revision), MAX(revision) FROM nodes
+SELECT MIN(revision), MAX(revision),
+       MIN(changed_revision), MAX(changed_revision) FROM nodes
   WHERE wc_id = ?1
   AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
   AND (presence = 'normal' OR presence = 'incomplete')

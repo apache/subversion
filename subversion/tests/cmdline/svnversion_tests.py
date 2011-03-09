@@ -292,6 +292,20 @@ def svnversion_with_structural_changes(sbox):
   svntest.actions.run_and_verify_svnversion("Deleted file", wc_dir, repo_url,
                                             [ "1:2M\n" ], [])
 
+def committed_revisions(sbox):
+  "test 'svnversion --committed'" 
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repo_url = sbox.repo_url
+
+  sbox.simple_copy('iota', 'iota2')
+  sbox.simple_commit()
+  sbox.simple_update()
+  svntest.actions.run_and_verify_svnversion("Committed revisions", wc_dir, repo_url,
+                                            [ "1:2\n" ], [],
+                                            "--committed")
+
+
 ########################################################################
 # Run the tests
 
@@ -302,6 +316,7 @@ test_list = [ None,
               ignore_externals,
               svnversion_with_excluded_subtrees,
               svnversion_with_structural_changes,
+              committed_revisions,
              ]
 
 if __name__ == '__main__':
