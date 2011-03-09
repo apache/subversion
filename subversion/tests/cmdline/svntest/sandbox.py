@@ -244,6 +244,18 @@ class Sandbox:
     targets = self.ospaths(targets)
     svntest.main.run_svn(False, 'propdel', name, *targets)
 
+  def simple_copy(self, source, dest):
+    """SOURCE and DEST are relpaths relative to the WC."""
+    source = self.ospath(source)
+    dest = self.ospath(dest)
+    svntest.main.run_svn(False, 'copy', source, dest)
+
+  def simple_repo_copy(self, source, dest):
+    """SOURCE and DEST are relpaths relative to the repo root."""
+    svntest.main.run_svn(False, 'copy', '-m', svntest.main.make_log_msg(),
+                         self.repo_url + '/' + source,
+                         self.repo_url + '/' + dest)
+
 
 def is_url(target):
   return (target.startswith('^/')
