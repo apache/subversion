@@ -76,7 +76,6 @@ typedef struct commit_context_t {
   apr_hash_t *lock_tokens;
   svn_boolean_t keep_locks;
   apr_hash_t *deleted_entries;   /* deleted files (for delete+add detection) */
-  apr_hash_t *copied_entries;    /* copied enties (we don't checkout these) */
 
   /* HTTP v2 stuff */
   const char *txn_name;          /* transaction name (append to txn-ish stubs */
@@ -366,9 +365,9 @@ checkout_dir(dir_context_t *dir)
 
   if (dir->parent_dir)
     {
-      /* Is our parent a copy?  If so, we're already implicitly checked out. */
-      if (apr_hash_get(dir->commit->copied_entries,
-                       dir->parent_dir->name, APR_HASH_KEY_STRING))
+      /* Is our parent newly added?  If so, we're already implicitly checked
+       * out. */
+      if (dir->parent_dir->added)
         {
           /* Implicitly checkout this dir now. */
           dir->checkout = apr_pcalloc(dir->pool, sizeof(*dir->checkout));
@@ -378,10 +377,6 @@ checkout_dir(dir_context_t *dir)
             svn_path_url_add_component2(dir->parent_dir->checkout->resource_url,
                                         svn_relpath_basename(dir->name, NULL),
                                         dir->pool);
-
-          apr_hash_set(dir->commit->copied_entries,
-                       apr_pstrdup(dir->commit->pool, dir->name),
-                       APR_HASH_KEY_STRING, (void*)1);
 
           return SVN_NO_ERROR;
         }
@@ -554,18 +549,10 @@ checkout_file(file_context_t *file)
 
   if (file->parent_dir)
     {
-      dir_context_t *dir;
+      dir_context_t *dir = file->parent_dir;
 
-      dir = file->parent_dir;
-      while (dir && ! apr_hash_get(file->commit->copied_entries,
-                                   dir->name, APR_HASH_KEY_STRING))
-        {
-          dir = dir->parent_dir;
-        }
-
-
-      /* Is our parent a copy?  If so, we're already implicitly checked out. */
-      if (dir)
+      /* Is our parent newly added?  If so, we're already implicitly checked out. */
+      if (dir->added)
         {
           const char *diff_path;
 
@@ -1123,10 +1110,6 @@ setup_copy_dir_headers(serf_bucket_t *headers,
   dir->checkout->pool = dir->pool;
   dir->checkout->activity_url = dir->commit->activity_url;
   dir->checkout->resource_url = apr_pstrdup(dir->checkout->pool, uri.path);
-
-  apr_hash_set(dir->commit->copied_entries,
-               apr_pstrdup(dir->commit->pool, dir->name), APR_HASH_KEY_STRING,
-               (void*)1);
 
   return SVN_NO_ERROR;
 }
@@ -2316,7 +2299,6 @@ svn_ra_serf__get_commit_editor(svn_ra_session_t *ra_session,
   ctx->keep_locks = keep_locks;
 
   ctx->deleted_entries = apr_hash_make(ctx->pool);
-  ctx->copied_entries = apr_hash_make(ctx->pool);
 
   editor = svn_delta_default_editor(pool);
   editor->open_root = open_root;
