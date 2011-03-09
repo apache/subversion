@@ -391,24 +391,6 @@ svn_wc__db_get_wcroot(const char **wcroot_abspath,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool);
 
-typedef svn_error_t * (*svn_wc__db_sqlite_lock_cb)(svn_wc__db_t *db,
-                                                   void *baton,
-                                                   apr_pool_t *scratch_pool);
-
-/* Obtain a sqlite lock to efficiently use the working copy database for
-   WRI_ABSPATH and call LOCK_CB with CB_BATON while this lock exist.
-
-   On returning from this function all operations will be committed, but
-   operations might have been committed before returning from this function.
-
-   ### See svn_sqlite__with_lock() for more details.
- */
-svn_error_t *
-svn_wc__db_with_sqlite_lock(svn_wc__db_t *db,
-                            const char *wri_abspath,
-                            svn_wc__db_sqlite_lock_cb lock_cb,
-                            void *cb_baton,
-                            apr_pool_t *scratch_pool);
 
 /* @} */
 
