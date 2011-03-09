@@ -334,7 +334,8 @@ def get_fsfs_format_file_path(repo_dir):
 def run_command(command, error_expected, binary_mode=0, *varargs):
   """Run COMMAND with VARARGS. Return exit code as int; stdout, stderr
   as lists of lines (including line terminators).  See run_command_stdin()
-  for details.  If ERROR_EXPECTED is None, any stderr also will be printed."""
+  for details.  If ERROR_EXPECTED is None, any stderr output will be
+  printed and will raise an exception."""
 
   return run_command_stdin(command, error_expected, 0, binary_mode,
                            None, *varargs)
@@ -489,7 +490,8 @@ def run_command_stdin(command, error_expected, bufsize=0, binary_mode=0,
   Normalize Windows line endings of stdout and stderr if not BINARY_MODE.
   Return exit code as int; stdout, stderr as lists of lines (including
   line terminators).
-  If ERROR_EXPECTED is None, any stderr also will be printed."""
+  If ERROR_EXPECTED is None, any stderr output will be printed and will
+  raise an exception."""
 
   if options.verbose:
     start = time.time()
@@ -574,8 +576,8 @@ def _with_auth(args):
 # For running subversion and returning the output
 def run_svn(error_expected, *varargs):
   """Run svn with VARARGS; return exit code as int; stdout, stderr as
-  lists of lines (including line terminators).
-  If ERROR_EXPECTED is None, any stderr also will be printed.  If
+  lists of lines (including line terminators).  If ERROR_EXPECTED is
+  None, any stderr output will be printed and will raise an exception.  If
   you're just checking that something does/doesn't come out of
   stdout/stderr, you might want to use actions.run_and_verify_svn()."""
   return run_command(svn_binary, error_expected, 0,
