@@ -9133,12 +9133,14 @@ svn_wc__db_revision_status(svn_revnum_t *min_revision,
                            svn_revnum_t *max_revision,
                            svn_boolean_t *is_sparse_checkout,
                            svn_boolean_t *is_modified,
+                           svn_boolean_t *is_switched,
                            svn_wc__db_t *db,
                            const char *local_abspath,
                            apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
   svn_wc__db_wcroot_t *wcroot;
+  const char *wcroot_repos_relpath;
   const char *local_relpath;
   svn_boolean_t have_row;
 
@@ -9193,6 +9195,24 @@ svn_wc__db_revision_status(svn_revnum_t *min_revision,
   /* If this query returns a row, the working copy is modified. */
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   *is_modified = have_row;
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  /* Check for switched nodes. */
+  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, &wcroot_repos_relpath,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, db,
+                               wcroot->abspath, scratch_pool, scratch_pool));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_SWITCHED_NODES));
+  SVN_ERR(svn_sqlite__bindf(stmt, "issss", wcroot->wc_id, local_relpath,
+                            construct_like_arg(local_relpath, scratch_pool),
+                            construct_like_arg(wcroot_repos_relpath,
+                                               scratch_pool),
+                            wcroot_repos_relpath));
+  /* If this query returns a row, some part of the working copy is switched. */
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  *is_switched = have_row;
   SVN_ERR(svn_sqlite__reset(stmt));
 
   return SVN_NO_ERROR;
