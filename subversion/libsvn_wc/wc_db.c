@@ -9149,6 +9149,54 @@ svn_wc__db_revision_status(svn_revnum_t *min_revision,
   *is_modified = have_row;
   SVN_ERR(svn_sqlite__reset(stmt));
 
+  if (! *is_modified)
+    {
+      apr_pool_t *iterpool = NULL;
+
+      /* Check for text and prop modifications. */
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_SELECT_CURRENT_NODES_RECURSIVE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id, local_relpath,
+                                construct_like_arg(local_relpath,
+                                                   scratch_pool)));
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+      if (have_row)
+        iterpool = svn_pool_create(scratch_pool);
+      while (have_row)
+        {
+          const char *node_abspath;
+          svn_wc__db_kind_t node_kind;
+
+          svn_pool_clear(iterpool);
+
+          node_abspath = svn_dirent_join(wcroot->abspath,
+                                         svn_sqlite__column_text(stmt, 0,
+                                                                 iterpool),
+                                         iterpool);
+
+          SVN_ERR(svn_wc__props_modified(is_modified, db, node_abspath,
+                                         iterpool));
+          if (*is_modified)
+            break;
+
+          node_kind = svn_sqlite__column_token(stmt, 1, kind_map);
+          if (node_kind == svn_wc__db_kind_file)
+            {
+              SVN_ERR(svn_wc__internal_text_modified_p(is_modified, db,
+                                                       node_abspath,
+                                                       FALSE, TRUE, iterpool));
+              if (*is_modified)
+                break;
+            }
+
+          SVN_ERR(svn_sqlite__step(&have_row, stmt));
+        }
+      if (iterpool)
+        svn_pool_destroy(iterpool);
+
+      SVN_ERR(svn_sqlite__reset(stmt));
+    }
+
   /* Check for switched nodes. */
   SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, &wcroot_repos_relpath,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,

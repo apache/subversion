@@ -903,6 +903,13 @@ WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
        OR (repos_path != ?5 || local_relpath))
   AND file_external IS NULL;
 
+-- STMT_SELECT_CURRENT_NODES_RECURSIVE
+SELECT local_relpath, kind FROM nodes_current
+WHERE wc_id = ?1
+  AND (?2 = '' OR local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
+  AND (presence = 'normal' OR presence = 'incomplete')
+  AND file_external IS NULL;
+
 /* Grab all the statements related to the schema.  */
 
 -- include: wc-metadata
