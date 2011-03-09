@@ -99,8 +99,6 @@ struct svn_ra_serf__merge_context_t
   svn_boolean_t keep_locks;
 
   const char *activity_url;
-  apr_size_t activity_url_len;
-
   const char *merge_url;
 
   int status;
@@ -490,7 +488,8 @@ create_merge_body(serf_bucket_t **bkt,
   svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:href", NULL);
 
   svn_ra_serf__add_cdata_len_buckets(body_bkt, alloc,
-                                     ctx->activity_url, ctx->activity_url_len);
+                                     ctx->activity_url,
+                                     strlen(ctx->activity_url));
 
   svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:href");
   svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:source");
@@ -522,7 +521,6 @@ svn_ra_serf__merge_create_req(svn_ra_serf__merge_context_t **ret_ctx,
                               svn_ra_serf__connection_t *conn,
                               const char *path,
                               const char *activity_url,
-                              apr_size_t activity_url_len,
                               apr_hash_t *lock_tokens,
                               svn_boolean_t keep_locks,
                               apr_pool_t *pool)
@@ -537,7 +535,6 @@ svn_ra_serf__merge_create_req(svn_ra_serf__merge_context_t **ret_ctx,
   merge_ctx->session = session;
 
   merge_ctx->activity_url = activity_url;
-  merge_ctx->activity_url_len = activity_url_len;
 
   merge_ctx->lock_tokens = lock_tokens;
   merge_ctx->keep_locks = keep_locks;

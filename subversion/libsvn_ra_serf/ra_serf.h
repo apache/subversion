@@ -1037,7 +1037,6 @@ svn_ra_serf__merge_create_req(svn_ra_serf__merge_context_t **merge_ctx,
                               svn_ra_serf__connection_t *conn,
                               const char *path,
                               const char *activity_url,
-                              apr_size_t activity_url_len,
                               apr_hash_t *lock_tokens,
                               svn_boolean_t keep_locks,
                               apr_pool_t *pool);
