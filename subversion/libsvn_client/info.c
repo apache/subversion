@@ -178,10 +178,12 @@ build_info_for_entry(svn_info_t **info,
                                   wc_ctx, local_abspath, pool);
 
   if (err)
-    if (exclude && err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
-      svn_error_clear(err);
-    else
-      return svn_error_return(err);
+    {
+      if (exclude && err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
+        svn_error_clear(err);
+      else
+        return svn_error_return(err);
+    }
 
   SVN_ERR(svn_wc_get_wc_root(&tmpinfo->wcroot_abspath, wc_ctx,
                              local_abspath, pool, pool));
