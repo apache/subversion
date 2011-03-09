@@ -765,6 +765,16 @@ svn_wc__read_entries_old(apr_hash_t **entries,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
+/**
+ * Find whether @a local_abspath is set with depth exclude using @a wc_ctx. 
+ */
+svn_error_t *
+svn_wc__node_depth_is_exclude(svn_boolean_t *exclude,
+                              svn_wc_context_t *wc_ctx,
+                              const char *local_abspath,
+                              apr_pool_t *scratch_pool);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

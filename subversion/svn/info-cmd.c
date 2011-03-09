@@ -344,6 +344,10 @@ print_info(void *baton,
           SVN_ERR(svn_cmdline_printf(pool, _("Depth: immediates\n")));
           break;
 
+        case svn_depth_exclude:
+          SVN_ERR(svn_cmdline_printf(pool, _("Depth: exclude\n")));
+          break;
+
         case svn_depth_infinity:
           /* Infinity is the default depth for working copy
              directories.  Let's not print it, it's not special enough
