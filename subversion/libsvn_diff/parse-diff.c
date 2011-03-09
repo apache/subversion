@@ -287,18 +287,15 @@ scan_eol(const char **eol, apr_file_t *file, apr_size_t max_len,
     {
       char buf[256];
       apr_size_t len;
-      svn_error_t *err;
+      svn_boolean_t eof = FALSE;
 
       if (total_len >= max_len)
         break;
 
       len = sizeof(buf) - 1 < (max_len - total_len) ? sizeof(buf) - 1
                                                     : (max_len - total_len);
-      err = svn_io_file_read_full(file, buf, sizeof(buf) - 1, &len, pool);
-      if (err && APR_STATUS_IS_EOF(err->apr_err))
-        svn_error_clear(err);
-      else
-        SVN_ERR(err);
+      SVN_ERR(svn_io_file_read_full2(file, buf, sizeof(buf) - 1, &len, &eof,
+                                     pool));
 
       if (len == 0)
         break; /* EOF */
@@ -361,14 +358,8 @@ readline(apr_file_t *file,
   len = 0;
   while (*match)
     {
-      svn_error_t *err;
-
-      err = svn_io_file_read_full(file, &c, sizeof(c), &numbytes,
-                                  scratch_pool);
-      if (err && APR_STATUS_IS_EOF(err->apr_err))
-        svn_error_clear(err);
-      else
-        SVN_ERR(err);
+      SVN_ERR(svn_io_file_read_full2(file, &c, sizeof(c), &numbytes, eof,
+                                     scratch_pool));
       len++;
       if (numbytes != 1 || len > max_len)
         {
