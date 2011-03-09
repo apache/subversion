@@ -889,7 +889,8 @@ WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
 SELECT local_relpath FROM nodes
 WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
   AND op_depth > 0
-  AND (presence = 'normal' OR presence = 'incomplete')
+  AND (presence = 'normal' OR presence = 'incomplete' OR
+       presence = 'base-deleted')
   AND file_external IS NULL;
 
 /* Grab all the statements related to the schema.  */
