@@ -254,6 +254,7 @@ def svnversion_with_structural_changes(sbox):
   wc_dir = sbox.wc_dir
   repo_url = sbox.repo_url
 
+  # Test a copy
   iota_path = os.path.join(wc_dir, 'iota')
   iota_copy_path = os.path.join(wc_dir, 'iota_copy')
 
@@ -277,6 +278,19 @@ def svnversion_with_structural_changes(sbox):
                                             [ "Uncommitted local addition, "
                                             "copy or move\n" ],
                                             [])
+  sbox.simple_commit()
+
+  # Test deletion
+  sbox.simple_rm('iota')
+  svntest.actions.run_and_verify_svnversion("Deleted file",
+                                            sbox.ospath('iota'),
+                                            repo_url + '/iota',
+                                            [],
+                                            [ "'%s' doesn't exist\n" % \
+                                              sbox.ospath('iota')],
+                                            )
+  svntest.actions.run_and_verify_svnversion("Deleted file", wc_dir, repo_url,
+                                            [ "1:2M\n" ], [])
 
 ########################################################################
 # Run the tests
