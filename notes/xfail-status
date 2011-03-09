@@ -130,17 +130,6 @@ Test #  Mode   Test Description
   Log: r1027031
   Point Person: philip
   
-LISTING: depth_tests.py
-
-Test #  Mode   Test Description
-------  -----  ----------------
-  36    XFAIL  'info' should treat excluded item as versioned
-  Issue #: 3792
-  Target Milestone: Unscheduled
-  Thread: N/A
-  Log: r876772
-  Point Person: danielsh 
-
 LISTING: diff_tests.py
 
 Test #  Mode   Test Description
