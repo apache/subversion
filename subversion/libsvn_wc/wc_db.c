@@ -4931,6 +4931,9 @@ svn_wc__db_read_children_info(apr_hash_t **nodes,
   *nodes = apr_hash_make(result_pool);
   while (have_row)
     {
+      /* CHILD points to memory that holds a svn_wc__db_info_t followed
+       * immediately by an apr_int64_t op_depth.  The caller will see the
+       * former; the latter is for local use only. */
       struct svn_wc__db_info_t *child;
       const char *child_relpath = svn_sqlite__column_text(stmt, 19, NULL);
       const char *name = svn_relpath_basename(child_relpath, NULL);
