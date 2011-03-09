@@ -56,7 +56,6 @@ analyze_status(const char *local_abspath,
                apr_pool_t *scratch_pool)
 {
   struct walk_baton *wb = baton;
-  svn_revnum_t item_rev;
   svn_boolean_t is_file_external;
   svn_wc__db_status_t status;
 
