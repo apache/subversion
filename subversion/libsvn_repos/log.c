@@ -841,7 +841,7 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
 
       /* Compare, constrast, and combine the results. */
       SVN_ERR(svn_mergeinfo_diff(&deleted, &added, prev_mergeinfo,
-                                 mergeinfo, FALSE, iterpool));
+                                 mergeinfo, FALSE, pool));
       SVN_ERR(svn_mergeinfo_merge(*deleted_mergeinfo, deleted, pool));
       SVN_ERR(svn_mergeinfo_merge(*added_mergeinfo, added, pool));
      }
