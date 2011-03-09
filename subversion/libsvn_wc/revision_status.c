@@ -31,75 +31,6 @@
 
 #include "svn_private_config.h"
 
-/* A baton for analyze_status(). */
-struct walk_baton
-{
-  svn_wc_revision_status_t *result;           /* where to put the result */
-  const char *local_abspath;         /* path whose URL we're looking for */
-  svn_wc__db_t *db;
-};
-
-/* An svn_wc__node_found_func_t callback function for analyzing the wc
- * status of LOCAL_ABSPATH.  Update the status information in BATON->result.
- * BATON is a 'struct walk_baton'.
- *
- * Implementation note: Since it can be invoked for a lot of paths in
- * a wc but some data, i.e. if the wc is switched or has modifications, is
- * expensive to calculate, we optimize by checking if those values are
- * already set before runnning the db operations.
- *
- * Temporary allocations are made in SCRATCH_POOL. */
-static svn_error_t *
-analyze_status(const char *local_abspath,
-               svn_node_kind_t kind,
-               void *baton,
-               apr_pool_t *scratch_pool)
-{
-  struct walk_baton *wb = baton;
-  svn_boolean_t is_file_external;
-  svn_wc__db_status_t status;
-
-  SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, wb->db,
-                               local_abspath, scratch_pool, scratch_pool));
-
-  if (status == svn_wc__db_status_not_present)
-    {
-      return SVN_NO_ERROR;
-    }
-
-  /* Ignore file externals. */
-  SVN_ERR(svn_wc__internal_is_file_external(&is_file_external, wb->db,
-                                            local_abspath, scratch_pool));
-  if (is_file_external)
-    return SVN_NO_ERROR;
-
-  if (! wb->result->modified)
-    {
-      svn_boolean_t props_mod;
-
-      SVN_ERR(svn_wc__props_modified(&props_mod, wb->db, local_abspath,
-                                     scratch_pool));
-      wb->result->modified |= props_mod;
-    }
-
-  if (! wb->result->modified)
-    {
-      svn_boolean_t text_mod;
-
-      SVN_ERR(svn_wc__internal_text_modified_p(&text_mod, wb->db,
-                                               local_abspath,
-                                               FALSE,
-                                               TRUE,
-                                               scratch_pool));
-      wb->result->modified |= text_mod;
-    }
-
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *
 svn_wc_revision_status2(svn_wc_revision_status_t **result_p,
                         svn_wc_context_t *wc_ctx,
@@ -111,7 +42,6 @@ svn_wc_revision_status2(svn_wc_revision_status_t **result_p,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
-  struct walk_baton wb;
   svn_wc_revision_status_t *result = apr_palloc(result_pool, sizeof(*result));
 
   *result_p = result;
@@ -153,19 +83,6 @@ svn_wc_revision_status2(svn_wc_revision_status_t **result_p,
             result->switched = TRUE;
         }
     }
-
-  /* initialize walking baton */
-  wb.result = result;
-  wb.local_abspath = local_abspath;
-  wb.db = wc_ctx->db;
-
-  SVN_ERR(svn_wc__node_walk_children(wc_ctx,
-                                     local_abspath,
-                                     FALSE /* show_hidden */,
-                                     analyze_status, &wb,
-                                     svn_depth_infinity,
-                                     cancel_func, cancel_baton,
-                                     scratch_pool));
 
   return SVN_NO_ERROR;
 }
