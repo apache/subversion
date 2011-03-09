@@ -96,13 +96,20 @@ build_info_for_entry(svn_info_t **info,
   apr_time_t lock_date;
   const svn_checksum_t *checksum;
   svn_node_kind_t kind;
+  svn_error_t *err;
+  svn_boolean_t exclude = FALSE;
 
   SVN_ERR(svn_wc_read_kind(&kind, wc_ctx, local_abspath, FALSE, pool));
 
   if (kind == svn_node_none)
-    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                             _("The node '%s' was not found."),
-                             svn_dirent_local_style(local_abspath, pool));
+    {
+      svn_error_clear(svn_wc__node_depth_is_exclude(&exclude, wc_ctx,
+                                                    local_abspath, pool));
+      if (! exclude)
+        return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                                 _("The node '%s' was not found."),
+                                 svn_dirent_local_style(local_abspath, pool));
+    }
 
   tmpinfo = apr_pcalloc(pool, sizeof(*tmpinfo));
   tmpinfo->kind = kind;
@@ -164,8 +171,17 @@ build_info_for_entry(svn_info_t **info,
   if (tmpinfo->depth == svn_depth_unknown)
     tmpinfo->depth = svn_depth_infinity;
 
-  SVN_ERR(svn_wc__node_get_schedule(&tmpinfo->schedule, NULL,
-                                    wc_ctx, local_abspath, pool));
+  if (exclude)
+    tmpinfo->depth = svn_depth_exclude;
+
+  err = svn_wc__node_get_schedule(&tmpinfo->schedule, NULL,
+                                  wc_ctx, local_abspath, pool);
+
+  if (err)
+    if (exclude && err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
+      svn_error_clear(err);
+    else
+      return svn_error_return(err);
 
   SVN_ERR(svn_wc_get_wc_root(&tmpinfo->wcroot_abspath, wc_ctx,
                              local_abspath, pool, pool));
