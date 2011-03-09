@@ -1970,7 +1970,8 @@ static svn_error_t *log_receiver(void *baton,
                                  log_entry->has_children,
                                  invalid_revnum, revprop_count));
   SVN_ERR(svn_ra_svn_write_proplist(conn, pool, log_entry->revprops));
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)"));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)b",
+                                 log_entry->subtractive_merge));
 
   if (log_entry->has_children)
     b->stack_depth++;

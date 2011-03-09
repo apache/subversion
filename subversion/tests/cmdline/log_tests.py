@@ -1686,7 +1686,8 @@ def merge_sensitive_log_added_mergeinfo_replaces_inherited(sbox):
 
   def run_log_g_r8(log_target):
     expected_merges = {
-      8 : [],
+      8 : []}
+    expected_reverse_merges = {
       3 : [8]}
     exit_code, output, err = svntest.actions.run_and_verify_svn(None, None,
                                                                 [],
@@ -1694,7 +1695,7 @@ def merge_sensitive_log_added_mergeinfo_replaces_inherited(sbox):
                                                                 '-r8',
                                                                 log_target)
     log_chain = parse_log_output(output)
-    check_merge_results(log_chain, expected_merges)
+    check_merge_results(log_chain, expected_merges, expected_reverse_merges)
 
   run_log_g_r8(wc_dir)
   run_log_g_r8(os.path.join(wc_dir, "A_COPY"))
@@ -1814,7 +1815,6 @@ def log_of_local_copy(sbox):
 
 @SkipUnless(server_has_mergeinfo)
 @Issue(3176)
-@XFail()
 def merge_sensitive_log_reverse_merges(sbox):
   "log -g differentiates forward and reverse merges"
 
@@ -1845,8 +1845,6 @@ def merge_sensitive_log_reverse_merges(sbox):
   exit_code, out, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                            'log', '-g', '-r8',
                                                            A_COPY_path)
-  # This test currently fails because reverse merges are not differentiated
-  # from forward merges.
   log_chain = parse_log_output(out)
   expected_merges = {
     8 : [],

@@ -158,6 +158,10 @@ log_receiver(void *baton,
       lrb->stack_depth++;
     }
 
+  if (log_entry->subtractive_merge)
+    SVN_ERR(dav_svn__brigade_puts(lrb->bb, lrb->output,
+                                  "<S:subtractive-merge/>"));
+
   if (log_entry->changed_paths2)
     {
       apr_hash_index_t *hi;

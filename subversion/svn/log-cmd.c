@@ -248,7 +248,10 @@ log_entry_receiver(void *baton,
       int i;
 
       /* Print the result of merge line */
-      SVN_ERR(svn_cmdline_printf(pool, _("Merged via:")));
+      if (log_entry->subtractive_merge)
+        SVN_ERR(svn_cmdline_printf(pool, _("Reverse merged via:")));
+      else
+        SVN_ERR(svn_cmdline_printf(pool, _("Merged via:")));
       for (i = 0; i < lb->merge_stack->nelts; i++)
         {
           svn_revnum_t rev = APR_ARRAY_IDX(lb->merge_stack, i, svn_revnum_t);
