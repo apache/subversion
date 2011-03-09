@@ -9136,6 +9136,7 @@ svn_wc__db_revision_status(svn_revnum_t *min_revision,
                            svn_boolean_t *is_switched,
                            svn_wc__db_t *db,
                            const char *local_abspath,
+                           svn_boolean_t committed,
                            apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
@@ -9160,8 +9161,16 @@ svn_wc__db_revision_status(svn_revnum_t *min_revision,
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (have_row)
     {
-        *min_revision = svn_sqlite__column_revnum(stmt, 0);
-        *max_revision = svn_sqlite__column_revnum(stmt, 1);
+        if (committed)
+          {
+            *min_revision = svn_sqlite__column_revnum(stmt, 2);
+            *max_revision = svn_sqlite__column_revnum(stmt, 3);
+          }
+        else
+          {
+            *min_revision = svn_sqlite__column_revnum(stmt, 0);
+            *max_revision = svn_sqlite__column_revnum(stmt, 1);
+          }
     }
   else
     {

@@ -35,7 +35,6 @@
 struct walk_baton
 {
   svn_wc_revision_status_t *result;           /* where to put the result */
-  svn_boolean_t committed;           /* examine last committed revisions */
   const char *local_abspath;         /* path whose URL we're looking for */
   svn_wc__db_t *db;
 };
@@ -57,14 +56,11 @@ analyze_status(const char *local_abspath,
                apr_pool_t *scratch_pool)
 {
   struct walk_baton *wb = baton;
-  svn_revnum_t changed_rev;
-  svn_revnum_t revision;
   svn_revnum_t item_rev;
   svn_boolean_t is_file_external;
   svn_wc__db_status_t status;
 
-  SVN_ERR(svn_wc__db_read_info(&status, NULL, &revision, NULL,
-                               NULL, NULL, &changed_rev,
+  SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, wb->db,
@@ -80,10 +76,6 @@ analyze_status(const char *local_abspath,
                                             local_abspath, scratch_pool));
   if (is_file_external)
     return SVN_NO_ERROR;
-
-  item_rev = (wb->committed
-              ? changed_rev
-              : revision);
 
   if (! wb->result->modified)
     {
@@ -138,8 +130,8 @@ svn_wc_revision_status2(svn_wc_revision_status_t **result_p,
                                      &result->sparse_checkout,
                                      &result->modified,
                                      &result->switched,
-                                     wc_ctx->db,
-                                     local_abspath, scratch_pool));
+                                     wc_ctx->db, local_abspath,
+                                     committed, scratch_pool));
 
   if (!result->switched && trail_url != NULL)
     {
@@ -165,7 +157,6 @@ svn_wc_revision_status2(svn_wc_revision_status_t **result_p,
 
   /* initialize walking baton */
   wb.result = result;
-  wb.committed = committed;
   wb.local_abspath = local_abspath;
   wb.db = wc_ctx->db;
 

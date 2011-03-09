@@ -2507,7 +2507,9 @@ svn_wc__db_temp_below_work(svn_boolean_t *have_work,
  * numbers found within LOCAL_ABSPATH.
  * Only nodes with op_depth zero and presence 'normal' or 'incomplete'
  * are considered, so that added, deleted or excluded nodes do not affect
- * the result.
+ * the result.  If COMMITTED is TRUE, set *MIN_REVISION and *MAX_REVISION
+ * to the lowest and highest comitted (i.e. "last changed") revision numbers,
+ * respectively.
  *
  * Indicate in *IS_SPARSE_CHECKOUT whether any of the nodes within
  * LOCAL_ABSPATH is sparse.
@@ -2522,6 +2524,7 @@ svn_wc__db_revision_status(svn_revnum_t *min_revision,
                            svn_boolean_t *is_switched,
                            svn_wc__db_t *db,
                            const char *local_abspath,
+                           svn_boolean_t committed,
                            apr_pool_t *scratch_pool);
 
 /* @} */
