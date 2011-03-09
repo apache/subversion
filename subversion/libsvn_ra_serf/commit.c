@@ -53,10 +53,7 @@ typedef struct checkout_context_t {
   apr_pool_t *pool;
 
   const char *activity_url;
-  apr_size_t activity_url_len;
-
   const char *checkout_url;
-
   const char *resource_url;
 
   svn_ra_serf__simple_request_context_t progress;
@@ -88,7 +85,6 @@ typedef struct commit_context_t {
 
   /* HTTP v1 stuff (only value when 'txn_url' is NULL) */
   const char *activity_url;      /* activity base URL... */
-  apr_size_t activity_url_len;   /* ...and length thereof */
   checkout_context_t *baseline;  /* checkout for the baseline */
   const char *checked_in_url;    /* checked-in root to base CHECKOUTs from */
   const char *vcc_url;           /* vcc url */
@@ -263,7 +259,7 @@ create_checkout_body(serf_bucket_t **bkt,
   svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:href", NULL);
 
   svn_ra_serf__add_cdata_len_buckets(body_bkt, alloc,
-                                     ctx->activity_url, ctx->activity_url_len);
+                                     ctx->activity_url, strlen(ctx->activity_url));
 
   svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:href");
   svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:activity-set");
@@ -378,7 +374,6 @@ checkout_dir(dir_context_t *dir)
           dir->checkout = apr_pcalloc(dir->pool, sizeof(*dir->checkout));
           dir->checkout->pool = dir->pool;
           dir->checkout->activity_url = dir->commit->activity_url;
-          dir->checkout->activity_url_len = dir->commit->activity_url_len;
           dir->checkout->resource_url =
             svn_path_url_add_component2(dir->parent_dir->checkout->resource_url,
                                         svn_relpath_basename(dir->name, NULL),
@@ -401,7 +396,6 @@ checkout_dir(dir_context_t *dir)
   checkout_ctx->pool = dir->pool;
 
   checkout_ctx->activity_url = dir->commit->activity_url;
-  checkout_ctx->activity_url_len = dir->commit->activity_url_len;
 
   /* We could be called twice for the root: once to checkout the baseline;
    * once to checkout the directory itself if we need to do so.
@@ -580,7 +574,6 @@ checkout_file(file_context_t *file)
           file->checkout->pool = file->pool;
 
           file->checkout->activity_url = file->commit->activity_url;
-          file->checkout->activity_url_len = file->commit->activity_url_len;
           diff_path = svn_relpath_is_child(dir->name, file->name, file->pool);
           file->checkout->resource_url =
             svn_path_url_add_component2(dir->checkout->resource_url,
@@ -599,7 +592,6 @@ checkout_file(file_context_t *file)
   file->checkout->pool = file->pool;
 
   file->checkout->activity_url = file->commit->activity_url;
-  file->checkout->activity_url_len = file->commit->activity_url_len;
 
   SVN_ERR(get_version_url(&(file->checkout->checkout_url),
                           file->commit->session, file->commit->conn,
@@ -1130,7 +1122,6 @@ setup_copy_dir_headers(serf_bucket_t *headers,
   dir->checkout = apr_pcalloc(dir->pool, sizeof(*dir->checkout));
   dir->checkout->pool = dir->pool;
   dir->checkout->activity_url = dir->commit->activity_url;
-  dir->checkout->activity_url_len = dir->commit->activity_url_len;
   dir->checkout->resource_url = apr_pstrdup(dir->checkout->pool, uri.path);
 
   apr_hash_set(dir->commit->copied_entries,
@@ -1385,7 +1376,6 @@ open_root(void *edit_baton,
       ctx->activity_url =
         svn_path_url_add_component2(activity_str, svn_uuid_generate(ctx->pool),
                                     ctx->pool);
-      ctx->activity_url_len = strlen(ctx->activity_url);
 
       /* Create our activity URL now on the server. */
       handler = apr_pcalloc(ctx->pool, sizeof(*handler));
@@ -2183,15 +2173,12 @@ close_edit(void *edit_baton,
   svn_boolean_t *merge_done;
   const char *merge_target =
     ctx->activity_url ? ctx->activity_url : ctx->txn_url;
-  apr_size_t merge_target_len =
-    ctx->activity_url ? ctx->activity_url_len : strlen(ctx->txn_url);
 
   /* MERGE our activity */
   SVN_ERR(svn_ra_serf__merge_create_req(&merge_ctx, ctx->session,
                                         ctx->session->conns[0],
                                         ctx->session->repos_url.path,
                                         merge_target,
-                                        merge_target_len,
                                         ctx->lock_tokens,
                                         ctx->keep_locks,
                                         pool));
