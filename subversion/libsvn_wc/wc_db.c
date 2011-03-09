@@ -360,7 +360,7 @@ with_db_txn(svn_wc__db_wcroot_t *wcroot,
   struct txn_baton_t tb = { wcroot, local_relpath, cb_func, cb_baton };
 
   return svn_error_return(
-    svn_sqlite__with_transaction(wcroot->sdb, run_txn, &tb, scratch_pool));
+    svn_sqlite__with_lock(wcroot->sdb, run_txn, &tb, scratch_pool));
 }
 
 
@@ -5376,9 +5376,8 @@ read_props_recursive(svn_wc__db_t *db,
   baton.pristine = pristine;
   baton.cancel_func = cancel_func;
   baton.cancel_baton = cancel_baton;
-  SVN_ERR(svn_sqlite__with_transaction(wcroot->sdb,
-                                       cache_props_recursive,
-                                       &baton, scratch_pool));
+  SVN_ERR(svn_sqlite__with_lock(wcroot->sdb, cache_props_recursive,
+                                &baton, scratch_pool));
 
   iterpool = svn_pool_create(scratch_pool);
 
@@ -5777,8 +5776,7 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
   rb.wc_id = wcroot->wc_id;
   rb.repos_root_url = repos_root_url;
 
-  SVN_ERR(svn_sqlite__with_transaction(wcroot->sdb, relocate_txn, &rb,
-                                       scratch_pool));
+  SVN_ERR(svn_sqlite__with_lock(wcroot->sdb, relocate_txn, &rb, scratch_pool));
 
   return SVN_NO_ERROR;
 }
