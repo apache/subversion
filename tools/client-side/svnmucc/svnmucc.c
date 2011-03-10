@@ -51,6 +51,7 @@
 #include "svn_ra.h"
 #include "svn_string.h"
 #include "svn_utf.h"
+#include "private/svn_cmdline_private.h"
 
 static void handle_error(svn_error_t *err, apr_pool_t *pool)
 {
@@ -613,6 +614,7 @@ execute(const apr_array_header_t *actions,
         const char *username,
         const char *password,
         const char *config_dir,
+        const apr_array_header_t *config_options,
         svn_boolean_t non_interactive,
         svn_revnum_t base_revision,
         apr_pool_t *pool)
@@ -628,6 +630,8 @@ execute(const apr_array_header_t *actions,
   int i;
 
   SVN_ERR(svn_config_get_config(&config, config_dir, pool));
+  SVN_ERR(svn_cmdline__apply_config_options(config, config_options,
+                                            "svnmucc: ", "--config-option"));
   SVN_ERR(create_ra_callbacks(&ra_callbacks, username, password,
                               non_interactive, pool));
   SVN_ERR(svn_ra_open4(&session, NULL, anchor, NULL, ra_callbacks,
@@ -774,7 +778,8 @@ usage(apr_pool_t *pool, int exit_val)
     "  -n, --non-interactive don't prompt the user about anything\n"
     "  -X, --extra-args ARG  append arguments from file ARG (one per line;\n"
     "                        use \"-\" to read from standard input)\n"
-    "  --config-dir ARG      use ARG to override the config directory\n";
+    "  --config-dir ARG      use ARG to override the config directory\n"
+    "  --config-option ARG   use ARG so override a configuration option\n";
   svn_error_clear(svn_cmdline_fputs(msg, stream, pool));
   apr_pool_destroy(pool);
   exit(exit_val);
@@ -799,6 +804,7 @@ main(int argc, const char **argv)
   apr_getopt_t *getopt;
   enum {
     config_dir_opt = SVN_OPT_FIRST_LONGOPT_ID,
+    config_inline_opt,
     with_revprop_opt
   };
   const apr_getopt_option_t options[] = {
@@ -813,17 +819,22 @@ main(int argc, const char **argv)
     {"help", 'h', 0, ""},
     {"non-interactive", 'n', 0, ""},
     {"config-dir", config_dir_opt, 1, ""},
+    {"config-option",  config_inline_opt, 1, ""},
     {NULL, 0, 0, NULL}
   };
   const char *message = NULL;
   const char *username = NULL, *password = NULL;
   const char *root_url = NULL, *extra_args_file = NULL;
   const char *config_dir = NULL;
+  apr_array_header_t *config_options;
   svn_boolean_t non_interactive = FALSE;
   svn_revnum_t base_revision = SVN_INVALID_REVNUM;
   apr_array_header_t *action_args;
   apr_hash_t *revprops = apr_hash_make(pool);
   int i;
+
+  config_options = apr_array_make(pool, 0,
+                                  sizeof(svn_cmdline__config_argument_t*));
 
   apr_getopt_init(&getopt, pool, argc, argv);
   getopt->interleave = 1;
@@ -831,6 +842,8 @@ main(int argc, const char **argv)
     {
       int opt;
       const char *arg;
+      const char *opt_arg;
+
       apr_status_t status = apr_getopt_long(getopt, options, &opt, &arg);
       if (APR_STATUS_IS_EOF(status))
         break;
@@ -900,6 +913,15 @@ main(int argc, const char **argv)
           if (err)
             handle_error(err, pool);
           break;
+        case config_inline_opt:
+          err = svn_utf_cstring_to_utf8(&opt_arg, arg, pool);
+          if (err)
+            handle_error(err, pool);
+
+          err = svn_cmdline__parse_config_option(config_options, opt_arg,
+                                                 pool);
+          if (err)
+            handle_error(err, pool);
         case 'h':
           usage(pool, EXIT_SUCCESS);
         }
@@ -1111,7 +1133,8 @@ main(int argc, const char **argv)
     }
 
   if ((err = execute(actions, anchor, revprops, username, password,
-                     config_dir, non_interactive, base_revision, pool)))
+                     config_dir, config_options, non_interactive,
+                     base_revision, pool)))
     handle_error(err, pool);
 
   svn_pool_destroy(pool);
