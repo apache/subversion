@@ -362,6 +362,10 @@ svn_ra_serf__open(svn_ra_session_t *session,
   /* todo: reuse serf context across sessions */
   serf_sess->context = serf_context_create(serf_sess->pool);
 
+  SVN_ERR(svn_ra_serf__blncache_create(&serf_sess->blncache,
+                                       serf_sess->pool));
+
+
   status = apr_uri_parse(serf_sess->pool, repos_URL, &url);
   if (status)
     {

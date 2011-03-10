@@ -40,6 +40,8 @@
 
 #include "private/svn_dav_protocol.h"
 
+#include "blncache.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -198,6 +200,7 @@ struct svn_ra_serf__session_t {
 
   /*** End HTTP v2 stuff ***/
 
+  svn_ra_serf__blncache_t *blncache;
 };
 
 #define SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(sess) ((sess)->me_resource != NULL)

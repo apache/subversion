@@ -1002,10 +1002,21 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
 
       if (revision != SVN_INVALID_REVNUM)
         {
-          SVN_ERR(retrieve_baseline_info(&actual_revision, &basecoll_url,
-                                         session, conn,
-                                         vcc_url, revision,
-                                         pool));
+          /* First check baseline information cache. */
+          SVN_ERR(svn_ra_serf__blncache_get_bc_url(&basecoll_url,
+                                                   session->blncache,
+                                                   revision, pool));
+
+          if (!basecoll_url)
+            {
+              SVN_ERR(retrieve_baseline_info(&actual_revision, &basecoll_url,
+                                             session, conn,
+                                             vcc_url, revision,
+                                             pool));
+              SVN_ERR(svn_ra_serf__blncache_set(session->blncache,
+                                                NULL, revision, basecoll_url,
+                                                pool));
+            }
         }
       else
         {
@@ -1023,9 +1034,22 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
 
           baseline_url = svn_urlpath__canonicalize(baseline_url, pool);
 
-          SVN_ERR(retrieve_baseline_info(&actual_revision, &basecoll_url,
-                                         session, conn,
-                                         baseline_url, revision, pool));
+          /* First check baseline information cache. */
+          SVN_ERR(svn_ra_serf__blncache_get_baseline_info(&basecoll_url,
+                                                          &actual_revision,
+                                                          session->blncache,
+                                                          baseline_url,
+                                                          pool));
+          if (!basecoll_url)
+            {
+              SVN_ERR(retrieve_baseline_info(&actual_revision, &basecoll_url,
+                                             session, conn,
+                                             baseline_url, revision, pool));
+
+              SVN_ERR(svn_ra_serf__blncache_set(session->blncache,
+                                                baseline_url, actual_revision,
+                                                basecoll_url, pool));
+            }
         }
 
       if (latest_revnum)
