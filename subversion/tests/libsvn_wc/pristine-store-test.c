@@ -61,14 +61,12 @@ create_repos_and_wc(const char **repos_url,
                     const svn_test_opts_t *opts,
                     apr_pool_t *pool)
 {
-  SVN_ERR(svn_test__create_repos_and_wc(repos_url, wc_abspath, test_name,
-                                        opts, pool));
+  svn_test__sandbox_t sandbox;
 
-  /* Open a DB context */
-  SVN_ERR(svn_wc__db_open(db, svn_wc__db_openmode_readonly, NULL,
-                          FALSE /* auto_upgrade */,
-                          TRUE /* enforce_empty_wq */,
-                          pool, pool));
+  SVN_ERR(svn_test__sandbox_create(&sandbox, test_name, opts, pool));
+  *repos_url = sandbox.repos_url;
+  *wc_abspath = sandbox.wc_abspath;
+  *db = sandbox.wc_ctx->db;
 
   return SVN_NO_ERROR;
 }
