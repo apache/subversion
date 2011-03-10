@@ -839,7 +839,9 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
                                    svn_mergeinfo_inherited, FALSE, iterpool));
       mergeinfo = apr_hash_get(catalog, path, APR_HASH_KEY_STRING);
 
-      /* Compare, constrast, and combine the results. */
+      /* Compare, constrast, and combine the results.  Use POOL to calculate
+         the diff because svn_mergeinfo_merge does not make deep copies of
+         the incoming mergeinfo changes. */
       SVN_ERR(svn_mergeinfo_diff(&deleted, &added, prev_mergeinfo,
                                  mergeinfo, FALSE, pool));
       SVN_ERR(svn_mergeinfo_merge(*deleted_mergeinfo, deleted, pool));
