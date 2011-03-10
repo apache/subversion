@@ -3492,15 +3492,6 @@ svn_wc__db_op_revert_actual(svn_wc__db_t *db,
 }
 
 
-/* ### forward declaration to avoid function movement churn.  */
-static svn_error_t *
-remove_children(svn_wc__db_wcroot_t *wcroot,
-                const char *local_relpath,
-                svn_wc__db_status_t status,
-                apr_int64_t op_depth,
-                apr_pool_t *scratch_pool);
-
-
 /* This implements db_txn_callback_t */
 static svn_error_t *
 op_revert_txn(void *baton,
