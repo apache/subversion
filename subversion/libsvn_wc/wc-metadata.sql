@@ -481,7 +481,13 @@ CREATE INDEX I_NODES_PARENT ON NODES (wc_id, parent_relpath, op_depth);
 
 /* Many queries have to filter the nodes table to pick only that version
    of each node with the highest (most "current") op_depth.  This view
-   does the heavy lifting for such queries. */
+   does the heavy lifting for such queries.
+
+   Note that this view includes a row for each and every path that is known
+   in the WC, including, for example, paths that were children of a base- or
+   lower-op-depth directory that has been replaced by something else in the
+   current view.
+ */
 CREATE VIEW NODES_CURRENT AS
   SELECT * FROM nodes
     JOIN (SELECT wc_id, local_relpath, MAX(op_depth) AS op_depth FROM nodes
@@ -493,6 +499,8 @@ CREATE VIEW NODES_CURRENT AS
 /* Many queries have to filter the nodes table to pick only that version
    of each node with the base (least "current") op_depth.  This view
    does the heavy lifting for such queries. */
+/* ### The JOIN may be redundant. Maybe we only need
+       "SELECT * FROM nodes WHERE op_depth = 0;". */
 CREATE VIEW NODES_BASE AS
   SELECT * FROM nodes
     JOIN (SELECT wc_id, local_relpath FROM nodes
