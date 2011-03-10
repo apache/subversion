@@ -27,12 +27,21 @@
 
 #include "../svn_test_fs.h"
 
-svn_error_t *
-svn_test__create_repos_and_wc(const char **repos_url,
-                              const char **wc_abspath,
-                              const char *test_name,
-                              const svn_test_opts_t *opts,
-                              apr_pool_t *pool)
+/* Create an empty repository and WC for the test TEST_NAME.  Set *REPOS_URL
+ * to the URL of the new repository and *WC_ABSPATH to the root path of the
+ * new WC.
+ *
+ * Create the repository and WC in subdirectories called
+ * REPOSITORIES_WORK_DIR/TEST_NAME and WCS_WORK_DIR/TEST_NAME respectively,
+ * within the current working directory.
+ *
+ * Register the repo and WC to be cleaned up when the test suite exits. */
+static svn_error_t *
+create_repos_and_wc(const char **repos_url,
+                    const char **wc_abspath,
+                    const char *test_name,
+                    const svn_test_opts_t *opts,
+                    apr_pool_t *pool)
 {
   const char *repos_path = svn_relpath_join(REPOSITORIES_WORK_DIR, test_name,
                                             pool);
@@ -47,7 +56,7 @@ svn_test__create_repos_and_wc(const char **repos_url,
   SVN_ERR(svn_io_make_dir_recursively(REPOSITORIES_WORK_DIR, pool));
   SVN_ERR(svn_io_make_dir_recursively(WCS_WORK_DIR, pool));
 
-  /* Create a repos and set *REPOS_URL to its path. */
+  /* Create a repos. Register it for clean-up. Set *REPOS_URL to its path. */
   {
     svn_repos_t *repos;
 
@@ -55,7 +64,7 @@ svn_test__create_repos_and_wc(const char **repos_url,
     SVN_ERR(svn_uri_get_file_url_from_dirent(repos_url, repos_path, pool));
   }
 
-  /* Create a WC */
+  /* Create a WC. Set *WC_ABSPATH to its path. */
   {
     svn_client_ctx_t *ctx;
     svn_opt_revision_t head_rev = { svn_opt_revision_head, {0} };
@@ -76,3 +85,16 @@ svn_test__create_repos_and_wc(const char **repos_url,
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_test__sandbox_create(svn_test__sandbox_t *sandbox,
+                         const char *test_name,
+                         const svn_test_opts_t *opts,
+                         apr_pool_t *pool)
+{
+  sandbox->pool = pool;
+  SVN_ERR(create_repos_and_wc(&sandbox->repos_url, &sandbox->wc_abspath,
+                              test_name, opts, pool));
+  SVN_ERR(svn_wc_context_create(&sandbox->wc_ctx, NULL, pool, pool));
+  return SVN_NO_ERROR;
+}

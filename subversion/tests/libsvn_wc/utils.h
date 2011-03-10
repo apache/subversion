@@ -40,21 +40,39 @@ extern "C" {
 #define REPOSITORIES_WORK_DIR "svn-test-work/repositories"
 #define WCS_WORK_DIR "svn-test-work/working-copies"
 
-/* Create an empty repository and WC for the test TEST_NAME.  Set *REPOS_URL
- * to the URL of the new repository and *WC_ABSPATH to the root path of the
- * new WC.
+
+/* The "sandbox" is a work space including a working copy and a repository.
+ * Functions are provided for easy manipulation of the WC.  Paths given to
+ * these functions can be relative to the WC root as stored in the sandbox
+ * object, or can be absolute paths. */
+
+/* An object holding the state of a test sand-box. */
+typedef struct svn_test__sandbox_t
+{
+  /* The WC context object. */
+  svn_wc_context_t *wc_ctx;
+  /* The repository URL. */
+  const char *repos_url;
+  /* The absolute local path of the WC root. */
+  const char *wc_abspath;
+  /* A pool that can be used for all allocations. */
+  apr_pool_t *pool;
+} svn_test__sandbox_t;
+
+
+/* Create an empty repository and WC for the test TEST_NAME.  Fill in
+ * *SANDBOX with all the details.
  *
  * Create the repository and WC in subdirectories called
  * REPOSITORIES_WORK_DIR/TEST_NAME and WCS_WORK_DIR/TEST_NAME respectively,
  * within the current working directory.
  *
- * Register the new repo and the new WC for cleanup. */
+ * Register the repo and WC to be cleaned up when the test suite exits. */
 svn_error_t *
-svn_test__create_repos_and_wc(const char **repos_url,
-                              const char **wc_abspath,
-                              const char *test_name,
-                              const svn_test_opts_t *opts,
-                              apr_pool_t *pool);
+svn_test__sandbox_create(svn_test__sandbox_t *sandbox,
+                         const char *test_name,
+                         const svn_test_opts_t *opts,
+                         apr_pool_t *pool);
 
 
 #ifdef __cplusplus
