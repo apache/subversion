@@ -305,8 +305,6 @@ def committed_revisions(sbox):
                                             [ "1:2\n" ], [],
                                             "--committed")
 
-# This was probably broken by r1079828, stsp is investigating...
-@XFail()
 def non_reposroot_wc(sbox):
   "test 'svnversion' on a non-repos-root working copy"
   sbox.build(create_wc=False)

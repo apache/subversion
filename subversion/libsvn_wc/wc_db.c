@@ -9212,7 +9212,10 @@ svn_wc__db_revision_status(svn_revnum_t *min_revision,
                             construct_like_arg(local_relpath, scratch_pool),
                             construct_like_arg(wcroot_repos_relpath,
                                                scratch_pool),
-                            wcroot_repos_relpath));
+                            wcroot_repos_relpath[0] == '\0' ?
+                              "" : apr_pstrcat(scratch_pool,
+                                               wcroot_repos_relpath, "/",
+                                               (char *)NULL)));
   /* If this query returns a row, some part of the working copy is switched. */
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   *is_switched = have_row;
