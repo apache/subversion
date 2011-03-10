@@ -895,10 +895,12 @@ WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
   AND file_external IS NULL;
 
 /* This query expects repos_path(wcroot)/% as arg 4,
-   and repos_path(wcroot) as arg 5. */
+   and repos_path(wcroot), with a slash appended unless the path is empty,
+   as arg 5. */
 -- STMT_SELECT_SWITCHED_NODES
 SELECT local_relpath FROM nodes_base
-WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
+WHERE wc_id = ?1 AND local_relpath != ""
+  AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
   AND ((repos_path NOT LIKE ?4 ESCAPE '#' AND repos_path != local_relpath)
        OR (repos_path != ?5 || local_relpath))
   AND file_external IS NULL;
