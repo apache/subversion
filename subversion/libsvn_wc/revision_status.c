@@ -60,7 +60,8 @@ svn_wc_revision_status2(svn_wc_revision_status_t **result_p,
                                      &result->modified,
                                      &result->switched,
                                      wc_ctx->db, local_abspath, trail_url,
-                                     committed, scratch_pool));
+                                     committed, cancel_func, cancel_baton,
+                                     scratch_pool));
 
   return SVN_NO_ERROR;
 }

@@ -9042,7 +9042,10 @@ ensure_wc_is_suitable_merge_target(const char *target_abspath,
       svn_boolean_t is_modified;
 
       SVN_ERR(svn_wc__has_local_mods(&is_modified, ctx->wc_ctx,
-                                     target_abspath, scratch_pool));
+                                     target_abspath,
+                                     ctx->cancel_func,
+                                     ctx->cancel_baton,
+                                     scratch_pool));
       if (is_modified)
         return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
                                 _("Cannot merge into a working copy "
