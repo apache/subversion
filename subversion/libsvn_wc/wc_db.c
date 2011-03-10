@@ -9293,6 +9293,8 @@ has_local_mods(svn_boolean_t *is_modified,
                svn_wc__db_wcroot_t *wcroot,
                const char *local_relpath,
                svn_wc__db_t *db,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
                apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
@@ -9307,6 +9309,9 @@ has_local_mods(svn_boolean_t *is_modified,
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   *is_modified = have_row;
   SVN_ERR(svn_sqlite__reset(stmt));
+
+  if (cancel_func)
+    SVN_ERR(cancel_func(cancel_baton));
 
   if (! *is_modified)
     {
@@ -9325,6 +9330,9 @@ has_local_mods(svn_boolean_t *is_modified,
         {
           const char *node_abspath;
           svn_wc__db_kind_t node_kind;
+
+          if (cancel_func)
+            SVN_ERR(cancel_func(cancel_baton));
 
           svn_pool_clear(iterpool);
 
@@ -9364,6 +9372,8 @@ svn_error_t *
 svn_wc__db_has_local_mods(svn_boolean_t *is_modified,
                           svn_wc__db_t *db,
                           const char *local_abspath,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
                           apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
@@ -9378,7 +9388,8 @@ svn_wc__db_has_local_mods(svn_boolean_t *is_modified,
   VERIFY_USABLE_WCROOT(wcroot);
 
   return svn_error_return(has_local_mods(is_modified, wcroot, local_relpath,
-                                         db, scratch_pool));
+                                         db, cancel_func, cancel_baton,
+                                         scratch_pool));
 }
 
 
@@ -9392,6 +9403,8 @@ svn_wc__db_revision_status(svn_revnum_t *min_revision,
                            const char *local_abspath,
                            const char *trail_url,
                            svn_boolean_t committed,
+                           svn_cancel_func_t cancel_func,
+                           void *cancel_baton,
                            apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
@@ -9409,17 +9422,26 @@ svn_wc__db_revision_status(svn_revnum_t *min_revision,
   SVN_ERR(get_min_max_revisions(min_revision, max_revision, db, wcroot,
                                 local_relpath, committed, scratch_pool));
 
+  if (cancel_func)
+    SVN_ERR(cancel_func(cancel_baton));
+
   /* Determine sparseness. */
   SVN_ERR(is_sparse_checkout_internal(is_sparse_checkout, wcroot,
                                       local_relpath, scratch_pool));
+
+  if (cancel_func)
+    SVN_ERR(cancel_func(cancel_baton));
 
   /* Check for switched nodes. */
   SVN_ERR(has_switched_subtrees(is_switched, wcroot, local_relpath,
                                 trail_url, db, scratch_pool));
 
+  if (cancel_func)
+    SVN_ERR(cancel_func(cancel_baton));
+
   /* Check for local mods. */
   SVN_ERR(has_local_mods(is_modified, wcroot, local_relpath, db,
-                         scratch_pool));
+                         cancel_func, cancel_baton, scratch_pool));
 
   return SVN_NO_ERROR;
 }

@@ -594,10 +594,14 @@ svn_error_t *
 svn_wc__has_local_mods(svn_boolean_t *is_modified,
                        svn_wc_context_t *wc_ctx,
                        const char *local_abspath,
+                       svn_cancel_func_t cancel_func,
+                       void *cancel_baton,
                        apr_pool_t *scratch_pool)
 {
   return svn_error_return(svn_wc__db_has_local_mods(is_modified,
                                                     wc_ctx->db,
                                                     local_abspath,
+                                                    cancel_func,
+                                                    cancel_baton,
                                                     scratch_pool));
 }

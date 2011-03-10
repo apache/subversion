@@ -2516,6 +2516,8 @@ svn_wc__db_revision_status(svn_revnum_t *min_revision,
                            const char *local_abspath,
                            const char *trail_url,
                            svn_boolean_t committed,
+                           svn_cancel_func_t cancel_func,
+                           void *cancel_baton,
                            apr_pool_t *scratch_pool);
 
 /* Set *MIN_REVISION and *MAX_REVISION to the lowest and highest revision
@@ -2579,6 +2581,8 @@ svn_error_t *
 svn_wc__db_has_local_mods(svn_boolean_t *is_modified,
                           svn_wc__db_t *db,
                           const char *local_abspath,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
                           apr_pool_t *scratch_pool);
 
 
