@@ -899,7 +899,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     However, there are some caveats. Most notably, copies made in the\n"
      "     merge source will be transformed into plain additions in the merge\n"
      "     target, since the copyfrom information is only valid within the\n"
-     "     source repository.\n"
+     "     source repository. Also, merge-tracking is not supported.\n"
      "\n"
      "\n"
      "  The following applies to all types of merges:\n"
