@@ -59,30 +59,8 @@ svn_wc_revision_status2(svn_wc_revision_status_t **result_p,
                                      &result->sparse_checkout,
                                      &result->modified,
                                      &result->switched,
-                                     wc_ctx->db, local_abspath,
+                                     wc_ctx->db, local_abspath, trail_url,
                                      committed, scratch_pool));
-
-  if (!result->switched && trail_url != NULL)
-    {
-      const char *url;
-
-      /* If the trailing part of the URL of the working copy directory
-         does not match the given trailing URL then the whole working
-         copy is switched. */
-      SVN_ERR(svn_wc__internal_node_get_url(&url, wc_ctx->db, local_abspath,
-                                            result_pool, scratch_pool));
-      if (! url)
-        {
-          result->switched = TRUE;
-        }
-      else
-        {
-          apr_size_t len1 = strlen(trail_url);
-          apr_size_t len2 = strlen(url);
-          if ((len1 > len2) || strcmp(url + len2 - len1, trail_url))
-            result->switched = TRUE;
-        }
-    }
 
   return SVN_NO_ERROR;
 }
