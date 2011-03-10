@@ -9075,6 +9075,8 @@ svn_wc__db_temp_below_work(svn_boolean_t *have_work,
 }
 
 
+/* Like svn_wc__db_min_max_revisions(),
+ * but accepts a WCROOT/LOCAL_RELPATH pair. */
 static svn_error_t *
 get_min_max_revisions(svn_revnum_t *min_revision,
                       svn_revnum_t *max_revision,
@@ -9120,6 +9122,33 @@ get_min_max_revisions(svn_revnum_t *min_revision,
 }
 
 
+svn_error_t *
+svn_wc__db_min_max_revisions(svn_revnum_t *min_revision,
+                             svn_revnum_t *max_revision,
+                             svn_wc__db_t *db,
+                             const char *local_abspath,
+                             svn_boolean_t committed,
+                             apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
+                                                db, local_abspath,
+                                                svn_sqlite__mode_readwrite,
+                                                scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  return svn_error_return(get_min_max_revisions(min_revision, max_revision,
+                                                db, wcroot, local_relpath,
+                                                committed, scratch_pool));
+}
+
+
+/* Like svn_wc__db_is_sparse_checkout,
+ * but accepts a WCROOT/LOCAL_RELPATH pair. */
 static svn_error_t *
 is_sparse_checkout_internal(svn_boolean_t *is_sparse_checkout,
                             svn_wc__db_wcroot_t *wcroot,
@@ -9145,7 +9174,32 @@ is_sparse_checkout_internal(svn_boolean_t *is_sparse_checkout,
 }
 
 
-/* ### This needs a DB as well as a WCROOT/RELPATH pair... */
+svn_error_t *
+svn_wc__db_is_sparse_checkout(svn_boolean_t *is_sparse_checkout,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
+                                                db, local_abspath,
+                                                svn_sqlite__mode_readwrite,
+                                                scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  return svn_error_return(is_sparse_checkout_internal(is_sparse_checkout,
+                                                      wcroot, local_relpath,
+                                                      scratch_pool));
+}
+
+
+/* Like svn_wc__db_has_switched_subtrees(),
+ * but accepts a WCROOT/LOCAL_RELPATH pair.
+ * ### This needs a DB as well as a WCROOT/RELPATH pair... */
 static svn_error_t *
 has_switched_subtrees(svn_boolean_t *is_switched,
                       svn_wc__db_wcroot_t *wcroot,
@@ -9207,7 +9261,33 @@ has_switched_subtrees(svn_boolean_t *is_switched,
 }
 
 
-/* ### This needs a DB as well as a WCROOT/RELPATH pair... */
+svn_error_t *
+svn_wc__db_has_switched_subtrees(svn_boolean_t *is_switched,
+                                 svn_wc__db_t *db,
+                                 const char *local_abspath,
+                                 const char *trail_url,
+                                 apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
+                                                db, local_abspath,
+                                                svn_sqlite__mode_readwrite,
+                                                scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  return svn_error_return(has_switched_subtrees(is_switched, wcroot,
+                                                local_relpath, trail_url,
+                                                db, scratch_pool));
+}
+
+
+/* Like svn_wc__db_has_local_mods(),
+ * but accepts a WCROOT/LOCAL_RELPATH pair.
+ * ### This needs a DB as well as a WCROOT/RELPATH pair... */
 static svn_error_t *
 has_local_mods(svn_boolean_t *is_modified,
                svn_wc__db_wcroot_t *wcroot,
@@ -9277,6 +9357,28 @@ has_local_mods(svn_boolean_t *is_modified,
     }
 
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__db_has_local_mods(svn_boolean_t *is_modified,
+                          svn_wc__db_t *db,
+                          const char *local_abspath,
+                          apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
+                                                db, local_abspath,
+                                                svn_sqlite__mode_readwrite,
+                                                scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  return svn_error_return(has_local_mods(is_modified, wcroot, local_relpath,
+                                         db, scratch_pool));
 }
 
 

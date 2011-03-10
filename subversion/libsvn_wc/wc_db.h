@@ -2503,6 +2503,8 @@ svn_wc__db_temp_below_work(svn_boolean_t *have_work,
  * expected URL, long enough to include any parts that the caller considers
  * might be changed by a switch.  If it does not match the end of WC_PATH's
  * actual URL, then report a "switched" status.
+ *
+ * See also the functions below which provide a subset of this functionality.
  */
 svn_error_t *
 svn_wc__db_revision_status(svn_revnum_t *min_revision,
@@ -2515,6 +2517,70 @@ svn_wc__db_revision_status(svn_revnum_t *min_revision,
                            const char *trail_url,
                            svn_boolean_t committed,
                            apr_pool_t *scratch_pool);
+
+/* Set *MIN_REVISION and *MAX_REVISION to the lowest and highest revision
+ * numbers found within LOCAL_ABSPATH in the working copy using DB.
+ * Only nodes with op_depth zero and presence 'normal' or 'incomplete'
+ * are considered, so that added, deleted or excluded nodes do not affect
+ * the result.  If COMMITTED is TRUE, set *MIN_REVISION and *MAX_REVISION
+ * to the lowest and highest comitted (i.e. "last changed") revision numbers,
+ * respectively. Use SCRATCH_POOL for temporary allocations.
+ * 
+ * This function provides a subset of the functionality of
+ * svn_wc__db_revision_status() and is more efficient if the caller
+ * doesn't need all information returned by svn_wc__db_revision_status(). */
+svn_error_t *
+svn_wc__db_min_max_revisions(svn_revnum_t *min_revision,
+                             svn_revnum_t *max_revision,
+                             svn_wc__db_t *db,
+                             const char *local_abspath,
+                             svn_boolean_t committed,
+                             apr_pool_t *scratch_pool);
+
+/* Indicate in *IS_SPARSE_CHECKOUT whether any of the nodes within
+ * LOCAL_ABSPATH is sparse, using DB.
+ * Use SCRATCH_POOL for temporary allocations.
+ * 
+ * This function provides a subset of the functionality of
+ * svn_wc__db_revision_status() and is more efficient if the caller
+ * doesn't need all information returned by svn_wc__db_revision_status(). */
+svn_error_t *
+svn_wc__db_is_sparse_checkout(svn_boolean_t *is_sparse_checkout,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              apr_pool_t *scratch_pool);
+
+/* Indicate in *IS_SWITCHED whether any node beneath LOCAL_ABSPATH
+ * is switched, using DB. Use SCRATCH_POOL for temporary allocations.
+ *
+ * If TRAIL_URL is non-NULL, use it to determine if LOCAL_ABSPATH itself
+ * is switched.  It should be any trailing portion of LOCAL_ABSPATH's
+ * expected URL, long enough to include any parts that the caller considers
+ * might be changed by a switch.  If it does not match the end of WC_PATH's
+ * actual URL, then report a "switched" status.
+ * 
+ * This function provides a subset of the functionality of
+ * svn_wc__db_revision_status() and is more efficient if the caller
+ * doesn't need all information returned by svn_wc__db_revision_status(). */
+svn_error_t *
+svn_wc__db_has_switched_subtrees(svn_boolean_t *is_switched,
+                                 svn_wc__db_t *db,
+                                 const char *local_abspath,
+                                 const char *trail_url,
+                                 apr_pool_t *scratch_pool);
+
+/* Indicate in *IS_MODIFIED whether the working copy has local modifications,
+ * using DB. Use SCRATCH_POOL for temporary allocations.
+ * 
+ * This function provides a subset of the functionality of
+ * svn_wc__db_revision_status() and is more efficient if the caller
+ * doesn't need all information returned by svn_wc__db_revision_status(). */
+svn_error_t *
+svn_wc__db_has_local_mods(svn_boolean_t *is_modified,
+                          svn_wc__db_t *db,
+                          const char *local_abspath,
+                          apr_pool_t *scratch_pool);
+
 
 /* @} */
 
