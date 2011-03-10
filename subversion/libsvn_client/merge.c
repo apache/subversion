@@ -8987,31 +8987,20 @@ ensure_wc_is_suitable_merge_target(const char *target_abspath,
                                    svn_boolean_t allow_switched_subtrees,
                                    apr_pool_t *scratch_pool)
 {
-  svn_wc_revision_status_t *wc_stat;
-
-  /* Avoid the following status crawl if we don't need it. */
+  /* Avoid the following checks if we don't need them. */
   if (allow_mixed_rev && allow_local_mods && allow_switched_subtrees)
     return SVN_NO_ERROR;
 
-  /* Get a WC summary with min/max revisions set to the BASE revision. */
-  SVN_ERR(svn_wc_revision_status2(&wc_stat, ctx->wc_ctx, target_abspath, NULL,
-                                  FALSE, ctx->cancel_func, ctx->cancel_baton,
-                                  scratch_pool, scratch_pool));
-
-  if (! allow_switched_subtrees && wc_stat->switched)
-    return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
-                            _("Cannot merge into a working copy "
-                              "with a switched subtree"));
-
-  if (! allow_local_mods && wc_stat->modified)
-    return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
-                            _("Cannot merge into a working copy "
-                              "that has local modifications"));
-
+  /* Perform the mixed-revision check first because it's the cheapest one. */
   if (! allow_mixed_rev)
     {
-      if (! (SVN_IS_VALID_REVNUM(wc_stat->min_rev)
-             && SVN_IS_VALID_REVNUM(wc_stat->max_rev)))
+      svn_revnum_t min_rev;
+      svn_revnum_t max_rev;
+
+      SVN_ERR(svn_wc__min_max_revisions(&min_rev, &max_rev, ctx->wc_ctx,
+                                        target_abspath, FALSE, scratch_pool));
+
+      if (!(SVN_IS_VALID_REVNUM(min_rev) && SVN_IS_VALID_REVNUM(max_rev)))
         {
           svn_boolean_t is_added;
 
@@ -9026,11 +9015,38 @@ ensure_wc_is_suitable_merge_target(const char *target_abspath,
                                       "copy"));
         }
 
-      if (wc_stat->min_rev != wc_stat->max_rev)
+      if (min_rev != max_rev)
         return svn_error_createf(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
                                  _("Cannot merge into mixed-revision working "
                                    "copy [%lu:%lu]; try updating first"),
-                                   wc_stat->min_rev, wc_stat->max_rev);
+                                   min_rev, max_rev);
+    }
+
+  /* Next, check for switched subtrees. */
+  if (! allow_switched_subtrees)
+    {
+      svn_boolean_t is_switched;
+
+      SVN_ERR(svn_wc__has_switched_subtrees(&is_switched, ctx->wc_ctx,
+                                            target_abspath, NULL,
+                                            scratch_pool));
+      if (is_switched)
+        return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
+                                _("Cannot merge into a working copy "
+                                  "with a switched subtree"));
+    }
+
+  /* This is the most expensive check, so it is performed last.*/
+  if (! allow_local_mods)
+    {
+      svn_boolean_t is_modified;
+
+      SVN_ERR(svn_wc__has_local_mods(&is_modified, ctx->wc_ctx,
+                                     target_abspath, scratch_pool));
+      if (is_modified)
+        return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE, NULL,
+                                _("Cannot merge into a working copy "
+                                  "that has local modifications"));
     }
 
   return SVN_NO_ERROR;

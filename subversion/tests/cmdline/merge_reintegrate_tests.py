@@ -672,6 +672,7 @@ def reintegrate_fail_on_modified_wc(sbox):
   mu_path = os.path.join(A_path, "mu")
   ignored_expected_disk, ignored_expected_status = set_up_branch(sbox)
   svntest.main.file_write(mu_path, "Changed on 'trunk' (the merge target).")
+  sbox.simple_update() # avoid mixed-revision error
   svntest.actions.run_and_verify_merge(
     A_path, None, None, sbox.repo_url + '/A_COPY', None, None, None, None,
     None, None, None,
@@ -740,6 +741,7 @@ def reintegrate_fail_on_switched_wc(sbox):
                                         expected_disk,
                                         expected_status,
                                         None, None, None, None, False);
+  sbox.simple_update() # avoid mixed-revision error
   svntest.actions.run_and_verify_merge(
     A_path, None, None, sbox.repo_url + '/A_COPY', None, None, None, None,
     None, None, None,
