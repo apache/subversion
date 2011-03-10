@@ -9074,33 +9074,19 @@ svn_wc__db_temp_below_work(svn_boolean_t *have_work,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_wc__db_revision_status(svn_revnum_t *min_revision,
-                           svn_revnum_t *max_revision,
-                           svn_boolean_t *is_sparse_checkout,
-                           svn_boolean_t *is_modified,
-                           svn_boolean_t *is_switched,
-                           svn_wc__db_t *db,
-                           const char *local_abspath,
-                           const char *trail_url,
-                           svn_boolean_t committed,
-                           apr_pool_t *scratch_pool)
+
+static svn_error_t *
+get_min_max_revisions(svn_revnum_t *min_revision,
+                      svn_revnum_t *max_revision,
+                      svn_wc__db_t *db,
+                      svn_wc__db_wcroot_t *wcroot,
+                      const char *local_relpath,
+                      svn_boolean_t committed,
+                      apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
-  svn_wc__db_wcroot_t *wcroot;
-  const char *wcroot_repos_relpath;
-  const char *local_relpath;
   svn_boolean_t have_row;
 
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
-                                                db, local_abspath,
-                                                svn_sqlite__mode_readwrite,
-                                                scratch_pool, scratch_pool));
-  VERIFY_USABLE_WCROOT(wcroot);
-
-  /* Determine mixed-revisionness. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_MIN_MAX_REVISIONS));
   SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id, local_relpath,
@@ -9130,7 +9116,19 @@ svn_wc__db_revision_status(svn_revnum_t *min_revision,
   SVN_ERR_ASSERT(! have_row);
   SVN_ERR(svn_sqlite__reset(stmt));
 
-  /* Determine sparseness. */
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+is_sparse_checkout_internal(svn_boolean_t *is_sparse_checkout,
+                            svn_wc__db_wcroot_t *wcroot,
+                            const char *local_relpath,
+                            apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_SPARSE_NODES));
   SVN_ERR(svn_sqlite__bindf(stmt, "iss",
@@ -9142,6 +9140,83 @@ svn_wc__db_revision_status(svn_revnum_t *min_revision,
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   *is_sparse_checkout = have_row;
   SVN_ERR(svn_sqlite__reset(stmt));
+
+  return SVN_NO_ERROR;
+}
+
+
+/* ### This needs a DB as well as a WCROOT/RELPATH pair... */
+static svn_error_t *
+has_switched_subtrees(svn_boolean_t *is_switched,
+                      svn_wc__db_wcroot_t *wcroot,
+                      const char *local_relpath,
+                      const char *trail_url,
+                      svn_wc__db_t *db,
+                      apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  const char *wcroot_repos_relpath;
+  svn_boolean_t have_row;
+
+  SVN_ERR(read_info(NULL, NULL, NULL, &wcroot_repos_relpath, NULL,
+                    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                    wcroot, "", scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_SWITCHED_NODES));
+  SVN_ERR(svn_sqlite__bindf(stmt, "issss", wcroot->wc_id, local_relpath,
+                            construct_like_arg(local_relpath, scratch_pool),
+                            construct_like_arg(wcroot_repos_relpath,
+                                               scratch_pool),
+                            wcroot_repos_relpath[0] == '\0' ?
+                              "" : apr_pstrcat(scratch_pool,
+                                               wcroot_repos_relpath, "/",
+                                               (char *)NULL)));
+  /* If this query returns a row, some part of the working copy is switched. */
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  *is_switched = have_row;
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  if (! *is_switched && trail_url != NULL)
+    {
+      const char *url;
+
+      /* If the trailing part of the URL of the working copy directory
+         does not match the given trailing URL then the whole working
+         copy is switched. */
+      SVN_ERR(svn_wc__internal_node_get_url(&url, db,
+                                            svn_dirent_join(wcroot->abspath,
+                                                            local_relpath,
+                                                            scratch_pool),
+                                            scratch_pool, scratch_pool));
+      if (! url)
+        {
+          *is_switched = TRUE;
+        }
+      else
+        {
+          apr_size_t len1 = strlen(trail_url);
+          apr_size_t len2 = strlen(url);
+          if ((len1 > len2) || strcmp(url + len2 - len1, trail_url))
+            *is_switched = TRUE;
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+/* ### This needs a DB as well as a WCROOT/RELPATH pair... */
+static svn_error_t *
+has_local_mods(svn_boolean_t *is_modified,
+               svn_wc__db_wcroot_t *wcroot,
+               const char *local_relpath,
+               svn_wc__db_t *db,
+               apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
 
   /* Check for additions or deletions. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
@@ -9201,49 +9276,48 @@ svn_wc__db_revision_status(svn_revnum_t *min_revision,
       SVN_ERR(svn_sqlite__reset(stmt));
     }
 
-  /* Check for switched nodes. */
-  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, &wcroot_repos_relpath,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, db,
-                               wcroot->abspath, scratch_pool, scratch_pool));
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_SWITCHED_NODES));
-  SVN_ERR(svn_sqlite__bindf(stmt, "issss", wcroot->wc_id, local_relpath,
-                            construct_like_arg(local_relpath, scratch_pool),
-                            construct_like_arg(wcroot_repos_relpath,
-                                               scratch_pool),
-                            wcroot_repos_relpath[0] == '\0' ?
-                              "" : apr_pstrcat(scratch_pool,
-                                               wcroot_repos_relpath, "/",
-                                               (char *)NULL)));
-  /* If this query returns a row, some part of the working copy is switched. */
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  *is_switched = have_row;
-  SVN_ERR(svn_sqlite__reset(stmt));
-
-  if (! *is_switched && trail_url != NULL)
-    {
-      const char *url;
-
-      /* If the trailing part of the URL of the working copy directory
-         does not match the given trailing URL then the whole working
-         copy is switched. */
-      SVN_ERR(svn_wc__internal_node_get_url(&url, db, local_abspath,
-                                            scratch_pool, scratch_pool));
-      if (! url)
-        {
-          *is_switched = TRUE;
-        }
-      else
-        {
-          apr_size_t len1 = strlen(trail_url);
-          apr_size_t len2 = strlen(url);
-          if ((len1 > len2) || strcmp(url + len2 - len1, trail_url))
-            *is_switched = TRUE;
-        }
-    }
-
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_wc__db_revision_status(svn_revnum_t *min_revision,
+                           svn_revnum_t *max_revision,
+                           svn_boolean_t *is_sparse_checkout,
+                           svn_boolean_t *is_modified,
+                           svn_boolean_t *is_switched,
+                           svn_wc__db_t *db,
+                           const char *local_abspath,
+                           const char *trail_url,
+                           svn_boolean_t committed,
+                           apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
+                                                db, local_abspath,
+                                                svn_sqlite__mode_readwrite,
+                                                scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  /* Determine mixed-revisionness. */
+  SVN_ERR(get_min_max_revisions(min_revision, max_revision, db, wcroot,
+                                local_relpath, committed, scratch_pool));
+
+  /* Determine sparseness. */
+  SVN_ERR(is_sparse_checkout_internal(is_sparse_checkout, wcroot,
+                                      local_relpath, scratch_pool));
+
+  /* Check for switched nodes. */
+  SVN_ERR(has_switched_subtrees(is_switched, wcroot, local_relpath,
+                                trail_url, db, scratch_pool));
+
+  /* Check for local mods. */
+  SVN_ERR(has_local_mods(is_modified, wcroot, local_relpath, db,
+                         scratch_pool));
+
+  return SVN_NO_ERROR;
+}
