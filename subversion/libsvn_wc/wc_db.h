@@ -2496,8 +2496,14 @@ svn_wc__db_temp_below_work(svn_boolean_t *have_work,
  * Indicate in *IS_SPARSE_CHECKOUT whether any of the nodes within
  * LOCAL_ABSPATH is sparse.
  * Indicate in *IS_MODIFIED whether the working copy has local modifications.
+ *
  * Indicate in *IS_SWITCHED whether any node beneath LOCAL_ABSPATH
- * is switched. */
+ * is switched. If TRAIL_URL is non-NULL, use it to determine if LOCAL_ABSPATH
+ * itself is switched.  It should be any trailing portion of LOCAL_ABSPATH's
+ * expected URL, long enough to include any parts that the caller considers
+ * might be changed by a switch.  If it does not match the end of WC_PATH's
+ * actual URL, then report a "switched" status.
+ */
 svn_error_t *
 svn_wc__db_revision_status(svn_revnum_t *min_revision,
                            svn_revnum_t *max_revision,
@@ -2506,6 +2512,7 @@ svn_wc__db_revision_status(svn_revnum_t *min_revision,
                            svn_boolean_t *is_switched,
                            svn_wc__db_t *db,
                            const char *local_abspath,
+                           const char *trail_url,
                            svn_boolean_t committed,
                            apr_pool_t *scratch_pool);
 

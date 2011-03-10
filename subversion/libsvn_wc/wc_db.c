@@ -9082,6 +9082,7 @@ svn_wc__db_revision_status(svn_revnum_t *min_revision,
                            svn_boolean_t *is_switched,
                            svn_wc__db_t *db,
                            const char *local_abspath,
+                           const char *trail_url,
                            svn_boolean_t committed,
                            apr_pool_t *scratch_pool)
 {
@@ -9220,6 +9221,28 @@ svn_wc__db_revision_status(svn_revnum_t *min_revision,
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   *is_switched = have_row;
   SVN_ERR(svn_sqlite__reset(stmt));
+
+  if (! *is_switched && trail_url != NULL)
+    {
+      const char *url;
+
+      /* If the trailing part of the URL of the working copy directory
+         does not match the given trailing URL then the whole working
+         copy is switched. */
+      SVN_ERR(svn_wc__internal_node_get_url(&url, db, local_abspath,
+                                            scratch_pool, scratch_pool));
+      if (! url)
+        {
+          *is_switched = TRUE;
+        }
+      else
+        {
+          apr_size_t len1 = strlen(trail_url);
+          apr_size_t len2 = strlen(url);
+          if ((len1 > len2) || strcmp(url + len2 - len1, trail_url))
+            *is_switched = TRUE;
+        }
+    }
 
   return SVN_NO_ERROR;
 }
