@@ -52,10 +52,10 @@
 #include "../svn_test.h"
 
 
-/* Create repos and WC, and also set *DB to a new DB context. */
+/* Create repos and WC, set *WC_ABSPATH to the WC path, and set *DB to a new
+ * DB context. */
 static svn_error_t *
-create_repos_and_wc(const char **repos_url,
-                    const char **wc_abspath,
+create_repos_and_wc(const char **wc_abspath,
                     svn_wc__db_t **db,
                     const char *test_name,
                     const svn_test_opts_t *opts,
@@ -64,7 +64,6 @@ create_repos_and_wc(const char **repos_url,
   svn_test__sandbox_t sandbox;
 
   SVN_ERR(svn_test__sandbox_create(&sandbox, test_name, opts, pool));
-  *repos_url = sandbox.repos_url;
   *wc_abspath = sandbox.wc_abspath;
   *db = sandbox.wc_ctx->db;
 
@@ -111,7 +110,6 @@ pristine_write_read(const svn_test_opts_t *opts,
                     apr_pool_t *pool)
 {
   svn_wc__db_t *db;
-  const char *repos_url;
   const char *wc_abspath;
 
   const char *pristine_tmp_abspath;
@@ -120,7 +118,7 @@ pristine_write_read(const svn_test_opts_t *opts,
   svn_string_t *data_string = svn_string_create(data, pool);
   svn_checksum_t *data_sha1, *data_md5;
 
-  SVN_ERR(create_repos_and_wc(&repos_url, &wc_abspath, &db,
+  SVN_ERR(create_repos_and_wc(&wc_abspath, &db,
                               "pristine_write_read", opts, pool));
 
   /* Write DATA into a new temporary pristine file, set PRISTINE_TMP_ABSPATH
@@ -211,13 +209,12 @@ pristine_get_translated(const svn_test_opts_t *opts,
                         apr_pool_t *pool)
 {
   svn_wc__db_t *db;
-  const char *repos_url;
   const char *wc_abspath, *versioned_abspath, *new_abspath;
   const char data[] = "Blah at r$Rev$\n";
   const char expected_data[] = "Blah at r$Rev: -1 $\n";
   svn_checksum_t *data_sha1, *data_md5;
 
-  SVN_ERR(create_repos_and_wc(&repos_url, &wc_abspath, &db,
+  SVN_ERR(create_repos_and_wc(&wc_abspath, &db,
                               "pristine_get_translated", opts, pool));
 
   versioned_abspath = svn_dirent_join(wc_abspath, "foo", pool);
@@ -293,7 +290,6 @@ pristine_delete_while_open(const svn_test_opts_t *opts,
                            apr_pool_t *pool)
 {
   svn_wc__db_t *db;
-  const char *repos_url;
   const char *wc_abspath;
   const char *pristine_tmp_dir;
   svn_stream_t *contents;
@@ -301,7 +297,7 @@ pristine_delete_while_open(const svn_test_opts_t *opts,
   const char data[] = "Blah";
   svn_checksum_t *data_sha1, *data_md5;
 
-  SVN_ERR(create_repos_and_wc(&repos_url, &wc_abspath, &db,
+  SVN_ERR(create_repos_and_wc(&wc_abspath, &db,
                               "pristine_delete_while_open", opts, pool));
 
   SVN_ERR(svn_wc__db_pristine_get_tempdir(&pristine_tmp_dir, db,
@@ -361,7 +357,6 @@ reject_mismatching_text(const svn_test_opts_t *opts,
 {
 #ifdef SVN_DEBUG  /* The pristine store only checks this in debug mode. */
   svn_wc__db_t *db;
-  const char *repos_url;
   const char *wc_abspath;
   const char *pristine_tmp_dir;
 
@@ -370,7 +365,7 @@ reject_mismatching_text(const svn_test_opts_t *opts,
 
   const char data2[] = "Baz";
 
-  SVN_ERR(create_repos_and_wc(&repos_url, &wc_abspath, &db,
+  SVN_ERR(create_repos_and_wc(&wc_abspath, &db,
                               "reject_mismatching_text", opts, pool));
 
   SVN_ERR(svn_wc__db_pristine_get_tempdir(&pristine_tmp_dir, db,
