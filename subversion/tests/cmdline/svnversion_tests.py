@@ -305,6 +305,18 @@ def committed_revisions(sbox):
                                             [ "1:2\n" ], [],
                                             "--committed")
 
+# This was probably broken by r1079828, stsp is investigating...
+@XFail()
+def non_reposroot_wc(sbox):
+  "test 'svnversion' on a non-repos-root working copy"
+  sbox.build(create_wc=False)
+  wc_dir = sbox.add_wc_path('wc2')
+  repo_url = sbox.repo_url + "/A/B"
+  svntest.main.run_svn(None, 'checkout', repo_url, wc_dir)
+  svntest.actions.run_and_verify_svnversion("Non-repos-root wc dir",
+                                            wc_dir, repo_url,
+                                            [ "1\n" ], [])
+
 
 ########################################################################
 # Run the tests
@@ -317,6 +329,7 @@ test_list = [ None,
               svnversion_with_excluded_subtrees,
               svnversion_with_structural_changes,
               committed_revisions,
+              non_reposroot_wc,
              ]
 
 if __name__ == '__main__':
