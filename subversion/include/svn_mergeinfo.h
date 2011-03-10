@@ -192,8 +192,8 @@ svn_mergeinfo_diff(svn_mergeinfo_t *deleted, svn_mergeinfo_t *added,
                    svn_boolean_t consider_inheritance,
                    apr_pool_t *pool);
 
-/** Merge one mergeinfo, @a changes, into another mergeinfo @a
- * mergeinfo.
+/** Merge a shallow copy of one mergeinfo, @a changes, into another mergeinfo
+ * @a mergeinfo.
  *
  * When intersecting rangelists for a path are merged, the inheritability of
  * the resulting svn_merge_range_t depends on the inheritability of the
