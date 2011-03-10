@@ -981,7 +981,7 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
     }
 
   /* Finish the report, which causes the update editor to be driven. */
-  return reporter->finish_report(report_baton, scratch_pool);
+  return svn_error_return(reporter->finish_report(report_baton, scratch_pool));
 
  abort_report:
   /* Clean up the fs transaction. */
@@ -990,7 +990,7 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
       fserr = svn_error_quick_wrap(fserr, _("Error aborting report"));
       svn_error_compose(err, fserr);
     }
-  return err;
+  return svn_error_return(err);
 }
 
 /*** Copying stream ***/
