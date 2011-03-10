@@ -55,8 +55,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.7\n"
 "Report-Msgid-Bugs-To: dev@subversion.apache.org\n"
-"POT-Creation-Date: 2011-02-15 15:12+0800\n"
-"PO-Revision-Date: 2011-02-15 15:11+0800\n"
+"POT-Creation-Date: 2011-03-10 14:15+0800\n"
+"PO-Revision-Date: 2011-03-10 14:30+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.apache.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.apache.org>\n"
 "Language: \n"
@@ -1304,6 +1304,10 @@ msgid ""
 msgstr "来源于 “%s” 的外部引用的文件不能写入 “%s”，因为 “%s” 尚处于冲突状态"
 
 #, c-format
+msgid "The file external '%s' can not be created because the node exists."
+msgstr "不能创建文件外部引用 '%s'，节点已经存在。"
+
+#, c-format
 msgid "URL '%s' does not begin with a scheme"
 msgstr "URL “%s” 没有以方案开始"
 
@@ -1983,14 +1987,6 @@ msgid "Checksum mismatch on representation '%s'"
 msgstr "'%s' 的校验和不匹配"
 
 #, c-format
-msgid "   expected:  %s"
-msgstr "       期望:  %s"
-
-#, c-format
-msgid "     actual:  %s"
-msgstr "       实际:  %s"
-
-#, c-format
 msgid "Attempted to open non-existent child node '%s'"
 msgstr "试图打开不存在的子节点“%s”"
 
@@ -2276,9 +2272,6 @@ msgid ""
 "a directory"
 msgstr "节点版本“%s”声称自己是包含合并信息的树顶，实际上却不是目录"
 
-msgid "Bad ID in cache"
-msgstr "缓存中有损坏的 ID"
-
 msgid "Can't get entries of non-directory"
 msgstr "不能获取非目录的条目"
 
@@ -2294,27 +2287,6 @@ msgstr "不能在*文件*修订节点增加合并信息计数 %%s 到 %%%s (> 1)
 
 msgid "Empty noderev in cache"
 msgstr "缓存中 noderev 为空"
-
-msgid "Kindless noderev in cache"
-msgstr "缓存中 noderev 无类型"
-
-#, c-format
-msgid "Unknown kind for noderev in cache: '%c'"
-msgstr "缓存中 noderev 的类型未知：“%c”"
-
-msgid "Unterminated ID in cache"
-msgstr "缓存中有未结束的 ID"
-
-#, c-format
-msgid "Bogus ID '%s' in cache"
-msgstr "缓存中有非法的 ID “%s”"
-
-msgid "No created path"
-msgstr "无已创建的路径"
-
-#, c-format
-msgid "Unknown node type in cache: '%c'"
-msgstr "缓存中有未知的节点类型：“%c”"
 
 #, c-format
 msgid "Can't fetch FSFS shared data"
@@ -2719,6 +2691,10 @@ msgid "URL '%s' is not a child of the session's repository root URL '%s'"
 msgstr "URL “%s” 不是会话版本库根 URL “%s” 的子节点"
 
 #, c-format
+msgid "'%s' path not found"
+msgstr "找不到路径 “%s”"
+
+#, c-format
 msgid "Don't know anything about capability '%s'"
 msgstr "不知道特性 “%s” 的任何信息"
 
@@ -2758,6 +2734,17 @@ msgstr "不能从响应中获得内容类型"
 
 msgid "Could not save file"
 msgstr "无法保存文件"
+
+msgid "Can't get text contents of a directory"
+msgstr "无法获得目录的文本内容"
+
+#, c-format
+msgid "   expected:  %s"
+msgstr "       期望:  %s"
+
+#, c-format
+msgid "     actual:  %s"
+msgstr "       实际:  %s"
 
 msgid "Server response missing the expected deadprop-count property"
 msgstr "服务器响应丢失了期望的 deadprop-count 属性"
@@ -3066,10 +3053,6 @@ msgid "%s of '%s'"
 msgstr "方法 %s 失败于 “%s”"
 
 #, c-format
-msgid "'%s' path not found"
-msgstr "找不到路径 “%s”"
-
-#, c-format
 msgid "Access to '%s' forbidden"
 msgstr "禁止访问 '%s'"
 
@@ -3171,15 +3154,18 @@ msgstr "版本库的 URL 非法"
 msgid "Unlock request failed: %d %s"
 msgstr "解锁请求失败: %d %s"
 
+msgid ""
+"The PROPFIND response did not include the requested baseline-collection value"
+msgstr "PROPFIND 响应中没有包含请求的 baseline-collection 值。"
+
+msgid "The PROPFIND response did not include the requested version-name value"
+msgstr "PROPFIND 响应中没有包含请求的 version-name 值。"
+
 msgid "The OPTIONS response did not include the requested checked-in value"
 msgstr "OPTIONS 响应中没有包含请求的 checked-in 值。"
 
-msgid ""
-"The OPTIONS response did not include the requested baseline-collection value"
-msgstr "OPTIONS 响应中没有包含请求的 baseline-collection 值。"
-
-msgid "The OPTIONS response did not include the requested version-name value"
-msgstr "OPTIONS 响应中没有包含请求的 version-name 值。"
+msgid "The PROPFIND response did not include the requested resourcetype value"
+msgstr "PROPFIND 响应中没有包含请求的 resourcetype 值"
 
 msgid "Missing revision attr in target-revision element"
 msgstr "元素“target-revision没有revision属性"
@@ -3210,12 +3196,6 @@ msgstr "通过 WebDAV 协议使用 serf 访问版本库的模块。"
 #, c-format
 msgid "Could not resolve proxy server '%s'"
 msgstr "不能解析代理服务器“%s”"
-
-msgid "The OPTIONS response did not include the requested resourcetype value"
-msgstr "OPTIONS 响应中没有包含请求的 resourcetype 值。"
-
-msgid "The PROPFIND response did not include the requested resourcetype value"
-msgstr "PROPFIND 响应中没有包含请求的 resourcetype 值"
 
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_serf"
@@ -4357,6 +4337,14 @@ msgid "Can't read stream"
 msgstr "无法读取流"
 
 #, c-format
+msgid "Can't write file '%s'"
+msgstr "无法写入文件“%s”"
+
+#, c-format
+msgid "Can't write stream"
+msgstr "无法写入流"
+
+#, c-format
 msgid "Can't get attribute information from file '%s'"
 msgstr "无法从文件“%s”获取属性信息"
 
@@ -4772,10 +4760,6 @@ msgid "Could not initialize SQLite shared cache"
 msgstr "不能初始化 SQLite 共享缓存"
 
 #, c-format
-msgid "Expected SQLite database not found: %s"
-msgstr "未发现期待的 SQLite 数据库：%s"
-
-#, c-format
 msgid "SQLite hotcopy failed for %s"
 msgstr "SQLite 由于 %s 导致热复制失败"
 
@@ -4892,14 +4876,8 @@ msgid "Error aborting report"
 msgstr "取消报告出错"
 
 #, c-format
-msgid ""
-"Checksum mismatch for text base of '%s':\n"
-"   expected:  %s\n"
-"     actual:  %s\n"
-msgstr ""
-"'%s' 原始内容的校验和不匹配:\n"
-"      期望:  %s\n"
-"      实际:  %s\n"
+msgid "Checksum mismatch for text base of '%s'"
+msgstr "'%s' 的文本校验和不匹配"
 
 #, c-format
 msgid "While preparing '%s' for commit"
@@ -5401,14 +5379,8 @@ msgid ""
 msgstr "无效属性 %s 位于 “%s”: 目标 “%s” 包含 “..” 或是绝对路径"
 
 #, c-format
-msgid ""
-"Checksum mismatch indicates corrupt text base for file: '%s':\n"
-"   expected:  %s\n"
-"     actual:  %s\n"
-msgstr ""
-"校验和不一致，指示文件“%s”的参考基础损坏:\n"
-"       期望:  %s\n"
-"       实际:  %s\n"
+msgid "Checksum mismatch indicates corrupt text base for file: '%s'"
+msgstr "校验和不一致，这意味着文件的参考基础损坏: '%s'"
 
 #, c-format
 msgid "Cannot relocate '%s' as it is not the root of a working copy"
@@ -5520,16 +5492,6 @@ msgstr ""
 "       记录:  %s\n"
 
 #, c-format
-msgid ""
-"Checksum mismatch for '%s':\n"
-"   expected:  %s\n"
-"     actual:  %s\n"
-msgstr ""
-"'%s' 的校验和不匹配:\n"
-"      期望:  %s\n"
-"      实际:  %s\n"
-
-#, c-format
 msgid "Unrecognized node kind: '%s'"
 msgstr "无法识别的节点种类: “%s”"
 
@@ -5630,6 +5592,10 @@ msgid "Can't revert '%s' without reverting parent"
 msgstr "不能恢复 '%s'，而不恢复父亲。"
 
 #, c-format
+msgid "Unsupported depth for revert of '%s'"
+msgstr "对于恢复 '%s'，其深度不受支持"
+
+#, c-format
 msgid "Corrupt data for '%s'"
 msgstr "'%s' 的数据损坏"
 
@@ -5713,6 +5679,14 @@ msgid "Pristine text not found"
 msgstr "找不到原始内容"
 
 #, c-format
+msgid "Pristine text '%s' not present"
+msgstr "原始内容 “%s” 不存在"
+
+#, c-format
+msgid "New pristine text '%s' has different size: %ld versus %ld"
+msgstr "新原始内容 '%s' 有不同的大小: %ld 与 %ld"
+
+#, c-format
 msgid "The pristine text with checksum '%s' was not found"
 msgstr "找不到校验和为“%s”的原始内容"
 
@@ -5721,10 +5695,8 @@ msgid "The pristine text with MD5 checksum '%s' was not found"
 msgstr "找不到 MD5 校验和为“%s”的原始内容"
 
 #, c-format
-msgid ""
-"The pristine text with checksum '%s' was found in the DB or on disk but not "
-"both"
-msgstr "在数据库或磁盘找到了校验和为“%s”的原始内容，但是没有同时存在"
+msgid "The pristine text with checksum '%s' was found in the DB but not on disk"
+msgstr "在数据库中找到了校验和为“%s”的原始内容，但是它不在磁盘上"
 
 #, c-format
 msgid "Missing a row in WCROOT."
@@ -5755,6 +5727,12 @@ msgstr "只有在XML模式“incremental”选项才有效"
 msgid "Skipping binary file: '%s'\n"
 msgstr "略过二进制文件: “%s”\n"
 
+msgid "Could not perform blame on all targets because some targets don't exist"
+msgstr "因为一些目标不存在，所以不能追溯全部目标"
+
+msgid "Could not cat all targets because some targets don't exist"
+msgstr "因为一些目标不存在，所以不能显示全部目标"
+
 #, c-format
 msgid "'%s' does not appear to be a URL"
 msgstr "“%s”不像是URL"
@@ -5762,11 +5740,12 @@ msgstr "“%s”不像是URL"
 #, c-format
 msgid ""
 "svn: warning: The depth of this commit is '%s', but copied directories will "
-"regardless be committed with depth '%s'. You must remove unwanted children of "
-"those directories in a separate commit.\n"
+"regardless be committed with depth '%s'.  You must remove unwanted children "
+"of those directories in a separate commit.  (Suppressing additional instances "
+"of this warning.)\n"
 msgstr ""
 "svn: 警告: 此提交的深度是 '%s'，但是复制的目录将被提交的深度是 '%s'。你必须在"
-"独立的提交中删除这些目录中不需要的项目。\n"
+"独立的提交中删除这些目录中不需要的项目。(这个警告的其它实例被抑制。)\n"
 
 msgid "||||||| ORIGINAL"
 msgstr "||||||| 原始版本"
@@ -6135,6 +6114,10 @@ msgstr "深度: 文件\n"
 msgid "Depth: immediates\n"
 msgstr "深度: 直接\n"
 
+#, c-format
+msgid "Depth: exclude\n"
+msgstr "深度: 排除\n"
+
 #. Other depths should never happen here.
 #, c-format
 msgid "Depth: INVALID\n"
@@ -6142,7 +6125,7 @@ msgstr "深度: 非法\n"
 
 #, c-format
 msgid "Copied From URL: %s\n"
-msgstr "从URL %s 复制: \n"
+msgstr "从 URL %s 复制: \n"
 
 #, c-format
 msgid "Copied From Rev: %ld\n"
@@ -6220,6 +6203,9 @@ msgstr "源      左边"
 msgid "Source right"
 msgstr "源      右边"
 
+msgid "Could not display info for all targets because some targets don't exist"
+msgstr "因为一些目标不存在，所以不能显示全部目标"
+
 msgid "%b %d %H:%M"
 msgstr "%b %d %H:%M"
 
@@ -6251,10 +6237,13 @@ msgstr "改变的路径: \n"
 msgid " (from %s:%ld)"
 msgstr " (从 %s:%ld)"
 
-#. Print the result of merge line
+#, c-format
+msgid "Reverse merged via:"
+msgstr "已经撤销合并，通过:"
+
 #, c-format
 msgid "Merged via:"
-msgstr "合并通过: "
+msgstr "已经合并，通过: "
 
 #, c-format
 msgid "\n"
@@ -7148,7 +7137,7 @@ msgid ""
 "     The difference between the left and right side is merged into the "
 "target.\n"
 "\n"
-"     To perform the merge, check out a working copy of the feature\n"
+"     To perform the merge, check out a working copy of the release\n"
 "     branch and run the following command in the top-level directory\n"
 "     of the working copy:\n"
 "\n"
@@ -7284,6 +7273,14 @@ msgid ""
 "     the svn diff command:\n"
 "\n"
 "         svn diff ^/trunk@500 ^/feature@HEAD\n"
+"\n"
+"     Note that a 2-URL merge can also merge from foreign repositories.\n"
+"     While SOURCE1 and SOURCE2 must both come from the same repository,\n"
+"     TARGET_WCPATH may come from a different repository than the sources.\n"
+"     However, there are some caveats. Most notably, copies made in the\n"
+"     merge source will be transformed into plain additions in the merge\n"
+"     target, since the copyfrom information is only valid within the\n"
+"     source repository.\n"
 "\n"
 "\n"
 "  The following applies to all types of merges:\n"
@@ -8848,13 +8845,6 @@ msgstr "(非法日期)"
 msgid "Can't open stdio file"
 msgstr "无法打开标准输出/入文件"
 
-msgid "Repository argument required"
-msgstr "需要版本库参数"
-
-#, c-format
-msgid "'%s' is an URL when it should be a path"
-msgstr "“%s”应该是路径，却是URL"
-
 msgid "specify revision number ARG (or X:Y range)"
 msgstr "指定版本 ARG (或 X:Y 范围)"
 
@@ -8932,6 +8922,15 @@ msgid ""
 "use format compatible with Subversion versions\n"
 "                             earlier than 1.7"
 msgstr "使用与 1.7 之前版本兼容的格式"
+
+msgid ""
+"size of the extra in-memory cache in MB used to\n"
+"                             minimize redundant operations. Default: 16.\n"
+"                             [used for FSFS repositories only]"
+msgstr ""
+"用来减少冗余操作的内存中的额外缓存的大小(MB)\n"
+"                             默认值: 16。\n"
+"                             [仅用于 FSFS 仓库]"
 
 msgid ""
 "usage: svnadmin crashtest REPOS_PATH\n"
@@ -9297,14 +9296,6 @@ msgid "Only one revision allowed"
 msgstr "只允许一个版本"
 
 #, c-format
-msgid "Exactly one property name and one file argument required"
-msgstr "必须提供恰好一个属性名称和一个文件参数"
-
-#, c-format
-msgid "Exactly one file argument required"
-msgstr "必须恰好提供一个文件参数"
-
-#, c-format
 msgid "UUID Token: %s\n"
 msgstr "UUID 标识: %s\n"
 
@@ -9370,6 +9361,13 @@ msgstr "遇到了多个版本参数；请使用“-r N:M”代替“-r M -r N”
 #, c-format
 msgid "subcommand argument required\n"
 msgstr "必须提供子命令参数\n"
+
+msgid "Repository argument required"
+msgstr "需要版本库参数"
+
+#, c-format
+msgid "'%s' is a URL when it should be a local path"
+msgstr "“%s”应该是本地路径，实际上却是 URL"
 
 #, c-format
 msgid ""
@@ -10064,6 +10062,15 @@ msgstr ""
 "                             [默认首选 IPv4。不支持在守护进程模式中同时使用 "
 "IPv4\n"
 "                             和 IPv6。如果需要，请使用 inetd 模式或隧道模式。]"
+
+msgid ""
+"compression level to use for network transmissions\n"
+"                             [0 .. no compression, 5 .. default, \n"
+"                              9 .. maximum compression]"
+msgstr ""
+"用于网络传输的压缩级别\n"
+"                             [0 .. 不压缩, 5 .. 默认, \n"
+"                              9 .. 最大压缩]"
 
 msgid ""
 "size of the extra in-memory cache in MB used to\n"
