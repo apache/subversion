@@ -184,15 +184,11 @@ CREATE INDEX I_ACTUAL_CHANGELIST ON ACTUAL_NODE (changelist);
 
 /* ------------------------------------------------------------------------- */
 
+/* This table is a cache of information about repository locks. */
 CREATE TABLE LOCK (
   /* what repository location is locked */
   repos_id  INTEGER NOT NULL REFERENCES REPOSITORY (id),
   repos_relpath  TEXT NOT NULL,
-  /* ### BH: Shouldn't this refer to an working copy location? You can have a
-         single relpath checked out multiple times in one (switch) or more
-         working copies. */
-  /* ### HKW: No, afaik.  This table is just a cache of what's in the
-         repository, so these should be repos_relpaths. */
 
   /* Information about the lock. Note: these values are just caches from
      the server, and are not authoritative. */
