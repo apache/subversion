@@ -1400,7 +1400,14 @@ new_revert_internal(svn_wc__db_t *db,
             {
               /* ### Need to reset read-only, executable.  Old revert
                      used the change in the magic properties to do
-                     this, but we don't have the old values. */
+                     this, but we don't have the old values.
+
+                 ### Perhaps use temporary SQLite table to store old
+                     properies, conflicts and local_relpaths?  Might
+                     also help with notification for recursive case.
+
+                 ### Need to set notification if changing
+                     attributes. */
               apr_hash_t *props;
 
               SVN_ERR(svn_wc__db_read_pristine_props(&props, db, local_abspath,
@@ -1435,6 +1442,8 @@ new_revert_internal(svn_wc__db_t *db,
         }
       notify_required = TRUE;
     }
+
+  /* ### Tidy up conflict droppings */
 
   if (notify_func && notify_required)
     notify_func(notify_baton,
