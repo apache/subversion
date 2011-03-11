@@ -936,7 +936,7 @@ post_process_commit_item(svn_wc_committed_queue_t *queue,
   remove_lock = (! keep_locks && (item->state_flags
                                        & SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN));
 
-  return svn_wc_queue_committed3(queue, item->path,
+  return svn_wc_queue_committed3(queue, wc_ctx, item->path,
                                  loop_recurse, item->incoming_prop_changes,
                                  remove_lock, !keep_changelists,
                                  md5_checksum, sha1_checksum, scratch_pool);
