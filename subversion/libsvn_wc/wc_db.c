@@ -6734,17 +6734,22 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
 }
 
 
-/* Like svn_wc__db_scan_deletion(), but with WCROOT+LOCAL_RELPATH instead of
-   DB+LOCAL_ABSPATH, and outputting relpaths instead of abspaths. */
-static svn_error_t *
-scan_deletion(const char **base_del_relpath,
-              const char **moved_to_relpath,
-              const char **work_del_relpath,
-              svn_wc__db_wcroot_t *wcroot,
-              const char *local_relpath,
-              apr_pool_t *result_pool,
-              apr_pool_t *scratch_pool)
+struct scan_deletion_baton
 {
+  const char **base_del_relpath;
+  const char **moved_to_relpath;
+  const char **work_del_relpath;
+  apr_pool_t *result_pool;
+};
+
+
+static svn_error_t *
+scan_deletion_txn(void *baton,
+                  svn_wc__db_wcroot_t *wcroot,
+                  const char *local_relpath,
+                  apr_pool_t *scratch_pool)
+{
+  struct scan_deletion_baton *sd_baton = baton;
   const char *current_relpath = local_relpath;
   const char *child_relpath = NULL;
   svn_wc__db_status_t child_presence;
@@ -6753,12 +6758,12 @@ scan_deletion(const char **base_del_relpath,
   apr_int64_t local_op_depth, op_depth;
 
   /* Initialize all the OUT parameters.  */
-  if (base_del_relpath != NULL)
-    *base_del_relpath = NULL;
-  if (moved_to_relpath != NULL)
-    *moved_to_relpath = NULL;
-  if (work_del_relpath != NULL)
-    *work_del_relpath = NULL;
+  if (sd_baton->base_del_relpath != NULL)
+    *sd_baton->base_del_relpath = NULL;
+  if (sd_baton->moved_to_relpath != NULL)
+    *sd_baton->moved_to_relpath = NULL;
+  if (sd_baton->work_del_relpath != NULL)
+    *sd_baton->work_del_relpath = NULL;
 
   /* Initialize to something that won't denote an important parent/child
      transition.  */
@@ -6797,10 +6802,11 @@ scan_deletion(const char **base_del_relpath,
              (added) WORKING subtree was deleted.  This can occur
              during post-commit processing when the copied parent that
              was in the WORKING tree has been moved to the BASE tree. */
-          if (work_del_relpath != NULL
+          if (sd_baton->work_del_relpath != NULL
               && child_presence == svn_wc__db_status_not_present
-              && *work_del_relpath == NULL)
-            *work_del_relpath = apr_pstrdup(result_pool, child_relpath);
+              && *sd_baton->work_del_relpath == NULL)
+            *sd_baton->work_del_relpath = apr_pstrdup(sd_baton->result_pool,
+                                                      child_relpath);
 
           /* If the child did not have a BASE node associated with it, then
              we're looking at a deletion that occurred within an added tree.
@@ -6814,10 +6820,11 @@ scan_deletion(const char **base_del_relpath,
 
              In both cases, set the root of the operation (if we have not
              already set it as part of a moved-away).  */
-          if (base_del_relpath != NULL
+          if (sd_baton->base_del_relpath != NULL
               && child_has_base
-              && *base_del_relpath == NULL)
-            *base_del_relpath = apr_pstrdup(result_pool, child_relpath);
+              && *sd_baton->base_del_relpath == NULL)
+            *sd_baton->base_del_relpath = apr_pstrdup(sd_baton->result_pool,
+                                                      child_relpath);
 
           /* We found whatever roots we needed. This BASE node and its
              ancestors are unchanged, so we're done.  */
@@ -6881,7 +6888,8 @@ scan_deletion(const char **base_del_relpath,
 
       /* Only grab the nearest ancestor.  */
       if (!found_moved_to &&
-          (moved_to_relpath != NULL || base_del_relpath != NULL)
+          (sd_baton->moved_to_relpath != NULL
+                || sd_baton->base_del_relpath != NULL)
           && !svn_sqlite__column_is_null(stmt, 2 /* moved_to */))
         {
           /* There better be a BASE_NODE (that was moved-away).  */
@@ -6890,11 +6898,12 @@ scan_deletion(const char **base_del_relpath,
           found_moved_to = TRUE;
 
           /* This makes things easy. It's the BASE_DEL_ABSPATH!  */
-          if (base_del_relpath != NULL)
-            *base_del_relpath = apr_pstrdup(result_pool, current_relpath);
+          if (sd_baton->base_del_relpath != NULL)
+            *sd_baton->base_del_relpath = apr_pstrdup(sd_baton->result_pool,
+                                                      current_relpath);
 
-          if (moved_to_relpath != NULL)
-            *moved_to_relpath = apr_pstrdup(result_pool,
+          if (sd_baton->moved_to_relpath != NULL)
+            *sd_baton->moved_to_relpath = apr_pstrdup(sd_baton->result_pool,
                                     svn_sqlite__column_text(stmt, 2, NULL));
         }
 
@@ -6902,11 +6911,12 @@ scan_deletion(const char **base_del_relpath,
       if (current_relpath == local_relpath)
         local_op_depth = op_depth;
 
-      if (work_del_relpath && !work_del_relpath[0]
+      if (sd_baton->work_del_relpath && !sd_baton->work_del_relpath[0]
           && ((op_depth < local_op_depth && op_depth > 0)
               || child_presence == svn_wc__db_status_not_present))
         {
-          *work_del_relpath = apr_pstrdup(result_pool, child_relpath);
+          *sd_baton->work_del_relpath = apr_pstrdup(sd_baton->result_pool,
+                                                    child_relpath);
         }
 
       /* We're all done examining the return values.  */
@@ -6926,6 +6936,29 @@ scan_deletion(const char **base_del_relpath,
     }
 
   return SVN_NO_ERROR;
+}
+
+
+/* Like svn_wc__db_scan_deletion(), but with WCROOT+LOCAL_RELPATH instead of
+   DB+LOCAL_ABSPATH, and outputting relpaths instead of abspaths. */
+static svn_error_t *
+scan_deletion(const char **base_del_relpath,
+              const char **moved_to_relpath,
+              const char **work_del_relpath,
+              svn_wc__db_wcroot_t *wcroot,
+              const char *local_relpath,
+              apr_pool_t *result_pool,
+              apr_pool_t *scratch_pool)
+{
+  struct scan_deletion_baton sd_baton;
+
+  sd_baton.base_del_relpath = base_del_relpath;
+  sd_baton.moved_to_relpath = moved_to_relpath;
+  sd_baton.work_del_relpath = work_del_relpath;
+  sd_baton.result_pool = result_pool;
+
+  return svn_error_return(with_db_txn(wcroot, local_relpath, scan_deletion_txn,
+                                      &sd_baton, scratch_pool));
 }
 
 
