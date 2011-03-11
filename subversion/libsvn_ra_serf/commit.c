@@ -1115,6 +1115,21 @@ setup_copy_dir_headers(serf_bucket_t *headers,
 }
 
 static svn_error_t *
+setup_post_headers(serf_bucket_t *headers,
+                   void *baton,
+                   apr_pool_t *pool)
+{
+#ifdef SVN_SERF_SEND_VTXN_NAME
+  /* Enable this to exercise the VTXN-NAME code based on a client
+     supplied transaction name. */
+  serf_bucket_headers_set(headers, SVN_DAV_VTXN_NAME_HEADER,
+                          svn_uuid_generate(pool));
+#endif
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 setup_delete_headers(serf_bucket_t *headers,
                      void *baton,
                      apr_pool_t *pool)
@@ -1228,6 +1243,18 @@ post_headers_iterator_callback(void *baton,
       prc_cc->txn_root_url =
         svn_path_url_add_component2(sess->txn_root_stub, val, prc_cc->pool);
     }
+
+  if (svn_cstring_casecmp(key, SVN_DAV_VTXN_NAME_HEADER) == 0)
+    {
+      /* Build out vtxn and vtxn-root URLs using the vtxn name we're
+         given, and store the whole lot of it in the commit context.  */
+      prc_cc->txn_name = apr_pstrdup(prc_cc->pool, val);
+      prc_cc->txn_url =
+        svn_path_url_add_component2(sess->vtxn_stub, val, prc_cc->pool);
+      prc_cc->txn_root_url =
+        svn_path_url_add_component2(sess->vtxn_root_stub, val, prc_cc->pool);
+    }
+
   return 0;
 }
 
@@ -1282,6 +1309,8 @@ open_root(void *edit_baton,
       handler->body_type = SVN_SKEL_MIME_TYPE;
       handler->body_delegate = create_txn_post_body;
       handler->body_delegate_baton = NULL;
+      handler->header_delegate = setup_post_headers;
+      handler->header_delegate_baton = NULL;
       handler->path = ctx->session->me_resource;
       handler->conn = ctx->session->conns[0];
       handler->session = ctx->session;

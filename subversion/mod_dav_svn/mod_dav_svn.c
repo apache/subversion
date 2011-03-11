@@ -626,6 +626,22 @@ dav_svn__get_txn_root_stub(request_rec *r)
 }
 
 
+const char *
+dav_svn__get_vtxn_stub(request_rec *r)
+{
+  return apr_pstrcat(r->pool, dav_svn__get_special_uri(r), "/vtxn",
+                     (char *)NULL);
+}
+
+
+const char *
+dav_svn__get_vtxn_root_stub(request_rec *r)
+{
+  return apr_pstrcat(r->pool, dav_svn__get_special_uri(r), "/vtxr",
+                     (char *)NULL);
+}
+
+
 svn_boolean_t
 dav_svn__get_autoversioning_flag(request_rec *r)
 {

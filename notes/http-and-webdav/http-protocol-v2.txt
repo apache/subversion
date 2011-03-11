@@ -128,6 +128,14 @@ PHASE 1 IN DETAIL
        Various read- and write-type requests can be issued against
        these resources (MKCOL, PUT, PROPFIND, PROPPATCH, GET, etc.).
 
+     - alternate transaction resource (!svn/vtxn/VTXN-NAME)
+       alternate transaction root resource (!svn/vtxr/VTXN-NAME/[PATH])
+
+       Alternative names for the transaction based on a virtual, or
+       visible, name supplied by the client when the transaction
+       was created.  The client supplied name is optional, if not
+       supplied these resource names are not valid.
+
  * Opening an RA session:
 
    ra_serf will send an OPTIONS request when creating a new
@@ -144,6 +152,8 @@ PHASE 1 IN DETAIL
      SVN-Rev-Root-Stub:  /REPOS-ROOT/!svn/rvr
      SVN-Txn-Stub:  /REPOS-ROOT/!svn/txn
      SVN-Txn-Root-Stub:  /REPOS-ROOT/!svn/txr
+     SVN-VTxn-Stub:  /REPOS-ROOT/!svn/vtxn
+     SVN-VTxn-Root-Stub:  /REPOS-ROOT/!svn/vtxr
 
    The presence of these new stubs (which can be appended to by the
    client to create full-fledged resource URLs) tells ra_serf that
@@ -220,11 +230,17 @@ PHASE 1 IN DETAIL
 
        - no more need to "discover" the activity URI;  !svn/act/ is gone.
 
-       - client no longer creates an activity UUID itself.
+       - client no longer needs to create an activity UUID itself.
 
        - instead, POST returns the name of the transaction it created,
-         which can then be appended to the transaction stub and
-         transaction root stub as necessary.
+         as TXN-NAME, which can then be appended to the transaction
+         stub and transaction root stub as necessary.
+
+       - if the client does choose to supply a UUID with the POST
+         request then the POST returns that UUID as VTXN-NAME, instead of
+         returning TXN-NAME, and the client then uses that with the
+         alternate transaction stub and transaction root stub in subsequent
+         requests.
 
      - Once the commit transaction is created, the client is free to
        send write requests against transaction resources it constructs
