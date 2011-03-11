@@ -842,13 +842,8 @@ harvest_committables(apr_hash_t *committables,
           if (is_replaced && this_is_deleted)
             continue;
 
-          if (! copy_mode)
-            SVN_ERR(svn_wc__node_get_repos_relpath(&this_repos_relpath, wc_ctx,
-                                                   this_abspath, iterpool,
-                                                   iterpool));
-          else
-            this_repos_relpath = svn_relpath_join(repos_relpath, name,
-                                                  iterpool);
+          this_repos_relpath = svn_relpath_join(repos_relpath, name,
+                                                iterpool);
 
           /* Recurse. */
           SVN_ERR(svn_wc_read_kind(&this_kind, ctx->wc_ctx, this_abspath,
