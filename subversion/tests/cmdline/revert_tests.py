@@ -1021,22 +1021,33 @@ def revert_added_tree(sbox):
 
 
 def revert_child_of_copy(sbox):
-  "revert a child of a copied directory does nothing"
+  "revert a child of a copied directory"
 
   sbox.build()
   wc_dir = sbox.wc_dir
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'cp', sbox.ospath('A/B/E'), sbox.ospath('A/B/E2'))
+                                     'cp',
+                                     sbox.ospath('A/B/E'),
+                                     sbox.ospath('A/B/E2'))
 
+
+  svntest.main.file_append(sbox.ospath('A/B/E2/beta', 'extra text\n')
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/B/E2'       : Item(status='A ', copied='+', wc_rev='-'),
     'A/B/E2/alpha' : Item(status='  ', copied='+', wc_rev='-'),
-    'A/B/E2/beta'  : Item(status='  ', copied='+', wc_rev='-'),
+    'A/B/E2/beta'  : Item(status='M ', copied='+', wc_rev='-'),
     })
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  # Revert of child of copy does nothing, status is unchanged
+  # First revert removes text change, child is still copied
+  expected_output = ["Reverted '%s'\n" % sbox.ospath('A/B/E2/beta')]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'revert', sbox.ospath('A/B/E2/beta'))
+  expected_status.tweak('A/B/E2/beta', status='  ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Second revert of child does nothing, child is still copied
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'revert', sbox.ospath('A/B/E2/beta'))
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
