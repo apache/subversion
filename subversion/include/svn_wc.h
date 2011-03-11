@@ -4785,6 +4785,7 @@ svn_wc_committed_queue_create(apr_pool_t *pool);
  */
 svn_error_t *
 svn_wc_queue_committed3(svn_wc_committed_queue_t *queue,
+                        svn_wc_context_t *wc_ctx,
                         const char *local_abspath,
                         svn_boolean_t recurse,
                         const apr_array_header_t *wcprop_changes,
