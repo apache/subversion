@@ -6396,24 +6396,25 @@ svn_wc__db_scan_base_repos(const char **repos_relpath,
 }
 
 
-/* Like svn_wc__db_scan_addition(), but with WCROOT+LOCAL_RELPATH instead of
-   DB+LOCAL_ABSPATH.
-
-   The output value of *ORIGINAL_REPOS_ID will be INVALID_REPOS_ID if there
-   is no 'copy-from' repository.  */
-static svn_error_t *
-scan_addition(svn_wc__db_status_t *status,
-              const char **op_root_relpath,
-              const char **repos_relpath,
-              apr_int64_t *repos_id,
-              const char **original_repos_relpath,
-              apr_int64_t *original_repos_id,
-              svn_revnum_t *original_revision,
-              svn_wc__db_wcroot_t *wcroot,
-              const char *local_relpath,
-              apr_pool_t *result_pool,
-              apr_pool_t *scratch_pool)
+struct scan_addition_baton
 {
+  svn_wc__db_status_t *status;
+  const char **op_root_relpath;
+  const char **repos_relpath;
+  apr_int64_t *repos_id;
+  const char **original_repos_relpath;
+  apr_int64_t *original_repos_id;
+  svn_revnum_t *original_revision;
+  apr_pool_t *result_pool;
+};
+
+static svn_error_t *
+scan_addition_txn(void *baton,
+                  svn_wc__db_wcroot_t *wcroot,
+                  const char *local_relpath,
+                  apr_pool_t *scratch_pool)
+{
+  struct scan_addition_baton *sab = baton;
   const char *current_relpath = local_relpath;
   const char *build_relpath = "";
 
@@ -6421,14 +6422,14 @@ scan_addition(svn_wc__db_status_t *status,
      in a subset of these, so it is easier to init all up front. Note that
      the STATUS parameter will be initialized once we read the status of
      the specified node.  */
-  if (op_root_relpath)
-    *op_root_relpath = NULL;
-  if (original_repos_relpath)
-    *original_repos_relpath = NULL;
-  if (original_repos_id)
-    *original_repos_id = INVALID_REPOS_ID;
-  if (original_revision)
-    *original_revision = SVN_INVALID_REVNUM;
+  if (sab->op_root_relpath)
+    *sab->op_root_relpath = NULL;
+  if (sab->original_repos_relpath)
+    *sab->original_repos_relpath = NULL;
+  if (sab->original_repos_id)
+    *sab->original_repos_id = INVALID_REPOS_ID;
+  if (sab->original_revision)
+    *sab->original_revision = SVN_INVALID_REVNUM;
 
   {
     svn_sqlite__stmt_t *stmt;
@@ -6469,12 +6470,12 @@ scan_addition(svn_wc__db_status_t *status,
                                                       local_relpath,
                                                       scratch_pool));
 
-    if (original_revision)
-      *original_revision = svn_sqlite__column_revnum(stmt, 12);
+    if (sab->original_revision)
+      *sab->original_revision = svn_sqlite__column_revnum(stmt, 12);
 
     /* Provide the default status; we'll override as appropriate. */
-    if (status)
-      *status = svn_wc__db_status_added;
+    if (sab->status)
+      *sab->status = svn_wc__db_status_added;
 
 
     /* Calculate the op root local path components */
@@ -6491,13 +6492,14 @@ scan_addition(svn_wc__db_status_t *status,
         current_relpath = svn_relpath_dirname(current_relpath, scratch_pool);
       }
 
-    if (op_root_relpath)
-      *op_root_relpath = apr_pstrdup(result_pool, current_relpath);
+    if (sab->op_root_relpath)
+      *sab->op_root_relpath = apr_pstrdup(sab->result_pool, current_relpath);
 
-    if (original_repos_relpath
-        || original_repos_id
-        || (original_revision && *original_revision == SVN_INVALID_REVNUM)
-        || status)
+    if (sab->original_repos_relpath
+        || sab->original_repos_id
+        || (sab->original_revision
+                && *sab->original_revision == SVN_INVALID_REVNUM)
+        || sab->status)
       {
         if (local_relpath != current_relpath)
           /* requery to get the add/copy root */
@@ -6521,31 +6523,32 @@ scan_addition(svn_wc__db_status_t *status,
                                                                 scratch_pool));
               }
 
-            if (original_revision && *original_revision == SVN_INVALID_REVNUM)
-              *original_revision = svn_sqlite__column_revnum(stmt, 12);
+            if (sab->original_revision
+                    && *sab->original_revision == SVN_INVALID_REVNUM)
+              *sab->original_revision = svn_sqlite__column_revnum(stmt, 12);
           }
 
         /* current_relpath / current_abspath
            as well as the record in stmt contain the data of the op_root */
-        if (original_repos_relpath)
-          *original_repos_relpath = svn_sqlite__column_text(stmt, 11,
-                                                            result_pool);
+        if (sab->original_repos_relpath)
+          *sab->original_repos_relpath = svn_sqlite__column_text(stmt, 11,
+                                                            sab->result_pool);
 
         if (!svn_sqlite__column_is_null(stmt, 10)
-            && (status
-                || original_repos_id))
+            && (sab->status
+                || sab->original_repos_id))
           /* If column 10 (original_repos_id) is NULL,
              this is a plain add, not a copy or a move */
           {
-            if (original_repos_id)
-              *original_repos_id = svn_sqlite__column_int64(stmt, 10);
+            if (sab->original_repos_id)
+              *sab->original_repos_id = svn_sqlite__column_int64(stmt, 10);
 
-            if (status)
+            if (sab->status)
               {
                 if (svn_sqlite__column_boolean(stmt, 13 /* moved_here */))
-                  *status = svn_wc__db_status_moved_here;
+                  *sab->status = svn_wc__db_status_moved_here;
                 else
-                  *status = svn_wc__db_status_copied;
+                  *sab->status = svn_wc__db_status_copied;
               }
           }
       }
@@ -6598,49 +6601,83 @@ scan_addition(svn_wc__db_status_t *status,
      CURRENT_ABSPATH now points to a BASE node. Figure out the repository
      information for the current node, and use that to compute the start
      node's repository information.  */
-  if (repos_relpath || repos_id)
+  if (sab->repos_relpath || sab->repos_id)
     {
       const char *base_relpath;
 
-      SVN_ERR(scan_upwards_for_repos(repos_id, &base_relpath,
+      SVN_ERR(scan_upwards_for_repos(sab->repos_id, &base_relpath,
                                      wcroot, current_relpath,
                                      scratch_pool, scratch_pool));
 
-      if (repos_relpath)
-        *repos_relpath = svn_relpath_join(base_relpath, build_relpath,
-                                          result_pool);
+      if (sab->repos_relpath)
+        *sab->repos_relpath = svn_relpath_join(base_relpath, build_relpath,
+                                               sab->result_pool);
     }
 
   /* Postconditions */
 #ifdef SVN_DEBUG
-  if (status)
+  if (sab->status)
     {
-      SVN_ERR_ASSERT(*status == svn_wc__db_status_added
-                     || *status == svn_wc__db_status_copied
-                     || *status == svn_wc__db_status_moved_here);
-      if (*status == svn_wc__db_status_added)
+      SVN_ERR_ASSERT(*sab->status == svn_wc__db_status_added
+                     || *sab->status == svn_wc__db_status_copied
+                     || *sab->status == svn_wc__db_status_moved_here);
+      if (*sab->status == svn_wc__db_status_added)
         {
-          SVN_ERR_ASSERT(!original_repos_relpath
-                         || *original_repos_relpath == NULL);
-          SVN_ERR_ASSERT(!original_revision
-                         || *original_revision == SVN_INVALID_REVNUM);
-          SVN_ERR_ASSERT(!original_repos_id
-                         || *original_repos_id == INVALID_REPOS_ID);
+          SVN_ERR_ASSERT(!sab->original_repos_relpath
+                         || *sab->original_repos_relpath == NULL);
+          SVN_ERR_ASSERT(!sab->original_revision
+                         || *sab->original_revision == SVN_INVALID_REVNUM);
+          SVN_ERR_ASSERT(!sab->original_repos_id
+                         || *sab->original_repos_id == INVALID_REPOS_ID);
         }
       else
         {
-          SVN_ERR_ASSERT(!original_repos_relpath
-                         || *original_repos_relpath != NULL);
-          SVN_ERR_ASSERT(!original_revision
-                         || *original_revision != SVN_INVALID_REVNUM);
-          SVN_ERR_ASSERT(!original_repos_id
-                         || *original_repos_id != INVALID_REPOS_ID);
+          SVN_ERR_ASSERT(!sab->original_repos_relpath
+                         || *sab->original_repos_relpath != NULL);
+          SVN_ERR_ASSERT(!sab->original_revision
+                         || *sab->original_revision != SVN_INVALID_REVNUM);
+          SVN_ERR_ASSERT(!sab->original_repos_id
+                         || *sab->original_repos_id != INVALID_REPOS_ID);
         }
     }
-  SVN_ERR_ASSERT(!op_root_relpath || *op_root_relpath != NULL);
+  SVN_ERR_ASSERT(!sab->op_root_relpath || *sab->op_root_relpath != NULL);
 #endif
 
   return SVN_NO_ERROR;
+}
+
+
+/* Like svn_wc__db_scan_addition(), but with WCROOT+LOCAL_RELPATH instead of
+   DB+LOCAL_ABSPATH.
+
+   The output value of *ORIGINAL_REPOS_ID will be INVALID_REPOS_ID if there
+   is no 'copy-from' repository.  */
+static svn_error_t *
+scan_addition(svn_wc__db_status_t *status,
+              const char **op_root_relpath,
+              const char **repos_relpath,
+              apr_int64_t *repos_id,
+              const char **original_repos_relpath,
+              apr_int64_t *original_repos_id,
+              svn_revnum_t *original_revision,
+              svn_wc__db_wcroot_t *wcroot,
+              const char *local_relpath,
+              apr_pool_t *result_pool,
+              apr_pool_t *scratch_pool)
+{
+  struct scan_addition_baton sab;
+
+  sab.status = status;
+  sab.op_root_relpath = op_root_relpath;
+  sab.repos_relpath = repos_relpath;
+  sab.repos_id = repos_id;
+  sab.original_repos_relpath = original_repos_relpath;
+  sab.original_repos_id = original_repos_id;
+  sab.original_revision = original_revision;
+  sab.result_pool = result_pool;
+
+  return svn_error_return(with_db_txn(wcroot, local_relpath, scan_addition_txn,
+                                      &sab, scratch_pool));
 }
 
 
