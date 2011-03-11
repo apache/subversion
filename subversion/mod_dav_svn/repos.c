@@ -491,6 +491,24 @@ parse_txnstub_uri(dav_resource_combined *comb,
   return FALSE;
 }
 
+static int
+parse_vtxnstub_uri(dav_resource_combined *comb,
+                   const char *path,
+                   const char *label,
+                   int use_checked_in)
+{
+  /* format: !svn/vtxn/TXN_NAME */
+
+  if (parse_txnstub_uri(comb, path, label, use_checked_in))
+    return TRUE;
+
+  comb->priv.root.vtxn_name = comb->priv.root.txn_name;
+  comb->priv.root.txn_name = dav_svn__get_txn(comb->priv.repos,
+                                              comb->priv.root.vtxn_name);
+
+  return FALSE;
+}
+
 
 static int
 parse_txnroot_uri(dav_resource_combined *comb,
@@ -537,6 +555,24 @@ parse_txnroot_uri(dav_resource_combined *comb,
                                               slash - path);
       comb->priv.repos_path = slash;
     }
+
+  return FALSE;
+}
+
+static int
+parse_vtxnroot_uri(dav_resource_combined *comb,
+                   const char *path,
+                   const char *label,
+                   int use_checked_in)
+{
+  /* format: !svn/vtxr/TXN_NAME/[PATH] */
+
+  if (parse_txnroot_uri(comb, path, label, use_checked_in))
+    return TRUE;
+
+  comb->priv.root.vtxn_name = comb->priv.root.txn_name;
+  comb->priv.root.txn_name = dav_svn__get_txn(comb->priv.repos,
+                                              comb->priv.root.vtxn_name);
 
   return FALSE;
 }
@@ -621,6 +657,8 @@ static const struct special_defn
   { "rvr", parse_revroot_uri, 1, TRUE, DAV_SVN_RESTYPE_REVROOT_COLLECTION },
   { "txn", parse_txnstub_uri, 1, FALSE, DAV_SVN_RESTYPE_TXN_COLLECTION},
   { "txr", parse_txnroot_uri, 1, TRUE, DAV_SVN_RESTYPE_TXNROOT_COLLECTION},
+  { "vtxn", parse_vtxnstub_uri, 1, FALSE, DAV_SVN_RESTYPE_TXN_COLLECTION},
+  { "vtxr", parse_vtxnroot_uri, 1, TRUE, DAV_SVN_RESTYPE_TXNROOT_COLLECTION},
 
   { NULL } /* sentinel */
 };
@@ -3783,11 +3821,13 @@ remove_resource(dav_resource *resource, dav_response **response)
   if (resource->type == DAV_RESOURCE_TYPE_PRIVATE
       && resource->info->restype == DAV_SVN_RESTYPE_TXN_COLLECTION)
     {
-      /* We'll assume that no activity was created to map to this
-         transaction.  */
-      return dav_svn__abort_txn(resource->info->repos,
-                                resource->info->root.txn_name,
-                                resource->pool);
+      if (resource->info->root.vtxn_name)
+        return dav_svn__delete_activity(resource->info->repos,
+                                        resource->info->root.vtxn_name);
+      else
+        return dav_svn__abort_txn(resource->info->repos,
+                                  resource->info->root.txn_name,
+                                  resource->pool);
     }
 
   /* ### note that the parent was checked out at some point, and this

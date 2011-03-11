@@ -37,6 +37,7 @@ dav_svn__post_create_txn(const dav_resource *resource,
                          ap_filter_t *output)
 {
   const char *txn_name;
+  const char *vtxn_name;
   dav_error *derr;
   request_rec *r = resource->info->r;
 
@@ -47,7 +48,20 @@ dav_svn__post_create_txn(const dav_resource *resource,
 
   /* Build a "201 Created" response with header that tells the
      client our new transaction's name. */
-  apr_table_set(r->headers_out, SVN_DAV_TXN_NAME_HEADER, txn_name);
+  vtxn_name =  apr_table_get(r->headers_in, SVN_DAV_VTXN_NAME_HEADER);
+  if (vtxn_name && vtxn_name[0])
+    {
+      /* If the client supplied a vtxn name then store a mapping from
+         the client name to the FS transaction name in the activity
+         database. */
+      if ((derr  = dav_svn__store_activity(resource->info->repos,
+                                           vtxn_name, txn_name)))
+        return derr;
+      apr_table_set(r->headers_out, SVN_DAV_VTXN_NAME_HEADER, vtxn_name);
+    }
+  else
+    apr_table_set(r->headers_out, SVN_DAV_TXN_NAME_HEADER, txn_name);
+
   r->status = HTTP_CREATED;
 
   return NULL;

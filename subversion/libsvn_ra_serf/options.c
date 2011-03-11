@@ -373,6 +373,14 @@ capabilities_headers_iterator_callback(void *baton,
         {
           orc->session->txn_root_stub = apr_pstrdup(orc->session->pool, val);
         }
+      else if (svn_cstring_casecmp(key, SVN_DAV_VTXN_STUB_HEADER) == 0)
+        {
+          orc->session->vtxn_stub = apr_pstrdup(orc->session->pool, val);
+        }
+      else if (svn_cstring_casecmp(key, SVN_DAV_VTXN_ROOT_STUB_HEADER) == 0)
+        {
+          orc->session->vtxn_root_stub = apr_pstrdup(orc->session->pool, val);
+        }
       else if (svn_cstring_casecmp(key, SVN_DAV_REPOS_UUID_HEADER) == 0)
         {
           orc->session->uuid = apr_pstrdup(orc->session->pool, val);

@@ -202,6 +202,15 @@ typedef struct dav_svn_root {
   */
   const char *txn_name;
 
+  /* The optional vtxn name supplied by an HTTPv2 client and
+     used in subsequent requests.  This may be NULL if the client
+     is not using a vtxn name.
+
+     PRIVATE resources that directly represent either a txn or
+     txn-root use this field.
+  */
+  const char *vtxn_name;
+
   /* If the root is part of a transaction, this contains the FS's transaction
      handle. It may be NULL if this root corresponds to a specific revision.
      It may also be NULL if we have not opened the transaction yet.
@@ -391,6 +400,12 @@ const char *dav_svn__get_txn_stub(request_rec *r);
 
 /* For accessing transaction properties (typically "!svn/txr") */
 const char *dav_svn__get_txn_root_stub(request_rec *r);
+
+/* For accessing transaction resources (typically "!svn/vtxn") */
+const char *dav_svn__get_vtxn_stub(request_rec *r);
+
+/* For accessing transaction properties (typically "!svn/vtxr") */
+const char *dav_svn__get_vtxn_root_stub(request_rec *r);
 
 
 /*** activity.c ***/

@@ -197,6 +197,8 @@ struct svn_ra_serf__session_t {
   const char *rev_root_stub;    /* for accessing REV/PATH pairs */
   const char *txn_stub;         /* for accessing transactions (i.e. txnprops) */
   const char *txn_root_stub;    /* for accessing TXN/PATH pairs */
+  const char *vtxn_stub;        /* for accessing transactions (i.e. txnprops) */
+  const char *vtxn_root_stub;   /* for accessing TXN/PATH pairs */
 
   /*** End HTTP v2 stuff ***/
 

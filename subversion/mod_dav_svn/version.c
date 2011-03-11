@@ -250,6 +250,12 @@ get_option(const dav_resource *resource,
       apr_table_set(r->headers_out, SVN_DAV_TXN_STUB_HEADER,
                     apr_pstrcat(resource->pool, repos_root_uri, "/",
                                 dav_svn__get_txn_stub(r), (char *)NULL));
+      apr_table_set(r->headers_out, SVN_DAV_VTXN_ROOT_STUB_HEADER,
+                    apr_pstrcat(resource->pool, repos_root_uri, "/",
+                                dav_svn__get_vtxn_root_stub(r), (char *)NULL));
+      apr_table_set(r->headers_out, SVN_DAV_VTXN_STUB_HEADER,
+                    apr_pstrcat(resource->pool, repos_root_uri, "/",
+                                dav_svn__get_vtxn_stub(r), (char *)NULL));
     }
 
   return NULL;
@@ -1427,6 +1433,12 @@ merge(dav_resource *target,
           svn_error_clear(serr);
           serr = SVN_NO_ERROR;
         }
+
+      /* HTTPv2 doesn't send DELETE after a successful MERGE so if
+         using the optional vtxn name mapping then delete it here. */
+      if (source->info->root.vtxn_name)
+        dav_svn__delete_activity(source->info->repos,
+                                 source->info->root.vtxn_name);
     }
   else
     {

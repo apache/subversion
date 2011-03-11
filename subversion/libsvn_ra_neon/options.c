@@ -253,6 +253,14 @@ parse_capabilities(ne_request *req,
     {
       ras->txn_stub = apr_pstrdup(ras->pool, val);
     }
+  if ((val = ne_get_response_header(req, SVN_DAV_VTXN_ROOT_STUB_HEADER)))
+    {
+      ras->vtxn_root_stub = apr_pstrdup(ras->pool, val);
+    }
+  if ((val = ne_get_response_header(req, SVN_DAV_VTXN_STUB_HEADER)))
+    {
+      ras->vtxn_stub = apr_pstrdup(ras->pool, val);
+    }
 }
 
 
