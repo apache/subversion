@@ -7726,13 +7726,7 @@ svn_wc__db_node_hidden(svn_boolean_t *hidden,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  svn_wc__db_status_t base_status;
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
-
-  /* This uses an optimisation that first reads the working node and
-     then may read the base node.  It could call svn_wc__db_read_info
-     but that would always read both nodes. */
+  svn_wc__db_status_t status;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -7741,35 +7735,15 @@ svn_wc__db_node_hidden(svn_boolean_t *hidden,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  /* First check the working node. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_WORKING_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  SVN_ERR(read_info(&status, NULL, NULL, NULL, NULL, NULL,
+                    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                    wcroot, local_relpath,
+                    scratch_pool, scratch_pool));
 
-  if (have_row)
-    {
-      /* Note: this can ONLY be an add/copy-here/move-here. It is not
-         possible to delete a "hidden" node.  */
-      svn_wc__db_status_t work_presence =
-                            svn_sqlite__column_token(stmt, 1, presence_map);
-      *hidden = (work_presence == svn_wc__db_status_excluded);
-      SVN_ERR(svn_sqlite__reset(stmt));
-      return SVN_NO_ERROR;
-    }
-
-  SVN_ERR(svn_sqlite__reset(stmt));
-
-  /* Now check the BASE node's status.  */
-  SVN_ERR(base_get_info(&base_status,
-                        NULL, NULL, NULL, NULL, NULL, NULL,
-                        NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                        wcroot, local_relpath,
-                        scratch_pool, scratch_pool));
-
-  *hidden = (base_status == svn_wc__db_status_absent
-             || base_status == svn_wc__db_status_not_present
-             || base_status == svn_wc__db_status_excluded);
+  *hidden = (status == svn_wc__db_status_absent
+             || status == svn_wc__db_status_not_present
+             || status == svn_wc__db_status_excluded);
 
   return SVN_NO_ERROR;
 }
