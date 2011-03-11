@@ -764,9 +764,6 @@ harvest_committables(apr_hash_t *committables,
 
       SVN_ERR(svn_wc__node_get_children(&children, ctx->wc_ctx, local_abspath,
                                         copy_mode, scratch_pool, iterpool));
-
-      /* Loop over all other entries in this directory, skipping the
-         "this dir" entry. */
       for (i = 0; i < children->nelts; i++)
         {
           const char *this_abspath = APR_ARRAY_IDX(children, i, const char *);
