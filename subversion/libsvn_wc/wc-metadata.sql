@@ -499,15 +499,9 @@ CREATE VIEW NODES_CURRENT AS
 /* Many queries have to filter the nodes table to pick only that version
    of each node with the base (least "current") op_depth.  This view
    does the heavy lifting for such queries. */
-/* ### The JOIN may be redundant. Maybe we only need
-       "SELECT * FROM nodes WHERE op_depth = 0;". */
 CREATE VIEW NODES_BASE AS
   SELECT * FROM nodes
-    JOIN (SELECT wc_id, local_relpath FROM nodes
-          GROUP BY wc_id, local_relpath) AS filter
-    ON nodes.wc_id = filter.wc_id
-      AND nodes.local_relpath = filter.local_relpath
-      AND nodes.op_depth = 0;
+  WHERE op_depth = 0;
 
 -- STMT_CREATE_NODES_TRIGGERS
 
@@ -644,11 +638,7 @@ PRAGMA user_version = 25;
 DROP VIEW IF EXISTS NODES_BASE;
 CREATE VIEW NODES_BASE AS
   SELECT * FROM nodes
-    JOIN (SELECT wc_id, local_relpath FROM nodes
-          GROUP BY wc_id, local_relpath) AS filter
-    ON nodes.wc_id = filter.wc_id
-      AND nodes.local_relpath = filter.local_relpath
-      AND nodes.op_depth = 0;
+  WHERE op_depth = 0;
 
 PRAGMA user_version = 26;
 
@@ -722,5 +712,10 @@ DROP TABLE ACTUAL_NODE_BACKUP;
  * While format 23 was current, "REFERENCES PRISTINE" was added to the
  * columns ACTUAL_NODE.older_checksum, ACTUAL_NODE.left_checksum,
  * ACTUAL_NODE.right_checksum, NODES.checksum.
+ *
+ * The "NODES_BASE" view was originally implemented with a more complex (but
+ * functionally equivalent) statement using a 'JOIN'.  WCs that were created
+ * at or upgraded to format 26 before it was changed will still have the old
+ * version.
  */
 
