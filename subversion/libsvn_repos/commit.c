@@ -644,16 +644,16 @@ svn_repos__post_commit_error_str(svn_error_t *err,
           if (hook_err2->message)
             msg = apr_pstrdup(pool, hook_err2->message);
           else
-            msg = _("post-commit hook failed with no error message");
+            msg = _("post-commit hook failed with no error message.");
         }
       else
         {
           msg = hook_err2->message
-                  ? hook_err2->message
+                  ? apr_pstrdup(pool, hook_err2->message)
                   : _("post-commit hook failed with no error message.");
           msg = apr_psprintf(
                   pool,
-                  _("post commit FS processing had error '%s' and %s"),
+                  _("post commit FS processing had error:\n%s\n%s"),
                   err->message ? err->message : _("(no error message)"),
                   msg);
         }
@@ -661,7 +661,7 @@ svn_repos__post_commit_error_str(svn_error_t *err,
   else
     {
       msg = apr_psprintf(pool,
-                         _("post-commit FS processing had error '%s'."),
+                         _("post-commit FS processing had error:\n%s"),
                          err->message ? err->message
                                       : _("(no error message)"));
     }
