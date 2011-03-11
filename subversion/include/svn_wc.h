@@ -3427,10 +3427,7 @@ typedef struct svn_wc_status3_t
   /** The URL of the repository */
   const char *repos_root_url;
 
-  /** The in-repository path relative to the repository root.
-   * Use svn_path_url_component2() to join this value to the
-   * repos_root_url to get the full URL.
-   */
+  /** The in-repository path relative to the repository root. */
   const char *repos_relpath;
 
     /** a file or directory can be 'switched' if the switch command has been
