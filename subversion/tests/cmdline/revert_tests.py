@@ -1020,6 +1020,7 @@ def revert_added_tree(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
+@XFail()
 def revert_child_of_copy(sbox):
   "revert a child of a copied directory"
 
@@ -1031,7 +1032,7 @@ def revert_child_of_copy(sbox):
                                      sbox.ospath('A/B/E2'))
 
 
-  svntest.main.file_append(sbox.ospath('A/B/E2/beta', 'extra text\n')
+  svntest.main.file_append(sbox.ospath('A/B/E2/beta'), 'extra text\n')
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/B/E2'       : Item(status='A ', copied='+', wc_rev='-'),
