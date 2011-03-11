@@ -1243,9 +1243,11 @@ svn_wc__db_op_revert_actual(svn_wc__db_t *db,
  * ### or hash?  A temporary SQLite table?
  */
 svn_error_t *
-svn_wc__db_op_revert(svn_wc__db_t *db,
+svn_wc__db_op_revert(apr_array_header_t **local_relpaths,
+                     svn_wc__db_t *db,
                      const char *local_abspath,
                      svn_depth_t depth,
+                     apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool);
 
 

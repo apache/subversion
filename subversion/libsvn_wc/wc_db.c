@@ -3491,6 +3491,11 @@ svn_wc__db_op_revert_actual(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+struct op_revert_baton {
+  apr_array_header_t *local_relpaths;
+  apr_pool_t *result_pool;
+};
+
 
 /* This implements db_txn_callback_t */
 static svn_error_t *
@@ -3499,6 +3504,7 @@ op_revert_txn(void *baton,
               const char *local_relpath,
               apr_pool_t *scratch_pool)
 {
+  struct op_revert_baton *b = baton;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
   apr_int64_t op_depth;
@@ -3535,6 +3541,9 @@ op_revert_txn(void *baton,
                                      path_for_error_message(wcroot,
                                                             local_relpath,
                                                             scratch_pool));
+          APR_ARRAY_PUSH(b->local_relpaths, const char *)
+            = apr_pstrdup(b->result_pool, local_relpath);
+
           return SVN_NO_ERROR;
         }
 
@@ -3548,16 +3557,8 @@ op_revert_txn(void *baton,
   op_depth = svn_sqlite__column_int64(stmt, 0);
   SVN_ERR(svn_sqlite__reset(stmt));
 
-  if (op_depth > 0)
+  if (op_depth > 0 && op_depth == relpath_depth(local_relpath))
     {
-      if (op_depth != relpath_depth(local_relpath))
-        return svn_error_createf(SVN_ERR_WC_INVALID_OPERATION_DEPTH, NULL,
-                                 _("Can't revert '%s' without"
-                                   " reverting parent"),
-                                 path_for_error_message(wcroot,
-                                                        local_relpath,
-                                                        scratch_pool));
-
       /* Can't do non-recursive revert if children exist */
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_SELECT_GE_OP_DEPTH_CHILDREN));
@@ -3600,6 +3601,10 @@ op_revert_txn(void *baton,
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
       SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
     }
+
+  if (op_depth || affected_rows)
+    APR_ARRAY_PUSH(b->local_relpaths, const char *)
+        = apr_pstrdup(b->result_pool, local_relpath);
 
   return SVN_NO_ERROR;
 }
@@ -3682,14 +3687,17 @@ op_revert_recursive_txn(void *baton,
 
 
 svn_error_t *
-svn_wc__db_op_revert(svn_wc__db_t *db,
+svn_wc__db_op_revert(apr_array_header_t **local_relpaths,
+                     svn_wc__db_t *db,
                      const char *local_abspath,
                      svn_depth_t depth,
+                     apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool)
 {
   db_txn_callback_t txn_func;
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
+  struct op_revert_baton baton;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -3708,13 +3716,19 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
                                                       scratch_pool));
     }
 
+  baton.local_relpaths = apr_array_make(result_pool, 1, sizeof(const char *));
+  baton.result_pool = result_pool;
+
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
                               db, local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  return svn_error_return(with_db_txn(wcroot, local_relpath, txn_func, NULL,
-                                      scratch_pool));
+  SVN_ERR(with_db_txn(wcroot, local_relpath, txn_func, &baton, scratch_pool));
+
+  *local_relpaths = baton.local_relpaths;
+
+  return SVN_NO_ERROR;
 }
 
 

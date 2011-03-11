@@ -1321,6 +1321,131 @@ verify_revert_depth(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+#ifdef SVN_NEW_REVERT
+static svn_error_t *
+new_revert_internal(svn_wc__db_t *db,
+                    const char *revert_root,
+                    const char *local_abspath,
+                    svn_depth_t depth,
+                    svn_boolean_t use_commit_times,
+                    apr_hash_t *changelist_hash,
+                    svn_cancel_func_t cancel_func,
+                    void *cancel_baton,
+                    svn_wc_notify_func2_t notify_func,
+                    void *notify_baton,
+                    apr_pool_t *scratch_pool)
+{
+  svn_error_t *err;
+  svn_wc__db_status_t status;
+  svn_wc__db_kind_t kind;
+  svn_node_kind_t on_disk;
+  svn_boolean_t special;
+  apr_array_header_t *reverted;
+  svn_boolean_t notify_required;
+
+  SVN_ERR(svn_wc__db_op_revert(&reverted, db, local_abspath, depth,
+                               scratch_pool, scratch_pool));
+  notify_required = reverted->nelts;
+
+  err = svn_wc__db_read_info(&status, &kind,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL,
+                             db, local_abspath, scratch_pool, scratch_pool);
+
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+    {
+      svn_error_clear(err);
+
+      if (notify_func && notify_required)
+        notify_func(notify_baton,
+                    svn_wc_create_notify(local_abspath, svn_wc_notify_revert,
+                                         scratch_pool),
+                    scratch_pool);
+
+      return SVN_NO_ERROR;
+    }
+  else if (err)
+    return svn_error_return(err);
+
+  SVN_ERR(svn_io_check_special_path(local_abspath, &on_disk, &special,
+                                    scratch_pool));
+
+  if (on_disk != svn_node_none)
+    {
+      if (on_disk == svn_node_dir && kind != svn_wc__db_kind_dir)
+        {
+          SVN_ERR(svn_io_remove_dir2(local_abspath, FALSE,
+                                     cancel_func, cancel_baton, scratch_pool));
+          on_disk = svn_node_none;
+        }
+      else if (on_disk == svn_node_file && kind != svn_wc__db_kind_file)
+        {
+          SVN_ERR(svn_io_remove_file2(local_abspath, FALSE, scratch_pool));
+          on_disk = svn_node_none;
+        }
+      else if (on_disk == svn_node_file)
+        {
+          svn_boolean_t modified;
+
+          SVN_ERR(svn_wc__internal_text_modified_p(&modified, db, local_abspath,
+                                                   FALSE, FALSE, scratch_pool));
+          if (modified)
+            {
+              SVN_ERR(svn_io_remove_file2(local_abspath, FALSE, scratch_pool));
+              on_disk = svn_node_none;
+            }
+          else
+            {
+              /* ### Need to reset read-only, executable.  Old revert
+                     used the change in the magic properties to do
+                     this, but we don't have the old values. */
+              apr_hash_t *props;
+
+              SVN_ERR(svn_wc__db_read_pristine_props(&props, db, local_abspath,
+                                                     scratch_pool,
+                                                     scratch_pool));
+              if (apr_hash_get(props, SVN_PROP_NEEDS_LOCK, APR_HASH_KEY_STRING))
+                SVN_ERR(svn_io_set_file_read_only(local_abspath, FALSE,
+                                                  scratch_pool));
+              if (apr_hash_get(props, SVN_PROP_EXECUTABLE, APR_HASH_KEY_STRING))
+                SVN_ERR(svn_io_set_file_executable(local_abspath, TRUE, FALSE,
+                                                   scratch_pool));
+            }
+        }
+    }
+
+  if (on_disk == svn_node_none)
+    {
+      if (kind == svn_wc__db_kind_dir)
+        SVN_ERR(svn_io_dir_make(local_abspath, APR_OS_DEFAULT, scratch_pool));
+
+      if (kind == svn_wc__db_kind_file)
+        {
+          svn_skel_t *work_item;
+
+          SVN_ERR(svn_wc__wq_build_file_install(&work_item, db, local_abspath,
+                                                NULL, use_commit_times, TRUE,
+                                                scratch_pool, scratch_pool));
+          SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item,
+                                    scratch_pool));
+          SVN_ERR(svn_wc__wq_run(db, local_abspath, cancel_func, cancel_baton,
+                                 scratch_pool));
+        }
+      notify_required = TRUE;
+    }
+
+  if (notify_func && notify_required)
+    notify_func(notify_baton,
+                svn_wc_create_notify(local_abspath, svn_wc_notify_revert,
+                                     scratch_pool),
+                scratch_pool);
+
+  return SVN_NO_ERROR;
+}
+#endif
+
 /* This is just the guts of svn_wc_revert4() save that it accepts a
    hash CHANGELIST_HASH whose keys are changelist names instead of an
    array of said names.  See svn_wc_revert4() for additional
@@ -1348,6 +1473,15 @@ revert_internal(svn_wc__db_t *db,
   const svn_wc_conflict_description2_t *tree_conflict;
   const char *op_root_abspath = NULL;
   svn_error_t *err;
+
+#ifdef SVN_NEW_REVERT
+  if (depth == svn_depth_empty && !changelist_hash)
+    return new_revert_internal(db, revert_root, local_abspath, depth,
+                               use_commit_times, changelist_hash,
+                               cancel_func, cancel_baton,
+                               notify_func, notify_baton,
+                               pool);
+#endif
 
   /* Check cancellation here, so recursive calls get checked early. */
   if (cancel_func)
