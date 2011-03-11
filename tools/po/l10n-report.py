@@ -43,6 +43,7 @@ import subprocess
 FROM_ADDRESS = "Subversion Translation Status <noreply@subversion.apache.org>"
 LIST_ADDRESS = "dev@subversion.apache.org"
 SUBJECT_TEMPLATE = "[l10n] Translation status report for %s r%s"
+MAIL_THREAD_ID = '<translation_status_report_for_%s@subversion.apache.org>'
 
 def _rev():
   dollar = "$Revision$"
@@ -204,8 +205,12 @@ def main():
         msg["X-Mailer"] = "l10n-report.py r%s" % _rev()
         msg["Reply-To"] = LIST_ADDRESS
         msg["Mail-Followup-To"] = LIST_ADDRESS
+        msg["In-Reply-To"] = MAIL_THREAD_ID % (branch_name.replace('/', '_'))
+        msg["References"] = msg["In-Reply-To"]
+
         # http://www.iana.org/assignments/auto-submitted-keywords/auto-submitted-keywords.xhtml
         msg["Auto-Submitted"] = 'auto-generated'
+
         msg.set_type("text/plain")
         msg.set_payload("\n".join((title, format_head, format_line, body)))
 
