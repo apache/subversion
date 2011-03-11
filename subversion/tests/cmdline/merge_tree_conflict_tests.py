@@ -44,8 +44,6 @@ Wimp = svntest.testcase.Wimp_deco
 from svntest.main import SVN_PROP_MERGEINFO
 from svntest.main import server_has_mergeinfo
 from merge_tests import set_up_branch
-from merge_tests import svn_commit
-from merge_tests import svn_delete
 from merge_tests import svn_copy
 from merge_tests import svn_merge
 
@@ -658,19 +656,21 @@ def del_differing_file(sbox):
 
   # Setup a standard greek tree in r1.
   sbox.build()
-  svn_commit.repo_rev = 1
 
   saved_cwd = os.getcwd()
   os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
 
   source = 'A/D/G'
   s_rev_orig = 1
 
   # Delete files in the source
-  svn_delete(source+"/tau")
-  s_rev_tau = svn_commit(source)
-  svn_delete(source+"/pi")
-  s_rev_pi = svn_commit(source)
+  sbox.simple_rm(source+"/tau")
+  sbox.simple_commit(source)
+  s_rev_tau = 2
+  sbox.simple_rm(source+"/pi")
+  sbox.simple_commit(source)
+  s_rev_pi = 3
 
   # Copy a file, modify it, and merge a deletion to it.
   target = 'A/D/G2'
@@ -707,7 +707,7 @@ def del_differing_file(sbox):
   svntest.main.file_append(target+"/tau", "An extra line in the target.\n")
   svntest.actions.run_and_verify_svn(None, None, [], 'propset',
                                      'newprop', 'v', target+"/pi")
-  svn_commit(target)
+  sbox.simple_commit(target)
 
 
   dir_G3 = os.path.join(dir_D, 'G3')

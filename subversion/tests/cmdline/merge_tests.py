@@ -12530,19 +12530,6 @@ def svn_copy(s_rev, path1, path2):
   svntest.actions.run_and_verify_svn(None, None, [], 'copy', '--parents',
                                      '-r', s_rev, path1, path2)
 
-def svn_delete(path):
-  "Delete a WC path locally."
-  path = local_path(path)
-  svntest.actions.run_and_verify_svn(None, None, [], 'delete', path)
-
-def svn_commit(path):
-  "Commit a WC path and return the new revision number."
-  path = local_path(path)
-  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
-                                     'commit', '-m', '', path)
-  svn_commit.repo_rev += 1
-  return svn_commit.repo_rev
-
 def svn_merge(rev_spec, source, target, exp_out=None, *args):
   """Merge a single change from path 'source' to path 'target'.
   SRC_CHANGE_NUM is either a number (to cherry-pick that specific change)
@@ -12562,12 +12549,6 @@ def svn_merge(rev_spec, source, target, exp_out=None, *args):
   svntest.actions.run_and_verify_svn(None, exp_out, [],
                                      'merge', rev_spec, source, target, *args)
 
-def svn_propset(pname, pvalue, *paths):
-  "Set property 'pname' to value 'pvalue' on each path in 'paths'"
-  local_paths = tuple([local_path(path) for path in paths])
-  svntest.actions.run_and_verify_svn(None, None, [], 'propset', pname, pvalue,
-                                     *local_paths)
-
 #----------------------------------------------------------------------
 # Tests for merging the deletion of a node, where the node to be deleted
 # is the same as or different from the node that was deleted.
@@ -12578,23 +12559,25 @@ def del_identical_file(sbox):
 
   # Set up a standard greek tree in r1.
   sbox.build()
-  svn_commit.repo_rev = 1
 
   saved_cwd = os.getcwd()
   os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
 
   # Set up a modification and deletion in the source branch.
   source = 'A/D/G'
-  s_rev_orig = svn_commit.repo_rev
+  s_rev_orig = 1
   svn_modfile(source+"/tau")
-  s_rev_mod = svn_commit(source)
-  svn_delete(source+"/tau")
-  s_rev_del = svn_commit(source)
+  sbox.simple_commit(source)
+  s_rev_mod = 2
+  sbox.simple_rm(source+"/tau")
+  sbox.simple_commit(source)
+  s_rev_del = 3
 
   # Make an identical copy, and merge a deletion to it.
   target = 'A/D/G2'
   svn_copy(s_rev_mod, source, target)
-  svn_commit(target)
+  sbox.simple_commit(target)
   # Should be deleted quietly.
   svn_merge(s_rev_del, source, target, '--- Merging|D |--- Recording| U')
 
@@ -12602,7 +12585,7 @@ def del_identical_file(sbox):
   # and merge a deletion to it.
   target = 'A/D/G3'
   svn_copy(s_rev_orig, source, target)
-  svn_commit(target)
+  sbox.simple_commit(target)
   svn_modfile(target+"/tau")
   # Should be deleted quietly.
   svn_merge(s_rev_del, source, target, '--- Merging|D |--- Recording| U')
@@ -12615,21 +12598,23 @@ def del_sched_add_hist_file(sbox):
 
   # Setup a standard greek tree in r1.
   sbox.build()
-  svn_commit.repo_rev = 1
 
   saved_cwd = os.getcwd()
   os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
 
   # Set up a creation in the source branch.
   source = 'A/D/G'
-  s_rev_orig = svn_commit.repo_rev
+  s_rev_orig = 1
   svn_mkfile(source+"/file")
-  s_rev_add = svn_commit(source)
+  sbox.simple_commit(source)
+  s_rev_add = 2
 
   # Merge a creation, and delete by reverse-merging into uncommitted WC.
   target = 'A/D/G2'
   svn_copy(s_rev_orig, source, target)
-  s_rev = svn_commit(target)
+  sbox.simple_commit(target)
+  s_rev = 3
   svn_merge(s_rev_add, source, target, '--- Merging|A |--- Recording| U')
   # Should be deleted quietly.
   svn_merge(-s_rev_add, source, target,
@@ -13043,11 +13028,12 @@ def merge_two_edits_to_same_prop(sbox):
 
   # Make a branch to merge to. (This is r6.)
   wc_disk, wc_status = set_up_branch(sbox, False, 1)
-  svn_commit.repo_rev = 6
+  initial_rev = 6
 
   # Change into the WC dir for convenience
   was_cwd = os.getcwd()
   os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
   wc_disk.wc_dir = ''
   wc_status.wc_dir = ''
 
@@ -13058,10 +13044,12 @@ def merge_two_edits_to_same_prop(sbox):
   mu_COPY_path     = os.path.join(A_COPY_path, "mu")
 
   # In the source, make two successive changes to the same property
-  svn_propset('p', 'new-val-1', mu_path)
-  rev1 = svn_commit('A/mu')
-  svn_propset('p', 'new-val-2', mu_path)
-  rev2 = svn_commit(mu_path)
+  sbox.simple_propset('p', 'new-val-1', 'A/mu')
+  sbox.simple_commit('A/mu')
+  rev1 = initial_rev + 1
+  sbox.simple_propset('p', 'new-val-2', 'A/mu')
+  sbox.simple_commit('A/mu')
+  rev2 = initial_rev + 2
 
   # Merge the first change, then the second, to a target branch.
   svn_merge(rev1, A_path, A_COPY_path)
@@ -13083,10 +13071,12 @@ def merge_two_edits_to_same_prop(sbox):
                                      'revert', '--recursive', A_COPY_path)
 
   # In the target branch, make two successive changes to the same property
-  svn_propset('p', 'new-val-3', mu_COPY_path)
-  rev3 = svn_commit('A_COPY/mu')
-  svn_propset('p', 'new-val-4', mu_COPY_path)
-  rev4 = svn_commit(mu_COPY_path)
+  sbox.simple_propset('p', 'new-val-3', 'A_COPY/mu')
+  sbox.simple_commit('A_COPY/mu')
+  rev3 = initial_rev + 3
+  sbox.simple_propset('p', 'new-val-4', 'A_COPY/mu')
+  sbox.simple_commit('A_COPY/mu')
+  rev4 = initial_rev + 4
 
   # Merge the two changes together to source.
   svn_merge('-r'+str(rev3-1)+':'+str(rev4), A_COPY_path, A_path, [
@@ -13138,11 +13128,12 @@ def merge_an_eol_unification_and_set_svn_eol_style(sbox):
 
   # Make a branch to merge to. (This will be r6.)
   wc_disk, wc_status = set_up_branch(sbox, False, 1)
-  svn_commit.repo_rev = 6
+  initial_rev = 6
 
   # Change into the WC dir for convenience
   was_cwd = os.getcwd()
   os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
   wc_disk.wc_dir = ''
   wc_status.wc_dir = ''
 
@@ -13152,16 +13143,19 @@ def merge_an_eol_unification_and_set_svn_eol_style(sbox):
   # In the source branch, create initial state and two successive changes.
   # Use binary mode to write the first file so no newline conversion occurs.
   svntest.main.file_write('A/mu', content1, 'wb')
-  rev1 = svn_commit('A/mu')
+  sbox.simple_commit('A/mu')
+  rev1 = initial_rev + 1
   # Use text mode to write the second copy of the file to get native EOLs.
   svntest.main.file_write('A/mu', content2, 'w')
-  rev2 = svn_commit('A/mu')
-  svn_propset('svn:eol-style', 'native', 'A/mu')
-  rev3 = svn_commit('A/mu')
+  sbox.simple_commit('A/mu')
+  rev2 = initial_rev + 2
+  sbox.simple_propset('svn:eol-style', 'native', 'A/mu')
+  sbox.simple_commit('A/mu')
+  rev3 = initial_rev + 3
 
   # Merge the initial state (inconsistent EOLs) to the target branch.
   svn_merge(rev1, 'A', 'A_COPY')
-  svn_commit('A_COPY')
+  sbox.simple_commit('A_COPY')
 
   # Merge the two changes together to the target branch.
   svn_merge('-r'+str(rev1)+':'+str(rev3), 'A', 'A_COPY', None,
