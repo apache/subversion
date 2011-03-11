@@ -1806,7 +1806,7 @@ typedef struct svn_wc_conflict_description_t
  *
  * Set the @c local_abspath field of the created struct to @a local_abspath
  * (which must be an absolute path), the @c kind field to
- * #svn_wc_conflict_kind_text, the @c node_kind to @c svn_node_file,
+ * #svn_wc_conflict_kind_text, the @c node_kind to #svn_node_file,
  * the @c action to #svn_wc_conflict_action_edit, and the @c reason to
  * #svn_wc_conflict_reason_edited.
  *
@@ -4184,9 +4184,9 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
 /**
  * Similar to svn_wc_delete4, but uses an access baton and relative path
  * instead of a working copy context and absolute path. @a adm_access
- * must hold a write lock for the parent of @a local_abspath.
+ * must hold a write lock for the parent of @a path.
  *
- * @c delete_unversioned will always be set to TRUE.
+ * @c delete_unversioned_target will always be set to TRUE.
  *
  * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.6 API.
@@ -4370,7 +4370,7 @@ svn_wc_add(const char *path,
            apr_pool_t *pool);
 
 /** Add a file to a working copy at @a local_abspath, obtaining the
- *text-base's contents from @a new_base_contents, the wc file's
+ * text-base's contents from @a new_base_contents, the wc file's
  * content from @a new_contents, its unmodified properties from @a
  * new_base_props and its actual properties from @a new_props. Use
  * @a wc_ctx for accessing the working copy.
@@ -4386,7 +4386,7 @@ svn_wc_add(const char *path,
  * @a new_contents must be provided in Normal Form. This is required
  * in order to pass both special and non-special files through a stream.
  *
- * @a wc_ctx must contain a write lock for the parent of @a dst_path.
+ * @a wc_ctx must contain a write lock for the parent of @a local_abspath.
  *
  * If @a copyfrom_url is non-NULL, then @a copyfrom_rev must be a
  * valid revision number, and together they are the copyfrom history
@@ -5852,12 +5852,11 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
  * files are to be compared.
  *
  * If @a depth is #svn_depth_empty, just diff exactly @a target or
- * @a anchor if @a target is empty.  If #svn_depth_files then do the same
+ * @a anchor_path if @a target is empty.  If #svn_depth_files then do the same
  * and for top-level file entries as well (if any).  If
  * #svn_depth_immediates, do the same as #svn_depth_files but also diff
  * top-level subdirectories at #svn_depth_empty.  If #svn_depth_infinity,
- * then diff fully recursively.  In the latter case, @a anchor should be part
- * of an access baton set for the @a target hierarchy.
+ * then diff fully recursively.
  *
  * @a ignore_ancestry determines whether paths that have discontinuous node
  * ancestry are treated as delete/add or as simple modifications.  If
@@ -6037,13 +6036,12 @@ svn_wc_get_diff_editor(svn_wc_adm_access_t *anchor,
  * @a callbacks/@a callback_baton is the callback table to use when two
  * files are to be compared.
  *
- * If @a depth is #svn_depth_empty, just diff exactly @a target or
- * @a anchor if @a target is empty.  If #svn_depth_files then do the same
+ * If @a depth is #svn_depth_empty, just diff exactly @a target_path.
+ * If #svn_depth_files then do the same
  * and for top-level file entries as well (if any).  If
  * #svn_depth_immediates, do the same as #svn_depth_files but also diff
  * top-level subdirectories at #svn_depth_empty.  If #svn_depth_infinity,
- * then diff fully recursively.  In the latter case, @a anchor should be part
- * of an access baton set for the @a target hierarchy.
+ * then diff fully recursively.
  *
  * @a ignore_ancestry determines whether paths that have discontinuous node
  * ancestry are treated as delete/add or as simple modifications.  If
@@ -6546,10 +6544,10 @@ svn_wc_get_pristine_contents(svn_stream_t **contents,
                              apr_pool_t *scratch_pool);
 
 
-/** Set *PRISTINE_PATH to the path of the "normal" pristine text file for
- * the versioned file PATH.
+/** Set @a *pristine_path to the path of the "normal" pristine text file for
+ * the versioned file @a path.
  *
- * If PATH does not have a pristine text, set *PRISTINE_PATH to a path where
+ * If @a path does not have a pristine text, set @a *pristine_path to a path where
  * nothing exists on disk (in a directory that does exist).
  *
  * @note: Before version 1.7, the behaviour in that case was to provide the
@@ -6646,7 +6644,7 @@ typedef svn_error_t * (*svn_wc_upgrade_get_repos_info_t)(
  * (typically #SVN_ERR_CANCELLED), return that error immediately.
  *
  * For each directory converted, @a notify_func will be called with
- * in @a notify_baton action @a svn_wc_notify_upgrade_path and as path
+ * in @a notify_baton action #svn_wc_notify_upgrade_path and as path
  * the path of the upgraded directory. @a notify_func may be @c NULL
  * if this notification is not needed.
  *
@@ -7022,10 +7020,10 @@ svn_wc_translated_file(const char **xlated_p,
  *
  * If @a flags includes #SVN_WC_TRANSLATE_FROM_NF, the stream will
  * translate from Normal Form to working copy form while writing to
- * @a local_abspath; stream read operations are not supported.
+ * @a path; stream read operations are not supported.
  * Conversely, if @a flags includes #SVN_WC_TRANSLATE_TO_NF, the stream will
  * translate from working copy form to Normal Form while reading from
- * @a local_abspath; stream write operations are not supported.
+ * @a path; stream write operations are not supported.
  *
  * The @a flags are the same constants as those used for
  * svn_wc_translated_file2().
@@ -7256,7 +7254,7 @@ svn_wc_add_lock(const char *path,
 
 /** Remove any lock from @a local_abspath.  If @a local_abspath has a
  * lock and the locking so specifies, make the file read-only.  Don't
- * return an error if @a path didn't have a lock.  Perform temporary
+ * return an error if @a local_abspath didn't have a lock.  Perform temporary
  * allocations in @a scratch_pool.
  *
  * @since New in 1.7.
@@ -7318,10 +7316,10 @@ typedef struct svn_wc_revision_status_t
  *
  * Set @a (*result_p)->switched to indicate whether any item in the WC is
  * switched relative to its parent.  If @a trail_url is non-NULL, use it to
- * determine if @a wc_path itself is switched.  It should be any trailing
- * portion of @a wc_path's expected URL, long enough to include any parts
+ * determine if @a local_abspath itself is switched.  It should be any trailing
+ * portion of @a local_abspath's expected URL, long enough to include any parts
  * that the caller considers might be changed by a switch.  If it does not
- * match the end of @a wc_path's actual URL, then report a "switched"
+ * match the end of @a local_abspath's actual URL, then report a "switched"
  * status.
  *
  * Set @a (*result_p)->modified to indicate whether any item is locally
@@ -7432,7 +7430,7 @@ svn_wc_set_changelist(const char *path,
  * check children and crop them appropriately according to @a depth.
  *
  * Returns immediately with an #SVN_ERR_UNSUPPORTED_FEATURE error if @a
- * target is not a directory, or if @a depth is not restrictive
+ * local_abspath is not a directory, or if @a depth is not restrictive
  * (e.g., #svn_depth_infinity).
  *
  * @a wc_ctx contains a tree lock, for the local path to the working copy
@@ -7509,19 +7507,19 @@ svn_wc_exclude(svn_wc_context_t *wc_ctx,
 /** @} */
 
 /**
- * Set @a kind to the @c svn_node_kind_t of @a abspath.  Use @a wc_ctx
+ * Set @a kind to the #svn_node_kind_t of @a abspath.  Use @a wc_ctx
  * to access the working copy, and @a scratch_pool for all temporary
  * allocations.
  *
- * If @a abspath is not under version control, set @a kind to @c svn_node_none.
- * If it is versioned but hidden and @a show_hidden is @c FALSE, also return @c
- * svn_node_none.
+ * If @a abspath is not under version control, set @a kind to #svn_node_none.
+ * If it is versioned but hidden and @a show_hidden is @c FALSE, also return
+ * #svn_node_none.
  *
  * ### What does hidden really mean?
  * ### What happens when show_hidden is TRUE?
  *
  * If the node's info is incomplete, it may or may not have a known node kind
- * set. If the kind is not known (yet), set @a kind to @c svn_node_unknown.
+ * set. If the kind is not known (yet), set @a kind to #svn_node_unknown.
  * Otherwise return the node kind even though the node is marked incomplete.
  *
  * @since New in 1.7.
