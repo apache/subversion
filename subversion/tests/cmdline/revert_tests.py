@@ -1021,6 +1021,7 @@ def revert_added_tree(sbox):
 
 
 @XFail()
+@Issue(3834)
 def revert_child_of_copy(sbox):
   "revert a child of a copied directory"
 
