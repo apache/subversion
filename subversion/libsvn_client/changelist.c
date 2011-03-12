@@ -50,10 +50,10 @@ struct set_cl_fn_baton
 };
 
 
-/* This function -- which implements the 'found_entry' vtable member
-   of svn_wc__node_walk_callbacks_t -- associates LOCAL_ABSPATH
-   with a new changelist (passed along in BATON->changelist), so long
-   as LOCAL_ABSPATH is deemed a valid target of that association.  */
+/* This function -- which implements svn_wc__node_found_func_t -- associates
+   LOCAL_ABSPATH with a new changelist (passed along in BATON->changelist),
+   so long as LOCAL_ABSPATH is deemed a valid target of that association.
+ */
 static svn_error_t *
 set_node_changelist(const char *local_abspath,
                     svn_node_kind_t kind,

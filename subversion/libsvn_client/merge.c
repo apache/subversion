@@ -10278,8 +10278,7 @@ struct get_subtree_mergeinfo_walk_baton
   svn_client_ctx_t *ctx;
 };
 
-/* svn_wc__node_walk_callbacks_t found_node() callback for
-   get_mergeinfo_paths().
+/* svn_wc__node_found_func_t callback for get_mergeinfo_paths().
 
    Given the working copy path LOCAL_ABSPATH, and WALK_BATON,
    where WALK_BATON is of type get_subtree_mergeinfo_walk_baton *:
