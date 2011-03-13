@@ -280,7 +280,7 @@ svn_cache__is_cachable(svn_cache__t *cache,
 svn_error_t *
 svn_cache__get(void **value,
                svn_boolean_t *found,
-               const svn_cache__t *cache,
+               svn_cache__t *cache,
                const void *key,
                apr_pool_t *pool);
 
@@ -324,7 +324,7 @@ svn_cache__set(svn_cache__t *cache,
  */
 svn_error_t *
 svn_cache__iter(svn_boolean_t *completed,
-                const svn_cache__t *cache,
+                svn_cache__t *cache,
                 svn_iter_apr_hash_cb_t func,
                 void *baton,
                 apr_pool_t *pool);
@@ -336,7 +336,7 @@ svn_cache__iter(svn_boolean_t *completed,
 svn_error_t *
 svn_cache__get_partial(void **value,
                        svn_boolean_t *found,
-                       const svn_cache__t *cache,
+                       svn_cache__t *cache,
                        const void *key,
                        svn_cache__partial_getter_func_t func,
                        void *baton,
