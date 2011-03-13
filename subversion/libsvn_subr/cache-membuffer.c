@@ -1270,6 +1270,11 @@ typedef struct svn_membuffer_cache_t
    */
   unsigned char prefix [APR_MD5_DIGESTSIZE];
 
+  /* A copy of the unmodified prefix. It is being used as a user-visible 
+   * ID for this cache instance.
+   */
+  const char* full_prefix;
+
   /* length of the keys that will be passed to us through the
    * svn_cache_t interface. May be APR_HASH_KEY_STRING.
    */
@@ -1481,6 +1486,49 @@ svn_membuffer_cache_is_cachable(void *cache_void, apr_size_t size)
       && (size < APR_UINT32_MAX - ITEM_ALIGNMENT);
 }
 
+static svn_error_t *
+svn_membuffer_cache_get_info(void *cache_void,
+                             svn_cache__info_t *info,
+                             svn_boolean_t reset,
+                             apr_pool_t *pool)
+{
+  svn_membuffer_cache_t *cache = cache_void;
+  apr_uint32_t i;
+
+  /* cache frontend specific data */
+
+  info->id = apr_pstrdup(pool, cache->full_prefix);
+
+  /* collect info from shared cache backend */
+
+  info->data_size = 0;
+  info->used_size = 0;
+  info->total_size = 0;
+
+  info->used_entries = 0;
+  info->total_entries = 0;
+
+  for (i = 0; i < CACHE_SEGMENTS; ++i)
+    {
+      svn_membuffer_t *segment = cache->membuffer + i;
+
+      SVN_ERR(lock_cache(segment));
+
+      info->data_size += segment->data_size;
+      info->used_size += segment->data_used;
+      info->total_size += segment->data_size +
+          segment->group_count * GROUP_SIZE * sizeof(entry_t);
+
+      info->used_entries += segment->used_entries;
+      info->total_entries += segment->group_count * GROUP_SIZE;
+
+      SVN_ERR(unlock_cache(segment, SVN_NO_ERROR));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 /* the v-table for membuffer-based caches
  */
 static svn_cache__vtable_t membuffer_cache_vtable = {
@@ -1488,7 +1536,8 @@ static svn_cache__vtable_t membuffer_cache_vtable = {
   svn_membuffer_cache_set,
   svn_membuffer_cache_iter,
   svn_membuffer_cache_is_cachable,
-  svn_membuffer_cache_get_partial
+  svn_membuffer_cache_get_partial,
+  svn_membuffer_cache_get_info
 };
 
 /* standard serialization function for svn_stringbuf_t items
@@ -1551,6 +1600,7 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
   cache->deserializer = deserializer
                       ? deserializer
                       : deserialize_svn_stringbuf;
+  cache->full_prefix = apr_pstrdup(pool, prefix);
   cache->key_len = klen;
   cache->pool = svn_pool_create(pool);
   cache->alloc_counter = 0;

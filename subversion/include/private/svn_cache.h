@@ -35,7 +35,7 @@
 #include "svn_error.h"
 #include "svn_iter.h"
 #include "svn_config.h"
-
+#include "svn_string.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -104,6 +104,61 @@ typedef struct svn_membuffer_t svn_membuffer_t;
  * Opaque type for an in-memory cache.
  */
 typedef struct svn_cache__t svn_cache__t;
+
+/**
+ * A structure containing typical statistics about a given cache instance.
+ * Use @ref svn_cache__get_info to get this data. Note that not all types
+ * of caches will be able to report complete and correct information.
+ */
+typedef struct svn_cache__info_t
+{
+  /** A string identifying the cache instance. Usually a copy of the @a id
+   * or @a prefix parameter passed to the cache constructor.
+   */
+  const char* id;
+
+  /** Number of getter calls (@ref svn_cache__get or @ref svn_cache__get).
+   */
+  apr_uint64_t gets;
+
+  /** Number of getter calls that return data.
+   */
+  apr_uint64_t hits;
+
+  /** Number of setter calls (@ref svn_cache__set).
+   */
+  apr_uint64_t sets;
+
+  /** Number of function calls that returned an error.
+   */
+  apr_uint64_t failures;
+
+  /** Size of the data currently stored in the cache.
+   * May be 0 if that information is not available.
+   */
+  apr_size_t used_size;
+
+  /** Amount of memory currently reserved for cached data.
+   * Will be equal to @a used_size if no precise information is available.
+   */
+  apr_size_t data_size;
+
+  /** Lower threshold of the total size of memory allocated to the cache and
+   * its index as well as management structures. The actual memory allocated
+   * by the cache may be larger.
+   */
+  apr_size_t total_size;
+
+  /** Number of cache entries.
+   * May be 0 if that information is not available.
+   */
+  apr_size_t used_entries;
+
+  /** Maximum numbers of cache entries.
+   * May be 0 if that information is not available.
+   */
+  apr_size_t total_entries;
+} svn_cache__info_t;
 
 /**
  * Creates a new cache in @a *cache_p.  This cache will use @a pool
@@ -332,6 +387,26 @@ svn_cache__get_partial(void **value,
                        svn_cache__partial_getter_func_t func,
                        void *baton,
                        apr_pool_t *scratch_pool);
+
+/**
+ * Collect all available usage statistics on the cache instance @a cache
+ * and write the data into @a info. If @a reset has been set, access
+ * counters will be reset right after copying the statistics info.
+ * @a pool will be used for allocations.
+ */
+svn_error_t *
+svn_cache__get_info(svn_cache__t *cache,
+                    svn_cache__info_t *info,
+                    svn_boolean_t reset,
+                    apr_pool_t *pool);
+
+/**
+ * Return the information given in @a info formatted as a multi-line string.
+ * Allocations take place in @a pool.
+ */
+svn_string_t *
+svn_cache__format_info(const svn_cache__info_t *info,
+                       apr_pool_t *pool);
 /** @} */
 
 
