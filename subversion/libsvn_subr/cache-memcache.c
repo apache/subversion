@@ -281,12 +281,36 @@ memcache_is_cachable(void *unused, apr_size_t size)
   return size < 1000000;
 }
 
+static svn_error_t *
+memcache_get_info(void *cache_void,
+                  svn_cache__info_t *info,
+                  svn_boolean_t reset,
+                  apr_pool_t *pool)
+{
+  memcache_t *cache = cache_void;
+
+  SVN_ERR(lock_cache(cache));
+
+  info->id = apr_pstrdup(pool, cache->prefix);
+
+  /* we don't have any memory allocation info */
+
+  info->used_size = 0;
+  info->total_size = 0;
+  info->data_size = 0;
+  info->used_entries = 0;
+  info->total_entries = 0;
+
+  return unlock_cache(cache, SVN_NO_ERROR);
+}
+
 static svn_cache__vtable_t memcache_vtable = {
   memcache_get,
   memcache_set,
   memcache_iter,
   memcache_is_cachable,
-  memcache_get_partial
+  memcache_get_partial,
+  memcache_get_info
 };
 
 svn_error_t *

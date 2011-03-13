@@ -493,12 +493,39 @@ inprocess_cache_is_cachable(void *cache_void, apr_size_t size)
   return size < SVN_ALLOCATOR_RECOMMENDED_MAX_FREE / cache->items_per_page;
 }
 
+static svn_error_t *
+inprocess_cache_get_info(void *cache_void,
+                         svn_cache__info_t *info,
+                         svn_boolean_t reset,
+                         apr_pool_t *pool)
+{
+  inprocess_cache_t *cache = cache_void;
+
+  SVN_ERR(lock_cache(cache));
+
+  info->id = apr_pstrdup(pool, cache->id);
+
+  info->used_entries = apr_hash_count(cache->hash);
+  info->total_entries = (apr_size_t)(cache->items_per_page *
+      cache->total_pages);
+
+  info->used_size = cache->data_size;
+  info->data_size = cache->data_size;
+  info->total_size = cache->data_size
+                   + cache->items_per_page * sizeof(struct cache_page)
+                   + info->used_entries * sizeof(struct cache_entry);
+
+  return unlock_cache(cache, SVN_NO_ERROR);
+}
+
+
 static svn_cache__vtable_t inprocess_cache_vtable = {
   inprocess_cache_get,
   inprocess_cache_set,
   inprocess_cache_iter,
   inprocess_cache_is_cachable,
-  inprocess_cache_get_partial
+  inprocess_cache_get_partial,
+  inprocess_cache_get_info
 };
 
 svn_error_t *

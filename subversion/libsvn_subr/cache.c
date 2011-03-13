@@ -152,3 +152,83 @@ svn_cache__get_partial(void **value,
 
   return err;
 }
+
+svn_error_t *
+svn_cache__get_info(svn_cache__t *cache,
+                    svn_cache__info_t *info,
+                    svn_boolean_t reset,
+                    apr_pool_t *pool)
+{
+  /* write general statistics */
+
+  info->gets = cache->reads;
+  info->hits = cache->hits;
+  info->sets = cache->writes;
+  info->failures = cache->failures;
+
+  /* Call the cache implementation for filling the blanks.
+   * It might also replace some of the general stats but
+   * this is currently not done.
+   */
+  SVN_ERR((cache->vtable->get_info)(cache->cache_internal,
+                                    info,
+                                    reset,
+                                    pool));
+
+  /* reset statistics */
+
+  if (reset)
+    {
+      cache->reads = 0;
+      cache->hits = 0;
+      cache->writes = 0;
+      cache->failures = 0;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_string_t *
+svn_cache__format_info(const svn_cache__info_t *info,
+                       apr_pool_t *pool)
+{
+  enum { _1MB = 1024 * 1024 };
+
+  apr_uint64_t misses = info->gets - info->hits;
+  float hit_rate = (100.0 * info->hits)
+                 / (info->gets ? info->gets : 1);
+  float write_rate = (100.0 * info->sets)
+                   / (misses ? misses : 1);
+  float data_usage_rate = (100.0 * info->used_size)
+                        / (info->data_size ? info->data_size : 1);
+  float data_entry_rate = (100.0 * info->used_entries)
+                        / (info->total_entries ? info->total_entries : 1);
+
+  return svn_string_createf(pool,
+
+                            "prefix  : %s\n"
+                            "gets    : %" APR_UINT64_T_FMT
+                            ", %" APR_UINT64_T_FMT " hits (%5.2f%%)\n"
+                            "sets    : %" APR_UINT64_T_FMT
+                            " (%5.2f%% of misses)\n"
+                            "failures: %" APR_UINT64_T_FMT "\n"
+                            "used    : %" APR_SIZE_T_FMT " MB (%5.2f%%)"
+                            " of %" APR_SIZE_T_FMT " MB data cache"
+                            " / %" APR_SIZE_T_FMT " MB total cache memory\n"
+                            "          %" APR_SIZE_T_FMT " entries (%5.2f%%)"
+                            " of %" APR_SIZE_T_FMT " total\n",
+
+                            info->id,
+
+                            info->gets,
+                            info->hits, hit_rate,
+                            info->sets, write_rate,
+                            info->failures,
+
+                            info->used_size / _1MB, data_usage_rate,
+                            info->data_size / _1MB,
+                            info->total_size / _1MB,
+
+                            info->used_entries, data_entry_rate,
+                            info->total_entries);
+}
