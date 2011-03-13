@@ -1318,7 +1318,7 @@ class WinGeneratorBase(GeneratorBase):
     libdir = ''
 
     if self.swig_path is not None:
-      self.swig_exe = os.path.join(self.swig_path, 'swig')
+      self.swig_exe = os.path.abspath(os.path.join(self.swig_path, 'swig'))
     else:
       self.swig_exe = 'swig'
 
