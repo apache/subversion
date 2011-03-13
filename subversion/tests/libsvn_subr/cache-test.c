@@ -136,6 +136,7 @@ test_inprocess_cache_basic(apr_pool_t *pool)
                                       1,
                                       1,
                                       TRUE,
+                                      "",
                                       pool));
 
   return basic_cache_test(cache, TRUE, pool);

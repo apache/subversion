@@ -3916,7 +3916,9 @@ make_txn_root(svn_fs_root_t **root_p,
                                       svn_fs_fs__dag_serialize,
                                       svn_fs_fs__dag_deserialize,
                                       APR_HASH_KEY_STRING,
-                                      32, 20, FALSE, root->pool));
+                                      32, 20, FALSE,
+                                      apr_pstrcat(pool, txn, ":TXN", (char *)NULL),
+                                      root->pool));
 
   root->fsap_data = frd;
 
