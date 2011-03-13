@@ -867,17 +867,21 @@ ensure_data_insertable(svn_membuffer_t *cache, apr_size_t size)
 
 /* Mimic apr_pcalloc in APR_POOL_DEBUG mode, i.e. handle failed allocations
  * (e.g. OOM) properly: Allocate at least SIZE bytes from POOL and zero
- * the content of the allocated memory. If the allocation fails, return NULL.
+ * the content of the allocated memory if ZERO has been set. Return NULL
+ * upon failed allocations.
  *
  * Also, satisfy our buffer alignment needs for performance reasons.
  */
-static void* secure_aligned_pcalloc(apr_pool_t *pool, apr_size_t size)
+static void* secure_aligned_alloc(apr_pool_t *pool,
+                                  apr_size_t size,
+                                  svn_boolean_t zero)
 {
   char* memory = apr_palloc(pool, (apr_size_t)size + ITEM_ALIGNMENT);
   if (memory != NULL)
     {
       memory = (char *)ALIGN_POINTER(memory);
-      memset(memory, 0, size);
+      if (zero)
+        memset(memory, 0, size);
     }
 
   return memory;
@@ -900,7 +904,7 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
                                   apr_pool_t *pool)
 {
   /* allocate cache as an array of segments / cache objects */
-  svn_membuffer_t *c = apr_pcalloc(pool, CACHE_SEGMENTS * sizeof(*c));
+  svn_membuffer_t *c = apr_palloc(pool, CACHE_SEGMENTS * sizeof(*c));
   apr_uint32_t seg;
   apr_uint32_t group_count;
   apr_uint64_t data_size;
@@ -944,13 +948,15 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
        */
       c[seg].group_count = group_count;
       c[seg].directory =
-          secure_aligned_pcalloc(pool, group_count * sizeof(entry_group_t));
+          secure_aligned_alloc(pool,
+                               group_count * sizeof(entry_group_t),
+                               FALSE);
       c[seg].first = NO_INDEX;
       c[seg].last = NO_INDEX;
       c[seg].next = NO_INDEX;
 
       c[seg].data_size = data_size;
-      c[seg].data = secure_aligned_pcalloc(pool, (apr_size_t)data_size);
+      c[seg].data = secure_aligned_alloc(pool, (apr_size_t)data_size, FALSE);
       c[seg].current_data = 0;
       c[seg].data_used = 0;
 
