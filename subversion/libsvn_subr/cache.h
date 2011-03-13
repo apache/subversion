@@ -65,6 +65,18 @@ struct svn_cache__t {
   svn_cache__error_handler_t error_handler;
   void *error_baton;
   void *cache_internal;
+
+  /* Total number of calls to getters. */
+  apr_uint64_t reads;
+
+  /* Total number of calls to set(). */
+  apr_uint64_t writes;
+
+  /* Total number of getter calls that returned a cached item. */
+  apr_uint64_t hits;
+
+  /* Total number of function calls that returned an error. */
+  apr_uint64_t failures;
 };
 
 

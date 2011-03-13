@@ -48,12 +48,17 @@ svn_cache__is_cachable(svn_cache__t *cache,
 /* Give the error handler callback a chance to replace or ignore the
    error. */
 static svn_error_t *
-handle_error(const svn_cache__t *cache,
+handle_error(svn_cache__t *cache,
              svn_error_t *err,
              apr_pool_t *pool)
 {
-  if (err && cache->error_handler)
-    err = (cache->error_handler)(err, cache->error_baton, pool);
+  if (err)
+    {
+      cache->failures++;
+      if (cache->error_handler)
+        err = (cache->error_handler)(err, cache->error_baton, pool);
+    }
+
   return err;
 }
 
@@ -61,20 +66,29 @@ handle_error(const svn_cache__t *cache,
 svn_error_t *
 svn_cache__get(void **value_p,
                svn_boolean_t *found,
-               const svn_cache__t *cache,
+               svn_cache__t *cache,
                const void *key,
                apr_pool_t *pool)
 {
+  svn_error_t *err;
+
   /* In case any errors happen and are quelched, make sure we start
      out with FOUND set to false. */
   *found = FALSE;
-  return handle_error(cache,
-                      (cache->vtable->get)(value_p,
-                                           found,
-                                           cache->cache_internal,
-                                           key,
-                                           pool),
-                      pool);
+
+  cache->reads++;
+  err = handle_error(cache,
+                     (cache->vtable->get)(value_p,
+                                          found,
+                                          cache->cache_internal,
+                                          key,
+                                          pool),
+                     pool);
+
+  if (*found)
+    cache->hits++;
+
+  return err;
 }
 
 svn_error_t *
@@ -83,6 +97,7 @@ svn_cache__set(svn_cache__t *cache,
                void *value,
                apr_pool_t *pool)
 {
+  cache->writes++;
   return handle_error(cache,
                       (cache->vtable->set)(cache->cache_internal,
                                            key,
@@ -94,7 +109,7 @@ svn_cache__set(svn_cache__t *cache,
 
 svn_error_t *
 svn_cache__iter(svn_boolean_t *completed,
-                const svn_cache__t *cache,
+                svn_cache__t *cache,
                 svn_iter_apr_hash_cb_t user_cb,
                 void *user_baton,
                 apr_pool_t *pool)
@@ -109,18 +124,31 @@ svn_cache__iter(svn_boolean_t *completed,
 svn_error_t *
 svn_cache__get_partial(void **value,
                        svn_boolean_t *found,
-                       const svn_cache__t *cache,
+                       svn_cache__t *cache,
                        const void *key,
                        svn_cache__partial_getter_func_t func,
                        void *baton,
                        apr_pool_t *scratch_pool)
 {
-  return (cache->vtable->get_partial)(value,
-                                      found,
-                                      cache->cache_internal,
-                                      key,
-                                      func,
-                                      baton,
-                                      scratch_pool);
-}
+  svn_error_t *err;
 
+  /* In case any errors happen and are quelched, make sure we start
+  out with FOUND set to false. */
+  *found = FALSE;
+
+  cache->reads++;
+  err = handle_error(cache,
+                     (cache->vtable->get_partial)(value,
+                                                  found,
+                                                  cache->cache_internal,
+                                                  key,
+                                                  func,
+                                                  baton,
+                                                  scratch_pool),
+                     scratch_pool);
+
+  if (*found)
+    cache->hits++;
+
+  return err;
+}
