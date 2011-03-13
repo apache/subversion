@@ -209,6 +209,7 @@ inprocess_cache_get(void **value_p,
                     apr_pool_t *pool)
 {
   inprocess_cache_t *cache = cache_void;
+  svn_error_t *err = NULL;
   struct cache_entry *entry;
   char* buffer;
 
@@ -235,11 +236,11 @@ inprocess_cache_get(void **value_p,
    */
   *found = TRUE;
   if (entry->value)
-    return cache->deserialize_func(value_p, buffer, entry->size, pool);
+    err = cache->deserialize_func(value_p, buffer, entry->size, pool);
   else
     *value_p = NULL;
 
-  return unlock_cache(cache, SVN_NO_ERROR);
+  return unlock_cache(cache, err);
 }
 
 /* Removes PAGE from the LRU list, removes all of its entries from
@@ -451,22 +452,21 @@ inprocess_cache_get_partial(void **value_p,
 {
   inprocess_cache_t *cache = cache_void;
   struct cache_entry *entry;
-  svn_error_t *err;
 
   SVN_ERR(lock_cache(cache));
 
   entry = apr_hash_get(cache->hash, key, cache->klen);
   if (! entry)
-  {
-    *found = FALSE;
-    return unlock_cache(cache, SVN_NO_ERROR);
-  }
+    {
+      *found = FALSE;
+      return unlock_cache(cache, SVN_NO_ERROR);
+    }
 
   move_page_to_front(cache, entry->page);
 
   *found = TRUE;
-  err = func(value_p, entry->value, entry->size, baton, pool);
-  return unlock_cache(cache, err);
+  return unlock_cache(cache,
+                      func(value_p, entry->value, entry->size, baton, pool));
 }
 
 static svn_boolean_t
