@@ -49,16 +49,6 @@ extern "C" {
  */
 
 /**
- * A function type for copying an object @a in into a different pool @a pool
- *  and returning the result in @a *out.
- *
- * @since New in 1.6.
-*/
-typedef svn_error_t *(*svn_cache__dup_func_t)(void **out,
-                                              const void *in,
-                                              apr_pool_t *pool);
-
-/**
  * A function type for deserializing an object @a *out from the string
  * @a data of length @a data_len in the pool @a pool.
 */
@@ -82,9 +72,9 @@ typedef svn_error_t *(*svn_cache__partial_getter_func_t)(void **out,
 
 /**
  * A function type for serializing an object @a in into bytes.  The
- * function should allocate the serialized value in @a pool, set @a
- * *data to the serialized value, and set *data_len to its length.
-*/
+ * function should allocate the serialized value in @a pool, set
+ * @a *data to the serialized value, and set @a *data_len to its length.
+ */
 typedef svn_error_t *(*svn_cache__serialize_func_t)(char **data,
                                                     apr_size_t *data_len,
                                                     void *in,
