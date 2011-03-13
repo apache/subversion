@@ -28,6 +28,7 @@
 #include "../libsvn_fs/fs-loader.h"
 
 #include "svn_config.h"
+#include "svn_cmdline.h"
 
 #include "svn_private_config.h"
 
@@ -64,6 +65,48 @@ warn_on_cache_errors(svn_error_t *err,
   return SVN_NO_ERROR;
 }
 
+/* Baton to be used for the dump_cache_statistics() pool cleanup function, */
+struct dump_cache_baton_t
+{
+  /* the pool about to be cleaned up. Will be used for temp. allocations. */
+  apr_pool_t *pool;
+
+  /* the cache to dump the statistics for */
+  svn_cache__t *cache;
+};
+
+/* APR pool cleanup handler that will printf the statistics of the
+   cache referenced by the baton in BATON_VOID. */
+static apr_status_t
+dump_cache_statistics(void *baton_void)
+{
+  struct dump_cache_baton_t *baton = baton_void;
+
+  apr_status_t result = APR_SUCCESS;
+  svn_cache__info_t info;
+  svn_string_t *text_stats;
+
+  svn_error_t *err = svn_cache__get_info(baton->cache,
+                                         &info,
+                                         TRUE,
+                                         baton->pool);
+
+  if (! err)
+    {
+      text_stats = svn_cache__format_info(&info, baton->pool);
+      err = svn_cmdline_printf(baton->pool, "%s\n", text_stats->data);
+    }
+
+  /* process error returns */
+  if (err)
+    {
+      result = err->apr_err;
+      svn_error_clear(err);
+    }
+
+  return result;
+}
+
 static svn_error_t *
 init_callbacks(svn_cache__t *cache,
                svn_fs_t *fs,
@@ -72,6 +115,23 @@ init_callbacks(svn_cache__t *cache,
 {
   if (cache != NULL)
     {
+#ifdef DEBUG_CACHE_DUMP_STATS
+
+      /* schedule printing the access statistics upon pool cleanup,
+       * i.e. end of FSFS session.
+       */
+      struct dump_cache_baton_t *baton;
+
+      baton = apr_palloc(pool, sizeof(*baton));
+      baton->pool = pool;
+      baton->cache = cache;
+
+      apr_pool_cleanup_register(pool,
+                                baton,
+                                dump_cache_statistics,
+                                apr_pool_cleanup_null);
+#endif
+
       if (! no_handler)
         SVN_ERR(svn_cache__set_error_handler(cache,
                                              warn_on_cache_errors,
