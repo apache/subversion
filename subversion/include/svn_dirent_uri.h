@@ -568,6 +568,8 @@ svn_dirent_get_absolute(const char **pabsolute,
  * to @a parent_uri, yields @a child_uri.  The remainder does not
  * begin with a dir separator.)
  *
+ * ### is the remainder a relpath?
+ *
  * Both uris must be in canonical form.
  *
  * If @a child_uri is the same as @a parent_uri, it is not considered a child,
