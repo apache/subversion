@@ -33,6 +33,9 @@
 
 /* The (internal) cache object. */
 typedef struct inprocess_cache_t {
+  /* A user-defined identifier for this cache instance. */
+  const char *id;
+
   /* Maps from a key (of size CACHE->KLEN) to a struct cache_entry. */
   apr_hash_t *hash;
   apr_ssize_t klen;
@@ -494,10 +497,13 @@ svn_cache__create_inprocess(svn_cache__t **cache_p,
                             apr_int64_t pages,
                             apr_int64_t items_per_page,
                             svn_boolean_t thread_safe,
+                            const char *id,
                             apr_pool_t *pool)
 {
   svn_cache__t *wrapper = apr_pcalloc(pool, sizeof(*wrapper));
   inprocess_cache_t *cache = apr_pcalloc(pool, sizeof(*cache));
+
+  cache->id = apr_pstrdup(pool, id);
 
   cache->hash = apr_hash_make(pool);
   cache->klen = klen;

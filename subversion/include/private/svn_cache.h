@@ -136,6 +136,7 @@ svn_cache__create_inprocess(svn_cache__t **cache_p,
                             apr_int64_t pages,
                             apr_int64_t items_per_page,
                             svn_boolean_t thread_safe,
+                            const char *id,
                             apr_pool_t *pool);
 /**
  * Creates a new cache in @a *cache_p, communicating to a memcached

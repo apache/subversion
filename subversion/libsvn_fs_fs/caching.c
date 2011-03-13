@@ -64,6 +64,24 @@ warn_on_cache_errors(svn_error_t *err,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+init_callbacks(svn_cache__t *cache,
+               svn_fs_t *fs,
+               svn_boolean_t no_handler,
+               apr_pool_t *pool)
+{
+  if (cache != NULL)
+    {
+      if (! no_handler)
+        SVN_ERR(svn_cache__set_error_handler(cache,
+                                             warn_on_cache_errors,
+                                             fs,
+                                             pool));
+
+    }
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_fs_fs__initialize_caches(svn_fs_t *fs,
@@ -101,11 +119,12 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                                           svn_fs_fs__serialize_id,
                                           svn_fs_fs__deserialize_id,
                                           sizeof(svn_revnum_t),
-                                          1, 100, FALSE, fs->pool));
-  if (! no_handler)
-      SVN_ERR(svn_cache__set_error_handler(ffd->rev_root_id_cache,
-                                          warn_on_cache_errors, fs, pool));
+                                          1, 100, FALSE,
+                                          apr_pstrcat(pool, prefix, "RRI",
+                                              (char *)NULL),
+                                          fs->pool));
 
+  SVN_ERR(init_callbacks(ffd->rev_root_id_cache, fs, no_handler, pool));
 
   /* Rough estimate: revision DAG nodes have size around 320 bytes, so
    * let's put 16 on a page. */
@@ -123,11 +142,12 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                                         svn_fs_fs__dag_serialize,
                                         svn_fs_fs__dag_deserialize,
                                         APR_HASH_KEY_STRING,
-                                        1024, 16, FALSE, fs->pool));
-  if (! no_handler)
-    SVN_ERR(svn_cache__set_error_handler(ffd->rev_node_cache,
-                                         warn_on_cache_errors, fs, pool));
+                                        1024, 16, FALSE,
+                                        apr_pstrcat(pool, prefix, "DAG",
+                                                    (char *)NULL),
+                                        fs->pool));
 
+  SVN_ERR(init_callbacks(ffd->rev_node_cache, fs, no_handler, pool));
 
   /* Very rough estimate: 1K per directory. */
   if (svn_fs__get_global_membuffer_cache())
@@ -144,11 +164,12 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                                         svn_fs_fs__serialize_dir_entries,
                                         svn_fs_fs__deserialize_dir_entries,
                                         APR_HASH_KEY_STRING,
-                                        1024, 8, FALSE, fs->pool));
+                                        1024, 8, FALSE,
+                                        apr_pstrcat(pool, prefix, "DIR",
+                                            (char *)NULL),
+                                        fs->pool));
 
-  if (! no_handler)
-    SVN_ERR(svn_cache__set_error_handler(ffd->dir_cache,
-                                         warn_on_cache_errors, fs, pool));
+  SVN_ERR(init_callbacks(ffd->dir_cache, fs, no_handler, pool));
 
   /* Only 16 bytes per entry (a revision number + the corresponding offset).
      Since we want ~8k pages, that means 512 entries per page. */
@@ -166,11 +187,12 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                                         svn_fs_fs__serialize_manifest,
                                         svn_fs_fs__deserialize_manifest,
                                         sizeof(svn_revnum_t),
-                                        32, 1, FALSE, fs->pool));
+                                        32, 1, FALSE,
+                                        apr_pstrcat(pool, prefix, "PACK-MANIFEST",
+                                                    (char *)NULL),
+                                        fs->pool));
 
-  if (! no_handler)
-    SVN_ERR(svn_cache__set_error_handler(ffd->packed_offset_cache,
-                                         warn_on_cache_errors, fs, pool));
+  SVN_ERR(init_callbacks(ffd->packed_offset_cache, fs, no_handler, pool));
 
   /* initialize fulltext cache as configured */
   if (memcache)
@@ -201,9 +223,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
       ffd->fulltext_cache = NULL;
     }
 
-  if (ffd->fulltext_cache && ! no_handler)
-    SVN_ERR(svn_cache__set_error_handler(ffd->fulltext_cache,
-            warn_on_cache_errors, fs, pool));
+  SVN_ERR(init_callbacks(ffd->fulltext_cache, fs, no_handler, pool));
 
   /* initialize txdelta window cache, if that has been enabled */
   if (svn_fs__get_global_membuffer_cache() &&
@@ -223,9 +243,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
       ffd->txdelta_window_cache = NULL;
     }
 
-  if (ffd->txdelta_window_cache && ! no_handler)
-    SVN_ERR(svn_cache__set_error_handler(ffd->txdelta_window_cache,
-                                         warn_on_cache_errors, fs, pool));
+  SVN_ERR(init_callbacks(ffd->txdelta_window_cache, fs, no_handler, pool));
 
   /* initialize node revision cache, if caching has been enabled */
   if (svn_fs__get_global_membuffer_cache())
@@ -246,9 +264,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
       ffd->node_revision_cache = NULL;
     }
 
-  if (ffd->node_revision_cache && ! no_handler)
-    SVN_ERR(svn_cache__set_error_handler(ffd->node_revision_cache,
-                                         warn_on_cache_errors, fs, pool));
+  SVN_ERR(init_callbacks(ffd->node_revision_cache, fs, no_handler, pool));
 
   return SVN_NO_ERROR;
 }
