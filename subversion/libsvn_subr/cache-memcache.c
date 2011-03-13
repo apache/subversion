@@ -289,8 +289,6 @@ memcache_get_info(void *cache_void,
 {
   memcache_t *cache = cache_void;
 
-  SVN_ERR(lock_cache(cache));
-
   info->id = apr_pstrdup(pool, cache->prefix);
 
   /* we don't have any memory allocation info */
@@ -300,8 +298,6 @@ memcache_get_info(void *cache_void,
   info->data_size = 0;
   info->used_entries = 0;
   info->total_entries = 0;
-
-  return unlock_cache(cache, SVN_NO_ERROR);
 }
 
 static svn_cache__vtable_t memcache_vtable = {
