@@ -316,7 +316,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                                                 apr_pstrcat(pool,
                                                             prefix,
                                                             "NODEREVS",
-                                                            NULL),
+                                                            (char *)NULL),
                                                 fs->pool));
     }
   else
