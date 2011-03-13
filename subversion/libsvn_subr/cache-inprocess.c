@@ -46,6 +46,8 @@ typedef struct inprocess_cache_t {
   /* Used to copy values out of the cache. */
   svn_cache__deserialize_func_t deserialize_func;
 
+  /* Maximum number of pages that this cache instance may allocate */
+  apr_int64_t total_pages;
   /* The number of pages we're allowed to allocate before having to
    * try to reuse one. */
   apr_int64_t unallocated_pages;
@@ -71,6 +73,12 @@ typedef struct inprocess_cache_t {
    * structs, as well as the dup'd values and hash keys.
    */
   apr_pool_t *cache_pool;
+
+  /* Sum of the SIZE members of all cache_entry elements that are
+   * accessible from HASH. This is used to make statistics available
+   * even if the sub-pools have already been destroyed. 
+   */
+  apr_size_t data_size;
 
 #if APR_HAS_THREADS
   /* A lock for intra-process synchronization to the cache, or NULL if
@@ -260,6 +268,7 @@ erase_page(inprocess_cache_t *cache,
        e;
        e = e->next_entry)
     {
+      cache->data_size -= e->size;
       apr_hash_set(cache->hash, e->key, cache->klen, NULL);
     }
 
@@ -313,12 +322,14 @@ inprocess_cache_set(void *cache_void,
       struct cache_page *page = existing_entry->page;
 
       move_page_to_front(cache, page);
+      cache->data_size -= existing_entry->size;
       if (value)
         {
           err = cache->serialize_func((char **)&existing_entry->value,
                                       &existing_entry->size,
                                       value,
                                       page->page_pool);
+          cache->data_size += existing_entry->size;
         }
       else
         {
@@ -368,6 +379,7 @@ inprocess_cache_set(void *cache_void,
                                     &new_entry->size,
                                     value,
                                     page->page_pool);
+        cache->data_size += new_entry->size;
       }
     else
       {
@@ -512,6 +524,7 @@ svn_cache__create_inprocess(svn_cache__t **cache_p,
   cache->deserialize_func = deserialize;
 
   SVN_ERR_ASSERT(pages >= 1);
+  cache->total_pages = pages;
   cache->unallocated_pages = pages;
   SVN_ERR_ASSERT(items_per_page >= 1);
   cache->items_per_page = items_per_page;
