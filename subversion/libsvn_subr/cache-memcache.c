@@ -298,6 +298,8 @@ memcache_get_info(void *cache_void,
   info->data_size = 0;
   info->used_entries = 0;
   info->total_entries = 0;
+
+  return SVN_NO_ERROR;
 }
 
 static svn_cache__vtable_t memcache_vtable = {
