@@ -2175,16 +2175,6 @@ link_path(void *report_baton,
 /** Minimum nr. of outstanding requests needed before a new connection is
  *  opened. */
 #define REQS_PER_CONN 8
-/** Maximum nr. of outstanding requests. This limits the memory usage
-    for requests that are waiting to be sent on the connections.
-
-    Since this number limits the reading of more data of the REPORT response,
-    and xml_parser reads this data in blocks of 8000 bytes, the number of
-    actual outstanding requests will be higher.
-
-    Setting this to 500 with 4 connections means 125 outstanding requests per
-    connection. This seems reasonable, but requires more real-world testing. */
-#define MAX_OUTSTANDING_REQS 500
 
 /** This function creates a new connection for this serf session, but only
  * if the number of ACTIVE_REQS > REQS_PER_CONN or if there currently is
@@ -2244,27 +2234,6 @@ create_update_report_body(serf_bucket_t **body_bkt,
   *body_bkt = serf_bucket_file_create(report->body_file, alloc);
 
   return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-throttled_handle_xml_parser(serf_request_t *request,
-                            serf_bucket_t *response,
-                            void *baton,
-                            apr_pool_t *pool)
-{
-  svn_ra_serf__xml_parser_t *parser_ctx = baton;
-  report_context_t *report = parser_ctx->user_data;
-
-  /* Stop reading the REPORT response and preparing new PROPFIND/GET requests if
-     too many requests are already sent or waiting to be sent. */
-  if (report->active_fetches + report->active_propfinds > MAX_OUTSTANDING_REQS) {
-    return svn_error_wrap_apr(APR_EAGAIN, NULL);
-  }
-
-  return svn_ra_serf__handle_xml_parser(request,
-                                        response,
-                                        baton,
-                                        pool);
 }
 
 static svn_error_t *
@@ -2328,7 +2297,7 @@ finish_report(void *report_baton,
      do anything with it. The error in parser_ctx->error is sufficient. */
   parser_ctx->status_code = &status_code;
 
-  handler->response_handler = throttled_handle_xml_parser;
+  handler->response_handler = svn_ra_serf__handle_xml_parser;
   handler->response_baton = parser_ctx;
 
   svn_ra_serf__request_create(handler);
@@ -2490,7 +2459,6 @@ finish_report(void *report_baton,
   /* FIXME subpool */
   return report->update_editor->close_edit(report->update_baton, sess->pool);
 }
-#undef MAX_OUTSTANDING_REQS
 #undef MAX_NR_OF_CONNS
 #undef EXP_REQS_PER_CONN
 
