@@ -16580,6 +16580,102 @@ def merge_change_to_file_with_executable(sbox):
   if not os.access(beta_path, os.X_OK):
     raise svntest.Failure("beta is not marked as executable after commit")
 
+@XFail()
+def dry_run_merge_conflicting_binary(sbox):
+  "dry run shouldn't make conflict resoln files"
+
+  # This test-case is to showcase the regression caused by
+  # r1075802. Here is the link to the relevant discussion:
+  # http://svn.haxx.se/dev/archive-2011-03/0145.shtml
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  # Add a binary file to the project
+  theta_contents = open(os.path.join(sys.path[0], "theta.bin"), 'rb').read()
+  # Write PNG file data into 'A/theta'.
+  theta_path = os.path.join(wc_dir, 'A', 'theta')
+  svntest.main.file_write(theta_path, theta_contents, 'wb')
+
+  svntest.main.run_svn(None, 'add', theta_path)
+
+  # Commit the new binary file, creating revision 2.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/theta' : Item(verb='Adding  (bin)'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/theta' : Item(status='  ', wc_rev=2),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        wc_dir)
+
+  # Make the "other" working copy
+  other_wc = sbox.add_wc_path('other')
+  svntest.actions.duplicate_dir(wc_dir, other_wc)
+
+  # Change the binary file in first working copy, commit revision 3.
+  svntest.main.file_append(theta_path, "some extra junk")
+  expected_output = wc.State(wc_dir, {
+    'A/theta' : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/theta' : Item(status='  ', wc_rev=3),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        wc_dir)
+
+  # In second working copy, append different content to the binary
+  # and attempt to 'svn merge -r 2:3'.
+  # We should see a conflict during the merge.
+  other_theta_path = os.path.join(other_wc, 'A', 'theta')
+  svntest.main.file_append(other_theta_path, "some other junk")
+  expected_output = wc.State(other_wc, {
+    'A/theta' : Item(status='C '),
+    })
+  expected_mergeinfo_output = wc.State(other_wc, {
+    '' : Item(status=' U'),
+    })
+  expected_elision_output = wc.State(other_wc, {
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    ''        : Item(props={SVN_PROP_MERGEINFO : '/:3'}),
+    'A/theta' : Item(theta_contents + "some other junk",
+                     props={'svn:mime-type' : 'application/octet-stream'}),
+    })
+
+  # verify content of base(left) file
+  expected_disk.add({
+  'A/theta.merge-left.r2' :
+    Item(contents = theta_contents )
+  })
+  # verify content of theirs(right) file
+  expected_disk.add({
+  'A/theta.merge-right.r3' :
+    Item(contents= theta_contents + "some extra junk")
+  })
+
+  expected_status = svntest.actions.get_virginal_state(other_wc, 1)
+  expected_status.add({
+    ''        : Item(status=' M', wc_rev=1),
+    'A/theta' : Item(status='C ', wc_rev=2),
+    })
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_merge(other_wc, '2', '3',
+                                       sbox.repo_url, None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None, None,
+                                       True, True, '--allow-mixed-revisions',
+                                       other_wc)
 ########################################################################
 # Run the tests
 
@@ -16702,6 +16798,7 @@ test_list = [ None,
               no_self_referential_or_nonexistent_inherited_mergeinfo,
               subtree_merges_inherit_invalid_working_mergeinfo,
               merge_change_to_file_with_executable,
+              dry_run_merge_conflicting_binary,
              ]
 
 if __name__ == '__main__':
