@@ -9523,9 +9523,27 @@ has_local_mods(svn_boolean_t *is_modified,
 
   if (! *is_modified)
     {
+      /* Check for property modifications. */
+      SVN_ERR(svn_sqlite__get_statement(
+                &stmt, wcroot->sdb,
+                STMT_SELECT_NODES_WITH_PROP_MODIFICATIONS));
+      SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id, local_relpath,
+                                construct_like_arg(local_relpath,
+                                                   scratch_pool)));
+      /* If this query returns a row, the working copy is modified. */
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+      *is_modified = have_row;
+      SVN_ERR(svn_sqlite__reset(stmt));
+
+      if (cancel_func)
+        SVN_ERR(cancel_func(cancel_baton));
+    }
+
+  if (! *is_modified)
+    {
       apr_pool_t *iterpool = NULL;
 
-      /* Check for text and prop modifications. */
+      /* Check for text modifications. */
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_SELECT_CURRENT_NODES_RECURSIVE));
       SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id, local_relpath,
@@ -9548,12 +9566,6 @@ has_local_mods(svn_boolean_t *is_modified,
                                          svn_sqlite__column_text(stmt, 0,
                                                                  iterpool),
                                          iterpool);
-
-          SVN_ERR(svn_wc__props_modified(is_modified, db, node_abspath,
-                                         iterpool));
-          if (*is_modified)
-            break;
-
           node_kind = svn_sqlite__column_token(stmt, 1, kind_map);
           if (node_kind == svn_wc__db_kind_file)
             {

@@ -910,6 +910,11 @@ WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
        presence = 'base-deleted')
   AND file_external IS NULL;
 
+-- STMT_SELECT_NODES_WITH_PROP_MODIFICATIONS
+SELECT local_relpath FROM actual_node
+WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
+  AND properties IS NOT NULL;
+
 /* This query expects repos_path(wcroot)/% as arg 4,
    and repos_path(wcroot), with a slash appended unless the path is empty,
    as arg 5. */
