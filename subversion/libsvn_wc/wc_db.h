@@ -1673,16 +1673,16 @@ svn_wc__db_read_pristine_props(apr_hash_t **props,
    ###   computing all info.
 */
 svn_error_t *
-svn_wc__db_read_children2(const apr_array_header_t **children,
-                          svn_wc__db_t *db,
-                          const char *local_abspath,
-                          apr_pool_t *result_pool,
-                          apr_pool_t *scratch_pool);
+svn_wc__db_read_children_of_working_node(const apr_array_header_t **children,
+                                         svn_wc__db_t *db,
+                                         const char *local_abspath,
+                                         apr_pool_t *result_pool,
+                                         apr_pool_t *scratch_pool);
 
-/* Like svn_wc__db_read_children2(), except also include any path that was
-   a child of a deleted directory that existed at LOCAL_ABSPATH, even if
-   that directory is now scheduled to be replaced by the working node at
-   LOCAL_ABSPATH.
+/* Like svn_wc__db_read_children_of_working_node(), except also include any
+   path that was a child of a deleted directory that existed at
+   LOCAL_ABSPATH, even if that directory is now scheduled to be replaced by
+   the working node at LOCAL_ABSPATH.
 */
 svn_error_t *
 svn_wc__db_read_children(const apr_array_header_t **children,

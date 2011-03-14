@@ -212,12 +212,12 @@ svn_wc__status2_from_3(svn_wc_status2_t **status,
  * working copy, and @a scratch_pool for all temporary allocations.
  */
 svn_error_t *
-svn_wc__node_get_children2(const apr_array_header_t **children,
-                           svn_wc_context_t *wc_ctx,
-                           const char *dir_abspath,
-                           svn_boolean_t show_hidden,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool);
+svn_wc__node_get_children_of_working_node(const apr_array_header_t **children,
+                                          svn_wc_context_t *wc_ctx,
+                                          const char *dir_abspath,
+                                          svn_boolean_t show_hidden,
+                                          apr_pool_t *result_pool,
+                                          apr_pool_t *scratch_pool);
 
 /**
  * Like svn_wc__node_get_children2(), except also include any path that was

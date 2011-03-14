@@ -5738,11 +5738,11 @@ svn_wc__db_read_pristine_props(apr_hash_t **props,
 
 
 svn_error_t *
-svn_wc__db_read_children2(const apr_array_header_t **children,
-                         svn_wc__db_t *db,
-                         const char *local_abspath,
-                         apr_pool_t *result_pool,
-                         apr_pool_t *scratch_pool)
+svn_wc__db_read_children_of_working_node(const apr_array_header_t **children,
+                                         svn_wc__db_t *db,
+                                         const char *local_abspath,
+                                         apr_pool_t *result_pool,
+                                         apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;

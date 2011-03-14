@@ -101,17 +101,18 @@ filter_and_make_absolute(const apr_array_header_t **children_abspaths,
 
 
 svn_error_t *
-svn_wc__node_get_children2(const apr_array_header_t **children,
-                           svn_wc_context_t *wc_ctx,
-                           const char *dir_abspath,
-                           svn_boolean_t show_hidden,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool)
+svn_wc__node_get_children_of_working_node(const apr_array_header_t **children,
+                                          svn_wc_context_t *wc_ctx,
+                                          const char *dir_abspath,
+                                          svn_boolean_t show_hidden,
+                                          apr_pool_t *result_pool,
+                                          apr_pool_t *scratch_pool)
 {
   const apr_array_header_t *rel_children;
 
-  SVN_ERR(svn_wc__db_read_children2(&rel_children, wc_ctx->db, dir_abspath,
-                                    scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_read_children_of_working_node(&rel_children,
+                                                   wc_ctx->db, dir_abspath,
+                                                   scratch_pool, scratch_pool));
   SVN_ERR(filter_and_make_absolute(children, wc_ctx, dir_abspath,
                                    rel_children, show_hidden,
                                    result_pool, scratch_pool));
