@@ -9440,11 +9440,10 @@ has_switched_subtrees(svn_boolean_t *is_switched,
       /* If the trailing part of the URL of the working copy directory
          does not match the given trailing URL then the whole working
          copy is switched. */
-      SVN_ERR(svn_wc__internal_node_get_url(&url, db,
-                                            svn_dirent_join(wcroot->abspath,
+      SVN_ERR(svn_wc__db_read_url(&url, db, svn_dirent_join(wcroot->abspath,
                                                             local_relpath,
                                                             scratch_pool),
-                                            scratch_pool, scratch_pool));
+                                  scratch_pool, scratch_pool));
       if (! url)
         {
           *is_switched = TRUE;
