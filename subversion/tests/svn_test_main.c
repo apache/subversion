@@ -339,6 +339,8 @@ do_test_num(const char *progname,
   if (desc->msg == NULL)
     printf("WARNING: New-style test descriptor is missing a docstring.\n");
 
+  fflush(stdout);
+
   skip_cleanup = test_failed;
 
   return test_failed;
