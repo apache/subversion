@@ -309,63 +309,6 @@ wclock_owns_lock(svn_boolean_t *own_lock,
 
 
 
-/* Some helpful transaction helpers. 
-
-   Instead of directly using SQLite transactions, these wrappers take care of
-   simple cases by allowing consumers to worry about wrapping the wcroot and
-   local_relpath, which are almost always used within the transaction.
-   
-   This also means if we later want to implement some wc_db-specific txn
-   handling, we have a convenient place to do it.
-   */
-
-/* A callback which supplies WCROOTs and LOCAL_RELPATHs. */
-typedef svn_error_t *(*db_txn_callback_t)(void *baton,
-                                          svn_wc__db_wcroot_t *wcroot,
-                                          const char *local_relpath,
-                                          apr_pool_t *scratch_pool);
-
-/* Baton for use with run_txn() and with_db_txn(). */
-struct txn_baton_t
-{
-  svn_wc__db_wcroot_t *wcroot;
-  const char *local_relpath;
-
-  db_txn_callback_t cb_func;
-  void *cb_baton;
-};
-
-
-/* Unwrap the sqlite transaction into a wc_db txn.
-   Implements svn_sqlite__transaction_callback_t. */
-static svn_error_t *
-run_txn(void *baton, svn_sqlite__db_t *db, apr_pool_t *scratch_pool)
-{
-  struct txn_baton_t *tb = baton;
-
-  return svn_error_return(
-    tb->cb_func(tb->cb_baton, tb->wcroot, tb->local_relpath, scratch_pool));
-}
-
-
-/* Run CB_FUNC in a SQLite transaction with CB_BATON, using WCROOT and
-   LOCAL_RELPATH.  If callbacks require additional information, they may
-   provide it using CB_BATON. */
-static svn_error_t *
-with_db_txn(svn_wc__db_wcroot_t *wcroot,
-            const char *local_relpath,
-            db_txn_callback_t cb_func,
-            void *cb_baton,
-            apr_pool_t *scratch_pool)
-{
-  struct txn_baton_t tb = { wcroot, local_relpath, cb_func, cb_baton };
-
-  return svn_error_return(
-    svn_sqlite__with_lock(wcroot->sdb, run_txn, &tb, scratch_pool));
-}
-
-
-
 /* Return the absolute path, in local path style, of LOCAL_RELPATH
    in WCROOT.  */
 static const char *
@@ -1493,8 +1436,8 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
 
      Note: old children can stick around, even if they are no longer present
      in this directory's revision.  */
-  SVN_ERR(with_db_txn(wcroot, local_relpath, insert_base_node, &ibb,
-                      scratch_pool));
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, insert_base_node, &ibb,
+                              scratch_pool));
 
   /* ### worry about flushing child subdirs?  */
   SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
@@ -1566,8 +1509,8 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
      ### or maybe let caller deal with that, if there is a possibility
      ### of a node kind change (rather than eat an extra lookup here).  */
 
-  SVN_ERR(with_db_txn(wcroot, local_relpath, insert_base_node, &ibb,
-                      scratch_pool));
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, insert_base_node, &ibb,
+                              scratch_pool));
 
   SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
   return SVN_NO_ERROR;
@@ -1636,8 +1579,8 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
      ### or maybe let caller deal with that, if there is a possibility
      ### of a node kind change (rather than eat an extra lookup here).  */
 
-  SVN_ERR(with_db_txn(wcroot, local_relpath, insert_base_node, &ibb,
-                      scratch_pool));
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, insert_base_node, &ibb,
+                              scratch_pool));
 
   SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
   return SVN_NO_ERROR;
@@ -1701,8 +1644,8 @@ add_absent_excluded_not_present_node(svn_wc__db_t *db,
      ### or maybe let caller deal with that, if there is a possibility
      ### of a node kind change (rather than eat an extra lookup here).  */
 
-  SVN_ERR(with_db_txn(wcroot, local_relpath, insert_base_node, &ibb,
-                      scratch_pool));
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, insert_base_node, &ibb,
+                              scratch_pool));
 
   SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
 
@@ -1750,7 +1693,7 @@ svn_wc__db_base_add_not_present_node(svn_wc__db_t *db,
 }
 
 
-/* This implements db_txn_callback_t */
+/* This implements svn_wc__db_txn_callback_t */
 static svn_error_t *
 db_base_remove(void *baton,
                svn_wc__db_wcroot_t *wcroot,
@@ -1802,8 +1745,8 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  SVN_ERR(with_db_txn(wcroot, local_relpath, db_base_remove, NULL,
-                      scratch_pool));
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, db_base_remove, NULL,
+                              scratch_pool));
 
   SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
 
@@ -2778,8 +2721,8 @@ svn_wc__db_op_copy_dir(svn_wc__db_t *db,
 
   iwb.work_items = work_items;
 
-  SVN_ERR(with_db_txn(wcroot, local_relpath, insert_working_node, &iwb,
-                      scratch_pool));
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, insert_working_node, &iwb,
+                              scratch_pool));
   SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -2851,8 +2794,8 @@ svn_wc__db_op_copy_file(svn_wc__db_t *db,
 
   iwb.work_items = work_items;
 
-  SVN_ERR(with_db_txn(wcroot, local_relpath, insert_working_node, &iwb,
-                      scratch_pool));
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, insert_working_node, &iwb,
+                              scratch_pool));
   SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -2920,8 +2863,8 @@ svn_wc__db_op_copy_symlink(svn_wc__db_t *db,
 
   iwb.work_items = work_items;
 
-  SVN_ERR(with_db_txn(wcroot, local_relpath, insert_working_node, &iwb,
-                      scratch_pool));
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, insert_working_node, &iwb,
+                              scratch_pool));
   SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -2953,8 +2896,8 @@ svn_wc__db_op_add_directory(svn_wc__db_t *db,
 
   iwb.work_items = work_items;
 
-  SVN_ERR(with_db_txn(wcroot, local_relpath, insert_working_node, &iwb,
-                      scratch_pool));
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, insert_working_node, &iwb,
+                              scratch_pool));
   SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -2986,8 +2929,8 @@ svn_wc__db_op_add_file(svn_wc__db_t *db,
 
   iwb.work_items = work_items;
 
-  SVN_ERR(with_db_txn(wcroot, local_relpath, insert_working_node, &iwb,
-                      scratch_pool));
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, insert_working_node, &iwb,
+                              scratch_pool));
   SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -3023,8 +2966,8 @@ svn_wc__db_op_add_symlink(svn_wc__db_t *db,
 
   iwb.work_items = work_items;
 
-  SVN_ERR(with_db_txn(wcroot, local_relpath, insert_working_node, &iwb,
-                      scratch_pool));
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, insert_working_node, &iwb,
+                              scratch_pool));
   SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -3138,8 +3081,9 @@ svn_wc__db_op_set_props(svn_wc__db_t *db,
   spb.conflict = conflict;
   spb.work_items = work_items;
 
-  return svn_error_return(with_db_txn(wcroot, local_relpath, set_props_txn,
-                                      &spb, scratch_pool));
+  return svn_error_return(svn_wc__db_with_txn(wcroot, local_relpath,
+                                              set_props_txn, &spb,
+                                              scratch_pool));
 }
 
 
@@ -3312,8 +3256,8 @@ svn_wc__db_op_set_changelist(svn_wc__db_t *db,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  SVN_ERR(with_db_txn(wcroot, local_relpath, set_changelist_txn,
-                      (void *) changelist, scratch_pool));
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, set_changelist_txn,
+                              (void *) changelist, scratch_pool));
 
   /* No need to flush the parent entries; changelists were not stored in the
      stub */
@@ -3467,8 +3411,8 @@ svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  SVN_ERR(with_db_txn(wcroot, local_relpath, set_tc_txn2,
-                      (void *) tree_conflict, scratch_pool));
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, set_tc_txn2,
+                              (void *) tree_conflict, scratch_pool));
 
   /* There may be some entries, and the lock info is now out of date.  */
   SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
@@ -3524,7 +3468,7 @@ struct op_revert_baton {
 };
 
 
-/* This implements db_txn_callback_t */
+/* This implements svn_wc__db_txn_callback_t */
 static svn_error_t *
 op_revert_txn(void *baton,
               svn_wc__db_wcroot_t *wcroot,
@@ -3637,7 +3581,7 @@ op_revert_txn(void *baton,
 }
 
 
-/* This implements db_txn_callback_t */
+/* This implements svn_wc__db_txn_callback_t */
 static svn_error_t *
 op_revert_recursive_txn(void *baton,
                         svn_wc__db_wcroot_t *wcroot,
@@ -3721,7 +3665,7 @@ svn_wc__db_op_revert(apr_array_header_t **local_relpaths,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool)
 {
-  db_txn_callback_t txn_func;
+  svn_wc__db_txn_callback_t txn_func;
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
   struct op_revert_baton baton;
@@ -3751,7 +3695,8 @@ svn_wc__db_op_revert(apr_array_header_t **local_relpaths,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  SVN_ERR(with_db_txn(wcroot, local_relpath, txn_func, &baton, scratch_pool));
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, txn_func, &baton,
+                              scratch_pool));
 
   *local_relpaths = baton.local_relpaths;
 
@@ -4551,8 +4496,8 @@ svn_wc__db_temp_op_delete(svn_wc__db_t *db,
   b.db = db;
   b.local_abspath = local_abspath;
 
-  SVN_ERR(with_db_txn(wcroot, local_relpath, temp_op_delete_txn, &b,
-                      scratch_pool));
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, temp_op_delete_txn, &b,
+                              scratch_pool));
 
   SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
 
@@ -5298,8 +5243,8 @@ read_url(const char **url,
          apr_pool_t *scratch_pool)
 {
   struct read_url_baton rub = { url, result_pool };
-  SVN_ERR(with_db_txn(wcroot, local_relpath, read_url_txn, &rub,
-                      scratch_pool));
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, read_url_txn, &rub,
+                              scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -6220,7 +6165,8 @@ svn_wc__db_global_commit(svn_wc__db_t *db,
   cb.no_unlock = no_unlock;
   cb.work_items = work_items;
 
-  SVN_ERR(with_db_txn(wcroot, local_relpath, commit_node, &cb, scratch_pool));
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, commit_node, &cb,
+                              scratch_pool));
 
   /* We *totally* monkeyed the entries. Toss 'em.  */
   SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
@@ -6303,7 +6249,8 @@ svn_wc__db_global_update(svn_wc__db_t *db,
   NOT_IMPLEMENTED();
 
 #if 0
-  SVN_ERR(with_db_txn(wcroot, local_relpath, update_node, &ub, scratch_pool));
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, update_node, &ub,
+                              scratch_pool));
 #endif
 
   /* We *totally* monkeyed the entries. Toss 'em.  */
@@ -6363,8 +6310,8 @@ svn_wc__db_global_record_fileinfo(svn_wc__db_t *db,
   rb.translated_size = translated_size;
   rb.last_mod_time = last_mod_time;
 
-  SVN_ERR(with_db_txn(wcroot, local_relpath, record_fileinfo, &rb,
-                      scratch_pool));
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, record_fileinfo, &rb,
+                              scratch_pool));
 
   /* We *totally* monkeyed the entries. Toss 'em.  */
   SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
@@ -6424,8 +6371,8 @@ svn_wc__db_lock_add(svn_wc__db_t *db,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  SVN_ERR(with_db_txn(wcroot, local_relpath, lock_add_txn, (void *) lock,
-                      scratch_pool));
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, lock_add_txn,
+                              (void *) lock, scratch_pool));
 
   /* There may be some entries, and the lock info is now out of date.  */
   SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
@@ -6473,8 +6420,8 @@ svn_wc__db_lock_remove(svn_wc__db_t *db,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  SVN_ERR(with_db_txn(wcroot, local_relpath, lock_remove_txn, NULL,
-                      scratch_pool));
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, lock_remove_txn, NULL,
+                              scratch_pool));
 
   /* There may be some entries, and the lock info is now out of date.  */
   SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
@@ -6792,8 +6739,9 @@ scan_addition(svn_wc__db_status_t *status,
   sab.original_revision = original_revision;
   sab.result_pool = result_pool;
 
-  return svn_error_return(with_db_txn(wcroot, local_relpath, scan_addition_txn,
-                                      &sab, scratch_pool));
+  return svn_error_return(svn_wc__db_with_txn(wcroot, local_relpath,
+                                              scan_addition_txn,
+                                              &sab, scratch_pool));
 }
 
 
@@ -7073,8 +7021,9 @@ scan_deletion(const char **base_del_relpath,
   sd_baton.work_del_relpath = work_del_relpath;
   sd_baton.result_pool = result_pool;
 
-  return svn_error_return(with_db_txn(wcroot, local_relpath, scan_deletion_txn,
-                                      &sd_baton, scratch_pool));
+  return svn_error_return(svn_wc__db_with_txn(wcroot, local_relpath,
+                                              scan_deletion_txn, &sd_baton,
+                                              scratch_pool));
 }
 
 
@@ -8249,8 +8198,9 @@ svn_wc__db_wclock_obtain(svn_wc__db_t *db,
   baton.steal_lock = steal_lock;
   baton.levels_to_lock = levels_to_lock;
 
-  return svn_error_return(with_db_txn(wcroot, local_relpath, wclock_obtain_cb,
-                                      &baton, scratch_pool));
+  return svn_error_return(svn_wc__db_with_txn(wcroot, local_relpath,
+                                              wclock_obtain_cb, &baton,
+                                              scratch_pool));
 }
 
 
@@ -8552,8 +8502,8 @@ svn_wc__db_temp_op_start_directory_update(svn_wc__db_t *db,
   du.new_rev = new_rev;
   du.new_repos_relpath = new_repos_relpath;
 
-  SVN_ERR(with_db_txn(wcroot, local_relpath, start_directory_update_txn, &du,
-                      scratch_pool));
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath,
+                              start_directory_update_txn, &du, scratch_pool));
 
   SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
 
@@ -8750,8 +8700,8 @@ svn_wc__db_temp_op_make_copy(svn_wc__db_t *db,
   mcb.local_abspath = local_abspath;
   mcb.op_depth = relpath_depth(local_relpath);
 
-  SVN_ERR(with_db_txn(wcroot, local_relpath, make_copy_txn, &mcb,
-                      scratch_pool));
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, make_copy_txn, &mcb,
+                              scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -8902,8 +8852,8 @@ svn_wc__db_temp_op_set_file_external(svn_wc__db_t *db,
   sfeb.peg_rev = peg_rev;
   sfeb.rev = rev;
 
-  SVN_ERR(with_db_txn(wcroot, local_relpath, set_file_external_txn,
-                      &sfeb, scratch_pool));
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, set_file_external_txn,
+                              &sfeb, scratch_pool));
 
   SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
 
@@ -9114,8 +9064,8 @@ svn_wc__db_temp_op_set_rev_and_repos_relpath(svn_wc__db_t *db,
 
   SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
 
-  SVN_ERR(with_db_txn(wcroot, local_relpath, set_rev_relpath_txn,
-                      &baton, scratch_pool));
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, set_rev_relpath_txn,
+                              &baton, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -9209,8 +9159,9 @@ svn_wc__db_temp_op_set_new_dir_to_incomplete(svn_wc__db_t *db,
 
   SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
 
-  SVN_ERR(with_db_txn(wcroot, local_relpath, set_new_dir_to_incomplete_txn,
-                      &baton, scratch_pool));
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath,
+                              set_new_dir_to_incomplete_txn,
+                              &baton, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -9647,7 +9598,7 @@ svn_wc__db_revision_status(svn_revnum_t *min_revision,
                                                 scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  return svn_error_return(with_db_txn(wcroot, local_relpath,
-                                      revision_status_txn, &rsb,
-                                      scratch_pool));
+  return svn_error_return(svn_wc__db_with_txn(wcroot, local_relpath,
+                                              revision_status_txn, &rsb,
+                                              scratch_pool));
 }
