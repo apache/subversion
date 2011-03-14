@@ -6419,25 +6419,22 @@ bump_node(svn_wc__db_wcroot_t *wcroot,
 
 /* The main body of bump_revisions_post_update. */
 static svn_error_t *
-tweak_entries(svn_wc__db_wcroot_t *wcroot,
-              const char *local_relpath,
-              svn_wc__db_t *db,
-              const char *dir_abspath,
-              apr_int64_t new_repos_id,
-              const char *new_repos_relpath,
-              const char *new_repos_root_url,
-              const char *new_repos_uuid,
-              svn_revnum_t new_rev,
-              svn_depth_t depth,
-              apr_hash_t *exclude_paths,
-              apr_pool_t *pool)
+bump_nodes(svn_wc__db_wcroot_t *wcroot,
+           const char *local_relpath,
+           svn_wc__db_t *db,
+           apr_int64_t new_repos_id,
+           const char *new_repos_relpath,
+           svn_revnum_t new_rev,
+           svn_depth_t depth,
+           apr_hash_t *exclude_relpaths,
+           apr_pool_t *pool)
 {
   apr_pool_t *iterpool;
   const apr_array_header_t *children;
   int i;
 
   /* Skip an excluded path and its descendants. */
-  if (apr_hash_get(exclude_paths, dir_abspath, APR_HASH_KEY_STRING))
+  if (apr_hash_get(exclude_relpaths, local_relpath, APR_HASH_KEY_STRING))
     return SVN_NO_ERROR;
 
   iterpool = svn_pool_create(pool);
@@ -6459,7 +6456,6 @@ tweak_entries(svn_wc__db_wcroot_t *wcroot,
   for (i = 0; i < children->nelts; i++)
     {
       const char *child_basename = APR_ARRAY_IDX(children, i, const char *);
-      const char *child_abspath;
       const char *child_local_relpath;
       svn_wc__db_kind_t kind;
       svn_wc__db_status_t status;
@@ -6477,21 +6473,11 @@ tweak_entries(svn_wc__db_wcroot_t *wcroot,
 
       child_local_relpath = svn_relpath_join(local_relpath, child_basename,
                                              iterpool);
-      child_abspath = svn_dirent_join(dir_abspath, child_basename, iterpool);
 
       /* Skip stuff we've already decided to exclude. */
-      excluded = (apr_hash_get(exclude_paths, child_abspath,
+      excluded = (apr_hash_get(exclude_relpaths, child_local_relpath,
                                APR_HASH_KEY_STRING) != NULL);
       if (excluded)
-        continue;
-
-      /* Skip stuff we've identified as file externals.  (If we're
-         here, we were doing an update of a directory, not the actual
-         switch handling of a file external itself.) */
-      SVN_ERR(svn_wc__db_temp_get_file_external(&serialized,
-                                                db, child_abspath,
-                                                iterpool, iterpool));
-      if (serialized)
         continue;
 
       SVN_ERR(base_get_info(&status, &kind, NULL, NULL, NULL, NULL,
@@ -6506,6 +6492,19 @@ tweak_entries(svn_wc__db_wcroot_t *wcroot,
             || status == svn_wc__db_status_absent
             || status == svn_wc__db_status_excluded)
         {
+          const char *child_abspath;
+          child_abspath = svn_dirent_join(wcroot->abspath, child_local_relpath, 
+                                          iterpool);
+
+          /* Skip stuff we've identified as file externals.  (If we're
+             here, we were doing an update of a directory, not the actual
+             switch handling of a file external itself.) */
+          SVN_ERR(svn_wc__db_temp_get_file_external(&serialized,
+                                                    db, child_abspath,
+                                                    iterpool, iterpool));
+          if (serialized)
+            continue;
+
           SVN_ERR(bump_node(wcroot, child_local_relpath, kind, new_repos_id,
                             child_repos_relpath, new_rev, FALSE /* is_root */,
                             iterpool));
@@ -6521,13 +6520,9 @@ tweak_entries(svn_wc__db_wcroot_t *wcroot,
           if (depth == svn_depth_immediates)
             depth_below_here = svn_depth_empty;
 
-          SVN_ERR(tweak_entries(wcroot, child_local_relpath,
-                                db, child_abspath, new_repos_id,
-                                child_repos_relpath,
-                                new_repos_root_url, new_repos_uuid,
-                                new_rev,
-                                depth_below_here,
-                                exclude_paths, iterpool));
+          SVN_ERR(bump_nodes(wcroot, child_local_relpath, db, new_repos_id,
+                             child_repos_relpath, new_rev, depth_below_here,
+                             exclude_relpaths, iterpool));
         }
     }
 
@@ -6546,7 +6541,7 @@ svn_wc__db_op_bump_revisions_post_update(svn_wc__db_t *db,
                                          const char *new_repos_root_url,
                                          const char *new_repos_uuid,
                                          svn_revnum_t new_revision,
-                                         apr_hash_t *exclude_paths,
+                                         apr_hash_t *exclude_relpaths,
                                          apr_pool_t *scratch_pool)
 {
   const char *local_relpath;
@@ -6556,12 +6551,14 @@ svn_wc__db_op_bump_revisions_post_update(svn_wc__db_t *db,
   svn_error_t *err;
   apr_int64_t new_repos_id = -1;
 
-  if (apr_hash_get(exclude_paths, local_abspath, APR_HASH_KEY_STRING))
-    return SVN_NO_ERROR;
-
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
                               local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
+
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  if (apr_hash_get(exclude_relpaths, local_relpath, APR_HASH_KEY_STRING))
+    return SVN_NO_ERROR;
 
   err = base_get_info(&status, &kind, NULL, NULL, NULL, NULL, NULL, NULL,
                       NULL, NULL, NULL, NULL, NULL, NULL,
@@ -6600,11 +6597,9 @@ svn_wc__db_op_bump_revisions_post_update(svn_wc__db_t *db,
     }
   else if (kind == svn_wc__db_kind_dir)
     {
-      SVN_ERR(tweak_entries(wcroot, local_relpath,
-                            db, local_abspath, new_repos_id, new_repos_relpath,
-                            new_repos_root_url, new_repos_uuid, new_revision,
-                            depth, exclude_paths,
-                            scratch_pool));
+      SVN_ERR(bump_nodes(wcroot, local_relpath, db, new_repos_id,
+                         new_repos_relpath, new_revision, depth,
+                         exclude_relpaths, scratch_pool));
     }
   else
     return svn_error_createf(SVN_ERR_NODE_UNKNOWN_KIND, NULL,
