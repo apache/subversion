@@ -4512,9 +4512,8 @@ tweak_node(svn_wc__db_t *db,
       && (status == svn_wc__db_status_not_present
           || (status == svn_wc__db_status_absent && revision != new_rev)))
     {
-      return svn_error_return(
-                svn_wc__db_temp_op_remove_entry(db, local_abspath,
-                                                scratch_pool));
+      return svn_error_return(svn_wc__db_base_remove(db, local_abspath,
+                                                     scratch_pool));
 
     }
 
@@ -4616,16 +4615,13 @@ tweak_entries(svn_wc__db_t *db,
       if (is_file_external)
         continue;
 
-      SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL,
-                                   db, child_abspath, iterpool, iterpool));
+      SVN_ERR(svn_wc__db_base_get_info(&status, &kind, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL,
+                                       db, child_abspath, iterpool, iterpool));
 
-      /* If a file, or deleted, excluded or absent dir, then tweak the
-         entry but don't recurse.
-
-         ### how does this translate into wc_db land? */
+      /* If a file, or not-present, absent or excluded, then tweak the node but
+         don't recurse. */
       if (kind == svn_wc__db_kind_file
             || status == svn_wc__db_status_not_present
             || status == svn_wc__db_status_absent
