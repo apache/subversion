@@ -193,7 +193,8 @@ typedef struct pristine_read_baton_t
  * Implements svn_sqlite__transaction_callback_t. */
 static svn_error_t *
 pristine_read_txn(void *baton,
-                  svn_sqlite__db_t *sdb,
+                  svn_wc__db_wcroot_t *wcroot,
+                  const char *local_relpath,
                   apr_pool_t *scratch_pool)
 {
   pristine_read_baton_t *b = baton;
@@ -202,7 +203,7 @@ pristine_read_txn(void *baton,
 
   /* Check that this pristine text is present in the store.  (The presence
    * of the file is not sufficient.) */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_PRISTINE));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_SELECT_PRISTINE));
   SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, b->sha1_checksum, scratch_pool));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   SVN_ERR(svn_sqlite__reset(stmt));
@@ -256,8 +257,8 @@ svn_wc__db_pristine_read(svn_stream_t **contents,
                              sha1_checksum,
                              FALSE /* create_subdir */,
                              scratch_pool, scratch_pool));
-  SVN_ERR(svn_sqlite__with_transaction(wcroot->sdb, pristine_read_txn, &b,
-                                       scratch_pool));
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, pristine_read_txn, &b,
+                              scratch_pool));
 
   return SVN_NO_ERROR;
 }
