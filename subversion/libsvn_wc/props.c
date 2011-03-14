@@ -1698,23 +1698,11 @@ svn_wc__prop_list_recursive(svn_wc_context_t *wc_ctx,
                                    scratch_pool));
       }
       break;
-    case  svn_depth_files:
-      SVN_ERR(svn_wc__db_read_props_of_files(wc_ctx->db, local_abspath,
-                                             pristine,
-                                             receiver_func, receiver_baton,
-                                             cancel_func, cancel_baton,
-                                             scratch_pool));
-      break;
+    case svn_depth_files:
     case svn_depth_immediates:
-      SVN_ERR(svn_wc__db_read_props_of_immediates(wc_ctx->db, local_abspath,
-                                                  pristine,
-                                                  receiver_func, receiver_baton,
-                                                  cancel_func, cancel_baton,
-                                                  scratch_pool));
-      break;
     case svn_depth_infinity:
-      SVN_ERR(svn_wc__db_read_props_recursive(wc_ctx->db, local_abspath,
-                                              pristine,
+      SVN_ERR(svn_wc__db_read_props_streamily(wc_ctx->db, local_abspath,
+                                              depth, pristine,
                                               receiver_func, receiver_baton,
                                               cancel_func, cancel_baton,
                                               scratch_pool));

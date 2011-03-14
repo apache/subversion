@@ -5490,17 +5490,16 @@ cache_props_recursive(void *cb_baton,
 }
 
 
-static svn_error_t *
-read_props_recursive(svn_wc__db_t *db,
-                     const char *local_abspath,
-                     svn_boolean_t files_only,
-                     svn_boolean_t immediates_only,
-                     svn_boolean_t pristine,
-                     svn_wc__proplist_receiver_t receiver_func,
-                     void *receiver_baton,
-                     svn_cancel_func_t cancel_func,
-                     void *cancel_baton,
-                     apr_pool_t *scratch_pool)
+svn_error_t *
+svn_wc__db_read_props_streamily(svn_wc__db_t *db,
+                                const char *local_abspath,
+                                svn_depth_t depth,
+                                svn_boolean_t pristine,
+                                svn_wc__proplist_receiver_t receiver_func,
+                                void *receiver_baton,
+                                svn_cancel_func_t cancel_func,
+                                void *cancel_baton,
+                                apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
   svn_sqlite__stmt_t *stmt;
@@ -5508,9 +5507,15 @@ read_props_recursive(svn_wc__db_t *db,
   svn_boolean_t have_row;
   int row_number;
   apr_pool_t *iterpool;
+  svn_boolean_t files_only = (depth == svn_depth_files);
+  svn_boolean_t immediates_only = ((depth == svn_depth_immediates) ||
+                                   (depth == svn_depth_files));
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(receiver_func);
+  SVN_ERR_ASSERT((depth == svn_depth_files) ||
+                 (depth == svn_depth_immediates) ||
+                 (depth == svn_depth_infinity));
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &baton.local_relpath,
                                                 db, local_abspath,
@@ -5592,60 +5597,6 @@ read_props_recursive(svn_wc__db_t *db,
 
   SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb,
                                       STMT_CLEAR_NODE_PROPS_CACHE));
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc__db_read_props_of_files(svn_wc__db_t *db,
-                               const char *local_abspath,
-                               svn_boolean_t pristine,
-                               svn_wc__proplist_receiver_t receiver_func,
-                               void *receiver_baton,
-                               svn_cancel_func_t cancel_func,
-                               void *cancel_baton,
-                               apr_pool_t *scratch_pool)
-{
-  SVN_ERR(read_props_recursive(db, local_abspath, TRUE, TRUE,
-                               pristine, receiver_func, receiver_baton,
-                               cancel_func, cancel_baton,
-                               scratch_pool));
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc__db_read_props_of_immediates(svn_wc__db_t *db,
-                                    const char *local_abspath,
-                                    svn_boolean_t pristine,
-                                    svn_wc__proplist_receiver_t receiver_func,
-                                    void *receiver_baton,
-                                    svn_cancel_func_t cancel_func,
-                                    void *cancel_baton,
-                                    apr_pool_t *scratch_pool)
-{
-  SVN_ERR(read_props_recursive(db, local_abspath, FALSE, TRUE,
-                               pristine, receiver_func, receiver_baton,
-                               cancel_func, cancel_baton,
-                               scratch_pool));
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc__db_read_props_recursive(svn_wc__db_t *db,
-                                const char *local_abspath,
-                                svn_boolean_t pristine,
-                                svn_wc__proplist_receiver_t receiver_func,
-                                void *receiver_baton,
-                                svn_cancel_func_t cancel_func,
-                                void *cancel_baton,
-                                apr_pool_t *scratch_pool)
-{
-  SVN_ERR(read_props_recursive(db, local_abspath, FALSE, FALSE,
-                               pristine, receiver_func, receiver_baton,
-                               cancel_func, cancel_baton,
-                               scratch_pool));
   return SVN_NO_ERROR;
 }
 
