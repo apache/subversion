@@ -1511,7 +1511,12 @@ struct svn_wc__db_info_t {
 
 /* Return in *NODES a hash mapping name->struct svn_wc__db_info_t for
    the children of DIR_ABSPATH, and in *CONFLICTS a hash of names in
-   conflict.  */
+   conflict.
+
+   The results include any path that was a child of a deleted directory that
+   existed at LOCAL_ABSPATH, even if that directory is now scheduled to be
+   replaced by the working node at LOCAL_ABSPATH.
+ */
 svn_error_t *
 svn_wc__db_read_children_info(apr_hash_t **nodes,
                               apr_hash_t **conflicts,
@@ -1637,8 +1642,13 @@ svn_wc__db_read_pristine_props(apr_hash_t **props,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
-/* Read into CHILDREN the basenames of the immediate children of
-   LOCAL_ABSPATH in DB.
+/* Set *CHILDREN to a new array of the (const char *) basenames of the
+   immediate children of the working node at LOCAL_ABSPATH in DB.
+
+   Return every path that refers to a child of the working node at
+   LOCAL_ABSPATH.  Do not include a path just because it was a child of a
+   deleted directory that existed at LOCAL_ABSPATH if that directory is now
+   sheduled to be replaced by the working node at LOCAL_ABSPATH.
 
    Allocate *CHILDREN in RESULT_POOL and do temporary allocations in
    SCRATCH_POOL.
@@ -1649,6 +1659,18 @@ svn_wc__db_read_pristine_props(apr_hash_t **props,
    ### however: _read_get_info can say "not interested", which isn't the
    ###   case with a struct. thus, a struct requires fetching and/or
    ###   computing all info.
+*/
+svn_error_t *
+svn_wc__db_read_children2(const apr_array_header_t **children,
+                          svn_wc__db_t *db,
+                          const char *local_abspath,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
+
+/* Like svn_wc__db_read_children2(), except also include any path that was
+   a child of a deleted directory that existed at LOCAL_ABSPATH, even if
+   that directory is now scheduled to be replaced by the working node at
+   LOCAL_ABSPATH.
 */
 svn_error_t *
 svn_wc__db_read_children(const apr_array_header_t **children,
