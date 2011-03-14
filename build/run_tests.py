@@ -317,7 +317,9 @@ class TestHarness:
       test_nums = test_nums.split(',')
       cmdline.extend(test_nums)
 
-    return self._run_prog(progname, cmdline)
+    prog = subprocess.Popen(cmdline, stdout=self.log, stderr=self.log)
+    prog.wait()
+    return prog.returncode
 
   def _run_py_test(self, prog, test_nums, dot_count):
     'Run a python test, passing parameters as needed.'
@@ -505,14 +507,6 @@ class TestHarness:
           print(TextColors.SUCCESS + 'success' + TextColors.ENDC)
 
     return failed
-
-  def _run_prog(self, progname, arglist):
-    '''Execute the file PROGNAME in a subprocess, with ARGLIST as its
-    arguments (a list/tuple of arg0..argN), redirecting standard output and
-    error to the log file. Return the command's exit code.'''
-    prog = subprocess.Popen(arglist, stdout=self.log, stderr=self.log)
-    prog.wait()
-    return prog.returncode
 
 
 def main():
