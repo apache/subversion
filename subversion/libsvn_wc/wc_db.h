@@ -1885,9 +1885,9 @@ svn_wc__db_global_update(svn_wc__db_t *db,
    or replacement).  Likewise, if BASE_URL is non-null, then rewrite
    all urls to be "telescoping" children of the base_url.
 
-   EXCLUDE_PATHS is a hash containing const char *abspathnames.  Nodes
-   for pathnames contained in EXCLUDE_PATHS are not touched by this
-   function.  These pathnames should be absolute paths.
+   EXCLUDE_RELPATHS is a hash containing const char *local_relpath.  Nodes
+   for pathnames contained in EXCLUDE_RELPATHS are not touched by this
+   function.  These pathnames should be paths relative to the wcroot.
 */
 svn_error_t *
 svn_wc__db_op_bump_revisions_post_update(svn_wc__db_t *db,
@@ -1897,7 +1897,7 @@ svn_wc__db_op_bump_revisions_post_update(svn_wc__db_t *db,
                                          const char *new_repos_root_url,
                                          const char *new_repos_uuid,
                                          svn_revnum_t new_revision,
-                                         apr_hash_t *exclude_paths,
+                                         apr_hash_t *exclude_relpaths,
                                          apr_pool_t *scratch_pool);
 
 

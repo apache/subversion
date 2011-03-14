@@ -226,9 +226,12 @@ struct edit_baton
 
   /* Subtrees that were skipped during the edit, and therefore shouldn't
      have their revision/url info updated at the end.  If a path is a
-     directory, its descendants will also be skipped.  The keys are absolute
-     pathnames and the values unspecified. */
+     directory, its descendants will also be skipped.  The keys are paths
+     relative to the working copy root and the values unspecified. */
   apr_hash_t *skipped_trees;
+
+  /* Absolute path of the working copy root or NULL if not initialized yet */
+  const char *wcroot_abspath;
 
   apr_pool_t *pool;
 };
@@ -241,11 +244,21 @@ struct edit_baton
  * LOCAL_ABSPATH.
  */
 static svn_error_t *
-remember_skipped_tree(struct edit_baton *eb, const char *local_abspath)
+remember_skipped_tree(struct edit_baton *eb,
+                      const char *local_abspath,
+                      apr_pool_t *scratch_pool)
 {
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  apr_hash_set(eb->skipped_trees,  apr_pstrdup(eb->pool, local_abspath),
+  if (eb->wcroot_abspath == NULL)
+    SVN_ERR(svn_wc__db_get_wcroot(&eb->wcroot_abspath,
+                                  eb->db, eb->anchor_abspath,
+                                  eb->pool, scratch_pool));
+
+  apr_hash_set(eb->skipped_trees,
+               apr_pstrdup(eb->pool,
+                           svn_dirent_skip_ancestor(eb->wcroot_abspath,
+                                                    local_abspath)),
                APR_HASH_KEY_STRING, (void*)1);
 
   return SVN_NO_ERROR;
@@ -1956,7 +1969,7 @@ do_entry_deletion(struct edit_baton *eb,
                                     local_abspath, pool));
   if (conflicted)
     {
-      SVN_ERR(remember_skipped_tree(eb, local_abspath));
+      SVN_ERR(remember_skipped_tree(eb, local_abspath, pool));
 
       /* ### TODO: Also print victim_path in the skip msg. */
       do_notification(eb, local_abspath, svn_node_unknown, svn_wc_notify_skip,
@@ -2010,7 +2023,7 @@ do_entry_deletion(struct edit_baton *eb,
                                               tree_conflict,
                                               pool));
 
-      SVN_ERR(remember_skipped_tree(eb, local_abspath));
+      SVN_ERR(remember_skipped_tree(eb, local_abspath, pool));
 
       do_notification(eb, local_abspath, svn_node_unknown,
                       svn_wc_notify_tree_conflict, pool);
@@ -2238,7 +2251,7 @@ add_directory(const char *path,
   if (conflicted)
     {
       /* Record this conflict so that its descendants are skipped silently. */
-      SVN_ERR(remember_skipped_tree(eb, db->local_abspath));
+      SVN_ERR(remember_skipped_tree(eb, db->local_abspath, pool));
 
       db->skip_this = TRUE;
       db->already_notified = TRUE;
@@ -2402,7 +2415,7 @@ add_directory(const char *path,
                                                   *eb->target_revision,
                                                   svn_wc__db_kind_dir,
                                                   NULL, NULL, pool));
-          SVN_ERR(remember_skipped_tree(eb, db->local_abspath));
+          SVN_ERR(remember_skipped_tree(eb, db->local_abspath, pool));
 
           /* Mark a conflict */
           SVN_ERR(create_tree_conflict(&tree_conflict, eb,
@@ -2422,7 +2435,7 @@ add_directory(const char *path,
       SVN_ERR(svn_wc__db_op_set_tree_conflict(eb->db, db->local_abspath,
                                               tree_conflict, pool));
 
-      SVN_ERR(remember_skipped_tree(eb, db->local_abspath));
+      SVN_ERR(remember_skipped_tree(eb, db->local_abspath, pool));
 
       db->skip_this = TRUE;
       db->already_notified = TRUE;
@@ -2530,7 +2543,7 @@ open_directory(const char *path,
                                     db->local_abspath, pool));
   if (conflicted)
     {
-      SVN_ERR(remember_skipped_tree(eb, db->local_abspath));
+      SVN_ERR(remember_skipped_tree(eb, db->local_abspath, pool));
 
       db->skip_this = TRUE;
       db->already_notified = TRUE;
@@ -2568,7 +2581,7 @@ open_directory(const char *path,
       if (tree_conflict->reason != svn_wc_conflict_reason_deleted &&
           tree_conflict->reason != svn_wc_conflict_reason_replaced)
         {
-          SVN_ERR(remember_skipped_tree(eb, db->local_abspath));
+          SVN_ERR(remember_skipped_tree(eb, db->local_abspath, pool));
           db->skip_this = TRUE;
 
           return SVN_NO_ERROR;
@@ -3126,7 +3139,7 @@ add_file(const char *path,
   /* Now the usual conflict handling: skip. */
   if (conflicted)
     {
-      SVN_ERR(remember_skipped_tree(eb, fb->local_abspath));
+      SVN_ERR(remember_skipped_tree(eb, fb->local_abspath, pool));
 
       fb->skip_this = TRUE;
       fb->already_notified = TRUE;
@@ -3265,7 +3278,7 @@ add_file(const char *path,
                                                   *eb->target_revision,
                                                   svn_wc__db_kind_file,
                                                   NULL, NULL, subpool));
-          SVN_ERR(remember_skipped_tree(eb, fb->local_abspath));
+          SVN_ERR(remember_skipped_tree(eb, fb->local_abspath, pool));
 
           /* Mark a conflict */
           SVN_ERR(create_tree_conflict(&tree_conflict, eb,
@@ -3346,7 +3359,7 @@ open_file(const char *path,
                                     fb->local_abspath, pool));
   if (conflicted)
     {
-      SVN_ERR(remember_skipped_tree(eb, fb->local_abspath));
+      SVN_ERR(remember_skipped_tree(eb, fb->local_abspath, pool));
 
       fb->skip_this = TRUE;
       fb->already_notified = TRUE;
@@ -3381,7 +3394,7 @@ open_file(const char *path,
           fb->deleted = TRUE;
         }
       else
-        SVN_ERR(remember_skipped_tree(eb, fb->local_abspath));
+        SVN_ERR(remember_skipped_tree(eb, fb->local_abspath, pool));
 
       if (!fb->deleted)
         fb->skip_this = TRUE;
