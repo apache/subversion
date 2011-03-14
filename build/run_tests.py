@@ -283,10 +283,7 @@ class TestHarness:
     'Run a c test, escaping parameters as required.'
     progdir, progbase = os.path.split(prog)
 
-    if not self.list_tests:
-      sys.stdout.write('.' * dot_count)
-      sys.stdout.flush()
-    elif self.milestone_filter:
+    if self.list_tests and self.milestone_filter:
       print 'WARNING: --milestone-filter option does not currently work with C tests'
 
     if os.access(progbase, os.X_OK):
@@ -317,7 +314,40 @@ class TestHarness:
       test_nums = test_nums.split(',')
       cmdline.extend(test_nums)
 
-    prog = subprocess.Popen(cmdline, stdout=self.log, stderr=self.log)
+    if test_nums:
+      total = len(test_nums)
+    else:
+      total_cmdline = [cmdline[0], '--list']
+      prog = subprocess.Popen(total_cmdline, stdout=subprocess.PIPE)
+      lines = prog.stdout.readlines()
+      total = len(lines) - 2
+
+    # This has to be class-scoped for use in the progress_func()
+    self.dots_written = 0
+    def progress_func(completed):
+      dots = (completed * dot_count) / total
+
+      dots_to_write = dots - self.dots_written
+      if self.log:
+        os.write(sys.stdout.fileno(), '.' * dots_to_write)
+
+      self.dots_written = dots
+
+    tests_completed = 0
+    prog = subprocess.Popen(cmdline, stdout=subprocess.PIPE,
+                            stderr=self.log)
+    line = prog.stdout.readline()
+    while line:
+      self.log.write(line)
+
+      if line.startswith('PASS') or line.startswith('FAIL') \
+           or line.startswith('XFAIL') or line.startswith('XPASS') \
+           or line.startswith('SKIP'):
+        tests_completed += 1
+        progress_func(tests_completed)
+
+      line = prog.stdout.readline()
+
     prog.wait()
     return prog.returncode
 
