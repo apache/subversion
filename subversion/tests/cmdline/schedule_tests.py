@@ -677,6 +677,44 @@ def propset_on_deleted_should_fail(sbox):
   svntest.actions.run_and_verify_svn(None, None, "svn: E155023: Can't set propert.*",
                                      'ps', 'prop', 'val', iota)
 
+@Issue(3468)
+def replace_dir_delete_child(sbox):
+  "replace a dir, then delete a child"
+  # The purpose of this test is to make sure that when a child of a
+  # replaced directory is deleted, the result can be committed.
+
+  sbox.build()
+
+  # Replace A/D/H with a copy of A/B
+  sbox.simple_rm('A/D/H')
+  sbox.simple_copy('A/B', 'A/D/H')
+
+  # Remove two children
+  sbox.simple_rm('A/D/H/lambda')
+  sbox.simple_rm('A/D/H/E')
+
+  # Don't look at what "svn status" says before commit.  It's not clear
+  # what it should be and that's not the point of this test.
+
+  # Commit.
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+    'A/D/H'         : Item(verb='Replacing'),
+    'A/D/H/lambda'  : Item(verb='Deleting'),
+    'A/D/H/E'       : Item(verb='Deleting'),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  expected_status.add({
+    'A/D/H/F' : Item(status='  ', wc_rev=0),
+    })
+  expected_status.tweak('A/D/H', 'A/D/H/F', wc_rev=2)
+  expected_status.remove('A/D/H/psi', 'A/D/H/omega', 'A/D/H/chi')
+
+  svntest.actions.run_and_verify_commit(sbox.wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, sbox.wc_dir)
+
 
 ########################################################################
 # Run the tests
@@ -699,6 +737,7 @@ test_list = [ None,
               delete_non_existent,
               delete_redelete_fudgery,
               propset_on_deleted_should_fail,
+              replace_dir_delete_child,
              ]
 
 if __name__ == '__main__':
