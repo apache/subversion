@@ -762,8 +762,9 @@ harvest_committables(apr_hash_t *committables,
       apr_pool_t *iterpool = svn_pool_create(scratch_pool);
       int i;
 
-      SVN_ERR(svn_wc__node_get_children2(&children, ctx->wc_ctx, local_abspath,
-                                         copy_mode, scratch_pool, iterpool));
+      SVN_ERR(svn_wc__node_get_children_of_working_node(
+                &children, ctx->wc_ctx, local_abspath, copy_mode,
+                scratch_pool, iterpool));
       for (i = 0; i < children->nelts; i++)
         {
           const char *this_abspath = APR_ARRAY_IDX(children, i, const char *);

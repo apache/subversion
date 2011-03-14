@@ -2683,8 +2683,8 @@ test_children_of_replaced_dir(const svn_test_opts_t *opts, apr_pool_t *pool)
                                    pool, pool));
   SVN_ERR(CHECK_ARRAY(children_array, all_children_inc_hidden, pool));
 
-  SVN_ERR(svn_wc__db_read_children2(&children_array, b.wc_ctx->db, A_abspath,
-                                    pool, pool));
+  SVN_ERR(svn_wc__db_read_children_of_working_node(
+            &children_array, b.wc_ctx->db, A_abspath, pool, pool));
   SVN_ERR(CHECK_ARRAY(children_array, working_children_inc_hidden, pool));
 
   SVN_ERR(svn_wc__node_get_children(&children_array, b.wc_ctx, A_abspath,
@@ -2696,12 +2696,14 @@ test_children_of_replaced_dir(const svn_test_opts_t *opts, apr_pool_t *pool)
    * child of a deleted-and-replaced dir (so should be included) and is also
    * a 'hidden' child of the working dir (so should be excluded). */
 
-  SVN_ERR(svn_wc__node_get_children2(&children_array, b.wc_ctx, A_abspath,
-                                     TRUE /* show_hidden */, pool, pool));
+  SVN_ERR(svn_wc__node_get_children_of_working_node(
+            &children_array, b.wc_ctx, A_abspath, TRUE /* show_hidden */,
+            pool, pool));
   SVN_ERR(CHECK_ARRAY(children_array, working_children_inc_hidden, pool));
 
-  SVN_ERR(svn_wc__node_get_children2(&children_array, b.wc_ctx, A_abspath,
-                                     FALSE /* show_hidden */, pool, pool));
+  SVN_ERR(svn_wc__node_get_children_of_working_node(
+            &children_array, b.wc_ctx, A_abspath, FALSE /* show_hidden */,
+            pool, pool));
   SVN_ERR(CHECK_ARRAY(children_array, working_children_exc_hidden, pool));
 
   SVN_ERR(svn_wc__db_read_children_info(&children_hash, &conflicts_hash,
