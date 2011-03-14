@@ -1144,6 +1144,11 @@ merge_binary_file(svn_skel_t **work_items,
       *merge_outcome = svn_wc_merge_merged;
       return SVN_NO_ERROR;
     }
+  else if (dry_run)
+    {
+      *merge_outcome = svn_wc_merge_conflict;
+      return SVN_NO_ERROR;
+    }
 
   /* Give the conflict resolution callback a chance to clean
      up the conflict before we mark the file 'conflicted' */
