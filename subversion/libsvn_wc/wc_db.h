@@ -1862,6 +1862,47 @@ svn_wc__db_global_update(svn_wc__db_t *db,
                          apr_pool_t *scratch_pool);
 
 
+/* Modify the entry of working copy LOCAL_ABSPATH, presumably after an update
+   of depth DEPTH completes.  If LOCAL_ABSPATH doesn't exist, this routine
+   does nothing.
+
+   Set the node's repository relpath, repository root, repository uuid and
+   revision to NEW_REPOS_RELPATH, NEW_REPOS_ROOT and NEW_REPOS_UUID.  If
+   NEW_REPOS_RELPATH is null, the repository location is untouched; if
+   NEW_REVISION in invalid, the working revision field is untouched.
+   The modifications are mutually exclusive.  If NEW_REPOS_ROOT is non-NULL,
+   set the repository root of the entry to NEW_REPOS_ROOT.
+
+   If LOCAL_ABSPATH is a directory, then, walk entries below LOCAL_ABSPATH
+   according to DEPTH thusly:
+
+   If DEPTH is svn_depth_infinity, perform the following actions on
+   every entry below PATH; if svn_depth_immediates, svn_depth_files,
+   or svn_depth_empty, perform them only on LOCAL_ABSPATH.
+
+   If NEW_REVISION is valid, then tweak every entry to have this new
+   working revision (excluding files that are scheduled for addition
+   or replacement).  Likewise, if BASE_URL is non-null, then rewrite
+   all urls to be "telescoping" children of the base_url.
+
+   EXCLUDE_PATHS is a hash containing const char *abspathnames.  Nodes
+   for pathnames contained in EXCLUDE_PATHS are not touched by this
+   function.  These pathnames should be absolute paths.
+*/
+svn_error_t *
+svn_wc__db_op_bump_revisions_post_update(svn_wc__db_t *db,
+                                         const char *local_abspath,
+                                         svn_depth_t depth,
+                                         const char *new_repos_relpath,
+                                         const char *new_repos_root_url,
+                                         const char *new_repos_uuid,
+                                         svn_revnum_t new_revision,
+                                         svn_wc_notify_func2_t notify_func,
+                                         void *notify_baton,
+                                         apr_hash_t *exclude_paths,
+                                         apr_pool_t *scratch_pool);
+
+
 /* Record the TRANSLATED_SIZE and LAST_MOD_TIME for a versioned node.
 
    This function will record the information within the WORKING node,
