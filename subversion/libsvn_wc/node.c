@@ -386,63 +386,8 @@ svn_wc__internal_node_get_url(const char **url,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool)
 {
-  svn_wc__db_status_t status;
-  const char *repos_relpath;
-  const char *repos_root_url;
-  svn_boolean_t have_base;
-
-  SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, &repos_relpath,
-                               &repos_root_url,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               &have_base, NULL, NULL, NULL,
-                               db, local_abspath,
-                               scratch_pool, scratch_pool));
-  if (repos_relpath == NULL)
-    {
-      if (status == svn_wc__db_status_added)
-        {
-          SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, &repos_relpath,
-                                           &repos_root_url, NULL, NULL, NULL,
-                                           NULL, NULL,
-                                           db, local_abspath,
-                                           scratch_pool, scratch_pool));
-        }
-      else if (have_base)
-        {
-          SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath, &repos_root_url,
-                                             NULL,
-                                             db, local_abspath,
-                                             scratch_pool, scratch_pool));
-        }
-      else if (status == svn_wc__db_status_absent
-               || status == svn_wc__db_status_excluded
-               || status == svn_wc__db_status_not_present
-               || (!have_base && (status == svn_wc__db_status_deleted)))
-        {
-          const char *parent_abspath;
-
-          /* Set 'repos_root_url' to the *full URL* of the parent WC dir,
-           * and 'repos_relpath' to the *single path component* that is the
-           * basename of this WC directory, so that joining them will result
-           * in the correct full URL. */
-          svn_dirent_split(&parent_abspath, &repos_relpath, local_abspath,
-                           scratch_pool);
-          SVN_ERR(svn_wc__internal_node_get_url(&repos_root_url, db,
-                                                parent_abspath,
-                                                scratch_pool, scratch_pool));
-        }
-      else
-        {
-          /* Status: obstructed, obstructed_add */
-          *url = NULL;
-          return SVN_NO_ERROR;
-        }
-    }
-
-  SVN_ERR_ASSERT(repos_root_url != NULL && repos_relpath != NULL);
-  *url = svn_path_url_add_component2(repos_root_url, repos_relpath,
-                                     result_pool);
+  SVN_ERR(svn_wc__db_read_url(url, db, local_abspath, result_pool,
+                              scratch_pool));
 
   return SVN_NO_ERROR;
 }

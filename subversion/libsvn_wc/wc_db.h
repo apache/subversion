@@ -1544,6 +1544,18 @@ svn_wc__db_read_children_walker_info(apr_hash_t **nodes,
                                      apr_pool_t *scratch_pool);
 
 
+/**
+ * Set *URL to the corresponding url for LOCAL_ABSPATH.
+ * If the node is added, return the url it will have in the repository.
+ */
+svn_error_t *
+svn_wc__db_read_url(const char **url,
+                    svn_wc__db_t *db,
+                    const char *local_abspath,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool);
+
+
 /* Set *PROPVAL to the value of the property named PROPNAME of the node
    LOCAL_ABSPATH in the ACTUAL tree (looking through to the WORKING or BASE
    tree as required).
