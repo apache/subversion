@@ -4489,8 +4489,6 @@ close_edit(void *edit_baton,
                                                        eb->repos_root,
                                                        eb->repos_uuid,
                                                        *(eb->target_revision),
-                                                       eb->notify_func,
-                                                       eb->notify_baton,
                                                        eb->skipped_trees,
                                                        eb->pool));
     }

@@ -1897,8 +1897,6 @@ svn_wc__db_op_bump_revisions_post_update(svn_wc__db_t *db,
                                          const char *new_repos_root_url,
                                          const char *new_repos_uuid,
                                          svn_revnum_t new_revision,
-                                         svn_wc_notify_func2_t notify_func,
-                                         void *notify_baton,
                                          apr_hash_t *exclude_paths,
                                          apr_pool_t *scratch_pool);
 

@@ -6366,8 +6366,6 @@ tweak_entries(svn_wc__db_t *db,
               const char *new_repos_root_url,
               const char *new_repos_uuid,
               svn_revnum_t new_rev,
-              svn_wc_notify_func2_t notify_func,
-              void *notify_baton,
               svn_depth_t depth,
               apr_hash_t *exclude_paths,
               apr_pool_t *pool)
@@ -6459,7 +6457,7 @@ tweak_entries(svn_wc__db_t *db,
 
           SVN_ERR(tweak_entries(db, child_abspath, child_repos_relpath,
                                 new_repos_root_url, new_repos_uuid,
-                                new_rev, notify_func, notify_baton,
+                                new_rev,
                                 depth_below_here,
                                 exclude_paths, iterpool));
         }
@@ -6480,8 +6478,6 @@ svn_wc__db_op_bump_revisions_post_update(svn_wc__db_t *db,
                                          const char *new_repos_root_url,
                                          const char *new_repos_uuid,
                                          svn_revnum_t new_revision,
-                                         svn_wc_notify_func2_t notify_func,
-                                         void *notify_baton,
                                          apr_hash_t *exclude_paths,
                                          apr_pool_t *scratch_pool)
 {
@@ -6529,7 +6525,6 @@ svn_wc__db_op_bump_revisions_post_update(svn_wc__db_t *db,
     {
       SVN_ERR(tweak_entries(db, local_abspath, new_repos_relpath,
                             new_repos_root_url, new_repos_uuid, new_revision,
-                            notify_func, notify_baton,
                             depth, exclude_paths,
                             scratch_pool));
     }
