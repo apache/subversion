@@ -5290,6 +5290,21 @@ read_url_txn(void *baton,
 }
 
 
+static svn_error_t *
+read_url(const char **url,
+         svn_wc__db_wcroot_t *wcroot,
+         const char *local_relpath,
+         apr_pool_t *result_pool,
+         apr_pool_t *scratch_pool)
+{
+  struct read_url_baton rub = { url, result_pool };
+  SVN_ERR(with_db_txn(wcroot, local_relpath, read_url_txn, &rub,
+                      scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_wc__db_read_url(const char **url,
                     svn_wc__db_t *db,
@@ -5299,7 +5314,6 @@ svn_wc__db_read_url(const char **url,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  struct read_url_baton rub = { url, result_pool };
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -5309,10 +5323,8 @@ svn_wc__db_read_url(const char **url,
                                                 scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  SVN_ERR(with_db_txn(wcroot, local_relpath, read_url_txn, &rub,
-                      scratch_pool));
-
-  return SVN_NO_ERROR;
+  return svn_error_return(read_url(url, wcroot, local_relpath, result_pool,
+                                   scratch_pool));
 }
 
 
@@ -9399,14 +9411,12 @@ svn_wc__db_is_sparse_checkout(svn_boolean_t *is_sparse_checkout,
 
 
 /* Like svn_wc__db_has_switched_subtrees(),
- * but accepts a WCROOT/LOCAL_RELPATH pair.
- * ### This needs a DB as well as a WCROOT/RELPATH pair... */
+ * but accepts a WCROOT/LOCAL_RELPATH pair. */
 static svn_error_t *
 has_switched_subtrees(svn_boolean_t *is_switched,
                       svn_wc__db_wcroot_t *wcroot,
                       const char *local_relpath,
                       const char *trail_url,
-                      svn_wc__db_t *db,
                       apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
@@ -9440,10 +9450,8 @@ has_switched_subtrees(svn_boolean_t *is_switched,
       /* If the trailing part of the URL of the working copy directory
          does not match the given trailing URL then the whole working
          copy is switched. */
-      SVN_ERR(svn_wc__db_read_url(&url, db, svn_dirent_join(wcroot->abspath,
-                                                            local_relpath,
-                                                            scratch_pool),
-                                  scratch_pool, scratch_pool));
+      SVN_ERR(read_url(&url, wcroot, local_relpath, scratch_pool,
+                       scratch_pool));
       if (! url)
         {
           *is_switched = TRUE;
@@ -9481,7 +9489,7 @@ svn_wc__db_has_switched_subtrees(svn_boolean_t *is_switched,
 
   return svn_error_return(has_switched_subtrees(is_switched, wcroot,
                                                 local_relpath, trail_url,
-                                                db, scratch_pool));
+                                                scratch_pool));
 }
 
 
@@ -9634,7 +9642,7 @@ svn_wc__db_revision_status(svn_revnum_t *min_revision,
 
   /* Check for switched nodes. */
   SVN_ERR(has_switched_subtrees(is_switched, wcroot, local_relpath,
-                                trail_url, db, scratch_pool));
+                                trail_url, scratch_pool));
 
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
