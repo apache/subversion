@@ -30,6 +30,7 @@
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_dirent_uri.h"
+#include "svn_path.h"
 #include "svn_hash.h"
 #include "svn_wc.h"
 #include "svn_checksum.h"
@@ -5207,6 +5208,109 @@ svn_wc__db_read_children_walker_info(apr_hash_t **nodes,
     }
 
   SVN_ERR(svn_sqlite__reset(stmt));
+
+  return SVN_NO_ERROR;
+}
+
+
+struct read_url_baton {
+  const char **url;
+  apr_pool_t *result_pool;
+};
+
+
+static svn_error_t *
+read_url_txn(void *baton,
+             svn_wc__db_wcroot_t *wcroot,
+             const char *local_relpath,
+             apr_pool_t *scratch_pool)
+{
+  struct read_url_baton *rub = baton;
+  svn_wc__db_status_t status;
+  const char *repos_relpath;
+  const char *repos_root_url;
+  apr_int64_t repos_id;
+  svn_boolean_t have_base;
+
+  SVN_ERR(read_info(&status, NULL, NULL, &repos_relpath, &repos_id, NULL,
+                    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                    NULL, NULL, NULL, &have_base, NULL, NULL, NULL,
+                    wcroot, local_relpath, scratch_pool, scratch_pool));
+
+  if (repos_relpath == NULL)
+    {
+      if (status == svn_wc__db_status_added)
+        {
+          SVN_ERR(scan_addition(NULL, NULL, &repos_relpath, &repos_id, NULL,
+                                NULL, NULL, wcroot, local_relpath,
+                                scratch_pool, scratch_pool));
+        }
+      else if (have_base)
+        {
+          SVN_ERR(scan_upwards_for_repos(&repos_id, &repos_relpath,
+                                         wcroot, local_relpath,
+                                         scratch_pool, scratch_pool));
+        }
+      else if (status == svn_wc__db_status_absent
+               || status == svn_wc__db_status_excluded
+               || status == svn_wc__db_status_not_present
+               || (!have_base && (status == svn_wc__db_status_deleted)))
+        {
+          const char *parent_relpath;
+          struct read_url_baton new_rub;
+          const char *url;
+
+          /* Set 'repos_root_url' to the *full URL* of the parent WC dir,
+           * and 'repos_relpath' to the *single path component* that is the
+           * basename of this WC directory, so that joining them will result
+           * in the correct full URL. */
+          svn_relpath_split(&parent_relpath, &repos_relpath, local_relpath,
+                            scratch_pool);
+          new_rub.result_pool = scratch_pool;
+          new_rub.url = &url;
+          SVN_ERR(read_url_txn(&new_rub, wcroot, parent_relpath,
+                               scratch_pool));
+        }
+      else
+        {
+          /* Status: obstructed, obstructed_add */
+          *rub->url = NULL;
+          return SVN_NO_ERROR;
+        }
+    }
+
+  SVN_ERR(fetch_repos_info(&repos_root_url, NULL, wcroot->sdb, repos_id,
+                           scratch_pool));
+
+  SVN_ERR_ASSERT(repos_root_url != NULL && repos_relpath != NULL);
+  *rub->url = svn_path_url_add_component2(repos_root_url, repos_relpath,
+                                          rub->result_pool);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__db_read_url(const char **url,
+                    svn_wc__db_t *db,
+                    const char *local_abspath,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+  struct read_url_baton rub = { url, result_pool };
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
+                                                local_abspath,
+                                                svn_sqlite__mode_readonly,
+                                                scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  SVN_ERR(with_db_txn(wcroot, local_relpath, read_url_txn, &rub,
+                      scratch_pool));
 
   return SVN_NO_ERROR;
 }
