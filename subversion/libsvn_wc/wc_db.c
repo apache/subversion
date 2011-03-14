@@ -9178,7 +9178,6 @@ svn_wc__db_temp_below_work(svn_boolean_t *have_work,
 static svn_error_t *
 get_min_max_revisions(svn_revnum_t *min_revision,
                       svn_revnum_t *max_revision,
-                      svn_wc__db_t *db,
                       svn_wc__db_wcroot_t *wcroot,
                       const char *local_relpath,
                       svn_boolean_t committed,
@@ -9240,7 +9239,7 @@ svn_wc__db_min_max_revisions(svn_revnum_t *min_revision,
   VERIFY_USABLE_WCROOT(wcroot);
 
   return svn_error_return(get_min_max_revisions(min_revision, max_revision,
-                                                db, wcroot, local_relpath,
+                                                wcroot, local_relpath,
                                                 committed, scratch_pool));
 }
 
@@ -9517,7 +9516,7 @@ svn_wc__db_revision_status(svn_revnum_t *min_revision,
   VERIFY_USABLE_WCROOT(wcroot);
 
   /* Determine mixed-revisionness. */
-  SVN_ERR(get_min_max_revisions(min_revision, max_revision, db, wcroot,
+  SVN_ERR(get_min_max_revisions(min_revision, max_revision, wcroot,
                                 local_relpath, committed, scratch_pool));
 
   if (cancel_func)
