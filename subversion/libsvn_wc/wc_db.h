@@ -1593,42 +1593,16 @@ svn_wc__db_read_props(apr_hash_t **props,
 
 /* Call RECEIVER_FUNC, passing RECEIVER_BATON, an absolute path, and
  * a hash table mapping <tt>char *</tt> names onto svn_string_t *
- * values for any properties of file child nodes of LOCAL_ABSPATH.
+ * values for any properties of child nodes of LOCAL_ABSPATH (up to DEPTH).
  * If PRISTINE is TRUE, read the pristine props (op_depth = 0).
+ *
+ * NOTE: The only valid values for DEPTH are svn_depth_files,
+ *       svn_depth_immediates, and svn_depth_infinity.
  */
 svn_error_t *
-svn_wc__db_read_props_of_files(svn_wc__db_t *db,
-                               const char *local_abspath,
-                               svn_boolean_t pristine,
-                               svn_wc__proplist_receiver_t receiver_func,
-                               void *receiver_baton,
-                               svn_cancel_func_t cancel_func,
-                               void *cancel_baton,
-                               apr_pool_t *scratch_pool);
-
-/* Call RECEIVER_FUNC, passing RECEIVER_BATON, an absolute path, and
- * a hash table mapping <tt>char *</tt> names onto svn_string_t *
- * values for any properties of immediate child nodes of LOCAL_ABSPATH.
- * If PRISTINE is TRUE, read the pristine props (op_depth = 0).
- */
-svn_error_t *
-svn_wc__db_read_props_of_immediates(svn_wc__db_t *db,
-                                    const char *local_abspath,
-                                    svn_boolean_t pristine,
-                                    svn_wc__proplist_receiver_t receiver_func,
-                                    void *receiver_baton,
-                                    svn_cancel_func_t cancel_func,
-                                    void *cancel_baton,
-                                    apr_pool_t *scratch_pool);
-
-/* Call RECEIVER_FUNC, passing RECEIVER_BATON, an absolute path, and
- * a hash table mapping <tt>char *</tt> names onto svn_string_t *
- * values for any properties of all (recursive) child nodes of LOCAL_ABSPATH.
- * If PRISTINE is TRUE, read the pristine props (op_depth = 0).
- */
-svn_error_t *
-svn_wc__db_read_props_recursive(svn_wc__db_t *db,
+svn_wc__db_read_props_streamily(svn_wc__db_t *db,
                                 const char *local_abspath,
+                                svn_depth_t depth,
                                 svn_boolean_t pristine,
                                 svn_wc__proplist_receiver_t receiver_func,
                                 void *receiver_baton,
