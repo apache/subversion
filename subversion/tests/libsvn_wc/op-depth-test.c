@@ -2559,6 +2559,160 @@ test_op_revert_changelist(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Check that the (const char *) keys of HASH are exactly the
+ * EXPECTED_NUM strings in EXPECTED_STRINGS.  Return an error if not. */
+static svn_error_t *
+check_hash_keys(apr_hash_t *hash,
+                int expected_num,
+                const char **expected_strings,
+                apr_pool_t *scratch_pool)
+{
+  svn_error_t *err = SVN_NO_ERROR;
+  int i;
+  apr_hash_index_t *hi;
+
+  for (i = 0; i < expected_num; i++)
+    {
+      const char *name = expected_strings[i];
+
+      if (apr_hash_get(hash, name, APR_HASH_KEY_STRING))
+        apr_hash_set(hash, name, APR_HASH_KEY_STRING, NULL);
+      else
+        err = svn_error_compose_create(
+                err, svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                       _("Expected, not found: '%s'"), name));
+    }
+  for (hi = apr_hash_first(scratch_pool, hash); hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *name = svn__apr_hash_index_key(hi);
+      err = svn_error_compose_create(
+              err, svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                     _("Found, not expected: '%s'"), name));
+    }
+  return err;
+}
+
+/* Check that the (const char *) keys of APR_HASH are exactly the
+ * strings in (const char *[]) C_ARRAY.  Return an error if not. */
+#define CHECK_HASH(apr_hash, c_array, scratch_pool) \
+  check_hash_keys(apr_hash, sizeof(c_array) / sizeof(c_array[0]), \
+                  c_array, scratch_pool)
+
+/* Check that the basenames of the (const char *) paths in ARRAY are exactly
+ * the EXPECTED_NUM strings in EXPECTED_STRINGS.  Return an error if not. */
+static svn_error_t *
+check_array_strings(const apr_array_header_t *array,
+                    int expected_num,
+                    const char **expected_strings,
+                    apr_pool_t *scratch_pool)
+{
+  int i;
+  apr_hash_t *hash = apr_hash_make(scratch_pool);
+
+  for (i = 0; i < array->nelts; i++)
+    {
+      const char *path = APR_ARRAY_IDX(array, i, const char *);
+
+      apr_hash_set(hash, svn_path_basename(path, scratch_pool),
+                   APR_HASH_KEY_STRING, "");
+    }
+
+  return check_hash_keys(hash, expected_num, expected_strings, scratch_pool);
+}
+
+/* Check that the basenames of the (const char *) paths in APR_ARRAY are
+ * exactly the strings in (const char *[]) C_ARRAY. Return an error if not. */
+#define CHECK_ARRAY(apr_array, c_array, scratch_pool) \
+  check_array_strings(apr_array, sizeof(c_array) / sizeof(c_array[0]), \
+                      c_array, scratch_pool)
+
+
+/* The purpose of this test is to check whether a child of a deleted-and-
+ * replaced directory is reported by various "list the children" APIs. */
+static svn_error_t *
+test_children_of_replaced_dir(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+  const apr_array_header_t *children_array;
+  apr_hash_t *children_hash, *conflicts_hash;
+  const char *A_abspath;
+  const char *working_children_exc_hidden[] = { "G", "H", "I", "J", "K", "L" };
+  const char *working_children_inc_hidden[] = { "G", "H", "I", "J", "K", "L" };
+  const char *all_children_inc_hidden[] = { "F", "G", "H", "I", "J", "K", "L" };
+
+  /*
+   * F - base only
+   * G - base, working (from copy of X; schedule-delete)
+   * H - base, working (from copy of X)
+   * I - working only (from copy of X)
+   * J - working only (schedule-add)
+   * K - working only (from copy of X; schedule-delete)
+   * L - base, working (not in copy; schedule-add)
+   */
+
+  SVN_ERR(svn_test__sandbox_create(&b, "children_of_replaced_dir", opts, pool));
+  A_abspath = svn_dirent_join(b.wc_abspath, "A", pool);
+
+  /* Set up the base state as revision 1. */
+  SVN_ERR(wc_mkdir(&b, "A"));
+  SVN_ERR(wc_mkdir(&b, "A/F"));
+  SVN_ERR(wc_mkdir(&b, "A/G"));
+  SVN_ERR(wc_mkdir(&b, "A/H"));
+  SVN_ERR(wc_mkdir(&b, "A/L"));
+  SVN_ERR(wc_mkdir(&b, "X"));
+  SVN_ERR(wc_mkdir(&b, "X/G"));
+  SVN_ERR(wc_mkdir(&b, "X/H"));
+  SVN_ERR(wc_mkdir(&b, "X/I"));
+  SVN_ERR(wc_mkdir(&b, "X/K"));
+  SVN_ERR(wc_commit(&b, ""));
+  SVN_ERR(wc_update(&b, "", 1));
+
+  /* Replace A with a copy of X. */
+  SVN_ERR(wc_delete(&b, "A"));
+  SVN_ERR(wc_copy(&b, "X", "A"));
+
+  /* Make other local mods. */
+  SVN_ERR(wc_delete(&b, "A/G"));
+  SVN_ERR(wc_mkdir(&b, "A/J"));
+  SVN_ERR(wc_mkdir(&b, "A/L"));
+
+  /* Test several variants of "list the children of 'A'". */
+
+  SVN_ERR(svn_wc__db_read_children(&children_array, b.wc_ctx->db, A_abspath,
+                                   pool, pool));
+  SVN_ERR(CHECK_ARRAY(children_array, all_children_inc_hidden, pool));
+
+  SVN_ERR(svn_wc__db_read_children2(&children_array, b.wc_ctx->db, A_abspath,
+                                    pool, pool));
+  SVN_ERR(CHECK_ARRAY(children_array, working_children_inc_hidden, pool));
+
+  SVN_ERR(svn_wc__node_get_children(&children_array, b.wc_ctx, A_abspath,
+                                    TRUE /* show_hidden */, pool, pool));
+  SVN_ERR(CHECK_ARRAY(children_array, all_children_inc_hidden, pool));
+
+  /* I am not testing svn_wc__node_get_children(show_hidden=FALSE) because
+   * I'm not sure what result we should expect if a certain child path is a
+   * child of a deleted-and-replaced dir (so should be included) and is also
+   * a 'hidden' child of the working dir (so should be excluded). */
+
+  SVN_ERR(svn_wc__node_get_children2(&children_array, b.wc_ctx, A_abspath,
+                                     TRUE /* show_hidden */, pool, pool));
+  SVN_ERR(CHECK_ARRAY(children_array, working_children_inc_hidden, pool));
+
+  SVN_ERR(svn_wc__node_get_children2(&children_array, b.wc_ctx, A_abspath,
+                                     FALSE /* show_hidden */, pool, pool));
+  SVN_ERR(CHECK_ARRAY(children_array, working_children_exc_hidden, pool));
+
+  SVN_ERR(svn_wc__db_read_children_info(&children_hash, &conflicts_hash,
+                                        b.wc_ctx->db, A_abspath, pool, pool));
+  SVN_ERR(CHECK_HASH(children_hash, all_children_inc_hidden, pool));
+
+  /* We don't yet have a svn_wc__db_read_children_info2() to test. */
+
+  return SVN_NO_ERROR;
+}
+
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
 
@@ -2599,5 +2753,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test_op_revert"),
     SVN_TEST_OPTS_PASS(test_op_revert_changelist,
                        "test_op_revert_changelist"),
+    SVN_TEST_OPTS_PASS(test_children_of_replaced_dir,
+                       "test_children_of_replaced_dir"),
     SVN_TEST_NULL
   };

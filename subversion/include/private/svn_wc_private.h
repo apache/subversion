@@ -195,9 +195,35 @@ svn_wc__status2_from_3(svn_wc_status2_t **status,
 
 
 /**
- * Fetch the absolute paths of all the working children of @a dir_abspath
- * into @a *children, allocated in @a result_pool.  Use @a wc_ctx to access
- * the working copy, and @a scratch_pool for all temporary allocations.
+ * Set @a *children to a new array of the immediate children of the working
+ * node at @a dir_abspath.  The elements of @a *children are (const char *)
+ * absolute paths.
+ *
+ * Include children that are scheduled for deletion.  Iff @a show_hidden
+ * is true, also include children that are 'excluded' or 'absent' or
+ * 'not-present'.
+ *
+ * Return every path that refers to a child of the working node at
+ * @a dir_abspath.  Do not include a path just because it was a child of a
+ * deleted directory that existed at @a dir_abspath if that directory is now
+ * sheduled to be replaced by the working node at @a dir_abspath.
+ *
+ * Allocate @a *children in @a result_pool.  Use @a wc_ctx to access the
+ * working copy, and @a scratch_pool for all temporary allocations.
+ */
+svn_error_t *
+svn_wc__node_get_children2(const apr_array_header_t **children,
+                           svn_wc_context_t *wc_ctx,
+                           const char *dir_abspath,
+                           svn_boolean_t show_hidden,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
+
+/**
+ * Like svn_wc__node_get_children2(), except also include any path that was
+ * a child of a deleted directory that existed at @a dir_abspath, even if
+ * that directory is now scheduled to be replaced by the working node at
+ * @a dir_abspath.
  */
 svn_error_t *
 svn_wc__node_get_children(const apr_array_header_t **children,

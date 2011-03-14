@@ -154,8 +154,24 @@ SELECT 1 FROM ACTUAL_NODE
 WHERE wc_id = ?1 AND parent_relpath = ?2;
 
 -- STMT_SELECT_NODE_CHILDREN
+/* Return all paths that are children of the directory (?1, ?2) in any
+   op-depth, including children of any underlying, replaced directories. */
 SELECT local_relpath FROM nodes
 WHERE wc_id = ?1 AND parent_relpath = ?2;
+
+-- STMT_SELECT_WORKING_CHILDREN
+/* Return all paths that are children of the working version of the
+   directory (?1, ?2).  A given path is not included just because it is a
+   child of an underlying (replaced) directory, it has to be in the
+   working version of the directory. */
+SELECT local_relpath FROM nodes_current
+WHERE wc_id = ?1 AND parent_relpath = ?2
+  AND (op_depth > (SELECT op_depth FROM nodes_current
+                   WHERE wc_id = ?1 AND local_relpath = ?2)
+       OR
+       (op_depth = (SELECT op_depth FROM nodes_current
+                    WHERE wc_id = ?1 AND local_relpath = ?2)
+        AND presence != 'base-deleted'));
 
 -- STMT_SELECT_BASE_PROPS
 SELECT properties FROM nodes

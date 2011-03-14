@@ -1037,6 +1037,31 @@ add_children_to_hash(apr_hash_t *children,
 }
 
 
+/* Set *CHILDREN to a new array of the (const char *) basenames of the
+   immediate children, whatever their status, of the working node at
+   LOCAL_RELPATH. */
+static svn_error_t *
+gather_children2(const apr_array_header_t **children,
+                 svn_wc__db_wcroot_t *wcroot,
+                 const char *local_relpath,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
+{
+  apr_hash_t *names_hash = apr_hash_make(scratch_pool);
+  apr_array_header_t *names_array;
+
+  /* All of the names get allocated in RESULT_POOL.  It
+     appears to be faster to use the hash to remove duplicates than to
+     use DISTINCT in the SQL query. */
+  SVN_ERR(add_children_to_hash(names_hash, STMT_SELECT_WORKING_CHILDREN,
+                               wcroot->sdb, wcroot->wc_id,
+                               local_relpath, result_pool));
+
+  SVN_ERR(svn_hash_keys(&names_array, names_hash, result_pool));
+  *children = names_array;
+  return SVN_NO_ERROR;
+}
+
 /* Return in *CHILDREN all of the children of the directory LOCAL_RELPATH,
    of any status, in all op-depths in the NODES table. */
 static svn_error_t *
@@ -1062,9 +1087,10 @@ gather_children(const apr_array_header_t **children,
 }
 
 
-/* Set *CHILDREN to a new array of (const char *) names of the repository
-   children of the directory WCROOT:LOCAL_RELPATH - that is, the children at
-   the same op-depth. */
+/* Set *CHILDREN to a new array of (const char *) names of the children of
+   the repository directory corresponding to the (working) path
+   WCROOT:LOCAL_RELPATH - that is, only the children that are at the same
+   op-depth as their parent. */
 static svn_error_t *
 gather_repo_children(const apr_array_header_t **children,
                      svn_wc__db_wcroot_t *wcroot,
@@ -5592,6 +5618,29 @@ svn_wc__db_read_pristine_props(apr_hash_t **props,
   SVN_ERR(db_read_pristine_props(props, wcroot, local_relpath,
                                  result_pool, scratch_pool));
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__db_read_children2(const apr_array_header_t **children,
+                         svn_wc__db_t *db,
+                         const char *local_abspath,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
+                                             local_abspath,
+                                             svn_sqlite__mode_readonly,
+                                             scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  return gather_children2(children, wcroot, local_relpath,
+                          result_pool, scratch_pool);
 }
 
 
