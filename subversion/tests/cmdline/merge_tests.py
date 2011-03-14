@@ -16580,7 +16580,6 @@ def merge_change_to_file_with_executable(sbox):
   if not os.access(beta_path, os.X_OK):
     raise svntest.Failure("beta is not marked as executable after commit")
 
-@XFail()
 def dry_run_merge_conflicting_binary(sbox):
   "dry run shouldn't make conflict resoln files"
 
