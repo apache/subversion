@@ -9613,6 +9613,61 @@ svn_wc__db_has_local_mods(svn_boolean_t *is_modified,
 }
 
 
+struct revision_status_baton
+{
+  svn_revnum_t *min_revision;
+  svn_revnum_t *max_revision;
+  svn_boolean_t *is_sparse_checkout;
+  svn_boolean_t *is_modified;
+  svn_boolean_t *is_switched;
+
+  const char *trail_url;
+  svn_boolean_t committed;
+  svn_cancel_func_t cancel_func;
+  void *cancel_baton;
+
+  /* We really shouldn't have to have one of these... */
+  svn_wc__db_t *db;
+};
+
+
+static svn_error_t *
+revision_status_txn(void *baton,
+                    svn_wc__db_wcroot_t *wcroot,
+                    const char *local_relpath,
+                    apr_pool_t *scratch_pool)
+{
+  struct revision_status_baton *rsb = baton;
+
+  /* Determine mixed-revisionness. */
+  SVN_ERR(get_min_max_revisions(rsb->min_revision, rsb->max_revision, wcroot,
+                                local_relpath, rsb->committed, scratch_pool));
+
+  if (rsb->cancel_func)
+    SVN_ERR(rsb->cancel_func(rsb->cancel_baton));
+
+  /* Determine sparseness. */
+  SVN_ERR(is_sparse_checkout_internal(rsb->is_sparse_checkout, wcroot,
+                                      local_relpath, scratch_pool));
+
+  if (rsb->cancel_func)
+    SVN_ERR(rsb->cancel_func(rsb->cancel_baton));
+
+  /* Check for switched nodes. */
+  SVN_ERR(has_switched_subtrees(rsb->is_switched, wcroot, local_relpath,
+                                rsb->trail_url, scratch_pool));
+
+  if (rsb->cancel_func)
+    SVN_ERR(rsb->cancel_func(rsb->cancel_baton));
+
+  /* Check for local mods. */
+  SVN_ERR(has_local_mods(rsb->is_modified, wcroot, local_relpath, rsb->db,
+                         rsb->cancel_func, rsb->cancel_baton, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_wc__db_revision_status(svn_revnum_t *min_revision,
                            svn_revnum_t *max_revision,
@@ -9629,6 +9684,9 @@ svn_wc__db_revision_status(svn_revnum_t *min_revision,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
+  struct revision_status_baton rsb = { min_revision, max_revision,
+        is_sparse_checkout, is_modified, is_switched, trail_url, committed,
+        cancel_func, cancel_baton, db };
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -9638,30 +9696,7 @@ svn_wc__db_revision_status(svn_revnum_t *min_revision,
                                                 scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  /* Determine mixed-revisionness. */
-  SVN_ERR(get_min_max_revisions(min_revision, max_revision, wcroot,
-                                local_relpath, committed, scratch_pool));
-
-  if (cancel_func)
-    SVN_ERR(cancel_func(cancel_baton));
-
-  /* Determine sparseness. */
-  SVN_ERR(is_sparse_checkout_internal(is_sparse_checkout, wcroot,
-                                      local_relpath, scratch_pool));
-
-  if (cancel_func)
-    SVN_ERR(cancel_func(cancel_baton));
-
-  /* Check for switched nodes. */
-  SVN_ERR(has_switched_subtrees(is_switched, wcroot, local_relpath,
-                                trail_url, scratch_pool));
-
-  if (cancel_func)
-    SVN_ERR(cancel_func(cancel_baton));
-
-  /* Check for local mods. */
-  SVN_ERR(has_local_mods(is_modified, wcroot, local_relpath, db,
-                         cancel_func, cancel_baton, scratch_pool));
-
-  return SVN_NO_ERROR;
+  return svn_error_return(with_db_txn(wcroot, local_relpath,
+                                      revision_status_txn, &rsb,
+                                      scratch_pool));
 }
