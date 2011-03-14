@@ -6259,6 +6259,87 @@ svn_wc__db_global_update(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+/* Baton for set_rev_relpath_txn */
+struct set_rev_relpath_baton
+{
+  svn_revnum_t rev;
+  svn_boolean_t set_repos_relpath;
+  const char *repos_relpath;
+  apr_int64_t repos_id;
+};
+
+
+/* Implements set_rev_relpath_txn for handling
+   svn_wc__db_temp_op_set_rev_and_repos_relpath() db operations. */
+static svn_error_t *
+set_rev_relpath_txn(void *baton,
+                    svn_wc__db_wcroot_t *wcroot,
+                    const char *local_relpath,
+                    apr_pool_t *scratch_pool)
+{
+  struct set_rev_relpath_baton *rrb = baton;
+  svn_sqlite__stmt_t *stmt;
+
+  if (SVN_IS_VALID_REVNUM(rrb->rev))
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_UPDATE_BASE_REVISION));
+
+      SVN_ERR(svn_sqlite__bindf(stmt, "isr", wcroot->wc_id, local_relpath,
+                                rrb->rev));
+
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
+
+  if (rrb->set_repos_relpath)
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_UPDATE_BASE_REPOS));
+
+      SVN_ERR(svn_sqlite__bindf(stmt, "isis", wcroot->wc_id, local_relpath,
+                                rrb->repos_id, rrb->repos_relpath));
+
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Sets a base nodes revision and/or repository relative path. If
+   LOCAL_ABSPATH's rev (REV) is valid, set is revision and if SET_REPOS_RELPATH
+   is TRUE set its repository relative path to REPOS_RELPATH (and make sure its
+   REPOS_ID is still valid).
+ */
+static svn_error_t *
+db_op_set_rev_and_repos_relpath(svn_wc__db_wcroot_t *wcroot,
+                                const char *local_relpath,
+                                svn_revnum_t rev,
+                                svn_boolean_t set_repos_relpath,
+                                const char *repos_relpath,
+                                apr_int64_t repos_id,
+                                apr_pool_t *scratch_pool)
+{
+  struct set_rev_relpath_baton baton;
+
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(rev) || set_repos_relpath);
+
+  baton.rev = rev;
+  baton.set_repos_relpath = set_repos_relpath;
+  baton.repos_relpath = repos_relpath;
+  baton.repos_id = repos_id;
+
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  SVN_ERR(flush_entries(NULL /* db */, wcroot, 
+                        svn_dirent_join(wcroot->abspath, local_relpath,
+                                        scratch_pool),
+                        scratch_pool));
+
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, set_rev_relpath_txn,
+                              &baton, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
 
 /* Helper for bump_revisions_post_update().
  *
@@ -6349,13 +6430,12 @@ tweak_node(svn_wc__db_wcroot_t *wcroot,
     new_rev = SVN_INVALID_REVNUM;
 
   if (SVN_IS_VALID_REVNUM(new_rev) || set_repos_relpath)
-    SVN_ERR(svn_wc__db_temp_op_set_rev_and_repos_relpath(db, local_abspath,
-                                                         new_rev,
-                                                         set_repos_relpath,
-                                                         new_repos_relpath,
-                                                         repos_root_url,
-                                                         repos_uuid,
-                                                         scratch_pool));
+    SVN_ERR(db_op_set_rev_and_repos_relpath(wcroot, local_relpath,
+                                            new_rev,
+                                            set_repos_relpath,
+                                            new_repos_relpath,
+                                            new_repos_id,
+                                            scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -6399,8 +6479,8 @@ tweak_entries(svn_wc__db_wcroot_t *wcroot,
   if (depth <= svn_depth_empty)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_wc__db_base_get_children(&children, db, dir_abspath,
-                                       pool, iterpool));
+  SVN_ERR(gather_repo_children(&children, wcroot, local_relpath, 0,
+                               pool, iterpool));
   for (i = 0; i < children->nelts; i++)
     {
       const char *child_basename = APR_ARRAY_IDX(children, i, const char *);
@@ -6408,6 +6488,7 @@ tweak_entries(svn_wc__db_wcroot_t *wcroot,
       const char *child_local_relpath;
       svn_wc__db_kind_t kind;
       svn_wc__db_status_t status;
+      const char *serialized;
 
       const char *child_repos_relpath = NULL;
       svn_boolean_t excluded, is_file_external;
@@ -6432,15 +6513,16 @@ tweak_entries(svn_wc__db_wcroot_t *wcroot,
       /* Skip stuff we've identified as file externals.  (If we're
          here, we were doing an update of a directory, not the actual
          switch handling of a file external itself.) */
-      SVN_ERR(svn_wc__internal_is_file_external(&is_file_external, db,
-                                                child_abspath, iterpool));
-      if (is_file_external)
+      SVN_ERR(svn_wc__db_temp_get_file_external(&serialized,
+                                                db, child_abspath,
+                                                iterpool, iterpool));
+      if (serialized)
         continue;
 
-      SVN_ERR(svn_wc__db_base_get_info(&status, &kind, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL,
-                                       db, child_abspath, iterpool, iterpool));
+      SVN_ERR(base_get_info(&status, &kind, NULL, NULL, NULL, NULL,
+                            NULL, NULL, NULL, NULL, NULL, NULL,
+                            NULL, NULL,
+                            wcroot, child_local_relpath, iterpool, iterpool));
 
       /* If a file, or not-present, absent or excluded, then tweak the node but
          don't recurse. */
@@ -9279,97 +9361,6 @@ svn_wc__db_temp_op_set_property_conflict_marker_file(svn_wc__db_t *db,
                                          prej_basename));
 
   return svn_error_return(svn_sqlite__step_done(stmt));
-}
-
-
-/* Baton for set_rev_relpath_txn */
-struct set_rev_relpath_baton
-{
-  svn_revnum_t rev;
-  svn_boolean_t set_repos_relpath;
-  const char *repos_relpath;
-  const char *repos_root_url;
-  const char *repos_uuid;
-};
-
-
-/* Implements svn_sqlite__transaction_callback_t for handling
-   svn_wc__db_temp_op_set_rev_and_repos_relpath() db operations. */
-static svn_error_t *
-set_rev_relpath_txn(void *baton,
-                    svn_wc__db_wcroot_t *wcroot,
-                    const char *local_relpath,
-                    apr_pool_t *scratch_pool)
-{
-  struct set_rev_relpath_baton *rrb = baton;
-  svn_sqlite__stmt_t *stmt;
-
-  if (SVN_IS_VALID_REVNUM(rrb->rev))
-    {
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_UPDATE_BASE_REVISION));
-
-      SVN_ERR(svn_sqlite__bindf(stmt, "isr", wcroot->wc_id, local_relpath,
-                                rrb->rev));
-
-      SVN_ERR(svn_sqlite__step_done(stmt));
-    }
-
-  if (rrb->set_repos_relpath)
-    {
-      apr_int64_t repos_id;
-      SVN_ERR(create_repos_id(&repos_id, rrb->repos_root_url, rrb->repos_uuid,
-                              wcroot->sdb, scratch_pool));
-
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_UPDATE_BASE_REPOS));
-
-      SVN_ERR(svn_sqlite__bindf(stmt, "isis", wcroot->wc_id, local_relpath,
-                                repos_id, rrb->repos_relpath));
-
-      SVN_ERR(svn_sqlite__step_done(stmt));
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc__db_temp_op_set_rev_and_repos_relpath(svn_wc__db_t *db,
-                                             const char *local_abspath,
-                                             svn_revnum_t rev,
-                                             svn_boolean_t set_repos_relpath,
-                                             const char *repos_relpath,
-                                             const char *repos_root_url,
-                                             const char *repos_uuid,
-                                             apr_pool_t *scratch_pool)
-{
-  svn_wc__db_wcroot_t *wcroot;
-  const char *local_relpath;
-  struct set_rev_relpath_baton baton;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(rev) || set_repos_relpath);
-
-  baton.rev = rev;
-  baton.set_repos_relpath = set_repos_relpath;
-  baton.repos_relpath = repos_relpath;
-  baton.repos_root_url = repos_root_url;
-  baton.repos_uuid = repos_uuid;
-
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
-                                                db, local_abspath,
-                                                svn_sqlite__mode_readwrite,
-                                                scratch_pool, scratch_pool));
-
-  VERIFY_USABLE_WCROOT(wcroot);
-
-  SVN_ERR(flush_entries(db, wcroot, local_abspath, scratch_pool));
-
-  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, set_rev_relpath_txn,
-                              &baton, scratch_pool));
-
-  return SVN_NO_ERROR;
 }
 
 
