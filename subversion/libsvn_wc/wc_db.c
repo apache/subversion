@@ -6481,6 +6481,8 @@ svn_wc__db_op_bump_revisions_post_update(svn_wc__db_t *db,
                                          apr_hash_t *exclude_paths,
                                          apr_pool_t *scratch_pool)
 {
+  const char *local_relpath;
+  svn_wc__db_wcroot_t *wcroot;
   svn_wc__db_status_t status;
   svn_wc__db_kind_t kind;
   svn_error_t *err;
@@ -6488,11 +6490,13 @@ svn_wc__db_op_bump_revisions_post_update(svn_wc__db_t *db,
   if (apr_hash_get(exclude_paths, local_abspath, APR_HASH_KEY_STRING))
     return SVN_NO_ERROR;
 
-  err = svn_wc__db_base_get_info(&status, &kind, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL,
-                                 db, local_abspath, scratch_pool,
-                                 scratch_pool);
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
+                              local_abspath, svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+
+  err = base_get_info(&status, &kind, NULL, NULL, NULL, NULL, NULL, NULL,
+                      NULL, NULL, NULL, NULL, NULL, NULL,
+                      wcroot, local_relpath, scratch_pool, scratch_pool);
   if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
     {
       svn_error_clear(err);
