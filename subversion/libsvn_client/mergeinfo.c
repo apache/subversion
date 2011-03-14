@@ -306,62 +306,6 @@ svn_client__get_wc_mergeinfo(svn_mergeinfo_t *mergeinfo,
   return SVN_NO_ERROR;
 }
 
-/* A baton for get_subtree_mergeinfo_walk_cb. */
-struct get_mergeinfo_catalog_walk_baton
-{
-  /* Absolute WC target and its path relative to repository root. */
-  const char *target_abspath;
-  const char *target_repos_root;
-
-  /* The mergeinfo catalog being built. */
-  svn_mergeinfo_catalog_t *mergeinfo_catalog;
-
-  svn_wc_context_t *wc_ctx;
-
-  /* Pool in which to allocate additions to MERGEINFO_CATALOG.*/
-  apr_pool_t *result_pool;
-};
-
-static svn_error_t *
-get_subtree_mergeinfo_walk_cb(const char *local_abspath,
-                              svn_node_kind_t kind,
-                              void *walk_baton,
-                              apr_pool_t *scratch_pool)
-{
-  struct get_mergeinfo_catalog_walk_baton *wb = walk_baton;
-  const svn_string_t *propval;
-
-  SVN_ERR(svn_wc_prop_get2(&propval, wb->wc_ctx, local_abspath,
-                           SVN_PROP_MERGEINFO, scratch_pool, scratch_pool));
-
-  /* We already have the target path's explicit/inherited mergeinfo, but do
-     add any subtree mergeinfo to the WB->MERGEINFO_CATALOG. */
-  if (propval && strcmp(local_abspath, wb->target_abspath) != 0)
-    {
-      const char *key_path;
-      svn_mergeinfo_t subtree_mergeinfo;
-
-      SVN_ERR(svn_client__path_relative_to_root(&key_path, wb->wc_ctx,
-                                                local_abspath,
-                                                wb->target_repos_root, FALSE,
-                                                NULL, wb->result_pool,
-                                                scratch_pool));
-      SVN_ERR(svn_mergeinfo_parse(&subtree_mergeinfo, propval->data,
-                                  wb->result_pool));
-
-      /* If the target had no explicit/inherited mergeinfo and this is the
-         first subtree with mergeinfo found, then the catalog will still be
-         NULL. */
-      if (!(*wb->mergeinfo_catalog))
-        *(wb->mergeinfo_catalog) = apr_hash_make(wb->result_pool);
-
-      apr_hash_set(*(wb->mergeinfo_catalog), key_path,
-                   APR_HASH_KEY_STRING, subtree_mergeinfo);
-    }
-
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *
 svn_client__get_wc_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
                                      svn_boolean_t *inherited,
@@ -376,7 +320,6 @@ svn_client__get_wc_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
 {
   const char *target_repos_rel_path;
   svn_mergeinfo_t mergeinfo;
-  struct get_mergeinfo_catalog_walk_baton wb;
   const char *repos_root;
   svn_node_kind_t kind;
 
@@ -423,15 +366,45 @@ svn_client__get_wc_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
                            scratch_pool));
   if (kind == svn_node_dir && include_descendants)
     {
-      wb.target_abspath = local_abspath;
-      wb.target_repos_root = repos_root;
-      wb.mergeinfo_catalog = mergeinfo_cat;
-      wb.wc_ctx = ctx->wc_ctx;
-      wb.result_pool = result_pool;
-      SVN_ERR(svn_wc__node_walk_children(ctx->wc_ctx, local_abspath, FALSE,
-                                         get_subtree_mergeinfo_walk_cb, &wb,
-                                         svn_depth_infinity, ctx->cancel_func,
-                                         ctx->cancel_baton, scratch_pool));
+      apr_hash_t *mergeinfo_props;
+      apr_hash_index_t *hi;
+      svn_opt_revision_t opt;
+      
+      opt.kind = svn_opt_revision_unspecified;
+
+      SVN_ERR(svn_client_propget3(&mergeinfo_props,
+                                  SVN_PROP_MERGEINFO,
+                                  local_abspath,
+                                  &opt, &opt,
+                                  NULL, svn_depth_infinity, NULL,
+                                  ctx, scratch_pool));
+
+      /* Convert *mergeinfo_props into a proper svn_mergeinfo_catalog_t */
+      for (hi = apr_hash_first(scratch_pool, mergeinfo_props);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+          const char *key_path = svn__apr_hash_index_key(hi);
+          svn_string_t *propval = svn__apr_hash_index_val(hi);
+          svn_mergeinfo_t subtree_mergeinfo;
+
+          SVN_ERR(svn_client__path_relative_to_root(&key_path, ctx->wc_ctx,
+                                                    key_path,
+                                                    repos_root, FALSE,
+                                                    NULL, result_pool,
+                                                    scratch_pool));
+          SVN_ERR(svn_mergeinfo_parse(&subtree_mergeinfo, propval->data,
+                                      result_pool));
+
+          /* If the target had no explicit/inherited mergeinfo and this is the
+             first subtree with mergeinfo found, then the catalog will still
+             be NULL. */
+          if (*mergeinfo_cat == NULL)
+            *mergeinfo_cat = apr_hash_make(result_pool);
+
+          apr_hash_set(*mergeinfo_cat, key_path,
+                       APR_HASH_KEY_STRING, subtree_mergeinfo);
+        }
     }
 
   return SVN_NO_ERROR;
