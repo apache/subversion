@@ -839,13 +839,13 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
                                    svn_mergeinfo_inherited, FALSE, iterpool));
       mergeinfo = apr_hash_get(catalog, path, APR_HASH_KEY_STRING);
 
-      /* Compare, constrast, and combine the results.  Use POOL to calculate
-         the diff because svn_mergeinfo_merge does not make deep copies of
-         the incoming mergeinfo changes. */
+      /* Compare, constrast, and combine the results. */
       SVN_ERR(svn_mergeinfo_diff(&deleted, &added, prev_mergeinfo,
-                                 mergeinfo, FALSE, pool));
-      SVN_ERR(svn_mergeinfo_merge(*deleted_mergeinfo, deleted, pool));
-      SVN_ERR(svn_mergeinfo_merge(*added_mergeinfo, added, pool));
+                                 mergeinfo, FALSE, iterpool));
+      SVN_ERR(svn_mergeinfo_merge(*deleted_mergeinfo,
+                                  svn_mergeinfo_dup(deleted, pool), pool));
+      SVN_ERR(svn_mergeinfo_merge(*added_mergeinfo,
+                                  svn_mergeinfo_dup(added, pool), pool));
      }
   svn_pool_destroy(iterpool);
 
@@ -871,8 +871,12 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
           if (! svn_dirent_is_ancestor(path, changed_path))
             continue;
           deleted = apr_hash_get(deleted_mergeinfo_catalog, key, klen);
-          SVN_ERR(svn_mergeinfo_merge(*deleted_mergeinfo, deleted, pool));
-          SVN_ERR(svn_mergeinfo_merge(*added_mergeinfo, added, pool));
+          SVN_ERR(svn_mergeinfo_merge(*deleted_mergeinfo,
+                                      svn_mergeinfo_dup(deleted, pool),
+                                      pool));
+          SVN_ERR(svn_mergeinfo_merge(*added_mergeinfo,
+                                      svn_mergeinfo_dup(added, pool),
+                                      pool));
 
           break;
         }
