@@ -6272,9 +6272,12 @@ svn_wc__db_global_update(svn_wc__db_t *db,
  * will not happen.
  */
 static svn_error_t *
-tweak_node(svn_wc__db_t *db,
+tweak_node(svn_wc__db_wcroot_t *wcroot,
+           const char *local_relpath,
+           svn_wc__db_t *db,
            const char *local_abspath,
            svn_wc__db_kind_t kind,
+           apr_int64_t new_repos_id,
            const char *new_repos_relpath,
            const char *new_repos_root_url,
            const char *new_repos_uuid,
@@ -6360,8 +6363,11 @@ tweak_node(svn_wc__db_t *db,
 
 /* The main body of bump_revisions_post_update. */
 static svn_error_t *
-tweak_entries(svn_wc__db_t *db,
+tweak_entries(svn_wc__db_wcroot_t *wcroot,
+              const char *local_relpath,
+              svn_wc__db_t *db,
               const char *dir_abspath,
+              apr_int64_t new_repos_id,
               const char *new_repos_relpath,
               const char *new_repos_root_url,
               const char *new_repos_uuid,
@@ -6381,7 +6387,8 @@ tweak_entries(svn_wc__db_t *db,
   iterpool = svn_pool_create(pool);
 
   /* Tweak "this_dir" */
-  SVN_ERR(tweak_node(db, dir_abspath, svn_wc__db_kind_dir,
+  SVN_ERR(tweak_node(wcroot, local_relpath, db, dir_abspath,
+                     svn_wc__db_kind_dir, new_repos_id,
                      new_repos_relpath, new_repos_root_url, new_repos_uuid,
                      new_rev, FALSE /* allow_removal */, iterpool));
 
@@ -6398,6 +6405,7 @@ tweak_entries(svn_wc__db_t *db,
     {
       const char *child_basename = APR_ARRAY_IDX(children, i, const char *);
       const char *child_abspath;
+      const char *child_local_relpath;
       svn_wc__db_kind_t kind;
       svn_wc__db_status_t status;
 
@@ -6411,6 +6419,8 @@ tweak_entries(svn_wc__db_t *db,
         child_repos_relpath = svn_relpath_join(new_repos_relpath,
                                                child_basename, iterpool);
 
+      child_local_relpath = svn_relpath_join(local_relpath, child_basename,
+                                             iterpool);
       child_abspath = svn_dirent_join(dir_abspath, child_basename, iterpool);
 
       /* Skip stuff we've already decided to exclude. */
@@ -6439,7 +6449,8 @@ tweak_entries(svn_wc__db_t *db,
             || status == svn_wc__db_status_absent
             || status == svn_wc__db_status_excluded)
         {
-          SVN_ERR(tweak_node(db, child_abspath, kind,
+          SVN_ERR(tweak_node(wcroot, child_local_relpath,
+                             db, child_abspath, kind, new_repos_id,
                              child_repos_relpath, new_repos_root_url,
                              new_repos_uuid, new_rev,
                              TRUE /* allow_removal */, iterpool));
@@ -6455,7 +6466,9 @@ tweak_entries(svn_wc__db_t *db,
           if (depth == svn_depth_immediates)
             depth_below_here = svn_depth_empty;
 
-          SVN_ERR(tweak_entries(db, child_abspath, child_repos_relpath,
+          SVN_ERR(tweak_entries(wcroot, child_local_relpath,
+                                db, child_abspath, new_repos_id,
+                                child_repos_relpath,
                                 new_repos_root_url, new_repos_uuid,
                                 new_rev,
                                 depth_below_here,
@@ -6486,6 +6499,7 @@ svn_wc__db_op_bump_revisions_post_update(svn_wc__db_t *db,
   svn_wc__db_status_t status;
   svn_wc__db_kind_t kind;
   svn_error_t *err;
+  apr_int64_t new_repos_id = -1;
 
   if (apr_hash_get(exclude_paths, local_abspath, APR_HASH_KEY_STRING))
     return SVN_NO_ERROR;
@@ -6517,17 +6531,23 @@ svn_wc__db_op_bump_revisions_post_update(svn_wc__db_t *db,
         break;
     }
 
+  if (new_repos_root_url != NULL)
+    SVN_ERR(create_repos_id(&new_repos_id, new_repos_root_url, new_repos_uuid,
+                            wcroot->sdb, scratch_pool));
+
   if (kind == svn_wc__db_kind_file || kind == svn_wc__db_kind_symlink)
     {
       /* Parent not updated so don't remove PATH entry.  */
-      SVN_ERR(tweak_node(db, local_abspath, kind,
+      SVN_ERR(tweak_node(wcroot, local_relpath,
+                         db, local_abspath, kind, new_repos_id,
                          new_repos_relpath, new_repos_root_url, new_repos_uuid,
                          new_revision, FALSE /* allow_removal */,
                          scratch_pool));
     }
   else if (kind == svn_wc__db_kind_dir)
     {
-      SVN_ERR(tweak_entries(db, local_abspath, new_repos_relpath,
+      SVN_ERR(tweak_entries(wcroot, local_relpath,
+                            db, local_abspath, new_repos_id, new_repos_relpath,
                             new_repos_root_url, new_repos_uuid, new_revision,
                             depth, exclude_paths,
                             scratch_pool));
