@@ -2479,21 +2479,6 @@ svn_wc__db_temp_op_set_property_conflict_marker_file(svn_wc__db_t *db,
                                                      const char *prej_basename,
                                                      apr_pool_t *scratch_pool);
 
-/* Sets a base nodes revision and/or repository relative path. If
-   LOCAL_ABSPATH's rev (REV) is valid, set is revision and if SET_REPOS_RELPATH
-   is TRUE set its repository relative path to REPOS_RELPATH (and make sure its
-   REPOS_ROOT_URL and REPOS_ROOT_UUID are still valid).
- */
-svn_error_t *
-svn_wc__db_temp_op_set_rev_and_repos_relpath(svn_wc__db_t *db,
-                                             const char *local_abspath,
-                                             svn_revnum_t rev,
-                                             svn_boolean_t set_repos_relpath,
-                                             const char *repos_relpath,
-                                             const char *repos_root_url,
-                                             const char *repos_uuid,
-                                             apr_pool_t *scratch_pool);
-
 /* Tweak a locally added existing directory LOCAL_ABSPATH to have a base
    node with incomplete status and revision REVISION instead. If
    REPOS_RELPATH is not NULL, apply REPOS_RELPATH, REPOS_ROOT_URL and
