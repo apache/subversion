@@ -4446,7 +4446,7 @@ close_file(void *file_baton,
   return SVN_NO_ERROR;
 }
 
-/* Helper for svn_wc__do_update_cleanup().
+/* Helper for bump_revisions_post_update().
  *
  * Tweak the information for LOCAL_ABSPATH in DB.  If NEW_REPOS_RELPATH is
  * non-NULL update the entry to the new url specified by NEW_REPOS_RELPATH,
@@ -4494,7 +4494,7 @@ tweak_node(svn_wc__db_t *db,
   SVN_ERR_ASSERT(db_kind == kind);
 
   /* As long as this function is only called as a helper to
-     svn_wc__do_update_cleanup, then it's okay to remove any entry
+     bump_revisions_post_update(), then it's okay to remove any node
      under certain circumstances:
 
      If the entry is still marked 'deleted', then the server did not
@@ -4544,7 +4544,7 @@ tweak_node(svn_wc__db_t *db,
 }
 
 
-/* The main body of svn_wc__do_update_cleanup. */
+/* The main body of bump_revisions_post_update. */
 static svn_error_t *
 tweak_entries(svn_wc__db_t *db,
               const char *dir_abspath,
@@ -4658,19 +4658,15 @@ tweak_entries(svn_wc__db_t *db,
 }
 
 /* Modify the entry of working copy LOCAL_ABSPATH, presumably after an update
-   completes.   If LOCAL_ABSPATH doesn't exist, this routine does nothing.
+   of depth DEPTH completes.  If LOCAL_ABSPATH doesn't exist, this routine
+   does nothing.
 
-   Set the entry's 'url' and 'working revision' fields to BASE_URL and
-   NEW_REVISION.  If BASE_URL is null, the url field is untouched; if
+   Set the node's repository relpath, repository root, repository uuid and
+   revision to NEW_REPOS_RELPATH, NEW_REPOS_ROOT and NEW_REPOS_UUID.  If
+   NEW_REPOS_RELPATH is null, the repository location is untouched; if
    NEW_REVISION in invalid, the working revision field is untouched.
-   The modifications are mutually exclusive.
-
-   If REPOS is non-NULL, set the repository root of the entry to REPOS, but
-   only if REPOS is an ancestor of the entries URL (after possibly modifying
-   it).  In addition to that requirement, if the LOCAL_ABSPATH refers to a
-   directory, the repository root is only set if REPOS is an ancestor of the
-   URLs all file entries which don't already have a repository root set.  This
-   prevents the entries file from being corrupted by this operation.
+   The modifications are mutually exclusive.  If NEW_REPOS_ROOT is non-NULL,
+   set the repository root of the entry to NEW_REPOS_ROOT.
 
    If LOCAL_ABSPATH is a directory, then, walk entries below LOCAL_ABSPATH
    according to DEPTH thusly:
@@ -4681,25 +4677,25 @@ tweak_entries(svn_wc__db_t *db,
 
    If NEW_REVISION is valid, then tweak every entry to have this new
    working revision (excluding files that are scheduled for addition
-   or replacement.)  Likewise, if BASE_URL is non-null, then rewrite
+   or replacement).  Likewise, if BASE_URL is non-null, then rewrite
    all urls to be "telescoping" children of the base_url.
 
-   EXCLUDE_PATHS is a hash containing const char * pathnames.  Entries
+   EXCLUDE_PATHS is a hash containing const char *abspathnames.  Nodes
    for pathnames contained in EXCLUDE_PATHS are not touched by this
    function.  These pathnames should be absolute paths.
 */
 static svn_error_t *
-do_update_cleanup(svn_wc__db_t *db,
-                          const char *local_abspath,
-                          svn_depth_t depth,
-                          const char *new_repos_relpath,
-                          const char *new_repos_root_url,
-                          const char *new_repos_uuid,
-                          svn_revnum_t new_revision,
-                          svn_wc_notify_func2_t notify_func,
-                          void *notify_baton,
-                          apr_hash_t *exclude_paths,
-                          apr_pool_t *pool)
+bump_revisions_post_update(svn_wc__db_t *db,
+                           const char *local_abspath,
+                           svn_depth_t depth,
+                           const char *new_repos_relpath,
+                           const char *new_repos_root_url,
+                           const char *new_repos_uuid,
+                           svn_revnum_t new_revision,
+                           svn_wc_notify_func2_t notify_func,
+                           void *notify_baton,
+                           apr_hash_t *exclude_paths,
+                           apr_pool_t *pool)
 {
   svn_wc__db_status_t status;
   svn_wc__db_kind_t kind;
@@ -4708,11 +4704,10 @@ do_update_cleanup(svn_wc__db_t *db,
   if (apr_hash_get(exclude_paths, local_abspath, APR_HASH_KEY_STRING))
     return SVN_NO_ERROR;
 
-  err = svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL,
-                             db, local_abspath, pool, pool);
+  err = svn_wc__db_base_get_info(&status, &kind, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL,
+                                 db, local_abspath, pool, pool);
   if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
     {
       svn_error_clear(err);
@@ -4790,17 +4785,17 @@ close_edit(void *edit_baton,
      will only remove the deleted entry!  */
   if (! eb->target_deleted)
     {
-      SVN_ERR(do_update_cleanup(eb->db,
-                                eb->target_abspath,
-                                eb->requested_depth,
-                                eb->switch_relpath,
-                                eb->repos_root,
-                                eb->repos_uuid,
-                                *(eb->target_revision),
-                                eb->notify_func,
-                                eb->notify_baton,
-                                eb->skipped_trees,
-                                eb->pool));
+      SVN_ERR(bump_revisions_post_update(eb->db,
+                                         eb->target_abspath,
+                                         eb->requested_depth,
+                                         eb->switch_relpath,
+                                         eb->repos_root,
+                                         eb->repos_uuid,
+                                         *(eb->target_revision),
+                                         eb->notify_func,
+                                         eb->notify_baton,
+                                         eb->skipped_trees,
+                                         eb->pool));
     }
 
   /* The edit is over, free its pool.
