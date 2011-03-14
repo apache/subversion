@@ -379,19 +379,6 @@ svn_wc__node_get_translated_size(svn_filesize_t *translated_size,
                                                scratch_pool, scratch_pool));
 }
 
-svn_error_t *
-svn_wc__internal_node_get_url(const char **url,
-                              svn_wc__db_t *db,
-                              const char *local_abspath,
-                              apr_pool_t *result_pool,
-                              apr_pool_t *scratch_pool)
-{
-  SVN_ERR(svn_wc__db_read_url(url, db, local_abspath, result_pool,
-                              scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
 
 svn_error_t *
 svn_wc__node_get_url(const char **url,
@@ -400,9 +387,8 @@ svn_wc__node_get_url(const char **url,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool)
 {
-  return svn_error_return(svn_wc__internal_node_get_url(
-                            url, wc_ctx->db, local_abspath,
-                            result_pool, scratch_pool));
+  return svn_error_return(svn_wc__db_read_url(url, wc_ctx->db, local_abspath,
+                                              result_pool, scratch_pool));
 }
 
 /* ### This is essentially a copy-paste of svn_wc__internal_get_url().

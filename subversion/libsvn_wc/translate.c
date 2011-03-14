@@ -324,8 +324,8 @@ svn_wc__expand_keywords(apr_hash_t **keywords,
                                db, local_abspath,
                                scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_wc__internal_node_get_url(&url, db, local_abspath,
-                                        scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_read_url(&url, db, local_abspath, scratch_pool,
+                              scratch_pool));
 
   SVN_ERR(svn_subst_build_keywords2(keywords,
                                     keyword_list,
