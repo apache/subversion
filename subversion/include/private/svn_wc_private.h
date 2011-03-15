@@ -44,11 +44,6 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/* ### Temporary.  Also defined in subversion/libsvn_wc/wc.h.  To build
- *     multi-DB mode, undefine this in both places. */
-#define SVN_WC__SINGLE_DB
-
-
 /** Given a @a local_abspath with a @a wc_ctx, set @a *switched to
  * TRUE if @a local_abspath is switched, otherwise set @a *switched to FALSE.
  * All temporary allocations are done in * @a scratch_pool.
