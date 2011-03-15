@@ -1368,9 +1368,9 @@ get_default_file_perms(apr_fileperms_t *perms, apr_pool_t *scratch_pool)
         Using svn_io_open_uniquely_named() here because other tempfile
         creation functions tweak the permission bits of files they create.
       */
-      SVN_ERR(svn_io_open_uniquely_named(&fd, NULL, NULL, "svn-tempfile", ".tmp",
-                                        svn_io_file_del_on_pool_cleanup,
-                                        scratch_pool, scratch_pool));
+      SVN_ERR(svn_io_open_uniquely_named(&fd, NULL, NULL, "default-perms", NULL,
+                                         svn_io_file_del_on_pool_cleanup,
+                                         scratch_pool, scratch_pool));
       SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_PROT, fd, scratch_pool));
       SVN_ERR(svn_io_file_close(fd, scratch_pool));
 
