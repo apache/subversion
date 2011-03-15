@@ -889,7 +889,7 @@ svn_wc__internal_is_replaced(svn_boolean_t *replaced,
                                      NULL, NULL, NULL,
                                      NULL, NULL, NULL,
                                      NULL, NULL, NULL,
-                                     NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL,
                                      db, local_abspath,
                                      scratch_pool, scratch_pool));
 
@@ -941,7 +941,7 @@ svn_wc__node_get_base_rev(svn_revnum_t *base_revision,
                                        NULL, NULL, NULL,
                                        NULL, NULL, NULL,
                                        NULL, NULL, NULL,
-                                       NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL,
                                        wc_ctx->db, local_abspath,
                                        scratch_pool, scratch_pool));
     }
@@ -997,7 +997,7 @@ svn_wc__node_get_working_rev_info(svn_revnum_t *revision,
                                            NULL, NULL, changed_rev,
                                            changed_date, changed_author,
                                            NULL, NULL, NULL, NULL, NULL,
-                                           NULL, wc_ctx->db,
+                                           NULL, NULL, wc_ctx->db,
                                            base_del_abspath, result_pool,
                                            scratch_pool));
         }
@@ -1008,7 +1008,7 @@ svn_wc__node_get_working_rev_info(svn_revnum_t *revision,
       svn_revnum_t base_rev;
       SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, &base_rev, NULL, NULL,
                                        NULL, changed_rev, changed_date,
-                                       changed_author, NULL, NULL, NULL,
+                                       changed_author, NULL, NULL, NULL, NULL,
                                        NULL, NULL, NULL, wc_ctx->db, local_abspath,
                                        result_pool, scratch_pool));
 
@@ -1120,7 +1120,7 @@ svn_wc__node_get_lock_info(const char **lock_token,
 
   err = svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 &lock,
+                                 &lock, NULL,
                                  wc_ctx->db, local_abspath,
                                  result_pool, scratch_pool);
 
@@ -1304,7 +1304,7 @@ svn_wc__internal_node_get_schedule(svn_wc_schedule_t *schedule,
               SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, NULL, NULL,
                                                NULL, NULL, NULL, NULL, NULL,
                                                NULL, NULL, NULL, NULL, NULL,
-                                               NULL,
+                                               NULL, NULL,
                                                db, local_abspath,
                                                scratch_pool, scratch_pool));
 

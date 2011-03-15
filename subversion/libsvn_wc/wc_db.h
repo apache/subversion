@@ -719,6 +719,9 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
    If TARGET is requested, and the node is NOT a symlink, then it will
    be set to NULL.
 
+   If UPDATE_ROOT is requested, set it to TRUE if the node should only
+   be updated when it is the root of an update (e.g. file externals).
+
    All returned data will be allocated in RESULT_POOL. All temporary
    allocations will be made in SCRATCH_POOL.
 */
@@ -738,6 +741,7 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
                          svn_filesize_t *translated_size,
                          const char **target,
                          svn_wc__db_lock_t **lock,
+                         svn_boolean_t *update_root,
                          svn_wc__db_t *db,
                          const char *local_abspath,
                          apr_pool_t *result_pool,

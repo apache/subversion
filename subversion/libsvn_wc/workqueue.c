@@ -324,7 +324,7 @@ verify_pristine_present(svn_wc__db_t *db,
 
   SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL,
-                                   &base_checksum, NULL, NULL, NULL,
+                                   &base_checksum, NULL, NULL, NULL, NULL,
                                    db, local_abspath,
                                    scratch_pool, scratch_pool));
   if (base_checksum != NULL)
@@ -515,7 +515,7 @@ remove_base_node(svn_wc__db_t *db,
   else
     SVN_ERR(svn_wc__db_base_get_info(&base_status, &base_kind, NULL, NULL,
                                      NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                     NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL, NULL,
                                      db, local_abspath,
                                      scratch_pool, scratch_pool));
 
@@ -605,7 +605,7 @@ run_base_remove(svn_wc__db_t *db,
       SVN_ERR(svn_wc__db_base_get_info(NULL, &kind, &revision, &repos_relpath,
                                        &repos_root_url, &repos_uuid, NULL,
                                        NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL,
+                                       NULL, NULL, NULL,
                                        db, local_abspath,
                                        scratch_pool, scratch_pool));
     }
@@ -697,7 +697,7 @@ run_deletion_postcommit(svn_wc__db_t *db,
          before deleting the file, */
       SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, &parent_revision, NULL,
                                        NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
                                        db, svn_dirent_dirname(local_abspath,
                                                               scratch_pool),
                                        scratch_pool, scratch_pool));
