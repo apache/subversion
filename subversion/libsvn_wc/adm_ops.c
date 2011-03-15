@@ -737,6 +737,8 @@ static svn_error_t *
 add_from_disk(svn_wc_context_t *wc_ctx,
               const char *local_abspath,
               svn_node_kind_t kind,
+              svn_wc_notify_func2_t notify_func,
+              void *notify_baton,
               apr_pool_t *scratch_pool)
 {
   svn_wc__db_t *db = wc_ctx->db;
@@ -749,6 +751,11 @@ add_from_disk(svn_wc_context_t *wc_ctx,
     {
       SVN_ERR(svn_wc__db_op_add_directory(db, local_abspath, NULL,
                                           scratch_pool));
+      /* Re-use the public API since it handles notifications. */
+      SVN_ERR(svn_wc_set_changelist2(wc_ctx, local_abspath, NULL,
+                                     NULL, NULL /* cancel_func and baton */,
+                                     notify_func, notify_baton,
+                                     scratch_pool));
     }
   return SVN_NO_ERROR;
 }
@@ -1081,7 +1088,9 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
 
   if (!copyfrom_url)  /* Case 2a: It's a simple add */
     {
-      SVN_ERR(add_from_disk(wc_ctx, local_abspath, kind, scratch_pool));
+      SVN_ERR(add_from_disk(wc_ctx, local_abspath, kind, 
+                            notify_func, notify_baton,
+                            scratch_pool));
       if (kind == svn_node_dir && !db_row_exists)
         {
           /* If using the legacy 1.6 interface the parent lock may not
@@ -1165,7 +1174,9 @@ svn_wc_add_from_disk(svn_wc_context_t *wc_ctx,
                              NULL, SVN_INVALID_REVNUM, scratch_pool));
   SVN_ERR(check_can_add_to_parent(NULL, NULL, wc_ctx, local_abspath,
                                   scratch_pool, scratch_pool));
-  SVN_ERR(add_from_disk(wc_ctx, local_abspath, kind, scratch_pool));
+  SVN_ERR(add_from_disk(wc_ctx, local_abspath, kind, 
+                        notify_func, notify_baton,
+                        scratch_pool));
 
   /* Report the addition to the caller. */
   if (notify_func != NULL)
@@ -2219,8 +2230,8 @@ svn_wc_set_changelist2(svn_wc_context_t *wc_ctx,
                                wc_ctx->db, local_abspath, scratch_pool,
                                scratch_pool));
 
-  /* We can't do changelists on directories. */
-  if (kind == svn_wc__db_kind_dir)
+  /* We can't add directories to changelists. */
+  if (kind == svn_wc__db_kind_dir && changelist)
     return svn_error_createf(SVN_ERR_CLIENT_IS_DIRECTORY, NULL,
                              _("'%s' is a directory, and thus cannot"
                                " be a member of a changelist"), local_abspath);
