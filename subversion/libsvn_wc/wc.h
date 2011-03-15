@@ -395,6 +395,22 @@ svn_wc__internal_text_modified_p(svn_boolean_t *modified_p,
                                  apr_pool_t *scratch_pool);
 
 
+/* Like svn_wc__internal_text_modified_p but also sets *EXECUTABLE_P
+ * and *READ_ONLY_P based on the files current permissions.
+ *
+ * EXECUTABLE_P and READ_ONLY_P can be NULL.
+ */
+svn_error_t *
+svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
+                                 svn_boolean_t *executable_p,
+                                 svn_boolean_t *read_only_p,
+                                 svn_wc__db_t *db,
+                                 const char *local_abspath,
+                                 svn_boolean_t force_comparison,
+                                 svn_boolean_t compare_textbases,
+                                 apr_pool_t *scratch_pool);
+
+
 
 /* Merge the difference between LEFT_ABSPATH and RIGHT_ABSPATH into
    TARGET_ABSPATH, return the appropriate work queue operations in
