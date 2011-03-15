@@ -103,9 +103,10 @@ def clname_from_lastchar_cb(full_path):
 
 
 # Regular expressions for 'svn changelist' output.
+_re_cl_rem_pattern = "^D \[(.*)\] (.*)"
 _re_cl_skip = re.compile("Skipped '(.*)'")
 _re_cl_add  = re.compile("^A \[(.*)\] (.*)")
-_re_cl_rem  = re.compile("^D \[(.*)\] (.*)")
+_re_cl_rem  = re.compile(_re_cl_rem_pattern)
 
 def verify_changelist_output(output, expected_adds=None,
                              expected_removals=None,
@@ -1150,8 +1151,7 @@ def change_to_dir(sbox):
   svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
 
   # A/mu removed from changelist after replace with directory
-  # TODO: stdout should have an 'rm-from-changelist' notification
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, '^A|' + _re_cl_rem_pattern, [],
                                      'mkdir', sbox.ospath('A/mu'))
   expected_infos = [{'Changelist' : None}] # No Name for directories?
   svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
