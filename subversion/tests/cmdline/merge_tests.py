@@ -16581,7 +16581,7 @@ def merge_change_to_file_with_executable(sbox):
     raise svntest.Failure("beta is not marked as executable after commit")
 
 def dry_run_merge_conflicting_binary(sbox):
-  "dry run shouldn't make conflict resoln files"
+  "dry run shouldn't resolve conflicts"
 
   # This test-case is to showcase the regression caused by
   # r1075802. Here is the link to the relevant discussion:
