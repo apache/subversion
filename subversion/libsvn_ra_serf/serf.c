@@ -142,7 +142,7 @@ load_config(svn_ra_serf__session_t *session,
   const char *port_str = NULL;
   const char *timeout_str = NULL;
   const char *exceptions;
-  unsigned int proxy_port;
+  apr_port_t proxy_port;
   svn_boolean_t is_exception = FALSE;
 
   if (config_hash)
@@ -285,7 +285,7 @@ load_config(svn_ra_serf__session_t *session,
         return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, NULL,
                                 _("Invalid URL: proxy port number greater "
                                   "than maximum TCP port number 65535"));
-      proxy_port = port;
+      proxy_port = (apr_port_t) port;
     }
   else
     proxy_port = 80;
