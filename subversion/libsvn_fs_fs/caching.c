@@ -65,6 +65,7 @@ warn_on_cache_errors(svn_error_t *err,
   return SVN_NO_ERROR;
 }
 
+#ifdef DEBUG_CACHE_DUMP_STATS
 /* Baton to be used for the dump_cache_statistics() pool cleanup function, */
 struct dump_cache_baton_t
 {
@@ -106,6 +107,7 @@ dump_cache_statistics(void *baton_void)
 
   return result;
 }
+#endif /* DEBUG_CACHE_DUMP_STATS */
 
 static svn_error_t *
 init_callbacks(svn_cache__t *cache,
