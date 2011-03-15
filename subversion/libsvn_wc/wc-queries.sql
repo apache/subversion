@@ -48,15 +48,15 @@ ORDER BY op_depth DESC;
 -- STMT_SELECT_BASE_NODE
 SELECT repos_id, repos_path, presence, kind, revision, checksum,
   translated_size, changed_revision, changed_date, changed_author, depth,
-  symlink_target, last_mod_time, properties
+  symlink_target, last_mod_time, properties, file_external IS NOT NULL
 FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
 
 -- STMT_SELECT_BASE_NODE_WITH_LOCK
 SELECT nodes.repos_id, nodes.repos_path, presence, kind, revision,
   checksum, translated_size, changed_revision, changed_date, changed_author,
-  depth, symlink_target, last_mod_time, properties, lock_token, lock_owner,
-  lock_comment, lock_date
+  depth, symlink_target, last_mod_time, properties, file_external IS NOT NULL,
+  lock_token, lock_owner, lock_comment, lock_date
 FROM nodes
 LEFT OUTER JOIN lock ON nodes.repos_id = lock.repos_id
   AND nodes.repos_path = lock.repos_relpath
