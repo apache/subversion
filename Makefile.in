@@ -500,7 +500,7 @@ svncheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@
 
 # 'make svnserveautocheck' runs svnserve for you and kills it.
 svnserveautocheck: svnserve bin $(TEST_DEPS) @BDB_TEST_DEPS@
-	env THREADED=$(THREADED) \
+	@env THREADED=$(THREADED) \
 	  bash $(top_srcdir)/subversion/tests/cmdline/svnserveautocheck.sh
 
 # First, run:
