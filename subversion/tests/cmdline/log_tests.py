@@ -1143,8 +1143,10 @@ Log message for revision 3.
 def check_merge_results(log_chain, expected_merges=None,
                         expected_reverse_merges=None):
   '''Check LOG_CHAIN to see if the log information contains 'Merged via'
-  information indicated by EXPECTED_MERGES.  EXPECTED_MERGES is a dictionary
-  whose key is the merged revision, and whose value is the merging revision.'''
+  and/or 'Reverse Merged via' information indicated by EXPECTED_MERGES and
+  EXPECTED_REVERSE_MERGES respectively. EXPECTED_MERGES and
+  EXPECTED_REVERSE_MERGES are dictionaries whose keys are the merged
+  revisions, and whose values are the merging revisions.'''
 
   # Check to see if the number and values of the revisions is correct
   for log in log_chain:
