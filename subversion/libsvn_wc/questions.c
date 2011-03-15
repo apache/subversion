@@ -47,6 +47,7 @@
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_io_private.h"
 
 
 
@@ -249,14 +250,36 @@ svn_wc__internal_text_modified_p(svn_boolean_t *modified_p,
                                  svn_boolean_t compare_textbases,
                                  apr_pool_t *scratch_pool)
 {
+  SVN_ERR(svn_wc__internal_file_modified_p(modified_p, NULL, NULL,
+                                           db, local_abspath,
+                                           force_comparison, compare_textbases,
+                                           scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
+                                 svn_boolean_t *executable_p,
+                                 svn_boolean_t *read_only_p,
+                                 svn_wc__db_t *db,
+                                 const char *local_abspath,
+                                 svn_boolean_t force_comparison,
+                                 svn_boolean_t compare_textbases,
+                                 apr_pool_t *scratch_pool)
+{
   svn_stream_t *pristine_stream;
   svn_error_t *err;
   apr_finfo_t finfo;
+  apr_int32_t wanted
+    = APR_FINFO_SIZE | APR_FINFO_MTIME | APR_FINFO_TYPE | APR_FINFO_LINK;
+
+  if (executable_p)
+    wanted |= APR_FINFO_PROT | APR_FINFO_OWNER;
+  if (read_only_p)
+    wanted |= APR_FINFO_PROT;
 
   /* No matter which way you look at it, the file needs to exist. */
-  err = svn_io_stat(&finfo, local_abspath,
-                    APR_FINFO_SIZE | APR_FINFO_MTIME | APR_FINFO_TYPE
-                    | APR_FINFO_LINK, scratch_pool);
+  err = svn_io_stat(&finfo, local_abspath, wanted, scratch_pool);
   if ((err && APR_STATUS_IS_ENOENT(err->apr_err))
       || (!err && !(finfo.filetype == APR_REG ||
                     finfo.filetype == APR_LNK)))
@@ -269,6 +292,11 @@ svn_wc__internal_text_modified_p(svn_boolean_t *modified_p,
     }
   else if (err)
     return err;
+
+  if (executable_p)
+    SVN_ERR(svn_io__is_finfo_executable(executable_p, &finfo, scratch_pool));
+  if (read_only_p)
+    SVN_ERR(svn_io__is_finfo_read_only(read_only_p, &finfo, scratch_pool));
 
   if (! force_comparison)
     {

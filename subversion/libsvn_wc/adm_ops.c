@@ -1398,9 +1398,11 @@ new_revert_internal(svn_wc__db_t *db,
         }
       else if (on_disk == svn_node_file)
         {
-          svn_boolean_t modified;
+          svn_boolean_t modified, executable, read_only;
 
-          SVN_ERR(svn_wc__internal_text_modified_p(&modified, db, local_abspath,
+          SVN_ERR(svn_wc__internal_file_modified_p(&modified, &executable,
+                                                   &read_only,
+                                                   db, local_abspath,
                                                    FALSE, FALSE, scratch_pool));
           if (modified)
             {
@@ -1409,27 +1411,38 @@ new_revert_internal(svn_wc__db_t *db,
             }
           else
             {
-              /* ### Need to reset read-only, executable.  Old revert
-                     used the change in the magic properties to do
-                     this, but we don't have the old values.
-
-                 ### Perhaps use temporary SQLite table to store old
-                     properies, conflicts and local_relpaths?  Might
-                     also help with notification for recursive case.
-
-                 ### Need to set notification if changing
-                     attributes. */
               apr_hash_t *props;
 
               SVN_ERR(svn_wc__db_read_pristine_props(&props, db, local_abspath,
                                                      scratch_pool,
                                                      scratch_pool));
-              if (apr_hash_get(props, SVN_PROP_NEEDS_LOCK, APR_HASH_KEY_STRING))
-                SVN_ERR(svn_io_set_file_read_only(local_abspath, FALSE,
-                                                  scratch_pool));
-              if (apr_hash_get(props, SVN_PROP_EXECUTABLE, APR_HASH_KEY_STRING))
-                SVN_ERR(svn_io_set_file_executable(local_abspath, TRUE, FALSE,
-                                                   scratch_pool));
+              if (apr_hash_get(props, SVN_PROP_NEEDS_LOCK, APR_HASH_KEY_STRING)
+                  && !read_only)
+                {
+                  SVN_ERR(svn_io_set_file_read_only(local_abspath,
+                                                    FALSE, scratch_pool));
+                  notify_required = TRUE;
+                }
+              else if (read_only)
+                {
+                  SVN_ERR(svn_io_set_file_read_write(local_abspath,
+                                                     FALSE, scratch_pool));
+                  notify_required = TRUE;
+                }
+
+              if (apr_hash_get(props, SVN_PROP_EXECUTABLE, APR_HASH_KEY_STRING)
+                  && !executable)
+                {
+                  SVN_ERR(svn_io_set_file_executable(local_abspath, TRUE,
+                                                     FALSE, scratch_pool));
+                  notify_required = TRUE;
+                }
+              else if (executable)
+                {
+                  SVN_ERR(svn_io_set_file_executable(local_abspath, FALSE,
+                                                     FALSE, scratch_pool));
+                  notify_required = TRUE;
+                }
             }
         }
     }

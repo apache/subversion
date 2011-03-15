@@ -64,6 +64,7 @@
 #include "svn_ctype.h"
 
 #include "private/svn_atomic.h"
+#include "private/svn_io_private.h"
 
 #define SVN_SLEEP_ENV_VAR "SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_SLEEP_FOR_TIMESTAMPS"
 
@@ -1761,36 +1762,84 @@ svn_io_set_file_executable(const char *path,
 
 
 svn_error_t *
-svn_io_is_file_executable(svn_boolean_t *executable,
-                          const char *path,
-                          apr_pool_t *pool)
+svn_io__is_finfo_read_only(svn_boolean_t *read_only,
+                           apr_finfo_t *file_info,
+                           apr_pool_t *pool)
 {
 #if defined(APR_HAS_USER) && !defined(WIN32) &&!defined(__OS2__)
-  apr_finfo_t file_info;
+  apr_status_t apr_err;
+  apr_uid_t uid;
+  apr_gid_t gid;
+
+  *read_only = FALSE;
+
+  apr_err = apr_uid_current(&uid, &gid, pool);
+
+  if (apr_err)
+    return svn_error_wrap_apr(apr_err, _("Error getting UID of process"));
+
+  /* Check write bit for current user. */
+  if (apr_uid_compare(uid, file_info->user) == APR_SUCCESS)
+    *read_only = !(file_info->protection & APR_UWRITE);
+
+  else if (apr_gid_compare(gid, file_info->group) == APR_SUCCESS)
+    *read_only = !(file_info->protection & APR_GWRITE);
+  
+  else
+    *read_only = !(file_info->protection & APR_WWRITE);
+
+#else  /* WIN32 || __OS2__ || !APR_HAS_USER */
+  *read_only = !(file_info->protection & APR_UWRITE);
+#endif
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_io__is_finfo_executable(svn_boolean_t *executable,
+                            apr_finfo_t *file_info,
+                            apr_pool_t *pool)
+{
+#if defined(APR_HAS_USER) && !defined(WIN32) &&!defined(__OS2__)
   apr_status_t apr_err;
   apr_uid_t uid;
   apr_gid_t gid;
 
   *executable = FALSE;
 
-  /* Get file and user info. */
-  SVN_ERR(svn_io_stat(&file_info, path,
-                      (APR_FINFO_PROT | APR_FINFO_OWNER),
-                      pool));
   apr_err = apr_uid_current(&uid, &gid, pool);
 
   if (apr_err)
     return svn_error_wrap_apr(apr_err, _("Error getting UID of process"));
 
   /* Check executable bit for current user. */
-  if (apr_uid_compare(uid, file_info.user) == APR_SUCCESS)
-    *executable = (file_info.protection & APR_UEXECUTE);
+  if (apr_uid_compare(uid, file_info->user) == APR_SUCCESS)
+    *executable = (file_info->protection & APR_UEXECUTE);
 
-  else if (apr_gid_compare(gid, file_info.group) == APR_SUCCESS)
-    *executable = (file_info.protection & APR_GEXECUTE);
+  else if (apr_gid_compare(gid, file_info->group) == APR_SUCCESS)
+    *executable = (file_info->protection & APR_GEXECUTE);
 
   else
-    *executable = (file_info.protection & APR_WEXECUTE);
+    *executable = (file_info->protection & APR_WEXECUTE);
+
+#else  /* WIN32 || __OS2__ || !APR_HAS_USER */
+  *executable = FALSE;
+#endif
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_io_is_file_executable(svn_boolean_t *executable,
+                          const char *path,
+                          apr_pool_t *pool)
+{
+#if defined(APR_HAS_USER) && !defined(WIN32) &&!defined(__OS2__)
+  apr_finfo_t file_info;
+
+  SVN_ERR(svn_io_stat(&file_info, path, APR_FINFO_PROT | APR_FINFO_OWNER,
+                      pool));
+  SVN_ERR(svn_io__is_finfo_executable(executable, &file_info, pool));
 
 #else  /* WIN32 || __OS2__ || !APR_HAS_USER */
   *executable = FALSE;

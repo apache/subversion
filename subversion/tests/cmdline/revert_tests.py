@@ -25,7 +25,7 @@
 ######################################################################
 
 # General modules
-import re, os
+import re, os, stat
 
 # Our testing module
 import svntest
@@ -1087,6 +1087,97 @@ def revert_non_recusive_after_delete(sbox):
   expected_status.tweak('A/B/E', status='  ')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+@XFail()
+def revert_permissions_only(sbox):
+  "permission-only reverts"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Helpers pinched/adapted from lock_tests.py.  Put them somewhere common?
+  def check_writability(path, writable):
+    bits = stat.S_IWGRP | stat.S_IWOTH | stat.S_IWRITE
+    mode = os.stat(path)[0]
+    if bool(mode & bits) != writable:
+      raise svntest.Failure("path '%s' is unexpectedly %s (mode %o)"
+                            % (path, ["writable", "read-only"][writable], mode))
+
+  def is_writable(path):
+    "Raise if PATH is not writable."
+    check_writability(path, True)
+
+  def is_readonly(path):
+    "Raise if PATH is not readonly."
+    check_writability(path, False)
+
+  def check_executability(path, executable):
+    bits = stat.S_IXGRP | stat.S_IXOTH | stat.S_IEXEC
+    mode = os.stat(path)[0]
+    if bool(mode & bits) != executable:
+      raise svntest.Failure("path '%s' is unexpectedly %s (mode %o)"
+                            % (path,
+                               ["executable", "non-executable"][executable],
+                               mode))
+
+  def is_executable(path):
+    "Raise if PATH is not executable."
+    check_executability(path, True)
+
+  def is_non_executable(path):
+    "Raise if PATH is executable."
+    check_executability(path, False)
+
+
+  os.chmod(sbox.ospath('A/B/E/alpha'), 0444);  # read-only
+  is_readonly(sbox.ospath('A/B/E/alpha'))
+  expected_output = ["Reverted '%s'\n" % sbox.ospath('A/B/E/alpha')]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'revert', sbox.ospath('A/B/E/alpha'))
+  is_writable(sbox.ospath('A/B/E/alpha'))
+
+  if svntest.main.is_posix_os:
+    os.chmod(sbox.ospath('A/B/E/beta'), 0777);   # executable
+    is_executable(sbox.ospath('A/B/E/beta'))
+    expected_output = ["Reverted '%s'\n" % sbox.ospath('A/B/E/beta')]
+    svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                       'revert', sbox.ospath('A/B/E/beta'))
+    is_non_executable(sbox.ospath('A/B/E/beta'))
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'svn:needs-lock', '1',
+                                     sbox.ospath('A/B/E/alpha'))
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'svn:executable', '1',
+                                     sbox.ospath('A/B/E/beta'))
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E/alpha': Item(verb='Sending'),
+    'A/B/E/beta':  Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/B/E/alpha', wc_rev='2')
+  expected_status.tweak('A/B/E/beta',  wc_rev='2')
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, wc_dir)
+
+  os.chmod(sbox.ospath('A/B/E/alpha'), 0666);  # not read-only
+  is_writable(sbox.ospath('A/B/E/alpha'))
+  expected_output = ["Reverted '%s'\n" % sbox.ospath('A/B/E/alpha')]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'revert', sbox.ospath('A/B/E/alpha'))
+  is_readonly(sbox.ospath('A/B/E/alpha'))
+
+  if svntest.main.is_posix_os:
+    os.chmod(sbox.ospath('A/B/E/beta'), 0666);   # not executable
+    is_non_executable(sbox.ospath('A/B/E/beta'))
+    expected_output = ["Reverted '%s'\n" % sbox.ospath('A/B/E/beta')]
+    svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                       'revert', sbox.ospath('A/B/E/beta'))
+    is_executable(sbox.ospath('A/B/E/beta'))
+
+
 ########################################################################
 # Run the tests
 
@@ -1116,6 +1207,7 @@ test_list = [ None,
               revert_added_tree,
               revert_child_of_copy,
               revert_non_recusive_after_delete,
+              revert_permissions_only,
              ]
 
 if __name__ == '__main__':
