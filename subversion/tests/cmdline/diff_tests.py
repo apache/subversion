@@ -3761,7 +3761,6 @@ def diff_git_with_props_on_dir(sbox):
                                      '-c2', '--git')
   os.chdir(was_cwd)
 
-@XFail()
 @Issue(3826)
 def diff_abs_localpath_from_wc_folder(sbox):
   "diff absolute localpath from wc folder"
