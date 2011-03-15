@@ -1757,10 +1757,7 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
 
 
 /* Like svn_wc__db_base_get_info(), but taking WCROOT+LOCAL_RELPATH instead of
-   DB+LOCAL_ABSPATH and outputting REPOS_ID instead of URL+UUID.  
-
-   If UPDATE_ROOT is not null, set *UPDATE_ROOT to TRUE if the node should only
-   be updated when it is the root of an update (E.G. file externals) */
+   DB+LOCAL_ABSPATH and outputting REPOS_ID instead of URL+UUID. */
 static svn_error_t *
 base_get_info(svn_wc__db_status_t *status,
               svn_wc__db_kind_t *kind,
@@ -1909,6 +1906,7 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
                          svn_filesize_t *translated_size,
                          const char **target,
                          svn_wc__db_lock_t **lock,
+                         svn_boolean_t *update_root,
                          svn_wc__db_t *db,
                          const char *local_abspath,
                          apr_pool_t *result_pool,
@@ -1928,7 +1926,7 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
   SVN_ERR(base_get_info(status, kind, revision, repos_relpath, &repos_id,
                         changed_rev, changed_date, changed_author,
                         last_mod_time, depth, checksum, translated_size,
-                        target, lock, NULL,
+                        target, lock, update_root,
                         wcroot, local_relpath, result_pool, scratch_pool));
   SVN_ERR_ASSERT(repos_id != INVALID_REPOS_ID);
   SVN_ERR(fetch_repos_info(repos_root_url, repos_uuid,

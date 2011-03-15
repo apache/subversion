@@ -748,7 +748,7 @@ complete_directory(struct edit_baton *eb,
          have to worry about removing it.  */
       err = svn_wc__db_base_get_info(&status, NULL, NULL, NULL, NULL, NULL,
                                      NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                     NULL, NULL,
+                                     NULL, NULL, NULL,
                                      eb->db, eb->target_abspath, pool, pool);
       if (err)
         {
@@ -789,6 +789,7 @@ complete_directory(struct edit_baton *eb,
                                        NULL, NULL, NULL,
                                        NULL, NULL, NULL,
                                        NULL, &depth, NULL, NULL, NULL, NULL,
+                                       NULL,
                                        eb->db, local_abspath,
                                        iterpool, iterpool));
 
@@ -827,7 +828,7 @@ complete_directory(struct edit_baton *eb,
       node_abspath = svn_dirent_join(local_abspath, name, iterpool);
 
       SVN_ERR(svn_wc__db_base_get_info(&status, &kind, &revnum,
-                                       NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL,
                                        NULL, NULL, NULL,
                                        NULL, NULL, NULL, NULL, NULL, NULL,
                                        eb->db, node_abspath,
@@ -1264,9 +1265,10 @@ open_root(void *edit_baton,
       svn_wc__db_status_t status;
 
       /* Read the depth from the entry. */
-      SVN_ERR(svn_wc__db_base_get_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, &depth, NULL, NULL, NULL,
-                                   NULL, eb->db, db->local_abspath, pool, pool));
+      SVN_ERR(svn_wc__db_base_get_info(&status, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, &depth, NULL, NULL,
+                                   NULL, NULL, NULL,
+                                   eb->db, db->local_abspath, pool, pool));
       db->ambient_depth = depth;
       db->was_incomplete = (status == svn_wc__db_status_incomplete);
 
@@ -1506,7 +1508,7 @@ create_tree_conflict(svn_wc_conflict_description2_t **pconflict,
                                        &left_repos_relpath,
                                        &repos_root_url,
                                        NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL,
                                        eb->db,
                                        local_abspath,
                                        result_pool,
@@ -1667,7 +1669,7 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
             SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, NULL,
                                              NULL, NULL, NULL, NULL, NULL,
                                              NULL, NULL, NULL, NULL, NULL,
-                                             NULL, NULL,
+                                             NULL, NULL, NULL,
                                              eb->db, local_abspath,
                                              pool,
                                              pool));
@@ -2532,7 +2534,7 @@ open_directory(const char *path,
     SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, &db->old_revision,
                                      NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                      &db->ambient_depth, NULL, NULL, NULL,
-                                     NULL,
+                                     NULL, NULL,
                                      eb->db, db->local_abspath, pool, pool));
 
   db->was_incomplete = (base_status == svn_wc__db_status_incomplete);
@@ -2843,6 +2845,7 @@ close_directory(void *dir_baton,
                                        &changed_date,
                                        &changed_author,
                                        NULL, &depth, NULL, NULL, NULL, NULL,
+                                       NULL,
                                        eb->db, db->local_abspath,
                                        pool, pool));
 
@@ -3732,7 +3735,7 @@ merge_file(svn_skel_t **work_items,
 
       SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, &revision, NULL, NULL,
                                        NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL,
                                        db, fb->local_abspath,
                                        scratch_pool, scratch_pool));
 
@@ -4333,7 +4336,7 @@ close_file(void *file_baton,
                                          NULL, NULL, NULL,
                                          NULL, NULL, NULL,
                                          NULL, NULL,
-                                         &new_checksum, NULL, NULL, NULL,
+                                         &new_checksum, NULL, NULL, NULL, NULL,
                                          eb->db, fb->local_abspath,
                                          pool, pool));
       }

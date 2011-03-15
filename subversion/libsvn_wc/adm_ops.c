@@ -640,7 +640,7 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
           svn_wc__db_status_t base_status;
           SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, NULL, NULL,
                                            NULL, NULL, NULL, NULL, NULL, NULL,
-                                           NULL, NULL, NULL, NULL, NULL,
+                                           NULL, NULL, NULL, NULL, NULL, NULL,
                                            db, local_abspath, pool, pool));
 
           if (base_status == svn_wc__db_status_not_present)
@@ -1549,7 +1549,7 @@ revert_internal(svn_wc__db_t *db,
   if (! unversioned && have_base)
     SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, NULL,
                                      NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                     NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL, NULL, NULL,
                                      db, local_abspath, pool, pool));
 
   replaced = ! unversioned && (status == svn_wc__db_status_added
@@ -1940,7 +1940,7 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
       err = svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL,
                                      NULL, NULL, NULL, NULL, NULL,
                                      &base_sha1_checksum,
-                                     NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL,
                                      db, local_abspath,
                                      scratch_pool, scratch_pool);
       if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)

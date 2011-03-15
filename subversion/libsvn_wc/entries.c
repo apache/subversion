@@ -227,6 +227,7 @@ get_base_info_for_deleted(svn_wc_entry_t *entry,
                                  &entry->working_size,
                                  NULL,
                                  NULL,
+                                 NULL,
                                  db,
                                  entry_abspath,
                                  result_pool,
@@ -382,6 +383,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
   const char *original_root_url;
   svn_boolean_t conflicted;
   svn_boolean_t have_base;
+  svn_boolean_t update_root = FALSE;
 
   entry->name = name;
 
@@ -579,6 +581,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
                                            NULL, NULL, NULL,
                                            NULL, NULL, NULL,
                                            NULL, NULL, NULL,
+                                           &update_root,
                                            db, entry_abspath,
                                            scratch_pool,
                                            scratch_pool));
@@ -926,7 +929,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
   /* Let's check for a file external.
      ### right now this is ugly, since we have no good way querying
      ### for a file external OR retrieving properties.  ugh.  */
-  if (entry->kind == svn_node_file)
+  if (update_root && entry->kind == svn_node_file)
     SVN_ERR(check_file_external(entry, db, entry_abspath, result_pool,
                                 scratch_pool));
 
