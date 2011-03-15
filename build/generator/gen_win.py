@@ -935,6 +935,10 @@ class WinGeneratorBase(GeneratorBase):
             or isinstance(target, gen_base.TargetSWIGLib)):
       if self.swig_vernum >= 103028:
         fakeincludes.append(self.apath(self.swig_libdir, target.lang))
+        if target.lang == 'perl':
+          # At least swigwin 1.3.38+ uses perl5 as directory name. Just add it
+          # to the list to make sure we don't break old versions
+          fakeincludes.append(self.apath(self.swig_libdir, 'perl5'))
       else:
         fakeincludes.append(self.swig_libdir)
       if target.lang == "python":
