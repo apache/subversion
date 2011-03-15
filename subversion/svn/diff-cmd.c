@@ -325,13 +325,19 @@ svn_cl__diff(apr_getopt_t *os,
                                      _("Path '%s' not relative to base URLs"),
                                      path);
 
-          path = svn_relpath_canonicalize(path, iterpool);
           if (svn_path_is_url(old_target))
-            target1 = svn_path_url_add_component2(old_target, path, iterpool);
+            target1 = svn_path_url_add_component2(
+                          old_target,
+                          svn_relpath_canonicalize(path, iterpool),
+                          iterpool);
           else
             target1 = svn_dirent_join(old_target, path, iterpool);
+
           if (svn_path_is_url(new_target))
-            target2 = svn_path_url_add_component2(new_target, path, iterpool);
+            target2 = svn_path_url_add_component2(
+                          new_target,
+                          svn_relpath_canonicalize(path, iterpool),
+                          iterpool);
           else
             target2 = svn_dirent_join(new_target, path, iterpool);
 
