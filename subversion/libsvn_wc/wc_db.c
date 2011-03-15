@@ -1757,7 +1757,10 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
 
 
 /* Like svn_wc__db_base_get_info(), but taking WCROOT+LOCAL_RELPATH instead of
-   DB+LOCAL_ABSPATH and outputting REPOS_ID instead of URL+UUID.  */
+   DB+LOCAL_ABSPATH and outputting REPOS_ID instead of URL+UUID.  
+
+   If UPDATE_ROOT is not null, set *UPDATE_ROOT to TRUE if the node should only
+   be updated when it is the root of an update (E.G. file externals) */
 static svn_error_t *
 base_get_info(svn_wc__db_status_t *status,
               svn_wc__db_kind_t *kind,
@@ -1773,6 +1776,7 @@ base_get_info(svn_wc__db_status_t *status,
               svn_filesize_t *translated_size,
               const char **target,
               svn_wc__db_lock_t **lock,
+              svn_boolean_t *update_root,
               svn_wc__db_wcroot_t *wcroot,
               const char *local_relpath,
               apr_pool_t *result_pool,
@@ -1807,7 +1811,7 @@ base_get_info(svn_wc__db_status_t *status,
       SVN_ERR_ASSERT(!repos_relpath || *repos_relpath);
       if (lock)
         {
-          *lock = lock_from_columns(stmt, 14, 15, 16, 17, result_pool);
+          *lock = lock_from_columns(stmt, 15, 16, 17, 18, result_pool);
         }
       if (changed_rev)
         {
@@ -1871,6 +1875,10 @@ base_get_info(svn_wc__db_status_t *status,
           else
             *target = svn_sqlite__column_text(stmt, 11, result_pool);
         }
+      if (update_root)
+        {
+          *update_root = svn_sqlite__column_boolean(stmt, 14);
+        }
     }
   else
     {
@@ -1920,7 +1928,7 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
   SVN_ERR(base_get_info(status, kind, revision, repos_relpath, &repos_id,
                         changed_rev, changed_date, changed_author,
                         last_mod_time, depth, checksum, translated_size,
-                        target, lock,
+                        target, lock, NULL,
                         wcroot, local_relpath, result_pool, scratch_pool));
   SVN_ERR_ASSERT(repos_id != INVALID_REPOS_ID);
   SVN_ERR(fetch_repos_info(repos_root_url, repos_uuid,
@@ -2321,7 +2329,7 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
           SVN_ERR(base_get_info(NULL, NULL, copyfrom_rev, copyfrom_relpath,
                                 copyfrom_id,
                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                NULL, NULL,
+                                NULL, NULL, NULL,
                                 wcroot, base_del_relpath,
                                 result_pool, scratch_pool));
         }
@@ -6335,7 +6343,7 @@ bump_node(svn_wc__db_wcroot_t *wcroot,
 
   SVN_ERR(base_get_info(&status, &db_kind, &revision, &repos_relpath,
                         &repos_id, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                        NULL, NULL, 
+                        NULL, NULL, NULL,
                         wcroot, local_relpath,
                         scratch_pool, scratch_pool));
 
@@ -6424,7 +6432,7 @@ bump_nodes(svn_wc__db_wcroot_t *wcroot,
       const char *child_local_relpath;
       svn_wc__db_kind_t kind;
       svn_wc__db_status_t status;
-      const char *serialized;
+      svn_boolean_t is_file_external;
 
       const char *child_repos_relpath = NULL;
       svn_boolean_t excluded;
@@ -6447,8 +6455,11 @@ bump_nodes(svn_wc__db_wcroot_t *wcroot,
 
       SVN_ERR(base_get_info(&status, &kind, NULL, NULL, NULL, NULL,
                             NULL, NULL, NULL, NULL, NULL, NULL,
-                            NULL, NULL,
+                            NULL, NULL, &is_file_external,
                             wcroot, child_local_relpath, iterpool, iterpool));
+
+      if (is_file_external)
+        continue;
 
       /* If a file, or not-present, absent or excluded, then tweak the node but
          don't recurse. */
@@ -6457,19 +6468,6 @@ bump_nodes(svn_wc__db_wcroot_t *wcroot,
             || status == svn_wc__db_status_absent
             || status == svn_wc__db_status_excluded)
         {
-          const char *child_abspath;
-          child_abspath = svn_dirent_join(wcroot->abspath, child_local_relpath, 
-                                          iterpool);
-
-          /* Skip stuff we've identified as file externals.  (If we're
-             here, we were doing an update of a directory, not the actual
-             switch handling of a file external itself.) */
-          SVN_ERR(svn_wc__db_temp_get_file_external(&serialized,
-                                                    db, child_abspath,
-                                                    iterpool, iterpool));
-          if (serialized)
-            continue;
-
           SVN_ERR(bump_node(wcroot, child_local_relpath, kind, new_repos_id,
                             child_repos_relpath, new_rev, FALSE /* is_root */,
                             iterpool));
@@ -6521,7 +6519,7 @@ bump_revisions_post_commit(void *baton,
   apr_int64_t new_repos_id = -1;
 
   err = base_get_info(&status, &kind, NULL, NULL, NULL, NULL, NULL, NULL,
-                      NULL, NULL, NULL, NULL, NULL, NULL,
+                      NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                       wcroot, local_relpath, scratch_pool, scratch_pool);
   if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
     {
@@ -8777,7 +8775,7 @@ svn_wc__db_temp_op_set_base_incomplete(svn_wc__db_t *db,
   VERIFY_USABLE_WCROOT(wcroot);
 
   SVN_ERR(base_get_info(&base_status, NULL, NULL, NULL, NULL, NULL,
-                        NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                        NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                         wcroot, local_relpath, scratch_pool, scratch_pool));
 
   SVN_ERR_ASSERT(base_status == svn_wc__db_status_normal ||
