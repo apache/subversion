@@ -1129,11 +1129,11 @@ def move_added_keeps_changelist(sbox):
   ]
   svntest.actions.run_and_verify_info(expected_infos, kappa2_path)
 
-@Issue(3820)  ### Extend to cover a merge that replaces a file with a dir
+@Issue(3820)
 def change_to_dir(sbox):
   "change file in changelist to dir"
 
-  sbox.build(read_only = True)
+  sbox.build()
 
   # No changelist initially
   expected_infos = [{'Name' : 'mu', 'Changelist' : None}]
@@ -1150,9 +1150,23 @@ def change_to_dir(sbox):
   svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
 
   # A/mu removed from changelist after replace with directory
+  # TODO: stdout should have an 'rm-from-changelist' notification
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'mkdir', sbox.ospath('A/mu'))
   expected_infos = [{'Changelist' : None}] # No Name for directories?
+  svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
+
+  svntest.main.run_svn(None, "commit", "-m", "r2: replace A/mu: file->dir",
+                       sbox.ospath('A'))
+  svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
+
+  svntest.main.run_svn(None, "update", "-r", "1", sbox.ospath('A'))
+  expected_infos = [{'Name' : 'mu', 'Changelist' : None}]
+  svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
+
+  expected_infos = [{'Changelist' : None}] # No Name for directories?
+  svntest.main.run_svn(None, "merge", "-c", "2", sbox.ospath('A'),
+                       sbox.ospath('A'))
   svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('A/mu'))
 
 
