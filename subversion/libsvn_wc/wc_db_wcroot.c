@@ -1,5 +1,5 @@
 /*
- * wc_db_pdh.c :  supporting datastructures for the administrative database
+ * wc_db_wcroot.c :  supporting datastructures for the administrative database
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
