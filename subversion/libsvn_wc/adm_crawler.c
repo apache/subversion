@@ -316,13 +316,12 @@ report_revisions_and_depths(svn_wc__db_t *db,
   /*** Do the real reporting and recursing. ***/
 
   /* First, look at "this dir" to see what its URL and depth are. */
-  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, &dir_repos_relpath,
-                               &dir_repos_root, NULL, NULL, NULL, NULL, NULL,
-                               &dir_depth, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL,
-                               db, dir_abspath,
-                               scratch_pool, iterpool));
+  SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, &dir_repos_relpath,
+                                   &dir_repos_root, NULL, NULL, NULL, NULL,
+                                   NULL, &dir_depth, NULL, NULL, NULL, NULL,
+                                   NULL,
+                                   db, dir_abspath,
+                                   scratch_pool, iterpool));
 
   /* If the directory has no url, search its parents */
   if (dir_repos_relpath == NULL)
