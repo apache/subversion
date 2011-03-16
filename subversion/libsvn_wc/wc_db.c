@@ -2982,7 +2982,7 @@ svn_wc__db_op_add_symlink(svn_wc__db_t *db,
 }
 
 
-struct set_props_baton
+struct set_props_baton_t
 {
   apr_hash_t *props;
 
@@ -3028,14 +3028,14 @@ set_actual_props(apr_int64_t wc_id,
    Create an entry in the ACTUAL table for the node if it does not yet
    have one.
    To specify no properties, BATON->props must be an empty hash, not NULL.
-   BATON is of type 'struct set_props_baton'. */
+   BATON is of type 'struct set_props_baton_t'. */
 static svn_error_t *
 set_props_txn(void *baton,
               svn_wc__db_wcroot_t *wcroot,
               const char *local_relpath,
               apr_pool_t *scratch_pool)
 {
-  struct set_props_baton *spb = baton;
+  struct set_props_baton_t *spb = baton;
   apr_hash_t *pristine_props;
 
   /* ### we dunno what to do with CONFLICT yet.  */
@@ -3074,7 +3074,7 @@ svn_wc__db_op_set_props(svn_wc__db_t *db,
                         const svn_skel_t *work_items,
                         apr_pool_t *scratch_pool)
 {
-  struct set_props_baton spb;
+  struct set_props_baton_t spb;
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
 
@@ -3468,7 +3468,7 @@ svn_wc__db_op_revert_actual(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
-struct op_revert_baton {
+struct op_revert_baton_t {
   apr_array_header_t *local_relpaths;
 };
 
@@ -3480,7 +3480,7 @@ op_revert_txn(void *baton,
               const char *local_relpath,
               apr_pool_t *scratch_pool)
 {
-  struct op_revert_baton *b = baton;
+  struct op_revert_baton_t *b = baton;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
   apr_int64_t op_depth;
@@ -3613,7 +3613,7 @@ op_revert_recursive_txn(void *baton,
                         const char *local_relpath,
                         apr_pool_t *scratch_pool)
 {
-  struct op_revert_baton *b = baton;
+  struct op_revert_baton_t *b = baton;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
   apr_int64_t op_depth;
@@ -3711,7 +3711,7 @@ svn_wc__db_op_revert(const apr_array_header_t **local_abspaths,
   svn_wc__db_txn_callback_t txn_func;
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  struct op_revert_baton baton;
+  struct op_revert_baton_t baton;
   apr_array_header_t *abspaths;
   int i;
 
@@ -4419,7 +4419,7 @@ info_below_working(svn_boolean_t *have_base,
 }
 
 
-struct temp_op_delete_baton {
+struct temp_op_delete_baton_t {
   /* The following two are only needed for svn_wc__db_temp_forget_directory */
   svn_wc__db_t *db;
   const char *local_abspath;
@@ -4433,7 +4433,7 @@ temp_op_delete_txn(void *baton,
                    const char *local_relpath,
                    apr_pool_t *scratch_pool)
 {
-  struct temp_op_delete_baton *b = baton;
+  struct temp_op_delete_baton_t *b = baton;
   svn_wc__db_status_t status;
   svn_wc__db_status_t new_working_status;
   svn_boolean_t have_work;
@@ -4535,7 +4535,7 @@ svn_wc__db_temp_op_delete(svn_wc__db_t *db,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  struct temp_op_delete_baton b;
+  struct temp_op_delete_baton_t b;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -5210,7 +5210,7 @@ svn_wc__db_read_children_walker_info(apr_hash_t **nodes,
 }
 
 
-struct read_url_baton {
+struct read_url_baton_t {
   const char **url;
   apr_pool_t *result_pool;
 };
@@ -5222,7 +5222,7 @@ read_url_txn(void *baton,
              const char *local_relpath,
              apr_pool_t *scratch_pool)
 {
-  struct read_url_baton *rub = baton;
+  struct read_url_baton_t *rub = baton;
   svn_wc__db_status_t status;
   const char *repos_relpath;
   const char *repos_root_url;
@@ -5254,7 +5254,7 @@ read_url_txn(void *baton,
                || (!have_base && (status == svn_wc__db_status_deleted)))
         {
           const char *parent_relpath;
-          struct read_url_baton new_rub;
+          struct read_url_baton_t new_rub;
           const char *url;
 
           /* Set 'repos_root_url' to the *full URL* of the parent WC dir,
@@ -5294,7 +5294,7 @@ read_url(const char **url,
          apr_pool_t *result_pool,
          apr_pool_t *scratch_pool)
 {
-  struct read_url_baton rub = { url, result_pool };
+  struct read_url_baton_t rub = { url, result_pool };
   SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, read_url_txn, &rub,
                               scratch_pool));
 
@@ -5731,7 +5731,7 @@ svn_wc__db_read_children(const apr_array_header_t **children,
 }
 
 
-struct relocate_baton
+struct relocate_baton_t
 {
   apr_int64_t wc_id;
   const char *local_relpath;
@@ -5747,7 +5747,7 @@ struct relocate_baton
 static svn_error_t *
 relocate_txn(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
-  struct relocate_baton *rb = baton;
+  struct relocate_baton_t *rb = baton;
   const char *like_arg;
   svn_sqlite__stmt_t *stmt;
   apr_int64_t new_repos_id;
@@ -5799,7 +5799,7 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
   svn_wc__db_wcroot_t *wcroot;
   const char *local_dir_relpath;
   svn_wc__db_status_t status;
-  struct relocate_baton rb;
+  struct relocate_baton_t rb;
   const char *stored_local_dir_relpath;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_dir_abspath));
@@ -5956,7 +5956,7 @@ determine_repos_info(apr_int64_t *repos_id,
 }
 
 
-struct commit_baton {
+struct commit_baton_t {
   svn_revnum_t new_revision;
   svn_revnum_t changed_rev;
   apr_time_t changed_date;
@@ -5978,7 +5978,7 @@ commit_node(void *baton,
             const char *local_relpath,
             apr_pool_t *scratch_pool)
 {
-  struct commit_baton *cb = baton;
+  struct commit_baton_t *cb = baton;
   svn_sqlite__stmt_t *stmt_base;
   svn_sqlite__stmt_t *stmt_work;
   svn_sqlite__stmt_t *stmt_act;
@@ -6194,7 +6194,7 @@ svn_wc__db_global_commit(svn_wc__db_t *db,
 {
   const char *local_relpath;
   svn_wc__db_wcroot_t *wcroot;
-  struct commit_baton cb;
+  struct commit_baton_t cb;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(new_revision));
@@ -6227,7 +6227,7 @@ svn_wc__db_global_commit(svn_wc__db_t *db,
 }
 
 
-struct update_baton {
+struct update_baton_t {
   const char *new_repos_relpath;
   svn_revnum_t new_revision;
   const apr_hash_t *new_props;
@@ -6262,7 +6262,7 @@ svn_wc__db_global_update(svn_wc__db_t *db,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  struct update_baton ub;
+  struct update_baton_t ub;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   /* ### allow NULL for NEW_REPOS_RELPATH to indicate "no change"?  */
@@ -6654,7 +6654,7 @@ svn_wc__db_op_bump_revisions_post_update(svn_wc__db_t *db,
 }
 
 
-struct record_baton {
+struct record_baton_t {
   svn_filesize_t translated_size;
   apr_time_t last_mod_time;
 };
@@ -6667,7 +6667,7 @@ record_fileinfo(void *baton,
                 const char *local_relpath,
                 apr_pool_t *scratch_pool)
 {
-  struct record_baton *rb = baton;
+  struct record_baton_t *rb = baton;
   svn_sqlite__stmt_t *stmt;
   int affected_rows;
 
@@ -6692,7 +6692,7 @@ svn_wc__db_global_record_fileinfo(svn_wc__db_t *db,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  struct record_baton rb;
+  struct record_baton_t rb;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -6853,7 +6853,7 @@ svn_wc__db_scan_base_repos(const char **repos_relpath,
 }
 
 
-struct scan_addition_baton
+struct scan_addition_baton_t
 {
   svn_wc__db_status_t *status;
   const char **op_root_relpath;
@@ -6871,7 +6871,7 @@ scan_addition_txn(void *baton,
                   const char *local_relpath,
                   apr_pool_t *scratch_pool)
 {
-  struct scan_addition_baton *sab = baton;
+  struct scan_addition_baton_t *sab = baton;
   const char *current_relpath = local_relpath;
   const char *build_relpath = "";
 
@@ -7122,7 +7122,7 @@ scan_addition(svn_wc__db_status_t *status,
               apr_pool_t *result_pool,
               apr_pool_t *scratch_pool)
 {
-  struct scan_addition_baton sab;
+  struct scan_addition_baton_t sab;
 
   sab.status = status;
   sab.op_root_relpath = op_root_relpath;
@@ -7192,7 +7192,7 @@ svn_wc__db_scan_addition(svn_wc__db_status_t *status,
 }
 
 
-struct scan_deletion_baton
+struct scan_deletion_baton_t
 {
   const char **base_del_relpath;
   const char **moved_to_relpath;
@@ -7207,7 +7207,7 @@ scan_deletion_txn(void *baton,
                   const char *local_relpath,
                   apr_pool_t *scratch_pool)
 {
-  struct scan_deletion_baton *sd_baton = baton;
+  struct scan_deletion_baton_t *sd_baton = baton;
   const char *current_relpath = local_relpath;
   const char *child_relpath = NULL;
   svn_wc__db_status_t child_presence;
@@ -7408,7 +7408,7 @@ scan_deletion(const char **base_del_relpath,
               apr_pool_t *result_pool,
               apr_pool_t *scratch_pool)
 {
-  struct scan_deletion_baton sd_baton;
+  struct scan_deletion_baton_t sd_baton;
 
   sd_baton.base_del_relpath = base_del_relpath;
   sd_baton.moved_to_relpath = moved_to_relpath;
@@ -8349,7 +8349,7 @@ svn_wc__db_temp_wcroot_tempdir(const char **temp_dir_abspath,
 
 
 /* Baton for wclock_obtain_cb() */
-struct wclock_obtain_baton
+struct wclock_obtain_baton_t
 {
   int levels_to_lock;
   svn_boolean_t steal_lock;
@@ -8380,7 +8380,7 @@ wclock_obtain_cb(void *baton,
                  const char *local_relpath,
                  apr_pool_t *scratch_pool)
 {
-  struct wclock_obtain_baton *bt = baton;
+  struct wclock_obtain_baton_t *bt = baton;
   svn_sqlite__stmt_t *stmt;
   svn_error_t *err;
   const char *lock_relpath;
@@ -8553,7 +8553,7 @@ svn_wc__db_wclock_obtain(svn_wc__db_t *db,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  struct wclock_obtain_baton baton;
+  struct wclock_obtain_baton_t baton;
 
   SVN_ERR_ASSERT(levels_to_lock >= -1);
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
@@ -8840,7 +8840,7 @@ svn_wc__db_temp_op_set_base_incomplete(svn_wc__db_t *db,
 }
 
 
-struct start_directory_update_baton
+struct start_directory_update_baton_t
 {
   svn_revnum_t new_rev;
   const char *new_repos_relpath;
@@ -8853,7 +8853,7 @@ start_directory_update_txn(void *baton,
                            const char *local_relpath,
                            apr_pool_t *scratch_pool)
 {
-  struct start_directory_update_baton *du = baton;
+  struct start_directory_update_baton_t *du = baton;
   svn_sqlite__stmt_t *stmt;
 
   /* Note: In the majority of calls, the repos_relpath is unchanged. */
@@ -8882,7 +8882,7 @@ svn_wc__db_temp_op_start_directory_update(svn_wc__db_t *db,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  struct start_directory_update_baton du;
+  struct start_directory_update_baton_t du;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(new_rev));
@@ -8906,7 +8906,7 @@ svn_wc__db_temp_op_start_directory_update(svn_wc__db_t *db,
 
 
 /* Baton for make_copy_txn */
-struct make_copy_baton
+struct make_copy_baton_t
 {
   svn_wc__db_t *db;
   const char *local_abspath;
@@ -8957,7 +8957,7 @@ make_copy_txn(void *baton,
               const char *local_relpath,
               apr_pool_t *scratch_pool)
 {
-  struct make_copy_baton *mcb = baton;
+  struct make_copy_baton_t *mcb = baton;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
   svn_boolean_t add_working_base_deleted = FALSE;
@@ -8999,7 +8999,7 @@ make_copy_txn(void *baton,
   for (i = 0; i < children->nelts; i++)
     {
       const char *name = APR_ARRAY_IDX(children, i, const char *);
-      struct make_copy_baton cbt;
+      struct make_copy_baton_t cbt;
       svn_wc__db_wcroot_t *copy_wcroot;
       const char *copy_relpath;
 
@@ -9061,7 +9061,7 @@ svn_wc__db_temp_op_make_copy(svn_wc__db_t *db,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  struct make_copy_baton mcb;
+  struct make_copy_baton_t mcb;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
 
@@ -9139,7 +9139,7 @@ svn_wc__db_temp_get_file_external(const char **serialized_file_external,
 }
 
 
-struct set_file_external_baton
+struct set_file_external_baton_t
 {
   const char *repos_relpath;
   const svn_opt_revision_t *peg_rev;
@@ -9153,7 +9153,7 @@ set_file_external_txn(void *baton,
                       const char *local_relpath,
                       apr_pool_t *scratch_pool)
 {
-  struct set_file_external_baton *sfeb = baton;
+  struct set_file_external_baton_t *sfeb = baton;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t got_row;
 
@@ -9230,7 +9230,7 @@ svn_wc__db_temp_op_set_file_external(svn_wc__db_t *db,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  struct set_file_external_baton sfeb;
+  struct set_file_external_baton_t sfeb;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(!repos_relpath
@@ -9374,7 +9374,7 @@ svn_wc__db_temp_op_set_property_conflict_marker_file(svn_wc__db_t *db,
 }
 
 
-struct set_new_dir_to_incomplete_baton
+struct set_new_dir_to_incomplete_baton_t
 {
   const char *repos_relpath;
   const char *repos_root_url;
@@ -9390,7 +9390,7 @@ set_new_dir_to_incomplete_txn(void *baton,
                               const char *local_relpath,
                               apr_pool_t *scratch_pool)
 {
-  struct set_new_dir_to_incomplete_baton *dtb = baton;
+  struct set_new_dir_to_incomplete_baton_t *dtb = baton;
   svn_sqlite__stmt_t *stmt;
   apr_int64_t repos_id;
   const char *parent_relpath = (*local_relpath == '\0')
@@ -9441,7 +9441,7 @@ svn_wc__db_temp_op_set_new_dir_to_incomplete(svn_wc__db_t *db,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  struct set_new_dir_to_incomplete_baton baton;
+  struct set_new_dir_to_incomplete_baton_t baton;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
@@ -9818,7 +9818,7 @@ svn_wc__db_has_local_mods(svn_boolean_t *is_modified,
 }
 
 
-struct revision_status_baton
+struct revision_status_baton_t
 {
   svn_revnum_t *min_revision;
   svn_revnum_t *max_revision;
@@ -9842,7 +9842,7 @@ revision_status_txn(void *baton,
                     const char *local_relpath,
                     apr_pool_t *scratch_pool)
 {
-  struct revision_status_baton *rsb = baton;
+  struct revision_status_baton_t *rsb = baton;
 
   /* Determine mixed-revisionness. */
   SVN_ERR(get_min_max_revisions(rsb->min_revision, rsb->max_revision, wcroot,
@@ -9889,7 +9889,7 @@ svn_wc__db_revision_status(svn_revnum_t *min_revision,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  struct revision_status_baton rsb = { min_revision, max_revision,
+  struct revision_status_baton_t rsb = { min_revision, max_revision,
         is_sparse_checkout, is_modified, is_switched, trail_url, committed,
         cancel_func, cancel_baton, db };
 
