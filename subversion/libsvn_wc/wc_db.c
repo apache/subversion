@@ -3587,6 +3587,26 @@ op_revert_txn(void *baton,
 }
 
 
+/* STMT must select local_relpath as column 0, STMT is reset. */
+static svn_error_t *
+add_to_relpaths(apr_array_header_t *relpaths,
+                svn_sqlite__stmt_t *stmt,
+                apr_pool_t *result_pool)
+{
+  svn_boolean_t have_row;
+
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  while (have_row)
+    {
+      APR_ARRAY_PUSH(relpaths, const char *)
+        = svn_sqlite__column_text(stmt, 0, result_pool);
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  return SVN_NO_ERROR;
+}
+
 /* This implements svn_wc__db_txn_callback_t */
 static svn_error_t *
 op_revert_recursive_txn(void *baton,
@@ -3594,6 +3614,7 @@ op_revert_recursive_txn(void *baton,
                         const char *local_relpath,
                         apr_pool_t *scratch_pool)
 {
+  struct op_revert_baton *b = baton;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
   apr_int64_t op_depth;
@@ -3612,7 +3633,13 @@ op_revert_recursive_txn(void *baton,
       SVN_ERR(svn_sqlite__reset(stmt));
 
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_DELETE_ACTUAL_NODE_RECURSIVE));
+                                        STMT_SELECT_ACTUAL_ONLY_RECURSIVE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id,
+                                local_relpath, like_arg));
+      SVN_ERR(add_to_relpaths(b->local_relpaths, stmt, b->result_pool));
+
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_DELETE_ACTUAL_ONLY_RECURSIVE));
       SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id,
                                 local_relpath, like_arg));
       SVN_ERR(svn_sqlite__step(&affected_rows, stmt));
@@ -3640,6 +3667,17 @@ op_revert_recursive_txn(void *baton,
 
   if (!op_depth)
     op_depth = 1; /* Don't delete BASE nodes */
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_NODES_GE_OP_DEPTH_RECURSIVE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "issi", wcroot->wc_id,
+                            local_relpath, like_arg, op_depth));
+  SVN_ERR(add_to_relpaths(b->local_relpaths, stmt, b->result_pool));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_ACTUAL_NODE_REVERT_RECURSIVE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id,
+                            local_relpath, like_arg));
+  SVN_ERR(add_to_relpaths(b->local_relpaths, stmt, b->result_pool));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_DELETE_NODES_RECURSIVE));
