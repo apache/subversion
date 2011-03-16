@@ -1430,6 +1430,7 @@ new_revert_internal(svn_wc__db_t *db,
                   notify_required = TRUE;
                 }
 
+#if !defined(WIN32) && !defined(__OS2__)
               if (apr_hash_get(props, SVN_PROP_EXECUTABLE, APR_HASH_KEY_STRING)
                   && !executable)
                 {
@@ -1443,6 +1444,7 @@ new_revert_internal(svn_wc__db_t *db,
                                                      FALSE, scratch_pool));
                   notify_required = TRUE;
                 }
+#endif
             }
         }
     }

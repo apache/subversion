@@ -36,6 +36,8 @@ extern "C" {
 
 /** Set @a *executable TRUE if @a file_info is executable for the
  * user, FALSE otherwise.
+ *
+ * Always returns FALSE on Windows or platforms without user support.
  */
 svn_error_t *
 svn_io__is_finfo_executable(svn_boolean_t *executable,
