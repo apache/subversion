@@ -680,8 +680,10 @@ svn_wc_set_adm_dir(const char *name,
 
 /** Callback for external definitions updates
  *
- * ### See implementation of #svn_wc_traversal_info_t for documentation of
- *     the parameters.
+ * @a local_abspath is the path on which the external definition was found.
+ * @a old_val and @a new_val are the before and after values of the
+ * SVN_PROP_EXTERNALS property.  @a depth is the ambient depth of the
+ * working copy directory at @a local_abspath.
  *
  * @since New in 1.7. */
 typedef svn_error_t *(*svn_wc_external_update_t)(void *baton,
@@ -3897,12 +3899,11 @@ svn_wc_walk_status(svn_wc_context_t *wc_ctx,
  * If @a cancel_func is non-NULL, call it with @a cancel_baton while building
  * the @a statushash to determine if the client has canceled the operation.
  *
- * If @a traversal_info is non-NULL, then record pre-update traversal
- * state in it.  (Caller should obtain @a traversal_info from
- * svn_wc_init_traversal_info().)
- *
- * ### Since r879231 it's not traversal_info, it's external_func/
- *     external_baton which is ...?
+ * If @a external_func is non-NULL and an external definition is found while
+ * walking @a local_abspath, the editor will call @a external_func with @a
+ * external_baton, with the local abspath on which the definition was
+ * found, and with the current external definition provided as both
+ * the @a old_val and @a new_val parameters of the callback function.
  *
  * Allocate the editor itself in @a pool, but the editor does temporary
  * allocations in a subpool of @a pool.
@@ -5004,12 +5005,11 @@ svn_wc_process_committed(const char *path,
  * use_commit_times is TRUE, then set restored files' timestamps to
  * their last-commit-times.
  *
- * If @a traversal_info is non-NULL, then record pre-update traversal
- * state in it.  (Caller should obtain @a traversal_info from
- * svn_wc_init_traversal_info().)
- *
- * ### Since r879231 it's not traversal_info, it's external_func/
- *     external_baton which is ...?
+ * If @a external_func is non-NULL and an external definition is found
+ * while walking @a local_abspath, call @a external_func with @a
+ * external_baton, with the local abspath on which the definition was
+ * found, and with the current external definition provided as both
+ * the @a old_val and @a new_val parameters of the callback function.
  *
  * @since New in 1.7.
  */
