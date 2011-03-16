@@ -89,7 +89,8 @@ svn_wc_relocate4(svn_wc_context_t *wc_ctx,
   const char *repos_relpath;
   const char *old_repos_root, *old_url;
   const char *new_repos_root, *new_url;
-  int from_len, old_url_len;
+  size_t from_len;
+  size_t old_url_len;
   const char *uuid;
   svn_boolean_t is_wc_root;
 
