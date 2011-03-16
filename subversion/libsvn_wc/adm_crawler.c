@@ -342,14 +342,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
     {
       const char *child = svn__apr_hash_index_key(hi);
       const char *this_path, *this_abspath;
-
-      //svn_wc__db_status_t this_status;
-      //svn_wc__db_kind_t this_kind;
-      //svn_revnum_t this_rev;
-      //svn_depth_t this_depth;
-      //svn_wc__db_lock_t *this_lock;
       svn_boolean_t this_switched = FALSE;
-      //svn_boolean_t this_file_external = FALSE;
       struct svn_wc__db_base_info_t *ths = svn__apr_hash_index_val(hi);
 
       /* Clear the iteration subpool here because the loop has a bunch
@@ -359,14 +352,6 @@ report_revisions_and_depths(svn_wc__db_t *db,
       /* Compute the paths and URLs we need. */
       this_path = svn_dirent_join(dir_path, child, iterpool);
       this_abspath = svn_dirent_join(dir_abspath, child, iterpool);
-
-      //SVN_ERR(svn_wc__db_base_get_info(&this_status, &this_kind, &this_rev,
-      //                                 &this_repos_relpath,
-      //                                 &this_repos_root_url,
-      //                                 NULL, NULL, NULL, NULL, NULL,
-      //                                 &this_depth,
-      //                                 NULL, NULL, NULL, &this_lock, NULL,
-      //                                 db, this_abspath, iterpool, iterpool));
 
       /* First check for exclusion */
       if (ths->status == svn_wc__db_status_excluded)
