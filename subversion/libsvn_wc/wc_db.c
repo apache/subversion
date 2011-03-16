@@ -3470,7 +3470,6 @@ svn_wc__db_op_revert_actual(svn_wc__db_t *db,
 
 struct op_revert_baton {
   apr_array_header_t *local_relpaths;
-  apr_pool_t *result_pool;
 };
 
 
@@ -3519,7 +3518,7 @@ op_revert_txn(void *baton,
                                                             local_relpath,
                                                             scratch_pool));
           APR_ARRAY_PUSH(b->local_relpaths, const char *)
-            = apr_pstrdup(b->result_pool, local_relpath);
+            = apr_pstrdup(scratch_pool, local_relpath);
 
           return SVN_NO_ERROR;
         }
@@ -3581,7 +3580,7 @@ op_revert_txn(void *baton,
 
   if (op_depth || affected_rows)
     APR_ARRAY_PUSH(b->local_relpaths, const char *)
-        = apr_pstrdup(b->result_pool, local_relpath);
+        = apr_pstrdup(scratch_pool, local_relpath);
 
   return SVN_NO_ERROR;
 }
@@ -3636,7 +3635,7 @@ op_revert_recursive_txn(void *baton,
                                         STMT_SELECT_ACTUAL_ONLY_RECURSIVE));
       SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id,
                                 local_relpath, like_arg));
-      SVN_ERR(add_to_relpaths(b->local_relpaths, stmt, b->result_pool));
+      SVN_ERR(add_to_relpaths(b->local_relpaths, stmt, scratch_pool));
 
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_DELETE_ACTUAL_ONLY_RECURSIVE));
@@ -3672,12 +3671,12 @@ op_revert_recursive_txn(void *baton,
                                     STMT_SELECT_NODES_GE_OP_DEPTH_RECURSIVE));
   SVN_ERR(svn_sqlite__bindf(stmt, "issi", wcroot->wc_id,
                             local_relpath, like_arg, op_depth));
-  SVN_ERR(add_to_relpaths(b->local_relpaths, stmt, b->result_pool));
+  SVN_ERR(add_to_relpaths(b->local_relpaths, stmt, scratch_pool));
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_ACTUAL_NODE_REVERT_RECURSIVE));
   SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id,
                             local_relpath, like_arg));
-  SVN_ERR(add_to_relpaths(b->local_relpaths, stmt, b->result_pool));
+  SVN_ERR(add_to_relpaths(b->local_relpaths, stmt, scratch_pool));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_DELETE_NODES_RECURSIVE));
@@ -3702,7 +3701,7 @@ op_revert_recursive_txn(void *baton,
 
 
 svn_error_t *
-svn_wc__db_op_revert(apr_array_header_t **local_relpaths,
+svn_wc__db_op_revert(apr_array_header_t **local_abspaths,
                      svn_wc__db_t *db,
                      const char *local_abspath,
                      svn_depth_t depth,
@@ -3713,6 +3712,7 @@ svn_wc__db_op_revert(apr_array_header_t **local_relpaths,
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
   struct op_revert_baton baton;
+  int i;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -3731,8 +3731,7 @@ svn_wc__db_op_revert(apr_array_header_t **local_relpaths,
                                                       scratch_pool));
     }
 
-  baton.local_relpaths = apr_array_make(result_pool, 1, sizeof(const char *));
-  baton.result_pool = result_pool;
+  baton.local_relpaths = apr_array_make(scratch_pool, 1, sizeof(const char *));
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
                               db, local_abspath, svn_sqlite__mode_readwrite,
@@ -3742,7 +3741,13 @@ svn_wc__db_op_revert(apr_array_header_t **local_relpaths,
   SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, txn_func, &baton,
                               scratch_pool));
 
-  *local_relpaths = baton.local_relpaths;
+  *local_abspaths = apr_array_make(scratch_pool, baton.local_relpaths->nelts,
+                                   sizeof(const char *));
+  for (i = 0; i < baton.local_relpaths->nelts; ++i)
+    APR_ARRAY_PUSH(*local_abspaths, const char *)
+      = svn_dirent_join(wcroot->abspath,
+                        APR_ARRAY_IDX(baton.local_relpaths, i, const char *),
+                        result_pool);
 
   return SVN_NO_ERROR;
 }
