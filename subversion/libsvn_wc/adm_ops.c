@@ -1333,30 +1333,45 @@ verify_revert_depth(svn_wc__db_t *db,
 }
 
 #ifdef SVN_NEW_REVERT
+/* Should be using a hash?  A sorted array? */
+static svn_boolean_t
+matches_reverted(const apr_array_header_t *reverted,
+                 const char *local_abspath)
+{
+  int i;
+
+  for (i = 0; i < reverted->nelts; ++i)
+    if (!strcmp(local_abspath, APR_ARRAY_IDX(reverted, i, const char *)))
+      return TRUE;
+
+  return FALSE;
+}
+
 static svn_error_t *
-new_revert_internal(svn_wc__db_t *db,
-                    const char *revert_root,
-                    const char *local_abspath,
-                    svn_depth_t depth,
-                    svn_boolean_t use_commit_times,
-                    apr_hash_t *changelist_hash,
-                    svn_cancel_func_t cancel_func,
-                    void *cancel_baton,
-                    svn_wc_notify_func2_t notify_func,
-                    void *notify_baton,
-                    apr_pool_t *scratch_pool)
+revert_restore(svn_wc__db_t *db,
+               const char *revert_root,
+               const char *local_abspath,
+               svn_depth_t depth,
+               svn_boolean_t use_commit_times,
+               apr_hash_t *changelist_hash,
+               const apr_array_header_t *reverted,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
+               svn_wc_notify_func2_t notify_func,
+               void *notify_baton,
+               apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
   svn_wc__db_status_t status;
   svn_wc__db_kind_t kind;
   svn_node_kind_t on_disk;
   svn_boolean_t special;
-  apr_array_header_t *reverted;
   svn_boolean_t notify_required;
 
-  SVN_ERR(svn_wc__db_op_revert(&reverted, db, local_abspath, depth,
-                               scratch_pool, scratch_pool));
-  notify_required = reverted->nelts;
+  if (cancel_func)
+    SVN_ERR(cancel_func(cancel_baton));
+
+  notify_required = matches_reverted(reverted, local_abspath);
 
   err = svn_wc__db_read_info(&status, &kind,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -1477,6 +1492,57 @@ new_revert_internal(svn_wc__db_t *db,
                                      scratch_pool),
                 scratch_pool);
 
+  if (depth == svn_depth_infinity && kind == svn_wc__db_kind_dir)
+    {
+      const apr_array_header_t *children;
+      int i;
+
+      SVN_ERR(svn_wc__db_read_children_of_working_node(&children, db,
+                                                       local_abspath,
+                                                       scratch_pool,
+                                                       scratch_pool));
+      for (i = 0; i < children->nelts; ++i)
+        {
+          const char *child_abspath
+            = svn_dirent_join(local_abspath,
+                              APR_ARRAY_IDX(children, i, const char *),
+                              scratch_pool);
+
+          SVN_ERR(revert_restore(db, revert_root, child_abspath, depth,
+                                 use_commit_times, changelist_hash, reverted,
+                                 cancel_func, cancel_baton,
+                                 notify_func, notify_baton,
+                                 scratch_pool));
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+new_revert_internal(svn_wc__db_t *db,
+                    const char *revert_root,
+                    const char *local_abspath,
+                    svn_depth_t depth,
+                    svn_boolean_t use_commit_times,
+                    apr_hash_t *changelist_hash,
+                    svn_cancel_func_t cancel_func,
+                    void *cancel_baton,
+                    svn_wc_notify_func2_t notify_func,
+                    void *notify_baton,
+                    apr_pool_t *scratch_pool)
+{
+  const apr_array_header_t *reverted;
+
+  SVN_ERR(svn_wc__db_op_revert(&reverted, db, local_abspath, depth,
+                               scratch_pool, scratch_pool));
+
+  SVN_ERR(revert_restore(db, revert_root, local_abspath, depth,
+                         use_commit_times, changelist_hash, reverted,
+                         cancel_func, cancel_baton,
+                         notify_func, notify_baton,
+                         scratch_pool));
+
   return SVN_NO_ERROR;
 }
 #endif
@@ -1510,7 +1576,8 @@ revert_internal(svn_wc__db_t *db,
   svn_error_t *err;
 
 #ifdef SVN_NEW_REVERT
-  if (depth == svn_depth_empty && !changelist_hash)
+  if (!changelist_hash
+      && (depth == svn_depth_empty || depth == svn_depth_infinity))
     return new_revert_internal(db, revert_root, local_abspath, depth,
                                use_commit_times, changelist_hash,
                                cancel_func, cancel_baton,

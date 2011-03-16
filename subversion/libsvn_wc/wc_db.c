@@ -3701,7 +3701,7 @@ op_revert_recursive_txn(void *baton,
 
 
 svn_error_t *
-svn_wc__db_op_revert(apr_array_header_t **local_abspaths,
+svn_wc__db_op_revert(const apr_array_header_t **local_abspaths,
                      svn_wc__db_t *db,
                      const char *local_abspath,
                      svn_depth_t depth,
@@ -3712,6 +3712,7 @@ svn_wc__db_op_revert(apr_array_header_t **local_abspaths,
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
   struct op_revert_baton baton;
+  apr_array_header_t *abspaths;
   int i;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
@@ -3741,13 +3742,15 @@ svn_wc__db_op_revert(apr_array_header_t **local_abspaths,
   SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, txn_func, &baton,
                               scratch_pool));
 
-  *local_abspaths = apr_array_make(scratch_pool, baton.local_relpaths->nelts,
-                                   sizeof(const char *));
+  abspaths = apr_array_make(scratch_pool, baton.local_relpaths->nelts,
+                            sizeof(const char *));
   for (i = 0; i < baton.local_relpaths->nelts; ++i)
-    APR_ARRAY_PUSH(*local_abspaths, const char *)
+    APR_ARRAY_PUSH(abspaths, const char *)
       = svn_dirent_join(wcroot->abspath,
                         APR_ARRAY_IDX(baton.local_relpaths, i, const char *),
                         result_pool);
+
+  *local_abspaths = abspaths;
 
   return SVN_NO_ERROR;
 }
