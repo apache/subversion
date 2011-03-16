@@ -363,8 +363,12 @@ WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
 DELETE FROM actual_node
 WHERE wc_id = ?1 AND local_relpath = ?2;
 
--- STMT_DELETE_ACTUAL_NODE_RECURSIVE
+-- STMT_DELETE_ACTUAL_ONLY_RECURSIVE
 DELETE FROM actual_node
+WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#');
+
+-- STMT_SELECT_ACTUAL_ONLY_RECURSIVE
+SELECT local_relpath FROM actual_node
 WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#');
 
 -- STMT_DELETE_ACTUAL_NODE_WITHOUT_CONFLICT
@@ -422,6 +426,16 @@ SET properties = NULL,
     left_checksum = NULL,
     right_checksum = NULL
 WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#');
+
+-- STMT_SELECT_ACTUAL_NODE_REVERT_RECURSIVE
+SELECT local_relpath FROM actual_node
+WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
+ AND (properties IS NOT NULL OR
+      tree_conflict_data IS NOT NULL OR
+      conflict_old IS NOT NULL OR
+      conflict_new IS NOT NULL OR
+      conflict_working IS NOT NULL OR
+      prop_reject IS NOT NULL);
 
 -- STMT_CLEAR_ACTUAL_NODE_LEAVING_CONFLICT
 UPDATE actual_node
@@ -711,7 +725,7 @@ UPDATE nodes SET repos_id = ?3, repos_path = ?4
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
 
 -- STMT_SELECT_NODES_GE_OP_DEPTH_RECURSIVE
-SELECT 1
+SELECT local_relpath
 FROM nodes
 WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
   AND op_depth >= ?4;
