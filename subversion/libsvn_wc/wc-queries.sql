@@ -407,7 +407,7 @@ SET properties = NULL,
     older_checksum = NULL,
     left_checksum = NULL,
     right_checksum = NULL
-WHERE wc_id = ?1 and local_relpath = ?2;
+WHERE wc_id = ?1 AND local_relpath = ?2;
 
 -- STMT_CLEAR_ACTUAL_NODE_LEAVING_CHANGELIST_RECURSIVE
 UPDATE actual_node
@@ -421,7 +421,7 @@ SET properties = NULL,
     older_checksum = NULL,
     left_checksum = NULL,
     right_checksum = NULL
-WHERE wc_id = ?1 and local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#';
+WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#');
 
 -- STMT_CLEAR_ACTUAL_NODE_LEAVING_CONFLICT
 UPDATE actual_node
@@ -435,7 +435,7 @@ SET properties = NULL,
     older_checksum = NULL,
     left_checksum = NULL,
     right_checksum = NULL
-WHERE wc_id = ?1 and local_relpath = ?2;
+WHERE wc_id = ?1 AND local_relpath = ?2;
 
 -- STMT_UPDATE_NODE_BASE_DEPTH
 UPDATE nodes SET depth = ?3
