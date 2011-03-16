@@ -747,6 +747,29 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
+/* Structure returned by svn_wc__db_base_get_children_info.  Only has the
+   fields needed by the adm crawler. */
+struct svn_wc__db_base_info_t {
+  svn_wc__db_status_t status;
+  svn_wc__db_kind_t kind;
+  svn_revnum_t revnum;
+  const char *repos_relpath;
+  const char *repos_root_url;
+  svn_depth_t depth;
+  svn_boolean_t update_root;
+  svn_wc__db_lock_t *lock;
+};
+
+/* Return in *NODES a hash mapping name->struct svn_wc__db_base_info_t for
+   the children of DIR_ABSPATH at op_depth 0.
+ */
+svn_error_t *
+svn_wc__db_base_get_children_info(apr_hash_t **nodes,
+                                  svn_wc__db_t *db,
+                                  const char *dir_abspath,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
+
 
 /* Set *PROPVAL to the value of the property named PROPNAME of the node
    LOCAL_ABSPATH in the BASE tree.

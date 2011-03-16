@@ -62,6 +62,15 @@ LEFT OUTER JOIN lock ON nodes.repos_id = lock.repos_id
   AND nodes.repos_path = lock.repos_relpath
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
 
+-- STMT_SELECT_BASE_CHILDREN_INFO
+SELECT local_relpath, nodes.repos_id, nodes.repos_path, presence, kind,
+  revision, depth, file_external IS NOT NULL,
+  lock_token, lock_owner, lock_comment, lock_date
+FROM nodes
+LEFT OUTER JOIN lock ON nodes.repos_id = lock.repos_id
+  AND nodes.repos_path = lock.repos_relpath
+WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth = 0;
+
 -- STMT_SELECT_WORKING_NODE
 SELECT op_depth, presence, kind, checksum, translated_size,
   changed_revision, changed_date, changed_author, depth, symlink_target,

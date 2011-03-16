@@ -1935,6 +1935,76 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc__db_base_get_children_info(apr_hash_t **nodes,
+                                  svn_wc__db_t *db,
+                                  const char *dir_abspath,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(dir_abspath));
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
+                              dir_abspath, svn_sqlite__mode_readonly,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  *nodes = apr_hash_make(result_pool);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, 
+                                    STMT_SELECT_BASE_CHILDREN_INFO));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  while (have_row)
+    {
+      struct svn_wc__db_base_info_t *info;
+      svn_error_t *err;
+      apr_int64_t repos_id;
+      const char *depth_str;
+      const char *child_relpath = svn_sqlite__column_text(stmt, 0, NULL);
+      const char *name = svn_relpath_basename(child_relpath, result_pool);
+
+      info = apr_pcalloc(result_pool, sizeof(*info));
+
+      repos_id = svn_sqlite__column_int64(stmt, 1);
+      info->repos_relpath = svn_sqlite__column_text(stmt, 2, result_pool);
+      info->status = svn_sqlite__column_token(stmt, 3, presence_map);
+      info->kind = svn_sqlite__column_token(stmt, 4, kind_map);
+      info->revnum = svn_sqlite__column_revnum(stmt, 5);
+
+      depth_str = svn_sqlite__column_text(stmt, 6, NULL);
+
+      info->depth = (depth_str != NULL) ? svn_depth_from_word(depth_str)
+                                        : svn_depth_unknown;
+      info->update_root = svn_sqlite__column_boolean(stmt, 7);
+
+      info->lock = lock_from_columns(stmt, 8, 9, 10, 11, result_pool);
+
+      err = fetch_repos_info(&info->repos_root_url, NULL, wcroot->sdb,
+                             repos_id, result_pool);
+
+      if (err)
+        return svn_error_return(
+                 svn_error_compose_create(err,
+                                          svn_sqlite__reset(stmt)));
+                           
+
+      apr_hash_set(*nodes, name, APR_HASH_KEY_STRING, info);
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_wc__db_base_get_prop(const svn_string_t **propval,
