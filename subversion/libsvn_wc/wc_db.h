@@ -128,15 +128,6 @@ extern "C" {
 typedef struct svn_wc__db_t svn_wc__db_t;
 
 
-/* Enumerated constants for how to open a WC datastore.  */
-typedef enum svn_wc__db_openmode_t {
-  svn_wc__db_openmode_default,    /* Open in the default mode (r/w now). */
-  svn_wc__db_openmode_readonly,   /* Changes will definitely NOT be made. */
-  svn_wc__db_openmode_readwrite   /* Changes will definitely be made. */
-
-} svn_wc__db_openmode_t;
-
-
 /* Enum indicating what kind of versioned object we're talking about.
 
    ### KFF: That is, my understanding is that this is *not* an enum
@@ -262,9 +253,7 @@ typedef struct svn_wc__db_lock_t {
    copy directory or working copy root (wcroot). As operations are performed,
    this context will load the appropriate wcroot information.
 
-   The context is returned in DB. The MODE parameter indicates whether the
-   caller knows all interactions will be read-only, whether writing will
-   definitely happen, or whether a default should be chosen.
+   The context is returned in DB.
 
    CONFIG should hold the various configuration options that may apply to
    the administrative operation. It should live at least as long as the
@@ -297,7 +286,6 @@ typedef struct svn_wc__db_lock_t {
 */
 svn_error_t *
 svn_wc__db_open(svn_wc__db_t **db,
-                svn_wc__db_openmode_t mode,
                 const svn_config_t *config,
                 svn_boolean_t auto_upgrade,
                 svn_boolean_t enforce_empty_wq,

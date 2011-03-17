@@ -1613,7 +1613,7 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
      'cleanup' with a new client will complete any outstanding
      upgrade. */
 
-  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readwrite,
+  SVN_ERR(svn_wc__db_open(&db,
                           NULL /* ### config */, FALSE, FALSE,
                           scratch_pool, scratch_pool));
 
@@ -1651,8 +1651,7 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
   SVN_ERR(svn_io_file_rename(db_from, db_to, scratch_pool));
 
   /* Now we have a working wcng, tidy up the droppings */
-  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readwrite,
-                          NULL /* ### config */, FALSE, FALSE,
+  SVN_ERR(svn_wc__db_open(&db, NULL /* ### config */, FALSE, FALSE,
                           scratch_pool, scratch_pool));
   SVN_ERR(svn_wc__wq_run(db, local_abspath, cancel_func, cancel_baton,
                          scratch_pool));

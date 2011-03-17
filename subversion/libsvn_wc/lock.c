@@ -422,12 +422,7 @@ alloc_db(svn_wc__db_t **db,
          apr_pool_t *result_pool,
          apr_pool_t *scratch_pool)
 {
-  svn_wc__db_openmode_t mode;
-
-  /* ### need to determine MODE based on callers' needs.  */
-  mode = svn_wc__db_openmode_default;
-  SVN_ERR(svn_wc__db_open(db, mode, config, TRUE, TRUE,
-                          result_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_open(db, config, TRUE, TRUE, result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -844,7 +839,7 @@ svn_wc_adm_probe_open3(svn_wc_adm_access_t **adm_access,
       svn_wc__db_t *db;
 
       /* Ugh. Too bad about having to open a DB.  */
-      SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly,
+      SVN_ERR(svn_wc__db_open(&db,
                               NULL /* ### config */, TRUE, TRUE, pool, pool));
       err = probe(db, &dir, path, pool);
       svn_error_clear(svn_wc__db_close(db));
