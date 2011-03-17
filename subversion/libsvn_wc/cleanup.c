@@ -141,7 +141,7 @@ svn_wc_cleanup3(svn_wc_context_t *wc_ctx,
 
   /* We need a DB that allows a non-empty work queue (though it *will*
      auto-upgrade). We'll handle everything manually.  */
-  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readwrite,
+  SVN_ERR(svn_wc__db_open(&db,
                           NULL /* ### config */, TRUE, FALSE,
                           scratch_pool, scratch_pool));
 

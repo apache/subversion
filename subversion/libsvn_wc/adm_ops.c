@@ -1913,8 +1913,7 @@ svn_wc_get_pristine_copy_path(const char *path,
   const char *local_abspath;
   svn_error_t *err;
 
-  SVN_ERR(svn_wc__db_open(&db, svn_wc__db_openmode_readonly, NULL,
-                          TRUE, TRUE, pool, pool));
+  SVN_ERR(svn_wc__db_open(&db, NULL, TRUE, TRUE, pool, pool));
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   err = svn_wc__text_base_path_to_read(pristine_path, db, local_abspath,

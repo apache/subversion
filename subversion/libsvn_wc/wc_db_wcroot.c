@@ -171,7 +171,6 @@ close_wcroot(void *data)
 
 svn_error_t *
 svn_wc__db_open(svn_wc__db_t **db,
-                svn_wc__db_openmode_t mode,
                 const svn_config_t *config,
                 svn_boolean_t auto_upgrade,
                 svn_boolean_t enforce_empty_wq,
@@ -179,7 +178,6 @@ svn_wc__db_open(svn_wc__db_t **db,
                 apr_pool_t *scratch_pool)
 {
   *db = apr_pcalloc(result_pool, sizeof(**db));
-  (*db)->mode = mode;
   (*db)->config = config;
   (*db)->auto_upgrade = auto_upgrade;
   (*db)->enforce_empty_wq = enforce_empty_wq;

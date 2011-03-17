@@ -354,7 +354,6 @@ create_open(svn_wc__db_t **db,
             const char **local_abspath,
             const char *subdir,
             int format,
-            svn_wc__db_openmode_t smode,
             apr_pool_t *pool)
 {
   SVN_ERR(create_fake_wc(subdir, format, pool));
@@ -362,7 +361,7 @@ create_open(svn_wc__db_t **db,
   SVN_ERR(svn_dirent_get_absolute(local_abspath,
                                   svn_dirent_join("fake-wc", subdir, pool),
                                   pool));
-  SVN_ERR(svn_wc__db_open(db, smode, NULL, TRUE, TRUE, pool, pool));
+  SVN_ERR(svn_wc__db_open(db, NULL, TRUE, TRUE, pool, pool));
 
   return SVN_NO_ERROR;
 }
@@ -418,8 +417,7 @@ test_getting_info(apr_pool_t *pool)
   svn_error_t *err;
 
   SVN_ERR(create_open(&db, &local_abspath,
-                      "test_getting_info", SVN_WC__VERSION,
-                      svn_wc__db_openmode_readonly, pool));
+                      "test_getting_info", SVN_WC__VERSION, pool));
 
   /* Test: basic fetching of data. */
   SVN_ERR(svn_wc__db_base_get_info(
@@ -658,8 +656,7 @@ test_inserting_nodes(apr_pool_t *pool)
   const apr_array_header_t *children;
 
   SVN_ERR(create_open(&db, &local_abspath,
-                      "test_insert_nodes", SVN_WC__VERSION,
-                      svn_wc__db_openmode_readwrite, pool));
+                      "test_insert_nodes", SVN_WC__VERSION, pool));
 
   props = apr_hash_make(pool);
   set_prop(props, "p1", "v1", pool);
@@ -777,8 +774,7 @@ test_children(apr_pool_t *pool)
   int i;
 
   SVN_ERR(create_open(&db, &local_abspath,
-                      "test_children", SVN_WC__VERSION,
-                      svn_wc__db_openmode_readonly, pool));
+                      "test_children", SVN_WC__VERSION, pool));
 
   SVN_ERR(svn_wc__db_base_get_children(&children,
                                        db, local_abspath,
@@ -841,8 +837,7 @@ test_working_info(apr_pool_t *pool)
   svn_wc__db_t *db;
 
   SVN_ERR(create_open(&db, &local_abspath,
-                      "test_working_info", SVN_WC__VERSION,
-                      svn_wc__db_openmode_readonly, pool));
+                      "test_working_info", SVN_WC__VERSION, pool));
 
   /* Test: basic fetching of data. */
   SVN_ERR(svn_wc__db_read_info(
@@ -896,8 +891,7 @@ test_pdh(apr_pool_t *pool)
   svn_wc__db_t *db;
 
   SVN_ERR(create_open(&db, &local_abspath,
-                      "test_pdh", SVN_WC__VERSION,
-                      svn_wc__db_openmode_readwrite, pool));
+                      "test_pdh", SVN_WC__VERSION, pool));
 
   /* NOTE: this test doesn't do anything apparent -- it simply exercises
      some internal functionality of wc_db.  This is a handy driver for
@@ -937,8 +931,7 @@ test_scan_addition(apr_pool_t *pool)
   svn_revnum_t original_revision;
 
   SVN_ERR(create_open(&db, &local_abspath,
-                      "test_scan_addition", SVN_WC__VERSION,
-                      svn_wc__db_openmode_readonly, pool));
+                      "test_scan_addition", SVN_WC__VERSION, pool));
 
   /* Simple addition of a directory. */
   SVN_ERR(svn_wc__db_scan_addition(
@@ -1066,8 +1059,7 @@ test_scan_deletion(apr_pool_t *pool)
   const char *moved_to_abspath;
 
   SVN_ERR(create_open(&db, &local_abspath,
-                      "test_scan_deletion", SVN_WC__VERSION,
-                      svn_wc__db_openmode_readonly, pool));
+                      "test_scan_deletion", SVN_WC__VERSION, pool));
 
   /* Node was moved elsewhere. */
   SVN_ERR(svn_wc__db_scan_deletion(
@@ -1241,8 +1233,7 @@ test_global_relocate(apr_pool_t *pool)
   const char *repos_uuid;
 
   SVN_ERR(create_open(&db, &local_abspath,
-                      "test_global_relocate", SVN_WC__VERSION,
-                      svn_wc__db_openmode_readonly, pool));
+                      "test_global_relocate", SVN_WC__VERSION, pool));
 
   /* Initial sanity check. */
   SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL,
@@ -1338,7 +1329,7 @@ test_work_queue(apr_pool_t *pool)
   int fetches = 0;
 
   SVN_ERR(create_open(&db, &local_abspath, "test_work_queue", SVN_WC__VERSION,
-                      svn_wc__db_openmode_readwrite, pool));
+                      pool));
 
   /* Create three work items.  */
   work_item = svn_skel__make_empty_list(pool);

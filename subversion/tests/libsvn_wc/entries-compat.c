@@ -373,7 +373,7 @@ create_open(svn_wc__db_t **db,
   SVN_ERR(svn_dirent_get_absolute(local_abspath,
                                   svn_dirent_join("fake-wc", subdir, pool),
                                   pool));
-  SVN_ERR(svn_wc__db_open(db, svn_wc__db_openmode_readwrite,
+  SVN_ERR(svn_wc__db_open(db,
                           NULL /* config */,
                           TRUE /* auto_upgrade */,
                           TRUE /* enforce_empty_wq */,

@@ -34,9 +34,6 @@
 
 
 struct svn_wc__db_t {
-  /* What's the appropriate mode for this datastore? */
-  svn_wc__db_openmode_t mode;
-
   /* We need the config whenever we run into a new WC directory, in order
      to figure out where we should look for the corresponding datastore. */
   const svn_config_t *config;
