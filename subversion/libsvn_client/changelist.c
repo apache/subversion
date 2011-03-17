@@ -70,9 +70,10 @@ set_node_changelist(const char *local_abspath,
   /* We only care about files right now. */
   if (kind != svn_node_file)
     {
-      /* Notify, unless it's a directory being removed from a changelist.
-         (That is in order to not spam during 'svn cl --remove -R'.)
-       */
+      /* Notify that we're skipping this directory (to which the
+         changelist concept doesn't currently apply) unless we're
+         removing changelist associations (so as not to spam during
+         'svn cl --remove -R'.)  */
       if (b->ctx->notify_func2
           && ! (b->changelist == NULL && kind == svn_node_dir))
         b->ctx->notify_func2(b->ctx->notify_baton2,
