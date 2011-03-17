@@ -1995,7 +1995,6 @@ revert(svn_test__sandbox_t *b,
 {
   const char *local_abspath = wc_path(b, local_relpath);
   svn_error_t *err;
-  const apr_array_header_t *local_abspaths;
 
   if (!before_actual)
     {
@@ -2007,8 +2006,7 @@ revert(svn_test__sandbox_t *b,
   SVN_ERR(insert_actual(b, before_actual));
   SVN_ERR(check_db_rows(b, "", before_nodes));
   SVN_ERR(check_db_actual(b, before_actual));
-  err = svn_wc__db_op_revert(&local_abspaths,
-                             b->wc_ctx->db, local_abspath, depth,
+  err = svn_wc__db_op_revert(b->wc_ctx->db, local_abspath, depth,
                              b->pool, b->pool);
   if (err)
     {

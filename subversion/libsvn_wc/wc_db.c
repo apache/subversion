@@ -3545,7 +3545,6 @@ op_revert_txn(void *baton,
               const char *local_relpath,
               apr_pool_t *scratch_pool)
 {
-  apr_array_header_t *local_relpaths = baton;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
   apr_int64_t op_depth;
@@ -3582,9 +3581,6 @@ op_revert_txn(void *baton,
                                      path_for_error_message(wcroot,
                                                             local_relpath,
                                                             scratch_pool));
-          APR_ARRAY_PUSH(local_relpaths, const char *)
-            = apr_pstrdup(scratch_pool, local_relpath);
-
           return SVN_NO_ERROR;
         }
 
@@ -3643,33 +3639,9 @@ op_revert_txn(void *baton,
       SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
     }
 
-  if (op_depth || affected_rows)
-    APR_ARRAY_PUSH(local_relpaths, const char *)
-        = apr_pstrdup(scratch_pool, local_relpath);
-
   return SVN_NO_ERROR;
 }
 
-
-/* STMT must select local_relpath as column 0, STMT is reset. */
-static svn_error_t *
-add_to_relpaths(apr_array_header_t *relpaths,
-                svn_sqlite__stmt_t *stmt,
-                apr_pool_t *result_pool)
-{
-  svn_boolean_t have_row;
-
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  while (have_row)
-    {
-      APR_ARRAY_PUSH(relpaths, const char *)
-        = svn_sqlite__column_text(stmt, 0, result_pool);
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
-    }
-  SVN_ERR(svn_sqlite__reset(stmt));
-
-  return SVN_NO_ERROR;
-}
 
 /* This implements svn_wc__db_txn_callback_t */
 static svn_error_t *
@@ -3678,7 +3650,6 @@ op_revert_recursive_txn(void *baton,
                         const char *local_relpath,
                         apr_pool_t *scratch_pool)
 {
-  apr_array_header_t *local_relpaths = baton;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
   apr_int64_t op_depth;
@@ -3695,12 +3666,6 @@ op_revert_recursive_txn(void *baton,
   if (!have_row)
     {
       SVN_ERR(svn_sqlite__reset(stmt));
-
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_SELECT_ACTUAL_ONLY_RECURSIVE));
-      SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id,
-                                local_relpath, like_arg));
-      SVN_ERR(add_to_relpaths(local_relpaths, stmt, scratch_pool));
 
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_DELETE_ACTUAL_ONLY_RECURSIVE));
@@ -3733,17 +3698,6 @@ op_revert_recursive_txn(void *baton,
     op_depth = 1; /* Don't delete BASE nodes */
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_NODES_GE_OP_DEPTH_RECURSIVE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "issi", wcroot->wc_id,
-                            local_relpath, like_arg, op_depth));
-  SVN_ERR(add_to_relpaths(local_relpaths, stmt, scratch_pool));
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_ACTUAL_NODE_REVERT_RECURSIVE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id,
-                            local_relpath, like_arg));
-  SVN_ERR(add_to_relpaths(local_relpaths, stmt, scratch_pool));
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_DELETE_NODES_RECURSIVE));
   SVN_ERR(svn_sqlite__bindf(stmt, "issi", wcroot->wc_id,
                             local_relpath, like_arg, op_depth));
@@ -3764,10 +3718,8 @@ op_revert_recursive_txn(void *baton,
   return SVN_NO_ERROR;
 }
 
-
 svn_error_t *
-svn_wc__db_op_revert(const apr_array_header_t **local_abspaths,
-                     svn_wc__db_t *db,
+svn_wc__db_op_revert(svn_wc__db_t *db,
                      const char *local_abspath,
                      svn_depth_t depth,
                      apr_pool_t *result_pool,
@@ -3776,9 +3728,8 @@ svn_wc__db_op_revert(const apr_array_header_t **local_abspaths,
   svn_wc__db_txn_callback_t txn_func;
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  apr_array_header_t *abspaths;
-  apr_array_header_t *local_relpaths;
-  int i;
+  svn_sqlite__stmt_t *stmt;
+  svn_error_t *err;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -3797,25 +3748,79 @@ svn_wc__db_op_revert(const apr_array_header_t **local_abspaths,
                                                       scratch_pool));
     }
 
-  local_relpaths = apr_array_make(scratch_pool, 1, sizeof(const char *));
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
+                              db, local_abspath, svn_sqlite__mode_readwrite,
+                              scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_CLEAR_REVERT_CACHE));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_CREATE_REVERT_CACHE));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_CREATE_REVERT_CACHE_TRIGGER1));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_CREATE_REVERT_CACHE_TRIGGER2));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  err = svn_wc__db_with_txn(wcroot, local_relpath, txn_func, NULL,
+                            scratch_pool);
+
+  /* We MUST remove the triggers! */
+  err = svn_error_compose_create(err,
+                                 svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                              STMT_DROP_REVERT_CACHE_TRIGGER1));
+  err = svn_error_compose_create(err, svn_sqlite__step_done(stmt));
+  err = svn_error_compose_create(err,
+                                 svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                              STMT_DROP_REVERT_CACHE_TRIGGER2));
+  err = svn_error_compose_create(err, svn_sqlite__step_done(stmt));
+
+  return err;
+}
+
+svn_error_t *
+svn_wc__db_reverted(svn_boolean_t *reverted,
+                    const char **conflict_old,
+                    const char **conflict_new,
+                    const char **conflict_working,
+                    const char **prop_reject,
+                    svn_wc__db_t *db,
+                    const char *local_abspath,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
                               db, local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, txn_func, local_relpaths,
-                              scratch_pool));
-
-  abspaths = apr_array_make(scratch_pool, local_relpaths->nelts,
-                            sizeof(const char *));
-  for (i = 0; i < local_relpaths->nelts; ++i)
-    APR_ARRAY_PUSH(abspaths, const char *)
-      = svn_dirent_join(wcroot->abspath,
-                        APR_ARRAY_IDX(local_relpaths, i, const char *),
-                        result_pool);
-
-  *local_abspaths = abspaths;
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_REVERT_CACHE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "s", local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (have_row)
+    {
+      *reverted = TRUE;
+      *conflict_new = svn_sqlite__column_text(stmt, 0, result_pool);
+      *conflict_old = svn_sqlite__column_text(stmt, 1, result_pool);
+      *conflict_working = svn_sqlite__column_text(stmt, 2, result_pool);
+      *prop_reject = svn_sqlite__column_text(stmt, 3, result_pool);
+    }
+  else
+    {
+      *reverted = FALSE;
+      *conflict_new = *conflict_old = *conflict_working = *prop_reject = NULL;
+    }
+  SVN_ERR(svn_sqlite__reset(stmt));
 
   return SVN_NO_ERROR;
 }

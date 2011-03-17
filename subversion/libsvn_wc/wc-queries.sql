@@ -376,10 +376,6 @@ WHERE wc_id = ?1 AND local_relpath = ?2;
 DELETE FROM actual_node
 WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#');
 
--- STMT_SELECT_ACTUAL_ONLY_RECURSIVE
-SELECT local_relpath FROM actual_node
-WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#');
-
 -- STMT_DELETE_ACTUAL_NODE_WITHOUT_CONFLICT
 DELETE FROM actual_node
 WHERE wc_id = ?1 AND local_relpath = ?2
@@ -435,16 +431,6 @@ SET properties = NULL,
     left_checksum = NULL,
     right_checksum = NULL
 WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#');
-
--- STMT_SELECT_ACTUAL_NODE_REVERT_RECURSIVE
-SELECT local_relpath FROM actual_node
-WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
- AND (properties IS NOT NULL OR
-      tree_conflict_data IS NOT NULL OR
-      conflict_old IS NOT NULL OR
-      conflict_new IS NOT NULL OR
-      conflict_working IS NOT NULL OR
-      prop_reject IS NOT NULL);
 
 -- STMT_CLEAR_ACTUAL_NODE_LEAVING_CONFLICT
 UPDATE actual_node
@@ -734,7 +720,7 @@ UPDATE nodes SET repos_id = ?3, repos_path = ?4
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0;
 
 -- STMT_SELECT_NODES_GE_OP_DEPTH_RECURSIVE
-SELECT local_relpath
+SELECT 1
 FROM nodes
 WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
   AND op_depth >= ?4;
@@ -902,6 +888,51 @@ CREATE UNIQUE INDEX temp__node_props_cache_unique
 -- STMT_SELECT_RELEVANT_PROPS_FROM_CACHE
 SELECT local_relpath, kind, properties FROM temp__node_props_cache
 ORDER BY local_relpath;
+
+-- STMT_CLEAR_REVERT_CACHE
+DROP TABLE IF EXISTS revert_cache;
+
+-- STMT_CREATE_REVERT_CACHE
+CREATE TEMPORARY TABLE revert_cache (
+   local_relpath TEXT PRIMARY KEY,
+   conflict_old TEXT,
+   conflict_new TEXT,
+   conflict_working TEXT,
+   prop_reject TEXT
+   );
+
+-- STMT_CREATE_REVERT_CACHE_TRIGGER1
+CREATE TEMPORARY TRIGGER trigger_revert_cache_nodes
+BEFORE DELETE ON nodes
+BEGIN
+   INSERT OR REPLACE INTO revert_cache(local_relpath) SELECT OLD.local_relpath;
+END;
+
+-- STMT_CREATE_REVERT_CACHE_TRIGGER2
+CREATE TEMPORARY TRIGGER trigger_revert_cache_actual
+BEFORE DELETE ON actual_node
+BEGIN
+   INSERT OR REPLACE INTO revert_cache
+   SELECT OLD.local_relpath,
+          OLD.conflict_old, OLD.conflict_new, OLD.conflict_working,
+          OLD.prop_reject;
+END
+
+-- STMT_DROP_REVERT_CACHE_TRIGGER1
+DROP TRIGGER IF EXISTS trigger_revert_cache_nodes;
+
+-- STMT_DROP_REVERT_CACHE_TRIGGER2
+DROP TRIGGER IF EXISTS trigger_revert_cache_actual;
+
+-- STMT_SELECT_REVERT_CACHE
+SELECT conflict_old, conflict_new, conflict_working, prop_reject
+FROM revert_cache
+WHERE local_relpath = ?1;
+
+-- STMT_SELECT_REVERT_CACHE_RECURSIVE
+SELECT local_relpath, conflict_old, conflict_new, conflict_working, prop_reject
+FROM revert_cache;
+WHERE local_relpath LIKE ?1 ESCAPE '#' ORDER BY local_relpath;
 
 
 /* ------------------------------------------------------------------------- */
