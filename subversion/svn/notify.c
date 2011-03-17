@@ -152,7 +152,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 
     case svn_wc_notify_update_add_deleted:
     case svn_wc_notify_update_update_deleted:
-      /* ### Before 1.7.0 these notifications where suppressed in the wc
+      /* ### Before 1.7.0 these notifications were suppressed in the wc
          ### library.. how should we notify these?
 
          ### Fall through in deleted notification. */
