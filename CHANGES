@@ -7,6 +7,7 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
 
  User-visible changes:
   - General:
+    * No longer including contrib/ in the release tarballs (r877798)
 
   - Major new features:
     * Less verbose HTTP-based repository access protocol (issue #1161, #3371)
@@ -26,6 +27,7 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * display the wc root in the output of 'svn info' (issue #3355)
     * add '--ie' as an alias for '--ignore-externals' (issue #3436)
     * add 'svnlook filesize' (issue #3509)
+    * add 'svn upgrade' command for upgrading working copies (r877675)
     * add 'svnsync --disable-locking' (issue #3545)
     * subtree merges don't unconditionally stop reintegrate merge (issue #3577)
     * 'svn --relocate' updates relative externals (issue #3597)
@@ -124,7 +126,7 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
   - General:
     * improved output of 'make check'
     * introduce scratch_pool/result_pool parameter paradigm
-    * improved error tracing (r877208)
+    * improved error tracing (r877208, -736)
     * improve building with sqlite on Windows (issue #3364)
     * allow mod_dav_svn to compile against Apache 2.4 (issue #3548)
     * support running tests against older servers (r876016)
@@ -136,6 +138,8 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * provide clients with old and new revision on update (r876515)
     * close both files, even on error in svn_stream_copy3() (r887262)
     * added 'work-in-progress' XFail test status (r876549)
+    * notifications sent when mergeinfo changes (r877588)
+    * add information on text and property mods in log APIs (r877688)
     * fixed: svn_ra_local__get_file() leaks file descriptors (issue #3290)
 
   - Bindings:
