@@ -1333,20 +1333,6 @@ verify_revert_depth(svn_wc__db_t *db,
 }
 
 #ifdef SVN_NEW_REVERT
-/* Should be using a hash?  A sorted array? */
-static svn_boolean_t
-matches_reverted(const apr_array_header_t *reverted,
-                 const char *local_abspath)
-{
-  int i;
-
-  for (i = 0; i < reverted->nelts; ++i)
-    if (!strcmp(local_abspath, APR_ARRAY_IDX(reverted, i, const char *)))
-      return TRUE;
-
-  return FALSE;
-}
-
 static svn_error_t *
 revert_restore(svn_wc__db_t *db,
                const char *revert_root,
