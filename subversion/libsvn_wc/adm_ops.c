@@ -1464,7 +1464,11 @@ revert_restore(svn_wc__db_t *db,
         }
     }
 
-  if (on_disk == svn_node_none)
+  if (on_disk == svn_node_none
+      && status != svn_wc__db_status_absent
+      && status != svn_wc__db_status_deleted
+      && status != svn_wc__db_status_excluded
+      && status != svn_wc__db_status_not_present)
     {
       if (kind == svn_wc__db_kind_dir)
         SVN_ERR(svn_io_dir_make(local_abspath, APR_OS_DEFAULT, scratch_pool));
