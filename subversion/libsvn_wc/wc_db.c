@@ -3538,10 +3538,6 @@ svn_wc__db_op_revert_actual(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
-struct op_revert_baton_t {
-  apr_array_header_t *local_relpaths;
-};
-
 
 /* This implements svn_wc__db_txn_callback_t */
 static svn_error_t *
@@ -3550,7 +3546,7 @@ op_revert_txn(void *baton,
               const char *local_relpath,
               apr_pool_t *scratch_pool)
 {
-  struct op_revert_baton_t *b = baton;
+  apr_array_header_t *local_relpaths = baton;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
   apr_int64_t op_depth;
@@ -3587,7 +3583,7 @@ op_revert_txn(void *baton,
                                      path_for_error_message(wcroot,
                                                             local_relpath,
                                                             scratch_pool));
-          APR_ARRAY_PUSH(b->local_relpaths, const char *)
+          APR_ARRAY_PUSH(local_relpaths, const char *)
             = apr_pstrdup(scratch_pool, local_relpath);
 
           return SVN_NO_ERROR;
@@ -3649,7 +3645,7 @@ op_revert_txn(void *baton,
     }
 
   if (op_depth || affected_rows)
-    APR_ARRAY_PUSH(b->local_relpaths, const char *)
+    APR_ARRAY_PUSH(local_relpaths, const char *)
         = apr_pstrdup(scratch_pool, local_relpath);
 
   return SVN_NO_ERROR;
@@ -3683,7 +3679,7 @@ op_revert_recursive_txn(void *baton,
                         const char *local_relpath,
                         apr_pool_t *scratch_pool)
 {
-  struct op_revert_baton_t *b = baton;
+  apr_array_header_t *local_relpaths = baton;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
   apr_int64_t op_depth;
@@ -3705,7 +3701,7 @@ op_revert_recursive_txn(void *baton,
                                         STMT_SELECT_ACTUAL_ONLY_RECURSIVE));
       SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id,
                                 local_relpath, like_arg));
-      SVN_ERR(add_to_relpaths(b->local_relpaths, stmt, scratch_pool));
+      SVN_ERR(add_to_relpaths(local_relpaths, stmt, scratch_pool));
 
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_DELETE_ACTUAL_ONLY_RECURSIVE));
@@ -3741,12 +3737,12 @@ op_revert_recursive_txn(void *baton,
                                     STMT_SELECT_NODES_GE_OP_DEPTH_RECURSIVE));
   SVN_ERR(svn_sqlite__bindf(stmt, "issi", wcroot->wc_id,
                             local_relpath, like_arg, op_depth));
-  SVN_ERR(add_to_relpaths(b->local_relpaths, stmt, scratch_pool));
+  SVN_ERR(add_to_relpaths(local_relpaths, stmt, scratch_pool));
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_ACTUAL_NODE_REVERT_RECURSIVE));
   SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id,
                             local_relpath, like_arg));
-  SVN_ERR(add_to_relpaths(b->local_relpaths, stmt, scratch_pool));
+  SVN_ERR(add_to_relpaths(local_relpaths, stmt, scratch_pool));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_DELETE_NODES_RECURSIVE));
@@ -3781,8 +3777,8 @@ svn_wc__db_op_revert(const apr_array_header_t **local_abspaths,
   svn_wc__db_txn_callback_t txn_func;
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  struct op_revert_baton_t baton;
   apr_array_header_t *abspaths;
+  apr_array_header_t *local_relpaths;
   int i;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
@@ -3802,22 +3798,22 @@ svn_wc__db_op_revert(const apr_array_header_t **local_abspaths,
                                                       scratch_pool));
     }
 
-  baton.local_relpaths = apr_array_make(scratch_pool, 1, sizeof(const char *));
+  local_relpaths = apr_array_make(scratch_pool, 1, sizeof(const char *));
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
                               db, local_abspath, svn_sqlite__mode_readwrite,
                               scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, txn_func, &baton,
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, txn_func, local_relpaths,
                               scratch_pool));
 
-  abspaths = apr_array_make(scratch_pool, baton.local_relpaths->nelts,
+  abspaths = apr_array_make(scratch_pool, local_relpaths->nelts,
                             sizeof(const char *));
-  for (i = 0; i < baton.local_relpaths->nelts; ++i)
+  for (i = 0; i < local_relpaths->nelts; ++i)
     APR_ARRAY_PUSH(abspaths, const char *)
       = svn_dirent_join(wcroot->abspath,
-                        APR_ARRAY_IDX(baton.local_relpaths, i, const char *),
+                        APR_ARRAY_IDX(local_relpaths, i, const char *),
                         result_pool);
 
   *local_abspaths = abspaths;
