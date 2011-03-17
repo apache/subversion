@@ -3702,7 +3702,6 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
   svn_wc__db_txn_callback_t txn_func;
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  svn_sqlite__stmt_t *stmt;
   svn_error_t *err;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
@@ -3726,31 +3725,20 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
                               db, local_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_CLEAR_REVERT_CACHE));
-  SVN_ERR(svn_sqlite__step_done(stmt));
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_CREATE_REVERT_CACHE));
-  SVN_ERR(svn_sqlite__step_done(stmt));
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_CREATE_REVERT_CACHE_TRIGGER1));
-  SVN_ERR(svn_sqlite__step_done(stmt));
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_CREATE_REVERT_CACHE_TRIGGER2));
-  SVN_ERR(svn_sqlite__step_done(stmt));
+  /* We MUST remove the triggers and not leave them to affect subsequent
+     deletes. */
+  err = svn_sqlite__exec_statements(wcroot->sdb, STMT_CREATE_REVERT_CACHE);
+  if (err)
+    return svn_error_compose_create(err,
+                                    svn_sqlite__exec_statements(wcroot->sdb,
+                                              STMT_DROP_REVERT_CACHE_TRIGGERS));
 
   err = svn_wc__db_with_txn(wcroot, local_relpath, txn_func, NULL,
                             scratch_pool);
 
-  /* We MUST remove the triggers! */
   err = svn_error_compose_create(err,
-                                 svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                              STMT_DROP_REVERT_CACHE_TRIGGER1));
-  err = svn_error_compose_create(err, svn_sqlite__step_done(stmt));
-  err = svn_error_compose_create(err,
-                                 svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                              STMT_DROP_REVERT_CACHE_TRIGGER2));
-  err = svn_error_compose_create(err, svn_sqlite__step_done(stmt));
+                                 svn_sqlite__exec_statements(wcroot->sdb,
+                                              STMT_DROP_REVERT_CACHE_TRIGGERS));
 
   return err;
 }

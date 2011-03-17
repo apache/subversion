@@ -893,26 +893,22 @@ CREATE UNIQUE INDEX temp__node_props_cache_unique
 SELECT local_relpath, kind, properties FROM temp__node_props_cache
 ORDER BY local_relpath
 
--- STMT_CLEAR_REVERT_CACHE
-DROP TABLE IF EXISTS revert_cache
-
 -- STMT_CREATE_REVERT_CACHE
+DROP TABLE IF EXISTS revert_cache;
 CREATE TEMPORARY TABLE revert_cache (
    local_relpath TEXT PRIMARY KEY,
    conflict_old TEXT,
    conflict_new TEXT,
    conflict_working TEXT,
    prop_reject TEXT
-   )
-
--- STMT_CREATE_REVERT_CACHE_TRIGGER1
+   );
+DROP TRIGGER IF EXISTS trigger_revert_cache_nodes;
 CREATE TEMPORARY TRIGGER trigger_revert_cache_nodes
 BEFORE DELETE ON nodes
 BEGIN
    INSERT OR REPLACE INTO revert_cache(local_relpath) SELECT OLD.local_relpath;
-END
-
--- STMT_CREATE_REVERT_CACHE_TRIGGER2
+END;
+DROP TRIGGER IF EXISTS trigger_revert_cache_actual;
 CREATE TEMPORARY TRIGGER trigger_revert_cache_actual
 BEFORE DELETE ON actual_node
 BEGIN
@@ -922,11 +918,9 @@ BEGIN
           OLD.prop_reject;
 END
 
--- STMT_DROP_REVERT_CACHE_TRIGGER1
-DROP TRIGGER IF EXISTS trigger_revert_cache_nodes
-
--- STMT_DROP_REVERT_CACHE_TRIGGER2
-DROP TRIGGER IF EXISTS trigger_revert_cache_actual
+-- STMT_DROP_REVERT_CACHE_TRIGGERS
+DROP TRIGGER IF EXISTS trigger_revert_cache_nodes;
+DROP TRIGGER IF EXISTS trigger_revert_cache_actual;
 
 -- STMT_SELECT_REVERT_CACHE
 SELECT conflict_old, conflict_new, conflict_working, prop_reject
