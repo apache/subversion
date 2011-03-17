@@ -771,22 +771,6 @@ svn_wc__db_base_get_children_info(apr_hash_t **nodes,
                                   apr_pool_t *scratch_pool);
 
 
-/* Set *PROPVAL to the value of the property named PROPNAME of the node
-   LOCAL_ABSPATH in the BASE tree.
-
-   If the node has no property named PROPNAME, set *PROPVAL to NULL.
-   If the node is not present in the BASE tree, return an error.
-   Allocate *PROPVAL in RESULT_POOL.
-*/
-svn_error_t *
-svn_wc__db_base_get_prop(const svn_string_t **propval,
-                         svn_wc__db_t *db,
-                         const char *local_abspath,
-                         const char *propname,
-                         apr_pool_t *result_pool,
-                         apr_pool_t *scratch_pool);
-
-
 /* Set *PROPS to the properties of the node LOCAL_ABSPATH in the BASE tree.
 
    *PROPS maps "const char *" names to "const svn_string_t *" values.
@@ -1597,23 +1581,6 @@ svn_wc__db_read_url(const char **url,
                     const char *local_abspath,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool);
-
-
-/* Set *PROPVAL to the value of the property named PROPNAME of the node
-   LOCAL_ABSPATH in the ACTUAL tree (looking through to the WORKING or BASE
-   tree as required).
-
-   If the node has no property named PROPNAME, set *PROPVAL to NULL.
-   If the node is not present, return an error.
-   Allocate *PROPVAL in RESULT_POOL.
-*/
-svn_error_t *
-svn_wc__db_read_prop(const svn_string_t **propval,
-                     svn_wc__db_t *db,
-                     const char *local_abspath,
-                     const char *propname,
-                     apr_pool_t *result_pool,
-                     apr_pool_t *scratch_pool);
 
 
 /* Set *PROPS to the properties of the node LOCAL_ABSPATH in the ACTUAL
