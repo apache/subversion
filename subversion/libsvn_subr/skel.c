@@ -697,7 +697,6 @@ svn_skel__parse_proplist(apr_hash_t **proplist_p,
   for (elt = skel->children; elt; elt = elt->next->next)
     {
       svn_string_t *value;
-      const char *name;
 
       if (propname
           && (elt->len != strlen(propname)
