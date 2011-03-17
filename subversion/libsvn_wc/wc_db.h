@@ -1266,8 +1266,10 @@ svn_wc__db_op_revert_actual(svn_wc__db_t *db,
  *
  * At present only depth=empty and depth=infinity are supported.
  *
- * ### Need to return the modified paths for notification.  An array
- * ### or hash?  A temporary SQLite table?
+ * This function populates the revert cache that can be queried to
+ * determine what was reverted.
+ *
+ * ### Need a way to drop the cache.
  */
 svn_error_t *
 svn_wc__db_op_revert(svn_wc__db_t *db,
@@ -1276,6 +1278,10 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool);
 
+/* Query the revert cache for LOCAL_ABSPATH and set *REVERTED if the path
+ * was reverted.  If it was reverted set *CONFLICT_OLD, *CONFLICT_NEW,
+ * *CONFLICT_WORKING and *PROP_REJECT to the names of the files.
+ */
 svn_error_t *
 svn_wc__db_reverted(svn_boolean_t *reverted,
                     const char **conflict_old,
