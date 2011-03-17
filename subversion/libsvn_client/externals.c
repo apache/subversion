@@ -1423,8 +1423,8 @@ svn_client__crawl_for_externals(apr_hash_t **externals_p,
                                 const char *local_abspath,
                                 svn_depth_t depth,
                                 svn_client_ctx_t *ctx,
-                                apr_pool_t *scratch_pool,
-                                apr_pool_t *result_pool)
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool)
 {
   apr_hash_t *externals_hash = apr_hash_make(result_pool);
 
