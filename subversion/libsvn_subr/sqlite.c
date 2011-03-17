@@ -509,7 +509,7 @@ svn_sqlite__column_properties(apr_hash_t **props,
 
   SVN_ERR(svn_skel__parse_proplist(props,
                                    svn_skel__parse(val, len, scratch_pool),
-                                   result_pool));
+                                   NULL, result_pool));
 
   return SVN_NO_ERROR;
 }
