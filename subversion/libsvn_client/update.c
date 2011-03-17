@@ -211,7 +211,10 @@ update_internal(svn_revnum_t *result_rev,
                                     depth_is_sticky, allow_unver_obstructions,
                                     diff3_cmd, preserved_exts,
                                     ctx->conflict_func, ctx->conflict_baton,
-                                    svn_client__external_info_gatherer, &efb,
+                                    ignore_externals
+                                        ? NULL
+                                        : svn_client__external_info_gatherer,
+                                    &efb,
                                     ctx->cancel_func, ctx->cancel_baton,
                                     ctx->notify_func2, ctx->notify_baton2,
                                     pool, pool));
@@ -232,7 +235,9 @@ update_internal(svn_revnum_t *result_rev,
                                 report_baton, TRUE, depth, (! depth_is_sticky),
                                 (! server_supports_depth),
                                 use_commit_times,
-                                svn_client__external_info_gatherer,
+                                ignore_externals
+                                        ? NULL
+                                        : svn_client__external_info_gatherer,
                                 &efb, ctx->notify_func2, ctx->notify_baton2,
                                 pool);
 
