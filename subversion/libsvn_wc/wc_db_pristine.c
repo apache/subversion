@@ -133,7 +133,6 @@ svn_wc__db_pristine_get_path(const char **pristine_abspath,
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
                                              db, wri_abspath,
-                                             svn_sqlite__mode_readonly,
                                              scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
@@ -246,8 +245,7 @@ svn_wc__db_pristine_read(svn_stream_t **contents,
   SVN_ERR_ASSERT(sha1_checksum->kind == svn_checksum_sha1);
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
-                              wri_abspath, svn_sqlite__mode_readonly,
-                              scratch_pool, scratch_pool));
+                              wri_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
   b.contents = contents;
@@ -290,8 +288,7 @@ svn_wc__db_pristine_get_tempdir(const char **temp_dir_abspath,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
-                              wri_abspath, svn_sqlite__mode_readonly,
-                              scratch_pool, scratch_pool));
+                              wri_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
   *temp_dir_abspath = pristine_get_tempdir(wcroot, result_pool, scratch_pool);
@@ -412,8 +409,7 @@ svn_wc__db_pristine_install(svn_wc__db_t *db,
                                    scratch_pool);
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
-                              wri_abspath, svn_sqlite__mode_readonly,
-                              scratch_pool, scratch_pool));
+                              wri_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
   b.tempfile_abspath = tempfile_abspath;
@@ -453,8 +449,7 @@ svn_wc__db_pristine_get_md5(const svn_checksum_t **md5_checksum,
   SVN_ERR_ASSERT(sha1_checksum->kind == svn_checksum_sha1);
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
-                              wri_abspath, svn_sqlite__mode_readonly,
-                              scratch_pool, scratch_pool));
+                              wri_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_SELECT_PRISTINE));
@@ -492,8 +487,7 @@ svn_wc__db_pristine_get_sha1(const svn_checksum_t **sha1_checksum,
   SVN_ERR_ASSERT(md5_checksum->kind == svn_checksum_md5);
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
-                              wri_abspath, svn_sqlite__mode_readonly,
-                              scratch_pool, scratch_pool));
+                              wri_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
@@ -647,8 +641,7 @@ svn_wc__db_pristine_remove(svn_wc__db_t *db,
   SVN_ERR_ASSERT(sha1_checksum->kind == svn_checksum_sha1);
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
-                              wri_abspath, svn_sqlite__mode_readwrite,
-                              scratch_pool, scratch_pool));
+                              wri_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
   /* If the work queue is not empty, don't delete any pristine text because
@@ -712,8 +705,7 @@ svn_wc__db_pristine_cleanup(svn_wc__db_t *db,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
-                              wri_abspath, svn_sqlite__mode_readonly,
-                              scratch_pool, scratch_pool));
+                              wri_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
   SVN_ERR(pristine_cleanup_wcroot(wcroot, scratch_pool));
@@ -746,8 +738,7 @@ svn_wc__db_pristine_check(svn_boolean_t *present,
   SVN_ERR_ASSERT(sha1_checksum->kind == svn_checksum_sha1);
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
-                              wri_abspath, svn_sqlite__mode_readonly,
-                              scratch_pool, scratch_pool));
+                              wri_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
   /* Check that there is an entry in the PRISTINE table. */

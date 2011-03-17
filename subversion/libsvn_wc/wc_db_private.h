@@ -128,8 +128,7 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
 
 
 /* For a given LOCAL_ABSPATH, figure out what sqlite database (WCROOT) to
-   use and the RELPATH within that wcroot.  If a sqlite database needs
-   to be opened, then use SMODE for it.
+   use and the RELPATH within that wcroot.
 
    *LOCAL_RELPATH will be allocated within RESULT_POOL. Temporary allocations
    will be made in SCRATCH_POOL.
@@ -143,7 +142,6 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
                                       const char **local_relpath,
                                       svn_wc__db_t *db,
                                       const char *local_abspath,
-                                      svn_sqlite__mode_t smode,
                                       apr_pool_t *result_pool,
                                       apr_pool_t *scratch_pool);
 
