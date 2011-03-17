@@ -1270,12 +1270,22 @@ svn_wc__db_op_revert_actual(svn_wc__db_t *db,
  * ### or hash?  A temporary SQLite table?
  */
 svn_error_t *
-svn_wc__db_op_revert(const apr_array_header_t **local_abspaths,
-                     svn_wc__db_t *db,
+svn_wc__db_op_revert(svn_wc__db_t *db,
                      const char *local_abspath,
                      svn_depth_t depth,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool);
+
+svn_error_t *
+svn_wc__db_reverted(svn_boolean_t *reverted,
+                    const char **conflict_old,
+                    const char **conflict_new,
+                    const char **conflict_working,
+                    const char **prop_reject,
+                    svn_wc__db_t *db,
+                    const char *local_abspath,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool);
 
 
 /* Return a hash @a *tree_conflicts of all the children of @a

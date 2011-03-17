@@ -1354,7 +1354,6 @@ revert_restore(svn_wc__db_t *db,
                svn_depth_t depth,
                svn_boolean_t use_commit_times,
                apr_hash_t *changelist_hash,
-               const apr_array_header_t *reverted,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
                svn_wc_notify_func2_t notify_func,
@@ -1365,13 +1364,17 @@ revert_restore(svn_wc__db_t *db,
   svn_wc__db_status_t status;
   svn_wc__db_kind_t kind;
   svn_node_kind_t on_disk;
-  svn_boolean_t special;
-  svn_boolean_t notify_required;
+  svn_boolean_t special, notify_required;
+  const char *conflict_old, *conflict_new, *conflict_working, *prop_reject;
+
 
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
 
-  notify_required = matches_reverted(reverted, local_abspath);
+  SVN_ERR(svn_wc__db_reverted(&notify_required,
+                              &conflict_old, &conflict_new, &conflict_working,
+                              &prop_reject,
+                              db, local_abspath, scratch_pool, scratch_pool));
 
   err = svn_wc__db_read_info(&status, &kind,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -1513,7 +1516,7 @@ revert_restore(svn_wc__db_t *db,
                               scratch_pool);
 
           SVN_ERR(revert_restore(db, revert_root, child_abspath, depth,
-                                 use_commit_times, changelist_hash, reverted,
+                                 use_commit_times, changelist_hash,
                                  cancel_func, cancel_baton,
                                  notify_func, notify_baton,
                                  scratch_pool));
@@ -1536,13 +1539,11 @@ new_revert_internal(svn_wc__db_t *db,
                     void *notify_baton,
                     apr_pool_t *scratch_pool)
 {
-  const apr_array_header_t *reverted;
-
-  SVN_ERR(svn_wc__db_op_revert(&reverted, db, local_abspath, depth,
+  SVN_ERR(svn_wc__db_op_revert(db, local_abspath, depth,
                                scratch_pool, scratch_pool));
 
   SVN_ERR(revert_restore(db, revert_root, local_abspath, depth,
-                         use_commit_times, changelist_hash, reverted,
+                         use_commit_times, changelist_hash,
                          cancel_func, cancel_baton,
                          notify_func, notify_baton,
                          scratch_pool));
