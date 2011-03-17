@@ -4305,7 +4305,7 @@ svn_client_revprop_set(const char *propname,
  *
  * @a changelists is an array of <tt>const char *</tt> changelist
  * names, used as a restrictive filter on items whose properties are
- * set; that is, don't set properties on any item unless it's a member
+ * gotten; that is, don't get @a propname on any item unless it's a member
  * of one of those changelists.  If @a changelists is empty (or
  * altogether @c NULL), no changelist filtering occurs.
  *
@@ -4409,7 +4409,7 @@ svn_client_revprop_get(const char *propname,
  *
  * @a changelists is an array of <tt>const char *</tt> changelist
  * names, used as a restrictive filter on items whose properties are
- * set; that is, don't set properties on any item unless it's a member
+ * listed; that is, don't list properties on any item unless it's a member
  * of one of those changelists.  If @a changelists is empty (or
  * altogether @c NULL), no changelist filtering occurs.
  *
