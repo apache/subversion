@@ -346,7 +346,6 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
                                       const char **local_relpath,
                                       svn_wc__db_t *db,
                                       const char *local_abspath,
-                                      svn_sqlite__mode_t smode,
                                       apr_pool_t *result_pool,
                                       apr_pool_t *scratch_pool)
 {
@@ -365,15 +364,6 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
   /* ### we need more logic for finding the database (if it is located
      ### outside of the wcroot) and then managing all of that within DB.
      ### for now: play quick & dirty. */
-
-  /* ### for now, overwrite the provided mode.  We currently cache the
-     ### sdb handles, which is great but for the occasion where we
-     ### initially open the sdb in readonly mode and then later want
-     ### to write to it.  The solution is to reopen the db in readwrite
-     ### mode, but that assumes we can track the fact that it was
-     ### originally opened readonly.  So for now, just punt and open
-     ### everything in readwrite mode.  */
-  smode = svn_sqlite__mode_readwrite;
 
   probe_wcroot = apr_hash_get(db->dir_data, local_abspath,
                               APR_HASH_KEY_STRING);
@@ -461,7 +451,16 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
     {
       svn_error_t *err;
 
-      err = svn_wc__db_util_open_db(&sdb, local_abspath, SDB_FILE, smode,
+      /* We always open the database in read/write mode.  If the database
+         isn't writable in the filesystem, SQLite will internally open
+         it as read-only, and we'll get an error if we try to do a write
+         operation.
+
+         We could decide what to do on a per-operation basis, but since
+         we're caching database handles, it make sense to be as permissive
+         as the filesystem allows. */
+      err = svn_wc__db_util_open_db(&sdb, local_abspath, SDB_FILE,
+                                    svn_sqlite__mode_readwrite,
                                     db->state_pool, scratch_pool);
       if (err == NULL)
         break;
