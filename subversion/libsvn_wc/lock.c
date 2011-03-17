@@ -97,12 +97,6 @@ close_single(svn_wc_adm_access_t *adm_access,
              svn_boolean_t preserve_lock,
              apr_pool_t *scratch_pool);
 
-static svn_error_t *
-alloc_db(svn_wc__db_t **db,
-         svn_config_t *config,
-         apr_pool_t *result_pool,
-         apr_pool_t *scratch_pool);
-
 
 svn_error_t *
 svn_wc__internal_check_wc(int *wc_format,
@@ -256,7 +250,8 @@ pool_cleanup_locked(void *p)
          run, but the subpools will NOT be destroyed)  */
       scratch_pool = svn_pool_create(lock->pool);
 
-      err = alloc_db(&db, NULL /* config */, scratch_pool, scratch_pool);
+      err = svn_wc__db_open(&db, NULL /* ### config. need! */, TRUE, TRUE,
+                            scratch_pool, scratch_pool);
       if (!err)
         {
           err = svn_wc__db_wq_fetch(&id, &work_item, db, lock->abspath,
@@ -410,19 +405,6 @@ adm_access_alloc(svn_wc_adm_access_t **adm_access,
                               ? pool_cleanup_locked
                               : pool_cleanup_readonly,
                             pool_cleanup_child);
-
-  return SVN_NO_ERROR;
-}
-
-
-/* */
-static svn_error_t *
-alloc_db(svn_wc__db_t **db,
-         svn_config_t *config,
-         apr_pool_t *result_pool,
-         apr_pool_t *scratch_pool)
-{
-  SVN_ERR(svn_wc__db_open(db, config, TRUE, TRUE, result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -811,7 +793,8 @@ svn_wc_adm_open3(svn_wc_adm_access_t **adm_access,
          do it here.  */
       /* ### we could optimize around levels_to_lock==0, but much of this
          ### is going to be simplified soon anyways.  */
-      SVN_ERR(alloc_db(&db, NULL /* ### config. need! */, pool, pool));
+      SVN_ERR(svn_wc__db_open(&db, NULL /* ### config. need! */, TRUE, TRUE,
+                              pool, pool));
       db_provided = FALSE;
     }
 
@@ -1180,7 +1163,8 @@ open_anchor(svn_wc_adm_access_t **anchor_access,
      ### given that we need DB for format detection, may as well keep this.
      ### in any case, much of this is going to be simplified soon anyways.  */
   if (!db_provided)
-    SVN_ERR(alloc_db(&db, NULL /* ### config. need! */, pool, pool));
+    SVN_ERR(svn_wc__db_open(&db, NULL, /* ### config. need! */ TRUE, TRUE,
+                            pool, pool));
 
   if (svn_path_is_empty(path)
       || svn_dirent_is_root(path, strlen(path))
