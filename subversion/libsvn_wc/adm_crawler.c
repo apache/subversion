@@ -255,8 +255,12 @@ read_externals_info(svn_wc__db_t *db,
    comes back from the server will be different for svn_depth_unknown
    than for svn_depth_infinity.)
 
+   DIR_REPOS_RELPATH, DIR_REPOS_ROOT and DIR_DEPTH are the repository
+   relative path, the repository root and depth stored on the directory,
+   passed here to avoid another database query.
+
    DEPTH_COMPATIBILITY_TRICK means the same thing here as it does
-   in svn_wc_crawl_revisions3().
+   in svn_wc_crawl_revisions5().
 
    If EXTERNAL_FUNC is non-NULL, then send externals information with
    the help of EXTERNAL_BATON
@@ -270,6 +274,9 @@ report_revisions_and_depths(svn_wc__db_t *db,
                             const char *anchor_abspath,
                             const char *dir_path,
                             svn_revnum_t dir_rev,
+                            const char *dir_repos_relpath,
+                            const char *dir_repos_root,
+                            svn_depth_t dir_depth,
                             const svn_ra_reporter3_t *reporter,
                             void *report_baton,
                             svn_wc_external_update_t external_func,
@@ -289,8 +296,6 @@ report_revisions_and_depths(svn_wc__db_t *db,
   apr_hash_t *dirents;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_hash_index_t *hi;
-  const char *dir_repos_root, *dir_repos_relpath;
-  svn_depth_t dir_depth;
   svn_error_t *err;
 
 
@@ -314,20 +319,6 @@ report_revisions_and_depths(svn_wc__db_t *db,
     SVN_ERR(err);
 
   /*** Do the real reporting and recursing. ***/
-
-  /* First, look at "this dir" to see what its URL and depth are. */
-  SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, &dir_repos_relpath,
-                                   &dir_repos_root, NULL, NULL, NULL, NULL,
-                                   NULL, &dir_depth, NULL, NULL, NULL, NULL,
-                                   NULL,
-                                   db, dir_abspath,
-                                   scratch_pool, iterpool));
-
-  /* If the directory has no url, search its parents */
-  if (dir_repos_relpath == NULL)
-    SVN_ERR(svn_wc__db_scan_base_repos(&dir_repos_relpath, &dir_repos_root,
-                                       NULL, db, dir_abspath,
-                                       scratch_pool, iterpool));
 
   /* If "this dir" has "svn:externals" property set on it,
    * call the external_func callback. */
@@ -619,19 +610,33 @@ report_revisions_and_depths(svn_wc__db_t *db,
 
           /* Finally, recurse if necessary and appropriate. */
           if (SVN_DEPTH_IS_RECURSIVE(depth))
-            SVN_ERR(report_revisions_and_depths(db,
-                                                anchor_abspath,
-                                                this_path,
-                                                ths->revnum,
-                                                reporter, report_baton,
-                                                external_func, external_baton,
-                                                notify_func, notify_baton,
-                                                restore_files, depth,
-                                                honor_depth_exclude,
-                                                depth_compatibility_trick,
-                                                start_empty,
-                                                use_commit_times,
-                                                iterpool));
+            {
+              const char *repos_relpath = ths->repos_relpath;
+
+              if (repos_relpath == NULL)
+                {
+                  repos_relpath = svn_relpath_join(dir_repos_relpath, child,
+                                                   iterpool);
+                }
+
+              SVN_ERR(report_revisions_and_depths(db,
+                                                  anchor_abspath,
+                                                  this_path,
+                                                  ths->revnum,
+                                                  repos_relpath,
+                                                  dir_repos_root,
+                                                  ths->depth,
+                                                  reporter, report_baton,
+                                                  external_func,
+                                                  external_baton,
+                                                  notify_func, notify_baton,
+                                                  restore_files, depth,
+                                                  honor_depth_exclude,
+                                                  depth_compatibility_trick,
+                                                  start_empty,
+                                                  use_commit_times,
+                                                  iterpool));
+            }
         } /* end directory case */
     } /* end main entries loop */
 
@@ -728,7 +733,7 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
   svn_boolean_t start_empty;
   svn_wc__db_status_t status;
   svn_wc__db_kind_t target_kind = svn_wc__db_kind_unknown;
-  const char *repos_relpath=NULL, *repos_root=NULL;
+  const char *repos_relpath=NULL, *repos_root_url=NULL;
   svn_depth_t target_depth = svn_depth_unknown;
   svn_wc__db_lock_t *target_lock = NULL;
   svn_node_kind_t disk_kind;
@@ -739,7 +744,7 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
      ROOT_DIRECTORY.  This is the first revnum that entries will be
      compared to. */
   err = svn_wc__db_base_get_info(&status, &target_kind, &target_rev,
-                                 &repos_relpath, &repos_root,
+                                 &repos_relpath, &repos_root_url,
                                  NULL, NULL, NULL, NULL, NULL,
                                  &target_depth, NULL, NULL, NULL,
                                  &target_lock, NULL,
@@ -761,6 +766,10 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
       else
         status = svn_wc__db_status_not_present; /* As checkout */
     }
+  else if (repos_root_url == NULL || repos_relpath == NULL)
+    SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath, &repos_root_url, NULL,
+                                       db, local_abspath,
+                                       scratch_pool, scratch_pool));
 
   if (status == svn_wc__db_status_not_present
       || status == svn_wc__db_status_absent
@@ -787,16 +796,6 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
       SVN_ERR(reporter->finish_report(report_baton, scratch_pool));
 
       return SVN_NO_ERROR;
-    }
-
-  if (!repos_root || !repos_relpath)
-    {
-      /* Ok, that leaves a local addition. Deleted and not existing nodes
-         are already handled. */
-      SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, &repos_relpath,
-                                       &repos_root, NULL, NULL, NULL, NULL,
-                                       NULL, db, local_abspath,
-                                       scratch_pool, scratch_pool));
     }
 
   if (!SVN_IS_VALID_REVNUM(target_rev))
@@ -877,6 +876,9 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
                                             local_abspath,
                                             "",
                                             target_rev,
+                                            repos_relpath,
+                                            repos_root_url,
+                                            target_depth,
                                             reporter, report_baton,
                                             external_func, external_baton,
                                             notify_func, notify_baton,
@@ -926,7 +928,7 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
           err = reporter->link_path(report_baton,
                                     "",
                                     svn_path_url_add_component2(
-                                                    repos_root,
+                                                    repos_root_url,
                                                     repos_relpath,
                                                     scratch_pool),
                                     target_rev,
