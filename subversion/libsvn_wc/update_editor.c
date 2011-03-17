@@ -2667,7 +2667,8 @@ close_directory(void *dir_baton,
   struct dir_baton *db = dir_baton;
   struct edit_baton *eb = db->edit_baton;
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
-  apr_array_header_t *entry_props, *dav_props, *regular_props;
+  apr_array_header_t *entry_prop_changes, *dav_prop_changes,
+                     *regular_prop_changes;
   apr_hash_t *base_props;
   apr_hash_t *actual_props;
   apr_hash_t *new_base_props = NULL, *new_actual_props = NULL;
@@ -2690,8 +2691,8 @@ close_directory(void *dir_baton,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(svn_categorize_props(db->propchanges, &entry_props, &dav_props,
-                               &regular_props, pool));
+  SVN_ERR(svn_categorize_props(db->propchanges, &entry_prop_changes,
+                               &dav_prop_changes, &regular_prop_changes, pool));
 
   /* Fetch the existing properties.  */
   SVN_ERR(svn_wc__get_pristine_props(&base_props,
@@ -2721,21 +2722,22 @@ close_directory(void *dir_baton,
          incoming change for. The remaining unmentioned properties are those
          which need to be deleted.  */
       props_to_delete = apr_hash_copy(pool, base_props);
-      for (i = 0; i < regular_props->nelts; i++)
+      for (i = 0; i < regular_prop_changes->nelts; i++)
         {
           const svn_prop_t *prop;
-          prop = &APR_ARRAY_IDX(regular_props, i, svn_prop_t);
+          prop = &APR_ARRAY_IDX(regular_prop_changes, i, svn_prop_t);
           apr_hash_set(props_to_delete, prop->name,
                        APR_HASH_KEY_STRING, NULL);
         }
 
-      /* Add these props to the incoming propchanges (in regular_props).  */
+      /* Add these props to the incoming propchanges (in
+       * regular_prop_changes).  */
       for (hi = apr_hash_first(pool, props_to_delete);
            hi != NULL;
            hi = apr_hash_next(hi))
         {
           const char *propname = svn__apr_hash_index_key(hi);
-          svn_prop_t *prop = apr_array_push(regular_props);
+          svn_prop_t *prop = apr_array_push(regular_prop_changes);
 
           /* Record a deletion for PROPNAME.  */
           prop->name = propname;
@@ -2745,16 +2747,18 @@ close_directory(void *dir_baton,
 
   /* If this directory has property changes stored up, now is the time
      to deal with them. */
-  if (regular_props->nelts || entry_props->nelts || dav_props->nelts)
+  if (regular_prop_changes->nelts || entry_prop_changes->nelts
+      || dav_prop_changes->nelts)
     {
-      if (regular_props->nelts)
+      if (regular_prop_changes->nelts)
         {
           /* If recording traversal info, then see if the
              SVN_PROP_EXTERNALS property on this directory changed,
              and record before and after for the change. */
-            if (eb->external_func)
+          if (eb->external_func)
             {
-              const svn_prop_t *change = externals_prop_changed(regular_props);
+              const svn_prop_t *change
+                = externals_prop_changed(regular_prop_changes);
 
               if (change)
                 {
@@ -2797,7 +2801,7 @@ close_directory(void *dir_baton,
                                         NULL /* use baseprops */,
                                         base_props,
                                         actual_props,
-                                        regular_props,
+                                        regular_prop_changes,
                                         TRUE /* base_merge */,
                                         FALSE /* dry_run */,
                                         eb->conflict_func,
@@ -2814,7 +2818,7 @@ close_directory(void *dir_baton,
       SVN_ERR(accumulate_last_change(&new_changed_rev,
                                      &new_changed_date,
                                      &new_changed_author,
-                                     entry_props,
+                                     entry_prop_changes,
                                      pool, pool));
     }
 
@@ -2883,8 +2887,8 @@ close_directory(void *dir_baton,
                 changed_rev, changed_date, changed_author,
                 NULL /* children */,
                 depth,
-                (dav_props && dav_props->nelts > 0)
-                    ? prop_hash_from_array(dav_props, pool)
+                (dav_prop_changes && dav_prop_changes->nelts > 0)
+                    ? prop_hash_from_array(dav_prop_changes, pool)
                     : NULL,
                 NULL /* conflict */,
                 NULL /* work_items */,
@@ -4021,9 +4025,9 @@ close_file(void *file_baton,
   svn_checksum_t *expected_md5_checksum = NULL;
   apr_hash_t *new_base_props = NULL;
   apr_hash_t *new_actual_props = NULL;
-  apr_array_header_t *entry_props;
-  apr_array_header_t *dav_props;
-  apr_array_header_t *regular_props;
+  apr_array_header_t *entry_prop_changes;
+  apr_array_header_t *dav_prop_changes;
+  apr_array_header_t *regular_prop_changes;
   svn_boolean_t install_pristine;
   const char *install_from = NULL;
   apr_hash_t *current_base_props = NULL;
@@ -4070,14 +4074,14 @@ close_file(void *file_baton,
                              svn_dirent_local_style(fb->local_abspath, pool));
 
   /* Gather the changes for each kind of property.  */
-  SVN_ERR(svn_categorize_props(fb->propchanges, &entry_props, &dav_props,
-                               &regular_props, pool));
+  SVN_ERR(svn_categorize_props(fb->propchanges, &entry_prop_changes,
+                               &dav_prop_changes, &regular_prop_changes, pool));
 
   /* Extract the changed_* and lock state information.  */
   SVN_ERR(accumulate_last_change(&new_changed_rev,
                                  &new_changed_date,
                                  &new_changed_author,
-                                 entry_props,
+                                 entry_prop_changes,
                                  pool, pool));
 
   /* Determine whether the file has become unlocked.  */
@@ -4086,9 +4090,10 @@ close_file(void *file_baton,
 
     lock_state = svn_wc_notify_lock_state_unchanged;
 
-    for (i = 0; i < entry_props->nelts; ++i)
+    for (i = 0; i < entry_prop_changes->nelts; ++i)
       {
-        const svn_prop_t *prop = &APR_ARRAY_IDX(entry_props, i, svn_prop_t);
+        const svn_prop_t *prop
+          = &APR_ARRAY_IDX(entry_prop_changes, i, svn_prop_t);
 
         /* If we see a change to the LOCK_TOKEN entry prop, then the only
            possible change is its REMOVAL. Thus, the lock has been removed,
@@ -4162,9 +4167,9 @@ close_file(void *file_baton,
       {
         int i;
 
-        for (i = 0; i < regular_props->nelts; ++i)
+        for (i = 0; i < regular_prop_changes->nelts; ++i)
           {
-            const svn_prop_t *prop = &APR_ARRAY_IDX(regular_props, i,
+            const svn_prop_t *prop = &APR_ARRAY_IDX(regular_prop_changes, i,
                                                     svn_prop_t);
 
             if (strcmp(prop->name, SVN_PROP_SPECIAL) == 0)
@@ -4217,7 +4222,7 @@ close_file(void *file_baton,
                                   NULL /* server_baseprops (update, not merge)  */,
                                   current_base_props,
                                   current_actual_props,
-                                  regular_props, /* propchanges */
+                                  regular_prop_changes, /* propchanges */
                                   TRUE /* base_merge */,
                                   FALSE /* dry_run */,
                                   eb->conflict_func, eb->conflict_baton,
@@ -4274,7 +4279,7 @@ close_file(void *file_baton,
                                   NULL /* server_baseprops (update, not merge)  */,
                                   apr_hash_make(pool),
                                   no_working_props,
-                                  regular_props, /* propchanges */
+                                  regular_prop_changes, /* propchanges */
                                   TRUE /* base_merge */,
                                   FALSE /* dry_run */,
                                   eb->conflict_func, eb->conflict_baton,
@@ -4356,8 +4361,10 @@ close_file(void *file_baton,
                                      new_changed_author,
                                      new_checksum,
                                      SVN_INVALID_FILESIZE,
-                                     (dav_props && dav_props->nelts > 0)
-                                        ? prop_hash_from_array(dav_props, pool)
+                                     (dav_prop_changes
+                                      && dav_prop_changes->nelts > 0)
+                                        ? prop_hash_from_array(dav_prop_changes,
+                                                               pool)
                                         : NULL,
                                      NULL /* conflict */,
                                      all_work_items,
