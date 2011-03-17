@@ -387,7 +387,7 @@ fast-distclean: fast-clean
 	$(SVN_CONFIG_SCRIPT_FILES)
 
 # clean everything out, returning to before './autogen.sh' was run.
-local-extraclean: local-distclean extraclean-swig extraclean-ctypes-python clean-javahl
+local-extraclean: local-distclean extraclean-swig extraclean-ctypes-python extraclean-javahl
 	rm -f $(top_srcdir)/build-outputs.mk \
               $(top_srcdir)/subversion/svn_private_config.h.in \
               $(top_srcdir)/configure \
@@ -403,7 +403,7 @@ local-extraclean: local-distclean extraclean-swig extraclean-ctypes-python clean
 
 
 # clean everything, including test output.
-local-clean: fast-clean check-clean clean-swig clean-ctypes-python
+local-clean: fast-clean check-clean clean-swig clean-ctypes-python clean-javahl
 
 # clean everything, including test output.
 local-distclean: fast-distclean check-clean
@@ -431,6 +431,8 @@ clean-javahl:
 	rm -f $(libsvnjavahl_PATH)/*.la $(JAVAHL_JAR)
 	rm -f $(libsvnjavahl_PATH)/*.lo
 	rm -f $(libsvnjavahl_PATH)/*.o
+
+extraclean-javahl: clean-javahl
 
 check-javahl: javahl javahl-compat
 	@FIX_JAVAHL_LIB@
