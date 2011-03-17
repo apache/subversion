@@ -682,7 +682,6 @@ svn_skel__parse_int(apr_int64_t *n, const svn_skel_t *skel,
 svn_error_t *
 svn_skel__parse_proplist(apr_hash_t **proplist_p,
                          const svn_skel_t *skel,
-                         const char *propname,
                          apr_pool_t *pool /* result_pool */)
 {
   apr_hash_t *proplist = NULL;
@@ -696,14 +695,8 @@ svn_skel__parse_proplist(apr_hash_t **proplist_p,
   proplist = apr_hash_make(pool);
   for (elt = skel->children; elt; elt = elt->next->next)
     {
-      svn_string_t *value;
-
-      if (propname
-          && (elt->len != strlen(propname)
-              || strncmp(propname, elt->data, elt->len) != 0))
-        continue; /* Looking for a particular property and this isn't it. */
-
-      value = svn_string_ncreate(elt->next->data, elt->next->len, pool);
+      svn_string_t *value = svn_string_ncreate(elt->next->data,
+                                               elt->next->len, pool);
       apr_hash_set(proplist,
                    apr_pstrmemdup(pool, elt->data, elt->len),
                    elt->len,
