@@ -2231,13 +2231,6 @@ svn_wc__db_upgrade_get_repos_id(apr_int64_t *repos_id,
                                 const char *repos_root_url,
                                 apr_pool_t *scratch_pool);
 
-
-svn_error_t *
-svn_wc__db_upgrade_finish(const char *local_dir_abspath,
-                          svn_sqlite__db_t *sdb,
-                          apr_pool_t *scratch_pool);
-
-
 /* @} */
 
 

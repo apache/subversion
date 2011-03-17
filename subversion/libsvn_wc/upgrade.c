@@ -1323,9 +1323,6 @@ upgrade_to_wcng(void **dir_baton,
   SVN_ERR(migrate_props(dir_abspath, data->root_abspath, data->sdb, old_format,
                         scratch_pool));
 
-  /* All done. DB should finalize the upgrade process now.  */
-  SVN_ERR(svn_wc__db_upgrade_finish(dir_abspath, data->sdb, scratch_pool));
-
   return SVN_NO_ERROR;
 }
 
