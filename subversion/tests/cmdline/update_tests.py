@@ -5120,8 +5120,8 @@ def update_deleted_locked_files(sbox):
   E = os.path.join(wc_dir, 'A', 'B', 'E')
   alpha = os.path.join(E, 'alpha')
 
-  svntest.main.run_svn(None, 'lock', alpha)#iota, alpha)
-  svntest.main.run_svn(None, 'delete', E)#iota, E)
+  svntest.main.run_svn(None, 'lock', iota, alpha)
+  svntest.main.run_svn(None, 'delete', iota, E)
 
   expected_output = svntest.wc.State(wc_dir, {})
 
