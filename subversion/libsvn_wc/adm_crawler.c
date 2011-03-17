@@ -1033,6 +1033,70 @@ copying_stream(svn_stream_t *source,
   return stream;
 }
 
+
+/* Set *STREAM to a stream from which the caller can read the pristine text
+ * of the working version of the file at LOCAL_ABSPATH.  If the working
+ * version of LOCAL_ABSPATH has no pristine text because it is locally
+ * added, set *STREAM to an empty stream.  If the working version of
+ * LOCAL_ABSPATH is not a file, return an error.
+ *
+ * Set *EXPECTED_MD5_CHECKSUM to the recorded MD5 checksum.
+ *
+ * Arrange for the actual checksum of the text to be calculated and written
+ * into *ACTUAL_MD5_CHECKSUM when the stream is read.
+ */
+static svn_error_t *
+read_and_checksum_pristine_text(svn_stream_t **stream,
+                                const svn_checksum_t **expected_md5_checksum,
+                                svn_checksum_t **actual_md5_checksum,
+                                svn_wc__db_t *db,
+                                const char *local_abspath,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool)
+{
+  svn_stream_t *base_stream;
+
+  SVN_ERR(svn_wc__get_pristine_contents(&base_stream, db, local_abspath,
+                                        result_pool, scratch_pool));
+  if (base_stream == NULL)
+    {
+      base_stream = svn_stream_empty(result_pool);
+      *expected_md5_checksum = NULL;
+      *actual_md5_checksum = NULL;
+    }
+  else
+    {
+      const svn_checksum_t *expected_md5;
+
+      SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, &expected_md5,
+                                   NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL,
+                                   db, local_abspath,
+                                   result_pool, scratch_pool));
+      if (expected_md5 == NULL)
+        return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
+                                 _("Pristine checksum for file '%s' is missing"),
+                                 svn_dirent_local_style(local_abspath,
+                                                        scratch_pool));
+      if (expected_md5->kind != svn_checksum_md5)
+        SVN_ERR(svn_wc__db_pristine_get_md5(&expected_md5, db, local_abspath,
+                                            expected_md5,
+                                            result_pool, scratch_pool));
+      *expected_md5_checksum = expected_md5;
+
+      /* Arrange to set ACTUAL_MD5_CHECKSUM to the MD5 of what is *actually*
+         found when the base stream is read. */
+      base_stream = svn_stream_checksummed2(base_stream, actual_md5_checksum,
+                                            NULL, svn_checksum_md5, TRUE,
+                                            result_pool);
+    }
+
+  *stream = base_stream;
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_wc__internal_transmit_text_deltas(const char **tempfile,
                                       const svn_checksum_t **new_text_base_md5_checksum,
@@ -1047,8 +1111,8 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
 {
   svn_txdelta_window_handler_t handler;
   void *wh_baton;
-  const svn_checksum_t *expected_md5_checksum;
-  svn_checksum_t *verify_checksum = NULL;  /* calc'd MD5 of BASE_STREAM */
+  const svn_checksum_t *expected_md5_checksum;  /* recorded MD5 of BASE_S. */
+  svn_checksum_t *verify_checksum;  /* calc'd MD5 of BASE_STREAM */
   svn_checksum_t *local_md5_checksum;  /* calc'd MD5 of LOCAL_STREAM */
   svn_checksum_t *local_sha1_checksum;  /* calc'd SHA1 of LOCAL_STREAM */
   const char *new_pristine_tmp_abspath;
@@ -1107,51 +1171,21 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
    * and arrange for its VERIFY_CHECKSUM to be calculated later. */
   if (! fulltext)
     {
-      /* Compute delta against the pristine contents */
-      SVN_ERR(svn_wc__get_pristine_contents(&base_stream, db, local_abspath,
-                                            scratch_pool, scratch_pool));
-      if (base_stream == NULL)
-        {
-          base_stream = svn_stream_empty(scratch_pool);
-          expected_md5_checksum = NULL;
-        }
-      else
-        {
-          SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL,
-                                       NULL, NULL, NULL,
-                                       NULL, NULL, NULL,
-                                       NULL, NULL,
-                                       &expected_md5_checksum, NULL,
-                                       NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL,
-                                       NULL, NULL, NULL,
-                                       db, local_abspath,
-                                       scratch_pool, scratch_pool));
-          if (expected_md5_checksum == NULL)
-            return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
-                                     _("Pristine checksum for file '%s' is missing"),
-                                     svn_dirent_local_style(local_abspath,
-                                                            scratch_pool));
-          /* We need to get the MD5 checksum because we want to pass it to
-           * apply_textdelta(). */
-          if (expected_md5_checksum->kind != svn_checksum_md5)
-            SVN_ERR(svn_wc__db_pristine_get_md5(&expected_md5_checksum,
-                                                db, local_abspath,
-                                                expected_md5_checksum,
-                                                scratch_pool, scratch_pool));
-
-          /* Arrange to set VERIFY_CHECKSUM to the MD5 of what is *actually*
-             found when the base stream is read. */
-          base_stream = svn_stream_checksummed2(base_stream, &verify_checksum,
-                                                NULL, svn_checksum_md5, TRUE,
-                                                scratch_pool);
-        }
+      /* We will be computing a delta against the pristine contents */
+      /* We need the expected checksum to be an MD-5 checksum rather than a
+       * SHA-1 because we want to pass it to apply_textdelta(). */
+      SVN_ERR(read_and_checksum_pristine_text(&base_stream,
+                                              &expected_md5_checksum,
+                                              &verify_checksum,
+                                              db, local_abspath,
+                                              scratch_pool, scratch_pool));
     }
   else
     {
       /* Send a fulltext. */
       base_stream = svn_stream_empty(scratch_pool);
       expected_md5_checksum = NULL;
+      verify_checksum = NULL;
     }
 
   /* Tell the editor that we're about to apply a textdelta to the
