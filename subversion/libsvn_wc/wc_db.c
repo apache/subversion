@@ -1994,31 +1994,6 @@ svn_wc__db_base_get_children_info(apr_hash_t **nodes,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_wc__db_base_get_prop(const svn_string_t **propval,
-                         svn_wc__db_t *db,
-                         const char *local_abspath,
-                         const char *propname,
-                         apr_pool_t *result_pool,
-                         apr_pool_t *scratch_pool)
-{
-  apr_hash_t *props;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-  SVN_ERR_ASSERT(propname != NULL);
-
-  /* Note: maybe one day, we'll have internal caches of this stuff, but
-     for now, we just grab all the props and pick out the requested prop. */
-
-  /* ### should: fetch into scratch_pool, then dup into result_pool.  */
-  SVN_ERR(svn_wc__db_base_get_props(&props, db, local_abspath,
-                                    result_pool, scratch_pool));
-
-  *propval = apr_hash_get(props, propname, APR_HASH_KEY_STRING);
-
-  return SVN_NO_ERROR;
-}
-
 
 svn_error_t *
 svn_wc__db_base_get_props(apr_hash_t **props,
@@ -5342,32 +5317,6 @@ svn_wc__db_read_url(const char **url,
 
   return svn_error_return(read_url(url, wcroot, local_relpath, result_pool,
                                    scratch_pool));
-}
-
-
-svn_error_t *
-svn_wc__db_read_prop(const svn_string_t **propval,
-                     svn_wc__db_t *db,
-                     const char *local_abspath,
-                     const char *propname,
-                     apr_pool_t *result_pool,
-                     apr_pool_t *scratch_pool)
-{
-  apr_hash_t *props;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-  SVN_ERR_ASSERT(propname != NULL);
-
-  /* Note: maybe one day, we'll have internal caches of this stuff, but
-     for now, we just grab all the props and pick out the requested prop. */
-
-  /* ### should: fetch into scratch_pool, then dup into result_pool.  */
-  SVN_ERR(svn_wc__db_read_props(&props, db, local_abspath,
-                                result_pool, scratch_pool));
-
-  *propval = apr_hash_get(props, propname, APR_HASH_KEY_STRING);
-
-  return SVN_NO_ERROR;
 }
 
 

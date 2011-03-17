@@ -615,14 +615,8 @@ validate_node(svn_wc__db_t *db,
 
   value = apr_hash_get(props, "p1", APR_HASH_KEY_STRING);
   SVN_TEST_STRING_ASSERT(value->data, "v1");
-  SVN_ERR(svn_wc__db_base_get_prop(&value, db, path, "p1",
-                                   scratch_pool, scratch_pool));
-  SVN_TEST_STRING_ASSERT(value->data, "v1");
 
   value = apr_hash_get(props, "for-file", APR_HASH_KEY_STRING);
-  SVN_TEST_STRING_ASSERT(value->data, relpath);
-  SVN_ERR(svn_wc__db_base_get_prop(&value, db, path, "for-file",
-                                   scratch_pool, scratch_pool));
   SVN_TEST_STRING_ASSERT(value->data, relpath);
 
   SVN_ERR(svn_wc__db_read_props(&props, db, path,
