@@ -489,7 +489,6 @@ read_one_entry(const svn_wc_entry_t **new_entry,
 
           SVN_ERR(svn_wc__db_temp_borrow_sdb(
                     &sdb, db, dir_abspath,
-                    svn_wc__db_openmode_readonly,
                     scratch_pool));
 
           SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
