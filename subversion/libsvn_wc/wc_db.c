@@ -6324,12 +6324,12 @@ svn_wc__db_global_update(svn_wc__db_t *db,
 #if 0
   SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, update_node, &ub,
                               scratch_pool));
-#endif
 
   /* We *totally* monkeyed the entries. Toss 'em.  */
   SVN_ERR(flush_entries(wcroot, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
+#endif
 }
 
 /* Sets a base nodes revision and/or repository relative path. If
