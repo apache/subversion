@@ -5166,8 +5166,8 @@ svn_error_t *
 svn_wc_get_wc_root(const char **wcroot_abspath,
                    svn_wc_context_t *wc_ctx,
                    const char *local_abspath,
-                   apr_pool_t *scratch_pool,
-                   apr_pool_t *result_pool);
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool);
 
 /** @} */
 

@@ -152,8 +152,8 @@ condense_targets(const char **common_parent,
                  const apr_array_header_t *targets,
                  svn_boolean_t targets_are_uris,
                  svn_boolean_t remove_redundancies,
-                 apr_pool_t *scratch_pool,
-                 apr_pool_t *result_pool)
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
 {
   if (targets_are_uris)
     {
@@ -252,7 +252,7 @@ organize_lock_targets(const char **common_parent_url,
 
       /* Get the common parent URL and a bunch of relpaths, one per target. */
       SVN_ERR(condense_targets(&common_url, &rel_targets, targets,
-                               TRUE, TRUE, scratch_pool, result_pool));
+                               TRUE, TRUE, result_pool, scratch_pool));
       if (! (common_url && *common_url))
         return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                                 _("No common parent found, unable to operate "
@@ -278,7 +278,7 @@ organize_lock_targets(const char **common_parent_url,
       /* Get the common parent dirent and a bunch of relpaths, one per
          target. */
       SVN_ERR(condense_targets(&common_dirent, &rel_targets, targets,
-                               FALSE, TRUE, scratch_pool, result_pool));
+                               FALSE, TRUE, result_pool, scratch_pool));
       if (! (common_dirent && *common_dirent))
         return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                                 _("No common parent found, unable to operate "
@@ -311,7 +311,7 @@ organize_lock_targets(const char **common_parent_url,
          condense those into a single common parent URL and a bunch of
          paths relative to that. */
       SVN_ERR(condense_targets(&common_url, &rel_urls, target_urls,
-                               TRUE, FALSE, scratch_pool, result_pool));
+                               TRUE, FALSE, result_pool, scratch_pool));
       if (! (common_url && *common_url))
         return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                                 _("Unable to lock/unlock across multiple "

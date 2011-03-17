@@ -42,8 +42,8 @@
 static const char *
 url_remove_final_relpath(const char *url,
                          const char *relpath,
-                         apr_pool_t *scratch_pool,
-                         apr_pool_t *result_pool)
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
 {
   char *result = apr_pstrdup(result_pool, url);
   char *result_end;

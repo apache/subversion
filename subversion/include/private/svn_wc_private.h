@@ -517,8 +517,8 @@ svn_wc__node_get_working_rev_info(svn_revnum_t *revision,
                                   const char **changed_author,
                                   svn_wc_context_t *wc_ctx,
                                   const char *local_abspath,
-                                  apr_pool_t *scratch_pool,
-                                  apr_pool_t *result_pool);
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
 
 
 /** This whole function is for legacy, and it sucks. It does not really

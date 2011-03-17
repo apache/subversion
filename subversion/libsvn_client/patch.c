@@ -740,8 +740,8 @@ init_patch_target(patch_target_t **patch_target,
 static svn_error_t *
 read_line(target_content_info_t *content_info,
           const char **line,
-          apr_pool_t *scratch_pool,
-          apr_pool_t *result_pool)
+          apr_pool_t *result_pool,
+          apr_pool_t *scratch_pool)
 {
   svn_stringbuf_t *line_raw;
   const char *eol_str;

@@ -1117,8 +1117,8 @@ accumulate_last_change(svn_revnum_t *changed_rev,
                        apr_time_t *changed_date,
                        const char **changed_author,
                        const apr_array_header_t *entry_props,
-                       apr_pool_t *scratch_pool,
-                       apr_pool_t *result_pool)
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
 {
   int i;
 
@@ -5023,11 +5023,11 @@ svn_error_t *
 svn_wc_get_wc_root(const char **wcroot_abspath,
                    svn_wc_context_t *wc_ctx,
                    const char *local_abspath,
-                   apr_pool_t *scratch_pool,
-                   apr_pool_t *result_pool)
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool)
 {
   return svn_wc__db_get_wcroot(wcroot_abspath, wc_ctx->db,
-                               local_abspath, scratch_pool, result_pool);
+                               local_abspath, result_pool, scratch_pool);
 }
 
 
