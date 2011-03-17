@@ -1246,7 +1246,7 @@ run_postcommit(svn_wc__db_t *db,
   if (arg5->next->is_atom)
     new_dav_cache = NULL;
   else
-    SVN_ERR(svn_skel__parse_proplist(&new_dav_cache, arg5->next, NULL,
+    SVN_ERR(svn_skel__parse_proplist(&new_dav_cache, arg5->next,
                                      scratch_pool));
   SVN_ERR(svn_skel__parse_int(&val, arg5->next->next, scratch_pool));
   keep_changelist = (val != 0);

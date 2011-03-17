@@ -750,8 +750,6 @@ typedef svn_error_t *(*svn_wc__proplist_receiver_t)(void *baton,
  * a hash table mapping <tt>char *</tt> names onto <tt>svn_string_t *</tt>
  * values for all the regular properties of the node at @a local_abspath
  * and any node beneath @a local_abspath within the specified @a depth.
- * If @a propname is not NULL, the passed hash table will only contain
- * the property @a propname.
  *
  * If @a pristine is @c TRUE, get the pristine (or "BASE") properties
  * from the working copy, instead of getting the current (or "WORKING")
@@ -770,7 +768,6 @@ typedef svn_error_t *(*svn_wc__proplist_receiver_t)(void *baton,
 svn_error_t *
 svn_wc__prop_list_recursive(svn_wc_context_t *wc_ctx,
                             const char *local_abspath,
-                            const char *propname,
                             svn_depth_t depth,
                             svn_boolean_t pristine,
                             svn_wc__proplist_receiver_t receiver_func,

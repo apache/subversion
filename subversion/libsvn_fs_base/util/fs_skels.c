@@ -455,7 +455,7 @@ svn_fs_base__parse_transaction_skel(transaction_t **transaction_p,
 
   /* PROPLIST */
   SVN_ERR(svn_skel__parse_proplist(&(transaction->proplist),
-                                   proplist, NULL, pool));
+                                   proplist, pool));
 
   /* COPIES */
   if ((len = svn_skel__list_length(copies)))
