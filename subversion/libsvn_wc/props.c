@@ -1671,7 +1671,6 @@ svn_wc_prop_list2(apr_hash_t **props,
 svn_error_t *
 svn_wc__prop_list_recursive(svn_wc_context_t *wc_ctx,
                             const char *local_abspath,
-                            const char *propname,
                             svn_depth_t depth,
                             svn_boolean_t pristine,
                             svn_wc__proplist_receiver_t receiver_func,
@@ -1703,7 +1702,7 @@ svn_wc__prop_list_recursive(svn_wc_context_t *wc_ctx,
     case svn_depth_immediates:
     case svn_depth_infinity:
       SVN_ERR(svn_wc__db_read_props_streamily(wc_ctx->db, local_abspath,
-                                              propname, depth, pristine,
+                                              depth, pristine,
                                               receiver_func, receiver_baton,
                                               cancel_func, cancel_baton,
                                               scratch_pool));

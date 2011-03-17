@@ -185,13 +185,10 @@ int svn_skel__list_length(const svn_skel_t *skel);
 
 /* Parse a `PROPLIST' SKEL into a regular hash of properties,
    *PROPLIST_P, which has const char * property names, and
-   svn_string_t * values. Use RESULT_POOL for all allocations.
-   If PROPNAME is not NULL then only parse properties with the
-   a same name as PROPNAME. */
+   svn_string_t * values. Use RESULT_POOL for all allocations.  */
 svn_error_t *
 svn_skel__parse_proplist(apr_hash_t **proplist_p,
                          const svn_skel_t *skel,
-                         const char *propname,
                          apr_pool_t *result_pool);
 
 /* Unparse a PROPLIST hash (which has const char * property names and

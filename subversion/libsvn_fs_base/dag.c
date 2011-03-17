@@ -570,7 +570,7 @@ svn_fs_base__dag_get_proplist(apr_hash_t **proplist_p,
                                     noderev->prop_key, trail, pool));
   proplist_skel = svn_skel__parse(raw_proplist.data, raw_proplist.len, pool);
   if (proplist_skel)
-    SVN_ERR(svn_skel__parse_proplist(&proplist, proplist_skel, NULL, pool));
+    SVN_ERR(svn_skel__parse_proplist(&proplist, proplist_skel, pool));
 
   *proplist_p = proplist;
   return SVN_NO_ERROR;

@@ -653,6 +653,70 @@ pristine_or_working_propval(const svn_string_t **propval,
   return SVN_NO_ERROR;
 }
 
+
+/* A baton for propget_walk_cb. */
+struct propget_walk_baton
+{
+  const char *propname;  /* The name of the property to get. */
+  svn_boolean_t pristine;  /* Select base rather than working props. */
+  svn_wc_context_t *wc_ctx;  /* Context for the tree being walked. */
+  apr_hash_t *changelist_hash;  /* Keys are changelists to filter on. */
+  apr_hash_t *props;  /* Out: mapping of (path:propval). */
+
+  /* Anchor, anchor_abspath pair for converting to relative paths */
+  const char *anchor;
+  const char *anchor_abspath;
+};
+
+/* An entries-walk callback for svn_client_propget.
+ *
+ * For the path given by PATH and ENTRY,
+ * populate wb->PROPS with the values of property wb->PROPNAME,
+ * where "wb" is the WALK_BATON of type "struct propget_walk_baton *".
+ * If wb->PRISTINE is true, use the base value, else use the working value.
+ *
+ * The keys of wb->PROPS will be 'const char *' paths, rooted at the
+ * path wb->anchor, and the values are 'const svn_string_t *' property values.
+ */
+static svn_error_t *
+propget_walk_cb(const char *local_abspath,
+                svn_node_kind_t kind,
+                void *walk_baton,
+                apr_pool_t *pool)
+{
+  struct propget_walk_baton *wb = walk_baton;
+  const svn_string_t *propval;
+
+  /* If our entry doesn't pass changelist filtering, get outta here. */
+  if (! svn_wc__changelist_match(wb->wc_ctx, local_abspath,
+                                 wb->changelist_hash, pool))
+    return SVN_NO_ERROR;
+
+  SVN_ERR(pristine_or_working_propval(&propval, wb->wc_ctx, local_abspath,
+                                      wb->propname, wb->pristine,
+                                      apr_hash_pool_get(wb->props), pool));
+
+  if (propval)
+    {
+      const char *path;
+
+      if (wb->anchor && wb->anchor_abspath)
+        {
+          path = svn_dirent_join(wb->anchor,
+                                 svn_dirent_skip_ancestor(wb->anchor_abspath,
+                                                          local_abspath),
+                                 apr_hash_pool_get(wb->props));
+        }
+      else
+        path = apr_pstrdup(apr_hash_pool_get(wb->props), local_abspath);
+
+      apr_hash_set(wb->props, path, APR_HASH_KEY_STRING, propval);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Helper for the remote case of svn_client_propget.
  *
  * Get the value of property PROPNAME in REVNUM, using RA_LIB and
@@ -761,61 +825,9 @@ remote_propget(apr_hash_t *props,
   return SVN_NO_ERROR;
 }
 
-/* Baton for recursive_propget_receiver(). */
-struct recursive_propget_receiver_baton
-{
-  apr_hash_t *props; /* Hash to collect props. */
-  apr_pool_t *pool; /* Pool to allocate additions to PROPS. */
-  apr_hash_t *changelist_hash; /* Keys are changelists to filter on. */
-  svn_wc_context_t *wc_ctx;  /* Working copy context. */
-
-  /* Anchor, anchor_abspath pair for converting to relative paths */
-  const char *anchor;
-  const char *anchor_abspath;
-};
-
-/* An implementation of svn_wc__proplist_receiver_t. */
-static svn_error_t *
-recursive_propget_receiver(void *baton,
-                           const char *local_abspath,
-                           apr_hash_t *props,
-                           apr_pool_t *scratch_pool)
-{
-  struct recursive_propget_receiver_baton *b = baton;
-  const char *path;
-
-  /* If the node doesn't pass changelist filtering, get outta here. */
-  if (! svn_wc__changelist_match(b->wc_ctx, local_abspath,
-                                 b->changelist_hash, scratch_pool))
-    return SVN_NO_ERROR;
-
-  /* Attempt to convert absolute paths to relative paths for
-   * presentation purposes, if needed. */
-  if (b->anchor && b->anchor_abspath)
-    {
-      path = svn_dirent_join(b->anchor,
-                             svn_dirent_skip_ancestor(b->anchor_abspath,
-                                                      local_abspath),
-                             scratch_pool);
-    }
-  else
-    path = local_abspath;
-
-  if (apr_hash_count(props))
-    {
-      apr_hash_index_t *hi = apr_hash_first(scratch_pool, props);
-      apr_hash_set(b->props, apr_pstrdup(b->pool, path),
-                   APR_HASH_KEY_STRING,
-                   svn_string_dup(svn__apr_hash_index_val(hi), b->pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
 /* Return the property value for any PROPNAME set on TARGET in *PROPS,
    with WC paths of char * for keys and property values of
-   svn_string_t * for values.  Assumes that PROPS is non-NULL.  Additions
-   to *PROPS are allocated in POOL.
+   svn_string_t * for values.  Assumes that PROPS is non-NULL.
 
    CHANGELISTS is an array of const char * changelist names, used as a
    restrictive filter on items whose properties are set; that is,
@@ -837,8 +849,8 @@ get_prop_from_wc(apr_hash_t *props,
                  apr_pool_t *pool)
 {
   apr_hash_t *changelist_hash = NULL;
+  struct propget_walk_baton wb;
   const char *target_abspath;
-  struct recursive_propget_receiver_baton rb;
 
   SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, pool));
 
@@ -853,47 +865,35 @@ get_prop_from_wc(apr_hash_t *props,
   if (depth == svn_depth_unknown)
     depth = svn_depth_infinity;
 
-  rb.props = props;
-  rb.pool = pool;
-  rb.wc_ctx = ctx->wc_ctx;
-  rb.changelist_hash = changelist_hash;
-
-  if (strcmp(target, target_abspath) != 0)
+  if (strcmp(target_abspath, target) != 0)
     {
-      rb.anchor = target;
-      rb.anchor_abspath = target_abspath;
+      wb.anchor = target;
+      wb.anchor_abspath = target_abspath;
     }
   else
     {
-      rb.anchor = NULL;
-      rb.anchor_abspath = NULL;
+      wb.anchor = NULL;
+      wb.anchor_abspath = NULL;
     }
+
+  wb.propname = propname;
+  wb.pristine = pristine;
+  wb.changelist_hash = changelist_hash;
+  wb.props = props;
+  wb.wc_ctx = ctx->wc_ctx;
 
   /* Fetch the property, recursively or for a single resource. */
   if (depth >= svn_depth_files && kind == svn_node_dir)
     {
-      SVN_ERR(svn_wc__prop_list_recursive(ctx->wc_ctx, target_abspath,
-                                          propname, depth, pristine,
-                                          recursive_propget_receiver, &rb,
-                                          ctx->cancel_func, ctx->cancel_baton,
-                                          pool));
+      SVN_ERR(svn_wc__node_walk_children(ctx->wc_ctx, target_abspath, FALSE,
+                                         propget_walk_cb, &wb, depth,
+                                         ctx->cancel_func, ctx->cancel_baton,
+                                         pool));
     }
   else if (svn_wc__changelist_match(ctx->wc_ctx, target_abspath,
                                     changelist_hash, pool))
     {
-      const svn_string_t *propval;
-
-      SVN_ERR(pristine_or_working_propval(&propval, ctx->wc_ctx, target_abspath,
-                                          propname, pristine, pool, pool));
-      if (propval)
-        {
-          apr_hash_t *target_props = apr_hash_make(pool);
-
-          apr_hash_set(target_props, target_abspath, APR_HASH_KEY_STRING,
-                       propval);
-          SVN_ERR(recursive_propget_receiver(&rb, target_abspath, target_props,
-                                             pool));      
-        }
+      SVN_ERR(propget_walk_cb(target_abspath, kind, &wb, pool));
     }
 
   return SVN_NO_ERROR;
@@ -1279,7 +1279,7 @@ svn_client_proplist3(const char *path_or_url,
               rb.anchor_abspath = NULL;
             }
 
-          SVN_ERR(svn_wc__prop_list_recursive(ctx->wc_ctx, local_abspath, NULL,
+          SVN_ERR(svn_wc__prop_list_recursive(ctx->wc_ctx, local_abspath,
                                               depth, pristine,
                                               recursive_proplist_receiver, &rb,
                                               ctx->cancel_func,
