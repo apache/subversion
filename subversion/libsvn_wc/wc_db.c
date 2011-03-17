@@ -5555,6 +5555,7 @@ cache_props_recursive(void *cb_baton,
 svn_error_t *
 svn_wc__db_read_props_streamily(svn_wc__db_t *db,
                                 const char *local_abspath,
+                                const char *propname,
                                 svn_depth_t depth,
                                 svn_boolean_t pristine,
                                 svn_wc__proplist_receiver_t receiver_func,
@@ -5640,7 +5641,8 @@ svn_wc__db_read_props_streamily(svn_wc__db_t *db,
               child_relpath = svn_sqlite__column_text(stmt, 0, NULL);
               child_abspath = svn_dirent_join(wcroot->abspath,
                                               child_relpath, iterpool);
-              SVN_ERR(svn_skel__parse_proplist(&props, prop_skel, iterpool));
+              SVN_ERR(svn_skel__parse_proplist(&props, prop_skel, propname,
+                                               iterpool));
               if (receiver_func && apr_hash_count(props) != 0)
                 {
                   SVN_ERR((*receiver_func)(receiver_baton,
