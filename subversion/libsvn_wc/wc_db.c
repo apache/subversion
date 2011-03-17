@@ -8033,19 +8033,12 @@ svn_error_t *
 svn_wc__db_temp_borrow_sdb(svn_sqlite__db_t **sdb,
                            svn_wc__db_t *db,
                            const char *local_dir_abspath,
-                           svn_wc__db_openmode_t mode,
                            apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  svn_sqlite__mode_t smode;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_dir_abspath));
-
-  if (mode == svn_wc__db_openmode_readonly)
-    smode = svn_sqlite__mode_readonly;
-  else
-    smode = svn_sqlite__mode_readwrite;
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
                             local_dir_abspath, scratch_pool, scratch_pool));
