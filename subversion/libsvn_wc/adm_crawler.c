@@ -206,13 +206,20 @@ read_externals_info(svn_wc__db_t *db,
                     svn_depth_t depth,
                     apr_pool_t *scratch_pool)
 {
+  apr_hash_t *props;
   const svn_string_t *val;
 
   SVN_ERR_ASSERT(external_func != NULL);
 
-  SVN_ERR(svn_wc__internal_propget(&val, db, local_abspath,
-                                   SVN_PROP_EXTERNALS,
-                                   scratch_pool, scratch_pool));
+  /* Directly use a DB api here as this code path is extensively used on
+     update. On top of that we already know that this an existing directory. */
+  SVN_ERR(svn_wc__db_read_props(&props, db, local_abspath,
+                                scratch_pool, scratch_pool));
+
+  if (!props)
+    return SVN_NO_ERROR;
+
+  val = apr_hash_get(props, SVN_PROP_EXTERNALS, APR_HASH_KEY_STRING);
 
   if (val)
     {
