@@ -201,43 +201,6 @@ set_wc_prop(void *baton,
 }
 
 
-struct invalidate_wcprop_walk_baton
-{
-  /* The wcprop to invalidate. */
-  const char *prop_name;
-
-  /* A context for accessing the working copy. */
-  svn_wc_context_t *wc_ctx;
-};
-
-
-/* This implements the `found_entry' prototype in
-   `svn_wc_entry_callbacks_t'. */
-static svn_error_t *
-invalidate_wcprop_for_node(const char *local_abspath,
-                           svn_node_kind_t kind,
-                           void *walk_baton,
-                           apr_pool_t *pool)
-{
-  struct invalidate_wcprop_walk_baton *wb = walk_baton;
-  svn_error_t *err;
-
-  /* It doesn't matter if we pass 0 or 1 for force here, since
-     property deletion is always permitted. */
-  err = svn_wc_prop_set4(wb->wc_ctx, local_abspath, wb->prop_name, NULL,
-                         FALSE, NULL, NULL, pool);
-  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-    {
-      svn_error_clear(err);
-      return SVN_NO_ERROR;
-    }
-  else if (err)
-    return svn_error_return(err);
-
-  return SVN_NO_ERROR;
-}
-
-
 /* This implements the `svn_ra_invalidate_wc_props_func_t' interface. */
 static svn_error_t *
 invalidate_wc_props(void *baton,
@@ -246,20 +209,20 @@ invalidate_wc_props(void *baton,
                     apr_pool_t *pool)
 {
   callback_baton_t *cb = baton;
-  struct invalidate_wcprop_walk_baton wb;
   const char *local_abspath;
-
-  wb.prop_name = prop_name;
-  wb.wc_ctx = cb->ctx->wc_ctx;
 
   local_abspath = svn_dirent_join(cb->base_dir_abspath, path, pool);
 
-  return svn_error_return(
-    svn_wc__node_walk_children(cb->ctx->wc_ctx, local_abspath, FALSE,
-                              invalidate_wcprop_for_node, &wb,
-                              svn_depth_infinity,
-                              cb->ctx->cancel_func, cb->ctx->cancel_baton,
-                              pool));
+  /* It's easier just to clear the whole dav_cache than to remove
+     individual items from it recursively like this.  And since we
+     know that the RA providers that ship with Subversion only
+     invalidate the one property they use the most from this cache,
+     and that we're intentionally trying to get away from the use of
+     the cache altogether anyway, there's little to lose in wiping the
+     whole cache.  Is it the most well-behaved approach to take?  Not
+     so much.  We choose not to care.  */
+  return svn_error_return(svn_wc__node_clear_dav_cache_recursive(
+                              cb->ctx->wc_ctx, local_abspath, pool));
 }
 
 
