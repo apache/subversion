@@ -54,12 +54,3 @@ subversion/libsvn_client/prop_commands.c
      restricted to those which match one of a specified set of
      changelists).  Stores results in a return hash -- no notification
      required.
-
-subversion/libsvn_client/ra.c
-
-   invalidate_wc_props() - Remove a particular property (by name) from
-     the dav cache of all items in a tree to infinite depth.  No
-     notifications.
-
-     NOTES: dav props are stored in a skel, so you can't simply whack
-     the specified prop in a relational fashion from the database.

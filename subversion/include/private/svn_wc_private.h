@@ -798,6 +798,15 @@ svn_wc__node_depth_is_exclude(svn_boolean_t *exclude,
                               const char *local_abspath,
                               apr_pool_t *scratch_pool);
 
+/**
+ * Recursively clear the dav cache (wcprops) in @a wc_ctx for the tree
+ * rooted at @a local_abspath.
+ */
+svn_error_t *
+svn_wc__node_clear_dav_cache_recursive(svn_wc_context_t *wc_ctx,
+                                       const char *local_abspath,
+                                       apr_pool_t *scratch_pool);
+
 /* Set @ *min_revision and @ *max_revision to the lowest and highest revision
  * numbers found within @a local_abspath, using context @a wc_ctx.
  * If @ committed is TRUE, set @a *min_revision and @a *max_revision

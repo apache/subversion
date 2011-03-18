@@ -1524,3 +1524,11 @@ svn_wc__node_depth_is_exclude(svn_boolean_t *exclude,
   return svn_error_return(err);
 }
 
+svn_error_t *
+svn_wc__node_clear_dav_cache_recursive(svn_wc_context_t *wc_ctx,
+                                       const char *local_abspath,
+                                       apr_pool_t *scratch_pool)
+{
+  return svn_error_return(svn_wc__db_base_clear_dav_cache_recursive(
+                              wc_ctx->db, local_abspath, scratch_pool));
+}
