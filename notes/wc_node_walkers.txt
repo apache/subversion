@@ -40,8 +40,6 @@ subversion/libsvn_client/merge.c
 
    get_mergeinfo_paths() -  ??
 
-   merge_reintegrate_locked() - ??
-
 subversion/libsvn_client/prop_commands.c
 
    set_props_cb() - Crawl a tree (up to specified depth) setting a
