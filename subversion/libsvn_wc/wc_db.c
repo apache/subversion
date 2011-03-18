@@ -4925,36 +4925,36 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svn_wc__db_read_children_info(apr_hash_t **nodes,
-                              apr_hash_t **conflicts,
-                              svn_wc__db_t *db,
-                              const char *dir_abspath,
-                              apr_pool_t *result_pool,
-                              apr_pool_t *scratch_pool)
+/* baton for read_children_info() */
+struct read_children_info_baton_t
 {
-  svn_wc__db_wcroot_t *wcroot;
-  const char *dir_relpath;
+  const char *dir_abspath;
+  apr_hash_t *nodes;
+  apr_hash_t *conflicts;
+  apr_pool_t *result_pool;
+};
+
+static svn_error_t *
+read_children_info(void *baton,
+                   svn_wc__db_wcroot_t *wcroot,
+                   const char *dir_relpath,
+                   apr_pool_t *scratch_pool)
+{
+  struct read_children_info_baton_t *rci = baton;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
   const char *repos_root_url = NULL;
   apr_int64_t last_repos_id;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(dir_abspath));
-  *conflicts = apr_hash_make(result_pool);
-
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &dir_relpath, db,
-                                             dir_abspath,
-                                             scratch_pool, scratch_pool));
-  VERIFY_USABLE_WCROOT(wcroot);
+  apr_hash_t *nodes = rci->nodes;
+  apr_hash_t *conflicts = rci->conflicts;
+  apr_pool_t *result_pool = rci->result_pool;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_NODE_CHILDREN_INFO));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, dir_relpath));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
-  *nodes = apr_hash_make(result_pool);
+  
   while (have_row)
     {
       /* CHILD points to memory that holds a svn_wc__db_info_t followed
@@ -4967,12 +4967,12 @@ svn_wc__db_read_children_info(apr_hash_t **nodes,
       apr_int64_t *op_depth, row_op_depth;
       svn_boolean_t new_child;
 
-      child = apr_hash_get(*nodes, name, APR_HASH_KEY_STRING);
+      child = apr_hash_get(nodes, name, APR_HASH_KEY_STRING);
       if (child)
         new_child = FALSE;
       else
         {
-          child = apr_palloc(result_pool, sizeof(*child) + sizeof(*op_depth));
+          child = apr_pcalloc(result_pool, sizeof(*child) + sizeof(*op_depth));
           new_child = TRUE;
         }
 
@@ -5071,7 +5071,7 @@ svn_wc__db_read_children_info(apr_hash_t **nodes,
           child->props_mod = FALSE;
           child->conflicted = FALSE;
 
-          apr_hash_set(*nodes, apr_pstrdup(result_pool, name),
+          apr_hash_set(nodes, apr_pstrdup(result_pool, name),
                        APR_HASH_KEY_STRING, child);
         }
       else if (row_op_depth == 0)
@@ -5098,7 +5098,7 @@ svn_wc__db_read_children_info(apr_hash_t **nodes,
       const char *name = svn_relpath_basename(child_relpath, NULL);
       svn_error_t *err;
 
-      child = apr_hash_get(*nodes, name, APR_HASH_KEY_STRING);
+      child = apr_hash_get(nodes, name, APR_HASH_KEY_STRING);
       if (!child)
         {
           child = apr_palloc(result_pool, sizeof(*child) + sizeof(int));
@@ -5132,7 +5132,7 @@ svn_wc__db_read_children_info(apr_hash_t **nodes,
                           !svn_sqlite__column_is_null(stmt, 5);  /* tree */
 
       if (child->conflicted)
-        apr_hash_set(*conflicts, apr_pstrdup(result_pool, name),
+        apr_hash_set(conflicts, apr_pstrdup(result_pool, name),
                      APR_HASH_KEY_STRING, "");
 
       err = svn_sqlite__step(&have_row, stmt);
@@ -5141,6 +5141,37 @@ svn_wc__db_read_children_info(apr_hash_t **nodes,
     }
 
   SVN_ERR(svn_sqlite__reset(stmt));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__db_read_children_info(apr_hash_t **nodes,
+                              apr_hash_t **conflicts,
+                              svn_wc__db_t *db,
+                              const char *dir_abspath,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool)
+{
+  struct read_children_info_baton_t rci;
+  svn_wc__db_wcroot_t *wcroot;
+  const char *dir_relpath;
+
+  *conflicts = apr_hash_make(result_pool);
+  *nodes = apr_hash_make(result_pool);
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(dir_abspath));
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &dir_relpath, db,
+                                                dir_abspath,
+                                                scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  rci.dir_abspath = dir_abspath;
+  rci.conflicts = *conflicts;
+  rci.nodes = *nodes;
+
+  SVN_ERR(svn_wc__db_with_txn(wcroot, dir_relpath, read_children_info, &rci,
+                              scratch_pool));
 
   return SVN_NO_ERROR;
 }
