@@ -4928,7 +4928,6 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
 /* baton for read_children_info() */
 struct read_children_info_baton_t
 {
-  const char *dir_abspath;
   apr_hash_t *nodes;
   apr_hash_t *conflicts;
   apr_pool_t *result_pool;
@@ -5166,7 +5165,7 @@ svn_wc__db_read_children_info(apr_hash_t **nodes,
                                                 scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  rci.dir_abspath = dir_abspath;
+  rci.result_pool = result_pool;
   rci.conflicts = *conflicts;
   rci.nodes = *nodes;
 
