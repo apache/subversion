@@ -135,7 +135,7 @@ add_conflict_version_xml(svn_stringbuf_t **pstr,
 
   if (SVN_IS_VALID_REVNUM(version->peg_rev))
     apr_hash_set(att_hash, "revision", APR_HASH_KEY_STRING,
-                 apr_itoa(pool, version->peg_rev));
+                 apr_ltoa(pool, version->peg_rev));
 
   if (version->node_kind != svn_node_unknown)
     apr_hash_set(att_hash, "kind", APR_HASH_KEY_STRING,
