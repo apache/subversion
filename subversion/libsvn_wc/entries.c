@@ -1362,6 +1362,25 @@ prune_deleted(apr_hash_t **entries_pruned,
   return SVN_NO_ERROR;
 }
 
+struct entries_read_baton_t
+{
+  apr_hash_t **new_entries;
+  svn_wc__db_t *db;
+  const char *local_abspath;
+  apr_pool_t *result_pool;
+};
+
+static svn_error_t *
+entries_read_txn(void *baton, svn_sqlite__db_t *db, apr_pool_t *scratch_pool)
+{
+  struct entries_read_baton_t *erb = baton;
+
+  SVN_ERR(read_entries(erb->new_entries, erb->db, erb->local_abspath,
+                       erb->result_pool, scratch_pool));
+
+  return NULL;
+}
+
 svn_error_t *
 svn_wc_entries_read(apr_hash_t **entries,
                     svn_wc_adm_access_t *adm_access,
@@ -1376,9 +1395,22 @@ svn_wc_entries_read(apr_hash_t **entries,
       svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
       const char *local_abspath = svn_wc__adm_access_abspath(adm_access);
       apr_pool_t *result_pool = svn_wc_adm_access_pool(adm_access);
+      svn_sqlite__db_t *sdb;
+      struct entries_read_baton_t erb;
 
-      SVN_ERR(read_entries(&new_entries, db, local_abspath,
-                           result_pool, pool));
+      /* ### Use the borrow DB api to handle all calls in a single read
+         ### transaction. This api is used extensively in our test suite
+         ### via the entries-read application. */
+
+      SVN_ERR(svn_wc__db_temp_borrow_sdb(&sdb, db, local_abspath, pool));
+
+      erb.db = db;
+      erb.local_abspath = local_abspath;
+      erb.new_entries = &new_entries;
+      erb.result_pool = result_pool;
+
+      SVN_ERR(svn_sqlite__with_lock(sdb, entries_read_txn, &erb, pool));
+
       svn_wc__adm_access_set_entries(adm_access, new_entries);
     }
 
