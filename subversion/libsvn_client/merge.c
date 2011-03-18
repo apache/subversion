@@ -10091,14 +10091,16 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
    'left hand side' of the underlying two-URL merge that a --reintegrate
    merge actually performs.
 
-   TARGET_REPOS_REL_PATH is the path of the reintegrate target relative to
+   TARGET_ABSPATH is the absolute working copy path of the reintegrate
+   merge.
+
+   TARGET_REPOS_REL_PATH is the path of TARGET_ABSPATH relative to
    the root of the repository.  SOURCE_REPOS_REL_PATH is the path of the
    reintegrate source relative to the root of the repository.
 
-   SUBTREES_WITH_MERGEINFO is a hash of (const char *) paths in the
-   reintegrate target, relative to the root of the repository, which have
-   explicit mergeinfo set on them.  The reintegrate target itself should
-   always be in this hash, regardless of whether it has explicit mergeinfo.
+   SUBTREES_WITH_MERGEINFO is a hash of (const char *) absolute paths mapped
+   to (svn_string_t *) mergeinfo values for each working copy path with
+   explicit mergeinfo in TARGET_ABSPATH.
 
    TARGET_REV is the working revision the entire WC tree rooted at
    TARGET_REPOS_REL_PATH is at.  SOURCE_REV is the peg revision of the
@@ -10107,7 +10109,7 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
    Populate *UNMERGED_TO_SOURCE_CATALOG with the mergeinfo describing what
    parts of TARGET_REPOS_REL_PATH@TARGET_REV have not been merged to
    SOURCE_REPOS_REL_PATH@SOURCE_REV, up to the youngest revision ever merged
-   from the target to the source if such exists, see doc string for
+   from the TARGET_ABSPATH to the source if such exists, see doc string for
    find_unmerged_mergeinfo().
 
    SOURCE_RA_SESSION is a session opened to the SOURCE_REPOS_REL_PATH
@@ -10117,11 +10119,13 @@ calculate_left_hand_side(const char **url_left,
                          svn_revnum_t *rev_left,
                          svn_mergeinfo_t *merged_to_source_catalog,
                          svn_mergeinfo_t *unmerged_to_source_catalog,
+                         const char *target_abspath,
                          const char *target_repos_rel_path,
                          apr_hash_t *subtrees_with_mergeinfo,
                          svn_revnum_t target_rev,
                          const char *source_repos_rel_path,
                          const char *source_repos_root,
+                         const char *target_repos_root,
                          svn_revnum_t source_rev,
                          svn_ra_session_t *source_ra_session,
                          svn_ra_session_t *target_ra_session,
@@ -10142,16 +10146,33 @@ calculate_left_hand_side(const char **url_left,
   const char *source_url;
   const char *target_url;
 
-  /* Get the history (segments) for the target and any of its subtrees
+  /* TARGET_ABSPATH may not have explicit mergeinfo and thus may not be
+     contained within SUBTREES_WITH_MERGEINFO.  If this is the case then
+     add a dummy item for TARGET_ABSPATH so we get its history (i.e. implicit
+     mergeinfo) below.  */
+  if (!apr_hash_get(subtrees_with_mergeinfo, target_abspath,
+                    APR_HASH_KEY_STRING))
+    apr_hash_set(subtrees_with_mergeinfo, target_abspath,
+                 APR_HASH_KEY_STRING, svn_string_create("", pool));
+
+  /* Get the history (segments) for TARGET_ABSPATH and any of its subtrees
      with explicit mergeinfo. */
   for (hi = apr_hash_first(pool, subtrees_with_mergeinfo);
        hi;
        hi = apr_hash_next(hi))
     {
-      const char *path = svn__apr_hash_index_key(hi);
-      const char *path_rel_to_session =
-        svn_relpath_skip_ancestor(target_repos_rel_path, path);
+      const char *absolute_path = svn__apr_hash_index_key(hi);
+      const char *path_rel_to_session;
+      const char *path_rel_to_root;
 
+      /* Convert the absolute path with mergeinfo on it to a path relative
+         to the session root. */
+      SVN_ERR(svn_client__path_relative_to_root(&path_rel_to_root,
+                                                ctx->wc_ctx, absolute_path,
+                                                target_repos_root, FALSE,
+                                                NULL, pool, pool));
+      path_rel_to_session = svn_relpath_skip_ancestor(target_repos_rel_path,
+                                                      path_rel_to_root);
       SVN_ERR(svn_client__repos_location_segments(&segments,
                                                   target_ra_session,
                                                   path_rel_to_session,
@@ -10159,7 +10180,7 @@ calculate_left_hand_side(const char **url_left,
                                                   SVN_INVALID_REVNUM,
                                                   ctx, subpool));
       apr_hash_set(segments_hash,
-                   apr_pstrdup(subpool, path),
+                   apr_pstrdup(subpool, path_rel_to_root),
                    APR_HASH_KEY_STRING, segments);
     }
 
@@ -10235,8 +10256,8 @@ calculate_left_hand_side(const char **url_left,
   else
     {
       /* We've previously merged some or all of the target, up to
-         youngest_merged_rev, from the target to the source.  Set *URL_LEFT
-         and *REV_LEFT to cover the youngest part of this range. */
+         youngest_merged_rev, from TARGET_ABSPATH to the source.  Set
+         *URL_LEFT and *REV_LEFT to cover the youngest part of this range. */
       svn_opt_revision_t peg_revision, youngest_rev, unspecified_rev;
       svn_opt_revision_t *start_revision;
       const char *youngest_url;
@@ -10265,62 +10286,6 @@ calculate_left_hand_side(const char **url_left,
   return SVN_NO_ERROR;
 }
 
-/* A baton for get_subtree_mergeinfo_walk_cb. */
-struct get_subtree_mergeinfo_walk_baton
-{
-  /* Merge target and target relative to repository root. */
-  const char *target_abspath;
-  const char *target_repos_root;
-
-  /* Hash of paths (const char *) that have explicit mergeinfo. */
-  apr_hash_t *subtrees_with_mergeinfo;
-
-  svn_client_ctx_t *ctx;
-};
-
-/* svn_wc__node_found_func_t callback for get_mergeinfo_paths().
-
-   Given the working copy path LOCAL_ABSPATH, and WALK_BATON,
-   where WALK_BATON is of type get_subtree_mergeinfo_walk_baton *:
-
-   If LOCAL_ABSPATH has explicit mergeinfo or is the same as
-   WALK_BATON->TARGET_PATH, then store a copy of LOCAL_ABSPATH in
-   WALK_BATON->SUBTREES_WITH_MERGEINFO.  The copy is allocated in
-   WALK_BATON->SUBTREES_WITH_MERGEINFO's pool.
-
-   POOL is used only for temporary allocations. */
-static svn_error_t *
-get_subtree_mergeinfo_walk_cb(const char *local_abspath,
-                              svn_node_kind_t kind,
-                              void *walk_baton,
-                              apr_pool_t *pool)
-{
-  struct get_subtree_mergeinfo_walk_baton *wb = walk_baton;
-  const svn_string_t *propval;
-
-  SVN_ERR(svn_wc_prop_get2(&propval, wb->ctx->wc_ctx, local_abspath,
-                           SVN_PROP_MERGEINFO, pool, pool));
-
-  /* We always want to include the reintegrate target even if it has
-     no explicit mergeinfo.  It still has natural history we'll need
-     to consider. */
-  if (propval || strcmp(local_abspath, wb->target_abspath) == 0)
-    {
-      const char *stored_path;
-
-      SVN_ERR(svn_client__path_relative_to_root(&stored_path, wb->ctx->wc_ctx,
-                                                local_abspath,
-                                                wb->target_repos_root, FALSE,
-                                                NULL, pool, pool));
-      stored_path = apr_pstrdup(apr_hash_pool_get(wb->subtrees_with_mergeinfo),
-                                stored_path);
-      apr_hash_set(wb->subtrees_with_mergeinfo, stored_path,
-                   APR_HASH_KEY_STRING, stored_path);
-    }
-
-  return SVN_NO_ERROR;
-}
-
 static svn_error_t *
 merge_reintegrate_locked(const char *source,
                          const svn_opt_revision_t *peg_revision,
@@ -10344,7 +10309,7 @@ merge_reintegrate_locked(const char *source,
   svn_mergeinfo_t merged_to_source_mergeinfo_catalog;
   svn_boolean_t use_sleep = FALSE;
   svn_error_t *err;
-  struct get_subtree_mergeinfo_walk_baton wb;
+  apr_hash_t *subtrees_with_mergeinfo;
   const char *target_url;
   svn_revnum_t target_base_rev;
   svn_node_kind_t kind;
@@ -10416,15 +10381,10 @@ merge_reintegrate_locked(const char *source,
                                "can be the root of the repository"));
 
   /* Find all the subtree's in TARGET_WCPATH that have explicit mergeinfo. */
-  wb.target_abspath = target_abspath;
-  wb.target_repos_root = wc_repos_root;
-  wb.subtrees_with_mergeinfo = apr_hash_make(scratch_pool);
-  wb.ctx = ctx;
-  SVN_ERR(svn_wc__node_walk_children(ctx->wc_ctx, target_abspath, TRUE,
-                                     get_subtree_mergeinfo_walk_cb, &wb,
-                                     svn_depth_infinity,
-                                     ctx->cancel_func, ctx->cancel_baton,
-                                     scratch_pool));
+  SVN_ERR(svn_client_propget3(&subtrees_with_mergeinfo, SVN_PROP_MERGEINFO,
+                              target_abspath, &working_revision,
+                              &working_revision, NULL, svn_depth_infinity,
+                              NULL, ctx, scratch_pool));
 
   /* Open two RA sessions, one to our source and one to our target. */
   SVN_ERR(svn_wc__node_get_url(&target_url, ctx->wc_ctx, target_abspath,
@@ -10445,11 +10405,13 @@ merge_reintegrate_locked(const char *source,
   SVN_ERR(calculate_left_hand_side(&url1, &rev1,
                                    &merged_to_source_mergeinfo_catalog,
                                    &unmerged_to_source_mergeinfo_catalog,
+                                   target_abspath,
                                    target_repos_rel_path,
-                                   wb.subtrees_with_mergeinfo,
+                                   subtrees_with_mergeinfo,
                                    rev1,
                                    source_repos_rel_path,
                                    source_repos_root,
+                                   wc_repos_root,
                                    rev2,
                                    source_ra_session,
                                    target_ra_session,
