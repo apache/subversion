@@ -295,16 +295,19 @@ scan_eol(const char **eol, apr_file_t *file, apr_size_t max_len,
       SVN_ERR(svn_io_file_read_full2(file, buf, sizeof(buf)-1, &len, &eof,
                                      pool));
 
+      if (len > 0)
+        {
+          buf[len] = '\0';
+          total_len += len;
+
+          /* ### BH: Does this properly detect the case where '\r' is on byte
+             ###     254 (last character of buffer and '\n' is on byte 255
+             ###     (first character of next buffer)? */
+          eol_str = svn_eol__detect_eol(buf, buf + len);
+        }
+
       if (eof)
         break;
-
-      buf[len] = '\0';
-      total_len += len;
-
-      /* ### BH: Does this properly detect the case where '\r' is on byte 254
-         ###     (last character of buffer and '\n' is on byte 255 (first
-         ###     character of next buffer)? */
-      eol_str = svn_eol__detect_eol(buf, buf + len);
     }
 
   SVN_ERR(svn_io_file_seek(file, APR_SET, &pos, pool));
