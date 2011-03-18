@@ -48,9 +48,3 @@ subversion/libsvn_client/prop_commands.c
      property name/value pair on each item therein (possibly restricted
      to those which match one of a specified set of changelists).
      Needs to notify on a per-path basis.
-
-   get_props_from_wc() - Crawl a tree (up to specified depth) fetching
-     the value of a given property name on each item therein (possibly
-     restricted to those which match one of a specified set of
-     changelists).  Stores results in a return hash -- no notification
-     required.
