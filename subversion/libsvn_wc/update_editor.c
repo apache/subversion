@@ -1896,40 +1896,15 @@ node_already_conflicted(svn_boolean_t *conflicted,
                         const char *local_abspath,
                         apr_pool_t *scratch_pool)
 {
-  const apr_array_header_t *conflicts;
-  int i;
+  svn_boolean_t text_conflicted, prop_conflicted, tree_conflicted;
 
-  SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, local_abspath,
-                                    scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__internal_conflicted_p(&text_conflicted,
+                                        &prop_conflicted,
+                                        &tree_conflicted,
+                                        db, local_abspath,
+                                        scratch_pool));
 
-  *conflicted = FALSE;
-
-  for (i = 0; i < conflicts->nelts; i++)
-    {
-      const svn_wc_conflict_description2_t *cd;
-      cd = APR_ARRAY_IDX(conflicts, i, const svn_wc_conflict_description2_t *);
-
-      if (cd->kind == svn_wc_conflict_kind_tree)
-        {
-          *conflicted = TRUE;
-          return SVN_NO_ERROR;
-        }
-      else if (cd->kind == svn_wc_conflict_kind_property ||
-               cd->kind == svn_wc_conflict_kind_text)
-        {
-          svn_boolean_t text_conflicted, prop_conflicted, tree_conflicted;
-          SVN_ERR(svn_wc__internal_conflicted_p(&text_conflicted,
-                                                &prop_conflicted,
-                                                &tree_conflicted,
-                                                db, local_abspath,
-                                                scratch_pool));
-
-          *conflicted = (text_conflicted || prop_conflicted
-                            || tree_conflicted);
-          return SVN_NO_ERROR;
-        }
-    }
-
+  *conflicted = (text_conflicted || prop_conflicted || tree_conflicted);
   return SVN_NO_ERROR;
 }
 
@@ -2209,7 +2184,7 @@ add_directory(const char *path,
       svn_error_clear(err);
       wc_kind = svn_wc__db_kind_unknown;
       status = svn_wc__db_status_normal;
-      conflicted = TRUE;  /* TRUE here causes us to check for a conflict */
+      conflicted = FALSE;
 
       versioned_locally_and_present = FALSE;
     }
@@ -3097,7 +3072,7 @@ add_file(const char *path,
       svn_error_clear(err);
       wc_kind = svn_wc__db_kind_unknown;
       status = svn_wc__db_status_normal;
-      conflicted = TRUE;  /* TRUE here causes us to check for a conflict */
+      conflicted = FALSE;
 
       versioned_locally_and_present = FALSE;
     }
