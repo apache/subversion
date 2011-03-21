@@ -44,8 +44,8 @@ analyze_status(void *baton,
   if (! status->entry)
     return SVN_NO_ERROR;
 
-  /* Added files have a revision of no interest */
-  if (status->text_status != svn_wc_status_added)
+  /* Added files and file externals have a revision of no interest */
+  if (status->text_status != svn_wc_status_added && !status->file_external)
     {
       svn_revnum_t item_rev = (sb->committed
                                ? status->entry->cmt_rev
