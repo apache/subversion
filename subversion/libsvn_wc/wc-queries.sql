@@ -175,10 +175,10 @@ WHERE wc_id = ?1 AND parent_relpath = ?2
    working version of the directory. */
 SELECT local_relpath FROM nodes_current
 WHERE wc_id = ?1 AND parent_relpath = ?2
-  AND (op_depth > (SELECT op_depth FROM nodes_current
+  AND (op_depth >= (SELECT MAX(op_depth) FROM nodes_current
                    WHERE wc_id = ?1 AND local_relpath = ?2)
        OR
-       (op_depth = (SELECT op_depth FROM nodes_current
+       (op_depth = (SELECT MAX(op_depth) FROM nodes_current
                     WHERE wc_id = ?1 AND local_relpath = ?2)
         AND presence != 'base-deleted'))
 
