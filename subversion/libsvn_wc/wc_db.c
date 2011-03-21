@@ -8189,12 +8189,17 @@ svn_wc__db_read_conflicts(const apr_array_header_t **conflicts,
         {
           const svn_wc_conflict_description2_t *desc;
           const svn_skel_t *skel;
+          svn_error_t *err;
 
           skel = svn_skel__parse(conflict_data, strlen(conflict_data),
                                  scratch_pool);
-          SVN_ERR(svn_wc__deserialize_conflict(&desc, skel,
+          err = svn_wc__deserialize_conflict(&desc, skel,
                           svn_dirent_dirname(local_abspath, scratch_pool),
-                          result_pool, scratch_pool));
+                          result_pool, scratch_pool);
+
+          if (err)
+            SVN_ERR(svn_error_compose_create(err,
+                                             svn_sqlite__reset(stmt)));
 
           APR_ARRAY_PUSH(cflcts, const svn_wc_conflict_description2_t *) = desc;
         }
