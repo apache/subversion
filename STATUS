@@ -224,6 +224,17 @@ Candidate changes:
       +0: hwright (I like the idea, but have no knowledge of the change, or
                    ability to test it.)
 
+  * r1083883
+    Fix issue #3816, "file external can cause mixed-revision working
+    copy after checkout"
+    Justification:
+      Without this fix, file externals pinned to a revision can prevent
+      reintegrate merges.
+    Branch:
+      ^/subversion/branches/1.6.x-issue3816
+    Votes:
+      +1: stsp
+
 Veto-blocked changes:
 =====================
 
