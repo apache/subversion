@@ -141,6 +141,7 @@ def svnversion_test(sbox):
 
 #----------------------------------------------------------------------
 
+# issue 3816
 def ignore_externals(sbox):
   "test 'svnversion' with svn:externals"
   sbox.build()
@@ -149,7 +150,10 @@ def ignore_externals(sbox):
 
   # Set up an external item
   C_path = os.path.join(wc_dir, "A", "C")
-  externals_desc = "ext -r 1 " + repo_url + "/A/D/G" + "\n"
+  externals_desc = """\
+ext-dir -r 1 %s/A/D/G
+ext-file -r 1 %s/A/D/H/omega
+""" % (repo_url, repo_url)
   tmp_f = os.tempnam(wc_dir, 'tmp')
   svntest.main.file_append(tmp_f, externals_desc)
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -168,10 +172,18 @@ def ignore_externals(sbox):
 
   # Update to get it on disk
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
-  ext_path = os.path.join(C_path, 'ext')
+  ext_dir_path = os.path.join(C_path, 'ext-dir')
+  ext_file_path = os.path.join(C_path, 'ext-file')
   exit_code, out, err = svntest.actions.run_and_verify_svn(
-    None, svntest.verify.AnyOutput, [], 'info', ext_path)
+    None, svntest.verify.AnyOutput, [], 'info', ext_dir_path)
+  for line in out:
+    if line.find('Revision: 1') != -1:
+      break
+  else:
+    raise svntest.Failure
 
+  exit_code, out, err = svntest.actions.run_and_verify_svn(
+    None, svntest.verify.AnyOutput, [], 'info', ext_file_path)
   for line in out:
     if line.find('Revision: 1') != -1:
       break
