@@ -229,6 +229,14 @@ INSERT OR REPLACE INTO lock
  lock_date)
 VALUES (?1, ?2, ?3, ?4, ?5, ?6)
 
+-- STMT_SELECT_BASE_NODE_LOCK_TOKENS_RECURSIVE
+SELECT local_relpath, lock_token
+FROM nodes
+LEFT OUTER JOIN lock ON nodes.repos_id = lock.repos_id
+  AND nodes.repos_path = lock.repos_relpath
+WHERE wc_id = ?1 AND op_depth = 0
+  AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
+
 -- STMT_INSERT_WCROOT
 INSERT INTO wcroot (local_abspath)
 VALUES (?1)

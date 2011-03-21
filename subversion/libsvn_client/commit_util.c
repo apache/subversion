@@ -190,44 +190,6 @@ look_up_committable(apr_hash_t *committables,
   return NULL;
 }
 
-/* Baton for add_lock_token() */
-struct add_lock_token_baton
-{
-  apr_hash_t *lock_tokens;
-  svn_wc_context_t *wc_ctx;
-};
-
-/* This implements the svn_wc__node_found_func_t interface. */
-static svn_error_t *
-add_lock_token(const char *local_abspath,
-               svn_node_kind_t kind,
-               void *walk_baton,
-               apr_pool_t *scratch_pool)
-{
-  struct add_lock_token_baton *altb = walk_baton;
-  apr_pool_t *token_pool = apr_hash_pool_get(altb->lock_tokens);
-  const char *lock_token;
-  const char *url;
-
-  /* I want every lock-token I can get my dirty hands on!
-     If this entry is switched, so what.  We will send an irrelevant lock
-     token. */
-  SVN_ERR(svn_wc__node_get_lock_info(&lock_token, NULL, NULL, NULL,
-                                     altb->wc_ctx, local_abspath,
-                                     scratch_pool, scratch_pool));
-  if (!lock_token)
-    return SVN_NO_ERROR;
-
-  SVN_ERR(svn_wc__node_get_url(&url, altb->wc_ctx, local_abspath,
-                               token_pool, scratch_pool));
-  if (url)
-    apr_hash_set(altb->lock_tokens, url,
-                 APR_HASH_KEY_STRING,
-                 apr_pstrdup(token_pool, lock_token));
-
-  return SVN_NO_ERROR;
-}
-
 /* Helper for harvest_committables().
  * If ENTRY is a dir, return an SVN_ERR_WC_FOUND_CONFLICT error when
  * encountering a tree-conflicted immediate child node. However, do
@@ -835,19 +797,29 @@ harvest_committables(apr_hash_t *committables,
   if (lock_tokens && db_kind == svn_node_dir
       && (state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE))
     {
-      struct add_lock_token_baton altb;
-      altb.wc_ctx = ctx->wc_ctx;
-      altb.lock_tokens = lock_tokens;
+      apr_hash_t *local_relpath_tokens;
+      apr_hash_index_t *hi;
 
-      SVN_ERR(svn_wc__node_walk_children(ctx->wc_ctx,
-                                         local_abspath,
-                                         FALSE,
-                                         add_lock_token,
-                                         &altb,
-                                         svn_depth_infinity,
-                                         ctx->cancel_func,
-                                         ctx->cancel_baton,
-                                         scratch_pool));
+      SVN_ERR(svn_wc__node_get_lock_tokens_recursive(
+                  &local_relpath_tokens, ctx->wc_ctx, local_abspath,
+                  scratch_pool, scratch_pool));
+
+      /* Map local_relpaths to URLs. */
+      for (hi = apr_hash_first(scratch_pool, local_relpath_tokens);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+          const char *item_abspath = svn__apr_hash_index_key(hi);
+          const char *lock_token = svn__apr_hash_index_val(hi);
+          const char *item_url;
+          apr_pool_t *token_pool = apr_hash_pool_get(lock_tokens);
+
+          SVN_ERR(svn_wc__node_get_url(&item_url, ctx->wc_ctx, item_abspath,
+                                       token_pool, scratch_pool));
+          if (item_url)
+            apr_hash_set(lock_tokens, item_url, APR_HASH_KEY_STRING,
+                         apr_pstrdup(token_pool, lock_token));
+        }
     }
 
   return SVN_NO_ERROR;

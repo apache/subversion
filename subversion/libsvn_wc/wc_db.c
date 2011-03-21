@@ -9885,3 +9885,52 @@ svn_wc__db_revision_status(svn_revnum_t *min_revision,
                                               revision_status_txn, &rsb,
                                               scratch_pool));
 }
+
+
+svn_error_t *
+svn_wc__db_base_get_lock_tokens_recursive(apr_hash_t **lock_tokens,
+                                          svn_wc__db_t *db,
+                                          const char *local_abspath,
+                                          apr_pool_t *result_pool,
+                                          apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath; 
+  const char *like_arg;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
+                                                db, local_abspath,
+                                                scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  *lock_tokens = apr_hash_make(result_pool);
+
+  /* Fetch all the lock tokens in and under LOCAL_RELPATH. */
+  SVN_ERR(svn_sqlite__get_statement(
+              &stmt, wcroot->sdb,
+              STMT_SELECT_BASE_NODE_LOCK_TOKENS_RECURSIVE));
+  like_arg = construct_like_arg(local_relpath, scratch_pool);
+  SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id, local_relpath,
+                            like_arg));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  while (have_row)
+    {
+      const char *child_relpath = svn_sqlite__column_text(stmt, 0, NULL);
+      const char *lock_token = svn_sqlite__column_text(stmt, 1, result_pool);
+
+      if (lock_token)
+        {
+          const char *child_abspath =
+            svn_dirent_join(wcroot->abspath, child_relpath, result_pool);
+          apr_hash_set(*lock_tokens, child_abspath,
+                       APR_HASH_KEY_STRING, lock_token);
+        }
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+  return svn_sqlite__reset(stmt);
+}
