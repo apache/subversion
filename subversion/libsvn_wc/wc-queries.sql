@@ -901,6 +901,7 @@ CREATE UNIQUE INDEX temp__node_props_cache_unique
 SELECT local_relpath, kind, properties FROM temp__node_props_cache
 ORDER BY local_relpath
 
+/* Perhaps revert log would be a better term? */
 -- STMT_CREATE_REVERT_CACHE
 DROP TABLE IF EXISTS revert_cache;
 CREATE TEMPORARY TABLE revert_cache (
@@ -908,30 +909,50 @@ CREATE TEMPORARY TABLE revert_cache (
    conflict_old TEXT,
    conflict_new TEXT,
    conflict_working TEXT,
-   prop_reject TEXT
+   prop_reject TEXT,
+   notify INTEGER
    );
 DROP TRIGGER IF EXISTS trigger_revert_cache_nodes;
 CREATE TEMPORARY TRIGGER trigger_revert_cache_nodes
 BEFORE DELETE ON nodes
 BEGIN
-   INSERT OR REPLACE INTO revert_cache(local_relpath) SELECT OLD.local_relpath;
+   INSERT OR REPLACE INTO revert_cache(local_relpath, notify)
+   SELECT OLD.local_relpath, 1;
 END;
 DROP TRIGGER IF EXISTS trigger_revert_cache_actual;
-CREATE TEMPORARY TRIGGER trigger_revert_cache_actual
+CREATE TEMPORARY TRIGGER trigger_revert_cache_actual_delete
 BEFORE DELETE ON actual_node
 BEGIN
-   INSERT OR REPLACE INTO revert_cache
+   INSERT OR REPLACE INTO revert_cache(local_relpath, conflict_old,
+                                       conflict_new, conflict_working,
+                                       prop_reject)
    SELECT OLD.local_relpath,
           OLD.conflict_old, OLD.conflict_new, OLD.conflict_working,
           OLD.prop_reject;
+   UPDATE revert_cache SET notify = 1
+   WHERE OLD.properties IS NOT NULL;
+END;
+DROP TRIGGER IF EXISTS trigger_revert_cache_update;
+CREATE TEMPORARY TRIGGER trigger_revert_cache_actual_update
+BEFORE UPDATE ON actual_node
+BEGIN
+   INSERT OR REPLACE INTO revert_cache(local_relpath, conflict_old,
+                                       conflict_new, conflict_working,
+                                       prop_reject)
+   SELECT OLD.local_relpath,
+          OLD.conflict_old, OLD.conflict_new, OLD.conflict_working,
+          OLD.prop_reject;
+   UPDATE revert_cache SET notify = 1
+   WHERE OLD.properties IS NOT NULL;
 END
 
 -- STMT_DROP_REVERT_CACHE_TRIGGERS
 DROP TRIGGER IF EXISTS trigger_revert_cache_nodes;
-DROP TRIGGER IF EXISTS trigger_revert_cache_actual;
+DROP TRIGGER IF EXISTS trigger_revert_cache_actual_delete;
+DROP TRIGGER IF EXISTS trigger_revert_cache_actual_update;
 
 -- STMT_SELECT_REVERT_CACHE
-SELECT conflict_old, conflict_new, conflict_working, prop_reject
+SELECT conflict_old, conflict_new, conflict_working, prop_reject, notify
 FROM revert_cache
 WHERE local_relpath = ?1
 

@@ -3701,7 +3701,7 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
   VERIFY_USABLE_WCROOT(wcroot);
 
   /* We MUST remove the triggers and not leave them to affect subsequent
-     deletes. */
+     operations. */
   err = svn_sqlite__exec_statements(wcroot->sdb, STMT_CREATE_REVERT_CACHE);
   if (err)
     return svn_error_compose_create(err,
@@ -3744,7 +3744,7 @@ svn_wc__db_reverted(svn_boolean_t *reverted,
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (have_row)
     {
-      *reverted = TRUE;
+      *reverted = !svn_sqlite__column_is_null(stmt, 4);
       *conflict_new = svn_sqlite__column_text(stmt, 0, result_pool);
       *conflict_old = svn_sqlite__column_text(stmt, 1, result_pool);
       *conflict_working = svn_sqlite__column_text(stmt, 2, result_pool);

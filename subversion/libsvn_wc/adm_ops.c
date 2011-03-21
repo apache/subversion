@@ -1334,6 +1334,21 @@ verify_revert_depth(svn_wc__db_t *db,
 
 #ifdef SVN_NEW_REVERT
 static svn_error_t *
+remove_conflict_file(const char *name,
+                     const char *local_abspath,
+                     apr_pool_t *scratch_pool)
+{
+  if (name)
+    {
+      const char *conflict_abspath
+        = svn_dirent_join(svn_dirent_dirname(local_abspath, scratch_pool),
+                          name, scratch_pool);
+      SVN_ERR(svn_io_remove_file2(conflict_abspath, TRUE, scratch_pool));
+    }
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 revert_restore(svn_wc__db_t *db,
                const char *revert_root,
                const char *local_abspath,
@@ -1477,7 +1492,10 @@ revert_restore(svn_wc__db_t *db,
       notify_required = TRUE;
     }
 
-  /* ### Tidy up conflict droppings */
+  SVN_ERR(remove_conflict_file(conflict_old, local_abspath, scratch_pool));
+  SVN_ERR(remove_conflict_file(conflict_new, local_abspath, scratch_pool));
+  SVN_ERR(remove_conflict_file(conflict_working, local_abspath, scratch_pool));
+  SVN_ERR(remove_conflict_file(prop_reject, local_abspath, scratch_pool));
 
   if (notify_func && notify_required)
     notify_func(notify_baton,
