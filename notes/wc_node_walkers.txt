@@ -25,12 +25,6 @@ subversion/libsvn_client/changelist.c
    svn_client_get_changelists() - Drive callback to report all
      changelist associations in a tree up to a specified depth.
 
-subversion/libsvn_client/commit_util.c
-
-   harvest_committables() - Crawl a tree to infinite depth harvesting
-     lock tokens for storage in a hash thereof used during the commit
-     process.  No notifications.
-
 subversion/libsvn_client/info.c
 
    crawl_entries() - Crawl a tree (up to specified depth) driving an

@@ -807,6 +807,20 @@ svn_wc__node_clear_dav_cache_recursive(svn_wc_context_t *wc_ctx,
                                        const char *local_abspath,
                                        apr_pool_t *scratch_pool);
 
+/**
+ * Set @a lock_tokens to a hash mapping <tt>const char *</tt> local
+ * absolute paths to <tt>const char *</tt> lock tokens for every path
+ * at or under @a local_abspath in @a wc_ctx which has such a lock
+ * token set on it.  Allocate the hash and all items therein from
+ * @a result_pool.
+ */
+svn_error_t *
+svn_wc__node_get_lock_tokens_recursive(apr_hash_t **lock_tokens,
+                                       svn_wc_context_t *wc_ctx,
+                                       const char *local_abspath,
+                                       apr_pool_t *result_pool,
+                                       apr_pool_t *scratch_pool);
+
 /* Set @ *min_revision and @ *max_revision to the lowest and highest revision
  * numbers found within @a local_abspath, using context @a wc_ctx.
  * If @ committed is TRUE, set @a *min_revision and @a *max_revision

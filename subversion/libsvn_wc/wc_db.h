@@ -822,6 +822,16 @@ svn_wc__db_base_clear_dav_cache_recursive(svn_wc__db_t *db,
                                           const char *local_abspath,
                                           apr_pool_t *scratch_pool);
 
+/* Set LOCK_TOKENS to a hash mapping const char * local absolute paths
+ * to const char * lock tokens for every base node at or under
+ * LOCAL_ABSPATH in DB which has such a lock token set on it.
+ * Allocate the hash and all items therein from RESULT_POOL.  */
+svn_error_t *
+svn_wc__db_base_get_lock_tokens_recursive(apr_hash_t **lock_tokens,
+                                          svn_wc__db_t *db,
+                                          const char *local_abspath,
+                                          apr_pool_t *result_pool,
+                                          apr_pool_t *scratch_pool);
 
 /* ### how to handle depth? empty != absent. thus, record depth on each
    ### directory? empty, files, immediates, infinity. recording depth

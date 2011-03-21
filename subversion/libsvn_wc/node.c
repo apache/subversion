@@ -1532,3 +1532,16 @@ svn_wc__node_clear_dav_cache_recursive(svn_wc_context_t *wc_ctx,
   return svn_error_return(svn_wc__db_base_clear_dav_cache_recursive(
                               wc_ctx->db, local_abspath, scratch_pool));
 }
+
+
+svn_error_t *
+svn_wc__node_get_lock_tokens_recursive(apr_hash_t **lock_tokens,
+                                       svn_wc_context_t *wc_ctx,
+                                       const char *local_abspath,
+                                       apr_pool_t *result_pool,
+                                       apr_pool_t *scratch_pool)
+{
+  return svn_error_return(svn_wc__db_base_get_lock_tokens_recursive(
+                              lock_tokens, wc_ctx->db, local_abspath,
+                              result_pool, scratch_pool));
+}
