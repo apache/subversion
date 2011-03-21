@@ -2188,6 +2188,8 @@ add_directory(const char *path,
 
       versioned_locally_and_present = FALSE;
     }
+  else if (wc_kind == svn_wc__db_kind_unknown)
+    versioned_locally_and_present = FALSE; /* Tree conflict ACTUAL-only node */
   else
     versioned_locally_and_present = IS_NODE_PRESENT(status);
 
@@ -3076,6 +3078,8 @@ add_file(const char *path,
 
       versioned_locally_and_present = FALSE;
     }
+  else if (wc_kind == svn_wc__db_kind_unknown)
+    versioned_locally_and_present = FALSE; /* Tree conflict ACTUAL-only node */
   else
     versioned_locally_and_present = IS_NODE_PRESENT(status);
 
@@ -3152,7 +3156,6 @@ add_file(const char *path,
          We will never see missing files here, because these would be
          re-added during the crawler phase. */
       svn_boolean_t local_is_file;
-      svn_boolean_t is_file_external;
 
       /* Is the local node a copy or move */
       if (status == svn_wc__db_status_added)
@@ -3171,7 +3174,7 @@ add_file(const char *path,
           svn_boolean_t switched;
 
           SVN_ERR(svn_wc__check_wc_root(&wc_root, NULL, &switched,
-                                        eb->db, fb->local_abspath, pool));
+                                        eb->db, fb->local_abspath, subpool));
 
           err = NULL;
 
@@ -3190,32 +3193,18 @@ add_file(const char *path,
             {
               fb->already_notified = TRUE;
               do_notification(eb, fb->local_abspath, svn_node_file,
-                              svn_wc_notify_update_obstruction, pool);
+                              svn_wc_notify_update_obstruction, subpool);
 
+              svn_pool_clear(subpool);
               return svn_error_return(err);
             }
         }
 
-      /* Find out if this is a file external, because we want to allow pulling
-       * in a file external onto an existing node -- because that's how
-       * externals are currently implemented. :( */
-      err = svn_wc__node_is_file_external(&is_file_external, eb->wc_ctx,
-                                          fb->local_abspath, subpool);
-      if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-        {
-          svn_error_clear(err);
-          is_file_external = FALSE;
-        }
-      else
-        SVN_ERR(err);
-
       /* Don't perform tree conflict checking if
        *  - if we are in a deleted subtree
-       *  - if this is a file external
        *  - if this is a normal file addition and we  we are switching
        */
       if (! pb->in_deleted_and_tree_conflicted_subtree
-          && ! is_file_external
           && (eb->switch_relpath != NULL
               || !local_is_file
               || status != svn_wc__db_status_added))
@@ -3260,7 +3249,7 @@ add_file(const char *path,
                                                   *eb->target_revision,
                                                   svn_wc__db_kind_file,
                                                   NULL, NULL, subpool));
-          SVN_ERR(remember_skipped_tree(eb, fb->local_abspath, pool));
+          SVN_ERR(remember_skipped_tree(eb, fb->local_abspath, subpool));
 
           /* Mark a conflict */
           SVN_ERR(create_tree_conflict(&tree_conflict, eb,
