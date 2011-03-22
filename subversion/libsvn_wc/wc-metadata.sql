@@ -492,7 +492,7 @@ CREATE VIEW NODES_CURRENT AS
   SELECT * FROM nodes AS n
     WHERE op_depth = (SELECT MAX(op_depth) FROM nodes AS n2
                       WHERE n2.wc_id = n.wc_id
-                        AND n2.local_relpath = n.local_relpath)
+                        AND n2.local_relpath = n.local_relpath);
 
 /* Many queries have to filter the nodes table to pick only that version
    of each node with the base (least "current") op_depth.  This view
