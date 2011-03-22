@@ -352,11 +352,16 @@ harvest_committables(apr_hash_t *committables,
   const char *entry_lock_token;
   const char *cf_relpath = NULL;
   svn_revnum_t entry_rev, cf_rev = SVN_INVALID_REVNUM;
-  const svn_string_t *propval;
   svn_boolean_t matches_changelists;
   svn_boolean_t is_special;
   svn_boolean_t is_file_external;
   svn_boolean_t is_added;
+  svn_boolean_t is_deleted;
+  svn_boolean_t is_not_present;
+  svn_boolean_t is_symlink;
+  svn_boolean_t conflicted;
+  const char *node_changelist;
+  svn_boolean_t is_update_root;
   const char *node_copyfrom_relpath;
   svn_revnum_t node_copyfrom_rev;
   svn_wc_context_t *wc_ctx = ctx->wc_ctx;
@@ -378,8 +383,18 @@ harvest_committables(apr_hash_t *committables,
   /* Return error on unknown path kinds.  We check both the entry and
      the node itself, since a path might have changed kind since its
      entry was written. */
-  SVN_ERR(svn_wc_read_kind(&db_kind, ctx->wc_ctx, local_abspath,
-                           TRUE, scratch_pool));
+  SVN_ERR(svn_wc__node_get_commit_status(&db_kind, &is_added, &is_deleted,
+                                         &is_not_present, &is_symlink,
+                                         &entry_rev, &entry_relpath,
+                                         &conflicted,
+                                         &node_changelist,
+                                         &prop_mod, &is_update_root,
+                                         ctx->wc_ctx, local_abspath,
+                                         scratch_pool, scratch_pool));
+
+  if (!entry_relpath && repos_relpath)
+    entry_relpath = repos_relpath;
+
   if ((db_kind != svn_node_file) && (db_kind != svn_node_dir))
     return svn_error_createf
       (SVN_ERR_NODE_UNKNOWN_KIND, NULL, _("Unknown entry kind for '%s'"),
@@ -403,8 +418,10 @@ harvest_committables(apr_hash_t *committables,
     }
 
   /* Save the result for reuse. */
-  matches_changelists = svn_wc__changelist_match(ctx->wc_ctx, local_abspath,
-                                                 changelists, scratch_pool);
+  matches_changelists = ((changelists == NULL)
+                         || (node_changelist != NULL
+                             && apr_hash_get(changelists, node_changelist,
+                                             APR_HASH_KEY_STRING) != NULL));
 
   /* Early exit. */
   if (working_kind != svn_node_dir && working_kind != svn_node_none
@@ -415,12 +432,9 @@ harvest_committables(apr_hash_t *committables,
 
   /* Verify that the node's type has not changed before attempting to
      commit. */
-  SVN_ERR(svn_wc_prop_get2(&propval, ctx->wc_ctx, local_abspath,
-                           SVN_PROP_SPECIAL, scratch_pool, scratch_pool));
-
-  if ((((! propval) && (is_special))
+  if ((((!is_symlink) && (is_special))
 #ifdef HAVE_SYMLINK
-       || ((propval) && (! is_special))
+       || (is_symlink && (! is_special))
 #endif /* HAVE_SYMLINK */
        ) && (working_kind != svn_node_none))
     {
@@ -430,14 +444,17 @@ harvest_committables(apr_hash_t *committables,
          svn_dirent_local_style(local_abspath, scratch_pool));
     }
 
-  SVN_ERR(svn_wc__node_is_file_external(&is_file_external, ctx->wc_ctx,
-                                        local_abspath, scratch_pool));
-  if (is_file_external && copy_mode)
-    return SVN_NO_ERROR;
+  if (is_update_root)
+    {
+      SVN_ERR(svn_wc__node_is_file_external(&is_file_external, ctx->wc_ctx,
+                                            local_abspath, scratch_pool));
+      if (is_file_external && copy_mode)
+        return SVN_NO_ERROR;
+    }
 
   /* If ENTRY is in our changelist, then examine it for conflicts. We
      need to bail out if any conflicts exist.  */
-  if (matches_changelists)
+  if (conflicted && matches_changelists)
     {
       svn_boolean_t tc, pc, treec;
 
@@ -456,13 +473,14 @@ harvest_committables(apr_hash_t *committables,
                                            db_kind, depth, changelists,
                                            scratch_pool));
 
+  if (entry_relpath == NULL)
+    SVN_ERR(svn_wc__node_get_repos_relpath(&entry_relpath,
+                                           ctx->wc_ctx, local_abspath,
+                                           scratch_pool, scratch_pool));
   /* Our own URL wins if not in COPY_MODE.  In COPY_MODE the
      telescoping URLs are used. */
-  SVN_ERR(svn_wc__node_get_repos_relpath(&entry_relpath, wc_ctx, local_abspath,
-                                         scratch_pool, scratch_pool));
   if (! copy_mode)
     repos_relpath = entry_relpath;
-
 
   /* Check for the deletion case.  Deletes occur only when not in
      "adds-only mode".  We use the SVN_CLIENT_COMMIT_ITEM_DELETE flag
@@ -478,17 +496,15 @@ harvest_committables(apr_hash_t *committables,
   if (! adds_only)
     {
       svn_boolean_t is_replaced;
-      svn_boolean_t is_status_deleted;
-      svn_boolean_t is_not_present;
 
       /* ### There is room for optimization here, but let's keep it plain
        * while this function is in flux. */
-      SVN_ERR(svn_wc__node_is_status_deleted(&is_status_deleted, ctx->wc_ctx,
-                                             local_abspath, scratch_pool));
-      SVN_ERR(svn_wc__node_is_replaced(&is_replaced, ctx->wc_ctx,
+
+      if (!is_added)
+        is_replaced = FALSE;
+      else
+        SVN_ERR(svn_wc__node_is_replaced(&is_replaced, ctx->wc_ctx,
                                        local_abspath, scratch_pool));
-      SVN_ERR(svn_wc__node_is_status_not_present(&is_not_present, ctx->wc_ctx,
-                                                 local_abspath, scratch_pool));
 
       /* ### Catch a mixed-rev copy that replaces. The mixed-rev children are
        * each regarded as op-roots of the replace and result in currently
@@ -509,15 +525,13 @@ harvest_committables(apr_hash_t *committables,
             is_replaced = FALSE;
         }
 
-      if (is_status_deleted || is_replaced || is_not_present)
+      if (is_deleted || is_replaced || is_not_present)
         state_flags |= SVN_CLIENT_COMMIT_ITEM_DELETE;
     }
 
   /* Check for the trivial addition case.  Adds can be explicit
      (schedule == add) or implicit (schedule == replace ::= delete+add).
      We also note whether or not this is an add with history here.  */
-  SVN_ERR(svn_wc__node_is_added(&is_added, ctx->wc_ctx, local_abspath,
-                                scratch_pool));
   if (is_added)
     {
       svn_boolean_t is_copy_target;
@@ -574,21 +588,18 @@ harvest_committables(apr_hash_t *committables,
       node_copyfrom_rev = SVN_INVALID_REVNUM;
     }
 
-  SVN_ERR(svn_wc__node_get_base_rev(&entry_rev, ctx->wc_ctx, local_abspath,
-                                    scratch_pool));
-
   /* Further additions occur in copy mode. */
   if (copy_mode && !(state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE))
     {
-      svn_revnum_t p_rev;
+      svn_revnum_t dir_rev;
 
       if (!copy_mode_root)
-        SVN_ERR(svn_wc__node_get_base_rev(&p_rev, ctx->wc_ctx,
+        SVN_ERR(svn_wc__node_get_base_rev(&dir_rev, ctx->wc_ctx,
                                           svn_dirent_dirname(local_abspath,
                                                              scratch_pool),
                                           scratch_pool));
 
-      if (copy_mode_root || entry_rev != p_rev)
+      if (copy_mode_root || entry_rev != dir_rev)
         {
           state_flags |= SVN_CLIENT_COMMIT_ITEM_ADD;
           if (node_copyfrom_relpath)
@@ -626,9 +637,10 @@ harvest_committables(apr_hash_t *committables,
              svn_dirent_local_style(local_abspath, scratch_pool));
         }
 
-      /* See if there are property modifications to send. */
-      SVN_ERR(check_prop_mods(&prop_mod, &eol_prop_changed, local_abspath,
-                              ctx->wc_ctx, scratch_pool));
+      /* If there are property modifications, check if eol-style changed. */
+      if (prop_mod)
+        SVN_ERR(check_prop_mods(&prop_mod, &eol_prop_changed, local_abspath,
+                                ctx->wc_ctx, scratch_pool));
 
       /* Regular adds of files have text mods, but for copies we have
          to test for textual mods.  Directories simply don't have text! */
@@ -693,8 +705,7 @@ harvest_committables(apr_hash_t *committables,
   /* Now, if this is something to commit, add it to our list. */
   if (state_flags)
     {
-      if (svn_wc__changelist_match(ctx->wc_ctx, local_abspath, changelists,
-                                   scratch_pool))
+      if (matches_changelists)
         {
           /* Finally, add the committable item. */
           SVN_ERR(add_committable(committables, local_abspath, db_kind,

@@ -886,6 +886,30 @@ svn_wc__has_local_mods(svn_boolean_t *is_modified,
                        void *cancel_baton,
                        apr_pool_t *scratch_pool);
 
+
+/* Gets information needed by the commit harvester.
+ *
+ * ### Currently this API is work in progress and is designed for just this
+ * ### caller. It is certainly possible (and likely) that this function and
+ * ### it's caller will eventually move into a wc and maybe wc_db api.
+ */
+svn_error_t *
+svn_wc__node_get_commit_status(svn_node_kind_t *kind,
+                               svn_boolean_t *added,
+                               svn_boolean_t *deleted,
+                               svn_boolean_t *not_present,
+                               svn_boolean_t *symlink,
+                               svn_revnum_t *revision,
+                               const char **repos_relpath,
+                               svn_boolean_t *conflicted,
+                               const char **changelist,
+                               svn_boolean_t *props_mod,
+                               svn_boolean_t *update_root,
+                               svn_wc_context_t *wc_ctx,
+                               const char *local_abspath,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
