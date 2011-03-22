@@ -614,6 +614,9 @@ log_properties_normalized(int normalized_rev_props_count,
  * If SYNC is TRUE, then properties on the destination revision that
  * do not exist on the source revision will be removed.
  *
+ * If QUIET is FALSE, then log_properties_copied() is called to log that
+ * properties were copied for revision REV.
+ *
  * Make sure the values of svn:* revision properties use only LF (\n)
  * lineending style, correcting their values as necessary. The number
  * of properties that were normalized is returned in *NORMALIZED_COUNT.
