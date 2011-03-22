@@ -305,7 +305,7 @@ def url_encoding_load(sbox):
   run_load_test(sbox, "url-encoding-bug.dump")
 
 def copy_bad_line_endings_dump(sbox):
-  "dump: inconsistent line endings in svn:props"
+  "dump: inconsistent line endings in svn:* props"
   run_dump_test(sbox, "copy-bad-line-endings.dump",
                 expected_dumpfile_name="copy-bad-line-endings.expected.dump",
                 bypass_prop_validation=True)
