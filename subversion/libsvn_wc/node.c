@@ -1545,3 +1545,80 @@ svn_wc__node_get_lock_tokens_recursive(apr_hash_t **lock_tokens,
                               lock_tokens, wc_ctx->db, local_abspath,
                               result_pool, scratch_pool));
 }
+
+svn_error_t *
+svn_wc__node_get_commit_status(svn_node_kind_t *kind,
+                               svn_boolean_t *added,
+                               svn_boolean_t *deleted,
+                               svn_boolean_t *not_present,
+                               svn_boolean_t *symlink,
+                               svn_revnum_t *revision,
+                               const char **repos_relpath,
+                               svn_boolean_t *conflicted,
+                               const char **changelist,
+                               svn_boolean_t *props_mod,
+                               svn_boolean_t *update_root,
+                               svn_wc_context_t *wc_ctx,
+                               const char *local_abspath,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool)
+{
+  svn_wc__db_status_t status;
+  svn_wc__db_kind_t db_kind;
+  svn_boolean_t have_base;
+
+  /* ### All of this should be handled inside a single read transaction */
+  SVN_ERR(svn_wc__db_read_info(&status, &db_kind, revision, repos_relpath,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL,NULL, changelist, NULL, NULL, NULL, NULL,
+                               props_mod, &have_base, NULL, conflicted, NULL,
+                               wc_ctx->db, local_abspath,
+                               result_pool, scratch_pool));
+
+  if (kind)
+    {
+      if (db_kind == svn_wc__db_kind_file)
+        *kind = svn_node_file;
+      else if (db_kind == svn_wc__db_kind_dir)
+        *kind = svn_node_dir;
+      else
+        *kind = svn_node_unknown;
+    }
+  if (added)
+    *added = (status == svn_wc__db_status_added);
+  if (deleted)
+    *deleted = (status == svn_wc__db_status_deleted);
+  if (not_present)
+    *not_present = (status == svn_wc__db_status_not_present);
+
+  if (symlink)
+    {
+      apr_hash_t *props;
+      *symlink = FALSE;
+
+      if (db_kind == svn_wc__db_kind_file)
+        {
+          SVN_ERR(svn_wc__db_read_props(&props, wc_ctx->db, local_abspath,
+                                        scratch_pool, scratch_pool));
+
+          *symlink = ((props != NULL)
+                      && (apr_hash_get(props, SVN_PROP_SPECIAL,
+                                       APR_HASH_KEY_STRING) != NULL));
+        }
+    }
+
+  if (have_base
+      && ((revision && !SVN_IS_VALID_REVNUM(*revision))
+          || (update_root && status == svn_wc__db_status_normal)))
+    {
+      SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, revision, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, update_root,
+                                       wc_ctx->db, local_abspath,
+                                       scratch_pool, scratch_pool));
+    }
+  else if (update_root)
+    *update_root = FALSE;
+
+  return SVN_NO_ERROR;
+}
