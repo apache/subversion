@@ -61,6 +61,7 @@ enum svnsync__opt {
   svnsync_opt_sync_password,
   svnsync_opt_config_dir,
   svnsync_opt_config_options,
+  svnsync_opt_source_prop_encoding,
   svnsync_opt_disable_locking,
   svnsync_opt_version,
   svnsync_opt_trust_server_cert,
@@ -105,8 +106,9 @@ static const svn_opt_subcommand_desc2_t svnsync_cmd_table[] =
          "the destination repository by any method other than 'svnsync'.\n"
          "In other words, the destination repository should be a read-only\n"
          "mirror of the source repository.\n"),
-      { SVNSYNC_OPTS_DEFAULT, 'q', svnsync_opt_allow_non_empty,
-        svnsync_opt_disable_locking, svnsync_opt_steal_lock } },
+      { SVNSYNC_OPTS_DEFAULT, svnsync_opt_source_prop_encoding, 'q',
+        svnsync_opt_allow_non_empty, svnsync_opt_disable_locking,
+        svnsync_opt_steal_lock } },
     { "synchronize", synchronize_cmd, { "sync" },
       N_("usage: svnsync synchronize DEST_URL [SOURCE_URL]\n"
          "\n"
@@ -118,8 +120,8 @@ static const svn_opt_subcommand_desc2_t svnsync_cmd_table[] =
          "source URL.  Specifying SOURCE_URL is recommended in particular\n"
          "if untrusted users/administrators may have write access to the\n"
          "DEST_URL repository.\n"),
-      { SVNSYNC_OPTS_DEFAULT, 'q', svnsync_opt_disable_locking,
-        svnsync_opt_steal_lock } },
+      { SVNSYNC_OPTS_DEFAULT, svnsync_opt_source_prop_encoding, 'q',
+        svnsync_opt_disable_locking, svnsync_opt_steal_lock } },
     { "copy-revprops", copy_revprops_cmd, { 0 },
       N_("usage:\n"
          "\n"
@@ -139,8 +141,8 @@ static const svn_opt_subcommand_desc2_t svnsync_cmd_table[] =
          "DEST_URL repository.\n"
          "\n"
          "Form 2 is deprecated syntax, equivalent to specifying \"-rREV[:REV2]\".\n"),
-      { SVNSYNC_OPTS_DEFAULT, 'q', 'r', svnsync_opt_disable_locking,
-        svnsync_opt_steal_lock } },
+      { SVNSYNC_OPTS_DEFAULT, svnsync_opt_source_prop_encoding, 'q', 'r',
+        svnsync_opt_disable_locking, svnsync_opt_steal_lock } },
     { "info", info_cmd, { 0 },
       N_("usage: svnsync info DEST_URL\n"
          "\n"
@@ -203,6 +205,12 @@ static const apr_getopt_option_t svnsync_options[] =
                           "For example:\n"
                           "                             "
                           "    servers:global:http-library=serf")},
+    {"source-prop-encoding", svnsync_opt_source_prop_encoding, 1,
+                       N_("convert translatable properties from encoding ARG\n"
+                          "                             "
+                          "to UTF-8. If not specified, then properties are\n"
+                          "                             "
+                          "presumed to be encoded in UTF-8.")},
     {"disable-locking",  svnsync_opt_disable_locking, 0,
                        N_("Disable built-in locking.  Use of this option can\n"
                           "                             "
@@ -238,6 +246,7 @@ typedef struct opt_baton_t {
   const char *sync_password;
   const char *config_dir;
   apr_hash_t *config;
+  const char *source_prop_encoding;
   svn_boolean_t disable_locking;
   svn_boolean_t steal_lock;
   svn_boolean_t quiet;
@@ -363,6 +372,9 @@ typedef struct subcommand_baton_t {
   svn_boolean_t quiet;
   svn_boolean_t allow_non_empty;
   const char *to_url;
+
+  /* initialize, synchronize, and copy-revprops only */
+  const char *source_prop_encoding;
 
   /* initialize only */
   const char *from_url;
@@ -618,7 +630,7 @@ log_properties_normalized(int normalized_rev_props_count,
  * properties were copied for revision REV.
  *
  * Make sure the values of svn:* revision properties use only LF (\n)
- * lineending style, correcting their values as necessary. The number
+ * line ending style, correcting their values as necessary. The number
  * of properties that were normalized is returned in *NORMALIZED_COUNT.
  */
 static svn_error_t *
@@ -627,6 +639,7 @@ copy_revprops(svn_ra_session_t *from_session,
               svn_revnum_t rev,
               svn_boolean_t sync,
               svn_boolean_t quiet,
+              const char *source_prop_encoding,
               int *normalized_count,
               apr_pool_t *pool)
 {
@@ -642,9 +655,10 @@ copy_revprops(svn_ra_session_t *from_session,
   /* Get the list of revision properties on REV of SOURCE. */
   SVN_ERR(svn_ra_rev_proplist(from_session, rev, &rev_props, subpool));
 
-  /* If necessary, normalize line ending style, and return the count
-     of changes in int *NORMALIZED_COUNT. */
-  SVN_ERR(svnsync_normalize_revprops(rev_props, normalized_count, pool));
+  /* If necessary, normalize encoding and line ending style and return the count
+     of EOL-normalized properties in int *NORMALIZED_COUNT. */
+  SVN_ERR(svnsync_normalize_revprops(rev_props, normalized_count,
+                                     source_prop_encoding, pool));
 
   /* Copy all but the svn:svnsync properties. */
   SVN_ERR(write_revprops(&filtered_count, to_session, rev, rev_props, pool));
@@ -685,6 +699,7 @@ make_subcommand_baton(opt_baton_t *opt_baton,
   b->quiet = opt_baton->quiet;
   b->allow_non_empty = opt_baton->allow_non_empty;
   b->to_url = to_url;
+  b->source_prop_encoding = opt_baton->source_prop_encoding;
   b->from_url = from_url;
   b->start_rev = start_rev;
   b->end_rev = end_rev;
@@ -789,8 +804,9 @@ do_initialize(svn_ra_session_t *to_session,
      LATEST is not 0, this really serves merely aesthetic and
      informational purposes, keeping the output of this command
      consistent while allowing folks to see what the latest revision is.  */
-  SVN_ERR(copy_revprops(from_session, to_session, latest, FALSE,
-                        baton->quiet, &normalized_rev_props_count, pool));
+  SVN_ERR(copy_revprops(from_session, to_session, latest, FALSE, baton->quiet,
+                        baton->source_prop_encoding, &normalized_rev_props_count,
+                        pool));
 
   SVN_ERR(log_properties_normalized(normalized_rev_props_count, 0, pool));
 
@@ -933,7 +949,7 @@ open_target_session(svn_ra_session_t **target_session_p,
   return SVN_NO_ERROR;
 }
 
-/* Replay baton, used during sychnronization. */
+/* Replay baton, used during synchronization. */
 typedef struct replay_baton_t {
   svn_ra_session_t *from_session;
   svn_ra_session_t *to_session;
@@ -1067,9 +1083,11 @@ replay_rev_started(svn_revnum_t revision,
     apr_hash_set(filtered, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING,
                  svn_string_create("", pool));
 
-  /* If necessary, normalize line ending style, and add the number
-     of changes to the overall count in the replay baton. */
-  SVN_ERR(svnsync_normalize_revprops(filtered, &normalized_count, pool));
+  /* If necessary, normalize encoding and line ending style. Add the number
+     of properties that required EOL normalization to the overall count
+     in the replay baton. */
+  SVN_ERR(svnsync_normalize_revprops(filtered, &normalized_count,
+                                     rb->sb->source_prop_encoding, pool));
   rb->normalized_rev_props_count += normalized_count;
 
   SVN_ERR(svn_ra_get_commit_editor3(rb->to_session, &commit_editor,
@@ -1082,8 +1100,8 @@ replay_rev_started(svn_revnum_t revision,
      over the RA interface, so we need an editor that's smart enough
      to filter those out for us.  */
   SVN_ERR(svnsync_get_sync_editor(commit_editor, commit_baton, revision - 1,
-                                  rb->sb->to_url, rb->sb->quiet,
-                                  &sync_editor, &sync_baton,
+                                  rb->sb->to_url, rb->sb->source_prop_encoding,
+                                  rb->sb->quiet, &sync_editor, &sync_baton,
                                   &(rb->normalized_node_props_count), pool));
 
   SVN_ERR(svn_delta_get_cancellation_editor(check_cancel, NULL,
@@ -1137,9 +1155,10 @@ replay_rev_finished(svn_revnum_t revision,
                             : filter_exclude_log),
                           subpool);
 
-  /* If necessary, normalize line ending style, and add the number
-     of changes to the overall count in the replay baton. */
-  SVN_ERR(svnsync_normalize_revprops(filtered, &normalized_count, pool));
+  /* If necessary, normalize encoding and line ending style, and add the number
+     of EOL-normalized properties to the overall count in the replay baton. */
+  SVN_ERR(svnsync_normalize_revprops(filtered, &normalized_count,
+                                     rb->sb->source_prop_encoding, pool));
   rb->normalized_rev_props_count += normalized_count;
 
   SVN_ERR(write_revprops(&filtered_count, rb->to_session, revision, filtered,
@@ -1243,10 +1262,9 @@ do_synchronize(svn_ra_session_t *to_session,
         {
           if (copying > last_merged)
             {
-              SVN_ERR(copy_revprops(from_session, to_session,
-                                    to_latest, TRUE, baton->quiet,
-                                    &normalized_rev_props_count,
-                                    pool));
+              SVN_ERR(copy_revprops(from_session, to_session, to_latest, TRUE,
+                                    baton->quiet, baton->source_prop_encoding,
+                                    &normalized_rev_props_count, pool));
               last_merged = copying;
               last_merged_rev = svn_string_create
                 (apr_psprintf(pool, "%ld", last_merged), pool);
@@ -1409,8 +1427,9 @@ do_copy_revprops(svn_ra_session_t *to_session,
     {
       int normalized_count;
       SVN_ERR(check_cancel(NULL));
-      SVN_ERR(copy_revprops(from_session, to_session, i, TRUE,
-                            baton->quiet, &normalized_count, pool));
+      SVN_ERR(copy_revprops(from_session, to_session, i, TRUE, baton->quiet,
+                            baton->source_prop_encoding, &normalized_count,
+                            pool));
       normalized_rev_props_count += normalized_count;
     }
 
@@ -1712,6 +1731,7 @@ main(int argc, const char *argv[])
   const char *username = NULL, *source_username = NULL, *sync_username = NULL;
   const char *password = NULL, *source_password = NULL, *sync_password = NULL;
   apr_array_header_t *config_options = NULL;
+  const char *source_prop_encoding = NULL;
   apr_allocator_t *allocator;
 
   if (svn_cmdline_init("svnsync", stderr) != EXIT_SUCCESS)
@@ -1834,6 +1854,11 @@ main(int argc, const char *argv[])
                                                      opt_arg, pool);
             if (err)
               return svn_cmdline_handle_exit_error(err, pool, "svnsync: ");
+            break;
+
+          case svnsync_opt_source_prop_encoding:
+            opt_err = svn_utf_cstring_to_utf8(&source_prop_encoding, opt_arg,
+                                              pool);
             break;
 
           case svnsync_opt_disable_locking:
@@ -2036,6 +2061,8 @@ main(int argc, const char *argv[])
 
   config = apr_hash_get(opt_baton.config, SVN_CONFIG_CATEGORY_CONFIG,
                         APR_HASH_KEY_STRING);
+
+  opt_baton.source_prop_encoding = source_prop_encoding;
 
   apr_signal(SIGINT, signal_handler);
 

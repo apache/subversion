@@ -33,15 +33,20 @@ extern "C" {
 #include "svn_delta.h"
 
 
-/* Normalize the line ending style of the values of properties in REV_PROPS
- * that "need translation" (according to svn_prop_needs_translation(),
- * currently all svn:* props) so that they contain only LF (\n) line endings.
- * The number of properties that needed normalization is returned in
+/* Normalize the encoding and line ending style of the values of properties
+ * in REV_PROPS that "need translation" (according to
+ * svn_prop_needs_translation(), which is currently all svn:* props) so that
+ * they are encoded in UTF-8 and contain only LF (\n) line endings.
+ *
+ * The number of properties that needed line ending normalization is returned in
  * *NORMALIZED_COUNT.
+ *
+ * No re-encoding is performed if SOURCE_PROP_ENCODING is NULL.
  */
 svn_error_t *
 svnsync_normalize_revprops(apr_hash_t *rev_props,
                            int *normalized_count,
+                           const char *source_prop_encoding,
                            apr_pool_t *pool);
 
 
@@ -51,15 +56,21 @@ svnsync_normalize_revprops(apr_hash_t *rev_props,
  * the commit.  TO_URL is the URL of the root of the repository into
  * which the commit is being made.
  *
+ * If SOURCE_PROP_ENCODING is NULL, then property values are presumed to be
+ * encoded in UTF-8 and are not re-encoded. Otherwise, the property values are
+ * presumed to be encoded in SOURCE_PROP_ENCODING, and are normalized to UTF-8.
+ *
  * As the sync editor encounters property values, it might see the need to
- * normalize them (to LF line endings). Each carried out normalization adds 1
- * to the *NORMALIZED_NODE_PROPS_COUNTER (for notification).
+ * normalize them (re-encode and/or change to LF line endings). Each carried-out
+ * line ending normalization adds 1 to the *NORMALIZED_NODE_PROPS_COUNTER
+ * (for notification).
  */
 svn_error_t *
 svnsync_get_sync_editor(const svn_delta_editor_t *wrapped_editor,
                         void *wrapped_edit_baton,
                         svn_revnum_t base_revision,
                         const char *to_url,
+                        const char *source_prop_encoding,
                         svn_boolean_t quiet,
                         const svn_delta_editor_t **editor,
                         void **edit_baton,
