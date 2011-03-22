@@ -173,12 +173,12 @@ WHERE wc_id = ?1 AND parent_relpath = ?2
    directory (?1, ?2).  A given path is not included just because it is a
    child of an underlying (replaced) directory, it has to be in the
    working version of the directory. */
-SELECT local_relpath FROM nodes_current
+SELECT local_relpath FROM nodes
 WHERE wc_id = ?1 AND parent_relpath = ?2
-  AND (op_depth >= (SELECT MAX(op_depth) FROM nodes_current
+  AND (op_depth > (SELECT MAX(op_depth) FROM nodes
                    WHERE wc_id = ?1 AND local_relpath = ?2)
        OR
-       (op_depth = (SELECT MAX(op_depth) FROM nodes_current
+       (op_depth = (SELECT MAX(op_depth) FROM nodes
                     WHERE wc_id = ?1 AND local_relpath = ?2)
         AND presence != 'base-deleted'))
 
