@@ -1286,6 +1286,7 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
 {
   apr_off_t pos, last_line;
   svn_boolean_t eof;
+  svn_boolean_t valid_header_line = FALSE;
   svn_boolean_t line_after_tree_header_read = FALSE;
   apr_pool_t *iterpool;
   enum parse_state state = state_start;
@@ -1323,6 +1324,8 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
                                    iterpool));
         }
 
+      valid_header_line = FALSE;
+
       /* Run the state machine. */
       for (i = 0; i < (sizeof(transitions) / sizeof(transitions[0])); i++)
         {
@@ -1332,6 +1335,7 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
             {
               SVN_ERR(transitions[i].fn(&state, line->data, *patch,
                                         result_pool, iterpool));
+              valid_header_line = TRUE;
               break;
             }
         }
@@ -1352,7 +1356,19 @@ svn_diff_parse_next_patch(svn_patch_t **patch,
           break;
         }
       else if (state == state_git_tree_seen)
-        line_after_tree_header_read = TRUE;
+        {
+          line_after_tree_header_read = TRUE;
+        }
+      else if (! valid_header_line && state != state_start)
+        {
+          /* We've encountered an invalid diff header. 
+           *
+           * Rewind to the start of the line just read - it may be a new
+           * header that begins there. */
+          SVN_ERR(svn_io_file_seek(patch_file->apr_file, APR_SET, &last_line,
+                                   scratch_pool));
+          state = state_start;
+        }
 
     }
   while (! eof);

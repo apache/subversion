@@ -120,9 +120,8 @@ static const char *git_tree_and_text_unidiff =
   ""                                                                    NL;
 
   /* Only the last git diff header is valid. The other ones either misses a
-   * path element or has noise between lines that must be continous.  The
-   * test test_bad_git_diff_headers currently fails because the headers with
-   * random noise are tolerated.  See issue #3809. */
+   * path element or has noise between lines that must be continous. See
+   * issue #3809. */
 static const char *bad_git_diff_header =
   "Index: iota.copied"                                                  NL
   "===================================================================" NL
@@ -925,7 +924,7 @@ struct svn_test_descriptor_t test_funcs[] =
                     "test git unidiff parsing"),
     SVN_TEST_PASS2(test_parse_git_tree_and_text_diff,
                    "test git unidiff parsing of tree and text changes"),
-    SVN_TEST_XFAIL2(test_bad_git_diff_headers,
+    SVN_TEST_PASS2(test_bad_git_diff_headers,
                     "test badly formatted git diff headers"),
     SVN_TEST_PASS2(test_parse_property_diff,
                    "test property unidiff parsing"),
