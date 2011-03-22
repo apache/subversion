@@ -797,7 +797,7 @@ def copy_bad_line_endings(sbox):
 #----------------------------------------------------------------------
 
 def delete_svn_props(sbox):
-  "copy with svn:prop deletions"
+  "copy with svn:* prop deletions"
   run_test(sbox, "delete-svn-props.dump")
 
 @Issue(3438)
