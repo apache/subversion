@@ -814,6 +814,9 @@ harvest_committables(apr_hash_t *committables,
           const char *item_url;
           apr_pool_t *token_pool = apr_hash_pool_get(lock_tokens);
 
+          if (ctx->cancel_func)
+            SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
+
           SVN_ERR(svn_wc__node_get_url(&item_url, ctx->wc_ctx, item_abspath,
                                        token_pool, scratch_pool));
           if (item_url)
