@@ -1308,6 +1308,9 @@ reject_hunk(patch_target_t *target, target_content_info_t *content_info,
   const char *hunk_header;
   apr_size_t len;
   svn_boolean_t eof;
+  static const char * const text_atat = "@@";
+  static const char * const prop_atat = "##";
+  const char *atat;
   apr_pool_t *iterpool;
 
   if (prop_name)
@@ -1320,23 +1323,21 @@ reject_hunk(patch_target_t *target, target_content_info_t *content_info,
       len = strlen(prop_header);
 
       SVN_ERR(svn_stream_write(content_info->reject, prop_header, &len));
-
-      /* ### What about just setting a variable to either "@@" or "##",
-       * ### and merging with the else clause below? */
-      hunk_header = apr_psprintf(pool, "## -%lu,%lu +%lu,%lu ##%s",
-                                 svn_diff_hunk_get_original_start(hunk),
-                                 svn_diff_hunk_get_original_length(hunk),
-                                 svn_diff_hunk_get_modified_start(hunk),
-                                 svn_diff_hunk_get_modified_length(hunk),
-                                 APR_EOL_STR);
+      atat = prop_atat;
     }
   else
-    hunk_header = apr_psprintf(pool, "@@ -%lu,%lu +%lu,%lu @@%s",
-                               svn_diff_hunk_get_original_start(hunk),
-                               svn_diff_hunk_get_original_length(hunk),
-                               svn_diff_hunk_get_modified_start(hunk),
-                               svn_diff_hunk_get_modified_length(hunk),
-                               APR_EOL_STR);
+    {
+      atat = text_atat;
+    }
+
+  hunk_header = apr_psprintf(pool, "%s -%lu,%lu +%lu,%lu %s%s",
+                             atat,
+                             svn_diff_hunk_get_original_start(hunk),
+                             svn_diff_hunk_get_original_length(hunk),
+                             svn_diff_hunk_get_modified_start(hunk),
+                             svn_diff_hunk_get_modified_length(hunk),
+                             atat,
+                             APR_EOL_STR);
   len = strlen(hunk_header);
   SVN_ERR(svn_stream_write(content_info->reject, hunk_header, &len));
 
