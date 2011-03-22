@@ -489,12 +489,10 @@ CREATE INDEX I_NODES_PARENT ON NODES (wc_id, parent_relpath, op_depth);
    current view.
  */
 CREATE VIEW NODES_CURRENT AS
-  SELECT * FROM nodes
-    JOIN (SELECT wc_id, local_relpath, MAX(op_depth) AS op_depth FROM nodes
-          GROUP BY wc_id, local_relpath) AS filter
-    ON nodes.wc_id = filter.wc_id
-      AND nodes.local_relpath = filter.local_relpath
-      AND nodes.op_depth = filter.op_depth;
+  SELECT * FROM nodes AS n
+    WHERE op_depth = (SELECT MAX(op_depth) FROM nodes AS n2
+                      WHERE n2.wc_id = n.wc_id 
+                        AND n2.local_relpath = n.local_relpath)
 
 /* Many queries have to filter the nodes table to pick only that version
    of each node with the base (least "current") op_depth.  This view
