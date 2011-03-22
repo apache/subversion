@@ -310,6 +310,12 @@ def copy_bad_line_endings_dump(sbox):
                 expected_dumpfile_name="copy-bad-line-endings.expected.dump",
                 bypass_prop_validation=True)
 
+def copy_bad_line_endings2_dump(sbox):
+  "dump: non-LF line endings in svn:* props"
+  run_dump_test(sbox, "copy-bad-line-endings2.dump",
+                expected_dumpfile_name="copy-bad-line-endings2.expected.dump",
+                bypass_prop_validation=True)
+
 def commit_a_copy_of_root_dump(sbox):
   "dump: commit a copy of root"
   run_dump_test(sbox, "repo-with-copy-of-root-dir.dump")
@@ -365,6 +371,7 @@ test_list = [ None,
               move_and_modify_in_the_same_revision_dump,
               move_and_modify_in_the_same_revision_load,
               copy_bad_line_endings_dump,
+              copy_bad_line_endings2_dump,
               commit_a_copy_of_root_dump,
               commit_a_copy_of_root_load,
               descend_into_replace_dump,

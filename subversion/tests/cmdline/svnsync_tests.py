@@ -27,6 +27,9 @@
 # General modules
 import sys, os
 
+# Test suite-specific modules
+import locale
+
 # Our testing module
 import svntest
 from svntest.verify import SVNUnexpectedStdout, SVNUnexpectedStderr
@@ -57,18 +60,22 @@ def build_repos(sbox):
   svntest.main.create_repos(sbox.repo_dir)
 
 
-def run_sync(url, source_url=None, expected_error=None):
+def run_sync(url, source_url=None, expected_error=None,
+             source_prop_encoding=None):
   "Synchronize the mirror repository with the master"
   if source_url is not None:
-    exit_code, output, errput = svntest.main.run_svnsync(
-      "synchronize", url, source_url,
+    args = ["synchronize", url, source_url,
       "--username", svntest.main.wc_author,
-      "--password", svntest.main.wc_passwd)
+      "--password", svntest.main.wc_passwd]
   else: # Allow testing of old source-URL-less syntax
-    exit_code, output, errput = svntest.main.run_svnsync(
-      "synchronize", url,
+    args = ["synchronize", url,
       "--username", svntest.main.wc_author,
-      "--password", svntest.main.wc_passwd)
+      "--password", svntest.main.wc_passwd]
+  if source_prop_encoding:
+    args.append("--source-prop-encoding")
+    args.append(source_prop_encoding)
+
+  exit_code, output, errput = svntest.main.run_svnsync(*args)
   if errput:
     if expected_error is None:
       raise SVNUnexpectedStderr(errput)
@@ -83,12 +90,17 @@ def run_sync(url, source_url=None, expected_error=None):
     # should be: ['Committed revision 1.\n', 'Committed revision 2.\n']
     raise SVNUnexpectedStdout("Missing stdout")
 
-def run_copy_revprops(url, source_url, expected_error=None):
+def run_copy_revprops(url, source_url, expected_error=None,
+                      source_prop_encoding=None):
   "Copy revprops to the mirror repository from the master"
-  exit_code, output, errput = svntest.main.run_svnsync(
-    "copy-revprops", url, source_url,
+  args = ["copy-revprops", url, source_url,
     "--username", svntest.main.wc_author,
-    "--password", svntest.main.wc_passwd)
+    "--password", svntest.main.wc_passwd]
+  if source_prop_encoding:
+    args.append("--source-prop-encoding")
+    args.append(source_prop_encoding)
+
+  exit_code, output, errput = svntest.main.run_svnsync(*args)
   if errput:
     if expected_error is None:
       raise SVNUnexpectedStderr(errput)
@@ -104,12 +116,16 @@ def run_copy_revprops(url, source_url, expected_error=None):
     #             'Copied properties for revision 2.\n']
     raise SVNUnexpectedStdout("Missing stdout")
 
-def run_init(dst_url, src_url):
+def run_init(dst_url, src_url, source_prop_encoding=None):
   "Initialize the mirror repository from the master"
-  exit_code, output, errput = svntest.main.run_svnsync(
-    "initialize", dst_url, src_url,
+  args = ["initialize", dst_url, src_url,
     "--username", svntest.main.wc_author,
-    "--password", svntest.main.wc_passwd)
+    "--password", svntest.main.wc_passwd]
+  if source_prop_encoding:
+    args.append("--source-prop-encoding")
+    args.append(source_prop_encoding)
+
+  exit_code, output, errput = svntest.main.run_svnsync(*args)
   if errput:
     raise SVNUnexpectedStderr(errput)
   if output != ['Copied properties for revision 0.\n']:
@@ -139,7 +155,7 @@ def run_info(url, expected_error=None):
 
 
 def setup_and_sync(sbox, dump_file_contents, subdir=None,
-                   bypass_prop_validation=False):
+                   bypass_prop_validation=False, source_prop_encoding=None):
   """Create a repository for SBOX, load it with DUMP_FILE_CONTENTS, then create a mirror repository and sync it with SBOX.  Return the mirror sandbox."""
 
   # Create the empty master repository.
@@ -165,10 +181,12 @@ def setup_and_sync(sbox, dump_file_contents, subdir=None,
   repo_url = sbox.repo_url
   if subdir:
     repo_url = repo_url + subdir
-  run_init(dest_sbox.repo_url, repo_url)
+  run_init(dest_sbox.repo_url, repo_url, source_prop_encoding)
 
-  run_sync(dest_sbox.repo_url, repo_url)
-  run_copy_revprops(dest_sbox.repo_url, repo_url)
+  run_sync(dest_sbox.repo_url, repo_url,
+           source_prop_encoding=source_prop_encoding)
+  run_copy_revprops(dest_sbox.repo_url, repo_url,
+                    source_prop_encoding=source_prop_encoding)
 
   return dest_sbox
 
@@ -190,7 +208,7 @@ def verify_mirror(dest_sbox, exp_dump_file_contents):
     "Dump files", "DUMP", exp_dump_file_contents, dest_dump)
 
 def run_test(sbox, dump_file_name, subdir=None, exp_dump_file_name=None,
-             bypass_prop_validation=False):
+             bypass_prop_validation=False, source_prop_encoding=None):
   """Load a dump file, sync repositories, and compare contents with the original
 or another dump file."""
 
@@ -204,7 +222,7 @@ or another dump file."""
                                   'rb').readlines()
 
   dest_sbox = setup_and_sync(sbox, master_dumpfile_contents, subdir,
-                             bypass_prop_validation)
+                             bypass_prop_validation, source_prop_encoding)
 
   # Compare the dump produced by the mirror repository with either the original
   # dump file (used to create the master repository) or another specified dump
@@ -794,6 +812,40 @@ def copy_bad_line_endings(sbox):
            exp_dump_file_name="copy-bad-line-endings.expected.dump",
            bypass_prop_validation=True)
 
+def copy_bad_line_endings2(sbox):
+  "copy with non-LF line endings in svn:* props"
+  run_test(sbox, "copy-bad-line-endings2.dump",
+           exp_dump_file_name="copy-bad-line-endings2.expected.dump",
+           bypass_prop_validation=True)
+
+def copy_bad_encoding(sbox):
+  "copy and reencode non-UTF-8 svn:* props"
+  run_test(sbox, "copy-bad-encoding.dump",
+           exp_dump_file_name="copy-bad-encoding.expected.dump",
+           bypass_prop_validation=True, source_prop_encoding="ISO-8859-3")
+
+def identity_copy(sbox):
+  "copy UTF-8 svn:* props identically"
+  orig_lc_all = locale.setlocale(locale.LC_ALL)
+  other_locales = [ "English.1252", "German.1252", "French.1252",
+                    "en_US.ISO-8859-1", "en_GB.ISO-8859-1", "de_DE.ISO-8859-1",
+                    "en_US.ISO8859-1", "en_GB.ISO8859-1", "de_DE.ISO8859-1" ]
+  for other_locale in other_locales:
+    try:
+      locale.setlocale(locale.LC_ALL, other_locale)
+      break
+    except:
+      pass
+  if locale.setlocale(locale.LC_ALL) != other_locale:
+    raise svntest.Skip
+
+  try:
+    run_test(sbox, "copy-bad-encoding.expected.dump",
+             exp_dump_file_name="copy-bad-encoding.expected.dump",
+             bypass_prop_validation=True)
+  finally:
+    locale.setlocale(locale.LC_ALL, orig_lc_all)
+
 #----------------------------------------------------------------------
 
 def delete_svn_props(sbox):
@@ -912,6 +964,9 @@ test_list = [ None,
               info_synchronized,
               info_not_synchronized,
               copy_bad_line_endings,
+              copy_bad_line_endings2,
+              copy_bad_encoding,
+              identity_copy,
               delete_svn_props,
               commit_a_copy_of_root,
               descend_into_replace,
