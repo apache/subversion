@@ -521,8 +521,6 @@ print_git_diff_header(svn_stream_t *os,
                            rev2, scratch_pool);
     }
 
-  /* ### Print git headers for renames, too, in the future. */
-
   return SVN_NO_ERROR;
 }
 
