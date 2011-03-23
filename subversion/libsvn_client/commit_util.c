@@ -669,8 +669,11 @@ harvest_committables(apr_hash_t *committables,
       svn_boolean_t eol_prop_changed;
 
       /* See if there are property modifications to send. */
-      SVN_ERR(check_prop_mods(&prop_mod, &eol_prop_changed, local_abspath,
-                              ctx->wc_ctx, scratch_pool));
+      if (prop_mod)
+        SVN_ERR(check_prop_mods(&prop_mod, &eol_prop_changed, local_abspath,
+                                ctx->wc_ctx, scratch_pool));
+      else
+        eol_prop_changed = FALSE;
 
       /* Check for text mods on files.  If EOL_PROP_CHANGED is TRUE,
          then we need to force a translated byte-for-byte comparison
