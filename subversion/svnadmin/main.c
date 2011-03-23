@@ -90,24 +90,6 @@ check_cancel(void *baton)
 }
 
 
-/* Helper to open stdio streams */
-static svn_error_t *
-create_stdio_stream(svn_stream_t **stream,
-                    APR_DECLARE(apr_status_t) open_fn(apr_file_t **,
-                                                      apr_pool_t *),
-                    apr_pool_t *pool)
-{
-  apr_file_t *stdio_file;
-  apr_status_t apr_err = open_fn(&stdio_file, pool);
-
-  if (apr_err)
-    return svn_error_wrap_apr(apr_err, _("Can't open stdio file"));
-
-  *stream = svn_stream_from_aprfile2(stdio_file, TRUE, pool);
-  return SVN_NO_ERROR;
-}
-
-
 /* Custom filesystem warning function. */
 static void
 warning_func(void *baton,
@@ -937,7 +919,7 @@ subcommand_dump(apr_getopt_t *os, void *baton, apr_pool_t *pool)
     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
        _("First revision cannot be higher than second"));
 
-  SVN_ERR(create_stdio_stream(&stdout_stream, apr_file_open_stdout, pool));
+  SVN_ERR(svn_stream_for_stdout(&stdout_stream, pool));
 
   /* Progress feedback goes to STDERR, unless they asked to suppress it. */
   if (! opt_state->quiet)
@@ -998,8 +980,7 @@ subcommand_load(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
 
   /* Read the stream from STDIN.  Users can redirect a file. */
-  SVN_ERR(create_stdio_stream(&stdin_stream,
-                              apr_file_open_stdin, pool));
+  SVN_ERR(svn_stream_for_stdin(&stdin_stream, pool));
 
   /* Progress feedback goes to STDOUT, unless they asked to suppress it. */
   if (! opt_state->quiet)
@@ -1063,7 +1044,7 @@ subcommand_recover(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   /* Expect no more arguments. */
   SVN_ERR(parse_args(NULL, os, 0, 0, pool));
 
-  SVN_ERR(create_stdio_stream(&stdout_stream, apr_file_open_stdout, pool));
+  SVN_ERR(svn_stream_for_stdout(&stdout_stream, pool));
 
   /* Restore default signal handlers until after we have acquired the
    * exclusive lock so that the user interrupt before we actually
@@ -1567,7 +1548,7 @@ subcommand_upgrade(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   /* Expect no more arguments. */
   SVN_ERR(parse_args(NULL, os, 0, 0, pool));
 
-  SVN_ERR(create_stdio_stream(&stdout_stream, apr_file_open_stdout, pool));
+  SVN_ERR(svn_stream_for_stdout(&stdout_stream, pool));
 
   /* Restore default signal handlers. */
   setup_cancellation_signals(SIG_DFL);
