@@ -961,6 +961,16 @@ svn_stream_t *
 svn_stream_from_aprfile(apr_file_t *file,
                         apr_pool_t *pool);
 
+/** Set @a *in to a generic stream connected to stdin, allocated in
+ * @a pool.  The stream and its underlying APR handle will be closed
+ * when @a pool is cleared or destroyed.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_stream_for_stdin(svn_stream_t **in,
+                     apr_pool_t *pool);
+
 /** Set @a *err to a generic stream connected to stderr, allocated in
  * @a pool.  The stream and its underlying APR handle will be closed
  * when @a pool is cleared or destroyed.
