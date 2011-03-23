@@ -134,7 +134,7 @@ extern "C" {
 #define SVN_VER_NUMBER     SVN_VER_NUM SVN_VER_NUMTAG
 
 /** Complete version string */
-#define SVN_VERSION        SVN_VER_NUM SVN_VER_TAG
+#define SVN_VERSION        SVN_VER_NUMBER SVN_VER_TAG
 
 
 
