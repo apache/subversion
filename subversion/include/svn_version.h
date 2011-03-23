@@ -94,7 +94,7 @@ extern "C" {
  *
  * Always change this at the same time as SVN_VER_NUMTAG.
  */
-#define SVN_VER_TAG        " (dev build)"
+#define SVN_VER_TAG        " (under development)"
 
 
 /** Number tag: a string describing the version.
