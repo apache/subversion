@@ -117,29 +117,20 @@ get_and_record_fileinfo(svn_wc__db_t *db,
                         svn_boolean_t ignore_enoent,
                         apr_pool_t *scratch_pool)
 {
-  apr_time_t last_mod_time;
-  apr_finfo_t finfo;
-  svn_error_t *err;
+  const svn_io_dirent2_t *dirent;
 
-  err = svn_io_file_affected_time(&last_mod_time, local_abspath,
-                                  scratch_pool);
-  if (err)
+  SVN_ERR(svn_io_stat_dirent(&dirent, local_abspath, ignore_enoent,
+                             scratch_pool, scratch_pool));
+
+  if (dirent->kind == svn_node_none)
     {
-      if (!ignore_enoent || !APR_STATUS_IS_ENOENT(err->apr_err))
-        return svn_error_return(err);
-
-      /* No biggy. Just skip all this.  */
-      svn_error_clear(err);
+      /* Skip file not found if ignore_enoent */
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(svn_io_stat(&finfo, local_abspath,
-                      APR_FINFO_MIN | APR_FINFO_LINK,
-                      scratch_pool));
-
   return svn_error_return(svn_wc__db_global_record_fileinfo(
                             db, local_abspath,
-                            finfo.size, last_mod_time,
+                            dirent->filesize, dirent->mtime,
                             scratch_pool));
 }
 
