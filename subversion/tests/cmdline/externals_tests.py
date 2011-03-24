@@ -1499,7 +1499,8 @@ def merge_target_with_externals(sbox):
                                      repo_url, wc_dir)
 
   # Setup A/external as file external to A/mu
-  externals_prop = "^/A/mu external\n"
+  # and A/external-pinned as a pinned file external to A/mu
+  externals_prop = "^/A/mu external\n^/A/mu@6 external-pinned\n"
   change_external(sbox.ospath('A'), externals_prop)
 
   # Branch A@1 to A-branch and make a simple text change on the latter in r8.
