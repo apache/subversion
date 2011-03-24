@@ -1615,7 +1615,7 @@ repos_to_wc_copy_locked(const apr_array_header_t *copy_pairs,
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
       svn_node_kind_t kind;
-      svn_depth_t node_depth;
+      svn_boolean_t is_excluded;
       svn_boolean_t is_absent;
 
       svn_pool_clear(iterpool);
@@ -1629,9 +1629,10 @@ repos_to_wc_copy_locked(const apr_array_header_t *copy_pairs,
          ### simplify the conditions? */
 
       /* Hidden by client exclusion */
-      SVN_ERR(svn_wc__node_get_depth(&node_depth, ctx->wc_ctx,
-                                     pair->dst_abspath_or_url, iterpool));
-      if (node_depth == svn_depth_exclude)
+      SVN_ERR(svn_wc__node_is_status_excluded(&is_excluded, ctx->wc_ctx,
+                                              pair->dst_abspath_or_url,
+                                              iterpool));
+      if (is_excluded)
         {
           return svn_error_createf
             (SVN_ERR_ENTRY_EXISTS,

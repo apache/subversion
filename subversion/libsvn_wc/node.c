@@ -844,6 +844,26 @@ svn_wc__node_is_status_not_present(svn_boolean_t *is_not_present,
 }
 
 svn_error_t *
+svn_wc__node_is_status_excluded(svn_boolean_t *is_excluded,
+                                   svn_wc_context_t *wc_ctx,
+                                   const char *local_abspath,
+                                   apr_pool_t *scratch_pool)
+{
+  svn_wc__db_status_t status;
+
+  SVN_ERR(svn_wc__db_read_info(&status,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL,
+                               wc_ctx->db, local_abspath,
+                               scratch_pool, scratch_pool));
+  *is_excluded = (status == svn_wc__db_status_excluded);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_wc__node_is_added(svn_boolean_t *is_added,
                       svn_wc_context_t *wc_ctx,
                       const char *local_abspath,
