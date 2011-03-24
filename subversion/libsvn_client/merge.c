@@ -5005,8 +5005,10 @@ get_mergeinfo_walk_cb(const char *path,
          determine if PATH is switched.  This is so get_mergeinfo_paths()
          can later tweak PATH's parent to reflect a missing child (implying it
          needs non-inheritable mergeinfo ranges) and PATH's siblings so they
-         get their own complete set of mergeinfo. */
-      SVN_ERR(svn_wc__path_switched(path, &switched, entry, pool));
+         get their own complete set of mergeinfo.
+         Don't consider file externals (issue #3843). */
+      if (entry->file_external_path == NULL)
+        SVN_ERR(svn_wc__path_switched(path, &switched, entry, pool));
     }
 
   /* Store PATHs with explict mergeinfo, which are switched, are missing
