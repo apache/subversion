@@ -3295,6 +3295,7 @@ open_file(const char *path,
   struct file_baton *fb;
   svn_node_kind_t kind;
   svn_boolean_t conflicted;
+  svn_boolean_t have_work;
   svn_wc_conflict_description2_t *tree_conflict = NULL;
 
   /* the file_pool can stick around for a *long* time, so we want to use
@@ -3321,8 +3322,16 @@ open_file(const char *path,
   SVN_ERR(svn_wc__db_read_info(NULL, NULL, &fb->old_revision, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, &conflicted, NULL,
+                               NULL, NULL, &have_work, &conflicted, NULL,
                                eb->db, fb->local_abspath, subpool, subpool));
+
+  if (have_work)
+    SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, &fb->old_revision,
+                                     NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL,
+                                     NULL, NULL,
+                                     eb->db, fb->local_abspath,
+                                     subpool, subpool));
 
   /* Is this path a conflict victim? */
   if (conflicted)
@@ -3576,18 +3585,10 @@ merge_file(svn_skel_t **work_items,
   struct edit_baton *eb = fb->edit_baton;
   struct dir_baton *pb = fb->dir_baton;
   svn_boolean_t is_locally_modified;
-  svn_boolean_t is_replaced = FALSE;
   svn_boolean_t magic_props_changed;
   enum svn_wc_merge_outcome_t merge_outcome = svn_wc_merge_unchanged;
   svn_skel_t *work_item;
   const char *new_text_base_tmp_abspath;
-  svn_wc__db_t *db = eb->db;
-  apr_pool_t *pool = result_pool;
-  svn_boolean_t file_exists = TRUE;
-  svn_wc__db_status_t status;
-  svn_boolean_t have_base;
-  svn_revnum_t revision;
-  const char *file_external = NULL;
   svn_error_t *err;
 
   /*
@@ -3613,33 +3614,9 @@ merge_file(svn_skel_t **work_items,
     SVN_ERR(svn_wc__db_pristine_get_path(&new_text_base_tmp_abspath,
                                          eb->db, pb->local_abspath,
                                          fb->new_text_base_sha1_checksum,
-                                         pool, scratch_pool));
+                                         scratch_pool, scratch_pool));
   else
     new_text_base_tmp_abspath = NULL;
-
-  err = svn_wc__db_read_info(&status, NULL, &revision, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, &have_base, NULL,
-                             NULL, NULL,
-                             db, fb->local_abspath,
-                             scratch_pool, scratch_pool);
-
-  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-    {
-      svn_error_clear(err);
-      file_exists = FALSE;
-
-      status = svn_wc__db_status_not_present;
-      revision = SVN_INVALID_REVNUM;
-      have_base = FALSE;
-    }
-  else
-    SVN_ERR(err);
-
-  if (file_exists)
-    SVN_ERR(svn_wc__db_temp_get_file_external(&file_external, eb->db,
-                                              fb->local_abspath,
-                                              scratch_pool, scratch_pool));
 
   /* Start by splitting the file path, getting an access baton for the parent,
      and an entry for the file if any. */
@@ -3662,7 +3639,7 @@ merge_file(svn_skel_t **work_items,
                                                fb->local_abspath,
                                                FALSE /* force_comparison */,
                                                FALSE /* compare_textbases */,
-                                               pool));
+                                               scratch_pool));
     }
   else if (fb->new_text_base_sha1_checksum && !fb->obstruction_found)
     {
@@ -3671,14 +3648,14 @@ merge_file(svn_skel_t **work_items,
       /* We have a new pristine to install. Is the file modified relative
          to this new pristine?  */
       SVN_ERR(svn_wc__db_pristine_read(&pristine_stream,
-                                       eb->db, fb->local_abspath,
+                                       eb->db, pb->local_abspath,
                                        fb->new_text_base_sha1_checksum,
-                                       pool, pool));
+                                       scratch_pool, scratch_pool));
       SVN_ERR(svn_wc__internal_versioned_file_modcheck(&is_locally_modified,
                                                        eb->db,
                                                        fb->local_abspath,
                                                        pristine_stream,
-                                                       FALSE, pool));
+                                                       FALSE, scratch_pool));
     }
   else
     {
@@ -3689,21 +3666,6 @@ merge_file(svn_skel_t **work_items,
         is_locally_modified = TRUE;
       else
         is_locally_modified = FALSE;
-    }
-
-  if (status != svn_wc__db_status_normal && have_base)
-    {
-      svn_wc__db_status_t base_status;
-
-      SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, &revision, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL,
-                                       db, fb->local_abspath,
-                                       scratch_pool, scratch_pool));
-
-      if (status == svn_wc__db_status_added
-          && base_status != svn_wc__db_status_not_present)
-        is_replaced = TRUE;
     }
 
   /* For 'textual' merging, we implement this matrix.
@@ -3732,7 +3694,8 @@ merge_file(svn_skel_t **work_items,
 
   if (fb->new_text_base_sha1_checksum)
     {
-      if (is_replaced)
+      if (fb->adding_base_under_local_add
+          || fb->deleted)
         {
           /* Nothing to do, the delete half of the local replacement will
              have already raised a tree conflict.  So we will just fall
@@ -3752,22 +3715,14 @@ merge_file(svn_skel_t **work_items,
                  text-base. */
 
               *install_pristine = TRUE;
-
-              /* For file externals there is a not-present node at op-depth 0.
-                 The initial update will then bring in the file external
-               */
-              if (file_external)
-                {
-                  SVN_ERR_ASSERT(status == svn_wc__db_status_normal
-                                 || status == svn_wc__db_status_not_present);
-                }
             }
         }
       else   /* working file or obstruction is locally modified... */
         {
           svn_node_kind_t wfile_kind;
 
-          SVN_ERR(svn_io_check_path(fb->local_abspath, &wfile_kind, pool));
+          SVN_ERR(svn_io_check_path(fb->local_abspath, &wfile_kind,
+                                    scratch_pool));
           if (wfile_kind == svn_node_none)
             {
               /* working file is missing?!
@@ -3792,7 +3747,8 @@ merge_file(svn_skel_t **work_items,
                  pretend it doesn't have an extension at all. */
               if (eb->ext_patterns && eb->ext_patterns->nelts)
                 {
-                  svn_path_splitext(NULL, &path_ext, fb->local_abspath, pool);
+                  svn_path_splitext(NULL, &path_ext, fb->local_abspath,
+                                    scratch_pool);
                   if (! (*path_ext
                          && svn_cstring_match_glob_list(path_ext,
                                                         eb->ext_patterns)))
@@ -3800,22 +3756,23 @@ merge_file(svn_skel_t **work_items,
                 }
 
               {
-                svn_revnum_t old_rev = revision;
+                svn_revnum_t old_rev = fb->old_revision;
 
-                /* ### BH: Why is this necessary? */
+                /* old_revision can be invalid when the conflict is against a
+                   local addition */
                 if (!SVN_IS_VALID_REVNUM(old_rev))
                   old_rev = 0;
 
-                oldrev_str = apr_psprintf(pool, ".r%ld%s%s",
+                oldrev_str = apr_psprintf(scratch_pool, ".r%ld%s%s",
                                           old_rev,
                                           *path_ext ? "." : "",
                                           *path_ext ? path_ext : "");
               }
-              newrev_str = apr_psprintf(pool, ".r%ld%s%s",
+              newrev_str = apr_psprintf(scratch_pool, ".r%ld%s%s",
                                         *eb->target_revision,
                                         *path_ext ? "." : "",
                                         *path_ext ? path_ext : "");
-              mine_str = apr_psprintf(pool, ".mine%s%s",
+              mine_str = apr_psprintf(scratch_pool, ".mine%s%s",
                                       *path_ext ? "." : "",
                                       *path_ext ? path_ext : "");
 
@@ -3823,12 +3780,13 @@ merge_file(svn_skel_t **work_items,
                 {
                   SVN_ERR(get_empty_tmp_file(&merge_left, eb->db,
                                              pb->local_abspath,
-                                             pool, pool));
+                                             result_pool, scratch_pool));
                   delete_left = TRUE;
                 }
               else
                 SVN_ERR(svn_wc__ultimate_base_text_path_to_read(
-                  &merge_left, eb->db, fb->local_abspath, pool, pool));
+                                  &merge_left, eb->db, fb->local_abspath,
+                                  result_pool, scratch_pool));
 
               /* Merge the changes from the old textbase to the new
                  textbase into the file we're updating.
@@ -3852,16 +3810,19 @@ merge_file(svn_skel_t **work_items,
                         eb->diff3_cmd, NULL, fb->propchanges,
                         eb->conflict_func, eb->conflict_baton,
                         eb->cancel_func, eb->cancel_baton,
-                        pool, pool));
-              *work_items = svn_wc__wq_merge(*work_items, work_item, pool);
+                        result_pool, scratch_pool));
+              *work_items = svn_wc__wq_merge(*work_items, work_item,
+                                             result_pool);
 
               /* If we created a temporary left merge file, get rid of it. */
               if (delete_left)
                 {
                   SVN_ERR(svn_wc__wq_build_file_remove(&work_item,
                                                        eb->db, merge_left,
-                                                       pool, pool));
-                  *work_items = svn_wc__wq_merge(*work_items, work_item, pool);
+                                                       result_pool,
+                                                       scratch_pool));
+                  *work_items = svn_wc__wq_merge(*work_items, work_item,
+                                                 result_pool);
                 }
             } /* end: working file exists and has mods */
         } /* end: working file has mods */
@@ -3877,7 +3838,7 @@ merge_file(svn_skel_t **work_items,
                                          &keywords,
                                          NULL,
                                          eb->db, fb->local_abspath,
-                                         pool, pool));
+                                         scratch_pool, scratch_pool));
       if (magic_props_changed || keywords)
         {
           /* Special edge-case: it's possible that this file installation
@@ -3897,7 +3858,7 @@ merge_file(svn_skel_t **work_items,
                     SVN_WC_TRANSLATE_TO_NF
                       | SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP,
                     eb->cancel_func, eb->cancel_baton,
-                    pool, pool));
+                    result_pool, scratch_pool));
 
           /* We always want to reinstall the working file if the magic
              properties have changed, or there are any keywords present.
@@ -3916,7 +3877,7 @@ merge_file(svn_skel_t **work_items,
      work items to handle text-timestamp and working-size.  */
   if (!*install_pristine
       && !is_locally_modified
-      && (fb->adding_file || status == svn_wc__db_status_normal))
+      && !fb->adding_base_under_local_add)
     {
       apr_time_t set_date = 0;
       /* Adjust working copy file unless this file is an allowed
@@ -3925,7 +3886,7 @@ merge_file(svn_skel_t **work_items,
         {
           /* Ignore invalid dates */
           err = svn_time_from_cstring(&set_date, fb->last_changed_date,
-                                      pool);
+                                      scratch_pool);
 
           if (err)
             {
@@ -3940,8 +3901,8 @@ merge_file(svn_skel_t **work_items,
       SVN_ERR(svn_wc__wq_build_record_fileinfo(&work_item,
                                                fb->local_abspath,
                                                set_date,
-                                               pool));
-      *work_items = svn_wc__wq_merge(*work_items, work_item, pool);
+                                               result_pool));
+      *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
     }
 
   /* Set the returned content state. */
