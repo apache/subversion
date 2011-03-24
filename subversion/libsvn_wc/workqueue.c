@@ -93,14 +93,19 @@ sync_file_flags(svn_wc__db_t *db,
                 const char *local_abspath,
                 apr_pool_t *scratch_pool)
 {
-  /* ### right now, the maybe_set_* functions will only positively set those
-     ### values. we need to clear them first.  */
-  SVN_ERR(svn_io_set_file_read_write(local_abspath, FALSE, scratch_pool));
-  SVN_ERR(svn_io_set_file_executable(local_abspath, FALSE, FALSE,
-                                     scratch_pool));
+  svn_boolean_t did_set;
 
-  SVN_ERR(svn_wc__maybe_set_read_only(NULL, db, local_abspath, scratch_pool));
-  SVN_ERR(svn_wc__maybe_set_executable(NULL, db, local_abspath, scratch_pool));
+  SVN_ERR(svn_wc__maybe_set_read_only(&did_set, db, local_abspath,
+                                      scratch_pool));
+  if (!did_set)
+    SVN_ERR(svn_io_set_file_read_write(local_abspath, FALSE, scratch_pool));
+
+  SVN_ERR(svn_wc__maybe_set_executable(&did_set, db, local_abspath,
+                                       scratch_pool));
+
+  if (!did_set)
+    SVN_ERR(svn_io_set_file_executable(local_abspath, FALSE, FALSE,
+                                       scratch_pool));
 
   return SVN_NO_ERROR;
 }
