@@ -1477,6 +1477,8 @@ def wc_repos_file_externals(sbox):
                                         True)
 
 #----------------------------------------------------------------------
+@Issue(3843)
+@XFail()
 def merge_target_with_externals(sbox):
   "merge target with externals"
 
@@ -1495,6 +1497,10 @@ def merge_target_with_externals(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'checkout',
                                      repo_url, wc_dir)
+
+  # Setup A/external as file external to A/mu
+  externals_prop = "^/A/mu external\n"
+  change_external(sbox.ospath('A'), externals_prop)
 
   # Branch A@1 to A-branch and make a simple text change on the latter in r8.
   svntest.actions.run_and_verify_svn(None, None, [], 'copy', A_path + '@1',
