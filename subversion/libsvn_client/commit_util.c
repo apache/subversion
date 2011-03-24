@@ -746,16 +746,23 @@ harvest_committables(apr_hash_t *committables,
           const char *this_abspath = APR_ARRAY_IDX(children, i, const char *);
           const char *name = svn_dirent_basename(this_abspath, NULL);
           const char *this_repos_relpath;
-          svn_depth_t this_depth;
+          
           svn_node_kind_t this_kind;
 
           svn_pool_clear(iterpool);
 
-          /* Skip the excluded item. */
-          SVN_ERR(svn_wc__node_get_depth(&this_depth, ctx->wc_ctx, this_abspath,
-                                         iterpool));
-          if (this_depth == svn_depth_exclude)
-            continue;
+          /* In copy-mode we see hidden nodes, so we have to filter them.*/
+          if (copy_mode)
+            {
+              svn_boolean_t this_excluded;
+
+              /* Skip excluded nodes. */
+              SVN_ERR(svn_wc__node_is_status_excluded(&this_excluded,
+                                                      ctx->wc_ctx,
+                                                      this_abspath, iterpool));
+              if (this_excluded)
+                continue;
+            }
 
           this_repos_relpath = svn_relpath_join(repos_relpath, name,
                                                 iterpool);
