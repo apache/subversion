@@ -4124,7 +4124,7 @@ close_file(void *file_baton,
 
   prop_state = svn_wc_notify_state_unknown;
 
-  if (! fb->adding_base_under_local_add)
+  if (! fb->adding_base_under_local_add && !fb->deleted)
     {
       /* Merge the 'regular' props into the existing working proplist. */
       /* This will merge the old and new props into a new prop db, and
@@ -4186,6 +4186,8 @@ close_file(void *file_baton,
 
       /* Store the incoming props (sent as propchanges) in new_base_props.
        * Keep the actual props unchanged. */
+      /* ### BH: This block really needs some review and a few testcases.
+         ###     I don't think it properly updates the BASE props */
       SVN_ERR(svn_wc__merge_props(&no_prop_state,
                                   &new_base_props,
                                   &no_new_actual_props,
@@ -4200,7 +4202,7 @@ close_file(void *file_baton,
                                   regular_prop_changes, /* propchanges */
                                   TRUE /* base_merge */,
                                   FALSE /* dry_run */,
-                                  eb->conflict_func, eb->conflict_baton,
+                                  NULL, NULL, /* No conflict handling possible */
                                   eb->cancel_func, eb->cancel_baton,
                                   pool,
                                   pool));
@@ -4313,7 +4315,8 @@ close_file(void *file_baton,
   /* Deal with the WORKING tree, based on updates to the BASE tree.  */
 
   /* If this file was locally-added and is now being added by the update, we
-     can toss the local-add, turning this into a local-edit.  */
+     can toss the local-add, turning this into a local-edit. 
+     If the local file is replaced, we don't want to touch ACTUAL. */
   if (fb->add_existed && fb->adding_file)
     {
       SVN_ERR(svn_wc__db_temp_op_remove_working(eb->db, fb->local_abspath,
@@ -4322,7 +4325,7 @@ close_file(void *file_baton,
 
   /* Now we need to update the ACTUAL tree, with the result of the
      properties merge. */
-  if (! fb->adding_base_under_local_add)
+  if (! fb->adding_base_under_local_add && !fb->deleted)
     {
       SVN_ERR_ASSERT(new_actual_props != NULL);
 
