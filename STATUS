@@ -201,7 +201,7 @@ Candidate changes:
    Justification:
      Data loss --- I already lost two log messages to this bug.
    Votes:
-     +1: danielsh
+     +1: danielsh, stsp
 
   * ^/subversion/branches/1.6.x-issue3719
     Fix issue #3719 "Extremely slow checkout on Windows"
