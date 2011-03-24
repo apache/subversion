@@ -183,12 +183,6 @@ case "`uname`" in
     ;;
 esac
 
-CLIENT_CMD="$ABS_BUILDDIR/subversion/svn/svn"
-$LDD "$CLIENT_CMD" | grep -q 'not found' \
-  && fail "Subversion client couldn't be fully linked at run-time"
-"$CLIENT_CMD" --version | egrep -q '^[*] ra_(neon|serf)' \
-  || fail "Subversion client couldn't find and/or load ra_dav library"
-
 httpd="$($APXS -q PROGNAME)"
 HTTPD=$(get_prog_name $httpd) || fail "HTTPD '$HTTPD' not found"
 [ -x $HTTPD ] || fail "HTTPD '$HTTPD' not executable"
@@ -368,17 +362,25 @@ rm "$HTTPD_CFG-copy"
 
 say "HTTPD is good"
 
-if [ "$HTTP_LIBRARY" = "" ]; then
-  say "Using default dav library"
-else
-  say "Using dav library '$HTTP_LIBRARY'"
-fi
-
 if [ $# -eq 1 ] && [ "x$1" = 'x--no-tests' ]; then
   exit
 fi
 
 say "starting the tests..."
+
+CLIENT_CMD="$ABS_BUILDDIR/subversion/svn/svn"
+$LDD "$CLIENT_CMD" | grep -q 'not found' \
+  && fail "Subversion client couldn't be fully linked at run-time"
+
+if [ "$HTTP_LIBRARY" = "" ]; then
+  say "Using default dav library"
+  "$CLIENT_CMD" --version | egrep -q '^[*] ra_(neon|serf)' \
+    || fail "Subversion client couldn't find and/or load ra_dav library"
+else
+  say "Requesting dav library '$HTTP_LIBRARY'"
+  "$CLIENT_CMD" --version | egrep -q "^[*] ra_$HTTP_LIBRARY" \
+    || fail "Subversion client couldn't find and/or load ra_dav library '$HTTP_LIBRARY'"
+fi
 
 if [ $# = 0 ]; then
   time make check "BASE_URL=$BASE_URL"
