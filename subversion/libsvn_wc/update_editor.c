@@ -3956,7 +3956,6 @@ close_file(void *file_baton,
   svn_skel_t *work_item;
   svn_revnum_t new_changed_rev;
   apr_time_t new_changed_date;
-  svn_node_kind_t kind;
   const char *new_changed_author;
   apr_pool_t *scratch_pool = fb->pool; /* Destroyed at function exit */
 
@@ -3985,12 +3984,6 @@ close_file(void *file_baton,
                             fb->new_text_base_md5_checksum, pool,
                             _("Checksum mismatch for '%s'"),
                             svn_dirent_local_style(fb->local_abspath, pool));
-
-  SVN_ERR(svn_wc_read_kind(&kind, eb->wc_ctx, fb->local_abspath, TRUE, pool));
-  if (kind == svn_node_none && ! fb->adding_file)
-    return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                             _("'%s' is not under version control"),
-                             svn_dirent_local_style(fb->local_abspath, pool));
 
   /* Gather the changes for each kind of property.  */
   SVN_ERR(svn_categorize_props(fb->propchanges, &entry_prop_changes,
@@ -4041,7 +4034,8 @@ close_file(void *file_baton,
 
   /* ### some of this feels like voodoo... */
 
-  if (kind != svn_node_none)
+  if ((!fb->adding_file || fb->add_existed)
+      && !fb->deleted && !fb->adding_base_under_local_add)
     SVN_ERR(svn_wc__get_actual_props(&local_actual_props,
                                      eb->db, fb->local_abspath,
                                      pool, pool));
@@ -4049,12 +4043,20 @@ close_file(void *file_baton,
     local_actual_props = apr_hash_make(pool);
 
 
-  if (kind != svn_node_none)
+  if (fb->add_existed)
     {
-      /* This node already exists. Grab its properties. */
+      /* This node already exists. Grab the current pristine properties. */
       SVN_ERR(svn_wc__get_pristine_props(&current_base_props,
                                          eb->db, fb->local_abspath,
                                          pool, pool));
+      current_actual_props = local_actual_props;
+    }
+  else if (!fb->adding_file)
+    {
+      /* Get the BASE properties for proper merging. */
+      SVN_ERR(svn_wc__db_base_get_props(&current_base_props,
+                                        eb->db, fb->local_abspath,
+                                        pool, pool));
       current_actual_props = local_actual_props;
     }
 
@@ -4256,7 +4258,7 @@ close_file(void *file_baton,
        * NEW_TEXT_BASE_SHA1_CHECKSUM.  The pristine text identified by that
        * checksum is already in the pristine store. */
     const svn_checksum_t *new_checksum = fb->new_text_base_sha1_checksum;
-    const char *serialised;
+    const char *serialised = NULL;
 
     /* If we don't have a NEW checksum, then the base must not have changed.
        Just carry over the old checksum.  */
@@ -4271,7 +4273,10 @@ close_file(void *file_baton,
                                          pool, pool));
       }
 
-    if (kind != svn_node_none)
+    /* The adm crawler skips file externals for us, so we only have to check
+       for them at the editor target path. */
+    if ((fb->dir_baton->parent_baton == NULL) /* In update root */
+        && (0 == strcmp(eb->target_abspath, fb->local_abspath)))
       SVN_ERR(svn_wc__db_temp_get_file_external(&serialised,
                                                 eb->db, fb->local_abspath,
                                                 pool, pool));
@@ -4298,7 +4303,7 @@ close_file(void *file_baton,
     /* ### ugh. deal with preserving the file external value in the database.
        ### there is no official API, so we do it this way. maybe we should
        ### have a temp API into wc_db.  */
-    if (kind != svn_node_none && serialised)
+    if (serialised)
       {
         const char *file_external_repos_relpath;
         svn_opt_revision_t file_external_peg_rev, file_external_rev;
