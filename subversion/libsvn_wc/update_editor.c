@@ -3558,11 +3558,6 @@ change_file_prop(void *file_baton,
  * sensitive to eol translation, keyword substitution, and performing
  * all actions accumulated the parent directory's work queue.
  *
- * If there's a new text base, it must be in the pristine store and
- * NEW_TEXT_BASE_SHA1_CHECKSUM must be its SHA-1 checksum (else NULL).
- * After this function returns, the caller should install it as the new
- * text base for this file.
- *
  * Set *CONTENT_STATE to the state of the contents after the
  * installation.
  *
@@ -3575,7 +3570,6 @@ merge_file(svn_skel_t **work_items,
            const char **install_from,
            svn_wc_notify_state_t *content_state,
            struct file_baton *fb,
-           const svn_checksum_t *new_text_base_sha1_checksum,
            apr_pool_t *result_pool,
            apr_pool_t *scratch_pool)
 {
@@ -3601,7 +3595,7 @@ merge_file(svn_skel_t **work_items,
      things are true:
 
          - The new pristine text of F is present in the pristine store
-           iff NEW_TEXT_BASE_SHA1_CHECKSUM is not NULL.
+           iff FB->NEW_TEXT_BASE_SHA1_CHECKSUM is not NULL.
 
          - The WC metadata still reflects the old version of F.
            (We can still access the old pristine base text of F.)
@@ -3615,10 +3609,10 @@ merge_file(svn_skel_t **work_items,
   *install_pristine = FALSE;
   *install_from = NULL;
 
-  if (new_text_base_sha1_checksum != NULL)
+  if (fb->new_text_base_sha1_checksum != NULL)
     SVN_ERR(svn_wc__db_pristine_get_path(&new_text_base_tmp_abspath,
-                                         eb->db, fb->local_abspath,
-                                         new_text_base_sha1_checksum,
+                                         eb->db, pb->local_abspath,
+                                         fb->new_text_base_sha1_checksum,
                                          pool, scratch_pool));
   else
     new_text_base_tmp_abspath = NULL;
@@ -3670,7 +3664,7 @@ merge_file(svn_skel_t **work_items,
                                                FALSE /* compare_textbases */,
                                                pool));
     }
-  else if (new_text_base_sha1_checksum && !fb->obstruction_found)
+  else if (fb->new_text_base_sha1_checksum && !fb->obstruction_found)
     {
       svn_stream_t *pristine_stream;
 
@@ -3678,7 +3672,7 @@ merge_file(svn_skel_t **work_items,
          to this new pristine?  */
       SVN_ERR(svn_wc__db_pristine_read(&pristine_stream,
                                        eb->db, fb->local_abspath,
-                                       new_text_base_sha1_checksum,
+                                       fb->new_text_base_sha1_checksum,
                                        pool, pool));
       SVN_ERR(svn_wc__internal_versioned_file_modcheck(&is_locally_modified,
                                                        eb->db,
@@ -3697,7 +3691,7 @@ merge_file(svn_skel_t **work_items,
         is_locally_modified = FALSE;
     }
 
-  if (have_base)
+  if (status != svn_wc__db_status_normal && have_base)
     {
       svn_wc__db_status_t base_status;
 
@@ -3736,7 +3730,7 @@ merge_file(svn_skel_t **work_items,
    So the first thing we do is figure out where we are in the
    matrix. */
 
-  if (new_text_base_sha1_checksum)
+  if (fb->new_text_base_sha1_checksum)
     {
       if (is_replaced)
         {
@@ -3825,7 +3819,7 @@ merge_file(svn_skel_t **work_items,
                                       *path_ext ? "." : "",
                                       *path_ext ? path_ext : "");
 
-              if (fb->add_existed && ! is_replaced)
+              if (fb->add_existed)
                 {
                   SVN_ERR(get_empty_tmp_file(&merge_left, eb->db,
                                              pb->local_abspath,
@@ -3961,7 +3955,7 @@ merge_file(svn_skel_t **work_items,
 
   if (merge_outcome == svn_wc_merge_conflict)
     *content_state = svn_wc_notify_state_conflicted;
-  else if (new_text_base_sha1_checksum)
+  else if (fb->new_text_base_sha1_checksum)
     {
       if (is_locally_modified)
         *content_state = svn_wc_notify_state_merged;
@@ -4198,8 +4192,7 @@ close_file(void *file_baton,
 
       /* Merge the text. This will queue some additional work.  */
       SVN_ERR(merge_file(&all_work_items, &install_pristine, &install_from,
-                         &content_state, fb, fb->new_text_base_sha1_checksum,
-                         pool, scratch_pool));
+                         &content_state, fb, pool, scratch_pool));
 
       if (install_pristine)
         {
@@ -4218,7 +4211,7 @@ close_file(void *file_baton,
                                                 install_from,
                                                 eb->use_commit_times,
                                                 record_fileinfo,
-                                                pool, pool));
+                                                pool, scratch_pool));
           all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
         }
     }
