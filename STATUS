@@ -252,8 +252,7 @@ Candidate changes:
     Branch:
       ^/subversion/branches/1.6.x-issue3843
     Votes:
-      +1: stsp
-      +1: pburba (without r992114, r1084962, r1084978)
+      +1: stsp, pburba
 
 Veto-blocked changes:
 =====================
