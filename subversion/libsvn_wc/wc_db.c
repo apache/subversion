@@ -141,6 +141,10 @@ typedef struct insert_base_baton_t {
   const char *repos_relpath;
   svn_revnum_t revision;
 
+  /* Only used when repos_id == -1 */
+  const char *repos_root_url;
+  const char *repos_uuid;
+
   /* common to all "normal" presence insertions */
   const apr_hash_t *props;
   svn_revnum_t changed_rev;
@@ -620,6 +624,7 @@ blank_ibb(insert_base_baton_t *pibb)
   pibb->changed_rev = SVN_INVALID_REVNUM;
   pibb->depth = svn_depth_infinity;
   pibb->translated_size = SVN_INVALID_FILESIZE;
+  pibb->repos_id = -1;
 }
 
 
@@ -732,6 +737,7 @@ insert_base_node(void *baton,
                  apr_pool_t *scratch_pool)
 {
   const insert_base_baton_t *pibb = baton;
+  apr_int64_t repos_id = pibb->repos_id;
   svn_sqlite__stmt_t *stmt;
   /* The directory at the WCROOT has a NULL parent_relpath. Otherwise,
      bind the appropriate parent_relpath. */
@@ -739,7 +745,11 @@ insert_base_node(void *baton,
     (*local_relpath == '\0') ? NULL
     : svn_relpath_dirname(local_relpath, scratch_pool);
 
-  SVN_ERR_ASSERT(pibb->repos_id != INVALID_REPOS_ID);
+  if (pibb->repos_id == -1)
+    SVN_ERR(create_repos_id(&repos_id, pibb->repos_root_url, pibb->repos_uuid,
+                            wcroot->sdb, scratch_pool));
+
+  SVN_ERR_ASSERT(repos_id != INVALID_REPOS_ID);
   SVN_ERR_ASSERT(pibb->repos_relpath != NULL);
 
   /* ### we can't handle this right now  */
@@ -753,7 +763,7 @@ insert_base_node(void *baton,
                             local_relpath,       /* 2 */
                             (apr_int64_t)0, /* op_depth is 0 for base */
                             parent_relpath,      /* 4 */
-                            pibb->repos_id,
+                            repos_id,
                             pibb->repos_relpath,
                             pibb->revision,
                             presence_map, pibb->status, /* 8 */
@@ -785,7 +795,7 @@ insert_base_node(void *baton,
   if (pibb->kind == svn_wc__db_kind_dir && pibb->children)
     SVN_ERR(insert_incomplete_children(wcroot->sdb, wcroot->wc_id,
                                        local_relpath,
-                                       pibb->repos_id,
+                                       repos_id,
                                        pibb->repos_relpath,
                                        pibb->revision,
                                        pibb->children,
@@ -1387,7 +1397,6 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  apr_int64_t repos_id;
   insert_base_baton_t ibb;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
@@ -1405,14 +1414,14 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
                               local_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  SVN_ERR(create_repos_id(&repos_id, repos_root_url, repos_uuid,
-                          wcroot->sdb, scratch_pool));
-
   blank_ibb(&ibb);
+
+  /* Calculate repos_id in insert_base_node() to avoid extra transaction */
+  ibb.repos_root_url = repos_root_url;
+  ibb.repos_uuid = repos_uuid;
 
   ibb.status = svn_wc__db_status_normal;
   ibb.kind = svn_wc__db_kind_dir;
-  ibb.repos_id = repos_id;
   ibb.repos_relpath = repos_relpath;
   ibb.revision = revision;
 
@@ -1461,7 +1470,6 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  apr_int64_t repos_id;
   insert_base_baton_t ibb;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
@@ -1477,14 +1485,14 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
                               local_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  SVN_ERR(create_repos_id(&repos_id, repos_root_url, repos_uuid,
-                          wcroot->sdb, scratch_pool));
-
   blank_ibb(&ibb);
+
+  /* Calculate repos_id in insert_base_node() to avoid extra transaction */
+  ibb.repos_root_url = repos_root_url;
+  ibb.repos_uuid = repos_uuid;
 
   ibb.status = svn_wc__db_status_normal;
   ibb.kind = svn_wc__db_kind_file;
-  ibb.repos_id = repos_id;
   ibb.repos_relpath = repos_relpath;
   ibb.revision = revision;
 
@@ -1531,7 +1539,6 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  apr_int64_t repos_id;
   insert_base_baton_t ibb;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
@@ -1547,14 +1554,14 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
                               local_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  SVN_ERR(create_repos_id(&repos_id, repos_root_url, repos_uuid,
-                          wcroot->sdb, scratch_pool));
-
   blank_ibb(&ibb);
+
+  /* Calculate repos_id in insert_base_node() to avoid extra transaction */
+  ibb.repos_root_url = repos_root_url;
+  ibb.repos_uuid = repos_uuid;
 
   ibb.status = svn_wc__db_status_normal;
   ibb.kind = svn_wc__db_kind_symlink;
-  ibb.repos_id = repos_id;
   ibb.repos_relpath = repos_relpath;
   ibb.revision = revision;
 
@@ -1596,7 +1603,6 @@ add_absent_excluded_not_present_node(svn_wc__db_t *db,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  apr_int64_t repos_id;
   insert_base_baton_t ibb;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
@@ -1612,14 +1618,14 @@ add_absent_excluded_not_present_node(svn_wc__db_t *db,
                               local_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  SVN_ERR(create_repos_id(&repos_id, repos_root_url, repos_uuid,
-                          wcroot->sdb, scratch_pool));
-
   blank_ibb(&ibb);
+
+  /* Calculate repos_id in insert_base_node() to avoid extra transaction */
+  ibb.repos_root_url = repos_root_url;
+  ibb.repos_uuid = repos_uuid;
 
   ibb.status = status;
   ibb.kind = kind;
-  ibb.repos_id = repos_id;
   ibb.repos_relpath = repos_relpath;
   ibb.revision = revision;
 
