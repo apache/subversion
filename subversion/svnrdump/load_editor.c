@@ -160,29 +160,21 @@ new_node_record(void **node_baton,
                 void *revision_baton,
                 apr_pool_t *pool)
 {
-  const struct svn_delta_editor_t *commit_editor;
+  struct revision_baton *rb = revision_baton;
+  const struct svn_delta_editor_t *commit_editor = rb->pb->commit_editor;
+  void *commit_edit_baton = rb->pb->commit_edit_baton;
   struct node_baton *nb;
-  struct revision_baton *rb;
   struct directory_baton *child_db;
   apr_hash_index_t *hi;
   void *child_baton;
-  void *commit_edit_baton;
-  char *ancestor_path;
-  apr_array_header_t *residual_open_path;
   char *relpath_compose;
   const char *nb_dirname;
-  apr_size_t residual_close_count;
-  int i;
 
-  rb = revision_baton;
   nb = apr_pcalloc(rb->pool, sizeof(*nb));
   nb->rb = rb;
 
   nb->copyfrom_path = NULL;
   nb->copyfrom_rev = SVN_INVALID_REVNUM;
-
-  commit_editor = rb->pb->commit_editor;
-  commit_edit_baton = rb->pb->commit_edit_baton;
 
   /* If the creation of commit_editor is pending, create it now and
      open_root on it; also create a top-level directory baton. */
@@ -265,6 +257,11 @@ new_node_record(void **node_baton,
   if (svn_path_compare_paths(nb_dirname,
                              rb->db->relpath) != 0)
     {
+      char *ancestor_path;
+      apr_size_t residual_close_count;
+      apr_array_header_t *residual_open_path;
+      int i;
+
       /* Before attempting to handle the action, call open_directory
          for all the path components and set the directory baton
          accordingly */
@@ -376,8 +373,7 @@ set_revision_property(void *baton,
                       const char *name,
                       const svn_string_t *value)
 {
-  struct revision_baton *rb;
-  rb = baton;
+  struct revision_baton *rb = baton;
 
   SVN_ERR(svn_repos__validate_prop(name, value, rb->pool));
 
@@ -405,12 +401,9 @@ set_node_property(void *baton,
                   const char *name,
                   const svn_string_t *value)
 {
-  struct node_baton *nb;
-  const struct svn_delta_editor_t *commit_editor;
-  apr_pool_t *pool;
-  nb = baton;
-  commit_editor = nb->rb->pb->commit_editor;
-  pool = nb->rb->pool;
+  struct node_baton *nb = baton;
+  const struct svn_delta_editor_t *commit_editor = nb->rb->pb->commit_editor;
+  apr_pool_t *pool = nb->rb->pool;
 
   SVN_ERR(svn_repos__validate_prop(name, value, pool));
 
@@ -436,12 +429,9 @@ static svn_error_t *
 delete_node_property(void *baton,
                      const char *name)
 {
-  struct node_baton *nb;
-  const struct svn_delta_editor_t *commit_editor;
-  apr_pool_t *pool;
-  nb = baton;
-  commit_editor = nb->rb->pb->commit_editor;
-  pool = nb->rb->pool;
+  struct node_baton *nb = baton;
+  const struct svn_delta_editor_t *commit_editor = nb->rb->pb->commit_editor;
+  apr_pool_t *pool = nb->rb->pool;
 
   SVN_ERR(svn_repos__validate_prop(name, NULL, pool));
 
@@ -473,15 +463,12 @@ static svn_error_t *
 set_fulltext(svn_stream_t **stream,
              void *node_baton)
 {
-  struct node_baton *nb;
-  const struct svn_delta_editor_t *commit_editor;
+  struct node_baton *nb = node_baton;
+  const struct svn_delta_editor_t *commit_editor = nb->rb->pb->commit_editor;
   svn_txdelta_window_handler_t handler;
   void *handler_baton;
-  apr_pool_t *pool;
+  apr_pool_t *pool = nb->rb->pool;
 
-  nb = node_baton;
-  commit_editor = nb->rb->pb->commit_editor;
-  pool = nb->rb->pool;
   LDR_DBG(("Setting fulltext for %p\n", nb->file_baton));
   SVN_ERR(commit_editor->apply_textdelta(nb->file_baton, nb->base_checksum,
                                          pool, &handler, &handler_baton));
@@ -495,13 +482,10 @@ apply_textdelta(svn_txdelta_window_handler_t *handler,
                 void **handler_baton,
                 void *node_baton)
 {
-  struct node_baton *nb;
-  const struct svn_delta_editor_t *commit_editor;
-  apr_pool_t *pool;
+  struct node_baton *nb = node_baton;
+  const struct svn_delta_editor_t *commit_editor = nb->rb->pb->commit_editor;
+  apr_pool_t *pool = nb->rb->pool;
 
-  nb = node_baton;
-  commit_editor = nb->rb->pb->commit_editor;
-  pool = nb->rb->pool;
   LDR_DBG(("Applying textdelta to %p\n", nb->file_baton));
   SVN_ERR(commit_editor->apply_textdelta(nb->file_baton, nb->base_checksum,
                                          pool, handler, handler_baton));
@@ -512,11 +496,8 @@ apply_textdelta(svn_txdelta_window_handler_t *handler,
 static svn_error_t *
 close_node(void *baton)
 {
-  struct node_baton *nb;
-  const struct svn_delta_editor_t *commit_editor;
-
-  nb = baton;
-  commit_editor = nb->rb->pb->commit_editor;
+  struct node_baton *nb = baton;
+  const struct svn_delta_editor_t *commit_editor = nb->rb->pb->commit_editor;
 
   /* Pass a file node closure through to the editor *unless* we
      deleted the file (which doesn't require us to open it). */
@@ -534,14 +515,9 @@ close_node(void *baton)
 static svn_error_t *
 close_revision(void *baton)
 {
-  struct revision_baton *rb;
-  const svn_delta_editor_t *commit_editor;
-  void *commit_edit_baton;
-  void *child_baton;
-  rb = baton;
-
-  commit_editor = rb->pb->commit_editor;
-  commit_edit_baton = rb->pb->commit_edit_baton;
+  struct revision_baton *rb = baton;
+  const svn_delta_editor_t *commit_editor = rb->pb->commit_editor;
+  void *commit_edit_baton = rb->pb->commit_edit_baton;
 
   /* Fake revision 0 */
   if (rb->rev == 0)
@@ -564,6 +540,8 @@ close_revision(void *baton)
     }
   else
     {
+      void *child_baton;
+
       /* Legitimate revision with no node information */
       SVN_ERR(svn_ra_get_commit_editor3(rb->pb->session, &commit_editor,
                                         &commit_edit_baton, rb->revprop_table,
