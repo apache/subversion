@@ -1077,6 +1077,43 @@ def lock_update_only(sbox):
                         wc_dir)
 
 
+#----------------------------------------------------------------------
+# Currently, it fails at the merge that adds a file:
+#    subversion/libsvn_client/repos_diff.c:984: (apr_err=155005)
+#    subversion/libsvn_client/merge.c:1708: (apr_err=155005)
+#    subversion/libsvn_wc/update_editor.c:5055: (apr_err=155005)
+#    subversion/libsvn_wc/lock.c:1437: (apr_err=155005)
+#    svn: E155005: No write-lock in '/.../svn-test-work/working_copies/tree_conflict_tests-22/E'
+@XFail()
+@Issue(3469)
+def at_directory_external(sbox):
+  "tree conflict at directory external"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # r2: create a directory external: ^/E -> ^/A
+  svntest.main.run_svn(None, 'ps', 'svn:externals', '^/A E', wc_dir)
+  svntest.main.run_svn(None, 'commit', '-m', 'ps', wc_dir)
+  svntest.main.run_svn(None, 'update', wc_dir)
+
+  # r3: modify ^/A/B/E/alpha
+  open(sbox.ospath('A/B/E/alpha'), 'a').write('This is still A/B/E/alpha.\n')
+  svntest.main.run_svn(None, 'commit', '-m', 'file mod', wc_dir)
+  svntest.main.run_svn(None, 'update', wc_dir)
+  merge_rev = svntest.main.youngest(sbox.repo_dir)
+
+  # r4: create ^/A/B/E/alpha2
+  open(sbox.ospath('A/B/E/alpha2'), 'a').write("This is the file 'alpha2'.\n")
+  svntest.main.run_svn(None, 'add', sbox.ospath('A/B/E/alpha2'))
+  svntest.main.run_svn(None, 'commit', '-m', 'file add', wc_dir)
+  svntest.main.run_svn(None, 'update', wc_dir)
+  merge_rev2 = svntest.main.youngest(sbox.repo_dir)
+
+  # r5: merge those
+  svntest.main.run_svn(None, "merge", '-c', merge_rev, '^/A/B', wc_dir)
+  svntest.main.run_svn(None, "merge", '-c', merge_rev2, '^/A/B', wc_dir)
+
 #######################################################################
 # Run the tests
 
@@ -1104,6 +1141,7 @@ test_list = [ None,
               query_absent_tree_conflicted_dir,
               up_add_onto_add_revert,
               lock_update_only,
+              at_directory_external,
              ]
 
 if __name__ == '__main__':
