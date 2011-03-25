@@ -1671,7 +1671,6 @@ def switch_external_on_locally_added_dir(sbox):
 
   probe_paths_exist([os.path.join(wc_dir, "foo", "exdir_E")])
 
-@XFail()
 @Issue(3819)
 def file_external_in_sibling(sbox):
   "update a file external in sibling dir"
