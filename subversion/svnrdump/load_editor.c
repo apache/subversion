@@ -329,14 +329,16 @@ new_node_record(void **node_baton,
                                           nb->copyfrom_path,
                                           nb->copyfrom_rev,
                                           rb->pool, &(nb->file_baton)));
-          LDR_DBG(("Added file %s to dir %p as %p\n", nb->path, rb->db->baton, nb->file_baton));
+          LDR_DBG(("Added file %s to dir %p as %p\n",
+                   nb->path, rb->db->baton, nb->file_baton));
           break;
         case svn_node_dir:
           SVN_ERR(commit_editor->add_directory(nb->path, rb->db->baton,
                                                nb->copyfrom_path,
                                                nb->copyfrom_rev,
                                                rb->pool, &child_baton));
-          LDR_DBG(("Added dir %s to dir %p as %p\n", nb->path, rb->db->baton, child_baton));
+          LDR_DBG(("Added dir %s to dir %p as %p\n",
+                   nb->path, rb->db->baton, child_baton));
           child_db = apr_pcalloc(rb->pool, sizeof(*child_db));
           child_db->baton = child_baton;
           child_db->depth = rb->db->depth + 1;
@@ -457,7 +459,8 @@ static svn_error_t *
 remove_node_props(void *baton)
 {
   struct node_baton *nb = baton;
-  if ((nb->action == svn_node_action_add || nb->action == svn_node_action_replace)
+  if ((nb->action == svn_node_action_add
+            || nb->action == svn_node_action_replace)
       && ! SVN_IS_VALID_REVNUM(nb->copyfrom_rev))
     /* Add-without-history; no "old" properties to worry about. */
     return SVN_NO_ERROR;
