@@ -439,14 +439,37 @@ static svn_error_t *
 remove_node_props(void *baton)
 {
   struct node_baton *nb = baton;
+  apr_pool_t *pool = nb->rb->pool;
+  apr_hash_index_t *hi;
+  apr_hash_t *props;
+
   if ((nb->action == svn_node_action_add
             || nb->action == svn_node_action_replace)
       && ! SVN_IS_VALID_REVNUM(nb->copyfrom_rev))
     /* Add-without-history; no "old" properties to worry about. */
     return SVN_NO_ERROR;
-  else
-    /* ### TODO */
-    SVN__NOT_IMPLEMENTED();
+
+  if (nb->kind == svn_node_file)
+    {
+      SVN_ERR(svn_ra_get_file(nb->rb->pb->session, nb->path, SVN_INVALID_REVNUM,
+                              NULL, NULL, &props, pool));
+    }
+  else  /* nb->kind == svn_node_dir */
+    {
+      SVN_ERR(svn_ra_get_dir2(nb->rb->pb->session, NULL, NULL, &props, nb->path,
+                              SVN_INVALID_REVNUM, 0, pool));
+    }
+
+  for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
+    {
+      const char *name = svn__apr_hash_index_key(hi);
+      svn_prop_kind_t kind = svn_property_kind(NULL, name);
+
+      if (kind == svn_prop_regular_kind)
+        SVN_ERR(set_node_property(nb, name, NULL));
+    }
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
