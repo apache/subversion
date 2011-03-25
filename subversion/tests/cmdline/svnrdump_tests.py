@@ -333,6 +333,13 @@ def descend_into_replace_load(sbox):
   "load: descending into replaced dir looks in src"
   run_load_test(sbox, "descend-into-replace.dump")
 
+@XFail()
+@Issue(3844)
+def multi_prop_edit_load(sbox):
+  "load: multiple prop edits on a file"
+  run_load_test(sbox, "multi-prop-edits.dump")
+
+
 ########################################################################
 # Run the tests
 
@@ -376,6 +383,7 @@ test_list = [ None,
               commit_a_copy_of_root_load,
               descend_into_replace_dump,
               descend_into_replace_load,
+              multi_prop_edit_load,
              ]
 
 if __name__ == '__main__':
