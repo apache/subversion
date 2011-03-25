@@ -95,6 +95,7 @@ class GeneratorBase(gen_base.GeneratorBase):
 
     # Instrumentation options
     self.disable_shared = None
+    self.static_apr = None
     self.instrument_apr_pools = None
     self.instrument_purify_quantify = None
     self.configure_apr_util = None
@@ -157,6 +158,8 @@ class GeneratorBase(gen_base.GeneratorBase):
         self.enable_ml = 1
       elif opt == '--disable-shared':
         self.disable_shared = 1
+      elif opt == '--with-static-apr':
+        self.static_apr = 1
       elif opt == '--vsnet-version':
         if val == '2002' or re.match('7(\.\d+)?', val):
           self.vs_version = '2002'
@@ -851,6 +854,9 @@ class WinGeneratorBase(GeneratorBase):
       fakedefines.extend(["_DEBUG","SVN_DEBUG"])
     elif cfg == 'Release':
       fakedefines.append("NDEBUG")
+      
+    if self.static_apr:
+      fakedefines.extend(["APR_DECLARE_STATIC", "APU_DECLARE_STATIC"])
 
     # XXX: Check if db is present, and if so, let apr-util know
     # XXX: This is a hack until the apr build system is improved to
@@ -1187,6 +1193,7 @@ class WinGeneratorBase(GeneratorBase):
                          ('apr_path', os.path.abspath(self.apr_path)),
                          ('apr_util_path', os.path.abspath(self.apr_util_path)),
                          ('project_guid', self.makeguid('serf')),
+                         ('apr_static', self.static_apr),
                         ))
 
   def move_proj_file(self, path, name, params=()):
@@ -1487,10 +1494,15 @@ class WinGeneratorBase(GeneratorBase):
     vermatch = re.search(r'^\s*#define\s+APR_MAJOR_VERSION\s+(\d+)', txt, re.M)
 
     major_ver = int(vermatch.group(1))
+    
+    suffix = ''
     if major_ver > 0:
-      self.apr_lib = 'libapr-%d.lib' % major_ver
+        suffix = '-%d' % major_ver
+    
+    if self.static_apr:
+      self.apr_lib = 'apr%s.lib' % suffix
     else:
-      self.apr_lib = 'libapr.lib'
+      self.apr_lib = 'libapr%s.lib' % suffix
 
   def _find_apr_util(self):
     "Find the APR-util library and version"
@@ -1509,10 +1521,15 @@ class WinGeneratorBase(GeneratorBase):
     vermatch = re.search(r'^\s*#define\s+APU_MAJOR_VERSION\s+(\d+)', txt, re.M)
 
     major_ver = int(vermatch.group(1))
+
+    suffix = ''
     if major_ver > 0:
-      self.aprutil_lib = 'libaprutil-%d.lib' % major_ver
+        suffix = '-%d' % major_ver
+
+    if self.static_apr:
+      self.aprutil_lib = 'aprutil%s.lib' % suffix
     else:
-      self.aprutil_lib = 'libaprutil.lib'
+      self.aprutil_lib = 'libaprutil%s.lib' % suffix
 
   def _find_sqlite(self):
     "Find the Sqlite library and version"
