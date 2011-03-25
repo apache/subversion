@@ -1026,6 +1026,7 @@ struct handle_externals_desc_change_baton
      external item parent directory path. */
   const char *from_url;
   const char *to_abspath;
+  const char *target_abspath;
 
   /* Passed through to handle_external_item_change_baton. */
   svn_client_ctx_t *ctx;
@@ -1042,6 +1043,7 @@ struct handle_externals_desc_change_baton
 
 /* This implements the 'svn_hash_diff_func_t' interface.
    BATON is of type 'struct handle_externals_desc_change_baton *'.
+   KEY is a 'const char *'.
 */
 static svn_error_t *
 handle_externals_desc_change(const void *key, apr_ssize_t klen,
@@ -1087,6 +1089,13 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
       || (ambient_depth < svn_depth_infinity
           && cb->requested_depth < svn_depth_infinity))
     return SVN_NO_ERROR;
+
+  /* Only handle externals under TARGET. */
+  if (cb->target_abspath)
+    {
+      if (! svn_dirent_is_ancestor(cb->target_abspath, (const char *) key))
+        return SVN_NO_ERROR;
+    }
 
   if ((old_desc_text = apr_hash_get(cb->externals_old, key, klen)))
     SVN_ERR(svn_wc_parse_externals_description3(&old_desc, key, old_desc_text,
@@ -1206,6 +1215,7 @@ svn_client__handle_externals(apr_hash_t *externals_old,
                              apr_hash_t *ambient_depths,
                              const char *from_url,
                              const char *to_abspath,
+                             const char *target,
                              const char *repos_root_url,
                              svn_depth_t requested_depth,
                              svn_boolean_t *timestamp_sleep,
@@ -1227,6 +1237,7 @@ svn_client__handle_externals(apr_hash_t *externals_old,
   cb.ambient_depths    = ambient_depths;
   cb.from_url          = from_url;
   cb.to_abspath        = to_abspath;
+  cb.target_abspath    = svn_dirent_join(to_abspath, target, pool);
   cb.repos_root_url    = repos_root_url;
   cb.ctx               = ctx;
   cb.timestamp_sleep   = timestamp_sleep;
@@ -1262,6 +1273,7 @@ svn_client__fetch_externals(apr_hash_t *externals,
   cb.ctx               = ctx;
   cb.from_url          = from_url;
   cb.to_abspath        = to_abspath;
+  cb.target_abspath    = NULL; /* ### wrong? */
   cb.repos_root_url    = repos_root_url;
   cb.timestamp_sleep   = timestamp_sleep;
   cb.native_eol        = native_eol;

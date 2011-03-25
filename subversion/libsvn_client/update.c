@@ -262,7 +262,7 @@ update_internal(svn_revnum_t *result_rev,
                                            efb.externals_new,
                                            efb.ambient_depths,
                                            anchor_url, anchor_abspath,
-                                           repos_root,
+                                           target, repos_root,
                                            depth, use_sleep, ctx, pool));
     }
 
