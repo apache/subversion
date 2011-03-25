@@ -121,13 +121,8 @@ new_revision_record(void **revision_baton,
 
   for (hi = apr_hash_first(pool, headers); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      void *val;
-      const char *hname, *hval;
-
-      apr_hash_this(hi, &key, NULL, &val);
-      hname = key;
-      hval = val;
+      const char *hname = svn__apr_hash_index_key(hi);
+      const char *hval = svn__apr_hash_index_val(hi);
 
       if (strcmp(hname, SVN_REPOS_DUMPFILE_REVISION_NUMBER) == 0)
         rb->rev = atoi(hval);
@@ -217,13 +212,8 @@ new_node_record(void **node_baton,
 
   for (hi = apr_hash_first(rb->pool, headers); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      void *val;
-      const char *hname, *hval;
-
-      apr_hash_this(hi, &key, NULL, &val);
-      hname = key;
-      hval = val;
+      const char *hname = svn__apr_hash_index_key(hi);
+      const char *hval = svn__apr_hash_index_val(hi);
 
       /* Parse the different kinds of headers we can encounter and
          stuff them into the node_baton for writing later */
