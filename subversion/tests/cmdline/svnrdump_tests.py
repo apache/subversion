@@ -113,7 +113,8 @@ def run_dump_test(sbox, dumpfile_name, expected_dumpfile_name = None,
     "Dump files", "DUMP", svnadmin_dumpfile, svnrdump_dumpfile,
     None, mismatched_headers_re)
 
-def run_load_test(sbox, dumpfile_name, expected_dumpfile_name = None):
+def run_load_test(sbox, dumpfile_name, expected_dumpfile_name = None,
+                  expect_deltas = True):
   """Load a dumpfile using 'svnrdump load', dump it with 'svnadmin
   dump' and check that the same dumpfile is produced"""
 
@@ -146,7 +147,8 @@ def run_load_test(sbox, dumpfile_name, expected_dumpfile_name = None):
                                           sbox.repo_url)
 
   # Create a dump file using svnadmin dump
-  svnadmin_dumpfile = svntest.actions.run_and_verify_dump(sbox.repo_dir, True)
+  svnadmin_dumpfile = svntest.actions.run_and_verify_dump(sbox.repo_dir,
+                                                          expect_deltas)
 
   if expected_dumpfile_name:
     svnrdump_dumpfile = open(os.path.join(svnrdump_tests_dir,
@@ -333,11 +335,10 @@ def descend_into_replace_load(sbox):
   "load: descending into replaced dir looks in src"
   run_load_test(sbox, "descend-into-replace.dump")
 
-@XFail()
 @Issue(3844)
 def multi_prop_edit_load(sbox):
   "load: multiple prop edits on a file"
-  run_load_test(sbox, "multi-prop-edits.dump")
+  run_load_test(sbox, "multi-prop-edits.dump", None, False)
 
 
 ########################################################################
