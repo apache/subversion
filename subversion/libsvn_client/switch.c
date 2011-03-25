@@ -237,7 +237,8 @@ switch_internal(svn_revnum_t *result_rev,
                 depth, ctx, pool));
       err = svn_client__handle_externals(efb.externals_old,
                                          efb.externals_new, efb.ambient_depths,
-                                         switch_url, local_abspath, source_root,
+                                         switch_url, anchor_abspath, target,
+                                         source_root,
                                          depth, use_sleep, ctx, pool);
     }
 
