@@ -341,6 +341,11 @@ def run_and_verify_svnrdump(dumpfile_content, expected_stdout,
   reports any errors."""
   exit_code, output, err = main.run_svnrdump(dumpfile_content, *varargs)
 
+  # Since main.run_svnrdump() uses binary mode, normalize the stderr
+  # line endings on Windows ourselves.
+  if sys.platform == 'win32':
+    err = map(lambda x : x.replace('\r\n', '\n'), err)
+
   verify.verify_outputs("Unexpected output", output, err,
                         expected_stdout, expected_stderr)
   verify.verify_exit_code("Unexpected return code", exit_code, expected_exit)
