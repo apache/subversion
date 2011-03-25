@@ -18,6 +18,7 @@
      under the License.
 -->
 ]<?xml version="1.0" encoding="utf-8"?>
+[format "xml"]
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
 [for configs][for platforms]    <ProjectConfiguration Include="[configs.name]|[platforms]">
@@ -113,3 +114,4 @@
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
 </Project>
+[end]
