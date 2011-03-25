@@ -1,0 +1,55 @@
+
+This files documents various debugging knobs in Subversion.
+
+The usual namespace rules apply: only names that begin with "SVN_" and don't
+contain double underscores are considered part of the public API.  Everything
+else is not officially supported.
+
+Compile-time:
+=============
+
+* SUFFIX_LINES_TO_KEEP
+  Scope: libsvn_diff
+  Purpose: control the identical prefix / identical suffix diff(blame) optimizations.
+  Range: natural integers
+  Default: 50
+  Suggested: 0, 1, 999999
+
+* PACK_AFTER_EVERY_COMMIT
+  Scope: libsvn_fs (only affects libsvn_fs_fs)
+  Purpose: stress test 
+  Range: boolean
+  
+* SVN_DEPRECATED
+  Scope: (everywhere)
+  Purpose: disable "deprecated function calls" warnings
+  Range: function declaration decorator
+  Default: (compiler dependant)
+  Suggested: "" (disable those warnings)
+
+* SVN_FS_FS_DEFAULT_MAX_FILES_PER_DIR
+  Scope: libsvn_fs_fs
+  Purpose: set fsfs default shard size
+  Default: 1000
+  Range: natural integers
+  Suggested: 1, 2, 3, 4, 5, 7, 11
+
+* SVN_UNALIGNED_ACCESS_IS_OK
+  Scope: ?
+  Purpose: enable memory operations optimizations
+  Range: boolean values (must be defined)
+  Default: platform dependant
+  Suggested: 0
+
+* (TODO: others)
+
+Environment variables:
+======================
+
+* SVNSYNC_UNSUPPORTED_STRIP_MERGEINFO
+* SVNSYNC_UNSUPPORTED_MIGRATE_SVNMERGE
+* SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_RELOCATE_VALIDATION
+* SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_SLEEP_FOR_TIMESTAMPS
+
+* (TODO: others)
+
