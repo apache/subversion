@@ -309,9 +309,11 @@ def locate_libs():
     suffix = "-1"
   else:
     suffix = ""
-  dlls.append(os.path.join(gen_obj.apr_path, objdir,
-                           'libapr%s.dll' % (suffix)))
-  dlls.append(os.path.join(gen_obj.apr_util_path, objdir,
+    
+  if cp.has_option('options', '--with-static-apr'):
+    dlls.append(os.path.join(gen_obj.apr_path, objdir,
+                             'libapr%s.dll' % (suffix)))
+    dlls.append(os.path.join(gen_obj.apr_util_path, objdir,
                              'libaprutil%s.dll' % (suffix)))
 
   if gen_obj.libintl_path is not None:
