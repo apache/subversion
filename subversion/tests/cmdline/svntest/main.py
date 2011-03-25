@@ -655,6 +655,16 @@ def run_atomic_ra_revprop_change(url, revision, propname, skel, want_error):
                      options.http_library, want_error and 1 or 0)
 
 
+def youngest(repos_path):
+  "run 'svnlook youngest' on REPOS_PATH, returns revision as int"
+  exit_code, stdout_lines, stderr_lines = run_command(svnlook_binary, None, 0, 
+                                                      'youngest', repos_path)
+  if exit_code or stderr_lines:
+    raise Failure("Unexpected failure of 'svnlook youngest':\n%s" % stderr_lines)
+  if len(stdout_lines) != 1:
+    raise Failure("Wrong output from 'svnlook youngest':\n%s" % stdout_lines)
+  return int(stdout_lines[0].rstrip())
+
 # Chmod recursively on a whole subtree
 def chmod_tree(path, mode, mask):
   for dirpath, dirs, files in os.walk(path):
