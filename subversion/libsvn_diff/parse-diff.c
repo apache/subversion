@@ -301,7 +301,7 @@ scan_eol(const char **eol, apr_file_t *file, apr_size_t max_len,
           total_len += len;
 
           /* ### BH: Does this properly detect the case where '\r' is on byte
-             ###     254 (last character of buffer and '\n' is on byte 255
+             ###     254 (last character of buffer) and '\n' is on byte 255
              ###     (first character of next buffer)? */
           eol_str = svn_eol__detect_eol(buf, buf + len);
         }
