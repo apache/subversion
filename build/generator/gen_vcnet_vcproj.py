@@ -36,7 +36,7 @@ class Generator(gen_win.WinGeneratorBase):
                                       'vcnet-vcproj')
 
   def quote(self, str):
-    return '&quot;%s&quot;' % str
+    return '"%s"' % str
 
   def get_external_project(self, target, proj_ext):
     "Link project files: prefer vcproj's, but if don't exist, try dsp's."
