@@ -18,7 +18,7 @@ BEGIN {
   if ($file) {
     $file .= "/.svn/wc.db" if -e "$file/.svn/wc.db";
     close STDIN;
-    open STDIN, "-|", 'sqlite3', $file, '.dump';
+    open STDIN, "-|", $sqlite3, $file, '.dump';
   } else {
     # filter stdin to stdout
   }
