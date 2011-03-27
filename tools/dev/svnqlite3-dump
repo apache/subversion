@@ -1,0 +1,33 @@
+#!/usr/bin/perl -lpw
+
+# USAGE:
+#   sqlite3 .svn/wc.db .dump | $0
+#   $0 /path/to/wc
+#   $0 /path/to/wc/.svn/wc.db
+# DOES:
+#   decodes blobs (eg, property skels) and dates to human-readable form
+# REQUIRES:
+#   sqlite3(1) (second and third usage forms only)
+
+BEGIN {
+  # locate sqlite3
+  my $sqlite3 = $ENV{SQLITE3} || "sqlite3";
+  # set stdin
+  my $file = shift;
+  $file = "." if -t and not $file;
+  if ($file) {
+    $file .= "/.svn/wc.db" if -e "$file/.svn/wc.db";
+    close STDIN;
+    open STDIN, "-|", 'sqlite3', $file, '.dump';
+  } else {
+    # filter stdin to stdout
+  }
+}
+
+# X'68656C6C6F' => "hello"
+1 while s/X'([0-9A-F]{2})/chr(hex $1) . q[X']/e;
+s/X''//g;
+s/\n/\\n/g; # multiline props
+
+# 1288312835000000 => "Fri Oct 29 02:40:35 2010"
+s/(?<=,)(\d\d\d\d\d\d\d\d\d\d)\d\d\d\d\d\d(?=,)/sprintf '"%s"', scalar localtime $1/eg;
