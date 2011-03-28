@@ -990,11 +990,13 @@ WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
   AND (presence = 'normal' OR presence = 'incomplete' OR
        presence = 'base-deleted')
   AND file_external IS NULL
+LIMIT 1
 
 -- STMT_SUBTREE_HAS_PROP_MODIFICATIONS
 SELECT 1 FROM actual_node
 WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
   AND properties IS NOT NULL
+LIMIT 1
 
 /* This query expects repos_path(wcroot)/% as arg 4,
    and repos_path(wcroot), with a slash appended unless the path is empty,
