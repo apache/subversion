@@ -9699,7 +9699,6 @@ has_local_mods(svn_boolean_t *is_modified,
                apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
 
   /* Check for additions or deletions. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
@@ -9707,8 +9706,7 @@ has_local_mods(svn_boolean_t *is_modified,
   SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id, local_relpath,
                             construct_like_arg(local_relpath, scratch_pool)));
   /* If this query returns a row, the working copy is modified. */
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  *is_modified = have_row;
+  SVN_ERR(svn_sqlite__step(is_modified, stmt));
   SVN_ERR(svn_sqlite__reset(stmt));
 
   if (cancel_func)
@@ -9724,8 +9722,7 @@ has_local_mods(svn_boolean_t *is_modified,
                                 construct_like_arg(local_relpath,
                                                    scratch_pool)));
       /* If this query returns a row, the working copy is modified. */
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
-      *is_modified = have_row;
+      SVN_ERR(svn_sqlite__step(is_modified, stmt));
       SVN_ERR(svn_sqlite__reset(stmt));
 
       if (cancel_func)
@@ -9735,6 +9732,7 @@ has_local_mods(svn_boolean_t *is_modified,
   if (! *is_modified)
     {
       apr_pool_t *iterpool = NULL;
+      svn_boolean_t have_row;
 
       /* Check for text modifications. */
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
