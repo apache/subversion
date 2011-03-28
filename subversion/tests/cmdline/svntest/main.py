@@ -29,7 +29,6 @@ import shutil  # for rmtree()
 import re
 import stat    # for ST_MODE
 import subprocess
-import copy    # for deepcopy()
 import time    # for time()
 import traceback # for print_exc()
 import threading
