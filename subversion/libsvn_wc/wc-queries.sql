@@ -252,7 +252,7 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 -- STMT_SELECT_DELETION_INFO
 SELECT nodes_base.presence, nodes_work.presence, nodes_work.moved_to,
        nodes_work.op_depth
-FROM nodes nodes_work
+FROM nodes AS nodes_work
 LEFT OUTER JOIN nodes nodes_base ON nodes_base.wc_id = nodes_work.wc_id
   AND nodes_base.local_relpath = nodes_work.local_relpath
   AND nodes_base.op_depth = 0
