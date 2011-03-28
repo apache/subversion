@@ -350,7 +350,7 @@ import_dir(const svn_delta_editor_t *editor,
          edit_path is "".  So below, this_path might become "./blah",
          and this_edit_path might become "blah", for example. */
       this_path = svn_dirent_join(path, filename, subpool);
-      this_edit_path = svn_dirent_join(edit_path, filename, subpool);
+      this_edit_path = svn_relpath_join(edit_path, filename, subpool);
 
       /* If this is an excluded path, exclude it. */
       SVN_ERR(svn_dirent_get_absolute(&abs_path, this_path, subpool));
@@ -514,7 +514,7 @@ import(const char *path,
       for (i = 0; i < new_entries->nelts; i++)
         {
           const char *component = APR_ARRAY_IDX(new_entries, i, const char *);
-          edit_path = svn_dirent_join(edit_path, component, pool);
+          edit_path = svn_relpath_join(edit_path, component, pool);
 
           /* If this is the last path component, and we're importing a
              file, then this component is the name of the file, not an
