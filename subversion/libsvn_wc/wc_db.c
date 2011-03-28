@@ -9702,7 +9702,7 @@ has_local_mods(svn_boolean_t *is_modified,
 
   /* Check for additions or deletions. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_NODES_WITH_TREE_MODIFICATIONS));
+                                    STMT_SUBTREE_HAS_TREE_MODIFICATIONS));
   SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id, local_relpath,
                             construct_like_arg(local_relpath, scratch_pool)));
   /* If this query returns a row, the working copy is modified. */
@@ -9715,9 +9715,8 @@ has_local_mods(svn_boolean_t *is_modified,
   if (! *is_modified)
     {
       /* Check for property modifications. */
-      SVN_ERR(svn_sqlite__get_statement(
-                &stmt, wcroot->sdb,
-                STMT_SELECT_NODES_WITH_PROP_MODIFICATIONS));
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_SUBTREE_HAS_PROP_MODIFICATIONS));
       SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id, local_relpath,
                                 construct_like_arg(local_relpath,
                                                    scratch_pool)));
