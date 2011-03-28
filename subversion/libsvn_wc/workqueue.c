@@ -1017,7 +1017,7 @@ log_do_committed(svn_wc__db_t *db,
           const char *child_abspath;
           svn_wc__db_status_t child_status;
 
-          apr_pool_clear(iterpool);
+          svn_pool_clear(iterpool);
           child_abspath = svn_dirent_join(local_abspath, child_name, iterpool);
 
           SVN_ERR(svn_wc__db_read_info(&child_status,
