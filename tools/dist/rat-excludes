@@ -10,6 +10,7 @@ build/config.guess
 build/config.sub
 build/generator/__init__.py
 build/generator/util/__init__.py
+build/install-sh
 doc/doxygen.conf
 notes/**
 packages/
