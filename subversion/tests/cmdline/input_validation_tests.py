@@ -128,7 +128,7 @@ def invalid_diff_targets(sbox):
 def invalid_export_targets(sbox):
   "invalid targets for 'export'"
   sbox.build(read_only=True)
-  run_and_verify_svn_in_wc(sbox, "svn: (E000017|E720183): Can't create directory 'iota':.*",
+  run_and_verify_svn_in_wc(sbox, "svn: (E000017|E720183): Can't create directory '.*iota':.*",
                            'export', '.', 'iota')
   for target in ["^/", "file://"]:
     run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path",
