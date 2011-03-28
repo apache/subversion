@@ -334,7 +334,7 @@ copy_one_versioned_file(const char *from_abspath,
 }
 
 /* Make an unversioned copy of the versioned file or directory tree at the
- * source path FROM.  Copy it to the destination path TO.
+ * source path FROM_ABSPATH.  Copy it to the destination path TO_ABSPATH.
  *
  * If REVISION is svn_opt_revision_working, copy the working version,
  * otherwise copy the base version.
@@ -396,8 +396,8 @@ copy_one_versioned_file(const char *from_abspath,
  *       case.
  */
 static svn_error_t *
-copy_versioned_files(const char *from,
-                     const char *to,
+copy_versioned_files(const char *from_abspath,
+                     const char *to_abspath,
                      const svn_opt_revision_t *revision,
                      svn_boolean_t force,
                      svn_boolean_t ignore_externals,
@@ -410,13 +410,11 @@ copy_versioned_files(const char *from,
   svn_error_t *err;
   apr_pool_t *iterpool;
   const apr_array_header_t *children;
-  const char *from_abspath;
-  const char *to_abspath;
   svn_node_kind_t from_kind;
   svn_depth_t node_depth;
 
-  SVN_ERR(svn_dirent_get_absolute(&from_abspath, from, pool));
-  SVN_ERR(svn_dirent_get_absolute(&to_abspath, to, pool));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(from_abspath));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(to_abspath));
 
   /* Only export 'added' and 'replaced' files when the revision is WORKING;
      when the revision is BASE (i.e. != WORKING), only export 'added' and
@@ -482,7 +480,7 @@ copy_versioned_files(const char *from,
           perm = finfo.protection;
         }
 #endif
-      err = svn_io_dir_make(to, perm, pool);
+      err = svn_io_dir_make(to_abspath, perm, pool);
       if (err)
         {
           if (! APR_STATUS_IS_EEXIST(err->apr_err))
@@ -520,10 +518,12 @@ copy_versioned_files(const char *from,
             {
               if (depth == svn_depth_infinity)
                 {
-                  const char *new_from = svn_dirent_join(from, child_basename,
+                  const char *new_from = svn_dirent_join(from_abspath,
+                                                         child_basename,
+                                                         iterpool);
+                  const char *new_to = svn_dirent_join(to_abspath,
+                                                       child_basename,
                                                        iterpool);
-                  const char *new_to = svn_dirent_join(to, child_basename,
-                                                     iterpool);
 
                   SVN_ERR(copy_versioned_files(new_from, new_to,
                                                revision, force,
@@ -537,16 +537,10 @@ copy_versioned_files(const char *from,
               const char *new_from_abspath;
               const char *new_to_abspath;
 
-              SVN_ERR(svn_dirent_get_absolute(&new_from_abspath,
-                                              svn_dirent_join(from,
-                                                              child_basename,
-                                                              iterpool),
-                                              iterpool));
-              SVN_ERR(svn_dirent_get_absolute(&new_to_abspath,
-                                              svn_dirent_join(to,
-                                                              child_basename,
-                                                              iterpool),
-                                              iterpool));
+              new_from_abspath = svn_dirent_join(from_abspath, child_basename,
+                                                 iterpool);
+              new_to_abspath = svn_dirent_join(to_abspath, child_basename,
+                                               iterpool);
 
               SVN_ERR(copy_one_versioned_file(new_from_abspath, new_to_abspath,
                                               ctx->wc_ctx, revision,
@@ -571,7 +565,8 @@ copy_versioned_files(const char *from,
             {
               int i;
 
-              SVN_ERR(svn_wc_parse_externals_description3(&ext_items, from,
+              SVN_ERR(svn_wc_parse_externals_description3(&ext_items,
+                                                          from_abspath,
                                                           prop_val->data,
                                                           FALSE, pool));
               for (i = 0; i < ext_items->nelts; ++i)
@@ -583,9 +578,11 @@ copy_versioned_files(const char *from,
 
                   ext_item = APR_ARRAY_IDX(ext_items, i,
                                            svn_wc_external_item2_t *);
-                  new_from = svn_dirent_join(from, ext_item->target_dir,
+                  new_from = svn_dirent_join(from_abspath,
+                                             ext_item->target_dir,
                                              iterpool);
-                  new_to = svn_dirent_join(to, ext_item->target_dir, iterpool);
+                  new_to = svn_dirent_join(to_abspath, ext_item->target_dir,
+                                           iterpool);
 
                    /* The target dir might have parents that don't exist.
                       Guarantee the path upto the last component. */
@@ -1249,6 +1246,11 @@ svn_client_export5(svn_revnum_t *result_rev,
     {
       /* This is a working copy export. */
       /* just copy the contents of the working copy into the target path. */
+      SVN_ERR(svn_dirent_get_absolute(&from_path_or_url, from_path_or_url,
+                                      pool));
+
+      SVN_ERR(svn_dirent_get_absolute(&to_path, to_path, pool));
+
       SVN_ERR(copy_versioned_files(from_path_or_url, to_path, revision,
                                    overwrite, ignore_externals, ignore_keywords,
                                    depth, native_eol, ctx, pool));
