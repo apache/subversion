@@ -476,7 +476,7 @@ copy_versioned_files(const char *from_abspath,
       if (revision->kind == svn_opt_revision_working)
         {
           apr_finfo_t finfo;
-          SVN_ERR(svn_io_stat(&finfo, from, APR_FINFO_PROT, pool));
+          SVN_ERR(svn_io_stat(&finfo, from_abspath, APR_FINFO_PROT, pool));
           perm = finfo.protection;
         }
 #endif
