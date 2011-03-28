@@ -1665,6 +1665,31 @@ svn_wc__db_read_children_of_working_node(const apr_array_header_t **children,
                                          apr_pool_t *result_pool,
                                          apr_pool_t *scratch_pool);
 
+/* Set *CHILDREN to a new array of the (const char *) basenames of the
+   immediate children of the working node at LOCAL_ABSPATH in DB which
+   where deleted as part of a replacement.
+
+   Return every path that refers to a child of the working node at
+   LOCAL_ABSPATH. Do not include paths that were not deleted due to
+   the replacement of LOCAL_ABSPATH.
+
+   ### This function is used during post-commit processing of replaced
+   ### directories and should probably not be called from elsewhere.
+   ### No attempt is made to verify that LOCAL_ABSPATH has in fact been
+   ### replaced. This allows the post-commit code to traverse the replaced
+   ### tree top-down and delete parent nodes from the DB before their
+   ### children have been removed (scan_addition() would fail in this case
+   ### since parent nodes, including the op_root, have disappeared).
+
+   Allocate *CHILDREN in RESULT_POOL and do temporary allocations in
+   SCRATCH_POOL. */
+svn_error_t *
+svn_wc__db_read_replaced_children(const apr_array_header_t **children,
+                                  svn_wc__db_t *db,
+                                  const char *local_abspath,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
+
 /* Like svn_wc__db_read_children_of_working_node(), except also include any
    path that was a child of a deleted directory that existed at
    LOCAL_ABSPATH, even if that directory is now scheduled to be replaced by

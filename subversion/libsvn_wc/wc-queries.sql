@@ -162,6 +162,14 @@ UNION
 SELECT 1 FROM ACTUAL_NODE
 WHERE wc_id = ?1 AND parent_relpath = ?2
 
+-- STMT_SELECT_REPLACED_CHILDREN_FOR_DELETION
+SELECT local_relpath FROM nodes
+WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth <= ?3
+  AND presence = 'base-deleted'
+  AND local_relpath NOT IN (
+    SELECT local_relpath FROM nodes
+    WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth > ?3)
+
 -- STMT_SELECT_NODE_CHILDREN
 /* Return all paths that are children of the directory (?1, ?2) in any
    op-depth, including children of any underlying, replaced directories. */
