@@ -916,7 +916,7 @@ install_committed_file(svn_boolean_t *overwrote_working,
 /* Set the base version of the node LOCAL_ABSPATH to be the same as its
  * working version currently is:
  *
- * - Remove children that are marked deleted (if it's a dir)
+ * - Remove children deleted as part of a replacement (if it's a dir)
  * - Install the new base props
  * - Install the new tree state
  * - Install the new base text (if it's a file)
@@ -986,57 +986,51 @@ log_do_committed(svn_wc__db_t *db,
      ### Thus, we're simply looking for status == svn_wc__db_status_added
 
      If "this dir" has been replaced (delete + add), remove those of
-     its children that are marked for deletion.
+     its children that were marked for deletion as part of the replace
+     operation of "this dir".
 
      All its immmediate children *must* be either scheduled for deletion
      (they were children of "this dir" during the "delete" phase of its
-     replacement), added (they are new children of the replaced dir),
+     replacement, in which case we delete them, or they were deleted
+     post-replace, in which case we leave them alone),
+     added (they are new children of the replaced dir),
      or replaced (they are new children of the replace dir that have
      the same names as children that were present during the "delete"
      phase of the replacement).
 
-     Children which are added or replaced will have been reported as
-     individual commit targets, and thus will be re-visited by
-     log_do_committed().  Children which were marked for deletion,
-     however, need to be outright removed from revision control.  */
+     Children which are added, or replaced, or deleted post-replace, will
+     have been reported as individual commit targets, and thus will be
+     re-visited by log_do_committed().  Children which were marked for
+     deletion as part of the replacement of "this dir", however, need to
+     be outright removed from revision control.  */
 
   if (status == svn_wc__db_status_added && kind == svn_wc__db_kind_dir)
     {
-      /* Loop over all children entries, look for items scheduled for
-         deletion. */
+      /* Loop over all replaced children. */
       const apr_array_header_t *children;
       int i;
       apr_pool_t *iterpool = svn_pool_create(pool);
 
-      SVN_ERR(svn_wc__db_read_children(&children, db, local_abspath,
-                                       pool, pool));
+      /* ### We should probably have a function that recursively deletes
+       * ### these children, instead of just listing them. */
+      SVN_ERR(svn_wc__db_read_replaced_children(&children, db, local_abspath,
+                                                pool, pool));
 
       for (i = 0; i < children->nelts; i++)
         {
           const char *child_name = APR_ARRAY_IDX(children, i, const char*);
           const char *child_abspath;
-          svn_wc__db_status_t child_status;
 
           svn_pool_clear(iterpool);
           child_abspath = svn_dirent_join(local_abspath, child_name, iterpool);
 
-          SVN_ERR(svn_wc__db_read_info(&child_status,
-                                       NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       db, child_abspath, iterpool, iterpool));
-
           /* Committing a deletion should remove the local nodes.  */
-          if (child_status == svn_wc__db_status_deleted)
-            {
-              SVN_ERR(svn_wc__internal_remove_from_revision_control(
-                        db, child_abspath,
-                        FALSE /* destroy_wf */,
-                        FALSE /* instant_error */,
-                        cancel_func, cancel_baton,
-                        iterpool));
-            }
+          SVN_ERR(svn_wc__internal_remove_from_revision_control(
+                    db, child_abspath,
+                    FALSE /* destroy_wf */,
+                    FALSE /* instant_error */,
+                    cancel_func, cancel_baton,
+                    iterpool));
         }
 
       svn_pool_destroy(iterpool);

@@ -5753,6 +5753,61 @@ svn_wc__db_read_children_of_working_node(const apr_array_header_t **children,
 
 
 svn_error_t *
+svn_wc__db_read_replaced_children(const apr_array_header_t **children,
+                                  svn_wc__db_t *db,
+                                  const char *local_abspath,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+  apr_int64_t op_depth;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  apr_array_header_t *result
+    = apr_array_make(result_pool, 0, sizeof(const char *));
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
+                                                db, local_abspath,
+                                                scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  /* Gather deleted children with smaller or equal op_depth as this
+   * added node, for which no rows with greater op_depth exist.
+   *
+   * Any such children were deleted as part of a replace operation -- either
+   * on this directory (equal op_depth), or a parent directory (smaller
+   * op_depth; this implies that this added node is a nested replacement).
+   * Children deleted post-replace have a higher op_depth.
+   *
+   * It's OK if we find no children -- either this was a plain addition,
+   * or the replaced directory was empty. */
+  SVN_ERR(op_depth_of(&op_depth, wcroot, local_relpath));
+  SVN_ERR(svn_sqlite__get_statement(
+            &stmt, wcroot->sdb, STMT_SELECT_REPLACED_CHILDREN_FOR_DELETION));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isi", wcroot->wc_id, local_relpath,
+                            op_depth));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  while (have_row)
+    {
+      const char *child_relpath = svn_sqlite__column_text(stmt, 0, NULL);
+
+      /* Allocate the name in RESULT_POOL so we won't have to copy it. */
+      APR_ARRAY_PUSH(result, const char *)
+        = svn_relpath_basename(child_relpath, result_pool);
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  *children = result;
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_wc__db_read_children(const apr_array_header_t **children,
                          svn_wc__db_t *db,
                          const char *local_abspath,
