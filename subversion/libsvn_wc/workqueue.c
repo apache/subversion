@@ -1038,6 +1038,8 @@ log_do_committed(svn_wc__db_t *db,
                         iterpool));
             }
         }
+
+      svn_pool_destroy(iterpool);
     }
 
   /* Install the node's current working props as its new base props.
