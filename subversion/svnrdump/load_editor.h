@@ -36,6 +36,7 @@ struct parse_baton
   const svn_delta_editor_t *commit_editor;
   void *commit_edit_baton;
   svn_ra_session_t *session;
+  svn_ra_session_t *aux_session;
   const char *uuid;
   const char *root_url;
 };
@@ -90,13 +91,16 @@ struct revision_baton
 
 /**
  * Load the dumpstream carried in @a stream to the location described
- * by @a session. Use @a pool for all memory allocations.  Use @a
+ * by @a session.  Use @a aux_session (which is opened to the same URL
+ * as @a session) for any secondary, out-of-band RA communications
+ * required.  Use @a pool for all memory allocations.  Use @a
  * cancel_func and @a cancel_baton to check for user cancellation of
  * the operation (for timely-but-safe termination).
  */
 svn_error_t *
 load_dumpstream(svn_stream_t *stream,
                 svn_ra_session_t *session,
+                svn_ra_session_t *aux_session,
                 svn_cancel_func_t cancel_func,
                 void *cancel_baton,
                 apr_pool_t *pool);

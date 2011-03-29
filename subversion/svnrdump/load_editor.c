@@ -451,13 +451,13 @@ remove_node_props(void *baton)
 
   if (nb->kind == svn_node_file)
     {
-      SVN_ERR(svn_ra_get_file(nb->rb->pb->session, nb->path, SVN_INVALID_REVNUM,
-                              NULL, NULL, &props, pool));
+      SVN_ERR(svn_ra_get_file(nb->rb->pb->aux_session, nb->path,
+                              SVN_INVALID_REVNUM, NULL, NULL, &props, pool));
     }
   else  /* nb->kind == svn_node_dir */
     {
-      SVN_ERR(svn_ra_get_dir2(nb->rb->pb->session, NULL, NULL, &props, nb->path,
-                              SVN_INVALID_REVNUM, 0, pool));
+      SVN_ERR(svn_ra_get_dir2(nb->rb->pb->aux_session, NULL, NULL, &props,
+                              nb->path, SVN_INVALID_REVNUM, 0, pool));
     }
 
   for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
@@ -591,6 +591,7 @@ close_revision(void *baton)
 svn_error_t *
 load_dumpstream(svn_stream_t *stream,
                 svn_ra_session_t *session,
+                svn_ra_session_t *aux_session,
                 svn_cancel_func_t cancel_func,
                 void *cancel_baton,
                 apr_pool_t *pool)
@@ -623,6 +624,7 @@ load_dumpstream(svn_stream_t *stream,
 
   parse_baton = apr_pcalloc(pool, sizeof(*parse_baton));
   parse_baton->session = session;
+  parse_baton->aux_session = aux_session;
   parse_baton->root_url = root_url;
 
   err = svn_repos_parse_dumpstream2(stream, parser, parse_baton,
