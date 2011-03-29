@@ -1824,8 +1824,20 @@ write_entry(struct write_baton **entry_node,
 
   if (entry->tree_conflict_data)
     {
+      /* Issue #3840: 1.6 uses one pair of () more than we do, so
+         strip it.  Thus, "()" becomes NULL and "((skel1) (skel2))"
+         becomes "(skel1) (skel2)". */
+      svn_skel_t *skel;
+
       actual_node = MAYBE_ALLOC(actual_node, scratch_pool);
-      actual_node->tree_conflict_data = entry->tree_conflict_data;
+      skel = svn_skel__parse(entry->tree_conflict_data,
+                             strlen(entry->tree_conflict_data),
+                             scratch_pool);
+      if (skel->children)
+        actual_node->tree_conflict_data = svn_skel__unparse(skel->children,
+                                                            result_pool)->data;
+      else
+        actual_node->tree_conflict_data = NULL;
     }
 
   if (entry->file_external_path != NULL)
