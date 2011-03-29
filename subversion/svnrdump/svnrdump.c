@@ -156,6 +156,7 @@ struct replay_baton {
 
 /* Option set */
 typedef struct opt_baton_t {
+  svn_client_ctx_t *ctx;
   svn_ra_session_t *session;
   const char *url;
   svn_boolean_t help;
@@ -237,22 +238,20 @@ replay_revend(svn_revnum_t revision,
   return SVN_NO_ERROR;
 }
 
-/* Set *SESSION to a new RA session opened to URL.  Allocate *SESSION
- * and related data structures in POOL.  Use CONFIG_DIR and pass
- * USERNAME, PASSWORD, CONFIG_DIR and NO_AUTH_CACHE to initialize the
- * authorization baton.  CONFIG_OPTIONS (if not NULL) is a list of
- * configuration overrides.
+/* Initialize the RA layer, and set *CTX to a new client context baton
+ * allocated from POOL.  Use CONFIG_DIR and pass USERNAME, PASSWORD,
+ * CONFIG_DIR and NO_AUTH_CACHE to initialize the authorization baton.
+ * CONFIG_OPTIONS (if not NULL) is a list of configuration overrides.
  */
 static svn_error_t *
-open_connection(svn_ra_session_t **session,
-                const char *url,
-                svn_boolean_t non_interactive,
-                const char *username,
-                const char *password,
-                const char *config_dir,
-                svn_boolean_t no_auth_cache,
-                apr_array_header_t *config_options,
-                apr_pool_t *pool)
+init_client_context(svn_client_ctx_t **ctx_p,
+                    svn_boolean_t non_interactive,
+                    const char *username,
+                    const char *password,
+                    const char *config_dir,
+                    svn_boolean_t no_auth_cache,
+                    apr_array_header_t *config_options,
+                    apr_pool_t *pool)
 {
   svn_client_ctx_t *ctx = NULL;
   svn_config_t *cfg_config;
@@ -280,7 +279,7 @@ open_connection(svn_ra_session_t **session,
                                         no_auth_cache, FALSE, cfg_config,
                                         ctx->cancel_func, ctx->cancel_baton,
                                         pool));
-  SVN_ERR(svn_client_open_ra_session(session, url, ctx, pool));
+  *ctx_p = ctx;
   return SVN_NO_ERROR;
 }
 
@@ -431,10 +430,13 @@ replay_revisions(svn_ra_session_t *session,
 
 /* Read a dumpstream from stdin, and use it to feed a loader capable
  * of transmitting that information to the repository located at URL
- * (to which SESSION has been opened).
+ * (to which SESSION has been opened).  AUX_SESSION is a second RA
+ * session opened to the same URL for performing auxiliary out-of-band
+ * operations.
  */
 static svn_error_t *
 load_revisions(svn_ra_session_t *session,
+               svn_ra_session_t *aux_session,
                const char *url,
                svn_boolean_t quiet,
                apr_pool_t *pool)
@@ -445,8 +447,8 @@ load_revisions(svn_ra_session_t *session,
   apr_file_open_stdin(&stdin_file, pool);
   stdin_stream = svn_stream_from_aprfile2(stdin_file, FALSE, pool);
 
-  SVN_ERR(load_dumpstream(stdin_stream, session, check_cancel, 
-                          NULL, pool));
+  SVN_ERR(load_dumpstream(stdin_stream, session, aux_session, 
+                          check_cancel, NULL, pool));
 
   SVN_ERR(svn_stream_close(stdin_stream));
 
@@ -533,7 +535,11 @@ load_cmd(apr_getopt_t *os,
          apr_pool_t *pool)
 {
   opt_baton_t *opt_baton = baton;
-  return load_revisions(opt_baton->session, opt_baton->url,
+  svn_ra_session_t *aux_session;
+  
+  SVN_ERR(svn_client_open_ra_session(&aux_session, opt_baton->url,
+                                     opt_baton->ctx, pool));
+  return load_revisions(opt_baton->session, aux_session, opt_baton->url,
                         opt_baton->quiet, pool);
 }
 
@@ -899,15 +905,18 @@ main(int argc, const char **argv)
       opt_baton->url = svn_uri_canonicalize(repos_url, pool);
     }
 
-  SVNRDUMP_ERR(open_connection(&(opt_baton->session),
-                               opt_baton->url,
-                               non_interactive,
-                               username,
-                               password,
-                               config_dir,
-                               no_auth_cache,
-                               config_options,
-                               pool));
+  SVNRDUMP_ERR(init_client_context(&(opt_baton->ctx),
+                                   non_interactive,
+                                   username,
+                                   password,
+                                   config_dir,
+                                   no_auth_cache,
+                                   config_options,
+                                   pool));
+
+  SVNRDUMP_ERR(svn_client_open_ra_session(&(opt_baton->session),
+                                          opt_baton->url,
+                                          opt_baton->ctx, pool));
 
   /* Have sane opt_baton->start_revision and end_revision defaults if
      unspecified.  */
