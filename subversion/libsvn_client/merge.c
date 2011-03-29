@@ -5549,8 +5549,7 @@ get_mergeinfo_walk_cb(const char *local_abspath,
                       apr_pool_t *scratch_pool)
 {
   struct get_mergeinfo_walk_baton *wb = walk_baton;
-  const svn_string_t *propval;
-  svn_boolean_t switched = FALSE;
+  const svn_string_t *propval = NULL;
   svn_boolean_t has_mergeinfo = FALSE;
   svn_boolean_t path_is_merge_target =
     !svn_path_compare_paths(local_abspath, wb->merge_target_abspath);
@@ -5560,12 +5559,14 @@ get_mergeinfo_walk_cb(const char *local_abspath,
   svn_boolean_t is_present;
   svn_boolean_t deleted;
   svn_boolean_t absent;
+  svn_boolean_t switched;
+  svn_boolean_t file_external;
   svn_boolean_t immediate_child_dir;
 
   /* TODO(#2843) How to deal with a excluded item on merge? */
 
   SVN_ERR(svn_wc__get_mergeinfo_walk_info(&is_present, &deleted, &absent,
-                                          &depth,
+                                          &switched, &file_external, &depth,
                                           wb->ctx->wc_ctx, local_abspath,
                                           scratch_pool));
 
@@ -5574,38 +5575,25 @@ get_mergeinfo_walk_cb(const char *local_abspath,
   if (!is_present)
     return SVN_NO_ERROR;
 
-   if (deleted || absent)
-    {
-      propval = NULL;
-      switched = FALSE;
-    }
-  else
+  if (! (deleted || absent))
     {
       SVN_ERR(svn_wc_prop_get2(&propval, wb->ctx->wc_ctx, local_abspath,
                                SVN_PROP_MERGEINFO, scratch_pool, scratch_pool));
       if (propval)
         has_mergeinfo = TRUE;
-
-      /* Regardless of whether PATH has explicit mergeinfo or not, we must
-         determine if PATH is switched.  This is so get_mergeinfo_paths()
-         can later tweak PATH's parent to reflect a missing child (implying it
-         needs non-inheritable mergeinfo ranges) and PATH's siblings so they
-         get their own complete set of mergeinfo. */
-      SVN_ERR(svn_wc__path_switched(&switched, wb->ctx->wc_ctx, local_abspath,
-                                    scratch_pool));
+      
+      /* Make sure what the WC thinks is present on disk really is. */
+      SVN_ERR(record_missing_subtree_roots(local_abspath, kind,
+                                           wb->subtree_dirents,
+                                           wb->missing_subtrees,
+                                           wb->cb_pool,
+                                           scratch_pool));
     }
 
   immediate_child_dir = ((wb->depth == svn_depth_immediates)
                          &&(kind == svn_node_dir)
                          && (strcmp(abs_parent_path,
                                     wb->merge_target_abspath) == 0));
-  /* Make sure what the WC thinks is present on disk really is. */
-   if (!absent && !deleted)
-    SVN_ERR(record_missing_subtree_roots(local_abspath, kind,
-                                         wb->subtree_dirents,
-                                         wb->missing_subtrees,
-                                         wb->cb_pool,
-                                         scratch_pool));
 
   /* Store PATHs with explict mergeinfo, which are switched, are missing
      children due to a sparse checkout, are scheduled for deletion are absent
@@ -5615,7 +5603,7 @@ get_mergeinfo_walk_cb(const char *local_abspath,
   if (path_is_merge_target
       || has_mergeinfo
       || deleted
-      || switched
+      || (switched && !file_external)
       || depth == svn_depth_empty
       || depth == svn_depth_files
       || absent

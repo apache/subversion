@@ -44,17 +44,6 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/** Given a @a local_abspath with a @a wc_ctx, set @a *switched to
- * TRUE if @a local_abspath is switched, otherwise set @a *switched to FALSE.
- * All temporary allocations are done in * @a scratch_pool.
- */
-svn_error_t *
-svn_wc__path_switched(svn_boolean_t *switched,
-                      svn_wc_context_t *wc_ctx,
-                      const char *local_abspath,
-                      apr_pool_t *scratch_pool);
-
-
 /* Return TRUE iff CLHASH (a hash whose keys are const char *
    changelist names) is NULL or if LOCAL_ABSPATH is part of a changelist in
    CLHASH. */
@@ -743,6 +732,8 @@ svn_error_t *
 svn_wc__get_mergeinfo_walk_info(svn_boolean_t *is_present,
                                 svn_boolean_t *is_deleted,
                                 svn_boolean_t *is_absent,
+                                svn_boolean_t *is_switched,
+                                svn_boolean_t *is_file_external,
                                 svn_depth_t *depth,
                                 svn_wc_context_t *wc_ctx,
                                 const char *local_abspath,

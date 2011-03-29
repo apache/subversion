@@ -1640,16 +1640,5 @@ svn_wc__call_with_write_lock(svn_wc__with_write_lock_func_t func,
   return svn_error_compose_create(err1, err2);
 }
 
-svn_error_t *
-svn_wc__path_switched(svn_boolean_t *switched,
-                      svn_wc_context_t *wc_ctx,
-                      const char *local_abspath,
-                      apr_pool_t *scratch_pool)
-{
-  svn_boolean_t wc_root;
-
-  return svn_wc__check_wc_root(&wc_root, NULL, switched, wc_ctx->db,
-                               local_abspath, scratch_pool);
-}
 
 
