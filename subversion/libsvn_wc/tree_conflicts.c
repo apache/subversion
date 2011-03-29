@@ -206,9 +206,11 @@ svn_wc__deserialize_conflict(const svn_wc_conflict_description2_t **conflict,
   svn_wc_conflict_description2_t *new_conflict;
 
   if (!is_valid_conflict_skel(skel))
-    return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
-                            _("Invalid conflict info in tree conflict "
-                              "description"));
+    return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
+                             _("Invalid conflict info '%s' in tree conflict "
+                               "description"),
+                             skel ? svn_skel__unparse(skel, scratch_pool)->data
+                                  : "(null)");
 
   /* victim basename */
   victim_basename = apr_pstrmemdup(scratch_pool,
