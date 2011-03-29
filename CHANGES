@@ -64,7 +64,7 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * more gracefully error when given back cmdline input (issue #3620)
     * update exit codes to reflect command failure (issue #3622)
     * don't double-update file externals (issue #3665)
-    * improve output of multi-target update (issue #3693)
+    * improve output of multi-target update (issue #3693, #3746)
     * make 'svn up --set-depth=exclude FILE' work (issue #3736)
     * return correct error code for 'svn cat' on nonexisting file (issue #3713)
     * support svn:externals on locally added directories (issue #2267)
@@ -73,6 +73,8 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * allow 'svn info' to run on an excluded item (issue #3792)
     * improve 'log -g' output with reverse merges (issue #3176)
     * don't print error message if stdout is a pipe and is closed (issue #3014)
+    * removed special copy-handling during updates added in 1.5.0 (issue #3711)
+    * fix warning about copies committed with non-infinite depth (issue #3752)
     * fixed: wc-to-wc copy of a switch source (issue #1802)
     * fixed: 'svn st' reports symlinks as obstructed items (issue #2284)
     * fixed: 'cd e:\; svn up e:\' fails (issue #2556)
@@ -104,6 +106,7 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * fixed: executable flag not correctly set on merge (issue #3686)
     * fixed: 'svn rm' fails on multiple URLs with encoded spaces (issue #3839)
     * fixed: children of replaced dirs cannot be deleted (issue #3468)
+    * fixed: executable flag of binary file lost during merge (issue #3686)
     * many other minor bugfixes, optimizations, plugs of memory leaks, etc
   
   - Server-side bugfixes:
@@ -118,10 +121,14 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * fixed: mod_dav_svn doesn't return stderr to user on failure (issue #3112)
     * fixed: hotcopy may corrupt target rep-cache.db (issue #3596)
     * fixed: mod_dav_svn can cause spurious merge conflicts (issue #3657)
+    * match paths against authz rules in case sensitive way (issue #3781)
+    * svnserve can now force usernames to upper/lower case (issue #3726)
     * many other minor bugfixes too numerous to list here
 
   - Other tool improvements and bugfixes:
     * svnsync now takes the '--config-option' argument (issue #2027)
+    * svnsync can translate non-UTF-8 properties to UTF-8 (issue #3817)
+    * svnadmin now errors on non-UTF-8 revision properties (issue #3755)
 
  Developer-visible changes:
   - General:
@@ -132,6 +139,7 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * allow mod_dav_svn to compile against Apache 2.4 (issue #3548)
     * support running tests against older servers (r876016)
     * notification of unversioned obstructions (r877344)
+    * fixed: configure script requires missing file on Solaris (#issue 3754)
 
   - API changes:
     * don't crash svn_client_copy if ctx->log_msg_func is NULL (issue #3234)
@@ -146,6 +154,8 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
   - Bindings:
     * New JavaHL package: org.apache.subversion
     * Deprecate the SVNClientSynchronized class in JavaHL (issue #2755)
+    * fixed setting binary properties in JavaHL (issue #3770)
+    * fix type mapping of svn_txdelta_window_t in python bindings (issue #3688)
 
 
 Version 1.6.16
