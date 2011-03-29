@@ -2055,7 +2055,6 @@ typedef svn_error_t *(*svn_wc_conflict_resolver_func_t)(
  *
  * @a local_dir_abspath will be the absolute path to the local directory
  * containing @a path, or @c NULL if the diff editor does not have a local
- * path. Note that @a path is a relative path, not just the basename of the
  * path.
  *
  * If @a state is non-NULL, set @a *state to the state of the item
