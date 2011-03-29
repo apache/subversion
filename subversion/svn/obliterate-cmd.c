@@ -78,7 +78,16 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
   if (!nb->had_print_error)
     {
       nb->had_print_error = TRUE;
-      svn_handle_error2(err, stderr, FALSE, "svn: ");
+
+      /* Issue #3014:
+       * Don't print anything on broken pipes. The pipe was likely
+       * closed by the process at the other end. We expect that
+       * process to perform error reporting as necessary.
+       *
+       * ### This assumes that there is only one error in a chain for
+       * ### SVN_ERR_IO_PIPE_WRITE_ERROR. See svn_cmdline_fputs(). */
+      if (err->apr_err != SVN_ERR_IO_PIPE_WRITE_ERROR)
+        svn_handle_error2(err, stderr, FALSE, "svn: ");
     }
   svn_error_clear(err);
 }

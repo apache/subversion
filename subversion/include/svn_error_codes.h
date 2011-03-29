@@ -279,6 +279,11 @@ SVN_ERROR_START
              SVN_ERR_IO_CATEGORY_START + 6,
              "Write error")
 
+  /** @since New in 1.7. */
+  SVN_ERRDEF(SVN_ERR_IO_PIPE_WRITE_ERROR,
+             SVN_ERR_IO_CATEGORY_START + 7,
+             "Write error in pipe")
+
   /* stream errors */
 
   SVN_ERRDEF(SVN_ERR_STREAM_UNEXPECTED_EOF,

@@ -338,7 +338,19 @@ svn_cmdline_fputs(const char *string, FILE* stream, apr_pool_t *pool)
   if (fputs(out, stream) == EOF)
     {
       if (errno)
-        return svn_error_wrap_apr(errno, _("Write error"));
+        {
+          err = svn_error_wrap_apr(errno, _("Write error"));
+
+          /* ### Issue #3014: Return a specific error for broken pipes,
+           * ### with a single element in the error chain. */
+          if (APR_STATUS_IS_EPIPE(err->apr_err))
+            {
+              svn_error_clear(err);
+              return svn_error_create(SVN_ERR_IO_PIPE_WRITE_ERROR, NULL, NULL);
+            }
+          else
+            return svn_error_return(err);
+        }
       else
         return svn_error_create
           (SVN_ERR_IO_WRITE_ERROR, NULL, NULL);
@@ -355,7 +367,19 @@ svn_cmdline_fflush(FILE *stream)
   if (fflush(stream) == EOF)
     {
       if (errno)
-        return svn_error_wrap_apr(errno, _("Write error"));
+        {
+          svn_error_t *err = svn_error_wrap_apr(errno, _("Write error"));
+
+          /* ### Issue #3014: Return a specific error for broken pipes,
+           * ### with a single element in the error chain. */
+          if (APR_STATUS_IS_EPIPE(err->apr_err))
+            {
+              svn_error_clear(err);
+              return svn_error_create(SVN_ERR_IO_PIPE_WRITE_ERROR, NULL, NULL);
+            }
+          else
+            return svn_error_return(err);
+        }
       else
         return svn_error_create(SVN_ERR_IO_WRITE_ERROR, NULL, NULL);
     }
@@ -376,7 +400,15 @@ svn_cmdline_handle_exit_error(svn_error_t *err,
                               apr_pool_t *pool,
                               const char *prefix)
 {
-  svn_handle_error2(err, stderr, FALSE, prefix);
+  /* Issue #3014:
+   * Don't print anything on broken pipes. The pipe was likely
+   * closed by the process at the other end. We expect that
+   * process to perform error reporting as necessary.
+   *
+   * ### This assumes that there is only one error in a chain for
+   * ### SVN_ERR_IO_PIPE_WRITE_ERROR. See svn_cmdline_fputs(). */
+  if (err->apr_err != SVN_ERR_IO_PIPE_WRITE_ERROR)
+    svn_handle_error2(err, stderr, FALSE, prefix);
   svn_error_clear(err);
   if (pool)
     svn_pool_destroy(pool);

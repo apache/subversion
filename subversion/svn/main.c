@@ -2594,7 +2594,16 @@ main(int argc, const char *argv[])
           err = svn_error_quick_wrap(err,
                                      _("Please see the 'svn upgrade' command"));
         }
-      svn_handle_error2(err, stderr, FALSE, "svn: ");
+
+      /* Issue #3014:
+       * Don't print anything on broken pipes. The pipe was likely
+       * closed by the process at the other end. We expect that
+       * process to perform error reporting as necessary.
+       *
+       * ### This assumes that there is only one error in a chain for
+       * ### SVN_ERR_IO_PIPE_WRITE_ERROR. See svn_cmdline_fputs(). */
+      if (err->apr_err != SVN_ERR_IO_PIPE_WRITE_ERROR)
+        svn_handle_error2(err, stderr, FALSE, "svn: ");
 
       /* Tell the user about 'svn cleanup' if any error on the stack
          was about locked working copies. */
