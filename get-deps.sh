@@ -26,7 +26,7 @@
 APR=apr-1.3.9
 APR_UTIL=apr-util-1.3.10
 NEON=neon-0.29.5
-SERF=serf-0.7.0
+SERF=serf-0.7.1
 ZLIB=zlib-1.2.5
 SQLITE_VERSION=3.7.3
 SQLITE=sqlite-amalgamation-$SQLITE_VERSION
