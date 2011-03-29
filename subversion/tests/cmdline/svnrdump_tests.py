@@ -336,7 +336,7 @@ def descend_into_replace_load(sbox):
   run_load_test(sbox, "descend-into-replace.dump")
 
 @XFail()
-@Issue(3844)
+@Issue(3847)
 def add_multi_prop_dump(sbox):
   "dump: add with multiple props"
   run_dump_test(sbox, "add-multi-prop.dump")
