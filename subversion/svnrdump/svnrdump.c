@@ -441,15 +441,12 @@ load_revisions(svn_ra_session_t *session,
 {
   apr_file_t *stdin_file;
   svn_stream_t *stdin_stream;
-  const svn_repos_parse_fns2_t *parser;
-  void *parse_baton;
 
   apr_file_open_stdin(&stdin_file, pool);
   stdin_stream = svn_stream_from_aprfile2(stdin_file, FALSE, pool);
 
-  SVN_ERR(get_dumpstream_loader(&parser, &parse_baton, session, pool));
-  SVN_ERR(drive_dumpstream_loader(stdin_stream, parser, parse_baton,
-                                  session, check_cancel, NULL, pool));
+  SVN_ERR(load_dumpstream(stdin_stream, session, check_cancel, 
+                          NULL, pool));
 
   SVN_ERR(svn_stream_close(stdin_stream));
 

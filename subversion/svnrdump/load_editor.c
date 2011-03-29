@@ -589,55 +589,42 @@ close_revision(void *baton)
 }
 
 svn_error_t *
-get_dumpstream_loader(const svn_repos_parse_fns2_t **parser,
-                      void **parse_baton,
-                      svn_ra_session_t *session,
-                      apr_pool_t *pool)
+load_dumpstream(svn_stream_t *stream,
+                svn_ra_session_t *session,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                apr_pool_t *pool)
 {
-  svn_repos_parse_fns2_t *pf;
-  struct parse_baton *pb;
-
-  pf = apr_pcalloc(pool, sizeof(*pf));
-  pf->new_revision_record = new_revision_record;
-  pf->uuid_record = uuid_record;
-  pf->new_node_record = new_node_record;
-  pf->set_revision_property = set_revision_property;
-  pf->set_node_property = set_node_property;
-  pf->delete_node_property = delete_node_property;
-  pf->remove_node_props = remove_node_props;
-  pf->set_fulltext = set_fulltext;
-  pf->apply_textdelta = apply_textdelta;
-  pf->close_node = close_node;
-  pf->close_revision = close_revision;
-
-  pb = apr_pcalloc(pool, sizeof(*pb));
-  pb->session = session;
-
-  *parser = pf;
-  *parse_baton = pb;
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-drive_dumpstream_loader(svn_stream_t *stream,
-                        const svn_repos_parse_fns2_t *parser,
-                        void *parse_baton,
-                        svn_ra_session_t *session,
-                        svn_cancel_func_t cancel_func,
-                        void *cancel_baton,
-                        apr_pool_t *pool)
-{
-  struct parse_baton *pb = parse_baton;
+  svn_repos_parse_fns2_t *parser;
+  struct parse_baton *parse_baton;
   const svn_string_t *lock_string;
   svn_boolean_t be_atomic;
   svn_error_t *err;
+  const char *root_url;
 
   SVN_ERR(svn_ra_has_capability(session, &be_atomic,
                                 SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
                                 pool));
   SVN_ERR(get_lock(&lock_string, session, cancel_func, cancel_baton, pool));
-  SVN_ERR(svn_ra_get_repos_root2(session, &(pb->root_url), pool));
+  SVN_ERR(svn_ra_get_repos_root2(session, &root_url, pool));
+
+  parser = apr_pcalloc(pool, sizeof(*parser));
+  parser->new_revision_record = new_revision_record;
+  parser->uuid_record = uuid_record;
+  parser->new_node_record = new_node_record;
+  parser->set_revision_property = set_revision_property;
+  parser->set_node_property = set_node_property;
+  parser->delete_node_property = delete_node_property;
+  parser->remove_node_props = remove_node_props;
+  parser->set_fulltext = set_fulltext;
+  parser->apply_textdelta = apply_textdelta;
+  parser->close_node = close_node;
+  parser->close_revision = close_revision;
+
+  parse_baton = apr_pcalloc(pool, sizeof(*parse_baton));
+  parse_baton->session = session;
+  parse_baton->root_url = root_url;
+
   err = svn_repos_parse_dumpstream2(stream, parser, parse_baton,
                                     cancel_func, cancel_baton, pool);
 

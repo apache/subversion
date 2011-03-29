@@ -89,32 +89,16 @@ struct revision_baton
 };
 
 /**
- * Build up a dumpstream parser @a parser (and corresponding baton @a
- * parse_baton) to fire the appropriate callbacks in a commit editor
- * set to commit to session @a session. Use @a pool for all memory
- * allocations.
+ * Load the dumpstream carried in @a stream to the location described
+ * by @a session. Use @a pool for all memory allocations.  Use @a
+ * cancel_func and @a cancel_baton to check for user cancellation of
+ * the operation (for timely-but-safe termination).
  */
 svn_error_t *
-get_dumpstream_loader(const svn_repos_parse_fns2_t **parser,
-                      void **parse_baton,
-                      svn_ra_session_t *session,
-                      apr_pool_t *pool);
-
-/**
- * Drive the dumpstream loader described by @a parser and @a
- * parse_baton to parse and commit the stream @a stream to the
- * location described by @a session. Use @a pool for all memory
- * allocations.  Use @a cancel_func and @a cancel_baton to check for
- * user cancellation of the operation (for timely-but-safe
- * termination).
- */
-svn_error_t *
-drive_dumpstream_loader(svn_stream_t *stream,
-                        const svn_repos_parse_fns2_t *parser,
-                        void *parse_baton,
-                        svn_ra_session_t *session,
-                        svn_cancel_func_t cancel_func,
-                        void *cancel_baton,
-                        apr_pool_t *pool);
+load_dumpstream(svn_stream_t *stream,
+                svn_ra_session_t *session,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                apr_pool_t *pool);
 
 #endif
