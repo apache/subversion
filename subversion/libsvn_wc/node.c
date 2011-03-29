@@ -1498,6 +1498,8 @@ svn_error_t *
 svn_wc__get_mergeinfo_walk_info(svn_boolean_t *is_present,
                                 svn_boolean_t *is_deleted,
                                 svn_boolean_t *is_absent,
+                                svn_boolean_t *is_switched,
+                                svn_boolean_t *is_file_external,
                                 svn_depth_t *depth,
                                 svn_wc_context_t *wc_ctx,
                                 const char *local_abspath,
@@ -1516,6 +1518,28 @@ svn_wc__get_mergeinfo_walk_info(svn_boolean_t *is_present,
   *is_present = (status != svn_wc__db_status_not_present);
   *is_deleted = (status == svn_wc__db_status_deleted);
   *is_absent = (status == svn_wc__db_status_absent);
+  *is_switched = FALSE;
+  *is_file_external = FALSE;
+
+  if (*is_present && (! (*is_deleted || *is_absent)))
+    {
+      svn_boolean_t wc_root;
+
+      SVN_ERR(svn_wc__check_wc_root(&wc_root, NULL, is_switched, wc_ctx->db,
+                                    local_abspath, scratch_pool));
+
+      /* File externals appear switched. */
+      if (is_switched)
+        {
+          const char *serialized_file_ext;
+
+          SVN_ERR(svn_wc__db_temp_get_file_external(&serialized_file_ext,
+                                                    wc_ctx->db, local_abspath,
+                                                    scratch_pool,
+                                                    scratch_pool));
+          *is_file_external = (serialized_file_ext != NULL);
+        }
+    }
 
   return SVN_NO_ERROR;
 }

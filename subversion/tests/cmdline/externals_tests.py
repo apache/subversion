@@ -1478,7 +1478,6 @@ def wc_repos_file_externals(sbox):
 
 #----------------------------------------------------------------------
 @Issue(3843)
-@XFail()
 def merge_target_with_externals(sbox):
   "merge target with externals"
 
