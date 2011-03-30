@@ -669,7 +669,8 @@ JNIEXPORT jlong JNICALL
 Java_org_apache_subversion_javahl_SVNClient_doSwitch
 (JNIEnv *env, jobject jthis, jstring jpath, jstring jurl, jobject jrevision,
  jobject jPegRevision, jobject jdepth, jboolean jdepthIsSticky,
- jboolean jignoreExternals, jboolean jallowUnverObstructions)
+ jboolean jignoreExternals, jboolean jallowUnverObstructions,
+ jboolean jignoreAncestry)
 {
   JNIEntry(SVNClient, doSwitch);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -698,7 +699,8 @@ Java_org_apache_subversion_javahl_SVNClient_doSwitch
                       EnumMapper::toDepth(jdepth),
                       jdepthIsSticky ? true : false,
                       jignoreExternals ? true : false,
-                      jallowUnverObstructions ? true : false);
+                      jallowUnverObstructions ? true : false,
+                      jignoreAncestry ? true : false);
 }
 
 JNIEXPORT void JNICALL

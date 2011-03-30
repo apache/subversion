@@ -296,7 +296,8 @@ public class SVNClient implements ISVNClient
     public native long doSwitch(String path, String url, Revision revision,
                                 Revision pegRevision, Depth depth,
                                 boolean depthIsSticky, boolean ignoreExternals,
-                                boolean allowUnverObstructions)
+                                boolean allowUnverObstructions,
+                                boolean ignoreAncestry)
             throws ClientException;
 
     /**
