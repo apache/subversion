@@ -292,7 +292,7 @@ scan_eol(const char **eol, apr_file_t *file, apr_size_t max_len,
       if (total_len >= max_len)
         break;
 
-      SVN_ERR(svn_io_file_read_full2(file, buf, sizeof(buf)-1, &len, &eof,
+      SVN_ERR(svn_io_file_read_full2(file, buf, sizeof(buf) - 1, &len, &eof,
                                      pool));
 
       if (len > 0)
