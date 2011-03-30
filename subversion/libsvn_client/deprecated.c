@@ -1905,6 +1905,24 @@ svn_client_update(svn_revnum_t *result_rev,
 
 /*** From switch.c ***/
 svn_error_t *
+svn_client_switch2(svn_revnum_t *result_rev,
+                   const char *path,
+                   const char *switch_url,
+                   const svn_opt_revision_t *peg_revision,
+                   const svn_opt_revision_t *revision,
+                   svn_depth_t depth,
+                   svn_boolean_t depth_is_sticky,
+                   svn_boolean_t ignore_externals,
+                   svn_boolean_t allow_unver_obstructions,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
+{
+  return svn_client_switch3(result_rev, path, switch_url, peg_revision,
+                            revision, depth, depth_is_sticky, ignore_externals,
+                            allow_unver_obstructions, TRUE, ctx, pool);
+}
+
+svn_error_t *
 svn_client_switch(svn_revnum_t *result_rev,
                   const char *path,
                   const char *switch_url,
@@ -1918,8 +1936,8 @@ svn_client_switch(svn_revnum_t *result_rev,
   return svn_client__switch_internal(result_rev, path, switch_url,
                                      &peg_revision, revision,
                                      SVN_DEPTH_INFINITY_OR_FILES(recurse),
-                                     FALSE, NULL, FALSE, FALSE, FALSE, ctx,
-                                     pool);
+                                     FALSE, NULL, FALSE, FALSE, FALSE, TRUE,
+                                     ctx, pool);
 }
 
 /*** From cat.c ***/

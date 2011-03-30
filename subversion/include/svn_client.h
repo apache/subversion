@@ -1326,6 +1326,12 @@ svn_client_update(svn_revnum_t *result_rev,
  *              set equal to the base properties. <br>
  *              If @c FALSE, then abort if there are any unversioned
  *              obstructing items.
+ * @param[in] ignore_ancestry  If @c FALSE, then verify that the file
+ *              or directory at @a path shares some common version control
+ *              ancestry with the switch URL location (represented by the
+ *              combination of @a url, @a peg_revision, and @a revision),
+ *              and returning #SVN_ERR_CLIENT_UNRELATED_RESOURCES if they
+ *              do not. If @c TRUE, no such sanity checks are performed.
  * @param[in] ctx   The standard client context, used for authentication and
  *              notification.  The notifier is invoked for paths affected by
  *              the switch, and also for files which may be restored from the
@@ -1340,11 +1346,34 @@ svn_client_update(svn_revnum_t *result_rev,
  *         #svn_opt_revision_date. <br>
  *         If no error occurred, return #SVN_NO_ERROR.
  *
- * @since New in 1.5.
+ * @since New in 1.7.
  *
  * @see #svn_depth_t <br> #svn_client_ctx_t <br> @ref clnt_revisions for
  *      a discussion of operative and peg revisions.
  */
+svn_error_t *
+svn_client_switch3(svn_revnum_t *result_rev,
+                   const char *path,
+                   const char *url,
+                   const svn_opt_revision_t *peg_revision,
+                   const svn_opt_revision_t *revision,
+                   svn_depth_t depth,
+                   svn_boolean_t depth_is_sticky,
+                   svn_boolean_t ignore_externals,
+                   svn_boolean_t allow_unver_obstructions,
+                   svn_boolean_t ignore_ancestry,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool);
+
+
+/**
+ * Similar to svn_client_switch3() but with @a ignore_ancestry always
+ * set to TRUE.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.4 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_switch2(svn_revnum_t *result_rev,
                    const char *path,

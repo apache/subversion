@@ -131,9 +131,11 @@ def do_routine_switching(wc_dir, repo_url, verify):
     svntest.actions.run_and_verify_switch(wc_dir, iota_path, gamma_url,
                                           expected_output,
                                           expected_disk,
-                                          expected_status)
+                                          expected_status,
+                                          None, None, None, None, None,
+                                          False, '--ignore-ancestry')
   else:
-    svntest.main.run_svn(None, 'switch',
+    svntest.main.run_svn(None, 'switch', '--ignore-ancestry',
                          gamma_url, iota_path)
 
   ### Switch the directory `A/B' to `A/D/G'.
@@ -165,10 +167,12 @@ def do_routine_switching(wc_dir, repo_url, verify):
     svntest.actions.run_and_verify_switch(wc_dir, AB_path, ADG_url,
                                           expected_output,
                                           expected_disk,
-                                          expected_status)
+                                          expected_status,
+                                          None, None, None, None, None,
+                                          False, '--ignore-ancestry')
   else:
-    svntest.main.run_svn(None,
-                         'switch', ADG_url, AB_path)
+    svntest.main.run_svn(None, 'switch', '--ignore-ancestry',
+                         ADG_url, AB_path)
 
 
 #----------------------------------------------------------------------
@@ -671,7 +675,9 @@ def delete_subdir(sbox):
   svntest.actions.run_and_verify_switch(wc_dir, A_path, A2_url,
                                         expected_output,
                                         expected_disk,
-                                        expected_status)
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        False, '--ignore-ancestry')
 
 #----------------------------------------------------------------------
 # Issue 1532: Switch a file to a dir: can't switch it back to the file
@@ -686,13 +692,13 @@ def file_dir_file(sbox):
   file_url = sbox.repo_url + '/iota'
   dir_url = sbox.repo_url + '/A/C'
 
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'switch', dir_url, file_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'switch',
+                                     '--ignore-ancestry', dir_url, file_path)
   if not os.path.isdir(file_path):
     raise svntest.Failure
 
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'switch', file_url, file_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'switch',
+                                     '--ignore-ancestry', file_url, file_path)
   if not os.path.isfile(file_path):
     raise svntest.Failure
 
@@ -736,8 +742,8 @@ def nonrecursive_switching(sbox):
   svntest.main.run_svn(None, 'ci', '-m', '', wc1_dir)
 
   # Try to switch "wc2" to the branch (non-recursively)
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'switch', '-N', version1_url, wc2_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'switch', '-N',
+                                     '--ignore-ancestry', version1_url, wc2_dir)
 
   # Check the URLs of the (not switched) directories.
   expected_infos = [
@@ -783,7 +789,8 @@ def failed_anchor_is_target(sbox):
 
   # This switch raises a tree conflict on 'psi', because of the local mods.
   svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
-                                     'switch', G_url, H_path)
+                                     'switch', '--ignore-ancestry',
+                                     G_url, H_path)
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/H', switched='S', wc_rev=2)
@@ -878,8 +885,8 @@ def bad_intermediate_urls(sbox):
   })
 
   actions.run_and_verify_switch(wc_dir, wc_dir, url_A_C, expected_output,
-    expected_disk, expected_status, None, None, None, None, None, False)
-
+                                expected_disk, expected_status, None, None,
+                                None, None, None, False, '--ignore-ancestry')
 
   # However, the URL for wc/A should now reflect ^/A/C/A, not something else.
   expected_infos = [
@@ -974,8 +981,9 @@ def obstructed_switch(sbox):
   expected_status.tweak('A/B/E/beta', wc_rev='3')
 
   actions.run_and_verify_switch(wc_dir, A_B_E, url_A_B_Esave,
-    expected_output, expected_disk, expected_status, None, None, None, None,
-    None, False)
+                                expected_output, expected_disk,
+                                expected_status, None, None, None, None,
+                                None, False, '--ignore-ancestry')
 
   # svn status
   expected_status.add({
@@ -1030,7 +1038,9 @@ def commit_mods_below_switch(sbox):
   svntest.actions.run_and_verify_switch(wc_dir, C_path, B_url,
                                         expected_output,
                                         expected_disk,
-                                        expected_status)
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        False, '--ignore-ancestry')
 
   D_path = os.path.join(wc_dir, 'A', 'D')
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -1078,6 +1088,7 @@ def relocate_beyond_repos_root(sbox):
   svntest.actions.run_and_verify_svn(None, None,
                                      ".*Invalid relocation destination.*",
                                      'switch', '--relocate',
+                                     '--ignore-ancestry',
                                      A_url, other_B_url, A_wc_dir)
 
   # Another way of trying to change the fs path, leading to an invalid
@@ -1085,10 +1096,12 @@ def relocate_beyond_repos_root(sbox):
   svntest.actions.run_and_verify_svn(None, None,
                                      ".*is not the root.*",
                                      'switch', '--relocate',
+                                     '--ignore-ancestry',
                                      repo_url, other_B_url, A_wc_dir)
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'switch', '--relocate',
+                                     '--ignore-ancestry',
                                      A_url, other_A_url, A_wc_dir)
 
   # Check that we can contact the repository, meaning that the
@@ -1162,7 +1175,9 @@ def refresh_read_only_attribute(sbox):
   svntest.actions.run_and_verify_switch(wc_dir, A_path, branch_url,
                                         expected_output,
                                         expected_disk,
-                                        expected_status)
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        False, '--ignore-ancestry')
 
   # The file with we set svn:needs-lock on should now be writable, but
   # is still read-only!
@@ -1193,7 +1208,7 @@ def switch_change_repos_root(sbox):
                  ".*No repository found.*"
   svntest.actions.run_and_verify_svn(None, None,
                                      expected_err,
-                                     'switch',
+                                     'switch', '--ignore-ancestry',
                                      other_A_url, A_wc_dir)
 
   # Test 2: A switch that changes the repo root part of the URL shouldn't work.
@@ -1203,7 +1218,7 @@ def switch_change_repos_root(sbox):
   svntest.main.create_repos(other_repo_dir)
   svntest.actions.run_and_verify_svn(None, None,
                                      ".*UUID.*",
-                                     'switch',
+                                     'switch', '--ignore-ancestry',
                                      other_A_url, A_wc_dir)
 
   # Make sure we didn't break the WC.
@@ -1240,6 +1255,7 @@ def relocate_and_propset(sbox):
   svntest.main.copy_repos(repo_dir, other_repo_dir, 1, 0)
   svntest.main.safe_rmtree(repo_dir, 1)
   svntest.actions.run_and_verify_svn(None, None, [], 'switch', '--relocate',
+                                     '--ignore-ancestry',
                                      repo_url, other_repo_url, wc_dir)
 
   # Remove gamma from the working copy.
@@ -1350,8 +1366,8 @@ def forced_switch(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status, None,
-                                        None, None, None, None, 0,
-                                        '--force')
+                                        None, None, None, None, False,
+                                        '--force', '--ignore-ancestry')
 
 #----------------------------------------------------------------------
 def forced_switch_failures(sbox):
@@ -1459,8 +1475,9 @@ def forced_switch_failures(sbox):
   expected_status.tweak('A/C', switched='S')
 
   actions.run_and_verify_switch(wc_dir, A_C, url_A_D, expected_output,
-    expected_disk, expected_status, None, None, None, None, None, False,
-    '--force')
+                                expected_disk, expected_status, None, None,
+                                None, None, None, False, '--force',
+                                '--ignore-ancestry')
 
 
   # 2) A forced switch that tries to add a dir when a file of the same
@@ -1485,8 +1502,9 @@ def forced_switch_failures(sbox):
   expected_status.tweak('A/B/F', switched='S')
 
   actions.run_and_verify_switch(wc_dir, A_B_F, url_A_D_G, expected_output,
-    expected_disk, expected_status, None, None, None, None, None, False,
-    '--force')
+                                expected_disk, expected_status, None, None,
+                                None, None, None, False, '--force',
+                                '--ignore-ancestry')
 
   # svn info A/B/F/pi
   expected_stdout = verify.ExpectedOutput(
@@ -1532,7 +1550,8 @@ def forced_switch_failures(sbox):
                     '.*a separate working copy.*already exists')
 
   actions.run_and_verify_switch(wc_dir, A_D_G, url_A_D_H, None, None, None,
-    expected_error, None, None, None, None, False, '--force')
+                                expected_error, None, None, None, None,
+                                False, '--force', '--ignore-ancestry')
 
   # Delete all three obstructions and finish the update.
   # rm -rf A/D/G/I
@@ -1686,7 +1705,8 @@ def switch_with_obstructing_local_adds(sbox):
                                         expected_status,
                                         None,
                                         svntest.tree.detect_conflict_files,
-                                        extra_files, None, None, 0)
+                                        extra_files, None, None, False,
+                                        '--ignore-ancestry')
 
 #----------------------------------------------------------------------
 
@@ -1701,8 +1721,9 @@ def switch_scheduled_add(sbox):
   svntest.main.file_append(file_path, "")
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'add', file_path)
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'switch', switch_url, file_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'switch',
+                                     '--ignore-ancestry',
+                                     switch_url, file_path)
 
 #----------------------------------------------------------------------
 @SkipUnless(server_has_mergeinfo)
@@ -1934,7 +1955,8 @@ def mergeinfo_switch_elision(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None, 1)
+                                        None, None, None, None, None, True,
+                                        '--ignore-ancestry')
 
   # Now check a switch which reverses and earlier switch and leaves
   # a path in an unswitched state.
@@ -1955,7 +1977,8 @@ def mergeinfo_switch_elision(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None, 1)
+                                        None, None, None, None, None, True,
+                                        '--ignore-ancestry')
 
   svntest.actions.run_and_verify_svn(None,
                                      ["property '" + SVN_PROP_MERGEINFO +
@@ -1976,7 +1999,8 @@ def mergeinfo_switch_elision(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None, 1)
+                                        None, None, None, None, None, True,
+                                        '--ignore-ancestry')
 
 #----------------------------------------------------------------------
 
@@ -2006,8 +2030,8 @@ def switch_with_depth(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status, None,
-                                        None, None, None, None, 0,
-                                        '--depth', 'empty')
+                                        None, None, None, None, False,
+                                        '--depth', 'empty', '--ignore-ancestry')
 
   # Set up expected results for reverting 'switch --depth=empty'
   expected_output = svntest.wc.State(wc_dir, {})
@@ -2018,8 +2042,8 @@ def switch_with_depth(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status, None,
-                                        None, None, None, None, 0,
-                                        '--depth', 'empty')
+                                        None, None, None, None, False,
+                                        '--depth', 'empty', '--ignore-ancestry')
 
   # Set up expected results of 'switch --depth=files'
   expected_output = svntest.wc.State(wc_dir, {
@@ -2045,8 +2069,8 @@ def switch_with_depth(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status, None,
-                                        None, None, None, None, 0,
-                                        '--depth', 'files')
+                                        None, None, None, None, False,
+                                        '--depth', 'files', '--ignore-ancestry')
 
   # Set up expected results for reverting 'switch --depth=files'
   expected_output = svntest.wc.State(wc_dir, {
@@ -2060,8 +2084,8 @@ def switch_with_depth(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status, None,
-                                        None, None, None, None, 0,
-                                        '--depth', 'files')
+                                        None, None, None, None, False,
+                                        '--depth', 'files', '--ignore-ancestry')
 
   # Putting the depth=immediates stuff in a subroutine, because we're
   # going to run it at least twice.
@@ -2098,8 +2122,9 @@ def switch_with_depth(sbox):
                                           expected_output,
                                           expected_disk,
                                           expected_status, None,
-                                          None, None, None, None, 0,
-                                          '--depth', 'immediates')
+                                          None, None, None, None, False,
+                                          '--depth', 'immediates',
+                                          '--ignore-ancestry')
 
   sw_depth_imm()
 
@@ -2122,7 +2147,8 @@ def switch_with_depth(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status, None,
-                                        None, None, None, None, 0)
+                                        None, None, None, None, False,
+                                        '--ignore-ancestry')
 
   # Okay, repeat 'switch --depth=immediates'.  (Afterwards we'll
   # 'switch --depth=infinity', to test going all the way.)
@@ -2147,8 +2173,9 @@ def switch_with_depth(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status, None,
-                                        None, None, None, None, 0,
-                                        '--depth', 'infinity')
+                                        None, None, None, None, False,
+                                        '--depth', 'infinity',
+                                        '--ignore-ancestry')
 
 #----------------------------------------------------------------------
 
@@ -2213,8 +2240,8 @@ def switch_to_dir_with_peg_rev(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status, None,
-                                        None, None, None, None, 0,
-                                        '-r', '2')
+                                        None, None, None, None, False,
+                                        '-r', '2', '--ignore-ancestry')
 
 def switch_urls_with_spaces(sbox):
   "switch file and dir to url containing spaces"
@@ -2258,7 +2285,9 @@ def switch_urls_with_spaces(sbox):
   svntest.actions.run_and_verify_switch(wc_dir, ABC_path, XYZ_url,
                                         expected_output,
                                         expected_disk,
-                                        expected_status)
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        False, '--ignore-ancestry')
 
   # Test 2: switch file 'bar baz bal' to 'tau pau mau'
   tpm_url = repo_url + '/tau pau mau'
@@ -2283,7 +2312,9 @@ def switch_urls_with_spaces(sbox):
   svntest.actions.run_and_verify_switch(wc_dir, bbb_path, tpm_url,
                                         expected_output,
                                         expected_disk,
-                                        expected_status)
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        False, '--ignore-ancestry')
 
 def switch_to_dir_with_peg_rev2(sbox):
   "switch to old rev of now renamed branch"
@@ -2350,8 +2381,8 @@ def switch_to_dir_with_peg_rev2(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status, None,
-                                        None, None, None, None, 0,
-                                        '-r', '2')
+                                        None, None, None, None, False,
+                                        '-r', '2', '--ignore-ancestry')
 
 def switch_to_root(sbox):
   "switch a folder to the root of its repository"
@@ -2401,7 +2432,9 @@ def switch_to_root(sbox):
   svntest.actions.run_and_verify_switch(wc_dir, ADG_path, sbox.repo_url,
                                         expected_output,
                                         expected_disk,
-                                        expected_status)
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        False, '--ignore-ancestry')
 
 #----------------------------------------------------------------------
 # Make sure that switch continue after deleting locally modified
@@ -2448,7 +2481,9 @@ def tolerate_local_mods(sbox):
   svntest.actions.run_and_verify_switch(wc_dir, A_path, A2_url,
                                         expected_output,
                                         expected_disk,
-                                        expected_status)
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        False, '--ignore-ancestry')
 
 #----------------------------------------------------------------------
 
@@ -2978,6 +3013,7 @@ def single_file_relocate(sbox):
   svntest.actions.run_and_verify_svn(None, None,
                                      ".*Cannot relocate.*",
                                      'switch', '--relocate',
+                                     '--ignore-ancestry',
                                      iota_url, other_iota_url, iota_path)
 
 
@@ -2998,6 +3034,7 @@ def relocate_with_switched_children(sbox):
 
   # Do the switch and check the results in three ways.
   svntest.actions.run_and_verify_svn(None, None, [], 'switch', '--relocate',
+                                     '--ignore-ancestry',
                                      repo_url, other_repo_url, wc_dir)
 
   # Attempt to commit changes and examine results
@@ -3047,7 +3084,8 @@ def copy_with_switched_subdir(sbox):
   svntest.actions.run_and_verify_status(wc_dir, state)
 
   # Switch D
-  svntest.actions.run_and_verify_svn(None, None, [], 'switch', E_url, G)
+  svntest.actions.run_and_verify_svn(None, None, [], 'switch',
+                                     '--ignore-ancestry', E_url, G)
 
   state.tweak('A/D/G', switched='S')
   state.remove('A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau');
@@ -3097,7 +3135,8 @@ def copy_with_switched_subdir(sbox):
                                      sbox.repo_url, wc_dir)
 
   # Switch D again to recreate state
-  svntest.actions.run_and_verify_svn(None, None, [], 'switch', E_url, G)
+  svntest.actions.run_and_verify_svn(None, None, [], 'switch',
+                                     '--ignore-ancestry', E_url, G)
 
   # Clear the statuses
   state.tweak(status='  ', copied=None, wc_rev='2')
@@ -3130,8 +3169,9 @@ def relocate_with_relative_externals(sbox):
 
   # Now relocate our working copy.
   svntest.actions.run_and_verify_svn(None, None, [], 'switch', '--relocate',
+                                     '--ignore-ancestry',
                                      repo_url, other_repo_url, wc_dir)
-
+  
   # Check the URLs of the externals -- were they updated to point to the
   # .other repository URL?
   svntest.actions.run_and_verify_info([{ 'URL' : '.*.other/A/D/G$' }],
