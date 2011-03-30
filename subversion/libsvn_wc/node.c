@@ -1595,9 +1595,12 @@ svn_wc__node_get_commit_status(svn_node_kind_t *kind,
                                svn_boolean_t *added,
                                svn_boolean_t *deleted,
                                svn_boolean_t *not_present,
+                               svn_boolean_t *is_op_root,
                                svn_boolean_t *symlink,
                                svn_revnum_t *revision,
                                const char **repos_relpath,
+                               svn_revnum_t *original_revision,
+                               const char **original_repos_relpath,
                                svn_boolean_t *conflicted,
                                const char **changelist,
                                svn_boolean_t *props_mod,
@@ -1614,8 +1617,9 @@ svn_wc__node_get_commit_status(svn_node_kind_t *kind,
   /* ### All of this should be handled inside a single read transaction */
   SVN_ERR(svn_wc__db_read_info(&status, &db_kind, revision, repos_relpath,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL,NULL, changelist, NULL, NULL, NULL, NULL,
-                               props_mod, &have_base, NULL, conflicted, NULL,
+                               NULL,NULL, changelist, original_repos_relpath,
+                               NULL, NULL, original_revision, props_mod,
+                               &have_base, NULL, conflicted, NULL,
                                wc_ctx->db, local_abspath,
                                result_pool, scratch_pool));
 
@@ -1634,6 +1638,42 @@ svn_wc__node_get_commit_status(svn_node_kind_t *kind,
     *deleted = (status == svn_wc__db_status_deleted);
   if (not_present)
     *not_present = (status == svn_wc__db_status_not_present);
+
+  if (is_op_root)
+    {
+      const char *op_root_abspath;
+      switch(status)
+        {
+          case svn_wc__db_status_added:
+            SVN_ERR(svn_wc__db_scan_addition(&status, &op_root_abspath,
+                                             NULL, NULL, NULL,
+                                             NULL, NULL, NULL, NULL,
+                                             wc_ctx->db, local_abspath,
+                                             scratch_pool, scratch_pool));
+
+            *is_op_root = (strcmp(op_root_abspath, local_abspath) == 0);
+          break;
+        case svn_wc__db_status_deleted:
+            {
+              const char *base_del_abspath;
+              const char *work_del_abspath;
+
+              SVN_ERR(svn_wc__db_scan_deletion(&base_del_abspath,
+                                               NULL, &work_del_abspath,
+                                               wc_ctx->db, local_abspath,
+                                               scratch_pool, scratch_pool));
+
+              op_root_abspath = (work_del_abspath != NULL) ? work_del_abspath
+                                                           : base_del_abspath;
+            }
+
+            *is_op_root = (strcmp(op_root_abspath, local_abspath) == 0);
+          break;
+        default:
+          *is_op_root = FALSE;
+          break;
+      }
+    }
 
   if (symlink)
     {
