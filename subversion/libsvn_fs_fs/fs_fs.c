@@ -5346,11 +5346,21 @@ write_hash_rep(svn_filesize_t *size,
 }
 
 /* Copy a node-revision specified by id ID in fileystem FS from a
-   transaction into the permanent rev-file FILE.  Return the offset of
+   transaction into the proto-rev-file FILE.  Return the offset of
    the new node-revision in *OFFSET.  If this is a directory, all
    children are copied as well.  START_NODE_ID and START_COPY_ID are
    the first available node and copy ids for this filesystem, for older
-   FS formats. Temporary allocations are from POOL. */
+   FS formats.
+
+   REV is the revision number that this proto-rev-file will represent.
+
+   INITIAL_OFFSET is the offset of the proto-rev-file on entry to
+   commit_body.
+
+   If REPS_TO_CACHE is not NULL, append to it a copy (allocated in
+   REPS_POOL) of each data rep that is new in this revision.
+
+   Temporary allocations are from POOL.  */
 static svn_error_t *
 write_final_rev(const svn_fs_id_t **new_id_p,
                 apr_file_t *file,
@@ -5359,6 +5369,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
                 const svn_fs_id_t *id,
                 const char *start_node_id,
                 const char *start_copy_id,
+                apr_off_t initial_offset,
                 apr_array_header_t *reps_to_cache,
                 apr_pool_t *reps_pool,
                 apr_pool_t *pool)
@@ -5398,7 +5409,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
           apr_hash_this(hi, NULL, NULL, &val);
           dirent = val;
           SVN_ERR(write_final_rev(&new_id, file, rev, fs, dirent->id,
-                                  start_node_id, start_copy_id,
+                                  start_node_id, start_copy_id, initial_offset,
                                   reps_to_cache, reps_pool,
                                   subpool));
           if (new_id && (svn_fs_fs__id_rev(new_id) == rev))
@@ -5430,6 +5441,14 @@ write_final_rev(const svn_fs_id_t **new_id_p,
         {
           noderev->data_rep->txn_id = NULL;
           noderev->data_rep->revision = rev;
+
+          /* See issue 3845.  Some unknown mechanism caused the
+             protorev file to get truncated, so check for that
+             here.  */
+          if (noderev->data_rep->offset + noderev->data_rep->size
+              > initial_offset)
+            return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                                    _("Truncated protorev file detected"));
         }
     }
 
@@ -5762,7 +5781,7 @@ commit_body(void *baton, apr_pool_t *pool)
   svn_revnum_t old_rev, new_rev;
   apr_file_t *proto_file;
   void *proto_file_lockcookie;
-  apr_off_t changed_path_offset;
+  apr_off_t initial_offset, changed_path_offset;
   char *buf;
   apr_hash_t *txnprops;
   svn_string_t date;
@@ -5793,11 +5812,12 @@ commit_body(void *baton, apr_pool_t *pool)
   /* Get a write handle on the proto revision file. */
   SVN_ERR(get_writable_proto_rev(&proto_file, &proto_file_lockcookie,
                                  cb->fs, cb->txn->id, pool));
+  SVN_ERR(get_file_offset(&initial_offset, proto_file, pool));
 
   /* Write out all the node-revisions and directory contents. */
   root_id = svn_fs_fs__id_txn_create("0", "0", cb->txn->id, pool);
   SVN_ERR(write_final_rev(&new_root_id, proto_file, new_rev, cb->fs, root_id,
-                          start_node_id, start_copy_id,
+                          start_node_id, start_copy_id, initial_offset,
                           cb->reps_to_cache, cb->reps_pool,
                           pool));
 
