@@ -175,8 +175,11 @@ Candidate changes:
      Avoiding deadlocks is a good thing.
    Branch:
     ^/subversion/branches/1.6.x-fsfs-begin-txn-deadlock
+   Thread:
+     http://mid.gmane.org/20110330055635.GA31369@daniel3.local
+     http://mid.gmane.org/4D3FC68F.7020709@orcaware.com
    Votes:
-     +1: blair
+     +1: blair, danielsh
 
  * r962377, r962378, r1036978, r1037762, r1063572, r1063573, r1063592
    Fix issue #3641 svnsync handling of directory copyfrom.
