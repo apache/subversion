@@ -107,7 +107,7 @@ class SVNClient :public SVNBase
   jlong doSwitch(const char *path, const char *url, Revision &revision,
                  Revision &pegRevision, svn_depth_t depth,
                  bool depthIsSticky, bool ignoreExternals,
-                 bool allowUnverObstructions);
+                 bool allowUnverObstructions, bool ignoreAncestry);
   jlong doExport(const char *srcPath, const char *destPath,
                  Revision &revision, Revision &pegRevision, bool force,
                  bool ignoreExternals, svn_depth_t depth,

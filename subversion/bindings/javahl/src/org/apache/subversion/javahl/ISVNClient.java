@@ -398,12 +398,15 @@ public interface ISVNClient
      *                      then also set the ambient depth value to depth.
      * @param ignoreExternals whether to process externals definitions
      * @param allowUnverObstructions allow unversioned paths that obstruct adds
+     * @param ignoreAncestry whether to skip common ancestry sanity check between
+                             <code>path</code> and <code>url</code>
      * @throws ClientException
-     * @since 1.5
+     * @since 1.7
      */
     long doSwitch(String path, String url, Revision revision,
                   Revision pegRevision, Depth depth, boolean depthIsSticky,
-                  boolean ignoreExternals, boolean allowUnverObstructions)
+                  boolean ignoreExternals, boolean allowUnverObstructions,
+                  boolean ignoreAncestry)
             throws ClientException;
 
     /**

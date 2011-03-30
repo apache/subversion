@@ -1331,7 +1331,7 @@ public class BasicTests extends SVNTests
                 greekWC.getItemContent("A/D/gamma"));
         thisTest.getWc().setItemIsSwitched("iota", true);
         client.doSwitch(iotaPath, gammaUrl, null, Revision.HEAD, Depth.unknown,
-                false, false, false);
+                        false, false, false, true);
 
         // check the status of the working copy
         thisTest.checkStatus();
@@ -1350,7 +1350,7 @@ public class BasicTests extends SVNTests
         thisTest.getWc().addItem("A/D/H/tau",
                 thisTest.getWc().getItemContent("A/D/G/tau"));
         client.doSwitch(adhPath, adgURL, null, Revision.HEAD, Depth.files,
-                false, false, false);
+                        false, false, false, true);
 
         // check the status of the working copy
         thisTest.checkStatus();

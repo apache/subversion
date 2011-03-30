@@ -517,7 +517,8 @@ jlong SVNClient::doSwitch(const char *path, const char *url,
                           Revision &revision, Revision &pegRevision,
                           svn_depth_t depth, bool depthIsSticky,
                           bool ignoreExternals,
-                          bool allowUnverObstructions)
+                          bool allowUnverObstructions,
+                          bool ignoreAncestry)
 {
     SVN::Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", -1);
@@ -532,7 +533,7 @@ jlong SVNClient::doSwitch(const char *path, const char *url,
     if (ctx == NULL)
         return -1;
 
-    SVN_JNI_ERR(svn_client_switch2(&rev, intPath.c_str(),
+    SVN_JNI_ERR(svn_client_switch3(&rev, intPath.c_str(),
                                    intUrl.c_str(),
                                    pegRevision.revision(),
                                    revision.revision(),
@@ -540,6 +541,7 @@ jlong SVNClient::doSwitch(const char *path, const char *url,
                                    depthIsSticky,
                                    ignoreExternals,
                                    allowUnverObstructions,
+                                   ignoreAncestry,
                                    ctx,
                                    requestPool.pool()),
                 -1);

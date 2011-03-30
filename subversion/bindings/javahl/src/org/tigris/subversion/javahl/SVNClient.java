@@ -1226,6 +1226,9 @@ public class SVNClient implements SVNClientInterface
     }
 
     /**
+     * @deprecated Use {@link #doSwitch(String, String, Revision, Revision,
+     *                                  int, boolean, boolean, boolean,
+     *                                  boolean)} instead.
      * @since 1.5
      */
     public long doSwitch(String path, String url, Revision revision,
@@ -1234,13 +1237,27 @@ public class SVNClient implements SVNClientInterface
                          boolean allowUnverObstructions)
             throws ClientException
     {
+        return doSwitch(path, url, revision, pegRevision, depth, depthIsSticky,
+                        ignoreExternals, allowUnverObstructions, true);
+    }
+
+    /**
+     * @since 1.7
+     */
+    public long doSwitch(String path, String url, Revision revision,
+                         Revision pegRevision, int depth,
+                         boolean depthIsSticky, boolean ignoreExternals,
+                         boolean allowUnverObstructions,
+                         boolean ignoreAncestry)
+            throws ClientException
+    {
         try
         {
             return aSVNClient.doSwitch(path, url,
                           revision == null ? null : revision.toApache(),
                           pegRevision == null ? null : pegRevision.toApache(),
                           Depth.toADepth(depth), depthIsSticky, ignoreExternals,
-                          allowUnverObstructions);
+                          allowUnverObstructions, ignoreAncestry);
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {
