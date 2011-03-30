@@ -260,6 +260,8 @@ Candidate changes:
       Don't know the cause, but we can stop it getting into the repo.
     Votes:
       +1: philip
+      +1: danielsh (trusting Philip's explanation that the noderev offset,length
+                    are cached to be the correct values for a non-corrupt file)
 
 Veto-blocked changes:
 =====================
