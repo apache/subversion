@@ -74,7 +74,7 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * improve 'log -g' output with reverse merges (issue #3176)
     * don't print error message if stdout is a pipe and is closed (issue #3014)
     * removed special copy-handling during updates added in 1.5.0 (issue #3711)
-    * fix warning about copies committed with non-infinite depth (issue #3752)
+    * fix warning about copies committed with non-infinity depth (issue #3752)
     * fixed: wc-to-wc copy of a switch source (issue #1802)
     * fixed: 'svn st' reports symlinks as obstructed items (issue #2284)
     * fixed: 'cd e:\; svn up e:\' fails (issue #2556)
