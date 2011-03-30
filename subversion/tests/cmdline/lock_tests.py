@@ -867,9 +867,11 @@ def lock_switched_files(sbox):
   alpha_URL = sbox.repo_url + '/A/B/E/alpha'
 
   svntest.actions.run_and_verify_svn(None, None, [], 'switch',
-                                     iota_URL, gamma_path)
+                                     iota_URL, gamma_path,
+                                     '--ignore-ancestry')
   svntest.actions.run_and_verify_svn(None, None, [], 'switch',
-                                     alpha_URL, lambda_path)
+                                     alpha_URL, lambda_path,
+                                     '--ignore-ancestry')
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/gamma', 'A/B/lambda', switched='S')
@@ -1450,7 +1452,8 @@ def lock_twice_in_one_wc(sbox):
   # Switch a second location for the same file in the same working copy
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'switch', sbox.repo_url + '/A',
-                                     os.path.join(wc_dir, 'A', 'B'))
+                                     os.path.join(wc_dir, 'A', 'B'),
+                                     '--ignore-ancestry')
 
   # Lock location 1
   svntest.actions.run_and_verify_svn(None, None, [],

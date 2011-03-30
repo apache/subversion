@@ -107,7 +107,9 @@ def svnversion_test(sbox):
   if svntest.actions.run_and_verify_switch(wc_dir, iota_path, gamma_url,
                                            expected_output,
                                            expected_disk,
-                                           expected_status):
+                                           expected_status,
+                                           None, None, None, None, None,
+                                           False, '--ignore-ancestry'):
     raise svntest.Failure
 
   # Prop modified, mixed, part wc switched

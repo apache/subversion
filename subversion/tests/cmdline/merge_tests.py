@@ -724,7 +724,9 @@ def simple_property_merges(sbox):
                                      A_url, A2_url)
 
   # Re-root the WC at A2.
-  svntest.actions.run_and_verify_svn(None, None, [], 'switch', A2_url, wc_dir)
+  svntest.main.safe_rmtree(wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'checkout',
+                                     A2_url, wc_dir)
 
   # Attempt to re-merge rev 4 of the original A's alpha.  Mergeinfo
   # inherited from A2 (created by its copy from A) allows us to avoid
@@ -16519,10 +16521,10 @@ def merge_change_to_file_with_executable(sbox):
   svntest.main.file_append(beta_path, 'appended beta text')
   sbox.simple_commit()
 
-  # Switch the WC to the branch
-  svntest.actions.run_and_verify_svn(None, None, [], 'switch',
-                                     sbox.repo_url + '/branch',
-                                     wc_dir)
+  # Re-root the WC at the branch
+  svntest.main.safe_rmtree(wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'checkout',
+                                     sbox.repo_url + '/branch', wc_dir)
   
   # Recalculate the paths
   alpha_path = os.path.join(wc_dir, "alpha")

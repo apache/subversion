@@ -911,7 +911,9 @@ def basic_switch(sbox):
   svntest.actions.run_and_verify_switch(wc_dir, iota_path, gamma_url,
                                         expected_output,
                                         expected_disk,
-                                        expected_status)
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        False, '--ignore-ancestry')
 
   ### Switch the directory `A/D/H' to `A/D/G'.
 
@@ -963,7 +965,9 @@ def basic_switch(sbox):
   svntest.actions.run_and_verify_switch(wc_dir, ADH_path, ADG_url,
                                         expected_output,
                                         expected_disk,
-                                        expected_status)
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        False, '--ignore-ancestry')
 
 #----------------------------------------------------------------------
 

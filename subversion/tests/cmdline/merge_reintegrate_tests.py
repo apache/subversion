@@ -740,7 +740,8 @@ def reintegrate_fail_on_switched_wc(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, False);
+                                        None, None, None, None, None,
+                                        False, '--ignore-ancestry')
   sbox.simple_update() # avoid mixed-revision error
   svntest.actions.run_and_verify_merge(
     A_path, None, None, sbox.repo_url + '/A_COPY', None, None, None, None,

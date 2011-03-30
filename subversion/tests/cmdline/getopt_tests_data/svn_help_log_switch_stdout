@@ -114,6 +114,10 @@ usage: 1. switch URL[@PEGREV] [PATH]
      Use the --set-depth option to set a new working copy depth on the
      targets of this operation.
 
+     By default, Subversion will refuse to switch a working copy path to
+     a new URL with which it shares no common version control ancestry.
+     Use the '--ignore-ancestry' option to override this sanity check.
+
   2. The '--relocate' option is deprecated. This syntax is equivalent to
      'svn relocate FROM-PREFIX TO-PREFIX [PATH]'.
 
@@ -144,6 +148,7 @@ Valid options:
   --diff3-cmd ARG          : use ARG as merge command
   --relocate               : relocate via URL-rewriting
   --ignore-externals [--ie] : ignore externals definitions
+  --ignore-ancestry [--ia] : ignore ancestry when calculating merges
   --force                  : force operation to run
   --accept ARG             : specify automatic conflict resolution action
                              ('postpone', 'base', 'mine-conflict',

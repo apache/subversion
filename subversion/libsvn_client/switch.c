@@ -68,6 +68,7 @@ switch_internal(svn_revnum_t *result_rev,
                 svn_boolean_t ignore_externals,
                 svn_boolean_t allow_unver_obstructions,
                 svn_boolean_t innerswitch,
+                svn_boolean_t ignore_ancestry,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool)
 {
@@ -132,7 +133,7 @@ switch_internal(svn_revnum_t *result_rev,
                              _("Directory '%s' has no URL"),
                              svn_dirent_local_style(anchor_abspath, pool));
 
-    /* We may need to crop the tree if the depth is sticky */
+  /* We may need to crop the tree if the depth is sticky */
   if (depth_is_sticky && depth < svn_depth_infinity)
     {
       svn_node_kind_t target_kind;
@@ -165,6 +166,7 @@ switch_internal(svn_revnum_t *result_rev,
                                            switch_url, anchor_abspath,
                                            peg_revision, revision,
                                            ctx, pool));
+
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &source_root, pool));
 
   /* Disallow a switch operation to change the repository root of the
@@ -173,6 +175,30 @@ switch_internal(svn_revnum_t *result_rev,
     return svn_error_createf(SVN_ERR_WC_INVALID_SWITCH, NULL,
                              _("'%s'\nis not the same repository as\n'%s'"),
                              url, source_root);
+
+  /* If we're not ignoring ancestry, then error out if the switch
+     source and target don't have a common ancestory.
+
+     ### We're acting on the anchor here, not the target.  Is that
+     ### okay? */
+  if (! ignore_ancestry)
+    {
+      const char *target_url, *yc_path;
+      svn_revnum_t target_rev, yc_rev;
+
+      SVN_ERR(svn_wc__node_get_url(&target_url, ctx->wc_ctx, local_abspath,
+                                   pool, pool));
+      SVN_ERR(svn_wc__node_get_base_rev(&target_rev, ctx->wc_ctx,
+                                        local_abspath, pool));
+      SVN_ERR(svn_client__get_youngest_common_ancestor(&yc_path, &yc_rev,
+                                                       switch_rev_url, revnum,
+                                                       target_url, target_rev,
+                                                       ctx, pool));
+      if (! (yc_path && SVN_IS_VALID_REVNUM(yc_rev)))
+        return svn_error_create(SVN_ERR_CLIENT_UNRELATED_RESOURCES,
+                                NULL, NULL);
+    }
+
 
   SVN_ERR(svn_ra_reparent(ra_session, url, pool));
 
@@ -284,6 +310,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                             svn_boolean_t ignore_externals,
                             svn_boolean_t allow_unver_obstructions,
                             svn_boolean_t innerswitch,
+                            svn_boolean_t ignore_ancestry,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool)
 {
@@ -310,7 +337,8 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                          switch_url, peg_revision, revision,
                          depth, depth_is_sticky,
                          timestamp_sleep, ignore_externals,
-                         allow_unver_obstructions, innerswitch, ctx, pool);
+                         allow_unver_obstructions, innerswitch,
+                         ignore_ancestry, ctx, pool);
 
   if (acquired_lock)
     err2 = svn_wc__release_write_lock(ctx->wc_ctx, anchor_abspath, pool);
@@ -321,7 +349,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
 }
 
 svn_error_t *
-svn_client_switch2(svn_revnum_t *result_rev,
+svn_client_switch3(svn_revnum_t *result_rev,
                    const char *path,
                    const char *switch_url,
                    const svn_opt_revision_t *peg_revision,
@@ -330,17 +358,17 @@ svn_client_switch2(svn_revnum_t *result_rev,
                    svn_boolean_t depth_is_sticky,
                    svn_boolean_t ignore_externals,
                    svn_boolean_t allow_unver_obstructions,
+                   svn_boolean_t ignore_ancestry,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
   if (svn_path_is_url(path))
     return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                             _("'%s' is not a local path"),
-                             path);
+                             _("'%s' is not a local path"), path);
 
   return svn_client__switch_internal(result_rev, path, switch_url,
                                      peg_revision, revision, depth,
                                      depth_is_sticky, NULL, ignore_externals,
-                                     allow_unver_obstructions, FALSE, ctx,
-                                     pool);
+                                     allow_unver_obstructions, FALSE, 
+                                     ignore_ancestry, ctx, pool);
 }
