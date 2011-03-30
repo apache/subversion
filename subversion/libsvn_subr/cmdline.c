@@ -337,19 +337,14 @@ svn_cmdline_fputs(const char *string, FILE* stream, apr_pool_t *pool)
 
   if (fputs(out, stream) == EOF)
     {
-      if (errno)
+      if (apr_get_os_error()) /* is errno on POSIX */
         {
-          err = svn_error_wrap_apr(errno, _("Write error"));
-
           /* ### Issue #3014: Return a specific error for broken pipes,
            * ### with a single element in the error chain. */
-          if (APR_STATUS_IS_EPIPE(err->apr_err))
-            {
-              svn_error_clear(err);
-              return svn_error_create(SVN_ERR_IO_PIPE_WRITE_ERROR, NULL, NULL);
-            }
+          if (APR_STATUS_IS_EPIPE(apr_get_os_error()))
+            return svn_error_create(SVN_ERR_IO_PIPE_WRITE_ERROR, NULL, NULL);
           else
-            return svn_error_return(err);
+            return svn_error_wrap_apr(apr_get_os_error(), _("Write error"));
         }
       else
         return svn_error_create
@@ -366,19 +361,14 @@ svn_cmdline_fflush(FILE *stream)
   errno = 0;
   if (fflush(stream) == EOF)
     {
-      if (errno)
+      if (apr_get_os_error()) /* is errno on POSIX */
         {
-          svn_error_t *err = svn_error_wrap_apr(errno, _("Write error"));
-
           /* ### Issue #3014: Return a specific error for broken pipes,
            * ### with a single element in the error chain. */
-          if (APR_STATUS_IS_EPIPE(err->apr_err))
-            {
-              svn_error_clear(err);
-              return svn_error_create(SVN_ERR_IO_PIPE_WRITE_ERROR, NULL, NULL);
-            }
+          if (APR_STATUS_IS_EPIPE(apr_get_os_error()))
+            return svn_error_create(SVN_ERR_IO_PIPE_WRITE_ERROR, NULL, NULL);
           else
-            return svn_error_return(err);
+            return svn_error_wrap_apr(apr_get_os_error(), _("Write error"));
         }
       else
         return svn_error_create(SVN_ERR_IO_WRITE_ERROR, NULL, NULL);
