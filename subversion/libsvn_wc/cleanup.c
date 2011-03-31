@@ -87,6 +87,8 @@ cleanup_internal(svn_wc__db_t *db,
   /* Can we even work with this directory?  */
   SVN_ERR(can_be_cleaned(&wc_format, db, adm_abspath, iterpool));
 
+  /* ### This fails if ADM_ABSPATH is locked indirectly via a
+     ### recursive lock on an ancestor. */
   SVN_ERR(svn_wc__db_wclock_obtain(db, adm_abspath, -1, TRUE, iterpool));
 
   /* Run our changes before the subdirectories. We may not have to recurse
@@ -142,10 +144,6 @@ svn_wc_cleanup3(svn_wc_context_t *wc_ctx,
   SVN_ERR(svn_wc__db_open(&db,
                           NULL /* ### config */, TRUE, FALSE,
                           scratch_pool, scratch_pool));
-
-  /* Always cleanup from the wc root, even when invoked on child. */
-  SVN_ERR(svn_wc__db_get_wcroot(&local_abspath, db, local_abspath,
-                                scratch_pool, scratch_pool));
 
   SVN_ERR(cleanup_internal(db, local_abspath, cancel_func, cancel_baton,
                            scratch_pool));
