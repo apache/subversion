@@ -907,7 +907,13 @@ def basic_switch(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('iota', switched='S')
 
-  # Do the switch and check the results in three ways.
+  # First, try the switch without the --ignore-ancestry flag,
+  # expecting failure.
+  expected_error = "svn: E195012: .*no common ancestry.*"
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'switch', gamma_url, iota_path)
+
+  # Now ignore ancestry so we can ge through this switch.
   svntest.actions.run_and_verify_switch(wc_dir, iota_path, gamma_url,
                                         expected_output,
                                         expected_disk,
@@ -960,6 +966,12 @@ def basic_switch(sbox):
     'A/D/H/tau' : Item(status='  ', wc_rev=1),
     })
   expected_status.tweak('iota', 'A/D/H', switched='S')
+
+  # First, try the switch without the --ignore-ancestry flag,
+  # expecting failure.
+  expected_error = "svn: E195012: .*no common ancestry.*"
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'switch', ADG_url, ADH_path)
 
   # Do the switch and check the results in three ways.
   svntest.actions.run_and_verify_switch(wc_dir, ADH_path, ADG_url,
