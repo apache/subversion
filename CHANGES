@@ -139,7 +139,6 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * allow mod_dav_svn to compile against Apache 2.4 (issue #3548)
     * support running tests against older servers (r876016)
     * notification of unversioned obstructions (r877344)
-    * fixed: configure script requires missing file on Solaris (#issue 3754)
 
   - API changes:
     * don't crash svn_client_copy if ctx->log_msg_func is NULL (issue #3234)
