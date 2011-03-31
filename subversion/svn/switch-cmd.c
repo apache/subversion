@@ -185,7 +185,9 @@ svn_cl__switch(apr_getopt_t *os,
                                  _("Path '%s' does not share common version "
                                    "control ancestry with the requested switch "
                                    "location.  Use --ignore-ancestry to "
-                                   "disable this check."), target);
+                                   "force the operation to run."),
+                                   svn_dirent_local_style(target,
+                                                          scratch_pool));
       return err;
     }
 
