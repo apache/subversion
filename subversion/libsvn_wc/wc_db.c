@@ -5871,8 +5871,6 @@ check_replace_txn(void *baton,
 
   replaced_op_depth = svn_sqlite__column_int64(stmt, 0);
 
-  SVN_DBG(("Found replaced depth %d for %s\n", (int)replaced_op_depth, local_relpath));
-
   if (crb->base_replace)
     {
       apr_int64_t op_depth = svn_sqlite__column_int64(stmt, 0);
@@ -5899,8 +5897,6 @@ check_replace_txn(void *baton,
 
   if (!crb->is_replace_root || !crb->is_replace)
     return SVN_NO_ERROR;
-
-  SVN_DBG(("Checking op_depths for %s\n", local_relpath));
 
   if (replaced_status != svn_wc__db_status_base_deleted)
     {
