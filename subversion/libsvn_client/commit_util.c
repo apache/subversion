@@ -368,8 +368,6 @@ harvest_committables(svn_wc_context_t *wc_ctx,
   svn_boolean_t conflicted;
   const char *node_changelist;
   svn_boolean_t is_update_root;
-  const char *node_copyfrom_relpath;
-  svn_revnum_t node_copyfrom_rev;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -498,90 +496,93 @@ harvest_committables(svn_wc_context_t *wc_ctx,
   if (is_deleted || is_not_present || is_replaced)
     state_flags |= SVN_CLIENT_COMMIT_ITEM_DELETE;
 
-  /* Check for the trivial addition case.  Adds can be explicit
-     (schedule == add) or implicit (schedule == replace ::= delete+add).
-     We also note whether or not this is an add with history here.  */
-  if (is_added)
-    {
-      svn_boolean_t is_copy_target;
+  {
+    const char *node_copyfrom_relpath;
+    svn_revnum_t node_copyfrom_rev;
 
-      SVN_ERR(svn_wc__node_get_copyfrom_info(NULL, &node_copyfrom_relpath,
-                                             NULL, &node_copyfrom_rev,
-                                             &is_copy_target,
-                                             wc_ctx, local_abspath,
-                                             scratch_pool, scratch_pool));
-      if (is_copy_target)
-        {
-          state_flags |= SVN_CLIENT_COMMIT_ITEM_ADD;
-          state_flags |= SVN_CLIENT_COMMIT_ITEM_IS_COPY;
-          cf_relpath = node_copyfrom_relpath;
-          cf_rev = node_copyfrom_rev;
-        }
-      else if (!node_copyfrom_relpath)
-        {
-          state_flags |= SVN_CLIENT_COMMIT_ITEM_ADD;
-        }
-      else
-        {
-          /* ### svn_wc__node_get_copyfrom_info has pre-wc-ng
-             behaviour for is_copy_target.  In this case we really
-             want all the copy targets, even those where just the
-             copfrom revision is different. */
-          const char *parent_copyfrom_relpath;
-          svn_revnum_t parent_copyfrom_rev;
-          const char *parent_abspath = svn_dirent_dirname(local_abspath,
-                                                          scratch_pool);
+    /* Check for the trivial addition case.  Adds can be explicit
+       (schedule == add) or implicit (schedule == replace ::= delete+add).
+       We also note whether or not this is an add with history here.  */
+    if (is_added)
+      {
+        svn_boolean_t is_copy_target;
 
-          SVN_ERR(svn_wc__node_get_copyfrom_info(NULL,
-                                                 &parent_copyfrom_relpath,
-                                                 NULL,
-                                                 &parent_copyfrom_rev,
-                                                 NULL,
-                                                 wc_ctx, parent_abspath,
-                                                 scratch_pool, scratch_pool));
-          if (parent_copyfrom_rev != node_copyfrom_rev)
-            {
-              state_flags |= SVN_CLIENT_COMMIT_ITEM_ADD;
-              state_flags |= SVN_CLIENT_COMMIT_ITEM_IS_COPY;
-              cf_relpath = node_copyfrom_relpath;
-              cf_rev = node_copyfrom_rev;
-            }
-        }
-    }
-  else
-    {
-      node_copyfrom_relpath = NULL;
-      node_copyfrom_rev = SVN_INVALID_REVNUM;
-    }
+        SVN_ERR(svn_wc__node_get_copyfrom_info(NULL, &node_copyfrom_relpath,
+                                               NULL, &node_copyfrom_rev,
+                                               &is_copy_target,
+                                               wc_ctx, local_abspath,
+                                               scratch_pool, scratch_pool));
+        if (is_copy_target)
+          {
+            state_flags |= SVN_CLIENT_COMMIT_ITEM_ADD;
+            state_flags |= SVN_CLIENT_COMMIT_ITEM_IS_COPY;
+            cf_relpath = node_copyfrom_relpath;
+            cf_rev = node_copyfrom_rev;
+          }
+        else if (!node_copyfrom_relpath)
+          {
+            state_flags |= SVN_CLIENT_COMMIT_ITEM_ADD;
+          }
+        else
+          {
+            /* ### svn_wc__node_get_copyfrom_info has pre-wc-ng
+               behaviour for is_copy_target.  In this case we really
+               want all the copy targets, even those where just the
+               copfrom revision is different. */
+            const char *parent_copyfrom_relpath;
+            svn_revnum_t parent_copyfrom_rev;
+            const char *parent_abspath = svn_dirent_dirname(local_abspath,
+                                                            scratch_pool);
+            SVN_ERR(svn_wc__node_get_copyfrom_info(NULL,
+                                                   &parent_copyfrom_relpath,
+                                                   NULL,
+                                                   &parent_copyfrom_rev,
+                                                   NULL,
+                                                   wc_ctx, parent_abspath,
+                                                   scratch_pool, scratch_pool));
+            if (parent_copyfrom_rev != node_copyfrom_rev)
+              {
+                state_flags |= SVN_CLIENT_COMMIT_ITEM_ADD;
+                state_flags |= SVN_CLIENT_COMMIT_ITEM_IS_COPY;
+                cf_relpath = node_copyfrom_relpath;
+                cf_rev = node_copyfrom_rev;
+              }
+          }
+      }
+    else
+      {
+        node_copyfrom_relpath = NULL;
+        node_copyfrom_rev = SVN_INVALID_REVNUM;
+      }
+    /* Further additions occur in copy mode. */
+    if (copy_mode && !(state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE))
+      {
+        svn_revnum_t dir_rev;
+  
+        if (!copy_mode_root)
+          SVN_ERR(svn_wc__node_get_base_rev(&dir_rev, wc_ctx,
+                                            svn_dirent_dirname(local_abspath,
+                                                               scratch_pool),
+                                            scratch_pool));
 
-  /* Further additions occur in copy mode. */
-  if (copy_mode && !(state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE))
-    {
-      svn_revnum_t dir_rev;
-
-      if (!copy_mode_root)
-        SVN_ERR(svn_wc__node_get_base_rev(&dir_rev, wc_ctx,
-                                          svn_dirent_dirname(local_abspath,
-                                                             scratch_pool),
-                                          scratch_pool));
-
-      if (copy_mode_root || entry_rev != dir_rev)
-        {
-          state_flags |= SVN_CLIENT_COMMIT_ITEM_ADD;
-          if (node_copyfrom_relpath)
-            {
-              state_flags |= SVN_CLIENT_COMMIT_ITEM_IS_COPY;
-              cf_relpath = node_copyfrom_relpath;
-              cf_rev = node_copyfrom_rev;
-            }
-          else if (entry_rev != SVN_INVALID_REVNUM)
-            {
-              state_flags |= SVN_CLIENT_COMMIT_ITEM_IS_COPY;
-              cf_relpath = entry_relpath;
-              cf_rev = entry_rev;
-            }
-        }
-    }
+        if (copy_mode_root || entry_rev != dir_rev)
+          {
+            state_flags |= SVN_CLIENT_COMMIT_ITEM_ADD;
+            if (node_copyfrom_relpath)
+              {
+                state_flags |= SVN_CLIENT_COMMIT_ITEM_IS_COPY;
+                cf_relpath = node_copyfrom_relpath;
+                cf_rev = node_copyfrom_rev;
+              }
+            else if (entry_rev != SVN_INVALID_REVNUM)
+              {
+                state_flags |= SVN_CLIENT_COMMIT_ITEM_IS_COPY;
+                cf_relpath = entry_relpath;
+                cf_rev = entry_rev;
+              }
+          }
+      }
+  }
 
   /* If an add is scheduled to occur, dig around for some more
      information about it. */
