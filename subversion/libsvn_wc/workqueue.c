@@ -414,7 +414,7 @@ svn_wc__wq_add_revert(svn_boolean_t *will_revert,
       svn_node_kind_t on_disk;
 
       SVN_ERR(svn_io_check_path(local_abspath, &on_disk, scratch_pool));
-      reinstall_working = on_disk == svn_node_none;
+      reinstall_working = (on_disk == svn_node_none);
       *will_revert = *will_revert || reinstall_working;
     }
 
@@ -431,7 +431,8 @@ svn_wc__wq_add_revert(svn_boolean_t *will_revert,
     }
 
 
-  if (status == svn_wc__db_status_added)
+  if (! remove_working
+      && status == svn_wc__db_status_added)
     {
       /* When looking at an added, non-replacing node, its entry
          will have to be removed after revert: if not, it'll look
