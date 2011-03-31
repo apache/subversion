@@ -1333,18 +1333,31 @@ verify_revert_depth(svn_wc__db_t *db,
 }
 
 #ifdef SVN_NEW_REVERT
+/* Remove conflict file NAME, which may not exist, associated with
+ * *LOCAL_ABSPATH and set NOTIFY_REQUIRED to TRUE if the file was
+ * present and removed. */
 static svn_error_t *
-remove_conflict_file(const char *name,
+remove_conflict_file(svn_boolean_t *notify_required,
+                     const char *name,
                      const char *local_abspath,
                      apr_pool_t *scratch_pool)
 {
   if (name)
     {
+      /* ### Doesn't work for dir prop rejects.  Perhaps have relpaths
+             in the database? */
       const char *conflict_abspath
         = svn_dirent_join(svn_dirent_dirname(local_abspath, scratch_pool),
                           name, scratch_pool);
-      SVN_ERR(svn_io_remove_file2(conflict_abspath, TRUE, scratch_pool));
+
+      svn_error_t *err = svn_io_remove_file2(conflict_abspath, FALSE,
+                                             scratch_pool);
+      if (err)
+        svn_error_clear(err);
+      else
+        *notify_required = TRUE;
     }
+
   return SVN_NO_ERROR;
 }
 
@@ -1492,10 +1505,14 @@ revert_restore(svn_wc__db_t *db,
       notify_required = TRUE;
     }
 
-  SVN_ERR(remove_conflict_file(conflict_old, local_abspath, scratch_pool));
-  SVN_ERR(remove_conflict_file(conflict_new, local_abspath, scratch_pool));
-  SVN_ERR(remove_conflict_file(conflict_working, local_abspath, scratch_pool));
-  SVN_ERR(remove_conflict_file(prop_reject, local_abspath, scratch_pool));
+  SVN_ERR(remove_conflict_file(&notify_required, conflict_old,
+                               local_abspath, scratch_pool));
+  SVN_ERR(remove_conflict_file(&notify_required, conflict_new,
+                               local_abspath, scratch_pool));
+  SVN_ERR(remove_conflict_file(&notify_required, conflict_working,
+                               local_abspath, scratch_pool));
+  SVN_ERR(remove_conflict_file(&notify_required, prop_reject,
+                               local_abspath, scratch_pool));
 
   if (notify_func && notify_required)
     notify_func(notify_baton,
