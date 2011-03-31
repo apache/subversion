@@ -5806,6 +5806,183 @@ svn_wc__db_read_replaced_children(const apr_array_header_t **children,
   return SVN_NO_ERROR;
 }
 
+/* Baton for check_replace_txn */
+struct check_replace_baton
+{
+  svn_boolean_t *is_replace_root;
+  svn_boolean_t *base_replace;
+  svn_boolean_t is_replace;
+};
+
+/* Helper for svn_wc__db_node_check_replace. Implements
+   svn_wc__db_txn_callback_t */
+static svn_error_t *
+check_replace_txn(void *baton,
+                  svn_wc__db_wcroot_t *wcroot,
+                  const char *local_relpath,
+                  apr_pool_t *scratch_pool)
+{
+  struct check_replace_baton *crb = baton;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  apr_int64_t replaced_op_depth;
+  svn_wc__db_status_t replaced_status;
+
+  /* Our caller initialized the output values in crb to FALSE */
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_NODE_INFO));
+
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  if (!have_row)
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND,
+                             svn_sqlite__reset(stmt),
+                             _("The node '%s' was not found."),
+                             path_for_error_message(wcroot, local_relpath,
+                                                    scratch_pool));
+
+  {
+    svn_wc__db_status_t status;
+
+    status = svn_sqlite__column_token(stmt, 3, presence_map);
+
+    if (status != svn_wc__db_status_normal)
+      return svn_error_return(svn_sqlite__reset(stmt));
+  }
+
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  if (!have_row)
+    return svn_error_return(svn_sqlite__reset(stmt));
+
+  replaced_status = svn_sqlite__column_token(stmt, 3, presence_map);
+
+  /* If the layer below the add describes a not present or a deleted node,
+     this is not a replacement. Deleted can only occur if an ancestor is
+     the delete root. */
+  if (replaced_status != svn_wc__db_status_not_present
+      && replaced_status != svn_wc__db_status_excluded
+      && replaced_status != svn_wc__db_status_absent
+      && replaced_status != svn_wc__db_status_base_deleted)
+    crb->is_replace = TRUE;
+
+  replaced_op_depth = svn_sqlite__column_int64(stmt, 0);
+
+  SVN_DBG(("Found replaced depth %d for %s\n", (int)replaced_op_depth, local_relpath));
+
+  if (crb->base_replace)
+    {
+      apr_int64_t op_depth = svn_sqlite__column_int64(stmt, 0);
+
+      while (op_depth != 0 && have_row)
+        {
+          SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+          if (have_row)
+            op_depth = svn_sqlite__column_int64(stmt, 0);
+        }
+
+      if (have_row && op_depth == 0)
+        {
+          svn_wc__db_status_t base_status;
+
+          base_status = svn_sqlite__column_token(stmt, 3, presence_map);
+                                           
+          *crb->base_replace = (base_status != svn_wc__db_status_not_present);
+        }
+    }
+
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  if (!crb->is_replace_root || !crb->is_replace)
+    return SVN_NO_ERROR;
+
+  SVN_DBG(("Checking op_depths for %s\n", local_relpath));
+
+  if (replaced_status != svn_wc__db_status_base_deleted)
+    {
+      apr_int64_t parent_op_depth;
+    
+      /* Check the current op-depth of the parent to see if we are a replacement
+         root */
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id,
+                                svn_relpath_dirname(local_relpath,
+                                                    scratch_pool)));
+    
+      SVN_ERR(svn_sqlite__step_row(stmt)); /* Parent must exist as 'normal' */
+    
+      parent_op_depth = svn_sqlite__column_int64(stmt, 0);
+    
+      if (parent_op_depth >= replaced_op_depth)
+        {
+          /* Did we replace inside our directory? */
+
+          *crb->is_replace_root = (parent_op_depth == replaced_op_depth);
+          SVN_ERR(svn_sqlite__reset(stmt));
+          return SVN_NO_ERROR;
+        }
+    
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    
+      if (have_row)
+        parent_op_depth = svn_sqlite__column_int64(stmt, 0);
+    
+      SVN_ERR(svn_sqlite__reset(stmt));
+    
+      if (!have_row)
+        *crb->is_replace_root = TRUE; /* Parent is no replacement */
+      else if (parent_op_depth < replaced_op_depth)
+        *crb->is_replace_root = TRUE; /* Parent replaces a lower layer */
+      /*else // No replacement root */
+  }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__db_node_check_replace(svn_boolean_t *is_replace_root,
+                              svn_boolean_t *base_replace,
+                              svn_boolean_t *is_replace,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+  struct check_replace_baton crb;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
+                                             local_abspath,
+                                             scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  if (is_replace_root)
+    *is_replace_root = FALSE;
+  if (is_replace)
+    *is_replace = FALSE;
+  if (base_replace)
+    *base_replace = FALSE;
+
+  if (local_relpath[0] == '\0')
+    return SVN_NO_ERROR; /* Working copy root can't be replaced */
+
+  crb.is_replace_root = is_replace_root;
+  crb.base_replace = base_replace;
+  crb.is_replace = FALSE;
+
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, check_replace_txn, &crb,
+                              scratch_pool));
+
+  if (is_replace)
+    *is_replace = crb.is_replace;
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_wc__db_read_children(const apr_array_header_t **children,

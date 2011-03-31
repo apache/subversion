@@ -1760,6 +1760,27 @@ svn_wc__db_node_hidden(svn_boolean_t *hidden,
                        const char *local_abspath,
                        apr_pool_t *scratch_pool);
 
+/* Checks if a node replaces a node in a different layer. Also check if it
+   replaces a BASE (op_depth 0) node or just a node in a higher layer (a copy).
+   Finally check if this is the root of the replacement, or if the replacement
+   is initiated by the parent node.
+
+   IS_REPLACE_ROOT (if not NULL) is set to TRUE if the node is the root of a
+   replacement; otherwise to FALSE.
+
+   BASE_REPLACE (if not NULL) is set to TRUE if the node directly or indirectly
+   replaces a node in the BASE tree; otherwise to FALSE.
+
+   IS_REPLACE (if not NULL) is set to TRUE if the node directly replaces a node
+   in a lower layer; otherwise to FALSE.
+ */
+svn_error_t *
+svn_wc__db_node_check_replace(svn_boolean_t *is_replace_root,
+                              svn_boolean_t *base_replace,
+                              svn_boolean_t *is_replace,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              apr_pool_t *scratch_pool);
 
 /* ### changelists. return an array, or an iterator interface? how big
    ### are these things? are we okay with an in-memory array? examine other
