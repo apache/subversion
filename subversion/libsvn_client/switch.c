@@ -195,8 +195,9 @@ switch_internal(svn_revnum_t *result_rev,
                                                        target_url, target_rev,
                                                        ctx, pool));
       if (! (yc_path && SVN_IS_VALID_REVNUM(yc_rev)))
-        return svn_error_create(SVN_ERR_CLIENT_UNRELATED_RESOURCES,
-                                NULL, NULL);
+        return svn_error_createf(SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
+                                 _("'%s' shares no common ancestry with '%s'"),
+                                 switch_url, local_abspath);
     }
 
 

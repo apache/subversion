@@ -182,10 +182,10 @@ svn_cl__switch(apr_getopt_t *os,
     {
       if (err->apr_err == SVN_ERR_CLIENT_UNRELATED_RESOURCES)
         return svn_error_createf(SVN_ERR_CLIENT_UNRELATED_RESOURCES, err,
-                                 "Path '%s' does not share common version "
-                                 "control ancestry with the requested switch "
-                                 "location.  Use --ignore-ancestry to disable "
-                                 "this check.", target);
+                                 _("Path '%s' does not share common version "
+                                   "control ancestry with the requested switch "
+                                   "location.  Use --ignore-ancestry to "
+                                   "disable this check."), target);
       return err;
     }
 
