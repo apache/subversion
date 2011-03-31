@@ -1594,7 +1594,9 @@ svn_error_t *
 svn_wc__node_get_commit_status(svn_node_kind_t *kind,
                                svn_boolean_t *added,
                                svn_boolean_t *deleted,
+                               svn_boolean_t *is_replace_root,
                                svn_boolean_t *not_present,
+                               svn_boolean_t *excluded,
                                svn_boolean_t *is_op_root,
                                svn_boolean_t *symlink,
                                svn_revnum_t *revision,
@@ -1638,6 +1640,18 @@ svn_wc__node_get_commit_status(svn_node_kind_t *kind,
     *deleted = (status == svn_wc__db_status_deleted);
   if (not_present)
     *not_present = (status == svn_wc__db_status_not_present);
+  if (excluded)
+    *excluded = (status == svn_wc__db_status_excluded);
+
+  if (is_replace_root)
+    {
+      if (status == svn_wc__db_status_added)
+        SVN_ERR(svn_wc__db_node_check_replace(is_replace_root, NULL, NULL,
+                                              wc_ctx->db, local_abspath,
+                                              scratch_pool));
+      else
+        *is_replace_root = FALSE;
+    }
 
   if (is_op_root)
     {
