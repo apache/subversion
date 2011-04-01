@@ -514,6 +514,12 @@ transform()
         (
           read LINE
           echo "$LINE"
+          read LINE
+          echo "$LINE"
+          read LINE
+          echo "$LINE"
+          read LINE
+          echo "$LINE"
           echo "LD_PRELOAD=\\"$EXISTINGLIBS\\""
           echo "export LD_PRELOAD"
           cat
