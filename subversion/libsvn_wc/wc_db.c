@@ -10010,7 +10010,6 @@ svn_wc__db_get_absent_subtrees(apr_hash_t **absent_subtrees,
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
   svn_sqlite__stmt_t *stmt;
-  const char *wcroot_repos_relpath;
   svn_boolean_t have_row;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
@@ -10018,11 +10017,6 @@ svn_wc__db_get_absent_subtrees(apr_hash_t **absent_subtrees,
                                                 db, local_abspath,
                                                 scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
-
-  SVN_ERR(read_info(NULL, NULL, NULL, &wcroot_repos_relpath, NULL,
-                    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                    wcroot, "", scratch_pool, scratch_pool));
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_ALL_ABSENT_NODES));
   SVN_ERR(svn_sqlite__bindf(stmt, "iss",
