@@ -159,9 +159,9 @@ def cat_skip_uncattable(sbox):
                                        'cat', rho_path, new_file_path)
 
   expected_err3 = expected_err1 + expected_err2 + \
-      ".*\nsvn: E200009: Could not cat all targets because some targets " + \
+      ".*svn: E200009: Could not cat all targets because some targets " + \
       "don't exist\n"
-  expected_err_re = re.compile(expected_err3)
+  expected_err_re = re.compile(expected_err3, re.DOTALL)
 
   exit_code, output, error = svntest.main.run_svn(1, 'cat', rho_path, G_path, new_file_path)
 
