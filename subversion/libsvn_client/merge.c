@@ -4365,7 +4365,7 @@ populate_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
          this until we know it is absolutely necessary, since it requires an
          expensive round trip communication with the server. */
       SVN_ERR(get_full_mergeinfo(
-        &(child->pre_merge_mergeinfo),
+        child->pre_merge_mergeinfo ? NULL : &(child->pre_merge_mergeinfo),
         /* Get implicit only for merge target. */
         (i == 0) ? &(child->implicit_mergeinfo) : NULL,
         &(child->indirect_mergeinfo),
@@ -5391,266 +5391,6 @@ single_file_merge_notify(void *notify_baton,
   notification_receiver(notify_baton, notify, pool);
 }
 
-
-/* A baton for get_mergeinfo_walk_cb. */
-struct get_mergeinfo_walk_baton
-{
-  /* Array of paths that have explicit mergeinfo and/or are switched. */
-  apr_array_header_t *children_with_mergeinfo;
-
-  /* A hash of MERGE_TARGET_ABSPATH's subdirectories' dirents.  Maps
-     const char * absolute working copy paths to dirent hashes as obtained
-     by svn_io_get_dirents3().  Contents are allocated in CB_POOL. */
-  apr_hash_t *subtree_dirents;
-
-  /* A hash to keep track of any subtrees in the merge target which are
-     unexpectedly missing from disk.  Maps const char * absolute working
-     copy paths to the same.  Contents are allocated in CB_POOL. */
-  apr_hash_t *missing_subtrees;
-
-  /* Merge source canonical path. */
-  const char* merge_src_canon_path;
-
-  /* Information on the merge cascaded from do_directory_merge() */
-  const char* merge_target_abspath;
-  const char *source_root_url;
-  const char* url1;
-  const char* url2;
-  svn_revnum_t revision1;
-  svn_revnum_t revision2;
-
-  /* merge depth requested. */
-  svn_depth_t depth;
-
-  /* RA session and client context cascaded from do_directory_merge() */
-  svn_ra_session_t *ra_session;
-  svn_client_ctx_t *ctx;
-
-  /* Pool from which to allocate new elements of CHILDREN_WITH_MERGEINFO. */
-  apr_pool_t *pool;
-
-  /* Pool with a lifetime guaranteed over all the get_mergeinfo_walk_cb
-     callbacks. */
-  apr_pool_t *cb_pool;
-};
-
-/* Helper for the svn_wc__node_found_func_t callback get_mergeinfo_walk_cb().
-
-   Checks for issue #2915 subtrees, i.e. those that the WC thinks are on disk
-   but have been removed due to an OS-level deletion.
-
-   If the supposed working path LOCAL_ABSPATH, of kind KIND, is the root
-   of a missing subtree, then add a (const char *) WC absolute path to
-   (const char *) WC absolute path mapping to MISSING_SUBTREES, where the
-   paths are both a copy of LOCAL_ABSPATH, allocated in RESULT_POOL.
-
-   If LOCAL_ABSPATH is a directory and is not missing from disk, then add
-   a (const char *) WC absolute path to (svn_io_dirent2_t *) dirent mapping
-   to SUBTREE_DIRENTS, again allocated in RESULT_POOL (see
-   svn_io_get_dirents3).
-
-   SCRATCH_POOL is used for temporary allocations.
-
-   Note: Since this is effetively a svn_wc__node_found_func_t callback, it
-   must be called in depth-first order. */
-static svn_error_t *
-record_missing_subtree_roots(const char *local_abspath,
-                             svn_node_kind_t kind,
-                             apr_hash_t *subtree_dirents,
-                             apr_hash_t *missing_subtrees,
-                             apr_pool_t *result_pool,
-                             apr_pool_t *scratch_pool)
-{
-  svn_boolean_t missing_subtree_root = FALSE;
-
-  /* Store the dirents for each directory in SUBTREE_DIRENTS. */
-  if (kind == svn_node_dir)
-    {
-      /* If SUBTREE_DIRENTS is empty LOCAL_ABSPATH is merge target. */
-      if (apr_hash_count(subtree_dirents) == 0
-          || apr_hash_get(subtree_dirents,
-                          svn_dirent_dirname(local_abspath,
-                                             scratch_pool),
-                                             APR_HASH_KEY_STRING))
-        {
-          apr_hash_t *dirents;
-          svn_error_t *err = svn_io_get_dirents3(&dirents, local_abspath,
-                                                 TRUE, result_pool,
-                                                 scratch_pool);
-          if (err)
-            {
-              if (APR_STATUS_IS_ENOENT(err->apr_err)
-                  || SVN__APR_STATUS_IS_ENOTDIR(err->apr_err))
-                {
-                  /* We can't get this directory's dirents, it's missing
-                     from disk. */
-                  svn_error_clear(err);
-                  missing_subtree_root = TRUE;
-                }
-              else
-                {
-                  return err;
-                }
-            }
-          else
-            {
-              apr_hash_set(subtree_dirents,
-                           apr_pstrdup(result_pool, local_abspath),
-                           APR_HASH_KEY_STRING, dirents);
-            }
-        }
-    }
-  else /* kind != svn_node_dir */
-    {
-      /* Is this non-directory missing from disk?  Check LOCAL_ABSPATH's
-         parent's dirents. */
-      apr_hash_t *parent_dirents = apr_hash_get(subtree_dirents,
-                                                svn_dirent_dirname(local_abspath,
-                                                                   scratch_pool),
-                                                APR_HASH_KEY_STRING);
-
-      /* If the parent_dirents is NULL, then LOCAL_ABSPATH is the
-         subtree of a missing subtree.  Since we only report the roots
-         of missing subtrees there is nothing more to do in that case. */
-      if (parent_dirents)
-        {
-          svn_io_dirent2_t *dirent =
-            apr_hash_get(parent_dirents,
-                         svn_dirent_basename(local_abspath, scratch_pool),
-                         APR_HASH_KEY_STRING);
-          if (!dirent)
-            missing_subtree_root = TRUE;
-        }
-    }
-
-  if (missing_subtree_root)
-    {
-      const char *path = apr_pstrdup(result_pool, local_abspath);
-
-      apr_hash_set(missing_subtrees, path,
-                   APR_HASH_KEY_STRING, path);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-/* svn_wc__node_found_func_t callback for get_mergeinfo_paths().
-
-   Given LOCAL_ABSPATH and WB, where WB is struct get_mergeinfo_walk_baton *,
-   if LOCAL_ABSPATH is switched, has explicit working svn:mergeinfo, is
-   missing a child due to a sparse checkout, is absent from disk, or is
-   deleted, then create a svn_client__merge_path_t * representing *PATH,
-   allocated in BATON->POOL, and push it onto the
-   WB->CHILDREN_WITH_MERGEINFO array. */
-static svn_error_t *
-get_mergeinfo_walk_cb(const char *local_abspath,
-                      svn_node_kind_t kind,
-                      void *walk_baton,
-                      apr_pool_t *scratch_pool)
-{
-  struct get_mergeinfo_walk_baton *wb = walk_baton;
-  const svn_string_t *propval = NULL;
-  svn_boolean_t has_mergeinfo = FALSE;
-  svn_boolean_t path_is_merge_target =
-    !svn_path_compare_paths(local_abspath, wb->merge_target_abspath);
-  const char *abs_parent_path = svn_dirent_dirname(local_abspath,
-                                                   scratch_pool);
-  svn_depth_t depth;
-  svn_boolean_t is_present;
-  svn_boolean_t deleted;
-  svn_boolean_t absent;
-  svn_boolean_t switched;
-  svn_boolean_t file_external;
-  svn_boolean_t immediate_child_dir;
-
-  /* TODO(#2843) How to deal with a excluded item on merge? */
-
-  SVN_ERR(svn_wc__get_mergeinfo_walk_info(&is_present, &deleted, &absent,
-                                          &switched, &file_external, &depth,
-                                          wb->ctx->wc_ctx, local_abspath,
-                                          scratch_pool));
-
-  /* Ignore LOCAL_ABSPATH if its parent thinks it exists, but it is not
-     actually present. */
-  if (!is_present)
-    return SVN_NO_ERROR;
-
-  if (! (deleted || absent))
-    {
-      SVN_ERR(svn_wc_prop_get2(&propval, wb->ctx->wc_ctx, local_abspath,
-                               SVN_PROP_MERGEINFO, scratch_pool, scratch_pool));
-      if (propval)
-        has_mergeinfo = TRUE;
-      
-      /* Make sure what the WC thinks is present on disk really is. */
-      SVN_ERR(record_missing_subtree_roots(local_abspath, kind,
-                                           wb->subtree_dirents,
-                                           wb->missing_subtrees,
-                                           wb->cb_pool,
-                                           scratch_pool));
-    }
-
-  immediate_child_dir = ((wb->depth == svn_depth_immediates)
-                         &&(kind == svn_node_dir)
-                         && (strcmp(abs_parent_path,
-                                    wb->merge_target_abspath) == 0));
-
-  /* Store PATHs with explict mergeinfo, which are switched, are missing
-     children due to a sparse checkout, are scheduled for deletion are absent
-     from the WC, are first level sub directories relative to merge target if
-     depth is immediates, and/or are file children of the merge target if
-     depth is files. */
-  if (path_is_merge_target
-      || has_mergeinfo
-      || deleted
-      || (switched && !file_external)
-      || depth == svn_depth_empty
-      || depth == svn_depth_files
-      || absent
-      || immediate_child_dir
-      || ((wb->depth == svn_depth_files) &&
-          (kind == svn_node_file) &&
-          (strcmp(abs_parent_path, wb->merge_target_abspath) == 0))
-          )
-    {
-      svn_client__merge_path_t *child =
-        apr_pcalloc(wb->pool, sizeof(*child));
-      child->abspath = apr_pstrdup(wb->pool, local_abspath);
-      child->missing_child = (depth == svn_depth_empty
-                              || depth == svn_depth_files
-                              || ((wb->depth == svn_depth_immediates) &&
-                                  (kind == svn_node_dir) &&
-                                  (strcmp(abs_parent_path,
-                                          wb->merge_target_abspath) == 0)));
-      child->switched = switched;
-      child->absent = absent;
-      child->scheduled_for_deletion = deleted;
-
-      if (propval)
-        SVN_ERR(svn_mergeinfo__string_has_noninheritable(
-          &(child->has_noninheritable), propval->data, scratch_pool));
-
-      /* A little trickery: If PATH doesn't have any mergeinfo or has
-         only inheritable mergeinfo, we still describe it as having
-         non-inheritable mergeinfo if it is missing a child.  Why?  Because
-         the mergeinfo we'll add to PATH as a result of the merge will need
-         to be non-inheritable (since PATH is missing children) and doing
-         this now allows get_mergeinfo_paths() to properly account for PATH's
-         other children. */
-      if (!child->has_noninheritable
-          && (depth == svn_depth_empty
-              || depth == svn_depth_files))
-        child->has_noninheritable = TRUE;
-
-      child->immediate_child_dir = immediate_child_dir;
-
-      APR_ARRAY_PUSH(wb->children_with_mergeinfo,
-                     svn_client__merge_path_t *) = child;
-    }
-
-  return SVN_NO_ERROR;
-}
-
 /* Compare two svn_client__merge_path_t elements **A and **B, given the
    addresses of pointers to them. Return an integer less than, equal to, or
    greater than zero if A sorts before, the same as, or after B, respectively.
@@ -5809,6 +5549,87 @@ insert_parent_and_sibs_of_sw_absent_del_subtree(
   return SVN_NO_ERROR;
 }
 
+/* pre_merge_status_cb's baton */
+struct pre_merge_status_baton_t
+{
+  /* const char *absolute_wc_path to svn_depth_t * mapping for depths
+     of empty, immediates, and files. */
+  apr_hash_t *shallow_subtrees;
+
+  /* const char *absolute_wc_path to the same, for all paths missing
+     from the working copy. */
+  apr_hash_t *missing_subtrees;
+
+  /* const char *absolute_wc_path const char * repos relative path, describing
+     the root of each switched subtree in the working copy and the repository
+     relative path it is switched to. */
+  apr_hash_t *switched_subtrees;
+
+  /* A pool to allocate additions to the above hashes in. */
+  apr_pool_t *pool;
+};
+
+/* A svn_client_status_func_t callback used by get_mergeinfo_paths to gather
+   all switched, absent, and missing subtrees under a merge target. */
+static svn_error_t *
+pre_merge_status_cb(void *baton,
+                    const char *path,
+                    const svn_client_status_t *status,
+                    apr_pool_t *pool)
+{
+  struct pre_merge_status_baton_t *pmsb = baton;
+
+  if (status->switched)
+    {
+      apr_hash_set(pmsb->switched_subtrees,
+                   apr_pstrdup(pmsb->pool, status->local_abspath),
+                   APR_HASH_KEY_STRING,
+                   apr_pstrdup(pmsb->pool, status->repos_relpath));
+    }
+
+  if (status->depth == svn_depth_empty
+      || status->depth == svn_depth_files)
+    {
+      const char *local_abspath = apr_pstrdup(pmsb->pool,
+                                              status->local_abspath);
+      svn_depth_t *depth = apr_pcalloc(pmsb->pool, sizeof *depth);
+
+      *depth = status->depth;
+      apr_hash_set(pmsb->shallow_subtrees,
+                   local_abspath,
+                   APR_HASH_KEY_STRING,
+                   depth);
+    }
+
+  if (status->node_status == svn_wc_status_missing)
+    {
+      svn_boolean_t new_missing_root = TRUE;
+      apr_hash_index_t *hi;
+      const char *local_abspath = apr_pstrdup(pmsb->pool,
+                                              status->local_abspath);
+
+      for (hi = apr_hash_first(pool, pmsb->missing_subtrees);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+          const char *missing_root_path = svn__apr_hash_index_key(hi);
+          
+          if (svn_dirent_is_ancestor(missing_root_path,
+                                     status->local_abspath))
+            {
+              new_missing_root = FALSE;
+              break;          
+            }
+        }
+
+      if (new_missing_root)
+        apr_hash_set(pmsb->missing_subtrees, local_abspath,
+                     APR_HASH_KEY_STRING, local_abspath);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Helper for do_directory_merge()
 
    If HONOR_MERGEINFO is TRUE, then perform a depth first walk of the working
@@ -5836,6 +5657,8 @@ insert_parent_and_sibs_of_sw_absent_del_subtree(
         MERGE_CMD_BATON->TARGET_ABSPATH and DEPTH is svn_depth_immediates.
      9) Path is an immediate *file* child of MERGE_CMD_BATON->TARGET_ABSPATH
         and DEPTH is svn_depth_files.
+     10) Path is at a depth of 'empty' or 'files'.
+     11) Path is missing from disk (e.g. due to an OS-level deletion).
 
    If HONOR_MERGEINFO is FALSE, then create an svn_client__merge_path_t * only
    for MERGE_CMD_BATON->TARGET_ABSPATH (i.e. only criteria 7 is applied).
@@ -5878,37 +5701,88 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                     apr_pool_t *scratch_pool)
 {
   int i;
-  apr_pool_t *iterpool;
-  struct get_mergeinfo_walk_baton wb = { 0 };
+  apr_pool_t *iterpool = NULL;
+  apr_hash_t *subtrees_with_mergeinfo;
+  apr_hash_t *absent_subtrees;
+  apr_hash_t *switched_subtrees;
+  apr_hash_t *shallow_subtrees;
+  apr_hash_t *missing_subtrees;
+  struct pre_merge_status_baton_t pre_merge_status_baton;
+  svn_opt_revision_t working_revision;
 
-  wb.children_with_mergeinfo = children_with_mergeinfo;
-  wb.cb_pool = svn_pool_create(scratch_pool);
-  wb.subtree_dirents = apr_hash_make(wb.cb_pool);
-  wb.missing_subtrees = apr_hash_make(wb.cb_pool);
-  wb.merge_src_canon_path = merge_src_canon_path;
-  wb.merge_target_abspath = merge_cmd_baton->target_abspath;
-  wb.source_root_url = source_root_url;
-  wb.url1 = url1;
-  wb.url2 = url2;
-  wb.revision1 = revision1;
-  wb.revision2 = revision2;
-  wb.depth = depth;
-  wb.ra_session = ra_session;
-  wb.ctx = merge_cmd_baton->ctx;
-  wb.pool = result_pool;
+  working_revision.kind = svn_opt_revision_working;
 
-  /* Cover cases 1), 2), and 6), 7), 8), 9), and 10) by walking the WC to get
-     all paths which have mergeinfo and/or are switched or are absent from
-     disk or is the target of the merge. */
-  SVN_ERR(svn_wc__node_walk_children(merge_cmd_baton->ctx->wc_ctx,
-                                     merge_cmd_baton->target_abspath, TRUE,
-                                     get_mergeinfo_walk_cb, &wb,
-                                     honor_mergeinfo ? depth : svn_depth_empty,
-                                     merge_cmd_baton->ctx->cancel_func,
-                                     merge_cmd_baton->ctx->cancel_baton,
-                                     scratch_pool));
+  /* Case 1: Subtrees with explicit mergeinfo. */
+  SVN_ERR(svn_client_propget3(&subtrees_with_mergeinfo, SVN_PROP_MERGEINFO,
+                              merge_cmd_baton->target_abspath, &working_revision,
+                              &working_revision, NULL, depth, NULL,
+                              merge_cmd_baton->ctx, scratch_pool));
+  
+  if (subtrees_with_mergeinfo)
+    {
+      apr_hash_index_t *hi;
 
-  if (apr_hash_count(wb.missing_subtrees))
+      if (!iterpool)
+          iterpool = svn_pool_create(scratch_pool);
+
+      for (hi = apr_hash_first(scratch_pool, subtrees_with_mergeinfo);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+          svn_mergeinfo_t child_pre_merge_mergeinfo;
+          const char *wc_path = svn__apr_hash_index_key(hi);
+          svn_string_t *mergeinfo_string = svn__apr_hash_index_val(hi);
+          svn_client__merge_path_t *mergeinfo_child =
+            apr_pcalloc(result_pool, sizeof(*mergeinfo_child));
+
+          svn_pool_clear(iterpool);
+          mergeinfo_child->abspath = apr_pstrdup(result_pool, wc_path);
+          SVN_ERR(svn_mergeinfo_parse(&child_pre_merge_mergeinfo,
+                                      mergeinfo_string->data, result_pool));
+
+          /* Stash this child's pre-existing mergeinfo. */
+          mergeinfo_child->pre_merge_mergeinfo = child_pre_merge_mergeinfo;
+
+          /* Note if this child has non-inheritable mergeinfo */
+          SVN_ERR(svn_mergeinfo__string_has_noninheritable(
+            &(mergeinfo_child->has_noninheritable), mergeinfo_string->data,
+            iterpool));
+
+          insert_child_to_merge(children_with_mergeinfo, mergeinfo_child,
+                                result_pool);
+        }
+
+      /* Sort CHILDREN_WITH_MERGEINFO by each child's path (i.e. as per
+         compare_merge_path_t_as_paths).  Any subsequent insertions of new
+         children with insert_child_to_merge() require this ordering. */
+      qsort(children_with_mergeinfo->elts,
+            children_with_mergeinfo->nelts,
+            children_with_mergeinfo->elt_size,
+            compare_merge_path_t_as_paths);
+    }
+
+  /* Case 2: Switched subtrees
+     Case 10: Paths at depths of 'empty' or 'files'
+     Case 11: Paths missing from disk */
+  switched_subtrees = apr_hash_make(scratch_pool);
+  pre_merge_status_baton.switched_subtrees = switched_subtrees;
+  shallow_subtrees = apr_hash_make(scratch_pool);
+  pre_merge_status_baton.shallow_subtrees = shallow_subtrees;
+  missing_subtrees = apr_hash_make(scratch_pool);
+  pre_merge_status_baton.missing_subtrees = missing_subtrees;
+  pre_merge_status_baton.pool = scratch_pool;
+  SVN_ERR(svn_client_status5(NULL, merge_cmd_baton->ctx,
+                             merge_cmd_baton->target_abspath,
+                             &working_revision, depth,
+                             TRUE, FALSE, TRUE, TRUE, FALSE, NULL,
+                             pre_merge_status_cb,
+                             &pre_merge_status_baton,
+                             scratch_pool));
+
+  /* Issue #2915: Raise an error describing the roots of any missing
+     subtrees, i.e. those that the WC thinks are on disk but have been
+     removed outside of Subversion. */
+  if (apr_hash_count(missing_subtrees))
     {
       apr_hash_index_t *hi;
       svn_stringbuf_t *missing_subtree_err_buf =
@@ -5918,7 +5792,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
 
       iterpool = svn_pool_create(scratch_pool);
 
-      for (hi = apr_hash_first(scratch_pool, wb.missing_subtrees);
+      for (hi = apr_hash_first(scratch_pool, missing_subtrees);
            hi;
            hi = apr_hash_next(hi))
         {
@@ -5929,25 +5803,189 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
           svn_stringbuf_appendcstr(missing_subtree_err_buf, "\n");
         }
 
-    return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE,
-                            NULL, missing_subtree_err_buf->data);
-  }
+      return svn_error_create(SVN_ERR_CLIENT_NOT_READY_TO_MERGE,
+                              NULL, missing_subtree_err_buf->data);
+    }
 
-  /* This pool is only needed across all the callbacks to detect
-     missing subtrees. */
-  svn_pool_destroy(wb.cb_pool);
+  if (apr_hash_count(switched_subtrees))
+    {
+      apr_hash_index_t *hi;
 
-  /* CHILDREN_WITH_MERGEINFO must be in depth first order, but the node
-     walk code returns nodes in a non particular order.  Also, we may need
-     to add elements to the array to cover case 3) through 5) from the
-     docstring.  If so, it is more efficient to find and insert these paths
-     if the sibling paths are in a guaranteed depth-first order.  For the
-     first reason we sort the array, for the second reason we do it now
-     rather than at the end of this function. */
-  qsort(children_with_mergeinfo->elts,
-        children_with_mergeinfo->nelts,
-        children_with_mergeinfo->elt_size,
-        compare_merge_path_t_as_paths);
+      for (hi = apr_hash_first(scratch_pool, switched_subtrees);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+           const char *wc_path = svn__apr_hash_index_key(hi);
+           svn_client__merge_path_t *child = get_child_with_mergeinfo(
+             children_with_mergeinfo, wc_path);
+
+           if (child)
+             {
+               child->switched = TRUE;
+             }
+           else
+             {
+               svn_client__merge_path_t *switched_child =
+                 apr_pcalloc(result_pool, sizeof(*switched_child));
+               switched_child->abspath = apr_pstrdup(result_pool, wc_path);
+               switched_child->switched = TRUE;
+               insert_child_to_merge(children_with_mergeinfo, switched_child,
+                                     result_pool);
+             }
+        }
+    }
+  
+  if (apr_hash_count(shallow_subtrees))
+    {
+      apr_hash_index_t *hi;
+
+      for (hi = apr_hash_first(scratch_pool, shallow_subtrees);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+           svn_boolean_t new_shallow_child = FALSE;
+           const char *wc_path = svn__apr_hash_index_key(hi);
+           svn_depth_t *child_depth = svn__apr_hash_index_val(hi);
+           svn_client__merge_path_t *shallow_child = get_child_with_mergeinfo(
+             children_with_mergeinfo, wc_path);
+
+           if (shallow_child)
+             {
+               if (*child_depth == svn_depth_empty
+                   || *child_depth == svn_depth_files)
+                 shallow_child->missing_child = TRUE;
+             }
+           else
+             {
+               shallow_child = apr_pcalloc(result_pool,
+                                           sizeof(*shallow_child));
+               new_shallow_child = TRUE;
+               shallow_child->abspath = apr_pstrdup(result_pool, wc_path);
+
+               if (*child_depth == svn_depth_empty
+                   || *child_depth == svn_depth_files)
+                 shallow_child->missing_child = TRUE;
+             }
+
+          /* A little trickery: If PATH doesn't have any mergeinfo or has
+             only inheritable mergeinfo, we still describe it as having
+             non-inheritable mergeinfo if it is missing a child due to
+             a shallow depth.  Why? Because the mergeinfo we'll add to PATH
+             to describe the merge must be non-inheritable, so PATH's missing
+             children don't inherit it.  Marking these PATHs as non-
+             inheritable allows the logic for case 3 to properly account
+             for PATH's children. */
+          if (!shallow_child->has_noninheritable
+              && (*child_depth == svn_depth_empty
+                  || *child_depth == svn_depth_files))
+            {
+              shallow_child->has_noninheritable = TRUE;
+            }
+
+          if (new_shallow_child)
+            insert_child_to_merge(children_with_mergeinfo, shallow_child,
+                                  result_pool);
+       }
+    }
+
+  /* Case 6: Paths absent from disk due to an authz restrictions. */
+  SVN_ERR(svn_wc__get_absent_subtrees(&absent_subtrees,
+                                      merge_cmd_baton->ctx->wc_ctx,
+                                      merge_cmd_baton->target_abspath,
+                                      result_pool, scratch_pool));
+  if (absent_subtrees)
+    {
+      apr_hash_index_t *hi;
+
+      for (hi = apr_hash_first(scratch_pool, absent_subtrees);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+           const char *wc_path = svn__apr_hash_index_key(hi);
+           svn_client__merge_path_t *child = get_child_with_mergeinfo(
+             children_with_mergeinfo, wc_path);
+
+           if (child)
+             {
+               child->absent = TRUE;
+             }
+           else
+             {
+               svn_client__merge_path_t *absent_child =
+                 apr_pcalloc(result_pool, sizeof(*absent_child));
+               absent_child->abspath = apr_pstrdup(result_pool, wc_path);
+               absent_child->absent = TRUE;
+               insert_child_to_merge(children_with_mergeinfo, absent_child,
+                                     result_pool);
+             }
+        }
+    }
+
+  /* Case 7: The merge target MERGE_CMD_BATON->TARGET_ABSPATH is always
+     present. */
+  if (!get_child_with_mergeinfo(children_with_mergeinfo,
+                                merge_cmd_baton->target_abspath))
+    {
+      svn_client__merge_path_t *target_child =
+        apr_pcalloc(result_pool, sizeof(*target_child));
+      target_child->abspath = apr_pstrdup(result_pool,
+                                          merge_cmd_baton->target_abspath);
+      insert_child_to_merge(children_with_mergeinfo, target_child,
+                            result_pool);
+    }
+
+  /* Case 8: Path is an immediate *directory* child of
+     MERGE_CMD_BATON->TARGET_ABSPATH and DEPTH is svn_depth_immediates.
+     
+     Case 9: Path is an immediate *file* child of
+     MERGE_CMD_BATON->TARGET_ABSPATH and DEPTH is svn_depth_files. */
+  if (depth == svn_depth_immediates || depth == svn_depth_files)
+    {
+      int i;
+      const apr_array_header_t *immediate_children;
+
+      SVN_ERR(svn_wc__node_get_children_of_working_node(
+        &immediate_children, merge_cmd_baton->ctx->wc_ctx,
+        merge_cmd_baton->target_abspath, FALSE, scratch_pool, scratch_pool));
+      
+      if (!iterpool)
+        iterpool = svn_pool_create(scratch_pool);
+
+      for (i = 0; i < immediate_children->nelts; i++)
+        {
+          const char *immediate_child_abspath =
+            APR_ARRAY_IDX(immediate_children, i, const char *);
+          svn_node_kind_t immediate_child_kind;
+
+          svn_pool_clear(iterpool);
+          SVN_ERR(svn_wc_read_kind(&immediate_child_kind,
+                                   merge_cmd_baton->ctx->wc_ctx,
+                                   immediate_child_abspath, FALSE,
+                                   iterpool));
+          if ((immediate_child_kind == svn_node_dir
+               && depth == svn_depth_immediates)
+              || (immediate_child_kind == svn_node_file
+                  && depth == svn_depth_files))
+            {
+              if (!get_child_with_mergeinfo(children_with_mergeinfo,
+                                            immediate_child_abspath))
+                {
+                  svn_client__merge_path_t *immediate_child =
+                    apr_pcalloc(result_pool, sizeof(*immediate_child));
+
+                  immediate_child->abspath =
+                    apr_pstrdup(result_pool, immediate_child_abspath);
+
+                  if (immediate_child_kind == svn_node_dir
+                      && depth == svn_depth_immediates)
+                    immediate_child->immediate_child_dir = TRUE;
+
+                  insert_child_to_merge(children_with_mergeinfo,
+                                        immediate_child, result_pool);
+                }
+            }
+        }
+    }
 
   /* If DEPTH isn't empty then cover cases 3), 4), and 5), possibly adding
      elements to CHILDREN_WITH_MERGEINFO. */

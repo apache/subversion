@@ -10000,6 +10000,56 @@ svn_wc__db_has_switched_subtrees(svn_boolean_t *is_switched,
                                                 scratch_pool));
 }
 
+svn_error_t *
+svn_wc__db_get_absent_subtrees(apr_hash_t **absent_subtrees,
+                               svn_wc__db_t *db,
+                               const char *local_abspath,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+  svn_sqlite__stmt_t *stmt;
+  const char *wcroot_repos_relpath;
+  svn_boolean_t have_row;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
+                                                db, local_abspath,
+                                                scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  SVN_ERR(read_info(NULL, NULL, NULL, &wcroot_repos_relpath, NULL,
+                    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                    wcroot, "", scratch_pool, scratch_pool));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_ALL_ABSENT_NODES));
+  SVN_ERR(svn_sqlite__bindf(stmt, "iss",
+                            wcroot->wc_id,
+                            local_relpath,
+                            construct_like_arg(local_relpath,
+                                               scratch_pool)));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  if (have_row)
+    *absent_subtrees = apr_hash_make(result_pool);
+  else
+    *absent_subtrees = NULL;
+
+  while (have_row)
+    {
+      const char *abs_path =
+        svn_dirent_join(wcroot->abspath,
+                        svn_sqlite__column_text(stmt, 0, scratch_pool),
+                        result_pool);
+      apr_hash_set(*absent_subtrees, abs_path, APR_HASH_KEY_STRING, abs_path);
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+
+  SVN_ERR(svn_sqlite__reset(stmt));
+  return SVN_NO_ERROR;
+}
 
 /* Like svn_wc__db_has_local_mods(),
  * but accepts a WCROOT/LOCAL_RELPATH pair.

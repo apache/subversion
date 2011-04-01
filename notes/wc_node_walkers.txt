@@ -33,13 +33,6 @@ subversion/libsvn_client/info.c
      callback it drives peeks back into the WC database many, many
      times per node.
 
-subversion/libsvn_client/merge.c
-
-   get_mergeinfo_paths() - Crawl a tree (up to specified depth),
-     locating children of a given directory for which the parent's
-     mergeinfo cannot be naively inherited and storing info about
-     those children in an array.  No notification required.
-
 subversion/libsvn_client/prop_commands.c
 
    set_props_cb() - Crawl a tree (up to specified depth) setting a
