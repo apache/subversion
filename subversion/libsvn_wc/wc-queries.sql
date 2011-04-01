@@ -909,10 +909,9 @@ CREATE UNIQUE INDEX temp__node_props_cache_unique
 SELECT local_relpath, kind, properties FROM temp__node_props_cache
 ORDER BY local_relpath
 
-/* Perhaps revert log would be a better term? */
--- STMT_CREATE_REVERT_CACHE
-DROP TABLE IF EXISTS revert_cache;
-CREATE TEMPORARY TABLE revert_cache (
+-- STMT_CREATE_REVERT_LIST
+DROP TABLE IF EXISTS revert_list;
+CREATE TEMPORARY TABLE revert_list (
    local_relpath TEXT PRIMARY KEY,
    conflict_old TEXT,
    conflict_new TEXT,
@@ -920,18 +919,19 @@ CREATE TEMPORARY TABLE revert_cache (
    prop_reject TEXT,
    notify INTEGER
    );
-DROP TRIGGER IF EXISTS trigger_revert_cache_nodes;
-CREATE TEMPORARY TRIGGER trigger_revert_cache_nodes
+CREATE UNIQUE INDEX revert_list_index ON revert_list(local_relpath);
+DROP TRIGGER IF EXISTS   trigger_revert_list_nodes;
+CREATE TEMPORARY TRIGGER trigger_revert_list_nodes
 BEFORE DELETE ON nodes
 BEGIN
-   INSERT OR REPLACE INTO revert_cache(local_relpath, notify)
+   INSERT OR REPLACE INTO revert_list(local_relpath, notify)
    SELECT OLD.local_relpath, 1;
 END;
-DROP TRIGGER IF EXISTS trigger_revert_cache_actual;
-CREATE TEMPORARY TRIGGER trigger_revert_cache_actual_delete
+DROP TRIGGER IF EXISTS   trigger_revert_list_actual_delete;
+CREATE TEMPORARY TRIGGER trigger_revert_list_actual_delete
 BEFORE DELETE ON actual_node
 BEGIN
-   INSERT OR REPLACE INTO revert_cache(local_relpath, conflict_old,
+   INSERT OR REPLACE INTO revert_list(local_relpath, conflict_old,
                                        conflict_new, conflict_working,
                                        prop_reject, notify)
    SELECT OLD.local_relpath,
@@ -939,11 +939,11 @@ BEGIN
           OLD.prop_reject,
           CASE WHEN OLD.properties IS NOT NULL THEN 1 ELSE NULL END;
 END;
-DROP TRIGGER IF EXISTS trigger_revert_cache_update;
-CREATE TEMPORARY TRIGGER trigger_revert_cache_actual_update
+DROP TRIGGER IF EXISTS   trigger_revert_list_actual_update;
+CREATE TEMPORARY TRIGGER trigger_revert_list_actual_update
 BEFORE UPDATE ON actual_node
 BEGIN
-   INSERT OR REPLACE INTO revert_cache(local_relpath, conflict_old,
+   INSERT OR REPLACE INTO revert_list(local_relpath, conflict_old,
                                        conflict_new, conflict_working,
                                        prop_reject, notify)
    SELECT OLD.local_relpath,
@@ -952,20 +952,28 @@ BEGIN
           CASE WHEN OLD.properties IS NOT NULL THEN 1 ELSE NULL END;
 END
 
--- STMT_DROP_REVERT_CACHE_TRIGGERS
-DROP TRIGGER IF EXISTS trigger_revert_cache_nodes;
-DROP TRIGGER IF EXISTS trigger_revert_cache_actual_delete;
-DROP TRIGGER IF EXISTS trigger_revert_cache_actual_update;
+-- STMT_DROP_REVERT_LIST_TRIGGERS
+DROP TRIGGER IF EXISTS trigger_revert_list_nodes;
+DROP TRIGGER IF EXISTS trigger_revert_list_actual_delete;
+DROP TRIGGER IF EXISTS trigger_revert_list_actual_update
 
--- STMT_SELECT_REVERT_CACHE
+-- STMT_SELECT_REVERT_LIST
 SELECT conflict_old, conflict_new, conflict_working, prop_reject, notify
-FROM revert_cache
+FROM revert_list
 WHERE local_relpath = ?1
 
--- STMT_SELECT_REVERT_CACHE_RECURSIVE
-SELECT local_relpath, conflict_old, conflict_new, conflict_working, prop_reject
-FROM revert_cache
-WHERE local_relpath LIKE ?1 ESCAPE '#' ORDER BY local_relpath
+-- STMT_DELETE_REVERT_LIST
+DELETE FROM revert_list WHERE local_relpath = ?1
+
+-- STMT_SELECT_REVERT_LIST_RECURSIVE
+SELECT local_relpath, notify
+FROM revert_list
+WHERE local_relpath = ?1 or local_relpath LIKE ?2 ESCAPE '#'
+ORDER BY local_relpath
+
+-- STMT_DELETE_REVERT_LIST_RECURSIVE
+DELETE FROM revert_list
+WHERE local_relpath = ?1 OR local_relpath LIKE ?2 ESCAPE '#'
 
 
 /* ------------------------------------------------------------------------- */

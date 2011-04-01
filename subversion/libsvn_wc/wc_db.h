@@ -1248,10 +1248,8 @@ svn_wc__db_op_revert_actual(svn_wc__db_t *db,
  *
  * At present only depth=empty and depth=infinity are supported.
  *
- * This function populates the revert cache that can be queried to
+ * This function populates the revert list that can be queried to
  * determine what was reverted.
- *
- * ### Need a way to drop the cache.
  */
 svn_error_t *
 svn_wc__db_op_revert(svn_wc__db_t *db,
@@ -1260,21 +1258,37 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool);
 
-/* Query the revert cache for LOCAL_ABSPATH and set *REVERTED if the
+/* Query the revert list for LOCAL_ABSPATH and set *REVERTED if the
  * path was reverted.  Set *CONFLICT_OLD, *CONFLICT_NEW,
  * *CONFLICT_WORKING and *PROP_REJECT to the names of the conflict
  * files, or NULL if the names are not stored.
+ *
+ * Removes the row for LOCAL_ABSPATH from the revert list.
  */
 svn_error_t *
-svn_wc__db_reverted(svn_boolean_t *reverted,
-                    const char **conflict_old,
-                    const char **conflict_new,
-                    const char **conflict_working,
-                    const char **prop_reject,
-                    svn_wc__db_t *db,
-                    const char *local_abspath,
-                    apr_pool_t *result_pool,
-                    apr_pool_t *scratch_pool);
+svn_wc__db_revert_list_read(svn_boolean_t *reverted,
+                            const char **conflict_old,
+                            const char **conflict_new,
+                            const char **conflict_working,
+                            const char **prop_reject,
+                            svn_wc__db_t *db,
+                            const char *local_abspath,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
+/* Make revert notifications for all paths in the revert list that are
+ * equal to LOCAL_ABSPATH or below LOCAL_ABSPATH.
+ *
+ * Removes all the corresponding rows from the revert list.
+ *
+ * ### Pass in cancel_func?
+ */
+svn_error_t *
+svn_wc__db_revert_list_notify(svn_wc_notify_func2_t notify_func,
+                              void *notify_baton,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              apr_pool_t *scratch_pool);
 
 
 /* Return a hash @a *tree_conflicts of all the children of @a
