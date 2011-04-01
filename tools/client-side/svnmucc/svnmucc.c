@@ -922,6 +922,7 @@ main(int argc, const char **argv)
                                                  pool);
           if (err)
             handle_error(err, pool);
+          break;
         case 'h':
           usage(pool, EXIT_SUCCESS);
         }
