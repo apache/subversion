@@ -347,8 +347,7 @@ svn_cmdline_fputs(const char *string, FILE* stream, apr_pool_t *pool)
             return svn_error_wrap_apr(apr_get_os_error(), _("Write error"));
         }
       else
-        return svn_error_create
-          (SVN_ERR_IO_WRITE_ERROR, NULL, NULL);
+        return svn_error_create(SVN_ERR_IO_WRITE_ERROR, NULL, NULL);
     }
 
   return SVN_NO_ERROR;
