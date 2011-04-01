@@ -2739,8 +2739,8 @@ def ls_multiple_and_non_existent_targets(sbox):
                                         0, 'ls', alpha, beta)
 
     # One non-existing target
-    expected_err = ".*W155010.*\n.*\n.*E200009.*"
-    expected_err_re = re.compile(expected_err)
+    expected_err = ".*W155010.*\n.*E200009.*"
+    expected_err_re = re.compile(expected_err, re.DOTALL)
 
     exit_code, output, error = svntest.main.run_svn(1, 'ls', alpha, 
                                                     non_existent_path, beta)
@@ -2762,8 +2762,8 @@ def ls_multiple_and_non_existent_targets(sbox):
                                         0, 'ls', alpha, beta)
 
     # One non-existing target
-    expected_err = ".*W160013.*\n.*\n.*E200009.*"
-    expected_err_re = re.compile(expected_err)
+    expected_err = ".*W160013.*\n.*E200009.*"
+    expected_err_re = re.compile(expected_err, re.DOTALL)
 
     exit_code, output, error = svntest.main.run_svn(1, 'ls', alpha, 
                                                     non_existent_url, beta)
@@ -2792,8 +2792,8 @@ def add_multiple_targets(sbox):
   svntest.main.file_write(file2, "file2 contents", 'w+')
 
   # One non-existing target
-  expected_err = ".*W155010.*\n.*\n.*E200009.*"
-  expected_err_re = re.compile(expected_err)
+  expected_err = ".*W155010.*\n.*E200009.*"
+  expected_err_re = re.compile(expected_err, re.DOTALL)
 
   # Build expected state
   expected_output = wc.State(wc_dir, {
@@ -2834,8 +2834,8 @@ def info_multiple_targets(sbox):
                                         0, 'info', alpha, beta)
 
     # One non-existing target
-    expected_err = ".*W155010.*\n\n.*\n.*E200009.*"
-    expected_err_re = re.compile(expected_err)
+    expected_err = ".*W155010.*\n\n.*E200009.*"
+    expected_err_re = re.compile(expected_err, re.DOTALL)
 
     exit_code, output, error = svntest.main.run_svn(1, 'info', alpha, 
                                                     non_existent_path, beta)
@@ -2857,8 +2857,8 @@ def info_multiple_targets(sbox):
                                         0, 'info', alpha, beta)
 
     # One non-existing target
-    expected_err = ".*W170000.*\n\n.*\n.*E200009.*"
-    expected_err_re = re.compile(expected_err)
+    expected_err = ".*W170000.*\n\n.*E200009.*"
+    expected_err_re = re.compile(expected_err, re.DOTALL)
 
     exit_code, output, error = svntest.main.run_svn(1, 'info', alpha, 
                                                     non_existent_url, beta)
@@ -2891,8 +2891,8 @@ def blame_multiple_targets(sbox):
       "     2    jrandom New contents for iota\n",
       ]
 
-    expected_err = ".*W155010.*\n.*\n.*E200009.*"
-    expected_err_re = re.compile(expected_err)
+    expected_err = ".*W155010.*\n.*E200009.*"
+    expected_err_re = re.compile(expected_err, re.DOTALL)
 
     exit_code, output, error = svntest.main.run_svn(1, 'blame', 
                                                     non_existent, iota)
@@ -2918,8 +2918,8 @@ def blame_multiple_targets(sbox):
       "     2    jrandom New contents for iota\n",
       ]
 
-    expected_err = ".*(W160017|W160013).*\n.*\n.*E200009.*"
-    expected_err_re = re.compile(expected_err)
+    expected_err = ".*(W160017|W160013).*\n.*E200009.*"
+    expected_err_re = re.compile(expected_err, re.DOTALL)
 
     exit_code, output, error = svntest.main.run_svn(1, 'blame', 
                                                     non_existent, iota_url)
