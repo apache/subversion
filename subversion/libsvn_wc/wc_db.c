@@ -3708,35 +3708,107 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
 
   /* We MUST remove the triggers and not leave them to affect subsequent
      operations. */
-  err = svn_sqlite__exec_statements(wcroot->sdb, STMT_CREATE_REVERT_CACHE);
+  err = svn_sqlite__exec_statements(wcroot->sdb, STMT_CREATE_REVERT_LIST);
   if (err)
     return svn_error_compose_create(err,
                                     svn_sqlite__exec_statements(wcroot->sdb,
-                                              STMT_DROP_REVERT_CACHE_TRIGGERS));
+                                               STMT_DROP_REVERT_LIST_TRIGGERS));
 
   err = svn_wc__db_with_txn(wcroot, local_relpath, txn_func, NULL,
                             scratch_pool);
 
   err = svn_error_compose_create(err,
                                  svn_sqlite__exec_statements(wcroot->sdb,
-                                              STMT_DROP_REVERT_CACHE_TRIGGERS));
+                                               STMT_DROP_REVERT_LIST_TRIGGERS));
 
   return err;
 }
 
+struct revert_list_read_baton {
+  svn_boolean_t *reverted;
+  const char **conflict_old;
+  const char **conflict_new;
+  const char **conflict_working;
+  const char **prop_reject;
+  apr_pool_t *result_pool;
+};
+
+static svn_error_t *
+revert_list_read(void *baton,
+                 svn_wc__db_wcroot_t *wcroot,
+                 const char *local_relpath,
+                 apr_pool_t *scratch_pool)
+{
+  struct revert_list_read_baton *b = baton;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_REVERT_LIST));
+  SVN_ERR(svn_sqlite__bindf(stmt, "s", local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (have_row)
+    {
+      *(b->reverted) = !svn_sqlite__column_is_null(stmt, 4);
+      *(b->conflict_new) = svn_sqlite__column_text(stmt, 0, b->result_pool);
+      *(b->conflict_old) = svn_sqlite__column_text(stmt, 1, b->result_pool);
+      *(b->conflict_working) = svn_sqlite__column_text(stmt, 2, b->result_pool);
+      *(b->prop_reject) = svn_sqlite__column_text(stmt, 3, b->result_pool);
+    }
+  else
+    {
+      *(b->reverted) = FALSE;
+      *(b->conflict_new) = *(b->conflict_old) = *(b->conflict_working) = NULL;
+      *(b->prop_reject) = NULL;
+    }
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  if (have_row)
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_DELETE_REVERT_LIST));
+      SVN_ERR(svn_sqlite__bindf(stmt, "s", local_relpath));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
-svn_wc__db_reverted(svn_boolean_t *reverted,
-                    const char **conflict_old,
-                    const char **conflict_new,
-                    const char **conflict_working,
-                    const char **prop_reject,
-                    svn_wc__db_t *db,
-                    const char *local_abspath,
-                    apr_pool_t *result_pool,
-                    apr_pool_t *scratch_pool)
+svn_wc__db_revert_list_read(svn_boolean_t *reverted,
+                            const char **conflict_old,
+                            const char **conflict_new,
+                            const char **conflict_working,
+                            const char **prop_reject,
+                            svn_wc__db_t *db,
+                            const char *local_abspath,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
+  struct revert_list_read_baton b = {reverted, conflict_old, conflict_new,
+                                     conflict_working, prop_reject,
+                                     result_pool};
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
+                              db, local_abspath, scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, revert_list_read, &b,
+                              scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__db_revert_list_notify(svn_wc_notify_func2_t notify_func,
+                              void *notify_baton,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath, *like_arg;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
 
@@ -3744,24 +3816,38 @@ svn_wc__db_reverted(svn_boolean_t *reverted,
                               db, local_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
+  like_arg = construct_like_arg(local_relpath, scratch_pool);
+
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_REVERT_CACHE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "s", local_relpath));
+                                    STMT_SELECT_REVERT_LIST_RECURSIVE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "ss", local_relpath, like_arg));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  if (have_row)
+  if (!have_row)
+    return svn_error_return(svn_sqlite__reset(stmt)); /* optimise for no row */
+  while (have_row)
     {
-      *reverted = !svn_sqlite__column_is_null(stmt, 4);
-      *conflict_new = svn_sqlite__column_text(stmt, 0, result_pool);
-      *conflict_old = svn_sqlite__column_text(stmt, 1, result_pool);
-      *conflict_working = svn_sqlite__column_text(stmt, 2, result_pool);
-      *prop_reject = svn_sqlite__column_text(stmt, 3, result_pool);
-    }
-  else
-    {
-      *reverted = FALSE;
-      *conflict_new = *conflict_old = *conflict_working = *prop_reject = NULL;
+      const char *notify_relpath = svn_sqlite__column_text(stmt, 0, NULL);
+
+      if (svn_sqlite__column_int64(stmt, 1))
+        {
+          const char *notify_abspath = svn_dirent_join(wcroot->abspath,
+                                                       notify_relpath,
+                                                       scratch_pool);
+          notify_func(notify_baton,
+                      svn_wc_create_notify(notify_abspath, svn_wc_notify_revert,
+                                           scratch_pool),
+                      scratch_pool);
+
+          /* ### Need cancel_func? */
+        }
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
   SVN_ERR(svn_sqlite__reset(stmt));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_DELETE_REVERT_LIST_RECURSIVE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "ss", local_relpath, like_arg));
+  SVN_ERR(svn_sqlite__step_done(stmt));
 
   return SVN_NO_ERROR;
 }
@@ -3811,7 +3897,6 @@ read_all_tree_conflicts(apr_hash_t **tree_conflicts,
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
-
   SVN_ERR(svn_sqlite__reset(stmt));
 
   svn_pool_destroy(iterpool);

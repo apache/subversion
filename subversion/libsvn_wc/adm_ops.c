@@ -1385,10 +1385,11 @@ revert_restore(svn_wc__db_t *db,
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
 
-  SVN_ERR(svn_wc__db_reverted(&notify_required,
-                              &conflict_old, &conflict_new, &conflict_working,
-                              &prop_reject,
-                              db, local_abspath, scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_revert_list_read(&notify_required,
+                                      &conflict_old, &conflict_new,
+                                      &conflict_working, &prop_reject,
+                                      db, local_abspath,
+                                      scratch_pool, scratch_pool));
 
   err = svn_wc__db_read_info(&status, &kind,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -1406,6 +1407,10 @@ revert_restore(svn_wc__db_t *db,
                     svn_wc_create_notify(local_abspath, svn_wc_notify_revert,
                                          scratch_pool),
                     scratch_pool);
+
+      if (notify_func)
+        SVN_ERR(svn_wc__db_revert_list_notify(notify_func, notify_baton,
+                                              db, local_abspath, scratch_pool));
 
       return SVN_NO_ERROR;
     }
@@ -1529,27 +1534,38 @@ revert_restore(svn_wc__db_t *db,
 
   if (depth == svn_depth_infinity && kind == svn_wc__db_kind_dir)
     {
+      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
       const apr_array_header_t *children;
       int i;
 
       SVN_ERR(svn_wc__db_read_children_of_working_node(&children, db,
                                                        local_abspath,
                                                        scratch_pool,
-                                                       scratch_pool));
+                                                       iterpool));
       for (i = 0; i < children->nelts; ++i)
         {
-          const char *child_abspath
-            = svn_dirent_join(local_abspath,
-                              APR_ARRAY_IDX(children, i, const char *),
-                              scratch_pool);
+          const char *child_abspath;
+
+          svn_pool_clear(iterpool);
+
+          child_abspath = svn_dirent_join(local_abspath,
+                                          APR_ARRAY_IDX(children, i,
+                                                        const char *),
+                                          iterpool);
 
           SVN_ERR(revert_restore(db, revert_root, child_abspath, depth,
                                  use_commit_times, changelist_hash,
                                  cancel_func, cancel_baton,
                                  notify_func, notify_baton,
-                                 scratch_pool));
+                                 iterpool));
         }
+
+      svn_pool_destroy(iterpool);
     }
+
+  if (notify_func)
+    SVN_ERR(svn_wc__db_revert_list_notify(notify_func, notify_baton,
+                                          db, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1575,6 +1591,10 @@ new_revert_internal(svn_wc__db_t *db,
                          cancel_func, cancel_baton,
                          notify_func, notify_baton,
                          scratch_pool));
+
+  if (notify_func)
+    SVN_ERR(svn_wc__db_revert_list_notify(notify_func, notify_baton,
+                                          db, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
