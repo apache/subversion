@@ -1444,23 +1444,23 @@ revert_restore(svn_wc__db_t *db,
           else
             {
               apr_hash_t *props;
-              svn_boolean_t read_only_prop;
+              svn_string_t *needs_lock_prop;
 #if !defined(WIN32) && !defined(__OS2__)
-              svn_boolean_t executable_prop;
+              svn_string_t *executable_prop;
 #endif
 
               SVN_ERR(svn_wc__db_read_pristine_props(&props, db, local_abspath,
                                                      scratch_pool,
                                                      scratch_pool));
-              read_only_prop = apr_hash_get(props, SVN_PROP_NEEDS_LOCK,
-                                            APR_HASH_KEY_STRING);
-              if (read_only_prop && !read_only)
+              needs_lock_prop = apr_hash_get(props, SVN_PROP_NEEDS_LOCK,
+                                             APR_HASH_KEY_STRING);
+              if (needs_lock_prop && !read_only)
                 {
                   SVN_ERR(svn_io_set_file_read_only(local_abspath,
                                                     FALSE, scratch_pool));
                   notify_required = TRUE;
                 }
-              else if (!read_only_prop && read_only)
+              else if (!needs_lock_prop && read_only)
                 {
                   SVN_ERR(svn_io_set_file_read_write(local_abspath,
                                                      FALSE, scratch_pool));
@@ -1500,6 +1500,7 @@ revert_restore(svn_wc__db_t *db,
         {
           svn_skel_t *work_item;
 
+          /* ### Get the checksum from read_info above and pass in here? */
           SVN_ERR(svn_wc__wq_build_file_install(&work_item, db, local_abspath,
                                                 NULL, use_commit_times, TRUE,
                                                 scratch_pool, scratch_pool));
