@@ -5630,12 +5630,12 @@ pre_merge_status_cb(void *baton,
   return SVN_NO_ERROR;
 }
 
-/* Helper for do_directory_merge()
+/* Helper for do_directory_merge() when performing merge-tracking aware
+   merges.
 
-   If HONOR_MERGEINFO is TRUE, then perform a depth first walk of the working
-   copy tree rooted at MERGE_CMD_BATON->TARGET_ABSPATH to depth DEPTH.
-   Create an svn_client__merge_path_t * for any path which meets one or more
-   of the following criteria:
+   Walk of the working copy tree rooted at MERGE_CMD_BATON->TARGET_ABSPATH to
+   depth DEPTH.  Create an svn_client__merge_path_t * for any path which meets
+   one or more of the following criteria:
 
      1) Path has working svn:mergeinfo.
      2) Path is switched.
@@ -5659,9 +5659,6 @@ pre_merge_status_cb(void *baton,
         and DEPTH is svn_depth_files.
      10) Path is at a depth of 'empty' or 'files'.
      11) Path is missing from disk (e.g. due to an OS-level deletion).
-
-   If HONOR_MERGEINFO is FALSE, then create an svn_client__merge_path_t * only
-   for MERGE_CMD_BATON->TARGET_ABSPATH (i.e. only criteria 7 is applied).
 
    If subtrees within the requested DEPTH are unexpectedly missing disk,
    then raise SVN_ERR_CLIENT_NOT_READY_TO_MERGE.
@@ -5694,7 +5691,6 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                     const char *url2,
                     svn_revnum_t revision1,
                     svn_revnum_t revision2,
-                    svn_boolean_t honor_mergeinfo,
                     svn_ra_session_t *ra_session,
                     svn_depth_t depth,
                     apr_pool_t *result_pool,
@@ -5989,7 +5985,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
 
   /* If DEPTH isn't empty then cover cases 3), 4), and 5), possibly adding
      elements to CHILDREN_WITH_MERGEINFO. */
-  if (!honor_mergeinfo || depth <= svn_depth_empty)
+  if (depth <= svn_depth_empty)
     return SVN_NO_ERROR;
 
   iterpool = svn_pool_create(scratch_pool);
@@ -8218,8 +8214,7 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
   SVN_ERR(get_mergeinfo_paths(notify_b->children_with_mergeinfo, merge_b,
                               mergeinfo_path, source_root_url,
                               url1, url2, revision1, revision2,
-                              honor_mergeinfo, ra_session,
-                              depth, pool, pool));
+                              ra_session, depth, pool, pool));
 
   /* The first item from the NOTIFY_B->CHILDREN_WITH_MERGEINFO is always
      the target thanks to depth-first ordering. */
