@@ -933,12 +933,11 @@ BEFORE DELETE ON actual_node
 BEGIN
    INSERT OR REPLACE INTO revert_cache(local_relpath, conflict_old,
                                        conflict_new, conflict_working,
-                                       prop_reject)
+                                       prop_reject, notify)
    SELECT OLD.local_relpath,
           OLD.conflict_old, OLD.conflict_new, OLD.conflict_working,
-          OLD.prop_reject;
-   UPDATE revert_cache SET notify = 1
-   WHERE OLD.properties IS NOT NULL;
+          OLD.prop_reject,
+          CASE WHEN OLD.properties IS NOT NULL THEN 1 ELSE NULL END;
 END;
 DROP TRIGGER IF EXISTS trigger_revert_cache_update;
 CREATE TEMPORARY TRIGGER trigger_revert_cache_actual_update
@@ -946,12 +945,11 @@ BEFORE UPDATE ON actual_node
 BEGIN
    INSERT OR REPLACE INTO revert_cache(local_relpath, conflict_old,
                                        conflict_new, conflict_working,
-                                       prop_reject)
+                                       prop_reject, notify)
    SELECT OLD.local_relpath,
           OLD.conflict_old, OLD.conflict_new, OLD.conflict_working,
-          OLD.prop_reject;
-   UPDATE revert_cache SET notify = 1
-   WHERE OLD.properties IS NOT NULL;
+          OLD.prop_reject,
+          CASE WHEN OLD.properties IS NOT NULL THEN 1 ELSE NULL END;
 END
 
 -- STMT_DROP_REVERT_CACHE_TRIGGERS
