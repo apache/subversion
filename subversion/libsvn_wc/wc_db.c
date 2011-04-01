@@ -3812,6 +3812,8 @@ read_all_tree_conflicts(apr_hash_t **tree_conflicts,
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
 
+  SVN_ERR(svn_sqlite__reset(stmt));
+
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
@@ -3867,7 +3869,7 @@ read_tree_conflict(const svn_wc_conflict_description2_t **tree_conflict,
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
   if (!have_row)
-    return SVN_NO_ERROR;
+    return svn_error_return(svn_sqlite__reset(stmt));
 
   conflict_data = svn_sqlite__column_text(stmt, 0, NULL);
   skel = svn_skel__parse(conflict_data, strlen(conflict_data), scratch_pool);
