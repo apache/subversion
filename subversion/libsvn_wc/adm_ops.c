@@ -1444,18 +1444,23 @@ revert_restore(svn_wc__db_t *db,
           else
             {
               apr_hash_t *props;
+              svn_boolean_t read_only_prop;
+#if !defined(WIN32) && !defined(__OS2__)
+              svn_boolean_t executable_prop;
+#endif
 
               SVN_ERR(svn_wc__db_read_pristine_props(&props, db, local_abspath,
                                                      scratch_pool,
                                                      scratch_pool));
-              if (apr_hash_get(props, SVN_PROP_NEEDS_LOCK, APR_HASH_KEY_STRING)
-                  && !read_only)
+              read_only_prop = apr_hash_get(props, SVN_PROP_NEEDS_LOCK,
+                                            APR_HASH_KEY_STRING);
+              if (read_only_prop && !read_only)
                 {
                   SVN_ERR(svn_io_set_file_read_only(local_abspath,
                                                     FALSE, scratch_pool));
                   notify_required = TRUE;
                 }
-              else if (read_only)
+              else if (!read_only_prop && read_only)
                 {
                   SVN_ERR(svn_io_set_file_read_write(local_abspath,
                                                      FALSE, scratch_pool));
@@ -1463,14 +1468,15 @@ revert_restore(svn_wc__db_t *db,
                 }
 
 #if !defined(WIN32) && !defined(__OS2__)
-              if (apr_hash_get(props, SVN_PROP_EXECUTABLE, APR_HASH_KEY_STRING)
-                  && !executable)
+              executable_prop = apr_hash_get(props, SVN_PROP_EXECUTABLE,
+                                             APR_HASH_KEY_STRING);
+              if (executable_prop && !executable)
                 {
                   SVN_ERR(svn_io_set_file_executable(local_abspath, TRUE,
                                                      FALSE, scratch_pool));
                   notify_required = TRUE;
                 }
-              else if (executable)
+              else if (!executable_prop && executable)
                 {
                   SVN_ERR(svn_io_set_file_executable(local_abspath, FALSE,
                                                      FALSE, scratch_pool));
