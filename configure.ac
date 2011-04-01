@@ -271,10 +271,8 @@ AC_ARG_ENABLE(local-library-preloading,
   AS_HELP_STRING([--enable-local-library-preloading], 
                  [Enable preloading of locally built libraries in locally
                   built executables.  This may be necessary for testing
-                  prior to installation on some platforms.  It doesn't work
-                  on some platforms (Darwin, OpenBSD, ...) and on platforms
-                  where it does work (Linux, ...) it may interfere with the
-                  installation process.]),
+                  prior to installation on some platforms.  It does not
+                  work on some platforms (Darwin, OpenBSD, ...).]),
   [
   if test "$enableval" != "no"; then
     if test "$svn_enable_shared" = "yes"; then
