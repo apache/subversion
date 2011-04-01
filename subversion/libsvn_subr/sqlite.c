@@ -51,7 +51,7 @@
 #endif
 
 #if !SQLITE_VERSION_AT_LEAST(3,6,18)
-#error SQLlite is too old -- version 3.6.18 is the minimum required version
+#error SQLite is too old -- version 3.6.18 is the minimum required version
 #endif
 
 INTERNAL_STATEMENTS_SQL_DECLARE_STATEMENTS(internal_statements);
