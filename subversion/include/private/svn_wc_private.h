@@ -875,6 +875,19 @@ svn_wc__has_switched_subtrees(svn_boolean_t *is_switched,
                               const char *trail_url,
                               apr_pool_t *scratch_pool);
 
+/* Set @a *absent_subtrees to a hash mapping <tt>const char *</tt> local
+ * absolute paths to <tt>const char *</tt> local absolute paths for every
+ * path at or under @a local_abspath in @a wc_ctx which are absent (excluded
+ * by authz).  If no absent paths are found then @a *absent_subtrees is set
+ * to @c NULL.  Allocate the hash and all items therein from @a result_pool.
+ */
+svn_error_t *
+svn_wc__get_absent_subtrees(apr_hash_t **absent_subtrees,
+                            svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
 /* Indicate in @a *is_modified whether the working copy has local
  * modifications, using context @a wc_ctx.
  * Use @a scratch_pool for temporary allocations.

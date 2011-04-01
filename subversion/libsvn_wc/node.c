@@ -1591,6 +1591,20 @@ svn_wc__node_get_lock_tokens_recursive(apr_hash_t **lock_tokens,
 }
 
 svn_error_t *
+svn_wc__get_absent_subtrees(apr_hash_t **absent_subtrees,
+                            svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
+{
+  return svn_error_return(svn_wc__db_get_absent_subtrees(absent_subtrees,
+                                                         wc_ctx->db,
+                                                         local_abspath,
+                                                         result_pool,
+                                                         scratch_pool));
+}
+
+svn_error_t *
 svn_wc__node_get_commit_status(svn_node_kind_t *kind,
                                svn_boolean_t *added,
                                svn_boolean_t *deleted,
