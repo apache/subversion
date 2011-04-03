@@ -294,10 +294,10 @@ struct dir_baton
   /* Set if this directory is being added during this editor drive. */
   svn_boolean_t adding_dir;
 
-  /* Set on a node and its descendants when a node gets tree conflicted
-     and descendants should still be updated (not skipped).
-     These nodes should all be marked as deleted. */
-  svn_boolean_t in_deleted_and_tree_conflicted_subtree;
+  /* Set on a node and its descendants are not present in the working copy
+     but should still be updated (not skipped). These nodes should all be
+     marked as deleted. */
+  svn_boolean_t shadowed;
 
   /* Set if an unversioned dir of the same name already existed in
      this directory. */
@@ -549,8 +549,7 @@ make_dir_baton(struct dir_baton **d_p,
     {
       d->name = svn_dirent_basename(path, dir_pool);
       d->local_abspath = svn_dirent_join(pb->local_abspath, d->name, dir_pool);
-      d->in_deleted_and_tree_conflicted_subtree =
-          pb->in_deleted_and_tree_conflicted_subtree;
+      d->shadowed = pb->shadowed;
     }
   else
     {
@@ -951,9 +950,9 @@ struct file_baton
      scheduled for addition without history. */
   svn_boolean_t add_existed;
 
-  /* Set if this file is locally deleted or is being added
-     within a locally deleted tree. */
-  svn_boolean_t deleted;
+  /* Set if this file is being added in the BASE layer, but is not-present
+     in the working copy (replaced, deleted, etc.). */
+  svn_boolean_t shadowed;
 
   /* If there are file content changes, these are the checksums of the
      resulting new text base, which is in the pristine store, else NULL. */
@@ -977,11 +976,6 @@ struct file_baton
 
   /* Bump information for the directory this file lives in */
   struct bump_dir_info *bump_info;
-
-  /* This is set when there is an incoming add of a file/symlink node onto a
-   * locally added node of different identity (add-vs-add tree conflict). */
-  svn_boolean_t adding_base_under_local_add;
-
 };
 
 
@@ -1026,7 +1020,7 @@ make_file_baton(struct file_baton **f_p,
   f->adding_file       = adding;
   f->obstruction_found = FALSE;
   f->add_existed       = FALSE;
-  f->deleted           = FALSE;
+  f->shadowed          = FALSE;
   f->dir_baton         = pb;
 
   /* the directory's bump info has one more referer now */
@@ -2094,9 +2088,7 @@ delete_entry(const char *path,
   their_relpath = svn_relpath_join(pb->new_relpath, base, pool);
 
   return do_entry_deletion(pb->edit_baton, local_abspath,
-                           their_relpath,
-                           pb->in_deleted_and_tree_conflicted_subtree,
-                           pool);
+                           their_relpath, pb->shadowed, pool);
 }
 
 
@@ -2343,7 +2335,7 @@ add_directory(const char *path,
        * ### We would also like to be checking copyfrom infos to not flag tree
        * conflicts on two copies with identical history. But at the time of
        * writing, add_directory() does not get any copyfrom information. */
-      if (! pb->in_deleted_and_tree_conflicted_subtree
+      if (! pb->shadowed
           && (eb->switch_relpath != NULL
               || local_is_non_dir
               || add_status == svn_wc__db_status_copied
@@ -2430,8 +2422,7 @@ add_directory(const char *path,
 
   SVN_ERR(svn_wc__ensure_directory(db->local_abspath, pool));
 
-  if (!pb->in_deleted_and_tree_conflicted_subtree
-      && status == svn_wc__db_status_added)
+  if (!pb->shadowed && status == svn_wc__db_status_added)
     /* If there is no conflict we take over any added directory */
     SVN_ERR(svn_wc__db_temp_op_remove_working(eb->db, db->local_abspath, pool));
 
@@ -2444,7 +2435,7 @@ add_directory(const char *path,
     {
       svn_wc_notify_action_t action;
 
-      if (db->in_deleted_and_tree_conflicted_subtree)
+      if (db->shadowed)
         action = svn_wc_notify_update_add_deleted;
       else if (db->obstruction_found)
         action = svn_wc_notify_exists;
@@ -2533,7 +2524,7 @@ open_directory(const char *path,
 
   /* Check for conflicts only when we haven't already recorded
    * a tree-conflict on a parent node. */
-  if (!db->in_deleted_and_tree_conflicted_subtree)
+  if (!db->shadowed)
     SVN_ERR(check_tree_conflict(&tree_conflict, eb, db->local_abspath,
                                 status, wc_kind, TRUE,
                                 svn_wc_conflict_action_edit, svn_node_dir,
@@ -2562,7 +2553,7 @@ open_directory(const char *path,
           return SVN_NO_ERROR;
         }
       else
-        db->in_deleted_and_tree_conflicted_subtree = TRUE;
+        db->shadowed = TRUE;
     }
 
   /* Mark directory as being at target_revision and URL, but incomplete. */
@@ -2902,7 +2893,7 @@ close_directory(void *dir_baton,
       svn_wc_notify_t *notify;
       svn_wc_notify_action_t action;
 
-      if (db->in_deleted_and_tree_conflicted_subtree)
+      if (db->shadowed)
         action = svn_wc_notify_update_update_deleted;
       else if (db->obstruction_found || db->add_existed)
         action = svn_wc_notify_exists;
@@ -3039,7 +3030,7 @@ add_file(const char *path,
 
   SVN_ERR(check_path_under_root(pb->local_abspath, fb->name, pool));
 
-  fb->deleted = pb->in_deleted_and_tree_conflicted_subtree;
+  fb->shadowed = pb->shadowed;
 
   /* The file_pool can stick around for a *long* time, so we want to
      use a subpool for any temporary allocations. */
@@ -3200,7 +3191,7 @@ add_file(const char *path,
        *  - if we are in a deleted subtree
        *  - if this is a normal file addition and we  we are switching
        */
-      if (! pb->in_deleted_and_tree_conflicted_subtree
+      if (! pb->shadowed
           && (eb->switch_relpath != NULL
               || !local_is_file
               || status != svn_wc__db_status_added))
@@ -3221,7 +3212,7 @@ add_file(const char *path,
         /* We have a tree conflict of a local add vs. an incoming add.
          * We want to update BASE only, scheduling WORKING as a replace
          * of BASE so that WORKING/ACTUAL stay unchanged. */
-        fb->adding_base_under_local_add = TRUE;
+        fb->shadowed = TRUE;
 
     }
   else if (kind != svn_node_none)
@@ -3351,11 +3342,11 @@ open_file(const char *path,
       return SVN_NO_ERROR;
     }
 
-  fb->deleted = pb->in_deleted_and_tree_conflicted_subtree;
+  fb->shadowed = pb->shadowed;
 
   /* Check for conflicts only when we haven't already recorded
    * a tree-conflict on a parent node. */
-  if (!pb->in_deleted_and_tree_conflicted_subtree)
+  if (!pb->shadowed)
     SVN_ERR(check_tree_conflict(&tree_conflict, eb, fb->local_abspath,
                                 status, wc_kind, TRUE,
                                 svn_wc_conflict_action_edit, svn_node_file,
@@ -3371,12 +3362,12 @@ open_file(const char *path,
       if (tree_conflict->reason == svn_wc_conflict_reason_deleted ||
           tree_conflict->reason == svn_wc_conflict_reason_replaced)
         {
-          fb->deleted = TRUE;
+          fb->shadowed = TRUE;
         }
       else
         SVN_ERR(remember_skipped_tree(eb, fb->local_abspath, pool));
 
-      if (!fb->deleted)
+      if (!fb->shadowed)
         fb->skip_this = TRUE;
 
       fb->already_notified = TRUE;
@@ -3694,8 +3685,7 @@ merge_file(svn_skel_t **work_items,
 
   if (fb->new_text_base_sha1_checksum)
     {
-      if (fb->adding_base_under_local_add
-          || fb->deleted)
+      if (fb->shadowed)
         {
           /* Nothing to do, the delete half of the local replacement will
              have already raised a tree conflict.  So we will just fall
@@ -3703,19 +3693,16 @@ merge_file(svn_skel_t **work_items,
         }
       else if (! is_locally_modified)
         {
-          if (!fb->deleted)
-            {
-              /* If there are no local mods, who cares whether it's a text
-                 or binary file!  Just write a log command to overwrite
-                 any working file with the new text-base.  If newline
-                 conversion or keyword substitution is activated, this
-                 will happen as well during the copy.
-                 For replaced files, though, we want to merge in the changes
-                 even if the file is not modified compared to the (non-revert)
-                 text-base. */
+          /* If there are no local mods, who cares whether it's a text
+             or binary file!  Just write a log command to overwrite
+             any working file with the new text-base.  If newline
+             conversion or keyword substitution is activated, this
+             will happen as well during the copy.
+             For replaced files, though, we want to merge in the changes
+             even if the file is not modified compared to the (non-revert)
+             text-base. */
 
-              *install_pristine = TRUE;
-            }
+          *install_pristine = TRUE;
         }
       else   /* working file or obstruction is locally modified... */
         {
@@ -3877,7 +3864,7 @@ merge_file(svn_skel_t **work_items,
      work items to handle text-timestamp and working-size.  */
   if (!*install_pristine
       && !is_locally_modified
-      && !fb->adding_base_under_local_add)
+      && !fb->shadowed)
     {
       apr_time_t set_date = 0;
       /* Adjust working copy file unless this file is an allowed
@@ -4035,7 +4022,7 @@ close_file(void *file_baton,
   /* ### some of this feels like voodoo... */
 
   if ((!fb->adding_file || fb->add_existed)
-      && !fb->deleted && !fb->adding_base_under_local_add)
+      && !fb->shadowed)
     SVN_ERR(svn_wc__get_actual_props(&local_actual_props,
                                      eb->db, fb->local_abspath,
                                      pool, pool));
@@ -4105,7 +4092,7 @@ close_file(void *file_baton,
         {
           svn_wc_conflict_description2_t *tree_conflict = NULL;
 
-          fb->adding_base_under_local_add = TRUE;
+          fb->shadowed = TRUE;
           fb->obstruction_found = TRUE;
           fb->add_existed = FALSE;
 
@@ -4131,7 +4118,7 @@ close_file(void *file_baton,
 
   prop_state = svn_wc_notify_state_unknown;
 
-  if (! fb->adding_base_under_local_add && !fb->deleted)
+  if (! fb->shadowed)
     {
       /* Merge the 'regular' props into the existing working proplist. */
       /* This will merge the old and new props into a new prop db, and
@@ -4336,8 +4323,7 @@ close_file(void *file_baton,
   /* Now we might have to update the ACTUAL tree, with the result of the
      properties merge. */
   if (! (fb->adding_file && !fb->add_existed)
-      && ! fb->adding_base_under_local_add 
-      && ! fb->deleted)
+      && ! fb->shadowed)
     {
       SVN_ERR_ASSERT(new_actual_props != NULL);
 
@@ -4369,7 +4355,7 @@ close_file(void *file_baton,
       svn_wc_notify_t *notify;
       svn_wc_notify_action_t action = svn_wc_notify_update_update;
 
-      if (fb->deleted)
+      if (fb->shadowed)
         action = svn_wc_notify_update_add_deleted;
       else if (fb->obstruction_found || fb->add_existed)
         {
