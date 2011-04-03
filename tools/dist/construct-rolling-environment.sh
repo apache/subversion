@@ -79,6 +79,8 @@ create_prefix() {
     wget -nc http://ftp.gnu.org/gnu/libtool/$LIBTOOL.tar.gz
     wget -nc "http://sourceforge.net/projects/swig/files/swig/$SWIG/$SWIG.tar.gz/download?use_mirror=$SOURCEFORGE_MIRROR"
 
+    PATH=$PREFIX/bin:$PATH; export PATH
+
     tar jxvf $AUTOCONF.tar.bz2
     cd $AUTOCONF
     ./configure --prefix=$PREFIX
