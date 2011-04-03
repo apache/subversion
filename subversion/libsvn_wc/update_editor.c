@@ -3010,7 +3010,7 @@ add_file(const char *path,
   svn_node_kind_t kind;
   svn_wc__db_kind_t wc_kind;
   svn_wc__db_status_t status;
-  apr_pool_t *subpool;
+  apr_pool_t *scratch_pool;
   svn_boolean_t conflicted;
   svn_boolean_t versioned_locally_and_present;
   svn_wc_conflict_description2_t *tree_conflict = NULL;
@@ -3034,7 +3034,7 @@ add_file(const char *path,
 
   /* The file_pool can stick around for a *long* time, so we want to
      use a subpool for any temporary allocations. */
-  subpool = svn_pool_create(pool);
+  scratch_pool = svn_pool_create(pool);
 
 
   /* It may not be named the same as the administrative directory. */
@@ -3045,13 +3045,14 @@ add_file(const char *path,
          "administrative directory"),
        svn_dirent_local_style(fb->local_abspath, pool));
 
-  SVN_ERR(svn_io_check_path(fb->local_abspath, &kind, subpool));
+  SVN_ERR(svn_io_check_path(fb->local_abspath, &kind, scratch_pool));
 
   err = svn_wc__db_read_info(&status, &wc_kind, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              &conflicted, NULL,
-                             eb->db, fb->local_abspath, subpool, subpool);
+                             eb->db, fb->local_abspath,
+                             scratch_pool, scratch_pool);
 
   if (err)
     {
@@ -3074,7 +3075,7 @@ add_file(const char *path,
   /* Is this path a conflict victim? */
   if (conflicted)
     SVN_ERR(node_already_conflicted(&conflicted, eb->db,
-                                    fb->local_abspath, subpool));
+                                    fb->local_abspath, scratch_pool));
 
   /* Do some user convenience in a specific tree conflicted state.
    * When we flagged a tree conflict for a local unversioned node
@@ -3092,20 +3093,20 @@ add_file(const char *path,
       SVN_ERR(svn_wc__get_tree_conflict(&previous_tc,
                                         eb->wc_ctx,
                                         fb->local_abspath,
-                                        subpool, subpool));
+                                        scratch_pool, scratch_pool));
       if (previous_tc
           && previous_tc->reason == svn_wc_conflict_reason_unversioned)
         {
           /* Remove tree conflict. */
           SVN_ERR(svn_wc__db_op_set_tree_conflict(eb->db,
                                                   fb->local_abspath,
-                                                  NULL, subpool));
+                                                  NULL, scratch_pool));
 
           /* Verify that all conflicts are gone now. Since we don't ever have
            * text/prop conflicts next to tree conflicts, this should always
            * set CONFLICTED to FALSE. Making sure doesn't hurt though. */
           SVN_ERR(node_already_conflicted(&conflicted, eb->db,
-                                          fb->local_abspath, subpool));
+                                          fb->local_abspath, scratch_pool));
         }
     }
 
@@ -3118,9 +3119,9 @@ add_file(const char *path,
       fb->already_notified = TRUE;
 
       do_notification(eb, fb->local_abspath, svn_node_unknown,
-                      svn_wc_notify_skip, subpool);
+                      svn_wc_notify_skip, scratch_pool);
 
-      svn_pool_destroy(subpool);
+      svn_pool_destroy(scratch_pool);
 
       return SVN_NO_ERROR;
     }
@@ -3149,7 +3150,7 @@ add_file(const char *path,
         SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
                                          NULL, NULL, NULL,
                                          eb->db, fb->local_abspath,
-                                         subpool, subpool));
+                                         scratch_pool, scratch_pool));
 
       /* Is there something that is a file? */
       local_is_file = (wc_kind == svn_wc__db_kind_file
@@ -3161,7 +3162,7 @@ add_file(const char *path,
           svn_boolean_t switched;
 
           SVN_ERR(svn_wc__check_wc_root(&wc_root, NULL, &switched,
-                                        eb->db, fb->local_abspath, subpool));
+                                        eb->db, fb->local_abspath, scratch_pool));
 
           err = NULL;
 
@@ -3180,9 +3181,9 @@ add_file(const char *path,
             {
               fb->already_notified = TRUE;
               do_notification(eb, fb->local_abspath, svn_node_file,
-                              svn_wc_notify_update_obstruction, subpool);
+                              svn_wc_notify_update_obstruction, scratch_pool);
 
-              svn_pool_clear(subpool);
+              svn_pool_clear(scratch_pool);
               return svn_error_return(err);
             }
         }
@@ -3201,7 +3202,7 @@ add_file(const char *path,
                                       status, wc_kind, FALSE,
                                       svn_wc_conflict_action_add,
                                       svn_node_file, fb->new_relpath,
-                                      subpool));
+                                      scratch_pool));
         }
 
       if (tree_conflict == NULL)
@@ -3236,8 +3237,8 @@ add_file(const char *path,
                                                   eb->repos_uuid,
                                                   *eb->target_revision,
                                                   svn_wc__db_kind_file,
-                                                  NULL, NULL, subpool));
-          SVN_ERR(remember_skipped_tree(eb, fb->local_abspath, subpool));
+                                                  NULL, NULL, scratch_pool));
+          SVN_ERR(remember_skipped_tree(eb, fb->local_abspath, scratch_pool));
 
           /* Mark a conflict */
           SVN_ERR(create_tree_conflict(&tree_conflict, eb,
@@ -3245,7 +3246,8 @@ add_file(const char *path,
                                        svn_wc_conflict_reason_unversioned,
                                        svn_wc_conflict_action_add,
                                        svn_node_file,
-                                       fb->new_relpath, subpool, subpool));
+                                       fb->new_relpath,
+                                       scratch_pool, scratch_pool));
           SVN_ERR_ASSERT(tree_conflict != NULL);
         }
     }
@@ -3257,14 +3259,14 @@ add_file(const char *path,
       SVN_ERR(svn_wc__db_op_set_tree_conflict(eb->db,
                                               fb->local_abspath,
                                               tree_conflict,
-                                              subpool));
+                                              scratch_pool));
 
       fb->already_notified = TRUE;
       do_notification(eb, fb->local_abspath, svn_node_unknown,
-                      svn_wc_notify_tree_conflict, subpool);
+                      svn_wc_notify_tree_conflict, scratch_pool);
     }
 
-  svn_pool_destroy(subpool);
+  svn_pool_destroy(scratch_pool);
 
   return SVN_NO_ERROR;
 }
@@ -3290,7 +3292,7 @@ open_file(const char *path,
 
   /* the file_pool can stick around for a *long* time, so we want to use
      a subpool for any temporary allocations. */
-  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_pool_t *scratch_pool = svn_pool_create(pool);
 
   SVN_ERR(make_file_baton(&fb, pb, path, FALSE, pool));
   *file_baton = fb;
@@ -3302,9 +3304,9 @@ open_file(const char *path,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(check_path_under_root(pb->local_abspath, fb->name, subpool));
+  SVN_ERR(check_path_under_root(pb->local_abspath, fb->name, scratch_pool));
 
-  SVN_ERR(svn_io_check_path(fb->local_abspath, &kind, subpool));
+  SVN_ERR(svn_io_check_path(fb->local_abspath, &kind, scratch_pool));
 
   /* Sanity check. */
 
@@ -3313,7 +3315,8 @@ open_file(const char *path,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, &have_work, &conflicted, NULL,
-                               eb->db, fb->local_abspath, subpool, subpool));
+                               eb->db, fb->local_abspath,
+                               scratch_pool, scratch_pool));
 
   if (have_work)
     SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, &fb->old_revision,
@@ -3321,7 +3324,7 @@ open_file(const char *path,
                                      NULL, NULL, NULL, NULL,
                                      NULL, NULL,
                                      eb->db, fb->local_abspath,
-                                     subpool, subpool));
+                                     scratch_pool, scratch_pool));
 
   /* Is this path a conflict victim? */
   if (conflicted)
@@ -3335,9 +3338,9 @@ open_file(const char *path,
       fb->already_notified = TRUE;
 
       do_notification(eb, fb->local_abspath, svn_node_unknown,
-                      svn_wc_notify_skip, subpool);
+                      svn_wc_notify_skip, scratch_pool);
 
-      svn_pool_destroy(subpool);
+      svn_pool_destroy(scratch_pool);
 
       return SVN_NO_ERROR;
     }
@@ -3350,14 +3353,14 @@ open_file(const char *path,
     SVN_ERR(check_tree_conflict(&tree_conflict, eb, fb->local_abspath,
                                 status, wc_kind, TRUE,
                                 svn_wc_conflict_action_edit, svn_node_file,
-                                fb->new_relpath, subpool));
+                                fb->new_relpath, scratch_pool));
 
   /* Is this path the victim of a newly-discovered tree conflict? */
   if (tree_conflict)
     {
       SVN_ERR(svn_wc__db_op_set_tree_conflict(eb->db,
                                               fb->local_abspath,
-                                              tree_conflict, subpool));
+                                              tree_conflict, scratch_pool));
 
       if (tree_conflict->reason == svn_wc_conflict_reason_deleted ||
           tree_conflict->reason == svn_wc_conflict_reason_replaced)
@@ -3372,10 +3375,10 @@ open_file(const char *path,
 
       fb->already_notified = TRUE;
       do_notification(eb, fb->local_abspath, svn_node_unknown,
-                      svn_wc_notify_tree_conflict, subpool);
+                      svn_wc_notify_tree_conflict, scratch_pool);
     }
 
-  svn_pool_destroy(subpool);
+  svn_pool_destroy(scratch_pool);
 
   return SVN_NO_ERROR;
 }
