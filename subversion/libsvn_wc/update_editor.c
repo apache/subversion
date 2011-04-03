@@ -4383,10 +4383,12 @@ close_file(void *file_baton,
       notify->revision = *eb->target_revision;
       notify->old_revision = fb->old_revision;
 
-      /* Fetch the mimetype */
-      SVN_ERR(svn_wc__internal_propget(&mime_type, eb->db, fb->local_abspath,
-                                       SVN_PROP_MIME_TYPE,
-                                       scratch_pool, scratch_pool));
+      /* Fetch the mimetype from the actual properties */
+      mime_type = (new_actual_props != NULL)
+                        ? apr_hash_get(new_actual_props, SVN_PROP_MIME_TYPE,
+                                       APR_HASH_KEY_STRING)
+                        : NULL;
+
       notify->mime_type = mime_type == NULL ? NULL : mime_type->data;
 
       eb->notify_func(eb->notify_baton, notify, scratch_pool);
