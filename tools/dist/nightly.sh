@@ -27,7 +27,7 @@ svn=svn
 # Parse our arguments
 while getopts "cd:t:s:" flag; do
   case $flag in
-    d) dir="$OPTARG" ;;
+    d) dir="`cd $OPTARG && pwd`" ;; # abspath
     c) clean="1" ;;
     t) target="$OPTARG" ;;
     s) svn="$OPTARG" ;;
