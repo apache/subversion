@@ -48,10 +48,10 @@ abscwd=`cd $dir; pwd`
 echo "Will place results in: $target"
 
 # Get the latest versions of the rolling scripts
-$svn export $repo/trunk/tools/dist/construct-rolling-environment.sh $dir
-$svn export $repo/trunk/tools/dist/roll.sh $dir
-$svn export $repo/trunk/tools/dist/dist.sh $dir
-$svn export $repo/trunk/tools/dist/gen_nightly_ann.py $dir
+for i in construct-rolling-environment.sh roll.sh dist.sh gen_nightly_ann.py
+do 
+  $svn export $repo/trunk/tools/dist/$i $dir/$i
+done
 
 # Create the environment
 cd roll
