@@ -3951,14 +3951,14 @@ close_file(void *file_baton,
 
   if (fb->skip_this)
     {
-      SVN_ERR(maybe_bump_dir_info(eb, fb->bump_info, pool));
+      SVN_ERR(maybe_bump_dir_info(eb, fb->bump_info, scratch_pool));
       svn_pool_destroy(fb->pool);
       return SVN_NO_ERROR;
     }
 
   if (expected_md5_digest)
     SVN_ERR(svn_checksum_parse_hex(&expected_md5_checksum, svn_checksum_md5,
-                                   expected_md5_digest, pool));
+                                   expected_md5_digest, scratch_pool));
 
   if (fb->received_textdelta)
     SVN_ERR_ASSERT(fb->new_text_base_sha1_checksum
@@ -3971,20 +3971,21 @@ close_file(void *file_baton,
       && !svn_checksum_match(expected_md5_checksum,
                              fb->new_text_base_md5_checksum))
     return svn_checksum_mismatch_err(expected_md5_checksum,
-                            fb->new_text_base_md5_checksum, pool,
+                            fb->new_text_base_md5_checksum, scratch_pool,
                             _("Checksum mismatch for '%s'"),
                             svn_dirent_local_style(fb->local_abspath, pool));
 
   /* Gather the changes for each kind of property.  */
   SVN_ERR(svn_categorize_props(fb->propchanges, &entry_prop_changes,
-                               &dav_prop_changes, &regular_prop_changes, pool));
+                               &dav_prop_changes, &regular_prop_changes,
+                               scratch_pool));
 
   /* Extract the changed_* and lock state information.  */
   SVN_ERR(accumulate_last_change(&new_changed_rev,
                                  &new_changed_date,
                                  &new_changed_author,
                                  entry_prop_changes,
-                                 pool, pool));
+                                 scratch_pool, scratch_pool));
 
   /* Determine whether the file has become unlocked.  */
   {
@@ -4003,7 +4004,8 @@ close_file(void *file_baton,
         if (! strcmp(prop->name, SVN_PROP_ENTRY_LOCK_TOKEN))
           {
             SVN_ERR_ASSERT(prop->value == NULL);
-            SVN_ERR(svn_wc__db_lock_remove(eb->db, fb->local_abspath, pool));
+            SVN_ERR(svn_wc__db_lock_remove(eb->db, fb->local_abspath,
+                                           scratch_pool));
 
             lock_state = svn_wc_notify_lock_state_unlocked;
             break;
@@ -4028,9 +4030,9 @@ close_file(void *file_baton,
       && !fb->shadowed)
     SVN_ERR(svn_wc__get_actual_props(&local_actual_props,
                                      eb->db, fb->local_abspath,
-                                     pool, pool));
+                                     scratch_pool, scratch_pool));
   if (local_actual_props == NULL)
-    local_actual_props = apr_hash_make(pool);
+    local_actual_props = apr_hash_make(scratch_pool);
 
 
   if (fb->add_existed)
@@ -4038,7 +4040,7 @@ close_file(void *file_baton,
       /* This node already exists. Grab the current pristine properties. */
       SVN_ERR(svn_wc__get_pristine_props(&current_base_props,
                                          eb->db, fb->local_abspath,
-                                         pool, pool));
+                                         scratch_pool, scratch_pool));
       current_actual_props = local_actual_props;
     }
   else if (!fb->adding_file)
@@ -4046,18 +4048,18 @@ close_file(void *file_baton,
       /* Get the BASE properties for proper merging. */
       SVN_ERR(svn_wc__db_base_get_props(&current_base_props,
                                         eb->db, fb->local_abspath,
-                                        pool, pool));
+                                        scratch_pool, scratch_pool));
       current_actual_props = local_actual_props;
     }
 
   /* Note: even if the node existed before, it may not have
      pristine props (e.g a local-add)  */
   if (current_base_props == NULL)
-    current_base_props = apr_hash_make(pool);
+    current_base_props = apr_hash_make(scratch_pool);
 
   /* And new nodes need an empty set of ACTUAL props.  */
   if (current_actual_props == NULL)
-    current_actual_props = apr_hash_make(pool);
+    current_actual_props = apr_hash_make(scratch_pool);
 
   /* Catch symlink-ness change.
    * add_file() doesn't know whether the incoming added node is a file or
@@ -4106,7 +4108,7 @@ close_file(void *file_baton,
                                       svn_wc__db_kind_file, TRUE,
                                       svn_wc_conflict_action_add,
                                       svn_node_file,
-                                      fb->new_relpath, pool));
+                                      fb->new_relpath, scratch_pool));
           SVN_ERR_ASSERT(tree_conflict != NULL);
           SVN_ERR(svn_wc__db_op_set_tree_conflict(eb->db,
                                                   fb->local_abspath,
@@ -4115,7 +4117,7 @@ close_file(void *file_baton,
 
           fb->already_notified = TRUE;
           do_notification(eb, fb->local_abspath, svn_node_unknown,
-                          svn_wc_notify_tree_conflict, pool);
+                          svn_wc_notify_tree_conflict, scratch_pool);
         }
     }
 
@@ -4143,14 +4145,14 @@ close_file(void *file_baton,
                                   FALSE /* dry_run */,
                                   eb->conflict_func, eb->conflict_baton,
                                   eb->cancel_func, eb->cancel_baton,
-                                  pool,
-                                  pool));
+                                  scratch_pool,
+                                  scratch_pool));
       /* We will ALWAYS have properties to save (after a not-dry-run merge).  */
       SVN_ERR_ASSERT(new_base_props != NULL && new_actual_props != NULL);
 
       /* Merge the text. This will queue some additional work.  */
       SVN_ERR(merge_file(&all_work_items, &install_pristine, &install_from,
-                         &content_state, fb, pool, scratch_pool));
+                         &content_state, fb, scratch_pool, scratch_pool));
 
       if (install_pristine)
         {
@@ -4169,8 +4171,9 @@ close_file(void *file_baton,
                                                 install_from,
                                                 eb->use_commit_times,
                                                 record_fileinfo,
-                                                pool, scratch_pool));
-          all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
+                                                scratch_pool, scratch_pool));
+          all_work_items = svn_wc__wq_merge(all_work_items, work_item,
+                                            scratch_pool);
         }
     }
   else
@@ -4179,7 +4182,7 @@ close_file(void *file_baton,
        * The incoming add becomes the revert-base! */
       svn_wc_notify_state_t no_prop_state;
       apr_hash_t *no_new_actual_props = NULL;
-      apr_hash_t *no_working_props = apr_hash_make(pool);
+      apr_hash_t *no_working_props = apr_hash_make(scratch_pool);
 
       /* Store the incoming props (sent as propchanges) in new_base_props.
        * Keep the actual props unchanged. */
@@ -4194,15 +4197,15 @@ close_file(void *file_baton,
                                   NULL /* left_version */,
                                   NULL /* right_version */,
                                   NULL /* server_baseprops (update, not merge)  */,
-                                  apr_hash_make(pool),
+                                  apr_hash_make(scratch_pool),
                                   no_working_props,
                                   regular_prop_changes, /* propchanges */
                                   TRUE /* base_merge */,
                                   FALSE /* dry_run */,
                                   NULL, NULL, /* No conflict handling possible */
                                   eb->cancel_func, eb->cancel_baton,
-                                  pool,
-                                  pool));
+                                  scratch_pool,
+                                  scratch_pool));
 
       prop_state = svn_wc_notify_state_unchanged;
       new_actual_props = local_actual_props;
@@ -4220,8 +4223,9 @@ close_file(void *file_baton,
          Note: this will also update the executable flag, but ... meh.  */
       SVN_ERR(svn_wc__wq_build_sync_file_flags(&work_item, eb->db,
                                                fb->local_abspath,
-                                               pool, pool));
-      all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
+                                               scratch_pool, scratch_pool));
+      all_work_items = svn_wc__wq_merge(all_work_items, work_item,
+                                        scratch_pool);
     }
 
   /* Clean up any temporary files.  */
@@ -4232,8 +4236,9 @@ close_file(void *file_baton,
       && strcmp(install_from, fb->local_abspath) != 0)
     {
       SVN_ERR(svn_wc__wq_build_file_remove(&work_item, eb->db, install_from,
-                                           pool, pool));
-      all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
+                                           scratch_pool, scratch_pool));
+      all_work_items = svn_wc__wq_merge(all_work_items, work_item,
+                                        scratch_pool);
     }
 
   /* ### NOTE: from this point onwards, we make several changes to the
@@ -4260,7 +4265,7 @@ close_file(void *file_baton,
                                          NULL, NULL,
                                          &new_checksum, NULL, NULL, NULL, NULL,
                                          eb->db, fb->local_abspath,
-                                         pool, pool));
+                                         scratch_pool, scratch_pool));
       }
 
     /* The adm crawler skips file externals for us, so we only have to check
@@ -4269,7 +4274,7 @@ close_file(void *file_baton,
         && (0 == strcmp(eb->target_abspath, fb->local_abspath)))
       SVN_ERR(svn_wc__db_temp_get_file_external(&serialised,
                                                 eb->db, fb->local_abspath,
-                                                pool, pool));
+                                                scratch_pool, scratch_pool));
 
     SVN_ERR(svn_wc__db_base_add_file(eb->db, fb->local_abspath,
                                      fb->new_relpath,
@@ -4283,12 +4288,12 @@ close_file(void *file_baton,
                                      SVN_INVALID_FILESIZE,
                                      (dav_prop_changes
                                       && dav_prop_changes->nelts > 0)
-                                        ? prop_hash_from_array(dav_prop_changes,
-                                                               pool)
-                                        : NULL,
+                                       ? prop_hash_from_array(dav_prop_changes,
+                                                              scratch_pool)
+                                       : NULL,
                                      NULL /* conflict */,
                                      all_work_items,
-                                     pool));
+                                     scratch_pool));
 
     /* ### ugh. deal with preserving the file external value in the database.
        ### there is no official API, so we do it this way. maybe we should
@@ -4301,14 +4306,14 @@ close_file(void *file_baton,
         SVN_ERR(svn_wc__unserialize_file_external(&file_external_repos_relpath,
                                                   &file_external_peg_rev,
                                                   &file_external_rev,
-                                                  serialised, pool));
+                                                  serialised, scratch_pool));
 
         SVN_ERR(svn_wc__db_temp_op_set_file_external(
                                                   eb->db, fb->local_abspath,
                                                   file_external_repos_relpath,
                                                   &file_external_peg_rev,
                                                   &file_external_rev,
-                                                  pool));
+                                                  scratch_pool));
       }
   }
 
@@ -4320,7 +4325,7 @@ close_file(void *file_baton,
   if (fb->add_existed && fb->adding_file)
     {
       SVN_ERR(svn_wc__db_temp_op_remove_working(eb->db, fb->local_abspath,
-                                                pool));
+                                                scratch_pool));
     }
 
   /* Now we might have to update the ACTUAL tree, with the result of the
@@ -4334,7 +4339,7 @@ close_file(void *file_baton,
                                       new_actual_props,
                                       NULL /* conflict */,
                                       NULL /* work_item */,
-                                      pool));
+                                      scratch_pool));
     }
 
   /* ### we may as well run whatever is in the queue right now. this
@@ -4345,10 +4350,10 @@ close_file(void *file_baton,
      ### some future point in time.  */
   SVN_ERR(svn_wc__wq_run(eb->db, fb->dir_baton->local_abspath,
                          eb->cancel_func, eb->cancel_baton,
-                         pool));
+                         scratch_pool));
 
   /* We have one less referrer to the directory's bump information. */
-  SVN_ERR(maybe_bump_dir_info(eb, fb->bump_info, pool));
+  SVN_ERR(maybe_bump_dir_info(eb, fb->bump_info, scratch_pool));
 
   /* Send a notification to the callback function.  (Skip notifications
      about files which were already notified for another reason.) */
@@ -4370,7 +4375,7 @@ close_file(void *file_baton,
           action = svn_wc_notify_update_add;
         }
 
-      notify = svn_wc_create_notify(fb->local_abspath, action, pool);
+      notify = svn_wc_create_notify(fb->local_abspath, action, scratch_pool);
       notify->kind = svn_node_file;
       notify->content_state = content_state;
       notify->prop_state = prop_state;
@@ -4380,13 +4385,14 @@ close_file(void *file_baton,
 
       /* Fetch the mimetype */
       SVN_ERR(svn_wc__internal_propget(&mime_type, eb->db, fb->local_abspath,
-                                       SVN_PROP_MIME_TYPE, pool, pool));
+                                       SVN_PROP_MIME_TYPE,
+                                       scratch_pool, scratch_pool));
       notify->mime_type = mime_type == NULL ? NULL : mime_type->data;
 
-      eb->notify_func(eb->notify_baton, notify, pool);
+      eb->notify_func(eb->notify_baton, notify, scratch_pool);
     }
 
-  svn_pool_destroy(fb->pool);
+  svn_pool_destroy(fb->pool); /* Destroy scratch_pool */
 
   return SVN_NO_ERROR;
 }
