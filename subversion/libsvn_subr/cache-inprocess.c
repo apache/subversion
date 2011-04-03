@@ -248,7 +248,7 @@ inprocess_cache_get(void **value_p,
   else
     *value_p = NULL;
 
-  return unlock_cache(cache, err);
+  return err;
 }
 
 /* Removes PAGE from the LRU list, removes all of its entries from
