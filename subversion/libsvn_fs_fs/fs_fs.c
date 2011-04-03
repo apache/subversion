@@ -1552,7 +1552,7 @@ svn_fs_fs__hotcopy(const char *src_path,
               err2 = svn_dirent_get_absolute(&dst_abspath, dst_path, pool);
               if (err2)
                 return svn_error_return(svn_error_compose_create(err, err2));
-
+              
               /* ### hack: strip off the 'db/' directory from paths so
                * ### they make sense to the user */
               src_abspath = svn_dirent_dirname(src_abspath, pool);
@@ -2222,6 +2222,7 @@ set_cached_node_revision_body(node_revision_t *noderev_p,
   return SVN_NO_ERROR;
 }
 
+
 /* Get the node-revision for the node ID in FS.
    Set *NODEREV_P to the new node-revision structure, allocated in POOL.
    See svn_fs_fs__get_node_revision, which wraps this and adds another
@@ -2831,7 +2832,7 @@ get_root_changes_offset(apr_off_t *root_offset,
    directory to its final location NEW_FILENAME in the repository.  On
    Unix, match the permissions of the new file to the permissions of
    PERMS_REFERENCE.  Temporary allocations are from POOL.
-
+   
    This function almost duplicates svn_io_file_move(), but it tries to
    guarantee a flush. */
 static svn_error_t *
@@ -3523,12 +3524,43 @@ fulltext_size_is_cachable(fs_fs_data_t *ffd, svn_filesize_t size)
       && svn_cache__is_cachable(ffd->fulltext_cache, (apr_size_t)size);
 }
 
+/* Store fulltext in RB in the fulltext cache used by said RB. Items that
+ * are too large to be cached won't. Also, this will be a no-op if no 
+ * fulltext cache has been enabled in RB.
+ */
+static svn_error_t *
+cache_rep(struct rep_read_baton *rb)
+{
+  fs_fs_data_t *ffd = rb->fs->fsap_data;
+  if (rb->current_fulltext &&
+      fulltext_size_is_cachable(ffd, rb->current_fulltext->len))
+    {
+      SVN_ERR(svn_cache__set(ffd->fulltext_cache, rb->fulltext_cache_key,
+                             rb->current_fulltext, rb->pool));
+    }
+
+  /* prevent duplicate caching (this is only to aid performance) */
+  rb->current_fulltext = NULL;
+
+  return SVN_NO_ERROR;
+}
+
 /* Close method used on streams returned by read_representation().
  */
 static svn_error_t *
 rep_read_contents_close(void *baton)
 {
   struct rep_read_baton *rb = baton;
+
+  /* If the item size was not known in advance or is empty,
+   * we didn't attempt to add it to the fulltext cache, yet.
+   * Now, the data should be in.
+   *
+   * If the fulltext has already been cached, calling this
+   * function will be a no-op as it reset the current_fulltext
+   * member during the first call. 
+   */
+  cache_rep(rb);
 
   svn_pool_destroy(rb->pool);
   svn_pool_destroy(rb->filehandle_pool);
@@ -3721,13 +3753,11 @@ rep_read_contents(void *baton,
         }
     }
 
-  if (rb->off == rb->len && rb->current_fulltext)
-    {
-      fs_fs_data_t *ffd = rb->fs->fsap_data;
-      SVN_ERR(svn_cache__set(ffd->fulltext_cache, rb->fulltext_cache_key,
-                             rb->current_fulltext, rb->pool));
-      rb->current_fulltext = NULL;
-    }
+  /* If we read the whole content, cache it.
+   * Otherwise, the closing function the read stream will take care of that.
+   * Duplicate caching attemps will be handled / prevented by cache_rep. */
+  if (rb->off == rb->len && rb->len)
+    cache_rep(rb);
 
   return SVN_NO_ERROR;
 }
@@ -7968,7 +7998,7 @@ struct pack_baton
 /* The work-horse for svn_fs_fs__pack, called with the FS write lock.
    This implements the svn_fs_fs__with_write_lock() 'body' callback
    type.  BATON is a 'struct pack_baton *'.
-
+   
    WARNING: if you add a call to this function, please note:
      The code currently assumes that any piece of code running with
      the write-lock set can rely on the ffd->min_unpacked_rev and
