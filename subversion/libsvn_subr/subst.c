@@ -1069,12 +1069,10 @@ translate_chunk(svn_stream_t *dst,
                  and to reduce loop condition overhead. */
               while ((p + len + 4) <= end)
                 {
-                  char sum = interesting[(unsigned char)p[len]]
-                           | interesting[(unsigned char)p[len+1]]
-                           | interesting[(unsigned char)p[len+2]]
-                           | interesting[(unsigned char)p[len+3]];
-
-                  if (sum != 0)
+                  if (interesting[(unsigned char)p[len]]
+                      || interesting[(unsigned char)p[len+1]]
+                      || interesting[(unsigned char)p[len+2]]
+                      || interesting[(unsigned char)p[len+3]])
                     break;
 
                   len += 4;
