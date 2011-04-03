@@ -673,12 +673,9 @@ WHERE wc_id = ?1 AND local_relpath = ?2
   AND op_depth = (SELECT MAX(op_depth) FROM nodes
                   WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0)
 
--- STMT_DETERMINE_TREE_FOR_RECORDING
-SELECT 0 FROM nodes WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
-UNION
-SELECT 1 FROM nodes WHERE wc_id = ?1 AND local_relpath = ?2
-  AND op_depth = (SELECT MAX(op_depth) FROM nodes
-                  WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0)
+-- STMT_DETERMINE_WHICH_TREES_EXIST
+SELECT op_depth FROM nodes WHERE wc_id = ?1 AND local_relpath = ?2
+ORDER BY op_depth
 
 /* ### This doesn't select all absent nodes, it only selects one of them. */
 -- STMT_SELECT_ABSENT_NODES

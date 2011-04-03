@@ -1168,7 +1168,8 @@ add_work_items(svn_sqlite__db_t *sdb,
 /* Determine which trees' nodes exist for a given WC_ID and LOCAL_RELPATH
    in the specified SDB.  */
 static svn_error_t *
-which_trees_exist(svn_boolean_t *base_exists,
+which_trees_exist(svn_boolean_t *any_exists,
+                  svn_boolean_t *base_exists,
                   svn_boolean_t *working_exists,
                   svn_sqlite__db_t *sdb,
                   apr_int64_t wc_id,
@@ -1177,30 +1178,38 @@ which_trees_exist(svn_boolean_t *base_exists,
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
 
-  *base_exists = FALSE;
-  *working_exists = FALSE;
+  if (base_exists)
+    *base_exists = FALSE;
+  if (working_exists)
+    *working_exists = FALSE;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                    STMT_DETERMINE_TREE_FOR_RECORDING));
+                                    STMT_DETERMINE_WHICH_TREES_EXIST));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
-  if (have_row)
-    {
-      int value = svn_sqlite__column_int(stmt, 0);
+  if (any_exists)
+    *any_exists = have_row;
 
-      if (value)
-        *working_exists = TRUE;  /* value == 1  */
-      else
-        *base_exists = TRUE;  /* value == 0  */
+  while (have_row)
+    {
+      apr_int64_t op_depth = svn_sqlite__column_int64(stmt, 0);
+
+      if (op_depth == 0)
+        {
+          if (base_exists)
+            *base_exists = TRUE;
+          if (!working_exists)
+            break;
+        }
+      else if (op_depth > 0)
+        {
+          if (working_exists)
+            *working_exists = TRUE;
+          break;
+        }
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
-      if (have_row)
-        {
-          /* If both rows, then both tables.  */
-          *base_exists = TRUE;
-          *working_exists = TRUE;
-        }
     }
 
   return svn_error_return(svn_sqlite__reset(stmt));
@@ -8716,13 +8725,12 @@ wclock_obtain_cb(void *baton,
          created?  1.6 used to lock .svn on creation. */
   if (local_relpath[0])
     {
-      svn_boolean_t have_base;
-      svn_boolean_t have_working;
+      svn_boolean_t have_any;
 
-      SVN_ERR(which_trees_exist(&have_base, &have_working, wcroot->sdb,
+      SVN_ERR(which_trees_exist(&have_any, NULL, NULL, wcroot->sdb,
                                 wcroot->wc_id, local_relpath));
 
-      if (!have_base && !have_working)
+      if (!have_any)
         return svn_error_createf(
                                  SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                                  _("The node '%s' was not found."),
