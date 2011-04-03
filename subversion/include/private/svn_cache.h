@@ -176,12 +176,16 @@ typedef struct svn_cache__info_t
  * may certainly be 1).
  *
  * If @a thread_safe is true, and APR is compiled with threads, all
- * accesses to the cache will be protected with a mutex.
+ * accesses to the cache will be protected with a mutex. The @a id
+ * is a purely user-visible information that will allow coders to
+ * identify this cache instance in a @ref svn_cache__info_t struct.
+ * It does not influence the behavior of the cache itself.
  *
- * Note that NULL is a legitimate value for cache entries (and @a dup_func
- * will not be called on it).
+ * Note that NULL is a legitimate value for cache entries (and 
+ * @a serialize_func will not be called on it).
  *
- * It is not safe for @a dup_func to interact with the cache itself.
+ * It is not safe for @a serialize_func nor @a deserialize_func to 
+ * interact with the cache itself.
  */
 svn_error_t *
 svn_cache__create_inprocess(svn_cache__t **cache_p,
