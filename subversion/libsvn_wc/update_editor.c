@@ -4333,9 +4333,11 @@ close_file(void *file_baton,
                                                 pool));
     }
 
-  /* Now we need to update the ACTUAL tree, with the result of the
+  /* Now we might have to update the ACTUAL tree, with the result of the
      properties merge. */
-  if (! fb->adding_base_under_local_add && !fb->deleted)
+  if (! (fb->adding_file && !fb->add_existed)
+      && ! fb->adding_base_under_local_add 
+      && ! fb->deleted)
     {
       SVN_ERR_ASSERT(new_actual_props != NULL);
 
