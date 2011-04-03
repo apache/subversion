@@ -80,7 +80,7 @@ mv roll/deploy "$target/dist"
 # Optionally remove our working directory
 if [ -n "$clean" ]; then
   echo '--------------------cleaning up-----------------------'
-  rm -r roll
+  rm -rf roll
 fi
 
 echo '------------------------done--------------------------'
