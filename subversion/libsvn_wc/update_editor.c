@@ -3827,7 +3827,7 @@ merge_file(svn_skel_t **work_items,
       SVN_ERR(svn_wc__get_translate_info(NULL, NULL,
                                          &keywords,
                                          NULL,
-                                         eb->db, fb->local_abspath,
+                                         eb->db, fb->local_abspath, NULL,
                                          scratch_pool, scratch_pool));
       if (magic_props_changed || keywords)
         {

@@ -167,7 +167,7 @@ detranslate_wc_file(const char **detranslated_abspath,
         SVN_ERR(svn_wc__get_translate_info(&style, &eol,
                                            &keywords,
                                            &special,
-                                           db, target_abspath,
+                                           db, target_abspath, NULL,
                                            scratch_pool, scratch_pool));
       else
         {
@@ -186,7 +186,7 @@ detranslate_wc_file(const char **detranslated_abspath,
         SVN_ERR(svn_wc__get_translate_info(&style, &eol,
                                            &keywords,
                                            &special,
-                                           db, target_abspath,
+                                           db, target_abspath, NULL,
                                            scratch_pool, scratch_pool));
       else
         {
@@ -1054,7 +1054,7 @@ merge_text_file(svn_skel_t **work_items,
          but the same treatment is probably also appropriate for
          whatever special file types we may invent in the future. */
       SVN_ERR(svn_wc__get_translate_info(NULL, NULL, NULL,
-                                         &special, db, target_abspath,
+                                         &special, db, target_abspath, NULL,
                                          pool, pool));
       SVN_ERR(svn_io_files_contents_same_p(&same, result_target,
                                            (special ?
