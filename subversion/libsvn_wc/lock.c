@@ -21,6 +21,8 @@
  * ====================================================================
  */
 
+#define SVN_DEPRECATED
+
 #include <apr_pools.h>
 #include <apr_time.h>
 
