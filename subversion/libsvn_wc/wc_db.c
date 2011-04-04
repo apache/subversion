@@ -3590,6 +3590,7 @@ op_revert_txn(void *baton,
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
       SVN_ERR(svn_sqlite__step_done(stmt));
 
+      /* ### This removes the lock, but what about the access baton? */
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_DELETE_WC_LOCK_ORPHAN));
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
@@ -3684,6 +3685,7 @@ op_revert_recursive_txn(void *baton,
                             local_relpath, like_arg));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
+  /* ### This removes the locks, but what about the access batons? */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_DELETE_WC_LOCK_ORPHAN_RECURSIVE));
   SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id,
