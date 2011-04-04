@@ -1420,6 +1420,9 @@ revert_restore(svn_wc__db_t *db,
   SVN_ERR(svn_io_check_special_path(local_abspath, &on_disk, &special,
                                     scratch_pool));
 
+  /* If we expect a versioned item to be present then check that any
+     item on disk matches the versioned item, if it doesn't match then
+     fix it or delete it.  */
   if (on_disk != svn_node_none
       && status != svn_wc__db_status_absent
       && status != svn_wc__db_status_deleted
@@ -1510,6 +1513,8 @@ revert_restore(svn_wc__db_t *db,
         }
     }
 
+  /* If we expect a versioned item to be present and there is nothing
+     on disk then recreate it. */
   if (on_disk == svn_node_none
       && status != svn_wc__db_status_absent
       && status != svn_wc__db_status_deleted
