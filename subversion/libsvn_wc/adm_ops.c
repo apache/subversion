@@ -1815,11 +1815,10 @@ revert_internal(svn_wc__db_t *db,
                                                 pool));
 
   /* The user may expect svn_depth_files/svn_depth_immediates to work
-     on copied dirs with one level of children children.  It doesn't,
-     the user will get an error and will need to invoke an infinite
-     revert.  If we identified those cases where svn_depth_infinity
-     would not revert too much we could invoke the recursive call
-     above. */
+     on copied dirs with one level of children.  It doesn't, the user
+     will get an error and will need to invoke an infinite revert.  If
+     we identified those cases where svn_depth_infinity would not
+     revert too much we could invoke the recursive call above. */
 
   if (depth == svn_depth_files || depth == svn_depth_immediates)
     return svn_error_return(new_revert_partial(db, revert_root, local_abspath,
