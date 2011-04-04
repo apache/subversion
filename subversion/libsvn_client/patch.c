@@ -2753,7 +2753,8 @@ svn_client_patch(const char *patch_abspath,
   if (kind == svn_node_none)
     return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
                              _("'%s' does not exist"),
-                             svn_dirent_dirname(patch_abspath, scratch_pool));
+                             svn_dirent_local_style(patch_abspath,
+                                                    scratch_pool));
   if (kind != svn_node_file)
     return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
                              _("'%s' is not a file"),
