@@ -1361,6 +1361,10 @@ remove_conflict_file(svn_boolean_t *notify_required,
   return SVN_NO_ERROR;
 }
 
+/* Make the working tree under LOCAL_ABSPATH to depth DEPTH match the
+   versioned tree.  This function is called after svn_wc__db_op_revert
+   has done the database revert and created the revert list.  Notifies
+   for all paths equal to or below LOCAL_ABSPATH that are reverted. */
 static svn_error_t *
 revert_restore(svn_wc__db_t *db,
                const char *revert_root,
@@ -1606,6 +1610,8 @@ new_revert_internal(svn_wc__db_t *db,
                     void *notify_baton,
                     apr_pool_t *scratch_pool)
 {
+  SVN_ERR_ASSERT(depth == svn_depth_empty || depth == svn_depth_infinity);
+
   SVN_ERR(svn_wc__db_op_revert(db, local_abspath, depth,
                                scratch_pool, scratch_pool));
 
@@ -1614,10 +1620,6 @@ new_revert_internal(svn_wc__db_t *db,
                          cancel_func, cancel_baton,
                          notify_func, notify_baton,
                          scratch_pool));
-
-  if (notify_func)
-    SVN_ERR(svn_wc__db_revert_list_notify(notify_func, notify_baton,
-                                          db, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
