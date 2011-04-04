@@ -5580,6 +5580,8 @@ insert_parent_and_sibs_of_sw_absent_del_subtree(
 /* pre_merge_status_cb's baton */
 struct pre_merge_status_baton_t
 {
+  svn_wc_context_t *wc_ctx;
+
   /* const char *absolute_wc_path to svn_depth_t * mapping for depths
      of empty, immediates, and files. */
   apr_hash_t *shallow_subtrees;
@@ -5601,30 +5603,47 @@ struct pre_merge_status_baton_t
    all switched, absent, and missing subtrees under a merge target. */
 static svn_error_t *
 pre_merge_status_cb(void *baton,
-                    const char *path,
-                    const svn_client_status_t *status,
+                    const char *local_abspath,
+                    const svn_wc_status3_t *status,
                     apr_pool_t *pool)
 {
   struct pre_merge_status_baton_t *pmsb = baton;
+  const char *dup_abspath = NULL;
+
+  /* ### Probably needed: Calculate file external status */
+  /*svn_boolean_t is_file_external = FALSE;
+
+  if (status->versioned
+      && status->switched
+      && status->kind == svn_node_file)
+    {
+      svn_boolean_t is_file_external;
+      SVN_ERR(svn_wc__node_is_file_external(&is_file_external, pmsb->wc_ctx,
+                                            local_abspath, pool));
+    }*/
 
   if (status->switched)
     {
+      if (!dup_abspath)
+        dup_abspath = apr_pstrdup(pmsb->pool, local_abspath);
+
       apr_hash_set(pmsb->switched_subtrees,
-                   apr_pstrdup(pmsb->pool, status->local_abspath),
+                   apr_pstrdup(pmsb->pool, local_abspath),
                    APR_HASH_KEY_STRING,
-                   apr_pstrdup(pmsb->pool, status->repos_relpath));
+                   dup_abspath);
     }
 
   if (status->depth == svn_depth_empty
       || status->depth == svn_depth_files)
     {
-      const char *local_abspath = apr_pstrdup(pmsb->pool,
-                                              status->local_abspath);
       svn_depth_t *depth = apr_pcalloc(pmsb->pool, sizeof *depth);
+
+      if (!dup_abspath)
+        dup_abspath = apr_pstrdup(pmsb->pool, local_abspath);
 
       *depth = status->depth;
       apr_hash_set(pmsb->shallow_subtrees,
-                   local_abspath,
+                   dup_abspath,
                    APR_HASH_KEY_STRING,
                    depth);
     }
@@ -5633,8 +5652,9 @@ pre_merge_status_cb(void *baton,
     {
       svn_boolean_t new_missing_root = TRUE;
       apr_hash_index_t *hi;
-      const char *local_abspath = apr_pstrdup(pmsb->pool,
-                                              status->local_abspath);
+
+      if (!dup_abspath)
+        dup_abspath = apr_pstrdup(pmsb->pool, local_abspath);
 
       for (hi = apr_hash_first(pool, pmsb->missing_subtrees);
            hi;
@@ -5643,7 +5663,7 @@ pre_merge_status_cb(void *baton,
           const char *missing_root_path = svn__apr_hash_index_key(hi);
           
           if (svn_dirent_is_ancestor(missing_root_path,
-                                     status->local_abspath))
+                                     dup_abspath))
             {
               new_missing_root = FALSE;
               break;          
@@ -5651,8 +5671,8 @@ pre_merge_status_cb(void *baton,
         }
 
       if (new_missing_root)
-        apr_hash_set(pmsb->missing_subtrees, local_abspath,
-                     APR_HASH_KEY_STRING, local_abspath);
+        apr_hash_set(pmsb->missing_subtrees, dup_abspath,
+                     APR_HASH_KEY_STRING, dup_abspath);
     }
 
   return SVN_NO_ERROR;
@@ -5788,6 +5808,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
   /* Case 2: Switched subtrees
      Case 10: Paths at depths of 'empty' or 'files'
      Case 11: Paths missing from disk */
+  pre_merge_status_baton.wc_ctx = merge_cmd_baton->ctx->wc_ctx;
   switched_subtrees = apr_hash_make(scratch_pool);
   pre_merge_status_baton.switched_subtrees = switched_subtrees;
   shallow_subtrees = apr_hash_make(scratch_pool);
@@ -5795,12 +5816,14 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
   missing_subtrees = apr_hash_make(scratch_pool);
   pre_merge_status_baton.missing_subtrees = missing_subtrees;
   pre_merge_status_baton.pool = scratch_pool;
-  SVN_ERR(svn_client_status5(NULL, merge_cmd_baton->ctx,
+  SVN_ERR(svn_wc_walk_status(merge_cmd_baton->ctx->wc_ctx,
                              merge_cmd_baton->target_abspath,
-                             &working_revision, depth,
-                             TRUE, FALSE, TRUE, TRUE, FALSE, NULL,
+                             depth, TRUE, TRUE, NULL,
                              pre_merge_status_cb,
                              &pre_merge_status_baton,
+                             NULL, NULL,
+                             merge_cmd_baton->ctx->cancel_func,
+                             merge_cmd_baton->ctx->cancel_baton,
                              scratch_pool));
 
   /* Issue #2915: Raise an error describing the roots of any missing
