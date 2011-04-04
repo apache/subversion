@@ -3589,6 +3589,11 @@ op_revert_txn(void *baton,
                                         STMT_DELETE_WORKING_NODE));
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
       SVN_ERR(svn_sqlite__step_done(stmt));
+
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_DELETE_WC_LOCK_ORPHAN));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__step_done(stmt));
     }
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
@@ -3679,6 +3684,12 @@ op_revert_recursive_txn(void *baton,
                             local_relpath, like_arg));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_DELETE_WC_LOCK_ORPHAN_RECURSIVE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id,
+                            local_relpath, like_arg));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
   return SVN_NO_ERROR;
 }
 
@@ -3729,6 +3740,10 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
   err = svn_error_compose_create(err,
                                  svn_sqlite__exec_statements(wcroot->sdb,
                                                STMT_DROP_REVERT_LIST_TRIGGERS));
+
+  err = svn_error_compose_create(err,
+                                 flush_entries(wcroot, local_abspath,
+                                               scratch_pool));
 
   return err;
 }

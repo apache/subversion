@@ -540,18 +540,29 @@ test_access_baton_like_locking(apr_pool_t *pool)
   SVN_ERR(svn_wc_adm_retrieve(&subdir_access, adm_access, D2, pool));
   SVN_ERR(svn_wc_add3(D3, subdir_access, svn_depth_infinity, NULL,
                       SVN_INVALID_REVNUM, NULL, NULL, NULL, NULL, pool));
+  SVN_ERR(svn_wc_add3(D4, subdir_access, svn_depth_infinity, NULL,
+                      SVN_INVALID_REVNUM, NULL, NULL, NULL, NULL, pool));
   SVN_ERR(svn_wc_locked(&locked, D3, pool));
   SVN_TEST_ASSERT(locked);
+  SVN_ERR(svn_wc_locked(&locked, D4, pool));
+  SVN_TEST_ASSERT(locked);
+  SVN_ERR(svn_wc_delete3(D4, subdir_access, NULL, NULL, NULL, NULL, FALSE,
+                         pool));
+  SVN_ERR(svn_wc_locked(&locked, D4, pool));
+  SVN_TEST_ASSERT(!locked);
   SVN_ERR(svn_wc_revert3(D, adm_access, svn_depth_infinity, FALSE,
                          NULL, NULL, NULL, NULL, NULL, pool));
   SVN_ERR(svn_wc_locked(&locked, D3, pool));
   SVN_TEST_ASSERT(!locked);
+  SVN_ERR(svn_wc_locked(&locked, local_abspath, pool));
+  SVN_TEST_ASSERT(locked);
   SVN_ERR(svn_wc_adm_close2(adm_access, pool));
 
   SVN_ERR(svn_wc_context_create(&wc_ctx, NULL, pool, pool));
 
   /* Obtain a lock for the root, which is extended on each level */
   SVN_ERR(svn_wc__db_wclock_obtain(wc_ctx->db, local_abspath, 0, FALSE, pool));
+  SVN_ERR(svn_io_make_dir_recursively(D4, pool));
   SVN_ERR(svn_wc_add4(wc_ctx, D, svn_depth_infinity, NULL, SVN_INVALID_REVNUM,
                       NULL, NULL, NULL, NULL, pool));
   SVN_ERR(svn_wc_add4(wc_ctx, D1, svn_depth_infinity, NULL, SVN_INVALID_REVNUM,

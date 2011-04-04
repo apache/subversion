@@ -582,6 +582,21 @@ WHERE wc_id = ?1 AND local_dir_relpath = ?2
 SELECT local_dir_relpath FROM wc_lock
 WHERE wc_id = ?1 AND local_dir_relpath LIKE ?2 ESCAPE '#'
 
+-- STMT_DELETE_WC_LOCK_ORPHAN
+DELETE FROM wc_lock
+WHERE wc_id = ?1 AND local_dir_relpath = ?2
+AND NOT EXISTS (SELECT 1 FROM nodes
+                 WHERE nodes.wc_id = ?1 AND nodes.wc_id = wc_lock.wc_id
+                   AND nodes.local_relpath = wc_lock.local_dir_relpath)
+
+-- STMT_DELETE_WC_LOCK_ORPHAN_RECURSIVE
+DELETE FROM wc_lock
+WHERE wc_id = ?1
+AND (local_dir_relpath = ?2 OR local_dir_relpath LIKE ?3 ESCAPE '#')
+AND NOT EXISTS (SELECT 1 FROM nodes
+                 WHERE nodes.wc_id = ?1 AND nodes.wc_id = wc_lock.wc_id
+                   AND nodes.local_relpath = wc_lock.local_dir_relpath)
+
 -- STMT_APPLY_CHANGES_TO_BASE_NODE
 /* translated_size and last_mod_time are not mentioned here because they will
    be tweaked after the working-file is installed.
