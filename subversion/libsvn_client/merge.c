@@ -249,6 +249,8 @@ typedef struct merge_cmd_baton_t {
                                          versioned dir (dry-run only) */
   const char *target_abspath;         /* Absolute working copy target of
                                          the merge. */
+  const char *target_wcroot_abspath;  /* Absolute path to root of wc that
+                                         TARGET_ABSPATH belongs to. */
 
   /* The left and right URLs and revs.  The value of this field changes to
      reflect the merge_source_t *currently* being merged by do_merge(). */
@@ -1554,6 +1556,32 @@ merge_file_added(const char *local_dir_abspath,
 
   if (tree_conflicted)
     *tree_conflicted = FALSE;
+
+  /* Easy out: not the same working copy.  (So, a disjoint working copy or
+     an external.) */
+  {
+    const char *mine_wcroot_abspath;
+
+    /* ### White-box optimization:
+
+       The code knows that MINE_ABSPATH is not a directory (it's an added
+       file), and we know that internally libsvn_wc queries are faster for
+       directories (this is an implementation detail).  Therefore, query for
+       the wcroot of the containing directory of MINE_ABSPATH.
+       
+       (We rely on the implementation detail only for performance, not for
+       correctness; under any implementation it would be valid to query for
+       the parent's wcroot.)
+     */
+    SVN_ERR(svn_wc_get_wc_root(&mine_wcroot_abspath, merge_b->ctx->wc_ctx,
+                               svn_dirent_dirname(mine_abspath, scratch_pool),
+                               scratch_pool, scratch_pool));
+    if (strcmp(mine_wcroot_abspath, merge_b->target_wcroot_abspath))
+      {
+        *content_state = svn_wc_notify_state_obstructed;
+        return SVN_NO_ERROR;
+      }
+  }
 
   /* Apply the prop changes to a new hash table. */
   file_props = apr_hash_copy(subpool, original_props);
@@ -8674,6 +8702,9 @@ do_merge(apr_hash_t **modified_subtrees,
   merge_cmd_baton.target_missing_child = FALSE;
   merge_cmd_baton.reintegrate_merge = reintegrate_merge;
   merge_cmd_baton.target_abspath = target_abspath;
+  SVN_ERR(svn_wc_get_wc_root(&merge_cmd_baton.target_wcroot_abspath,
+                             ctx->wc_ctx, merge_cmd_baton.target_abspath,
+                             pool, subpool));
   merge_cmd_baton.pool = subpool;
   merge_cmd_baton.merge_options = merge_options;
   merge_cmd_baton.diff3_cmd = diff3_cmd;
