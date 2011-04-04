@@ -740,7 +740,7 @@ READLINK_PL=$(PERL) -e 'use Cwd; print Cwd::realpath(shift)'
 
 swig-pl_DEPS = autogen-swig-pl libsvn_swig_perl \
   $(SWIG_PL_DIR)/native/Makefile
-swig-pl: check-SWIG $(swig-pl_DEPS)
+swig-pl: $(swig-pl_DEPS)
 	if test "`$(READLINK_PL) $(SWIG_PL_DIR)`" != "`$(READLINK_PL) $(SWIG_PL_SRC_DIR)`"; then \
 	  ln -sf $(SWIG_PL_SRC_DIR)/native/*.c $(SWIG_PL_DIR)/native; \
 	fi
@@ -783,7 +783,7 @@ copy-swig-py: autogen-swig-py $(SWIG_PY_DIR)/libsvn
 	done
 	@touch $(SWIG_PY_DIR)/libsvn/__init__.py
 
-swig-py: check-SWIG autogen-swig-py copy-swig-py
+swig-py: autogen-swig-py copy-swig-py
 
 check-swig-py: swig-py
 	cd $(SWIG_PY_DIR); \
@@ -805,7 +805,7 @@ clean-swig-py:
 extraclean-swig-py: clean-swig-py
 	$(EXTRACLEAN_SWIG_PY)
 
-swig-rb: check-SWIG autogen-swig-rb
+swig-rb: autogen-swig-rb
 
 check-swig-rb: swig-rb svnserve
 	cd $(SWIG_RB_DIR); \
