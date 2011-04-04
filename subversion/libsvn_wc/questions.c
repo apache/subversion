@@ -118,7 +118,7 @@ compare_and_verify(svn_boolean_t *modified_p,
   SVN_ERR(svn_wc__get_translate_info(&eol_style, &eol_str,
                                      &keywords,
                                      &special,
-                                     db, versioned_file_abspath,
+                                     db, versioned_file_abspath, NULL,
                                      scratch_pool, scratch_pool));
 
   need_translation = svn_subst_translation_required(eol_style, eol_str,

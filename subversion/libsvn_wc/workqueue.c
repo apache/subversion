@@ -849,7 +849,7 @@ install_committed_file(svn_boolean_t *overwrote_working,
     SVN_ERR(svn_wc__get_translate_info(NULL, NULL,
                                        NULL,
                                        &special,
-                                       db, file_abspath,
+                                       db, file_abspath, NULL,
                                        scratch_pool, scratch_pool));
     /* ### Should this be a strcmp()? */
     if (! special && tmp != tmp_wfile)
@@ -1385,6 +1385,10 @@ run_file_install(svn_wc__db_t *db,
   svn_stream_t *dst_stream;
   const char *dst_abspath;
   apr_int64_t val;
+  const char *wcroot_abspath;
+  const char *source_abspath;
+  const svn_checksum_t *checksum;
+  apr_hash_t *props;
 
   local_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
   SVN_ERR(svn_skel__parse_int(&val, arg1->next, scratch_pool));
@@ -1392,27 +1396,32 @@ run_file_install(svn_wc__db_t *db,
   SVN_ERR(svn_skel__parse_int(&val, arg1->next->next, scratch_pool));
   record_fileinfo = (val != 0);
 
-  if (arg4 == NULL)
-    {
-      /* Get the pristine contents (from WORKING or BASE, as appropriate).  */
-      SVN_ERR(svn_wc__get_pristine_contents(&src_stream, db, local_abspath,
+  SVN_ERR(svn_wc__db_read_node_install_info(&wcroot_abspath, NULL, NULL,
+                                            &checksum, NULL, &props,
+                                            db, local_abspath,
                                             scratch_pool, scratch_pool));
-      SVN_ERR_ASSERT(src_stream != NULL);
+
+  if (arg4 != NULL)
+    {
+      /* Use the provided path for the source.  */
+      source_abspath = apr_pstrmemdup(scratch_pool, arg4->data, arg4->len);
     }
   else
     {
-      const char *source_abspath;
-
-      /* Use the provided path for the source.  */
-      source_abspath = apr_pstrmemdup(scratch_pool, arg4->data, arg4->len);
-      SVN_ERR(svn_stream_open_readonly(&src_stream, source_abspath,
-                                       scratch_pool, scratch_pool));
+      SVN_ERR_ASSERT(checksum != NULL);
+      SVN_ERR(svn_wc__db_pristine_get_future_path(&source_abspath,
+                                                  wcroot_abspath,
+                                                  checksum,
+                                                  scratch_pool, scratch_pool));
     }
+
+  SVN_ERR(svn_stream_open_readonly(&src_stream, source_abspath,
+                                   scratch_pool, scratch_pool));
 
   /* Fetch all the translation bits.  */
   SVN_ERR(svn_wc__get_translate_info(&style, &eol,
                                      &keywords,
-                                     &special, db, local_abspath,
+                                     &special, db, local_abspath, props,
                                      scratch_pool, scratch_pool));
   if (special)
     {
@@ -1445,7 +1454,7 @@ run_file_install(svn_wc__db_t *db,
 
   /* Where is the Right Place to put a temp file in this working copy?  */
   SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir_abspath,
-                                         db, local_abspath,
+                                         db, wcroot_abspath,
                                          scratch_pool, scratch_pool));
 
   /* Translate to a temporary file. We don't want the user seeing a partial
@@ -1469,7 +1478,12 @@ run_file_install(svn_wc__db_t *db,
   SVN_ERR(svn_io_file_rename(dst_abspath, local_abspath, scratch_pool));
 
   /* Tweak the on-disk file according to its properties.  */
-  SVN_ERR(sync_file_flags(db, local_abspath, scratch_pool));
+  if (props
+      && (apr_hash_get(props, SVN_PROP_NEEDS_LOCK, APR_HASH_KEY_STRING)
+          || apr_hash_get(props, SVN_PROP_EXECUTABLE, APR_HASH_KEY_STRING)))
+    {
+      SVN_ERR(sync_file_flags(db, local_abspath, scratch_pool));
+    }
 
   if (use_commit_times)
     {
@@ -1675,7 +1689,7 @@ run_file_copy_translated(svn_wc__db_t *db,
   SVN_ERR(svn_wc__get_translate_info(&style, &eol,
                                      &keywords,
                                      &special,
-                                     db, local_abspath,
+                                     db, local_abspath, NULL,
                                      scratch_pool, scratch_pool));
 
   SVN_ERR(svn_subst_copy_and_translate4(src_abspath, dst_abspath,

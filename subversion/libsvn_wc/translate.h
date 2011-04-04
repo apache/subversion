@@ -61,8 +61,10 @@ extern "C" {
    available, do not create a hash entry for it.  If no keywords are
    found in the list, or if there is no list, set *KEYWORDS to NULL.
 
-   If SPECIAL is not NULL determine if the svn:special flag is set on LOCAL_ABSPATH
-   in DB.  If so, set SPECIAL to TRUE, if not, set it to FALSE
+   If SPECIAL is not NULL determine if the svn:special flag is set on 
+   LOCAL_ABSPATH in DB.  If so, set SPECIAL to TRUE, if not, set it to FALSE.
+
+   If PROPS is not NULL, use PROPS instead of the properties on LOCAL_ABSPATH.
 
    Use SCRATCH_POOL for temporary allocation, RESULT_POOL for allocating
    *STYLE and *EOL.
@@ -74,9 +76,9 @@ svn_wc__get_translate_info(svn_subst_eol_style_t *style,
                            svn_boolean_t *special,
                            svn_wc__db_t *db,
                            const char *local_abspath,
+                           apr_hash_t *props,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
-
 
 /* Reverse parser.  Given a real EOL string ("\n", "\r", or "\r\n"),
    return an encoded *VALUE ("LF", "CR", "CRLF") that one might see in

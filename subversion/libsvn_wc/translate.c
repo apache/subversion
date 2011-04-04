@@ -85,7 +85,7 @@ svn_wc__internal_translated_stream(svn_stream_t **stream,
   SVN_ERR(svn_wc__get_translate_info(&style, &eol,
                                      &keywords,
                                      &special,
-                                     db, versioned_abspath,
+                                     db, versioned_abspath, NULL,
                                      scratch_pool, scratch_pool));
 
   if (special)
@@ -171,7 +171,7 @@ svn_wc__internal_translated_file(const char **xlated_abspath,
   SVN_ERR(svn_wc__get_translate_info(&style, &eol,
                                      &keywords,
                                      &special,
-                                     db, versioned_abspath,
+                                     db, versioned_abspath, NULL, 
                                      scratch_pool, scratch_pool));
 
   if (! svn_subst_translation_required(style, eol, keywords, special, TRUE)
@@ -260,15 +260,16 @@ svn_wc__get_translate_info(svn_subst_eol_style_t *style,
                            svn_boolean_t *special,
                            svn_wc__db_t *db,
                            const char *local_abspath,
+                           apr_hash_t *props,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool)
 {
-  apr_hash_t *props;
   svn_string_t *propval;
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(svn_wc__get_actual_props(&props, db, local_abspath,
-                                   scratch_pool, scratch_pool));
+  if (props == NULL)
+    SVN_ERR(svn_wc__get_actual_props(&props, db, local_abspath,
+                                     scratch_pool, scratch_pool));
 
   if (eol)
     {
