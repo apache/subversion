@@ -53,6 +53,8 @@
 #include "svn_dirent_uri.h"
 #include "svn_private_config.h"
 
+#include "private/svn_atomic.h"
+
 #define SVN_SLEEP_ENV_VAR "SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_SLEEP_FOR_TIMESTAMPS"
 
 /*
@@ -458,6 +460,13 @@ svn_io_open_uniquely_named(apr_file_t **file,
                            _("Unable to make name for '%s'"),
                            svn_path_local_style(path, scratch_pool));
 }
+
+#ifdef WIN32
+/* Counter value of file_mktemp request (used in a threadsafe way), to make
+   sure that a single process normally never generates the same tempname
+   twice */
+static volatile apr_uint32_t tempname_counter = 0;
+#endif
 
 /* Creates a new temporary file in DIRECTORY with apr flags FLAGS.
    Set *NEW_FILE to the file handle and *NEW_FILE_NAME to its name.
