@@ -5937,7 +5937,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
      MERGE_CMD_BATON->TARGET_ABSPATH and DEPTH is svn_depth_files. */
   if (depth == svn_depth_immediates || depth == svn_depth_files)
     {
-      int i;
+      int j;
       const apr_array_header_t *immediate_children;
 
       SVN_ERR(svn_wc__node_get_children_of_working_node(
@@ -5947,10 +5947,10 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
       if (!iterpool)
         iterpool = svn_pool_create(scratch_pool);
 
-      for (i = 0; i < immediate_children->nelts; i++)
+      for (j = 0; j < immediate_children->nelts; j++)
         {
           const char *immediate_child_abspath =
-            APR_ARRAY_IDX(immediate_children, i, const char *);
+            APR_ARRAY_IDX(immediate_children, j, const char *);
           svn_node_kind_t immediate_child_kind;
 
           svn_pool_clear(iterpool);
