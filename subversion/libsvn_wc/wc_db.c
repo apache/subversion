@@ -5354,6 +5354,65 @@ svn_wc__db_read_children_walker_info(apr_hash_t **nodes,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc__db_read_node_install_info(const char **wcroot_abspath,
+                                  svn_wc__db_status_t *status,
+                                  svn_wc__db_kind_t *kind,
+                                  const svn_checksum_t **sha1_checksum,
+                                  const char **target,
+                                  apr_hash_t **pristine_props,
+                                  svn_wc__db_t *db,
+                                  const char *local_abspath,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+  svn_sqlite__stmt_t *stmt;
+  svn_error_t *err = NULL;
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
+                              local_abspath, scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  if (wcroot_abspath != NULL)
+    *wcroot_abspath = apr_pstrdup(result_pool, wcroot->abspath);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_NODE_INFO));
+
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+
+  SVN_ERR(svn_sqlite__step_row(stmt)); /* Row must exist */
+
+  if (status)
+    {
+      apr_int64_t op_depth = svn_sqlite__column_int64(stmt, 0);
+
+      *status = svn_sqlite__column_token(stmt, 3, presence_map);
+
+      if (op_depth > 0)
+        err = convert_to_working_status(status, *status);
+    }
+
+  if (kind)
+    *kind = svn_sqlite__column_token(stmt, 4, kind_map);
+
+  if (!err && sha1_checksum)
+    err = svn_sqlite__column_checksum(sha1_checksum, stmt, 6, result_pool);
+
+  if (target)
+    *target = svn_sqlite__column_text(stmt, 12, result_pool);
+
+  if (!err && pristine_props)
+    err = svn_sqlite__column_properties(pristine_props, stmt, 14, result_pool,
+                                        scratch_pool);
+
+  return svn_error_compose_create(err,
+                                  svn_sqlite__reset(stmt));
+}
+
+
 
 struct read_url_baton_t {
   const char **url;
