@@ -153,7 +153,7 @@ svn_wc__db_pristine_get_path(const char **pristine_abspath,
 svn_error_t *
 svn_wc__db_pristine_get_future_path(const char **pristine_abspath,
                                     const char *wcroot_abspath,
-                                    svn_checksum_t *sha1_checksum,
+                                    const svn_checksum_t *sha1_checksum,
                                     apr_pool_t *result_pool,
                                     apr_pool_t *scratch_pool)
 {
