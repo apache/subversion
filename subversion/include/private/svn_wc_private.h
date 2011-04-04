@@ -903,6 +903,16 @@ svn_wc__has_local_mods(svn_boolean_t *is_modified,
                        void *cancel_baton,
                        apr_pool_t *scratch_pool);
 
+/* Renames a working copy from @a from_abspath to @a dst_abspath and makes sure
+   open handles are closed to allow this on all platforms.
+
+   Summary: This avoids a file lock problem on wc.db on Windows, that is
+            triggered by libsvn_client'ss copy to working copy code. */
+svn_error_t *
+svn_wc__rename_wc(svn_wc_context_t *wc_ctx,
+                  const char *from_abspath,
+                  const char *dst_abspath,
+                  apr_pool_t *scratch_pool);
 
 /* Gets information needed by the commit harvester.
  *

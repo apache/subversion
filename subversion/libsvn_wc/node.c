@@ -1734,3 +1734,18 @@ svn_wc__node_get_commit_status(svn_node_kind_t *kind,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_wc__rename_wc(svn_wc_context_t *wc_ctx,
+                  const char *from_abspath,
+                  const char *dst_abspath,
+                  apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_wc__db_temp_forget_directory(wc_ctx->db,
+                                           from_abspath,
+                                           scratch_pool));
+
+  SVN_ERR(svn_io_file_rename(from_abspath, dst_abspath, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
