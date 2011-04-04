@@ -646,7 +646,6 @@ def warn_on_reserved_name(sbox):
     'lock', reserved_path)
 
 
-@Skip(svntest.main.is_posix_os)
 def propvalue_normalized(sbox):
   "'ps svn:special' should normalize to '*'"
 
