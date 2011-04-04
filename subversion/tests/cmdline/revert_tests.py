@@ -1133,7 +1133,7 @@ def revert_permissions_only(sbox):
                                      'revert', sbox.ospath('A/B/E/alpha'))
   is_writable(sbox.ospath('A/B/E/alpha'))
 
-  if svntest.main.is_posix_os:
+  if svntest.main.is_posix_os():
     os.chmod(sbox.ospath('A/B/E/beta'), 0777);   # executable
     is_executable(sbox.ospath('A/B/E/beta'))
     expected_output = ["Reverted '%s'\n" % sbox.ospath('A/B/E/beta')]
@@ -1167,7 +1167,7 @@ def revert_permissions_only(sbox):
                                      'revert', sbox.ospath('A/B/E/alpha'))
   is_readonly(sbox.ospath('A/B/E/alpha'))
 
-  if svntest.main.is_posix_os:
+  if svntest.main.is_posix_os():
     os.chmod(sbox.ospath('A/B/E/beta'), 0666);   # not executable
     is_non_executable(sbox.ospath('A/B/E/beta'))
     expected_output = ["Reverted '%s'\n" % sbox.ospath('A/B/E/beta')]
