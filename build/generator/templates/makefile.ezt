@@ -73,7 +73,7 @@ autogen-swig: autogen-swig-[swig_langs.short]
 # Section 4: Rules to build SWIG .c files from .i files
 ########################################
 [for swig_c]
-[swig_c.c_file]:[for swig_c.deps] [swig_c.deps][end]
+[swig_c.c_file]: check-SWIG [for swig_c.deps] [swig_c.deps][end]
 	$(SWIG) $(SWIG_INCLUDES) [swig_c.opts] -o $@ $(top_srcdir)/[swig_c.source][end]
 
 
