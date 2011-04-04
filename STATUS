@@ -216,6 +216,7 @@ Candidate changes:
     Notes:
       See the issue for details, and also this thread:
       http://svn.haxx.se/dev/archive-2011-02/0066.shtml
+      r1088808 fixes a compilation failure on Windows.
     Votes:
       +1: stsp
 
