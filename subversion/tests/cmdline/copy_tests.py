@@ -980,8 +980,9 @@ def repos_to_wc(sbox):
   E_url = other_repo_url + "/A/B/E"
   pi_url = other_repo_url + "/A/D/G/pi"
 
-  # Expect an error in the directory case
-  svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
+  # Expect an error in the directory case until we allow this copy to succeed.
+  expected_error = "svn: E200007: Source URL '.*foreign repository"
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
                                      'copy', E_url, wc_dir)
 
   # But file case should work fine.

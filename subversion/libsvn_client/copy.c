@@ -1525,7 +1525,7 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
         }
 
       /* Move the temporary disk tree into place. */
-      SVN_ERR(svn_io_file_rename(tmp_abspath, dst_abspath, pool));
+      SVN_ERR(svn_wc__rename_wc(ctx->wc_ctx, tmp_abspath, dst_abspath, pool));
 
       if (! same_repositories)
         {
