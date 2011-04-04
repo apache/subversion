@@ -366,6 +366,7 @@ def remove_symlink(sbox):
 
 @SkipUnless(svntest.main.is_posix_os)
 @SkipUnless(server_has_mergeinfo)
+@Issue(2530)
 def merge_symlink_into_file(sbox):
   "merge symlink into file"
 
@@ -411,7 +412,7 @@ def merge_symlink_into_file(sbox):
                        'merge', '-r', '2:4', dprime_url,
                        os.path.join(wc_dir, 'A', 'D'))
 
-  # now revert, and we'll get a strange error
+  # now revert, we once got a strange error
   svntest.main.run_svn(None, 'revert', '-R', wc_dir)
 
   # assuming we got past the revert because someone fixed that bug, lets
@@ -701,6 +702,43 @@ def unrelated_changed_special_status(sbox):
                                      '-m', 'psi changed special status')
 
 
+@SkipUnless(svntest.main.is_posix_os)
+def symlink_destination_change(sbox):
+  "revert a symlink destination change"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Create a new symlink and commit it.
+  newfile_path = os.path.join(wc_dir, 'newfile')
+  os.symlink('linktarget', newfile_path)
+  svntest.main.run_svn(None, 'add', newfile_path)
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'newfile' : Item(verb='Adding'),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'newfile' : Item(status='  ', wc_rev=2),
+    })
+
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  # Modify the symlink to point somewhere else
+  os.remove(newfile_path)
+  os.symlink('linktarget2', newfile_path)
+
+  expected_status.tweak('newfile', status='M ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Revert should restore the symlink to point to the original destination
+  svntest.main.run_svn(None, 'revert', '-R', wc_dir)
+  expected_status.tweak('newfile', status='  ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Now replace the symlink with a normal file and try to commit, we
 ########################################################################
 # Run the tests
 
@@ -723,6 +761,7 @@ test_list = [ None,
               warn_on_reserved_name,
               propvalue_normalized,
               unrelated_changed_special_status,
+              symlink_destination_change,
              ]
 
 if __name__ == '__main__':
