@@ -586,7 +586,7 @@ WHERE wc_id = ?1 AND local_dir_relpath LIKE ?2 ESCAPE '#'
 DELETE FROM wc_lock
 WHERE wc_id = ?1 AND local_dir_relpath = ?2
 AND NOT EXISTS (SELECT 1 FROM nodes
-                 WHERE nodes.wc_id = ?1 AND nodes.wc_id = wc_lock.wc_id
+                 WHERE nodes.wc_id = ?1
                    AND nodes.local_relpath = wc_lock.local_dir_relpath)
 
 -- STMT_DELETE_WC_LOCK_ORPHAN_RECURSIVE
@@ -594,7 +594,7 @@ DELETE FROM wc_lock
 WHERE wc_id = ?1
 AND (local_dir_relpath = ?2 OR local_dir_relpath LIKE ?3 ESCAPE '#')
 AND NOT EXISTS (SELECT 1 FROM nodes
-                 WHERE nodes.wc_id = ?1 AND nodes.wc_id = wc_lock.wc_id
+                 WHERE nodes.wc_id = ?1
                    AND nodes.local_relpath = wc_lock.local_dir_relpath)
 
 -- STMT_APPLY_CHANGES_TO_BASE_NODE
