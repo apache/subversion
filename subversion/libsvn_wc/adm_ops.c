@@ -1332,7 +1332,6 @@ verify_revert_depth(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
-#ifdef SVN_NEW_REVERT
 /* Remove conflict file NAME, which may not exist, associated with
  * *LOCAL_ABSPATH and set NOTIFY_REQUIRED to TRUE if the file was
  * present and removed. */
@@ -1767,7 +1766,6 @@ new_revert_partial(svn_wc__db_t *db,
 
   return SVN_NO_ERROR;
 }
-#endif
 
 /* This is just the guts of svn_wc_revert4() save that it accepts a
    hash CHANGELIST_HASH whose keys are changelist names instead of an
@@ -1797,7 +1795,6 @@ revert_internal(svn_wc__db_t *db,
   const char *op_root_abspath = NULL;
   svn_error_t *err;
 
-#ifdef SVN_NEW_REVERT
   if (changelist_hash)
     return svn_error_return(new_revert_changelist(db, revert_root,
                                                   local_abspath, depth,
@@ -1829,7 +1826,6 @@ revert_internal(svn_wc__db_t *db,
 
   /* Other depths, throw an error? */
   return SVN_NO_ERROR;
-#endif
 
   /* Check cancellation here, so recursive calls get checked early. */
   if (cancel_func)

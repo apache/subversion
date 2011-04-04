@@ -856,7 +856,8 @@ def status_of_missing_dir_after_revert_replaced_with_history_dir(sbox):
                                        dry_run = 0)
 
   # now test if the revert works ok
-  revert_paths = [G_path]
+  revert_paths = [G_path] + [os.path.join(G_path, child)
+                             for child in ['alpha', 'beta', 'pi', 'rho', 'tau']]
 
   expected_output = svntest.verify.UnorderedOutput([
     "Reverted '%s'\n" % path for path in revert_paths])
@@ -1020,7 +1021,6 @@ def revert_added_tree(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
-@XFail()
 @Issue(3834)
 def revert_child_of_copy(sbox):
   "revert a child of a copied directory"
@@ -1054,7 +1054,6 @@ def revert_child_of_copy(sbox):
                                      'revert', sbox.ospath('A/B/E2/beta'))
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-@XFail()
 @Issue(3783)
 def revert_non_recusive_after_delete(sbox):
   "non-recursive revert after delete"
@@ -1087,7 +1086,6 @@ def revert_non_recusive_after_delete(sbox):
   expected_status.tweak('A/B/E', status='  ')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-@XFail()
 def revert_permissions_only(sbox):
   "permission-only reverts"
 

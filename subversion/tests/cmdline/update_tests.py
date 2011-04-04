@@ -5363,7 +5363,6 @@ def update_nonexistent_child_of_copy(sbox):
   if os.path.exists('A2/mu'):
     raise svntest.Failure("A2/mu improperly revived")
 
-@XFail()
 @Issue(3807)
 def revive_children_of_copy(sbox):
   """undelete a child of a copied dir"""

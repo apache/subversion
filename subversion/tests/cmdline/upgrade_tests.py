@@ -564,7 +564,6 @@ def x3_1_4_0(sbox):
 
   do_x3_upgrade(sbox)
 
-@XFail()
 @Issue(3811)
 def x3_1_4_6(sbox):
   "3x same wc upgrade 1.4.6 test"
@@ -574,7 +573,6 @@ def x3_1_4_6(sbox):
 
   do_x3_upgrade(sbox)
 
-@XFail()
 @Issue(3811)
 def x3_1_6_12(sbox):
   "3x same wc upgrade 1.6.12 test"

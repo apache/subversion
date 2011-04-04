@@ -4858,7 +4858,6 @@ def copy_delete_delete(sbox):
   "copy, delete child, delete copy"
   copy_delete_undo(sbox, False)
 
-@XFail()
 @Issue(3784)
 def copy_delete_revert(sbox):
   "copy, delete child, revert copy"
