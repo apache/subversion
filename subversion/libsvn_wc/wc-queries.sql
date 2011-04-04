@@ -955,7 +955,9 @@ BEGIN
    SELECT OLD.local_relpath,
           OLD.conflict_old, OLD.conflict_new, OLD.conflict_working,
           OLD.prop_reject,
-          CASE WHEN OLD.properties IS NOT NULL THEN 1 ELSE NULL END;
+          CASE
+          WHEN OLD.properties IS NOT NULL OR OLD.tree_conflict_data IS NOT NULL
+          THEN 1 ELSE NULL END;
 END;
 DROP TRIGGER IF EXISTS   trigger_revert_list_actual_update;
 CREATE TEMPORARY TRIGGER trigger_revert_list_actual_update
@@ -967,7 +969,9 @@ BEGIN
    SELECT OLD.local_relpath,
           OLD.conflict_old, OLD.conflict_new, OLD.conflict_working,
           OLD.prop_reject,
-          CASE WHEN OLD.properties IS NOT NULL THEN 1 ELSE NULL END;
+          CASE
+          WHEN OLD.properties IS NOT NULL OR OLD.tree_conflict_data IS NOT NULL
+          THEN 1 ELSE NULL END;
 END
 
 -- STMT_DROP_REVERT_LIST_TRIGGERS
