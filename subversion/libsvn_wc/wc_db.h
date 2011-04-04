@@ -1573,6 +1573,24 @@ struct svn_wc__db_walker_info_t {
   svn_wc__db_kind_t kind;
 };
 
+/* Gets the information required to install a pristine file to the working copy
+
+   Set WCROOT_ABSPATH to the working copy root, STATUS to the presence of the
+   node, KIND to the node kind, SHA1_CHECKSUM to the checksum of the node
+   (a valid reference into the pristine store) and PRISTINE_PROPS to the node's
+   pristine properties (to use for installing the file). */
+svn_error_t *
+svn_wc__db_read_node_install_info(const char **wcroot_abspath,
+                                  svn_wc__db_status_t *status,
+                                  svn_wc__db_kind_t *kind,
+                                  const svn_checksum_t **sha1_checksum,
+                                  const char **target,
+                                  apr_hash_t **pristine_props,
+                                  svn_wc__db_t *db,
+                                  const char *local_abspath,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
+
 /* Return in *NODES a hash mapping name->struct svn_wc__db_walker_info_t for
    the children of DIR_ABSPATH. "name" is the child's name relatve to
    DIR_ABSPATH, not an absolute path. */
