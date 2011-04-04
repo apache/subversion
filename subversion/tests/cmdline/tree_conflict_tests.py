@@ -1078,13 +1078,12 @@ def lock_update_only(sbox):
 
 
 #----------------------------------------------------------------------
-# Currently, it fails at the merge that adds a file:
+# This used to at the merge that adds a file:
 #    subversion/libsvn_client/repos_diff.c:984: (apr_err=155005)
 #    subversion/libsvn_client/merge.c:1708: (apr_err=155005)
 #    subversion/libsvn_wc/update_editor.c:5055: (apr_err=155005)
 #    subversion/libsvn_wc/lock.c:1437: (apr_err=155005)
 #    svn: E155005: No write-lock in '/.../svn-test-work/working_copies/tree_conflict_tests-22/E'
-@XFail()
 @Issue(3469)
 def at_directory_external(sbox):
   "tree conflict at directory external"
