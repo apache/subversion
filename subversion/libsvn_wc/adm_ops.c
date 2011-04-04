@@ -1420,7 +1420,11 @@ revert_restore(svn_wc__db_t *db,
   SVN_ERR(svn_io_check_special_path(local_abspath, &on_disk, &special,
                                     scratch_pool));
 
-  if (on_disk != svn_node_none)
+  if (on_disk != svn_node_none
+      && status != svn_wc__db_status_absent
+      && status != svn_wc__db_status_deleted
+      && status != svn_wc__db_status_excluded
+      && status != svn_wc__db_status_not_present)
     {
       if (on_disk == svn_node_dir && kind != svn_wc__db_kind_dir)
         {
