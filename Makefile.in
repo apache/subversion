@@ -706,12 +706,6 @@ install-man:
 install-swig-py: install-swig-py-lib
 install-swig-rb: install-swig-rb-lib
 
-check-SWIG:
-	if [ "$(SWIG)" = "none" ]; then \
-	  echo "SWIG disabled at configure time" >&2; \
-	  exit 1; \
-	fi
-
 clean-swig: clean-swig-headers clean-swig-py clean-swig-rb clean-swig-pl
 extraclean-swig: extraclean-swig-headers extraclean-swig-py \
                  extraclean-swig-rb extraclean-swig-pl
