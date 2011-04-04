@@ -41,6 +41,9 @@
 #define starts_with(str, start)  \
   (strncmp((str), (start), strlen(start)) == 0)
 
+/* Like strlen() but for string literals. */
+#define STRLEN_LITERAL(str) (sizeof(str) - 1)
+
 /* This struct describes a range within a file, as well as the
  * current cursor position within the range. All numbers are in bytes. */
 struct svn_diff__hunk_range {
@@ -896,7 +899,7 @@ diff_minus(enum parse_state *new_state, const char *line, svn_patch_t *patch,
   if (tab)
     *tab = '\0';
 
-  SVN_ERR(grab_filename(&patch->old_filename, line + strlen("--- "),
+  SVN_ERR(grab_filename(&patch->old_filename, line + STRLEN_LITERAL("--- "),
                         result_pool, scratch_pool));
 
   *new_state = state_minus_seen;
@@ -915,7 +918,7 @@ diff_plus(enum parse_state *new_state, const char *line, svn_patch_t *patch,
   if (tab)
     *tab = '\0';
 
-  SVN_ERR(grab_filename(&patch->new_filename, line + strlen("+++ "),
+  SVN_ERR(grab_filename(&patch->new_filename, line + STRLEN_LITERAL("+++ "),
                         result_pool, scratch_pool));
 
   *new_state = state_unidiff_found;
@@ -981,7 +984,7 @@ git_start(enum parse_state *new_state, const char *line, svn_patch_t *patch,
    * files. In those cases the old_path and new_path is identical on the
    * 'diff --git' line.  For all other cases we fetch the filenames from
    * other header lines. */
-  old_path_start = line + strlen("diff --git a/");
+  old_path_start = line + STRLEN_LITERAL("diff --git a/");
   new_path_end = line + strlen(line);
   new_path_start = old_path_start;
 
@@ -997,7 +1000,7 @@ git_start(enum parse_state *new_state, const char *line, svn_patch_t *patch,
         break;
 
       old_path_end = new_path_marker;
-      new_path_start = new_path_marker + strlen(" b/");
+      new_path_start = new_path_marker + STRLEN_LITERAL(" b/");
 
       /* No path after the marker. */
       if (! *new_path_start)
@@ -1043,7 +1046,7 @@ git_minus(enum parse_state *new_state, const char *line, svn_patch_t *patch,
     SVN_ERR(grab_filename(&patch->old_filename, "/dev/null",
                           result_pool, scratch_pool));
   else
-    SVN_ERR(grab_filename(&patch->old_filename, line + strlen("--- a/"),
+    SVN_ERR(grab_filename(&patch->old_filename, line + STRLEN_LITERAL("--- a/"),
                           result_pool, scratch_pool));
 
   *new_state = state_git_minus_seen;
@@ -1065,7 +1068,7 @@ git_plus(enum parse_state *new_state, const char *line, svn_patch_t *patch,
     SVN_ERR(grab_filename(&patch->new_filename, "/dev/null",
                           result_pool, scratch_pool));
   else
-    SVN_ERR(grab_filename(&patch->new_filename, line + strlen("+++ b/"),
+    SVN_ERR(grab_filename(&patch->new_filename, line + STRLEN_LITERAL("+++ b/"),
                           result_pool, scratch_pool));
 
   *new_state = state_git_header_found;
@@ -1077,7 +1080,8 @@ static svn_error_t *
 git_move_from(enum parse_state *new_state, const char *line, svn_patch_t *patch,
               apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
-  SVN_ERR(grab_filename(&patch->old_filename, line + strlen("rename from "),
+  SVN_ERR(grab_filename(&patch->old_filename,
+                        line + STRLEN_LITERAL("rename from "),
                         result_pool, scratch_pool));
 
   *new_state = state_move_from_seen;
@@ -1089,7 +1093,8 @@ static svn_error_t *
 git_move_to(enum parse_state *new_state, const char *line, svn_patch_t *patch,
             apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
-  SVN_ERR(grab_filename(&patch->new_filename, line + strlen("rename to "),
+  SVN_ERR(grab_filename(&patch->new_filename,
+                        line + STRLEN_LITERAL("rename to "),
                         result_pool, scratch_pool));
 
   patch->operation = svn_diff_op_moved;
@@ -1103,7 +1108,8 @@ static svn_error_t *
 git_copy_from(enum parse_state *new_state, const char *line, svn_patch_t *patch,
               apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
-  SVN_ERR(grab_filename(&patch->old_filename, line + strlen("copy from "),
+  SVN_ERR(grab_filename(&patch->old_filename,
+                        line + STRLEN_LITERAL("copy from "),
                         result_pool, scratch_pool));
 
   *new_state = state_copy_from_seen;
@@ -1115,7 +1121,7 @@ static svn_error_t *
 git_copy_to(enum parse_state *new_state, const char *line, svn_patch_t *patch,
             apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
-  SVN_ERR(grab_filename(&patch->new_filename, line + strlen("copy to "),
+  SVN_ERR(grab_filename(&patch->new_filename, line + STRLEN_LITERAL("copy to "),
                         result_pool, scratch_pool));
 
   patch->operation = svn_diff_op_copied;
