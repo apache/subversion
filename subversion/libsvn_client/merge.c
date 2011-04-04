@@ -5611,18 +5611,17 @@ pre_merge_status_cb(void *baton,
   const char *dup_abspath = NULL;
 
   /* ### Probably needed: Calculate file external status */
-  /*svn_boolean_t is_file_external = FALSE;
+  svn_boolean_t is_file_external = FALSE;
 
   if (status->versioned
       && status->switched
       && status->kind == svn_node_file)
     {
-      svn_boolean_t is_file_external;
       SVN_ERR(svn_wc__node_is_file_external(&is_file_external, pmsb->wc_ctx,
                                             local_abspath, pool));
-    }*/
+    }
 
-  if (status->switched)
+  if (status->switched && !is_file_external)
     {
       if (!dup_abspath)
         dup_abspath = apr_pstrdup(pmsb->pool, local_abspath);
