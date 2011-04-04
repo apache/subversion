@@ -416,10 +416,6 @@ $svnmucc rm "$BASE_URL/branch" cp 2 "$BASE_URL/trunk" "$BASE_URL/branch" put /de
 say "svn log on $BASE_URL : "
 $SVN --username jrandom --password rayjandom log -vq "$BASE_URL"
 
-# shut it down
-echo -n "${SCRIPT}: stopping httpd: "
-$HTTPD -f $HTTPD_CONFIG -k stop
-echo "."
 
 # verify result: should be at rev 4 in both repos
 # FIXME: do more rigorous verification here
@@ -438,5 +434,29 @@ fi
 
 say "PASS: master, slave are both at r4, as expected"
 
-exit 0
+# The following test case is for the regression issue triggered by r917523.
+# The revision r917523 do some url encodings to the paths and uris which are
+# not url-encoded. But there is one additional url-encoding of an uri which is
+# already encoded. With this extra encoding, committing a path to slave which
+# has space in it fails. Please see this thread
+# http://svn.haxx.se/dev/archive-2011-03/0641.shtml for more info.
 
+say "Test case for regression issue triggered by r917523"
+
+$svnmucc cp 2 "$BASE_URL/trunk" "$BASE_URL/branch new"
+$svnmucc put /dev/null "$BASE_URL/branch new/file" \
+--config-option servers:global:http-library=neon
+RETVAL=$?
+
+if [ $RETVAL -eq 0 ] ; then
+  say "PASS: committing a path which has space in it passes"
+else
+  say "FAIL: committing a path which has space in it fails as there are extra
+  url-encodings happening in server side"
+fi
+
+# shut it down
+echo -n "${SCRIPT}: stopping httpd: "
+$HTTPD -f $HTTPD_CONFIG -k stop
+echo "."
+exit 0
