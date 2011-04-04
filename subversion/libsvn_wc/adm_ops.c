@@ -1639,9 +1639,12 @@ new_revert_changelist(svn_wc__db_t *db,
                       void *notify_baton,
                       apr_pool_t *scratch_pool)
 {
-  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_pool_t *iterpool;
   const apr_array_header_t *children;
   int i;
+
+  if (cancel_func)
+    SVN_ERR(cancel_func(cancel_baton));
 
   if (svn_wc__internal_changelist_match(db, local_abspath, changelist_hash,
                                         scratch_pool))
@@ -1652,6 +1655,8 @@ new_revert_changelist(svn_wc__db_t *db,
 
   if (depth == svn_depth_empty)
     return SVN_NO_ERROR;
+
+  iterpool = svn_pool_create(scratch_pool);
 
   /* We can handle both depth=files and depth=immediates by setting
      depth=empty here.  We don't need to distinguish files and
@@ -1681,6 +1686,81 @@ new_revert_changelist(svn_wc__db_t *db,
                                     cancel_func, cancel_baton,
                                     notify_func, notify_baton,
                                     iterpool));
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+/* Does a partially recursive revert of LOCAL_ABSPATH to depth DEPTH
+   (which must be either svn_depth_files or svn_depth_immediates) by
+   doing a non-recursive revert on each permissible path.  Notifies
+   all reverted paths.
+
+   ### This won't revert a copied dir with one level of children since
+   ### the non-recursive revert on the dir will fail.  Not sure how a
+   ### partially recursive revert should handle actual-only nodes. */
+static svn_error_t *
+new_revert_partial(svn_wc__db_t *db,
+                   const char *revert_root,
+                   const char *local_abspath,
+                   svn_depth_t depth,
+                   svn_boolean_t use_commit_times,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   svn_wc_notify_func2_t notify_func,
+                   void *notify_baton,
+                   apr_pool_t *scratch_pool)
+{
+  apr_pool_t *iterpool;
+  svn_wc__db_kind_t kind;
+  const apr_array_header_t *children;
+  svn_boolean_t is_revert_root = !strcmp(local_abspath, revert_root);
+  int i;
+
+  SVN_ERR_ASSERT(depth == svn_depth_files || depth == svn_depth_immediates);
+
+  if (cancel_func)
+    SVN_ERR(cancel_func(cancel_baton));
+
+  SVN_ERR(svn_wc__db_read_info(NULL, &kind,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               db, local_abspath, scratch_pool, scratch_pool));
+
+  if (is_revert_root || depth == svn_depth_immediates
+      || (depth == svn_depth_files && kind == svn_wc__db_kind_file))
+    SVN_ERR(new_revert_internal(db, revert_root, local_abspath, svn_depth_empty,
+                                use_commit_times, cancel_func, cancel_baton,
+                                notify_func, notify_baton, scratch_pool));
+
+  if (!is_revert_root)
+    return SVN_NO_ERROR;
+
+  iterpool = svn_pool_create(scratch_pool);
+
+  SVN_ERR(svn_wc__db_read_children_of_working_node(&children, db,
+                                                   local_abspath,
+                                                   scratch_pool,
+                                                   iterpool));
+  for (i = 0; i < children->nelts; ++i)
+    {
+      const char *child_abspath;
+
+      svn_pool_clear(iterpool);
+
+      child_abspath = svn_dirent_join(local_abspath,
+                                      APR_ARRAY_IDX(children, i,
+                                                    const char *),
+                                      iterpool);
+
+      SVN_ERR(new_revert_partial(db, revert_root, child_abspath, depth,
+                                 use_commit_times,
+                                 cancel_func, cancel_baton,
+                                 notify_func, notify_baton,
+                                 iterpool));
     }
 
   svn_pool_destroy(iterpool);
@@ -1733,6 +1813,23 @@ revert_internal(svn_wc__db_t *db,
                                                 cancel_func, cancel_baton,
                                                 notify_func, notify_baton,
                                                 pool));
+
+  /* The user may expect svn_depth_files/svn_depth_immediates to work
+     on copied dirs with one level of children children.  It doesn't,
+     the user will get an error and will need to invoke an infinite
+     revert.  If we identified those cases where svn_depth_infinity
+     would not revert too much we could invoke the recursive call
+     above. */
+
+  if (depth == svn_depth_files || depth == svn_depth_immediates)
+    return svn_error_return(new_revert_partial(db, revert_root, local_abspath,
+                                               depth, use_commit_times,
+                                               cancel_func, cancel_baton,
+                                               notify_func, notify_baton,
+                                               pool));
+
+  /* Other depths, throw an error? */
+  return SVN_NO_ERROR;
 #endif
 
   /* Check cancellation here, so recursive calls get checked early. */
