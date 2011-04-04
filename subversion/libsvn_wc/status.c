@@ -270,7 +270,7 @@ read_info(const struct svn_wc__db_info_t **info,
       mutable->has_props = TRUE;
 #ifdef HAVE_SYMLINK
       SVN_ERR(svn_wc__get_translate_info(NULL, NULL, NULL, &mutable->special,
-                                         db, local_abspath,
+                                         db, local_abspath, NULL,
                                          scratch_pool, scratch_pool));
 #endif
     }
