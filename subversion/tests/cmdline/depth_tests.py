@@ -2221,7 +2221,11 @@ def excluded_path_misc_operation(sbox):
   #verify_depth(None, "empty", LE_path)
 
   # revert A/L, with an excluded item in the tree
-  expected_output = ["Reverted '"+L_path+"'\n"]
+  revert_paths = [L_path] + [os.path.join(L_path, child)
+                             for child in ['E', 'F', 'lambda']]
+  expected_output = svntest.verify.UnorderedOutput([
+    "Reverted '%s'\n" % path for path in revert_paths])
+
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'revert', '--depth=infinity', L_path)
 

@@ -312,7 +312,13 @@ def revert_nested_adds(sbox):
   X_path = sbox.ospath('X')
   Y_path = sbox.ospath('A/C/Y')
   Z_path = sbox.ospath('A/D/H/Z')
-  files = [X_path, Y_path, Z_path]
+  files = ([X_path, Y_path, Z_path]
+           + [os.path.join(X_path, child)
+              for child in ['P', 'delta']]
+           + [os.path.join(Y_path, child)
+              for child in ['Q', 'epsilon', 'upsilon']]
+           + [os.path.join(Z_path, child)
+              for child in ['R', 'zeta']])
 
   exit_code, output, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                               'revert',
