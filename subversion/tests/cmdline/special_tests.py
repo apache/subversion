@@ -654,9 +654,12 @@ def propvalue_normalized(sbox):
 
   # Add a "symlink"
   iota2_path = sbox.ospath('iota2')
-  svntest.main.file_write(iota2_path, "This is the file 'iota2'.\n")
+  svntest.main.file_write(iota2_path, "symlink destination")
   svntest.main.run_svn(None, 'add', iota2_path)
   svntest.main.run_svn(None, 'propset', 'svn:special', 'yes', iota2_path)
+  if svntest.main.is_posix_os:
+    os.remove(iota2_path)
+    os.symlink("symlink destination", iota2_path)
 
   # Property value should be SVN_PROP_BOOLEAN_TRUE
   expected_propval = ['*']
