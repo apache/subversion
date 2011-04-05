@@ -2258,11 +2258,9 @@ cross_db_copy(svn_wc__db_wcroot_t *src_wcroot,
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (have_row)
     {
-      /* const char *prop_reject = svn_sqlite__column_text(stmt, 0,
-                                                           scratch_pool);
-
-         ### STMT_INSERT_ACTUAL_NODE doesn't cover every column, it's
+      /* ### STMT_INSERT_ACTUAL_NODE doesn't cover every column, it's
          ### enough for some cases but will probably need to extended. */
+      const char *prop_reject = svn_sqlite__column_text(stmt, 0, scratch_pool);
       const char *changelist = svn_sqlite__column_text(stmt, 1, scratch_pool);
       const char *conflict_old = svn_sqlite__column_text(stmt, 2, scratch_pool);
       const char *conflict_new = svn_sqlite__column_text(stmt, 3, scratch_pool);
@@ -2278,12 +2276,12 @@ cross_db_copy(svn_wc__db_wcroot_t *src_wcroot,
       SVN_ERR(svn_sqlite__reset(stmt));
       SVN_ERR(svn_sqlite__get_statement(&stmt, dst_wcroot->sdb,
                                         STMT_INSERT_ACTUAL_NODE));
-      SVN_ERR(svn_sqlite__bindf(stmt, "issbsssss",
+      SVN_ERR(svn_sqlite__bindf(stmt, "issbssssss",
                                 dst_wcroot->wc_id, dst_relpath,
                                 svn_relpath_dirname(dst_relpath, scratch_pool),
                                 properties, props_size,
                                 conflict_old, conflict_new, conflict_working,
-                                changelist, tree_conflict_data));
+                                prop_reject, changelist, tree_conflict_data));
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
   SVN_ERR(svn_sqlite__reset(stmt));
