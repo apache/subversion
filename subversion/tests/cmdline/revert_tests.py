@@ -1086,6 +1086,8 @@ def revert_non_recusive_after_delete(sbox):
   expected_status.tweak('A/B/E', status='  ')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+# I suspect svn_io__is_finfo_read_only doesn't work on Windows :-(
+@SkipUnless(svntest.main.is_posix_os)
 def revert_permissions_only(sbox):
   "permission-only reverts"
 
