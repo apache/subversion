@@ -4441,7 +4441,6 @@ is_add_or_root_of_copy(svn_boolean_t *add_or_root_of_copy,
   op_depth = svn_sqlite__column_int64(stmt, 0);
 
   *add_or_root_of_copy = (op_depth == relpath_depth(local_relpath));
-  SVN_DBG(("Is root: %s / %d\n", local_relpath, *add_or_root_of_copy));
 
   return svn_error_return(svn_sqlite__reset(stmt));
 }
