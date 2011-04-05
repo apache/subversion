@@ -23,14 +23,16 @@ set -e
 
 repo=http://svn.apache.org/repos/asf/subversion
 svn=svn
+olds=7
 
 # Parse our arguments
-while getopts "cd:t:s:" flag; do
+while getopts "cd:t:s:o:" flag; do
   case $flag in
     d) dir="`cd $OPTARG && pwd`" ;; # abspath
     c) clean="1" ;;
     t) target="$OPTARG" ;;
     s) svn="$OPTARG" ;;
+    o) olds="$OPTARG" ;;
   esac
 done
 
@@ -75,9 +77,15 @@ cd ..
 echo '-------------------moving results---------------------'
 if [ -f "$target/index.html" ]; then rm "$target/index.html"; fi
 mv index.html "$target"
-if [ -d "$target/dist" ]; then rm -r "$target/dist"; fi
+if [ ! -d "$target/dist" ]; then mkdir "$target/dist"; fi
+if [ -d "$target/dist/r$head" ]; then rm -r "$target/dist/r$head"; fi
 rm -r roll/deploy/to-tigris
-mv roll/deploy "$target/dist"
+mv roll/deploy "$target/dist/r$head"
+
+# Clean up old results
+ls -t1 "$target/dist/" | sed -e "1,${olds}d" | while read d; do
+  rm -rf "$target/dist/$d"
+done
 
 # Optionally remove our working directory
 if [ -n "$clean" ]; then
