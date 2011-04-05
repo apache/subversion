@@ -3406,8 +3406,11 @@ svn_error_t *
 svn_wc__db_op_set_changelist(svn_wc__db_t *db,
                              const char *local_abspath,
                              const char *changelist,
+                             const apr_hash_t *changelists,
+                             svn_depth_t depth,
                              apr_pool_t *scratch_pool)
 {
+  svn_wc__db_txn_callback_t txn_func;
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
 
@@ -3416,6 +3419,17 @@ svn_wc__db_op_set_changelist(svn_wc__db_t *db,
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
                               db, local_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
+
+  switch (depth)
+    {
+      case svn_depth_empty:
+        txn_func = set_changelist_txn;
+        break;
+
+      default:
+        /* ### This is only implemented for depth = empty right now. */
+        NOT_IMPLEMENTED();
+    }
 
   SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, set_changelist_txn,
                               (void *) changelist, scratch_pool));
