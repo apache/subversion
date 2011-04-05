@@ -3353,7 +3353,7 @@ set_changelist_txn(void *baton,
                    apr_pool_t *scratch_pool)
 {
   const char *new_changelist = baton;
-  const char *existing_changelist;
+  const char *existing_changelist = NULL;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
 
