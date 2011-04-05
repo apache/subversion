@@ -174,7 +174,6 @@ svn_ra_neon__get_mergeinfo(svn_ra_session_t *session,
                            svn_boolean_t include_descendants,
                            apr_pool_t *pool)
 {
-  int status_code;
   svn_ra_neon__session_t *ras = session->priv;
   svn_stringbuf_t *request_body = svn_stringbuf_create("", pool);
   struct mergeinfo_baton mb;
@@ -263,7 +262,7 @@ svn_ra_neon__get_mergeinfo(svn_ra_session_t *session,
                                       end_element,
                                       &mb,
                                       NULL,
-                                      &status_code,
+                                      NULL,
                                       FALSE,
                                       pool));
 
