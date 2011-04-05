@@ -274,9 +274,9 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
     = APR_FINFO_SIZE | APR_FINFO_MTIME | APR_FINFO_TYPE | APR_FINFO_LINK;
 
   if (executable_p)
-    wanted |= APR_FINFO_PROT | APR_FINFO_OWNER;
+    wanted |= SVN__APR_FINFO_EXECUTABLE;
   if (read_only_p)
-    wanted |= APR_FINFO_PROT;
+    wanted |= SVN__APR_FINFO_READONLY;
 
   /* No matter which way you look at it, the file needs to exist. */
   err = svn_io_stat(&finfo, local_abspath, wanted, scratch_pool);
@@ -288,6 +288,11 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
          So, it can't be modified. */
       svn_error_clear(err);
       *modified_p = FALSE;
+      if (executable_p)
+        *executable_p = FALSE;
+      if (read_only_p)
+        *read_only_p = FALSE;
+
       return SVN_NO_ERROR;
     }
   else if (err)
