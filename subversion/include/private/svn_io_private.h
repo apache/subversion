@@ -33,6 +33,17 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/* The flags to pass to apr_stat to check for executable and/or readonly */
+#if defined(WIN32) || defined(__OS2__)
+#define SVN__APR_FINFO_EXECUTABLE (0)
+#define SVN__APR_FINFO_READONLY (0)
+#define SVN__APR_FINFO_MASK_OUT (APR_FINFO_PROT | APR_FINFO_OWNER)
+#else
+#define SVN__APR_FINFO_EXECUTABLE (APR_FINFO_PROT)
+#define SVN__APR_FINFO_READONLY (APR_FINFO_PROT | APR_FINFO_OWNER)
+#define SVN__APR_FINFO_MASK_OUT (0)
+#endif
+
 
 /** Set @a *executable TRUE if @a file_info is executable for the
  * user, FALSE otherwise.

@@ -3084,6 +3084,9 @@ svn_error_t *
 svn_io_file_info_get(apr_finfo_t *finfo, apr_int32_t wanted,
                      apr_file_t *file, apr_pool_t *pool)
 {
+  /* Quoting APR: On NT this request is incredibly expensive, but accurate. */
+  wanted &= ~SVN__APR_FINFO_MASK_OUT;
+
   return do_io_file_wrapper_cleanup
     (file, apr_file_info_get(finfo, wanted, file),
      N_("Can't get attribute information from file '%s'"),
@@ -3288,6 +3291,9 @@ svn_io_stat(apr_finfo_t *finfo, const char *fname,
     fname = ".";
 
   SVN_ERR(cstring_from_utf8(&fname_apr, fname, pool));
+
+  /* Quoting APR: On NT this request is incredibly expensive, but accurate. */
+  wanted &= ~SVN__APR_FINFO_MASK_OUT;
 
   status = apr_stat(finfo, fname_apr, wanted, pool);
   if (status)
@@ -3578,6 +3584,9 @@ svn_io_dir_walk2(const char *dirname,
   apr_finfo_t finfo;
 
   wanted |= APR_FINFO_TYPE | APR_FINFO_NAME;
+
+  /* Quoting APR: On NT this request is incredibly expensive, but accurate. */
+  wanted &= ~SVN__APR_FINFO_MASK_OUT;
 
   /* The documentation for apr_dir_read used to state that "." and ".."
      will be returned as the first two files, but it doesn't
