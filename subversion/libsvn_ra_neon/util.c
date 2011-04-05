@@ -623,6 +623,7 @@ generate_error(svn_ra_neon__request_t *req, apr_pool_t *pool)
                           req->code_desc, req->method, req->url));
         }
     case NE_AUTH:
+    case NE_PROXYAUTH:
       errcode = SVN_ERR_RA_NOT_AUTHORIZED;
 #ifdef SVN_NEON_0_27
       /* neon >= 0.27 gives a descriptive error message after auth
