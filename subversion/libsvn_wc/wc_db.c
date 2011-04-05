@@ -4736,8 +4736,6 @@ temp_op_delete_txn(void *baton,
   svn_boolean_t del_work = FALSE;
   svn_boolean_t mod_work = FALSE;
 
-  SVN_DBG(("Deleting %s\n", local_relpath));
-
   SVN_ERR(read_info(&status,
                     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
