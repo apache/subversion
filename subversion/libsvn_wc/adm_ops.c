@@ -2198,7 +2198,7 @@ svn_wc_set_changelist2(svn_wc_context_t *wc_ctx,
 
   /* Set the changelist. */
   SVN_ERR(svn_wc__db_op_set_changelist(wc_ctx->db, local_abspath, changelist,
-                                       scratch_pool));
+                                       NULL, svn_depth_empty, scratch_pool));
 
   /* And tell someone what we've done. */
   if (notify_func)
