@@ -85,7 +85,7 @@ mv roll/deploy "$target/dist/r$head"
 # Some static links for the most recent artefacts.
 ln -sf "r$head" "$target/dist/current"
 ls "$target/dist/r$head" | while read fname; do
-  ln -s "r$head/$fname" "$target/dist/$fname"
+  ln -sf "r$head/$fname" "$target/dist/$fname"
 done
 
 # Clean up old results
