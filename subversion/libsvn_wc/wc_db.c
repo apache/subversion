@@ -2544,6 +2544,57 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
   return SVN_NO_ERROR;
 }
 
+/* Baton for op_copy_txn */
+struct op_copy_baton
+{
+  svn_wc__db_wcroot_t *src_wcroot;
+  const char *src_relpath;
+
+  svn_wc__db_t *db;
+  const char *dst_abspath;
+  svn_wc__db_wcroot_t *dst_wcroot;
+  const char *dst_relpath;
+
+  const svn_skel_t *work_items;
+};
+
+/* Helper for svn_wc__db_op_copy.
+   Implements  svn_sqlite__transaction_callback_t */
+static svn_error_t *
+op_copy_txn(void * baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
+{
+  struct op_copy_baton *ocb = baton;
+
+  if (ocb->dst_wcroot == NULL)
+    {
+       SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&ocb->dst_wcroot,
+                                                     &ocb->dst_relpath,
+                                                     ocb->db,
+                                                     ocb->dst_abspath,
+                                                     scratch_pool,
+                                                     scratch_pool));
+
+       VERIFY_USABLE_WCROOT(ocb->dst_wcroot);
+
+       if (ocb->dst_wcroot->sdb != sdb)
+         {
+            /* Source and destination databases differ; so also start a lock
+               in the destination database, by calling ourself in a lock. */
+
+            return svn_error_return(
+                        svn_sqlite__with_lock(ocb->dst_wcroot->sdb,
+                                              op_copy_txn, ocb, scratch_pool));
+         }
+    }
+
+  /* From this point we can assume a lock in the src and dst databases */
+
+  SVN_ERR(db_op_copy(ocb->src_wcroot, ocb->src_relpath,
+                     ocb->dst_wcroot, ocb->dst_relpath,
+                     ocb->work_items, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_wc__db_op_copy(svn_wc__db_t *db,
@@ -2553,26 +2604,23 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
                    const svn_skel_t *work_items,
                    apr_pool_t *scratch_pool)
 {
-  svn_wc__db_wcroot_t *src_wcroot;
-  svn_wc__db_wcroot_t *dst_wcroot;
-  const char *src_relpath, *dst_relpath;
+   struct op_copy_baton ocb = {0};
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(src_abspath));
   SVN_ERR_ASSERT(svn_dirent_is_absolute(dst_abspath));
 
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&src_wcroot, &src_relpath, db,
-                                             src_abspath,
-                                             scratch_pool, scratch_pool));
-  VERIFY_USABLE_WCROOT(src_wcroot);
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&ocb.src_wcroot,
+                                                &ocb.src_relpath, db,
+                                                src_abspath,
+                                                scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(ocb.src_wcroot);
 
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&dst_wcroot, &dst_relpath, db,
-                                             dst_abspath,
-                                             scratch_pool, scratch_pool));
-  VERIFY_USABLE_WCROOT(dst_wcroot);
+  ocb.db = db;
+  ocb.dst_abspath = dst_abspath;
+  ocb.work_items = work_items;
 
-  /* ### This should all happen in one transaction. */
-  SVN_ERR(db_op_copy(src_wcroot, src_relpath, dst_wcroot,
-                     dst_relpath, work_items, scratch_pool));
+  SVN_ERR(svn_sqlite__with_lock(ocb.src_wcroot->sdb, op_copy_txn, &ocb,
+                                scratch_pool));
 
   return SVN_NO_ERROR;
 }
