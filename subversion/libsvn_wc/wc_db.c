@@ -3395,10 +3395,35 @@ set_changelist_txn(void *baton,
                                         STMT_UPDATE_ACTUAL_CHANGELIST));
     }
 
+  /* Run the update or insert query */
   SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id, local_relpath,
                             new_changelist));
+  SVN_ERR(svn_sqlite__step_done(stmt));
 
-  return svn_error_return(svn_sqlite__step_done(stmt));
+  /* Now, add a row to the CHANGELIST_LIST table, so we can later notify. */
+  /* ### TODO: This could just as well be done with a trigger, but for right
+     ### now, this is quick and dirty. */
+  if (existing_changelist)
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_INSERT_CHANGELIST_LIST));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isis", wcroot->wc_id, local_relpath,
+                                svn_wc_notify_changelist_clear,
+                                existing_changelist));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
+
+  if (new_changelist)
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_INSERT_CHANGELIST_LIST));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isis", wcroot->wc_id, local_relpath,
+                                svn_wc_notify_changelist_set,
+                                new_changelist));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -3431,12 +3456,73 @@ svn_wc__db_op_set_changelist(svn_wc__db_t *db,
         NOT_IMPLEMENTED();
     }
 
+  SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb,
+                                      STMT_CREATE_CHANGELIST_LIST));
+
   SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, set_changelist_txn,
                               (void *) changelist, scratch_pool));
 
   SVN_ERR(flush_entries(wcroot, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__db_changelist_list_notify(svn_wc_notify_func2_t notify_func,
+                                  void *notify_baton,
+                                  svn_wc__db_t *db,
+                                  const char *local_abspath,
+                                  apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+  const char *like_arg;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
+                              db, local_abspath, scratch_pool, iterpool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  like_arg = construct_like_arg(local_relpath, scratch_pool);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_CHANGELIST_LIST_RECURSIVE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "ss", local_relpath, like_arg));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (!have_row)
+    return svn_error_return(svn_sqlite__reset(stmt)); /* optimise for no row */
+
+  while (have_row)
+    {
+      const char *notify_relpath = svn_sqlite__column_text(stmt, 0, NULL);
+      svn_wc_notify_action_t action = svn_sqlite__column_int64(stmt, 1);
+      svn_wc_notify_t *notify;
+      const char *notify_abspath;
+
+      svn_pool_clear(iterpool);
+
+      notify_abspath = svn_dirent_join(wcroot->abspath, notify_relpath,
+                                       iterpool);
+      notify = svn_wc_create_notify(notify_abspath, action, iterpool);
+      notify->changelist_name = svn_sqlite__column_text(stmt, 2, NULL);
+      notify_func(notify_baton, notify, iterpool);
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_DELETE_CHANGELIST_LIST_RECURSIVE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "ss", local_relpath, like_arg));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+
 }
 
 

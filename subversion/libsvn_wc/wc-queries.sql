@@ -340,6 +340,30 @@ REPLACE INTO actual_node (
   wc_id, local_relpath, parent_relpath, changelist)
 VALUES (?1, ?2, ?3, ?4)
 
+-- STMT_CREATE_CHANGELIST_LIST
+DROP TABLE IF EXISTS changelist_list;
+CREATE TEMPORARY TABLE changelist_list (
+  wc_id  INTEGER NOT NULL,
+  local_relpath TEXT NOT NULL,
+  notify INTEGER,
+  changelist TEXT NOT NULL
+  );
+CREATE INDEX changelist_list_index ON changelist_list(local_relpath);
+
+-- STMT_INSERT_CHANGELIST_LIST
+INSERT INTO changelist_list(wc_id, local_relpath, notify, changelist)
+VALUES (?1, ?2, ?3, ?4);
+
+-- STMT_DELETE_CHANGELIST_LIST_RECURSIVE
+DELETE FROM changelist_list
+WHERE local_relpath = ?1 OR local_relpath LIKE ?2 ESCAPE '#'
+
+-- STMT_SELECT_CHANGELIST_LIST_RECURSIVE
+SELECT local_relpath, notify, changelist
+FROM changelist_list
+WHERE local_relpath = ?1 or local_relpath LIKE ?2 ESCAPE '#'
+ORDER BY local_relpath
+
 -- STMT_DELETE_ACTUAL_EMPTY
 DELETE FROM actual_node
 WHERE wc_id = ?1 AND local_relpath = ?2

@@ -1207,6 +1207,18 @@ svn_wc__db_op_set_changelist(svn_wc__db_t *db,
                              svn_depth_t depth,
                              apr_pool_t *scratch_pool);
 
+/* Make changelist mod notifications for all paths in the changelist list
+ * that are equal to or below LOCAL_ABSPATH.
+ *
+ * Removes the cooresponding rows from the changelist list.
+ */
+svn_error_t *
+svn_wc__db_changelist_list_notify(svn_wc_notify_func2_t notify_func,
+                                  void *notify_baton,
+                                  svn_wc__db_t *db,
+                                  const char *local_abspath,
+                                  apr_pool_t *scratch_pool);
+
 
 /* ### caller maintains ACTUAL. we're just recording state. */
 /* ### we probably need to record details of the conflict. how? */
