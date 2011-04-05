@@ -27,6 +27,8 @@
 #include "svn_subst.h"
 #include <apr_general.h>
 
+#include "private/svn_io_private.h"
+
 #include "../svn_test.h"
 
 
@@ -483,7 +485,43 @@ test_stream_seek_translated(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_readonly(apr_pool_t *pool)
+{
+  const char *path;
+  apr_finfo_t finfo;
+  svn_boolean_t read_only;
+  apr_int32_t wanted = APR_FINFO_SIZE | APR_FINFO_MTIME | APR_FINFO_TYPE
+                        | APR_FINFO_LINK | APR_FINFO_PROT;
 
+
+  SVN_ERR(svn_io_open_unique_file3(NULL, &path, NULL,
+                                   svn_io_file_del_on_pool_cleanup,
+                                   pool, pool));
+
+  /* File should be writable */
+  SVN_ERR(svn_io_stat(&finfo, path, wanted, pool));
+  SVN_ERR(svn_io__is_finfo_read_only(&read_only, &finfo, pool));
+  SVN_TEST_ASSERT(read_only == FALSE);
+
+  /* Set read only */
+  SVN_ERR(svn_io_set_file_read_only(path, FALSE, pool));
+
+  /* File should be read only */
+  SVN_ERR(svn_io_stat(&finfo, path, wanted, pool));
+  SVN_ERR(svn_io__is_finfo_read_only(&read_only, &finfo, pool));
+  SVN_TEST_ASSERT(read_only);
+
+  /* Set writable */
+  SVN_ERR(svn_io_set_file_read_write(path, FALSE, pool));
+
+  /* File should be writable */
+  SVN_ERR(svn_io_stat(&finfo, path, wanted, pool));
+  SVN_ERR(svn_io__is_finfo_read_only(&read_only, &finfo, pool));
+  SVN_TEST_ASSERT(read_only == FALSE);
+
+  return SVN_NO_ERROR;
+}
 
 /* The test table.  */
 
@@ -502,5 +540,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test stream seeking for stringbufs"),
     SVN_TEST_PASS2(test_stream_seek_translated,
                    "test stream seeking for translated streams"),
+    SVN_TEST_PASS2(test_readonly,
+                   "test setting a file readonly"),
     SVN_TEST_NULL
   };
