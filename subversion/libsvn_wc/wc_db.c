@@ -3408,7 +3408,7 @@ set_changelist_txn(void *baton,
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_INSERT_CHANGELIST_LIST));
       SVN_ERR(svn_sqlite__bindf(stmt, "isis", wcroot->wc_id, local_relpath,
-                                svn_wc_notify_changelist_clear,
+                                (apr_int64_t)svn_wc_notify_changelist_clear,
                                 existing_changelist));
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
@@ -3418,7 +3418,7 @@ set_changelist_txn(void *baton,
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_INSERT_CHANGELIST_LIST));
       SVN_ERR(svn_sqlite__bindf(stmt, "isis", wcroot->wc_id, local_relpath,
-                                svn_wc_notify_changelist_set,
+                                (apr_int64_t)svn_wc_notify_changelist_set,
                                 new_changelist));
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
@@ -4735,6 +4735,8 @@ temp_op_delete_txn(void *baton,
   svn_boolean_t add_work = FALSE;
   svn_boolean_t del_work = FALSE;
   svn_boolean_t mod_work = FALSE;
+
+  SVN_DBG(("Deleting %s\n", local_relpath));
 
   SVN_ERR(read_info(&status,
                     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
