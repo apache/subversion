@@ -111,6 +111,21 @@ update_internal(svn_revnum_t *result_rev,
                              _("'%s' has no URL"),
                              svn_dirent_local_style(anchor_abspath, pool));
 
+  /* Check if our anchor exists in BASE. If it doesn't we can't update.
+     ### For performance reasons this should be handled with the same query
+     ### as retrieving the anchor url. */
+  SVN_ERR(svn_wc__node_get_base_rev(&revnum, ctx->wc_ctx, anchor_abspath,
+                                    pool));
+
+  if (!SVN_IS_VALID_REVNUM(revnum))
+    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                             _("'%s' does not exist in the repository yet,"
+                               " which makes it is impossible to update '%s'."),
+                             svn_dirent_local_style(anchor_abspath,
+                                                    pool),
+                             svn_dirent_basename(local_abspath, NULL));
+
+
   /* We may need to crop the tree if the depth is sticky */
   if (depth_is_sticky && depth < svn_depth_infinity)
     {

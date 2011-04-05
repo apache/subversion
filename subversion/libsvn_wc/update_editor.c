@@ -433,56 +433,6 @@ get_empty_tmp_file(const char **tmp_filename,
                                                   result_pool));
 }
 
-
-/* Return the repository relative path for LOCAL_ABSPATH allocated in
- * RESULT_POOL, or NULL if unable to obtain.
- *
- * Use DB to retrieve information on LOCAL_ABSPATH, and do all temporary
- * allocation in SCRATCH_POOL.
- */
-static const char *
-node_get_relpath_ignore_errors(svn_wc__db_t *db,
-                               const char *local_abspath,
-                               apr_pool_t *result_pool,
-                               apr_pool_t *scratch_pool)
-{
-  svn_wc__db_status_t status;
-  svn_error_t *err;
-  const char *relpath = NULL;
-
-  err = svn_wc__db_read_info(&status, NULL, NULL, &relpath, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL,
-                             db, local_abspath, result_pool, scratch_pool);
-
-  if (err)
-    {
-      svn_error_clear(err);
-      return NULL;
-    }
-
-  if (relpath)
-    return relpath;
-
-  if (status == svn_wc__db_status_added)
-    {
-      svn_error_clear(svn_wc__db_scan_addition(NULL, NULL, &relpath, NULL,
-                                               NULL, NULL, NULL, NULL, NULL,
-                                               db, local_abspath,
-                                               result_pool, scratch_pool));
-    }
-  else if (status != svn_wc__db_status_deleted)
-    {
-      svn_error_clear(svn_wc__db_scan_base_repos(&relpath, NULL, NULL,
-                                                 db, local_abspath,
-                                                 result_pool, scratch_pool));
-    }
-
-  return relpath;
-}
-
-
 /* An APR pool cleanup handler.  This runs the log file for a
    directory baton. */
 static apr_status_t
@@ -610,34 +560,9 @@ make_dir_baton(struct dir_baton **d_p,
         }
       else
         {
-          /* Get the original REPOS_RELPATH. An update will not be
-             changing its value.  */
-          svn_wc__db_status_t status;
-          const char *repos_relpath, *original_repos_relpath;
-          SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, &repos_relpath,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL,
-                                       &original_repos_relpath,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL,
-                                       eb->db, d->local_abspath,
-                                       dir_pool, scratch_pool));
-          if (status == svn_wc__db_status_added)
-            SVN_ERR(svn_wc__db_scan_addition(NULL, NULL,
-                                             &repos_relpath, NULL, NULL,
-                                             &original_repos_relpath, NULL, NULL,
-                                             NULL,
+          SVN_ERR(svn_wc__db_scan_base_repos(&d->new_relpath, NULL, NULL,
                                              eb->db, d->local_abspath,
                                              dir_pool, scratch_pool));
-
-          if (original_repos_relpath)
-            d->new_relpath = original_repos_relpath;
-          else if (repos_relpath)
-            d->new_relpath = repos_relpath;
-          else
-            SVN_ERR(svn_wc__db_scan_base_repos(&d->new_relpath, NULL, NULL,
-                                               eb->db, d->local_abspath,
-                                               dir_pool, scratch_pool));
           SVN_ERR_ASSERT(d->new_relpath);
         }
     }
@@ -1001,17 +926,17 @@ make_file_baton(struct file_baton **f_p,
   f->local_abspath = svn_dirent_join(pb->local_abspath, f->name, file_pool);
 
   /* Figure out the new_URL for this file. */
-  if (pb->edit_baton->switch_relpath)
+  if (adding || pb->edit_baton->switch_relpath)
     f->new_relpath = svn_relpath_join(pb->new_relpath, f->name, file_pool);
   else
-    f->new_relpath = node_get_relpath_ignore_errors(pb->edit_baton->db,
-                                                    f->local_abspath,
-                                                    file_pool, scratch_pool);
+    {
+      SVN_ERR(svn_wc__db_scan_base_repos(&f->new_relpath, NULL, NULL,
+                                         pb->edit_baton->db,
+                                         f->local_abspath,
+                                         file_pool, scratch_pool));
 
-  /* ### why the complicated logic above. isn't it always this way?
-     ### file externals are probably special/different?  */
-  if (f->new_relpath == NULL)
-    f->new_relpath = svn_relpath_join(pb->new_relpath, f->name, file_pool);
+      SVN_ERR_ASSERT(f->new_relpath);
+    }
 
   f->pool              = file_pool;
   f->edit_baton        = pb->edit_baton;
