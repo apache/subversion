@@ -679,7 +679,7 @@ def propvalue_normalized(sbox):
                                         expected_status, None,
                                         wc_dir)
 
-  svntest.main.run_svn(None, 'update')
+  svntest.main.run_svn(None, 'update', wc_dir)
   svntest.actions.run_and_verify_svn(None, expected_propval, [],
                                      'propget', '--strict', 'svn:special',
                                      iota2_path)
