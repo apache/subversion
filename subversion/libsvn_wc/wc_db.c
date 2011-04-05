@@ -3968,9 +3968,10 @@ svn_wc__db_revert_list_notify(svn_wc_notify_func2_t notify_func,
   const char *local_relpath, *like_arg;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
-                              db, local_abspath, scratch_pool, scratch_pool));
+                              db, local_abspath, scratch_pool, iterpool));
   VERIFY_USABLE_WCROOT(wcroot);
 
   like_arg = construct_like_arg(local_relpath, scratch_pool);
@@ -3985,15 +3986,18 @@ svn_wc__db_revert_list_notify(svn_wc_notify_func2_t notify_func,
     {
       const char *notify_relpath = svn_sqlite__column_text(stmt, 0, NULL);
 
+      svn_pool_clear(iterpool);
+
       if (svn_sqlite__column_int64(stmt, 1))
         {
           const char *notify_abspath = svn_dirent_join(wcroot->abspath,
                                                        notify_relpath,
-                                                       scratch_pool);
+                                                       iterpool);
           notify_func(notify_baton,
-                      svn_wc_create_notify(notify_abspath, svn_wc_notify_revert,
-                                           scratch_pool),
-                      scratch_pool);
+                      svn_wc_create_notify(notify_abspath,
+                                           svn_wc_notify_revert,
+                                           iterpool),
+                      iterpool);
 
           /* ### Need cancel_func? */
         }
@@ -4005,6 +4009,8 @@ svn_wc__db_revert_list_notify(svn_wc_notify_func2_t notify_func,
                                     STMT_DELETE_REVERT_LIST_RECURSIVE));
   SVN_ERR(svn_sqlite__bindf(stmt, "ss", local_relpath, like_arg));
   SVN_ERR(svn_sqlite__step_done(stmt));
+
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
