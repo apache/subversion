@@ -2158,7 +2158,6 @@ svn_wc_set_changelist2(svn_wc_context_t *wc_ctx,
                        void *notify_baton,
                        apr_pool_t *scratch_pool)
 {
-  svn_wc_notify_t *notify;
   const char *existing_changelist;
   svn_wc__db_kind_t kind;
 
@@ -2202,25 +2201,9 @@ svn_wc_set_changelist2(svn_wc_context_t *wc_ctx,
 
   /* And tell someone what we've done. */
   if (notify_func)
-    {
-      if (existing_changelist)
-        {
-          notify = svn_wc_create_notify(local_abspath,
-                                        svn_wc_notify_changelist_clear,
-                                        scratch_pool);
-          notify->changelist_name = existing_changelist;
-          notify_func(notify_baton, notify, scratch_pool);
-        }
-
-      if (changelist)
-        {
-          notify = svn_wc_create_notify(local_abspath,
-                                        svn_wc_notify_changelist_set,
-                                        scratch_pool);
-          notify->changelist_name = changelist;
-          notify_func(notify_baton, notify, scratch_pool);
-        }
-    }
+    SVN_ERR(svn_wc__db_changelist_list_notify(notify_func, notify_baton,
+                                              wc_ctx->db, local_abspath,
+                                              scratch_pool));
 
   return SVN_NO_ERROR;
 }
