@@ -788,7 +788,7 @@ INSERT OR REPLACE INTO actual_node (
   conflict_new,
   conflict_working, prop_reject, changelist, text_mod,
   tree_conflict_data)
-VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
+VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, NULL, ?10)
 
 -- STMT_SELECT_NOT_PRESENT
 SELECT 1 FROM nodes
