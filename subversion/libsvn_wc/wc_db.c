@@ -4666,7 +4666,8 @@ temp_op_delete_txn(void *baton,
                                      wcroot, local_relpath, scratch_pool));
 
           if ((below_base || below_work)
-              && below_status != svn_wc__db_status_not_present)
+              && below_status != svn_wc__db_status_not_present
+              && below_status != svn_wc__db_status_deleted)
             mod_work = TRUE;
           else
             del_work = TRUE;

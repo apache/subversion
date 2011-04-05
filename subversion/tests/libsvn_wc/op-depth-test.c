@@ -1718,6 +1718,21 @@ test_mixed_rev_copy(const svn_test_opts_t *opts, apr_pool_t *pool)
     SVN_ERR(check_db_rows(&b, "X", rows));
   }
 
+  SVN_ERR(wc_delete(&b, "X/B/C"));
+  {
+    nodes_row_t rows[] = {
+      { 1, "X",     "normal",       1, "A" },
+      { 1, "X/B",   "not-present",  2, "A/B" },
+      { 2, "X/B",   "normal",       2, "A/B" },
+      { 2, "X/B/C", "not-present",  3, "A/B/C" },
+      { 2, "X/Y",   "normal",       2, "A/B" },
+      { 2, "X/Y/C", "not-present",  3, "A/B/C" },
+      { 3, "X/Y/C", "normal",       3, "A/B/C" },
+      { 0 }
+    };
+    SVN_ERR(check_db_rows(&b, "X", rows));
+  }
+
   return SVN_NO_ERROR;
 }
 
