@@ -4428,7 +4428,6 @@ is_add_or_root_of_copy(svn_boolean_t *add_or_root_of_copy,
                        const char *local_relpath,
                        apr_pool_t *scratch_pool)
 {
-  svn_wc__db_status_t status;
   svn_sqlite__stmt_t *stmt;
   apr_int64_t op_depth;
 
