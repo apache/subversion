@@ -939,32 +939,29 @@ svn_wc__node_get_base_rev(svn_revnum_t *base_revision,
                           const char *local_abspath,
                           apr_pool_t *scratch_pool)
 {
-  svn_wc__db_status_t status;
   svn_boolean_t have_base;
+  svn_error_t *err;
 
-  SVN_ERR(svn_wc__db_read_info(&status,
-                               NULL, base_revision,
+  err = svn_wc__db_base_get_info(NULL, NULL, base_revision,
+                                 NULL, NULL, NULL,
+                                 NULL, NULL, NULL,
+                                 NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL,
+                                 wc_ctx->db, local_abspath,
+                                 scratch_pool, scratch_pool);
+
+  if (!err || err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+    return svn_error_return(err);
+
+  svn_error_clear(err);
+
+  SVN_ERR(svn_wc__db_read_info(NULL, NULL, base_revision,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, &have_base, NULL,
                                NULL, NULL,
                                wc_ctx->db, local_abspath,
                                scratch_pool, scratch_pool));
-
-  if (SVN_IS_VALID_REVNUM(*base_revision))
-    return SVN_NO_ERROR;
-
-  if (have_base)
-    {
-      /* The node was replaced with something else. Look at the base.  */
-      SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, base_revision,
-                                       NULL, NULL, NULL,
-                                       NULL, NULL, NULL,
-                                       NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL,
-                                       wc_ctx->db, local_abspath,
-                                       scratch_pool, scratch_pool));
-    }
 
   return SVN_NO_ERROR;
 }
