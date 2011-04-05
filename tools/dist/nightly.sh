@@ -47,10 +47,13 @@ abscwd=`cd $dir; pwd`
 
 echo "Will place results in: $target"
 
+# get youngest
+head=`$svn info $repo/trunk | grep '^Revision' | cut -d ' ' -f 2`
+
 # Get the latest versions of the rolling scripts
 for i in construct-rolling-environment.sh roll.sh dist.sh gen_nightly_ann.py
 do 
-  $svn export $repo/trunk/tools/dist/$i $dir/$i
+  $svn export -r $head $repo/trunk/tools/dist/$i@$head $dir/$i
 done
 
 # Create the environment
@@ -62,7 +65,6 @@ fi;
 
 # Roll the tarballs
 echo '-------------------rolling tarball--------------------'
-head=`$svn info $repo/trunk | grep '^Revision' | cut -d ' ' -f 2`
 ${abscwd}/roll.sh trunk $head "-nightly"
 cd ..
 
