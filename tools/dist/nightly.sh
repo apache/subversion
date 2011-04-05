@@ -82,6 +82,12 @@ if [ -d "$target/dist/r$head" ]; then rm -r "$target/dist/r$head"; fi
 rm -r roll/deploy/to-tigris
 mv roll/deploy "$target/dist/r$head"
 
+# Some static links for the most recent artefacts.
+ln -sf "r$head" "$target/dist/current"
+ls "$target/dist/r$head" | while read fname; do
+  ln -s "r$head/$fname" "$target/dist/$fname"
+done
+
 # Clean up old results
 ls -t1 "$target/dist/" | sed -e "1,${olds}d" | while read d; do
   rm -rf "$target/dist/$d"
