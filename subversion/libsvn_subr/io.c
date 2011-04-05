@@ -1789,7 +1789,7 @@ svn_io__is_finfo_read_only(svn_boolean_t *read_only,
     *read_only = !(file_info->protection & APR_WWRITE);
 
 #else  /* WIN32 || __OS2__ || !APR_HAS_USER */
-  *read_only = !(file_info->protection & APR_UWRITE);
+  *read_only = (file_info->protection & APR_FREADONLY);
 #endif
 
   return SVN_NO_ERROR;
