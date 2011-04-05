@@ -1175,6 +1175,66 @@ def revert_permissions_only(sbox):
                                        'revert', sbox.ospath('A/B/E/beta'))
     is_executable(sbox.ospath('A/B/E/beta'))
 
+@XFail()
+@Issue(3851)
+def revert_copy_depth_files(sbox):
+  "revert a copy with depth=files"
+
+  sbox.build(read_only=True)
+  wc_dir = sbox.wc_dir
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'copy',
+                                     sbox.ospath('A/B/E'),
+                                     sbox.ospath('A/B/E2'))
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/B/E2'       : Item(status='A ', copied='+', wc_rev='-'),
+    'A/B/E2/alpha' : Item(status='  ', copied='+', wc_rev='-'),
+    'A/B/E2/beta'  : Item(status='  ', copied='+', wc_rev='-'),
+    })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  expected_output = svntest.verify.UnorderedOutput([
+    "Reverted '%s'\n" % sbox.ospath(path) for path in ['A/B/E2',
+                                                       'A/B/E2/alpha',
+                                                       'A/B/E2/beta']])
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'revert', '--depth', 'files',
+                                     sbox.ospath('A/B/E2'))
+
+  expected_status.remove('A/B/E2', 'A/B/E2/alpha', 'A/B/E2/beta')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+@XFail()
+@Issue(3851)
+def revert_nested_add_depth_immediates(sbox):
+  "revert a nested add with depth=immediates"
+
+  sbox.build(read_only=True)
+  wc_dir = sbox.wc_dir
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'mkdir', '--parents', sbox.ospath('A/X/Y'))
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/X'       : Item(status='A ', wc_rev='0'),
+    'A/X/Y'     : Item(status='A ', wc_rev='0'),
+    })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  expected_output = svntest.verify.UnorderedOutput([
+    "Reverted '%s'\n" % sbox.ospath(path) for path in ['A/X', 'A/X/Y']])
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'revert', '--depth', 'immediates',
+                                     sbox.ospath('A/X'))
+
+  expected_status.remove('A/X', 'A/X/Y')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 ########################################################################
 # Run the tests
@@ -1206,6 +1266,8 @@ test_list = [ None,
               revert_child_of_copy,
               revert_non_recusive_after_delete,
               revert_permissions_only,
+              revert_copy_depth_files,
+              revert_nested_add_depth_immediates,
              ]
 
 if __name__ == '__main__':
