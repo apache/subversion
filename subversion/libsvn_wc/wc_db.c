@@ -201,6 +201,10 @@ typedef struct insert_working_baton_t {
   /* may have work items to queue in this transaction  */
   const svn_skel_t *work_items;
 
+  /* If the value is > 0 and < op_depth, also insert a not-present
+     at op-depth NOT_PRESENT_OP_DEPTH, based on this same information */
+  apr_int64_t not_present_op_depth;
+
 } insert_working_baton_t;
 
 
@@ -954,6 +958,27 @@ insert_working_node(void *baton,
                                        scratch_pool));
 
   SVN_ERR(add_work_items(wcroot->sdb, piwb->work_items, scratch_pool));
+
+  if (piwb->not_present_op_depth > 0
+      && piwb->not_present_op_depth < piwb->op_depth)
+    {
+      /* And also insert a not-present node to tell the commit processing that
+         a child of the parent node was not copied. */
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_INSERT_NODE));
+          
+      SVN_ERR(svn_sqlite__bindf(stmt, "isisisrtnt", 
+                                wcroot->wc_id, local_relpath,
+                                piwb->not_present_op_depth, parent_relpath,
+                                piwb->original_repos_id,
+                                piwb->original_repos_relpath,
+                                piwb->original_revnum,
+                                presence_map, svn_wc__db_status_not_present,
+                                /* NULL */
+                                kind_map, piwb->kind));
+
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -2157,6 +2182,7 @@ cross_db_copy(svn_wc__db_wcroot_t *src_wcroot,
               const char *dst_relpath,
               svn_wc__db_status_t dst_status,
               apr_int64_t dst_op_depth,
+              apr_int64_t dst_np_op_depth,
               svn_wc__db_kind_t kind,
               const apr_array_header_t *children,
               apr_int64_t copyfrom_id,
@@ -2221,6 +2247,8 @@ cross_db_copy(svn_wc__db_wcroot_t *src_wcroot,
   iwb.checksum = checksum;
   iwb.children = children;
   iwb.depth = depth;
+
+  iwb.not_present_op_depth = dst_np_op_depth;
 
   SVN_ERR(insert_working_node(&iwb, dst_wcroot, dst_relpath, scratch_pool));
 
@@ -2401,6 +2429,7 @@ op_depth_of(apr_int64_t *op_depth,
 
 static svn_error_t *
 op_depth_for_copy(apr_int64_t *op_depth,
+                  apr_int64_t *np_op_depth,
                   apr_int64_t copyfrom_repos_id,
                   const char *copyfrom_relpath,
                   svn_revnum_t copyfrom_revision,
@@ -2426,6 +2455,7 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
   svn_boolean_t have_work;
   apr_int64_t copyfrom_id;
   apr_int64_t dst_op_depth;
+  apr_int64_t dst_np_op_depth;
   svn_wc__db_kind_t kind;
   const apr_array_header_t *children;
 
@@ -2433,7 +2463,7 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
                             &status, &kind, &have_work, src_wcroot,
                             src_relpath, scratch_pool, scratch_pool));
 
-  SVN_ERR(op_depth_for_copy(&dst_op_depth, copyfrom_id,
+  SVN_ERR(op_depth_for_copy(&dst_op_depth, &dst_np_op_depth, copyfrom_id,
                             copyfrom_relpath, copyfrom_rev,
                             dst_wcroot, dst_relpath, scratch_pool));
 
@@ -2515,6 +2545,27 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
                                 dst_relpath, dst_parent_relpath));
       SVN_ERR(svn_sqlite__step_done(stmt));
 
+      if (dst_np_op_depth > 0)
+        {
+          /* We introduce a not-present node at the parent's op_depth to
+             properly start a new op-depth at our own op_depth. This marks
+             us as an op_root for commit and allows reverting just this
+             operation */
+
+          SVN_ERR(svn_sqlite__get_statement(&stmt, dst_wcroot->sdb,
+                                            STMT_INSERT_NODE));
+          SVN_ERR(svn_sqlite__bindf(stmt, "isisisrtnt", 
+                                    src_wcroot->wc_id, dst_relpath,
+                                    dst_np_op_depth, dst_parent_relpath,
+                                    copyfrom_id, copyfrom_relpath,
+                                    copyfrom_rev,
+                                    presence_map,
+                                       svn_wc__db_status_not_present,
+                                    /* NULL */
+                                    kind_map, kind));
+
+          SVN_ERR(svn_sqlite__step_done(stmt));
+        }
       /* Insert incomplete children, if relevant.
          The children are part of the same op and so have the same op_depth.
          (The only time we'd want a different depth is during a recursive
@@ -2534,7 +2585,8 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
   else
     {
       SVN_ERR(cross_db_copy(src_wcroot, src_relpath, dst_wcroot,
-                            dst_relpath, dst_status, dst_op_depth, kind,
+                            dst_relpath, dst_status, dst_op_depth,
+                            dst_np_op_depth, kind,
                             children, copyfrom_id, copyfrom_relpath,
                             copyfrom_rev, scratch_pool));
     }
@@ -2680,14 +2732,23 @@ catch_copy_of_absent(svn_wc__db_wcroot_t *wcroot,
 }
 
 
-/* If LOCAL_RELPATH is presence=incomplete then set *OP_DEPTH to the
-   op_depth of the incomplete node, otherwise if the copyfrom
-   information COPYFROM_REPOS_ID+COPYFROM_RELPATH+COPYFROM_REVISION
-   "matches" the copyfrom information for the parent of LOCAL_RELPATH
-   then set *OP_DEPTH to the op_depth of the parent, otherwise set
-   *OP_DEPTH to the op_depth of LOCAL_RELPATH. */
+/* Determine at which OP_DEPTH a copy of COPYFROM_REPOS_ID, COPYFROM_RELPATH at
+   revision COPYFROM_REVISION should be inserted as LOCAL_RELPATH. Do this
+   by checking if this would be a direct child of a copy of its parent
+   directory. If it is then set *OP_DEPTH to the op_depth of its parent.
+
+   If the node is not a direct copy at the same revision of the parent
+   *NP_OP_DEPTH will be set to the op_depth of the parent when a not-present
+   node should be inserted at this op_depth. This will be the case when the
+   parent already defined an incomplete child with the same name. Otherwise
+   *NP_OP_DEPTH will be set to -1.
+
+   If the parent node is not the parent of the to be copied node, then
+   *OP_DEPTH will be set to the proper op_depth for a new oew operation root.
+ */
 static svn_error_t *
 op_depth_for_copy(apr_int64_t *op_depth,
+                  apr_int64_t *np_op_depth,
                   apr_int64_t copyfrom_repos_id,
                   const char *copyfrom_relpath,
                   svn_revnum_t copyfrom_revision,
@@ -2698,8 +2759,10 @@ op_depth_for_copy(apr_int64_t *op_depth,
   const char *parent_relpath, *name;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
+  apr_int64_t incomplete_op_depth = -1;
 
   *op_depth = relpath_depth(local_relpath);
+  *np_op_depth = -1;
 
   if (!copyfrom_relpath)
     return SVN_NO_ERROR;
@@ -2713,11 +2776,7 @@ op_depth_for_copy(apr_int64_t *op_depth,
       svn_wc__db_status_t status = svn_sqlite__column_token(stmt, 1,
                                                             presence_map);
       if (status == svn_wc__db_status_incomplete)
-        {
-          *op_depth = svn_sqlite__column_int64(stmt, 0);
-          SVN_ERR(svn_sqlite__reset(stmt));
-          return SVN_NO_ERROR;
-        }
+        incomplete_op_depth = svn_sqlite__column_int64(stmt, 0);
     }
   SVN_ERR(svn_sqlite__reset(stmt));
 
@@ -2728,12 +2787,17 @@ op_depth_for_copy(apr_int64_t *op_depth,
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (have_row)
     {
+      apr_int64_t parent_op_depth = svn_sqlite__column_int64(stmt, 0);
       svn_wc__db_status_t status = svn_sqlite__column_token(stmt, 1,
                                                             presence_map);
+
       svn_error_t *err = convert_to_working_status(&status, status);
       if (err)
         SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
-      if (status == svn_wc__db_status_added)
+
+      if (status == svn_wc__db_status_added
+          && ((incomplete_op_depth < 0)
+              || (incomplete_op_depth == parent_op_depth)))
         {
           apr_int64_t parent_copyfrom_repos_id
             = svn_sqlite__column_int64(stmt, 10);
@@ -2742,12 +2806,16 @@ op_depth_for_copy(apr_int64_t *op_depth,
           svn_revnum_t parent_copyfrom_revision
             = svn_sqlite__column_revnum(stmt, 12);
 
-          if (parent_copyfrom_repos_id == copyfrom_repos_id
-              && copyfrom_revision == parent_copyfrom_revision
-              && !strcmp(svn_relpath_join(parent_copyfrom_relpath, name,
-                                          scratch_pool),
-                         copyfrom_relpath))
-            *op_depth = svn_sqlite__column_int64(stmt, 0);
+          if (parent_copyfrom_repos_id == copyfrom_repos_id)
+            {
+              if (copyfrom_revision == parent_copyfrom_revision
+                  && !strcmp(copyfrom_relpath,
+                             svn_relpath_join(parent_copyfrom_relpath, name,
+                                              scratch_pool)))
+                *op_depth = parent_op_depth;
+              else if (incomplete_op_depth > 0)
+                *np_op_depth = incomplete_op_depth;
+            }
         }
     }
   SVN_ERR(svn_sqlite__reset(stmt));
@@ -2811,7 +2879,8 @@ svn_wc__db_op_copy_dir(svn_wc__db_t *db,
     }
 
   /* ### Should we do this inside the transaction? */
-  SVN_ERR(op_depth_for_copy(&iwb.op_depth, iwb.original_repos_id,
+  SVN_ERR(op_depth_for_copy(&iwb.op_depth, &iwb.not_present_op_depth,
+                            iwb.original_repos_id,
                             original_repos_relpath, original_revision,
                             wcroot, local_relpath, scratch_pool));
 
@@ -2884,7 +2953,8 @@ svn_wc__db_op_copy_file(svn_wc__db_t *db,
     }
 
   /* ### Should we do this inside the transaction? */
-  SVN_ERR(op_depth_for_copy(&iwb.op_depth, iwb.original_repos_id,
+  SVN_ERR(op_depth_for_copy(&iwb.op_depth, &iwb.not_present_op_depth,
+                            iwb.original_repos_id,
                             original_repos_relpath, original_revision,
                             wcroot, local_relpath, scratch_pool));
 
@@ -2952,7 +3022,8 @@ svn_wc__db_op_copy_symlink(svn_wc__db_t *db,
     }
 
   /* ### Should we do this inside the transaction? */
-  SVN_ERR(op_depth_for_copy(&iwb.op_depth, iwb.original_repos_id,
+  SVN_ERR(op_depth_for_copy(&iwb.op_depth, &iwb.not_present_op_depth,
+                            iwb.original_repos_id,
                             original_repos_relpath, original_revision,
                             wcroot, local_relpath, scratch_pool));
 
