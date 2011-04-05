@@ -4429,63 +4429,21 @@ is_add_or_root_of_copy(svn_boolean_t *add_or_root_of_copy,
                        apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
-  const char *op_root_relpath;
-  const char *original_repos_relpath;
-  apr_int64_t original_repos_id;
-  svn_revnum_t original_revision;
+  svn_sqlite__stmt_t *stmt;
+  apr_int64_t op_depth;
 
-  SVN_ERR(scan_addition(&status, &op_root_relpath, NULL, NULL,
-                        &original_repos_relpath,
-                        &original_repos_id, &original_revision,
-                        wcroot, local_relpath, scratch_pool, scratch_pool));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_WORKING_NODE));
 
-  SVN_ERR_ASSERT(status == svn_wc__db_status_added
-                 || status == svn_wc__db_status_copied);
-  SVN_ERR_ASSERT(op_root_relpath != NULL);
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step_row(stmt));
 
-  *add_or_root_of_copy = (status == svn_wc__db_status_added
-                          || !strcmp(local_relpath, op_root_relpath));
+  op_depth = svn_sqlite__column_int64(stmt, 0);
 
-  if (*add_or_root_of_copy && status == svn_wc__db_status_copied)
-    {
-      /* ### merge sets the wrong copyfrom when adding a tree and so
-             the root detection above is unreliable.  I'm "fixing" it
-             here because I just need to detect whether this is an
-             instance of the merge bug, and that's easier than fixing
-             scan_addition or merge. */
-      const char *parent_relpath;
-      const char *name;
-      svn_wc__db_status_t parent_status;
-      const char *parent_original_repos_relpath;
-      apr_int64_t parent_original_repos_id;
-      svn_revnum_t parent_original_revision;
-      svn_error_t *err;
+  *add_or_root_of_copy = (op_depth == relpath_depth(local_relpath));
+  SVN_DBG(("Is root: %s / %d\n", local_relpath, *add_or_root_of_copy));
 
-      svn_relpath_split(&parent_relpath, &name, local_relpath, scratch_pool);
-
-      err = scan_addition(&parent_status, NULL, NULL, NULL,
-                          &parent_original_repos_relpath,
-                          &parent_original_repos_id, &parent_original_revision,
-                          wcroot, parent_relpath, scratch_pool, scratch_pool);
-      if (err)
-        {
-          if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-            return svn_error_return(err);
-          /* It really is a root */
-          svn_error_clear(err);
-        }
-      else if (parent_status == svn_wc__db_status_copied
-               && original_revision == parent_original_revision
-               && original_repos_id == parent_original_repos_id
-               && !strcmp(original_repos_relpath,
-                          svn_dirent_join(parent_original_repos_relpath,
-                                          name,
-                                          scratch_pool)))
-        /* An instance of the merge bug */
-        *add_or_root_of_copy = FALSE;
-    }
-
-  return SVN_NO_ERROR;
+  return svn_error_return(svn_sqlite__reset(stmt));
 }
 
 
@@ -4537,14 +4495,7 @@ convert_to_working_status(svn_wc__db_status_t *working_status,
 
 /* Return the status of the node, if any, below the "working" node.
    Set *HAVE_BASE or *HAVE_WORK to indicate if a base node or lower
-   working node is present, and *STATUS to the status of the node.
-
-   This is an experimental interface.  It appears that delete only
-   needs to know whether the below node is base or not (if it is a
-   base the status is available via base_get_info).  It's possible
-   this function should be removed and read_info modified to return
-   the "lower is base".  I'll leave it for now because delete may turn
-   out to need more info. */
+   working node is present, and *STATUS to the status of the node. */
 static svn_error_t *
 info_below_working(svn_boolean_t *have_base,
                    svn_boolean_t *have_work,
@@ -4557,6 +4508,7 @@ info_below_working(svn_boolean_t *have_base,
   svn_boolean_t have_row;
 
   *have_base = *have_work =  FALSE;
+  *status = svn_wc__db_status_normal;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_NODE_INFO));
@@ -4566,6 +4518,9 @@ info_below_working(svn_boolean_t *have_base,
     {
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
       if (have_row)
+        *status = svn_sqlite__column_token(stmt, 3, presence_map);
+
+      while (have_row)
         {
           apr_int64_t op_depth = svn_sqlite__column_int64(stmt, 0);
 
@@ -4574,7 +4529,7 @@ info_below_working(svn_boolean_t *have_base,
           else
             *have_base = TRUE;
 
-          *status = svn_sqlite__column_token(stmt, 3, presence_map);
+          SVN_ERR(svn_sqlite__step(&have_row, stmt));
         }
     }
   SVN_ERR(svn_sqlite__reset(stmt));
