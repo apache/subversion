@@ -646,11 +646,10 @@ static svn_error_t *
 complete_directory(struct edit_baton *eb,
                    const char *local_abspath,
                    svn_boolean_t is_root_dir,
-                   apr_pool_t *pool)
+                   apr_pool_t *scratch_pool)
 {
   const apr_array_header_t *children;
   int i;
-  apr_pool_t *iterpool;
 
   /* If this is the root directory and there is a target, we don't have to
      mark this directory complete. */
@@ -673,7 +672,8 @@ complete_directory(struct edit_baton *eb,
       err = svn_wc__db_base_get_info(&status, NULL, NULL, NULL, NULL, NULL,
                                      NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                      NULL, NULL, NULL,
-                                     eb->db, eb->target_abspath, pool, pool);
+                                     eb->db, eb->target_abspath,
+                                     scratch_pool, scratch_pool);
       if (err)
         {
           if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
@@ -689,17 +689,16 @@ complete_directory(struct edit_baton *eb,
              hasn't been re-added to the BASE tree by this update. If so, we
              should get rid of this excluded node now. */
 
-          SVN_ERR(do_entry_deletion(eb, eb->target_abspath, NULL, FALSE, pool));
+          SVN_ERR(do_entry_deletion(eb, eb->target_abspath, NULL, FALSE,
+                                    scratch_pool));
         }
 
       return SVN_NO_ERROR;
     }
 
-  iterpool = svn_pool_create(pool);
-
   /* Mark THIS_DIR complete. */
   SVN_ERR(svn_wc__db_temp_op_set_base_incomplete(eb->db, local_abspath, FALSE,
-                                                 iterpool));
+                                                 scratch_pool));
 
   if (eb->depth_is_sticky)
     {
@@ -715,7 +714,7 @@ complete_directory(struct edit_baton *eb,
                                        NULL, &depth, NULL, NULL, NULL, NULL,
                                        NULL,
                                        eb->db, local_abspath,
-                                       iterpool, iterpool));
+                                       scratch_pool, scratch_pool));
 
       if (depth != eb->requested_depth)
         {
@@ -730,86 +729,11 @@ complete_directory(struct edit_baton *eb,
               SVN_ERR(svn_wc__db_temp_op_set_dir_depth(eb->db,
                                                        local_abspath,
                                                        eb->requested_depth,
-                                                       iterpool));
+                                                       scratch_pool));
             }
         }
     }
 
-  /* Remove any deleted or missing entries. */
-  /* ### This should only happen when the update depth allows this.
-     ### Needs review!
-
-     ### Can we handle this in the post update revision bump to avoid
-     ### an extra node walk? */
-
-  SVN_ERR(svn_wc__db_base_get_children(&children, eb->db, local_abspath,
-                                       pool, iterpool));
-  for (i = 0; i < children->nelts; i++)
-    {
-      const char *name = APR_ARRAY_IDX(children, i, const char *);
-      const char *node_abspath;
-      svn_wc__db_status_t status;
-      svn_wc__db_kind_t kind;
-      svn_revnum_t revnum;
-
-      svn_pool_clear(iterpool);
-
-      node_abspath = svn_dirent_join(local_abspath, name, iterpool);
-
-      SVN_ERR(svn_wc__db_base_get_info(&status, &kind, &revnum,
-                                       NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       eb->db, node_abspath,
-                                       iterpool, iterpool));
-
-      /* ### obsolete comment?
-         Any entry still marked as deleted (and not schedule add) can now
-         be removed -- if it wasn't undeleted by the update, then it
-         shouldn't stay in the updated working set.  Schedule add items
-         should remain.
-
-         An absent entry might have been reconfirmed as absent, and the way
-         we can tell is by looking at its revision number: a revision
-         number different from the target revision of the update means the
-         update never mentioned the item, so the entry should be
-         removed. */
-      if (status == svn_wc__db_status_not_present)
-        {
-          /* "Usually", not_present nodes indicate that an 'svn delete' was
-           * committed and its parent has not been updated yet. We have just
-           * updated the parent and so the not_present BASE_NODE should go
-           * away.
-           * However, not_present can also mean that 'update' wanted to add a
-           * node and found an existing conflict or an unversioned obstruction
-           * at that path. We don't want to remove such not_present state, so
-           * check if the path is skipped and leave the BASE_NODE alone if so.
-           *
-           * Note that add_file() and add_directory() automatically fix such
-           * added-not_present nodes when they find out that the obstruction
-           * is gone. */
-
-          if (eb->wcroot_abspath == NULL)
-            SVN_ERR(svn_wc__db_get_wcroot(&eb->wcroot_abspath, eb->db,
-                                          node_abspath,
-                                          eb->pool, iterpool));
-
-          if (!apr_hash_get(eb->skipped_trees,
-                            svn_dirent_skip_ancestor(eb->wcroot_abspath,
-                                                     node_abspath),
-                            APR_HASH_KEY_STRING))
-            {
-              SVN_ERR(svn_wc__db_base_remove(eb->db, node_abspath, iterpool));
-            }
-        }
-      else if (status == svn_wc__db_status_absent
-               && revnum != *eb->target_revision)
-        {
-          SVN_ERR(svn_wc__db_base_remove(eb->db, node_abspath, iterpool));
-        }
-    }
-
-  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
@@ -827,21 +751,30 @@ maybe_bump_dir_info(struct edit_baton *eb,
                     struct bump_dir_info *bdi,
                     apr_pool_t *pool)
 {
+  apr_pool_t *iterpool = NULL;
   /* Keep moving up the tree of directories until we run out of parents,
      or a directory is not yet "done".  */
   while (bdi != NULL)
     {
       if (--bdi->ref_count > 0)
-        return SVN_NO_ERROR;    /* directory isn't done yet */
+        break;  /* directory isn't done yet */
+
+      if (iterpool == NULL)
+        iterpool = svn_pool_create(pool);
+      else
+        svn_pool_clear(iterpool);
 
       /* The refcount is zero, so we remove any 'dead' entries from
          the directory and mark it 'complete'.  */
       if (! bdi->skipped)
         SVN_ERR(complete_directory(eb, bdi->local_abspath,
-                                   bdi->parent == NULL, pool));
+                                   bdi->parent == NULL, iterpool));
       bdi = bdi->parent;
     }
   /* we exited the for loop because there are no more parents */
+
+  if (iterpool != NULL)
+    svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
