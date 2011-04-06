@@ -736,6 +736,11 @@ complete_directory(struct edit_baton *eb,
     }
 
   /* Remove any deleted or missing entries. */
+  /* ### This should only happen when the update depth allows this.
+     ### Needs review!
+
+     ### Can we handle this in the post update revision bump to avoid
+     ### an extra node walk? */
 
   SVN_ERR(svn_wc__db_base_get_children(&children, eb->db, local_abspath,
                                        pool, iterpool));
@@ -776,20 +781,26 @@ complete_directory(struct edit_baton *eb,
            * updated the parent and so the not_present BASE_NODE should go
            * away.
            * However, not_present can also mean that 'update' wanted to add a
-           * node and found an unversioned obstruction at that path. We don't
-           * want to remove such not_present state, so check if there is a
-           * tree conflict flagged against an unversioned node and leave the
-           * BASE_NODE alone if so.
-           * Note that add_file() automatically fixes such an
-           * added-not_present node when it finds the obstruction gone. */
-          const svn_wc_conflict_description2_t *tree_conflict;
-          SVN_ERR(svn_wc__db_op_read_tree_conflict(&tree_conflict,
-                                                   eb->db,
-                                                   node_abspath,
-                                                   iterpool, iterpool));
-          if (!tree_conflict
-              || tree_conflict->reason != svn_wc_conflict_reason_unversioned)
-            SVN_ERR(svn_wc__db_base_remove(eb->db, node_abspath, iterpool));
+           * node and found an existing conflict or an unversioned obstruction
+           * at that path. We don't want to remove such not_present state, so
+           * check if the path is skipped and leave the BASE_NODE alone if so.
+           *
+           * Note that add_file() and add_directory() automatically fix such
+           * added-not_present nodes when they find out that the obstruction
+           * is gone. */
+
+          if (eb->wcroot_abspath == NULL)
+            SVN_ERR(svn_wc__db_get_wcroot(&eb->wcroot_abspath, eb->db,
+                                          node_abspath,
+                                          eb->pool, iterpool));
+
+          if (!apr_hash_get(eb->skipped_trees,
+                            svn_dirent_skip_ancestor(eb->wcroot_abspath,
+                                                     node_abspath),
+                            APR_HASH_KEY_STRING))
+            {
+              SVN_ERR(svn_wc__db_base_remove(eb->db, node_abspath, iterpool));
+            }
         }
       else if (status == svn_wc__db_status_absent
                && revnum != *eb->target_revision)
@@ -2145,8 +2156,28 @@ add_directory(const char *path,
       db->skip_this = TRUE;
       db->already_notified = TRUE;
 
+      /* We skip this node, but once the update completes the parent node will
+         be updated to the new revision. So a future recursive update of the
+         parent will not bring in this new node as the revision of the parent
+         describes to the repository that all children are available.
+
+         To resolve this problem, we add a not-present node to allow bringing
+         the node in once this conflict is resolved.
+
+         Note that we can safely assume that no present base node exists,
+         because then we would not have received an add_directory.
+       */
+      SVN_ERR(svn_wc__db_base_add_not_present_node(eb->db, db->local_abspath,
+                                                   db->new_relpath,
+                                                   eb->repos_root,
+                                                   eb->repos_uuid,
+                                                   pb->old_revision,
+                                                   svn_wc__db_kind_dir,
+                                                   NULL, NULL,
+                                                   pool));
+
       /* ### TODO: Also print victim_path in the skip msg. */
-      do_notification(eb, db->local_abspath, svn_node_unknown,
+      do_notification(eb, db->local_abspath, svn_node_dir,
                       svn_wc_notify_skip, pool);
       return SVN_NO_ERROR;
     }
@@ -3042,6 +3073,26 @@ add_file(const char *path,
 
       fb->skip_this = TRUE;
       fb->already_notified = TRUE;
+
+      /* We skip this node, but once the update completes the parent node will
+         be updated to the new revision. So a future recursive update of the
+         parent will not bring in this new node as the revision of the parent
+         describes to the repository that all children are available.
+
+         To resolve this problem, we add a not-present node to allow bringing
+         the node in once this conflict is resolved.
+
+         Note that we can safely assume that no present base node exists,
+         because then we would not have received an add_file.
+       */
+      SVN_ERR(svn_wc__db_base_add_not_present_node(eb->db, fb->local_abspath,
+                                                   fb->new_relpath,
+                                                   eb->repos_root,
+                                                   eb->repos_uuid,
+                                                   pb->old_revision,
+                                                   svn_wc__db_kind_file,
+                                                   NULL, NULL,
+                                                   pool));
 
       do_notification(eb, fb->local_abspath, svn_node_unknown,
                       svn_wc_notify_skip, scratch_pool);
