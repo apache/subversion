@@ -768,12 +768,11 @@ add_from_disk(svn_wc_context_t *wc_ctx,
 static svn_error_t *
 check_can_add_to_parent(const char **repos_root_url,
                         const char **repos_uuid,
-                        svn_wc_context_t *wc_ctx,
+                        svn_wc__db_t *db,
                         const char *local_abspath,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
-  svn_wc__db_t *db = wc_ctx->db;
   const char *parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
   svn_wc__db_status_t parent_status;
   svn_wc__db_kind_t parent_kind;
@@ -849,7 +848,7 @@ static svn_error_t *
 check_can_add_node(svn_node_kind_t *kind_p,
                    svn_boolean_t *db_row_exists_p,
                    svn_boolean_t *is_wc_root_p,
-                   svn_wc_context_t *wc_ctx,
+                   svn_wc__db_t *db,
                    const char *local_abspath,
                    const char *copyfrom_url,
                    svn_revnum_t copyfrom_rev,
@@ -858,7 +857,6 @@ check_can_add_node(svn_node_kind_t *kind_p,
   const char *base_name = svn_dirent_basename(local_abspath, scratch_pool);
   svn_boolean_t is_wc_root;
   svn_node_kind_t kind;
-  svn_wc__db_t *db = wc_ctx->db;
   svn_boolean_t exists;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
@@ -1034,13 +1032,13 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
   const char *repos_root_url, *repos_uuid;
 
   SVN_ERR(check_can_add_node(&kind, &db_row_exists, &is_wc_root,
-                             wc_ctx, local_abspath, copyfrom_url, copyfrom_rev,
+                             db, local_abspath, copyfrom_url, copyfrom_rev,
                              scratch_pool));
 
   /* Get REPOS_ROOT_URL and REPOS_UUID.  Check that the
      parent is a versioned directory in an acceptable state. */
   SVN_ERR(check_can_add_to_parent(&repos_root_url, &repos_uuid,
-                                  wc_ctx, local_abspath, scratch_pool,
+                                  db, local_abspath, scratch_pool,
                                   scratch_pool));
 
   /* If we're performing a repos-to-WC copy, check that the copyfrom
@@ -1170,9 +1168,9 @@ svn_wc_add_from_disk(svn_wc_context_t *wc_ctx,
 {
   svn_node_kind_t kind;
 
-  SVN_ERR(check_can_add_node(&kind, NULL, NULL, wc_ctx, local_abspath,
+  SVN_ERR(check_can_add_node(&kind, NULL, NULL, wc_ctx->db, local_abspath,
                              NULL, SVN_INVALID_REVNUM, scratch_pool));
-  SVN_ERR(check_can_add_to_parent(NULL, NULL, wc_ctx, local_abspath,
+  SVN_ERR(check_can_add_to_parent(NULL, NULL, wc_ctx->db, local_abspath,
                                   scratch_pool, scratch_pool));
   SVN_ERR(add_from_disk(wc_ctx, local_abspath, kind, 
                         notify_func, notify_baton,
