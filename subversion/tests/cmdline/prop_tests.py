@@ -2359,6 +2359,76 @@ def propget_redirection(sbox):
   if ((len(expected_output) * 3) - 6) != len(pg_stdout_redir):
     raise svntest.Failure("Redirected pg -vR has unexpected duplicates")
 
+@XFail()
+@Issue(3852)
+def file_matching_dir_prop_reject(sbox):
+  "prop conflict for file matching dir prop reject"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Add file with awkward name
+  svntest.main.file_append(sbox.ospath('A/dir_conflicts'), "some content\n")
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'add', sbox.ospath('A/dir_conflicts'))
+  sbox.simple_propset('prop', 'val1', 'A/dir_conflicts')
+  sbox.simple_propset('prop', 'val1', 'A')
+  expected_output = svntest.wc.State(wc_dir, {
+      'A'               : Item(verb='Sending'),
+      'A/dir_conflicts' : Item(verb='Adding'),
+      })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A', wc_rev=2)
+  expected_status.add({
+    'A/dir_conflicts' : Item(status='  ', wc_rev=2),
+      })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  # Modify/commit property change
+  sbox.simple_propset('prop', 'val2', 'A/dir_conflicts')
+  sbox.simple_propset('prop', 'val2', 'A')
+  expected_output = svntest.wc.State(wc_dir, {
+      'A'               : Item(verb='Sending'),
+      'A/dir_conflicts' : Item(verb='Sending'),
+      })
+  expected_status.tweak('A', 'A/dir_conflicts', wc_rev=3)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, wc_dir)
+
+  # Local property mod
+  sbox.simple_propset('prop', 'val3', 'A/dir_conflicts')
+  sbox.simple_propset('prop', 'val3', 'A')
+
+  # Update to trigger property conflict
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A/dir_conflicts' : Item('some content\n', props = {'prop' : 'val3'}),
+    })
+  expected_disk.tweak('A', props={'prop' : 'val3'})
+  expected_output = svntest.wc.State(wc_dir, {
+    'A'               : Item(status=' C'),
+    'A/dir_conflicts' : Item(status=' C'),
+    })
+  expected_status.tweak(wc_rev=2)
+  expected_status.tweak('A', 'A/dir_conflicts', status=' C')
+
+  # I'm not sure what conflict files are expected
+  extra_files = ['dir_conflicts.*\.prej', 'dir_conflicts.*\.prej']
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None,
+                                        svntest.tree.detect_conflict_files,
+                                        extra_files,
+                                        None, None, 2, '-r', '2', wc_dir)
+
+  if len(extra_files) != 0:
+    print("didn't get expected conflict files")
+    raise svntest.verify.SVNUnexpectedOutput
+
+
 ########################################################################
 # Run the tests
 
@@ -2399,6 +2469,7 @@ test_list = [ None,
               obstructed_subdirs,
               atomic_over_ra,
               propget_redirection,
+              file_matching_dir_prop_reject,
              ]
 
 if __name__ == '__main__':
