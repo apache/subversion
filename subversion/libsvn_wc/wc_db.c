@@ -3400,6 +3400,16 @@ set_changelist_txn(void *baton,
                             new_changelist));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
+  if (new_changelist == NULL)
+    {
+     /* When removing a changelist, we may have left an empty ACTUAL node, so
+        remove it.  */
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_DELETE_ACTUAL_EMPTY));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
+
   /* Now, add a row to the CHANGELIST_LIST table, so we can later notify. */
   /* ### TODO: This could just as well be done with a trigger, but for right
      ### now, this is quick and dirty. */
