@@ -427,7 +427,6 @@ svn_wc__internal_conflicted_p(svn_boolean_t *text_conflicted_p,
   svn_wc__db_kind_t node_kind;
   const apr_array_header_t *conflicts;
   int i;
-  const char* dir_path;
   svn_boolean_t conflicted;
 
   SVN_ERR(svn_wc__db_read_info(NULL, &node_kind, NULL, NULL, NULL, NULL,
@@ -438,11 +437,6 @@ svn_wc__internal_conflicted_p(svn_boolean_t *text_conflicted_p,
                                db, local_abspath, scratch_pool,
                                scratch_pool));
 
-  if (node_kind == svn_wc__db_kind_dir)
-    dir_path = local_abspath;
-  else
-    dir_path = svn_dirent_dirname(local_abspath, scratch_pool);
-
   if (text_conflicted_p)
     *text_conflicted_p = FALSE;
   if (prop_conflicted_p)
@@ -452,6 +446,7 @@ svn_wc__internal_conflicted_p(svn_boolean_t *text_conflicted_p,
 
   if (!conflicted)
     return SVN_NO_ERROR;
+
 
   SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, local_abspath,
                                     scratch_pool, scratch_pool));
@@ -474,12 +469,10 @@ svn_wc__internal_conflicted_p(svn_boolean_t *text_conflicted_p,
             if (!text_conflicted_p || *text_conflicted_p)
               break;
 
-            if (cd->base_file)
+            if (cd->base_abspath)
               {
-                const char *path = svn_dirent_join(dir_path, cd->base_file,
-                                                   scratch_pool);
-
-                SVN_ERR(svn_io_check_path(path, &kind, scratch_pool));
+                SVN_ERR(svn_io_check_path(cd->base_abspath, &kind,
+                                          scratch_pool));
 
                 *text_conflicted_p = (kind == svn_node_file);
 
@@ -487,12 +480,10 @@ svn_wc__internal_conflicted_p(svn_boolean_t *text_conflicted_p,
                   break;
               }
 
-            if (cd->their_file)
+            if (cd->their_abspath)
               {
-                const char *path = svn_dirent_join(dir_path, cd->their_file,
-                                                   scratch_pool);
-
-                SVN_ERR(svn_io_check_path(path, &kind, scratch_pool));
+                SVN_ERR(svn_io_check_path(cd->their_abspath, &kind,
+                                          scratch_pool));
 
                 *text_conflicted_p = (kind == svn_node_file);
 
@@ -500,12 +491,10 @@ svn_wc__internal_conflicted_p(svn_boolean_t *text_conflicted_p,
                   break;
               }
 
-            if (cd->my_file)
+            if (cd->my_abspath)
               {
-                const char *path = svn_dirent_join(dir_path, cd->my_file,
-                                                   scratch_pool);
-
-                SVN_ERR(svn_io_check_path(path, &kind, scratch_pool));
+                SVN_ERR(svn_io_check_path(cd->my_abspath, &kind,
+                                          scratch_pool));
 
                 *text_conflicted_p = (kind == svn_node_file);
               }
@@ -515,12 +504,10 @@ svn_wc__internal_conflicted_p(svn_boolean_t *text_conflicted_p,
             if (!prop_conflicted_p || *prop_conflicted_p)
               break;
 
-            if (cd->their_file)
+            if (cd->their_abspath)
               {
-                const char *path = svn_dirent_join(dir_path, cd->their_file,
-                                                   scratch_pool);
-
-                SVN_ERR(svn_io_check_path(path, &kind, scratch_pool));
+                SVN_ERR(svn_io_check_path(cd->their_abspath, &kind,
+                                          scratch_pool));
 
                 *prop_conflicted_p = (kind == svn_node_file);
               }

@@ -790,9 +790,9 @@ setup_text_conflict_desc(const char *left_abspath,
   cdesc->is_binary = FALSE;
   cdesc->mime_type = (mimeprop && mimeprop->value)
                      ? mimeprop->value->data : NULL,
-  cdesc->base_file = left_abspath;
-  cdesc->their_file = right_abspath;
-  cdesc->my_file = detranslated_target;
+  cdesc->base_abspath = left_abspath;
+  cdesc->their_abspath = right_abspath;
+  cdesc->my_abspath = detranslated_target;
   cdesc->merged_file = result_target;
 
   cdesc->src_left_version = left_version;
@@ -1031,9 +1031,7 @@ merge_text_file(svn_skel_t **work_items,
            * svn_wc__wq_tmp_build_set_text_conflict_markers()'s doc string. */
           SVN_ERR(svn_wc__wq_tmp_build_set_text_conflict_markers(
                             &work_item, db, target_abspath,
-                            svn_dirent_basename(left_copy, NULL),
-                            svn_dirent_basename(right_copy, NULL),
-                            svn_dirent_basename(target_copy, NULL),
+                            left_copy, right_copy, target_copy,
                             result_pool, scratch_pool));
           *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
         }
@@ -1108,7 +1106,6 @@ merge_binary_file(svn_skel_t **work_items,
   /* ### when making the binary-file backups, should we be honoring
      keywords and eol stuff?   */
   const char *left_copy, *right_copy;
-  const char *left_base, *right_base;
   const char *merge_dirpath, *merge_filename;
   const char *conflict_wrk;
   svn_skel_t *work_item;
@@ -1260,10 +1257,8 @@ merge_binary_file(svn_skel_t **work_items,
   if (strcmp(target_abspath, detranslated_target_abspath) != 0)
     {
       /* Create a .mine file too */
-      const char *mine_copy;
-
       SVN_ERR(svn_io_open_uniquely_named(NULL,
-                                         &mine_copy,
+                                         &conflict_wrk,
                                          merge_dirpath,
                                          merge_filename,
                                          target_label,
@@ -1271,28 +1266,20 @@ merge_binary_file(svn_skel_t **work_items,
                                          pool, pool));
       SVN_ERR(svn_wc__wq_build_file_move(work_items, db,
                                          detranslated_target_abspath,
-                                         mine_copy,
+                                         conflict_wrk,
                                          pool, result_pool));
-
-      mine_copy = svn_dirent_is_child(merge_dirpath,
-                                      mine_copy, pool);
-      conflict_wrk = mine_copy;
     }
   else
     {
       conflict_wrk = NULL;
     }
 
-  /* Derive the basenames of the backup files. */
-  left_base = svn_dirent_basename(left_copy, pool);
-  right_base = svn_dirent_basename(right_copy, pool);
-
   /* Mark target_abspath's entry as "Conflicted", and start tracking
      the backup files in the entry as well. */
   SVN_ERR(svn_wc__wq_tmp_build_set_text_conflict_markers(&work_item,
                                                          db, target_abspath,
-                                                         left_base,
-                                                         right_base,
+                                                         left_copy,
+                                                         right_copy,
                                                          conflict_wrk,
                                                          result_pool,
                                                          scratch_pool));

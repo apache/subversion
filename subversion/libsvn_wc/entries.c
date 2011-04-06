@@ -900,16 +900,16 @@ read_one_entry(const svn_wc_entry_t **new_entry,
           switch (cd->kind)
             {
             case svn_wc_conflict_kind_text:
-              entry->conflict_old = apr_pstrdup(result_pool,
-                                                cd->base_file);
-              entry->conflict_new = apr_pstrdup(result_pool,
-                                                cd->their_file);
-              entry->conflict_wrk = apr_pstrdup(result_pool,
-                                                cd->my_file);
+              entry->conflict_old = svn_dirent_basename(cd->base_abspath,
+                                                        result_pool);
+              entry->conflict_new = svn_dirent_basename(cd->their_abspath,
+                                                        result_pool);
+              entry->conflict_wrk = svn_dirent_basename(cd->my_abspath,
+                                                        result_pool);
               break;
             case svn_wc_conflict_kind_property:
-              entry->prejfile = apr_pstrdup(result_pool,
-                                            cd->their_file);
+              entry->prejfile = svn_dirent_basename(cd->their_abspath,
+                                                    result_pool);
               break;
             case svn_wc_conflict_kind_tree:
               break;
@@ -1803,15 +1803,34 @@ write_entry(struct write_baton **entry_node,
   if (entry->conflict_old)
     {
       actual_node = MAYBE_ALLOC(actual_node, scratch_pool);
-      actual_node->conflict_old = entry->conflict_old;
-      actual_node->conflict_new = entry->conflict_new;
-      actual_node->conflict_working = entry->conflict_wrk;
+      if (parent_relpath && entry->conflict_old)
+        actual_node->conflict_old = svn_relpath_join(parent_relpath,
+                                                     entry->conflict_old,
+                                                     scratch_pool);
+      else
+        actual_node->conflict_old = entry->conflict_old;
+      if (parent_relpath && entry->conflict_new)
+        actual_node->conflict_new = svn_relpath_join(parent_relpath,
+                                                     entry->conflict_new,
+                                                     scratch_pool);
+      else
+        actual_node->conflict_new = entry->conflict_new;
+      if (parent_relpath && entry->conflict_wrk)
+        actual_node->conflict_working = svn_relpath_join(parent_relpath,
+                                                         entry->conflict_wrk,
+                                                         scratch_pool);
+      else
+        actual_node->conflict_working = entry->conflict_wrk;
     }
 
   if (entry->prejfile)
     {
       actual_node = MAYBE_ALLOC(actual_node, scratch_pool);
-      actual_node->prop_reject = entry->prejfile;
+      actual_node->prop_reject = svn_relpath_join((entry->kind == svn_node_dir
+                                                   ? local_relpath
+                                                   : parent_relpath),
+                                                  entry->prejfile,
+                                                  scratch_pool);
     }
 
   if (entry->changelist)

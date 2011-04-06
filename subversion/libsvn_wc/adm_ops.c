@@ -1263,23 +1263,16 @@ svn_wc__register_file_external(svn_wc_context_t *wc_ctx,
 */
 
 
-/* Remove conflict file NAME, which may not exist, associated with
- * *LOCAL_ABSPATH and set NOTIFY_REQUIRED to TRUE if the file was
- * present and removed. */
+/* Remove conflict file CONFLICT_ABSPATH, which may not exist, and set
+ * *NOTIFY_REQUIRED to TRUE if the file was present and removed. */
 static svn_error_t *
 remove_conflict_file(svn_boolean_t *notify_required,
-                     const char *name,
+                     const char *conflict_abspath,
                      const char *local_abspath,
                      apr_pool_t *scratch_pool)
 {
-  if (name)
+  if (conflict_abspath)
     {
-      /* ### Doesn't work for dir prop rejects.  Perhaps have relpaths
-             in the database? */
-      const char *conflict_abspath
-        = svn_dirent_join(svn_dirent_dirname(local_abspath, scratch_pool),
-                          name, scratch_pool);
-
       svn_error_t *err = svn_io_remove_file2(conflict_abspath, FALSE,
                                              scratch_pool);
       if (err)

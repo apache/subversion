@@ -239,9 +239,9 @@ svn_error_t *
 svn_wc__wq_tmp_build_set_text_conflict_markers(svn_skel_t **work_item,
                                                svn_wc__db_t *db,
                                                const char *local_abspath,
-                                               const char *old_basename,
-                                               const char *new_basename,
-                                               const char *wrk_basename,
+                                               const char *old_abspath,
+                                               const char *new_abspath,
+                                               const char *wrk_abspath,
                                                apr_pool_t *result_pool,
                                                apr_pool_t *scratch_pool);
 
@@ -260,7 +260,7 @@ svn_error_t *
 svn_wc__wq_tmp_build_set_property_conflict_marker(svn_skel_t **work_item,
                                                   svn_wc__db_t *db,
                                                   const char *local_abspath,
-                                                  const char *prej_basename,
+                                                  const char *prej_abspath,
                                                   apr_pool_t *result_pool,
                                                   apr_pool_t *scratch_pool);
 

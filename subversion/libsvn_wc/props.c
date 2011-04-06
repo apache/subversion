@@ -93,8 +93,9 @@ append_prop_conflict(svn_stream_t *stream,
 }
 
 
-/* Get the reject file for LOCAL_ABSPATH in DB.  Set *REJECT_FILE to the
-   name of that file, or to NULL if no such file exists. */
+/* Get the property reject file for LOCAL_ABSPATH in DB.  Set
+   *PREJFILE_ABSPATH to the name of that file, or to NULL if no such
+   file is named.  The file may, or may not, exist on disk. */
 svn_error_t *
 svn_wc__get_prejfile_abspath(const char **prejfile_abspath,
                              svn_wc__db_t *db,
@@ -115,18 +116,7 @@ svn_wc__get_prejfile_abspath(const char **prejfile_abspath,
 
       if (cd->kind == svn_wc_conflict_kind_property)
         {
-          if (strcmp(cd->their_file,
-                     SVN_WC__THIS_DIR_PREJ SVN_WC__PROP_REJ_EXT) == 0)
-            *prejfile_abspath = svn_dirent_join(
-                                  local_abspath,
-                                  SVN_WC__THIS_DIR_PREJ SVN_WC__PROP_REJ_EXT,
-                                  result_pool);
-          else
-            *prejfile_abspath = svn_dirent_join(
-                                  svn_dirent_dirname(local_abspath,
-                                                     scratch_pool),
-                                  cd->their_file,
-                                  result_pool);
+          *prejfile_abspath = apr_pstrdup(result_pool, cd->their_abspath);
           return SVN_NO_ERROR;
         }
     }
@@ -753,14 +743,24 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
 
   /* Create a tmpfile for each of the string_t's we've got.  */
   if (working_val)
-    SVN_ERR(svn_io_write_unique(&cdesc->my_file, dirpath, working_val->data,
-                                working_val->len,
-                                svn_io_file_del_on_pool_cleanup, filepool));
+    {
+      const char *file_name;
+
+      SVN_ERR(svn_io_write_unique(&file_name, dirpath, working_val->data,
+                                  working_val->len,
+                                  svn_io_file_del_on_pool_cleanup, filepool));
+      cdesc->my_abspath = svn_dirent_join(dirpath, file_name, filepool);
+    }
 
   if (new_val)
-    SVN_ERR(svn_io_write_unique(&cdesc->their_file, dirpath, new_val->data,
-                                new_val->len, svn_io_file_del_on_pool_cleanup,
-                                filepool));
+    {
+      const char *file_name;
+
+      SVN_ERR(svn_io_write_unique(&file_name, dirpath, new_val->data,
+                                  new_val->len, svn_io_file_del_on_pool_cleanup,
+                                  filepool));
+      cdesc->their_abspath = svn_dirent_join(dirpath, file_name, filepool);
+    }
 
   if (!base_val && !old_val)
     {
@@ -780,15 +780,18 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
          conflict-callback can still attempt a 3-way merge. */
 
       const svn_string_t *the_val = base_val ? base_val : old_val;
+      const char *file_name;
 
-      SVN_ERR(svn_io_write_unique(&cdesc->base_file, dirpath, the_val->data,
+      SVN_ERR(svn_io_write_unique(&file_name, dirpath, the_val->data,
                                   the_val->len, svn_io_file_del_on_pool_cleanup,
                                   filepool));
+      cdesc->base_abspath = svn_dirent_join(dirpath, file_name, filepool);
     }
 
   else  /* base and old are both non-NULL */
     {
       const svn_string_t *the_val;
+      const char *file_name;
 
       if (! svn_string_compare(base_val, old_val))
         {
@@ -816,9 +819,10 @@ maybe_generate_propconflict(svn_boolean_t *conflict_remains,
           the_val = base_val;
         }
 
-      SVN_ERR(svn_io_write_unique(&cdesc->base_file, dirpath, the_val->data,
+      SVN_ERR(svn_io_write_unique(&file_name, dirpath, the_val->data,
                                   the_val->len, svn_io_file_del_on_pool_cleanup,
                                   filepool));
+      cdesc->base_abspath = svn_dirent_join(dirpath, file_name, filepool);
 
       if (working_val && new_val)
         {
@@ -1576,9 +1580,7 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
 
         SVN_ERR(svn_wc__wq_tmp_build_set_property_conflict_marker(
                                           &work_item,
-                                          db, local_abspath,
-                                          svn_dirent_basename(reject_path,
-                                                              NULL),
+                                          db, local_abspath, reject_path,
                                           scratch_pool, scratch_pool));
 
         SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, scratch_pool));

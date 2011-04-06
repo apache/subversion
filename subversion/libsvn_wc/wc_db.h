@@ -2562,9 +2562,9 @@ svn_wc__db_temp_op_set_file_external(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_temp_op_set_text_conflict_marker_files(svn_wc__db_t *db,
                                                   const char *local_abspath,
-                                                  const char *old_basename,
-                                                  const char *new_basename,
-                                                  const char *wrk_basename,
+                                                  const char *old_abspath,
+                                                  const char *new_abspath,
+                                                  const char *wrk_abspath,
                                                   apr_pool_t *scratch_pool);
 
 /* Set the conflict marker information on LOCAL_ABSPATH to the specified
@@ -2572,7 +2572,7 @@ svn_wc__db_temp_op_set_text_conflict_marker_files(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_temp_op_set_property_conflict_marker_file(svn_wc__db_t *db,
                                                      const char *local_abspath,
-                                                     const char *prej_basename,
+                                                     const char *prej_abspath,
                                                      apr_pool_t *scratch_pool);
 
 /* Tweak a locally added existing directory LOCAL_ABSPATH to have a base

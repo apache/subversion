@@ -1469,18 +1469,22 @@ svn_wc__node_get_info_bits(apr_time_t *text_time,
             {
             case svn_wc_conflict_kind_text:
               if (conflict_old)
-                *conflict_old = apr_pstrdup(result_pool, cd->base_file);
+                *conflict_old = svn_dirent_basename(cd->base_abspath,
+                                                    result_pool);
 
               if (conflict_new)
-                *conflict_new = apr_pstrdup(result_pool, cd->their_file);
+                *conflict_new = svn_dirent_basename(cd->their_abspath,
+                                                    result_pool);
 
               if (conflict_wrk)
-                *conflict_wrk = apr_pstrdup(result_pool, cd->my_file);
+                *conflict_wrk = svn_dirent_basename(cd->my_abspath,
+                                                    result_pool);
               break;
 
             case svn_wc_conflict_kind_property:
               if (prejfile)
-                *prejfile = apr_pstrdup(result_pool, cd->their_file);
+                *prejfile = svn_dirent_basename(cd->their_abspath,
+                                                result_pool);
               break;
             case svn_wc_conflict_kind_tree:
               break;

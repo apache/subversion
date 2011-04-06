@@ -140,21 +140,16 @@ get_and_record_fileinfo(svn_wc__db_t *db,
 /* OP_REVERT  */
 
 
-/* Remove the file at join(PARENT_ABSPATH, BASE_NAME) if it is not the
-   working file defined by LOCAL_ABSPATH. If BASE_NAME is NULL, then
-   nothing is done. All temp allocations are made within SCRATCH_POOL.  */
+/* Remove the file CONFLICT_ABSPATH if it is not the working file
+   defined by LOCAL_ABSPATH. If CONFLICT_ABSPATH is NULL, then nothing
+   is done. All temp allocations are made within SCRATCH_POOL.  */
 static svn_error_t *
-maybe_remove_conflict(const char *parent_abspath,
-                      const char *base_name,
+maybe_remove_conflict(const char *conflict_abspath,
                       const char *local_abspath,
                       apr_pool_t *scratch_pool)
 {
-  if (base_name != NULL)
+  if (conflict_abspath != NULL)
     {
-      const char *conflict_abspath = svn_dirent_join(parent_abspath,
-                                                     base_name,
-                                                     scratch_pool);
-
       if (strcmp(conflict_abspath, local_abspath) != 0)
         SVN_ERR(svn_io_remove_file2(conflict_abspath, TRUE,
                                     scratch_pool));
@@ -231,14 +226,17 @@ run_revert(svn_wc__db_t *db,
           cd = APR_ARRAY_IDX(conflicts, i,
                              const svn_wc_conflict_description2_t *);
 
-          SVN_ERR(maybe_remove_conflict(parent_abspath, cd->base_file,
+          SVN_ERR(maybe_remove_conflict(cd->base_abspath,
                                         local_abspath, scratch_pool));
-          SVN_ERR(maybe_remove_conflict(parent_abspath, cd->their_file,
+          SVN_ERR(maybe_remove_conflict(cd->their_abspath,
                                         local_abspath, scratch_pool));
-          SVN_ERR(maybe_remove_conflict(parent_abspath, cd->my_file,
+          SVN_ERR(maybe_remove_conflict(cd->my_abspath,
                                         local_abspath, scratch_pool));
-          SVN_ERR(maybe_remove_conflict(parent_abspath, cd->merged_file,
-                                        local_abspath, scratch_pool));
+          if (cd->merged_file)
+            SVN_ERR(maybe_remove_conflict(svn_dirent_join(parent_abspath,
+                                                          cd->merged_file,
+                                                          scratch_pool),
+                                          local_abspath, scratch_pool));
         }
     }
 
@@ -1940,30 +1938,30 @@ run_set_text_conflict_markers(svn_wc__db_t *db,
 {
   const svn_skel_t *arg = work_item->children->next;
   const char *local_abspath;
-  const char *old_basename;
-  const char *new_basename;
-  const char *wrk_basename;
+  const char *old_abspath;
+  const char *new_abspath;
+  const char *wrk_abspath;
 
   local_abspath = apr_pstrmemdup(scratch_pool, arg->data, arg->len);
 
   arg = arg->next;
-  old_basename = arg->len ? apr_pstrmemdup(scratch_pool, arg->data, arg->len)
-                          : NULL;
+  old_abspath = arg->len ? apr_pstrmemdup(scratch_pool, arg->data, arg->len)
+                         : NULL;
 
   arg = arg->next;
-  new_basename = arg->len ? apr_pstrmemdup(scratch_pool, arg->data, arg->len)
-                          : NULL;
+  new_abspath = arg->len ? apr_pstrmemdup(scratch_pool, arg->data, arg->len)
+                         : NULL;
 
   arg = arg->next;
-  wrk_basename = arg->len ? apr_pstrmemdup(scratch_pool, arg->data, arg->len)
-                          : NULL;
+  wrk_abspath = arg->len ? apr_pstrmemdup(scratch_pool, arg->data, arg->len)
+                         : NULL;
 
   return svn_error_return(
           svn_wc__db_temp_op_set_text_conflict_marker_files(db,
                                                             local_abspath,
-                                                            old_basename,
-                                                            new_basename,
-                                                            wrk_basename,
+                                                            old_abspath,
+                                                            new_abspath,
+                                                            wrk_abspath,
                                                             scratch_pool));
 }
 
@@ -1972,9 +1970,9 @@ svn_error_t *
 svn_wc__wq_tmp_build_set_text_conflict_markers(svn_skel_t **work_item,
                                                svn_wc__db_t *db,
                                                const char *local_abspath,
-                                               const char *old_basename,
-                                               const char *new_basename,
-                                               const char *wrk_basename,
+                                               const char *old_abspath,
+                                               const char *new_abspath,
+                                               const char *wrk_abspath,
                                                apr_pool_t *result_pool,
                                                apr_pool_t *scratch_pool)
 {
@@ -1982,14 +1980,16 @@ svn_wc__wq_tmp_build_set_text_conflict_markers(svn_skel_t **work_item,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  svn_skel__prepend_str(wrk_basename ? apr_pstrdup(result_pool, wrk_basename)
-                                     : "", *work_item, result_pool);
+  /* Abspaths in the workqueue won't work if the WC is moved. */
 
-  svn_skel__prepend_str(new_basename ? apr_pstrdup(result_pool, new_basename)
-                                     : "", *work_item, result_pool);
+  svn_skel__prepend_str(wrk_abspath ? apr_pstrdup(result_pool, wrk_abspath)
+                                    : "", *work_item, result_pool);
 
-  svn_skel__prepend_str(old_basename ? apr_pstrdup(result_pool, old_basename)
-                                     : "", *work_item, result_pool);
+  svn_skel__prepend_str(new_abspath ? apr_pstrdup(result_pool, new_abspath)
+                                    : "", *work_item, result_pool);
+
+  svn_skel__prepend_str(old_abspath ? apr_pstrdup(result_pool, old_abspath)
+                                    : "", *work_item, result_pool);
 
   svn_skel__prepend_str(apr_pstrdup(result_pool, local_abspath),
                         *work_item, result_pool);
@@ -2013,18 +2013,18 @@ run_set_property_conflict_marker(svn_wc__db_t *db,
 {
   const svn_skel_t *arg = work_item->children->next;
   const char *local_abspath;
-  const char *prej_basename;
+  const char *prej_abspath;
 
   local_abspath = apr_pstrmemdup(scratch_pool, arg->data, arg->len);
 
   arg = arg->next;
-  prej_basename = arg->len ? apr_pstrmemdup(scratch_pool, arg->data, arg->len)
-                           : NULL;
+  prej_abspath = arg->len ? apr_pstrmemdup(scratch_pool, arg->data, arg->len)
+                          : NULL;
 
   return svn_error_return(
           svn_wc__db_temp_op_set_property_conflict_marker_file(db,
                                                                 local_abspath,
-                                                                prej_basename,
+                                                                prej_abspath,
                                                                 scratch_pool));
 }
 
@@ -2032,7 +2032,7 @@ svn_error_t *
 svn_wc__wq_tmp_build_set_property_conflict_marker(svn_skel_t **work_item,
                                                   svn_wc__db_t *db,
                                                   const char *local_abspath,
-                                                  const char *prej_basename,
+                                                  const char *prej_abspath,
                                                   apr_pool_t *result_pool,
                                                   apr_pool_t *scratch_pool)
 {
@@ -2040,8 +2040,8 @@ svn_wc__wq_tmp_build_set_property_conflict_marker(svn_skel_t **work_item,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  svn_skel__prepend_str(prej_basename ? apr_pstrdup(result_pool, prej_basename)
-                                      : "", *work_item, result_pool);
+  svn_skel__prepend_str(prej_abspath ? apr_pstrdup(result_pool, prej_abspath)
+                                     : "", *work_item, result_pool);
 
   svn_skel__prepend_str(apr_pstrdup(result_pool, local_abspath),
                         *work_item, result_pool);
