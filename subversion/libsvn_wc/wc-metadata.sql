@@ -642,6 +642,15 @@ PRAGMA user_version = 26;
 
 /* ------------------------------------------------------------------------- */
 
+/* Format 27 involves no schema changes, it introduces stores
+   conflict files as relpaths rather than names in ACTUAL_NODE. */
+
+-- STMT_UPGRADE_TO_27
+PRAGMA user_version = 27;
+
+
+/* ------------------------------------------------------------------------- */
+
 /* Format YYY introduces new handling for conflict information.  */
 -- format: YYY
 

@@ -913,6 +913,12 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3
 -- STMT_HAS_WORKING_NODES
 SELECT 1 FROM nodes WHERE op_depth > 0
 
+-- STMT_HAS_ACTUAL_NODES_CONFLICTS
+SELECT 1 FROM actual_node
+WHERE NOT ((prop_reject IS NULL) AND (conflict_old IS NULL)
+           AND (conflict_new IS NULL) AND (conflict_working IS NULL)
+           AND (tree_conflict_data IS NULL))
+
 -- STMT_UPDATE_CHECKSUM
 UPDATE nodes SET checksum = ?4
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3

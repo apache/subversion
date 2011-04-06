@@ -1152,6 +1152,27 @@ bump_to_26(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+bump_to_27(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
+{
+  const char *wcroot_abspath = ((struct bump_baton *)baton)->wcroot_abspath;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                    STMT_HAS_ACTUAL_NODES_CONFLICTS));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  SVN_ERR(svn_sqlite__reset(stmt));
+  if (have_row)
+    return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                             _("The working copy at '%s' is format 26 with "
+                               "conflicts; use a format 26 client to resolve "
+                               "before using this client"),
+                             wcroot_abspath);
+  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_27));
+  return SVN_NO_ERROR;
+}
+
 
 struct upgrade_data_t {
   svn_sqlite__db_t *sdb;
@@ -1424,6 +1445,12 @@ svn_wc__upgrade_sdb(int *result_format,
         SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_26, &bb,
                                              scratch_pool));
         *result_format = 26;
+        /* FALLTHROUGH  */
+
+      case 26:
+        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_27, &bb,
+                                             scratch_pool));
+        *result_format = 27;
         /* FALLTHROUGH  */
 
       /* ### future bumps go here.  */

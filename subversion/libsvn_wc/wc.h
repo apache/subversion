@@ -140,12 +140,15 @@ extern "C" {
  *
  * The change from 25 to 26 introduced a NODES_BASE view.
  *
+ * The change from 26 to 27 stored conflict files as relpaths rather
+ * than basenames.
+ *
  * == 1.7.x shipped with format ???
  *
  * Please document any further format changes here.
  */
 
-#define SVN_WC__VERSION 26
+#define SVN_WC__VERSION 27
 
 
 /* Formats <= this have no concept of "revert text-base/props".  */

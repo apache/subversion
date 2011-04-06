@@ -1666,7 +1666,9 @@ typedef struct svn_wc_conflict_description2_t
    * four fulltext files that can be used to interactively resolve the
    * conflict.
    *
-   * ### Are these paths relative to some directory, or absolute?
+   * BASE_ABSPATH, THEIR_ABSPATH and MY_ABSPATH are absolute paths.
+   *
+   * ### Is MERGED_FILE relative to some directory, or absolute?
    *
    * All four files will be in repository-normal form -- LF
    * line endings and contracted keywords.  (If any of these files are
@@ -1680,15 +1682,15 @@ typedef struct svn_wc_conflict_description2_t
    * property values are technically binary values, and thus can't
    * always be merged.)
    */
-  const char *base_file;     /* common ancestor of the two files being merged */
+  const char *base_abspath;  /* common ancestor of the two files being merged */
 
   /** their version of the file */
   /* ### BH: For properties this field contains the reference to
              the property rejection (.prej) file */
-  const char *their_file;
+  const char *their_abspath;
 
   /** my locally-edited version of the file */
-  const char *my_file;
+  const char *my_abspath;
 
   /** merged version; may contain conflict markers */
   const char *merged_file;

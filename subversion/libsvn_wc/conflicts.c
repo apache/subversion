@@ -116,23 +116,20 @@ svn_wc__conflict_skel_add_prop_conflict(
 /*** Resolving a conflict automatically ***/
 
 
-/* Helper for resolve_conflict_on_entry.  Delete the file BASE_NAME in
-   PARENT_DIR if it exists.  Set WAS_PRESENT to TRUE if the file existed,
-   and leave it UNTOUCHED otherwise. */
+/* Helper for resolve_conflict_on_entry.  Delete the file FILE_ABSPATH
+   in if it exists.  Set WAS_PRESENT to TRUE if the file existed, and
+   leave it UNTOUCHED otherwise. */
 static svn_error_t *
-attempt_deletion(const char *parent_dir,
-                 const char *base_name,
+attempt_deletion(const char *file_abspath,
                  svn_boolean_t *was_present,
                  apr_pool_t *scratch_pool)
 {
-  const char *full_path;
   svn_error_t *err;
 
-  if (base_name == NULL)
+  if (file_abspath == NULL)
     return SVN_NO_ERROR;
 
-  full_path = svn_dirent_join(parent_dir, base_name, scratch_pool);
-  err = svn_io_remove_file2(full_path, FALSE, scratch_pool);
+  err = svn_io_remove_file2(file_abspath, FALSE, scratch_pool);
 
   if (err == NULL || !APR_STATUS_IS_ENOENT(err->apr_err))
     {
@@ -203,12 +200,12 @@ resolve_conflict_on_node(svn_wc__db_t *db,
 
       if (desc->kind == svn_wc_conflict_kind_text)
         {
-          conflict_old = desc->base_file;
-          conflict_new = desc->their_file;
-          conflict_working = desc->my_file;
+          conflict_old = desc->base_abspath;
+          conflict_new = desc->their_abspath;
+          conflict_working = desc->my_abspath;
         }
       else if (desc->kind == svn_wc_conflict_kind_property)
-        prop_reject_file = desc->their_file;
+        prop_reject_file = desc->their_abspath;
     }
 
   if (kind == svn_wc__db_kind_dir)
@@ -258,23 +255,6 @@ resolve_conflict_on_node(svn_wc__db_t *db,
                                                svn_io_file_del_on_close,
                                                pool, pool));
 
-                /* ### If any of these paths isn't absolute, treat it
-                 * ### as relative to CONFLICT_DIR_ABSPATH.
-                 * ### Else we end up erroring out here, e.g. if the file
-                 * ### is just a basename, and does not live in the current
-                 * ### working directory.
-                 * ### The API docs are unclear about whether these paths
-                 * ### must be absolute or not. */
-                if (! svn_dirent_is_absolute(conflict_old))
-                  conflict_old = svn_dirent_join(conflict_dir_abspath,
-                                                 conflict_old, pool);
-                if (! svn_dirent_is_absolute(conflict_working))
-                  conflict_working = svn_dirent_join(conflict_dir_abspath,
-                                                     conflict_working, pool);
-                if (! svn_dirent_is_absolute(conflict_new))
-                  conflict_new = svn_dirent_join(conflict_dir_abspath,
-                                                 conflict_new, pool);
-
                 SVN_ERR(svn_diff_file_diff3_2(&diff,
                                               conflict_old,
                                               conflict_working,
@@ -313,19 +293,15 @@ resolve_conflict_on_node(svn_wc__db_t *db,
 
   if (resolve_text)
     {
-      SVN_ERR(attempt_deletion(conflict_dir_abspath, conflict_old,
-                               &found_file, pool));
-      SVN_ERR(attempt_deletion(conflict_dir_abspath, conflict_new,
-                               &found_file, pool));
-      SVN_ERR(attempt_deletion(conflict_dir_abspath, conflict_working,
-                               &found_file, pool));
+      SVN_ERR(attempt_deletion(conflict_old, &found_file, pool));
+      SVN_ERR(attempt_deletion(conflict_new, &found_file, pool));
+      SVN_ERR(attempt_deletion(conflict_working, &found_file, pool));
       resolve_text = conflict_old || conflict_new || conflict_working;
     }
   if (resolve_props)
     {
       if (prop_reject_file != NULL)
-        SVN_ERR(attempt_deletion(conflict_dir_abspath, prop_reject_file,
-                                 &found_file, pool));
+        SVN_ERR(attempt_deletion(prop_reject_file, &found_file, pool));
       else
         resolve_props = FALSE;
     }

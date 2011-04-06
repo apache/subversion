@@ -158,14 +158,6 @@ svn_wc__cd2_to_cd(const svn_wc_conflict_description2_t *conflict,
 
 
 /*
- * Convert from svn_wc_conflict_description_t to svn_wc_conflict_description2_t.
- * Allocate the result in RESULT_POOL.
- */
-svn_wc_conflict_description2_t *
-svn_wc__cd_to_cd2(const svn_wc_conflict_description_t *conflict,
-                  apr_pool_t *result_pool);
-
-/*
  * Convert from svn_wc_status3_t to svn_wc_status2_t.
  * Allocate the result in RESULT_POOL.
  */
