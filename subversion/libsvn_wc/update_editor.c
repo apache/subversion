@@ -648,9 +648,6 @@ complete_directory(struct edit_baton *eb,
                    svn_boolean_t is_root_dir,
                    apr_pool_t *scratch_pool)
 {
-  const apr_array_header_t *children;
-  int i;
-
   /* If this is the root directory and there is a target, we don't have to
      mark this directory complete. */
   if (is_root_dir && *eb->target_basename != '\0')
