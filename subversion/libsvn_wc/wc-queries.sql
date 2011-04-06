@@ -348,7 +348,7 @@ CREATE TEMPORARY TABLE changelist_list (
   notify INTEGER,
   changelist TEXT NOT NULL
   );
-CREATE INDEX changelist_list_index ON changelist_list(local_relpath);
+CREATE INDEX changelist_list_index ON changelist_list(wc_id, local_relpath);
 
 -- STMT_INSERT_CHANGELIST_LIST
 INSERT INTO changelist_list(wc_id, local_relpath, notify, changelist)
@@ -356,12 +356,12 @@ VALUES (?1, ?2, ?3, ?4);
 
 -- STMT_DELETE_CHANGELIST_LIST_RECURSIVE
 DELETE FROM changelist_list
-WHERE local_relpath = ?1 OR local_relpath LIKE ?2 ESCAPE '#'
+WHERE wc_id = ?1 AND local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#'
 
 -- STMT_SELECT_CHANGELIST_LIST_RECURSIVE
 SELECT local_relpath, notify, changelist
 FROM changelist_list
-WHERE local_relpath = ?1 or local_relpath LIKE ?2 ESCAPE '#'
+WHERE wc_id = ?1 AND local_relpath = ?2 or local_relpath LIKE ?3 ESCAPE '#'
 ORDER BY local_relpath
 
 -- STMT_DELETE_ACTUAL_EMPTY

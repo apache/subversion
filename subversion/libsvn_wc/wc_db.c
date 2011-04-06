@@ -3490,7 +3490,8 @@ svn_wc__db_changelist_list_notify(svn_wc_notify_func2_t notify_func,
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_CHANGELIST_LIST_RECURSIVE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "ss", local_relpath, like_arg));
+  SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id, local_relpath,
+                            like_arg));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (!have_row)
     return svn_error_return(svn_sqlite__reset(stmt)); /* optimise for no row */
@@ -3516,7 +3517,8 @@ svn_wc__db_changelist_list_notify(svn_wc_notify_func2_t notify_func,
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_DELETE_CHANGELIST_LIST_RECURSIVE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "ss", local_relpath, like_arg));
+  SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id, local_relpath,
+                            like_arg));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
   svn_pool_destroy(iterpool);
