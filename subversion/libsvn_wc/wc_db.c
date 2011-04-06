@@ -3475,15 +3475,18 @@ svn_wc__db_op_set_changelist(svn_wc__db_t *db,
                                     svn_sqlite__exec_statements(wcroot->sdb,
                                         STMT_DROP_CHANGELIST_LIST_TRIGGERS));
 
-  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, set_changelist_txn,
-                              (void *) changelist, scratch_pool));
+  err = svn_wc__db_with_txn(wcroot, local_relpath, set_changelist_txn,
+                            (void *) changelist, scratch_pool);
 
-  SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb,
+  err = svn_error_compose_create(err,
+                                 svn_sqlite__exec_statements(wcroot->sdb,
                                       STMT_DROP_CHANGELIST_LIST_TRIGGERS));
 
-  SVN_ERR(flush_entries(wcroot, local_abspath, scratch_pool));
+  err = svn_error_compose_create(err,
+                                 flush_entries(wcroot, local_abspath,
+                                               scratch_pool));
 
-  return SVN_NO_ERROR;
+  return err;
 }
 
 
