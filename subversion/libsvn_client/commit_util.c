@@ -310,12 +310,11 @@ bail_on_tree_conflicted_ancestor(svn_wc_context_t *wc_ctx,
    non-NULL.  JUST_LOCKED indicates whether to treat non-modified items with
    lock tokens as commit candidates.
 
-   If in COPY_MODE, treat the entry as if it is destined to be added
-   with history as COMMIT_RELPATH, and add 'deleted' entries to COMMITTABLES as
-   items to delete in the copy destination. COMMIT_RELPATH must be NULL if not
-   in COPY_MODE.  COPY_MODE_ROOT should be set TRUE for the first call for
-   which COPY_MODE is TRUE, i.e. not for for the recursive calls, and FALSE
-   otherwise.
+   If COMMIT_RELPATH is not NULL, treat not-added nodes as if it is destined to 
+   be added as COMMIT_RELPATH, and add 'deleted' entries to COMMITTABLES as
+   items to delete in the copy destination.  COPY_MODE_ROOT should be set TRUE
+   for the first call for which COPY_MODE is TRUE, i.e. not for for the
+   recursive calls, and FALSE otherwise.
 
    If CHANGELISTS is non-NULL, it is a hash whose keys are const char *
    changelist names used as a restrictive filter
@@ -334,7 +333,6 @@ harvest_committables(svn_wc_context_t *wc_ctx,
                      apr_hash_t *lock_tokens,
                      const char *repos_root_url,
                      const char *commit_relpath,
-                     svn_boolean_t copy_mode,
                      svn_boolean_t copy_mode_root,
                      svn_depth_t depth,
                      svn_boolean_t just_locked,
@@ -357,7 +355,6 @@ harvest_committables(svn_wc_context_t *wc_ctx,
   svn_revnum_t entry_rev, cf_rev = SVN_INVALID_REVNUM;
   svn_boolean_t matches_changelists;
   svn_boolean_t is_special;
-  svn_boolean_t is_file_external;
   svn_boolean_t is_added;
   svn_boolean_t is_deleted;
   svn_boolean_t is_replaced;
@@ -370,6 +367,7 @@ harvest_committables(svn_wc_context_t *wc_ctx,
   svn_boolean_t is_update_root;
   svn_revnum_t original_rev;
   const char *original_relpath;
+  svn_boolean_t copy_mode = (commit_relpath != NULL);
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -405,11 +403,6 @@ harvest_committables(svn_wc_context_t *wc_ctx,
 
   if (!entry_relpath && commit_relpath)
     entry_relpath = commit_relpath;
-
-  if ((db_kind != svn_node_file) && (db_kind != svn_node_dir))
-    return svn_error_createf
-      (SVN_ERR_NODE_UNKNOWN_KIND, NULL, _("Unknown entry kind for '%s'"),
-       svn_dirent_local_style(local_abspath, scratch_pool));
 
   SVN_ERR(svn_io_check_special_path(local_abspath, &working_kind, &is_special,
                                     scratch_pool));
@@ -455,15 +448,20 @@ harvest_committables(svn_wc_context_t *wc_ctx,
          svn_dirent_local_style(local_abspath, scratch_pool));
     }
 
-  if (is_update_root)
+  if (copy_mode
+      && is_update_root
+      && db_kind == svn_node_file)
     {
+      svn_boolean_t is_file_external;
+
       SVN_ERR(svn_wc__node_is_file_external(&is_file_external, wc_ctx,
                                             local_abspath, scratch_pool));
-      if (is_file_external && copy_mode)
+
+      if (copy_mode)
         return SVN_NO_ERROR;
     }
 
-  /* If ENTRY is in our changelist, then examine it for conflicts. We
+  /* If NODE is in our changelist, then examine it for conflicts. We
      need to bail out if any conflicts exist.  */
   if (conflicted && matches_changelists)
     {
@@ -484,11 +482,6 @@ harvest_committables(svn_wc_context_t *wc_ctx,
     SVN_ERR(svn_wc__node_get_repos_relpath(&entry_relpath,
                                            wc_ctx, local_abspath,
                                            scratch_pool, scratch_pool));
-  /* Our own URL wins if not in COPY_MODE.  In COPY_MODE the
-     telescoping URLs are used. */
-  if (! copy_mode)
-    commit_relpath = entry_relpath;
-
   /* Check for the deletion case.
      * We delete explicitly deleted nodes (duh!)
      * We delete not-present children of copies
@@ -621,7 +614,7 @@ harvest_committables(svn_wc_context_t *wc_ctx,
      information about it. */
   if (state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
     {
-      svn_boolean_t eol_prop_changed;
+      svn_boolean_t eol_prop_changed = FALSE;
 
       /* First of all, the working file or directory must exist.
          See issue #3198. */
@@ -708,7 +701,10 @@ harvest_committables(svn_wc_context_t *wc_ctx,
         {
           /* Finally, add the committable item. */
           SVN_ERR(add_committable(committables, local_abspath, db_kind,
-                                  repos_root_url, commit_relpath,
+                                  repos_root_url,
+                                  commit_relpath 
+                                      ? commit_relpath
+                                      : entry_relpath,
                                   entry_rev,
                                   cf_relpath,
                                   cf_rev,
@@ -717,7 +713,7 @@ harvest_committables(svn_wc_context_t *wc_ctx,
           if (state_flags & SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN)
             apr_hash_set(lock_tokens,
                          svn_path_url_add_component2(
-                             repos_root_url, commit_relpath,
+                             repos_root_url, entry_relpath,
                              apr_hash_pool_get(lock_tokens)),
                          APR_HASH_KEY_STRING, entry_lock_token);
         }
@@ -754,15 +750,16 @@ harvest_committables(svn_wc_context_t *wc_ctx,
 
           svn_pool_clear(iterpool);
 
-          if (commit_relpath != NULL)
+          if (commit_relpath == NULL)
+            this_commit_relpath = NULL;
+          else
             this_commit_relpath = svn_relpath_join(commit_relpath, name,
                                                    iterpool);
 
           SVN_ERR(harvest_committables(wc_ctx, this_abspath,
                                        committables, lock_tokens,
                                        repos_root_url,
-                                       copy_mode ? this_commit_relpath : NULL,
-                                       copy_mode,
+                                       this_commit_relpath,
                                        FALSE, /* COPY_MODE_ROOT */
                                        depth_below_here,
                                        just_locked,
@@ -985,9 +982,9 @@ svn_client__harvest_committables(apr_hash_t **committables,
 
       SVN_ERR(harvest_committables(ctx->wc_ctx, target_abspath,
                                    *committables, *lock_tokens, 
-                                   repos_root_url, NULL,
-                                   FALSE, /* COPY_MODE */
-                                   FALSE, /* COPY_MODE_ROOT */
+                                   repos_root_url,
+                                   NULL /* COMMIT_RELPATH */,
+                                   FALSE /* COPY_MODE_ROOT */,
                                    depth, just_locked, changelist_hash,
                                    FALSE, FALSE,
                                    ctx->cancel_func, ctx->cancel_baton,
@@ -1035,8 +1032,8 @@ harvest_copy_committables(void *baton, void *item, apr_pool_t *pool)
   return harvest_committables(btn->ctx->wc_ctx,
                               pair->src_abspath_or_url,
                               btn->committables, NULL,
-                              repos_root_url, commit_relpath,
-                              TRUE,  /* COPY_MODE */
+                              repos_root_url,
+                              commit_relpath,
                               TRUE,  /* COPY_MODE_ROOT */
                               svn_depth_infinity,
                               FALSE,  /* JUST_LOCKED */
