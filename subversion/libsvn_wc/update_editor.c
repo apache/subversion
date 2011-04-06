@@ -499,7 +499,6 @@ make_dir_baton(struct dir_baton **d_p,
     {
       d->name = svn_dirent_basename(path, dir_pool);
       d->local_abspath = svn_dirent_join(pb->local_abspath, d->name, dir_pool);
-      d->shadowed = pb->shadowed;
     }
   else
     {
@@ -588,6 +587,13 @@ make_dir_baton(struct dir_baton **d_p,
   d->bump_info    = bdi;
   d->old_revision = SVN_INVALID_REVNUM;
   d->adding_dir   = adding;
+
+  /* Copy some flags from the parent baton */
+  if (pb)
+    {
+      d->skip_this = pb->skip_this;
+      d->shadowed = pb->shadowed;
+    }
 
   /* The caller of this function needs to fill these in. */
   d->ambient_depth = svn_depth_unknown;
@@ -886,7 +892,8 @@ make_file_baton(struct file_baton **f_p,
   f->adding_file       = adding;
   f->obstruction_found = FALSE;
   f->add_existed       = FALSE;
-  f->shadowed          = FALSE;
+  f->skip_this         = pb->skip_this;
+  f->shadowed          = pb->shadowed;
   f->dir_baton         = pb;
 
   /* the directory's bump info has one more referer now */
@@ -1983,11 +1990,9 @@ add_directory(const char *path,
   SVN_ERR(make_dir_baton(&db, path, eb, pb, TRUE, pool));
   *child_baton = db;
 
-  if (pb->skip_this)
+  if (db->skip_this)
     {
-      db->skip_this = TRUE;
-      db->already_notified = TRUE;
-
+      db->bump_info->skipped = TRUE;
       return SVN_NO_ERROR;
     }
 
@@ -2221,7 +2226,7 @@ add_directory(const char *path,
        * ### We would also like to be checking copyfrom infos to not flag tree
        * conflicts on two copies with identical history. But at the time of
        * writing, add_directory() does not get any copyfrom information. */
-      if (! pb->shadowed
+      if (! db->shadowed
           && (eb->switch_relpath != NULL
               || local_is_non_dir
               || add_status == svn_wc__db_status_copied
@@ -2306,9 +2311,12 @@ add_directory(const char *path,
                                                        db->ambient_depth,
                                                        pool));
 
-  SVN_ERR(svn_wc__ensure_directory(db->local_abspath, pool));
+  /* Make sure there is a real directory at LOCAL_ABSPATH, unless we are just
+     updating the DB */
+  if (!db->shadowed)
+    SVN_ERR(svn_wc__ensure_directory(db->local_abspath, pool));
 
-  if (!pb->shadowed && status == svn_wc__db_status_added)
+  if (!db->shadowed && status == svn_wc__db_status_added)
     /* If there is no conflict we take over any added directory */
     SVN_ERR(svn_wc__db_temp_op_remove_working(eb->db, db->local_abspath, pool));
 
@@ -2355,18 +2363,14 @@ open_directory(const char *path,
   SVN_ERR(make_dir_baton(&db, path, eb, pb, FALSE, pool));
   *child_baton = db;
 
-  /* We should have a write lock on every directory touched.  */
-  SVN_ERR(svn_wc__write_check(eb->db, db->local_abspath, pool));
-
-  if (pb->skip_this)
+  if (db->skip_this)
     {
-      db->skip_this = TRUE;
-      db->already_notified = TRUE;
-
       db->bump_info->skipped = TRUE;
-
       return SVN_NO_ERROR;
     }
+
+  /* We should have a write lock on every directory touched.  */
+  SVN_ERR(svn_wc__write_check(eb->db, db->local_abspath, pool));
 
   SVN_ERR(check_path_under_root(pb->local_abspath, db->name, pool));
 
@@ -2907,16 +2911,10 @@ add_file(const char *path,
   SVN_ERR(make_file_baton(&fb, pb, path, TRUE, pool));
   *file_baton = fb;
 
-  if (pb->skip_this)
-    {
-      fb->skip_this = TRUE;
-      fb->already_notified = TRUE;
-      return SVN_NO_ERROR;
-    }
+  if (fb->skip_this)
+    return SVN_NO_ERROR;
 
   SVN_ERR(check_path_under_root(pb->local_abspath, fb->name, pool));
-
-  fb->shadowed = pb->shadowed;
 
   /* The file_pool can stick around for a *long* time, so we want to
      use a subpool for any temporary allocations. */
@@ -3098,7 +3096,7 @@ add_file(const char *path,
        *  - if we are in a deleted subtree
        *  - if this is a normal file addition and we  we are switching
        */
-      if (! pb->shadowed
+      if (! fb->shadowed
           && (eb->switch_relpath != NULL
               || !local_is_file
               || status != svn_wc__db_status_added))
@@ -3203,12 +3201,8 @@ open_file(const char *path,
   SVN_ERR(make_file_baton(&fb, pb, path, FALSE, pool));
   *file_baton = fb;
 
-  if (pb->skip_this)
-    {
-      fb->skip_this = TRUE;
-      fb->already_notified = TRUE;
-      return SVN_NO_ERROR;
-    }
+  if (fb->skip_this)
+    return SVN_NO_ERROR;
 
   SVN_ERR(check_path_under_root(pb->local_abspath, fb->name, scratch_pool));
 
@@ -3255,7 +3249,7 @@ open_file(const char *path,
 
   /* Check for conflicts only when we haven't already recorded
    * a tree-conflict on a parent node. */
-  if (!pb->shadowed)
+  if (!fb->shadowed)
     SVN_ERR(check_tree_conflict(&tree_conflict, eb, fb->local_abspath,
                                 status, wc_kind, TRUE,
                                 svn_wc_conflict_action_edit, svn_node_file,
