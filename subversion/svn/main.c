@@ -886,7 +886,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "       \n"
      "         svn merge ^/trunk@500 ^/feature\n"
      "\n"
-     "     Before performing a 2-UL merge, it is a good idea to preview the\n"
+     "     Before performing a 2-URL merge, it is a good idea to preview the\n"
      "     changes which will be merged, because there is no guarantee that\n"
      "     the merge will be free of conflicts. The preview can be done with\n"
      "     the svn diff command:\n"
