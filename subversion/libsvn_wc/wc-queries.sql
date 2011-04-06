@@ -349,6 +349,53 @@ CREATE TEMPORARY TABLE changelist_list (
   changelist TEXT NOT NULL
   );
 CREATE INDEX changelist_list_index ON changelist_list(wc_id, local_relpath);
+/* We have four cases upon which we wish to notify.  The first is easy:
+
+        Action                                  Notification
+        ------                                  ------------
+        INSERT ACTUAL                           cl-set
+
+   The others are a bit more complex:
+        Action          Old CL      New CL      Notification
+        ------          ------      ------      ------------
+        UPDATE ACTUAL   NULL        NOT NULL    cl-set
+        UPDATE ACTUAL   NOT NULL    NOT NULL    cl-clear / cl-set
+        UPDATE ACTUAL   NOT NULL    NULL        cl-clear
+
+Of the following triggers, the first address the first case, and the second
+two address the last three cases.
+*/
+DROP TRIGGER IF EXISTS   trigger_changelist_list_actual_cl_insert;
+CREATE TEMPORARY TRIGGER trigger_changelist_list_actual_cl_insert
+BEFORE INSERT ON actual_node
+BEGIN
+    /* 26 corresponds to svn_wc_notify_changelist_set */
+    INSERT INTO changelist_list(wc_id, local_relpath, notify, changelist)
+    VALUES (NEW.wc_id, NEW.local_relpath, 26, NEW.changelist);
+END;
+DROP TRIGGER IF EXISTS   trigger_changelist_list_actual_cl_set;
+CREATE TEMPORARY TRIGGER trigger_changelist_list_actual_cl_set
+BEFORE UPDATE ON actual_node
+WHEN NEW.CHANGELIST IS NOT NULL
+BEGIN
+    /* 26 corresponds to svn_wc_notify_changelist_set */
+    INSERT INTO changelist_list(wc_id, local_relpath, notify, changelist)
+    VALUES (NEW.wc_id, NEW.local_relpath, 26, NEW.changelist);
+END;
+DROP TRIGGER IF EXISTS   trigger_changelist_list_actual_cl_clear;
+CREATE TEMPORARY TRIGGER trigger_changelist_list_actual_cl_clear
+BEFORE UPDATE ON actual_node
+WHEN OLD.changelist IS NOT NULL
+BEGIN
+    /* 27 corresponds to svn_wc_notify_changelist_clear */
+    INSERT INTO changelist_list(wc_id, local_relpath, notify, changelist)
+    VALUES (OLD.wc_id, OLD.local_relpath, 27, OLD.changelist);
+END;
+
+-- STMT_DROP_CHANGELIST_LIST_TRIGGERS
+DROP TRIGGER IF EXISTS trigger_changelist_list_actual_cl_insert;
+DROP TRIGGER IF EXISTS trigger_changelist_list_actual_cl_set;
+DROP TRIGGER IF EXISTS trigger_changelist_list_actual_cl_clear;
 
 -- STMT_INSERT_CHANGELIST_LIST
 INSERT INTO changelist_list(wc_id, local_relpath, notify, changelist)
