@@ -254,44 +254,39 @@ bail_on_tree_conflicted_children(svn_wc_context_t *wc_ctx,
 
 /* Helper function for svn_client__harvest_committables().
  * Determine whether we are within a tree-conflicted subtree of the
- * working copy and return an SVN_ERR_WC_FOUND_CONFLICT error if so.
- * Step outward through the parent directories up to the working copy
- * root, obtaining read locks temporarily. */
+ * working copy and return an SVN_ERR_WC_FOUND_CONFLICT error if so. */
 static svn_error_t *
 bail_on_tree_conflicted_ancestor(svn_wc_context_t *wc_ctx,
-                                 const char *first_abspath,
+                                 const char *local_abspath,
                                  apr_pool_t *scratch_pool)
 {
-  const char *local_abspath;
-  const char *parent_abspath;
-  svn_boolean_t wc_root;
-  svn_boolean_t tree_conflicted;
+  const char *wcroot_abspath;
 
-  local_abspath = first_abspath;
+  SVN_ERR(svn_wc_get_wc_root(&wcroot_abspath, wc_ctx, local_abspath,
+                             scratch_pool, scratch_pool));
 
-  while(1)
+  local_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+
+  while(svn_dirent_is_ancestor(wcroot_abspath, local_abspath))
     {
-      SVN_ERR(svn_wc__strictly_is_wc_root(&wc_root,
-                                          wc_ctx,
-                                          local_abspath,
-                                          scratch_pool));
+      svn_boolean_t tree_conflicted;
 
-      if (wc_root)
-        break;
-
-      /* Check the parent directory's entry for tree-conflicts
-       * on PATH. */
-      parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+      /* Check if the parent has tree conflicts */
       SVN_ERR(svn_wc_conflicted_p3(NULL, NULL, &tree_conflicted,
-                                   wc_ctx, parent_abspath, scratch_pool));
+                                   wc_ctx, local_abspath, scratch_pool));
       if (tree_conflicted)
-        return svn_error_createf(
-                 SVN_ERR_WC_FOUND_CONFLICT, NULL,
-                 _("Aborting commit: '%s' remains in tree-conflict"),
-                 svn_dirent_local_style(local_abspath, scratch_pool));
+        {
+          return svn_error_createf(
+                   SVN_ERR_WC_FOUND_CONFLICT, NULL,
+                   _("Aborting commit: '%s' remains in tree-conflict"),
+                   svn_dirent_local_style(local_abspath, scratch_pool));
+        }
 
       /* Step outwards */
-      local_abspath = parent_abspath;
+      if (svn_dirent_is_root(local_abspath, strlen(local_abspath)))
+        break;
+      else
+        local_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
     }
 
   return SVN_NO_ERROR;
