@@ -6975,47 +6975,57 @@ db_op_set_rev_and_repos_relpath(svn_wc__db_wcroot_t *wcroot,
   return SVN_NO_ERROR;
 }
 
-/* Helper for bump_revisions_post_update().
+/* The main body of bump_revisions_post_update.
  *
  * Tweak the information for LOCAL_RELPATH in WCROOT.  If NEW_REPOS_RELPATH is
  * non-NULL update the entry to the new url specified by NEW_REPOS_RELPATH,
  * NEW_REPOS_ID..  If NEW_REV is valid, make this the node's working revision.
  *
- * If ALLOW_REMOVAL is TRUE the tweaks might cause the node for
- * LOCAL_ABSPATH to be removed from the WC; if ALLOW_REMOVAL is FALSE this
- * will not happen.
- *
- * If DELETED is not NULL, set *DELETED to TRUE if the node was deleted as part
- * of the revision bump; if not set it to FALSE.
+ * Unless S_ROOT is TRUE the tweaks might cause the node for LOCAL_ABSPATH to
+ * be removed from the WC; if IS_ROOT is TRUE this will not happen.
  */
 static svn_error_t *
-bump_node(svn_boolean_t *deleted,
-          svn_wc__db_wcroot_t *wcroot,
-          const char *local_relpath,
-          svn_wc__db_kind_t kind,
-          apr_int64_t new_repos_id,
-          const char *new_repos_relpath,
-          svn_revnum_t new_rev,
-          svn_boolean_t is_root,
-          apr_pool_t *scratch_pool)
+bump_node_revision(svn_wc__db_wcroot_t *wcroot,
+                   const char *local_relpath,
+                   apr_int64_t new_repos_id,
+                   const char *new_repos_relpath,
+                   svn_revnum_t new_rev,
+                   svn_depth_t depth,
+                   apr_hash_t *exclude_relpaths,
+                   svn_boolean_t is_root,
+                   svn_boolean_t skip_when_dir,
+                   apr_pool_t *scratch_pool)
 {
+  apr_pool_t *iterpool;
+  const apr_array_header_t *children;
+  int i;
   svn_wc__db_status_t status;
   svn_wc__db_kind_t db_kind;
   svn_revnum_t revision;
   const char *repos_relpath;
   apr_int64_t repos_id;
   svn_boolean_t set_repos_relpath = FALSE;
+  svn_boolean_t update_root;
+  svn_depth_t depth_below_here = depth;
 
-  if (deleted)
-    *deleted = FALSE;
+  /* Skip an excluded path and its descendants. */
+  if (apr_hash_get(exclude_relpaths, local_relpath, APR_HASH_KEY_STRING))
+    return SVN_NO_ERROR;
 
   SVN_ERR(base_get_info(&status, &db_kind, &revision, &repos_relpath,
                         &repos_id, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                        NULL, NULL, NULL,
+                        NULL, NULL, &update_root,
                         wcroot, local_relpath,
                         scratch_pool, scratch_pool));
 
-  SVN_ERR_ASSERT(db_kind == kind);
+  /* Skip file externals */
+  if (update_root
+      && db_kind == svn_wc__db_kind_file
+      && !is_root)
+    return SVN_NO_ERROR;
+
+  if (skip_when_dir && db_kind == svn_wc__db_kind_dir)
+    return SVN_NO_ERROR;
 
   /* If the node is still marked 'not-present', then the server did not
      re-add it.  So it's really gone in this revision, thus we remove the node.
@@ -7027,12 +7037,8 @@ bump_node(svn_boolean_t *deleted,
       && (status == svn_wc__db_status_not_present
           || (status == svn_wc__db_status_absent && revision != new_rev)))
     {
-      if (deleted)
-        *deleted = TRUE;
-
       return svn_error_return(db_base_remove(NULL, wcroot, local_relpath,
                                              scratch_pool));
-
     }
 
   if (new_repos_relpath != NULL)
@@ -7046,10 +7052,8 @@ bump_node(svn_boolean_t *deleted,
           set_repos_relpath = TRUE;
     }
 
-  if (SVN_IS_VALID_REVNUM(new_rev) && new_rev == revision)
-    new_rev = SVN_INVALID_REVNUM;
-
-  if (SVN_IS_VALID_REVNUM(new_rev) || set_repos_relpath)
+  if (set_repos_relpath
+      || (SVN_IS_VALID_REVNUM(new_rev) && new_rev != revision))
     SVN_ERR(db_op_set_rev_and_repos_relpath(wcroot, local_relpath,
                                             new_rev,
                                             set_repos_relpath,
@@ -7057,47 +7061,22 @@ bump_node(svn_boolean_t *deleted,
                                             new_repos_id,
                                             scratch_pool));
 
-  return SVN_NO_ERROR;
-}
-
-
-/* The main body of bump_revisions_post_update. */
-static svn_error_t *
-bump_nodes(svn_wc__db_wcroot_t *wcroot,
-           const char *local_relpath,
-           apr_int64_t new_repos_id,
-           const char *new_repos_relpath,
-           svn_revnum_t new_rev,
-           svn_depth_t depth,
-           apr_hash_t *exclude_relpaths,
-           svn_boolean_t is_root,
-           apr_pool_t *scratch_pool)
-{
-  apr_pool_t *iterpool;
-  const apr_array_header_t *children;
-  int i;
-  svn_boolean_t deleted;
-
-  /* Skip an excluded path and its descendants. */
-  if (apr_hash_get(exclude_relpaths, local_relpath, APR_HASH_KEY_STRING))
+  /* Early out */
+  if (depth <= svn_depth_empty
+      || db_kind != svn_wc__db_kind_dir
+      || status == svn_wc__db_status_absent
+      || status == svn_wc__db_status_excluded
+      || status == svn_wc__db_status_not_present)
     return SVN_NO_ERROR;
 
-  /* Tweak "this_dir" */
-  SVN_ERR(bump_node(&deleted,
-                    wcroot, local_relpath, svn_wc__db_kind_dir, new_repos_id,
-                    new_repos_relpath, new_rev, is_root, scratch_pool));
+  /* And now recurse over the children */
 
-  if (deleted)
-    return SVN_NO_ERROR;
+  depth_below_here = depth;
+
+  if (depth == svn_depth_immediates || depth == svn_depth_files)
+    depth_below_here = svn_depth_empty;
 
   iterpool = svn_pool_create(scratch_pool);
-
-  if (depth == svn_depth_unknown)
-    depth = svn_depth_infinity;
-
-  /* Early out */
-  if (depth <= svn_depth_empty)
-    return SVN_NO_ERROR;
 
   SVN_ERR(gather_repo_children(&children, wcroot, local_relpath, 0,
                                scratch_pool, iterpool));
@@ -7105,12 +7084,7 @@ bump_nodes(svn_wc__db_wcroot_t *wcroot,
     {
       const char *child_basename = APR_ARRAY_IDX(children, i, const char *);
       const char *child_local_relpath;
-      svn_wc__db_kind_t kind;
-      svn_wc__db_status_t status;
-      svn_boolean_t is_file_external;
-
       const char *child_repos_relpath = NULL;
-      svn_boolean_t excluded;
 
       svn_pool_clear(iterpool);
 
@@ -7122,48 +7096,12 @@ bump_nodes(svn_wc__db_wcroot_t *wcroot,
       child_local_relpath = svn_relpath_join(local_relpath, child_basename,
                                              iterpool);
 
-      /* Skip stuff we've already decided to exclude. */
-      excluded = (apr_hash_get(exclude_relpaths, child_local_relpath,
-                               APR_HASH_KEY_STRING) != NULL);
-      if (excluded)
-        continue;
-
-      SVN_ERR(base_get_info(&status, &kind, NULL, NULL, NULL, NULL,
-                            NULL, NULL, NULL, NULL, NULL, NULL,
-                            NULL, NULL, &is_file_external,
-                            wcroot, child_local_relpath, iterpool, iterpool));
-
-      if (is_file_external)
-        continue;
-
-      /* If a file, or not-present, absent or excluded, then tweak the node but
-         don't recurse. */
-      if (kind == svn_wc__db_kind_file
-            || status == svn_wc__db_status_not_present
-            || status == svn_wc__db_status_absent
-            || status == svn_wc__db_status_excluded)
-        {
-          SVN_ERR(bump_node(NULL,
-                            wcroot, child_local_relpath, kind, new_repos_id,
-                            child_repos_relpath, new_rev, FALSE /* is_root */,
-                            iterpool));
-        }
-
-      /* If a directory and recursive... */
-      else if ((depth == svn_depth_infinity
-                || depth == svn_depth_immediates)
-               && (kind == svn_wc__db_kind_dir))
-        {
-          svn_depth_t depth_below_here = depth;
-
-          if (depth == svn_depth_immediates)
-            depth_below_here = svn_depth_empty;
-
-          SVN_ERR(bump_nodes(wcroot, child_local_relpath, new_repos_id,
-                             child_repos_relpath, new_rev, depth_below_here,
-                             exclude_relpaths, FALSE /* is_root */,
-                             iterpool));
-        }
+      SVN_ERR(bump_node_revision(wcroot, child_local_relpath, new_repos_id,
+                                 child_repos_relpath, new_rev,
+                                 depth_below_here,
+                                 exclude_relpaths, FALSE /* is_root */,
+                                 (depth < svn_depth_immediates),
+                                 iterpool));
     }
 
   /* Cleanup */
@@ -7222,24 +7160,10 @@ bump_revisions_post_commit(void *baton,
                             brb->new_repos_uuid,
                             wcroot->sdb, scratch_pool));
 
-  if (kind == svn_wc__db_kind_file || kind == svn_wc__db_kind_symlink)
-    {
-      /* Parent not updated so don't remove PATH entry.  */
-      SVN_ERR(bump_node(NULL,
-                        wcroot, local_relpath, kind, new_repos_id,
-                        brb->new_repos_relpath,
-                        brb->new_revision, TRUE /* is_root */,
-                        scratch_pool));
-    }
-  else if (kind == svn_wc__db_kind_dir)
-    {
-      SVN_ERR(bump_nodes(wcroot, local_relpath, new_repos_id,
-                         brb->new_repos_relpath, brb->new_revision, brb->depth,
-                         brb->exclude_relpaths, TRUE /* is_root */,
-                         scratch_pool));
-    }
-  else
-    SVN_ERR_MALFUNCTION();
+  SVN_ERR(bump_node_revision(wcroot, local_relpath, new_repos_id,
+                             brb->new_repos_relpath, brb->new_revision,
+                             brb->depth, brb->exclude_relpaths,
+                             TRUE /* is_root */, FALSE, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -7266,6 +7190,9 @@ svn_wc__db_op_bump_revisions_post_update(svn_wc__db_t *db,
 
   if (apr_hash_get(exclude_relpaths, local_relpath, APR_HASH_KEY_STRING))
     return SVN_NO_ERROR;
+
+  if (depth == svn_depth_unknown)
+    depth = svn_depth_infinity;
 
   brb.depth = depth;
   brb.new_repos_relpath = new_repos_relpath;
