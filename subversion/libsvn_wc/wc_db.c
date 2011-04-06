@@ -3410,29 +3410,6 @@ set_changelist_txn(void *baton,
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
 
-  /* Now, add a row to the CHANGELIST_LIST table, so we can later notify. */
-  /* ### TODO: This could just as well be done with a trigger, but for right
-     ### now, this is quick and dirty. */
-  if (existing_changelist)
-    {
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_INSERT_CHANGELIST_LIST));
-      SVN_ERR(svn_sqlite__bindf(stmt, "isis", wcroot->wc_id, local_relpath,
-                                (apr_int64_t)svn_wc_notify_changelist_clear,
-                                existing_changelist));
-      SVN_ERR(svn_sqlite__step_done(stmt));
-    }
-
-  if (new_changelist)
-    {
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_INSERT_CHANGELIST_LIST));
-      SVN_ERR(svn_sqlite__bindf(stmt, "isis", wcroot->wc_id, local_relpath,
-                                (apr_int64_t)svn_wc_notify_changelist_set,
-                                new_changelist));
-      SVN_ERR(svn_sqlite__step_done(stmt));
-    }
-
   return SVN_NO_ERROR;
 }
 
@@ -3448,6 +3425,7 @@ svn_wc__db_op_set_changelist(svn_wc__db_t *db,
   svn_wc__db_txn_callback_t txn_func;
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
+  svn_error_t *err;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -3466,11 +3444,19 @@ svn_wc__db_op_set_changelist(svn_wc__db_t *db,
         NOT_IMPLEMENTED();
     }
 
-  SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb,
-                                      STMT_CREATE_CHANGELIST_LIST));
+  /* We MUST remove the triggers and not leave them to affect subsequent
+     operations. */
+  err = svn_sqlite__exec_statements(wcroot->sdb, STMT_CREATE_CHANGELIST_LIST);
+  if (err)
+    return svn_error_compose_create(err,
+                                    svn_sqlite__exec_statements(wcroot->sdb,
+                                        STMT_DROP_CHANGELIST_LIST_TRIGGERS));
 
   SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, set_changelist_txn,
                               (void *) changelist, scratch_pool));
+
+  SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb,
+                                      STMT_DROP_CHANGELIST_LIST_TRIGGERS));
 
   SVN_ERR(flush_entries(wcroot, local_abspath, scratch_pool));
 
