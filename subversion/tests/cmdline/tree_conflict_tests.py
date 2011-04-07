@@ -977,7 +977,6 @@ def query_absent_tree_conflicted_dir(sbox):
 
 #----------------------------------------------------------------------
 
-@XFail()
 @Issue(3608)
 def up_add_onto_add_revert(sbox):
   "issue #3608: reverting an add onto add conflict"
