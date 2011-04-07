@@ -1102,18 +1102,21 @@ typedef enum svn_wc_notify_action_t
   /** An update tried to add a file or directory at path but an
    * unversioned obstruction was found.  @since New in 1.7. */
   svn_wc_notify_update_obstruction,
-
   /** An update operation removed an external working copy.
    * @since New in 1.7. */
   svn_wc_notify_update_external_removed,
 
-  /** A node below a deleted and tree conflicted directory was added
-   *  during update @since New in 1.7. */
-  svn_wc_notify_update_add_deleted,
-
-  /** A node below a deleted and tree conflicted directory was updated
+  /** A node below an existing node was added during update.
    * @since New in 1.7. */
-  svn_wc_notify_update_update_deleted,
+  svn_wc_notify_update_shadowed_add,
+
+  /** A node below an exising node was updated during update.
+   * @since New in 1.7. */
+  svn_wc_notify_update_shadowed_update,
+
+  /** A node below an existing node was deleted during update.
+   * @since New in 1.7. */
+  svn_wc_notify_update_shadowed_delete,
 
   /** The mergeinfo on path was updated.  @since New in 1.7. */
   svn_wc_notify_merge_record_info,

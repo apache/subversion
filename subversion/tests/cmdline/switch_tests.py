@@ -2529,15 +2529,15 @@ def tree_conflicts_on_switch_1_1(sbox):
 
   expected_output = deep_trees_conflict_output.copy()
   expected_output.add({
-    'DDD/D1/D2'         : Item(status='D '),
-    'DDD/D1/D2/D3'      : Item(status='D '),
-    'DDD/D1/D2/D3/zeta' : Item(status='D '),
-    'DD/D1/D2'          : Item(status='D '),
-    'DD/D1/D2/epsilon'  : Item(status='D '),
-    'DF/D1/beta'        : Item(status='D '),
-    'D/D1/delta'        : Item(status='D '),
-    'DDF/D1/D2'         : Item(status='D '),
-    'DDF/D1/D2/gamma'   : Item(status='D ')
+    'DDD/D1/D2'         : Item(status='  ', treeconflict='U'),
+    'DDD/D1/D2/D3'      : Item(status='  ', treeconflict='U'),
+    'DDD/D1/D2/D3/zeta' : Item(status='  ', treeconflict='A'),
+    'DD/D1/D2'          : Item(status='  ', treeconflict='U'),
+    'DD/D1/D2/epsilon'  : Item(status='  ', treeconflict='A'),
+    'DF/D1/beta'        : Item(status='  ', treeconflict='U'),
+    'D/D1/delta'        : Item(status='  ', treeconflict='A'),
+    'DDF/D1/D2'         : Item(status='  ', treeconflict='U'),
+    'DDF/D1/D2/gamma'   : Item(status='  ', treeconflict='U')
   })
 
   expected_disk = disk_empty_dirs.copy()
@@ -2619,12 +2619,12 @@ def tree_conflicts_on_switch_1_2(sbox):
 
   expected_output = deep_trees_conflict_output.copy()
   expected_output.add({
-    'DD/D1/D2'          : Item(status='D '),
-    'DDF/D1/D2'         : Item(status='D '),
-    'DDF/D1/D2/gamma'   : Item(status='D '),
-    'DDD/D1/D2'         : Item(status='D '),
-    'DDD/D1/D2/D3'      : Item(status='D '),
-    'DF/D1/beta'        : Item(status='D '),
+    'DD/D1/D2'          : Item(status='  ', treeconflict='D'),
+    'DDF/D1/D2'         : Item(status='  ', treeconflict='U'),
+    'DDF/D1/D2/gamma'   : Item(status='  ', treeconflict='D'),
+    'DDD/D1/D2'         : Item(status='  ', treeconflict='U'),
+    'DDD/D1/D2/D3'      : Item(status='  ', treeconflict='D'),
+    'DF/D1/beta'        : Item(status='  ', treeconflict='D'),
   })
 
   expected_disk = disk_empty_dirs.copy()
