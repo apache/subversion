@@ -730,7 +730,7 @@ FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 
 
--- ### these statements below should be setting copyfrom_revision!
+/* ### these statements below should be setting copyfrom_revision! */
 -- STMT_UPDATE_COPYFROM
 UPDATE nodes SET repos_id = ?3, repos_path = ?4
 WHERE wc_id = ?1 AND local_relpath = ?2
