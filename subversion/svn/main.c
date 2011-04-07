@@ -1751,7 +1751,7 @@ main(int argc, const char *argv[])
         opt_state.revprop = TRUE;
         break;
       case 'R':
-        opt_state.depth = SVN_DEPTH_INFINITY_OR_FILES(TRUE);
+        opt_state.depth = svn_depth_infinity;
         break;
       case 'N':
         descend = FALSE;
@@ -2358,7 +2358,7 @@ main(int argc, const char *argv[])
         }
       else
         {
-          opt_state.depth = SVN_DEPTH_INFINITY_OR_FILES(FALSE);
+          opt_state.depth = svn_depth_files;
         }
     }
 
