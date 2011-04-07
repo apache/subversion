@@ -1666,9 +1666,10 @@ typedef struct svn_wc_conflict_description2_t
    * four fulltext files that can be used to interactively resolve the
    * conflict.
    *
-   * BASE_ABSPATH, THEIR_ABSPATH and MY_ABSPATH are absolute paths.
+   * @a base_abspath, @a their_abspath and @a my_abspath are absolute
+   * paths.
    *
-   * ### Is MERGED_FILE relative to some directory, or absolute?
+   * ### Is @a merged_file relative to some directory, or absolute?
    *
    * All four files will be in repository-normal form -- LF
    * line endings and contracted keywords.  (If any of these files are

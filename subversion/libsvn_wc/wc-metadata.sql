@@ -141,12 +141,12 @@ CREATE TABLE ACTUAL_NODE (
      the properties, relative to WORKING/BASE as appropriate. */
   properties  BLOB,
 
-  /* basenames of the conflict files. */
+  /* relpaths of the conflict files. */
   /* ### These columns will eventually be merged into conflict_data below. */
   conflict_old  TEXT,
   conflict_new  TEXT,
   conflict_working  TEXT,
-  prop_reject  TEXT,  /* ### is this right? */
+  prop_reject  TEXT,
 
   /* if not NULL, this node is part of a changelist. */
   changelist  TEXT,
