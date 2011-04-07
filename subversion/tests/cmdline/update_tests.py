@@ -4858,6 +4858,7 @@ def tree_conflict_uc1_update_deleted_tree(sbox):
 # Issue #3334: a delete-onto-modified tree conflict should leave the node
 # scheduled for re-addition.
 @Issue(3334)
+@XFail()
 def tree_conflict_uc2_schedule_re_add(sbox):
   "tree conflicts on update UC2, schedule re-add"
   sbox.build()
