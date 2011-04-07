@@ -50,11 +50,7 @@ svn_dbg__preamble(const char *file, long line, FILE *output)
   if (output != NULL && !quiet_mode())
     {
       /* Quick and dirty basename() code.  */
-#if defined(WIN32) || defined(__OS2__)
-      const char *slash = strrchr(file, '\\');
-#else
       const char *slash = strrchr(file, '/');
-#endif
 
       if (slash == NULL)
         slash = strrchr(file, '\\');
