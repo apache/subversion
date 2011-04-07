@@ -4941,7 +4941,7 @@ def tree_conflict_uc2_schedule_re_add(sbox):
       ''            : Item(status='  ', wc_rev='2'),
       'A'           : Item(status='A ', wc_rev='-', copied='+'),
       'A/B'         : Item(status='  ', wc_rev='-', copied='+'),
-      'A/B/lambda'  : Item(status='D ', wc_rev='1'),
+      'A/B/lambda'  : Item(status='D ', wc_rev='-', copied='+'),
       'A/B/E'       : Item(status='  ', wc_rev='-', copied='+'),
       'A/B/E/alpha' : Item(status='M ', wc_rev='-', copied='+'),
       'A/B/E/beta'  : Item(status='  ', wc_rev='-', copied='+'),
