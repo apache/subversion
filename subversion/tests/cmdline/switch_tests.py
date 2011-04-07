@@ -881,7 +881,8 @@ def bad_intermediate_urls(sbox):
     'A/D/G/tau', 'A/D/H', 'A/D/H/psi', 'A/D/H/omega', 'A/D/H/chi',
     'A/D/gamma', 'A/mu', 'A/C')
   expected_status.add({
-    'A/Z'               : Item(status='? ', treeconflict='C'),
+    # Obstructed node is currently turned into a delete to allow resolving.
+    'A/Z'               : Item(status='D ', treeconflict='C', wc_rev=2),
   })
 
   actions.run_and_verify_switch(wc_dir, wc_dir, url_A_C, expected_output,
@@ -898,10 +899,10 @@ def bad_intermediate_urls(sbox):
   # check that we can recover from the tree conflict
   # rm A/Z
   os.remove(A_Z)
+  svntest.main.run_svn(None, 'revert', A_Z)
 
   # svn up
   expected_output = svntest.wc.State(wc_dir, {
-    'A/Z'               : Item(status='A '),
   })
 
   expected_disk.tweak('A/Z', contents=None)
@@ -1450,6 +1451,9 @@ def forced_switch_failures(sbox):
     'A/C/G/tau'         : Item(status='A '),
     'A/C/gamma'         : Item(status='A '),
     'A/C/H'             : Item(status='  ', treeconflict='C'),
+    'A/C/H/psi'         : Item(status='  ', treeconflict='A'),
+    'A/C/H/omega'       : Item(status='  ', treeconflict='A'),
+    'A/C/H/chi'         : Item(status='  ', treeconflict='A'),
   })
 
   expected_disk = svntest.main.greek_state.copy()
@@ -1469,7 +1473,10 @@ def forced_switch_failures(sbox):
     'A/C/G/rho'         : Item(status='  ', wc_rev='1'),
     'A/C/G/tau'         : Item(status='  ', wc_rev='1'),
     'A/C/G/pi'          : Item(status='  ', wc_rev='1'),
-    'A/C/H'             : Item(status='? ', treeconflict='C'),
+    'A/C/H'             : Item(status='D ', treeconflict='C', wc_rev='1'),
+    'A/C/H/psi'         : Item(status='D ', wc_rev='1'),
+    'A/C/H/omega'       : Item(status='D ', wc_rev='1'),
+    'A/C/H/chi'         : Item(status='D ', wc_rev='1'),
     'A/C/gamma'         : Item(status='  ', wc_rev='1'),
   })
   expected_status.tweak('A/C', switched='S')
@@ -1563,16 +1570,15 @@ def forced_switch_failures(sbox):
   # rm A/C/H
   os.remove(A_C_H)
 
+  # Resolve the tree conflict on A_C_H
+  svntest.main.run_svn(None, 'resolved', A_C_H)
+
   # A/B/F is switched to A/D/G
   # A/C is switched to A/D
   # A/D/G is switched to A/D/H
   # svn up
   expected_output = svntest.wc.State(wc_dir, {
-    'A/C/H'             : Item(status='A '),
-    'A/C/H/omega'       : Item(status='A '),
-    'A/C/H/chi'         : Item(status='A '),
     'A/C/H/I'           : Item(status='A '),
-    'A/C/H/psi'         : Item(status='A '),
     'A/D/G/omega'       : Item(status='A '),
     'A/D/G/I'           : Item(status='A '),
     'A/D/G/psi'         : Item(status='A '),
@@ -1616,6 +1622,8 @@ def forced_switch_failures(sbox):
   expected_status.tweak('A/B/F/pi', 'A/C/H', treeconflict=None)
   expected_status.tweak('A/D/G', switched='S')
 
+  svntest.main.run_svn(None, 'revert', '-R', os.path.join(wc_dir, 'A/C/H'))
+
   actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
     expected_status, None, None, None, None, None, False, wc_dir)
 
@@ -1658,6 +1666,9 @@ def switch_with_obstructing_local_adds(sbox):
   expected_output = svntest.wc.State(sbox.wc_dir, {
     "A/B/F/gamma"   : Item(status='  ', treeconflict='C'),
     "A/B/F/G"       : Item(status='  ', treeconflict='C'),
+    'A/B/F/G/tau'   : Item(status='  ', treeconflict='A'),
+    'A/B/F/G/rho'   : Item(status='  ', treeconflict='A'),
+    'A/B/F/G/pi'    : Item(status='  ', treeconflict='A'),
     "A/B/F/H"       : Item(status='A '),
     "A/B/F/H/chi"   : Item(status='A '),
     "A/B/F/H/omega" : Item(status='A '),
@@ -1681,10 +1692,11 @@ def switch_with_obstructing_local_adds(sbox):
   expected_status.tweak('A/B/F', switched='S')
   expected_status.add({
     'A/B/F/gamma'     : Item(status='R ', treeconflict='C', wc_rev='1'),
-    'A/B/F/G'         : Item(status='A ', treeconflict='C', wc_rev='0'),
-    'A/B/F/G/pi'      : Item(status='A ', wc_rev='0'),
-    'A/B/F/G/tau'     : Item(status='A ', wc_rev='0'),
+    'A/B/F/G'         : Item(status='R ', treeconflict='C', wc_rev='1'),
+    'A/B/F/G/pi'      : Item(status='R ', wc_rev='1'),
+    'A/B/F/G/tau'     : Item(status='R ', wc_rev='1'),
     'A/B/F/G/upsilon' : Item(status='A ', wc_rev='0'),
+    'A/B/F/G/rho'     : Item(status='D ', wc_rev='1'),
     'A/B/F/H'         : Item(status='  ', wc_rev='1'),
     'A/B/F/H/chi'     : Item(status='  ', wc_rev='1'),
     'A/B/F/H/omega'   : Item(status='  ', wc_rev='1'),

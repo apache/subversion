@@ -2202,35 +2202,16 @@ add_directory(const char *path,
             }
         }
 
-      /* We can't properly handle add vs. add with mismatching
-       * node kinds before single db. */
-      if (local_is_non_dir)
-        {
-          db->already_notified = TRUE;
-          do_notification(eb, db->local_abspath, svn_node_dir,
-                          svn_wc_notify_update_obstruction, pool);
-          return svn_error_createf(
-                   SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-                   _("Failed to add directory '%s': a non-directory object "
-                     "of the same name already exists"),
-                   svn_dirent_local_style(db->local_abspath,
-                                          pool));
-        }
-
       /* Do tree conflict checking if
        *  - if there is a local copy.
        *  - if this is a switch operation
-       *  - the node kinds mismatch (when single db is here)
+       *  - the node kinds mismatch
        *
        * During switch, local adds at the same path as incoming adds get
        * "lost" in that switching back to the original will no longer have the
        * local add. So switch always alerts the user with a tree conflict.
        *
        * Allow pulling absent/exluded/not_present nodes back in.
-       *
-       * ### This code is already gearing up to single db with respect to
-       * add-vs.-add conflicts with mismatching node kinds. But before single
-       * db, we cannot deal with mismatching node kinds properly.
        *
        * ### We would also like to be checking copyfrom infos to not flag tree
        * conflicts on two copies with identical history. But at the time of
@@ -2257,6 +2238,11 @@ add_directory(const char *path,
            * conflict, so merge it with the incoming add. */
           db->add_existed = TRUE;
         }
+      else
+        {
+          /* Add the node as deleted */
+          db->shadowed = TRUE;
+        }
     }
   else if (kind != svn_node_none)
     {
@@ -2267,20 +2253,8 @@ add_directory(const char *path,
        * if unversioned obstructions are allowed. */
       if (! (kind == svn_node_dir && eb->allow_unver_obstructions))
         {
-          /* ### Instead of skipping, this should bring in the BASE node
-           * and mark some sort of obstruction-conflict. Come, o single-db! */
-          db->skip_this = TRUE;
-
-          /* If we are skipping an add, we need to tell the WC that
-           * there's a node supposed to be here which we don't have. */
-          SVN_ERR(svn_wc__db_base_add_not_present_node(eb->db, db->local_abspath,
-                                                  db->new_relpath,
-                                                  eb->repos_root,
-                                                  eb->repos_uuid,
-                                                  *eb->target_revision,
-                                                  svn_wc__db_kind_dir,
-                                                  NULL, NULL, pool));
-          SVN_ERR(remember_skipped_tree(eb, db->local_abspath, pool));
+          /* Bring in the node as deleted */ /* ### Obstructed Conflict */
+          db->shadowed = TRUE;
 
           /* Mark a conflict */
           SVN_ERR(create_tree_conflict(&tree_conflict, eb,
@@ -2300,14 +2274,10 @@ add_directory(const char *path,
       SVN_ERR(svn_wc__db_op_set_tree_conflict(eb->db, db->local_abspath,
                                               tree_conflict, pool));
 
-      SVN_ERR(remember_skipped_tree(eb, db->local_abspath, pool));
-
-      db->skip_this = TRUE;
       db->already_notified = TRUE;
 
       do_notification(eb, db->local_abspath, svn_node_unknown,
                       svn_wc_notify_tree_conflict, pool);
-      return SVN_NO_ERROR;
     }
 
 
@@ -2328,6 +2298,12 @@ add_directory(const char *path,
   if (!db->shadowed && status == svn_wc__db_status_added)
     /* If there is no conflict we take over any added directory */
     SVN_ERR(svn_wc__db_temp_op_remove_working(eb->db, db->local_abspath, pool));
+
+  /* ### We can't record an unversioned obstruction yet, so 
+     ### we record a delete instead, which will allow resolving the conflict
+     ### to theirs with 'svn revert'. */
+  if (db->shadowed && db->obstruction_found)
+    SVN_ERR(svn_wc__db_temp_op_delete(eb->db, db->local_abspath, pool));
 
   /* If this add was obstructed by dir scheduled for addition without
      history let close_file() handle the notification because there

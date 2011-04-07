@@ -816,7 +816,7 @@ def obstructed_update_alters_wc_props(sbox):
 
   expected_status = actions.get_virginal_state(wc_dir, 2)
   expected_status.add({
-    'A/foo'             : Item(status='? ', treeconflict='C'),
+    'A/foo'             : Item(status='D ', treeconflict='C', wc_rev=2),
   })
 
   actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
@@ -827,10 +827,11 @@ def obstructed_update_alters_wc_props(sbox):
   #print "Removing obstruction"
   os.unlink(obstruction_path)
 
+  svntest.main.run_svn(None, 'revert', obstruction_path)
+
   # Update the -- now unobstructed -- WC again.
   #print "Updating WC again"
   expected_output = svntest.wc.State(wc_dir, {
-    'A/foo' : Item(status='A '),
     })
 
   expected_disk = svntest.main.greek_state.copy()
@@ -2260,7 +2261,7 @@ def forced_update_failures(sbox):
 
   expected_status = actions.get_virginal_state(wc_dir_backup, 1)
   expected_status.add({
-    'A/C/I'             : Item(status='? ', treeconflict='C'),
+    'A/C/I'             : Item(status='D ', treeconflict='C', wc_rev=2),
     'A/B/F/nu'          : Item(status='? ', treeconflict='C'),
   })
   expected_status.tweak('A/C', 'A/B/F', wc_rev='2')
@@ -2273,9 +2274,10 @@ def forced_update_failures(sbox):
   os.remove(backup_A_C_I)
   svntest.main.safe_rmtree(backup_A_B_F_nu)
 
+  svntest.main.run_svn(None, 'revert', backup_A_C_I)
+
   # svn up wc_dir_backup
   expected_output = svntest.wc.State(wc_dir_backup, {
-    'A/C/I'             : Item(status='A '),
     'A/B/F/nu'          : Item(status='A '),
   })
 
@@ -2857,7 +2859,10 @@ def update_with_obstructing_additions(sbox):
 
   # Try to update M's Parent.
   expected_output = wc.State(A_path, {
-    'M'   : Item(status='  ', treeconflict='C'),
+    'M'      : Item(status='  ', treeconflict='C'),
+    'M/rho'  : Item(status='  ', treeconflict='A'),
+    'M/pi'   : Item(status='  ', treeconflict='A'),
+    'M/tau'  : Item(status='  ', treeconflict='A'),
     })
 
   expected_disk = svntest.main.greek_state.copy()
@@ -2901,7 +2906,7 @@ def update_with_obstructing_additions(sbox):
     'A/D/H/I/K'     : Item(status='  ', wc_rev=4),
     'A/D/H/I/K/xi'  : Item(status='  ', wc_rev=4),
     'A/D/H/I/L'     : Item(status='  ', wc_rev=4),
-    'A/M'           : Item(status='A ', copied='+', wc_rev='-',
+    'A/M'           : Item(status='R ', copied='+', wc_rev='-',
                            treeconflict='C'),
     'A/M/I'         : Item(status='  ', copied='+', wc_rev='-'),
     'A/M/I/J'       : Item(status='  ', copied='+', wc_rev='-'),
@@ -2913,6 +2918,11 @@ def update_with_obstructing_additions(sbox):
     'A/M/psi'       : Item(status='  ', copied='+', wc_rev='-'),
     'A/M/omega'     : Item(status='  ', copied='+', wc_rev='-'),
     'omicron'       : Item(status='A ', copied='+', wc_rev='-'),
+
+    # Inserted under the tree conflict
+    'A/M/pi'            : Item(status='D ', wc_rev='4'),
+    'A/M/rho'           : Item(status='D ', wc_rev='4'),
+    'A/M/tau'           : Item(status='D ', wc_rev='4'),
     })
 
   svntest.actions.run_and_verify_update(wc_dir, expected_output,
@@ -2923,12 +2933,6 @@ def update_with_obstructing_additions(sbox):
   # Resolve the tree conflict.
   svntest.main.run_svn(None, 'resolve', '--accept', 'working', M_path)
 
-  # --force shouldn't help either.
-  svntest.actions.run_and_verify_update(wc_dir, expected_output,
-                                        expected_disk, expected_status,
-                                        None, None, None, None, None, False,
-                                        M_path, '--force')
-
   # Try to update omicron's parent, non-recusively so as not to
   # try and update M first.
   expected_output = wc.State(wc_dir, {
@@ -2938,6 +2942,7 @@ def update_with_obstructing_additions(sbox):
   expected_status.tweak('', 'iota', status='  ', wc_rev=4)
   expected_status.tweak('omicron', status='R ', copied='+', wc_rev='-',
                         treeconflict='C')
+  expected_status.tweak('A/M', treeconflict=None)
 
   svntest.actions.run_and_verify_update(wc_dir, expected_output,
                                         expected_disk, expected_status,
