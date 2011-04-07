@@ -114,6 +114,7 @@ create_packed_filesystem(const char *dir,
   svn_revnum_t after_rev;
   apr_pool_t *subpool = svn_pool_create(pool);
   apr_pool_t *iterpool;
+  int version;
 
   /* Create a filesystem, then close it */
   SVN_ERR(svn_test__create_fs(&fs, dir, opts, subpool));
@@ -122,8 +123,10 @@ create_packed_filesystem(const char *dir,
   subpool = svn_pool_create(pool);
 
   /* Rewrite the format file */
-  SVN_ERR(write_format(dir, SVN_FS_FS__FORMAT_NUMBER,
-                       shard_size, subpool));
+  SVN_ERR(svn_io_read_version_file(&version,
+                                   svn_path_join(dir, "format", subpool),
+                                   subpool));
+  SVN_ERR(write_format(dir, version, shard_size, subpool));
 
   /* Reopen the filesystem */
   SVN_ERR(svn_fs_open(&fs, dir, NULL, subpool));
