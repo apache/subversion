@@ -2219,7 +2219,7 @@ def forced_update_failures(sbox):
 
   expected_status = actions.get_virginal_state(wc_backup, 1)
   expected_status.add({
-    'A/B/F/nu'          : Item(status='? ', treeconflict='C'),
+    'A/B/F/nu'          : Item(status='D ', treeconflict='C', wc_rev='2'),
   })
   expected_status.tweak('A/B/F', wc_rev='2')
 
@@ -2262,7 +2262,7 @@ def forced_update_failures(sbox):
   expected_status = actions.get_virginal_state(wc_dir_backup, 1)
   expected_status.add({
     'A/C/I'             : Item(status='D ', treeconflict='C', wc_rev=2),
-    'A/B/F/nu'          : Item(status='? ', treeconflict='C'),
+    'A/B/F/nu'          : Item(status='D ', treeconflict='C', wc_rev=2),
   })
   expected_status.tweak('A/C', 'A/B/F', wc_rev='2')
 
@@ -2274,11 +2274,10 @@ def forced_update_failures(sbox):
   os.remove(backup_A_C_I)
   svntest.main.safe_rmtree(backup_A_B_F_nu)
 
-  svntest.main.run_svn(None, 'revert', backup_A_C_I)
+  svntest.main.run_svn(None, 'revert', backup_A_C_I, backup_A_B_F_nu)
 
   # svn up wc_dir_backup
   expected_output = svntest.wc.State(wc_dir_backup, {
-    'A/B/F/nu'          : Item(status='A '),
   })
 
   expected_disk.tweak('A/B/F/nu', contents="This is the file 'nu'\n")
@@ -4086,6 +4085,7 @@ def restarted_update_should_delete_dir_prop(sbox):
                                         expected_status, None, wc_dir)
 
   # Create a second working copy.
+  ### Does this hack still work with wc-ng?
   other_wc = sbox.add_wc_path('other')
   svntest.actions.duplicate_dir(wc_dir, other_wc)
 
@@ -4130,7 +4130,7 @@ def restarted_update_should_delete_dir_prop(sbox):
 
   expected_status = actions.get_virginal_state(wc_dir, 3)
   expected_status.add({
-    'A/zeta'            : Item(status='? ', treeconflict='C'),
+    'A/zeta'            : Item(status='D ', treeconflict='C', wc_rev='3'),
   })
 
   actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
@@ -4139,8 +4139,9 @@ def restarted_update_should_delete_dir_prop(sbox):
   # Now, delete the obstructing path and rerun the update.
   os.unlink(zeta_path)
 
+  svntest.main.run_svn(None, 'revert', zeta_path)
+
   expected_output = svntest.wc.State(wc_dir, {
-    'A/zeta' : Item(status='A '),
     })
 
   expected_disk = svntest.main.greek_state.copy()
