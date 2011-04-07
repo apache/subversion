@@ -167,7 +167,7 @@ Candidate changes:
      Local fix.  users@ reports.
    Votes:
 
-  * 1.6.x-fsfs-begin-txn-deadlock
+ * 1.6.x-fsfs-begin-txn-deadlock
    Fix a deadlock that can occur when two or more multithreaded
    Subversion servers on the same system serve two or more fsfs
    repositories.
@@ -206,66 +206,66 @@ Candidate changes:
    Votes:
      +1: danielsh, stsp
 
-  * ^/subversion/branches/1.6.x-issue3719
-    Fix issue #3719 "Extremely slow checkout on Windows"
-    Justification:
-      Has been reported to improve checkout performance on Windows
-      by a factor of 10 for one user (85 minutes down to 8 minutes).
-      The problem is most visible on NTFS with working copies that have
-      many files with svn: properties.
-    Notes:
-      See the issue for details, and also this thread:
-      http://svn.haxx.se/dev/archive-2011-02/0066.shtml
-      r1088808 fixes a compilation failure on Windows.
-    Votes:
-      +1: stsp, rhuijben
+ * ^/subversion/branches/1.6.x-issue3719
+   Fix issue #3719 "Extremely slow checkout on Windows"
+   Justification:
+     Has been reported to improve checkout performance on Windows
+     by a factor of 10 for one user (85 minutes down to 8 minutes).
+     The problem is most visible on NTFS with working copies that have
+     many files with svn: properties.
+   Notes:
+     See the issue for details, and also this thread:
+     http://svn.haxx.se/dev/archive-2011-02/0066.shtml
+     r1088808 fixes a compilation failure on Windows.
+   Votes:
+     +1: stsp, rhuijben
 
-  * r1074572
-    Allow building on Windows with a recent Expat.
-    Justification:
-      We like building Subversion, even on Windows.  User requested.
-    Votes:
-      +0: hwright (I like the idea, but have no knowledge of the change, or
-                   ability to test it.)
+ * r1074572
+   Allow building on Windows with a recent Expat.
+   Justification:
+     We like building Subversion, even on Windows.  User requested.
+   Votes:
+     +0: hwright (I like the idea, but have no knowledge of the change, or
+                  ability to test it.)
 
-  * r1083883, r1076826
-    Fix issue #3816, "file external can cause mixed-revision working
-    copy after checkout"
-    Justification:
-      Without this fix, file externals pinned to a revision can prevent
-      reintegrate merges.
-    Notes:
-      r1083883 is the actual fix and has no corresponding trunk revision.
-      r1076826 added a test case on trunk (merged to the branch in r1083892).
-    Branch:
-      ^/subversion/branches/1.6.x-issue3816
-    Votes:
-      +1: stsp
+ * r1083883, r1076826
+   Fix issue #3816, "file external can cause mixed-revision working
+   copy after checkout"
+   Justification:
+     Without this fix, file externals pinned to a revision can prevent
+     reintegrate merges.
+   Notes:
+     r1083883 is the actual fix and has no corresponding trunk revision.
+     r1076826 added a test case on trunk (merged to the branch in r1083892).
+   Branch:
+     ^/subversion/branches/1.6.x-issue3816
+   Votes:
+     +1: stsp
 
-  * r1085001, r992114, r1084962, r1084978
-    Fix issue #3843, "file externals cause non-inheritable mergeinfo"
-    Justification:
-      Without this fix, merges into working copies which contain
-      file externals create non-inheritable mergeinfo on the merge
-      target, and explicit mergeinfo on file externals and all children.
-      This is not desirable, and can cause commits to fail unless mergeinfo
-      is manually removed from the file external.
-    Notes:
-      The r1083883 group is much less useful without this fix.
-      r1085001 was a commit to the branch. The other revisions are from trunk.
-    Branch:
-      ^/subversion/branches/1.6.x-issue3843
-    Votes:
-      +1: stsp, pburba
+ * r1085001, r992114, r1084962, r1084978
+   Fix issue #3843, "file externals cause non-inheritable mergeinfo"
+   Justification:
+     Without this fix, merges into working copies which contain
+     file externals create non-inheritable mergeinfo on the merge
+     target, and explicit mergeinfo on file externals and all children.
+     This is not desirable, and can cause commits to fail unless mergeinfo
+     is manually removed from the file external.
+   Notes:
+     The r1083883 group is much less useful without this fix.
+     r1085001 was a commit to the branch. The other revisions are from trunk.
+   Branch:
+     ^/subversion/branches/1.6.x-issue3843
+   Votes:
+     +1: stsp, pburba
 
-  * ^/subversion/branches/1.6.x-issue3845
-    Detect very occasional corruption and abort commit.
-    Justification:
-      Don't know the cause, but we can stop it getting into the repo.
-    Votes:
-      +1: philip
-      +1: danielsh (trusting Philip's explanation that the noderev offset,length
-                    are cached to be the correct values for a non-corrupt file)
+ * ^/subversion/branches/1.6.x-issue3845
+   Detect very occasional corruption and abort commit.
+   Justification:
+     Don't know the cause, but we can stop it getting into the repo.
+   Votes:
+     +1: philip
+     +1: danielsh (trusting Philip's explanation that the noderev offset,length
+                   are cached to be the correct values for a non-corrupt file)
 
  * r1084575, r1084581
    Change the version string from "(dev build)" to "(under development)".
