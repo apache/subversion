@@ -2276,7 +2276,7 @@ add_directory(const char *path,
 
       db->already_notified = TRUE;
 
-      do_notification(eb, db->local_abspath, svn_node_unknown,
+      do_notification(eb, db->local_abspath, svn_node_dir,
                       svn_wc_notify_tree_conflict, pool);
     }
 
@@ -3117,20 +3117,7 @@ add_file(const char *path,
        * if unversioned obstructions are allowed. */
       if (! (kind == svn_node_file && eb->allow_unver_obstructions))
         {
-          /* ### Instead of skipping, this should bring in the BASE node
-           * and mark some sort of obstruction-conflict. Come, o single-db! */
-          fb->skip_this = TRUE;
-
-          /* If we are skipping an add, we need to tell the WC that
-           * there's a node supposed to be here which we don't have. */
-          SVN_ERR(svn_wc__db_base_add_not_present_node(eb->db, fb->local_abspath,
-                                                  fb->new_relpath,
-                                                  eb->repos_root,
-                                                  eb->repos_uuid,
-                                                  *eb->target_revision,
-                                                  svn_wc__db_kind_file,
-                                                  NULL, NULL, scratch_pool));
-          SVN_ERR(remember_skipped_tree(eb, fb->local_abspath, scratch_pool));
+          fb->shadowed = TRUE;
 
           /* Mark a conflict */
           SVN_ERR(create_tree_conflict(&tree_conflict, eb,
@@ -3146,15 +3133,13 @@ add_file(const char *path,
 
   if (tree_conflict != NULL)
     {
-      fb->obstruction_found = TRUE;
-
       SVN_ERR(svn_wc__db_op_set_tree_conflict(eb->db,
                                               fb->local_abspath,
                                               tree_conflict,
                                               scratch_pool));
 
       fb->already_notified = TRUE;
-      do_notification(eb, fb->local_abspath, svn_node_unknown,
+      do_notification(eb, fb->local_abspath, svn_node_file,
                       svn_wc_notify_tree_conflict, scratch_pool);
     }
 
@@ -4183,6 +4168,12 @@ close_file(void *file_baton,
                                      NULL /* conflict */,
                                      all_work_items,
                                      scratch_pool));
+
+  /* ### We can't record an unversioned obstruction yet, so 
+     ### we record a delete instead, which will allow resolving the conflict
+     ### to theirs with 'svn revert'. */
+  if (fb->shadowed && fb->obstruction_found)
+    SVN_ERR(svn_wc__db_temp_op_delete(eb->db, fb->local_abspath, pool));
 
     /* ### ugh. deal with preserving the file external value in the database.
        ### there is no official API, so we do it this way. maybe we should

@@ -208,11 +208,10 @@ def checkout_with_obstructions(sbox):
 
   # svn status
   expected_status = actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak('iota', status='? ', wc_rev=None,
-    treeconflict='C')
-  # A is tree conflicted and obstructed
-  # Currently we record that as deleted
-  expected_status.tweak('A', status='D ', treeconflict='C')
+  # A and iota are tree conflicted and obstructed
+  expected_status.tweak('A', 'iota', status='D ', wc_rev=1,
+                        treeconflict='C')
+
   expected_status.tweak('A/D', 'A/D/G', 'A/D/G/rho', 'A/D/G/pi', 'A/D/G/tau',
     'A/D/H', 'A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi', 'A/D/gamma', 'A/B',
     'A/B/E', 'A/B/E/beta', 'A/B/E/alpha', 'A/B/F', 'A/B/lambda', 'A/C',
@@ -226,12 +225,14 @@ def checkout_with_obstructions(sbox):
   # Now see to it that we can recover from the obstructions.
   # rm -rf A iota
   svntest.main.safe_rmtree( os.path.join(wc_dir, 'A') )
-  svntest.main.run_svn(None, 'revert', '-R', os.path.join(wc_dir, 'A'))
   os.remove( os.path.join(wc_dir, 'iota') )
+
+
+  svntest.main.run_svn(None, 'revert', '-R', os.path.join(wc_dir, 'A'),
+                       os.path.join(wc_dir, 'iota'))
 
   # svn up
   expected_output = svntest.wc.State(wc_dir, {
-    'iota'              : Item(status='A '),
   })
 
   expected_disk = svntest.main.greek_state.copy()

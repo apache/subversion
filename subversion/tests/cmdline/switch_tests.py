@@ -976,7 +976,7 @@ def obstructed_switch(sbox):
   expected_disk.tweak('A/B/E/alpha', contents='hello')
 
   expected_status.add({
-    'A/B/E/alpha'       : Item(status='? ', treeconflict='C'),
+    'A/B/E/alpha'       : Item(status='D ', treeconflict='C', wc_rev=3),
   })
   expected_status.tweak('A/B/E', wc_rev='3', switched='S')
   expected_status.tweak('A/B/E/beta', wc_rev='3')
@@ -1503,7 +1503,7 @@ def forced_switch_failures(sbox):
 
   expected_status.add({
     'A/B/F/tau'         : Item(status='  ', wc_rev='1'),
-    'A/B/F/pi'          : Item(status='? ', treeconflict='C'),
+    'A/B/F/pi'          : Item(status='D ', treeconflict='C', wc_rev='1'),
     'A/B/F/rho'         : Item(status='  ', wc_rev='1'),
   })
   expected_status.tweak('A/B/F', switched='S')
@@ -1570,8 +1570,9 @@ def forced_switch_failures(sbox):
   # rm A/C/H
   os.remove(A_C_H)
 
-  # Resolve the tree conflict on A_C_H
+  # Resolve the tree conflict on A_C_H and A_B_F_pi
   svntest.main.run_svn(None, 'resolved', A_C_H)
+  svntest.main.run_svn(None, 'revert', A_B_F_pi)
 
   # A/B/F is switched to A/D/G
   # A/C is switched to A/D
@@ -1583,7 +1584,6 @@ def forced_switch_failures(sbox):
     'A/D/G/I'           : Item(status='A '),
     'A/D/G/psi'         : Item(status='A '),
     'A/D/H/I'           : Item(status='A '),
-    'A/B/F/pi'          : Item(status='A '),
   })
 
   # When running the tests over ra_serf, 'A/D/G/omega' and 'A/D/G/psi' do
