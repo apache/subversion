@@ -267,6 +267,14 @@ Candidate changes:
       +1: danielsh (trusting Philip's explanation that the noderev offset,length
                     are cached to be the correct values for a non-corrupt file)
 
+ * r1084575, r1084581
+   Change the version string from "(dev build)" to "(under development)".
+   Justification:
+     Same as for trunk: clarification that "1.6.17 (dev build)" is actually a
+     off-the-branch build and not a blessed release.
+   Votes: 
+     +1: danielsh (r1084575 only)
+
 Veto-blocked changes:
 =====================
 
