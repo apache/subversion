@@ -3079,7 +3079,7 @@ def relocate_with_switched_children(sbox):
     expected_info = { 'URL' : pattern }
     svntest.actions.run_and_verify_info([expected_info], path)
 
-@XFail()
+
 def copy_with_switched_subdir(sbox):
   "copy directory with switched subdir"
   sbox.build()
@@ -3095,7 +3095,7 @@ def copy_with_switched_subdir(sbox):
   # Verify before switching
   svntest.actions.run_and_verify_status(wc_dir, state)
 
-  # Switch D
+  # Switch A/D/G
   svntest.actions.run_and_verify_svn(None, None, [], 'switch',
                                      '--ignore-ancestry', E_url, G)
 
@@ -3107,7 +3107,7 @@ def copy_with_switched_subdir(sbox):
     })
   svntest.actions.run_and_verify_status(wc_dir, state)
 
-  # And now copy A and everything below it to R
+  # And now copy A/D and everything below it to R
   svntest.actions.run_and_verify_svn(None, None, [], 'cp', D, R)
 
   state.add({
@@ -3119,25 +3119,17 @@ def copy_with_switched_subdir(sbox):
     'R/H/chi'   : Item(status='  ', copied='+', wc_rev='-'),
     'R/H/omega' : Item(status='  ', copied='+', wc_rev='-'),
     'R/H/psi'   : Item(status='  ', copied='+', wc_rev='-'),
-
-    # This should be:
-    # 'R/G'       : Item(status='A ', copied='+', wc_rev='-'),
-    # But is:
-    'R/G'       : Item(status='  ', copied='+', wc_rev='-'),
+    'R/G'       : Item(status='R ', copied='+', wc_rev='-', entry_status='A '),
     })
 
   svntest.actions.run_and_verify_status(wc_dir, state)
 
   svntest.main.run_svn(None, 'ci', '-m', 'Commit added folder', wc_dir)
 
-  # Additional test. Enable when the invalid copy is fixed.
-  # It should either commit to R/G/alpha or to A/D/G/alpha when the copy
-  # keeps the switch.. or it must be that there is no alpha file.
-
-  # (Don't forget to bump the wc_rev below for the extra commit)
-  #svntest.main.run_svn(None, 'up', wc_dir)
-  #svntest.main.file_append(os.path.join(wc_dir, 'R/G/alpha'), "apple")
-  #svntest.main.run_svn(None, 'ci', '-m', 'Commit changed file', wc_dir)
+  # Additional test, it should commit to R/G/alpha.
+  svntest.main.run_svn(None, 'up', wc_dir)
+  svntest.main.file_append(os.path.join(wc_dir, 'R/G/alpha'), "apple")
+  svntest.main.run_svn(None, 'ci', '-m', 'Commit changed file', wc_dir)
 
   # Checkout working copy to verify result
   svntest.main.safe_rmtree(wc_dir, 1)
@@ -3146,17 +3138,15 @@ def copy_with_switched_subdir(sbox):
                                      'checkout',
                                      sbox.repo_url, wc_dir)
 
-  # Switch D again to recreate state
+  # Switch A/D/G again to recreate state
   svntest.actions.run_and_verify_svn(None, None, [], 'switch',
                                      '--ignore-ancestry', E_url, G)
 
   # Clear the statuses
-  state.tweak(status='  ', copied=None, wc_rev='2')
+  state.tweak(status='  ', copied=None, wc_rev='3', entry_status=None)
   # But reset the switched state
   state.tweak('A/D/G', switched='S')
 
-  # This fails because the original tree of D is under R, while there
-  # should either be the tree of E, or nothing at all.
   svntest.actions.run_and_verify_status(wc_dir, state)
 
 ### regression test for issue #3597
