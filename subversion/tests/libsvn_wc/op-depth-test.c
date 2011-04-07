@@ -2788,7 +2788,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test_temp_op_make_copy"),
     SVN_TEST_OPTS_PASS(test_wc_move,
                        "test_wc_move"),
-    SVN_TEST_OPTS_XFAIL(test_mixed_rev_copy,
+    SVN_TEST_OPTS_PASS(test_mixed_rev_copy,
                         "test_mixed_rev_copy"),
     SVN_TEST_OPTS_PASS(test_delete_of_replace,
                        "test_delete_of_replace"),

@@ -2501,10 +2501,17 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
       break;
     case svn_wc__db_status_deleted:
     case svn_wc__db_status_not_present:
-      dst_status = svn_wc__db_status_not_present;
-      break;
     case svn_wc__db_status_excluded:
-      dst_status = svn_wc__db_status_excluded;
+      /* These presence values should not create a new op depth */
+      if (dst_np_op_depth > 0)
+        {
+          dst_op_depth = dst_np_op_depth;
+          dst_np_op_depth = -1;
+        }
+      if (status == svn_wc__db_status_excluded)
+        dst_status = svn_wc__db_status_excluded;
+      else
+        dst_status = svn_wc__db_status_not_present;
       break;
     case svn_wc__db_status_absent:
       return svn_error_createf(SVN_ERR_AUTHZ_UNREADABLE, NULL,
