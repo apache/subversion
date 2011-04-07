@@ -1733,6 +1733,31 @@ test_mixed_rev_copy(const svn_test_opts_t *opts, apr_pool_t *pool)
     SVN_ERR(check_db_rows(&b, "X", rows));
   }
 
+  SVN_ERR(wc_delete(&b, "X"));
+  SVN_ERR(wc_update(&b, "A/B/C", 0));
+  {
+    nodes_row_t rows[] = {
+      { 0, "",      "normal",       0, "" },
+      { 0, "A",     "normal",       1, "A" },
+      { 0, "A/B",   "normal",       2, "A/B" },
+      { 0, "A/B/C", "not-present",  3, "A/B/C" },
+      { 0 }
+    };
+    SVN_ERR(check_db_rows(&b, "", rows));
+  }
+
+  SVN_ERR(wc_copy(&b, "A", "X"));
+  {
+    nodes_row_t rows[] = {
+      { 1, "X",     "normal",       1, "A" },
+      { 1, "X/B",   "not-present",  2, "A/B" },
+      { 2, "X/B",   "normal",       2, "A/B" },
+      { 2, "X/B/C", "not-present",  3, "A/B/C" },
+      { 0 }
+    };
+    SVN_ERR(check_db_rows(&b, "X", rows));
+  }
+
   return SVN_NO_ERROR;
 }
 
@@ -2763,8 +2788,8 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test_temp_op_make_copy"),
     SVN_TEST_OPTS_PASS(test_wc_move,
                        "test_wc_move"),
-    SVN_TEST_OPTS_PASS(test_mixed_rev_copy,
-                       "test_mixed_rev_copy"),
+    SVN_TEST_OPTS_XFAIL(test_mixed_rev_copy,
+                        "test_mixed_rev_copy"),
     SVN_TEST_OPTS_PASS(test_delete_of_replace,
                        "test_delete_of_replace"),
     SVN_TEST_OPTS_PASS(test_del_replace_not_present,
