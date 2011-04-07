@@ -1587,12 +1587,12 @@ test_temp_op_make_copy(const svn_test_opts_t *opts, apr_pool_t *pool)
     };
     /*  /           norm        -
         A           norm        norm
-        A/B         norm        base-del    norm
-        A/B/C       norm        base-del                norm
-        A/F         norm        base-del    norm
-        A/F/G       norm        base-del    norm
-        A/F/H       norm        base-del    not-pres
-        A/F/E       norm        base-del
+        A/B         norm        norm        norm
+        A/B/C       norm        norm        base-del    norm
+        A/F         norm        norm        norm
+        A/F/G       norm        norm        norm
+        A/F/H       norm        norm        not-pres
+        A/F/E       norm        norm        base-del
         A/X         norm        norm
         A/X/Y       incomplete  incomplete
     */
@@ -1608,19 +1608,22 @@ test_temp_op_make_copy(const svn_test_opts_t *opts, apr_pool_t *pool)
       { 0, "A/X",   "normal",       2, "A/X" },
       { 0, "A/X/Y", "incomplete",   2, "A/X/Y" },
       { 1, "A",     "normal",       2, "A" },
-      { 1, "A/B",   "base-deleted", 2, "A/B" },
-      { 1, "A/B/C", "base-deleted", 2, "A/B/C" },
-      { 1, "A/F",   "base-deleted", 2, "A/F" },
-      { 1, "A/F/G", "base-deleted", 2, "A/F/G" },
-      { 1, "A/F/H", "base-deleted", 2, "A/F/H" },
-      { 1, "A/F/E", "base-deleted", 2, "A/F/E" },
+      { 1, "A/B",   "normal",       2, "A/B" },
+      { 1, "A/B/C", "normal",       2, "A/B/C" },
+      { 1, "A/F",   "normal",       2, "A/F" },
+      { 1, "A/F/G", "normal",       2, "A/F/G" },
+      { 1, "A/F/H", "normal",       2, "A/F/H" },
+      { 1, "A/F/E", "normal",       2, "A/F/E" },
       { 1, "A/X",   "normal",       2, "A/X" },
       { 1, "A/X/Y", "incomplete",   2, "A/X/Y" },
       { 2, "A/B",   "normal",       NO_COPY_FROM },
-      { 3, "A/B/C", "normal",       NO_COPY_FROM },
+      { 2, "A/B",   "normal",       NO_COPY_FROM },
+      { 2, "A/B/C", "base-deleted", NO_COPY_FROM },
       { 2, "A/F",   "normal",       1, "S2" },
+      { 2, "A/F/E", "base-deleted", 2, "A/F/E" },
       { 2, "A/F/G", "normal",       1, "S2/G" },
       { 2, "A/F/H", "not-present",  1, "S2/H" },
+      { 3, "A/B/C", "normal",       NO_COPY_FROM },
       { 0 }
     };
 

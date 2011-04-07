@@ -9497,7 +9497,7 @@ struct make_copy_baton_t
     /     normal          -
     A     normal          -
     A/B   normal          -         normal
-    A/B/C normal          -         normal
+    A/B/C normal          -         base-del       normal
     A/F   normal          -         normal
     A/F/G normal          -         normal
     A/F/H normal          -         base-deleted   normal
@@ -9505,23 +9505,20 @@ struct make_copy_baton_t
     A/X   normal          -
     A/X/Y incomplete      -
 
-    This function copies the tree for A from op_depth=0, into the
-    working op_depth of A, i.e. 1, then marks as base-deleted any
-    subtrees in that op_depth that are below higher op_depth, and
-    finally removes base-deleted nodes from higher op_depth.
+    This function adds layers to A and some of its descendants in an attempt
+    to make the working copy look like as if it were a copy of the BASE nodes.
 
              0            1              2            3
-    /     normal          -
-    A     normal       normal
-    A/B   normal       base-deleted   normal
-    A/B/C normal       base-deleted   normal
-    A/F   normal       base-deleted   normal
-    A/F/G normal       base-deleted   normal
-    A/F/H normal       base-deleted                   normal
-    A/F/E normal       base-deleted   not-present
-    A/X   normal       normal
-    A/X/Y incomplete   incomplete
-
+    /     normal        -
+    A     normal        norm
+    A/B   normal        norm        norm
+    A/B/C normal        norm        base-del       normal
+    A/F   normal        norm        norm
+    A/F/G normal        norm        norm
+    A/F/H normal        norm        not-pres
+    A/F/E normal        norm        base-del
+    A/X   normal        norm
+    A/X/Y incomplete  incomplete
  */
 static svn_error_t *
 make_copy_txn(void *baton,
@@ -9546,8 +9543,10 @@ make_copy_txn(void *baton,
   if (have_row)
     {
       svn_wc__db_status_t working_status;
+      apr_int64_t working_op_depth;
 
       working_status = svn_sqlite__column_token(stmt, 1, presence_map);
+      working_op_depth = svn_sqlite__column_int64(stmt, 0);
       SVN_ERR(svn_sqlite__reset(stmt));
 
       SVN_ERR_ASSERT(working_status == svn_wc__db_status_normal
@@ -9555,11 +9554,15 @@ make_copy_txn(void *baton,
                      || working_status == svn_wc__db_status_not_present
                      || working_status == svn_wc__db_status_incomplete);
 
-      if (working_status == svn_wc__db_status_base_deleted)
-        /* Make existing deletions of BASE_NODEs remove WORKING_NODEs */
-        remove_working = TRUE;
+      /* Only change nodes in the layers where we are creating the copy.
+         Deletes in higher layers will just apply to the copy */
+      if (working_op_depth <= mcb->op_depth)
+        {
+          add_working_base_deleted = TRUE;
 
-      add_working_base_deleted = TRUE;
+          if (working_status == svn_wc__db_status_base_deleted)
+            remove_working = TRUE;
+        }
     }
   else
     SVN_ERR(svn_sqlite__reset(stmt));
