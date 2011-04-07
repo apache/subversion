@@ -9476,9 +9476,6 @@ svn_wc__db_temp_op_start_directory_update(svn_wc__db_t *db,
 /* Baton for make_copy_txn */
 struct make_copy_baton_t
 {
-  svn_wc__db_t *db;
-  const char *local_abspath;
-
   apr_int64_t op_depth;
 };
 
@@ -9568,23 +9565,15 @@ make_copy_txn(void *baton,
     {
       const char *name = APR_ARRAY_IDX(children, i, const char *);
       struct make_copy_baton_t cbt;
-      svn_wc__db_wcroot_t *copy_wcroot;
       const char *copy_relpath;
 
       svn_pool_clear(iterpool);
-      cbt.local_abspath = svn_dirent_join(mcb->local_abspath, name, iterpool);
 
-      SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&copy_wcroot,
-                                  &copy_relpath, mcb->db,
-                                  cbt.local_abspath,
-                                  iterpool, iterpool));
+      copy_relpath = svn_relpath_join(local_relpath, name, iterpool);
 
-      VERIFY_USABLE_WCROOT(copy_wcroot);
-
-      cbt.db = mcb->db;
       cbt.op_depth = mcb->op_depth;
 
-      SVN_ERR(make_copy_txn(&cbt, copy_wcroot, copy_relpath, iterpool));
+      SVN_ERR(make_copy_txn(&cbt, wcroot, copy_relpath, iterpool));
     }
 
   if (remove_working)
@@ -9613,7 +9602,8 @@ make_copy_txn(void *baton,
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
 
-  SVN_ERR(flush_entries(wcroot, mcb->local_abspath, iterpool));
+  SVN_ERR(flush_entries(wcroot, svn_dirent_join(wcroot->abspath, local_relpath,
+                                                iterpool), iterpool));
 
   svn_pool_destroy(iterpool);
 
@@ -9656,8 +9646,6 @@ svn_wc__db_temp_op_make_copy(svn_wc__db_t *db,
      the update editor is going to have to bail out. */
   SVN_ERR(catch_copy_of_absent(wcroot, local_relpath, scratch_pool));
 
-  mcb.db = db;
-  mcb.local_abspath = local_abspath;
   mcb.op_depth = relpath_depth(local_relpath);
 
   SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, make_copy_txn, &mcb,
