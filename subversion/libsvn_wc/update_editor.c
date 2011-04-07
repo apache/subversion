@@ -612,7 +612,7 @@ static svn_error_t *
 do_entry_deletion(struct edit_baton *eb,
                   const char *local_abspath,
                   const char *their_url,
-                  svn_boolean_t in_deleted_and_tree_conflicted_subtree,
+                  svn_boolean_t shadowed,
                   apr_pool_t *pool);
 
 static svn_error_t *
@@ -1783,7 +1783,7 @@ static svn_error_t *
 do_entry_deletion(struct edit_baton *eb,
                   const char *local_abspath,
                   const char *their_relpath,
-                  svn_boolean_t in_deleted_and_tree_conflicted_subtree,
+                  svn_boolean_t shadowed,
                   apr_pool_t *pool)
 {
   svn_wc__db_status_t status;
@@ -1838,7 +1838,7 @@ do_entry_deletion(struct edit_baton *eb,
 
   /* Check for conflicts only when we haven't already recorded
    * a tree-conflict on a parent node. */
-  if (!in_deleted_and_tree_conflicted_subtree)
+  if (!shadowed)
     SVN_ERR(check_tree_conflict(&tree_conflict, eb, local_abspath,
                                 status, kind, TRUE,
                                 svn_wc_conflict_action_delete, svn_node_none,
@@ -1932,8 +1932,20 @@ do_entry_deletion(struct edit_baton *eb,
 
   /* Notify. (If tree_conflict, we've already notified.) */
   if (tree_conflict == NULL)
-    do_notification(eb, local_abspath, svn_node_unknown,
-                    svn_wc_notify_update_delete, pool);
+    {
+      svn_wc_notify_action_t action = svn_wc_notify_update_delete;
+      svn_node_kind_t node_kind;
+
+      if (shadowed)
+        action = svn_wc_notify_update_shadowed_delete;
+
+      if (kind == svn_wc__db_kind_dir)
+        node_kind = svn_node_dir;
+      else
+        node_kind = svn_node_file;
+
+      do_notification(eb, local_abspath, node_kind, action, pool);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -2117,8 +2129,11 @@ add_directory(const char *path,
       return SVN_NO_ERROR;
     }
 
-
-  if (versioned_locally_and_present)
+  if (db->shadowed)
+    {
+      /* Nothing to check; does not and will not exist in working copy */
+    }
+  else if (versioned_locally_and_present)
     {
       /* What to do with a versioned or schedule-add dir:
 
@@ -2153,16 +2168,24 @@ add_directory(const char *path,
 
       if (local_is_dir)
         {
-          svn_boolean_t wc_root;
-          svn_boolean_t switched;
+          const char *wcroot_abspath;
 
-          SVN_ERR(svn_wc__check_wc_root(&wc_root, NULL, &switched, eb->db,
-                                        db->local_abspath, pool));
+          SVN_ERR(svn_wc__db_get_wcroot(&wcroot_abspath, eb->db,
+                                        db->local_abspath, pool, pool));
 
-          err = NULL;
-
-          if (wc_root)
+          if (! strcmp(wcroot_abspath, db->local_abspath))
             {
+              /* Problem: We have a separate working copy in place where
+                 we would like to add a new node.
+
+                 Any change to this node would change the sub-working copy
+                 instead of our own working copy!!!
+
+                 So, the only safe thing to do is to return with an error. A
+                 future update will resolve this problem, because the
+                 parent directory will be marked incomplete.
+               */
+
               /* ### In 1.6 we provided a bit more information on
                      what kind of working copy was found */
               err = svn_error_createf(
@@ -2170,21 +2193,7 @@ add_directory(const char *path,
                          _("Failed to add directory '%s': a separate "
                            "working copy with the same name already exists"),
                          svn_dirent_local_style(db->local_abspath, pool));
-            }
 
-          if (!err && switched && !eb->switch_relpath)
-            {
-              err = svn_error_createf(
-                         SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-                         _("Switched directory '%s' does not match "
-                           "expected URL '%s'"),
-                         svn_dirent_local_style(db->local_abspath, pool),
-                         svn_path_url_add_component2(eb->repos_root,
-                                                     db->new_relpath, pool));
-            }
-
-          if (err != NULL)
-            {
               db->already_notified = TRUE;
               do_notification(eb, db->local_abspath, svn_node_dir,
                               svn_wc_notify_update_obstruction, pool);
@@ -2330,7 +2339,7 @@ add_directory(const char *path,
       svn_wc_notify_action_t action;
 
       if (db->shadowed)
-        action = svn_wc_notify_update_add_deleted;
+        action = svn_wc_notify_update_shadowed_add;
       else if (db->obstruction_found)
         action = svn_wc_notify_exists;
       else
@@ -2784,7 +2793,7 @@ close_directory(void *dir_baton,
       svn_wc_notify_action_t action;
 
       if (db->shadowed)
-        action = svn_wc_notify_update_update_deleted;
+        action = svn_wc_notify_update_shadowed_update;
       else if (db->obstruction_found || db->add_existed)
         action = svn_wc_notify_exists;
       else
@@ -3030,8 +3039,11 @@ add_file(const char *path,
       return SVN_NO_ERROR;
     }
 
-
-  if (versioned_locally_and_present)
+  if (fb->shadowed)
+    {
+      /* Nothing to check; does not and will not exist in working copy */
+    }
+  else if (versioned_locally_and_present)
     {
       /* What to do with a versioned or schedule-add file:
 
@@ -3968,7 +3980,7 @@ close_file(void *file_baton,
    * locally there already is a file scheduled for addition, or vice versa.
    * It sees incoming symlinks as simple files and may wrongly try to offer
    * a text conflict. So flag a tree conflict here. */
-  if (fb->adding_file && fb->add_existed)
+  if (!fb->shadowed && fb->adding_file && fb->add_existed)
     {
       svn_boolean_t local_is_link = FALSE;
       svn_boolean_t incoming_is_link = FALSE;
@@ -4114,7 +4126,8 @@ close_file(void *file_baton,
   /* Now that all the state has settled, should we update the readonly
      status of the working file? The LOCK_STATE will signal what we should
      do for this node.  */
-  if (fb->new_text_base_sha1_checksum == NULL
+  if (!fb->shadowed
+      && fb->new_text_base_sha1_checksum == NULL
       && lock_state == svn_wc_notify_lock_state_unlocked)
     {
       /* If a lock was removed and we didn't update the text contents, we
@@ -4264,7 +4277,9 @@ close_file(void *file_baton,
       svn_wc_notify_action_t action = svn_wc_notify_update_update;
 
       if (fb->shadowed)
-        action = svn_wc_notify_update_add_deleted;
+        action = fb->adding_file 
+                        ? svn_wc_notify_update_shadowed_add
+                        : svn_wc_notify_update_shadowed_update;
       else if (fb->obstruction_found || fb->add_existed)
         {
           if (content_state != svn_wc_notify_state_conflicted)

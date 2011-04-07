@@ -89,7 +89,7 @@ _re_parse_summarize = re.compile("^([MAD ][M ])      (.+)\n")
 
 _re_parse_checkout = re.compile('^([RMAGCUDE_ ][MAGCUDE_ ])'
                                 '([B ])'
-                                '([C ])\s+'
+                                '([CAUD ])\s+'
                                 '(.+)')
 _re_parse_co_skipped = re.compile('^(Restored|Skipped)\s+\'(.+)\'')
 _re_parse_co_restored = re.compile('^(Restored)\s+\'(.+)\'')
@@ -460,8 +460,8 @@ class State:
 
       match = _re_parse_checkout.search(line)
       if match:
-        if match.group(3) == 'C':
-          treeconflict = 'C'
+        if match.group(3) != ' ':
+          treeconflict = match.group(3)
         else:
           treeconflict = None
         desc[to_relpath(match.group(4))] = StateItem(status=match.group(1),

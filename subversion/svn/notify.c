@@ -150,13 +150,6 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
         }
       break;
 
-    case svn_wc_notify_update_add_deleted:
-    case svn_wc_notify_update_update_deleted:
-      /* ### Before 1.7.0 these notifications were suppressed in the wc
-         ### library.. how should we notify these?
-
-         ### Fall through in deleted notification. */
-
     case svn_wc_notify_update_delete:
     case svn_wc_notify_update_external_removed:
       nb->received_some_change = TRUE;
@@ -854,6 +847,24 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
     case svn_wc_notify_tree_conflict:
       nb->tree_conflicts++;
       if ((err = svn_cmdline_printf(pool, "   C %s\n", path_local)))
+        goto print_error;
+      break;
+
+    case svn_wc_notify_update_shadowed_add:
+      nb->received_some_change = TRUE;
+      if ((err = svn_cmdline_printf(pool, "   A %s\n", path_local)))
+        goto print_error;
+      break;
+
+    case svn_wc_notify_update_shadowed_update:
+      nb->received_some_change = TRUE;
+      if ((err = svn_cmdline_printf(pool, "   U %s\n", path_local)))
+        goto print_error;
+      break;
+
+    case svn_wc_notify_update_shadowed_delete:
+      nb->received_some_change = TRUE;
+      if ((err = svn_cmdline_printf(pool, "   D %s\n", path_local)))
         goto print_error;
       break;
 
