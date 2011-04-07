@@ -11,9 +11,9 @@ details on how release lines and voting work, what kinds of bugs can
 delay a release, etc.
 
 Status of 1.6.17:
-=================
 
 Candidate changes:
+==================
 
  * r879766
    Fix issue #3498: Subversion password stores freeze Eclipse
