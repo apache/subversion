@@ -1505,10 +1505,9 @@ def wc_to_wc_copy_between_different_repos(sbox):
 
 #----------------------------------------------------------------------
 #  Regression test for issues 2101, 2020 and 3776
-@XFail()
 @Issues(2101,2020,3776)
 def wc_to_wc_copy_deleted(sbox):
-  "wc to wc copy with deleted=true items"
+  "wc to wc copy with presence=not-present items"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -1525,19 +1524,7 @@ def wc_to_wc_copy_deleted(sbox):
   expected_status.tweak('A/B/E/alpha', 'A/B/lambda', 'A/B/F', status='D ')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  # Copy to schedule=delete fails
-  exit_code, out, err = svntest.main.run_svn(1, 'cp',
-                                             os.path.join(B_path, 'E'),
-                                             os.path.join(B_path, 'F'))
-  for line in err:
-    if line.find("is scheduled for deletion") != -1:
-      break
-  else:
-    raise svntest.Failure
-  svntest.actions.run_and_verify_status(wc_dir, expected_status)
-
-
-  # Commit to get state deleted
+  # Commit to get state not-present
   expected_status.remove('A/B/E/alpha', 'A/B/lambda', 'A/B/F')
   expected_output = svntest.wc.State(wc_dir, {
     'A/B/E/alpha' : Item(verb='Deleting'),
@@ -1549,7 +1536,7 @@ def wc_to_wc_copy_deleted(sbox):
                                         expected_status,
                                         None, wc_dir)
 
-  # Copy including stuff in state deleted=true
+  # Copy including stuff in state not-present
   svntest.actions.run_and_verify_svn(None, None, [], 'copy', B_path, B2_path)
   expected_status.add({
     'A/B2'         : Item(status='A ', wc_rev='-', copied='+'),
@@ -1561,27 +1548,12 @@ def wc_to_wc_copy_deleted(sbox):
     })
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  # Stuff copied from state deleted=true is now schedule=delete.
-  # Attempts to revert the schedule=delete will fail, but should not
-  # break the wc.  It's very important that the directory revert fails
-  # since it's a placeholder rather than a full hierarchy
-  exit_code, out, err = svntest.main.run_svn(1, 'revert', '--recursive',
-                                             os.path.join(B2_path, 'F'))
-  for line in err:
-    if line.find("Error restoring text") != -1:
-      break
-  else:
-    raise svntest.Failure
-  exit_code, out, err = svntest.main.run_svn(1, 'revert',
-                                             os.path.join(B2_path, 'lambda'))
-  for line in err:
-    if line.find("Error restoring text") != -1:
-      break
-  else:
-    raise svntest.Failure
+  # Reverting the copied not-present is a no-op.
+  svntest.main.run_svn(1, 'revert', os.path.join(B2_path, 'F'))
+  svntest.main.run_svn(1, 'revert', os.path.join(B2_path, 'lambda'))
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  # Revert the entire copy including the schedule delete bits
+  # Revert the entire copy including the schedule not-present bits
   svntest.actions.run_and_verify_svn(None, None, [], 'revert', '--recursive',
                                      B2_path)
   expected_status.remove('A/B2',
@@ -1606,25 +1578,6 @@ def wc_to_wc_copy_deleted(sbox):
     'A/B2/lambda'  : Item(verb='Deleting'),
     'A/B2/F'       : Item(verb='Deleting'),
     })
-
-  ### This commit fails with a core dump. Before the commit, the rows
-  ### in WORKING_NODE are marked as "not-present" indicating that the
-  ### added node has been (schedule-)deleted. This is all fine.
-  ###
-  ### During the commit, the B2 directory is "promoted" to a BASE_NODE
-  ### indicating it now reflects what is in the repository. HOWEVER, the
-  ### not-present WORKING_NODE rows are left as not-present. Since there
-  ### is no longer a parent for those nodes in WORKING_NODE, this is an
-  ### integrity problem in the database. not-present is used to delete
-  ### subtrees of *added* nodes. "base-deleted" is used to indicate a
-  ### deletion in the BASE tree.
-  ###
-  ### In this particular situation, the proper status of "lambda" and
-  ### "F" are unclear. Some thinking needs to happen around the correct
-  ### transactional process during the commit.
-  ###
-  ### For now, this test is marked as an XFail() until we get our commit
-  ### processing fixed up.
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
