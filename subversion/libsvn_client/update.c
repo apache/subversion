@@ -118,13 +118,19 @@ update_internal(svn_revnum_t *result_rev,
                                     pool));
 
   if (!SVN_IS_VALID_REVNUM(revnum))
-    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                             _("'%s' does not exist in the repository yet,"
-                               " which makes it is impossible to update '%s'."),
-                             svn_dirent_local_style(anchor_abspath,
-                                                    pool),
-                             svn_dirent_basename(local_abspath, NULL));
+    {
+      if (ctx->notify_func2)
+        {
+          svn_wc_notify_t *nt;
 
+          nt = svn_wc_create_notify(local_abspath,
+                                    svn_wc_notify_update_skip_working_only,
+                                    pool);
+
+          ctx->notify_func2(ctx->notify_baton2, nt, pool);
+        }
+      return SVN_NO_ERROR;
+    }
 
   /* We may need to crop the tree if the depth is sticky */
   if (depth_is_sticky && depth < svn_depth_infinity)
