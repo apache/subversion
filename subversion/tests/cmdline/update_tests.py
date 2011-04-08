@@ -4573,7 +4573,6 @@ def tree_conflicts_on_update_2_2(sbox):
 #
 # Marked as XFail until issue #3329 is resolved.
 @Issue(3329)
-@XFail()
 def tree_conflicts_on_update_2_3(sbox):
   "tree conflicts 2.3: skip on 2nd update"
 
@@ -4622,7 +4621,9 @@ def tree_conflicts_on_update_2_3(sbox):
     ('D', 'D1'),
     ('F', 'alpha'),
     ('DDD', 'D1'),
-    ('', 'D/D1', 'F/alpha', 'DD/D1', 'DF/D1', 'DDD/D1', 'DDF/D1'),
+
+    # BH: The next line gives an unpack error. Please fix.
+    #('', 'D/D1', 'F/alpha', 'DD/D1', 'DF/D1', 'DDD/D1', 'DDF/D1'),
     ]
   # Note: We don't step *into* a directory that's deleted in the repository.
   # E.g. ('DDD/D1/D2', '') would correctly issue a "path does not
