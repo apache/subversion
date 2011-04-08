@@ -1773,30 +1773,51 @@ node_already_conflicted(svn_boolean_t *conflicted,
 }
 
 
-/* Delete PATH from its immediate parent PARENT_PATH, in the edit
- * represented by EB. PATH is relative to EB->anchor.
- * PARENT_PATH is relative to the current working directory.
- *
- * THEIR_RELPATH is the deleted node's repository relative path on the
- * source-right side, the side that the target should become after the
- * update. In other words, that's the new URL the node would have if it
- * were not deleted.
- *
- * Perform all allocations in POOL.
- */
+/* An svn_delta_editor_t function. */
 static svn_error_t *
-do_entry_deletion(struct edit_baton *eb,
-                  const char *local_abspath,
-                  const char *their_relpath,
-                  svn_boolean_t shadowed,
-                  apr_pool_t *pool)
+delete_entry(const char *path,
+             svn_revnum_t revision,
+             void *parent_baton,
+             apr_pool_t *pool)
 {
-  svn_wc__db_status_t status;
+  struct dir_baton *pb = parent_baton;
+  struct edit_baton *eb = pb->edit_baton;
+  const char *base = svn_relpath_basename(path, NULL);
+  const char *local_abspath;
+  const char *their_relpath;
   svn_wc__db_kind_t kind;
   svn_boolean_t conflicted;
   svn_wc_conflict_description2_t *tree_conflict = NULL;
-  const char *dir_abspath = svn_dirent_dirname(local_abspath, pool);
+  const char *dir_abspath;
   svn_skel_t *work_item;
+  svn_wc__db_status_t status;
+
+  local_abspath = svn_dirent_join(pb->local_abspath, base, pool);
+  dir_abspath = svn_dirent_dirname(local_abspath, pool);
+  their_relpath = svn_relpath_join(pb->new_relpath, base, pool);
+
+  if (pb->skip_this)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(check_path_under_root(pb->local_abspath, base, pool));
+
+  /* Detect obstructing working copies */
+  {
+    svn_boolean_t is_root;
+
+    SVN_ERR(svn_wc__db_is_wcroot(&is_root, eb->db, local_abspath,
+                                 pool));
+
+    if (is_root)
+      {
+        /* Just skip this node; a future update will handle it */
+        remember_skipped_tree(eb, local_abspath, pool);
+        do_notification(eb, local_abspath, svn_node_unknown,
+                        svn_wc_notify_update_skip_obstruction, pool);
+
+        return SVN_NO_ERROR;
+      }
+  }
 
   SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -1843,7 +1864,7 @@ do_entry_deletion(struct edit_baton *eb,
 
   /* Check for conflicts only when we haven't already recorded
    * a tree-conflict on a parent node. */
-  if (!shadowed)
+  if (!pb->shadowed)
     SVN_ERR(check_tree_conflict(&tree_conflict, eb, local_abspath,
                                 status, kind, TRUE,
                                 svn_wc_conflict_action_delete, svn_node_none,
@@ -1939,7 +1960,7 @@ do_entry_deletion(struct edit_baton *eb,
       svn_wc_notify_action_t action = svn_wc_notify_update_delete;
       svn_node_kind_t node_kind;
 
-      if (shadowed)
+      if (pb->shadowed)
         action = svn_wc_notify_update_shadowed_delete;
 
       if (kind == svn_wc__db_kind_dir)
@@ -1952,33 +1973,6 @@ do_entry_deletion(struct edit_baton *eb,
 
   return SVN_NO_ERROR;
 }
-
-
-/* An svn_delta_editor_t function. */
-static svn_error_t *
-delete_entry(const char *path,
-             svn_revnum_t revision,
-             void *parent_baton,
-             apr_pool_t *pool)
-{
-  struct dir_baton *pb = parent_baton;
-  const char *base = svn_relpath_basename(path, NULL);
-  const char *local_abspath;
-  const char *their_relpath;
-
-  local_abspath = svn_dirent_join(pb->local_abspath, base, pool);
-
-  if (pb->skip_this)
-    return SVN_NO_ERROR;
-
-  SVN_ERR(check_path_under_root(pb->local_abspath, base, pool));
-
-  their_relpath = svn_relpath_join(pb->new_relpath, base, pool);
-
-  return do_entry_deletion(pb->edit_baton, local_abspath,
-                           their_relpath, pb->shadowed, pool);
-}
-
 
 /* An svn_delta_editor_t function. */
 static svn_error_t *
@@ -2006,10 +2000,7 @@ add_directory(const char *path,
   *child_baton = db;
 
   if (db->skip_this)
-    {
-      db->bump_info->skipped = TRUE;
-      return SVN_NO_ERROR;
-    }
+    return SVN_NO_ERROR;
 
   SVN_ERR(check_path_under_root(pb->local_abspath, db->name, pool));
 
@@ -2296,15 +2287,33 @@ open_directory(const char *path,
   *child_baton = db;
 
   if (db->skip_this)
-    {
-      db->bump_info->skipped = TRUE;
-      return SVN_NO_ERROR;
-    }
+    return SVN_NO_ERROR;
+
+  SVN_ERR(check_path_under_root(pb->local_abspath, db->name, pool));
+
+  /* Detect obstructing working copies */
+  {
+    svn_boolean_t is_root;
+
+    SVN_ERR(svn_wc__db_is_wcroot(&is_root, eb->db, db->local_abspath,
+                                 pool));
+
+    if (is_root)
+      {
+        /* Just skip this node; a future update will handle it */
+        remember_skipped_tree(eb, db->local_abspath, pool);
+        db->skip_this = TRUE;
+        db->already_notified = TRUE;
+
+        do_notification(eb, db->local_abspath, svn_node_dir,
+                        svn_wc_notify_update_skip_obstruction, pool);
+
+        return SVN_NO_ERROR;
+      }
+  }
 
   /* We should have a write lock on every directory touched.  */
   SVN_ERR(svn_wc__write_check(eb->db, db->local_abspath, pool));
-
-  SVN_ERR(check_path_under_root(pb->local_abspath, db->name, pool));
 
   SVN_ERR(svn_wc__db_read_info(&status, &wc_kind, &db->old_revision, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL,
@@ -3086,6 +3095,27 @@ open_file(const char *path,
     return SVN_NO_ERROR;
 
   SVN_ERR(check_path_under_root(pb->local_abspath, fb->name, scratch_pool));
+
+  /* Detect obstructing working copies */
+  {
+    svn_boolean_t is_root;
+
+    SVN_ERR(svn_wc__db_is_wcroot(&is_root, eb->db, fb->local_abspath,
+                                 pool));
+
+    if (is_root)
+      {
+        /* Just skip this node; a future update will handle it */
+        remember_skipped_tree(eb, fb->local_abspath, pool);
+        fb->skip_this = TRUE;
+        fb->already_notified = TRUE;
+
+        do_notification(eb, fb->local_abspath, svn_node_file,
+                        svn_wc_notify_update_skip_obstruction, pool);
+
+        return SVN_NO_ERROR;
+      }
+  }
 
   SVN_ERR(svn_io_check_path(fb->local_abspath, &kind, scratch_pool));
 
