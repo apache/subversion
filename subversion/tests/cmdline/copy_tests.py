@@ -4755,7 +4755,7 @@ def mixed_rev_copy_del(sbox):
     'A/B/E_copy'      : Item(verb='Adding'),
     'A/B/E_copy/beta' : Item(verb='Deleting'),
     })
-  expected_status.tweak('A/B/E_copy', wc_rev=3, copied=None)
+  expected_status.tweak('A/B/E_copy', wc_rev=3, copied=None, status='  ')
   expected_status.remove('A/B/E_copy/alpha', 'A/B/E_copy/beta')
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
