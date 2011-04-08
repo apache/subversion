@@ -1592,12 +1592,6 @@ def forced_switch_failures(sbox):
     'A/D/H/I'           : Item(status='A '),
   })
 
-  # When running the tests over ra_serf, 'A/D/G/omega' and 'A/D/G/psi' do
-  # manage to get added before the forced switch above errors out.  So don't
-  # expect those two paths to appear in the output of the final update.
-  if svntest.main.is_ra_type_dav_serf():
-    expected_output.remove('A/D/G/omega', 'A/D/G/psi')
-    
   expected_disk.remove('A/D/G/tau', 'A/D/G/rho', 'A/D/G/pi')
   expected_disk.add({
     'A/D/H/I'           : Item(),
