@@ -83,7 +83,7 @@ _re_parse_status = re.compile('^([?!MACDRUGI_~ ][MACDRUG_ ])'
                               '((?P<wc_rev>\d+|-|\?) +(\d|-|\?)+ +(\S+) +)?'
                               '(?P<path>.+)$')
 
-_re_parse_skipped = re.compile("^Skipped.* '(.+)'\n")
+_re_parse_skipped = re.compile("^Skipped[^']* '(.+)'( --.*)?\n")
 
 _re_parse_summarize = re.compile("^([MAD ][M ])      (.+)\n")
 
@@ -91,7 +91,7 @@ _re_parse_checkout = re.compile('^([RMAGCUDE_ ][MAGCUDE_ ])'
                                 '([B ])'
                                 '([CAUD ])\s+'
                                 '(.+)')
-_re_parse_co_skipped = re.compile('^(Restored|Skipped)\s+\'(.+)\'')
+_re_parse_co_skipped = re.compile('^(Restored|Skipped)\s+\'(.+)\'( --.*)?')
 _re_parse_co_restored = re.compile('^(Restored)\s+\'(.+)\'')
 
 # Lines typically have a verb followed by whitespace then a path.

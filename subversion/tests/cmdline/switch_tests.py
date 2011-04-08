@@ -1553,11 +1553,19 @@ def forced_switch_failures(sbox):
   # Try the forced switch.  A/D/G/I obstructs the dir A/D/G/I coming
   # from the repos, causing an error.
   # svn switch --force url/A/D/H A/D/G
-  expected_error = ('Failed to add directory.*' + re.escape(A_D_G_I) +
-                    '.*a separate working copy.*already exists')
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G/chi'         : Item(status='A '),
+    'A/D/G/tau'         : Item(status='D '),
+    'A/D/G/omega'       : Item(status='A '),
+    'A/D/G/psi'         : Item(status='A '),
+    'A/D/G/I'           : Item(verb='Skipped'),
+    'A/D/G/rho'         : Item(status='D '),
+    'A/D/G/pi'          : Item(status='D '),
+  })
 
-  actions.run_and_verify_switch(wc_dir, A_D_G, url_A_D_H, None, None, None,
-                                expected_error, None, None, None, None,
+  actions.run_and_verify_switch(wc_dir, A_D_G, url_A_D_H, expected_output,
+                                None, None, None,
+                                None, None, None, None,
                                 False, '--force', '--ignore-ancestry')
 
   # Delete all three obstructions and finish the update.
@@ -1580,9 +1588,7 @@ def forced_switch_failures(sbox):
   # svn up
   expected_output = svntest.wc.State(wc_dir, {
     'A/C/H/I'           : Item(status='A '),
-    'A/D/G/omega'       : Item(status='A '),
     'A/D/G/I'           : Item(status='A '),
-    'A/D/G/psi'         : Item(status='A '),
     'A/D/H/I'           : Item(status='A '),
   })
 
