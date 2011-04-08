@@ -1638,6 +1638,7 @@ add_absent_excluded_not_present_node(svn_wc__db_t *db,
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
   insert_base_baton_t ibb;
+  const char *dir_abspath, *name;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(repos_relpath != NULL);
@@ -1648,9 +1649,18 @@ add_absent_excluded_not_present_node(svn_wc__db_t *db,
                  || status == svn_wc__db_status_excluded
                  || status == svn_wc__db_status_not_present);
 
+  /* These absent presence nodes are only useful below a parent node that is
+     present. To avoid problems with working copies obstructing the child
+     we calculate the wcroot and local_relpath of the parent and then add
+     our own relpath. */
+
+  svn_dirent_split(&dir_abspath, &name, local_abspath, scratch_pool);
+
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
-                              local_abspath, scratch_pool, scratch_pool));
+                              dir_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
+
+  local_relpath = svn_relpath_join(local_relpath, name, scratch_pool);
 
   blank_ibb(&ibb);
 
