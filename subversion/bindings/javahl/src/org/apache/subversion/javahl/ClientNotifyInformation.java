@@ -486,7 +486,7 @@ public class ClientNotifyInformation extends EventObject
         update_shadowed_update ("update shadowed update"),
 
         /** Applying a shadowed delete */
-        update_shadowed_update ("update shadowed delete"),
+        update_shadowed_delete ("update shadowed delete"),
 
         /** The mergeinfo on path was updated.  */
         merge_record_info   ("merge record info"),
