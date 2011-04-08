@@ -2054,6 +2054,37 @@ add_directory(const char *path,
 
       versioned_locally_and_present = FALSE;
     }
+  else if (wc_kind == svn_wc__db_kind_dir
+           && status == svn_wc__db_status_normal)
+    {
+      /* !! We found the root of a separate working copy obstructing the wc !!
+
+         If the directory would be part of our own working copy then
+         we wouldn't have been called as an add_directory().
+
+         The only thing we can do is add a not-present node, to allow
+         a future update to bring in the new files when the problem is
+         resolved.  Note that svn_wc__db_base_add_not_present_node()
+         explicitly adds the node into the parent's node database. */
+
+      SVN_ERR(svn_wc__db_base_add_not_present_node(eb->db, db->local_abspath,
+                                                   db->new_relpath,
+                                                   eb->repos_root,
+                                                   eb->repos_uuid,
+                                                   *eb->target_revision,
+                                                   svn_wc__db_kind_file,
+                                                   NULL, NULL,
+                                                   pool));
+
+      remember_skipped_tree(eb, db->local_abspath, pool);
+      db->skip_this = TRUE;
+      db->already_notified = TRUE;
+
+      do_notification(eb, db->local_abspath, svn_node_dir,
+                      svn_wc_notify_update_skip_obstruction, pool);
+
+      return SVN_NO_ERROR;
+    }
   else if (wc_kind == svn_wc__db_kind_unknown)
     versioned_locally_and_present = FALSE; /* Tree conflict ACTUAL-only node */
   else
@@ -2116,7 +2147,6 @@ add_directory(const char *path,
 
          A dir added with history is a tree conflict. */
 
-      svn_boolean_t local_is_dir;
       svn_boolean_t local_is_non_dir;
       svn_wc__db_status_t add_status = svn_wc__db_status_normal;
 
@@ -2128,49 +2158,9 @@ add_directory(const char *path,
                                          pool, pool));
 
 
-      /* Is there something that is a file? */
-      local_is_dir = (wc_kind == svn_wc__db_kind_dir
-                      && status != svn_wc__db_status_deleted);
-
       /* Is there *something* that is not a dir? */
       local_is_non_dir = (wc_kind != svn_wc__db_kind_dir
                           && status != svn_wc__db_status_deleted);
-
-      if (local_is_dir)
-        {
-          const char *wcroot_abspath;
-
-          SVN_ERR(svn_wc__db_get_wcroot(&wcroot_abspath, eb->db,
-                                        db->local_abspath, pool, pool));
-
-          if (! strcmp(wcroot_abspath, db->local_abspath))
-            {
-              /* Problem: We have a separate working copy in place where
-                 we would like to add a new node.
-
-                 Any change to this node would change the sub-working copy
-                 instead of our own working copy!!!
-
-                 So, the only safe thing to do is to return with an error. A
-                 future update will resolve this problem, because the
-                 parent directory will be marked incomplete.
-               */
-
-              /* ### In 1.6 we provided a bit more information on
-                     what kind of working copy was found */
-              err = svn_error_createf(
-                         SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-                         _("Failed to add directory '%s': a separate "
-                           "working copy with the same name already exists"),
-                         svn_dirent_local_style(db->local_abspath, pool));
-
-              db->already_notified = TRUE;
-              do_notification(eb, db->local_abspath, svn_node_dir,
-                              svn_wc_notify_update_obstruction, pool);
-
-              return svn_error_return(err);
-            }
-        }
 
       /* Do tree conflict checking if
        *  - if there is a local copy.
@@ -2179,20 +2169,10 @@ add_directory(const char *path,
        *
        * During switch, local adds at the same path as incoming adds get
        * "lost" in that switching back to the original will no longer have the
-       * local add. So switch always alerts the user with a tree conflict.
-       *
-       * Allow pulling absent/exluded/not_present nodes back in.
-       *
-       * ### We would also like to be checking copyfrom infos to not flag tree
-       * conflicts on two copies with identical history. But at the time of
-       * writing, add_directory() does not get any copyfrom information. */
-      if (! db->shadowed
-          && (eb->switch_relpath != NULL
-              || local_is_non_dir
-              || add_status == svn_wc__db_status_copied
-              || add_status == svn_wc__db_status_moved_here
-             )
-         )
+       * local add. So switch always alerts the user with a tree conflict. */
+      if (eb->switch_relpath != NULL
+          || local_is_non_dir
+          || add_status != svn_wc__db_status_added)
         {
           SVN_ERR(check_tree_conflict(&tree_conflict, eb,
                                       db->local_abspath,
@@ -2201,18 +2181,10 @@ add_directory(const char *path,
                                       svn_node_dir, db->new_relpath, pool));
         }
 
-
       if (tree_conflict == NULL)
-        {
-          /* We have a node in WORKING and we've decided not to flag a
-           * conflict, so merge it with the incoming add. */
-          db->add_existed = TRUE;
-        }
+        db->add_existed = TRUE; /* Take over WORKING */
       else
-        {
-          /* Add the node as deleted */
-          db->shadowed = TRUE;
-        }
+        db->shadowed = TRUE; /* Only update BASE */
     }
   else if (kind != svn_node_none)
     {
@@ -2899,6 +2871,39 @@ add_file(const char *path,
 
       versioned_locally_and_present = FALSE;
     }
+  else if (wc_kind == svn_wc__db_kind_dir
+           && status == svn_wc__db_status_normal)
+    {
+      /* !! We found the root of a separate working copy obstructing the wc !!
+
+         If the directory would be part of our own working copy then
+         we wouldn't have been called as an add_file().
+
+         The only thing we can do is add a not-present node, to allow
+         a future update to bring in the new files when the problem is
+         resolved.  Note that svn_wc__db_base_add_not_present_node()
+         explicitly adds the node into the parent's node database. */
+
+      SVN_ERR(svn_wc__db_base_add_not_present_node(eb->db, fb->local_abspath,
+                                                   fb->new_relpath,
+                                                   eb->repos_root,
+                                                   eb->repos_uuid,
+                                                   *eb->target_revision,
+                                                   svn_wc__db_kind_file,
+                                                   NULL, NULL,
+                                                   pool));
+
+      remember_skipped_tree(eb, fb->local_abspath, pool);
+      fb->skip_this = TRUE;
+      fb->already_notified = TRUE;
+
+      do_notification(eb, fb->local_abspath, svn_node_file,
+                      svn_wc_notify_update_skip_obstruction, scratch_pool);
+
+      svn_pool_destroy(scratch_pool);
+
+      return SVN_NO_ERROR;
+    }
   else if (wc_kind == svn_wc__db_kind_unknown)
     versioned_locally_and_present = FALSE; /* Tree conflict ACTUAL-only node */
   else
@@ -2979,46 +2984,17 @@ add_file(const char *path,
       local_is_file = (wc_kind == svn_wc__db_kind_file
                        || wc_kind == svn_wc__db_kind_symlink);
 
-      if (local_is_file)
-        {
-          svn_boolean_t wc_root;
-          svn_boolean_t switched;
-
-          SVN_ERR(svn_wc__check_wc_root(&wc_root, NULL, &switched,
-                                        eb->db, fb->local_abspath, scratch_pool));
-
-          err = NULL;
-
-          if (switched && !eb->switch_relpath)
-            {
-              err = svn_error_createf(
-                         SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-                         _("Switched file '%s' does not match "
-                           "expected URL '%s'"),
-                         svn_dirent_local_style(fb->local_abspath, pool),
-                         svn_path_url_add_component2(eb->repos_root,
-                                                     fb->new_relpath, pool));
-            }
-
-          if (err != NULL)
-            {
-              fb->already_notified = TRUE;
-              do_notification(eb, fb->local_abspath, svn_node_file,
-                              svn_wc_notify_update_obstruction, scratch_pool);
-
-              svn_pool_clear(scratch_pool);
-              return svn_error_return(err);
-            }
-        }
-
-      /* Don't perform tree conflict checking if
-       *  - if we are in a deleted subtree
-       *  - if this is a normal file addition and we  we are switching
-       */
-      if (! fb->shadowed
-          && (eb->switch_relpath != NULL
-              || !local_is_file
-              || status != svn_wc__db_status_added))
+      /* Do tree conflict checking if
+       *  - if there is a local copy.
+       *  - if this is a switch operation
+       *  - the node kinds mismatch
+       *
+       * During switch, local adds at the same path as incoming adds get
+       * "lost" in that switching back to the original will no longer have the
+       * local add. So switch always alerts the user with a tree conflict. */
+      if (eb->switch_relpath != NULL
+          || !local_is_file
+          || status != svn_wc__db_status_added)
         {
           SVN_ERR(check_tree_conflict(&tree_conflict, eb,
                                       fb->local_abspath,
@@ -3029,14 +3005,9 @@ add_file(const char *path,
         }
 
       if (tree_conflict == NULL)
-        /* We have a node in WORKING and we've decided not to flag a
-         * conflict, so merge it with the incoming add. */
-        fb->add_existed = TRUE;
+        fb->add_existed = TRUE; /* Take over WORKING */
       else
-        /* We have a tree conflict of a local add vs. an incoming add.
-         * We want to update BASE only, scheduling WORKING as a replace
-         * of BASE so that WORKING/ACTUAL stay unchanged. */
-        fb->shadowed = TRUE;
+        fb->shadowed = TRUE; /* Only update BASE */
 
     }
   else if (kind != svn_node_none)
@@ -3048,6 +3019,7 @@ add_file(const char *path,
        * if unversioned obstructions are allowed. */
       if (! (kind == svn_node_file && eb->allow_unver_obstructions))
         {
+          /* Bring in the node as deleted */ /* ### Obstructed Conflict */
           fb->shadowed = TRUE;
 
           /* Mark a conflict */

@@ -1099,9 +1099,10 @@ typedef enum svn_wc_notify_action_t
   /** Starting an update operation.  @since New in 1.7. */
   svn_wc_notify_update_started,
 
-  /** An update tried to add a file or directory at path but an
-   * unversioned obstruction was found.  @since New in 1.7. */
-  svn_wc_notify_update_obstruction,
+  /** An update tried to add a file or directory at a path where
+   * a separate working copy was found.  @since New in 1.7. */
+  svn_wc_notify_update_skip_obstruction,
+
   /** An update operation removed an external working copy.
    * @since New in 1.7. */
   svn_wc_notify_update_external_removed,

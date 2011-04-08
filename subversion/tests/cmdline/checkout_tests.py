@@ -473,19 +473,27 @@ def forced_checkout_with_versioned_obstruction(sbox):
   # Checkout the entire first repos into the fresh dir.  This should
   # fail because A is already checked out.  (Ideally, we'd silently
   # incorporate A's working copy into its parent working copy.)
-  exit_code, sout, serr = svntest.actions.run_and_verify_svn(
-    "Expected error during co", None, svntest.verify.AnyOutput,
-    "co", "--force", repo_url, fresh_wc_dir)
-
-  test_stderr("Failed to add directory '.*A'.*already exists", serr)
+  expected_output = svntest.wc.State(fresh_wc_dir, {
+    'iota'              : Item(status='A '),
+    'A'                 : Item(verb='Skipped'),
+  })
+  expected_wc = svntest.main.greek_state.copy()
+  svntest.actions.run_and_verify_checkout(repo_url, fresh_wc_dir,
+                                          expected_output, expected_wc,
+                                          None, None, None, None,
+                                          '--force')
 
   # Checkout the entire first repos into the other dir.  This should
   # fail because it's a different repository.
-  exit_code, sout, serr = svntest.actions.run_and_verify_svn(
-    "Expected error during co", None, svntest.verify.AnyOutput,
-    "co", "--force", repo_url, other_wc_dir)
-
-  test_stderr("(Failed to add directory|UUID mismatch:).*'.*A'", serr)
+  expected_output = svntest.wc.State(other_wc_dir, {
+    'iota'              : Item(status='A '),
+    'A'                 : Item(verb='Skipped'),
+  })
+  expected_wc = svntest.main.greek_state.copy()
+  svntest.actions.run_and_verify_checkout(repo_url, other_wc_dir,
+                                          expected_output, expected_wc,
+                                          None, None, None, None,
+                                          '--force')
 
   #ensure that other_wc_dir_A is not affected by this forced checkout.
   svntest.actions.run_and_verify_svn("empty status output", None,

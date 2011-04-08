@@ -2313,13 +2313,12 @@ def forced_update_failures(sbox):
     expected_output, expected_disk, None, None, None, None)
 
   # svn up --force wc_dir_backup/A/C
-  expected_error = (
-    "svn: E155000: Failed to add directory .*I.*working copy with the same name "
-    + "already exists"
-  )
+  expected_output = svntest.wc.State(wc_dir_backup, {
+    'A/C/I'             : Item(verb='Skipped'),
+  })
 
-  actions.run_and_verify_update(wc_dir_backup, None, None, None,
-    expected_error, None, None, None, None, False, '--force', backup_A_C)
+  actions.run_and_verify_update(wc_dir_backup, expected_output, None, None,
+    None, None, None, None, None, False, '--force', backup_A_C)
 
 
 #----------------------------------------------------------------------
