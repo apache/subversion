@@ -734,15 +734,13 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
 /* Schedule the single node at LOCAL_ABSPATH, of kind KIND, for addition in
  * its parent directory in the WC.  It will have no properties. */
 static svn_error_t *
-add_from_disk(svn_wc_context_t *wc_ctx,
+add_from_disk(svn_wc__db_t *db,
               const char *local_abspath,
               svn_node_kind_t kind,
               svn_wc_notify_func2_t notify_func,
               void *notify_baton,
               apr_pool_t *scratch_pool)
 {
-  svn_wc__db_t *db = wc_ctx->db;
-
   if (kind == svn_node_file)
     {
       SVN_ERR(svn_wc__db_op_add_file(db, local_abspath, NULL, scratch_pool));
@@ -751,12 +749,18 @@ add_from_disk(svn_wc_context_t *wc_ctx,
     {
       SVN_ERR(svn_wc__db_op_add_directory(db, local_abspath, NULL,
                                           scratch_pool));
-      /* Re-use the public API since it handles notifications. */
-      SVN_ERR(svn_wc_set_changelist2(wc_ctx, local_abspath, NULL,
-                                     NULL, NULL /* cancel_func and baton */,
-                                     notify_func, notify_baton,
-                                     scratch_pool));
+
+      /* Remove any existing changelist on the prior node. */
+      SVN_ERR(svn_wc__db_op_set_changelist(db, local_abspath, NULL, NULL,
+                                           svn_depth_empty, scratch_pool));
+
+      /* And tell someone what we've done. */
+      if (notify_func)
+        SVN_ERR(svn_wc__db_changelist_list_notify(notify_func, notify_baton,
+                                                  db, local_abspath,
+                                                  scratch_pool));
     }
+
   return SVN_NO_ERROR;
 }
 
@@ -1086,8 +1090,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
 
   if (!copyfrom_url)  /* Case 2a: It's a simple add */
     {
-      SVN_ERR(add_from_disk(wc_ctx, local_abspath, kind, 
-                            notify_func, notify_baton,
+      SVN_ERR(add_from_disk(db, local_abspath, kind, notify_func, notify_baton,
                             scratch_pool));
       if (kind == svn_node_dir && !db_row_exists)
         {
@@ -1172,7 +1175,7 @@ svn_wc_add_from_disk(svn_wc_context_t *wc_ctx,
                              NULL, SVN_INVALID_REVNUM, scratch_pool));
   SVN_ERR(check_can_add_to_parent(NULL, NULL, wc_ctx->db, local_abspath,
                                   scratch_pool, scratch_pool));
-  SVN_ERR(add_from_disk(wc_ctx, local_abspath, kind, 
+  SVN_ERR(add_from_disk(wc_ctx->db, local_abspath, kind, 
                         notify_func, notify_baton,
                         scratch_pool));
 
