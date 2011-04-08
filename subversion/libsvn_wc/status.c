@@ -2484,6 +2484,7 @@ internal_status(svn_wc_status3_t **status,
   const char *parent_repos_relpath;
   const char *parent_repos_root_url;
   svn_wc__db_status_t node_status;
+  svn_boolean_t is_root = FALSE;
   svn_error_t *err;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
@@ -2515,7 +2516,12 @@ internal_status(svn_wc_status3_t **status,
                                                  FALSE /* is_ignored */,
                                                  result_pool, scratch_pool));
 
-  if (!svn_dirent_is_root(local_abspath, strlen(local_abspath)))
+  if (svn_dirent_is_root(local_abspath, strlen(local_abspath)))
+    is_root = TRUE;
+  else
+    SVN_ERR(svn_wc__db_is_wcroot(&is_root, db, local_abspath, scratch_pool));
+
+  if (!is_root)
     {
       svn_wc__db_status_t parent_status;
       const char *parent_abspath = svn_dirent_dirname(local_abspath,
