@@ -609,13 +609,6 @@ make_dir_baton(struct dir_baton **d_p,
 
 /* Forward declarations. */
 static svn_error_t *
-do_entry_deletion(struct edit_baton *eb,
-                  const char *local_abspath,
-                  const char *their_url,
-                  svn_boolean_t shadowed,
-                  apr_pool_t *pool);
-
-static svn_error_t *
 already_in_a_tree_conflict(svn_boolean_t *conflicted,
                            svn_wc__db_t *db,
                            const char *local_abspath,
@@ -687,13 +680,25 @@ complete_directory(struct edit_baton *eb,
 
       if (!err && status == svn_wc__db_status_excluded)
         {
+          svn_skel_t *work_item;
           /* There is a small chance that the explicit target of an update/
              switch is gone in the repository, in that specific case the node
              hasn't been re-added to the BASE tree by this update. If so, we
              should get rid of this excluded node now. */
 
-          SVN_ERR(do_entry_deletion(eb, eb->target_abspath, NULL, FALSE,
+          /* Issue a wq operation to delete the BASE_NODE data and to delete
+             actual nodes based on that from disk, but leave any WORKING_NODES
+           */
+          SVN_ERR(svn_wc__wq_build_base_remove(&work_item,
+                                               eb->db, eb->target_abspath,
+                                               FALSE,
+                                               scratch_pool, scratch_pool));
+          SVN_ERR(svn_wc__db_wq_add(eb->db, eb->target_abspath, work_item,
                                     scratch_pool));
+
+          SVN_ERR(svn_wc__wq_run(eb->db, eb->target_abspath,
+                                 eb->cancel_func, eb->cancel_baton,
+                                 scratch_pool));
         }
 
       return SVN_NO_ERROR;
