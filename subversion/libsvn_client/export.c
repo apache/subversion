@@ -982,6 +982,9 @@ close_file(void *file_baton,
   actual_checksum = svn_checksum__from_digest(fb->text_digest,
                                               svn_checksum_md5, pool);
 
+  /* Note that text_digest can be NULL when talking to certain repositories.
+     In that case text_checksum will be NULL and the following match code
+     will note that the checksums match */
   if (!svn_checksum_match(text_checksum, actual_checksum))
     return svn_checksum_mismatch_err(text_checksum, actual_checksum, pool,
                                      _("Checksum mismatch for '%s'"),
