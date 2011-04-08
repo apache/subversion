@@ -1103,6 +1103,11 @@ typedef enum svn_wc_notify_action_t
    * a separate working copy was found.  @since New in 1.7. */
   svn_wc_notify_update_skip_obstruction,
 
+  /** An explicit update tried to update a file or directory that
+   * doesn't live in the repository and can't be brought in. 
+   * @since New in 1.7. */
+  svn_wc_notify_update_skip_working_only,
+
   /** An update operation removed an external working copy.
    * @since New in 1.7. */
   svn_wc_notify_update_external_removed,

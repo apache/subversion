@@ -5359,12 +5359,20 @@ def update_nonexistent_child_of_copy(sbox):
   svntest.main.run_svn(None, 'copy', 'A', 'A2')
 
   # Try updating a nonexistent path in the copied dir.
-  expected_error = "svn: E200009: '.*' does not exist in the repository yet"
-  svntest.main.run_svn(expected_error, 'update', os.path.join('A2', 'nonexistent'))
+  expected_output = svntest.wc.State('A2', {
+    'nonexistent'             : Item(verb='Skipped'),
+  })
+  svntest.actions.run_and_verify_update(os.path.join('A2', 'nonexistent'),
+                                        expected_output, None, None, None)
 
   # Try updating a deleted path in the copied dir.
   svntest.main.run_svn(None, 'delete', os.path.join('A2', 'mu'))
-  svntest.main.run_svn(expected_error, 'update', os.path.join('A2', 'mu'))
+
+  expected_output = svntest.wc.State('A2', {
+    'mu'             : Item(verb='Skipped'),
+  })
+  svntest.actions.run_and_verify_update(os.path.join('A2', 'mu'),
+                                        expected_output, None, None, None)
   if os.path.exists('A2/mu'):
     raise svntest.Failure("A2/mu improperly revived")
 

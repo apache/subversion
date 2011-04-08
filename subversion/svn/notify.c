@@ -156,6 +156,13 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
             path_local)))
         goto print_error;
       break;
+    case svn_wc_notify_update_skip_working_only:
+      nb->skipped_paths++;
+      if ((err = svn_cmdline_printf(
+            pool, _("Skipped '%s' -- Has no versioned parent\n"),
+            path_local)))
+        goto print_error;
+      break;
     case svn_wc_notify_update_delete:
     case svn_wc_notify_update_external_removed:
       nb->received_some_change = TRUE;
