@@ -2512,12 +2512,6 @@ svn_wc__db_temp_wcroot_tempdir(const char **temp_dir_abspath,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
-svn_error_t *
-svn_wc__db_temp_op_set_base_incomplete(svn_wc__db_t *db,
-                                       const char *local_dir_abspath,
-                                       svn_boolean_t incomplete,
-                                       apr_pool_t *scratch_pool);
-
 /* Update the BASE_NODE of directory LOCAL_ABSPATH to be NEW_REPOS_RELPATH
    at revision NEW_REV with status incomplete. */
 svn_error_t *
@@ -2526,6 +2520,15 @@ svn_wc__db_temp_op_start_directory_update(svn_wc__db_t *db,
                                           const char *new_repos_relpath,
                                           svn_revnum_t new_rev,
                                           apr_pool_t *scratch_pool);
+
+/* Marks a directory update started with
+   svn_wc__db_temp_op_start_directory_update as completed, by removing
+   the incomplete status */
+svn_error_t *
+svn_wc__db_temp_op_end_directory_update(svn_wc__db_t *db,
+                                        const char *local_dir_abspath,
+                                        apr_pool_t *scratch_pool);
+
 
 /* Copy the base tree at LOCAL_ABSPATH into the working tree as copy,
    leaving any subtree additions and copies as-is.  This allows the

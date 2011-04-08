@@ -705,8 +705,8 @@ complete_directory(struct edit_baton *eb,
     }
 
   /* Mark THIS_DIR complete. */
-  SVN_ERR(svn_wc__db_temp_op_set_base_incomplete(eb->db, local_abspath, FALSE,
-                                                 scratch_pool));
+  SVN_ERR(svn_wc__db_temp_op_end_directory_update(eb->db, local_abspath,
+                                                  scratch_pool));
 
   if (eb->depth_is_sticky)
     {
