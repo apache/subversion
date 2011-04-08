@@ -467,20 +467,26 @@ public class ClientNotifyInformation extends EventObject
           * which is unable to be operated on.  */
         failed_external ("failed external"),
 
-        /** An update tried to add a file or directory at path but an
-          * unversioned obstruction was found.  */
-        update_obstruction  ("update obstruction"),
+        /** Starting an update operation */
+        update_started ("update started"),
+
+        /** Skipping an obstruction working copy */
+        update_skip_obstruction ("update skip obstruction"),
+
+        /** Skipping a working only node */
+        update_skip_working_only ("update skip working only"),
 
         /** An update operation removed an external working copy.  */
         update_external_removed ("update external removed"),
 
-        /** A node below a deleted and tree conflicted directory was added
-          *  during update.  */
-        update_add_deleted  ("update add deleted"),
+        /** Applying a shadowed add */
+        update_shadowed_add ("update shadowed add"),
 
-        /** A node below a deleted and tree conflicted directory was updated.
-          */
-        update_update_deleted   ("update modified deleted"),
+        /** Applying a shadowed update */
+        update_shadowed_update ("update shadowed update"),
+
+        /** Applying a shadowed delete */
+        update_shadowed_update ("update shadowed delete"),
 
         /** The mergeinfo on path was updated.  */
         merge_record_info   ("merge record info"),
