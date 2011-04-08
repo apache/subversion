@@ -2465,14 +2465,12 @@ close_directory(void *dir_baton,
   svn_revnum_t new_changed_rev;
   apr_time_t new_changed_date;
   const char *new_changed_author;
+  apr_pool_t *scratch_pool = db->pool;
 
   /* Skip if we're in a conflicted tree. */
   if (db->skip_this)
     {
       db->bump_info->skipped = TRUE;
-
-      /* ### hopefully this directory's queue is empty, cuz we're not
-         ### going to be running it!  */
 
       /* Allow the parent to complete its update. */
       SVN_ERR(maybe_bump_dir_info(eb, db->bump_info, db->pool));
@@ -2484,18 +2482,32 @@ close_directory(void *dir_baton,
                                &dav_prop_changes, &regular_prop_changes, pool));
 
   /* Fetch the existing properties.  */
-  SVN_ERR(svn_wc__get_pristine_props(&base_props,
-                                     eb->db, db->local_abspath,
-                                     pool, pool));
-  SVN_ERR(svn_wc__get_actual_props(&actual_props,
-                                   eb->db, db->local_abspath,
-                                   pool, pool));
-
-  /* Local-add nodes have no pristines. Incoming-adds have no actuals.  */
-  if (base_props == NULL)
-    base_props = apr_hash_make(pool);
-  if (actual_props == NULL)
+  if ((!db->adding_dir || db->add_existed)
+      && !db->shadowed)
+    {
+      SVN_ERR(svn_wc__get_actual_props(&actual_props,
+                                       eb->db, db->local_abspath,
+                                       scratch_pool, scratch_pool));
+    }
+  else
     actual_props = apr_hash_make(pool);
+
+  if (db->add_existed)
+    {
+      /* This node already exists. Grab the current pristine properties. */
+      SVN_ERR(svn_wc__get_pristine_props(&base_props,
+                                         eb->db, db->local_abspath,
+                                         scratch_pool, scratch_pool));
+    }
+  else if (!db->adding_dir)
+    {
+      /* Get the BASE properties for proper merging. */
+      SVN_ERR(svn_wc__db_base_get_props(&base_props,
+                                        eb->db, db->local_abspath,
+                                        scratch_pool, scratch_pool));
+    }
+  else
+    base_props = apr_hash_make(pool);
 
   /* An incomplete directory might have props which were supposed to be
      deleted but weren't.  Because the server sent us all the props we're
@@ -2659,8 +2671,7 @@ close_directory(void *dir_baton,
          then we also want to write them to an old-style props file.  */
       props = new_base_props;
       if (props == NULL)
-        SVN_ERR(svn_wc__db_base_get_props(&props, eb->db, db->local_abspath,
-                                          pool, pool));
+        props = base_props;
 
       /* ### NOTE: from this point onwards, we make TWO changes to the
          ### database in a non-transactional way. some kind of revamp
@@ -2686,7 +2697,9 @@ close_directory(void *dir_baton,
       /* If we updated the BASE properties, then we also have ACTUAL
          properties to update. Do that now, along with queueing a work
          item to write out an old-style props file.  */
-      if (new_base_props != NULL)
+      if (!db->shadowed
+          && !(db->adding_dir && !db->add_existed)
+          && new_base_props != NULL)
         {
           SVN_ERR_ASSERT(new_actual_props != NULL);
 
@@ -3841,7 +3854,6 @@ close_file(void *file_baton,
                                      scratch_pool, scratch_pool));
   if (local_actual_props == NULL)
     local_actual_props = apr_hash_make(scratch_pool);
-
 
   if (fb->add_existed)
     {
