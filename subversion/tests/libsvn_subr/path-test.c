@@ -1397,11 +1397,9 @@ test_path_local_style(apr_pool_t *pool)
     { "/",                   "\\" },
     { "//server/share/dir",  "\\\\server\\share\\dir" },
 #else
-    { "a:/",                 "a:" },
     { "a:/file",             "a:/file" },
     { "dir/file",            "dir/file" },
     { "/",                   "/" },
-    { "//server/share/dir",  "/server/share/dir" },
 #endif
     { NULL, NULL }
   };

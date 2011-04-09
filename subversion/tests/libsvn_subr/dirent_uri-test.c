@@ -2330,11 +2330,9 @@ test_dirent_local_style(apr_pool_t *pool)
     { "//server/share/dir",  "\\\\server\\share\\dir" },
     { "//server/sh re/dir",  "\\\\server\\sh re\\dir" },
 #else
-    { "a:/",                 "a:" }, /* Wrong but expected for svn_path_*() */
     { "a:/file",             "a:/file" },
     { "dir/file",            "dir/file" },
     { "/",                   "/" },
-    { "//server/share/dir",  "/server/share/dir" },
 #endif
   };
   int i;
