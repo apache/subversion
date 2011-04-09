@@ -52,7 +52,8 @@
    the OS! */
 #define SVN_PATH_IS_PLATFORM_EMPTY(s,n) ((n) == 1 && (s)[0] == '.')
 
-/* This check must match the check on top of dirent_uri-tests.c */
+/* This check must match the check on top of dirent_uri-tests.c and
+   path-tests.c */
 #if defined(WIN32) || defined(__CYGWIN__) || defined(__OS2__)
 #define SVN_USE_DOS_PATHS
 #endif
@@ -118,19 +119,6 @@ internal_style(path_type_t type, const char *path, apr_pool_t *pool)
 static const char *
 local_style(path_type_t type, const char *path, apr_pool_t *pool)
 {
-  switch (type)
-    {
-      case type_dirent:
-        path = svn_dirent_canonicalize(path, pool);
-        break;
-      case type_relpath:
-        path = svn_relpath_canonicalize(path, pool);
-        break;
-      case type_uri:
-      default:
-        return apr_pstrdup(pool, path);
-    }
-
   /* Internally, Subversion represents the current directory with the
      empty string.  But users like to see "." . */
   if (SVN_PATH_IS_EMPTY(path))

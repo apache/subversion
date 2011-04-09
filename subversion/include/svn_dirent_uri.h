@@ -60,11 +60,9 @@
  *    - @c svn_dirent_canonicalize()
  *    - @c svn_dirent_is_canonical()
  *    - @c svn_dirent_internal_style()
- *    - @c svn_dirent_local_style()
  *    - @c svn_relpath_canonicalize()
  *    - @c svn_relpath_is_canonical()
  *    - @c svn_relpath_internal_style()
- *    - @c svn_relpath_local_style()
  *    - @c svn_uri_canonicalize()
  *    - @c svn_uri_is_canonical()
  *
