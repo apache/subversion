@@ -1576,13 +1576,10 @@ svn_client__do_commit(const char *base_url,
       const svn_checksum_t *new_text_base_md5_checksum;
       const svn_checksum_t *new_text_base_sha1_checksum;
       svn_boolean_t fulltext = FALSE;
-      const char *item_abspath;
 
       svn_pool_clear(iterpool);
 
       /* Transmit the entry. */
-      SVN_ERR(svn_dirent_get_absolute(&item_abspath, item->path, iterpool));
-
       if (ctx->cancel_func)
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
@@ -1594,15 +1591,17 @@ svn_client__do_commit(const char *base_url,
                                         iterpool);
           notify->kind = svn_node_file;
           notify->path_prefix = notify_path_prefix;
-          (*ctx->notify_func2)(ctx->notify_baton2, notify, iterpool);
+          ctx->notify_func2(ctx->notify_baton2, notify, iterpool);
         }
 
-      if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
+      /* If the node has no history, transmit full text */
+      if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
+          && ! (item->state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY))
         fulltext = TRUE;
 
       SVN_ERR(svn_wc_transmit_text_deltas3(&new_text_base_md5_checksum,
                                            &new_text_base_sha1_checksum,
-                                           ctx->wc_ctx, item_abspath,
+                                           ctx->wc_ctx, item->path,
                                            fulltext, editor, mod->file_baton,
                                            pool, iterpool));
       if (md5_checksums)
