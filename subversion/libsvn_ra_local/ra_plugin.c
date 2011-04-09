@@ -189,18 +189,17 @@ reporter_link_path(void *reporter_baton,
 {
   reporter_baton_t *rbaton = reporter_baton;
   const char *fs_path = NULL;
-  const char *repos_url_decoded;
-  size_t repos_url_len;
+  const char *repos_url = rbaton->sess->repos_url;
 
-  url = svn_path_uri_decode(url, pool);
-  repos_url_decoded = svn_path_uri_decode(rbaton->sess->repos_url, pool);
-  repos_url_len = strlen(repos_url_decoded);
-  if (strncmp(url, repos_url_decoded, repos_url_len) != 0)
+  if (!svn_uri_is_ancestor(repos_url, url))
     return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                              _("'%s'\n"
                                "is not the same repository as\n"
                                "'%s'"), url, rbaton->sess->repos_url);
-  fs_path = url + repos_url_len;
+
+  fs_path = svn_path_uri_decode(svn_uri_skip_ancestor(repos_url, url),
+                                pool);
+
   return svn_repos_link_path3(rbaton->report_baton, path, fs_path, revision,
                               depth, start_empty, lock_token, pool);
 }
