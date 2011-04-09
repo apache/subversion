@@ -328,6 +328,7 @@ pristine_install_txn(void *baton,
   apr_finfo_t finfo;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
+  svn_error_t *err;
 
   /* If this pristine text is already present in the store, just keep it:
    * delete the new one and return. */
@@ -365,8 +366,30 @@ pristine_install_txn(void *baton,
 
   /* Move the file to its target location.  (If it is already there, it is
    * an orphan file and it doesn't matter if we overwrite it.) */
-  SVN_ERR(svn_io_file_rename(b->tempfile_abspath, b->pristine_abspath,
-                             scratch_pool));
+  err = svn_io_file_rename(b->tempfile_abspath, b->pristine_abspath,
+                           scratch_pool);
+
+  /* Maybe the directory doesn't exist yet? */
+  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+    {
+      svn_error_t *err2;
+
+      err2 = svn_io_dir_make(svn_dirent_dirname(b->pristine_abspath,
+                                                scratch_pool),
+                             APR_OS_DEFAULT, scratch_pool);
+
+      if (err2)
+        /* Creating directory didn't work: Return all errors */
+        return svn_error_return(svn_error_compose_create(err, err2));
+      else
+        /* We could create a directory: retry install */
+        svn_error_clear(err);
+
+      SVN_ERR(svn_io_file_rename(b->tempfile_abspath, b->pristine_abspath,
+                           scratch_pool));
+    }
+  else
+    SVN_ERR(err);
 
   SVN_ERR(svn_io_stat(&finfo, b->pristine_abspath, APR_FINFO_SIZE,
                       scratch_pool));
@@ -418,7 +441,7 @@ svn_wc__db_pristine_install(svn_wc__db_t *db,
 
   SVN_ERR(get_pristine_fname(&b.pristine_abspath, wcroot->abspath,
                              sha1_checksum,
-                             TRUE /* create_subdir */,
+                             FALSE /* create_subdir */,
                              scratch_pool, scratch_pool));
 
   /* Ensure the SQL txn has at least a 'RESERVED' lock before we start looking
