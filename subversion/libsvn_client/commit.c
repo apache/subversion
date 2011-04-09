@@ -899,13 +899,11 @@ collect_lock_tokens(apr_hash_t **result,
       const char *url = svn__apr_hash_index_key(hi);
       const char *token = svn__apr_hash_index_val(hi);
 
-      if (strncmp(base_url, url, base_len) == 0
-          && (url[base_len] == '\0' || url[base_len] == '/'))
+      if (svn_uri_is_ancestor(base_url, url))
         {
-          if (url[base_len] == '\0')
-            url = "";
-          else
-            url = svn_path_uri_decode(url + base_len + 1, pool);
+          url = svn_path_uri_decode(svn_uri_skip_ancestor(base_url, url),
+                                    pool);
+
           apr_hash_set(*result, url, APR_HASH_KEY_STRING, token);
         }
     }
