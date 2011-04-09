@@ -42,7 +42,7 @@
 
 #define SVN_EMPTY_PATH ""
 
-/* This check must match the check on top of dirent_uri.c */
+/* This check must match the check on top of dirent_uri.c and path-tests.c */
 #if defined(WIN32) || defined(__CYGWIN__) || defined(__OS2__)
 #define SVN_USE_DOS_PATHS
 #endif
@@ -2325,8 +2325,6 @@ test_dirent_local_style(apr_pool_t *pool)
 #ifdef SVN_USE_DOS_PATHS
     { "A:/",                 "A:\\" },
     { "A:/file",             "A:\\file" },
-    { "a:/",                 "A:\\" },
-    { "a:/file",             "A:\\file" },
     { "dir/file",            "dir\\file" },
     { "/",                   "\\" },
     { "//server/share/dir",  "\\\\server\\share\\dir" },
@@ -2363,7 +2361,6 @@ test_relpath_local_style(apr_pool_t *pool)
     const char *result;
   } tests[] = {
     { "",                     "." },
-    { ".",                    "." },
     { "c:hi",                 "c:hi" },
 #ifdef SVN_USE_DOS_PATHS
     { "dir/file",             "dir\\file" },
@@ -2407,6 +2404,7 @@ test_dirent_internal_style(apr_pool_t *pool)
     { "A:\\file",            "A:/file" },
     { "A:file",              "A:file" },
     { "a:\\",                "A:/" },
+    { "a:/",                 "A:/" },
     { "a:\\file",            "A:/file" },
     { "a:file",              "A:file" },
     { "dir\\file",           "dir/file" },
