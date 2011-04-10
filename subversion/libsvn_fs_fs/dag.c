@@ -449,10 +449,8 @@ svn_fs_fs__dag_dir_entry(svn_fs_dirent_t **dirent,
                             _("Can't get entries of non-directory"));
 
   /* Get a dirent hash for this directory. */
-  return svn_fs_fs__rep_contents_dir_partial((void **)dirent, node->fs,
-                                             noderev,
-                                             svn_fs_fs__extract_dir_entry,
-                                             (void *)name, pool);
+  return svn_fs_fs__rep_contents_dir_entry(dirent, node->fs,
+                                           noderev, name, pool);
 }
 
 

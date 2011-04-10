@@ -4044,15 +4044,13 @@ svn_fs_fs__rep_contents_dir(apr_hash_t **entries_p,
 }
 
 svn_error_t *
-svn_fs_fs__rep_contents_dir_partial(void **result_p,
-                                    svn_fs_t *fs,
-                                    node_revision_t *noderev,
-                                    svn_cache__partial_getter_func_t deserializer,
-                                    void *baton,
-                                    apr_pool_t *pool)
+svn_fs_fs__rep_contents_dir_entry(svn_fs_dirent_t **dirent,
+                                  svn_fs_t *fs,
+                                  node_revision_t *noderev,
+                                  const char *name,
+                                  apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  apr_hash_t *entries;
   svn_boolean_t found = FALSE;
 
   /* Are we looking for an immutable directory?  We could try the
@@ -4060,18 +4058,23 @@ svn_fs_fs__rep_contents_dir_partial(void **result_p,
   if (! svn_fs_fs__id_txn_id(noderev->id))
     {
       const char *unparsed_id =
-          svn_fs_fs__id_unparse(noderev->id, pool)->data;
+        svn_fs_fs__id_unparse(noderev->id, pool)->data;
 
       /* Cache lookup. Return on the requested part of the dir info. */
-      SVN_ERR(svn_cache__get_partial(result_p, &found, ffd->dir_cache,
-                                     unparsed_id, deserializer, baton,
+      SVN_ERR(svn_cache__get_partial((void **)dirent,
+                                     &found,
+                                     ffd->dir_cache,
+                                     unparsed_id,
+                                     svn_fs_fs__extract_dir_entry,
+                                     (void*)name,
                                      pool));
     }
 
   if (! found)
     {
-      char *serialized_entries;
-      apr_size_t serialized_len;
+      apr_hash_t *entries;
+      svn_fs_dirent_t *entry;
+      svn_fs_dirent_t *entry_copy = NULL;
 
       /* since we don't need the directory content later on, put it into
          some sub-pool that will be reclaimed immedeately after exiting
@@ -4084,18 +4087,17 @@ svn_fs_fs__rep_contents_dir_partial(void **result_p,
          into the cache for faster lookup in future calls. */
       SVN_ERR(svn_fs_fs__rep_contents_dir(&entries, fs, noderev, sub_pool));
 
-      /* deserializer works on serialied data only. So, we need to provide
-         serialized dir entries */
-      SVN_ERR(svn_fs_fs__serialize_dir_entries(&serialized_entries,
-                                               &serialized_len,
-                                               entries,
-                                               sub_pool));
-      SVN_ERR(deserializer(result_p,
-                           serialized_entries,
-                           serialized_len,
-                           baton,
-                           pool));
+      /* find desired entry and return a copy in POOL, if found */
+      entry = apr_hash_get(entries, name, APR_HASH_KEY_STRING);
+      if (entry != NULL)
+        {
+          entry_copy = apr_palloc(pool, sizeof(*entry_copy));
+          entry_copy->name = apr_pstrdup(pool, entry->name);
+          entry_copy->id = svn_fs_fs__id_copy(entry->id, pool);
+          entry_copy->kind = entry->kind;
+        }
 
+      *dirent = entry_copy;
       apr_pool_destroy(sub_pool);
     }
 
@@ -7560,8 +7562,8 @@ svn_fs_fs__delete_node_revision(svn_fs_t *fs,
   /* Delete any mutable data representation. */
   if (noderev->data_rep && noderev->data_rep->txn_id
       && noderev->kind == svn_node_dir)
-    SVN_ERR(svn_io_remove_file2(path_txn_node_children(fs, id, pool), FALSE,
-                                pool));
+      SVN_ERR(svn_io_remove_file2(path_txn_node_children(fs, id, pool), FALSE,
+                                  pool));
 
   return svn_io_remove_file2(path_txn_node_rev(fs, id, pool), FALSE, pool);
 }
