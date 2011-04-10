@@ -14,6 +14,7 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * Rewritten working copy metadata storage (issue #3357)
     * New 'svn patch' subcommand (issue #511)
     * Property packing on FSFS backends (issue #3444)
+    * Limit FSFS memory consumption (issue #3478, #3593)
 
   - Minor new features and improvements:
     * Better handling of HTTP redirects (issue #2779)
@@ -37,7 +38,8 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * added '--parents' to 'svn update' (issue #3748)
     * allow configurable connection timeout in ra_serf (r876161)
     * add digest authentication in ra_serf (r876405)
-    * add extensive caching support to servers (r1067669, r1067675, r1072302)
+    * add extensive caching support to servers (r1067669, -75, -72302)
+    * add configurable caching to svnadmin (r1078357)
     * make server-side network data compression rate configurable (r1072288)
 
   - Client-side bugfixes:
