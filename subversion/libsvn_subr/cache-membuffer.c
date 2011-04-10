@@ -1473,6 +1473,7 @@ svn_membuffer_cache_get_partial(void **value_p,
                                       full_key,
                                       full_key_len,
                                       value_p,
+                                      found,
                                       func,
                                       baton,
                                       DEBUG_CACHE_MEMBUFFER_TAG
