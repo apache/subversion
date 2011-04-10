@@ -381,7 +381,9 @@ svn_cache__iter(svn_boolean_t *completed,
 
 /**
  * Similar to @ref svn_cache__set but will call a specific de-serialization
- * function @a func.
+ * function @a func. @a found will be set depending on whether the @a key
+ * has been found. Even if that reports @c TRUE, @a values may still return
+ * a @c NULL pointer depending on the logic inside @a func.
  */
 svn_error_t *
 svn_cache__get_partial(void **value,

@@ -1179,6 +1179,7 @@ membuffer_cache_get_partial(svn_membuffer_t *cache,
                             const void *key,
                             apr_size_t key_len,
                             void **item,
+                            svn_boolean_t *found,
                             svn_cache__partial_getter_func_t deserializer,
                             void *baton,
                             DEBUG_CACHE_MEMBUFFER_TAG_ARG
@@ -1198,9 +1199,12 @@ membuffer_cache_get_partial(svn_membuffer_t *cache,
   if (entry == NULL)
     {
       *item = NULL;
+      *found = FALSE;
     }
   else
     {
+      *found = TRUE;
+
       entry->hit_count++;
       cache->hit_count++;
       cache->total_hits++;
@@ -1473,7 +1477,7 @@ svn_membuffer_cache_get_partial(void **value_p,
                                       baton,
                                       DEBUG_CACHE_MEMBUFFER_TAG
                                       pool));
-  *found = *value_p != NULL;
+
   return SVN_NO_ERROR;
 }
 
