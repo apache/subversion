@@ -1045,7 +1045,8 @@ membuffer_cache_set(svn_membuffer_t *cache,
 
   /* Serialize data data.
    */
-  SVN_ERR(serializer(&buffer, &size, item, pool));
+  if (item)
+    SVN_ERR(serializer(&buffer, &size, item, pool));
 
   /* The actual cache data access needs to sync'ed
    */
@@ -1053,7 +1054,9 @@ membuffer_cache_set(svn_membuffer_t *cache,
 
   /* if necessary, enlarge the insertion window.
    */
-  if (cache->data_size / 4 > size && ensure_data_insertable(cache, size))
+  if (   item != NULL
+      && cache->data_size / 4 > size
+      && ensure_data_insertable(cache, size))
     {
       /* Remove old data for this key, if that exists.
        * Get an unused entry for the key and and initialize it with
