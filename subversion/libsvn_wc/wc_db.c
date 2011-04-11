@@ -3628,10 +3628,10 @@ svn_wc__db_op_mark_resolved(svn_wc__db_t *db,
 
 /* */
 static svn_error_t *
-set_tc_txn2(void *baton,
-            svn_wc__db_wcroot_t *wcroot,
-            const char *local_relpath,
-            apr_pool_t *scratch_pool)
+set_tc_txn(void *baton,
+           svn_wc__db_wcroot_t *wcroot,
+           const char *local_relpath,
+           apr_pool_t *scratch_pool)
 {
   const svn_wc_conflict_description2_t *tree_conflict = baton;
   const char *parent_relpath;
@@ -3709,7 +3709,7 @@ svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
                               db, local_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, set_tc_txn2,
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, set_tc_txn,
                               (void *) tree_conflict, scratch_pool));
 
   /* There may be some entries, and the lock info is now out of date.  */
