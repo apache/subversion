@@ -2186,21 +2186,6 @@ svn_wc_set_changelist2(svn_wc_context_t *wc_ctx,
                              _("'%s' is a directory, and thus cannot"
                                " be a member of a changelist"), local_abspath);
 
-  /* If the path has no changelist and we're removing changelist, skip it.
-     ### the db actually does this check, too, but for notification's sake,
-     ### we add it here as well. */
-  if (! (changelist || existing_changelist))
-    return SVN_NO_ERROR;
-
-  /* If the path is already assigned to the changelist we're
-     trying to assign, skip it.
-     ### the db actually does this check, too, but for notification's sake,
-     ### we add it here as well. */
-  if (existing_changelist
-      && changelist
-      && strcmp(existing_changelist, changelist) == 0)
-    return SVN_NO_ERROR;
-
   /* Set the changelist. */
   SVN_ERR(svn_wc__db_op_set_changelist(wc_ctx->db, local_abspath, changelist,
                                        NULL, svn_depth_empty, scratch_pool));
