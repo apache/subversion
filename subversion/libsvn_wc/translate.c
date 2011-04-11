@@ -383,29 +383,20 @@ svn_wc__maybe_set_read_only(svn_boolean_t *did_set,
   svn_wc__db_status_t status;
   svn_wc__db_kind_t kind;
   svn_wc__db_lock_t *lock;
-  svn_error_t *err;
 
   if (did_set)
     *did_set = FALSE;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  err = svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL,
-                             &lock,
-                             db, local_abspath, scratch_pool, scratch_pool);
+  SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               &lock,
+                               db, local_abspath, scratch_pool, scratch_pool));
 
-  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-    {
-      /* If the path wasn't versioned, we still want to set it to read-only. */
-      svn_error_clear(err);
-      status = svn_wc__db_status_not_present;
-    }
-  else if (err)
-    return svn_error_return(err);
-  else if (lock)
+  if (lock)
     return SVN_NO_ERROR; /* We have a lock */
   else if (kind != svn_wc__db_kind_file)
     return SVN_NO_ERROR;
