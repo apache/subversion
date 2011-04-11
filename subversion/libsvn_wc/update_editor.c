@@ -3400,11 +3400,11 @@ merge_file(svn_skel_t **work_items,
   struct edit_baton *eb = fb->edit_baton;
   struct dir_baton *pb = fb->dir_baton;
   svn_boolean_t is_locally_modified;
-  svn_boolean_t magic_props_changed;
   enum svn_wc_merge_outcome_t merge_outcome = svn_wc_merge_unchanged;
   svn_skel_t *work_item;
-  const char *new_text_base_tmp_abspath;
   svn_error_t *err;
+
+  SVN_ERR_ASSERT(! fb->shadowed && !fb->obstruction_found);
 
   /*
      When this function is called on file F, we assume the following
@@ -3425,20 +3425,8 @@ merge_file(svn_skel_t **work_items,
   *install_pristine = FALSE;
   *install_from = NULL;
 
-  if (fb->new_text_base_sha1_checksum != NULL)
-    SVN_ERR(svn_wc__db_pristine_get_path(&new_text_base_tmp_abspath,
-                                         eb->db, pb->local_abspath,
-                                         fb->new_text_base_sha1_checksum,
-                                         scratch_pool, scratch_pool));
-  else
-    new_text_base_tmp_abspath = NULL;
-
   /* Start by splitting the file path, getting an access baton for the parent,
      and an entry for the file if any. */
-
-  /* Determine if any of the propchanges are the "magic" ones that
-     might require changing the working file. */
-  magic_props_changed = svn_wc__has_magic_property(fb->propchanges);
 
   /* Has the user made local mods to the working file?
      Note that this compares to the current pristine file, which is
@@ -3446,77 +3434,45 @@ merge_file(svn_skel_t **work_items,
      file.  However, in the case we had an obstruction, we check against the
      new text base.
    */
-  if (! fb->obstruction_found)
+  if (fb->adding_file && !fb->add_existed)
     {
-      /* The working file is not an obstruction. So: is the file modified,
-         relative to its ORIGINAL pristine?  */
+      is_locally_modified = FALSE; /* There is no file: Don't check */
+    }
+  else
+    {
+      /* The working file is not an obstruction. 
+         So: is the file modified, relative to its ORIGINAL pristine?
+
+         This function sets is_locally_modified to FALSE for
+         files that do not exist */
+
       SVN_ERR(svn_wc__internal_text_modified_p(&is_locally_modified, eb->db,
                                                fb->local_abspath,
                                                FALSE /* force_comparison */,
                                                FALSE /* compare_textbases */,
                                                scratch_pool));
     }
-  else if (fb->new_text_base_sha1_checksum && !fb->obstruction_found)
+
+  /* For 'textual' merging, we use the following system:
+
+     When a file is modified and we have a new BASE:
+      - For text files
+          * svn_wc_merge uses diff3
+          * possibly makes backups and marks files as conflicted.
+
+      - For binary files
+          * svn_wc_merge makes backups and marks files as conflicted.
+
+     If a file is not modified and we have a new BASE:
+       * Install from pristine.
+
+     If we have property changes related to magic properties or if the
+     svn:keywords property is set:
+       * Retranslate from the working file.
+   */
+  if (! is_locally_modified
+      && fb->new_text_base_sha1_checksum)
     {
-      svn_stream_t *pristine_stream;
-
-      /* We have a new pristine to install. Is the file modified relative
-         to this new pristine?  */
-      SVN_ERR(svn_wc__db_pristine_read(&pristine_stream,
-                                       eb->db, pb->local_abspath,
-                                       fb->new_text_base_sha1_checksum,
-                                       scratch_pool, scratch_pool));
-      SVN_ERR(svn_wc__internal_versioned_file_modcheck(&is_locally_modified,
-                                                       eb->db,
-                                                       fb->local_abspath,
-                                                       pristine_stream,
-                                                       FALSE, scratch_pool));
-    }
-  else
-    {
-      /* No other potential changes, so the working file is NOT modified.
-         Except when we have a local obstruction! */
-
-      if (fb->obstruction_found)
-        is_locally_modified = TRUE;
-      else
-        is_locally_modified = FALSE;
-    }
-
-  /* For 'textual' merging, we implement this matrix.
-
-                                 Text file                  Binary File
-                               -----------------------------------------------
-    "Local Mods" &&            | svn_wc_merge uses diff3, | svn_wc_merge     |
-    (!fb->obstruction_found || | possibly makes backups & | makes backups,   |
-     fb->add_existed)          | marks file as conflicted.| marks conflicted |
-                               -----------------------------------------------
-    "Local Mods" &&            |        Just leave obstructing file as-is.   |
-    fb->obstruction_found      |                                             |
-                               -----------------------------------------------
-    No Mods                    |        Just overwrite working file.         |
-                               -----------------------------------------------
-    File is Locally            |        Same as if 'No Mods' except we       |
-    Deleted                    |        don't copy the new text base to      |
-                               |        the working file location.           |
-                               -----------------------------------------------
-    File is Locally            |        Install the new text base.           |
-    Replaced                   |        Leave working file alone.            |
-                               -----------------------------------------------
-
-   So the first thing we do is figure out where we are in the
-   matrix. */
-
-  if (fb->new_text_base_sha1_checksum)
-    {
-      if (fb->shadowed)
-        {
-          /* Nothing to do, the delete half of the local replacement will
-             have already raised a tree conflict.  So we will just fall
-             through to the installation of the new textbase. */
-        }
-      else if (! is_locally_modified)
-        {
           /* If there are no local mods, who cares whether it's a text
              or binary file!  Just write a log command to overwrite
              any working file with the new text-base.  If newline
@@ -3526,30 +3482,23 @@ merge_file(svn_skel_t **work_items,
              even if the file is not modified compared to the (non-revert)
              text-base. */
 
-          *install_pristine = TRUE;
-        }
-      else   /* working file or obstruction is locally modified... */
-        {
-          svn_node_kind_t wfile_kind;
+      *install_pristine = TRUE;
+    }
+  else if (fb->new_text_base_sha1_checksum)
+    {
+      /* Working file exists and has local mods: 
+           Now we need to let loose svn_wc__merge_internal() to merge
+           the textual changes into the working file. */
+          const char *oldrev_str, *newrev_str, *mine_str;
+          const char *merge_left;
+          svn_boolean_t delete_left = FALSE;
+          const char *path_ext = "";
+          const char *new_text_base_tmp_abspath;
 
-          SVN_ERR(svn_io_check_path(fb->local_abspath, &wfile_kind,
-                                    scratch_pool));
-          if (wfile_kind == svn_node_none)
-            {
-              /* working file is missing?!
-                 Just copy the new text-base to the file. */
-              *install_pristine = TRUE;
-            }
-          else if (! fb->obstruction_found)
-            /* Working file exists and has local mods
-               or is scheduled for addition but is not an obstruction. */
-            {
-              /* Now we need to let loose svn_wc__merge_internal() to merge
-                 the textual changes into the working file. */
-              const char *oldrev_str, *newrev_str, *mine_str;
-              const char *merge_left;
-              svn_boolean_t delete_left = FALSE;
-              const char *path_ext = "";
+      SVN_ERR(svn_wc__db_pristine_get_path(&new_text_base_tmp_abspath,
+                                           eb->db, pb->local_abspath,
+                                           fb->new_text_base_sha1_checksum,
+                                           scratch_pool, scratch_pool));
 
               /* If we have any file extensions we're supposed to
                  preserve in generated conflict file names, then find
@@ -3635,15 +3584,19 @@ merge_file(svn_skel_t **work_items,
                   *work_items = svn_wc__wq_merge(*work_items, work_item,
                                                  result_pool);
                 }
-            } /* end: working file exists and has mods */
-        } /* end: working file has mods */
-    } /* end: "textual" merging process */
+    } /* end: working file exists and has mods */
   else
     {
       /* There is no new text base, but let's see if the working file needs
          to be updated for any other reason. */
 
       apr_hash_t *keywords;
+
+      /* Determine if any of the propchanges are the "magic" ones that
+         might require changing the working file. */
+      svn_boolean_t magic_props_changed;
+
+      magic_props_changed = svn_wc__has_magic_property(fb->propchanges);
 
       SVN_ERR(svn_wc__get_translate_info(NULL, NULL,
                                          &keywords,
@@ -3687,8 +3640,7 @@ merge_file(svn_skel_t **work_items,
      However, if we are NOT creating a new working copy file, then create
      work items to handle text-timestamp and working-size.  */
   if (!*install_pristine
-      && !is_locally_modified
-      && !fb->shadowed)
+      && !is_locally_modified)
     {
       apr_time_t set_date = 0;
       /* Adjust working copy file unless this file is an allowed
@@ -3971,8 +3923,11 @@ close_file(void *file_baton,
       SVN_ERR_ASSERT(new_base_props != NULL && new_actual_props != NULL);
 
       /* Merge the text. This will queue some additional work.  */
-      SVN_ERR(merge_file(&all_work_items, &install_pristine, &install_from,
-                         &content_state, fb, scratch_pool, scratch_pool));
+      if (!fb->obstruction_found)
+        SVN_ERR(merge_file(&all_work_items, &install_pristine, &install_from,
+                           &content_state, fb, scratch_pool, scratch_pool));
+      else
+        install_pristine = FALSE;
 
       if (install_pristine)
         {
