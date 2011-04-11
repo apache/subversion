@@ -7400,6 +7400,13 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
  * changelist assignment from @a local_abspath.  @a changelist may not
  * be the empty string.
  *
+ * @a changelists is an array of <tt>const char *</tt> changelist
+ * names, used as a restrictive filter on items whose changelist
+ * assignments are adjusted; that is, don't tweak the changeset of any
+ * item unless it's currently a member of one of those changelists.
+ * If @a changelists is empty (or altogether @c NULL), no changelist
+ * filtering occurs.
+ *
  * If @a cancel_func is not @c NULL, call it with @a cancel_baton to
  * determine if the client has canceled the operation.
  *
@@ -7423,6 +7430,7 @@ svn_error_t *
 svn_wc_set_changelist2(svn_wc_context_t *wc_ctx,
                        const char *local_abspath,
                        const char *changelist,
+                       const apr_array_header_t *changelists,
                        svn_cancel_func_t cancel_func,
                        void *cancel_baton,
                        svn_wc_notify_func2_t notify_func,
