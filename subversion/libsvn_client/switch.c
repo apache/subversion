@@ -209,11 +209,18 @@ switch_internal(svn_revnum_t *result_rev,
   efb.externals_old = apr_hash_make(pool);
   efb.ambient_depths = apr_hash_make(pool);
   efb.result_pool = pool;
+
+  SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
+                                SVN_RA_CAPABILITY_DEPTH, pool));
+
   SVN_ERR(svn_wc_get_switch_editor4(&switch_editor, &switch_edit_baton,
                                     &revnum, ctx->wc_ctx, anchor_abspath,
                                     target, switch_rev_url, use_commit_times,
                                     depth,
                                     depth_is_sticky, allow_unver_obstructions,
+                                    TRUE,
+                                    server_supports_depth
+                                        && (depth == svn_depth_unknown),
                                     diff3_cmd, preserved_exts,
                                     ctx->conflict_func, ctx->conflict_baton,
                                     svn_client__external_info_gatherer, &efb,
@@ -226,9 +233,6 @@ switch_internal(svn_revnum_t *result_rev,
   SVN_ERR(svn_ra_do_switch2(ra_session, &reporter, &report_baton, revnum,
                             target, depth, switch_rev_url,
                             switch_editor, switch_edit_baton, pool));
-
-  SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
-                                SVN_RA_CAPABILITY_DEPTH, pool));
 
   /* Drive the reporter structure, describing the revisions within
      PATH.  When we call reporter->finish_report, the update_editor
