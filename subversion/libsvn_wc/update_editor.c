@@ -3489,101 +3489,101 @@ merge_file(svn_skel_t **work_items,
       /* Working file exists and has local mods: 
            Now we need to let loose svn_wc__merge_internal() to merge
            the textual changes into the working file. */
-          const char *oldrev_str, *newrev_str, *mine_str;
-          const char *merge_left;
-          svn_boolean_t delete_left = FALSE;
-          const char *path_ext = "";
-          const char *new_text_base_tmp_abspath;
+      const char *oldrev_str, *newrev_str, *mine_str;
+      const char *merge_left;
+      svn_boolean_t delete_left = FALSE;
+      const char *path_ext = "";
+      const char *new_text_base_tmp_abspath;
+      svn_revnum_t old_revision;
 
       SVN_ERR(svn_wc__db_pristine_get_path(&new_text_base_tmp_abspath,
                                            eb->db, pb->local_abspath,
                                            fb->new_text_base_sha1_checksum,
                                            scratch_pool, scratch_pool));
 
-              /* If we have any file extensions we're supposed to
-                 preserve in generated conflict file names, then find
-                 this path's extension.  But then, if it isn't one of
-                 the ones we want to keep in conflict filenames,
-                 pretend it doesn't have an extension at all. */
-              if (eb->ext_patterns && eb->ext_patterns->nelts)
-                {
-                  svn_path_splitext(NULL, &path_ext, fb->local_abspath,
-                                    scratch_pool);
-                  if (! (*path_ext
-                         && svn_cstring_match_glob_list(path_ext,
-                                                        eb->ext_patterns)))
-                    path_ext = "";
-                }
+      /* If we have any file extensions we're supposed to
+         preserve in generated conflict file names, then find
+         this path's extension.  But then, if it isn't one of
+         the ones we want to keep in conflict filenames,
+         pretend it doesn't have an extension at all. */
+      if (eb->ext_patterns && eb->ext_patterns->nelts)
+        {
+          svn_path_splitext(NULL, &path_ext, fb->local_abspath,
+                            scratch_pool);
+          if (! (*path_ext
+                 && svn_cstring_match_glob_list(path_ext,
+                                                eb->ext_patterns)))
+            path_ext = "";
+        }
 
-              {
-                svn_revnum_t old_rev = fb->old_revision;
+      old_revision = fb->old_revision;
 
-                /* old_revision can be invalid when the conflict is against a
-                   local addition */
-                if (!SVN_IS_VALID_REVNUM(old_rev))
-                  old_rev = 0;
+      /* old_revision can be invalid when the conflict is against a
+         local addition */
+      if (!SVN_IS_VALID_REVNUM(old_revision))
+        old_revision = 0;
 
-                oldrev_str = apr_psprintf(scratch_pool, ".r%ld%s%s",
-                                          old_rev,
-                                          *path_ext ? "." : "",
-                                          *path_ext ? path_ext : "");
-              }
-              newrev_str = apr_psprintf(scratch_pool, ".r%ld%s%s",
-                                        *eb->target_revision,
-                                        *path_ext ? "." : "",
-                                        *path_ext ? path_ext : "");
-              mine_str = apr_psprintf(scratch_pool, ".mine%s%s",
-                                      *path_ext ? "." : "",
-                                      *path_ext ? path_ext : "");
+      oldrev_str = apr_psprintf(scratch_pool, ".r%ld%s%s",
+                                old_revision,
+                                *path_ext ? "." : "",
+                                *path_ext ? path_ext : "");
 
-              if (fb->add_existed)
-                {
-                  SVN_ERR(get_empty_tmp_file(&merge_left, eb->db,
-                                             pb->local_abspath,
-                                             result_pool, scratch_pool));
-                  delete_left = TRUE;
-                }
-              else
-                SVN_ERR(svn_wc__ultimate_base_text_path_to_read(
-                                  &merge_left, eb->db, fb->local_abspath,
-                                  result_pool, scratch_pool));
+      newrev_str = apr_psprintf(scratch_pool, ".r%ld%s%s",
+                                *eb->target_revision,
+                                *path_ext ? "." : "",
+                                *path_ext ? path_ext : "");
+      mine_str = apr_psprintf(scratch_pool, ".mine%s%s",
+                              *path_ext ? "." : "",
+                              *path_ext ? path_ext : "");
 
-              /* Merge the changes from the old textbase to the new
-                 textbase into the file we're updating.
-                 Remember that this function wants full paths! */
-              /* ### TODO: Pass version info here. */
-              /* ### NOTE: if this call bails out, then we must ensure
-                 ###   that no work items have been queued which might
-                 ###   place this file into an inconsistent state.
-                 ###   in the future, all the state changes should be
-                 ###   made atomically.  */
-              SVN_ERR(svn_wc__internal_merge(
-                        &work_item,
-                        &merge_outcome,
-                        eb->db,
-                        merge_left, NULL,
-                        new_text_base_tmp_abspath, NULL,
-                        fb->local_abspath,
-                        NULL /* copyfrom_abspath */,
-                        oldrev_str, newrev_str, mine_str,
-                        FALSE /* dry_run */,
-                        eb->diff3_cmd, NULL, fb->propchanges,
-                        eb->conflict_func, eb->conflict_baton,
-                        eb->cancel_func, eb->cancel_baton,
-                        result_pool, scratch_pool));
-              *work_items = svn_wc__wq_merge(*work_items, work_item,
-                                             result_pool);
+      if (fb->add_existed)
+        {
+          SVN_ERR(get_empty_tmp_file(&merge_left, eb->db,
+                                     pb->local_abspath,
+                                     result_pool, scratch_pool));
+          delete_left = TRUE;
+        }
+      else
+        SVN_ERR(svn_wc__ultimate_base_text_path_to_read(
+                            &merge_left, eb->db, fb->local_abspath,
+                            result_pool, scratch_pool));
 
-              /* If we created a temporary left merge file, get rid of it. */
-              if (delete_left)
-                {
-                  SVN_ERR(svn_wc__wq_build_file_remove(&work_item,
-                                                       eb->db, merge_left,
-                                                       result_pool,
-                                                       scratch_pool));
-                  *work_items = svn_wc__wq_merge(*work_items, work_item,
-                                                 result_pool);
-                }
+      /* Merge the changes from the old textbase to the new
+         textbase into the file we're updating.
+         Remember that this function wants full paths! */
+      /* ### TODO: Pass version info here. */
+      /* ### NOTE: if this call bails out, then we must ensure
+         ###   that no work items have been queued which might
+         ###   place this file into an inconsistent state.
+         ###   in the future, all the state changes should be
+         ###   made atomically.  */
+      SVN_ERR(svn_wc__internal_merge(
+                            &work_item,
+                            &merge_outcome,
+                            eb->db,
+                            merge_left, NULL,
+                            new_text_base_tmp_abspath, NULL,
+                            fb->local_abspath,
+                            NULL /* copyfrom_abspath */,
+                            oldrev_str, newrev_str, mine_str,
+                            FALSE /* dry_run */,
+                            eb->diff3_cmd, NULL, fb->propchanges,
+                            eb->conflict_func, eb->conflict_baton,
+                            eb->cancel_func, eb->cancel_baton,
+                            result_pool, scratch_pool));
+      *work_items = svn_wc__wq_merge(*work_items, work_item,
+                                     result_pool);
+
+      /* If we created a temporary left merge file, get rid of it. */
+      if (delete_left)
+        {
+          SVN_ERR(svn_wc__wq_build_file_remove(&work_item,
+                                               eb->db, merge_left,
+                                               result_pool,
+                                               scratch_pool));
+          *work_items = svn_wc__wq_merge(*work_items, work_item,
+                                         result_pool);
+        }
     } /* end: working file exists and has mods */
   else
     {
