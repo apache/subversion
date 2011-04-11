@@ -5302,6 +5302,9 @@ typedef svn_error_t *(*svn_wc_get_file_t)(void *baton,
  * If @a allow_unver_obstructions is TRUE, then allow unversioned
  * obstructions when adding a path.
  *
+ * If @a adds_as_modification is TRUE, local additions are seen as a local
+ * modification of added nodes when the node kind matches.
+ *
  * If @a depth is #svn_depth_infinity, update fully recursively.
  * Else if it is #svn_depth_immediates, update the uppermost
  * directory, its file entries, and the presence or absence of
@@ -5314,6 +5317,10 @@ typedef svn_error_t *(*svn_wc_get_file_t)(void *baton,
  * If @a depth_is_sticky is set and @a depth is not
  * #svn_depth_unknown, then in addition to updating PATHS, also set
  * their sticky ambient depth value to @a depth.
+ *
+ * If @a repository_performs_filtering is TRUE, assume that the server handles
+ * the ambient depth filtering, so this doesn't have to be handled in the
+ * editor.
  *
  * @since New in 1.7.
  */
@@ -5328,6 +5335,8 @@ svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
                           svn_depth_t depth,
                           svn_boolean_t depth_is_sticky,
                           svn_boolean_t allow_unver_obstructions,
+                          svn_boolean_t adds_as_modification,
+                          svn_boolean_t server_performs_filtering,
                           const char *diff3_cmd,
                           const apr_array_header_t *preserved_exts,
                           svn_wc_conflict_resolver_func_t conflict_func,
@@ -5344,13 +5353,17 @@ svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
 /** Similar to svn_wc_get_update_editor4, but uses access batons and relative
  * path instead of a working copy context-abspath pair and
  * svn_wc_traversal_info_t instead of an externals callback.  Also,
- * @a fetch_func and @a fetch_baton are ignored.
+ * @a fetch_func and @a fetch_baton are ignored. Always sets
+ * server_performs_filtering to FALSE.
  *
  * If @a ti is non-NULL, record traversal info in @a ti, for use by
  * post-traversal accessors such as svn_wc_edited_externals().
  *
  * All locks, both those in @a anchor and newly acquired ones, will be
  * released when the editor driver calls @c close_edit.
+ *
+ * Always sets @a adds_as_modification to TRUE and @a server_performs_filtering
+ * to FALSE.
  *
  * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.6 API.
@@ -5454,6 +5467,8 @@ svn_wc_get_switch_editor4(const svn_delta_editor_t **editor,
                           svn_depth_t depth,
                           svn_boolean_t depth_is_sticky,
                           svn_boolean_t allow_unver_obstructions,
+                          svn_boolean_t adds_as_modification,
+                          svn_boolean_t server_performs_filtering,
                           const char *diff3_cmd,
                           const apr_array_header_t *preserved_exts,
                           svn_wc_conflict_resolver_func_t conflict_func,
@@ -5476,6 +5491,9 @@ svn_wc_get_switch_editor4(const svn_delta_editor_t **editor,
  *
  * All locks, both those in @a anchor and newly acquired ones, will be
  * released when the editor driver calls @c close_edit.
+ *
+ * Always sets @a adds_as_modification to TRUE and @a server_performs_filtering
+ * to FALSE.
  *
  * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.6 API.

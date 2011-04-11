@@ -224,12 +224,18 @@ update_internal(svn_revnum_t *result_rev,
   efb.ambient_depths = apr_hash_make(pool);
   efb.result_pool = pool;
 
+  SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
+                                SVN_RA_CAPABILITY_DEPTH, pool));
+
   /* Fetch the update editor.  If REVISION is invalid, that's okay;
      the RA driver will call editor->set_target_revision later on. */
   SVN_ERR(svn_wc_get_update_editor4(&update_editor, &update_edit_baton,
                                     &revnum, ctx->wc_ctx, anchor_abspath,
                                     target, use_commit_times, depth,
                                     depth_is_sticky, allow_unver_obstructions,
+                                    TRUE,
+                                    server_supports_depth
+                                        && (depth == svn_depth_unknown),
                                     diff3_cmd, preserved_exts,
                                     ctx->conflict_func, ctx->conflict_baton,
                                     ignore_externals
@@ -245,9 +251,6 @@ update_internal(svn_revnum_t *result_rev,
   SVN_ERR(svn_ra_do_update2(ra_session, &reporter, &report_baton,
                             revnum, target, depth, FALSE,
                             update_editor, update_edit_baton, pool));
-
-  SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
-                                SVN_RA_CAPABILITY_DEPTH, pool));
 
   /* Drive the reporter structure, describing the revisions within
      PATH.  When we call reporter->finish_report, the

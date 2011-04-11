@@ -190,6 +190,9 @@ struct edit_baton
   /* Allow unversioned obstructions when adding a path. */
   svn_boolean_t allow_unver_obstructions;
 
+  /* Handle local additions as modifications of new nodes */
+  svn_boolean_t adds_as_modification;
+
   /* If this is a 'switch' operation, the new relpath of target_abspath,
      else NULL. */
   const char *switch_relpath;
@@ -2168,7 +2171,8 @@ add_directory(const char *path,
        * local add. So switch always alerts the user with a tree conflict. */
       if (eb->switch_relpath != NULL
           || local_is_non_dir
-          || add_status != svn_wc__db_status_added)
+          || add_status != svn_wc__db_status_added
+          || !eb->adds_as_modification)
         {
           SVN_ERR(check_tree_conflict(&tree_conflict, eb,
                                       db->local_abspath,
@@ -3021,7 +3025,8 @@ add_file(const char *path,
        * local add. So switch always alerts the user with a tree conflict. */
       if (eb->switch_relpath != NULL
           || !local_is_file
-          || status != svn_wc__db_status_added)
+          || status != svn_wc__db_status_added
+          || !eb->adds_as_modification)
         {
           SVN_ERR(check_tree_conflict(&tree_conflict, eb,
                                       fb->local_abspath,
@@ -4246,6 +4251,8 @@ make_editor(svn_revnum_t *target_revision,
             svn_depth_t depth,
             svn_boolean_t depth_is_sticky,
             svn_boolean_t allow_unver_obstructions,
+            svn_boolean_t adds_as_modification,
+            svn_boolean_t server_performs_filtering,
             svn_wc_notify_func2_t notify_func,
             void *notify_baton,
             svn_cancel_func_t cancel_func,
@@ -4336,6 +4343,7 @@ make_editor(svn_revnum_t *target_revision,
   eb->conflict_func            = conflict_func;
   eb->conflict_baton           = conflict_baton;
   eb->allow_unver_obstructions = allow_unver_obstructions;
+  eb->adds_as_modification     = adds_as_modification;
   eb->skipped_trees            = apr_hash_make(edit_pool);
   eb->ext_patterns             = preserved_exts;
 
@@ -4368,9 +4376,9 @@ make_editor(svn_revnum_t *target_revision,
      But even what we do so might extend beyond the scope of our
      ambient depth.  So we use another filtering editor to avoid
      modifying the ambient working copy depth when not asked to do so.
-     (This can also be skipped if the server understands depth; consider
-     letting the depth RA capability percolate down to this level.) */
-  if (!depth_is_sticky)
+     (This can also be skipped if the server understands depth.) */
+  if (!server_performs_filtering
+      && !depth_is_sticky)
     SVN_ERR(svn_wc__ambient_depth_filter_editor(&inner_editor,
                                                 &inner_baton,
                                                 wc_ctx->db,
@@ -4402,6 +4410,8 @@ svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
                           svn_depth_t depth,
                           svn_boolean_t depth_is_sticky,
                           svn_boolean_t allow_unver_obstructions,
+                          svn_boolean_t adds_as_modification,
+                          svn_boolean_t server_performs_filtering,
                           const char *diff3_cmd,
                           const apr_array_header_t *preserved_exts,
                           svn_wc_conflict_resolver_func_t conflict_func,
@@ -4418,6 +4428,7 @@ svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
   return make_editor(target_revision, wc_ctx, anchor_abspath,
                      target_basename, use_commit_times,
                      NULL, depth, depth_is_sticky, allow_unver_obstructions,
+                     adds_as_modification, server_performs_filtering,
                      notify_func, notify_baton,
                      cancel_func, cancel_baton,
                      conflict_func, conflict_baton,
@@ -4438,6 +4449,8 @@ svn_wc_get_switch_editor4(const svn_delta_editor_t **editor,
                           svn_depth_t depth,
                           svn_boolean_t depth_is_sticky,
                           svn_boolean_t allow_unver_obstructions,
+                          svn_boolean_t adds_as_modification,
+                          svn_boolean_t server_performs_filtering,
                           const char *diff3_cmd,
                           const apr_array_header_t *preserved_exts,
                           svn_wc_conflict_resolver_func_t conflict_func,
@@ -4457,6 +4470,7 @@ svn_wc_get_switch_editor4(const svn_delta_editor_t **editor,
                      target_basename, use_commit_times,
                      switch_url,
                      depth, depth_is_sticky, allow_unver_obstructions,
+                     adds_as_modification, server_performs_filtering,
                      notify_func, notify_baton,
                      cancel_func, cancel_baton,
                      conflict_func, conflict_baton,
