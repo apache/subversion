@@ -3441,7 +3441,7 @@ merge_file(svn_skel_t **work_items,
          So: is the file modified, relative to its ORIGINAL pristine?
 
          This function sets is_locally_modified to FALSE for
-         files that do not exist */
+         files that do not exist and for directories. */
 
       SVN_ERR(svn_wc__internal_text_modified_p(&is_locally_modified, eb->db,
                                                fb->local_abspath,
@@ -3977,37 +3977,34 @@ close_file(void *file_baton,
     }
   else
     {
-      /* Adding a BASE node under a locally added node.
-       * The incoming add becomes the revert-base! */
-      svn_wc_notify_state_t no_prop_state;
-      apr_hash_t *no_new_actual_props = NULL;
-      apr_hash_t *no_working_props = apr_hash_make(scratch_pool);
+      /* Adding or updating a BASE node under a locally added node. */
+      apr_hash_t *fake_actual_props;
 
-      /* Store the incoming props (sent as propchanges) in new_base_props.
-       * Keep the actual props unchanged. */
-      /* ### BH: This block really needs some review and a few testcases.
-         ###     I don't think it properly updates the BASE props */
-      SVN_ERR(svn_wc__merge_props(&no_prop_state,
+      if (fb->adding_file)
+        fake_actual_props = apr_hash_make(scratch_pool);
+      else
+        fake_actual_props = current_base_props;
+
+      /* Store the incoming props (sent as propchanges) in new_base_props
+         and create a set of new actual props to use for notifications */
+      SVN_ERR(svn_wc__merge_props(&prop_state,
                                   &new_base_props,
-                                  &no_new_actual_props,
+                                  &new_actual_props,
                                   eb->db,
                                   fb->local_abspath,
                                   svn_wc__db_kind_file,
                                   NULL /* left_version */,
                                   NULL /* right_version */,
-                                  NULL /* server_baseprops (update, not merge)  */,
-                                  apr_hash_make(scratch_pool),
-                                  no_working_props,
+                                  NULL /* server_baseprops (not merging) */,
+                                  current_base_props /* base_props */,
+                                  fake_actual_props /* working_props */,
                                   regular_prop_changes, /* propchanges */
                                   TRUE /* base_merge */,
                                   FALSE /* dry_run */,
-                                  NULL, NULL, /* No conflict handling possible */
+                                  NULL, NULL, /* No conflict handling */
                                   eb->cancel_func, eb->cancel_baton,
                                   scratch_pool,
                                   scratch_pool));
-
-      prop_state = svn_wc_notify_state_unchanged;
-      new_actual_props = local_actual_props;
     }
 
   /* ### NOTE: from this point onwards, we make several changes to the
