@@ -3090,7 +3090,6 @@ open_file(const char *path,
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
   struct file_baton *fb;
-  svn_node_kind_t kind;
   svn_boolean_t conflicted;
   svn_boolean_t have_work;
   svn_wc__db_status_t status;
@@ -3129,8 +3128,6 @@ open_file(const char *path,
         return SVN_NO_ERROR;
       }
   }
-
-  SVN_ERR(svn_io_check_path(fb->local_abspath, &kind, scratch_pool));
 
   /* Sanity check. */
 
