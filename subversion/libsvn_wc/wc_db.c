@@ -3393,7 +3393,6 @@ set_changelist_txn(void *baton,
                    apr_pool_t *scratch_pool)
 {
   const char *new_changelist = baton;
-  const char *existing_changelist = NULL;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
 
@@ -3401,8 +3400,6 @@ set_changelist_txn(void *baton,
                                     STMT_SELECT_ACTUAL_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  if (have_row)
-    existing_changelist = svn_sqlite__column_text(stmt, 1, scratch_pool);
   SVN_ERR(svn_sqlite__reset(stmt));
 
   if (!have_row)
@@ -3424,13 +3421,6 @@ set_changelist_txn(void *baton,
     }
   else
     {
-      /* We have an existing row, and it simply needs to be updated, if
-         it's different. */
-      if (existing_changelist
-            && new_changelist
-            && strcmp(existing_changelist, new_changelist) == 0)
-        return SVN_NO_ERROR;
-
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_UPDATE_ACTUAL_CHANGELIST));
     }

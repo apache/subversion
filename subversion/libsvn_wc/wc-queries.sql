@@ -376,7 +376,8 @@ END;
 DROP TRIGGER IF EXISTS   trigger_changelist_list_actual_cl_clear;
 CREATE TEMPORARY TRIGGER trigger_changelist_list_actual_cl_clear
 BEFORE UPDATE ON actual_node
-WHEN OLD.changelist IS NOT NULL
+WHEN OLD.changelist IS NOT NULL AND
+        (OLD.changelist != NEW.changelist OR NEW.changelist IS NULL)
 BEGIN
     /* 27 corresponds to svn_wc_notify_changelist_clear */
     INSERT INTO changelist_list(wc_id, local_relpath, notify, changelist)
@@ -385,7 +386,8 @@ END;
 DROP TRIGGER IF EXISTS   trigger_changelist_list_actual_cl_set;
 CREATE TEMPORARY TRIGGER trigger_changelist_list_actual_cl_set
 BEFORE UPDATE ON actual_node
-WHEN NEW.CHANGELIST IS NOT NULL
+WHEN NEW.CHANGELIST IS NOT NULL AND
+        (OLD.changelist != NEW.changelist OR OLD.changelist IS NULL)
 BEGIN
     /* 26 corresponds to svn_wc_notify_changelist_set */
     INSERT INTO changelist_list(wc_id, local_relpath, notify, changelist)
