@@ -4590,6 +4590,7 @@ db_working_actual_remove(svn_wc__db_wcroot_t *wcroot,
   SVN_ERR(remove_children(wcroot, local_relpath, svn_wc__db_status_incomplete,
                           op_depth, scratch_pool));
 
+#ifdef SVN_DEBUG
   /* Postcondition: There are no NODES rows in this subtree, at same or
      greater op_depth. */
   {
@@ -4620,6 +4621,7 @@ db_working_actual_remove(svn_wc__db_wcroot_t *wcroot,
     SVN_ERR_ASSERT(! have_row);
     SVN_ERR(svn_sqlite__reset(stmt));
   }
+#endif
 
   return SVN_NO_ERROR;
 }

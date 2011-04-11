@@ -586,16 +586,14 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
                apr_pool_t *pool)
 {
   svn_wc__db_t *db = wc_ctx->db;
-  svn_boolean_t was_add = FALSE;
   svn_error_t *err;
   svn_wc__db_status_t status;
   svn_wc__db_kind_t kind;
-  svn_boolean_t have_base;
 
   err = svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL,
-                             &have_base, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL,
                              db, local_abspath, pool, pool);
 
   if (delete_unversioned_target &&
@@ -624,28 +622,6 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
       /* Explicitly ignore other statii */
       default:
         break;
-    }
-
-  if (status == svn_wc__db_status_added)
-    {
-      const char *op_root_abspath;
-      SVN_ERR(svn_wc__db_scan_addition(&status, &op_root_abspath, NULL, NULL,
-                                       NULL, NULL, NULL, NULL,  NULL,
-                                       db, local_abspath, pool, pool));
-
-      if (!have_base)
-        was_add = strcmp(op_root_abspath, local_abspath) == 0;
-      else
-        {
-          svn_wc__db_status_t base_status;
-          SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, NULL, NULL,
-                                           NULL, NULL, NULL, NULL, NULL, NULL,
-                                           NULL, NULL, NULL, NULL, NULL, NULL,
-                                           db, local_abspath, pool, pool));
-
-          if (base_status == svn_wc__db_status_not_present)
-            was_add = TRUE;
-        }
     }
 
   if (kind == svn_wc__db_kind_dir)
@@ -704,20 +680,6 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
     (*notify_func)(notify_baton,
                    svn_wc_create_notify(local_abspath, svn_wc_notify_delete,
                                         pool), pool);
-
-  if (kind == svn_wc__db_kind_dir && was_add)
-    {
-      /* We have to release the WC-DB handles, to allow removing
-         the directory on windows.
-
-         A better solution would probably be to call svn_wc__adm_destroy()
-         in the right place, but we can't do that without breaking the API. */
-
-      SVN_ERR(svn_wc__db_temp_forget_directory(
-                               wc_ctx->db,
-                               local_abspath,
-                               pool));
-    }
 
   /* By the time we get here, anything that was scheduled to be added has
      become unversioned */
