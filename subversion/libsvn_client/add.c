@@ -742,9 +742,7 @@ mkdir_urls(const apr_array_header_t *urls,
   SVN_ERR(svn_uri_condense_targets(&common, &targets, urls, FALSE,
                                    pool, pool));
 
-  /* ### BH: This looks unnecessary, because the hash is not used and
-         you can't rely on hash ordering but it fails our tests if I
-         remove it. The qsort() below determines the final ordering. */
+  /*Remove duplicate targets introduced by make_parents with more targets. */
   SVN_ERR(svn_hash_from_cstring_keys(&targets_hash, targets, pool));
   SVN_ERR(svn_hash_keys(&targets, targets_hash, pool));
 
