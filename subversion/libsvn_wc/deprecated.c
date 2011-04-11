@@ -1164,7 +1164,7 @@ svn_wc_set_changelist(const char *path,
                                          svn_wc__adm_get_db(adm_access),
                                          pool));
 
-  SVN_ERR(svn_wc_set_changelist2(wc_ctx, local_abspath, changelist,
+  SVN_ERR(svn_wc_set_changelist2(wc_ctx, local_abspath, changelist, NULL,
                                  cancel_func, cancel_baton, notify_func,
                                  notify_baton, pool));
 

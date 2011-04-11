@@ -2146,6 +2146,7 @@ svn_error_t *
 svn_wc_set_changelist2(svn_wc_context_t *wc_ctx,
                        const char *local_abspath,
                        const char *changelist,
+                       const apr_array_header_t *changelists,
                        svn_cancel_func_t cancel_func,
                        void *cancel_baton,
                        svn_wc_notify_func2_t notify_func,
@@ -2159,6 +2160,17 @@ svn_wc_set_changelist2(svn_wc_context_t *wc_ctx,
   SVN_ERR_ASSERT(! (changelist && changelist[0] == '\0'));
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  if (changelists && changelists->nelts)
+    {
+      apr_hash_t *changelist_hash;
+
+      SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelists,
+                                         scratch_pool));
+      if (! svn_wc__changelist_match(wc_ctx, local_abspath, changelist_hash,
+                                     scratch_pool))
+        return SVN_NO_ERROR;
+    }
 
   SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,

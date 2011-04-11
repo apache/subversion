@@ -44,7 +44,7 @@
 struct set_cl_fn_baton
 {
   const char *changelist; /* NULL if removing changelists */
-  apr_hash_t *changelist_hash;
+  const apr_array_header_t *changelists;
   svn_client_ctx_t *ctx;
   apr_pool_t *pool;
 };
@@ -61,11 +61,6 @@ set_node_changelist(const char *local_abspath,
                     apr_pool_t *pool)
 {
   struct set_cl_fn_baton *b = (struct set_cl_fn_baton *)baton;
-
-  /* See if this entry passes our changelist filtering. */
-  if (! svn_wc__changelist_match(b->ctx->wc_ctx, local_abspath,
-                                 b->changelist_hash, pool))
-    return SVN_NO_ERROR;
 
   /* We only care about files right now. */
   if (kind != svn_node_file)
@@ -85,6 +80,7 @@ set_node_changelist(const char *local_abspath,
     }
 
   return svn_wc_set_changelist2(b->ctx->wc_ctx, local_abspath, b->changelist,
+                                b->changelists,
                                 b->ctx->cancel_func, b->ctx->cancel_baton,
                                 b->ctx->notify_func2, b->ctx->notify_baton2,
                                 pool);
@@ -99,11 +95,7 @@ svn_client_add_to_changelist(const apr_array_header_t *paths,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *pool)
 {
-  /* ### Someday this routine might use a different underlying API to
-     ### to make the associations in a centralized database. */
-
   apr_pool_t *iterpool = svn_pool_create(pool);
-  apr_hash_t *changelist_hash = NULL;
   int i;
 
   if (changelist[0] == '\0')
@@ -119,9 +111,6 @@ svn_client_add_to_changelist(const apr_array_header_t *paths,
                                  _("'%s' is not a local path"), path);
     }
 
-  if (changelists && changelists->nelts)
-    SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelists, pool));
-
   for (i = 0; i < paths->nelts; i++)
     {
       struct set_cl_fn_baton snb;
@@ -132,7 +121,7 @@ svn_client_add_to_changelist(const apr_array_header_t *paths,
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, iterpool));
 
       snb.changelist = changelist;
-      snb.changelist_hash = changelist_hash;
+      snb.changelists = changelists;
       snb.ctx = ctx;
       snb.pool = iterpool;
       SVN_ERR(svn_wc__node_walk_children(ctx->wc_ctx, local_abspath, FALSE,
@@ -154,11 +143,7 @@ svn_client_remove_from_changelists(const apr_array_header_t *paths,
                                    svn_client_ctx_t *ctx,
                                    apr_pool_t *pool)
 {
-  /* ### Someday this routine might use a different underlying API to
-     ### to make the associations in a centralized database. */
-
   apr_pool_t *iterpool = svn_pool_create(pool);
-  apr_hash_t *changelist_hash = NULL;
   int i;
 
   for (i = 0; i < paths->nelts; i++)
@@ -170,9 +155,6 @@ svn_client_remove_from_changelists(const apr_array_header_t *paths,
                                  _("'%s' is not a local path"), path);
     }
 
-  if (changelists && changelists->nelts)
-    SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelists, pool));
-
   for (i = 0; i < paths->nelts; i++)
     {
       struct set_cl_fn_baton snb;
@@ -183,7 +165,7 @@ svn_client_remove_from_changelists(const apr_array_header_t *paths,
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, iterpool));
 
       snb.changelist = NULL;
-      snb.changelist_hash = changelist_hash;
+      snb.changelists = changelists;
       snb.ctx = ctx;
       snb.pool = iterpool;
       SVN_ERR(svn_wc__node_walk_children(ctx->wc_ctx, local_abspath, FALSE,
