@@ -3707,8 +3707,6 @@ close_file(void *file_baton,
   apr_array_header_t *entry_prop_changes;
   apr_array_header_t *dav_prop_changes;
   apr_array_header_t *regular_prop_changes;
-  svn_boolean_t install_pristine;
-  const char *install_from = NULL;
   apr_hash_t *current_base_props = NULL;
   apr_hash_t *current_actual_props = NULL;
   apr_hash_t *local_actual_props = NULL;
@@ -3894,6 +3892,9 @@ close_file(void *file_baton,
 
   if (! fb->shadowed)
     {
+      svn_boolean_t install_pristine;
+      const char *install_from = NULL;
+
       /* Merge the 'regular' props into the existing working proplist. */
       /* This will merge the old and new props into a new prop db, and
          write <cp> commands to the logfile to install the merged
@@ -3947,6 +3948,32 @@ close_file(void *file_baton,
           all_work_items = svn_wc__wq_merge(all_work_items, work_item,
                                             scratch_pool);
         }
+      else if (lock_state == svn_wc_notify_lock_state_unlocked)
+        {
+          /* If a lock was removed and we didn't update the text contents, we
+             might need to set the file read-only.
+      
+             Note: this will also update the executable flag, but ... meh.  */
+          SVN_ERR(svn_wc__wq_build_sync_file_flags(&work_item, eb->db,
+                                                   fb->local_abspath,
+                                                   scratch_pool, scratch_pool));
+          all_work_items = svn_wc__wq_merge(all_work_items, work_item,
+                                            scratch_pool);
+        }
+
+      /* Clean up any temporary files.  */
+
+      /* Remove the INSTALL_FROM file, as long as it doesn't refer to the
+         working file.  */
+      if (install_from != NULL
+          && strcmp(install_from, fb->local_abspath) != 0)
+        {
+          SVN_ERR(svn_wc__wq_build_file_remove(&work_item, eb->db,
+                                               install_from,
+                                               scratch_pool, scratch_pool));
+          all_work_items = svn_wc__wq_merge(all_work_items, work_item,
+                                            scratch_pool);
+        }
     }
   else
     {
@@ -3981,37 +4008,6 @@ close_file(void *file_baton,
 
       prop_state = svn_wc_notify_state_unchanged;
       new_actual_props = local_actual_props;
-    }
-
-  /* Now that all the state has settled, should we update the readonly
-     status of the working file? The LOCK_STATE will signal what we should
-     do for this node.  */
-  if (!fb->shadowed
-      && fb->new_text_base_sha1_checksum == NULL
-      && lock_state == svn_wc_notify_lock_state_unlocked)
-    {
-      /* If a lock was removed and we didn't update the text contents, we
-         might need to set the file read-only.
-
-         Note: this will also update the executable flag, but ... meh.  */
-      SVN_ERR(svn_wc__wq_build_sync_file_flags(&work_item, eb->db,
-                                               fb->local_abspath,
-                                               scratch_pool, scratch_pool));
-      all_work_items = svn_wc__wq_merge(all_work_items, work_item,
-                                        scratch_pool);
-    }
-
-  /* Clean up any temporary files.  */
-
-  /* Remove the INSTALL_FROM file, as long as it doesn't refer to the
-     working file.  */
-  if (install_from != NULL
-      && strcmp(install_from, fb->local_abspath) != 0)
-    {
-      SVN_ERR(svn_wc__wq_build_file_remove(&work_item, eb->db, install_from,
-                                           scratch_pool, scratch_pool));
-      all_work_items = svn_wc__wq_merge(all_work_items, work_item,
-                                        scratch_pool);
     }
 
   /* ### NOTE: from this point onwards, we make several changes to the
