@@ -43,16 +43,12 @@
    configured for the working copy indicated by PDH. The returned path
    does not necessarily currently exist.
 
-   Iff CREATE_SUBDIR is TRUE, then this function will make sure that the
-   parent directory of PRISTINE_ABSPATH exists. This is only useful when
-   about to create a new pristine.
 
    Any other allocations are made in SCRATCH_POOL. */
 static svn_error_t *
 get_pristine_fname(const char **pristine_abspath,
                    const char *wcroot_abspath,
                    const svn_checksum_t *sha1_checksum,
-                   svn_boolean_t create_subdir,
                    apr_pool_t *result_pool,
                    apr_pool_t *scratch_pool)
 {
@@ -82,21 +78,6 @@ get_pristine_fname(const char **pristine_abspath,
   subdir[0] = hexdigest[0];
   subdir[1] = hexdigest[1];
   subdir[2] = '\0';
-
-  if (create_subdir)
-    {
-      const char *subdir_abspath = svn_dirent_join(base_dir_abspath, subdir,
-                                                   scratch_pool);
-      svn_error_t *err;
-
-      err = svn_io_dir_make(subdir_abspath, APR_OS_DEFAULT, scratch_pool);
-
-      /* Whatever error may have occurred... ignore it. Typically, this
-         will be "directory already exists", but if it is something
-         *different*, then presumably another error will follow when we
-         try to access the file within this (missing?) pristine subdir. */
-      svn_error_clear(err);
-    }
 
   /* The file is located at DIR/.svn/pristine/XX/XXYYZZ... */
   *pristine_abspath = svn_dirent_join_many(result_pool,
@@ -144,7 +125,6 @@ svn_wc__db_pristine_get_path(const char **pristine_abspath,
 
   SVN_ERR(get_pristine_fname(pristine_abspath, wcroot->abspath,
                              sha1_checksum,
-                             FALSE /* create_subdir */,
                              result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -159,7 +139,6 @@ svn_wc__db_pristine_get_future_path(const char **pristine_abspath,
 {
   SVN_ERR(get_pristine_fname(pristine_abspath, wcroot_abspath,
                              sha1_checksum,
-                             FALSE /* create_subdir */,
                              result_pool, scratch_pool));
   return SVN_NO_ERROR;
 }
@@ -253,7 +232,6 @@ svn_wc__db_pristine_read(svn_stream_t **contents,
   b.result_pool = result_pool;
   SVN_ERR(get_pristine_fname(&b.pristine_abspath, wcroot->abspath,
                              sha1_checksum,
-                             FALSE /* create_subdir */,
                              scratch_pool, scratch_pool));
   SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, pristine_read_txn, &b,
                               scratch_pool));
@@ -441,7 +419,6 @@ svn_wc__db_pristine_install(svn_wc__db_t *db,
 
   SVN_ERR(get_pristine_fname(&b.pristine_abspath, wcroot->abspath,
                              sha1_checksum,
-                             FALSE /* create_subdir */,
                              scratch_pool, scratch_pool));
 
   /* Ensure the SQL txn has at least a 'RESERVED' lock before we start looking
@@ -633,8 +610,7 @@ pristine_remove_if_unreferenced(svn_wc__db_wcroot_t *wcroot,
   b.wcroot = wcroot;
   b.sha1_checksum = sha1_checksum;
   SVN_ERR(get_pristine_fname(&b.pristine_abspath, wcroot->abspath,
-                             sha1_checksum, FALSE /* create_subdir */,
-                             scratch_pool, scratch_pool));
+                             sha1_checksum, scratch_pool, scratch_pool));
 
   /* Ensure the SQL txn has at least a 'RESERVED' lock before we start looking
    * at the disk, to ensure no concurrent pristine install/delete txn. */
@@ -777,8 +753,7 @@ svn_wc__db_pristine_check(svn_boolean_t *present,
       const char *pristine_abspath;
       svn_node_kind_t kind_on_disk;
       SVN_ERR(get_pristine_fname(&pristine_abspath, wcroot->abspath,
-                                 sha1_checksum, FALSE /* create_subdir */,
-                                 scratch_pool, scratch_pool));
+                                 sha1_checksum, scratch_pool, scratch_pool));
       SVN_ERR(svn_io_check_path(pristine_abspath, &kind_on_disk, scratch_pool));
 
       if (kind_on_disk != svn_node_file)
