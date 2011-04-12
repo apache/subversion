@@ -391,6 +391,9 @@ void svn_wc__compat_call_notify_func(void *baton,
  * If LOCAL_ABSPATH does not exist, consider it unmodified.  If it exists
  * but is not under revision control (not even scheduled for
  * addition), return the error SVN_ERR_ENTRY_NOT_FOUND.
+ *
+ * If the text is unmodified and a write-lock is held this function
+ * will repair "broken" timestamps and filesizes.
  */
 svn_error_t *
 svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,

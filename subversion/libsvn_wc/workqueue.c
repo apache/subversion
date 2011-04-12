@@ -736,9 +736,6 @@ log_do_committed(svn_wc__db_t *db,
       || kind == svn_wc__db_kind_symlink)
     {
       svn_boolean_t overwrote_working;
-      apr_finfo_t finfo;
-      svn_filesize_t translated_size;
-      apr_time_t last_mod_time;
 
       SVN_ERR(svn_wc__db_global_commit(db, local_abspath,
                                        new_revision, changed_rev,
@@ -767,44 +764,32 @@ log_do_committed(svn_wc__db_t *db,
                                      cancel_func, cancel_baton,
                                      pool));
 
-      SVN_ERR(svn_io_stat(&finfo, local_abspath,
-                          APR_FINFO_MIN | APR_FINFO_LINK, pool));
-
       /* We will compute and modify the size and timestamp */
-
-      translated_size = finfo.size;
-
       if (overwrote_working)
         {
-          last_mod_time = finfo.mtime;
+          apr_finfo_t finfo;
+
+          SVN_ERR(svn_io_stat(&finfo, local_abspath,
+                              APR_FINFO_MIN | APR_FINFO_LINK, pool));
+          SVN_ERR(svn_wc__db_global_record_fileinfo(db, local_abspath,
+                                                    finfo.size, finfo.mtime,
+                                                    pool));
         }
       else
         {
           svn_boolean_t modified;
-          /* The working copy file hasn't been overwritten, meaning
-             we need to decide which timestamp to use. */
 
-          /* Compare the texts. We just removed the translated size
-             and working time from the nodes record by calling
-             svn_wc__db_global_commit , so we can just use
-             svn_wc__internal_file_modified_p's internal logic
-             to determine if we should mark the file as unmodified */
+          /* The working copy file hasn't been overwritten.  We just
+           removed the translated size and working time from the nodes
+           record by calling svn_wc__db_global_commit, so we can use
+           svn_wc__internal_file_modified_p's internal logic to
+           "repair" them if the file is unmodified */
           SVN_ERR(svn_wc__internal_file_modified_p(&modified, NULL, NULL,
                                                    db, local_abspath,
                                                    TRUE, FALSE, pool));
 
-          /* If they are the same, use the working file's timestamp,
-             else use epoch. */
-          if (modified)
-            return SVN_NO_ERROR; /* Don't record fileinfo */
-
-          last_mod_time = finfo.mtime;
         }
-
-      return svn_error_return(svn_wc__db_global_record_fileinfo(
-                                db, local_abspath,
-                                translated_size, last_mod_time,
-                                pool));
+      return SVN_NO_ERROR;
     }
 
   /* It's not a file, so it's a directory. */
