@@ -132,7 +132,7 @@ build_key(const char **mc_key,
  */
 static svn_error_t *
 memcache_internal_get(char **data,
-                      apr_size_t *size
+                      apr_size_t *size,
                       svn_boolean_t *found,
                       void *cache_void,
                       const void *key,
@@ -149,7 +149,7 @@ memcache_internal_get(char **data,
                               pool,
                               mc_key,
                               data,
-                              data_len,
+                              size,
                               NULL /* ignore flags */);
   if (apr_err == APR_NOTFOUND)
     {
@@ -175,10 +175,11 @@ memcache_get(void **value_p,
              const void *key,
              apr_pool_t *pool)
 {
+  memcache_t *cache = cache_void;
   char *data;
   apr_size_t data_len;
   SVN_ERR(memcache_internal_get(&data,
-                                &size,
+                                &data_len,
                                 found,
                                 cache_void,
                                 key,
@@ -186,17 +187,19 @@ memcache_get(void **value_p,
 
   /* If we found it, de-serialize it. */
   if (*found)
-    if (cache->deserialize_func)
-      {
-        SVN_ERR((cache->deserialize_func)(value_p, data, data_len, pool));
-      }
-    else
-      {
-        svn_string_t *value = apr_pcalloc(pool, sizeof(*value));
-        value->data = data;
-        value->len = data_len;
-        *value_p = value;
-      }
+    {
+      if (cache->deserialize_func)
+        {
+          SVN_ERR((cache->deserialize_func)(value_p, data, data_len, pool));
+        }
+      else
+        {
+          svn_string_t *value = apr_pcalloc(pool, sizeof(*value));
+          value->data = data;
+          value->len = data_len;
+          *value_p = value;
+        }
+    }
 
   return SVN_NO_ERROR;
 }
@@ -217,7 +220,7 @@ memcache_internal_set(void *cache_void,
   apr_status_t apr_err;
 
   SVN_ERR(build_key(&mc_key, cache, key, pool));
-  apr_err = apr_memcache_set(cache->memcache, mc_key, data, data_len, 0, 0);
+  apr_err = apr_memcache_set(cache->memcache, mc_key, (char *)data, len, 0, 0);
 
   /* ### Maybe write failures should be ignored (but logged)? */
   if (apr_err != APR_SUCCESS)
@@ -234,6 +237,7 @@ memcache_set(void *cache_void,
              void *value,
              apr_pool_t *pool)
 {
+  memcache_t *cache = cache_void;
   apr_pool_t *subpool = svn_pool_create(pool);
   char *data;
   apr_size_t data_len;
@@ -278,7 +282,7 @@ memcache_get_partial(void **value_p,
 
   /* If we found it, de-serialize it. */
   return *found
-    ? func(value_p, data, data_len, baton, pool)
+    ? func(value_p, data, size, baton, pool)
     : err;
 }
 
