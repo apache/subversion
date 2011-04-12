@@ -1172,20 +1172,6 @@ log_do_committed(svn_wc__db_t *db,
                                    NULL /* work_items */,
                                    pool));
 
-  /* For directories, we also have to reset the state in the parent's
-     entry for this directory, unless the current directory is a `WC
-     root' (meaning, our parent directory on disk is not our parent in
-     Version Control Land), in which case we're all finished here. */
-  {
-    svn_boolean_t is_root;
-    svn_boolean_t is_switched;
-
-    SVN_ERR(svn_wc__check_wc_root(&is_root, NULL, &is_switched,
-                                  db, local_abspath, pool));
-    if (is_root || is_switched)
-      return SVN_NO_ERROR;
-  }
-
   return SVN_NO_ERROR;
 }
 
