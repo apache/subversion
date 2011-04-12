@@ -1827,7 +1827,8 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
       if (wc_special || ! local_special)
         {
           /* Check for local mods. before removing entry */
-          SVN_ERR(svn_wc__internal_text_modified_p(&text_modified_p, db,
+          SVN_ERR(svn_wc__internal_file_modified_p(&text_modified_p, NULL,
+                                                   NULL, db,
                                                    local_abspath, FALSE,
                                                    TRUE, scratch_pool));
           if (text_modified_p && instant_error)

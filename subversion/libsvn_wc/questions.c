@@ -243,21 +243,6 @@ svn_wc__internal_versioned_file_modcheck(svn_boolean_t *modified_p,
 }
 
 svn_error_t *
-svn_wc__internal_text_modified_p(svn_boolean_t *modified_p,
-                                 svn_wc__db_t *db,
-                                 const char *local_abspath,
-                                 svn_boolean_t force_comparison,
-                                 svn_boolean_t compare_textbases,
-                                 apr_pool_t *scratch_pool)
-{
-  SVN_ERR(svn_wc__internal_file_modified_p(modified_p, NULL, NULL,
-                                           db, local_abspath,
-                                           force_comparison, compare_textbases,
-                                           scratch_pool));
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
 svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
                                  svn_boolean_t *executable_p,
                                  svn_boolean_t *read_only_p,
@@ -408,7 +393,7 @@ svn_wc_text_modified_p2(svn_boolean_t *modified_p,
                         svn_boolean_t force_comparison,
                         apr_pool_t *scratch_pool)
 {
-  return svn_wc__internal_text_modified_p(modified_p, wc_ctx->db,
+  return svn_wc__internal_file_modified_p(modified_p, NULL, NULL, wc_ctx->db,
                                           local_abspath, force_comparison,
                                           TRUE, scratch_pool);
 }

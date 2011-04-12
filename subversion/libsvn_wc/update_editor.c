@@ -1185,7 +1185,8 @@ entry_has_local_mods(svn_boolean_t *modified,
   /* Check for text modifications */
   if (kind == svn_wc__db_kind_file
       || kind == svn_wc__db_kind_symlink)
-    SVN_ERR(svn_wc__internal_text_modified_p(&text_modified, db, local_abspath,
+    SVN_ERR(svn_wc__internal_file_modified_p(&text_modified, NULL, NULL,
+                                             db, local_abspath,
                                              FALSE, TRUE, scratch_pool));
   else
     text_modified = FALSE;
@@ -3455,8 +3456,8 @@ merge_file(svn_skel_t **work_items,
          This function sets is_locally_modified to FALSE for
          files that do not exist and for directories. */
 
-      SVN_ERR(svn_wc__internal_text_modified_p(&is_locally_modified, eb->db,
-                                               fb->local_abspath,
+      SVN_ERR(svn_wc__internal_file_modified_p(&is_locally_modified, NULL,
+                                               NULL, eb->db, fb->local_abspath,
                                                FALSE /* force_comparison */,
                                                FALSE /* compare_textbases */,
                                                scratch_pool));

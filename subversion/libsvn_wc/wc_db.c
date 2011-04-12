@@ -10486,8 +10486,8 @@ has_local_mods(svn_boolean_t *is_modified,
           node_kind = svn_sqlite__column_token(stmt, 1, kind_map);
           if (node_kind == svn_wc__db_kind_file)
             {
-              SVN_ERR(svn_wc__internal_text_modified_p(is_modified, db,
-                                                       node_abspath,
+              SVN_ERR(svn_wc__internal_file_modified_p(is_modified, NULL,
+                                                       NULL, db, node_abspath,
                                                        FALSE, TRUE, iterpool));
               if (*is_modified)
                 break;
