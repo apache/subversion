@@ -227,22 +227,6 @@ compare_and_verify(svn_boolean_t *modified_p,
 }
 
 svn_error_t *
-svn_wc__internal_versioned_file_modcheck(svn_boolean_t *modified_p,
-                                         svn_wc__db_t *db,
-                                         const char *versioned_file_abspath,
-                                         svn_stream_t *pristine_stream,
-                                         svn_boolean_t compare_textbases,
-                                         apr_pool_t *scratch_pool)
-{
-  return svn_error_return(compare_and_verify(modified_p, db,
-                                             versioned_file_abspath,
-                                             pristine_stream,
-                                             compare_textbases,
-                                             FALSE /* verify_checksum */,
-                                             scratch_pool));
-}
-
-svn_error_t *
 svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
                                  svn_boolean_t *executable_p,
                                  svn_boolean_t *read_only_p,
