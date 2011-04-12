@@ -890,7 +890,6 @@ collect_lock_tokens(apr_hash_t **result,
                     apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
-  size_t base_len = strlen(base_url);
 
   *result = apr_hash_make(pool);
 
