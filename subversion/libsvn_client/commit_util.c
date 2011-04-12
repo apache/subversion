@@ -649,7 +649,9 @@ harvest_committables(svn_wc_context_t *wc_ctx,
                          svn_path_url_add_component2(
                              repos_root_url, node_relpath,
                              apr_hash_pool_get(lock_tokens)),
-                         APR_HASH_KEY_STRING, node_lock_token);
+                         APR_HASH_KEY_STRING,
+                         apr_pstrdup(apr_hash_pool_get(lock_tokens),
+                                     node_lock_token));
         }
     }
 
