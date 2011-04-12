@@ -691,7 +691,6 @@ def text_time_behaviour(wc_dir, wc_path, status_path, expected_status, cmd):
 
 # Is this really a status test?  I'm not sure, but I don't know where
 # else to put it.
-@XFail()
 @Issue(3773)
 def timestamp_behaviour(sbox):
   "timestamp behaviour"
