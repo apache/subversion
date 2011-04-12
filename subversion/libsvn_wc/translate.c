@@ -350,24 +350,35 @@ svn_wc__maybe_set_executable(svn_boolean_t *did_set,
                              apr_pool_t *scratch_pool)
 {
 #ifndef WIN32
-  const svn_string_t *propval;
+  svn_wc__db_status_t status;
+  svn_wc__db_kind_t kind;
+  svn_wc__db_lock_t *lock;
+  apr_hash_t *props;
+
+  if (did_set)
+    *did_set = FALSE;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(svn_wc__internal_propget(&propval, db, local_abspath,
-                                   SVN_PROP_EXECUTABLE, scratch_pool,
-                                   scratch_pool));
-  if (propval != NULL)
-    {
-      SVN_ERR(svn_io_set_file_executable(local_abspath, TRUE, FALSE,
-                                         scratch_pool));
-      if (did_set)
-        *did_set = TRUE;
-    }
-  else
+  SVN_ERR(svn_wc__db_read_node_install_info(NULL, &status, &kind, NULL, NULL,
+                                            &props,
+                                            db, local_abspath,
+                                            scratch_pool, scratch_pool));
+
+  if (kind != svn_wc__db_kind_file
+      || status != svn_wc__db_status_normal
+      || props == NULL
+      || ! apr_hash_get(props, SVN_PROP_EXECUTABLE, APR_HASH_KEY_STRING))
+    return SVN_NO_ERROR; /* Not executable */
+
+  SVN_ERR(svn_io_set_file_executable(local_abspath, TRUE, FALSE,
+                                     scratch_pool));
+  if (did_set)
+    *did_set = TRUE;
+#else
+  if (did_set)
+    *did_set = FALSE;
 #endif
-    if (did_set)
-      *did_set = FALSE;
 
   return SVN_NO_ERROR;
 }
@@ -379,41 +390,39 @@ svn_wc__maybe_set_read_only(svn_boolean_t *did_set,
                             const char *local_abspath,
                             apr_pool_t *scratch_pool)
 {
-  const svn_string_t *needs_lock;
   svn_wc__db_status_t status;
   svn_wc__db_kind_t kind;
   svn_wc__db_lock_t *lock;
+  apr_hash_t *props;
 
   if (did_set)
     *did_set = FALSE;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
-                               &lock,
-                               db, local_abspath, scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_read_node_install_info(NULL, &status, &kind, NULL, NULL,
+                                            &props,
+                                            db, local_abspath,
+                                            scratch_pool, scratch_pool));
+
+  if (kind != svn_wc__db_kind_file
+      || status != svn_wc__db_status_normal
+      || props == NULL
+      || ! apr_hash_get(props, SVN_PROP_NEEDS_LOCK, APR_HASH_KEY_STRING))
+    return SVN_NO_ERROR; /* Doesn't need lock handling */
+
+  SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   &lock, NULL,
+                                   db, local_abspath,
+                                   scratch_pool, scratch_pool));
 
   if (lock)
     return SVN_NO_ERROR; /* We have a lock */
-  else if (kind != svn_wc__db_kind_file)
-    return SVN_NO_ERROR;
 
-  /* Files that aren't in the repository yet should be left writable. */
-  if (status != svn_wc__db_status_normal)
-    return SVN_NO_ERROR;
-
-  SVN_ERR(svn_wc__internal_propget(&needs_lock, db, local_abspath,
-                                   SVN_PROP_NEEDS_LOCK, scratch_pool,
-                                   scratch_pool));
-  if (needs_lock != NULL)
-    {
-      SVN_ERR(svn_io_set_file_read_only(local_abspath, FALSE, scratch_pool));
-      if (did_set)
-        *did_set = TRUE;
-    }
+  SVN_ERR(svn_io_set_file_read_only(local_abspath, FALSE, scratch_pool));
+  if (did_set)
+    *did_set = TRUE;
 
   return SVN_NO_ERROR;
 }
