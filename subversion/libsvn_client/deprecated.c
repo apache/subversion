@@ -1865,7 +1865,7 @@ svn_client_update3(apr_array_header_t **result_revs,
 {
   return svn_client_update4(result_revs, paths, revision,
                             depth, depth_is_sticky, ignore_externals,
-                            allow_unver_obstructions, FALSE, ctx, pool);
+                            allow_unver_obstructions, TRUE, FALSE, ctx, pool);
 }
 
 svn_error_t *

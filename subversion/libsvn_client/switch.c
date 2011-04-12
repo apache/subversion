@@ -218,7 +218,6 @@ switch_internal(svn_revnum_t *result_rev,
                                     target, switch_rev_url, use_commit_times,
                                     depth,
                                     depth_is_sticky, allow_unver_obstructions,
-                                    TRUE,
                                     server_supports_depth
                                         && (depth == svn_depth_unknown),
                                     diff3_cmd, preserved_exts,

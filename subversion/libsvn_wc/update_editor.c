@@ -2172,10 +2172,9 @@ add_directory(const char *path,
        * During switch, local adds at the same path as incoming adds get
        * "lost" in that switching back to the original will no longer have the
        * local add. So switch always alerts the user with a tree conflict. */
-      if (eb->switch_relpath != NULL
+      if (!eb->adds_as_modification
           || local_is_non_dir
-          || add_status != svn_wc__db_status_added
-          || !eb->adds_as_modification)
+          || add_status != svn_wc__db_status_added)
         {
           SVN_ERR(check_tree_conflict(&tree_conflict, eb,
                                       db->local_abspath,
@@ -3026,10 +3025,9 @@ add_file(const char *path,
        * During switch, local adds at the same path as incoming adds get
        * "lost" in that switching back to the original will no longer have the
        * local add. So switch always alerts the user with a tree conflict. */
-      if (eb->switch_relpath != NULL
+      if (!eb->adds_as_modification
           || !local_is_file
-          || status != svn_wc__db_status_added
-          || !eb->adds_as_modification)
+          || status != svn_wc__db_status_added)
         {
           SVN_ERR(check_tree_conflict(&tree_conflict, eb,
                                       fb->local_abspath,
@@ -4451,7 +4449,6 @@ svn_wc_get_switch_editor4(const svn_delta_editor_t **editor,
                           svn_depth_t depth,
                           svn_boolean_t depth_is_sticky,
                           svn_boolean_t allow_unver_obstructions,
-                          svn_boolean_t adds_as_modification,
                           svn_boolean_t server_performs_filtering,
                           const char *diff3_cmd,
                           const apr_array_header_t *preserved_exts,
@@ -4472,7 +4469,8 @@ svn_wc_get_switch_editor4(const svn_delta_editor_t **editor,
                      target_basename, use_commit_times,
                      switch_url,
                      depth, depth_is_sticky, allow_unver_obstructions,
-                     adds_as_modification, server_performs_filtering,
+                     FALSE /* adds_as_modification */,
+                     server_performs_filtering,
                      notify_func, notify_baton,
                      cancel_func, cancel_baton,
                      conflict_func, conflict_baton,

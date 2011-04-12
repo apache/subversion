@@ -473,6 +473,9 @@ svn_client__make_local_parents(const char *path,
    that obstruct items added from the repos are tolerated; if FALSE,
    these obstructions cause the update to fail.
 
+   If ADDS_AS_MODIFICATION is TRUE, local additions are handled as
+   modifications on added nodes.
+
    If INNERUPDATE is true, no anchor check is performed on the update target.
 
    If MAKE_PARENTS is true, allow the update to calculate and checkout
@@ -489,6 +492,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                             svn_boolean_t depth_is_sticky,
                             svn_boolean_t ignore_externals,
                             svn_boolean_t allow_unver_obstructions,
+                            svn_boolean_t adds_as_modification,
                             svn_boolean_t *timestamp_sleep,
                             svn_boolean_t innerupdate,
                             svn_boolean_t make_parents,

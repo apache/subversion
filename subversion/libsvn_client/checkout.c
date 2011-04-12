@@ -217,6 +217,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
                                         revision, depth, TRUE,
                                         ignore_externals,
                                         allow_unver_obstructions,
+                                        TRUE /* adds_as_modification */,
                                         use_sleep, innercheckout, FALSE,
                                         ctx, pool);
     }

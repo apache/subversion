@@ -1193,6 +1193,10 @@ svn_client_checkout(svn_revnum_t *result_rev,
  * If @a allow_unver_obstructions is FALSE then the update will abort
  * if there are any unversioned obstructing items.
  *
+ * If @a adds_as_modifications is TRUE, local additions that obstruct
+ * added files are handled as a modified version of the file instead of
+ * as a tree conflict.
+ *
  * If @a make_parents is TRUE, create any non-existent parent
  * directories also by checking them out at depth=empty.
  *
@@ -1224,13 +1228,14 @@ svn_client_update4(apr_array_header_t **result_revs,
                    svn_boolean_t depth_is_sticky,
                    svn_boolean_t ignore_externals,
                    svn_boolean_t allow_unver_obstructions,
+                   svn_boolean_t adds_as_modification,
                    svn_boolean_t make_parents,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
 
 /**
  * Similar to svn_client_update4() but with @a make_parents always set
- * to FALSE.
+ * to FALSE and @a adds_as_modification set to TRUE.
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
  * @since New in 1.5.
