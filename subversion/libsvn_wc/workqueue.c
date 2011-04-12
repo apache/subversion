@@ -787,12 +787,11 @@ log_do_committed(svn_wc__db_t *db,
           /* Compare the texts. We just removed the translated size
              and working time from the nodes record by calling
              svn_wc__db_global_commit , so we can just use
-             svn_wc__internal_text_modified_p's internal logic
+             svn_wc__internal_file_modified_p's internal logic
              to determine if we should mark the file as unmodified */
-          SVN_ERR(svn_wc__internal_text_modified_p(
-                        &modified, db, local_abspath,
-                        TRUE /* force_comparison */,
-                        FALSE /* compare_textbases */, pool));
+          SVN_ERR(svn_wc__internal_file_modified_p(&modified, NULL, NULL,
+                                                   db, local_abspath,
+                                                   TRUE, FALSE, pool));
 
           /* If they are the same, use the working file's timestamp,
              else use epoch. */
