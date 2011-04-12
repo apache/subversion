@@ -10146,13 +10146,13 @@ svn_wc__db_temp_op_set_new_dir_to_incomplete(svn_wc__db_t *db,
 
 
 svn_error_t *
-svn_wc__db_temp_below_work(svn_boolean_t *have_work,
-                           svn_wc__db_t *db,
-                           const char *local_abspath,
-                           apr_pool_t *scratch_pool)
+svn_wc__db_info_below_working(svn_boolean_t *have_base,
+                              svn_boolean_t *have_work,
+                              svn_wc__db_status_t *status,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              apr_pool_t *scratch_pool)
 {
-  svn_boolean_t have_base;
-  svn_wc__db_status_t status;
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
 
@@ -10161,7 +10161,7 @@ svn_wc__db_temp_below_work(svn_boolean_t *have_work,
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
                               local_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
-  SVN_ERR(info_below_working(&have_base, have_work, &status,
+  SVN_ERR(info_below_working(have_base, have_work, status,
                              wcroot, local_relpath, scratch_pool));
 
   return SVN_NO_ERROR;
