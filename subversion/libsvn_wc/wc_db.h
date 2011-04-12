@@ -1203,7 +1203,7 @@ svn_error_t *
 svn_wc__db_op_set_changelist(svn_wc__db_t *db,
                              const char *local_abspath,
                              const char *changelist,
-                             const apr_hash_t *changelists,
+                             const apr_array_header_t *changelists,
                              svn_depth_t depth,
                              apr_pool_t *scratch_pool);
 
