@@ -340,6 +340,7 @@ jlongArray SVNClient::update(Targets &targets, Revision &revision,
                                    depthIsSticky,
                                    ignoreExternals,
                                    allowUnverObstructions,
+                                   TRUE /* adds_as_modification */,
                                    makeParents,
                                    ctx, requestPool.pool()),
                 NULL);

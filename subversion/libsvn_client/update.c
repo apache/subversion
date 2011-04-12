@@ -65,6 +65,7 @@ update_internal(svn_revnum_t *result_rev,
                 svn_boolean_t depth_is_sticky,
                 svn_boolean_t ignore_externals,
                 svn_boolean_t allow_unver_obstructions,
+                svn_boolean_t adds_as_modification,
                 svn_boolean_t *timestamp_sleep,
                 svn_boolean_t innerupdate,
                 svn_boolean_t notify_summary,
@@ -233,7 +234,7 @@ update_internal(svn_revnum_t *result_rev,
                                     &revnum, ctx->wc_ctx, anchor_abspath,
                                     target, use_commit_times, depth,
                                     depth_is_sticky, allow_unver_obstructions,
-                                    TRUE,
+                                    adds_as_modification,
                                     server_supports_depth
                                         && (depth == svn_depth_unknown),
                                     diff3_cmd, preserved_exts,
@@ -322,6 +323,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                             svn_boolean_t depth_is_sticky,
                             svn_boolean_t ignore_externals,
                             svn_boolean_t allow_unver_obstructions,
+                            svn_boolean_t adds_as_modification,
                             svn_boolean_t *timestamp_sleep,
                             svn_boolean_t innerupdate,
                             svn_boolean_t make_parents,
@@ -374,8 +376,8 @@ svn_client__update_internal(svn_revnum_t *result_rev,
           err = update_internal(result_rev, missing_parent, anchor_abspath,
                                 &peg_revision, svn_depth_empty, FALSE,
                                 ignore_externals, allow_unver_obstructions,
-                                timestamp_sleep, innerupdate, FALSE,
-                                ctx, pool);
+                                adds_as_modification, timestamp_sleep,
+                                innerupdate, FALSE, ctx, pool);
           if (err)
             goto cleanup;
           anchor_abspath = missing_parent;
@@ -398,6 +400,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   err = update_internal(result_rev, local_abspath, anchor_abspath,
                         &peg_revision, depth, depth_is_sticky,
                         ignore_externals, allow_unver_obstructions,
+                        adds_as_modification,
                         timestamp_sleep, innerupdate, TRUE, ctx, pool);
  cleanup:
   err = svn_error_compose_create(
@@ -416,6 +419,7 @@ svn_client_update4(apr_array_header_t **result_revs,
                    svn_boolean_t depth_is_sticky,
                    svn_boolean_t ignore_externals,
                    svn_boolean_t allow_unver_obstructions,
+                   svn_boolean_t adds_as_modification,
                    svn_boolean_t make_parents,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
@@ -423,6 +427,7 @@ svn_client_update4(apr_array_header_t **result_revs,
   int i;
   apr_pool_t *subpool = svn_pool_create(pool);
   const char *path = NULL;
+  svn_boolean_t sleep = FALSE;
 
   if (result_revs)
     *result_revs = apr_array_make(pool, paths->nelts, sizeof(svn_revnum_t));
@@ -438,7 +443,6 @@ svn_client_update4(apr_array_header_t **result_revs,
 
   for (i = 0; i < paths->nelts; ++i)
     {
-      svn_boolean_t sleep;
       svn_error_t *err = SVN_NO_ERROR;
       svn_revnum_t result_rev;
       const char *local_abspath;
@@ -446,26 +450,27 @@ svn_client_update4(apr_array_header_t **result_revs,
 
       svn_pool_clear(subpool);
 
-      if (ctx->cancel_func && (err = ctx->cancel_func(ctx->cancel_baton)))
-        break;
+      if (ctx->cancel_func)
+        SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, subpool));
       err = svn_client__update_internal(&result_rev, local_abspath,
                                         revision, depth, depth_is_sticky,
                                         ignore_externals,
                                         allow_unver_obstructions,
+                                        adds_as_modification,
                                         &sleep, FALSE, make_parents,
                                         ctx, subpool);
 
-      if (err && err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
-        {
-          return svn_error_return(err);
-        }
-
       if (err)
         {
-          /* SVN_ERR_WC_NOT_WORKING_COPY: it's not versioned */
+          if(err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
+            return svn_error_return(err);
+
           svn_error_clear(err);
+
+          /* SVN_ERR_WC_NOT_WORKING_COPY: it's not versioned */
+          
           result_rev = SVN_INVALID_REVNUM;
           if (ctx->notify_func2)
             {
@@ -481,7 +486,8 @@ svn_client_update4(apr_array_header_t **result_revs,
     }
 
   svn_pool_destroy(subpool);
-  svn_io_sleep_for_timestamps((paths->nelts == 1) ? path : NULL, pool);
+  if (sleep)
+    svn_io_sleep_for_timestamps((paths->nelts == 1) ? path : NULL, pool);
 
   return SVN_NO_ERROR;
 }
