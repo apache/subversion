@@ -55,6 +55,8 @@
 
 #define NOT_IMPLEMENTED() SVN__NOT_IMPLEMENTED()
 
+WC_QUERIES_SQL_DECLARE_STATEMENTS(statements);
+
 
 /*
  * Some filename constants.
@@ -424,6 +426,31 @@ static const char *construct_like_arg(const char *local_relpath,
   return apr_pstrcat(result_pool,
                      escape_sqlite_like(local_relpath, result_pool),
                      "/%", (char *)NULL);
+}
+
+
+/* Construct a clause to be used as a filter, of the form:
+ * COLUMN in (LIST[0], LIST[1], LIST[2], ..., LIST[N]).
+ *
+ * Allocate the result either statically or in RESULT_POOL.  */
+static const char *
+construct_filter(const char *column_name,
+                 const apr_array_header_t *list,
+                 apr_pool_t *result_pool)
+{
+  svn_stringbuf_t *clause;
+  int i;
+
+  if (!list || list->nelts == 0)
+    return "";
+
+  clause = svn_stringbuf_createf(result_pool, "%s IN (?", column_name);
+
+  for (i = 1; i < list->nelts; i++)
+    svn_stringbuf_appendcstr(clause, ", ?");
+  svn_stringbuf_appendcstr(clause, ")");
+
+  return clause->data;
 }
 
 
@@ -3385,6 +3412,13 @@ svn_wc__db_op_modified(svn_wc__db_t *db,
 }
 
 
+struct set_changelist_baton_t
+{
+  const char *new_changelist;
+  const apr_array_header_t *changelists;
+};
+
+
 /* */
 static svn_error_t *
 set_changelist_txn(void *baton,
@@ -3392,21 +3426,28 @@ set_changelist_txn(void *baton,
                    const char *local_relpath,
                    apr_pool_t *scratch_pool)
 {
-  const char *new_changelist = baton;
+  struct set_changelist_baton_t *scb = baton;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_ACTUAL_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  SVN_ERR(svn_sqlite__reset(stmt));
+  /* If we are filtering based on changelists, we *must* already have nodes,
+   * so we can skip this check. */
+  if (scb->changelists && scb->changelists->nelts > 0)
+    have_row = TRUE;
+  else
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_SELECT_ACTUAL_NODE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+      SVN_ERR(svn_sqlite__reset(stmt));
+    }
 
   if (!have_row)
     {
       /* We need to insert an ACTUAL node, but only if we're not attempting
          to remove a (non-existent) changelist. */
-      if (new_changelist == NULL)
+      if (scb->new_changelist == NULL)
         return SVN_NO_ERROR;
 
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
@@ -3421,16 +3462,42 @@ set_changelist_txn(void *baton,
     }
   else
     {
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_UPDATE_ACTUAL_CHANGELIST));
+      const char *stmt_text = statements[STMT_UPDATE_ACTUAL_CHANGELIST];
+      const char *filter = construct_filter("changelist",
+                                            scb->changelists,
+                                            scratch_pool);
+     
+      if (*filter)
+        stmt_text = apr_pstrcat(scratch_pool, stmt_text, " AND ", filter,
+                                NULL);
+
+      SVN_ERR(svn_sqlite__prepare(&stmt, wcroot->sdb, stmt_text,
+                                  scratch_pool));
+
+      /* If we have a filter, it means we need to bind the changelist
+         params. */
+      if (*filter)
+        {
+          int i;
+
+          for (i = 0; i < scb->changelists->nelts; i++)
+            {
+              const char *cl = APR_ARRAY_IDX(scb->changelists, i,
+                                             const char *);
+
+              /* The magic number '4' here is the number of existing params,
+                 plus 1, in the statement, which will be bound below. */
+              SVN_ERR(svn_sqlite__bind_text(stmt, i+4, cl));
+            }
+        }
     }
 
   /* Run the update or insert query */
   SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id, local_relpath,
-                            new_changelist));
+                            scb->new_changelist));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
-  if (new_changelist == NULL)
+  if (scb->new_changelist == NULL)
     {
      /* When removing a changelist, we may have left an empty ACTUAL node, so
         remove it.  */
@@ -3448,13 +3515,14 @@ svn_error_t *
 svn_wc__db_op_set_changelist(svn_wc__db_t *db,
                              const char *local_abspath,
                              const char *changelist,
-                             const apr_hash_t *changelists,
+                             const apr_array_header_t *changelists,
                              svn_depth_t depth,
                              apr_pool_t *scratch_pool)
 {
   svn_wc__db_txn_callback_t txn_func;
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
+  struct set_changelist_baton_t scb = { changelist, changelists };
   svn_error_t *err;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
@@ -3483,7 +3551,7 @@ svn_wc__db_op_set_changelist(svn_wc__db_t *db,
                                         STMT_DROP_CHANGELIST_LIST_TRIGGERS));
 
   err = svn_wc__db_with_txn(wcroot, local_relpath, set_changelist_txn,
-                            (void *) changelist, scratch_pool);
+                            &scb, scratch_pool);
 
   err = svn_error_compose_create(err,
                                  svn_sqlite__exec_statements(wcroot->sdb,

@@ -2123,17 +2123,6 @@ svn_wc_set_changelist2(svn_wc_context_t *wc_ctx,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  if (changelists && changelists->nelts)
-    {
-      apr_hash_t *changelist_hash;
-
-      SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelists,
-                                         scratch_pool));
-      if (! svn_wc__changelist_match(wc_ctx, local_abspath, changelist_hash,
-                                     scratch_pool))
-        return SVN_NO_ERROR;
-    }
-
   SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                &existing_changelist,
@@ -2150,7 +2139,8 @@ svn_wc_set_changelist2(svn_wc_context_t *wc_ctx,
 
   /* Set the changelist. */
   SVN_ERR(svn_wc__db_op_set_changelist(wc_ctx->db, local_abspath, changelist,
-                                       NULL, svn_depth_empty, scratch_pool));
+                                       changelists, svn_depth_empty,
+                                       scratch_pool));
 
   /* And tell someone what we've done. */
   if (notify_func)
