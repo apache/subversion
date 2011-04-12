@@ -196,16 +196,6 @@ svn_wc__wq_build_record_fileinfo(svn_skel_t **work_item,
                                  apr_pool_t *result_pool);
 
 
-/* Record a work item to revert LOCAL_ABSPATH;
-   REVERT_ROOT designates the root of the entire revert operation. */
-svn_error_t *
-svn_wc__wq_add_revert(svn_boolean_t *will_revert,
-                      svn_wc__db_t *db,
-                      const char *revert_root,
-                      const char *local_abspath,
-                      svn_boolean_t use_commit_times,
-                      apr_pool_t *scratch_pool);
-
 /* Set *WORK_ITEM to a new work item that will remove all the data of
    the BASE_NODE of LOCAL_ABSPATH and all it's descendants, but keeping
    any WORKING_NODE data.
