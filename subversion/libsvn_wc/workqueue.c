@@ -1116,41 +1116,26 @@ log_do_committed(svn_wc__db_t *db,
         }
       else
         {
+          svn_boolean_t modified;
           /* The working copy file hasn't been overwritten, meaning
              we need to decide which timestamp to use. */
 
-          apr_finfo_t basef_finfo;
-          svn_boolean_t modified;
-
-          /* If the working file was overwritten (due to re-translation)
-             or touched (due to +x / -x), then use *that* textual
-             timestamp instead. */
-          SVN_ERR(svn_wc__get_pristine_text_status(&basef_finfo,
-                                                   db, local_abspath,
-                                                   pool, pool));
-
-          /* Verify that the working file is the same as the base file
-             by comparing file sizes, then timestamps and the contents
-             after that. */
-
-          /*###FIXME: if the file needs translation, don't compare
-            file-sizes, just compare timestamps and do the rest of the
-            hokey pokey. */
-          modified = finfo.size != basef_finfo.size;
-          if (finfo.mtime != basef_finfo.mtime && ! modified)
-            {
-              /* Compare the texts.  Don't use
-                 svn_wc__internal_text_modified_p's ability to compare
-                 against the *recorded* size and time stamp because that's
-                 not what we are interested in right here. */
-              SVN_ERR(svn_wc__internal_text_modified_p(
+          /* Compare the texts. We just removed the translated size
+             and working time from the nodes record by calling
+             svn_wc__db_global_commit , so we can just use
+             svn_wc__internal_text_modified_p's internal logic
+             to determine if we should mark the file as unmodified */
+          SVN_ERR(svn_wc__internal_text_modified_p(
                         &modified, db, local_abspath,
                         TRUE /* force_comparison */,
                         FALSE /* compare_textbases */, pool));
-            }
+
           /* If they are the same, use the working file's timestamp,
-             else use the base file's timestamp. */
-          last_mod_time = modified ? basef_finfo.mtime : finfo.mtime;
+             else use epoch. */
+          if (modified)
+            return SVN_NO_ERROR; /* Don't record fileinfo */
+
+          last_mod_time = finfo.mtime;
         }
 
       return svn_error_return(svn_wc__db_global_record_fileinfo(
