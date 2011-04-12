@@ -836,8 +836,11 @@ struct file_baton
 
   /* If there are file content changes, these are the checksums of the
      resulting new text base, which is in the pristine store, else NULL. */
-  svn_checksum_t *new_text_base_md5_checksum;
-  svn_checksum_t *new_text_base_sha1_checksum;
+  const svn_checksum_t *new_text_base_md5_checksum;
+  const svn_checksum_t *new_text_base_sha1_checksum;
+
+  /* The checksum of the file before the update */
+  const svn_checksum_t *original_checksum;
 
   /* Set if we've received an apply_textdelta for this file. */
   svn_boolean_t received_textdelta;
@@ -3138,19 +3141,20 @@ open_file(const char *path,
 
   /* If replacing, make sure the .svn entry already exists. */
   SVN_ERR(svn_wc__db_read_info(&status, &wc_kind, &fb->old_revision, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               &fb->original_checksum,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, &have_work, &conflicted, NULL,
                                eb->db, fb->local_abspath,
-                               scratch_pool, scratch_pool));
+                               fb->pool, scratch_pool));
 
   if (have_work)
     SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, &fb->old_revision,
                                      NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                     NULL, NULL, NULL, NULL,
+                                     NULL, &fb->original_checksum, NULL, NULL,
                                      NULL, NULL,
                                      eb->db, fb->local_abspath,
-                                     scratch_pool, scratch_pool));
+                                     fb->pool, scratch_pool));
 
   /* Is this path a conflict victim? */
   if (conflicted)
@@ -3217,6 +3221,7 @@ apply_textdelta(void *file_baton,
   struct file_baton *fb = file_baton;
   apr_pool_t *handler_pool = svn_pool_create(fb->pool);
   struct handler_baton *hb = apr_pcalloc(handler_pool, sizeof(*hb));
+  struct edit_baton *eb = fb->edit_baton;
   svn_error_t *err;
   const char *recorded_base_checksum;
   svn_stream_t *source;
@@ -3240,12 +3245,16 @@ apply_textdelta(void *file_baton,
      for replaced nodes because we didn't store the checksum of the "revert
      base".  In WC-NG, we do and we can.) */
   {
-    const svn_checksum_t *checksum;
+    const svn_checksum_t *checksum = fb->original_checksum;
 
-    SVN_ERR(svn_wc__get_ultimate_base_checksums(NULL, &checksum,
-                                                fb->edit_baton->db,
-                                                fb->local_abspath,
-                                                pool, pool));
+    /* If we have a checksum that we want to compare to a MD5 checksum,
+       ensure that it is a MD5 checksum */
+    if (checksum
+        && expected_base_checksum
+        && checksum->kind != svn_checksum_md5)
+      SVN_ERR(svn_wc__db_pristine_get_md5(&checksum, eb->db, fb->local_abspath,
+                                          checksum, pool, pool));
+
     recorded_base_checksum = svn_checksum_to_cstring(checksum, pool);
     if (recorded_base_checksum && expected_base_checksum
         && strcmp(expected_base_checksum, recorded_base_checksum) != 0)
@@ -3274,11 +3283,11 @@ apply_textdelta(void *file_baton,
 
   if (! fb->adding_file)
     {
-      SVN_ERR(svn_wc__get_ultimate_base_contents(&source, fb->edit_baton->db,
-                                                 fb->local_abspath,
-                                                 handler_pool, handler_pool));
-      if (source == NULL)
-        source = svn_stream_empty(handler_pool);
+      SVN_ERR_ASSERT(!fb->original_checksum || fb->original_checksum->kind == svn_checksum_sha1);
+      SVN_ERR(svn_wc__db_pristine_read(&source, fb->edit_baton->db,
+                                       fb->local_abspath,
+                                       fb->original_checksum,
+                                       handler_pool, handler_pool));
     }
   else
     {
@@ -3546,9 +3555,10 @@ merge_file(svn_skel_t **work_items,
           delete_left = TRUE;
         }
       else
-        SVN_ERR(svn_wc__ultimate_base_text_path_to_read(
-                            &merge_left, eb->db, fb->local_abspath,
-                            result_pool, scratch_pool));
+        SVN_ERR(svn_wc__db_pristine_get_path(&merge_left, eb->db,
+                                             fb->local_abspath,
+                                             fb->original_checksum,
+                                             result_pool, scratch_pool));
 
       /* Merge the changes from the old textbase to the new
          textbase into the file we're updating.
@@ -4029,15 +4039,7 @@ close_file(void *file_baton,
     /* If we don't have a NEW checksum, then the base must not have changed.
        Just carry over the old checksum.  */
     if (new_checksum == NULL)
-      {
-        SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL,
-                                         NULL, NULL, NULL,
-                                         NULL, NULL, NULL,
-                                         NULL, NULL,
-                                         &new_checksum, NULL, NULL, NULL, NULL,
-                                         eb->db, fb->local_abspath,
-                                         scratch_pool, scratch_pool));
-      }
+      new_checksum = fb->original_checksum;
 
     /* The adm crawler skips file externals for us, so we only have to check
        for them at the editor target path. */
