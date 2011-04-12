@@ -3460,36 +3460,33 @@ set_changelist_txn(void *baton,
                                       svn_relpath_dirname(local_relpath,
                                                           scratch_pool)));
     }
-  else
+  else if (scb->changelists && scb->changelists->nelts)
     {
-      const char *stmt_text = statements[STMT_UPDATE_ACTUAL_CHANGELIST];
-      const char *filter = construct_filter("changelist",
-                                            scb->changelists,
-                                            scratch_pool);
-     
-      if (*filter)
-        stmt_text = apr_pstrcat(scratch_pool, stmt_text, " AND ", filter,
-                                NULL);
+      int i;
+      const char *stmt_text = apr_pstrcat(scratch_pool,
+                                   statements[STMT_UPDATE_ACTUAL_CHANGELIST],
+                                    " AND ",
+                                    construct_filter("changelist",
+                                                     scb->changelists,
+                                                     scratch_pool),
+                                    NULL);
 
       SVN_ERR(svn_sqlite__prepare(&stmt, wcroot->sdb, stmt_text,
                                   scratch_pool));
 
-      /* If we have a filter, it means we need to bind the changelist
-         params. */
-      if (*filter)
+      for (i = 0; i < scb->changelists->nelts; i++)
         {
-          int i;
+          const char *cl = APR_ARRAY_IDX(scb->changelists, i, const char *);
 
-          for (i = 0; i < scb->changelists->nelts; i++)
-            {
-              const char *cl = APR_ARRAY_IDX(scb->changelists, i,
-                                             const char *);
-
-              /* The magic number '4' here is the number of existing params,
-                 plus 1, in the statement, which will be bound below. */
-              SVN_ERR(svn_sqlite__bind_text(stmt, i+4, cl));
-            }
+          /* The magic number '4' here is the number of existing params,
+             plus 1, in the statement, which will be bound below. */
+          SVN_ERR(svn_sqlite__bind_text(stmt, i+4, cl));
         }
+    }
+  else
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_UPDATE_ACTUAL_CHANGELIST));
     }
 
   /* Run the update or insert query */
