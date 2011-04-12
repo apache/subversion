@@ -352,7 +352,6 @@ svn_wc__maybe_set_executable(svn_boolean_t *did_set,
 #ifndef WIN32
   svn_wc__db_status_t status;
   svn_wc__db_kind_t kind;
-  svn_wc__db_lock_t *lock;
   apr_hash_t *props;
 
   if (did_set)
