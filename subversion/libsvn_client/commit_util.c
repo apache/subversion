@@ -488,74 +488,18 @@ harvest_committables(svn_wc_context_t *wc_ctx,
   if (is_deleted || is_not_present || is_replaced)
     state_flags |= SVN_CLIENT_COMMIT_ITEM_DELETE;
 
-  /* Check for the trivial addition case.  Adds can be explicit
-     (schedule == add) or implicit (schedule == replace ::= delete+add).
-     We also note whether or not this is an add with history here.  */
-  if (is_added)
+  /* Check for adds and copies */
+  if (is_added && is_op_root)
     {
-      if (is_op_root)
+      /* Root of local add or copy */
+      state_flags |= SVN_CLIENT_COMMIT_ITEM_ADD;
+
+      if (original_relpath)
         {
-          /* Root of local add or copy */
-          state_flags |= SVN_CLIENT_COMMIT_ITEM_ADD;
-          if (original_relpath)
-            {
-              /* Root of copy */
-              state_flags |= SVN_CLIENT_COMMIT_ITEM_ADD;
-              state_flags |= SVN_CLIENT_COMMIT_ITEM_IS_COPY;
-              cf_relpath = original_relpath;
-              cf_rev = original_rev;
-            }
-        }
-      else
-        {
-          /* While we still have some pre-WC-NG like processing we have
-             to check if the child has the same revision as the parent.
-
-             ### Should we also check for switched? 
-
-             ### This could be handled inside WC-NG, by recording a new
-             ### op-depth for this condition.
-
-             ### !!! Removing this entire block currently only triggers
-             ### !!! a single failure in our test suite, but this problem
-             ### !!! is far more likely to occur in real user working copies.
-           */
-          const char *parent_copyfrom_relpath;
-          svn_revnum_t parent_copyfrom_rev;
-          const char *parent_abspath = svn_dirent_dirname(local_abspath,
-                                                          scratch_pool);
-
-          const char *node_copyfrom_relpath;
-          svn_revnum_t node_copyfrom_rev;
-
-          if (original_relpath)
-            {
-              node_copyfrom_relpath = original_relpath;
-              node_copyfrom_rev = original_rev;
-            }
-          else
-            SVN_ERR(svn_wc__node_get_copyfrom_info(NULL,
-                                                   &node_copyfrom_relpath,
-                                                   NULL, &node_copyfrom_rev,
-                                                   &is_copy_target,
-                                                   wc_ctx, local_abspath,
-                                                   scratch_pool,
-                                                   scratch_pool));
-
-          SVN_ERR(svn_wc__node_get_copyfrom_info(NULL,
-                                                 &parent_copyfrom_relpath,
-                                                 NULL,
-                                                 &parent_copyfrom_rev,
-                                                 NULL,
-                                                 wc_ctx, parent_abspath,
-                                                 scratch_pool, scratch_pool));
-          if (parent_copyfrom_rev != node_copyfrom_rev)
-            {
-              state_flags |= SVN_CLIENT_COMMIT_ITEM_ADD;
-              state_flags |= SVN_CLIENT_COMMIT_ITEM_IS_COPY;
-              cf_relpath = node_copyfrom_relpath;
-              cf_rev = node_copyfrom_rev;
-            }
+          /* Root of copy */
+          state_flags |= SVN_CLIENT_COMMIT_ITEM_IS_COPY;
+          cf_relpath = original_relpath;
+          cf_rev = original_rev;
         }
     }
 
