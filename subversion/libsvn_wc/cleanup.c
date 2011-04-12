@@ -71,55 +71,48 @@ can_be_cleaned(int *wc_format,
 /* */
 static svn_error_t *
 cleanup_internal(svn_wc__db_t *db,
-                 const char *adm_abspath,
+                 const char *dir_abspath,
                  svn_cancel_func_t cancel_func,
                  void *cancel_baton,
                  apr_pool_t *scratch_pool)
 {
   int wc_format;
   const char *cleanup_abspath;
-  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-
-  /* Check cancellation; note that this catches recursive calls too. */
-  if (cancel_func)
-    SVN_ERR(cancel_func(cancel_baton));
 
   /* Can we even work with this directory?  */
-  SVN_ERR(can_be_cleaned(&wc_format, db, adm_abspath, iterpool));
+  SVN_ERR(can_be_cleaned(&wc_format, db, dir_abspath, scratch_pool));
 
   /* ### This fails if ADM_ABSPATH is locked indirectly via a
      ### recursive lock on an ancestor. */
-  SVN_ERR(svn_wc__db_wclock_obtain(db, adm_abspath, -1, TRUE, iterpool));
+  SVN_ERR(svn_wc__db_wclock_obtain(db, dir_abspath, -1, TRUE, scratch_pool));
 
   /* Run our changes before the subdirectories. We may not have to recurse
      if we blow away a subdir.  */
   if (wc_format >= SVN_WC__HAS_WORK_QUEUE)
-    SVN_ERR(svn_wc__wq_run(db, adm_abspath, cancel_func, cancel_baton,
-                           iterpool));
+    SVN_ERR(svn_wc__wq_run(db, dir_abspath, cancel_func, cancel_baton,
+                           scratch_pool));
 
-  SVN_ERR(svn_wc__db_get_wcroot(&cleanup_abspath, db, adm_abspath,
-                                iterpool, iterpool));
+  SVN_ERR(svn_wc__db_get_wcroot(&cleanup_abspath, db, dir_abspath,
+                                scratch_pool, scratch_pool));
 
   /* Perform these operations if we lock the entire working copy.
      Note that we really need to check a wcroot value and not
      svn_wc__check_wcroot() as that function, will just return true
      once we start sharing databases with externals.
    */
-  if (strcmp(cleanup_abspath, adm_abspath) == 0)
+  if (strcmp(cleanup_abspath, dir_abspath) == 0)
     {
     /* Cleanup the tmp area of the admin subdir, if running the log has not
        removed it!  The logs have been run, so anything left here has no hope
        of being useful. */
-      SVN_ERR(svn_wc__adm_cleanup_tmp_area(db, adm_abspath, iterpool));
+      SVN_ERR(svn_wc__adm_cleanup_tmp_area(db, dir_abspath, scratch_pool));
 
       /* Remove unreferenced pristine texts */
-      SVN_ERR(svn_wc__db_pristine_cleanup(db, adm_abspath, iterpool));
+      SVN_ERR(svn_wc__db_pristine_cleanup(db, dir_abspath, scratch_pool));
     }
 
   /* All done, toss the lock */
-  SVN_ERR(svn_wc__db_wclock_release(db, adm_abspath, iterpool));
-
-  svn_pool_destroy(iterpool);
+  SVN_ERR(svn_wc__db_wclock_release(db, dir_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
