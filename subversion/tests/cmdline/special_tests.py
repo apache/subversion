@@ -261,8 +261,11 @@ def copy_tree_with_symlink(sbox):
     'A/D/H2/chi' : Item(status='  ', copied='+', wc_rev='-'),
     'A/D/H2/omega' : Item(status='  ', copied='+', wc_rev='-'),
     'A/D/H2/psi' : Item(status='  ', copied='+', wc_rev='-'),
-    'A/D/H2/linktarget' : Item(status='  ', copied='+', wc_rev='-'),
-    'A/D/H2/newfile' : Item(status='  ', copied='+', wc_rev='-'),
+    # linktarget and newfile are from r2, while h2 is from r1.
+    'A/D/H2/linktarget' : Item(status='A ', copied='+', wc_rev='-',
+                               entry_status='  '),
+    'A/D/H2/newfile' : Item(status='A ', copied='+', wc_rev='-',
+                            entry_status='  '),
     })
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
