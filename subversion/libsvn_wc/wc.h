@@ -393,7 +393,11 @@ void svn_wc__compat_call_notify_func(void *baton,
  * addition), return the error SVN_ERR_ENTRY_NOT_FOUND.
  *
  * If the text is unmodified and a write-lock is held this function
- * will repair "broken" timestamps and filesizes.
+ * will ensure that the last-known-unmodified timestamp and
+ * filesize of the file as recorded in DB matches the corresponding
+ * attributes of the actual file.  (This is often referred to as
+ * "timestamp repair", and serves to help future unforced is-modified
+ * checks return quickly if the file remains untouched.)
  */
 svn_error_t *
 svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
