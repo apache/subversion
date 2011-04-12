@@ -1551,6 +1551,7 @@ svn_wc__node_get_commit_status(svn_node_kind_t *kind,
                                const char **changelist,
                                svn_boolean_t *props_mod,
                                svn_boolean_t *update_root,
+                               const char **lock_token,
                                svn_wc_context_t *wc_ctx,
                                const char *local_abspath,
                                apr_pool_t *result_pool,
@@ -1558,6 +1559,7 @@ svn_wc__node_get_commit_status(svn_node_kind_t *kind,
 {
   svn_wc__db_status_t status;
   svn_wc__db_kind_t db_kind;
+  svn_wc__db_lock_t *lock;
   svn_boolean_t have_base;
 
   /* ### All of this should be handled inside a single read transaction */
@@ -1565,7 +1567,7 @@ svn_wc__node_get_commit_status(svn_node_kind_t *kind,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL,NULL, changelist, original_repos_relpath,
                                NULL, NULL, original_revision, props_mod,
-                               &have_base, NULL, conflicted, NULL,
+                               &have_base, NULL, conflicted, &lock,
                                wc_ctx->db, local_abspath,
                                result_pool, scratch_pool));
 
@@ -1649,6 +1651,8 @@ svn_wc__node_get_commit_status(svn_node_kind_t *kind,
         }
     }
 
+  /* Retrieve some information from BASE which is needed for replacing
+     and/or deleting BASE nodes. (We don't need lock here) */
   if (have_base
       && ((revision && !SVN_IS_VALID_REVNUM(*revision))
           || (update_root && status == svn_wc__db_status_normal)))
@@ -1661,6 +1665,9 @@ svn_wc__node_get_commit_status(svn_node_kind_t *kind,
     }
   else if (update_root)
     *update_root = FALSE;
+
+  if (lock_token)
+    *lock_token = lock ? lock->token : NULL;
 
   return SVN_NO_ERROR;
 }

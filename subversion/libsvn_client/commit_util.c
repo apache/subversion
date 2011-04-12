@@ -344,10 +344,11 @@ harvest_committables(svn_wc_context_t *wc_ctx,
   apr_byte_t state_flags = 0;
   svn_node_kind_t working_kind;
   svn_node_kind_t db_kind;
-  const char *entry_relpath;
-  const char *entry_lock_token;
+  const char *node_relpath;
+  const char *node_lock_token;
+  svn_revnum_t node_rev;
   const char *cf_relpath = NULL;
-  svn_revnum_t entry_rev, cf_rev = SVN_INVALID_REVNUM;
+  svn_revnum_t cf_rev = SVN_INVALID_REVNUM;
   svn_boolean_t matches_changelists;
   svn_boolean_t is_special;
   svn_boolean_t is_added;
@@ -385,19 +386,20 @@ harvest_committables(svn_wc_context_t *wc_ctx,
                                          &is_replaced,
                                          &is_not_present, &is_excluded,
                                          &is_op_root, &is_symlink,
-                                         &entry_rev, &entry_relpath,
+                                         &node_rev, &node_relpath,
                                          &original_rev, &original_relpath,
                                          &conflicted,
                                          &node_changelist,
                                          &prop_mod, &is_update_root,
+                                         &node_lock_token,
                                          wc_ctx, local_abspath,
                                          scratch_pool, scratch_pool));
 
   if ((skip_files && db_kind == svn_node_file) || is_excluded)
     return SVN_NO_ERROR;
 
-  if (!entry_relpath && commit_relpath)
-    entry_relpath = commit_relpath;
+  if (!node_relpath && commit_relpath)
+    node_relpath = commit_relpath;
 
   SVN_ERR(svn_io_check_special_path(local_abspath, &working_kind, &is_special,
                                     scratch_pool));
@@ -473,8 +475,8 @@ harvest_committables(svn_wc_context_t *wc_ctx,
         }
     }
 
-  if (entry_relpath == NULL)
-    SVN_ERR(svn_wc__node_get_repos_relpath(&entry_relpath,
+  if (node_relpath == NULL)
+    SVN_ERR(svn_wc__node_get_repos_relpath(&node_relpath,
                                            wc_ctx, local_abspath,
                                            scratch_pool, scratch_pool));
   /* Check for the deletion case.
@@ -491,8 +493,6 @@ harvest_committables(svn_wc_context_t *wc_ctx,
      We also note whether or not this is an add with history here.  */
   if (is_added)
     {
-      svn_boolean_t is_copy_target;
-
       if (is_op_root)
         {
           /* Root of local add or copy */
@@ -587,7 +587,7 @@ harvest_committables(svn_wc_context_t *wc_ctx,
                                                              scratch_pool),
                                           scratch_pool));
 
-      if (copy_mode_root || entry_rev != dir_rev)
+      if (copy_mode_root || node_rev != dir_rev)
         {
           state_flags |= SVN_CLIENT_COMMIT_ITEM_ADD;
           if (node_copyfrom_relpath)
@@ -596,11 +596,11 @@ harvest_committables(svn_wc_context_t *wc_ctx,
               cf_relpath = node_copyfrom_relpath;
               cf_rev = node_copyfrom_rev;
             }
-          else if (entry_rev != SVN_INVALID_REVNUM)
+          else if (node_rev != SVN_INVALID_REVNUM)
             {
               state_flags |= SVN_CLIENT_COMMIT_ITEM_IS_COPY;
-              cf_relpath = entry_relpath;
-              cf_rev = entry_rev;
+              cf_relpath = node_relpath;
+              cf_rev = node_rev;
             }
         }
     }
@@ -679,14 +679,9 @@ harvest_committables(svn_wc_context_t *wc_ctx,
   /* If the entry has a lock token and it is already a commit candidate,
      or the caller wants unmodified locked items to be treated as
      such, note this fact. */
-  if (lock_tokens && (state_flags || just_locked))
+  if (node_lock_token && lock_tokens && (state_flags || just_locked))
     {
-      SVN_ERR(svn_wc__node_get_lock_info(&entry_lock_token, NULL, NULL, NULL,
-                                         wc_ctx, local_abspath,
-                                         apr_hash_pool_get(lock_tokens),
-                                         scratch_pool));
-      if (entry_lock_token)
-        state_flags |= SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN;
+      state_flags |= SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN;
     }
 
   /* Now, if this is something to commit, add it to our list. */
@@ -699,8 +694,8 @@ harvest_committables(svn_wc_context_t *wc_ctx,
                                   repos_root_url,
                                   commit_relpath 
                                       ? commit_relpath
-                                      : entry_relpath,
-                                  entry_rev,
+                                      : node_relpath,
+                                  node_rev,
                                   cf_relpath,
                                   cf_rev,
                                   state_flags,
@@ -708,9 +703,41 @@ harvest_committables(svn_wc_context_t *wc_ctx,
           if (state_flags & SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN)
             apr_hash_set(lock_tokens,
                          svn_path_url_add_component2(
-                             repos_root_url, entry_relpath,
+                             repos_root_url, node_relpath,
                              apr_hash_pool_get(lock_tokens)),
-                         APR_HASH_KEY_STRING, entry_lock_token);
+                         APR_HASH_KEY_STRING, node_lock_token);
+        }
+    }
+
+    /* Fetch lock tokens for descendants of deleted nodes. */
+  if (lock_tokens
+      && (state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE))
+    {
+      apr_hash_t *local_relpath_tokens;
+      apr_hash_index_t *hi;
+
+      SVN_ERR(svn_wc__node_get_lock_tokens_recursive(
+                  &local_relpath_tokens, wc_ctx, local_abspath,
+                  scratch_pool, scratch_pool));
+
+      /* Map local_relpaths to URLs. */
+      for (hi = apr_hash_first(scratch_pool, local_relpath_tokens);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+          const char *item_abspath = svn__apr_hash_index_key(hi);
+          const char *lock_token = svn__apr_hash_index_val(hi);
+          const char *item_url;
+          apr_pool_t *token_pool = apr_hash_pool_get(lock_tokens);
+
+          if (cancel_func)
+            SVN_ERR(cancel_func(cancel_baton));
+
+          SVN_ERR(svn_wc__node_get_url(&item_url, wc_ctx, item_abspath,
+                                       token_pool, scratch_pool));
+          if (item_url)
+            apr_hash_set(lock_tokens, item_url, APR_HASH_KEY_STRING,
+                         apr_pstrdup(token_pool, lock_token));
         }
     }
 
@@ -767,38 +794,6 @@ harvest_committables(svn_wc_context_t *wc_ctx,
         }
 
       svn_pool_destroy(iterpool);
-    }
-
-  /* Fetch lock tokens for descendants of deleted directories. */
-  if (lock_tokens
-      && (state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE))
-    {
-      apr_hash_t *local_relpath_tokens;
-      apr_hash_index_t *hi;
-
-      SVN_ERR(svn_wc__node_get_lock_tokens_recursive(
-                  &local_relpath_tokens, wc_ctx, local_abspath,
-                  scratch_pool, scratch_pool));
-
-      /* Map local_relpaths to URLs. */
-      for (hi = apr_hash_first(scratch_pool, local_relpath_tokens);
-           hi;
-           hi = apr_hash_next(hi))
-        {
-          const char *item_abspath = svn__apr_hash_index_key(hi);
-          const char *lock_token = svn__apr_hash_index_val(hi);
-          const char *item_url;
-          apr_pool_t *token_pool = apr_hash_pool_get(lock_tokens);
-
-          if (cancel_func)
-            SVN_ERR(cancel_func(cancel_baton));
-
-          SVN_ERR(svn_wc__node_get_url(&item_url, wc_ctx, item_abspath,
-                                       token_pool, scratch_pool));
-          if (item_url)
-            apr_hash_set(lock_tokens, item_url, APR_HASH_KEY_STRING,
-                         apr_pstrdup(token_pool, lock_token));
-        }
     }
 
   return SVN_NO_ERROR;
