@@ -126,6 +126,47 @@ build_key(const char **mc_key,
   return SVN_NO_ERROR;
 }
 
+/* Core functionality of our getter functions: fetch DATA from the memcached
+ * given by CACHE_VOID and identified by KEY. Indicate success in FOUND and
+ * use a tempoary sub-pool of POOL for allocations.
+ */
+static svn_error_t *
+memcache_internal_get(char **data,
+                      apr_size_t *size
+                      svn_boolean_t *found,
+                      void *cache_void,
+                      const void *key,
+                      apr_pool_t *pool)
+{
+  memcache_t *cache = cache_void;
+  apr_status_t apr_err;
+  const char *mc_key;
+  apr_pool_t *subpool = svn_pool_create(pool);
+
+  SVN_ERR(build_key(&mc_key, cache, key, subpool));
+
+  apr_err = apr_memcache_getp(cache->memcache,
+                              pool,
+                              mc_key,
+                              data,
+                              data_len,
+                              NULL /* ignore flags */);
+  if (apr_err == APR_NOTFOUND)
+    {
+      *found = FALSE;
+      svn_pool_destroy(subpool);
+      return SVN_NO_ERROR;
+    }
+  else if (apr_err != APR_SUCCESS || !*data)
+    return svn_error_wrap_apr(apr_err,
+                              _("Unknown memcached error while reading"));
+
+  *found = TRUE;
+
+  svn_pool_destroy(subpool);
+  return SVN_NO_ERROR;
+}
+
 
 static svn_error_t *
 memcache_get(void **value_p,
@@ -134,46 +175,55 @@ memcache_get(void **value_p,
              const void *key,
              apr_pool_t *pool)
 {
-  memcache_t *cache = cache_void;
-  apr_status_t apr_err;
   char *data;
-  const char *mc_key;
   apr_size_t data_len;
-  apr_pool_t *subpool = svn_pool_create(pool);
+  SVN_ERR(memcache_internal_get(&data,
+                                &size,
+                                found,
+                                cache_void,
+                                key,
+                                pool));
 
-  SVN_ERR(build_key(&mc_key, cache, key, subpool));
+  /* If we found it, de-serialize it. */
+  if (*found)
+    if (cache->deserialize_func)
+      {
+        SVN_ERR((cache->deserialize_func)(value_p, data, data_len, pool));
+      }
+    else
+      {
+        svn_string_t *value = apr_pcalloc(pool, sizeof(*value));
+        value->data = data;
+        value->len = data_len;
+        *value_p = value;
+      }
 
-  apr_err = apr_memcache_getp(cache->memcache,
-                              pool,
-                              mc_key,
-                              &data,
-                              &data_len,
-                              NULL /* ignore flags */);
-  if (apr_err == APR_NOTFOUND)
-    {
-      *found = FALSE;
-      svn_pool_destroy(subpool);
-      return SVN_NO_ERROR;
-    }
-  else if (apr_err != APR_SUCCESS || !data)
+  return SVN_NO_ERROR;
+}
+
+/* Core functionality of our setter functions: store LENGH bytes of DATA 
+ * to be identified by KEY in the memcached given by CACHE_VOID. Use POOL
+ * for temporary allocations.
+ */
+static svn_error_t *
+memcache_internal_set(void *cache_void,
+                      const void *key,
+                      const char *data,
+                      apr_size_t len,
+                      apr_pool_t *pool)
+{
+  memcache_t *cache = cache_void;
+  const char *mc_key;
+  apr_status_t apr_err;
+
+  SVN_ERR(build_key(&mc_key, cache, key, pool));
+  apr_err = apr_memcache_set(cache->memcache, mc_key, data, data_len, 0, 0);
+
+  /* ### Maybe write failures should be ignored (but logged)? */
+  if (apr_err != APR_SUCCESS)
     return svn_error_wrap_apr(apr_err,
-                              _("Unknown memcached error while reading"));
+                              _("Unknown memcached error while writing"));
 
-  /* We found it! */
-  if (cache->deserialize_func)
-    {
-      SVN_ERR((cache->deserialize_func)(value_p, data, data_len, pool));
-    }
-  else
-    {
-      svn_string_t *value = apr_pcalloc(pool, sizeof(*value));
-      value->data = data;
-      value->len = data_len;
-      *value_p = value;
-    }
-  *found = TRUE;
-
-  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
@@ -184,14 +234,10 @@ memcache_set(void *cache_void,
              void *value,
              apr_pool_t *pool)
 {
-  memcache_t *cache = cache_void;
   apr_pool_t *subpool = svn_pool_create(pool);
   char *data;
-  const char *mc_key;
   apr_size_t data_len;
-  apr_status_t apr_err;
-
-  SVN_ERR(build_key(&mc_key, cache, key, subpool));
+  svn_error_t *err;
 
   if (cache->serialize_func)
     {
@@ -204,15 +250,10 @@ memcache_set(void *cache_void,
       data_len = value_str->len;
     }
 
-  apr_err = apr_memcache_set(cache->memcache, mc_key, data, data_len, 0, 0);
-
-  /* ### Maybe write failures should be ignored (but logged)? */
-  if (apr_err != APR_SUCCESS)
-    return svn_error_wrap_apr(apr_err,
-                              _("Unknown memcached error while writing"));
+  err = memcache_internal_set(cache_void, key, data, data_len, subpool);
 
   svn_pool_destroy(subpool);
-  return SVN_NO_ERROR;
+  return err;
 }
 
 static svn_error_t *
@@ -224,38 +265,21 @@ memcache_get_partial(void **value_p,
                      void *baton,
                      apr_pool_t *pool)
 {
-  memcache_t *cache = cache_void;
-  svn_error_t *err;
-  apr_status_t apr_err;
+  svn_error_t *err = SVN_NO_ERROR;
+
   char *data;
-  const char *mc_key;
-  apr_size_t data_len;
-  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_size_t size;
+  SVN_ERR(memcache_internal_get(&data,
+                                &size,
+                                found,
+                                cache_void,
+                                key,
+                                pool));
 
-  SVN_ERR(build_key(&mc_key, cache, key, subpool));
-
-  apr_err = apr_memcache_getp(cache->memcache,
-                              subpool,
-                              mc_key,
-                              &data,
-                              &data_len,
-                              NULL /* ignore flags */);
-  if (apr_err == APR_NOTFOUND)
-    {
-      *found = FALSE;
-      svn_pool_destroy(subpool);
-      return SVN_NO_ERROR;
-    }
-  else if (apr_err != APR_SUCCESS || !data)
-    return svn_error_wrap_apr(apr_err,
-                              _("Unknown memcached error while reading"));
-
-  /* We found it! */
-  *found = TRUE;
-  err = func(value_p, data, data_len, baton, pool);
-
-  svn_pool_destroy(subpool);
-  return err;
+  /* If we found it, de-serialize it. */
+  return *found
+    ? func(value_p, data, data_len, baton, pool)
+    : err;
 }
 
 
