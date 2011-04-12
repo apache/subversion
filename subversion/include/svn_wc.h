@@ -5318,7 +5318,7 @@ typedef svn_error_t *(*svn_wc_get_file_t)(void *baton,
  * #svn_depth_unknown, then in addition to updating PATHS, also set
  * their sticky ambient depth value to @a depth.
  *
- * If @a repository_performs_filtering is TRUE, assume that the server handles
+ * If @a server_performs_filtering is TRUE, assume that the server handles
  * the ambient depth filtering, so this doesn't have to be handled in the
  * editor.
  *
@@ -5353,8 +5353,7 @@ svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
 /** Similar to svn_wc_get_update_editor4, but uses access batons and relative
  * path instead of a working copy context-abspath pair and
  * svn_wc_traversal_info_t instead of an externals callback.  Also,
- * @a fetch_func and @a fetch_baton are ignored. Always sets
- * server_performs_filtering to FALSE.
+ * @a fetch_func and @a fetch_baton are ignored.
  *
  * If @a ti is non-NULL, record traversal info in @a ti, for use by
  * post-traversal accessors such as svn_wc_edited_externals().
