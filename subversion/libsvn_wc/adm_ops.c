@@ -2115,7 +2115,6 @@ svn_wc_set_changelist2(svn_wc_context_t *wc_ctx,
                        void *notify_baton,
                        apr_pool_t *scratch_pool)
 {
-  const char *existing_changelist;
   svn_wc__db_kind_t kind;
 
   /* Assert that we aren't being asked to set an empty changelist. */
@@ -2123,12 +2122,7 @@ svn_wc_set_changelist2(svn_wc_context_t *wc_ctx,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               &existing_changelist,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL,
-                               wc_ctx->db, local_abspath, scratch_pool,
+  SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, local_abspath, TRUE,
                                scratch_pool));
 
   /* We can't add directories to changelists. */
