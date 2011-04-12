@@ -1693,8 +1693,8 @@ def switch_with_obstructing_local_adds(sbox):
   expected_status.add({
     'A/B/F/gamma'     : Item(status='R ', treeconflict='C', wc_rev='1'),
     'A/B/F/G'         : Item(status='R ', treeconflict='C', wc_rev='1'),
-    'A/B/F/G/pi'      : Item(status='R ', wc_rev='1'),
-    'A/B/F/G/tau'     : Item(status='R ', wc_rev='1'),
+    'A/B/F/G/pi'      : Item(status='A ', wc_rev='1'),
+    'A/B/F/G/tau'     : Item(status='A ', wc_rev='1'),
     'A/B/F/G/upsilon' : Item(status='A ', wc_rev='0'),
     'A/B/F/G/rho'     : Item(status='D ', wc_rev='1'),
     'A/B/F/H'         : Item(status='  ', wc_rev='1'),
@@ -3119,7 +3119,7 @@ def copy_with_switched_subdir(sbox):
     'R/H/chi'   : Item(status='  ', copied='+', wc_rev='-'),
     'R/H/omega' : Item(status='  ', copied='+', wc_rev='-'),
     'R/H/psi'   : Item(status='  ', copied='+', wc_rev='-'),
-    'R/G'       : Item(status='R ', copied='+', wc_rev='-', entry_status='A '),
+    'R/G'       : Item(status='A ', copied='+', wc_rev='-'),
     })
 
   svntest.actions.run_and_verify_status(wc_dir, state)

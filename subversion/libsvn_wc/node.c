@@ -1288,26 +1288,12 @@ svn_wc__internal_node_get_schedule(svn_wc_schedule_t *schedule,
       case svn_wc__db_status_added:
         {
           const char *op_root_abspath;
-          const char *parent_abspath;
-          const char *parent_copyfrom_relpath;
-          const char *child_name;
 
-          if (schedule)
-            *schedule = svn_wc_schedule_add;
-
-          if (copyfrom_relpath != NULL)
-            {
-              status = svn_wc__db_status_copied; /* Or moved */
-              op_root_abspath = local_abspath;
-            }
-          else
-            SVN_ERR(svn_wc__db_scan_addition(&status,
-                                             &op_root_abspath,
-                                             NULL, NULL, NULL,
-                                             &copyfrom_relpath,
-                                             NULL, NULL, NULL,
-                                             db, local_abspath,
-                                             scratch_pool, scratch_pool));
+          SVN_ERR(svn_wc__db_scan_addition(&status, &op_root_abspath,
+                                           NULL, NULL, NULL, NULL,
+                                           NULL, NULL, NULL,
+                                           db, local_abspath,
+                                           scratch_pool, scratch_pool));
 
           if (copied && status != svn_wc__db_status_added)
             *copied = TRUE;
@@ -1315,89 +1301,32 @@ svn_wc__internal_node_get_schedule(svn_wc_schedule_t *schedule,
           if (!schedule)
             break;
 
-          if (has_base)
-            {
-              svn_wc__db_status_t base_status;
-              SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, NULL, NULL,
-                                               NULL, NULL, NULL, NULL, NULL,
-                                               NULL, NULL, NULL, NULL, NULL,
-                                               NULL, NULL,
-                                               db, local_abspath,
-                                               scratch_pool, scratch_pool));
+          *schedule = svn_wc_schedule_add;
 
-              if (base_status != svn_wc__db_status_not_present)
-                *schedule = svn_wc_schedule_replace;
+          /* If this node is the op-root check for replaced */
+          if (status == svn_wc__db_status_added
+              || strcmp(op_root_abspath, local_abspath) == 0)
+            {
+              svn_boolean_t have_base, have_work;
+              svn_wc__db_status_t below_working;
+              SVN_ERR(svn_wc__db_info_below_working(&have_base, &have_work,
+                                                    &below_working,
+                                                    db, local_abspath,
+                                                    scratch_pool));
+
+              /* If the node is not present or deleted (read: not present
+                 in working), then the node is not a replacement */
+              if ((have_work || have_base)
+                  && below_working != svn_wc__db_status_not_present
+                  && below_working != svn_wc__db_status_deleted)
+                {
+                  *schedule = svn_wc_schedule_replace;
+                  break;
+                }
             }
           else
-            {
-              svn_boolean_t below_work;
+            *schedule = svn_wc_schedule_normal;
 
-              SVN_ERR(svn_wc__db_temp_below_work(&below_work,
-                                                 db, local_abspath,
-                                                 scratch_pool));
-              /* Unlike base nodes above, not-present is considered a
-                 replace since working not-present represents a delete
-                 to be committed */
-              if (below_work)
-                *schedule = svn_wc_schedule_replace;
-            }
-
-          if (status == svn_wc__db_status_added)
-            break; /* Local addition */
-
-          /* Determine the parent status to check if we should show the
-             schedule of a child of a copy as normal. */
-          if (strcmp(op_root_abspath, local_abspath) != 0)
-            {
-              *schedule = svn_wc_schedule_normal;
-              break; /* Part of parent copy */
-            }
-
-          /* When we used entries we didn't see just a different revision
-             as a new operational root, so we have to check if the parent
-             is from the same copy origin */
-          parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
-
-          SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL,
-                                       &parent_copyfrom_relpath, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       db, parent_abspath,
-                                       scratch_pool, scratch_pool));
-
-          if (status != svn_wc__db_status_added)
-            break; /* Parent was not added */
-
-          if (!parent_copyfrom_relpath)
-            {
-              SVN_ERR(svn_wc__db_scan_addition(&status, &op_root_abspath, NULL,
-                                               NULL, NULL,
-                                               &parent_copyfrom_relpath, NULL,
-                                               NULL, NULL,
-                                               db, parent_abspath,
-                                               scratch_pool, scratch_pool));
-
-              if (!parent_copyfrom_relpath)
-                break; /* Parent is a local addition */
-
-              parent_copyfrom_relpath = svn_relpath_join(
-                                           parent_copyfrom_relpath,
-                                           svn_dirent_is_child(op_root_abspath,
-                                                               parent_abspath,
-                                                               NULL),
-                                           scratch_pool);
-            }
-
-
-          child_name = svn_relpath_is_child(parent_copyfrom_relpath,
-                                            copyfrom_relpath, NULL);
-
-          if (!child_name
-              || strcmp(child_name, svn_dirent_basename(local_abspath, NULL)))
-            break; /* Different operation */
-
-          *schedule = svn_wc_schedule_normal;
           break;
         }
       default:

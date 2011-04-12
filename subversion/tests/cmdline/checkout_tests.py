@@ -919,7 +919,8 @@ def co_with_obstructing_local_adds(sbox):
     'A/D/M/psi'     : Item(status='  ', copied='+', wc_rev='-'),
     'A/D/M/chi'     : Item(status='  ', copied='+', wc_rev='-'),
     'A/D/M/omega'   : Item(status='  ', copied='+', wc_rev='-'),
-    'A/D/M/I'       : Item(status='  ', copied='+', wc_rev='-'),
+    'A/D/M/I'       : Item(status='A ', copied='+', wc_rev='-',
+                           entry_status='  '), # A/D/MI is a new op_root
     'A/D/M/I/J'     : Item(status='  ', copied='+', wc_rev='-'),
     'A/D/M/I/K'     : Item(status='  ', copied='+', wc_rev='-'),
     'A/D/M/I/K/xi'  : Item(status='  ', copied='+', wc_rev='-'),

@@ -2608,12 +2608,16 @@ svn_wc__db_drop_root(svn_wc__db_t *db,
 /* Return the OP_DEPTH for LOCAL_RELPATH. */
 int svn_wc__db_op_depth_for_upgrade(const char *local_relpath);
 
-/* Set *HAVE_WORK TRUE if there is a working layer below the top layer */
+/* Set *HAVE_WORK TRUE if there is a working layer below the top layer and
+   *HAVE_BASE if there is a base layer. Set *STATUS to the status of the
+   highest layer below WORKING */
 svn_error_t *
-svn_wc__db_temp_below_work(svn_boolean_t *have_work,
-                           svn_wc__db_t *db,
-                           const char *local_abspath,
-                           apr_pool_t *scratch_pool);
+svn_wc__db_info_below_working(svn_boolean_t *have_base,
+                              svn_boolean_t *have_work,
+                              svn_wc__db_status_t *status,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              apr_pool_t *scratch_pool);
 
 
 /* Gather revision status information about a working copy using DB.

@@ -2906,7 +2906,8 @@ def update_with_obstructing_additions(sbox):
     'A/D/H/I/L'     : Item(status='  ', wc_rev=4),
     'A/M'           : Item(status='R ', copied='+', wc_rev='-',
                            treeconflict='C'),
-    'A/M/I'         : Item(status='  ', copied='+', wc_rev='-'),
+    'A/M/I'         : Item(status='A ', copied='+', wc_rev='-',
+                           entry_status='  '), # New op_root
     'A/M/I/J'       : Item(status='  ', copied='+', wc_rev='-'),
     'A/M/I/J/eta'   : Item(status='  ', copied='+', wc_rev='-'),
     'A/M/I/K'       : Item(status='  ', copied='+', wc_rev='-'),
