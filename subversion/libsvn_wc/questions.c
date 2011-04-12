@@ -378,11 +378,26 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
     }
 
   /* Check all bytes, and verify checksum if requested. */
-  return svn_error_return(compare_and_verify(modified_p, db, local_abspath,
-                                             pristine_stream,
-                                             compare_textbases,
-                                             force_comparison,
-                                             scratch_pool));
+  SVN_ERR(compare_and_verify(modified_p, db, local_abspath,
+                             pristine_stream,
+                             compare_textbases,
+                             force_comparison,
+                             scratch_pool));
+
+  if (!*modified_p)
+    {
+      svn_boolean_t own_lock;
+
+      /* The timestamp is missing or "broken" so "repair" it if we can. */
+      SVN_ERR(svn_wc__db_wclock_owns_lock(&own_lock, db, local_abspath, FALSE,
+                                          scratch_pool));
+      if (own_lock)
+        SVN_ERR(svn_wc__db_global_record_fileinfo(db, local_abspath,
+                                                  finfo.size, finfo.mtime,
+                                                  scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
 }
 
 
