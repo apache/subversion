@@ -661,29 +661,24 @@ harvest_committables(svn_wc_context_t *wc_ctx,
     {
       apr_hash_t *local_relpath_tokens;
       apr_hash_index_t *hi;
+      apr_pool_t *token_pool = apr_hash_pool_get(lock_tokens);
 
       SVN_ERR(svn_wc__node_get_lock_tokens_recursive(
                   &local_relpath_tokens, wc_ctx, local_abspath,
-                  scratch_pool, scratch_pool));
+                  token_pool, scratch_pool));
 
-      /* Map local_relpaths to URLs. */
+      /* Add tokens to existing hash. */
       for (hi = apr_hash_first(scratch_pool, local_relpath_tokens);
            hi;
            hi = apr_hash_next(hi))
         {
-          const char *item_abspath = svn__apr_hash_index_key(hi);
-          const char *lock_token = svn__apr_hash_index_val(hi);
-          const char *item_url;
-          apr_pool_t *token_pool = apr_hash_pool_get(lock_tokens);
+          const void *key;
+          apr_ssize_t klen;
+          void * val;
 
-          if (cancel_func)
-            SVN_ERR(cancel_func(cancel_baton));
+          apr_hash_this(hi, &key, &klen, &val);
 
-          SVN_ERR(svn_wc__node_get_url(&item_url, wc_ctx, item_abspath,
-                                       token_pool, scratch_pool));
-          if (item_url)
-            apr_hash_set(lock_tokens, item_url, APR_HASH_KEY_STRING,
-                         apr_pstrdup(token_pool, lock_token));
+          apr_hash_set(lock_tokens, key, klen, val);
         }
     }
 

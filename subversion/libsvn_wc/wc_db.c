@@ -10626,9 +10626,10 @@ svn_wc__db_base_get_lock_tokens_recursive(apr_hash_t **lock_tokens,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath; 
-  const char *like_arg;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
+  apr_int64_t last_repos_id = INVALID_REPOS_ID;
+  const char *last_repos_root_url;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -10643,22 +10644,38 @@ svn_wc__db_base_get_lock_tokens_recursive(apr_hash_t **lock_tokens,
   SVN_ERR(svn_sqlite__get_statement(
               &stmt, wcroot->sdb,
               STMT_SELECT_BASE_NODE_LOCK_TOKENS_RECURSIVE));
-  like_arg = construct_like_arg(local_relpath, scratch_pool);
+
   SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id, local_relpath,
-                            like_arg));
+                            construct_like_arg(local_relpath, scratch_pool)));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   while (have_row)
     {
-      const char *child_relpath = svn_sqlite__column_text(stmt, 0, NULL);
-      const char *lock_token = svn_sqlite__column_text(stmt, 1, result_pool);
+      apr_int64_t child_repos_id = svn_sqlite__column_int64(stmt, 0);
+      const char *child_relpath = svn_sqlite__column_text(stmt, 1, NULL);
+      const char *lock_token = svn_sqlite__column_text(stmt, 2, result_pool);
 
-      if (lock_token)
+      if (child_repos_id != last_repos_id)
         {
-          const char *child_abspath =
-            svn_dirent_join(wcroot->abspath, child_relpath, result_pool);
-          apr_hash_set(*lock_tokens, child_abspath,
-                       APR_HASH_KEY_STRING, lock_token);
+          svn_error_t *err = fetch_repos_info(&last_repos_root_url, NULL,
+                                              wcroot->sdb, child_repos_id,
+                                              scratch_pool);
+
+          if (err)
+            {
+              return svn_error_return(
+                            svn_error_compose_create(err,
+                                                     svn_sqlite__reset(stmt)));
+            }
+
+          last_repos_id = child_repos_id;
         }
+
+      apr_hash_set(*lock_tokens,
+                   svn_path_url_add_component2(last_repos_root_url,
+                                               child_relpath,
+                                               result_pool),
+                   APR_HASH_KEY_STRING,
+                   lock_token);
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
