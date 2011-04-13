@@ -114,7 +114,7 @@ check_root_url_of_target(const char **root_url,
   if (!svn_path_is_url(truepath))
     SVN_ERR(svn_dirent_get_absolute(&truepath, truepath, pool));
 
-  err =  svn_client__get_repos_root(&tmp_root_url, truepath, &opt_rev,
+  err =  svn_client__get_repos_root(&tmp_root_url, truepath,
                                     ctx, pool, pool);
 
   if (err)

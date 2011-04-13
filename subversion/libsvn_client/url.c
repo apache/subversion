@@ -47,14 +47,19 @@ svn_client_url_from_path2(const char **url,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
-  svn_opt_revision_t revision;
-
   if (!svn_path_is_url(path_or_url))
-    SVN_ERR(svn_dirent_get_absolute(&path_or_url, path_or_url, scratch_pool));
+    {
+      SVN_ERR(svn_dirent_get_absolute(&path_or_url, path_or_url,
+                                      scratch_pool));
 
-  revision.kind = svn_opt_revision_unspecified;
-  return svn_client__derive_location(url, NULL, path_or_url, &revision,
-                                     NULL, ctx, result_pool, scratch_pool);
+      return svn_error_return(
+                 svn_wc__node_get_url(url, ctx->wc_ctx, path_or_url,
+                                      result_pool, scratch_pool));
+    }
+  else
+    *url = apr_pstrdup(result_pool, path_or_url);
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -64,19 +69,9 @@ svn_client_root_url_from_path(const char **url,
                               svn_client_ctx_t *ctx,
                               apr_pool_t *pool)
 {
-  svn_opt_revision_t peg_revision;
-
-  if (svn_path_is_url(path_or_url))
-    {
-      peg_revision.kind = svn_opt_revision_head;
-    }
-  else
-    {
-      peg_revision.kind = svn_opt_revision_base;
-      SVN_ERR(svn_dirent_get_absolute(&path_or_url, path_or_url, pool));
-    }
-  return svn_client__get_repos_root(url, path_or_url, &peg_revision,
-                                    ctx, pool, pool);
+  return svn_error_return(
+           svn_client__get_repos_root(url, path_or_url,
+                                      ctx, pool, pool));
 }
 
 svn_error_t *

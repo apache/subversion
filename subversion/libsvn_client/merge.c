@@ -9158,7 +9158,6 @@ merge_locked(const char *source1,
   svn_ra_session_t *ra_session1, *ra_session2;
   apr_array_header_t *merge_sources;
   merge_source_t *merge_source;
-  svn_opt_revision_t working_rev;
   svn_error_t *err;
   svn_boolean_t use_sleep = FALSE;
   const char *yc_path = NULL;
@@ -9228,10 +9227,8 @@ merge_locked(const char *source1,
                                              scratch_pool));
 
   /* Determine the working copy target's repository root URL. */
-  working_rev.kind = svn_opt_revision_working;
   SVN_ERR(svn_client__get_repos_root(&wc_repos_root, target_abspath,
-                                     &working_rev, ctx,
-                                     scratch_pool, scratch_pool));
+                                     ctx, scratch_pool, scratch_pool));
 
   /* Open some RA sessions to our merge source sides. */
   sesspool = svn_pool_create(scratch_pool);
@@ -10405,15 +10402,12 @@ merge_reintegrate_locked(const char *source,
                              svn_dirent_local_style(source, scratch_pool));
 
   /* Determine the working copy target's repository root URL. */
-  working_revision.kind = svn_opt_revision_working;
   SVN_ERR(svn_client__get_repos_root(&wc_repos_root, target_abspath,
-                                     &working_revision, ctx,
-                                     scratch_pool, scratch_pool));
+                                     ctx, scratch_pool, scratch_pool));
 
   /* Determine the source's repository root URL. */
   SVN_ERR(svn_client__get_repos_root(&source_repos_root, url2,
-                                     peg_revision, ctx,
-                                     scratch_pool, scratch_pool));
+                                     ctx, scratch_pool, scratch_pool));
 
   /* source_repos_root and wc_repos_root are required to be the same,
      as mergeinfo doesn't come into play for cross-repository merging. */
@@ -10455,6 +10449,7 @@ merge_reintegrate_locked(const char *source,
                                "can be the root of the repository"));
 
   /* Find all the subtree's in TARGET_WCPATH that have explicit mergeinfo. */
+  working_revision.kind = svn_opt_revision_working;
   SVN_ERR(svn_client_propget3(&subtrees_with_mergeinfo, SVN_PROP_MERGEINFO,
                               target_abspath, &working_revision,
                               &working_revision, NULL, svn_depth_infinity,
@@ -10692,8 +10687,7 @@ merge_peg_locked(const char *source,
   /* Determine the working copy target's repository root URL. */
   working_rev.kind = svn_opt_revision_working;
   SVN_ERR(svn_client__get_repos_root(&wc_repos_root, target_abspath,
-                                     &working_rev, ctx,
-                                     scratch_pool, scratch_pool));
+                                     ctx, scratch_pool, scratch_pool));
 
   /* Open an RA session to our source URL, and determine its root URL. */
   sesspool = svn_pool_create(scratch_pool);

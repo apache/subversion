@@ -347,13 +347,11 @@ switch_file_external(const char *path,
   if (!locked_here)
     {
       const char *dest_wc_repos_root_url;
-      svn_opt_revision_t peg_rev;
 
       /* Check that the repository root URL for the newly opened
          wc is the same as the file external. */
-      peg_rev.kind = svn_opt_revision_base;
       SVN_ERR(svn_client__get_repos_root(&dest_wc_repos_root_url,
-                                         anchor_abspath, &peg_rev,
+                                         anchor_abspath,
                                          ctx, subpool, subpool));
 
       if (0 != strcmp(repos_root_url, dest_wc_repos_root_url))

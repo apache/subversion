@@ -274,15 +274,14 @@ svn_client__ensure_ra_session_url(const char **old_session_url,
                                   apr_pool_t *pool);
 
 /* Set REPOS_ROOT, allocated in RESULT_POOL to the URL which represents
-   the root of the repository in with ABSPATH_OR_URL (at PEG_REVISION) is
-   versioned.  Use the authentication baton and working copy context
-   cached in CTX as necessary.
+   the root of the repository in with ABSPATH_OR_URL is versioned.
+   Use the authentication baton and working copy context cached in CTX as
+   necessary.
 
    Use SCRATCH_POOL for temporary allocations. */
 svn_error_t *
 svn_client__get_repos_root(const char **repos_root,
                            const char *abspath_or_url,
-                           const svn_opt_revision_t *peg_revision,
                            svn_client_ctx_t *ctx,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
