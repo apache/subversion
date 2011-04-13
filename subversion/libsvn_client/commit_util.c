@@ -87,7 +87,6 @@ add_committable(apr_hash_t *committables,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool)
 {
-  const char *repos_name = SVN_CLIENT__SINGLE_REPOS_NAME;
   apr_array_header_t *array;
   svn_client_commit_item3_t *new_item;
 
@@ -98,14 +97,15 @@ add_committable(apr_hash_t *committables,
   /* ### todo: Get the canonical repository for this item, which will
      be the real key for the COMMITTABLES hash, instead of the above
      bogosity. */
-  array = apr_hash_get(committables, repos_name, APR_HASH_KEY_STRING);
+  array = apr_hash_get(committables, repos_root_url, APR_HASH_KEY_STRING);
 
   /* E-gads!  There is no array for this repository yet!  Oh, no
      problem, we'll just create (and add to the hash) one. */
   if (array == NULL)
     {
       array = apr_array_make(result_pool, 1, sizeof(new_item));
-      apr_hash_set(committables, repos_name, APR_HASH_KEY_STRING, array);
+      apr_hash_set(committables, apr_pstrdup(result_pool, repos_root_url),
+                   APR_HASH_KEY_STRING, array);
     }
 
   /* Now update pointer values, ensuring that their allocations live
@@ -783,7 +783,6 @@ svn_client__harvest_committables(apr_hash_t **committables,
   int i;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_hash_t *changelist_hash = NULL;
-  const char *repos_root_url = NULL;
   svn_wc_context_t *wc_ctx = ctx->wc_ctx;
 
   /* It's possible that one of the named targets has a parent that is
@@ -829,6 +828,7 @@ svn_client__harvest_committables(apr_hash_t **committables,
       const char *repos_relpath, *target_abspath;
       svn_boolean_t is_added;
       svn_node_kind_t kind;
+      const char *repos_root_url;
       svn_error_t *err;
 
       svn_pool_clear(iterpool);
@@ -862,8 +862,7 @@ svn_client__harvest_committables(apr_hash_t **committables,
                        svn_dirent_local_style(target_abspath, iterpool));
         }
 
-      if (!repos_root_url)
-        SVN_ERR(svn_wc__node_get_repos_info(&repos_root_url, NULL, wc_ctx,
+      SVN_ERR(svn_wc__node_get_repos_info(&repos_root_url, NULL, wc_ctx,
                                             target_abspath, TRUE, TRUE,
                                             result_pool, iterpool));
 

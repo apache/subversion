@@ -780,17 +780,6 @@ typedef struct svn_client__copy_pair_t
 
 */
 
-
-
-/* ### This is TEMPORARY! Until we can find out the canonical
-   repository URL of a given entry, we'll just use this bogus value in
-   for our single committables hash key.  By the time we support
-   multiple repositories we will have to be storing the canonical
-   repository URLs anyway, so this will go away and the real URLs will
-   be the keys of the committables hash. */
-#define SVN_CLIENT__SINGLE_REPOS_NAME "svn:single-repos"
-
-
 /* Recursively crawl a set of working copy paths (DIR_ABSPATH + each
    item in the TARGETS array) looking for commit candidates, locking
    working copy directories as the crawl progresses.  For each

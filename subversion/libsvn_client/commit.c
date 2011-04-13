@@ -1249,16 +1249,24 @@ svn_client_commit5(const apr_array_header_t *targets,
   if (cmt_err)
     goto cleanup;
 
-  /* ### todo: Currently there should be only one hash entry, which
-     has a hacked name until we have the entries files storing
-     canonical repository URLs.  Then, the hacked name can go away
-     and be replaced with a canonical repos URL, and from there we
-     are poised to started handling nested working copies.  See
-     http://subversion.tigris.org/issues/show_bug.cgi?id=960. */
-  if (! ((commit_items = apr_hash_get(committables,
-                                      SVN_CLIENT__SINGLE_REPOS_NAME,
-                                      APR_HASH_KEY_STRING))))
-    goto cleanup;
+  if (apr_hash_count(committables) == 0)
+    {
+      goto cleanup; /* Nothing to do */
+    }
+  else if (apr_hash_count(committables) > 1)
+    {
+      cmt_err = svn_error_create(
+             SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+             _("Commit can only commit to a single repository at a time.\n"
+               "Are all targets part of the same working copy?"));
+      goto cleanup;
+    }
+
+  {
+    apr_hash_index_t *hi = apr_hash_first(iterpool, committables);
+
+    commit_items = svn__apr_hash_index_val(hi);
+  }
 
   /* If our array of targets contains only locks (and no actual file
      or prop modifications), then we return here to avoid committing a
