@@ -3480,7 +3480,6 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
     {
       const char *session_url = NULL, *url;
       svn_revnum_t target_rev;
-      svn_opt_revision_t peg_revision;
       svn_error_t *err;
 
       /* Assert that we have sane input. */
@@ -3490,14 +3489,16 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
 
       *implicit_mergeinfo = NULL;
 
-      peg_revision.kind = svn_opt_revision_working;
-      err = svn_client__derive_location(&url, &target_rev, target_abspath,
-                                        &peg_revision, ra_session,
-                                        ctx, scratch_pool, scratch_pool);
-
+      /* Retrieve the origin (original_*) of the node, or just the
+         url if the node was not copied. */
+      err = svn_client__entry_location(&url, &target_rev, 
+                                       ctx->wc_ctx, target_abspath,
+                                       svn_opt_revision_working,
+                                       scratch_pool, scratch_pool);
+      
       if (err)
         {
-          if (err->apr_err == SVN_ERR_CLIENT_VERSIONED_PATH_REQUIRED)
+            if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
             {
               /* We've been asked to operate on a target which has no location
                * in the repository. Either it's unversioned (but attempts to
@@ -3520,6 +3521,8 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
 
       if (*implicit_mergeinfo == NULL)
         {
+          svn_opt_revision_t peg_revision;
+
           /* Temporarily point our RA_SESSION at our target URL so we can
              fetch so-called "implicit mergeinfo" (that is, natural
              history). */
