@@ -2185,3 +2185,36 @@ svn_client_relocate(const char *path,
                              _("Non-recursive relocation not supported")));
   return svn_client_relocate2(path, from_prefix, to_prefix, TRUE, ctx, pool);
 }
+
+/*** From util.c ***/
+svn_error_t *
+svn_client_commit_item_create(const svn_client_commit_item3_t **item,
+                              apr_pool_t *pool)
+{
+  *item = svn_client_commit_item3_create(pool);
+  return SVN_NO_ERROR;
+}
+
+svn_client_commit_item2_t *
+svn_client_commit_item2_dup(const svn_client_commit_item2_t *item,
+                            apr_pool_t *pool)
+{
+  svn_client_commit_item2_t *new_item = apr_palloc(pool, sizeof(*new_item));
+
+  *new_item = *item;
+
+  if (new_item->path)
+    new_item->path = apr_pstrdup(pool, new_item->path);
+
+  if (new_item->url)
+    new_item->url = apr_pstrdup(pool, new_item->url);
+
+  if (new_item->copyfrom_url)
+    new_item->copyfrom_url = apr_pstrdup(pool, new_item->copyfrom_url);
+
+  if (new_item->wcprop_changes)
+    new_item->wcprop_changes = svn_prop_array_dup(new_item->wcprop_changes,
+                                                  pool);
+
+  return new_item;
+}
