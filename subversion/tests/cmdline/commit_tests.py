@@ -1478,7 +1478,6 @@ def commit_multiple_wc(sbox):
 # from different repositories. Commits to multiple repositories
 # are outside the scope of issue #2381.
 @Issue(2381)
-@XFail
 def commit_multiple_wc_multiple_repos(sbox):
   "committing two WCs from different repos fails"
 

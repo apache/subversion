@@ -1299,17 +1299,16 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
                                             copy_pairs,
                                             ctx, pool, pool));
 
-  /* ### todo: There should be only one hash entry, which currently
-     has a hacked name until we have the entries files storing
-     canonical repository URLs.  Then, the hacked name can go away and
-     be replaced with a entry->repos (or wherever the entry's
-     canonical repos URL is stored). */
-  if (! (commit_items = apr_hash_get(committables,
-                                     SVN_CLIENT__SINGLE_REPOS_NAME,
-                                     APR_HASH_KEY_STRING)))
-    {
-      return SVN_NO_ERROR;
-    }
+  /* The committables are keyed by the repository root */
+  {
+    const char *repos_root_url;
+    SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_url, pool));
+
+    commit_items = apr_hash_get(committables, repos_root_url,
+                                APR_HASH_KEY_STRING);
+
+    SVN_ERR_ASSERT(commit_items != NULL);
+  }
 
   /* If we are creating intermediate directories, tack them onto the list
      of committables. */
