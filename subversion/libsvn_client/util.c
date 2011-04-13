@@ -120,14 +120,11 @@ svn_client__path_relative_to_root(const char **rel_path,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool)
 {
-  /* ### TODO: Rework this to use svn_ra_get_path_relative_to_root(). */
-
-  SVN_ERR_ASSERT(repos_root != NULL || ra_session != NULL);
+  const char *repos_relpath;
 
   /* If we have a WC path... */
   if (! svn_path_is_url(abspath_or_url))
     {
-      const char *repos_relpath;
       /* ...fetch its entry, and attempt to get both its full URL and
          repository root URL.  If we can't get REPOS_ROOT from the WC
          entry, we'll get it from the RA layer.*/
@@ -139,59 +136,57 @@ svn_client__path_relative_to_root(const char **rel_path,
                                              scratch_pool));
 
       SVN_ERR_ASSERT(repos_relpath != NULL);
-
-      if (include_leading_slash)
-        *rel_path = apr_pstrcat(result_pool, "/", repos_relpath, NULL);
-      else
-        *rel_path = repos_relpath;
-
-      return SVN_NO_ERROR;
     }
-
-  /* If we weren't provided a REPOS_ROOT, or couldn't find one in the
-     WC entry, we'll ask the RA layer.  */
-  if (repos_root == NULL)
-    SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, scratch_pool));
-
-  /* Check if ABSPATH_OR_URL *is* the repository root URL.  */
-  if (strcmp(repos_root, abspath_or_url) == 0)
+     /* Merge handling passes a root that is not the repos root */
+  else if (repos_root != NULL)
     {
-      *rel_path = include_leading_slash ? "/" : "";
+      if (!svn_uri_is_ancestor(repos_root, abspath_or_url))
+        return svn_error_createf(SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
+                                 _("URL '%s' is not a child of repository "
+                                   "root URL '%s'"),
+                                 abspath_or_url, repos_root);
+
+      repos_relpath = svn_path_uri_decode(
+                            svn_uri_skip_ancestor(repos_root,
+                                                  abspath_or_url),
+                            result_pool);
     }
   else
     {
-      /* See if PATH_OR_URL is a child of REPOS_ROOT.  If we get NULL
-         back from this, the two URLs have no commonality (which
-         should only happen if our caller provided us a REPOS_ROOT and
-         a PATH_OR_URL of something not in that repository).  */
-      const char *rel_url = svn_uri_is_child(repos_root, abspath_or_url,
-                                             scratch_pool);
-      if (! rel_url)
+      svn_error_t *err;
+
+      SVN_ERR_ASSERT(ra_session != NULL);
+
+      /* Ask the RA layer to create a relative path for us */
+      err = svn_ra_get_path_relative_to_root(ra_session, rel_path,
+                                             abspath_or_url, scratch_pool);
+
+      if (err)
         {
-          return svn_error_createf(SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
-                                   _("URL '%s' is not a child of repository "
-                                     "root URL '%s'"),
-                                   abspath_or_url, repos_root);
+          if (err->apr_err == SVN_ERR_RA_ILLEGAL_URL)
+            return svn_error_createf(SVN_ERR_CLIENT_UNRELATED_RESOURCES, err,
+                                     _("URL '%s' is not inside repository"),
+                                     abspath_or_url);
+
+          return svn_error_return(err);
         }
-      if (include_leading_slash)
-        *rel_path = apr_pstrcat(result_pool, "/", rel_url, NULL);
-      else
-        *rel_path = apr_pstrdup(result_pool, rel_url);
     }
 
-  return SVN_NO_ERROR;
+  if (include_leading_slash)
+    *rel_path = apr_pstrcat(result_pool, "/", repos_relpath, NULL);
+  else
+    *rel_path = repos_relpath;
+
+   return SVN_NO_ERROR;
 }
 
 svn_error_t *
 svn_client__get_repos_root(const char **repos_root,
                            const char *abspath_or_url,
-                           const svn_opt_revision_t *peg_revision,
                            svn_client_ctx_t *ctx,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool)
 {
-  svn_revnum_t rev;
-  const char *target_url;
   svn_ra_session_t *ra_session;
 
   /* If PATH_OR_URL is a local path we can fetch the repos root locally. */

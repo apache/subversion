@@ -1020,7 +1020,7 @@ get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_catalog,
 
       /* Acquire return values. */
       SVN_ERR(svn_client__get_repos_root(repos_root, local_abspath,
-                                         &peg_rev, ctx, result_pool,
+                                         ctx, result_pool,
                                          scratch_pool));
       SVN_ERR(svn_client__get_wc_or_repos_mergeinfo_catalog(
         mergeinfo_catalog, &indirect, include_descendants, FALSE,
