@@ -362,7 +362,9 @@ internal_status(svn_wc_status3_t **status,
 
    If GET_ALL is FALSE, and LOCAL_ABSPATH is not locally modified, then
    *STATUS will be set to NULL.  If GET_ALL is non-zero, then *STATUS will be
-   allocated and returned no matter what.
+   allocated and returned no matter what.  If IGNORE_TEXT_MODS is TRUE then
+   don't check for text mods, assume there are none and set and *STATUS
+   returned to reflect that assumption.
 
    The status struct's repos_lock field will be set to REPOS_LOCK.
 */
@@ -375,6 +377,7 @@ assemble_status(svn_wc_status3_t **status,
                 const struct svn_wc__db_info_t *info,
                 const svn_io_dirent2_t *dirent,
                 svn_boolean_t get_all,
+                svn_boolean_t ignore_text_mods,
                 const svn_lock_t *repos_lock,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool)
@@ -512,11 +515,12 @@ assemble_status(svn_wc_status3_t **status,
              to avoid an extra filestat for every file, which can be
              expensive on network drives as a filestat usually can't
              be cached there */
-          if (dirent
-              && dirent->filesize != SVN_INVALID_FILESIZE
-              && dirent->mtime != 0
-              && info->translated_size == dirent->filesize
-              && info->last_mod_time == dirent->mtime)
+          if (ignore_text_mods
+              ||(dirent
+                 && dirent->filesize != SVN_INVALID_FILESIZE
+                 && dirent->mtime != 0
+                 && info->translated_size == dirent->filesize
+                 && info->last_mod_time == dirent->mtime))
             text_modified_p = FALSE;
           else
             {
@@ -769,6 +773,7 @@ send_status_structure(const struct walk_status_baton *wb,
                       const struct svn_wc__db_info_t *info,
                       const svn_io_dirent2_t *dirent,
                       svn_boolean_t get_all,
+                      svn_boolean_t ignore_text_mods,
                       svn_wc_status_func4_t status_func,
                       void *status_baton,
                       apr_pool_t *scratch_pool)
@@ -799,7 +804,7 @@ send_status_structure(const struct walk_status_baton *wb,
 
   SVN_ERR(assemble_status(&statstruct, wb->db, local_abspath,
                           parent_repos_root_url, parent_repos_relpath,
-                          info, dirent, get_all,
+                          info, dirent, get_all, ignore_text_mods,
                           repos_lock, scratch_pool, scratch_pool));
 
   if (statstruct && status_func)
@@ -967,6 +972,7 @@ get_dir_status(const struct walk_status_baton *wb,
                svn_depth_t depth,
                svn_boolean_t get_all,
                svn_boolean_t no_ignore,
+               svn_boolean_t ignore_text_mods,
                svn_wc_status_func4_t status_func,
                void *status_baton,
                svn_cancel_func_t cancel_func,
@@ -989,6 +995,7 @@ handle_dir_entry(const struct walk_status_baton *wb,
                  svn_depth_t depth,
                  svn_boolean_t get_all,
                  svn_boolean_t no_ignore,
+                 svn_boolean_t ignore_text_mods,
                  svn_wc_status_func4_t status_func,
                  void *status_baton,
                  svn_cancel_func_t cancel_func,
@@ -1018,6 +1025,7 @@ handle_dir_entry(const struct walk_status_baton *wb,
                                  dir_repos_root_url, dir_repos_relpath,
                                  entry_info,
                                  dirent, ignores, depth, get_all, no_ignore,
+                                 ignore_text_mods,
                                  status_func, status_baton, cancel_func,
                                  cancel_baton,
                                  pool));
@@ -1030,6 +1038,7 @@ handle_dir_entry(const struct walk_status_baton *wb,
                                         dir_repos_root_url,
                                         dir_repos_relpath,
                                         entry_info, dirent, get_all,
+                                        ignore_text_mods,
                                         status_func, status_baton, pool));
         }
     }
@@ -1040,6 +1049,7 @@ handle_dir_entry(const struct walk_status_baton *wb,
                                     dir_repos_root_url,
                                     dir_repos_relpath,
                                     entry_info, dirent, get_all,
+                                    ignore_text_mods,
                                     status_func, status_baton, pool));
     }
 
@@ -1127,6 +1137,7 @@ get_dir_status(const struct walk_status_baton *wb,
                svn_depth_t depth,
                svn_boolean_t get_all,
                svn_boolean_t no_ignore,
+               svn_boolean_t ignore_text_mods,
                svn_wc_status_func4_t status_func,
                void *status_baton,
                svn_cancel_func_t cancel_func,
@@ -1203,6 +1214,7 @@ get_dir_status(const struct walk_status_baton *wb,
                                       parent_repos_root_url,
                                       parent_repos_relpath,
                                       dir_info, dirent, get_all,
+                                      ignore_text_mods,
                                       status_func, status_baton,
                                       iterpool));
 
@@ -1255,6 +1267,7 @@ get_dir_status(const struct walk_status_baton *wb,
                                                            : svn_depth_empty,
                                        get_all,
                                        no_ignore,
+                                       ignore_text_mods,
                                        status_func, status_baton,
                                        cancel_func, cancel_baton, iterpool));
               continue;
@@ -1595,7 +1608,7 @@ make_dir_baton(void **dir_baton,
                              d->depth == svn_depth_files
                                       ? svn_depth_files
                                       : svn_depth_immediates,
-                             TRUE, TRUE,
+                             TRUE, TRUE, FALSE,
                              hash_stash, d->statii,
                              eb->cancel_func, eb->cancel_baton,
                              pool));
@@ -1772,6 +1785,7 @@ handle_statii(struct edit_baton *eb,
                                  NULL,
                                  NULL /* dirent */,
                                  ignores, depth, eb->get_all, eb->no_ignore,
+                                 FALSE,
                                  status_func, status_baton,
                                  eb->cancel_func, eb->cancel_baton,
                                  iterpool));
@@ -2042,6 +2056,7 @@ close_directory(void *dir_baton,
                                          eb->ignores,
                                          eb->default_depth,
                                          eb->get_all, eb->no_ignore,
+                                         FALSE,
                                          eb->status_func, eb->status_baton,
                                          eb->cancel_func, eb->cancel_baton,
                                          pool));
@@ -2239,6 +2254,7 @@ close_edit(void *edit_baton,
                              eb->default_depth,
                              eb->get_all,
                              eb->no_ignore,
+                             FALSE,
                              eb->ignores,
                              eb->status_func,
                              eb->status_baton,
@@ -2359,6 +2375,7 @@ svn_wc_walk_status(svn_wc_context_t *wc_ctx,
                    svn_depth_t depth,
                    svn_boolean_t get_all,
                    svn_boolean_t no_ignore,
+                   svn_boolean_t ignore_text_mods,
                    const apr_array_header_t *ignore_patterns,
                    svn_wc_status_func4_t status_func,
                    void *status_baton,
@@ -2425,6 +2442,7 @@ svn_wc_walk_status(svn_wc_context_t *wc_ctx,
                          depth,
                          get_all,
                          no_ignore,
+                         ignore_text_mods,
                          status_func, status_baton,
                          cancel_func, cancel_baton,
                          scratch_pool));
@@ -2566,6 +2584,7 @@ internal_status(svn_wc_status3_t **status,
                                           NULL,
                                           dirent,
                                           TRUE /* get_all */,
+                                          FALSE,
                                           NULL /* repos_lock */,
                                           result_pool, scratch_pool));
 }

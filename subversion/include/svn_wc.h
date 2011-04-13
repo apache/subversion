@@ -3813,6 +3813,12 @@ typedef void (*svn_wc_status_func_t)(void *baton,
  *   - If @a get_all is FALSE, then only locally-modified entries will be
  *     returned.  If TRUE, then all entries will be returned.
  *
+ *   - If @a ignore_text_mods is TRUE, then the walk will not check for
+ *     modified files.  Any #svn_wc_status3_t structures returned for files
+ *     will always have a text_status field set to svn_wc_status_normal.
+ *     If @a ignore_text_mods is FALSE, the walk checks for text changes
+ *     and returns #svn_wc_status3_t structures describing any changes.
+ *
  *   - If @a depth is #svn_depth_empty, a status structure will
  *     be returned for the target only; if #svn_depth_files, for the
  *     target and its immediate file children; if
@@ -3852,6 +3858,7 @@ svn_wc_walk_status(svn_wc_context_t *wc_ctx,
                    svn_depth_t depth,
                    svn_boolean_t get_all,
                    svn_boolean_t no_ignore,
+                   svn_boolean_t ignore_text_mods,
                    const apr_array_header_t *ignore_patterns,
                    svn_wc_status_func4_t status_func,
                    void *status_baton,
