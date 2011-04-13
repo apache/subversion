@@ -179,11 +179,13 @@ svn_temp_serializer__push(svn_temp_serializer__context_t *context,
                           const void * const * source_struct,
                           apr_size_t struct_size)
 {
+  const void *source = *source_struct;
+
   /* create a new entry for the structure stack */
   source_stack_t *new = apr_palloc(context->pool, sizeof(*new));
 
   /* the serialized structure must be properly aligned */
-  if (*source_struct)
+  if (source)
     align_buffer_end(context);
 
   /* Store the offset at which the struct data that will the appended.
@@ -191,7 +193,7 @@ svn_temp_serializer__push(svn_temp_serializer__context_t *context,
   store_current_end_pointer(context, source_struct);
 
   /* store source and target information */
-  new->source_struct = *source_struct;
+  new->source_struct = source;
   new->target_offset = context->buffer->len;
 
   /* put the new entry onto the stack*/
@@ -201,7 +203,7 @@ svn_temp_serializer__push(svn_temp_serializer__context_t *context,
   /* finally, actually append the new struct
    * (so we can now manipulate pointers within it) */
   if (*source_struct)
-    svn_stringbuf_appendbytes(context->buffer, *source_struct, struct_size);
+    svn_stringbuf_appendbytes(context->buffer, source, struct_size);
 }
 
 /* Remove the lastest structure from the stack.
@@ -225,13 +227,15 @@ void
 svn_temp_serializer__add_string(svn_temp_serializer__context_t *context,
                                 const char * const * s)
 {
+  const char *string = *s;
+
   /* Store the offset at which the string data that will the appended.
    * Write 0 for NULL pointers. Strings don't need special alignment. */
   store_current_end_pointer(context, (const void **)s);
 
   /* append the string data */
-  if (*s)
-    svn_stringbuf_appendbytes(context->buffer, *s, strlen(*s) + 1);
+  if (string)
+    svn_stringbuf_appendbytes(context->buffer, string, strlen(string) + 1);
 }
 
 /* Set the serialized representation of the pointer PTR inside the current
