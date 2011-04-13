@@ -515,7 +515,7 @@ svn_client_status5(svn_revnum_t *result_rev,
   else
     {
       err = svn_wc_walk_status(ctx->wc_ctx, target_abspath,
-                               depth, get_all, no_ignore, ignores,
+                               depth, get_all, no_ignore, FALSE, ignores,
                                tweak_status, &sb,
                                ignore_externals
                                    ? NULL

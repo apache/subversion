@@ -5820,7 +5820,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
   pre_merge_status_baton.pool = scratch_pool;
   SVN_ERR(svn_wc_walk_status(merge_cmd_baton->ctx->wc_ctx,
                              merge_cmd_baton->target_abspath,
-                             depth, TRUE, TRUE, NULL,
+                             depth, TRUE, TRUE, TRUE, NULL,
                              pre_merge_status_cb,
                              &pre_merge_status_baton,
                              NULL, NULL,
