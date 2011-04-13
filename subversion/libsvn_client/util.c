@@ -110,32 +110,6 @@ svn_client_proplist_item_dup(const svn_client_proplist_item_t *item,
   return new_item;
 }
 
-/* Return LOCAL_ABSPATH's URL and repository root in *URL and REPOS_ROOT,
-   respectively.  */
-static svn_error_t *
-wc_path_to_repos_urls(const char **url,
-                      const char **repos_root,
-                      svn_wc_context_t *wc_ctx,
-                      const char *local_abspath,
-                      apr_pool_t *result_pool,
-                      apr_pool_t *scratch_pool)
-{
-  SVN_ERR(svn_client__entry_location(url, NULL, wc_ctx, local_abspath,
-                                     svn_opt_revision_unspecified,
-                                     result_pool, scratch_pool));
-
-  /* If we weren't provided a REPOS_ROOT, we'll try to read one from
-     the entry.  The entry might not hold a URL -- in that case, we'll
-     need a fallback plan. */
-  if (*repos_root == NULL)
-    SVN_ERR(svn_wc__node_get_repos_info(repos_root, NULL, wc_ctx,
-                                        local_abspath, TRUE, FALSE,
-                                        result_pool, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-
 svn_error_t *
 svn_client__path_relative_to_root(const char **rel_path,
                                   svn_wc_context_t *wc_ctx,
@@ -153,12 +127,25 @@ svn_client__path_relative_to_root(const char **rel_path,
   /* If we have a WC path... */
   if (! svn_path_is_url(abspath_or_url))
     {
+      const char *repos_relpath;
       /* ...fetch its entry, and attempt to get both its full URL and
          repository root URL.  If we can't get REPOS_ROOT from the WC
          entry, we'll get it from the RA layer.*/
-      SVN_ERR(wc_path_to_repos_urls(&abspath_or_url, &repos_root, wc_ctx,
-                                    abspath_or_url, scratch_pool,
-                                    scratch_pool));
+
+      SVN_ERR(svn_wc__node_get_repos_relpath(&repos_relpath,
+                                             wc_ctx,
+                                             abspath_or_url,
+                                             result_pool,
+                                             scratch_pool));
+
+      SVN_ERR_ASSERT(repos_relpath != NULL);
+
+      if (include_leading_slash)
+        *rel_path = apr_pstrcat(result_pool, "/", repos_relpath, NULL);
+      else
+        *rel_path = repos_relpath;
+
+      return SVN_NO_ERROR;
     }
 
   /* If we weren't provided a REPOS_ROOT, or couldn't find one in the
@@ -187,7 +174,7 @@ svn_client__path_relative_to_root(const char **rel_path,
                                    abspath_or_url, repos_root);
         }
       if (include_leading_slash)
-        *rel_path = svn_fspath__canonicalize(rel_url, result_pool);
+        *rel_path = apr_pstrcat(result_pool, "/", rel_url, NULL);
       else
         *rel_path = apr_pstrdup(result_pool, rel_url);
     }
@@ -205,43 +192,26 @@ svn_client__get_repos_root(const char **repos_root,
 {
   svn_revnum_t rev;
   const char *target_url;
+  svn_ra_session_t *ra_session;
 
-  /* If PATH_OR_URL is a local path and PEG_REVISION keeps us looking
-     locally, we'll first check PATH_OR_URL's entry for a repository
-     root URL. */
-  if (!svn_path_is_url(abspath_or_url)
-      && (peg_revision->kind == svn_opt_revision_working
-          || peg_revision->kind == svn_opt_revision_base))
+  /* If PATH_OR_URL is a local path we can fetch the repos root locally. */
+  if (!svn_path_is_url(abspath_or_url))
     {
-      *repos_root = NULL;
-      SVN_ERR(wc_path_to_repos_urls(&abspath_or_url, repos_root,
-                                    ctx->wc_ctx, abspath_or_url,
-                                    result_pool, scratch_pool));
-    }
-  else
-    {
-      *repos_root = NULL;
+      SVN_ERR(svn_wc__node_get_repos_info(repos_root, NULL,
+                                          ctx->wc_ctx, abspath_or_url,
+                                          TRUE, TRUE,
+                                          result_pool, scratch_pool));
+
+      return SVN_NO_ERROR;
     }
 
-  /* If PATH_OR_URL was a URL, or PEG_REVISION wasn't a client-side
-     revision, or we weren't otherwise able to find the repository
-     root URL in PATH_OR_URL's WC entry, we use the RA layer to look
-     it up. */
-  if (*repos_root == NULL)
-    {
-      svn_ra_session_t *ra_session;
-      SVN_ERR(svn_client__ra_session_from_path(&ra_session,
-                                               &rev,
-                                               &target_url,
+  /* If PATH_OR_URL was a URL, we use the RA layer to look it up. */
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL,
                                                abspath_or_url,
-                                               NULL,
-                                               peg_revision,
-                                               peg_revision,
-                                               ctx,
-                                               scratch_pool));
+                                               NULL, NULL, FALSE, TRUE,
+                                               ctx, scratch_pool));
 
-      SVN_ERR(svn_ra_get_repos_root2(ra_session, repos_root, result_pool));
-    }
+  SVN_ERR(svn_ra_get_repos_root2(ra_session, repos_root, result_pool));
 
   return SVN_NO_ERROR;
 }
