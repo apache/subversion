@@ -657,15 +657,6 @@ svn_fs_begin_txn(svn_fs_txn_t **txn_p, svn_fs_t *fs, svn_revnum_t rev,
   return svn_error_return(svn_fs_begin_txn2(txn_p, fs, rev, 0, pool));
 }
 
-svn_error_t *
-svn_fs__begin_obliteration_txn(svn_fs_txn_t **txn_p,
-                               svn_fs_t *fs,
-                               svn_revnum_t rev,
-                               apr_pool_t *pool)
-{
-  return svn_error_return(fs->vtable->begin_obliteration_txn(txn_p, fs, rev,
-                                                             pool));
-}
 
 svn_error_t *
 svn_fs_commit_txn(const char **conflict_p, svn_revnum_t *new_rev,
@@ -699,18 +690,6 @@ svn_fs_commit_txn(const char **conflict_p, svn_revnum_t *new_rev,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_fs__commit_obliteration_txn(svn_revnum_t rev, svn_fs_txn_t *txn,
-                                apr_pool_t *pool)
-{
-  /* TODO: ### Perhaps here is a good place to unpack the revision ... */
-
-  SVN_ERR(txn->vtable->commit_obliteration(rev, txn, pool));
-
-  /* ### ... and here to re-pack it, if it was packed. */
-
-  return SVN_NO_ERROR;
-}
 
 svn_error_t *
 svn_fs_abort_txn(svn_fs_txn_t *txn, apr_pool_t *pool)

@@ -162,15 +162,6 @@ class SvnRepository:
     main.file_write(ldumpfile, ''.join(stderr))
     main.file_append(ldumpfile, ''.join(stdout))
 
-
-  def obliterate_node_rev(self, path, rev,
-                          exp_out=None, exp_err=[], exp_exit=0):
-    """Obliterate the single node-rev PATH in revision REV. Check the
-    expected stdout, stderr and exit code (EXP_OUT, EXP_ERR, EXP_EXIT)."""
-    arg = self.repo_url + '/' + path + '@' + str(rev)
-    actions.run_and_verify_svn2(None, exp_out, exp_err, exp_exit,
-                                'obliterate', arg)
-
   def svn_mkdirs(self, *dirs):
     """Run 'svn mkdir' on the repository. DIRS is a list of directories to
     make, and each directory is a path relative to the repository root,

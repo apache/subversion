@@ -163,22 +163,6 @@ svn_repos_post_revprop_change_hook(svn_repos_t *repos, apr_pool_t *pool)
 }
 
 
-const char *
-svn_repos__pre_obliterate_hook(svn_repos_t *repos, apr_pool_t *pool)
-{
-  return svn_dirent_join(repos->hook_path, SVN_REPOS__HOOK_PRE_OBLITERATE,
-                       pool);
-}
-
-
-const char *
-svn_repos__post_obliterate_hook(svn_repos_t *repos, apr_pool_t *pool)
-{
-  return svn_dirent_join(repos->hook_path, SVN_REPOS__HOOK_POST_OBLITERATE,
-                       pool);
-}
-
-
 static svn_error_t *
 create_repos_dir(const char *path, apr_pool_t *pool)
 {
@@ -544,82 +528,6 @@ PREWRITTEN_HOOKS_TEXT
     SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
               _("Creating pre-revprop-change hook"));
   }  /* end pre-revprop-change hook */
-
-
-#ifdef SVN_WITH_EXPERIMENTAL_OBLITERATE
-  /* Pre-obliterate hook. */
-  {
-    this_path = apr_psprintf(pool, "%s%s",
-                             svn_repos__pre_obliterate_hook(repos, pool),
-                             SVN_REPOS__HOOK_DESC_EXT);
-
-#define SCRIPT_NAME SVN_REPOS__HOOK_PRE_OBLITERATE
-
-    contents =
-"#!/bin/sh"                                                                  NL
-""                                                                           NL
-"# PRE-OBLITERATE HOOK"                                                      NL
-"#"                                                                          NL
-"# The pre-obliterate hook is invoked before an obliteration.  Subversion"   NL
-"# runs this hook by invoking a program (script, executable, binary, etc.)"  NL
-"# named '"SCRIPT_NAME"' (for which this file is a template), with the"      NL
-"# following ordered arguments and input:"                                   NL
-"#"                                                                          NL
-"#   [1] REPOS-PATH   (the path to this repository)"                         NL
-"#   [2] USER         (the username of the person trying to obliterate)"     NL
-"#"                                                                          NL
-"#   [STDIN] OBLITERATION-SET   (a list of PATH@REV, one per line)"          NL
-"#"                                                                          NL
-"# If the hook program exits with success, the obliteration happens; but"    NL
-"# if it exits with failure (non-zero), the obliteration doesn't happen."    NL
-"# The hook program can use the 'svnlook' utility to examine the"            NL
-"# existing history of the repository."                                      NL
-"#"                                                                          NL
-"# NOTE: Unlike most other hooks, this hook MUST exist for obliteration"     NL
-"# to be enabled.  If the hook does not exist, Subversion"                   NL
-"# will behave as if the hook were present, but failed.  The reason"         NL
-"# for this is that obliteration is irreversible: the old data is gone"      NL
-"# forever."                                                                 NL
-"#"                                                                          NL
-"# WARNING: We recommend not enabling the hook until:"                       NL
-"#   - it is needed;"                                                        NL
-"#   - there is a good repository back-up and restore procedure operating;"  NL
-"#   - the user name(s) to be allowed obliteration privileges are"           NL
-"#       authenticated user names with strong passwords;"                    NL
-"#   - the hook script has been tested."                                     NL
-"#"                                                                          NL
-"# On a Unix system, the normal procedure is to have '"SCRIPT_NAME"'"        NL
-"# invoke other programs to do the real work, though it may do the"          NL
-"# work itself too."                                                         NL
-"#"                                                                          NL
-"# Note that '"SCRIPT_NAME"' must be executable by the user(s) who will"     NL
-"# invoke it (typically the user httpd runs as), and that user must"         NL
-"# have filesystem-level permission to access the repository."               NL
-"#"                                                                          NL
-"# On a Windows system, you should name the hook program"                    NL
-"# '"SCRIPT_NAME".bat' or '"SCRIPT_NAME".exe',"                              NL
-"# but the basic idea is the same."                                          NL
-"#"                                                                          NL
-HOOKS_ENVIRONMENT_TEXT
-"#"                                                                          NL
-"# Here is an example hook script, for a Unix /bin/sh interpreter."          NL
-PREWRITTEN_HOOKS_TEXT
-""                                                                           NL
-""                                                                           NL
-"REPOS=\"$1\""                                                               NL
-"USER=\"$2\""                                                                NL
-""                                                                           NL
-"if [ \"$USER\" = \"the-admin\" ]; then exit 0; fi"                          NL
-""                                                                           NL
-"echo \"Obliteration is not enabled for normal users\" >&2"                  NL
-"exit 1"                                                                     NL;
-
-#undef SCRIPT_NAME
-
-    SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
-              _("Creating pre-obliterate hook"));
-  }  /* end pre-obliterate hook */
-#endif
 
 
   /* Pre-lock hook. */
@@ -1038,66 +946,6 @@ PREWRITTEN_HOOKS_TEXT
     SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
               _("Creating post-revprop-change hook"));
   } /* end post-revprop-change hook */
-
-#ifdef SVN_WITH_EXPERIMENTAL_OBLITERATE
-  /* Post-obliterate hook. */
-  {
-    this_path = apr_psprintf(pool, "%s%s",
-                             svn_repos__post_obliterate_hook(repos, pool),
-                             SVN_REPOS__HOOK_DESC_EXT);
-
-#define SCRIPT_NAME SVN_REPOS__HOOK_POST_OBLITERATE
-
-    contents =
-"#!/bin/sh"                                                                  NL
-""                                                                           NL
-"# POST-OBLITERATE HOOK"                                                     NL
-"#"                                                                          NL
-"# The post-obliterate hook is invoked after an obliteration."               NL
-"# Subversion runs this hook by invoking a program (script, executable,"     NL
-"# binary, etc.) named '"SCRIPT_NAME"' (for which this file is a template)," NL
-"# with the following ordered arguments:"                                    NL
-"#"                                                                          NL
-"#   [1] REPOS-PATH   (the path to this repository)"                         NL
-"#   [2] USER         (the username of the person trying to obliterate)"     NL
-"#"                                                                          NL
-"#   [STDIN] OBLITERATION-SET   (a list of PATH@REV, one per line)"          NL
-"#"                                                                          NL
-"# Because the obliteration has already completed and cannot be undone,"     NL
-"# the exit code of the hook program is ignored.  The hook program"          NL
-"# can use the 'svnlook' utility to help it examine the"                     NL
-"# new history of the repository."                                           NL
-"#"                                                                          NL
-"# On a Unix system, the normal procedure is to have '"SCRIPT_NAME"'"        NL
-"# invoke other programs to do the real work, though it may do the"          NL
-"# work itself too."                                                         NL
-"#"                                                                          NL
-"# Note that '"SCRIPT_NAME"' must be executable by the user(s) who will"     NL
-"# invoke it (typically the user httpd runs as), and that user must"         NL
-"# have filesystem-level permission to access the repository."               NL
-"#"                                                                          NL
-"# On a Windows system, you should name the hook program"                    NL
-"# '"SCRIPT_NAME".bat' or '"SCRIPT_NAME".exe',"                              NL
-"# but the basic idea is the same."                                          NL
-"#"                                                                          NL
-HOOKS_ENVIRONMENT_TEXT
-"# "                                                                         NL
-"# Here is an example hook script, for a Unix /bin/sh interpreter."          NL
-PREWRITTEN_HOOKS_TEXT
-""                                                                           NL
-""                                                                           NL
-"REPOS=\"$1\""                                                               NL
-"USER=\"$2\""                                                                NL
-""                                                                           NL
-"# Send out an email notification"                                           NL
-"mailer.py obliterate \"$REPOS\" \"$USER\" /path/to/mailer.conf"             NL;
-
-#undef SCRIPT_NAME
-
-    SVN_ERR_W(svn_io_file_create(this_path, contents, pool),
-              _("Creating post-obliterate hook"));
-  } /* end post-obliterate hook */
-#endif
 
   return SVN_NO_ERROR;
 }

@@ -4799,61 +4799,6 @@ node_origin_rev(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-obliterate_1(const svn_test_opts_t *opts,
-             apr_pool_t *pool)
-{
-  apr_pool_t *subpool = svn_pool_create(pool);
-  svn_fs_t *fs;
-  svn_fs_txn_t *txn;
-  svn_fs_root_t *txn_root, *root;
-  svn_revnum_t youngest_rev = 0;
-
-  /* Create the repository. */
-  SVN_ERR(svn_test__create_fs(&fs, "test-repo-obliterate-1",
-                              opts, pool));
-
-  /* Revision 1: Create the Greek tree.  */
-  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, subpool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
-  SVN_ERR(svn_test__create_greek_tree(txn_root, subpool));
-  SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, subpool));
-  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
-  svn_pool_clear(subpool);
-
-  /* Revision 2: Modify A/D/H/chi and A/B/E/alpha.  */
-  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
-  SVN_ERR(svn_test__set_file_contents(txn_root, "A/D/H/chi", "2", subpool));
-  SVN_ERR(svn_test__set_file_contents(txn_root, "A/B/E/alpha", "2", subpool));
-  SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, subpool));
-  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
-  svn_pool_clear(subpool);
-
-  /* Revision 3: Copy A/D to A/D2, and create A/D2/floop new.  */
-  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
-  SVN_ERR(svn_fs_revision_root(&root, fs, youngest_rev, subpool));
-  SVN_ERR(svn_fs_copy(root, "A/D", txn_root, "A/D2", subpool));
-  SVN_ERR(svn_fs_make_file(txn_root, "A/D2/floop", subpool));
-  SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, subpool));
-  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
-  svn_pool_clear(subpool);
-
-  /* Test obliteration in that repository. */
-
-  /* In revision 3: ...  */
-  SVN_ERR(svn_fs__begin_obliteration_txn(&txn, fs, 3, subpool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
-  SVN_ERR(svn_fs_revision_root(&root, fs, 3, subpool));
-  SVN_ERR(svn_fs_delete(txn_root, "A/D/H/chi", subpool));
-  SVN_ERR(svn_fs__commit_obliteration_txn(3, txn, subpool));
-  svn_pool_clear(subpool);
-
-  return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
-                          "Feature and test are still under development");
-}
-
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -4933,7 +4878,5 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test svn_fs_node_origin_rev"),
     SVN_TEST_OPTS_PASS(small_file_integrity,
                        "create and modify small file"),
-    SVN_TEST_OPTS_WIMP(obliterate_1,
-                       "obliterate 1", "obliterate is in development"),
     SVN_TEST_NULL
   };

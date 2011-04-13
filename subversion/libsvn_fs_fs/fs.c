@@ -149,7 +149,6 @@ static fs_vtable_t fs_vtable = {
   svn_fs_fs__set_uuid,
   svn_fs_fs__revision_root,
   svn_fs_fs__begin_txn,
-  svn_fs_fs__begin_obliteration_txn,
   svn_fs_fs__open_txn,
   svn_fs_fs__purge_txn,
   svn_fs_fs__list_transactions,

@@ -1457,28 +1457,6 @@ svn_ra_local__get_deleted_rev(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
-/* Implements svn_ra__vtable_t.obliterate_path_rev. */
-static svn_error_t *
-svn_ra_local__obliterate_path_rev(svn_ra_session_t *session,
-                                  svn_revnum_t revision,
-                                  const char *path,
-                                  apr_pool_t *pool)
-{
-  svn_ra_local__session_baton_t *sess = session->priv;
-  const char *abs_path  = svn_fspath__join(sess->fs_path->data, path, pool);
-
-  /* A username is absolutely required to obliterate anything. */
-  SVN_ERR(get_username(session, pool));
-
-  SVN_ERR(svn_repos__obliterate_path_rev(sess->repos,
-                                         sess->username,
-                                         revision,
-                                         abs_path,
-                                         pool));
-
-  return SVN_NO_ERROR;
-}
-
 /*----------------------------------------------------------------*/
 
 static const svn_version_t *
@@ -1525,8 +1503,7 @@ static const svn_ra__vtable_t ra_local_vtable =
   svn_ra_local__replay,
   svn_ra_local__has_capability,
   svn_ra_local__replay_range,
-  svn_ra_local__get_deleted_rev,
-  svn_ra_local__obliterate_path_rev
+  svn_ra_local__get_deleted_rev
 };
 
 
