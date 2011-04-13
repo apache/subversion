@@ -69,6 +69,9 @@ svn_client_root_url_from_path(const char **url,
                               svn_client_ctx_t *ctx,
                               apr_pool_t *pool)
 {
+  if (!svn_path_is_url(path_or_url))
+    SVN_ERR(svn_dirent_get_absolute(&path_or_url, path_or_url, pool));
+
   return svn_error_return(
            svn_client__get_repos_root(url, path_or_url,
                                       ctx, pool, pool));
