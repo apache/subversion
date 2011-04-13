@@ -1383,7 +1383,6 @@ def failed_commit(sbox):
 # Also related to issue #959, this test here doesn't use svn:externals
 # but the behaviour needs to be considered.
 # In this test two WCs are nested, one WC is child of the other.
-@XFail()
 @Issue(2381)
 def commit_multiple_wc_nested(sbox):
   "commit from two nested working copies"
@@ -1426,7 +1425,6 @@ def commit_multiple_wc_nested(sbox):
   svntest.actions.run_and_verify_status(wc2_dir, expected_status2)
 
 # Same as commit_multiple_wc_nested except that the two WCs are not nested.
-@XFail()
 @Issue(2381)
 def commit_multiple_wc(sbox):
   "commit from two working copies"
@@ -1480,6 +1478,7 @@ def commit_multiple_wc(sbox):
 # from different repositories. Commits to multiple repositories
 # are outside the scope of issue #2381.
 @Issue(2381)
+@XFail
 def commit_multiple_wc_multiple_repos(sbox):
   "committing two WCs from different repos fails"
 

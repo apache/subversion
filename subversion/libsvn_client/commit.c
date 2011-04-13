@@ -1009,6 +1009,112 @@ check_nonrecursive_dir_delete(const char *target_path,
   return SVN_NO_ERROR;
 }
 
+/* Given a list of committables described by their common base abspath
+   BASE_ABSPATH and a list of relative dirents TARGET_RELPATHS determine
+   which absolute paths must be locked to commit all these targets and
+   return this as a const char * array in LOCK_TARGETS
+
+   Allocate the result in RESULT_POOL and use SCRATCH_POOL for temporary
+   storage */
+static svn_error_t *
+determine_lock_targets(apr_array_header_t **lock_targets,
+                       svn_wc_context_t *wc_ctx,
+                       const char *base_abspath,
+                       const apr_array_header_t *target_relpaths,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
+{
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_hash_t *wc_items; /* const char *wcroot -> apr_array_header_t */
+  apr_hash_index_t *hi;
+  int i;
+
+  wc_items = apr_hash_make(scratch_pool);
+
+  /* Create an array of targets for each working copy used */
+  for (i = 0; i < target_relpaths->nelts; i++)
+    {
+      const char *target_abspath;
+      const char *wcroot_abspath;
+      apr_array_header_t *wc_targets;
+      svn_error_t *err;
+      const char *target_relpath = APR_ARRAY_IDX(target_relpaths, i,
+                                                 const char *);
+
+      svn_pool_clear(iterpool);
+      target_abspath = svn_dirent_join(base_abspath, target_relpath,
+                                       scratch_pool);
+
+      err = svn_wc_get_wc_root(&wcroot_abspath, wc_ctx, target_abspath,
+                               iterpool, iterpool);
+
+      if (err)
+        {
+          if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+            {
+              svn_error_clear(err);
+              continue;
+            }
+          return svn_error_return(err);
+        }
+
+      wc_targets = apr_hash_get(wc_items, wcroot_abspath, APR_HASH_KEY_STRING);
+
+      if (! wc_targets)
+        {
+          wc_targets = apr_array_make(scratch_pool, 4, sizeof(const char *));
+          apr_hash_set(wc_items, apr_pstrdup(scratch_pool, wcroot_abspath), 
+                       APR_HASH_KEY_STRING, wc_targets);
+        }
+
+      APR_ARRAY_PUSH(wc_targets, const char *) = target_abspath;
+    }
+
+  *lock_targets = apr_array_make(result_pool, apr_hash_count(wc_items),
+                                 sizeof(const char *));
+
+  /* For each working copy determine where to lock */
+  for (hi = apr_hash_first(scratch_pool, wc_items);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *common;
+      const char *wcroot_abspath = svn__apr_hash_index_key(hi);
+      apr_array_header_t *wc_targets = svn__apr_hash_index_val(hi);
+
+      svn_pool_clear(iterpool);
+
+      if (wc_targets->nelts == 1)
+        {
+          const char *target_abspath;
+          target_abspath = APR_ARRAY_IDX(wc_targets, 0, const char *);
+
+          if (! strcmp(wcroot_abspath, target_abspath))
+            {
+              APR_ARRAY_PUSH(*lock_targets, const char *)
+                      = apr_pstrdup(result_pool, target_abspath);
+            }
+          else
+            {
+              /* The old code did an ancestor check; lock the parent
+                 just to be sure */
+              APR_ARRAY_PUSH(*lock_targets, const char *) 
+                      = svn_dirent_dirname(target_abspath, result_pool);
+            }
+        }
+      else
+        {
+          SVN_ERR(svn_dirent_condense_targets(&common, NULL, wc_targets,
+                                              FALSE, result_pool, iterpool));
+
+          APR_ARRAY_PUSH(*lock_targets, const char *) = common;
+        }
+    }
+
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_client_commit5(const apr_array_header_t *targets,
                    svn_depth_t depth,
@@ -1028,17 +1134,20 @@ svn_client_commit5(const apr_array_header_t *targets,
   const char *log_msg;
   const char *base_abspath;
   const char *base_url;
-  const char *target;
   apr_array_header_t *rel_targets;
+  apr_array_header_t *lock_targets;
+  apr_array_header_t *locks_obtained;
   apr_hash_t *committables;
   apr_hash_t *lock_tokens;
   apr_hash_t *md5_checksums;
   apr_hash_t *sha1_checksums;
   apr_array_header_t *commit_items;
-  svn_error_t *cmt_err = SVN_NO_ERROR, *unlock_err = SVN_NO_ERROR;
+  svn_error_t *cmt_err = SVN_NO_ERROR;
   svn_error_t *bump_err = SVN_NO_ERROR;
+  svn_error_t *unlock_err = SVN_NO_ERROR;
   svn_boolean_t commit_in_progress = FALSE;
   svn_commit_info_t *commit_info = NULL;
+  apr_pool_t *iterpool = svn_pool_create(pool);
   const char *current_abspath;
   const char *notify_prefix;
   int i;
@@ -1046,17 +1155,16 @@ svn_client_commit5(const apr_array_header_t *targets,
   /* Committing URLs doesn't make sense, so error if it's tried. */
   for (i = 0; i < targets->nelts; i++)
     {
-      target = APR_ARRAY_IDX(targets, i, const char *);
+      const char *target = APR_ARRAY_IDX(targets, i, const char *);
       if (svn_path_is_url(target))
         return svn_error_createf
           (SVN_ERR_ILLEGAL_TARGET, NULL,
            _("'%s' is a URL, but URLs cannot be commit targets"), target);
     }
 
-  /* Condense the target list. */
+  /* Condense the target list. This makes all targets absolute. */
   SVN_ERR(svn_dirent_condense_targets(&base_abspath, &rel_targets, targets,
-                                      depth == svn_depth_infinity,
-                                      pool, pool));
+                                      FALSE, pool, iterpool));
 
   /* No targets means nothing to commit, so just return. */
   if (base_abspath == NULL)
@@ -1068,15 +1176,29 @@ svn_client_commit5(const apr_array_header_t *targets,
      must mean that we are being asked to commit (effectively) a
      single path. */
   if (rel_targets->nelts == 0)
+    APR_ARRAY_PUSH(rel_targets, const char *) = "";
+
+  SVN_ERR(determine_lock_targets(&lock_targets, ctx->wc_ctx, base_abspath,
+                                 rel_targets, pool, iterpool));
+
+  locks_obtained = apr_array_make(pool, lock_targets->nelts,
+                                  sizeof(const char *));
+
+  for (i = 0; i < lock_targets->nelts; i++)
     {
-      const char *name;
+      const char *lock_root;
+      const char *target = APR_ARRAY_IDX(lock_targets, i, const char *);
 
-      /* Recompute our base directory, and push the resulting name (which
-         may be "") into the list of relative targets.  */
-      SVN_ERR(svn_wc_get_actual_target2(&base_abspath, &name, ctx->wc_ctx,
-                                        base_abspath, pool, pool));
+      svn_pool_clear(iterpool);
 
-      APR_ARRAY_PUSH(rel_targets, const char *) = name;
+      cmt_err = svn_error_return(
+                    svn_wc__acquire_write_lock(&lock_root, ctx->wc_ctx, target,
+                                           FALSE, pool, iterpool));
+
+      if (cmt_err)
+        goto cleanup;
+
+      APR_ARRAY_PUSH(locks_obtained, const char *) = lock_root;
     }
 
   /* Determine prefix to strip from the commit notify messages */
@@ -1084,9 +1206,6 @@ svn_client_commit5(const apr_array_header_t *targets,
   notify_prefix = svn_dirent_get_longest_ancestor(current_abspath,
                                                   base_abspath,
                                                   pool);
-
-  SVN_ERR(svn_wc__acquire_write_lock(NULL, ctx->wc_ctx, base_abspath,
-                                     FALSE, pool, pool));
 
   /*
    * At this point, the working copy must be unlocked (if possible)
@@ -1101,27 +1220,22 @@ svn_client_commit5(const apr_array_header_t *targets,
 
      At the same time, if a non-recursive commit is desired, do not
      allow a deleted directory as one of the targets. */
-  {
-    apr_pool_t *iterpool = svn_pool_create(pool);
+  for (i = 0; i < targets->nelts; i++)
+    {
+      const char *target_path = APR_ARRAY_IDX(targets, i, const char *);
 
-    for (i = 0; i < targets->nelts; i++)
-      {
-        const char *target_path = APR_ARRAY_IDX(targets, i, const char *);
+      svn_pool_clear(iterpool);
+      cmt_err = svn_error_return(
+                    check_nonrecursive_dir_delete(target_path, ctx->wc_ctx,
+                                                  depth, iterpool));
 
-        svn_pool_clear(iterpool);
-        cmt_err = check_nonrecursive_dir_delete(target_path, ctx->wc_ctx,
-                                                depth, iterpool);
-        if (cmt_err)
-          {
-            svn_pool_destroy(iterpool);
-            goto cleanup;
-          }
-      }
-    svn_pool_destroy(iterpool);
-  }
+      if (cmt_err)
+        goto cleanup;
+    }
 
   /* Crawl the working copy for commit items. */
-  if ((cmt_err = svn_client__harvest_committables(&committables,
+  cmt_err = svn_error_return(
+                 svn_client__harvest_committables(&committables,
                                                   &lock_tokens,
                                                   base_abspath,
                                                   rel_targets,
@@ -1130,7 +1244,9 @@ svn_client_commit5(const apr_array_header_t *targets,
                                                   changelists,
                                                   ctx,
                                                   pool,
-                                                  pool)))
+                                                  iterpool));
+
+  if (cmt_err)
     goto cleanup;
 
   /* ### todo: Currently there should be only one hash entry, which
@@ -1171,8 +1287,9 @@ svn_client_commit5(const apr_array_header_t *targets,
   if (SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx))
     {
       const char *tmp_file;
-      cmt_err = svn_client__get_log_msg(&log_msg, &tmp_file, commit_items,
-                                        ctx, pool);
+      cmt_err = svn_error_return(
+                     svn_client__get_log_msg(&log_msg, &tmp_file, commit_items,
+                                             ctx, pool));
 
       if (cmt_err || (! log_msg))
         goto cleanup;
@@ -1181,14 +1298,18 @@ svn_client_commit5(const apr_array_header_t *targets,
     log_msg = "";
 
   /* Sort and condense our COMMIT_ITEMS. */
-  if ((cmt_err = svn_client__condense_commit_items(&base_url,
-                                                   commit_items,
-                                                   pool)))
+  cmt_err = svn_error_return(svn_client__condense_commit_items(&base_url,
+                                                               commit_items,
+                                                               pool));
+
+  if (cmt_err)
     goto cleanup;
 
   /* Collect our lock tokens with paths relative to base_url. */
-  if ((cmt_err = collect_lock_tokens(&lock_tokens, lock_tokens, base_url,
-                                     pool)))
+  cmt_err = svn_error_return(collect_lock_tokens(&lock_tokens, lock_tokens,
+                                                 base_url, pool));
+
+  if (cmt_err)
     goto cleanup;
 
   cb.original_callback = commit_callback;
@@ -1196,27 +1317,30 @@ svn_client_commit5(const apr_array_header_t *targets,
   cb.info = &commit_info;
   cb.pool = pool;
 
-  if ((cmt_err = get_ra_editor(&ra_session, &editor, &edit_baton, ctx,
+  cmt_err = svn_error_return(
+                 get_ra_editor(&ra_session, &editor, &edit_baton, ctx,
                                base_url, base_abspath, log_msg,
                                commit_items, revprop_table, TRUE, lock_tokens,
                                keep_locks, capture_commit_info,
-                               &cb, pool)))
+                               &cb, pool));
+
+  if (cmt_err)
     goto cleanup;
 
   /* Make a note that we have a commit-in-progress. */
   commit_in_progress = TRUE;
 
   /* Perform the commit. */
-  cmt_err = svn_client__do_commit(base_url, commit_items, editor, edit_baton,
+  cmt_err = svn_error_return(
+            svn_client__do_commit(base_url, commit_items, editor, edit_baton,
                                   notify_prefix, &md5_checksums,
-                                  &sha1_checksums, ctx, pool);
+                                  &sha1_checksums, ctx, pool));
 
   /* Handle a successful commit. */
   if ((! cmt_err)
       || (cmt_err->apr_err == SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED))
     {
       svn_wc_committed_queue_t *queue = svn_wc_committed_queue_create(pool);
-      apr_pool_t *iterpool = svn_pool_create(pool);
 
       /* Make a note that our commit is finished. */
       commit_in_progress = FALSE;
@@ -1239,7 +1363,6 @@ svn_client_commit5(const apr_array_header_t *targets,
           if (bump_err)
             goto cleanup;
         }
-      svn_pool_destroy(iterpool);
 
       SVN_ERR_ASSERT(commit_info);
       bump_err
@@ -1247,7 +1370,7 @@ svn_client_commit5(const apr_array_header_t *targets,
                                          commit_info->revision,
                                          commit_info->date,
                                          commit_info->author,
-                                         pool);
+                                         iterpool);
     }
 
   /* Sleep to ensure timestamp integrity. */
@@ -1264,7 +1387,23 @@ svn_client_commit5(const apr_array_header_t *targets,
      attempt to modify the working copy, so it doesn't prevent explicit
      clean-up. */
   if (! bump_err)
-    unlock_err = svn_wc__release_write_lock(ctx->wc_ctx, base_abspath, pool);
+    {
+      /* Release all locks we obtained */
+      for (i = 0; i < locks_obtained->nelts; i++)
+        {
+          const char *lock_root = APR_ARRAY_IDX(locks_obtained, i,
+                                                const char *);
+
+          svn_pool_clear(iterpool);
+
+          unlock_err = svn_error_compose_create(
+                           svn_wc__release_write_lock(ctx->wc_ctx, lock_root,
+                                                      iterpool),
+                           unlock_err);
+        }
+    }
+
+  svn_pool_destroy(iterpool);
 
   return reconcile_errors(cmt_err, unlock_err, bump_err, pool);
 }
