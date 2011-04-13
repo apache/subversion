@@ -557,7 +557,7 @@ svn_client_commit_item3_create(apr_pool_t *pool);
  *
  * @deprecated Provided for backward compatibility with the 1.5 API.
  */
-svn_error_t *
+SVN_DEPRECATED svn_error_t *
 svn_client_commit_item_create(const svn_client_commit_item3_t **item,
                               apr_pool_t *pool);
 
