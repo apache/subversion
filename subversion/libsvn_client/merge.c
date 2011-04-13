@@ -10649,7 +10649,6 @@ merge_peg_locked(const char *source,
   const char *URL;
   apr_array_header_t *merge_sources;
   const char *wc_repos_root, *source_repos_root;
-  svn_opt_revision_t working_rev;
   svn_ra_session_t *ra_session;
   apr_pool_t *sesspool;
   svn_boolean_t use_sleep = FALSE;
@@ -10688,7 +10687,6 @@ merge_peg_locked(const char *source,
                                              scratch_pool));
 
   /* Determine the working copy target's repository root URL. */
-  working_rev.kind = svn_opt_revision_working;
   SVN_ERR(svn_client__get_repos_root(&wc_repos_root, target_abspath,
                                      ctx, scratch_pool, scratch_pool));
 
