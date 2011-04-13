@@ -2547,8 +2547,7 @@ static const svn_ra__vtable_t ra_svn_vtable = {
   ra_svn_replay,
   ra_svn_has_capability,
   ra_svn_replay_range,
-  ra_svn_get_deleted_rev,
-  NULL  /* ra_svn_obliterate_path_rev */
+  ra_svn_get_deleted_rev
 };
 
 svn_error_t *

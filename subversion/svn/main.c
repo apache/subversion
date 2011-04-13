@@ -976,13 +976,6 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  All the SRCs must be of the same type.\n"),
     {'r', 'q', opt_force, opt_parents, SVN_CL__LOG_MSG_OPTIONS} },
 
-#ifdef SVN_WITH_EXPERIMENTAL_OBLITERATE
-  { "obliterate", svn_cl__obliterate, {0}, N_
-    ("Permanently delete a specific node-revision from the repository.\n"
-     "usage: obliterate URL@REV\n"),
-    {0} },
-#endif
-
   { "patch", svn_cl__patch, {0}, N_
     ("Apply a patch to a working copy.\n"
      "usage: patch PATCHFILE [WCPATH]\n"

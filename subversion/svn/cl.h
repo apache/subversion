@@ -263,7 +263,6 @@ svn_opt_subcommand_t
   svn_cl__mergeinfo,
   svn_cl__mkdir,
   svn_cl__move,
-  svn_cl__obliterate,
   svn_cl__patch,
   svn_cl__propdel,
   svn_cl__propedit,

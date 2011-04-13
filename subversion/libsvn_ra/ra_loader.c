@@ -1248,24 +1248,6 @@ svn_ra_get_deleted_rev(svn_ra_session_t *session,
   return err;
 }
 
-svn_error_t *
-svn_ra__obliterate_path_rev(svn_ra_session_t *session,
-                            svn_revnum_t rev,
-                            const char *path,
-                            apr_pool_t *pool)
-{
-  const char *session_url;
-
-  SVN_ERR(svn_ra_get_session_url(session, &session_url, pool));
-
-  if (session->vtable->obliterate_path_rev == NULL)
-    return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL,
-                            _("Obliterate is not supported by this "
-                              "Repository Access method"));
-
-  return session->vtable->obliterate_path_rev(session, rev, path, pool);
-}
-
 
 
 svn_error_t *

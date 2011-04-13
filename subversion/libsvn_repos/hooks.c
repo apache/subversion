@@ -126,8 +126,6 @@ check_hook_result(const char *name, const char *cmd, apr_proc_t *cmd_proc,
         action = _("Commit");
       else if (strcmp(name, "pre-revprop-change") == 0)
         action = _("Revprop change");
-      else if (strcmp(name, "pre-obliterate") == 0)
-        action = _("Obliteration");
       else if (strcmp(name, "pre-lock") == 0)
         action = _("Lock");
       else if (strcmp(name, "pre-unlock") == 0)
@@ -584,92 +582,6 @@ svn_repos__hooks_post_revprop_change(svn_repos_t *repos,
 
   return SVN_NO_ERROR;
 }
-
-
-svn_error_t  *
-svn_repos__hooks_pre_obliterate(svn_repos_t *repos,
-                                svn_revnum_t rev,
-                                const char *author,
-                                const svn_string_t *obliteration_set,
-                                apr_pool_t *pool)
-{
-  const char *hook = svn_repos__pre_obliterate_hook(repos, pool);
-  svn_boolean_t broken_link;
-
-  if ((hook = check_hook_cmd(hook, &broken_link, pool)) && broken_link)
-    {
-      return hook_symlink_error(hook);
-    }
-  else if (hook)
-    {
-      const char *args[4];
-      apr_file_t *stdin_handle = NULL;
-
-      /* Pass the Obliteration Set as stdin to hook */
-      SVN_ERR(create_temp_file(&stdin_handle, obliteration_set, pool));
-
-      args[0] = hook;
-      args[1] = svn_dirent_local_style(svn_repos_path(repos, pool), pool);
-      args[2] = author ? author : "";
-      args[3] = NULL;
-
-      SVN_ERR(run_hook_cmd(NULL, SVN_REPOS__HOOK_PRE_OBLITERATE, hook, args,
-                           stdin_handle, pool));
-
-      SVN_ERR(svn_io_file_close(stdin_handle, pool));
-    }
-  else
-    {
-      /* If the pre- hook doesn't exist at all, then default to
-         MASSIVE PARANOIA.  Obliteration is a lossy
-         operation; so unless the repository admininstrator has
-         *deliberately* created the pre-hook, disallow all changes. */
-      return
-        svn_error_create
-        (SVN_ERR_REPOS_DISABLED_FEATURE, NULL,
-         _("Repository has not been enabled to accept obliteration"));
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t  *
-svn_repos__hooks_post_obliterate(svn_repos_t *repos,
-                                 svn_revnum_t rev,
-                                 const char *author,
-                                 const svn_string_t *obliteration_set,
-                                 apr_pool_t *pool)
-{
-  const char *hook = svn_repos_post_revprop_change_hook(repos, pool);
-  svn_boolean_t broken_link;
-
-  if ((hook = check_hook_cmd(hook, &broken_link, pool)) && broken_link)
-    {
-      return hook_symlink_error(hook);
-    }
-  else if (hook)
-    {
-      const char *args[4];
-      apr_file_t *stdin_handle = NULL;
-
-      /* Pass the Obliteration Set as stdin to hook */
-      SVN_ERR(create_temp_file(&stdin_handle, obliteration_set, pool));
-
-      args[0] = hook;
-      args[1] = svn_dirent_local_style(svn_repos_path(repos, pool), pool);
-      args[2] = author ? author : "";
-      args[3] = NULL;
-
-      SVN_ERR(run_hook_cmd(NULL, SVN_REPOS__HOOK_POST_REVPROP_CHANGE, hook,
-                           args, stdin_handle, pool));
-
-      SVN_ERR(svn_io_file_close(stdin_handle, pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
 
 
 svn_error_t  *
