@@ -2501,12 +2501,14 @@ svn_wc_cleanup(const char *path,
   return svn_wc_cleanup2(path, diff3_cmd, cancel_func, cancel_baton, pool);
 }
 
-svn_error_t *
-svn_wc_cleanup2(const char *path,
-                const char *diff3_cmd,
-                svn_cancel_func_t cancel_func,
-                void *cancel_baton,
-                apr_pool_t *pool)
+
+static svn_error_t *
+cleanup_internal(const char *path,
+                 const char *diff3_cmd,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
+                 svn_boolean_t already_recursing,
+                 apr_pool_t *pool)
 {
   apr_hash_t *entries = NULL;
   apr_hash_index_t *hi;
@@ -2525,10 +2527,18 @@ svn_wc_cleanup2(const char *path,
 
   /* a "version" of 0 means a non-wc directory */
   if (wc_format_version == 0)
-    return svn_error_createf
-      (SVN_ERR_WC_NOT_DIRECTORY, NULL,
-       _("'%s' is not a working copy directory"),
-       svn_path_local_style(path, pool));
+    {
+      /* If we've been asked to cleanup a non-working copy, bail out.
+       * But if this directory is simply found missing during recursion,
+       * silently ignore it. */
+      if (already_recursing)
+        return SVN_NO_ERROR;
+      else
+        return svn_error_createf
+          (SVN_ERR_WC_NOT_DIRECTORY, NULL,
+           _("'%s' is not a working copy directory"),
+           svn_path_local_style(path, pool));
+    }
 
   /* Lock this working copy directory, or steal an existing lock */
   SVN_ERR(svn_wc__adm_steal_write_lock(&adm_access, NULL, path, pool));
@@ -2554,8 +2564,9 @@ svn_wc_cleanup2(const char *path,
           /* Sub-directories */
           SVN_ERR(svn_io_check_path(entry_path, &kind, subpool));
           if (kind == svn_node_dir)
-            SVN_ERR(svn_wc_cleanup2(entry_path, diff3_cmd,
-                                    cancel_func, cancel_baton, subpool));
+            SVN_ERR(cleanup_internal(entry_path, diff3_cmd,
+                                     cancel_func, cancel_baton,
+                                     TRUE, subpool));
         }
       else
         {
@@ -2597,4 +2608,16 @@ svn_wc_cleanup2(const char *path,
   SVN_ERR(svn_wc__adm_cleanup_tmp_area(adm_access, pool));
 
   return svn_wc_adm_close2(adm_access, pool);
+}
+
+svn_error_t *
+svn_wc_cleanup2(const char *path,
+                const char *diff3_cmd,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                apr_pool_t *pool)
+{
+  return cleanup_internal(path, diff3_cmd, cancel_func, cancel_baton,
+                          FALSE, pool);
+
 }
