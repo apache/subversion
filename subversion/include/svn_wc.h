@@ -7416,7 +7416,7 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
  * @note For now, directories are NOT allowed to be associated with
  * changelists; there is confusion about whether they should behave
  * as depth-0 or depth-infinity objects.  If @a local_abspath is a directory,
- * return #SVN_ERR_UNSUPPORTED_FEATURE.
+ * return an error.
  *
  * @note This metadata is purely a client-side "bookkeeping"
  * convenience, and is entirely managed by the working copy.
