@@ -2119,8 +2119,10 @@ try_copy(const apr_array_header_t *sources,
 
               for (i = 0; i < copy_pairs->nelts; i++)
                 {
+                  const char *copyfrom_repos_root_url;
+                  const char *copyfrom_repos_relpath;
                   const char *copyfrom_url, *url;
-                  svn_revnum_t base_rev, copyfrom_rev;
+                  svn_revnum_t copyfrom_rev;
                   svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
 
@@ -2128,23 +2130,18 @@ try_copy(const apr_array_header_t *sources,
 
                   SVN_ERR_ASSERT(svn_dirent_is_absolute(pair->src_abspath_or_url));
 
-                  SVN_ERR(svn_wc__node_get_copyfrom_info(
-                    NULL, NULL, &copyfrom_url, &copyfrom_rev, NULL,
-                    ctx->wc_ctx, pair->src_abspath_or_url, pool, iterpool));
+                  SVN_ERR(svn_wc__node_get_origin(NULL, &copyfrom_rev,
+                                                  &copyfrom_repos_relpath,
+                                                  &copyfrom_repos_root_url,
+                                                  NULL,
+                                                  ctx->wc_ctx,
+                                                  pair->src_abspath_or_url,
+                                                  FALSE, iterpool, iterpool));
 
-                  if (copyfrom_url)
-                    {
-                      url = copyfrom_url;
-                    }
-                  else
-                    {
-                      SVN_ERR(svn_wc__node_get_url(&url, ctx->wc_ctx,
-                                                   pair->src_abspath_or_url,
-                                                   pool, iterpool));
-                      SVN_ERR(svn_wc__node_get_base_rev(
-                        &base_rev, ctx->wc_ctx,
-                        pair->src_abspath_or_url, iterpool));
-                    }
+                  if (copyfrom_repos_relpath)
+                    url = svn_path_url_add_component2(copyfrom_repos_root_url,
+                                                      copyfrom_repos_relpath,
+                                                      pool);
 
                   if (url == NULL)
                     return svn_error_createf
@@ -2159,16 +2156,14 @@ try_copy(const apr_array_header_t *sources,
                     {
                       /* Default the peg revision to that of the WC entry. */
                       pair->src_peg_revision.kind = svn_opt_revision_number;
-                      pair->src_peg_revision.value.number =
-                        (copyfrom_url ? copyfrom_rev : base_rev);
+                      pair->src_peg_revision.value.number = copyfrom_rev;
                     }
 
                   if (pair->src_op_revision.kind == svn_opt_revision_base)
                     {
                       /* Use the entry's revision as the operational rev. */
                       pair->src_op_revision.kind = svn_opt_revision_number;
-                      pair->src_op_revision.value.number =
-                        (copyfrom_url ? copyfrom_rev : base_rev);
+                      pair->src_op_revision.value.number = copyfrom_rev;
                     }
                 }
 
