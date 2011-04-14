@@ -493,6 +493,7 @@ davcheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@ apache-mod
 # Automatically configure and run Apache httpd on a random port, and then
 # run make check.
 davautocheck: bin $(TEST_DEPS) @BDB_TEST_DEPS@ apache-mod
+	@# Takes MODULE_PATH and USE_HTTPV1 in the environment.
 	@APXS=$(APXS) bash $(top_srcdir)/subversion/tests/cmdline/davautocheck.sh
 
 # First, run:
