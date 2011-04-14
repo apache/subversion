@@ -867,12 +867,20 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
         }
     }
 
-  /* The first call to the reporter merely informs it that the
-     top-level directory being updated is at BASE_REV.  Its PATH
-     argument is ignored. */
-  SVN_ERR(reporter->set_path(report_baton, "", target_rev, target_depth,
-                             start_empty, NULL, scratch_pool));
+  {
+    svn_depth_t anchor_depth = target_depth;
 
+    if (honor_depth_exclude 
+        && depth != svn_depth_unknown
+        && depth < target_depth)
+      anchor_depth = depth;
+
+    /* The first call to the reporter merely informs it that the
+       top-level directory being updated is at BASE_REV.  Its PATH
+       argument is ignored. */
+    SVN_ERR(reporter->set_path(report_baton, "", target_rev, anchor_depth,
+                               start_empty, NULL, scratch_pool));
+  }
   if (target_kind == svn_wc__db_kind_dir)
     {
       if (depth != svn_depth_empty)
