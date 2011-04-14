@@ -1190,7 +1190,6 @@ modcheck_callback(void *baton,
   switch (status->node_status)
     {
       case svn_wc_status_normal:
-      case svn_wc_status_obstructed:
       case svn_wc_status_ignored:
       case svn_wc_status_none:
       case svn_wc_status_unversioned:
@@ -1199,6 +1198,12 @@ modcheck_callback(void *baton,
       case svn_wc_status_deleted:
         mb->found_mod = TRUE;
         break;
+
+      case svn_wc_status_missing:
+      case svn_wc_status_obstructed:
+        if (status->prop_status != svn_wc_status_modified)
+          break;
+        /* Fall through in the found modification case */
 
       default:
       case svn_wc_status_added:
