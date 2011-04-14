@@ -86,50 +86,67 @@ static svn_error_t *
 build_info_for_entry(svn_info_t **info,
                      svn_wc_context_t *wc_ctx,
                      const char *local_abspath,
-                     apr_pool_t *pool)
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
 {
   svn_info_t *tmpinfo;
-  const char *copyfrom_url;
-  svn_revnum_t copyfrom_rev;
   svn_boolean_t is_copy_target;
-  const char *lock_token, *lock_owner, *lock_comment;
   apr_time_t lock_date;
-  const svn_checksum_t *checksum;
   svn_node_kind_t kind;
-  svn_error_t *err;
   svn_boolean_t exclude = FALSE;
+  svn_boolean_t is_copy;
+  svn_revnum_t rev;
+  const char *repos_relpath;
 
-  SVN_ERR(svn_wc_read_kind(&kind, wc_ctx, local_abspath, FALSE, pool));
+  SVN_ERR(svn_wc_read_kind(&kind, wc_ctx, local_abspath, FALSE, scratch_pool));
 
   if (kind == svn_node_none)
     {
       svn_error_clear(svn_wc__node_depth_is_exclude(&exclude, wc_ctx,
-                                                    local_abspath, pool));
+                                                    local_abspath,
+                                                    scratch_pool));
       if (! exclude)
         return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                                  _("The node '%s' was not found."),
-                                 svn_dirent_local_style(local_abspath, pool));
+                                 svn_dirent_local_style(local_abspath,
+                                                        scratch_pool));
     }
 
-  tmpinfo = apr_pcalloc(pool, sizeof(*tmpinfo));
+  tmpinfo = apr_pcalloc(result_pool, sizeof(*tmpinfo));
   tmpinfo->kind = kind;
 
-  SVN_ERR(svn_wc__node_get_url(&tmpinfo->URL, wc_ctx, local_abspath,
-                               pool, pool));
+  SVN_ERR(svn_wc__node_get_origin(&is_copy, &rev, &repos_relpath,
+                                  &tmpinfo->repos_root_URL,
+                                  &tmpinfo->repos_UUID,
+                                  wc_ctx, local_abspath, TRUE,
+                                  result_pool, scratch_pool));
 
-  /* WC-1 returned repos UUID's and root URLs for schedule-deleted
-     stuff, too. */
-  SVN_ERR(svn_wc__node_get_repos_info(&tmpinfo->repos_root_URL,
-                                      &tmpinfo->repos_UUID,
-                                      wc_ctx, local_abspath, TRUE, TRUE,
-                                      pool, pool));
+  /* If we didn't get an origin, get it directly */
+  if (!tmpinfo->repos_root_URL)
+    {
+      SVN_ERR(svn_wc__node_get_repos_info(&tmpinfo->repos_root_URL,
+                                          &tmpinfo->repos_UUID,
+                                          wc_ctx, local_abspath, TRUE, TRUE,
+                                          result_pool, scratch_pool));
+    }
 
-  SVN_ERR(svn_wc__node_get_changed_info(&tmpinfo->last_changed_rev,
-                                        &tmpinfo->last_changed_date,
-                                        &tmpinfo->last_changed_author,
-                                        wc_ctx, local_abspath, pool, pool));
-  SVN_ERR(svn_wc__node_get_commit_base_rev(&tmpinfo->rev, wc_ctx,
-                                           local_abspath, pool));
+  if (repos_relpath)
+    {
+      SVN_ERR(svn_wc__node_get_changed_info(&tmpinfo->last_changed_rev,
+                                            &tmpinfo->last_changed_date,
+                                            &tmpinfo->last_changed_author,
+                                            wc_ctx, local_abspath,
+                                            result_pool, scratch_pool));
+    }
+  else
+    tmpinfo->last_changed_rev = SVN_INVALID_REVNUM;
+
+  if (is_copy)
+    SVN_ERR(svn_wc__node_get_commit_base_rev(&tmpinfo->rev, wc_ctx,
+                                             local_abspath, scratch_pool));
+  else
+    tmpinfo->rev = rev;
+
   /* ### FIXME: For now, we'll tweak an SVN_INVALID_REVNUM and make it
      ### 0.  In WC-1, files scheduled for addition were assigned
      ### revision=0.  This is wrong, and we're trying to remedy that,
@@ -144,49 +161,66 @@ build_info_for_entry(svn_info_t **info,
   if (! SVN_IS_VALID_REVNUM(tmpinfo->rev))
     tmpinfo->rev = 0;
 
-  SVN_ERR(svn_wc__node_get_copyfrom_info(NULL, NULL,
-                                         &copyfrom_url, &copyfrom_rev,
-                                         &is_copy_target, wc_ctx,
-                                         local_abspath, pool, pool));
-  if (is_copy_target)
+  tmpinfo->copyfrom_rev = SVN_INVALID_REVNUM;
+
+  if (is_copy)
     {
-      tmpinfo->copyfrom_url = copyfrom_url;
-      tmpinfo->copyfrom_rev = copyfrom_rev;
+      SVN_ERR(svn_wc__node_get_copyfrom_info(NULL, NULL, NULL, NULL,
+                                             &is_copy_target,
+                                             wc_ctx, local_abspath,
+                                             scratch_pool, scratch_pool));
+
+      if (is_copy_target)
+        {
+          tmpinfo->copyfrom_url = svn_path_url_add_component2(
+                                               tmpinfo->repos_root_URL,
+                                               repos_relpath, result_pool);
+          tmpinfo->copyfrom_rev = rev;
+        }
+    }
+  else if (repos_relpath)
+    tmpinfo->URL = svn_path_url_add_component2(tmpinfo->repos_root_URL,
+                                               repos_relpath,
+                                               result_pool);
+
+  /* Don't create a URL for local additions */
+  if (!tmpinfo->URL)
+    SVN_ERR(svn_wc__node_get_url(&tmpinfo->URL, wc_ctx, local_abspath,
+                                 result_pool, scratch_pool));
+
+  if (tmpinfo->kind == svn_node_file)
+    {
+      const svn_checksum_t *checksum;
+
+      SVN_ERR(svn_wc__node_get_changelist(&tmpinfo->changelist, wc_ctx,
+                                          local_abspath,
+                                          result_pool, scratch_pool));
+
+      SVN_ERR(svn_wc__node_get_base_checksum(&checksum, wc_ctx, local_abspath,
+                                              scratch_pool, scratch_pool));
+
+      tmpinfo->checksum = svn_checksum_to_cstring(checksum, result_pool);
+    }
+
+  if (tmpinfo->kind == svn_node_dir)
+    {
+      SVN_ERR(svn_wc__node_get_depth(&tmpinfo->depth, wc_ctx,
+                                     local_abspath, scratch_pool));
+
+      if (tmpinfo->depth == svn_depth_unknown)
+        tmpinfo->depth = svn_depth_infinity;
     }
   else
-    {
-      tmpinfo->copyfrom_url = NULL;
-      tmpinfo->copyfrom_rev = SVN_INVALID_REVNUM;
-    }
-
-  SVN_ERR(svn_wc__node_get_changelist(&tmpinfo->changelist, wc_ctx,
-                                      local_abspath, pool, pool));
-
-  SVN_ERR(svn_wc__node_get_base_checksum(&checksum, wc_ctx, local_abspath,
-                                         pool, pool));
-  tmpinfo->checksum = svn_checksum_to_cstring(checksum, pool);
-
-  SVN_ERR(svn_wc__node_get_depth(&tmpinfo->depth, wc_ctx,
-                                 local_abspath, pool));
-  if (tmpinfo->depth == svn_depth_unknown)
     tmpinfo->depth = svn_depth_infinity;
 
   if (exclude)
     tmpinfo->depth = svn_depth_exclude;
 
-  err = svn_wc__node_get_schedule(&tmpinfo->schedule, NULL,
-                                  wc_ctx, local_abspath, pool);
-
-  if (err)
-    {
-      if (exclude && err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
-        svn_error_clear(err);
-      else
-        return svn_error_return(err);
-    }
+  SVN_ERR(svn_wc__node_get_schedule(&tmpinfo->schedule, NULL,
+                                    wc_ctx, local_abspath, scratch_pool));
 
   SVN_ERR(svn_wc_get_wc_root(&tmpinfo->wcroot_abspath, wc_ctx,
-                             local_abspath, pool, pool));
+                             local_abspath, result_pool, scratch_pool));
 
   /* Some random stuffs we don't have wc-ng apis for yet */
   SVN_ERR(svn_wc__node_get_info_bits(&tmpinfo->text_time,
@@ -194,7 +228,8 @@ build_info_for_entry(svn_info_t **info,
                                      &tmpinfo->conflict_new,
                                      &tmpinfo->conflict_wrk,
                                      &tmpinfo->prejfile,
-                                     wc_ctx, local_abspath, pool, pool));
+                                     wc_ctx, local_abspath,
+                                     result_pool, scratch_pool));
 
   /* Some defaults */
   tmpinfo->has_wc_info          = TRUE;
@@ -202,23 +237,32 @@ build_info_for_entry(svn_info_t **info,
   tmpinfo->size64               = SVN_INVALID_FILESIZE;
 
   SVN_ERR(svn_wc__node_get_translated_size(&tmpinfo->working_size64, wc_ctx,
-                                           local_abspath, pool));
+                                           local_abspath, scratch_pool));
   if (((apr_size_t)tmpinfo->working_size64) == tmpinfo->working_size64)
     tmpinfo->working_size       = (apr_size_t)tmpinfo->working_size64;
   else /* >= 4GB */
     tmpinfo->working_size       = SVN_INFO_SIZE_UNKNOWN;
 
   /* lock stuff */
-  SVN_ERR(svn_wc__node_get_lock_info(&lock_token, &lock_owner,
-                                     &lock_comment, &lock_date,
-                                     wc_ctx, local_abspath, pool, pool));
-  if (lock_token)  /* the token is the critical bit. */
+  if (kind == svn_node_file)
     {
-      tmpinfo->lock = apr_pcalloc(pool, sizeof(*(tmpinfo->lock)));
-      tmpinfo->lock->token         = lock_token;
-      tmpinfo->lock->owner         = lock_owner;
-      tmpinfo->lock->comment       = lock_comment;
-      tmpinfo->lock->creation_date = lock_date;
+      const char *lock_token;
+      const char *lock_owner;
+      const char *lock_comment;
+
+      SVN_ERR(svn_wc__node_get_lock_info(&lock_token, &lock_owner,
+                                         &lock_comment, &lock_date,
+                                         wc_ctx, local_abspath,
+                                         result_pool, scratch_pool));
+
+      if (lock_token)  /* the token is the critical bit. */
+        {
+          tmpinfo->lock = apr_pcalloc(result_pool, sizeof(*(tmpinfo->lock)));
+          tmpinfo->lock->token         = lock_token;
+          tmpinfo->lock->owner         = lock_owner;
+          tmpinfo->lock->comment       = lock_comment;
+          tmpinfo->lock->creation_date = lock_date;
+        }
     }
 
   *info = tmpinfo;
@@ -368,7 +412,7 @@ info_found_node_callback(const char *local_abspath,
                                     local_abspath, pool, pool));
 
   err = build_info_for_entry(&info, fe_baton->wc_ctx, local_abspath,
-                             pool);
+                             pool, pool);
   if (err && (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
       && tree_conflict)
     {
