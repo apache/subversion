@@ -1599,10 +1599,14 @@ svn_wc__node_get_origin(svn_boolean_t *is_copy,
     if (status == svn_wc__db_status_added)
       scan_working = TRUE;
     else if (status == svn_wc__db_status_deleted)
-      /* Is this a BASE or a WORKING delete? */
-      SVN_ERR(svn_wc__db_info_below_working(NULL, &scan_working, NULL,
-                                            wc_ctx->db, local_abspath,
-                                            scratch_pool));
+      {
+        svn_boolean_t have_base;
+        svn_wc__db_status_t status;
+        /* Is this a BASE or a WORKING delete? */
+        SVN_ERR(svn_wc__db_info_below_working(&have_base, &scan_working, &status,
+                                              wc_ctx->db, local_abspath,
+                                              scratch_pool));
+      }
 
     if (scan_working)
       {
