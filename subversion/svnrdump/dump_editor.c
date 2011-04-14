@@ -86,16 +86,16 @@ normalize_props(apr_hash_t *props,
                 apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
-  const char *key, *cstring;
-  const svn_string_t *value;
 
   for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
     {
-      key = svn__apr_hash_index_key(hi);
-      value = svn__apr_hash_index_val(hi);
+      const char *key = svn__apr_hash_index_key(hi);
+      const svn_string_t *value = svn__apr_hash_index_val(hi);
 
       if (svn_prop_needs_translation(key))
         {
+          const char *cstring;
+
           SVN_ERR(svn_subst_translate_cstring2(value->data, &cstring,
                                                "\n", TRUE,
                                                NULL, FALSE,
@@ -516,10 +516,7 @@ close_directory(void *dir_baton,
   for (hi = apr_hash_first(pool, db->deleted_entries); hi;
        hi = apr_hash_next(hi))
     {
-      const void *key;
-      const char *path;
-      apr_hash_this(hi, &key, NULL, NULL);
-      path = key;
+      const char *path = svn__apr_hash_index_key(hi);
 
       SVN_ERR(dump_node(db->eb, path, svn_node_unknown, svn_node_action_delete,
                         FALSE, NULL, SVN_INVALID_REVNUM, pool));
@@ -743,10 +740,7 @@ close_file(void *file_baton,
            apr_pool_t *pool)
 {
   struct dump_edit_baton *eb = file_baton;
-  svn_stream_t *delta_filestream;
   apr_finfo_t *info = apr_pcalloc(pool, sizeof(apr_finfo_t));
-  apr_off_t offset;
-  apr_status_t err;
 
   LDR_DBG(("close_file %p\n", file_baton));
 
@@ -757,6 +751,8 @@ close_file(void *file_baton,
   /* Dump the text headers */
   if (eb->dump_text)
     {
+      apr_status_t err;
+
       /* Text-delta: true */
       SVN_ERR(svn_stream_printf(eb->stream, pool,
                                 SVN_REPOS_DUMPFILE_TEXT_DELTA
@@ -819,7 +815,9 @@ close_file(void *file_baton,
          truncate the file so we can reuse it for the next textdelta
          application. Note that the file isn't created, opened or
          closed here */
-      offset = 0;
+      svn_stream_t *delta_filestream;
+      apr_off_t offset = 0;
+
       SVN_ERR(svn_io_file_seek(eb->delta_file, APR_SET, &offset, pool));
       delta_filestream = svn_stream_from_aprfile2(eb->delta_file, TRUE, pool);
       SVN_ERR(svn_stream_copy3(delta_filestream, eb->stream, NULL, NULL, pool));
