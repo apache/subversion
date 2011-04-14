@@ -297,22 +297,6 @@ svn_wc__process_committed_internal(svn_wc__db_t *db,
           sha1_checksum = NULL;
           if (kind != svn_wc__db_kind_dir)
             {
-              /* Suppress log creation for deleted entries in a replaced
-                 directory.  By the time any log we create here is run,
-                 those entries will already have been removed (as a result
-                 of running the log for the replaced directory that was
-                 created at the start of this function). */
-              if (status == svn_wc__db_status_deleted)
-                {
-                  svn_boolean_t replaced;
-
-                  SVN_ERR(svn_wc__internal_is_replaced(&replaced,
-                                                       db, local_abspath,
-                                                       iterpool));
-                  if (replaced)
-                    continue;
-                }
-
               if (queue != NULL)
                 {
                   const committed_queue_item_t *cqi

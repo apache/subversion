@@ -883,56 +883,6 @@ svn_wc__node_is_added(svn_boolean_t *is_added,
   return SVN_NO_ERROR;
 }
 
-
-/* Equivalent to the old notion of "entry->schedule == schedule_replace"  */
-svn_error_t *
-svn_wc__internal_is_replaced(svn_boolean_t *replaced,
-                             svn_wc__db_t *db,
-                             const char *local_abspath,
-                             apr_pool_t *scratch_pool)
-{
-  svn_wc__db_status_t status;
-  svn_boolean_t have_base;
-  svn_wc__db_status_t base_status;
-
-  SVN_ERR(svn_wc__db_read_info(
-            &status, NULL, NULL,
-            NULL, NULL, NULL, NULL, NULL, NULL,
-            NULL, NULL, NULL, NULL, NULL, NULL,
-            NULL, NULL, NULL, NULL,
-            NULL, &have_base, NULL,
-            NULL, NULL,
-            db, local_abspath,
-            scratch_pool, scratch_pool));
-  if (have_base)
-    SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, NULL,
-                                     NULL, NULL, NULL,
-                                     NULL, NULL, NULL,
-                                     NULL, NULL, NULL,
-                                     NULL, NULL, NULL, NULL,
-                                     db, local_abspath,
-                                     scratch_pool, scratch_pool));
-
-  *replaced = ((status == svn_wc__db_status_added)
-               && have_base
-               && base_status != svn_wc__db_status_not_present);
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc__node_is_replaced(svn_boolean_t *replaced,
-                         svn_wc_context_t *wc_ctx,
-                         const char *local_abspath,
-                         apr_pool_t *scratch_pool)
-{
-  return svn_error_return(svn_wc__internal_is_replaced(replaced, wc_ctx->db,
-                                                       local_abspath,
-                                                       scratch_pool));
-}
-
-
 svn_error_t *
 svn_wc__node_get_base_rev(svn_revnum_t *base_revision,
                           svn_wc_context_t *wc_ctx,

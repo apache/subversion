@@ -420,20 +420,6 @@ svn_client_status5(svn_revnum_t *result_rev,
              repository.  (Note that "locally replaced" doesn't count
              as "added" in this case.)  */
 
-          /* ### FIXME:  WC-1 code here was just (! added).  Not sure
-             ### if this WC-NG approach matches semantically.  */
-          SVN_ERR(svn_wc__node_is_added(&added, ctx->wc_ctx,
-                                        dir_abspath, pool));
-          if (added)
-            {
-              svn_boolean_t replaced;
-
-              SVN_ERR(svn_wc__node_is_replaced(&replaced, ctx->wc_ctx,
-                                               dir_abspath, pool));
-              if (replaced)
-                added = FALSE;
-            }
-
           if (! added)
             sb.deleted_in_repos = TRUE;
 
