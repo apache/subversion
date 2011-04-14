@@ -109,6 +109,7 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * fixed: 'svn rm' fails on multiple URLs with encoded spaces (issue #3839)
     * fixed: children of replaced dirs cannot be deleted (issue #3468)
     * fixed: executable flag of binary file lost during merge (issue #3686)
+    * fixed: merging a symlink-turned-regular-file breaks the wc (issue #2530)
     * many other minor bugfixes, optimizations, plugs of memory leaks, etc
   
   - Server-side bugfixes:
@@ -125,6 +126,7 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * fixed: mod_dav_svn can cause spurious merge conflicts (issue #3657)
     * match paths against authz rules in case sensitive way (issue #3781)
     * svnserve can now force usernames to upper/lower case (issue #3726)
+    * reduce duplicate log messages in 'log -g' (issue #3650)
     * many other minor bugfixes too numerous to list here
 
   - Other tool improvements and bugfixes:
