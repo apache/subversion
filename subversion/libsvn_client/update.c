@@ -235,8 +235,7 @@ update_internal(svn_revnum_t *result_rev,
                                     target, use_commit_times, depth,
                                     depth_is_sticky, allow_unver_obstructions,
                                     adds_as_modification,
-                                    server_supports_depth
-                                        && (depth == svn_depth_unknown),
+                                    server_supports_depth,
                                     diff3_cmd, preserved_exts,
                                     ctx->conflict_func, ctx->conflict_baton,
                                     ignore_externals
@@ -250,8 +249,9 @@ update_internal(svn_revnum_t *result_rev,
   /* Tell RA to do an update of URL+TARGET to REVISION; if we pass an
      invalid revnum, that means RA will use the latest revision.  */
   SVN_ERR(svn_ra_do_update2(ra_session, &reporter, &report_baton,
-                            revnum, target, depth, FALSE,
-                            update_editor, update_edit_baton, pool));
+                            revnum, target,
+                            depth_is_sticky ? depth : svn_depth_unknown,
+                            FALSE, update_editor, update_edit_baton, pool));
 
   /* Drive the reporter structure, describing the revisions within
      PATH.  When we call reporter->finish_report, the

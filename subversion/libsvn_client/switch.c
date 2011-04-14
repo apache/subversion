@@ -218,8 +218,7 @@ switch_internal(svn_revnum_t *result_rev,
                                     target, switch_rev_url, use_commit_times,
                                     depth,
                                     depth_is_sticky, allow_unver_obstructions,
-                                    server_supports_depth
-                                        && (depth == svn_depth_unknown),
+                                    server_supports_depth,
                                     diff3_cmd, preserved_exts,
                                     ctx->conflict_func, ctx->conflict_baton,
                                     svn_client__external_info_gatherer, &efb,
@@ -230,7 +229,9 @@ switch_internal(svn_revnum_t *result_rev,
   /* Tell RA to do an update of URL+TARGET to REVISION; if we pass an
      invalid revnum, that means RA will use the latest revision. */
   SVN_ERR(svn_ra_do_switch2(ra_session, &reporter, &report_baton, revnum,
-                            target, depth, switch_rev_url,
+                            target,
+                            depth_is_sticky ? depth : svn_depth_unknown,
+                            switch_rev_url,
                             switch_editor, switch_edit_baton, pool));
 
   /* Drive the reporter structure, describing the revisions within
