@@ -611,32 +611,46 @@ svn_client__repos_locations(const char **start_url,
      the copyfrom information. */
   if (! svn_path_is_url(path))
     {
-      const char *node_url, *copyfrom_url;
-      svn_revnum_t copyfrom_rev;
-
       SVN_ERR(svn_dirent_get_absolute(&local_abspath_or_url, path, subpool));
-      SVN_ERR(svn_wc__node_get_url(&node_url, ctx->wc_ctx,
-                                   local_abspath_or_url, pool, subpool));
-      SVN_ERR(svn_wc__node_get_copyfrom_info(NULL, NULL,
-                                             &copyfrom_url, &copyfrom_rev,
-                                             NULL, ctx->wc_ctx,
-                                             local_abspath_or_url,
-                                             pool, subpool));
-      if (copyfrom_url && revision->kind == svn_opt_revision_working)
+
+      if (revision->kind == svn_opt_revision_working)
         {
-          url = copyfrom_url;
-          peg_revnum = copyfrom_rev;
-          if (!node_url || strcmp(node_url, copyfrom_url) != 0)
+          const char *repos_root_url;
+          const char *repos_relpath;
+          svn_boolean_t is_copy;
+
+          SVN_ERR(svn_wc__node_get_origin(&is_copy, NULL, &repos_relpath,
+                                          &repos_root_url, NULL,
+                                          ctx->wc_ctx, local_abspath_or_url,
+                                          FALSE, subpool, subpool));
+
+          if (repos_relpath)
+            url = svn_path_url_add_component2(repos_root_url, repos_relpath,
+                                              pool);
+          else
+            url = NULL;
+
+          if (url && is_copy && ra_session)
             {
-              /* We can't use the caller provided RA session in this case */
-              ra_session = NULL;
+              const char *session_url;
+              SVN_ERR(svn_ra_get_session_url(ra_session, &session_url,
+                                             subpool));
+
+              if (strcmp(session_url, url) != 0)
+                {
+                  /* We can't use the caller provided RA session now :( */
+                  ra_session = NULL;
+                }
             }
         }
-      else if (node_url)
-        {
-          url = node_url;
-        }
       else
+        url = NULL;
+
+      if (! url)
+        SVN_ERR(svn_wc__node_get_url(&url, ctx->wc_ctx,
+                                     local_abspath_or_url, pool, subpool));
+
+      if (!url)
         {
           return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                                    _("'%s' has no URL"),
