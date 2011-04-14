@@ -1235,7 +1235,7 @@ svn_wc__internal_node_get_schedule(svn_wc_schedule_t *schedule,
                                    apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
-  svn_boolean_t has_base;
+  svn_boolean_t has_base, have_work;
   const char *copyfrom_relpath;
 
   if (schedule)
@@ -1246,7 +1246,7 @@ svn_wc__internal_node_get_schedule(svn_wc_schedule_t *schedule,
   SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                &copyfrom_relpath, NULL, NULL, NULL, NULL,
-                               &has_base, NULL, NULL, NULL,
+                               &has_base, &have_work, NULL, NULL,
                                db, local_abspath, scratch_pool, scratch_pool));
 
   switch (status)
@@ -1254,11 +1254,10 @@ svn_wc__internal_node_get_schedule(svn_wc_schedule_t *schedule,
       case svn_wc__db_status_not_present:
       case svn_wc__db_status_absent:
       case svn_wc__db_status_excluded:
-        return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
-                                 _("'%s' is not under version control"),
-                                 svn_dirent_local_style(local_abspath,
-                                                        scratch_pool));
-
+        /* We used status normal in the entries world. */
+        if (schedule)
+          *schedule = svn_wc_schedule_normal;
+        break;
       case svn_wc__db_status_normal:
       case svn_wc__db_status_incomplete:
         break;
