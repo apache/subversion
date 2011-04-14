@@ -1171,84 +1171,43 @@ open_root(void *edit_baton,
 /* ===================================================================== */
 /* Checking for local modifications. */
 
-/* Set *MODIFIED to true iff the item described by (LOCAL_ABSPATH, KIND)
- * has local modifications. For a file, this means text mods or property mods.
- * For a directory, this means property mods.
- *
- * Use SCRATCH_POOL for temporary allocations.
- */
-static svn_error_t *
-entry_has_local_mods(svn_boolean_t *modified,
-                     svn_wc__db_t *db,
-                     const char *local_abspath,
-                     svn_wc__db_kind_t kind,
-                     apr_pool_t *scratch_pool)
-{
-  svn_boolean_t text_modified;
-  svn_boolean_t props_modified;
-
-  /* Check for text modifications */
-  if (kind == svn_wc__db_kind_file
-      || kind == svn_wc__db_kind_symlink)
-    SVN_ERR(svn_wc__internal_file_modified_p(&text_modified, NULL, NULL,
-                                             db, local_abspath,
-                                             FALSE, TRUE, scratch_pool));
-  else
-    text_modified = FALSE;
-
-  /* Check for property modifications */
-  SVN_ERR(svn_wc__props_modified(&props_modified, db, local_abspath,
-                                 scratch_pool));
-
-  *modified = (text_modified || props_modified);
-
-  return SVN_NO_ERROR;
-}
-
 /* A baton for use with modcheck_found_entry(). */
 typedef struct modcheck_baton_t {
   svn_wc__db_t *db;         /* wc_db to access nodes */
   svn_boolean_t found_mod;  /* whether a modification has been found */
-  svn_boolean_t all_edits_are_deletes;  /* If all the mods found, if any,
-                                          were deletes.  If FOUND_MOD is false
-                                          then this field has no meaning. */
+  svn_boolean_t found_not_delete;  /* Found a not-delete modification */
 } modcheck_baton_t;
 
-/* An implementation of svn_wc__node_found_func_t. */
+/* An implementation of svn_wc_status_func4_t. */
 static svn_error_t *
-modcheck_found_node(const char *local_abspath,
-                    svn_node_kind_t kind,
-                    void *walk_baton,
-                    apr_pool_t *scratch_pool)
+modcheck_callback(void *baton,
+                  const char *local_abspath,
+                  const svn_wc_status3_t *status,
+                  apr_pool_t *scratch_pool)
 {
-  modcheck_baton_t *baton = walk_baton;
-  svn_wc__db_kind_t db_kind;
-  svn_wc__db_status_t status;
-  svn_boolean_t modified;
+  modcheck_baton_t *mb = baton;
 
-  /* ### The walker could in theory pass status and db kind as arguments.
-   * ### So this read_info call is probably redundant. */
-  SVN_ERR(svn_wc__db_read_info(&status, &db_kind, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL,
-                               baton->db, local_abspath, scratch_pool,
-                               scratch_pool));
-
-  if (status != svn_wc__db_status_normal)
-    modified = TRUE;
-  /* No need to check if we already have at least one modification */
-  else if (!baton->found_mod)
-    SVN_ERR(entry_has_local_mods(&modified, baton->db, local_abspath,
-                                 db_kind, scratch_pool));
-  else
-    modified = FALSE;
-
-  if (modified)
+  switch (status->node_status)
     {
-      baton->found_mod = TRUE;
-      if (status != svn_wc__db_status_deleted)
-        baton->all_edits_are_deletes = FALSE;
+      case svn_wc_status_normal:
+      case svn_wc_status_obstructed:
+      case svn_wc_status_ignored:
+      case svn_wc_status_none:
+      case svn_wc_status_unversioned:
+        break;
+
+      case svn_wc_status_deleted:
+        mb->found_mod = TRUE;
+        break;
+
+      default:
+      case svn_wc_status_added:
+      case svn_wc_status_replaced:
+      case svn_wc_status_modified:
+        mb->found_mod = TRUE;
+        mb->found_not_delete = TRUE;
+        /* Exit from the status walker: We know what we want to know */
+        return svn_error_create(SVN_ERR_CEASE_INVOCATION, NULL, NULL);
     }
 
   return SVN_NO_ERROR;
@@ -1261,30 +1220,39 @@ modcheck_found_node(const char *local_abspath,
  * *ALL_EDITS_ARE_DELETES to true, set it to false otherwise.  LOCAL_ABSPATH
  * may be a file or a directory. */
 static svn_error_t *
-tree_has_local_mods(svn_boolean_t *modified,
+node_has_local_mods(svn_boolean_t *modified,
                     svn_boolean_t *all_edits_are_deletes,
                     svn_wc__db_t *db,
                     const char *local_abspath,
                     svn_cancel_func_t cancel_func,
                     void *cancel_baton,
-                    apr_pool_t *pool)
+                    apr_pool_t *scratch_pool)
 {
-  modcheck_baton_t modcheck_baton = { NULL, FALSE, TRUE };
+  modcheck_baton_t modcheck_baton = { NULL, FALSE, FALSE };
+  svn_error_t *err;
 
   modcheck_baton.db = db;
 
-  /* Walk the WC tree to its full depth, looking for any local modifications.
-   * If it's a "sparse" directory, that's OK: there can be no local mods in
-   * the pieces that aren't present in the WC. */
+  /* Walk the WC tree for status with depth infinity, looking for any local
+   * modifications. If it's a "sparse" directory, that's OK: there can be
+   * no local mods in the pieces that aren't present in the WC. */
 
-  SVN_ERR(svn_wc__internal_walk_children(db, local_abspath,
-                                         FALSE /* show_hidden */,
-                                         modcheck_found_node, &modcheck_baton,
-                                         svn_depth_infinity, cancel_func,
-                                         cancel_baton, pool));
+  err = svn_wc__internal_walk_status(db, local_abspath,
+                                     svn_depth_infinity,
+                                     FALSE, FALSE, FALSE, NULL,
+                                     modcheck_callback, &modcheck_baton,
+                                     NULL, NULL,
+                                     cancel_func, cancel_baton,
+                                     scratch_pool);
+
+  if (err && err->apr_err == SVN_ERR_CEASE_INVOCATION)
+    svn_error_clear(err);
+  else
+    SVN_ERR(err);
 
   *modified = modcheck_baton.found_mod;
-  *all_edits_are_deletes = modcheck_baton.all_edits_are_deletes;
+  *all_edits_are_deletes = !modcheck_baton.found_not_delete;
+
   return SVN_NO_ERROR;
 }
 
@@ -1596,32 +1564,16 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
 
         /* Check if the update wants to delete or replace a locally
          * modified node. */
-        switch (working_kind)
-          {
-            case svn_wc__db_kind_file:
-            case svn_wc__db_kind_symlink:
-              all_mods_are_deletes = FALSE;
-              SVN_ERR(entry_has_local_mods(&modified, eb->db, local_abspath,
-                                           working_kind, pool));
-              break;
 
-            case svn_wc__db_kind_dir:
-              /* We must detect deep modifications in a directory tree,
-               * but the update editor will not visit the subdirectories
-               * of a directory that it wants to delete.  Therefore, we
-               * need to start a separate crawl here. */
-              SVN_ERR(tree_has_local_mods(&modified, &all_mods_are_deletes,
-                                          eb->db, local_abspath,
-                                          eb->cancel_func, eb->cancel_baton,
-                                          pool));
-              break;
 
-            default:
-              /* It's supposed to be in 'normal' status. So how can it be
-               * neither file nor folder? */
-              SVN_ERR_MALFUNCTION();
-              break;
-          }
+        /* Do a deep tree detection of local changes. The update editor will
+         * not visit the subdirectories of a directory that it wants to delete.
+         * Therefore, we need to start a separate crawl here. */
+              
+        SVN_ERR(node_has_local_mods(&modified, &all_mods_are_deletes,
+                                    eb->db, local_abspath,
+                                    eb->cancel_func, eb->cancel_baton,
+                                    pool));
 
         if (modified)
           {
