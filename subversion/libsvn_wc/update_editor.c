@@ -371,9 +371,10 @@ struct handler_baton
   /* Where we are assembling the new file. */
   const char *new_text_base_tmp_abspath;
 
-    /* The expected MD5 checksum of the text source or NULL if no base
-     checksum is available */
-  svn_checksum_t *expected_source_md5_checksum;
+    /* The expected source checksum of the text source or NULL if no base
+     checksum is available (MD5 if the server provides a checksum, SHA1 if
+     the server doesn't) */
+  svn_checksum_t *expected_source_checksum;
 
   /* Why two checksums?
      The editor currently provides an md5 which we use to detect corruption
@@ -383,8 +384,9 @@ struct handler_baton
      being, that's the way it is. */
 
   /* The calculated checksum of the text source or NULL if the acual
-     checksum is not being calculated */
-  svn_checksum_t *actual_source_md5_checksum;
+     checksum is not being calculated. The checksum kind is identical to the
+     kind of expected_source_checksum. */
+  svn_checksum_t *actual_source_checksum;
 
   /* The stream used to calculate the source checksums */
   svn_stream_t *source_checksum_stream;
@@ -931,22 +933,25 @@ window_handler(svn_txdelta_window_t *window, void *baton)
   if (window != NULL && !err)
     return SVN_NO_ERROR;
 
-  if (hb->expected_source_md5_checksum)
+  if (hb->expected_source_checksum)
     {
       /* Close the stream to calculate HB->actual_source_md5_checksum. */
       svn_error_t *err2 = svn_stream_close(hb->source_checksum_stream);
 
-      if (!err2 && !svn_checksum_match(hb->expected_source_md5_checksum,
-                                       hb->actual_source_md5_checksum))
+      SVN_ERR_ASSERT(hb->expected_source_checksum->kind ==
+                    hb->actual_source_checksum->kind);
+
+      if (!err2 && !svn_checksum_match(hb->expected_source_checksum,
+                                       hb->actual_source_checksum))
         {
           err = svn_error_createf(SVN_ERR_WC_CORRUPT_TEXT_BASE, err,
                     _("Checksum mismatch while updating '%s':\n"
                       "   expected:  %s\n"
                       "     actual:  %s\n"),
                     svn_dirent_local_style(fb->local_abspath, hb->pool),
-                    svn_checksum_to_cstring(hb->expected_source_md5_checksum,
+                    svn_checksum_to_cstring(hb->expected_source_checksum,
                                             hb->pool),
-                    svn_checksum_to_cstring(hb->actual_source_md5_checksum,
+                    svn_checksum_to_cstring(hb->actual_source_checksum,
                                             hb->pool));
         }
 
@@ -3212,7 +3217,7 @@ open_file(const char *path,
 /* An svn_delta_editor_t function. */
 static svn_error_t *
 apply_textdelta(void *file_baton,
-                const char *expected_base_checksum,
+                const char *expected_checksum,
                 apr_pool_t *pool,
                 svn_txdelta_window_handler_t *handler,
                 void **handler_baton)
@@ -3222,7 +3227,8 @@ apply_textdelta(void *file_baton,
   struct handler_baton *hb = apr_pcalloc(handler_pool, sizeof(*hb));
   struct edit_baton *eb = fb->edit_baton;
   svn_error_t *err;
-  const char *recorded_base_checksum;
+  const svn_checksum_t *recorded_base_checksum;
+  svn_checksum_t *expected_base_checksum;
   svn_stream_t *source;
   svn_stream_t *target;
 
@@ -3232,6 +3238,10 @@ apply_textdelta(void *file_baton,
       *handler_baton = NULL;
       return SVN_NO_ERROR;
     }
+
+  /* Parse checksum or sets expected_base_checksum to NULL */
+  SVN_ERR(svn_checksum_parse_hex(&expected_base_checksum, svn_checksum_md5,
+                                 expected_checksum, pool));
 
   fb->received_textdelta = TRUE;
 
@@ -3243,27 +3253,28 @@ apply_textdelta(void *file_baton,
      check our RECORDED_BASE_CHECKSUM.  (In WC-1, we could not do this test
      for replaced nodes because we didn't store the checksum of the "revert
      base".  In WC-NG, we do and we can.) */
-  {
-    const svn_checksum_t *checksum = fb->original_checksum;
+  recorded_base_checksum = fb->original_checksum;
 
-    /* If we have a checksum that we want to compare to a MD5 checksum,
-       ensure that it is a MD5 checksum */
-    if (checksum
-        && expected_base_checksum
-        && checksum->kind != svn_checksum_md5)
-      SVN_ERR(svn_wc__db_pristine_get_md5(&checksum, eb->db, fb->local_abspath,
-                                          checksum, pool, pool));
+  /* If we have a checksum that we want to compare to a MD5 checksum,
+     ensure that it is a MD5 checksum */
+  if (recorded_base_checksum
+      && expected_base_checksum
+      && recorded_base_checksum->kind != svn_checksum_md5)
+    SVN_ERR(svn_wc__db_pristine_get_md5(&recorded_base_checksum,
+                                        eb->db, fb->local_abspath,
+                                        recorded_base_checksum, pool, pool));
 
-    recorded_base_checksum = svn_checksum_to_cstring(checksum, pool);
-    if (recorded_base_checksum && expected_base_checksum
-        && strcmp(expected_base_checksum, recorded_base_checksum) != 0)
+
+  if (!svn_checksum_match(expected_base_checksum, recorded_base_checksum))
       return svn_error_createf(SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
                      _("Checksum mismatch for '%s':\n"
                        "   expected:  %s\n"
                        "   recorded:  %s\n"),
                      svn_dirent_local_style(fb->local_abspath, pool),
-                     expected_base_checksum, recorded_base_checksum);
-  }
+                     svn_checksum_to_cstring_display(expected_base_checksum,
+                                                     pool),
+                     svn_checksum_to_cstring_display(recorded_base_checksum,
+                                                     pool));
 
   /* Open the text base for reading, unless this is an added file. */
 
@@ -3282,7 +3293,9 @@ apply_textdelta(void *file_baton,
 
   if (! fb->adding_file)
     {
-      SVN_ERR_ASSERT(!fb->original_checksum || fb->original_checksum->kind == svn_checksum_sha1);
+      SVN_ERR_ASSERT(!fb->original_checksum
+                     || fb->original_checksum->kind == svn_checksum_sha1);
+
       SVN_ERR(svn_wc__db_pristine_read(&source, fb->edit_baton->db,
                                        fb->local_abspath,
                                        fb->original_checksum,
@@ -3300,14 +3313,14 @@ apply_textdelta(void *file_baton,
   /* Checksum the text base while applying deltas */
   if (recorded_base_checksum)
     {
-      SVN_ERR(svn_checksum_parse_hex(&hb->expected_source_md5_checksum,
-                                     svn_checksum_md5, recorded_base_checksum,
-                                     handler_pool));
+      hb->expected_source_checksum = svn_checksum_dup(recorded_base_checksum,
+                                                      handler_pool);
 
-      /* Wrap stream and store reference to allow calculating the md5 */
+      /* Wrap stream and store reference to allow calculating the
+         checksum. */
       source = svn_stream_checksummed2(source,
-                                       &hb->actual_source_md5_checksum,
-                                       NULL, svn_checksum_md5,
+                                       &hb->actual_source_checksum,
+                                       NULL, recorded_base_checksum->kind,
                                        TRUE, handler_pool);
       hb->source_checksum_stream = source;
     }
