@@ -1820,6 +1820,30 @@ def status_nested_wc_old_format(sbox):
 # Run the tests
 
 
+def simple_lock(sbox, relpath):
+  path = os.path.join(sbox.wc_dir, relpath)
+  svntest.actions.run_and_verify_svn(None, None, [], 'lock', path)
+
+#----------------------------------------------------------------------
+# Regression test for issue #3855 "status doesn't show 'K' on a locked
+# deleted node".
+@Issue(3855)
+@XFail()
+def status_locked_deleted(sbox):
+  "status with locked deleted file"
+
+  sbox.build()
+  iota_path = os.path.join(sbox.wc_dir, 'iota')
+
+  sbox.simple_rm('iota')
+  simple_lock(sbox, 'iota')
+  svntest.actions.run_and_verify_svn(None, ['D    K  %s\n' % iota_path], [],
+                                     'status', iota_path)
+
+########################################################################
+# Run the tests
+
+
 # list all tests here, starting with None:
 test_list = [ None,
               status_unversioned_file_in_current_dir,
@@ -1854,6 +1878,7 @@ test_list = [ None,
               status_dash_u_type_change,
               status_with_tree_conflicts,
               status_nested_wc_old_format,
+              status_locked_deleted,
              ]
 
 if __name__ == '__main__':
