@@ -50,7 +50,12 @@ Environment variables:
 * SVNSYNC_UNSUPPORTED_MIGRATE_SVNMERGE
 * SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_RELOCATE_VALIDATION
 * SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_SLEEP_FOR_TIMESTAMPS
-* SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2 (libsvn_ra_serf)
+
+* SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
+  Scope: libsvn_ra_neon and libsvn_ra_serf, if SVN_DEBUG
+  Purpose: A "yes" value causes the RA modules to ignore the server's
+     advertisement of HTTPv2 protocol support (if any), effectively
+     causing them to only speak our original HTTP protocol.
 
 * (TODO: others)
 

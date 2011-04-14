@@ -34,6 +34,8 @@
 #include "ra_neon.h"
 
 
+#define SVN_IGNORE_V2_ENV_VAR "SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2"
+
 static const svn_ra_neon__xml_elm_t options_elements[] =
 {
   { "DAV:", "activity-collection-set", ELEM_activity_coll_set, 0 },
@@ -235,7 +237,19 @@ parse_capabilities(ne_request *req,
   /* HTTP v2 stuff */
   if ((val = ne_get_response_header(req, SVN_DAV_ME_RESOURCE_HEADER)))
     {
-      ras->me_resource = apr_pstrdup(ras->pool, val);
+#ifdef SVN_DEBUG
+      /* ### This section is throw in here for development use.  It
+         ### allows devs the chance to force the client to speak v1,
+         ### even if the server is capable of speaking v2.  We should
+         ### probably remove it before 1.7 goes final. */
+      char *ignore_v2_env_var = getenv(SVN_IGNORE_V2_ENV_VAR);
+
+      if (! (ignore_v2_env_var
+             && apr_strnatcasecmp(ignore_v2_env_var, "yes") == 0))
+        ras->me_resource = apr_pstrdup(ras->pool, val);
+#else
+        ras->me_resource = apr_pstrdup(ras->pool, val);
+#endif
     }
   if ((val = ne_get_response_header(req, SVN_DAV_REV_ROOT_STUB_HEADER)))
     {
