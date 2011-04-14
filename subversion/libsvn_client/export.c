@@ -432,18 +432,15 @@ copy_versioned_files(const char *from_abspath,
   if (revision->kind != svn_opt_revision_working)
     {
       svn_boolean_t is_added;
+      const char *repos_relpath;
 
-      SVN_ERR(svn_wc__node_is_added(&is_added, ctx->wc_ctx,
-                                    from_abspath, pool));
-      if (is_added)
-        {
-          const char *is_copied;
-          SVN_ERR(svn_wc__node_get_copyfrom_info(&is_copied, NULL, NULL,
-                                                 NULL, NULL, ctx->wc_ctx,
-                                                 from_abspath, pool, pool));
-          if (! is_copied)
-            return SVN_NO_ERROR;
-        }
+      SVN_ERR(svn_wc__node_get_origin(&is_added, NULL, &repos_relpath,
+                                      NULL, NULL,
+                                      ctx->wc_ctx, from_abspath, FALSE,
+                                      pool, pool));
+
+      if (is_added && !repos_relpath)
+        return SVN_NO_ERROR; /* Local addition */
     }
   else
     {
