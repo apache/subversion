@@ -488,12 +488,14 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
               || strcmp(copyfrom_repos_relpath, repos_relpath))
             return
               svn_error_createf(SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-                                _("URL '%s' doesn't match existing "
-                                  "URL '%s' in '%s'"),
+                                _("URL '%s' (uuid: '%s') doesn't match existing "
+                                  "URL '%s' (uuid: '%s') in '%s'"),
                                 url,
+                                db_repos_uuid,
                                 svn_path_url_add_component2(db_repos_root_url,
                                                             db_repos_relpath,
                                                             scratch_pool),
+                                repos_uuid,
                                 local_abspath);
         }
     }
