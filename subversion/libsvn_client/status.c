@@ -91,7 +91,7 @@ tweak_status(void *baton,
   if (sb->deleted_in_repos)
     {
       svn_wc_status3_t *new_status = svn_wc_dup_status3(status, scratch_pool);
-      new_status->repos_text_status = svn_wc_status_deleted;
+      new_status->repos_node_status = svn_wc_status_deleted;
       status = new_status;
     }
 
@@ -419,7 +419,8 @@ svn_client_status5(svn_revnum_t *result_rev,
              versioned, then it must have since been deleted from the
              repository.  (Note that "locally replaced" doesn't count
              as "added" in this case.)  */
-
+          SVN_ERR(svn_wc__node_is_added(&added, ctx->wc_ctx,
+                                        dir_abspath, pool));
           if (! added)
             sb.deleted_in_repos = TRUE;
 
