@@ -845,7 +845,7 @@ if test "$enable_disallowing_of_undefined_references" != "no"; then
   LDFLAGS="$old_LDFLAGS"
   if test "$svn_wl_no_undefined" = "yes"; then
     AC_MSG_RESULT([yes])
-    for library_dir in $(ls "$abs_srcdir/subversion" | grep libsvn_); do
+    for library_dir in "$abs_srcdir/subversion/libsvn_"*; do
       eval "`basename $library_dir`_LDFLAGS=-Wl,--no-undefined"
     done
   else
