@@ -463,17 +463,30 @@ assemble_status(svn_wc_status3_t **status,
         }
     }
 
+  /* Does the node have props? */
+  {
+    svn_boolean_t has_props;
+    if (info->status == svn_wc__db_status_deleted)
+      has_props = FALSE; /* Not interesting */
+    else if (info->props_mod)
+      has_props = TRUE;
+    else
+      has_props = info->has_props;
+
+    /* If the entry has a properties, see if it has local changes. */
+    if (has_props)
+      prop_status = info->props_mod ? svn_wc_status_modified
+                                    : svn_wc_status_normal;
+  }
+
   /* If NODE_STATUS is still normal, after the above checks, then
      we should proceed to refine the status.
 
      If it was changed, then the subdir is incomplete or missing/obstructed.
-     It means that no further information is available, and we should skip
-     all this work.  */
-  if (node_status == svn_wc_status_normal
-      || (node_status == svn_wc_status_missing
-          && info->kind != svn_wc__db_kind_dir))
+   */
+  if (info->kind != svn_wc__db_kind_dir
+      && node_status == svn_wc_status_normal)
     {
-      svn_boolean_t has_props;
       svn_boolean_t text_modified_p = FALSE;
 
       /* Implement predecence rules: */
@@ -482,29 +495,9 @@ assemble_status(svn_wc_status3_t **status,
             Together, these two stati are of lowest precedence, and C has
             precedence over M. */
 
-      /* Does the node have props? */
-      if (info->status == svn_wc__db_status_deleted)
-        has_props = FALSE; /* Not interesting */
-      else if (info->props_mod)
-        has_props = TRUE;
-      else
-        has_props = info->has_props;
-
-      if (has_props)
-        prop_status = svn_wc_status_normal;
-
-      /* If the entry has a properties, see if it has local changes. */
-      if (has_props)
-        prop_status = info->props_mod ? svn_wc_status_modified
-                                      : svn_wc_status_normal;
-
-      /* ### Don't read properties twice!  Cache wc_special in
-             svn_wc__db_read_children_info. */
-
       /* If the entry is a file, check for textual modifications */
-      if (node_status != svn_wc_status_missing
-          && (info->kind == svn_wc__db_kind_file
-              || info->kind == svn_wc__db_kind_symlink)
+      if ((info->kind == svn_wc__db_kind_file
+          || info->kind == svn_wc__db_kind_symlink)
 #ifdef HAVE_SYMLINK
              && (info->special == (dirent && dirent->special))
 #endif /* HAVE_SYMLINK */
@@ -547,7 +540,6 @@ assemble_status(svn_wc_status3_t **status,
       else if (info->special != (dirent && dirent->special))
         node_status = svn_wc_status_obstructed;
 #endif /* HAVE_SYMLINK */
-
 
       if (text_modified_p)
         text_status = svn_wc_status_modified;
@@ -2389,8 +2381,6 @@ svn_wc__internal_walk_status(svn_wc__db_t *db,
   const svn_io_dirent2_t *dirent;
   const char *anchor_abspath, *target_name;
   svn_boolean_t skip_root;
-  svn_error_t *err;
-  svn_wc__db_status_t status;
   svn_wc__db_kind_t kind;
 
   wb.db = db;
