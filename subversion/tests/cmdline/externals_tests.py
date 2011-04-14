@@ -1683,9 +1683,10 @@ def file_external_in_sibling(sbox):
   change_external(sbox.ospath('A2'), externals_prop)
   sbox.simple_update()
 
-  expected_stdout = ["Updating '.' ...\n", "At revision 2.\n"]
   os.chdir(sbox.ospath("A"))
-  svntest.actions.run_and_verify_svn(None, expected_stdout, [], 'update')
+  svntest.actions.run_and_verify_svn(None,
+                            svntest.actions.expected_noop_update_output(2),
+                            [], 'update')
 
 @XFail()
 @Issue(3823)
