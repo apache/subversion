@@ -373,7 +373,7 @@ def expected_noop_update_output(rev):
   """Return an ExpectedOutput object describing what we'd expect to
   see from an update to revision REV that was effectively a no-op (no
   server changes transmitted)."""
-  return verify.createExpectedOutput("Updating '.*' ...|At revision %d."
+  return verify.createExpectedOutput("Updating '.*':|At revision %d."
                                      % (rev),
                                      "no-op update")
 

@@ -1178,7 +1178,7 @@ def another_hudson_problem(sbox):
                        'Updated to revision 3.\n',
                        ]
   else:
-    expected_output = ["Updating '%s' ...\n" % (G_path),
+    expected_output = ["Updating '%s':\n" % (G_path),
                        'Restored \'' + G_path + '\'\n',
                        'Restored \'' + G_path + os.path.sep + 'pi\'\n',
                        'Restored \'' + G_path + os.path.sep + 'rho\'\n',
@@ -3803,7 +3803,7 @@ def update_accept_conflicts(sbox):
   # Just leave the conflicts alone, since run_and_verify_svn already uses
   # the --non-interactive option.
   svntest.actions.run_and_verify_svn(None,
-                                     ["Updating '%s' ...\n" % (iota_path_backup),
+                                     ["Updating '%s':\n" % (iota_path_backup),
                                       'C    %s\n' % (iota_path_backup,),
                                       'Updated to revision 2.\n',
                                       'Summary of conflicts:\n',
@@ -3814,7 +3814,7 @@ def update_accept_conflicts(sbox):
   # lambda: --accept=postpone
   # Just leave the conflicts alone.
   svntest.actions.run_and_verify_svn(None,
-                                     ["Updating '%s' ...\n" % (lambda_path_backup),
+                                     ["Updating '%s':\n" % (lambda_path_backup),
                                       'C    %s\n' % (lambda_path_backup,),
                                       'Updated to revision 2.\n',
                                       'Summary of conflicts:\n',
@@ -3826,7 +3826,7 @@ def update_accept_conflicts(sbox):
   # mu: --accept=base
   # Accept the pre-update base file.
   svntest.actions.run_and_verify_svn(None,
-                                     ["Updating '%s' ...\n" % (mu_path_backup),
+                                     ["Updating '%s':\n" % (mu_path_backup),
                                       'G    %s\n' % (mu_path_backup,),
                                       'Updated to revision 2.\n'],
                                      [],
@@ -3836,7 +3836,7 @@ def update_accept_conflicts(sbox):
   # alpha: --accept=mine
   # Accept the user's working file.
   svntest.actions.run_and_verify_svn(None,
-                                     ["Updating '%s' ...\n" % (alpha_path_backup),
+                                     ["Updating '%s':\n" % (alpha_path_backup),
                                       'G    %s\n' % (alpha_path_backup,),
                                       'Updated to revision 2.\n'],
                                      [],
@@ -3846,7 +3846,7 @@ def update_accept_conflicts(sbox):
   # beta: --accept=theirs
   # Accept their file.
   svntest.actions.run_and_verify_svn(None,
-                                     ["Updating '%s' ...\n" % (beta_path_backup),
+                                     ["Updating '%s':\n" % (beta_path_backup),
                                       'G    %s\n' % (beta_path_backup,),
                                       'Updated to revision 2.\n'],
                                      [],
@@ -3858,7 +3858,7 @@ def update_accept_conflicts(sbox):
   # conflicts in place, so expect a message on stderr, but expect
   # svn to exit with an exit code of 0.
   svntest.actions.run_and_verify_svn2(None,
-                                      ["Updating '%s' ...\n" % (pi_path_backup),
+                                      ["Updating '%s':\n" % (pi_path_backup),
                                        'G    %s\n' % (pi_path_backup,),
                                        'Updated to revision 2.\n'],
                                       "system(.*) returned.*", 0,
@@ -3868,7 +3868,7 @@ def update_accept_conflicts(sbox):
   # rho: --accept=launch
   # Run the external merge tool, it should leave conflict markers in place.
   svntest.actions.run_and_verify_svn(None,
-                                     ["Updating '%s' ...\n" % (rho_path_backup),
+                                     ["Updating '%s':\n" % (rho_path_backup),
                                       'C    %s\n' % (rho_path_backup,),
                                       'Updated to revision 2.\n',
                                       'Summary of conflicts:\n',
