@@ -533,23 +533,24 @@ svn_client__get_wc_or_repos_mergeinfo_catalog(
   svn_revnum_t target_rev;
   const char *local_abspath;
   const char *repos_root;
-  svn_boolean_t is_added;
+  const char *repos_relpath;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, target_wcpath,
                                   scratch_pool));
-  SVN_ERR(svn_wc__node_is_added(&is_added, ctx->wc_ctx, local_abspath,
-                                scratch_pool));
-  SVN_ERR(svn_wc__node_get_repos_info(&repos_root, NULL,
-                                      ctx->wc_ctx, local_abspath, FALSE, FALSE,
-                                      scratch_pool, scratch_pool));
 
   /* We may get an entry with abbreviated information from TARGET_WCPATH's
      parent if TARGET_WCPATH is missing.  These limited entries do not have
      a URL and without that we cannot get accurate mergeinfo for
      TARGET_WCPATH. */
-  SVN_ERR(svn_client__entry_location(&url, &target_rev, ctx->wc_ctx,
-                                     local_abspath, svn_opt_revision_working,
-                                     scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__node_get_origin(NULL, &target_rev, &repos_relpath,
+                                  &repos_root, NULL,
+                                  ctx->wc_ctx, local_abspath, FALSE,
+                                  scratch_pool, scratch_pool));
+
+  if (repos_relpath)
+    url = svn_path_url_add_component2(repos_root, repos_relpath, scratch_pool);
+  else
+    url = NULL;
 
   if (repos_only)
     *target_mergeinfo_catalog = NULL;
@@ -568,7 +569,7 @@ svn_client__get_wc_or_repos_mergeinfo_catalog(
   if (*target_mergeinfo_catalog == NULL)
     {
       /* No need to check the repos if this is a local addition. */
-      if (!is_added)
+      if (url != NULL)
         {
           apr_hash_t *original_props;
 

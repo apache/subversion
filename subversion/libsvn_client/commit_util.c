@@ -504,26 +504,11 @@ harvest_committables(svn_wc_context_t *wc_ctx,
     }
 
   /* Further additions occur in copy mode. */
-  if (copy_mode && !(state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE))
+  if (copy_mode
+      && (!is_added || copy_mode_root)
+      && !(state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE))
     {
       svn_revnum_t dir_rev;
-      const char *node_copyfrom_relpath;
-      svn_revnum_t node_copyfrom_rev;
-
-      if (is_added)
-        {
-          SVN_ERR(svn_wc__node_get_copyfrom_info(NULL,
-                                                 &node_copyfrom_relpath,
-                                                 NULL, &node_copyfrom_rev,
-                                                 NULL,
-                                                 wc_ctx, local_abspath,
-                                                 scratch_pool, scratch_pool));
-        }
-       else
-        {
-          node_copyfrom_relpath = NULL;
-          node_copyfrom_rev = SVN_INVALID_REVNUM;
-        }
 
       if (!copy_mode_root)
         SVN_ERR(svn_wc__node_get_base_rev(&dir_rev, wc_ctx,
@@ -534,18 +519,15 @@ harvest_committables(svn_wc_context_t *wc_ctx,
       if (copy_mode_root || node_rev != dir_rev)
         {
           state_flags |= SVN_CLIENT_COMMIT_ITEM_ADD;
-          if (node_copyfrom_relpath)
-            {
-              state_flags |= SVN_CLIENT_COMMIT_ITEM_IS_COPY;
-              cf_relpath = node_copyfrom_relpath;
-              cf_rev = node_copyfrom_rev;
-            }
-          else if (node_rev != SVN_INVALID_REVNUM)
-            {
-              state_flags |= SVN_CLIENT_COMMIT_ITEM_IS_COPY;
-              cf_relpath = node_relpath;
-              cf_rev = node_rev;
-            }
+
+          SVN_ERR(svn_wc__node_get_origin(NULL, &cf_rev,
+                                      &cf_relpath, NULL,
+                                      NULL,
+                                      wc_ctx, local_abspath, FALSE,
+                                      scratch_pool, scratch_pool));
+
+          if (cf_relpath)
+            state_flags |= SVN_CLIENT_COMMIT_ITEM_IS_COPY;
         }
     }
 

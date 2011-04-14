@@ -321,6 +321,38 @@ svn_wc__node_get_url(const char **url,
                      apr_pool_t *scratch_pool);
 
 /**
+ * Retrieves the origin of the node as it is known in the repository. For
+ * added nodes this retrieves where the node is copied from, and the repository
+ * location for other nodes.
+ *
+ * All output arguments may be NULL.
+ *
+ * If @a is_copy is not NULL, sets @a *is_copy to TRUE if the origin is a copy
+ * of the original node.
+ *
+ * If not NULL, sets @a revision, @a repos_relpath, @a repos_root_url and
+ * @a repos_uuid to the original (if a copy) or their current values.
+ *
+ * If @a scan_deleted is TRUE, determine the origin of the deleted node. If
+ * @a scan_deleted is FALSE, return NULL, SVN_INVALID_REVNUM or FALSE for
+ * deleted nodes.
+ *
+ * Allocate the result in @a result_pool. Perform temporary allocations in
+ * @a scratch_pool */
+svn_error_t *
+svn_wc__node_get_origin(svn_boolean_t *is_copy,
+                        svn_revnum_t *revision,
+                        const char **repos_relpath,
+                        const char **repos_root_url,
+                        const char **repos_uuid,
+                        svn_wc_context_t *wc_ctx,
+                        const char *local_abspath,
+                        svn_boolean_t scan_deleted,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
+
+
+/**
  * Set @a *repos_relpath to the corresponding repos_relpath for @a
  * local_abspath, using @a wc_ctx. If the node is added, return the
  * repos_relpath it will have in the repository.

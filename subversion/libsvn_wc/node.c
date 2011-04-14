@@ -1535,6 +1535,114 @@ svn_wc__get_absent_subtrees(apr_hash_t **absent_subtrees,
 }
 
 svn_error_t *
+svn_wc__node_get_origin(svn_boolean_t *is_copy,
+                        svn_revnum_t *revision,
+                        const char **repos_relpath,
+                        const char **repos_root_url,
+                        const char **repos_uuid,
+                        svn_wc_context_t *wc_ctx,
+                        const char *local_abspath,
+                        svn_boolean_t scan_deleted,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
+{
+  const char *original_repos_relpath;
+  const char *original_repos_root_url;
+  const char *original_repos_uuid;
+  svn_revnum_t original_revision;
+  svn_wc__db_status_t status;
+
+  const char *tmp_repos_relpath;
+
+  if (!repos_relpath)
+    repos_relpath = &tmp_repos_relpath;
+
+  SVN_ERR(svn_wc__db_read_info(&status, NULL, revision, repos_relpath,
+                               repos_root_url, repos_uuid, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               &original_repos_relpath,
+                               &original_repos_root_url,
+                               &original_repos_uuid, &original_revision,
+                               NULL, NULL, is_copy, NULL, NULL,
+                               wc_ctx->db, local_abspath,
+                               result_pool, scratch_pool));
+
+  if (*repos_relpath)
+    {
+      return SVN_NO_ERROR; /* Returned BASE information */
+    }
+
+  if (status == svn_wc__db_status_deleted && !scan_deleted)
+    {
+      if (is_copy)
+        *is_copy = FALSE; /* Deletes are stored in working; default to FALSE */
+
+      return SVN_NO_ERROR; /* No info */
+    }
+
+  if (original_repos_relpath)
+    {
+      *repos_relpath = original_repos_relpath;
+      if (revision)
+        *revision = original_revision;
+      if (repos_root_url)
+        *repos_root_url = original_repos_root_url;
+      if (repos_uuid)
+        *repos_uuid = original_repos_uuid;
+
+      return SVN_NO_ERROR;
+    }
+
+  {
+    svn_boolean_t scan_working = FALSE;
+
+    if (status == svn_wc__db_status_added)
+      scan_working = TRUE;
+    else if (status == svn_wc__db_status_deleted)
+      /* Is this a BASE or a WORKING delete? */
+      SVN_ERR(svn_wc__db_info_below_working(NULL, &scan_working, NULL,
+                                            wc_ctx->db, local_abspath,
+                                            scratch_pool));
+
+    if (scan_working)
+      {
+        const char *op_root_abspath;
+      
+        SVN_ERR(svn_wc__db_scan_addition(&status, &op_root_abspath, NULL,
+                                         NULL, NULL, &original_repos_relpath,
+                                         repos_root_url,
+                                         repos_uuid,
+                                         revision,
+                                         wc_ctx->db, local_abspath,
+                                         result_pool, scratch_pool));
+
+        if (status == svn_wc__db_status_added)
+          return SVN_NO_ERROR; /* Local addition */
+
+        *repos_relpath = svn_relpath_join(
+                                original_repos_relpath,
+                                svn_dirent_skip_ancestor(op_root_abspath,
+                                                         local_abspath),
+                                result_pool);
+      }
+    else /* Deleted, excluded, not-present, absent, ... */
+      {
+        if (is_copy)
+          *is_copy = FALSE;
+
+        SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, revision, repos_relpath,
+                                         repos_root_url, repos_uuid, NULL,
+                                         NULL, NULL, NULL, NULL, NULL, NULL,
+                                         NULL, NULL, NULL,
+                                         wc_ctx->db, local_abspath,
+                                         result_pool, scratch_pool));
+      }
+
+    return SVN_NO_ERROR;
+  }
+}
+
+svn_error_t *
 svn_wc__node_get_commit_status(svn_node_kind_t *kind,
                                svn_boolean_t *added,
                                svn_boolean_t *deleted,
