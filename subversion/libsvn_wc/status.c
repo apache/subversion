@@ -2370,28 +2370,30 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
 }
 
 svn_error_t *
-svn_wc_walk_status(svn_wc_context_t *wc_ctx,
-                   const char *local_abspath,
-                   svn_depth_t depth,
-                   svn_boolean_t get_all,
-                   svn_boolean_t no_ignore,
-                   svn_boolean_t ignore_text_mods,
-                   const apr_array_header_t *ignore_patterns,
-                   svn_wc_status_func4_t status_func,
-                   void *status_baton,
-                   svn_wc_external_update_t external_func,
-                   void *external_baton,
-                   svn_cancel_func_t cancel_func,
-                   void *cancel_baton,
-                   apr_pool_t *scratch_pool)
+svn_wc__internal_walk_status(svn_wc__db_t *db,
+                             const char *local_abspath,
+                             svn_depth_t depth,
+                             svn_boolean_t get_all,
+                             svn_boolean_t no_ignore,
+                             svn_boolean_t ignore_text_mods,
+                             const apr_array_header_t *ignore_patterns,
+                             svn_wc_status_func4_t status_func,
+                             void *status_baton,
+                             svn_wc_external_update_t external_func,
+                             void *external_baton,
+                             svn_cancel_func_t cancel_func,
+                             void *cancel_baton,
+                             apr_pool_t *scratch_pool)
 {
-  svn_node_kind_t kind;
   struct walk_status_baton wb;
   const svn_io_dirent2_t *dirent;
   const char *anchor_abspath, *target_name;
   svn_boolean_t skip_root;
+  svn_error_t *err;
+  svn_wc__db_status_t status;
+  svn_wc__db_kind_t kind;
 
-  wb.db = wc_ctx->db;
+  wb.db = db;
   wb.target_abspath = local_abspath;
   wb.externals = apr_hash_make(scratch_pool);
   wb.external_func = external_func;
@@ -2409,17 +2411,17 @@ svn_wc_walk_status(svn_wc_context_t *wc_ctx,
       ignore_patterns = ignores;
     }
 
-  SVN_ERR(svn_wc_read_kind(&kind, wc_ctx, local_abspath, FALSE, scratch_pool));
+  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, TRUE, scratch_pool));
   SVN_ERR(svn_io_stat_dirent(&dirent, local_abspath, TRUE,
                              scratch_pool, scratch_pool));
 
-  if (kind == svn_node_file && dirent->kind == svn_node_file)
+  if (kind == svn_wc__db_kind_file && dirent->kind == svn_node_file)
     {
       anchor_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
       target_name = svn_dirent_basename(local_abspath, NULL);
       skip_root = TRUE;
     }
-  else if (kind == svn_node_dir && dirent->kind == svn_node_dir)
+  else if (kind == svn_wc__db_kind_dir && dirent->kind == svn_node_dir)
     {
       anchor_abspath = local_abspath;
       target_name = NULL;
@@ -2448,6 +2450,39 @@ svn_wc_walk_status(svn_wc_context_t *wc_ctx,
                          scratch_pool));
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc_walk_status(svn_wc_context_t *wc_ctx,
+                   const char *local_abspath,
+                   svn_depth_t depth,
+                   svn_boolean_t get_all,
+                   svn_boolean_t no_ignore,
+                   svn_boolean_t ignore_text_mods,
+                   const apr_array_header_t *ignore_patterns,
+                   svn_wc_status_func4_t status_func,
+                   void *status_baton,
+                   svn_wc_external_update_t external_func,
+                   void *external_baton,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   apr_pool_t *scratch_pool)
+{
+  return svn_error_return(
+           svn_wc__internal_walk_status(wc_ctx->db,
+                                        local_abspath,
+                                        depth,
+                                        get_all,
+                                        no_ignore,
+                                        ignore_text_mods,
+                                        ignore_patterns,
+                                        status_func,
+                                        status_baton,
+                                        external_func,
+                                        external_baton,
+                                        cancel_func,
+                                        cancel_baton,
+                                        scratch_pool));
 }
 
 

@@ -567,6 +567,22 @@ svn_wc__internal_changelist_match(svn_wc__db_t *db,
                                   apr_hash_t *clhash,
                                   apr_pool_t *scratch_pool);
 
+/* Library-internal version of svn_wc_walk_status(), which see. */
+svn_error_t *
+svn_wc__internal_walk_status(svn_wc__db_t *db,
+                             const char *local_abspath,
+                             svn_depth_t depth,
+                             svn_boolean_t get_all,
+                             svn_boolean_t no_ignore,
+                             svn_boolean_t ignore_text_mods,
+                             const apr_array_header_t *ignore_patterns,
+                             svn_wc_status_func4_t status_func,
+                             void *status_baton,
+                             svn_wc_external_update_t external_func,
+                             void *external_baton,
+                             svn_cancel_func_t cancel_func,
+                             void *cancel_baton,
+                             apr_pool_t *scratch_pool);
 
 /* Library-internal version of svn_wc__node_walk_children(), which see. */
 svn_error_t *
