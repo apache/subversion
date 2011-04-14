@@ -79,7 +79,7 @@ autogen-swig: autogen-swig-[swig_langs.short]
 # This needs to be here, rather than in Makefile.in, else
 # './autogen.sh --release' doesn't find it.
 check-SWIG:
-	if [ "$(SWIG)" = "none" ]; then \
+	@if [ "$(SWIG)" = "none" ]; then \
 	  echo "SWIG disabled at configure time" >&2; \
 	  exit 1; \
 	fi
