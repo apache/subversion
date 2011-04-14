@@ -3478,50 +3478,45 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
 
   if (implicit_mergeinfo)
     {
-      const char *session_url = NULL, *url;
+      const char *repos_root;
+      const char *repos_relpath;
+      const char *session_url = NULL;
       svn_revnum_t target_rev;
-      svn_error_t *err;
 
       /* Assert that we have sane input. */
       SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(start)
                  && SVN_IS_VALID_REVNUM(end)
                  && (start > end));
 
-      *implicit_mergeinfo = NULL;
-
       /* Retrieve the origin (original_*) of the node, or just the
          url if the node was not copied. */
-      err = svn_client__entry_location(&url, &target_rev, 
-                                       ctx->wc_ctx, target_abspath,
-                                       svn_opt_revision_working,
-                                       scratch_pool, scratch_pool);
-      
-      if (err)
-        {
-            if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-            {
-              /* We've been asked to operate on a target which has no location
-               * in the repository. Either it's unversioned (but attempts to
-               * merge into unversioned targets should not get as far as here),
-               * or it is locally added, in which case the target's implicit
-               * mergeinfo is empty. */
-              svn_error_clear(err);
-              *implicit_mergeinfo = apr_hash_make(result_pool);
-            }
-          else
-            return svn_error_return(err);
-        }
+      SVN_ERR(svn_wc__node_get_origin(FALSE, &target_rev, &repos_relpath,
+                                      &repos_root, NULL,
+                                      ctx->wc_ctx, target_abspath, FALSE,
+                                      scratch_pool, scratch_pool));
 
-      if (target_rev <= end)
+      if (! repos_relpath)
+        {
+          /* We've been asked to operate on a target which has no location
+           * in the repository. Either it's unversioned (but attempts to
+           * merge into unversioned targets should not get as far as here),
+           * or it is locally added, in which case the target's implicit
+           * mergeinfo is empty. */
+          *implicit_mergeinfo = apr_hash_make(result_pool);
+        }
+      else if (target_rev <= end)
         {
           /* We're asking about a range outside our natural history
              altogether.  That means our implicit mergeinfo is empty. */
           *implicit_mergeinfo = apr_hash_make(result_pool);
         }
-
-      if (*implicit_mergeinfo == NULL)
+      else
         {
           svn_opt_revision_t peg_revision;
+          const char *url;
+
+          url = svn_path_url_add_component2(repos_root, repos_relpath,
+                                            scratch_pool);
 
           /* Temporarily point our RA_SESSION at our target URL so we can
              fetch so-called "implicit mergeinfo" (that is, natural
