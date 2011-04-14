@@ -950,6 +950,8 @@ svn_wc__node_get_working_rev_info(svn_revnum_t *revision,
                                        scratch_pool));
       if (work_del_abspath)
         {
+          /* ### This is not going to return any useful data
+             ### We need to look one layer down */
           SVN_ERR(svn_wc__db_read_info(&status, NULL, revision, NULL, NULL,
                                        NULL, changed_rev, changed_date,
                                        changed_author, NULL, NULL, NULL,
@@ -1185,7 +1187,7 @@ svn_wc__internal_node_get_schedule(svn_wc_schedule_t *schedule,
                                    apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
-  svn_boolean_t has_base, have_work;
+  svn_boolean_t have_work;
   const char *copyfrom_relpath;
 
   if (schedule)
@@ -1196,7 +1198,7 @@ svn_wc__internal_node_get_schedule(svn_wc_schedule_t *schedule,
   SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                &copyfrom_relpath, NULL, NULL, NULL, NULL,
-                               &has_base, &have_work, NULL, NULL,
+                               NULL, &have_work, NULL, NULL,
                                db, local_abspath, scratch_pool, scratch_pool));
 
   switch (status)
@@ -1256,7 +1258,7 @@ svn_wc__internal_node_get_schedule(svn_wc_schedule_t *schedule,
           if (status == svn_wc__db_status_added
               || strcmp(op_root_abspath, local_abspath) == 0)
             {
-              svn_boolean_t have_base, have_work;
+              svn_boolean_t have_base;
               svn_wc__db_status_t below_working;
               SVN_ERR(svn_wc__db_info_below_working(&have_base, &have_work,
                                                     &below_working,
@@ -1550,9 +1552,9 @@ svn_wc__node_get_origin(svn_boolean_t *is_copy,
     else if (status == svn_wc__db_status_deleted)
       {
         svn_boolean_t have_base;
-        svn_wc__db_status_t status;
         /* Is this a BASE or a WORKING delete? */
-        SVN_ERR(svn_wc__db_info_below_working(&have_base, &scan_working, &status,
+        SVN_ERR(svn_wc__db_info_below_working(&have_base, &scan_working,
+                                              &status,
                                               wc_ctx->db, local_abspath,
                                               scratch_pool));
       }
