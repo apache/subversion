@@ -64,6 +64,9 @@
 #
 #   APXS=/opt/svn/1.4.x/bin/apxs MODULE_PATH=/opt/svn/1.4.x/modules \ 
 #     subversion/tests/cmdline/davautocheck.sh
+#
+# To prevent the server from advertising httpv2, pass USE_HTTPV1 in
+# the environment.
 
 SCRIPTDIR=$(dirname $0)
 SCRIPT=$(basename $0)
@@ -147,6 +150,12 @@ unset HTTPS_PROXY
 [ -x $APXS ] || fail "Can't execute apxs executable $APXS"
 
 say "Using '$APXS'..."
+
+# Pick up $USE_HTTPV1
+ADVERTISE_V2_PROTOCOL=on
+if [ ${USE_HTTPV1:+set} ]; then
+ ADVERTISE_V2_PROTOCOL=off
+fi
 
 # Find the source and build directories. The build dir can be found if it is
 # the current working dir or the source dir.
@@ -313,6 +322,7 @@ CustomLog           "$HTTPD_ROOT/ops" "%t %u %{SVN-REPOS-NAME}e %{SVN-ACTION}e" 
   AuthName          "Subversion Repository"
   AuthUserFile      $HTTPD_USERS
   Require           valid-user
+  SVNAdvertiseV2Protocol ${ADVERTISE_V2_PROTOCOL}
 </Location>
 <Location /svn-test-work/local_tmp/repos>
   DAV               svn
@@ -322,6 +332,7 @@ CustomLog           "$HTTPD_ROOT/ops" "%t %u %{SVN-REPOS-NAME}e %{SVN-ACTION}e" 
   AuthName          "Subversion Repository"
   AuthUserFile      $HTTPD_USERS
   Require           valid-user
+  SVNAdvertiseV2Protocol ${ADVERTISE_V2_PROTOCOL}
 </Location>
 RedirectMatch permanent ^/svn-test-work/repositories/REDIRECT-PERM-(.*)\$ /svn-test-work/repositories/\$1
 RedirectMatch           ^/svn-test-work/repositories/REDIRECT-TEMP-(.*)\$ /svn-test-work/repositories/\$1
