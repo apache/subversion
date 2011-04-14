@@ -2121,7 +2121,7 @@ try_copy(const apr_array_header_t *sources,
                 {
                   const char *copyfrom_repos_root_url;
                   const char *copyfrom_repos_relpath;
-                  const char *copyfrom_url, *url;
+                  const char *url;
                   svn_revnum_t copyfrom_rev;
                   svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
