@@ -1095,18 +1095,32 @@ determine_lock_targets(apr_array_header_t **lock_targets,
             }
           else
             {
-              /* The old code did an ancestor check; lock the parent
-                 just to be sure */
+              /* Lock the parent to allow deleting the target */
               APR_ARRAY_PUSH(*lock_targets, const char *) 
                       = svn_dirent_dirname(target_abspath, result_pool);
             }
         }
-      else
+      else if (wc_targets->nelts > 1)
         {
-          SVN_ERR(svn_dirent_condense_targets(&common, NULL, wc_targets,
-                                              FALSE, result_pool, iterpool));
+          SVN_ERR(svn_dirent_condense_targets(&common, &wc_targets, wc_targets,
+                                              FALSE, iterpool, iterpool));
 
-          APR_ARRAY_PUSH(*lock_targets, const char *) = common;
+          qsort(wc_targets->elts, wc_targets->nelts, wc_targets->elt_size,
+                svn_sort_compare_paths);
+
+          if (wc_targets->nelts == 0
+              || !svn_path_is_empty(APR_ARRAY_IDX(wc_targets, 0, const char*))
+              || !strcmp(common, wcroot_abspath))
+            {
+              APR_ARRAY_PUSH(*lock_targets, const char *) 
+                    = apr_pstrdup(result_pool, common);
+            }
+          else
+            {
+              /* Lock the parent to allow deleting the target */
+              APR_ARRAY_PUSH(*lock_targets, const char *) 
+                       = svn_dirent_dirname(common, result_pool);
+            }
         }
     }
 
