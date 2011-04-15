@@ -183,7 +183,7 @@ detect_changed(apr_hash_t **changed,
 {
   apr_hash_t *changes;
   apr_hash_index_t *hi;
-  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_pool_t *subpool;
   svn_boolean_t found_readable = FALSE;
   svn_boolean_t found_unreadable = FALSE;
 
@@ -194,6 +194,8 @@ detect_changed(apr_hash_t **changed,
     /* No paths changed in this revision?  Uh, sure, I guess the
        revision is readable, then.  */
     return SVN_NO_ERROR;
+
+  subpool = svn_pool_create(pool);
 
   for (hi = apr_hash_first(pool, changes); hi; hi = apr_hash_next(hi))
     {
