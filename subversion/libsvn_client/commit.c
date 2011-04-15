@@ -940,27 +940,16 @@ post_process_commit_item(svn_wc_committed_queue_t *queue,
 
 
 static svn_error_t *
-check_nonrecursive_dir_delete(const char *target_path,
-                              svn_wc_context_t *wc_ctx,
+check_nonrecursive_dir_delete(svn_wc_context_t *wc_ctx,
+                              const char *target_abspath,
                               svn_depth_t depth,
-                              apr_pool_t *pool)
+                              apr_pool_t *scratch_pool)
 {
-  const char *target_abspath, *lock_abspath;
-  svn_boolean_t locked_here;
   svn_node_kind_t kind;
 
-  SVN_ERR(svn_dirent_get_absolute(&target_abspath, target_path, pool));
+  SVN_ERR(svn_wc_read_kind(&kind, wc_ctx, target_abspath, FALSE,
+                           scratch_pool));
 
-  SVN_ERR(svn_wc_read_kind(&kind, wc_ctx, target_abspath, FALSE, pool));
-  if (kind == svn_node_dir)
-    lock_abspath = target_abspath;
-  else
-    lock_abspath = svn_dirent_dirname(target_abspath, pool);
-
-  SVN_ERR(svn_wc_locked2(&locked_here, NULL, wc_ctx, lock_abspath, pool));
-  if (!locked_here)
-    return svn_error_create(SVN_ERR_WC_LOCKED, NULL,
-                           _("Are all targets part of the same working copy?"));
 
   /* ### TODO(sd): This check is slightly too strict.  It should be
      ### possible to:
@@ -982,20 +971,22 @@ check_nonrecursive_dir_delete(const char *target_path,
     {
       if (kind == svn_node_dir)
         {
-          svn_wc_status3_t *status;
+          svn_wc_schedule_t schedule;
 
           /* ### Looking at schedule is probably enough, no need for
                  pristine compare etc. */
-          SVN_ERR(svn_wc_status3(&status, wc_ctx, target_abspath, pool,
-                                 pool));
-          if (status->node_status == svn_wc_status_deleted ||
-              status->node_status == svn_wc_status_replaced)
+          SVN_ERR(svn_wc__node_get_schedule(&schedule, NULL,
+                                            wc_ctx, target_abspath,
+                                            scratch_pool));
+
+          if (schedule == svn_wc_schedule_delete
+              || schedule == svn_wc_schedule_replace)
             {
               const apr_array_header_t *children;
 
               SVN_ERR(svn_wc__node_get_children(&children, wc_ctx,
-                                                target_abspath, TRUE, pool,
-                                                pool));
+                                                target_abspath, TRUE,
+                                                scratch_pool, scratch_pool));
 
               if (children->nelts > 0)
                 return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
@@ -1219,26 +1210,21 @@ svn_client_commit5(const apr_array_header_t *targets,
                                                   base_abspath,
                                                   pool);
 
-  /*
-   * At this point, the working copy must be unlocked (if possible)
-   * before returning from this function. So we must now handle every
-   * error explicitly, rather than using SVN_ERR().
-   *
-   */
-
-  /* One day we might support committing from multiple working copies, but
-     we don't yet.  This check ensures that we don't silently commit a
-     subset of the targets.
-
-     At the same time, if a non-recursive commit is desired, do not
-     allow a deleted directory as one of the targets. */
-  for (i = 0; i < targets->nelts; i++)
+  /* If a non-recursive commit is desired, do not allow a deleted directory 
+     as one of the targets.   ### Why? With WC-NG there is no technical
+                                  reason to deny this and the caller
+                                  explicitly send us the target? */
+  for (i = 0; i < rel_targets->nelts; i++)
     {
-      const char *target_path = APR_ARRAY_IDX(targets, i, const char *);
+      const char *relpath = APR_ARRAY_IDX(targets, i, const char *);
+      const char *target_abspath;
 
       svn_pool_clear(iterpool);
+
+      target_abspath = svn_dirent_join(base_abspath, relpath, iterpool);
+
       cmt_err = svn_error_return(
-                    check_nonrecursive_dir_delete(target_path, ctx->wc_ctx,
+                    check_nonrecursive_dir_delete(ctx->wc_ctx, target_abspath,
                                                   depth, iterpool));
 
       if (cmt_err)
