@@ -228,7 +228,7 @@ if __name__ == '__main__':
 
   if len(sys.argv) != 3:
     print >>sys.stderr, usage
-    exit(1)
+    sys.exit(1)
 
   repo_dir = sys.argv[1]
   rev = sys.argv[2]
@@ -237,4 +237,4 @@ if __name__ == '__main__':
     fix_rev(repo_dir, rev)
   except FixError, e:
     print 'error:', e
-    exit(1)
+    sys.exit(1)
