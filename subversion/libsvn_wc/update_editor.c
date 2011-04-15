@@ -424,18 +424,15 @@ get_empty_tmp_file(const char **tmp_filename,
                    apr_pool_t *result_pool,
                    apr_pool_t *scratch_pool)
 {
-  const char *temp_dir_path;
-  apr_file_t *file;
+  const char *temp_dir_abspath;
 
-  SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir_path, db, wri_abspath,
+  SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir_abspath, db, wri_abspath,
                                          scratch_pool, scratch_pool));
-  SVN_ERR(svn_io_open_unique_file3(&file, tmp_filename, temp_dir_path,
+  SVN_ERR(svn_io_open_unique_file3(NULL, tmp_filename, temp_dir_abspath,
                                    svn_io_file_del_none,
                                    scratch_pool, scratch_pool));
-  SVN_ERR(svn_io_file_close(file, scratch_pool));
 
-  return svn_error_return(svn_dirent_get_absolute(tmp_filename, *tmp_filename,
-                                                  result_pool));
+  return SVN_NO_ERROR;
 }
 
 /* An APR pool cleanup handler.  This runs the log file for a
