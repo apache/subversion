@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+benchmark="$PWD/benchmark.py"
+
+parent="$(date +"%Y%m%d-%H%M%S")"
+inital_workdir="$PWD"
+mkdir "$parent"
+cd "$parent"
+pwd
+
+ORIGINAL_PATH="$PATH"
+
+use(){
+  svn="$1"
+  if [ "$svn" = "trunk" ]; then
+    export PATH="$HOME/pat/trunk/prefix/bin:$ORIGINAL_PATH"
+  else
+    export PATH="$HOME/pat/stable/prefix/bin:$ORIGINAL_PATH"
+  fi
+}
+
+
+batch(){
+  levels="$1"
+  spread="$2"
+  N="$3"
+  pre="${levels}x${spread}_"
+  use 1.6
+  "$benchmark" run ${pre}1.6 $levels $spread $N
+  use trunk
+  "$benchmark" run ${pre}trunk $levels $spread $N
+  echo 
+  echo "Results for dir levels: $levels  spread: $spread"
+  "$benchmark" compare ${pre}1.6 ${pre}trunk
+}
+
+N=6
+al=5
+as=5
+bl=100
+bs=1
+cl=1
+cs=100
+
+##DEBUG
+#N=1
+#al=1
+#as=1
+#bl=2
+#bs=1
+#cl=1
+#cs=2
+##DEBUG
+
+
+{
+started="$(date)"
+echo "Started at $started"
+echo 
+
+batch $al $as $N
+batch $bl $bs $N
+batch $cl $cs $N
+
+echo
+echo =========================================================================
+echo
+echo "calculating total of 1.6..."
+"$benchmark" combine *x*_1.6 total_1.6
+
+echo
+echo "calculating total of trunk..."
+"$benchmark" combine *x*_trunk total_trunk
+
+echo
+echo "comparing averaged totals..."
+"$benchmark" compare total_1.6 total_trunk
+
+echo
+echo "Had started at $started,"
+echo "       done at $(date)"
+pwd
+} 2>&1 | tee results.txt
+
+cd "$inital_workdir"
+if [ -f "$parent/total_trunk" ]; then
+  rm -rf "$parent"
+fi
