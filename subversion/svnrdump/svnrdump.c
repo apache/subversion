@@ -38,6 +38,7 @@
 
 #include "dump_editor.h"
 #include "load_editor.h"
+#include "svnrdump.h"
 
 #include "private/svn_cmdline_private.h"
 
