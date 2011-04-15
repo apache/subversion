@@ -11,11 +11,16 @@ if [ ! -d "$REPO_DIR" ] || [ "$START_REV" = "" ]; then
   exit 1
 fi
 
-YOUNGEST="$(svnlook youngest $REPO_DIR)"
+YOUNGEST="$(svnlook youngest "$REPO_DIR")"
+
+if [ "$YOUNGEST" = "" ]; then
+  echo "$0: error running 'svnlook youngest $REPO_DIR'"
+  exit 1
+fi
 
 echo "Verifying revisions $START_REV through $YOUNGEST."
 
-for REV in $(seq $START_REV $YOUNGEST); do
-  echo === r$REV
-  ./fixer/fix-rev.py "$REPO_DIR" $REV
+for ((REV=$START_REV; REV <= $YOUNGEST; REV++)); do
+  echo "=== r$REV"
+  ./fixer/fix-rev.py "$REPO_DIR" "$REV"
 done
