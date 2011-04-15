@@ -268,6 +268,25 @@ svn_wc__wq_build_pristine_get_translated(svn_skel_t **work_item,
                                          apr_pool_t *result_pool,
                                          apr_pool_t *scratch_pool);
 
+/* Handle the final post-commit step of retranslating and recording the
+   working copy state of a committed file.
+
+   If PROP_MODS is false, assume that properties are not changed.
+
+   (Property modifications are read when svn_wc__wq_build_file_commit
+    is called and processed when the working queue is being evaluated)
+
+    Allocate *work_item in RESULT_POOL. Perform temporary allocations
+    in SCRATCH_POOL.
+   */
+svn_error_t *
+svn_wc__wq_build_file_commit(svn_skel_t **work_item,
+                             svn_wc__db_t *db,
+                             const char *local_abspath,
+                             svn_boolean_t prop_mods,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
+
 svn_error_t *
 svn_wc__wq_add_deletion_postcommit(svn_wc__db_t *db,
                                    const char *local_abspath,
