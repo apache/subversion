@@ -174,14 +174,15 @@ do_dump_props(struct dump_edit_baton *eb,
               apr_pool_t *pool)
 {
   svn_stream_t *propstream;
+  apr_hash_t *normal_props;
 
   if (trigger_var && !*trigger_var)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_rdump__normalize_props(eb->props, eb->pool));
+  SVN_ERR(svn_rdump__normalize_props(&normal_props, eb->props, eb->pool));
   svn_stringbuf_setempty(eb->propstring);
   propstream = svn_stream_from_stringbuf(eb->propstring, eb->pool);
-  SVN_ERR(svn_hash_write_incremental(eb->props, eb->deleted_props,
+  SVN_ERR(svn_hash_write_incremental(normal_props, eb->deleted_props,
                                      propstream, "PROPS-END", pool));
   SVN_ERR(svn_stream_close(propstream));
 
