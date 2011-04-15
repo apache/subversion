@@ -614,7 +614,7 @@ log_do_committed(svn_wc__db_t *db,
             NULL, NULL, NULL, NULL, NULL, NULL,
             NULL, NULL, NULL, NULL, NULL, NULL,
             NULL, NULL, NULL, NULL,
-            NULL, NULL, NULL,
+            &prop_mods, NULL, NULL,
             NULL, NULL,
             db, local_abspath,
             scratch_pool, scratch_pool));
@@ -701,7 +701,6 @@ log_do_committed(svn_wc__db_t *db,
 
   /* Install the node's current working props as its new base props.
    * Remember some details about the prop changes, for later use. */
-  SVN_ERR(svn_wc__props_modified(&prop_mods, db, local_abspath, pool));
   if (prop_mods)
     {
       if (kind == svn_wc__db_kind_file)

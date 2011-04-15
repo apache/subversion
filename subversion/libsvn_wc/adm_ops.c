@@ -245,8 +245,6 @@ svn_wc__process_committed_internal(svn_wc__db_t *db,
 {
   svn_wc__db_kind_t kind;
 
-  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, TRUE, scratch_pool));
-
   SVN_ERR(process_committed_leaf(db, local_abspath, !top_of_recurse,
                                  new_revnum, new_date, rev_author,
                                  new_dav_cache,
@@ -254,18 +252,15 @@ svn_wc__process_committed_internal(svn_wc__db_t *db,
                                  sha1_checksum,
                                  scratch_pool));
 
+  /* Only check kind after processing the node itself. The node might
+     have been deleted */
+  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, TRUE, scratch_pool));
+
   if (recurse && kind == svn_wc__db_kind_dir)
     {
       const apr_array_header_t *children;
       apr_pool_t *iterpool = svn_pool_create(scratch_pool);
       int i;
-
-      /* Run the log. It might delete this node, leaving us nothing
-         more to do.  */
-      SVN_ERR(svn_wc__wq_run(db, local_abspath, NULL, NULL, iterpool));
-      SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, TRUE, iterpool));
-      if (kind == svn_wc__db_kind_unknown)
-        return SVN_NO_ERROR;  /* it got deleted!  */
 
       /* Read PATH's entries;  this is the absolute path. */
       SVN_ERR(svn_wc__db_read_children(&children, db, local_abspath,
@@ -327,11 +322,7 @@ svn_wc__process_committed_internal(svn_wc__db_t *db,
                                                      keep_changelist,
                                                      sha1_checksum,
                                                      queue, iterpool));
-
-          if (kind == svn_wc__db_kind_dir)
-            SVN_ERR(svn_wc__wq_run(db, this_abspath, NULL, NULL, iterpool));
         }
-
       svn_pool_destroy(iterpool);
    }
 
