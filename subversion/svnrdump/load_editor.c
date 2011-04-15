@@ -34,7 +34,7 @@
 #include "private/svn_repos_private.h"
 #include "private/svn_ra_private.h"
 
-#include "load_editor.h"
+#include "svnrdump.h"
 
 #define SVNRDUMP_PROP_LOCK SVN_PROP_PREFIX "rdump-lock"
 
@@ -44,6 +44,71 @@
 #define LDR_DBG(x) while(0)
 #endif
 
+
+
+/**
+ * General baton used by the parser functions.
+ */
+struct parse_baton
+{
+  const svn_delta_editor_t *commit_editor;
+  void *commit_edit_baton;
+  svn_ra_session_t *session;
+  svn_ra_session_t *aux_session;
+  const char *uuid;
+  const char *root_url;
+};
+
+/**
+ * Use to wrap the dir_context_t in commit.c so we can keep track of
+ * depth, relpath and parent for open_directory and close_directory.
+ */
+struct directory_baton
+{
+  void *baton;
+  const char *relpath;
+  int depth;
+  struct directory_baton *parent;
+};
+
+/**
+ * Baton used to represent a node; to be used by the parser
+ * functions. Contains a link to the revision baton.
+ */
+struct node_baton
+{
+  const char *path;
+  svn_node_kind_t kind;
+  enum svn_node_action action;
+
+  svn_revnum_t copyfrom_rev;
+  const char *copyfrom_path;
+
+  void *file_baton;
+  const char *base_checksum;
+
+  struct revision_baton *rb;
+};
+
+/**
+ * Baton used to represet a revision; used by the parser
+ * functions. Contains a link to the parser baton.
+ */
+struct revision_baton
+{
+  svn_revnum_t rev;
+  apr_hash_t *revprop_table;
+
+  const svn_string_t *datestamp;
+  const svn_string_t *author;
+
+  struct parse_baton *pb;
+  struct directory_baton *db;
+  apr_pool_t *pool;
+};
+
+
+
 static svn_error_t *
 commit_callback(const svn_commit_info_t *commit_info,
                 void *baton,
@@ -589,12 +654,12 @@ close_revision(void *baton)
 }
 
 svn_error_t *
-load_dumpstream(svn_stream_t *stream,
-                svn_ra_session_t *session,
-                svn_ra_session_t *aux_session,
-                svn_cancel_func_t cancel_func,
-                void *cancel_baton,
-                apr_pool_t *pool)
+svn_rdump__load_dumpstream(svn_stream_t *stream,
+                           svn_ra_session_t *session,
+                           svn_ra_session_t *aux_session,
+                           svn_cancel_func_t cancel_func,
+                           void *cancel_baton,
+                           apr_pool_t *pool)
 {
   svn_repos_parse_fns2_t *parser;
   struct parse_baton *parse_baton;

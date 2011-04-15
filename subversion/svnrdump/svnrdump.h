@@ -30,6 +30,7 @@
 #include "svn_pools.h"
 #include "svn_hash.h"
 #include "svn_delta.h"
+#include "svn_ra.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -46,6 +47,23 @@ svn_error_t *
 svn_rdump__get_dump_editor(const svn_delta_editor_t **editor,
                            void **edit_baton,
                            svn_stream_t *stream,
+                           svn_cancel_func_t cancel_func,
+                           void *cancel_baton,
+                           apr_pool_t *pool);
+
+
+/**
+ * Load the dumpstream carried in @a stream to the location described
+ * by @a session.  Use @a aux_session (which is opened to the same URL
+ * as @a session) for any secondary, out-of-band RA communications
+ * required.  Use @a pool for all memory allocations.  Use @a
+ * cancel_func and @a cancel_baton to check for user cancellation of
+ * the operation (for timely-but-safe termination).
+ */
+svn_error_t *
+svn_rdump__load_dumpstream(svn_stream_t *stream,
+                           svn_ra_session_t *session,
+                           svn_ra_session_t *aux_session,
                            svn_cancel_func_t cancel_func,
                            void *cancel_baton,
                            apr_pool_t *pool);
