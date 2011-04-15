@@ -1194,23 +1194,15 @@ svn_wc_set_changelist(const char *path,
 {
   const char *local_abspath;
   svn_wc_context_t *wc_ctx;
-  svn_error_t *err;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
                                          svn_wc__adm_get_db(adm_access),
                                          pool));
 
-  /* If the node is a directory, the old function always returned the error
-   * SVN_ERR_CLIENT_IS_DIRECTORY (despite this not being a client layer
-   * function and despite its doc string saying it would return
-   * SVN_ERR_UNSUPPORTED_FEATURE). */
-  err = svn_wc_set_changelist2(wc_ctx, local_abspath, changelist, NULL,
-                               cancel_func, cancel_baton, notify_func,
-                               notify_baton, pool);
-  if (err && err->apr_err == SVN_ERR_WC_NOT_FILE)
-    err->apr_err = SVN_ERR_CLIENT_IS_DIRECTORY;
-  SVN_ERR(err);
+  SVN_ERR(svn_wc_set_changelist2(wc_ctx, local_abspath, changelist, NULL,
+                                 cancel_func, cancel_baton, notify_func,
+                                 notify_baton, pool));
 
   return svn_error_return(svn_wc_context_destroy(wc_ctx));
 }
