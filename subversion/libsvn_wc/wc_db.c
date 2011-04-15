@@ -3951,7 +3951,7 @@ op_revert_recursive_txn(void *baton,
       SVN_ERR(svn_sqlite__reset(stmt));
 
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_DELETE_ACTUAL_ONLY_RECURSIVE));
+                                        STMT_DELETE_ACTUAL_NODE_RECURSIVE));
       SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id,
                                 local_relpath, like_arg));
       SVN_ERR(svn_sqlite__step(&affected_rows, stmt));
