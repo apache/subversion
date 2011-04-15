@@ -36,7 +36,6 @@
 #include "svn_string.h"
 #include "svn_props.h"
 
-#include "dump_editor.h"
 #include "load_editor.h"
 #include "svnrdump.h"
 
@@ -350,8 +349,8 @@ replay_revisions(svn_ra_session_t *session,
 
   SVN_ERR(svn_stream_for_stdout(&stdout_stream, pool));
 
-  SVN_ERR(get_dump_editor(&dump_editor, &dump_baton, stdout_stream,
-                          check_cancel, NULL, pool));
+  SVN_ERR(svn_rdump__get_dump_editor(&dump_editor, &dump_baton, stdout_stream,
+                                     check_cancel, NULL, pool));
 
   replay_baton = apr_pcalloc(pool, sizeof(*replay_baton));
   replay_baton->editor = dump_editor;

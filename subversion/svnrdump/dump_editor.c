@@ -32,8 +32,6 @@
 
 #include "private/svn_fspath.h"
 
-#include "dump_editor.h"
-
 #include "svnrdump.h"
 
 #define ARE_VALID_COPY_ARGS(p,r) ((p) && SVN_IS_VALID_REVNUM(r))
@@ -43,6 +41,40 @@
 #else
 #define LDR_DBG(x) while(0)
 #endif
+
+/* A directory baton used by all directory-related callback functions
+ * in the dump editor.  */
+struct dir_baton
+{
+  struct dump_edit_baton *eb;
+  struct dir_baton *parent_dir_baton;
+
+  /* is this directory a new addition to this revision? */
+  svn_boolean_t added;
+
+  /* has this directory been written to the output stream? */
+  svn_boolean_t written_out;
+
+  /* the absolute path to this directory */
+  const char *abspath; /* an fspath */
+
+  /* Copyfrom info for the node, if any. */
+  const char *copyfrom_path; /* a relpath */
+  svn_revnum_t copyfrom_rev;
+
+  /* Hash of paths that need to be deleted, though some -might- be
+     replaced.  Maps const char * paths to this dir_baton. Note that
+     they're full paths, because that's what the editor driver gives
+     us, although they're all really within this directory. */
+  apr_hash_t *deleted_entries;
+};
+
+/* A handler baton to be used in window_handler().  */
+struct handler_baton
+{
+  svn_txdelta_window_handler_t apply_handler;
+  void *apply_baton;
+};
 
 /* The baton used by the dump editor. */
 struct dump_edit_baton {
@@ -814,12 +846,12 @@ close_edit(void *edit_baton, apr_pool_t *pool)
 }
 
 svn_error_t *
-get_dump_editor(const svn_delta_editor_t **editor,
-                void **edit_baton,
-                svn_stream_t *stream,
-                svn_cancel_func_t cancel_func,
-                void *cancel_baton,
-                apr_pool_t *pool)
+svn_rdump__get_dump_editor(const svn_delta_editor_t **editor,
+                           void **edit_baton,
+                           svn_stream_t *stream,
+                           svn_cancel_func_t cancel_func,
+                           void *cancel_baton,
+                           apr_pool_t *pool)
 {
   struct dump_edit_baton *eb;
   svn_delta_editor_t *de;
