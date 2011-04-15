@@ -650,10 +650,10 @@ change_dir_prop(void *parent_baton,
       db->written_out = TRUE;
     }
 
-  /* Dump props whether or not the directory has been written
-     out. Then disable printing a couple of extra newlines */
-  SVN_ERR(do_dump_props(db->eb, NULL, TRUE, pool));
+  /* Make sure we eventually output the props, and disable printing
+     a couple of extra newlines */
   db->eb->dump_newlines = FALSE;
+  db->eb->dump_props = TRUE;
 
   return SVN_NO_ERROR;
 }
