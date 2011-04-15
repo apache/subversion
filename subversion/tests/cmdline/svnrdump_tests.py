@@ -335,7 +335,6 @@ def descend_into_replace_load(sbox):
   "load: descending into replaced dir looks in src"
   run_load_test(sbox, "descend-into-replace.dump")
 
-@XFail()
 @Issue(3847)
 def add_multi_prop_dump(sbox):
   "dump: add with multiple props"
