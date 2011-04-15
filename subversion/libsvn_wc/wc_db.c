@@ -6289,61 +6289,6 @@ svn_wc__db_read_children_of_working_node(const apr_array_header_t **children,
                           result_pool, scratch_pool);
 }
 
-
-svn_error_t *
-svn_wc__db_read_replaced_children(const apr_array_header_t **children,
-                                  svn_wc__db_t *db,
-                                  const char *local_abspath,
-                                  apr_pool_t *result_pool,
-                                  apr_pool_t *scratch_pool)
-{
-  svn_wc__db_wcroot_t *wcroot;
-  const char *local_relpath;
-  apr_int64_t op_depth;
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
-  apr_array_header_t *result
-    = apr_array_make(result_pool, 0, sizeof(const char *));
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
-                                                db, local_abspath,
-                                                scratch_pool, scratch_pool));
-  VERIFY_USABLE_WCROOT(wcroot);
-
-  /* Gather deleted children with smaller or equal op_depth as this
-   * added node, for which no rows with greater op_depth exist.
-   *
-   * Any such children were deleted as part of a replace operation -- either
-   * on this directory (equal op_depth), or a parent directory (smaller
-   * op_depth; this implies that this added node is a nested replacement).
-   * Children deleted post-replace have a higher op_depth.
-   *
-   * It's OK if we find no children -- either this was a plain addition,
-   * or the replaced directory was empty. */
-  SVN_ERR(op_depth_of(&op_depth, wcroot, local_relpath));
-  SVN_ERR(svn_sqlite__get_statement(
-            &stmt, wcroot->sdb, STMT_SELECT_REPLACED_CHILDREN_FOR_DELETION));
-  SVN_ERR(svn_sqlite__bindf(stmt, "isi", wcroot->wc_id, local_relpath,
-                            op_depth));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  while (have_row)
-    {
-      const char *child_relpath = svn_sqlite__column_text(stmt, 0, NULL);
-
-      /* Allocate the name in RESULT_POOL so we won't have to copy it. */
-      APR_ARRAY_PUSH(result, const char *)
-        = svn_relpath_basename(child_relpath, result_pool);
-
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
-    }
-  SVN_ERR(svn_sqlite__reset(stmt));
-
-  *children = result;
-  return SVN_NO_ERROR;
-}
-
 /* Baton for check_replace_txn */
 struct check_replace_baton
 {
@@ -6867,7 +6812,26 @@ commit_node(void *baton,
   SVN_ERR(svn_sqlite__reset(stmt_info));
   SVN_ERR(svn_sqlite__reset(stmt_act));
 
-  /* Update the BASE_NODE row with all the new information.  */
+  /* Do we commit a shadowing operation? */
+  if (op_depth > 0)
+    {
+      svn_sqlite__stmt_t *delete_stmt;
+
+      SVN_ERR(svn_sqlite__get_statement(&delete_stmt, wcroot->sdb,
+                                        STMT_DELETE_SHADOWED_RECURSIVE));
+
+      SVN_ERR(svn_sqlite__bindf(delete_stmt,
+                                "issi", 
+                                wcroot->wc_id,
+                                local_relpath,
+                                construct_like_arg(local_relpath,
+                                                   scratch_pool),
+                                op_depth));
+
+      SVN_ERR(svn_sqlite__step_done(delete_stmt));
+    }
+
+  /* Update or add the BASE_NODE row with all the new information.  */
 
   if (*local_relpath == '\0')
     parent_relpath = NULL;
@@ -6904,7 +6868,10 @@ commit_node(void *baton,
   if (op_depth > 0)
     {
       /* This removes all op_depth > 0 and so does both layers of a
-         two-layer replace. */
+         two-layer replace. 
+
+         Do this now, or we will remove the newly added base node. */
+
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_DELETE_ALL_WORKING_NODES));
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
@@ -6956,12 +6923,6 @@ commit_node(void *baton,
                                         STMT_DELETE_LOCK));
       SVN_ERR(svn_sqlite__bindf(lock_stmt, "is", repos_id, repos_relpath));
       SVN_ERR(svn_sqlite__step_done(lock_stmt));
-    }
-
-  if (op_depth > 0)
-    {
-      /* ### Remove all nodes of children with op_depth < 0
-         ### (and then potentially left over base-deleteds) */
     }
 
   /* Install any work items into the queue, as part of this transaction.  */

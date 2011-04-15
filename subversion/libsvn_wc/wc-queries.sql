@@ -162,13 +162,15 @@ UNION
 SELECT 1 FROM ACTUAL_NODE
 WHERE wc_id = ?1 AND parent_relpath = ?2
 
--- STMT_SELECT_REPLACED_CHILDREN_FOR_DELETION
-SELECT local_relpath FROM nodes
-WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth <= ?3
-  AND presence = 'base-deleted'
-  AND local_relpath NOT IN (
-    SELECT local_relpath FROM nodes
-    WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth > ?3)
+-- STMT_DELETE_SHADOWED_RECURSIVE
+DELETE FROM nodes
+WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
+  AND (op_depth < ?4
+       OR (presence = 'base-deleted'
+           AND op_depth = (SELECT MIN(op_depth) FROM nodes f
+                           WHERE f.wc_id = nodes.wc_id 
+                             AND f.local_relpath = nodes.local_relpath
+                             AND f.op_depth >= ?4)))
 
 -- STMT_SELECT_NODE_CHILDREN
 /* Return all paths that are children of the directory (?1, ?2) in any
