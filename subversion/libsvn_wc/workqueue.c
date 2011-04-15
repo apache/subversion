@@ -42,11 +42,7 @@
 
 /* Workqueue operation names.  */
 #define OP_BASE_REMOVE "base-remove"
-#define OP_DELETION_POSTCOMMIT "deletion-postcommit"
-/* Arguments of OP_POSTCOMMIT:
- *   (local_abspath, revnum, date, [author], [checksum],
- *    [dav_cache/wc_props], keep_changelist, no_unlock, changed_rev). */
-#define OP_POSTCOMMIT "postcommit"
+#define OP_FILE_COMMIT "file-commit"
 #define OP_FILE_INSTALL "file-install"
 #define OP_FILE_REMOVE "file-remove"
 #define OP_FILE_MOVE "file-move"
@@ -58,6 +54,10 @@
 #define OP_TMP_SET_PROPERTY_CONFLICT_MARKER "tmp-set-property-conflict-marker"
 #define OP_PRISTINE_GET_TRANSLATED "pristine-get-translated"
 #define OP_POSTUPGRADE "postupgrade"
+
+/* To be removed */
+#define OP_DELETION_POSTCOMMIT "deletion-postcommit"
+#define OP_POSTCOMMIT "postcommit"
 
 /* For work queue debugging. Generates output about its operation.  */
 /* #define DEBUG_WORK_QUEUE */
@@ -575,6 +575,58 @@ install_committed_file(svn_boolean_t *overwrote_working,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+process_commit_file_install(svn_wc__db_t *db,
+                       const char *local_abspath,
+                       svn_boolean_t remove_executable,
+                       svn_boolean_t set_read_write,
+                       svn_cancel_func_t cancel_func,
+                       void *cancel_baton,
+                       apr_pool_t *scratch_pool)
+{
+  svn_boolean_t overwrote_working;
+
+  /* Install the new file, which may involve expanding keywords.
+     A copy of this file should have been dropped into our `tmp/text-base'
+     directory during the commit process.  Part of this process
+     involves recording the textual timestamp for this entry.  We'd like
+     to just use the timestamp of the working file, but it is possible
+     that at some point during the commit, the real working file might
+     have changed again. 
+   */
+
+  SVN_ERR(install_committed_file(&overwrote_working, db,
+                                 local_abspath,
+                                 remove_executable, set_read_write,
+                                 cancel_func, cancel_baton,
+                                 scratch_pool));
+
+  /* We will compute and modify the size and timestamp */
+  if (overwrote_working)
+    {
+      apr_finfo_t finfo;
+
+      SVN_ERR(svn_io_stat(&finfo, local_abspath,
+                          APR_FINFO_MIN | APR_FINFO_LINK, scratch_pool));
+      SVN_ERR(svn_wc__db_global_record_fileinfo(db, local_abspath,
+                                                finfo.size, finfo.mtime,
+                                                scratch_pool));
+    }
+  else
+    {
+      svn_boolean_t modified;
+
+      /* The working copy file hasn't been overwritten.  We just
+       removed the translated size and working time from the nodes
+       record by calling svn_wc__db_global_commit, so we can use
+       svn_wc__internal_file_modified_p's internal logic to
+       "repair" them if the file is unmodified */
+      SVN_ERR(svn_wc__internal_file_modified_p(&modified, NULL, NULL,
+                                               db, local_abspath,
+                                               TRUE, FALSE, scratch_pool));
+    }
+  return SVN_NO_ERROR;
+}
 
 /* Set the base version of the node LOCAL_ABSPATH to be the same as its
  * working version currently is:
@@ -603,8 +655,6 @@ log_do_committed(svn_wc__db_t *db,
   apr_pool_t *pool = scratch_pool;
   svn_wc__db_kind_t kind;
   svn_wc__db_status_t status;
-  svn_boolean_t remove_executable = FALSE;
-  svn_boolean_t set_read_write = FALSE;
   svn_boolean_t prop_mods;
 
   /* ### this gets the *intended* kind. for now, this also matches any
@@ -631,42 +681,16 @@ log_do_committed(svn_wc__db_t *db,
 
   /*** Mark the committed item committed-to-date ***/
 
-  /* Install the node's current working props as its new base props.
-   * Remember some details about the prop changes, for later use. */
-  if (prop_mods)
-    {
-      if (kind == svn_wc__db_kind_file)
-        {
-          /* Examine propchanges here before installing the new
-             propbase.  If the executable prop was -deleted-, remember
-             this by setting REMOVE_EXECUTABLE so that we can later
-             tell install_committed_file() so.  The same applies to the
-             needs-lock property, remembered by setting SET_READ_WRITE. */
-          int i;
-          apr_array_header_t *propchanges;
-
-          SVN_ERR(svn_wc__internal_propdiff(&propchanges, NULL, db,
-                                            local_abspath, pool, pool));
-          for (i = 0; i < propchanges->nelts; i++)
-            {
-              svn_prop_t *propchange
-                = &APR_ARRAY_IDX(propchanges, i, svn_prop_t);
-
-              if ((! strcmp(propchange->name, SVN_PROP_EXECUTABLE))
-                  && (propchange->value == NULL))
-                remove_executable = TRUE;
-              else if ((! strcmp(propchange->name, SVN_PROP_NEEDS_LOCK))
-                       && (propchange->value == NULL))
-                set_read_write = TRUE;
-            }
-        }
-    }
-
   /* If it's a file, install the tree changes and the file's text. */
   if (kind == svn_wc__db_kind_file
       || kind == svn_wc__db_kind_symlink)
     {
-      svn_boolean_t overwrote_working;
+      svn_skel_t *work_item;
+
+      SVN_ERR(svn_wc__wq_build_file_commit(&work_item,
+                                           db, local_abspath,
+                                           prop_mods,
+                                           pool, pool));
 
       SVN_ERR(svn_wc__db_global_commit(db, local_abspath,
                                        new_revision, changed_rev,
@@ -676,50 +700,9 @@ log_do_committed(svn_wc__db_t *db,
                                        new_dav_cache,
                                        keep_changelist,
                                        no_unlock,
-                                       NULL /* work_items */,
+                                       work_item,
                                        pool));
 
-      /* Install the new file, which may involve expanding keywords.
-         A copy of this file should have been dropped into our `tmp/text-base'
-         directory during the commit process.  Part of this process
-         involves setting the textual timestamp for this entry.  We'd like
-         to just use the timestamp of the working file, but it is possible
-         that at some point during the commit, the real working file might
-         have changed again.  If that has happened, we'll use the
-         timestamp of the copy of this file in `tmp/text-base' (which
-         by then will have moved to `text-base'. */
-
-      SVN_ERR(install_committed_file(&overwrote_working, db,
-                                     local_abspath,
-                                     remove_executable, set_read_write,
-                                     cancel_func, cancel_baton,
-                                     pool));
-
-      /* We will compute and modify the size and timestamp */
-      if (overwrote_working)
-        {
-          apr_finfo_t finfo;
-
-          SVN_ERR(svn_io_stat(&finfo, local_abspath,
-                              APR_FINFO_MIN | APR_FINFO_LINK, pool));
-          SVN_ERR(svn_wc__db_global_record_fileinfo(db, local_abspath,
-                                                    finfo.size, finfo.mtime,
-                                                    pool));
-        }
-      else
-        {
-          svn_boolean_t modified;
-
-          /* The working copy file hasn't been overwritten.  We just
-           removed the translated size and working time from the nodes
-           record by calling svn_wc__db_global_commit, so we can use
-           svn_wc__internal_file_modified_p's internal logic to
-           "repair" them if the file is unmodified */
-          SVN_ERR(svn_wc__internal_file_modified_p(&modified, NULL, NULL,
-                                                   db, local_abspath,
-                                                   TRUE, FALSE, pool));
-
-        }
       return SVN_NO_ERROR;
     }
 
@@ -872,6 +855,93 @@ svn_wc__wq_add_postcommit(svn_wc__db_t *db,
   svn_skel__prepend_str(OP_POSTCOMMIT, work_item, scratch_pool);
 
   SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* ------------------------------------------------------------------------ */
+
+/* OP_FILE_COMMIT  */
+static svn_error_t *
+run_file_commit(svn_wc__db_t *db,
+                const svn_skel_t *work_item,
+                const char *wri_abspath,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                apr_pool_t *scratch_pool)
+{
+  const svn_skel_t *arg1 = work_item->children->next;
+  const char *local_relpath;
+  const char *local_abspath;
+  svn_boolean_t remove_executable;
+  svn_boolean_t set_read_write;
+  apr_int64_t v;
+
+  local_relpath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
+  SVN_ERR(svn_wc__db_from_relpath(&local_abspath, db, wri_abspath,
+                                  local_relpath, scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_skel__parse_int(&v, arg1->next, scratch_pool));
+  set_read_write = (v != 0);
+
+  SVN_ERR(svn_skel__parse_int(&v, arg1->next, scratch_pool));
+  remove_executable = (v != 0);
+
+  return svn_error_return(
+                process_commit_file_install(db, local_abspath,
+                                            remove_executable,
+                                            set_read_write,
+                                            cancel_func, cancel_baton,
+                                            scratch_pool));
+}
+
+svn_error_t *
+svn_wc__wq_build_file_commit(svn_skel_t **work_item,
+                             svn_wc__db_t *db,
+                             const char *local_abspath,
+                             svn_boolean_t props_mod,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
+{
+  svn_boolean_t remove_executable = FALSE;
+  svn_boolean_t set_read_write = FALSE;
+  const char *local_relpath;
+  *work_item = svn_skel__make_empty_list(result_pool);
+
+  {
+    /* Examine propchanges here before installing the new properties in BASE
+       If the executable prop was -deleted-, remember this by setting
+       REMOVE_EXECUTABLE so that we can later tell install_committed_file() so.
+       The same applies to the needs-lock property, remembered by
+       setting SET_READ_WRITE. */
+
+    int i;
+    apr_array_header_t *propchanges;
+
+    SVN_ERR(svn_wc__internal_propdiff(&propchanges, NULL, db, local_abspath,
+                                      scratch_pool, scratch_pool));
+
+    for (i = 0; i < propchanges->nelts; i++)
+      {
+        svn_prop_t *propchange = &APR_ARRAY_IDX(propchanges, i, svn_prop_t);
+
+        if ((! strcmp(propchange->name, SVN_PROP_EXECUTABLE))
+            && (propchange->value == NULL))
+          remove_executable = TRUE;
+        else if ((! strcmp(propchange->name, SVN_PROP_NEEDS_LOCK))
+                 && (propchange->value == NULL))
+          set_read_write = TRUE;
+      }
+  }
+
+  SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath,
+                                result_pool, scratch_pool));
+
+  svn_skel__prepend_int(remove_executable, *work_item, result_pool);
+  svn_skel__prepend_int(set_read_write, *work_item, result_pool);
+  svn_skel__prepend_str(local_relpath, *work_item, result_pool);
+
+  svn_skel__prepend_str(OP_FILE_COMMIT, *work_item, result_pool);
 
   return SVN_NO_ERROR;
 }
@@ -1690,8 +1760,7 @@ svn_wc__wq_build_pristine_get_translated(svn_skel_t **work_item,
 /* ------------------------------------------------------------------------ */
 
 static const struct work_item_dispatch dispatch_table[] = {
-  { OP_DELETION_POSTCOMMIT, run_deletion_postcommit },
-  { OP_POSTCOMMIT, run_postcommit },
+  { OP_FILE_COMMIT, run_file_commit },
   { OP_FILE_INSTALL, run_file_install },
   { OP_FILE_REMOVE, run_file_remove },
   { OP_FILE_MOVE, run_file_move },
@@ -1703,7 +1772,13 @@ static const struct work_item_dispatch dispatch_table[] = {
   { OP_TMP_SET_TEXT_CONFLICT_MARKERS, run_set_text_conflict_markers },
   { OP_TMP_SET_PROPERTY_CONFLICT_MARKER, run_set_property_conflict_marker },
   { OP_PRISTINE_GET_TRANSLATED, run_pristine_get_translated },
+
+  /* Upgrade steps */
   { OP_POSTUPGRADE, run_postupgrade },
+
+  /* To be removed (probably on next format bump) */
+  { OP_DELETION_POSTCOMMIT, run_deletion_postcommit },
+  { OP_POSTCOMMIT, run_postcommit },
 
   /* Sentinel.  */
   { NULL }
