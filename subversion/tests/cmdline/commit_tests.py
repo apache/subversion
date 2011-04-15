@@ -2802,6 +2802,21 @@ def tree_conflicts_resolved(sbox):
   expected_status.wc_dir = wc_dir_2
   svntest.actions.run_and_verify_status(wc_dir_2, expected_status)
 
+#----------------------------------------------------------------------
+@XFail()
+def commit_multiple_nested_deletes(sbox):
+  "committing multiple nested deletes"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  A = os.path.join(wc_dir, 'A')
+  A_B = os.path.join(A, 'B')
+
+  sbox.simple_rm('A')
+
+  svntest.main.run_svn(None, 'ci', A, A_B, '-m', 'Q')
+
 
 ########################################################################
 # Run the tests
@@ -2870,6 +2885,7 @@ test_list = [ None,
               commit_added_missing,
               tree_conflicts_block_commit,
               tree_conflicts_resolved,
+              commit_multiple_nested_deletes,
              ]
 
 if __name__ == '__main__':
