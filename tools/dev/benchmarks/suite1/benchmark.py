@@ -488,83 +488,86 @@ def write_to_file(file_path, instance):
   cPickle.dump(instance, f)
   f.close()
 
+def cmd_compare(path1, path2):
+  t1 = read_from_file(path1)
+  t2 = read_from_file(path2)
+
+  print t1.summary()
+  print '---'
+  print t2.summary()
+  print '---'
+  print t2.compare_to(t1)
+
+def cmd_combine(dest, *paths):
+  total = Timings('--version');
+
+  for path in paths:
+    t = read_from_file(path)
+    total.add(t)
+
+  print total.summary()
+  write_to_file(dest, total)
+
+def cmd_run(timings_path, levels, spread, N=1):
+  levels = int(levels)
+  spread = int(spread)
+  N = int(N)
+      
+  print '\n\nHi, going to run a Subversion benchmark series of %d runs...' % N
+
+  ### UGH! should pass to run()
+  global timings
+
+  if os.path.isfile(timings_path):
+    print 'Going to add results to existing file', timings_path
+    timings = read_from_file(timings_path)
+  else:
+    print 'Going to write results to new file', timings_path
+    timings = Timings('--version')
+
+  run(levels, spread, N)
+
+  write_to_file(timings_path, timings)
+
+def cmd_show(*paths):
+  for timings_path in paths:
+    timings = read_from_file(timings_path)
+    print '---\n%s' % timings_path
+    print timings.summary()
+
+
 def usage():
   print __doc__
 
 if __name__ == '__main__':
-  if len(sys.argv) > 1 and 'compare'.startswith(sys.argv[1]):
-    if len(sys.argv) < 4:
+  if len(sys.argv) < 2:
+    usage()
+    exit(1)
+
+  cmd = sys.argv[1]
+  if cmd == 'compare':
+    if len(sys.argv) != 4:
       usage()
       exit(1)
-    
-    p1,p2 = sys.argv[2:4]
+    cmd_compare(*sys.argv[2:])
 
-    t1 = read_from_file(p1)
-    t2 = read_from_file(p2)
-
-    print t1.summary()
-    print '---'
-    print t2.summary()
-    print '---'
-    print t2.compare_to(t1)
-
-  elif len(sys.argv) > 1 and 'combine'.startswith(sys.argv[1]):
+  elif cmd == 'combine':
     if len(sys.argv) < 5:
       usage()
       exit(1)
-    
-    dest = sys.argv[-1]
-    paths = sys.argv[2:-1]
+    cmd_combine(*sys.argv[2:])
 
-    total = Timings('--version');
-
-    for path in paths:
-      t = read_from_file(path)
-      total.add(t)
-
-    print total.summary()
-    write_to_file(dest, total)
-
-
-
-  elif len(sys.argv) > 1 and 'run'.startswith(sys.argv[1]):
-    try:
-      timings_path = sys.argv[2]
-      levels = int(sys.argv[3])
-      spread = int(sys.argv[4])
-
-      if len(sys.argv) > 5:
-        N = int(sys.argv[5])
-      else:
-        N = 1
-    except:
-      usage()
-      raise
-
-      
-    print '\n\nHi, going to run a Subversion benchmark series of %d runs...' % N
-
-    if os.path.isfile(timings_path):
-      print 'Going to add results to existing file', timings_path
-      timings = read_from_file(timings_path)
-    else:
-      print 'Going to write results to new file', timings_path
-      timings = Timings('--version')
-
-    run(levels, spread, N)
-
-    write_to_file(timings_path, timings)
-
-
-  elif len(sys.argv) > 1 and 'show'.startswith(sys.argv[1]):
-    if len(sys.argv) < 2:
+  elif cmd == 'run':
+    if len(sys.argv) < 5 or len(sys.argv) > 6:
       usage()
       exit(1)
-      
-    for timings_path in sys.argv[2:]:
-      timings = read_from_file(timings_path)
-      print '---\n%s' % timings_path
-      print timings.summary()
+    cmd_run(*sys.argv[2:])
 
-  else: usage()
+  elif cmd == 'show':
+    if len(sys.argv) < 3:
+      usage()
+      exit(1)
+    cmd_show(*sys.argv[2:])
 
+  else:
+    usage()
