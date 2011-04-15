@@ -81,8 +81,7 @@ typedef struct committed_queue_item_t
   svn_boolean_t no_unlock;
   svn_boolean_t keep_changelist;
 
-  /* The pristine text checksum(s). Either or both may be present. */
-  const svn_checksum_t *md5_checksum;
+  /* The pristine text checksum. */
   const svn_checksum_t *sha1_checksum;
 
   apr_hash_t *new_dav_cache;
@@ -233,7 +232,6 @@ svn_wc__process_committed_internal(svn_wc__db_t *db,
                                    apr_hash_t *new_dav_cache,
                                    svn_boolean_t no_unlock,
                                    svn_boolean_t keep_changelist,
-                                   const svn_checksum_t *md5_checksum,
                                    const svn_checksum_t *sha1_checksum,
                                    const svn_wc_committed_queue_t *queue,
                                    apr_pool_t *scratch_pool)
@@ -293,7 +291,6 @@ svn_wc__process_committed_internal(svn_wc__db_t *db,
           if (status == svn_wc__db_status_excluded)
             continue;
 
-          md5_checksum = NULL;
           sha1_checksum = NULL;
           if (kind != svn_wc__db_kind_dir)
             {
@@ -305,7 +302,6 @@ svn_wc__process_committed_internal(svn_wc__db_t *db,
 
                   if (cqi != NULL)
                     {
-                      md5_checksum = cqi->md5_checksum;
                       sha1_checksum = cqi->sha1_checksum;
                     }
                 }
@@ -322,7 +318,6 @@ svn_wc__process_committed_internal(svn_wc__db_t *db,
                                                      NULL,
                                                      TRUE /* no_unlock */,
                                                      keep_changelist,
-                                                     md5_checksum,
                                                      sha1_checksum,
                                                      queue, iterpool));
 
@@ -381,7 +376,6 @@ svn_wc_queue_committed3(svn_wc_committed_queue_t *queue,
                         const apr_array_header_t *wcprop_changes,
                         svn_boolean_t remove_lock,
                         svn_boolean_t remove_changelist,
-                        const svn_checksum_t *md5_checksum,
                         const svn_checksum_t *sha1_checksum,
                         apr_pool_t *scratch_pool)
 {
@@ -401,7 +395,6 @@ svn_wc_queue_committed3(svn_wc_committed_queue_t *queue,
   cqi->recurse = recurse;
   cqi->no_unlock = !remove_lock;
   cqi->keep_changelist = !remove_changelist;
-  cqi->md5_checksum = md5_checksum;
   cqi->sha1_checksum = sha1_checksum;
   cqi->new_dav_cache = svn_wc__prop_array_to_hash(wcprop_changes, queue->pool);
 
@@ -482,7 +475,6 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
                                                  cqi->new_dav_cache,
                                                  cqi->no_unlock,
                                                  cqi->keep_changelist,
-                                                 cqi->md5_checksum,
                                                  cqi->sha1_checksum, queue,
                                                  iterpool));
 

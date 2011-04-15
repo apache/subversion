@@ -4761,15 +4761,9 @@ svn_wc_committed_queue_create(apr_pool_t *pool);
  * If @a remove_changelist is @c TRUE, any association with a
  * changelist will be removed.
  *
- * If @a local_abspath is a file and @a md5_checksum is non-NULL, use @a md5_checksum
- * as the checksum for the new text base. Otherwise, calculate the checksum
- * if needed.
- *   ### [JAF]  No, it doesn't calculate the checksum, it stores null in wc.db:
- *   ### see svn_wc__process_committed_internal().
  *
- * If @a sha1_checksum is non-NULL, use it instead of @a md5_checksum to
- * identify the node's pristine text.
- * ### NOT YET IMPLEMENTED.
+ * If @a sha1_checksum is non-NULL, use it to identify the node's pristine
+ * text.
  *
  * If @a recurse is TRUE and @a local_abspath is a directory, then bump every
  * versioned object at or under @a local_abspath.  This is usually done for
@@ -4781,13 +4775,11 @@ svn_wc_committed_queue_create(apr_pool_t *pool);
  *       'wcprop_changes' = NULL;
  *       'remove_lock' = FALSE;
  *       'remove_changelist' from the recursive parent item;
- *       'md5_checksum' from the child item in the queue;
  *     and any children (at any depth) of that directory that are NOT in
  *     the queue as separate items will get:
  *       'wcprop_changes' = NULL;
  *       'remove_lock' = FALSE;
  *       'remove_changelist' from the recursive parent item;
- *       'md5_checksum' = NULL  ### means what?
  *
  * @note the @a recurse parameter should be used with extreme care since
  * it will bump ALL nodes under the directory, regardless of their
@@ -4810,7 +4802,6 @@ svn_wc_queue_committed3(svn_wc_committed_queue_t *queue,
                         const apr_array_header_t *wcprop_changes,
                         svn_boolean_t remove_lock,
                         svn_boolean_t remove_changelist,
-                        const svn_checksum_t *md5_checksum,
                         const svn_checksum_t *sha1_checksum,
                         apr_pool_t *scratch_pool);
 
