@@ -30,17 +30,17 @@
 #include "svnrdump.h"
 
 
-/* Normalize the line ending style of the values of properties in PROPS
- * that "need translation" (according to svn_prop_needs_translation(),
- * currently all svn:* props) so that they contain only LF (\n) line endings.
- */
 svn_error_t *
-svn_rdump__normalize_props(apr_hash_t *props,
-                           apr_pool_t *pool)
+svn_rdump__normalize_props(apr_hash_t **normal_props,
+                           apr_hash_t *props,
+                           apr_pool_t *result_pool)
 {
   apr_hash_index_t *hi;
 
-  for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
+  *normal_props = apr_hash_make(result_pool);
+
+  for (hi = apr_hash_first(result_pool, props); hi;
+        hi = apr_hash_next(hi))
     {
       const char *key = svn__apr_hash_index_key(hi);
       const svn_string_t *value = svn__apr_hash_index_val(hi);
@@ -52,10 +52,11 @@ svn_rdump__normalize_props(apr_hash_t *props,
           SVN_ERR(svn_subst_translate_cstring2(value->data, &cstring,
                                                "\n", TRUE,
                                                NULL, FALSE,
-                                               pool));
-          value = svn_string_create(cstring, pool);
-          apr_hash_set(props, key, APR_HASH_KEY_STRING, value);
+                                               result_pool));
+          value = svn_string_create(cstring, result_pool);
         }
+
+      apr_hash_set(*normal_props, key, APR_HASH_KEY_STRING, value);
     }
   return SVN_NO_ERROR;
 }

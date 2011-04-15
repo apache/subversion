@@ -178,6 +178,7 @@ replay_revstart(svn_revnum_t revision,
                 apr_pool_t *pool)
 {
   struct replay_baton *rb = replay_baton;
+  apr_hash_t *normal_props;
   svn_stringbuf_t *propstring;
   svn_stream_t *stdout_stream;
   svn_stream_t *revprop_stream;
@@ -188,10 +189,10 @@ replay_revstart(svn_revnum_t revision,
   SVN_ERR(svn_stream_printf(stdout_stream, pool,
                             SVN_REPOS_DUMPFILE_REVISION_NUMBER
                             ": %ld\n", revision));
-  SVN_ERR(svn_rdump__normalize_props(rev_props, pool));
+  SVN_ERR(svn_rdump__normalize_props(&normal_props, rev_props, pool));
   propstring = svn_stringbuf_create_ensure(0, pool);
   revprop_stream = svn_stream_from_stringbuf(propstring, pool);
-  SVN_ERR(svn_hash_write2(rev_props, revprop_stream, "PROPS-END", pool));
+  SVN_ERR(svn_hash_write2(normal_props, revprop_stream, "PROPS-END", pool));
   SVN_ERR(svn_stream_close(revprop_stream));
 
   /* Prop-content-length: 13 */

@@ -72,10 +72,16 @@ svn_rdump__load_dumpstream(svn_stream_t *stream,
 /* Normalize the line ending style of the values of properties in PROPS
  * that "need translation" (according to svn_prop_needs_translation(),
  * currently all svn:* props) so that they contain only LF (\n) line endings.
+ *
+ * Put the normalized props into NORMAL_PROPS, allocated in RESULT_POOL.
+ *
+ * Note: this function does not do a deep copy; it is expected that PROPS has
+ * a longer lifetime than NORMAL_PROPS.
  */
 svn_error_t *
-svn_rdump__normalize_props(apr_hash_t *props,
-                           apr_pool_t *pool);
+svn_rdump__normalize_props(apr_hash_t **normal_props,
+                           apr_hash_t *props,
+                           apr_pool_t *result_pool);
 
 #ifdef __cplusplus
 }
