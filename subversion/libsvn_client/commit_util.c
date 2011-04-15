@@ -1021,6 +1021,34 @@ svn_client__condense_commit_items(const char **base_url,
            svn_dirent_local_style(item->path, pool),
            svn_dirent_local_style(last_item->path, pool));
 
+      if (last_item != NULL
+          /* This is a delete */
+          && (item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
+          && !(item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
+          /* Last was a delete */
+          && (last_item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
+          && !(item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
+          /* And last_item is an ancestor of item */
+          && svn_uri_is_ancestor(last_item->url, item->url))
+        {
+          /* We are committing an explicit delete below another delete.
+
+             These used to be filtered by svn_dirent_condense_targets,
+             when no filtering depth was provided. */
+          int j;
+
+          /* Remove the offending delete by moving the rest and continue */
+          for (j = i+1; j < ci->nelts; j++)
+            {
+              APR_ARRAY_IDX(ci, j-1, svn_client_commit_item3_t *)
+                  = APR_ARRAY_IDX(ci, j, svn_client_commit_item3_t *);
+            }
+
+          ci->nelts--;
+          i--;
+          continue;
+        }
+
       /* In the first iteration, our BASE_URL is just our only
          encountered commit URL to date.  After that, we find the
          longest ancestor between the current BASE_URL and the current
