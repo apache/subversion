@@ -575,14 +575,33 @@ svn_wc_queue_committed2(svn_wc_committed_queue_t *queue,
 {
   svn_wc_context_t *wc_ctx;
   const char *local_abspath;
+  svn_checksum_t *sha1_checksum = NULL;
 
   SVN_ERR(svn_wc_context_create(&wc_ctx, NULL, scratch_pool, scratch_pool));
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
 
+  if (md5_checksum != NULL)
+    {
+      svn_error_t *err;
+      err = svn_wc__db_pristine_get_sha1(&sha1_checksum, wc_ctx->db,
+                                         local_abspath, md5_checksum,
+                                         svn_wc__get_committed_queue_pool(queue),
+                                         scratch_pool);
+
+      /* Don't fail on SHA1 not found */
+      if (err && err->apr_err == SVN_ERR_WC_DB_ERROR)
+        {
+          svn_error_clear(err);
+          sha1_checksum = NULL;
+        }
+      else
+        SVN_ERR(err);
+    }
+
   SVN_ERR(svn_wc_queue_committed3(queue, wc_ctx, local_abspath, recurse,
                                   wcprop_changes,
-                                  remove_lock, remove_changelist, md5_checksum,
-                                  NULL /* sha1_checksum */, scratch_pool));
+                                  remove_lock, remove_changelist,
+                                  sha1_checksum, scratch_pool));
 
   return svn_error_return(svn_wc_context_destroy(wc_ctx));
 }
@@ -647,9 +666,12 @@ svn_wc_process_committed4(const char *path,
 {
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   const char *local_abspath;
-  const svn_checksum_t *checksum;
+  const svn_checksum_t *md5_checksum;
+  const svn_checksum_t *sha1_checksum = NULL;
   apr_time_t new_date;
   apr_hash_t *wcprop_changes_hash;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   if (rev_date)
     SVN_ERR(svn_time_from_cstring(&new_date, rev_date, pool));
@@ -657,18 +679,32 @@ svn_wc_process_committed4(const char *path,
     new_date = 0;
 
   if (digest)
-    checksum = svn_checksum__from_digest(digest, svn_checksum_md5, pool);
+    md5_checksum = svn_checksum__from_digest(digest, svn_checksum_md5, pool);
   else
-    checksum = NULL;
+    md5_checksum = NULL;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  if (md5_checksum != NULL)
+    {
+      svn_error_t *err;
+      err = svn_wc__db_pristine_get_sha1(&sha1_checksum, db,
+                                         local_abspath, md5_checksum,
+                                         pool, pool);
+
+      if (err && err->apr_err == SVN_ERR_WC_DB_ERROR)
+        {
+          svn_error_clear(err);
+          sha1_checksum = NULL;
+        }
+      else
+        SVN_ERR(err);
+    }
 
   wcprop_changes_hash = svn_wc__prop_array_to_hash(wcprop_changes, pool);
   SVN_ERR(svn_wc__process_committed_internal(db, local_abspath, recurse, TRUE,
                                              new_revnum, new_date, rev_author,
                                              wcprop_changes_hash,
                                              !remove_lock, !remove_changelist,
-                                             checksum, NULL, NULL, pool));
+                                             sha1_checksum, NULL, pool));
 
   /* Run the log file(s) we just created. */
   return svn_error_return(svn_wc__wq_run(db, local_abspath, NULL, NULL, pool));

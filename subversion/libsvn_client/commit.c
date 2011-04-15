@@ -918,7 +918,6 @@ post_process_commit_item(svn_wc_committed_queue_t *queue,
                          svn_wc_context_t *wc_ctx,
                          svn_boolean_t keep_changelists,
                          svn_boolean_t keep_locks,
-                         const svn_checksum_t *md5_checksum,
                          const svn_checksum_t *sha1_checksum,
                          apr_pool_t *scratch_pool)
 {
@@ -936,7 +935,7 @@ post_process_commit_item(svn_wc_committed_queue_t *queue,
   return svn_wc_queue_committed3(queue, wc_ctx, item->path,
                                  loop_recurse, item->incoming_prop_changes,
                                  remove_lock, !keep_changelists,
-                                 md5_checksum, sha1_checksum, scratch_pool);
+                                 sha1_checksum, scratch_pool);
 }
 
 
@@ -1139,7 +1138,6 @@ svn_client_commit5(const apr_array_header_t *targets,
   apr_array_header_t *locks_obtained;
   apr_hash_t *committables;
   apr_hash_t *lock_tokens;
-  apr_hash_t *md5_checksums;
   apr_hash_t *sha1_checksums;
   apr_array_header_t *commit_items;
   svn_error_t *cmt_err = SVN_NO_ERROR;
@@ -1341,7 +1339,7 @@ svn_client_commit5(const apr_array_header_t *targets,
   /* Perform the commit. */
   cmt_err = svn_error_return(
             svn_client__do_commit(base_url, commit_items, editor, edit_baton,
-                                  notify_prefix, &md5_checksums,
+                                  notify_prefix, NULL,
                                   &sha1_checksums, ctx, pool));
 
   /* Handle a successful commit. */
@@ -1361,9 +1359,6 @@ svn_client_commit5(const apr_array_header_t *targets,
           svn_pool_clear(iterpool);
           bump_err = post_process_commit_item(queue, item, ctx->wc_ctx,
                                               keep_changelists, keep_locks,
-                                              apr_hash_get(md5_checksums,
-                                                           item->path,
-                                                           APR_HASH_KEY_STRING),
                                               apr_hash_get(sha1_checksums,
                                                            item->path,
                                                            APR_HASH_KEY_STRING),
