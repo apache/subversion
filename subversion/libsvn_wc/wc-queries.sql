@@ -461,7 +461,7 @@ WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
 DELETE FROM actual_node
 WHERE wc_id = ?1 AND local_relpath = ?2
 
--- STMT_DELETE_ACTUAL_ONLY_RECURSIVE
+-- STMT_DELETE_ACTUAL_NODE_RECURSIVE
 DELETE FROM actual_node
 WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
 
