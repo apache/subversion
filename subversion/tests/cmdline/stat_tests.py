@@ -1828,7 +1828,6 @@ def simple_lock(sbox, relpath):
 # Regression test for issue #3855 "status doesn't show 'K' on a locked
 # deleted node".
 @Issue(3855)
-@XFail()
 def status_locked_deleted(sbox):
   "status with locked deleted file"
 

@@ -5537,8 +5537,6 @@ read_children_info(void *baton,
 
           child->translated_size = get_translated_size(stmt, 7);
 
-          child->lock = lock_from_columns(stmt, 15, 16, 17, 18, result_pool);
-
           err = svn_sqlite__column_properties(&properties, stmt, 14,
                                               scratch_pool, scratch_pool);
           if (err)
@@ -5562,6 +5560,11 @@ read_children_info(void *baton,
         {
           child->have_base = TRUE;
         }
+
+      /* Get the lock info. The query only reports lock info in the row at
+       * op_depth 0. */
+      if (row_op_depth == 0)
+        child->lock = lock_from_columns(stmt, 15, 16, 17, 18, result_pool);
 
       err = svn_sqlite__step(&have_row, stmt);
       if (err)
