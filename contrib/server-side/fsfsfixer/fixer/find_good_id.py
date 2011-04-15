@@ -87,11 +87,11 @@ if __name__ == '__main__':
     rev = sys.argv[2]
     size = sys.argv[3]
     print "Good offset:", find_good_rep_header(repo_dir, rev, size)
-    exit(0)
+    sys.exit(0)
 
   if len(sys.argv) != 3:
     print >>sys.stderr, usage
-    exit(1)
+    sys.exit(1)
 
   repo_dir = sys.argv[1]
   bad_id = sys.argv[2]
