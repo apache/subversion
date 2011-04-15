@@ -125,8 +125,10 @@ crop_children(svn_wc__db_t *db,
                                             ? svn_depth_immediates
                                             : svn_depth_files;
           if (depth < remove_below)
-            SVN_ERR(svn_wc__db_temp_op_remove_entry(db, local_abspath,
-                                                    iterpool));
+            SVN_ERR(svn_wc__db_op_remove_node(db, local_abspath, FALSE,
+                                              SVN_INVALID_REVNUM,
+                                              svn_wc__db_kind_unknown,
+                                              iterpool));
 
           continue;
         }
