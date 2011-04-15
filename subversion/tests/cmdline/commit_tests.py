@@ -2803,7 +2803,6 @@ def tree_conflicts_resolved(sbox):
   svntest.actions.run_and_verify_status(wc_dir_2, expected_status)
 
 #----------------------------------------------------------------------
-@XFail()
 def commit_multiple_nested_deletes(sbox):
   "committing multiple nested deletes"
 
