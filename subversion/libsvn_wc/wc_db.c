@@ -6787,11 +6787,8 @@ commit_node(void *baton,
             apr_pool_t *scratch_pool)
 {
   struct commit_baton_t *cb = baton;
-  svn_sqlite__stmt_t *stmt_base;
-  svn_sqlite__stmt_t *stmt_work;
+  svn_sqlite__stmt_t *stmt_info;
   svn_sqlite__stmt_t *stmt_act;
-  svn_boolean_t have_base;
-  svn_boolean_t have_work;
   svn_boolean_t have_act;
   svn_string_t prop_blob = { 0 };
   const char *changelist = NULL;
@@ -6802,6 +6799,7 @@ commit_node(void *baton,
   svn_sqlite__stmt_t *stmt;
   apr_int64_t repos_id;
   const char *repos_relpath;
+  apr_int64_t op_depth;
 
     /* If we are adding a file or directory, then we need to get
      repository information from the parent node since "this node" does
@@ -6814,14 +6812,10 @@ commit_node(void *baton,
                                scratch_pool, scratch_pool));
 
   /* ### is it better to select only the data needed?  */
-  SVN_ERR(svn_sqlite__get_statement(&stmt_base, wcroot->sdb,
-                                    STMT_SELECT_BASE_NODE));
-  SVN_ERR(svn_sqlite__get_statement(&stmt_work, wcroot->sdb,
-                                    STMT_SELECT_WORKING_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt_base, "is", wcroot->wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__bindf(stmt_work, "is", wcroot->wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__step(&have_base, stmt_base));
-  SVN_ERR(svn_sqlite__step(&have_work, stmt_work));
+  SVN_ERR(svn_sqlite__get_statement(&stmt_info, wcroot->sdb,
+                                    STMT_SELECT_NODE_INFO));
+  SVN_ERR(svn_sqlite__bindf(stmt_info, "is", wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step_row(stmt_info));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt_act, wcroot->sdb,
                                     STMT_SELECT_ACTUAL_NODE));
@@ -6830,35 +6824,27 @@ commit_node(void *baton,
   SVN_ERR(svn_sqlite__step(&have_act, stmt_act));
 
   /* There should be something to commit!  */
-  /* ### not true. we could simply have text changes. how to assert?
-     SVN_ERR_ASSERT(have_work || have_act);  */
+
+  op_depth = svn_sqlite__column_int64(stmt_info, 0);
 
   /* Figure out the new node's kind. It will be whatever is in WORKING_NODE,
      or there will be a BASE_NODE that has it.  */
-  if (have_work)
-    new_kind = svn_sqlite__column_token(stmt_work, 2, kind_map);
-  else
-    new_kind = svn_sqlite__column_token(stmt_base, 3, kind_map);
+  new_kind = svn_sqlite__column_token(stmt_info, 4, kind_map);
 
   /* What will the new depth be?  */
   if (new_kind == svn_wc__db_kind_dir)
-    {
-      if (have_work)
-        new_depth_str = svn_sqlite__column_text(stmt_work, 8, scratch_pool);
-      else
-        new_depth_str = svn_sqlite__column_text(stmt_base, 10, scratch_pool);
-    }
+    new_depth_str = svn_sqlite__column_text(stmt_info, 11, scratch_pool);
 
   /* Check that the repository information is not being changed.  */
-  if (have_base)
+  if (op_depth == 0)
     {
-      SVN_ERR_ASSERT(!svn_sqlite__column_is_null(stmt_base, 0));
-      SVN_ERR_ASSERT(!svn_sqlite__column_is_null(stmt_base, 1));
+      SVN_ERR_ASSERT(!svn_sqlite__column_is_null(stmt_info, 1));
+      SVN_ERR_ASSERT(!svn_sqlite__column_is_null(stmt_info, 2));
 
       /* A commit cannot change these values.  */
-      SVN_ERR_ASSERT(repos_id == svn_sqlite__column_int64(stmt_base, 0));
+      SVN_ERR_ASSERT(repos_id == svn_sqlite__column_int64(stmt_info, 1));
       SVN_ERR_ASSERT(strcmp(repos_relpath,
-                            svn_sqlite__column_text(stmt_base, 1, NULL)) == 0);
+                            svn_sqlite__column_text(stmt_info, 2, NULL)) == 0);
     }
 
   /* Find the appropriate new properties -- ACTUAL overrides any properties
@@ -6869,11 +6855,8 @@ commit_node(void *baton,
   if (have_act)
     prop_blob.data = svn_sqlite__column_blob(stmt_act, 6, &prop_blob.len,
                                              scratch_pool);
-  if (have_work && prop_blob.data == NULL)
-    prop_blob.data = svn_sqlite__column_blob(stmt_work, 16, &prop_blob.len,
-                                             scratch_pool);
-  if (have_base && prop_blob.data == NULL)
-    prop_blob.data = svn_sqlite__column_blob(stmt_base, 13, &prop_blob.len,
+  if (prop_blob.data == NULL)
+    prop_blob.data = svn_sqlite__column_blob(stmt_info, 14, &prop_blob.len,
                                              scratch_pool);
 
   if (cb->keep_changelist && have_act)
@@ -6881,8 +6864,7 @@ commit_node(void *baton,
 
   /* ### other stuff?  */
 
-  SVN_ERR(svn_sqlite__reset(stmt_base));
-  SVN_ERR(svn_sqlite__reset(stmt_work));
+  SVN_ERR(svn_sqlite__reset(stmt_info));
   SVN_ERR(svn_sqlite__reset(stmt_act));
 
   /* Update the BASE_NODE row with all the new information.  */
@@ -6919,7 +6901,7 @@ commit_node(void *baton,
 
   SVN_ERR(svn_sqlite__step_done(stmt));
 
-  if (have_work)
+  if (op_depth > 0)
     {
       /* This removes all op_depth > 0 and so does both layers of a
          two-layer replace. */
@@ -6931,8 +6913,6 @@ commit_node(void *baton,
 
   if (have_act)
     {
-      /* ### FIXME: We lose the tree conflict data recorded on the node for its
-                    children here if we use this on a directory */
       if (cb->keep_changelist && changelist != NULL)
         {
           /* The user told us to keep the changelist. Replace the row in
@@ -6976,6 +6956,12 @@ commit_node(void *baton,
                                         STMT_DELETE_LOCK));
       SVN_ERR(svn_sqlite__bindf(lock_stmt, "is", repos_id, repos_relpath));
       SVN_ERR(svn_sqlite__step_done(lock_stmt));
+    }
+
+  if (op_depth > 0)
+    {
+      /* ### Remove all nodes of children with op_depth < 0
+         ### (and then potentially left over base-deleteds) */
     }
 
   /* Install any work items into the queue, as part of this transaction.  */
