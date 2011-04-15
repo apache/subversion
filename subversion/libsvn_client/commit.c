@@ -1216,7 +1216,7 @@ svn_client_commit5(const apr_array_header_t *targets,
                                   explicitly send us the target? */
   for (i = 0; i < rel_targets->nelts; i++)
     {
-      const char *relpath = APR_ARRAY_IDX(targets, i, const char *);
+      const char *relpath = APR_ARRAY_IDX(rel_targets, i, const char *);
       const char *target_abspath;
 
       svn_pool_clear(iterpool);
