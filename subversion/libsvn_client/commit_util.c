@@ -1027,7 +1027,7 @@ svn_client__condense_commit_items(const char **base_url,
           && !(item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
           /* Last was a delete */
           && (last_item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
-          && !(item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
+          && !(last_item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
           /* And last_item is an ancestor of item */
           && svn_uri_is_ancestor(last_item->url, item->url))
         {
