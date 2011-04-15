@@ -189,7 +189,7 @@ replay_revstart(svn_revnum_t revision,
   SVN_ERR(svn_stream_printf(stdout_stream, pool,
                             SVN_REPOS_DUMPFILE_REVISION_NUMBER
                             ": %ld\n", revision));
-  SVN_ERR(normalize_props(rev_props, pool));
+  SVN_ERR(svn_rdump__normalize_props(rev_props, pool));
   propstring = svn_stringbuf_create_ensure(0, pool);
   revprop_stream = svn_stream_from_stringbuf(propstring, pool);
   SVN_ERR(svn_hash_write2(rev_props, revprop_stream, "PROPS-END", pool));

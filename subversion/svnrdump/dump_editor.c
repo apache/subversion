@@ -34,6 +34,8 @@
 
 #include "dump_editor.h"
 
+#include "svnrdump.h"
+
 #define ARE_VALID_COPY_ARGS(p,r) ((p) && SVN_IS_VALID_REVNUM(r))
 
 #if 0
@@ -76,36 +78,6 @@ struct dump_edit_baton {
   svn_boolean_t dump_props;
   svn_boolean_t dump_newlines;
 };
-
-/* Normalize the line ending style of the values of properties in PROPS
- * that "need translation" (according to svn_prop_needs_translation(),
- * currently all svn:* props) so that they contain only LF (\n) line endings.
- */
-svn_error_t *
-normalize_props(apr_hash_t *props,
-                apr_pool_t *pool)
-{
-  apr_hash_index_t *hi;
-
-  for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
-    {
-      const char *key = svn__apr_hash_index_key(hi);
-      const svn_string_t *value = svn__apr_hash_index_val(hi);
-
-      if (svn_prop_needs_translation(key))
-        {
-          const char *cstring;
-
-          SVN_ERR(svn_subst_translate_cstring2(value->data, &cstring,
-                                               "\n", TRUE,
-                                               NULL, FALSE,
-                                               pool));
-          value = svn_string_create(cstring, pool);
-          apr_hash_set(props, key, APR_HASH_KEY_STRING, value);
-        }
-    }
-  return SVN_NO_ERROR;
-}
 
 /* Make a directory baton to represent the directory at PATH (relative
  * to the EDIT_BATON).
@@ -174,7 +146,7 @@ do_dump_props(struct dump_edit_baton *eb,
   if (trigger_var && !*trigger_var)
     return SVN_NO_ERROR;
 
-  SVN_ERR(normalize_props(eb->props, eb->pool));
+  SVN_ERR(svn_rdump__normalize_props(eb->props, eb->pool));
   svn_stringbuf_setempty(eb->propstring);
   propstream = svn_stream_from_stringbuf(eb->propstring, eb->pool);
   SVN_ERR(svn_hash_write_incremental(eb->props, eb->deleted_props,
