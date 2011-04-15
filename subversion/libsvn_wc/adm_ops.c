@@ -129,6 +129,8 @@ process_committed_leaf(svn_wc__db_t *db,
   const svn_checksum_t *copied_checksum;
   svn_revnum_t new_changed_rev = new_revnum;
   svn_boolean_t have_base;
+  svn_boolean_t prop_mods;
+  svn_skel_t *work_item = NULL;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -137,7 +139,7 @@ process_committed_leaf(svn_wc__db_t *db,
                                NULL, NULL, NULL,
                                NULL, NULL, &copied_checksum,
                                NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, &prop_mods,
                                &have_base, NULL, NULL, NULL,
                                db, local_abspath,
                                scratch_pool, scratch_pool));
@@ -162,7 +164,10 @@ process_committed_leaf(svn_wc__db_t *db,
                                 scratch_pool));
     }
 
-  /* ### this picks up file and symlink  */
+  if (status == svn_wc__db_status_not_present)
+    return SVN_NO_ERROR; /* Why does this get here? */
+
+
   if (kind != svn_wc__db_kind_dir)
     {
       /* If we sent a delta (meaning: post-copy modification),
@@ -176,7 +181,8 @@ process_committed_leaf(svn_wc__db_t *db,
 
           checksum = copied_checksum;
 
-          if (via_recurse)
+          /* Is the node completely unmodified and are we recursing? */
+          if (via_recurse && !prop_mods)
             {
               /* If a copied node itself is not modified, but the op_root of
                 the copy is committed we have to make sure that changed_rev,
@@ -185,29 +191,22 @@ process_committed_leaf(svn_wc__db_t *db,
                 information then a clean checkout of exactly the same
                 revisions. (Issue #3676) */
 
-                svn_boolean_t props_modified;
-                svn_revnum_t changed_rev;
-                const char *changed_author;
-                apr_time_t changed_date;
-
                 SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL,
-                                             NULL, &changed_rev, &changed_date,
-                                             &changed_author, NULL, NULL, NULL,
+                                             NULL, &new_changed_rev,
+                                             &new_changed_date,
+                                             &new_changed_author, NULL, NULL,
                                              NULL, NULL, NULL, NULL, NULL,
-                                             NULL, NULL, &props_modified, NULL,
-                                             NULL, NULL, NULL,
+                                             NULL, NULL, NULL, NULL,
+                                             NULL, NULL, NULL, NULL,
                                              db, local_abspath,
                                              scratch_pool, scratch_pool));
-
-                if (!props_modified)
-                  {
-                    /* Unmodified child of copy: We keep changed_rev */
-                    new_changed_rev = changed_rev;
-                    new_changed_date = changed_date;
-                    new_changed_author = changed_author;
-                  }
             }
         }
+
+      SVN_ERR(svn_wc__wq_build_file_commit(&work_item,
+                                           db, local_abspath,
+                                           prop_mods,
+                                           scratch_pool, scratch_pool));
     }
   else
     {
@@ -217,12 +216,16 @@ process_committed_leaf(svn_wc__db_t *db,
     }
 
   /* The new text base will be found in the pristine store by its checksum. */
-  SVN_ERR(svn_wc__wq_add_postcommit(db, local_abspath, 
-                                    new_revnum,
-                                    new_changed_rev, new_changed_date,
-                                    new_changed_author, checksum,
-                                    new_dav_cache, keep_changelist, no_unlock,
-                                    scratch_pool));
+  SVN_ERR(svn_wc__db_global_commit(db, local_abspath,
+                                   new_revnum, new_changed_rev,
+                                   new_changed_date, new_changed_author,
+                                   checksum,
+                                   NULL /* new_children */,
+                                   new_dav_cache,
+                                   keep_changelist,
+                                   no_unlock,
+                                   work_item,
+                                   scratch_pool));
 
   return SVN_NO_ERROR;
 }
