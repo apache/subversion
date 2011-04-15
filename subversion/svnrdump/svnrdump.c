@@ -36,7 +36,6 @@
 #include "svn_string.h"
 #include "svn_props.h"
 
-#include "load_editor.h"
 #include "svnrdump.h"
 
 #include "private/svn_cmdline_private.h"
@@ -447,8 +446,8 @@ load_revisions(svn_ra_session_t *session,
   apr_file_open_stdin(&stdin_file, pool);
   stdin_stream = svn_stream_from_aprfile2(stdin_file, FALSE, pool);
 
-  SVN_ERR(load_dumpstream(stdin_stream, session, aux_session, 
-                          check_cancel, NULL, pool));
+  SVN_ERR(svn_rdump__load_dumpstream(stdin_stream, session, aux_session, 
+                                     check_cancel, NULL, pool));
 
   SVN_ERR(svn_stream_close(stdin_stream));
 
