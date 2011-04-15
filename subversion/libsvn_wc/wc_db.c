@@ -6812,9 +6812,21 @@ commit_node(void *baton,
   SVN_ERR(svn_sqlite__reset(stmt_info));
   SVN_ERR(svn_sqlite__reset(stmt_act));
 
-  /* Do we commit a shadowing operation? */
   if (op_depth > 0)
     {
+      /* Do we commit a shadowing operation? 
+
+         If yes then:
+           1) Remove all shadowed nodes
+           2) And remove all nodes that have a base-deleted as lowest layer,
+              because 1) removed that layer
+
+         Possible followup:
+           3) ### Collapse descendants of the current op_depth in layer 0, 
+                  to commit a remote copy in one step (but don't touch/use
+                  ACTUAL!!)
+       */
+
       svn_sqlite__stmt_t *delete_stmt;
 
       SVN_ERR(svn_sqlite__get_statement(&delete_stmt, wcroot->sdb,
@@ -6867,10 +6879,8 @@ commit_node(void *baton,
 
   if (op_depth > 0)
     {
-      /* This removes all op_depth > 0 and so does both layers of a
-         two-layer replace. 
-
-         Do this now, or we will remove the newly added base node. */
+      /* This removes all op_depth  0 and so does both layers of a
+         two-layer replace. */
 
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_DELETE_ALL_WORKING_NODES));
