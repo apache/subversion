@@ -16677,6 +16677,49 @@ def dry_run_merge_conflicting_binary(sbox):
                                        None, None, None, None, None,
                                        True, True, '--allow-mixed-revisions',
                                        other_wc)
+
+#----------------------------------------------------------------------
+@Issue(3857)
+def foreign_repos_prop_conflict(sbox):
+  "prop conflict from foreign repos merge"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Create a second repository and working copy with the original
+  # greek tree.
+  repo_dir = sbox.repo_dir
+  other_repo_dir, other_repo_url = sbox.add_repo_path("other")
+  other_wc_dir = sbox.add_wc_path("other")
+  svntest.main.copy_repos(repo_dir, other_repo_dir, 1, 1)
+  svntest.actions.run_and_verify_svn(None, None, [], 'co', other_repo_url,
+                                     other_wc_dir)
+
+  # Add properties in the first repos and commit.
+  sbox.simple_propset('red', 'rojo', 'A/D/G')
+  sbox.simple_propset('yellow', 'amarillo', 'A/D/G')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'spenglish', wc_dir)
+
+  # Tweak properties in the first repos and commit.
+  sbox.simple_propset('red', 'rosso', 'A/D/G')
+  sbox.simple_propset('yellow', 'giallo', 'A/D/G')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'engtalian', wc_dir)
+
+  # Now, merge the propchange to the *second* working copy.
+  expected_output = [' C   %s\n' % (os.path.join(other_wc_dir,
+                                                 "A", "D", "G")),
+                     'Summary of conflicts:\n',
+                     '  Property conflicts: 1\n',
+                     ]
+  expected_output = expected_merge_output([[3]], expected_output, True)
+  svntest.actions.run_and_verify_svn(None,
+                                     expected_output,
+                                     [], 'merge', '-c3',
+                                     sbox.repo_url,
+                                     other_wc_dir)
+
 ########################################################################
 # Run the tests
 
@@ -16800,6 +16843,7 @@ test_list = [ None,
               subtree_merges_inherit_invalid_working_mergeinfo,
               merge_change_to_file_with_executable,
               dry_run_merge_conflicting_binary,
+              foreign_repos_prop_conflict,
              ]
 
 if __name__ == '__main__':

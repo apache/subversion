@@ -426,19 +426,21 @@ svn_wc__cd2_to_cd(const svn_wc_conflict_description2_t *conflict,
 
       case svn_wc_conflict_kind_text:
         new_conflict->is_binary = conflict->is_binary;
-        new_conflict->mime_type = conflict->mime_type
-                              ? apr_pstrdup(result_pool, conflict->mime_type)
-                              : NULL;
-        new_conflict->base_file = svn_dirent_basename(conflict->base_abspath,
+        if (conflict->mime_type)
+          new_conflict->mime_type = apr_pstrdup(result_pool,
+                                                conflict->mime_type);
+        if (conflict->base_abspath)
+          new_conflict->base_file = svn_dirent_basename(conflict->base_abspath,
+                                                        result_pool);
+        if (conflict->their_abspath)
+          new_conflict->their_file = svn_dirent_basename(conflict->their_abspath,
+                                                         result_pool);
+        if (conflict->my_abspath)
+          new_conflict->my_file = svn_dirent_basename(conflict->my_abspath,
                                                       result_pool);
-        new_conflict->their_file = svn_dirent_basename(conflict->their_abspath,
-                                                       result_pool);
-        new_conflict->my_file = svn_dirent_basename(conflict->my_abspath,
-                                                    result_pool);
-        new_conflict->merged_file = conflict->merged_file
-                                    ? apr_pstrdup(result_pool,
-                                                  conflict->merged_file)
-                                    : NULL;
+        if (conflict->merged_file)
+          new_conflict->merged_file = apr_pstrdup(result_pool,
+                                                  conflict->merged_file);
         break;
 
       case svn_wc_conflict_kind_tree:
