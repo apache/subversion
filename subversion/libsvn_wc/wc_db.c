@@ -4359,14 +4359,82 @@ svn_wc__db_op_read_tree_conflict(
   return SVN_NO_ERROR;
 }
 
+/* Baton for remove_post_commit_txn */
+struct remove_node_baton
+{
+  svn_revnum_t not_present_rev;
+  svn_wc__db_kind_t not_present_kind;
+};
+
+/* Implements svn_wc__db_txn_callback_t for svn_wc__db_op_remove_node */
+static svn_error_t *
+remove_node_txn(void *baton,
+                svn_wc__db_wcroot_t *wcroot,
+                const char *local_relpath,
+                apr_pool_t *scratch_pool)
+{
+  struct remove_node_baton *rnb = baton;
+  svn_sqlite__stmt_t *stmt;
+
+  apr_int64_t repos_id;
+  const char *repos_relpath;
+
+  const char *like_arg = construct_like_arg(local_relpath, scratch_pool);
+
+  SVN_ERR_ASSERT(*local_relpath != '\0'); /* Never on a wcroot */
+
+  /* Need info for not_present node? */
+  if (SVN_IS_VALID_REVNUM(rnb->not_present_rev))
+    SVN_ERR(scan_upwards_for_repos(&repos_id, &repos_relpath, wcroot,
+                                   local_relpath, scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_DELETE_NODES_RECURSIVE));
+
+  /* Remove all nodes at or below local_relpath where op_depth >= 0 */
+  SVN_ERR(svn_sqlite__bindf(stmt, "issi", wcroot->wc_id,
+                                          local_relpath,
+                                          like_arg,
+                                          (apr_int64_t)0));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_DELETE_ACTUAL_NODE_RECURSIVE));
+
+  /* Delete all actual nodes at or below local_relpath */
+  SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id,
+                                         local_relpath,
+                                         like_arg));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  /* Should we leave a not-present node? */
+  if (SVN_IS_VALID_REVNUM(rnb->not_present_rev))
+    {
+      insert_base_baton_t ibb;
+      blank_ibb(&ibb);
+
+      ibb.repos_id = repos_id;
+      ibb.status = svn_wc__db_status_not_present;
+      ibb.kind = rnb->not_present_kind;
+
+      ibb.repos_relpath = repos_relpath;
+      ibb.revision = rnb->not_present_rev;
+
+      SVN_ERR(insert_base_node(&ibb, wcroot, local_relpath, scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
-svn_wc__db_temp_op_remove_entry(svn_wc__db_t *db,
-                                const char *local_abspath,
-                                apr_pool_t *scratch_pool)
+svn_wc__db_op_remove_node(svn_wc__db_t *db,
+                          const char *local_abspath,
+                          svn_revnum_t not_present_revision,
+                          svn_wc__db_kind_t not_present_kind,
+                          apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
-  svn_sqlite__stmt_t *stmt;
+  struct remove_node_baton rnb;
   const char *local_relpath;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
@@ -4375,17 +4443,15 @@ svn_wc__db_temp_op_remove_entry(svn_wc__db_t *db,
                               local_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
+  rnb.not_present_rev = not_present_revision;
+  rnb.not_present_kind = not_present_kind;
+
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, remove_node_txn,
+                              &rnb, scratch_pool));
+
+  /* ### Flush everything below this node in all ways */
   SVN_ERR(flush_entries(wcroot, local_abspath, scratch_pool));
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_DELETE_NODES));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__step_done(stmt));
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_DELETE_ACTUAL_NODE_WITHOUT_CONFLICT));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-
-  SVN_ERR(svn_sqlite__step_done(stmt));
+  SVN_ERR(svn_wc__db_temp_forget_directory(db, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }

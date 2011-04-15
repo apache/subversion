@@ -2424,12 +2424,21 @@ svn_wc__db_temp_forget_directory(svn_wc__db_t *db,
                                  const char *local_dir_abspath,
                                  apr_pool_t *scratch_pool);
 
-/* Removes all references of LOCAL_ABSPATH from its working copy
-   using DB. */
+/* Removes all references to LOCAL_ABSPATH from DB, while optionally leaving
+   tree conflicts and/or a not present node.
+
+   This operation always recursively removes all nodes at and below
+   LOCAL_ABSPATH from NODES and ACTUAL.
+
+   If NOT_PRESENT_REVISION specifies a valid revision, leave a not_present
+   BASE node at local_abspath. (Requires an existing BASE node before removing)
+ */
 svn_error_t *
-svn_wc__db_temp_op_remove_entry(svn_wc__db_t *db,
-                                const char *local_abspath,
-                                apr_pool_t *scratch_pool);
+svn_wc__db_op_remove_node(svn_wc__db_t *db,
+                          const char *local_abspath,
+                          svn_revnum_t not_present_revision,
+                          svn_wc__db_kind_t not_present_kind,
+                          apr_pool_t *scratch_pool);
 
 /* Remove the WORKING_NODE row of LOCAL_ABSPATH in DB. */
 svn_error_t *
