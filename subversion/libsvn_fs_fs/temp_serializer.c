@@ -248,6 +248,18 @@ typedef struct hash_data_t
   /* number of entries in the directory */
   apr_size_t count;
 
+  /* number of unused dir entry buckets in the index */
+  apr_size_t over_provision;
+
+  /* internal modifying operations counter
+   * (used to repack data once in a while) */
+  apr_size_t operations;
+
+  /* size of the serialization buffer actually used.
+   * (we will allocate more than we actually need such that we may
+   * append more data in situ later) */
+  apr_size_t len;
+
   /* reference to the entries */
   svn_fs_dirent_t **entries;
 } hash_data_t;
@@ -291,14 +303,20 @@ serialize_dir(apr_hash_t *entries, apr_pool_t *pool)
 
   /* calculate sizes */
   apr_size_t count = apr_hash_count(entries);
-  apr_size_t entries_len = count * sizeof(svn_fs_dirent_t*);
+  apr_size_t over_provision = 2 + count / 4;
+  apr_size_t entries_len = (count + over_provision) * sizeof(svn_fs_dirent_t*);
 
   /* copy the hash entries to an auxilliary struct of known layout */
   hash_data.count = count;
+  hash_data.over_provision = over_provision;
+  hash_data.operations = 0;
   hash_data.entries = apr_palloc(pool, entries_len);
 
   for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi), ++i)
     hash_data.entries[i] = svn__apr_hash_index_val(hi);
+
+  for (i = 0; i < over_provision; ++i)
+    hash_data.entries[i + count] = NULL;
 
   /* sort entry index by ID name */
   qsort(hash_data.entries,
@@ -648,6 +666,22 @@ svn_fs_fs__deserialize_node_revision(void **item,
   return SVN_NO_ERROR;
 }
 
+/* Utility function that returns the directory serialized inside CONTEXT
+ * to DATA and DATA_LEN. */
+svn_error_t *
+return_serialized_dir_context(svn_temp_serializer__context_t *context,
+                              char **data,
+                              apr_size_t *data_len)
+{
+  svn_stringbuf_t *serialized = svn_temp_serializer__get(context);
+
+  *data = serialized->data;
+  *data_len = serialized->len;
+  ((hash_data_t *)serialized->data)->len = serialized->len;
+
+  return SVN_NO_ERROR;
+}
+
 /* Implements svn_cache__serialize_func_t for a directory contents hash.
  */
 svn_error_t *
@@ -658,15 +692,11 @@ svn_fs_fs__serialize_dir_entries(char **data,
 {
   apr_hash_t *dir = in;
 
-  /* serialize the dir content into a new serialization context */
-  svn_temp_serializer__context_t *context = serialize_dir(dir, pool);
-
-  /* return serialized data */
-  svn_stringbuf_t *serialized = svn_temp_serializer__get(context);
-  *data = serialized->data;
-  *data_len = serialized->len;
-
-  return SVN_NO_ERROR;
+  /* serialize the dir content into a new serialization context 
+   * and return the serialized data */
+  return return_serialized_dir_context(serialize_dir(dir, pool),
+                                       data,
+                                       data_len);
 }
 
 /* Implements svn_cache__deserialize_func_t for a directory contents hash
@@ -786,7 +816,7 @@ svn_fs_fs__extract_dir_entry(void **out,
        */
       apr_size_t end_offset = index + 1 < hash_data->count
                             ? ((apr_size_t*)entries)[index+1]
-                            : data_len;
+                            : hash_data->len;
       apr_size_t size = end_offset - ((apr_size_t*)entries)[index];
 
       /* copy & deserialize the entry */
@@ -801,5 +831,109 @@ svn_fs_fs__extract_dir_entry(void **out,
   return SVN_NO_ERROR;
 }
 
+/* Utility function for svn_fs_fs__replace_dir_entry that implements the
+ * modification as a simply deserialize / modify / serialize sequence.
+ */
+static svn_error_t *
+slowly_replace_dir_entry(char **data,
+                         apr_size_t *data_len,
+                         void *baton,
+                         apr_pool_t *pool)
+{
+  replace_baton_t *replace_baton = (replace_baton_t *)baton;
+  hash_data_t *hash_data = (hash_data_t *)*data;
+  apr_hash_t *dir;
 
+  SVN_ERR(svn_fs_fs__deserialize_dir_entries((void **)&dir,
+                                             *data,
+                                             hash_data->len,
+                                             pool));
+  apr_hash_set(dir,
+               replace_baton->name,
+               APR_HASH_KEY_STRING,
+               replace_baton->new_entry);
 
+  return svn_fs_fs__serialize_dir_entries(data, data_len, dir, pool);
+}
+
+/* Implements svn_cache__partial_setter_func_t for a serialized directory.
+ */
+svn_error_t *
+svn_fs_fs__replace_dir_entry(char **data,
+                             apr_size_t *data_len,
+                             void *baton,
+                             apr_pool_t *pool)
+{
+  replace_baton_t *replace_baton = (replace_baton_t *)baton;
+  hash_data_t *hash_data = (hash_data_t *)*data;
+  svn_boolean_t found;
+  svn_fs_dirent_t **entries;
+  apr_size_t index;
+
+  svn_temp_serializer__context_t *context;
+
+  /* after quite a number of operations, let's re-pack everything.
+   * This is to limit the number of vasted space as we cannot overwrite
+   * existing data but must always append. */
+  if (hash_data->operations > 2 + hash_data->count / 4)
+    return slowly_replace_dir_entry(data, data_len, baton, pool);
+
+  /* resolve the reference to the entries array */
+  entries = (svn_fs_dirent_t **)
+    svn_temp_deserializer__ptr((const char *)hash_data,
+                               (const void **)&hash_data->entries);
+
+  /* binary search for the desired entry by name */
+  index = find_entry(entries, replace_baton->name, hash_data->count, &found);
+
+  /* handle entry removal (if found at all) */
+  if (replace_baton->new_entry == NULL)
+    {
+      if (found)
+        {
+          /* remove reference to the entry from the index */
+          memmove(&entries[index],
+                  &entries[index + 1],
+                  sizeof(entries[index]) * (hash_data->count - index));
+
+          hash_data->count--;
+          hash_data->over_provision++;
+          hash_data->operations++;
+        }
+
+      return SVN_NO_ERROR;
+    }
+
+  /* if not found, prepare to insert the new entry */
+  if (!found)
+    {
+      /* fallback to slow operation if there is no place left to insert an
+       * new entry to index. That will automatically give add some spare
+       * entries ("overprovision"). */
+      if (hash_data->over_provision == 0)
+        return slowly_replace_dir_entry(data, data_len, baton, pool);
+
+      /* make entries[index] available for pointing to the new entry */
+      memmove(&entries[index + 1],
+              &entries[index],
+              sizeof(entries[index]) * (hash_data->count - index));
+
+      hash_data->count++;
+      hash_data->over_provision--;
+      hash_data->operations++;
+    }
+
+  /* de-serialize the new entry */
+  entries[index] = replace_baton->new_entry;
+  context = svn_temp_serializer__init_append(hash_data,
+                                             entries,
+                                             hash_data->len,
+                                             *data_len,
+                                             pool);
+  serialize_dir_entry(context, &entries[index]);
+
+  /* return the updated serialized data */
+  return return_serialized_dir_context(context,
+                                       data,
+                                       data_len);
+}

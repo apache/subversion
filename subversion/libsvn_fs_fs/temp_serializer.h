@@ -189,4 +189,30 @@ svn_fs_fs__extract_dir_entry(void **out,
                              void *baton,
                              apr_pool_t *pool);
 
+/**
+ * Describes the change to be done to a directory: Set the entry
+ * identify by @a name to the value @a new_entry. If the latter is
+ * @c NULL, the entry shall be removed if it exists. Otherwise it
+ * will be replaced or automatically added, respectively.
+ */
+typedef struct replace_baton_t
+{
+  /** name of the directory entry to modify */
+  const char *name;
+
+  /** directory entry to insert instead */
+  svn_fs_dirent_t *new_entry;
+} replace_baton_t;
+
+/**
+ * Implements @ref svn_cache__partial_setter_func_t for a single
+ * @ref svn_fs_dirent_t within a serialized directory contents hash,
+ * identified by its name in the @ref replace_baton_t in @a baton.
+ */
+svn_error_t *
+svn_fs_fs__replace_dir_entry(char **data,
+                             apr_size_t *data_len,
+                             void *baton,
+                             apr_pool_t *pool);
+
 #endif
