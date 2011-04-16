@@ -70,6 +70,33 @@ svn_temp_serializer__init(const void *source_struct,
                           apr_pool_t *pool);
 
 /**
+ * Continue the serialization process of the @a source_struct that has
+ * already been serialized to @a buffer but contains references to new
+ * objects yet to serialize. I.e. this function allows you to append
+ * data to serialized structures returned by @ref svn_temp_serializer__get.
+ *
+ * The current size of the serialized data is given in @a currently_used.
+ * If the allocated data buffer is actually larger, you may specifiy that
+ * size in @a currently_allocated to prevent unnecessary re-allocations.
+ * Otherwise, set it to 0.
+ *
+ * All allocations will be made from @a pool.
+ *
+ * Please note that only sub-structures of @a source_struct may be added.
+ * To add item referenced from other parts of the buffer, serialize from
+ * @a source_struct first, get the result from @ref svn_temp_serializer__get
+ * and call svn_temp_serializer__init_append for the next part.
+ *
+ * @return the serization context.
+ */
+svn_temp_serializer__context_t *
+svn_temp_serializer__init_append(const void *buffer,
+                                 const void *source_struct,
+                                 apr_size_t currently_used,
+                                 apr_size_t currently_allocated,
+                                 apr_pool_t *pool);
+
+/**
  * Begin serialization of a referenced sub-structure within the
  * serialization @a context. @a source_struct must be a reference to the
  * pointer in the original parent structure so that the correspondence in
