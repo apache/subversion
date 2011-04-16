@@ -133,6 +133,45 @@ svn_temp_serializer__init(const void *source_struct,
   return context;
 }
 
+/* Continue the serialization process of the SOURCE_STRUCT that has already
+ * been serialized to BUFFER but contains references to new objects yet to
+ * serialize. The current size of the serialized data is given in
+ * CURRENTLY_USED. If the allocated data buffer is actually larger, you may
+ * specifiy that in CURRENTLY_ALLOCATED to prevent unnecessary allocations.
+ * Otherwise, set it to 0. All allocations will be made from POOl.
+ */
+svn_temp_serializer__context_t *
+svn_temp_serializer__init_append(const void *buffer,
+                                 const void *source_struct,
+                                 apr_size_t currently_used,
+                                 apr_size_t currently_allocated,
+                                 apr_pool_t *pool)
+{
+  /* determine the current memory buffer capacity */
+  apr_size_t init_size = currently_allocated < currently_used
+                       ? currently_used
+                       : currently_allocated;
+
+  /* create the serialization context and initialize it */
+  svn_temp_serializer__context_t *context = apr_palloc(pool, sizeof(*context));
+  context->pool = pool;
+
+  /* use BUFFER as serialization target */
+  context->buffer = svn_stringbuf_create_ensure(0, pool);
+  context->buffer->data = buffer;
+  context->buffer->len = currently_used;
+  context->buffer->blocksize = init_size;
+
+  /* SOURCE_STRUCT is our serialization root */
+  context->source = apr_palloc(pool, sizeof(*context->source));
+  context->source->source_struct = source_struct;
+  context->source->target_offset = source_struct - buffer;
+  context->source->upper = NULL;
+
+  /* done */
+  return context;
+}
+
 /* Utility function replacing the serialized pointer corresponding to
  * *SOURCE_POINTER with the offset that it will be put when being append
  * right after this function call.
