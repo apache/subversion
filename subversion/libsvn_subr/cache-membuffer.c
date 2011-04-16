@@ -1616,7 +1616,6 @@ svn_membuffer_cache_set_partial(void *cache_void,
                                       baton,
                                       DEBUG_CACHE_MEMBUFFER_TAG
                                       pool));
-// printf("set partial %s \n", key);
 
   return SVN_NO_ERROR;
 }
