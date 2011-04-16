@@ -21,6 +21,7 @@
 usage: benchmark.py run <run_file> <levels> <spread> [N]
        benchmark.py show <run_file>
        benchmark.py compare <run_file1> <run_file2>
+       benchmark.py combine <new_file> <run_file1> <run_file2> ...
 
 Test data is written to run_file.
 If a run_file exists, data is added to it.
@@ -37,8 +38,8 @@ import datetime
 import random
 import shutil
 import cPickle
+import optparse
 
-VERBOSE = False
 
 DEFAULT_TIMINGS_PATH = './benchmark_py_last_run.py-pickle'
 
@@ -50,7 +51,7 @@ def run_cmd(cmd, stdin=None, shell=False):
     printable_cmd = 'CMD: ' + cmd
   else:
     printable_cmd = 'CMD: ' + ' '.join(cmd)
-  if VERBOSE:
+  if options.verbose:
     print printable_cmd
 
   if stdin:
@@ -65,7 +66,7 @@ def run_cmd(cmd, stdin=None, shell=False):
                        shell=shell)
   stdout,stderr = p.communicate(input=stdin)
 
-  if VERBOSE:
+  if options.verbose:
     if (stdout):
       print "STDOUT: [[[\n%s]]]" % ''.join(stdout)
   if (stderr):
@@ -232,12 +233,12 @@ def create_tree(in_dir, levels, spread=5):
 
 
 def svn(*args):
-  global timings
   name = args[0]
-  cmd = ['svn']
-  cmd.extend(args)
-  if VERBOSE:
-    print 'svn cmd: ' + ' '.join(cmd)
+
+  ### options comes from the global namespace; it should be passed
+  cmd = [options.svn] + list(args)
+  if options.verbose:
+    print 'svn cmd:', ' '.join(cmd)
  
   stdin = None
   if stdin:
@@ -245,6 +246,7 @@ def svn(*args):
   else:
     stdin_arg = None
 
+  ### timings comes from the global namespace; it should be passed
   timings.tic(name)
   try:
     p = subprocess.Popen(cmd,
@@ -256,7 +258,7 @@ def svn(*args):
   finally:
     timings.toc()
 
-  if VERBOSE:
+  if options.verbose:
     if (stdout):
       print "STDOUT: [[[\n%s]]]" % ''.join(stdout)
     if (stderr):
@@ -362,8 +364,6 @@ def propadd_tree(in_dir, fraction):
 
 
 def run(levels, spread, N):
-  global timings
-
   # ensure identical modifications for every run of this script
   random.seed(0)
 
@@ -464,7 +464,10 @@ def run(levels, spread, N):
       finally:
         stopped = datetime.datetime.now()
         print '\nDone with svn benchmark in', (stopped - started)
-        timings.submit_timing('TOTAL RUN', timedelta_to_seconds(stopped - started))
+
+        ### timings comes from the global namespace; it should be passed
+        timings.submit_timing('TOTAL RUN',
+                              timedelta_to_seconds(stopped - started))
 
         # rename ps to prop mod
         if timings.timings.get('ps'):
@@ -547,34 +550,50 @@ def usage():
   print __doc__
 
 if __name__ == '__main__':
-  if len(sys.argv) < 2:
+  parser = optparse.OptionParser()
+  # -h is automatically added.
+  ### should probably expand the help for that. and see about -?
+  parser.add_option('-v', '--verbose', action='store_true', dest='verbose',
+                    help='Verbose operation')
+  parser.add_option('--svn', action='store', dest='svn', default='svn',
+                    help='Specify Subversion executable to use')
+
+  ### should start passing this, but for now: make it global
+  global options
+
+  options, args = parser.parse_args()
+
+  # there should be at least one arg left: the sub-command
+  if not args:
     usage()
     exit(1)
 
-  cmd = sys.argv[1]
+  cmd = args[0]
+  del args[0]
+
   if cmd == 'compare':
-    if len(sys.argv) != 4:
+    if len(args) != 2:
       usage()
       exit(1)
-    cmd_compare(*sys.argv[2:])
+    cmd_compare(*args)
 
   elif cmd == 'combine':
-    if len(sys.argv) < 5:
+    if len(args) < 3:
       usage()
       exit(1)
-    cmd_combine(*sys.argv[2:])
+    cmd_combine(*args)
 
   elif cmd == 'run':
-    if len(sys.argv) < 5 or len(sys.argv) > 6:
+    if len(args) < 3 or len(args) > 4:
       usage()
       exit(1)
-    cmd_run(*sys.argv[2:])
+    cmd_run(*args)
 
   elif cmd == 'show':
-    if len(sys.argv) < 3:
+    if not args:
       usage()
       exit(1)
-    cmd_show(*sys.argv[2:])
+    cmd_show(*args)
 
   else:
     usage()
