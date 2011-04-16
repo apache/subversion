@@ -298,20 +298,21 @@ memcache_set_partial(void *cache_void,
 
   char *data;
   apr_size_t size;
+  svn_boolean_t found = FALSE;
 
-  apr_pool_t *subpool = svn_pool_create(poo);
+  apr_pool_t *subpool = svn_pool_create(pool);
   SVN_ERR(memcache_internal_get(&data,
                                 &size,
-                                found,
+                                &found,
                                 cache_void,
                                 key,
                                 pool));
 
   /* If we found it, modify it and write it back to cache */
-  if (*found)
+  if (found)
     {
       SVN_ERR(func(&data, &size, baton, subpool));
-      err = memcache_internal_set(cache_void, key, data, data_len, subpool);
+      err = memcache_internal_set(cache_void, key, data, size, subpool);
     }
 
   svn_pool_destroy(subpool);
