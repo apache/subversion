@@ -141,8 +141,8 @@ svn_temp_serializer__init(const void *source_struct,
  * Otherwise, set it to 0. All allocations will be made from POOl.
  */
 svn_temp_serializer__context_t *
-svn_temp_serializer__init_append(const void *buffer,
-                                 const void *source_struct,
+svn_temp_serializer__init_append(void *buffer,
+                                 void *source_struct,
                                  apr_size_t currently_used,
                                  apr_size_t currently_allocated,
                                  apr_pool_t *pool)
@@ -165,7 +165,7 @@ svn_temp_serializer__init_append(const void *buffer,
   /* SOURCE_STRUCT is our serialization root */
   context->source = apr_palloc(pool, sizeof(*context->source));
   context->source->source_struct = source_struct;
-  context->source->target_offset = source_struct - buffer;
+  context->source->target_offset = (char *)source_struct - (char *)buffer;
   context->source->upper = NULL;
 
   /* done */
