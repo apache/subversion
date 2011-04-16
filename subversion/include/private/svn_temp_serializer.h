@@ -90,8 +90,8 @@ svn_temp_serializer__init(const void *source_struct,
  * @return the serization context.
  */
 svn_temp_serializer__context_t *
-svn_temp_serializer__init_append(const void *buffer,
-                                 const void *source_struct,
+svn_temp_serializer__init_append(void *buffer,
+                                 void *source_struct,
                                  apr_size_t currently_used,
                                  apr_size_t currently_allocated,
                                  apr_pool_t *pool);
