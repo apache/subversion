@@ -29,14 +29,13 @@ If a run_file exists, data is added to it.
 If <N> is provided, the run is repeated N times.
 """
 
-import os, sys, time
+import os
+import sys
 import tempfile
-
-from datetime import datetime, timedelta
-from subprocess import Popen, PIPE, call
+import subprocess
+import datetime
 import random
 import shutil
-
 import cPickle
 
 VERBOSE = False
@@ -55,11 +54,15 @@ def run_cmd(cmd, stdin=None, shell=False):
     print printable_cmd
 
   if stdin:
-    stdin_arg = PIPE
+    stdin_arg = subprocess.PIPE
   else:
     stdin_arg = None
 
-  p = Popen(cmd, stdin=stdin_arg, stdout=PIPE, stderr=PIPE, shell=shell)
+  p = subprocess.Popen(cmd,
+                       stdin=stdin_arg,
+                       stdout=subprocess.PIPE,
+                       stderr=subprocess.PIPE,
+                       shell=shell)
   stdout,stderr = p.communicate(input=stdin)
 
   if VERBOSE:
@@ -90,11 +93,11 @@ class Timings:
       return
     self.toc()
     self.current_name = name
-    self.tic_at = datetime.now()
+    self.tic_at = datetime.datetime.now()
 
   def toc(self):
     if self.current_name and self.tic_at:
-      toc_at = datetime.now()
+      toc_at = datetime.datetime.now()
       self.submit_timing(self.current_name, 
                          timedelta_to_seconds(toc_at - self.tic_at))
     self.current_name = None
@@ -238,13 +241,17 @@ def svn(*args):
  
   stdin = None
   if stdin:
-    stdin_arg = PIPE
+    stdin_arg = subprocess.PIPE
   else:
     stdin_arg = None
 
   timings.tic(name)
   try:
-    p = Popen(cmd, stdin=stdin_arg, stdout=PIPE, stderr=PIPE, shell=False)
+    p = subprocess.Popen(cmd,
+                         stdin=stdin_arg,
+                         stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE,
+                         shell=False)
     stdout,stderr = p.communicate(input=stdin)
   finally:
     timings.toc()
@@ -381,7 +388,7 @@ def run(levels, spread, N):
 
       so, se = svn('--version')
       print ', '.join( so.split('\n')[:2] )
-      started = datetime.now()
+      started = datetime.datetime.now()
 
       try:
         run_cmd(['svnadmin', 'create', repos])
@@ -455,7 +462,7 @@ def run(levels, spread, N):
 
 
       finally:
-        stopped = datetime.now()
+        stopped = datetime.datetime.now()
         print '\nDone with svn benchmark in', (stopped - started)
         timings.submit_timing('TOTAL RUN', timedelta_to_seconds(stopped - started))
 
