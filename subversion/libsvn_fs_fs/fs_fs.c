@@ -3286,7 +3286,7 @@ rep_read_get_baton(struct rep_read_baton **rb_p,
   b->md5_checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
   b->checksum_finalized = FALSE;
   b->md5_checksum = svn_checksum_dup(rep->md5_checksum, pool);
-  b->len = rep->expanded_size;
+  b->len = rep->expanded_size ? rep->expanded_size : rep->size;
   b->off = 0;
   b->fulltext_cache_key = fulltext_cache_key;
   b->pool = svn_pool_create(pool);
@@ -3294,7 +3294,7 @@ rep_read_get_baton(struct rep_read_baton **rb_p,
 
   if (fulltext_cache_key)
     b->current_fulltext = svn_stringbuf_create_ensure
-                            ((apr_size_t)rep->expanded_size,
+                            ((apr_size_t)b->len,
                              b->filehandle_pool);
   else
     b->current_fulltext = NULL;
@@ -3755,10 +3755,11 @@ read_representation(svn_stream_t **contents_p,
     {
       fs_fs_data_t *ffd = fs->fsap_data;
       const char *fulltext_key = NULL;
+      apr_size_t len = rep->expanded_size ? rep->expanded_size : rep->size;
       struct rep_read_baton *rb;
 
       if (ffd->fulltext_cache && SVN_IS_VALID_REVNUM(rep->revision)
-          && fulltext_size_is_cachable(ffd, rep->expanded_size))
+          && fulltext_size_is_cachable(ffd, len))
         {
           svn_string_t *fulltext;
           svn_boolean_t is_cached;
