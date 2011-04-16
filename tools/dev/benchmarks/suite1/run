@@ -17,6 +17,9 @@
 # specific language governing permissions and limitations
 # under the License.
 
+SVN_1_6="$HOME/src/svn-1.6.x/subversion/svn/svn"
+SVN_trunk="$HOME/src/svn/subversion/svn/svn"
+
 benchmark="$PWD/benchmark.py"
 
 parent="$(date +"%Y%m%d-%H%M%S")"
@@ -27,25 +30,14 @@ pwd
 
 ORIGINAL_PATH="$PATH"
 
-use(){
-  svn="$1"
-  if [ "$svn" = "trunk" ]; then
-    export PATH="$HOME/pat/trunk/prefix/bin:$ORIGINAL_PATH"
-  else
-    export PATH="$HOME/pat/stable/prefix/bin:$ORIGINAL_PATH"
-  fi
-}
-
 
 batch(){
   levels="$1"
   spread="$2"
   N="$3"
   pre="${levels}x${spread}_"
-  use 1.6
-  "$benchmark" run ${pre}1.6 $levels $spread $N
-  use trunk
-  "$benchmark" run ${pre}trunk $levels $spread $N
+  "$benchmark" "--svn=${SVN_1_6}" run ${pre}1.6 $levels $spread $N
+  "$benchmark" "--svn=${SVN_trunk}" run ${pre}trunk $levels $spread $N
   echo 
   echo "Results for dir levels: $levels  spread: $spread"
   "$benchmark" compare ${pre}1.6 ${pre}trunk
@@ -83,11 +75,11 @@ echo
 echo =========================================================================
 echo
 echo "calculating total of 1.6..."
-"$benchmark" combine *x*_1.6 total_1.6
+"$benchmark" combine total_1.6 *x*_1.6
 
 echo
 echo "calculating total of trunk..."
-"$benchmark" combine *x*_trunk total_trunk
+"$benchmark" combine total_trunk *x*_trunk
 
 echo
 echo "comparing averaged totals..."
