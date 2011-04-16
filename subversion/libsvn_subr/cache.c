@@ -154,6 +154,23 @@ svn_cache__get_partial(void **value,
 }
 
 svn_error_t *
+svn_cache__set_partial(svn_cache__t *cache,
+                       const void *key,
+                       svn_cache__partial_setter_func_t func,
+                       void *baton,
+                       apr_pool_t *scratch_pool)
+{
+  cache->writes++;
+  return handle_error(cache,
+                      (cache->vtable->set_partial)(cache->cache_internal,
+                                                   key,
+                                                   func,
+                                                   baton,
+                                                   scratch_pool),
+                      scratch_pool);
+}
+
+svn_error_t *
 svn_cache__get_info(svn_cache__t *cache,
                     svn_cache__info_t *info,
                     svn_boolean_t reset,

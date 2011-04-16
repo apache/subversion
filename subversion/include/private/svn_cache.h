@@ -71,6 +71,19 @@ typedef svn_error_t *(*svn_cache__partial_getter_func_t)(void **out,
                                                          apr_pool_t *pool);
 
 /**
+ * A function type for modifying an already deserialized in the @a *data
+ * buffer of length @a *data_len. Additional information of the modification
+ * to do will be provided in @a baton. The function may change the size of
+ * data buffer and may re-allocate it if necessary. In that case, the new
+ * values must be passed back in @a *data_len and @a *data, respectively.
+ * Allocations will be done from @a pool.
+ */
+typedef svn_error_t *(*svn_cache__partial_setter_func_t)(char **data,
+                                                         apr_size_t *data_len,
+                                                         void *baton,
+                                                         apr_pool_t *pool);
+
+/**
  * A function type for serializing an object @a in into bytes.  The
  * function should allocate the serialized value in @a pool, set
  * @a *data to the serialized value, and set @a *data_len to its length.
@@ -391,6 +404,20 @@ svn_cache__get_partial(void **value,
                        svn_cache__t *cache,
                        const void *key,
                        svn_cache__partial_getter_func_t func,
+                       void *baton,
+                       apr_pool_t *scratch_pool);
+
+/**
+ * Find the item identified by @a key in the @a cache. If it has been found,
+ * call @a func for it and @a baton to potentially modify the data. Changed
+ * data will be written back to the cache. If the item cannot be found,
+ * @a func does not get called. @a scratch_pool is used for temporary
+ * allocations.
+ */
+svn_error_t *
+svn_cache__set_partial(svn_cache__t *cache,
+                       const void *key,
+                       svn_cache__partial_setter_func_t func,
                        void *baton,
                        apr_pool_t *scratch_pool);
 

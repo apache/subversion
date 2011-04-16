@@ -288,6 +288,38 @@ memcache_get_partial(void **value_p,
 
 
 static svn_error_t *
+memcache_set_partial(void *cache_void,
+                     const void *key,
+                     svn_cache__partial_setter_func_t func,
+                     void *baton,
+                     apr_pool_t *pool)
+{
+  svn_error_t *err = SVN_NO_ERROR;
+
+  char *data;
+  apr_size_t size;
+
+  apr_pool_t *subpool = svn_pool_create(poo);
+  SVN_ERR(memcache_internal_get(&data,
+                                &size,
+                                found,
+                                cache_void,
+                                key,
+                                pool));
+
+  /* If we found it, modify it and write it back to cache */
+  if (*found)
+    {
+      SVN_ERR(func(&data, &size, baton, subpool));
+      err = memcache_internal_set(cache_void, key, data, data_len, subpool);
+    }
+
+  svn_pool_destroy(subpool);
+  return err;
+}
+
+
+static svn_error_t *
 memcache_iter(svn_boolean_t *completed,
               void *cache_void,
               svn_iter_apr_hash_cb_t user_cb,
@@ -336,6 +368,7 @@ static svn_cache__vtable_t memcache_vtable = {
   memcache_iter,
   memcache_is_cachable,
   memcache_get_partial,
+  memcache_set_partial,
   memcache_get_info
 };
 

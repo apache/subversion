@@ -1174,6 +1174,12 @@ membuffer_cache_get(svn_membuffer_t *cache,
   return deserializer(item, buffer, entry->size, pool);
 }
 
+/* Look for the cache entry identified by KEY and KEY_LEN. FOUND indicates
+ * whether that entry exists. If not found, *ITEM will be NULL. Otherwise,
+ * the DESERIALIZER is called with that entry and the BATON provided
+ * and will extract the desired information. The result is set in *ITEM.
+ * Allocations will be done in POOL.
+ */
 static svn_error_t *
 membuffer_cache_get_partial(svn_membuffer_t *cache,
                             const void *key,
@@ -1232,6 +1238,105 @@ membuffer_cache_get_partial(svn_membuffer_t *cache,
                          entry->size,
                          baton,
                          pool);
+    }
+
+  /* done here -> unlock the cache
+   */
+  return unlock_cache(cache, err);
+}
+
+/* Look for the cache entry identified by KEY and KEY_LEN. If no entry
+ * has been found, the function returns without modifying the cache.
+ * Otherwise, FUNC is called with that entry and the BATON provided
+ * and may modify the cache entry. Allocations will be done in POOL.
+ */
+static svn_error_t *
+membuffer_cache_set_partial(svn_membuffer_t *cache,
+                            const void *key,
+                            apr_size_t key_len,
+                            svn_cache__partial_setter_func_t func,
+                            void *baton,
+                            DEBUG_CACHE_MEMBUFFER_TAG_ARG
+                            apr_pool_t *pool)
+{
+  apr_uint32_t group_index;
+  unsigned char to_find[KEY_SIZE];
+  entry_t *entry;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  /* cache item lookup
+   */
+  group_index = get_group_index(&cache, key, key_len, to_find, pool);
+
+  SVN_ERR(lock_cache(cache));
+
+  entry = find_entry(cache, group_index, to_find, FALSE);
+  cache->total_reads++;
+
+  /* this function is a no-op if the item is not in cache
+   */
+  if (entry != NULL)
+    {
+      /* access the serialized cache item */
+      char *data = (char*)cache->data + entry->offset;
+      char *orig_data = data;
+      apr_size_t size = entry->size;
+
+      entry->hit_count++;
+      cache->hit_count++;
+      cache->total_writes++;
+
+#ifdef DEBUG_CACHE_MEMBUFFER
+
+      /* Check for overlapping entries.
+       */
+      SVN_ERR_ASSERT(entry->next == NO_INDEX ||
+                     entry->offset + size
+                        <= get_entry(cache, entry->next)->offset);
+
+      /* Compare original content, type and key (hashes)
+       */
+      SVN_ERR(store_content_part(tag, data, size, pool));
+      SVN_ERR(assert_equal_tags(&entry->tag, tag));
+
+#endif
+
+      /* modify it, preferrably in-situ.
+       */
+      err = func(&data, &size, baton, pool);
+
+      /* if modification caused a re-allocation, we need to remove the old
+       * entry and to copy the new data back into cache.
+       */
+      if (data != orig_data)
+        {
+          /* Remove the old entry and try to make space for the new one.
+           */
+          drop_entry(cache, entry);
+          if (   (cache->data_size / 4 > size)
+              && ensure_data_insertable(cache, size))
+            {
+              /* Write the new entry.
+               */
+              entry->size = size;
+              entry->offset = cache->current_data;
+              if (size)
+                memcpy(cache->data + entry->offset, data, size);
+
+              /* Link the entry properly.
+               */
+              insert_entry(cache, entry);
+
+#ifdef DEBUG_CACHE_MEMBUFFER
+
+              /* Remember original content, type and key (hashes)
+               */
+              SVN_ERR(store_content_part(tag, data, size, pool));
+              memcpy(&entry->tag, tag, sizeof(*tag));
+
+#endif
+            }
+        }
     }
 
   /* done here -> unlock the cache
@@ -1482,6 +1587,40 @@ svn_membuffer_cache_get_partial(void **value_p,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+svn_membuffer_cache_set_partial(void *cache_void,
+                                const void *key,
+                                svn_cache__partial_setter_func_t func,
+                                void *baton,
+                                apr_pool_t *pool)
+{
+  svn_membuffer_cache_t *cache = cache_void;
+
+  void *full_key;
+  apr_size_t full_key_len;
+
+  DEBUG_CACHE_MEMBUFFER_INIT_TAG
+
+  combine_key(cache->prefix,
+              sizeof(cache->prefix),
+              key,
+              cache->key_len,
+              &full_key,
+              &full_key_len,
+              pool);
+
+  SVN_ERR(membuffer_cache_set_partial(cache->membuffer,
+                                      full_key,
+                                      full_key_len,
+                                      func,
+                                      baton,
+                                      DEBUG_CACHE_MEMBUFFER_TAG
+                                      pool));
+// printf("set partial %s \n", key);
+
+  return SVN_NO_ERROR;
+}
+
 static svn_boolean_t
 svn_membuffer_cache_is_cachable(void *cache_void, apr_size_t size)
 {
@@ -1545,6 +1684,7 @@ static svn_cache__vtable_t membuffer_cache_vtable = {
   svn_membuffer_cache_iter,
   svn_membuffer_cache_is_cachable,
   svn_membuffer_cache_get_partial,
+  svn_membuffer_cache_set_partial,
   svn_membuffer_cache_get_info
 };
 
