@@ -31,6 +31,7 @@
 #include "svn_cmdline.h"
 
 #include "svn_private_config.h"
+#include <valgrind/callgrind.h>
 
 /* Return a memcache in *MEMCACHE_P for FS if it's configured to use
    memcached, or NULL otherwise.  Also, sets *FAIL_STOP to a boolean
@@ -157,6 +158,13 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
   svn_memcache_t *memcache;
   svn_boolean_t no_handler;
 
+  static int runCount = 0;
+
+  if (++runCount == 2)
+  {
+    CALLGRIND_START_INSTRUMENTATION
+  }
+  
   SVN_ERR(read_config(&memcache, &no_handler, fs, pool));
 
   /* Make the cache for revision roots.  For the vast majority of

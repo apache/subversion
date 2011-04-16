@@ -481,6 +481,35 @@ inprocess_cache_get_partial(void **value_p,
                       func(value_p, entry->value, entry->size, baton, pool));
 }
 
+static svn_error_t *
+inprocess_cache_set_partial(void *cache_void,
+                            const void *key,
+                            svn_cache__partial_setter_func_t func,
+                            void *baton,
+                            apr_pool_t *pool)
+{
+  inprocess_cache_t *cache = cache_void;
+  struct cache_entry *entry;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  SVN_ERR(lock_cache(cache));
+
+  entry = apr_hash_get(cache->hash, key, cache->klen);
+  if (! entry)
+    return unlock_cache(cache, err);
+
+  move_page_to_front(cache, entry->page);
+
+  cache->data_size -= entry->size;
+  err = func((char **)&entry->value,
+             &entry->size,
+             baton,
+             entry->page->page_pool);
+  cache->data_size += entry->size;
+
+  return unlock_cache(cache, err);
+}
+
 static svn_boolean_t
 inprocess_cache_is_cachable(void *cache_void, apr_size_t size)
 {
@@ -525,6 +554,7 @@ static svn_cache__vtable_t inprocess_cache_vtable = {
   inprocess_cache_iter,
   inprocess_cache_is_cachable,
   inprocess_cache_get_partial,
+  inprocess_cache_set_partial,
   inprocess_cache_get_info
 };
 
