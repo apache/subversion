@@ -259,6 +259,25 @@ compare_dirent_id_names(const void *lhs, const void *rhs)
                 (*(const svn_fs_dirent_t *const *)rhs)->name);
 }
 
+/* Utility function to serialize the *ENTRY_P into a the given
+ * serialization CONTEXT.
+ */
+static void
+serialize_dir_entry(svn_temp_serializer__context_t *context,
+                    svn_fs_dirent_t **entry_p)
+{
+  svn_fs_dirent_t *entry = *entry_p;
+
+  svn_temp_serializer__push(context,
+                            (const void * const *)entry_p,
+                             sizeof(svn_fs_dirent_t));
+
+  svn_fs_fs__id_serialize(context, &entry->id);
+  svn_temp_serializer__add_string(context, &entry->name);
+
+  svn_temp_serializer__pop(context);
+}
+
 /* Utility function to serialize the ENTRIES into a new serialization
  * context to be returned. Allocation will be made form POOL.
  */
@@ -301,17 +320,7 @@ serialize_dir(apr_hash_t *entries, apr_pool_t *pool)
 
   /* serialize the individual entries and their sub-structures */
   for (i = 0; i < count; ++i)
-    {
-      svn_fs_dirent_t **entry = &hash_data.entries[i];
-      svn_temp_serializer__push(context,
-                                (const void * const *)entry,
-                                sizeof(svn_fs_dirent_t));
-
-      svn_fs_fs__id_serialize(context, &(*entry)->id);
-      svn_temp_serializer__add_string(context, &(*entry)->name);
-
-      svn_temp_serializer__pop(context);
-    }
+    serialize_dir_entry(context, &hash_data.entries[i]);
 
   return context;
 }
@@ -694,25 +703,20 @@ svn_fs_fs__get_sharded_offset(void **out,
   return SVN_NO_ERROR;
 }
 
-/* Implements svn_cache__partial_getter_func_t for a directory contents hash.
+/* Utility function that returns the lowest index of the first entry in
+ * *ENTRIES that points to a dir entry with a name equal or larger than NAME.
+ * If an exact match has been found, *FOUND will be set to TRUE. COUNT is
+ * the number of valid entries in ENTRIES.
  */
-svn_error_t *
-svn_fs_fs__extract_dir_entry(void **out,
-                             const char *data,
-                             apr_size_t data_len,
-                             void *baton,
-                             apr_pool_t *pool)
+static apr_size_t
+find_entry(svn_fs_dirent_t **entries,
+           const char *name,
+           apr_size_t count,
+           svn_boolean_t *found)
 {
-  hash_data_t *hash_data = (hash_data_t *)data;
-  const char* name = baton;
-
-  /* resolve the reference to the entries array */
-  const svn_fs_dirent_t * const *entries =
-      svn_temp_deserializer__ptr(data, (const void **)&hash_data->entries);
-
   /* binary search for the desired entry by name */
   apr_size_t lower = 0;
-  apr_size_t upper = hash_data->count;
+  apr_size_t upper = count;
   apr_size_t middle;
 
   for (middle = upper / 2; lower < upper; middle = (upper + lower) / 2)
@@ -729,33 +733,69 @@ svn_fs_fs__extract_dir_entry(void **out,
         upper = middle;
     }
 
+  /* check whether we actually found a match */
+  *found = FALSE;
+  if (lower < count)
+    {
+      const svn_fs_dirent_t *entry =
+          svn_temp_deserializer__ptr(entries, (const void **)&entries[lower]);
+      const char* entry_name =
+          svn_temp_deserializer__ptr(entry, (const void **)&entry->name);
+
+      if (strcmp(entry_name, name) == 0)
+        *found = TRUE;
+    }
+
+  return lower;
+}
+
+/* Implements svn_cache__partial_getter_func_t for a directory contents hash.
+ */
+svn_error_t *
+svn_fs_fs__extract_dir_entry(void **out,
+                             const char *data,
+                             apr_size_t data_len,
+                             void *baton,
+                             apr_pool_t *pool)
+{
+  hash_data_t *hash_data = (hash_data_t *)data;
+  const char* name = baton;
+  svn_boolean_t found;
+
+  /* resolve the reference to the entries array */
+  const svn_fs_dirent_t * const *entries =
+    svn_temp_deserializer__ptr(data, (const void **)&hash_data->entries);
+
+  /* binary search for the desired entry by name */
+  apr_size_t index = find_entry((svn_fs_dirent_t **)entries,
+                                name,
+                                hash_data->count,
+                                &found);
+
   /* de-serialize that entry or return NULL, if no match has been found */
   *out = NULL;
-  if (lower < hash_data->count)
+  if (found)
     {
       const svn_fs_dirent_t *source =
-          svn_temp_deserializer__ptr(entries, (const void **)&entries[lower]);
+          svn_temp_deserializer__ptr(entries, (const void **)&entries[index]);
 
       /* Entries have been serialized one-by-one, each time including all
        * nestes structures and strings. Therefore, they occupy a single
        * block of memory whose end-offset is either the beginning of the
        * next entry or the end of the buffer
        */
-      apr_size_t end_offset = lower + 1 < hash_data->count
-                            ? ((apr_size_t*)entries)[lower+1]
+      apr_size_t end_offset = index + 1 < hash_data->count
+                            ? ((apr_size_t*)entries)[index+1]
                             : data_len;
-      apr_size_t size = end_offset - ((apr_size_t*)entries)[lower];
+      apr_size_t size = end_offset - ((apr_size_t*)entries)[index];
 
       /* copy & deserialize the entry */
       svn_fs_dirent_t *new_entry = apr_palloc(pool, size);
       memcpy(new_entry, source, size);
 
       svn_temp_deserializer__resolve(new_entry, (void **)&new_entry->name);
-      if (strcmp(new_entry->name, name) == 0)
-        {
-          svn_fs_fs__id_deserialize(new_entry, (svn_fs_id_t **)&new_entry->id);
-          *(svn_fs_dirent_t **)out = new_entry;
-        }
+      svn_fs_fs__id_deserialize(new_entry, (svn_fs_id_t **)&new_entry->id);
+      *(svn_fs_dirent_t **)out = new_entry;
     }
 
   return SVN_NO_ERROR;
