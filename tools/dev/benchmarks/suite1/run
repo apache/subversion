@@ -28,8 +28,6 @@ mkdir "$parent"
 cd "$parent"
 pwd
 
-ORIGINAL_PATH="$PATH"
-
 
 batch(){
   levels="$1"
@@ -65,27 +63,27 @@ cs=100
 {
 started="$(date)"
 echo "Started at $started"
-echo 
+echo ""
 
 batch $al $as $N
 batch $bl $bs $N
 batch $cl $cs $N
 
-echo
+echo ""
 echo =========================================================================
-echo
+echo ""
 echo "calculating total of 1.6..."
 "$benchmark" combine total_1.6 *x*_1.6
 
-echo
+echo ""
 echo "calculating total of trunk..."
 "$benchmark" combine total_trunk *x*_trunk
 
-echo
+echo ""
 echo "comparing averaged totals..."
 "$benchmark" compare total_1.6 total_trunk
 
-echo
+echo ""
 echo "Had started at $started,"
 echo "       done at $(date)"
 pwd
