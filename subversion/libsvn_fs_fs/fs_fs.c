@@ -5495,6 +5495,7 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
   svn_txdelta_window_handler_t wh;
   void *whb;
   fs_fs_data_t *ffd = fs->fsap_data;
+  int diff_version = ffd->format >= SVN_FS_FS__MIN_SVNDIFF1_FORMAT ? 1 : 0;
 
   b = apr_pcalloc(pool, sizeof(*b));
 
@@ -5540,10 +5541,12 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
   SVN_ERR(get_file_offset(&b->delta_start, file, b->pool));
 
   /* Prepare to write the svndiff data. */
-  if (ffd->format >= SVN_FS_FS__MIN_SVNDIFF1_FORMAT)
-    svn_txdelta_to_svndiff2(&wh, &whb, b->rep_stream, 1, pool);
-  else
-    svn_txdelta_to_svndiff2(&wh, &whb, b->rep_stream, 0, pool);
+  svn_txdelta_to_svndiff3(&wh,
+                          &whb,
+                          b->rep_stream,
+                          diff_version,
+                          SVN_DEFAULT_COMPRESSION_LEVEL,
+                          pool);
 
   b->delta_stream = svn_txdelta_target_push(wh, whb, source, b->pool);
 
