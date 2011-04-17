@@ -598,6 +598,83 @@ test_copy_crash(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+#ifdef TEST16K_ADD
+static svn_error_t *
+test_16k_add(const svn_test_opts_t *opts,
+                apr_pool_t *pool)
+{
+  svn_repos_t *repos;
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  svn_revnum_t committed_rev;
+  svn_opt_revision_t rev;
+  svn_client_ctx_t *ctx;
+  const char *repos_url;
+  const char *cwd, *wc_path;
+  svn_opt_revision_t peg_rev;
+  apr_array_header_t *targets;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  int i;
+
+  /* Create a filesytem and repository. */
+  SVN_ERR(svn_test__create_repos(&repos, "test-16k-repos",
+                                 opts, pool));
+  fs = svn_repos_fs(repos);
+
+  /* Prepare a txn to receive the greek tree. */
+  SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &committed_rev, txn, pool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(committed_rev));
+
+  /* Check out the HEAD revision */
+  SVN_ERR(svn_dirent_get_absolute(&cwd, "", pool));
+  SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_url, "test-16k-repos",
+                                           pool));
+
+  /* Put wc inside an unversioned directory.  Checking out a 1.7 wc
+     directly inside a 1.6 wc doesn't work reliably, an intervening
+     unversioned directory prevents the problems. */
+  wc_path = svn_dirent_join(cwd, "test-16k", pool);
+  SVN_ERR(svn_io_make_dir_recursively(wc_path, pool));
+  svn_test_add_dir_cleanup(wc_path);
+
+  wc_path = svn_dirent_join(wc_path, "trunk", pool);
+  SVN_ERR(svn_io_remove_dir2(wc_path, TRUE, NULL, NULL, pool));
+  rev.kind = svn_opt_revision_head;
+  peg_rev.kind = svn_opt_revision_unspecified;
+  SVN_ERR(svn_client_create_context(&ctx, pool));
+  SVN_ERR(svn_client_checkout3(NULL, repos_url, wc_path,
+                               &peg_rev, &rev, svn_depth_infinity,
+                               TRUE, FALSE, ctx, pool));
+
+  for (i = 0; i < 16384; i++)
+    {
+      const char *path;
+
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_io_open_unique_file3(NULL, &path, wc_path,
+                                       svn_io_file_del_none,
+                                       iterpool, iterpool));
+
+      SVN_ERR(svn_client_add4(path, svn_depth_unknown, FALSE, FALSE, FALSE,
+                              ctx, iterpool));
+    }
+
+  targets = apr_array_make(pool, 1, sizeof(const char *));
+  APR_ARRAY_PUSH(targets, const char *) = wc_path;
+  svn_pool_clear(iterpool);
+
+  SVN_ERR(svn_client_commit5(targets, svn_depth_infinity, FALSE, FALSE, 
+                             NULL, NULL, NULL, NULL, ctx, iterpool));
+
+
+  return SVN_NO_ERROR;
+}
+#endif
 
 /* ========================================================================== */
 
@@ -611,5 +688,8 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_OPTS_PASS(test_patch, "test svn_client_patch"),
     SVN_TEST_OPTS_PASS(test_wc_add_scenarios, "test svn_wc_add3 scenarios"),
     SVN_TEST_OPTS_PASS(test_copy_crash, "test a crash in svn_client_copy5"),
+#ifdef TEST16K_ADD
+    SVN_TEST_OPTS_PASS(test_16k_add, "test adding 16k files"),
+#endif
     SVN_TEST_NULL
   };
