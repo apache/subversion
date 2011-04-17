@@ -436,12 +436,16 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
                                 svn_revnum_t new_revnum,
                                 const char *rev_date,
                                 const char *rev_author,
+                                svn_cancel_func_t cancel_func,
+                                void *cancel_baton,
                                 apr_pool_t *scratch_pool)
 {
   apr_array_header_t *sorted_queue;
   int i;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_time_t new_date;
+  apr_hash_t *run_wqs = apr_hash_make(scratch_pool);
+  apr_hash_index_t *hi;
 
   if (rev_date)
     SVN_ERR(svn_time_from_cstring(&new_date, rev_date, iterpool));
@@ -457,6 +461,7 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
       const svn_sort__item_t *sort_item
         = &APR_ARRAY_IDX(sorted_queue, i, svn_sort__item_t);
       const committed_queue_item_t *cqi = sort_item->value;
+      const char *wcroot_abspath;
 
       svn_pool_clear(iterpool);
 
@@ -476,11 +481,34 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
                                                  cqi->sha1_checksum, queue,
                                                  iterpool));
 
-      SVN_ERR(svn_wc__wq_run(wc_ctx->db, cqi->local_abspath, NULL, NULL,
-                             iterpool));
+      /* Don't run the wq now, but remember that we must call it for this
+         working copy */
+      SVN_ERR(svn_wc__db_get_wcroot(&wcroot_abspath,
+                                    wc_ctx->db, cqi->local_abspath,
+                                    iterpool, iterpool));
+
+      if (! apr_hash_get(run_wqs, wcroot_abspath, APR_HASH_KEY_STRING))
+        {
+          wcroot_abspath = apr_pstrdup(scratch_pool, wcroot_abspath);
+          apr_hash_set(run_wqs, wcroot_abspath, APR_HASH_KEY_STRING,
+                       wcroot_abspath);
+        }
     }
 
   SVN_ERR(svn_hash__clear(queue->queue, iterpool));
+
+  for (hi = apr_hash_first(scratch_pool, run_wqs);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *wcroot_abspath = svn__apr_hash_index_key(hi);
+
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_wc__wq_run(wc_ctx->db, wcroot_abspath,
+                             cancel_func, cancel_baton,
+                             iterpool));
+    }
 
   svn_pool_destroy(iterpool);
 
