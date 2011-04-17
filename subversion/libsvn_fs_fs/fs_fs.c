@@ -4007,24 +4007,35 @@ parse_dir_entries(apr_hash_t **entries_p,
   return SVN_NO_ERROR;
 }
 
+/* Return the cache object in FS responsible to storing the directory
+ * the NODEREV. If none exists, return NULL. */
+static svn_cache__t *
+locate_dir_cache(svn_fs_t *fs,
+                 node_revision_t *noderev)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  return svn_fs_fs__id_txn_id(noderev->id)
+      ? ffd->txn_dir_cache
+      : ffd->dir_cache;
+}
+
 svn_error_t *
 svn_fs_fs__rep_contents_dir(apr_hash_t **entries_p,
                             svn_fs_t *fs,
                             node_revision_t *noderev,
                             apr_pool_t *pool)
 {
-  fs_fs_data_t *ffd = fs->fsap_data;
   const char *unparsed_id = NULL;
   apr_hash_t *unparsed_entries, *parsed_entries;
 
-  /* Are we looking for an immutable directory?  We could try the
-   * cache. */
-  if (! svn_fs_fs__id_txn_id(noderev->id))
+  /* find the cache we may use */
+  svn_cache__t *cache = locate_dir_cache(fs, noderev);
+  if (cache)
     {
       svn_boolean_t found;
 
       unparsed_id = svn_fs_fs__id_unparse(noderev->id, pool)->data;
-      SVN_ERR(svn_cache__get((void **) entries_p, &found, ffd->dir_cache,
+      SVN_ERR(svn_cache__get((void **) entries_p, &found, cache,
                              unparsed_id, pool));
       if (found)
         return SVN_NO_ERROR;
@@ -4035,9 +4046,9 @@ svn_fs_fs__rep_contents_dir(apr_hash_t **entries_p,
   SVN_ERR(get_dir_contents(unparsed_entries, fs, noderev, pool));
   SVN_ERR(parse_dir_entries(&parsed_entries, unparsed_entries, pool));
 
-  /* If this is an immutable directory, let's cache the contents. */
-  if (! svn_fs_fs__id_txn_id(noderev->id))
-    SVN_ERR(svn_cache__set(ffd->dir_cache, unparsed_id, parsed_entries, pool));
+  /* Update the cache, if we are to use one. */
+  if (cache)
+    SVN_ERR(svn_cache__set(cache, unparsed_id, parsed_entries, pool));
 
   *entries_p = parsed_entries;
   return SVN_NO_ERROR;
@@ -4050,26 +4061,26 @@ svn_fs_fs__rep_contents_dir_entry(svn_fs_dirent_t **dirent,
                                   const char *name,
                                   apr_pool_t *pool)
 {
-  fs_fs_data_t *ffd = fs->fsap_data;
   svn_boolean_t found = FALSE;
 
-  /* Are we looking for an immutable directory?  We could try the
-   * cache. */
-  if (! svn_fs_fs__id_txn_id(noderev->id))
+  /* find the cache we may use */
+  svn_cache__t *cache = locate_dir_cache(fs, noderev);
+  if (cache)
     {
       const char *unparsed_id =
         svn_fs_fs__id_unparse(noderev->id, pool)->data;
 
-      /* Cache lookup. Return on the requested part of the dir info. */
+      /* Cache lookup. */
       SVN_ERR(svn_cache__get_partial((void **)dirent,
                                      &found,
-                                     ffd->dir_cache,
+                                     cache,
                                      unparsed_id,
                                      svn_fs_fs__extract_dir_entry,
                                      (void*)name,
                                      pool));
     }
 
+  /* fetch data from disk if we did not find it in the cache */
   if (! found)
     {
       apr_hash_t *entries;
@@ -5214,6 +5225,7 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
   const char *filename = path_txn_node_children(fs, parent_noderev->id, pool);
   apr_file_t *file;
   svn_stream_t *out;
+  fs_fs_data_t *ffd = fs->fsap_data;
 
   if (!rep || !rep->txn_id)
     {
@@ -5253,6 +5265,30 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
       SVN_ERR(svn_io_file_open(&file, filename, APR_WRITE | APR_APPEND,
                                APR_OS_DEFAULT, pool));
       out = svn_stream_from_aprfile2(file, TRUE, pool);
+    }
+
+  /* if we have a directory cache for this transaction, update it */
+  if (ffd->txn_dir_cache)
+    {
+      apr_pool_t *subpool = svn_pool_create(pool);
+
+      /* build parameters: (name, new entry) pair */
+      const char *key =
+          svn_fs_fs__id_unparse(parent_noderev->id, subpool)->data;
+      replace_baton_t baton = {name, NULL};
+
+      if (id)
+        {
+          baton.new_entry = apr_pcalloc(subpool, sizeof(*baton.new_entry));
+          baton.new_entry->name = name;
+          baton.new_entry->kind = kind;
+          baton.new_entry->id = id;
+        }
+
+      /* actually update the cached directory (if cached) */
+      SVN_ERR(svn_cache__set_partial(ffd->txn_dir_cache, key, svn_fs_fs__replace_dir_entry, &baton, subpool));
+
+      svn_pool_destroy(subpool);
     }
 
   /* Append an incremental hash entry for the entry change. */
@@ -7368,8 +7404,18 @@ svn_fs_fs__delete_node_revision(svn_fs_t *fs,
   /* Delete any mutable data representation. */
   if (noderev->data_rep && noderev->data_rep->txn_id
       && noderev->kind == svn_node_dir)
+    {
+      fs_fs_data_t *ffd = fs->fsap_data;
       SVN_ERR(svn_io_remove_file2(path_txn_node_children(fs, id, pool), FALSE,
                                   pool));
+
+      /* remove the corresponding entry from the cache, if such exists */
+      if (ffd->txn_dir_cache)
+        {
+          const char *key = svn_fs_fs__id_unparse(id, pool)->data;
+          SVN_ERR(svn_cache__set(ffd->txn_dir_cache, key, NULL, pool));
+        }
+    }
 
   return svn_io_remove_file2(path_txn_node_rev(fs, id, pool), FALSE, pool);
 }

@@ -330,3 +330,66 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
 
   return SVN_NO_ERROR;
 }
+
+/* APR pool cleanup handler that will reset the cache pointer given in
+   BATON_VOID. */
+static apr_status_t
+remove_txn_cache(void *baton_void)
+{
+  svn_cache__t **cache_p = baton_void;
+  *cache_p = NULL;
+
+  return  APR_SUCCESS;
+}
+
+svn_error_t *
+svn_fs_fs__initialize_txn_caches(svn_fs_t *fs,
+                                 const char *txn_id,
+                                 apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  /* Transaction content needs to be carefully prefixed to virtually
+     eliminate any chance for conflicts. The (repo, txn_id) pair
+     should be unique but if a transaction fails, it might be possible
+     to start a new transaction later that receives the same id.
+     Therefore, throw in a uuid as well - just to be sure. */
+  const char *prefix = apr_pstrcat(pool,
+                                   "fsfs:", ffd->uuid,
+                                   "/", fs->path,
+                                   ":", txn_id,
+                                   ":", svn_uuid_generate(pool), ":",
+                                   (char *)NULL);
+
+  /* There must be no concurrent transactions in progress for the same
+     FSFS access / session object. Maybe, you forgot to clean POOL. */
+  SVN_ERR_ASSERT(ffd->txn_dir_cache == NULL);
+
+  /* create a txn-local directory cache */
+  if (svn_fs__get_global_membuffer_cache())
+    SVN_ERR(svn_cache__create_membuffer_cache(&(ffd->txn_dir_cache),
+                                              svn_fs__get_global_membuffer_cache(),
+                                              svn_fs_fs__serialize_dir_entries,
+                                              svn_fs_fs__deserialize_dir_entries,
+                                              APR_HASH_KEY_STRING,
+                                              apr_pstrcat(pool, prefix, "TXNDIR",
+                                                          (char *)NULL),
+                                              pool));
+  else
+    SVN_ERR(svn_cache__create_inprocess(&(ffd->txn_dir_cache),
+                                        svn_fs_fs__serialize_dir_entries,
+                                        svn_fs_fs__deserialize_dir_entries,
+                                        APR_HASH_KEY_STRING,
+                                        1024, 8, FALSE,
+                                        apr_pstrcat(pool, prefix, "TXNDIR",
+                                            (char *)NULL),
+                                        pool));
+
+  /* reset the transaction-specific cache if the pool gets cleaned up. */
+  apr_pool_cleanup_register(pool,
+                            &(ffd->txn_dir_cache),
+                            remove_txn_cache,
+                            apr_pool_cleanup_null);
+
+  return SVN_NO_ERROR;
+}
