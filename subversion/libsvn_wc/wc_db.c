@@ -1837,13 +1837,15 @@ base_get_info(svn_wc__db_status_t *status,
               svn_revnum_t *changed_rev,
               apr_time_t *changed_date,
               const char **changed_author,
-              apr_time_t *last_mod_time,
               svn_depth_t *depth,
               const svn_checksum_t **checksum,
-              svn_filesize_t *translated_size,
               const char **target,
               svn_wc__db_lock_t **lock,
+              svn_filesize_t *recorded_size,
+              apr_time_t *recorded_mod_time,
+              svn_boolean_t *had_props,
               svn_boolean_t *update_root,
+              svn_boolean_t *needs_full_update,
               svn_wc__db_wcroot_t *wcroot,
               const char *local_relpath,
               apr_pool_t *result_pool,
@@ -1893,9 +1895,9 @@ base_get_info(svn_wc__db_status_t *status,
           /* Result may be NULL. */
           *changed_author = svn_sqlite__column_text(stmt, 9, result_pool);
         }
-      if (last_mod_time)
+      if (recorded_mod_time)
         {
-          *last_mod_time = svn_sqlite__column_int64(stmt, 12);
+          *recorded_mod_time = svn_sqlite__column_int64(stmt, 12);
         }
       if (depth)
         {
@@ -1931,9 +1933,9 @@ base_get_info(svn_wc__db_status_t *status,
                                                scratch_pool));
             }
         }
-      if (translated_size)
+      if (recorded_size)
         {
-          *translated_size = get_translated_size(stmt, 6);
+          *recorded_size = get_translated_size(stmt, 6);
         }
       if (target)
         {
@@ -1942,9 +1944,20 @@ base_get_info(svn_wc__db_status_t *status,
           else
             *target = svn_sqlite__column_text(stmt, 11, result_pool);
         }
+      if (had_props)
+        {
+          *had_props = !svn_sqlite__column_is_null(stmt, 13);
+        }
       if (update_root)
         {
           *update_root = svn_sqlite__column_boolean(stmt, 14);
+        }
+      if (needs_full_update)
+        {
+          /* Before we add a new column it is equivalent to the wc-ng
+             incomplete presence */
+          *status = (svn_sqlite__column_token(stmt, 2, presence_map)
+                            == svn_wc__db_status_incomplete);
         }
     }
   else
@@ -1970,13 +1983,15 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
                          svn_revnum_t *changed_rev,
                          apr_time_t *changed_date,
                          const char **changed_author,
-                         apr_time_t *last_mod_time,
                          svn_depth_t *depth,
                          const svn_checksum_t **checksum,
-                         svn_filesize_t *translated_size,
                          const char **target,
                          svn_wc__db_lock_t **lock,
+                         svn_filesize_t *recorded_size,
+                         apr_time_t *recorded_mod_time,
+                         svn_boolean_t *had_props,
                          svn_boolean_t *update_root,
+                         svn_boolean_t *needs_full_update,
                          svn_wc__db_t *db,
                          const char *local_abspath,
                          apr_pool_t *result_pool,
@@ -1993,9 +2008,10 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
   VERIFY_USABLE_WCROOT(wcroot);
 
   SVN_ERR(base_get_info(status, kind, revision, repos_relpath, &repos_id,
-                        changed_rev, changed_date, changed_author,
-                        last_mod_time, depth, checksum, translated_size,
-                        target, lock, update_root,
+                        changed_rev, changed_date, changed_author, depth,
+                        checksum, target, lock, recorded_size,
+                        recorded_mod_time, had_props,
+                        update_root, needs_full_update,
                         wcroot, local_relpath, result_pool, scratch_pool));
   SVN_ERR_ASSERT(repos_id != INVALID_REPOS_ID);
   SVN_ERR(fetch_repos_info(repos_root_url, repos_uuid,
@@ -2434,7 +2450,7 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
           SVN_ERR(base_get_info(NULL, NULL, copyfrom_rev, copyfrom_relpath,
                                 copyfrom_id,
                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                NULL, NULL, NULL,
+                                NULL, NULL, NULL, NULL, NULL,
                                 wcroot, base_del_relpath,
                                 result_pool, scratch_pool));
         }
@@ -7176,7 +7192,7 @@ bump_node_revision(svn_wc__db_wcroot_t *wcroot,
 
   SVN_ERR(base_get_info(&status, &db_kind, &revision, &repos_relpath,
                         &repos_id, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                        NULL, NULL, &update_root,
+                        NULL, NULL, NULL, &update_root, NULL,
                         wcroot, local_relpath,
                         scratch_pool, scratch_pool));
 
@@ -7295,7 +7311,7 @@ bump_revisions_post_commit(void *baton,
   apr_int64_t new_repos_id = -1;
 
   err = base_get_info(&status, &kind, NULL, NULL, NULL, NULL, NULL, NULL,
-                      NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                      NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                       wcroot, local_relpath, scratch_pool, scratch_pool);
   if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
     {
@@ -9491,7 +9507,7 @@ end_directory_update(void *baton,
   svn_sqlite__stmt_t *stmt;
   svn_wc__db_status_t base_status;
 
-  SVN_ERR(base_get_info(&base_status, NULL, NULL, NULL, NULL, NULL,
+  SVN_ERR(base_get_info(&base_status, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                         NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                         wcroot, local_relpath, scratch_pool, scratch_pool));
 

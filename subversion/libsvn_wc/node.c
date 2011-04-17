@@ -897,11 +897,9 @@ svn_wc__node_get_base_rev(svn_revnum_t *base_revision,
   svn_boolean_t have_base;
   svn_error_t *err;
 
-  err = svn_wc__db_base_get_info(NULL, NULL, base_revision,
-                                 NULL, NULL, NULL,
-                                 NULL, NULL, NULL,
-                                 NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL,
+  err = svn_wc__db_base_get_info(NULL, NULL, base_revision, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL, 
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                  wc_ctx->db, local_abspath,
                                  scratch_pool, scratch_pool);
 
@@ -973,9 +971,9 @@ svn_wc__node_get_working_rev_info(svn_revnum_t *revision,
                                            NULL, NULL, changed_rev,
                                            changed_date, changed_author,
                                            NULL, NULL, NULL, NULL, NULL,
-                                           NULL, NULL, wc_ctx->db,
-                                           base_del_abspath, result_pool,
-                                           scratch_pool));
+                                           NULL, NULL, NULL, NULL,
+                                           wc_ctx->db, base_del_abspath,
+                                           result_pool, scratch_pool));
         }
     }
   else if (have_base)
@@ -985,7 +983,8 @@ svn_wc__node_get_working_rev_info(svn_revnum_t *revision,
       SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, &base_rev, NULL, NULL,
                                        NULL, changed_rev, changed_date,
                                        changed_author, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, wc_ctx->db, local_abspath,
+                                       NULL, NULL, NULL, NULL, NULL,
+                                       wc_ctx->db, local_abspath,
                                        result_pool, scratch_pool));
 
       if (revision && !SVN_IS_VALID_REVNUM(*revision)
@@ -1097,8 +1096,8 @@ svn_wc__node_get_lock_info(const char **lock_token,
   svn_error_t *err;
 
   err = svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 &lock, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, &lock, NULL,
+                                 NULL, NULL, NULL, NULL,
                                  wc_ctx->db, local_abspath,
                                  result_pool, scratch_pool);
 
@@ -1599,7 +1598,7 @@ svn_wc__node_get_origin(svn_boolean_t *is_copy,
         SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, revision, repos_relpath,
                                          repos_root_url, repos_uuid, NULL,
                                          NULL, NULL, NULL, NULL, NULL, NULL,
-                                         NULL, NULL, NULL,
+                                         NULL, NULL, NULL, NULL, NULL,
                                          wc_ctx->db, local_abspath,
                                          result_pool, scratch_pool));
       }
@@ -1734,7 +1733,8 @@ svn_wc__node_get_commit_status(svn_node_kind_t *kind,
     {
       SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, revision, NULL, NULL, NULL,
                                        NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, update_root,
+                                       NULL, NULL, NULL, NULL, update_root,
+                                       NULL,
                                        wc_ctx->db, local_abspath,
                                        scratch_pool, scratch_pool));
     }

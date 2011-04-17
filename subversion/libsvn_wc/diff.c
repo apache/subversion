@@ -166,8 +166,8 @@ get_nearest_pristine_text_as_file(const char **result_abspath,
       svn_error_t *err;
 
       err = svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL,
-                                     NULL, NULL, NULL, NULL, NULL, &checksum,
-                                     NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL, &checksum,
+                                     NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                      db, local_abspath,
                                      scratch_pool, scratch_pool);
       if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
@@ -591,6 +591,7 @@ file_diff(struct dir_baton *db,
     SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, &revert_base_revnum,
                                      NULL, NULL, NULL, NULL, NULL, NULL,
                                      NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL,
                                      eb->db, local_abspath, pool, pool));
 
   replaced = ((status == svn_wc__db_status_added)

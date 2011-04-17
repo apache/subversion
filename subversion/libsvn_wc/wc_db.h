@@ -674,21 +674,27 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
    will be returned.
 
    The OUT parameters, and their "not available" values are:
-     STATUS           n/a (always available)
-     KIND             n/a (always available)
-     REVISION         SVN_INVALID_REVNUM
-     REPOS_RELPATH    NULL (caller should scan up)
-     REPOS_ROOT_URL   NULL (caller should scan up)
-     REPOS_UUID       NULL (caller should scan up)
-     CHANGED_REV      SVN_INVALID_REVNUM
-     CHANGED_DATE     0
-     CHANGED_AUTHOR   NULL
-     LAST_MOD_TIME    0
-     DEPTH            svn_depth_unknown
-     CHECKSUM         NULL
-     TRANSLATED_SIZE  SVN_INVALID_FILESIZE
-     TARGET           NULL
-     LOCK             NULL
+     STATUS             n/a (always available)
+     KIND               n/a (always available)
+     REVISION           SVN_INVALID_REVNUM
+     REPOS_RELPATH      NULL (caller should scan up)
+     REPOS_ROOT_URL     NULL (caller should scan up)
+     REPOS_UUID         NULL (caller should scan up)
+     CHANGED_REV        SVN_INVALID_REVNUM
+     CHANGED_DATE       0
+     CHANGED_AUTHOR     NULL
+     DEPTH              svn_depth_unknown
+     CHECKSUM           NULL
+     TARGET             NULL
+     LOCK               NULL
+
+     RECORDED_SIZE      SVN_INVALID_FILESIZE
+     RECORDED_MOD_TIME  0
+
+     HAD_PROPS          FALSE
+
+     UPDATE_ROOT        FALSE
+     NEEDS_FULL_UPDATE  FALSE
 
    If the STATUS is normal, and the REPOS_* values are NULL, then the
    caller should use svn_wc__db_scan_base_repos() to scan up the BASE
@@ -701,7 +707,7 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
    If CHECKSUM is requested, and the node is NOT a file, then it will
    be set to NULL.
 
-   If TRANSLATED_SIZE is requested, and the node is NOT a file, then
+   If RECORDED_SIZE is requested, and the node is NOT a file, then
    it will be set to SVN_INVALID_FILESIZE.
 
    If TARGET is requested, and the node is NOT a symlink, then it will
@@ -709,6 +715,9 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
 
    If UPDATE_ROOT is requested, set it to TRUE if the node should only
    be updated when it is the root of an update (e.g. file externals).
+
+   If NEEDS_FULL_UPDATE is requested, set it to TRUE if the node needs to know
+   the complete set of children and properties on the next update. (EditorV1)
 
    All returned data will be allocated in RESULT_POOL. All temporary
    allocations will be made in SCRATCH_POOL.
@@ -723,13 +732,15 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
                          svn_revnum_t *changed_rev,
                          apr_time_t *changed_date,
                          const char **changed_author,
-                         apr_time_t *last_mod_time,
                          svn_depth_t *depth,
                          const svn_checksum_t **checksum,
-                         svn_filesize_t *translated_size,
                          const char **target,
                          svn_wc__db_lock_t **lock,
+                         svn_filesize_t *recorded_size,
+                         apr_time_t *recorded_mod_time,
+                         svn_boolean_t *had_props,
                          svn_boolean_t *update_root,
+                         svn_boolean_t *needs_full_update,
                          svn_wc__db_t *db,
                          const char *local_abspath,
                          apr_pool_t *result_pool,
@@ -1403,7 +1414,7 @@ svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
      CONFLICTED              FALSE
 
      OP_ROOT                 FALSE
-     HAVE_PROPS             FALSE
+     HAD_PROPS               FALSE
      PROPS_MOD               FALSE
 
      HAVE_BASE               FALSE

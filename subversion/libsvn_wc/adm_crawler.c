@@ -680,7 +680,7 @@ find_base_rev(svn_revnum_t *base_rev,
     return svn_error_return(
         svn_wc__db_base_get_info(NULL, NULL, base_rev, NULL, NULL, NULL, NULL,
                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL,
+                                 NULL, NULL, NULL, NULL,
                                  db, local_abspath, pool, pool));
 
   if (status == svn_wc__db_status_added)
@@ -753,9 +753,9 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
      compared to. */
   err = svn_wc__db_base_get_info(&status, &target_kind, &target_rev,
                                  &repos_relpath, &repos_root_url,
-                                 NULL, NULL, NULL, NULL, NULL,
-                                 &target_depth, NULL, NULL, NULL,
-                                 &target_lock, NULL,
+                                 NULL, NULL, NULL, NULL, &target_depth,
+                                 NULL, NULL, &target_lock, NULL,
+                                 NULL, NULL, NULL, NULL,
                                  db, local_abspath, scratch_pool,
                                  scratch_pool);
 
@@ -925,7 +925,7 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
       err = svn_wc__db_base_get_info(&parent_status, NULL, NULL,
                                      &parent_repos_relpath, NULL, NULL, NULL,
                                      NULL, NULL, NULL, NULL, NULL, NULL,
-                                     NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL, NULL,
                                      db, parent_abspath,
                                      scratch_pool, scratch_pool);
 
