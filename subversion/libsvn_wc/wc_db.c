@@ -6865,11 +6865,9 @@ commit_node(void *baton,
                                         STMT_DELETE_SHADOWED_RECURSIVE));
 
       SVN_ERR(svn_sqlite__bindf(delete_stmt,
-                                "issi", 
+                                "isi",
                                 wcroot->wc_id,
                                 local_relpath,
-                                construct_like_arg(local_relpath,
-                                                   scratch_pool),
                                 op_depth));
 
       SVN_ERR(svn_sqlite__step_done(delete_stmt));
