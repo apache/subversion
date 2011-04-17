@@ -1728,6 +1728,9 @@ svn_fs_fs__commit_txn(const char **conflict_p,
     }
 
  cleanup:
+
+  svn_fs_fs__reset_txn_caches(fs);
+
   svn_pool_destroy(iterpool);
   return svn_error_return(err);
 }

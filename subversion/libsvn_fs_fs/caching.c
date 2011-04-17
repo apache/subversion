@@ -331,15 +331,49 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+/* Baton to be used for the remove_txn_cache() pool cleanup function, */
+struct txn_cleanup_baton_t
+{
+  /* the cache to reset */
+  svn_cache__t *txn_cache;
+
+  /* the position where to reset it */
+  svn_cache__t **to_reset;
+};
+
 /* APR pool cleanup handler that will reset the cache pointer given in
    BATON_VOID. */
 static apr_status_t
 remove_txn_cache(void *baton_void)
 {
-  svn_cache__t **cache_p = baton_void;
-  *cache_p = NULL;
+  struct txn_cleanup_baton_t *baton = baton_void;
+
+  /* be careful not to hurt performance by resetting newer txn's caches */
+  if (*baton->to_reset == baton->txn_cache)
+    *baton->to_reset  = NULL;
 
   return  APR_SUCCESS;
+}
+
+static svn_error_t *
+init_txn_callbacks(svn_cache__t **cache,
+                   apr_pool_t *pool)
+{
+  if (cache != NULL)
+    {
+      struct txn_cleanup_baton_t *baton;
+
+      baton = apr_palloc(pool, sizeof(*baton));
+      baton->txn_cache = *cache;
+      baton->to_reset = cache;
+
+      apr_pool_cleanup_register(pool,
+                                baton,
+                                remove_txn_cache,
+                                apr_pool_cleanup_null);
+    }
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -361,9 +395,15 @@ svn_fs_fs__initialize_txn_caches(svn_fs_t *fs,
                                    ":", svn_uuid_generate(pool), ":",
                                    (char *)NULL);
 
-  /* There must be no concurrent transactions in progress for the same
-     FSFS access / session object. Maybe, you forgot to clean POOL. */
-  SVN_ERR_ASSERT(ffd->txn_dir_cache == NULL);
+  /* We don't support caching for concurrent transactions in the SAME
+   * FSFS session. Maybe, you forgot to clean POOL. */
+  if (ffd->txn_dir_cache != NULL || ffd->concurrent_transactions)
+    {
+      ffd->txn_dir_cache = NULL;
+      ffd->concurrent_transactions = TRUE;
+
+      return SVN_NO_ERROR;
+    }
 
   /* create a txn-local directory cache */
   if (svn_fs__get_global_membuffer_cache())
@@ -386,10 +426,17 @@ svn_fs_fs__initialize_txn_caches(svn_fs_t *fs,
                                         pool));
 
   /* reset the transaction-specific cache if the pool gets cleaned up. */
-  apr_pool_cleanup_register(pool,
-                            &(ffd->txn_dir_cache),
-                            remove_txn_cache,
-                            apr_pool_cleanup_null);
+  init_txn_callbacks(&(ffd->txn_dir_cache), pool);
 
   return SVN_NO_ERROR;
+}
+
+void
+svn_fs_fs__reset_txn_caches(svn_fs_t *fs)
+{
+  /* we can always just reset the caches. This may degrade performance but
+   * can never cause in incorrect behavior. */
+
+  fs_fs_data_t *ffd = fs->fsap_data;
+  ffd->txn_dir_cache = NULL;
 }
