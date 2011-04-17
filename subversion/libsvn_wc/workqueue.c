@@ -158,8 +158,9 @@ remove_base_node(svn_wc__db_t *db,
 
   SVN_ERR(svn_wc__db_read_info(&wrk_status, &wrk_kind, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, &have_base,
-                               &have_work, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL,
+                               &have_base, NULL, &have_work,
                                db, local_abspath, scratch_pool, scratch_pool));
 
   SVN_ERR_ASSERT(have_base); /* Verified in caller and _base_get_children() */
@@ -663,9 +664,9 @@ log_do_committed(svn_wc__db_t *db,
             &status, &kind, NULL,
             NULL, NULL, NULL, NULL, NULL, NULL,
             NULL, NULL, NULL, NULL, NULL, NULL,
-            NULL, NULL, NULL, NULL,
-            &prop_mods, NULL, NULL,
-            NULL, NULL,
+            NULL, NULL, NULL, NULL, NULL, NULL,
+            NULL, NULL, &prop_mods,
+            NULL, NULL, NULL,
             db, local_abspath,
             scratch_pool, scratch_pool));
 
@@ -1107,13 +1108,13 @@ run_file_install(svn_wc__db_t *db,
     {
       apr_time_t changed_date;
 
-      SVN_ERR(svn_wc__db_read_info(
-                NULL, NULL, NULL, NULL, NULL, NULL,
-                NULL, &changed_date, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                NULL, NULL,
-                db, local_abspath,
-                scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, &changed_date, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL,
+                                   db, local_abspath,
+                                   scratch_pool, scratch_pool));
 
       if (changed_date)
         SVN_ERR(svn_io_set_file_affected_time(changed_date,

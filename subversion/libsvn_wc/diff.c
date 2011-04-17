@@ -156,9 +156,10 @@ get_nearest_pristine_text_as_file(const char **result_abspath,
   const svn_checksum_t *checksum;
 
   SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, &checksum,
+                               NULL, NULL, NULL, NULL, &checksum,
                                NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL,
                                db, local_abspath, scratch_pool, scratch_pool));
   if (checksum == NULL)
     {
@@ -582,8 +583,9 @@ file_diff(struct dir_baton *db,
 
   SVN_ERR(svn_wc__db_read_info(&status, NULL, &revision, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
-                               &have_base, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL,
+                               &have_base, NULL, NULL,
                                eb->db, local_abspath, pool, pool));
   if (have_base)
     SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, &revert_base_revnum,
@@ -983,8 +985,8 @@ report_wc_file_as_added(struct dir_baton *db,
   SVN_ERR(svn_wc__db_read_info(&status, NULL, &revision, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, eb->db, local_abspath,
-                               pool, pool));
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               eb->db, local_abspath, pool, pool));
 
   if (status == svn_wc__db_status_added)
     SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
@@ -1129,8 +1131,8 @@ report_wc_directory_as_added(struct dir_baton *db,
       SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, eb->db,
-                                   child_abspath, iterpool, iterpool));
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   eb->db, child_abspath, iterpool, iterpool));
 
       /* If comparing against WORKING, skip entries that are
          schedule-deleted - they don't really exist. */
@@ -1227,8 +1229,8 @@ delete_entry(const char *path,
   SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, eb->db,
-                               local_abspath, pool, pool));
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               eb->db, local_abspath, pool, pool));
 
   /* If comparing against WORKING, skip nodes that are deleted
      - they don't really exist. */
@@ -1505,7 +1507,8 @@ apply_textdelta(void *file_baton,
   err = svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, eb->db, fb->local_abspath, pool, pool);
+                             NULL, NULL, NULL, NULL,
+                             eb->db, fb->local_abspath, pool, pool);
   if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
     {
       svn_error_clear(err);
@@ -1597,7 +1600,8 @@ close_file(void *file_baton,
   err = svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, eb->db, fb->local_abspath, pool, pool);
+                             NULL, NULL, NULL, NULL,
+                             eb->db, fb->local_abspath, pool, pool);
   if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
     svn_error_clear(err);
   else if (err)

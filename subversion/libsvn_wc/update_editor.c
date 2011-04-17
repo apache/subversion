@@ -1670,8 +1670,9 @@ already_in_a_tree_conflict(svn_boolean_t *conflicted,
 
       err = svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, &has_conflict, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL,
+                                 &has_conflict, NULL, NULL, NULL,
+                                 NULL, NULL, NULL,
                                  db, ancestor_abspath, iterpool, iterpool);
 
       if (err)
@@ -1787,8 +1788,8 @@ delete_entry(const char *path,
 
   SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               &conflicted, NULL,
+                               NULL, NULL, NULL, NULL, NULL, &conflicted,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
                                eb->db, local_abspath, pool, pool));
 
   /* Is this path a conflict victim? */
@@ -2001,8 +2002,8 @@ add_directory(const char *path,
 
   err = svn_wc__db_read_info(&status, &wc_kind, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             &conflicted, NULL,
+                             NULL, NULL, NULL, NULL, NULL,
+                             &conflicted, NULL, NULL, NULL, NULL, NULL, NULL,
                              eb->db, db->local_abspath, db->pool, db->pool);
   if (err)
     {
@@ -2282,10 +2283,11 @@ open_directory(const char *path,
   SVN_ERR(svn_wc__write_check(eb->db, db->local_abspath, pool));
 
   SVN_ERR(svn_wc__db_read_info(&status, &wc_kind, &db->old_revision, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
-                               &db->ambient_depth, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
-                               NULL, &have_work, &conflicted, NULL,
+                               &db->ambient_depth, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               &conflicted, NULL, NULL, NULL,
+                               NULL, NULL, &have_work,
                                eb->db, db->local_abspath, pool, pool));
 
   if (!have_work)
@@ -2847,8 +2849,8 @@ add_file(const char *path,
 
   err = svn_wc__db_read_info(&status, &wc_kind, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             &conflicted, NULL,
+                             NULL, NULL, NULL, NULL, NULL,
+                             &conflicted, NULL, NULL, NULL, NULL, NULL, NULL,
                              eb->db, fb->local_abspath,
                              scratch_pool, scratch_pool);
 
@@ -3099,10 +3101,11 @@ open_file(const char *path,
 
   /* If replacing, make sure the .svn entry already exists. */
   SVN_ERR(svn_wc__db_read_info(&status, &wc_kind, &fb->old_revision, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               &fb->original_checksum,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, &have_work, &conflicted, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               &fb->original_checksum, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               &conflicted, NULL, NULL, NULL,
+                               NULL, NULL, &have_work,
                                eb->db, fb->local_abspath,
                                fb->pool, scratch_pool));
 
@@ -4253,7 +4256,8 @@ make_editor(svn_revnum_t *target_revision,
                                &repos_root, &repos_uuid,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, wc_ctx->db, anchor_abspath,
+                               NULL, NULL, NULL, NULL, NULL,
+                               wc_ctx->db, anchor_abspath,
                                result_pool, scratch_pool));
   
   /* ### For adds, REPOS_ROOT and REPOS_UUID would be NULL now. */
@@ -4577,6 +4581,7 @@ svn_wc__check_wc_root(svn_boolean_t *wc_root,
                                &repos_root, &repos_uuid, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL,
                                db, local_abspath,
                                scratch_pool, scratch_pool));
 
@@ -4812,6 +4817,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   err = svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL,
                              db, local_abspath, scratch_pool, scratch_pool);
 
   if (err && err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
@@ -4834,7 +4840,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL,
+                               NULL, NULL, NULL, NULL,
                                db, dir_abspath, scratch_pool, scratch_pool));
 
   switch (status)

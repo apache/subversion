@@ -136,10 +136,9 @@ copy_pristine_text_if_necessary(svn_wc__db_t *db,
   const svn_checksum_t *checksum;
 
   SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL,
-                               &checksum,
+                               NULL, NULL, NULL, &checksum, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                db, src_abspath,
                                scratch_pool, scratch_pool));
   if (checksum)
@@ -476,7 +475,7 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
                                &src_repos_root_url, &src_repos_uuid, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
                                db, src_abspath, scratch_pool, scratch_pool);
 
     if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
@@ -495,7 +494,7 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
                                  &dst_repos_root_url, &dst_repos_uuid, NULL,
                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL,
                                  db, dstdir_abspath, scratch_pool, scratch_pool));
 
     if (!src_repos_root_url)
@@ -559,7 +558,7 @@ svn_wc_copy3(svn_wc_context_t *wc_ctx,
     err = svn_wc__db_read_info(&dst_status, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL,
                                db, dst_abspath, scratch_pool, scratch_pool);
 
     if (err && err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)

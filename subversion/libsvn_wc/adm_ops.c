@@ -134,13 +134,11 @@ process_committed_leaf(svn_wc__db_t *db,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL,
-                               NULL, NULL, NULL,
-                               NULL, NULL, NULL,
-                               NULL, NULL, &copied_checksum,
-                               NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, &prop_mods,
-                               &have_base, NULL, NULL, NULL,
+  SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, &copied_checksum,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, &prop_mods,
+                               &have_base, NULL, NULL,
                                db, local_abspath,
                                scratch_pool, scratch_pool));
 
@@ -198,6 +196,7 @@ process_committed_leaf(svn_wc__db_t *db,
                                              NULL, NULL, NULL, NULL, NULL,
                                              NULL, NULL, NULL, NULL,
                                              NULL, NULL, NULL, NULL,
+                                             NULL, NULL, NULL,
                                              db, local_abspath,
                                              scratch_pool, scratch_pool));
             }
@@ -281,12 +280,10 @@ svn_wc__process_committed_internal(svn_wc__db_t *db,
           this_abspath = svn_dirent_join(local_abspath, name, iterpool);
 
           SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL,
-                                       NULL, NULL, NULL,
-                                       NULL, NULL, NULL,
-                                       NULL, NULL, NULL,
-                                       NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
                                        db, this_abspath,
                                        iterpool, iterpool));
 
@@ -568,8 +565,8 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
   svn_wc__db_kind_t kind;
 
   err = svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL,
                              db, local_abspath, pool, pool);
 
@@ -724,10 +721,10 @@ check_can_add_to_parent(const char **repos_root_url,
   SVN_ERR(svn_wc__write_check(db, parent_abspath, scratch_pool));
 
   err = svn_wc__db_read_info(&parent_status, &parent_kind, NULL,
-                             NULL, repos_root_url,
-                             repos_uuid, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, repos_root_url, repos_uuid, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL,
                              db, parent_abspath, result_pool, scratch_pool);
 
   if (err
@@ -840,7 +837,7 @@ check_can_add_node(svn_node_kind_t *kind_p,
       = svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL,
                              db, local_abspath,
                              scratch_pool, scratch_pool);
 
@@ -1260,10 +1257,10 @@ revert_restore(svn_wc__db_t *db,
                                       scratch_pool, scratch_pool));
 
   err = svn_wc__db_read_info(&status, &kind,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, 
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL,
+                             NULL, NULL, NULL,
                              db, local_abspath, scratch_pool, scratch_pool);
 
   if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
@@ -1593,6 +1590,7 @@ new_revert_partial(svn_wc__db_t *db,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL,
                                db, local_abspath, scratch_pool, scratch_pool));
 
   if (is_revert_root || depth == svn_depth_immediates
@@ -1784,7 +1782,7 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
   SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL,
+                               NULL, NULL, NULL, NULL,
                                db, local_abspath, scratch_pool, scratch_pool));
 
   if (kind == svn_wc__db_kind_file || kind == svn_wc__db_kind_symlink)
@@ -1837,10 +1835,11 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
       else
         SVN_ERR(err);
       err = svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL,
+                                 &working_sha1_checksum, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL,
                                  NULL, NULL, NULL, NULL, NULL,
-                                 &working_sha1_checksum,
-                                 NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL,
                                  db, local_abspath,
                                  scratch_pool, scratch_pool);
       if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
@@ -2194,9 +2193,8 @@ svn_wc__internal_changelist_match(svn_wc__db_t *db,
 
   err = svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             &changelist,
+                             NULL, NULL, NULL, NULL, NULL, &changelist,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL,
                              db, local_abspath, scratch_pool, scratch_pool);
 
   if (err)

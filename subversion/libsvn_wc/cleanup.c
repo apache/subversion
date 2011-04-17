@@ -86,6 +86,7 @@ repair_timestamps(svn_wc__db_t *db,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL,
                                db, local_abspath, scratch_pool, scratch_pool));
 
   if (status == svn_wc__db_status_absent

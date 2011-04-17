@@ -483,10 +483,9 @@ recursive_resolve_conflict(svn_wc__db_t *db,
 
   err = svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, &conflicted,
-                             NULL,
-                             db, local_abspath,
-                             iterpool, iterpool);
+                             NULL, NULL, NULL, NULL, &conflicted, NULL, NULL,
+                             NULL, NULL, NULL, NULL,
+                             db, local_abspath, iterpool, iterpool);
 
   if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
     { /* Would be nice if we could just call svn_wc__db_read_info on

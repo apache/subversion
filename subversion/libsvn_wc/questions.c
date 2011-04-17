@@ -137,10 +137,9 @@ compare_and_verify(svn_boolean_t *modified_p,
            * and setup checksummed stream for base file. */
           SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL,
                                        NULL, NULL, NULL, NULL,
-                                       NULL, &node_checksum, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL,
-                                       NULL, NULL,
+                                       &node_checksum, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
                                        db, versioned_file_abspath,
                                        scratch_pool, scratch_pool));
           /* SVN_EXPERIMENTAL_PRISTINE:
@@ -307,9 +306,10 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
 
       /* Read the relevant info */
       err = svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, &last_mod_time, NULL, NULL,
-                                 &translated_size , NULL,
                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL,
+                                 &translated_size, &last_mod_time,
+                                 NULL, NULL, NULL, NULL, NULL,
                                  NULL, NULL, NULL,
                                  db, local_abspath,
                                  scratch_pool, scratch_pool);
@@ -323,7 +323,6 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
       if (translated_size != SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN
           && finfo.size != translated_size)
         goto compare_them;
-
 
       /* Compare the timestamps
 
@@ -413,11 +412,10 @@ svn_wc__internal_conflicted_p(svn_boolean_t *text_conflicted_p,
   int i;
   svn_boolean_t conflicted;
 
-  SVN_ERR(svn_wc__db_read_info(NULL, &node_kind, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL,
+  SVN_ERR(svn_wc__db_read_info(NULL, &node_kind, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, &conflicted,
                                NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL,
-                               &conflicted, NULL,
                                db, local_abspath, scratch_pool,
                                scratch_pool));
 
