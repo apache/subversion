@@ -196,8 +196,8 @@ build_info_for_entry(svn_info_t **info,
                                           local_abspath,
                                           result_pool, scratch_pool));
 
-      SVN_ERR(svn_wc__node_get_base_checksum(&checksum, wc_ctx, local_abspath,
-                                              scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc__node_get_checksum(&checksum, wc_ctx, local_abspath,
+                                        scratch_pool, scratch_pool));
 
       tmpinfo->checksum = svn_checksum_to_cstring(checksum, result_pool);
     }
@@ -222,22 +222,21 @@ build_info_for_entry(svn_info_t **info,
   SVN_ERR(svn_wc_get_wc_root(&tmpinfo->wcroot_abspath, wc_ctx,
                              local_abspath, result_pool, scratch_pool));
 
-  /* Some random stuffs we don't have wc-ng apis for yet */
-  SVN_ERR(svn_wc__node_get_info_bits(&tmpinfo->text_time,
-                                     &tmpinfo->conflict_old,
-                                     &tmpinfo->conflict_new,
-                                     &tmpinfo->conflict_wrk,
-                                     &tmpinfo->prejfile,
-                                     wc_ctx, local_abspath,
-                                     result_pool, scratch_pool));
+  SVN_ERR(svn_wc__node_get_conflict_info(&tmpinfo->conflict_old,
+                                         &tmpinfo->conflict_new,
+                                         &tmpinfo->conflict_wrk,
+                                         &tmpinfo->prejfile,
+                                         wc_ctx, local_abspath,
+                                         result_pool, scratch_pool));
 
   /* Some defaults */
   tmpinfo->has_wc_info          = TRUE;
   tmpinfo->size                 = SVN_INFO_SIZE_UNKNOWN;
   tmpinfo->size64               = SVN_INVALID_FILESIZE;
 
-  SVN_ERR(svn_wc__node_get_translated_size(&tmpinfo->working_size64, wc_ctx,
-                                           local_abspath, scratch_pool));
+  SVN_ERR(svn_wc__node_get_recorded_info(&tmpinfo->working_size64,
+                                         &tmpinfo->text_time,
+                                         wc_ctx, local_abspath, scratch_pool));
   if (((apr_size_t)tmpinfo->working_size64) == tmpinfo->working_size64)
     tmpinfo->working_size       = (apr_size_t)tmpinfo->working_size64;
   else /* >= 4GB */

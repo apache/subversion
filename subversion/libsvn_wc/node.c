@@ -347,11 +347,11 @@ svn_wc__node_get_changelist(const char **changelist,
 }
 
 svn_error_t *
-svn_wc__node_get_base_checksum(const svn_checksum_t **checksum,
-                               svn_wc_context_t *wc_ctx,
-                               const char *local_abspath,
-                               apr_pool_t *result_pool,
-                               apr_pool_t *scratch_pool)
+svn_wc__node_get_checksum(const svn_checksum_t **checksum,
+                          svn_wc_context_t *wc_ctx,
+                          const char *local_abspath,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
 {
   return svn_error_return(svn_wc__db_read_info(NULL, NULL, NULL, NULL,
                                                NULL, NULL, NULL, NULL,
@@ -365,18 +365,20 @@ svn_wc__node_get_base_checksum(const svn_checksum_t **checksum,
 }
 
 svn_error_t *
-svn_wc__node_get_translated_size(svn_filesize_t *translated_size,
-                                 svn_wc_context_t *wc_ctx,
-                                 const char *local_abspath,
-                                 apr_pool_t *scratch_pool)
+svn_wc__node_get_recorded_info(svn_filesize_t *recorded_size,
+                               apr_time_t *recorded_mod_time,
+                               svn_wc_context_t *wc_ctx,
+                               const char *local_abspath,
+                               apr_pool_t *scratch_pool)
 {
   return svn_error_return(svn_wc__db_read_info(NULL, NULL, NULL, NULL,
                                                NULL, NULL, NULL, NULL,
                                                NULL, NULL, NULL, NULL,
                                                NULL, NULL, NULL, NULL,
-                                               NULL, translated_size,
+                                               NULL,  recorded_size,
+                                               recorded_mod_time,
                                                NULL, NULL, NULL,
-                                               NULL, NULL, NULL,
+                                               NULL, NULL,
                                                NULL, NULL, NULL,
                                                wc_ctx->db, local_abspath,
                                                scratch_pool, scratch_pool));
@@ -1312,21 +1314,20 @@ svn_wc__node_get_schedule(svn_wc_schedule_t *schedule,
 }
 
 svn_error_t *
-svn_wc__node_get_info_bits(apr_time_t *text_time,
-                           const char **conflict_old,
-                           const char **conflict_new,
-                           const char **conflict_wrk,
-                           const char **prejfile,
-                           svn_wc_context_t *wc_ctx,
-                           const char *local_abspath,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool)
+svn_wc__node_get_conflict_info(const char **conflict_old,
+                               const char **conflict_new,
+                               const char **conflict_wrk,
+                               const char **prejfile,
+                               svn_wc_context_t *wc_ctx,
+                               const char *local_abspath,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool)
 {
   svn_boolean_t conflicted;
 
   SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, text_time, NULL, &conflicted,
+                               NULL, NULL, NULL, NULL, &conflicted,
                                NULL, NULL, NULL, NULL, NULL, NULL,
                                wc_ctx->db, local_abspath,
                                scratch_pool, scratch_pool));
