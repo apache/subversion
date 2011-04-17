@@ -153,6 +153,13 @@ svn_temp_serializer__set_null(svn_temp_serializer__context_t *context,
                               const void * const * ptr);
 
 /**
+ * @return the number of bytes currently used in the serialization buffer
+ * of the given serialization @a context.
+ */
+apr_size_t
+svn_temp_serializer__get_length(svn_temp_serializer__context_t *context);
+
+/**
  * @return a reference to the data buffer containing the data serialialized
  * so far in the given serialization @a context.
  */
