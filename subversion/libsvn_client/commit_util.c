@@ -1548,13 +1548,13 @@ svn_client__do_commit(const char *base_url,
                                            &new_text_base_sha1_checksum,
                                            ctx->wc_ctx, item->path,
                                            fulltext, editor, mod->file_baton,
-                                           pool, iterpool));
+                                           iterpool, iterpool));
       if (md5_checksums)
         apr_hash_set(*md5_checksums, item->path, APR_HASH_KEY_STRING,
-                     new_text_base_md5_checksum);
+                     svn_checksum_dup(new_text_base_md5_checksum, pool));
       if (sha1_checksums)
         apr_hash_set(*sha1_checksums, item->path, APR_HASH_KEY_STRING,
-                     new_text_base_sha1_checksum);
+                     svn_checksum_dup(new_text_base_sha1_checksum, pool));
     }
 
   svn_pool_destroy(iterpool);
