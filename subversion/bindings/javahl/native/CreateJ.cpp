@@ -617,13 +617,13 @@ CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
           /* This call returns SVN_ERR_ENTRY_NOT_FOUND for some hidden
              cases, which we can just ignore here as hidden nodes
              are not in text or property conflict. */
-          svn_error_t *err = svn_wc__node_get_info_bits(NULL,
-                                                        &conflict_old,
-                                                        &conflict_new,
-                                                        &conflict_wrk,
-                                                        NULL,
-                                                        wc_ctx, local_abspath,
-                                                        pool, pool);
+          svn_error_t *err = svn_wc__node_get_conflict_info(&conflict_old,
+                                                            &conflict_new,
+                                                            &conflict_wrk,
+                                                            NULL,
+                                                            wc_ctx,
+                                                            local_abspath,
+                                                            pool, pool);
 
           if (err)
             {
