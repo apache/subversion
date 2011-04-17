@@ -853,6 +853,8 @@ purge_shared_txn_body(svn_fs_t *fs, const void *baton, apr_pool_t *pool)
   const char *txn_id = baton;
 
   free_shared_txn(fs, txn_id);
+  svn_fs_fs__reset_txn_caches(fs);
+
   return SVN_NO_ERROR;
 }
 

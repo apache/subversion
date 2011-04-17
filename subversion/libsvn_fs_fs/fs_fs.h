@@ -517,6 +517,11 @@ svn_fs_fs__initialize_txn_caches(svn_fs_t *fs,
                                  const char *txn_id,
                                  apr_pool_t *pool);
 
+/* Resets the svn_cache__t structures local to the current transaction in FS.
+   Calling it more than once per txn or from outside any txn is allowed. */
+void
+svn_fs_fs__reset_txn_caches(svn_fs_t *fs);
+
 /* Possibly pack the repository at PATH.  This just take full shards, and
    combines all the revision files into a single one, with a manifest header.
    Use optional CANCEL_FUNC/CANCEL_BATON for cancellation support.

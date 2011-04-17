@@ -248,6 +248,9 @@ typedef struct fs_fs_data_t
   /* Cache for node_revision_t objects; the key is (revision, id offset) */
   svn_cache__t *node_revision_cache;
 
+  /* If set, there are or have been more than one concurrent transaction */
+  svn_boolean_t concurrent_transactions;
+
   /* Tempoary cache for changed directories yet to be committed; maps from
      unparsed FS ID to ###x.  NULL outside transactions. */
   svn_cache__t *txn_dir_cache;
