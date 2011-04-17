@@ -163,6 +163,7 @@ svn_wc__internal_check_wc(int *wc_format,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL,
                                    db, local_abspath,
                                    scratch_pool, scratch_pool);
 
@@ -621,7 +622,7 @@ adm_available(svn_boolean_t *available,
   SVN_ERR(svn_wc__db_read_info(&status, kind, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
                                db, local_abspath, scratch_pool, scratch_pool));
 
   *available = !(status == svn_wc__db_status_absent
@@ -1092,6 +1093,7 @@ child_is_disjoint(svn_boolean_t *disjoint,
                                &node_repos_root, &node_repos_uuid, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL,
                                db, local_abspath,
                                scratch_pool, scratch_pool));
 
@@ -1108,6 +1110,7 @@ child_is_disjoint(svn_boolean_t *disjoint,
                                &parent_repos_uuid, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL,
                                db, parent_abspath,
                                scratch_pool, scratch_pool));
 

@@ -79,10 +79,10 @@ crop_children(svn_wc__db_t *db,
   iterpool = svn_pool_create(pool);
 
   SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, &dir_depth,
+                               NULL, NULL, NULL, &dir_depth, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL,
+                               NULL, NULL, NULL, NULL,
                                db, local_abspath, pool, iterpool));
 
   if (dir_depth == svn_depth_unknown)
@@ -111,10 +111,10 @@ crop_children(svn_wc__db_t *db,
       child_abspath = svn_dirent_join(local_abspath, child_name, iterpool);
 
       SVN_ERR(svn_wc__db_read_info(&child_status, &kind, NULL, NULL, NULL,
-                                   NULL,NULL, NULL, NULL, NULL, &child_depth,
+                                   NULL,NULL, NULL, NULL, &child_depth,
                                    NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL,
+                                   NULL, NULL, NULL, NULL, NULL,
                                    db, child_abspath, iterpool, iterpool));
 
       if (child_status == svn_wc__db_status_absent ||
@@ -238,10 +238,10 @@ svn_wc_exclude(svn_wc_context_t *wc_ctx,
     }
 
   SVN_ERR(svn_wc__db_read_info(&status, &kind, &revision, &repos_relpath,
-                               &repos_root, &repos_uuid, NULL, NULL,
+                               &repos_root, &repos_uuid, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL,
-                               &have_base, NULL, NULL, NULL,
+                               &have_base, NULL, NULL,
                                wc_ctx->db, local_abspath,
                                scratch_pool, scratch_pool));
 
@@ -341,7 +341,7 @@ svn_wc_crop_tree2(svn_wc_context_t *wc_ctx,
     SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL,
                                  db, local_abspath,
                                  scratch_pool, scratch_pool));
 

@@ -120,7 +120,7 @@ svn_wc_restore(svn_wc_context_t *wc_ctx,
   SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL,
+                               NULL, NULL, NULL, NULL,
                                wc_ctx->db, local_abspath,
                                scratch_pool, scratch_pool));
 
@@ -411,7 +411,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
                                        NULL, NULL, NULL, NULL, NULL, NULL,
                                        NULL, NULL, NULL, NULL, NULL, NULL,
                                        NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL,
                                        db, this_abspath, iterpool, iterpool));
 
           if (wrk_status == svn_wc__db_status_added)
@@ -669,7 +669,8 @@ find_base_rev(svn_revnum_t *base_rev,
   SVN_ERR(svn_wc__db_read_info(&status, NULL, base_rev, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
-                               &have_base, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL,
+                               &have_base, NULL, NULL,
                                db, local_abspath, pool, pool));
 
   if (SVN_IS_VALID_REVNUM(*base_rev))
@@ -834,7 +835,7 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
       err = svn_wc__db_read_info(&wrk_status, NULL, NULL, NULL, NULL, NULL,
                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                  db, local_abspath,
                                  scratch_pool, scratch_pool);
 
@@ -1084,9 +1085,10 @@ read_and_checksum_pristine_text(svn_stream_t **stream,
       const svn_checksum_t *expected_md5;
 
       SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, &expected_md5,
+                                   NULL, NULL, NULL, NULL, &expected_md5,
                                    NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL,
                                    db, local_abspath,
                                    result_pool, scratch_pool));
       if (expected_md5 == NULL)

@@ -829,8 +829,11 @@ test_working_info(apr_pool_t *pool)
   const char *original_root_url;
   const char *original_uuid;
   svn_revnum_t original_revnum;
+  svn_boolean_t op_root;
+  svn_boolean_t had_props;
   svn_boolean_t props_mod;
   svn_boolean_t have_base;
+  svn_boolean_t have_more_work;
   svn_boolean_t have_work;
   svn_boolean_t conflicted;
   svn_wc__db_lock_t *lock;
@@ -843,12 +846,12 @@ test_working_info(apr_pool_t *pool)
   SVN_ERR(svn_wc__db_read_info(
             &status, &kind, &revision,
             &repos_relpath, &repos_root_url, &repos_uuid,
-            &changed_rev, &changed_date, &changed_author, &last_mod_time,
-            &depth, &checksum, &translated_size, &target,
-            &changelist, &original_repos_relpath, &original_root_url,
-            &original_uuid, &original_revnum,
-            &props_mod, &have_base, &have_work,
-            &conflicted, &lock,
+            &changed_rev, &changed_date, &changed_author,
+            &depth, &checksum, &target, &original_repos_relpath,
+            &original_root_url, &original_uuid, &original_revnum,
+            &lock, &translated_size, &last_mod_time, &changelist,
+            &conflicted, &op_root, &had_props, &props_mod,
+            &have_base, &have_more_work, &have_work,
             db, svn_dirent_join(local_abspath, "I", pool),
             pool, pool));
   SVN_TEST_ASSERT(status == svn_wc__db_status_added);
@@ -1242,6 +1245,7 @@ test_global_relocate(apr_pool_t *pool)
                                NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL,
                                db, local_abspath,
                                pool, pool));
 
@@ -1257,6 +1261,7 @@ test_global_relocate(apr_pool_t *pool)
                                NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL,
                                db, local_abspath,
                                pool, pool));
   SVN_TEST_STRING_ASSERT(repos_relpath, "");
@@ -1271,6 +1276,7 @@ test_global_relocate(apr_pool_t *pool)
                                NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL,
                                db, svn_dirent_join(local_abspath, "F",
                                                    pool),
                                pool, pool));
@@ -1285,6 +1291,7 @@ test_global_relocate(apr_pool_t *pool)
                                NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL,
                                db, svn_dirent_join(local_abspath, "G",
                                                    pool),
                                pool, pool));

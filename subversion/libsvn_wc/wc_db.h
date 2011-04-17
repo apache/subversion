@@ -1377,7 +1377,7 @@ svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
 
    The OUT parameters, and their "not available" values are:
      STATUS                  n/a (always available)
-     KIND                    n/a (always available)
+     KIND                    svn_wc__db_kind_unknown   (For ACTUAL only nodes)
      REVISION                SVN_INVALID_REVNUM
      REPOS_RELPATH           NULL
      REPOS_ROOT_URL          NULL
@@ -1385,21 +1385,30 @@ svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
      CHANGED_REV             SVN_INVALID_REVNUM
      CHANGED_DATE            0
      CHANGED_AUTHOR          NULL
-     LAST_MOD_TIME           0
      DEPTH                   svn_depth_unknown
      CHECKSUM                NULL
-     TRANSLATED_SIZE         SVN_INVALID_FILESIZE
      TARGET                  NULL
-     CHANGELIST              NULL
+
      ORIGINAL_REPOS_RELPATH  NULL
      ORIGINAL_ROOT_URL       NULL
      ORIGINAL_UUID           NULL
      ORIGINAL_REVISION       SVN_INVALID_REVNUM
-     PROPS_MOD               n/a (always available)
-     HAVE_BASE               n/a (always available)
-     HAVE_WORK               n/a (always available)
-     CONFLICTED              FALSE
+
      LOCK                    NULL
+
+     RECORDED_SIZE           SVN_INVALID_FILESIZE
+     RECORDED_MOD_TIME       0
+
+     CHANGELIST              NULL
+     CONFLICTED              FALSE
+
+     OP_ROOT                 FALSE
+     HAVE_PROPS             FALSE
+     PROPS_MOD               FALSE
+
+     HAVE_BASE               FALSE
+     HAVE_MORE_WORK          FALSE
+     HAVE_WORK               FALSE
 
    When STATUS is requested, then it will be one of these values:
 
@@ -1407,7 +1416,6 @@ svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
        A plain BASE node, with no local changes.
 
      svn_wc__db_status_added
-     svn_wc__db_status_obstructed_add
        A node has been added/copied/moved to here. See HAVE_BASE to see
        if this change overwrites a BASE node. Use scan_addition() to resolve
        whether this has been added, copied, or moved, and the details of the
@@ -1415,14 +1423,10 @@ svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
        the details requires scanning one or more ancestor nodes).
 
      svn_wc__db_status_deleted
-     svn_wc__db_status_obstructed_delete
        This node has been deleted or moved away. It may be a delete/move of
        a BASE node, or a child node of a subtree that was copied/moved to
        an ancestor location. Call scan_deletion() to determine the full
        details of the operations upon this node.
-
-     svn_wc__db_status_obstructed
-       The versioned subdirectory is missing or obstructed by a file.
 
      svn_wc__db_status_absent
        The node is versioned/known by the server, but the server has
@@ -1455,11 +1459,30 @@ svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
    If CHECKSUM is requested, and the node is NOT a file, then it will
    be set to NULL.
 
+   If TARGET is requested, and the node is NOT a symlink, then it will
+   be set to NULL.
+
    If TRANSLATED_SIZE is requested, and the node is NOT a file, then
    it will be set to SVN_INVALID_FILESIZE.
 
-   If TARGET is requested, and the node is NOT a symlink, then it will
-   be set to NULL.
+   If HAVE_WORK is TRUE, the returned information is from the highest WORKING
+   layer. In that case HAVE_MORE_WORK and HAVE_BASE provide information about
+   what other layers exist for this node.
+
+   If HAVE_WORK is FALSE and HAVE_BASE is TRUE then the information is from
+   the BASE tree.
+
+   If HAVE_WORK and HAVE_BASE are both FALSE and when retrieving CONFLICTED,
+   then the node doesn't exist at all.
+
+   If OP_ROOT is requested and the node has a WORKING layer, OP_ROOT will be
+   set to true if this node is the op_root for this layer.
+
+   If HAD_PROPS is requested and the node has pristine props, the value will
+   be set to TRUE.
+
+   If PROP_MODS is requested and the node has property modification the value
+   will be set to TRUE.
 
    ### add information about the need to scan upwards to get a complete
    ### picture of the state of this node.
@@ -1511,12 +1534,9 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,  /* ### derived */
                      svn_revnum_t *changed_rev,
                      apr_time_t *changed_date,
                      const char **changed_author,
-                     apr_time_t *last_mod_time,
-                     svn_depth_t *depth,  /* ### dirs only */
-                     const svn_checksum_t **checksum,
-                     svn_filesize_t *translated_size,
-                     const char **target,
-                     const char **changelist,
+                     svn_depth_t *depth,  /* dirs only */
+                     const svn_checksum_t **checksum, /* files only */
+                     const char **target, /* symlinks only */
 
                      /* ### the following fields if copied/moved (history) */
                      const char **original_repos_relpath,
@@ -1524,14 +1544,26 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,  /* ### derived */
                      const char **original_uuid,
                      svn_revnum_t *original_revision,
 
-                     /* ### the followed are derived fields */
-                     svn_boolean_t *props_mod,
-                     svn_boolean_t *have_base,
-                     svn_boolean_t *have_work,
+                     /* For BASE nodes */
+                     svn_wc__db_lock_t **lock,
 
+                     /* Recorded for files present in the working copy */
+                     svn_filesize_t *recorded_size,
+                     apr_time_t *recorded_mod_time,
+
+                     /* From ACTUAL */
+                     const char **changelist,
                      svn_boolean_t *conflicted,
 
-                     svn_wc__db_lock_t **lock,
+                     /* ### the followed are derived fields */
+                     svn_boolean_t *op_root,
+
+                     svn_boolean_t *had_props,
+                     svn_boolean_t *props_mod,
+
+                     svn_boolean_t *have_base,
+                     svn_boolean_t *have_more_work,
+                     svn_boolean_t *have_work,
 
                      svn_wc__db_t *db,
                      const char *local_abspath,

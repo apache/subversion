@@ -321,7 +321,7 @@ svn_wc__expand_keywords(apr_hash_t **keywords,
                                &changed_date, &changed_author, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL,
+                               NULL, NULL, NULL, NULL,
                                db, local_abspath,
                                scratch_pool, scratch_pool));
 

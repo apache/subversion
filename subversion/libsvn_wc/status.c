@@ -244,32 +244,30 @@ read_info(const struct svn_wc__db_info_t **info,
           apr_pool_t *result_pool,
           apr_pool_t *scratch_pool)
 {
-  struct svn_wc__db_info_t *mutable
-    = apr_palloc(scratch_pool, sizeof(struct svn_wc__db_info_t));
+  struct svn_wc__db_info_t *mtb
+    = apr_pcalloc(scratch_pool, sizeof(struct svn_wc__db_info_t));
 
-  SVN_ERR(svn_wc__db_read_info(&mutable->status, &mutable->kind,
-                               &mutable->revnum, &mutable->repos_relpath,
-                               &mutable->repos_root_url, NULL,
-                               &mutable->changed_rev,
-                               &mutable->changed_date,
-                               &mutable->changed_author,
-                               &mutable->last_mod_time,
-                               &mutable->depth, NULL,
-                               &mutable->translated_size, NULL,
-                               &mutable->changelist, NULL, NULL, NULL, NULL,
-                               &mutable->props_mod,
-                               &mutable->have_base, NULL,
-                               &mutable->conflicted, &mutable->lock,
+  SVN_ERR(svn_wc__db_read_info(&mtb->status, &mtb->kind,
+                               &mtb->revnum, &mtb->repos_relpath,
+                               &mtb->repos_root_url, NULL, &mtb->changed_rev,
+                               &mtb->changed_date, &mtb->changed_author,
+                               &mtb->depth, NULL, NULL,
+                               NULL, NULL, NULL, NULL,
+                               &mtb->lock, &mtb->translated_size,
+                               &mtb->last_mod_time, &mtb->changelist,
+                               &mtb->conflicted, NULL,
+                               NULL, &mtb->props_mod,
+                               &mtb->have_base, NULL, NULL,
                                db, local_abspath,
                                result_pool, scratch_pool));
 
-  if (mutable->status == svn_wc__db_status_deleted)
-    mutable->has_props = FALSE;
-  else if (mutable->props_mod)
+  if (mtb->status == svn_wc__db_status_deleted)
+    mtb->has_props = FALSE;
+  else if (mtb->props_mod)
     {
-      mutable->has_props = TRUE;
+      mtb->has_props = TRUE;
 #ifdef HAVE_SYMLINK
-      SVN_ERR(svn_wc__get_translate_info(NULL, NULL, NULL, &mutable->special,
+      SVN_ERR(svn_wc__get_translate_info(NULL, NULL, NULL, &mtb->special,
                                          db, local_abspath, NULL,
                                          scratch_pool, scratch_pool));
 #endif
@@ -280,15 +278,14 @@ read_info(const struct svn_wc__db_info_t **info,
 
       SVN_ERR(svn_wc__db_read_pristine_props(&properties, db, local_abspath,
                                              scratch_pool, scratch_pool));
-      mutable->has_props = (properties && !!apr_hash_count(properties));
+      mtb->has_props = (properties && !!apr_hash_count(properties));
 #ifdef HAVE_SYMLINK
-      mutable->special = (mutable->has_props
+      mtb->special = (mtb->has_props
                           && apr_hash_get(properties, SVN_PROP_SPECIAL,
                                           APR_HASH_KEY_STRING));
 #endif
     }
-
-  *info = mutable;
+  *info = mtb;
 
   return SVN_NO_ERROR;
 }
@@ -2538,7 +2535,8 @@ internal_status(svn_wc_status3_t **status,
   err = svn_wc__db_read_info(&node_status, &node_kind, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, db, local_abspath,
+                             NULL, NULL, NULL, NULL, NULL,
+                             db, local_abspath,
                              scratch_pool, scratch_pool);
 
   if ((err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
@@ -2575,8 +2573,9 @@ internal_status(svn_wc_status3_t **status,
                                  NULL, NULL, NULL, NULL,
                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, db, parent_abspath, result_pool,
-                                 scratch_pool);
+                                 NULL, NULL, NULL, NULL,
+                                 db, parent_abspath,
+                                 result_pool, scratch_pool);
 
       if (err && (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND
                   || SVN_WC__ERR_IS_NOT_CURRENT_WC(err)))

@@ -198,9 +198,10 @@ svn_wc__text_base_path_to_read(const char **result_abspath,
   const svn_checksum_t *checksum;
 
   SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, &checksum,
+                               NULL, NULL, NULL, NULL, &checksum, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL,
                                db, local_abspath,
                                scratch_pool, scratch_pool));
   if (checksum == NULL)
@@ -226,9 +227,10 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
   const svn_checksum_t *sha1_checksum;
 
   SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, &sha1_checksum,
+                               NULL, NULL, NULL, NULL, &sha1_checksum, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL,
                                db, local_abspath, scratch_pool, scratch_pool));
 
   /* Sanity */
@@ -429,6 +431,7 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL,
                                db, local_abspath, scratch_pool, scratch_pool));
 
   /* When the directory exists and is scheduled for deletion or is not-present

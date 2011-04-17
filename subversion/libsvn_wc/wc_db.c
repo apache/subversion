@@ -264,20 +264,23 @@ read_info(svn_wc__db_status_t *status,
           svn_revnum_t *changed_rev,
           apr_time_t *changed_date,
           const char **changed_author,
-          apr_time_t *last_mod_time,
           svn_depth_t *depth,
           const svn_checksum_t **checksum,
-          svn_filesize_t *translated_size,
           const char **target,
-          const char **changelist,
           const char **original_repos_relpath,
           apr_int64_t *original_repos_id,
           svn_revnum_t *original_revision,
+          svn_wc__db_lock_t **lock,
+          svn_filesize_t *recorded_size,
+          apr_time_t *recorded_mod_time,
+          const char **changelist,
+          svn_boolean_t *conflicted,
+          svn_boolean_t *op_root,
+          svn_boolean_t *had_props,
           svn_boolean_t *props_mod,
           svn_boolean_t *have_base,
+          svn_boolean_t *have_more_work,
           svn_boolean_t *have_work,
-          svn_boolean_t *conflicted,
-          svn_wc__db_lock_t **lock,
           svn_wc__db_wcroot_t *wcroot,
           const char *local_relpath,
           apr_pool_t *result_pool,
@@ -2241,26 +2244,10 @@ cross_db_copy(svn_wc__db_wcroot_t *src_wcroot,
                  || kind == svn_wc__db_kind_dir
                  );
 
-  SVN_ERR(read_info(NULL /* status */,
-                    NULL /* kind */,
-                    NULL /* revision */,
-                    NULL /* repos_relpath */,
-                    NULL /* repos_id */,
-                    &changed_rev, &changed_date, &changed_author,
-                    NULL /* last_mod_time */,
-                    &depth,
-                    &checksum,
-                    NULL /* translated_size */,
-                    NULL /* target */,
-                    NULL /* changelist */,
-                    NULL /* original_repos_relpath */,
-                    NULL /* original_repos_id */,
-                    NULL /* original_revision */,
-                    NULL /* props_mod */,
-                    NULL /* have_base */,
-                    NULL /* have_work */,
-                    NULL /* conflicted */,
-                    NULL /* lock */,
+  SVN_ERR(read_info(NULL, NULL, NULL, NULL, NULL,
+                    &changed_rev, &changed_date, &changed_author, &depth,
+                    &checksum, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                     src_wcroot, src_relpath, scratch_pool, scratch_pool));
 
   SVN_ERR(db_read_pristine_props(&props, src_wcroot, src_relpath,
@@ -2370,23 +2357,11 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
   svn_revnum_t revision;
 
   SVN_ERR(read_info(status, kind, &revision, &repos_relpath, copyfrom_id,
-                    NULL /* changed_rev */,
-                    NULL /* changed_date */,
-                    NULL /* changed_author */,
-                    NULL /* last_mod_time */,
-                    NULL /* depth */,
-                    NULL /* checksum */,
-                    NULL /* translated_size */,
-                    NULL /* target */,
-                    NULL /* changelist */,
-                    NULL /* original_repos_relpath */,
-                    NULL /* original_repos_id */,
-                    NULL /* original_revision */,
-                    NULL /* props_mod */,
+                    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                     NULL /* have_base */,
+                    NULL /* have_more_work */,
                     have_work,
-                    NULL /* conflicted */,
-                    NULL /* lock */,
                     wcroot, local_relpath, result_pool, scratch_pool));
 
   if (*status == svn_wc__db_status_excluded)
@@ -4928,8 +4903,8 @@ temp_op_delete_txn(void *baton,
   SVN_ERR(read_info(&status,
                     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                    &have_work,
-                    NULL, NULL,
+                    NULL, NULL, NULL,
+                    NULL, NULL, &have_work,
                     wcroot, local_relpath,
                     scratch_pool, scratch_pool));
 
@@ -5052,20 +5027,23 @@ read_info(svn_wc__db_status_t *status,
           svn_revnum_t *changed_rev,
           apr_time_t *changed_date,
           const char **changed_author,
-          apr_time_t *last_mod_time,
           svn_depth_t *depth,
           const svn_checksum_t **checksum,
-          svn_filesize_t *translated_size,
           const char **target,
-          const char **changelist,
           const char **original_repos_relpath,
           apr_int64_t *original_repos_id,
           svn_revnum_t *original_revision,
+          svn_wc__db_lock_t **lock,
+          svn_filesize_t *recorded_size,
+          apr_time_t *recorded_mod_time,
+          const char **changelist,
+          svn_boolean_t *conflicted,
+          svn_boolean_t *op_root,
+          svn_boolean_t *had_props,
           svn_boolean_t *props_mod,
           svn_boolean_t *have_base,
+          svn_boolean_t *have_more_work,
           svn_boolean_t *have_work,
-          svn_boolean_t *conflicted,
-          svn_wc__db_lock_t **lock,
           svn_wc__db_wcroot_t *wcroot,
           const char *local_relpath,
           apr_pool_t *result_pool,
@@ -5154,9 +5132,9 @@ read_info(svn_wc__db_status_t *status,
           *changed_author = svn_sqlite__column_text(stmt_info, 10,
                                                     result_pool);
         }
-      if (last_mod_time)
+      if (recorded_mod_time)
         {
-          *last_mod_time = svn_sqlite__column_int64(stmt_info, 13);
+          *recorded_mod_time = svn_sqlite__column_int64(stmt_info, 13);
         }
       if (depth)
         {
@@ -5198,9 +5176,9 @@ read_info(svn_wc__db_status_t *status,
                                                      scratch_pool)));
             }
         }
-      if (translated_size)
+      if (recorded_size)
         {
-          *translated_size = get_translated_size(stmt_info, 7);
+          *recorded_size = get_translated_size(stmt_info, 7);
         }
       if (target)
         {
@@ -5237,6 +5215,10 @@ read_info(svn_wc__db_status_t *status,
         {
           *props_mod = have_act && !svn_sqlite__column_is_null(stmt_act, 6);
         }
+      if (had_props)
+        {
+          *had_props = !svn_sqlite__column_is_null(stmt_info, 14);
+        }
       if (conflicted)
         {
           if (have_act)
@@ -5263,8 +5245,17 @@ read_info(svn_wc__db_status_t *status,
       if (have_work)
         *have_work = (op_depth != 0);
 
-      if (have_base)
+      if (op_root)
         {
+          *op_root = ((op_depth > 0)
+                      && (op_depth == relpath_depth(local_relpath)));
+        }
+
+      if (have_base || have_more_work)
+        {
+          if (have_more_work)
+            *have_more_work = FALSE;
+
           while (!err && op_depth != 0)
             {
               err = svn_sqlite__step(&have_info, stmt_info);
@@ -5273,9 +5264,19 @@ read_info(svn_wc__db_status_t *status,
                 break;
 
               op_depth = svn_sqlite__column_int64(stmt_info, 0);
+
+              if (have_more_work)
+                {
+                  if (op_depth > 0)
+                    *have_more_work = TRUE;
+
+                  if (!have_base)
+                   break;
+                }
             }
 
-          *have_base = (op_depth == 0);
+          if (have_base)
+            *have_base = (op_depth == 0);
         }
     }
   else if (have_act)
@@ -5309,34 +5310,40 @@ read_info(svn_wc__db_status_t *status,
         *changed_rev = SVN_INVALID_REVNUM;
       if (changed_date)
         *changed_date = 0;
-      if (last_mod_time)
-        *last_mod_time = 0;
       if (depth)
         *depth = svn_depth_unknown;
       if (checksum)
         *checksum = NULL;
-      if (translated_size)
-        *translated_size = 0;
       if (target)
         *target = NULL;
-      if (changelist)
-        *changelist = svn_sqlite__column_text(stmt_act, 1, result_pool);
       if (original_repos_relpath)
         *original_repos_relpath = NULL;
       if (original_repos_id)
         *original_repos_id = INVALID_REPOS_ID;
       if (original_revision)
         *original_revision = SVN_INVALID_REVNUM;
-      if (props_mod)
-        *props_mod = !svn_sqlite__column_is_null(stmt_act, 6);
-      if (have_base)
-        *have_base = FALSE;
-      if (have_work)
-        *have_work = FALSE;
-      if (conflicted)
-        *conflicted = TRUE;
       if (lock)
         *lock = NULL;
+      if (recorded_size)
+        *recorded_size = 0;
+      if (recorded_mod_time)
+        *recorded_mod_time = 0;
+      if (changelist)
+        *changelist = svn_sqlite__column_text(stmt_act, 1, result_pool);
+      if (op_root)
+        *op_root = FALSE;
+      if (had_props)
+        *had_props = FALSE;
+      if (props_mod)
+        *props_mod = FALSE;
+      if (conflicted)
+        *conflicted = TRUE;
+      if (have_base)
+        *have_base = FALSE;
+      if (have_more_work)
+        *have_more_work = FALSE;
+      if (have_work)
+        *have_work = FALSE;
     }
   else
     {
@@ -5365,21 +5372,24 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
                      svn_revnum_t *changed_rev,
                      apr_time_t *changed_date,
                      const char **changed_author,
-                     apr_time_t *last_mod_time,
                      svn_depth_t *depth,
                      const svn_checksum_t **checksum,
-                     svn_filesize_t *translated_size,
                      const char **target,
-                     const char **changelist,
                      const char **original_repos_relpath,
                      const char **original_root_url,
                      const char **original_uuid,
                      svn_revnum_t *original_revision,
+                     svn_wc__db_lock_t **lock,
+                     svn_filesize_t *recorded_size,
+                     apr_time_t *recorded_mod_time,
+                     const char **changelist,
+                     svn_boolean_t *conflicted,
+                     svn_boolean_t *op_root,
+                     svn_boolean_t *have_props,
                      svn_boolean_t *props_mod,
                      svn_boolean_t *have_base,
+                     svn_boolean_t *have_more_work,
                      svn_boolean_t *have_work,
-                     svn_boolean_t *conflicted,
-                     svn_wc__db_lock_t **lock,
                      svn_wc__db_t *db,
                      const char *local_abspath,
                      apr_pool_t *result_pool,
@@ -5397,10 +5407,11 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,
 
   SVN_ERR(read_info(status, kind, revision, repos_relpath, &repos_id,
                     changed_rev, changed_date, changed_author,
-                    last_mod_time, depth, checksum, translated_size, target,
-                    changelist, original_repos_relpath, &original_repos_id,
-                    original_revision, props_mod, have_base,
-                    have_work, conflicted, lock,
+                    depth, checksum, target, original_repos_relpath,
+                    &original_repos_id, original_revision, lock,
+                    recorded_size, recorded_mod_time, changelist, conflicted,
+                    op_root, have_props, props_mod,
+                    have_base, have_more_work, have_work,
                     wcroot, local_relpath, result_pool, scratch_pool));
   SVN_ERR(fetch_repos_info(repos_root_url, repos_uuid,
                            wcroot->sdb, repos_id, result_pool));
@@ -5804,7 +5815,8 @@ read_url_txn(void *baton,
 
   SVN_ERR(read_info(&status, NULL, NULL, &repos_relpath, &repos_id, NULL,
                     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                    NULL, NULL, NULL, &have_base, NULL, NULL, NULL,
+                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                    &have_base, NULL, NULL,
                     wcroot, local_relpath, scratch_pool, scratch_pool));
 
   if (repos_relpath == NULL)
@@ -6571,9 +6583,9 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
                     NULL, NULL,
                     &rb.repos_relpath, &rb.old_repos_id,
                     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                    NULL, NULL, NULL, NULL, NULL,
-                    &rb.have_base_node,
-                    NULL, NULL, NULL,
+                    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                    NULL,
+                    &rb.have_base_node, NULL, NULL,
                     wcroot, local_relpath,
                     scratch_pool, scratch_pool));
 
@@ -6588,6 +6600,7 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
                         &rb.repos_relpath, &rb.old_repos_id,
                         NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                         NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                        NULL, NULL, NULL,
                         NULL, NULL, NULL,
                         wcroot, parent_relpath,
                         scratch_pool, scratch_pool));
@@ -8957,6 +8970,7 @@ svn_wc__db_node_hidden(svn_boolean_t *hidden,
   SVN_ERR(read_info(&status, NULL, NULL, NULL, NULL, NULL,
                     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                    NULL, NULL, NULL,
                     wcroot, local_relpath,
                     scratch_pool, scratch_pool));
 
@@ -10329,6 +10343,7 @@ has_switched_subtrees(svn_boolean_t *is_switched,
   SVN_ERR(read_info(NULL, NULL, NULL, &wcroot_repos_relpath, NULL,
                     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                    NULL, NULL, NULL,
                     wcroot, "", scratch_pool, scratch_pool));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
