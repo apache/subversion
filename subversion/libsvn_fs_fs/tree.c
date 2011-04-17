@@ -3901,6 +3901,12 @@ make_txn_root(svn_fs_root_t **root_p,
                                       apr_pstrcat(pool, txn, ":TXN", (char *)NULL),
                                       root->pool));
 
+  /* Initialize transaction-local caches in FS.
+
+     Note that we cannot put those caches in frd because that content
+     fs root object is not available where we would need it. */
+  svn_fs_fs__initialize_txn_caches(fs, txn, pool);
+
   root->fsap_data = frd;
 
   *root_p = root;

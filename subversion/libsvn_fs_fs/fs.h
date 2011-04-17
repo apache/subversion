@@ -248,6 +248,10 @@ typedef struct fs_fs_data_t
   /* Cache for node_revision_t objects; the key is (revision, id offset) */
   svn_cache__t *node_revision_cache;
 
+  /* Tempoary cache for changed directories yet to be committed; maps from
+     unparsed FS ID to ###x.  NULL outside transactions. */
+  svn_cache__t *txn_dir_cache;
+
   /* Data shared between all svn_fs_t objects for a given filesystem. */
   fs_fs_shared_data_t *shared;
 
