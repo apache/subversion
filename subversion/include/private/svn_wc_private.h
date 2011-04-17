@@ -287,24 +287,32 @@ svn_wc__node_get_changelist(const char **changelist,
  * result_pool and use @a scratch_pool for temporary allocations.
  */
 svn_error_t *
-svn_wc__node_get_base_checksum(const svn_checksum_t **checksum,
-                               svn_wc_context_t *wc_ctx,
-                               const char *local_abspath,
-                               apr_pool_t *result_pool,
-                               apr_pool_t *scratch_pool);
+svn_wc__node_get_checksum(const svn_checksum_t **checksum,
+                          svn_wc_context_t *wc_ctx,
+                          const char *local_abspath,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
 
 /**
- * Set @a *translated_size to the recorded size (in bytes) of the
+ * Set @a *recorded_size to the recorded size (in bytes) of the
  * pristine text -- after translation -- associated with @a
- * local_abspath.  If @a local_abspath isn't a file in the working
- * copy, set @a *translated_size to SVN_INVALID_FILESIZE.  Use @a
- * scratch_pool for temporary allocations.
+ * local_abspath and @a *recorded_mod_time to the recorded last
+ *
+ * modification time. (@a recorded_size and @a recorded_mod_time may be NULL,
+ * if the caller is not interested in the result.
+ *
+ * If @a local_abspath isn't a versioned file in the working copy (but is a
+ * valid node) or when no information is recorded, set @a *translated_size 
+ * to SVN_INVALID_FILESIZE and @a *recorded_last_mod_time to 0.
+ *
+ * Use @a scratch_pool for temporary allocations.
  */
 svn_error_t *
-svn_wc__node_get_translated_size(svn_filesize_t *translated_size,
-                                 svn_wc_context_t *wc_ctx,
-                                 const char *local_abspath,
-                                 apr_pool_t *scratch_pool);
+svn_wc__node_get_recorded_info(svn_filesize_t *recorded_size,
+                               apr_time_t *recorded_mod_time,
+                               svn_wc_context_t *wc_ctx,
+                               const char *local_abspath,
+                               apr_pool_t *scratch_pool);
 
 /**
  * Set @a *url to the corresponding url for @a local_abspath, using @a wc_ctx.
@@ -619,22 +627,23 @@ svn_wc__node_check_conflicts(svn_boolean_t *prop_conflicted,
 
 /**
  * A hack to remove the last entry from libsvn_client.  This simply fetches an
- * entry, and puts the needed bits into the output parameters, allocated in
- * @a result_pool. All output arguments can be NULL to indicate that the
+ * some values from WC-NG, and puts the needed bits into the output parameters,
+ * allocated in @a result_pool.
+ *
+ * All output arguments can be NULL to indicate that the
  * caller is not interested in the specific result.
  *
  * @a local_abspath and @a wc_ctx are what you think they are.
  */
 svn_error_t *
-svn_wc__node_get_info_bits(apr_time_t *text_time,
-                           const char **conflict_old,
-                           const char **conflict_new,
-                           const char **conflict_wrk,
-                           const char **prejfile,
-                           svn_wc_context_t *wc_ctx,
-                           const char *local_abspath,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool);
+svn_wc__node_get_conflict_info(const char **conflict_old,
+                               const char **conflict_new,
+                               const char **conflict_wrk,
+                               const char **prejfile,
+                               svn_wc_context_t *wc_ctx,
+                               const char *local_abspath,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool);
 
 
 /**
