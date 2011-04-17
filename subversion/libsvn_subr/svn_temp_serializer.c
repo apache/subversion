@@ -303,7 +303,15 @@ svn_temp_serializer__set_null(svn_temp_serializer__context_t *context,
   *(apr_size_t*)(context->buffer->data + offset) = 0;
 }
 
-/* Return the the data buffer that receives the serialialized data from
+/* Return the number of bytes currently used in the serialization buffer
+ * of the given serialization CONTEXT.*/
+apr_size_t
+svn_temp_serializer__get_length(svn_temp_serializer__context_t *context)
+{
+  return context->buffer->len;
+}
+
+/* Return the data buffer that receives the serialialized data from
  * the given serialization CONTEXT.
  */
 svn_stringbuf_t *
