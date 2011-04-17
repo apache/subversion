@@ -262,6 +262,10 @@ typedef struct hash_data_t
 
   /* reference to the entries */
   svn_fs_dirent_t **entries;
+
+  /* size of the serialized entries and don't be too wasteful
+   * (needed since the entries are no longer in sequence) */
+  apr_uint32_t *lengths;
 } hash_data_t;
 
 static int
@@ -272,20 +276,26 @@ compare_dirent_id_names(const void *lhs, const void *rhs)
 }
 
 /* Utility function to serialize the *ENTRY_P into a the given
- * serialization CONTEXT.
+ * serialization CONTEXT. Return the serialized size of the
+ * dir entry in *LENGTH.
  */
 static void
 serialize_dir_entry(svn_temp_serializer__context_t *context,
-                    svn_fs_dirent_t **entry_p)
+                    svn_fs_dirent_t **entry_p,
+                    apr_uint32_t *length)
 {
   svn_fs_dirent_t *entry = *entry_p;
+  apr_size_t initial_length = svn_temp_serializer__get_length(context);
 
   svn_temp_serializer__push(context,
                             (const void * const *)entry_p,
-                             sizeof(svn_fs_dirent_t));
+                            sizeof(svn_fs_dirent_t));
 
   svn_fs_fs__id_serialize(context, &entry->id);
   svn_temp_serializer__add_string(context, &entry->name);
+
+  *length = (apr_uint32_t)(  svn_temp_serializer__get_length(context)
+                           - APR_ALIGN_DEFAULT(initial_length));
 
   svn_temp_serializer__pop(context);
 }
@@ -305,18 +315,17 @@ serialize_dir(apr_hash_t *entries, apr_pool_t *pool)
   apr_size_t count = apr_hash_count(entries);
   apr_size_t over_provision = 2 + count / 4;
   apr_size_t entries_len = (count + over_provision) * sizeof(svn_fs_dirent_t*);
+  apr_size_t lengths_len = (count + over_provision) * sizeof(apr_uint32_t);
 
   /* copy the hash entries to an auxilliary struct of known layout */
   hash_data.count = count;
   hash_data.over_provision = over_provision;
   hash_data.operations = 0;
   hash_data.entries = apr_palloc(pool, entries_len);
+  hash_data.lengths = apr_palloc(pool, lengths_len);
 
   for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi), ++i)
     hash_data.entries[i] = svn__apr_hash_index_val(hi);
-
-  for (i = 0; i < over_provision; ++i)
-    hash_data.entries[i + count] = NULL;
 
   /* sort entry index by ID name */
   qsort(hash_data.entries,
@@ -338,7 +347,16 @@ serialize_dir(apr_hash_t *entries, apr_pool_t *pool)
 
   /* serialize the individual entries and their sub-structures */
   for (i = 0; i < count; ++i)
-    serialize_dir_entry(context, &hash_data.entries[i]);
+    serialize_dir_entry(context,
+                        &hash_data.entries[i],
+                        &hash_data.lengths[i]);
+
+  svn_temp_serializer__pop(context);
+
+  /* serialize entries references */
+  svn_temp_serializer__push(context,
+                            (const void * const *)&hash_data.lengths,
+                            lengths_len);
 
   return context;
 }
@@ -796,6 +814,10 @@ svn_fs_fs__extract_dir_entry(void **out,
   const svn_fs_dirent_t * const *entries =
     svn_temp_deserializer__ptr(data, (const void **)&hash_data->entries);
 
+  /* resolve the reference to the lengths array */
+  const apr_uint32_t *lengths =
+    svn_temp_deserializer__ptr(data, (const void **)&hash_data->lengths);
+
   /* binary search for the desired entry by name */
   apr_size_t index = find_entry((svn_fs_dirent_t **)entries,
                                 name,
@@ -814,10 +836,7 @@ svn_fs_fs__extract_dir_entry(void **out,
        * block of memory whose end-offset is either the beginning of the
        * next entry or the end of the buffer
        */
-      apr_size_t end_offset = index + 1 < hash_data->count
-                            ? ((apr_size_t*)entries)[index+1]
-                            : hash_data->len;
-      apr_size_t size = end_offset - ((apr_size_t*)entries)[index];
+      apr_size_t size = lengths[index];
 
       /* copy & deserialize the entry */
       svn_fs_dirent_t *new_entry = apr_palloc(pool, size);
@@ -868,6 +887,8 @@ svn_fs_fs__replace_dir_entry(char **data,
   hash_data_t *hash_data = (hash_data_t *)*data;
   svn_boolean_t found;
   svn_fs_dirent_t **entries;
+  apr_uint32_t *lengths;
+  apr_uint32_t length;
   apr_size_t index;
 
   svn_temp_serializer__context_t *context;
@@ -883,6 +904,11 @@ svn_fs_fs__replace_dir_entry(char **data,
     svn_temp_deserializer__ptr((const char *)hash_data,
                                (const void **)&hash_data->entries);
 
+  /* resolve the reference to the lengths array */
+  lengths = (apr_uint32_t *)
+    svn_temp_deserializer__ptr((const char *)hash_data,
+                               (const void **)&hash_data->lengths);
+
   /* binary search for the desired entry by name */
   index = find_entry(entries, replace_baton->name, hash_data->count, &found);
 
@@ -895,6 +921,9 @@ svn_fs_fs__replace_dir_entry(char **data,
           memmove(&entries[index],
                   &entries[index + 1],
                   sizeof(entries[index]) * (hash_data->count - index));
+          memmove(&lengths[index],
+                  &lengths[index + 1],
+                  sizeof(lengths[index]) * (hash_data->count - index));
 
           hash_data->count--;
           hash_data->over_provision++;
@@ -917,6 +946,9 @@ svn_fs_fs__replace_dir_entry(char **data,
       memmove(&entries[index + 1],
               &entries[index],
               sizeof(entries[index]) * (hash_data->count - index));
+      memmove(&lengths[index + 1],
+              &lengths[index],
+              sizeof(lengths[index]) * (hash_data->count - index));
 
       hash_data->count++;
       hash_data->over_provision--;
@@ -930,10 +962,22 @@ svn_fs_fs__replace_dir_entry(char **data,
                                              hash_data->len,
                                              *data_len,
                                              pool);
-  serialize_dir_entry(context, &entries[index]);
+  serialize_dir_entry(context, &entries[index], &length);
 
   /* return the updated serialized data */
-  return return_serialized_dir_context(context,
-                                       data,
-                                       data_len);
+  SVN_ERR (return_serialized_dir_context(context,
+                                         data,
+                                         data_len));
+
+  /* since the previous call may have re-allocated the buffer, the lengths
+   * pointer may no longer point to the entry in that buffer. Therefore,
+   * re-map it again and store the length value after that. */
+
+  hash_data = (hash_data_t *)*data;
+  lengths = (apr_uint32_t *)
+    svn_temp_deserializer__ptr((const char *)hash_data,
+                               (const void **)&hash_data->lengths);
+  lengths[index] = length;
+
+  return SVN_NO_ERROR;
 }
