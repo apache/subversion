@@ -141,8 +141,8 @@ ambient_read_info(svn_boolean_t *hidden,
 
   if (read_base)
     err = svn_wc__db_base_get_info(status, kind, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, depth, NULL, NULL,
-                                   NULL, NULL, NULL,
+                                   NULL, NULL, NULL, depth, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL,
                                    db, local_abspath,
                                    scratch_pool, scratch_pool);
   else

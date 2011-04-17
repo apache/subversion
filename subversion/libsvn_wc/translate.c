@@ -411,8 +411,8 @@ svn_wc__maybe_set_read_only(svn_boolean_t *did_set,
     return SVN_NO_ERROR; /* Doesn't need lock handling */
 
   SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   &lock, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, &lock,
+                                   NULL, NULL, NULL, NULL, NULL,
                                    db, local_abspath,
                                    scratch_pool, scratch_pool));
 

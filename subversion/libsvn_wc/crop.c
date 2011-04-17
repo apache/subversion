@@ -277,7 +277,7 @@ svn_wc_exclude(svn_wc_context_t *wc_ctx,
     SVN_ERR(svn_wc__db_base_get_info(NULL, &kind, &revision, &repos_relpath,
                                      &repos_root, &repos_uuid, NULL, NULL,
                                      NULL, NULL, NULL, NULL, NULL, NULL,
-                                     NULL, NULL,
+                                     NULL, NULL, NULL, NULL,
                                      wc_ctx->db, local_abspath,
                                      scratch_pool, scratch_pool));
 
