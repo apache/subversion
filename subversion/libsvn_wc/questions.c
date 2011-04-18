@@ -96,6 +96,12 @@
  * form according to VERSIONED_FILE_ABSPATH's properties, and compare the
  * result with VERSIONED_FILE_ABSPATH.
  *
+ * HAS_PROPS should be TRUE if the file had properties when it was not
+ * modified, otherwise FALSE.
+ *
+ * PROPS_MOD should be TRUE if the file's properties have been changed,
+ * otherwise FALSE.
+ *
  * PRISTINE_STREAM will be closed before a successful return.
  *
  * DB is a wc_db; use SCRATCH_POOL for temporary allocation.
@@ -108,6 +114,7 @@ compare_and_verify(svn_boolean_t *modified_p,
                    svn_stream_t *pristine_stream,
                    svn_filesize_t pristine_size,
                    svn_boolean_t has_props,
+                   svn_boolean_t props_mod,
                    svn_boolean_t compare_textbases,
                    const svn_checksum_t *verify_checksum,
                    apr_pool_t *scratch_pool)
@@ -120,6 +127,9 @@ compare_and_verify(svn_boolean_t *modified_p,
   svn_boolean_t need_translation;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(versioned_file_abspath));
+
+  if (props_mod)
+    has_props = TRUE; /* Maybe it didn't have properties; but it has now */
 
   if (has_props)
     {
@@ -146,8 +156,22 @@ compare_and_verify(svn_boolean_t *modified_p,
       return svn_error_return(svn_stream_close(pristine_stream));
     }
 
-  /* #### Can a file be smaller then its repository_normal form, or other
-          optimizations? */
+  if (need_translation
+      && !special
+      && !props_mod
+      && (keywords == NULL)
+      && (versioned_file_size < versioned_file_size))
+    {
+      *modified_p = TRUE; /* The file is < its repository normal form
+                             and the properties didn't change.
+
+                             That must be a change. */
+
+      /* ### Why did we open the pristine? */
+      return svn_error_return(svn_stream_close(pristine_stream));
+    }
+
+  /* ### Other checks possible? */
 
   if (verify_checksum || need_translation)
     {
@@ -287,8 +311,8 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
 
   if (! force_comparison)
     {
-      svn_filesize_t translated_size;
-      apr_time_t last_mod_time;
+      svn_filesize_t recorded_size;
+      apr_time_t recorded_mod_time;
 
       /* We're allowed to use a heuristic to determine whether files may
          have changed.  The heuristic has these steps:
@@ -322,23 +346,23 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
       SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL,
-                                   &translated_size, &last_mod_time,
+                                   &recorded_size, &recorded_mod_time,
                                    NULL, NULL, NULL, &has_props, &props_mod,
                                    NULL, NULL, NULL,
                                    db, local_abspath,
                                    scratch_pool, scratch_pool));
 
       /* Compare the sizes, if applicable */
-      if (translated_size != SVN_INVALID_FILESIZE
-          && finfo.size != translated_size)
+      if (recorded_size != SVN_INVALID_FILESIZE
+          && finfo.size != recorded_size)
         goto compare_them;
 
       /* Compare the timestamps
 
-         Note: text_time == 0 means absent from entries,
+         Note: recorded_mod_time == 0 means not available,
                which also means the timestamps won't be equal,
                so there's no need to explicitly check the 'absent' value. */
-      if (last_mod_time != finfo.mtime)
+      if (recorded_mod_time != finfo.mtime)
         goto compare_them;
 
       *modified_p = FALSE;
@@ -354,10 +378,6 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
                                    db, local_abspath,
                                    scratch_pool, scratch_pool));
     }
-
-  if (props_mod)
-    has_props = TRUE; /* Maybe it didn't have properties; but it has now */
-
 
  compare_them:
   /* If there's no text-base file, we have to assume the working file
@@ -387,7 +407,7 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
   SVN_ERR(compare_and_verify(modified_p, db,
                              local_abspath, finfo.size,
                              pristine_stream, pristine_size,
-                             has_props,
+                             has_props, props_mod,
                              compare_textbases,
                              verify_checksum,
                              scratch_pool));
