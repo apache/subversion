@@ -45,6 +45,9 @@
 
 #include "../svn_test.h"
 
+#ifdef _MSC_VER
+#pragma warning(disable: 4221) /* nonstandard extension used */
+#endif
 
 /* Compare strings, like strcmp but either or both may be NULL which
  * compares equal to NULL and not equal to any non-NULL string. */
