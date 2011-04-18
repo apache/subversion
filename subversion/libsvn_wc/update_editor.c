@@ -253,11 +253,6 @@ remember_skipped_tree(struct edit_baton *eb,
 {
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  if (eb->wcroot_abspath == NULL)
-    SVN_ERR(svn_wc__db_get_wcroot(&eb->wcroot_abspath,
-                                  eb->db, eb->anchor_abspath,
-                                  eb->pool, scratch_pool));
-
   apr_hash_set(eb->skipped_trees,
                apr_pstrdup(eb->pool,
                            svn_dirent_skip_ancestor(eb->wcroot_abspath,
@@ -435,17 +430,16 @@ get_empty_tmp_file(const char **tmp_filename,
   return SVN_NO_ERROR;
 }
 
-/* An APR pool cleanup handler.  This runs the log file for a
-   directory baton. */
+/* An APR pool cleanup handler.  This runs the working queue for an
+   editor baton. */
 static apr_status_t
-cleanup_dir_baton(void *dir_baton)
+cleanup_edit_baton(void *edit_baton)
 {
-  struct dir_baton *db = dir_baton;
-  struct edit_baton *eb = db->edit_baton;
+  struct edit_baton *eb = edit_baton;
   svn_error_t *err;
-  apr_pool_t *pool = apr_pool_parent_get(db->pool);
+  apr_pool_t *pool = apr_pool_parent_get(eb->pool);
 
-  err = svn_wc__wq_run(eb->db, db->local_abspath,
+  err = svn_wc__wq_run(eb->db, eb->wcroot_abspath,
                        NULL /* cancel_func */, NULL /* cancel_baton */,
                        pool);
 
@@ -463,10 +457,10 @@ cleanup_dir_baton(void *dir_baton)
    <stsp> mail pool?
    <hwright> that's where the missing commit mails are going!  */
 static apr_status_t
-cleanup_dir_baton_child(void *dir_baton)
+cleanup_edit_baton_child(void *edit_baton)
 {
-  struct dir_baton *db = dir_baton;
-  apr_pool_cleanup_kill(db->pool, db, cleanup_dir_baton);
+  struct edit_baton *eb = edit_baton;
+  apr_pool_cleanup_kill(eb->pool, eb, cleanup_edit_baton);
   return APR_SUCCESS;
 }
 
@@ -600,9 +594,6 @@ make_dir_baton(struct dir_baton **d_p,
   /* The caller of this function needs to fill these in. */
   d->ambient_depth = svn_depth_unknown;
   d->was_incomplete = FALSE;
-
-  apr_pool_cleanup_register(dir_pool, d, cleanup_dir_baton,
-                            cleanup_dir_baton_child);
 
   *d_p = d;
   return SVN_NO_ERROR;
@@ -2681,7 +2672,6 @@ close_directory(void *dir_baton,
   while (bdi && !bdi->ref_count)
     {
       apr_pool_t *destroy_pool = bdi->pool;
-      apr_pool_cleanup_kill(destroy_pool, db, cleanup_dir_baton);
       bdi = bdi->parent;
       svn_pool_destroy(destroy_pool);
     }
@@ -4146,12 +4136,22 @@ close_edit(void *edit_baton,
                                                        eb->pool));
     }
 
+  /* The edit is over: run the wq with proper cancel support,
+     but first kill the handler that would run it on the pool
+     cleanup at the end of this function. */
+  apr_pool_cleanup_kill(eb->pool, eb, cleanup_edit_baton);
+
+  SVN_ERR(svn_wc__wq_run(eb->db, eb->wcroot_abspath,
+                         eb->cancel_func, eb->cancel_baton,
+                         eb->pool));
+
   /* The edit is over, free its pool.
      ### No, this is wrong.  Who says this editor/baton won't be used
      again?  But the change is not merely to remove this call.  We
      should also make eb->pool not be a subpool (see make_editor),
      and change callers of svn_client_{checkout,update,switch} to do
      better pool management. ### */
+
   svn_pool_destroy(eb->pool);
 
   return SVN_NO_ERROR;
@@ -4240,6 +4240,10 @@ make_editor(svn_revnum_t *target_revision,
   eb->target_basename          = target_basename;
   eb->anchor_abspath           = anchor_abspath;
 
+  SVN_ERR(svn_wc__db_get_wcroot(&eb->wcroot_abspath,
+                                wc_ctx->db, anchor_abspath,
+                                edit_pool, scratch_pool));
+
   if (switch_url)
     eb->switch_relpath =
       svn_path_uri_decode(svn_uri_skip_ancestor(repos_root, switch_url),
@@ -4268,6 +4272,9 @@ make_editor(svn_revnum_t *target_revision,
   eb->adds_as_modification     = adds_as_modification;
   eb->skipped_trees            = apr_hash_make(edit_pool);
   eb->ext_patterns             = preserved_exts;
+
+  apr_pool_cleanup_register(edit_pool, eb, cleanup_edit_baton,
+                            cleanup_edit_baton_child);
 
   /* Construct an editor. */
   tree_editor->set_target_revision = set_target_revision;
