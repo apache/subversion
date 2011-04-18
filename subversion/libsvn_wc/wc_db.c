@@ -168,6 +168,10 @@ typedef struct insert_base_baton_t {
   /* may need to insert/update ACTUAL to record a conflict  */
   const svn_skel_t *conflict;
 
+  /* may need to insert/update ACTUAL to record new properties */
+  svn_boolean_t update_actual_props;
+  const apr_hash_t *new_actual_props;
+
   /* may have work items to queue in this transaction  */
   const svn_skel_t *work_items;
 
@@ -236,6 +240,13 @@ static svn_error_t *
 add_work_items(svn_sqlite__db_t *sdb,
                const svn_skel_t *skel,
                apr_pool_t *scratch_pool);
+
+static svn_error_t *
+set_actual_props(apr_int64_t wc_id,
+                 const char *local_relpath,
+                 apr_hash_t *props,
+                 svn_sqlite__db_t *db,
+                 apr_pool_t *scratch_pool);
 
 static svn_error_t *
 insert_incomplete_children(svn_sqlite__db_t *sdb,
@@ -825,6 +836,29 @@ insert_base_node(void *baton,
                                         scratch_pool));
 
   SVN_ERR(svn_sqlite__insert(NULL, stmt));
+
+  if (pibb->update_actual_props)
+    {
+      /* Cast away const, to allow calling property helpers */
+      apr_hash_t *base_props = (apr_hash_t *)pibb->props;
+      apr_hash_t *new_actual_props = (apr_hash_t *)pibb->new_actual_props;
+
+      if (base_props != NULL
+          && new_actual_props != NULL
+          && (apr_hash_count(base_props) == apr_hash_count(new_actual_props)))
+        {
+          apr_array_header_t *diffs;
+
+          SVN_ERR(svn_prop_diffs(&diffs, (apr_hash_t *)new_actual_props,
+                                 (apr_hash_t *)pibb->props, scratch_pool));
+
+          if (diffs->nelts == 0)
+            new_actual_props = NULL;
+        }
+
+      SVN_ERR(set_actual_props(wcroot->wc_id, local_relpath, new_actual_props,
+                               wcroot->sdb, scratch_pool));
+    }
 
   if (pibb->kind == svn_wc__db_kind_dir && pibb->children)
     SVN_ERR(insert_incomplete_children(wcroot->sdb, wcroot->wc_id,
@@ -1456,6 +1490,8 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
                               svn_depth_t depth,
                               apr_hash_t *dav_cache,
                               const svn_skel_t *conflict,
+                              svn_boolean_t update_actual_props,
+                              apr_hash_t *new_actual_props,
                               const svn_skel_t *work_items,
                               apr_pool_t *scratch_pool)
 {
@@ -1501,6 +1537,12 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
   ibb.conflict = conflict;
   ibb.work_items = work_items;
 
+  if (update_actual_props)
+    {
+      ibb.update_actual_props = TRUE;
+      ibb.new_actual_props = new_actual_props;
+    }
+
   /* Insert the directory and all its children transactionally.
 
      Note: old children can stick around, even if they are no longer present
@@ -1529,6 +1571,8 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
                          svn_filesize_t translated_size,
                          apr_hash_t *dav_cache,
                          const svn_skel_t *conflict,
+                         svn_boolean_t update_actual_props,
+                         apr_hash_t *new_actual_props,
                          const svn_skel_t *work_items,
                          apr_pool_t *scratch_pool)
 {
@@ -1572,6 +1616,13 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
   ibb.conflict = conflict;
   ibb.work_items = work_items;
 
+  if (update_actual_props)
+    {
+      ibb.update_actual_props = TRUE;
+      ibb.new_actual_props = new_actual_props;
+    }
+
+
   /* ### hmm. if this used to be a directory, we should remove children.
      ### or maybe let caller deal with that, if there is a possibility
      ### of a node kind change (rather than eat an extra lookup here).  */
@@ -1598,6 +1649,8 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
                             const char *target,
                             apr_hash_t *dav_cache,
                             const svn_skel_t *conflict,
+                            svn_boolean_t update_actual_props,
+                            apr_hash_t *new_actual_props,
                             const svn_skel_t *work_items,
                             apr_pool_t *scratch_pool)
 {
@@ -1639,6 +1692,12 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
   ibb.dav_cache = dav_cache;
   ibb.conflict = conflict;
   ibb.work_items = work_items;
+
+  if (update_actual_props)
+    {
+      ibb.update_actual_props = TRUE;
+      ibb.new_actual_props = new_actual_props;
+    }
 
   /* ### hmm. if this used to be a directory, we should remove children.
      ### or maybe let caller deal with that, if there is a possibility
