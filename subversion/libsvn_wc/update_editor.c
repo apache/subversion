@@ -3499,9 +3499,9 @@ merge_file(svn_skel_t **work_items,
          because we would have installed an obstruction or tree conflict
          instead */
       SVN_ERR(svn_wc__wq_build_record_fileinfo(&work_item,
-                                               fb->local_abspath,
+                                               eb->db, fb->local_abspath,
                                                set_date,
-                                               result_pool));
+                                               result_pool, scratch_pool));
       *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
     }
 

@@ -132,6 +132,7 @@ svn_wc__wq_build_file_remove(svn_skel_t **work_item,
 svn_error_t *
 svn_wc__wq_build_file_move(svn_skel_t **work_item,
                            svn_wc__db_t *db,
+                           const char *wri_abspath,
                            const char *src_abspath,
                            const char *dst_abspath,
                            apr_pool_t *result_pool,
@@ -191,10 +192,11 @@ svn_wc__wq_build_prej_install(svn_skel_t **work_item,
    ### it is unclear whether this should survive.  */
 svn_error_t *
 svn_wc__wq_build_record_fileinfo(svn_skel_t **work_item,
+                                 svn_wc__db_t *db,
                                  const char *local_abspath,
                                  apr_time_t set_time,
-                                 apr_pool_t *result_pool);
-
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
 
 /* Set *WORK_ITEM to a new work item that will remove all the data of
    the BASE_NODE of LOCAL_ABSPATH and all it's descendants, but keeping
