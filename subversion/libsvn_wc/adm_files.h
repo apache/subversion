@@ -61,10 +61,15 @@ svn_boolean_t svn_wc__adm_area_exists(const char *adm_abspath,
  * locally added (even if it replaces an existing base node).  Return an
  * error if there is no pristine text for any other reason.
  *
+ * If SIZE is not NULL, set *SIZE to the length of the pristine stream in
+ * BYTES or to SVN_INVALID_FILESIZE if no pristine is available for this
+ * file.
+ *
  * For more detail, see the description of svn_wc_get_pristine_contents2().
  */
 svn_error_t *
 svn_wc__get_pristine_contents(svn_stream_t **contents,
+                              svn_filesize_t *size,
                               svn_wc__db_t *db,
                               const char *local_abspath,
                               apr_pool_t *result_pool,

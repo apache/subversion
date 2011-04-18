@@ -217,6 +217,7 @@ svn_wc__text_base_path_to_read(const char **result_abspath,
 
 svn_error_t *
 svn_wc__get_pristine_contents(svn_stream_t **contents,
+                              svn_filesize_t *size,
                               svn_wc__db_t *db,
                               const char *local_abspath,
                               apr_pool_t *result_pool,
@@ -225,6 +226,9 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
   svn_wc__db_status_t status;
   svn_wc__db_kind_t kind;
   const svn_checksum_t *sha1_checksum;
+
+  if (size)
+    *size = SVN_INVALID_FILESIZE;
 
   SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, &sha1_checksum, NULL,
@@ -275,7 +279,7 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
                              svn_dirent_local_style(local_abspath,
                                                     scratch_pool));
   if (sha1_checksum)
-    SVN_ERR(svn_wc__db_pristine_read(contents, db, local_abspath,
+    SVN_ERR(svn_wc__db_pristine_read(contents, size, db, local_abspath,
                                      sha1_checksum,
                                      result_pool, scratch_pool));
   else

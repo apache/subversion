@@ -173,7 +173,7 @@ copy_pristine_text_if_necessary(svn_wc__db_t *db,
       SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&tmpdir_abspath, db, dst_abspath,
                                              scratch_pool, scratch_pool));
 
-      SVN_ERR(svn_wc__db_pristine_read(&src_pristine, db,
+      SVN_ERR(svn_wc__db_pristine_read(&src_pristine, NULL, db,
                                        src_abspath, sha1_checksum,
                                        scratch_pool, scratch_pool));
       SVN_ERR(svn_stream_open_unique(&tmp_pristine, &tmp_pristine_abspath,

@@ -171,7 +171,7 @@ pristine_write_read(const svn_test_opts_t *opts,
     svn_stream_t *data_read_back;
     svn_boolean_t same;
 
-    SVN_ERR(svn_wc__db_pristine_read(&data_read_back, db, wc_abspath,
+    SVN_ERR(svn_wc__db_pristine_read(&data_read_back, NULL, db, wc_abspath,
                                      data_sha1, pool, pool));
     SVN_ERR(svn_stream_contents_same2(&same, data_read_back, data_stream,
                                       pool));
@@ -185,7 +185,7 @@ pristine_write_read(const svn_test_opts_t *opts,
     svn_stream_t *data_read_back;
 
     SVN_ERR(svn_wc__db_pristine_remove(db, wc_abspath, data_sha1, pool));
-    err = svn_wc__db_pristine_read(&data_read_back, db, wc_abspath,
+    err = svn_wc__db_pristine_read(&data_read_back, NULL, db, wc_abspath,
                                    data_sha1, pool, pool);
     SVN_TEST_ASSERT(err != NULL);
     svn_error_clear(err);
@@ -313,7 +313,7 @@ pristine_delete_while_open(const svn_test_opts_t *opts,
   }
 
   /* Open it for reading */
-  SVN_ERR(svn_wc__db_pristine_read(&contents, db, wc_abspath, data_sha1,
+  SVN_ERR(svn_wc__db_pristine_read(&contents, NULL, db, wc_abspath, data_sha1,
                                    pool, pool));
 
   /* Delete it */

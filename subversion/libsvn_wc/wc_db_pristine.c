@@ -152,6 +152,10 @@ typedef struct pristine_read_baton_t
   const svn_checksum_t *sha1_checksum;
   /* The path to the pristine file (within the pristine store). */
   const char *pristine_abspath;
+
+  /* Pointer to where to place the size (if requested) */
+  svn_filesize_t *size;
+
   /* The pool from which to allocate the result stream. */
   apr_pool_t *result_pool;
 } pristine_read_baton_t;
@@ -181,9 +185,14 @@ pristine_read_txn(void *baton,
 
   /* Check that this pristine text is present in the store.  (The presence
    * of the file is not sufficient.) */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_SELECT_PRISTINE));
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_PRISTINE_SIZE));
   SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, b->sha1_checksum, scratch_pool));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  if (b->size)
+    *b->size = svn_sqlite__column_int64(stmt, 0);
+
   SVN_ERR(svn_sqlite__reset(stmt));
   if (! have_row)
     {
@@ -195,13 +204,15 @@ pristine_read_txn(void *baton,
 
   /* Open the file as a readable stream.  It will remain readable even when
    * deleted from disk; APR guarantees that on Windows as well as Unix. */
-  SVN_ERR(svn_stream_open_readonly(b->contents, b->pristine_abspath,
-                                   b->result_pool, scratch_pool));
+  if (b->contents)
+    SVN_ERR(svn_stream_open_readonly(b->contents, b->pristine_abspath,
+                                     b->result_pool, scratch_pool));
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
 svn_wc__db_pristine_read(svn_stream_t **contents,
+                         svn_filesize_t *size,
                          svn_wc__db_t *db,
                          const char *wri_abspath,
                          const svn_checksum_t *sha1_checksum,
@@ -223,6 +234,7 @@ svn_wc__db_pristine_read(svn_stream_t **contents,
 
   b.contents = contents;
   b.sha1_checksum = sha1_checksum;
+  b.size = size;
   b.result_pool = result_pool;
   SVN_ERR(get_pristine_fname(&b.pristine_abspath, wcroot->abspath,
                              sha1_checksum,

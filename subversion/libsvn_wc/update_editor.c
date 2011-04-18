@@ -3109,7 +3109,7 @@ apply_textdelta(void *file_baton,
       SVN_ERR_ASSERT(!fb->original_checksum
                      || fb->original_checksum->kind == svn_checksum_sha1);
 
-      SVN_ERR(svn_wc__db_pristine_read(&source, fb->edit_baton->db,
+      SVN_ERR(svn_wc__db_pristine_read(&source, NULL, fb->edit_baton->db,
                                        fb->local_abspath,
                                        fb->original_checksum,
                                        handler_pool, handler_pool));

@@ -81,9 +81,12 @@
 
 
 /* Set *MODIFIED_P to TRUE if (after translation) VERSIONED_FILE_ABSPATH
- * differs from PRISTINE_STREAM, else to FALSE if not.  Also verify that
- * PRISTINE_STREAM matches the stored checksum for VERSIONED_FILE_ABSPATH,
- * if verify_checksum is TRUE. If checksum does not match, return the error
+ * (of VERSIONED_FILE_SIZE bytes) differs from PRISTINE_STREAM (of
+ * PRISTINE_SIZE bytes), else to FALSE if not.
+ *
+ * If VERIFY_CHECKSUM is not NULL, also verify that PRISTINE_STREAM matches
+ * this checksum (which should be the stored checksum for 
+ * VERSIONED_FILE_ABSPATH). If the checksum does not match, return the error
  * SVN_ERR_WC_CORRUPT_TEXT_BASE.
  *
  * If COMPARE_TEXTBASES is true, translate VERSIONED_FILE_ABSPATH's EOL
@@ -101,9 +104,12 @@ static svn_error_t *
 compare_and_verify(svn_boolean_t *modified_p,
                    svn_wc__db_t *db,
                    const char *versioned_file_abspath,
+                   svn_filesize_t versioned_file_size,
                    svn_stream_t *pristine_stream,
+                   svn_filesize_t pristine_size,
+                   svn_boolean_t has_props,
                    svn_boolean_t compare_textbases,
-                   svn_boolean_t verify_checksum,
+                   const svn_checksum_t *verify_checksum,
                    apr_pool_t *scratch_pool)
 {
   svn_boolean_t same;
@@ -115,43 +121,47 @@ compare_and_verify(svn_boolean_t *modified_p,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(versioned_file_abspath));
 
-  SVN_ERR(svn_wc__get_translate_info(&eol_style, &eol_str,
-                                     &keywords,
-                                     &special,
-                                     db, versioned_file_abspath, NULL,
-                                     scratch_pool, scratch_pool));
+  if (has_props)
+    {
+      SVN_ERR(svn_wc__get_translate_info(&eol_style, &eol_str,
+                                         &keywords,
+                                         &special,
+                                         db, versioned_file_abspath, NULL,
+                                         scratch_pool, scratch_pool));
 
-  need_translation = svn_subst_translation_required(eol_style, eol_str,
-                                                    keywords, special, TRUE);
+      need_translation = svn_subst_translation_required(eol_style, eol_str,
+                                                        keywords, special,
+                                                        TRUE);
+    }
+  else
+    need_translation = FALSE;
+
+  if (! need_translation
+      && ! verify_checksum
+      && (versioned_file_size != pristine_size))
+    {
+      *modified_p = TRUE;
+
+      /* ### Why did we open the pristine? */
+      return svn_error_return(svn_stream_close(pristine_stream));
+    }
+
+  /* #### Can a file be smaller then its repository_normal form, or other
+          optimizations? */
 
   if (verify_checksum || need_translation)
     {
       /* Reading files is necessary. */
       svn_checksum_t *checksum;
       svn_stream_t *v_stream;  /* versioned_file */
-      const svn_checksum_t *node_checksum;
 
       if (verify_checksum)
         {
-          /* Need checksum verification, so read checksum from entries file
-           * and setup checksummed stream for base file. */
-          SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL,
-                                       &node_checksum, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       db, versioned_file_abspath,
-                                       scratch_pool, scratch_pool));
-          /* SVN_EXPERIMENTAL_PRISTINE:
-             node_checksum is originally MD-5 but will later be SHA-1.  To
-             allow for this, we calculate CHECKSUM as the same kind so that
-             we can compare them. */
-
-          if (node_checksum)
-            pristine_stream = svn_stream_checksummed2(pristine_stream,
-                                                      &checksum, NULL,
-                                                      node_checksum->kind, TRUE,
-                                                      scratch_pool);
+          pristine_stream = svn_stream_checksummed2(pristine_stream,
+                                                    &checksum, NULL,
+                                                    verify_checksum->kind,
+                                                    TRUE,
+                                                    scratch_pool);
         }
 
       if (special)
@@ -195,11 +205,11 @@ compare_and_verify(svn_boolean_t *modified_p,
       SVN_ERR(svn_stream_contents_same2(&same, pristine_stream, v_stream,
                                         scratch_pool));
 
-      if (verify_checksum && node_checksum)
+      if (verify_checksum)
         {
-          if (checksum && !svn_checksum_match(checksum, node_checksum))
+          if (checksum && !svn_checksum_match(checksum, verify_checksum))
             return svn_error_create(SVN_ERR_WC_CORRUPT_TEXT_BASE,
-                    svn_checksum_mismatch_err(node_checksum, checksum,
+                    svn_checksum_mismatch_err(verify_checksum, checksum,
                                               scratch_pool,
                                 _("Checksum mismatch indicates corrupt "
                                   "text base for file: '%s'"),
@@ -236,8 +246,12 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
                                  apr_pool_t *scratch_pool)
 {
   svn_stream_t *pristine_stream;
+  svn_filesize_t pristine_size;
+  svn_boolean_t has_props;
+  svn_boolean_t props_mod;
   svn_error_t *err;
   apr_finfo_t finfo;
+  const svn_checksum_t *verify_checksum = NULL;
   apr_int32_t wanted
     = APR_FINFO_SIZE | APR_FINFO_MTIME | APR_FINFO_TYPE | APR_FINFO_LINK;
 
@@ -305,22 +319,17 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
       */
 
       /* Read the relevant info */
-      err = svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL,
-                                 &translated_size, &last_mod_time,
-                                 NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL,
-                                 db, local_abspath,
-                                 scratch_pool, scratch_pool);
-      if (err)
-        {
-          svn_error_clear(err);
-          goto compare_them;
-        }
+      SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL,
+                                   &translated_size, &last_mod_time,
+                                   NULL, NULL, NULL, &has_props, &props_mod,
+                                   NULL, NULL, NULL,
+                                   db, local_abspath,
+                                   scratch_pool, scratch_pool));
 
       /* Compare the sizes, if applicable */
-      if (translated_size != SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN
+      if (translated_size != SVN_INVALID_FILESIZE
           && finfo.size != translated_size)
         goto compare_them;
 
@@ -332,10 +341,23 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
       if (last_mod_time != finfo.mtime)
         goto compare_them;
 
-
       *modified_p = FALSE;
       return SVN_NO_ERROR;
     }
+  else
+    {
+      SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, &verify_checksum, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, &has_props, &props_mod,
+                                   NULL, NULL, NULL,
+                                   db, local_abspath,
+                                   scratch_pool, scratch_pool));
+    }
+
+  if (props_mod)
+    has_props = TRUE; /* Maybe it didn't have properties; but it has now */
+
 
  compare_them:
   /* If there's no text-base file, we have to assume the working file
@@ -343,7 +365,8 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
      yet committed. */
   /* We used to stat for the working base here, but we just give
      compare_and_verify a try; we'll check for errors afterwards */
-  err = svn_wc__get_pristine_contents(&pristine_stream, db, local_abspath,
+  err = svn_wc__get_pristine_contents(&pristine_stream, &pristine_size,
+                                      db, local_abspath,
                                       scratch_pool, scratch_pool);
   if (err && APR_STATUS_IS_ENOENT(err->apr_err))
     {
@@ -361,10 +384,12 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
     }
 
   /* Check all bytes, and verify checksum if requested. */
-  SVN_ERR(compare_and_verify(modified_p, db, local_abspath,
-                             pristine_stream,
+  SVN_ERR(compare_and_verify(modified_p, db,
+                             local_abspath, finfo.size,
+                             pristine_stream, pristine_size,
+                             has_props,
                              compare_textbases,
-                             force_comparison,
+                             verify_checksum,
                              scratch_pool));
 
   if (!*modified_p)

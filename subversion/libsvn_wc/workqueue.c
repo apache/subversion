@@ -625,7 +625,7 @@ process_commit_file_install(svn_wc__db_t *db,
        "repair" them if the file is unmodified */
       SVN_ERR(svn_wc__internal_file_modified_p(&modified, NULL, NULL,
                                                db, local_abspath,
-                                               TRUE, FALSE, scratch_pool));
+                                               FALSE, FALSE, scratch_pool));
     }
   return SVN_NO_ERROR;
 }
@@ -1691,7 +1691,7 @@ pristine_get_translated(svn_wc__db_t *db,
 {
   svn_stream_t *src_stream, *dst_stream;
 
-  SVN_ERR(svn_wc__db_pristine_read(&src_stream, db, versioned_abspath,
+  SVN_ERR(svn_wc__db_pristine_read(&src_stream, NULL, db, versioned_abspath,
                                    pristine_sha1,
                                    scratch_pool, scratch_pool));
   SVN_ERR(svn_wc__internal_translated_stream(&dst_stream, db, new_abspath,
