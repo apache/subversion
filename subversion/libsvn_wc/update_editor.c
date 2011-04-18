@@ -709,41 +709,6 @@ complete_directory(struct edit_baton *eb,
   /* Mark THIS_DIR complete. */
   SVN_ERR(svn_wc__db_temp_op_end_directory_update(eb->db, local_abspath,
                                                   scratch_pool));
-
-  if (eb->depth_is_sticky)
-    {
-      svn_depth_t depth;
-
-      /* ### obsolete comment?
-         ### We should specifically check BASE_NODE here and then only remove
-             the BASE_NODE if there is a WORKING_NODE. */
-
-      SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL,
-                                       NULL, NULL, NULL,
-                                       NULL, NULL, NULL,
-                                       &depth, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL,
-                                       eb->db, local_abspath,
-                                       scratch_pool, scratch_pool));
-
-      if (depth != eb->requested_depth)
-        {
-          /* After a depth upgrade the entry must reflect the new depth.
-             Upgrading to infinity changes the depth of *all* directories,
-             upgrading to something else only changes the target. */
-
-          if (eb->requested_depth == svn_depth_infinity
-              || (strcmp(local_abspath, eb->target_abspath) == 0
-                  && eb->requested_depth > depth))
-            {
-              SVN_ERR(svn_wc__db_temp_op_set_dir_depth(eb->db,
-                                                       local_abspath,
-                                                       eb->requested_depth,
-                                                       scratch_pool));
-            }
-        }
-    }
-
   return SVN_NO_ERROR;
 }
 
@@ -2634,6 +2599,21 @@ close_directory(void *dir_baton,
       /* If no depth is set yet, set to infinity. */
       if (depth == svn_depth_unknown)
         depth = svn_depth_infinity;
+
+      if (eb->depth_is_sticky
+          && depth != eb->requested_depth)
+        {
+          /* After a depth upgrade the entry must reflect the new depth.
+             Upgrading to infinity changes the depth of *all* directories,
+             upgrading to something else only changes the target. */
+
+          if (eb->requested_depth == svn_depth_infinity
+              || (strcmp(db->local_abspath, eb->target_abspath) == 0
+                  && eb->requested_depth > depth))
+            {
+              depth = eb->requested_depth;
+            }
+        }
 
       /* Do we have new properties to install? Or shall we simply retain
          the prior set of properties? If we're installing new properties,
