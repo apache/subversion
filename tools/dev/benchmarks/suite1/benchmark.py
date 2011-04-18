@@ -39,6 +39,7 @@ import random
 import shutil
 import cPickle
 import optparse
+import stat
 
 TOTAL_RUN = 'TOTAL RUN'
 
@@ -269,6 +270,8 @@ def svn(*args):
                          stderr=subprocess.PIPE,
                          shell=False)
     stdout,stderr = p.communicate(input=stdin)
+  except OSError:
+    stdout = stderr = None
   finally:
     timings.toc()
 
@@ -377,6 +380,24 @@ def propadd_tree(in_dir, fraction):
       propadd_tree(path, fraction)
 
 
+def rmtree_onerror(func, path, exc_info):
+  """Error handler for ``shutil.rmtree``.
+
+  If the error is due to an access error (read only file)
+  it attempts to add write permission and then retries.
+
+  If the error is for another reason it re-raises the error.
+
+  Usage : ``shutil.rmtree(path, onerror=onerror)``
+  """
+  if not os.access(path, os.W_OK):
+    # Is the error an access error ?
+    os.chmod(path, stat.S_IWUSR)
+    func(path)
+  else:
+    raise
+
+
 def run(levels, spread, N):
   for i in range(N):
     base = tempfile.mkdtemp()
@@ -386,22 +407,23 @@ def run(levels, spread, N):
 
     try:
       repos = j(base, 'repos')
+      repos = repos.replace('\\', '/')
       wc = j(base, 'wc')
       wc2 = j(base, 'wc2')
 
       file_url = 'file://%s' % repos
 
-      so, se = run_cmd(['which', 'svn'])
+      so, se = svn('--version')
       if not so:
         print "Can't find svn."
         exit(1)
+      version = ', '.join([s.strip() for s in so.split('\n')[:2]])
 
       print '\nRunning svn benchmark in', base
       print 'dir levels: %s; new files and dirs per leaf: %s; run %d of %d' %(
             levels, spread, i + 1, N)
 
-      so, se = svn('--version')
-      print ', '.join( so.split('\n')[:2] )
+      print version
       started = datetime.datetime.now()
 
       try:
@@ -494,7 +516,7 @@ def run(levels, spread, N):
 
         print timings.summary()
     finally:
-      shutil.rmtree(base)
+      shutil.rmtree(base, onerror=rmtree_onerror)
 
 
 def read_from_file(file_path):
