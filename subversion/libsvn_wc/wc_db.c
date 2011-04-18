@@ -55,8 +55,6 @@
 
 #define NOT_IMPLEMENTED() SVN__NOT_IMPLEMENTED()
 
-WC_QUERIES_SQL_DECLARE_STATEMENTS(statements);
-
 
 /*
  * Some filename constants.
@@ -440,31 +438,6 @@ static const char *construct_like_arg(const char *local_relpath,
   return apr_pstrcat(result_pool,
                      escape_sqlite_like(local_relpath, result_pool),
                      "/%", (char *)NULL);
-}
-
-
-/* Construct a clause to be used as a filter, of the form:
- * COLUMN in (LIST[0], LIST[1], LIST[2], ..., LIST[N]).
- *
- * Allocate the result either statically or in RESULT_POOL.  */
-static const char *
-construct_filter(const char *column_name,
-                 const apr_array_header_t *list,
-                 apr_pool_t *result_pool)
-{
-  svn_stringbuf_t *clause;
-  int i;
-
-  if (!list || list->nelts == 0)
-    return "";
-
-  clause = svn_stringbuf_createf(result_pool, "%s IN (?", column_name);
-
-  for (i = 1; i < list->nelts; i++)
-    svn_stringbuf_appendcstr(clause, ", ?");
-  svn_stringbuf_appendcstr(clause, ")");
-
-  return clause->data;
 }
 
 
@@ -3510,33 +3483,39 @@ set_changelist_txn(void *baton,
                                       svn_relpath_dirname(local_relpath,
                                                           scratch_pool)));
     }
-  else if (scb->changelists && scb->changelists->nelts)
+  else if (!scb->changelists || scb->changelists->nelts == 0)
     {
-      int i;
-      const char *stmt_text = apr_pstrcat(scratch_pool,
-                                   statements[STMT_UPDATE_ACTUAL_CHANGELIST],
-                                    " AND ",
-                                    construct_filter("changelist",
-                                                     scb->changelists,
-                                                     scratch_pool),
-                                    NULL);
-
-      SVN_ERR(svn_sqlite__prepare(&stmt, wcroot->sdb, stmt_text,
-                                  scratch_pool));
-
-      for (i = 0; i < scb->changelists->nelts; i++)
-        {
-          const char *cl = APR_ARRAY_IDX(scb->changelists, i, const char *);
-
-          /* The magic number '4' here is the number of existing params,
-             plus 1, in the statement, which will be bound below. */
-          SVN_ERR(svn_sqlite__bind_text(stmt, i+4, cl));
-        }
+      /* No filtering going on: we can just use the simple statement. */
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_UPDATE_ACTUAL_CHANGELIST));
     }
   else
     {
+      /* We need to execute (potentially) multiple changelist-filtered
+         queries, one for each changelist.  */
+      int i;
+
+      /* Start with the second changelist in the list of changelist filters.
+         In the case where we only have one changelist filter, this loop is
+         skipped, and we get simple single-query execution. */
+      for (i = 1; i < scb->changelists->nelts; i++)
+        {
+          const char *cl = APR_ARRAY_IDX(scb->changelists, i, const char *);
+
+          SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                           STMT_UPDATE_ACTUAL_CHANGELIST_FILTER_CHANGELIST));
+          SVN_ERR(svn_sqlite__bindf(stmt, "isss", wcroot->wc_id,
+                                    local_relpath, scb->new_changelist, cl));
+          SVN_ERR(svn_sqlite__step_done(stmt));
+        }
+
+      /* Finally, we do the first changelist, and let the actual execution
+         fall through below. */
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_UPDATE_ACTUAL_CHANGELIST));
+                           STMT_UPDATE_ACTUAL_CHANGELIST_FILTER_CHANGELIST));
+      SVN_ERR(svn_sqlite__bind_text(stmt, 4,
+                                   APR_ARRAY_IDX(scb->changelists, 0,
+                                                 const char *)));
     }
 
   /* Run the update or insert query */
