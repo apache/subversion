@@ -1197,7 +1197,10 @@ svn_wc__internal_node_get_schedule(svn_wc_schedule_t *schedule,
                                    apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
+  svn_boolean_t op_root;
+  svn_boolean_t have_base;
   svn_boolean_t have_work;
+  svn_boolean_t have_more_work;
   const char *copyfrom_relpath;
 
   if (schedule)
@@ -1208,8 +1211,8 @@ svn_wc__internal_node_get_schedule(svn_wc_schedule_t *schedule,
   SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, &copyfrom_relpath,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL,
-                               NULL, NULL, &have_work,
+                               &op_root, NULL, NULL,
+                               &have_base, &have_more_work, &have_work,
                                db, local_abspath, scratch_pool, scratch_pool));
 
   switch (status)
@@ -1227,49 +1230,54 @@ svn_wc__internal_node_get_schedule(svn_wc_schedule_t *schedule,
 
       case svn_wc__db_status_deleted:
         {
-          const char *work_del_abspath;
-
           if (schedule)
             *schedule = svn_wc_schedule_delete;
 
           if (!copied)
             break;
 
-          /* Find out details of our deletion.  */
-          SVN_ERR(svn_wc__db_scan_deletion(NULL, NULL,
-                                           &work_del_abspath,
-                                           db, local_abspath,
-                                           scratch_pool, scratch_pool));
+          if (have_more_work || !have_base)
+            *copied = TRUE;
+          else
+            {
+              const char *work_del_abspath;
 
-          if (!work_del_abspath)
-            break; /* Base deletion */
+              /* Find out details of our deletion.  */
+              SVN_ERR(svn_wc__db_scan_deletion(NULL, NULL,
+                                               &work_del_abspath,
+                                               db, local_abspath,
+                                               scratch_pool, scratch_pool));
 
-          *copied = TRUE;
+              if (work_del_abspath)
+                *copied = TRUE; /* Working deletion */
+            }
           break;
         }
       case svn_wc__db_status_added:
         {
-          const char *op_root_abspath;
+          if (!op_root)
+            {
+              if (copied)
+                *copied = TRUE;
 
-          SVN_ERR(svn_wc__db_scan_addition(&status, &op_root_abspath,
-                                           NULL, NULL, NULL, NULL,
-                                           NULL, NULL, NULL,
-                                           db, local_abspath,
-                                           scratch_pool, scratch_pool));
+              if (schedule)
+                *schedule = svn_wc_schedule_normal;
 
-          if (copied && status != svn_wc__db_status_added)
-            *copied = TRUE;
+              break;
+            }
+
+          if (schedule)
+            *schedule = svn_wc_schedule_add;
+
+          if (copied)
+            *copied = (copyfrom_relpath != NULL);
 
           if (!schedule)
             break;
 
-          *schedule = svn_wc_schedule_add;
-
-          /* If this node is the op-root check for replaced */
-          if (status == svn_wc__db_status_added
-              || strcmp(op_root_abspath, local_abspath) == 0)
+          /* Check for replaced */
+          if (have_base || have_more_work)
             {
-              svn_boolean_t have_base;
               svn_wc__db_status_t below_working;
               SVN_ERR(svn_wc__db_info_below_working(&have_base, &have_work,
                                                     &below_working,
@@ -1278,17 +1286,13 @@ svn_wc__internal_node_get_schedule(svn_wc_schedule_t *schedule,
 
               /* If the node is not present or deleted (read: not present
                  in working), then the node is not a replacement */
-              if ((have_work || have_base)
-                  && below_working != svn_wc__db_status_not_present
+              if (below_working != svn_wc__db_status_not_present
                   && below_working != svn_wc__db_status_deleted)
                 {
                   *schedule = svn_wc_schedule_replace;
                   break;
                 }
             }
-          else
-            *schedule = svn_wc_schedule_normal;
-
           break;
         }
       default:
