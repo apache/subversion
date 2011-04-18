@@ -40,8 +40,6 @@ import shutil
 import cPickle
 import optparse
 
-
-DEFAULT_TIMINGS_PATH = './benchmark_py_last_run.py-pickle'
 TOTAL_RUN = 'TOTAL RUN'
 
 timings = None
