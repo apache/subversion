@@ -4113,8 +4113,6 @@ close_edit(void *edit_baton,
             }
           else if (status == svn_wc__db_status_excluded)
             {
-              svn_skel_t *work_item;
-
               /* There is a small chance that the explicit target of an update/
                  switch is gone in the repository, in that specific case the
                  node hasn't been re-added to the BASE tree by this update. 
