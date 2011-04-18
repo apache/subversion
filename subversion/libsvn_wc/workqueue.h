@@ -287,28 +287,6 @@ svn_wc__wq_build_file_commit(svn_skel_t **work_item,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
 
-svn_error_t *
-svn_wc__wq_add_deletion_postcommit(svn_wc__db_t *db,
-                                   const char *local_abspath,
-                                   svn_revnum_t new_revision,
-                                   svn_boolean_t no_unlock,
-                                   apr_pool_t *scratch_pool);
-
-
-/* Queue a work item that will call log_do_committed() with all of these
- * parameters.  See log_do_committed(). */
-svn_error_t *
-svn_wc__wq_add_postcommit(svn_wc__db_t *db,
-                          const char *local_abspath,
-                          svn_revnum_t new_revision,
-                          svn_revnum_t changed_rev,
-                          apr_time_t changed_date,
-                          const char *changed_author,
-                          const svn_checksum_t *new_checksum,
-                          apr_hash_t *new_dav_cache,
-                          svn_boolean_t keep_changelist,
-                          svn_boolean_t no_unlock,
-                          apr_pool_t *scratch_pool);
 
 svn_error_t *
 svn_wc__wq_build_postupgrade(svn_skel_t **work_item,

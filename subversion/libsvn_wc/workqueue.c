@@ -394,29 +394,6 @@ run_deletion_postcommit(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svn_wc__wq_add_deletion_postcommit(svn_wc__db_t *db,
-                                   const char *local_abspath,
-                                   svn_revnum_t new_revision,
-                                   svn_boolean_t no_unlock,
-                                   apr_pool_t *scratch_pool)
-{
-  svn_skel_t *work_item = svn_skel__make_empty_list(scratch_pool);
-
-  /* The skel still points at LOCAL_ABSPATH, but the skel will be
-     serialized just below in the wq_add call.  */
-  svn_skel__prepend_int(no_unlock, work_item, scratch_pool);
-  svn_skel__prepend_int(new_revision, work_item, scratch_pool);
-  svn_skel__prepend_str(local_abspath, work_item, scratch_pool);
-  svn_skel__prepend_str(OP_DELETION_POSTCOMMIT, work_item, scratch_pool);
-
-  SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-
 /* ------------------------------------------------------------------------ */
 
 /* OP_POSTCOMMIT  */
@@ -619,10 +596,20 @@ process_commit_file_install(svn_wc__db_t *db,
       svn_boolean_t modified;
 
       /* The working copy file hasn't been overwritten.  We just
-       removed the translated size and working time from the nodes
-       record by calling svn_wc__db_global_commit, so we can use
-       svn_wc__internal_file_modified_p's internal logic to
-       "repair" them if the file is unmodified */
+         removed the recorded size and modification time from the nodes
+         record by calling svn_wc__db_global_commit().
+
+         Now we have some file in our working copy that might be what
+         we just committed, but we are not certain at this point.
+
+         We still have a write lock here, so we check if the file is
+         what we expect it to be and if it is the right file we update
+         the recorded information. (If it isn't we keep the null data).
+
+         Instead of reimplementing all this here, we just call a function
+         that already does implement this when it notices that we have the
+         right kind of lock (and we ignore the result)
+       */
       SVN_ERR(svn_wc__internal_file_modified_p(&modified, NULL, NULL,
                                                db, local_abspath,
                                                FALSE, FALSE, scratch_pool));
@@ -810,53 +797,6 @@ run_postcommit(svn_wc__db_t *db,
                              _("Error processing post-commit work for '%s'"),
                              svn_dirent_local_style(local_abspath,
                                                     scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc__wq_add_postcommit(svn_wc__db_t *db,
-                          const char *local_abspath,
-                          svn_revnum_t new_revision,
-                          svn_revnum_t changed_rev,
-                          apr_time_t changed_date,
-                          const char *changed_author,
-                          const svn_checksum_t *new_checksum,
-                          apr_hash_t *new_dav_cache,
-                          svn_boolean_t keep_changelist,
-                          svn_boolean_t no_unlock,
-                          apr_pool_t *scratch_pool)
-{
-  svn_skel_t *work_item = svn_skel__make_empty_list(scratch_pool);
-
-  svn_skel__prepend_int(changed_rev, work_item, scratch_pool);
-  svn_skel__prepend_int(no_unlock, work_item, scratch_pool);
-  svn_skel__prepend_int(keep_changelist, work_item, scratch_pool);
-  if (new_dav_cache == NULL || apr_hash_count(new_dav_cache) == 0)
-    {
-      svn_skel__prepend_str("", work_item, scratch_pool);
-    }
-  else
-    {
-      svn_skel_t *props_skel;
-
-      SVN_ERR(svn_skel__unparse_proplist(&props_skel, new_dav_cache,
-                                         scratch_pool));
-      svn_skel__prepend(props_skel, work_item);
-    }
-  svn_skel__prepend_str(new_checksum
-                          ? svn_checksum_serialize(new_checksum,
-                                                   scratch_pool, scratch_pool)
-                          : "",
-                        work_item, scratch_pool);
-  svn_skel__prepend_str(changed_author ? changed_author : "", work_item, scratch_pool);
-  svn_skel__prepend_int(changed_date, work_item, scratch_pool);
-  svn_skel__prepend_int(new_revision, work_item, scratch_pool);
-  svn_skel__prepend_str(local_abspath, work_item, scratch_pool);
-  svn_skel__prepend_str(OP_POSTCOMMIT, work_item, scratch_pool);
-
-  SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item, scratch_pool));
 
   return SVN_NO_ERROR;
 }
