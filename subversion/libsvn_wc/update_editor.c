@@ -644,56 +644,6 @@ complete_directory(struct edit_baton *eb,
      mark this directory complete. */
   if (is_root_dir && *eb->target_basename != '\0')
     {
-      svn_wc__db_status_t status;
-      svn_error_t *err;
-
-      SVN_ERR_ASSERT(strcmp(local_abspath, eb->anchor_abspath) == 0);
-
-      /* Note: we are fetching information about the *target*, not self.
-         There is no guarantee that the target has a BASE node. Two examples:
-
-           1. the node was present, but the update deleted it
-           2. the node was not present in BASE, but locally-added, and the
-              update did not create a new BASE node "under" the local-add.
-
-         If there is no BASE node for the target, then we certainly don't
-         have to worry about removing it.  */
-      err = svn_wc__db_base_get_info(&status, NULL, NULL, NULL, NULL, NULL,
-                                     NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                     NULL, NULL, NULL, NULL, NULL,
-                                     eb->db, eb->target_abspath,
-                                     scratch_pool, scratch_pool);
-      if (err)
-        {
-          if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-            return svn_error_return(err);
-
-          svn_error_clear(err);
-        }
-
-      if (!err && status == svn_wc__db_status_excluded)
-        {
-          svn_skel_t *work_item;
-          /* There is a small chance that the explicit target of an update/
-             switch is gone in the repository, in that specific case the node
-             hasn't been re-added to the BASE tree by this update. If so, we
-             should get rid of this excluded node now. */
-
-          /* Issue a wq operation to delete the BASE_NODE data and to delete
-             actual nodes based on that from disk, but leave any WORKING_NODES
-           */
-          SVN_ERR(svn_wc__wq_build_base_remove(&work_item,
-                                               eb->db, eb->target_abspath,
-                                               FALSE,
-                                               scratch_pool, scratch_pool));
-          SVN_ERR(svn_wc__db_wq_add(eb->db, eb->target_abspath, work_item,
-                                    scratch_pool));
-
-          SVN_ERR(svn_wc__wq_run(eb->db, eb->target_abspath,
-                                 eb->cancel_func, eb->cancel_baton,
-                                 scratch_pool));
-        }
-
       return SVN_NO_ERROR;
     }
 
@@ -4096,6 +4046,7 @@ close_edit(void *edit_baton,
            apr_pool_t *pool)
 {
   struct edit_baton *eb = edit_baton;
+  apr_pool_t *scratch_pool = eb->pool;
 
   /* The editor didn't even open the root; we have to take care of
      some cleanup stuffs. */
@@ -4104,7 +4055,6 @@ close_edit(void *edit_baton,
       /* We need to "un-incomplete" the root directory. */
       SVN_ERR(complete_directory(eb, eb->anchor_abspath, TRUE, pool));
     }
-
 
   /* By definition, anybody "driving" this editor for update or switch
      purposes at a *minimum* must have called set_target_revision() at
@@ -4134,6 +4084,47 @@ close_edit(void *edit_baton,
                                                        *(eb->target_revision),
                                                        eb->skipped_trees,
                                                        eb->pool));
+
+      if (*eb->target_basename != '\0')
+        {
+          svn_wc__db_status_t status;
+          svn_error_t *err;
+       
+          /* Note: we are fetching information about the *target*, not anchor.
+             There is no guarantee that the target has a BASE node.
+             For example:
+
+               The node was not present in BASE, but locally-added, and the
+               update did not create a new BASE node "under" the local-add.
+       
+             If there is no BASE node for the target, then we certainly don't
+             have to worry about removing it. */
+          err = svn_wc__db_base_get_info(&status, NULL, NULL, NULL, NULL, NULL,
+                                         NULL, NULL, NULL, NULL, NULL, NULL,
+                                         NULL, NULL, NULL, NULL, NULL, NULL,
+                                         eb->db, eb->target_abspath,
+                                         scratch_pool, scratch_pool);
+          if (err)
+            {
+              if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+                return svn_error_return(err);
+       
+              svn_error_clear(err);
+            }
+          else if (status == svn_wc__db_status_excluded)
+            {
+              svn_skel_t *work_item;
+
+              /* There is a small chance that the explicit target of an update/
+                 switch is gone in the repository, in that specific case the
+                 node hasn't been re-added to the BASE tree by this update. 
+
+                 If so, we should get rid of this excluded node now. */
+
+              SVN_ERR(svn_wc__db_base_remove(eb->db, eb->target_abspath,
+                                             scratch_pool));
+            }
+        }
     }
 
   /* The edit is over: run the wq with proper cancel support,
