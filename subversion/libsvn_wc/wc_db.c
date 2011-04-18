@@ -1378,17 +1378,32 @@ svn_wc__db_init(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_to_relpath(const char **local_relpath,
                       svn_wc__db_t *db,
+                      const char *wri_abspath,
                       const char *local_abspath,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
+  const char *relpath;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, local_relpath, db,
-                              local_abspath, result_pool, scratch_pool));
-  VERIFY_USABLE_WCROOT(wcroot);
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &relpath, db,
+                              wri_abspath, result_pool, scratch_pool));
+
+  /* This function is indirectly called from the upgrade code, so we
+     can't verify the wcroot here. Just check that it is not NULL */
+  SVN_ERR_ASSERT(wcroot != NULL);
+
+  if (svn_dirent_is_ancestor(wcroot->abspath, local_abspath))
+    {
+      *local_relpath = apr_pstrdup(result_pool,
+                                   svn_dirent_skip_ancestor(wcroot->abspath,
+                                                            local_abspath));
+    }
+  else
+    /* Probably moving from $TMP. Should we allow this? */
+    *local_relpath = apr_pstrdup(result_pool, local_abspath);
 
   return SVN_NO_ERROR;
 }
@@ -1404,9 +1419,8 @@ svn_wc__db_from_relpath(const char **local_abspath,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *unused_relpath;
-
 #if 0
-  SVN_ERR_ASSERT(svn_relpath_is_canonical(local_abspath));
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(local_relpath, scratch_pool));
 #endif
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &unused_relpath, db,

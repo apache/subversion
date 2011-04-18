@@ -329,7 +329,8 @@ svn_wc__db_init(svn_wc__db_t *db,
                 apr_pool_t *scratch_pool);
 
 
-/* Compute the LOCAL_RELPATH for the given LOCAL_ABSPATH.
+/* Compute the LOCAL_RELPATH for the given LOCAL_ABSPATH, relative
+   from wri_abspath.
 
    The LOCAL_RELPATH is a relative path to the working copy's root. That
    root will be located by this function, and the path will be relative to
@@ -348,6 +349,7 @@ svn_wc__db_init(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_to_relpath(const char **local_relpath,
                       svn_wc__db_t *db,
+                      const char *wri_abspath,
                       const char *local_abspath,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool);

@@ -1264,7 +1264,7 @@ merge_binary_file(svn_skel_t **work_items,
                                          target_label,
                                          svn_io_file_del_none,
                                          pool, pool));
-      SVN_ERR(svn_wc__wq_build_file_move(work_items, db,
+      SVN_ERR(svn_wc__wq_build_file_move(work_items, db, target_abspath,
                                          detranslated_target_abspath,
                                          conflict_wrk,
                                          pool, result_pool));
