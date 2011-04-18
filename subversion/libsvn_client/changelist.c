@@ -39,52 +39,6 @@
 #include "svn_private_config.h"
 
 
-/* Entry-walker callback for svn_client_add_to_changelist() and
-   svn_client_remove_from_changelist() below. */
-struct set_cl_fn_baton
-{
-  const char *changelist; /* NULL if removing changelists */
-  const apr_array_header_t *changelists;
-  svn_client_ctx_t *ctx;
-  apr_pool_t *pool;
-};
-
-
-/* This function -- which implements svn_wc__node_found_func_t -- associates
-   LOCAL_ABSPATH with a new changelist (passed along in BATON->changelist),
-   so long as LOCAL_ABSPATH is deemed a valid target of that association.
- */
-static svn_error_t *
-set_node_changelist(const char *local_abspath,
-                    svn_node_kind_t kind,
-                    void *baton,
-                    apr_pool_t *pool)
-{
-  struct set_cl_fn_baton *b = (struct set_cl_fn_baton *)baton;
-
-  /* We only care about files right now. */
-  if (kind != svn_node_file)
-    {
-      /* Notify that we're skipping this directory (to which the
-         changelist concept doesn't currently apply) unless we're
-         removing changelist associations (so as not to spam during
-         'svn cl --remove -R'.)  */
-      if (b->ctx->notify_func2
-          && ! (b->changelist == NULL && kind == svn_node_dir))
-        b->ctx->notify_func2(b->ctx->notify_baton2,
-                             svn_wc_create_notify(local_abspath,
-                                                  svn_wc_notify_skip,
-                                                  pool),
-                             pool);
-      return SVN_NO_ERROR;
-    }
-
-  return svn_wc_set_changelist2(b->ctx->wc_ctx, local_abspath, b->changelist,
-                                b->changelists,
-                                b->ctx->cancel_func, b->ctx->cancel_baton,
-                                b->ctx->notify_func2, b->ctx->notify_baton2,
-                                pool);
-}
 
 
 svn_error_t *
@@ -113,22 +67,17 @@ svn_client_add_to_changelist(const apr_array_header_t *paths,
 
   for (i = 0; i < paths->nelts; i++)
     {
-      struct set_cl_fn_baton snb;
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
       const char *local_abspath;
 
       svn_pool_clear(iterpool);
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, iterpool));
 
-      snb.changelist = changelist;
-      snb.changelists = changelists;
-      snb.ctx = ctx;
-      snb.pool = iterpool;
-      SVN_ERR(svn_wc__node_walk_children(ctx->wc_ctx, local_abspath, FALSE,
-                                         set_node_changelist, &snb,
-                                         depth,
-                                         ctx->cancel_func, ctx->cancel_baton,
-                                         iterpool));
+      SVN_ERR(svn_wc_set_changelist2(ctx->wc_ctx, local_abspath, changelist,
+                                     depth, changelists,
+                                     ctx->cancel_func, ctx->cancel_baton,
+                                     ctx->notify_func2, ctx->notify_baton2,
+                                     iterpool));
     }
 
   svn_pool_destroy(iterpool);
@@ -157,22 +106,17 @@ svn_client_remove_from_changelists(const apr_array_header_t *paths,
 
   for (i = 0; i < paths->nelts; i++)
     {
-      struct set_cl_fn_baton snb;
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
       const char *local_abspath;
 
       svn_pool_clear(iterpool);
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, iterpool));
 
-      snb.changelist = NULL;
-      snb.changelists = changelists;
-      snb.ctx = ctx;
-      snb.pool = iterpool;
-      SVN_ERR(svn_wc__node_walk_children(ctx->wc_ctx, local_abspath, FALSE,
-                                         set_node_changelist, &snb,
-                                         depth,
-                                         ctx->cancel_func, ctx->cancel_baton,
-                                         iterpool));
+      SVN_ERR(svn_wc_set_changelist2(ctx->wc_ctx, local_abspath, NULL,
+                                     depth, changelists,
+                                     ctx->cancel_func, ctx->cancel_baton,
+                                     ctx->notify_func2, ctx->notify_baton2,
+                                     iterpool));
     }
 
   svn_pool_destroy(iterpool);

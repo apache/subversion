@@ -7398,7 +7398,7 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
  * Set @a local_abspath's 'changelist' attribute to @a changelist iff
  * @a changelist is not @c NULL; otherwise, remove any current
  * changelist assignment from @a local_abspath.  @a changelist may not
- * be the empty string.
+ * be the empty string.  Recurse to @a depth.
  *
  * @a changelists is an array of <tt>const char *</tt> changelist
  * names, used as a restrictive filter on items whose changelist
@@ -7430,6 +7430,7 @@ svn_error_t *
 svn_wc_set_changelist2(svn_wc_context_t *wc_ctx,
                        const char *local_abspath,
                        const char *changelist,
+                       svn_depth_t depth,
                        const apr_array_header_t *changelists,
                        svn_cancel_func_t cancel_func,
                        void *cancel_baton,
