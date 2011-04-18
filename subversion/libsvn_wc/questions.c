@@ -156,6 +156,10 @@ compare_and_verify(svn_boolean_t *modified_p,
       return svn_error_return(svn_stream_close(pristine_stream));
     }
 
+#if 0
+  /* ### On second thought, I think this needs more review before enabling
+     ### This case might break when we have a fixed "\r\n" EOL, because
+     ### we use a repair mode in the compare itself. */
   if (need_translation
       && !special
       && !props_mod
@@ -170,6 +174,7 @@ compare_and_verify(svn_boolean_t *modified_p,
       /* ### Why did we open the pristine? */
       return svn_error_return(svn_stream_close(pristine_stream));
     }
+#endif
 
   /* ### Other checks possible? */
 
