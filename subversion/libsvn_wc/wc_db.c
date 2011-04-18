@@ -6884,31 +6884,41 @@ commit_node(void *baton,
 
   if (op_depth > 0)
     {
-      /* Do we commit a shadowing operation? 
+      int affected_rows;
 
-         If yes then:
+      /* This removes all layers of this node and at the same time determines
+         if we need to remove shadowed layers below our descendants. */
+
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_DELETE_ALL_LAYERS));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
+
+      if (affected_rows > 1)
+        {
+          /* We commit a shadowing operation
+
            1) Remove all shadowed nodes
            2) And remove all nodes that have a base-deleted as lowest layer,
               because 1) removed that layer
 
-         Possible followup:
-           3) ### Collapse descendants of the current op_depth in layer 0, 
-                  to commit a remote copy in one step (but don't touch/use
-                  ACTUAL!!)
-       */
+           Possible followup:
+             3) ### Collapse descendants of the current op_depth in layer 0,
+                    to commit a remote copy in one step (but don't touch/use
+                    ACTUAL!!)
+          */
 
-      svn_sqlite__stmt_t *delete_stmt;
+          SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                            STMT_DELETE_SHADOWED_RECURSIVE));
 
-      SVN_ERR(svn_sqlite__get_statement(&delete_stmt, wcroot->sdb,
-                                        STMT_DELETE_SHADOWED_RECURSIVE));
+          SVN_ERR(svn_sqlite__bindf(stmt,
+                                    "isi",
+                                    wcroot->wc_id,
+                                    local_relpath,
+                                    op_depth));
 
-      SVN_ERR(svn_sqlite__bindf(delete_stmt,
-                                "isi",
-                                wcroot->wc_id,
-                                local_relpath,
-                                op_depth));
-
-      SVN_ERR(svn_sqlite__step_done(delete_stmt));
+          SVN_ERR(svn_sqlite__step_done(stmt));
+        }
     }
 
   /* Update or add the BASE_NODE row with all the new information.  */
@@ -6944,17 +6954,6 @@ commit_node(void *baton,
                                       scratch_pool));
 
   SVN_ERR(svn_sqlite__step_done(stmt));
-
-  if (op_depth > 0)
-    {
-      /* This removes all op_depth  0 and so does both layers of a
-         two-layer replace. */
-
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_DELETE_ALL_WORKING_NODES));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-      SVN_ERR(svn_sqlite__step_done(stmt));
-    }
 
   if (have_act)
     {

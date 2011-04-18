@@ -453,6 +453,10 @@ WHERE wc_id = ?1 AND local_relpath = ?2
 DELETE FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0
 
+-- STMT_DELETE_ALL_LAYERS
+DELETE FROM nodes
+WHERE wc_id = ?1 AND local_relpath = ?2
+
 -- STMT_DELETE_NODES
 DELETE FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2
