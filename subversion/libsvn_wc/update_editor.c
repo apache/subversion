@@ -2642,11 +2642,6 @@ close_directory(void *dir_baton,
       if (props == NULL)
         props = base_props;
 
-      /* ### NOTE: from this point onwards, we make TWO changes to the
-         ### database in a non-transactional way. some kind of revamp
-         ### needs to happend to bring this down to a single DB transaction
-         ### to perform the changes and install all the needed work items.  */
-
       SVN_ERR(svn_wc__db_base_add_directory(
                 eb->db, db->local_abspath,
                 db->new_relpath,
@@ -2660,24 +2655,10 @@ close_directory(void *dir_baton,
                     ? prop_hash_from_array(dav_prop_changes, pool)
                     : NULL,
                 NULL /* conflict */,
+                (! db->shadowed) && new_base_props != NULL,
+                new_actual_props,
                 NULL /* work_items */,
                 pool));
-
-      /* If we updated the BASE properties, then we also have ACTUAL
-         properties to update. Do that now, along with queueing a work
-         item to write out an old-style props file.  */
-      if (!db->shadowed
-          && !(db->adding_dir && !db->add_existed)
-          && new_base_props != NULL)
-        {
-          SVN_ERR_ASSERT(new_actual_props != NULL);
-
-          SVN_ERR(svn_wc__db_op_set_props(eb->db, db->local_abspath,
-                                          new_actual_props,
-                                          NULL /* conflict */,
-                                          NULL /* work_items */,
-                                          pool));
-        }
     }
 
   /* Process all of the queued work items for this directory.  */
@@ -4035,6 +4016,8 @@ close_file(void *file_baton,
                                                               scratch_pool)
                                        : NULL,
                                      NULL /* conflict */,
+                                     (! fb->shadowed) && new_base_props,
+                                     new_actual_props,
                                      all_work_items,
                                      scratch_pool));
 
@@ -4075,20 +4058,6 @@ close_file(void *file_baton,
     {
       SVN_ERR(svn_wc__db_temp_op_remove_working(eb->db, fb->local_abspath,
                                                 scratch_pool));
-    }
-
-  /* Now we might have to update the ACTUAL tree, with the result of the
-     properties merge. */
-  if (! (fb->adding_file && !fb->add_existed)
-      && ! fb->shadowed)
-    {
-      SVN_ERR_ASSERT(new_actual_props != NULL);
-
-      SVN_ERR(svn_wc__db_op_set_props(eb->db, fb->local_abspath,
-                                      new_actual_props,
-                                      NULL /* conflict */,
-                                      NULL /* work_item */,
-                                      scratch_pool));
     }
 
   /* ### we may as well run whatever is in the queue right now. this

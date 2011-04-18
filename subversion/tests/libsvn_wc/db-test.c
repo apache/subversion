@@ -690,7 +690,7 @@ test_inserting_nodes(apr_pool_t *pool)
             props,
             1, TIME_1a, AUTHOR_1,
             children, svn_depth_infinity,
-            NULL, NULL, NULL,
+            NULL, NULL, FALSE, NULL, NULL,
             pool));
 
   /* Replace an incomplete node with a file node. */
@@ -701,7 +701,7 @@ test_inserting_nodes(apr_pool_t *pool)
             props,
             1, TIME_1a, AUTHOR_1,
             checksum, 10,
-            NULL, NULL, NULL,
+            NULL, NULL, FALSE, NULL, NULL,
             pool));
 
   /* Create a new symlink node. */
@@ -712,7 +712,7 @@ test_inserting_nodes(apr_pool_t *pool)
             props,
             1, TIME_1a, AUTHOR_1,
             "O-target",
-            NULL, NULL, NULL,
+            NULL, NULL, FALSE, NULL, NULL,
             pool));
 
   /* Replace an incomplete node with an absent file node. */
