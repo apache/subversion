@@ -326,6 +326,11 @@ INSERT INTO actual_node (
   wc_id, local_relpath, prop_reject, parent_relpath)
 VALUES (?1, ?2, ?3, ?4)
 
+-- STMT_UPDATE_ACTUAL_CHANGELIST_FILTER_CHANGELIST
+UPDATE actual_node SET changelist = ?3
+WHERE wc_id = ?1 AND local_relpath = ?2
+  AND changelist=?4
+
 -- STMT_UPDATE_ACTUAL_CHANGELIST
 UPDATE actual_node SET changelist = ?3
 WHERE wc_id = ?1 AND local_relpath = ?2
