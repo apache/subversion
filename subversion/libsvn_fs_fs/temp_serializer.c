@@ -694,7 +694,7 @@ return_serialized_dir_context(svn_temp_serializer__context_t *context,
   svn_stringbuf_t *serialized = svn_temp_serializer__get(context);
 
   *data = serialized->data;
-  *data_len = serialized->len;
+  *data_len = serialized->blocksize;
   ((hash_data_t *)serialized->data)->len = serialized->len;
 
   return SVN_NO_ERROR;
