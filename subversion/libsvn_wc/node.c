@@ -1638,15 +1638,23 @@ svn_wc__node_get_commit_status(svn_node_kind_t *kind,
   svn_wc__db_status_t status;
   svn_wc__db_kind_t db_kind;
   svn_wc__db_lock_t *lock;
+  svn_boolean_t had_props;
+  svn_boolean_t props_mod_tmp;
   svn_boolean_t have_base;
+  svn_boolean_t have_more_work;
+  svn_boolean_t op_root;
+
+  if (!props_mod)
+    props_mod = &props_mod_tmp;
 
   /* ### All of this should be handled inside a single read transaction */
   SVN_ERR(svn_wc__db_read_info(&status, &db_kind, revision, repos_relpath,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                original_repos_relpath, NULL, NULL,
                                original_revision, &lock, NULL, NULL,
-                               changelist, conflicted, NULL, NULL, props_mod,
-                               &have_base, NULL, NULL,
+                               changelist, conflicted,
+                               &op_root, &had_props, props_mod,
+                               &have_base, &have_more_work, NULL,
                                wc_ctx->db, local_abspath,
                                result_pool, scratch_pool));
 
@@ -1667,10 +1675,14 @@ svn_wc__node_get_commit_status(svn_node_kind_t *kind,
     *not_present = (status == svn_wc__db_status_not_present);
   if (excluded)
     *excluded = (status == svn_wc__db_status_excluded);
+  if (is_op_root)
+    *is_op_root = op_root;
 
   if (is_replace_root)
     {
-      if (status == svn_wc__db_status_added)
+      if (status == svn_wc__db_status_added
+          && op_root
+          && (have_base || have_more_work))
         SVN_ERR(svn_wc__db_node_check_replace(is_replace_root, NULL, NULL,
                                               wc_ctx->db, local_abspath,
                                               scratch_pool));
@@ -1678,48 +1690,13 @@ svn_wc__node_get_commit_status(svn_node_kind_t *kind,
         *is_replace_root = FALSE;
     }
 
-  if (is_op_root)
-    {
-      const char *op_root_abspath;
-      switch(status)
-        {
-          case svn_wc__db_status_added:
-            SVN_ERR(svn_wc__db_scan_addition(&status, &op_root_abspath,
-                                             NULL, NULL, NULL,
-                                             NULL, NULL, NULL, NULL,
-                                             wc_ctx->db, local_abspath,
-                                             scratch_pool, scratch_pool));
-
-            *is_op_root = (strcmp(op_root_abspath, local_abspath) == 0);
-          break;
-        case svn_wc__db_status_deleted:
-            {
-              const char *base_del_abspath;
-              const char *work_del_abspath;
-
-              SVN_ERR(svn_wc__db_scan_deletion(&base_del_abspath,
-                                               NULL, &work_del_abspath,
-                                               wc_ctx->db, local_abspath,
-                                               scratch_pool, scratch_pool));
-
-              op_root_abspath = (work_del_abspath != NULL) ? work_del_abspath
-                                                           : base_del_abspath;
-            }
-
-            *is_op_root = (strcmp(op_root_abspath, local_abspath) == 0);
-          break;
-        default:
-          *is_op_root = FALSE;
-          break;
-      }
-    }
-
   if (symlink)
     {
       apr_hash_t *props;
       *symlink = FALSE;
 
-      if (db_kind == svn_wc__db_kind_file)
+      if (db_kind == svn_wc__db_kind_file
+          && (had_props || *props_mod))
         {
           SVN_ERR(svn_wc__db_read_props(&props, wc_ctx->db, local_abspath,
                                         scratch_pool, scratch_pool));
