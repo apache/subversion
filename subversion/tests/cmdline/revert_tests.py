@@ -1236,6 +1236,57 @@ def revert_nested_add_depth_immediates(sbox):
   expected_status.remove('A/X', 'A/X/Y')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+@XFail()
+@Issue(3859)
+def revert_empty_actual(sbox):
+  "revert with superfluous actual node"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  svntest.main.file_append(sbox.ospath('A/B/E/alpha'), 'their text\n')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Create a NODES row with op-depth>0
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'copy', '-r', '1',
+                                     sbox.repo_url + '/A/B/E/alpha',
+                                     sbox.ospath('alpha'))
+
+  # Merge to create an ACTUAL with a conflict
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+    'alpha' : Item(status='A ', copied='+', wc_rev='-'),
+    })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  svntest.main.file_append(sbox.ospath('alpha'), 'my text\n')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'merge', '--accept', 'postpone',
+                                     '^/A/B/E/alpha', sbox.ospath('alpha'))
+  expected_status.tweak('alpha', status='CM', entry_status='A ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Clear merge property and remove conflict files
+  sbox.simple_propdel('svn:mergeinfo', 'alpha')
+  os.remove(sbox.ospath('alpha.merge-left.r1'))
+  os.remove(sbox.ospath('alpha.merge-right.r2'))
+  os.remove(sbox.ospath('alpha.working'))
+
+  # XFail here: revert removes the NODES row so notification should
+  # occur but the superfluous ACTUAL node suppresses it
+  expected_status.tweak('alpha', status='A ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  svntest.actions.run_and_verify_svn(None,
+                                     ["Reverted '%s'\n" % sbox.ospath('alpha')],
+                                     [],
+                                     'revert', sbox.ospath('alpha'))
+
+  expected_status.remove('alpha')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+                                     
+
 ########################################################################
 # Run the tests
 
@@ -1268,6 +1319,7 @@ test_list = [ None,
               revert_permissions_only,
               revert_copy_depth_files,
               revert_nested_add_depth_immediates,
+              revert_empty_actual,
              ]
 
 if __name__ == '__main__':
