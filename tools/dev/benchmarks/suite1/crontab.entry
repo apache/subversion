@@ -1,0 +1,3 @@
+# m h  dom mon dow   command
+21 0 * * Mon /home/neels/svnbench/cronjob >>/home/neels/cronjob.log 2>&1
+
