@@ -42,6 +42,7 @@ import optparse
 
 
 DEFAULT_TIMINGS_PATH = './benchmark_py_last_run.py-pickle'
+TOTAL_RUN = 'TOTAL RUN'
 
 timings = None
 
@@ -111,6 +112,12 @@ class Timings:
       self.timings[name] = times
     times.append(seconds)
 
+  def min_max_avg(self, name):
+    ttimings = self.timings.get(name)
+    return ( min(ttimings),
+             max(ttimings),
+             reduce(lambda x,y: x + y, ttimings) / len(ttimings) )
+
   def summary(self):
     s = []
     if self.name:
@@ -123,30 +130,19 @@ class Timings:
       timings = self.timings.get(name)
       if not name or not timings: continue
 
-      s.append('%5d %7.3f %7.3f %7.3f  %s' % (
+      tmin, tmax, tavg = self.min_max_avg(name)
+
+      s.append('%5d %7.2f %7.2f %7.2f  %s' % (
                  len(timings),
-                 min(timings),
-                 max(timings),
-                 reduce(lambda x,y: x + y, timings) / len(timings),
+                 tmin,
+                 tmax,
+                 tavg,
                  name))
+
     return '\n'.join(s)
 
 
   def compare_to(self, other):
-    selfname = self.name
-    if not selfname:
-      selfname = 'unnamed'
-    othername = other.name
-    if not othername:
-      othername = 'the other'
-
-    s = ['COMPARE %s to %s'%(othername, selfname),
-         '  1.23|+0.45  means factor=1.23, difference in seconds = 0.45',
-         '  factor < 1 or difference < 0 means \'%s\' is faster than \'%s\''
-           % (self.name, othername)]
-
-    s.append('      min              max              avg         operation')
-
     def do_div(a, b):
       if b:
         return float(a) / float(b)
@@ -156,40 +152,60 @@ class Timings:
     def do_diff(a, b):
       return float(a) - float(b)
 
-    def min_max_avg(ttimings):
-      return ( min(ttimings),
-               max(ttimings),
-               reduce(lambda x,y: x + y, ttimings) / len(ttimings) )
+    selfname = self.name
+    if not selfname:
+      selfname = 'unnamed'
+    othername = other.name
+    if not othername:
+      othername = 'the other'
+
+    selftotal = self.min_max_avg(TOTAL_RUN)[2]
+    othertotal = other.min_max_avg(TOTAL_RUN)[2]
+
+    s = ['COMPARE %s to %s' % (othername, selfname)]
+           
+    if TOTAL_RUN in self.timings and TOTAL_RUN in other.timings:
+      s.append('  %s times: %5.1f seconds avg for %s' % (TOTAL_RUN,
+                                                         othertotal, othername))
+      s.append('  %s        %5.1f seconds avg for %s' % (' ' * len(TOTAL_RUN),
+                                                         selftotal, selfname))
+
+
+    s.append('      min              max              avg         operation')
 
     names = sorted(self.timings.keys())
 
     for name in names:
-      timings = self.timings.get(name)
-      other_timings = other.timings.get(name)
-      if not other_timings:
+      if not name in other.timings:
         continue
 
 
-      min_me, max_me, avg_me = min_max_avg(timings)
-      min_other, max_other, avg_other = min_max_avg(other_timings)
+      min_me, max_me, avg_me = self.min_max_avg(name)
+      min_other, max_other, avg_other = other.min_max_avg(name)
 
       s.append('%-16s %-16s %-16s  %s' % (
-                 '%7.3f|%+7.4f' % (
+                 '%7.2f|%+7.3f' % (
                      do_div(min_me, min_other),
                      do_diff(min_me, min_other)
                    ),
 
-                 '%7.3f|%+7.4f' % (
+                 '%7.2f|%+7.3f' % (
                      do_div(max_me, max_other),
                      do_diff(max_me, max_other)
                    ),
 
-                 '%7.3f|%+7.4f' % (
+                 '%7.2f|%+7.3f' % (
                      do_div(avg_me, avg_other),
                      do_diff(avg_me, avg_other)
                    ),
 
                  name))
+
+    s.extend([
+         '("1.23|+0.45"  means factor=1.23, difference in seconds = 0.45',
+         'factor < 1 or difference < 0 means \'%s\' is faster than \'%s\')'
+           % (self.name, othername)])
+
     return '\n'.join(s)
 
 
@@ -364,12 +380,12 @@ def propadd_tree(in_dir, fraction):
 
 
 def run(levels, spread, N):
-  # ensure identical modifications for every run of this script
-  random.seed(0)
-
   for i in range(N):
-
     base = tempfile.mkdtemp()
+
+    # ensure identical modifications for every run
+    random.seed(0)
+
     try:
       repos = j(base, 'repos')
       wc = j(base, 'wc')
@@ -466,7 +482,7 @@ def run(levels, spread, N):
         print '\nDone with svn benchmark in', (stopped - started)
 
         ### timings comes from the global namespace; it should be passed
-        timings.submit_timing('TOTAL RUN',
+        timings.submit_timing(TOTAL_RUN,
                               timedelta_to_seconds(stopped - started))
 
         # rename ps to prop mod

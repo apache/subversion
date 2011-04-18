@@ -17,8 +17,14 @@
 # specific language governing permissions and limitations
 # under the License.
 
-SVN_1_6="$HOME/src/svn-1.6.x/subversion/svn/svn"
-SVN_trunk="$HOME/src/svn/subversion/svn/svn"
+# Where are the svn binaries you want to benchmark?
+if [ "$USER" = "neels" ]; then
+  SVN_1_6="$HOME/pat/stable/prefix/bin/svn"
+  SVN_trunk="$HOME/pat/trunk/prefix/bin/svn"
+else
+  SVN_1_6="$HOME/src/svn-1.6.x/subversion/svn/svn"
+  SVN_trunk="$HOME/src/svn/subversion/svn/svn"
+fi
 
 benchmark="$PWD/benchmark.py"
 
@@ -34,10 +40,12 @@ batch(){
   spread="$2"
   N="$3"
   pre="${levels}x${spread}_"
-  "$benchmark" "--svn=${SVN_1_6}" run ${pre}1.6 $levels $spread $N
-  "$benchmark" "--svn=${SVN_trunk}" run ${pre}trunk $levels $spread $N
-  echo 
+  echo
+  echo "---------------------------------------------------------------------"
+  echo
   echo "Results for dir levels: $levels  spread: $spread"
+  "$benchmark" "--svn=${SVN_1_6}" run ${pre}1.6 $levels $spread $N >/dev/null
+  "$benchmark" "--svn=${SVN_trunk}" run ${pre}trunk $levels $spread $N > /dev/null
   "$benchmark" compare ${pre}1.6 ${pre}trunk
 }
 
@@ -72,14 +80,9 @@ batch $cl $cs $N
 echo ""
 echo =========================================================================
 echo ""
-echo "calculating total of 1.6..."
-"$benchmark" combine total_1.6 *x*_1.6
+"$benchmark" combine total_1.6 *x*_1.6 >/dev/null
+"$benchmark" combine total_trunk *x*_trunk >/dev/null
 
-echo ""
-echo "calculating total of trunk..."
-"$benchmark" combine total_trunk *x*_trunk
-
-echo ""
 echo "comparing averaged totals..."
 "$benchmark" compare total_1.6 total_trunk
 
