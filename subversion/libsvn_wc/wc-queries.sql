@@ -603,6 +603,11 @@ SELECT md5_checksum
 FROM pristine
 WHERE checksum = ?1
 
+-- STMT_SELECT_PRISTINE_SIZE
+SELECT size
+FROM pristine
+WHERE checksum = ?1 LIMIT 1
+
 -- STMT_SELECT_PRISTINE_BY_MD5
 SELECT checksum
 FROM pristine

@@ -1072,7 +1072,7 @@ read_and_checksum_pristine_text(svn_stream_t **stream,
 {
   svn_stream_t *base_stream;
 
-  SVN_ERR(svn_wc__get_pristine_contents(&base_stream, db, local_abspath,
+  SVN_ERR(svn_wc__get_pristine_contents(&base_stream, NULL, db, local_abspath,
                                         result_pool, scratch_pool));
   if (base_stream == NULL)
     {

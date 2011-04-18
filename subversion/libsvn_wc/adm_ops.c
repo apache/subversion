@@ -1770,7 +1770,7 @@ svn_wc_get_pristine_contents2(svn_stream_t **contents,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool)
 {
-  return svn_error_return(svn_wc__get_pristine_contents(contents,
+  return svn_error_return(svn_wc__get_pristine_contents(contents, NULL,
                                                         wc_ctx->db,
                                                         local_abspath,
                                                         result_pool,
