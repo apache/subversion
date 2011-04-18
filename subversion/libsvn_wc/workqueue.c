@@ -886,7 +886,7 @@ run_file_commit(svn_wc__db_t *db,
   SVN_ERR(svn_skel__parse_int(&v, arg1->next, scratch_pool));
   set_read_write = (v != 0);
 
-  SVN_ERR(svn_skel__parse_int(&v, arg1->next, scratch_pool));
+  SVN_ERR(svn_skel__parse_int(&v, arg1->next->next, scratch_pool));
   remove_executable = (v != 0);
 
   return svn_error_return(
