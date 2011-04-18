@@ -344,13 +344,6 @@ struct bump_dir_info
   /* how many entries are referring to this bump information? */
   int ref_count;
 
-  /* the absolute path of the directory to bump */
-  const char *local_abspath;
-
-  /* Set if this directory is skipped due to prop or tree conflicts.
-     This does NOT mean that children are skipped. */
-  svn_boolean_t skipped;
-
   /* Pool that should be cleared after the dir is bumped */
   apr_pool_t *pool;
 };
@@ -566,8 +559,6 @@ make_dir_baton(struct dir_baton **d_p,
   bdi = apr_pcalloc(dir_pool, sizeof(*bdi));
   bdi->parent = pb ? pb->bump_info : NULL;
   bdi->ref_count = 1;
-  bdi->local_abspath = apr_pstrdup(eb->pool, d->local_abspath);
-  bdi->skipped = FALSE;
   bdi->pool = dir_pool;
 
   /* the parent's bump info has one more referer */
@@ -626,71 +617,30 @@ do_notification(const struct edit_baton *eb,
   (*eb->notify_func)(eb->notify_baton, notify, scratch_pool);
 }
 
-
-/* Helper for maybe_bump_dir_info():
-
-   In a single atomic action, (1) remove any 'deleted' entries from a
-   directory, (2) remove any 'absent' entries whose revision numbers
-   are different from the parent's new target revision, (3) remove any
-   'missing' dir entries, and (4) remove the directory's 'incomplete'
-   flag. */
-static svn_error_t *
-complete_directory(struct edit_baton *eb,
-                   const char *local_abspath,
-                   svn_boolean_t is_root_dir,
-                   apr_pool_t *scratch_pool)
-{
-  /* If this is the root directory and there is a target, we don't have to
-     mark this directory complete. */
-  if (is_root_dir && *eb->target_basename != '\0')
-    {
-      return SVN_NO_ERROR;
-    }
-
-  /* Mark THIS_DIR complete. */
-  SVN_ERR(svn_wc__db_temp_op_end_directory_update(eb->db, local_abspath,
-                                                  scratch_pool));
-  return SVN_NO_ERROR;
-}
-
-
-
 /* Decrement the bump_dir_info's reference count. If it hits zero,
-   then this directory is "done". This means it is safe to remove the
-   'incomplete' flag attached to the THIS_DIR entry.
+   then this directory is "done". This means it is safe to clear its pool.
 
    In addition, when the directory is "done", we loop onto the parent's
    bump information to possibly mark it as done, too.
 */
 static svn_error_t *
-maybe_bump_dir_info(struct edit_baton *eb,
-                    struct bump_dir_info *bdi,
-                    apr_pool_t *pool)
+maybe_release_dir_info(struct bump_dir_info *bdi)
 {
-  apr_pool_t *iterpool = NULL;
   /* Keep moving up the tree of directories until we run out of parents,
      or a directory is not yet "done".  */
   while (bdi != NULL)
     {
+      apr_pool_t *destroy_pool;
+
       if (--bdi->ref_count > 0)
         break;  /* directory isn't done yet */
 
-      if (iterpool == NULL)
-        iterpool = svn_pool_create(pool);
-      else
-        svn_pool_clear(iterpool);
-
-      /* The refcount is zero, so we remove any 'dead' entries from
-         the directory and mark it 'complete'.  */
-      if (! bdi->skipped)
-        SVN_ERR(complete_directory(eb, bdi->local_abspath,
-                                   bdi->parent == NULL, iterpool));
+      destroy_pool = bdi->pool;
       bdi = bdi->parent;
+
+      svn_pool_destroy(destroy_pool);
     }
   /* we exited the for loop because there are no more parents */
-
-  if (iterpool != NULL)
-    svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
@@ -1034,7 +984,6 @@ open_root(void *edit_baton,
     {
       db->skip_this = TRUE;
       db->already_notified = TRUE;
-      db->bump_info->skipped = TRUE;
 
       /* Notify that we skipped the target, while we actually skipped
          the anchor */
@@ -1044,7 +993,7 @@ open_root(void *edit_baton,
       return SVN_NO_ERROR;
     }
 
-  if (! *eb->target_basename)
+  if (*eb->target_basename == '\0')
     {
       /* For an update with a NULL target, this is equivalent to open_dir(): */
       svn_depth_t depth;
@@ -1057,8 +1006,6 @@ open_root(void *edit_baton,
                                    eb->db, db->local_abspath, pool, pool));
       db->ambient_depth = depth;
       db->was_incomplete = (status == svn_wc__db_status_incomplete);
-
-      /* ### TODO: Skip if inside a conflicted tree. */
 
       SVN_ERR(svn_wc__db_temp_op_start_directory_update(eb->db,
                                                         db->local_abspath,
@@ -2336,7 +2283,6 @@ close_directory(void *dir_baton,
   apr_hash_t *base_props;
   apr_hash_t *actual_props;
   apr_hash_t *new_base_props = NULL, *new_actual_props = NULL;
-  struct bump_dir_info *bdi;
   svn_revnum_t new_changed_rev;
   apr_time_t new_changed_date;
   const char *new_changed_author;
@@ -2345,10 +2291,8 @@ close_directory(void *dir_baton,
   /* Skip if we're in a conflicted tree. */
   if (db->skip_this)
     {
-      db->bump_info->skipped = TRUE;
-
       /* Allow the parent to complete its update. */
-      SVN_ERR(maybe_bump_dir_info(eb, db->bump_info, db->pool));
+      SVN_ERR(maybe_release_dir_info(db->bump_info));
 
       return SVN_NO_ERROR;
     }
@@ -2563,6 +2507,8 @@ close_directory(void *dir_baton,
       if (props == NULL)
         props = base_props;
 
+      /* Update the BASE data for the directory and mark the directory
+         complete */
       SVN_ERR(svn_wc__db_base_add_directory(
                 eb->db, db->local_abspath,
                 db->new_relpath,
@@ -2586,11 +2532,6 @@ close_directory(void *dir_baton,
   SVN_ERR(svn_wc__wq_run(eb->db, db->local_abspath,
                          eb->cancel_func, eb->cancel_baton,
                          pool));
-
-  /* We're done with this directory, so remove one reference from the
-     bump information. This may trigger a number of actions. See
-     maybe_bump_dir_info() for more information.  */
-  SVN_ERR(maybe_bump_dir_info(eb, db->bump_info, db->pool));
 
   /* Notify of any prop changes on this directory -- but do nothing if
      it's an added or skipped directory, because notification has already
@@ -2618,13 +2559,9 @@ close_directory(void *dir_baton,
       eb->notify_func(eb->notify_baton, notify, pool);
     }
 
-  bdi = db->bump_info;
-  while (bdi && !bdi->ref_count)
-    {
-      apr_pool_t *destroy_pool = bdi->pool;
-      bdi = bdi->parent;
-      svn_pool_destroy(destroy_pool);
-    }
+  /* We're done with this directory, so remove one reference from the
+     bump information. */
+  SVN_ERR(maybe_release_dir_info(db->bump_info));
 
   return SVN_NO_ERROR;
 }
@@ -2929,6 +2866,23 @@ add_file(const char *path,
                                        scratch_pool, scratch_pool));
           SVN_ERR_ASSERT(tree_conflict != NULL);
         }
+    }
+
+  /* When this is not the update target add a not-present BASE node now,
+     to allow marking the parent directory complete in its close_edit() call.
+     This resolves issues when that occurs before the close_file(). */
+  if (pb->parent_baton
+      || *eb->target_basename == '\0'
+      || (strcmp(fb->local_abspath, eb->target_abspath) != 0))
+    {
+      SVN_ERR(svn_wc__db_base_add_not_present_node(eb->db, fb->local_abspath,
+                                                   fb->new_relpath,
+                                                   eb->repos_root,
+                                                   eb->repos_uuid,
+                                                   *eb->target_revision,
+                                                   svn_wc__db_kind_file,
+                                                   NULL, NULL,
+                                                   pool));
     }
 
   if (tree_conflict != NULL)
@@ -3605,8 +3559,8 @@ close_file(void *file_baton,
 
   if (fb->skip_this)
     {
-      SVN_ERR(maybe_bump_dir_info(eb, fb->bump_info, scratch_pool));
       svn_pool_destroy(fb->pool);
+      SVN_ERR(maybe_release_dir_info(fb->bump_info));
       return SVN_NO_ERROR;
     }
 
@@ -3990,9 +3944,6 @@ close_file(void *file_baton,
                          eb->cancel_func, eb->cancel_baton,
                          scratch_pool));
 
-  /* We have one less referrer to the directory's bump information. */
-  SVN_ERR(maybe_bump_dir_info(eb, fb->bump_info, scratch_pool));
-
   /* Send a notification to the callback function.  (Skip notifications
      about files which were already notified for another reason.) */
   if (eb->notify_func && !fb->already_notified)
@@ -4036,6 +3987,9 @@ close_file(void *file_baton,
 
   svn_pool_destroy(fb->pool); /* Destroy scratch_pool */
 
+  /* We have one less referrer to the directory's bump information. */
+  SVN_ERR(maybe_release_dir_info(fb->bump_info));
+
   return SVN_NO_ERROR;
 }
 
@@ -4050,10 +4004,13 @@ close_edit(void *edit_baton,
 
   /* The editor didn't even open the root; we have to take care of
      some cleanup stuffs. */
-  if (! eb->root_opened)
+  if (! eb->root_opened
+      && *eb->target_basename == '\0')
     {
       /* We need to "un-incomplete" the root directory. */
-      SVN_ERR(complete_directory(eb, eb->anchor_abspath, TRUE, pool));
+      SVN_ERR(svn_wc__db_temp_op_end_directory_update(eb->db,
+                                                      eb->anchor_abspath,
+                                                      scratch_pool));
     }
 
   /* By definition, anybody "driving" this editor for update or switch

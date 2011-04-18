@@ -9547,8 +9547,7 @@ end_directory_update(void *baton,
                         NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                         wcroot, local_relpath, scratch_pool, scratch_pool));
 
-  SVN_ERR_ASSERT(base_status == svn_wc__db_status_normal ||
-                 base_status == svn_wc__db_status_incomplete);
+  SVN_ERR_ASSERT(base_status == svn_wc__db_status_incomplete);
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_UPDATE_NODE_BASE_PRESENCE));
