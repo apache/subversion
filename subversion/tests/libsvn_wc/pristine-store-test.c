@@ -203,87 +203,6 @@ pristine_write_read(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
-/* Test the WQ item for getting and translating a text. */
-static svn_error_t *
-pristine_get_translated(const svn_test_opts_t *opts,
-                        apr_pool_t *pool)
-{
-  svn_wc__db_t *db;
-  const char *wc_abspath, *versioned_abspath, *new_abspath;
-  const char data[] = "Blah at r$Rev$\n";
-  const char expected_data[] = "Blah at r$Rev: -1 $\n";
-  svn_checksum_t *data_sha1, *data_md5;
-
-  SVN_ERR(create_repos_and_wc(&wc_abspath, &db,
-                              "pristine_get_translated", opts, pool));
-
-  versioned_abspath = svn_dirent_join(wc_abspath, "foo", pool);
-  new_abspath = svn_dirent_join(wc_abspath, "foo.fetched", pool);
-
-  /* Create VERSIONED_ABSPATH, whose metadata will be used for the
-     translation. Set some properties on it. */
-  {
-    svn_wc_context_t *wc_ctx;
-    const char *dirname = svn_dirent_dirname(versioned_abspath, pool);
-
-    SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL, db, pool));
-    SVN_ERR(svn_io_file_create(versioned_abspath, data, pool));
-
-    SVN_ERR(svn_wc__db_wclock_obtain(wc_ctx->db, dirname, 0, FALSE, pool));
-
-    SVN_ERR(svn_wc_add_from_disk(wc_ctx, versioned_abspath, NULL, NULL, pool));
-    SVN_ERR(svn_wc_prop_set4(wc_ctx, versioned_abspath,
-                             "svn:keywords", svn_string_create("Rev", pool),
-                             FALSE, NULL, NULL, pool));
-
-    SVN_ERR(svn_wc__db_wclock_release(wc_ctx->db, dirname, pool));
-  }
-
-  /* Store DATA as a pristine text, and set DATA_SHA1 and DATA_MD5. */
-  {
-    const char *pristine_tmp_dir;
-    const char *pristine_tmp_abspath;
-
-    SVN_ERR(svn_wc__db_pristine_get_tempdir(&pristine_tmp_dir, db,
-                                            wc_abspath, pool, pool));
-    SVN_ERR(write_and_checksum_temp_file(&pristine_tmp_abspath,
-                                         &data_sha1, &data_md5,
-                                         data, pristine_tmp_dir, pool));
-    SVN_ERR(svn_wc__db_pristine_install(db, pristine_tmp_abspath,
-                                        data_sha1, data_md5, pool));
-  }
-
-  /* Run a work item to read and translate the text into NEW_ABSPATH. */
-  {
-    svn_skel_t *work_item;
-
-    SVN_ERR(svn_wc__wq_build_pristine_get_translated(&work_item,
-                                                     db, versioned_abspath,
-                                                     new_abspath, data_sha1,
-                                                     pool, pool));
-    SVN_ERR(svn_wc__db_wq_add(db, versioned_abspath, work_item, pool));
-
-    SVN_ERR(svn_wc__wq_run(db, wc_abspath, NULL, NULL, pool));
-  }
-
-  /* Check that NEW_ABSPATH has been created with the translated text. */
-  {
-    svn_stream_t *expected_stream
-      = svn_stream_from_string(svn_string_create(expected_data, pool), pool);
-    svn_stream_t *file_stream;
-    svn_boolean_t same;
-
-    SVN_ERR(svn_stream_open_readonly(&file_stream, new_abspath,
-                                     pool, pool));
-    SVN_ERR(svn_stream_contents_same2(&same, expected_stream, file_stream,
-                                      pool));
-
-    SVN_TEST_ASSERT(same);
-  }
-
-  return SVN_NO_ERROR;
-}
-
 /* Test deleting a pristine text while it is open for reading. */
 static svn_error_t *
 pristine_delete_while_open(const svn_test_opts_t *opts,
@@ -408,8 +327,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_NULL,
     SVN_TEST_OPTS_PASS(pristine_write_read,
                        "pristine_write_read"),
-    SVN_TEST_OPTS_PASS(pristine_get_translated,
-                       "pristine_get_translated"),
     SVN_TEST_OPTS_PASS(pristine_delete_while_open,
                        "pristine_delete_while_open"),
     SVN_TEST_OPTS_PASS(reject_mismatching_text,
