@@ -869,7 +869,11 @@ accumulate_last_change(svn_revnum_t *changed_rev,
       if (! strcmp(prop->name, SVN_PROP_ENTRY_LAST_AUTHOR))
         *changed_author = apr_pstrdup(result_pool, prop->value->data);
       else if (! strcmp(prop->name, SVN_PROP_ENTRY_COMMITTED_REV))
-        *changed_rev = SVN_STR_TO_REV(prop->value->data);
+        {
+          apr_int64_t rev;
+          SVN_ERR(svn_cstring_atoi64(&rev, prop->value->data));
+          *changed_rev = (svn_revnum_t)rev;
+        }
       else if (! strcmp(prop->name, SVN_PROP_ENTRY_COMMITTED_DATE))
         SVN_ERR(svn_time_from_cstring(changed_date, prop->value->data,
                                       scratch_pool));
@@ -896,24 +900,21 @@ accumulate_last_change(svn_revnum_t *changed_rev,
 static svn_error_t *
 check_path_under_root(const char *base_path,
                       const char *add_path,
-                      apr_pool_t *pool)
+                      apr_pool_t *scratch_pool)
 {
-  const char *full_path;
   svn_boolean_t under_root;
 
-  SVN_ERR(svn_dirent_is_under_root(&under_root, &full_path, base_path, add_path, pool));
+  SVN_ERR(svn_dirent_is_under_root(&under_root, NULL, base_path, add_path,
+                                   scratch_pool));
 
   if (! under_root)
     {
       return svn_error_createf(
           SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
          _("Path '%s' is not in the working copy"),
-         /* Not using full_path here because it might be NULL or
-            undefined, since apr_filepath_merge() returned error.
-            (Pity we can't pass NULL for &full_path in the first place,
-            but the APR docs don't bless that.) */
-         svn_dirent_local_style(svn_dirent_join(base_path, add_path, pool),
-                                pool));
+         svn_dirent_local_style(svn_dirent_join(base_path, add_path,
+                                                scratch_pool),
+                                scratch_pool));
     }
 
   return SVN_NO_ERROR;
