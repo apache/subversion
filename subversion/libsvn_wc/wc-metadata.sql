@@ -648,6 +648,19 @@ PRAGMA user_version = 26;
 -- STMT_UPGRADE_TO_27
 PRAGMA user_version = 27;
 
+/* ------------------------------------------------------------------------- */
+
+/* Format 28 involves no schema changes, it only converts MD5 pristine 
+   references to SHA1. */
+
+-- STMT_UPGRADE_TO_28
+
+UPDATE NODES SET checksum=(SELECT checksum FROM pristine
+                           WHERE md5_checksum=nodes.checksum)
+WHERE EXISTS(SELECT 1 FROM pristine WHERE md5_checksum=nodes.checksum);
+
+PRAGMA user_version = 28;
+
 
 /* ------------------------------------------------------------------------- */
 
