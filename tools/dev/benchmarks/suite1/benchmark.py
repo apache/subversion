@@ -411,7 +411,10 @@ def run(levels, spread, N):
       wc = j(base, 'wc')
       wc2 = j(base, 'wc2')
 
-      file_url = 'file://%s' % repos
+      if repos.startswith('/'):
+        file_url = 'file://%s' % repos
+      else:
+        file_url = 'file:///%s' % repos
 
       so, se = svn('--version')
       if not so:
