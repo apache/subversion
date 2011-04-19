@@ -1797,29 +1797,6 @@ run_pristine_get_translated(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_wc__wq_build_pristine_get_translated(svn_skel_t **work_item,
-                                         svn_wc__db_t *db,
-                                         const char *versioned_abspath,
-                                         const char *new_abspath,
-                                         const svn_checksum_t *pristine_sha1,
-                                         apr_pool_t *result_pool,
-                                         apr_pool_t *scratch_pool)
-{
-  *work_item = svn_skel__make_empty_list(result_pool);
-
-  svn_skel__prepend_str(svn_checksum_serialize(pristine_sha1,
-                                               result_pool, scratch_pool),
-                        *work_item, result_pool);
-  svn_skel__prepend_str(apr_pstrdup(result_pool, new_abspath),
-                        *work_item, result_pool);
-  svn_skel__prepend_str(apr_pstrdup(result_pool, versioned_abspath),
-                        *work_item, result_pool);
-  svn_skel__prepend_str(OP_PRISTINE_GET_TRANSLATED, *work_item, result_pool);
-
-  return SVN_NO_ERROR;
-}
-
 
 /* ------------------------------------------------------------------------ */
 

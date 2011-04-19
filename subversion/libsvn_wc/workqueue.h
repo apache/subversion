@@ -256,20 +256,6 @@ svn_wc__wq_tmp_build_set_property_conflict_marker(svn_skel_t **work_item,
                                                   apr_pool_t *result_pool,
                                                   apr_pool_t *scratch_pool);
 
-/* Set *WORK_ITEM to a new work item that will create the file NEW_ABSPATH
- * with the pristine text identified by PRISTINE_SHA1, translated into
- * working-copy form according to the versioned properties of
- * VERSIONED_ABSPATH that are current when the work item is executed.  The
- * work item will overwrite NEW_ABSPATH if that already exists. */
-svn_error_t *
-svn_wc__wq_build_pristine_get_translated(svn_skel_t **work_item,
-                                         svn_wc__db_t *db,
-                                         const char *versioned_abspath,
-                                         const char *new_abspath,
-                                         const svn_checksum_t *pristine_sha1,
-                                         apr_pool_t *result_pool,
-                                         apr_pool_t *scratch_pool);
-
 /* Handle the final post-commit step of retranslating and recording the
    working copy state of a committed file.
 
