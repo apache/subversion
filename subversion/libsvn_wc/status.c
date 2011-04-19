@@ -244,8 +244,7 @@ read_info(const struct svn_wc__db_info_t **info,
           apr_pool_t *result_pool,
           apr_pool_t *scratch_pool)
 {
-  struct svn_wc__db_info_t *mtb
-    = apr_pcalloc(scratch_pool, sizeof(struct svn_wc__db_info_t));
+  struct svn_wc__db_info_t *mtb = apr_pcalloc(scratch_pool, sizeof(*mtb));
 
   SVN_ERR(svn_wc__db_read_info(&mtb->status, &mtb->kind,
                                &mtb->revnum, &mtb->repos_relpath,
@@ -256,35 +255,27 @@ read_info(const struct svn_wc__db_info_t **info,
                                &mtb->lock, &mtb->translated_size,
                                &mtb->last_mod_time, &mtb->changelist,
                                &mtb->conflicted, NULL,
-                               NULL, &mtb->props_mod,
+                               &mtb->has_props, &mtb->props_mod,
                                &mtb->have_base, NULL, NULL,
                                db, local_abspath,
                                result_pool, scratch_pool));
 
-  if (mtb->status == svn_wc__db_status_deleted)
-    mtb->has_props = FALSE;
-  else if (mtb->props_mod)
-    {
-      mtb->has_props = TRUE;
 #ifdef HAVE_SYMLINK
-      SVN_ERR(svn_wc__get_translate_info(NULL, NULL, NULL, &mtb->special,
-                                         db, local_abspath, NULL,
-                                         scratch_pool, scratch_pool));
-#endif
-    }
-  else
+  if (mtb->has_props || mtb->props_mod)
     {
       apr_hash_t *properties;
 
-      SVN_ERR(svn_wc__db_read_pristine_props(&properties, db, local_abspath,
-                                             scratch_pool, scratch_pool));
-      mtb->has_props = (properties && !!apr_hash_count(properties));
-#ifdef HAVE_SYMLINK
-      mtb->special = (mtb->has_props
-                          && apr_hash_get(properties, SVN_PROP_SPECIAL,
-                                          APR_HASH_KEY_STRING));
-#endif
+      if (mtb->props_mod)
+        SVN_ERR(svn_wc__db_read_props(&properties, db, local_abspath,
+                                      scratch_pool, scratch_pool));
+      else
+        SVN_ERR(svn_wc__db_read_pristine_props(&properties, db, local_abspath,
+                                               scratch_pool, scratch_pool));
+
+      mtb->special = (NULL != apr_hash_get(properties, SVN_PROP_SPECIAL,
+                                           APR_HASH_KEY_STRING));
     }
+#endif
   *info = mtb;
 
   return SVN_NO_ERROR;
@@ -461,20 +452,13 @@ assemble_status(svn_wc_status3_t **status,
     }
 
   /* Does the node have props? */
-  {
-    svn_boolean_t has_props;
-    if (info->status == svn_wc__db_status_deleted)
-      has_props = FALSE; /* Not interesting */
-    else if (info->props_mod)
-      has_props = TRUE;
-    else
-      has_props = info->has_props;
-
-    /* If the entry has a properties, see if it has local changes. */
-    if (has_props)
-      prop_status = info->props_mod ? svn_wc_status_modified
-                                    : svn_wc_status_normal;
-  }
+  if (info->status != svn_wc__db_status_deleted)
+    {
+      if (info->props_mod)
+        prop_status = svn_wc_status_modified;
+      else if (info->has_props)
+        prop_status = svn_wc_status_normal;
+    }
 
   /* If NODE_STATUS is still normal, after the above checks, then
      we should proceed to refine the status.
