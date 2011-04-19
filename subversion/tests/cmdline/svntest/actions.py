@@ -1301,8 +1301,14 @@ def process_output_for_commit(output):
   """Helper for run_and_verify_commit(), also used in the factory."""
   # Remove the final output line, and verify that the commit succeeded.
   lastline = ""
+  rest = []
+
   if len(output):
     lastline = output.pop().strip()
+
+    while len(output) and lastline.startswith('Removing external'):
+      rest.append(lastline)
+      lastline = output.pop().strip()
 
     cm = re.compile("(Committed|Imported) revision [0-9]+.")
     match = cm.search(lastline)
@@ -1325,6 +1331,9 @@ def process_output_for_commit(output):
     if not match:
       # whoops, it was important output, put it back.
       output.append(lastline)
+
+  if len(rest):
+    output.extend(rest)
 
   return output
 

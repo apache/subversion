@@ -95,6 +95,7 @@ _re_parse_co_skipped = re.compile('^(Restored|Skipped)\s+\'(.+)\'( --.*)?')
 _re_parse_co_restored = re.compile('^(Restored)\s+\'(.+)\'')
 
 # Lines typically have a verb followed by whitespace then a path.
+_re_parse_commit_ext = re.compile('^(([A-Za-z]+( [a-z]+)*)) \'(.+)\'( --.*)?')
 _re_parse_commit = re.compile('^(\w+(  \(bin\))?)\s+(.+)')
 
 
@@ -480,6 +481,11 @@ class State:
     desc = { }
     for line in lines:
       if line.startswith('DBG:') or line.startswith('Transmitting'):
+        continue
+
+      match = _re_parse_commit_ext.search(line)
+      if match:
+        desc[to_relpath(match.group(4))] = StateItem(verb=match.group(1))
         continue
 
       match = _re_parse_commit.search(line)
