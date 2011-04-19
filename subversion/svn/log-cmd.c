@@ -228,6 +228,9 @@ log_entry_receiver(void *baton,
             = apr_hash_get(log_entry->changed_paths2, item->key, item->klen);
           const char *copy_data = "";
 
+          if (lb->ctx->cancel_func)
+            SVN_ERR(lb->ctx->cancel_func(lb->ctx->cancel_baton));
+
           if (log_item->copyfrom_path
               && SVN_IS_VALID_REVNUM(log_item->copyfrom_rev))
             {
