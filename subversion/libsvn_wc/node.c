@@ -1266,13 +1266,12 @@ svn_wc__internal_node_get_schedule(svn_wc_schedule_t *schedule,
               break;
             }
 
-          if (schedule)
-            *schedule = svn_wc_schedule_add;
-
           if (copied)
             *copied = (copyfrom_relpath != NULL);
 
-          if (!schedule)
+          if (schedule)
+            *schedule = svn_wc_schedule_add;
+          else
             break;
 
           /* Check for replaced */
