@@ -700,7 +700,6 @@ preserve_pre_merge_files(svn_skel_t **work_items,
      Make our LEFT and RIGHT files 'local' if they aren't... */
   if (! svn_dirent_is_ancestor(wcroot_abspath, left_abspath))
     {
-      SVN_DBG(("Left abspath was %s\n", left_abspath));
       SVN_ERR(svn_io_open_unique_file3(NULL, &tmp_left, temp_dir_abspath,
                                        svn_io_file_del_none,
                                        scratch_pool, scratch_pool));
