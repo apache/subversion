@@ -226,12 +226,6 @@ svn_wc__db_pristine_read(svn_stream_t **contents,
   SVN_ERR_ASSERT(contents != NULL);
   SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
   SVN_ERR_ASSERT(sha1_checksum != NULL);
-  /* ### Transitional: accept MD-5 and look up the SHA-1.  Return an error
-   * if the pristine text is not in the store. */
-  if (sha1_checksum->kind != svn_checksum_sha1)
-    SVN_ERR(svn_wc__db_pristine_get_sha1(&sha1_checksum, db, wri_abspath,
-                                         sha1_checksum,
-                                         scratch_pool, scratch_pool));
   SVN_ERR_ASSERT(sha1_checksum->kind == svn_checksum_sha1);
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,

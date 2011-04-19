@@ -143,12 +143,15 @@ extern "C" {
  * The change from 26 to 27 stored conflict files as relpaths rather
  * than basenames.
  *
+ * The change from 27 to 28 converted any remaining references to MD5 checksums
+ * to SHA1 checksums
+ *
  * == 1.7.x shipped with format ???
  *
  * Please document any further format changes here.
  */
 
-#define SVN_WC__VERSION 27
+#define SVN_WC__VERSION 28
 
 
 /* Formats <= this have no concept of "revert text-base/props".  */
