@@ -49,21 +49,24 @@
 
 /* Add EXTERNALS_PROP_VAL for the export destination path PATH to
    TRAVERSAL_INFO.  */
-static void
+static svn_error_t *
 add_externals(apr_hash_t *externals,
               const char *path,
               const svn_string_t *externals_prop_val)
 {
   apr_pool_t *pool = apr_hash_pool_get(externals);
+  const char *local_abspath;
 
   if (! externals_prop_val)
-    return;
+    return SVN_NO_ERROR;
 
-  apr_hash_set(externals,
-               apr_pstrdup(pool, path),
-               APR_HASH_KEY_STRING,
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  apr_hash_set(externals, local_abspath, APR_HASH_KEY_STRING,
                apr_pstrmemdup(pool, externals_prop_val->data,
                               externals_prop_val->len));
+
+  return SVN_NO_ERROR;
 }
 
 /* Helper function that gets the eol style and optionally overrides the
@@ -951,7 +954,7 @@ change_dir_prop(void *dir_baton,
   struct edit_baton *eb = db->edit_baton;
 
   if (value && (strcmp(name, SVN_PROP_EXTERNALS) == 0))
-    add_externals(eb->externals, db->path, value);
+    SVN_ERR(add_externals(eb->externals, db->path, value));
 
   return SVN_NO_ERROR;
 }

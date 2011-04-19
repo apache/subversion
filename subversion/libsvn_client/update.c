@@ -287,9 +287,11 @@ update_internal(svn_revnum_t *result_rev,
       SVN_ERR(svn_client__handle_externals(efb.externals_old,
                                            efb.externals_new,
                                            efb.ambient_depths,
-                                           anchor_url, anchor_abspath,
-                                           target, repos_root,
-                                           depth, use_sleep, ctx, pool));
+                                           svn_dirent_join(anchor_abspath,
+                                                           target, pool),
+                                           repos_root,
+                                           depth, FALSE, use_sleep,
+                                           ctx, pool));
     }
 
   if (sleep_here)

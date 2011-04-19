@@ -164,10 +164,25 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
         goto print_error;
       break;
     case svn_wc_notify_update_delete:
-    case svn_wc_notify_update_external_removed:
       nb->received_some_change = TRUE;
       if ((err = svn_cmdline_printf(pool, "D    %s\n", path_local)))
         goto print_error;
+      break;
+
+    case svn_wc_notify_update_external_removed:
+      nb->received_some_change = TRUE;
+      if (n->err && n->err->message)
+        {
+          if ((err = svn_cmdline_printf(pool, "Removing external '%s' -- %s\n",
+              path_local, n->err->message)))
+            goto print_error;
+        }
+      else
+        {
+          if ((err = svn_cmdline_printf(pool, "Removing external '%s'\n",
+                                        path_local)))
+            goto print_error;
+        }
       break;
 
     case svn_wc_notify_update_replace:

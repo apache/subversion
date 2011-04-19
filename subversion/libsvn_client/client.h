@@ -939,16 +939,17 @@ svn_client__do_commit(const char *base_url,
    timestamp integrity, *TIMESTAMP_SLEEP will be unchanged if no sleep
    is required.
 
+   If DELETE_ONLY is TRUE, only process removals of externals.
+
    Use POOL for temporary allocation. */
 svn_error_t *
 svn_client__handle_externals(apr_hash_t *externals_old,
                              apr_hash_t *externals_new,
                              apr_hash_t *ambient_depths,
-                             const char *from_url,
-                             const char *to_abspath,
-                             const char *target,
+                             const char *anchor_abspath,
                              const char *repos_root_url,
                              svn_depth_t requested_depth,
+                             svn_boolean_t delete_only,
                              svn_boolean_t *timestamp_sleep,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *pool);
