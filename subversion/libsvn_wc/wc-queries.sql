@@ -719,6 +719,19 @@ WHERE wc_id = ?1 AND local_relpath = ?2
 ORDER BY op_depth DESC
 LIMIT 1
 
+-- STMT_INSERT_WORKING_NODE_FROM_NODE_RECURSIVE
+INSERT INTO nodes (
+    wc_id, local_relpath, op_depth, parent_relpath, presence, kind, checksum,
+    changed_revision, changed_date, changed_author, depth, symlink_target,
+    translated_size, last_mod_time, properties)
+SELECT wc_id, local_relpath, ?4 /*op_depth*/, parent_relpath, 'base-deleted',
+       kind, checksum, changed_revision, changed_date, changed_author, depth,
+       symlink_target, translated_size, last_mod_time, properties
+FROM nodes_current
+WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
+  AND presence NOT IN ('base-deleted', 'not-present')
+      
+
 -- STMT_INSERT_WORKING_NODE_FROM_BASE_COPY
 INSERT INTO nodes (
     wc_id, local_relpath, op_depth, parent_relpath, repos_id, repos_path,
@@ -764,6 +777,15 @@ WHERE wc_id = ?1 AND local_relpath LIKE ?2 ESCAPE '#' AND op_depth = ?3
 -- STMT_UPDATE_OP_DEPTH
 UPDATE nodes SET op_depth = ?4
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3
+
+-- STMT_UPDATE_OP_DEPTH_RECURSIVE
+UPDATE nodes SET op_depth = ?3
+WHERE wc_id = ?1 AND local_relpath LIKE ?2 ESCAPE '#' AND op_depth > ?3
+
+-- STMT_DELETE_WORKING_NODE_NOT_DELETED
+DELETE FROM nodes
+WHERE wc_id = ?1 AND local_relpath LIKE ?2 ESCAPE '#' AND op_depth > ?3
+  AND presence NOT IN ('base-deleted', 'not-present')
 
 
 -- STMT_UPDATE_COPYFROM_TO_INHERIT
