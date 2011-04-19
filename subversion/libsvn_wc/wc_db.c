@@ -3423,17 +3423,6 @@ svn_wc__db_temp_working_set_props(svn_wc__db_t *db,
 
 
 svn_error_t *
-svn_wc__db_op_delete(svn_wc__db_t *db,
-                     const char *local_abspath,
-                     apr_pool_t *scratch_pool)
-{
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  NOT_IMPLEMENTED();
-}
-
-
-svn_error_t *
 svn_wc__db_op_move(svn_wc__db_t *db,
                    const char *src_abspath,
                    const char *dst_abspath,
@@ -5084,6 +5073,81 @@ svn_wc__db_temp_op_delete(svn_wc__db_t *db,
   b.local_abspath = local_abspath;
 
   SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, temp_op_delete_txn, &b,
+                              scratch_pool));
+
+  SVN_ERR(flush_entries(wcroot, local_abspath, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+struct op_delete_baton_t {
+  apr_int64_t delete_depth;  /* op-depth for root of delete */
+};
+
+static svn_error_t *
+op_delete_txn(void *baton,
+              svn_wc__db_wcroot_t *wcroot,
+              const char *local_relpath,
+              apr_pool_t *scratch_pool)
+{
+  struct op_delete_baton_t *b = baton;
+  svn_wc__db_status_t status;
+  svn_boolean_t have_base, have_work;
+
+  SVN_ERR(read_info(&status,
+                    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                    NULL, NULL, NULL,
+                    &have_base, NULL, &have_work,
+                    wcroot, local_relpath,
+                    scratch_pool, scratch_pool));
+
+  if (have_base && !have_work)
+    {
+      svn_sqlite__stmt_t *stmt;
+      const char *like_arg = construct_like_arg(local_relpath, scratch_pool);
+
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_DELETE_WORKING_NODE_NOT_DELETED));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isi",
+                                wcroot->wc_id, like_arg, b->delete_depth));
+      SVN_ERR(svn_sqlite__update(NULL, stmt));
+
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_UPDATE_OP_DEPTH_RECURSIVE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isi",
+                                wcroot->wc_id, like_arg, b->delete_depth));
+      SVN_ERR(svn_sqlite__update(NULL, stmt));
+
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                 STMT_INSERT_WORKING_NODE_FROM_NODE_RECURSIVE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "issi",
+                                wcroot->wc_id, local_relpath, like_arg,
+                                b->delete_depth));
+      SVN_ERR(svn_sqlite__insert(NULL, stmt));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__db_op_delete(svn_wc__db_t *db,
+                     const char *local_abspath,
+                     apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+  struct op_delete_baton_t b;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
+                              db, local_abspath, scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  b.delete_depth = relpath_depth(local_relpath);
+
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, op_delete_txn, &b,
                               scratch_pool));
 
   SVN_ERR(flush_entries(wcroot, local_abspath, scratch_pool));
