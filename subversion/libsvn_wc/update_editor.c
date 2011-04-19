@@ -705,13 +705,6 @@ struct file_baton
      initialized, this is never NULL, but it may have zero elements.  */
   apr_array_header_t *propchanges;
 
-  /* The last-changed-date of the file.  This is actually a property
-     that comes through as an 'entry prop', and will be used to set
-     the working file's timestamp if it's added.
-
-     Will be NULL unless eb->use_commit_times is TRUE. */
-  const char *last_changed_date;
-
   /* Bump information for the directory this file lives in */
   struct bump_dir_info *bump_info;
 };
@@ -3175,7 +3168,6 @@ change_file_prop(void *file_baton,
                  apr_pool_t *scratch_pool)
 {
   struct file_baton *fb = file_baton;
-  struct edit_baton *eb = fb->edit_baton;
   svn_prop_t *propchange;
 
   if (fb->skip_this)
@@ -3185,17 +3177,6 @@ change_file_prop(void *file_baton,
   propchange = apr_array_push(fb->propchanges);
   propchange->name = apr_pstrdup(fb->pool, name);
   propchange->value = value ? svn_string_dup(value, fb->pool) : NULL;
-
-  /* Special case: If use-commit-times config variable is set we
-     cache the last-changed-date propval so we can use it to set
-     the working file's timestamp. */
-  if (value
-      && eb->use_commit_times
-      && (strcmp(name, SVN_PROP_ENTRY_COMMITTED_DATE) == 0))
-    {
-      /* propchange is already in the right pool */
-      fb->last_changed_date = propchange->value->data;
-    }
 
   return SVN_NO_ERROR;
 }
@@ -3230,6 +3211,7 @@ merge_file(svn_skel_t **work_items,
            const char **install_from,
            svn_wc_notify_state_t *content_state,
            struct file_baton *fb,
+           apr_time_t last_changed_date,
            apr_pool_t *result_pool,
            apr_pool_t *scratch_pool)
 {
@@ -3238,7 +3220,6 @@ merge_file(svn_skel_t **work_items,
   svn_boolean_t is_locally_modified;
   enum svn_wc_merge_outcome_t merge_outcome = svn_wc_merge_unchanged;
   svn_skel_t *work_item;
-  svn_error_t *err;
 
   SVN_ERR_ASSERT(! fb->shadowed && !fb->obstruction_found);
 
@@ -3475,29 +3456,17 @@ merge_file(svn_skel_t **work_items,
 
   /* Installing from a pristine will handle timestamps and recording.
      However, if we are NOT creating a new working copy file, then create
-     work items to handle text-timestamp and working-size.  */
+     work items to handle the recording of the timestamp and working-size. */
   if (!*install_pristine
       && !is_locally_modified)
     {
       apr_time_t set_date = 0;
-      /* Adjust working copy file unless this file is an allowed
-         obstruction. */
-      if (fb->last_changed_date && !fb->obstruction_found)
-        {
-          /* Ignore invalid dates */
-          err = svn_time_from_cstring(&set_date, fb->last_changed_date,
-                                      scratch_pool);
 
-          if (err)
-            {
-              svn_error_clear(err);
-              set_date = 0;
-            }
+      if (eb->use_commit_times && last_changed_date != 0)
+        {
+          set_date = last_changed_date;
         }
 
-      /* If this would have been an obstruction, we wouldn't be here,
-         because we would have installed an obstruction or tree conflict
-         instead */
       SVN_ERR(svn_wc__wq_build_record_fileinfo(&work_item,
                                                eb->db, fb->local_abspath,
                                                set_date,
@@ -3675,7 +3644,8 @@ close_file(void *file_baton,
    * locally there already is a file scheduled for addition, or vice versa.
    * It sees incoming symlinks as simple files and may wrongly try to offer
    * a text conflict. So flag a tree conflict here. */
-  if (!fb->shadowed && fb->adding_file && fb->add_existed)
+  if (!fb->shadowed 
+      && (! fb->adding_file || fb->add_existed))
     {
       svn_boolean_t local_is_link = FALSE;
       svn_boolean_t incoming_is_link = FALSE;
@@ -3763,7 +3733,8 @@ close_file(void *file_baton,
       /* Merge the text. This will queue some additional work.  */
       if (!fb->obstruction_found)
         SVN_ERR(merge_file(&all_work_items, &install_pristine, &install_from,
-                           &content_state, fb, scratch_pool, scratch_pool));
+                           &content_state, fb, new_changed_date,
+                           scratch_pool, scratch_pool));
       else
         install_pristine = FALSE;
 
@@ -3788,7 +3759,8 @@ close_file(void *file_baton,
           all_work_items = svn_wc__wq_merge(all_work_items, work_item,
                                             scratch_pool);
         }
-      else if (lock_state == svn_wc_notify_lock_state_unlocked)
+      else if (lock_state == svn_wc_notify_lock_state_unlocked
+               && !fb->obstruction_found)
         {
           /* If a lock was removed and we didn't update the text contents, we
              might need to set the file read-only.
