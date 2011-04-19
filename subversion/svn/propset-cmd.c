@@ -130,8 +130,6 @@ svn_cl__propset(apr_getopt_t *os,
     }
   else  /* operate on a normal, versioned property (not a revprop) */
     {
-      int i;
-
       if (opt_state->depth == svn_depth_unknown)
         opt_state->depth = svn_depth_empty;
 
@@ -177,14 +175,8 @@ svn_cl__propset(apr_getopt_t *os,
                                   NULL, svn_cl__print_commit_info, NULL, ctx,
                                   scratch_pool));
 
-      for (i = 0; i < targets->nelts; i++)
-        {
-          const char *target = APR_ARRAY_IDX(targets, i, const char *);
-
-          if (! opt_state->quiet)
-            svn_cl__check_boolean_prop_val(pname_utf8, propval->data,
-                                           scratch_pool);
-        }
+      if (! opt_state->quiet)
+        svn_cl__check_boolean_prop_val(pname_utf8, propval->data, scratch_pool);
     }
 
   return SVN_NO_ERROR;
