@@ -666,7 +666,7 @@ public interface ISVNClient
     /**
      * Sets one property of an item with a String value
      *
-     * @param path    path of the item
+     * @param paths   paths of the items
      * @param name    name of the property
      * @param value   new value of the property
      * @param depth   the depth to recurse into subdirectories
@@ -678,7 +678,7 @@ public interface ISVNClient
      * @throws ClientException
      * @since 1.5
      */
-    void propertySet(String path, String name, byte[] value, Depth depth,
+    void propertySet(Set<String> paths, String name, byte[] value, Depth depth,
                      Collection<String> changelists, boolean force,
                      Map<String, String> revpropTable, CommitCallback callback)
             throws ClientException;

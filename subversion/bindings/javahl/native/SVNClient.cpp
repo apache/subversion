@@ -873,13 +873,12 @@ void SVNClient::properties(const char *path, Revision &revision,
     return;
 }
 
-void SVNClient::propertySet(const char *path, const char *name,
+void SVNClient::propertySet(Targets &targets, const char *name,
                             JNIByteArray &value, svn_depth_t depth,
                             StringArray &changelists, bool force,
                             RevpropTable &revprops, CommitCallback *callback)
 {
     SVN::Pool requestPool;
-    SVN_JNI_NULL_PTR_EX(path, "path", );
     SVN_JNI_NULL_PTR_EX(name, "name", );
 
     svn_string_t *val;
@@ -889,14 +888,12 @@ void SVNClient::propertySet(const char *path, const char *name,
       val = svn_string_ncreate((const char *)value.getBytes(), value.getLength(),
                                requestPool.pool());
 
-    Path intPath(path);
-    SVN_JNI_ERR(intPath.error_occured(), );
-
     svn_client_ctx_t *ctx = context.getContext(NULL);
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_propset4(name, val, intPath.c_str(),
+    const apr_array_header_t *targetsApr = targets.array(requestPool);
+    SVN_JNI_ERR(svn_client_propset4(name, val, targetsApr,
                                     depth, force, SVN_INVALID_REVNUM,
                                     changelists.array(requestPool),
                                     revprops.hash(requestPool),
