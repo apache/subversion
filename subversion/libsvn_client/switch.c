@@ -269,9 +269,10 @@ switch_internal(svn_revnum_t *result_rev,
                 depth, ctx, pool));
       err = svn_client__handle_externals(efb.externals_old,
                                          efb.externals_new, efb.ambient_depths,
-                                         switch_url, anchor_abspath, target,
+                                         svn_dirent_join(anchor_abspath, 
+                                                         target, pool),
                                          source_root,
-                                         depth, use_sleep, ctx, pool);
+                                         depth, FALSE, use_sleep, ctx, pool);
     }
 
   /* Sleep to ensure timestamp integrity (we do this regardless of
