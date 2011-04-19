@@ -536,7 +536,7 @@ svn_sqlite__column_is_null(svn_sqlite__stmt_t *stmt, int column)
   return sqlite3_column_type(stmt->s3stmt, column) == SQLITE_NULL;
 }
 
-svn_boolean_t
+int
 svn_sqlite__column_bytes(svn_sqlite__stmt_t *stmt, int column)
 {
   return sqlite3_column_bytes(stmt->s3stmt, column);
