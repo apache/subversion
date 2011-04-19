@@ -291,6 +291,11 @@ svn_sqlite__column_checksum(const svn_checksum_t **checksum,
 svn_boolean_t
 svn_sqlite__column_is_null(svn_sqlite__stmt_t *stmt, int column);
 
+/* Return the number of bytes the column uses in a text or blob representation.
+   0 for NULL columns. */
+int
+svn_sqlite__column_bytes(svn_sqlite__stmt_t *stmt, int column);
+
 
 /* --------------------------------------------------------------------- */
 
