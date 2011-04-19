@@ -1374,8 +1374,9 @@ public class BasicTests extends SVNTests
         thisTest.getWc().setItemTextStatus("A/D/H/chi", Status.Kind.modified);
 
         // set a property on A/D/G/rho file
-        client.propertySet(thisTest.getWCPath()+"/A/D/G/rho", "abc",
-                           (new String("def")).getBytes(),
+        pathSet.clear();
+        pathSet.add(thisTest.getWCPath()+"/A/D/G/rho");
+        client.propertySet(pathSet, "abc", (new String("def")).getBytes(),
                            Depth.infinity, null, false, null, null);
         thisTest.getWc().setItemPropStatus("A/D/G/rho", Status.Kind.modified);
 
@@ -3944,14 +3945,20 @@ public class BasicTests extends SVNTests
     private void setprop(String path, String name, String value)
         throws ClientException
     {
-        client.propertySet(path, name, value != null ? value.getBytes() : null,
+        Set<String> paths = new HashSet<String>();
+        paths.add(path);
+
+        client.propertySet(paths, name, value != null ? value.getBytes() : null,
                            Depth.empty, null, false, null, null);
     }
 
     private void setprop(String path, String name, byte[] value)
         throws ClientException
     {
-        client.propertySet(path, name, value, Depth.empty,
+        Set<String> paths = new HashSet<String>();
+        paths.add(path);
+
+        client.propertySet(paths, name, value, Depth.empty,
                            null, false, null, null);
     }
 

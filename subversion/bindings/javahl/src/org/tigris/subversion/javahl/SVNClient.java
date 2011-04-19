@@ -1870,7 +1870,10 @@ public class SVNClient implements SVNClientInterface
     {
         try
         {
-            aSVNClient.propertySet(path, name,
+            Set<String> paths = new HashSet<String>();
+            paths.add(path);
+
+            aSVNClient.propertySet(paths, name,
                                    value == null ? null : value.getBytes(),
                                    Depth.toADepth(depth),
                                    changelists == null ? null

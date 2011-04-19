@@ -917,7 +917,7 @@ Java_org_apache_subversion_javahl_SVNClient_properties
 
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_propertySet
-(JNIEnv *env, jobject jthis, jstring jpath, jstring jname, jbyteArray jvalue,
+(JNIEnv *env, jobject jthis, jobject jtargets, jstring jname, jbyteArray jvalue,
  jobject jdepth, jobject jchangelists, jboolean jforce, jobject jrevpropTable,
  jobject jcallback)
 {
@@ -928,7 +928,8 @@ Java_org_apache_subversion_javahl_SVNClient_propertySet
       JNIUtil::throwError(_("bad C++ this"));
       return;
     }
-  JNIStringHolder path(jpath);
+  StringArray targetsArr(jtargets);
+  Targets targets(targetsArr);
   if (JNIUtil::isExceptionThrown())
     return;
 
@@ -949,7 +950,8 @@ Java_org_apache_subversion_javahl_SVNClient_propertySet
     return;
 
   CommitCallback callback(jcallback);
-  cl->propertySet(path, name, value, EnumMapper::toDepth(jdepth), changelists,
+  cl->propertySet(targets, name, value, EnumMapper::toDepth(jdepth),
+                  changelists,
                   jforce ? true:false, revprops, jcallback ? &callback : NULL);
 }
 

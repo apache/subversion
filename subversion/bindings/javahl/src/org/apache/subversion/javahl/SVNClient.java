@@ -416,7 +416,7 @@ public class SVNClient implements ISVNClient
     /**
      * @since 1.5
      */
-    public native void propertySet(String path, String name, byte[] value,
+    public native void propertySet(Set<String> paths, String name, byte[] value,
                                    Depth depth, Collection<String> changelists,
                                    boolean force,
                                    Map<String, String> revpropTable,
