@@ -103,6 +103,12 @@
 #define UNKNOWN_WC_ID ((apr_int64_t) -1)
 #define FORMAT_FROM_SDB (-1)
 
+/* Check if the column contains actual properties. The empty set of properties
+   is stored as "()", so we have properties if the size of the column is
+   larger then 2. */
+#define SQLITE_PROPERTIES_AVAILABLE(stmt, i) \
+                 (svn_sqlite__column_bytes(stmt, i) > 2)
+
 /* This is a character used to escape itself and the globbing character in
    globbing sql expressions below.  See escape_sqlite_like().
 
@@ -1992,7 +1998,7 @@ base_get_info(svn_wc__db_status_t *status,
         }
       if (had_props)
         {
-          *had_props = !svn_sqlite__column_is_null(stmt, 13);
+          *had_props = SQLITE_PROPERTIES_AVAILABLE(stmt, 13);
         }
       if (update_root)
         {
@@ -5285,7 +5291,8 @@ read_info(svn_wc__db_status_t *status,
         }
       if (had_props)
         {
-          *had_props = !svn_sqlite__column_is_null(stmt_info, 14);
+          *had_props = SQLITE_PROPERTIES_AVAILABLE(stmt_info, 14);
+          SVN_DBG(("Had props for %s is %d status=%s\n", local_relpath, *had_props, svn_sqlite__column_text(stmt_info, 3, NULL)));
         }
       if (conflicted)
         {
@@ -5497,6 +5504,13 @@ struct read_children_info_baton_t
   apr_pool_t *result_pool;
 };
 
+/* What we really want to store about a node */
+struct read_children_info_item_t
+{
+  struct svn_wc__db_info_t info;
+  apr_int64_t op_depth;
+};
+
 static svn_error_t *
 read_children_info(void *baton,
                    svn_wc__db_wcroot_t *wcroot,
@@ -5520,57 +5534,54 @@ read_children_info(void *baton,
   
   while (have_row)
     {
-      /* CHILD points to memory that holds a svn_wc__db_info_t followed
-       * immediately by an apr_int64_t op_depth.  The caller will see the
-       * former; the latter is for local use only. */
-      struct svn_wc__db_info_t *child;
+      /* CHILD item points to what we have about the node. We only provide
+         CHILD->item to our caller. */
+      struct read_children_info_item_t *child_item;
       const char *child_relpath = svn_sqlite__column_text(stmt, 19, NULL);
       const char *name = svn_relpath_basename(child_relpath, NULL);
       svn_error_t *err;
-      apr_int64_t *op_depth, row_op_depth;
+      apr_int64_t op_depth;
       svn_boolean_t new_child;
 
-      child = apr_hash_get(nodes, name, APR_HASH_KEY_STRING);
-      if (child)
+      child_item = apr_hash_get(nodes, name, APR_HASH_KEY_STRING);
+      if (child_item)
         new_child = FALSE;
       else
         {
-          child = apr_pcalloc(result_pool, sizeof(*child) + sizeof(*op_depth));
+          child_item = apr_pcalloc(result_pool, sizeof(*child_item));
           new_child = TRUE;
         }
 
-      op_depth = (apr_int64_t *)(child + 1);
-      row_op_depth = svn_sqlite__column_int(stmt, 0);
+      op_depth = svn_sqlite__column_int(stmt, 0);
 
-      if (new_child || *op_depth < row_op_depth)
+      /* Do we have new or better information? */
+      if (new_child || op_depth > child_item->op_depth)
         {
-          apr_hash_t *properties;
-
-          *op_depth = row_op_depth;
+          struct svn_wc__db_info_t *child = &child_item->info;
+          child_item->op_depth = op_depth;
 
           child->kind = svn_sqlite__column_token(stmt, 4, kind_map);
 
           child->status = svn_sqlite__column_token(stmt, 3, presence_map);
-          if (*op_depth != 0)
+          if (op_depth != 0)
             {
               err = convert_to_working_status(&child->status, child->status);
               if (err)
                 SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
             }
 
-          if (*op_depth != 0)
+          if (op_depth != 0)
             child->revnum = SVN_INVALID_REVNUM;
           else
             child->revnum = svn_sqlite__column_revnum(stmt, 5);
 
-
-          if (*op_depth != 0)
+          if (op_depth != 0)
             child->repos_relpath = NULL;
           else
             child->repos_relpath = svn_sqlite__column_text(stmt, 2,
                                                            result_pool);
 
-          if (*op_depth != 0 || svn_sqlite__column_is_null(stmt, 1))
+          if (op_depth != 0 || svn_sqlite__column_is_null(stmt, 1))
             {
               child->repos_root_url = NULL;
             }
@@ -5615,35 +5626,36 @@ read_children_info(void *baton,
             }
 
           child->translated_size = get_translated_size(stmt, 7);
-
-          err = svn_sqlite__column_properties(&properties, stmt, 14,
-                                              scratch_pool, scratch_pool);
-          if (err)
-            SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
-          child->has_props = properties && !!apr_hash_count(properties);
+          child->has_props = SQLITE_PROPERTIES_AVAILABLE(stmt, 14);
 #ifdef HAVE_SYMLINK
-          child->special = (child->has_props
-                            && apr_hash_get(properties, SVN_PROP_SPECIAL,
-                                            APR_HASH_KEY_STRING));
-#endif
+          if (child->has_props)
+            {
+              apr_hash_t *properties;
+              err = svn_sqlite__column_properties(&properties, stmt, 14,
+                                                  scratch_pool, scratch_pool);
+              if (err)
+                SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
 
-          child->changelist = NULL;
-          child->have_base = (*op_depth == 0);
-          child->props_mod = FALSE;
-          child->conflicted = FALSE;
+              child->special = (child->has_props
+                                && apr_hash_get(properties, SVN_PROP_SPECIAL,
+                                              APR_HASH_KEY_STRING));
+            }
+#endif
 
           apr_hash_set(nodes, apr_pstrdup(result_pool, name),
                        APR_HASH_KEY_STRING, child);
         }
-      else if (row_op_depth == 0)
-        {
-          child->have_base = TRUE;
-        }
 
-      /* Get the lock info. The query only reports lock info in the row at
-       * op_depth 0. */
-      if (row_op_depth == 0)
-        child->lock = lock_from_columns(stmt, 15, 16, 17, 18, result_pool);
+      if (op_depth == 0)
+        {
+          child_item->info.have_base = TRUE;
+
+          /* Get the lock info. The query only reports lock info in the row at
+            * op_depth 0. */
+          if (op_depth == 0)
+            child_item->info.lock = lock_from_columns(stmt, 15, 16, 17, 18,
+                                                      result_pool);
+        }
 
       err = svn_sqlite__step(&have_row, stmt);
       if (err)
@@ -5659,21 +5671,25 @@ read_children_info(void *baton,
 
   while (have_row)
     {
+      struct read_children_info_item_t *child_item;
       struct svn_wc__db_info_t *child;
       const char *child_relpath = svn_sqlite__column_text(stmt, 7, NULL);
       const char *name = svn_relpath_basename(child_relpath, NULL);
       svn_error_t *err;
 
-      child = apr_hash_get(nodes, name, APR_HASH_KEY_STRING);
-      if (!child)
+      child_item = apr_hash_get(nodes, name, APR_HASH_KEY_STRING);
+      if (!child_item)
         {
-          child = apr_palloc(result_pool, sizeof(*child) + sizeof(int));
-          child->status = svn_wc__db_status_not_present;
+          child_item = apr_pcalloc(result_pool, sizeof(*child_item));
+          child_item->info.status = svn_wc__db_status_not_present;
         }
+
+      child = &child_item->info;
 
       child->changelist = svn_sqlite__column_text(stmt, 1, result_pool);
 
       child->props_mod = !svn_sqlite__column_is_null(stmt, 6);
+#ifdef HAVE_SYMLINK
       if (child->props_mod)
         {
           apr_hash_t *properties;
@@ -5682,14 +5698,10 @@ read_children_info(void *baton,
                                               scratch_pool, scratch_pool);
           if (err)
             SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
-          child->has_props = properties && !!apr_hash_count(properties);
-#ifdef HAVE_SYMLINK
-          child->special = (child->has_props
-                            && apr_hash_get(properties, SVN_PROP_SPECIAL,
-                                            APR_HASH_KEY_STRING));
-#endif
+          child->special = (NULL != apr_hash_get(properties, SVN_PROP_SPECIAL,
+                                                 APR_HASH_KEY_STRING));
         }
-
+#endif
 
       child->conflicted = !svn_sqlite__column_is_null(stmt, 2) ||  /* old */
                           !svn_sqlite__column_is_null(stmt, 3) ||  /* new */
