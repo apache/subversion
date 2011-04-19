@@ -4115,20 +4115,21 @@ svn_client_move(svn_client_commit_info_t **commit_info_p,
 
 
 /**
- * Set @a propname to @a propval on @a target.
+ * Set @a propname to @a propval on @a targets.
  * A @a propval of @c NULL will delete the property.
  *
- * If @a depth is #svn_depth_empty, set the property on @a target
- * only; if #svn_depth_files, set it on @a target and its file
- * children (if any); if #svn_depth_immediates, on @a target and all
- * of its immediate children (both files and directories); if
- * #svn_depth_infinity, on @a target and everything beneath it.
+ * If @a depth is #svn_depth_empty, set the property on each member of
+ * @a targets only; if #svn_depth_files, set it on @a targets and their file
+ * children (if any); if #svn_depth_immediates, on @a targets and all
+ * of their immediate children (both files and directories); if
+ * #svn_depth_infinity, on @a targets and everything beneath them.
  *
- * The @a target may only be an URL if @a base_revision_for_url is not
+ * Targets must either be all working copy paths or URLs.  The @a targets may
+ * only be an URL if @a base_revision_for_url is not
  * #SVN_INVALID_REVNUM; in this case, the property will only be set
  * if it has not changed since revision @a base_revision_for_url.
- * @a base_revision_for_url must be #SVN_INVALID_REVNUM if @a target
- * is not an URL.  @a depth deeper than #svn_depth_empty is not
+ * @a base_revision_for_url must be #SVN_INVALID_REVNUM if @a targets
+ * are not URLs.  @a depth deeper than #svn_depth_empty is not
  * supported on URLs.  The authentication baton in @a ctx and @a
  * ctx->log_msg_func3/@a ctx->log_msg_baton3 will be used to
  * immediately attempt to commit the property change in the
@@ -4140,8 +4141,8 @@ svn_client_move(svn_client_commit_info_t **commit_info_p,
  *
  * If @a skip_checks is TRUE, do no validity checking.  But if @a
  * skip_checks is FALSE, and @a propname is not a valid property for @a
- * target, return an error, either #SVN_ERR_ILLEGAL_TARGET (if the
- * property is not appropriate for @a target), or
+ * targets, return an error, either #SVN_ERR_ILLEGAL_TARGET (if the
+ * property is not appropriate for @a targets), or
  * #SVN_ERR_BAD_MIME_TYPE (if @a propname is "svn:mime-type", but @a
  * propval is not a valid mime-type).
  *
@@ -4171,7 +4172,7 @@ svn_client_move(svn_client_commit_info_t **commit_info_p,
 svn_error_t *
 svn_client_propset4(const char *propname,
                     const svn_string_t *propval,
-                    const char *target,
+                    const apr_array_header_t *targets,
                     svn_depth_t depth,
                     svn_boolean_t skip_checks,
                     svn_revnum_t base_revision_for_url,

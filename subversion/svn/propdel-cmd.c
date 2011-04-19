@@ -90,36 +90,17 @@ svn_cl__propdel(apr_getopt_t *os,
     }
   else  /* operate on a normal, versioned property (not a revprop) */
     {
-      apr_pool_t *subpool = svn_pool_create(pool);
-      int i;
-
       if (opt_state->depth == svn_depth_unknown)
         opt_state->depth = svn_depth_empty;
 
       /* For each target, remove the property PNAME. */
-      for (i = 0; i < targets->nelts; i++)
-        {
-          const char *target = APR_ARRAY_IDX(targets, i, const char *);
-
-          svn_pool_clear(subpool);
-          SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
-
-          /* Pass FALSE for 'skip_checks' because it doesn't matter here,
-             and opt_state->force doesn't apply to this command anyway. */
-          SVN_ERR(svn_cl__try(svn_client_propset4(
-                               pname_utf8,
-                               NULL, target,
-                               opt_state->depth,
-                               FALSE, SVN_INVALID_REVNUM,
-                               opt_state->changelists, NULL,
-                               svn_cl__print_commit_info, NULL,
-                               ctx, subpool),
-                              NULL, opt_state->quiet,
-                              SVN_ERR_UNVERSIONED_RESOURCE,
-                              SVN_ERR_ENTRY_NOT_FOUND,
-                              SVN_NO_ERROR));
-        }
-      svn_pool_destroy(subpool);
+      SVN_ERR(svn_client_propset4(pname_utf8,
+                                  NULL, targets,
+                                  opt_state->depth,
+                                  FALSE, SVN_INVALID_REVNUM,
+                                  opt_state->changelists, NULL,
+                                  svn_cl__print_commit_info, NULL,
+                                  ctx, pool));
     }
 
   return SVN_NO_ERROR;

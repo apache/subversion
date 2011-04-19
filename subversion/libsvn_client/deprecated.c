@@ -1536,11 +1536,14 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
                     apr_pool_t *pool)
 {
   struct capture_baton_t cb;
+  apr_array_header_t *targets = apr_array_make(pool, 1, sizeof(const char *));
+
+  APR_ARRAY_PUSH(targets, const char *) = target;
 
   cb.info = commit_info_p;
   cb.pool = pool;
 
-  return svn_client_propset4(propname, propval, target, depth, skip_checks,
+  return svn_client_propset4(propname, propval, targets, depth, skip_checks,
                              base_revision_for_url, changelists, revprop_table,
                              capture_commit_info, &cb, ctx, pool);
 }

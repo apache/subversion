@@ -343,7 +343,7 @@ set_props_cb(void *baton,
 svn_error_t *
 svn_client_propset4(const char *propname,
                     const svn_string_t *propval,
-                    const char *target,
+                    const apr_array_header_t *targets,
                     svn_depth_t depth,
                     svn_boolean_t skip_checks,
                     svn_revnum_t base_revision_for_url,
@@ -354,6 +354,23 @@ svn_client_propset4(const char *propname,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool)
 {
+  svn_boolean_t targets_are_urls;
+  int i;
+
+  if (targets->nelts == 0)
+    return SVN_NO_ERROR;
+
+  /* Check for homogeneity among our targets. */
+  targets_are_urls = svn_path_is_url(APR_ARRAY_IDX(targets, 0, const char *));
+  for (i = 1; i < targets->nelts; i++)
+    {
+      const char *target = APR_ARRAY_IDX(targets, i, const char *);
+
+      if (svn_path_is_url(target) != targets_are_urls)
+        return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                 _("Cannot mix repository and working copy paths"));
+    }
+
   /* Since Subversion controls the "svn:" property namespace, we
      don't honor the 'skip_checks' flag here.  Unusual property
      combinations, like svn:eol-style with a non-text svn:mime-type,
@@ -370,21 +387,21 @@ svn_client_propset4(const char *propname,
     return svn_error_createf(SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
                              _("Bad property name: '%s'"), propname);
 
-  if (svn_path_is_url(target))
+  if (targets_are_urls)
     {
       /* The rationale for requiring the base_revision_for_url
          argument is that without it, it's too easy to possibly
          overwrite someone else's change without noticing.  (See also
          tools/examples/svnput.c). */
       if (! SVN_IS_VALID_REVNUM(base_revision_for_url))
-        return svn_error_createf(SVN_ERR_CLIENT_BAD_REVISION, NULL,
-                                 _("Setting property on non-local target '%s' "
-                                   "needs a base revision"), target);
+        return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL,
+                                _("Setting property on non-local targets "
+                                  "needs a base revision"));
 
       if (depth > svn_depth_empty)
-        return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                 _("Setting property recursively on non-local "
-                                   "target '%s' is not supported"), target);
+        return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                _("Setting property recursively on non-local "
+                                  "targets is not supported"));
 
       /* ### When you set svn:eol-style or svn:keywords on a wc file,
          ### Subversion sends a textdelta at commit time to properly
@@ -398,54 +415,81 @@ svn_client_propset4(const char *propname,
       if ((strcmp(propname, SVN_PROP_EOL_STYLE) == 0) ||
           (strcmp(propname, SVN_PROP_KEYWORDS) == 0))
         return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                 _("Setting property '%s' on non-local target "
-                                   "'%s' is not supported"), propname, target);
+                                 _("Setting property '%s' on non-local "
+                                   "targets is not supported"), propname);
 
-      return propset_on_url(propname, propval, target, skip_checks,
-                            base_revision_for_url, revprop_table,
-                            commit_callback, commit_baton, ctx, pool);
+      for (i = 0; i < targets->nelts; i++)
+        {
+          const char *target = APR_ARRAY_IDX(targets, i, const char *);
+
+          SVN_ERR(propset_on_url(propname, propval, target, skip_checks,
+                                 base_revision_for_url, revprop_table,
+                                 commit_callback, commit_baton, ctx, pool));
+        }
+
+      return SVN_NO_ERROR;
     }
   else
     {
-      svn_node_kind_t kind;
       apr_hash_t *changelist_hash = NULL;
-      const char *target_abspath;
-      svn_error_t *err;
-      struct set_props_baton baton;
-
-      SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, pool));
+      apr_pool_t *iterpool = svn_pool_create(pool);
 
       if (changelists && changelists->nelts)
         SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash,
                                            changelists, pool));
 
-      err = svn_wc_read_kind(&kind, ctx->wc_ctx, target_abspath, FALSE, pool);
-
-      if ((err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-          || kind == svn_node_unknown || kind == svn_node_none)
+      for (i = 0; i < targets->nelts; i++)
         {
-          /* svn uses SVN_ERR_UNVERSIONED_RESOURCE as warning only
-             for this function. */
-          return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, err,
-                                   _("'%s' is not under version control"),
-                                   svn_dirent_local_style(target_abspath,
-                                                          pool));
+          svn_node_kind_t kind;
+          const char *target_abspath;
+          svn_error_t *err;
+          struct set_props_baton baton;
+          const char *target = APR_ARRAY_IDX(targets, i, const char *);
+
+          svn_pool_clear(iterpool);
+
+          /* Check for cancellation */
+          if (ctx->cancel_func)
+            SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
+
+          SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, iterpool));
+
+          err = svn_wc_read_kind(&kind, ctx->wc_ctx, target_abspath, FALSE,
+                                 iterpool);
+
+          if ((err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+              || kind == svn_node_unknown || kind == svn_node_none)
+            {
+              if (ctx->notify_func2)
+                {
+                  svn_wc_notify_t *notify = svn_wc_create_notify(
+                                                    target_abspath,
+                                                    svn_wc_notify_warning,
+                                                    iterpool);
+
+                  notify->err = err;
+                  ctx->notify_func2(ctx->notify_baton2, notify, iterpool);
+                }
+
+              svn_error_clear(err);
+            }
+          else
+            SVN_ERR(err);
+
+          baton.ctx = ctx;
+          baton.local_abspath = target_abspath;
+          baton.depth = depth;
+          baton.kind = kind;
+          baton.propname = propname;
+          baton.propval = propval;
+          baton.skip_checks = skip_checks;
+          baton.changelist_hash = changelist_hash;
+
+          SVN_ERR(svn_wc__call_with_write_lock(set_props_cb, &baton,
+                                               ctx->wc_ctx, target_abspath,
+                                               FALSE, iterpool, iterpool));
         }
-      else
-        SVN_ERR(err);
-
-      baton.ctx = ctx;
-      baton.local_abspath = target_abspath;
-      baton.depth = depth;
-      baton.kind = kind;
-      baton.propname = propname;
-      baton.propval = propval;
-      baton.skip_checks = skip_checks;
-      baton.changelist_hash = changelist_hash;
-
-      SVN_ERR(svn_wc__call_with_write_lock(set_props_cb, &baton,
-                                           ctx->wc_ctx, target_abspath, FALSE,
-                                           pool, pool));
+      svn_pool_destroy(iterpool);
 
       return SVN_NO_ERROR;
     }
