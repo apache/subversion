@@ -1165,7 +1165,6 @@ def binary_file_externals(sbox):
 
 # Issue #3351.
 @Issue(3351)
-@XFail()
 def update_lose_file_external(sbox):
   "delete a file external"
 
@@ -1214,10 +1213,12 @@ def update_lose_file_external(sbox):
   # commit the property change
   expected_output = svntest.wc.State(wc_dir, {
     'A/C' : Item(verb='Sending'),
+    'A/C/external' : Item(verb='Removing external'),
     })
 
   # (re-use above expected_status)
   expected_status.tweak('A/C', wc_rev = 3)
+  expected_status.remove('A/C/external')
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)
@@ -1231,7 +1232,6 @@ def update_lose_file_external(sbox):
 
   # (re-use above expected_status)
   expected_status.tweak(wc_rev = 3)
-  expected_status.remove('A/C/external')
 
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
@@ -1239,6 +1239,8 @@ def update_lose_file_external(sbox):
                                         expected_status,
                                         None, None, None, None, None,
                                         True)
+
+  probe_paths_missing([os.path.join(wc_dir, 'A', 'C', 'external')])
 
 
 #----------------------------------------------------------------------
@@ -1595,7 +1597,6 @@ def file_external_in_sibling(sbox):
                             svntest.actions.expected_noop_update_output(2),
                             [], 'update')
 
-@XFail()
 @Issue(3823)
 def file_external_update_without_commit(sbox):
   "update a file external without committing target"
