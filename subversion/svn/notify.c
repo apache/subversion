@@ -940,6 +940,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
                                n->url);
       if (err)
         goto print_error;
+      break;
 
     default:
       break;
