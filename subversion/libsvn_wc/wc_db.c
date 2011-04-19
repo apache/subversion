@@ -3814,47 +3814,6 @@ svn_wc__db_op_set_tree_conflict(svn_wc__db_t *db,
 }
 
 
-svn_error_t *
-svn_wc__db_op_revert_actual(svn_wc__db_t *db,
-                            const char *local_abspath,
-                            apr_pool_t *scratch_pool)
-{
-  svn_wc__db_wcroot_t *wcroot;
-  const char *local_relpath;
-  svn_sqlite__stmt_t *stmt;
-  int affected_rows;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
-                              local_abspath, scratch_pool, scratch_pool));
-  VERIFY_USABLE_WCROOT(wcroot);
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                STMT_DELETE_ACTUAL_NODE_LEAVING_CHANGELIST));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
-
-  if (affected_rows == 0)
-    {
-      /* Failed to delete the row.
-         Presumably because there was a changelist set on it */
-
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                 STMT_CLEAR_ACTUAL_NODE_LEAVING_CHANGELIST));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-      SVN_ERR(svn_sqlite__step_done(stmt));
-      /* We're not interested here if there was an affected row or not:
-         If there isn't by now, then there simply was no row to begin with */
-    }
-
-  /* Some entries have cached the above values. Kapow!!  */
-  SVN_ERR(flush_entries(wcroot, local_abspath, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-
 /* This implements svn_wc__db_txn_callback_t */
 static svn_error_t *
 op_revert_txn(void *baton,
