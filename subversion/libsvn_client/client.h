@@ -909,9 +909,8 @@ svn_client__do_commit(const char *base_url,
 
 /* Handle changes to the svn:externals property described by EXTERNALS_OLD,
    EXTERNALS_NEW, and AMBIENT_DEPTHS.  The tree's top level directory
-   is at TO_ABSPATH and corresponds to FROM_URL URL in the repository,
-   which has a root URL of REPOS_ROOT_URL.  A write lock should be
-   held.
+   is at TO_ABSPATH which has a root URL of REPOS_ROOT_URL (optional).
+   A write lock should be  held.
 
    For each changed value of the property, discover the nature of the
    change and behave appropriately -- either check a new "external"
@@ -930,10 +929,6 @@ svn_client__do_commit(const char *base_url,
    interpreted.
 
    Pass NOTIFY_FUNC with NOTIFY_BATON along to svn_client_checkout().
-
-   ### todo: AUTH_BATON may not be so useful.  It's almost like we
-       need access to the original auth-obtaining callbacks that
-       produced auth baton in the first place.  Hmmm. ###
 
    *TIMESTAMP_SLEEP will be set TRUE if a sleep is required to ensure
    timestamp integrity, *TIMESTAMP_SLEEP will be unchanged if no sleep
@@ -1012,24 +1007,6 @@ svn_client__crawl_for_externals(apr_hash_t **externals_p,
                                 apr_pool_t *result_pool,
                                 apr_pool_t *scratch_pool);
 
-/* Helper function to fix issue #2267,
- * "support svn:externals on locally added directories".
- *
- * Crawl all externals beneath ANCHOR_ABSPATH (this is cheap because we're
- * only crawling the WC DB itself). If there are externals within the
- * REQUESTED_DEPTH that weren't already picked up while we were crawling
- * the BASE tree, add them to the EXTERNALS_NEW hash with ambient depth
- * infinity. Facilitates populating externals in locally added directories.
- *
- * ### This is a bit of a hack. We should try to find a better solution
- * ### to this problem. */
-svn_error_t *
-svn_client__gather_externals_in_locally_added_dirs(apr_hash_t *externals_new,
-                                                   apr_hash_t *ambient_depths,
-                                                   const char *anchor_abspath,
-                                                   svn_depth_t requested_depth,
-                                                   svn_client_ctx_t *ctx,
-                                                   apr_pool_t *scratch_pool);
 
 /* Baton type for svn_wc__external_info_gatherer(). */
 typedef struct svn_client__external_func_baton_t
