@@ -33,7 +33,6 @@
 #include "svn_string.h"
 #include "svn_time.h"
 #include "svn_sorts.h"
-#include "svn_path.h"
 #include "svn_props.h"
 #include "svn_mergeinfo.h"
 #include "repos.h"
@@ -1062,13 +1061,13 @@ get_merged_mergeinfo(apr_hash_t **merged_mergeinfo,
                                                          APR_HASH_KEY_STRING);
       if (changed_path && changed_path->prop_mod)
         break;
-      if (svn_dirent_is_root(path, strlen(path)))
+      if (svn_fspath__is_root(path, strlen(path)))
         {
           svn_pool_destroy(subpool);
           *merged_mergeinfo = NULL;
           return SVN_NO_ERROR;
         }
-      path = svn_path_dirname(path, subpool);
+      path = svn_fspath__dirname(path, subpool);
     }
 
   /* First, find the mergeinfo difference for old_path_rev->revnum, and
