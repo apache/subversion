@@ -913,6 +913,15 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
           goto print_error;
       break;
 
+    case svn_wc_notify_property_deleted_nonexistent:
+        err = svn_cmdline_printf(pool,
+                                 _("Attempting to delete nonexistent "
+                                   "property '%s' on '%s'\n"), n->prop_name,
+                                   path_local);
+        if (err)
+          goto print_error;
+      break;
+
     case svn_wc_notify_revprop_set:
         err = svn_cmdline_printf(pool,
                           _("property '%s' set on repository revision %ld\n"),

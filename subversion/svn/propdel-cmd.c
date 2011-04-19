@@ -41,25 +41,6 @@
 
 /*** Code. ***/
 
-struct notify_wrapper_baton
-{
-  void *real_baton;
-  svn_wc_notify_func2_t real_func;
-  svn_boolean_t found_deleted_nonexistent;
-};
-
-/* This checks for deleted_nonexistent before calling the notification function.
-   This implements `svn_wc_notify_func2_t'. */
-static void
-notify_wrapper(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
-{
-  struct notify_wrapper_baton *nwb = baton;
-
-  nwb->found_deleted_nonexistent |=
-                (n->action == svn_wc_notify_property_deleted_nonexistent);
-  nwb->real_func(nwb->real_baton, n, pool);
-}
-
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
 svn_cl__propdel(apr_getopt_t *os,
@@ -70,7 +51,6 @@ svn_cl__propdel(apr_getopt_t *os,
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   const char *pname, *pname_utf8;
   apr_array_header_t *args, *targets;
-  struct notify_wrapper_baton nwb = { 0 };
 
   /* Get the property's name (and a UTF-8 version of that name). */
   SVN_ERR(svn_opt_parse_num_args(&args, os, 1, pool));
@@ -87,15 +67,6 @@ svn_cl__propdel(apr_getopt_t *os,
 
   /* Add "." if user passed 0 file arguments */
   svn_opt_push_implicit_dot_target(targets, pool);
-
-  if (! opt_state->quiet)
-    {
-      nwb.real_func = ctx->notify_func2;
-      nwb.real_baton = ctx->notify_baton2;
-      ctx->notify_func2 = notify_wrapper;
-      ctx->notify_baton2 = &nwb;
-    }
-
   SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, pool));
 
   if (opt_state->revprop)  /* operate on a revprop */
@@ -147,10 +118,6 @@ svn_cl__propdel(apr_getopt_t *os,
                               SVN_ERR_UNVERSIONED_RESOURCE,
                               SVN_ERR_ENTRY_NOT_FOUND,
                               SVN_NO_ERROR));
-          if (nwb.found_deleted_nonexistent)
-            return svn_error_createf(SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
-                             _("Attempting to delete nonexistent property '%s'"),
-                             pname);
         }
       svn_pool_destroy(subpool);
     }

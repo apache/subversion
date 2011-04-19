@@ -1439,9 +1439,9 @@ def invalid_propnames(sbox):
   propname = chr(8)
   propval = 'foo'
 
-  expected_stderr = (".*Attempting to delete nonexistent property "
+  expected_stdout = (".*Attempting to delete nonexistent property "
                      "'%s'.*" % (propname,))
-  svntest.actions.run_and_verify_svn(None, None, expected_stderr,
+  svntest.actions.run_and_verify_svn(None, expected_stdout, [],
                                      'propdel', propname)
   expected_stderr = (".*'%s' is not a valid Subversion"
                      ' property name' % (propname,))
@@ -1484,9 +1484,9 @@ def perms_on_symlink(sbox):
     old_mode = os.stat('newdir')[stat.ST_MODE]
     # The only property on 'symlink' is svn:special, so attempting to remove
     # 'svn:executable' should result in an error
-    expected_stderr = (".*Attempting to delete nonexistent property "
+    expected_stdout = (".*Attempting to delete nonexistent property "
                        "'svn:executable'.*")
-    svntest.actions.run_and_verify_svn(None, None, expected_stderr, 'propdel',
+    svntest.actions.run_and_verify_svn(None, expected_stdout, [], 'propdel',
                                      'svn:executable', 'symlink')
     new_mode = os.stat('newdir')[stat.ST_MODE]
     if not old_mode == new_mode:
@@ -1711,8 +1711,8 @@ def delete_nonexistent_property(sbox):
   wc_dir = sbox.wc_dir
 
   # Remove one property
-  expected_stderr = ".*Attempting to delete nonexistent property 'yellow'.*"
-  svntest.actions.run_and_verify_svn(None, None, expected_stderr,
+  expected_stdout = ".*Attempting to delete nonexistent property 'yellow'.*"
+  svntest.actions.run_and_verify_svn(None, expected_stdout, [],
                                      'propdel', 'yellow',
                                      os.path.join(wc_dir, 'A', 'D', 'G'))
 
