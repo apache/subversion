@@ -665,14 +665,17 @@ preserve_pre_merge_files(svn_skel_t **work_items,
 {
   const char *tmp_left, *tmp_right, *detranslated_target_copy;
   const char *dir_abspath, *target_name;
-  const char *temp_dir;
-  svn_skel_t *work_item;
+  const char *wcroot_abspath, *temp_dir_abspath;
+  svn_skel_t *work_item, *last_items = NULL;
   svn_error_t *err;
 
   *work_items = NULL;
 
   svn_dirent_split(&dir_abspath, &target_name, target_abspath, scratch_pool);
-  SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir, db, target_abspath,
+
+  SVN_ERR(svn_wc__db_get_wcroot(&wcroot_abspath, db, target_abspath,
+                                scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir_abspath, db, target_abspath,
                                          scratch_pool, scratch_pool));
 
   /* Create three empty files in DIR_ABSPATH, naming them with unique names
@@ -680,37 +683,50 @@ preserve_pre_merge_files(svn_skel_t **work_items,
      and set *{LEFT,RIGHT,TARGET}_COPY to those names. */
   SVN_ERR(svn_io_open_uniquely_named(
             NULL, left_copy, dir_abspath, target_name, left_label,
-            svn_io_file_del_none, scratch_pool, scratch_pool));
+            svn_io_file_del_none, result_pool, scratch_pool));
   SVN_ERR(svn_io_open_uniquely_named(
             NULL, right_copy, dir_abspath, target_name, right_label,
-            svn_io_file_del_none, scratch_pool, scratch_pool));
+            svn_io_file_del_none, result_pool, scratch_pool));
   SVN_ERR(svn_io_open_uniquely_named(
             NULL, target_copy, dir_abspath, target_name, target_label,
-            svn_io_file_del_none, scratch_pool, scratch_pool));
+            svn_io_file_del_none, result_pool, scratch_pool));
 
   /* We preserve all the files with keywords expanded and line
      endings in local (working) form. */
 
-  /* Log files require their paths to be in the subtree
-     relative to the adm_access path they are executed in.
+  /* The workingqueue prefers (requires?) its paths to be in the subtree
+     relative to the wcroot path they are executed in.
 
      Make our LEFT and RIGHT files 'local' if they aren't... */
-  if (! svn_dirent_is_ancestor(dir_abspath, left_abspath))
+  if (! svn_dirent_is_ancestor(wcroot_abspath, left_abspath))
     {
-      SVN_ERR(svn_io_open_unique_file3(NULL, &tmp_left, temp_dir,
-                                       svn_io_file_del_on_pool_cleanup,
+      SVN_DBG(("Left abspath was %s\n", left_abspath));
+      SVN_ERR(svn_io_open_unique_file3(NULL, &tmp_left, temp_dir_abspath,
+                                       svn_io_file_del_none,
                                        scratch_pool, scratch_pool));
       SVN_ERR(svn_io_copy_file(left_abspath, tmp_left, TRUE, scratch_pool));
+
+      /* And create a wq item to remove the file later */
+      SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db, tmp_left,
+                                           result_pool, scratch_pool));
+
+      last_items = svn_wc__wq_merge(last_items, work_item, result_pool);
     }
   else
     tmp_left = left_abspath;
 
-  if (! svn_dirent_is_ancestor(dir_abspath, right_abspath))
+  if (! svn_dirent_is_ancestor(wcroot_abspath, right_abspath))
     {
-      SVN_ERR(svn_io_open_unique_file3(NULL, &tmp_right, temp_dir,
-                                       svn_io_file_del_on_pool_cleanup,
+      SVN_ERR(svn_io_open_unique_file3(NULL, &tmp_right, temp_dir_abspath,
+                                       svn_io_file_del_none,
                                        scratch_pool, scratch_pool));
       SVN_ERR(svn_io_copy_file(right_abspath, tmp_right, TRUE, scratch_pool));
+
+      /* And create a wq item to remove the file later */
+      SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db, tmp_right,
+                                           result_pool, scratch_pool));
+
+      last_items = svn_wc__wq_merge(last_items, work_item, result_pool);
     }
   else
     tmp_right = right_abspath;
@@ -767,6 +783,9 @@ preserve_pre_merge_files(svn_skel_t **work_items,
                                                 *target_copy,
                                                 result_pool, scratch_pool));
   *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
+
+  /* And maybe delete some tempfiles */
+  *work_items = svn_wc__wq_merge(*work_items, last_items, result_pool);
 
   return SVN_NO_ERROR;
 }
@@ -940,6 +959,7 @@ merge_text_file(svn_skel_t **work_items,
   const char *result_target;
   const char *dir_abspath, *base_name;
   const char *temp_dir;
+  svn_skel_t *work_item;
 
   *work_items = NULL;
 
@@ -1065,8 +1085,6 @@ merge_text_file(svn_skel_t **work_items,
 
   if (*merge_outcome != svn_wc_merge_unchanged && ! dry_run)
     {
-      svn_skel_t *work_item;
-
       /* replace TARGET_ABSPATH with the new merged file, expanding. */
       SVN_ERR(svn_wc__wq_build_file_install(&work_item,
                                             db, target_abspath,
@@ -1076,6 +1094,13 @@ merge_text_file(svn_skel_t **work_items,
                                             result_pool, scratch_pool));
       *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
     }
+
+  /* Remove the tempfile after use */
+  SVN_ERR(svn_wc__wq_build_file_remove(&work_item,
+                                       db, result_target,
+                                       result_pool, scratch_pool));
+
+  *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
 
   return SVN_NO_ERROR;
 }
