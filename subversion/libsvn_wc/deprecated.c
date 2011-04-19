@@ -151,6 +151,8 @@ svn_wc_crawl_revisions4(const char *path,
                                   use_commit_times,
                                   external_func,
                                   eb,
+                                  NULL /* cancel_func */,
+                                  NULL /* cancel_baton */,
                                   notify_func,
                                   notify_baton,
                                   pool));
@@ -646,7 +648,7 @@ svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
                                          pool));
   SVN_ERR(svn_wc_process_committed_queue2(queue, wc_ctx, new_revnum,
                                           rev_date, rev_author,
-                                          NULL, NULL, pool));
+                                          NULL, NULL, NULL, NULL, pool));
   SVN_ERR(svn_wc_context_destroy(wc_ctx));
 
   return SVN_NO_ERROR;

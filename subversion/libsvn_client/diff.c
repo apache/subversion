@@ -1890,6 +1890,7 @@ diff_repos_wc(const char *path1,
                                   reporter, reporter_baton,
                                   FALSE, depth, TRUE, (! server_supports_depth),
                                   FALSE, NULL, NULL, /* notification is N/A */
+                                  ctx->cancel_func, ctx->cancel_baton,
                                   NULL, NULL, pool));
 
   return SVN_NO_ERROR;

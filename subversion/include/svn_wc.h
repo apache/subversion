@@ -4857,6 +4857,9 @@ svn_wc_queue_committed(svn_wc_committed_queue_t **queue,
  * If @a cancel_func is non-NULL, call it with @a cancel_baton to determine
  * if the client wants to cancel the operation.
  *
+ * If @a external_func is non-NULL, call it with @a external_baton on
+ * 'svn:externals' changes applied to the working copy.
+ *
  * @since New in 1.7.
  */
 svn_error_t *
@@ -4865,6 +4868,8 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
                                 svn_revnum_t new_revnum,
                                 const char *rev_date,
                                 const char *rev_author,
+                                svn_wc_external_update_t external_func,
+                                void *external_baton,
                                 svn_cancel_func_t cancel_func,
                                 void *cancel_baton,
                                 apr_pool_t *scratch_pool);
@@ -5039,6 +5044,8 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
                         svn_boolean_t use_commit_times,
                         svn_wc_external_update_t external_func,
                         void *external_baton,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
                         svn_wc_notify_func2_t notify_func,
                         void *notify_baton,
                         apr_pool_t *scratch_pool);
@@ -5046,6 +5053,8 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
 /**
  * Similar to svn_wc_crawl_revisions5, but with a relative path and
  * access baton instead of an absolute path and wc_ctx.
+ *
+ * Passes NULL for @a cancel_func and @a cancel_baton.
  *
  * @since New in 1.6.
  * @deprecated Provided for compatibility with the 1.6 API.

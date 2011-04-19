@@ -263,7 +263,8 @@ update_internal(svn_revnum_t *result_rev,
                                 ignore_externals
                                         ? NULL
                                         : svn_client__external_info_gatherer,
-                                &efb, ctx->notify_func2, ctx->notify_baton2,
+                                &efb, ctx->cancel_func, ctx->cancel_baton,
+                                ctx->notify_func2, ctx->notify_baton2,
                                 pool);
 
   if (err)
