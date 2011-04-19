@@ -778,6 +778,7 @@ struct svn_wc__db_base_info_t {
   const char *repos_relpath;
   const char *repos_root_url;
   svn_depth_t depth;
+  svn_boolean_t had_props;
   svn_boolean_t update_root;
   svn_wc__db_lock_t *lock;
 };
@@ -1618,17 +1619,23 @@ struct svn_wc__db_info_t {
   svn_revnum_t changed_rev;
   const char *changed_author;
   apr_time_t changed_date;
-  apr_time_t last_mod_time;
   svn_depth_t depth;
-  svn_filesize_t translated_size;
+
+  svn_filesize_t recorded_size;
+  apr_time_t recorded_mod_time;
+
   const char *changelist;
-  svn_boolean_t has_props;
+svn_boolean_t conflicted;
 #ifdef HAVE_SYMLINK
   svn_boolean_t special;
 #endif
+  svn_boolean_t op_root;
+
+  svn_boolean_t had_props;
   svn_boolean_t props_mod;
+
   svn_boolean_t have_base;
-  svn_boolean_t conflicted;
+
   svn_wc__db_lock_t *lock;
 };
 

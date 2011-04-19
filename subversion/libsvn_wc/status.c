@@ -250,18 +250,17 @@ read_info(const struct svn_wc__db_info_t **info,
                                &mtb->revnum, &mtb->repos_relpath,
                                &mtb->repos_root_url, NULL, &mtb->changed_rev,
                                &mtb->changed_date, &mtb->changed_author,
-                               &mtb->depth, NULL, NULL,
-                               NULL, NULL, NULL, NULL,
-                               &mtb->lock, &mtb->translated_size,
-                               &mtb->last_mod_time, &mtb->changelist,
-                               &mtb->conflicted, NULL,
-                               &mtb->has_props, &mtb->props_mod,
+                               &mtb->depth, NULL, NULL, NULL, NULL, NULL, NULL,
+                               &mtb->lock, &mtb->recorded_size,
+                               &mtb->recorded_mod_time, &mtb->changelist,
+                               &mtb->conflicted, &mtb->op_root,
+                               &mtb->had_props, &mtb->props_mod,
                                &mtb->have_base, NULL, NULL,
                                db, local_abspath,
                                result_pool, scratch_pool));
 
 #ifdef HAVE_SYMLINK
-  if (mtb->has_props || mtb->props_mod)
+  if (mtb->had_props || mtb->props_mod)
     {
       apr_hash_t *properties;
 
@@ -416,9 +415,12 @@ assemble_status(svn_wc_status3_t **status,
         {
           node_status = svn_wc_status_deleted;
 
-          SVN_ERR(svn_wc__internal_node_get_schedule(NULL, &copied,
-                                                     db, local_abspath,
-                                                     scratch_pool));
+          if (!info->have_base)
+            copied = TRUE;
+          else
+            SVN_ERR(svn_wc__internal_node_get_schedule(NULL, &copied,
+                                                       db, local_abspath,
+                                                       scratch_pool));
         }
       else if (!dirent || dirent->kind != svn_node_dir)
         {
@@ -456,7 +458,7 @@ assemble_status(svn_wc_status3_t **status,
     {
       if (info->props_mod)
         prop_status = svn_wc_status_modified;
-      else if (info->has_props)
+      else if (info->had_props)
         prop_status = svn_wc_status_normal;
     }
 
@@ -493,8 +495,8 @@ assemble_status(svn_wc_status3_t **status,
               ||(dirent
                  && dirent->filesize != SVN_INVALID_FILESIZE
                  && dirent->mtime != 0
-                 && info->translated_size == dirent->filesize
-                 && info->last_mod_time == dirent->mtime))
+                 && info->recorded_size == dirent->filesize
+                 && info->recorded_mod_time == dirent->mtime))
             text_modified_p = FALSE;
           else
             {
@@ -550,15 +552,20 @@ assemble_status(svn_wc_status3_t **status,
             override a C text status.*/
       if (info->status == svn_wc__db_status_added)
         {
-          svn_wc_schedule_t schedule;
-          SVN_ERR(svn_wc__internal_node_get_schedule(&schedule, &copied,
-                                                     db, local_abspath,
-                                                     scratch_pool));
-
-          if (schedule == svn_wc_schedule_add)
-            node_status = svn_wc_status_added;
-          else if (schedule == svn_wc_schedule_replace)
-            node_status = svn_wc_status_replaced;
+          if (!info->op_root)
+            copied = TRUE; /* And keep status normal */
+          else
+            {
+              svn_wc_schedule_t schedule;
+              SVN_ERR(svn_wc__internal_node_get_schedule(&schedule, &copied,
+                                                         db, local_abspath,
+                                                         scratch_pool));
+            
+              if (schedule == svn_wc_schedule_add)
+                node_status = svn_wc_status_added;
+              else if (schedule == svn_wc_schedule_replace)
+                node_status = svn_wc_status_replaced;
+            }
         }
     }
 
