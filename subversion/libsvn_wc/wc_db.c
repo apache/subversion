@@ -5628,7 +5628,7 @@ read_children_info(void *baton,
           child->recorded_size = get_translated_size(stmt, 7);
           child->had_props = SQLITE_PROPERTIES_AVAILABLE(stmt, 14);
 #ifdef HAVE_SYMLINK
-          if (child->has_props)
+          if (child->had_props)
             {
               apr_hash_t *properties;
               err = svn_sqlite__column_properties(&properties, stmt, 14,
@@ -5636,7 +5636,7 @@ read_children_info(void *baton,
               if (err)
                 SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
 
-              child->special = (child->has_props
+              child->special = (child->had_props
                                 && apr_hash_get(properties, SVN_PROP_SPECIAL,
                                               APR_HASH_KEY_STRING));
             }
