@@ -287,6 +287,8 @@ svn_cl__propedit(apr_getopt_t *os,
           if (edited_propval && !svn_string_compare(propval, edited_propval))
             {
               svn_error_t *err = SVN_NO_ERROR;
+              apr_array_header_t *targs = apr_array_make(subpool, 1,
+                                                sizeof(const char *));
 
               svn_cl__check_boolean_prop_val(pname_utf8, edited_propval->data,
                                              subpool);
@@ -296,7 +298,8 @@ svn_cl__propedit(apr_getopt_t *os,
                                                    opt_state, NULL, ctx->config,
                                                    subpool));
 
-              err = svn_client_propset4(pname_utf8, edited_propval, target,
+              APR_ARRAY_PUSH(targs, const char *) = target;
+              err = svn_client_propset4(pname_utf8, edited_propval, targs,
                                         svn_depth_empty, opt_state->force,
                                         base_rev, NULL, opt_state->revprop_table,
                                         commit_info_handler, &cib,
