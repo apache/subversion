@@ -2119,9 +2119,11 @@ svn_wc__db_base_get_children_info(apr_hash_t **nodes,
 
       info->depth = (depth_str != NULL) ? svn_depth_from_word(depth_str)
                                         : svn_depth_unknown;
-      info->update_root = svn_sqlite__column_boolean(stmt, 7);
 
-      info->lock = lock_from_columns(stmt, 8, 9, 10, 11, result_pool);
+      info->had_props = SQLITE_PROPERTIES_AVAILABLE(stmt, 7);
+      info->update_root = svn_sqlite__column_boolean(stmt, 8);
+
+      info->lock = lock_from_columns(stmt, 9, 10, 11, 12, result_pool);
 
       err = fetch_repos_info(&info->repos_root_url, NULL, wcroot->sdb,
                              repos_id, result_pool);
@@ -5292,7 +5294,6 @@ read_info(svn_wc__db_status_t *status,
       if (had_props)
         {
           *had_props = SQLITE_PROPERTIES_AVAILABLE(stmt_info, 14);
-          SVN_DBG(("Had props for %s is %d status=%s\n", local_relpath, *had_props, svn_sqlite__column_text(stmt_info, 3, NULL)));
         }
       if (conflicted)
         {
@@ -5611,8 +5612,6 @@ read_children_info(void *baton,
           child->changed_author = svn_sqlite__column_text(stmt, 10,
                                                           result_pool);
 
-          child->last_mod_time = svn_sqlite__column_int64(stmt, 13);
-
           if (child->kind != svn_wc__db_kind_dir)
             child->depth = svn_depth_unknown;
           else
@@ -5625,8 +5624,9 @@ read_children_info(void *baton,
                 child->depth = svn_depth_unknown;
             }
 
-          child->translated_size = get_translated_size(stmt, 7);
-          child->has_props = SQLITE_PROPERTIES_AVAILABLE(stmt, 14);
+          child->recorded_mod_time = svn_sqlite__column_int64(stmt, 13);
+          child->recorded_size = get_translated_size(stmt, 7);
+          child->had_props = SQLITE_PROPERTIES_AVAILABLE(stmt, 14);
 #ifdef HAVE_SYMLINK
           if (child->has_props)
             {
@@ -5641,6 +5641,10 @@ read_children_info(void *baton,
                                               APR_HASH_KEY_STRING));
             }
 #endif
+          if (op_depth == 0)
+            child->op_root = FALSE;
+          else
+            child->op_root = (op_depth == relpath_depth(child_relpath));
 
           apr_hash_set(nodes, apr_pstrdup(result_pool, name),
                        APR_HASH_KEY_STRING, child);
