@@ -1484,15 +1484,6 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
 /* If LOCAL_ABSPATH is inside a conflicted tree, set *CONFLICTED to TRUE,
  * Otherwise set *CONFLICTED to FALSE.  Use SCRATCH_POOL for temporary
  * allocations.
- *
- * The search begins at the working copy root, returning the first
- * ("highest") tree conflict victim, which may be LOCAL_ABSPATH itself.
- *
- * ### this function MAY not cache 'entries' (lack of access batons), so
- * ### it will re-read the entries file for ancestor directories for
- * ### every path encountered during the update. however, the DB param
- * ### may have directories with access batons, holding the entries. it
- * ### depends on whether the update was done from the wcroot or not.
  */
 static svn_error_t *
 already_in_a_tree_conflict(svn_boolean_t *conflicted,
@@ -1509,37 +1500,21 @@ already_in_a_tree_conflict(svn_boolean_t *conflicted,
 
   while (TRUE)
     {
-      svn_wc__db_status_t status;
       svn_boolean_t is_wc_root, has_conflict;
-      svn_error_t *err;
-      const svn_wc_conflict_description2_t *conflict;
 
       svn_pool_clear(iterpool);
 
-      err = svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL,
-                                 &has_conflict, NULL, NULL, NULL,
-                                 NULL, NULL, NULL,
-                                 db, ancestor_abspath, iterpool, iterpool);
-
-      if (err)
-        {
-          if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND
-              && !SVN_WC__ERR_IS_NOT_CURRENT_WC(err))
-            return svn_error_return(err);
-
-          svn_error_clear(err);
-          break;
-        }
-
-      if (status == svn_wc__db_status_not_present
-          || status == svn_wc__db_status_absent
-          || status == svn_wc__db_status_excluded)
-        break;
+      SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL,
+                                   &has_conflict, NULL, NULL, NULL,
+                                   NULL, NULL, NULL,
+                                   db, ancestor_abspath, iterpool, iterpool));
 
       if (has_conflict)
         {
+          const svn_wc_conflict_description2_t *conflict;
+
           SVN_ERR(svn_wc__db_op_read_tree_conflict(&conflict, db,
                                                    ancestor_abspath,
                                                    iterpool, iterpool));
@@ -1551,9 +1526,6 @@ already_in_a_tree_conflict(svn_boolean_t *conflicted,
             }
         }
 
-      if (svn_dirent_is_root(ancestor_abspath, strlen(ancestor_abspath)))
-        break;
-
       SVN_ERR(svn_wc__db_is_wcroot(&is_wc_root, db, ancestor_abspath,
                                    iterpool));
 
@@ -1563,7 +1535,7 @@ already_in_a_tree_conflict(svn_boolean_t *conflicted,
       ancestor_abspath = svn_dirent_dirname(ancestor_abspath, scratch_pool);
     }
 
-  svn_pool_clear(iterpool);
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
