@@ -710,6 +710,30 @@ def blame_output_after_merge(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                     'blame', '-g', mu_path)
 
+  # Now test with -rN:M
+  expected_output = [ "     -          - New version of file 'mu'.\n",
+                      "     -          - 2nd line in file 'mu'.\n",
+                      "     7    jrandom new 3rd line in file 'mu'.\n",
+                      "     7    jrandom add 3.5 line in file 'mu'.\n",
+                      "     -          - 4th line in file 'mu'.\n",
+                      "     -          - 5th line in file 'mu'.\n",
+                      "     -          - 6th line in file 'mu'.\n"]
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                    'blame',  '-r', '4:head', mu_path)
+
+  # Next test with the -g option with -rN:M
+  expected_output = [ "       -          - New version of file 'mu'.\n",
+                      "       -          - 2nd line in file 'mu'.\n",
+                      "G      -          - new 3rd line in file 'mu'.\n",
+                      "G      6    jrandom add 3.5 line in file 'mu'.\n",
+                      "       -          - 4th line in file 'mu'.\n",
+                      "       -          - 5th line in file 'mu'.\n",
+                      "       -          - 6th line in file 'mu'.\n"]
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                    'blame', '-g', '-r', '6:head', mu_path)
+
 ########################################################################
 # Run the tests
 
