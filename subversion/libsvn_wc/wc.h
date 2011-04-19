@@ -261,6 +261,9 @@ svn_wc__get_committed_queue_pool(const struct svn_wc_committed_queue_t *queue);
  * If @a sha1_checksum is non-NULL, use it to identify the node's pristine
  * text.
  *
+ * If @a old_externals is non-NULL, store the old version of just removed
+ * svn:externals definitions on unshadowed directories in @a old_externals.
+ *
  * Set TOP_OF_RECURSE to TRUE to show that this the top of a possibly
  * recursive commit operation.
  */
@@ -277,6 +280,7 @@ svn_wc__process_committed_internal(svn_wc__db_t *db,
                                    svn_boolean_t keep_changelist,
                                    const svn_checksum_t *sha1_checksum,
                                    const svn_wc_committed_queue_t *queue,
+                                   apr_hash_t *old_externals,
                                    apr_pool_t *scratch_pool);
 
 

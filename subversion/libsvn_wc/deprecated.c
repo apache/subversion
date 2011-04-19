@@ -707,7 +707,7 @@ svn_wc_process_committed4(const char *path,
                                              new_revnum, new_date, rev_author,
                                              wcprop_changes_hash,
                                              !remove_lock, !remove_changelist,
-                                             sha1_checksum, NULL, pool));
+                                             sha1_checksum, NULL, NULL, pool));
 
   /* Run the log file(s) we just created. */
   return svn_error_return(svn_wc__wq_run(db, local_abspath, NULL, NULL, pool));
