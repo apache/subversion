@@ -247,6 +247,7 @@ switch_internal(svn_revnum_t *result_rev,
                                 (! server_supports_depth),
                                 use_commit_times,
                                 svn_client__external_info_gatherer, &efb,
+                                ctx->cancel_func, ctx->cancel_baton,
                                 ctx->notify_func2, ctx->notify_baton2, pool);
 
   if (err)

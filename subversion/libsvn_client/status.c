@@ -483,7 +483,9 @@ svn_client_status5(svn_revnum_t *result_rev,
                                           &lock_fetch_reporter, &rb, FALSE,
                                           depth, TRUE,
                                           (! server_supports_depth),
-                                          FALSE, NULL, NULL, NULL, NULL, pool));
+                                          FALSE, NULL, NULL,
+                                          ctx->cancel_func, ctx->cancel_baton,
+                                          NULL, NULL, pool));
         }
 
       if (ctx->notify_func2)

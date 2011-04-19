@@ -1373,6 +1373,8 @@ svn_client_commit5(const apr_array_header_t *targets,
                                          commit_info->revision,
                                          commit_info->date,
                                          commit_info->author,
+                                         NULL /* external_func */,
+                                         NULL /* external_baton */,
                                          ctx->cancel_func,
                                          ctx->cancel_baton,
                                          iterpool);

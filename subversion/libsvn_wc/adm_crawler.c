@@ -286,16 +286,19 @@ report_revisions_and_depths(svn_wc__db_t *db,
                             svn_depth_t dir_depth,
                             const svn_ra_reporter3_t *reporter,
                             void *report_baton,
-                            svn_wc_external_update_t external_func,
-                            void *external_baton,
-                            svn_wc_notify_func2_t notify_func,
-                            void *notify_baton,
                             svn_boolean_t restore_files,
                             svn_depth_t depth,
                             svn_boolean_t honor_depth_exclude,
                             svn_boolean_t depth_compatibility_trick,
                             svn_boolean_t report_everything,
                             svn_boolean_t use_commit_times,
+                            svn_boolean_t had_props,
+                            svn_wc_external_update_t external_func,
+                            void *external_baton,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
+                            svn_wc_notify_func2_t notify_func,
+                            void *notify_baton,
                             apr_pool_t *scratch_pool)
 {
   const char *dir_abspath;
@@ -342,6 +345,9 @@ report_revisions_and_depths(svn_wc__db_t *db,
       const char *this_path, *this_abspath;
       svn_boolean_t this_switched = FALSE;
       struct svn_wc__db_base_info_t *ths = svn__apr_hash_index_val(hi);
+
+      if (cancel_func)
+        SVN_ERR(cancel_func(cancel_baton));
 
       /* Clear the iteration subpool here because the loop has a bunch
          of 'continue' jump statements. */
@@ -634,14 +640,16 @@ report_revisions_and_depths(svn_wc__db_t *db,
                                                   dir_repos_root,
                                                   ths->depth,
                                                   reporter, report_baton,
-                                                  external_func,
-                                                  external_baton,
-                                                  notify_func, notify_baton,
                                                   restore_files, depth,
                                                   honor_depth_exclude,
                                                   depth_compatibility_trick,
                                                   start_empty,
                                                   use_commit_times,
+                                                  ths->had_props,
+                                                  external_func,
+                                                  external_baton,
+                                                  cancel_func, cancel_baton,
+                                                  notify_func, notify_baton,
                                                   iterpool));
             }
         } /* end directory case */
@@ -731,6 +739,8 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
                         svn_boolean_t use_commit_times,
                         svn_wc_external_update_t external_func,
                         void *external_baton,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
                         svn_wc_notify_func2_t notify_func,
                         void *notify_baton,
                         apr_pool_t *scratch_pool)
@@ -746,6 +756,7 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
   svn_wc__db_lock_t *target_lock = NULL;
   svn_node_kind_t disk_kind;
   svn_boolean_t explicit_rev;
+  svn_boolean_t had_props;
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   /* The first thing we do is get the base_rev from the working copy's
@@ -755,7 +766,7 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
                                  &repos_relpath, &repos_root_url,
                                  NULL, NULL, NULL, NULL, &target_depth,
                                  NULL, NULL, &target_lock, NULL,
-                                 NULL, NULL, NULL, NULL,
+                                 NULL, &had_props, NULL, NULL,
                                  db, local_abspath, scratch_pool,
                                  scratch_pool);
 
@@ -765,6 +776,7 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
         return svn_error_return(err);
 
       svn_error_clear(err);
+      had_props = FALSE;
       SVN_ERR(svn_wc__db_read_kind(&target_kind, db, local_abspath, TRUE,
                                    scratch_pool));
 
@@ -896,13 +908,15 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
                                             repos_root_url,
                                             target_depth,
                                             reporter, report_baton,
-                                            external_func, external_baton,
-                                            notify_func, notify_baton,
                                             restore_files, depth,
                                             honor_depth_exclude,
                                             depth_compatibility_trick,
                                             start_empty,
                                             use_commit_times,
+                                            had_props,
+                                            external_func, external_baton,
+                                            cancel_func, cancel_baton,
+                                            notify_func, notify_baton,
                                             scratch_pool);
           if (err)
             goto abort_report;

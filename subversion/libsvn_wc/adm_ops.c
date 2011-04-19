@@ -436,6 +436,8 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
                                 svn_revnum_t new_revnum,
                                 const char *rev_date,
                                 const char *rev_author,
+                                svn_wc_external_update_t external_func,
+                                void *external_baton,
                                 svn_cancel_func_t cancel_func,
                                 void *cancel_baton,
                                 apr_pool_t *scratch_pool)
