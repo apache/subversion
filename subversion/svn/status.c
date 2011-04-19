@@ -112,7 +112,8 @@ generate_status_desc(enum svn_wc_status_kind status)
     case svn_wc_status_ignored:     return "ignored";
     case svn_wc_status_external:    return "external";
     case svn_wc_status_unversioned: return "unversioned";
-    default:                        abort();
+    default:
+      SVN_ERR_MALFUNCTION_NO_RETURN();
     }
 }
 
