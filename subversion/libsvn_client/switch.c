@@ -264,9 +264,6 @@ switch_internal(svn_revnum_t *result_rev,
      the primary operation. */
   if (SVN_DEPTH_IS_RECURSIVE(depth) && (! ignore_externals))
     {
-      SVN_ERR(svn_client__gather_externals_in_locally_added_dirs(
-                efb.externals_new, efb.ambient_depths, local_abspath,
-                depth, ctx, pool));
       err = svn_client__handle_externals(efb.externals_old,
                                          efb.externals_new, efb.ambient_depths,
                                          svn_dirent_join(anchor_abspath, 

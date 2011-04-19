@@ -615,7 +615,7 @@ def modify_and_update_receive_new_external(sbox):
           "exdir_Z      " + external_url_for["A/D/exdir_A/H"] + \
           "\n"
 
-  change_external(B_path, externals_desc, commit=False)
+  change_external(B_path, externals_desc)
 
   # Now cd into A/B and try updating
   was_cwd = os.getcwd()
@@ -1273,7 +1273,7 @@ def switch_relative_external(sbox):
   # Okay.  We now want to switch A to A_copy, which *should* cause
   # A/D/ext to point to the URL for A_copy/B (instead of A/B).
   svntest.actions.run_and_verify_svn(None, None, [], 'sw',
-                                     '--quiet', A_copy_url, A_path)
+                                     A_copy_url, A_path)
 
   expected_infos = [
     { 'Path' : re.escape(D_path),
@@ -1347,7 +1347,7 @@ def relegate_external(sbox):
 
   # point external to the other repository
   externals_desc = other_repo_url + '/A/B/E        external\n'
-  change_external(A_path, externals_desc, commit=False)
+  change_external(A_path, externals_desc)
 
   # Update "relegates", i.e. throws-away and recreates, the external
   expected_output = svntest.wc.State(wc_dir, {
@@ -1362,17 +1362,13 @@ def relegate_external(sbox):
       'A/external/alpha' : Item('This is the file \'alpha\'.\n'),
       'A/external/beta'  : Item('This is the file \'beta\'.\n'),
       })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak('A', status=' M')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
                                         expected_status,
                                         None, None, None, None, None,
                                         True)
-
-  ### TODO: Commit the propset and update a pristine working copy from
-  ### r2 to r3.
 
 #----------------------------------------------------------------------
 
@@ -1581,95 +1577,6 @@ def update_modify_file_external(sbox):
                                         None, None, None, None, None,
                                         True)
 
-# Test for issue #2267
-@Issue(2267)
-def update_external_on_locally_added_dir(sbox):
-  "update an external on a locally added dir"
-
-  external_url_for = externals_test_setup(sbox)
-  wc_dir         = sbox.wc_dir
-
-  repo_url       = sbox.repo_url
-  other_repo_url = repo_url + ".other"
-
-  # Checkout a working copy
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'checkout',
-                                     repo_url, wc_dir)
-
-  # Add one new external item to the property on A/foo.  The new item is
-  # "exdir_E", deliberately added in the middle not at the end.
-  new_externals_desc = \
-           external_url_for["A/D/exdir_A"] + " exdir_A"           + \
-           "\n"                                                   + \
-           external_url_for["A/D/exdir_A/G/"] + " exdir_A/G/"     + \
-           "\n"                                                   + \
-           "exdir_E           " + other_repo_url + "/A/B/E"       + \
-           "\n"                                                   + \
-           "exdir_A/H -r 1 " + external_url_for["A/D/exdir_A/H"]  + \
-           "\n"                                                   + \
-           external_url_for["A/D/x/y/z/blah"] + " x/y/z/blah"     + \
-           "\n"
-
-  # Add A/foo and set the property on it
-  new_dir = sbox.ospath("A/foo")
-  sbox.simple_mkdir("A/foo")
-  change_external(new_dir, new_externals_desc, commit=False)
-
-  # Update the working copy, see if we get the new item.
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
-
-  probe_paths_exist([os.path.join(wc_dir, "A", "foo", "exdir_E")])
-
-# Test for issue #2267
-@Issue(2267)
-def switch_external_on_locally_added_dir(sbox):
-  "switch an external on a locally added dir"
-
-  external_url_for = externals_test_setup(sbox)
-  wc_dir         = sbox.wc_dir
-
-  repo_url       = sbox.repo_url
-  other_repo_url = repo_url + ".other"
-  A_path         = repo_url + "/A"
-  A_copy_path    = repo_url + "/A_copy"
-
-  # Create a branch of A
-  # Checkout a working copy
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'copy',
-                                     A_path, A_copy_path,
-                                     '-m', 'Create branch of A')
-
-  # Checkout a working copy
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'checkout',
-                                     A_path, wc_dir)
-
-  # Add one new external item to the property on A/foo.  The new item is
-  # "exdir_E", deliberately added in the middle not at the end.
-  new_externals_desc = \
-           external_url_for["A/D/exdir_A"] + " exdir_A"           + \
-           "\n"                                                   + \
-           external_url_for["A/D/exdir_A/G/"] + " exdir_A/G/"     + \
-           "\n"                                                   + \
-           "exdir_E           " + other_repo_url + "/A/B/E"       + \
-           "\n"                                                   + \
-           "exdir_A/H -r 1 " + external_url_for["A/D/exdir_A/H"]  + \
-           "\n"                                                   + \
-           external_url_for["A/D/x/y/z/blah"] + " x/y/z/blah"     + \
-           "\n"
-
-  # Add A/foo and set the property on it
-  new_dir = sbox.ospath("foo")
-  sbox.simple_mkdir("foo")
-  change_external(new_dir, new_externals_desc, commit=False)
-
-  # Switch the working copy to the branch, see if we get the new item.
-  svntest.actions.run_and_verify_svn(None, None, [], 'sw', A_copy_path, wc_dir)
-
-  probe_paths_exist([os.path.join(wc_dir, "foo", "exdir_E")])
-
 @Issue(3819)
 def file_external_in_sibling(sbox):
   "update a file external in sibling dir"
@@ -1733,8 +1640,6 @@ test_list = [ None,
               wc_repos_file_externals,
               merge_target_with_externals,
               update_modify_file_external,
-              update_external_on_locally_added_dir,
-              switch_external_on_locally_added_dir,
               file_external_in_sibling,
               file_external_update_without_commit,
              ]

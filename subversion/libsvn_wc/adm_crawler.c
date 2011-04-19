@@ -213,8 +213,8 @@ read_externals_info(svn_wc__db_t *db,
 
   /* Directly use a DB api here as this code path is extensively used on
      update. On top of that we already know that this an existing directory. */
-  SVN_ERR(svn_wc__db_read_props(&props, db, local_abspath,
-                                scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_base_get_props(&props, db, local_abspath,
+                                    scratch_pool, scratch_pool));
 
   if (!props)
     return SVN_NO_ERROR;
@@ -332,7 +332,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
 
   /* If "this dir" has "svn:externals" property set on it,
    * call the external_func callback. */
-  if (external_func)
+  if (external_func && had_props)
     SVN_ERR(read_externals_info(db, dir_abspath, external_func,
                                 external_baton, dir_depth, iterpool));
 
