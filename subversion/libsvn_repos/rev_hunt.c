@@ -1226,6 +1226,7 @@ compare_path_revisions(const void *a, const void *b)
 
 static svn_error_t *
 find_merged_revisions(apr_array_header_t **merged_path_revisions_out,
+                      svn_revnum_t start,
                       const apr_array_header_t *mainline_path_revisions,
                       svn_repos_t *repos,
                       apr_hash_t *duplicate_path_revs,
@@ -1285,7 +1286,11 @@ find_merged_revisions(apr_array_header_t **merged_path_revisions_out,
                   svn_node_kind_t kind;
                   svn_fs_root_t *root;
 
+                  if (range->end < start)
+                    continue;
+
                   svn_pool_clear(iterpool3);
+
                   SVN_ERR(svn_fs_revision_root(&root, repos->fs, range->end,
                                                iterpool3));
                   SVN_ERR(svn_fs_check_path(&kind, root, path, iterpool3));
@@ -1466,7 +1471,7 @@ svn_repos_get_file_revs2(svn_repos_t *repos,
 
   /* If we are including merged revisions, go get those, too. */
   if (include_merged_revisions)
-    SVN_ERR(find_merged_revisions(&merged_path_revisions,
+    SVN_ERR(find_merged_revisions(&merged_path_revisions, start,
                                   mainline_path_revisions, repos,
                                   duplicate_path_revs, authz_read_func,
                                   authz_read_baton, pool));
