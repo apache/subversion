@@ -176,19 +176,34 @@ svn_cl__propset(apr_getopt_t *os,
       for (i = 0; i < targets->nelts; i++)
         {
           const char *target = APR_ARRAY_IDX(targets, i, const char *);
+          svn_error_t *err;
 
           svn_pool_clear(iterpool);
           SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
-          SVN_ERR(svn_cl__try(svn_client_propset4(
+
+          err = svn_client_propset4(
                                pname_utf8, propval, target,
                                opt_state->depth, opt_state->force,
                                SVN_INVALID_REVNUM, opt_state->changelists,
                                NULL, svn_cl__print_commit_info, NULL, ctx,
-                               iterpool),
-                              NULL, opt_state->quiet,
-                              SVN_ERR_UNVERSIONED_RESOURCE,
-                              SVN_ERR_ENTRY_NOT_FOUND,
-                              SVN_NO_ERROR));
+                               iterpool);
+          if (err && (err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE
+                   || err->apr_err == SVN_ERR_ENTRY_NOT_FOUND) )
+            {
+              if (! opt_state->quiet)
+                {
+                  svn_wc_notify_t *notify = svn_wc_create_notify(NULL,
+                                                         svn_wc_notify_warning,
+                                                         iterpool);
+
+                  notify->err = err;
+                  ctx->notify_func2(ctx->notify_baton, notify, iterpool);
+                }
+
+              svn_error_clear(err);
+            }
+          else if (err)
+            return err;
 
           if (! opt_state->quiet)
             svn_cl__check_boolean_prop_val(pname_utf8, propval->data, iterpool);
