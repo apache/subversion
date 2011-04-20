@@ -54,10 +54,6 @@
 #define OP_TMP_SET_PROPERTY_CONFLICT_MARKER "tmp-set-property-conflict-marker"
 #define OP_POSTUPGRADE "postupgrade"
 
-/* To be removed */
-#define OP_DELETION_POSTCOMMIT "deletion-postcommit"
-#define OP_POSTCOMMIT "postcommit"
-
 /* For work queue debugging. Generates output about its operation.  */
 /* #define DEBUG_WORK_QUEUE */
 
@@ -315,90 +311,9 @@ svn_wc__wq_build_base_remove(svn_skel_t **work_item,
 
 /* ------------------------------------------------------------------------ */
 
-/* OP_DELETION_POSTCOMMIT  */
-
-/* Process the OP_DELETION_POSTCOMMIT work item WORK_ITEM.
- * See svn_wc__wq_add_deletion_postcommit() which generates this work item.
- * Implements (struct work_item_dispatch).func. */
-static svn_error_t *
-run_deletion_postcommit(svn_wc__db_t *db,
-                        const svn_skel_t *work_item,
-                        const char *wri_abspath,
-                        svn_cancel_func_t cancel_func,
-                        void *cancel_baton,
-                        apr_pool_t *scratch_pool)
-{
-  const svn_skel_t *arg1 = work_item->children->next;
-  const char *local_abspath;
-  svn_revnum_t new_revision;
-  svn_boolean_t no_unlock;
-  svn_wc__db_kind_t kind;
-  apr_int64_t val;
-
-  /* ### warning: this code has not been vetted for running multiple times  */
-
-  /* We need a NUL-terminated path, so copy it out of the skel.  */
-  local_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
-  SVN_ERR(svn_skel__parse_int(&val, arg1->next, scratch_pool));
-  new_revision = (svn_revnum_t)val;
-  SVN_ERR(svn_skel__parse_int(&val, arg1->next->next, scratch_pool));
-  no_unlock = (val != 0);
-
-  SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, FALSE, scratch_pool));
-
-  /* ### the section below was ripped out of log.c::log_do_committed().
-     ### it needs to be rewritten into wc-ng terms.  */
-
-    {
-      const char *repos_relpath;
-      const char *repos_root_url;
-      const char *repos_uuid;
-      svn_revnum_t parent_revision;
-
-      /* Get hold of repository info, if we are going to need it,
-         before deleting the file, */
-      SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, &parent_revision, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL,
-                                       db, svn_dirent_dirname(local_abspath,
-                                                              scratch_pool),
-                                       scratch_pool, scratch_pool));
-      if (new_revision > parent_revision)
-        SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath, &repos_root_url,
-                                           &repos_uuid, db, local_abspath,
-                                           scratch_pool, scratch_pool));
-
-      /* We're deleting a file, and we can safely remove files from
-         revision control without screwing something else up.  */
-      SVN_ERR(svn_wc__internal_remove_from_revision_control(
-                db, local_abspath,
-                FALSE, FALSE, cancel_func, cancel_baton, scratch_pool));
-
-      /* If the parent entry's working rev 'lags' behind new_rev...
-         ### Maybe we should also add a not-present node if the
-         ### deleted node was switched? */
-      if (new_revision > parent_revision)
-        {
-          /* ...then the parent's revision is now officially a
-             lie;  therefore, it must remember the file as being
-             'deleted' for a while.  Create a new, uninteresting
-             ghost entry:  */
-          SVN_ERR(svn_wc__db_base_add_not_present_node(
-                    db, local_abspath,
-                    repos_relpath, repos_root_url, repos_uuid,
-                    new_revision, kind,
-                    NULL, NULL,
-                    scratch_pool));
-        }
-    }
-
-  return SVN_NO_ERROR;
-}
-
 /* ------------------------------------------------------------------------ */
 
-/* OP_POSTCOMMIT  */
+/* OP_FILE_COMMIT  */
 
 
 /* FILE_ABSPATH is the new text base of the newly-committed versioned file,
@@ -619,193 +534,7 @@ process_commit_file_install(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
-/* Set the base version of the node LOCAL_ABSPATH to be the same as its
- * working version currently is:
- *
- * - Remove children deleted as part of a replacement (if it's a dir)
- * - Install the new base props
- * - Install the new tree state
- * - Install the new base text (if it's a file)
- * - Adjust the parent (if it's a dir)
- * */
-static svn_error_t *
-log_do_committed(svn_wc__db_t *db,
-                 const char *local_abspath,
-                 svn_revnum_t new_revision,
-                 svn_revnum_t changed_rev,
-                 apr_time_t changed_date,
-                 const char *changed_author,
-                 const svn_checksum_t *new_checksum,
-                 apr_hash_t *new_dav_cache,
-                 svn_boolean_t keep_changelist,
-                 svn_boolean_t no_unlock,
-                 svn_cancel_func_t cancel_func,
-                 void *cancel_baton,
-                 apr_pool_t *scratch_pool)
-{
-  apr_pool_t *pool = scratch_pool;
-  svn_wc__db_kind_t kind;
-  svn_wc__db_status_t status;
-  svn_boolean_t prop_mods;
 
-  /* ### this gets the *intended* kind. for now, this also matches any
-     ### potential BASE kind since we cannot change kinds.  */
-  SVN_ERR(svn_wc__db_read_info(
-            &status, &kind, NULL,
-            NULL, NULL, NULL, NULL, NULL, NULL,
-            NULL, NULL, NULL, NULL, NULL, NULL,
-            NULL, NULL, NULL, NULL, NULL, NULL,
-            NULL, NULL, &prop_mods,
-            NULL, NULL, NULL,
-            db, local_abspath,
-            scratch_pool, scratch_pool));
-
-  /* We should never be running a commit on a not-present node. If we see
-     this, then it (probably) means that a prior run has deleted this node,
-     and left the not-present behind. There isn't anything more to do.  */
-  if (status == svn_wc__db_status_not_present)
-    return SVN_NO_ERROR;
-
-  /* We shouldn't be in this function for deleted nodes. They are handled
-     by other processes.  */
-  SVN_ERR_ASSERT(status != svn_wc__db_status_deleted);
-
-  /*** Mark the committed item committed-to-date ***/
-
-  /* If it's a file, install the tree changes and the file's text. */
-  if (kind == svn_wc__db_kind_file
-      || kind == svn_wc__db_kind_symlink)
-    {
-      svn_skel_t *work_item;
-
-      SVN_ERR(svn_wc__wq_build_file_commit(&work_item,
-                                           db, local_abspath,
-                                           prop_mods,
-                                           pool, pool));
-
-      SVN_ERR(svn_wc__db_global_commit(db, local_abspath,
-                                       new_revision, changed_rev,
-                                       changed_date, changed_author,
-                                       new_checksum,
-                                       NULL /* new_children */,
-                                       new_dav_cache,
-                                       keep_changelist,
-                                       no_unlock,
-                                       work_item,
-                                       pool));
-
-      return SVN_NO_ERROR;
-    }
-
-  /* It's not a file, so it's a directory. */
-
-  SVN_ERR(svn_wc__db_global_commit(db, local_abspath,
-                                   new_revision, changed_rev,
-                                   changed_date, changed_author,
-                                   NULL /* new_checksum */,
-                                   NULL /* new_children */,
-                                   new_dav_cache,
-                                   keep_changelist,
-                                   no_unlock,
-                                   NULL /* work_items */,
-                                   pool));
-
-  return SVN_NO_ERROR;
-}
-
-
-/* Process the OP_POSTCOMMIT work item WORK_ITEM.
- * See svn_wc__wq_add_postcommit() which generates this work item.
- * Implements (struct work_item_dispatch).func. */
-static svn_error_t *
-run_postcommit(svn_wc__db_t *db,
-               const svn_skel_t *work_item,
-               const char *wri_abspath,
-               svn_cancel_func_t cancel_func,
-               void *cancel_baton,
-               apr_pool_t *scratch_pool)
-{
-  const svn_skel_t *arg1 = work_item->children->next;
-  const svn_skel_t *arg5 = work_item->children->next->next->next->next->next;
-  const char *local_abspath;
-  svn_revnum_t new_revision, changed_rev;
-  apr_time_t changed_date;
-  const char *changed_author;
-  const svn_checksum_t *new_checksum;
-  apr_hash_t *new_dav_cache;
-  svn_boolean_t keep_changelist, no_unlock;
-  svn_error_t *err;
-  apr_int64_t val;
-
-  local_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
-  SVN_ERR(svn_skel__parse_int(&val, arg1->next, scratch_pool));
-  new_revision = (svn_revnum_t)val;
-  SVN_ERR(svn_skel__parse_int(&val, arg1->next->next, scratch_pool));
-  changed_date = (apr_time_t)val;
-  if (arg1->next->next->next->len == 0)
-    changed_author = NULL;
-  else
-    changed_author = apr_pstrmemdup(scratch_pool,
-                                    arg1->next->next->next->data,
-                                    arg1->next->next->next->len);
-  if (arg5->len == 0)
-    {
-      new_checksum = NULL;
-    }
-  else
-    {
-      const char *data = apr_pstrmemdup(scratch_pool, arg5->data, arg5->len);
-      SVN_ERR(svn_checksum_deserialize(&new_checksum, data,
-                                       scratch_pool, scratch_pool));
-    }
-  if (arg5->next->is_atom)
-    new_dav_cache = NULL;
-  else
-    SVN_ERR(svn_skel__parse_proplist(&new_dav_cache, arg5->next,
-                                     scratch_pool));
-  SVN_ERR(svn_skel__parse_int(&val, arg5->next->next, scratch_pool));
-  keep_changelist = (val != 0);
-
-  /* Before r927056, this WQ item didn't have this next field.  Catch any
-   * attempt to run this code on a WC having a stale WQ item in it. */
-  SVN_ERR_ASSERT(arg5->next->next->next != NULL);
-
-  if (arg5->next->next->next)
-    {
-      SVN_ERR(svn_skel__parse_int(&val, arg5->next->next->next,
-                                  scratch_pool));
-      no_unlock = (val != 0);
-    }
-  else
-    no_unlock = TRUE;
-
-  if (arg5->next->next->next->next)
-    {
-      SVN_ERR(svn_skel__parse_int(&val, arg5->next->next->next->next,
-                                  scratch_pool));
-      changed_rev = (svn_revnum_t)val;
-    }
-  else
-    changed_rev = new_revision; /* Behavior before fixing issue #3676 */
-
-  err = log_do_committed(db, local_abspath,
-                         new_revision, changed_rev, changed_date,
-                         changed_author, new_checksum, new_dav_cache,
-                         keep_changelist, no_unlock,
-                         cancel_func, cancel_baton,
-                         scratch_pool);
-  if (err)
-    return svn_error_createf(SVN_ERR_WC_BAD_ADM_LOG, err,
-                             _("Error processing post-commit work for '%s'"),
-                             svn_dirent_local_style(local_abspath,
-                                                    scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-/* ------------------------------------------------------------------------ */
-
-/* OP_FILE_COMMIT  */
 static svn_error_t *
 run_file_commit(svn_wc__db_t *db,
                 const svn_skel_t *work_item,
@@ -1751,10 +1480,6 @@ static const struct work_item_dispatch dispatch_table[] = {
 
   /* Upgrade steps */
   { OP_POSTUPGRADE, run_postupgrade },
-
-  /* To be removed (probably on next format bump) */
-  { OP_DELETION_POSTCOMMIT, run_deletion_postcommit },
-  { OP_POSTCOMMIT, run_postcommit },
 
   /* Sentinel.  */
   { NULL }
