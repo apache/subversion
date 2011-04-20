@@ -457,11 +457,10 @@ svn_client_propset4(const char *propname,
               if (ctx->notify_func2)
                 {
                   svn_wc_notify_t *notify = svn_wc_create_notify(
-                                                    target_abspath,
-                                                    svn_wc_notify_warning,
-                                                    iterpool);
+                                              target_abspath,
+                                              svn_wc_notify_path_nonexistent,
+                                              iterpool);
 
-                  notify->err = err;
                   ctx->notify_func2(ctx->notify_baton2, notify, iterpool);
                 }
 

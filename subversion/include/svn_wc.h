@@ -1170,9 +1170,9 @@ typedef enum svn_wc_notify_action_t
    * @since New in 1.7. */
   svn_wc_notify_url_redirect,
 
-  /** A warning has been issued.
+  /** The operation was attempted on a path which doesn't exist.
    * @since New in 1.7. */
-  svn_wc_notify_warning
+  svn_wc_notify_path_nonexistent
 
 } svn_wc_notify_action_t;
 
@@ -1281,8 +1281,7 @@ typedef struct svn_wc_notify_t {
 
   /** Points to an error describing the reason for the failure when @c
    * action is one of the following: #svn_wc_notify_failed_lock,
-   * #svn_wc_notify_failed_unlock, #svn_wc_notify_failed_external,
-   * #svn_wc_notify_warning.
+   * #svn_wc_notify_failed_unlock, #svn_wc_notify_failed_external.
    * Is @c NULL otherwise. */
   svn_error_t *err;
 
