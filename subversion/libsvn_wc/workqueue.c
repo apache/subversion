@@ -52,7 +52,6 @@
 #define OP_RECORD_FILEINFO "record-fileinfo"
 #define OP_TMP_SET_TEXT_CONFLICT_MARKERS "tmp-set-text-conflict-markers"
 #define OP_TMP_SET_PROPERTY_CONFLICT_MARKER "tmp-set-property-conflict-marker"
-#define OP_PRISTINE_GET_TRANSLATED "pristine-get-translated"
 #define OP_POSTUPGRADE "postupgrade"
 
 /* To be removed */
@@ -1737,69 +1736,6 @@ svn_wc__wq_tmp_build_set_property_conflict_marker(svn_skel_t **work_item,
 
 /* ------------------------------------------------------------------------ */
 
-/* OP_PRISTINE_GET_TRANSLATED  */
-
-/* Create (or overwrite) the file NEW_ABSPATH with the pristine text
-   identified by PRISTINE_SHA1, translated into working-copy form
-   according to the versioned properties of VERSIONED_ABSPATH. */
-static svn_error_t *
-pristine_get_translated(svn_wc__db_t *db,
-                        const char *versioned_abspath,
-                        const char *new_abspath,
-                        const svn_checksum_t *pristine_sha1,
-                        svn_cancel_func_t cancel_func,
-                        void *cancel_baton,
-                        apr_pool_t *scratch_pool)
-{
-  svn_stream_t *src_stream, *dst_stream;
-
-  SVN_ERR(svn_wc__db_pristine_read(&src_stream, NULL, db, versioned_abspath,
-                                   pristine_sha1,
-                                   scratch_pool, scratch_pool));
-  SVN_ERR(svn_wc__internal_translated_stream(&dst_stream, db, new_abspath,
-                                             versioned_abspath,
-                                             SVN_WC_TRANSLATE_FROM_NF,
-                                             scratch_pool, scratch_pool));
-  SVN_ERR(svn_stream_copy3(src_stream, dst_stream,
-                           cancel_func, cancel_baton, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-run_pristine_get_translated(svn_wc__db_t *db,
-                            const svn_skel_t *work_item,
-                            const char *wri_abspath,
-                            svn_cancel_func_t cancel_func,
-                            void *cancel_baton,
-                            apr_pool_t *scratch_pool)
-{
-  const svn_skel_t *arg1 = work_item->children->next;
-  const char *versioned_abspath;
-  const char *new_abspath;
-  const svn_checksum_t *pristine_sha1;
-
-  versioned_abspath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
-  new_abspath = apr_pstrmemdup(scratch_pool, arg1->next->data,
-                               arg1->next->len);
-  {
-    const char *data = apr_pstrmemdup(scratch_pool,
-                                      arg1->next->next->data,
-                                      arg1->next->next->len);
-    SVN_ERR(svn_checksum_deserialize(&pristine_sha1, data,
-                                     scratch_pool, scratch_pool));
-  }
-
-  SVN_ERR(pristine_get_translated(db, versioned_abspath, new_abspath,
-                                  pristine_sha1,
-                                  cancel_func, cancel_baton, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-
-/* ------------------------------------------------------------------------ */
-
 static const struct work_item_dispatch dispatch_table[] = {
   { OP_FILE_COMMIT, run_file_commit },
   { OP_FILE_INSTALL, run_file_install },
@@ -1819,7 +1755,6 @@ static const struct work_item_dispatch dispatch_table[] = {
   /* To be removed (probably on next format bump) */
   { OP_DELETION_POSTCOMMIT, run_deletion_postcommit },
   { OP_POSTCOMMIT, run_postcommit },
-  { OP_PRISTINE_GET_TRANSLATED, run_pristine_get_translated },
 
   /* Sentinel.  */
   { NULL }
