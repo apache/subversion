@@ -776,9 +776,12 @@ typedef svn_error_t *(*svn_wc__proplist_receiver_t)(void *baton,
  * If @a propname is not NULL, the passed hash table will only contain
  * the property @a propname.
  *
- * If @a pristine is @c TRUE, get the pristine (or "BASE") properties
+ * If @a base_props is @c TRUE, get the unmodified BASE properties
  * from the working copy, instead of getting the current (or "WORKING")
  * properties.
+ *
+ * If @a pristine is not @c TRUE, and @a base_props is FALSE show local
+ * modifications to the properties.
  *
  * If a node has no properties, @a receiver_func is not called for the node.
  *
@@ -795,6 +798,7 @@ svn_wc__prop_list_recursive(svn_wc_context_t *wc_ctx,
                             const char *local_abspath,
                             const char *propname,
                             svn_depth_t depth,
+                            svn_boolean_t base_props,
                             svn_boolean_t pristine,
                             svn_wc__proplist_receiver_t receiver_func,
                             void *receiver_baton,

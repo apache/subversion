@@ -1714,9 +1714,15 @@ svn_wc__db_read_props(apr_hash_t **props,
 /* Call RECEIVER_FUNC, passing RECEIVER_BATON, an absolute path, and
  * a hash table mapping <tt>char *</tt> names onto svn_string_t *
  * values for any properties of child nodes of LOCAL_ABSPATH (up to DEPTH).
- * If PRISTINE is TRUE, read the pristine props (op_depth = 0).
- * If PROPNAME is not NULL, the passed hash table will only contain
- * the property PROPNAME.
+ *
+ * If BASE_PROPS is TRUE, read the properties from the BASE layer (op_depth=0),
+ * without local modifications.
+ *
+ * If BASE_PROPS is FALSE, read the properties from the WORKING layer (highest
+ * op_depth).
+ *
+ * If BASE_PROPS is FALSE and, PRISTINE is TRUE, the local modifications will
+ * be suppressed. If PRISTINE is FALSE, local modifications will be visible.
  *
  * NOTE: The only valid values for DEPTH are svn_depth_files,
  *       svn_depth_immediates, and svn_depth_infinity.
@@ -1726,6 +1732,7 @@ svn_wc__db_read_props_streamily(svn_wc__db_t *db,
                                 const char *local_abspath,
                                 const char *propname,
                                 svn_depth_t depth,
+                                svn_boolean_t base_props,
                                 svn_boolean_t pristine,
                                 svn_wc__proplist_receiver_t receiver_func,
                                 void *receiver_baton,
