@@ -191,23 +191,11 @@ print_status(const char *path,
       char ood_status, lock_status;
       const char *working_rev;
 
-      /* ### FIXME: For now, we'll tweak an SVN_INVALID_REVNUM and make it
-         ### 0. In WC-1, files scheduled for addition were assigned
-         ### revision=0.  This is wrong, and we're trying to remedy that,
-         ### but for the sake of test suite and code sanity now in WC-NG,
-         ### we'll just maintain the old behavior. */
       if (! status->versioned)
         working_rev = "";
-      else if (status->copied)
+      else if (status->copied
+               || ! SVN_IS_VALID_REVNUM(status->revision))
         working_rev = "-";
-      else if (! SVN_IS_VALID_REVNUM(status->revision))
-        {
-          if (node_status == svn_wc_status_added ||
-              node_status == svn_wc_status_replaced)
-            working_rev = "0";
-          else
-            working_rev = " ? ";
-        }
       else
         working_rev = apr_psprintf(pool, "%ld", status->revision);
 

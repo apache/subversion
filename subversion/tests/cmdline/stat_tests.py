@@ -433,7 +433,7 @@ def status_nonrecursive_update_different_cwd(sbox):
 
   expected_output = [
     '        *                                %s\n' % os.path.join("C", "J"),
-    'A                0       ?   ?           %s\n' % os.path.join("C", "K"),
+    'A                -       ?   ?           %s\n' % os.path.join("C", "K"),
     '        *        1        1 jrandom      C\n',
     'Status against revision:      2\n' ]
 
@@ -445,7 +445,7 @@ def status_nonrecursive_update_different_cwd(sbox):
 
   expected_output = [
     '        *                                J\n',
-    'A                0       ?   ?           K\n',
+    'A                -       ?   ?           K\n',
     '        *        1        1 jrandom      .\n',
     'Status against revision:      2\n']
 
@@ -889,11 +889,9 @@ def missing_dir_in_anchor(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # At one point this caused a "foo not locked" error
-  is_singledb = svntest.main.wc_is_singledb(foo_path)
   svntest.main.safe_rmtree(foo_path)
-  expected_status.tweak('foo', status='! ', wc_rev='?')
-  if is_singledb:
-    expected_status.tweak('foo', entry_status='A ', entry_rev='0')
+  expected_status.tweak('foo', status='! ', entry_status='A ',
+                               wc_rev='-',  entry_rev='0')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
