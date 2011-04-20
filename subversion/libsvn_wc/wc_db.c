@@ -6108,6 +6108,7 @@ svn_wc__db_read_props(apr_hash_t **props,
 typedef struct cache_props_baton_t
 {
   svn_boolean_t immediates_only;
+  svn_boolean_t base_props;
   svn_boolean_t pristine;
   svn_cancel_func_t cancel_func;
   void *cancel_baton;
@@ -6125,7 +6126,7 @@ cache_props_recursive(void *cb_baton,
 
   if (baton->immediates_only)
     {
-      if (baton->pristine)
+      if (baton->base_props)
         SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_CACHE_NODE_BASE_PROPS_OF_CHILDREN));
       else
@@ -6135,7 +6136,7 @@ cache_props_recursive(void *cb_baton,
     }
   else
     {
-      if (baton->pristine)
+      if (baton->base_props)
         SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_CACHE_NODE_BASE_PROPS_RECURSIVE));
       else
@@ -6148,7 +6149,7 @@ cache_props_recursive(void *cb_baton,
   SVN_ERR(svn_sqlite__step_done(stmt));
 
   /* ACTUAL props aren't relevant in the pristine case. */
-  if (baton->pristine)
+  if (baton->base_props || baton->pristine)
     return SVN_NO_ERROR;
 
   if (baton->cancel_func)
@@ -6179,6 +6180,7 @@ svn_wc__db_read_props_streamily(svn_wc__db_t *db,
                                 const char *local_abspath,
                                 const char *propname,
                                 svn_depth_t depth,
+                                svn_boolean_t base_props,
                                 svn_boolean_t pristine,
                                 svn_wc__proplist_receiver_t receiver_func,
                                 void *receiver_baton,
@@ -6212,6 +6214,7 @@ svn_wc__db_read_props_streamily(svn_wc__db_t *db,
                                       STMT_CLEAR_NODE_PROPS_CACHE));
 
   baton.immediates_only = immediates_only;
+  baton.base_props = base_props;
   baton.pristine = pristine;
   baton.cancel_func = cancel_func;
   baton.cancel_baton = cancel_baton;
