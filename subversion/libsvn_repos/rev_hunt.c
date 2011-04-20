@@ -1091,8 +1091,7 @@ get_merged_mergeinfo(apr_hash_t **merged_mergeinfo,
   /* Then calculate and merge the differences. */
   SVN_ERR(svn_mergeinfo_diff(&deleted, &changed, prev_mergeinfo, curr_mergeinfo,
                              FALSE, subpool));
-  if (apr_hash_count(deleted))
-    SVN_ERR(svn_mergeinfo_merge(changed, deleted, subpool));
+  SVN_ERR(svn_mergeinfo_merge(changed, deleted, subpool));
 
   /* Store the result. */
   if (apr_hash_count(changed))
