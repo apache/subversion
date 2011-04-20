@@ -85,6 +85,25 @@ tweak_status(void *baton,
   const char *path = local_abspath;
   svn_client_status_t *cst;
 
+  if (sb->anchor_abspath)
+    path = svn_dirent_join(sb->anchor_relpath,
+                           svn_dirent_skip_ancestor(sb->anchor_abspath, path),
+                           scratch_pool);
+
+  /* If the status item has an entry, but doesn't belong to one of the
+     changelists our caller is interested in, we filter our this status
+     transmission.  */
+  if (sb->changelist_hash
+      && (! status->changelist
+          || ! apr_hash_get(sb->changelist_hash, status->changelist,
+                            APR_HASH_KEY_STRING)))
+    {
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(create_client_status(&cst, sb->wc_ctx, local_abspath, status,
+                               scratch_pool, scratch_pool));
+
   /* If we know that the target was deleted in HEAD of the repository,
      we need to note that fact in all the status structures that come
      through here. */
@@ -94,21 +113,6 @@ tweak_status(void *baton,
       new_status->repos_node_status = svn_wc_status_deleted;
       status = new_status;
     }
-
-  if (sb->anchor_abspath)
-    path = svn_dirent_join(sb->anchor_relpath,
-                           svn_dirent_skip_ancestor(sb->anchor_abspath, path),
-                           scratch_pool);
-
-  /* If the status item has an entry, but doesn't belong to one of the
-     changelists our caller is interested in, we filter our this status
-     transmission.  */
-  if (! svn_wc__changelist_match(sb->wc_ctx, local_abspath,
-                                 sb->changelist_hash, scratch_pool))
-    return SVN_NO_ERROR;
-
-  SVN_ERR(create_client_status(&cst, sb->wc_ctx, local_abspath, status,
-                               scratch_pool, scratch_pool));
 
   /* Call the real status function/baton. */
   return sb->real_status_func(sb->real_status_baton, path, cst,
