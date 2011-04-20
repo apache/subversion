@@ -1030,7 +1030,6 @@ merge_text_file(svn_skel_t **work_items,
 
       if (*merge_outcome == svn_wc_merge_conflict)
         {
-          svn_skel_t *work_item;
           const char *left_copy, *right_copy, *target_copy;
 
           /* Preserve the three conflict files */
