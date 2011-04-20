@@ -165,6 +165,9 @@ update_internal(svn_revnum_t *result_rev,
   svn_config_get(cfg, &diff3_cmd, SVN_CONFIG_SECTION_HELPERS,
                  SVN_CONFIG_OPTION_DIFF3_CMD, NULL);
 
+  if (diff3_cmd != NULL)
+    SVN_ERR(svn_path_cstring_to_utf8(&diff3_cmd, diff3_cmd, pool));
+
   /* See if the user wants last-commit timestamps instead of current ones. */
   SVN_ERR(svn_config_get_bool(cfg, &use_commit_times,
                               SVN_CONFIG_SECTION_MISCELLANY,

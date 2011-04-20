@@ -416,7 +416,7 @@ do_text_merge_external(svn_boolean_t *contains_conflicts,
 {
   int exit_code;
 
-  SVN_ERR(svn_io_run_diff3_2(&exit_code, ".",
+  SVN_ERR(svn_io_run_diff3_3(&exit_code, ".",
                              detranslated_target, left_abspath, right_abspath,
                              target_label, left_label, right_label,
                              result_f, diff3_cmd,
