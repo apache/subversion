@@ -288,9 +288,13 @@ maybe_add_subdir(apr_array_header_t *subdirs,
 
 
 /* Return in CHILDREN, the list of all 1.6 versioned subdirectories
-   which also exist on disk as directories.  */
+   which also exist on disk as directories.
+
+   If DELETE_DIR is not NULL set *DELETE_DIR to TRUE if the directory
+   should be deleted after migrating to WC-NG, otherwise to FALSE. */
 static svn_error_t *
 get_versioned_subdirs(apr_array_header_t **children,
+                      svn_boolean_t *delete_dir,
                       const char *dir_abspath,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
@@ -298,6 +302,7 @@ get_versioned_subdirs(apr_array_header_t **children,
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_hash_t *entries;
   apr_hash_index_t *hi;
+  svn_wc_entry_t *this_dir = NULL;
 
   *children = apr_array_make(result_pool, 10, sizeof(const char *));
 
@@ -311,7 +316,10 @@ get_versioned_subdirs(apr_array_header_t **children,
 
       /* skip "this dir"  */
       if (*name == '\0')
-        continue;
+        {
+          this_dir = svn__apr_hash_index_val(hi);
+          continue;
+        }
 
       svn_pool_clear(iterpool);
 
@@ -320,6 +328,13 @@ get_versioned_subdirs(apr_array_header_t **children,
     }
 
   svn_pool_destroy(iterpool);
+
+  if (delete_dir != NULL)
+    {
+      *delete_dir = (this_dir != NULL)
+                     && (this_dir->schedule == svn_wc_schedule_delete)
+                     && ! this_dir->keep_local;
+    }
 
   return SVN_NO_ERROR;
 }
@@ -512,12 +527,14 @@ svn_wc__wipe_postupgrade(const char *dir_abspath,
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_array_header_t *subdirs;
   svn_error_t *err;
+  svn_boolean_t delete_dir;
   int i;
 
   if (cancel_func)
     SVN_ERR((*cancel_func)(cancel_baton));
 
-  err = get_versioned_subdirs(&subdirs, dir_abspath, scratch_pool, iterpool);
+  err = get_versioned_subdirs(&subdirs, &delete_dir, dir_abspath,
+                              scratch_pool, iterpool);
   if (err)
     {
       if (APR_STATUS_IS_ENOENT(err->apr_err))
@@ -527,7 +544,7 @@ svn_wc__wipe_postupgrade(const char *dir_abspath,
           err = NULL;
         }
       svn_pool_destroy(iterpool);
-      return err;
+      return svn_error_return(err);
     }
   for (i = 0; i < subdirs->nelts; ++i)
     {
@@ -545,6 +562,17 @@ svn_wc__wipe_postupgrade(const char *dir_abspath,
                                        TRUE, NULL, NULL, iterpool));
   else
     wipe_obsolete_files(dir_abspath, scratch_pool);
+
+  if (delete_dir)
+    {
+      /* If this was a WC-NG single database copy, this directory wouldn't
+         be here (unless it was deleted with --keep-local)
+
+         If the directory is empty, we can just delete it; if not we
+         keep it.
+       */
+      svn_error_clear(svn_io_dir_remove_nonrecursive(dir_abspath, iterpool));
+    }
 
   svn_pool_destroy(iterpool);
 
@@ -1539,7 +1567,8 @@ upgrade_working_copy(void *parent_baton,
       return SVN_NO_ERROR;
     }
 
-  err = get_versioned_subdirs(&subdirs, dir_abspath, scratch_pool, iterpool);
+  err = get_versioned_subdirs(&subdirs, NULL, dir_abspath,
+                              scratch_pool, iterpool);
   if (err)
     {
       if (APR_STATUS_IS_ENOENT(err->apr_err))
