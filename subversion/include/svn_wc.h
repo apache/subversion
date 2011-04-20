@@ -3415,11 +3415,11 @@ typedef struct svn_wc_status3_t
   /** Set to TRUE if the item is the victim of a conflict. */
   svn_boolean_t conflicted;
 
-  /** The status of the node itself. In order of precedence: Tree conflicts,
-   * structural changes, text changes (including text conflicts). */
+  /** The status of the node itself. In order of precedence: Obstructions,
+   * structural changes, text changes. */
   enum svn_wc_status_kind node_status;
 
-  /** The status of the entry itself, including its text if it is a file. */
+  /** The status of the entry's text. */
   enum svn_wc_status_kind text_status;
 
   /** The status of the entry's properties. */
