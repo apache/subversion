@@ -2952,7 +2952,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test_children_of_replaced_dir"),
     SVN_TEST_OPTS_PASS(test_op_delete,
                        "test_op_delete"),
-    SVN_TEST_OPTS_XFAIL(test_child_replace_with_same_origin,
+    SVN_TEST_OPTS_PASS(test_child_replace_with_same_origin,
                        "test_child_replace_with_same"),
     SVN_TEST_NULL
   };
