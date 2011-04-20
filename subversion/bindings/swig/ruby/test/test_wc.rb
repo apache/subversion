@@ -1058,10 +1058,8 @@ EOE
 
     notifies = []
 
-    assert_raises(Svn::Error::ClientIsDirectory) do
-      Svn::Wc::AdmAccess.open(nil, @wc_path) do |access|
-        access.set_changelist(@wc_path, "789", nil, notify_collector)
-      end
+    Svn::Wc::AdmAccess.open(nil, @wc_path) do |access|
+      access.set_changelist(@wc_path, "789", nil, notify_collector)
     end
   end
 
