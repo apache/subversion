@@ -1012,10 +1012,23 @@ migrate_text_bases(apr_hash_t **text_bases_info,
                complexity. :)  */
 
         /* Gather the two checksums. */
-        SVN_ERR(svn_io_file_checksum2(&md5_checksum, text_base_path,
-                                      svn_checksum_md5, iterpool));
-        SVN_ERR(svn_io_file_checksum2(&sha1_checksum, text_base_path,
-                                      svn_checksum_sha1, iterpool));
+        {
+          svn_stream_t *read_stream;
+
+          SVN_ERR(svn_stream_open_readonly(&read_stream, text_base_path,
+                                           iterpool, iterpool));
+
+          read_stream = svn_stream_checksummed2(read_stream, &md5_checksum,
+                                                NULL, svn_checksum_md5, 
+                                                TRUE, iterpool);
+
+          read_stream = svn_stream_checksummed2(read_stream, &sha1_checksum,
+                                                NULL, svn_checksum_sha1,
+                                                TRUE, iterpool);
+
+           /* This calculates the hash */
+          SVN_ERR(svn_stream_close(read_stream));
+        }
 
         SVN_ERR(svn_io_stat(&finfo, text_base_path, APR_FINFO_SIZE, iterpool));
 
