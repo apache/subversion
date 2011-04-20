@@ -601,19 +601,17 @@ def missing_dirs(sbox):
       'A'                 : Item(status='  ', wc_rev='1'),
       'A/mu'              : Item(status='  ', wc_rev='1'),
       'A/C'               : Item(status='  ', wc_rev='1'),
-      'A/D'               : Item(status='~ ', wc_rev='?'),
+      'A/D'               : Item(status='! ', wc_rev='-'),
       'A/B'               : Item(status='  ', wc_rev='1'),
       'A/B/F'             : Item(status='  ', wc_rev='1'),
-      'A/B/E'             : Item(status='! ', wc_rev='?'),
+      'A/B/E'             : Item(status='! ', wc_rev='-'),
       'A/B/lambda'        : Item(status='  ', wc_rev='1'),
       'iota'              : Item(status='  ', wc_rev='1'),
       'A/B_new'           : Item(status='A ', wc_rev='-', copied='+'),
-      'A/B_new/E'         : Item(status='! ', wc_rev='?'),
-      'A/B_new/F'         : Item(status='~ ', wc_rev='?'),
+      'A/B_new/E'         : Item(status='! ', wc_rev='-'),
+      'A/B_new/F'         : Item(status='! ', wc_rev='-'),
       'A/B_new/lambda'    : Item(status='  ', wc_rev='-', copied='+'),
     })
-  if svntest.main.wc_is_singledb(sbox.wc_dir):
-    expected_status.tweak('A/D', 'A/B_new/F', status='! ')
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 
 def missing_dirs2(sbox):
@@ -633,19 +631,17 @@ def missing_dirs2(sbox):
       'A'                 : Item(status='  ', wc_rev='1'),
       'A/mu'              : Item(status='  ', wc_rev='1'),
       'A/C'               : Item(status='  ', wc_rev='1'),
-      'A/D'               : Item(status='~ ', wc_rev='?'),
+      'A/D'               : Item(status='! ', wc_rev='-'),
       'A/B'               : Item(status='  ', wc_rev='1'),
       'A/B/F'             : Item(status='  ', wc_rev='1'),
-      'A/B/E'             : Item(status='! ', wc_rev='?'),
+      'A/B/E'             : Item(status='! ', wc_rev='-'),
       'A/B/lambda'        : Item(status='  ', wc_rev='1'),
       'iota'              : Item(status='  ', wc_rev='1'),
       'A/B_new'           : Item(status='A ', wc_rev='-', copied='+'),
-      'A/B_new/E'         : Item(status='! ', wc_rev='?'),
-      'A/B_new/F'         : Item(status='~ ', wc_rev='?'),
+      'A/B_new/E'         : Item(status='! ', wc_rev='-'),
+      'A/B_new/F'         : Item(status='! ', wc_rev='-'),
       'A/B_new/lambda'    : Item(status='  ', wc_rev='-', copied='+'),
     })
-  if svntest.main.wc_is_singledb(sbox.wc_dir):
-    expected_status.tweak('A/D', 'A/B_new/F', status='! ')
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 
 @XFail()
@@ -807,7 +803,7 @@ def replaced_files(sbox):
       'A/g' : Item(status='RM', wc_rev='5'),
       'B'   : Item(status='A ', wc_rev='-', copied='+'),
       'B/f' : Item(status='R ', wc_rev='-', copied='+'),
-      'B/g' : Item(status='RM', wc_rev='0'),
+      'B/g' : Item(status='RM', wc_rev='-'),
   })
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 

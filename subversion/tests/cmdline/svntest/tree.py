@@ -424,9 +424,34 @@ def compare_file_nodes(a, b):
     return 1
   if a.props != b.props:
     return 1
-  if a.atts != b.atts:
+  if a.atts == b.atts:
+    # No fixes necessary
+    return 0
+
+  # Fix a pre-WC-NG assumptions in our testsuite
+  if (b.atts == {'status': 'A ', 'wc_rev': '0'})     \
+     and (a.atts == {'status': 'A ', 'wc_rev': '-'}):
+    return 0
+  return 1
+
+# Helper for compare_trees
+def compare_dir_nodes(a, b):
+  """Compare two nodes, A (actual) and B (expected). Compare their names,
+  properties and attributes, ignoring children.  Return 0 if the
+  same, 1 otherwise."""
+  if a.name != b.name:
     return 1
-  return 0
+  if (a.props != b.props):
+    return 1
+  if (a.atts == b.atts):
+    # No fixes necessary
+    return 0
+
+  # Fix a pre-WC-NG assumptions in our testsuite
+  if (b.atts == {'status': 'A ', 'wc_rev': '0'})     \
+     and (a.atts == {'status': 'A ', 'wc_rev': '-'}):
+    return 0
+  return 1
 
 
 # Internal utility used by most build_tree_from_foo() routines.
@@ -642,8 +667,7 @@ def compare_trees(label,
       raise SVNTypeMismatch
     # They're both directories.
     else:
-      # First, compare the directories' two hashes.
-      if (a.props != b.props) or (a.atts != b.atts):
+      if compare_dir_nodes(a, b):
         display_nodes(a, b)
         raise SVNTreeUnequal
 
