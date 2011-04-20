@@ -434,50 +434,6 @@ svn_client__get_wc_or_repos_mergeinfo(svn_mergeinfo_t *target_mergeinfo,
 
 
 svn_error_t *
-svn_client__mergeinfo_from_segments(svn_mergeinfo_t *mergeinfo_p,
-                                    apr_array_header_t *segments,
-                                    apr_pool_t *pool)
-{
-  svn_mergeinfo_t mergeinfo = apr_hash_make(pool);
-  int i;
-
-  /* Translate location segments into merge sources and ranges. */
-  for (i = 0; i < segments->nelts; i++)
-    {
-      svn_location_segment_t *segment =
-        APR_ARRAY_IDX(segments, i, svn_location_segment_t *);
-      apr_array_header_t *path_ranges;
-      svn_merge_range_t *range;
-      const char *source_path;
-
-      /* No path segment?  Skip it. */
-      if (! segment->path)
-        continue;
-
-      /* Prepend a leading slash to our path. */
-      source_path = apr_pstrcat(pool, "/", segment->path, NULL);
-
-      /* See if we already stored ranges for this path.  If not, make
-         a new list.  */
-      path_ranges = apr_hash_get(mergeinfo, source_path, APR_HASH_KEY_STRING);
-      if (! path_ranges)
-        path_ranges = apr_array_make(pool, 1, sizeof(range));
-
-      /* Build a merge range, push it onto the list of ranges, and for
-         good measure, (re)store it in the hash. */
-      range = apr_pcalloc(pool, sizeof(*range));
-      range->start = MAX(segment->range_start - 1, 0);
-      range->end = segment->range_end;
-      range->inheritable = TRUE;
-      APR_ARRAY_PUSH(path_ranges, svn_merge_range_t *) = range;
-      apr_hash_set(mergeinfo, source_path, APR_HASH_KEY_STRING, path_ranges);
-    }
-
-  *mergeinfo_p = mergeinfo;
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
 svn_client__get_history_as_mergeinfo(svn_mergeinfo_t *mergeinfo_p,
                                      const char *path_or_url,
                                      const svn_opt_revision_t *peg_revision,
@@ -520,7 +476,7 @@ svn_client__get_history_as_mergeinfo(svn_mergeinfo_t *mergeinfo_p,
                                               peg_revnum, range_youngest,
                                               range_oldest, ctx, pool));
 
-  SVN_ERR(svn_client__mergeinfo_from_segments(mergeinfo_p, segments, pool));
+  SVN_ERR(svn_mergeinfo__mergeinfo_from_segments(mergeinfo_p, segments, pool));
 
   /* If we opened an RA session, ensure its closure. */
   if (sesspool)
