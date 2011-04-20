@@ -93,10 +93,32 @@ def export_working_copy(sbox):
   sbox.build(read_only = True)
 
   export_target = sbox.add_wc_path('export')
+  expected_output = svntest.wc.State(export_target, {
+    'A'                 : Item(status='A '),
+    'A/B'               : Item(status='A '),
+    'A/B/E'             : Item(status='A '),
+    'A/B/E/alpha'       : Item(status='A '),
+    'A/B/E/beta'        : Item(status='A '),
+    'A/B/F'             : Item(status='A '),
+    'A/B/lambda'        : Item(status='A '),
+    'A/D'               : Item(status='A '),
+    'A/D/G'             : Item(status='A '),
+    'A/D/G/rho'         : Item(status='A '),
+    'A/D/G/pi'          : Item(status='A '),
+    'A/D/G/tau'         : Item(status='A '),
+    'A/D/H'             : Item(status='A '),
+    'A/D/H/chi'         : Item(status='A '),
+    'A/D/H/psi'         : Item(status='A '),
+    'A/D/H/omega'       : Item(status='A '),
+    'A/D/gamma'         : Item(status='A '),
+    'A/mu'              : Item(status='A '),
+    'A/C'               : Item(status='A '),
+    'iota'              : Item(status='A '),
+  })
 
   svntest.actions.run_and_verify_export(sbox.wc_dir,
                                         export_target,
-                                        svntest.wc.State(sbox.wc_dir, {}),
+                                        expected_output,
                                         svntest.main.greek_state.copy())
 
 def export_working_copy_with_mods(sbox):
@@ -131,9 +153,30 @@ def export_working_copy_with_mods(sbox):
 
   export_target = sbox.add_wc_path('export')
 
+  expected_output = svntest.wc.State(export_target, {
+    'A'                 : Item(status='A '),
+    'A/D'               : Item(status='A '),
+    'A/D/H'             : Item(status='A '),
+    'A/D/H/chi'         : Item(status='A '),
+    'A/D/H/omega'       : Item(status='A '),
+    'A/D/H/psi'         : Item(status='A '),
+    'A/D/G'             : Item(status='A '),
+    'A/D/G/rho'         : Item(status='A '),
+    'A/D/G/pi'          : Item(status='A '),
+    'A/D/G/tau'         : Item(status='A '),
+    'A/mu'              : Item(status='A '),
+    'A/B'               : Item(status='A '),
+    'A/B/E'             : Item(status='A '),
+    'A/B/lambda'        : Item(status='A '),
+    'A/B/F'             : Item(status='A '),
+    'A/C'               : Item(status='A '),
+    'iota'              : Item(status='A '),
+    'kappa'             : Item(status='A '),
+  })
+
   svntest.actions.run_and_verify_export(sbox.wc_dir,
                                         export_target,
-                                        svntest.wc.State(sbox.wc_dir, {}),
+                                        expected_output,
                                         expected_disk)
 
 def export_over_existing_dir(sbox):
@@ -239,9 +282,32 @@ def export_working_copy_with_keyword_translation(sbox):
 
   export_target = sbox.add_wc_path('export')
 
+  expected_output = svntest.wc.State(export_target, {
+    'A'                 : Item(status='A '),
+    'A/B'               : Item(status='A '),
+    'A/B/E'             : Item(status='A '),
+    'A/B/E/alpha'       : Item(status='A '),
+    'A/B/E/beta'        : Item(status='A '),
+    'A/B/F'             : Item(status='A '),
+    'A/B/lambda'        : Item(status='A '),
+    'A/D'               : Item(status='A '),
+    'A/D/G'             : Item(status='A '),
+    'A/D/G/pi'          : Item(status='A '),
+    'A/D/G/rho'         : Item(status='A '),
+    'A/D/G/tau'         : Item(status='A '),
+    'A/D/H'             : Item(status='A '),
+    'A/D/H/psi'         : Item(status='A '),
+    'A/D/H/chi'         : Item(status='A '),
+    'A/D/H/omega'       : Item(status='A '),
+    'A/D/gamma'         : Item(status='A '),
+    'A/C'               : Item(status='A '),
+    'A/mu'              : Item(status='A '),
+    'iota'              : Item(status='A '),
+  })
+
   svntest.actions.run_and_verify_export(wc_dir,
                                         export_target,
-                                        svntest.wc.State(sbox.wc_dir, {}),
+                                        expected_output,
                                         expected_disk)
 
 def export_working_copy_with_property_mods(sbox):
@@ -261,9 +327,32 @@ def export_working_copy_with_property_mods(sbox):
 
   export_target = sbox.add_wc_path('export')
 
+  expected_output = svntest.wc.State(export_target, {
+    'A'                 : Item(status='A '),
+    'A/B'               : Item(status='A '),
+    'A/B/E'             : Item(status='A '),
+    'A/B/E/alpha'       : Item(status='A '),
+    'A/B/E/beta'        : Item(status='A '),
+    'A/B/F'             : Item(status='A '),
+    'A/B/lambda'        : Item(status='A '),
+    'A/D'               : Item(status='A '),
+    'A/D/G'             : Item(status='A '),
+    'A/D/G/pi'          : Item(status='A '),
+    'A/D/G/rho'         : Item(status='A '),
+    'A/D/G/tau'         : Item(status='A '),
+    'A/D/H'             : Item(status='A '),
+    'A/D/H/psi'         : Item(status='A '),
+    'A/D/H/chi'         : Item(status='A '),
+    'A/D/H/omega'       : Item(status='A '),
+    'A/D/gamma'         : Item(status='A '),
+    'A/C'               : Item(status='A '),
+    'A/mu'              : Item(status='A '),
+    'iota'              : Item(status='A '),
+  })
+
   svntest.actions.run_and_verify_export(wc_dir,
                                         export_target,
-                                        svntest.wc.State(sbox.wc_dir, {}),
+                                        expected_output,
                                         expected_disk)
 
 @XFail()
@@ -300,9 +389,33 @@ def export_working_copy_at_base_revision(sbox):
 
   export_target = sbox.add_wc_path('export')
 
+  expected_output = svntest.wc.State(export_target, {
+    'A'                 : Item(status='A '),
+    'A/C'               : Item(status='A '),
+    'A/D'               : Item(status='A '),
+    'A/D/gamma'         : Item(status='A '),
+    'A/D/G'             : Item(status='A '),
+    'A/D/G/pi'          : Item(status='A '),
+    'A/D/G/tau'         : Item(status='A '),
+    'A/D/G/rho'         : Item(status='A '),
+    'A/D/H'             : Item(status='A '),
+    'A/D/H/psi'         : Item(status='A '),
+    'A/D/H/omega'       : Item(status='A '),
+    'A/D/H/chi'         : Item(status='A '),
+    'A/B'               : Item(status='A '),
+    'A/B/F'             : Item(status='A '),
+    'A/B/lambda'        : Item(status='A '),
+    'A/B/E'             : Item(status='A '),
+    'A/B/E/beta'        : Item(status='A '),
+    'A/B/E/alpha'       : Item(status='A '),
+    'A/mu'              : Item(status='A '),
+    'K'                 : Item(status='A '),
+    'iota'              : Item(status='A '),
+  })
+
   svntest.actions.run_and_verify_export(wc_dir,
                                         export_target,
-                                        svntest.wc.State(sbox.wc_dir, {}),
+                                        expected_output,
                                         expected_disk,
                                         '-rBASE')
 
@@ -385,7 +498,27 @@ def export_with_state_deleted(sbox):
                                         None, wc_dir)
 
   export_target = sbox.add_wc_path('export')
-  expected_output = svntest.wc.State(sbox.wc_dir, {})
+  expected_output = svntest.wc.State(export_target, {
+    'A'                 : Item(status='A '),
+    'A/B'               : Item(status='A '),
+    'A/B/E'             : Item(status='A '),
+    'A/B/E/beta'        : Item(status='A '),
+    'A/B/F'             : Item(status='A '),
+    'A/B/lambda'        : Item(status='A '),
+    'A/D'               : Item(status='A '),
+    'A/D/G'             : Item(status='A '),
+    'A/D/G/rho'         : Item(status='A '),
+    'A/D/G/tau'         : Item(status='A '),
+    'A/D/G/pi'          : Item(status='A '),
+    'A/D/H'             : Item(status='A '),
+    'A/D/H/chi'         : Item(status='A '),
+    'A/D/H/psi'         : Item(status='A '),
+    'A/D/H/omega'       : Item(status='A '),
+    'A/D/gamma'         : Item(status='A '),
+    'A/C'               : Item(status='A '),
+    'A/mu'              : Item(status='A '),
+    'iota'              : Item(status='A '),
+  })
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.remove('A/B/E/alpha')
   svntest.actions.run_and_verify_export(sbox.wc_dir,
@@ -534,9 +667,32 @@ def export_working_copy_ignoring_keyword_translation(sbox):
 
   export_target = sbox.add_wc_path('export')
 
+  expected_output = svntest.wc.State(export_target, {
+    'A'                 : Item(status='A '),
+    'A/D'               : Item(status='A '),
+    'A/D/G'             : Item(status='A '),
+    'A/D/G/rho'         : Item(status='A '),
+    'A/D/G/pi'          : Item(status='A '),
+    'A/D/G/tau'         : Item(status='A '),
+    'A/D/H'             : Item(status='A '),
+    'A/D/H/psi'         : Item(status='A '),
+    'A/D/H/omega'       : Item(status='A '),
+    'A/D/H/chi'         : Item(status='A '),
+    'A/D/gamma'         : Item(status='A '),
+    'A/B'               : Item(status='A '),
+    'A/B/E'             : Item(status='A '),
+    'A/B/E/alpha'       : Item(status='A '),
+    'A/B/E/beta'        : Item(status='A '),
+    'A/B/F'             : Item(status='A '),
+    'A/B/lambda'        : Item(status='A '),
+    'A/C'               : Item(status='A '),
+    'A/mu'              : Item(status='A '),
+    'iota'              : Item(status='A '),
+  })
+
   svntest.actions.run_and_verify_export(wc_dir,
                                         export_target,
-                                        svntest.wc.State(sbox.wc_dir, {}),
+                                        expected_output,
                                         expected_disk,
                                         "--ignore-keywords")
 
@@ -569,7 +725,6 @@ def export_with_url_unsafe_characters(sbox):
   if not os.path.exists(export_target):
     raise svntest.Failure("export did not fetch file with URL unsafe path")
 
-@XFail()
 @Issue(3800)
 def export_working_copy_with_depths(sbox):
   "export working copy with different depths"
@@ -580,25 +735,34 @@ def export_working_copy_with_depths(sbox):
       'iota': Item(contents="This is the file 'iota'.\n"),
       })
   export_target = sbox.add_wc_path('immediates')
+  expected_output = svntest.wc.State(export_target, {
+    'iota'              : Item(status='A '),
+    'A'                 : Item(status='A '),
+  })
   svntest.actions.run_and_verify_export(sbox.wc_dir,
                                         export_target,
-                                        svntest.wc.State(sbox.wc_dir, {}),
+                                        expected_output,
                                         expected_disk,
                                         '--depth=immediates')
 
   expected_disk.remove('A')
   export_target = sbox.add_wc_path('files')
+  expected_output = svntest.wc.State(export_target, {
+    'iota'              : Item(status='A '),
+  })
   svntest.actions.run_and_verify_export(sbox.wc_dir,
                                         export_target,
-                                        svntest.wc.State(sbox.wc_dir, {}),
+                                        expected_output,
                                         expected_disk,
                                         '--depth=files')
 
   expected_disk.remove('iota')
+  expected_output = svntest.wc.State(export_target, {
+  })
   export_target = sbox.add_wc_path('empty')
   svntest.actions.run_and_verify_export(sbox.wc_dir,
                                         export_target,
-                                        svntest.wc.State(sbox.wc_dir, {}),
+                                        expected_output,
                                         expected_disk,
                                         '--depth=empty')
 
