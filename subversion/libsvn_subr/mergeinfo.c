@@ -1296,6 +1296,9 @@ svn_mergeinfo_merge(svn_mergeinfo_t mergeinfo, svn_mergeinfo_t changes,
   apr_array_header_t *sorted1, *sorted2;
   int i, j;
 
+  if (!apr_hash_count(changes))
+    return SVN_NO_ERROR;
+
   sorted1 = svn_sort__hash(mergeinfo, svn_sort_compare_items_as_paths, pool);
   sorted2 = svn_sort__hash(changes, svn_sort_compare_items_as_paths, pool);
 
