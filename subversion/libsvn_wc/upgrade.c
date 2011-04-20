@@ -994,41 +994,35 @@ migrate_text_bases(apr_hash_t **text_bases_info,
       {
         const char *pristine_path;
         const char *text_base_path;
+        const char *temp_path;
         svn_sqlite__stmt_t *stmt;
         apr_finfo_t finfo;
+        svn_stream_t *read_stream;
+        svn_stream_t *result_stream;
 
         text_base_path = svn_dirent_join(text_base_dir, text_base_basename,
                                          iterpool);
 
-        /* ### This code could be a bit smarter: we could chain checksum
-               streams instead of reading the file twice; we could check to
-               see if a pristine row exists before attempting to insert one;
-               we could check and see if a pristine file exists before
-               attempting to copy a new one over it.
+        /* Create a copy and calculate a checksum in one step */
+        SVN_ERR(svn_stream_open_unique(&result_stream, &temp_path,
+                                       new_wcroot_abspath,
+                                       svn_io_file_del_none,
+                                       iterpool, iterpool));
 
-               However, I think simplicity is the big win here, especially since
-               this is code that runs exactly once on a user's machine: when
-               doing the upgrade.  If you disagree, feel free to add the
-               complexity. :)  */
-
-        /* Gather the two checksums. */
-        {
-          svn_stream_t *read_stream;
-
-          SVN_ERR(svn_stream_open_readonly(&read_stream, text_base_path,
+        SVN_ERR(svn_stream_open_readonly(&read_stream, text_base_path,
                                            iterpool, iterpool));
 
-          read_stream = svn_stream_checksummed2(read_stream, &md5_checksum,
-                                                NULL, svn_checksum_md5, 
-                                                TRUE, iterpool);
+        read_stream = svn_stream_checksummed2(read_stream, &md5_checksum,
+                                              NULL, svn_checksum_md5, 
+                                              TRUE, iterpool);
 
-          read_stream = svn_stream_checksummed2(read_stream, &sha1_checksum,
-                                                NULL, svn_checksum_sha1,
-                                                TRUE, iterpool);
+        read_stream = svn_stream_checksummed2(read_stream, &sha1_checksum,
+                                              NULL, svn_checksum_sha1,
+                                              TRUE, iterpool);
 
-           /* This calculates the hash */
-          SVN_ERR(svn_stream_close(read_stream));
-        }
+        /* This calculates the hash, creates a copy and closes the stream */
+        SVN_ERR(svn_stream_copy3(read_stream, result_stream,
+                                 NULL, NULL, iterpool));
 
         SVN_ERR(svn_io_stat(&finfo, text_base_path, APR_FINFO_SIZE, iterpool));
 
@@ -1050,11 +1044,9 @@ migrate_text_bases(apr_hash_t **text_bases_info,
                                                             iterpool),
                                          iterpool));
 
-        /* Copy, rather than move, so that the upgrade can be restarted.
-           It could be moved if upgrades scanned for files in the
-           pristine directory as well as the text-base directory. */
-        SVN_ERR(svn_io_copy_file(text_base_path, pristine_path, TRUE,
-                                 iterpool));
+        /* Now move the file into the pristine store, overwriting
+           existing files with the same checksum. */
+        SVN_ERR(svn_io_file_move(temp_path, pristine_path, iterpool));
       }
 
       /* Add the checksums for this text-base to *TEXT_BASES_INFO. */
