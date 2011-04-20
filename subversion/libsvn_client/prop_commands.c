@@ -41,6 +41,7 @@
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_client_private.h"
 
 
 /*** Code. ***/
@@ -362,14 +363,7 @@ svn_client_propset4(const char *propname,
 
   /* Check for homogeneity among our targets. */
   targets_are_urls = svn_path_is_url(APR_ARRAY_IDX(targets, 0, const char *));
-  for (i = 1; i < targets->nelts; i++)
-    {
-      const char *target = APR_ARRAY_IDX(targets, i, const char *);
-
-      if (svn_path_is_url(target) != targets_are_urls)
-        return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                 _("Cannot mix repository and working copy paths"));
-    }
+  SVN_ERR(svn_client__assert_homogeneous_target_type(targets));
 
   /* Since Subversion controls the "svn:" property namespace, we
      don't honor the 'skip_checks' flag here.  Unusual property
