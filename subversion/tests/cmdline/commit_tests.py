@@ -489,10 +489,11 @@ def nested_dir_replacements(sbox):
   #    - ALL other children of A/D scheduled as "D" at rev 1
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak('A/D', 'A/D/H', status='R ', wc_rev=1)
+  expected_status.tweak('A/D', status='R ', wc_rev=1)
   # In the entries world we couldn't represent H properly, so it shows
   # A/D/H as a replacement against BASE
-  expected_status.tweak('A/D/H', status='A ', wc_rev=1, entry_status='R ')
+  expected_status.tweak('A/D/H', status='A ', wc_rev='-',
+                                 entry_status='R ', entry_rev='1')
   expected_status.add({
     'A/D/bloo' : Item(status='A ', wc_rev=0),
     })

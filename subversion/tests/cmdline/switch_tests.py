@@ -1693,15 +1693,15 @@ def switch_with_obstructing_local_adds(sbox):
   expected_status.add({
     'A/B/F/gamma'     : Item(status='R ', treeconflict='C', wc_rev='1'),
     'A/B/F/G'         : Item(status='R ', treeconflict='C', wc_rev='1'),
-    'A/B/F/G/pi'      : Item(status='A ', wc_rev='1'),
-    'A/B/F/G/tau'     : Item(status='A ', wc_rev='1'),
-    'A/B/F/G/upsilon' : Item(status='A ', wc_rev='0'),
+    'A/B/F/G/pi'      : Item(status='A ', wc_rev='-'),
+    'A/B/F/G/tau'     : Item(status='A ', wc_rev='-'),
+    'A/B/F/G/upsilon' : Item(status='A ', wc_rev='-'),
     'A/B/F/G/rho'     : Item(status='D ', wc_rev='1'),
     'A/B/F/H'         : Item(status='  ', wc_rev='1'),
     'A/B/F/H/chi'     : Item(status='  ', wc_rev='1'),
     'A/B/F/H/omega'   : Item(status='  ', wc_rev='1'),
     'A/B/F/H/psi'     : Item(status='  ', wc_rev='1'),
-    'A/B/F/I'         : Item(status='A ', wc_rev='0'),
+    'A/B/F/I'         : Item(status='A ', wc_rev='-'),
   })
 
   # "Extra" files that we expect to result from the conflicts.
