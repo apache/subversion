@@ -943,8 +943,8 @@ svn_wc__node_get_pre_ng_status_data(svn_revnum_t *revision,
                                result_pool, scratch_pool));
 
   if (!have_work
-      || (!changed_rev || SVN_IS_VALID_REVNUM(*changed_rev)
-          && !revision || SVN_IS_VALID_REVNUM(*revision))
+      || ((!changed_rev || SVN_IS_VALID_REVNUM(*changed_rev))
+          && (!revision || SVN_IS_VALID_REVNUM(*revision)))
       || ((status != svn_wc__db_status_added)
           && (status != svn_wc__db_status_deleted)))
     {
