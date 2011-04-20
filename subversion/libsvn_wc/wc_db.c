@@ -2870,6 +2870,7 @@ op_depth_for_copy(apr_int64_t *op_depth,
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
   apr_int64_t incomplete_op_depth = -1;
+  apr_int64_t min_op_depth = 1; /* Never touch BASE */
 
   *op_depth = relpath_depth(local_relpath);
   *np_op_depth = -1;
@@ -2885,8 +2886,10 @@ op_depth_for_copy(apr_int64_t *op_depth,
     {
       svn_wc__db_status_t status = svn_sqlite__column_token(stmt, 1,
                                                             presence_map);
+
+      min_op_depth = svn_sqlite__column_int64(stmt, 0);
       if (status == svn_wc__db_status_incomplete)
-        incomplete_op_depth = svn_sqlite__column_int64(stmt, 0);
+        incomplete_op_depth = min_op_depth;
     }
   SVN_ERR(svn_sqlite__reset(stmt));
 
@@ -2904,6 +2907,12 @@ op_depth_for_copy(apr_int64_t *op_depth,
       svn_error_t *err = convert_to_working_status(&status, status);
       if (err)
         SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
+
+      if (parent_op_depth < min_op_depth)
+        {
+          /* We want to create a copy; not overwrite the lower layers */
+          return SVN_NO_ERROR;
+        }
 
       if (status == svn_wc__db_status_added
           && ((incomplete_op_depth < 0)
