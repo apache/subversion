@@ -214,6 +214,10 @@ print_status(void *baton,
                                                         local_abspath, 
                                                         sb->cl_pool, pool));
             break;
+
+          default:
+            /* This space intentionally left blank. */
+            break;
         }
 
       status = twks;
