@@ -951,8 +951,11 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
         goto print_error;
       break;
 
-    case svn_wc_notify_warning:
-      svn_handle_warning2(stderr, n->err, "svn: ");
+    case svn_wc_notify_path_nonexistent:
+      err = svn_cmdline_printf(pool, _("'%s' is not under version control"),
+                               path_local);
+      if (err)
+        goto print_error;
       break;
 
     default:
