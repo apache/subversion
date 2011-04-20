@@ -153,7 +153,7 @@ append_basename_if_dir(const char **appendable_dirent_p,
 static svn_error_t *
 copy_one_versioned_file(const char *from_abspath,
                         const char *to_abspath,
-                        svn_wc_context_t *wc_ctx,
+                        svn_client_ctx_t *ctx,
                         const svn_opt_revision_t *revision,
                         const char *native_eol,
                         svn_boolean_t ignore_keywords,
@@ -171,6 +171,7 @@ copy_one_versioned_file(const char *from_abspath,
   const char *dst_tmp;
   svn_error_t *err;
   svn_boolean_t is_deleted;
+  svn_wc_context_t *wc_ctx = ctx->wc_ctx;
 
   SVN_ERR(svn_wc__node_is_status_deleted(&is_deleted, wc_ctx, from_abspath,
                                          scratch_pool));
@@ -333,7 +334,17 @@ copy_one_versioned_file(const char *from_abspath,
                                                              scratch_pool));
 
   /* Now that dst_tmp contains the translated data, do the atomic rename. */
-  return svn_io_file_rename(dst_tmp, to_abspath, scratch_pool);
+  SVN_ERR(svn_io_file_rename(dst_tmp, to_abspath, scratch_pool));
+
+  if (ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify = svn_wc_create_notify(to_abspath,
+                                      svn_wc_notify_update_add, scratch_pool);
+      notify->kind = svn_node_file;
+      (*ctx->notify_func2)(ctx->notify_baton2, notify, scratch_pool);
+    }
+
+  return SVN_NO_ERROR;
 }
 
 /* Make an unversioned copy of the versioned file or directory tree at the
@@ -347,56 +358,9 @@ copy_one_versioned_file(const char *from_abspath,
  *
  * Include externals unless IGNORE_EXTERNALS is true.
  *
- * ### [JAF] The intention of the DEPTH parameter is (presumably):
+ * Recurse according to DEPTH.
  *
- *         Recurse according to DEPTH.
- *
- *     If I'm reading the code right, the current behaviour is:
- *
- *         If DEPTH is svn_depth_infinity then recurse fully.  Otherwise,
- *         copy only the node at FROM itself and any immediate children that
- *         exist as files in the working version (even if we're copying from
- *         the base version), and ignore any externals.
- *
- * ### [JAF] If something already exists on disk at the destination path,
- *     the behaviour depends on the node kinds of the source and destination
- *     and on the FORCE flag.  The intention (I guess) is to follow the
- *     semantics of svn_client_export5(), semantics that are not fully
- *     documented but would be something like:
- *
- *     -----------+---------------------------------------------------------
- *            Src | DIR                 FILE                SPECIAL
- *     Dst (disk) +---------------------------------------------------------
- *     NONE       | simple copy         simple copy         (as src=file?)
- *     DIR        | merge if forced [2] inside if root [1]  (as src=file?)
- *     FILE       | err                 overwr if forced[3] (as src=file?)
- *     SPECIAL    | ???                 ???                 ???
- *     -----------+---------------------------------------------------------
- *
- *     [1] FILE onto DIR case: If this file is the root of the copy and thus
- *         the only node to be copied, then copy it as a child of the
- *         directory TO, applying these same rules again except that if this
- *         case occurs again (the child path is already a directory) then
- *         error out.  If this file is not the root of the copy (it is
- *         reached by recursion), then error out.
- *
- *     [2] DIR onto DIR case.  If the 'FORCE' flag is true then copy the
- *         source's children inside the target dir, else error out.  When
- *         copying the children, apply the same set of rules, except in the
- *         FILE onto DIR case error out like in note [1].
- *
- *     [3] If the 'FORCE' flag is true then overwrite the destination file
- *         else error out.
- *
- *     The reality (apparently, looking at the code) is somewhat different.
- *     For a start, to detect the source kind, it looks at what is on disk
- *     rather than the versioned working or base node.
- *
- * ### [JAF] To improve the situation, I think the selection of which nodes
- *       to export should be decoupled from this function and performed
- *       instead by a WC tree-walk function driving an editor, much like
- *       (and sharing parts of) the implementation of the export-from-URL
- *       case.
+
  */
 static svn_error_t *
 copy_versioned_files(const char *from_abspath,
@@ -499,51 +463,50 @@ copy_versioned_files(const char *from_abspath,
       for (j = 0; j < children->nelts; j++)
         {
           const char *child_abspath = APR_ARRAY_IDX(children, j, const char *);
-          const char *child_basename;
+          const char *child_name = svn_dirent_basename(child_abspath, NULL);
+          const char *target_abspath;
           svn_node_kind_t child_kind;
 
           svn_pool_clear(iterpool);
-          child_basename = svn_dirent_basename(child_abspath, iterpool);
 
           if (ctx->cancel_func)
             SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
-          /* ### We could also invoke ctx->notify_func somewhere in
-             ### here... Is it called for, though?  Not sure. */
+          target_abspath = svn_dirent_join(to_abspath, child_name, iterpool);
 
           SVN_ERR(svn_wc_read_kind(&child_kind, ctx->wc_ctx, child_abspath,
                                    FALSE, iterpool));
 
           if (child_kind == svn_node_dir)
             {
-              if (depth == svn_depth_infinity)
+              if (depth == svn_depth_infinity
+                  || depth == svn_depth_immediates)
                 {
-                  const char *new_from = svn_dirent_join(from_abspath,
-                                                         child_basename,
-                                                         iterpool);
-                  const char *new_to = svn_dirent_join(to_abspath,
-                                                       child_basename,
-                                                       iterpool);
+                  if (ctx->notify_func2)
+                    {
+                      svn_wc_notify_t *notify =
+                          svn_wc_create_notify(target_abspath,
+                                               svn_wc_notify_update_add, pool);
+                      notify->kind = svn_node_dir;
+                      (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+                    }
 
-                  SVN_ERR(copy_versioned_files(new_from, new_to,
-                                               revision, force,
-                                               ignore_externals,
-                                               ignore_keywords, depth,
-                                               native_eol, ctx, iterpool));
+                  if (depth == svn_depth_infinity)
+                    SVN_ERR(copy_versioned_files(child_abspath, target_abspath,
+                                                 revision, force,
+                                                 ignore_externals,
+                                                 ignore_keywords, depth,
+                                                 native_eol, ctx, iterpool));
+                  else
+                    SVN_ERR(svn_io_make_dir_recursively(target_abspath,
+                                                        iterpool));
                 }
             }
-          else if (child_kind == svn_node_file)
+          else if (child_kind == svn_node_file
+                   && depth >= svn_depth_files)
             {
-              const char *new_from_abspath;
-              const char *new_to_abspath;
-
-              new_from_abspath = svn_dirent_join(from_abspath, child_basename,
-                                                 iterpool);
-              new_to_abspath = svn_dirent_join(to_abspath, child_basename,
-                                               iterpool);
-
-              SVN_ERR(copy_one_versioned_file(new_from_abspath, new_to_abspath,
-                                              ctx->wc_ctx, revision,
+              SVN_ERR(copy_one_versioned_file(child_abspath, target_abspath,
+                                              ctx, revision,
                                               native_eol, ignore_keywords,
                                               iterpool));
             }
@@ -606,19 +569,9 @@ copy_versioned_files(const char *from_abspath,
     }
   else if (from_kind == svn_node_file)
     {
-      SVN_ERR(append_basename_if_dir(&to_abspath, from_abspath, FALSE, pool));
-      SVN_ERR(copy_one_versioned_file(from_abspath, to_abspath, ctx->wc_ctx,
+      SVN_ERR(copy_one_versioned_file(from_abspath, to_abspath, ctx,
                                       revision, native_eol, ignore_keywords,
                                       pool));
-
-      /* Notify. */
-      if (ctx->notify_func2)
-        {
-          svn_wc_notify_t *notify = svn_wc_create_notify(to_abspath,
-                                          svn_wc_notify_update_add, pool);
-          notify->kind = svn_node_file;
-          (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
-        }
     }
 
   return SVN_NO_ERROR;
@@ -1247,12 +1200,54 @@ svn_client_export5(svn_revnum_t *result_rev,
     }
   else
     {
+      svn_node_kind_t kind;
       /* This is a working copy export. */
       /* just copy the contents of the working copy into the target path. */
       SVN_ERR(svn_dirent_get_absolute(&from_path_or_url, from_path_or_url,
                                       pool));
 
       SVN_ERR(svn_dirent_get_absolute(&to_path, to_path, pool));
+
+      SVN_ERR(svn_io_check_path(from_path_or_url, &kind, pool));
+
+      /* ### [JAF] If something already exists on disk at the destination path,
+       * the behaviour depends on the node kinds of the source and destination
+       * and on the FORCE flag.  The intention (I guess) is to follow the
+       * semantics of svn_client_export5(), semantics that are not fully
+       * documented but would be something like:
+       *
+       * -----------+---------------------------------------------------------
+       *        Src | DIR                 FILE                SPECIAL
+       * Dst (disk) +---------------------------------------------------------
+       * NONE       | simple copy         simple copy         (as src=file?)
+       * DIR        | merge if forced [2] inside if root [1]  (as src=file?)
+       * FILE       | err                 overwr if forced[3] (as src=file?)
+       * SPECIAL    | ???                 ???                 ???
+       * -----------+---------------------------------------------------------
+       *
+       * [1] FILE onto DIR case: If this file is the root of the copy and thus
+       *     the only node to be copied, then copy it as a child of the
+       *     directory TO, applying these same rules again except that if this
+       *     case occurs again (the child path is already a directory) then
+       *     error out.  If this file is not the root of the copy (it is
+       *     reached by recursion), then error out.
+       *
+       * [2] DIR onto DIR case.  If the 'FORCE' flag is true then copy the
+       *     source's children inside the target dir, else error out.  When
+       *     copying the children, apply the same set of rules, except in the
+       *     FILE onto DIR case error out like in note [1].
+       *
+       * [3] If the 'FORCE' flag is true then overwrite the destination file
+       *     else error out.
+       *
+       * The reality (apparently, looking at the code) is somewhat different.
+       * For a start, to detect the source kind, it looks at what is on disk
+       * rather than the versioned working or base node.
+       */
+
+      if (kind == svn_node_file)
+        SVN_ERR(append_basename_if_dir(&to_path, from_path_or_url, FALSE,
+                                       pool));
 
       SVN_ERR(copy_versioned_files(from_path_or_url, to_path, revision,
                                    overwrite, ignore_externals, ignore_keywords,
