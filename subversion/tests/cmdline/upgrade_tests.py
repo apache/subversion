@@ -644,7 +644,6 @@ def missing_dirs2(sbox):
     })
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 
-@XFail()
 @Issue(3808)
 def delete_and_keep_local(sbox):
   "check status delete and delete --keep-local"
