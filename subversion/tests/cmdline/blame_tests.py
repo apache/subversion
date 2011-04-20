@@ -31,6 +31,9 @@ import os, sys, re
 import svntest
 from svntest.main import server_has_mergeinfo
 
+# For some basic merge setup used by blame -g tests.
+from merge_tests import set_up_branch
+
 # (abbreviation)
 Skip = svntest.testcase.Skip_deco
 SkipUnless = svntest.testcase.SkipUnless_deco
@@ -734,6 +737,65 @@ def blame_output_after_merge(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                     'blame', '-g', '-r', '6:head', mu_path)
 
+#----------------------------------------------------------------------
+
+@SkipUnless(server_has_mergeinfo)
+@XFail()
+@Issue(3862)
+def merge_sensitive_blame_and_empty_mergeinfo(sbox):
+  "blame -g handles changes from empty mergeinfo"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  wc_disk, wc_status = set_up_branch(sbox, True)
+
+  A_COPY_path   = os.path.join(wc_dir, 'A_COPY')
+  psi_path      = os.path.join(wc_dir, 'A', 'D', 'H', 'psi')
+  psi_COPY_path = os.path.join(wc_dir, 'A_COPY', 'D', 'H', 'psi')
+
+  # Make an edit to A/D/H/psi in r3.
+  svntest.main.file_append(psi_path, "trunk edit in revision three.\n")
+  svntest.main.run_svn(None, 'ci', '-m', 'trunk edit', wc_dir)
+
+  # Merge r3 from A to A_COPY, reverse merge r3 from A/D/H/psi
+  # to A_COPY/D/H/psi, and commit as r4.  This results in empty
+  # mergeinfo on A_COPY/D/H/psi.
+  svntest.main.run_svn(None, 'up', wc_dir)
+  svntest.main.run_svn(None, 'merge', '-c3',
+                       sbox.repo_url + '/A', A_COPY_path)
+  svntest.main.run_svn(None, 'merge', '-c-3',
+                       sbox.repo_url + '/A/D/H/psi', psi_COPY_path)
+  svntest.main.run_svn(None, 'ci', '-m',
+                       'Sync merge A to A_COPY excepting A_COPY/D/H/psi',
+                       wc_dir)
+
+  # Make an edit to A/D/H/psi in r5.
+  svntest.main.file_append(psi_path, "trunk edit in revision five.\n")
+  svntest.main.run_svn(None, 'ci', '-m', 'trunk edit', wc_dir)
+
+  # Sync merge A/D/H/psi to A_COPY/D/H/psi and commit as r6.  This replaces
+  # the empty mergeinfo on A_COPY/D/H/psi with '/A/D/H/psi:2-5'.
+  svntest.main.run_svn(None, 'up', wc_dir)
+  svntest.main.run_svn(None, 'merge',  sbox.repo_url + '/A/D/H/psi',
+                       psi_COPY_path)
+  svntest.main.run_svn(None, 'ci', '-m',
+                       'Sync merge A/D/H/psi to A_COPY/D/H/psi', wc_dir)
+
+  # Check the blame -g output:
+  # Currently this test fails because the trunk edit done in r3 is
+  # reported as having been done in r5.
+  #
+  #   >svn blame -g A_COPY\D\H\psi
+  #          1    jrandom This is the file 'psi'.
+  #   G      5    jrandom trunk edit in revision three.
+  #   G      5    jrandom trunk edit in revision five.
+  expected_output = [
+      "       1    jrandom This is the file 'psi'.\n",
+      "G      3    jrandom trunk edit in revision three.\n",
+      "G      5    jrandom trunk edit in revision five.\n"]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                    'blame', '-g', psi_COPY_path)
+
 ########################################################################
 # Run the tests
 
@@ -754,6 +816,7 @@ test_list = [ None,
               blame_peg_rev_file_not_in_head,
               blame_file_not_in_head,
               blame_output_after_merge,
+              merge_sensitive_blame_and_empty_mergeinfo,
              ]
 
 if __name__ == '__main__':
