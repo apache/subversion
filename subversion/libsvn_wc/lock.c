@@ -76,7 +76,7 @@ struct svn_wc_adm_access_t
 /* This is a placeholder used in the set hash to represent missing
    directories.  Only its address is important, it contains no useful
    data. */
-static const svn_wc_adm_access_t missing;
+static const svn_wc_adm_access_t missing = { 0 };
 #define IS_MISSING(lock) ((lock) == &missing)
 
 /* ### hack for now. future functionality coming in a future revision.  */
