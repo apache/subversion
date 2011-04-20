@@ -1036,7 +1036,7 @@ def wc_wc_copy_revert(sbox):
   expected_output = svntest.verify.ExpectedOutput(
     ['A  +             -        1 jrandom      ' + sbox.ospath('A2') + '\n',
      '   +             -        1 jrandom      ' + sbox.ospath('A2/B') + '\n',
-     '!               ?        ?   ?           ' + sbox.ospath('A2/B/E') + '\n',
+     '!                -       ?   ?           ' + sbox.ospath('A2/B/E') + '\n',
      ])
   expected_output.match_all = False
   svntest.actions.run_and_verify_svn(None, expected_output, [],
