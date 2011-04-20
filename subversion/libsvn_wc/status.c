@@ -65,6 +65,9 @@ struct walk_status_baton
   /* Target of the status */
   const char *target_abspath;
 
+  /* Should we ignore text modifications? */
+  svn_boolean_t ignore_text_mods;
+
   /* Externals info harvested during the status run. */
   apr_hash_t *externals;
 
@@ -753,7 +756,6 @@ send_status_structure(const struct walk_status_baton *wb,
                       const struct svn_wc__db_info_t *info,
                       const svn_io_dirent2_t *dirent,
                       svn_boolean_t get_all,
-                      svn_boolean_t ignore_text_mods,
                       svn_wc_status_func4_t status_func,
                       void *status_baton,
                       apr_pool_t *scratch_pool)
@@ -784,7 +786,7 @@ send_status_structure(const struct walk_status_baton *wb,
 
   SVN_ERR(assemble_status(&statstruct, wb->db, local_abspath,
                           parent_repos_root_url, parent_repos_relpath,
-                          info, dirent, get_all, ignore_text_mods,
+                          info, dirent, get_all, wb->ignore_text_mods,
                           repos_lock, scratch_pool, scratch_pool));
 
   if (statstruct && status_func)
@@ -952,7 +954,7 @@ get_dir_status(const struct walk_status_baton *wb,
                svn_depth_t depth,
                svn_boolean_t get_all,
                svn_boolean_t no_ignore,
-               svn_boolean_t ignore_text_mods,
+               svn_boolean_t had_props,
                svn_wc_status_func4_t status_func,
                void *status_baton,
                svn_cancel_func_t cancel_func,
@@ -975,7 +977,7 @@ handle_dir_entry(const struct walk_status_baton *wb,
                  svn_depth_t depth,
                  svn_boolean_t get_all,
                  svn_boolean_t no_ignore,
-                 svn_boolean_t ignore_text_mods,
+                 svn_boolean_t had_props,
                  svn_wc_status_func4_t status_func,
                  void *status_baton,
                  svn_cancel_func_t cancel_func,
@@ -1005,7 +1007,7 @@ handle_dir_entry(const struct walk_status_baton *wb,
                                  dir_repos_root_url, dir_repos_relpath,
                                  entry_info,
                                  dirent, ignores, depth, get_all, no_ignore,
-                                 ignore_text_mods,
+                                 had_props,
                                  status_func, status_baton, cancel_func,
                                  cancel_baton,
                                  pool));
@@ -1018,7 +1020,6 @@ handle_dir_entry(const struct walk_status_baton *wb,
                                         dir_repos_root_url,
                                         dir_repos_relpath,
                                         entry_info, dirent, get_all,
-                                        ignore_text_mods,
                                         status_func, status_baton, pool));
         }
     }
@@ -1029,7 +1030,6 @@ handle_dir_entry(const struct walk_status_baton *wb,
                                     dir_repos_root_url,
                                     dir_repos_relpath,
                                     entry_info, dirent, get_all,
-                                    ignore_text_mods,
                                     status_func, status_baton, pool));
     }
 
@@ -1117,7 +1117,7 @@ get_dir_status(const struct walk_status_baton *wb,
                svn_depth_t depth,
                svn_boolean_t get_all,
                svn_boolean_t no_ignore,
-               svn_boolean_t ignore_text_mods,
+               svn_boolean_t had_props,
                svn_wc_status_func4_t status_func,
                void *status_baton,
                svn_cancel_func_t cancel_func,
@@ -1184,7 +1184,8 @@ get_dir_status(const struct walk_status_baton *wb,
      value to wc->external_func along with this directory's depth. (Also,
      we want to track the externals internally so we can report status more
      accurately.) */
-  SVN_ERR(handle_externals(wb, local_abspath, dir_info->depth, iterpool));
+  if (had_props)
+    SVN_ERR(handle_externals(wb, local_abspath, dir_info->depth, iterpool));
 
   if (!selected)
     {
@@ -1194,7 +1195,6 @@ get_dir_status(const struct walk_status_baton *wb,
                                       parent_repos_root_url,
                                       parent_repos_relpath,
                                       dir_info, dirent, get_all,
-                                      ignore_text_mods,
                                       status_func, status_baton,
                                       iterpool));
 
@@ -1247,7 +1247,7 @@ get_dir_status(const struct walk_status_baton *wb,
                                                            : svn_depth_empty,
                                        get_all,
                                        no_ignore,
-                                       ignore_text_mods,
+                                       info->had_props,
                                        status_func, status_baton,
                                        cancel_func, cancel_baton, iterpool));
               continue;
@@ -1588,7 +1588,7 @@ make_dir_baton(void **dir_baton,
                              d->depth == svn_depth_files
                                       ? svn_depth_files
                                       : svn_depth_immediates,
-                             TRUE, TRUE, FALSE,
+                             TRUE, TRUE, TRUE /* had_props */,
                              hash_stash, d->statii,
                              eb->cancel_func, eb->cancel_baton,
                              pool));
@@ -2276,7 +2276,7 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
   svn_delta_editor_t *tree_editor = svn_delta_default_editor(result_pool);
 
   /* Construct an edit baton. */
-  eb = apr_palloc(result_pool, sizeof(*eb));
+  eb = apr_pcalloc(result_pool, sizeof(*eb));
   eb->default_depth     = depth;
   eb->target_revision   = edit_revision;
   eb->db                = wc_ctx->db;
@@ -2296,13 +2296,14 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
   eb->target_basename   = apr_pstrdup(result_pool, target_basename);
   eb->root_opened       = FALSE;
 
-  eb->wb.db             = wc_ctx->db;
-  eb->wb.target_abspath = eb->target_abspath;
-  eb->wb.external_func  = external_func;
-  eb->wb.external_baton = external_baton;
-  eb->wb.externals      = apr_hash_make(result_pool);
-  eb->wb.repos_locks    = NULL;
-  eb->wb.repos_root     = NULL;
+  eb->wb.db               = wc_ctx->db;
+  eb->wb.target_abspath   = eb->target_abspath;
+  eb->wb.ignore_text_mods = FALSE;
+  eb->wb.external_func    = external_func;
+  eb->wb.external_baton   = external_baton;
+  eb->wb.externals        = apr_hash_make(result_pool);
+  eb->wb.repos_locks      = NULL;
+  eb->wb.repos_root       = NULL;
 
   /* Use the caller-provided ignore patterns if provided; the build-time
      configured defaults otherwise. */
@@ -2373,6 +2374,7 @@ svn_wc__internal_walk_status(svn_wc__db_t *db,
 
   wb.db = db;
   wb.target_abspath = local_abspath;
+  wb.ignore_text_mods = ignore_text_mods;
   wb.externals = apr_hash_make(scratch_pool);
   wb.external_func = external_func;
   wb.external_baton = external_baton;
@@ -2422,7 +2424,7 @@ svn_wc__internal_walk_status(svn_wc__db_t *db,
                          depth,
                          get_all,
                          no_ignore,
-                         ignore_text_mods,
+                         TRUE /* had_props */,
                          status_func, status_baton,
                          cancel_func, cancel_baton,
                          scratch_pool));
