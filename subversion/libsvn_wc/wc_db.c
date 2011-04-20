@@ -4358,7 +4358,7 @@ svn_wc__db_op_read_tree_conflict(
   return SVN_NO_ERROR;
 }
 
-/* Baton for remove_post_commit_txn */
+/* Baton for remove_node_txn */
 struct remove_node_baton
 {
   svn_revnum_t not_present_rev;
@@ -7387,7 +7387,7 @@ struct bump_revisions_baton_t
 };
 
 static svn_error_t *
-bump_revisions_post_commit(void *baton,
+bump_revisions_post_update(void *baton,
                            svn_wc__db_wcroot_t *wcroot,
                            const char *local_relpath,
                            apr_pool_t *scratch_pool)
@@ -7468,7 +7468,7 @@ svn_wc__db_op_bump_revisions_post_update(svn_wc__db_t *db,
   brb.exclude_relpaths = exclude_relpaths;
 
   SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath,
-                              bump_revisions_post_commit, &brb, scratch_pool));
+                              bump_revisions_post_update, &brb, scratch_pool));
 
   return SVN_NO_ERROR;
 }
