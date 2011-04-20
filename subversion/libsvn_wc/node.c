@@ -922,81 +922,50 @@ svn_wc__node_get_base_rev(svn_revnum_t *base_revision,
 }
 
 svn_error_t *
-svn_wc__node_get_working_rev_info(svn_revnum_t *revision,
-                                  svn_revnum_t *changed_rev,
-                                  apr_time_t *changed_date,
-                                  const char **changed_author,
-                                  svn_wc_context_t *wc_ctx,
-                                  const char *local_abspath,
-                                  apr_pool_t *result_pool,
-                                  apr_pool_t *scratch_pool)
+svn_wc__node_get_pre_ng_status_data(svn_revnum_t *revision,
+                                   svn_revnum_t *changed_rev,
+                                   apr_time_t *changed_date,
+                                   const char **changed_author,
+                                   svn_wc_context_t *wc_ctx,
+                                   const char *local_abspath,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
-  svn_boolean_t have_base;
+  svn_boolean_t have_base, have_more_work, have_work;
 
   SVN_ERR(svn_wc__db_read_info(&status, NULL, revision, NULL, NULL, NULL,
                                changed_rev, changed_date, changed_author,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               &have_base, NULL, NULL,
-                               wc_ctx->db, local_abspath, result_pool,
-                               scratch_pool));
+                               &have_base, &have_more_work, &have_work,
+                               wc_ctx->db, local_abspath,
+                               result_pool, scratch_pool));
 
-  if (SVN_IS_VALID_REVNUM(*changed_rev) && SVN_IS_VALID_REVNUM(*revision))
-    return SVN_NO_ERROR; /* We got everything we need */
-
-  if (status == svn_wc__db_status_deleted)
+  if (!have_work
+      || (!changed_rev || SVN_IS_VALID_REVNUM(*changed_rev)
+          && !revision || SVN_IS_VALID_REVNUM(*revision))
+      || ((status != svn_wc__db_status_added)
+          && (status != svn_wc__db_status_deleted)))
     {
-      const char *work_del_abspath;
-      const char *base_del_abspath;
-
-      SVN_ERR(svn_wc__db_scan_deletion(&base_del_abspath, NULL,
-                                       &work_del_abspath, wc_ctx->db,
-                                       local_abspath, scratch_pool,
-                                       scratch_pool));
-      if (work_del_abspath)
-        {
-          /* ### This is not going to return any useful data
-             ### We need to look one layer down */
-          SVN_ERR(svn_wc__db_read_info(&status, NULL, revision, NULL, NULL,
-                                       NULL, changed_rev, changed_date,
-                                       changed_author, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL,
-                                       wc_ctx->db, work_del_abspath,
-                                       result_pool, scratch_pool));
-        }
-      else
-        {
-          SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, revision, NULL,
-                                           NULL, NULL, changed_rev,
-                                           changed_date, changed_author,
-                                           NULL, NULL, NULL, NULL, NULL,
-                                           NULL, NULL, NULL, NULL,
-                                           wc_ctx->db, base_del_abspath,
-                                           result_pool, scratch_pool));
-        }
+      return SVN_NO_ERROR; /* We got everything we need */
     }
-  else if (have_base)
+
+  if (have_base && !have_more_work)
+    SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, revision, NULL, NULL, NULL,
+                                     changed_rev, changed_date, changed_author,
+                                     NULL, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL,
+                                     wc_ctx->db, local_abspath,
+                                     result_pool, scratch_pool));
+  else
     {
-      svn_wc__db_status_t base_status;
-      svn_revnum_t base_rev;
-      SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, &base_rev, NULL, NULL,
-                                       NULL, changed_rev, changed_date,
-                                       changed_author, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL,
-                                       wc_ctx->db, local_abspath,
-                                       result_pool, scratch_pool));
+      /* Sorry, we need a function to peek below the current working and
+         the BASE layer. And we don't have one yet.
 
-      if (revision && !SVN_IS_VALID_REVNUM(*revision)
-          && base_status != svn_wc__db_status_not_present)
-        {
-          /* When we used entries we reset the revision to 0 when we added a new
-             node over an existing not present node */
-          *revision = base_rev;
-        }
+         ### Better to report nothing, than the wrong information */
     }
+
   return SVN_NO_ERROR;
 }
 

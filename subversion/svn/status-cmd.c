@@ -181,21 +181,42 @@ print_status(void *baton,
    * ### with our testsuite. */
   if (status->versioned
       && !SVN_IS_VALID_REVNUM(status->revision)
-      && !status->copied)
+      && !status->copied
+      && (status->node_status == svn_wc_status_deleted
+          || status->node_status == svn_wc_status_replaced))
     {
-      svn_client_status_t *tweaked_status
-                 = svn_client_status_dup(status, sb->cl_pool);
+      svn_client_status_t *twks = svn_client_status_dup(status, sb->cl_pool);
 
-      /* Retrieve some data from the original version of the replaced node */
-      SVN_ERR(svn_wc__node_get_working_rev_info(&tweaked_status->revision,
-                                                &tweaked_status->changed_rev,
-                                                &tweaked_status->changed_date,
-                                                &tweaked_status->changed_author,
-                                                sb->ctx->wc_ctx,
-                                                local_abspath, sb->cl_pool,
-                                                pool));
+      /* Copied is FALSE, so either we have a local addition, or we have
+         a delete that directly shadows a BASE node */
 
-      status = tweaked_status;
+      switch(status->node_status)
+        {
+          case svn_wc_status_replaced:
+            /* Just retrieve the revision below the replacement.
+               The other fields are filled by a copy.
+               (With ! copied, we know we have a BASE node)
+
+               ### Is this really what we want to provide? */
+            SVN_ERR(svn_wc__node_get_pre_ng_status_data(&twks->revision,
+                                                        NULL, NULL, NULL,
+                                                        sb->ctx->wc_ctx,
+                                                        local_abspath,
+                                                        sb->cl_pool, pool));
+            break;
+          case svn_wc_status_deleted:
+            /* Retrieve some data from the original version below the delete */
+            SVN_ERR(svn_wc__node_get_pre_ng_status_data(&twks->revision,
+                                                        &twks->changed_rev,
+                                                        &twks->changed_date,
+                                                        &twks->changed_author,
+                                                        sb->ctx->wc_ctx,
+                                                        local_abspath, 
+                                                        sb->cl_pool, pool));
+            break;
+        }
+
+      status = twks;
     }
 
   /* If the path is part of a changelist, then we don't print

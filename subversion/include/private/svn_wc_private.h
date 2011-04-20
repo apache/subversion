@@ -531,14 +531,14 @@ svn_wc__node_get_base_rev(svn_revnum_t *base_revision,
  * changed_rev.
  */
 svn_error_t *
-svn_wc__node_get_working_rev_info(svn_revnum_t *revision,
-                                  svn_revnum_t *changed_rev,
-                                  apr_time_t *changed_date,
-                                  const char **changed_author,
-                                  svn_wc_context_t *wc_ctx,
-                                  const char *local_abspath,
-                                  apr_pool_t *result_pool,
-                                  apr_pool_t *scratch_pool);
+svn_wc__node_get_pre_ng_status_data(svn_revnum_t *revision,
+                                    svn_revnum_t *changed_rev,
+                                    apr_time_t *changed_date,
+                                    const char **changed_author,
+                                    svn_wc_context_t *wc_ctx,
+                                    const char *local_abspath,
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool);
 
 
 /** This whole function is for legacy, and it sucks. It does not really
