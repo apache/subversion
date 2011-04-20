@@ -5380,6 +5380,9 @@ svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
  * Always sets @a adds_as_modification to TRUE and @a server_performs_filtering
  * to FALSE.
  *
+ * This function assumes that @a diff3_cmd is path encoded. Later versions
+ * assume utf-8.
+ *
  * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.6 API.
  */
@@ -5507,6 +5510,9 @@ svn_wc_get_switch_editor4(const svn_delta_editor_t **editor,
  * released when the editor driver calls @c close_edit.
  *
  * Always sets @a server_performs_filtering to FALSE.
+ *
+ * This function assumes that @a diff3_cmd is path encoded. Later versions
+ * assume utf-8.
  *
  * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.6 API.
@@ -6378,6 +6384,9 @@ svn_wc_merge4(enum svn_wc_merge_outcome_t *merge_outcome,
 /** Similar to svn_wc_merge4() but takes relative paths and an access
  * baton. It doesn't support a cancel function or tracking origin version
  * information.
+ *
+ * This function assumes that @a diff3_cmd is path encoded. Later versions
+ * assume utf-8.
  *
  * @since New in 1.5.
  * @deprecated Provided for backwards compatibility with the 1.6 API.

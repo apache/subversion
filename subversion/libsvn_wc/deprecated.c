@@ -2982,6 +2982,9 @@ svn_wc_get_update_editor3(svn_revnum_t *target_revision,
       external_func = traversal_info_update;
     }
 
+  if (diff3_cmd)
+    SVN_ERR(svn_path_cstring_to_utf8(&diff3_cmd, diff3_cmd, pool));
+
   SVN_ERR(svn_wc_get_update_editor4(editor, edit_baton,
                                     target_revision,
                                     wc_ctx,
@@ -3099,6 +3102,9 @@ svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
       eb->traversal = traversal_info;
       external_func = traversal_info_update;
     }
+
+  if (diff3_cmd)
+    SVN_ERR(svn_path_cstring_to_utf8(&diff3_cmd, diff3_cmd, pool));
 
   SVN_ERR(svn_wc_get_switch_editor4(editor, edit_baton,
                                     target_revision,
@@ -3743,6 +3749,9 @@ svn_wc_merge3(enum svn_wc_merge_outcome_t *merge_outcome,
   SVN_ERR(svn_dirent_get_absolute(&target_abspath, merge_target, pool));
 
   SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */, db, pool));
+
+  if (diff3_cmd)
+    SVN_ERR(svn_path_cstring_to_utf8(&diff3_cmd, diff3_cmd, pool));
 
   SVN_ERR(svn_wc_merge4(merge_outcome,
                         wc_ctx,
