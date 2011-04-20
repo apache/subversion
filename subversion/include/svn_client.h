@@ -4121,45 +4121,43 @@ svn_client_move(svn_client_commit_info_t **commit_info_p,
  *
  * If @a targets are URLs:
  *
- *   Immediately attempt to commit the property change in the repository,
+ * - Immediately attempt to commit the property change in the repository,
  *   using the authentication baton in @a ctx and @a
  *   ctx->log_msg_func3/@a ctx->log_msg_baton3.
+ *   @note ### Currently a separate commit for each target. TODO: single commit.
  *
- *     ### Currently a separate commit for each target. TODO: single commit.
- *
- *   If the property has changed on any target since revision
+ * - If the property has changed on any target since revision
  *   @a base_revision_for_url (which must not be #SVN_INVALID_REVNUM), no
  *   change will be made and an error will be returned.
- *
- *     ### Currently processes targets in order, committing if successful,
+ *   @note ### Currently processes targets in order, committing if successful,
  *         stopping when one hits this error. TODO: commit all or none.
  *
- *   If non-NULL, @a revprop_table is a hash table holding additional,
+ * - If non-NULL, @a revprop_table is a hash table holding additional,
  *   custom revision properties (<tt>const char *</tt> names mapped to
  *   <tt>svn_string_t *</tt> values) to be set on the new revision.  This
  *   table cannot contain any standard Subversion properties.
  *
- *   If @a commit_callback is non-NULL, then for each successful commit,
+ * - If @a commit_callback is non-NULL, then for each successful commit,
  *   call @a commit_callback with @a commit_baton and a #svn_commit_info_t
  *   for the commit.
  *
- *   @a depth must be #svn_depth_empty.  @a changelists is ignored.
+ * - @a depth must be #svn_depth_empty.  @a changelists is ignored.
  *
  * If @a targets are working copy paths:
  *
- *   If @a depth is #svn_depth_empty, set the property on each member of
+ * - If @a depth is #svn_depth_empty, set the property on each member of
  *   @a targets only; if #svn_depth_files, set it on @a targets and their
  *   file children (if any); if #svn_depth_immediates, on @a targets and all
  *   of their immediate children (both files and directories); if
  *   #svn_depth_infinity, on @a targets and everything beneath them.
  *
- *   @a changelists is an array of <tt>const char *</tt> changelist
+ * - @a changelists is an array of <tt>const char *</tt> changelist
  *   names, used as a restrictive filter on items whose properties are
  *   set; that is, don't set properties on any item unless it's a member
  *   of one of those changelists.  If @a changelists is empty (or
  *   altogether @c NULL), no changelist filtering occurs.
  *
- *   @a base_revision_for_url must be #SVN_INVALID_REVNUM.  @a revprop_table,
+ * - @a base_revision_for_url must be #SVN_INVALID_REVNUM.  @a revprop_table,
  *   @a commit_callback and @a commit_baton are ignored.
  *
  * If @a propname is an svn-controlled property (i.e. prefixed with
@@ -4195,8 +4193,8 @@ svn_client_propset4(const char *propname,
                     apr_pool_t *pool);
 
 /**
- * Similar to svn_client_propset4(), but returns the @a commit_info_p directly,
- * rather than through @a commit_callback.
+ * Similar to svn_client_propset4(), but takes only a single target, and
+ * returns the @a commit_info_p directly rather than through a callback.
  *
  * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.6 API.
