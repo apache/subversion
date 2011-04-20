@@ -10204,62 +10204,6 @@ svn_wc__db_temp_op_set_property_conflict_marker_file(svn_wc__db_t *db,
   return svn_error_return(svn_sqlite__step_done(stmt));
 }
 
-
-struct set_new_dir_to_incomplete_baton_t
-{
-  const char *repos_relpath;
-  const char *repos_root_url;
-  const char *repos_uuid;
-  svn_revnum_t revision;
-  svn_depth_t depth;
-};
-
-
-static svn_error_t *
-set_new_dir_to_incomplete_txn(void *baton,
-                              svn_wc__db_wcroot_t *wcroot,
-                              const char *local_relpath,
-                              apr_pool_t *scratch_pool)
-{
-  struct set_new_dir_to_incomplete_baton_t *dtb = baton;
-  svn_sqlite__stmt_t *stmt;
-  apr_int64_t repos_id;
-  const char *parent_relpath = (*local_relpath == '\0')
-                                  ? NULL
-                                  : svn_relpath_dirname(local_relpath,
-                                                        scratch_pool);
-
-  SVN_ERR(create_repos_id(&repos_id, dtb->repos_root_url, dtb->repos_uuid,
-                          wcroot->sdb, scratch_pool));
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_INSERT_NODE));
-
-  SVN_ERR(svn_sqlite__bindf(stmt, "isis" /* 1 - 4 */
-                            "isr" "sns", /* 5 - 7, 8, 9(n), 10 */
-                            wcroot->wc_id,           /* 1 */
-                            local_relpath,           /* 2 */
-                            (apr_int64_t)0, /* op_depth == 0; BASE */
-                            parent_relpath,          /* 4 */
-                            repos_id,
-                            dtb->repos_relpath,
-                            dtb->revision,
-                            "incomplete",            /* 8, presence */
-                            "dir"));                 /* 10, kind */
-
-  /* If depth is not unknown: record depth */
-  if (dtb->depth >= svn_depth_empty && dtb->depth <= svn_depth_infinity)
-    SVN_ERR(svn_sqlite__bind_text(stmt, 9, svn_depth_to_word(dtb->depth)));
-
-  SVN_ERR(svn_sqlite__step_done(stmt));
-
-  if (parent_relpath)
-    SVN_ERR(extend_parent_delete(wcroot->sdb, wcroot->wc_id,
-                                 local_relpath, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-
 svn_error_t *
 svn_wc__db_temp_op_set_new_dir_to_incomplete(svn_wc__db_t *db,
                                              const char *local_abspath,
@@ -10272,17 +10216,11 @@ svn_wc__db_temp_op_set_new_dir_to_incomplete(svn_wc__db_t *db,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  struct set_new_dir_to_incomplete_baton_t baton;
+  struct insert_base_baton_t ibb;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
   SVN_ERR_ASSERT(repos_relpath && repos_root_url && repos_uuid);
-
-  baton.repos_relpath = repos_relpath;
-  baton.repos_root_url = repos_root_url;
-  baton.repos_uuid = repos_uuid;
-  baton.revision = revision;
-  baton.depth = depth;
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
                                                 db, local_abspath,
@@ -10290,11 +10228,23 @@ svn_wc__db_temp_op_set_new_dir_to_incomplete(svn_wc__db_t *db,
 
   VERIFY_USABLE_WCROOT(wcroot);
 
-  SVN_ERR(flush_entries(wcroot, local_abspath, scratch_pool));
+  blank_ibb(&ibb);
+
+  /* Calculate repos_id in insert_base_node() to avoid extra transaction */
+  ibb.repos_root_url = repos_root_url;
+  ibb.repos_uuid = repos_uuid;
+
+  ibb.status = svn_wc__db_status_incomplete;
+  ibb.repos_relpath = repos_relpath;
+  ibb.revision = revision;
+  ibb.depth = depth;
+
 
   SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath,
-                              set_new_dir_to_incomplete_txn,
-                              &baton, scratch_pool));
+                              insert_base_node,
+                              &ibb, scratch_pool));
+
+  SVN_ERR(flush_entries(wcroot, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
