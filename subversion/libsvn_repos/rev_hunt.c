@@ -1234,7 +1234,7 @@ find_merged_revisions(apr_array_header_t **merged_path_revisions_out,
                       apr_pool_t *pool)
 {
   const apr_array_header_t *old;
-  apr_array_header_t *new;
+  apr_array_header_t *new_merged_path_revs;
   apr_pool_t *iterpool, *last_pool;
   apr_array_header_t *merged_path_revisions = apr_array_make(pool, 0,
                                                 sizeof(struct path_revision *));
@@ -1249,7 +1249,8 @@ find_merged_revisions(apr_array_header_t **merged_path_revisions_out,
       apr_pool_t *temp_pool;
 
       svn_pool_clear(iterpool);
-      new = apr_array_make(iterpool, 0, sizeof(struct path_revision *));
+      new_merged_path_revs = apr_array_make(iterpool, 0,
+                                            sizeof(struct path_revision *));
 
       /* Iterate over OLD, checking for non-empty mergeinfo.  If found, gather
          path_revisions for any merged revisions, and store those in NEW. */
@@ -1297,7 +1298,8 @@ find_merged_revisions(apr_array_header_t **merged_path_revisions_out,
                     continue;
 
                   /* Search and find revisions to add to the NEW list. */
-                  SVN_ERR(find_interesting_revisions(new, repos, path,
+                  SVN_ERR(find_interesting_revisions(new_merged_path_revs,
+                                                     repos, path,
                                                      range->start, range->end,
                                                      TRUE, TRUE,
                                                      duplicate_path_revs,
@@ -1312,15 +1314,15 @@ find_merged_revisions(apr_array_header_t **merged_path_revisions_out,
 
       /* Append the newly found path revisions with the old ones. */
       merged_path_revisions = apr_array_append(iterpool, merged_path_revisions,
-                                               new);
+                                               new_merged_path_revs);
 
       /* Swap data structures */
-      old = new;
+      old = new_merged_path_revs;
       temp_pool = last_pool;
       last_pool = iterpool;
       iterpool = temp_pool;
     }
-  while (new->nelts > 0);
+  while (new_merged_path_revs->nelts > 0);
 
   /* Sort MERGED_PATH_REVISIONS in increasing order by REVNUM. */
   qsort(merged_path_revisions->elts, merged_path_revisions->nelts,
