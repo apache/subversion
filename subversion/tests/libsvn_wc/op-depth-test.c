@@ -2838,6 +2838,76 @@ test_op_delete(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* The purpose of this test is to check what happens if a deleted child is
+   replaced by the same nodes. */
+static svn_error_t *
+test_child_replace_with_same_origin(const svn_test_opts_t *opts,
+                                    apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "child_replace_with_same", opts, pool));
+
+  /* Set up the base state as revision 1. */
+  SVN_ERR(wc_mkdir(&b, "A"));
+  SVN_ERR(wc_mkdir(&b, "A/B"));
+  SVN_ERR(wc_mkdir(&b, "A/B/C"));
+  SVN_ERR(wc_commit(&b, ""));
+  SVN_ERR(wc_update(&b, "", 1));
+
+  SVN_ERR(wc_copy(&b, "A", "X"));
+
+  {
+    nodes_row_t rows[] = {
+      {1, "X",       "normal",           1, "A"},
+      {1, "X/B",     "normal",           1, "A/B"},
+      {1, "X/B/C",   "normal",           1, "A/B/C"},
+      { 0 }
+    };
+    SVN_ERR(check_db_rows(&b, "X", rows));
+  }
+
+  SVN_ERR(wc_delete(&b, "X/B"));
+  {
+    nodes_row_t rows[] = {
+      {1, "X",       "normal",           1, "A"},
+      {1, "X/B",     "normal",           1, "A/B"},
+      {1, "X/B/C",   "normal",           1, "A/B/C"},
+
+      {2, "X/B",     "base-deleted",     NO_COPY_FROM },
+      {2, "X/B/C",   "base-deleted",     NO_COPY_FROM },
+
+      { 0 }
+    };
+    SVN_ERR(check_db_rows(&b, "X", rows));
+  }
+
+  SVN_ERR(wc_copy(&b, "A/B", "X/B"));
+  {
+    /* The revisions match what was here, so for an optimal commit
+       this should have exactly the same behavior as reverting X/B.
+
+       Another copy would be fine, as that is really what the user
+       did. */
+    nodes_row_t rows[] = {
+      {1, "X",       "normal",           1, "A"},
+      {1, "X/B",     "normal",           1, "A/B"},
+      {1, "X/B/C",   "normal",           1, "A/B/C"},
+
+      /* We either expect this */
+      {2, "X/B",     "normal",           1, "A/B" },
+      {2, "X/B/C",   "normal",           1, "A/B/C" },
+
+      /* Or we expect that op_depth 2 does not exist */
+
+      { 0 }
+    };
+    SVN_ERR(check_db_rows(&b, "X", rows));
+  }
+
+  return SVN_NO_ERROR;
+}
+
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
 
@@ -2882,5 +2952,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test_children_of_replaced_dir"),
     SVN_TEST_OPTS_PASS(test_op_delete,
                        "test_op_delete"),
+    SVN_TEST_OPTS_XFAIL(test_child_replace_with_same_origin,
+                       "test_child_replace_with_same"),
     SVN_TEST_NULL
   };
