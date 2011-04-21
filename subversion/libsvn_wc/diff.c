@@ -125,11 +125,13 @@ reverse_propchanges(apr_hash_t *baseprops,
 
 /* Set *RESULT_ABSPATH to the absolute path to a readable file containing
    the pristine text of LOCAL_ABSPATH in DB, or to NULL if it does not have
-   any pristine text.  If the node has more than one pristine text, get the
-   one that is "nearest" to the working version.  That means the pristine
-   text of the copied file if this node is copied or moved here, else of the
-   replaced file if it is an add that replaces a file, else of its base
-   node, or NULL if it is a simple add or an add that replaces a non-file.
+   any pristine text.
+
+   If USE_BASE is FALSE it gets the pristine text of what is currently in the
+   working copy. (So it returns the pristine file of a copy).
+
+   If USE_BASE is TRUE, it looks in the lowest layer of the working copy and
+   shows exactly what was originally checked out (or updated to).
 
    Rationale:
 
@@ -147,36 +149,30 @@ reverse_propchanges(apr_hash_t *baseprops,
    not 100% sure this is the right decision, but it at least seems
    to match our test suite's expectations. */
 static svn_error_t *
-get_nearest_pristine_text_as_file(const char **result_abspath,
-                                  svn_wc__db_t *db,
-                                  const char *local_abspath,
-                                  apr_pool_t *result_pool,
-                                  apr_pool_t *scratch_pool)
+get_pristine_file(const char **result_abspath,
+                  svn_wc__db_t *db,
+                  const char *local_abspath,
+                  svn_boolean_t use_base,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
 {
   const svn_checksum_t *checksum;
 
-  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, &checksum,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL,
-                               db, local_abspath, scratch_pool, scratch_pool));
-  if (checksum == NULL)
+  if (!use_base)
     {
-      svn_error_t *err;
-
-      err = svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL,
-                                     NULL, NULL, NULL, NULL, &checksum,
-                                     NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                     db, local_abspath,
-                                     scratch_pool, scratch_pool);
-      if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-        {
-          svn_error_clear(err);
-          checksum = NULL;
-        }
-      else if (err)
-        return svn_error_return(err);
+      SVN_ERR(svn_wc__db_read_pristine_info(NULL, NULL, NULL, NULL, NULL, NULL,
+                                            &checksum, NULL, NULL,
+                                            db, local_abspath,
+                                            scratch_pool, scratch_pool));
+    }
+  else
+    {
+      SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, &checksum,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL,
+                                       db, local_abspath,
+                                       scratch_pool, scratch_pool));
     }
 
   if (checksum != NULL)
@@ -568,6 +564,7 @@ file_diff(struct dir_baton *db,
   svn_boolean_t have_base;
   svn_wc__db_status_t base_status;
   const char *local_abspath;
+  svn_boolean_t use_base = FALSE;
 
   SVN_ERR_ASSERT(! eb->use_text_base);
 
@@ -615,15 +612,18 @@ file_diff(struct dir_baton *db,
   if (replaced
       && ! (status == svn_wc__db_status_copied
             || status == svn_wc__db_status_moved_here))
-    revision = revert_base_revnum;
+    {
+      use_base = TRUE;
+      revision = revert_base_revnum;
+    }
 
   /* Set TEXTBASE to the path to the text-base file that we want to diff
      against.
 
      ### There shouldn't be cases where the result is NULL, but at present
      there might be - see get_nearest_pristine_text_as_file(). */
-  SVN_ERR(get_nearest_pristine_text_as_file(&textbase, eb->db, local_abspath,
-                                            pool, pool));
+  SVN_ERR(get_pristine_file(&textbase, eb->db, local_abspath,
+                            use_base, pool, pool));
 
   SVN_ERR(get_empty_file(eb, &empty_file));
 
@@ -1027,9 +1027,8 @@ report_wc_file_as_added(struct dir_baton *db,
 
 
   if (eb->use_text_base)
-    SVN_ERR(svn_wc__text_base_path_to_read(&source_file,
-                                           eb->db, local_abspath,
-                                           pool, pool));
+    SVN_ERR(get_pristine_file(&source_file, eb->db, local_abspath,
+                              TRUE, pool, pool));
   else
     source_file = path;
 
@@ -1257,9 +1256,8 @@ delete_entry(const char *path,
           apr_hash_t *baseprops = NULL;
           const char *base_mimetype;
 
-          SVN_ERR(svn_wc__text_base_path_to_read(&textbase,
-                                                 eb->db, local_abspath,
-                                                 pool, pool));
+          SVN_ERR(get_pristine_file(&textbase, eb->db, local_abspath,
+                                    eb->use_text_base, pool, pool));
 
           SVN_ERR(svn_wc__get_pristine_props(&baseprops, eb->db, local_abspath,
                                              pool, pool));
@@ -1631,9 +1629,8 @@ close_file(void *file_baton,
      the same as BASE. */
   temp_file_path = fb->temp_file_path;
   if (!temp_file_path)
-    SVN_ERR(svn_wc__text_base_path_to_read(&temp_file_path,
-                                           eb->db, fb->local_abspath,
-                                           fb->pool, pool));
+    SVN_ERR(get_pristine_file(&temp_file_path, eb->db, fb->local_abspath,
+                              eb->use_text_base, fb->pool, pool));
 
   /* If the file isn't in the working copy (either because it was added
      in the BASE->repos diff or because we're diffing against WORKING
@@ -1696,9 +1693,8 @@ close_file(void *file_baton,
   if (modified)
     {
       if (eb->use_text_base)
-        SVN_ERR(svn_wc__text_base_path_to_read(&localfile,
-                                               eb->db, fb->local_abspath,
-                                               fb->pool, pool));
+        SVN_ERR(get_pristine_file(&localfile, eb->db, fb->local_abspath,
+                                  TRUE, fb->pool, pool));
       else
         /* a detranslated version of the working file */
         SVN_ERR(svn_wc__internal_translated_file(

@@ -2138,9 +2138,6 @@ def diff_property_changes_to_base(sbox):
   svntest.actions.run_and_verify_svn(None, expected, [],
                                      'diff', '-r', 'BASE:1')
 
-# This test assumes garbage data in deleted nodes of WC-NG
-# BH: Working on a proper fix for this issue
-@XFail() # Should be fixed in the next couple of hours
 def diff_schedule_delete(sbox):
   "scheduled deleted"
 
