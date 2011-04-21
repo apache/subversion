@@ -16,6 +16,8 @@ The files are:
   fixer/__init__.py: an empty file that signals to Python that this directory
     is a Python module
 
+Backup your repository before running them.
+
 For more details, see the email from Julian Foad on 2010-10-06, subject
 "Fixing FSFS 'Corrupt node-revision' and 'Corrupt representation' errors",
 <http://svn.haxx.se/dev/archive-2010-10/0095.shtml>.
