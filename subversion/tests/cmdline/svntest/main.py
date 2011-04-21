@@ -163,7 +163,7 @@ svndumpfilter_binary = os.path.abspath('../../svndumpfilter/svndumpfilter' + \
 entriesdump_binary = os.path.abspath('entries-dump' + _exe)
 atomic_ra_revprop_change_binary = os.path.abspath('atomic-ra-revprop-change' + \
                                                   _exe)
-lock_wc_dir_binary = os.path.abspath('lock-wc-dir' + _exe)
+wc_lock_tester_binary = os.path.abspath('../libsvn_wc/wc-lock-tester' + _exe)
 
 # Location to the pristine repository, will be calculated from test_area_url
 # when we know what the user specified for --url.
@@ -654,13 +654,13 @@ def run_atomic_ra_revprop_change(url, revision, propname, skel, want_error):
                      url, revision, propname, skel,
                      options.http_library, want_error and 1 or 0)
 
-def run_lock_wc_dir(recursive, path):
+def run_wc_lock_tester(recursive, path):
   "Run the wc-lock obtainer tool, returning its exit code, stdout and stderr"
   if recursive:
     option = "-r"
   else:
     option = "-1"
-  return run_command(lock_wc_dir_binary, False, False, option, path)
+  return run_command(wc_lock_tester_binary, False, False, option, path)
 
 
 def youngest(repos_path):

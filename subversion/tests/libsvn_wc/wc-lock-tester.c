@@ -1,5 +1,5 @@
 /*
- * lock-wc-dir.c :  wrapper around svn_wc__acquire_write_lock()
+ * wc-lock-tester.c :  wrapper around svn_wc__acquire_write_lock()
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -106,7 +106,7 @@ main(int argc, const char *argv[])
 
   if (err)
     {
-      svn_handle_error2(err, stderr, FALSE, "lock-wc-dir: ");
+      svn_handle_error2(err, stderr, FALSE, "wc-lock-tester: ");
       svn_error_clear(err);
       exit_code = EXIT_FAILURE;
     }
