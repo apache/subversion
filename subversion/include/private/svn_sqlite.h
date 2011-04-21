@@ -134,12 +134,6 @@ svn_error_t *
 svn_sqlite__get_statement(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
                           int stmt_idx);
 
-/* Prepare TEXT as a statement in DB, returning a statement in *STMT,
-   allocated in RESULT_POOL. */
-svn_error_t *
-svn_sqlite__prepare(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
-                    const char *text, apr_pool_t *result_pool);
-
 
 /* ---------------------------------------------------------------------
 

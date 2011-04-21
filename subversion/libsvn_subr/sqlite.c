@@ -139,6 +139,20 @@ exec_sql(svn_sqlite__db_t *db, const char *sql)
 }
 
 
+static svn_error_t *
+prepare_statement(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
+                  const char *text, apr_pool_t *result_pool)
+{
+  *stmt = apr_palloc(result_pool, sizeof(**stmt));
+  (*stmt)->db = db;
+  (*stmt)->needs_reset = FALSE;
+
+  SQLITE_ERR(sqlite3_prepare_v2(db->db3, text, -1, &(*stmt)->s3stmt, NULL), db);
+
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_sqlite__exec_statements(svn_sqlite__db_t *db, int stmt_idx)
 {
@@ -155,27 +169,14 @@ svn_sqlite__get_statement(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
   SVN_ERR_ASSERT(stmt_idx < db->nbr_statements);
 
   if (db->prepared_stmts[stmt_idx] == NULL)
-    SVN_ERR(svn_sqlite__prepare(&db->prepared_stmts[stmt_idx], db,
-                                db->statement_strings[stmt_idx],
-                                db->state_pool));
+    SVN_ERR(prepare_statement(&db->prepared_stmts[stmt_idx], db,
+                              db->statement_strings[stmt_idx],
+                              db->state_pool));
 
   *stmt = db->prepared_stmts[stmt_idx];
 
   if ((*stmt)->needs_reset)
     return svn_error_return(svn_sqlite__reset(*stmt));
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_sqlite__prepare(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
-                    const char *text, apr_pool_t *result_pool)
-{
-  *stmt = apr_palloc(result_pool, sizeof(**stmt));
-  (*stmt)->db = db;
-  (*stmt)->needs_reset = FALSE;
-
-  SQLITE_ERR(sqlite3_prepare_v2(db->db3, text, -1, &(*stmt)->s3stmt, NULL), db);
 
   return SVN_NO_ERROR;
 }
@@ -668,7 +669,7 @@ svn_sqlite__read_schema_version(int *version,
 {
   svn_sqlite__stmt_t *stmt;
 
-  SVN_ERR(svn_sqlite__prepare(&stmt, db, "PRAGMA user_version;", scratch_pool));
+  SVN_ERR(prepare_statement(&stmt, db, "PRAGMA user_version;", scratch_pool));
   SVN_ERR(svn_sqlite__step_row(stmt));
 
   *version = svn_sqlite__column_int(stmt, 0);
