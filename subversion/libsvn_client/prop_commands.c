@@ -341,15 +341,23 @@ set_props_cb(void *baton,
   return SVN_NO_ERROR;
 }
 
+/* Check that PROPNAME is a valid name for a versioned property.  Return an
+ * error if it is not valid, specifically if it is:
+ *   - the name of a standard Subversion rev-prop; or
+ *   - in the namespace of WC-props; or
+ *   - not a well-formed property name (except if PROPVAL is NULL: in other
+ *     words we do allow deleting a prop with an ill-formed name).
+ *
+ * Since Subversion controls the "svn:" property namespace, we don't honor
+ * a 'skip_checks' flag here.  Checks for unusual property combinations such
+ * as svn:eol-style with a non-text svn:mime-type might understandably be
+ * skipped, but things such as using a property name reserved for revprops
+ * on a local target are never allowed.
+ */
 static svn_error_t *
 check_prop_name(const char *propname,
                 const svn_string_t *propval)
 {
-  /* Since Subversion controls the "svn:" property namespace, we
-     don't honor the 'skip_checks' flag here.  Unusual property
-     combinations, like svn:eol-style with a non-text svn:mime-type,
-     are understandable, but revprops on local targets are not. */
-
   if (is_revision_prop_name(propname))
     return svn_error_createf(SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
                              _("Revision property '%s' not allowed "
