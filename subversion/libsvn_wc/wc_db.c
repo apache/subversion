@@ -10235,10 +10235,10 @@ svn_wc__db_temp_op_set_new_dir_to_incomplete(svn_wc__db_t *db,
   ibb.repos_uuid = repos_uuid;
 
   ibb.status = svn_wc__db_status_incomplete;
+  ibb.kind = svn_wc__db_kind_dir;
   ibb.repos_relpath = repos_relpath;
   ibb.revision = revision;
   ibb.depth = depth;
-
 
   SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath,
                               insert_base_node,
