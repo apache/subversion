@@ -13,7 +13,7 @@ import os, sys, re, subprocess
 from subprocess import Popen, PIPE
 
 from find_good_id import FixError, rev_file_path, find_good_id, find_good_rep_header
-from config import *
+from fixer_config import *
 
 
 # ----------------------------------------------------------------------
