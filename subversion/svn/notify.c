@@ -173,13 +173,13 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       nb->received_some_change = TRUE;
       if (n->err && n->err->message)
         {
-          if ((err = svn_cmdline_printf(pool, "Removing external '%s' -- %s\n",
+          if ((err = svn_cmdline_printf(pool, "Removed external '%s': %s\n",
               path_local, n->err->message)))
             goto print_error;
         }
       else
         {
-          if ((err = svn_cmdline_printf(pool, "Removing external '%s'\n",
+          if ((err = svn_cmdline_printf(pool, "Removed external '%s'\n",
                                         path_local)))
             goto print_error;
         }
@@ -534,7 +534,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       /* Currently this is used for checkouts and switches too.  If we
          want different output, we'll have to add new actions. */
       if ((err = svn_cmdline_printf(pool,
-                                    _("\nFetching external item into '%s'\n"),
+                                    _("\nFetching external item into '%s':\n"),
                                     path_local)))
         goto print_error;
       break;
@@ -667,7 +667,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 
     case svn_wc_notify_status_external:
       if ((err = svn_cmdline_printf
-           (pool, _("\nPerforming status on external item at '%s'\n"),
+           (pool, _("\nPerforming status on external item at '%s':\n"),
             path_local)))
         goto print_error;
       break;
@@ -945,7 +945,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       break;
 
     case svn_wc_notify_url_redirect:
-      err = svn_cmdline_printf(pool, _("Redirecting to URL '%s'\n"),
+      err = svn_cmdline_printf(pool, _("Redirecting to URL '%s':\n"),
                                n->url);
       if (err)
         goto print_error;
