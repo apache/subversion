@@ -4115,50 +4115,68 @@ svn_client_move(svn_client_commit_info_t **commit_info_p,
 
 
 /**
+ * Set @a propname to @a propval on @a url.  A @a propval of @c NULL will
+ * delete the property.
+ *
+ * Immediately attempt to commit the property change in the repository,
+ * using the authentication baton in @a ctx and @a
+ * ctx->log_msg_func3/@a ctx->log_msg_baton3.
+ *
+ * If the property has changed on @a url since revision
+ * @a base_revision_for_url (which must not be #SVN_INVALID_REVNUM), no
+ * change will be made and an error will be returned.
+ *
+ * If non-NULL, @a revprop_table is a hash table holding additional,
+ * custom revision properties (<tt>const char *</tt> names mapped to
+ * <tt>svn_string_t *</tt> values) to be set on the new revision.  This
+ * table cannot contain any standard Subversion properties.
+ *
+ * If @a commit_callback is non-NULL, then call @a commit_callback with
+ * @a commit_baton and a #svn_commit_info_t for the commit.
+ *
+ * If @a propname is an svn-controlled property (i.e. prefixed with
+ * #SVN_PROP_PREFIX), then the caller is responsible for ensuring that
+ * the value is UTF8-encoded and uses LF line-endings.
+ *
+ * If @a skip_checks is TRUE, do no validity checking.  But if @a
+ * skip_checks is FALSE, and @a propname is not a valid property for @a
+ * targets, return an error, either #SVN_ERR_ILLEGAL_TARGET (if the
+ * property is not appropriate for @a targets), or
+ * #SVN_ERR_BAD_MIME_TYPE (if @a propname is "svn:mime-type", but @a
+ * propval is not a valid mime-type).
+ *
+ * Use @a scratch_pool for all memory allocation.
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_client_propset_remote(const char *propname,
+                          const svn_string_t *propval,
+                          const char *url,
+                          svn_boolean_t skip_checks,
+                          svn_revnum_t base_revision_for_url,
+                          const apr_hash_t *revprop_table,
+                          svn_commit_callback2_t commit_callback,
+                          void *commit_baton,
+                          svn_client_ctx_t *ctx,
+                          apr_pool_t *scratch_pool);
+
+/**
  * Set @a propname to @a propval on each (const char *) target in @a
- * targets.  The targets must be either all working copy paths or all URLs.
+ * targets.  The targets must be either all working copy paths.
  * A @a propval of @c NULL will delete the property.
  *
- * If @a targets are URLs:
+ * If @a depth is #svn_depth_empty, set the property on each member of
+ * @a targets only; if #svn_depth_files, set it on @a targets and their
+ * file children (if any); if #svn_depth_immediates, on @a targets and all
+ * of their immediate children (both files and directories); if
+ * #svn_depth_infinity, on @a targets and everything beneath them.
  *
- * - Immediately attempt to commit the property change in the repository,
- *   using the authentication baton in @a ctx and @a
- *   ctx->log_msg_func3/@a ctx->log_msg_baton3.
- *   @note ### Currently a separate commit for each target. TODO: single commit.
- *
- * - If the property has changed on any target since revision
- *   @a base_revision_for_url (which must not be #SVN_INVALID_REVNUM), no
- *   change will be made and an error will be returned.
- *   @note ### Currently processes targets in order, committing if successful,
- *         stopping when one hits this error. TODO: commit all or none.
- *
- * - If non-NULL, @a revprop_table is a hash table holding additional,
- *   custom revision properties (<tt>const char *</tt> names mapped to
- *   <tt>svn_string_t *</tt> values) to be set on the new revision.  This
- *   table cannot contain any standard Subversion properties.
- *
- * - If @a commit_callback is non-NULL, then for each successful commit,
- *   call @a commit_callback with @a commit_baton and a #svn_commit_info_t
- *   for the commit.
- *
- * - @a depth must be #svn_depth_empty.  @a changelists is ignored.
- *
- * If @a targets are working copy paths:
- *
- * - If @a depth is #svn_depth_empty, set the property on each member of
- *   @a targets only; if #svn_depth_files, set it on @a targets and their
- *   file children (if any); if #svn_depth_immediates, on @a targets and all
- *   of their immediate children (both files and directories); if
- *   #svn_depth_infinity, on @a targets and everything beneath them.
- *
- * - @a changelists is an array of <tt>const char *</tt> changelist
- *   names, used as a restrictive filter on items whose properties are
- *   set; that is, don't set properties on any item unless it's a member
- *   of one of those changelists.  If @a changelists is empty (or
- *   altogether @c NULL), no changelist filtering occurs.
- *
- * - @a base_revision_for_url must be #SVN_INVALID_REVNUM.  @a revprop_table,
- *   @a commit_callback and @a commit_baton are ignored.
+ * @a changelists is an array of <tt>const char *</tt> changelist
+ * names, used as a restrictive filter on items whose properties are
+ * set; that is, don't set properties on any item unless it's a member
+ * of one of those changelists.  If @a changelists is empty (or
+ * altogether @c NULL), no changelist filtering occurs.
  *
  * If @a propname is an svn-controlled property (i.e. prefixed with
  * #SVN_PROP_PREFIX), then the caller is responsible for ensuring that
@@ -4174,26 +4192,23 @@ svn_client_move(svn_client_commit_info_t **commit_info_p,
  * If @a ctx->cancel_func is non-NULL, invoke it passing @a
  * ctx->cancel_baton at various places during the operation.
  *
- * Use @a pool for all memory allocation.
+ * Use @a scratch_pool for all memory allocation.
  *
  * @since New in 1.7.
  */
 svn_error_t *
-svn_client_propset4(const char *propname,
-                    const svn_string_t *propval,
-                    const apr_array_header_t *targets,
-                    svn_depth_t depth,
-                    svn_boolean_t skip_checks,
-                    svn_revnum_t base_revision_for_url,
-                    const apr_array_header_t *changelists,
-                    const apr_hash_t *revprop_table,
-                    svn_commit_callback2_t commit_callback,
-                    void *commit_baton,
-                    svn_client_ctx_t *ctx,
-                    apr_pool_t *pool);
+svn_client_propset_local(const char *propname,
+                         const svn_string_t *propval,
+                         const apr_array_header_t *targets,
+                         svn_depth_t depth,
+                         svn_boolean_t skip_checks,
+                         const apr_array_header_t *changelists,
+                         svn_client_ctx_t *ctx,
+                         apr_pool_t *scratch_pool);
 
 /**
- * Similar to svn_client_propset4(), but takes only a single target, and
+ * An amalgamation of svn_client_propset_local() and
+ * svn_client_propset_remote() that takes only a single target, and
  * returns the @a commit_info_p directly rather than through a callback.
  *
  * @since New in 1.5.

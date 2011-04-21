@@ -287,8 +287,6 @@ svn_cl__propedit(apr_getopt_t *os,
           if (edited_propval && !svn_string_compare(propval, edited_propval))
             {
               svn_error_t *err = SVN_NO_ERROR;
-              apr_array_header_t *targs = apr_array_make(subpool, 1,
-                                                sizeof(const char *));
 
               svn_cl__check_boolean_prop_val(pname_utf8, edited_propval->data,
                                              subpool);
@@ -297,13 +295,27 @@ svn_cl__propedit(apr_getopt_t *os,
                 SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton3),
                                                    opt_state, NULL, ctx->config,
                                                    subpool));
+              if (svn_path_is_url(target))
+                {
+                  err = svn_client_propset_remote(pname_utf8, edited_propval,
+                                                  target, opt_state->force,
+                                                  base_rev,
+                                                  opt_state->revprop_table,
+                                                  commit_info_handler, &cib,
+                                                  ctx, subpool);
+                }
+              else
+                {
+                  apr_array_header_t *targs = apr_array_make(subpool, 1,
+                                                    sizeof(const char *));
 
-              APR_ARRAY_PUSH(targs, const char *) = target;
-              err = svn_client_propset4(pname_utf8, edited_propval, targs,
-                                        svn_depth_empty, opt_state->force,
-                                        base_rev, NULL, opt_state->revprop_table,
-                                        commit_info_handler, &cib,
-                                        ctx, subpool);
+                  APR_ARRAY_PUSH(targs, const char *) = target;
+                  err = svn_client_propset_local(pname_utf8, edited_propval,
+                                                 targs, svn_depth_empty,
+                                                 opt_state->force, NULL,
+                                                 ctx, subpool);
+                }
+
               if (ctx->log_msg_func3)
                 SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton3,
                                                 err, pool));

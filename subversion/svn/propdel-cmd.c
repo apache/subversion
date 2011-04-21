@@ -94,13 +94,9 @@ svn_cl__propdel(apr_getopt_t *os,
         opt_state->depth = svn_depth_empty;
 
       /* For each target, remove the property PNAME. */
-      SVN_ERR(svn_client_propset4(pname_utf8,
-                                  NULL, targets,
-                                  opt_state->depth,
-                                  FALSE, SVN_INVALID_REVNUM,
-                                  opt_state->changelists, NULL,
-                                  svn_cl__print_commit_info, NULL,
-                                  ctx, pool));
+      SVN_ERR(svn_client_propset_local(pname_utf8, NULL, targets,
+                                       opt_state->depth, FALSE,
+                                       opt_state->changelists, ctx, pool));
     }
 
   return SVN_NO_ERROR;

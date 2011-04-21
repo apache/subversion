@@ -341,30 +341,10 @@ set_props_cb(void *baton,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_client_propset4(const char *propname,
-                    const svn_string_t *propval,
-                    const apr_array_header_t *targets,
-                    svn_depth_t depth,
-                    svn_boolean_t skip_checks,
-                    svn_revnum_t base_revision_for_url,
-                    const apr_array_header_t *changelists,
-                    const apr_hash_t *revprop_table,
-                    svn_commit_callback2_t commit_callback,
-                    void *commit_baton,
-                    svn_client_ctx_t *ctx,
-                    apr_pool_t *pool)
+static svn_error_t *
+check_prop_name(const char *propname,
+                const svn_string_t *propval)
 {
-  svn_boolean_t targets_are_urls;
-  int i;
-
-  if (targets->nelts == 0)
-    return SVN_NO_ERROR;
-
-  /* Check for homogeneity among our targets. */
-  targets_are_urls = svn_path_is_url(APR_ARRAY_IDX(targets, 0, const char *));
-  SVN_ERR(svn_client__assert_homogeneous_target_type(targets));
-
   /* Since Subversion controls the "svn:" property namespace, we
      don't honor the 'skip_checks' flag here.  Unusual property
      combinations, like svn:eol-style with a non-text svn:mime-type,
@@ -381,111 +361,143 @@ svn_client_propset4(const char *propname,
     return svn_error_createf(SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
                              _("Bad property name: '%s'"), propname);
 
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_propset_local(const char *propname,
+                         const svn_string_t *propval,
+                         const apr_array_header_t *targets,
+                         svn_depth_t depth,
+                         svn_boolean_t skip_checks,
+                         const apr_array_header_t *changelists,
+                         svn_client_ctx_t *ctx,
+                         apr_pool_t *scratch_pool)
+{
+  apr_hash_t *changelist_hash = NULL;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  svn_boolean_t targets_are_urls;
+  int i;
+
+  if (targets->nelts == 0)
+    return SVN_NO_ERROR;
+
+  /* Check for homogeneity among our targets. */
+  targets_are_urls = svn_path_is_url(APR_ARRAY_IDX(targets, 0, const char *));
+  SVN_ERR(svn_client__assert_homogeneous_target_type(targets));
+
   if (targets_are_urls)
+    return svn_error_create(SVN_ERR_ILLEGAL_TARGET, NULL,
+                            _("Targets must be URLs"));
+
+  SVN_ERR(check_prop_name(propname, propval));
+
+  if (changelists && changelists->nelts)
+    SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash,
+                                       changelists, scratch_pool));
+
+  for (i = 0; i < targets->nelts; i++)
     {
-      /* The rationale for requiring the base_revision_for_url
-         argument is that without it, it's too easy to possibly
-         overwrite someone else's change without noticing.  (See also
-         tools/examples/svnput.c). */
-      if (! SVN_IS_VALID_REVNUM(base_revision_for_url))
-        return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL,
-                                _("Setting property on non-local targets "
-                                  "needs a base revision"));
+      svn_node_kind_t kind;
+      const char *target_abspath;
+      svn_error_t *err;
+      struct set_props_baton baton;
+      const char *target = APR_ARRAY_IDX(targets, i, const char *);
 
-      if (depth > svn_depth_empty)
-        return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                _("Setting property recursively on non-local "
-                                  "targets is not supported"));
+      svn_pool_clear(iterpool);
 
-      /* ### When you set svn:eol-style or svn:keywords on a wc file,
-         ### Subversion sends a textdelta at commit time to properly
-         ### normalize the file in the repository.  If we want to
-         ### support editing these properties on URLs, then we should
-         ### generate the same textdelta; for now, we won't support
-         ### editing these properties on URLs.  (Admittedly, this
-         ### means that all the machinery with get_file_for_validation
-         ### is unused.)
-       */
-      if ((strcmp(propname, SVN_PROP_EOL_STYLE) == 0) ||
-          (strcmp(propname, SVN_PROP_KEYWORDS) == 0))
-        return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                 _("Setting property '%s' on non-local "
-                                   "targets is not supported"), propname);
+      /* Check for cancellation */
+      if (ctx->cancel_func)
+        SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
-      for (i = 0; i < targets->nelts; i++)
+      SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, iterpool));
+
+      err = svn_wc_read_kind(&kind, ctx->wc_ctx, target_abspath, FALSE,
+                             iterpool);
+
+      if ((err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+          || kind == svn_node_unknown || kind == svn_node_none)
         {
-          const char *target = APR_ARRAY_IDX(targets, i, const char *);
-
-          SVN_ERR(propset_on_url(propname, propval, target, skip_checks,
-                                 base_revision_for_url, revprop_table,
-                                 commit_callback, commit_baton, ctx, pool));
-        }
-
-      return SVN_NO_ERROR;
-    }
-  else
-    {
-      apr_hash_t *changelist_hash = NULL;
-      apr_pool_t *iterpool = svn_pool_create(pool);
-
-      if (changelists && changelists->nelts)
-        SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash,
-                                           changelists, pool));
-
-      for (i = 0; i < targets->nelts; i++)
-        {
-          svn_node_kind_t kind;
-          const char *target_abspath;
-          svn_error_t *err;
-          struct set_props_baton baton;
-          const char *target = APR_ARRAY_IDX(targets, i, const char *);
-
-          svn_pool_clear(iterpool);
-
-          /* Check for cancellation */
-          if (ctx->cancel_func)
-            SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
-
-          SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, iterpool));
-
-          err = svn_wc_read_kind(&kind, ctx->wc_ctx, target_abspath, FALSE,
-                                 iterpool);
-
-          if ((err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-              || kind == svn_node_unknown || kind == svn_node_none)
+          if (ctx->notify_func2)
             {
-              if (ctx->notify_func2)
-                {
-                  svn_wc_notify_t *notify = svn_wc_create_notify(
-                                              target_abspath,
-                                              svn_wc_notify_path_nonexistent,
-                                              iterpool);
+              svn_wc_notify_t *notify = svn_wc_create_notify(
+                                          target_abspath,
+                                          svn_wc_notify_path_nonexistent,
+                                          iterpool);
 
-                  ctx->notify_func2(ctx->notify_baton2, notify, iterpool);
-                }
-
-              svn_error_clear(err);
+              ctx->notify_func2(ctx->notify_baton2, notify, iterpool);
             }
-          else
-            SVN_ERR(err);
 
-          baton.ctx = ctx;
-          baton.local_abspath = target_abspath;
-          baton.depth = depth;
-          baton.kind = kind;
-          baton.propname = propname;
-          baton.propval = propval;
-          baton.skip_checks = skip_checks;
-          baton.changelist_hash = changelist_hash;
-
-          SVN_ERR(svn_wc__call_with_write_lock(set_props_cb, &baton,
-                                               ctx->wc_ctx, target_abspath,
-                                               FALSE, iterpool, iterpool));
+          svn_error_clear(err);
         }
-      svn_pool_destroy(iterpool);
+      else
+        SVN_ERR(err);
 
-      return SVN_NO_ERROR;
+      baton.ctx = ctx;
+      baton.local_abspath = target_abspath;
+      baton.depth = depth;
+      baton.kind = kind;
+      baton.propname = propname;
+      baton.propval = propval;
+      baton.skip_checks = skip_checks;
+      baton.changelist_hash = changelist_hash;
+
+      SVN_ERR(svn_wc__call_with_write_lock(set_props_cb, &baton,
+                                           ctx->wc_ctx, target_abspath,
+                                           FALSE, iterpool, iterpool));
     }
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_propset_remote(const char *propname,
+                          const svn_string_t *propval,
+                          const char *url,
+                          svn_boolean_t skip_checks,
+                          svn_revnum_t base_revision_for_url,
+                          const apr_hash_t *revprop_table,
+                          svn_commit_callback2_t commit_callback,
+                          void *commit_baton,
+                          svn_client_ctx_t *ctx,
+                          apr_pool_t *scratch_pool)
+{
+  if (!svn_path_is_url(url))
+    return svn_error_create(SVN_ERR_ILLEGAL_TARGET, NULL,
+                            _("Targets must be URLs"));
+
+  SVN_ERR(check_prop_name(propname, propval));
+
+  /* The rationale for requiring the base_revision_for_url
+     argument is that without it, it's too easy to possibly
+     overwrite someone else's change without noticing.  (See also
+     tools/examples/svnput.c). */
+  if (! SVN_IS_VALID_REVNUM(base_revision_for_url))
+    return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL,
+                            _("Setting property on non-local targets "
+                              "needs a base revision"));
+
+  /* ### When you set svn:eol-style or svn:keywords on a wc file,
+     ### Subversion sends a textdelta at commit time to properly
+     ### normalize the file in the repository.  If we want to
+     ### support editing these properties on URLs, then we should
+     ### generate the same textdelta; for now, we won't support
+     ### editing these properties on URLs.  (Admittedly, this
+     ### means that all the machinery with get_file_for_validation
+     ### is unused.)
+   */
+  if ((strcmp(propname, SVN_PROP_EOL_STYLE) == 0) ||
+      (strcmp(propname, SVN_PROP_KEYWORDS) == 0))
+    return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                             _("Setting property '%s' on non-local "
+                               "targets is not supported"), propname);
+
+  SVN_ERR(propset_on_url(propname, propval, url, skip_checks,
+                         base_revision_for_url, revprop_table,
+                         commit_callback, commit_baton, ctx, scratch_pool));
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
