@@ -13,7 +13,7 @@ The files are:
   fix-repo: a Bash script that calls fixer/fix-rev.py on each rev in a range
   fixer/fix-rev.py: checks and fixes if possible a single revision
   fixer/find_good_id.py: a helper function
-  fixer/__init__: an empty file that signals to Python that this directory
+  fixer/__init__.py: an empty file that signals to Python that this directory
     is a Python module
 
 For more details, see the email from Julian Foad on 2010-10-06, subject
