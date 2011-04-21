@@ -33,8 +33,6 @@ import java.util.EventListener;
  * Implement this interface to provide a custom notification handler
  * to the SVNClient class.  If you need to pass extra information to
  * the notification handler add it to your implementing class.
- *
- * @since 1.2
  */
 public interface ReposNotifyCallback extends EventListener
 {

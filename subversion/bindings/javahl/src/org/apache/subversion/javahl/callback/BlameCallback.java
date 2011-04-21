@@ -31,8 +31,6 @@ import org.apache.subversion.javahl.ISVNClient;
 /**
  * This interface is used to receive every single line for a file on a
  * the {@link ISVNClient#blame} call.
- *
- * @since 1.7
  */
 public interface BlameCallback
 {

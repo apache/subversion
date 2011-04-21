@@ -98,7 +98,6 @@ public interface ISVNRepos {
 	 * @param useDeltas         the dump will contain deltas between nodes
      * @param callback          the callback to recieve notifications
 	 * @throws ClientException  throw in case of problem
-	 * @since 1.5
 	 */
 	public abstract void dump(File path, OutputStream dataOut,
                 Revision start, Revision end, boolean incremental,
@@ -147,7 +146,6 @@ public interface ISVNRepos {
 	 *                          in put optional.
 	 * @param callback          the target for processing messages
 	 * @throws ClientException  throw in case of problem
-	 * @since 1.5
 	 */
 	public abstract void load(File path, InputStream dataInput,
 			boolean ignoreUUID, boolean forceUUID, boolean usePreCommitHook,
@@ -195,7 +193,6 @@ public interface ISVNRepos {
 	 * @param usePostRevPropChangeHook Whether to run the
 	 * <i>post-revprop-change</i> hook script.
 	 * @throws SubversionException If a problem occurs.
-	 * @since 1.5.0
 	 */
 	public abstract void setRevProp(File path, Revision rev, String propName,
 			String propValue, boolean usePreRevPropChangeHook,
@@ -220,7 +217,6 @@ public interface ISVNRepos {
 	 * @param path              the path to the repository
      * @param depth             the depth to recurse
 	 * @throws ClientException  throw in case of problem
-	 * @since 1.7
 	 */
 	public abstract Set<Lock> lslocks(File path, Depth depth)
             throws ClientException;
@@ -230,7 +226,6 @@ public interface ISVNRepos {
 	 * @param path              the path to the repository
 	 * @param locks             the name of the locked items
 	 * @throws ClientException  throw in case of problem
-	 * @since 1.2
 	 */
 	public abstract void rmlocks(File path, String[] locks)
 			throws ClientException;

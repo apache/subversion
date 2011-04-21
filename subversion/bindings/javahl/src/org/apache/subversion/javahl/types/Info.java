@@ -31,7 +31,6 @@ import org.apache.subversion.javahl.ISVNClient;
 /**
  * this class is returned by {@link ISVNClient#info2} and contains information
  * about items in the repository or working copy
- * @since 1.2
  */
 public class Info implements java.io.Serializable
 {
@@ -158,7 +157,6 @@ public class Info implements java.io.Serializable
 
     /**
      * The name of the changelist.
-     * @since 1.5
      */
     private String changelistName;
 
@@ -166,7 +164,6 @@ public class Info implements java.io.Serializable
      * The size of the file after being translated into its local
      * representation, or <code>-1</code> if unknown.  Not applicable
      * for directories.
-     * @since 1.5
      */
     private long workingSize;
 
@@ -175,19 +172,16 @@ public class Info implements java.io.Serializable
      * e.g. without adjustment of line endings and keyword
      * expansion). Only applicable for file -- not directory -- URLs.
      * For working copy paths, size will be <code>-1</code>.
-     * @since New in 1.5.
      */
     private long reposSize;
 
     /**
      * The depth of the item.
-     * @since 1.6
      */
     private Depth depth;
 
     /**
      * Info on any tree conflict of which this node is a victim.
-     * @since 1.6
      */
     private ConflictDescriptor treeConflict;
 
@@ -446,7 +440,6 @@ public class Info implements java.io.Serializable
 
     /**
      * @return The name of the changelist.
-     * @since 1.5
      */
     public String getChangelistName()
     {
@@ -457,7 +450,6 @@ public class Info implements java.io.Serializable
      * @return The size of the file after being translated into its
      * local representation, or <code>-1</code> if unknown.  Not
      * applicable for directories.
-     * @since 1.5
      */
     public long getWorkingSize()
     {
@@ -469,7 +461,6 @@ public class Info implements java.io.Serializable
      * e.g. without adjustment of line endings and keyword
      * expansion). Only applicable for file -- not directory -- URLs.
      * For working copy paths, size will be <code>-1</code>.
-     * @since New in 1.5.
      */
     public long getReposSize()
     {
@@ -479,7 +470,6 @@ public class Info implements java.io.Serializable
     /**
      * @return The depth of the directory or <code>null</code> if the
      * item is a file.
-     * @since New in 1.5.
      */
     public Depth getDepth()
     {
@@ -488,7 +478,6 @@ public class Info implements java.io.Serializable
 
     /**
      * @return the tree conflict of which this node is a victim, or null if none
-     * @since New in 1.6.
      */
     public ConflictDescriptor getConflictDescriptor()
     {

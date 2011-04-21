@@ -34,8 +34,6 @@ import org.apache.subversion.javahl.SubversionException;
 
 /**
  * Merge history for a path.
- *
- * @since 1.5
  */
 public class Mergeinfo implements java.io.Serializable
 {

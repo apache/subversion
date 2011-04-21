@@ -26,8 +26,6 @@ package org.apache.subversion.javahl.types;
 
 /**
  * Object that describes a revision range
- *
- * @since 1.5
  */
 public class RevisionRange implements Comparable<RevisionRange>, java.io.Serializable
 {
