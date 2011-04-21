@@ -519,10 +519,11 @@ CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
           svn_boolean_t prop_conflicted = FALSE;
           svn_boolean_t tree_conflicted = FALSE;
 
-          SVN_JNI_ERR(svn_wc__node_check_conflicts(&prop_conflicted,
-                                                   &text_conflicted,
-                                                   &tree_conflicted, wc_ctx,
-                                                   local_abspath, pool, pool),
+          SVN_JNI_ERR(svn_wc_conflicted_p3(&text_conflicted,
+                                           &prop_conflicted,
+                                           &tree_conflicted,
+                                           wc_ctx, local_abspath,
+                                           pool),
                       NULL);
 
           if (tree_conflicted)
