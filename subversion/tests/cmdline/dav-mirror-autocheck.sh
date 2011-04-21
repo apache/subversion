@@ -455,6 +455,44 @@ else
   url-encodings happening in server side"
 fi
 
+# Test case for commit to out-dated(though target path is up to date) slave.
+# See issue #3860 for details.
+say "Test case for out-dated slave commit"
+
+svn="$SVN --non-interactive --username=jrandom --password=rayjandom"
+# Make a working copy of the slave.
+$svn checkout $SLAVE_URL $HTTPD_ROOT/wc
+cd $HTTPD_ROOT/wc
+# Add a new file named newfile and commit it.
+touch branch/newfile
+$svn add branch/newfile
+$svn commit -mm
+
+say "De-activating post-commit hook on $MASTER_REPOS to make $SLAVE_REPOS go out of sync"
+mv "$MASTER_REPOS/hooks/post-commit" "$MASTER_REPOS/hooks/post-commit_"
+
+echo "Change made to file in branch" > $HTTPD_ROOT/wc/branch/newfile
+$svn ci -m "Commit from slave"
+
+MASTER_HEAD=`$SVNLOOK youngest "$MASTER_REPOS"`
+SLAVE_HEAD=`$SVNLOOK youngest "$SLAVE_REPOS"`
+say "Now the slave is at r$SLAVE_HEAD and master is at r$MASTER_HEAD."
+
+# Now any other commit operation will fail with an out-of-date error
+
+$svn cp -m "Creating a branch" ^/trunk ^/branch/newbranch --config-option "servers:global:http-library=neon"
+RETVAL=$?
+
+if [ $RETVAL -eq 0 ]; then
+  say "PASS: Commits succeed even with an out-of-date slave"
+else
+  say "FAIL: Commits fail with an out-of-date slave"
+fi
+say "Some house-keeping..."
+say "Re-activating the post-commit hook on the master repo: $MASTER_REPOS."
+mv "$MASTER_REPOS/hooks/post-commit_" "$MASTER_REPOS/hooks/post-commit"
+say "Syncing slave with master."
+$SVNSYNC --non-interactive sync "$SYNC_URL" --username=svnsync --password=svnsync 
 # shut it down
 echo -n "${SCRIPT}: stopping httpd: "
 $HTTPD -f $HTTPD_CONFIG -k stop
