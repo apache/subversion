@@ -462,19 +462,19 @@ svn_wc__internal_conflicted_p(svn_boolean_t *text_conflicted_p,
   int i;
   svn_boolean_t conflicted;
 
-  SVN_ERR(svn_wc__db_read_info(NULL, &node_kind, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, &conflicted,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
-                               db, local_abspath, scratch_pool,
-                               scratch_pool));
-
   if (text_conflicted_p)
     *text_conflicted_p = FALSE;
   if (prop_conflicted_p)
     *prop_conflicted_p = FALSE;
   if (tree_conflicted_p)
     *tree_conflicted_p = FALSE;
+
+  SVN_ERR(svn_wc__db_read_info(NULL, &node_kind, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, &conflicted,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               db, local_abspath, scratch_pool,
+                               scratch_pool));
 
   if (!conflicted)
     return SVN_NO_ERROR;

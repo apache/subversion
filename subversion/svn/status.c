@@ -153,13 +153,18 @@ print_status(const char *path,
       svn_boolean_t tree_conflicted;
       svn_error_t *err;
 
-      err = svn_wc_conflicted_p3(&prop_conflicted,
-                                 &text_conflicted,
+      err = svn_wc_conflicted_p3(&text_conflicted,
+                                 &prop_conflicted,
                                  &tree_conflicted, ctx->wc_ctx,
                                  local_abspath, pool);
 
       if (err && err->apr_err == SVN_ERR_WC_UPGRADE_REQUIRED)
-        svn_error_clear(err);
+        {
+          svn_error_clear(err);
+          text_conflicted = FALSE;
+          prop_conflicted = FALSE;
+          tree_conflicted = FALSE;
+        }
       else
         SVN_ERR(err);
 
