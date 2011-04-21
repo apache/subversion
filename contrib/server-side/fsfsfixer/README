@@ -10,7 +10,7 @@ corruption in a FSFS repository, particularly errors that are reported by
 
 The files are:
 
-  fix-repo: a Bash script that calls fixer/fix-rev.py on each rev in a range
+  fix-repo: a /bin/sh script that calls fixer/fix-rev.py on each rev in a range
   fixer/fix-rev.py: checks and fixes if possible a single revision
   fixer/find_good_id.py: a helper function
   fixer/__init__.py: an empty file that signals to Python that this directory
