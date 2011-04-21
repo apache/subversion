@@ -164,17 +164,21 @@ def handle_one_error(repo_dir, rev, error_lines):
 
   return False
 
+def grab_stderr(child_argv):
+  p = Popen(child_argv, stdout=PIPE, stderr=PIPE)
+  _, stderr = p.communicate()
+  child_err = []
+  for line in stderr.splitlines():
+    if line.find('(apr_err=') == -1:
+      child_err.append(line)
+  return child_err
+
 def fix_one_error(repo_dir, rev):
   """Verify, and if there is an error we know how to fix, then fix it.
      Return False if no error, True if fixed, exception if can't fix."""
 
   # Capture the output of 'svnadmin verify' (ignoring any debug-build output)
-  p = Popen([SVNADMIN, 'verify', '-q', '-r'+rev, repo_dir], stdout=PIPE, stderr=PIPE)
-  _, stderr = p.communicate()
-  svnadmin_err = []
-  for line in stderr.splitlines():
-    if line.find('(apr_err=') == -1:
-      svnadmin_err.append(line)
+  svnadmin_err = grab_stderr([SVNADMIN, 'verify', '-q', '-r'+rev, repo_dir])
 
   if svnadmin_err == []:
     return False
@@ -192,12 +196,7 @@ def fix_one_error(repo_dir, rev):
   # one that we *can* handle.
 
   # Capture the output of 'svnlook tree' (ignoring any debug-build output)
-  p = Popen([SVNLOOK, 'tree', '-r'+rev, repo_dir], stdout=PIPE, stderr=PIPE)
-  _, stderr = p.communicate()
-  svnlook_err = []
-  for line in stderr.splitlines():
-    if line.find('(apr_err=') == -1:
-      svnlook_err.append(line)
+  svnlook_err = grab_stderr([SVNLOOK, 'tree', '-r'+rev, repo_dir])
 
   if svnlook_err == []:
     print 'warning: svnlook did not find an error'
