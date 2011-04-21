@@ -5921,7 +5921,8 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
  * to generate appropriate --git diff headers for such files.
  *
  * If @a use_text_base is TRUE, then compare the repository against
- * the working copy's text-base files, rather than the working files.
+ * the working copy's original checkout files (aka BASE), rather than
+ * the working files.
  *
  * Normally, the difference from repository->working_copy is shown.
  * If @a reverse_order is TRUE, then show working_copy->repository diffs.
