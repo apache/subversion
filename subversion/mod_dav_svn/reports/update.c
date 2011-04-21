@@ -1317,6 +1317,11 @@ dav_svn__update_report(const dav_resource *resource,
   /* this will complete the report, and then drive our editor to generate
      the response to the client. */
   serr = svn_repos_finish_report(rbaton, resource->pool);
+
+  /* Whether svn_repos_finish_report returns an error or not we can no
+     longer abort this report as the file has been closed. */
+  rbaton = NULL;
+
   if (serr)
     {
       derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -1325,10 +1330,6 @@ dav_svn__update_report(const dav_resource *resource,
                                   resource->pool);
       goto cleanup;
     }
-
-  /* We're finished with the report baton.  Note that so we don't try
-     to abort this report later. */
-  rbaton = NULL;
 
   /* ### Temporarily disable resource_walks for single-file switch
      operations.  It isn't strictly necessary. */
