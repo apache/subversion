@@ -338,7 +338,9 @@ class TestHarness:
                             stderr=self.log)
     line = prog.stdout.readline()
     while line:
-      self.log.write(line)
+      # If using --log-to-stdout self.log in None.
+      if self.log:
+        self.log.write(line)
 
       if line.startswith('PASS') or line.startswith('FAIL') \
            or line.startswith('XFAIL') or line.startswith('XPASS') \
