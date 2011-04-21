@@ -21,10 +21,14 @@ SVNLOOK = 'svnlook'
 # Verbosity: True for verbose, or False for quiet
 VERBOSE = True
 
+URL = "https://svn.apache.org/repos/asf/subversion/trunk/contrib/server-side/fsfsfixer/fixer/fix-rev.py"
+
 # Global dictionaries recording the fixes made
 fixed_ids = {}
 fixed_checksums = {}
 
+# Youngest FSFS format we know how to handle.
+MAX_FSFS_FORMAT = 5
 
 # ----------------------------------------------------------------------
 # Functions
@@ -203,12 +207,31 @@ def fix_one_error(repo_dir, rev):
 
   raise FixError("unfixable error:\n  " + "\n  ".join(svnadmin_err))
 
+def check_formats(repo_dir):
+  """Check that REPO_DIR isn't newer than we know how to handle."""
+
+  repos_format = int(open(os.path.join(repo_dir, 'format')).readline())
+  if repos_format not in [3,5]:
+    raise FixError("Repository '%s' too new (format %d); try the version at %s"
+                   % (repo_dir, repos_format, URL))
+
+  fs_type = open(os.path.join(repo_dir, 'db', 'fs-type')).read().rstrip()
+  if fs_type != 'fsfs':
+    raise FixError("Repository '%s' has wrong FS backend: "
+                   "found '%s', expected '%s'" % (fs_type, 'fsfs'))
+
+  fsfs_format = int(open(os.path.join(repo_dir, 'db', 'format')).readline())
+  if fsfs_format > MAX_FSFS_FORMAT:
+    raise FixError("Filesystem '%s' is too new (format %d); try the version at %s"
+                   % (os.path.join(repo_dir, 'db'), fsfs_format, URL))
 
 # ----------------------------------------------------------------------
 # Main program
 
 def fix_rev(repo_dir, rev):
   """"""
+
+  check_formats(repo_dir)
 
   # Back up the file
   if not os.path.exists(rev_file_path(repo_dir, rev) + '.orig'):
