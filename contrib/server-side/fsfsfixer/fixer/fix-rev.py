@@ -11,20 +11,14 @@ import os, sys, re, subprocess
 from subprocess import Popen, PIPE
 
 from find_good_id import FixError, rev_file_path, find_good_id, find_good_rep_header
+from config import *
 
 
 # ----------------------------------------------------------------------
-# Configuration
+# Globals
 
-# Path and file name of the 'svnadmin' and 'svnlook' programs
-SVNADMIN = 'svnadmin'
-SVNLOOK = 'svnlook'
-
-# Verbosity: True for verbose, or False for quiet
-VERBOSE = True
-
-URL = "$URL$"[6:-2]
 # URL = dirname(dirname(URL))
+URL = "$URL$"[6:-2]
 URL = URL[:URL.rindex('/', 0, URL.rindex('/'))]
 
 # Global dictionaries recording the fixes made
