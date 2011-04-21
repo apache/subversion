@@ -1700,11 +1700,7 @@ def lock_admin_dir(wc_dir):
   "Lock a SVN administrative directory"
   db, root_path, relpath = wc.open_wc_db(wc_dir)
 
-  db.execute('insert into wc_lock (wc_id, local_dir_relpath, locked_levels) '
-             + 'values (?, ?, ?)',
-             (1, relpath, 0))
-  db.commit()
-  db.close()
+  svntest.main.run_lock_wc_dir(False, wc_dir)
 
 def get_wc_uuid(wc_dir):
   "Return the UUID of the working copy at WC_DIR."
