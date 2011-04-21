@@ -38,10 +38,6 @@
 
 #include "svn_private_config.h"
 
-
-#define KEY_OLD_PROPVAL "old_value_p"
-#define KEY_NEW_PROPVAL "value"
-
 #define USAGE_MSG \
   "Usage: %s [-r|-1] DIRNAME\n" \
   "\n" \
@@ -72,8 +68,8 @@ obtain_lock(const char *path, svn_boolean_t recursive,
                                        scratch_pool));
     }
 
-  SVN_ERR(svn_cmdline_printf(scratch_pool, "Lock on '%s' obtained (and we "
-                             "are not going to release it...\n",
+  SVN_ERR(svn_cmdline_printf(scratch_pool, "Lock on '%s' obtained, and we "
+                             "are not going to release it.\n",
                              svn_dirent_local_style(local_abspath,
                                                     scratch_pool)));
 
@@ -88,10 +84,11 @@ main(int argc, const char *argv[])
   svn_error_t *err;
   svn_boolean_t recursive;
 
-  if (argc < 2 || argc > 3)
+  if (argc != 3
+      || (strcmp(argv[1], "-1") && apr_strnatcmp(argv[1], "-r")))
     {
       fprintf(stderr, USAGE_MSG, argv[0]);
-      exit(1);
+      exit(EXIT_FAILURE);
     }
 
   if (apr_initialize() != APR_SUCCESS)
