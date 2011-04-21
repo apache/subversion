@@ -1,7 +1,9 @@
 #!/bin/sh
 USAGE="Fix some kinds of corruption in a Subversion repository
 by running './fixer/fix-rev.py' on each revision.
-Usage: $0 REPO-DIR START-REV"
+Usage: $0 REPO-DIR START-REV
+
+Backup your repository before running these scripts."
 
 REPO_DIR="$1"
 START_REV="$2"

@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 
 usage = """
-Fix a bad FSFS revision file.
+Fix a bad FSFS revision file in-place.  Doesn't create backups.
+
 Usage: $0 REPO-DIR REVISION
+
 $LastChangedDate$
 $LastChangedRevision$
 """
