@@ -169,11 +169,10 @@ svn_cl__propset(apr_getopt_t *os,
             }
         }
 
-      SVN_ERR(svn_client_propset4(pname_utf8, propval, targets,
-                                  opt_state->depth, opt_state->force,
-                                  SVN_INVALID_REVNUM, opt_state->changelists,
-                                  NULL, svn_cl__print_commit_info, NULL, ctx,
-                                  scratch_pool));
+      SVN_ERR(svn_client_propset_local(pname_utf8, propval, targets,
+                                       opt_state->depth, opt_state->force,
+                                       opt_state->changelists, ctx,
+                                       scratch_pool));
 
       if (! opt_state->quiet)
         svn_cl__check_boolean_prop_val(pname_utf8, propval->data, scratch_pool);

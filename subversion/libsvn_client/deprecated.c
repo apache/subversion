@@ -1535,17 +1535,25 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool)
 {
-  struct capture_baton_t cb;
-  apr_array_header_t *targets = apr_array_make(pool, 1, sizeof(const char *));
+  if (svn_path_is_url(target))
+    {
+      struct capture_baton_t cb = { commit_info_p, pool };
 
-  APR_ARRAY_PUSH(targets, const char *) = target;
+      SVN_ERR(svn_client_propset_remote(propname, propval, target, skip_checks,
+                                        base_revision_for_url, revprop_table,
+                                        capture_commit_info, &cb, ctx, pool));
+    }
+  else
+    {
+      apr_array_header_t *targets = apr_array_make(pool, 1,
+                                                   sizeof(const char *));
 
-  cb.info = commit_info_p;
-  cb.pool = pool;
+      APR_ARRAY_PUSH(targets, const char *) = target;
+      SVN_ERR(svn_client_propset_local(propname, propval, targets, depth,
+                                       skip_checks, changelists, ctx, pool));
+    }
 
-  return svn_client_propset4(propname, propval, targets, depth, skip_checks,
-                             base_revision_for_url, changelists, revprop_table,
-                             capture_commit_info, &cb, ctx, pool);
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
