@@ -569,10 +569,9 @@ UPDATE nodes SET presence = ?3
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 
 -- STMT_UPDATE_NODE_WORKING_PRESENCE
-UPDATE nodes SET presence = ?3
+UPDATE nodes SET presence = ?4
 WHERE wc_id = ?1 AND local_relpath = ?2
-  AND op_depth = (SELECT MAX(op_depth) FROM nodes
-                  WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0)
+  AND op_depth = ?3
 
 -- STMT_UPDATE_BASE_NODE_PRESENCE_REVNUM_AND_REPOS_PATH
 UPDATE nodes SET presence = ?3, revision = ?4, repos_path = ?5
@@ -695,14 +694,12 @@ INSERT OR REPLACE INTO nodes (
 VALUES (?1, ?2, 0,
         ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)
 
--- STMT_INSERT_WORKING_NODE_FROM_BASE
+-- STMT_INSTALL_WORKING_NODE_FOR_DELETE
 INSERT OR REPLACE INTO nodes (
-    wc_id, local_relpath, op_depth, parent_relpath, presence, kind, checksum,
-    changed_revision, changed_date, changed_author, depth, symlink_target,
-    translated_size, last_mod_time, properties)
-SELECT wc_id, local_relpath, ?3 /*op_depth*/, parent_relpath, ?4 /*presence*/,
-       kind, checksum, changed_revision, changed_date, changed_author, depth,
-       symlink_target, translated_size, last_mod_time, properties
+    wc_id, local_relpath, op_depth,
+    parent_relpath, presence, kind)
+SELECT wc_id, local_relpath, ?3 /*op_depth*/,
+       parent_relpath, ?4 /*presence*/, kind
 FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 
@@ -787,15 +784,14 @@ DELETE FROM nodes
 WHERE wc_id = ?1 AND local_relpath LIKE ?2 ESCAPE '#' AND op_depth > ?3
   AND presence NOT IN ('base-deleted', 'not-present')
 
-
--- STMT_UPDATE_COPYFROM_TO_INHERIT
+-- STMT_UPDATE_WORKING_TO_DELETED
 UPDATE nodes SET
-  repos_id = NULL,
-  repos_path = NULL,
-  revision = NULL
-WHERE wc_id = ?1 AND local_relpath = ?2
-  AND op_depth = (SELECT MAX(op_depth) FROM nodes
-                  WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0)
+  repos_id = NULL, repos_path = NULL, revision = NULL,
+  moved_here = NULL, depth = NULL, properties = NULL,
+  symlink_target = NULL, checksum = NULL,
+  changed_revision = NULL, changed_date = NULL, changed_author = NULL,
+  translated_size = NULL, last_mod_time = NULL
+WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3
 
 -- STMT_DETERMINE_WHICH_TREES_EXIST
 SELECT op_depth FROM nodes WHERE wc_id = ?1 AND local_relpath = ?2
