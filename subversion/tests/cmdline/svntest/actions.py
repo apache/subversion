@@ -1696,11 +1696,11 @@ def get_virginal_state(wc_dir, rev):
   return state
 
 # Cheap administrative directory locking
-def lock_admin_dir(wc_dir):
+def lock_admin_dir(wc_dir, recursive=False):
   "Lock a SVN administrative directory"
   db, root_path, relpath = wc.open_wc_db(wc_dir)
 
-  svntest.main.run_lock_wc_dir(False, wc_dir)
+  svntest.main.run_wc_lock_tester(recursive, wc_dir)
 
 def get_wc_uuid(wc_dir):
   "Return the UUID of the working copy at WC_DIR."
