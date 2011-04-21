@@ -5828,6 +5828,145 @@ svn_wc__db_read_children_info(apr_hash_t **nodes,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc__db_read_pristine_info(svn_wc__db_status_t *status,
+                              svn_wc__db_kind_t *kind,
+                              svn_revnum_t *changed_rev,
+                              apr_time_t *changed_date,
+                              const char **changed_author,
+                              svn_depth_t *depth,  /* dirs only */
+                              const svn_checksum_t **checksum, /* files only */
+                              const char **target, /* symlinks only */
+                              svn_boolean_t *had_props,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  svn_error_t *err = NULL;
+  apr_int64_t op_depth;
+  svn_wc__db_status_t raw_status;
+  svn_wc__db_kind_t node_kind;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
+                                                local_abspath,
+                                                scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  /* Obtain the most likely to exist record first, to make sure we don't
+     have to obtain the SQLite read-lock multiple times */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_NODE_INFO));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  if (!have_row)
+    {
+      return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND,
+                               svn_sqlite__reset(stmt),
+                               _("The node '%s' was not found."),
+                               path_for_error_message(wcroot,
+                                                      local_relpath,
+                                                      scratch_pool));
+    }
+
+  op_depth = svn_sqlite__column_int64(stmt, 0);
+  raw_status = svn_sqlite__column_token(stmt, 3, presence_map);
+
+  if (op_depth > 0 && raw_status == svn_wc__db_status_base_deleted)
+    {
+      SVN_ERR(svn_sqlite__step_row(stmt));
+
+      op_depth = svn_sqlite__column_int64(stmt, 0);
+      raw_status = svn_sqlite__column_token(stmt, 3, presence_map);
+    }
+
+  node_kind = svn_sqlite__column_token(stmt, 4, kind_map);
+
+  if (status)
+    {
+      err = svn_error_compose_create(err,
+                                   convert_to_working_status(status,
+                                                             raw_status));
+    }
+  if (kind)
+    {
+      *kind = node_kind;
+    }
+  if (changed_rev)
+    {
+      *changed_rev = svn_sqlite__column_revnum(stmt, 8);
+    }
+  if (changed_date)
+    {
+      *changed_date = svn_sqlite__column_int64(stmt, 9);
+    }
+  if (changed_author)
+    {
+      *changed_author = svn_sqlite__column_text(stmt, 10,
+                                                result_pool);
+    }
+  if (depth)
+    {
+      if (node_kind != svn_wc__db_kind_dir)
+        {
+          *depth = svn_depth_unknown;
+        }
+      else
+        {
+          const char *depth_str;
+
+          depth_str = svn_sqlite__column_text(stmt, 11, NULL);
+
+          if (depth_str == NULL)
+            *depth = svn_depth_unknown;
+          else
+            *depth = svn_depth_from_word(depth_str);
+        }
+    }
+  if (checksum)
+    {
+      if (node_kind != svn_wc__db_kind_file)
+        {
+          *checksum = NULL;
+        }
+      else
+        {
+          svn_error_t *err2;
+          err2 = svn_sqlite__column_checksum(checksum, stmt, 6, result_pool);
+
+          if (err2 != NULL)
+            err = svn_error_compose_create(
+                     err,
+                     svn_error_createf(
+                           err->apr_err, err2,
+                          _("The node '%s' has a corrupt checksum value."),
+                          path_for_error_message(wcroot, local_relpath,
+                                                 scratch_pool)));
+        }
+    }
+  if (target)
+    {
+      if (node_kind != svn_wc__db_kind_symlink)
+        *target = NULL;
+      else
+        *target = svn_sqlite__column_text(stmt, 12, result_pool);
+    }
+  if (had_props)
+    {
+      *had_props = SQLITE_PROPERTIES_AVAILABLE(stmt, 14);
+    }
+
+  return svn_error_return(
+            svn_error_compose_create(err,
+                                     svn_sqlite__reset(stmt)));
+}
 
 svn_error_t *
 svn_wc__db_read_children_walker_info(apr_hash_t **nodes,

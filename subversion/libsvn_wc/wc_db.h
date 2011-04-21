@@ -1652,6 +1652,35 @@ struct svn_wc__db_walker_info_t {
   svn_wc__db_kind_t kind;
 };
 
+/* When a node is deleted in WORKING, some of its information is no longer
+   available. But in some cases it might still be relevant to obtain this
+   information even when the information isn't stored in the BASE tree.
+
+   This function allows access to that specific information.
+
+   When a node is not deleted, this node returns the same information
+   as svn_wc__db_read_info().
+
+   All output arguments are optional and behave in the same way as when
+   calling svn_wc__db_read_info().
+
+   (All other information (like original_*) can be obtained via other apis).
+ */
+svn_error_t *
+svn_wc__db_read_pristine_info(svn_wc__db_status_t *status,
+                              svn_wc__db_kind_t *kind,
+                              svn_revnum_t *changed_rev,
+                              apr_time_t *changed_date,
+                              const char **changed_author,
+                              svn_depth_t *depth,  /* dirs only */
+                              const svn_checksum_t **checksum, /* files only */
+                              const char **target, /* symlinks only */
+                              svn_boolean_t *had_props,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
+
 /* Gets the information required to install a pristine file to the working copy
 
    Set WCROOT_ABSPATH to the working copy root, STATUS to the presence of the
