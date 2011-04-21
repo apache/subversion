@@ -27,8 +27,6 @@ package org.apache.subversion.javahl.types;
 /**
  * The description of a merge conflict, encountered during
  * merge/update/switch operations.
- *
- * @since 1.6
  */
 public class ConflictVersion
 {

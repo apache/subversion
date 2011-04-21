@@ -31,8 +31,6 @@ import org.apache.subversion.javahl.types.*;
 /**
  * The event passed to the {@link ClientNotifyCallback#onNotify}
  * API to notify {@link ISVNClient} of relevant events.
- *
- * @since 1.2
  */
 public class ClientNotifyInformation extends EventObject
 {
@@ -92,19 +90,16 @@ public class ClientNotifyInformation extends EventObject
 
     /**
      * The name of the changelist.
-     * @since 1.5
      */
     private String changelistName;
 
     /**
      * The range of the merge just beginning to occur.
-     * @since 1.5
      */
     private RevisionRange mergeRange;
 
     /**
      * A common absolute path prefix that can be subtracted from .path.
-     * @since 1.6
      */
     private String pathPrefix;
 
@@ -262,7 +257,6 @@ public class ClientNotifyInformation extends EventObject
 
     /**
      * @return The name of the changelist.
-     * @since 1.5
      */
     public String getChangelistName()
     {
@@ -271,7 +265,6 @@ public class ClientNotifyInformation extends EventObject
 
     /**
      * @return The range of the merge just beginning to occur.
-     * @since 1.5
      */
     public RevisionRange getMergeRange()
     {
@@ -280,7 +273,6 @@ public class ClientNotifyInformation extends EventObject
 
     /**
      * @return The common absolute path prefix.
-     * @since 1.6
      */
     public String getPathPrefix()
     {

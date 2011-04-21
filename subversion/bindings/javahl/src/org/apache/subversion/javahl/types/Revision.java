@@ -128,7 +128,6 @@ public class Revision implements java.io.Serializable
      * @param revNumber The revision number to create an object for.
      * @return An object representing <code>revNumber</code>, or
      * <code>null</code> if the revision number was invalid.
-     * @since 1.2
      */
     static Number createNumber(long revNumber)
     {

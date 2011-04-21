@@ -33,8 +33,6 @@ import java.util.TimeZone;
 /**
  * Holds date for a log message.  This class maintains
  * the time to the microsecond and is not lossy.
- *
- * @since 1.5
  */
 public class LogDate implements java.io.Serializable
 {

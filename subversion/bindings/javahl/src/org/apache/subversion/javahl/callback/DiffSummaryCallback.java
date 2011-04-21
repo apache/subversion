@@ -39,8 +39,6 @@ import org.apache.subversion.javahl.ISVNClient;
  *     }
  * }
  * </pre></code></blockquote>
- *
- * @since 1.5
  */
 public interface DiffSummaryCallback
 {

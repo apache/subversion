@@ -29,8 +29,6 @@ import org.apache.subversion.javahl.callback.ReposNotifyCallback;
 /**
  * The event passed to the {@link ReposNotifyCallback#onNotify}
  * API to notify {@link ISVNClient} of relevant events.
- *
- * @since 1.2
  */
 public class ReposNotifyInformation extends EventObject
 {
