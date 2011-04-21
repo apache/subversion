@@ -216,8 +216,8 @@ wc_update(svn_test__sandbox_t *b, const char *path, svn_revnum_t revnum)
 
   APR_ARRAY_PUSH(paths, const char *) = wc_path(b, path);
   SVN_ERR(svn_client_create_context(&ctx, b->pool));
-  return svn_client_update3(&result_revs, paths, &revision, svn_depth_infinity,
-                            TRUE, FALSE, FALSE, ctx, b->pool);
+  return svn_client_update4(&result_revs, paths, &revision, svn_depth_infinity,
+                            TRUE, FALSE, FALSE, FALSE, FALSE, ctx, b->pool);
 }
 
 static svn_error_t *
@@ -2908,6 +2908,212 @@ test_child_replace_with_same_origin(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+/* The purpose of this test is to check what happens below a shadowed update,
+   in a few scenarios */
+static svn_error_t *
+test_shadowed_update(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "child_replace_with_same", opts, pool));
+
+  /* Set up the base state as revision 1. */
+  file_write(&b, "iota", "This is iota");
+  SVN_ERR(wc_add(&b, "iota"));
+  SVN_ERR(wc_commit(&b, ""));
+
+  /* And create two trees in r2 */
+  SVN_ERR(wc_mkdir(&b, "A"));
+  SVN_ERR(wc_mkdir(&b, "A/B"));
+  SVN_ERR(wc_mkdir(&b, "A/B/C"));
+
+  SVN_ERR(wc_mkdir(&b, "K"));
+  SVN_ERR(wc_mkdir(&b, "K/L"));
+  SVN_ERR(wc_mkdir(&b, "K/L/M"));
+  SVN_ERR(wc_commit(&b, ""));
+
+  /* And change something in r3 */
+  file_write(&b, "iota", "This is a new iota");
+  SVN_ERR(wc_commit(&b, ""));
+
+  /* And delete C & M */
+  SVN_ERR(wc_delete(&b, "A/B/C"));
+  SVN_ERR(wc_delete(&b, "K/L/M"));
+  SVN_ERR(wc_commit(&b, ""));
+
+  /* And now create the shadowed situation */
+  SVN_ERR(wc_update(&b, "", 2));
+  SVN_ERR(wc_copy(&b, "A", "A_tmp"));
+  SVN_ERR(wc_update(&b, "", 1));
+  SVN_ERR(wc_move(&b, "A_tmp", "A"));
+
+  SVN_ERR(wc_mkdir(&b, "K"));
+  SVN_ERR(wc_mkdir(&b, "K/L"));
+  SVN_ERR(wc_mkdir(&b, "K/L/M"));
+
+  /* Verify situation before update */
+  {
+    nodes_row_t rows[] = {
+      {0, "",        "normal",           1, ""},
+      {0, "iota",    "normal",           1, "iota"},
+
+      {1, "A",       "normal",           2, "A"},
+      {1, "A/B",     "normal",           2, "A/B"},
+      {1, "A/B/C",   "normal",           2, "A/B/C"},
+
+      {1, "K",       "normal",           NO_COPY_FROM},
+      {2, "K/L",     "normal",           NO_COPY_FROM},
+      {3, "K/L/M",   "normal",           NO_COPY_FROM},
+      { 0 }
+    };
+    SVN_ERR(check_db_rows(&b, "", rows));
+  }
+
+  /* And now bring in A and K below the local information */
+  SVN_ERR(wc_update(&b, "", 3));
+
+  {
+    nodes_row_t rows[] = {
+
+      {0, "",        "normal",           3, ""},
+      {0, "iota",    "normal",           3, "iota"},
+
+      {0, "A",       "normal",           3, "A"},
+      {0, "A/B",     "normal",           3, "A/B"},
+      {0, "A/B/C",   "normal",           3, "A/B/C"},
+
+      {1, "A",       "normal",           2, "A"},
+      {1, "A/B",     "normal",           2, "A/B"},
+      {1, "A/B/C",   "normal",           2, "A/B/C"},
+
+      {0, "K",       "normal",           3, "K"},
+      {0, "K/L",     "normal",           3, "K/L"},
+      {0, "K/L/M",   "normal",           3, "K/L/M"},
+
+      {1, "K",       "normal",           NO_COPY_FROM},
+      {1, "K/L",     "base-deleted",     NO_COPY_FROM},
+      {1, "K/L/M",   "base-deleted",     NO_COPY_FROM},
+
+      {2, "K/L",     "normal",           NO_COPY_FROM},
+      {3, "K/L/M",   "normal",           NO_COPY_FROM},
+
+      { 0 }
+    };
+    SVN_ERR(check_db_rows(&b, "", rows));
+  }
+
+  /* Update again to remove C and M */
+  SVN_ERR(wc_resolved(&b, "A"));
+  SVN_ERR(wc_resolved(&b, "K"));
+  SVN_ERR(wc_update(&b, "", 4));
+
+  {
+    nodes_row_t rows[] = {
+
+      {0, "",        "normal",           4, ""},
+      {0, "iota",    "normal",           4, "iota"},
+
+      {0, "A",       "normal",           4, "A"},
+      {0, "A/B",     "normal",           4, "A/B"},
+
+      {1, "A",       "normal",           2, "A"},
+      {1, "A/B",     "normal",           2, "A/B"},
+      {1, "A/B/C",   "normal",           2, "A/B/C"},
+
+      {0, "K",       "normal",           4, "K"},
+      {0, "K/L",     "normal",           4, "K/L"},
+
+      {1, "K",       "normal",           NO_COPY_FROM},
+      {1, "K/L",     "base-deleted",     NO_COPY_FROM},
+
+      {2, "K/L",     "normal",           NO_COPY_FROM},
+      {3, "K/L/M",   "normal",           NO_COPY_FROM},
+
+      { 0 }
+    };
+    SVN_ERR(check_db_rows(&b, "", rows));
+  }
+
+  /* Update again to bring C and M back */
+  SVN_ERR(wc_resolved(&b, "A"));
+  SVN_ERR(wc_resolved(&b, "K"));
+  SVN_ERR(wc_update(&b, "", 3));
+
+  SVN_ERR(wc_delete(&b, "K/L/M"));
+  {
+    nodes_row_t rows[] = {
+
+      {0, "K",       "normal",           3, "K"},
+      {0, "K/L",     "normal",           3, "K/L"},
+      {0, "K/L/M",   "normal",           3, "K/L/M"},
+
+      {1, "K",       "normal",           NO_COPY_FROM},
+      {1, "K/L",     "base-deleted",     NO_COPY_FROM},
+      {1, "K/L/M",   "base-deleted",     NO_COPY_FROM},
+
+      {2, "K/L",     "normal",           NO_COPY_FROM},
+
+      { 0 }
+    };
+    SVN_ERR(check_db_rows(&b, "K", rows));
+  }
+
+  /* Resolve conflict on K and go back to r1 */
+  SVN_ERR(wc_revert(&b, "K", svn_depth_infinity));
+  SVN_ERR(wc_update(&b, "", 1));
+
+  SVN_ERR(wc_mkdir(&b, "K"));
+  SVN_ERR(wc_mkdir(&b, "K/L"));
+
+  SVN_ERR(wc_update(&b, "", 3));
+
+  {
+    nodes_row_t rows[] = {
+
+      {0, "K",       "normal",           3, "K"},
+      {0, "K/L",     "normal",           3, "K/L"},
+      {0, "K/L/M",   "normal",           3, "K/L/M"},
+
+      {1, "K",       "normal",           NO_COPY_FROM},
+      {1, "K/L",     "base-deleted",     NO_COPY_FROM},
+      {1, "K/L/M",   "base-deleted",     NO_COPY_FROM},
+
+      {2, "K/L",     "normal",           NO_COPY_FROM},
+
+      { 0 }
+    };
+    SVN_ERR(check_db_rows(&b, "K", rows));
+  }
+
+  /* Update the shadowed K/L/M to r4 where it does not exits */
+  SVN_ERR(wc_resolved(&b, "K"));
+  SVN_ERR(wc_update(&b, "K/L/M", 4));
+
+  {
+    nodes_row_t rows[] = {
+
+      {0, "K",       "normal",           3, "K"},
+      {0, "K/L",     "normal",           3, "K/L"},
+      {0, "K/L/M",   "not-present",      4, "K/L/M"},
+
+      {1, "K",       "normal",           NO_COPY_FROM},
+      {1, "K/L",     "base-deleted",     NO_COPY_FROM},
+
+      {2, "K/L",     "normal",           NO_COPY_FROM},
+
+      /* ### Currently I see an unexpected
+      { 1, "K/L/M",  "base-deleted",     NO_COPY_FROM},
+         ### Which shadows the not-present node */
+
+      { 0 }
+    };
+    SVN_ERR(check_db_rows(&b, "K", rows));
+  }
+
+
+  return SVN_NO_ERROR;
+}
+
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
 
@@ -2954,5 +3160,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test_op_delete"),
     SVN_TEST_OPTS_PASS(test_child_replace_with_same_origin,
                        "test_child_replace_with_same"),
+    SVN_TEST_OPTS_XFAIL(test_shadowed_update,
+                       "test_shadowed_update"),
     SVN_TEST_NULL
   };
