@@ -717,6 +717,7 @@ append_locks(dav_lockdb *lockdb,
                                      &new_rev, txn, resource->pool);
       if (SVN_IS_VALID_REVNUM(new_rev))
         {
+          /* ### Log an error in post-commit FS processing? */
           svn_error_clear(serr);
         }
       else
