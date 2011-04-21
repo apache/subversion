@@ -715,7 +715,7 @@ extend_parent_delete(svn_wc__db_wcroot_t *wcroot,
       if (!have_row || parent_op_depth < op_depth)
         {
           SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                          STMT_INSERT_WORKING_NODE_FROM_BASE));
+                                        STMT_INSTALL_WORKING_NODE_FOR_DELETE));
           SVN_ERR(svn_sqlite__bindf(stmt, "isit", wcroot->wc_id,
                                     local_relpath, parent_op_depth,
                                     presence_map,
@@ -4603,6 +4603,7 @@ info_below_working(svn_boolean_t *have_base,
                    svn_wc__db_status_t *status,
                    svn_wc__db_wcroot_t *wcroot,
                    const char *local_relpath,
+                   apr_int64_t below_op_depth, /* < 0 is ignored */
                    apr_pool_t *scratch_pool);
 
 
@@ -4618,8 +4619,8 @@ db_working_update_presence(apr_int64_t op_depth,
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_UPDATE_NODE_WORKING_PRESENCE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "ist", wcroot->wc_id, local_relpath,
-                            presence_map, status));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isit", wcroot->wc_id, local_relpath,
+                            op_depth, presence_map, status));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
   if (status == svn_wc__db_status_base_deleted)
@@ -4653,7 +4654,8 @@ db_working_update_presence(apr_int64_t op_depth,
 
           child_relpath = svn_relpath_join(local_relpath, name, iterpool);
           SVN_ERR(info_below_working(&below_base, &below_work, &below_status,
-                                     wcroot, child_relpath, iterpool));
+                                     wcroot, child_relpath, op_depth,
+                                     iterpool));
           if ((below_base || below_work)
               && (below_status == svn_wc__db_status_normal
                   || below_status == svn_wc__db_status_added
@@ -4667,15 +4669,15 @@ db_working_update_presence(apr_int64_t op_depth,
         }
       svn_pool_destroy(iterpool);
 
-      /* Reset the copyfrom in case this was a copy.
-         ### What else should be reset? Properties? Or copy the node again? */
+      /* Reset information that does not apply to deleted */
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_UPDATE_COPYFROM_TO_INHERIT));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+                                        STMT_UPDATE_WORKING_TO_DELETED));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isi", wcroot->wc_id, local_relpath,
+                                op_depth));
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
-
-  /* ### Should the switch to not-present remove an ACTUAL row? */
+  else
+    SVN_ERR_MALFUNCTION();
 
   return SVN_NO_ERROR;
 }
@@ -4786,20 +4788,31 @@ db_working_insert(svn_wc__db_status_t status,
                             local_relpath, op_depth, presence_map, status));
   SVN_ERR(svn_sqlite__insert(NULL, stmt));
 
-  /* Need to update the op_depth of all deleted child trees -- this
-     relies on the recursion having already deleted the trees so
-     that they are all at op_depth+1.
+  if (status == svn_wc__db_status_base_deleted)
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_UPDATE_WORKING_TO_DELETED));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isi", wcroot->wc_id, local_relpath,
+                                op_depth));
+      SVN_ERR(svn_sqlite__update(NULL, stmt));
 
-     ### Rewriting the op_depth means that the number of queries is
-     ### O(depth^2).  Fix it by implementing svn_wc__db_op_delete so
-     ### that the recursion gets moved from adm_ops.c to wc_db.c and
-     ### one transaction does the whole tree and thus each op_depth
-     ### only gets written once. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_UPDATE_OP_DEPTH_REDUCE_RECURSIVE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "isi",
-                            wcroot->wc_id, like_arg, op_depth + 1));
-  SVN_ERR(svn_sqlite__update(NULL, stmt));
+      /* Need to update the op_depth of all deleted child trees -- this
+         relies on the recursion having already deleted the trees so
+         that they are all at op_depth+1.
+    
+         ### Rewriting the op_depth means that the number of queries is
+         ### O(depth^2).  Fix it by implementing svn_wc__db_op_delete so
+         ### that the recursion gets moved from adm_ops.c to wc_db.c and
+         ### one transaction does the whole tree and thus each op_depth
+         ### only gets written once. */
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_UPDATE_OP_DEPTH_REDUCE_RECURSIVE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isi",
+                                wcroot->wc_id, like_arg, op_depth + 1));
+      SVN_ERR(svn_sqlite__update(NULL, stmt));
+    }
+  else
+    SVN_ERR_MALFUNCTION();
 
   return SVN_NO_ERROR;
 }
@@ -4876,15 +4889,18 @@ convert_to_working_status(svn_wc__db_status_t *working_status,
 }
 
 
-/* Return the status of the node, if any, below the "working" node.
+/* Return the status of the node, if any, below the "working" node (or
+   below BELOW_OP_DEPTH if >= 0).
    Set *HAVE_BASE or *HAVE_WORK to indicate if a base node or lower
-   working node is present, and *STATUS to the status of the node. */
+   working node is present, and *STATUS to the status of the first
+   layer below the selected node. */
 static svn_error_t *
 info_below_working(svn_boolean_t *have_base,
                    svn_boolean_t *have_work,
                    svn_wc__db_status_t *status,
                    svn_wc__db_wcroot_t *wcroot,
                    const char *local_relpath,
+                   apr_int64_t below_op_depth,
                    apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
@@ -4897,6 +4913,15 @@ info_below_working(svn_boolean_t *have_base,
                                     STMT_SELECT_NODE_INFO));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  if (below_op_depth >= 0)
+    {
+      while (have_row && 
+             (svn_sqlite__column_int64(stmt, 0) > below_op_depth))
+        {
+          SVN_ERR(svn_sqlite__step(&have_row, stmt));
+        }
+    }
   if (have_row)
     {
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
@@ -4977,7 +5002,7 @@ temp_op_delete_txn(void *baton,
           svn_wc__db_status_t below_status;
 
           SVN_ERR(info_below_working(&below_base, &below_work, &below_status,
-                                     wcroot, local_relpath, scratch_pool));
+                                     wcroot, local_relpath, -1, scratch_pool));
 
           if ((below_base || below_work)
               && below_status != svn_wc__db_status_not_present
@@ -10280,7 +10305,7 @@ svn_wc__db_info_below_working(svn_boolean_t *have_base,
                               local_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
   SVN_ERR(info_below_working(have_base, have_work, status,
-                             wcroot, local_relpath, scratch_pool));
+                             wcroot, local_relpath, -1, scratch_pool));
 
   return SVN_NO_ERROR;
 }
