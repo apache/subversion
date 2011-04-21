@@ -169,7 +169,7 @@ def grab_stderr(child_argv):
   _, stderr = p.communicate()
   child_err = []
   for line in stderr.splitlines():
-    if line.find('(apr_err=') == -1:
+    if '(apr_err=' not in line:
       child_err.append(line)
   return child_err
 
