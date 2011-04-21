@@ -34,7 +34,7 @@ import java.util.Map;
 
 /**
  * This interface is the commom interface for all subversion
- * operations. It is implemented by SVNClient and SVNClientSynchronized
+ * operations. It is implemented by SVNClient
  */
 public interface ISVNClient
 {
@@ -668,7 +668,8 @@ public interface ISVNClient
      *
      * @param paths   paths of the items
      * @param name    name of the property
-     * @param value   new value of the property
+     * @param value   new value of the property. Set value to <code>
+     * null</code> to delete a property
      * @param depth   the depth to recurse into subdirectories
      * @param changelists changelists to filter by
      * @param force   do not check if the value is valid
