@@ -75,10 +75,7 @@ def replace_in_rev_file(repo_dir, rev, old, new):
 def fix_id(repo_dir, rev, bad_id):
 
   # Find the GOOD_ID to replace BAD_ID.
-  if bad_id == "6-12953.0.r12953/30623":
-    good_id = "0-12953.0.r12953/30403"
-  else:
-    good_id = find_good_id(repo_dir, bad_id)
+  good_id = find_good_id(repo_dir, bad_id)
 
   # Replacement ID must be the same length, otherwise I don't know how to
   # reconstruct the file so as to preserve all offsets.
