@@ -851,8 +851,8 @@ insert_base_node(void *baton,
   if (*local_relpath)
     {
       if (parent_relpath
-          && (pibb->status == svn_wc__db_status_normal)
-              || (pibb->status == svn_wc__db_status_incomplete))
+          && ((pibb->status == svn_wc__db_status_normal)
+              || (pibb->status == svn_wc__db_status_incomplete)))
         {
           SVN_ERR(extend_parent_delete(wcroot, local_relpath, scratch_pool));
         }
@@ -3609,7 +3609,8 @@ svn_wc__db_op_set_changelist(svn_wc__db_t *db,
   struct set_changelist_baton_t scb = { changelist, changelists };
   struct with_triggers_baton_t wtb = { STMT_CREATE_CHANGELIST_LIST,
                                        STMT_DROP_CHANGELIST_LIST_TRIGGERS,
-                                       NULL, &scb };
+                                       NULL, NULL };
+  wtb.cb_baton = &scb;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
