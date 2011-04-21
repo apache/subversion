@@ -1213,7 +1213,7 @@ def update_lose_file_external(sbox):
   # commit the property change
   expected_output = svntest.wc.State(wc_dir, {
     'A/C' : Item(verb='Sending'),
-    'A/C/external' : Item(verb='Removing external'),
+    'A/C/external' : Item(verb='Removed external'),
     })
 
   # (re-use above expected_status)

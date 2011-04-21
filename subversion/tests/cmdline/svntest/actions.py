@@ -1303,10 +1303,14 @@ def process_output_for_commit(output):
   lastline = ""
   rest = []
 
+  def external_removal(line):
+    return line.startswith('Removing external') \
+           or line.startswith('Removed external')
+
   if len(output):
     lastline = output.pop().strip()
 
-    while len(output) and lastline.startswith('Removing external'):
+    while len(output) and external_removal(lastline):
       rest.append(lastline)
       lastline = output.pop().strip()
 
