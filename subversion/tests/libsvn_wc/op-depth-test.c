@@ -1747,7 +1747,7 @@ test_mixed_rev_copy(const svn_test_opts_t *opts, apr_pool_t *pool)
       { 0, "",      "normal",       0, "" },
       { 0, "A",     "normal",       1, "A" },
       { 0, "A/B",   "normal",       2, "A/B" },
-      { 0, "A/B/C", "not-present",  3, "A/B/C" },
+      { 0, "A/B/C", "not-present",  0, "A/B/C" },
       { 0 }
     };
     SVN_ERR(check_db_rows(&b, "", rows));
@@ -1759,7 +1759,7 @@ test_mixed_rev_copy(const svn_test_opts_t *opts, apr_pool_t *pool)
       { 1, "X",     "normal",       1, "A" },
       { 1, "X/B",   "not-present",  2, "A/B" },
       { 2, "X/B",   "normal",       2, "A/B" },
-      { 2, "X/B/C", "not-present",  3, "A/B/C" },
+      { 2, "X/B/C", "not-present",  0, "A/B/C" },
       { 0 }
     };
     SVN_ERR(check_db_rows(&b, "X", rows));
@@ -1866,8 +1866,8 @@ test_del_replace_not_present(const svn_test_opts_t *opts, apr_pool_t *pool)
     nodes_row_t rows[] = {
       { 0, "A",         "normal",       2, "A" },
       { 0, "A/B",       "normal",       2, "A/B" },
-      { 0, "A/B/X",     "not-present",  2, "A/B/X" },
-      { 0, "A/B/Y",     "not-present",  2, "A/B/Y" },
+      { 0, "A/B/X",     "not-present",  0, "A/B/X" },
+      { 0, "A/B/Y",     "not-present",  0, "A/B/Y" },
       { 0, "A/B/Z",     "normal",       2, "A/B/Z" },
       { 1, "A",         "base-deleted", NO_COPY_FROM },
       { 1, "A/B",       "base-deleted", NO_COPY_FROM },
@@ -1882,15 +1882,15 @@ test_del_replace_not_present(const svn_test_opts_t *opts, apr_pool_t *pool)
     nodes_row_t rows[] = {
       { 0, "A",         "normal",       2, "A" },
       { 0, "A/B",       "normal",       2, "A/B" },
-      { 0, "A/B/X",     "not-present",  2, "A/B/X" },
-      { 0, "A/B/Y",     "not-present",  2, "A/B/Y" },
+      { 0, "A/B/X",     "not-present",  0, "A/B/X" },
+      { 0, "A/B/Y",     "not-present",  0, "A/B/Y" },
       { 0, "A/B/Z",     "normal",       2, "A/B/Z" },
       { 1, "A",         "normal",       2, "X" },
       { 1, "A/B",       "normal",       2, "X/B" },
-      { 1, "A/B/W",     "not-present",  2, "X/B/W" },
+      { 1, "A/B/W",     "not-present",  0, "X/B/W" },
       { 1, "A/B/X",     "normal",       2, "X/B/X" },
-      { 1, "A/B/Y",     "not-present",  2, "X/B/Y" },
-      { 1, "A/B/Z",     "not-present",  2, "X/B/Z" },
+      { 1, "A/B/Y",     "not-present",  0, "X/B/Y" },
+      { 1, "A/B/Z",     "not-present",  0, "X/B/Z" },
       { 0 }
     };
     SVN_ERR(check_db_rows(&b, "A", rows));
@@ -1901,8 +1901,8 @@ test_del_replace_not_present(const svn_test_opts_t *opts, apr_pool_t *pool)
     nodes_row_t rows[] = {
       { 0, "A",         "normal",       2, "A" },
       { 0, "A/B",       "normal",       2, "A/B" },
-      { 0, "A/B/X",     "not-present",  2, "A/B/X" },
-      { 0, "A/B/Y",     "not-present",  2, "A/B/Y" },
+      { 0, "A/B/X",     "not-present",  0, "A/B/X" },
+      { 0, "A/B/Y",     "not-present",  0, "A/B/Y" },
       { 0, "A/B/Z",     "normal",       2, "A/B/Z" },
       { 1, "A",         "base-deleted", NO_COPY_FROM },
       { 1, "A/B",       "base-deleted", NO_COPY_FROM },
@@ -3042,6 +3042,16 @@ test_shadowed_update(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(wc_delete(&b, "K/L/M"));
   {
     nodes_row_t rows[] = {
+      {0, "",        "normal",           3, ""},
+      {0, "iota",    "normal",           3, "iota"},
+
+      {0, "A",       "normal",           3, "A"},
+      {0, "A/B",     "normal",           3, "A/B"},
+      {0, "A/B/C",   "normal",           3, "A/B/C"},
+
+      {1, "A",       "normal",           2, "A"},
+      {1, "A/B",     "normal",           2, "A/B"},
+      {1, "A/B/C",   "normal",           2, "A/B/C"},
 
       {0, "K",       "normal",           3, "K"},
       {0, "K/L",     "normal",           3, "K/L"},
@@ -3055,7 +3065,7 @@ test_shadowed_update(const svn_test_opts_t *opts, apr_pool_t *pool)
 
       { 0 }
     };
-    SVN_ERR(check_db_rows(&b, "K", rows));
+    SVN_ERR(check_db_rows(&b, "", rows));
   }
 
   /* Resolve conflict on K and go back to r1 */
@@ -3085,12 +3095,25 @@ test_shadowed_update(const svn_test_opts_t *opts, apr_pool_t *pool)
     SVN_ERR(check_db_rows(&b, "K", rows));
   }
 
-  /* Update the shadowed K/L/M to r4 where it does not exits */
+  /* Update the shadowed K/L/M to r4 where they do not exit */
   SVN_ERR(wc_resolved(&b, "K"));
   SVN_ERR(wc_update(&b, "K/L/M", 4));
+  SVN_ERR(wc_resolved(&b, "A"));
+  SVN_ERR(wc_update(&b, "A/B/C", 4));
 
   {
     nodes_row_t rows[] = {
+
+      {0, "",        "normal",           3, ""},
+      {0, "iota",    "normal",           3, "iota"},
+
+      {0, "A",       "normal",           3, "A"},
+      {0, "A/B",     "normal",           3, "A/B"},
+      {0, "A/B/C",   "not-present",      4, "A/B/C"},
+
+      {1, "A",       "normal",           2, "A"},
+      {1, "A/B",     "normal",           2, "A/B"},
+      {1, "A/B/C",   "normal",           2, "A/B/C"},
 
       {0, "K",       "normal",           3, "K"},
       {0, "K/L",     "normal",           3, "K/L"},
@@ -3101,13 +3124,9 @@ test_shadowed_update(const svn_test_opts_t *opts, apr_pool_t *pool)
 
       {2, "K/L",     "normal",           NO_COPY_FROM},
 
-      /* ### Currently I see an unexpected
-      { 1, "K/L/M",  "base-deleted",     NO_COPY_FROM},
-         ### Which shadows the not-present node */
-
       { 0 }
     };
-    SVN_ERR(check_db_rows(&b, "K", rows));
+    SVN_ERR(check_db_rows(&b, "", rows));
   }
 
 
@@ -3160,7 +3179,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test_op_delete"),
     SVN_TEST_OPTS_PASS(test_child_replace_with_same_origin,
                        "test_child_replace_with_same"),
-    SVN_TEST_OPTS_XFAIL(test_shadowed_update,
+    SVN_TEST_OPTS_PASS(test_shadowed_update,
                        "test_shadowed_update"),
     SVN_TEST_NULL
   };

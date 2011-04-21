@@ -1572,7 +1572,7 @@ delete_entry(const char *path,
   const char *base = svn_relpath_basename(path, NULL);
   const char *local_abspath;
   const char *repos_relpath;
-  svn_wc__db_kind_t kind;
+  svn_wc__db_kind_t kind, base_kind;
   svn_boolean_t conflicted;
   svn_boolean_t have_base;
   svn_boolean_t have_work;
@@ -1623,9 +1623,13 @@ delete_entry(const char *path,
                                scratch_pool, scratch_pool));
 
   if (!have_work)
-    base_status = status;
+    {
+      base_status = status;
+      base_kind = kind;
+    }
   else
-    SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, NULL, &repos_relpath,
+    SVN_ERR(svn_wc__db_base_get_info(&base_status, &base_kind, NULL,
+                                     &repos_relpath,
                                      NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                      NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                      eb->db, local_abspath,
@@ -1740,14 +1744,18 @@ delete_entry(const char *path,
     {
       /* Delete, and do not leave a not-present node.  */
       SVN_ERR(svn_wc__wq_build_base_remove(&work_item,
-                                           eb->db, local_abspath, FALSE,
+                                           eb->db, local_abspath,
+                                           SVN_INVALID_REVNUM,
+                                           svn_wc__db_kind_unknown,
                                            scratch_pool, scratch_pool));
     }
   else
     {
       /* Delete, leaving a not-present node.  */
       SVN_ERR(svn_wc__wq_build_base_remove(&work_item,
-                                           eb->db, local_abspath, TRUE,
+                                           eb->db, local_abspath,
+                                           *eb->target_revision,
+                                           base_kind,
                                            scratch_pool, scratch_pool));
       eb->target_deleted = TRUE;
     }

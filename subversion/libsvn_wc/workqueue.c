@@ -246,40 +246,70 @@ run_base_remove(svn_wc__db_t *db,
   const svn_skel_t *arg1 = work_item->children->next;
   const char *local_relpath;
   const char *local_abspath;
-  svn_boolean_t keep_not_present;
-  svn_revnum_t revision;
+  svn_revnum_t not_present_rev = SVN_INVALID_REVNUM;
+  svn_wc__db_kind_t not_present_kind;
   const char *repos_relpath, *repos_root_url, *repos_uuid;
-  svn_wc__db_kind_t kind;
   apr_int64_t val;
 
   local_relpath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
   SVN_ERR(svn_wc__db_from_relpath(&local_abspath, db, wri_abspath,
                                   local_relpath, scratch_pool, scratch_pool));
   SVN_ERR(svn_skel__parse_int(&val, arg1->next, scratch_pool));
-  keep_not_present = (val != 0);
 
-  if (keep_not_present)
+  if (arg1->next->next)
     {
-      SVN_ERR(svn_wc__db_base_get_info(NULL, &kind, &revision, &repos_relpath,
-                                       &repos_root_url, &repos_uuid, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL,
-                                       db, local_abspath,
-                                       scratch_pool, scratch_pool));
+      not_present_rev = (svn_revnum_t)val;
+      SVN_ERR(svn_skel__parse_int(&val, arg1->next->next, scratch_pool));
+      not_present_kind = val;
+
+      if (SVN_IS_VALID_REVNUM(not_present_rev))
+        {
+          const char *dir_abspath, *name;
+
+          /* This wq operation is restartable, so we can't assume the node
+             to be here. But we can assume that the parent is still there */
+          svn_dirent_split(&dir_abspath, &name, local_abspath, scratch_pool);
+
+          SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath, &repos_root_url,
+                                             &repos_uuid,
+                                             db, dir_abspath,
+                                             scratch_pool, scratch_pool));
+
+          repos_relpath = svn_relpath_join(repos_relpath, name, scratch_pool);
+        }
+    }
+  else
+    {
+      svn_boolean_t keep_not_present;
+
+      SVN_ERR_ASSERT(SVN_WC__VERSION <= 28); /* Case unused in later versions*/
+
+      keep_not_present = (val != 0);
+
+      if (keep_not_present)
+        {
+          SVN_ERR(svn_wc__db_base_get_info(NULL, &not_present_kind,
+                                           &not_present_rev, &repos_relpath,
+                                           &repos_root_url, &repos_uuid, NULL,
+                                           NULL, NULL, NULL, NULL, NULL, NULL,
+                                           NULL, NULL, NULL, NULL, NULL,
+                                           db, local_abspath,
+                                           scratch_pool, scratch_pool));
+        }
     }
 
   SVN_ERR(remove_base_node(db, local_abspath,
                            cancel_func, cancel_baton,
                            scratch_pool));
 
-  if (keep_not_present)
+  if (SVN_IS_VALID_REVNUM(not_present_rev))
     {
       SVN_ERR(svn_wc__db_base_add_not_present_node(db, local_abspath,
                                                    repos_relpath,
                                                    repos_root_url,
                                                    repos_uuid,
-                                                   revision,
-                                                   kind,
+                                                   not_present_rev,
+                                                   not_present_kind,
                                                    NULL,
                                                    NULL,
                                                    scratch_pool));
@@ -292,7 +322,8 @@ svn_error_t *
 svn_wc__wq_build_base_remove(svn_skel_t **work_item,
                              svn_wc__db_t *db,
                              const char *local_abspath,
-                             svn_boolean_t keep_not_present,
+                             svn_revnum_t not_present_revision,
+                             svn_wc__db_kind_t not_present_kind,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
 {
@@ -302,7 +333,8 @@ svn_wc__wq_build_base_remove(svn_skel_t **work_item,
   SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath,
                                 local_abspath, result_pool, scratch_pool));
 
-  svn_skel__prepend_int(keep_not_present, *work_item, result_pool);
+  svn_skel__prepend_int(not_present_kind, *work_item, result_pool);
+  svn_skel__prepend_int(not_present_revision, *work_item, result_pool);
   svn_skel__prepend_str(local_relpath, *work_item, result_pool);
   svn_skel__prepend_str(OP_BASE_REMOVE, *work_item, result_pool);
 
