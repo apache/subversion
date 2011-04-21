@@ -28,6 +28,7 @@ def parse_id(id):
   return noderev, rev, offset
 
 def rev_file_path(repo_dir, rev):
+  # TODO: support shards
   return os.path.join(repo_dir, 'db', 'revs', rev)
 
 def rev_file_indexes(repo_dir, rev):
