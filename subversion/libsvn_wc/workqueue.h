@@ -211,7 +211,8 @@ svn_error_t *
 svn_wc__wq_build_base_remove(svn_skel_t **work_item,
                              svn_wc__db_t *db,
                              const char *local_abspath,
-                             svn_boolean_t keep_not_present,
+                             svn_revnum_t not_present_revision,
+                             svn_wc__db_kind_t not_present_kind,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
 

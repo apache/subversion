@@ -685,8 +685,7 @@ blank_ibb(insert_base_baton_t *pibb)
    the extended delete, A/B/C is already deleted.
  */
 static svn_error_t *
-extend_parent_delete(svn_sqlite__db_t *sdb,
-                     apr_int64_t wc_id,
+extend_parent_delete(svn_wc__db_wcroot_t *wcroot,
                      const char *local_relpath,
                      apr_pool_t *scratch_pool)
 {
@@ -697,9 +696,9 @@ extend_parent_delete(svn_sqlite__db_t *sdb,
 
   SVN_ERR_ASSERT(local_relpath[0]);
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_LOWEST_WORKING_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, parent_relpath));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, parent_relpath));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (have_row)
     parent_op_depth = svn_sqlite__column_int64(stmt, 0);
@@ -708,16 +707,16 @@ extend_parent_delete(svn_sqlite__db_t *sdb,
     {
       apr_int64_t op_depth;
 
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
       if (have_row)
         op_depth = svn_sqlite__column_int64(stmt, 0);
       SVN_ERR(svn_sqlite__reset(stmt));
       if (!have_row || parent_op_depth < op_depth)
         {
-          SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+          SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                           STMT_INSERT_WORKING_NODE_FROM_BASE));
-          SVN_ERR(svn_sqlite__bindf(stmt, "isit", wc_id,
+          SVN_ERR(svn_sqlite__bindf(stmt, "isit", wcroot->wc_id,
                                     local_relpath, parent_op_depth,
                                     presence_map,
                                     svn_wc__db_status_base_deleted));
@@ -736,16 +735,15 @@ extend_parent_delete(svn_sqlite__db_t *sdb,
    this node must be removed.
  */
 static svn_error_t *
-retract_parent_delete(svn_sqlite__db_t *sdb,
-                      apr_int64_t wc_id,
+retract_parent_delete(svn_wc__db_wcroot_t *wcroot,
                       const char *local_relpath,
                       apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_DELETE_LOWEST_WORKING_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
   return SVN_NO_ERROR;
@@ -849,9 +847,22 @@ insert_base_node(void *baton,
                                        0 /* BASE */,
                                        scratch_pool));
 
-  if (parent_relpath)
-    SVN_ERR(extend_parent_delete(wcroot->sdb, wcroot->wc_id, local_relpath,
-                                 scratch_pool));
+  /* When this is not the root node, check shadowing behavior */
+  if (*local_relpath)
+    {
+      if (parent_relpath
+          && (pibb->status == svn_wc__db_status_normal)
+              || (pibb->status == svn_wc__db_status_incomplete))
+        {
+          SVN_ERR(extend_parent_delete(wcroot, local_relpath, scratch_pool));
+        }
+      else if (pibb->status == svn_wc__db_status_not_present
+               || pibb->status == svn_wc__db_status_absent
+               || pibb->status == svn_wc__db_status_excluded)
+        {
+          SVN_ERR(retract_parent_delete(wcroot, local_relpath, scratch_pool));
+        }
+    }
 
   SVN_ERR(add_work_items(wcroot->sdb, pibb->work_items, scratch_pool));
 
@@ -1833,8 +1844,7 @@ db_base_remove(void *baton,
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
-  SVN_ERR(retract_parent_delete(wcroot->sdb, wcroot->wc_id, local_relpath,
-                                scratch_pool));
+  SVN_ERR(retract_parent_delete(wcroot, local_relpath, scratch_pool));
 
   /* If there is no working node then any actual node must be deleted,
      unless it marks a conflict */
