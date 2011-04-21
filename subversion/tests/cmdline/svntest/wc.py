@@ -848,30 +848,12 @@ def open_wc_db(local_path):
 def text_base_path(file_path):
   """Return the path to the text-base file for the versioned file
      FILE_PATH."""
+
+  info = svntest.actions.run_and_parse_info(file_path)[0]
+
+  checksum = info['Checksum']
   db, root_path, relpath = open_wc_db(file_path)
 
-  c = db.cursor()
-  # NODES conversion is complete enough that we can use it if it exists
-  c.execute("""pragma table_info(nodes)""")
-  if c.fetchone():
-    c.execute("""select checksum from nodes
-                 where local_relpath = '""" + relpath + """'
-                 and op_depth = 0""")
-  else:
-    c.execute("""select checksum from base_node
-                 where local_relpath = '""" + relpath + """'""")
-  row = c.fetchone()
-  if row is not None:
-    checksum = row[0]
-    if checksum is not None and checksum[0:6] == "$md5 $":
-      c.execute("""select checksum from pristine
-                   where md5_checksum = '""" + checksum + """'""")
-      checksum = c.fetchone()[0]
-  if row is None or checksum is None:
-    raise svntest.Failure("No SHA1 checksum for " + relpath)
-  db.close()
-
-  checksum = checksum[6:]
   # Calculate single DB location
   dot_svn = svntest.main.get_admin_name()
   fn = os.path.join(root_path, dot_svn, 'pristine', checksum[0:2], checksum)
