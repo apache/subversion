@@ -19,3 +19,6 @@ The files are:
 For more details, see the email from Julian Foad on 2010-10-06, subject
 "Fixing FSFS 'Corrupt node-revision' and 'Corrupt representation' errors",
 <http://svn.haxx.se/dev/archive-2010-10/0095.shtml>.
+
+This script does not support fixing revisions that had been packed.  Consider
+using ../../../tools/server-side/fsfs-reshard.py first.
