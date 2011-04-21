@@ -3,6 +3,8 @@
 usage = """
 Fix a bad FSFS revision file.
 Usage: $0 REPO-DIR REVISION
+$LastChangedDate$
+$LastChangedRevision$
 """
 
 import os, sys, re, subprocess
@@ -21,7 +23,7 @@ SVNLOOK = 'svnlook'
 # Verbosity: True for verbose, or False for quiet
 VERBOSE = True
 
-URL = "https://svn.apache.org/repos/asf/subversion/trunk/contrib/server-side/fsfsfixer/fixer/fix-rev.py"
+URL = "$URL$"[6:-2]
 
 # Global dictionaries recording the fixes made
 fixed_ids = {}
