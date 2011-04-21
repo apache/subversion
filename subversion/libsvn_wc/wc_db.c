@@ -2282,6 +2282,35 @@ svn_wc__db_base_clear_dav_cache_recursive(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+/* Helper for creating SQLite triggers, running the main transaction
+   callback, and then dropping the triggers.  It guarantees that the
+   triggers will not survive the transaction.  This could be used for
+   any general prefix/postscript statements where the postscript
+   *must* be executed if the transaction completes. */
+struct with_triggers_baton_t {
+  int create_trigger;
+  int drop_trigger;
+  svn_wc__db_txn_callback_t cb_func;
+  void *cb_baton;
+};
+
+static svn_error_t *
+with_triggers(void *baton,
+              svn_wc__db_wcroot_t *wcroot,
+              const char *local_relpath,
+              apr_pool_t *scratch_pool)
+{
+  struct with_triggers_baton_t *b = baton;
+
+  SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb, b->create_trigger));
+
+  SVN_ERR(b->cb_func(b->cb_baton, wcroot, local_relpath, scratch_pool));
+
+  SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb, b->drop_trigger));
+
+  return SVN_NO_ERROR;
+}
+
 
 /* Helper for svn_wc__db_op_copy to handle copying from one db to
    another */
@@ -3565,11 +3594,12 @@ svn_wc__db_op_set_changelist(svn_wc__db_t *db,
                              svn_depth_t depth,
                              apr_pool_t *scratch_pool)
 {
-  svn_wc__db_txn_callback_t txn_func;
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
   struct set_changelist_baton_t scb = { changelist, changelists };
-  svn_error_t *err;
+  struct with_triggers_baton_t wtb = { STMT_CREATE_CHANGELIST_LIST,
+                                       STMT_DROP_CHANGELIST_LIST_TRIGGERS,
+                                       NULL, &scb };
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -3580,7 +3610,7 @@ svn_wc__db_op_set_changelist(svn_wc__db_t *db,
   switch (depth)
     {
       case svn_depth_empty:
-        txn_func = set_changelist_txn;
+        wtb.cb_func = set_changelist_txn;
         break;
 
       default:
@@ -3588,26 +3618,12 @@ svn_wc__db_op_set_changelist(svn_wc__db_t *db,
         NOT_IMPLEMENTED();
     }
 
-  /* We MUST remove the triggers and not leave them to affect subsequent
-     operations. */
-  err = svn_sqlite__exec_statements(wcroot->sdb, STMT_CREATE_CHANGELIST_LIST);
-  if (err)
-    return svn_error_compose_create(err,
-                                    svn_sqlite__exec_statements(wcroot->sdb,
-                                        STMT_DROP_CHANGELIST_LIST_TRIGGERS));
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, with_triggers, &wtb,
+                              scratch_pool));
 
-  err = svn_wc__db_with_txn(wcroot, local_relpath, set_changelist_txn,
-                            &scb, scratch_pool);
+  SVN_ERR(flush_entries(wcroot, local_abspath, scratch_pool));
 
-  err = svn_error_compose_create(err,
-                                 svn_sqlite__exec_statements(wcroot->sdb,
-                                      STMT_DROP_CHANGELIST_LIST_TRIGGERS));
-
-  err = svn_error_compose_create(err,
-                                 flush_entries(wcroot, local_abspath,
-                                               scratch_pool));
-
-  return err;
+  return SVN_NO_ERROR;
 }
 
 
@@ -4023,20 +4039,21 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool)
 {
-  svn_wc__db_txn_callback_t txn_func;
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  svn_error_t *err;
+  struct with_triggers_baton_t wtb = { STMT_CREATE_REVERT_LIST,
+                                       STMT_DROP_REVERT_LIST_TRIGGERS,
+                                       NULL, NULL};
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   switch (depth)
     {
     case svn_depth_empty:
-      txn_func = op_revert_txn;
+      wtb.cb_func = op_revert_txn;
       break;
     case svn_depth_infinity:
-      txn_func = op_revert_recursive_txn;
+      wtb.cb_func = op_revert_recursive_txn;
       break;
     default:
       return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
@@ -4049,26 +4066,12 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
                               db, local_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  /* We MUST remove the triggers and not leave them to affect subsequent
-     operations. */
-  err = svn_sqlite__exec_statements(wcroot->sdb, STMT_CREATE_REVERT_LIST);
-  if (err)
-    return svn_error_compose_create(err,
-                                    svn_sqlite__exec_statements(wcroot->sdb,
-                                               STMT_DROP_REVERT_LIST_TRIGGERS));
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, with_triggers, &wtb,
+                              scratch_pool));
 
-  err = svn_wc__db_with_txn(wcroot, local_relpath, txn_func, NULL,
-                            scratch_pool);
+  SVN_ERR(flush_entries(wcroot, local_abspath, scratch_pool));
 
-  err = svn_error_compose_create(err,
-                                 svn_sqlite__exec_statements(wcroot->sdb,
-                                               STMT_DROP_REVERT_LIST_TRIGGERS));
-
-  err = svn_error_compose_create(err,
-                                 flush_entries(wcroot, local_abspath,
-                                               scratch_pool));
-
-  return err;
+  return SVN_NO_ERROR;
 }
 
 struct revert_list_read_baton {
