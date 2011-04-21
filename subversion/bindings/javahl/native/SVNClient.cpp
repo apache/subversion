@@ -873,10 +873,9 @@ void SVNClient::properties(const char *path, Revision &revision,
     return;
 }
 
-void SVNClient::propertySet(Targets &targets, const char *name,
-                            JNIByteArray &value, svn_depth_t depth,
-                            StringArray &changelists, bool force,
-                            RevpropTable &revprops, CommitCallback *callback)
+void SVNClient::propertySetLocal(Targets &targets, const char *name,
+                                 JNIByteArray &value, svn_depth_t depth,
+                                 StringArray &changelists, bool force)
 {
     SVN::Pool requestPool;
     SVN_JNI_NULL_PTR_EX(name, "name", );
@@ -893,12 +892,39 @@ void SVNClient::propertySet(Targets &targets, const char *name,
         return;
 
     const apr_array_header_t *targetsApr = targets.array(requestPool);
-    SVN_JNI_ERR(svn_client_propset4(name, val, targetsApr,
-                                    depth, force, SVN_INVALID_REVNUM,
-                                    changelists.array(requestPool),
-                                    revprops.hash(requestPool),
-                                    CommitCallback::callback, callback,
-                                    ctx, requestPool.pool()), );
+    SVN_JNI_ERR(svn_client_propset_local(name, val, targetsApr,
+                                         depth, force,
+                                         changelists.array(requestPool),
+                                         ctx, requestPool.pool()), );
+}
+
+void SVNClient::propertySetRemote(const char *path, const char *name,
+                                  JNIByteArray &value, bool force,
+                                  RevpropTable &revprops,
+                                  CommitCallback *callback)
+{
+    SVN::Pool requestPool;
+    SVN_JNI_NULL_PTR_EX(name, "name", );
+
+    svn_string_t *val;
+    if (value.isNull())
+      val = NULL;
+    else
+      val = svn_string_ncreate((const char *)value.getBytes(), value.getLength(),
+                               requestPool.pool());
+
+    Path intPath(path);
+    SVN_JNI_ERR(intPath.error_occured(), );
+
+    svn_client_ctx_t *ctx = context.getContext(NULL);
+    if (ctx == NULL)
+        return;
+
+    SVN_JNI_ERR(svn_client_propset_remote(name, val, intPath.c_str(),
+                                          force, SVN_INVALID_REVNUM,
+                                          revprops.hash(requestPool),
+                                          CommitCallback::callback, callback,
+                                          ctx, requestPool.pool()), );
 }
 
 void SVNClient::diff(const char *target1, Revision &revision1,

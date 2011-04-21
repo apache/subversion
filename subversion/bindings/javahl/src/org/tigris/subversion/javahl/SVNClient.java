@@ -1870,15 +1870,23 @@ public class SVNClient implements SVNClientInterface
     {
         try
         {
-            Set<String> paths = new HashSet<String>();
-            paths.add(path);
+            if (Path.isURL(path))
+            {
+                aSVNClient.propertySetRemote(path, name,
+                                       value == null ? null : value.getBytes(),
+                                       force, revpropTable, null);
+            }
+            else
+            {
+                Set<String> paths = new HashSet<String>();
+                paths.add(path);
 
-            aSVNClient.propertySet(paths, name,
+                aSVNClient.propertySetLocal(paths, name,
                                    value == null ? null : value.getBytes(),
                                    Depth.toADepth(depth),
                                    changelists == null ? null
-                                    : Arrays.asList(changelists),
-                                   force, revpropTable, null);
+                                    : Arrays.asList(changelists), force);
+            }
         }
         catch (org.apache.subversion.javahl.ClientException ex)
         {

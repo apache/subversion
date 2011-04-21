@@ -301,11 +301,16 @@ public class SVNClient implements ISVNClient
                                   ProplistCallback callback)
             throws ClientException;
 
-    public native void propertySet(Set<String> paths, String name, byte[] value,
-                                   Depth depth, Collection<String> changelists,
-                                   boolean force,
-                                   Map<String, String> revpropTable,
-                                   CommitCallback callback)
+    public native void propertySetLocal(Set<String> paths, String name,
+                                        byte[] value, Depth depth,
+                                        Collection<String> changelists,
+                                        boolean force)
+            throws ClientException;
+
+    public native void propertySetRemote(String path, String name, byte[] value,
+                                         boolean force,
+                                         Map<String, String> revpropTable,
+                                         CommitCallback callback)
             throws ClientException;
 
     public native byte[] revProperty(String path, String name, Revision rev)

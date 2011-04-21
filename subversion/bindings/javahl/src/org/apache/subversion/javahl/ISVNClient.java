@@ -644,9 +644,14 @@ public interface ISVNClient
      *                     results in a commit.
      * @throws ClientException
      */
-    void propertySet(Set<String> paths, String name, byte[] value, Depth depth,
-                     Collection<String> changelists, boolean force,
-                     Map<String, String> revpropTable, CommitCallback callback)
+    void propertySetLocal(Set<String> paths, String name, byte[] value,
+                          Depth depth, Collection<String> changelists,
+                          boolean force)
+            throws ClientException;
+
+    void propertySetRemote(String path, String name, byte[] value,
+                           boolean force, Map<String, String> revpropTable,
+                           CommitCallback callback)
             throws ClientException;
 
     /**
