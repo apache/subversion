@@ -1376,8 +1376,8 @@ public class BasicTests extends SVNTests
         // set a property on A/D/G/rho file
         pathSet.clear();
         pathSet.add(thisTest.getWCPath()+"/A/D/G/rho");
-        client.propertySet(pathSet, "abc", (new String("def")).getBytes(),
-                           Depth.infinity, null, false, null, null);
+        client.propertySetLocal(pathSet, "abc", (new String("def")).getBytes(),
+                                Depth.infinity, null, false);
         thisTest.getWc().setItemPropStatus("A/D/G/rho", Status.Kind.modified);
 
         // set a property on A/B/F directory
@@ -3948,8 +3948,9 @@ public class BasicTests extends SVNTests
         Set<String> paths = new HashSet<String>();
         paths.add(path);
 
-        client.propertySet(paths, name, value != null ? value.getBytes() : null,
-                           Depth.empty, null, false, null, null);
+        client.propertySetLocal(paths, name,
+                                value != null ? value.getBytes() : null,
+                                Depth.empty, null, false);
     }
 
     private void setprop(String path, String name, byte[] value)
@@ -3958,8 +3959,8 @@ public class BasicTests extends SVNTests
         Set<String> paths = new HashSet<String>();
         paths.add(path);
 
-        client.propertySet(paths, name, value, Depth.empty,
-                           null, false, null, null);
+        client.propertySetLocal(paths, name, value, Depth.empty,
+                                null, false);
     }
 
     private long commit(OneTest thisTest, String msg)

@@ -916,10 +916,42 @@ Java_org_apache_subversion_javahl_SVNClient_properties
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNClient_propertySet
-(JNIEnv *env, jobject jthis, jobject jtargets, jstring jname, jbyteArray jvalue,
- jobject jdepth, jobject jchangelists, jboolean jforce, jobject jrevpropTable,
- jobject jcallback)
+Java_org_apache_subversion_javahl_SVNClient_propertySetRemote
+(JNIEnv *env, jobject jthis, jstring jpath, jstring jname,
+ jbyteArray jvalue, jboolean jforce, jobject jrevpropTable, jobject jcallback)
+{
+  JNIEntry(SVNClient, propertySet);
+  SVNClient *cl = SVNClient::getCppObject(jthis);
+  if (cl == NULL)
+    {
+      JNIUtil::throwError(_("bad C++ this"));
+      return;
+    }
+  JNIStringHolder path(jpath);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  JNIStringHolder name(jname);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  JNIByteArray value(jvalue);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  RevpropTable revprops(jrevpropTable);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  CommitCallback callback(jcallback);
+  cl->propertySetRemote(path, name, value, jforce ? true:false, revprops,
+                        jcallback ? &callback : NULL);
+}
+
+JNIEXPORT void JNICALL
+Java_org_apache_subversion_javahl_SVNClient_propertySetLocal
+(JNIEnv *env, jobject jthis, jobject jtargets, jstring jname,
+ jbyteArray jvalue, jobject jdepth, jobject jchangelists, jboolean jforce)
 {
   JNIEntry(SVNClient, propertySet);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -945,14 +977,8 @@ Java_org_apache_subversion_javahl_SVNClient_propertySet
   if (JNIUtil::isExceptionThrown())
     return;
 
-  RevpropTable revprops(jrevpropTable);
-  if (JNIUtil::isExceptionThrown())
-    return;
-
-  CommitCallback callback(jcallback);
-  cl->propertySet(targets, name, value, EnumMapper::toDepth(jdepth),
-                  changelists,
-                  jforce ? true:false, revprops, jcallback ? &callback : NULL);
+  cl->propertySetLocal(targets, name, value, EnumMapper::toDepth(jdepth),
+                       changelists, jforce ? true:false);
 }
 
 JNIEXPORT jbyteArray JNICALL
