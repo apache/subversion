@@ -284,6 +284,22 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r1094692
+   Make "blame -g" more efficient when svn:mergeinfo is large.
+   Justification:
+     Orders of magnitude faster on some large datasets where the server
+     is otherwise too slow to be useable.
+   Votes:
+     +1: philip
+
+ * r1095654
+   Avoid closing an already closed file.
+   Justification:
+     Causes invalid handle exceptions on Windows servers.
+   Votes:
+     +1: philip
+  
+
 Veto-blocked changes:
 =====================
 
