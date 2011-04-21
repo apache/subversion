@@ -521,7 +521,8 @@ END;
 
 CREATE TRIGGER nodes_update_checksum_trigger
 AFTER UPDATE OF checksum ON nodes
-/* WHEN NEW.checksum IS NOT NULL OR OLD.checksum IS NOT NULL */
+WHEN NEW.checksum IS NOT OLD.checksum
+  /* AND (NEW.checksum IS NOT NULL OR OLD.checksum IS NOT NULL) */
 BEGIN
   UPDATE pristine SET refcount = refcount + 1
   WHERE checksum = NEW.checksum;
@@ -660,6 +661,25 @@ UPDATE NODES SET checksum=(SELECT checksum FROM pristine
 WHERE EXISTS(SELECT 1 FROM pristine WHERE md5_checksum=nodes.checksum);
 
 PRAGMA user_version = 28;
+
+/* ------------------------------------------------------------------------- */
+
+/* Format 29 introduces ... */
+
+-- STMT_UPGRADE_TO_29
+
+DROP TRIGGER IF EXISTS nodes_update_checksum_trigger;
+
+CREATE TRIGGER nodes_update_checksum_trigger
+AFTER UPDATE OF checksum ON nodes
+WHEN NEW.checksum IS NOT OLD.checksum
+  /* AND (NEW.checksum IS NOT NULL OR OLD.checksum IS NOT NULL) */
+BEGIN
+  UPDATE pristine SET refcount = refcount + 1
+  WHERE checksum = NEW.checksum;
+  UPDATE pristine SET refcount = refcount - 1
+  WHERE checksum = OLD.checksum;
+END;
 
 
 /* ------------------------------------------------------------------------- */
