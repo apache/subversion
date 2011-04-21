@@ -607,25 +607,6 @@ svn_wc__node_is_file_external(svn_boolean_t *file_external,
                               apr_pool_t *scratch_pool);
 
 /**
- * Check what kinds of conflicts we have on @a local_abspath.
- *
- * We could have returned the conflicts at once if it wasn't for the fact
- * that there can be multiple prop conflicts.
- *
- * One or two of @a prop_conflicted, @a text_conflicted and @a
- * tree_conflicted can be NULL if we're not interested in that particular
- * value.
- */
-svn_error_t *
-svn_wc__node_check_conflicts(svn_boolean_t *prop_conflicted,
-                             svn_boolean_t *text_conflicted,
-                             svn_boolean_t *tree_conflicted,
-                             svn_wc_context_t *wc_ctx,
-                             const char *local_abspath,
-                             apr_pool_t *result_pool,
-                             apr_pool_t *scratch_pool);
-
-/**
  * A hack to remove the last entry from libsvn_client.  This simply fetches an
  * some values from WC-NG, and puts the needed bits into the output parameters,
  * allocated in @a result_pool.

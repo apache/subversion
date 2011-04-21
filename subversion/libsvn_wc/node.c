@@ -1123,42 +1123,6 @@ svn_wc__node_is_file_external(svn_boolean_t *file_external,
 }
 
 svn_error_t *
-svn_wc__node_check_conflicts(svn_boolean_t *prop_conflicted,
-                             svn_boolean_t *text_conflicted,
-                             svn_boolean_t *tree_conflicted,
-                             svn_wc_context_t *wc_ctx,
-                             const char *local_abspath,
-                             apr_pool_t *result_pool,
-                             apr_pool_t *scratch_pool)
-{
-  const apr_array_header_t *conflicts;
-  int i;
-
-  if (prop_conflicted)
-    *prop_conflicted = FALSE;
-  if (text_conflicted)
-    *text_conflicted = FALSE;
-  if (tree_conflicted)
-    *tree_conflicted = FALSE;
-
-  SVN_ERR(svn_wc__db_read_conflicts(&conflicts, wc_ctx->db, local_abspath,
-                                    result_pool, scratch_pool));
-
-  for (i = 0; i < conflicts->nelts; i++)
-    {
-      const svn_wc_conflict_description2_t *cd;
-      cd = APR_ARRAY_IDX(conflicts, i, svn_wc_conflict_description2_t *);
-      if (prop_conflicted && cd->kind == svn_wc_conflict_kind_property)
-        *prop_conflicted = TRUE;
-      else if (text_conflicted && cd->kind == svn_wc_conflict_kind_text)
-        *text_conflicted = TRUE;
-      else if (tree_conflicted && cd->kind == svn_wc_conflict_kind_tree)
-        *tree_conflicted = TRUE;
-    }
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
 svn_wc__internal_node_get_schedule(svn_wc_schedule_t *schedule,
                                    svn_boolean_t *copied,
                                    svn_wc__db_t *db,
