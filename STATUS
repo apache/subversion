@@ -228,6 +228,15 @@ Candidate changes:
      +0: hwright (I like the idea, but have no knowledge of the change, or
                   ability to test it.)
 
+ * r1076730, r1078954, r1081255
+   Fix issue #3650 "log -g produces excessive duplicate output"
+   Justification:
+     Eliminates potentially massive duplication when tracing logs
+     across merge reintegrations.
+   Branch: ^/subversion/branches/1.6.x-issue3650
+   Votes:
+     +1: pburba
+
  * r1083883, r1076826
    Fix issue #3816, "file external can cause mixed-revision working
    copy after checkout"
@@ -290,7 +299,7 @@ Candidate changes:
      Orders of magnitude faster on some large datasets where the server
      is otherwise too slow to be useable.
    Votes:
-     +1: philip
+     +1: philip, pburba
 
  * r1095654
    Avoid closing an already closed file.
