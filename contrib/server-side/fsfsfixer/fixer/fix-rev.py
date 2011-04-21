@@ -24,6 +24,8 @@ SVNLOOK = 'svnlook'
 VERBOSE = True
 
 URL = "$URL$"[6:-2]
+# URL = dirname(dirname(URL))
+URL = URL[:URL.rindex('/', 0, URL.rindex('/'))]
 
 # Global dictionaries recording the fixes made
 fixed_ids = {}
