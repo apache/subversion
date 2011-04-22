@@ -2007,6 +2007,7 @@ svn_wc__internal_propset(svn_wc__db_t *db,
                          const char *local_abspath,
                          const char *name,
                          const svn_string_t *value,
+                         svn_depth_t depth,
                          svn_boolean_t skip_checks,
                          svn_wc_notify_func2_t notify_func,
                          void *notify_baton,
@@ -2020,6 +2021,8 @@ svn_wc__internal_propset(svn_wc__db_t *db,
   const char *dir_abspath;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  /* ### For the time being, only support depth = empty */
+  SVN_ERR_ASSERT(depth == svn_depth_empty);
 
   /* Get the node kind for this path. */
   SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
@@ -2208,14 +2211,15 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
                  const char *local_abspath,
                  const char *name,
                  const svn_string_t *value,
+                 svn_depth_t depth,
                  svn_boolean_t skip_checks,
                  svn_wc_notify_func2_t notify_func,
                  void *notify_baton,
                  apr_pool_t *scratch_pool)
 {
   return svn_error_return(svn_wc__internal_propset(wc_ctx->db, local_abspath,
-                                   name, value, skip_checks, notify_func,
-                                   notify_baton, scratch_pool));
+                                   name, value, depth, skip_checks,
+                                   notify_func, notify_baton, scratch_pool));
 }
 
 

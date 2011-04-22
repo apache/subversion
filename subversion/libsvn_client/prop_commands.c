@@ -119,7 +119,8 @@ propset_walk_cb(const char *local_abspath,
     return SVN_NO_ERROR;
 
   err = svn_wc_prop_set4(wb->wc_ctx, local_abspath, wb->propname, wb->propval,
-                         wb->force, wb->notify_func, wb->notify_baton, pool);
+                         svn_depth_empty, wb->force, wb->notify_func,
+                         wb->notify_baton, pool);
   if (err && (err->apr_err == SVN_ERR_ILLEGAL_TARGET
               || err->apr_err == SVN_ERR_WC_INVALID_SCHEDULE))
     {
@@ -334,7 +335,8 @@ set_props_cb(void *baton,
                                     bt->changelist_hash, scratch_pool))
     {
       SVN_ERR(svn_wc_prop_set4(bt->ctx->wc_ctx, bt->local_abspath,
-                               bt->propname, bt->propval, bt->skip_checks,
+                               bt->propname, bt->propval, svn_depth_empty,
+                               bt->skip_checks,
                                bt->ctx->notify_func2, bt->ctx->notify_baton2,
                                scratch_pool));
     }

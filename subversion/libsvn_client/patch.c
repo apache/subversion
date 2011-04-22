@@ -2221,7 +2221,7 @@ install_patched_prop_targets(patch_target_t *target,
         {
           if (! dry_run)
             SVN_ERR(svn_wc_prop_set4(ctx->wc_ctx, target->local_abspath,
-                                     prop_target->name, NULL,
+                                     prop_target->name, NULL, svn_depth_empty,
                                      TRUE /* skip_checks */,
                                      NULL, NULL, /* suppress notification */
                                      iterpool));
@@ -2297,7 +2297,7 @@ install_patched_prop_targets(patch_target_t *target,
       else
         {
           err = (svn_wc_prop_set4(ctx->wc_ctx, target->local_abspath,
-                                  prop_target->name, prop_val,
+                                  prop_target->name, prop_val, svn_depth_empty,
                                   TRUE, /* ### Skipping checks */
                                   NULL, NULL,
                                   iterpool));

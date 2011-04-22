@@ -307,7 +307,7 @@ add_file(const char *local_abspath,
     /* This must be a special file. */
     SVN_ERR(svn_wc_prop_set4(ctx->wc_ctx, local_abspath, SVN_PROP_SPECIAL,
                              svn_string_create(SVN_PROP_BOOLEAN_TRUE, pool),
-                             FALSE, NULL, NULL, pool));
+                             svn_depth_empty, FALSE, NULL, NULL, pool));
   else if (properties)
     {
       /* loop through the hashtable and add the properties */
@@ -322,7 +322,7 @@ add_file(const char *local_abspath,
              the autoprops say to set some weird combination,
              we just error and let the user sort it out. */
           err = svn_wc_prop_set4(ctx->wc_ctx, local_abspath, pname, pval,
-                                 FALSE, NULL, NULL, pool);
+                                 svn_depth_empty, FALSE, NULL, NULL, pool);
           if (err)
             {
               /* Don't leave the job half-done. If we fail to set a property,
