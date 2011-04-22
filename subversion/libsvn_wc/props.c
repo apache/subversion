@@ -2007,8 +2007,8 @@ do_propset(svn_wc__db_t *db,
            const char *local_abspath,
            const char *name,
            const svn_string_t *value,
-           svn_depth_t depth,
            svn_boolean_t skip_checks,
+           const apr_hash_t *changelists,
            svn_wc_notify_func2_t notify_func,
            void *notify_baton,
            apr_pool_t *scratch_pool)
@@ -2021,8 +2021,10 @@ do_propset(svn_wc__db_t *db,
   const char *dir_abspath;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-  /* ### For the time being, only support depth = empty */
-  SVN_ERR_ASSERT(depth == svn_depth_empty);
+
+  if (!svn_wc__internal_changelist_match(db, local_abspath,
+                                         changelists, scratch_pool))
+    return SVN_NO_ERROR;
 
   /* Get the node kind for this path. */
   SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
@@ -2206,6 +2208,46 @@ do_propset(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+/* A baton for propset_walk_cb. */
+struct propset_walk_baton
+{
+  const char *propname;  /* The name of the property to set. */
+  const svn_string_t *propval;  /* The value to set. */
+  svn_wc__db_t *db;  /* Database for the tree being walked. */
+  svn_boolean_t force;  /* True iff force was passed. */
+  const apr_hash_t *changelists;  /* Changelists to filter on. */
+  svn_wc_notify_func2_t notify_func;
+  void *notify_baton;
+};
+
+/* An node-walk callback for svn_wc_prop_set4().
+ *
+ * For LOCAL_ABSPATH, set the property named wb->PROPNAME to the value
+ * wb->PROPVAL, where "wb" is the WALK_BATON of type "struct
+ * propset_walk_baton *".
+ */
+static svn_error_t *
+propset_walk_cb(const char *local_abspath,
+                svn_node_kind_t kind,
+                void *walk_baton,
+                apr_pool_t *scratch_pool)
+{
+  struct propset_walk_baton *wb = walk_baton;
+  svn_error_t *err;
+
+  err = do_propset(wb->db, local_abspath, wb->propname, wb->propval,
+                   wb->force, wb->changelists, wb->notify_func,
+                   wb->notify_baton, scratch_pool);
+  if (err && (err->apr_err == SVN_ERR_ILLEGAL_TARGET
+              || err->apr_err == SVN_ERR_WC_INVALID_SCHEDULE))
+    {
+      svn_error_clear(err);
+      err = SVN_NO_ERROR;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
                  const char *local_abspath,
@@ -2218,21 +2260,36 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
                  void *notify_baton,
                  apr_pool_t *scratch_pool)
 {
+  apr_hash_t *changelist_hash = NULL;
+
   if (changelists && changelists->nelts)
+    SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelists,
+                                       scratch_pool));
+
+  if (depth == svn_depth_empty)
     {
-      apr_hash_t *changelist_hash = NULL;
-
-      SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelists,
-                                         scratch_pool));
-
-      if (!svn_wc__changelist_match(wc_ctx, local_abspath, changelist_hash,
-                                    scratch_pool))
+      if (!svn_wc__internal_changelist_match(wc_ctx->db, local_abspath,
+                                             changelist_hash, scratch_pool))
         return SVN_NO_ERROR;
+
+      SVN_ERR(do_propset(wc_ctx->db, local_abspath, name, value, skip_checks,
+                         changelist_hash, notify_func, notify_baton,
+                         scratch_pool));
+    }
+  else
+    {
+      struct propset_walk_baton wb = { name, value, wc_ctx->db, skip_checks,
+                                       changelist_hash, notify_func,
+                                       notify_baton };
+
+      SVN_ERR(svn_wc__internal_walk_children(wc_ctx->db, local_abspath, FALSE,
+                                             propset_walk_cb, &wb,
+                                             depth,
+                                             NULL, NULL,  /* cancellation */
+                                             scratch_pool));
     }
 
-  return svn_error_return(do_propset(wc_ctx->db, local_abspath, name, value,
-                                     depth, skip_checks, notify_func,
-                                     notify_baton, scratch_pool));
+  return SVN_NO_ERROR;
 }
 
 
