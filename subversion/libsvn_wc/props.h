@@ -69,19 +69,6 @@ svn_wc__internal_propget(const svn_string_t **value,
                          apr_pool_t *scratch_pool);
 
 
-/* Internal function for setting a property. See svn_wc_prop_set4(). */
-svn_error_t *
-svn_wc__internal_propset(svn_wc__db_t *db,
-                         const char *local_abspath,
-                         const char *name,
-                         const svn_string_t *value,
-                         svn_depth_t depth,
-                         svn_boolean_t skip_checks,
-                         svn_wc_notify_func2_t notify_func,
-                         void *notify_baton,
-                         apr_pool_t *scratch_pool);
-
-
 /* Given LOCAL_ABSPATH/DB and an array of PROPCHANGES based on
    SERVER_BASEPROPS, calculate what changes should be applied to the working
    copy.
