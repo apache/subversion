@@ -46,6 +46,7 @@
  */
 
 #include <apr_hash.h>
+#include <apr_md5.h>
 
 #include "svn_error.h"
 #include "svn_pools.h"
@@ -314,9 +315,11 @@ struct file_baton {
   /* The list of incoming BASE->repos propchanges. */
   apr_array_header_t *propchanges;
 
-  /* APPLY_HANDLER/APPLY_BATON represent the delta applcation baton. */
-  svn_txdelta_window_handler_t apply_handler;
-  void *apply_baton;
+  /* The current checksum on disk */
+  svn_checksum_t *base_checksum;
+
+  /* The resulting checksum from apply_textdelta */
+  svn_checksum_t *result_checksum;
 
   /* The overall crawler editor baton. */
   struct edit_baton *eb;
@@ -1461,6 +1464,7 @@ open_file(const char *path,
           void **file_baton)
 {
   struct dir_baton *pb = parent_baton;
+  struct edit_baton *eb = pb->eb;
   struct file_baton *fb;
   const char *full_path;
 
@@ -1473,17 +1477,45 @@ open_file(const char *path,
   apr_hash_set(pb->compared, apr_pstrdup(pb->pool, full_path),
                APR_HASH_KEY_STRING, "");
 
+  SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, &fb->base_checksum, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL,
+                                   eb->db, fb->local_abspath,
+                                   fb->pool, fb->pool));
+
   return SVN_NO_ERROR;
 }
+
+/* Baton for window_handler */
+struct window_handler_baton
+{
+  struct file_baton *fb;
+
+  /* APPLY_HANDLER/APPLY_BATON represent the delta applcation baton. */
+  svn_txdelta_window_handler_t apply_handler;
+  void *apply_baton;
+
+  unsigned char result_digest[APR_MD5_DIGESTSIZE];
+};
 
 /* Do the work of applying the text delta. */
 static svn_error_t *
 window_handler(svn_txdelta_window_t *window,
                void *window_baton)
 {
-  struct file_baton *fb = window_baton;
+  struct window_handler_baton *whb = window_baton;
+  struct file_baton *fb = whb->fb;
 
-  return fb->apply_handler(window, fb->apply_baton);
+  SVN_ERR(whb->apply_handler(window, whb->apply_baton));
+
+  if (!window)
+    {
+      fb->result_checksum = svn_checksum__from_digest(whb->result_digest,
+                                                      svn_checksum_md5,
+                                                      fb->pool);
+    }
+
+  return SVN_NO_ERROR;
 }
 
 /* An editor function. */
@@ -1495,57 +1527,21 @@ apply_textdelta(void *file_baton,
                 void **handler_baton)
 {
   struct file_baton *fb = file_baton;
+  struct window_handler_baton *whb;
   struct edit_baton *eb = fb->eb;
-  svn_wc__db_status_t status;
-  const char *parent, *base_name;
   const char *temp_dir;
   svn_stream_t *source;
   svn_stream_t *temp_stream;
-  svn_error_t *err;
-  svn_boolean_t found;
 
-  err = svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL,
-                             eb->db, fb->local_abspath, pool, pool);
-  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-    {
-      svn_error_clear(err);
-      found = FALSE;
-    }
+  if (fb->base_checksum)
+    SVN_ERR(svn_wc__db_pristine_read(&source, NULL,
+                                     eb->db, fb->local_abspath,
+                                     fb->base_checksum,
+                                     pool, pool));
   else
-    {
-      SVN_ERR(err);
-      found = TRUE;
-    }
+    source = svn_stream_empty(pool);
 
-  if (found && status == svn_wc__db_status_added)
-    SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
-                                     NULL, NULL, NULL, eb->db,
-                                     fb->local_abspath, pool, pool));
 
-  svn_dirent_split(&parent, &base_name, fb->wc_path, fb->pool);
-
-  /* If the node is added-with-history, then this is not actually
-     an add, but a modification. */
-  if (found && (status == svn_wc__db_status_copied ||
-                status == svn_wc__db_status_moved_here))
-    fb->added = FALSE;
-
-  if (fb->added)
-    {
-      source = svn_stream_empty(pool);
-    }
-  else
-    {
-      /* The current text-base is the starting point if replacing */
-      SVN_ERR(svn_wc__get_pristine_contents(&source, NULL,
-                                            eb->db, fb->local_abspath,
-                                            fb->pool, fb->pool));
-      if (source == NULL)
-        source = svn_stream_empty(fb->pool);
-    }
 
   /* This is the file that will contain the pristine repository version. It
      is created in the admin temporary area. This file continues to exists
@@ -1556,14 +1552,17 @@ apply_textdelta(void *file_baton,
                                  temp_dir, svn_io_file_del_on_pool_cleanup,
                                  fb->pool, fb->pool));
 
+  whb = apr_pcalloc(fb->pool, sizeof(*whb));
+  whb->fb = fb;
+
   svn_txdelta_apply(source, temp_stream,
-                    NULL,
+                    whb->result_digest,
                     fb->temp_file_path /* error_info */,
                     fb->pool,
-                    &fb->apply_handler, &fb->apply_baton);
+                    &whb->apply_handler, &whb->apply_baton);
 
   *handler = window_handler;
-  *handler_baton = file_baton;
+  *handler_baton = whb;
   return SVN_NO_ERROR;
 }
 
@@ -1575,7 +1574,7 @@ apply_textdelta(void *file_baton,
  */
 static svn_error_t *
 close_file(void *file_baton,
-           const char *text_checksum,
+           const char *expected_md5_digest,
            apr_pool_t *pool)
 {
   struct file_baton *fb = file_baton;
@@ -1598,16 +1597,47 @@ close_file(void *file_baton,
      comparison: either BASE or WORKING. */
   apr_hash_t *originalprops;
 
+  if (expected_md5_digest != NULL)
+    {
+      svn_checksum_t *expected_checksum;
+      svn_checksum_t *repos_checksum = fb->result_checksum;
+
+      SVN_ERR(svn_checksum_parse_hex(&expected_checksum, svn_checksum_md5,
+                                     expected_md5_digest, pool));
+
+      if (repos_checksum == NULL)
+        repos_checksum = fb->base_checksum;
+
+      if (repos_checksum->kind != svn_checksum_md5)
+        SVN_ERR(svn_wc__db_pristine_get_md5(&repos_checksum,
+                                            eb->db, fb->local_abspath,
+                                            repos_checksum,
+                                            pool, pool));
+
+      if (!svn_checksum_match(expected_checksum, repos_checksum))
+        return svn_checksum_mismatch_err(
+                            expected_checksum,
+                            repos_checksum,
+                            pool,
+                            _("Checksum mismatch for '%s'"),
+                            svn_dirent_local_style(fb->local_abspath, pool));
+    }
+
   err = svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL,
                              eb->db, fb->local_abspath, pool, pool);
-  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-    svn_error_clear(err);
-  else if (err)
-    return err;
-  else if (status == svn_wc__db_status_added)
+  if (fb->added
+      && err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+    {
+      svn_error_clear(err);
+      status = svn_wc__db_status_not_present;
+    }
+  else
+    SVN_ERR(err);
+
+  if (status == svn_wc__db_status_added)
     SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
                                      NULL, NULL, NULL, eb->db,
                                      fb->local_abspath, pool, pool));

@@ -1546,6 +1546,7 @@ def check_for_omitted_prefix_in_path_component(sbox):
     raise svntest.Failure
 
 #----------------------------------------------------------------------
+@XFail()
 def diff_renamed_file(sbox):
   "diff a file that has been renamed"
 
