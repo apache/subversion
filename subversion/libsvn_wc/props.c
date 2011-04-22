@@ -2213,10 +2213,23 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
                  const svn_string_t *value,
                  svn_depth_t depth,
                  svn_boolean_t skip_checks,
+                 const apr_array_header_t *changelists,
                  svn_wc_notify_func2_t notify_func,
                  void *notify_baton,
                  apr_pool_t *scratch_pool)
 {
+  if (changelists && changelists->nelts)
+    {
+      apr_hash_t *changelist_hash = NULL;
+
+      SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelists,
+                                         scratch_pool));
+
+      if (!svn_wc__changelist_match(wc_ctx, local_abspath, changelist_hash,
+                                    scratch_pool))
+        return SVN_NO_ERROR;
+    }
+
   return svn_error_return(do_propset(wc_ctx->db, local_abspath, name, value,
                                      depth, skip_checks, notify_func,
                                      notify_baton, scratch_pool));

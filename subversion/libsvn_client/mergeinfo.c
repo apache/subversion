@@ -114,7 +114,7 @@ svn_client__record_wc_mergeinfo(const char *local_abspath,
      ### svn_client__get_prop_from_wc(). */
   SVN_ERR(svn_wc_prop_set4(ctx->wc_ctx, local_abspath, SVN_PROP_MERGEINFO,
                            mergeinfo_str, svn_depth_empty,
-                           TRUE /* skip checks */, NULL, NULL,
+                           TRUE /* skip checks */, NULL, NULL, NULL,
                            scratch_pool));
 
   if (do_notification && ctx->notify_func2)
@@ -788,7 +788,7 @@ elide_mergeinfo(svn_mergeinfo_t parent_mergeinfo,
   if (elides)
     {
       SVN_ERR(svn_wc_prop_set4(ctx->wc_ctx, local_abspath, SVN_PROP_MERGEINFO,
-                               NULL, svn_depth_empty, TRUE, NULL, NULL,
+                               NULL, svn_depth_empty, TRUE, NULL, NULL, NULL,
                                scratch_pool));
 
       if (ctx->notify_func2)

@@ -2191,7 +2191,7 @@ svn_wc_prop_set3(const char *name,
                                          svn_wc__adm_get_db(adm_access), pool));
 
   err = svn_wc_prop_set4(wc_ctx, local_abspath, name, value, svn_depth_empty,
-                         skip_checks, notify_func, notify_baton, pool);
+                         skip_checks, NULL, notify_func, notify_baton, pool);
 
   if (err && err->apr_err == SVN_ERR_WC_INVALID_SCHEDULE)
     svn_error_clear(err);

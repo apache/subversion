@@ -5744,6 +5744,12 @@ svn_wc_prop_get(const svn_string_t **value,
  * entry property, return the error #SVN_ERR_BAD_PROP_KIND, even if
  * @a skip_checks is TRUE.
  *
+ * @a changelists is an array of <tt>const char *</tt> changelist
+ * names, used as a restrictive filter on items whose properties are
+ * set; that is, don't set properties on any item unless it's a member
+ * of one of those changelists.  If @a changelists is empty (or
+ * altogether @c NULL), no changelist filtering occurs.
+ *
  * For each file or directory operated on, @a notify_func will be called
  * with its path and the @a notify_baton.  @a notify_func may be @c NULL
  * if you are not interested in this information.
@@ -5759,6 +5765,7 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
                  const svn_string_t *value,
                  svn_depth_t depth,
                  svn_boolean_t skip_checks,
+                 const apr_array_header_t *changelists,
                  svn_wc_notify_func2_t notify_func,
                  void *notify_baton,
                  apr_pool_t *scratch_pool);
