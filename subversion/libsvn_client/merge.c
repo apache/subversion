@@ -1206,8 +1206,8 @@ merge_props_changed(const char *local_dir_abspath,
             }
         }
 
-      if (err && (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND
-                  || err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE))
+      if (err && (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND
+                  || err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS))
         {
           /* If the entry doesn't exist in the wc, this is a tree-conflict. */
           if (state)

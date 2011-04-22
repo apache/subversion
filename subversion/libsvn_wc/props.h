@@ -82,25 +82,25 @@ svn_wc__internal_propset(svn_wc__db_t *db,
 
 
 /* Given LOCAL_ABSPATH/DB and an array of PROPCHANGES based on
-   SERVER_BASEPROPS, merge the changes into the working copy.
-   Append all necessary log entries except the property changes to
-   ENTRY_ACCUM. Return the new property collections to the caller
-   via NEW_BASE_PROPS and NEW_ACTUAL_PROPS, so the caller can combine
-   the property update with other operations.
+   SERVER_BASEPROPS, calculate what changes should be applied to the working
+   copy.
 
-   If BASE_PROPS or WORKING_PROPS is NULL, use the props from the
-   working copy.
+   Return working queue operations in WORK_ITEMS and a new set of actual
+   (NEW_ACTUAL_PROPS) and pristine properties (NEW_PRISTINE_PROPS).
 
-   If SERVER_BASEPROPS is NULL then use base props as PROPCHANGES
+   We return the new property collections to the caller, so the caller
+   can combine the property update with other operations.
+
+   If SERVER_BASEPROPS is NULL then use the pristine props as PROPCHANGES
    base.
 
-   If BASE_MERGE is FALSE then only change working properties;
-   if TRUE, change both the base and working properties.
+   If BASE_MERGE is FALSE then only change working properties; if TRUE,
+   change both the pristine and working properties. (Only the update editor
+   should use BASE_MERGE is TRUE)
 
-   If conflicts are found when merging, place them into a temporary
-   .prej file, and write log commands to move this file into LOCAL_ABSPATH's
-   parent directory, or append the conflicts to the file's already-existing
-   .prej file.  Modify base properties unconditionally,
+   If conflicts are found when merging, create a temporary .prej file,
+   and provide working queue operations to write the conflict information
+   into the .prej file later. Modify base properties unconditionally,
    if BASE_MERGE is TRUE, they do not generate conficts.
 
    TODO ### LEFT_VERSION and RIGHT_VERSION ...
@@ -112,8 +112,9 @@ svn_wc__internal_propset(svn_wc__db_t *db,
    If STATE is non-null, set *STATE to the state of the local properties
    after the merge.  */
 svn_error_t *
-svn_wc__merge_props(svn_wc_notify_state_t *state,
-                    apr_hash_t **new_base_props,
+svn_wc__merge_props(svn_skel_t **work_items,
+                    svn_wc_notify_state_t *state,
+                    apr_hash_t **new_pristine_props,
                     apr_hash_t **new_actual_props,
                     svn_wc__db_t *db,
                     const char *local_abspath,
@@ -121,8 +122,8 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
                     const svn_wc_conflict_version_t *left_version,
                     const svn_wc_conflict_version_t *right_version,
                     apr_hash_t *server_baseprops,
-                    apr_hash_t *base_props,
-                    apr_hash_t *working_props,
+                    apr_hash_t *pristine_props,
+                    apr_hash_t *actual_props,
                     const apr_array_header_t *propchanges,
                     svn_boolean_t base_merge,
                     svn_boolean_t dry_run,
