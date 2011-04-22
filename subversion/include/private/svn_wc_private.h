@@ -50,7 +50,7 @@ extern "C" {
 svn_boolean_t
 svn_wc__changelist_match(svn_wc_context_t *wc_ctx,
                          const char *local_abspath,
-                         apr_hash_t *clhash,
+                         const apr_hash_t *clhash,
                          apr_pool_t *scratch_pool);
 
 
