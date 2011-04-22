@@ -4140,10 +4140,9 @@ svn_client_move(svn_client_commit_info_t **commit_info_p,
  *
  * If @a skip_checks is TRUE, do no validity checking.  But if @a
  * skip_checks is FALSE, and @a propname is not a valid property for @a
- * targets, return an error, either #SVN_ERR_ILLEGAL_TARGET (if the
- * property is not appropriate for @a targets), or
- * #SVN_ERR_BAD_MIME_TYPE (if @a propname is "svn:mime-type", but @a
- * propval is not a valid mime-type).
+ * url, return an error, either #SVN_ERR_ILLEGAL_TARGET (if the property is
+ * not appropriate for @a url), or * #SVN_ERR_BAD_MIME_TYPE (if @a propname
+ * is "svn:mime-type", but @a propval is not a valid mime-type).
  *
  * Use @a scratch_pool for all memory allocation.
  *
@@ -4163,8 +4162,8 @@ svn_client_propset_remote(const char *propname,
 
 /**
  * Set @a propname to @a propval on each (const char *) target in @a
- * targets.  The targets must be either all working copy paths.
- * A @a propval of @c NULL will delete the property.
+ * targets.  The targets must be all working copy paths.  A @a propval
+ * of @c NULL will delete the property.
  *
  * If @a depth is #svn_depth_empty, set the property on each member of
  * @a targets only; if #svn_depth_files, set it on @a targets and their
