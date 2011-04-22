@@ -217,7 +217,7 @@ def check_formats(repo_dir):
   fs_type = open(os.path.join(repo_dir, 'db', 'fs-type')).read().rstrip()
   if fs_type != 'fsfs':
     raise FixError("Repository '%s' has wrong FS backend: "
-                   "found '%s', expected '%s'" % (fs_type, 'fsfs'))
+                   "found '%s', expected '%s'" % (repo_dir, fs_type, 'fsfs'))
 
   fsfs_format = int(open(os.path.join(repo_dir, 'db', 'format')).readline())
   if fsfs_format > MAX_FSFS_FORMAT:
