@@ -1579,19 +1579,25 @@ close_file(void *file_baton,
 {
   struct file_baton *fb = file_baton;
   struct edit_baton *eb = fb->eb;
+  svn_wc__db_t *db = eb->db;
+  apr_pool_t *scratch_pool = fb->pool;
   svn_wc__db_status_t status;
-  const char *repos_mimetype;
   const char *empty_file;
   svn_error_t *err;
 
-  /* The BASE and repository properties of the file. */
-  apr_hash_t *base_props;
-  apr_hash_t *repos_props;
+  /* The BASE information */
+  const svn_checksum_t *pristine_checksum;
+  const char *pristine_file;
+  apr_hash_t *pristine_props;
 
-  /* The path to the wc file: either BASE or WORKING. */
+  /* The repository information; constructed from BASE + Changes */
+  const char *repos_file;
+  apr_hash_t *repos_props;
+  const char *repos_mimetype;
+  svn_boolean_t had_props, props_mod;
+
+  /* The path to the wc file: either a pristine or actual. */
   const char *localfile;
-  /* The path to the temporary copy of the pristine repository version. */
-  const char *temp_file_path;
   svn_boolean_t modified;
   /* The working copy properties at the base of the wc->repos
      comparison: either BASE or WORKING. */
@@ -1624,10 +1630,12 @@ close_file(void *file_baton,
     }
 
   err = svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, &pristine_checksum, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL,
-                             eb->db, fb->local_abspath, pool, pool);
+                             NULL, &had_props, &props_mod,
+                             NULL, NULL, NULL,
+                             db, fb->local_abspath,
+                             scratch_pool, scratch_pool);
   if (fb->added
       && err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
     {
@@ -1637,31 +1645,45 @@ close_file(void *file_baton,
   else
     SVN_ERR(err);
 
+  SVN_ERR(get_empty_file(eb, &empty_file));
+
+  if (fb->added)
+    {
+      pristine_props = apr_hash_make(scratch_pool);
+      pristine_file = empty_file;
+    }
+  else
+    {
+      if (status != svn_wc__db_status_normal)
+        SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL,
+                                         NULL, NULL, NULL, NULL,
+                                         &pristine_checksum,
+                                         NULL, NULL, NULL, NULL,
+                                         &had_props, NULL, NULL,
+                                         db, fb->local_abspath,
+                                         scratch_pool, scratch_pool));
+
+      SVN_ERR(svn_wc__db_pristine_get_path(&pristine_file,
+                                           db, fb->local_abspath,
+                                           pristine_checksum,
+                                           scratch_pool, scratch_pool));
+
+      if (had_props)
+        SVN_ERR(svn_wc__db_base_get_props(&pristine_props,
+                                           db, fb->local_abspath,
+                                           scratch_pool, scratch_pool));
+      else
+        pristine_props = apr_hash_make(scratch_pool);
+    }
+
   if (status == svn_wc__db_status_added)
     SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
                                      NULL, NULL, NULL, eb->db,
                                      fb->local_abspath, pool, pool));
 
-  SVN_ERR(get_empty_file(eb, &empty_file));
-
-  /* Load the BASE and repository file properties. */
-  if (fb->added)
-    base_props = apr_hash_make(pool);
-  else
-    SVN_ERR(svn_wc__get_pristine_props(&base_props, eb->db,
-                                       fb->local_abspath, pool, pool));
-
-  repos_props = apply_propchanges(base_props, fb->propchanges);
-
+  repos_props = apply_propchanges(pristine_props, fb->propchanges);
   repos_mimetype = get_prop_mimetype(repos_props);
-
-  /* The repository version of the file is in the temp file we applied
-     the BASE->repos delta to.  If we haven't seen any changes, it's
-     the same as BASE. */
-  temp_file_path = fb->temp_file_path;
-  if (!temp_file_path)
-    SVN_ERR(get_pristine_file(&temp_file_path, eb->db, fb->local_abspath,
-                              eb->use_text_base, fb->pool, pool));
+  repos_file = fb->temp_file_path ? fb->temp_file_path : pristine_file;
 
   /* If the file isn't in the working copy (either because it was added
      in the BASE->repos diff or because we're diffing against WORKING
@@ -1673,7 +1695,7 @@ close_file(void *file_baton,
       if (eb->reverse_order)
         return eb->callbacks->file_added(NULL, NULL, NULL, NULL, fb->path,
                                          empty_file,
-                                         temp_file_path,
+                                         repos_file,
                                          0,
                                          eb->revnum,
                                          NULL,
@@ -1685,7 +1707,7 @@ close_file(void *file_baton,
                                          pool);
       else
         return eb->callbacks->file_deleted(NULL, NULL, NULL, fb->path,
-                                           temp_file_path,
+                                           repos_file,
                                            empty_file,
                                            repos_mimetype,
                                            NULL,
@@ -1735,11 +1757,11 @@ close_file(void *file_baton,
                  pool, pool));
     }
   else
-    localfile = temp_file_path = NULL;
+    localfile = repos_file = NULL;
 
   if (eb->use_text_base)
     {
-      originalprops = base_props;
+      originalprops = pristine_props;
     }
   else
     {
@@ -1765,9 +1787,9 @@ close_file(void *file_baton,
       SVN_ERR(eb->callbacks->file_changed(NULL, NULL, NULL, NULL,
                                           fb->path,
                                           eb->reverse_order ? localfile
-                                                            : temp_file_path,
+                                                            : repos_file,
                                            eb->reverse_order
-                                                          ? temp_file_path
+                                                          ? repos_file
                                                           : localfile,
                                            eb->reverse_order
                                                           ? SVN_INVALID_REVNUM
