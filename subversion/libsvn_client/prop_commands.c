@@ -396,7 +396,7 @@ svn_client_propset_local(const char *propname,
 
   if (targets_are_urls)
     return svn_error_create(SVN_ERR_ILLEGAL_TARGET, NULL,
-                            _("Targets must be URLs"));
+                            _("Targets must be working copy paths"));
 
   SVN_ERR(check_prop_name(propname, propval));
 
