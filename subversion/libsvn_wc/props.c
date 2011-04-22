@@ -2054,11 +2054,6 @@ do_propset(svn_wc__db_t *db,
                              svn_dirent_local_style(local_abspath,
                                                     scratch_pool));
 
-  /* we don't do entry properties here */
-  if (prop_kind == svn_prop_entry_kind)
-    return svn_error_createf(SVN_ERR_BAD_PROP_KIND, NULL,
-                             _("Property '%s' is an entry property"), name);
-
   /* Else, handle a regular property: */
 
 
@@ -2260,7 +2255,13 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
                  void *notify_baton,
                  apr_pool_t *scratch_pool)
 {
+  enum svn_prop_kind prop_kind = svn_property_kind(NULL, name);
   apr_hash_t *changelist_hash = NULL;
+
+  /* we don't do entry properties here */
+  if (prop_kind == svn_prop_entry_kind)
+    return svn_error_createf(SVN_ERR_BAD_PROP_KIND, NULL,
+                             _("Property '%s' is an entry property"), name);
 
   if (changelists && changelists->nelts)
     SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelists,
