@@ -86,47 +86,6 @@ error_if_wcprop_name(const char *name)
 }
 
 
-/* A baton for propset_walk_cb. */
-struct propset_walk_baton
-{
-  const char *propname;  /* The name of the property to set. */
-  const svn_string_t *propval;  /* The value to set. */
-  svn_wc_context_t *wc_ctx;  /* Context for the tree being walked. */
-  svn_boolean_t force;  /* True iff force was passed. */
-  const apr_array_header_t *changelists;  /* Changelists to filter on. */
-  svn_wc_notify_func2_t notify_func;
-  void *notify_baton;
-};
-
-/* An node-walk callback for svn_client_propset4.
- *
- * For LOCAL_ABSPATH, set the property named wb->PROPNAME to the value
- * wb->PROPVAL, where "wb" is the WALK_BATON of type "struct
- * propset_walk_baton *".
- */
-static svn_error_t *
-propset_walk_cb(const char *local_abspath,
-                svn_node_kind_t kind,
-                void *walk_baton,
-                apr_pool_t *pool)
-{
-  struct propset_walk_baton *wb = walk_baton;
-  svn_error_t *err;
-
-  err = svn_wc_prop_set4(wb->wc_ctx, local_abspath, wb->propname, wb->propval,
-                         svn_depth_empty, wb->force, wb->changelists,
-                         wb->notify_func, wb->notify_baton, pool);
-  if (err && (err->apr_err == SVN_ERR_ILLEGAL_TARGET
-              || err->apr_err == SVN_ERR_WC_INVALID_SCHEDULE))
-    {
-      svn_error_clear(err);
-      err = SVN_NO_ERROR;
-    }
-
-  return svn_error_return(err);
-}
-
-
 struct getter_baton
 {
   svn_ra_session_t *ra_session;
@@ -310,30 +269,11 @@ set_props_cb(void *baton,
 {
   struct set_props_baton *bt = baton;
 
-  if (bt->depth >= svn_depth_files && bt->kind == svn_node_dir)
-    {
-      struct propset_walk_baton wb;
+  SVN_ERR(svn_wc_prop_set4(bt->ctx->wc_ctx, bt->local_abspath, bt->propname,
+                           bt->propval, bt->depth, bt->skip_checks,
+                           bt->changelists, bt->ctx->notify_func2,
+                           bt->ctx->notify_baton2, scratch_pool));
 
-      wb.wc_ctx = bt->ctx->wc_ctx;
-      wb.propname = bt->propname;
-      wb.propval = bt->propval;
-      wb.force = bt->skip_checks;
-      wb.changelists = bt->changelists;
-      wb.notify_func = bt->ctx->notify_func2;
-      wb.notify_baton = bt->ctx->notify_baton2;
-      SVN_ERR(svn_wc__node_walk_children(bt->ctx->wc_ctx, bt->local_abspath,
-                                         FALSE, propset_walk_cb, &wb,
-                                         bt->depth, bt->ctx->cancel_func,
-                                         bt->ctx->cancel_baton, scratch_pool));
-    }
-  else
-    {
-      SVN_ERR(svn_wc_prop_set4(bt->ctx->wc_ctx, bt->local_abspath,
-                               bt->propname, bt->propval, svn_depth_empty,
-                               bt->skip_checks, bt->changelists,
-                               bt->ctx->notify_func2, bt->ctx->notify_baton2,
-                               scratch_pool));
-    }
   return SVN_NO_ERROR;
 }
 
