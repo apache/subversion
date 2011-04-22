@@ -2281,6 +2281,7 @@ close_directory(void *dir_baton,
   apr_time_t new_changed_date;
   const char *new_changed_author;
   apr_pool_t *scratch_pool = db->pool;
+  svn_skel_t *all_work_items = NULL;
 
   /* Skip if we're in a conflicted tree. */
   if (db->skip_this)
@@ -2366,6 +2367,8 @@ close_directory(void *dir_baton,
     {
       if (regular_prop_changes->nelts)
         {
+          svn_skel_t *work_item;
+
           /* If recording traversal info, then see if the
              SVN_PROP_EXTERNALS property on this directory changed,
              and record before and after for the change. */
@@ -2404,7 +2407,8 @@ close_directory(void *dir_baton,
 
           /* Merge pending properties into temporary files (ignoring
              conflicts). */
-          SVN_ERR_W(svn_wc__merge_props(&prop_state,
+          SVN_ERR_W(svn_wc__merge_props(&work_item,
+                                        &prop_state,
                                         &new_base_props,
                                         &new_actual_props,
                                         eb->db,
@@ -2423,17 +2427,19 @@ close_directory(void *dir_baton,
                                         eb->cancel_func,
                                         eb->cancel_baton,
                                         db->pool,
-                                        pool),
+                                        scratch_pool),
                     _("Couldn't do property merge"));
           /* After a (not-dry-run) merge, we ALWAYS have props to save.  */
           SVN_ERR_ASSERT(new_base_props != NULL && new_actual_props != NULL);
+          all_work_items = svn_wc__wq_merge(all_work_items, work_item,
+                                            scratch_pool);
         }
 
       SVN_ERR(accumulate_last_change(&new_changed_rev,
                                      &new_changed_date,
                                      &new_changed_author,
                                      entry_prop_changes,
-                                     pool, pool));
+                                     scratch_pool, scratch_pool));
     }
 
   /* If this directory is merely an anchor for a targeted child, then we
@@ -2465,7 +2471,7 @@ close_directory(void *dir_baton,
                                        &depth, NULL, NULL, NULL, NULL,
                                        NULL, NULL, NULL, NULL,
                                        eb->db, db->local_abspath,
-                                       pool, pool));
+                                       scratch_pool, scratch_pool));
 
       /* If we received any changed_* values, then use them.  */
       if (SVN_IS_VALID_REVNUM(new_changed_rev))
@@ -2518,14 +2524,14 @@ close_directory(void *dir_baton,
                 NULL /* conflict */,
                 (! db->shadowed) && new_base_props != NULL,
                 new_actual_props,
-                NULL /* work_items */,
-                pool));
+                all_work_items,
+                scratch_pool));
     }
 
   /* Process all of the queued work items for this directory.  */
   SVN_ERR(svn_wc__wq_run(eb->db, db->local_abspath,
                          eb->cancel_func, eb->cancel_baton,
-                         pool));
+                         scratch_pool));
 
   /* Notify of any prop changes on this directory -- but do nothing if
      it's an added or skipped directory, because notification has already
@@ -2550,7 +2556,7 @@ close_directory(void *dir_baton,
       notify->revision = *eb->target_revision;
       notify->old_revision = db->old_revision;
 
-      eb->notify_func(eb->notify_baton, notify, pool);
+      eb->notify_func(eb->notify_baton, notify, scratch_pool);
     }
 
   /* We're done with this directory, so remove one reference from the
@@ -3710,7 +3716,8 @@ close_file(void *file_baton,
       /* This will merge the old and new props into a new prop db, and
          write <cp> commands to the logfile to install the merged
          props.  */
-      SVN_ERR(svn_wc__merge_props(&prop_state,
+      SVN_ERR(svn_wc__merge_props(&work_item,
+                                  &prop_state,
                                   &new_base_props,
                                   &new_actual_props,
                                   eb->db,
@@ -3730,12 +3737,19 @@ close_file(void *file_baton,
                                   scratch_pool));
       /* We will ALWAYS have properties to save (after a not-dry-run merge).  */
       SVN_ERR_ASSERT(new_base_props != NULL && new_actual_props != NULL);
+      all_work_items = svn_wc__wq_merge(all_work_items, work_item,
+                                        scratch_pool);
 
       /* Merge the text. This will queue some additional work.  */
       if (!fb->obstruction_found)
-        SVN_ERR(merge_file(&all_work_items, &install_pristine, &install_from,
-                           &content_state, fb, new_changed_date,
-                           scratch_pool, scratch_pool));
+        {
+          SVN_ERR(merge_file(&work_item, &install_pristine, &install_from,
+                             &content_state, fb, new_changed_date,
+                             scratch_pool, scratch_pool));
+
+          all_work_items = svn_wc__wq_merge(all_work_items, work_item,
+                                            scratch_pool);
+        }
       else
         install_pristine = FALSE;
 
@@ -3800,7 +3814,8 @@ close_file(void *file_baton,
 
       /* Store the incoming props (sent as propchanges) in new_base_props
          and create a set of new actual props to use for notifications */
-      SVN_ERR(svn_wc__merge_props(&prop_state,
+      SVN_ERR(svn_wc__merge_props(&work_item,
+                                  &prop_state,
                                   &new_base_props,
                                   &new_actual_props,
                                   eb->db,
@@ -3818,6 +3833,9 @@ close_file(void *file_baton,
                                   eb->cancel_func, eb->cancel_baton,
                                   scratch_pool,
                                   scratch_pool));
+
+      all_work_items = svn_wc__wq_merge(all_work_items, work_item,
+                                        scratch_pool);
     }
 
   /* ### NOTE: from this point onwards, we make several changes to the

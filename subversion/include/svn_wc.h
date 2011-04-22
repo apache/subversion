@@ -6471,7 +6471,10 @@ svn_wc_merge(const char *left,
  * #SVN_ERR_CANCELLED), return that error immediately.
  *
  * If @a local_abspath is not under version control, return the error
- * #SVN_ERR_UNVERSIONED_RESOURCE and don't touch anyone's properties.
+ * #SVN_ERR_WC_PATH_NOT_FOUND and don't touch anyone's properties.
+ *
+ * If @a local_abspath has a status in which it doesn't have properties
+ * (E.g. deleted) return the error SVN_ERR_WC_PATH_UNEXPECTED_STATUS.
  *
  * @since New in 1.7.
  */
@@ -6498,6 +6501,10 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
  * apply @a propchanges to this node's pristine set of properties. This
  * functionality is not supported on newer APIs -- pristine information
  * should only be changed through an update editor drive.
+ *
+ * For compatibility reasons this function returns
+ * #SVN_ERR_UNVERSIONED_RESOURCE, when svn_wc_merge_props3 would return either
+ * #SVN_ERR_WC_PATH_NOT_FOUND or #SVN_ERR_WC_PATH_UNEXPECTED_STATUS.
  *
  * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.6 API.

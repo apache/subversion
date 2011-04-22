@@ -2288,22 +2288,32 @@ svn_wc_merge_props2(svn_wc_notify_state_t *state,
                     apr_pool_t *scratch_pool)
 {
   const char *local_abspath;
+  svn_error_t *err;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
 
-  return svn_error_return(svn_wc__perform_props_merge(
-                            state,
-                            svn_wc__adm_get_db(adm_access),
-                            local_abspath,
-                            NULL /* left_version */,
-                            NULL /* right_version */,
-                            baseprops,
-                            propchanges,
-                            base_merge,
-                            dry_run,
-                            conflict_func, conflict_baton,
-                            NULL, NULL,
-                            scratch_pool));
+  err = svn_wc__perform_props_merge(state,
+                                    svn_wc__adm_get_db(adm_access),
+                                    local_abspath,
+                                    NULL /* left_version */,
+                                    NULL /* right_version */,
+                                    baseprops,
+                                    propchanges,
+                                    base_merge,
+                                    dry_run,
+                                    conflict_func, conflict_baton,
+                                    NULL, NULL,
+                                    scratch_pool);
+
+  if (err)
+    switch(err->apr_err)
+      {
+        case SVN_ERR_WC_PATH_NOT_FOUND:
+        case SVN_ERR_WC_PATH_UNEXPECTED_STATUS:
+          err->apr_err = SVN_ERR_UNVERSIONED_RESOURCE;
+          break;
+      }
+  return svn_error_return(err);
 }
 
 svn_error_t *
