@@ -93,7 +93,7 @@ struct propset_walk_baton
   const svn_string_t *propval;  /* The value to set. */
   svn_wc_context_t *wc_ctx;  /* Context for the tree being walked. */
   svn_boolean_t force;  /* True iff force was passed. */
-  apr_hash_t *changelist_hash;  /* Keys are changelists to filter on. */
+  const apr_array_header_t *changelists;  /* Changelists to filter on. */
   svn_wc_notify_func2_t notify_func;
   void *notify_baton;
 };
@@ -113,14 +113,9 @@ propset_walk_cb(const char *local_abspath,
   struct propset_walk_baton *wb = walk_baton;
   svn_error_t *err;
 
-  /* If our entry doesn't pass changelist filtering, get outta here. */
-  if (! svn_wc__changelist_match(wb->wc_ctx, local_abspath,
-                                 wb->changelist_hash, pool))
-    return SVN_NO_ERROR;
-
   err = svn_wc_prop_set4(wb->wc_ctx, local_abspath, wb->propname, wb->propval,
-                         svn_depth_empty, wb->force, wb->notify_func,
-                         wb->notify_baton, pool);
+                         svn_depth_empty, wb->force, wb->changelists,
+                         wb->notify_func, wb->notify_baton, pool);
   if (err && (err->apr_err == SVN_ERR_ILLEGAL_TARGET
               || err->apr_err == SVN_ERR_WC_INVALID_SCHEDULE))
     {
@@ -304,7 +299,7 @@ struct set_props_baton
   const char *propname;
   const svn_string_t *propval;
   svn_boolean_t skip_checks;
-  apr_hash_t *changelist_hash;
+  const apr_array_header_t *changelists;
 };
 
 /* Working copy lock callback for svn_client_propset4 */
@@ -323,7 +318,7 @@ set_props_cb(void *baton,
       wb.propname = bt->propname;
       wb.propval = bt->propval;
       wb.force = bt->skip_checks;
-      wb.changelist_hash = bt->changelist_hash;
+      wb.changelists = bt->changelists;
       wb.notify_func = bt->ctx->notify_func2;
       wb.notify_baton = bt->ctx->notify_baton2;
       SVN_ERR(svn_wc__node_walk_children(bt->ctx->wc_ctx, bt->local_abspath,
@@ -331,12 +326,11 @@ set_props_cb(void *baton,
                                          bt->depth, bt->ctx->cancel_func,
                                          bt->ctx->cancel_baton, scratch_pool));
     }
-  else if (svn_wc__changelist_match(bt->ctx->wc_ctx, bt->local_abspath,
-                                    bt->changelist_hash, scratch_pool))
+  else
     {
       SVN_ERR(svn_wc_prop_set4(bt->ctx->wc_ctx, bt->local_abspath,
                                bt->propname, bt->propval, svn_depth_empty,
-                               bt->skip_checks,
+                               bt->skip_checks, bt->changelists,
                                bt->ctx->notify_func2, bt->ctx->notify_baton2,
                                scratch_pool));
     }
@@ -384,7 +378,6 @@ svn_client_propset_local(const char *propname,
                          svn_client_ctx_t *ctx,
                          apr_pool_t *scratch_pool)
 {
-  apr_hash_t *changelist_hash = NULL;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   svn_boolean_t targets_are_urls;
   int i;
@@ -401,10 +394,6 @@ svn_client_propset_local(const char *propname,
                             _("Targets must be working copy paths"));
 
   SVN_ERR(check_prop_name(propname, propval));
-
-  if (changelists && changelists->nelts)
-    SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash,
-                                       changelists, scratch_pool));
 
   for (i = 0; i < targets->nelts; i++)
     {
@@ -450,7 +439,7 @@ svn_client_propset_local(const char *propname,
       baton.propname = propname;
       baton.propval = propval;
       baton.skip_checks = skip_checks;
-      baton.changelist_hash = changelist_hash;
+      baton.changelists = changelists;
 
       SVN_ERR(svn_wc__call_with_write_lock(set_props_cb, &baton,
                                            ctx->wc_ctx, target_abspath,

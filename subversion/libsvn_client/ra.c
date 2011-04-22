@@ -198,7 +198,7 @@ set_wc_prop(void *baton,
      here, so we just set the property and hope for the best. */
   return svn_error_return(svn_wc_prop_set4(cb->ctx->wc_ctx, local_abspath, name,
                                            value, svn_depth_empty, TRUE, NULL,
-                                           NULL, pool));
+                                           NULL, NULL, pool));
 }
 
 
