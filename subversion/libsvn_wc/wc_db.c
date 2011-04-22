@@ -3377,7 +3377,7 @@ set_props_txn(void *baton,
   SVN_ERR(set_actual_props(wcroot->wc_id, local_relpath,
                            spb->props, wcroot->sdb, scratch_pool));
 
-  SVN_ERR(add_work_items(wcroot->sdb, work_items, scratch_pool));
+  SVN_ERR(add_work_items(wcroot->sdb, spb->work_items, scratch_pool));
 
   return SVN_NO_ERROR;
 }
