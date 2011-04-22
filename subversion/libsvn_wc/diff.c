@@ -801,18 +801,18 @@ file_diff(struct edit_baton *eb,
  * DIR_BATON is the baton for the directory.
  */
 static svn_error_t *
-directory_elements_diff(struct dir_baton *db)
+walk_local_nodes_diff(struct edit_baton *eb,
+                      const char *local_abspath,
+                      const char *path,
+                      svn_depth_t depth,
+                      apr_hash_t *compared,
+                      apr_pool_t *scratch_pool)
 {
+  svn_wc__db_t *db = eb->db;
   const apr_array_header_t *children;
   int i;
   svn_boolean_t in_anchor_not_target;
   apr_pool_t *iterpool;
-  struct edit_baton *eb = db->eb;
-
-  /* This directory should have been unchanged or replaced, not added,
-     since an added directory can only contain added files and these will
-     already have been compared. */
-  SVN_ERR_ASSERT(!db->added);
 
   /* Everything we do below is useless if we are comparing to BASE. */
   if (eb->use_text_base)
@@ -824,53 +824,52 @@ directory_elements_diff(struct dir_baton *db)
      skipped. */
   in_anchor_not_target =
     (*eb->target
-      && (! svn_path_compare_paths(db->path, eb->anchor_path)));
+      && (! svn_path_compare_paths(path, eb->anchor_path)));
 
   /* Check for local property mods on this directory, if we haven't
      already reported them and we aren't changelist-filted.
      ### it should be noted that we do not currently allow directories
      ### to be part of changelists, so if a changelist is provided, the
      ### changelist check will always fail. */
-  if (svn_wc__internal_changelist_match(eb->db, db->local_abspath,
-                                        eb->changelist_hash, db->pool)
+  if (svn_wc__internal_changelist_match(db, local_abspath,
+                                        eb->changelist_hash, scratch_pool)
       && (! in_anchor_not_target)
-      && (! apr_hash_get(db->compared, "", 0)))
+      && (!compared || ! apr_hash_get(compared, "", 0)))
     {
       svn_boolean_t modified;
 
-      SVN_ERR(svn_wc__props_modified(&modified, eb->db, db->local_abspath,
-                                     db->pool));
+      SVN_ERR(svn_wc__props_modified(&modified, db, local_abspath,
+                                     scratch_pool));
       if (modified)
         {
           apr_array_header_t *propchanges;
           apr_hash_t *baseprops;
 
           SVN_ERR(svn_wc__internal_propdiff(&propchanges, &baseprops,
-                                            eb->db, db->local_abspath,
-                                            db->pool, db->pool));
+                                            db, local_abspath,
+                                            scratch_pool, scratch_pool));
 
-          SVN_ERR(eb->callbacks->dir_props_changed(db->local_abspath,
+          SVN_ERR(eb->callbacks->dir_props_changed(local_abspath,
                                                    NULL, NULL,
-                                                   db->path,
+                                                   path,
                                                    propchanges, baseprops,
                                                    eb->callback_baton,
-                                                   db->pool));
+                                                   scratch_pool));
         }
     }
 
-  if (db->depth == svn_depth_empty && !in_anchor_not_target)
+  if (depth == svn_depth_empty && !in_anchor_not_target)
     return SVN_NO_ERROR;
 
-  iterpool = svn_pool_create(db->pool);
+  iterpool = svn_pool_create(scratch_pool);
 
-  SVN_ERR(svn_wc__db_read_children(&children, eb->db, db->local_abspath,
-                                   db->pool, iterpool));
+  SVN_ERR(svn_wc__db_read_children(&children, db, local_abspath,
+                                   scratch_pool, iterpool));
 
   for (i = 0; i < children->nelts; i++)
     {
       const char *name = APR_ARRAY_IDX(children, i, const char*);
-      struct dir_baton *subdir_baton;
-      const char *child_abspath, *path;
+      const char *child_abspath, *child_path;
       svn_boolean_t hidden;
       svn_wc__db_kind_t kind;
 
@@ -879,9 +878,9 @@ directory_elements_diff(struct dir_baton *db)
       if (eb->cancel_func)
         SVN_ERR(eb->cancel_func(eb->cancel_baton));
 
-      child_abspath = svn_dirent_join(db->local_abspath, name, iterpool);
+      child_abspath = svn_dirent_join(local_abspath, name, iterpool);
 
-      SVN_ERR(svn_wc__db_node_hidden(&hidden, eb->db, child_abspath, iterpool));
+      SVN_ERR(svn_wc__db_node_hidden(&hidden, db, child_abspath, iterpool));
 
       if (hidden)
         continue;
@@ -893,19 +892,19 @@ directory_elements_diff(struct dir_baton *db)
       if (in_anchor_not_target && strcmp(eb->target, name))
         continue;
 
-      path = svn_dirent_join(db->path, name, iterpool);
+      child_path = svn_dirent_join(path, name, iterpool);
 
       /* Skip this node if it is in the list of nodes already diff'd. */
-      if (apr_hash_get(db->compared, path, APR_HASH_KEY_STRING))
+      if (compared && apr_hash_get(compared, child_path, APR_HASH_KEY_STRING))
         continue;
 
-      SVN_ERR(svn_wc__db_read_kind(&kind, eb->db, child_abspath, TRUE,
+      SVN_ERR(svn_wc__db_read_kind(&kind, db, child_abspath, TRUE,
                                    iterpool));
       switch (kind)
         {
         case svn_wc__db_kind_file:
         case svn_wc__db_kind_symlink:
-          SVN_ERR(file_diff(eb, child_abspath, path, iterpool));
+          SVN_ERR(file_diff(eb, child_abspath, child_path, iterpool));
           break;
 
         case svn_wc__db_kind_dir:
@@ -919,21 +918,20 @@ directory_elements_diff(struct dir_baton *db)
           /* Check the subdir if in the anchor (the subdir is the target), or
              if recursive */
           if (in_anchor_not_target
-              || (db->depth > svn_depth_files)
-              || (db->depth == svn_depth_unknown))
+              || (depth > svn_depth_files)
+              || (depth == svn_depth_unknown))
             {
-              svn_depth_t depth_below_here = db->depth;
+              svn_depth_t depth_below_here = depth;
 
               if (depth_below_here == svn_depth_immediates)
                 depth_below_here = svn_depth_empty;
 
-              subdir_baton = make_dir_baton(path, db,
-                                            db->eb,
-                                            FALSE,
+              SVN_ERR(walk_local_nodes_diff(eb,
+                                            child_abspath,
+                                            child_path,
                                             depth_below_here,
-                                            iterpool);
-
-              SVN_ERR(directory_elements_diff(subdir_baton));
+                                            NULL,
+                                            iterpool));
             }
           break;
 
@@ -1412,7 +1410,12 @@ close_directory(void *dir_baton,
      directories since they can only contain added elements, all of
      which have already been diff'd. */
   if (!db->added)
-    SVN_ERR(directory_elements_diff(db));
+    SVN_ERR(walk_local_nodes_diff(eb,
+                                  db->local_abspath,
+                                  db->path,
+                                  db->depth,
+                                  db->compared,
+                                  db->pool));
 
   /* Mark this directory as compared in the parent directory's baton,
      unless this is the root of the comparison. */
@@ -1802,11 +1805,12 @@ close_edit(void *edit_baton,
 
   if (!eb->root_opened)
     {
-      struct dir_baton *db;
-
-      db = make_dir_baton(eb->anchor_path, NULL, eb, FALSE, eb->depth,
-                          eb->pool);
-      SVN_ERR(directory_elements_diff(db));
+      SVN_ERR(walk_local_nodes_diff(eb,
+                                    eb->anchor_abspath,
+                                    eb->anchor_path,
+                                    eb->depth,
+                                    NULL,
+                                    eb->pool));
     }
 
   return SVN_NO_ERROR;
@@ -1910,7 +1914,6 @@ svn_wc_diff6(svn_wc_context_t *wc_ctx,
              apr_pool_t *pool)
 {
   struct edit_baton *eb;
-  struct dir_baton *db;
   const char *target;
   const char *target_abspath;
   const char *anchor_path;
@@ -1939,9 +1942,12 @@ svn_wc_diff6(svn_wc_context_t *wc_ctx,
                           cancel_func, cancel_baton,
                           pool));
 
-  db = make_dir_baton(anchor_path, NULL, eb, FALSE, depth, eb->pool);
-
-  SVN_ERR(directory_elements_diff(db));
+  SVN_ERR(walk_local_nodes_diff(eb,
+                                eb->anchor_abspath,
+                                eb->anchor_path,
+                                depth,
+                                NULL,
+                                eb->pool));
 
   return SVN_NO_ERROR;
 }
