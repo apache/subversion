@@ -149,28 +149,28 @@ typedef struct svn_cache__info_t
   /** Size of the data currently stored in the cache.
    * May be 0 if that information is not available.
    */
-  apr_size_t used_size;
+  apr_uint64_t used_size;
 
   /** Amount of memory currently reserved for cached data.
    * Will be equal to @a used_size if no precise information is available.
    */
-  apr_size_t data_size;
+  apr_uint64_t data_size;
 
   /** Lower threshold of the total size of memory allocated to the cache and
    * its index as well as management structures. The actual memory allocated
    * by the cache may be larger.
    */
-  apr_size_t total_size;
+  apr_uint64_t total_size;
 
   /** Number of cache entries.
    * May be 0 if that information is not available.
    */
-  apr_size_t used_entries;
+  apr_uint64_t used_entries;
 
   /** Maximum numbers of cache entries.
    * May be 0 if that information is not available.
    */
-  apr_size_t total_entries;
+  apr_uint64_t total_entries;
 } svn_cache__info_t;
 
 /**
