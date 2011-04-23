@@ -5911,6 +5911,10 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
  * repository. The editor is allocated in @a result_pool; temporary
  * calculations are performed in @a scratch_pool.
  *
+ * This editor supports diffing either the actual files and properties in the
+ * working copy (when @a use_text_base is #FALSE), or the current pristine
+ * information (when @a use_text_base is #TRUE) against the editor driver.
+ *
  * @a anchor_path/@a target represent the base of the hierarchy to be compared.
  *
  * @a callbacks/@a callback_baton is the callback table to use when two
@@ -5935,10 +5939,6 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
  * If @a use_git_diff_format is TRUE, copied paths will be treated as added
  * if they weren't modified after being copied. This allows the callbacks
  * to generate appropriate --git diff headers for such files.
- *
- * If @a use_text_base is TRUE, then compare the repository against
- * the working copy's original checkout files (aka BASE), rather than
- * the working files.
  *
  * Normally, the difference from repository->working_copy is shown.
  * If @a reverse_order is TRUE, then show working_copy->repository diffs.
