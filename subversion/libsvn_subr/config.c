@@ -377,7 +377,7 @@ make_hash_key(char *key)
 {
   register char *p;
   for (p = key; *p != 0; ++p)
-    *p = apr_tolower(*p);
+    *p = (char)apr_tolower(*p);
   return key;
 }
 
