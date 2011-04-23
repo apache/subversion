@@ -3757,7 +3757,7 @@ read_representation(svn_stream_t **contents_p,
     {
       fs_fs_data_t *ffd = fs->fsap_data;
       const char *fulltext_key = NULL;
-      apr_size_t len = rep->expanded_size ? rep->expanded_size : rep->size;
+      svn_filesize_t len = rep->expanded_size ? rep->expanded_size : rep->size;
       struct rep_read_baton *rb;
 
       if (ffd->fulltext_cache && SVN_IS_VALID_REVNUM(rep->revision)
