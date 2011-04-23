@@ -167,7 +167,7 @@ parse_value(int *pch, parse_context_t *ctx)
   while (ch != EOF && ch != '\n')
     /* last ch seen was ':' or '=' in parse_option. */
     {
-      const char char_from_int = ch;
+      const char char_from_int = (char)ch;
       svn_stringbuf_appendbyte(ctx->value, char_from_int);
       SVN_ERR(parser_getc(ctx, &ch));
     }
@@ -223,7 +223,7 @@ parse_value(int *pch, parse_context_t *ctx)
 
                   while (ch != EOF && ch != '\n')
                     {
-                      const char char_from_int = ch;
+                      const char char_from_int = (char)ch;
                       svn_stringbuf_appendbyte(ctx->value, char_from_int);
                       SVN_ERR(parser_getc(ctx, &ch));
                     }
@@ -250,7 +250,7 @@ parse_option(int *pch, parse_context_t *ctx, apr_pool_t *pool)
   ch = *pch;   /* Yes, the first char is relevant. */
   while (ch != EOF && ch != ':' && ch != '=' && ch != '\n')
     {
-      const char char_from_int = ch;
+      const char char_from_int = (char)ch;
       svn_stringbuf_appendbyte(ctx->option, char_from_int);
       SVN_ERR(parser_getc(ctx, &ch));
     }
@@ -293,7 +293,7 @@ parse_section_name(int *pch, parse_context_t *ctx, apr_pool_t *pool)
   SVN_ERR(parser_getc(ctx, &ch));
   while (ch != EOF && ch != ']' && ch != '\n')
     {
-      const char char_from_int = ch;
+      const char char_from_int = (char)ch;
       svn_stringbuf_appendbyte(ctx->section, char_from_int);
       SVN_ERR(parser_getc(ctx, &ch));
     }

@@ -366,7 +366,7 @@ static void convert_case(char *text, svn_boolean_t to_uppercase)
   char *c = text;
   while (*c)
     {
-      *c = (to_uppercase ? apr_toupper(*c) : apr_tolower(*c));
+      *c = (char)(to_uppercase ? apr_toupper(*c) : apr_tolower(*c));
       ++c;
     }
 }
