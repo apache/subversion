@@ -855,7 +855,7 @@ skip_handler_apr(void *baton, apr_size_t *count)
    * happend and keep the *count==0 set earlier.
    */
   if ((offset != new_pos) || (current == 0))
-    *count = new_pos - current;
+    *count = (apr_size_t)(new_pos - current);
 
   return err;
 }
