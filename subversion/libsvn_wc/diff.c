@@ -873,20 +873,13 @@ walk_local_nodes_diff(struct edit_baton *eb,
     {
       const char *name = APR_ARRAY_IDX(children, i, const char*);
       const char *child_abspath, *child_path;
-      svn_boolean_t hidden;
+      svn_wc__db_status_t status;
       svn_wc__db_kind_t kind;
 
       svn_pool_clear(iterpool);
 
       if (eb->cancel_func)
         SVN_ERR(eb->cancel_func(eb->cancel_baton));
-
-      child_abspath = svn_dirent_join(local_abspath, name, iterpool);
-
-      SVN_ERR(svn_wc__db_node_hidden(&hidden, db, child_abspath, iterpool));
-
-      if (hidden)
-        continue;
 
       /* In the anchor directory, if the anchor is not the target then all
          entries other than the target should not be diff'd. Running diff
@@ -895,14 +888,27 @@ walk_local_nodes_diff(struct edit_baton *eb,
       if (in_anchor_not_target && strcmp(eb->target, name))
         continue;
 
+
+      child_abspath = svn_dirent_join(local_abspath, name, iterpool);
+
+      SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   db, child_abspath,
+                                   iterpool, iterpool));
+
+      if (status == svn_wc__db_status_not_present
+          || status == svn_wc__db_status_excluded
+          || status == svn_wc__db_status_absent)
+        continue;
+
       child_path = svn_dirent_join(path, name, iterpool);
 
       /* Skip this node if it is in the list of nodes already diff'd. */
       if (compared && apr_hash_get(compared, child_path, APR_HASH_KEY_STRING))
         continue;
 
-      SVN_ERR(svn_wc__db_read_kind(&kind, db, child_abspath, TRUE,
-                                   iterpool));
       switch (kind)
         {
         case svn_wc__db_kind_file:
@@ -957,11 +963,12 @@ walk_local_nodes_diff(struct edit_baton *eb,
  * Do all allocation in POOL.
  */
 static svn_error_t *
-report_wc_file_as_added(struct dir_baton *db,
+report_wc_file_as_added(struct edit_baton *eb,
+                        const char *local_abspath,
                         const char *path,
-                        apr_pool_t *pool)
+                        apr_pool_t *scratch_pool)
 {
-  struct edit_baton *eb = db->eb;
+  svn_wc__db_t *db = eb->db;
   apr_hash_t *emptyprops;
   const char *mimetype;
   apr_hash_t *wcprops = NULL;
@@ -969,15 +976,12 @@ report_wc_file_as_added(struct dir_baton *db,
   const char *empty_file;
   const char *source_file;
   const char *translated_file;
-  const char *local_abspath;
   svn_wc__db_status_t status;
   svn_revnum_t revision;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-
   /* If this entry is filtered by changelist specification, do nothing. */
-  if (! svn_wc__internal_changelist_match(eb->db, local_abspath,
-                                          eb->changelist_hash, pool))
+  if (! svn_wc__internal_changelist_match(db, local_abspath,
+                                          eb->changelist_hash, scratch_pool))
     return SVN_NO_ERROR;
 
   SVN_ERR(get_empty_file(eb, &empty_file));
@@ -986,12 +990,13 @@ report_wc_file_as_added(struct dir_baton *db,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               eb->db, local_abspath, pool, pool));
+                               db, local_abspath,
+                               scratch_pool, scratch_pool));
 
   if (status == svn_wc__db_status_added)
     SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
-                                     NULL, NULL, NULL, eb->db, local_abspath,
-                                     pool, pool));
+                                     NULL, NULL, NULL, db, local_abspath,
+                                     scratch_pool, scratch_pool));
 
   /* We can't show additions for files that don't exist. */
   SVN_ERR_ASSERT(status != svn_wc__db_status_deleted || eb->use_text_base);
@@ -1008,36 +1013,36 @@ report_wc_file_as_added(struct dir_baton *db,
         return SVN_NO_ERROR;
 
       /* Otherwise show just the local modifications. */
-      return file_diff(eb, local_abspath, path, pool);
+      return file_diff(eb, local_abspath, path, scratch_pool);
     }
 
-  emptyprops = apr_hash_make(pool);
+  emptyprops = apr_hash_make(scratch_pool);
 
   if (eb->use_text_base)
-    SVN_ERR(svn_wc__get_pristine_props(&wcprops, eb->db, local_abspath,
-                                       pool, pool));
+    SVN_ERR(svn_wc__get_pristine_props(&wcprops, db, local_abspath,
+                                       scratch_pool, scratch_pool));
   else
-    SVN_ERR(svn_wc__get_actual_props(&wcprops, eb->db, local_abspath,
-                                     pool, pool));
+    SVN_ERR(svn_wc__get_actual_props(&wcprops, db, local_abspath,
+                                     scratch_pool, scratch_pool));
   mimetype = get_prop_mimetype(wcprops);
 
   SVN_ERR(svn_prop_diffs(&propchanges,
-                         wcprops, emptyprops, pool));
+                         wcprops, emptyprops, scratch_pool));
 
 
   if (eb->use_text_base)
-    SVN_ERR(get_pristine_file(&source_file, eb->db, local_abspath,
-                              TRUE, pool, pool));
+    SVN_ERR(get_pristine_file(&source_file, db, local_abspath,
+                              TRUE, scratch_pool, scratch_pool));
   else
-    source_file = path;
+    source_file = local_abspath;
 
   SVN_ERR(svn_wc__internal_translated_file(
-           &translated_file, source_file, eb->db, local_abspath,
+           &translated_file, source_file, db, local_abspath,
            SVN_WC_TRANSLATE_TO_NF | SVN_WC_TRANSLATE_USE_GLOBAL_TMP,
            eb->cancel_func, eb->cancel_baton,
-           pool, pool));
+           scratch_pool, scratch_pool));
 
-  SVN_ERR(eb->callbacks->file_added(db->local_abspath,
+  SVN_ERR(eb->callbacks->file_added(local_abspath,
                                     NULL, NULL, NULL,
                                     path,
                                     empty_file, translated_file,
@@ -1046,7 +1051,7 @@ report_wc_file_as_added(struct dir_baton *db,
                                     NULL, SVN_INVALID_REVNUM,
                                     propchanges, emptyprops,
                                     eb->callback_baton,
-                                    pool));
+                                    scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1060,18 +1065,20 @@ report_wc_file_as_added(struct dir_baton *db,
  * Do all allocation in POOL.
  */
 static svn_error_t *
-report_wc_directory_as_added(struct dir_baton *db,
-                             apr_pool_t *pool)
+report_wc_directory_as_added(struct edit_baton *eb,
+                             const char *local_abspath,
+                             const char *path,
+                             svn_depth_t depth,
+                             apr_pool_t *scratch_pool)
 {
-  struct edit_baton *eb = db->eb;
-  apr_hash_t *emptyprops = apr_hash_make(pool), *wcprops = NULL;
+  svn_wc__db_t *db = eb->db;
+  apr_hash_t *emptyprops, *wcprops = NULL;
   apr_array_header_t *propchanges;
   const apr_array_header_t *children;
   int i;
   apr_pool_t *iterpool;
-  const char *dir_abspath;
 
-  SVN_ERR(svn_dirent_get_absolute(&dir_abspath, db->path, pool));
+  emptyprops = apr_hash_make(scratch_pool);
 
   /* If this directory passes changelist filtering, get its BASE or
      WORKING properties, as appropriate, and simulate their
@@ -1079,38 +1086,37 @@ report_wc_directory_as_added(struct dir_baton *db,
      ### it should be noted that we do not currently allow directories
      ### to be part of changelists, so if a changelist is provided, this
      ### check will always fail. */
-  if (svn_wc__internal_changelist_match(eb->db, dir_abspath,
-                                        eb->changelist_hash, pool))
+  if (svn_wc__internal_changelist_match(db, local_abspath,
+                                        eb->changelist_hash, scratch_pool))
     {
       if (eb->use_text_base)
-        SVN_ERR(svn_wc__get_pristine_props(&wcprops, eb->db, dir_abspath,
-                                           pool, pool));
+        SVN_ERR(svn_wc__get_pristine_props(&wcprops, db, local_abspath,
+                                           scratch_pool, scratch_pool));
       else
-        SVN_ERR(svn_wc__get_actual_props(&wcprops, eb->db, dir_abspath,
-                                         pool, pool));
+        SVN_ERR(svn_wc__get_actual_props(&wcprops, db, local_abspath,
+                                         scratch_pool, scratch_pool));
 
-      SVN_ERR(svn_prop_diffs(&propchanges, wcprops, emptyprops, pool));
+      SVN_ERR(svn_prop_diffs(&propchanges, wcprops, emptyprops, scratch_pool));
 
       if (propchanges->nelts > 0)
-        SVN_ERR(eb->callbacks->dir_props_changed(db->local_abspath,
+        SVN_ERR(eb->callbacks->dir_props_changed(local_abspath,
                                                  NULL, NULL,
-                                                 db->path,
+                                                 path,
                                                  propchanges, emptyprops,
                                                  eb->callback_baton,
-                                                 pool));
+                                                 scratch_pool));
     }
 
   /* Report the addition of the directory's contents. */
-  iterpool = svn_pool_create(pool);
+  iterpool = svn_pool_create(scratch_pool);
 
-  SVN_ERR(svn_wc__db_read_children(&children, eb->db, dir_abspath,
-                                   pool, iterpool));
+  SVN_ERR(svn_wc__db_read_children(&children, db, local_abspath,
+                                   scratch_pool, iterpool));
 
   for (i = 0; i < children->nelts; i++)
     {
       const char *name = APR_ARRAY_IDX(children, i, const char *);
-      const char *child_abspath, *path;
-      svn_boolean_t hidden;
+      const char *child_abspath, *child_path;
       svn_wc__db_status_t status;
       svn_wc__db_kind_t kind;
 
@@ -1119,48 +1125,49 @@ report_wc_directory_as_added(struct dir_baton *db,
       if (eb->cancel_func)
         SVN_ERR(eb->cancel_func(eb->cancel_baton));
 
-      child_abspath = svn_dirent_join(dir_abspath, name, iterpool);
-
-      SVN_ERR(svn_wc__db_node_hidden(&hidden, eb->db, child_abspath,
-                                     iterpool));
-
-      if (hidden)
-        continue;
+      child_abspath = svn_dirent_join(local_abspath, name, iterpool);
 
       SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   eb->db, child_abspath, iterpool, iterpool));
+                                   db, child_abspath, iterpool, iterpool));
+
+      if (status == svn_wc__db_status_not_present
+          || status == svn_wc__db_status_excluded
+          || status == svn_wc__db_status_absent)
+        {
+          continue;
+        }
 
       /* If comparing against WORKING, skip entries that are
          schedule-deleted - they don't really exist. */
       if (!eb->use_text_base && status == svn_wc__db_status_deleted)
         continue;
 
-      path = svn_dirent_join(db->path, name, iterpool);
+      child_path = svn_dirent_join(path, name, iterpool);
 
       switch (kind)
         {
         case svn_wc__db_kind_file:
         case svn_wc__db_kind_symlink:
-          SVN_ERR(report_wc_file_as_added(db, path, iterpool));
+          SVN_ERR(report_wc_file_as_added(eb, child_abspath, child_path,
+                                          iterpool));
           break;
 
         case svn_wc__db_kind_dir:
-          if (db->depth > svn_depth_files || db->depth == svn_depth_unknown)
+          if (depth > svn_depth_files || depth == svn_depth_unknown)
             {
-              svn_depth_t depth_below_here = db->depth;
-              struct dir_baton *subdir_baton;
+              svn_depth_t depth_below_here = depth;
 
               if (depth_below_here == svn_depth_immediates)
                 depth_below_here = svn_depth_empty;
 
-              subdir_baton = make_dir_baton(path, db, eb, FALSE,
-                                            depth_below_here,
-                                            iterpool);
-
-              SVN_ERR(report_wc_directory_as_added(subdir_baton, iterpool));
+              SVN_ERR(report_wc_directory_as_added(eb,
+                                                   child_abspath,
+                                                   child_path,
+                                                   depth_below_here,
+                                                   iterpool));
             }
           break;
 
@@ -1213,7 +1220,7 @@ delete_entry(const char *path,
 {
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->eb;
-  struct dir_baton *db;
+  svn_wc__db_t *db = eb->db;
   const char *empty_file;
   const char *full_path = svn_dirent_join(eb->anchor_path, path,
                                           pb->pool);
@@ -1229,7 +1236,7 @@ delete_entry(const char *path,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               eb->db, local_abspath, pool, pool));
+                               db, local_abspath, pool, pool));
 
   /* If comparing against WORKING, skip nodes that are deleted
      - they don't really exist. */
@@ -1255,7 +1262,7 @@ delete_entry(const char *path,
           apr_hash_t *baseprops = NULL;
           const char *base_mimetype;
 
-          SVN_ERR(get_pristine_file(&textbase, eb->db, local_abspath,
+          SVN_ERR(get_pristine_file(&textbase, db, local_abspath,
                                     eb->use_text_base, pool, pool));
 
           SVN_ERR(svn_wc__get_pristine_props(&baseprops, eb->db, local_abspath,
@@ -1274,15 +1281,17 @@ delete_entry(const char *path,
       else
         {
           /* Or normally, show the working file being added. */
-          SVN_ERR(report_wc_file_as_added(pb, full_path, pool));
+          SVN_ERR(report_wc_file_as_added(eb, local_abspath, full_path, pool));
         }
       break;
     case svn_wc__db_kind_dir:
-      db = make_dir_baton(full_path, pb, pb->eb, FALSE,
-                          svn_depth_infinity, pool);
       /* A delete is required to change working-copy into requested
          revision, so diff should show this as an add. */
-      SVN_ERR(report_wc_directory_as_added(db, pool));
+      SVN_ERR(report_wc_directory_as_added(eb,
+                                           local_abspath,
+                                           full_path,
+                                           svn_depth_infinity,
+                                           pool));
 
     default:
       break;
@@ -1641,6 +1650,9 @@ close_file(void *file_baton,
     {
       svn_error_clear(err);
       status = svn_wc__db_status_not_present;
+      pristine_checksum = NULL;
+      had_props = FALSE;
+      props_mod = FALSE;
     }
   else
     SVN_ERR(err);
