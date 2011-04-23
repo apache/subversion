@@ -367,6 +367,8 @@ const apr_getopt_option_t svn_cl__options[] =
   {"idiff",         opt_internal_diff, 0, NULL},
   {"keep-locks",    opt_no_unlock, 0, NULL},
   {"keep-cl",       opt_keep_changelists, 0, NULL},
+  {"vi-cmd",        opt_editor_cmd, 1, NULL},
+  {"emacs-cmd",     opt_editor_cmd, 1, NULL},
 
   {0,               0, 0, 0},
 };
