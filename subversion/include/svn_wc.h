@@ -2650,7 +2650,10 @@ typedef enum svn_wc_schedule_t
 
 /** A working copy entry -- that is, revision control information about
  * one versioned entity.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 typedef struct svn_wc_entry_t
 {
   /* IMPORTANT: If you extend this structure, add new fields to the end. */
