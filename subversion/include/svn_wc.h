@@ -2653,7 +2653,6 @@ typedef enum svn_wc_schedule_t
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
  */
-SVN_DEPRECATED
 typedef struct svn_wc_entry_t
 {
   /* IMPORTANT: If you extend this structure, add new fields to the end. */
@@ -2973,7 +2972,10 @@ svn_wc_entries_read(apr_hash_t **entries,
 
 /** Return a duplicate of @a entry, allocated in @a pool.  No part of the new
  * entry will be shared with @a entry.
+ *
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_wc_entry_t *
 svn_wc_entry_dup(const svn_wc_entry_t *entry,
                  apr_pool_t *pool);
