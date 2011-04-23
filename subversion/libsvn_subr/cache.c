@@ -212,14 +212,14 @@ svn_cache__format_info(const svn_cache__info_t *info,
   enum { _1MB = 1024 * 1024 };
 
   apr_uint64_t misses = info->gets - info->hits;
-  float hit_rate = (100.0 * info->hits)
-                 / (info->gets ? info->gets : 1);
-  float write_rate = (100.0 * info->sets)
-                   / (misses ? misses : 1);
-  float data_usage_rate = (100.0 * info->used_size)
-                        / (info->data_size ? info->data_size : 1);
-  float data_entry_rate = (100.0 * info->used_entries)
-                        / (info->total_entries ? info->total_entries : 1);
+  double hit_rate = (100.0 * info->hits)
+                  / (info->gets ? info->gets : 1);
+  double write_rate = (100.0 * info->sets)
+                    / (misses ? misses : 1);
+  double data_usage_rate = (100.0 * info->used_size)
+                         / (info->data_size ? info->data_size : 1);
+  double data_entry_rate = (100.0 * info->used_entries)
+                         / (info->total_entries ? info->total_entries : 1);
 
   return svn_string_createf(pool,
 
@@ -229,11 +229,11 @@ svn_cache__format_info(const svn_cache__info_t *info,
                             "sets    : %" APR_UINT64_T_FMT
                             " (%5.2f%% of misses)\n"
                             "failures: %" APR_UINT64_T_FMT "\n"
-                            "used    : %" APR_SIZE_T_FMT " MB (%5.2f%%)"
-                            " of %" APR_SIZE_T_FMT " MB data cache"
-                            " / %" APR_SIZE_T_FMT " MB total cache memory\n"
-                            "          %" APR_SIZE_T_FMT " entries (%5.2f%%)"
-                            " of %" APR_SIZE_T_FMT " total\n",
+                            "used    : %" APR_UINT64_T_FMT " MB (%5.2f%%)"
+                            " of %" APR_UINT64_T_FMT " MB data cache"
+                            " / %" APR_UINT64_T_FMT " MB total cache memory\n"
+                            "          %" APR_UINT64_T_FMT " entries (%5.2f%%)"
+                            " of %" APR_UINT64_T_FMT " total\n",
 
                             info->id,
 
