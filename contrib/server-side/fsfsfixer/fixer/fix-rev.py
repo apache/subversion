@@ -121,6 +121,7 @@ def handle_one_error(repo_dir, rev, error_lines):
      Return True if fixed, False if not fixed."""
 
   line1 = error_lines[0]
+
   match = re.match(r"svn.*: Corrupt node-revision '(.*)'", line1)
   if match:
     # Fix it.
