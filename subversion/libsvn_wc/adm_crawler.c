@@ -316,17 +316,22 @@ report_revisions_and_depths(svn_wc__db_t *db,
   SVN_ERR(svn_wc__db_base_get_children_info(&base_children, db, dir_abspath,
                                             scratch_pool, iterpool));
 
-  err = svn_io_get_dirents3(&dirents, dir_abspath, TRUE,
-                            scratch_pool, scratch_pool);
-
-  if (err && (APR_STATUS_IS_ENOENT(err->apr_err)
-              || SVN__APR_STATUS_IS_ENOTDIR(err->apr_err)))
+  if (restore_files)
     {
-      svn_error_clear(err);
-      dirents = apr_hash_make(scratch_pool);
+      err = svn_io_get_dirents3(&dirents, dir_abspath, TRUE,
+                                scratch_pool, scratch_pool);
+      
+      if (err && (APR_STATUS_IS_ENOENT(err->apr_err)
+                  || SVN__APR_STATUS_IS_ENOTDIR(err->apr_err)))
+        {
+          svn_error_clear(err);
+          dirents = apr_hash_make(scratch_pool);
+        }
+      else
+        SVN_ERR(err);
     }
   else
-    SVN_ERR(err);
+    dirents = NULL;
 
   /*** Do the real reporting and recursing. ***/
 
@@ -408,7 +413,8 @@ report_revisions_and_depths(svn_wc__db_t *db,
         }
 
       /* Is the entry NOT on the disk? We may be able to restore it.  */
-      if (apr_hash_get(dirents, child, APR_HASH_KEY_STRING) == NULL)
+      if (restore_files
+          && apr_hash_get(dirents, child, APR_HASH_KEY_STRING) == NULL)
         {
           svn_wc__db_status_t wrk_status;
           svn_wc__db_kind_t wrk_kind;
@@ -838,10 +844,14 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
   if (target_depth == svn_depth_unknown)
     target_depth = svn_depth_infinity;
 
-  SVN_ERR(svn_io_check_path(local_abspath, &disk_kind, scratch_pool));
+  if (restore_files)
+    SVN_ERR(svn_io_check_path(local_abspath, &disk_kind, scratch_pool));
+  else
+    disk_kind = svn_node_unknown;
 
   /* Determine if there is a missing node that should be restored */
-  if (disk_kind == svn_node_none)
+  if (restore_files
+      && disk_kind == svn_node_none)
     {
       svn_wc__db_status_t wrk_status;
       err = svn_wc__db_read_info(&wrk_status, NULL, NULL, NULL, NULL, NULL,
@@ -866,8 +876,7 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
                                          db, local_abspath,
                                          scratch_pool, scratch_pool));
 
-      if (restore_files
-          && wrk_status != svn_wc__db_status_added
+      if (wrk_status != svn_wc__db_status_added
           && wrk_status != svn_wc__db_status_deleted
           && wrk_status != svn_wc__db_status_excluded
           && wrk_status != svn_wc__db_status_not_present
