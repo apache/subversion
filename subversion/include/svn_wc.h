@@ -2653,6 +2653,7 @@ typedef enum svn_wc_schedule_t
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+/* SVN_DEPRECATED */
 typedef struct svn_wc_entry_t
 {
   /* IMPORTANT: If you extend this structure, add new fields to the end. */
