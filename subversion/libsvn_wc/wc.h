@@ -499,9 +499,6 @@ svn_wc__walker_default_error_handler(const char *path,
  * @c svn_depth_infinity, @c svn_depth_empty, @c svn_depth_files,
  * @c svn_depth_immediates, or @c svn_depth_unknown.
  *
- * If @a read_base is TRUE, always read the depth data from BASE_NODE
- * instead of from WORKING when that exists.
- *
  * Allocations are done in POOL.
  */
 svn_error_t *
@@ -510,7 +507,6 @@ svn_wc__ambient_depth_filter_editor(const svn_delta_editor_t **editor,
                                     svn_wc__db_t *db,
                                     const char *anchor_abspath,
                                     const char *target,
-                                    svn_boolean_t read_base,
                                     const svn_delta_editor_t *wrapped_editor,
                                     void *wrapped_edit_baton,
                                     apr_pool_t *result_pool);

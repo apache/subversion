@@ -2350,7 +2350,6 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
                                                 wc_ctx->db,
                                                 anchor_abspath,
                                                 target_basename,
-                                                TRUE /* read_base */,
                                                 inner_editor,
                                                 inner_baton,
                                                 result_pool));

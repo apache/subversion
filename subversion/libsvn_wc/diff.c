@@ -1904,13 +1904,13 @@ svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
   inner_editor = tree_editor;
   inner_baton = eb;
 
-  if (!server_performs_filtering && depth == svn_depth_unknown)
+  if (!server_performs_filtering
+      && depth == svn_depth_unknown)
     SVN_ERR(svn_wc__ambient_depth_filter_editor(&inner_editor,
                                                 &inner_baton,
                                                 wc_ctx->db,
                                                 anchor_abspath,
                                                 target,
-                                                FALSE /* read_base */,
                                                 inner_editor,
                                                 inner_baton,
                                                 result_pool));
