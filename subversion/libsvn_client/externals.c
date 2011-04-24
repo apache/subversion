@@ -206,7 +206,8 @@ switch_dir_external(const char *path,
               SVN_ERR(svn_client__update_internal(NULL, local_abspath,
                                                   revision, svn_depth_unknown,
                                                   FALSE, FALSE, FALSE, TRUE,
-                                                  timestamp_sleep, TRUE, FALSE,
+                                                  FALSE, FALSE, TRUE,
+                                                  timestamp_sleep,
                                                   ctx, subpool));
               svn_pool_destroy(subpool);
               return SVN_NO_ERROR;
@@ -251,8 +252,9 @@ switch_dir_external(const char *path,
               SVN_ERR(svn_client__switch_internal(NULL, path, url,
                                                   peg_revision, revision,
                                                   svn_depth_infinity,
-                                                  TRUE, timestamp_sleep,
-                                                  FALSE, FALSE, TRUE, TRUE,
+                                                  TRUE, FALSE, FALSE,
+                                                  FALSE, TRUE, TRUE,
+                                                  timestamp_sleep,
                                                   ctx, subpool));
 
               svn_pool_destroy(subpool);
@@ -448,11 +450,12 @@ switch_file_external(const char *path,
   err = svn_client__switch_internal(NULL, path, url, peg_revision, revision,
                                     svn_depth_empty,
                                     FALSE, /* depth_is_sticky */
-                                    timestamp_sleep,
                                     TRUE, /* ignore_externals */
                                     FALSE, /* allow_unver_obstructions */
-                                    FALSE, /* innerswitch */
+                                    FALSE, /* apply_local_external_mods */
                                     TRUE, /* ignore_ancestry */
+                                    FALSE, /* innerswitch */
+                                    timestamp_sleep,
                                     ctx,
                                     pool);
   if (err)
@@ -1458,3 +1461,45 @@ svn_client__crawl_for_externals(apr_hash_t **externals_p,
   *externals_p = externals_hash;
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_client__gather_local_external_changes(apr_hash_t *externals_new,
+                                          apr_hash_t *ambient_depths,
+                                          const char *anchor_abspath,
+                                          svn_depth_t requested_depth,
+                                          svn_client_ctx_t *ctx,
+                                          apr_pool_t *scratch_pool)
+{
+  apr_hash_t *all_externals;
+  apr_hash_index_t *hi;
+
+  /* If there was no requested depth for this operation, use infinity.
+   * svn_client__crawl_for_externals() doesn't like depth 'unknown'. */
+  if (requested_depth == svn_depth_unknown)
+    requested_depth = svn_depth_infinity;
+
+  SVN_ERR(svn_client__crawl_for_externals(&all_externals, anchor_abspath,
+                                          requested_depth, ctx, scratch_pool,
+                                          scratch_pool));
+
+  for (hi = apr_hash_first(scratch_pool, all_externals);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *local_abspath = svn__apr_hash_index_key(hi);
+
+      if (! apr_hash_get(externals_new, local_abspath, APR_HASH_KEY_STRING))
+        {
+          apr_pool_t *hash_pool = apr_hash_pool_get(externals_new);
+          svn_string_t *propval = svn__apr_hash_index_val(hi);
+
+          apr_hash_set(externals_new, local_abspath, APR_HASH_KEY_STRING,
+                       apr_pstrdup(hash_pool, propval->data));
+          apr_hash_set(ambient_depths, local_abspath, APR_HASH_KEY_STRING,
+                       svn_depth_to_word(svn_depth_infinity));
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+

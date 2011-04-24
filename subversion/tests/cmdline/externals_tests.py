@@ -1579,6 +1579,97 @@ def update_modify_file_external(sbox):
                                         None, None, None, None, None,
                                         True)
 
+# Test for issue #2267
+@Issue(2267)
+@XFail() # Needs new commandline option
+def update_external_on_locally_added_dir(sbox):
+  "update an external on a locally added dir"
+
+  external_url_for = externals_test_setup(sbox)
+  wc_dir         = sbox.wc_dir
+
+  repo_url       = sbox.repo_url
+  other_repo_url = repo_url + ".other"
+
+  # Checkout a working copy
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'checkout',
+                                     repo_url, wc_dir)
+
+  # Add one new external item to the property on A/foo.  The new item is
+  # "exdir_E", deliberately added in the middle not at the end.
+  new_externals_desc = \
+           external_url_for["A/D/exdir_A"] + " exdir_A"           + \
+           "\n"                                                   + \
+           external_url_for["A/D/exdir_A/G/"] + " exdir_A/G/"     + \
+           "\n"                                                   + \
+           "exdir_E           " + other_repo_url + "/A/B/E"       + \
+           "\n"                                                   + \
+           "exdir_A/H -r 1 " + external_url_for["A/D/exdir_A/H"]  + \
+           "\n"                                                   + \
+           external_url_for["A/D/x/y/z/blah"] + " x/y/z/blah"     + \
+           "\n"
+
+  # Add A/foo and set the property on it
+  new_dir = sbox.ospath("A/foo")
+  sbox.simple_mkdir("A/foo")
+  change_external(new_dir, new_externals_desc, commit=False)
+
+  # Update the working copy, see if we get the new item.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  probe_paths_exist([os.path.join(wc_dir, "A", "foo", "exdir_E")])
+
+# Test for issue #2267
+@Issue(2267)
+@XFail() # Needs new commandline option
+def switch_external_on_locally_added_dir(sbox):
+  "switch an external on a locally added dir"
+
+  external_url_for = externals_test_setup(sbox)
+  wc_dir         = sbox.wc_dir
+
+  repo_url       = sbox.repo_url
+  other_repo_url = repo_url + ".other"
+  A_path         = repo_url + "/A"
+  A_copy_path    = repo_url + "/A_copy"
+
+  # Create a branch of A
+  # Checkout a working copy
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'copy',
+                                     A_path, A_copy_path,
+                                     '-m', 'Create branch of A')
+
+  # Checkout a working copy
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'checkout',
+                                     A_path, wc_dir)
+
+  # Add one new external item to the property on A/foo.  The new item is
+  # "exdir_E", deliberately added in the middle not at the end.
+  new_externals_desc = \
+           external_url_for["A/D/exdir_A"] + " exdir_A"           + \
+           "\n"                                                   + \
+           external_url_for["A/D/exdir_A/G/"] + " exdir_A/G/"     + \
+           "\n"                                                   + \
+           "exdir_E           " + other_repo_url + "/A/B/E"       + \
+           "\n"                                                   + \
+           "exdir_A/H -r 1 " + external_url_for["A/D/exdir_A/H"]  + \
+           "\n"                                                   + \
+           external_url_for["A/D/x/y/z/blah"] + " x/y/z/blah"     + \
+           "\n"
+
+  # Add A/foo and set the property on it
+  new_dir = sbox.ospath("foo")
+  sbox.simple_mkdir("foo")
+  change_external(new_dir, new_externals_desc, commit=False)
+
+  # Switch the working copy to the branch, see if we get the new item.
+  svntest.actions.run_and_verify_svn(None, None, [], 'sw', A_copy_path, wc_dir)
+
+  probe_paths_exist([os.path.join(wc_dir, "foo", "exdir_E")])
+
 @Issue(3819)
 def file_external_in_sibling(sbox):
   "update a file external in sibling dir"
@@ -1641,6 +1732,8 @@ test_list = [ None,
               wc_repos_file_externals,
               merge_target_with_externals,
               update_modify_file_external,
+              update_external_on_locally_added_dir,
+              switch_external_on_locally_added_dir,
               file_external_in_sibling,
               file_external_update_without_commit,
              ]

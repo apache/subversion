@@ -217,7 +217,8 @@ wc_update(svn_test__sandbox_t *b, const char *path, svn_revnum_t revnum)
   APR_ARRAY_PUSH(paths, const char *) = wc_path(b, path);
   SVN_ERR(svn_client_create_context(&ctx, b->pool));
   return svn_client_update4(&result_revs, paths, &revision, svn_depth_infinity,
-                            TRUE, FALSE, FALSE, FALSE, FALSE, ctx, b->pool);
+                            TRUE, FALSE, FALSE, FALSE, FALSE, FALSE,
+                            ctx, b->pool);
 }
 
 static svn_error_t *
