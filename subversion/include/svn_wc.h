@@ -5918,8 +5918,10 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
  * @a anchor_abspath/@a target represent the base of the hierarchy to be
  * compared. The diff callback paths will be relative to this path.
  *
- * @a callbacks/@a callback_baton is the callback table to use when two
- * files are to be compared.
+ * Diffs will be reported as valid relpaths, with @a anchor_abspath being
+ * the root ("").
+ *
+ * @a callbacks/@a callback_baton is the callback table to use.
  *
  * If @a depth is #svn_depth_empty, just diff exactly @a target or
  * @a anchor_path if @a target is empty.  If #svn_depth_files then do the same
@@ -5953,6 +5955,10 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
  * it's a member of one of those changelists.  If @a changelists is
  * empty (or altogether @c NULL), no changelist filtering occurs.
  *
+  * If @a server_performs_filtering is TRUE, assume that the server handles
+ * the ambient depth filtering, so this doesn't have to be handled in the
+ * editor.
+ *
  * @since New in 1.7.
  */
 svn_error_t *
@@ -5961,24 +5967,28 @@ svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
                         svn_wc_context_t *wc_ctx,
                         const char *anchor_abspath,
                         const char *target,
-                        const svn_wc_diff_callbacks4_t *callbacks,
-                        void *callback_baton,
                         svn_depth_t depth,
                         svn_boolean_t ignore_ancestry,
                         svn_boolean_t show_copies_as_adds,
                         svn_boolean_t use_git_diff_format,
                         svn_boolean_t use_text_base,
                         svn_boolean_t reverse_order,
+                        svn_boolean_t server_performs_filtering,
                         const apr_array_header_t *changelists,
+                        const svn_wc_diff_callbacks4_t *callbacks,
+                        void *callback_baton,
                         svn_cancel_func_t cancel_func,
                         void *cancel_baton,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 
 /**
- * Similar to svn_wc_get_diff_editor6(), but with an
+ * Similar to svn_wc_get_diff_editor6(), but with an access baton and relative
+ * path. @a server_performs_filtering always true and with a
  * #svn_wc_diff_callbacks3_t instead of #svn_wc_diff_callbacks4_t,
  * @a show_copies_as_adds, and @a use_git_diff_format set to @c FALSE.
+ *
+ * Diffs will be reported as below the relative path stored in @a anchor.
  *
  * @since New in 1.6.
  *

@@ -1853,15 +1853,16 @@ svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
                         svn_wc_context_t *wc_ctx,
                         const char *anchor_abspath,
                         const char *target,
-                        const svn_wc_diff_callbacks4_t *callbacks,
-                        void *callback_baton,
                         svn_depth_t depth,
                         svn_boolean_t ignore_ancestry,
                         svn_boolean_t show_copies_as_adds,
                         svn_boolean_t use_git_diff_format,
                         svn_boolean_t use_text_base,
                         svn_boolean_t reverse_order,
+                        svn_boolean_t server_performs_filtering,
                         const apr_array_header_t *changelists,
+                        const svn_wc_diff_callbacks4_t *callbacks,
+                        void *callback_baton,
                         svn_cancel_func_t cancel_func,
                         void *cancel_baton,
                         apr_pool_t *result_pool,
@@ -1903,7 +1904,7 @@ svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
   inner_editor = tree_editor;
   inner_baton = eb;
 
-  if (depth == svn_depth_unknown)
+  if (!server_performs_filtering && depth == svn_depth_unknown)
     SVN_ERR(svn_wc__ambient_depth_filter_editor(&inner_editor,
                                                 &inner_baton,
                                                 wc_ctx->db,
