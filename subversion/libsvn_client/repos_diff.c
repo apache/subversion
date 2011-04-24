@@ -33,7 +33,9 @@
  * the difference between the two files.  */
 
 #include <apr_uri.h>
+#include <apr_md5.h>
 
+#include "svn_checksum.h"
 #include "svn_hash.h"
 #include "svn_wc.h"
 #include "svn_pools.h"
@@ -185,7 +187,6 @@ struct file_baton {
      first repository version.  Also, the pristine-property list of
      this file. */
   const char *path_start_revision;
-  apr_file_t *file_start_revision;
   apr_hash_t *pristine_props;
 
   /* The path and APR file handle to the temporary file that contains the
@@ -193,7 +194,6 @@ struct file_baton {
      textdelta and file deletion, and will be NULL if there's no
      textual difference between the two revisions. */
   const char *path_end_revision;
-  apr_file_t *file_end_revision;
 
   /* APPLY_HANDLER/APPLY_BATON represent the delta application baton. */
   svn_txdelta_window_handler_t apply_handler;
@@ -201,6 +201,13 @@ struct file_baton {
 
   /* The overall crawler editor baton. */
   struct edit_baton *edit_baton;
+
+  /* Holds the checksum of the start revision file */
+  svn_checksum_t *start_md5_checksum;
+
+  /* Holds the resulting md5 digest of a textdelta transform */
+  unsigned char result_digest[APR_MD5_DIGESTSIZE];
+  svn_checksum_t *result_md5_checksum;
 
   /* A cache of any property changes (svn_prop_t) received for this file. */
   apr_array_header_t *propchanges;
@@ -322,6 +329,9 @@ get_file_from_ra(struct file_baton *b, svn_revnum_t revision)
   SVN_ERR(svn_stream_open_unique(&fstream, &(b->path_start_revision), NULL,
                                  svn_io_file_del_on_pool_cleanup, b->pool,
                                  b->pool));
+
+  fstream = svn_stream_checksummed2(fstream, NULL, &b->start_md5_checksum,
+                                    svn_checksum_md5, TRUE, b->pool);
 
   SVN_ERR(svn_ra_get_file(b->edit_baton->ra_session,
                           b->path,
@@ -850,16 +860,13 @@ window_handler(svn_txdelta_window_t *window,
 {
   struct file_baton *b = window_baton;
 
-  /* Skip *everything* within a newly tree-conflicted directory. */
-  if (b->skip)
-    return SVN_NO_ERROR;
-
   SVN_ERR(b->apply_handler(window, b->apply_baton));
 
   if (!window)
     {
-      SVN_ERR(svn_io_file_close(b->file_start_revision, b->pool));
-      SVN_ERR(svn_io_file_close(b->file_end_revision, b->pool));
+      b->result_md5_checksum = svn_checksum__from_digest(b->result_digest,
+                                                         svn_checksum_md5,
+                                                         b->pool);
     }
 
   return SVN_NO_ERROR;
@@ -868,38 +875,53 @@ window_handler(svn_txdelta_window_t *window,
 /* An editor function.  */
 static svn_error_t *
 apply_textdelta(void *file_baton,
-                const char *base_checksum,
+                const char *base_md5_digest,
                 apr_pool_t *pool,
                 svn_txdelta_window_handler_t *handler,
                 void **handler_baton)
 {
   struct file_baton *b = file_baton;
+  svn_stream_t *src_stream;
+  svn_stream_t *result_stream;
 
   /* Skip *everything* within a newly tree-conflicted directory. */
   if (b->skip)
     {
-      *handler = window_handler;
-      *handler_baton = file_baton;
+      *handler = svn_delta_noop_window_handler;
+      *handler_baton = NULL;
       return SVN_NO_ERROR;
     }
 
+  if (base_md5_digest != NULL)
+    {
+      svn_checksum_t *base_md5_checksum;
+
+      SVN_ERR(svn_checksum_parse_hex(&base_md5_checksum, svn_checksum_md5,
+                                     base_md5_digest, pool));
+
+      if (!svn_checksum_match(base_md5_checksum, b->start_md5_checksum))
+        return svn_error_return(svn_checksum_mismatch_err(
+                                      base_md5_checksum,
+                                      b->start_md5_checksum,
+                                      pool,
+                                      _("Base checksum mismatch for '%s'"),
+                                      b->path));
+    }
+
   /* Open the file to be used as the base for second revision */
-  SVN_ERR(svn_io_file_open(&(b->file_start_revision),
-                           b->path_start_revision,
-                           APR_READ, APR_OS_DEFAULT, b->pool));
+  SVN_ERR(svn_stream_open_readonly(&src_stream, b->path_start_revision,
+                                   b->pool, pool));
 
   /* Open the file that will become the second revision after applying the
      text delta, it starts empty */
-  SVN_ERR(svn_io_open_unique_file3(&(b->file_end_revision),
-                                   &(b->path_end_revision), NULL,
+  SVN_ERR(svn_stream_open_unique(&result_stream, &b->path_end_revision, NULL,
                                    svn_io_file_del_on_pool_cleanup,
                                    b->pool, pool));
 
-  svn_txdelta_apply(svn_stream_from_aprfile2(b->file_start_revision, TRUE,
-                                             b->pool),
-                    svn_stream_from_aprfile2(b->file_end_revision, TRUE,
-                                             b->pool),
-                    NULL, b->path, b->pool,
+  svn_txdelta_apply(src_stream,
+                    result_stream,
+                    b->result_digest,
+                    b->path, b->pool,
                     &(b->apply_handler), &(b->apply_baton));
 
   *handler = window_handler;
@@ -920,7 +942,7 @@ apply_textdelta(void *file_baton,
  */
 static svn_error_t *
 close_file(void *file_baton,
-           const char *text_checksum,
+           const char *expected_md5_digest,
            apr_pool_t *pool)
 {
   struct file_baton *b = file_baton;
@@ -933,6 +955,22 @@ close_file(void *file_baton,
   /* Skip *everything* within a newly tree-conflicted directory. */
   if (b->skip)
     return SVN_NO_ERROR;
+
+  if (expected_md5_digest)
+    {
+      svn_checksum_t *expected_md5_checksum;
+
+      SVN_ERR(svn_checksum_parse_hex(&expected_md5_checksum, svn_checksum_md5,
+                                     expected_md5_digest, pool));
+
+      if (!svn_checksum_match(expected_md5_checksum, b->result_md5_checksum))
+        return svn_error_return(svn_checksum_mismatch_err(
+                                      expected_md5_checksum,
+                                      b->result_md5_checksum,
+                                      pool,
+                                      _("Checksum mismatch for '%s'"),
+                                      b->path));
+    }
 
   err = get_parent_dir_abspath(&local_dir_abspath, eb->wc_ctx,
                                b->wcpath, eb->dry_run, b->pool);
