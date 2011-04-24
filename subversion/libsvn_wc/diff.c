@@ -411,9 +411,9 @@ make_dir_baton(const char *path,
   db->pool = pool;
   db->propchanges = apr_array_make(pool, 1, sizeof(svn_prop_t));
   db->compared = apr_hash_make(db->pool);
-  db->path = path;
+  db->path = apr_pstrdup(pool, path);
 
-  db->name = svn_dirent_basename(path, NULL);
+  db->name = svn_dirent_basename(db->path, NULL);
 
   if (parent_baton != NULL)
     db->local_abspath = svn_dirent_join(parent_baton->local_abspath, db->name,
@@ -443,9 +443,9 @@ make_file_baton(const char *path,
   fb->added = added;
   fb->pool = pool;
   fb->propchanges  = apr_array_make(pool, 1, sizeof(svn_prop_t));
-  fb->path = path;
+  fb->path = apr_pstrdup(pool, path);
 
-  fb->name = svn_dirent_basename(path, NULL);
+  fb->name = svn_dirent_basename(fb->path, NULL);
   fb->local_abspath = svn_dirent_join(parent_baton->local_abspath, fb->name,
                                       pool);
 
