@@ -151,7 +151,7 @@ svn_wc__internal_translated_stream(svn_stream_t **stream,
 
 svn_error_t *
 svn_wc__internal_translated_file(const char **xlated_abspath,
-                                 const char *src,
+                                 const char *src_abspath,
                                  svn_wc__db_t *db,
                                  const char *versioned_abspath,
                                  apr_uint32_t flags,
@@ -162,11 +162,10 @@ svn_wc__internal_translated_file(const char **xlated_abspath,
 {
   svn_subst_eol_style_t style;
   const char *eol;
-  const char *xlated_path;
   apr_hash_t *keywords;
   svn_boolean_t special;
 
-
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(src_abspath));
   SVN_ERR_ASSERT(svn_dirent_is_absolute(versioned_abspath));
   SVN_ERR(svn_wc__get_translate_info(&style, &eol,
                                      &keywords,
@@ -178,7 +177,7 @@ svn_wc__internal_translated_file(const char **xlated_abspath,
       && (! (flags & SVN_WC_TRANSLATE_FORCE_COPY)))
     {
       /* Translation would be a no-op, so return the original file. */
-      xlated_path = src;
+      *xlated_abspath = src_abspath;
     }
   else  /* some translation (or copying) is necessary */
     {
@@ -223,7 +222,7 @@ svn_wc__internal_translated_file(const char **xlated_abspath,
             return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL, NULL, NULL);
         }
 
-      SVN_ERR(svn_subst_copy_and_translate4(src, tmp_vfile,
+      SVN_ERR(svn_subst_copy_and_translate4(src_abspath, tmp_vfile,
                                             eol, repair_forced,
                                             keywords,
                                             expand,
@@ -231,9 +230,8 @@ svn_wc__internal_translated_file(const char **xlated_abspath,
                                             cancel_func, cancel_baton,
                                             result_pool));
 
-      xlated_path = tmp_vfile;
+      *xlated_abspath = tmp_vfile;
     }
-  SVN_ERR(svn_dirent_get_absolute(xlated_abspath, xlated_path, result_pool));
 
   return SVN_NO_ERROR;
 }

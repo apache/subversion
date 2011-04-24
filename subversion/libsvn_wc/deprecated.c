@@ -3419,20 +3419,27 @@ svn_wc_translated_file2(const char **xlated_path,
   const char *versioned_abspath;
   const char *root;
   const char *tmp_root;
+  const char *src_abspath;
 
   SVN_ERR(svn_dirent_get_absolute(&versioned_abspath, versioned_file, pool));
+  SVN_ERR(svn_dirent_get_absolute(&src_abspath, src, pool));
 
-  SVN_ERR(svn_wc__internal_translated_file(xlated_path, src,
+  SVN_ERR(svn_wc__internal_translated_file(xlated_path, src_abspath,
                                            svn_wc__adm_get_db(adm_access),
                                            versioned_abspath,
                                            flags, NULL, NULL, pool, pool));
-  if (! svn_dirent_is_absolute(versioned_file))
+
+  if (strcmp(*xlated_path, src_abspath) == 0)
+    *xlated_path = src;
+  else if (! svn_dirent_is_absolute(versioned_file))
     {
       SVN_ERR(svn_io_temp_dir(&tmp_root, pool));
       if (! svn_dirent_is_child(tmp_root, *xlated_path, pool))
         {
           SVN_ERR(svn_dirent_get_absolute(&root, "", pool));
-          *xlated_path = svn_dirent_is_child(root, *xlated_path, pool);
+
+          if (svn_dirent_is_child(root, *xlated_path, pool))
+            *xlated_path = svn_dirent_is_child(root, *xlated_path, pool);
         }
     }
 

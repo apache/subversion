@@ -142,12 +142,11 @@ svn_wc__internal_translated_stream(svn_stream_t **stream,
                                    apr_pool_t *result_pool,
                                    apr_pool_t *scratch_pool);
 
-/* Like svn_wc_translated_file3(), except the working copy database
- * is specified directly by DB instead of indirectly through a
- * svn_wc_context_t parameter. */
+/* Like svn_wc_translated_file2(), except the working copy database
+ * is used directly and the function assumes abspaths. */
 svn_error_t *
 svn_wc__internal_translated_file(const char **xlated_abspath,
-                                 const char *src,
+                                 const char *src_abspath,
                                  svn_wc__db_t *db,
                                  const char *versioned_abspath,
                                  apr_uint32_t flags,
