@@ -34,10 +34,14 @@ def rev_file_path(repo_dir, rev):
 def rev_file_indexes(repo_dir, rev):
   """Return (ids, texts), where IDS is a dictionary of all node-rev ids
      defined in revision REV of the repo at REPO_DIR, in the form
-     {noderev: full id}, and TEXTS is an array of
+     {noderev: full_id}, and TEXTS is an array of
      (offset, size, expanded-size, csum [,sha1-csum, uniquifier]) tuples
      taken from all the "text: REV ..." representation lines
-     in revision REV."""
+     in revision REV.
+     
+     Here, NODEREV is the node-revision id minus the /offset part, and
+     FULL_ID is the full node-revision id (including the /offset part).
+     """
   ids = {}
   texts = []
   for line in open(rev_file_path(repo_dir, rev)):
