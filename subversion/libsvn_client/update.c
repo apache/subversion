@@ -287,13 +287,11 @@ update_internal(svn_revnum_t *result_rev,
     {
       if (apply_local_external_modifications)
         SVN_ERR(svn_client__gather_local_external_changes(
-                  efb.externals_new, efb.ambient_depths, anchor_abspath,
+                  efb.externals_new, efb.ambient_depths, local_abspath,
                   depth, ctx, pool));
       SVN_ERR(svn_client__handle_externals(efb.externals_old,
                                            efb.externals_new,
                                            efb.ambient_depths,
-                                           svn_dirent_join(anchor_abspath,
-                                                           target, pool),
                                            repos_root,
                                            depth, FALSE, use_sleep,
                                            ctx, pool));

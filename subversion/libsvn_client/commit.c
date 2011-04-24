@@ -1390,7 +1390,7 @@ svn_client_commit5(const apr_array_header_t *targets,
 
           SVN_ERR(svn_client__handle_externals(efb.externals_old,
                                                efb.externals_new,
-                                               NULL, NULL, NULL,
+                                               NULL, NULL,
                                                svn_depth_unknown, TRUE,
                                                NULL, ctx, iterpool));
         }
