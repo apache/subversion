@@ -164,18 +164,18 @@ reporter_link_path(void *report_baton, const char *path, const char *url,
                    const char *lock_token, apr_pool_t *pool)
 {
   report_baton_t *rb = report_baton;
-  const char *ancestor;
-  apr_size_t len;
 
-  ancestor = svn_uri_get_longest_ancestor(url, rb->ancestor, pool);
-
-  /* If we got a shorter ancestor, truncate our current ancestor.
-     Note that svn_dirent_get_longest_ancestor will allocate its return
-     value even if it identical to one of its arguments. */
-  len = strlen(ancestor);
-  if (len < strlen(rb->ancestor))
+  if (!svn_uri_is_ancestor(rb->ancestor, url))
     {
-      rb->ancestor[len] = '\0';
+      const char *ancestor;
+
+      ancestor = svn_uri_get_longest_ancestor(url, rb->ancestor, pool);
+
+      /* If we got a shorter ancestor, truncate our current ancestor.
+         Note that svn_dirent_get_longest_ancestor will allocate its return
+         value even if it identical to one of its arguments. */
+
+      rb->ancestor[strlen(ancestor)] = '\0';
       rb->depth = svn_depth_infinity;
     }
 
