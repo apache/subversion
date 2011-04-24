@@ -4250,7 +4250,6 @@ make_editor(svn_revnum_t *target_revision,
                                                 wc_ctx->db,
                                                 anchor_abspath,
                                                 target_basename,
-                                                TRUE /* read_base */,
                                                 inner_editor,
                                                 inner_baton,
                                                 result_pool));
