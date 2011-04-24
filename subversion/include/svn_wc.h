@@ -3933,6 +3933,10 @@ svn_wc_walk_status(svn_wc_context_t *wc_ctx,
  * found, and with the current external definition provided as both
  * the @a old_val and @a new_val parameters of the callback function.
  *
+ * If @a server_performs_filtering is TRUE, assume that the server handles
+ * the ambient depth filtering, so this doesn't have to be handled in the
+ * editor.
+ *
  * Allocate the editor itself in @a pool, but the editor does temporary
  * allocations in a subpool of @a pool.
  *
@@ -3949,6 +3953,7 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
                           svn_depth_t depth,
                           svn_boolean_t get_all,
                           svn_boolean_t no_ignore,
+                          svn_boolean_t server_performs_filtering,
                           const apr_array_header_t *ignore_patterns,
                           svn_wc_status_func4_t status_func,
                           void *status_baton,
@@ -3961,9 +3966,11 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
 
 /**
  * Same as svn_wc_get_status_editor5, but using #svn_wc_status_func3_t
- * instead of #svn_wc_status_func4_t. This also uses a single pool
- * parameter, stating that all temporary allocations are performed in
- * manually constructed/destroyed subpool.
+ * instead of #svn_wc_status_func4_t. And @a server_performs_filtering
+ * always set to #TRUE.
+ *
+ * This also uses a single pool parameter, stating that all temporary
+ * allocations are performed in manually constructed/destroyed subpool.
  *
  * @since New in 1.6.
  * @deprecated Provided for backward compatibility with the 1.6 API.
