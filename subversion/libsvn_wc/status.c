@@ -2262,6 +2262,7 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
                           svn_depth_t depth,
                           svn_boolean_t get_all,
                           svn_boolean_t no_ignore,
+                          svn_boolean_t server_performs_filtering,
                           const apr_array_header_t *ignore_patterns,
                           svn_wc_status_func4_t status_func,
                           void *status_baton,
@@ -2274,6 +2275,8 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
 {
   struct edit_baton *eb;
   svn_delta_editor_t *tree_editor = svn_delta_default_editor(result_pool);
+  void *inner_baton;
+  const svn_delta_editor_t *inner_editor;
 
   /* Construct an edit baton. */
   eb = apr_pcalloc(result_pool, sizeof(*eb));
@@ -2290,8 +2293,6 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
   eb->anchor_abspath    = apr_pstrdup(result_pool, anchor_abspath);
   eb->target_abspath    = svn_dirent_join(anchor_abspath, target_basename,
                                           result_pool);
-
-
 
   eb->target_basename   = apr_pstrdup(result_pool, target_basename);
   eb->root_opened       = FALSE;
@@ -2339,10 +2340,26 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
   tree_editor->close_file = close_file;
   tree_editor->close_edit = close_edit;
 
+  inner_editor = tree_editor;
+  inner_baton = eb;
+
+  if (!server_performs_filtering
+      && depth == svn_depth_unknown)
+    SVN_ERR(svn_wc__ambient_depth_filter_editor(&inner_editor,
+                                                &inner_baton,
+                                                wc_ctx->db,
+                                                anchor_abspath,
+                                                target_basename,
+                                                TRUE /* read_base */,
+                                                inner_editor,
+                                                inner_baton,
+                                                result_pool));
+
   /* Conjoin a cancellation editor with our status editor. */
   SVN_ERR(svn_delta_get_cancellation_editor(cancel_func, cancel_baton,
-                                            tree_editor, eb, editor,
-                                            edit_baton, result_pool));
+                                            inner_editor, inner_baton,
+                                            editor, edit_baton,
+                                            result_pool));
 
   if (set_locks_baton)
     *set_locks_baton = eb;

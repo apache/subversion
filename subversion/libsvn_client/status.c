@@ -390,11 +390,21 @@ svn_client_status5(svn_revnum_t *result_rev,
            _("Entry '%s' has no URL"),
            svn_dirent_local_style(dir, pool));
 
+      /* Open a repository session to the URL. */
+      SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, URL,
+                                                   dir_abspath,
+                                                   NULL, FALSE, TRUE,
+                                                   ctx, pool));
+
+      SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
+                                    SVN_RA_CAPABILITY_DEPTH, pool));
+
       SVN_ERR(svn_wc_get_status_editor5(&editor, &edit_baton, &set_locks_baton,
                                     &edit_revision, ctx->wc_ctx,
                                     dir_abspath, target_basename,
                                     depth, get_all,
-                                    no_ignore, ignores, tweak_status, &sb,
+                                    no_ignore, server_supports_depth,
+                                    ignores, tweak_status, &sb,
                                     ignore_externals
                                         ? NULL
                                         : svn_client__external_info_gatherer,
@@ -402,11 +412,6 @@ svn_client_status5(svn_revnum_t *result_rev,
                                     ctx->cancel_func, ctx->cancel_baton,
                                     pool, pool));
 
-      /* Open a repository session to the URL. */
-      SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, URL,
-                                                   dir_abspath,
-                                                   NULL, FALSE, TRUE,
-                                                   ctx, pool));
 
       /* Verify that URL exists in HEAD.  If it doesn't, this can save
          us a whole lot of hassle; if it does, the cost of this
@@ -474,9 +479,6 @@ svn_client_status5(svn_revnum_t *result_rev,
             rb.depth = svn_depth_infinity;
           else
             rb.depth = depth;
-
-          SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
-                                        SVN_RA_CAPABILITY_DEPTH, pool));
 
           /* Drive the reporter structure, describing the revisions
              within PATH.  When we call reporter->finish_report,
