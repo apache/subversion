@@ -1789,6 +1789,7 @@ diff_repos_wc(const char *path1,
   const char *url1, *anchor, *anchor_url, *target;
   svn_revnum_t rev;
   svn_ra_session_t *ra_session;
+  svn_depth_t diff_depth;
   const svn_ra_reporter3_t *reporter;
   void *reporter_baton;
   const svn_delta_editor_t *diff_editor;
@@ -1897,11 +1898,16 @@ diff_repos_wc(const char *path1,
   else
     callback_baton->revnum2 = rev;
 
+  if (depth != svn_depth_infinity)
+    diff_depth = depth;
+  else
+    diff_depth = svn_depth_unknown;
+
   SVN_ERR(svn_ra_do_diff3(ra_session,
                           &reporter, &reporter_baton,
                           rev,
                           target,
-                          svn_depth_unknown,
+                          diff_depth,
                           ignore_ancestry,
                           TRUE,  /* text_deltas */
                           url1,
