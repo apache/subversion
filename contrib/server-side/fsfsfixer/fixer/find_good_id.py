@@ -36,7 +36,8 @@ def rev_file_indexes(repo_dir, rev):
      defined in revision REV of the repo at REPO_DIR, in the form
      {noderev: full id}, and TEXTS is an array of
      (offset, size, expanded-size, csum [,sha1-csum, uniquifier]) tuples
-     taken from all the "text: REV ..." lines in revision REV."""
+     taken from all the "text: REV ..." representation lines
+     in revision REV."""
   ids = {}
   texts = []
   for line in open(rev_file_path(repo_dir, rev)):
