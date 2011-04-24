@@ -1575,6 +1575,7 @@ struct diff_callbacks3_wrapper_baton {
   const svn_wc_diff_callbacks3_t *callbacks3;
   svn_wc__db_t *db;
   void *baton;
+  const char *anchor;
 };
 
 /* An svn_wc_diff_callbacks4_t function for wrapping
@@ -1604,7 +1605,10 @@ wrap_4to3_file_changed(const char *local_dir_abspath,
                                                 scratch_pool);
 
   return b->callbacks3->file_changed(adm_access, contentstate, propstate,
-                                     tree_conflicted, path, tmpfile1, tmpfile2,
+                                     tree_conflicted,
+                                     svn_dirent_join(b->anchor, path,
+                                                     scratch_pool),
+                                     tmpfile1, tmpfile2,
                                      rev1, rev2, mimetype1, mimetype2,
                                      propchanges, originalprops, b->baton);
 }
@@ -1638,7 +1642,10 @@ wrap_4to3_file_added(const char *local_dir_abspath,
                                                 scratch_pool);
 
   return b->callbacks3->file_added(adm_access, contentstate, propstate,
-                                   tree_conflicted, path, tmpfile1, tmpfile2,
+                                   tree_conflicted,
+                                   svn_dirent_join(b->anchor, path,
+                                                   scratch_pool),
+                                   tmpfile1, tmpfile2,
                                    rev1, rev2, mimetype1, mimetype2,
                                    propchanges, originalprops, b->baton);
 }
@@ -1666,7 +1673,9 @@ wrap_4to3_file_deleted(const char *local_dir_abspath,
                                                 scratch_pool);
 
   return b->callbacks3->file_deleted(adm_access, state, tree_conflicted,
-                                     path, tmpfile1, tmpfile2,
+                                     svn_dirent_join(b->anchor, path,
+                                                     scratch_pool),
+                                     tmpfile1, tmpfile2,
                                      mimetype1, mimetype2, originalprops,
                                      b->baton);
 }
@@ -1691,7 +1700,10 @@ wrap_4to3_dir_added(const char *local_dir_abspath,
     adm_access = svn_wc__adm_retrieve_internal2(b->db, local_dir_abspath,
                                                 scratch_pool);
 
-  return b->callbacks3->dir_added(adm_access, state, tree_conflicted, path, rev, b->baton);
+  return b->callbacks3->dir_added(adm_access, state, tree_conflicted,
+                                  svn_dirent_join(b->anchor, path,
+                                                     scratch_pool),
+                                  rev, b->baton);
 }
 
 /* An svn_wc_diff_callbacks4_t function for wrapping
@@ -1712,7 +1724,9 @@ wrap_4to3_dir_deleted(const char *local_dir_abspath,
                                                 scratch_pool);
 
   return b->callbacks3->dir_deleted(adm_access, state, tree_conflicted,
-                                    path, b->baton);
+                                    svn_dirent_join(b->anchor, path,
+                                                     scratch_pool),
+                                    b->baton);
 }
 
 /* An svn_wc_diff_callbacks4_t function for wrapping
@@ -1735,7 +1749,9 @@ wrap_4to3_dir_props_changed(const char *local_dir_abspath,
                                                 scratch_pool);
 
   return b->callbacks3->dir_props_changed(adm_access, propstate,
-                                          tree_conflicted, path,
+                                          tree_conflicted,
+                                          svn_dirent_join(b->anchor, path,
+                                                     scratch_pool),
                                           propchanges, original_props,
                                           b->baton);
 }
@@ -1760,8 +1776,10 @@ wrap_4to3_dir_opened(const char *local_dir_abspath,
   if (skip_children)
     *skip_children = FALSE;
 
-  return b->callbacks3->dir_opened(adm_access, tree_conflicted, path, rev,
-                                   b->baton);
+  return b->callbacks3->dir_opened(adm_access, tree_conflicted,
+                                   svn_dirent_join(b->anchor, path,
+                                                     scratch_pool),
+                                   rev, b->baton);
 }
 
 /* An svn_wc_diff_callbacks4_t function for wrapping
@@ -1783,7 +1801,10 @@ wrap_4to3_dir_closed(const char *local_dir_abspath,
                                                 scratch_pool);
 
   return b->callbacks3->dir_closed(adm_access, contentstate, propstate,
-                                   tree_conflicted, path, b->baton);
+                                   tree_conflicted,
+                                   svn_dirent_join(b->anchor, path,
+                                                     scratch_pool),
+                                   b->baton);
 }
 
 
@@ -1824,11 +1845,12 @@ svn_wc_get_diff_editor5(svn_wc_adm_access_t *anchor,
   b->callbacks3 = callbacks;
   b->baton = callback_baton;
   b->db = db;
+  b->anchor = svn_wc_adm_access_path(anchor);
 
   SVN_ERR(svn_wc_get_diff_editor6(editor,
                                    edit_baton,
                                    wc_ctx,
-                                   svn_wc_adm_access_path(anchor),
+                                   svn_wc__adm_access_abspath(anchor),
                                    target,
                                    &diff_callbacks3_wrapper,
                                    b,
@@ -1978,9 +2000,10 @@ svn_wc_diff5(svn_wc_adm_access_t *anchor,
 
   b->callbacks3 = callbacks;
   b->baton = callback_baton;
+  b->anchor = svn_wc_adm_access_path(anchor);
 
   SVN_ERR(svn_wc_diff6(wc_ctx,
-                       svn_dirent_join(svn_wc_adm_access_path(anchor),
+                       svn_dirent_join(svn_wc__adm_access_abspath(anchor),
                                        target, pool),
                        &diff_callbacks3_wrapper,
                        b,
