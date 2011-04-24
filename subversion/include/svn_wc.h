@@ -5915,7 +5915,8 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
  * working copy (when @a use_text_base is #FALSE), or the current pristine
  * information (when @a use_text_base is #TRUE) against the editor driver.
  *
- * @a anchor_path/@a target represent the base of the hierarchy to be compared.
+ * @a anchor_abspath/@a target represent the base of the hierarchy to be
+ * compared. The diff callback paths will be relative to this path.
  *
  * @a callbacks/@a callback_baton is the callback table to use when two
  * files are to be compared.
@@ -5958,7 +5959,7 @@ svn_error_t *
 svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
                         void **edit_baton,
                         svn_wc_context_t *wc_ctx,
-                        const char *anchor_path,
+                        const char *anchor_abspath,
                         const char *target,
                         const svn_wc_diff_callbacks4_t *callbacks,
                         void *callback_baton,
@@ -6097,7 +6098,7 @@ svn_wc_get_diff_editor(svn_wc_adm_access_t *anchor,
 /**
  * Compare working copy against the text-base.
  *
- * @a target_path represents the base of the hierarchy to be compared.
+ * @a target_abspath represents the base of the hierarchy to be compared.
  *
  * @a callbacks/@a callback_baton is the callback table to use when two
  * files are to be compared.
@@ -6136,7 +6137,7 @@ svn_wc_get_diff_editor(svn_wc_adm_access_t *anchor,
  */
 svn_error_t *
 svn_wc_diff6(svn_wc_context_t *wc_ctx,
-             const char *target_path,
+             const char *target_abspath,
              const svn_wc_diff_callbacks4_t *callbacks,
              void *callback_baton,
              svn_depth_t depth,

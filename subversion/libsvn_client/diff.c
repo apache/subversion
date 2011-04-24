@@ -776,6 +776,9 @@ struct diff_cmd_baton {
    * directory of the working copy involved in the diff. */
   const char *wc_root_abspath;
 
+  /* The anchor to prefix before wc paths */
+  const char *anchor;
+
   /* A hashtable using the visited paths as keys.
    * ### This is needed for us to know if we need to print a diff header for
    * ### a path that has property changes. */
@@ -783,8 +786,8 @@ struct diff_cmd_baton {
 };
 
 
-/* An svn_wc_diff_callbacks4_t function.  Used for both file and directory
-   property diffs. */
+/* An helper for diff_dir_props_changed, diff_file_changed and diff_file_added
+ */
 static svn_error_t *
 diff_props_changed(const char *local_dir_abspath,
                    svn_wc_notify_state_t *state,
@@ -842,6 +845,31 @@ diff_props_changed(const char *local_dir_abspath,
   svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
+
+/* An svn_wc_diff_callbacks4_t function. */
+static svn_error_t *
+diff_dir_props_changed(const char *local_dir_abspath,
+                   svn_wc_notify_state_t *state,
+                   svn_boolean_t *tree_conflicted,
+                   const char *path,
+                   const apr_array_header_t *propchanges,
+                   apr_hash_t *original_props,
+                   void *diff_baton,
+                   apr_pool_t *scratch_pool)
+{
+  struct diff_cmd_baton *diff_cmd_baton = diff_baton;
+
+  if (diff_cmd_baton->anchor)
+    path = svn_dirent_join(diff_cmd_baton->anchor, path, scratch_pool);
+
+  return svn_error_return(diff_props_changed(local_dir_abspath, state,
+                                             tree_conflicted, path,
+                                             propchanges,
+                                             original_props,
+                                             diff_baton,
+                                             scratch_pool));
+}
+
 
 /* Show differences between TMPFILE1 and TMPFILE2. PATH, REV1, and REV2 are
    used in the headers to indicate the file and revisions.  If either
@@ -1039,6 +1067,9 @@ diff_file_changed(const char *local_dir_abspath,
                   void *diff_baton,
                   apr_pool_t *scratch_pool)
 {
+  struct diff_cmd_baton *diff_cmd_baton = diff_baton;
+  if (diff_cmd_baton->anchor)
+    path = svn_dirent_join(diff_cmd_baton->anchor, path, scratch_pool);
   if (tmpfile1)
     SVN_ERR(diff_content_changed(path,
                                  tmpfile1, tmpfile2, rev1, rev2,
@@ -1082,6 +1113,9 @@ diff_file_added(const char *local_dir_abspath,
                 apr_pool_t *scratch_pool)
 {
   struct diff_cmd_baton *diff_cmd_baton = diff_baton;
+
+  if (diff_cmd_baton->anchor)
+    path = svn_dirent_join(diff_cmd_baton->anchor, path, scratch_pool);
 
   /* We want diff_file_changed to unconditionally show diffs, even if
      the diff is empty (as would be the case if an empty file were
@@ -1133,6 +1167,9 @@ diff_file_deleted_with_diff(const char *local_dir_abspath,
 {
   struct diff_cmd_baton *diff_cmd_baton = diff_baton;
 
+  if (diff_cmd_baton->anchor)
+    path = svn_dirent_join(diff_cmd_baton->anchor, path, scratch_pool);
+
   if (tmpfile1)
     SVN_ERR(diff_content_changed(path,
                                  tmpfile1, tmpfile2, diff_cmd_baton->revnum1,
@@ -1166,6 +1203,9 @@ diff_file_deleted_no_diff(const char *local_dir_abspath,
 {
   struct diff_cmd_baton *diff_cmd_baton = diff_baton;
 
+  if (diff_cmd_baton->anchor)
+    path = svn_dirent_join(diff_cmd_baton->anchor, path, scratch_pool);
+
   if (state)
     *state = svn_wc_notify_state_unknown;
   if (tree_conflicted)
@@ -1190,6 +1230,9 @@ diff_dir_added(const char *local_dir_abspath,
                void *diff_baton,
                apr_pool_t *scratch_pool)
 {
+  struct diff_cmd_baton *diff_cmd_baton = diff_baton;
+  if (diff_cmd_baton->anchor)
+    path = svn_dirent_join(diff_cmd_baton->anchor, path, scratch_pool);
   if (state)
     *state = svn_wc_notify_state_unknown;
   if (tree_conflicted)
@@ -1209,6 +1252,9 @@ diff_dir_deleted(const char *local_dir_abspath,
                  void *diff_baton,
                  apr_pool_t *scratch_pool)
 {
+  struct diff_cmd_baton *diff_cmd_baton = diff_baton;
+  if (diff_cmd_baton->anchor)
+    path = svn_dirent_join(diff_cmd_baton->anchor, path, scratch_pool);
   if (state)
     *state = svn_wc_notify_state_unknown;
   if (tree_conflicted)
@@ -1229,6 +1275,9 @@ diff_dir_opened(const char *local_dir_abspath,
                 void *diff_baton,
                 apr_pool_t *scratch_pool)
 {
+  struct diff_cmd_baton *diff_cmd_baton = diff_baton;
+  if (diff_cmd_baton->anchor)
+    path = svn_dirent_join(diff_cmd_baton->anchor, path, scratch_pool);
   if (tree_conflicted)
     *tree_conflicted = FALSE;
   if (skip_children)
@@ -1249,6 +1298,9 @@ diff_dir_closed(const char *local_dir_abspath,
                 void *diff_baton,
                 apr_pool_t *scratch_pool)
 {
+  struct diff_cmd_baton *diff_cmd_baton = diff_baton;
+  if (diff_cmd_baton->anchor)
+    path = svn_dirent_join(diff_cmd_baton->anchor, path, scratch_pool);
   if (contentstate)
     *contentstate = svn_wc_notify_state_unknown;
   if (propstate)
@@ -1320,49 +1372,6 @@ convert_to_url(const char **url,
                              svn_dirent_local_style(abspath_or_url,
                                                     scratch_pool));
   return SVN_NO_ERROR;
-}
-
-/* Return the absolute path to the root of the working copy which
- * LOCAL_ABSPATH is located in, or NULL if LOCAL_ABSPATH is not within
- * a working copy. Use working copy context WC_CTX.
- * Allocate the result in RESULT_POOL.
- * Use SCRATCH_POOL for temporary allocations. */
-static const char *
-find_wc_root(const char *local_abspath, svn_wc_context_t *wc_ctx,
-             apr_pool_t *result_pool, apr_pool_t *scratch_pool)
-{
-  svn_boolean_t wc_root_found;
-  apr_pool_t *iterpool;
-
-  wc_root_found = FALSE;
-  iterpool = svn_pool_create(scratch_pool);
-  while (! wc_root_found && *local_abspath)
-    {
-      svn_error_t *err;
-
-      svn_pool_clear(iterpool);
-
-      err = svn_wc_is_wc_root2(&wc_root_found, wc_ctx, local_abspath,
-                               iterpool);
-      if (err)
-        {
-          /* Ignore all errors. We don't care, because if all we get is
-           * errors, the path is not in a working copy. */
-          svn_error_clear(err);
-        }
-
-      if (svn_dirent_is_root(local_abspath, strlen(local_abspath)))
-        break;
-
-      if (! wc_root_found)
-        local_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
-    }
-  svn_pool_destroy(iterpool);
-
-  if (wc_root_found)
-    return apr_pstrdup(result_pool, local_abspath);
-
-  return NULL;
 }
 
 /** Check if paths PATH1 and PATH2 are urls and if the revisions REVISION1
@@ -1604,6 +1613,7 @@ diff_wc_wc(const char *path1,
 {
   const char *abspath1;
   svn_error_t *err;
+  svn_node_kind_t kind;
 
   SVN_ERR_ASSERT(! svn_path_is_url(path1));
   SVN_ERR_ASSERT(! svn_path_is_url(path2));
@@ -1640,8 +1650,15 @@ diff_wc_wc(const char *path1,
 
   callback_baton->revnum2 = SVN_INVALID_REVNUM;  /* WC */
 
+  SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, abspath1, FALSE, pool));
+
+  if (kind != svn_node_dir)
+    callback_baton->anchor = svn_dirent_dirname(path1, pool);
+  else
+    callback_baton->anchor = path1;
+
   SVN_ERR(svn_wc_diff6(ctx->wc_ctx,
-                       path1,
+                       abspath1,
                        callbacks, callback_baton,
                        depth,
                        ignore_ancestry, show_copies_as_adds,
@@ -1843,12 +1860,16 @@ diff_repos_wc(const char *path1,
                                                ctx, pool));
   callback_baton->ra_session = ra_session;
   if (use_git_diff_format)
-    callback_baton->wc_root_abspath = find_wc_root(anchor_abspath, ctx->wc_ctx,
-                                                   pool, pool);
+    {
+      SVN_ERR(svn_wc_get_wc_root(&callback_baton->wc_root_abspath,
+                                 ctx->wc_ctx, anchor_abspath,
+                                 pool, pool));
+    }
+  callback_baton->anchor = anchor;
 
   SVN_ERR(svn_wc_get_diff_editor6(&diff_editor, &diff_edit_baton,
                                   ctx->wc_ctx,
-                                  anchor,
+                                  anchor_abspath,
                                   target,
                                   callbacks, callback_baton,
                                   depth,
@@ -2181,7 +2202,7 @@ svn_client_diff5(const apr_array_header_t *options,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
-  struct diff_cmd_baton diff_cmd_baton;
+  struct diff_cmd_baton diff_cmd_baton = { 0 };
   svn_wc_diff_callbacks4_t diff_callbacks;
 
   /* We will never do a pegged diff from here. */
@@ -2195,7 +2216,7 @@ svn_client_diff5(const apr_array_header_t *options,
                                                   diff_file_deleted_with_diff;
   diff_callbacks.dir_added =  diff_dir_added;
   diff_callbacks.dir_deleted = diff_dir_deleted;
-  diff_callbacks.dir_props_changed = diff_props_changed;
+  diff_callbacks.dir_props_changed = diff_dir_props_changed;
   diff_callbacks.dir_opened = diff_dir_opened;
   diff_callbacks.dir_closed = diff_dir_closed;
 
@@ -2219,6 +2240,7 @@ svn_client_diff5(const apr_array_header_t *options,
   diff_cmd_baton.visited_paths = apr_hash_make(pool);
   diff_cmd_baton.ra_session = NULL;
   diff_cmd_baton.wc_root_abspath = NULL;
+  diff_cmd_baton.anchor = NULL;
 
   return do_diff(&diff_callbacks, &diff_cmd_baton, ctx,
                  path1, path2, revision1, revision2, &peg_revision,
@@ -2246,7 +2268,7 @@ svn_client_diff_peg5(const apr_array_header_t *options,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool)
 {
-  struct diff_cmd_baton diff_cmd_baton;
+  struct diff_cmd_baton diff_cmd_baton = { 0 };
   svn_wc_diff_callbacks4_t diff_callbacks;
 
   /* setup callback and baton */
@@ -2256,7 +2278,7 @@ svn_client_diff_peg5(const apr_array_header_t *options,
                                                   diff_file_deleted_with_diff;
   diff_callbacks.dir_added =  diff_dir_added;
   diff_callbacks.dir_deleted = diff_dir_deleted;
-  diff_callbacks.dir_props_changed = diff_props_changed;
+  diff_callbacks.dir_props_changed = diff_dir_props_changed;
   diff_callbacks.dir_opened = diff_dir_opened;
   diff_callbacks.dir_closed = diff_dir_closed;
 
@@ -2280,6 +2302,7 @@ svn_client_diff_peg5(const apr_array_header_t *options,
   diff_cmd_baton.visited_paths = apr_hash_make(pool);
   diff_cmd_baton.ra_session = NULL;
   diff_cmd_baton.wc_root_abspath = NULL;
+  diff_cmd_baton.anchor = NULL;
 
   return do_diff(&diff_callbacks, &diff_cmd_baton, ctx,
                  path, path, start_revision, end_revision, peg_revision,
