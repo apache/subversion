@@ -943,7 +943,6 @@ svn_error_t *
 svn_client__handle_externals(apr_hash_t *externals_old,
                              apr_hash_t *externals_new,
                              apr_hash_t *ambient_depths,
-                             const char *anchor_abspath,
                              const char *repos_root_url,
                              svn_depth_t requested_depth,
                              svn_boolean_t delete_only,
