@@ -1867,24 +1867,29 @@ diff_repos_wc(const char *path1,
     }
   callback_baton->anchor = anchor;
 
+  SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
+                                SVN_RA_CAPABILITY_DEPTH, pool));
+
   SVN_ERR(svn_wc_get_diff_editor6(&diff_editor, &diff_edit_baton,
                                   ctx->wc_ctx,
                                   anchor_abspath,
                                   target,
-                                  callbacks, callback_baton,
                                   depth,
                                   ignore_ancestry,
                                   show_copies_as_adds,
                                   use_git_diff_format,
                                   rev2_is_base,
                                   reverse,
+                                  server_supports_depth,
                                   changelists,
+                                  callbacks, callback_baton,
                                   ctx->cancel_func, ctx->cancel_baton,
                                   pool, pool));
 
   /* Tell the RA layer we want a delta to change our txn to URL1 */
   SVN_ERR(svn_client__get_revision_number(&rev, NULL, ctx->wc_ctx,
-                                          (strcmp(path1, url1) == 0) ? NULL : abspath1,
+                                          (strcmp(path1, url1) == 0)
+                                                    ? NULL : abspath1,
                                           ra_session, revision1, pool));
 
   if (!reverse)
@@ -1896,14 +1901,11 @@ diff_repos_wc(const char *path1,
                           &reporter, &reporter_baton,
                           rev,
                           target,
-                          depth,
+                          svn_depth_unknown,
                           ignore_ancestry,
                           TRUE,  /* text_deltas */
                           url1,
                           diff_editor, diff_edit_baton, pool));
-
-  SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
-                                SVN_RA_CAPABILITY_DEPTH, pool));
 
   /* Create a txn mirror of path2;  the diff editor will print
      diffs in reverse.  :-)  */
