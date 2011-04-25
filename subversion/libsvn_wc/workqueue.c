@@ -89,7 +89,6 @@ sync_file_flags(svn_wc__db_t *db,
 {
   svn_boolean_t did_set;
 
-  SVN_DBG(("here: '%s'\n", local_abspath));
   SVN_ERR(svn_wc__maybe_set_read_only(&did_set, db, local_abspath,
                                       scratch_pool));
   if (!did_set)
