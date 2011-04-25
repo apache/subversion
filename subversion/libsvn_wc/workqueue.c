@@ -89,17 +89,29 @@ sync_file_flags(svn_wc__db_t *db,
 {
   svn_boolean_t did_set;
 
+  SVN_DBG(("here: '%s'\n", local_abspath));
   SVN_ERR(svn_wc__maybe_set_read_only(&did_set, db, local_abspath,
                                       scratch_pool));
   if (!did_set)
     SVN_ERR(svn_io_set_file_read_write(local_abspath, FALSE, scratch_pool));
 
+#ifndef WIN32
   SVN_ERR(svn_wc__maybe_set_executable(&did_set, db, local_abspath,
                                        scratch_pool));
 
   if (!did_set)
-    SVN_ERR(svn_io_set_file_executable(local_abspath, FALSE, FALSE,
-                                       scratch_pool));
+    {
+      svn_node_kind_t kind;
+
+      SVN_ERR(svn_io_check_path(local_abspath, &kind, scratch_pool));
+
+      /* We want to preserve whatever execute bits may be existent on
+         directories. */
+      if (kind != svn_node_dir)
+        SVN_ERR(svn_io_set_file_executable(local_abspath, FALSE, FALSE,
+                                           scratch_pool));
+    }
+#endif
 
   return SVN_NO_ERROR;
 }
