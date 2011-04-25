@@ -358,9 +358,12 @@ svn_wc__maybe_set_executable(svn_boolean_t *did_set,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   SVN_ERR(svn_wc__db_read_node_install_info(NULL, &status, &kind, NULL, NULL,
-                                            &props,
+                                            NULL,
                                             db, local_abspath,
                                             scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_wc__db_read_props(&props, db, local_abspath, scratch_pool,
+                                scratch_pool));
 
   if (kind != svn_wc__db_kind_file
       || status != svn_wc__db_status_normal
@@ -398,9 +401,11 @@ svn_wc__maybe_set_read_only(svn_boolean_t *did_set,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   SVN_ERR(svn_wc__db_read_node_install_info(NULL, &status, &kind, NULL, NULL,
-                                            &props,
-                                            db, local_abspath,
+                                            NULL, db, local_abspath,
                                             scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_wc__db_read_props(&props, db, local_abspath, scratch_pool,
+                                scratch_pool));
 
   if (kind != svn_wc__db_kind_file
       || status != svn_wc__db_status_normal
