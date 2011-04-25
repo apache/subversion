@@ -1576,6 +1576,7 @@ struct diff_callbacks3_wrapper_baton {
   svn_wc__db_t *db;
   void *baton;
   const char *anchor;
+  const char *anchor_abspath;
 };
 
 /* An svn_wc_diff_callbacks4_t function for wrapping
@@ -1598,11 +1599,13 @@ wrap_4to3_file_changed(const char *local_dir_abspath,
                        apr_pool_t *scratch_pool)
 {
   struct diff_callbacks3_wrapper_baton *b = diff_baton;
-  svn_wc_adm_access_t *adm_access = NULL;
+  svn_wc_adm_access_t *adm_access;
+  const char *dir = svn_relpath_dirname(path, scratch_pool);
 
-  if (local_dir_abspath)
-    adm_access = svn_wc__adm_retrieve_internal2(b->db, local_dir_abspath,
-                                                scratch_pool);
+  adm_access = svn_wc__adm_retrieve_internal2(
+                        b->db,
+                        svn_dirent_join(b->anchor_abspath, dir, scratch_pool),
+                        scratch_pool);
 
   return b->callbacks3->file_changed(adm_access, contentstate, propstate,
                                      tree_conflicted,
@@ -1635,11 +1638,13 @@ wrap_4to3_file_added(const char *local_dir_abspath,
                      apr_pool_t *scratch_pool)
 {
   struct diff_callbacks3_wrapper_baton *b = diff_baton;
-  svn_wc_adm_access_t *adm_access = NULL;
+  svn_wc_adm_access_t *adm_access;
+  const char *dir = svn_relpath_dirname(path, scratch_pool);
 
-  if (local_dir_abspath)
-    adm_access = svn_wc__adm_retrieve_internal2(b->db, local_dir_abspath,
-                                                scratch_pool);
+  adm_access = svn_wc__adm_retrieve_internal2(
+                        b->db,
+                        svn_dirent_join(b->anchor_abspath, dir, scratch_pool),
+                        scratch_pool);
 
   return b->callbacks3->file_added(adm_access, contentstate, propstate,
                                    tree_conflicted,
@@ -1666,11 +1671,13 @@ wrap_4to3_file_deleted(const char *local_dir_abspath,
                        apr_pool_t *scratch_pool)
 {
   struct diff_callbacks3_wrapper_baton *b = diff_baton;
-  svn_wc_adm_access_t *adm_access = NULL;
+  svn_wc_adm_access_t *adm_access;
+  const char *dir = svn_relpath_dirname(path, scratch_pool);
 
-  if (local_dir_abspath)
-    adm_access = svn_wc__adm_retrieve_internal2(b->db, local_dir_abspath,
-                                                scratch_pool);
+  adm_access = svn_wc__adm_retrieve_internal2(
+                        b->db,
+                        svn_dirent_join(b->anchor_abspath, dir, scratch_pool),
+                        scratch_pool);
 
   return b->callbacks3->file_deleted(adm_access, state, tree_conflicted,
                                      svn_dirent_join(b->anchor, path,
@@ -1694,11 +1701,12 @@ wrap_4to3_dir_added(const char *local_dir_abspath,
                     apr_pool_t *scratch_pool)
 {
   struct diff_callbacks3_wrapper_baton *b = diff_baton;
-  svn_wc_adm_access_t *adm_access = NULL;
+  svn_wc_adm_access_t *adm_access;
 
-  if (local_dir_abspath)
-    adm_access = svn_wc__adm_retrieve_internal2(b->db, local_dir_abspath,
-                                                scratch_pool);
+  adm_access = svn_wc__adm_retrieve_internal2(
+                        b->db,
+                        svn_dirent_join(b->anchor_abspath, path, scratch_pool),
+                        scratch_pool);
 
   return b->callbacks3->dir_added(adm_access, state, tree_conflicted,
                                   svn_dirent_join(b->anchor, path,
@@ -1717,11 +1725,12 @@ wrap_4to3_dir_deleted(const char *local_dir_abspath,
                       apr_pool_t *scratch_pool)
 {
   struct diff_callbacks3_wrapper_baton *b = diff_baton;
-  svn_wc_adm_access_t *adm_access = NULL;
+  svn_wc_adm_access_t *adm_access;
 
-  if (local_dir_abspath)
-    adm_access = svn_wc__adm_retrieve_internal2(b->db, local_dir_abspath,
-                                                scratch_pool);
+  adm_access = svn_wc__adm_retrieve_internal2(
+                        b->db,
+                        svn_dirent_join(b->anchor_abspath, path, scratch_pool),
+                        scratch_pool);
 
   return b->callbacks3->dir_deleted(adm_access, state, tree_conflicted,
                                     svn_dirent_join(b->anchor, path,
@@ -1742,11 +1751,12 @@ wrap_4to3_dir_props_changed(const char *local_dir_abspath,
                             apr_pool_t *scratch_pool)
 {
   struct diff_callbacks3_wrapper_baton *b = diff_baton;
-  svn_wc_adm_access_t *adm_access = NULL;
+  svn_wc_adm_access_t *adm_access;
 
-  if (local_dir_abspath)
-    adm_access = svn_wc__adm_retrieve_internal2(b->db, local_dir_abspath,
-                                                scratch_pool);
+  adm_access = svn_wc__adm_retrieve_internal2(
+                        b->db,
+                        svn_dirent_join(b->anchor_abspath, path, scratch_pool),
+                        scratch_pool);
 
   return b->callbacks3->dir_props_changed(adm_access, propstate,
                                           tree_conflicted,
@@ -1768,11 +1778,12 @@ wrap_4to3_dir_opened(const char *local_dir_abspath,
                      apr_pool_t *scratch_pool)
 {
   struct diff_callbacks3_wrapper_baton *b = diff_baton;
-  svn_wc_adm_access_t *adm_access = NULL;
+  svn_wc_adm_access_t *adm_access;
 
-  if (local_dir_abspath)
-    adm_access = svn_wc__adm_retrieve_internal2(b->db, local_dir_abspath,
-                                                scratch_pool);
+  adm_access = svn_wc__adm_retrieve_internal2(
+                        b->db,
+                        svn_dirent_join(b->anchor_abspath, path, scratch_pool),
+                        scratch_pool);
   if (skip_children)
     *skip_children = FALSE;
 
@@ -1794,11 +1805,12 @@ wrap_4to3_dir_closed(const char *local_dir_abspath,
                      apr_pool_t *scratch_pool)
 {
   struct diff_callbacks3_wrapper_baton *b = diff_baton;
-  svn_wc_adm_access_t *adm_access = NULL;
+  svn_wc_adm_access_t *adm_access;
 
-  if (local_dir_abspath)
-    adm_access = svn_wc__adm_retrieve_internal2(b->db, local_dir_abspath,
-                                                scratch_pool);
+  adm_access = svn_wc__adm_retrieve_internal2(
+                        b->db,
+                        svn_dirent_join(b->anchor_abspath, path, scratch_pool),
+                        scratch_pool);
 
   return b->callbacks3->dir_closed(adm_access, contentstate, propstate,
                                    tree_conflicted,
@@ -1846,11 +1858,12 @@ svn_wc_get_diff_editor5(svn_wc_adm_access_t *anchor,
   b->baton = callback_baton;
   b->db = db;
   b->anchor = svn_wc_adm_access_path(anchor);
+  b->anchor_abspath = svn_wc__adm_access_abspath(anchor);
 
   SVN_ERR(svn_wc_get_diff_editor6(editor,
                                    edit_baton,
                                    wc_ctx,
-                                   svn_wc__adm_access_abspath(anchor),
+                                   b->anchor_abspath,
                                    target,
                                    depth,
                                    ignore_ancestry,
@@ -2002,10 +2015,10 @@ svn_wc_diff5(svn_wc_adm_access_t *anchor,
   b->callbacks3 = callbacks;
   b->baton = callback_baton;
   b->anchor = svn_wc_adm_access_path(anchor);
+  b->anchor_abspath = svn_wc__adm_access_abspath(anchor);
 
   SVN_ERR(svn_wc_diff6(wc_ctx,
-                       svn_dirent_join(svn_wc__adm_access_abspath(anchor),
-                                       target, pool),
+                       svn_dirent_join(b->anchor_abspath, target, pool),
                        &diff_callbacks3_wrapper,
                        b,
                        depth,
