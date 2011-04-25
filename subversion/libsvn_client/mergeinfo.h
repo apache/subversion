@@ -265,9 +265,14 @@ svn_client__get_wc_or_repos_mergeinfo_catalog(
    session whose session URL maps to PATH_OR_URL's URL, or NULL.
    If RANGE_YOUNGEST and RANGE_OLDEST are valid, use them to bound the
    revision ranges of returned mergeinfo.  See svn_ra_get_location_segments()
-   for the rules governing PEG_REVISION, START_REVISION, and END_REVISION.*/
+   for the rules governing PEG_REVISION, START_REVISION, and END_REVISION.
+
+   If HAS_REV_ZERO_HISTORY is not NULL, then set *HAS_REV_ZERO_HISTORY to
+   TRUE if the natural history of PATH_OR_URL@PEG_REVISION includes
+   revision 0.  Set *HAS_REV_ZERO_HISTORY to FALSE otherwise. */
 svn_error_t *
 svn_client__get_history_as_mergeinfo(svn_mergeinfo_t *mergeinfo_p,
+                                     svn_boolean_t *has_rev_zero_history,
                                      const char *path_or_url,
                                      const svn_opt_revision_t *peg_revision,
                                      svn_revnum_t range_youngest,

@@ -1017,7 +1017,7 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
           peg_rev.kind = svn_opt_revision_number;
           peg_rev.value.number = base_revision;
           SVN_ERR(svn_client__get_history_as_mergeinfo(
-            &implicit_mergeinfo,
+            &implicit_mergeinfo, NULL,
             local_abspath, &peg_rev,
             base_revision,
             SVN_INVALID_REVNUM,
@@ -3536,6 +3536,7 @@ get_full_mergeinfo(svn_mergeinfo_t *recorded_mergeinfo,
           peg_revision.kind = svn_opt_revision_number;
           peg_revision.value.number = target_rev;
           SVN_ERR(svn_client__get_history_as_mergeinfo(implicit_mergeinfo,
+                                                       NULL,
                                                        url, &peg_revision,
                                                        start, end,
                                                        ra_session, ctx,
@@ -4154,10 +4155,10 @@ find_gaps_in_merge_source_history(svn_revnum_t *gap_start,
   /* Get URL1@REVISION1:URL2@REVISION2 as mergeinfo. */
   peg_rev.kind = svn_opt_revision_number;
   peg_rev.value.number = young_rev;
-  SVN_ERR(svn_client__get_history_as_mergeinfo(&implicit_src_mergeinfo, url,
-                                               &peg_rev, young_rev, old_rev,
-                                               ra_session, merge_b->ctx,
-                                               scratch_pool));
+  SVN_ERR(svn_client__get_history_as_mergeinfo(&implicit_src_mergeinfo, NULL,
+                                               url, &peg_rev, young_rev,
+                                               old_rev, ra_session,
+                                               merge_b->ctx, scratch_pool));
 
   rangelist = apr_hash_get(implicit_src_mergeinfo,
                            merge_src_canon_path,

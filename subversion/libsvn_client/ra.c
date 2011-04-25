@@ -762,6 +762,8 @@ svn_client__get_youngest_common_ancestor(const char **ancestor_path,
   svn_revnum_t yc_revision = SVN_INVALID_REVNUM;
   const char *yc_path = NULL;
   svn_opt_revision_t revision1, revision2;
+  svn_boolean_t has_rev_zero_history1;
+  svn_boolean_t has_rev_zero_history2;
 
   revision1.kind = revision2.kind = svn_opt_revision_number;
   revision1.value.number = rev1;
@@ -769,12 +771,16 @@ svn_client__get_youngest_common_ancestor(const char **ancestor_path,
 
   /* We're going to cheat and use history-as-mergeinfo because it
      saves us a bunch of annoying custom data comparisons and such. */
-  SVN_ERR(svn_client__get_history_as_mergeinfo(&history1, path_or_url1,
+  SVN_ERR(svn_client__get_history_as_mergeinfo(&history1,
+                                               &has_rev_zero_history1,
+                                               path_or_url1,
                                                &revision1,
                                                SVN_INVALID_REVNUM,
                                                SVN_INVALID_REVNUM,
                                                NULL, ctx, pool));
-  SVN_ERR(svn_client__get_history_as_mergeinfo(&history2, path_or_url2,
+  SVN_ERR(svn_client__get_history_as_mergeinfo(&history2,
+                                               &has_rev_zero_history2,
+                                               path_or_url2,
                                                &revision2,
                                                SVN_INVALID_REVNUM,
                                                SVN_INVALID_REVNUM,
@@ -809,6 +815,12 @@ svn_client__get_youngest_common_ancestor(const char **ancestor_path,
                 }
             }
         }
+    }
+
+  if (!yc_path && has_rev_zero_history1 && has_rev_zero_history2)
+    {
+      yc_path = "/";
+      yc_revision = 0;
     }
 
   *ancestor_path = yc_path;
