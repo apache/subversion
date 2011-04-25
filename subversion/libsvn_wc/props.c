@@ -2018,7 +2018,6 @@ do_propset(svn_wc__db_t *db,
   svn_wc_notify_action_t notify_action;
   svn_wc__db_kind_t kind;
   svn_wc__db_status_t status;
-  const char *dir_abspath;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -2033,13 +2032,6 @@ do_propset(svn_wc__db_t *db,
                                NULL, NULL, NULL, NULL, NULL, NULL,
                                db, local_abspath,
                                scratch_pool, scratch_pool));
-
-  if (kind == svn_wc__db_kind_dir)
-    dir_abspath = local_abspath;
-  else
-    dir_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
-
-  SVN_ERR(svn_wc__write_check(db, dir_abspath, scratch_pool));
 
   if (prop_kind == svn_prop_wc_kind)
     return svn_error_return(wcprop_set(db, local_abspath, name, value,
@@ -2257,11 +2249,28 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
 {
   enum svn_prop_kind prop_kind = svn_property_kind(NULL, name);
   apr_hash_t *changelist_hash = NULL;
+  svn_wc__db_kind_t kind;
+  const char *dir_abspath;
 
   /* we don't do entry properties here */
   if (prop_kind == svn_prop_entry_kind)
     return svn_error_createf(SVN_ERR_BAD_PROP_KIND, NULL,
                              _("Property '%s' is an entry property"), name);
+
+  /* We have to do this little DIR_ABSPATH dance for backwards compat.
+     But from 1.7 onwards, all locks are of infinite depth, and from 1.6
+     backward we never call this API with depth > empty, so we only need
+     to do the write check once per call, here (and not for every node in
+     the node walker). */
+  SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, local_abspath, TRUE,
+                               scratch_pool));
+
+  if (kind == svn_wc__db_kind_dir)
+    dir_abspath = local_abspath;
+  else
+    dir_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+
+  SVN_ERR(svn_wc__write_check(wc_ctx->db, dir_abspath, scratch_pool));
 
   if (changelists && changelists->nelts)
     SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelists,
