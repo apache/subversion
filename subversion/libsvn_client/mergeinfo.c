@@ -633,6 +633,7 @@ svn_client__get_wc_or_repos_mergeinfo_catalog(
 
 svn_error_t *
 svn_client__get_history_as_mergeinfo(svn_mergeinfo_t *mergeinfo_p,
+                                     svn_boolean_t *has_rev_zero_history,
                                      const char *path_or_url,
                                      const svn_opt_revision_t *peg_revision,
                                      svn_revnum_t range_youngest,
@@ -673,6 +674,18 @@ svn_client__get_history_as_mergeinfo(svn_mergeinfo_t *mergeinfo_p,
   SVN_ERR(svn_client__repos_location_segments(&segments, session, "",
                                               peg_revnum, range_youngest,
                                               range_oldest, ctx, pool));
+
+  if (has_rev_zero_history)
+    {
+      *has_rev_zero_history = FALSE;
+        if (segments->nelts)
+          {
+            svn_location_segment_t *oldest_segment =
+              APR_ARRAY_IDX(segments, 0, svn_location_segment_t *);
+            if (oldest_segment->range_start == 0)
+              *has_rev_zero_history = TRUE;
+          }
+    }
 
   SVN_ERR(svn_mergeinfo__mergeinfo_from_segments(mergeinfo_p, segments, pool));
 
@@ -1704,14 +1717,14 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
     }
 
   if (!finding_merged)
-    SVN_ERR(svn_client__get_history_as_mergeinfo(&path_or_url_history,
+    SVN_ERR(svn_client__get_history_as_mergeinfo(&path_or_url_history, NULL,
                                                  path_or_url,
                                                  peg_revision,
                                                  SVN_INVALID_REVNUM,
                                                  SVN_INVALID_REVNUM,
                                                  NULL, ctx, scratch_pool));
 
-  SVN_ERR(svn_client__get_history_as_mergeinfo(&source_history,
+  SVN_ERR(svn_client__get_history_as_mergeinfo(&source_history, NULL,
                                                merge_source_url,
                                                real_src_peg_revision,
                                                SVN_INVALID_REVNUM,
