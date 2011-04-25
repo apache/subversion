@@ -108,29 +108,32 @@ svn_wc__expand_keywords(apr_hash_t **keywords,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 
-/* If the SVN_PROP_EXECUTABLE property is present at all, then set
-   LOCAL_ABSPATH in DB executable.  If DID_SET is non-null, then set
-   *DID_SET to TRUE if did set LOCAL_ABSPATH executable, or to FALSE if not.
+/* Sync the write and execute bit for LOCAL_ABSPATH with what is currently
+   indicated by the properties in the database:
+
+    * If the SVN_PROP_NEEDS_LOCK property is present and there is no
+      lock token for the file in the working copy, set LOCAL_ABSPATH to
+      read-only.
+    * If the SVN_PROP_EXECUTABLE property is present at all, then set
+      LOCAL_ABSPATH executable.
+
+   If DID_SET is non-null, then liberally set *DID_SET to TRUE if we might
+   have change the permissions on LOCAL_ABSPATH.  (A TRUE value in *DID_SET
+   does not guarantee that we changed the permissions, simply that more
+   investigation is warrented.)
+
+   This function looks at the current values of the above properties,
+   including any scheduled-but-not-yet-committed changes.
+ 
+   If LOCAL_ABSPATH is a directory, this function is a no-op.
 
    Use SCRATCH_POOL for any temporary allocations.
-*/
+ */
 svn_error_t *
-svn_wc__maybe_set_executable(svn_boolean_t *did_set,
-                             svn_wc__db_t *db,
-                             const char *local_abspath,
-                             apr_pool_t *scratch_pool);
-
-/* If the SVN_PROP_NEEDS_LOCK property is present and there is no
-   lock token for the file in the working copy, set LOCAL_ABSPATH to
-   read-only. If DID_SET is non-null, then set *DID_SET to TRUE if
-   did set LOCAL_ABSPATH read-write, or to FALSE if not.
-
-   Use SCRATCH_POOL for any temporary allocations.
-*/
-svn_error_t * svn_wc__maybe_set_read_only(svn_boolean_t *did_set,
-                                          svn_wc__db_t *db,
-                                          const char *local_abspath,
-                                          apr_pool_t *scratch_pool);
+svn_wc__sync_flags_with_props(svn_boolean_t *did_set,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              apr_pool_t *scratch_pool);
 
 /* Internal version of svn_wc_translated_stream2(), which see. */
 svn_error_t *

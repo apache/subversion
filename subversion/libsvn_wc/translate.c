@@ -342,89 +342,71 @@ svn_wc__expand_keywords(apr_hash_t **keywords,
 }
 
 svn_error_t *
-svn_wc__maybe_set_executable(svn_boolean_t *did_set,
-                             svn_wc__db_t *db,
-                             const char *local_abspath,
-                             apr_pool_t *scratch_pool)
-{
-#ifndef WIN32
-  svn_wc__db_status_t status;
-  svn_wc__db_kind_t kind;
-  apr_hash_t *props;
-
-  if (did_set)
-    *did_set = FALSE;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(svn_wc__db_read_node_install_info(NULL, &status, &kind, NULL, NULL,
-                                            NULL,
-                                            db, local_abspath,
-                                            scratch_pool, scratch_pool));
-
-  SVN_ERR(svn_wc__db_read_props(&props, db, local_abspath, scratch_pool,
-                                scratch_pool));
-
-  if (kind != svn_wc__db_kind_file
-      || status != svn_wc__db_status_normal
-      || props == NULL
-      || ! apr_hash_get(props, SVN_PROP_EXECUTABLE, APR_HASH_KEY_STRING))
-    return SVN_NO_ERROR; /* Not executable */
-
-  SVN_ERR(svn_io_set_file_executable(local_abspath, TRUE, FALSE,
-                                     scratch_pool));
-  if (did_set)
-    *did_set = TRUE;
-#else
-  if (did_set)
-    *did_set = FALSE;
-#endif
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc__maybe_set_read_only(svn_boolean_t *did_set,
-                            svn_wc__db_t *db,
-                            const char *local_abspath,
-                            apr_pool_t *scratch_pool)
+svn_wc__sync_flags_with_props(svn_boolean_t *did_set,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
   svn_wc__db_kind_t kind;
   svn_wc__db_lock_t *lock;
-  apr_hash_t *props;
+  apr_hash_t *props = NULL;
 
   if (did_set)
     *did_set = FALSE;
 
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  /* ### We'll consolidate these info gathering statements in a future
+         commit. */
 
-  SVN_ERR(svn_wc__db_read_node_install_info(NULL, &status, &kind, NULL, NULL,
-                                            NULL, db, local_abspath,
-                                            scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, &lock, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL,
+                               db, local_abspath,
+                               scratch_pool, scratch_pool));
 
   SVN_ERR(svn_wc__db_read_props(&props, db, local_abspath, scratch_pool,
                                 scratch_pool));
 
-  if (kind != svn_wc__db_kind_file
-      || status != svn_wc__db_status_normal
-      || props == NULL
-      || ! apr_hash_get(props, SVN_PROP_NEEDS_LOCK, APR_HASH_KEY_STRING))
-    return SVN_NO_ERROR; /* Doesn't need lock handling */
+  /* We actually only care about the following flags on files, so just
+     early-out for all other types. */
+  if (kind != svn_wc__db_kind_file)
+    return SVN_NO_ERROR;
 
-  SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, &lock,
-                                   NULL, NULL, NULL, NULL, NULL,
-                                   db, local_abspath,
-                                   scratch_pool, scratch_pool));
-
-  if (lock)
-    return SVN_NO_ERROR; /* We have a lock */
-
-  SVN_ERR(svn_io_set_file_read_only(local_abspath, FALSE, scratch_pool));
+  /* If we get this far, we're going to change *something*, so just set
+     the flag appropriately. */
   if (did_set)
     *did_set = TRUE;
+
+  /* Handle the read-write bit. */
+  if (status != svn_wc__db_status_normal
+      || props == NULL
+      || ! apr_hash_get(props, SVN_PROP_NEEDS_LOCK, APR_HASH_KEY_STRING))
+    {
+      SVN_ERR(svn_io_set_file_read_write(local_abspath, FALSE, scratch_pool));
+    }
+  else
+    {
+      if (! lock)
+        SVN_ERR(svn_io_set_file_read_only(local_abspath, FALSE, scratch_pool));
+    }
+
+/* Windows doesn't care about the execute bit. */
+#ifndef WIN32
+
+  if ( ( status != svn_wc__db_status_normal
+        && status != svn_wc__db_status_added )
+      || props == NULL
+      || ! apr_hash_get(props, SVN_PROP_EXECUTABLE, APR_HASH_KEY_STRING))
+    {
+      /* Turn off the execute bit */
+      SVN_ERR(svn_io_set_file_executable(local_abspath, FALSE, FALSE,
+                                         scratch_pool));
+    }
+  else
+    SVN_ERR(svn_io_set_file_executable(local_abspath, TRUE, FALSE,
+                                       scratch_pool));
+#endif
 
   return SVN_NO_ERROR;
 }

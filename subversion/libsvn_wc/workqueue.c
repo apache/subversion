@@ -87,30 +87,8 @@ sync_file_flags(svn_wc__db_t *db,
                 const char *local_abspath,
                 apr_pool_t *scratch_pool)
 {
-  svn_boolean_t did_set;
-
-  SVN_ERR(svn_wc__maybe_set_read_only(&did_set, db, local_abspath,
-                                      scratch_pool));
-  if (!did_set)
-    SVN_ERR(svn_io_set_file_read_write(local_abspath, FALSE, scratch_pool));
-
-#ifndef WIN32
-  SVN_ERR(svn_wc__maybe_set_executable(&did_set, db, local_abspath,
-                                       scratch_pool));
-
-  if (!did_set)
-    {
-      svn_node_kind_t kind;
-
-      SVN_ERR(svn_io_check_path(local_abspath, &kind, scratch_pool));
-
-      /* We want to preserve whatever execute bits may be existent on
-         directories. */
-      if (kind != svn_node_dir)
-        SVN_ERR(svn_io_set_file_executable(local_abspath, FALSE, FALSE,
-                                           scratch_pool));
-    }
-#endif
+  SVN_ERR(svn_wc__sync_flags_with_props(NULL, db, local_abspath,
+                                        scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -370,11 +348,10 @@ svn_wc__wq_build_base_remove(svn_skel_t **work_item,
  * clobbering timestamps unnecessarily).
  *
  * Set the working file's executability according to its svn:executable
- * property, or, if REMOVE_EXECUTABLE is TRUE, set it to not executable.
+ * property.
  *
  * Set the working file's read-only attribute according to its properties
- * and lock status (see svn_wc__maybe_set_read_only()), or, if
- * REMOVE_READ_ONLY is TRUE, set it to writable.
+ * and lock status (see svn_wc__maybe_set_read_only()).
  *
  * If the working file was re-translated or had its executability or
  * read-only state changed,
@@ -387,13 +364,11 @@ static svn_error_t *
 install_committed_file(svn_boolean_t *overwrote_working,
                        svn_wc__db_t *db,
                        const char *file_abspath,
-                       svn_boolean_t remove_executable,
-                       svn_boolean_t remove_read_only,
                        svn_cancel_func_t cancel_func,
                        void *cancel_baton,
                        apr_pool_t *scratch_pool)
 {
-  svn_boolean_t same, did_set;
+  svn_boolean_t same;
   const char *tmp_wfile;
   svn_boolean_t special;
 
@@ -467,49 +442,13 @@ install_committed_file(svn_boolean_t *overwrote_working,
     }
 
   /* ### should be using OP_SYNC_FILE_FLAGS, or an internal version of
-     ### that here. do we need to set *OVERWROTE_WORKING?  */
+     ### that here. do we need to set *OVERWROTE_WORKING? */
 
-  if (remove_executable)
-    {
-      /* No need to chmod -x on a new file: new files don't have it. */
-      if (same)
-        SVN_ERR(svn_io_set_file_executable(file_abspath,
-                                           FALSE, /* chmod -x */
-                                           FALSE, scratch_pool));
-      /* ### We should avoid setting 'overwrote_working' here if we didn't
-       * change the executability. */
-      *overwrote_working = TRUE; /* entry needs wc-file's timestamp  */
-    }
-  else
-    {
-      /* Set the working file's execute bit if props dictate. */
-      SVN_ERR(svn_wc__maybe_set_executable(&did_set, db, file_abspath,
-                                           scratch_pool));
-      if (did_set)
-        /* okay, so we didn't -overwrite- the working file, but we changed
-           its timestamp, which is the point of returning this flag. :-) */
-        *overwrote_working = TRUE;
-    }
-
-  if (remove_read_only)
-    {
-      /* No need to make a new file read_write: new files already are. */
-      if (same)
-        SVN_ERR(svn_io_set_file_read_write(file_abspath, FALSE,
-                                           scratch_pool));
-      /* ### We should avoid setting 'overwrote_working' here if we didn't
-       * change the read-only-ness. */
-      *overwrote_working = TRUE; /* entry needs wc-file's timestamp  */
-    }
-  else
-    {
-      SVN_ERR(svn_wc__maybe_set_read_only(&did_set, db, file_abspath,
-                                          scratch_pool));
-      if (did_set)
-        /* okay, so we didn't -overwrite- the working file, but we changed
-           its timestamp, which is the point of returning this flag. :-) */
-        *overwrote_working = TRUE;
-    }
+  /* ### Re: OVERWROTE_WORKING, the following function is rather liberal
+     ### with setting that flag, so we should probably decide if we really
+     ### care about it when syncing flags. */
+  SVN_ERR(svn_wc__sync_flags_with_props(overwrote_working, db, file_abspath,
+                                        scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -517,8 +456,6 @@ install_committed_file(svn_boolean_t *overwrote_working,
 static svn_error_t *
 process_commit_file_install(svn_wc__db_t *db,
                        const char *local_abspath,
-                       svn_boolean_t remove_executable,
-                       svn_boolean_t set_read_write,
                        svn_cancel_func_t cancel_func,
                        void *cancel_baton,
                        apr_pool_t *scratch_pool)
@@ -536,7 +473,6 @@ process_commit_file_install(svn_wc__db_t *db,
 
   SVN_ERR(install_committed_file(&overwrote_working, db,
                                  local_abspath,
-                                 remove_executable, set_read_write,
                                  cancel_func, cancel_baton,
                                  scratch_pool));
 
@@ -589,24 +525,13 @@ run_file_commit(svn_wc__db_t *db,
   const svn_skel_t *arg1 = work_item->children->next;
   const char *local_relpath;
   const char *local_abspath;
-  svn_boolean_t remove_executable;
-  svn_boolean_t set_read_write;
-  apr_int64_t v;
 
   local_relpath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
   SVN_ERR(svn_wc__db_from_relpath(&local_abspath, db, wri_abspath,
                                   local_relpath, scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_skel__parse_int(&v, arg1->next, scratch_pool));
-  set_read_write = (v != 0);
-
-  SVN_ERR(svn_skel__parse_int(&v, arg1->next->next, scratch_pool));
-  remove_executable = (v != 0);
-
   return svn_error_return(
                 process_commit_file_install(db, local_abspath,
-                                            remove_executable,
-                                            set_read_write,
                                             cancel_func, cancel_baton,
                                             scratch_pool));
 }
@@ -619,42 +544,12 @@ svn_wc__wq_build_file_commit(svn_skel_t **work_item,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
 {
-  svn_boolean_t remove_executable = FALSE;
-  svn_boolean_t set_read_write = FALSE;
   const char *local_relpath;
   *work_item = svn_skel__make_empty_list(result_pool);
-
-  {
-    /* Examine propchanges here before installing the new properties in BASE
-       If the executable prop was -deleted-, remember this by setting
-       REMOVE_EXECUTABLE so that we can later tell install_committed_file() so.
-       The same applies to the needs-lock property, remembered by
-       setting SET_READ_WRITE. */
-
-    int i;
-    apr_array_header_t *propchanges;
-
-    SVN_ERR(svn_wc__internal_propdiff(&propchanges, NULL, db, local_abspath,
-                                      scratch_pool, scratch_pool));
-
-    for (i = 0; i < propchanges->nelts; i++)
-      {
-        svn_prop_t *propchange = &APR_ARRAY_IDX(propchanges, i, svn_prop_t);
-
-        if ((! strcmp(propchange->name, SVN_PROP_EXECUTABLE))
-            && (propchange->value == NULL))
-          remove_executable = TRUE;
-        else if ((! strcmp(propchange->name, SVN_PROP_NEEDS_LOCK))
-                 && (propchange->value == NULL))
-          set_read_write = TRUE;
-      }
-  }
 
   SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath,
                                 local_abspath, result_pool, scratch_pool));
 
-  svn_skel__prepend_int(remove_executable, *work_item, result_pool);
-  svn_skel__prepend_int(set_read_write, *work_item, result_pool);
   svn_skel__prepend_str(local_relpath, *work_item, result_pool);
 
   svn_skel__prepend_str(OP_FILE_COMMIT, *work_item, result_pool);
