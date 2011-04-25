@@ -2234,6 +2234,12 @@ svn_mergeinfo__mergeinfo_from_segments(svn_mergeinfo_t *mergeinfo_p,
       if (! path_ranges)
         path_ranges = apr_array_make(pool, 1, sizeof(range));
 
+      /* A svn_location_segment_t may have legitimately describe only
+         revision 0, but there is no corresponding representation for
+         this in a svn_merge_range_t. */
+      if (segment->range_start == 0 && segment->range_end == 0)
+        continue;
+
       /* Build a merge range, push it onto the list of ranges, and for
          good measure, (re)store it in the hash. */
       range = apr_pcalloc(pool, sizeof(*range));
