@@ -2018,6 +2018,7 @@ do_propset(svn_wc__db_t *db,
   svn_wc_notify_action_t notify_action;
   svn_wc__db_kind_t kind;
   svn_wc__db_status_t status;
+  svn_skel_t *work_item = NULL;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -2073,29 +2074,8 @@ do_propset(svn_wc__db_t *db,
       value = new_value;
     }
 
-  if (kind == svn_wc__db_kind_file && strcmp(name, SVN_PROP_EXECUTABLE) == 0)
-    {
-      /* If the svn:executable property was set, then chmod +x.
-         If the svn:executable property was deleted (NULL value passed
-         in), then chmod -x. */
-      if (value == NULL)
-        SVN_ERR(svn_io_set_file_executable(local_abspath, FALSE, TRUE,
-                                           scratch_pool));
-      else
-        SVN_ERR(svn_io_set_file_executable(local_abspath, TRUE, TRUE,
-                                           scratch_pool));
-    }
-
-  if (kind == svn_wc__db_kind_file && strcmp(name, SVN_PROP_NEEDS_LOCK) == 0)
-    {
-      /* If the svn:needs-lock property was set to NULL, set the file
-         to read-write */
-      if (value == NULL)
-        SVN_ERR(svn_io_set_file_read_write(local_abspath, FALSE,
-                                           scratch_pool));
-
-      /* If not, we'll set the file to read-only at commit time. */
-    }
+  SVN_ERR(svn_wc__wq_build_sync_file_flags(&work_item, db, local_abspath,
+                                           scratch_pool, scratch_pool));
 
   SVN_ERR_W(svn_wc__db_read_props(&prophash, db, local_abspath,
                                   scratch_pool, scratch_pool),
@@ -2179,8 +2159,11 @@ do_propset(svn_wc__db_t *db,
   apr_hash_set(prophash, name, APR_HASH_KEY_STRING, value);
 
   /* Drop it right into the db..  */
-  SVN_ERR(svn_wc__db_op_set_props(db, local_abspath, prophash, NULL, NULL,
+  SVN_ERR(svn_wc__db_op_set_props(db, local_abspath, prophash, NULL, work_item,
                                   scratch_pool));
+
+  /* Run our workqueue item for sync'ing flags with props. */
+  SVN_ERR(svn_wc__wq_run(db, local_abspath, NULL, NULL, scratch_pool));
 
   if (notify_func)
     {
