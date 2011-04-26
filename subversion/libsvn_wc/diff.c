@@ -621,7 +621,7 @@ file_diff(struct edit_baton *eb,
       else
         base_mimetype = NULL;
 
-      SVN_ERR(eb->callbacks->file_deleted(NULL, NULL, NULL, path,
+      SVN_ERR(eb->callbacks->file_deleted(NULL, NULL, path,
                                           textbase,
                                           empty_file,
                                           base_mimetype,
@@ -674,7 +674,7 @@ file_diff(struct edit_baton *eb,
               eb->cancel_func, eb->cancel_baton,
               scratch_pool, scratch_pool));
 
-      SVN_ERR(eb->callbacks->file_added(NULL, NULL, NULL, NULL, path,
+      SVN_ERR(eb->callbacks->file_added(NULL, NULL, NULL, path,
                                         (! eb->show_copies_as_adds &&
                                          eb->use_git_diff_format &&
                                          status != svn_wc__db_status_added) ?
@@ -753,7 +753,7 @@ file_diff(struct edit_baton *eb,
 
       if (modified || propchanges->nelts > 0)
         {
-          SVN_ERR(eb->callbacks->file_changed(NULL, NULL, NULL, NULL,
+          SVN_ERR(eb->callbacks->file_changed(NULL, NULL, NULL,
                                               path,
                                               modified ? textbase : NULL,
                                               translated,
@@ -824,8 +824,7 @@ walk_local_nodes_diff(struct edit_baton *eb,
                                             db, local_abspath,
                                             scratch_pool, scratch_pool));
 
-          SVN_ERR(eb->callbacks->dir_props_changed(local_abspath,
-                                                   NULL, NULL,
+          SVN_ERR(eb->callbacks->dir_props_changed(NULL, NULL,
                                                    path, FALSE /* ### ? */,
                                                    propchanges, baseprops,
                                                    eb->callback_baton,
@@ -1013,8 +1012,7 @@ report_wc_file_as_added(struct edit_baton *eb,
            eb->cancel_func, eb->cancel_baton,
            scratch_pool, scratch_pool));
 
-  SVN_ERR(eb->callbacks->file_added(local_abspath,
-                                    NULL, NULL, NULL,
+  SVN_ERR(eb->callbacks->file_added(NULL, NULL, NULL,
                                     path,
                                     empty_file, translated_file,
                                     0, revision,
@@ -1070,8 +1068,7 @@ report_wc_directory_as_added(struct edit_baton *eb,
       SVN_ERR(svn_prop_diffs(&propchanges, wcprops, emptyprops, scratch_pool));
 
       if (propchanges->nelts > 0)
-        SVN_ERR(eb->callbacks->dir_props_changed(local_abspath,
-                                                 NULL, NULL,
+        SVN_ERR(eb->callbacks->dir_props_changed(NULL, NULL,
                                                  path, TRUE,
                                                  propchanges, emptyprops,
                                                  eb->callback_baton,
@@ -1239,7 +1236,7 @@ delete_entry(const char *path,
                                              pool, pool));
           base_mimetype = get_prop_mimetype(baseprops);
 
-          SVN_ERR(eb->callbacks->file_deleted(NULL, NULL, NULL, path,
+          SVN_ERR(eb->callbacks->file_deleted(NULL, NULL, path,
                                               textbase,
                                               empty_file,
                                               base_mimetype,
@@ -1311,7 +1308,7 @@ open_directory(const char *path,
   db = make_dir_baton(path, pb, pb->eb, FALSE, subdir_depth, dir_pool);
   *child_baton = db;
 
-  SVN_ERR(db->eb->callbacks->dir_opened(NULL, NULL, NULL, NULL,
+  SVN_ERR(db->eb->callbacks->dir_opened(NULL, NULL, NULL,
                                         path, base_revision,
                                         db->eb->callback_baton, dir_pool));
 
@@ -1375,7 +1372,7 @@ close_directory(void *dir_baton,
       if (!eb->reverse_order)
         reverse_propchanges(originalprops, db->propchanges, db->pool);
 
-      SVN_ERR(eb->callbacks->dir_props_changed(NULL, NULL, NULL,
+      SVN_ERR(eb->callbacks->dir_props_changed(NULL, NULL,
                                                db->path,
                                                db->added,
                                                db->propchanges,
@@ -1406,7 +1403,7 @@ close_directory(void *dir_baton,
     apr_hash_set(pb->compared, apr_pstrdup(pb->pool, db->path),
                  APR_HASH_KEY_STRING, "");
 
-  SVN_ERR(db->eb->callbacks->dir_closed(NULL, NULL, NULL, NULL, db->path,
+  SVN_ERR(db->eb->callbacks->dir_closed(NULL, NULL, NULL, db->path,
                                         db->added, db->eb->callback_baton,
                                         db->pool));
 
@@ -1680,7 +1677,7 @@ close_file(void *file_baton,
   if (fb->added || (!eb->use_text_base && status == svn_wc__db_status_deleted))
     {
       if (eb->reverse_order)
-        return eb->callbacks->file_added(NULL, NULL, NULL, NULL, fb->path,
+        return eb->callbacks->file_added(NULL, NULL, NULL, fb->path,
                                          empty_file,
                                          repos_file,
                                          0,
@@ -1693,7 +1690,7 @@ close_file(void *file_baton,
                                          eb->callback_baton,
                                          pool);
       else
-        return eb->callbacks->file_deleted(NULL, NULL, NULL, fb->path,
+        return eb->callbacks->file_deleted(NULL, NULL, fb->path,
                                            repos_file,
                                            empty_file,
                                            repos_mimetype,
@@ -1707,7 +1704,7 @@ close_file(void *file_baton,
    * as added, diff the file with the empty file. */
   if ((status == svn_wc__db_status_copied ||
        status == svn_wc__db_status_moved_here) && eb->show_copies_as_adds)
-    return eb->callbacks->file_added(NULL, NULL, NULL, NULL, fb->path,
+    return eb->callbacks->file_added(NULL, NULL, NULL, fb->path,
                                      empty_file,
                                      fb->local_abspath,
                                      0,
@@ -1771,7 +1768,7 @@ close_file(void *file_baton,
           && ! eb->reverse_order)
         reverse_propchanges(originalprops, fb->propchanges, fb->pool);
 
-      SVN_ERR(eb->callbacks->file_changed(NULL, NULL, NULL, NULL,
+      SVN_ERR(eb->callbacks->file_changed(NULL, NULL, NULL,
                                           fb->path,
                                           eb->reverse_order ? localfile
                                                             : repos_file,

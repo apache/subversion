@@ -789,8 +789,7 @@ struct diff_cmd_baton {
 /* An helper for diff_dir_props_changed, diff_file_changed and diff_file_added
  */
 static svn_error_t *
-diff_props_changed(const char *local_dir_abspath,
-                   svn_wc_notify_state_t *state,
+diff_props_changed(svn_wc_notify_state_t *state,
                    svn_boolean_t *tree_conflicted,
                    const char *path,
                    svn_boolean_t dir_was_added,
@@ -849,22 +848,21 @@ diff_props_changed(const char *local_dir_abspath,
 
 /* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
-diff_dir_props_changed(const char *local_dir_abspath,
-                   svn_wc_notify_state_t *state,
-                   svn_boolean_t *tree_conflicted,
-                   const char *path,
-                   svn_boolean_t dir_was_added,
-                   const apr_array_header_t *propchanges,
-                   apr_hash_t *original_props,
-                   void *diff_baton,
-                   apr_pool_t *scratch_pool)
+diff_dir_props_changed(svn_wc_notify_state_t *state,
+                       svn_boolean_t *tree_conflicted,
+                       const char *path,
+                       svn_boolean_t dir_was_added,
+                       const apr_array_header_t *propchanges,
+                       apr_hash_t *original_props,
+                       void *diff_baton,
+                       apr_pool_t *scratch_pool)
 {
   struct diff_cmd_baton *diff_cmd_baton = diff_baton;
 
   if (diff_cmd_baton->anchor)
     path = svn_dirent_join(diff_cmd_baton->anchor, path, scratch_pool);
 
-  return svn_error_return(diff_props_changed(local_dir_abspath, state,
+  return svn_error_return(diff_props_changed(state,
                                              tree_conflicted, path,
                                              dir_was_added,
                                              propchanges,
@@ -1065,8 +1063,7 @@ diff_file_opened(svn_boolean_t *tree_conflicted,
 
 /* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
-diff_file_changed(const char *local_dir_abspath,
-                  svn_wc_notify_state_t *content_state,
+diff_file_changed(svn_wc_notify_state_t *content_state,
                   svn_wc_notify_state_t *prop_state,
                   svn_boolean_t *tree_conflicted,
                   const char *path,
@@ -1090,7 +1087,7 @@ diff_file_changed(const char *local_dir_abspath,
                                  mimetype1, mimetype2,
                                  svn_diff_op_modified, NULL, diff_baton));
   if (prop_changes->nelts > 0)
-    SVN_ERR(diff_props_changed(local_dir_abspath, prop_state, tree_conflicted,
+    SVN_ERR(diff_props_changed(prop_state, tree_conflicted,
                                path, FALSE, prop_changes,
                                original_props, diff_baton, scratch_pool));
   if (content_state)
@@ -1108,8 +1105,7 @@ diff_file_changed(const char *local_dir_abspath,
 
 /* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
-diff_file_added(const char *local_dir_abspath,
-                svn_wc_notify_state_t *content_state,
+diff_file_added(svn_wc_notify_state_t *content_state,
                 svn_wc_notify_state_t *prop_state,
                 svn_boolean_t *tree_conflicted,
                 const char *path,
@@ -1150,7 +1146,7 @@ diff_file_added(const char *local_dir_abspath,
                                  mimetype1, mimetype2,
                                  svn_diff_op_added, NULL, diff_baton));
   if (prop_changes->nelts > 0)
-    SVN_ERR(diff_props_changed(local_dir_abspath, prop_state, tree_conflicted,
+    SVN_ERR(diff_props_changed(prop_state, tree_conflicted,
                                path, FALSE, prop_changes,
                                original_props, diff_baton, scratch_pool));
   if (content_state)
@@ -1167,8 +1163,7 @@ diff_file_added(const char *local_dir_abspath,
 
 /* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
-diff_file_deleted_with_diff(const char *local_dir_abspath,
-                            svn_wc_notify_state_t *state,
+diff_file_deleted_with_diff(svn_wc_notify_state_t *state,
                             svn_boolean_t *tree_conflicted,
                             const char *path,
                             const char *tmpfile1,
@@ -1203,8 +1198,7 @@ diff_file_deleted_with_diff(const char *local_dir_abspath,
 
 /* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
-diff_file_deleted_no_diff(const char *local_dir_abspath,
-                          svn_wc_notify_state_t *state,
+diff_file_deleted_no_diff(svn_wc_notify_state_t *state,
                           svn_boolean_t *tree_conflicted,
                           const char *path,
                           const char *tmpfile1,
@@ -1234,8 +1228,7 @@ diff_file_deleted_no_diff(const char *local_dir_abspath,
 
 /* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
-diff_dir_added(const char *local_dir_abspath,
-               svn_wc_notify_state_t *state,
+diff_dir_added(svn_wc_notify_state_t *state,
                svn_boolean_t *tree_conflicted,
                svn_boolean_t *skip,
                svn_boolean_t *skip_children,
@@ -1257,8 +1250,7 @@ diff_dir_added(const char *local_dir_abspath,
 
 /* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
-diff_dir_deleted(const char *local_dir_abspath,
-                 svn_wc_notify_state_t *state,
+diff_dir_deleted(svn_wc_notify_state_t *state,
                  svn_boolean_t *tree_conflicted,
                  const char *path,
                  void *diff_baton,
@@ -1275,8 +1267,7 @@ diff_dir_deleted(const char *local_dir_abspath,
 
 /* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
-diff_dir_opened(const char *local_dir_abspath,
-                svn_boolean_t *tree_conflicted,
+diff_dir_opened(svn_boolean_t *tree_conflicted,
                 svn_boolean_t *skip,
                 svn_boolean_t *skip_children,
                 const char *path,
@@ -1295,8 +1286,7 @@ diff_dir_opened(const char *local_dir_abspath,
 
 /* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
-diff_dir_closed(const char *local_dir_abspath,
-                svn_wc_notify_state_t *contentstate,
+diff_dir_closed(svn_wc_notify_state_t *contentstate,
                 svn_wc_notify_state_t *propstate,
                 svn_boolean_t *tree_conflicted,
                 const char *path,

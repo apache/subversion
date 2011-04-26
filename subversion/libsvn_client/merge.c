@@ -1064,8 +1064,7 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
 
 /* Used for both file and directory property merges. */
 static svn_error_t *
-merge_props_changed(const char *local_dir_abspath,
-                    svn_wc_notify_state_t *state,
+merge_props_changed(svn_wc_notify_state_t *state,
                     svn_boolean_t *tree_conflicted,
                     const char *local_abspath,
                     const apr_array_header_t *propchanges,
@@ -1201,8 +1200,7 @@ merge_props_changed(const char *local_dir_abspath,
 
 /* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
-merge_dir_props_changed(const char *local_dir_abspath,
-                        svn_wc_notify_state_t *state,
+merge_dir_props_changed(svn_wc_notify_state_t *state,
                         svn_boolean_t *tree_conflicted,
                         const char *local_abspath,
                         svn_boolean_t dir_was_added,
@@ -1226,8 +1224,7 @@ merge_dir_props_changed(const char *local_dir_abspath,
       return SVN_NO_ERROR;
     }
 
-  return svn_error_return(merge_props_changed(local_dir_abspath,
-                                              state,
+  return svn_error_return(merge_props_changed(state,
                                               tree_conflicted,
                                               local_abspath,
                                               propchanges,
@@ -1306,8 +1303,7 @@ merge_file_opened(svn_boolean_t *tree_conflicted,
 
 /* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
-merge_file_changed(const char *local_dir_abspath,
-                   svn_wc_notify_state_t *content_state,
+merge_file_changed(svn_wc_notify_state_t *content_state,
                    svn_wc_notify_state_t *prop_state,
                    svn_boolean_t *tree_conflicted,
                    const char *mine_abspath,
@@ -1427,8 +1423,7 @@ merge_file_changed(const char *local_dir_abspath,
     {
       svn_boolean_t tree_conflicted2 = FALSE;
 
-      SVN_ERR(merge_props_changed(local_dir_abspath, prop_state,
-                                  &tree_conflicted2,
+      SVN_ERR(merge_props_changed(prop_state, &tree_conflicted2,
                                   mine_abspath, prop_changes, original_props,
                                   baton, scratch_pool));
 
@@ -1515,8 +1510,7 @@ merge_file_changed(const char *local_dir_abspath,
 
 /* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
-merge_file_added(const char *local_dir_abspath,
-                 svn_wc_notify_state_t *content_state,
+merge_file_added(svn_wc_notify_state_t *content_state,
                  svn_wc_notify_state_t *prop_state,
                  svn_boolean_t *tree_conflicted,
                  const char *mine_abspath,
@@ -1849,8 +1843,7 @@ files_same_p(svn_boolean_t *same,
 
 /* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
-merge_file_deleted(const char *local_dir_abspath,
-                   svn_wc_notify_state_t *state,
+merge_file_deleted(svn_wc_notify_state_t *state,
                    svn_boolean_t *tree_conflicted,
                    const char *mine_abspath,
                    const char *older_abspath,
@@ -1977,8 +1970,7 @@ merge_file_deleted(const char *local_dir_abspath,
 
 /* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
-merge_dir_added(const char *local_dir_abspath,
-                svn_wc_notify_state_t *state,
+merge_dir_added(svn_wc_notify_state_t *state,
                 svn_boolean_t *tree_conflicted,
                 svn_boolean_t *skip,
                 svn_boolean_t *skip_children,
@@ -2172,8 +2164,7 @@ merge_dir_added(const char *local_dir_abspath,
 
 /* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
-merge_dir_deleted(const char *local_dir_abspath,
-                  svn_wc_notify_state_t *state,
+merge_dir_deleted(svn_wc_notify_state_t *state,
                   svn_boolean_t *tree_conflicted,
                   const char *local_abspath,
                   void *baton,
@@ -2308,8 +2299,7 @@ merge_dir_deleted(const char *local_dir_abspath,
 
 /* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
-merge_dir_opened(const char *local_dir_abspath,
-                 svn_boolean_t *tree_conflicted,
+merge_dir_opened(svn_boolean_t *tree_conflicted,
                  svn_boolean_t *skip,
                  svn_boolean_t *skip_children,
                  const char *local_abspath,
@@ -2353,7 +2343,8 @@ merge_dir_opened(const char *local_dir_abspath,
    * future merges into non-shallow working copies to merge
    * changes we missed this time around. */
   err = svn_wc__node_get_depth(&parent_depth, merge_b->ctx->wc_ctx,
-                               local_dir_abspath, subpool);
+                               svn_dirent_dirname(local_abspath, scratch_pool),
+                               scratch_pool);
   if (err)
     {
       if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
@@ -2434,8 +2425,7 @@ merge_dir_opened(const char *local_dir_abspath,
 
 /* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
-merge_dir_closed(const char *local_dir_abspath,
-                 svn_wc_notify_state_t *contentstate,
+merge_dir_closed(svn_wc_notify_state_t *contentstate,
                  svn_wc_notify_state_t *propstate,
                  svn_boolean_t *tree_conflicted,
                  const char *path,
@@ -6830,12 +6820,8 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
              merge.  */
           if (! (merge_b->ignore_ancestry || sources_related))
             {
-              const char *local_dir_abspath =
-                svn_dirent_dirname(target_abspath, subpool);
-
               /* Delete... */
-              SVN_ERR(merge_file_deleted(local_dir_abspath,
-                                         &text_state,
+              SVN_ERR(merge_file_deleted(&text_state,
                                          &tree_conflicted,
                                          target_abspath,
                                          tmpfile1,
@@ -6853,8 +6839,7 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
                                        n, &header_sent, subpool);
 
               /* ...plus add... */
-              SVN_ERR(merge_file_added(local_dir_abspath,
-                                       &text_state, &prop_state,
+              SVN_ERR(merge_file_added(&text_state, &prop_state,
                                        &tree_conflicted,
                                        target_abspath,
                                        tmpfile1,
@@ -6876,11 +6861,7 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
             }
           else
             {
-              const char *local_dir_abspath =
-                svn_dirent_dirname(target_abspath, subpool);
-
-              SVN_ERR(merge_file_changed(local_dir_abspath,
-                                         &text_state, &prop_state,
+              SVN_ERR(merge_file_changed(&text_state, &prop_state,
                                          &tree_conflicted,
                                          target_abspath,
                                          tmpfile1,

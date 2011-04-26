@@ -528,7 +528,7 @@ diff_deleted_dir(const char *dir,
           get_file_mime_types(&mimetype1, &mimetype2, b);
 
           SVN_ERR(eb->diff_callbacks->file_deleted(
-                                NULL, NULL, NULL, b->wcpath,
+                                NULL, NULL, b->wcpath,
                                 b->path_start_revision,
                                 b->path_end_revision,
                                 mimetype1, mimetype2,
@@ -591,8 +591,8 @@ delete_entry(const char *path,
 
             get_file_mime_types(&mimetype1, &mimetype2, b);
 
-            SVN_ERR(eb->diff_callbacks->file_deleted
-                    (local_dir_abspath, &state, &tree_conflicted, b->wcpath,
+            SVN_ERR(eb->diff_callbacks->file_deleted(
+                     &state, &tree_conflicted, b->wcpath,
                      b->path_start_revision,
                      b->path_end_revision,
                      mimetype1, mimetype2,
@@ -604,8 +604,8 @@ delete_entry(const char *path,
           }
         case svn_node_dir:
           {
-            SVN_ERR(eb->diff_callbacks->dir_deleted
-                    (local_dir_abspath, &state, &tree_conflicted,
+            SVN_ERR(eb->diff_callbacks->dir_deleted(
+                     &state, &tree_conflicted,
                      svn_dirent_join(eb->target, path, pool),
                      eb->diff_cmd_baton, pool));
 
@@ -685,7 +685,7 @@ add_directory(const char *path,
                           pool));
 
   SVN_ERR(eb->diff_callbacks->dir_added(
-                local_dir_abspath, &state, &b->tree_conflicted,
+                &state, &b->tree_conflicted,
                 &b->skip, &b->skip_children, b->wcpath,
                 eb->target_revision, copyfrom_path, copyfrom_revision,
                 eb->diff_cmd_baton, pool));
@@ -775,7 +775,7 @@ open_directory(const char *path,
                           pool));
 
   SVN_ERR(eb->diff_callbacks->dir_opened(
-                local_dir_abspath, &b->tree_conflicted, &b->skip,
+                &b->tree_conflicted, &b->skip,
                 &b->skip_children, b->wcpath, base_revision,
                 b->edit_baton->diff_cmd_baton, pool));
 
@@ -1003,8 +1003,8 @@ close_file(void *file_baton,
       get_file_mime_types(&mimetype1, &mimetype2, b);
 
       if (b->added)
-        SVN_ERR(eb->diff_callbacks->file_added
-                (local_dir_abspath, &content_state, &prop_state, &b->tree_conflicted,
+        SVN_ERR(eb->diff_callbacks->file_added(
+                 &content_state, &prop_state, &b->tree_conflicted,
                  b->wcpath,
                  b->path_end_revision ? b->path_start_revision : NULL,
                  b->path_end_revision,
@@ -1016,8 +1016,8 @@ close_file(void *file_baton,
                  b->edit_baton->diff_cmd_baton,
                  pool));
       else
-        SVN_ERR(eb->diff_callbacks->file_changed
-                (local_dir_abspath, &content_state, &prop_state,
+        SVN_ERR(eb->diff_callbacks->file_changed(
+                 &content_state, &prop_state,
                  &b->tree_conflicted, b->wcpath,
                  b->path_end_revision ? b->path_start_revision : NULL,
                  b->path_end_revision,
@@ -1134,7 +1134,7 @@ close_directory(void *dir_baton,
     {
       svn_boolean_t tree_conflicted = FALSE;
       SVN_ERR(eb->diff_callbacks->dir_props_changed(
-               local_dir_abspath, &prop_state, &tree_conflicted,
+               &prop_state, &tree_conflicted,
                b->wcpath, b->added,
                b->propchanges, b->pristine_props,
                b->edit_baton->diff_cmd_baton, pool));
@@ -1143,7 +1143,7 @@ close_directory(void *dir_baton,
     }
 
   SVN_ERR(eb->diff_callbacks->dir_closed(
-           local_dir_abspath, NULL, NULL, NULL,
+           NULL, NULL, NULL,
            b->wcpath, b->added,
            b->edit_baton->diff_cmd_baton, pool));
 
