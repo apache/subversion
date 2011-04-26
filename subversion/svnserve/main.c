@@ -45,7 +45,7 @@
 #include "svn_opt.h"
 #include "svn_repos.h"
 #include "svn_string.h"
-#include "svn_fs.h"
+#include "svn_cache_config.h"
 #include "svn_version.h"
 #include "svn_io.h"
 
@@ -838,7 +838,7 @@ int main(int argc, const char *argv[])
    * keep the per-process caches smaller than the default.
    * Also, apply the respective command line parameters, if given. */
   {
-    svn_fs_cache_config_t settings = *svn_fs_get_cache_config();
+    svn_cache_config_t settings = *svn_get_cache_config();
 
     if (params.memory_cache_size != -1)
       settings.cache_size = params.memory_cache_size;
@@ -861,7 +861,7 @@ int main(int argc, const char *argv[])
 #endif
       }
 
-    svn_fs_set_cache_config(&settings);
+    svn_set_cache_config(&settings);
   }
 
   while (1)
