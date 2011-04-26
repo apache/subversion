@@ -2014,7 +2014,6 @@ do_propset(svn_wc__db_t *db,
            apr_pool_t *scratch_pool)
 {
   apr_hash_t *prophash;
-  enum svn_prop_kind prop_kind = svn_property_kind(NULL, name);
   svn_wc_notify_action_t notify_action;
   svn_wc__db_kind_t kind;
   svn_wc__db_status_t status;
@@ -2033,10 +2032,6 @@ do_propset(svn_wc__db_t *db,
                                NULL, NULL, NULL, NULL, NULL, NULL,
                                db, local_abspath,
                                scratch_pool, scratch_pool));
-
-  if (prop_kind == svn_prop_wc_kind)
-    return svn_error_return(wcprop_set(db, local_abspath, name, value,
-                                       scratch_pool));
 
   if (status != svn_wc__db_status_normal
       && status != svn_wc__db_status_added
@@ -2245,6 +2240,14 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
   if (prop_kind == svn_prop_entry_kind)
     return svn_error_createf(SVN_ERR_BAD_PROP_KIND, NULL,
                              _("Property '%s' is an entry property"), name);
+
+  /* Check to see if we're setting the dav cache. */
+  if (prop_kind == svn_prop_wc_kind)
+    {
+      SVN_ERR_ASSERT(depth == svn_depth_empty);
+      return svn_error_return(wcprop_set(wc_ctx->db, local_abspath,
+                                         name, value, scratch_pool));
+    }
 
   /* We have to do this little DIR_ABSPATH dance for backwards compat.
      But from 1.7 onwards, all locks are of infinite depth, and from 1.6

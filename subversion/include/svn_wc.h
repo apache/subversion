@@ -5772,8 +5772,8 @@ svn_wc_prop_get(const svn_string_t **value,
  * #SVN_ERR_BAD_MIME_TYPE (if @a name is "svn:mime-type", but @a value
  * is not a valid mime-type).
  *
- * @a depth follows the usual semeatic for depth.
- * @note Currently only #svn_depth_empty is supported.
+ * @a depth follows the usual semeatic for depth.  If the property is a
+ * wc property, @a depth must be #svn_depth_empty.
  *
  * @a name may be a wc property or a regular property; but if it is an
  * entry property, return the error #SVN_ERR_BAD_PROP_KIND, even if
