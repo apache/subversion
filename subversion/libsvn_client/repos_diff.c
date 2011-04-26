@@ -1236,7 +1236,7 @@ change_file_prop(void *file_baton,
       svn_string_t *old_val = apr_hash_get(b->pristine_props, name,
                                            APR_HASH_KEY_STRING);
 
-      if (old_val && svn_string_compare(old_val, value) == 0)
+      if (old_val && svn_string_compare(old_val, value))
         return SVN_NO_ERROR;
     }
 
@@ -1267,7 +1267,7 @@ change_dir_prop(void *dir_baton,
       svn_string_t *old_val = apr_hash_get(db->pristine_props, name,
                                            APR_HASH_KEY_STRING);
 
-      if (old_val && svn_string_compare(old_val, value) == 0)
+      if (old_val && svn_string_compare(old_val, value))
         return SVN_NO_ERROR;
     }
 
