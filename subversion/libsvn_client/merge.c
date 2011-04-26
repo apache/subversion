@@ -1329,24 +1329,6 @@ merge_file_changed(const char *local_dir_abspath,
   SVN_ERR_ASSERT(!older_abspath || svn_dirent_is_absolute(older_abspath));
   SVN_ERR_ASSERT(!yours_abspath || svn_dirent_is_absolute(yours_abspath));
 
-  if (tree_conflicted)
-    *tree_conflicted = FALSE;
-
-  /* Easy out:  no access baton means there ain't no merge target */
-  if (local_dir_abspath == NULL)
-    {
-      if (content_state)
-        *content_state = svn_wc_notify_state_missing;
-      if (prop_state)
-        *prop_state = svn_wc_notify_state_missing;
-      /* Trying to change a file at a non-existing path.
-       * Although this is a tree-conflict, it will already have been
-       * raised by the merge_dir_opened() callback. Not raising additional tree
-       * conflicts for the child nodes inside. */
-      svn_pool_destroy(subpool);
-      return SVN_NO_ERROR;
-    }
-
   /* Check for an obstructed or missing node on disk. */
   {
     svn_wc_notify_state_t obstr_state;
@@ -1359,6 +1341,8 @@ merge_file_changed(const char *local_dir_abspath,
       {
         if (content_state)
           *content_state = obstr_state;
+        if (prop_state && obstr_state == svn_wc_notify_state_missing)
+          *prop_state = svn_wc_notify_state_missing;
         svn_pool_destroy(subpool);
         return SVN_NO_ERROR;
       }
@@ -1607,30 +1591,6 @@ merge_file_added(const char *local_dir_abspath,
       apr_hash_set(file_props, prop->name, APR_HASH_KEY_STRING, prop->value);
     }
 
-  /* Easy out:  if we have no adm_access for the parent directory,
-     then this portion of the tree-delta "patch" must be inapplicable.
-     Send a 'missing' state back;  the repos-diff editor should then
-     send a 'skip' notification. */
-  if (! local_dir_abspath)
-    {
-      if (merge_b->dry_run && merge_b->added_path
-          && svn_dirent_is_child(merge_b->added_path, mine_abspath, NULL))
-        {
-          if (content_state)
-            *content_state = svn_wc_notify_state_changed;
-          if (prop_state && apr_hash_count(file_props))
-            *prop_state = svn_wc_notify_state_changed;
-        }
-      else
-        *content_state = svn_wc_notify_state_missing;
-      /* Trying to add a file at a non-existing path.
-       * Although this is a tree-conflict, it will already have been
-       * raised by the merge_dir_opened() callback. Not raising additional tree
-       * conflicts for the child nodes inside. */
-      svn_pool_destroy(subpool);
-      return SVN_NO_ERROR;
-    }
-
   /* Check for an obstructed or missing node on disk. */
   {
     svn_wc_notify_state_t obstr_state;
@@ -1642,14 +1602,23 @@ merge_file_added(const char *local_dir_abspath,
 
     if (obstr_state != svn_wc_notify_state_inapplicable)
       {
-        if (content_state)
+        if (merge_b->dry_run && merge_b->added_path
+            && svn_dirent_is_child(merge_b->added_path, mine_abspath, NULL))
+          {
+            if (content_state)
+              *content_state = svn_wc_notify_state_changed;
+            if (prop_state && apr_hash_count(file_props))
+              *prop_state = svn_wc_notify_state_changed;
+          }
+        else if (content_state)
           *content_state = obstr_state;
+
         svn_pool_destroy(subpool);
         return SVN_NO_ERROR;
       }
   }
 
-  parent_abspath = local_dir_abspath;
+  parent_abspath = svn_dirent_dirname(mine_abspath, scratch_pool);
 
   SVN_ERR(svn_io_check_path(mine_abspath, &kind, subpool));
   switch (kind)
@@ -1908,23 +1877,6 @@ merge_file_deleted(const char *local_dir_abspath,
       svn_pool_destroy(subpool);
       if (state)
         *state = svn_wc_notify_state_unchanged;
-      if (tree_conflicted)
-        *tree_conflicted = FALSE;
-      return SVN_NO_ERROR;
-    }
-
-  if (tree_conflicted)
-    *tree_conflicted = FALSE;
-
-  /* Easy out:  if we have no adm_access for the parent directory,
-     then this portion of the tree-delta "patch" must be inapplicable.
-     Send a 'missing' state back;  the repos-diff editor should then
-     send a 'skip' notification. */
-  if (! local_dir_abspath)
-    {
-      if (state)
-        *state = svn_wc_notify_state_missing;
-      svn_pool_destroy(subpool);
       return SVN_NO_ERROR;
     }
 
