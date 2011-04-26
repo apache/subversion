@@ -1997,7 +1997,6 @@ merge_dir_added(const char *local_dir_abspath,
   const char *parent_abspath;
   svn_boolean_t is_versioned;
   svn_boolean_t is_deleted;
-  svn_error_t *err;
 
   /* Easy out: We are only applying mergeinfo differences. */
   if (merge_b->record_only)
@@ -2010,32 +2009,7 @@ merge_dir_added(const char *local_dir_abspath,
       return SVN_NO_ERROR;
     }
 
-  parent_abspath = local_dir_abspath;
-
-  if (tree_conflicted)
-    *tree_conflicted = FALSE;
-
-  /* Easy out:  if we have no adm_access for the parent directory,
-     then this portion of the tree-delta "patch" must be inapplicable.
-     Send a 'missing' state back;  the repos-diff editor should then
-     send a 'skip' notification. */
-  if (! local_dir_abspath)
-    {
-      if (state)
-        {
-          if (merge_b->dry_run && merge_b->added_path
-              && svn_dirent_is_child(merge_b->added_path, local_abspath, NULL))
-            *state = svn_wc_notify_state_changed;
-          else
-            *state = svn_wc_notify_state_missing;
-        }
-      /* Trying to add a directory at a non-existing path.
-       * Although this is a tree-conflict, it will already have been
-       * raised by the merge_dir_opened() callback. Not raising additional tree
-       * conflicts for the child nodes inside. */
-      svn_pool_destroy(subpool);
-      return SVN_NO_ERROR;
-    }
+  parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
 
   child = svn_dirent_is_child(merge_b->target_abspath, local_abspath, NULL);
   SVN_ERR_ASSERT(child != NULL);
@@ -2052,52 +2026,49 @@ merge_dir_added(const char *local_dir_abspath,
                                  copyfrom_url, subpool));
     }
 
-  /* Find out if this path is deleted and in asking this question also derive
-     the path's version-control state, we'll need to know both below. */
-  err = svn_wc__node_is_status_deleted(&is_deleted, merge_b->ctx->wc_ctx,
-                                       local_abspath, subpool);
-  if (err)
-    {
-      if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-        {
-          svn_error_clear(err);
-          err = NULL;
-          is_versioned = is_deleted = FALSE;
-        }
-      else
-        return svn_error_return(err);
-    }
-  else
-    {
-      is_versioned = TRUE;
-    }
-
-  SVN_ERR(svn_io_check_path(local_abspath, &kind, subpool));
-
   /* Check for an obstructed or missing node on disk. */
   {
     svn_wc_notify_state_t obstr_state;
 
-    SVN_ERR(perform_obstruction_check(&obstr_state, NULL, NULL, NULL, NULL,
-                                      NULL,
+    SVN_ERR(perform_obstruction_check(&obstr_state, NULL, &is_versioned, NULL,
+                                      &is_deleted, &kind,
                                       merge_b, local_abspath, svn_node_unknown,
                                       scratch_pool));
-
     /* In this case of adding a directory, we have an exception to the usual
      * "skip if it's inconsistent" rule. If the directory exists on disk
      * unexpectedly, we simply make it versioned, because we can do so without
      * risk of destroying data. Only skip if it is versioned but unexpectedly
      * missing from disk, or is unversioned but obstructed by a node of the
      * wrong kind. */
-    if (obstr_state == svn_wc_notify_state_missing
-        || (obstr_state == svn_wc_notify_state_obstructed
-            && kind == svn_node_file))
+    if (obstr_state == svn_wc_notify_state_obstructed 
+        && (is_deleted || kind == svn_node_none))
       {
-        if (state)
+        svn_node_kind_t disk_kind;
+
+        SVN_ERR(svn_io_check_path(local_abspath, &disk_kind, scratch_pool));
+
+        if (disk_kind == svn_node_dir)
+          {
+            obstr_state = svn_wc_notify_state_inapplicable;
+            kind = svn_node_dir; /* Take over existing directory */
+          }
+      }
+
+    if (obstr_state != svn_wc_notify_state_inapplicable)
+      {
+        if (state && merge_b->dry_run && merge_b->added_path
+            && svn_dirent_is_child(merge_b->added_path, local_abspath, NULL))
+          {
+            *state = svn_wc_notify_state_changed;
+          }
+        else if (state)
           *state = obstr_state;
         svn_pool_destroy(subpool);
         return SVN_NO_ERROR;
       }
+
+    if (is_deleted)
+      kind = svn_node_none;
   }
 
   /* Switch on the on-disk state of this path */
