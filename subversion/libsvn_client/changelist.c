@@ -130,7 +130,6 @@ struct get_cl_fn_baton
 {
   svn_changelist_receiver_t callback_func;
   void *callback_baton;
-  apr_hash_t *changelists;
   svn_wc_context_t *wc_ctx;
   apr_pool_t *pool;
 };
@@ -148,12 +147,7 @@ get_node_changelist(const char *local_abspath,
   SVN_ERR(svn_wc__node_get_changelist(&changelist, b->wc_ctx,
                                       local_abspath, pool, pool));
 
-  /* If the the changelist matches one that we're looking for (or we
-     aren't looking for any in particular)... */
-  if (svn_wc__changelist_match(b->wc_ctx, local_abspath,
-                               b->changelists, pool)
-      && ((kind == svn_node_file)
-          || (kind == svn_node_dir)))
+  if (((kind == svn_node_file) || (kind == svn_node_dir)))
     {
 
       /* ...then call the callback function. */
@@ -183,13 +177,9 @@ svn_client_get_changelists(const char *path,
   gnb.callback_baton = callback_baton;
   gnb.wc_ctx = ctx->wc_ctx;
   gnb.pool = pool;
-  if (changelists)
-    SVN_ERR(svn_hash_from_cstring_keys(&(gnb.changelists), changelists, pool));
-  else
-    gnb.changelists = NULL;
 
   return svn_error_return(
-    svn_wc__node_walk_children(ctx->wc_ctx, local_abspath, FALSE,
+    svn_wc__node_walk_children(ctx->wc_ctx, local_abspath, FALSE, changelists,
                                get_node_changelist, &gnb, depth,
                                ctx->cancel_func, ctx->cancel_baton, pool));
 }

@@ -457,7 +457,7 @@ crawl_entries(const char *local_abspath,
   fe_baton.receiver_baton = receiver_baton;
   fe_baton.wc_ctx = ctx->wc_ctx;
 
-  err = svn_wc__node_walk_children(ctx->wc_ctx, local_abspath, FALSE,
+  err = svn_wc__node_walk_children(ctx->wc_ctx, local_abspath, FALSE, NULL,
                                    info_found_node_callback, &fe_baton, depth,
                                    ctx->cancel_func, ctx->cancel_baton, pool);
 
