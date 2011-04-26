@@ -1593,8 +1593,7 @@ wrap_4to3_file_opened(svn_boolean_t *tree_conflicted,
 /* An svn_wc_diff_callbacks4_t function for wrapping
  * svn_wc_diff_callbacks3_t. */
 static svn_error_t *
-wrap_4to3_file_changed(const char *local_dir_abspath,
-                       svn_wc_notify_state_t *contentstate,
+wrap_4to3_file_changed(svn_wc_notify_state_t *contentstate,
                        svn_wc_notify_state_t *propstate,
                        svn_boolean_t *tree_conflicted,
                        const char *path,
@@ -1630,8 +1629,7 @@ wrap_4to3_file_changed(const char *local_dir_abspath,
 /* An svn_wc_diff_callbacks4_t function for wrapping
  * svn_wc_diff_callbacks3_t. */
 static svn_error_t *
-wrap_4to3_file_added(const char *local_dir_abspath,
-                     svn_wc_notify_state_t *contentstate,
+wrap_4to3_file_added(svn_wc_notify_state_t *contentstate,
                      svn_wc_notify_state_t *propstate,
                      svn_boolean_t *tree_conflicted,
                      const char *path,
@@ -1669,8 +1667,7 @@ wrap_4to3_file_added(const char *local_dir_abspath,
 /* An svn_wc_diff_callbacks4_t function for wrapping
  * svn_wc_diff_callbacks3_t. */
 static svn_error_t *
-wrap_4to3_file_deleted(const char *local_dir_abspath,
-                       svn_wc_notify_state_t *state,
+wrap_4to3_file_deleted(svn_wc_notify_state_t *state,
                        svn_boolean_t *tree_conflicted,
                        const char *path,
                        const char *tmpfile1,
@@ -1701,8 +1698,7 @@ wrap_4to3_file_deleted(const char *local_dir_abspath,
 /* An svn_wc_diff_callbacks4_t function for wrapping
  * svn_wc_diff_callbacks3_t. */
 static svn_error_t *
-wrap_4to3_dir_added(const char *local_dir_abspath,
-                    svn_wc_notify_state_t *state,
+wrap_4to3_dir_added(svn_wc_notify_state_t *state,
                     svn_boolean_t *tree_conflicted,
                     svn_boolean_t *skip,
                     svn_boolean_t *skip_children,
@@ -1730,8 +1726,7 @@ wrap_4to3_dir_added(const char *local_dir_abspath,
 /* An svn_wc_diff_callbacks4_t function for wrapping
  * svn_wc_diff_callbacks3_t. */
 static svn_error_t *
-wrap_4to3_dir_deleted(const char *local_dir_abspath,
-                      svn_wc_notify_state_t *state,
+wrap_4to3_dir_deleted(svn_wc_notify_state_t *state,
                       svn_boolean_t *tree_conflicted,
                       const char *path,
                       void *diff_baton,
@@ -1754,8 +1749,7 @@ wrap_4to3_dir_deleted(const char *local_dir_abspath,
 /* An svn_wc_diff_callbacks4_t function for wrapping
  * svn_wc_diff_callbacks3_t. */
 static svn_error_t *
-wrap_4to3_dir_props_changed(const char *local_dir_abspath,
-                            svn_wc_notify_state_t *propstate,
+wrap_4to3_dir_props_changed(svn_wc_notify_state_t *propstate,
                             svn_boolean_t *tree_conflicted,
                             const char *path,
                             svn_boolean_t dir_was_added,
@@ -1783,8 +1777,7 @@ wrap_4to3_dir_props_changed(const char *local_dir_abspath,
 /* An svn_wc_diff_callbacks4_t function for wrapping
  * svn_wc_diff_callbacks3_t. */
 static svn_error_t *
-wrap_4to3_dir_opened(const char *local_dir_abspath,
-                     svn_boolean_t *tree_conflicted,
+wrap_4to3_dir_opened(svn_boolean_t *tree_conflicted,
                      svn_boolean_t *skip,
                      svn_boolean_t *skip_children,
                      const char *path,
@@ -1811,8 +1804,7 @@ wrap_4to3_dir_opened(const char *local_dir_abspath,
 /* An svn_wc_diff_callbacks4_t function for wrapping
  * svn_wc_diff_callbacks3_t. */
 static svn_error_t *
-wrap_4to3_dir_closed(const char *local_dir_abspath,
-                     svn_wc_notify_state_t *contentstate,
+wrap_4to3_dir_closed(svn_wc_notify_state_t *contentstate,
                      svn_wc_notify_state_t *propstate,
                      svn_boolean_t *tree_conflicted,
                      const char *path,
