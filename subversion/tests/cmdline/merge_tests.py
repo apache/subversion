@@ -10800,7 +10800,6 @@ def foreign_repos_2_url(sbox):
   svntest.actions.verify_disk(wc_dir2, expected_disk, True)
 
 #----------------------------------------------------------------------
-@XFail()
 @Issue(1962)
 def merge_added_subtree(sbox):
   "merge added subtree"
@@ -10829,11 +10828,11 @@ def merge_added_subtree(sbox):
   expected_output = wc.State(A_path, {
     'D2'        : Item(status='A '),
     'D2/gamma'  : Item(status='A '),
-    'D2/H/'     : Item(status='A '),
+    'D2/H'      : Item(status='A '),
     'D2/H/chi'  : Item(status='A '),
     'D2/H/psi'  : Item(status='A '),
     'D2/H/omega': Item(status='A '),
-    'D2/G/'     : Item(status='A '),
+    'D2/G'      : Item(status='A '),
     'D2/G/pi'   : Item(status='A '),
     'D2/G/rho'  : Item(status='A '),
     'D2/G/tau'  : Item(status='A ')
@@ -10843,11 +10842,11 @@ def merge_added_subtree(sbox):
   expected_status.add({
     'A/D2'        : Item(status='A ', copied='+', wc_rev='-'),
     'A/D2/gamma'  : Item(status='  ', copied='+', wc_rev='-'),
-    'A/D2/H/'     : Item(status='  ', copied='+', wc_rev='-'),
+    'A/D2/H'      : Item(status='  ', copied='+', wc_rev='-'),
     'A/D2/H/chi'  : Item(status='  ', copied='+', wc_rev='-'),
     'A/D2/H/psi'  : Item(status='  ', copied='+', wc_rev='-'),
     'A/D2/H/omega': Item(status='  ', copied='+', wc_rev='-'),
-    'A/D2/G/'     : Item(status='  ', copied='+', wc_rev='-'),
+    'A/D2/G'      : Item(status='  ', copied='+', wc_rev='-'),
     'A/D2/G/pi'   : Item(status='  ', copied='+', wc_rev='-'),
     'A/D2/G/rho'  : Item(status='  ', copied='+', wc_rev='-'),
     'A/D2/G/tau'  : Item(status='  ', copied='+', wc_rev='-')
