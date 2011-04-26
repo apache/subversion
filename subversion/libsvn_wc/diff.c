@@ -312,7 +312,7 @@ struct file_baton {
   apr_array_header_t *propchanges;
 
   /* The current checksum on disk */
-  svn_checksum_t *base_checksum;
+  const svn_checksum_t *base_checksum;
 
   /* The resulting checksum from apply_textdelta */
   svn_checksum_t *result_checksum;
@@ -1590,7 +1590,7 @@ close_file(void *file_baton,
   if (expected_md5_digest != NULL)
     {
       svn_checksum_t *expected_checksum;
-      svn_checksum_t *repos_checksum = fb->result_checksum;
+      const svn_checksum_t *repos_checksum = fb->result_checksum;
 
       SVN_ERR(svn_checksum_parse_hex(&expected_checksum, svn_checksum_md5,
                                      expected_md5_digest, pool));
