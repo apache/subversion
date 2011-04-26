@@ -525,10 +525,15 @@ run_file_commit(svn_wc__db_t *db,
   const svn_skel_t *arg1 = work_item->children->next;
   const char *local_relpath;
   const char *local_abspath;
+  apr_int64_t v;
 
   local_relpath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
   SVN_ERR(svn_wc__db_from_relpath(&local_abspath, db, wri_abspath,
                                   local_relpath, scratch_pool, scratch_pool));
+
+  /* We currently ignore the following two values, just kept in for compat. */
+  SVN_ERR(svn_skel__parse_int(&v, arg1->next, scratch_pool));
+  SVN_ERR(svn_skel__parse_int(&v, arg1->next, scratch_pool));
 
   return svn_error_return(
                 process_commit_file_install(db, local_abspath,
@@ -550,6 +555,10 @@ svn_wc__wq_build_file_commit(svn_skel_t **work_item,
   SVN_ERR(svn_wc__db_to_relpath(&local_relpath, db, local_abspath,
                                 local_abspath, result_pool, scratch_pool));
 
+  /* This are currently ignored, they are here for compat. */
+  svn_skel__prepend_int(FALSE, *work_item, result_pool);
+  svn_skel__prepend_int(FALSE, *work_item, result_pool);
+  
   svn_skel__prepend_str(local_relpath, *work_item, result_pool);
 
   svn_skel__prepend_str(OP_FILE_COMMIT, *work_item, result_pool);
