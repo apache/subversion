@@ -59,6 +59,9 @@ struct edit_baton {
      repository operation. */
   svn_wc_context_t *wc_ctx;
 
+  /* The passed depth */
+  svn_depth_t depth;
+
   /* The callback and calback argument that implement the file comparison
      function */
   const svn_wc_diff_callbacks4_t *diff_callbacks;
@@ -561,7 +564,6 @@ delete_entry(const char *path,
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
   svn_node_kind_t kind;
-  const char *local_dir_abspath;
   svn_wc_notify_state_t state = svn_wc_notify_state_inapplicable;
   svn_wc_notify_action_t action = svn_wc_notify_skip;
   svn_boolean_t tree_conflicted = FALSE;
@@ -573,25 +575,22 @@ delete_entry(const char *path,
 
   /* We need to know if this is a directory or a file */
   SVN_ERR(svn_ra_check_path(eb->ra_session, path, eb->revision, &kind, pool));
-  SVN_ERR(get_dir_abspath(&local_dir_abspath, eb->wc_ctx, pb->wcpath,
-                          TRUE, pool));
-  if ((! eb->wc_ctx) || local_dir_abspath)
+
+  switch (kind)
     {
-      switch (kind)
-        {
-        case svn_node_file:
-          {
-            const char *mimetype1, *mimetype2;
-            struct file_baton *b;
+    case svn_node_file:
+      {
+        const char *mimetype1, *mimetype2;
+        struct file_baton *b;
 
-            /* Compare a file being deleted against an empty file */
-            b = make_file_baton(path, FALSE, eb, pool);
-            SVN_ERR(get_file_from_ra(b, eb->revision));
-            SVN_ERR(get_empty_file(b->edit_baton, &(b->path_end_revision)));
+        /* Compare a file being deleted against an empty file */
+        b = make_file_baton(path, FALSE, eb, pool);
+        SVN_ERR(get_file_from_ra(b, eb->revision));
+        SVN_ERR(get_empty_file(b->edit_baton, &(b->path_end_revision)));
 
-            get_file_mime_types(&mimetype1, &mimetype2, b);
+        get_file_mime_types(&mimetype1, &mimetype2, b);
 
-            SVN_ERR(eb->diff_callbacks->file_deleted(
+        SVN_ERR(eb->diff_callbacks->file_deleted(
                      &state, &tree_conflicted, b->wcpath,
                      b->path_start_revision,
                      b->path_end_revision,
@@ -600,40 +599,39 @@ delete_entry(const char *path,
                      b->edit_baton->diff_cmd_baton,
                      pool));
 
-            break;
-          }
-        case svn_node_dir:
-          {
-            SVN_ERR(eb->diff_callbacks->dir_deleted(
+        break;
+      }
+    case svn_node_dir:
+      {
+        SVN_ERR(eb->diff_callbacks->dir_deleted(
                      &state, &tree_conflicted,
                      svn_dirent_join(eb->target, path, pool),
                      eb->diff_cmd_baton, pool));
 
-            if (eb->walk_deleted_repos_dirs)
-              {
-                /* A workaround for issue 2333.  The "old" dir will be
-                skipped by the repository report.  Crawl it recursively,
-                diffing each file against the empty file. */
-                SVN_ERR(diff_deleted_dir(path,
-                                         eb->revision,
-                                         eb->ra_session,
-                                         eb,
-                                         eb->cancel_func,
-                                         eb->cancel_baton,
-                                         pool));
-              }
-            break;
+        if (eb->walk_deleted_repos_dirs)
+          {
+            /* A workaround for issue 2333.  The "old" dir will be
+            skipped by the repository report.  Crawl it recursively,
+            diffing each file against the empty file. */
+            SVN_ERR(diff_deleted_dir(path,
+                                     eb->revision,
+                                     eb->ra_session,
+                                     eb,
+                                     eb->cancel_func,
+                                     eb->cancel_baton,
+                                     pool));
           }
-        default:
-          break;
-        }
+        break;
+      }
+    default:
+      break;
+    }
 
-      if ((state != svn_wc_notify_state_missing)
-          && (state != svn_wc_notify_state_obstructed)
-          && !tree_conflicted)
-        {
-          action = svn_wc_notify_update_delete;
-        }
+  if ((state != svn_wc_notify_state_missing)
+      && (state != svn_wc_notify_state_obstructed)
+      && !tree_conflicted)
+    {
+      action = svn_wc_notify_update_delete;
     }
 
   if (eb->notify_func)
@@ -1378,6 +1376,7 @@ svn_client__get_diff_editor(const svn_delta_editor_t **editor,
   eb->pool = editor_pool;
   eb->target = target;
   eb->wc_ctx = wc_ctx;
+  eb->depth = depth;
   eb->diff_callbacks = diff_callbacks;
   eb->diff_cmd_baton = diff_cmd_baton;
   eb->dry_run = dry_run;
