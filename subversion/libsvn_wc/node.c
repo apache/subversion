@@ -702,7 +702,9 @@ walker_helper(svn_wc__db_t *db,
                                                child_status, show_hidden));
           /* ### We might want to pass child_status as well because at least
            * ### one callee is asking for it.
-           * ### But is it OK to use an svn_wc__db type in this API? */
+           * ### But is it OK to use an svn_wc__db type in this API?
+           * ###    Not yet, we need to get the node walker
+           * ###    libsvn_wc-internal first. -hkw */
           SVN_ERR(walk_callback(child_abspath, kind, walk_baton, iterpool));
         }
 
