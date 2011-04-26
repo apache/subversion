@@ -70,10 +70,6 @@ struct edit_baton {
   /* RA_SESSION is the open session for making requests to the RA layer */
   svn_ra_session_t *ra_session;
 
-  /* TRUE if RA_SESSION is open to a repository URL using the http or https
-     scheme. */
-  svn_boolean_t is_dav_session;
-
   /* The rev1 from the '-r Rev1:Rev2' command line option */
   svn_revnum_t revision;
 
@@ -637,24 +633,13 @@ delete_entry(const char *path,
           && !tree_conflicted)
         {
           action = svn_wc_notify_update_delete;
-          if (eb->dry_run)
-            {
-              /* Remember what we _would've_ deleted (issue #2584). */
-              const char *wcpath = svn_dirent_join(eb->target, path, pb->pool);
-              apr_hash_set(svn_client__dry_run_deletions(eb->diff_cmd_baton),
-                           wcpath, APR_HASH_KEY_STRING, wcpath);
-
-              /* ### TODO: if (kind == svn_node_dir), record all
-                 ### children as deleted to avoid collisions from
-                 ### subsequent edits. */
-            }
         }
     }
 
   if (eb->notify_func)
     {
       const char* deleted_path;
-      deleted_path_notify_t *dpn = apr_palloc(eb->pool, sizeof(*dpn));
+      deleted_path_notify_t *dpn = apr_pcalloc(eb->pool, sizeof(*dpn));
       deleted_path = svn_dirent_join(eb->target, path, eb->pool);
       dpn->kind = kind;
       dpn->action = tree_conflicted ? svn_wc_notify_tree_conflict : action;
@@ -699,10 +684,11 @@ add_directory(const char *path,
   SVN_ERR(get_dir_abspath(&local_dir_abspath, eb->wc_ctx, pb->wcpath, TRUE,
                           pool));
 
-  SVN_ERR(eb->diff_callbacks->dir_added
-          (local_dir_abspath, &state, &b->tree_conflicted, b->wcpath,
-           eb->target_revision, copyfrom_path, copyfrom_revision,
-           eb->diff_cmd_baton, pool));
+  SVN_ERR(eb->diff_callbacks->dir_added(
+                local_dir_abspath, &state, &b->tree_conflicted,
+                &b->skip, &b->skip_children, b->wcpath,
+                eb->target_revision, copyfrom_path, copyfrom_revision,
+                eb->diff_cmd_baton, pool));
 
   /* Notifications for directories are done at close_directory time.
    * But for paths at which the editor drive adds directories, we make an
@@ -788,9 +774,10 @@ open_directory(const char *path,
   SVN_ERR(get_dir_abspath(&local_dir_abspath, eb->wc_ctx, pb->wcpath, TRUE,
                           pool));
 
-  SVN_ERR(eb->diff_callbacks->dir_opened
-          (local_dir_abspath, &b->tree_conflicted, &b->skip_children,
-           b->wcpath, base_revision, b->edit_baton->diff_cmd_baton, pool));
+  SVN_ERR(eb->diff_callbacks->dir_opened(
+                local_dir_abspath, &b->tree_conflicted, &b->skip,
+                &b->skip_children, b->wcpath, base_revision,
+                b->edit_baton->diff_cmd_baton, pool));
 
   return SVN_NO_ERROR;
 }
@@ -837,6 +824,7 @@ open_file(const char *path,
 {
   struct dir_baton *pb = parent_baton;
   struct file_baton *b;
+  struct edit_baton *eb = pb->edit_baton;
   b = make_file_baton(path, FALSE, pb->edit_baton, pool);
   *file_baton = b;
 
@@ -847,6 +835,13 @@ open_file(const char *path,
       b->skip = TRUE;
       return SVN_NO_ERROR;
     }
+
+  SVN_ERR(eb->diff_callbacks->file_opened(
+                   &b->tree_conflicted, &b->skip,
+                   b->wcpath, base_revision, eb->diff_cmd_baton, pool));
+
+  if (b->skip)
+    return SVN_NO_ERROR;
 
   SVN_ERR(get_file_from_ra(b, base_revision));
 
@@ -1104,10 +1099,6 @@ close_directory(void *dir_baton,
   if (b->skip)
     return SVN_NO_ERROR;
 
-  if (eb->dry_run)
-    SVN_ERR(svn_hash__clear(svn_client__dry_run_deletions(eb->diff_cmd_baton),
-                            pool));
-
   err = get_dir_abspath(&local_dir_abspath, eb->wc_ctx, b->wcpath,
                         FALSE, b->pool);
 
@@ -1141,19 +1132,20 @@ close_directory(void *dir_baton,
      have been recognised as added, in which case they cannot conflict. */
   if ((b->propchanges->nelts > 0) && (! eb->dry_run || local_dir_abspath))
     {
-      svn_boolean_t tree_conflicted;
-      SVN_ERR(eb->diff_callbacks->dir_props_changed
-              (local_dir_abspath, &prop_state, &tree_conflicted,
-               b->wcpath,
+      svn_boolean_t tree_conflicted = FALSE;
+      SVN_ERR(eb->diff_callbacks->dir_props_changed(
+               local_dir_abspath, &prop_state, &tree_conflicted,
+               b->wcpath, b->added,
                b->propchanges, b->pristine_props,
                b->edit_baton->diff_cmd_baton, pool));
       if (tree_conflicted)
         b->tree_conflicted = TRUE;
     }
 
-  SVN_ERR(eb->diff_callbacks->dir_closed
-          (local_dir_abspath, NULL, NULL, NULL,
-           b->wcpath, b->edit_baton->diff_cmd_baton, pool));
+  SVN_ERR(eb->diff_callbacks->dir_closed(
+           local_dir_abspath, NULL, NULL, NULL,
+           b->wcpath, b->added,
+           b->edit_baton->diff_cmd_baton, pool));
 
   /* Don't notify added directories as they triggered notification
      in add_directory. */
@@ -1239,10 +1231,12 @@ change_file_prop(void *file_baton,
 
      See http://subversion.tigris.org/issues/show_bug.cgi?id=3657#desc9 and
      http://svn.haxx.se/dev/archive-2010-08/0351.shtml for more details. */
-  if (value && b->edit_baton->is_dav_session)
+  if (value)
     {
-      const char *current_prop = svn_prop_get_value(b->pristine_props, name);
-      if (current_prop && strcmp(current_prop, value->data) == 0)
+      svn_string_t *old_val = apr_hash_get(b->pristine_props, name,
+                                           APR_HASH_KEY_STRING);
+
+      if (old_val && svn_string_compare(old_val, value) == 0)
         return SVN_NO_ERROR;
     }
 
@@ -1268,11 +1262,12 @@ change_dir_prop(void *dir_baton,
     return SVN_NO_ERROR;
 
   /* See the comment re issue #3657 in the change_file_prop() callback. */
-  if (value && db->edit_baton->is_dav_session)
+  if (value)
     {
-      const char *current_prop = svn_prop_get_value(db->pristine_props,
-                                                    name);
-      if (current_prop && strcmp(current_prop, value->data) == 0)
+      svn_string_t *old_val = apr_hash_get(db->pristine_props, name,
+                                           APR_HASH_KEY_STRING);
+
+      if (old_val && svn_string_compare(old_val, value) == 0)
         return SVN_NO_ERROR;
     }
 
@@ -1355,32 +1350,32 @@ absent_file(const char *path,
 
 /* Create a repository diff editor and baton.  */
 svn_error_t *
-svn_client__get_diff_editor(const char *target,
+svn_client__get_diff_editor(const svn_delta_editor_t **editor,
+                            void **edit_baton,
                             svn_wc_context_t *wc_ctx,
-                            const svn_wc_diff_callbacks4_t *diff_callbacks,
-                            void *diff_cmd_baton,
+                            const char *target,
                             svn_depth_t depth,
-                            svn_boolean_t dry_run,
                             svn_ra_session_t *ra_session,
                             svn_revnum_t revision,
-                            svn_wc_notify_func2_t notify_func,
-                            void *notify_baton,
+                            svn_boolean_t walk_deleted_dirs,
+                            svn_boolean_t dry_run,
+                            const svn_wc_diff_callbacks4_t *diff_callbacks,
+                            void *diff_cmd_baton,
                             svn_cancel_func_t cancel_func,
                             void *cancel_baton,
-                            const svn_delta_editor_t **editor,
-                            void **edit_baton,
-                            apr_pool_t *pool)
+                            svn_wc_notify_func2_t notify_func,
+                            void *notify_baton,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
 {
-  apr_pool_t *subpool = svn_pool_create(pool);
-  svn_delta_editor_t *tree_editor = svn_delta_default_editor(subpool);
-  struct edit_baton *eb = apr_palloc(subpool, sizeof(*eb));
+  apr_pool_t *editor_pool = svn_pool_create(result_pool);
+  svn_delta_editor_t *tree_editor = svn_delta_default_editor(editor_pool);
+  struct edit_baton *eb = apr_pcalloc(editor_pool, sizeof(*eb));
   const char *target_abspath;
-  const char *session_url;
-  apr_status_t status;
-  apr_uri_t apr_uri;
 
-  SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, pool));
+  SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, editor_pool));
 
+  eb->pool = editor_pool;
   eb->target = target;
   eb->wc_ctx = wc_ctx;
   eb->diff_callbacks = diff_callbacks;
@@ -1388,30 +1383,13 @@ svn_client__get_diff_editor(const char *target,
   eb->dry_run = dry_run;
   eb->ra_session = ra_session;
 
-  SVN_ERR(svn_ra_get_session_url(ra_session, &session_url, subpool));
-  status = apr_uri_parse(subpool, session_url, &apr_uri);
-  if (status)
-    {
-      return svn_error_createf(SVN_ERR_BAD_URL, NULL,
-                               _("Unable to parse URL '%s'"), session_url);
-    }
-  else
-    {
-      if (svn_cstring_casecmp(apr_uri.scheme, "https") == 0
-          || svn_cstring_casecmp(apr_uri.scheme, "http") == 0)
-        eb->is_dav_session = TRUE;
-      else
-        eb->is_dav_session = FALSE;
-    }
-
   eb->revision = revision;
   eb->empty_file = NULL;
-  eb->empty_hash = apr_hash_make(subpool);
-  eb->deleted_paths = apr_hash_make(subpool);
-  eb->pool = subpool;
+  eb->empty_hash = apr_hash_make(eb->pool);
+  eb->deleted_paths = apr_hash_make(eb->pool);
   eb->notify_func = notify_func;
   eb->notify_baton = notify_baton;
-  eb->walk_deleted_repos_dirs = TRUE;
+  eb->walk_deleted_repos_dirs = walk_deleted_dirs;
   eb->cancel_func = cancel_func;
   eb->cancel_baton = cancel_baton;
 
@@ -1437,7 +1415,5 @@ svn_client__get_diff_editor(const char *target,
                                            eb,
                                            editor,
                                            edit_baton,
-                                           pool);
-
-  /* We don't destroy subpool, as it's managed by the edit baton. */
+                                           eb->pool);
 }

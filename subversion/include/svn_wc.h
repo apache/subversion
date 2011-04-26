@@ -2092,6 +2092,18 @@ typedef svn_error_t *(*svn_wc_conflict_resolver_func_t)(
 typedef struct svn_wc_diff_callbacks4_t
 {
   /**
+   * This function is called before @a file_changed to allow callbacks to
+   * skip the most expensive processing of retrieving the file data.
+   *
+   */
+  svn_error_t *(*file_opened)(svn_boolean_t *tree_conflicted,
+                              svn_boolean_t *skip,
+                              const char *path,
+                              svn_revnum_t rev,
+                              void *diff_baton,
+                              apr_pool_t *scratch_pool);
+
+  /**
    * A file @a path has changed.  If @a tmpfile2 is non-NULL, the
    * contents have changed and those changes can be seen by comparing
    * @a tmpfile1 and @a tmpfile2, which represent @a rev1 and @a rev2 of
@@ -2185,24 +2197,6 @@ typedef struct svn_wc_diff_callbacks4_t
                                apr_pool_t *scratch_pool);
 
   /**
-   * A directory @a path was added.  @a rev is the revision that the
-   * directory came from.
-   *
-   * If @a copyfrom_path is non-@c NULL, this add has history (i.e., is a
-   * copy), and the origin of the copy may be recorded as
-   * @a copyfrom_path under @a copyfrom_revision.
-   */
-  svn_error_t *(*dir_added)(const char *local_dir_abspath,
-                            svn_wc_notify_state_t *state,
-                            svn_boolean_t *tree_conflicted,
-                            const char *path,
-                            svn_revnum_t rev,
-                            const char *copyfrom_path,
-                            svn_revnum_t copyfrom_revision,
-                            void *diff_baton,
-                            apr_pool_t *scratch_pool);
-
-  /**
    * A directory @a path was deleted.
    */
   svn_error_t *(*dir_deleted)(const char *local_dir_abspath,
@@ -2211,38 +2205,19 @@ typedef struct svn_wc_diff_callbacks4_t
                               const char *path,
                               void *diff_baton,
                               apr_pool_t *scratch_pool);
-
-  /**
-   * A list of property changes (@a propchanges) was applied to the
-   * directory @a path.
-   *
-   * The array is a list of (#svn_prop_t) structures.
-   *
-   * The original list of properties is provided in @a original_props,
-   * which is a hash of #svn_string_t values, keyed on the property
-   * name.
-   */
-  svn_error_t *(*dir_props_changed)(const char *local_dir_abspath,
-                                    svn_wc_notify_state_t *propstate,
-                                    svn_boolean_t *tree_conflicted,
-                                    const char *path,
-                                    const apr_array_header_t *propchanges,
-                                    apr_hash_t *original_props,
-                                    void *diff_baton,
-                                    apr_pool_t *scratch_pool);
-
   /**
    * A directory @a path has been opened.  @a rev is the revision that the
    * directory came from.
    *
-   * This function is called for @a path before any of the callbacks are
-   * called for a child of @a path.
+   * This function is called for any existing directory @a path before any
+   * of the callbacks are called for a child of @a path.
    *
    * If the callback returns @c TRUE in @a *skip_children, children
    * of this directory will be skipped.
    */
   svn_error_t *(*dir_opened)(const char *local_dir_abspath,
                              svn_boolean_t *tree_conflicted,
+                             svn_boolean_t *skip,
                              svn_boolean_t *skip_children,
                              const char *path,
                              svn_revnum_t rev,
@@ -2250,13 +2225,60 @@ typedef struct svn_wc_diff_callbacks4_t
                              apr_pool_t *scratch_pool);
 
   /**
-   * A directory @a path has been closed.
+   * A directory @a path was added.  @a rev is the revision that the
+   * directory came from.
+   *
+   * This function is called for any new directory @a path before any
+   * of the callbacks are called for a child of @a path.
+   *
+   * If @a copyfrom_path is non-@c NULL, this add has history (i.e., is a
+   * copy), and the origin of the copy may be recorded as
+   * @a copyfrom_path under @a copyfrom_revision.
+   */
+  svn_error_t *(*dir_added)(const char *local_dir_abspath,
+                            svn_wc_notify_state_t *state,
+                            svn_boolean_t *tree_conflicted,
+                            svn_boolean_t *skip,
+                            svn_boolean_t *skip_children,
+                            const char *path,
+                            svn_revnum_t rev,
+                            const char *copyfrom_path,
+                            svn_revnum_t copyfrom_revision,
+                            void *diff_baton,
+                            apr_pool_t *scratch_pool);
+
+  /**
+   * A list of property changes (@a propchanges) was applied to the
+   * directory @a path.
+   *
+   * The array is a list of (#svn_prop_t) structures.
+   *
+   * @a dir_was_added is set to #TRUE if the directory was added, and
+   * to #FALSE if the directory pre-existed.
+   */
+  svn_error_t *(*dir_props_changed)(const char *local_dir_abspath,
+                                    svn_wc_notify_state_t *propstate,
+                                    svn_boolean_t *tree_conflicted,
+                                    const char *path,
+                                    svn_boolean_t dir_was_added,
+                                    const apr_array_header_t *propchanges,
+                                    apr_hash_t *original_props,
+                                    void *diff_baton,
+                                    apr_pool_t *scratch_pool);
+
+  /**
+   * A directory @a path which has been opened with @a dir_opened or @a
+   * dir_added has been closed.
+   *
+   * @a dir_was_added is set to #TRUE if the directory was added, and
+   * to #FALSE if the directory pre-existed.
    */
   svn_error_t *(*dir_closed)(const char *local_dir_abspath,
                              svn_wc_notify_state_t *contentstate,
                              svn_wc_notify_state_t *propstate,
                              svn_boolean_t *tree_conflicted,
                              const char *path,
+                             svn_boolean_t dir_was_added,
                              void *diff_baton,
                              apr_pool_t *scratch_pool);
 

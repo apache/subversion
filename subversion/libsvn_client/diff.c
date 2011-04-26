@@ -793,6 +793,7 @@ diff_props_changed(const char *local_dir_abspath,
                    svn_wc_notify_state_t *state,
                    svn_boolean_t *tree_conflicted,
                    const char *path,
+                   svn_boolean_t dir_was_added,
                    const apr_array_header_t *propchanges,
                    apr_hash_t *original_props,
                    void *diff_baton,
@@ -852,6 +853,7 @@ diff_dir_props_changed(const char *local_dir_abspath,
                    svn_wc_notify_state_t *state,
                    svn_boolean_t *tree_conflicted,
                    const char *path,
+                   svn_boolean_t dir_was_added,
                    const apr_array_header_t *propchanges,
                    apr_hash_t *original_props,
                    void *diff_baton,
@@ -864,6 +866,7 @@ diff_dir_props_changed(const char *local_dir_abspath,
 
   return svn_error_return(diff_props_changed(local_dir_abspath, state,
                                              tree_conflicted, path,
+                                             dir_was_added,
                                              propchanges,
                                              original_props,
                                              diff_baton,
@@ -1049,6 +1052,17 @@ diff_content_changed(const char *path,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+diff_file_opened(svn_boolean_t *tree_conflicted,
+                 svn_boolean_t *skip,
+                 const char *path,
+                 svn_revnum_t rev,
+                 void *diff_baton,
+                 apr_pool_t *scratch_pool)
+{
+  return SVN_NO_ERROR;
+}
+
 /* An svn_wc_diff_callbacks4_t function. */
 static svn_error_t *
 diff_file_changed(const char *local_dir_abspath,
@@ -1077,7 +1091,7 @@ diff_file_changed(const char *local_dir_abspath,
                                  svn_diff_op_modified, NULL, diff_baton));
   if (prop_changes->nelts > 0)
     SVN_ERR(diff_props_changed(local_dir_abspath, prop_state, tree_conflicted,
-                               path, prop_changes,
+                               path, FALSE, prop_changes,
                                original_props, diff_baton, scratch_pool));
   if (content_state)
     *content_state = svn_wc_notify_state_unknown;
@@ -1137,7 +1151,7 @@ diff_file_added(const char *local_dir_abspath,
                                  svn_diff_op_added, NULL, diff_baton));
   if (prop_changes->nelts > 0)
     SVN_ERR(diff_props_changed(local_dir_abspath, prop_state, tree_conflicted,
-                               path, prop_changes,
+                               path, FALSE, prop_changes,
                                original_props, diff_baton, scratch_pool));
   if (content_state)
     *content_state = svn_wc_notify_state_unknown;
@@ -1223,6 +1237,8 @@ static svn_error_t *
 diff_dir_added(const char *local_dir_abspath,
                svn_wc_notify_state_t *state,
                svn_boolean_t *tree_conflicted,
+               svn_boolean_t *skip,
+               svn_boolean_t *skip_children,
                const char *path,
                svn_revnum_t rev,
                const char *copyfrom_path,
@@ -1233,10 +1249,6 @@ diff_dir_added(const char *local_dir_abspath,
   struct diff_cmd_baton *diff_cmd_baton = diff_baton;
   if (diff_cmd_baton->anchor)
     path = svn_dirent_join(diff_cmd_baton->anchor, path, scratch_pool);
-  if (state)
-    *state = svn_wc_notify_state_unknown;
-  if (tree_conflicted)
-    *tree_conflicted = FALSE;
 
   /* Do nothing. */
 
@@ -1255,10 +1267,6 @@ diff_dir_deleted(const char *local_dir_abspath,
   struct diff_cmd_baton *diff_cmd_baton = diff_baton;
   if (diff_cmd_baton->anchor)
     path = svn_dirent_join(diff_cmd_baton->anchor, path, scratch_pool);
-  if (state)
-    *state = svn_wc_notify_state_unknown;
-  if (tree_conflicted)
-    *tree_conflicted = FALSE;
 
   /* Do nothing. */
 
@@ -1269,19 +1277,16 @@ diff_dir_deleted(const char *local_dir_abspath,
 static svn_error_t *
 diff_dir_opened(const char *local_dir_abspath,
                 svn_boolean_t *tree_conflicted,
+                svn_boolean_t *skip,
                 svn_boolean_t *skip_children,
                 const char *path,
                 svn_revnum_t rev,
                 void *diff_baton,
                 apr_pool_t *scratch_pool)
 {
-  struct diff_cmd_baton *diff_cmd_baton = diff_baton;
+  /*struct diff_cmd_baton *diff_cmd_baton = diff_baton;
   if (diff_cmd_baton->anchor)
-    path = svn_dirent_join(diff_cmd_baton->anchor, path, scratch_pool);
-  if (tree_conflicted)
-    *tree_conflicted = FALSE;
-  if (skip_children)
-    *skip_children = FALSE;
+    path = svn_dirent_join(diff_cmd_baton->anchor, path, scratch_pool);*/
 
   /* Do nothing. */
 
@@ -1295,18 +1300,13 @@ diff_dir_closed(const char *local_dir_abspath,
                 svn_wc_notify_state_t *propstate,
                 svn_boolean_t *tree_conflicted,
                 const char *path,
+                svn_boolean_t dir_was_added,
                 void *diff_baton,
                 apr_pool_t *scratch_pool)
 {
-  struct diff_cmd_baton *diff_cmd_baton = diff_baton;
+  /*struct diff_cmd_baton *diff_cmd_baton = diff_baton;
   if (diff_cmd_baton->anchor)
-    path = svn_dirent_join(diff_cmd_baton->anchor, path, scratch_pool);
-  if (contentstate)
-    *contentstate = svn_wc_notify_state_unknown;
-  if (propstate)
-    *propstate = svn_wc_notify_state_unknown;
-  if (tree_conflicted)
-    *tree_conflicted = FALSE;
+    path = svn_dirent_join(diff_cmd_baton->anchor, path, scratch_pool);*/
 
   /* Do nothing. */
 
@@ -1726,6 +1726,7 @@ diff_repos_repos(const svn_wc_diff_callbacks4_t *callbacks,
   callback_baton->revnum2 = rev2;
 
   callback_baton->ra_session = ra_session;
+  callback_baton->anchor = base_path;
 
   /* Now, we open an extra RA session to the correct anchor
      location for URL1.  This is used during the editor calls to fetch file
@@ -1736,13 +1737,14 @@ diff_repos_repos(const svn_wc_diff_callbacks4_t *callbacks,
 
   /* Set up the repos_diff editor on BASE_PATH, if available.
      Otherwise, we just use "". */
-  SVN_ERR(svn_client__get_diff_editor
-          (base_path ? base_path : "",
-           NULL, callbacks, callback_baton, depth,
-           FALSE /* doesn't matter for diff */, extra_ra_session, rev1,
-           NULL /* no notify_func */, NULL /* no notify_baton */,
-           ctx->cancel_func, ctx->cancel_baton,
-           &diff_editor, &diff_edit_baton, pool));
+  SVN_ERR(svn_client__get_diff_editor(
+                &diff_editor, &diff_edit_baton,
+                NULL, "", depth,
+                extra_ra_session, rev1, TRUE, FALSE,
+                callbacks, callback_baton,
+                ctx->cancel_func, ctx->cancel_baton,
+                NULL /* no notify_func */, NULL /* no notify_baton */,
+                pool, pool));
 
   /* We want to switch our txn into URL2 */
   SVN_ERR(svn_ra_do_diff3
@@ -2218,6 +2220,7 @@ svn_client_diff5(const apr_array_header_t *options,
   peg_revision.kind = svn_opt_revision_unspecified;
 
   /* setup callback and baton */
+  diff_callbacks.file_opened = diff_file_opened;
   diff_callbacks.file_changed = diff_file_changed;
   diff_callbacks.file_added = diff_file_added;
   diff_callbacks.file_deleted = no_diff_deleted ? diff_file_deleted_no_diff :
@@ -2280,6 +2283,7 @@ svn_client_diff_peg5(const apr_array_header_t *options,
   svn_wc_diff_callbacks4_t diff_callbacks;
 
   /* setup callback and baton */
+  diff_callbacks.file_opened = diff_file_opened;
   diff_callbacks.file_changed = diff_file_changed;
   diff_callbacks.file_added = diff_file_added;
   diff_callbacks.file_deleted = no_diff_deleted ? diff_file_deleted_no_diff :
