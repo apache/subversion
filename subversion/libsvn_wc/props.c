@@ -2018,7 +2018,7 @@ do_propset(svn_wc__db_t *db,
   svn_wc_notify_action_t notify_action;
   svn_wc__db_kind_t kind;
   svn_wc__db_status_t status;
-  svn_skel_t *work_item;
+  svn_skel_t *work_item = NULL;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -2074,8 +2074,13 @@ do_propset(svn_wc__db_t *db,
       value = new_value;
     }
 
-  SVN_ERR(svn_wc__wq_build_sync_file_flags(&work_item, db, local_abspath,
-                                           scratch_pool, scratch_pool));
+  if (kind == svn_wc__db_kind_file
+        && (strcmp(name, SVN_PROP_EXECUTABLE) == 0
+            || strcmp(name, SVN_PROP_NEEDS_LOCK) == 0))
+    {
+      SVN_ERR(svn_wc__wq_build_sync_file_flags(&work_item, db, local_abspath,
+                                               scratch_pool, scratch_pool));
+    }
 
   SVN_ERR_W(svn_wc__db_read_props(&prophash, db, local_abspath,
                                   scratch_pool, scratch_pool),
@@ -2163,7 +2168,8 @@ do_propset(svn_wc__db_t *db,
                                   scratch_pool));
 
   /* Run our workqueue item for sync'ing flags with props. */
-  SVN_ERR(svn_wc__wq_run(db, local_abspath, NULL, NULL, scratch_pool));
+  if (work_item)
+    SVN_ERR(svn_wc__wq_run(db, local_abspath, NULL, NULL, scratch_pool));
 
   if (notify_func)
     {
