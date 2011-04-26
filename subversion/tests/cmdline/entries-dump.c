@@ -230,7 +230,7 @@ directory_dump(const char *path,
 
   bt.prefix_path = path;
 
-  err = svn_wc__node_walk_children(bt.wc_ctx, bt.root_abspath, FALSE,
+  err = svn_wc__node_walk_children(bt.wc_ctx, bt.root_abspath, FALSE, NULL,
                                    print_dir, &bt, svn_depth_infinity,
                                    NULL, NULL, scratch_pool);
   if (err)

@@ -406,7 +406,8 @@ svn_wc__node_get_copyfrom_info(const char **copyfrom_root_url,
 
 /**
  * Call @a walk_callback with @a walk_baton for @a local_abspath and all
- * nodes underneath it, restricted by @a walk_depth.
+ * nodes underneath it, restricted by @a walk_depth, and possibly
+ * @a changelists.
  *
  * If @a show_hidden is true, include hidden nodes, else ignore them.
  */
@@ -414,6 +415,7 @@ svn_error_t *
 svn_wc__node_walk_children(svn_wc_context_t *wc_ctx,
                            const char *local_abspath,
                            svn_boolean_t show_hidden,
+                           const apr_array_header_t *changelists,
                            svn_wc__node_found_func_t walk_callback,
                            void *walk_baton,
                            svn_depth_t walk_depth,

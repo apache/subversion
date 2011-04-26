@@ -791,6 +791,7 @@ svn_error_t *
 svn_wc__node_walk_children(svn_wc_context_t *wc_ctx,
                            const char *local_abspath,
                            svn_boolean_t show_hidden,
+                           const apr_array_header_t *changelists,
                            svn_wc__node_found_func_t walk_callback,
                            void *walk_baton,
                            svn_depth_t walk_depth,
@@ -800,7 +801,8 @@ svn_wc__node_walk_children(svn_wc_context_t *wc_ctx,
 {
   return svn_error_return(
     svn_wc__internal_walk_children(wc_ctx->db, local_abspath, show_hidden,
-                                   NULL, walk_callback, walk_baton, walk_depth,
+                                   changelists, walk_callback, walk_baton,
+                                   walk_depth,
                                    cancel_func, cancel_baton, scratch_pool));
 }
 
