@@ -353,73 +353,6 @@ get_dirprops_from_ra(struct dir_baton *b, svn_revnum_t base_revision)
                          b->pool);
 }
 
-
-/* If WC_CTX is NULL then set *LOCAL_DIR_ABSPATH to NULL otherwise
-   return in *LOCAL_DIR_ABSPATH the absolute path for the directory
-   PATH if PATH is a versioned directory. If PATH is not a versioned
-   directory and LENIENT is FALSE then return an error
-   SVN_ERR_WC_NOT_WORKING_COPY.  If LENIENT is TRUE then no error will
-   be returned but instead *LOCAL_DIR_ABSPATH will be set to NULL.
-
-   This rather odd interface was originally designed around searching
-   an access baton set. */
-static svn_error_t *
-get_dir_abspath(const char **local_dir_abspath,
-                svn_wc_context_t *wc_ctx,
-                const char *path,
-                svn_boolean_t lenient,
-                apr_pool_t *pool)
-{
-  *local_dir_abspath = NULL;
-
-  if (wc_ctx)
-    {
-      svn_node_kind_t kind;
-      svn_error_t *err;
-      const char *local_abspath;
-      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-      err = svn_wc_read_kind(&kind, wc_ctx, local_abspath, FALSE, pool);
-      if (err)
-        {
-          if (lenient)
-            kind = svn_node_none;
-          else
-            return svn_error_return(err);
-        }
-      svn_error_clear(err);
-      if (kind == svn_node_dir)
-        *local_dir_abspath = local_abspath;
-      else if (!lenient)
-        return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
-                                 _("'%s' is not a versioned directory"),
-                                 svn_dirent_local_style(local_abspath, pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
-/* Like get_path_access except the returned path, in
-   *LOCAL_PARENT_DIR_ABSPATH, is for the parent of PATH rather than
-   for PATH itself.  As for get_path_access WC_CTX may be NULL. */
-static svn_error_t *
-get_parent_dir_abspath(const char **local_parent_dir_abspath,
-                       svn_wc_context_t *wc_ctx,
-                       const char *path,
-                       svn_boolean_t lenient,
-                       apr_pool_t *pool)
-{
-  if (!wc_ctx)
-    *local_parent_dir_abspath = NULL;  /* Avoid messing around with paths */
-  else
-    {
-      SVN_ERR(get_dir_abspath(local_parent_dir_abspath, wc_ctx,
-                              svn_dirent_dirname(path, pool),
-                              lenient, pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
 /* Get the empty file associated with the edit baton. This is cached so
  * that it can be reused, all empty files are the same.
  */
@@ -661,7 +594,6 @@ add_directory(const char *path,
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
   struct dir_baton *b;
-  const char *local_dir_abspath;
   svn_wc_notify_state_t state;
 
   /* ### TODO: support copyfrom? */
@@ -678,9 +610,6 @@ add_directory(const char *path,
       return SVN_NO_ERROR;
     }
 
-
-  SVN_ERR(get_dir_abspath(&local_dir_abspath, eb->wc_ctx, pb->wcpath, TRUE,
-                          pool));
 
   SVN_ERR(eb->diff_callbacks->dir_added(
                 &state, &b->tree_conflicted,
@@ -754,7 +683,6 @@ open_directory(const char *path,
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
   struct dir_baton *b;
-  const char *local_dir_abspath;
 
   b = make_dir_baton(path, pb, pb->edit_baton, FALSE, pool);
   *child_baton = b;
@@ -768,9 +696,6 @@ open_directory(const char *path,
     }
 
   SVN_ERR(get_dirprops_from_ra(b, base_revision));
-
-  SVN_ERR(get_dir_abspath(&local_dir_abspath, eb->wc_ctx, pb->wcpath, TRUE,
-                          pool));
 
   SVN_ERR(eb->diff_callbacks->dir_opened(
                 &b->tree_conflicted, &b->skip,
@@ -940,8 +865,6 @@ close_file(void *file_baton,
 {
   struct file_baton *b = file_baton;
   struct edit_baton *eb = b->edit_baton;
-  const char *local_dir_abspath;
-  svn_error_t *err;
   svn_wc_notify_state_t content_state = svn_wc_notify_state_unknown;
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
 
@@ -964,36 +887,6 @@ close_file(void *file_baton,
                                       _("Checksum mismatch for '%s'"),
                                       b->path));
     }
-
-  err = get_parent_dir_abspath(&local_dir_abspath, eb->wc_ctx,
-                               b->wcpath, eb->dry_run, b->pool);
-
-  if (err && err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
-    {
-      /* ### maybe try to stat the local b->wcpath? */
-      /* If the file path doesn't exist, then send a 'skipped' notification. */
-      /* Currently, there is no way how this could be a tree-conflict
-       * notification, because tree conflicts are only detected below.
-       * Neither open_file, add_file or apply_textdelta tack tree-conflicts
-       * on the file baton. delete_file is only carried out on dir close.
-       * This is a skip due to lock failure. */
-      if (eb->notify_func)
-        {
-          svn_wc_notify_t *notify = svn_wc_create_notify(
-                                      b->wcpath,
-                                      svn_wc_notify_skip,
-                                      pool);
-          notify->kind = svn_node_file;
-          notify->content_state = svn_wc_notify_state_missing;
-          notify->prop_state = prop_state;
-          (*eb->notify_func)(eb->notify_baton, notify, pool);
-        }
-
-      svn_error_clear(err);
-      return SVN_NO_ERROR;
-    }
-  else if (err)
-    return svn_error_return(err);
 
   if (b->path_end_revision || b->propchanges->nelts > 0)
     {
@@ -1090,17 +983,19 @@ close_directory(void *dir_baton,
   struct edit_baton *eb = b->edit_baton;
   svn_wc_notify_state_t content_state = svn_wc_notify_state_unknown;
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
-  svn_error_t *err;
+  svn_node_kind_t kind;
   const char *local_dir_abspath;
 
   /* Skip *everything* within a newly tree-conflicted directory. */
   if (b->skip)
     return SVN_NO_ERROR;
 
-  err = get_dir_abspath(&local_dir_abspath, eb->wc_ctx, b->wcpath,
-                        FALSE, b->pool);
+  if (eb->wc_ctx)
+    SVN_ERR(svn_wc_read_kind(&kind, eb->wc_ctx, b->wcpath, FALSE, pool));
+  else
+    kind = svn_node_dir;
 
-  if (err && err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
+  if (kind != svn_node_dir)
     {
       /* ### maybe try to stat the local b->wcpath? */
       /* If the path doesn't exist, then send a 'skipped' notification.
@@ -1119,16 +1014,13 @@ close_directory(void *dir_baton,
             = svn_wc_notify_state_missing;
           (*eb->notify_func)(eb->notify_baton, notify, pool);
         }
-      svn_error_clear(err);
       return SVN_NO_ERROR;
     }
-  else if (err)
-    return svn_error_return(err);
 
   /* Don't do the props_changed stuff if this is a dry_run and we don't
      have an access baton, since in that case the directory will already
      have been recognised as added, in which case they cannot conflict. */
-  if ((b->propchanges->nelts > 0) && (! eb->dry_run || local_dir_abspath))
+  if (b->propchanges->nelts > 0)
     {
       svn_boolean_t tree_conflicted = FALSE;
       SVN_ERR(eb->diff_callbacks->dir_props_changed(
