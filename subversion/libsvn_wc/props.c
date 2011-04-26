@@ -2018,7 +2018,7 @@ do_propset(svn_wc__db_t *db,
   svn_wc_notify_action_t notify_action;
   svn_wc__db_kind_t kind;
   svn_wc__db_status_t status;
-  svn_skel_t *work_item = NULL;
+  svn_skel_t *work_item;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
