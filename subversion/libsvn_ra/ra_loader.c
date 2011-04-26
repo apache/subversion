@@ -575,11 +575,13 @@ svn_error_t *svn_ra_get_path_relative_to_session(svn_ra_session_t *session,
     }
   else
     {
-      *rel_path = svn_uri_is_child(sess_url, url, pool);
-      if (! *rel_path)
+      const char *relpath = svn_uri_is_child(sess_url, url, pool);
+      if (! *relpath)
         return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                                  _("'%s' isn't a child of session URL '%s'"),
                                  url, sess_url);
+
+      *rel_path = svn_path_uri_decode(relpath, pool);
     }
   return SVN_NO_ERROR;
 }
@@ -597,12 +599,14 @@ svn_error_t *svn_ra_get_path_relative_to_root(svn_ra_session_t *session,
     }
   else
     {
-      *rel_path = svn_uri_is_child(root_url, url, pool);
-      if (! *rel_path)
+      const char *relpath = svn_uri_is_child(root_url, url, pool);
+      if (! *relpath)
         return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                                  _("'%s' isn't a child of repository root "
                                    "URL '%s'"),
                                  url, root_url);
+
+      *rel_path = svn_path_uri_decode(relpath, pool);
     }
 
   return SVN_NO_ERROR;

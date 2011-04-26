@@ -695,6 +695,9 @@ svn_ra_get_session_url(svn_ra_session_t *ra_session,
  * is parented, setting @a *rel_path to that value.  If @a url is not
  * a child of the session URL, return @c SVN_ERR_RA_ILLEGAL_URL.
  *
+ * The returned path is uri decoded to allow using it with the ra or other
+ * apis as a valid relpath.
+ *
  * @since New in 1.7.
  */
 svn_error_t *
@@ -707,6 +710,9 @@ svn_ra_get_path_relative_to_session(svn_ra_session_t *ra_session,
  * the repository with which @a ra_session is associated, setting @a
  * *rel_path to that value.  If @a url is not a child of repository
  * root URL, return @c SVN_ERR_RA_ILLEGAL_URL.
+ *
+ * The returned path is uri decoded to allow using it with the ra or other
+ * apis as a valid relpath.
  *
  * @since New in 1.7.
  */
