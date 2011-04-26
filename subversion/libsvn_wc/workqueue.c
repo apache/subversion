@@ -83,18 +83,6 @@ dispatch_work_item(svn_wc__db_t *db,
 
 
 static svn_error_t *
-sync_file_flags(svn_wc__db_t *db,
-                const char *local_abspath,
-                apr_pool_t *scratch_pool)
-{
-  SVN_ERR(svn_wc__sync_flags_with_props(NULL, db, local_abspath,
-                                        scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
 get_and_record_fileinfo(svn_wc__db_t *db,
                         const char *local_abspath,
                         svn_boolean_t ignore_enoent,
@@ -727,7 +715,8 @@ run_file_install(svn_wc__db_t *db,
       && (apr_hash_get(props, SVN_PROP_NEEDS_LOCK, APR_HASH_KEY_STRING)
           || apr_hash_get(props, SVN_PROP_EXECUTABLE, APR_HASH_KEY_STRING)))
     {
-      SVN_ERR(sync_file_flags(db, local_abspath, scratch_pool));
+      SVN_ERR(svn_wc__sync_flags_with_props(NULL, db, local_abspath,
+                                            scratch_pool));
     }
 
   if (use_commit_times)
@@ -1051,7 +1040,8 @@ run_sync_file_flags(svn_wc__db_t *db,
   SVN_ERR(svn_wc__db_from_relpath(&local_abspath, db, wri_abspath,
                                   local_relpath, scratch_pool, scratch_pool));
 
-  return svn_error_return(sync_file_flags(db, local_abspath, scratch_pool));
+  return svn_error_return(svn_wc__sync_flags_with_props(NULL, db,
+                                            local_abspath, scratch_pool));
 }
 
 
