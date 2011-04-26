@@ -2069,10 +2069,6 @@ typedef svn_error_t *(*svn_wc_conflict_resolver_func_t)(
  *
  * Common parameters:
  *
- * @a local_dir_abspath will be the absolute path to the local directory
- * containing @a path, or @c NULL if the diff editor does not have a local
- * path.
- *
  * If @a state is non-NULL, set @a *state to the state of the item
  * after the operation has been performed.  (In practice, this is only
  * useful with merge, not diff; diff callbacks will probably set
@@ -2120,8 +2116,7 @@ typedef struct svn_wc_diff_callbacks4_t
    * property name.
    *
    */
-  svn_error_t *(*file_changed)(const char *local_dir_abspath,
-                               svn_wc_notify_state_t *contentstate,
+  svn_error_t *(*file_changed)(svn_wc_notify_state_t *contentstate,
                                svn_wc_notify_state_t *propstate,
                                svn_boolean_t *tree_conflicted,
                                const char *path,
@@ -2155,8 +2150,7 @@ typedef struct svn_wc_diff_callbacks4_t
    * copy), and the origin of the copy may be recorded as
    * @a copyfrom_path under @a copyfrom_revision.
    */
-  svn_error_t *(*file_added)(const char *local_dir_abspath,
-                             svn_wc_notify_state_t *contentstate,
+  svn_error_t *(*file_added)(svn_wc_notify_state_t *contentstate,
                              svn_wc_notify_state_t *propstate,
                              svn_boolean_t *tree_conflicted,
                              const char *path,
@@ -2184,8 +2178,7 @@ typedef struct svn_wc_diff_callbacks4_t
    * be NULL.  The implementor can use this information to decide if
    * (or how) to generate differences.
    */
-  svn_error_t *(*file_deleted)(const char *local_dir_abspath,
-                               svn_wc_notify_state_t *state,
+  svn_error_t *(*file_deleted)(svn_wc_notify_state_t *state,
                                svn_boolean_t *tree_conflicted,
                                const char *path,
                                const char *tmpfile1,
@@ -2199,8 +2192,7 @@ typedef struct svn_wc_diff_callbacks4_t
   /**
    * A directory @a path was deleted.
    */
-  svn_error_t *(*dir_deleted)(const char *local_dir_abspath,
-                              svn_wc_notify_state_t *state,
+  svn_error_t *(*dir_deleted)(svn_wc_notify_state_t *state,
                               svn_boolean_t *tree_conflicted,
                               const char *path,
                               void *diff_baton,
@@ -2215,8 +2207,7 @@ typedef struct svn_wc_diff_callbacks4_t
    * If the callback returns @c TRUE in @a *skip_children, children
    * of this directory will be skipped.
    */
-  svn_error_t *(*dir_opened)(const char *local_dir_abspath,
-                             svn_boolean_t *tree_conflicted,
+  svn_error_t *(*dir_opened)(svn_boolean_t *tree_conflicted,
                              svn_boolean_t *skip,
                              svn_boolean_t *skip_children,
                              const char *path,
@@ -2235,8 +2226,7 @@ typedef struct svn_wc_diff_callbacks4_t
    * copy), and the origin of the copy may be recorded as
    * @a copyfrom_path under @a copyfrom_revision.
    */
-  svn_error_t *(*dir_added)(const char *local_dir_abspath,
-                            svn_wc_notify_state_t *state,
+  svn_error_t *(*dir_added)(svn_wc_notify_state_t *state,
                             svn_boolean_t *tree_conflicted,
                             svn_boolean_t *skip,
                             svn_boolean_t *skip_children,
@@ -2256,8 +2246,7 @@ typedef struct svn_wc_diff_callbacks4_t
    * @a dir_was_added is set to #TRUE if the directory was added, and
    * to #FALSE if the directory pre-existed.
    */
-  svn_error_t *(*dir_props_changed)(const char *local_dir_abspath,
-                                    svn_wc_notify_state_t *propstate,
+  svn_error_t *(*dir_props_changed)(svn_wc_notify_state_t *propstate,
                                     svn_boolean_t *tree_conflicted,
                                     const char *path,
                                     svn_boolean_t dir_was_added,
@@ -2273,8 +2262,7 @@ typedef struct svn_wc_diff_callbacks4_t
    * @a dir_was_added is set to #TRUE if the directory was added, and
    * to #FALSE if the directory pre-existed.
    */
-  svn_error_t *(*dir_closed)(const char *local_dir_abspath,
-                             svn_wc_notify_state_t *contentstate,
+  svn_error_t *(*dir_closed)(svn_wc_notify_state_t *contentstate,
                              svn_wc_notify_state_t *propstate,
                              svn_boolean_t *tree_conflicted,
                              const char *path,
