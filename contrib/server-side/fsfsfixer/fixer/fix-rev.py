@@ -24,6 +24,8 @@ URL = "$URL$"[6:-2]
 URL = URL[:URL.rindex('/', 0, URL.rindex('/'))]
 
 # Global dictionaries recording the fixes made
+# TODO: These two are currently unused.  Please feel free to delete them, or
+#       make it print them out, or add a comment, or just leave it as it is.
 fixed_ids = {}
 fixed_checksums = {}
 
