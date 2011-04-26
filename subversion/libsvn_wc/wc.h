@@ -580,11 +580,13 @@ svn_wc__internal_walk_status(svn_wc__db_t *db,
                              void *cancel_baton,
                              apr_pool_t *scratch_pool);
 
-/* Library-internal version of svn_wc__node_walk_children(), which see. */
+/* Library-internal version of svn_wc__node_walk_children(), which see.
+   If CHANGELISTS is non-NULL and non-empty, filter thereon. */
 svn_error_t *
 svn_wc__internal_walk_children(svn_wc__db_t *db,
                                const char *local_abspath,
                                svn_boolean_t show_hidden,
+                               const apr_array_header_t *changelists,
                                svn_wc__node_found_func_t walk_callback,
                                void *walk_baton,
                                svn_depth_t walk_depth,

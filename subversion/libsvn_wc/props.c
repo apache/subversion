@@ -2008,7 +2008,6 @@ do_propset(svn_wc__db_t *db,
            const char *name,
            const svn_string_t *value,
            svn_boolean_t skip_checks,
-           const apr_hash_t *changelists,
            svn_wc_notify_func2_t notify_func,
            void *notify_baton,
            apr_pool_t *scratch_pool)
@@ -2020,10 +2019,6 @@ do_propset(svn_wc__db_t *db,
   svn_skel_t *work_item = NULL;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  if (!svn_wc__internal_changelist_match(db, local_abspath,
-                                         changelists, scratch_pool))
-    return SVN_NO_ERROR;
 
   /* Get the node kind for this path. */
   SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
@@ -2186,7 +2181,6 @@ struct propset_walk_baton
   const svn_string_t *propval;  /* The value to set. */
   svn_wc__db_t *db;  /* Database for the tree being walked. */
   svn_boolean_t force;  /* True iff force was passed. */
-  const apr_hash_t *changelists;  /* Changelists to filter on. */
   svn_wc_notify_func2_t notify_func;
   void *notify_baton;
 };
@@ -2207,8 +2201,7 @@ propset_walk_cb(const char *local_abspath,
   svn_error_t *err;
 
   err = do_propset(wb->db, local_abspath, wb->propname, wb->propval,
-                   wb->force, wb->changelists, wb->notify_func,
-                   wb->notify_baton, scratch_pool);
+                   wb->force, wb->notify_func, wb->notify_baton, scratch_pool);
   if (err && (err->apr_err == SVN_ERR_ILLEGAL_TARGET
               || err->apr_err == SVN_ERR_WC_INVALID_SCHEDULE))
     {
@@ -2232,7 +2225,6 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
                  apr_pool_t *scratch_pool)
 {
   enum svn_prop_kind prop_kind = svn_property_kind(NULL, name);
-  apr_hash_t *changelist_hash = NULL;
   svn_wc__db_kind_t kind;
   const char *dir_abspath;
 
@@ -2264,27 +2256,28 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
 
   SVN_ERR(svn_wc__write_check(wc_ctx->db, dir_abspath, scratch_pool));
 
-  if (changelists && changelists->nelts)
-    SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelists,
-                                       scratch_pool));
-
   if (depth == svn_depth_empty)
     {
+      apr_hash_t *changelist_hash = NULL;
+
+      if (changelists && changelists->nelts)
+        SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelists,
+                                           scratch_pool));
+
       if (!svn_wc__internal_changelist_match(wc_ctx->db, local_abspath,
                                              changelist_hash, scratch_pool))
         return SVN_NO_ERROR;
 
       SVN_ERR(do_propset(wc_ctx->db, local_abspath, name, value, skip_checks,
-                         changelist_hash, notify_func, notify_baton,
-                         scratch_pool));
+                         notify_func, notify_baton, scratch_pool));
     }
   else
     {
       struct propset_walk_baton wb = { name, value, wc_ctx->db, skip_checks,
-                                       changelist_hash, notify_func,
-                                       notify_baton };
+                                       notify_func, notify_baton };
 
-      SVN_ERR(svn_wc__internal_walk_children(wc_ctx->db, local_abspath, FALSE,
+      SVN_ERR(svn_wc__internal_walk_children(wc_ctx->db, local_abspath,
+                                             FALSE, changelists,
                                              propset_walk_cb, &wb,
                                              depth,
                                              NULL, NULL,  /* cancellation */
