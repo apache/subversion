@@ -946,6 +946,26 @@ svn_wc__node_get_commit_status(svn_node_kind_t *kind,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
+/* Checks for obstructions for the merge processing
+ *
+ * ### Currently this API is work in progress and is designed for just this
+ * ### caller.
+ *
+ * All output arguments except OBSTRUCTION_STATE may be NULL.
+ */
+svn_error_t *
+svn_wc__check_for_obstructions(svn_wc_notify_state_t *obstruction_state,
+                               svn_boolean_t *exists,
+                               svn_boolean_t *versioned,
+                               svn_boolean_t *added,
+                               svn_boolean_t *deleted,
+                               svn_node_kind_t *kind,
+                               svn_wc_context_t *wc_ctx,
+                               const char *local_abspath,
+                               svn_boolean_t no_wcroot_check,
+                               apr_pool_t *scratch_pool);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
