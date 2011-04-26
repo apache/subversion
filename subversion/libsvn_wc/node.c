@@ -1716,9 +1716,9 @@ svn_wc__check_for_obstructions(svn_wc_notify_state_t *obstruction_state,
   if (versioned)
     *versioned = FALSE;
   if (added)
-    *versioned = FALSE;
+    *added = FALSE;
   if (deleted)
-    *versioned = FALSE;
+    *deleted = FALSE;
   if (kind)
     *kind = svn_node_none;
 
