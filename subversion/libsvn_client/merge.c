@@ -1052,8 +1052,7 @@ filter_self_referential_mergeinfo(apr_array_header_t **props,
   return SVN_NO_ERROR;
 }
 
-/* An svn_wc_diff_callbacks4_t function.  Used for both file and directory
-   property merges. */
+/* Used for both file and directory property merges. */
 static svn_error_t *
 merge_props_changed(const char *local_dir_abspath,
                     svn_wc_notify_state_t *state,
@@ -1071,29 +1070,6 @@ merge_props_changed(const char *local_dir_abspath,
   svn_error_t *err;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  if (tree_conflicted)
-    *tree_conflicted = FALSE;
-
-  /* Check for an obstructed or missing node on disk. */
-  {
-    svn_wc_notify_state_t obstr_state;
-
-    SVN_ERR(perform_obstruction_check(&obstr_state, NULL, NULL, NULL, NULL,
-                                      NULL,
-                                      merge_b, local_abspath, svn_node_unknown,
-                                      scratch_pool));
-
-    if (obstr_state != svn_wc_notify_state_inapplicable)
-      {
-        if (state)
-          *state = obstr_state;
-        svn_pool_destroy(subpool);
-        return SVN_NO_ERROR;
-      }
-  }
-
-  /* ### TODO check tree-conflicts! */
 
   SVN_ERR(svn_categorize_props(propchanges, NULL, NULL, &props, subpool));
 
@@ -1218,17 +1194,33 @@ static svn_error_t *
 merge_dir_props_changed(const char *local_dir_abspath,
                         svn_wc_notify_state_t *state,
                         svn_boolean_t *tree_conflicted,
-                        const char *path,
+                        const char *local_abspath,
                         svn_boolean_t dir_was_added,
                         const apr_array_header_t *propchanges,
                         apr_hash_t *original_props,
                         void *diff_baton,
                         apr_pool_t *scratch_pool)
 {
+  merge_cmd_baton_t *merge_b = diff_baton;
+  svn_wc_notify_state_t obstr_state;
+  svn_node_kind_t kind;
+
+  SVN_ERR(perform_obstruction_check(&obstr_state, NULL, NULL, NULL, NULL,
+                                    NULL,
+                                    merge_b, local_abspath, svn_node_dir,
+                                    scratch_pool));
+
+  if (obstr_state != svn_wc_notify_state_inapplicable)
+    {
+      if (state)
+        *state = obstr_state;
+      return SVN_NO_ERROR;
+    }
+
   return svn_error_return(merge_props_changed(local_dir_abspath,
                                               state,
                                               tree_conflicted,
-                                              path,
+                                              local_abspath,
                                               propchanges,
                                               original_props,
                                               diff_baton,
@@ -1424,7 +1416,7 @@ merge_file_changed(const char *local_dir_abspath,
      into account the new property values. */
   if (prop_changes->nelts > 0)
     {
-      svn_boolean_t tree_conflicted2;
+      svn_boolean_t tree_conflicted2 = FALSE;
 
       SVN_ERR(merge_props_changed(local_dir_abspath, prop_state,
                                   &tree_conflicted2,
@@ -2390,26 +2382,6 @@ merge_dir_opened(const char *local_dir_abspath,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  if (tree_conflicted)
-    *tree_conflicted = FALSE;
-  if (skip_children)
-    *skip_children = FALSE;
-
-  if (local_dir_abspath == NULL)
-    {
-      /* Trying to open a directory at a non-existing path.
-       * Although this is a tree-conflict, it will already have been
-       * raised by the merge_dir_opened() callback on the topmost nonexisting
-       * ancestor, where an adm_access was still present. Not raising
-       * additional tree conflicts for the child nodes inside. */
-      /* ### TODO: Verify that this holds true for explicit targets that
-       * # point deep into a nonexisting subtree. */
-      if (skip_children)
-        *skip_children = TRUE;
-      svn_pool_destroy(subpool);
-      return SVN_NO_ERROR;
-    }
-
   /* Check for an obstructed or missing node on disk. */
   SVN_ERR(perform_obstruction_check(&obstr_state, NULL, NULL, NULL, NULL,
                                     NULL,
@@ -2420,6 +2392,7 @@ merge_dir_opened(const char *local_dir_abspath,
     {
       if (skip_children)
         *skip_children = TRUE;
+      /* But don't skip THIS, to allow a skip notification */
       svn_pool_destroy(subpool);
       return SVN_NO_ERROR;
     }
