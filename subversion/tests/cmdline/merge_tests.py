@@ -6593,7 +6593,9 @@ def avoid_reflected_revs(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None, None, 1)
+                                       None, None, None, None, None, 1,
+                                       None, A_COPY_path,
+                                       '--allow-mixed-revisions')
 
   # Sync up with the trunk ie., A
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
@@ -6632,7 +6634,10 @@ def avoid_reflected_revs(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None, None, 1)
+                                       None, None, None, None, None, 1,
+                                       None, A_COPY_path,
+                                       '--allow-mixed-revisions')
+
 
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
   expected_output = wc.State(wc_dir, {
