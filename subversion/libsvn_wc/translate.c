@@ -381,13 +381,25 @@ svn_wc__sync_flags_with_props(svn_boolean_t *did_set,
   /* Handle the read-write bit. */
   if (status != svn_wc__db_status_normal
       || props == NULL
-      || ! apr_hash_get(props, SVN_PROP_NEEDS_LOCK, APR_HASH_KEY_STRING))
+      || ! apr_hash_get(props, SVN_PROP_NEEDS_LOCK, APR_HASH_KEY_STRING)
+      || lock)
     {
       SVN_ERR(svn_io_set_file_read_write(local_abspath, FALSE, scratch_pool));
     }
   else
     {
-      if (! lock)
+      /* Special case: If we have an uncommitted svn:needs-lock, we don't
+         set the file read_only just yet.  That happens upon commit. */
+      apr_hash_t *pristine_props;
+
+      SVN_ERR(svn_wc__get_pristine_props(&pristine_props, db, local_abspath,
+                                         scratch_pool, scratch_pool));
+
+      if (pristine_props
+            && apr_hash_get(pristine_props,
+                            SVN_PROP_NEEDS_LOCK, APR_HASH_KEY_STRING) )
+            /*&& props
+            && apr_hash_get(props, SVN_PROP_NEEDS_LOCK, APR_HASH_KEY_STRING) )*/
         SVN_ERR(svn_io_set_file_read_only(local_abspath, FALSE, scratch_pool));
     }
 
