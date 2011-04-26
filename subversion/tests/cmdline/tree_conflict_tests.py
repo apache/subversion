@@ -1084,6 +1084,7 @@ def lock_update_only(sbox):
 #    subversion/libsvn_wc/lock.c:1437: (apr_err=155005)
 #    svn: E155005: No write-lock in '/.../svn-test-work/working_copies/tree_conflict_tests-22/E'
 @Issue(3469)
+@XFail()
 def at_directory_external(sbox):
   "tree conflict at directory external"
 

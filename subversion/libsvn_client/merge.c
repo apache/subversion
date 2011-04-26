@@ -276,6 +276,10 @@ typedef struct merge_cmd_baton_t {
      dry_run mode. */
   apr_hash_t *dry_run_deletions;
 
+  /* The list of paths for entries we've added, used only when in
+     dry_run mode. */
+  apr_hash_t *dry_run_added;
+
   /* The list of any paths which remained in conflict after a
      resolution attempt was made.  We track this in-memory, rather
      than just using WC entry state, since the latter doesn't help us
@@ -353,6 +357,20 @@ dry_run_deleted_p(const merge_cmd_baton_t *merge_b, const char *wcpath)
                        APR_HASH_KEY_STRING) != NULL);
 }
 
+/* Return true iff we're in dry-run mode and WCPATH would have been
+   added by now if we weren't in dry-run mode.
+   Used to avoid spurious notifications (e.g. conflicts) from a merge
+   attempt into an existing target which would have been deleted if we
+   weren't in dry_run mode (issue #2584).  Assumes that WCPATH is
+   still versioned (e.g. has an associated entry). */
+static APR_INLINE svn_boolean_t
+dry_run_added_p(const merge_cmd_baton_t *merge_b, const char *wcpath)
+{
+  return (merge_b->dry_run &&
+          apr_hash_get(merge_b->dry_run_added, wcpath,
+                       APR_HASH_KEY_STRING) != NULL);
+}
+
 /* Return whether any WC path was put in conflict by the merge
    operation corresponding to MERGE_B. */
 static APR_INLINE svn_boolean_t
@@ -408,20 +426,36 @@ perform_obstruction_check(svn_wc_notify_state_t *obstruction_state,
     *kind = svn_node_none;
 
   /* In a dry run, make as if nodes "deleted" by the dry run appear so. */
-  if (merge_b->dry_run && dry_run_deleted_p(merge_b, local_abspath))
+  if (merge_b->dry_run)
     {
-      *obstruction_state = svn_wc_notify_state_inapplicable;
+      if (dry_run_deleted_p(merge_b, local_abspath))
+        {
+          *obstruction_state = svn_wc_notify_state_inapplicable;
+        
+          if (versioned)
+            *versioned = TRUE;
+          if (deleted)
+            *deleted = TRUE;
+        
+          if (expected_kind != svn_node_unknown
+              && expected_kind != svn_node_none)
+            *obstruction_state = svn_wc_notify_state_obstructed;
+          return SVN_NO_ERROR;
+        }
+      else if (dry_run_added_p(merge_b, local_abspath))
+        {
+          *obstruction_state = svn_wc_notify_state_inapplicable;
 
-      if (versioned)
-        *versioned = TRUE;
-      if (deleted)
-        *deleted = TRUE;
+          if (versioned)
+            *versioned = TRUE;
+          if (added)
+            *added = TRUE;
+          if (kind)
+            *kind = svn_node_dir; /* Currently only used for dirs */
 
-      if (expected_kind != svn_node_unknown
-          && expected_kind != svn_node_none)
-        *obstruction_state = svn_wc_notify_state_obstructed;
-      return SVN_NO_ERROR;
-    }
+          return SVN_NO_ERROR;
+        }
+     }
 
   if (kind == NULL)
     kind = &wc_kind;
@@ -1224,6 +1258,13 @@ merge_dir_props_changed(svn_wc_notify_state_t *state,
       return SVN_NO_ERROR;
     }
 
+  if (dir_was_added
+      && merge_b->dry_run 
+      && dry_run_added_p(merge_b, local_abspath))
+    {
+      return SVN_NO_ERROR; /* We can't do a real prop merge for added dirs */
+    }
+
   return svn_error_return(merge_props_changed(state,
                                               tree_conflicted,
                                               local_abspath,
@@ -1544,8 +1585,6 @@ merge_file_added(svn_wc_notify_state_t *content_state,
         *content_state = svn_wc_notify_state_unchanged;
       if (prop_state)
         *prop_state = svn_wc_notify_state_unchanged;
-      if (tree_conflicted)
-        *tree_conflicted = FALSE;
       return SVN_NO_ERROR;
     }
 
@@ -1554,9 +1593,6 @@ merge_file_added(svn_wc_notify_state_t *content_state,
      below. */
   if (prop_state)
     *prop_state = svn_wc_notify_state_unknown;
-
-  if (tree_conflicted)
-    *tree_conflicted = FALSE;
 
   /* Apply the prop changes to a new hash table. */
   file_props = apr_hash_copy(subpool, original_props);
@@ -1996,8 +2032,6 @@ merge_dir_added(svn_wc_notify_state_t *state,
       svn_pool_destroy(subpool);
       if (state)
         *state = svn_wc_notify_state_unchanged;
-      if (tree_conflicted)
-        *tree_conflicted = FALSE;
       return SVN_NO_ERROR;
     }
 
@@ -2069,7 +2103,11 @@ merge_dir_added(svn_wc_notify_state_t *state,
     case svn_node_none:
       /* Unversioned or schedule-delete */
       if (merge_b->dry_run)
-        merge_b->added_path = apr_pstrdup(merge_b->pool, local_abspath);
+        {
+          merge_b->added_path = apr_pstrdup(merge_b->pool, local_abspath);
+          apr_hash_set(merge_b->dry_run_added, merge_b->added_path,
+                       APR_HASH_KEY_STRING, merge_b->added_path);
+        }
       else
         {
           SVN_ERR(svn_io_dir_make(local_abspath, APR_OS_DEFAULT, subpool));
@@ -2183,12 +2221,8 @@ merge_dir_deleted(svn_wc_notify_state_t *state,
       svn_pool_destroy(subpool);
       if (state)
         *state = svn_wc_notify_state_unchanged;
-      if (tree_conflicted)
-        *tree_conflicted = FALSE;
       return SVN_NO_ERROR;
     }
-  if (tree_conflicted)
-    *tree_conflicted = FALSE;
 
   /* Check for an obstructed or missing node on disk. */
   {
@@ -2434,12 +2468,6 @@ merge_dir_closed(svn_wc_notify_state_t *contentstate,
                  apr_pool_t *scratch_pool)
 {
   merge_cmd_baton_t *merge_b = baton;
-  if (contentstate)
-    *contentstate = svn_wc_notify_state_unknown;
-  if (propstate)
-    *propstate = svn_wc_notify_state_unknown;
-  if (tree_conflicted)
-    *tree_conflicted = FALSE;
 
   if (merge_b->dry_run)
     svn_hash__clear(merge_b->dry_run_deletions, scratch_pool);
@@ -8653,6 +8681,8 @@ do_merge(apr_hash_t **modified_subtrees,
       merge_cmd_baton.added_path = NULL;
       merge_cmd_baton.add_necessitated_merge = FALSE;
       merge_cmd_baton.dry_run_deletions =
+        dry_run ? apr_hash_make(subpool) : NULL;
+      merge_cmd_baton.dry_run_added =
         dry_run ? apr_hash_make(subpool) : NULL;
       merge_cmd_baton.conflicted_paths = NULL;
       merge_cmd_baton.paths_with_new_mergeinfo = NULL;
