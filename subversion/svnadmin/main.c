@@ -35,7 +35,7 @@
 #include "svn_path.h"
 #include "svn_config.h"
 #include "svn_repos.h"
-#include "svn_fs.h"
+#include "svn_cache_config.h"
 #include "svn_version.h"
 #include "svn_props.h"
 #include "svn_time.h"
@@ -1651,7 +1651,7 @@ main(int argc, const char *argv[])
   /* Initialize opt_state. */
   opt_state.start_revision.kind = svn_opt_revision_unspecified;
   opt_state.end_revision.kind = svn_opt_revision_unspecified;
-  opt_state.memory_cache_size = svn_fs_get_cache_config()->cache_size;
+  opt_state.memory_cache_size = svn_get_cache_config()->cache_size;
   opt_state.config_options 
             = apr_array_make(pool, 0, sizeof(svn_cmdline__config_argument_t*));
 
@@ -1943,14 +1943,14 @@ main(int argc, const char *argv[])
   /* Configure FSFS caches for maximum efficiency with svnadmin.
    * Also, apply the respective command line parameters, if given. */
   {
-    svn_fs_cache_config_t settings = *svn_fs_get_cache_config();
+    svn_cache_config_t settings = *svn_get_cache_config();
 
     settings.cache_size = opt_state.memory_cache_size;
     settings.cache_fulltexts = subcommand->cmd_func == subcommand_load;
     settings.cache_txdeltas = TRUE;
     settings.single_threaded = TRUE;
 
-    svn_fs_set_cache_config(&settings);
+    svn_set_cache_config(&settings);
   }
 
   /* Run the subcommand. */

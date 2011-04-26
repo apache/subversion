@@ -58,15 +58,6 @@ extern "C" {
 apr_hash_t *
 svn_fs__access_get_lock_tokens(svn_fs_access_t *access_ctx);
 
-/* Access the process-global (singleton) membuffer cache. The first call
- * will automatically allocate the cache using the current cache config.
- * NULL will be returned if the desired cache size is 0.
- *
- * @since New in 1.7.
- */
-struct svn_membuffer_t *
-svn_fs__get_global_membuffer_cache(void);
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

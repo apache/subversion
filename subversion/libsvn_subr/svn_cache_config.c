@@ -1,4 +1,4 @@
-/* caching.c : in-memory caching
+/* svn_cache_config.c : configuration of internal caches
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -22,15 +22,14 @@
 
 #include <apr_atomic.h>
 
-#include "svn_fs.h"
-#include "private/svn_fs_private.h"
+#include "svn_cache_config.h"
 #include "private/svn_cache.h"
 
 #include "svn_pools.h"
 
 /* The cache settings as a process-wide singleton.
  */
-static svn_fs_cache_config_t cache_settings =
+static svn_cache_config_t cache_settings =
   {
     /* default configuration:
      *
@@ -77,8 +76,8 @@ static svn_fs_cache_config_t cache_settings =
 };
 
 /* Get the current FSFS cache configuration. */
-const svn_fs_cache_config_t *
-svn_fs_get_cache_config(void)
+const svn_cache_config_t *
+svn_get_cache_config(void)
 {
   return &cache_settings;
 }
@@ -89,7 +88,7 @@ svn_fs_get_cache_config(void)
  * could not be created for some reason.
  */
 svn_membuffer_t *
-svn_fs__get_global_membuffer_cache(void)
+svn_cache__get_global_membuffer_cache(void)
 {
   static svn_membuffer_t * volatile cache = NULL;
 
@@ -132,7 +131,7 @@ svn_fs__get_global_membuffer_cache(void)
           &new_cache,
           (apr_size_t)cache_size,
           (apr_size_t)(cache_size / 16),
-          ! svn_fs_get_cache_config()->single_threaded,
+          ! svn_get_cache_config()->single_threaded,
           pool);
 
       /* Some error occured. Most likely it's an OOM error but we don't
@@ -170,7 +169,7 @@ svn_fs__get_global_membuffer_cache(void)
 }
 
 void
-svn_fs_set_cache_config(const svn_fs_cache_config_t *settings)
+svn_set_cache_config(const svn_cache_config_t *settings)
 {
   cache_settings = *settings;
 }

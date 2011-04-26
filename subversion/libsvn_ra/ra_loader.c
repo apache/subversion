@@ -44,7 +44,6 @@
 #include "svn_path.h"
 #include "svn_dso.h"
 #include "svn_config.h"
-#include "svn_fs.h"
 #include "ra_loader.h"
 
 #include "private/svn_ra_private.h"
@@ -250,17 +249,6 @@ check_ra_version(const svn_version_t *ra_version, const char *scheme)
 
 svn_error_t *svn_ra_initialize(apr_pool_t *pool)
 {
-  /* Per default, disable large expensive FS caching on the client side.
-   * We can still chose a different size for that cache later in the
-   * startup phase, e.g. after reading config files. If that does not
-   * happen until the first FSFS repository get opened, low initialization
-   * overhead caches will be used for the most time-critical structures.
-   *
-   * This is only relevant for FSFS over ra_local. */
-  svn_fs_cache_config_t settings = *svn_fs_get_cache_config();
-  settings.cache_size = 0x0;
-  svn_fs_set_cache_config(&settings);
-
   return SVN_NO_ERROR;
 }
 
