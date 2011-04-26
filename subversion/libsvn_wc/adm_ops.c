@@ -2312,6 +2312,57 @@ svn_wc__set_file_external_location(svn_wc_context_t *wc_ctx,
 }
 
 
+struct get_cl_fn_baton
+{
+  svn_wc__db_t *db;
+  svn_changelist_receiver_t callback_func;
+  void *callback_baton;
+};
+
+static svn_error_t *
+get_node_changelist(const char *local_abspath,
+                    svn_node_kind_t kind,
+                    void *baton,
+                    apr_pool_t *scratch_pool)
+{
+  struct get_cl_fn_baton *b = baton;
+  const char *changelist;
+
+  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, &changelist,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               b->db, local_abspath,
+                               scratch_pool, scratch_pool));
+
+  SVN_ERR(b->callback_func(b->callback_baton, local_abspath,
+                           changelist, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc_get_changelists(svn_wc_context_t *wc_ctx,
+                       const char *local_abspath,
+                       svn_depth_t depth,
+                       const apr_array_header_t *changelists,
+                       svn_changelist_receiver_t callback_func,
+                       void *callback_baton,
+                       svn_cancel_func_t cancel_func,
+                       void *cancel_baton,
+                       apr_pool_t *scratch_pool)
+{
+  struct get_cl_fn_baton gnb = { wc_ctx->db, callback_func, callback_baton };
+
+  return svn_error_return(
+    svn_wc__internal_walk_children(wc_ctx->db, local_abspath, FALSE,
+                                   changelists, get_node_changelist, &gnb,
+                                   depth, cancel_func, cancel_baton,
+                                   scratch_pool));
+
+}
+
+
 svn_boolean_t
 svn_wc__internal_changelist_match(svn_wc__db_t *db,
                                   const char *local_abspath,

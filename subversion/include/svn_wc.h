@@ -7530,6 +7530,19 @@ svn_wc_set_changelist(const char *path,
                       void *notify_baton,
                       apr_pool_t *pool);
 
+/* @since New in 1.7.
+ */
+svn_error_t *
+svn_wc_get_changelists(svn_wc_context_t *wc_ctx,
+                       const char *local_abspath,
+                       svn_depth_t depth,
+                       const apr_array_header_t *changelists,
+                       svn_changelist_receiver_t callback_func,
+                       void *callback_baton,
+                       svn_cancel_func_t cancel_func,
+                       void *cancel_baton,
+                       apr_pool_t *scratch_pool);
+
 /** Crop @a local_abspath according to @a depth.
  *
  * Remove any item that exceeds the boundary of @a depth (relative to

@@ -124,41 +124,6 @@ svn_client_remove_from_changelists(const apr_array_header_t *paths,
 }
 
 
-
-/* Entry-walker callback for svn_client_get_changelist() below. */
-struct get_cl_fn_baton
-{
-  svn_changelist_receiver_t callback_func;
-  void *callback_baton;
-  svn_wc_context_t *wc_ctx;
-  apr_pool_t *pool;
-};
-
-
-static svn_error_t *
-get_node_changelist(const char *local_abspath,
-                    svn_node_kind_t kind,
-                    void *baton,
-                    apr_pool_t *pool)
-{
-  struct get_cl_fn_baton *b = (struct get_cl_fn_baton *)baton;
-  const char *changelist;
-
-  SVN_ERR(svn_wc__node_get_changelist(&changelist, b->wc_ctx,
-                                      local_abspath, pool, pool));
-
-  if (((kind == svn_node_file) || (kind == svn_node_dir)))
-    {
-
-      /* ...then call the callback function. */
-      SVN_ERR(b->callback_func(b->callback_baton, local_abspath,
-                               changelist, pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
 svn_error_t *
 svn_client_get_changelists(const char *path,
                            const apr_array_header_t *changelists,
@@ -168,18 +133,12 @@ svn_client_get_changelists(const char *path,
                            svn_client_ctx_t *ctx,
                            apr_pool_t *pool)
 {
-  struct get_cl_fn_baton gnb;
   const char *local_abspath;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
-  gnb.callback_func = callback_func;
-  gnb.callback_baton = callback_baton;
-  gnb.wc_ctx = ctx->wc_ctx;
-  gnb.pool = pool;
-
-  return svn_error_return(
-    svn_wc__node_walk_children(ctx->wc_ctx, local_abspath, FALSE, changelists,
-                               get_node_changelist, &gnb, depth,
-                               ctx->cancel_func, ctx->cancel_baton, pool));
+  SVN_ERR(svn_wc_get_changelists(ctx->wc_ctx, local_abspath, depth, changelists,
+                                 callback_func, callback_baton,
+                                 ctx->cancel_func, ctx->cancel_baton, pool));
+  return SVN_NO_ERROR;
 }
