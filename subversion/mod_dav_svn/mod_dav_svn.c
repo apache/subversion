@@ -32,7 +32,7 @@
 #include <mod_dav.h>
 
 #include "svn_version.h"
-#include "svn_fs.h"
+#include "svn_cache_config.h"
 #include "svn_utf.h"
 #include "svn_ctype.h"
 #include "svn_dso.h"
@@ -427,7 +427,7 @@ SVNSpecialURI_cmd(cmd_parms *cmd, void *config, const char *arg1)
 static const char *
 SVNInMemoryCacheSize_cmd(cmd_parms *cmd, void *config, const char *arg1)
 {
-  svn_fs_cache_config_t settings = *svn_fs_get_cache_config();
+  svn_cache_config_t settings = *svn_get_cache_config();
 
   apr_uint64_t value = 0;
   svn_error_t *err = svn_cstring_atoui64(&value, arg1);
@@ -439,7 +439,7 @@ SVNInMemoryCacheSize_cmd(cmd_parms *cmd, void *config, const char *arg1)
 
   settings.cache_size = value * 0x100000;
 
-  svn_fs_set_cache_config(&settings);
+  svn_set_cache_config(&settings);
 
   return NULL;
 }
