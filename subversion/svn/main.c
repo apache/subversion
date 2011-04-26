@@ -2339,7 +2339,7 @@ main(int argc, const char *argv[])
     {
       if (subcommand->cmd_func == svn_cl__status)
         {
-          opt_state.depth = SVN_DEPTH_INFINITY_OR_IMMEDIATES(FALSE);
+          opt_state.depth = svn_depth_immediates;
         }
       else if (subcommand->cmd_func == svn_cl__revert
                || subcommand->cmd_func == svn_cl__add
