@@ -149,62 +149,6 @@
  * the doc string for HONOR_MERGEINFO().
  */
 
-/*-----------------------------------------------------------------------*/
-
-/*** Utilities ***/
-
-/* Return SVN_ERR_UNSUPPORTED_FEATURE if URL's scheme does not
-   match the scheme of the url for LOCAL_ABSPATH; return
-   SVN_ERR_BAD_URL if no scheme can be found for one or both urls;
-   otherwise return SVN_NO_ERROR.  Use SCRATCH_POOL for temporary
-   allocation. */
-static svn_error_t *
-check_scheme_match(svn_wc_context_t *wc_ctx,
-                   const char *local_abspath,
-                   const char *url,
-                   apr_pool_t *scratch_pool)
-{
-  const char *idx1, *idx2;
-  const char *local_path_url;
-
-  SVN_ERR(svn_wc__node_get_url(&local_path_url, wc_ctx, local_abspath,
-                               scratch_pool, scratch_pool));
-
-  idx1 = strchr(url, ':');
-  idx2 = strchr(local_path_url, ':');
-
-  if ((idx1 == NULL) && (idx2 == NULL))
-    {
-      return svn_error_createf
-        (SVN_ERR_BAD_URL, NULL,
-         _("URLs have no scheme ('%s' and '%s')"), url, local_path_url);
-    }
-  else if (idx1 == NULL)
-    {
-      return svn_error_createf
-        (SVN_ERR_BAD_URL, NULL,
-         _("URL has no scheme: '%s'"), url);
-    }
-  else if (idx2 == NULL)
-    {
-      return svn_error_createf
-        (SVN_ERR_BAD_URL, NULL,
-         _("URL has no scheme: '%s'"), local_path_url);
-    }
-  else if (((idx1 - url) != (idx2 - local_path_url))
-           || (strncmp(url, local_path_url, idx1 - url) != 0))
-    {
-      return svn_error_createf
-        (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-         _("Access scheme mixtures not yet supported ('%s' and '%s')"),
-         url, local_path_url);
-    }
-
-  /* else */
-
-  return SVN_NO_ERROR;
-}
-
 
 /*-----------------------------------------------------------------------*/
 
@@ -249,8 +193,8 @@ typedef struct merge_cmd_baton_t {
                                          versioned dir (dry-run only) */
   const char *target_abspath;         /* Absolute working copy target of
                                          the merge. */
-  const char *target_wcroot_abspath;  /* Absolute path to root of wc that
-                                         TARGET_ABSPATH belongs to. */
+  const char *repos_root_url;         /* The repository root of the repository
+                                         containing TARGET_ABSPATH */
 
   /* The left and right URLs and revs.  The value of this field changes to
      reflect the merge_source_t *currently* being merged by do_merge(). */
@@ -343,6 +287,28 @@ typedef struct merge_cmd_baton_t {
 #define RECORD_MERGEINFO(merge_b) (HONOR_MERGEINFO(merge_b) \
                                    && !(merge_b)->dry_run)
 
+
+/*-----------------------------------------------------------------------*/
+
+/*** Utilities ***/
+
+/* Return SVN_ERR_UNSUPPORTED_FEATURE if URL is not inside the repository
+   of LOCAL_ABSPAT.  Use SCRATCH_POOL for temporary allocations. */
+static svn_error_t *
+check_repos_match(merge_cmd_baton_t *merge_b,
+                  const char *local_abspath,
+                  const char *url,
+                  apr_pool_t *scratch_pool)
+{
+  if (!svn_uri_is_ancestor(merge_b->repos_root_url, url))
+    return svn_error_createf(
+        SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+         _("Url '%s' of '%s' is not in repository '%s'"),
+         url, svn_dirent_local_style(local_abspath, scratch_pool),
+         merge_b->repos_root_url);
+
+  return SVN_NO_ERROR;
+}
 /* Return true iff we're in dry-run mode and WCPATH would have been
    deleted by now if we weren't in dry-run mode.
    Used to avoid spurious notifications (e.g. conflicts) from a merge
@@ -1678,9 +1644,8 @@ merge_file_added(svn_wc_notify_state_t *content_state,
                 else
                   copyfrom_url = merge_b->merge_source.url2;
                 copyfrom_rev = rev2;
-                SVN_ERR(check_scheme_match(merge_b->ctx->wc_ctx,
-                                           parent_abspath,
-                                           copyfrom_url, subpool));
+                SVN_ERR(check_repos_match(merge_b, mine_abspath, copyfrom_url,
+                                          subpool));
                 new_base_props = file_props;
                 new_props = NULL; /* inherit from new_base_props */
                 SVN_ERR(svn_stream_open_readonly(&new_base_contents,
@@ -2048,8 +2013,9 @@ merge_dir_added(svn_wc_notify_state_t *state,
       copyfrom_url = svn_path_url_add_component2(merge_b->merge_source.url2,
                                                  child, subpool);
       copyfrom_rev = rev;
-      SVN_ERR(check_scheme_match(merge_b->ctx->wc_ctx, parent_abspath,
-                                 copyfrom_url, subpool));
+
+      SVN_ERR(check_repos_match(merge_b, parent_abspath, copyfrom_url,
+                                subpool));
     }
 
   /* Check for an obstructed or missing node on disk. */
@@ -8620,9 +8586,10 @@ do_merge(apr_hash_t **modified_subtrees,
   merge_cmd_baton.target_missing_child = FALSE;
   merge_cmd_baton.reintegrate_merge = reintegrate_merge;
   merge_cmd_baton.target_abspath = target_abspath;
-  SVN_ERR(svn_wc_get_wc_root(&merge_cmd_baton.target_wcroot_abspath,
-                             ctx->wc_ctx, merge_cmd_baton.target_abspath,
-                             pool, subpool));
+  SVN_ERR(svn_wc__node_get_repos_info(&merge_cmd_baton.repos_root_url, NULL,
+                                      ctx->wc_ctx,
+                                      merge_cmd_baton.target_abspath,
+                                      TRUE, FALSE, pool, subpool));
   merge_cmd_baton.pool = subpool;
   merge_cmd_baton.merge_options = merge_options;
   merge_cmd_baton.diff3_cmd = diff3_cmd;
