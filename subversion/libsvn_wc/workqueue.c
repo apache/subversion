@@ -513,7 +513,6 @@ run_file_commit(svn_wc__db_t *db,
   const svn_skel_t *arg1 = work_item->children->next;
   const char *local_relpath;
   const char *local_abspath;
-  apr_int64_t v;
 
   local_relpath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
   SVN_ERR(svn_wc__db_from_relpath(&local_abspath, db, wri_abspath,
