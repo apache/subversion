@@ -209,20 +209,6 @@ Candidate changes:
    Votes:
      +1: danielsh, stsp
 
- * ^/subversion/branches/1.6.x-issue3719
-   Fix issue #3719 "Extremely slow checkout on Windows"
-   Justification:
-     Has been reported to improve checkout performance on Windows
-     by a factor of 10 for one user (85 minutes down to 8 minutes).
-     The problem is most visible on NTFS with working copies that have
-     many files with svn: properties.
-   Notes:
-     See the issue for details, and also this thread:
-     http://svn.haxx.se/dev/archive-2011-02/0066.shtml
-     r1088808 fixes a compilation failure on Windows.
-   Votes:
-     +1: stsp, rhuijben
-
  * r1074572
    Allow building on Windows with a recent Expat.
    Justification:
@@ -431,3 +417,17 @@ Approved changes:
                  that are currently nominated...so my +1 is conditional on
                  that fix being applied first.)
      +1: danielsh (pburba: a fix to #3641 was committed to trunk)
+
+ * ^/subversion/branches/1.6.x-issue3719
+   Fix issue #3719 "Extremely slow checkout on Windows"
+   Justification:
+     Has been reported to improve checkout performance on Windows
+     by a factor of 10 for one user (85 minutes down to 8 minutes).
+     The problem is most visible on NTFS with working copies that have
+     many files with svn: properties.
+   Notes:
+     See the issue for details, and also this thread:
+     http://svn.haxx.se/dev/archive-2011-02/0066.shtml
+     r1088808 fixes a compilation failure on Windows.
+   Votes:
+     +1: stsp, rhuijben, jcorvel
