@@ -1326,8 +1326,10 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
                    apr_pool_t *scratch_pool)
 {
   merge_cmd_baton_t *merge_b = baton;
-  apr_pool_t *subpool = svn_pool_create(merge_b->pool);
+  apr_pool_t *subpool;
   enum svn_wc_merge_outcome_t merge_outcome;
+  svn_node_kind_t wc_kind;
+  svn_boolean_t is_deleted;
 
   SVN_ERR_ASSERT(mine_abspath && svn_dirent_is_absolute(mine_abspath));
   SVN_ERR_ASSERT(!older_abspath || svn_dirent_is_absolute(older_abspath));
@@ -1337,17 +1339,20 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
   {
     svn_wc_notify_state_t obstr_state;
 
-    SVN_ERR(perform_obstruction_check(&obstr_state, NULL, NULL, NULL, NULL,
-                                      NULL,
+    SVN_ERR(perform_obstruction_check(&obstr_state, NULL, NULL, NULL,
+                                      &is_deleted, &wc_kind,
                                       merge_b, mine_abspath, svn_node_unknown,
                                       scratch_pool));
     if (obstr_state != svn_wc_notify_state_inapplicable)
       {
+        /* ### a future thought:  if the file is under version control,
+         * but the working file is missing, maybe we can 'restore' the
+         * working file from the text-base, and then allow the merge to run? */
+
         if (content_state)
           *content_state = obstr_state;
         if (prop_state && obstr_state == svn_wc_notify_state_missing)
           *prop_state = svn_wc_notify_state_missing;
-        svn_pool_destroy(subpool);
         return SVN_NO_ERROR;
       }
   }
@@ -1355,56 +1360,49 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
   /* Other easy outs:  if the merge target isn't under version
      control, or is just missing from disk, fogettaboutit.  There's no
      way svn_wc_merge4() can do the merge. */
-  {
-    svn_node_kind_t kind;
-    svn_node_kind_t wc_kind;
-    svn_depth_t parent_depth;
+  if (wc_kind != svn_node_file || is_deleted)
+    {
+      /* Maybe the node is excluded via depth filtering? */
 
-    SVN_ERR(svn_wc_read_kind(&wc_kind, merge_b->ctx->wc_ctx, mine_abspath,
-                             FALSE, subpool));
-    SVN_ERR(svn_io_check_path(mine_abspath, &kind, subpool));
+      if (wc_kind == svn_node_none)
+        {
+          svn_depth_t parent_depth;
 
-    /* If the file isn't there due to depth restrictions, do not flag
-     * a conflict. Non-inheritable mergeinfo will be recorded, allowing
-     * future merges into non-shallow working copies to merge changes
-     * we missed this time around. */
-    SVN_ERR(svn_wc__node_get_depth(&parent_depth, merge_b->ctx->wc_ctx,
-                                   svn_dirent_dirname(mine_abspath, subpool),
-                                   subpool));
-    if (wc_kind == svn_node_none
-        && parent_depth < svn_depth_files
-        && parent_depth != svn_depth_unknown)
-      {
-        if (content_state)
-          *content_state = svn_wc_notify_state_missing;
-        if (prop_state)
-          *prop_state = svn_wc_notify_state_missing;
-        svn_pool_destroy(subpool);
-        return SVN_NO_ERROR;
-      }
+          /* If the file isn't there due to depth restrictions, do not flag
+           * a conflict. Non-inheritable mergeinfo will be recorded, allowing
+           * future merges into non-shallow working copies to merge changes
+           * we missed this time around. */
+          SVN_ERR(svn_wc__node_get_depth(&parent_depth, merge_b->ctx->wc_ctx,
+                                         svn_dirent_dirname(mine_abspath,
+                                                            scratch_pool),
+                                         scratch_pool));
+          if (parent_depth < svn_depth_files
+              && parent_depth != svn_depth_unknown)
+            {
+              if (content_state)
+                *content_state = svn_wc_notify_state_missing;
+              if (prop_state)
+                *prop_state = svn_wc_notify_state_missing;
+              return SVN_NO_ERROR;
+            }
+        }
 
-    /* ### a future thought:  if the file is under version control,
-       but the working file is missing, maybe we can 'restore' the
-       working file from the text-base, and then allow the merge to run?  */
+      /* This is use case 4 described in the paper attached to issue
+       * #2282.  See also notes/tree-conflicts/detection.txt
+       */
+      SVN_ERR(tree_conflict(merge_b, mine_abspath, svn_node_file,
+                            svn_wc_conflict_action_edit,
+                            svn_wc_conflict_reason_missing));
+      if (tree_conflicted)
+        *tree_conflicted = TRUE;
+      if (content_state)
+        *content_state = svn_wc_notify_state_missing;
+      if (prop_state)
+        *prop_state = svn_wc_notify_state_missing;
+      return SVN_NO_ERROR;
+    }
 
-    if ((wc_kind == svn_node_none) || (kind != svn_node_file))
-      {
-        /* This is use case 4 described in the paper attached to issue
-         * #2282.  See also notes/tree-conflicts/detection.txt
-         */
-        SVN_ERR(tree_conflict(merge_b, mine_abspath, svn_node_file,
-                              svn_wc_conflict_action_edit,
-                              svn_wc_conflict_reason_missing));
-        if (tree_conflicted)
-          *tree_conflicted = TRUE;
-        if (content_state)
-          *content_state = svn_wc_notify_state_missing;
-        if (prop_state)
-          *prop_state = svn_wc_notify_state_missing;
-        svn_pool_destroy(subpool);
-        return SVN_NO_ERROR;
-      }
-  }
+   subpool = svn_pool_create(merge_b->pool);
 
   /* ### TODO: Thwart attempts to merge into a path that has
      ### unresolved conflicts.  This needs to be smart enough to deal
@@ -2308,19 +2306,16 @@ merge_dir_opened(svn_boolean_t *tree_conflicted,
                  apr_pool_t *scratch_pool)
 {
   merge_cmd_baton_t *merge_b = baton;
-  apr_pool_t *subpool = svn_pool_create(merge_b->pool);
   svn_depth_t parent_depth;
-  svn_node_kind_t kind;
-  svn_node_kind_t kind_on_disk;
+  svn_node_kind_t wc_kind;
   svn_wc_notify_state_t obstr_state;
   svn_boolean_t is_deleted;
-  svn_error_t *err;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   /* Check for an obstructed or missing node on disk. */
-  SVN_ERR(perform_obstruction_check(&obstr_state, NULL, NULL, NULL, NULL,
-                                    NULL,
+  SVN_ERR(perform_obstruction_check(&obstr_state, NULL, NULL, NULL,
+                                    &is_deleted, &wc_kind,
                                     merge_b, local_abspath, svn_node_unknown,
                                     scratch_pool));
 
@@ -2329,97 +2324,65 @@ merge_dir_opened(svn_boolean_t *tree_conflicted,
       if (skip_children)
         *skip_children = TRUE;
       /* But don't skip THIS, to allow a skip notification */
-      svn_pool_destroy(subpool);
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(svn_wc_read_kind(&kind, merge_b->ctx->wc_ctx,
-                           local_abspath, TRUE, subpool));
-  SVN_ERR(svn_io_check_path(local_abspath, &kind_on_disk, subpool));
-
-  /* If the parent is too shallow to contain this directory,
-   * and the directory is not present on disk, skip it.
-   * Non-inheritable mergeinfo will be recorded, allowing
-   * future merges into non-shallow working copies to merge
-   * changes we missed this time around. */
-  err = svn_wc__node_get_depth(&parent_depth, merge_b->ctx->wc_ctx,
-                               svn_dirent_dirname(local_abspath, scratch_pool),
-                               scratch_pool);
-  if (err)
+  if (wc_kind != svn_node_dir || is_deleted)
     {
-      if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+      if (wc_kind == svn_node_none)
         {
-          svn_error_clear(err);
-          parent_depth = svn_depth_unknown;
+          /* If the parent is too shallow to contain this directory,
+           * and the directory is not present on disk, skip it.
+           * Non-inheritable mergeinfo will be recorded, allowing
+           * future merges into non-shallow working copies to merge
+           * changes we missed this time around. */
+          SVN_ERR(svn_wc__node_get_depth(&parent_depth, merge_b->ctx->wc_ctx,
+                                         svn_dirent_dirname(local_abspath,
+                                                            scratch_pool),
+                                         scratch_pool));
+          if (parent_depth != svn_depth_unknown &&
+              parent_depth < svn_depth_immediates)
+            {
+              if (skip_children)
+                *skip_children = TRUE;
+              return SVN_NO_ERROR;
+            }
         }
-      else
+
+      /* Check for tree conflicts, if any. */
+      
+      /* If we're trying to open a file, the reason for the conflict is
+       * 'replaced'. Because the merge is trying to open the directory,
+       * rather than adding it, the directory must have existed in the
+       * history of the target branch and has been replaced with a file. */
+      if (wc_kind == svn_node_file)
         {
-          svn_pool_destroy(subpool);
-          return svn_error_return(err);
+          SVN_ERR(tree_conflict(merge_b, local_abspath, svn_node_dir,
+                                svn_wc_conflict_action_edit,
+                                svn_wc_conflict_reason_replaced));
+          if (tree_conflicted)
+            *tree_conflicted = TRUE;
         }
-    }
-  if (kind == svn_node_none &&
-      parent_depth != svn_depth_unknown &&
-      parent_depth < svn_depth_immediates)
-    {
-      if (skip_children)
-        *skip_children = TRUE;
-      svn_pool_destroy(subpool);
-      return SVN_NO_ERROR;
-    }
 
-  /* Find out if this path is deleted. */
-  err = svn_wc__node_is_status_deleted(&is_deleted, merge_b->ctx->wc_ctx,
-                                       local_abspath, subpool);
-  if (err)
-    {
-      if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+      /* If we're trying to open a directory that's locally deleted,
+       * or not present because it was deleted in the history of the
+       * target branch, the reason for the conflict is 'deleted'.
+       *
+       * If the DB says something should be here, but there is
+       * nothing on disk, we're probably in a mixed-revision
+       * working copy and the parent has an outdated idea about
+       * the state of its child. Flag a tree conflict in this case
+       * forcing the user to sanity-check the merge result. */
+      else if (is_deleted || wc_kind == svn_node_none)
         {
-          svn_error_clear(err);
-          is_deleted = FALSE;
-        }
-      else
-        {
-          svn_pool_destroy(subpool);
-          return svn_error_return(err);
+          SVN_ERR(tree_conflict(merge_b, local_abspath, svn_node_dir,
+                                svn_wc_conflict_action_edit,
+                                svn_wc_conflict_reason_deleted));
+          if (tree_conflicted)
+            *tree_conflicted = TRUE;
         }
     }
 
-  /* Check for tree conflicts, if any. */
-
-  /* If we're trying to open a file, the reason for the conflict is
-   * 'replaced'. Because the merge is trying to open the directory,
-   * rather than adding it, the directory must have existed in the
-   * history of the target branch and has been replaced with a file. */
-  if (kind == svn_node_file)
-    {
-      SVN_ERR(tree_conflict(merge_b, local_abspath, svn_node_dir,
-                            svn_wc_conflict_action_edit,
-                            svn_wc_conflict_reason_replaced));
-      if (tree_conflicted)
-        *tree_conflicted = TRUE;
-    }
-
-  /* If we're trying to open a directory that's locally deleted,
-   * or not present because it was deleted in the history of the
-   * target branch, the reason for the conflict is 'deleted'.
-   *
-   * If the DB says something should be here, but there is
-   * nothing on disk, we're probably in a mixed-revision
-   * working copy and the parent has an outdated idea about
-   * the state of its child. Flag a tree conflict in this case
-   * forcing the user to sanity-check the merge result. */
-  else if (is_deleted || kind == svn_node_none ||
-           (kind_on_disk != kind && kind_on_disk == svn_node_none))
-    {
-      SVN_ERR(tree_conflict(merge_b, local_abspath, svn_node_dir,
-                            svn_wc_conflict_action_edit,
-                            svn_wc_conflict_reason_deleted));
-      if (tree_conflicted)
-        *tree_conflicted = TRUE;
-    }
-
-  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
