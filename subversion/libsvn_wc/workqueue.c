@@ -519,9 +519,7 @@ run_file_commit(svn_wc__db_t *db,
   SVN_ERR(svn_wc__db_from_relpath(&local_abspath, db, wri_abspath,
                                   local_relpath, scratch_pool, scratch_pool));
 
-  /* We currently ignore the following two values, just kept in for compat. */
-  SVN_ERR(svn_skel__parse_int(&v, arg1->next, scratch_pool));
-  SVN_ERR(svn_skel__parse_int(&v, arg1->next, scratch_pool));
+  /* We don't both parsing the other two values in the skel. */
 
   return svn_error_return(
                 process_commit_file_install(db, local_abspath,
