@@ -2261,7 +2261,7 @@ svn_wc_set_changelist2(svn_wc_context_t *wc_ctx,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   SVN_ERR(svn_wc__internal_walk_children(wc_ctx->db, local_abspath, FALSE,
-                                         changelist_walker, &cwb,
+                                         NULL, changelist_walker, &cwb,
                                          depth, cancel_func, cancel_baton,
                                          scratch_pool));
 
