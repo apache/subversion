@@ -310,6 +310,14 @@ Candidate changes:
      Causes invalid handle exceptions on Windows servers.
    Votes:
      +1: philip
+
+ * r1096460
+   Ensure results are put into the correct pool in ra_local.
+   Justification:
+     Memory corruption is bad.  No known corruption in the wild, but still
+     theoretically possible.
+   Votes:
+     +1: hwright
   
 
 Veto-blocked changes:
