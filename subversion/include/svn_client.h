@@ -5009,18 +5009,6 @@ svn_client_remove_from_changelists(const apr_array_header_t *paths,
                                    svn_client_ctx_t *ctx,
                                    apr_pool_t *pool);
 
-/**
- * The callback type used by svn_client_get_changelists().
- *
- * On each invocation, @a path is a newly discovered member of the
- * changelist, and @a baton is a private function closure.
- *
- * @since New in 1.5.
- */
-typedef svn_error_t *(*svn_changelist_receiver_t) (void *baton,
-                                                   const char *path,
-                                                   const char *changelist,
-                                                   apr_pool_t *pool);
 
 /**
  * Beginning at @a path, crawl to @a depth to discover every path in
