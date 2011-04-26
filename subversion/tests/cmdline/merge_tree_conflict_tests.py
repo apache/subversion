@@ -1348,6 +1348,13 @@ def tree_conflicts_merge_edit_onto_missing(sbox):
 
   expected_skip = svntest.wc.State('', {
     'F/alpha'           : Item(),
+    # BH: After fixing several issues in the obstruction handling
+    #     I get the following Skip notifications. Please review!
+    'D/D1'              : Item(),
+    'DD/D1'             : Item(),
+    'DF/D1'             : Item(),
+    'DDD/D1'            : Item(),
+    'DDF/D1'            : Item(),
     })
 
 
@@ -1424,6 +1431,13 @@ def tree_conflicts_merge_del_onto_missing(sbox):
   expected_skip = svntest.wc.State('', {
     'F/alpha'           : Item(),
     'D/D1'              : Item(),
+    # BH: After fixing several issues in the obstruction handling
+    #     I get the following Skip notifications. Please review!
+    'D/D1'              : Item(),
+    'DD/D1'             : Item(),
+    'DF/D1'             : Item(),
+    'DDD/D1'            : Item(),
+    'DDF/D1'            : Item(),
     })
 
   svntest.actions.deep_trees_run_tests_scheme_for_merge(sbox,

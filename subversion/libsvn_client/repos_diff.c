@@ -983,39 +983,11 @@ close_directory(void *dir_baton,
   struct edit_baton *eb = b->edit_baton;
   svn_wc_notify_state_t content_state = svn_wc_notify_state_unknown;
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
-  svn_node_kind_t kind;
-  const char *local_dir_abspath;
+  svn_boolean_t skipped = FALSE;
 
   /* Skip *everything* within a newly tree-conflicted directory. */
   if (b->skip)
     return SVN_NO_ERROR;
-
-  if (eb->wc_ctx)
-    SVN_ERR(svn_wc_read_kind(&kind, eb->wc_ctx, b->wcpath, FALSE, pool));
-  else
-    kind = svn_node_dir;
-
-  if (kind != svn_node_dir)
-    {
-      /* ### maybe try to stat the local b->wcpath? */
-      /* If the path doesn't exist, then send a 'skipped' notification.
-         Don't notify added directories as they triggered notification
-         in add_directory. */
-      if (! b->added && eb->notify_func)
-        {
-          svn_wc_notify_t *notify
-            = svn_wc_create_notify(b->wcpath,
-                                   b->tree_conflicted
-                                     ? svn_wc_notify_tree_conflict
-                                     : svn_wc_notify_skip,
-                                   pool);
-          notify->kind = svn_node_dir;
-          notify->content_state = notify->prop_state
-            = svn_wc_notify_state_missing;
-          (*eb->notify_func)(eb->notify_baton, notify, pool);
-        }
-      return SVN_NO_ERROR;
-    }
 
   /* Don't do the props_changed stuff if this is a dry_run and we don't
      have an access baton, since in that case the directory will already
@@ -1030,23 +1002,30 @@ close_directory(void *dir_baton,
                b->edit_baton->diff_cmd_baton, pool));
       if (tree_conflicted)
         b->tree_conflicted = TRUE;
+
+      if (prop_state == svn_wc_notify_state_obstructed
+          || prop_state == svn_wc_notify_state_missing)
+        {
+          content_state = prop_state;
+          skipped = TRUE;
+        }
     }
 
-  SVN_ERR(eb->diff_callbacks->dir_closed(
-           NULL, NULL, NULL,
-           b->wcpath, b->added,
-           b->edit_baton->diff_cmd_baton, pool));
+  SVN_ERR(eb->diff_callbacks->dir_closed(NULL, NULL, NULL,
+                                         b->wcpath, b->added,
+                                         b->edit_baton->diff_cmd_baton,
+                                         pool));
 
   /* Don't notify added directories as they triggered notification
      in add_directory. */
-  if (!b->added && eb->notify_func)
+  if (!skipped && !b->added && eb->notify_func)
     {
-      svn_wc_notify_t *notify;
       apr_hash_index_t *hi;
 
       for (hi = apr_hash_first(pool, eb->deleted_paths); hi;
            hi = apr_hash_next(hi))
         {
+          svn_wc_notify_t *notify;
           const char *deleted_path = svn__apr_hash_index_key(hi);
           deleted_path_notify_t *dpn = svn__apr_hash_index_val(hi);
 
@@ -1058,12 +1037,21 @@ close_directory(void *dir_baton,
           apr_hash_set(eb->deleted_paths, deleted_path,
                        APR_HASH_KEY_STRING, NULL);
         }
+    }
 
-      notify = svn_wc_create_notify(b->wcpath,
-                                    b->tree_conflicted
-                                      ? svn_wc_notify_tree_conflict
-                                      : svn_wc_notify_update_update,
-                                    pool);
+  if (!b->added && eb->notify_func)
+    {
+      svn_wc_notify_t *notify;
+      svn_wc_notify_action_t action;
+
+      if (b->tree_conflicted)
+        action = svn_wc_notify_tree_conflict;
+      else if (skipped)
+        action = svn_wc_notify_skip;
+      else
+        action = svn_wc_notify_update_update;
+
+      notify = svn_wc_create_notify(b->wcpath, action, pool);
       notify->kind = svn_node_dir;
 
       /* In case of a tree conflict during merge, the diff callback
