@@ -2005,6 +2005,7 @@ validate_eol_prop_against_file(const char *path,
 static svn_error_t *
 do_propset(svn_wc__db_t *db,
            const char *local_abspath,
+           svn_node_kind_t kind,
            const char *name,
            const svn_string_t *value,
            svn_boolean_t skip_checks,
@@ -2014,14 +2015,13 @@ do_propset(svn_wc__db_t *db,
 {
   apr_hash_t *prophash;
   svn_wc_notify_action_t notify_action;
-  svn_wc__db_kind_t kind;
   svn_wc__db_status_t status;
   svn_skel_t *work_item = NULL;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  /* Get the node kind for this path. */
-  SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
+  /* Get the node status for this path. */
+  SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL,
@@ -2054,17 +2054,14 @@ do_propset(svn_wc__db_t *db,
       gb.db = db;
 
       SVN_ERR(svn_wc_canonicalize_svn_prop(&new_value, name, value,
-                                           local_abspath,
-                                           kind == svn_wc__db_kind_dir ?
-                                                    svn_node_dir :
-                                                    svn_node_file,
+                                           local_abspath, kind,
                                            skip_checks,
                                            get_file_for_validation, &gb,
                                            scratch_pool));
       value = new_value;
     }
 
-  if (kind == svn_wc__db_kind_file
+  if (kind == svn_node_file
         && (strcmp(name, SVN_PROP_EXECUTABLE) == 0
             || strcmp(name, SVN_PROP_NEEDS_LOCK) == 0))
     {
@@ -2084,7 +2081,7 @@ do_propset(svn_wc__db_t *db,
    * property is set, we'll grab the new list and see if it differs
    * from the old one.
    */
-  if (kind == svn_wc__db_kind_file && strcmp(name, SVN_PROP_KEYWORDS) == 0)
+  if (kind == svn_node_file && strcmp(name, SVN_PROP_KEYWORDS) == 0)
     {
       svn_string_t *old_value = apr_hash_get(prophash, SVN_PROP_KEYWORDS,
                                              APR_HASH_KEY_STRING);
@@ -2200,7 +2197,7 @@ propset_walk_cb(const char *local_abspath,
   struct propset_walk_baton *wb = walk_baton;
   svn_error_t *err;
 
-  err = do_propset(wb->db, local_abspath, wb->propname, wb->propval,
+  err = do_propset(wb->db, local_abspath, kind, wb->propname, wb->propval,
                    wb->force, wb->notify_func, wb->notify_baton, scratch_pool);
   if (err && (err->apr_err == SVN_ERR_ILLEGAL_TARGET
               || err->apr_err == SVN_ERR_WC_INVALID_SCHEDULE))
@@ -2268,7 +2265,11 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
                                              changelist_hash, scratch_pool))
         return SVN_NO_ERROR;
 
-      SVN_ERR(do_propset(wc_ctx->db, local_abspath, name, value, skip_checks,
+      SVN_ERR(do_propset(wc_ctx->db, local_abspath,
+                         kind == svn_wc__db_kind_dir
+                            ? svn_node_dir
+                            : svn_node_file,
+                         name, value, skip_checks,
                          notify_func, notify_baton, scratch_pool));
     }
   else
