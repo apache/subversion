@@ -826,7 +826,7 @@ walk_local_nodes_diff(struct edit_baton *eb,
 
           SVN_ERR(eb->callbacks->dir_props_changed(local_abspath,
                                                    NULL, NULL,
-                                                   path,
+                                                   path, FALSE /* ### ? */,
                                                    propchanges, baseprops,
                                                    eb->callback_baton,
                                                    scratch_pool));
@@ -1072,7 +1072,7 @@ report_wc_directory_as_added(struct edit_baton *eb,
       if (propchanges->nelts > 0)
         SVN_ERR(eb->callbacks->dir_props_changed(local_abspath,
                                                  NULL, NULL,
-                                                 path,
+                                                 path, TRUE,
                                                  propchanges, emptyprops,
                                                  eb->callback_baton,
                                                  scratch_pool));
@@ -1311,6 +1311,10 @@ open_directory(const char *path,
   db = make_dir_baton(path, pb, pb->eb, FALSE, subdir_depth, dir_pool);
   *child_baton = db;
 
+  SVN_ERR(db->eb->callbacks->dir_opened(NULL, NULL, NULL, NULL,
+                                        path, base_revision,
+                                        db->eb->callback_baton, dir_pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -1373,6 +1377,7 @@ close_directory(void *dir_baton,
 
       SVN_ERR(eb->callbacks->dir_props_changed(NULL, NULL, NULL,
                                                db->path,
+                                               db->added,
                                                db->propchanges,
                                                originalprops,
                                                eb->callback_baton,
@@ -1400,6 +1405,10 @@ close_directory(void *dir_baton,
   if (pb)
     apr_hash_set(pb->compared, apr_pstrdup(pb->pool, db->path),
                  APR_HASH_KEY_STRING, "");
+
+  SVN_ERR(db->eb->callbacks->dir_closed(NULL, NULL, NULL, NULL, db->path,
+                                        db->added, db->eb->callback_baton,
+                                        db->pool));
 
   return SVN_NO_ERROR;
 }
@@ -1454,6 +1463,9 @@ open_file(const char *path,
                                    NULL, NULL, NULL, NULL, NULL, NULL,
                                    eb->db, fb->local_abspath,
                                    fb->pool, fb->pool));
+
+  SVN_ERR(eb->callbacks->file_opened(NULL, NULL, fb->path, base_revision,
+                                     eb->callback_baton, fb->pool));
 
   return SVN_NO_ERROR;
 }

@@ -339,14 +339,6 @@ typedef struct merge_cmd_baton_t {
 #define RECORD_MERGEINFO(merge_b) (HONOR_MERGEINFO(merge_b) \
                                    && !(merge_b)->dry_run)
 
-
-apr_hash_t *
-svn_client__dry_run_deletions(void *merge_cmd_baton)
-{
-  merge_cmd_baton_t *merge_b = merge_cmd_baton;
-  return merge_b->dry_run_deletions;
-}
-
 /* Return true iff we're in dry-run mode and WCPATH would have been
    deleted by now if we weren't in dry-run mode.
    Used to avoid spurious notifications (e.g. conflicts) from a merge
@@ -1226,6 +1218,28 @@ merge_props_changed(const char *local_dir_abspath,
   return SVN_NO_ERROR;
 }
 
+/* An svn_wc_diff_callbacks4_t function. */
+static svn_error_t *
+merge_dir_props_changed(const char *local_dir_abspath,
+                        svn_wc_notify_state_t *state,
+                        svn_boolean_t *tree_conflicted,
+                        const char *path,
+                        svn_boolean_t dir_was_added,
+                        const apr_array_header_t *propchanges,
+                        apr_hash_t *original_props,
+                        void *diff_baton,
+                        apr_pool_t *scratch_pool)
+{
+  return svn_error_return(merge_props_changed(local_dir_abspath,
+                                              state,
+                                              tree_conflicted,
+                                              path,
+                                              propchanges,
+                                              original_props,
+                                              diff_baton,
+                                              scratch_pool));
+}
+
 /* Contains any state collected while resolving conflicts. */
 typedef struct conflict_resolver_baton_t
 {
@@ -1280,6 +1294,18 @@ conflict_resolver(svn_wc_conflict_result_t **result,
     }
 
   return svn_error_return(err);
+}
+
+/* An svn_wc_diff_callbacks4_t function. */
+static svn_error_t *
+merge_file_opened(svn_boolean_t *tree_conflicted,
+                  svn_boolean_t *skip,
+                  const char *path,
+                  svn_revnum_t rev,
+                  void *diff_baton,
+                  apr_pool_t *scratch_pool)
+{
+  return SVN_NO_ERROR;
 }
 
 /* An svn_wc_diff_callbacks4_t function. */
@@ -1897,6 +1923,13 @@ merge_file_deleted(const char *local_dir_abspath,
   apr_pool_t *subpool = svn_pool_create(merge_b->pool);
   svn_node_kind_t kind;
 
+  if (merge_b->dry_run)
+    {
+      const char *wcpath = apr_pstrdup(merge_b->pool, mine_abspath);
+      apr_hash_set(merge_b->dry_run_deletions, wcpath,
+                   APR_HASH_KEY_STRING, wcpath);
+    }
+
   /* Easy out: We are only applying mergeinfo differences. */
   if (merge_b->record_only)
     {
@@ -2020,6 +2053,8 @@ static svn_error_t *
 merge_dir_added(const char *local_dir_abspath,
                 svn_wc_notify_state_t *state,
                 svn_boolean_t *tree_conflicted,
+                svn_boolean_t *skip,
+                svn_boolean_t *skip_children,
                 const char *local_abspath,
                 svn_revnum_t rev,
                 const char *copyfrom_path,
@@ -2252,6 +2287,13 @@ merge_dir_deleted(const char *local_dir_abspath,
   svn_boolean_t is_versioned;
   svn_boolean_t is_deleted;
 
+  if (merge_b->dry_run)
+    {
+      const char *wcpath = apr_pstrdup(merge_b->pool, local_abspath);
+      apr_hash_set(merge_b->dry_run_deletions, wcpath,
+                   APR_HASH_KEY_STRING, wcpath);
+    }
+
   /* Easy out: We are only applying mergeinfo differences. */
   if (merge_b->record_only)
     {
@@ -2262,7 +2304,6 @@ merge_dir_deleted(const char *local_dir_abspath,
         *tree_conflicted = FALSE;
       return SVN_NO_ERROR;
     }
-
   if (tree_conflicted)
     *tree_conflicted = FALSE;
 
@@ -2402,6 +2443,7 @@ merge_dir_deleted(const char *local_dir_abspath,
 static svn_error_t *
 merge_dir_opened(const char *local_dir_abspath,
                  svn_boolean_t *tree_conflicted,
+                 svn_boolean_t *skip,
                  svn_boolean_t *skip_children,
                  const char *path,
                  svn_revnum_t rev,
@@ -2558,9 +2600,11 @@ merge_dir_closed(const char *local_dir_abspath,
                  svn_wc_notify_state_t *propstate,
                  svn_boolean_t *tree_conflicted,
                  const char *path,
+                 svn_boolean_t dir_was_added,
                  void *baton,
                  apr_pool_t *scratch_pool)
 {
+  merge_cmd_baton_t *merge_b = baton;
   if (contentstate)
     *contentstate = svn_wc_notify_state_unknown;
   if (propstate)
@@ -2568,7 +2612,8 @@ merge_dir_closed(const char *local_dir_abspath,
   if (tree_conflicted)
     *tree_conflicted = FALSE;
 
-  /* Nothing to be done. */
+  if (merge_b->dry_run)
+    svn_hash__clear(merge_b->dry_run_deletions, scratch_pool);
 
   return SVN_NO_ERROR;
 }
@@ -2577,13 +2622,14 @@ merge_dir_closed(const char *local_dir_abspath,
 static const svn_wc_diff_callbacks4_t
 merge_callbacks =
   {
+    merge_file_opened,
     merge_file_changed,
     merge_file_added,
     merge_file_deleted,
-    merge_dir_added,
     merge_dir_deleted,
-    merge_props_changed,
     merge_dir_opened,
+    merge_dir_added,
+    merge_dir_props_changed,
     merge_dir_closed
   };
 
@@ -5046,15 +5092,16 @@ drive_merge_report_editor(const char *target_abspath,
 
   /* Get the diff editor and a reporter with which to, ultimately,
      drive it. */
-  SVN_ERR(svn_client__get_diff_editor(target_abspath, merge_b->ctx->wc_ctx,
-                                      &merge_callbacks, merge_b, depth,
-                                      merge_b->dry_run,
+  SVN_ERR(svn_client__get_diff_editor(&diff_editor, &diff_edit_baton,
+                                      merge_b->ctx->wc_ctx, target_abspath,
+                                      depth,
                                       merge_b->ra_session2, revision1,
-                                      notification_receiver, notify_b,
+                                      FALSE, merge_b->dry_run,
+                                      &merge_callbacks, merge_b,
                                       merge_b->ctx->cancel_func,
                                       merge_b->ctx->cancel_baton,
-                                      &diff_editor, &diff_edit_baton,
-                                      pool));
+                                      notification_receiver, notify_b,
+                                      pool, pool));
   SVN_ERR(svn_ra_do_diff3(merge_b->ra_session1,
                           &reporter, &report_baton, revision2,
                           "", depth, merge_b->ignore_ancestry,

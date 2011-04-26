@@ -1579,6 +1579,17 @@ struct diff_callbacks3_wrapper_baton {
   const char *anchor_abspath;
 };
 
+static svn_error_t *
+wrap_4to3_file_opened(svn_boolean_t *tree_conflicted,
+                      svn_boolean_t *skip,
+                      const char *path,
+                      svn_revnum_t rev,
+                      void *diff_baton,
+                      apr_pool_t *scratch_pool)
+{
+  return SVN_NO_ERROR;
+}
+
 /* An svn_wc_diff_callbacks4_t function for wrapping
  * svn_wc_diff_callbacks3_t. */
 static svn_error_t *
@@ -1693,6 +1704,8 @@ static svn_error_t *
 wrap_4to3_dir_added(const char *local_dir_abspath,
                     svn_wc_notify_state_t *state,
                     svn_boolean_t *tree_conflicted,
+                    svn_boolean_t *skip,
+                    svn_boolean_t *skip_children,
                     const char *path,
                     svn_revnum_t rev,
                     const char *copyfrom_path,
@@ -1745,6 +1758,7 @@ wrap_4to3_dir_props_changed(const char *local_dir_abspath,
                             svn_wc_notify_state_t *propstate,
                             svn_boolean_t *tree_conflicted,
                             const char *path,
+                            svn_boolean_t dir_was_added,
                             const apr_array_header_t *propchanges,
                             apr_hash_t *original_props,
                             void *diff_baton,
@@ -1771,6 +1785,7 @@ wrap_4to3_dir_props_changed(const char *local_dir_abspath,
 static svn_error_t *
 wrap_4to3_dir_opened(const char *local_dir_abspath,
                      svn_boolean_t *tree_conflicted,
+                     svn_boolean_t *skip,
                      svn_boolean_t *skip_children,
                      const char *path,
                      svn_revnum_t rev,
@@ -1801,6 +1816,7 @@ wrap_4to3_dir_closed(const char *local_dir_abspath,
                      svn_wc_notify_state_t *propstate,
                      svn_boolean_t *tree_conflicted,
                      const char *path,
+                     svn_boolean_t dir_was_added,
                      void *diff_baton,
                      apr_pool_t *scratch_pool)
 {
@@ -1822,13 +1838,14 @@ wrap_4to3_dir_closed(const char *local_dir_abspath,
 
 /* Used to wrap svn_diff_callbacks3_t as an svn_wc_diff_callbacks4_t. */
 static struct svn_wc_diff_callbacks4_t diff_callbacks3_wrapper = {
+  wrap_4to3_file_opened,
   wrap_4to3_file_changed,
   wrap_4to3_file_added,
   wrap_4to3_file_deleted,
-  wrap_4to3_dir_added,
   wrap_4to3_dir_deleted,
-  wrap_4to3_dir_props_changed,
   wrap_4to3_dir_opened,
+  wrap_4to3_dir_added,
+  wrap_4to3_dir_props_changed,
   wrap_4to3_dir_closed
 };
 

@@ -421,13 +421,6 @@ svn_error_t * svn_client__wc_delete(const char *path,
                                     svn_client_ctx_t *ctx,
                                     apr_pool_t *pool);
 
-/* Return the set of WC paths to entries which would have been deleted
-   by an update/merge if not in "dry run" mode, or NULL if not in "dry
-   run" mode.  MERGE_CMD_BATON is expected to be of type "struct
-   merge_cmd_baton" (from merge.c).  It contains the list, which is
-   intended for direct modification. */
-apr_hash_t *svn_client__dry_run_deletions(void *merge_cmd_baton);
-
 /* Make PATH and add it to the working copy, optionally making all the
    intermediate parent directories if MAKE_PARENTS is TRUE. */
 svn_error_t *
@@ -649,21 +642,23 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
 
    EDITOR/EDIT_BATON return the newly created editor and baton. */
 svn_error_t *
-svn_client__get_diff_editor(const char *target,
+svn_client__get_diff_editor(const svn_delta_editor_t **editor,
+                            void **edit_baton,
                             svn_wc_context_t *wc_ctx,
-                            const svn_wc_diff_callbacks4_t *diff_cmd,
-                            void *diff_cmd_baton,
+                            const char *target,
                             svn_depth_t depth,
-                            svn_boolean_t dry_run,
                             svn_ra_session_t *ra_session,
                             svn_revnum_t revision,
-                            svn_wc_notify_func2_t notify_func,
-                            void *notify_baton,
+                            svn_boolean_t walk_deleted_dirs,
+                            svn_boolean_t dry_run,
+                            const svn_wc_diff_callbacks4_t *diff_callbacks,
+                            void *diff_cmd_baton,
                             svn_cancel_func_t cancel_func,
                             void *cancel_baton,
-                            const svn_delta_editor_t **editor,
-                            void **edit_baton,
-                            apr_pool_t *pool);
+                            svn_wc_notify_func2_t notify_func,
+                            void *notify_baton,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
 
 
 /* ---------------------------------------------------------------- */
