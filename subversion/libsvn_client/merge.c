@@ -404,12 +404,22 @@ perform_obstruction_check(svn_wc_notify_state_t *obstruction_state,
     *added = FALSE;
   if (deleted)
     *deleted = FALSE;
+  if (kind)
+    *kind = svn_node_none;
 
   /* In a dry run, make as if nodes "deleted" by the dry run appear so. */
   if (merge_b->dry_run && dry_run_deleted_p(merge_b, local_abspath))
     {
       *obstruction_state = svn_wc_notify_state_inapplicable;
-      
+
+      if (versioned)
+        *versioned = TRUE;
+      if (deleted)
+        *deleted = TRUE;
+
+      if (expected_kind != svn_node_unknown
+          && expected_kind != svn_node_none)
+        *obstruction_state = svn_wc_notify_state_obstructed;
       return SVN_NO_ERROR;
     }
 
@@ -1203,7 +1213,6 @@ merge_dir_props_changed(const char *local_dir_abspath,
 {
   merge_cmd_baton_t *merge_b = diff_baton;
   svn_wc_notify_state_t obstr_state;
-  svn_node_kind_t kind;
 
   SVN_ERR(perform_obstruction_check(&obstr_state, NULL, NULL, NULL, NULL,
                                     NULL,
@@ -2206,13 +2215,6 @@ merge_dir_deleted(const char *local_dir_abspath,
   svn_boolean_t is_versioned;
   svn_boolean_t is_deleted;
 
-  if (merge_b->dry_run)
-    {
-      const char *wcpath = apr_pstrdup(merge_b->pool, local_abspath);
-      apr_hash_set(merge_b->dry_run_deletions, wcpath,
-                   APR_HASH_KEY_STRING, wcpath);
-    }
-
   /* Easy out: We are only applying mergeinfo differences. */
   if (merge_b->record_only)
     {
@@ -2226,51 +2228,14 @@ merge_dir_deleted(const char *local_dir_abspath,
   if (tree_conflicted)
     *tree_conflicted = FALSE;
 
-  /* Easy out:  if we have no adm_access for the parent directory,
-     then this portion of the tree-delta "patch" must be inapplicable.
-     Send a 'missing' state back;  the repos-diff editor should then
-     send a 'skip' notification. */
-  if (! local_dir_abspath)
-    {
-      if (state)
-        *state = svn_wc_notify_state_missing;
-      /* Trying to delete a directory at a non-existing path.
-       * Although this is a tree-conflict, it will already have been
-       * raised by the merge_dir_opened() callback. Not raising additional tree
-       * conflicts for the child nodes inside. */
-      svn_pool_destroy(subpool);
-      return SVN_NO_ERROR;
-    }
-
-  /* Find out if this path is deleted and in asking this question also derive
-     the path's version-control state, we'll need to know both below. */
-  err = svn_wc__node_is_status_deleted(&is_deleted, merge_b->ctx->wc_ctx,
-                                       local_abspath, subpool);
-  if (err)
-    {
-      if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-        {
-          svn_error_clear(err);
-          err = NULL;
-          is_versioned = is_deleted = FALSE;
-        }
-      else
-        return svn_error_return(err);
-    }
-  else
-    {
-      is_versioned = TRUE;
-    }
-
   /* Check for an obstructed or missing node on disk. */
   {
     svn_wc_notify_state_t obstr_state;
 
-    SVN_ERR(perform_obstruction_check(&obstr_state, NULL, NULL, NULL, NULL,
-                                      NULL,
+    SVN_ERR(perform_obstruction_check(&obstr_state, NULL, &is_versioned, NULL,
+                                      &is_deleted, &kind,
                                       merge_b, local_abspath, svn_node_unknown,
                                       scratch_pool));
-
     if (obstr_state != svn_wc_notify_state_inapplicable)
       {
         if (state)
@@ -2278,10 +2243,20 @@ merge_dir_deleted(const char *local_dir_abspath,
         svn_pool_destroy(subpool);
         return SVN_NO_ERROR;
       }
+
+    if (is_deleted)
+      kind = svn_node_none;
   }
 
-  /* Switch on the on-disk state of this path */
-  SVN_ERR(svn_io_check_path(local_abspath, &kind, subpool));
+  if (merge_b->dry_run)
+    {
+      const char *wcpath = apr_pstrdup(merge_b->pool, local_abspath);
+      apr_hash_set(merge_b->dry_run_deletions, wcpath,
+                   APR_HASH_KEY_STRING, wcpath);
+    }
+
+
+  /* Switch on the wc state of this path */
   switch (kind)
     {
     case svn_node_dir:
