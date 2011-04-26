@@ -1675,3 +1675,154 @@ svn_wc__rename_wc(svn_wc_context_t *wc_ctx,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_wc__check_for_obstructions(svn_wc_notify_state_t *obstruction_state,
+                               svn_boolean_t *exists,
+                               svn_boolean_t *versioned,
+                               svn_boolean_t *added,
+                               svn_boolean_t *deleted,
+                               svn_node_kind_t *kind,
+                               svn_wc_context_t *wc_ctx,
+                               const char *local_abspath,
+                               svn_boolean_t no_wcroot_check,
+                               apr_pool_t *scratch_pool)
+{
+  svn_wc__db_status_t status;
+  svn_wc__db_kind_t db_kind;
+  svn_node_kind_t disk_kind;
+  svn_error_t *err;
+
+  *obstruction_state = svn_wc_notify_state_inapplicable;
+  if (exists)
+    *exists = FALSE;
+  if (versioned)
+    *versioned = FALSE;
+  if (added)
+    *versioned = FALSE;
+  if (deleted)
+    *versioned = FALSE;
+  if (kind)
+    *kind = svn_node_none;
+
+  SVN_ERR(svn_io_check_path(local_abspath, &disk_kind, scratch_pool));
+
+  err = svn_wc__db_read_info(&status, &db_kind, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL,
+                             wc_ctx->db, local_abspath,
+                             scratch_pool, scratch_pool);
+
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+    {
+      svn_error_clear(err);
+
+      if (disk_kind != svn_node_none)
+        {
+          /* Nothing in the DB, but something on disk */
+          *obstruction_state = svn_wc_notify_state_obstructed;
+          return SVN_NO_ERROR;
+        }
+
+      err = svn_wc__db_read_info(&status, &db_kind, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL,
+                                 wc_ctx->db, svn_dirent_dirname(local_abspath,
+                                                                scratch_pool),
+                                 scratch_pool, scratch_pool);
+
+      if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+        {
+          svn_error_clear(err);
+          /* No versioned parent; we can't add a node here */
+          *obstruction_state = svn_wc_notify_state_obstructed;
+          return SVN_NO_ERROR;
+        }
+      else
+        SVN_ERR(err);
+
+      if (db_kind != svn_wc__db_kind_dir
+          || (status != svn_wc__db_status_normal
+              && status != svn_wc__db_status_added))
+        {
+          /* The parent doesn't allow nodes to be added below it */
+          *obstruction_state = svn_wc_notify_state_obstructed;
+        }
+
+      return SVN_NO_ERROR;
+    }
+  else
+    SVN_ERR(err);
+
+  /* Check for obstructing working copies */
+  if (!no_wcroot_check
+      && db_kind == svn_wc__db_kind_dir
+      && status == svn_wc__db_status_normal)
+    {
+      svn_boolean_t is_root;
+      SVN_ERR(svn_wc__db_is_wcroot(&is_root, wc_ctx->db, local_abspath,
+                                   scratch_pool));
+
+      if (is_root)
+        {
+          /* Callers should handle this as unversioned */
+          *obstruction_state = svn_wc_notify_state_obstructed;
+          return SVN_NO_ERROR;
+        }
+    }
+
+  if (kind)
+    SVN_ERR(convert_db_kind_to_node_kind(kind, db_kind, status, FALSE));
+
+  switch (status)
+    {
+      case svn_wc__db_status_deleted:
+        if (versioned)
+          *versioned = TRUE;
+        if (deleted)
+          *deleted = TRUE;
+        /* Fall through to svn_wc__db_status_not_present */
+      case svn_wc__db_status_not_present:
+        if (disk_kind != svn_node_none)
+          *obstruction_state = svn_wc_notify_state_obstructed;
+        break;
+
+      case svn_wc__db_status_excluded:
+      case svn_wc__db_status_absent:
+      case svn_wc__db_status_incomplete:
+        if (versioned)
+          *versioned = TRUE;
+        *obstruction_state = svn_wc_notify_state_missing;
+        break;
+
+      case svn_wc__db_status_added:
+        if (added)
+          *added = TRUE;
+        /* Fall through to svn_wc__db_status_normal */
+      case svn_wc__db_status_normal:
+        if (versioned)
+          *versioned = TRUE;
+        if (exists)
+          *exists = TRUE;
+        if (disk_kind == svn_node_none)
+          *obstruction_state = svn_wc_notify_state_missing;
+        else
+          {
+            svn_node_kind_t expected_kind;
+
+            SVN_ERR(convert_db_kind_to_node_kind(&expected_kind, db_kind,
+                                                 status, FALSE));
+                                         
+            if (disk_kind != expected_kind)
+              *obstruction_state = svn_wc_notify_state_obstructed;
+          }
+        break;
+      default:
+        SVN_ERR_MALFUNCTION();
+    }
+
+  return SVN_NO_ERROR;
+}
+
