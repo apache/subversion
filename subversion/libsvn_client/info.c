@@ -385,7 +385,6 @@ push_dir_info(svn_ra_session_t *ra_session,
 /* Callback and baton for crawl_entries() walk over entries files. */
 struct found_entry_baton
 {
-  apr_hash_t *changelist_hash;
   svn_info_receiver_t receiver;
   void *receiver_baton;
   svn_wc_context_t *wc_ctx;
@@ -402,10 +401,6 @@ info_found_node_callback(const char *local_abspath,
   svn_info_t *info = NULL;
   const svn_wc_conflict_description2_t *tree_conflict = NULL;
   svn_error_t *err;
-
-  if (! svn_wc__changelist_match(fe_baton->wc_ctx, local_abspath,
-                                 fe_baton->changelist_hash, pool))
-    return SVN_NO_ERROR;
 
   SVN_ERR(svn_wc__get_tree_conflict(&tree_conflict, fe_baton->wc_ctx,
                                     local_abspath, pool, pool));
@@ -445,19 +440,19 @@ crawl_entries(const char *local_abspath,
               svn_info_receiver_t receiver,
               void *receiver_baton,
               svn_depth_t depth,
-              apr_hash_t *changelist_hash,
+              const apr_array_header_t *changelists,
               svn_client_ctx_t *ctx,
               apr_pool_t *pool)
 {
   struct found_entry_baton fe_baton;
   svn_error_t *err;
 
-  fe_baton.changelist_hash = changelist_hash;
   fe_baton.receiver = receiver;
   fe_baton.receiver_baton = receiver_baton;
   fe_baton.wc_ctx = ctx->wc_ctx;
 
-  err = svn_wc__node_walk_children(ctx->wc_ctx, local_abspath, FALSE, NULL,
+  err = svn_wc__node_walk_children(ctx->wc_ctx, local_abspath, FALSE,
+                                   changelists,
                                    info_found_node_callback, &fe_baton, depth,
                                    ctx->cancel_func, ctx->cancel_baton, pool);
 
@@ -573,14 +568,9 @@ svn_client_info3(const char *abspath_or_url,
           || peg_revision->kind == svn_opt_revision_unspecified))
     {
       /* Do all digging in the working copy. */
-      apr_hash_t *changelist_hash = NULL;
-      if (changelists && changelists->nelts)
-        SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash,
-                                           changelists, pool));
-
       return svn_error_return(
         crawl_entries(abspath_or_url, receiver, receiver_baton,
-                      depth, changelist_hash, ctx, pool));
+                      depth, changelists, ctx, pool));
     }
 
   /* Go repository digging instead. */
