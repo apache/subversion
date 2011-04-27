@@ -44,8 +44,6 @@ extern "C" {
  * description of a tree conflict described by @a conflict.
  *
  * Allocate the result in @a pool.
- *
- * @since New in 1.6.
  */
 svn_error_t *
 svn_cl__get_human_readable_tree_conflict_description(
@@ -56,8 +54,6 @@ svn_cl__get_human_readable_tree_conflict_description(
 /**
  * Append to @a str an XML representation of the tree conflict data
  * for @a conflict, in a format suitable for 'svn info --xml'.
- *
- * @since New in 1.6.
  */
 svn_error_t *
 svn_cl__append_tree_conflict_info_xml(
