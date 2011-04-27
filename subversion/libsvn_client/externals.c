@@ -1477,14 +1477,20 @@ svn_client__gather_local_external_changes(apr_hash_t *externals_new,
        hi = apr_hash_next(hi))
     {
       const char *local_abspath = svn__apr_hash_index_key(hi);
+      svn_string_t *propval = svn__apr_hash_index_val(hi);
+      apr_pool_t *hash_pool = apr_hash_pool_get(externals_new);
 
-      if (! apr_hash_get(externals_new, local_abspath, APR_HASH_KEY_STRING))
+      local_abspath = apr_pstrdup(hash_pool, local_abspath);
+
+      /* Override existing pristine definitions */
+      apr_hash_set(externals_new, local_abspath, APR_HASH_KEY_STRING,
+                   apr_pstrdup(hash_pool, propval->data));
+
+      /* Make sure that when using ambient depths, there is a depth for
+         every path */
+      if (ambient_depths
+          && !apr_hash_get(ambient_depths, local_abspath, APR_HASH_KEY_STRING))
         {
-          apr_pool_t *hash_pool = apr_hash_pool_get(externals_new);
-          svn_string_t *propval = svn__apr_hash_index_val(hi);
-
-          apr_hash_set(externals_new, local_abspath, APR_HASH_KEY_STRING,
-                       apr_pstrdup(hash_pool, propval->data));
           apr_hash_set(ambient_depths, local_abspath, APR_HASH_KEY_STRING,
                        svn_depth_to_word(svn_depth_infinity));
         }
