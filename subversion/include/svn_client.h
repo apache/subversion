@@ -1343,7 +1343,7 @@ svn_client_update(svn_revnum_t *result_rev,
  *              and returning #SVN_ERR_CLIENT_UNRELATED_RESOURCES if they
  *              do not. If @c TRUE, no such sanity checks are performed.
  *
- * @param [in] a apply_local_external_modifications If @c TRUE, local versions 
+ * @param [in] apply_local_external_modifications  If @c TRUE, local versions
  *              of the svn:externals property are processed during switch
  *              instead of their committed version.
  *
