@@ -5099,39 +5099,106 @@ op_delete_txn(void *baton,
 {
   struct op_delete_baton_t *b = baton;
   svn_wc__db_status_t status;
-  svn_boolean_t have_base, have_work;
+  svn_boolean_t op_root, have_base, have_work;
+  svn_boolean_t add_work = FALSE, del_work = FALSE, mod_work = FALSE;
 
   SVN_ERR(read_info(&status,
                     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                    NULL, NULL, NULL,
+                    &op_root, NULL, NULL,
                     &have_base, NULL, &have_work,
                     wcroot, local_relpath,
                     scratch_pool, scratch_pool));
 
-  if (have_base && !have_work)
+  if (status == svn_wc__db_status_deleted
+      || status == svn_wc__db_status_not_present)
+    return SVN_NO_ERROR;
+
+  if (op_root)
+    {
+      svn_boolean_t below_base;
+      svn_boolean_t below_work;
+      svn_wc__db_status_t below_status;
+
+      /* Use STMT_SELECT_NODE_INFO directly instead of read_info plus
+         info_below_working */
+      SVN_ERR(info_below_working(&below_base, &below_work, &below_status,
+                                 wcroot, local_relpath, -1, scratch_pool));
+      if ((below_base || below_work)
+          && below_status != svn_wc__db_status_not_present
+          && below_status != svn_wc__db_status_deleted)
+        mod_work = TRUE;
+      else
+        del_work = TRUE;
+    }
+  else
+    add_work = TRUE;
+
+  if (del_work)
     {
       svn_sqlite__stmt_t *stmt;
       const char *like_arg = construct_like_arg(local_relpath, scratch_pool);
 
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_DELETE_NODES_RECURSIVE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "issi",
+                                wcroot->wc_id, local_relpath, like_arg,
+                                b->delete_depth));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
+  else if (add_work || mod_work)
+    {
+      /* To avoid notification on already deleted nodes that remain
+         deleted we want to avoid removing/reinserting any such
+         nodes. */
+
+      svn_sqlite__stmt_t *stmt;
+      const char *like_arg = construct_like_arg(local_relpath, scratch_pool);
+
+      if (mod_work)
+        {
+          /* Reusing existing queries to delete nodes so insert below
+             works, could use another single query here. */
+          SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                            STMT_DELETE_WORKING_NODE));
+          SVN_ERR(svn_sqlite__bindf(stmt, "is",
+                                    wcroot->wc_id, local_relpath));
+          SVN_ERR(svn_sqlite__step_done(stmt));
+
+          SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_DELETE_WORKING_NODE_NOT_DELETED));
-      SVN_ERR(svn_sqlite__bindf(stmt, "isi",
-                                wcroot->wc_id, like_arg, b->delete_depth));
-      SVN_ERR(svn_sqlite__update(NULL, stmt));
+          SVN_ERR(svn_sqlite__bindf(stmt, "isi",
+                                    wcroot->wc_id, like_arg,
+                                    b->delete_depth - 1));
+          SVN_ERR(svn_sqlite__step_done(stmt));
+        }
+      else
+        {
+          SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_DELETE_WORKING_NODE_NOT_DELETED));
+          SVN_ERR(svn_sqlite__bindf(stmt, "isi",
+                                    wcroot->wc_id, like_arg, b->delete_depth));
+          SVN_ERR(svn_sqlite__step_done(stmt));
+        }
 
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_UPDATE_OP_DEPTH_RECURSIVE));
       SVN_ERR(svn_sqlite__bindf(stmt, "isi",
                                 wcroot->wc_id, like_arg, b->delete_depth));
-      SVN_ERR(svn_sqlite__update(NULL, stmt));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_DELETE_WORKING_ORPHAN));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isi",
+                                wcroot->wc_id, like_arg, b->delete_depth));
+      SVN_ERR(svn_sqlite__step_done(stmt));
 
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                  STMT_INSERT_WORKING_NODE_FROM_NODE_RECURSIVE));
       SVN_ERR(svn_sqlite__bindf(stmt, "issi",
                                 wcroot->wc_id, local_relpath, like_arg,
                                 b->delete_depth));
-      SVN_ERR(svn_sqlite__insert(NULL, stmt));
+      SVN_ERR(svn_sqlite__step_done(stmt));
     }
 
   return SVN_NO_ERROR;

@@ -784,6 +784,13 @@ DELETE FROM nodes
 WHERE wc_id = ?1 AND local_relpath LIKE ?2 ESCAPE '#' AND op_depth > ?3
   AND presence NOT IN ('base-deleted', 'not-present')
 
+-- STMT_DELETE_WORKING_ORPHAN
+DELETE FROM nodes
+WHERE wc_id = ?1 AND local_relpath LIKE ?2 ESCAPE '#' AND op_depth = ?3
+AND NOT EXISTS (SELECT 1 FROM nodes AS A
+                 WHERE A.wc_id = ?1
+                   AND A.local_relpath = nodes.local_relpath AND op_depth < ?3)
+
 -- STMT_UPDATE_WORKING_TO_DELETED
 UPDATE nodes SET
   repos_id = NULL, repos_path = NULL, revision = NULL,
