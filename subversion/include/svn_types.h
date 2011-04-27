@@ -1256,7 +1256,6 @@ typedef struct svn_info2_t
    * e.g. without adjustment of line endings and keyword
    * expansion). Only applicable for file -- not directory -- URLs.
    * For working copy paths, size64 will be #SVN_INVALID_FILESIZE.
-   * @since New in 1.6.
    */
   svn_filesize_t size;
 
