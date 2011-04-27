@@ -3022,8 +3022,9 @@ typedef struct svn_wc_info_t
    */
   svn_filesize_t working_size;
 
-  /** Info on any conflict of which this node is a victim. Otherwise NULL.  */
-  const svn_wc_conflict_description2_t *conflict;
+  /** Array of const svn_wc_conflict_description2_t * which contains info
+   * on any conflict of which this node is a victim. Otherwise NULL.  */
+  const apr_array_header_t *conflicts;
 
   /** The local absolute path of the working copy root.  */
   const char *wcroot_abspath;
