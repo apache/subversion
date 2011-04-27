@@ -539,7 +539,7 @@ svn_error_t *
 svn_client_info3(const char *abspath_or_url,
                  const svn_opt_revision_t *peg_revision,
                  const svn_opt_revision_t *revision,
-                 svn_info_receiver_t receiver,
+                 svn_info_receiver2_t receiver,
                  void *receiver_baton,
                  svn_depth_t depth,
                  const apr_array_header_t *changelists,
