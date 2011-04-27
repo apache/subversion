@@ -282,20 +282,12 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r1094692
-   Make "blame -g" more efficient when svn:mergeinfo is large.
-   Justification:
-     Orders of magnitude faster on some large datasets where the server
-     is otherwise too slow to be useable.
-   Votes:
-     +1: philip, pburba
-
  * r1095654
    Avoid closing an already closed file.
    Justification:
      Causes invalid handle exceptions on Windows servers.
    Votes:
-     +1: philip
+     +1: philip, hwright
 
  * r1096460
    Ensure results are put into the correct pool in ra_local.
@@ -417,3 +409,11 @@ Approved changes:
                  that are currently nominated...so my +1 is conditional on
                  that fix being applied first.)
      +1: danielsh (pburba: a fix to #3641 was committed to trunk)
+
+ * r1094692
+   Make "blame -g" more efficient when svn:mergeinfo is large.
+   Justification:
+     Orders of magnitude faster on some large datasets where the server
+     is otherwise too slow to be useable.
+   Votes:
+     +1: philip, pburba, hwright
