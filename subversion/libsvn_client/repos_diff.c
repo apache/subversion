@@ -187,6 +187,7 @@ struct file_baton {
      this file. */
   const char *path_start_revision;
   apr_hash_t *pristine_props;
+  svn_revnum_t base_revision;
 
   /* The path and APR file handle to the temporary file that contains the
      second repository version.  These fields are set when processing
@@ -230,7 +231,8 @@ make_dir_baton(const char *path,
                svn_boolean_t added,
                apr_pool_t *pool)
 {
-  struct dir_baton *dir_baton = apr_pcalloc(pool, sizeof(*dir_baton));
+  apr_pool_t *dir_pool = svn_pool_create(pool);
+  struct dir_baton *dir_baton = apr_pcalloc(dir_pool, sizeof(*dir_baton));
 
   dir_baton->dir_baton = parent_baton;
   dir_baton->edit_baton = edit_baton;
@@ -238,9 +240,9 @@ make_dir_baton(const char *path,
   dir_baton->tree_conflicted = FALSE;
   dir_baton->skip = FALSE;
   dir_baton->skip_children = FALSE;
-  dir_baton->pool = pool;
-  dir_baton->path = apr_pstrdup(pool, path);
-  dir_baton->wcpath = svn_dirent_join(edit_baton->target, path, pool);
+  dir_baton->pool = dir_pool;
+  dir_baton->path = apr_pstrdup(dir_pool, path);
+  dir_baton->wcpath = svn_dirent_join(edit_baton->target, path, dir_pool);
   dir_baton->propchanges  = apr_array_make(pool, 1, sizeof(svn_prop_t));
 
   return dir_baton;
@@ -257,16 +259,18 @@ make_file_baton(const char *path,
                 struct edit_baton *edit_baton,
                 apr_pool_t *pool)
 {
-  struct file_baton *file_baton = apr_pcalloc(pool, sizeof(*file_baton));
+  apr_pool_t *file_pool = svn_pool_create(pool);
+  struct file_baton *file_baton = apr_pcalloc(file_pool, sizeof(*file_baton));
 
   file_baton->edit_baton = edit_baton;
   file_baton->added = added;
   file_baton->tree_conflicted = FALSE;
   file_baton->skip = FALSE;
-  file_baton->pool = pool;
-  file_baton->path = apr_pstrdup(pool, path);
-  file_baton->wcpath = svn_dirent_join(edit_baton->target, path, pool);
+  file_baton->pool = file_pool;
+  file_baton->path = apr_pstrdup(file_pool, path);
+  file_baton->wcpath = svn_dirent_join(edit_baton->target, path, file_pool);
   file_baton->propchanges  = apr_array_make(pool, 1, sizeof(svn_prop_t));
+  file_baton->base_revision = edit_baton->revision;
 
   return file_baton;
 }
@@ -292,7 +296,7 @@ get_file_mime_types(const char **mimetype1,
       pristine_val = apr_hash_get(b->pristine_props, SVN_PROP_MIME_TYPE,
                                   strlen(SVN_PROP_MIME_TYPE));
       if (pristine_val)
-        *mimetype1 = pristine_val->data;
+        *mimetype2 = *mimetype1 = pristine_val->data;
     }
 
   if (b->propchanges)
@@ -321,24 +325,106 @@ get_file_mime_types(const char **mimetype1,
  * the file.
  */
 static svn_error_t *
-get_file_from_ra(struct file_baton *b, svn_revnum_t revision)
+get_file_from_ra(struct file_baton *b,
+                 svn_boolean_t props_only,
+                 apr_pool_t *scratch_pool)
 {
-  svn_stream_t *fstream;
+  struct edit_baton *eb = b->edit_baton;
+  if (! props_only)
+    {
+      svn_stream_t *fstream;
+      
+      SVN_ERR(svn_stream_open_unique(&fstream, &(b->path_start_revision), NULL,
+                                     svn_io_file_del_on_pool_cleanup, b->pool,
+                                     b->pool));
+      
+      fstream = svn_stream_checksummed2(fstream, NULL, &b->start_md5_checksum,
+                                        svn_checksum_md5, TRUE, b->pool);
+      
+      /* Retrieve the file and its properties */
+      SVN_ERR(svn_ra_get_file(b->edit_baton->ra_session,
+                              b->path,
+                              b->base_revision,
+                              fstream, NULL,
+                              &(b->pristine_props),
+                              b->pool));
+      SVN_ERR(svn_stream_close(fstream));
+    }
+  else
+    {
+      SVN_ERR(svn_ra_get_file(b->edit_baton->ra_session,
+                              b->path,
+                              b->base_revision,
+                              NULL, NULL,
+                              &(b->pristine_props),
+                              b->pool));
+    }
 
-  SVN_ERR(svn_stream_open_unique(&fstream, &(b->path_start_revision), NULL,
-                                 svn_io_file_del_on_pool_cleanup, b->pool,
-                                 b->pool));
+  return SVN_NO_ERROR;
+}
 
-  fstream = svn_stream_checksummed2(fstream, NULL, &b->start_md5_checksum,
-                                    svn_checksum_md5, TRUE, b->pool);
+/* Issue #3657 'dav update report handler in skelta mode can cause
+     spurious conflicts'.  When communicating with the repository via ra_serf
+     and ra_neon, the change_dir_prop and change_file_prop svn_delta_editor_t
+     callbacks are called (obviously) when a directory or file property has
+     changed between the start and end of the edit.  Less obvious however,
+     is that these callbacks may be made describing *all* of the properties
+     on FILE_BATON->PATH when using the DAV providers, not just the change(s).
+     (Specifically ra_neon does this for diff/merge and ra_serf does it
+     for diff/merge/update/switch).
 
-  SVN_ERR(svn_ra_get_file(b->edit_baton->ra_session,
-                          b->path,
-                          revision,
-                          fstream, NULL,
-                          &(b->pristine_props),
-                          b->pool));
-  return svn_stream_close(fstream);
+     This means that the change_[file|dir]_prop svn_delta_editor_t callbacks
+     may be made where there are no property changes (i.e. a noop change of
+     NAME from VALUE to VALUE).  Normally this is harmless, but during a
+     merge it can result in spurious conflicts if the WC's pristine property
+     NAME has a value other than VALUE.  In an ideal world the mod_dav_svn
+     update report handler, when in 'skelta' mode and describing changes to
+     a path on which a property has changed, wouldn't ask the client to later
+     fetch all properties and figure out what has changed itself.  The server
+     already knows which properties have changed!
+
+     Regardless, such a change is not yet implemented, and even when it is,
+     the client should DTRT with regard to older servers which behave this
+     way.  Hence this little hack:  We populate FILE_BATON->PROPCHANGES only
+     with *actual* property changes.
+
+     See http://subversion.tigris.org/issues/show_bug.cgi?id=3657#desc9 and
+     http://svn.haxx.se/dev/archive-2010-08/0351.shtml for more details.
+     
+     This function filters these property changes from the change hash
+ */
+static svn_error_t *
+remove_non_prop_changes(apr_hash_t *pristine_props,
+                        apr_array_header_t *changes)
+{
+  int i;
+
+  for (i = 0; i < changes->nelts; i++)
+    {
+      svn_prop_t *change = &APR_ARRAY_IDX(changes, i, svn_prop_t);
+
+      if (change->value)
+        {
+          const svn_string_t *old_val = apr_hash_get(pristine_props,
+                                                     change->name,
+                                                     APR_HASH_KEY_STRING);
+
+          if (old_val && svn_string_compare(old_val, change->value))
+            {
+              int j;
+
+              /* Remove the matching change by shifting the rest */
+              for (j = i; j < changes->nelts; j++)
+                {
+                  APR_ARRAY_IDX(changes, j, svn_prop_t)
+                       = APR_ARRAY_IDX(changes, j+1, svn_prop_t);
+                }
+              changes->nelts--;
+            }
+        }
+    }
+
+  return SVN_NO_ERROR;
 }
 
 /* Get the props attached to a directory in the repository at BASE_REVISION. */
@@ -457,7 +543,7 @@ diff_deleted_dir(const char *dir,
 
           /* Compare a file being deleted against an empty file */
           b = make_file_baton(path, FALSE, eb, iterpool);
-          SVN_ERR(get_file_from_ra(b, revision));
+          SVN_ERR(get_file_from_ra(b, FALSE, iterpool));
 
           SVN_ERR(get_empty_file(b->edit_baton, &(b->path_end_revision)));
 
@@ -500,14 +586,18 @@ delete_entry(const char *path,
   svn_wc_notify_state_t state = svn_wc_notify_state_inapplicable;
   svn_wc_notify_action_t action = svn_wc_notify_skip;
   svn_boolean_t tree_conflicted = FALSE;
+  apr_pool_t *scratch_pool;
 
   /* Skip *everything* within a newly tree-conflicted directory,
    * and directories the children of which should be skipped. */
   if (pb->skip || pb->tree_conflicted || pb->skip_children)
     return SVN_NO_ERROR;
 
+  scratch_pool = svn_pool_create(eb->pool);
+
   /* We need to know if this is a directory or a file */
-  SVN_ERR(svn_ra_check_path(eb->ra_session, path, eb->revision, &kind, pool));
+  SVN_ERR(svn_ra_check_path(eb->ra_session, path, eb->revision, &kind,
+                            scratch_pool));
 
   switch (kind)
     {
@@ -517,8 +607,8 @@ delete_entry(const char *path,
         struct file_baton *b;
 
         /* Compare a file being deleted against an empty file */
-        b = make_file_baton(path, FALSE, eb, pool);
-        SVN_ERR(get_file_from_ra(b, eb->revision));
+        b = make_file_baton(path, FALSE, eb, scratch_pool);
+        SVN_ERR(get_file_from_ra(b, FALSE, scratch_pool));
         SVN_ERR(get_empty_file(b->edit_baton, &(b->path_end_revision)));
 
         get_file_mime_types(&mimetype1, &mimetype2, b);
@@ -530,7 +620,7 @@ delete_entry(const char *path,
                      mimetype1, mimetype2,
                      b->pristine_props,
                      b->edit_baton->diff_cmd_baton,
-                     pool));
+                     scratch_pool));
 
         break;
       }
@@ -539,7 +629,7 @@ delete_entry(const char *path,
         SVN_ERR(eb->diff_callbacks->dir_deleted(
                      &state, &tree_conflicted,
                      svn_dirent_join(eb->target, path, pool),
-                     eb->diff_cmd_baton, pool));
+                     eb->diff_cmd_baton, scratch_pool));
 
         if (eb->walk_deleted_repos_dirs)
           {
@@ -552,7 +642,7 @@ delete_entry(const char *path,
                                      eb,
                                      eb->cancel_func,
                                      eb->cancel_baton,
-                                     pool));
+                                     scratch_pool));
           }
         break;
       }
@@ -578,6 +668,8 @@ delete_entry(const char *path,
       dpn->tree_conflicted = tree_conflicted;
       apr_hash_set(eb->deleted_paths, deleted_path, APR_HASH_KEY_STRING, dpn);
     }
+
+  svn_pool_destroy(scratch_pool);
 
   return SVN_NO_ERROR;
 }
@@ -731,7 +823,6 @@ add_file(const char *path,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(get_empty_file(b->edit_baton, &(b->path_start_revision)));
   b->pristine_props = pb->edit_baton->empty_hash;
 
   return SVN_NO_ERROR;
@@ -759,14 +850,11 @@ open_file(const char *path,
       return SVN_NO_ERROR;
     }
 
+  b->base_revision = base_revision;
+
   SVN_ERR(eb->diff_callbacks->file_opened(
                    &b->tree_conflicted, &b->skip,
                    b->wcpath, base_revision, eb->diff_cmd_baton, pool));
-
-  if (b->skip)
-    return SVN_NO_ERROR;
-
-  SVN_ERR(get_file_from_ra(b, base_revision));
 
   return SVN_NO_ERROR;
 }
@@ -801,6 +889,7 @@ apply_textdelta(void *file_baton,
   struct file_baton *b = file_baton;
   svn_stream_t *src_stream;
   svn_stream_t *result_stream;
+  apr_pool_t *scratch_pool = b->pool;
 
   /* Skip *everything* within a newly tree-conflicted directory. */
   if (b->skip)
@@ -810,31 +899,39 @@ apply_textdelta(void *file_baton,
       return SVN_NO_ERROR;
     }
 
+  /* We need the expected pristine file, so go get it */
+  if (!b->added)
+    SVN_ERR(get_file_from_ra(b, FALSE, b->pool));
+  else
+    SVN_ERR(get_empty_file(b->edit_baton, &(b->path_start_revision)));
+
+  SVN_ERR_ASSERT(b->path_start_revision != NULL);
+
   if (base_md5_digest != NULL)
     {
       svn_checksum_t *base_md5_checksum;
 
       SVN_ERR(svn_checksum_parse_hex(&base_md5_checksum, svn_checksum_md5,
-                                     base_md5_digest, pool));
+                                     base_md5_digest, scratch_pool));
 
       if (!svn_checksum_match(base_md5_checksum, b->start_md5_checksum))
         return svn_error_return(svn_checksum_mismatch_err(
                                       base_md5_checksum,
                                       b->start_md5_checksum,
-                                      pool,
+                                      scratch_pool,
                                       _("Base checksum mismatch for '%s'"),
                                       b->path));
     }
 
   /* Open the file to be used as the base for second revision */
   SVN_ERR(svn_stream_open_readonly(&src_stream, b->path_start_revision,
-                                   b->pool, pool));
+                                   scratch_pool, scratch_pool));
 
   /* Open the file that will become the second revision after applying the
      text delta, it starts empty */
   SVN_ERR(svn_stream_open_unique(&result_stream, &b->path_end_revision, NULL,
-                                   svn_io_file_del_on_pool_cleanup,
-                                   b->pool, pool));
+                                 svn_io_file_del_on_pool_cleanup,
+                                 scratch_pool, scratch_pool));
 
   svn_txdelta_apply(src_stream,
                     result_stream,
@@ -867,17 +964,23 @@ close_file(void *file_baton,
   struct edit_baton *eb = b->edit_baton;
   svn_wc_notify_state_t content_state = svn_wc_notify_state_unknown;
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
+  apr_pool_t *scratch_pool;
 
   /* Skip *everything* within a newly tree-conflicted directory. */
   if (b->skip)
-    return SVN_NO_ERROR;
+    {
+      svn_pool_destroy(b->pool);
+      return SVN_NO_ERROR;
+    }
+
+  scratch_pool = b->pool;
 
   if (expected_md5_digest)
     {
       svn_checksum_t *expected_md5_checksum;
 
       SVN_ERR(svn_checksum_parse_hex(&expected_md5_checksum, svn_checksum_md5,
-                                     expected_md5_digest, pool));
+                                     expected_md5_digest, scratch_pool));
 
       if (!svn_checksum_match(expected_md5_checksum, b->result_md5_checksum))
         return svn_error_return(svn_checksum_mismatch_err(
@@ -888,10 +991,23 @@ close_file(void *file_baton,
                                       b->path));
     }
 
+  if (!b->added && b->propchanges->nelts > 0)
+    {
+      if (!b->pristine_props)
+        {
+          /* We didn't receive a text change, so we have no pristine props.
+             Retrieve just the props now. */
+          SVN_ERR(get_file_from_ra(b, TRUE, scratch_pool));
+        }
+
+      remove_non_prop_changes(b->pristine_props, b->propchanges);
+    }
+
   if (b->path_end_revision || b->propchanges->nelts > 0)
     {
       const char *mimetype1, *mimetype2;
       get_file_mime_types(&mimetype1, &mimetype2, b);
+
 
       if (b->added)
         SVN_ERR(eb->diff_callbacks->file_added(
@@ -905,7 +1021,7 @@ close_file(void *file_baton,
                  NULL, SVN_INVALID_REVNUM,
                  b->propchanges, b->pristine_props,
                  b->edit_baton->diff_cmd_baton,
-                 pool));
+                 scratch_pool));
       else
         SVN_ERR(eb->diff_callbacks->file_changed(
                  &content_state, &prop_state,
@@ -917,7 +1033,7 @@ close_file(void *file_baton,
                  mimetype1, mimetype2,
                  b->propchanges, b->pristine_props,
                  b->edit_baton->diff_cmd_baton,
-                 pool));
+                 scratch_pool));
     }
 
 
@@ -964,12 +1080,14 @@ close_file(void *file_baton,
       else
         action = svn_wc_notify_update_update;
 
-      notify = svn_wc_create_notify(b->wcpath, action, pool);
+      notify = svn_wc_create_notify(b->wcpath, action, scratch_pool);
       notify->kind = kind;
       notify->content_state = content_state;
       notify->prop_state = prop_state;
-      (*eb->notify_func)(eb->notify_baton, notify, pool);
+      (*eb->notify_func)(eb->notify_baton, notify, scratch_pool);
     }
+
+  svn_pool_destroy(b->pool); /* Destroy file and scratch pool */
 
   return SVN_NO_ERROR;
 }
@@ -984,10 +1102,19 @@ close_directory(void *dir_baton,
   svn_wc_notify_state_t content_state = svn_wc_notify_state_unknown;
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
   svn_boolean_t skipped = FALSE;
+  apr_pool_t *scratch_pool;
 
   /* Skip *everything* within a newly tree-conflicted directory. */
   if (b->skip)
-    return SVN_NO_ERROR;
+    {
+      svn_pool_destroy(b->pool);
+      return SVN_NO_ERROR;
+    }
+
+  scratch_pool = b->pool;
+
+  if (!b->added && b->propchanges->nelts > 0)
+    SVN_ERR(remove_non_prop_changes(b->pristine_props, b->propchanges));
 
   /* Don't do the props_changed stuff if this is a dry_run and we don't
      have an access baton, since in that case the directory will already
@@ -999,7 +1126,7 @@ close_directory(void *dir_baton,
                &prop_state, &tree_conflicted,
                b->wcpath, b->added,
                b->propchanges, b->pristine_props,
-               b->edit_baton->diff_cmd_baton, pool));
+               b->edit_baton->diff_cmd_baton, scratch_pool));
       if (tree_conflicted)
         b->tree_conflicted = TRUE;
 
@@ -1014,7 +1141,7 @@ close_directory(void *dir_baton,
   SVN_ERR(eb->diff_callbacks->dir_closed(NULL, NULL, NULL,
                                          b->wcpath, b->added,
                                          b->edit_baton->diff_cmd_baton,
-                                         pool));
+                                         scratch_pool));
 
   /* Don't notify added directories as they triggered notification
      in add_directory. */
@@ -1061,8 +1188,10 @@ close_directory(void *dir_baton,
 
       notify->prop_state = prop_state;
       notify->lock_state = svn_wc_notify_lock_state_inapplicable;
-      (*eb->notify_func)(eb->notify_baton, notify, pool);
+      (*eb->notify_func)(eb->notify_baton, notify, scratch_pool);
     }
+
+  svn_pool_destroy(b->pool); /* Destroy baton and scratch_pool */
 
   return SVN_NO_ERROR;
 }
@@ -1081,42 +1210,6 @@ change_file_prop(void *file_baton,
   /* Skip *everything* within a newly tree-conflicted directory. */
   if (b->skip)
     return SVN_NO_ERROR;
-
-  /* Issue #3657 'dav update report handler in skelta mode can cause
-     spurious conflicts'.  When communicating with the repository via ra_serf
-     and ra_neon, the change_dir_prop and change_file_prop svn_delta_editor_t
-     callbacks are called (obviously) when a directory or file property has
-     changed between the start and end of the edit.  Less obvious however,
-     is that these callbacks may be made describing *all* of the properties
-     on FILE_BATON->PATH when using the DAV providers, not just the change(s).
-     (Specifically ra_neon does this for diff/merge and ra_serf does it
-     for diff/merge/update/switch).
-
-     This means that the change_[file|dir]_prop svn_delta_editor_t callbacks
-     may be made where there are no property changes (i.e. a noop change of
-     NAME from VALUE to VALUE).  Normally this is harmless, but during a
-     merge it can result in spurious conflicts if the WC's pristine property
-     NAME has a value other than VALUE.  In an ideal world the mod_dav_svn
-     update report handler, when in 'skelta' mode and describing changes to
-     a path on which a property has changed, wouldn't ask the client to later
-     fetch all properties and figure out what has changed itself.  The server
-     already knows which properties have changed!
-
-     Regardless, such a change is not yet implemented, and even when it is,
-     the client should DTRT with regard to older servers which behave this
-     way.  Hence this little hack:  We populate FILE_BATON->PROPCHANGES only
-     with *actual* property changes.
-
-     See http://subversion.tigris.org/issues/show_bug.cgi?id=3657#desc9 and
-     http://svn.haxx.se/dev/archive-2010-08/0351.shtml for more details. */
-  if (value)
-    {
-      svn_string_t *old_val = apr_hash_get(b->pristine_props, name,
-                                           APR_HASH_KEY_STRING);
-
-      if (old_val && svn_string_compare(old_val, value))
-        return SVN_NO_ERROR;
-    }
 
   propchange = apr_array_push(b->propchanges);
   propchange->name = apr_pstrdup(b->pool, name);
@@ -1138,16 +1231,6 @@ change_dir_prop(void *dir_baton,
   /* Skip *everything* within a newly tree-conflicted directory. */
   if (db->skip)
     return SVN_NO_ERROR;
-
-  /* See the comment re issue #3657 in the change_file_prop() callback. */
-  if (value)
-    {
-      svn_string_t *old_val = apr_hash_get(db->pristine_props, name,
-                                           APR_HASH_KEY_STRING);
-
-      if (old_val && svn_string_compare(old_val, value))
-        return SVN_NO_ERROR;
-    }
 
   propchange = apr_array_push(db->propchanges);
   propchange->name = apr_pstrdup(db->pool, name);
