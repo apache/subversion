@@ -230,7 +230,9 @@ print_info_xml(void *baton,
     }
 
   if (info->tree_conflict)
-    SVN_ERR(svn_cl__append_tree_conflict_info_xml(sb, info->tree_conflict,
+    SVN_ERR(svn_cl__append_tree_conflict_info_xml(sb,
+                                                  svn_cl__cd_to_cd2(
+                                                    info->tree_conflict, pool),
                                                   pool));
 
   /* "</entry>" */
@@ -456,7 +458,7 @@ print_info(void *baton,
       const char *src_right_version;
 
       SVN_ERR(svn_cl__get_human_readable_tree_conflict_description(
-                &desc, info->tree_conflict, pool));
+                &desc, svn_cl__cd_to_cd2(info->tree_conflict, pool), pool));
 
       src_left_version =
         svn_cl__node_description(info->tree_conflict->src_left_version,
