@@ -2046,26 +2046,34 @@ info_from_info2(const svn_info2_t *info2,
     info->has_wc_info           = FALSE;
 
   /* Populate conflict fields. */
-  if (info2->wc_info && info2->wc_info->conflict)
+  if (info2->wc_info && info2->wc_info->conflicts)
     {
-      const svn_wc_conflict_description2_t *conflict
-                                                = info2->wc_info->conflict;
+      int i;
 
-      switch (conflict->kind)
+      for (i = 0; i < info2->wc_info->conflicts->nelts; i++)
         {
-          case svn_wc_conflict_kind_tree:
-            info->tree_conflict = svn_wc__cd2_to_cd(conflict, pool);
-            break;
+          const svn_wc_conflict_description2_t *conflict
+                              = APR_ARRAY_IDX(info2->wc_info->conflicts, i,
+                                    const svn_wc_conflict_description2_t *);
 
-          case svn_wc_conflict_kind_text:
-            info->conflict_old = conflict->base_abspath;
-            info->conflict_new = conflict->my_abspath;
-            info->conflict_wrk = conflict->their_abspath;
-            break;
+          /* ### Not really sure what we should do if we get multiple
+             ### conflicts of the same type. */
+          switch (conflict->kind)
+            {
+              case svn_wc_conflict_kind_tree:
+                info->tree_conflict = svn_wc__cd2_to_cd(conflict, pool);
+                break;
 
-          case svn_wc_conflict_kind_property:
-            info->prejfile = conflict->their_abspath;
-            break;
+              case svn_wc_conflict_kind_text:
+                info->conflict_old = conflict->base_abspath;
+                info->conflict_new = conflict->my_abspath;
+                info->conflict_wrk = conflict->their_abspath;
+                break;
+
+              case svn_wc_conflict_kind_property:
+                info->prejfile = conflict->their_abspath;
+                break;
+            }
         }
     }
 
