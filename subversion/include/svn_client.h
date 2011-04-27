@@ -5116,13 +5116,6 @@ svn_client_unlock(const apr_array_header_t *targets,
  * @{
  */
 
-/** The size of the file is unknown.
- * Used as value in fields of type @c apr_size_t.
- *
- * @since New in 1.5
- */
-#define SVN_INFO_SIZE_UNKNOWN ((apr_size_t) -1)
-
 /**
  * A structure which describes various system-generated metadata about
  * a working-copy path or URL.
