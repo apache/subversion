@@ -5243,19 +5243,6 @@ typedef struct svn_info_t
 
 } svn_info_t;
 
-/**
- * The callback invoked by svn_client_info3().  Each invocation
- * describes @a abspath_or_url with the information present in @a info.
- * Use @a scratch_pool for all temporary allocation.
- *
- * @since New in 1.7.
- */
-/* ### Before 1.7: We might want to rev  svn_wc_info2_t* to update conflict
-       information, remove schedule, etc. */
-typedef svn_error_t *(*svn_info_receiver2_t)(void *baton,
-                                             const char *abspath_or_url,
-                                             const svn_info_t *info,
-                                             apr_pool_t *scratch_pool);
 
 /**
  * The callback invoked by svn_client_info2().  Each invocation

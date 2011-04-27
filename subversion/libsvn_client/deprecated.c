@@ -2001,6 +2001,77 @@ svn_client_checkout(svn_revnum_t *result_rev,
 
 /*** From info.c ***/
 
+/* Convert an svn_info2_t to an svn_info_t, doing shallow copies of objects. */
+static svn_info_t *
+info_from_info2(const svn_info2_t *info2,
+                apr_pool_t *pool)
+{
+  svn_info_t *info = apr_pcalloc(pool, sizeof(*info));
+
+  info->URL                 = info2->URL;
+  info->rev                 = info2->rev;
+  info->kind                = info2->kind;
+  info->repos_root_URL      = info2->repos_root_URL;
+  info->repos_UUID          = info2->repos_UUID;
+  info->last_changed_rev    = info2->last_changed_rev;
+  info->last_changed_date   = info2->last_changed_date;
+  info->last_changed_author = info2->last_changed_author;
+  info->lock                = info2->lock;
+
+  info->size64              = info2->size;
+  if (((apr_size_t)info->size64) == info->size64)
+    info->size               = (apr_size_t)info->size64;
+  else /* >= 4GB */
+    info->size               = SVN_INFO_SIZE_UNKNOWN;
+
+  if (info2->wc_info)
+    {
+      info->has_wc_info         = TRUE;
+      info->schedule            = info2->wc_info->schedule;
+      info->copyfrom_url        = info2->wc_info->copyfrom_url;
+      info->copyfrom_rev        = info2->wc_info->copyfrom_rev;
+      info->text_time           = info2->wc_info->text_time;
+      info->prop_time           = 0;
+      info->checksum            = info2->wc_info->checksum;
+      info->changelist          = info2->wc_info->changelist;
+      info->depth               = info2->wc_info->depth;
+
+      info->working_size64      = info2->wc_info->working_size;
+      if (((apr_size_t)info->working_size64) == info->working_size64)
+        info->working_size       = (apr_size_t)info->working_size64;
+      else /* >= 4GB */
+        info->working_size       = SVN_INFO_SIZE_UNKNOWN;
+    }
+  else
+    info->has_wc_info           = FALSE;
+
+  /* Populate conflict fields. */
+  if (info2->wc_info && info2->wc_info->conflict)
+    {
+      const svn_wc_conflict_description2_t *conflict
+                                                = info2->wc_info->conflict;
+
+      switch (conflict->kind)
+        {
+          case svn_wc_conflict_kind_tree:
+            info->tree_conflict = svn_wc__cd2_to_cd(conflict, pool);
+            break;
+
+          case svn_wc_conflict_kind_text:
+            info->conflict_old = conflict->base_abspath;
+            info->conflict_new = conflict->my_abspath;
+            info->conflict_wrk = conflict->their_abspath;
+            break;
+
+          case svn_wc_conflict_kind_property:
+            info->prejfile = conflict->their_abspath;
+            break;
+        }
+    }
+
+  return info;
+}
+
 struct info_to_relpath_baton
 {
   const char *anchor_abspath;
@@ -2012,7 +2083,7 @@ struct info_to_relpath_baton
 static svn_error_t *
 info_receiver_relpath_wrapper(void *baton,
                               const char *abspath_or_url,
-                              const svn_info_t *info,
+                              const svn_info2_t *info2,
                               apr_pool_t *scratch_pool)
 {
   struct info_to_relpath_baton *rb = baton;
@@ -2029,7 +2100,7 @@ info_receiver_relpath_wrapper(void *baton,
 
   SVN_ERR(rb->info_receiver(rb->info_baton,
                             path,
-                            info,
+                            info_from_info2(info2, scratch_pool),
                             scratch_pool));
 
   return SVN_NO_ERROR;
