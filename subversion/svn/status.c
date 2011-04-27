@@ -180,7 +180,7 @@ print_status(const char *path,
           tree_status_code = 'C';
           SVN_ERR(svn_cl__get_human_readable_tree_conflict_description(
                             &desc,
-                            old_tree_conflict,
+                            svn_cl__cd_to_cd2(old_tree_conflict, pool),
                             pool));
           tree_desc_line = apr_psprintf(pool, "\n      >   %s", desc);
           (*tree_conflicts)++;
