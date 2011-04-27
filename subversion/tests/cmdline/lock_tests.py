@@ -1318,7 +1318,7 @@ def ls_url_encoded(sbox):
 
 #----------------------------------------------------------------------
 # Make sure unlocking a path with the wrong lock token fails.
-@XFail(svntest.main.is_ra_type_dav)
+@XFail(svntest.main.is_ra_type_dav_neon)
 @Issue(3794)
 def unlock_wrong_token(sbox):
   "verify unlocking with wrong lock token"
@@ -1380,7 +1380,7 @@ def examine_lock_encoded_recurse(sbox):
                                         svntest.main.wc_author)
 
 # Trying to unlock someone else's lock with --force should fail.
-@XFail(svntest.main.is_ra_type_dav)
+@XFail(svntest.main.is_ra_type_dav_neon)
 @Issue(3801)
 def unlocked_lock_of_other_user(sbox):
   "unlock file locked by other user"
