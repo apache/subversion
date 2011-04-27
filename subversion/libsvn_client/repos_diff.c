@@ -329,7 +329,6 @@ get_file_from_ra(struct file_baton *b,
                  svn_boolean_t props_only,
                  apr_pool_t *scratch_pool)
 {
-  struct edit_baton *eb = b->edit_baton;
   if (! props_only)
     {
       svn_stream_t *fstream;
