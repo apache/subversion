@@ -3020,10 +3020,10 @@ typedef struct svn_wc_info_t
    * representation, or #SVN_INVALID_FILESIZE if unknown.
    * Not applicable for directories.
    */
-  svn_filesize_t working_size64;
+  svn_filesize_t working_size;
 
   /** Info on any conflict of which this node is a victim. Otherwise NULL.  */
-  svn_wc_conflict_description2_t *conflict;
+  const svn_wc_conflict_description2_t *conflict;
 
   /** The local absolute path of the working copy root.  */
   const char *wcroot_abspath;

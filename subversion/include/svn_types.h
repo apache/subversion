@@ -1273,6 +1273,18 @@ typedef struct svn_info2_t
 } svn_info2_t;
 
 
+/**
+ * The callback invoked by info retrievers.  Each invocation
+ * describes @a abspath_or_url with the information present in @a info.
+ * Use @a scratch_pool for all temporary allocation.
+ *
+ * @since New in 1.7.
+ */
+typedef svn_error_t *(*svn_info_receiver2_t)(void *baton,
+                                             const char *abspath_or_url,
+                                             const svn_info2_t *info,
+                                             apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
