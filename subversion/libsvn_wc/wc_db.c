@@ -5429,8 +5429,8 @@ read_info(svn_wc__db_status_t *status,
   else if (have_act)
     {
       /* A row in ACTUAL_NODE should never exist without a corresponding
-         node in BASE_NODE and/or WORKING_NODE unless it flags a conflict. */
-      if (svn_sqlite__column_is_null(stmt_act, 5)) /* conflict_data */
+         node in BASE_NODE and/or WORKING_NODE unless it flags a tree conflict. */
+      if (svn_sqlite__column_is_null(stmt_act, 5)) /* tree_conflict_data */
           err = svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
                                   _("Corrupt data for '%s'"),
                                   path_for_error_message(wcroot, local_relpath,
