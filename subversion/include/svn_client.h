@@ -1240,7 +1240,8 @@ svn_client_update4(apr_array_header_t **result_revs,
 
 /**
  * Similar to svn_client_update4() but with @a make_parents always set
- * to FALSE and @a adds_as_modification set to TRUE.
+ * to FALSE, @a adds_as_modification set to TRUE, and
+ * @a apply_local_external_modifications set to FALSE.
  *
  * @deprecated Provided for backward compatibility with the 1.6 API.
  * @since New in 1.5.
@@ -1384,7 +1385,7 @@ svn_client_switch3(svn_revnum_t *result_rev,
 
 /**
  * Similar to svn_client_switch3() but with @a ignore_ancestry always
- * set to TRUE.
+ * set to TRUE and @a apply_local_external_modifications set to FALSE.
  *
  * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.4 API.
