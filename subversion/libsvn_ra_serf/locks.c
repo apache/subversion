@@ -695,7 +695,9 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
       const char *req_url, *path, *token;
       const void *key;
       void *val;
+      svn_lock_t *existing_lock;
       struct unlock_context_t unlock_ctx;
+      svn_error_t *lock_err = NULL;
 
       svn_pool_clear(subpool);
 
@@ -707,10 +709,9 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
 
       if (force && (!token || token[0] == '\0'))
         {
-          svn_lock_t *lock;
-
-          SVN_ERR(svn_ra_serf__get_lock(ra_session, &lock, path, subpool));
-          token = lock->token;
+          SVN_ERR(svn_ra_serf__get_lock(ra_session, &existing_lock, path,
+                                        subpool));
+          token = existing_lock->token;
           if (!token)
             {
               svn_error_t *err;
@@ -753,15 +754,28 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
       svn_ra_serf__request_create(handler);
       SVN_ERR(svn_ra_serf__context_run_wait(&ctx->done, session, subpool));
 
-      if (ctx->status != 204)
+      switch (ctx->status)
         {
-           return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-                                    _("Unlock request failed: %d %s"),
-                                    ctx->status, ctx->reason);
+          case 204:
+            break; /* OK */
+          case 403:
+            /* Api users expect this specific error code to detect failures */
+            lock_err = svn_error_createf(SVN_ERR_FS_LOCK_OWNER_MISMATCH, NULL,
+                                         _("Unlock request failed: %d %s"),
+                                         ctx->status, ctx->reason);
+            break;
+          default:
+            lock_err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                                   _("Unlock request failed: %d %s"),
+                                   ctx->status, ctx->reason);
         }
 
       if (lock_func)
-        SVN_ERR(lock_func(lock_baton, path, FALSE, NULL, NULL, subpool));
+        {
+          SVN_ERR(lock_func(lock_baton, path, FALSE, existing_lock,
+                            lock_err, subpool));
+          svn_error_clear(lock_err);
+        }
     }
 
   return SVN_NO_ERROR;
