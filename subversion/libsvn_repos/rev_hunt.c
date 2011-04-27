@@ -1029,7 +1029,8 @@ struct path_revision
 };
 
 /* Check for merges in OLD_PATH_REV->PATH at OLD_PATH_REV->REVNUM.  Store
-   the mergeinfo difference in MERGED_MERGEINFO, allocated in POOL. */
+   the mergeinfo difference in *MERGED_MERGEINFO, allocated in POOL.  The
+   returned *MERGED_MERGEINFO will be NULL if there are no changes. */
 static svn_error_t *
 get_merged_mergeinfo(apr_hash_t **merged_mergeinfo,
                      svn_repos_t *repos,
@@ -1039,6 +1040,30 @@ get_merged_mergeinfo(apr_hash_t **merged_mergeinfo,
   apr_pool_t *subpool = svn_pool_create(pool);
   apr_hash_t *curr_mergeinfo, *prev_mergeinfo, *deleted, *changed;
   svn_error_t *err;
+  svn_fs_root_t *root;
+  apr_hash_t *changed_paths;
+  const char *path = old_path_rev->path;
+
+  /* Getting/parsing/diffing svn:mergeinfo is expensive, so only do it
+     if there is a property change. */
+  SVN_ERR(svn_fs_revision_root(&root, repos->fs, old_path_rev->revnum,
+                               subpool));
+  SVN_ERR(svn_fs_paths_changed2(&changed_paths, root, subpool));
+  while (1)
+    {
+      svn_fs_path_change2_t *changed_path = apr_hash_get(changed_paths,
+                                                         path,
+                                                         APR_HASH_KEY_STRING);
+      if (changed_path && changed_path->prop_mod)
+        break;
+      if (svn_dirent_is_root(path, strlen(path)))
+        {
+          svn_pool_destroy(subpool);
+          *merged_mergeinfo = NULL;
+          return SVN_NO_ERROR;
+        }
+      path = svn_path_dirname(path, subpool);
+    }
 
   /* First, find the mergeinfo difference for old_path_rev->revnum, and
      old_path_rev->revnum - 1. */
@@ -1048,10 +1073,12 @@ get_merged_mergeinfo(apr_hash_t **merged_mergeinfo,
                            old_path_rev->revnum - 1, subpool);
   if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
     {
-      /* If the path doesn't exist in the previous revision, assume empty
-         mergeinfo. */
+      /* If the path doesn't exist in the previous revision, assume no
+         merges */
       svn_error_clear(err);
-      prev_mergeinfo = apr_hash_make(subpool);
+      svn_pool_destroy(subpool);
+      *merged_mergeinfo = NULL;
+      return SVN_NO_ERROR;
     }
   else
     SVN_ERR(err);
@@ -1059,10 +1086,14 @@ get_merged_mergeinfo(apr_hash_t **merged_mergeinfo,
   /* Then calculate and merge the differences. */
   SVN_ERR(svn_mergeinfo_diff(&deleted, &changed, prev_mergeinfo, curr_mergeinfo,
                              FALSE, subpool));
-  SVN_ERR(svn_mergeinfo_merge(changed, deleted, subpool));
+  if (apr_hash_count(deleted))
+    SVN_ERR(svn_mergeinfo_merge(changed, deleted, subpool));
 
   /* Store the result. */
-  *merged_mergeinfo = svn_mergeinfo_dup(changed, pool);
+  if (apr_hash_count(changed))
+    *merged_mergeinfo = svn_mergeinfo_dup(changed, pool);
+  else
+    *merged_mergeinfo = NULL;
 
   svn_pool_destroy(subpool);
 

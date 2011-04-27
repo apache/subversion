@@ -409,11 +409,3 @@ Approved changes:
                  that are currently nominated...so my +1 is conditional on
                  that fix being applied first.)
      +1: danielsh (pburba: a fix to #3641 was committed to trunk)
-
- * r1094692
-   Make "blame -g" more efficient when svn:mergeinfo is large.
-   Justification:
-     Orders of magnitude faster on some large datasets where the server
-     is otherwise too slow to be useable.
-   Votes:
-     +1: philip, pburba, hwright
