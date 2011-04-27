@@ -1199,6 +1199,13 @@ typedef unsigned long svn_linenum_t;
 
 /** @} */
 
+/** The size of the file is unknown.
+ * Used as value in fields of type @c apr_size_t.
+ *
+ * @since New in 1.5
+ */
+#define SVN_INFO_SIZE_UNKNOWN ((apr_size_t) -1)
+
 
 /** Forward declaration, for the purpose of the #svn_info2_t struct. */
 struct svn_wc_info_t;
