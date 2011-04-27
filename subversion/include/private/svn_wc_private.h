@@ -37,6 +37,7 @@
 #ifndef SVN_WC_PRIVATE_H
 #define SVN_WC_PRIVATE_H
 
+#include "svn_types.h"
 #include "svn_wc.h"
 
 #ifdef __cplusplus
@@ -966,6 +967,20 @@ svn_wc__check_for_obstructions(svn_wc_notify_state_t *obstruction_state,
                                const char *local_abspath,
                                svn_boolean_t no_wcroot_check,
                                apr_pool_t *scratch_pool);
+
+/* Walk the children of LOCAL_ABSPATH and push svn_info2_t's through
+   RECEIVER/RECEIVER_BATON.  Honor DEPTH while crawling children, and
+   filter the pushed items against CHANGELISTS.  */
+svn_error_t *
+svn_wc__get_info(svn_wc_context_t *wc_ctx,
+                 const char *local_abspath,
+                 svn_depth_t depth,
+                 svn_info_receiver2_t receiver,
+                 void *receiver_baton,
+                 const apr_array_header_t *changelists,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
+                 apr_pool_t *scratch_pool);
 
 
 #ifdef __cplusplus
