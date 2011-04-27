@@ -73,16 +73,17 @@ autogen-swig: autogen-swig-[swig_langs.short]
 # Section 4: Rules to build SWIG .c files from .i files
 ########################################
 [for swig_c]
-[swig_c.c_file]: check-SWIG [for swig_c.deps] [swig_c.deps][end]
+[swig_c.c_file]: .swig_checked [for swig_c.deps] [swig_c.deps][end]
 	$(SWIG) $(SWIG_INCLUDES) [swig_c.opts] -o $@ $(top_srcdir)/[swig_c.source][end]
 
 # This needs to be here, rather than in Makefile.in, else
 # './autogen.sh --release' doesn't find it.
-check-SWIG:
+.swig_checked:
 	@if [ "$(SWIG)" = "none" ]; then \
 	  echo "SWIG disabled at configure time" >&2; \
 	  exit 1; \
 	fi
+	@touch .swig_checked
 
 
 ########################################
