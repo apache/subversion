@@ -171,17 +171,13 @@ print_status(const char *path,
       if (tree_conflicted)
         {
           const svn_wc_conflict_description2_t *tree_conflict;
-          svn_wc_conflict_description_t *old_tree_conflict;
           SVN_ERR(svn_wc__get_tree_conflict(&tree_conflict, ctx->wc_ctx,
                                             local_abspath, pool, pool));
           SVN_ERR_ASSERT(tree_conflict != NULL);
-          old_tree_conflict = svn_wc__cd2_to_cd(tree_conflict, pool);
 
           tree_status_code = 'C';
           SVN_ERR(svn_cl__get_human_readable_tree_conflict_description(
-                            &desc,
-                            svn_cl__cd_to_cd2(old_tree_conflict, pool),
-                            pool));
+                            &desc, tree_conflict, pool));
           tree_desc_line = apr_psprintf(pool, "\n      >   %s", desc);
           (*tree_conflicts)++;
         }

@@ -809,11 +809,6 @@ svn_cl__opt_parse_path(svn_opt_revision_t *rev,
 svn_error_t *
 svn_cl__assert_homogeneous_target_type(const apr_array_header_t *targets);
 
-/* Temp function for updating output functions. */
-svn_wc_conflict_description2_t *
-svn_cl__cd_to_cd2(const svn_wc_conflict_description_t *conflict,
-                 apr_pool_t *result_pool);
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
