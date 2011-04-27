@@ -282,13 +282,6 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r1095654
-   Avoid closing an already closed file.
-   Justification:
-     Causes invalid handle exceptions on Windows servers.
-   Votes:
-     +1: philip, hwright
-
  * r1096460
    Ensure results are put into the correct pool in ra_local.
    Justification:
@@ -409,3 +402,10 @@ Approved changes:
                  that are currently nominated...so my +1 is conditional on
                  that fix being applied first.)
      +1: danielsh (pburba: a fix to #3641 was committed to trunk)
+
+ * r1095654
+   Avoid closing an already closed file.
+   Justification:
+     Causes invalid handle exceptions on Windows servers.
+   Votes:
+     +1: philip, hwright, julianfoad
