@@ -4039,7 +4039,6 @@ temp_file_create(apr_file_t **new_file,
               if (!apr_err_2 && finfo.filetype == APR_DIR)
                 continue;
 
-#ifdef WIN32
               apr_err_2 = APR_TO_OS_ERROR(apr_err);
 
               if (apr_err_2 == ERROR_ACCESS_DENIED ||
@@ -4051,7 +4050,6 @@ temp_file_create(apr_file_t **new_file,
                   i += 797;
                   continue;
                 }
-#endif
 
               /* Else fall through and return the original error. */
             }
