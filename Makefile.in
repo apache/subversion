@@ -708,6 +708,7 @@ install-swig-py: install-swig-py-lib
 install-swig-rb: install-swig-rb-lib
 
 clean-swig: clean-swig-headers clean-swig-py clean-swig-rb clean-swig-pl
+	@rm -f .swig_checked
 extraclean-swig: extraclean-swig-headers extraclean-swig-py \
                  extraclean-swig-rb extraclean-swig-pl
 

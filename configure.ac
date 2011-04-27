@@ -1263,6 +1263,9 @@ if test -e packages/solaris/pkginfo.in; then
 fi
 AC_SUBST(SVN_CONFIG_SCRIPT_FILES)
 
+# Ensure that SWIG is checked after reconfiguration.
+rm -f .swig_checked
+
 AC_OUTPUT
 
 # ==== Print final messages to user ==========================================
