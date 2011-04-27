@@ -392,6 +392,7 @@ do_unlock(svn_ra_session_t *session,
           const char *path,
           const char *token,
           svn_boolean_t force,
+          const svn_lock_t **old_lock,
           apr_pool_t *pool)
 {
   svn_ra_neon__session_t *ras = session->priv;
@@ -400,6 +401,9 @@ do_unlock(svn_ra_session_t *session,
   ne_uri uri;
 
   apr_hash_t *extra_headers = apr_hash_make(pool);
+
+  if (old_lock)
+    *old_lock = NULL;
 
   /* Make a neon lock structure containing token and full URL to unlock. */
   url = svn_path_url_add_component2(ras->url->data, path, pool);
@@ -425,9 +429,9 @@ do_unlock(svn_ra_session_t *session,
                                  _("'%s' is not locked in the repository"),
                                  path);
       token = lock->token;
+      if (old_lock)
+        *old_lock = lock;
     }
-
-
 
   apr_hash_set(extra_headers, "Lock-Token", APR_HASH_KEY_STRING,
                apr_psprintf(pool, "<%s>", token));
@@ -435,8 +439,34 @@ do_unlock(svn_ra_session_t *session,
     apr_hash_set(extra_headers, SVN_DAV_OPTIONS_HEADER, APR_HASH_KEY_STRING,
                  SVN_DAV_OPTION_LOCK_BREAK);
 
-  return svn_ra_neon__simple_request(NULL, ras, "UNLOCK", url_path,
-                                     extra_headers, NULL, 204, 0, pool);
+  {
+    int code = 0;
+    svn_error_t *err;
+
+    err = svn_ra_neon__simple_request(&code, ras, "UNLOCK", url_path,
+                                      extra_headers, NULL, 204, 0, pool);
+
+    if (err && ((err->apr_err == SVN_ERR_RA_DAV_REQUEST_FAILED)
+                || (err->apr_err == SVN_ERR_RA_DAV_FORBIDDEN)))
+      {
+        switch (code)
+          {
+            case 403:
+              return svn_error_createf(SVN_ERR_FS_LOCK_OWNER_MISMATCH, err,
+                                       _("Unlock failed on '%s'"
+                                         " (%d Forbidden)"), path, code);
+            case 400:
+               return svn_error_createf(SVN_ERR_FS_NO_SUCH_LOCK, err,
+                                       _("No lock on path '%s'"
+                                         " (%d Bad Request)"), path, code);
+            default:
+              break; /* Handle as error */
+          }
+      }
+    else
+      SVN_ERR(err);
+  }
+  return SVN_NO_ERROR;
 }
 
 
@@ -462,6 +492,7 @@ svn_ra_neon__unlock(svn_ra_session_t *session,
       void *val;
       const char *token;
       svn_error_t *err, *callback_err = NULL;
+      const svn_lock_t *old_lock = NULL;
 
       svn_pool_clear(iterpool);
 
@@ -474,7 +505,7 @@ svn_ra_neon__unlock(svn_ra_session_t *session,
       else
         token = NULL;
 
-      err = do_unlock(session, path, token, force, iterpool);
+      err = do_unlock(session, path, token, force, &old_lock, iterpool);
 
       if (err && !SVN_ERR_IS_UNLOCK_ERROR(err))
         {
@@ -483,7 +514,8 @@ svn_ra_neon__unlock(svn_ra_session_t *session,
         }
 
       if (lock_func)
-        callback_err = lock_func(lock_baton, path, FALSE, NULL, err, iterpool);
+        callback_err = svn_error_return(
+                 lock_func(lock_baton, path, FALSE, old_lock, err, iterpool));
 
       svn_error_clear(err);
 
@@ -497,7 +529,8 @@ svn_ra_neon__unlock(svn_ra_session_t *session,
   svn_pool_destroy(iterpool);
 
  departure:
-  return svn_ra_neon__maybe_store_auth_info_after_result(ret_err, ras, pool);
+  return svn_error_return(
+          svn_ra_neon__maybe_store_auth_info_after_result(ret_err, ras, pool));
 }
 
 
