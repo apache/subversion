@@ -2994,6 +2994,43 @@ svn_wc_entry_dup(const svn_wc_entry_t *entry,
 /** @} */
 
 
+/**
+ * This struct contains information about the working copy, and is used
+ * in conjunction with #svn_info2_t.
+ *
+ * @note Fields may be added to the end of this structure in future
+ * versions.  Therefore, users shouldn't allocate structures of this
+ * type, to preserve binary compatibility.
+ *
+ * @since New in 1.7.
+ */
+typedef struct svn_wc_info_t
+{
+  /* ### Do we still need schedule? */
+  svn_wc_schedule_t schedule;
+  const char *copyfrom_url;
+  svn_revnum_t copyfrom_rev;
+  apr_time_t text_time;
+  const char *checksum;
+  const char *changelist;
+  svn_depth_t depth;
+
+  /**
+   * The size of the file after being translated into its local
+   * representation, or #SVN_INVALID_FILESIZE if unknown.
+   * Not applicable for directories.
+   */
+  svn_filesize_t working_size64;
+
+  /** Info on any conflict of which this node is a victim. Otherwise NULL.  */
+  svn_wc_conflict_description2_t *conflict;
+
+  /** The local absolute path of the working copy root.  */
+  const char *wcroot_abspath;
+
+} svn_wc_info_t;
+
+
 /** Given @a local_abspath in a dir under version control, decide if it is
  * in a state of conflict; return the answers in @a *text_conflicted_p, @a
  * *prop_conflicted_p, and @a *tree_conflicted_p.  If one or two of the

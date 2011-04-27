@@ -5132,6 +5132,8 @@ svn_client_unlock(const apr_array_header_t *targets,
  * type, to preserve binary compatibility.
  *
  * @since New in 1.2.
+ * @deprecated Provided for backward compatibility with the 1.6 API.  The new
+ * API is #svn_info2_t, located in svn_types.h.
  */
 typedef struct svn_info_t
 {
