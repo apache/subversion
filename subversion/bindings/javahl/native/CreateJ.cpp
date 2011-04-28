@@ -178,7 +178,7 @@ CreateJ::ConflictVersion(const svn_wc_conflict_version_t *version)
 }
 
 jobject
-CreateJ::Info(const char *path, const svn_info_t *info)
+CreateJ::Info(const char *path, const svn_info2_t *info)
 {
   JNIEnv *env = JNIUtil::getEnv();
 
@@ -202,12 +202,9 @@ CreateJ::Info(const char *path, const svn_info_t *info)
                              "JJLjava/lang/String;"
                              "L"JAVA_PACKAGE"/types/Lock;Z"
                              "L"JAVA_PACKAGE"/types/Info$ScheduleKind;"
-                             "Ljava/lang/String;JJJ"
-                             "Ljava/lang/String;Ljava/lang/String;"
-                             "Ljava/lang/String;Ljava/lang/String;"
-                             "Ljava/lang/String;Ljava/lang/String;JJ"
-                             "L"JAVA_PACKAGE"/types/Depth;"
-                             "L"JAVA_PACKAGE"/ConflictDescriptor;)V");
+                             "Ljava/lang/String;JJLjava/lang/String;"
+                             "Ljava/lang/String;JJ"
+                             "L"JAVA_PACKAGE"/types/Depth;Ljava/util/Set;)V");
       if (mid == 0 || JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
     }
@@ -216,9 +213,50 @@ CreateJ::Info(const char *path, const svn_info_t *info)
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
-  jstring jwcroot = JNIUtil::makeJString(info->wcroot_abspath);
-  if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN_NULL;
+  jstring jwcroot = NULL;
+  jstring jcopyFromUrl = NULL;
+  jstring jchecksum = NULL;
+  jstring jchangelist = NULL;
+  jobject jconflicts = NULL;
+  jobject jscheduleKind = NULL;
+  jobject jdepth = NULL;
+  jlong jworkingSize = -1;
+  jlong jcopyfrom_rev = -1;
+  jlong jtext_time = -1;
+  if (info->wc_info)
+    {
+      jwcroot = JNIUtil::makeJString(info->wc_info->wcroot_abspath);
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+
+      jcopyFromUrl = JNIUtil::makeJString(info->wc_info->copyfrom_url);
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+
+      jchecksum = JNIUtil::makeJString(info->wc_info->checksum);
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+
+      jchangelist = JNIUtil::makeJString(info->wc_info->changelist);
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+
+      jconflicts = NULL;
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+
+      jscheduleKind = EnumMapper::mapScheduleKind(info->wc_info->schedule);
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+
+      jdepth = EnumMapper::mapDepth(info->wc_info->depth);
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+
+      jworkingSize = info->wc_info->working_size;
+      jcopyfrom_rev = info->wc_info->copyfrom_rev;
+      jtext_time = info->wc_info->text_time;
+    }
 
   jstring jurl = JNIUtil::makeJString(info->URL);
   if (JNIUtil::isJavaExceptionThrown())
@@ -241,50 +279,9 @@ CreateJ::Info(const char *path, const svn_info_t *info)
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
-  jstring jcopyFromUrl = JNIUtil::makeJString(info->copyfrom_url);
-  if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN_NULL;
-
-  jstring jchecksum = JNIUtil::makeJString(info->checksum);
-  if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN_NULL;
-
-  jstring jconflictOld = JNIUtil::makeJString(info->conflict_old);
-  if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN_NULL;
-
-  jstring jconflictNew = JNIUtil::makeJString(info->conflict_new);
-  if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN_NULL;
-
-  jstring jconflictWrk = JNIUtil::makeJString(info->conflict_wrk);
-  if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN_NULL;
-
-  jstring jprejfile = JNIUtil::makeJString(info->prejfile);
-  if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN_NULL;
-
-  jstring jchangelist = JNIUtil::makeJString(info->changelist);
-  if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN_NULL;
-
-  jobject jdesc = CreateJ::ConflictDescriptor(info->tree_conflict);
-  if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN_NULL;
-
   jobject jnodeKind = EnumMapper::mapNodeKind(info->kind);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
-
-  jobject jscheduleKind = EnumMapper::mapScheduleKind(info->schedule);
-  if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN_NULL;
-
-  jlong jworkingSize = info->working_size == SVN_INFO_SIZE_UNKNOWN
-    ? -1 : (jlong) info->working_size;
-  jlong jreposSize = info->size == SVN_INFO_SIZE_UNKNOWN
-    ? -1 : (jlong) info->size;
 
   jobject jinfo2 = env->NewObject(clazz, mid, jpath, jwcroot, jurl,
                                   (jlong) info->rev,
@@ -292,15 +289,11 @@ CreateJ::Info(const char *path, const svn_info_t *info)
                                   (jlong) info->last_changed_rev,
                                   (jlong) info->last_changed_date,
                                   jlastChangedAuthor, jlock,
-                                  info->has_wc_info ? JNI_TRUE : JNI_FALSE,
+                                  info->wc_info ? JNI_TRUE : JNI_FALSE,
                                   jscheduleKind, jcopyFromUrl,
-                                  (jlong) info->copyfrom_rev,
-                                  (jlong) info->text_time,
-                                  (jlong) info->prop_time, jchecksum,
-                                  jconflictOld, jconflictNew, jconflictWrk,
-                                  jprejfile, jchangelist,
-                                  jworkingSize, jreposSize,
-                                  EnumMapper::mapDepth(info->depth), jdesc);
+                                  jcopyfrom_rev, jtext_time, jchecksum,
+                                  jchangelist, jworkingSize,
+                                  (jlong) info->size, jdepth, NULL);
 
   return env->PopLocalFrame(jinfo2);
 }

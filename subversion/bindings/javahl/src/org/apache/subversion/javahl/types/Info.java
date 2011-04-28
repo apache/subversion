@@ -24,6 +24,7 @@
 package org.apache.subversion.javahl.types;
 
 import java.util.Date;
+import java.util.Set;
 
 import org.apache.subversion.javahl.ConflictDescriptor;
 import org.apache.subversion.javahl.ISVNClient;
@@ -124,36 +125,9 @@ public class Info implements java.io.Serializable
     private long textTime;
 
     /**
-     * the last time the properties of the items were changed in ns
-     */
-    private long propTime;
-
-    /**
      * the checksum of the item
      */
     private String checksum;
-
-    /**
-     * if the item is in conflict, the filename of the base version file
-     */
-    private String conflictOld;
-
-    /**
-     * if the item is in conflict, the filename of the last repository version
-     * file
-     */
-    private String conflictNew;
-
-    /**
-     * if the item is in conflict, the filename of the working copy
-     * version file
-     */
-    private String conflictWrk;
-
-    /**
-     * the property reject file
-     */
-    private String prejfile;
 
     /**
      * The name of the changelist.
@@ -183,7 +157,7 @@ public class Info implements java.io.Serializable
     /**
      * Info on any tree conflict of which this node is a victim.
      */
-    private ConflictDescriptor treeConflict;
+    private Set<ConflictDescriptor> conflict;
 
     /**
      * constructor to build the object by native code. See fields for
@@ -204,12 +178,7 @@ public class Info implements java.io.Serializable
      * @param copyFromUrl
      * @param copyFromRev
      * @param textTime
-     * @param propTime
      * @param checksum
-     * @param conflictOld
-     * @param conflictNew
-     * @param conflictWrk
-     * @param prejfile
      * @param depth
      * @param treeConflict
      */
@@ -217,10 +186,9 @@ public class Info implements java.io.Serializable
           String reposRootUrl, String reposUUID, long lastChangedRev,
           long lastChangedDate, String lastChangedAuthor, Lock lock,
           boolean hasWcInfo, ScheduleKind schedule, String copyFromUrl,
-          long copyFromRev, long textTime, long propTime, String checksum,
-          String conflictOld, String conflictNew, String conflictWrk,
-          String prejfile, String changelistName, long workingSize,
-          long reposSize, Depth depth, ConflictDescriptor treeConflict)
+          long copyFromRev, long textTime, String checksum,
+          String changelistName, long workingSize, long reposSize, Depth depth,
+          Set<ConflictDescriptor> conflict)
     {
         this.path = path;
         this.wcroot = wcroot;
@@ -238,17 +206,12 @@ public class Info implements java.io.Serializable
         this.copyFromUrl = copyFromUrl;
         this.copyFromRev = copyFromRev;
         this.textTime = textTime;
-        this.propTime = propTime;
         this.checksum = checksum;
-        this.conflictOld = conflictOld;
-        this.conflictNew = conflictNew;
-        this.conflictWrk = conflictWrk;
-        this.prejfile = prejfile;
         this.changelistName = changelistName;
         this.workingSize = workingSize;
         this.reposSize = reposSize;
         this.depth = depth;
-        this.treeConflict = treeConflict;
+        this.conflict = conflict;
     }
 
     /**
@@ -386,56 +349,11 @@ public class Info implements java.io.Serializable
     }
 
     /**
-     * return the last time the properties of the items were changed
-     */
-    public Date getPropTime()
-    {
-        if (propTime == 0)
-            return null;
-        else
-            return new Date(propTime/1000);
-    }
-
-    /**
      * return the checksum of the item
      */
     public String getChecksum()
     {
         return checksum;
-    }
-
-    /**
-     * return if the item is in conflict, the filename of the base version file
-     */
-    public String getConflictOld()
-    {
-        return conflictOld;
-    }
-
-    /**
-     * return if the item is in conflict, the filename of the last repository
-     * version file
-     */
-    public String getConflictNew()
-    {
-        return conflictNew;
-    }
-
-    /**
-     * return if the item is in conflict, the filename of the working copy
-     * version file
-     */
-    public String getConflictWrk()
-    {
-        return conflictWrk;
-    }
-
-    /**
-     * return the property reject file
-     */
-    public String getPrejfile()
-    {
-        return prejfile;
     }
 
     /**
@@ -479,9 +397,9 @@ public class Info implements java.io.Serializable
     /**
      * @return the tree conflict of which this node is a victim, or null if none
      */
-    public ConflictDescriptor getConflictDescriptor()
+    public Set<ConflictDescriptor> getConflicts()
     {
-        return treeConflict;
+        return conflict;
     }
 
     /**

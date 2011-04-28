@@ -46,7 +46,7 @@ class CreateJ
   ConflictDescriptor(const svn_wc_conflict_description_t *desc);
 
   static jobject
-  Info(const char *path, const svn_info_t *info);
+  Info(const char *path, const svn_info2_t *info);
 
   static jobject
   Lock(const svn_lock_t *lock);

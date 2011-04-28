@@ -152,7 +152,7 @@ public class Info implements java.io.Serializable
              NodeKind.fromApache(aInfo.getKind()),
              aInfo.getLastChangedAuthor(), aInfo.getRev(),
              aInfo.getLastChangedRev(), aInfo.getLastChangedDate(),
-             aInfo.getTextTime(), aInfo.getPropTime(), aInfo.getCopyFromUrl() != null,
+             aInfo.getTextTime(), null, aInfo.getCopyFromUrl() != null,
              aInfo.getSchedule() == org.apache.subversion.javahl.types.Info.ScheduleKind.delete,
              checkAbsent(aInfo.getPath()), checkIncomplete(aInfo.getPath()),
              aInfo.getCopyFromRev(), aInfo.getCopyFromUrl());

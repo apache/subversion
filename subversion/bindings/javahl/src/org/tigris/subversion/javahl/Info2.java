@@ -24,6 +24,7 @@
 package org.tigris.subversion.javahl;
 
 import java.util.Date;
+import java.util.Set;
 
 /**
  * this class is returned by SVNClientInterface.info2 and contains information
@@ -247,6 +248,86 @@ public class Info2 implements java.io.Serializable
         this.treeConflict = treeConflict;
     }
 
+    static private String
+    getConflictOld(Set<org.apache.subversion.javahl.ConflictDescriptor>
+                   conflicts)
+    {
+      if (conflicts == null)
+        return null;
+
+      for (org.apache.subversion.javahl.ConflictDescriptor conflict : conflicts)
+        {
+          if (conflict.getKind() == org.apache.subversion.javahl.ConflictDescriptor.Kind.text)
+            return conflict.getBasePath();
+        }
+
+      return null;
+    }
+
+    static private String
+    getConflictNew(Set<org.apache.subversion.javahl.ConflictDescriptor>
+                   conflicts)
+    {
+      if (conflicts == null)
+        return null;
+
+      for (org.apache.subversion.javahl.ConflictDescriptor conflict : conflicts)
+        {
+          if (conflict.getKind() == org.apache.subversion.javahl.ConflictDescriptor.Kind.text)
+            return conflict.getTheirPath();
+        }
+
+      return null;
+    }
+
+    static private String
+    getConflictWrk(Set<org.apache.subversion.javahl.ConflictDescriptor>
+                   conflicts)
+    {
+      if (conflicts == null)
+        return null;
+
+      for (org.apache.subversion.javahl.ConflictDescriptor conflict : conflicts)
+        {
+          if (conflict.getKind() == org.apache.subversion.javahl.ConflictDescriptor.Kind.text)
+            return conflict.getMyPath();
+        }
+
+      return null;
+    }
+
+    static private String
+    getPrejfile(Set<org.apache.subversion.javahl.ConflictDescriptor>
+                conflicts)
+    {
+      if (conflicts == null)
+        return null;
+
+      for (org.apache.subversion.javahl.ConflictDescriptor conflict : conflicts)
+        {
+          if (conflict.getKind() == org.apache.subversion.javahl.ConflictDescriptor.Kind.property)
+            return conflict.getTheirPath();
+        }
+
+      return null;
+    }
+
+    static private ConflictDescriptor
+    getTreeConflict(Set<org.apache.subversion.javahl.ConflictDescriptor>
+                        conflicts)
+    {
+      if (conflicts == null)
+        return null;
+
+      for (org.apache.subversion.javahl.ConflictDescriptor conflict : conflicts)
+        {
+          if (conflict.getKind() == org.apache.subversion.javahl.ConflictDescriptor.Kind.tree)
+            return new ConflictDescriptor(conflict);
+        }
+
+      return null;
+    }
+
     /**
      * A backward-compat constructor.
      */
@@ -264,14 +345,14 @@ public class Info2 implements java.io.Serializable
              aInfo.getCopyFromUrl(), aInfo.getCopyFromRev(),
              aInfo.getTextTime() == null ? 0
                 : aInfo.getTextTime().getTime() * 1000,
-             aInfo.getPropTime() == null ? 0
-                : aInfo.getPropTime().getTime() * 1000, aInfo.getChecksum(),
-             aInfo.getConflictOld(), aInfo.getConflictNew(),
-             aInfo.getConflictWrk(), aInfo.getPrejfile(),
+             0, aInfo.getChecksum(),
+             getConflictOld(aInfo.getConflicts()),
+             getConflictNew(aInfo.getConflicts()),
+             getConflictWrk(aInfo.getConflicts()),
+             getPrejfile(aInfo.getConflicts()),
              aInfo.getChangelistName(), aInfo.getWorkingSize(),
              aInfo.getReposSize(), Depth.fromADepth(aInfo.getDepth()),
-             aInfo.getConflictDescriptor() == null ? null
-                : new ConflictDescriptor(aInfo.getConflictDescriptor()));
+             getTreeConflict(aInfo.getConflicts()));
     }
 
     /**
