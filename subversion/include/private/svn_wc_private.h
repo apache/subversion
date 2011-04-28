@@ -270,18 +270,6 @@ svn_wc__node_get_changed_info(svn_revnum_t *changed_rev,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool);
 
-/**
- * Set @a *changelist to the changelist to which @a local_abspath belongs.
- * Allocate the result in @a result_pool and use @a scratch_pool for temporary
- * allocations.
- */
-svn_error_t *
-svn_wc__node_get_changelist(const char **changelist,
-                            svn_wc_context_t *wc_ctx,
-                            const char *local_abspath,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool);
-
 
 /**
  * Set @a *recorded_size to the recorded size (in bytes) of the
