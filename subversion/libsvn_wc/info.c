@@ -39,19 +39,17 @@ static svn_error_t *
 build_info_for_entry(svn_info2_t **info,
                      svn_wc_context_t *wc_ctx,
                      const char *local_abspath,
+                     svn_node_kind_t kind,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool)
 {
   svn_info2_t *tmpinfo;
   svn_boolean_t is_copy_target;
   apr_time_t lock_date;
-  svn_node_kind_t kind;
   svn_boolean_t exclude = FALSE;
   svn_boolean_t is_copy;
   svn_revnum_t rev;
   const char *repos_relpath;
-
-  SVN_ERR(svn_wc_read_kind(&kind, wc_ctx, local_abspath, FALSE, scratch_pool));
 
   if (kind == svn_node_none)
     {
@@ -263,7 +261,7 @@ info_found_node_callback(const char *local_abspath,
                                     local_abspath, pool, pool));
 
   err = build_info_for_entry(&info, fe_baton->wc_ctx, local_abspath,
-                             pool, pool);
+                             kind, pool, pool);
   if (err && (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
       && tree_conflict)
     {
