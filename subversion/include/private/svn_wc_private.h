@@ -907,20 +907,42 @@ svn_wc__node_get_commit_status(svn_node_kind_t *kind,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
-/* Checks for obstructions for the merge processing
+/* Checks a node LOCAL_ABSPATH in WC_CTX for several kinds of obstructions
+ * for tasks like merge processing.
  *
- * ### Currently this API is work in progress and is designed for just this
- * ### caller.
+ * If a node is not obstructed it sets *OBSTRUCTION_STATE to
+ * svn_wc_notify_state_inapplicable. If a node is obstructed or when its
+ * direct parent does not exist or is deleted return _state_obstructed. When
+ * a node doesn't exist but should exist return svn_wc_notify_state_missing.
  *
- * All output arguments except OBSTRUCTION_STATE may be NULL.
+ * A node is also obstructed if it is marked excluded or absent or when
+ * an unversioned file or directory exists. And if NO_WCROOT_CHECK is FALSE,
+ * the root of a working copy is also obstructed; this to allow detecting
+ * obstructing working copies.
+ *
+ * If KIND is not NULL, set *KIND to the kind of node registered in the working
+ * copy, or SVN_NODE_NONE if the node doesn't
+ *
+ * If ADDED is not NULL, set *ADDED to TRUE if the node is added. (Addition,
+ * copy or moved).
+ *
+ * If DELETED is not NULL, set *DELETED to TRUE if the node is marked as
+ * deleted in the working copy.
+ *
+ * If CONFLICTED is not NULL, set *CONFLICTED to TRUE if the node is somehow
+ * conflicted.
+ *
+ * All output arguments except OBSTRUCTION_STATE can be NULL to ommit the
+ * result.
+ *
+ * This function performs temporary allocations in SCRATCH_POOL.
  */
 svn_error_t *
 svn_wc__check_for_obstructions(svn_wc_notify_state_t *obstruction_state,
-                               svn_boolean_t *exists,
-                               svn_boolean_t *versioned,
+                               svn_node_kind_t *kind,
                                svn_boolean_t *added,
                                svn_boolean_t *deleted,
-                               svn_node_kind_t *kind,
+                               svn_boolean_t *conflicted,
                                svn_wc_context_t *wc_ctx,
                                const char *local_abspath,
                                svn_boolean_t no_wcroot_check,

@@ -1632,11 +1632,10 @@ svn_wc__rename_wc(svn_wc_context_t *wc_ctx,
 
 svn_error_t *
 svn_wc__check_for_obstructions(svn_wc_notify_state_t *obstruction_state,
-                               svn_boolean_t *exists,
-                               svn_boolean_t *versioned,
+                               svn_node_kind_t *kind,
                                svn_boolean_t *added,
                                svn_boolean_t *deleted,
-                               svn_node_kind_t *kind,
+                               svn_boolean_t *conflicted,
                                svn_wc_context_t *wc_ctx,
                                const char *local_abspath,
                                svn_boolean_t no_wcroot_check,
@@ -1645,26 +1644,25 @@ svn_wc__check_for_obstructions(svn_wc_notify_state_t *obstruction_state,
   svn_wc__db_status_t status;
   svn_wc__db_kind_t db_kind;
   svn_node_kind_t disk_kind;
+  svn_boolean_t conflicted_p;
   svn_error_t *err;
 
   *obstruction_state = svn_wc_notify_state_inapplicable;
-  if (exists)
-    *exists = FALSE;
-  if (versioned)
-    *versioned = FALSE;
+  if (kind)
+    *kind = svn_node_none;
   if (added)
     *added = FALSE;
   if (deleted)
     *deleted = FALSE;
-  if (kind)
-    *kind = svn_node_none;
+  if (conflicted)
+    *conflicted = FALSE;
 
   SVN_ERR(svn_io_check_path(local_abspath, &disk_kind, scratch_pool));
 
   err = svn_wc__db_read_info(&status, &db_kind, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, &conflicted_p, NULL,
+                             NULL, NULL, NULL, NULL, NULL,
                              wc_ctx->db, local_abspath,
                              scratch_pool, scratch_pool);
 
@@ -1679,10 +1677,10 @@ svn_wc__check_for_obstructions(svn_wc_notify_state_t *obstruction_state,
           return SVN_NO_ERROR;
         }
 
-      err = svn_wc__db_read_info(&status, &db_kind, NULL, NULL, NULL, NULL, NULL,
+      err = svn_wc__db_read_info(&status, &db_kind, NULL, NULL, NULL, NULL,
                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                  wc_ctx->db, svn_dirent_dirname(local_abspath,
                                                                 scratch_pool),
                                  scratch_pool, scratch_pool);
@@ -1733,8 +1731,6 @@ svn_wc__check_for_obstructions(svn_wc_notify_state_t *obstruction_state,
   switch (status)
     {
       case svn_wc__db_status_deleted:
-        if (versioned)
-          *versioned = TRUE;
         if (deleted)
           *deleted = TRUE;
         /* Fall through to svn_wc__db_status_not_present */
@@ -1746,8 +1742,6 @@ svn_wc__check_for_obstructions(svn_wc_notify_state_t *obstruction_state,
       case svn_wc__db_status_excluded:
       case svn_wc__db_status_absent:
       case svn_wc__db_status_incomplete:
-        if (versioned)
-          *versioned = TRUE;
         *obstruction_state = svn_wc_notify_state_missing;
         break;
 
@@ -1756,10 +1750,6 @@ svn_wc__check_for_obstructions(svn_wc_notify_state_t *obstruction_state,
           *added = TRUE;
         /* Fall through to svn_wc__db_status_normal */
       case svn_wc__db_status_normal:
-        if (versioned)
-          *versioned = TRUE;
-        if (exists)
-          *exists = TRUE;
         if (disk_kind == svn_node_none)
           *obstruction_state = svn_wc_notify_state_missing;
         else
@@ -1775,6 +1765,17 @@ svn_wc__check_for_obstructions(svn_wc_notify_state_t *obstruction_state,
         break;
       default:
         SVN_ERR_MALFUNCTION();
+    }
+
+  if (conflicted_p && (conflicted != NULL))
+    {
+      svn_boolean_t text_c, prop_c, tree_c;
+
+      SVN_ERR(svn_wc__internal_conflicted_p(&text_c, &prop_c, &tree_c,
+                                            wc_ctx->db, local_abspath,
+                                            scratch_pool));
+
+      *conflicted = (text_c || prop_c || tree_c);
     }
 
   return SVN_NO_ERROR;
