@@ -38,7 +38,7 @@
 #include "private/svn_wc_private.h"
 
 jobject
-CreateJ::ConflictDescriptor(const svn_wc_conflict_description_t *desc)
+CreateJ::ConflictDescriptor(const svn_wc_conflict_description2_t *desc)
 {
   JNIEnv *env = JNIUtil::getEnv();
 
@@ -73,7 +73,7 @@ CreateJ::ConflictDescriptor(const svn_wc_conflict_description_t *desc)
         POP_AND_RETURN_NULL;
     }
 
-  jstring jpath = JNIUtil::makeJString(desc->path);
+  jstring jpath = JNIUtil::makeJString(desc->local_abspath);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
   jstring jpropertyName = JNIUtil::makeJString(desc->property_name);
@@ -82,13 +82,13 @@ CreateJ::ConflictDescriptor(const svn_wc_conflict_description_t *desc)
   jstring jmimeType = JNIUtil::makeJString(desc->mime_type);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
-  jstring jbasePath = JNIUtil::makeJString(desc->base_file);
+  jstring jbasePath = JNIUtil::makeJString(desc->base_abspath);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
-  jstring jreposPath = JNIUtil::makeJString(desc->their_file);
+  jstring jreposPath = JNIUtil::makeJString(desc->their_abspath);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
-  jstring juserPath = JNIUtil::makeJString(desc->my_file);
+  jstring juserPath = JNIUtil::makeJString(desc->my_abspath);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
   jstring jmergedPath = JNIUtil::makeJString(desc->merged_file);
@@ -528,10 +528,7 @@ CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
                                                     local_abspath, pool, pool),
                           NULL);
 
-              svn_wc_conflict_description_t *old_tree_conflict =
-                                    svn_wc__cd2_to_cd(tree_conflict, pool);
-              jConflictDescription = CreateJ::ConflictDescriptor
-                                                            (old_tree_conflict);
+              jConflictDescription = CreateJ::ConflictDescriptor(tree_conflict);
               if (JNIUtil::isJavaExceptionThrown())
                 POP_AND_RETURN_NULL;
             }

@@ -25,6 +25,7 @@
  */
 
 #include "svn_client.h"
+#include "private/svn_wc_private.h"
 #include "svn_private_config.h"
 
 #include "ClientContext.h"
@@ -374,7 +375,7 @@ ClientContext::resolve(svn_wc_conflict_result_t **result,
     }
 
   // Create an instance of the conflict descriptor.
-  jobject jdesc = CreateJ::ConflictDescriptor(desc);
+  jobject jdesc = CreateJ::ConflictDescriptor(svn_wc__cd_to_cd2(desc, pool));
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN(SVN_NO_ERROR);
 

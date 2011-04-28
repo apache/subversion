@@ -43,7 +43,7 @@ class CreateJ
 {
  public:
   static jobject
-  ConflictDescriptor(const svn_wc_conflict_description_t *desc);
+  ConflictDescriptor(const svn_wc_conflict_description2_t *desc);
 
   static jobject
   Info(const char *path, const svn_info2_t *info);
