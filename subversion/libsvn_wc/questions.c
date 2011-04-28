@@ -164,7 +164,7 @@ compare_and_verify(svn_boolean_t *modified_p,
       && !special
       && !props_mod
       && (keywords == NULL)
-      && (versioned_file_size < versioned_file_size))
+      && (versioned_file_size < pristine_file_size))
     {
       *modified_p = TRUE; /* The file is < its repository normal form
                              and the properties didn't change.
@@ -276,11 +276,15 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
 {
   svn_stream_t *pristine_stream;
   svn_filesize_t pristine_size;
+  svn_wc__db_status_t status;
+  svn_wc__db_kind_t kind;
+  const svn_checksum_t *checksum;
+  svn_filesize_t recorded_size;
+  apr_time_t recorded_mod_time;
   svn_boolean_t has_props;
   svn_boolean_t props_mod;
   svn_error_t *err;
   apr_finfo_t finfo;
-  const svn_checksum_t *verify_checksum = NULL;
   apr_int32_t wanted
     = APR_FINFO_SIZE | APR_FINFO_MTIME | APR_FINFO_TYPE | APR_FINFO_LINK;
 
@@ -314,14 +318,31 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
   if (read_only_p)
     SVN_ERR(svn_io__is_finfo_read_only(read_only_p, &finfo, scratch_pool));
 
+  /* Read the relevant info */
+  SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, &checksum, NULL, NULL, NULL,
+                               NULL, NULL, NULL,
+                               &recorded_size, &recorded_mod_time,
+                               NULL, NULL, NULL, &has_props, &props_mod,
+                               NULL, NULL, NULL,
+                               db, local_abspath,
+                               scratch_pool, scratch_pool));
+
+  /* If we don't have a pristine or the node has a status that allows a
+     pristine, just say that the node is modified */
+  if (!checksum
+      || (kind != svn_wc__db_kind_file)
+      || ((status != svn_wc__db_status_normal)
+          && (status != svn_wc__db_status_added)))
+    {
+      *modified_p = TRUE;
+      return SVN_NO_ERROR;
+    }
+
   if (! force_comparison)
     {
-      svn_filesize_t recorded_size;
-      apr_time_t recorded_mod_time;
-
       /* We're allowed to use a heuristic to determine whether files may
          have changed.  The heuristic has these steps:
-
 
          1. Compare the working file's size
             with the size cached in the entries file
@@ -347,16 +368,6 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
 
       */
 
-      /* Read the relevant info */
-      SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL,
-                                   &recorded_size, &recorded_mod_time,
-                                   NULL, NULL, NULL, &has_props, &props_mod,
-                                   NULL, NULL, NULL,
-                                   db, local_abspath,
-                                   scratch_pool, scratch_pool));
-
       /* Compare the sizes, if applicable */
       if (recorded_size != SVN_INVALID_FILESIZE
           && finfo.size != recorded_size)
@@ -373,40 +384,11 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
       *modified_p = FALSE;
       return SVN_NO_ERROR;
     }
-  else
-    {
-      SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, &verify_checksum, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, &has_props, &props_mod,
-                                   NULL, NULL, NULL,
-                                   db, local_abspath,
-                                   scratch_pool, scratch_pool));
-    }
 
  compare_them:
-  /* If there's no text-base file, we have to assume the working file
-     is modified.  For example, a file scheduled for addition but not
-     yet committed. */
-  /* We used to stat for the working base here, but we just give
-     compare_and_verify a try; we'll check for errors afterwards */
-  err = svn_wc__get_pristine_contents(&pristine_stream, &pristine_size,
-                                      db, local_abspath,
-                                      scratch_pool, scratch_pool);
-  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
-    {
-      svn_error_clear(err);
-      *modified_p = TRUE;
-      return SVN_NO_ERROR;
-    }
-
-  SVN_ERR(err);
-
-  if (pristine_stream == NULL)
-    {
-      *modified_p = TRUE;
-      return SVN_NO_ERROR;
-    }
+  SVN_ERR(svn_wc__db_pristine_read(&pristine_stream, &pristine_size,
+                                   db, local_abspath, checksum,
+                                   scratch_pool, scratch_pool));
 
   /* Check all bytes, and verify checksum if requested. */
   SVN_ERR(compare_and_verify(modified_p, db,
@@ -414,7 +396,7 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
                              pristine_stream, pristine_size,
                              has_props, props_mod,
                              compare_textbases,
-                             verify_checksum,
+                             force_comparison ? checksum : NULL,
                              scratch_pool));
 
   if (!*modified_p)
