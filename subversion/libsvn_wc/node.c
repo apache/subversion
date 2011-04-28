@@ -321,33 +321,6 @@ svn_wc__node_get_changed_info(svn_revnum_t *changed_rev,
 }
 
 svn_error_t *
-svn_wc__node_get_changelist(const char **changelist,
-                            svn_wc_context_t *wc_ctx,
-                            const char *local_abspath,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool)
-{
-  svn_error_t *err;
-
-  err = svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, changelist,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             wc_ctx->db, local_abspath, result_pool,
-                             scratch_pool);
-
-  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-    {
-      svn_error_clear(err);
-      err = SVN_NO_ERROR;
-      *changelist = NULL;
-    }
-
-  return svn_error_return(err);
-}
-
-
-svn_error_t *
 svn_wc__node_get_recorded_info(svn_filesize_t *recorded_size,
                                apr_time_t *recorded_mod_time,
                                svn_wc_context_t *wc_ctx,
