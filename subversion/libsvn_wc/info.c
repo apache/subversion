@@ -245,7 +245,9 @@ struct found_entry_baton
   svn_wc_context_t *wc_ctx;
 };
 
-/* An svn_wc__node_found_func_t callback function. */
+/* Call WALK_BATON->receiver with WALK_BATON->receiver_baton, passing to it
+ * info about the path LOCAL_ABSPATH.
+ * An svn_wc__node_found_func_t callback function. */
 static svn_error_t *
 info_found_node_callback(const char *local_abspath,
                          svn_node_kind_t kind,
@@ -318,41 +320,16 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
                                        &fe_baton, depth, cancel_func,
                                        cancel_baton, scratch_pool);
 
+  /* If the target root node is not present, svn_wc__node_walk_children()
+     returns a PATH_NOT_FOUND error and doesn't call the callback.  In this
+     case, check for a tree conflict on this node, and if there
+     is one, send a minimal info struct. */
   if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
     {
-      /* Check for a tree conflict on the root node of the info, and if there
-         is one, send a minimal info struct. */
-      const svn_wc_conflict_description2_t *tree_conflict;
+      svn_error_clear(err);
 
-      SVN_ERR(svn_wc__get_tree_conflict(&tree_conflict, wc_ctx,
-                                        local_abspath, scratch_pool,
-                                        scratch_pool));
-
-      if (tree_conflict)
-        {
-          svn_info2_t *info;
-          svn_error_clear(err);
-
-          SVN_ERR(build_info_for_unversioned(&info, scratch_pool));
-          if (tree_conflict)
-            {
-              apr_array_header_t *conflicts = apr_array_make(scratch_pool,
-                1, sizeof(const svn_wc_conflict_description2_t *));
-
-              APR_ARRAY_PUSH(conflicts, const svn_wc_conflict_description2_t *)
-                = tree_conflict;
-              info->wc_info->conflicts = conflicts;
-            }
-
-          SVN_ERR(svn_wc__node_get_repos_info(&(info->repos_root_URL),
-                                              NULL, wc_ctx,
-                                              local_abspath, FALSE, FALSE,
-                                              scratch_pool, scratch_pool));
-
-          SVN_ERR(receiver(receiver_baton, local_abspath, info, scratch_pool));
-        }
-      else
-        return svn_error_return(err);
+      SVN_ERR(info_found_node_callback(local_abspath, svn_node_none, &fe_baton,
+                                       scratch_pool));
     }
   else if (err)
     return svn_error_return(err);
