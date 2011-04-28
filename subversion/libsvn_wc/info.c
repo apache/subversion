@@ -179,6 +179,9 @@ build_info_for_entry(svn_info2_t **info,
   if (exclude)
     tmpinfo->wc_info->depth = svn_depth_exclude;
 
+  /* A default */
+  tmpinfo->size = SVN_INVALID_FILESIZE;
+
   SVN_ERR(svn_wc__node_get_schedule(&tmpinfo->wc_info->schedule, NULL,
                                     wc_ctx, local_abspath, scratch_pool));
 
