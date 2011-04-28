@@ -30,9 +30,9 @@
 
 
 
-/* Helper: build an svn_info_t *INFO struct from WC metadata,
-   allocated in POOL.  Pointer fields are copied by reference, not
-   dup'd.  PATH is the path of the WC node that ENTRY represents. */
+/* Set *INFO to a new struct, allocated in RESULT_POOL, built from the WC
+   metadata of LOCAL_ABSPATH.  Pointer fields are copied by reference, not
+   dup'd. */
 static svn_error_t *
 build_info_for_entry(svn_info2_t **info,
                      svn_wc_context_t *wc_ctx,
