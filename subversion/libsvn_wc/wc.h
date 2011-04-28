@@ -580,6 +580,12 @@ svn_wc__internal_walk_status(svn_wc__db_t *db,
                              void *cancel_baton,
                              apr_pool_t *scratch_pool);
 
+/** A callback invoked by the generic node-walker function.  */
+typedef svn_error_t *(*svn_wc__node_found_func_t)(const char *local_abspath,
+                                                  svn_node_kind_t kind,
+                                                  void *walk_baton,
+                                                  apr_pool_t *scratch_pool);
+
 /* Library-internal version of svn_wc__node_walk_children(), which see.
    If CHANGELISTS is non-NULL and non-empty, filter thereon. */
 svn_error_t *
