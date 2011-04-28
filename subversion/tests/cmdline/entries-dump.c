@@ -36,7 +36,7 @@
 
 #include "private/svn_wc_private.h"
 
-#include "libsvn_wc/wc.h"
+#include "../../libsvn_wc/wc.h"
 
 static void
 str_value(const char *name, const char *value)
