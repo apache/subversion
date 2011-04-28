@@ -1055,7 +1055,6 @@ CREATE TEMPORARY TABLE revert_list (
    prop_reject TEXT,
    notify INTEGER
    );
-CREATE UNIQUE INDEX revert_list_index ON revert_list(local_relpath);
 DROP TRIGGER IF EXISTS   trigger_revert_list_nodes;
 CREATE TEMPORARY TRIGGER trigger_revert_list_nodes
 BEFORE DELETE ON nodes
