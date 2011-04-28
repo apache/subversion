@@ -31,6 +31,7 @@
 #include <apr_pools.h>
 #include <apr_general.h>
 #include <apr_signal.h>
+#include <apr_env.h>
 
 #include "svn_cmdline.h"
 #include "svn_opt.h"
@@ -479,8 +480,9 @@ main(int argc, const char *argv[])
     }
 
   /* Disable sleeping for timestamps, to speed up the tests. */
-  setenv("SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_SLEEP_FOR_TIMESTAMPS",
-         "yes", TRUE /* overwrite */);
+  apr_env_set(
+         "SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_SLEEP_FOR_TIMESTAMPS",
+         "yes", pool);
 
   /* You can't be both quiet and verbose. */
   if (quiet_mode && verbose_mode)
