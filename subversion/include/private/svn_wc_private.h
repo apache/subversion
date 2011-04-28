@@ -284,19 +284,6 @@ svn_wc__node_get_changelist(const char **changelist,
 
 
 /**
- * Set @a *checksum to the checksum of the pristine text associated
- * with @a local_abspath if the working copy has recorded such
- * information, or to @c NULL otherwise.  Allocate the result in @a
- * result_pool and use @a scratch_pool for temporary allocations.
- */
-svn_error_t *
-svn_wc__node_get_checksum(const svn_checksum_t **checksum,
-                          svn_wc_context_t *wc_ctx,
-                          const char *local_abspath,
-                          apr_pool_t *result_pool,
-                          apr_pool_t *scratch_pool);
-
-/**
  * Set @a *recorded_size to the recorded size (in bytes) of the
  * pristine text -- after translation -- associated with @a
  * local_abspath and @a *recorded_mod_time to the recorded last

@@ -149,12 +149,17 @@ build_info_for_entry(svn_info2_t **info,
     {
       const svn_checksum_t *checksum;
 
+      SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, &checksum, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL,
+                                   wc_ctx->db, local_abspath, result_pool,
+                                   scratch_pool));
+
       SVN_ERR(svn_wc__node_get_changelist(&tmpinfo->wc_info->changelist, wc_ctx,
                                           local_abspath,
                                           result_pool, scratch_pool));
-
-      SVN_ERR(svn_wc__node_get_checksum(&checksum, wc_ctx, local_abspath,
-                                        scratch_pool, scratch_pool));
 
       tmpinfo->wc_info->checksum = svn_checksum_to_cstring(checksum,
                                                            result_pool);
