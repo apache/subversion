@@ -4584,14 +4584,16 @@ record_skips(const char *mergeinfo_path,
        hi = apr_hash_next(hi))
     {
       const char *skipped_abspath = svn__apr_hash_index_key(hi);
-      svn_wc_status3_t *status;
+      svn_wc_notify_state_t obstruction_state;
 
-      /* Before we override, make sure this is a versioned path, it
-         might be an unversioned obstruction. */
-      SVN_ERR(svn_wc_status3(&status, merge_b->ctx->wc_ctx,
-                             skipped_abspath, pool, pool));
-      if (status->node_status == svn_wc_status_none
-          || status->node_status == svn_wc_status_unversioned)
+      /* Before we override, make sure this is a versioned path, it might
+         be an external or missing from disk due to authz restrictions. */
+      SVN_ERR(perform_obstruction_check(&obstruction_state,
+                                        NULL, NULL, NULL, NULL, NULL,
+                                        merge_b, skipped_abspath,
+                                        svn_node_unknown, pool));
+      if (obstruction_state == svn_wc_notify_state_obstructed
+          || obstruction_state == svn_wc_notify_state_missing)
         continue;
 
       /* Add an empty range list for this path.
