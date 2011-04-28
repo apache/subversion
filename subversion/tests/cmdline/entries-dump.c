@@ -36,6 +36,8 @@
 
 #include "private/svn_wc_private.h"
 
+#include "libsvn_wc/wc.h"
+
 static void
 str_value(const char *name, const char *value)
 {
@@ -230,9 +232,9 @@ directory_dump(const char *path,
 
   bt.prefix_path = path;
 
-  err = svn_wc__node_walk_children(bt.wc_ctx, bt.root_abspath, FALSE, NULL,
-                                   print_dir, &bt, svn_depth_infinity,
-                                   NULL, NULL, scratch_pool);
+  err = svn_wc__internal_walk_children(bt.wc_ctx->db, bt.root_abspath, FALSE,
+                                       NULL, print_dir, &bt, svn_depth_infinity,
+                                       NULL, NULL, scratch_pool);
   if (err)
     {
       const char *dir_abspath;

@@ -142,12 +142,6 @@ svn_wc__strictly_is_wc_root(svn_boolean_t *wc_root,
  * before the 1.7 release.
  */
 
-/** A callback invoked by the generic node-walker function.  */
-typedef svn_error_t *(*svn_wc__node_found_func_t)(const char *local_abspath,
-                                                  svn_node_kind_t kind,
-                                                  void *walk_baton,
-                                                  apr_pool_t *scratch_pool);
-
 
 /*
  * Convert from svn_wc_conflict_description2_t to svn_wc_conflict_description_t.
@@ -404,25 +398,6 @@ svn_wc__node_get_copyfrom_info(const char **copyfrom_root_url,
                                const char *local_abspath,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
-
-/**
- * Call @a walk_callback with @a walk_baton for @a local_abspath and all
- * nodes underneath it, restricted by @a walk_depth, and possibly
- * @a changelists.
- *
- * If @a show_hidden is true, include hidden nodes, else ignore them.
- */
-svn_error_t *
-svn_wc__node_walk_children(svn_wc_context_t *wc_ctx,
-                           const char *local_abspath,
-                           svn_boolean_t show_hidden,
-                           const apr_array_header_t *changelists,
-                           svn_wc__node_found_func_t walk_callback,
-                           void *walk_baton,
-                           svn_depth_t walk_depth,
-                           svn_cancel_func_t cancel_func,
-                           void *cancel_baton,
-                           apr_pool_t *scratch_pool);
 
 /**
  * Set @a *is_deleted to TRUE if @a local_abspath is deleted, using
