@@ -144,6 +144,9 @@ public final class Depth
 
     public static int fromADepth(org.apache.subversion.javahl.types.Depth aDepth)
     {
+        if (aDepth == null)
+          return unknown;
+
         switch(aDepth)
         {
             case infinity:
