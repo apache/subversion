@@ -281,14 +281,6 @@ Candidate changes:
    Branch: ^/subversion/branches/1.6.x-issue3853
    Votes:
      +1: stsp
-
- * r1096460
-   Ensure results are put into the correct pool in ra_local.
-   Justification:
-     Memory corruption is bad.  No known corruption in the wild, but still
-     theoretically possible.
-   Votes:
-     +1: hwright
   
 
 Veto-blocked changes:
