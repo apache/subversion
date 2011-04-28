@@ -978,7 +978,7 @@ CREATE TEMPORARY TABLE temp__node_props_cache AS
     AND (?2 = '' OR local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
     AND local_relpath NOT IN (
       SELECT local_relpath FROM actual_node WHERE wc_id = ?1)
-    AND (presence = 'normal' OR presence = 'incomplete')
+    AND presence IN ('normal', 'incomplete')
 /* ###  Need index?
 CREATE UNIQUE INDEX temp__node_props_cache_unique
   ON temp__node_props_cache (local_relpath) */
@@ -988,7 +988,7 @@ INSERT INTO temp__node_props_cache (local_relpath, kind, properties)
   SELECT A.local_relpath, N.kind, A.properties
   FROM actual_node AS A JOIN nodes_current AS N
     ON A.wc_id = N.wc_id AND A.local_relpath = N.local_relpath
-       AND (N.presence = 'normal' OR N.presence = 'incomplete')
+       AND N.presence IN ('normal', 'incomplete')
   WHERE A.wc_id = ?1
     AND (?2 = '' OR A.local_relpath = ?2 OR A.local_relpath LIKE ?3 ESCAPE '#')
     AND A.local_relpath NOT IN
@@ -1001,7 +1001,7 @@ CREATE TEMPORARY TABLE temp__node_props_cache AS
     AND (?2 = '' OR local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
     AND local_relpath NOT IN (
       SELECT local_relpath FROM actual_node WHERE wc_id = ?1)
-    AND (presence = 'normal' OR presence = 'incomplete')
+    AND presence IN ('normal', 'incomplete')
 /* ###  Need index?
 CREATE UNIQUE INDEX temp__node_props_cache_unique
   ON temp__node_props_cache (local_relpath) */
@@ -1013,7 +1013,7 @@ CREATE TEMPORARY TABLE temp__node_props_cache AS
     AND (local_relpath = ?2 OR parent_relpath = ?2)
     AND local_relpath NOT IN (
       SELECT local_relpath FROM actual_node WHERE wc_id = ?1)
-    AND (presence = 'normal' OR presence = 'incomplete')
+    AND presence IN ('normal', 'incomplete')
 /* ###  Need index?
 CREATE UNIQUE INDEX temp__node_props_cache_unique
   ON temp__node_props_cache (local_relpath) */
@@ -1023,7 +1023,7 @@ INSERT INTO temp__node_props_cache (local_relpath, kind, properties)
   SELECT A.local_relpath, N.kind, A.properties
   FROM actual_node AS A JOIN nodes_current AS N
     ON A.wc_id = N.wc_id AND A.local_relpath = N.local_relpath
-       AND (N.presence = 'normal' OR N.presence = 'incomplete')
+       AND N.presence IN ('normal', 'incomplete')
   WHERE A.wc_id = ?1
     AND (A.local_relpath = ?2 OR A.parent_relpath = ?2)
     AND A.local_relpath NOT IN
@@ -1036,7 +1036,7 @@ CREATE TEMPORARY TABLE temp__node_props_cache AS
     AND (local_relpath = ?2 OR parent_relpath = ?2)
     AND local_relpath NOT IN (
       SELECT local_relpath FROM actual_node WHERE wc_id = ?1)
-    AND (presence = 'normal' OR presence = 'incomplete')
+    AND presence IN ('normal', 'incomplete')
 /* ###  Need index?
 CREATE UNIQUE INDEX temp__node_props_cache_unique
   ON temp__node_props_cache (local_relpath) */
@@ -1147,7 +1147,7 @@ SELECT MIN(revision), MAX(revision),
        MIN(changed_revision), MAX(changed_revision) FROM nodes
   WHERE wc_id = ?1
   AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
-  AND (presence = 'normal' OR presence = 'incomplete')
+  AND presence IN ('normal', 'incomplete')
   AND file_external IS NULL
   AND op_depth = 0
 
@@ -1155,16 +1155,15 @@ SELECT MIN(revision), MAX(revision),
 SELECT local_relpath, presence, depth FROM nodes
 WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
   AND op_depth = 0
-  AND (presence = 'absent' OR presence = 'excluded' OR
-       (depth != 'infinity' AND depth != 'unknown'))
+  AND (presence IN ('absent', 'excluded')
+        OR depth NOT IN ('infinity', 'unknown'))
   AND file_external IS NULL
 
 -- STMT_SUBTREE_HAS_TREE_MODIFICATIONS
 SELECT 1 FROM nodes
 WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
   AND op_depth > 0
-  AND (presence = 'normal' OR presence = 'incomplete' OR
-       presence = 'base-deleted')
+  AND presence IN ('normal', 'incomplete', 'base-deleted')
   AND file_external IS NULL
 LIMIT 1
 
@@ -1189,7 +1188,7 @@ WHERE wc_id = ?1 AND local_relpath != ""
 SELECT local_relpath, kind FROM nodes_current
 WHERE wc_id = ?1
   AND (?2 = '' OR local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
-  AND (presence = 'normal' OR presence = 'incomplete')
+  AND presence IN ('normal', 'incomplete')
   AND file_external IS NULL
 
 /* Grab all the statements related to the schema.  */
