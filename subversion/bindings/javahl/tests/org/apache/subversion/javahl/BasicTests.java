@@ -3061,7 +3061,9 @@ public class BasicTests extends SVNTests
         MyInfoCallback callback = new MyInfoCallback();
         client.info2(tcTest.getWCPath() + "/A/B/E/alpha", null,
                 null, Depth.unknown, null, callback);
-        ConflictDescriptor conflict = callback.getInfo().getConflictDescriptor();
+        Set<ConflictDescriptor> conflicts = callback.getInfo().getConflicts();
+        assertNotNull("Conflict should not be null", conflicts);
+        ConflictDescriptor conflict = conflicts.iterator().next();
 
         assertNotNull("Conflict should not be null", conflict);
 
