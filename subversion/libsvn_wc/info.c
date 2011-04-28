@@ -25,6 +25,8 @@
 #include "svn_path.h"
 #include "svn_wc.h"
 
+#include "wc.h"
+
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
 
@@ -313,10 +315,10 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
   fe_baton.receiver_baton = receiver_baton;
   fe_baton.wc_ctx = wc_ctx;
 
-  err = svn_wc__node_walk_children(wc_ctx, local_abspath, FALSE,
-                                   changelists,
-                                   info_found_node_callback, &fe_baton, depth,
-                                   cancel_func, cancel_baton, scratch_pool);
+  err = svn_wc__internal_walk_children(wc_ctx->db, local_abspath, FALSE,
+                                       changelists, info_found_node_callback,
+                                       &fe_baton, depth, cancel_func,
+                                       cancel_baton, scratch_pool);
 
   if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
     {
