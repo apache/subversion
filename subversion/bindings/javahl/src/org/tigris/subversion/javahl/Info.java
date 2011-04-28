@@ -148,7 +148,7 @@ public class Info implements java.io.Serializable
     {
         this((new File(aInfo.getPath())).getName(), aInfo.getUrl(),
              aInfo.getReposUUID(), aInfo.getReposRootUrl(),
-             aInfo.getSchedule().ordinal(),
+             aInfo.getSchedule() == null ? 0 : aInfo.getSchedule().ordinal(),
              NodeKind.fromApache(aInfo.getKind()),
              aInfo.getLastChangedAuthor(), aInfo.getRev(),
              aInfo.getLastChangedRev(), aInfo.getLastChangedDate(),
