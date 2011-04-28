@@ -586,7 +586,7 @@ svn_ra_local__get_uuid(svn_ra_session_t *session,
                        apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
-  *uuid = apr_pstrdup(pool, sess->uuid);
+  *uuid = sess->uuid;
   return SVN_NO_ERROR;
 }
 
@@ -596,7 +596,7 @@ svn_ra_local__get_repos_root(svn_ra_session_t *session,
                              apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
-  *url = apr_pstrdup(pool, sess->repos_url);
+  *url = sess->repos_url;
   return SVN_NO_ERROR;
 }
 
