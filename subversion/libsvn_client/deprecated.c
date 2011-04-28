@@ -2019,7 +2019,9 @@ info_from_info2(const svn_info2_t *info2,
   info->lock                = info2->lock;
 
   info->size64              = info2->size;
-  if (((apr_size_t)info->size64) == info->size64)
+  if (info2->size == SVN_INVALID_FILESIZE)
+    info->size               = SVN_INFO_SIZE_UNKNOWN;
+  else if (((apr_size_t)info->size64) == info->size64)
     info->size               = (apr_size_t)info->size64;
   else /* >= 4GB */
     info->size               = SVN_INFO_SIZE_UNKNOWN;
