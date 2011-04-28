@@ -1114,6 +1114,29 @@ ORDER BY local_relpath
 DELETE FROM revert_list
 WHERE local_relpath = ?1 OR local_relpath LIKE ?2 ESCAPE '#'
 
+-- STMT_CREATE_DELETE_LIST
+DROP TABLE IF EXISTS delete_list;
+CREATE TEMPORARY TABLE delete_list (
+   local_relpath TEXT PRIMARY KEY
+   );
+DROP TRIGGER IF EXISTS trigger_delete_list_nodes;
+CREATE TEMPORARY TRIGGER trigger_delete_list_nodes
+AFTER INSERT ON nodes
+BEGIN
+   INSERT INTO delete_list(local_relpath)
+   SELECT NEW.local_relpath;
+END
+
+-- STMT_DROP_DELETE_LIST_TRIGGERS
+DROP TRIGGER IF EXISTS trigger_delete_list_nodes
+
+-- STMT_SELECT_DELETE_LIST
+SELECT local_relpath FROM delete_list
+ORDER BY local_relpath
+
+-- STMT_DROP_DELETE_LIST
+DROP TABLE delete_list
+
 
 /* ------------------------------------------------------------------------- */
 

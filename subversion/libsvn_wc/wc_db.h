@@ -1212,12 +1212,26 @@ svn_wc__db_temp_working_set_props(svn_wc__db_t *db,
                                   apr_pool_t *scratch_pool);
 #endif
 
-/* ### KFF: This handles files, dirs, symlinks, anything else? */
-/* ### dlr: Does this support recursive dir deletes (e.g. _revert)? Document. */
+/* Delete LOCAL_ABSPATH and all children from the database.
+ *
+ * This function populates the delete list.
+ */
 svn_error_t *
 svn_wc__db_op_delete(svn_wc__db_t *db,
                      const char *local_abspath,
                      apr_pool_t *scratch_pool);
+
+/* Make delete notifications for all paths in the delete list created
+ * by deleting LOCAL_ABSPATH.
+ *
+ * This function drops the delete list.
+ */
+svn_error_t *
+svn_wc__db_delete_list_notify(svn_wc_notify_func2_t notify_func,
+                              void *notify_baton,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              apr_pool_t *scratch_pool);
 
 
 /* ### KFF: Would like to know behavior when dst_path already exists

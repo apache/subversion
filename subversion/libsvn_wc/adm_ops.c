@@ -698,6 +698,13 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
         break;
     }
 
+#ifdef SVN_NEW_DELETE
+  SVN_ERR(svn_wc__db_op_delete(db, local_abspath, pool));
+
+  if (notify_func)
+    SVN_ERR(svn_wc__db_delete_list_notify(notify_func, notify_baton,
+                                          db, local_abspath, pool));
+#else
   if (kind == svn_wc__db_kind_dir)
     {
       /* ### NODE_DATA We recurse into the subtree here, which is fine,
@@ -754,6 +761,7 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
     (*notify_func)(notify_baton,
                    svn_wc_create_notify(local_abspath, svn_wc_notify_delete,
                                         pool), pool);
+#endif
 
   /* By the time we get here, anything that was scheduled to be added has
      become unversioned */
