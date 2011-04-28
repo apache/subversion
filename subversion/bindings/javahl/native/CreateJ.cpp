@@ -241,10 +241,6 @@ CreateJ::Info(const char *path, const svn_info2_t *info)
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
 
-      jconflicts = NULL;
-      if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN_NULL;
-
       jscheduleKind = EnumMapper::mapScheduleKind(info->wc_info->schedule);
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
@@ -256,6 +252,28 @@ CreateJ::Info(const char *path, const svn_info2_t *info)
       jworkingSize = info->wc_info->working_size;
       jcopyfrom_rev = info->wc_info->copyfrom_rev;
       jtext_time = info->wc_info->text_time;
+
+      if (info->wc_info->conflicts && info->wc_info->conflicts->nelts > 0)
+        {
+          std::vector<jobject> jconflict_vec;
+
+          for (int i = 0; i < info->wc_info->conflicts->nelts; i++)
+            {
+              const svn_wc_conflict_description2_t *conflict = APR_ARRAY_IDX(
+                                info->wc_info->conflicts, i,
+                                const svn_wc_conflict_description2_t *);
+
+              jobject jconflict = ConflictDescriptor(conflict);
+              if (JNIUtil::isJavaExceptionThrown())
+                POP_AND_RETURN_NULL;
+
+              jconflict_vec.push_back(jconflict);
+            }
+
+          jconflicts = Set(jconflict_vec);
+          if (JNIUtil::isJavaExceptionThrown())
+            POP_AND_RETURN_NULL;
+        }
     }
 
   jstring jurl = JNIUtil::makeJString(info->URL);
@@ -293,7 +311,7 @@ CreateJ::Info(const char *path, const svn_info2_t *info)
                                   jscheduleKind, jcopyFromUrl,
                                   jcopyfrom_rev, jtext_time, jchecksum,
                                   jchangelist, jworkingSize,
-                                  (jlong) info->size, jdepth, NULL);
+                                  (jlong) info->size, jdepth, jconflicts);
 
   return env->PopLocalFrame(jinfo2);
 }
