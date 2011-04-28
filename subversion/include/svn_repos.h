@@ -987,7 +987,7 @@ svn_repos_delete_path(void *report_baton,
  *
  * After the call to this function, @a report_baton is no longer valid;
  * it should not be passed to any other reporting functions, including
- * svn_repos_abort_report().
+ * svn_repos_abort_report(), even if this function returns an error.
  */
 svn_error_t *
 svn_repos_finish_report(void *report_baton,
