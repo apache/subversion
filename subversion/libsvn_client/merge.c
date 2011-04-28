@@ -4584,7 +4584,7 @@ record_skips(const char *mergeinfo_path,
       /* Before we override, make sure this is a versioned path, it might
          be an external or missing from disk due to authz restrictions. */
       SVN_ERR(perform_obstruction_check(&obstruction_state,
-                                        NULL, NULL, NULL, NULL, NULL,
+                                        NULL, NULL, NULL,
                                         merge_b, skipped_abspath,
                                         svn_node_unknown, pool));
       if (obstruction_state == svn_wc_notify_state_obstructed
