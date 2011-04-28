@@ -341,7 +341,8 @@ public class Info2 implements java.io.Serializable
                 : aInfo.getLastChangedDate().getTime() * 1000,
              aInfo.getLastChangedAuthor(),
              aInfo.getLock() == null ? null : new Lock(aInfo.getLock()),
-             aInfo.isHasWcInfo(), aInfo.getSchedule().ordinal(),
+             aInfo.isHasWcInfo(),
+             aInfo.getSchedule() == null ? 0 : aInfo.getSchedule().ordinal(),
              aInfo.getCopyFromUrl(), aInfo.getCopyFromRev(),
              aInfo.getTextTime() == null ? 0
                 : aInfo.getTextTime().getTime() * 1000,
