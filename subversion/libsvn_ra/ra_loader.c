@@ -526,6 +526,8 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
       SVN_ERR(vtable->get_uuid(session, &repository_uuid, pool));
       if (strcmp(uuid, repository_uuid) != 0)
         {
+          /* Duplicate the uuid as it is allocated in sesspool */
+          repository_uuid = apr_pstrdup(pool, repository_uuid);
           svn_pool_destroy(sesspool);
           return svn_error_createf(SVN_ERR_RA_UUID_MISMATCH, NULL,
                                    _("Repository UUID '%s' doesn't match "
