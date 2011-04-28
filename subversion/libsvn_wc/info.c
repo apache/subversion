@@ -235,7 +235,7 @@ build_info_for_unversioned(svn_info2_t **info,
   tmpinfo->last_changed_date    = 0;
   tmpinfo->last_changed_author  = NULL;
   tmpinfo->lock                 = NULL;
-  tmpinfo->size                 = SVN_INFO_SIZE_UNKNOWN;
+  tmpinfo->size                 = SVN_INVALID_FILESIZE;
 
   *info = tmpinfo;
   return SVN_NO_ERROR;
