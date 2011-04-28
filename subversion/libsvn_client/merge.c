@@ -362,8 +362,6 @@ is_path_conflicted_by_merge(merge_cmd_baton_t *merge_b)
  **/
 static svn_error_t *
 perform_obstruction_check(svn_wc_notify_state_t *obstruction_state,
-                          svn_boolean_t *exists,
-                          svn_boolean_t *versioned,
                           svn_boolean_t *added,
                           svn_boolean_t *deleted,
                           svn_node_kind_t *kind,
@@ -380,10 +378,6 @@ perform_obstruction_check(svn_wc_notify_state_t *obstruction_state,
 
   *obstruction_state = svn_wc_notify_state_inapplicable;
 
-  if (exists)
-    *exists = FALSE;
-  if (versioned)
-    *versioned = FALSE;
   if (added)
     *added = FALSE;
   if (deleted)
@@ -397,12 +391,10 @@ perform_obstruction_check(svn_wc_notify_state_t *obstruction_state,
       if (dry_run_deleted_p(merge_b, local_abspath))
         {
           *obstruction_state = svn_wc_notify_state_inapplicable;
-        
-          if (versioned)
-            *versioned = TRUE;
+
           if (deleted)
             *deleted = TRUE;
-        
+
           if (expected_kind != svn_node_unknown
               && expected_kind != svn_node_none)
             *obstruction_state = svn_wc_notify_state_obstructed;
@@ -412,8 +404,6 @@ perform_obstruction_check(svn_wc_notify_state_t *obstruction_state,
         {
           *obstruction_state = svn_wc_notify_state_inapplicable;
 
-          if (versioned)
-            *versioned = TRUE;
           if (added)
             *added = TRUE;
           if (kind)
@@ -429,11 +419,10 @@ perform_obstruction_check(svn_wc_notify_state_t *obstruction_state,
   check_root = ! strcmp(local_abspath, merge_b->target_abspath);
 
   SVN_ERR(svn_wc__check_for_obstructions(obstruction_state,
-                                         exists,
-                                         versioned,
+                                         kind,
                                          added,
                                          deleted,
-                                         kind,
+                                         NULL,
                                          wc_ctx, local_abspath,
                                          check_root,
                                          scratch_pool));
@@ -1212,7 +1201,7 @@ merge_dir_props_changed(svn_wc_notify_state_t *state,
   merge_cmd_baton_t *merge_b = diff_baton;
   svn_wc_notify_state_t obstr_state;
 
-  SVN_ERR(perform_obstruction_check(&obstr_state, NULL, NULL, NULL, NULL,
+  SVN_ERR(perform_obstruction_check(&obstr_state, NULL, NULL,
                                     NULL,
                                     merge_b, local_abspath, svn_node_dir,
                                     scratch_pool));
@@ -1339,7 +1328,7 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
   {
     svn_wc_notify_state_t obstr_state;
 
-    SVN_ERR(perform_obstruction_check(&obstr_state, NULL, NULL, NULL,
+    SVN_ERR(perform_obstruction_check(&obstr_state, NULL,
                                       &is_deleted, &wc_kind,
                                       merge_b, mine_abspath, svn_node_unknown,
                                       scratch_pool));
@@ -1590,7 +1579,7 @@ merge_file_added(svn_wc_notify_state_t *content_state,
   {
     svn_wc_notify_state_t obstr_state;
 
-    SVN_ERR(perform_obstruction_check(&obstr_state, NULL, NULL, NULL, NULL,
+    SVN_ERR(perform_obstruction_check(&obstr_state, NULL, NULL,
                                       &kind,
                                       merge_b, mine_abspath, svn_node_unknown,
                                       scratch_pool));
@@ -1877,7 +1866,7 @@ merge_file_deleted(svn_wc_notify_state_t *state,
   {
     svn_wc_notify_state_t obstr_state;
 
-    SVN_ERR(perform_obstruction_check(&obstr_state, NULL, NULL, NULL, NULL,
+    SVN_ERR(perform_obstruction_check(&obstr_state, NULL, NULL,
                                       NULL,
                                       merge_b, mine_abspath, svn_node_unknown,
                                       scratch_pool));
@@ -2020,10 +2009,13 @@ merge_dir_added(svn_wc_notify_state_t *state,
   {
     svn_wc_notify_state_t obstr_state;
 
-    SVN_ERR(perform_obstruction_check(&obstr_state, NULL, &is_versioned, NULL,
+    SVN_ERR(perform_obstruction_check(&obstr_state, NULL,
                                       &is_deleted, &kind,
                                       merge_b, local_abspath, svn_node_unknown,
                                       scratch_pool));
+
+    is_versioned = (kind == svn_node_dir) || (kind == svn_node_file);
+
     /* In this case of adding a directory, we have an exception to the usual
      * "skip if it's inconsistent" rule. If the directory exists on disk
      * unexpectedly, we simply make it versioned, because we can do so without
@@ -2192,10 +2184,13 @@ merge_dir_deleted(svn_wc_notify_state_t *state,
   {
     svn_wc_notify_state_t obstr_state;
 
-    SVN_ERR(perform_obstruction_check(&obstr_state, NULL, &is_versioned, NULL,
+    SVN_ERR(perform_obstruction_check(&obstr_state, NULL,
                                       &is_deleted, &kind,
                                       merge_b, local_abspath, svn_node_unknown,
                                       scratch_pool));
+
+    is_versioned = (kind == svn_node_dir) || (kind == svn_node_file);
+
     if (obstr_state != svn_wc_notify_state_inapplicable)
       {
         if (state)
@@ -2314,7 +2309,7 @@ merge_dir_opened(svn_boolean_t *tree_conflicted,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   /* Check for an obstructed or missing node on disk. */
-  SVN_ERR(perform_obstruction_check(&obstr_state, NULL, NULL, NULL,
+  SVN_ERR(perform_obstruction_check(&obstr_state, NULL,
                                     &is_deleted, &wc_kind,
                                     merge_b, local_abspath, svn_node_unknown,
                                     scratch_pool));
