@@ -704,6 +704,7 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
   if (notify_func)
     SVN_ERR(svn_wc__db_delete_list_notify(notify_func, notify_baton,
                                           db, local_abspath, pool));
+  /* ### else: Delete the list */
 #else
   if (kind == svn_wc__db_kind_dir)
     {
@@ -803,6 +804,7 @@ add_from_disk(svn_wc__db_t *db,
         SVN_ERR(svn_wc__db_changelist_list_notify(notify_func, notify_baton,
                                                   db, local_abspath,
                                                   scratch_pool));
+      /* ### else: Delete the list */
     }
 
   return SVN_NO_ERROR;
@@ -1384,6 +1386,7 @@ revert_restore(svn_wc__db_t *db,
       if (notify_func)
         SVN_ERR(svn_wc__db_revert_list_notify(notify_func, notify_baton,
                                               db, local_abspath, scratch_pool));
+      /* ### else: Delete the list */
 
       return SVN_NO_ERROR;
     }
@@ -1562,6 +1565,7 @@ revert_restore(svn_wc__db_t *db,
   if (notify_func)
     SVN_ERR(svn_wc__db_revert_list_notify(notify_func, notify_baton,
                                           db, local_abspath, scratch_pool));
+  /* ### else: Delete the list */
 
   return SVN_NO_ERROR;
 }
