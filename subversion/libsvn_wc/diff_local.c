@@ -463,6 +463,9 @@ diff_status_callback(void *baton,
       case svn_wc_status_obstructed:
       case svn_wc_status_missing:
         return SVN_NO_ERROR; /* ### What should we do here? */
+
+      default:
+        break; /* Go check other conditions */
     }
 
   if (eb->changelist_hash != NULL
