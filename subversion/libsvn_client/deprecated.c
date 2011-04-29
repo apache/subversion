@@ -2045,7 +2045,11 @@ info_from_info2(const svn_info2_t *info2,
         info->working_size       = SVN_INFO_SIZE_UNKNOWN;
     }
   else
-    info->has_wc_info           = FALSE;
+    {
+      info->has_wc_info           = FALSE;
+      info->working_size          = SVN_INFO_SIZE_UNKNOWN;
+      info->working_size64        = SVN_INVALID_FILESIZE;
+    }
 
   /* Populate conflict fields. */
   if (info2->wc_info && info2->wc_info->conflicts)
