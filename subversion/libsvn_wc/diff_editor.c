@@ -1,6 +1,6 @@
 /*
- * diff.c -- The diff editor for comparing the working copy against the
- *           repository.
+ * diff_editor.c -- The diff editor for comparing the working copy against the
+ *                  repository.
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -36,6 +36,13 @@
  * client layer to compare any remaining files that may have been modified
  * locally. Added directories do not have corresponding temporary
  * directories created, as they are not needed.
+ *
+ * The diff result from this editor is a combination of the restructuring
+ * operations from the repository with the local restructurings since checking
+ * out.
+ *
+ * ### TODO: Make sure that we properly support and report multi layered
+ *           operations instead of only simple file replacements.
  *
  * ### TODO: Replacements where the node kind changes needs support. It
  * mostly works when the change is in the repository, but not when it is
@@ -1931,58 +1938,4 @@ svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
                                            editor,
                                            edit_baton,
                                            result_pool);
-}
-
-
-/* Compare working copy against the text-base. */
-svn_error_t *
-svn_wc_diff6(svn_wc_context_t *wc_ctx,
-             const char *target_abspath,
-             const svn_wc_diff_callbacks4_t *callbacks,
-             void *callback_baton,
-             svn_depth_t depth,
-             svn_boolean_t ignore_ancestry,
-             svn_boolean_t show_copies_as_adds,
-             svn_boolean_t use_git_diff_format,
-             const apr_array_header_t *changelists,
-             svn_cancel_func_t cancel_func,
-             void *cancel_baton,
-             apr_pool_t *pool)
-{
-  struct edit_baton *eb;
-  const char *target;
-  const char *anchor_abspath;
-  svn_wc__db_kind_t kind;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(target_abspath));
-  SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, target_abspath, FALSE,
-                               pool));
-
-  if (kind == svn_wc__db_kind_dir)
-    {
-      anchor_abspath = target_abspath;
-      target = "";
-    }
-  else
-    svn_dirent_split(&anchor_abspath, &target, target_abspath, pool);
-
-  SVN_ERR(make_edit_baton(&eb,
-                          wc_ctx->db,
-                          anchor_abspath,
-                          target,
-                          callbacks, callback_baton,
-                          depth, ignore_ancestry, show_copies_as_adds,
-                          use_git_diff_format,
-                          FALSE, FALSE, changelists,
-                          cancel_func, cancel_baton,
-                          pool));
-
-  SVN_ERR(walk_local_nodes_diff(eb,
-                                eb->anchor_abspath,
-                                "",
-                                depth,
-                                NULL,
-                                eb->pool));
-
-  return SVN_NO_ERROR;
 }
