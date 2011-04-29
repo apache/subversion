@@ -195,15 +195,40 @@ svn_wc__text_base_path_to_read(const char **result_abspath,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool)
 {
+  svn_wc__db_status_t status;
+  svn_wc__db_kind_t kind;
   const svn_checksum_t *checksum;
 
-  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, &checksum, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL,
-                               db, local_abspath,
-                               scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_read_pristine_info(&status, &kind, NULL, NULL, NULL, NULL,
+                                        &checksum, NULL, NULL,
+                                        db, local_abspath,
+                                        scratch_pool, scratch_pool));
+
+  /* Sanity */
+  if (kind != svn_wc__db_kind_file)
+    return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
+                             _("Can only get the pristine contents of files; "
+                               "'%s' is not a file"),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+
+  if (status == svn_wc__db_status_not_present)
+    /* We know that the delete of this node has been committed.
+       This should be the same as if called on an unknown path. */
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                             _("Cannot get the pristine contents of '%s' "
+                               "because its delete is already committed"),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+  else if (status == svn_wc__db_status_absent
+      || status == svn_wc__db_status_excluded
+      || status == svn_wc__db_status_incomplete)
+    return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                             _("Cannot get the pristine contents of '%s' "
+                               "because it has an unexpected status"),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+
   if (checksum == NULL)
     return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
                              _("Node '%s' has no pristine text"),
@@ -230,12 +255,10 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
   if (size)
     *size = SVN_INVALID_FILESIZE;
 
-  SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, &sha1_checksum, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL,
-                               db, local_abspath, scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_read_pristine_info(&status, &kind, NULL, NULL, NULL, NULL,
+                                        &sha1_checksum, NULL, NULL,
+                                        db, local_abspath,
+                                        scratch_pool, scratch_pool));
 
   /* Sanity */
   if (kind != svn_wc__db_kind_file)
@@ -245,22 +268,11 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
                              svn_dirent_local_style(local_abspath,
                                                     scratch_pool));
 
-  if (status == svn_wc__db_status_added)
+  if (status == svn_wc__db_status_added && !sha1_checksum)
     {
-      /* For an added node, we return "no stream". Make sure this is not
-         copied-here or moved-here, in which case we return the copy/move
-         source's contents.  */
-      SVN_ERR(svn_wc__db_scan_addition(&status,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL,
-                                       db, local_abspath,
-                                       scratch_pool, scratch_pool));
-      if (status == svn_wc__db_status_added)
-        {
-          /* Simply added. The pristine base does not exist. */
-          *contents = NULL;
-          return SVN_NO_ERROR;
-        }
+      /* Simply added. The pristine base does not exist. */
+      *contents = NULL;
+      return SVN_NO_ERROR;
     }
   else if (status == svn_wc__db_status_not_present)
     /* We know that the delete of this node has been committed.
