@@ -471,6 +471,9 @@ diff_status_callback(void *baton,
                             APR_HASH_KEY_STRING)))
     return SVN_NO_ERROR; /* Filtered via changelist */
 
+  /* ### The following checks should probably be reversed as it should decide
+         when *not* to show a diff, because generally all changed nodes should
+         have a diff. */
   if (status->kind == svn_node_file)
     {
       /* Show a diff when
