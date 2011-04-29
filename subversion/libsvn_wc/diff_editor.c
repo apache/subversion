@@ -1282,16 +1282,17 @@ add_directory(const char *path,
   svn_depth_t subdir_depth = (pb->depth == svn_depth_immediates)
                               ? svn_depth_empty : pb->depth;
 
-  /* Add this path to the parent directory's list of elements that
-     have been compared. */
-  apr_hash_set(pb->compared, apr_pstrdup(pb->pool, db->path),
-               APR_HASH_KEY_STRING, "");
-
   /* ### TODO: support copyfrom? */
 
   db = make_dir_baton(path, pb, pb->eb, TRUE, subdir_depth,
                       dir_pool);
   *child_baton = db;
+
+  /* Add this path to the parent directory's list of elements that
+     have been compared. */
+  apr_hash_set(pb->compared, apr_pstrdup(pb->pool, db->path),
+               APR_HASH_KEY_STRING, "");
+
 
   return SVN_NO_ERROR;
 }
