@@ -106,7 +106,21 @@ def check_pristine(sbox, files):
 def check_dav_cache(dir_path, wc_id, expected_dav_caches):
   dot_svn = svntest.main.get_admin_name()
   db = svntest.sqlite3.connect(os.path.join(dir_path, dot_svn, 'wc.db'))
+
   c = db.cursor()
+
+  # Check if python's sqlite can read our db
+  c.execute('select sqlite_version()')
+  sqlite_ver = map(int, c.fetchone()[0].split('.'))
+
+  # SQLite versions have 3 or 4 number groups
+  major = sqlite_ver[0]
+  minor = sqlite_ver[1]
+  patch = sqlite_ver[2]
+
+  if major < 3 or (major == 3 and minor < 6) \
+     or (major == 3 and minor == 6 and patch < 18):
+       return # We need a newer SQLite
 
   for local_relpath, expected_dav_cache in expected_dav_caches.items():
     # NODES conversion is complete enough that we can use it if it exists
