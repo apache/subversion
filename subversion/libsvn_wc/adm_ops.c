@@ -1832,11 +1832,14 @@ svn_wc_get_pristine_copy_path(const char *path,
                                        pool, pool);
   if (err && err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
     {
-      const char *adm_abspath = svn_dirent_dirname(local_abspath, pool);
-
+      const char *adm_abspath;
       svn_error_clear(err);
+
+      SVN_ERR(svn_wc__db_get_wcroot(&adm_abspath, db, local_abspath,
+                                    pool, pool));
+
       *pristine_path = svn_wc__nonexistent_path(db, adm_abspath, pool);
-      return SVN_NO_ERROR;
+      return svn_error_return(svn_wc__db_close(db));
     }
    SVN_ERR(err);
 
