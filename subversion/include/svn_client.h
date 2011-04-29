@@ -945,6 +945,12 @@ typedef struct svn_client_ctx_t
    * @since New in 1.5. */
   const char *client_name;
 
+  /** Conflict resolution callback and baton, if available. NULL means that
+   * subversion should try @c conflict_func.
+   * @since New in 1.7. */
+  svn_wc_conflict_resolver_func2_t conflict_func2;
+  void *conflict_baton2;
+
   /** A working copy context for the client operation to use.
    * This is initialized by svn_client_create_context() and should never
    * be @c NULL.

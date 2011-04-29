@@ -2321,6 +2321,30 @@ svn_wc_prop_get(const svn_string_t **value,
   return svn_error_return(svn_wc_context_destroy(wc_ctx));
 }
 
+/* baton for conflict_func_1to2_wrapper */
+struct conflict_func_1to2_baton
+{
+  svn_wc_conflict_resolver_func_t inner_func;
+  void *inner_baton;
+};
+
+
+/* Implements svn_wc_conflict_resolver_func2_t */
+static svn_error_t *
+conflict_func_1to2_wrapper(svn_wc_conflict_result_t **result,
+                           const svn_wc_conflict_description2_t *conflict,
+                           void *baton,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
+{
+  struct conflict_func_1to2_baton *btn = baton;
+  svn_wc_conflict_description_t *cd = svn_wc__cd2_to_cd(conflict,
+                                                        scratch_pool);
+
+  return svn_error_return(btn->inner_func(result, cd, btn->inner_baton,
+                                          result_pool));
+}
+
 svn_error_t *
 svn_wc_merge_props2(svn_wc_notify_state_t *state,
                     const char *path,
@@ -2335,8 +2359,12 @@ svn_wc_merge_props2(svn_wc_notify_state_t *state,
 {
   const char *local_abspath;
   svn_error_t *err;
+  struct conflict_func_1to2_baton conflict_wrapper;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
+
+  conflict_wrapper.inner_func = conflict_func;
+  conflict_wrapper.inner_baton = conflict_baton;
 
   err = svn_wc__perform_props_merge(state,
                                     svn_wc__adm_get_db(adm_access),
@@ -2347,7 +2375,9 @@ svn_wc_merge_props2(svn_wc_notify_state_t *state,
                                     propchanges,
                                     base_merge,
                                     dry_run,
-                                    conflict_func, conflict_baton,
+                                    conflict_func ? conflict_func_1to2_wrapper
+                                                  : NULL,
+                                    &conflict_wrapper,
                                     NULL, NULL,
                                     scratch_pool);
 
@@ -3029,6 +3059,7 @@ svn_wc_get_update_editor3(svn_revnum_t *target_revision,
   svn_wc__db_t *db = svn_wc__adm_get_db(anchor);
   svn_wc_external_update_t external_func = NULL;
   struct traversal_info_update_baton *eb = NULL;
+  struct conflict_func_1to2_baton *cfw = NULL;
 
   SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL, db, pool));
 
@@ -3038,6 +3069,13 @@ svn_wc_get_update_editor3(svn_revnum_t *target_revision,
       eb->db = db;
       eb->traversal = traversal_info;
       external_func = traversal_info_update;
+    }
+
+  if (conflict_func)
+    {
+      cfw = apr_pcalloc(pool, sizeof(*cfw));
+      cfw->inner_func = conflict_func;
+      cfw->inner_baton = conflict_baton;
     }
 
   if (diff3_cmd)
@@ -3055,7 +3093,9 @@ svn_wc_get_update_editor3(svn_revnum_t *target_revision,
                                     FALSE /* server_performs_filtering */,
                                     diff3_cmd,
                                     preserved_exts,
-                                    conflict_func, conflict_baton,
+                                    conflict_func ? conflict_func_1to2_wrapper
+                                                  : NULL,
+                                    cfw,
                                     external_func, eb,
                                     cancel_func, cancel_baton,
                                     notify_func, notify_baton,
@@ -3148,6 +3188,7 @@ svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
   svn_wc__db_t *db = svn_wc__adm_get_db(anchor);
   svn_wc_external_update_t external_func = NULL;
   struct traversal_info_update_baton *eb = NULL;
+  struct conflict_func_1to2_baton *cfw = NULL;
 
   SVN_ERR_ASSERT(switch_url && svn_uri_is_canonical(switch_url, pool));
 
@@ -3159,6 +3200,13 @@ svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
       eb->db = db;
       eb->traversal = traversal_info;
       external_func = traversal_info_update;
+    }
+
+  if (conflict_func)
+    {
+      cfw = apr_pcalloc(pool, sizeof(*cfw));
+      cfw->inner_func = conflict_func;
+      cfw->inner_baton = conflict_baton;
     }
 
   if (diff3_cmd)
@@ -3175,7 +3223,9 @@ svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
                                     FALSE /* server_performs_filtering */,
                                     diff3_cmd,
                                     preserved_exts,
-                                    conflict_func, conflict_baton,
+                                    conflict_func ? conflict_func_1to2_wrapper
+                                                  : NULL,
+                                    cfw,
                                     external_func, eb,
                                     cancel_func, cancel_baton,
                                     notify_func, notify_baton,
@@ -3808,12 +3858,16 @@ svn_wc_merge3(enum svn_wc_merge_outcome_t *merge_outcome,
   svn_wc_context_t *wc_ctx;
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   const char *left_abspath, *right_abspath, *target_abspath;
+  struct conflict_func_1to2_baton cfw;
 
   SVN_ERR(svn_dirent_get_absolute(&left_abspath, left, pool));
   SVN_ERR(svn_dirent_get_absolute(&right_abspath, right, pool));
   SVN_ERR(svn_dirent_get_absolute(&target_abspath, merge_target, pool));
 
   SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */, db, pool));
+
+  cfw.inner_func = conflict_func;
+  cfw.inner_baton = conflict_baton;
 
   if (diff3_cmd)
     SVN_ERR(svn_path_cstring_to_utf8(&diff3_cmd, diff3_cmd, pool));
@@ -3832,7 +3886,8 @@ svn_wc_merge3(enum svn_wc_merge_outcome_t *merge_outcome,
                         diff3_cmd,
                         merge_options,
                         prop_diff,
-                        conflict_func, conflict_baton,
+                        conflict_func ? conflict_func_1to2_wrapper : NULL,
+                        &cfw,
                         NULL, NULL,
                         pool));
 

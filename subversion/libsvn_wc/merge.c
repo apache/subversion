@@ -790,7 +790,7 @@ preserve_pre_merge_files(svn_skel_t **work_items,
 }
 
 /* Helper for maybe_resolve_conflicts() below. */
-static const svn_wc_conflict_description_t *
+static const svn_wc_conflict_description2_t *
 setup_text_conflict_desc(const char *left_abspath,
                          const char *right_abspath,
                          const char *target_abspath,
@@ -816,7 +816,7 @@ setup_text_conflict_desc(const char *left_abspath,
   cdesc->src_left_version = left_version;
   cdesc->src_right_version = right_version;
 
-  return svn_wc__cd2_to_cd(cdesc, pool);
+  return cdesc;
 }
 
 /* XXX Insane amount of parameters... */
@@ -839,7 +839,7 @@ maybe_resolve_conflicts(svn_skel_t **work_items,
                         const char *detranslated_target,
                         const svn_prop_t *mimeprop,
                         svn_diff_file_options_t *options,
-                        svn_wc_conflict_resolver_func_t conflict_func,
+                        svn_wc_conflict_resolver_func2_t conflict_func,
                         void *conflict_baton,
                         svn_cancel_func_t cancel_func,
                         void *cancel_baton,
@@ -861,11 +861,11 @@ maybe_resolve_conflicts(svn_skel_t **work_items,
       /* If there is no interactive conflict resolution then we are effectively
          postponing conflict resolution. */
       result = svn_wc_create_conflict_result(svn_wc_conflict_choose_postpone,
-                                             NULL, scratch_pool);
+                                             NULL, result_pool);
     }
   else
     {
-      const svn_wc_conflict_description_t *cdesc;
+      const svn_wc_conflict_description2_t *cdesc;
 
       cdesc = setup_text_conflict_desc(left_abspath,
                                        right_abspath,
@@ -878,7 +878,8 @@ maybe_resolve_conflicts(svn_skel_t **work_items,
                                        FALSE,
                                        scratch_pool);
 
-      SVN_ERR(conflict_func(&result, cdesc, conflict_baton, scratch_pool));
+      SVN_ERR(conflict_func(&result, cdesc, conflict_baton, scratch_pool,
+                            scratch_pool));
       if (result == NULL)
         return svn_error_create(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
                                 NULL, _("Conflict callback violated API:"
@@ -944,7 +945,7 @@ merge_text_file(svn_skel_t **work_items,
                 const char *copyfrom_text,
                 const char *detranslated_target_abspath,
                 const svn_prop_t *mimeprop,
-                svn_wc_conflict_resolver_func_t conflict_func,
+                svn_wc_conflict_resolver_func2_t conflict_func,
                 void *conflict_baton,
                 svn_cancel_func_t cancel_func,
                 void *cancel_baton,
@@ -1120,7 +1121,7 @@ merge_binary_file(svn_skel_t **work_items,
                   const svn_wc_conflict_version_t *right_version,
                   const char *detranslated_target_abspath,
                   const svn_prop_t *mimeprop,
-                  svn_wc_conflict_resolver_func_t conflict_func,
+                  svn_wc_conflict_resolver_func2_t conflict_func,
                   void *conflict_baton,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool)
@@ -1175,7 +1176,7 @@ merge_binary_file(svn_skel_t **work_items,
   if (conflict_func)
     {
       svn_wc_conflict_result_t *result = NULL;
-      const svn_wc_conflict_description_t *cdesc;
+      const svn_wc_conflict_description2_t *cdesc;
       const char *install_from = NULL;
 
       cdesc = setup_text_conflict_desc(left_abspath, right_abspath,
@@ -1185,7 +1186,7 @@ merge_binary_file(svn_skel_t **work_items,
                                        detranslated_target_abspath,
                                        mimeprop, TRUE, pool);
 
-      SVN_ERR(conflict_func(&result, cdesc, conflict_baton, pool));
+      SVN_ERR(conflict_func(&result, cdesc, conflict_baton, pool, pool));
       if (result == NULL)
         return svn_error_create(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
                                 NULL, _("Conflict callback violated API:"
@@ -1332,7 +1333,7 @@ svn_wc__internal_merge(svn_skel_t **work_items,
                        const char *diff3_cmd,
                        const apr_array_header_t *merge_options,
                        const apr_array_header_t *prop_diff,
-                       svn_wc_conflict_resolver_func_t conflict_func,
+                       svn_wc_conflict_resolver_func2_t conflict_func,
                        void *conflict_baton,
                        svn_cancel_func_t cancel_func,
                        void *cancel_baton,
@@ -1471,7 +1472,7 @@ svn_wc_merge4(enum svn_wc_merge_outcome_t *merge_outcome,
               const char *diff3_cmd,
               const apr_array_header_t *merge_options,
               const apr_array_header_t *prop_diff,
-              svn_wc_conflict_resolver_func_t conflict_func,
+              svn_wc_conflict_resolver_func2_t conflict_func,
               void *conflict_baton,
               svn_cancel_func_t cancel_func,
               void *cancel_baton,

@@ -1114,7 +1114,7 @@ merge_props_changed(svn_wc_notify_state_t *state,
 
       err = svn_wc_merge_props3(state, ctx->wc_ctx, local_abspath, NULL, NULL,
                                 original_props, props, merge_b->dry_run,
-                                ctx->conflict_func, ctx->conflict_baton,
+                                ctx->conflict_func2, ctx->conflict_baton2,
                                 ctx->cancel_func, ctx->cancel_baton,
                                 subpool);
 
@@ -1233,7 +1233,7 @@ merge_dir_props_changed(svn_wc_notify_state_t *state,
 typedef struct conflict_resolver_baton_t
 {
   /* The wrapped callback and baton. */
-  svn_wc_conflict_resolver_func_t wrapped_func;
+  svn_wc_conflict_resolver_func2_t wrapped_func;
   void *wrapped_baton;
 
   /* The list of any paths which remained in conflict after a
@@ -1250,21 +1250,25 @@ typedef struct conflict_resolver_baton_t
    resolution attempt from BATON->wrapped_func. */
 static svn_error_t *
 conflict_resolver(svn_wc_conflict_result_t **result,
-                  const svn_wc_conflict_description_t *description,
-                  void *baton, apr_pool_t *pool)
+                  const svn_wc_conflict_description2_t *description,
+                  void *baton,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
   conflict_resolver_baton_t *conflict_b = baton;
 
   if (conflict_b->wrapped_func)
     err = (*conflict_b->wrapped_func)(result, description,
-                                      conflict_b->wrapped_baton, pool);
+                                      conflict_b->wrapped_baton,
+                                      result_pool,
+                                      scratch_pool);
   else
     {
       /* If we have no wrapped callback to invoke, then we still need
          to behave like a proper conflict-callback ourselves.  */
       *result = svn_wc_create_conflict_result(svn_wc_conflict_choose_postpone,
-                                              NULL, pool);
+                                              NULL, result_pool);
       err = SVN_NO_ERROR;
     }
 
@@ -1273,7 +1277,7 @@ conflict_resolver(svn_wc_conflict_result_t **result,
       || (*result && ((*result)->choice == svn_wc_conflict_choose_postpone)))
     {
       const char *conflicted_path = apr_pstrdup(conflict_b->pool,
-                                                description->path);
+                                                description->local_abspath);
 
       if (*conflict_b->conflicted_paths == NULL)
         *conflict_b->conflicted_paths = apr_hash_make(conflict_b->pool);
@@ -1464,8 +1468,8 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
       SVN_ERR(svn_wc_text_modified_p2(&has_local_mods, merge_b->ctx->wc_ctx,
                                       mine_abspath, FALSE, subpool));
 
-      conflict_baton.wrapped_func = merge_b->ctx->conflict_func;
-      conflict_baton.wrapped_baton = merge_b->ctx->conflict_baton;
+      conflict_baton.wrapped_func = merge_b->ctx->conflict_func2;
+      conflict_baton.wrapped_baton = merge_b->ctx->conflict_baton2;
       conflict_baton.conflicted_paths = &merge_b->conflicted_paths;
       conflict_baton.pool = merge_b->pool;
 
