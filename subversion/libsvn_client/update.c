@@ -241,7 +241,7 @@ update_internal(svn_revnum_t *result_rev,
                                     adds_as_modification,
                                     server_supports_depth,
                                     diff3_cmd, preserved_exts,
-                                    ctx->conflict_func, ctx->conflict_baton,
+                                    ctx->conflict_func2, ctx->conflict_baton2,
                                     ignore_externals
                                         ? NULL
                                         : svn_client__external_info_gatherer,

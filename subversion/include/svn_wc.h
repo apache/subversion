@@ -5416,7 +5416,7 @@ svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
                           svn_boolean_t server_performs_filtering,
                           const char *diff3_cmd,
                           const apr_array_header_t *preserved_exts,
-                          svn_wc_conflict_resolver_func_t conflict_func,
+                          svn_wc_conflict_resolver_func2_t conflict_func,
                           void *conflict_baton,
                           svn_wc_external_update_t external_func,
                           void *external_baton,
@@ -5440,6 +5440,9 @@ svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
  *
  * Always sets @a adds_as_modification to TRUE and @a server_performs_filtering
  * to FALSE.
+ *
+ * Uses a svn_wc_conflict_resolver_func_t conflict resolver instead of a
+ * svn_wc_conflict_resolver_func2_t.
  *
  * This function assumes that @a diff3_cmd is path encoded. Later versions
  * assume utf-8.
@@ -5549,7 +5552,7 @@ svn_wc_get_switch_editor4(const svn_delta_editor_t **editor,
                           svn_boolean_t server_performs_filtering,
                           const char *diff3_cmd,
                           const apr_array_header_t *preserved_exts,
-                          svn_wc_conflict_resolver_func_t conflict_func,
+                          svn_wc_conflict_resolver_func2_t conflict_func,
                           void *conflict_baton,
                           svn_wc_external_update_t external_func,
                           void *external_baton,
@@ -5571,6 +5574,9 @@ svn_wc_get_switch_editor4(const svn_delta_editor_t **editor,
  * released when the editor driver calls @c close_edit.
  *
  * Always sets @a server_performs_filtering to FALSE.
+ *
+ * Uses a svn_wc_conflict_resolver_func_t conflict resolver instead of a
+ * svn_wc_conflict_resolver_func2_t.
  *
  * This function assumes that @a diff3_cmd is path encoded. Later versions
  * assume utf-8.
@@ -6459,7 +6465,7 @@ svn_wc_merge4(enum svn_wc_merge_outcome_t *merge_outcome,
               const char *diff3_cmd,
               const apr_array_header_t *merge_options,
               const apr_array_header_t *prop_diff,
-              svn_wc_conflict_resolver_func_t conflict_func,
+              svn_wc_conflict_resolver_func2_t conflict_func,
               void *conflict_baton,
               svn_cancel_func_t cancel_func,
               void *cancel_baton,
@@ -6468,6 +6474,9 @@ svn_wc_merge4(enum svn_wc_merge_outcome_t *merge_outcome,
 /** Similar to svn_wc_merge4() but takes relative paths and an access
  * baton. It doesn't support a cancel function or tracking origin version
  * information.
+ *
+ * Uses a svn_wc_conflict_resolver_func_t conflict resolver instead of a
+ * svn_wc_conflict_resolver_func2_t.
  *
  * This function assumes that @a diff3_cmd is path encoded. Later versions
  * assume utf-8.
@@ -6570,7 +6579,7 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
                     apr_hash_t *baseprops,
                     const apr_array_header_t *propchanges,
                     svn_boolean_t dry_run,
-                    svn_wc_conflict_resolver_func_t conflict_func,
+                    svn_wc_conflict_resolver_func2_t conflict_func,
                     void *conflict_baton,
                     svn_cancel_func_t cancel_func,
                     void *cancel_baton,
@@ -6584,6 +6593,9 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
  * apply @a propchanges to this node's pristine set of properties. This
  * functionality is not supported on newer APIs -- pristine information
  * should only be changed through an update editor drive.
+ *
+ * Uses a svn_wc_conflict_resolver_func_t conflict resolver instead of a
+ * svn_wc_conflict_resolver_func2_t.
  *
  * For compatibility reasons this function returns
  * #SVN_ERR_UNVERSIONED_RESOURCE, when svn_wc_merge_props3 would return either

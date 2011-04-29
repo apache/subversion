@@ -224,7 +224,7 @@ struct edit_baton
 
   /* This editor will invoke a interactive conflict-resolution
      callback, if available. */
-  svn_wc_conflict_resolver_func_t conflict_func;
+  svn_wc_conflict_resolver_func2_t conflict_func;
   void *conflict_baton;
 
   /* Subtrees that were skipped during the edit, and therefore shouldn't
@@ -4115,7 +4115,7 @@ make_editor(svn_revnum_t *target_revision,
             void *notify_baton,
             svn_cancel_func_t cancel_func,
             void *cancel_baton,
-            svn_wc_conflict_resolver_func_t conflict_func,
+            svn_wc_conflict_resolver_func2_t conflict_func,
             void *conflict_baton,
             svn_wc_external_update_t external_func,
             void *external_baton,
@@ -4279,7 +4279,7 @@ svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
                           svn_boolean_t server_performs_filtering,
                           const char *diff3_cmd,
                           const apr_array_header_t *preserved_exts,
-                          svn_wc_conflict_resolver_func_t conflict_func,
+                          svn_wc_conflict_resolver_func2_t conflict_func,
                           void *conflict_baton,
                           svn_wc_external_update_t external_func,
                           void *external_baton,
@@ -4317,7 +4317,7 @@ svn_wc_get_switch_editor4(const svn_delta_editor_t **editor,
                           svn_boolean_t server_performs_filtering,
                           const char *diff3_cmd,
                           const apr_array_header_t *preserved_exts,
-                          svn_wc_conflict_resolver_func_t conflict_func,
+                          svn_wc_conflict_resolver_func2_t conflict_func,
                           void *conflict_baton,
                           svn_wc_external_update_t external_func,
                           void *external_baton,
