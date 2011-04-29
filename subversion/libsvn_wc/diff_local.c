@@ -120,23 +120,11 @@ get_pristine_file(const char **result_abspath,
 /*-------------------------------------------------------------------------*/
 
 
-/* Overall crawler editor baton.
- */
-struct edit_baton {
+/* The diff baton */
+struct diff_baton 
+{
   /* A wc db. */
   svn_wc__db_t *db;
-
-  /* ANCHOR/TARGET represent the base of the hierarchy to be compared. */
-  const char *target;
-
-  /* The absolute path of the anchor directory */
-  const char *anchor_abspath;
-
-  /* Target revision */
-  svn_revnum_t revnum;
-
-  /* Was the root opened? */
-  svn_boolean_t root_opened;
 
   /* The callbacks and callback argument that implement the file comparison
      functions */
@@ -155,12 +143,6 @@ struct edit_baton {
   /* Are we producing a git-style diff? */
   svn_boolean_t use_git_diff_format;
 
-  /* Possibly diff repos against text-bases instead of working files. */
-  svn_boolean_t use_text_base;
-
-  /* Possibly show the diffs backwards. */
-  svn_boolean_t reverse_order;
-
   /* Empty file used to diff adds / deletes */
   const char *empty_file;
 
@@ -174,85 +156,25 @@ struct edit_baton {
   apr_pool_t *pool;
 };
 
-/* Create a new edit baton. TARGET_PATH/ANCHOR are working copy paths
- * that describe the root of the comparison. CALLBACKS/CALLBACK_BATON
- * define the callbacks to compare files. DEPTH defines if and how to
- * descend into subdirectories; see public doc string for exactly how.
- * IGNORE_ANCESTRY defines whether to utilize node ancestry when
- * calculating diffs.  USE_TEXT_BASE defines whether to compare
- * against working files or text-bases.  REVERSE_ORDER defines which
- * direction to perform the diff.
- *
- * CHANGELISTS is a list of const char * changelist names, used to
- * filter diff output responses to only those items in one of the
- * specified changelists, empty (or NULL altogether) if no changelist
- * filtering is requested.
- */
-static svn_error_t *
-make_edit_baton(struct edit_baton **edit_baton,
-                svn_wc__db_t *db,
-                const char *anchor_abspath,
-                const char *target,
-                const svn_wc_diff_callbacks4_t *callbacks,
-                void *callback_baton,
-                svn_depth_t depth,
-                svn_boolean_t ignore_ancestry,
-                svn_boolean_t show_copies_as_adds,
-                svn_boolean_t use_git_diff_format,
-                svn_boolean_t use_text_base,
-                svn_boolean_t reverse_order,
-                const apr_array_header_t *changelists,
-                svn_cancel_func_t cancel_func,
-                void *cancel_baton,
-                apr_pool_t *pool)
-{
-  apr_hash_t *changelist_hash = NULL;
-  struct edit_baton *eb;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(anchor_abspath));
-
-  if (changelists && changelists->nelts)
-    SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelists, pool));
-
-  eb = apr_pcalloc(pool, sizeof(*eb));
-  eb->db = db;
-  eb->anchor_abspath = apr_pstrdup(pool, anchor_abspath);
-  eb->target = apr_pstrdup(pool, target);
-  eb->callbacks = callbacks;
-  eb->callback_baton = callback_baton;
-  eb->depth = depth;
-  eb->ignore_ancestry = ignore_ancestry;
-  eb->show_copies_as_adds = show_copies_as_adds;
-  eb->use_git_diff_format = use_git_diff_format;
-  eb->use_text_base = use_text_base;
-  eb->reverse_order = reverse_order;
-  eb->changelist_hash = changelist_hash;
-  eb->cancel_func = cancel_func;
-  eb->cancel_baton = cancel_baton;
-  eb->pool = pool;
-
-  *edit_baton = eb;
-  return SVN_NO_ERROR;
-}
-
 /* Get the empty file associated with the edit baton. This is cached so
  * that it can be reused, all empty files are the same.
  */
 static svn_error_t *
-get_empty_file(struct edit_baton *b,
-               const char **empty_file)
+get_empty_file(struct diff_baton *eb,
+               const char **empty_file,
+               apr_pool_t *scratch_pool)
 {
   /* Create the file if it does not exist */
   /* Note that we tried to use /dev/null in r857294, but
      that won't work on Windows: it's impossible to stat NUL */
-  if (!b->empty_file)
+  if (!eb->empty_file)
     {
-      SVN_ERR(svn_io_open_unique_file3(NULL, &b->empty_file, NULL,
+      SVN_ERR(svn_io_open_unique_file3(NULL, &eb->empty_file, NULL,
                                        svn_io_file_del_on_pool_cleanup,
-                                       b->pool, b->pool));
+                                       eb->pool, scratch_pool));
     }
 
-  *empty_file = b->empty_file;
+  *empty_file = eb->empty_file;
 
   return SVN_NO_ERROR;
 }
@@ -284,7 +206,7 @@ get_prop_mimetype(apr_hash_t *props)
  * directory.
  */
 static svn_error_t *
-file_diff(struct edit_baton *eb,
+file_diff(struct diff_baton *eb,
           const char *local_abspath,
           const char *path,
           apr_pool_t *scratch_pool)
@@ -300,8 +222,6 @@ file_diff(struct edit_baton *eb,
   svn_boolean_t have_base;
   svn_wc__db_status_t base_status;
   svn_boolean_t use_base = FALSE;
-
-  SVN_ERR_ASSERT(! eb->use_text_base);
 
   /* If the item is not a member of a specified changelist (and there are
      some specified changelists), skip it. */
@@ -357,7 +277,7 @@ file_diff(struct edit_baton *eb,
   SVN_ERR(get_pristine_file(&textbase, db, local_abspath,
                             use_base, scratch_pool, scratch_pool));
 
-  SVN_ERR(get_empty_file(eb, &empty_file));
+  SVN_ERR(get_empty_file(eb, &empty_file, scratch_pool));
 
   /* Delete compares text-base against empty file, modifications to the
    * working-copy version of the deleted file are not wanted.
@@ -536,7 +456,7 @@ file_diff(struct edit_baton *eb,
  * DIR_BATON is the baton for the directory.
  */
 static svn_error_t *
-walk_local_nodes_diff(struct edit_baton *eb,
+walk_local_nodes_diff(struct diff_baton *eb,
                       const char *local_abspath,
                       const char *path,
                       svn_depth_t depth,
@@ -546,18 +466,7 @@ walk_local_nodes_diff(struct edit_baton *eb,
   svn_wc__db_t *db = eb->db;
   const apr_array_header_t *children;
   int i;
-  svn_boolean_t in_anchor_not_target;
   apr_pool_t *iterpool;
-
-  /* Everything we do below is useless if we are comparing to BASE. */
-  if (eb->use_text_base)
-    return SVN_NO_ERROR;
-
-  /* Determine if this is the anchor directory if the anchor is different
-     to the target. When the target is a file, the anchor is the parent
-     directory and if this is that directory the non-target entries must be
-     skipped. */
-  in_anchor_not_target = ((*path == '\0') && (*eb->target != '\0'));
 
   /* Check for local property mods on this directory, if we haven't
      already reported them and we aren't changelist-filted.
@@ -566,7 +475,6 @@ walk_local_nodes_diff(struct edit_baton *eb,
      ### changelist check will always fail. */
   if (svn_wc__internal_changelist_match(db, local_abspath,
                                         eb->changelist_hash, scratch_pool)
-      && (! in_anchor_not_target)
       && (!compared || ! apr_hash_get(compared, path, 0)))
     {
       svn_boolean_t modified;
@@ -590,7 +498,7 @@ walk_local_nodes_diff(struct edit_baton *eb,
         }
     }
 
-  if (depth == svn_depth_empty && !in_anchor_not_target)
+  if (depth == svn_depth_empty)
     return SVN_NO_ERROR;
 
   iterpool = svn_pool_create(scratch_pool);
@@ -609,13 +517,6 @@ walk_local_nodes_diff(struct edit_baton *eb,
 
       if (eb->cancel_func)
         SVN_ERR(eb->cancel_func(eb->cancel_baton));
-
-      /* In the anchor directory, if the anchor is not the target then all
-         entries other than the target should not be diff'd. Running diff
-         on one file in a directory should not diff other files in that
-         directory. */
-      if (in_anchor_not_target && strcmp(eb->target, name))
-        continue;
 
       child_abspath = svn_dirent_join(local_abspath, name, iterpool);
 
@@ -654,8 +555,7 @@ walk_local_nodes_diff(struct edit_baton *eb,
 
           /* Check the subdir if in the anchor (the subdir is the target), or
              if recursive */
-          if (in_anchor_not_target
-              || (depth > svn_depth_files)
+          if ((depth > svn_depth_files)
               || (depth == svn_depth_unknown))
             {
               svn_depth_t depth_below_here = depth;
@@ -696,16 +596,16 @@ svn_wc_diff6(svn_wc_context_t *wc_ctx,
              const apr_array_header_t *changelists,
              svn_cancel_func_t cancel_func,
              void *cancel_baton,
-             apr_pool_t *pool)
+             apr_pool_t *scratch_pool)
 {
-  struct edit_baton *eb;
+  struct diff_baton eb = { 0 };
   const char *target;
   const char *anchor_abspath;
   svn_wc__db_kind_t kind;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(target_abspath));
   SVN_ERR(svn_wc__db_read_kind(&kind, wc_ctx->db, target_abspath, FALSE,
-                               pool));
+                               scratch_pool));
 
   if (kind == svn_wc__db_kind_dir)
     {
@@ -713,25 +613,38 @@ svn_wc_diff6(svn_wc_context_t *wc_ctx,
       target = "";
     }
   else
-    svn_dirent_split(&anchor_abspath, &target, target_abspath, pool);
+    svn_dirent_split(&anchor_abspath, &target, target_abspath, scratch_pool);
 
-  SVN_ERR(make_edit_baton(&eb,
-                          wc_ctx->db,
-                          anchor_abspath,
-                          target,
-                          callbacks, callback_baton,
-                          depth, ignore_ancestry, show_copies_as_adds,
-                          use_git_diff_format,
-                          FALSE, FALSE, changelists,
-                          cancel_func, cancel_baton,
-                          pool));
+  eb.db = wc_ctx->db;
+  eb.callbacks = callbacks;
+  eb.callback_baton = callback_baton;
+  eb.ignore_ancestry = ignore_ancestry;
+  eb.show_copies_as_adds = show_copies_as_adds;
+  eb.use_git_diff_format = use_git_diff_format;
+  eb.empty_file = NULL;
 
-  SVN_ERR(walk_local_nodes_diff(eb,
-                                eb->anchor_abspath,
-                                "",
-                                depth,
-                                NULL,
-                                eb->pool));
+  if (changelists && changelists->nelts)
+    SVN_ERR(svn_hash_from_cstring_keys(&eb.changelist_hash, changelists,
+                                       scratch_pool));
+
+  if (kind == svn_wc__db_kind_dir)
+    SVN_ERR(walk_local_nodes_diff(&eb,
+                                  anchor_abspath,
+                                  "",
+                                  depth,
+                                  NULL,
+                                  scratch_pool));
+  else
+    {
+      svn_wc_status3_t *status;
+      SVN_ERR(svn_wc_status3(&status, wc_ctx, target_abspath,
+                             scratch_pool, scratch_pool));
+
+      if (status->node_status == svn_wc_status_deleted
+          || status->text_status != svn_wc_status_normal
+          || status->prop_status == svn_wc_status_modified)
+        SVN_ERR(file_diff(&eb, target_abspath, target, scratch_pool));
+    }
 
   return SVN_NO_ERROR;
 }
