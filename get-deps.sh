@@ -53,18 +53,18 @@ get_deps() {
     wget -nc http://www.sqlite.org/$SQLITE.tar.gz
 
     cd $BASEDIR
-    tar zxvf $TEMPDIR/$NEON.tar.gz
-    tar jxvf $TEMPDIR/$ZLIB.tar.bz2
-    tar jxvf $TEMPDIR/$SERF.tar.bz2
-    tar zxvf $TEMPDIR/$SQLITE.tar.gz
+    gzip  -dc $TEMPDIR/$NEON.tar.gz | tar -xf -
+    bzip2 -dc $TEMPDIR/$ZLIB.tar.bz2 | tar -xf -
+    bzip2 -dc $TEMPDIR/$SERF.tar.bz2 | tar -xf -
+    gzip  -dc $TEMPDIR/$SQLITE.tar.gz | tar -xf -
 
     mv $NEON neon
     mv $ZLIB zlib
     mv $SERF serf
     mv sqlite-$SQLITE_VERSION sqlite-amalgamation
 
-    tar jxvf $TEMPDIR/$APR.tar.bz2
-    tar jxvf $TEMPDIR/$APR_UTIL.tar.bz2
+    bzip2 -dc $TEMPDIR/$APR.tar.bz2 | tar -xf -
+    bzip2 -dc $TEMPDIR/$APR_UTIL.tar.bz2 | tar -xf -
     mv $APR apr
     mv $APR_UTIL apr-util
     cd $BASEDIR
