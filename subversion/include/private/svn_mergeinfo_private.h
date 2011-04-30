@@ -240,11 +240,11 @@ svn_mergeinfo__adjust_mergeinfo_rangelists(svn_mergeinfo_t *adjusted_mergeinfo,
                                            apr_pool_t *result_pool,
                                            apr_pool_t *scratch_pool);
 
-/* Translates an array SEGMENTS (of svn_location_t *), like the one
+/* Translates an array SEGMENTS (of svn_location_segment_t *), like the one
    returned from svn_client__repos_location_segments, into a mergeinfo
    *MERGEINFO_P, allocated in POOL.
 
-   Note: A svn_location_t segment may legitimately describe only revision 0,
+   Note: A svn_location_segment_t segment may legitimately describe only revision 0,
    but there is no way to describe that using svn_mergeinfo_t.  Any such
    segment in SEGMENTS are ignored. */
 svn_error_t *
