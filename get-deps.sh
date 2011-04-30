@@ -69,6 +69,14 @@ get_deps() {
     mv $APR_UTIL apr-util
     cd $BASEDIR
 
+    echo
+    echo "If you require mod_dav_svn, the recommended version of httpd is:"
+    echo "   $APACHE_MIRROR/httpd/$HTTPD.tar.bz2"
+
+    echo
+    echo "If you require apr-iconv, its recommended version is:"
+    echo "   $APACHE_MIRROR/apr/$APR_ICONV.tar.bz2"
+
     rm -rf $TEMPDIR
 }
 
