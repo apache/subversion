@@ -14,17 +14,6 @@ A rough guide:
                              and now maintained in a separate repository
                              of its own.
                              
-  HOWTO.DocBook              Instructions on how to build HTML, PDF, 
-                             or PostScript from DocBook Lite source.
-
-  misc-docs/                 Holds additional DocBook Lite material that
-                             either isn't yet ready to go into the
-                             the Subversion Book, or which may never go
-                             into the Book but instead into companion
-                             documents that would be available from the
-                             Subversion site.  Think of it as a
-                             temporary, but published, holding area.
-
   programmer/                Documents for Subversion programmers.
 
   programmer/WritingChangeLogs.txt
@@ -35,13 +24,5 @@ A rough guide:
 
   user/lj_article.txt        An introductory article from Linux Journal.
 
-  user/svn-ref.tex           LaTeX source for an svn quick-ref sheet.
-
   user/*.html                Some documentation that should probably be
                              migrated to DocBook Lite and misc-docs/.
-
-  translations/french        A translation of the Subversion handbook
-                             (which has been absorbed into the book).
- 
-If you'd like to document a new feature, try to find a place for it
-somewhere in misc-docs.
