@@ -1822,6 +1822,16 @@ svn_wc_revert4(svn_wc_context_t *wc_ctx,
 }
 
 
+/* Return a path where nothing exists on disk, within the admin directory
+   belonging to the WCROOT_ABSPATH directory.  */
+static const char *
+nonexistent_path(const char *wcroot_abspath, apr_pool_t *scratch_pool)
+{
+  return svn_wc__adm_child(wcroot_abspath, SVN_WC__ADM_NONEXISTENT_PATH,
+                           scratch_pool);
+}
+
+
 svn_error_t *
 svn_wc_get_pristine_copy_path(const char *path,
                               const char **pristine_path,
@@ -1844,18 +1854,19 @@ svn_wc_get_pristine_copy_path(const char *path,
     {
       /* The node doesn't exist, so return a non-existent path located
          in WCROOT/.svn/  */
-      const char *adm_abspath;
+      const char *wcroot_abspath;
 
       svn_error_clear(err);
 
-      err = svn_wc__db_get_wcroot(&adm_abspath, db, local_abspath,
+      err = svn_wc__db_get_wcroot(&wcroot_abspath, db, local_abspath,
                                   pool, pool);
       if (err == NULL)
-        *pristine_path = svn_wc__nonexistent_path(db, adm_abspath, pool);
+        *pristine_path = nonexistent_path(wcroot_abspath, pool);
     }
 
    return svn_error_compose_create(err, svn_wc__db_close(db));
 }
+
 
 svn_error_t *
 svn_wc_get_pristine_contents2(svn_stream_t **contents,

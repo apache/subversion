@@ -154,14 +154,6 @@ svn_wc__adm_cleanup_tmp_area(svn_wc__db_t *db,
                              apr_pool_t *scratch_pool);
 
 
-/* Return a path where nothing exists on disk, within the admin directory
-   belonging to the versioned directory ADM_ABSPATH in DB. */
-const char *
-svn_wc__nonexistent_path(svn_wc__db_t *db,
-                         const char *adm_abspath,
-                         apr_pool_t *scratch_pool);
-
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
