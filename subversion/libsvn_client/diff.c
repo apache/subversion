@@ -1239,9 +1239,9 @@ diff_dir_added(svn_wc_notify_state_t *state,
                void *diff_baton,
                apr_pool_t *scratch_pool)
 {
-  struct diff_cmd_baton *diff_cmd_baton = diff_baton;
+  /*struct diff_cmd_baton *diff_cmd_baton = diff_baton;
   if (diff_cmd_baton->anchor)
-    path = svn_dirent_join(diff_cmd_baton->anchor, path, scratch_pool);
+    path = svn_dirent_join(diff_cmd_baton->anchor, path, scratch_pool);*/
 
   /* Do nothing. */
 
@@ -1256,9 +1256,9 @@ diff_dir_deleted(svn_wc_notify_state_t *state,
                  void *diff_baton,
                  apr_pool_t *scratch_pool)
 {
-  struct diff_cmd_baton *diff_cmd_baton = diff_baton;
+  /*struct diff_cmd_baton *diff_cmd_baton = diff_baton;
   if (diff_cmd_baton->anchor)
-    path = svn_dirent_join(diff_cmd_baton->anchor, path, scratch_pool);
+    path = svn_dirent_join(diff_cmd_baton->anchor, path, scratch_pool);*/
 
   /* Do nothing. */
 
