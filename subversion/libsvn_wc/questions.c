@@ -123,7 +123,7 @@ compare_and_verify(svn_boolean_t *modified_p,
   svn_subst_eol_style_t eol_style;
   const char *eol_str;
   apr_hash_t *keywords;
-  svn_boolean_t special;
+  svn_boolean_t special = FALSE;
   svn_boolean_t need_translation;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(versioned_file_abspath));
