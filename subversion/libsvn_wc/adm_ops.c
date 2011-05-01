@@ -1208,6 +1208,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
   return SVN_NO_ERROR;
 }
 
+
 svn_error_t *
 svn_wc_add_from_disk(svn_wc_context_t *wc_ctx,
                      const char *local_abspath,
@@ -1237,6 +1238,7 @@ svn_wc_add_from_disk(svn_wc_context_t *wc_ctx,
 
   return SVN_NO_ERROR;
 }
+
 
 svn_error_t *
 svn_wc__register_file_external(svn_wc_context_t *wc_ctx,
@@ -1829,25 +1831,30 @@ svn_wc_get_pristine_copy_path(const char *path,
   const char *local_abspath;
   svn_error_t *err;
 
-  SVN_ERR(svn_wc__db_open(&db, NULL, TRUE, TRUE, pool, pool));
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  SVN_ERR(svn_wc__db_open(&db, NULL, TRUE, TRUE, pool, pool));
+  /* DB is now open. This is seemingly a "light" function that a caller
+     may use repeatedly despite error return values. The rest of this
+     function should aggressively close DB, even in the error case.  */
 
   err = svn_wc__text_base_path_to_read(pristine_path, db, local_abspath,
                                        pool, pool);
   if (err && err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
     {
+      /* The node doesn't exist, so return a non-existent path located
+         in WCROOT/.svn/  */
       const char *adm_abspath;
+
       svn_error_clear(err);
 
-      SVN_ERR(svn_wc__db_get_wcroot(&adm_abspath, db, local_abspath,
-                                    pool, pool));
-
-      *pristine_path = svn_wc__nonexistent_path(db, adm_abspath, pool);
-      return svn_error_return(svn_wc__db_close(db));
+      err = svn_wc__db_get_wcroot(&adm_abspath, db, local_abspath,
+                                  pool, pool);
+      if (err == NULL)
+        *pristine_path = svn_wc__nonexistent_path(db, adm_abspath, pool);
     }
-   SVN_ERR(err);
 
-  return svn_error_return(svn_wc__db_close(db));
+   return svn_error_compose_create(err, svn_wc__db_close(db));
 }
 
 svn_error_t *
