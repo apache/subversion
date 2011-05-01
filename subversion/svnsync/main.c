@@ -1466,8 +1466,8 @@ resolve_revnums(svn_revnum_t *start_revnum,
   if ((start_revision.kind == svn_opt_revision_unspecified) &&
       (end_revision.kind == svn_opt_revision_unspecified))
     {
-      start_rev = 0;
-      end_rev = SVN_INVALID_REVNUM;
+      *start_revnum = 0;
+      *end_revnum = SVN_INVALID_REVNUM;
       return SVN_NO_ERROR;
     }
 
