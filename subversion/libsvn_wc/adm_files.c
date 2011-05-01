@@ -624,13 +624,3 @@ svn_wc_create_tmp_file2(apr_file_t **fp,
 
   return SVN_NO_ERROR;
 }
-
-
-const char *
-svn_wc__nonexistent_path(svn_wc__db_t *db,
-                         const char *adm_abspath,
-                         apr_pool_t *scratch_pool)
-{
-  return svn_wc__adm_child(adm_abspath, SVN_WC__ADM_NONEXISTENT_PATH,
-                           scratch_pool);
-}
