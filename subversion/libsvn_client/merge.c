@@ -7849,14 +7849,10 @@ remove_noop_subtree_ranges(const char *url1,
                   svn_client__merge_path_t *);
   apr_array_header_t *requested_ranges;
   apr_array_header_t *subtree_gap_ranges;
-  apr_array_header_t *subtree_remaining_ranges =
-    apr_array_make(scratch_pool, 1, sizeof(svn_merge_range_t *));
-  apr_array_header_t *log_targets =
-    apr_array_make(scratch_pool, 1, sizeof(const char *));
-  apr_array_header_t *merged_ranges =
-    apr_array_make(scratch_pool, 0, sizeof(svn_revnum_t *));
-  apr_array_header_t *operative_ranges =
-    apr_array_make(scratch_pool, 0, sizeof(svn_revnum_t *));
+  apr_array_header_t *subtree_remaining_ranges;
+  apr_array_header_t *log_targets;
+  apr_array_header_t *merged_ranges;
+  apr_array_header_t *operative_ranges;
   log_noop_baton_t log_gap_baton;
   svn_merge_range_t *oldest_gap_rev;
   svn_merge_range_t *youngest_gap_rev;
