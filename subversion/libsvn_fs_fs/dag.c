@@ -126,7 +126,6 @@ copy_node_revision(node_revision_t *noderev,
   nr->copyfrom_rev = noderev->copyfrom_rev;
   nr->copyroot_path = apr_pstrdup(pool, noderev->copyroot_path);
   nr->copyroot_rev = noderev->copyroot_rev;
-  nr->predecessor_count = noderev->predecessor_count;
   nr->data_rep = svn_fs_fs__rep_copy(noderev->data_rep, pool);
   nr->prop_rep = svn_fs_fs__rep_copy(noderev->prop_rep, pool);
   nr->mergeinfo_count = noderev->mergeinfo_count;
