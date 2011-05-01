@@ -825,10 +825,10 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
                pool,
                _("--- Recording mergeinfo for reverse merge of r%ld through r%ld into '%s':\n"),
                n->merge_range->start, n->merge_range->end + 1, path_local);
+        }
 
       if (err)
         goto print_error;
-        }
       break;
 
     case svn_wc_notify_merge_elide_info:
