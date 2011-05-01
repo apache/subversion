@@ -1678,11 +1678,6 @@ delete_entry(const char *path,
    * a tree-conflict on a parent node. */
   if (!pb->shadowed)
     {
-      const char *their_relpath = repos_relpath;
-
-      if (eb->switch_relpath)
-        their_relpath = svn_relpath_join(pb->new_relpath, base, scratch_pool);
-
       SVN_ERR(check_tree_conflict(&tree_conflict, eb, local_abspath,
                                   status, kind, TRUE,
                                   svn_wc_conflict_action_delete, svn_node_none,
