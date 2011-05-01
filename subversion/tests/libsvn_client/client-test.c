@@ -650,7 +650,7 @@ test_16k_add(const svn_test_opts_t *opts,
                                &peg_rev, &rev, svn_depth_infinity,
                                TRUE, FALSE, ctx, pool));
 
-  for (i = 0; i < 040000; i++)
+  for (i = 0; i < 16384; i++)
     {
       const char *path;
 
