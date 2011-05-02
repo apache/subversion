@@ -127,7 +127,7 @@ public class Info implements java.io.Serializable
     /**
      * the checksum of the item
      */
-    private String checksum;
+    private Checksum checksum;
 
     /**
      * The name of the changelist.
@@ -186,7 +186,7 @@ public class Info implements java.io.Serializable
           String reposRootUrl, String reposUUID, long lastChangedRev,
           long lastChangedDate, String lastChangedAuthor, Lock lock,
           boolean hasWcInfo, ScheduleKind schedule, String copyFromUrl,
-          long copyFromRev, long textTime, String checksum,
+          long copyFromRev, long textTime, Checksum checksum,
           String changelistName, long workingSize, long reposSize, Depth depth,
           Set<ConflictDescriptor> conflict)
     {
@@ -351,7 +351,7 @@ public class Info implements java.io.Serializable
     /**
      * return the checksum of the item
      */
-    public String getChecksum()
+    public Checksum getChecksum()
     {
         return checksum;
     }
