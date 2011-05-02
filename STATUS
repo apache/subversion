@@ -270,6 +270,7 @@ Candidate changes:
    Justification:
      Same as for trunk: clarification that "1.6.17 (dev build)" is actually a
      off-the-branch build and not a blessed release.
+     http://mid.gmane.org/25D5DB7A-AD59-4B48-8BA1-2D3D034C4C7A@ryandesign.com
    Votes: 
      +1: danielsh (r1084575 only)
 
