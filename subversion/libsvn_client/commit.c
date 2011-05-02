@@ -1355,7 +1355,7 @@ svn_client_commit5(const apr_array_header_t *targets,
   cmt_err = svn_error_return(
             svn_client__do_commit(base_url, commit_items, editor, edit_baton,
                                   notify_prefix, NULL,
-                                  &sha1_checksums, ctx, pool));
+                                  &sha1_checksums, ctx, iterpool));
 
   /* Handle a successful commit. */
   if ((! cmt_err)
