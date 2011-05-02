@@ -2272,7 +2272,7 @@ close_directory(void *dir_baton,
   apr_hash_t *base_props;
   apr_hash_t *actual_props;
   apr_hash_t *new_base_props = NULL, *new_actual_props = NULL;
-  svn_revnum_t new_changed_rev;
+  svn_revnum_t new_changed_rev = SVN_INVALID_REVNUM;
   apr_time_t new_changed_date;
   const char *new_changed_author;
   apr_pool_t *scratch_pool = db->pool;
