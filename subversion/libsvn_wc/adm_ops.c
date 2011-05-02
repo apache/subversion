@@ -224,10 +224,13 @@ process_committed_leaf(svn_wc__db_t *db,
       */
 
       /* ### GJS: wtf is the following comment about?  */
-      /* ### If we can determine that nothing below this node was changed
-         ### via this commit, we should keep new_changed_rev at its old
-         ### value, like how we handle files. */
-
+      /* ### Issue #3676: If we can determine that nothing below this node was
+         ### changed via this commit, we should keep new_changed_rev at its old
+         ### value, like how we handle files.
+         ###
+         ### On a clean checkout the last changed rev of the directory is the
+         ### latest revision any of the descendants or the node itself was
+         ### changed. */
       if (have_base && !have_work
           && prop_mods && had_props
           && old_externals)
