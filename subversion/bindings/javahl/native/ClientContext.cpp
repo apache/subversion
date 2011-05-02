@@ -87,8 +87,8 @@ ClientContext::ClientContext(jobject jsvnclient)
     persistentCtx->notify_baton2 = m_jctx;
     persistentCtx->progress_func = progress;
     persistentCtx->progress_baton = m_jctx;
-    persistentCtx->conflict_func2 = resolve;
-    persistentCtx->conflict_baton2 = m_jctx;
+    persistentCtx->conflict_func = resolve;
+    persistentCtx->conflict_baton = m_jctx;
 }
 
 ClientContext::~ClientContext()
@@ -348,7 +348,7 @@ ClientContext::progress(apr_off_t progressVal, apr_off_t total,
 
 svn_error_t *
 ClientContext::resolve(svn_wc_conflict_result_t **result,
-                       const svn_wc_conflict_description2_t *desc,
+                       const svn_wc_conflict_description_t *desc,
                        void *baton,
                        apr_pool_t *pool)
 {
