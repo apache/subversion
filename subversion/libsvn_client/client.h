@@ -887,7 +887,8 @@ svn_client__condense_commit_items(const char **base_url,
    char *) path to the (const svn_checksum_t *) MD5 checksum of its new text
    base.  Similarly for SHA1_CHECKSUMS.
 
-   Use POOL for all allocations.
+   Use RESULT_POOL for all allocating the resulting hashes and SCRATCH_POOL
+   for temporary allocations.
    */
 svn_error_t *
 svn_client__do_commit(const char *base_url,
@@ -898,7 +899,8 @@ svn_client__do_commit(const char *base_url,
                       apr_hash_t **md5_checksums,
                       apr_hash_t **sha1_checksums,
                       svn_client_ctx_t *ctx,
-                      apr_pool_t *pool);
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool);
 
 
 

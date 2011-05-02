@@ -1389,7 +1389,7 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
   SVN_ERR_W(svn_client__do_commit(top_dst_url, commit_items,
                                   editor, edit_baton,
                                   0, /* ### any notify_path_offset needed? */
-                                  NULL, NULL, ctx, pool),
+                                  NULL, NULL, ctx, pool, pool),
             _("Commit failed (details follow):"));
 
   /* Sleep to ensure timestamp integrity. */
