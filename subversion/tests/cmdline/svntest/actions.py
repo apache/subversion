@@ -226,7 +226,7 @@ def run_and_verify_svnadmin2(message, expected_stdout, expected_stderr,
   return exit_code, out, err
 
 
-def run_and_verify_svnversion(message, wc_dir, repo_url,
+def run_and_verify_svnversion(message, wc_dir, trail_url,
                               expected_stdout, expected_stderr, *varargs):
   """like run_and_verify_svnversion2, but the expected exit code is
   assumed to be 0 if no output is expected on stderr, and 1 otherwise."""
@@ -234,16 +234,20 @@ def run_and_verify_svnversion(message, wc_dir, repo_url,
   expected_exit = 0
   if expected_stderr is not None and expected_stderr != []:
     expected_exit = 1
-  return run_and_verify_svnversion2(message, wc_dir, repo_url,
+  return run_and_verify_svnversion2(message, wc_dir, trail_url,
                                     expected_stdout, expected_stderr,
                                     expected_exit, *varargs)
 
-def run_and_verify_svnversion2(message, wc_dir, repo_url,
+def run_and_verify_svnversion2(message, wc_dir, trail_url,
                                expected_stdout, expected_stderr,
                                expected_exit, *varargs):
   """Run svnversion command and check its output and exit code."""
 
-  exit_code, out, err = main.run_svnversion(wc_dir, repo_url, *varargs)
+  if trail_url is None:
+    exit_code, out, err = main.run_svnversion(wc_dir, *varargs)
+  else:
+    exit_code, out, err = main.run_svnversion(wc_dir, trail_url, *varargs)
+
   verify.verify_outputs("Unexpected output", out, err,
                         expected_stdout, expected_stderr)
   verify.verify_exit_code(message, exit_code, expected_exit)
