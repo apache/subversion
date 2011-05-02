@@ -178,6 +178,53 @@ CreateJ::ConflictVersion(const svn_wc_conflict_version_t *version)
 }
 
 jobject
+CreateJ::Checksum(const svn_checksum_t *checksum)
+{
+  if (!checksum)
+    return NULL;
+
+  JNIEnv *env = JNIUtil::getEnv();
+
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  jclass clazz = env->FindClass(JAVA_PACKAGE"/types/Checksum");
+  if (JNIUtil::isExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  // Get the method id for the CommitItem constructor.
+  static jmethodID midConstructor = 0;
+  if (midConstructor == 0)
+    {
+      midConstructor = env->GetMethodID(clazz, "<init>",
+                                        "([B"
+                                        "L"JAVA_PACKAGE"/types/Checksum$Kind;"
+                                        ")V");
+      if (JNIUtil::isExceptionThrown())
+        POP_AND_RETURN_NULL;
+    }
+
+  jbyteArray jdigest = JNIUtil::makeJByteArray(
+                            (const signed char *)checksum->digest,
+                            svn_checksum_size(checksum));
+  if (JNIUtil::isExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  jobject jkind = EnumMapper::mapChecksumKind(checksum->kind);
+  if (JNIUtil::isExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  // create the Java object
+  jobject jchecksum = env->NewObject(clazz, midConstructor, jdigest, jkind);
+  if (JNIUtil::isExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  return env->PopLocalFrame(jchecksum);
+}
+
+jobject
 CreateJ::Info(const char *path, const svn_info2_t *info)
 {
   JNIEnv *env = JNIUtil::getEnv();
@@ -202,7 +249,8 @@ CreateJ::Info(const char *path, const svn_info2_t *info)
                              "JJLjava/lang/String;"
                              "L"JAVA_PACKAGE"/types/Lock;Z"
                              "L"JAVA_PACKAGE"/types/Info$ScheduleKind;"
-                             "Ljava/lang/String;JJLjava/lang/String;"
+                             "Ljava/lang/String;JJ"
+                             "L"JAVA_PACKAGE"/types/Checksum;"
                              "Ljava/lang/String;JJ"
                              "L"JAVA_PACKAGE"/types/Depth;Ljava/util/Set;)V");
       if (mid == 0 || JNIUtil::isJavaExceptionThrown())
@@ -215,7 +263,7 @@ CreateJ::Info(const char *path, const svn_info2_t *info)
 
   jstring jwcroot = NULL;
   jstring jcopyFromUrl = NULL;
-  jstring jchecksum = NULL;
+  jobject jchecksum = NULL;
   jstring jchangelist = NULL;
   jobject jconflicts = NULL;
   jobject jscheduleKind = NULL;
@@ -233,7 +281,7 @@ CreateJ::Info(const char *path, const svn_info2_t *info)
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
 
-      jchecksum = JNIUtil::makeJString(info->wc_info->checksum);
+      jchecksum = Checksum(info->wc_info->checksum);
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
 

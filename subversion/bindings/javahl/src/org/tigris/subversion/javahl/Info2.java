@@ -346,7 +346,8 @@ public class Info2 implements java.io.Serializable
              aInfo.getCopyFromUrl(), aInfo.getCopyFromRev(),
              aInfo.getTextTime() == null ? 0
                 : aInfo.getTextTime().getTime() * 1000,
-             0, aInfo.getChecksum(),
+             0, aInfo.getChecksum() == null ? null
+                    : new String(aInfo.getChecksum().getDigest()),
              getConflictOld(aInfo.getConflicts()),
              getConflictNew(aInfo.getConflicts()),
              getConflictWrk(aInfo.getConflicts()),

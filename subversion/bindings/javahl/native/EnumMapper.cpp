@@ -145,6 +145,12 @@ jobject EnumMapper::mapStatusKind(svn_wc_status_kind svnKind)
   return mapEnum(JAVA_PACKAGE"/types/Status$Kind", ((int) svnKind) - 1);
 }
 
+jobject EnumMapper::mapChecksumKind(svn_checksum_kind_t kind)
+{
+  // We're assuming a valid value for the C enum above
+  return mapEnum(JAVA_PACKAGE"/types/Checksum$Kind", (int) kind);
+}
+
 jobject EnumMapper::mapConflictKind(svn_wc_conflict_kind_t kind)
 {
   // We're assuming a valid value for the C enum above

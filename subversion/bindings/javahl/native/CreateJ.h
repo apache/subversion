@@ -46,6 +46,9 @@ class CreateJ
   ConflictDescriptor(const svn_wc_conflict_description2_t *desc);
 
   static jobject
+  Checksum(const svn_checksum_t *checksum);
+
+  static jobject
   Info(const char *path, const svn_info2_t *info);
 
   static jobject
