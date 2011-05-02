@@ -1339,7 +1339,7 @@ find_merged_revisions(apr_array_header_t **merged_path_revisions_out,
 
 struct send_baton
 {
-  apr_pool_t *iter_pool;
+  apr_pool_t *iterpool;
   apr_pool_t *last_pool;
   apr_hash_t *last_props;
   const char *last_path;
@@ -1365,28 +1365,28 @@ send_path_revision(struct path_revision *path_rev,
   apr_pool_t *tmp_pool;  /* For swapping */
   svn_boolean_t contents_changed;
 
-  svn_pool_clear(sb->iter_pool);
+  svn_pool_clear(sb->iterpool);
 
   /* Get the revision properties. */
   SVN_ERR(svn_fs_revision_proplist(&rev_props, repos->fs,
-                                   path_rev->revnum, sb->iter_pool));
+                                   path_rev->revnum, sb->iterpool));
 
   /* Open the revision root. */
   SVN_ERR(svn_fs_revision_root(&root, repos->fs, path_rev->revnum,
-                               sb->iter_pool));
+                               sb->iterpool));
 
   /* Get the file's properties for this revision and compute the diffs. */
   SVN_ERR(svn_fs_node_proplist(&props, root, path_rev->path,
-                                   sb->iter_pool));
+                                   sb->iterpool));
   SVN_ERR(svn_prop_diffs(&prop_diffs, props, sb->last_props,
-                         sb->iter_pool));
+                         sb->iterpool));
 
   /* Check if the contents changed. */
   /* Special case: In the first revision, we always provide a delta. */
   if (sb->last_root)
     SVN_ERR(svn_fs_contents_changed(&contents_changed, sb->last_root,
                                     sb->last_path, root, path_rev->path,
-                                    sb->iter_pool));
+                                    sb->iterpool));
   else
     contents_changed = TRUE;
 
@@ -1395,7 +1395,7 @@ send_path_revision(struct path_revision *path_rev,
                   rev_props, path_rev->merged,
                   contents_changed ? &delta_handler : NULL,
                   contents_changed ? &delta_baton : NULL,
-                  prop_diffs, sb->iter_pool));
+                  prop_diffs, sb->iterpool));
 
   /* Compute and send delta if client asked for it.
      Note that this was initialized to NULL, so if !contents_changed,
@@ -1406,11 +1406,11 @@ send_path_revision(struct path_revision *path_rev,
       SVN_ERR(svn_fs_get_file_delta_stream(&delta_stream,
                                            sb->last_root, sb->last_path,
                                            root, path_rev->path,
-                                           sb->iter_pool));
+                                           sb->iterpool));
       /* And send. */
       SVN_ERR(svn_txdelta_send_txstream(delta_stream,
                                         delta_handler, delta_baton,
-                                        sb->iter_pool));
+                                        sb->iterpool));
     }
 
   /* Remember root, path and props for next iteration. */
@@ -1419,8 +1419,8 @@ send_path_revision(struct path_revision *path_rev,
   sb->last_props = props;
 
   /* Swap the pools. */
-  tmp_pool = sb->iter_pool;
-  sb->iter_pool = sb->last_pool;
+  tmp_pool = sb->iterpool;
+  sb->iterpool = sb->last_pool;
   sb->last_pool = tmp_pool;
 
   return SVN_NO_ERROR;
@@ -1485,7 +1485,7 @@ svn_repos_get_file_revs2(svn_repos_t *repos,
 
   /* We switch betwwen two pools while looping, since we need information from
      the last iteration to be available. */
-  sb.iter_pool = svn_pool_create(pool);
+  sb.iterpool = svn_pool_create(pool);
   sb.last_pool = svn_pool_create(pool);
 
   /* We want the first txdelta to be against the empty file. */
@@ -1542,7 +1542,7 @@ svn_repos_get_file_revs2(svn_repos_t *repos,
     }
 
   svn_pool_destroy(sb.last_pool);
-  svn_pool_destroy(sb.iter_pool);
+  svn_pool_destroy(sb.iterpool);
 
   return SVN_NO_ERROR;
 }
