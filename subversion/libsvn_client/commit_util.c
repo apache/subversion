@@ -1464,30 +1464,31 @@ svn_client__do_commit(const char *base_url,
                       apr_hash_t **md5_checksums,
                       apr_hash_t **sha1_checksums,
                       svn_client_ctx_t *ctx,
-                      apr_pool_t *pool)
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
 {
-  apr_hash_t *file_mods = apr_hash_make(pool);
-  apr_hash_t *items_hash = apr_hash_make(pool);
-  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_hash_t *file_mods = apr_hash_make(scratch_pool);
+  apr_hash_t *items_hash = apr_hash_make(scratch_pool);
+  apr_pool_t *iter_pool = svn_pool_create(scratch_pool);
   apr_hash_index_t *hi;
   int i;
   struct path_driver_cb_baton cb_baton;
   apr_array_header_t *paths =
-    apr_array_make(pool, commit_items->nelts, sizeof(const char *));
+    apr_array_make(scratch_pool, commit_items->nelts, sizeof(const char *));
 
 #ifdef SVN_CLIENT_COMMIT_DEBUG
   {
     SVN_ERR(get_test_editor(&editor, &edit_baton,
                             editor, edit_baton,
-                            base_url, pool));
+                            base_url, scratch_pool));
   }
 #endif /* SVN_CLIENT_COMMIT_DEBUG */
 
   /* Ditto for the checksums. */
   if (md5_checksums)
-    *md5_checksums = apr_hash_make(pool);
+    *md5_checksums = apr_hash_make(result_pool);
   if (sha1_checksums)
-    *sha1_checksums = apr_hash_make(pool);
+    *sha1_checksums = apr_hash_make(result_pool);
 
   /* Build a hash from our COMMIT_ITEMS array, keyed on the
      URI-decoded relative paths (which come from the item URLs).  And
@@ -1496,7 +1497,7 @@ svn_client__do_commit(const char *base_url,
     {
       svn_client_commit_item3_t *item =
         APR_ARRAY_IDX(commit_items, i, svn_client_commit_item3_t *);
-      const char *path = svn_path_uri_decode(item->url, pool);
+      const char *path = svn_path_uri_decode(item->url, scratch_pool);
       apr_hash_set(items_hash, path, APR_HASH_KEY_STRING, item);
       APR_ARRAY_PUSH(paths, const char *) = path;
     }
@@ -1511,10 +1512,13 @@ svn_client__do_commit(const char *base_url,
 
   /* Drive the commit editor! */
   SVN_ERR(svn_delta_path_driver(editor, edit_baton, SVN_INVALID_REVNUM,
-                                paths, do_item_commit, &cb_baton, pool));
+                                paths, do_item_commit, &cb_baton,
+                                scratch_pool));
 
   /* Transmit outstanding text deltas. */
-  for (hi = apr_hash_first(pool, file_mods); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(scratch_pool, file_mods);
+       hi;
+       hi = apr_hash_next(hi))
     {
       struct file_mod_t *mod = svn__apr_hash_index_val(hi);
       const svn_client_commit_item3_t *item = mod->item;
@@ -1522,7 +1526,7 @@ svn_client__do_commit(const char *base_url,
       const svn_checksum_t *new_text_base_sha1_checksum;
       svn_boolean_t fulltext = FALSE;
 
-      svn_pool_clear(iterpool);
+      svn_pool_clear(iter_pool);
 
       /* Transmit the entry. */
       if (ctx->cancel_func)
@@ -1533,10 +1537,10 @@ svn_client__do_commit(const char *base_url,
           svn_wc_notify_t *notify;
           notify = svn_wc_create_notify(item->path,
                                         svn_wc_notify_commit_postfix_txdelta,
-                                        iterpool);
+                                        iter_pool);
           notify->kind = svn_node_file;
           notify->path_prefix = notify_path_prefix;
-          ctx->notify_func2(ctx->notify_baton2, notify, iterpool);
+          ctx->notify_func2(ctx->notify_baton2, notify, iter_pool);
         }
 
       /* If the node has no history, transmit full text */
@@ -1548,7 +1552,7 @@ svn_client__do_commit(const char *base_url,
                                            &new_text_base_sha1_checksum,
                                            ctx->wc_ctx, item->path,
                                            fulltext, editor, mod->file_baton,
-                                           pool, iterpool));
+                                           result_pool, iter_pool));
       if (md5_checksums)
         apr_hash_set(*md5_checksums, item->path, APR_HASH_KEY_STRING,
                      new_text_base_md5_checksum);
@@ -1557,10 +1561,10 @@ svn_client__do_commit(const char *base_url,
                      new_text_base_sha1_checksum);
     }
 
-  svn_pool_destroy(iterpool);
+  svn_pool_destroy(iter_pool);
 
   /* Close the edit. */
-  return editor->close_edit(edit_baton, pool);
+  return editor->close_edit(edit_baton, scratch_pool);
 }
 
 
