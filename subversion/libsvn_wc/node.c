@@ -1326,30 +1326,6 @@ svn_wc__get_mergeinfo_walk_info(svn_boolean_t *is_present,
 }
 
 svn_error_t *
-svn_wc__node_depth_is_exclude(svn_boolean_t *exclude,
-                              svn_wc_context_t *wc_ctx,
-                              const char *local_abspath,
-                              apr_pool_t *scratch_pool)
-{
-  svn_wc__db_status_t status;
-  svn_error_t *err;
-  
-  *exclude = FALSE;
-
-  err = svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL,
-                             wc_ctx->db, local_abspath, scratch_pool,
-                             scratch_pool);
-
-  if ((! err) && (status == svn_wc__db_status_excluded))
-    *exclude = TRUE;
-
-  return svn_error_return(err);
-}
-
-svn_error_t *
 svn_wc__node_clear_dav_cache_recursive(svn_wc_context_t *wc_ctx,
                                        const char *local_abspath,
                                        apr_pool_t *scratch_pool)
