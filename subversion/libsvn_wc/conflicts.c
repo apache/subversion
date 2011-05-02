@@ -354,7 +354,7 @@ resolve_one_conflict(svn_wc__db_t *db,
   const apr_array_header_t *conflicts;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   int i;
-  svn_boolean_t resolved;
+  svn_boolean_t resolved = FALSE;
 
   SVN_ERR(svn_wc__db_read_conflicts(&conflicts, db, local_abspath,
                                     scratch_pool, iterpool));
