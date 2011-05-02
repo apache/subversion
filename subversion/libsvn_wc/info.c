@@ -66,10 +66,6 @@ build_info_for_entry(svn_info2_t **info,
   tmpinfo = apr_pcalloc(result_pool, sizeof(*tmpinfo));
   tmpinfo->kind = kind;
 
-  /* ### This is dangerous, though temporary.  Per the docstring, we shouldn't
-     ### be alloc'ing this struct directly, but let libsvn_wc do it.  Nowhere
-     ### in libsvn_wc do we currently alloc this struct, so we do it here.
-     ### All this code will shortly move to libsvn_wc, anyway. */
   tmpinfo->wc_info = apr_pcalloc(result_pool, sizeof(*tmpinfo->wc_info));
 
   SVN_ERR(svn_wc__node_get_origin(&is_copy, &rev, &repos_relpath,
