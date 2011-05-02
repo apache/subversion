@@ -947,6 +947,8 @@ check_nonrecursive_dir_delete(svn_wc_context_t *wc_ctx,
 {
   svn_node_kind_t kind;
 
+  SVN_ERR_ASSERT(depth != svn_depth_infinity);
+
   SVN_ERR(svn_wc_read_kind(&kind, wc_ctx, target_abspath, FALSE,
                            scratch_pool));
 
@@ -966,38 +968,43 @@ check_nonrecursive_dir_delete(svn_wc_context_t *wc_ctx,
      ###
      ### This would be fairly easy to fix, though: just, well,
      ### check the above conditions!
+     ###
+     ### GJS: I think there may be some confusion here. there is
+     ###      the depth of the commit, and the depth of a checked-out
+     ###      directory in the working copy. Delete, by its nature, will
+     ###      always delete all of its children, so it seems a bit
+     ###      strange to worry about what is in the working copy.
   */
-  if (depth != svn_depth_infinity)
+  if (kind == svn_node_dir)
     {
-      if (kind == svn_node_dir)
+      svn_wc_schedule_t schedule;
+
+      /* ### Looking at schedule is probably enough, no need for
+         pristine compare etc. */
+      SVN_ERR(svn_wc__node_get_schedule(&schedule, NULL,
+                                        wc_ctx, target_abspath,
+                                        scratch_pool));
+
+      if (schedule == svn_wc_schedule_delete
+          || schedule == svn_wc_schedule_replace)
         {
-          svn_wc_schedule_t schedule;
+          const apr_array_header_t *children;
 
-          /* ### Looking at schedule is probably enough, no need for
-                 pristine compare etc. */
-          SVN_ERR(svn_wc__node_get_schedule(&schedule, NULL,
-                                            wc_ctx, target_abspath,
-                                            scratch_pool));
+          SVN_ERR(svn_wc__node_get_children(&children, wc_ctx,
+                                            target_abspath, TRUE,
+                                            scratch_pool, scratch_pool));
 
-          if (schedule == svn_wc_schedule_delete
-              || schedule == svn_wc_schedule_replace)
-            {
-              const apr_array_header_t *children;
-
-              SVN_ERR(svn_wc__node_get_children(&children, wc_ctx,
-                                                target_abspath, TRUE,
-                                                scratch_pool, scratch_pool));
-
-              if (children->nelts > 0)
-                return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+          if (children->nelts > 0)
+            return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                                     _("Cannot non-recursively commit a "
                                       "directory deletion of a directory "
                                       "with child nodes"));
-            }
         }
     }
+
   return SVN_NO_ERROR;
 }
+
 
 /* Given a list of committables described by their common base abspath
    BASE_ABSPATH and a list of relative dirents TARGET_RELPATHS determine
@@ -1119,6 +1126,7 @@ determine_lock_targets(apr_array_header_t **lock_targets,
   return SVN_NO_ERROR;
 }
 
+
 svn_error_t *
 svn_client_commit5(const apr_array_header_t *targets,
                    svn_depth_t depth,
@@ -1154,6 +1162,8 @@ svn_client_commit5(const apr_array_header_t *targets,
   const char *current_abspath;
   const char *notify_prefix;
   int i;
+
+  SVN_ERR_ASSERT(depth != svn_depth_unknown && depth != svn_depth_exclude);
 
   /* Committing URLs doesn't make sense, so error if it's tried. */
   for (i = 0; i < targets->nelts; i++)
@@ -1211,25 +1221,30 @@ svn_client_commit5(const apr_array_header_t *targets,
                                                   pool);
 
   /* If a non-recursive commit is desired, do not allow a deleted directory 
-     as one of the targets.   ### Why? With WC-NG there is no technical
-                                  reason to deny this and the caller
-                                  explicitly send us the target? */
-  for (i = 0; i < rel_targets->nelts; i++)
-    {
-      const char *relpath = APR_ARRAY_IDX(rel_targets, i, const char *);
-      const char *target_abspath;
+     as one of the targets.
 
-      svn_pool_clear(iterpool);
+     ### Why? With WC-NG there is no technical reason to deny this and the
+     ### caller explicitly send us the target?
+     ###
+     ### GJS: see my comment in check_nonrecursive_dir_delete(). I think
+     ###      there may be some confusion around the DEPTH param.  */
+  if (depth != svn_depth_infinity)
+    for (i = 0; i < rel_targets->nelts; i++)
+      {
+        const char *relpath = APR_ARRAY_IDX(rel_targets, i, const char *);
+        const char *target_abspath;
 
-      target_abspath = svn_dirent_join(base_abspath, relpath, iterpool);
+        svn_pool_clear(iterpool);
 
-      cmt_err = svn_error_return(
-                    check_nonrecursive_dir_delete(ctx->wc_ctx, target_abspath,
-                                                  depth, iterpool));
+        target_abspath = svn_dirent_join(base_abspath, relpath, iterpool);
 
-      if (cmt_err)
-        goto cleanup;
-    }
+        cmt_err = svn_error_return(
+          check_nonrecursive_dir_delete(ctx->wc_ctx, target_abspath,
+                                        depth, iterpool));
+
+        if (cmt_err)
+          goto cleanup;
+      }
 
   /* Crawl the working copy for commit items. */
   cmt_err = svn_error_return(
@@ -1362,27 +1377,27 @@ svn_client_commit5(const apr_array_header_t *targets,
             = APR_ARRAY_IDX(commit_items, i, svn_client_commit_item3_t *);
 
           svn_pool_clear(iterpool);
-          bump_err = post_process_commit_item(queue, item, ctx->wc_ctx,
-                                              keep_changelists, keep_locks,
-                                              apr_hash_get(sha1_checksums,
-                                                           item->path,
-                                                           APR_HASH_KEY_STRING),
-                                              iterpool);
+          bump_err = post_process_commit_item(
+                       queue, item, ctx->wc_ctx,
+                       keep_changelists, keep_locks,
+                       apr_hash_get(sha1_checksums,
+                                    item->path,
+                                    APR_HASH_KEY_STRING),
+                       iterpool);
           if (bump_err)
             goto cleanup;
         }
 
       SVN_ERR_ASSERT(commit_info);
-      bump_err
-        = svn_wc_process_committed_queue2(queue, ctx->wc_ctx,
-                                         commit_info->revision,
-                                         commit_info->date,
-                                         commit_info->author,
-                                         svn_client__external_info_gatherer,
-                                         &efb,
-                                         ctx->cancel_func,
-                                         ctx->cancel_baton,
-                                         iterpool);
+      bump_err = svn_wc_process_committed_queue2(
+                   queue, ctx->wc_ctx,
+                   commit_info->revision,
+                   commit_info->date,
+                   commit_info->author,
+                   svn_client__external_info_gatherer,
+                   &efb,
+                   ctx->cancel_func, ctx->cancel_baton,
+                   iterpool);
 
       if (apr_hash_count(efb.externals_old))
         {
@@ -1428,5 +1443,6 @@ svn_client_commit5(const apr_array_header_t *targets,
 
   svn_pool_destroy(iterpool);
 
-  return reconcile_errors(cmt_err, unlock_err, bump_err, pool);
+  return svn_error_return(reconcile_errors(cmt_err, unlock_err, bump_err,
+                                           pool));
 }
