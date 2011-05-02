@@ -7134,6 +7134,57 @@ determine_repos_info(apr_int64_t *repos_id,
   return SVN_NO_ERROR;
 }
 
+#ifdef SVN_WC__EXPERIMENTAL_DESCENDANT_COMMIT
+/* Moves all nodes below PARENT_LOCAL_RELPATH from op-depth OP_DEPTH to
+   op-depth 0 (BASE), setting their presence to 'excluded' if their presence
+   wasn't 'normal'. */
+static svn_error_t *
+descendant_commit(svn_wc__db_wcroot_t *wcroot,
+                  const char *parent_local_relpath,
+                  apr_int64_t op_depth,
+                  apr_int64_t repos_id,
+                  const char *parent_repos_relpath,
+                  svn_revnum_t revision,
+                  apr_pool_t *scratch_pool)
+{
+  const apr_array_header_t *children;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  svn_sqlite__stmt_t *stmt;
+  int i;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_COMMIT_DESCENDANT_TO_BASE));
+
+  SVN_ERR(gather_repo_children(&children, wcroot, parent_local_relpath, 
+                               op_depth, scratch_pool, iterpool));
+
+  for (i = 0; i < children->nelts; i++)
+    {
+      const char *local_relpath;
+      const char *repos_relpath;
+      const char *name = APR_ARRAY_IDX(children, i, const char *);
+
+      svn_pool_clear(iterpool);
+
+      local_relpath = svn_relpath_join(parent_local_relpath, name, iterpool);
+      repos_relpath = svn_relpath_join(parent_repos_relpath, name, iterpool);
+      SVN_ERR(svn_sqlite__bindf(stmt, "isiisi",
+                                wcroot->wc_id,
+                                local_relpath,
+                                op_depth,
+                                repos_id,
+                                repos_relpath,
+                                (apr_int64_t)revision));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+
+      SVN_ERR(descendant_commit(wcroot, local_relpath, op_depth, repos_id,
+                                repos_relpath, revision, iterpool));
+    }
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+#endif
 
 struct commit_baton_t {
   svn_revnum_t new_revision;
@@ -7275,6 +7326,12 @@ commit_node(void *baton,
 
           SVN_ERR(svn_sqlite__step_done(stmt));
         }
+
+#ifdef SVN_WC__EXPERIMENTAL_DESCENDANT_COMMIT
+      SVN_ERR(descendant_commit(wcroot, local_relpath, op_depth,
+                                repos_id, repos_relpath, cb->new_revision,
+                                scratch_pool));
+#endif
     }
 
   /* Update or add the BASE_NODE row with all the new information.  */
