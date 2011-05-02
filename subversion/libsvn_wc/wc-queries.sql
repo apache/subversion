@@ -170,6 +170,16 @@ WHERE wc_id = ?1
   AND (op_depth < ?3
        OR (op_depth = ?3 AND presence = 'base-deleted'))
 
+-- STMT_COMMIT_DESCENDANT_TO_BASE
+UPDATE NODES SET op_depth = 0, repos_id = ?4, repos_path = ?5, revision = ?6,
+  moved_here = NULL, moved_to = NULL, dav_cache = NULL,
+  presence = CASE WHEN presence IN ('not-present', 'excluded')
+                       AND EXISTS(SELECT 1 FROM NODES WHERE wc_id = ?1 
+                                   AND local_relpath = ?2 AND op_depth > ?3)
+                  THEN 'excluded' ELSE presence END
+WHERE wc_id = ?1 AND local_relpath = ?2 and op_depth = ?3
+  AND presence IN ('normal', 'excluded', 'not-present')
+
 -- STMT_SELECT_NODE_CHILDREN
 /* Return all paths that are children of the directory (?1, ?2) in any
    op-depth, including children of any underlying, replaced directories. */

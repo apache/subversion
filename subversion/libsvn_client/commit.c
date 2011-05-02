@@ -924,6 +924,9 @@ post_process_commit_item(svn_wc_committed_queue_t *queue,
   svn_boolean_t loop_recurse = FALSE;
   svn_boolean_t remove_lock;
 
+  /* The following condition can be disabled (keeping loop_recurse FALSE), when
+     the SVN_WC__EXPERIMENTAL_DESCENDANT_COMMIT flag in libsvn_wc/wc.db is
+     enabled */
   if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
       && (item->kind == svn_node_dir)
       && (item->copyfrom_url))

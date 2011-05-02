@@ -156,13 +156,26 @@ process_committed_leaf(svn_wc__db_t *db,
       return svn_error_return(
                 svn_wc__db_op_remove_node(
                                 db, local_abspath, 
-                                have_base ? new_revnum : SVN_INVALID_REVNUM,
+                                (have_base && !via_recurse)
+                                    ? new_revnum : SVN_INVALID_REVNUM,
+                                kind,
+                                scratch_pool));
+    }
+  else if (status == svn_wc__db_status_not_present)
+    {
+      /* We are committing the leaf of a copy operation.
+         It is safe to remove this leaf now */
+      return svn_error_return(
+                svn_wc__db_op_remove_node(
+                                db, local_abspath,
+                                (have_base && !via_recurse)
+                                    ? new_revnum : SVN_INVALID_REVNUM,
                                 kind,
                                 scratch_pool));
     }
 
-  if (status == svn_wc__db_status_not_present)
-    return SVN_NO_ERROR; /* Why does this get here? */
+  SVN_ERR_ASSERT(status == svn_wc__db_status_normal
+                 || status == svn_wc__db_status_added);
 
   if (kind != svn_wc__db_kind_dir)
     {
