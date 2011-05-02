@@ -164,7 +164,6 @@ process_committed_leaf(svn_wc__db_t *db,
   if (status == svn_wc__db_status_not_present)
     return SVN_NO_ERROR; /* Why does this get here? */
 
-
   if (kind != svn_wc__db_kind_dir)
     {
       /* If we sent a delta (meaning: post-copy modification),
@@ -208,9 +207,27 @@ process_committed_leaf(svn_wc__db_t *db,
     }
   else
     {
+      /* ### if this is a copy op root, then we should fold the entire
+         ### layer down into BASE. later child mods will apply against
+         ### that new BASE tree. ... this is important to ensure that
+         ### we don't have a copy-child listed within an op-root that no
+         ### longer exists when we commit this specific node.
+         ###
+         ### note that we will need to adjust the caller's process to
+         ### avoid a "commit" on a copied child that has already been
+         ### collapsed by the commit of the op root. BUT: we also need
+         ### to deal with modified children of the copy (text+props)
+         ### which do not appear within the tree structure changes of
+         ### the NODES table. text changes need to shift the checksum
+         ### value, and prop changes need to shift the properties column
+         ### from the ACTUAL_NODE table.
+      */
+
+      /* ### GJS: wtf is the following comment about?  */
       /* ### If we can determine that nothing below this node was changed
          ### via this commit, we should keep new_changed_rev at its old
          ### value, like how we handle files. */
+
       if (have_base && !have_work
           && prop_mods && had_props
           && old_externals)
@@ -277,6 +294,9 @@ svn_wc__process_committed_internal(svn_wc__db_t *db,
 {
   svn_wc__db_kind_t kind;
 
+  /* NOTE: be wary of making crazy semantic changes in this function, since
+     svn_wc_process_committed4() calls this.  */
+
   SVN_ERR(process_committed_leaf(db, local_abspath, !top_of_recurse,
                                  new_revnum, new_date, rev_author,
                                  new_dav_cache,
@@ -324,39 +344,38 @@ svn_wc__process_committed_internal(svn_wc__db_t *db,
             continue;
 
           sha1_checksum = NULL;
-          if (kind != svn_wc__db_kind_dir)
+          if (kind != svn_wc__db_kind_dir && queue != NULL)
             {
-              if (queue != NULL)
-                {
-                  const committed_queue_item_t *cqi
-                    = apr_hash_get(queue->queue, this_abspath,
-                                   APR_HASH_KEY_STRING);
+              const committed_queue_item_t *cqi;
 
-                  if (cqi != NULL)
-                    {
-                      sha1_checksum = cqi->sha1_checksum;
-                    }
+              cqi = apr_hash_get(queue->queue, this_abspath,
+                                 APR_HASH_KEY_STRING);
+              if (cqi != NULL)
+                {
+                  sha1_checksum = cqi->sha1_checksum;
                 }
             }
 
           /* Recurse.  Pass NULL for NEW_DAV_CACHE, because the
              ones present in the current call are only applicable to
              this one committed item. */
-          SVN_ERR(svn_wc__process_committed_internal(db, this_abspath,
-                                                     TRUE /* recurse */,
-                                                     FALSE,
-                                                     new_revnum, new_date,
-                                                     rev_author,
-                                                     NULL,
-                                                     TRUE /* no_unlock */,
-                                                     keep_changelist,
-                                                     sha1_checksum,
-                                                     queue,
-                                                     old_externals,
-                                                     iterpool));
+          SVN_ERR(svn_wc__process_committed_internal(
+                    db, this_abspath,
+                    TRUE /* recurse */,
+                    FALSE /* top_of_recurse */,
+                    new_revnum, new_date,
+                    rev_author,
+                    NULL /* new_dav_cache */,
+                    TRUE /* no_unlock */,
+                    keep_changelist,
+                    sha1_checksum,
+                    queue,
+                    old_externals,
+                    iterpool));
         }
+
       svn_pool_destroy(iterpool);
-   }
+    }
 
   return SVN_NO_ERROR;
 }
@@ -515,7 +534,8 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
 
       SVN_ERR(svn_wc__process_committed_internal(
                 wc_ctx->db, cqi->local_abspath,
-                cqi->recurse, TRUE,
+                cqi->recurse,
+                TRUE /* top_of_recurse */,
                 new_revnum, new_date, rev_author,
                 cqi->new_dav_cache,
                 cqi->no_unlock,
@@ -538,6 +558,7 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
         }
     }
 
+  /* Make sure nothing happens if this function is called again.  */
   SVN_ERR(svn_hash__clear(queue->queue, iterpool));
 
   /* Ok; everything is committed now. Now we can start calling callbacks */
