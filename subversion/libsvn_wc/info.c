@@ -283,7 +283,7 @@ info_found_node_callback(const char *local_abspath,
   else if (err)
     return svn_error_return(err);
 
-  SVN_ERR_ASSERT(info != NULL);
+  SVN_ERR_ASSERT(info != NULL && info->wc_info != NULL);
 
   if (tree_conflict)
     {
