@@ -87,8 +87,6 @@ typedef struct ra_svn_reporter_baton_t {
 static void parse_tunnel(const char *url, const char **tunnel,
                          apr_pool_t *pool)
 {
-  const char *p;
-
   *tunnel = NULL;
 
   if (strncasecmp(url, "svn", 3) != 0)
@@ -98,12 +96,13 @@ static void parse_tunnel(const char *url, const char **tunnel,
   /* Get the tunnel specification, if any. */
   if (*url == '+')
     {
+      const char *p;
+
       url++;
       p = strchr(url, ':');
       if (!p)
         return;
       *tunnel = apr_pstrmemdup(pool, url, p - url);
-      url = p;
     }
 }
 
