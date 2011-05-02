@@ -196,6 +196,14 @@ class Sandbox:
       target = self.ospath(target)
     svntest.main.run_svn(False, 'update', target)
 
+  def simple_switch(self, url, target=None):
+    """Switch a TARGET to URL"""
+    if target is None:
+      target = self.wc_dir
+    else:
+      target = self.ospath(target)
+    svntest.main.run_svn(False, 'switch', url, target, '--ignore-ancestry')
+
   def simple_commit(self, target=None):
     """Commit the WC or TARGET with a default log message.
        TARGET is a relpath relative to the WC."""

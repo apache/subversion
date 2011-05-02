@@ -317,6 +317,48 @@ def non_reposroot_wc(sbox):
                                             wc_dir, repo_url,
                                             [ "1\n" ], [])
 
+@XFail()
+@Issue(3858)
+def child_switched(sbox):
+  "test svnversion output for switched children"
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+  repo_url = sbox.repo_url
+
+  sbox.simple_switch(repo_url + '/A/D', 'A/B')
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/B', switched='S')
+  expected_status.add( {
+      'A/B/H'             : Item(status='  ', wc_rev='1'),
+      'A/B/H/psi'         : Item(status='  ', wc_rev='1'),
+      'A/B/H/omega'       : Item(status='  ', wc_rev='1'),
+      'A/B/H/chi'         : Item(status='  ', wc_rev='1'),
+      'A/B/G'             : Item(status='  ', wc_rev='1'),
+      'A/B/G/tau'         : Item(status='  ', wc_rev='1'),
+      'A/B/G/pi'          : Item(status='  ', wc_rev='1'),
+      'A/B/G/rho'         : Item(status='  ', wc_rev='1'),
+      'A/B/gamma'         : Item(status='  ', wc_rev='1'),
+  })
+  expected_status.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', 'A/B/lambda',
+                         'A/B/F')
+
+
+  # Commit the new binary file, creating revision 2.
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # This should detect the switch at A/B
+  svntest.actions.run_and_verify_svnversion(None, wc_dir, None,
+                                            [ "1S\n" ], [])
+
+  # But A/B/G and its children are not switched by itself
+  svntest.actions.run_and_verify_svnversion(None, os.path.join(wc_dir,'A/B/G'),
+                                            None, [ "1\n" ], [])
+
+  # And A/B isn't when you look at it directlry
+  svntest.actions.run_and_verify_svnversion(None, os.path.join(wc_dir,'A/B'),
+                                            None, [ "1\n" ], [])
+
 
 ########################################################################
 # Run the tests
@@ -330,6 +372,7 @@ test_list = [ None,
               svnversion_with_structural_changes,
               committed_revisions,
               non_reposroot_wc,
+              child_switched,
              ]
 
 if __name__ == '__main__':
