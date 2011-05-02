@@ -1469,7 +1469,7 @@ svn_client__do_commit(const char *base_url,
 {
   apr_hash_t *file_mods = apr_hash_make(scratch_pool);
   apr_hash_t *items_hash = apr_hash_make(scratch_pool);
-  apr_pool_t *iter_pool = svn_pool_create(scratch_pool);
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_hash_index_t *hi;
   int i;
   struct path_driver_cb_baton cb_baton;
@@ -1526,7 +1526,7 @@ svn_client__do_commit(const char *base_url,
       const svn_checksum_t *new_text_base_sha1_checksum;
       svn_boolean_t fulltext = FALSE;
 
-      svn_pool_clear(iter_pool);
+      svn_pool_clear(iterpool);
 
       /* Transmit the entry. */
       if (ctx->cancel_func)
@@ -1537,10 +1537,10 @@ svn_client__do_commit(const char *base_url,
           svn_wc_notify_t *notify;
           notify = svn_wc_create_notify(item->path,
                                         svn_wc_notify_commit_postfix_txdelta,
-                                        iter_pool);
+                                        iterpool);
           notify->kind = svn_node_file;
           notify->path_prefix = notify_path_prefix;
-          ctx->notify_func2(ctx->notify_baton2, notify, iter_pool);
+          ctx->notify_func2(ctx->notify_baton2, notify, iterpool);
         }
 
       /* If the node has no history, transmit full text */
@@ -1552,7 +1552,7 @@ svn_client__do_commit(const char *base_url,
                                            &new_text_base_sha1_checksum,
                                            ctx->wc_ctx, item->path,
                                            fulltext, editor, mod->file_baton,
-                                           result_pool, iter_pool));
+                                           result_pool, iterpool));
       if (md5_checksums)
         apr_hash_set(*md5_checksums, item->path, APR_HASH_KEY_STRING,
                      new_text_base_md5_checksum);
@@ -1561,7 +1561,7 @@ svn_client__do_commit(const char *base_url,
                      new_text_base_sha1_checksum);
     }
 
-  svn_pool_destroy(iter_pool);
+  svn_pool_destroy(iterpool);
 
   /* Close the edit. */
   return editor->close_edit(edit_baton, scratch_pool);

@@ -50,7 +50,7 @@ print_update_summary(apr_array_header_t *targets,
 {
   int i;
   const char *path_prefix;
-  apr_pool_t *iter_pool;
+  apr_pool_t *iterpool;
 
   if (targets->nelts < 2)
     return SVN_NO_ERROR;
@@ -58,14 +58,14 @@ print_update_summary(apr_array_header_t *targets,
   SVN_ERR(svn_dirent_get_absolute(&path_prefix, "", scratch_pool));
   SVN_ERR(svn_cmdline_printf(scratch_pool, _("Summary of updates:\n")));
 
-  iter_pool = svn_pool_create(scratch_pool);
+  iterpool = svn_pool_create(scratch_pool);
 
   for (i = 0; i < targets->nelts; i++)
     {
       const char *path = APR_ARRAY_IDX(targets, i, const char *);
       svn_revnum_t rev = SVN_INVALID_REVNUM;
 
-      svn_pool_clear(iter_pool);
+      svn_pool_clear(iterpool);
 
       /* PATH shouldn't be a URL. */
       SVN_ERR_ASSERT(! svn_path_is_url(path));
@@ -82,18 +82,18 @@ print_update_summary(apr_array_header_t *targets,
 
       /* Convert to an absolute path if it's not already. */
       if (! svn_dirent_is_absolute(path))
-        SVN_ERR(svn_dirent_get_absolute(&path, path, iter_pool));
+        SVN_ERR(svn_dirent_get_absolute(&path, path, iterpool));
       path = svn_dirent_local_style(svn_dirent_skip_ancestor(path_prefix,
-                                                             path), iter_pool);
+                                                             path), iterpool);
 
       /* Print an update summary for this target, removing the current
          working directory prefix from PATH (if PATH is at or under
          $CWD), and converting the path to local style for display. */
-      SVN_ERR(svn_cmdline_printf(iter_pool, _("  Updated '%s' to r%ld.\n"),
+      SVN_ERR(svn_cmdline_printf(iterpool, _("  Updated '%s' to r%ld.\n"),
                                  path, rev));
     }
 
-  svn_pool_destroy(iter_pool);
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
