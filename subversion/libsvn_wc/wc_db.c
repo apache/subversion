@@ -5991,6 +5991,7 @@ svn_wc__db_read_pristine_info(svn_wc__db_status_t *status,
     {
       SVN_ERR(svn_sqlite__step_row(stmt));
 
+      op_depth = svn_sqlite__column_int64(stmt, 0);
       raw_status = svn_sqlite__column_token(stmt, 3, presence_map);
     }
 
@@ -5998,9 +5999,15 @@ svn_wc__db_read_pristine_info(svn_wc__db_status_t *status,
 
   if (status)
     {
-      err = svn_error_compose_create(err,
-                                   convert_to_working_status(status,
-                                                             raw_status));
+      if (op_depth > 0)
+        {
+          err = svn_error_compose_create(err,
+                                         convert_to_working_status(
+                                                    status,
+                                                    raw_status));
+        }
+      else
+        *status = raw_status;
     }
   if (kind)
     {
