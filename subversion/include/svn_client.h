@@ -1932,6 +1932,9 @@ svn_client_import(svn_client_commit_info_t **commit_info_p,
  * @a commit_callback with @a commit_baton and a #svn_commit_info_t for
  * the commit.
  *
+ * @note #svn_depth_unknown and #svn_depth_exclude should not be passed
+ * for @a depth.
+ *
  * @since New in 1.7.
  */
 svn_error_t *
