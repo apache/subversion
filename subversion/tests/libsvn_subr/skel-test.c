@@ -765,11 +765,9 @@ unparse_implicit_length(apr_pool_t *pool)
     for (byte = 0; byte < 256; byte++)
       if (skel_is_name( (apr_byte_t)byte))
         {
-          svn_stringbuf_t *str = get_empty_string(pool);
           char buf =  (char)byte;
           svn_skel_t *skel = build_atom(1, &buf, pool);
-
-          str = svn_skel__unparse(skel, pool);
+          svn_stringbuf_t *str = svn_skel__unparse(skel, pool);
 
           if (! (str
                  && str->len == 1
@@ -791,7 +789,7 @@ unparse_list(apr_pool_t *pool)
 {
   /* Make a list of all the single-byte implicit-length atoms.  */
   {
-    svn_stringbuf_t *str = get_empty_string(pool);
+    svn_stringbuf_t *str;
     int byte;
     svn_skel_t *list = empty(pool);
     svn_skel_t *reparsed, *elt;
@@ -839,7 +837,7 @@ unparse_list(apr_pool_t *pool)
 
   /* Make a list of lists.  */
   {
-    svn_stringbuf_t *str = get_empty_string(pool);
+    svn_stringbuf_t *str;
     svn_skel_t *top = empty(pool);
     svn_skel_t *reparsed;
     int i;
