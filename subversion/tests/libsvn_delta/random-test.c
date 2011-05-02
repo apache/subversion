@@ -207,7 +207,6 @@ generate_random_file(apr_uint32_t maxlen,
     {
       apr_size_t ignore_length;
       apr_file_write_full(fp, file_buffer, buf - file_buffer, &ignore_length);
-      buf = file_buffer;
     }
   rewind_file(fp);
 
