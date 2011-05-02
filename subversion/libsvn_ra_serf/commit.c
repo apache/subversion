@@ -733,7 +733,6 @@ proppatch_walker(void *baton,
     prop_name = apr_pstrcat(pool, "S:", name, (char *)NULL);
   else if (strcmp(ns, SVN_DAV_PROP_NS_CUSTOM) == 0)
     prop_name = apr_pstrcat(pool, "C:", name, (char *)NULL);
-  name_len = strlen(prop_name);
 
   SVN_ERR(derive_old_val(&old_val_p, wb, ns, name, pool));
 
