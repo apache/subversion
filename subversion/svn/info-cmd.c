@@ -156,7 +156,9 @@ print_info_xml(void *baton,
                                                      pool));
 
       /* "<checksum> xx </checksum>" */
-      svn_cl__xml_tagged_cdata(&sb, pool, "checksum", info->wc_info->checksum);
+      svn_cl__xml_tagged_cdata(&sb, pool, "checksum",
+                               svn_checksum_to_cstring(info->wc_info->checksum,
+                                                       pool)); 
 
       if (info->wc_info->changelist)
         /* "<changelist> xx </changelist>" */
@@ -416,7 +418,8 @@ print_info(void *baton,
 
       if (info->wc_info->checksum)
         SVN_ERR(svn_cmdline_printf(pool, _("Checksum: %s\n"),
-                                   info->wc_info->checksum));
+                                   svn_checksum_to_cstring(
+                                              info->wc_info->checksum, pool)));
 
       if (info->wc_info->conflicts)
         {

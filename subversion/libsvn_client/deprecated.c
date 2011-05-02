@@ -2034,7 +2034,12 @@ info_from_info2(const svn_info2_t *info2,
       info->copyfrom_rev        = info2->wc_info->copyfrom_rev;
       info->text_time           = info2->wc_info->text_time;
       info->prop_time           = 0;
-      info->checksum            = info2->wc_info->checksum;
+      if (info2->wc_info->checksum
+            && info2->wc_info->checksum->kind == svn_checksum_md5)
+        info->checksum          = svn_checksum_to_cstring(
+                                        info2->wc_info->checksum, pool);
+      else
+        info->checksum          = NULL;
       info->changelist          = info2->wc_info->changelist;
       info->depth               = info2->wc_info->depth;
 
