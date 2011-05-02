@@ -1527,7 +1527,6 @@ merge_file_added(svn_wc_notify_state_t *content_state,
 {
   merge_cmd_baton_t *merge_b = baton;
   apr_pool_t *subpool = svn_pool_create(merge_b->pool);
-  const char *parent_abspath;
   svn_node_kind_t kind;
   int i;
   apr_hash_t *file_props;
@@ -1605,8 +1604,6 @@ merge_file_added(svn_wc_notify_state_t *content_state,
         return SVN_NO_ERROR;
       }
   }
-
-  parent_abspath = svn_dirent_dirname(mine_abspath, scratch_pool);
 
   SVN_ERR(svn_io_check_path(mine_abspath, &kind, subpool));
   switch (kind)
