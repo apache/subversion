@@ -53,9 +53,20 @@ build_info_for_entry(svn_info2_t **info,
 
   if (kind == svn_node_none)
     {
-      svn_error_clear(svn_wc__node_depth_is_exclude(&exclude, wc_ctx,
-                                                    local_abspath,
-                                                    scratch_pool));
+      svn_wc__db_status_t status;
+      svn_error_t *err = svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL,
+                                              NULL, NULL, NULL, NULL, NULL,
+                                              NULL, NULL, NULL, NULL, NULL,
+                                              NULL, NULL, NULL, NULL, NULL,
+                                              NULL, NULL, NULL, NULL, NULL,
+                                              NULL, NULL,
+                                              wc_ctx->db, local_abspath,
+                                              scratch_pool, scratch_pool);
+
+      if ((! err) && (status == svn_wc__db_status_excluded))
+        exclude = TRUE;
+
+      svn_error_clear(err);
       if (! exclude)
         return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                                  _("The node '%s' was not found."),
