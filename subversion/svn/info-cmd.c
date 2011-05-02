@@ -156,6 +156,7 @@ print_info_xml(void *baton,
                                                      pool));
 
       /* "<checksum> xx </checksum>" */
+      /* ### Print the checksum kind. */
       svn_cl__xml_tagged_cdata(&sb, pool, "checksum",
                                svn_checksum_to_cstring(info->wc_info->checksum,
                                                        pool)); 
