@@ -2751,8 +2751,6 @@ struct op_copy_baton
   svn_wc__db_wcroot_t *src_wcroot;
   const char *src_relpath;
 
-  svn_wc__db_t *db;
-  const char *dst_abspath;
   svn_wc__db_wcroot_t *dst_wcroot;
   const char *dst_relpath;
 
@@ -2766,26 +2764,14 @@ op_copy_txn(void * baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
   struct op_copy_baton *ocb = baton;
 
-  if (ocb->dst_wcroot == NULL)
+  if (sdb != ocb->dst_wcroot->sdb)
     {
-       SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&ocb->dst_wcroot,
-                                                     &ocb->dst_relpath,
-                                                     ocb->db,
-                                                     ocb->dst_abspath,
-                                                     scratch_pool,
-                                                     scratch_pool));
+       /* Source and destination databases differ; so also start a lock
+          in the destination database, by calling ourself in a lock. */
 
-       VERIFY_USABLE_WCROOT(ocb->dst_wcroot);
-
-       if (ocb->dst_wcroot->sdb != sdb)
-         {
-            /* Source and destination databases differ; so also start a lock
-               in the destination database, by calling ourself in a lock. */
-
-            return svn_error_return(
+      return svn_error_return(
                         svn_sqlite__with_lock(ocb->dst_wcroot->sdb,
                                               op_copy_txn, ocb, scratch_pool));
-         }
     }
 
   /* From this point we can assume a lock in the src and dst databases */
@@ -2816,10 +2802,16 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
                                                 scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(ocb.src_wcroot);
 
-  ocb.db = db;
-  ocb.dst_abspath = dst_abspath;
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&ocb.dst_wcroot,
+                                                &ocb.dst_relpath,
+                                                db, dst_abspath,
+                                                scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(ocb.dst_wcroot);
+
   ocb.work_items = work_items;
 
+  /* Call with the sdb in src_wcroot. It might call itself again to
+     also obtain a lock in dst_wcroot */
   SVN_ERR(svn_sqlite__with_lock(ocb.src_wcroot->sdb, op_copy_txn, &ocb,
                                 scratch_pool));
 
