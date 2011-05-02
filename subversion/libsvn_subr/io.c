@@ -3162,25 +3162,25 @@ svn_io_file_write_full(apr_file_t *file, const void *buf,
                        apr_size_t nbytes, apr_size_t *bytes_written,
                        apr_pool_t *pool)
 {
+  apr_status_t rv = apr_file_write_full(file, buf, nbytes, bytes_written);
+
 #ifdef WIN32
 #define MAXBUFSIZE 30*1024
-  apr_status_t rv;
-  apr_size_t bw = 0;
-  apr_size_t to_write = nbytes;
+  if (rv == APR_FROM_OS_ERROR(ERROR_NOT_ENOUGH_MEMORY)
+      && nbytes > MAXBUFSIZE)
+    {
+      apr_size_t bw = 0;
+      *bytes_written = 0;
 
-  do {
-    bw = to_write > MAXBUFSIZE ? MAXBUFSIZE : to_write;
-    rv = apr_file_write(file, buf, &bw);
-    buf = (char *)buf + bw;
-    to_write -= bw;
-  } while (rv == APR_SUCCESS && to_write > 0);
-
-  /* bytes_written may actually be NULL */
-  if (bytes_written)
-    *bytes_written = nbytes - to_write;
+      do {
+        rv = apr_file_write_full(file, buf,
+                                 nbytes > MAXBUFSIZE ? MAXBUFSIZE : nbytes, &bw);
+        *bytes_written += bw;
+        buf = (char *)buf + bw;
+        nbytes -= bw;
+      } while (rv == APR_SUCCESS && nbytes > 0);
+    }
 #undef MAXBUFSIZE
-#else
-  apr_status_t rv = apr_file_write_full(file, buf, nbytes, bytes_written);
 #endif
 
   return svn_error_return(do_io_file_wrapper_cleanup(
