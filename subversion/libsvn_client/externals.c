@@ -439,6 +439,7 @@ switch_file_external(const char *path,
                                     "created because the node exists."),
                                   svn_dirent_local_style(local_abspath,
                                                          subpool));
+          goto cleanup;
         }
 
       err = svn_wc__register_file_external(ctx->wc_ctx, local_abspath, url,
