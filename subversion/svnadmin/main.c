@@ -1350,7 +1350,7 @@ subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   svn_repos_t *repos;
   svn_fs_t *fs;
   svn_revnum_t youngest, lower, upper;
-  svn_stream_t *progress_stream;
+  svn_stream_t *progress_stream = NULL;
 
   /* Expect no more arguments. */
   SVN_ERR(parse_args(NULL, os, 0, 0, pool));
