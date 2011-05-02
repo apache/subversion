@@ -1152,6 +1152,7 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
 {
   const char *message;
   const char *top_src_path, *top_dst_url;
+  const char *repos_root_url;
   const char *top_src_abspath;
   svn_ra_session_t *ra_session;
   const svn_delta_editor_t *editor;
@@ -1295,15 +1296,11 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
                                             ctx, pool, pool));
 
   /* The committables are keyed by the repository root */
-  {
-    const char *repos_root_url;
-    SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_url, pool));
+  SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_url, pool));
 
-    commit_items = apr_hash_get(committables, repos_root_url,
-                                APR_HASH_KEY_STRING);
-
-    SVN_ERR_ASSERT(commit_items != NULL);
-  }
+  commit_items = apr_hash_get(committables, repos_root_url,
+                              APR_HASH_KEY_STRING);
+  SVN_ERR_ASSERT(commit_items != NULL);
 
   /* If we are creating intermediate directories, tack them onto the list
      of committables. */
