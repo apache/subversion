@@ -1140,6 +1140,7 @@ get_dir_status(const struct walk_status_baton *wb,
 
   iterpool = svn_pool_create(subpool);
 
+  /* ### Performance: Use read_info() on single path if selected != NULL */
   SVN_ERR(svn_wc__db_read_children_info(&nodes, &conflicts,
                                         wb->db, local_abspath,
                                         subpool, iterpool));
