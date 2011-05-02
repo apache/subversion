@@ -46,17 +46,13 @@
 #include "svn_hash.h"
 #include "svn_wc.h"
 #include "svn_io.h"
-#include "svn_xml.h"
 #include "svn_time.h"
-#include "svn_diff.h"
 #include "svn_sorts.h"
 
 #include "wc.h"
 #include "adm_files.h"
-#include "entries.h"
 #include "props.h"
 #include "translate.h"
-#include "tree_conflicts.h"
 #include "workqueue.h"
 
 #include "svn_private_config.h"
@@ -129,8 +125,10 @@ process_committed_leaf(svn_wc__db_t *db,
   svn_wc__db_kind_t kind;
   const svn_checksum_t *copied_checksum;
   svn_revnum_t new_changed_rev = new_revnum;
-  svn_boolean_t have_base, have_work;
-  svn_boolean_t had_props, prop_mods;
+  svn_boolean_t have_base;
+  svn_boolean_t have_work;
+  svn_boolean_t had_props;
+  svn_boolean_t prop_mods;
   svn_skel_t *work_item = NULL;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
@@ -184,22 +182,22 @@ process_committed_leaf(svn_wc__db_t *db,
           if (via_recurse && !prop_mods)
             {
               /* If a copied node itself is not modified, but the op_root of
-                the copy is committed we have to make sure that changed_rev,
-                changed_date and changed_author don't change or the working
-                copy used for committing will show different last modified
-                information then a clean checkout of exactly the same
-                revisions. (Issue #3676) */
+                 the copy is committed we have to make sure that changed_rev,
+                 changed_date and changed_author don't change or the working
+                 copy used for committing will show different last modified
+                 information then a clean checkout of exactly the same
+                 revisions. (Issue #3676) */
 
-                SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL,
-                                             NULL, &new_changed_rev,
-                                             &new_changed_date,
-                                             &new_changed_author, NULL, NULL,
-                                             NULL, NULL, NULL, NULL, NULL,
-                                             NULL, NULL, NULL, NULL,
-                                             NULL, NULL, NULL, NULL,
-                                             NULL, NULL, NULL,
-                                             db, local_abspath,
-                                             scratch_pool, scratch_pool));
+              SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL,
+                                           NULL, &new_changed_rev,
+                                           &new_changed_date,
+                                           &new_changed_author, NULL, NULL,
+                                           NULL, NULL, NULL, NULL, NULL,
+                                           NULL, NULL, NULL, NULL,
+                                           NULL, NULL, NULL, NULL,
+                                           NULL, NULL, NULL,
+                                           db, local_abspath,
+                                           scratch_pool, scratch_pool));
             }
         }
 
@@ -400,6 +398,7 @@ svn_wc_committed_queue_create(apr_pool_t *pool)
   return q;
 }
 
+
 svn_error_t *
 svn_wc_queue_committed3(svn_wc_committed_queue_t *queue,
                         svn_wc_context_t *wc_ctx,
@@ -435,6 +434,7 @@ svn_wc_queue_committed3(svn_wc_committed_queue_t *queue,
   return SVN_NO_ERROR;
 }
 
+
 /* Return TRUE if any item of QUEUE is a parent of ITEM and will be
    processed recursively, return FALSE otherwise.
 
@@ -463,6 +463,7 @@ have_recursive_parent(apr_hash_t *queue,
 
   return FALSE;
 }
+
 
 svn_error_t *
 svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
@@ -512,15 +513,16 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
                                                          iterpool))
         continue;
 
-      SVN_ERR(svn_wc__process_committed_internal(wc_ctx->db, cqi->local_abspath,
-                                                 cqi->recurse, TRUE, new_revnum,
-                                                 new_date, rev_author,
-                                                 cqi->new_dav_cache,
-                                                 cqi->no_unlock,
-                                                 cqi->keep_changelist,
-                                                 cqi->sha1_checksum, queue,
-                                                 old_externals,
-                                                 iterpool));
+      SVN_ERR(svn_wc__process_committed_internal(
+                wc_ctx->db, cqi->local_abspath,
+                cqi->recurse, TRUE,
+                new_revnum, new_date, rev_author,
+                cqi->new_dav_cache,
+                cqi->no_unlock,
+                cqi->keep_changelist,
+                cqi->sha1_checksum, queue,
+                old_externals,
+                iterpool));
 
       /* Don't run the wq now, but remember that we must call it for this
          working copy */
@@ -588,7 +590,6 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
 }
 
 
-
 /* Remove/erase PATH from the working copy. This involves deleting PATH
  * from the physical filesystem. PATH is assumed to be an unversioned file
  * or directory.
@@ -640,13 +641,15 @@ erase_unversioned_from_wc(const char *path,
           else
             return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                                      _("Unsupported node kind for path '%s'"),
-                                     svn_dirent_local_style(path, scratch_pool));
+                                     svn_dirent_local_style(path,
+                                                            scratch_pool));
 
         }
     }
 
   return SVN_NO_ERROR;
 }
+
 
 svn_error_t *
 svn_wc_delete4(svn_wc_context_t *wc_ctx,
@@ -776,6 +779,7 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
   return SVN_NO_ERROR;
 }
 
+
 /* Schedule the single node at LOCAL_ABSPATH, of kind KIND, for addition in
  * its parent directory in the WC.  It will have no properties. */
 static svn_error_t *
@@ -809,6 +813,7 @@ add_from_disk(svn_wc__db_t *db,
 
   return SVN_NO_ERROR;
 }
+
 
 /* Set *REPOS_ROOT_URL and *REPOS_UUID to the repository of the parent of
    LOCAL_ABSPATH.  REPOS_ROOT_URL and/or REPOS_UUID may be NULL if not
@@ -884,6 +889,7 @@ check_can_add_to_parent(const char **repos_root_url,
 
   return SVN_NO_ERROR;
 }
+
 
 /* Check that the on-disk item at LOCAL_ABSPATH can be scheduled for
  * addition to its WC parent directory.
@@ -1002,6 +1008,7 @@ check_can_add_node(svn_node_kind_t *kind_p,
   return SVN_NO_ERROR;
 }
 
+
 /* Convert the nested pristine working copy rooted at LOCAL_ABSPATH into
  * a copied subtree in the outer working copy.
  *
@@ -1023,7 +1030,9 @@ integrate_nested_wc_as_copy(svn_wc_context_t *wc_ctx,
 
   /* Move the admin dir from the wc to a temporary location: MOVED_ABSPATH */
   {
-    const char *tmpdir_abspath, *moved_adm_abspath, *adm_abspath;
+    const char *tmpdir_abspath;
+    const char *moved_adm_abspath;
+    const char *adm_abspath;
 
     SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&tmpdir_abspath, db,
                                            svn_dirent_dirname(local_abspath,
@@ -1054,6 +1063,7 @@ integrate_nested_wc_as_copy(svn_wc_context_t *wc_ctx,
      receive the lock via our depth infinity lock */
   {
     svn_boolean_t owns_lock;
+
     SVN_ERR(svn_wc__db_wclock_owns_lock(&owns_lock, db, local_abspath,
                                         FALSE, scratch_pool));
     if (!owns_lock)
@@ -1063,6 +1073,7 @@ integrate_nested_wc_as_copy(svn_wc_context_t *wc_ctx,
 
   return SVN_NO_ERROR;
 }
+
 
 svn_error_t *
 svn_wc_add4(svn_wc_context_t *wc_ctx,
@@ -1078,8 +1089,10 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
 {
   svn_wc__db_t *db = wc_ctx->db;
   svn_node_kind_t kind;
-  svn_boolean_t db_row_exists, is_wc_root;
-  const char *repos_root_url, *repos_uuid;
+  svn_boolean_t db_row_exists;
+  svn_boolean_t is_wc_root;
+  const char *repos_root_url;
+  const char *repos_uuid;
 
   SVN_ERR(check_can_add_node(&kind, &db_row_exists, &is_wc_root,
                              db, local_abspath, copyfrom_url, copyfrom_rev,
@@ -1146,6 +1159,7 @@ svn_wc_add4(svn_wc_context_t *wc_ctx,
              ### Perhaps the lock should be created in the same
              transaction that adds the node? */
           svn_boolean_t owns_lock;
+
           SVN_ERR(svn_wc__db_wclock_owns_lock(&owns_lock, db, local_abspath,
                                               FALSE, scratch_pool));
           if (!owns_lock)
@@ -1249,7 +1263,9 @@ svn_wc__register_file_external(svn_wc_context_t *wc_ctx,
                                apr_pool_t *scratch_pool)
 {
   svn_wc__db_t *db = wc_ctx->db;
-  const char *parent_abspath, *base_name, *repos_root_url;
+  const char *parent_abspath;
+  const char *base_name;
+  const char *repos_root_url;
 
   svn_dirent_split(&parent_abspath, &base_name, local_abspath, scratch_pool);
 
@@ -1335,6 +1351,7 @@ remove_conflict_file(svn_boolean_t *notify_required,
   return SVN_NO_ERROR;
 }
 
+
 /* Make the working tree under LOCAL_ABSPATH to depth DEPTH match the
    versioned tree.  This function is called after svn_wc__db_op_revert
    has done the database revert and created the revert list.  Notifies
@@ -1356,8 +1373,10 @@ revert_restore(svn_wc__db_t *db,
   svn_wc__db_kind_t kind;
   svn_node_kind_t on_disk;
   svn_boolean_t special, notify_required;
-  const char *conflict_old, *conflict_new, *conflict_working, *prop_reject;
-
+  const char *conflict_old;
+  const char *conflict_new;
+  const char *conflict_working;
+  const char *prop_reject;
 
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
@@ -1387,7 +1406,8 @@ revert_restore(svn_wc__db_t *db,
 
       if (notify_func)
         SVN_ERR(svn_wc__db_revert_list_notify(notify_func, notify_baton,
-                                              db, local_abspath, scratch_pool));
+                                              db, local_abspath,
+                                              scratch_pool));
       /* ### else: Delete the list */
 
       return SVN_NO_ERROR;
@@ -1420,7 +1440,9 @@ revert_restore(svn_wc__db_t *db,
         }
       else if (on_disk == svn_node_file)
         {
-          svn_boolean_t modified, executable, read_only;
+          svn_boolean_t modified;
+          svn_boolean_t executable;
+          svn_boolean_t read_only;
           apr_hash_t *props;
           svn_string_t *special_prop;
 
@@ -1572,6 +1594,7 @@ revert_restore(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+
 /* Revert tree LOCAL_ABSPATH to depth DEPTH and notify for all
    reverts. */
 static svn_error_t *
@@ -1599,6 +1622,7 @@ new_revert_internal(svn_wc__db_t *db,
 
   return SVN_NO_ERROR;
 }
+
 
 /* Revert files in LOCAL_ABSPATH to depth DEPTH that match
    CHANGELIST_HASH and notify for all reverts. */
@@ -1668,6 +1692,7 @@ new_revert_changelist(svn_wc__db_t *db,
 
   return SVN_NO_ERROR;
 }
+
 
 /* Does a partially recursive revert of LOCAL_ABSPATH to depth DEPTH
    (which must be either svn_depth_files or svn_depth_immediates) by
@@ -1744,6 +1769,7 @@ new_revert_partial(svn_wc__db_t *db,
 
   return SVN_NO_ERROR;
 }
+
 
 /* This is just the guts of svn_wc_revert4() save that it accepts a
    hash CHANGELIST_HASH whose keys are changelist names instead of an
@@ -1882,6 +1908,7 @@ svn_wc_get_pristine_contents2(svn_stream_t **contents,
                                                         scratch_pool));
 }
 
+
 svn_error_t *
 svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
                                               const char *local_abspath,
@@ -1931,7 +1958,8 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
              with a special file */
 
           SVN_ERR(svn_wc__get_translate_info(NULL, NULL, NULL,
-                                             &wc_special, db, local_abspath, NULL,
+                                             &wc_special,
+                                             db, local_abspath, NULL,
                                              scratch_pool, scratch_pool));
           SVN_ERR(svn_io_check_special_path(local_abspath, &on_disk,
                                             &local_special, scratch_pool));
@@ -2130,9 +2158,10 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
 
   if (left_something)
     return svn_error_create(SVN_ERR_WC_LEFT_LOCAL_MOD, NULL, NULL);
-  else
-    return SVN_NO_ERROR;
+
+  return SVN_NO_ERROR;
 }
+
 
 svn_error_t *
 svn_wc_remove_from_revision_control2(svn_wc_context_t *wc_ctx,
@@ -2152,6 +2181,7 @@ svn_wc_remove_from_revision_control2(svn_wc_context_t *wc_ctx,
                                                     cancel_baton,
                                                     scratch_pool));
 }
+
 
 svn_error_t *
 svn_wc_add_lock2(svn_wc_context_t *wc_ctx,
@@ -2193,6 +2223,7 @@ svn_wc_add_lock2(svn_wc_context_t *wc_ctx,
   return SVN_NO_ERROR;
 }
 
+
 svn_error_t *
 svn_wc_remove_lock2(svn_wc_context_t *wc_ctx,
                     const char *local_abspath,
@@ -2227,6 +2258,7 @@ svn_wc_remove_lock2(svn_wc_context_t *wc_ctx,
   return SVN_NO_ERROR;
 }
 
+
 struct changelist_walker_baton
 {
   const char *changelist;
@@ -2236,6 +2268,7 @@ struct changelist_walker_baton
   svn_wc_notify_func2_t notify_func;
   void *notify_baton;
 };
+
 
 static svn_error_t *
 changelist_walker(const char *local_abspath,
@@ -2273,6 +2306,7 @@ changelist_walker(const char *local_abspath,
   return SVN_NO_ERROR;
 }
 
+
 svn_error_t *
 svn_wc_set_changelist2(svn_wc_context_t *wc_ctx,
                        const char *local_abspath,
@@ -2300,6 +2334,7 @@ svn_wc_set_changelist2(svn_wc_context_t *wc_ctx,
 
   return SVN_NO_ERROR;
 }
+
 
 svn_error_t *
 svn_wc__set_file_external_location(svn_wc_context_t *wc_ctx,
@@ -2352,6 +2387,7 @@ struct get_cl_fn_baton
   void *callback_baton;
 };
 
+
 static svn_error_t *
 get_node_changelist(const char *local_abspath,
                     svn_node_kind_t kind,
@@ -2373,6 +2409,7 @@ get_node_changelist(const char *local_abspath,
 
   return SVN_NO_ERROR;
 }
+
 
 svn_error_t *
 svn_wc_get_changelists(svn_wc_context_t *wc_ctx,
@@ -2413,7 +2450,6 @@ svn_wc__internal_changelist_match(svn_wc__db_t *db,
                              NULL, NULL, NULL, NULL, NULL, &changelist,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              db, local_abspath, scratch_pool, scratch_pool);
-
   if (err)
     {
       svn_error_clear(err);
@@ -2421,9 +2457,10 @@ svn_wc__internal_changelist_match(svn_wc__db_t *db,
     }
 
   return (changelist
-            && apr_hash_get( (apr_hash_t *)clhash, changelist,
+            && apr_hash_get((apr_hash_t *)clhash, changelist,
                             APR_HASH_KEY_STRING) != NULL);
 }
+
 
 svn_boolean_t
 svn_wc__changelist_match(svn_wc_context_t *wc_ctx,
