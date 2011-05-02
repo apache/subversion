@@ -2206,7 +2206,7 @@ propset_walk_cb(const char *local_abspath,
       err = SVN_NO_ERROR;
     }
 
-  return err;
+  return svn_error_return(err);
 }
 
 svn_error_t *
