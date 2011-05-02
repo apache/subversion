@@ -2420,6 +2420,7 @@ svn_wc__set_file_external_location(svn_wc_context_t *wc_ctx,
 struct get_cl_fn_baton
 {
   svn_wc__db_t *db;
+  apr_hash_t *clhash;
   svn_changelist_receiver_t callback_func;
   void *callback_baton;
 };
@@ -2441,8 +2442,10 @@ get_node_changelist(const char *local_abspath,
                                b->db, local_abspath,
                                scratch_pool, scratch_pool));
 
-  SVN_ERR(b->callback_func(b->callback_baton, local_abspath,
-                           changelist, scratch_pool));
+  if (svn_wc__internal_changelist_match(b->db, local_abspath, b->clhash,
+                                        scratch_pool))
+    SVN_ERR(b->callback_func(b->callback_baton, local_abspath,
+                             changelist, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -2459,7 +2462,12 @@ svn_wc_get_changelists(svn_wc_context_t *wc_ctx,
                        void *cancel_baton,
                        apr_pool_t *scratch_pool)
 {
-  struct get_cl_fn_baton gnb = { wc_ctx->db, callback_func, callback_baton };
+  struct get_cl_fn_baton gnb = { wc_ctx->db, NULL,
+                                 callback_func, callback_baton };
+
+  if (changelists)
+    SVN_ERR(svn_hash_from_cstring_keys(&gnb.clhash, changelists,
+                                       scratch_pool));
 
   return svn_error_return(
     svn_wc__internal_walk_children(wc_ctx->db, local_abspath, FALSE,
