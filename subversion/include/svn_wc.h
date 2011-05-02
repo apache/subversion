@@ -3011,7 +3011,7 @@ typedef struct svn_wc_info_t
   const char *copyfrom_url;
   svn_revnum_t copyfrom_rev;
   apr_time_t text_time;
-  const char *checksum;
+  svn_checksum_t *checksum;
   const char *changelist;
   svn_depth_t depth;
 

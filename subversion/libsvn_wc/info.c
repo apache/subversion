@@ -154,18 +154,14 @@ build_info_for_entry(svn_info2_t **info,
 
   if (tmpinfo->kind == svn_node_file)
     {
-      const svn_checksum_t *checksum;
-
       SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, &checksum, NULL,
+                                   NULL, NULL, NULL, NULL,
+                                   &tmpinfo->wc_info->checksum, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                    &tmpinfo->wc_info->changelist,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                    wc_ctx->db, local_abspath, result_pool,
                                    scratch_pool));
-
-      tmpinfo->wc_info->checksum = svn_checksum_to_cstring(checksum,
-                                                           result_pool);
     }
 
   if (tmpinfo->kind == svn_node_dir)
