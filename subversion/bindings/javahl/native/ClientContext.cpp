@@ -87,8 +87,8 @@ ClientContext::ClientContext(jobject jsvnclient)
     persistentCtx->notify_baton2 = m_jctx;
     persistentCtx->progress_func = progress;
     persistentCtx->progress_baton = m_jctx;
-    persistentCtx->conflict_func = resolve;
-    persistentCtx->conflict_baton = m_jctx;
+    persistentCtx->conflict_func2 = resolve;
+    persistentCtx->conflict_baton2 = m_jctx;
 }
 
 ClientContext::~ClientContext()
@@ -348,9 +348,10 @@ ClientContext::progress(apr_off_t progressVal, apr_off_t total,
 
 svn_error_t *
 ClientContext::resolve(svn_wc_conflict_result_t **result,
-                       const svn_wc_conflict_description_t *desc,
+                       const svn_wc_conflict_description2_t *desc,
                        void *baton,
-                       apr_pool_t *pool)
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
 {
   jobject jctx = (jobject) baton;
   JNIEnv *env = JNIUtil::getEnv();
@@ -375,7 +376,7 @@ ClientContext::resolve(svn_wc_conflict_result_t **result,
     }
 
   // Create an instance of the conflict descriptor.
-  jobject jdesc = CreateJ::ConflictDescriptor(svn_wc__cd_to_cd2(desc, pool));
+  jobject jdesc = CreateJ::ConflictDescriptor(desc);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN(SVN_NO_ERROR);
 
@@ -392,7 +393,7 @@ ClientContext::resolve(svn_wc_conflict_result_t **result,
       return err;
     }
 
-  *result = javaResultToC(jresult, pool);
+  *result = javaResultToC(jresult, result_pool);
   if (*result == NULL)
     {
       // Unable to convert the result into a C representation.
