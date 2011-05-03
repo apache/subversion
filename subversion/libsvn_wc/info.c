@@ -191,6 +191,9 @@ build_info_for_entry(svn_info2_t **info,
                                          &tmpinfo->wc_info->text_time,
                                          wc_ctx, local_abspath, scratch_pool));
 
+  SVN_ERR(svn_wc__db_read_conflicts(&tmpinfo->wc_info->conflicts, wc_ctx->db,
+                                    local_abspath, result_pool, scratch_pool));
+
   /* lock stuff */
   if (kind == svn_node_file)
     {
@@ -274,6 +277,9 @@ info_found_node_callback(const char *local_abspath,
   if (err && (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
       && tree_conflict)
     {
+      apr_array_header_t *conflicts = apr_array_make(pool,
+        1, sizeof(const svn_wc_conflict_description2_t *));
+
       svn_error_clear(err);
 
       SVN_ERR(build_info_for_unversioned(&info, pool));
@@ -282,22 +288,15 @@ info_found_node_callback(const char *local_abspath,
                                           fe_baton->wc_ctx,
                                           local_abspath, FALSE, FALSE,
                                           pool, pool));
-    }
-  else if (err)
-    return svn_error_return(err);
-
-  SVN_ERR_ASSERT(info != NULL && info->wc_info != NULL);
-
-  if (tree_conflict)
-    {
-      apr_array_header_t *conflicts = apr_array_make(pool,
-        1, sizeof(const svn_wc_conflict_description2_t *));
 
       APR_ARRAY_PUSH(conflicts, const svn_wc_conflict_description2_t *)
         = tree_conflict;
       info->wc_info->conflicts = conflicts;
     }
+  else if (err)
+    return svn_error_return(err);
 
+  SVN_ERR_ASSERT(info != NULL && info->wc_info != NULL);
   SVN_ERR(fe_baton->receiver(fe_baton->receiver_baton, local_abspath,
                              info, pool));
   return SVN_NO_ERROR;
