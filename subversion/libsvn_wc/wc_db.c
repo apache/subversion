@@ -5149,6 +5149,12 @@ op_delete_txn(void *baton,
   SVN_ERR(svn_sqlite__bindf(stmt, "iss",
                             wcroot->wc_id, local_relpath, like_arg));
   SVN_ERR(svn_sqlite__step_done(stmt));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_DELETE_WC_LOCK_ORPHAN_RECURSIVE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id,
+                            local_relpath, like_arg));
+  SVN_ERR(svn_sqlite__step_done(stmt));
     
   if (add_work)
     {
