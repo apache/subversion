@@ -3530,8 +3530,8 @@ close_file(void *file_baton,
 
   if (fb->skip_this)
     {
-      svn_pool_destroy(fb->pool);
       SVN_ERR(maybe_release_dir_info(fb->bump_info));
+      svn_pool_destroy(fb->pool);
       return SVN_NO_ERROR;
     }
 
@@ -3982,10 +3982,10 @@ close_file(void *file_baton,
       eb->notify_func(eb->notify_baton, notify, scratch_pool);
     }
 
-  svn_pool_destroy(fb->pool); /* Destroy scratch_pool */
-
   /* We have one less referrer to the directory's bump information. */
   SVN_ERR(maybe_release_dir_info(fb->bump_info));
+
+  svn_pool_destroy(fb->pool); /* Destroy scratch_pool */
 
   return SVN_NO_ERROR;
 }
