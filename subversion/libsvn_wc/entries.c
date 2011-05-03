@@ -396,7 +396,6 @@ read_one_entry(const svn_wc_entry_t **new_entry,
   svn_boolean_t conflicted;
   svn_boolean_t have_base;
   svn_boolean_t have_more_work;
-  svn_boolean_t update_root = FALSE;
 
   entry->name = name;
 
@@ -570,7 +569,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
                                            NULL, NULL, NULL,
                                            NULL, NULL, NULL,
                                            NULL, NULL,
-                                           &update_root, NULL,
+                                           NULL, NULL,
                                            db, entry_abspath,
                                            scratch_pool,
                                            scratch_pool));
@@ -918,7 +917,8 @@ read_one_entry(const svn_wc_entry_t **new_entry,
   /* Let's check for a file external.
      ### right now this is ugly, since we have no good way querying
      ### for a file external OR retrieving properties.  ugh.  */
-  if (update_root && entry->kind == svn_node_file)
+  if (status == svn_wc__db_status_normal
+      && kind == svn_wc__db_kind_file)
     SVN_ERR(check_file_external(entry, db, entry_abspath, result_pool,
                                 scratch_pool));
 
