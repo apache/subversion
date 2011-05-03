@@ -1796,7 +1796,7 @@ end_report(svn_ra_serf__xml_parser_t *parser,
         {
           const char *fs_path;
           const char *full_path =
-            svn_fspath__join(ctx->sess->repos_url.path,
+            svn_fspath__join(ctx->sess->session_url.path,
                              svn_path_uri_encode(info->name, info->pool),
                              info->pool);
           
@@ -2203,7 +2203,7 @@ open_connection_if_needed(svn_ra_serf__session_t *sess, int active_reqs)
       sess->conns[cur]->session = sess;
       status = serf_connection_create2(&sess->conns[cur]->conn,
                                        sess->context,
-                                       sess->repos_url,
+                                       sess->session_url,
                                        svn_ra_serf__conn_setup,
                                        sess->conns[cur],
                                        svn_ra_serf__conn_closed,
@@ -2617,7 +2617,7 @@ svn_ra_serf__do_update(svn_ra_session_t *ra_session,
 
   return make_update_reporter(ra_session, reporter, report_baton,
                               revision_to_update_to,
-                              session->repos_url.path, NULL, update_target,
+                              session->session_url.path, NULL, update_target,
                               depth, FALSE, TRUE, send_copyfrom_args,
                               update_editor, update_baton, pool);
 }
@@ -2640,7 +2640,7 @@ svn_ra_serf__do_diff(svn_ra_session_t *ra_session,
 
   return make_update_reporter(ra_session, reporter, report_baton,
                               revision,
-                              session->repos_url.path, versus_url, diff_target,
+                              session->session_url.path, versus_url, diff_target,
                               depth, ignore_ancestry, text_deltas, FALSE,
                               diff_editor, diff_baton, pool);
 }
@@ -2660,7 +2660,7 @@ svn_ra_serf__do_status(svn_ra_session_t *ra_session,
 
   return make_update_reporter(ra_session, reporter, report_baton,
                               revision,
-                              session->repos_url.path, NULL, status_target,
+                              session->session_url.path, NULL, status_target,
                               depth, FALSE, FALSE, FALSE,
                               status_editor, status_baton, pool);
 }
@@ -2681,7 +2681,7 @@ svn_ra_serf__do_switch(svn_ra_session_t *ra_session,
 
   return make_update_reporter(ra_session, reporter, report_baton,
                               revision_to_switch_to,
-                              session->repos_url.path,
+                              session->session_url.path,
                               switch_url, switch_target,
                               depth, TRUE, TRUE, FALSE /* TODO(sussman) */,
                               switch_editor, switch_baton, pool);
@@ -2709,7 +2709,7 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
   /* Fetch properties. */
   fetch_props = apr_hash_make(pool);
 
-  fetch_url = svn_path_url_add_component2(session->repos_url.path, path, pool);
+  fetch_url = svn_path_url_add_component2(session->session_url.path, path, pool);
 
   /* The simple case is if we want HEAD - then a GET on the fetch_url is fine.
    *

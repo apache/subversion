@@ -507,13 +507,13 @@ get_version_url(const char **checked_in_url,
              baseline collection. */
           SVN_ERR(svn_ra_serf__get_baseline_info(&bc_url, &bc_relpath,
                                                  session, conn,
-                                                 session->repos_url.path,
+                                                 session->session_url.path,
                                                  base_revision, NULL, pool));
           propfind_url = svn_path_url_add_component2(bc_url, bc_relpath, pool);
         }
       else
         {
-          propfind_url = session->repos_url.path;
+          propfind_url = session->session_url.path;
         }
 
       SVN_ERR(svn_ra_serf__deliver_props(&propfind_ctx, props, session, conn,
@@ -531,7 +531,7 @@ get_version_url(const char **checked_in_url,
       if (!root_checkout)
         return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                                  _("Path '%s' not present"),
-                                 session->repos_url.path);
+                                 session->session_url.path);
 
       root_checkout = svn_urlpath__canonicalize(root_checkout, pool);
     }
@@ -1062,7 +1062,7 @@ setup_copy_file_headers(serf_bucket_t *headers,
   const char *absolute_uri;
 
   /* The Dest URI must be absolute.  Bummer. */
-  uri = file->commit->session->repos_url;
+  uri = file->commit->session->session_url;
   uri.path = (char*)file->url;
   absolute_uri = apr_uri_unparse(pool, &uri, 0);
 
@@ -1084,7 +1084,7 @@ setup_copy_dir_headers(serf_bucket_t *headers,
   const char *absolute_uri;
 
   /* The Dest URI must be absolute.  Bummer. */
-  uri = dir->commit->session->repos_url;
+  uri = dir->commit->session->session_url;
 
   if (USING_HTTPV2_COMMIT_SUPPORT(dir->commit))
     {
@@ -1334,8 +1334,8 @@ open_root(void *edit_baton,
                                    _("%s of '%s': %d %s (%s://%s)"),
                                    handler->method, handler->path,
                                    post_ctx->status, post_ctx->reason,
-                                   ctx->session->repos_url.scheme,
-                                   ctx->session->repos_url.hostinfo);
+                                   ctx->session->session_url.scheme,
+                                   ctx->session->session_url.hostinfo);
         }
       if (! (ctx->txn_name && ctx->txn_root_url && ctx->txn_url))
         {
@@ -1346,7 +1346,7 @@ open_root(void *edit_baton,
 
       /* Fixup the txn_root_url to point to the anchor of the commit. */
       SVN_ERR(svn_ra_serf__get_relative_path(&rel_path,
-                                             ctx->session->repos_url.path,
+                                             ctx->session->session_url.path,
                                              ctx->session, NULL, dir_pool));
       ctx->txn_root_url = svn_path_url_add_component2(ctx->txn_root_url,
                                                       rel_path, ctx->pool);
@@ -1371,7 +1371,7 @@ open_root(void *edit_baton,
 
       SVN_ERR(svn_ra_serf__create_options_req(&opt_ctx, ctx->session,
                                               ctx->session->conns[0],
-                                              ctx->session->repos_url.path,
+                                              ctx->session->session_url.path,
                                               ctx->pool));
 
       SVN_ERR(svn_ra_serf__context_run_wait(
@@ -1411,8 +1411,8 @@ open_root(void *edit_baton,
                                    _("%s of '%s': %d %s (%s://%s)"),
                                    handler->method, handler->path,
                                    mkact_ctx->status, mkact_ctx->reason,
-                                   ctx->session->repos_url.scheme,
-                                   ctx->session->repos_url.hostinfo);
+                                   ctx->session->session_url.scheme,
+                                   ctx->session->session_url.hostinfo);
         }
 
       /* Now go fetch our VCC and baseline so we can do a CHECKOUT. */
@@ -1899,7 +1899,7 @@ add_file(const char *path,
       handler->conn = new_file->commit->conn;
       handler->method = "HEAD";
       handler->path = svn_path_url_add_component2(
-        dir->commit->session->repos_url.path,
+        dir->commit->session->session_url.path,
         path, new_file->pool);
       handler->response_handler = svn_ra_serf__handle_status_only;
       handler->response_baton = head_ctx;
@@ -2196,7 +2196,7 @@ close_edit(void *edit_baton,
   /* MERGE our activity */
   SVN_ERR(svn_ra_serf__merge_create_req(&merge_ctx, ctx->session,
                                         ctx->session->conns[0],
-                                        ctx->session->repos_url.path,
+                                        ctx->session->session_url.path,
                                         merge_target,
                                         ctx->lock_tokens,
                                         ctx->keep_locks,

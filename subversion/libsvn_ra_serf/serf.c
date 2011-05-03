@@ -187,7 +187,8 @@ load_config(svn_ra_serf__session_t *session,
   if (exceptions)
     {
       apr_array_header_t *l = svn_cstring_split(exceptions, ",", TRUE, pool);
-      is_exception = svn_cstring_match_glob_list(session->repos_url.hostname, l);
+      is_exception = svn_cstring_match_glob_list(session->session_url.hostname,
+                                                 l);
     }
   if (! is_exception)
     {
@@ -214,7 +215,7 @@ load_config(svn_ra_serf__session_t *session,
 
   if (config)
     server_group = svn_config_find_group(config,
-                                         session->repos_url.hostname,
+                                         session->session_url.hostname,
                                          SVN_CONFIG_SECTION_GROUPS, pool);
   else
     server_group = NULL;
@@ -381,8 +382,8 @@ svn_ra_serf__open(svn_ra_session_t *session,
     {
       url.port = apr_uri_port_of_scheme(url.scheme);
     }
-  serf_sess->repos_url = url;
-  serf_sess->repos_url_str = apr_pstrdup(serf_sess->pool, repos_URL);
+  serf_sess->session_url = url;
+  serf_sess->session_url_str = apr_pstrdup(serf_sess->pool, repos_URL);
   serf_sess->using_ssl = (svn_cstring_casecmp(url.scheme, "https") == 0);
 
   serf_sess->capabilities = apr_hash_make(serf_sess->pool);
@@ -450,7 +451,7 @@ svn_ra_serf__reparent(svn_ra_session_t *ra_session,
   apr_status_t status;
 
   /* If it's the URL we already have, wave our hands and do nothing. */
-  if (strcmp(session->repos_url_str, url) == 0)
+  if (strcmp(session->session_url_str, url) == 0)
     {
       return SVN_NO_ERROR;
     }
@@ -463,8 +464,8 @@ svn_ra_serf__reparent(svn_ra_session_t *ra_session,
                                _("Illegal repository URL '%s'"), url);
     }
 
-  session->repos_url.path = new_url.path;
-  session->repos_url_str = apr_pstrdup(session->pool, url);
+  session->session_url.path = new_url.path;
+  session->session_url_str = apr_pstrdup(session->pool, url);
 
   return SVN_NO_ERROR;
 }
@@ -475,7 +476,7 @@ svn_ra_serf__get_session_url(svn_ra_session_t *ra_session,
                              apr_pool_t *pool)
 {
   svn_ra_serf__session_t *session = ra_session->priv;
-  *url = apr_pstrdup(pool, session->repos_url_str);
+  *url = apr_pstrdup(pool, session->session_url_str);
   return SVN_NO_ERROR;
 }
 
@@ -488,7 +489,7 @@ svn_ra_serf__get_latest_revnum(svn_ra_session_t *ra_session,
   svn_ra_serf__session_t *session = ra_session->priv;
 
   return svn_ra_serf__get_baseline_info(&basecoll_url, &relative_url, session,
-                                        NULL, session->repos_url.path,
+                                        NULL, session->session_url.path,
                                         SVN_INVALID_REVNUM, latest_revnum,
                                         pool);
 }
@@ -564,7 +565,7 @@ fetch_path_props(svn_ra_serf__propfind_context_t **ret_prop_ctx,
   apr_hash_t *props;
   const char *path;
 
-  path = session->repos_url.path;
+  path = session->session_url.path;
 
   /* If we have a relative path, append it. */
   if (rel_path)
@@ -892,7 +893,7 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
   apr_hash_t *props;
   const char *path;
 
-  path = session->repos_url.path;
+  path = session->session_url.path;
 
   /* If we have a relative path, URI encode and append it. */
   if (rel_path)

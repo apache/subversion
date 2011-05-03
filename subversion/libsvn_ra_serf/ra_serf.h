@@ -124,8 +124,8 @@ struct svn_ra_serf__session_t {
   int cur_conn;
 
   /* The URL that was passed into _open() */
-  apr_uri_t repos_url;
-  const char *repos_url_str;
+  apr_uri_t session_url;
+  const char *session_url_str;
 
   /* The actual discovered root; may be NULL until we know it. */
   apr_uri_t repos_root;

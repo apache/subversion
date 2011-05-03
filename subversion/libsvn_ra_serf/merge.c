@@ -541,7 +541,7 @@ svn_ra_serf__merge_create_req(svn_ra_serf__merge_context_t **ret_ctx,
 
   merge_ctx->commit_info = svn_create_commit_info(pool);
 
-  merge_ctx->merge_url = session->repos_url.path;
+  merge_ctx->merge_url = session->session_url.path;
 
   handler = apr_pcalloc(pool, sizeof(*handler));
 
