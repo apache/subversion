@@ -172,11 +172,12 @@ build_info_for_entry(svn_info2_t **info,
   /* A default */
   tmpinfo->size = SVN_INVALID_FILESIZE;
 
-  SVN_ERR(svn_wc__node_get_schedule(&tmpinfo->wc_info->schedule, NULL,
-                                    wc_ctx, local_abspath, scratch_pool));
+  SVN_ERR(svn_wc__internal_node_get_schedule(&tmpinfo->wc_info->schedule, NULL,
+                                             wc_ctx->db, local_abspath,
+                                             scratch_pool));
 
-  SVN_ERR(svn_wc_get_wc_root(&tmpinfo->wc_info->wcroot_abspath, wc_ctx,
-                             local_abspath, result_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_get_wcroot(&tmpinfo->wc_info->wcroot_abspath, wc_ctx->db,
+                                local_abspath, result_pool, scratch_pool));
 
   SVN_ERR(svn_wc__node_get_recorded_info(&tmpinfo->wc_info->working_size,
                                          &tmpinfo->wc_info->text_time,
