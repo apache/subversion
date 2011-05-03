@@ -78,11 +78,11 @@ build_info_for_entry(svn_info2_t **info,
 
   tmpinfo->wc_info = apr_pcalloc(result_pool, sizeof(*tmpinfo->wc_info));
 
-  SVN_ERR(svn_wc__node_get_origin(&is_copy, &rev, &repos_relpath,
-                                  &tmpinfo->repos_root_URL,
-                                  &tmpinfo->repos_UUID,
-                                  wc_ctx, local_abspath, TRUE,
-                                  result_pool, scratch_pool));
+  SVN_ERR(svn_wc__internal_get_origin(&is_copy, &rev, &repos_relpath,
+                                      &tmpinfo->repos_root_URL,
+                                      &tmpinfo->repos_UUID,
+                                      wc_ctx->db, local_abspath, TRUE,
+                                      result_pool, scratch_pool));
 
   /* If we didn't get an origin, get it directly */
   if (!tmpinfo->repos_root_URL)
