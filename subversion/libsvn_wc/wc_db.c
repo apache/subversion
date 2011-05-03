@@ -164,7 +164,6 @@ typedef struct insert_base_baton_t {
 
   /* for inserting files */
   const svn_checksum_t *checksum;
-  svn_filesize_t translated_size;
 
   /* for inserting symlinks */
   const char *target;
@@ -175,6 +174,9 @@ typedef struct insert_base_baton_t {
   /* may need to insert/update ACTUAL to record new properties */
   svn_boolean_t update_actual_props;
   const apr_hash_t *new_actual_props;
+
+  /* maybe we should copy information from a previous record? */
+  svn_boolean_t keep_recorded_info;
 
   /* may have work items to queue in this transaction  */
   const svn_skel_t *work_items;
@@ -353,7 +355,7 @@ path_for_error_message(const svn_wc__db_wcroot_t *wcroot,
 /* Return a file size from column SLOT of the SQLITE statement STMT, or
    SVN_INVALID_FILESIZE if the column value is NULL.  */
 static svn_filesize_t
-get_translated_size(svn_sqlite__stmt_t *stmt, int slot)
+get_recorded_size(svn_sqlite__stmt_t *stmt, int slot)
 {
   if (svn_sqlite__column_is_null(stmt, slot))
     return SVN_INVALID_FILESIZE;
@@ -647,7 +649,6 @@ blank_ibb(insert_base_baton_t *pibb)
   pibb->revision = SVN_INVALID_REVNUM;
   pibb->changed_rev = SVN_INVALID_REVNUM;
   pibb->depth = svn_depth_infinity;
-  pibb->translated_size = SVN_INVALID_FILESIZE;
   pibb->repos_id = -1;
 }
 
@@ -761,6 +762,9 @@ insert_base_node(void *baton,
   const insert_base_baton_t *pibb = baton;
   apr_int64_t repos_id = pibb->repos_id;
   svn_sqlite__stmt_t *stmt;
+  svn_filesize_t recorded_size = SVN_INVALID_FILESIZE;
+  apr_int64_t recorded_mod_time;
+  
   /* The directory at the WCROOT has a NULL parent_relpath. Otherwise,
      bind the appropriate parent_relpath. */
   const char *parent_relpath =
@@ -776,6 +780,20 @@ insert_base_node(void *baton,
 
   /* ### we can't handle this right now  */
   SVN_ERR_ASSERT(pibb->conflict == NULL);
+
+  if (pibb->keep_recorded_info)
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_SELECT_BASE_NODE));
+
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__step_row(stmt));
+
+      recorded_size = get_recorded_size(stmt, 6);
+      recorded_mod_time = svn_sqlite__column_int64(stmt, 12);
+
+      SVN_ERR(svn_sqlite__reset(stmt));
+    }
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_INSERT_NODE));
   SVN_ERR(svn_sqlite__bindf(stmt, "isisisr"
@@ -802,8 +820,12 @@ insert_base_node(void *baton,
     {
       SVN_ERR(svn_sqlite__bind_checksum(stmt, 14, pibb->checksum,
                                         scratch_pool));
-      if (pibb->translated_size != SVN_INVALID_FILESIZE)
-        SVN_ERR(svn_sqlite__bind_int64(stmt, 16, pibb->translated_size));
+
+      if (recorded_size != SVN_INVALID_FILESIZE)
+        {
+          SVN_ERR(svn_sqlite__bind_int64(stmt, 16, recorded_size));
+          SVN_ERR(svn_sqlite__bind_int64(stmt, 17, recorded_mod_time));
+        }
     }
 
   SVN_ERR(svn_sqlite__bind_properties(stmt, 15, pibb->props,
@@ -1572,11 +1594,11 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
                          apr_time_t changed_date,
                          const char *changed_author,
                          const svn_checksum_t *checksum,
-                         svn_filesize_t translated_size,
                          apr_hash_t *dav_cache,
                          const svn_skel_t *conflict,
                          svn_boolean_t update_actual_props,
                          apr_hash_t *new_actual_props,
+                         svn_boolean_t keep_recorded_info,
                          const svn_skel_t *work_items,
                          apr_pool_t *scratch_pool)
 {
@@ -1614,7 +1636,6 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
   ibb.changed_author = changed_author;
 
   ibb.checksum = checksum;
-  ibb.translated_size = translated_size;
 
   ibb.dav_cache = dav_cache;
   ibb.conflict = conflict;
@@ -1626,6 +1647,7 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
       ibb.new_actual_props = new_actual_props;
     }
 
+  ibb.keep_recorded_info = keep_recorded_info;
 
   /* ### hmm. if this used to be a directory, we should remove children.
      ### or maybe let caller deal with that, if there is a possibility
@@ -1770,7 +1792,6 @@ add_absent_excluded_not_present_node(svn_wc__db_t *db,
   ibb.children = NULL;
   ibb.depth = svn_depth_unknown;
   ibb.checksum = NULL;
-  ibb.translated_size = SVN_INVALID_FILESIZE;
   ibb.target = NULL;
 
   ibb.conflict = conflict;
@@ -1997,7 +2018,7 @@ base_get_info(svn_wc__db_status_t *status,
         }
       if (recorded_size)
         {
-          *recorded_size = get_translated_size(stmt, 6);
+          *recorded_size = get_recorded_size(stmt, 6);
         }
       if (target)
         {
@@ -5401,7 +5422,7 @@ read_info(svn_wc__db_status_t *status,
         }
       if (recorded_size)
         {
-          *recorded_size = get_translated_size(stmt_info, 7);
+          *recorded_size = get_recorded_size(stmt_info, 7);
         }
       if (target)
         {
@@ -5772,7 +5793,7 @@ read_children_info(void *baton,
             }
 
           child->recorded_mod_time = svn_sqlite__column_int64(stmt, 13);
-          child->recorded_size = get_translated_size(stmt, 7);
+          child->recorded_size = get_recorded_size(stmt, 7);
           child->had_props = SQLITE_PROPERTIES_AVAILABLE(stmt, 14);
 #ifdef HAVE_SYMLINK
           if (child->had_props)

@@ -3571,6 +3571,7 @@ close_file(void *file_baton,
   apr_time_t new_changed_date;
   const char *new_changed_author;
   apr_pool_t *scratch_pool = fb->pool; /* Destroyed at function exit */
+  svn_boolean_t keep_recorded_info = FALSE;
 
   if (fb->skip_this)
     {
@@ -3833,6 +3834,8 @@ close_file(void *file_baton,
                                             scratch_pool);
         }
 
+      keep_recorded_info = (install_pristine == FALSE);
+
       /* Clean up any temporary files.  */
 
       /* Remove the INSTALL_FROM file, as long as it doesn't refer to the
@@ -3924,7 +3927,6 @@ close_file(void *file_baton,
                                      new_changed_date,
                                      new_changed_author,
                                      new_checksum,
-                                     SVN_INVALID_FILESIZE,
                                      (dav_prop_changes
                                       && dav_prop_changes->nelts > 0)
                                        ? prop_hash_from_array(dav_prop_changes,
@@ -3933,6 +3935,7 @@ close_file(void *file_baton,
                                      NULL /* conflict */,
                                      (! fb->shadowed) && new_base_props,
                                      new_actual_props,
+                                     keep_recorded_info,
                                      all_work_items,
                                      scratch_pool));
 

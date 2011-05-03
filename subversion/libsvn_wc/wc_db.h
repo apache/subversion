@@ -481,10 +481,6 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
    The checksum of the file contents is given in CHECKSUM. An entry in
    the pristine text base is NOT required when this API is called.
 
-   If the translated size of the file (its contents, translated as defined
-   by its properties) is known, then pass it as TRANSLATED_SIZE. Otherwise,
-   pass SVN_INVALID_FILESIZE.
-
    If DAV_CACHE is not NULL, sets LOCAL_ABSPATH's dav cache to the specified
    data.
 
@@ -498,6 +494,9 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
 
    Any work items that are necessary as part of this node construction may
    be passed in WORK_ITEMS.
+
+   Unless KEEP_RECORDED_INFO is set to TRUE, recorded size and timestamp values
+   will be cleared.
 
    All temporary allocations will be made in SCRATCH_POOL.
 */
@@ -513,11 +512,11 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
                          apr_time_t changed_date,
                          const char *changed_author,
                          const svn_checksum_t *checksum,
-                         svn_filesize_t translated_size,
                          apr_hash_t *dav_cache,
                          const svn_skel_t *conflict,
                          svn_boolean_t update_actual_props,
                          apr_hash_t *new_actual_props,
+                         svn_boolean_t keep_recorded_info,
                          const svn_skel_t *work_items,
                          apr_pool_t *scratch_pool);
 
