@@ -645,8 +645,7 @@ walker_helper(svn_wc__db_t *db,
               break;
           }
 
-      /* Return the child, if appropriate.  (For a directory,
-       * this is the first visit: as a child.) */
+      /* Return the child, if appropriate. */
       if ( (child_kind == svn_wc__db_kind_file
              || depth >= svn_depth_immediates)
            && svn_wc__internal_changelist_match(db, child_abspath,
