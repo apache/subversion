@@ -199,7 +199,6 @@ build_info_for_entry(svn_info2_t **info,
                                                   NULL, NULL, NULL, NULL,
                                                   NULL, NULL, NULL, NULL,
                                                   &lock, NULL, NULL, NULL,
-                                                  NULL, NULL,
                                                   wc_ctx->db, local_abspath,
                                                   result_pool, scratch_pool);
 

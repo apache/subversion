@@ -1924,8 +1924,6 @@ base_get_info(svn_wc__db_status_t *status,
               const svn_checksum_t **checksum,
               const char **target,
               svn_wc__db_lock_t **lock,
-              svn_filesize_t *recorded_size,
-              apr_time_t *recorded_mod_time,
               svn_boolean_t *had_props,
               svn_boolean_t *update_root,
               svn_boolean_t *needs_full_update,
@@ -1978,10 +1976,6 @@ base_get_info(svn_wc__db_status_t *status,
           /* Result may be NULL. */
           *changed_author = svn_sqlite__column_text(stmt, 9, result_pool);
         }
-      if (recorded_mod_time)
-        {
-          *recorded_mod_time = svn_sqlite__column_int64(stmt, 12);
-        }
       if (depth)
         {
           if (node_kind != svn_wc__db_kind_dir)
@@ -2015,10 +2009,6 @@ base_get_info(svn_wc__db_status_t *status,
                         path_for_error_message(wcroot, local_relpath,
                                                scratch_pool));
             }
-        }
-      if (recorded_size)
-        {
-          *recorded_size = get_recorded_size(stmt, 6);
         }
       if (target)
         {
@@ -2070,8 +2060,6 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
                          const svn_checksum_t **checksum,
                          const char **target,
                          svn_wc__db_lock_t **lock,
-                         svn_filesize_t *recorded_size,
-                         apr_time_t *recorded_mod_time,
                          svn_boolean_t *had_props,
                          svn_boolean_t *update_root,
                          svn_boolean_t *needs_full_update,
@@ -2092,8 +2080,7 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
 
   SVN_ERR(base_get_info(status, kind, revision, repos_relpath, &repos_id,
                         changed_rev, changed_date, changed_author, depth,
-                        checksum, target, lock, recorded_size,
-                        recorded_mod_time, had_props,
+                        checksum, target, lock, had_props,
                         update_root, needs_full_update,
                         wcroot, local_relpath, result_pool, scratch_pool));
   SVN_ERR_ASSERT(repos_id != INVALID_REPOS_ID);
@@ -2563,7 +2550,7 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
         {
           SVN_ERR(base_get_info(NULL, NULL, copyfrom_rev, copyfrom_relpath,
                                 copyfrom_id,
-                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                NULL, NULL, NULL, NULL, NULL,
                                 NULL, NULL, NULL, NULL, NULL,
                                 wcroot, base_del_relpath,
                                 result_pool, scratch_pool));
@@ -7629,7 +7616,7 @@ bump_node_revision(svn_wc__db_wcroot_t *wcroot,
     return SVN_NO_ERROR;
 
   SVN_ERR(base_get_info(&status, &db_kind, &revision, &repos_relpath,
-                        &repos_id, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                        &repos_id, NULL, NULL, NULL, NULL, NULL,
                         NULL, NULL, NULL, &update_root, NULL,
                         wcroot, local_relpath,
                         scratch_pool, scratch_pool));
@@ -7749,7 +7736,7 @@ bump_revisions_post_update(void *baton,
   apr_int64_t new_repos_id = -1;
 
   err = base_get_info(&status, &kind, NULL, NULL, NULL, NULL, NULL, NULL,
-                      NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                      NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                       wcroot, local_relpath, scratch_pool, scratch_pool);
   if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
     {
@@ -9946,7 +9933,7 @@ end_directory_update(void *baton,
   svn_wc__db_status_t base_status;
 
   SVN_ERR(base_get_info(&base_status, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                        NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                        NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                         wcroot, local_relpath, scratch_pool, scratch_pool));
 
   SVN_ERR_ASSERT(base_status == svn_wc__db_status_incomplete);

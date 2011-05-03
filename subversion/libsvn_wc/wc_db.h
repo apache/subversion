@@ -710,9 +710,6 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
      TARGET             NULL
      LOCK               NULL
 
-     RECORDED_SIZE      SVN_INVALID_FILESIZE
-     RECORDED_MOD_TIME  0
-
      HAD_PROPS          FALSE
 
      UPDATE_ROOT        FALSE
@@ -728,9 +725,6 @@ svn_wc__db_base_remove(svn_wc__db_t *db,
 
    If CHECKSUM is requested, and the node is NOT a file, then it will
    be set to NULL.
-
-   If RECORDED_SIZE is requested, and the node is NOT a file, then
-   it will be set to SVN_INVALID_FILESIZE.
 
    If TARGET is requested, and the node is NOT a symlink, then it will
    be set to NULL.
@@ -758,8 +752,6 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
                          const svn_checksum_t **checksum,
                          const char **target,
                          svn_wc__db_lock_t **lock,
-                         svn_filesize_t *recorded_size,
-                         apr_time_t *recorded_mod_time,
                          svn_boolean_t *had_props,
                          svn_boolean_t *update_root,
                          svn_boolean_t *needs_full_update,

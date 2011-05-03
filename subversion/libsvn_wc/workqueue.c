@@ -147,7 +147,7 @@ remove_base_node(svn_wc__db_t *db,
   else
     SVN_ERR(svn_wc__db_base_get_info(&base_status, &base_kind, NULL, NULL,
                                      NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                     NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, NULL, NULL,
                                      db, local_abspath,
                                      scratch_pool, scratch_pool));
 
@@ -269,7 +269,7 @@ run_base_remove(svn_wc__db_t *db,
                                            &not_present_rev, &repos_relpath,
                                            &repos_root_url, &repos_uuid, NULL,
                                            NULL, NULL, NULL, NULL, NULL, NULL,
-                                           NULL, NULL, NULL, NULL, NULL,
+                                           NULL, NULL, NULL,
                                            db, local_abspath,
                                            scratch_pool, scratch_pool));
         }
