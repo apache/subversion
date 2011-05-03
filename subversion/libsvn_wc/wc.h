@@ -643,6 +643,18 @@ svn_wc__internal_get_copyfrom_info(const char **copyfrom_root_url,
                                    apr_pool_t *result_pool,
                                    apr_pool_t *scratch_pool);
 
+/* Internal version of svn_wc__node_get_origin() */
+svn_error_t *
+svn_wc__internal_get_origin(svn_boolean_t *is_copy,
+                            svn_revnum_t *revision,
+                            const char **repos_relpath,
+                            const char **repos_root_url,
+                            const char **repos_uuid,
+                            svn_wc__db_t *db,
+                            const char *local_abspath,
+                            svn_boolean_t scan_deleted,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
 
 
 /* Upgrade the wc sqlite database given in SDB for the wc located at

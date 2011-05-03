@@ -1361,16 +1361,16 @@ svn_wc__get_absent_subtrees(apr_hash_t **absent_subtrees,
 }
 
 svn_error_t *
-svn_wc__node_get_origin(svn_boolean_t *is_copy,
-                        svn_revnum_t *revision,
-                        const char **repos_relpath,
-                        const char **repos_root_url,
-                        const char **repos_uuid,
-                        svn_wc_context_t *wc_ctx,
-                        const char *local_abspath,
-                        svn_boolean_t scan_deleted,
-                        apr_pool_t *result_pool,
-                        apr_pool_t *scratch_pool)
+svn_wc__internal_get_origin(svn_boolean_t *is_copy,
+                            svn_revnum_t *revision,
+                            const char **repos_relpath,
+                            const char **repos_root_url,
+                            const char **repos_uuid,
+                            svn_wc__db_t *db,
+                            const char *local_abspath,
+                            svn_boolean_t scan_deleted,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
 {
   const char *original_repos_relpath;
   const char *original_repos_root_url;
@@ -1391,8 +1391,7 @@ svn_wc__node_get_origin(svn_boolean_t *is_copy,
                                &original_repos_uuid, &original_revision,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, is_copy,
-                               wc_ctx->db, local_abspath,
-                               result_pool, scratch_pool));
+                               db, local_abspath, result_pool, scratch_pool));
 
   if (*repos_relpath)
     {
@@ -1430,8 +1429,7 @@ svn_wc__node_get_origin(svn_boolean_t *is_copy,
         svn_boolean_t have_base;
         /* Is this a BASE or a WORKING delete? */
         SVN_ERR(svn_wc__db_info_below_working(&have_base, &scan_working,
-                                              &status,
-                                              wc_ctx->db, local_abspath,
+                                              &status, db, local_abspath,
                                               scratch_pool));
       }
 
@@ -1443,8 +1441,7 @@ svn_wc__node_get_origin(svn_boolean_t *is_copy,
                                          NULL, NULL, &original_repos_relpath,
                                          repos_root_url,
                                          repos_uuid,
-                                         revision,
-                                         wc_ctx->db, local_abspath,
+                                         revision, db, local_abspath,
                                          result_pool, scratch_pool));
 
         if (status == svn_wc__db_status_added)
@@ -1465,12 +1462,30 @@ svn_wc__node_get_origin(svn_boolean_t *is_copy,
                                          repos_root_url, repos_uuid, NULL,
                                          NULL, NULL, NULL, NULL, NULL, NULL,
                                          NULL, NULL, NULL,
-                                         wc_ctx->db, local_abspath,
+                                         db, local_abspath,
                                          result_pool, scratch_pool));
       }
 
     return SVN_NO_ERROR;
   }
+}
+
+svn_error_t *
+svn_wc__node_get_origin(svn_boolean_t *is_copy,
+                        svn_revnum_t *revision,
+                        const char **repos_relpath,
+                        const char **repos_root_url,
+                        const char **repos_uuid,
+                        svn_wc_context_t *wc_ctx,
+                        const char *local_abspath,
+                        svn_boolean_t scan_deleted,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
+{
+  return svn_error_return(svn_wc__internal_get_origin(is_copy, revision,
+                            repos_relpath, repos_root_url, repos_uuid,
+                            wc_ctx->db, local_abspath, scan_deleted,
+                            result_pool, scratch_pool));
 }
 
 svn_error_t *
