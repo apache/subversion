@@ -1993,7 +1993,8 @@ apply_textdelta(void *file_baton,
 
   svn_txdelta_to_svndiff2(handler, handler_baton, ctx->stream, 0, pool);
 
-  ctx->base_checksum = base_checksum;
+  if (base_checksum)
+    ctx->base_checksum = apr_pstrdup(ctx->pool, base_checksum);
 
   return SVN_NO_ERROR;
 }
