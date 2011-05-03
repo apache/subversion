@@ -152,17 +152,17 @@ delete_urls(const apr_array_header_t *paths,
   apr_array_header_t *targets;
   apr_hash_t *commit_revprops;
   svn_error_t *err;
-  const char *common;
+  const char *common_url;
   int i;
-  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(pool);
 
   /* Condense our list of deletion targets. */
-  SVN_ERR(svn_uri_condense_targets(&common, &targets, paths, TRUE,
-                                   pool, subpool));
+  SVN_ERR(svn_uri_condense_targets(&common_url, &targets, paths, TRUE,
+                                   pool, iterpool));
   if (! targets->nelts)
     {
       const char *bname;
-      svn_uri_split(&common, &bname, common, pool);
+      svn_uri_split(&common_url, &bname, common_url, pool);
       APR_ARRAY_PUSH(targets, const char *) = bname;
     }
 
@@ -179,7 +179,7 @@ delete_urls(const apr_array_header_t *paths,
           const char *relpath = APR_ARRAY_IDX(targets, i, const char *);
 
           item = svn_client_commit_item3_create(pool);
-          item->url = svn_path_url_add_component2(common, relpath, pool);
+          item->url = svn_path_url_add_component2(common_url, relpath, pool);
           item->state_flags = SVN_CLIENT_COMMIT_ITEM_DELETE;
           APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
         }
@@ -187,7 +187,7 @@ delete_urls(const apr_array_header_t *paths,
                                       ctx, pool));
       if (! log_msg)
         {
-          svn_pool_destroy(subpool);
+          svn_pool_destroy(iterpool);
           return SVN_NO_ERROR;
         }
     }
@@ -197,42 +197,30 @@ delete_urls(const apr_array_header_t *paths,
   SVN_ERR(svn_client__ensure_revprop_table(&commit_revprops, revprop_table,
                                            log_msg, ctx, pool));
 
+  /* Open ra session to the common parent of our deletes */
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL,
+                                               common_url, NULL, NULL,
+                                               FALSE, TRUE, ctx, pool));
+
   /* Verify that each thing to be deleted actually exists (to prevent
      the creation of a revision that has no changes, since the
      filesystem allows for no-op deletes).  */
   for (i = 0; i < targets->nelts; i++)
     {
       const char *relpath = APR_ARRAY_IDX(targets, i, const char *);
-      const char *item_url;
 
-      svn_pool_clear(subpool);
-      item_url = svn_path_url_add_component2(common, relpath, subpool);
+      svn_pool_clear(iterpool);
 
-      /* If we've not yet done so, open an RA session for the
-         URL. Note that we don't have a local directory, nor a place
-         to put temp files.  Otherwise, reparent our existing
-         session.  */
-      if (! ra_session)
-        {
-          SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL,
-                                                       item_url, NULL, NULL,
-                                                       FALSE, TRUE, ctx, pool));
-        }
-      else
-        {
-          SVN_ERR(svn_ra_reparent(ra_session, item_url, subpool));
-        }
-
-      SVN_ERR(svn_ra_check_path(ra_session, "", SVN_INVALID_REVNUM,
-                                &kind, subpool));
+      SVN_ERR(svn_ra_check_path(ra_session, relpath, SVN_INVALID_REVNUM,
+                                &kind, iterpool));
       if (kind == svn_node_none)
-        return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
-                                 _("URL '%s' does not exist"), item_url);
+        {
+          return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
+                                   _("URL '%s' does not exist"), 
+                                   svn_path_url_add_component2(common_url,
+                                                               relpath, pool));
+        }
     }
-  svn_pool_destroy(subpool);
-
-  /* Reparent the RA_session to the common parent of our deletees. */
-  SVN_ERR(svn_ra_reparent(ra_session, common, pool));
 
   /* Fetch RA commit editor */
   SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
@@ -245,16 +233,19 @@ delete_urls(const apr_array_header_t *paths,
   /* Call the path-based editor driver. */
   err = svn_delta_path_driver(editor, edit_baton, SVN_INVALID_REVNUM,
                               targets, path_driver_cb_func,
-                              (void *)editor, pool);
+                              (void *)editor, iterpool);
+
+  svn_pool_destroy(iterpool);
   if (err)
     {
       return svn_error_return(
                svn_error_compose_create(err,
-                                        editor->abort_edit(edit_baton, pool)));
+                                        editor->abort_edit(edit_baton,
+                                                           iterpool)));
     }
 
   /* Close the edit. */
-  return editor->close_edit(edit_baton, pool);
+  return svn_error_return(editor->close_edit(edit_baton, pool));
 }
 
 svn_error_t *
