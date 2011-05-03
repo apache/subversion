@@ -195,11 +195,21 @@ build_info_for_entry(svn_info2_t **info,
     {
       svn_wc__db_lock_t *lock;
 
-      SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       &lock, NULL, NULL, NULL, NULL, NULL,
-                                       wc_ctx->db, local_abspath,
-                                       result_pool, scratch_pool));
+      svn_error_t *err = svn_wc__db_base_get_info(NULL, NULL, NULL, NULL,
+                                                  NULL, NULL, NULL, NULL,
+                                                  NULL, NULL, NULL, NULL,
+                                                  &lock, NULL, NULL, NULL,
+                                                  NULL, NULL,
+                                                  wc_ctx->db, local_abspath,
+                                                  result_pool, scratch_pool);
+
+      if (err && (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND))
+        {
+          svn_error_clear(err);
+          lock = NULL;
+        }
+      else if (err)
+        return svn_error_return(err);
 
       if (lock)
         {
