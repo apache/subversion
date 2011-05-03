@@ -1986,7 +1986,7 @@ apply_textdelta(void *file_baton,
 
   SVN_ERR(svn_io_open_unique_file3(&ctx->svndiff, NULL, NULL,
                                    svn_io_file_del_on_close,
-                                   ctx->pool, ctx->pool));
+                                   ctx->pool, pool));
 
   ctx->stream = svn_stream_create(ctx, pool);
   svn_stream_set_write(ctx->stream, svndiff_stream_write);
