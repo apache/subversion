@@ -156,8 +156,13 @@ build_info_for_entry(svn_info2_t **info,
 
   if (tmpinfo->kind == svn_node_dir)
     {
-      SVN_ERR(svn_wc__node_get_depth(&tmpinfo->wc_info->depth, wc_ctx,
-                                     local_abspath, scratch_pool));
+      SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, &tmpinfo->wc_info->depth,
+                                   NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL,
+                                   wc_ctx->db, local_abspath, scratch_pool,
+                                   scratch_pool));
 
       if (tmpinfo->wc_info->depth == svn_depth_unknown)
         tmpinfo->wc_info->depth = svn_depth_infinity;
