@@ -1178,6 +1178,36 @@ def case_sensitive_authz(sbox):
                                         None,
                                         mu_path)
 
+@Skip(svntest.main.is_ra_type_file)
+def authz_tree_conflict(sbox):
+  "authz should notice a tree conflict"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  sbox.simple_rm('A/C')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  write_authz_file(sbox, {"/": "jrandom = rw", "/A/C": "*="})
+  write_restrictive_svnserve_conf(sbox.repo_dir)
+
+  # And now create an obstruction
+  sbox.simple_mkdir('A/C')
+
+  expected_output = svntest.wc.State(wc_dir, {})
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('A/C', status='A ', wc_rev='0')
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        None,
+                                        expected_status,
+                                        "Failed to mark '.*C' absent:",
+                                        None, None, None, None, 0,
+                                        '-r', '1', wc_dir)
+  
+
+
 ########################################################################
 # Run the tests
 
@@ -1203,6 +1233,7 @@ test_list = [ None,
               wc_wc_copy_revert,
               authz_recursive_ls,
               case_sensitive_authz,
+              authz_tree_conflict,
              ]
 serial_only = True
 
