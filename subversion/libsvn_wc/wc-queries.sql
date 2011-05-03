@@ -785,22 +785,6 @@ WHERE wc_id = ?1 AND local_relpath LIKE ?2 ESCAPE '#' AND op_depth = ?3
 UPDATE nodes SET op_depth = ?4
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3
 
--- STMT_UPDATE_OP_DEPTH_RECURSIVE
-UPDATE nodes SET op_depth = ?3
-WHERE wc_id = ?1 AND local_relpath LIKE ?2 ESCAPE '#' AND op_depth > ?3
-
--- STMT_DELETE_WORKING_NODE_NOT_DELETED
-DELETE FROM nodes
-WHERE wc_id = ?1 AND local_relpath LIKE ?2 ESCAPE '#' AND op_depth > ?3
-  AND presence NOT IN ('base-deleted', 'not-present')
-
--- STMT_DELETE_WORKING_ORPHAN
-DELETE FROM nodes
-WHERE wc_id = ?1 AND local_relpath LIKE ?2 ESCAPE '#' AND op_depth = ?3
-AND NOT EXISTS (SELECT 1 FROM nodes AS A
-                 WHERE A.wc_id = ?1
-                   AND A.local_relpath = nodes.local_relpath AND op_depth < ?3)
-
 -- STMT_UPDATE_WORKING_TO_DELETED
 UPDATE nodes SET
   repos_id = NULL, repos_path = NULL, revision = NULL,
@@ -1128,17 +1112,13 @@ WHERE local_relpath = ?1 OR local_relpath LIKE ?2 ESCAPE '#'
 DROP TABLE IF EXISTS delete_list;
 CREATE TEMPORARY TABLE delete_list (
    local_relpath TEXT PRIMARY KEY
-   );
-DROP TRIGGER IF EXISTS trigger_delete_list_nodes;
-CREATE TEMPORARY TRIGGER trigger_delete_list_nodes
-AFTER INSERT ON nodes
-BEGIN
-   INSERT INTO delete_list(local_relpath)
-   SELECT NEW.local_relpath;
-END
+   )
 
--- STMT_DROP_DELETE_LIST_TRIGGERS
-DROP TRIGGER IF EXISTS trigger_delete_list_nodes
+-- STMT_INSERT_DELETE_LIST
+INSERT INTO delete_list(local_relpath)
+SELECT local_relpath FROM nodes_current
+WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
+  AND presence NOT IN ('base-deleted', 'not-present')
 
 -- STMT_SELECT_DELETE_LIST
 SELECT local_relpath FROM delete_list

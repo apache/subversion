@@ -944,8 +944,8 @@ def query_absent_tree_conflicted_dir(sbox):
 
   # Delete A/C with --keep-local, in effect disarming the tree-conflict.
   run_and_verify_svn(None,
-                     ['D         ' + C_C_path + '\n',
-                      'D         ' + C_path + '\n'],
+                     verify.UnorderedOutput(['D         ' + C_C_path + '\n',
+                                             'D         ' + C_path + '\n']),
                      [],
                      'delete', C_path, '--keep-local')
 
