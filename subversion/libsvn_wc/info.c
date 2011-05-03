@@ -266,8 +266,8 @@ info_found_node_callback(const char *local_abspath,
   const svn_wc_conflict_description2_t *tree_conflict = NULL;
   svn_error_t *err;
 
-  SVN_ERR(svn_wc__get_tree_conflict(&tree_conflict, fe_baton->wc_ctx,
-                                    local_abspath, pool, pool));
+  SVN_ERR(svn_wc__db_op_read_tree_conflict(&tree_conflict, fe_baton->wc_ctx->db,
+                                           local_abspath, pool, pool));
 
   err = build_info_for_entry(&info, fe_baton->wc_ctx, local_abspath,
                              kind, pool, pool);
