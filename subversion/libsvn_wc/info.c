@@ -120,10 +120,10 @@ build_info_for_entry(svn_info2_t **info,
 
   if (is_copy)
     {
-      SVN_ERR(svn_wc__node_get_copyfrom_info(NULL, NULL, NULL, NULL,
-                                             &is_copy_target,
-                                             wc_ctx, local_abspath,
-                                             scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc__internal_get_copyfrom_info(NULL, NULL, NULL, NULL,
+                                                 &is_copy_target,
+                                                 wc_ctx->db, local_abspath,
+                                                 scratch_pool, scratch_pool));
 
       if (is_copy_target)
         {
