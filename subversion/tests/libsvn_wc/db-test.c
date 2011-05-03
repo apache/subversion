@@ -700,8 +700,8 @@ test_inserting_nodes(apr_pool_t *pool)
             "N/N-a", ROOT_ONE, UUID_ONE, 3,
             props,
             1, TIME_1a, AUTHOR_1,
-            checksum, 10,
-            NULL, NULL, FALSE, NULL, NULL,
+            checksum,
+            NULL, NULL, FALSE, NULL, FALSE, NULL,
             pool));
 
   /* Create a new symlink node. */
