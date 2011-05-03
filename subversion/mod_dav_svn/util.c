@@ -130,6 +130,7 @@ dav_svn__convert_err(svn_error_t *serr,
       case SVN_ERR_UNSUPPORTED_FEATURE:
         status = HTTP_NOT_IMPLEMENTED;
         break;
+      case SVN_ERR_FS_LOCK_OWNER_MISMATCH:
       case SVN_ERR_FS_PATH_ALREADY_LOCKED:
         status = HTTP_LOCKED;
         break;
