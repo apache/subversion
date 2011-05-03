@@ -833,8 +833,8 @@ def run_and_verify_update(wc_dir_name,
 
 
 def run_and_parse_info(*args):
-  """Run 'svn info' and parse its output into a list of dicts,
-  one dict per target."""
+  """Run 'svn info ARGS' and parse its output into a list of dicts,
+  one dict per reported node."""
 
   # the returned array
   all_infos = []
