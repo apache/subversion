@@ -2009,7 +2009,12 @@ info_from_info2(const svn_info2_t *info2,
   svn_info_t *info = apr_pcalloc(pool, sizeof(*info));
 
   info->URL                 = info2->URL;
-  info->rev                 = info2->rev;
+  /* Goofy backward compat handling for added nodes. */
+  if (SVN_IS_VALID_REVNUM(info2->rev))
+    info->rev               = info2->rev;
+  else
+    info->rev               = 0;
+
   info->kind                = info2->kind;
   info->repos_root_URL      = info2->repos_root_URL;
   info->repos_UUID          = info2->repos_UUID;
