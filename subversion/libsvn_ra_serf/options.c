@@ -332,7 +332,7 @@ capabilities_headers_iterator_callback(void *baton,
     {
       if (svn_cstring_casecmp(key, SVN_DAV_ROOT_URI_HEADER) == 0)
         {
-          orc->session->repos_root = orc->session->repos_url;
+          orc->session->repos_root = orc->session->session_url;
           orc->session->repos_root.path = apr_pstrdup(orc->session->pool, val);
           orc->session->repos_root_str =
             svn_urlpath__canonicalize(
@@ -504,7 +504,7 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
   /* This routine automatically fills in serf_sess->capabilities */
   SVN_ERR(svn_ra_serf__create_options_req(&opt_ctx, serf_sess,
                                           serf_sess->conns[0],
-                                          serf_sess->repos_url.path, pool));
+                                          serf_sess->session_url.path, pool));
 
   err = svn_ra_serf__context_run_wait(
             svn_ra_serf__get_options_done_ptr(opt_ctx), serf_sess, pool);
@@ -522,7 +522,7 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
 
   return svn_error_compose_create(
              svn_ra_serf__error_on_status(opt_ctx->status_code,
-                                          serf_sess->repos_url.path,
+                                          serf_sess->session_url.path,
                                           opt_ctx->parser_ctx->location),
              err);
 }

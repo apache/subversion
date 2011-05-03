@@ -96,18 +96,18 @@ construct_realm(svn_ra_serf__session_t *session,
   const char *realm;
   apr_port_t port;
 
-  if (session->repos_url.port_str)
+  if (session->session_url.port_str)
     {
-      port = session->repos_url.port;
+      port = session->session_url.port;
     }
   else
     {
-      port = apr_uri_port_of_scheme(session->repos_url.scheme);
+      port = apr_uri_port_of_scheme(session->session_url.scheme);
     }
 
   realm = apr_psprintf(pool, "%s://%s:%d",
-                       session->repos_url.scheme,
-                       session->repos_url.hostname,
+                       session->session_url.scheme,
+                       session->session_url.hostname,
                        port);
 
   return realm;
@@ -1656,7 +1656,7 @@ svn_ra_serf__discover_vcc(const char **vcc_url,
     }
 
   props = apr_hash_make(pool);
-  path = session->repos_url.path;
+  path = session->session_url.path;
   *vcc_url = NULL;
   uuid = NULL;
 
@@ -1734,7 +1734,7 @@ svn_ra_serf__discover_vcc(const char **vcc_url,
                                  svn_path_component_count(relative_path));
 
       /* Now recreate the root_url. */
-      session->repos_root = session->repos_url;
+      session->repos_root = session->session_url;
       session->repos_root.path = apr_pstrdup(session->pool, url_buf->data);
       session->repos_root_str =
         svn_urlpath__canonicalize(apr_uri_unparse(session->pool,

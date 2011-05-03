@@ -953,7 +953,7 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
 
   /* No URL?  No sweat.  We'll use the session URL. */
   if (! url)
-    url = session->repos_url.path;
+    url = session->session_url.path;
 
   /* If the caller didn't provide a specific connection for us to use,
      we'll use the default one.  */
@@ -979,7 +979,7 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
               svn_ra_serf__options_context_t *opt_ctx;
 
               SVN_ERR(svn_ra_serf__create_options_req(&opt_ctx, session, conn,
-                                                  session->repos_url.path,
+                                                  session->session_url.path,
                                                   pool));
               SVN_ERR(svn_ra_serf__context_run_wait(
                 svn_ra_serf__get_options_done_ptr(opt_ctx), session, pool));
