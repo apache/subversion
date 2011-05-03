@@ -586,7 +586,11 @@ typedef svn_error_t *(*svn_wc__node_found_func_t)(const char *local_abspath,
                                                   void *walk_baton,
                                                   apr_pool_t *scratch_pool);
 
-/* Library-internal version of svn_wc__node_walk_children(), which see.
+/* Call @a walk_callback with @a walk_baton for @a local_abspath and all
+   nodes underneath it, restricted by @a walk_depth, and possibly
+   @a changelists.
+
+   If @a show_hidden is true, include hidden nodes, else ignore them.
    If CHANGELISTS is non-NULL and non-empty, filter thereon. */
 svn_error_t *
 svn_wc__internal_walk_children(svn_wc__db_t *db,
