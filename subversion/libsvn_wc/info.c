@@ -111,20 +111,11 @@ build_info_for_entry(svn_info2_t **info,
   else
     tmpinfo->rev = rev;
 
-  /* ### FIXME: For now, we'll tweak an SVN_INVALID_REVNUM and make it
-     ### 0.  In WC-1, files scheduled for addition were assigned
-     ### revision=0.  This is wrong, and we're trying to remedy that,
-     ### but for the sake of test suite and code sanity now in WC-NG,
-     ### we'll just maintain the old behavior.
-     ###
-     ### We should also just be fetching the true BASE revision
+  /* ### We should also just be fetching the true BASE revision
      ### above, which means copied items would also not have a
      ### revision to display.  But WC-1 wants to show the revision of
      ### copy targets as the copyfrom-rev.  *sigh*
   */
-  if (! SVN_IS_VALID_REVNUM(tmpinfo->rev))
-    tmpinfo->rev = 0;
-
   tmpinfo->wc_info->copyfrom_rev = SVN_INVALID_REVNUM;
 
   if (is_copy)
