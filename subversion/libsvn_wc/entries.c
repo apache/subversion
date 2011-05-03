@@ -478,58 +478,22 @@ read_one_entry(const svn_wc_entry_t **new_entry,
   if (status == svn_wc__db_status_normal
       || status == svn_wc__db_status_incomplete)
     {
-      svn_boolean_t have_row = FALSE;
+      /* Plain old BASE node.  */
+      entry->schedule = svn_wc_schedule_normal;
 
-      /* Ugh. During a checkout, it is possible that we are constructing
-         a subdirectory "over" a not-present directory. The read_info()
-         will return information out of the wc.db in the subdir. We
-         need to detect this situation and create a DELETED entry
-         instead.
-
-         ### Does this still happen?  The regression tests passed when
-             the NODES query was erroneously accessing BASE_NODE. */
-      if (kind == svn_wc__db_kind_dir)
+      /* Grab inherited repository information, if necessary. */
+      if (repos_relpath == NULL)
         {
-          svn_sqlite__db_t *sdb;
-          svn_sqlite__stmt_t *stmt;
-
-          SVN_ERR(svn_wc__db_temp_borrow_sdb(
-                    &sdb, db, dir_abspath,
-                    scratch_pool));
-
-          SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                            STMT_SELECT_NOT_PRESENT));
-          SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, entry->name));
-          SVN_ERR(svn_sqlite__step(&have_row, stmt));
-          SVN_ERR(svn_sqlite__reset(stmt));
+          SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath,
+                                             &entry->repos,
+                                             &entry->uuid,
+                                             db,
+                                             entry_abspath,
+                                             result_pool,
+                                             scratch_pool));
         }
 
-      if (have_row)
-        {
-          /* Just like a normal "not-present" node: schedule=normal
-             and DELETED.  */
-          entry->schedule = svn_wc_schedule_normal;
-          entry->deleted = TRUE;
-        }
-      else
-        {
-          /* Plain old BASE node.  */
-          entry->schedule = svn_wc_schedule_normal;
-
-          /* Grab inherited repository information, if necessary. */
-          if (repos_relpath == NULL)
-            {
-              SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath,
-                                                 &entry->repos,
-                                                 &entry->uuid,
-                                                 db,
-                                                 entry_abspath,
-                                                 result_pool,
-                                                 scratch_pool));
-            }
-
-          entry->incomplete = (status == svn_wc__db_status_incomplete);
-        }
+      entry->incomplete = (status == svn_wc__db_status_incomplete);
     }
   else if (status == svn_wc__db_status_deleted)
     {
