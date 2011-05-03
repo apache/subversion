@@ -3477,26 +3477,38 @@ merge_file(svn_skel_t **work_items,
              require retranslation, but receiving a change bumps the revision
              number which requires re-expansion of keywords... */
 
-          const char *tmptext;
+          if (is_locally_modified)
+            {
+              const char *tmptext;
 
-          /* Copy and DEtranslate the working file to a temp text-base.
-             Note that detranslation is done according to the old props. */
-          SVN_ERR(svn_wc__internal_translated_file(
-                    &tmptext, fb->local_abspath, eb->db, fb->local_abspath,
-                    SVN_WC_TRANSLATE_TO_NF
-                      | SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP,
-                    eb->cancel_func, eb->cancel_baton,
-                    result_pool, scratch_pool));
+              /* Copy and DEtranslate the working file to a temp text-base.
+                 Note that detranslation is done according to the old props. */
+              SVN_ERR(svn_wc__internal_translated_file(
+                        &tmptext, fb->local_abspath, eb->db, fb->local_abspath,
+                        SVN_WC_TRANSLATE_TO_NF
+                          | SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP,
+                        eb->cancel_func, eb->cancel_baton,
+                        result_pool, scratch_pool));
 
-          /* We always want to reinstall the working file if the magic
-             properties have changed, or there are any keywords present.
-             Note that TMPTEXT might actually refer to the working file
-             itself (the above function skips a detranslate when not
-             required). This is acceptable, as we will (re)translate
-             according to the new properties into a temporary file (from
-             the working file), and then rename the temp into place. Magic!  */
-          *install_pristine = TRUE;
-          *install_from = tmptext;
+              /* We always want to reinstall the working file if the magic
+                 properties have changed, or there are any keywords present.
+                 Note that TMPTEXT might actually refer to the working file
+                 itself (the above function skips a detranslate when not
+                 required). This is acceptable, as we will (re)translate
+                 according to the new properties into a temporary file (from
+                 the working file), and then rename the temp into place. Magic!
+               */
+              *install_pristine = TRUE;
+              *install_from = tmptext;
+            }
+          else
+            {
+              /* Use our existing 'copy' from the pristine store instead
+                 of making a new copy. This way we can use the standard code
+                 to update the recorded size and modification time.
+                 (Issue #3842) */
+              *install_pristine = TRUE;
+            }
         }
     }
 
