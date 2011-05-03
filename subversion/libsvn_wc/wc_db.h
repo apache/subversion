@@ -1628,7 +1628,7 @@ struct svn_wc__db_info_t {
   apr_time_t recorded_mod_time;
 
   const char *changelist;
-svn_boolean_t conflicted;
+  svn_boolean_t conflicted;
 #ifdef HAVE_SYMLINK
   svn_boolean_t special;
 #endif
