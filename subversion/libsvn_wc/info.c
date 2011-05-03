@@ -139,8 +139,8 @@ build_info_for_entry(svn_info2_t **info,
 
   /* Don't create a URL for local additions */
   if (!tmpinfo->URL)
-    SVN_ERR(svn_wc__node_get_url(&tmpinfo->URL, wc_ctx, local_abspath,
-                                 result_pool, scratch_pool));
+    SVN_ERR(svn_wc__db_read_url(&tmpinfo->URL, wc_ctx->db, local_abspath,
+                                result_pool, scratch_pool));
 
   if (tmpinfo->kind == svn_node_file)
     {
