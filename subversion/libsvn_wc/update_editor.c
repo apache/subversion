@@ -42,13 +42,11 @@
 #include "svn_io.h"
 #include "svn_private_config.h"
 #include "svn_time.h"
-#include "svn_iter.h"
 
 #include "wc.h"
 #include "adm_files.h"
 #include "entries.h"
 #include "translate.h"
-#include "tree_conflicts.h"
 #include "workqueue.h"
 
 #include "private/svn_wc_private.h"
@@ -2377,9 +2375,8 @@ close_directory(void *dir_baton,
                   const svn_string_t *new_val_s = change->value;
                   const svn_string_t *old_val_s;
 
-                  SVN_ERR(svn_wc__internal_propget(
-                           &old_val_s, eb->db, db->local_abspath,
-                           SVN_PROP_EXTERNALS, db->pool, db->pool));
+                  old_val_s = apr_hash_get(base_props, SVN_PROP_EXTERNALS,
+                                           APR_HASH_KEY_STRING);
 
                   if ((new_val_s == NULL) && (old_val_s == NULL))
                     ; /* No value before, no value after... so do nothing. */
