@@ -156,7 +156,6 @@ struct edit_baton
 
   /* The DB handle for managing the working copy state.  */
   svn_wc__db_t *db;
-  svn_wc_context_t *wc_ctx;
 
   /* Array of file extension patterns to preserve as extensions in
      generated conflict files. */
@@ -2561,52 +2560,100 @@ close_directory(void *dir_baton,
 
 /* Common code for 'absent_file' and 'absent_directory'. */
 static svn_error_t *
-absent_file_or_dir(const char *path,
-                   svn_node_kind_t kind,
-                   void *parent_baton,
-                   apr_pool_t *pool)
+absent_node(const char *path,
+            svn_wc__db_kind_t absent_kind,
+            void *parent_baton,
+            apr_pool_t *pool)
 {
-  const char *name = svn_dirent_basename(path, pool);
-  const char *local_abspath;
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
-  const char *repos_relpath;
-  const char *repos_root_url;
-  const char *repos_uuid;
-  svn_boolean_t is_added;
-  svn_node_kind_t existing_kind;
-  svn_wc__db_kind_t db_kind
-    = kind == svn_node_dir ? svn_wc__db_kind_dir : svn_wc__db_kind_file;
+  apr_pool_t *scratch_pool = svn_pool_create(pool);
+  const char *name = svn_dirent_basename(path, NULL);
+  const char *local_abspath;
+  svn_error_t *err;
+  svn_wc__db_status_t status;
+  svn_wc__db_kind_t kind;
 
-  local_abspath = svn_dirent_join(pb->local_abspath, name, pool);
+  if (pb->skip_this)
+    return SVN_NO_ERROR;
+
+  local_abspath = svn_dirent_join(pb->local_abspath, name, scratch_pool);
 
   /* If an item by this name is scheduled for addition that's a
      genuine tree-conflict.  */
-  SVN_ERR(svn_wc_read_kind(&existing_kind, eb->wc_ctx, local_abspath, TRUE,
-                           pool));
-  if (existing_kind != svn_node_none)
+  err = svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL,
+                             eb->db, local_abspath,
+                             scratch_pool, scratch_pool);
+
+  if (err)
     {
-      SVN_ERR(svn_wc__node_is_added(&is_added, eb->wc_ctx, local_abspath,
-                                    pool));
-      if (is_added)
-        return svn_error_createf(
+      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+        return svn_error_return(err);
+
+      svn_error_clear(err);
+      status = svn_wc__db_status_not_present;
+      kind = svn_wc__db_kind_unknown;
+    }
+
+  if (status == svn_wc__db_status_normal
+      && kind == svn_wc__db_kind_dir)
+    {
+      /* We found an obstructing working copy!
+
+         We can do two things now: 
+            1) notify the user, record a skip, etc.
+            2) Just record the absent node in BASE in the parent
+               working copy.
+
+         As option 2 happens to be exactly what we do anyway, lets do that.
+      */
+    }
+  else if (status == svn_wc__db_status_not_present
+           || status == svn_wc__db_status_absent
+           || status == svn_wc__db_status_excluded)
+    {
+      /* The BASE node is not actually there, so we can safely turn it into
+         an absent node */
+    }
+  else
+    {
+      /* We have a local addition. If this would be a BASE node it would have
+         been deleted before we get here. (Which might have turned it into
+         a copy).
+
+         ### This should be recorded as a tree conflict and the update
+         ### can just continue, as we can just record the absent status
+         ### in BASE.
+       */
+      SVN_ERR_ASSERT(status != svn_wc__db_status_normal);
+
+      return svn_error_createf(
          SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
          _("Failed to mark '%s' absent: item of the same name is already "
            "scheduled for addition"),
-         svn_dirent_local_style(path, pool));
+         svn_dirent_local_style(local_abspath, pool));
     }
 
-  SVN_ERR(svn_wc__db_scan_base_repos(&repos_relpath, &repos_root_url,
-                                     &repos_uuid, eb->db, pb->local_abspath,
-                                     pool, pool));
-  repos_relpath = svn_dirent_join(repos_relpath, name, pool);
+  {
+    const char *repos_relpath;
+    repos_relpath = svn_relpath_join(pb->new_relpath, name, scratch_pool);
+    
+    /* Insert an absent node below the parent node to note that this child
+       is absent. (This puts it in the parent db if the child is obstructed) */
+    SVN_ERR(svn_wc__db_base_add_absent_node(eb->db, local_abspath,
+                                            repos_relpath, eb->repos_root,
+                                            eb->repos_uuid,
+                                            *(eb->target_revision),
+                                            absent_kind,
+                                            svn_wc__db_status_absent,
+                                            NULL, NULL,
+                                            scratch_pool));
+  }
 
-  SVN_ERR(svn_wc__db_base_add_absent_node(eb->db, local_abspath,
-                                          repos_relpath, repos_root_url,
-                                          repos_uuid, *(eb->target_revision),
-                                          db_kind, svn_wc__db_status_absent,
-                                          NULL, NULL,
-                                          pool));
+  svn_pool_destroy(scratch_pool);
 
   return SVN_NO_ERROR;
 }
@@ -2618,7 +2665,7 @@ absent_file(const char *path,
             void *parent_baton,
             apr_pool_t *pool)
 {
-  return absent_file_or_dir(path, svn_node_file, parent_baton, pool);
+  return absent_node(path, svn_wc__db_kind_file, parent_baton, pool);
 }
 
 
@@ -2628,7 +2675,7 @@ absent_directory(const char *path,
                  void *parent_baton,
                  apr_pool_t *pool)
 {
-  return absent_file_or_dir(path, svn_node_dir, parent_baton, pool);
+  return absent_node(path, svn_wc__db_kind_dir, parent_baton, pool);
 }
 
 
@@ -4176,7 +4223,6 @@ make_editor(svn_revnum_t *target_revision,
   eb->repos_root               = repos_root;
   eb->repos_uuid               = repos_uuid;
   eb->db                       = wc_ctx->db;
-  eb->wc_ctx                   = wc_ctx;
   eb->target_basename          = target_basename;
   eb->anchor_abspath           = anchor_abspath;
 
