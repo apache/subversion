@@ -473,6 +473,12 @@ typedef struct svn_client_commit_item3_t
    * same lifetime as this data structure.
    */
   apr_array_header_t *outgoing_prop_changes;
+
+  /**
+   * When processing the commit this contains the relative path for
+   * the commit session. #NULL until the commit item is preprocessed.
+   */
+  const char *session_relpath;
 } svn_client_commit_item3_t;
 
 /** The commit candidate structure.

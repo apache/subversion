@@ -1076,7 +1076,7 @@ svn_client__condense_commit_items(const char **base_url,
     }
 
   /* Now that we've settled on a *BASE_URL, go hack that base off
-     of all of our URLs. */
+     of all of our URLs and store it as session_relpath. */
   for (i = 0; i < ci->nelts; i++)
     {
       svn_client_commit_item3_t *this_item
@@ -1085,9 +1085,10 @@ svn_client__condense_commit_items(const char **base_url,
       size_t base_url_len = strlen(*base_url);
 
       if (url_len > base_url_len)
-        this_item->url = apr_pstrdup(pool, this_item->url + base_url_len + 1);
+        this_item->session_relpath = svn_uri_is_child(*base_url,
+                                                      this_item->url, pool);
       else
-        this_item->url = "";
+        this_item->session_relpath = "";
     }
 
 #ifdef SVN_CLIENT_COMMIT_DEBUG
@@ -1432,7 +1433,7 @@ do_item_commit(void **dir_baton,
       /* Add this file mod to the FILE_MODS hash. */
       mod->item = item;
       mod->file_baton = file_baton;
-      apr_hash_set(file_mods, item->url, APR_HASH_KEY_STRING, mod);
+      apr_hash_set(file_mods, item->session_relpath, APR_HASH_KEY_STRING, mod);
     }
   else if (file_baton)
     {
@@ -1491,13 +1492,13 @@ svn_client__do_commit(const char *base_url,
     *sha1_checksums = apr_hash_make(result_pool);
 
   /* Build a hash from our COMMIT_ITEMS array, keyed on the
-     URI-decoded relative paths (which come from the item URLs).  And
+     relative paths (which come from the item URLs).  And
      keep an array of those decoded paths, too.  */
   for (i = 0; i < commit_items->nelts; i++)
     {
       svn_client_commit_item3_t *item =
         APR_ARRAY_IDX(commit_items, i, svn_client_commit_item3_t *);
-      const char *path = svn_path_uri_decode(item->url, scratch_pool);
+      const char *path = item->session_relpath;
       apr_hash_set(items_hash, path, APR_HASH_KEY_STRING, item);
       APR_ARRAY_PUSH(paths, const char *) = path;
     }

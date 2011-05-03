@@ -104,13 +104,13 @@ get_wc_prop(void *baton,
             = APR_ARRAY_IDX(cb->commit_items, i,
                             svn_client_commit_item3_t *);
 
-          SVN_ERR(svn_dirent_get_absolute(&local_abspath, item->path, pool));
-
-          if (! strcmp(relpath,
-                       svn_path_uri_decode(item->url, pool)))
-            return svn_error_return(svn_wc_prop_get2(value, cb->ctx->wc_ctx,
-                                                     local_abspath, name,
-                                                     pool, pool));
+          if (! strcmp(relpath, item->session_relpath))
+            {
+              SVN_ERR_ASSERT(svn_dirent_is_absolute(item->path));
+              return svn_error_return(svn_wc_prop_get2(value, cb->ctx->wc_ctx,
+                                                       item->path, name,
+                                                       pool, pool));
+            }
         }
 
       return SVN_NO_ERROR;
@@ -150,17 +150,14 @@ push_wc_prop(void *baton,
       svn_client_commit_item3_t *item
         = APR_ARRAY_IDX(cb->commit_items, i, svn_client_commit_item3_t *);
 
-      if (strcmp(relpath, svn_path_uri_decode(item->url, pool)) == 0)
+      if (strcmp(relpath, item->session_relpath) == 0)
         {
           apr_pool_t *cpool = item->incoming_prop_changes->pool;
           svn_prop_t *prop = apr_palloc(cpool, sizeof(*prop));
 
           prop->name = apr_pstrdup(cpool, name);
           if (value)
-            {
-              prop->value
-                = svn_string_ncreate(value->data, value->len, cpool);
-            }
+            prop->value = svn_string_dup(value, pool);
           else
             prop->value = NULL;
 
