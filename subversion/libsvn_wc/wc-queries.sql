@@ -407,16 +407,16 @@ BEGIN
     /* 26 corresponds to svn_wc_notify_changelist_set */
     INSERT INTO changelist_list(wc_id, local_relpath, notify, changelist)
     VALUES (NEW.wc_id, NEW.local_relpath, 26, NEW.changelist);
-END;
+END
 
 -- STMT_DROP_CHANGELIST_LIST_TRIGGERS
 DROP TRIGGER IF EXISTS trigger_changelist_list_actual_cl_insert;
 DROP TRIGGER IF EXISTS trigger_changelist_list_actual_cl_set;
-DROP TRIGGER IF EXISTS trigger_changelist_list_actual_cl_clear;
+DROP TRIGGER IF EXISTS trigger_changelist_list_actual_cl_clear
 
 -- STMT_INSERT_CHANGELIST_LIST
 INSERT INTO changelist_list(wc_id, local_relpath, notify, changelist)
-VALUES (?1, ?2, ?3, ?4);
+VALUES (?1, ?2, ?3, ?4)
 
 -- STMT_DELETE_CHANGELIST_LIST_RECURSIVE
 DELETE FROM changelist_list
