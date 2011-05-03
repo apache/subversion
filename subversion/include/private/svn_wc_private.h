@@ -354,35 +354,6 @@ svn_wc__node_get_repos_relpath(const char **repos_relpath,
                                apr_pool_t *scratch_pool);
 
 /**
- * Set @a *copyfrom_url to the corresponding copy-from URL (allocated
- * from @a result_pool), and @a copyfrom_rev to the corresponding
- * copy-from revision, of @a local_abspath, using @a wc_ctx.  Set @a
- * is_copy_target to TRUE iff @a local_abspath was the target of a
- * copy information (versus being a member of the subtree beneath such
- * a copy target).
- *
- * @a copyfrom_root_url and @a copyfrom_repos_relpath return the exact same
- * information as @a copyfrom_url, just still separated as root and relpath.
- *
- * If @a local_abspath is not copied, set @a *copyfrom_root_url,
- * @a *copyfrom_repos_relpath and @a copyfrom_url to NULL and
- * @a *copyfrom_rev to @c SVN_INVALID_REVNUM.
- *
- * Any out parameters may be NULL if the caller doesn't care about those
- * values.
- */
-svn_error_t *
-svn_wc__node_get_copyfrom_info(const char **copyfrom_root_url,
-                               const char **copyfrom_repos_relpath,
-                               const char **copyfrom_url,
-                               svn_revnum_t *copyfrom_rev,
-                               svn_boolean_t *is_copy_target,
-                               svn_wc_context_t *wc_ctx,
-                               const char *local_abspath,
-                               apr_pool_t *result_pool,
-                               apr_pool_t *scratch_pool);
-
-/**
  * Set @a *is_deleted to TRUE if @a local_abspath is deleted, using
  * @a wc_ctx.  If @a local_abspath is not in the working copy, return
  * @c SVN_ERR_WC_PATH_NOT_FOUND.  Use @a scratch_pool for all temporary
