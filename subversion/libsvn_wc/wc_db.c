@@ -826,8 +826,8 @@ insert_base_node(void *baton,
         {
           apr_array_header_t *diffs;
 
-          SVN_ERR(svn_prop_diffs(&diffs, (apr_hash_t *)new_actual_props,
-                                 (apr_hash_t *)pibb->props, scratch_pool));
+          SVN_ERR(svn_prop_diffs(&diffs, new_actual_props, base_props,
+                                 scratch_pool));
 
           if (diffs->nelts == 0)
             new_actual_props = NULL;

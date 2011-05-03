@@ -435,7 +435,7 @@ svn_wc__db_get_wcroot(const char **wcroot_abspath,
    If CONFLICT is not NULL, then it describes a conflict for this node. The
    node will be record as conflicted (in ACTUAL).
 
-   If SET_ACTUAL_PROPS is TRUE, set the properties store NEW_ACTUAL_PROPS
+   If UPDATE_ACTUAL_PROPS is TRUE, set the properties store NEW_ACTUAL_PROPS
    as the new set of properties in ACTUAL. If NEW_ACTUAL_PROPS is NULL or
    when the value of NEW_ACTUAL_PROPS matches NEW_PROPS, store NULL in
    ACTUAL, to mark the properties unmodified.
@@ -460,7 +460,7 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
                               svn_depth_t depth,
                               apr_hash_t *dav_cache,
                               const svn_skel_t *conflict,
-                              svn_boolean_t set_actual_props,
+                              svn_boolean_t update_actual_props,
                               apr_hash_t *new_actual_props,
                               const svn_skel_t *work_items,
                               apr_pool_t *scratch_pool);
@@ -491,7 +491,7 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
    If CONFLICT is not NULL, then it describes a conflict for this node. The
    node will be record as conflicted (in ACTUAL).
 
-   If SET_ACTUAL_PROPS is TRUE, set the properties store NEW_ACTUAL_PROPS
+   If UPDATE_ACTUAL_PROPS is TRUE, set the properties store NEW_ACTUAL_PROPS
    as the new set of properties in ACTUAL. If NEW_ACTUAL_PROPS is NULL or
    when the value of NEW_ACTUAL_PROPS matches NEW_PROPS, store NULL in
    ACTUAL, to mark the properties unmodified.
@@ -516,7 +516,7 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
                          svn_filesize_t translated_size,
                          apr_hash_t *dav_cache,
                          const svn_skel_t *conflict,
-                         svn_boolean_t set_actual_props,
+                         svn_boolean_t update_actual_props,
                          apr_hash_t *new_actual_props,
                          const svn_skel_t *work_items,
                          apr_pool_t *scratch_pool);
@@ -542,7 +542,7 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
    If CONFLICT is not NULL, then it describes a conflict for this node. The
    node will be record as conflicted (in ACTUAL).
 
-   If SET_ACTUAL_PROPS is TRUE, set the properties store NEW_ACTUAL_PROPS
+   If UPDATE_ACTUAL_PROPS is TRUE, set the properties store NEW_ACTUAL_PROPS
    as the new set of properties in ACTUAL. If NEW_ACTUAL_PROPS is NULL or
    when the value of NEW_ACTUAL_PROPS matches NEW_PROPS, store NULL in
    ACTUAL, to mark the properties unmodified.
@@ -594,7 +594,7 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
                             const char *target,
                             apr_hash_t *dav_cache,
                             const svn_skel_t *conflict,
-                            svn_boolean_t set_actual_props,
+                            svn_boolean_t update_actual_props,
                             apr_hash_t *new_actual_props,
                             const svn_skel_t *work_items,
                             apr_pool_t *scratch_pool);
