@@ -425,7 +425,7 @@ svn_wc__get_tree_conflict(const svn_wc_conflict_description2_t **tree_conflict,
 
   return svn_error_return(
     svn_wc__db_op_read_tree_conflict(tree_conflict, wc_ctx->db, victim_abspath,
-                                     scratch_pool, scratch_pool));
+                                     result_pool, scratch_pool));
 }
 
 svn_error_t *
