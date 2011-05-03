@@ -3746,7 +3746,13 @@ close_file(void *file_baton,
                                             scratch_pool);
         }
       else
-        install_pristine = FALSE;
+        {
+          install_pristine = FALSE;
+          if (fb->new_text_base_sha1_checksum)
+            content_state = svn_wc_notify_state_changed;
+          else
+            content_state = svn_wc_notify_state_unchanged;
+        }
 
       if (install_pristine)
         {
@@ -3831,6 +3837,11 @@ close_file(void *file_baton,
 
       all_work_items = svn_wc__wq_merge(all_work_items, work_item,
                                         scratch_pool);
+
+      if (fb->new_text_base_sha1_checksum)
+        content_state = svn_wc_notify_state_changed;
+      else
+        content_state = svn_wc_notify_state_unchanged;
     }
 
   /* ### NOTE: from this point onwards, we make several changes to the
