@@ -1978,10 +1978,14 @@ apply_textdelta(void *file_baton,
    * writing to a temporary file (ugh). A special svn stream serf bucket
    * that returns EAGAIN until we receive the done call?  But, when
    * would we run through the serf context?  Grr.
+   *
+   * ctx->pool is the same for all files in the commit that send a
+   * textdelta so this file is explicitly closed in close_file to
+   * avoid too many simultaneously open files.
    */
 
   SVN_ERR(svn_io_open_unique_file3(&ctx->svndiff, NULL, NULL,
-                                   svn_io_file_del_on_pool_cleanup,
+                                   svn_io_file_del_on_close,
                                    ctx->pool, ctx->pool));
 
   ctx->stream = svn_stream_create(ctx, pool);
@@ -2139,6 +2143,9 @@ close_file(void *file_baton,
           return return_response_err(handler, put_ctx);
         }
     }
+
+  if (ctx->svndiff)
+    SVN_ERR(svn_io_file_close(ctx->svndiff, pool));
 
   /* If we had any prop changes, push them via PROPPATCH. */
   if (apr_hash_count(ctx->changed_props) ||
