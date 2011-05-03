@@ -45,7 +45,6 @@ build_info_for_entry(svn_info2_t **info,
 {
   svn_info2_t *tmpinfo;
   svn_boolean_t is_copy_target;
-  apr_time_t lock_date;
   svn_boolean_t exclude = FALSE;
   svn_boolean_t is_copy;
   svn_revnum_t rev;
@@ -189,22 +188,21 @@ build_info_for_entry(svn_info2_t **info,
   /* lock stuff */
   if (kind == svn_node_file)
     {
-      const char *lock_token;
-      const char *lock_owner;
-      const char *lock_comment;
+      svn_wc__db_lock_t *lock;
 
-      SVN_ERR(svn_wc__node_get_lock_info(&lock_token, &lock_owner,
-                                         &lock_comment, &lock_date,
-                                         wc_ctx, local_abspath,
-                                         result_pool, scratch_pool));
+      SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       &lock, NULL, NULL, NULL, NULL, NULL,
+                                       wc_ctx->db, local_abspath,
+                                       result_pool, scratch_pool));
 
-      if (lock_token)  /* the token is the critical bit. */
+      if (lock)
         {
           tmpinfo->lock = apr_pcalloc(result_pool, sizeof(*(tmpinfo->lock)));
-          tmpinfo->lock->token         = lock_token;
-          tmpinfo->lock->owner         = lock_owner;
-          tmpinfo->lock->comment       = lock_comment;
-          tmpinfo->lock->creation_date = lock_date;
+          tmpinfo->lock->token         = lock->token;
+          tmpinfo->lock->owner         = lock->owner;
+          tmpinfo->lock->comment       = lock->comment;
+          tmpinfo->lock->creation_date = lock->date;
         }
     }
 
