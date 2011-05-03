@@ -38,33 +38,33 @@ extern "C" {
  * @{
  * @since New in 1.7. */
 
-/* Cache ressource settings. It controls what caches, in what size and
+/** Cache ressource settings. It controls what caches, in what size and
    how they will be created. The settings apply for the whole process.
 
    @since New in 1.7.
  */
 typedef struct svn_cache_config_t
 {
-  /* total cache size in bytes. Please note that this is only soft limit
-     to the total application memory usage and will be exceeded due to 
+  /** total cache size in bytes. Please note that this is only soft limit
+     to the total application memory usage and will be exceeded due to
      temporary objects and other program state.
      May be 0, resulting in default caching code being used. */
   apr_uint64_t cache_size;
 
-  /* maximum number of files kept open */
+  /** maximum number of files kept open */
   apr_size_t file_handle_count;
 
-  /* shall fulltexts be cached? */
+  /** shall fulltexts be cached? */
   svn_boolean_t cache_fulltexts;
 
-  /* shall text deltas be cached? */
+  /** shall text deltas be cached? */
   svn_boolean_t cache_txdeltas;
 
-  /* is this application guaranteed to be single-threaded? */
+  /** is this application guaranteed to be single-threaded? */
   svn_boolean_t single_threaded;
 } svn_cache_config_t;
 
-/* Get the current cache configuration. If it has not been set,
+/** Get the current cache configuration. If it has not been set,
    this function will return the default settings.
 
    @since New in 1.7.
@@ -72,7 +72,7 @@ typedef struct svn_cache_config_t
 const svn_cache_config_t *
 svn_get_cache_config(void);
 
-/* Set the cache configuration. Please note that it may not change
+/** Set the cache configuration. Please note that it may not change
    the actual configuration *in use*. Therefore, call it before reading
    data from any repo and call it only once.
 
