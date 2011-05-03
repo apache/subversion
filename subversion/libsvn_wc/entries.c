@@ -194,121 +194,132 @@ check_file_external(svn_wc_entry_t *entry,
      CMT_REV
      CMT_DATE
      CMT_AUTHOR
-     TEXT_TIME
      DEPTH
-     WORKING_SIZE
-     COPIED
+     DELETED
 
    Return: KIND, REPOS_RELPATH, CHECKSUM
 */
 static svn_error_t *
-get_base_info_for_deleted(svn_wc_entry_t *entry,
-                          svn_wc__db_kind_t *kind,
-                          const char **repos_relpath,
-                          const svn_checksum_t **checksum,
-                          svn_wc__db_t *db,
-                          const char *entry_abspath,
-                          const svn_wc_entry_t *parent_entry,
-                          apr_pool_t *result_pool,
-                          apr_pool_t *scratch_pool)
+get_info_for_deleted(svn_wc_entry_t *entry,
+                     svn_wc__db_kind_t *kind,
+                     const char **repos_relpath,
+                     const svn_checksum_t **checksum,
+                     svn_wc__db_t *db,
+                     const char *entry_abspath,
+                     const svn_wc_entry_t *parent_entry,
+                     svn_boolean_t have_base,
+                     svn_boolean_t have_more_work,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
 {
-  svn_error_t *err;
+  if (have_base && !have_more_work)
+    {
+      /* This is the delete of a BASE node */
+      SVN_ERR(svn_wc__db_base_get_info(NULL, kind,
+                                       &entry->revision,
+                                       repos_relpath,
+                                       &entry->repos,
+                                       &entry->uuid,
+                                       &entry->cmt_rev,
+                                       &entry->cmt_date,
+                                       &entry->cmt_author,
+                                       &entry->depth,
+                                       checksum,
+                                       NULL,
+                                       NULL /* lock */,
+                                       NULL /* recorded_size */,
+                                       NULL /* recorded_mod_time */,
+                                       NULL,
+                                       NULL,
+                                       NULL,
+                                       db,
+                                       entry_abspath,
+                                       result_pool,
+                                       scratch_pool));
 
-  /* Get the information from the underlying BASE node.  */
-  err = svn_wc__db_base_get_info(NULL, kind,
-                                 &entry->revision,
-                                 NULL, NULL, NULL,
-                                 &entry->cmt_rev,
-                                 &entry->cmt_date,
-                                 &entry->cmt_author,
-                                 &entry->depth,
-                                 checksum,
-                                 NULL,
-                                 NULL /* lock */,
-                                 &entry->working_size,
-                                 &entry->text_time,
-                                 NULL,
-                                 NULL,
-                                 NULL,
-                                 db,
-                                 entry_abspath,
-                                 result_pool,
-                                 scratch_pool);
-  /* SVN_EXPERIMENTAL_PRISTINE:
-     *checksum is originally MD-5 but will later be SHA-1.  That's OK here -
-     we are just returning what is stored. */
-
-  if (err)
+      if (*repos_relpath == NULL)
+        SVN_ERR(svn_wc__db_scan_base_repos(repos_relpath,
+                                           &entry->repos,
+                                           &entry->uuid,
+                                           db,
+                                           entry_abspath,
+                                           result_pool,
+                                           scratch_pool));
+    }
+  else
     {
       const char *work_del_abspath;
       const char *parent_repos_relpath;
       const char *parent_abspath;
-      svn_wc__db_status_t parent_status;
 
-      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-        return svn_error_return(err);
-
-      /* No base node? This is a deleted child of a copy/move-here,
+      /* This is a deleted child of a copy/move-here,
          so we need to scan up the WORKING tree to find the root of
          the deletion. Then examine its parent to discover its
          future location in the repository.  */
-      svn_error_clear(err);
-
-      SVN_ERR(svn_wc__db_scan_deletion(NULL,
-                                       NULL,
-                                       &work_del_abspath,
-                                       db, entry_abspath,
-                                       scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc__db_read_pristine_info(NULL, kind,
+                                            &entry->cmt_rev,
+                                            &entry->cmt_date,
+                                            &entry->cmt_author,
+                                            &entry->depth,
+                                            checksum,
+                                            NULL,
+                                            NULL,
+                                            db,
+                                            entry_abspath,
+                                            result_pool,
+                                            scratch_pool));
+      /* working_size and text_time unavailable */
+ 
+     SVN_ERR(svn_wc__db_scan_deletion(NULL,
+                                      NULL,
+                                      &work_del_abspath,
+                                      db, entry_abspath,
+                                      scratch_pool, scratch_pool));
 
       SVN_ERR_ASSERT(work_del_abspath != NULL);
       parent_abspath = svn_dirent_dirname(work_del_abspath, scratch_pool);
 
-      /* During post-commit the parent that was previously added may
-         have been moved from the WORKING tree to the BASE tree.  */
-      SVN_ERR(svn_wc__db_read_info(&parent_status, NULL, NULL,
-                                   &parent_repos_relpath,
-                                   &entry->repos, &entry->uuid,
-                                   NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL,
-                                   db, parent_abspath,
-                                   scratch_pool, scratch_pool));
-      if (parent_status == svn_wc__db_status_added)
-        SVN_ERR(svn_wc__db_scan_addition(NULL, NULL,
-                                         &parent_repos_relpath,
-                                         &entry->repos,
-                                         &entry->uuid,
-                                         NULL, NULL, NULL, NULL,
-                                         db, parent_abspath,
-                                         result_pool, scratch_pool));
+      /* The parent directory of the delete root must be added, so we
+         can find the required information there */
+      SVN_ERR(svn_wc__db_scan_addition(NULL, NULL,
+                                       &parent_repos_relpath,
+                                       &entry->repos,
+                                       &entry->uuid,
+                                       NULL, NULL, NULL, NULL,
+                                       db, parent_abspath,
+                                       result_pool, scratch_pool));
 
       /* Now glue it all together */
-      *repos_relpath = svn_relpath_join(
-        parent_repos_relpath,
-        svn_dirent_is_child(parent_abspath,
-                            entry_abspath,
-                            NULL),
-        result_pool);
-    }
-  else
-    {
-      SVN_ERR(svn_wc__db_scan_base_repos(repos_relpath,
-                                         &entry->repos,
-                                         &entry->uuid,
-                                         db,
-                                         entry_abspath,
-                                         result_pool,
-                                         scratch_pool));
+      *repos_relpath = svn_relpath_join(parent_repos_relpath,
+                                        svn_dirent_is_child(parent_abspath,
+                                                            entry_abspath,
+                                                            NULL),
+                                        result_pool);
+
+
+      /* Even though this is the delete of a WORKING node, there might still
+         be a BASE node somewhere below with an interesting revision */
+      if (have_base)
+        {
+          svn_wc__db_status_t status;
+          SVN_ERR(svn_wc__db_base_get_info(&status, NULL, &entry->revision,
+                                           NULL, NULL, NULL, NULL, NULL, NULL,
+                                           NULL, NULL, NULL, NULL, NULL, NULL,
+                                           NULL, NULL, NULL,
+                                           db, entry_abspath,
+                                           result_pool, scratch_pool));
+
+          if (status == svn_wc__db_status_not_present)
+            entry->deleted = TRUE;
+        }
     }
 
   /* Do some extra work for the child nodes.  */
-  if (parent_entry != NULL)
+  if (!SVN_IS_VALID_REVNUM(entry->revision) && parent_entry != NULL)
     {
       /* For child nodes without a revision, pick up the parent's
          revision.  */
-      if (!SVN_IS_VALID_REVNUM(entry->revision))
-        entry->revision = parent_entry->revision;
+      entry->revision = parent_entry->revision;
     }
 
   return SVN_NO_ERROR;
@@ -386,6 +397,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
   const char *original_root_url;
   svn_boolean_t conflicted;
   svn_boolean_t have_base;
+  svn_boolean_t have_more_work;
   svn_boolean_t update_root = FALSE;
 
   entry->name = name;
@@ -418,7 +430,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
             NULL /* have_props */,
             NULL /* props_mod */,
             &have_base,
-            NULL /* have_more_work */,
+            &have_more_work,
             NULL /* have_work */,
             db,
             entry_abspath,
@@ -498,17 +510,27 @@ read_one_entry(const svn_wc_entry_t **new_entry,
   else if (status == svn_wc__db_status_deleted)
     {
       svn_node_kind_t path_kind;
-      const char *work_del_abspath;
 
       /* ### we don't have to worry about moves, so this is a delete. */
       entry->schedule = svn_wc_schedule_delete;
 
-      SVN_ERR(svn_wc__db_scan_deletion(NULL, NULL,
-                                       &work_del_abspath,
-                                       db, entry_abspath,
-                                       scratch_pool, scratch_pool));
-      if (work_del_abspath)
+      /* If there are multiple working layers or no BASE layer, then
+         this is a WORKING delete or WORKING not-present. */
+      if (have_more_work || !have_base)
         entry->copied = TRUE;
+      else if (have_base && !have_more_work)
+        entry->copied = FALSE;
+      else
+        {
+          const char *work_del_abspath;
+          SVN_ERR(svn_wc__db_scan_deletion(NULL, NULL,
+                                           &work_del_abspath,
+                                           db, entry_abspath,
+                                           scratch_pool, scratch_pool));
+
+          if (work_del_abspath)
+            entry->copied = TRUE;
+        }
 
       /* If there is still a directory on-disk we keep it, if not it is
          already deleted. Simple, isn't it?
@@ -800,13 +822,14 @@ read_one_entry(const svn_wc_entry_t **new_entry,
      ### tho they are not "part of" a repository any more.  */
   if (entry->schedule == svn_wc_schedule_delete)
     {
-      SVN_ERR(get_base_info_for_deleted(entry,
-                                        &kind,
-                                        &repos_relpath,
-                                        &checksum,
-                                        db, entry_abspath,
-                                        parent_entry,
-                                        result_pool, scratch_pool));
+      SVN_ERR(get_info_for_deleted(entry,
+                                   &kind,
+                                   &repos_relpath,
+                                   &checksum,
+                                   db, entry_abspath,
+                                   parent_entry,
+                                   have_base, have_more_work,
+                                   result_pool, scratch_pool));
     }
 
   /* ### default to the infinite depth if we don't know it. */
@@ -843,8 +866,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
 
   if (checksum)
     {
-      /* SVN_EXPERIMENTAL_PRISTINE:
-         If we got a SHA-1, get the corresponding MD-5. */
+      /* We got a SHA-1, get the corresponding MD-5. */
       if (checksum->kind != svn_checksum_md5)
         SVN_ERR(svn_wc__db_pristine_get_md5(&checksum, db,
                                             entry_abspath, checksum,
