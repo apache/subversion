@@ -321,44 +321,46 @@ def non_reposroot_wc(sbox):
 @Issue(3858)
 def child_switched(sbox):
   "test svnversion output for switched children"
-  sbox.build(read_only = True)
+  sbox.build()#sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
   repo_url = sbox.repo_url
 
+  # Copy A to A2
+  sbox.simple_copy('A', 'branch')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Switch A/B to a sibling.
   sbox.simple_switch(repo_url + '/A/D', 'A/B')
-
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak('A/B', switched='S')
-  expected_status.add( {
-      'A/B/H'             : Item(status='  ', wc_rev='1'),
-      'A/B/H/psi'         : Item(status='  ', wc_rev='1'),
-      'A/B/H/omega'       : Item(status='  ', wc_rev='1'),
-      'A/B/H/chi'         : Item(status='  ', wc_rev='1'),
-      'A/B/G'             : Item(status='  ', wc_rev='1'),
-      'A/B/G/tau'         : Item(status='  ', wc_rev='1'),
-      'A/B/G/pi'          : Item(status='  ', wc_rev='1'),
-      'A/B/G/rho'         : Item(status='  ', wc_rev='1'),
-      'A/B/gamma'         : Item(status='  ', wc_rev='1'),
-  })
-  expected_status.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', 'A/B/lambda',
-                         'A/B/F')
-
-
-  # Commit the new binary file, creating revision 2.
-  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # This should detect the switch at A/B
   svntest.actions.run_and_verify_svnversion(None, wc_dir, None,
-                                            [ "1S\n" ], [])
+                                            [ "2S\n" ], [])
 
   # But A/B/G and its children are not switched by itself
   svntest.actions.run_and_verify_svnversion(None, os.path.join(wc_dir,'A/B/G'),
-                                            None, [ "1\n" ], [])
+                                            None, [ "2\n" ], [])
 
-  # And A/B isn't when you look at it directlry
+  # And A/B isn't when you look at it directly
   svntest.actions.run_and_verify_svnversion(None, os.path.join(wc_dir,'A/B'),
-                                            None, [ "1\n" ], [])
+                                            None, [ "2\n" ], [])
 
+  # Switch branch/D to ^/A, then switch branch/D/G back to ^/branch/D/G so
+  # the latter is switched relative to its parent but not the WC root.
+  sbox.simple_switch(repo_url + '/A/D', 'branch/D')
+  sbox.simple_switch(repo_url + '/branch/D/G', 'branch/D/G')
+
+  # This should detect the switch at branch/D and branch/D/G
+  svntest.actions.run_and_verify_svnversion(None,
+                                            os.path.join(wc_dir,'branch'),
+                                            None, [ "2S\n" ], [])
+
+  # Directly targeting the switched branch/D should still detect the switch
+  # at branch/D/G even though the latter isn't switched against the root of
+  # the working copy.
+  svntest.actions.run_and_verify_svnversion(None,
+                                            os.path.join(wc_dir,'branch', 'D'),
+                                            None, [ "2S\n" ], [])
 
 ########################################################################
 # Run the tests
