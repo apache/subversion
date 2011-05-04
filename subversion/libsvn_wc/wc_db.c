@@ -1266,52 +1266,17 @@ add_work_items(svn_sqlite__db_t *sdb,
 }
 
 
-/* Determine which trees' nodes exist for a given WC_ID and LOCAL_RELPATH
-   in the specified SDB.  */
+/* Determine whether the node exists for a given WCROOT and LOCAL_RELPATH.  */
 static svn_error_t *
-which_trees_exist(svn_boolean_t *any_exists,
-                  svn_boolean_t *base_exists,
-                  svn_boolean_t *working_exists,
-                  svn_sqlite__db_t *sdb,
-                  apr_int64_t wc_id,
-                  const char *local_relpath)
+does_node_exist(svn_boolean_t *exists,
+                const svn_wc__db_wcroot_t *wcroot,
+                const char *local_relpath)
 {
   svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
 
-  if (base_exists)
-    *base_exists = FALSE;
-  if (working_exists)
-    *working_exists = FALSE;
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                    STMT_DETERMINE_WHICH_TREES_EXIST));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-
-  if (any_exists)
-    *any_exists = have_row;
-
-  while (have_row)
-    {
-      apr_int64_t op_depth = svn_sqlite__column_int64(stmt, 0);
-
-      if (op_depth == 0)
-        {
-          if (base_exists)
-            *base_exists = TRUE;
-          if (!working_exists)
-            break;
-        }
-      else if (op_depth > 0)
-        {
-          if (working_exists)
-            *working_exists = TRUE;
-          break;
-        }
-
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
-    }
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_DOES_NODE_EXIST));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(exists, stmt));
 
   return svn_error_return(svn_sqlite__reset(stmt));
 }
@@ -2893,7 +2858,7 @@ catch_copy_of_absent(svn_wc__db_wcroot_t *wcroot,
    *NP_OP_DEPTH will be set to -1.
 
    If the parent node is not the parent of the to be copied node, then
-   *OP_DEPTH will be set to the proper op_depth for a new oew operation root.
+   *OP_DEPTH will be set to the proper op_depth for a new operation root.
  */
 static svn_error_t *
 op_depth_for_copy(apr_int64_t *op_depth,
@@ -9135,14 +9100,11 @@ wclock_obtain_cb(void *baton,
          created?  1.6 used to lock .svn on creation. */
   if (local_relpath[0])
     {
-      svn_boolean_t have_any;
+      svn_boolean_t exists;
 
-      SVN_ERR(which_trees_exist(&have_any, NULL, NULL, wcroot->sdb,
-                                wcroot->wc_id, local_relpath));
-
-      if (!have_any)
-        return svn_error_createf(
-                                 SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+      SVN_ERR(does_node_exist(&exists, wcroot, local_relpath));
+      if (!exists)
+        return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                                  _("The node '%s' was not found."),
                                  path_for_error_message(wcroot,
                                                         local_relpath,

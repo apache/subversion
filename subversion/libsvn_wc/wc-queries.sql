@@ -771,9 +771,9 @@ WHERE wc_id = ?1 AND local_relpath LIKE ?2 ESCAPE '#' AND op_depth = ?3
 UPDATE nodes SET op_depth = ?4
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3
 
--- STMT_DETERMINE_WHICH_TREES_EXIST
-SELECT op_depth FROM nodes WHERE wc_id = ?1 AND local_relpath = ?2
-ORDER BY op_depth
+-- STMT_DOES_NODE_EXIST
+SELECT 1 FROM nodes WHERE wc_id = ?1 AND local_relpath = ?2
+LIMIT 1
 
 /* ### This doesn't select all absent nodes, it only selects one of them. */
 -- STMT_SELECT_ABSENT_NODES
