@@ -449,10 +449,10 @@ downgrade_commit_copied_notify_func(void *baton,
       my_notify = svn_wc_dup_notify(notify, pool);
       my_notify->action = svn_wc_notify_commit_added;
     }
-  else if (notify->action == svn_wc_notify_commit_copied)
+  else if (notify->action == svn_wc_notify_commit_copied_replaced)
     {
       my_notify = svn_wc_dup_notify(notify, pool);
-      my_notify->action = svn_wc_notify_commit_added;
+      my_notify->action = svn_wc_notify_commit_replaced;
     }
 
   /* Call the wrapped notification system (if any) with MY_NOTIFY,
