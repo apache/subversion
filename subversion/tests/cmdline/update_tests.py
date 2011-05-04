@@ -5338,7 +5338,7 @@ def update_with_file_lock_and_keywords_property_set(sbox):
   mu_ts_before_update = os.path.getmtime(mu_path)
 
   # Make sure we are at a different timestamp to really notice a mtime change
-  time.sleep(1)
+  time.sleep(1.1)
 
   # Issue #3471 manifests itself here; The timestamp of 'mu' gets updated
   # to the time of the last "svn up".

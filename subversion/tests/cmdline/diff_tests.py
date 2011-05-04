@@ -3091,7 +3091,7 @@ def diff_ignore_eolstyle_empty_lines(sbox):
                                         None, None, wc_dir)
 
   # sleep to guarantee timestamp change
-  time.sleep(1)
+  time.sleep(1.1)
 
   # commit only eol changes
   svntest.main.file_write(file_path,
