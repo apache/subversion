@@ -113,98 +113,6 @@ test_write_tree_conflict(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-#ifdef THIS_TEST_RAISES_MALFUNCTION
-static svn_error_t *
-test_write_invalid_tree_conflicts(apr_pool_t *pool)
-{
-  svn_wc_conflict_description2_t *conflict;
-  apr_hash_t *conflicts;
-  const char *tree_conflict_data;
-  svn_error_t *err;
-  const char *local_abspath;
-
-  /* Configure so that we can test for errors caught by SVN_ERR_ASSERT. */
-  svn_error_set_malfunction_handler(svn_error_raise_on_malfunction);
-
-  conflicts = apr_hash_make(pool);
-
-  /* node_kind */
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, "Foo", pool));
-  conflict = svn_wc_conflict_description_create_tree2(
-                    local_abspath, svn_node_none, svn_wc_operation_update,
-                    NULL, NULL, pool);
-  conflict->action = svn_wc_conflict_action_delete;
-  conflict->reason = svn_wc_conflict_reason_edited;
-
-  apr_hash_set(conflicts, conflict->local_abspath, APR_HASH_KEY_STRING,
-               conflict);
-
-  err = svn_wc__write_tree_conflicts(&tree_conflict_data, conflicts, pool);
-  if (err == SVN_NO_ERROR)
-    return fail(pool,
-                "Failed to detect invalid conflict node_kind");
-  svn_error_clear(err);
-  svn_hash__clear(conflicts, pool);
-
-  /* operation */
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, "Foo.c", pool));
-  conflict = svn_wc_conflict_description_create_tree2(
-                    local_abspath, svn_node_file, 99,
-                    NULL, NULL, pool);
-  conflict->action = svn_wc_conflict_action_delete;
-  conflict->reason = svn_wc_conflict_reason_edited;
-
-  apr_hash_set(conflicts, conflict->local_abspath, APR_HASH_KEY_STRING,
-               conflict);
-
-  err = svn_wc__write_tree_conflicts(&tree_conflict_data, conflicts, pool);
-  if (err == SVN_NO_ERROR)
-    return fail(pool,
-                "Failed to detect invalid conflict operation");
-  svn_error_clear(err);
-  svn_hash__clear(conflicts, pool);
-
-  /* action */
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, "Foo.c", pool));
-  conflict = svn_wc_conflict_description_create_tree2(
-                    local_abspath, svn_node_file, svn_wc_operation_update,
-                    NULL, NULL, pool);
-  conflict->action = 99;
-  conflict->reason = svn_wc_conflict_reason_edited;
-
-  apr_hash_set(conflicts, conflict->local_abspath, APR_HASH_KEY_STRING,
-               conflict);
-
-  err = svn_wc__write_tree_conflicts(&tree_conflict_data, conflicts, pool);
-  if (err == SVN_NO_ERROR)
-    return fail(pool,
-                "Failed to detect invalid conflict action");
-  svn_error_clear(err);
-  svn_hash__clear(conflicts, pool);
-
-  /* reason */
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, "Foo.c", pool));
-  conflict = svn_wc_conflict_description_create_tree2(
-                    local_abspath, svn_node_file, svn_wc_operation_update,
-                    NULL, NULL, pool);
-  conflict->action = svn_wc_conflict_action_delete;
-  conflict->reason = 99;
-
-  apr_hash_set(conflicts, conflict->local_abspath, APR_HASH_KEY_STRING,
-               conflict);
-
-  err = svn_wc__write_tree_conflicts(&tree_conflict_data, conflicts, pool);
-  if (err == SVN_NO_ERROR)
-    return fail(pool,
-                "Failed to detect invalid conflict reason");
-  svn_error_clear(err);
-  svn_hash__clear(conflicts, pool);
-
-  return SVN_NO_ERROR;
-}
-#endif
-
-
 /* The test table.  */
 
 struct svn_test_descriptor_t test_funcs[] =
@@ -214,10 +122,6 @@ struct svn_test_descriptor_t test_funcs[] =
                    "read 1 tree conflict"),
     SVN_TEST_PASS2(test_write_tree_conflict,
                    "write 1 tree conflict"),
-#ifdef THIS_TEST_RAISES_MALFUNCTION
-    SVN_TEST_PASS2(test_write_invalid_tree_conflicts,
-                   "detect broken tree conflict data while writing"),
-#endif
     SVN_TEST_NULL
   };
 
