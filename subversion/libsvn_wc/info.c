@@ -335,7 +335,7 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
                                        &fe_baton, depth, cancel_func,
                                        cancel_baton, scratch_pool);
 
-  /* If the target root node is not present, svn_wc__node_walk_children()
+  /* If the target root node is not present, svn_wc__internal_walk_children()
      returns a PATH_NOT_FOUND error and doesn't call the callback.  In this
      case, check for a tree conflict on this node, and if there
      is one, send a minimal info struct. */
