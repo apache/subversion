@@ -3182,7 +3182,7 @@ def relocate_with_relative_externals(sbox):
                                       os.path.join(wc_dir, 'A', 'B', 'H-ext'))
 
 @Issue(3871)
-@XFail()
+@XFail(svntest.main.is_ra_type_file)
 def up_to_old_rev_with_subtree_switched_to_root(sbox):
   "up to old rev with subtree switched to root"
 
