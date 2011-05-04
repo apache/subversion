@@ -918,16 +918,15 @@ post_process_commit_item(svn_wc_committed_queue_t *queue,
                          svn_wc_context_t *wc_ctx,
                          svn_boolean_t keep_changelists,
                          svn_boolean_t keep_locks,
+                         svn_boolean_t commit_as_operations,
                          const svn_checksum_t *sha1_checksum,
                          apr_pool_t *scratch_pool)
 {
   svn_boolean_t loop_recurse = FALSE;
   svn_boolean_t remove_lock;
 
-  /* The following condition can be disabled (keeping loop_recurse FALSE), when
-     the SVN_WC__EXPERIMENTAL_DESCENDANT_COMMIT flag in libsvn_wc/wc.db is
-     enabled */
-  if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
+  if (! commit_as_operations
+      && (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
       && (item->kind == svn_node_dir)
       && (item->copyfrom_url))
     loop_recurse = TRUE;
@@ -1168,6 +1167,7 @@ svn_client_commit5(const apr_array_header_t *targets,
                    svn_depth_t depth,
                    svn_boolean_t keep_locks,
                    svn_boolean_t keep_changelists,
+                   svn_boolean_t commit_as_operations,
                    const apr_array_header_t *changelists,
                    const apr_hash_t *revprop_table,
                    svn_commit_callback2_t commit_callback,
@@ -1257,14 +1257,8 @@ svn_client_commit5(const apr_array_header_t *targets,
                                                   pool);
 
   /* If a non-recursive commit is desired, do not allow a deleted directory 
-     as one of the targets.
-
-     ### Why? With WC-NG there is no technical reason to deny this and the
-     ### caller explicitly send us the target?
-     ###
-     ### GJS: see my comment in check_nonrecursive_dir_delete(). I think
-     ###      there may be some confusion around the DEPTH param.  */
-  if (depth != svn_depth_infinity)
+     as one of the targets. */
+  if (depth != svn_depth_infinity && ! commit_as_operations)
     for (i = 0; i < rel_targets->nelts; i++)
       {
         const char *relpath = APR_ARRAY_IDX(rel_targets, i, const char *);
@@ -1305,6 +1299,8 @@ svn_client_commit5(const apr_array_header_t *targets,
                                                     ctx,
                                                     pool,
                                                     iterpool));
+
+    svn_pool_clear(iterpool);
   }
 
   if (cmt_err)
@@ -1427,7 +1423,7 @@ svn_client_commit5(const apr_array_header_t *targets,
           svn_pool_clear(iterpool);
           bump_err = post_process_commit_item(
                        queue, item, ctx->wc_ctx,
-                       keep_changelists, keep_locks,
+                       keep_changelists, keep_locks, commit_as_operations,
                        apr_hash_get(sha1_checksums,
                                     item->path,
                                     APR_HASH_KEY_STRING),

@@ -375,7 +375,7 @@ void SVNClient::commit(Targets &targets, CommitMessage *message,
         return;
 
     SVN_JNI_ERR(svn_client_commit5(targets2, depth,
-                                   noUnlock, keepChangelist,
+                                   noUnlock, keepChangelist, TRUE,
                                    changelists.array(requestPool),
                                    revprops.hash(requestPool),
                                    CommitCallback::callback, callback,

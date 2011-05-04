@@ -201,7 +201,7 @@ wc_commit(svn_test__sandbox_t *b, const char *path)
   APR_ARRAY_PUSH(targets, const char *) = wc_path(b, path);
   SVN_ERR(svn_client_create_context(&ctx, b->pool));
   return svn_client_commit5(targets, svn_depth_infinity,
-                            FALSE, FALSE, /* keep locks/cl's */
+                            FALSE, FALSE, TRUE, /* keep locks/cl's/use_ops*/
                             NULL, NULL, NULL, NULL, ctx, b->pool);
 }
 
