@@ -1567,11 +1567,20 @@ def wc_to_wc_copy_deleted(sbox):
 
   # Copy again and commit
   svntest.actions.run_and_verify_svn(None, None, [], 'copy', B_path, B2_path)
+
   expected_status.add({
-    'A/B2'        : Item(status='  ', wc_rev=3),
-    'A/B2/E'      : Item(status='  ', wc_rev=3),
-    'A/B2/E/beta' : Item(status='  ', wc_rev=3),
-    })
+    'A/B2'              : Item(status='A ', copied='+', wc_rev='-'),
+    'A/B2/lambda'       : Item(status='D ', copied='+', wc_rev='-'),
+    'A/B2/F'            : Item(status='D ', copied='+', wc_rev='-'),
+    'A/B2/E'            : Item(status='  ', copied='+', wc_rev='-'),
+    'A/B2/E/alpha'      : Item(status='D ', copied='+', wc_rev='-'),
+    'A/B2/E/beta'       : Item(status='  ', copied='+', wc_rev='-')
+  })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  expected_status.remove('A/B2/lambda', 'A/B2/F', 'A/B2/E/alpha')
+  expected_status.tweak('A/B2', 'A/B2/E', 'A/B2/E/beta', status='  ',
+                        copied=None, wc_rev=3)
   expected_output = svntest.wc.State(wc_dir, {
     'A/B2'         : Item(verb='Adding'),
     'A/B2/E/alpha' : Item(verb='Deleting'),
@@ -4730,16 +4739,20 @@ def mixed_rev_copy_del(sbox):
                                      sbox.ospath('A/B/E_copy'))
   expected_status.add({
     'A/B/E_copy'       : Item(status='A ', copied='+', wc_rev='-'),
-    'A/B/E_copy/alpha' : Item(status='  ', copied='+', wc_rev='-'),
-    'A/B/E_copy/beta'  : Item(status='  ', copied='+', wc_rev='-'),
+    # In the entries world mixed revision copies have only a single op_root
+    'A/B/E_copy/alpha' : Item(status='A ', copied='+', wc_rev='-',
+                              entry_status='  '),
+    'A/B/E_copy/beta'  : Item(status='A ', copied='+', wc_rev='-',
+                              entry_status='  '),
     })
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Delete A/B/E_copy/alpha and A/B/E_copy/beta
-  svntest.main.run_svn(None, 'rm',
+  svntest.main.run_svn(None, 'rm', '--force',
                        sbox.ospath('A/B/E_copy/alpha'),
                        sbox.ospath('A/B/E_copy/beta'))
-  expected_status.tweak('A/B/E_copy/alpha', 'A/B/E_copy/beta', status='D ')
+  expected_status.tweak('A/B/E_copy/alpha', 'A/B/E_copy/beta', status='D ',
+                        entry_status=None)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # This test currently fails above, as both alpha and beta disappear
