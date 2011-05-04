@@ -1932,7 +1932,15 @@ svn_client_import(svn_client_commit_info_t **commit_info_p,
  * keep_changelists is set.  If @a changelists is
  * empty (or altogether @c NULL), no changelist filtering occurs.
  *
- * Use @a pool for any temporary allocations.
+ * If @a commit_as_operations is set to FALSE, when a copy is committed
+ * all changes below the copy are always committed at the same time
+ * (independent of the value of @a depth). If @a commit_as_operations is
+ * #TRUE, changes to descendants are only committed if they are itself
+ * included via @a depth and targets.
+ *
+ * When @a commit_as_operations is #TRUE it is possible to delete a node and
+ * all its descendants by selecting just the root of the deletion. If it is
+ * set to #FALSE this will raise an error.
  *
  * If @a commit_callback is non-NULL, then for each successful commit, call
  * @a commit_callback with @a commit_baton and a #svn_commit_info_t for
@@ -1941,6 +1949,8 @@ svn_client_import(svn_client_commit_info_t **commit_info_p,
  * @note #svn_depth_unknown and #svn_depth_exclude must not be passed
  * for @a depth.
  *
+ * Use @a pool for any temporary allocations.
+ *
  * @since New in 1.7.
  */
 svn_error_t *
@@ -1948,6 +1958,7 @@ svn_client_commit5(const apr_array_header_t *targets,
                    svn_depth_t depth,
                    svn_boolean_t keep_locks,
                    svn_boolean_t keep_changelists,
+                   svn_boolean_t commit_as_operations,
                    const apr_array_header_t *changelists,
                    const apr_hash_t *revprop_table,
                    svn_commit_callback2_t commit_callback,
@@ -1965,6 +1976,8 @@ svn_client_commit5(const apr_array_header_t *targets,
  * Also, if no error is returned and @a (*commit_info_p)->revision is set to
  * #SVN_INVALID_REVNUM, then the commit was a no-op; nothing needed to
  * be committed.
+ *
+ * Sets @ commit_as_operations to FALSE to match Subversion 1.6's behavior.
  *
  * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.6 API.

@@ -4624,7 +4624,6 @@ def changed_data_should_match_checkout(sbox):
   os.chdir(was_cwd)
 
 # Regression test for issue #3676 for copies including directories
-@XFail()
 @Issue(3676)
 def changed_dir_data_should_match_checkout(sbox):
   """changed dir after commit should match checkout"""

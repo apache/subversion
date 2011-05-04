@@ -494,7 +494,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
       ctx->notify_baton2 = &notify_baton;
     }
 
-  err = svn_client_commit5(targets, depth, keep_locks, keep_changelists,
+  err = svn_client_commit5(targets, depth, keep_locks, keep_changelists, FALSE,
                            changelists, revprop_table,
                            capture_commit_info, &cb, ctx, pool);
 
