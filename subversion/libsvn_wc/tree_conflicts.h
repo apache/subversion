@@ -67,6 +67,11 @@ svn_wc__serialize_conflict(svn_skel_t **skel,
                            apr_pool_t *scratch_pool);
 
 
+/* Parse a newly allocated svn_wc_conflict_description2_t object from the
+ * provided SKEL. Return the result in *CONFLICT, allocated in RESULT_POOL.
+ * DIR_PATH is the path to the WC directory whose conflicts are being read.
+ * Use SCRATCH_POOL for temporary allocations.
+ */
 svn_error_t *
 svn_wc__deserialize_conflict(const svn_wc_conflict_description2_t **conflict,
                              const svn_skel_t *skel,
