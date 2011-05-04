@@ -441,25 +441,26 @@ downgrade_commit_copied_notify_func(void *baton,
                                     const svn_wc_notify_t *notify,
                                     apr_pool_t *pool)
 {
-  svn_wc_notify_t *my_notify = (svn_wc_notify_t *)notify;
   struct downgrade_commit_copied_notify_baton *b = baton;
 
   if (notify->action == svn_wc_notify_commit_copied)
     {
-      my_notify = svn_wc_dup_notify(notify, pool);
+      svn_wc_notify_t *my_notify = svn_wc_dup_notify(notify, pool);
       my_notify->action = svn_wc_notify_commit_added;
+      notify = my_notify;
     }
   else if (notify->action == svn_wc_notify_commit_copied_replaced)
     {
-      my_notify = svn_wc_dup_notify(notify, pool);
+      svn_wc_notify_t *my_notify = svn_wc_dup_notify(notify, pool);
       my_notify->action = svn_wc_notify_commit_replaced;
+      notify = my_notify;
     }
 
   /* Call the wrapped notification system (if any) with MY_NOTIFY,
      which is either the original NOTIFY object, or a tweaked deep
      copy thereof. */
   if (b->orig_notify_func2)
-    b->orig_notify_func2(b->orig_notify_baton2, my_notify, pool);
+    b->orig_notify_func2(b->orig_notify_baton2, notify, pool);
 }
 
 
