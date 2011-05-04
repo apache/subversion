@@ -37,7 +37,7 @@
    dup'd. */
 static svn_error_t *
 build_info_for_entry(svn_info2_t **info,
-                     svn_wc_context_t *wc_ctx,
+                     svn_wc__db_t *db,
                      const char *local_abspath,
                      svn_node_kind_t kind,
                      apr_pool_t *result_pool,
@@ -59,7 +59,7 @@ build_info_for_entry(svn_info2_t **info,
                                               NULL, NULL, NULL, NULL, NULL,
                                               NULL, NULL, NULL, NULL, NULL,
                                               NULL, NULL,
-                                              wc_ctx->db, local_abspath,
+                                              db, local_abspath,
                                               scratch_pool, scratch_pool);
 
       if ((! err) && (status == svn_wc__db_status_excluded))
@@ -81,7 +81,7 @@ build_info_for_entry(svn_info2_t **info,
   SVN_ERR(svn_wc__internal_get_origin(&is_copy, &rev, &repos_relpath,
                                       &tmpinfo->repos_root_URL,
                                       &tmpinfo->repos_UUID,
-                                      wc_ctx->db, local_abspath, TRUE,
+                                      db, local_abspath, TRUE,
                                       result_pool, scratch_pool));
 
   /* If we didn't get an origin, get it directly */
@@ -89,7 +89,7 @@ build_info_for_entry(svn_info2_t **info,
     {
       SVN_ERR(svn_wc__internal_get_repos_info(&tmpinfo->repos_root_URL,
                                               &tmpinfo->repos_UUID,
-                                              wc_ctx->db, local_abspath, TRUE,
+                                              db, local_abspath, TRUE,
                                               TRUE, result_pool, scratch_pool));
     }
 
@@ -102,14 +102,14 @@ build_info_for_entry(svn_info2_t **info,
                                    NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL,
-                                   wc_ctx->db, local_abspath, result_pool,
+                                   db, local_abspath, result_pool,
                                    scratch_pool));
     }
   else
     tmpinfo->last_changed_rev = SVN_INVALID_REVNUM;
 
   if (is_copy)
-    SVN_ERR(svn_wc__internal_get_commit_base_rev(&tmpinfo->rev, wc_ctx->db,
+    SVN_ERR(svn_wc__internal_get_commit_base_rev(&tmpinfo->rev, db,
                                                  local_abspath, scratch_pool));
   else
     tmpinfo->rev = rev;
@@ -125,7 +125,7 @@ build_info_for_entry(svn_info2_t **info,
     {
       SVN_ERR(svn_wc__internal_get_copyfrom_info(NULL, NULL, NULL, NULL,
                                                  &is_copy_target,
-                                                 wc_ctx->db, local_abspath,
+                                                 db, local_abspath,
                                                  scratch_pool, scratch_pool));
 
       if (is_copy_target)
@@ -143,7 +143,7 @@ build_info_for_entry(svn_info2_t **info,
 
   /* Don't create a URL for local additions */
   if (!tmpinfo->URL)
-    SVN_ERR(svn_wc__db_read_url(&tmpinfo->URL, wc_ctx->db, local_abspath,
+    SVN_ERR(svn_wc__db_read_url(&tmpinfo->URL, db, local_abspath,
                                 result_pool, scratch_pool));
 
   if (tmpinfo->kind == svn_node_file)
@@ -154,7 +154,7 @@ build_info_for_entry(svn_info2_t **info,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                    &tmpinfo->wc_info->changelist,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   wc_ctx->db, local_abspath, result_pool,
+                                   db, local_abspath, result_pool,
                                    scratch_pool));
     }
 
@@ -165,7 +165,7 @@ build_info_for_entry(svn_info2_t **info,
                                    NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL,
-                                   wc_ctx->db, local_abspath, scratch_pool,
+                                   db, local_abspath, scratch_pool,
                                    scratch_pool));
 
       if (tmpinfo->wc_info->depth == svn_depth_unknown)
@@ -181,10 +181,10 @@ build_info_for_entry(svn_info2_t **info,
   tmpinfo->size = SVN_INVALID_FILESIZE;
 
   SVN_ERR(svn_wc__internal_node_get_schedule(&tmpinfo->wc_info->schedule, NULL,
-                                             wc_ctx->db, local_abspath,
+                                             db, local_abspath,
                                              scratch_pool));
 
-  SVN_ERR(svn_wc__db_get_wcroot(&tmpinfo->wc_info->wcroot_abspath, wc_ctx->db,
+  SVN_ERR(svn_wc__db_get_wcroot(&tmpinfo->wc_info->wcroot_abspath, db,
                                 local_abspath, result_pool, scratch_pool));
 
   SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -193,10 +193,10 @@ build_info_for_entry(svn_info2_t **info,
                                &tmpinfo->wc_info->working_size,
                                &tmpinfo->wc_info->text_time,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               wc_ctx->db, local_abspath,
+                               db, local_abspath,
                                scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_wc__db_read_conflicts(&tmpinfo->wc_info->conflicts, wc_ctx->db,
+  SVN_ERR(svn_wc__db_read_conflicts(&tmpinfo->wc_info->conflicts, db,
                                     local_abspath, result_pool, scratch_pool));
 
   /* lock stuff */
@@ -208,7 +208,7 @@ build_info_for_entry(svn_info2_t **info,
                                                   NULL, NULL, NULL, NULL,
                                                   NULL, NULL, NULL, NULL,
                                                   &lock, NULL, NULL, NULL,
-                                                  wc_ctx->db, local_abspath,
+                                                  db, local_abspath,
                                                   result_pool, scratch_pool);
 
       if (err && (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND))
@@ -265,7 +265,7 @@ struct found_entry_baton
 {
   svn_info_receiver2_t receiver;
   void *receiver_baton;
-  svn_wc_context_t *wc_ctx;
+  svn_wc__db_t *db;
 };
 
 /* Call WALK_BATON->receiver with WALK_BATON->receiver_baton, passing to it
@@ -282,10 +282,10 @@ info_found_node_callback(const char *local_abspath,
   const svn_wc_conflict_description2_t *tree_conflict = NULL;
   svn_error_t *err;
 
-  SVN_ERR(svn_wc__db_op_read_tree_conflict(&tree_conflict, fe_baton->wc_ctx->db,
+  SVN_ERR(svn_wc__db_op_read_tree_conflict(&tree_conflict, fe_baton->db,
                                            local_abspath, pool, pool));
 
-  err = build_info_for_entry(&info, fe_baton->wc_ctx, local_abspath,
+  err = build_info_for_entry(&info, fe_baton->db, local_abspath,
                              kind, pool, pool);
   if (err && (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
       && tree_conflict)
@@ -296,11 +296,10 @@ info_found_node_callback(const char *local_abspath,
       svn_error_clear(err);
 
       SVN_ERR(build_info_for_unversioned(&info, pool));
-      SVN_ERR(svn_wc__node_get_repos_info(&(info->repos_root_URL),
-                                          NULL,
-                                          fe_baton->wc_ctx,
-                                          local_abspath, FALSE, FALSE,
-                                          pool, pool));
+      SVN_ERR(svn_wc__internal_get_repos_info(&(info->repos_root_URL),
+                                              NULL, fe_baton->db,
+                                              local_abspath, FALSE, FALSE,
+                                              pool, pool));
 
       APR_ARRAY_PUSH(conflicts, const svn_wc_conflict_description2_t *)
         = tree_conflict;
@@ -332,7 +331,7 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
 
   fe_baton.receiver = receiver;
   fe_baton.receiver_baton = receiver_baton;
-  fe_baton.wc_ctx = wc_ctx;
+  fe_baton.db = wc_ctx->db;
 
   err = svn_wc__internal_walk_children(wc_ctx->db, local_abspath, FALSE,
                                        changelists, info_found_node_callback,
