@@ -507,6 +507,17 @@ WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
                                            OR local_relpath LIKE ?3 ESCAPE '#')
                                       AND kind = 'file'))
 
+-- STMT_DELETE_ACTUAL_LEAVING_CHANGELIST_AND_CONFLICT
+DELETE FROM actual_node
+WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
+      AND tree_conflict_data IS NULL
+      AND (changelist IS NULL
+           OR local_relpath NOT IN (SELECT local_relpath FROM nodes_current
+                                    WHERE wc_id = ?1
+                                      AND (local_relpath = ?2
+                                           OR local_relpath LIKE ?3 ESCAPE '#')
+                                      AND kind = 'file'))
+
 -- STMT_DELETE_CHILD_NODES_RECURSIVE
 DELETE FROM nodes
 WHERE wc_id = ?1 AND local_relpath LIKE ?2 ESCAPE '#' AND op_depth = ?3
@@ -531,6 +542,19 @@ UPDATE actual_node
 SET properties = NULL,
     text_mod = NULL,
     tree_conflict_data = NULL,
+    conflict_old = NULL,
+    conflict_new = NULL,
+    conflict_working = NULL,
+    prop_reject = NULL,
+    older_checksum = NULL,
+    left_checksum = NULL,
+    right_checksum = NULL
+WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
+
+-- STMT_CLEAR_ACTUAL_LEAVING_CHANGELIST_AND_CONFLICT
+UPDATE actual_node
+SET properties = NULL,
+    text_mod = NULL,
     conflict_old = NULL,
     conflict_new = NULL,
     conflict_working = NULL,
