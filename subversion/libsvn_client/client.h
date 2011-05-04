@@ -777,6 +777,13 @@ typedef struct svn_client__copy_pair_t
 
 */
 
+/* Callback for the commit harvester to check if a node exists at the specified
+   url */
+typedef svn_error_t *(*svn_client__check_url_kind_t)(void *baton,
+                                                     svn_node_kind_t *kind,
+                                                     const char *url,
+                                                     apr_pool_t *scratch_pool);
+
 /* Recursively crawl a set of working copy paths (DIR_ABSPATH + each
    item in the TARGETS array) looking for commit candidates, locking
    working copy directories as the crawl progresses.  For each
@@ -828,6 +835,8 @@ svn_client__harvest_committables(apr_hash_t **committables,
                                  svn_depth_t depth,
                                  svn_boolean_t just_locked,
                                  const apr_array_header_t *changelists,
+                                 svn_client__check_url_kind_t check_url_func,
+                                 void *check_url_baton,
                                  svn_client_ctx_t *ctx,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool);
@@ -845,10 +854,11 @@ svn_client__harvest_committables(apr_hash_t **committables,
 svn_error_t *
 svn_client__get_copy_committables(apr_hash_t **committables,
                                   const apr_array_header_t *copy_pairs,
+                                  svn_client__check_url_kind_t check_url_func,
+                                  void *check_url_baton,
                                   svn_client_ctx_t *ctx,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool);
-
 
 /* A qsort()-compatible sort routine for sorting an array of
    svn_client_commit_item_t's by their URL member. */

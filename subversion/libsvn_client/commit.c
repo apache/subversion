@@ -1129,6 +1129,39 @@ determine_lock_targets(apr_array_header_t **lock_targets,
   return SVN_NO_ERROR;
 }
 
+/* Baton for check_url_kind */
+struct check_url_kind_baton
+{
+  apr_pool_t *pool;
+  svn_ra_session_t *session;
+  const char *repos_root_url;
+  svn_client_ctx_t *ctx;
+};
+
+/* Implements svn_client__check_url_kind_t for svn_client_commit5 */
+static svn_error_t *
+check_url_kind(void *baton,
+               svn_node_kind_t *kind,
+               const char *url,
+               apr_pool_t *scratch_pool)
+{
+  struct check_url_kind_baton *cukb = baton;
+
+  /* If we don't have a session or can't use the session, get one */
+  if (!cukb->session || !svn_uri_is_ancestor(cukb->repos_root_url, url))
+    {
+      SVN_ERR(svn_client_open_ra_session(&cukb->session, url, cukb->ctx,
+                                         cukb->pool));
+      SVN_ERR(svn_ra_get_repos_root2(cukb->session, &cukb->repos_root_url,
+                                     cukb->pool));
+    }
+  else
+    SVN_ERR(svn_ra_reparent(cukb->session, url, scratch_pool));
+
+  return svn_error_return(
+                svn_ra_check_path(cukb->session, "", SVN_INVALID_REVNUM,
+                                  kind, scratch_pool));
+}
 
 svn_error_t *
 svn_client_commit5(const apr_array_header_t *targets,
@@ -1250,17 +1283,29 @@ svn_client_commit5(const apr_array_header_t *targets,
       }
 
   /* Crawl the working copy for commit items. */
-  cmt_err = svn_error_return(
-                 svn_client__harvest_committables(&committables,
-                                                  &lock_tokens,
-                                                  base_abspath,
-                                                  rel_targets,
-                                                  depth,
-                                                  ! keep_locks,
-                                                  changelists,
-                                                  ctx,
-                                                  pool,
-                                                  iterpool));
+  {
+    struct check_url_kind_baton cukb;
+
+    /* Prepare for when we have a copy containing not-present nodes. */
+    cukb.pool = iterpool;
+    cukb.session = NULL; /* ### Can we somehow reuse session? */
+    cukb.repos_root_url = NULL;
+    cukb.ctx = ctx;
+
+    cmt_err = svn_error_return(
+                   svn_client__harvest_committables(&committables,
+                                                    &lock_tokens,
+                                                    base_abspath,
+                                                    rel_targets,
+                                                    depth,
+                                                    ! keep_locks,
+                                                    changelists,
+                                                    check_url_kind,
+                                                    &cukb,
+                                                    ctx,
+                                                    pool,
+                                                    iterpool));
+  }
 
   if (cmt_err)
     goto cleanup;

@@ -1583,9 +1583,11 @@ def wc_to_wc_copy_deleted(sbox):
                         copied=None, wc_rev=3)
   expected_output = svntest.wc.State(wc_dir, {
     'A/B2'         : Item(verb='Adding'),
-    'A/B2/E/alpha' : Item(verb='Deleting'),
-    'A/B2/lambda'  : Item(verb='Deleting'),
-    'A/B2/F'       : Item(verb='Deleting'),
+    # Before the commit processor verified not-present deletes
+    # the output would also contain
+    # 'A/B2/E/alpha' : Item(verb='Deleting'),
+    # 'A/B2/lambda'  : Item(verb='Deleting'),
+    # 'A/B2/F'       : Item(verb='Deleting'),
     })
 
   svntest.actions.run_and_verify_commit(wc_dir,
@@ -4697,7 +4699,6 @@ def copy_over_deleted_dir(sbox):
   main.run_svn(None, 'cp', os.path.join(sbox.wc_dir, 'A/D'),
                os.path.join(sbox.wc_dir, 'A/B'))
 
-@XFail()
 @Issue(3314)
 def mixed_rev_copy_del(sbox):
   """copy mixed-rev and delete children"""
