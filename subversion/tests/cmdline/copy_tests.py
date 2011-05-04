@@ -4278,7 +4278,6 @@ def reverse_merge_move(sbox):
                                         None,
                                         None)
 
-@XFail()
 @Issue(3699)
 def nonrecursive_commit_of_copy(sbox):
   """commit only top of copy; check child behavior"""
@@ -4335,9 +4334,9 @@ def nonrecursive_commit_of_copy(sbox):
                         'A_new/B/F', 'A_new/mu',
                         status='  ', copied=None, wc_rev='2')
 
-  # And these are deleted with their parent (not sure if this is ok)
-  expected_status.remove('A_new/C', 'A_new/B/E', 'A_new/B/E/alpha',
-                         'A_new/B/E/beta')
+  # And these are now normal deletes, because their parent was committed.
+  expected_status.tweak('A_new/C', 'A_new/B/E', 'A_new/B/E/alpha',
+                        'A_new/B/E/beta', copied=None, wc_rev='2')
 
   # 'A_new/G_new' and everything below should still be added
   # as their operation root was not committed
