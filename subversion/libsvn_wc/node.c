@@ -1605,6 +1605,21 @@ svn_wc__node_get_commit_status(svn_node_kind_t *kind,
 }
 
 svn_error_t *
+svn_wc__get_not_present_descendants(const apr_array_header_t **descendants,
+                                    svn_wc_context_t *wc_ctx,
+                                    const char *local_abspath,
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool)
+{
+  return svn_error_return(
+                svn_wc__db_get_not_present_descendants(descendants,
+                                                       wc_ctx->db,
+                                                       local_abspath,
+                                                       result_pool,
+                                                       scratch_pool));
+}
+
+svn_error_t *
 svn_wc__rename_wc(svn_wc_context_t *wc_ctx,
                   const char *from_abspath,
                   const char *dst_abspath,

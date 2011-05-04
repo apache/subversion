@@ -10607,6 +10607,58 @@ svn_wc__db_info_below_working(svn_boolean_t *have_base,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc__db_get_not_present_descendants(const apr_array_header_t **descendants,
+                                       svn_wc__db_t *db,
+                                       const char *local_abspath,
+                                       apr_pool_t *result_pool,
+                                       apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
+                              local_abspath, scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_NOT_PRESENT_DESCENDANTS));
+
+  SVN_ERR(svn_sqlite__bindf(stmt, "isi",
+                            wcroot->wc_id,
+                            local_relpath,
+                            (apr_int64_t)relpath_depth(local_relpath)));
+
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  if (have_row)
+    {
+      apr_array_header_t *paths;
+
+      paths = apr_array_make(result_pool, 4, sizeof(const char*));
+      while (have_row)
+        {
+          const char *found_relpath = svn_sqlite__column_text(stmt, 0, NULL);
+
+          APR_ARRAY_PUSH(paths, const char *)
+              = svn_relpath_is_child(local_relpath, found_relpath,
+                                     result_pool);
+
+          SVN_ERR(svn_sqlite__step(&have_row, stmt));
+        }
+
+      *descendants = paths;
+    }
+  else
+    *descendants = apr_array_make(result_pool, 0, sizeof(const char*));
+
+  return svn_error_return(svn_sqlite__reset(stmt));
+}
+
 
 /* Like svn_wc__db_min_max_revisions(),
  * but accepts a WCROOT/LOCAL_RELPATH pair. */

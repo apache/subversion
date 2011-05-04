@@ -2710,6 +2710,18 @@ svn_wc__db_info_below_working(svn_boolean_t *have_base,
                               apr_pool_t *scratch_pool);
 
 
+/* Gets an array of const char *local_relpaths of descendants of LOCAL_ABSPATH,
+ * which itself must be the op root of an addition, copy or move.
+ * The descendants returned are at the same op_depth, but are to be deleted
+ * by the commit processing because they are not present in the local copy.
+ */
+svn_error_t *
+svn_wc__db_get_not_present_descendants(const apr_array_header_t **descendants,
+                                       svn_wc__db_t *db,
+                                       const char *local_abspath,
+                                       apr_pool_t *result_pool,
+                                       apr_pool_t *scratch_pool);
+
 /* Gather revision status information about a working copy using DB.
  * 
  * Set *MIN_REVISION and *MAX_REVISION to the lowest and highest revision
