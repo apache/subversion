@@ -240,8 +240,7 @@ delete_urls(const apr_array_header_t *paths,
     {
       return svn_error_return(
                svn_error_compose_create(err,
-                                        editor->abort_edit(edit_baton,
-                                                           iterpool)));
+                                        editor->abort_edit(edit_baton, pool)));
     }
 
   /* Close the edit. */
