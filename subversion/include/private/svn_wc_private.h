@@ -898,6 +898,19 @@ svn_wc__node_get_commit_status(svn_node_kind_t *kind,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
+/* Gets an array of const char *repos_relpaths of descendants of LOCAL_ABSPATH,
+ * which must be the op root of an addition, copy or move. The descendants
+ * returned are at the same op_depth, but are to be deleted by the commit
+ * processing because they are not present in the local copy.
+ */
+svn_error_t *
+svn_wc__get_not_present_descendants(const apr_array_header_t **descendants,
+                                    svn_wc_context_t *wc_ctx,
+                                    const char *local_abspath,
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool);
+
+
 /* Checks a node LOCAL_ABSPATH in WC_CTX for several kinds of obstructions
  * for tasks like merge processing.
  *
