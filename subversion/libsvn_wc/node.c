@@ -321,27 +321,6 @@ svn_wc__node_get_changed_info(svn_revnum_t *changed_rev,
 }
 
 svn_error_t *
-svn_wc__node_get_recorded_info(svn_filesize_t *recorded_size,
-                               apr_time_t *recorded_mod_time,
-                               svn_wc_context_t *wc_ctx,
-                               const char *local_abspath,
-                               apr_pool_t *scratch_pool)
-{
-  return svn_error_return(svn_wc__db_read_info(NULL, NULL, NULL, NULL,
-                                               NULL, NULL, NULL, NULL,
-                                               NULL, NULL, NULL, NULL,
-                                               NULL, NULL, NULL, NULL,
-                                               NULL,  recorded_size,
-                                               recorded_mod_time,
-                                               NULL, NULL, NULL,
-                                               NULL, NULL,
-                                               NULL, NULL, NULL,
-                                               wc_ctx->db, local_abspath,
-                                               scratch_pool, scratch_pool));
-}
-
-
-svn_error_t *
 svn_wc__node_get_url(const char **url,
                      svn_wc_context_t *wc_ctx,
                      const char *local_abspath,

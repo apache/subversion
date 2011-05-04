@@ -272,27 +272,6 @@ svn_wc__node_get_changed_info(svn_revnum_t *changed_rev,
 
 
 /**
- * Set @a *recorded_size to the recorded size (in bytes) of the
- * pristine text -- after translation -- associated with @a
- * local_abspath and @a *recorded_mod_time to the recorded last
- *
- * modification time. (@a recorded_size and @a recorded_mod_time may be NULL,
- * if the caller is not interested in the result.
- *
- * If @a local_abspath isn't a versioned file in the working copy (but is a
- * valid node) or when no information is recorded, set @a *translated_size 
- * to SVN_INVALID_FILESIZE and @a *recorded_last_mod_time to 0.
- *
- * Use @a scratch_pool for temporary allocations.
- */
-svn_error_t *
-svn_wc__node_get_recorded_info(svn_filesize_t *recorded_size,
-                               apr_time_t *recorded_mod_time,
-                               svn_wc_context_t *wc_ctx,
-                               const char *local_abspath,
-                               apr_pool_t *scratch_pool);
-
-/**
  * Set @a *url to the corresponding url for @a local_abspath, using @a wc_ctx.
  * If the node is added, return the url it will have in the repository.
  *
