@@ -560,7 +560,7 @@ svn_wc__node_get_copyfrom_info(const char **copyfrom_root_url,
                                                         scratch_pool));
 }
 
-/* A recursive node-walker, helper for svn_wc__node_walk_children().
+/* A recursive node-walker, helper for svn_wc__internal_walk_children().
  *
  * Call WALK_CALLBACK with WALK_BATON on all children (recursively) of
  * DIR_ABSPATH in DB, but not on DIR_ABSPATH itself. DIR_ABSPATH must be a
