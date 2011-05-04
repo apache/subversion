@@ -164,14 +164,12 @@ process_committed_leaf(svn_wc__db_t *db,
   else if (status == svn_wc__db_status_not_present)
     {
       /* We are committing the leaf of a copy operation.
-         It is safe to remove this leaf now */
-      return svn_error_return(
-                svn_wc__db_op_remove_node(
-                                db, local_abspath,
-                                (have_base && !via_recurse)
-                                    ? new_revnum : SVN_INVALID_REVNUM,
-                                kind,
-                                scratch_pool));
+         We leave the not-present marker to allow pulling in excluded
+         children of a copy.
+
+         The next update will remove the not-present marker. */
+
+      return SVN_NO_ERROR;
     }
 
   SVN_ERR_ASSERT(status == svn_wc__db_status_normal
