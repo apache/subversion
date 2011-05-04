@@ -705,13 +705,13 @@ def timestamp_behaviour(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Sleep to ensure timestamps change
-  time.sleep(2)
+  time.sleep(1.1)
 
   # Check behaviour of revert on text-time
   text_time_behaviour(wc_dir, iota_path, 'iota', expected_status, 'revert')
 
   # Sleep to ensure timestamps change
-  time.sleep(2)
+  time.sleep(1.1)
 
   # Check behaviour of cleanup on text-time
   text_time_behaviour(wc_dir, iota_path, 'iota', expected_status, 'cleanup')
