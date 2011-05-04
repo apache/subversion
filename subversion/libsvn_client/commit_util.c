@@ -475,6 +475,9 @@ harvest_committables(svn_wc_context_t *wc_ctx,
         }
     }
 
+  if (is_deleted && !is_op_root /* && !is_added */)
+    return SVN_NO_ERROR; /* Not an operational delete and not an add. */
+
   if (node_relpath == NULL)
     SVN_ERR(svn_wc__node_get_repos_relpath(&node_relpath,
                                            wc_ctx, local_abspath,
@@ -722,6 +725,119 @@ harvest_committables(svn_wc_context_t *wc_ctx,
   return SVN_NO_ERROR;
 }
 
+/* Baton for handle_descendants */
+struct handle_descendants_baton
+{
+  svn_wc_context_t *wc_ctx;
+  svn_cancel_func_t cancel_func;
+  void *cancel_baton;
+  svn_client__check_url_kind_t check_url_func;
+  void *check_url_baton;
+};
+
+/* Helper for the commit harvesters */
+static svn_error_t *
+handle_descendants(void *baton,
+                       const void *key, apr_ssize_t klen, void *val,
+                       apr_pool_t *pool)
+{
+  struct handle_descendants_baton *hdb = baton;
+  apr_array_header_t *commit_items = val;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  int i;
+
+  for (i = 0; i < commit_items->nelts; i++)
+    {
+      svn_client_commit_item3_t *item =
+        APR_ARRAY_IDX(commit_items, i, svn_client_commit_item3_t *);
+      const apr_array_header_t *absent_descendants;
+      int j;
+
+      /* Is this a copy operation? */
+      if (!(item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
+          || ! item->copyfrom_url)
+        continue;
+
+      if (hdb->cancel_func)
+        SVN_ERR(hdb->cancel_func(hdb->cancel_baton));
+
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_wc__get_not_present_descendants(&absent_descendants,
+                                                  hdb->wc_ctx, item->path,
+                                                  iterpool, iterpool));
+
+      for (j = 0; j < absent_descendants->nelts; j++)
+        {
+          int k;
+          svn_boolean_t found_item = FALSE;
+          svn_node_kind_t kind;
+          const char *relpath = APR_ARRAY_IDX(absent_descendants, j,
+                                              const char *);
+          const char *local_abspath = svn_dirent_join(item->path, relpath,
+                                                      iterpool);
+
+          /* If the path has a commit operation, we do nothing.
+             (It will be deleted by the operation) */
+          for (k = 0; k < commit_items->nelts; k++)
+            {
+              svn_client_commit_item3_t *cmt_item =
+                 APR_ARRAY_IDX(commit_items, k, svn_client_commit_item3_t *);
+
+              if (! strcmp(cmt_item->path, local_abspath))
+                {
+                  found_item = TRUE;
+                  break;
+                }
+            }
+
+          if (found_item)
+            continue; /* We have an explicit delete or replace for this path */
+
+          /* ### Need a sub-iterpool? */
+
+          if (hdb->check_url_func)
+            {
+              const char *from_url = svn_path_url_add_component2(
+                                                item->copyfrom_url, relpath,
+                                                iterpool);
+
+              SVN_ERR(hdb->check_url_func(hdb->check_url_baton,
+                                          &kind, from_url, iterpool));
+
+              if (kind == svn_node_none)
+                continue; /* This node is already deleted */
+            }
+          else
+            kind = svn_node_unknown; /* 'Ok' for a delete of something */
+
+          {
+            /* Add a new commit item that describes the delete */
+            apr_pool_t *result_pool = commit_items->pool;
+            svn_client_commit_item3_t *new_item
+                  = svn_client_commit_item3_create(result_pool);
+
+            new_item->path = svn_dirent_join(item->path, relpath,
+                                             result_pool);
+            new_item->kind = kind;
+            new_item->url = svn_path_url_add_component2(item->url, relpath,
+                                                        result_pool);
+            new_item->revision = SVN_INVALID_REVNUM;
+            new_item->state_flags = SVN_CLIENT_COMMIT_ITEM_DELETE;
+            new_item->incoming_prop_changes = apr_array_make(result_pool, 1,
+                                                 sizeof(svn_prop_t *));
+
+            APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *)
+                  = new_item;
+          }
+        }
+      }
+
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
+}
+
+
 
 /* BATON is an apr_hash_t * of harvested committables. */
 static svn_error_t *
@@ -758,6 +874,8 @@ svn_client__harvest_committables(apr_hash_t **committables,
                                  svn_depth_t depth,
                                  svn_boolean_t just_locked,
                                  const apr_array_header_t *changelists,
+                                 svn_client__check_url_kind_t check_url_func,
+                                 void *check_url_baton,
                                  svn_client_ctx_t *ctx,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool)
@@ -766,6 +884,7 @@ svn_client__harvest_committables(apr_hash_t **committables,
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_hash_t *changelist_hash = NULL;
   svn_wc_context_t *wc_ctx = ctx->wc_ctx;
+  struct handle_descendants_baton hdb;
 
   /* It's possible that one of the named targets has a parent that is
    * itself scheduled for addition or replacement -- that is, the
@@ -903,6 +1022,15 @@ svn_client__harvest_committables(apr_hash_t **committables,
                                    result_pool, iterpool));
     }
 
+  hdb.wc_ctx = ctx->wc_ctx;
+  hdb.cancel_func = ctx->cancel_func;
+  hdb.cancel_baton = ctx->cancel_baton;
+  hdb.check_url_func = check_url_func;
+  hdb.check_url_baton = check_url_baton;
+
+  SVN_ERR(svn_iter_apr_hash(NULL, *committables,
+                            handle_descendants, &hdb, iterpool));
+
   /* Make sure that every path in danglers is part of the commit. */
   SVN_ERR(svn_iter_apr_hash(NULL,
                             danglers, validate_dangler, *committables,
@@ -918,6 +1046,8 @@ struct copy_committables_baton
   svn_client_ctx_t *ctx;
   apr_hash_t *committables;
   apr_pool_t *result_pool;
+  svn_client__check_url_kind_t check_url_func;
+  void *check_url_baton;
 };
 
 static svn_error_t *
@@ -927,6 +1057,7 @@ harvest_copy_committables(void *baton, void *item, apr_pool_t *pool)
   svn_client__copy_pair_t *pair = *(svn_client__copy_pair_t **)item;
   const char *repos_root_url;
   const char *commit_relpath;
+  struct handle_descendants_baton hdb;
 
   /* Read the entry for this SRC. */
   SVN_ERR_ASSERT(svn_dirent_is_absolute(pair->src_abspath_or_url));
@@ -941,19 +1072,30 @@ harvest_copy_committables(void *baton, void *item, apr_pool_t *pool)
                                        pool);
 
   /* Handle this SRC. */
-  return harvest_committables(btn->ctx->wc_ctx,
-                              pair->src_abspath_or_url,
-                              btn->committables, NULL,
-                              repos_root_url,
-                              commit_relpath,
-                              TRUE,  /* COPY_MODE_ROOT */
-                              svn_depth_infinity,
-                              FALSE,  /* JUST_LOCKED */
-                              NULL,
-                              FALSE, FALSE, /* skip files, dirs */
-                              btn->ctx->cancel_func,
-                              btn->ctx->cancel_baton,
-                              btn->result_pool, pool);
+  SVN_ERR(harvest_committables(btn->ctx->wc_ctx,
+                               pair->src_abspath_or_url,
+                               btn->committables, NULL,
+                               repos_root_url,
+                               commit_relpath,
+                               TRUE,  /* COPY_MODE_ROOT */
+                               svn_depth_infinity,
+                               FALSE,  /* JUST_LOCKED */
+                               NULL,
+                               FALSE, FALSE, /* skip files, dirs */
+                               btn->ctx->cancel_func,
+                               btn->ctx->cancel_baton,
+                               btn->result_pool, pool));
+
+  hdb.wc_ctx = btn->ctx->wc_ctx;
+  hdb.cancel_func = btn->ctx->cancel_func;
+  hdb.cancel_baton = btn->ctx->cancel_baton;
+  hdb.check_url_func = btn->check_url_func;
+  hdb.check_url_baton = btn->check_url_baton;
+
+  SVN_ERR(svn_iter_apr_hash(NULL, btn->committables,
+                            handle_descendants, &hdb, pool));
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -961,6 +1103,8 @@ harvest_copy_committables(void *baton, void *item, apr_pool_t *pool)
 svn_error_t *
 svn_client__get_copy_committables(apr_hash_t **committables,
                                   const apr_array_header_t *copy_pairs,
+                                  svn_client__check_url_kind_t check_url_func,
+                                  void *check_url_baton,
                                   svn_client_ctx_t *ctx,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool)
@@ -972,6 +1116,9 @@ svn_client__get_copy_committables(apr_hash_t **committables,
   btn.ctx = ctx;
   btn.committables = *committables;
   btn.result_pool = result_pool;
+
+  btn.check_url_func = check_url_func;
+  btn.check_url_baton = check_url_baton;
 
   /* For each copy pair, harvest the committables for that pair into the
      committables hash. */

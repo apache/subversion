@@ -1291,8 +1291,10 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
                                            message, ctx, pool));
 
   /* Crawl the working copy for commit items. */
+  /* ### TODO: Pass check_url_func for issue #3314 handling */
   SVN_ERR(svn_client__get_copy_committables(&committables,
                                             copy_pairs,
+                                            NULL, NULL, /* check_url_func */
                                             ctx, pool, pool));
 
   /* The committables are keyed by the repository root */
