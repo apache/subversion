@@ -456,7 +456,20 @@ svn_ra_serf__reparent(svn_ra_session_t *ra_session,
       return SVN_NO_ERROR;
     }
 
-  /* Do we need to check that it's the same host and port? */
+  if (!session->repos_root_str)
+    {
+      const char *vcc_url;
+      SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session, NULL, pool));
+    }
+
+  if (!svn_uri_is_ancestor(session->repos_root_str, url))
+    {
+      return svn_error_createf(
+          SVN_ERR_RA_ILLEGAL_URL, NULL,
+          _("URL '%s' is not a child of the session's repository root "
+            "URL '%s'"), url, session->repos_root_str);
+    }
+
   status = apr_uri_parse(session->pool, url, &new_url);
   if (status)
     {
