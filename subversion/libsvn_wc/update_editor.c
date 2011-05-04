@@ -3850,7 +3850,12 @@ close_file(void *file_baton,
                                             scratch_pool);
         }
 
-      keep_recorded_info = (install_pristine == FALSE);
+      if (! install_pristine
+          && (content_state == svn_wc_notify_state_unchanged))
+        {
+          /* It is safe to keep the current recorded timestamp and size */
+          keep_recorded_info = TRUE;
+        }
 
       /* Clean up any temporary files.  */
 
