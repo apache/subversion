@@ -4817,35 +4817,41 @@ svn_wc__db_delete_list_notify(svn_wc_notify_func2_t notify_func,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
-  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
-                              db, local_abspath, scratch_pool, iterpool));
+                              db, local_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_DELETE_LIST));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  while (have_row)
+  if (notify_func)
     {
-      const char *notify_relpath = svn_sqlite__column_text(stmt, 0, NULL);
-      const char *notify_abspath = svn_dirent_join(wcroot->abspath,
-                                                   notify_relpath,
-                                                   iterpool);
-      notify_func(notify_baton,
-                  svn_wc_create_notify(notify_abspath,
-                                       svn_wc_notify_delete,
-                                       iterpool),
-                  iterpool);
+      svn_sqlite__stmt_t *stmt;
+      svn_boolean_t have_row;
+      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_SELECT_DELETE_LIST));
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
-    }
+      while (have_row)
+        {
+          const char *notify_relpath = svn_sqlite__column_text(stmt, 0, NULL);
+          const char *notify_abspath = svn_dirent_join(wcroot->abspath,
+                                                       notify_relpath,
+                                                       iterpool);
+          notify_func(notify_baton,
+                      svn_wc_create_notify(notify_abspath,
+                                           svn_wc_notify_delete,
+                                           iterpool),
+                      iterpool);
 
-  SVN_ERR(svn_sqlite__reset(stmt));
+          SVN_ERR(svn_sqlite__step(&have_row, stmt));
+        }
+
+      SVN_ERR(svn_sqlite__reset(stmt));
+
+      svn_pool_destroy(iterpool);
+    }
 
   SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb, STMT_DROP_DELETE_LIST));
 
