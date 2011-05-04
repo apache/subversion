@@ -521,11 +521,6 @@ WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
                                            OR local_relpath LIKE ?3 ESCAPE '#')
                                       AND kind = 'file'))
 
--- STMT_DELETE_CHILD_NODES_RECURSIVE
-DELETE FROM nodes
-WHERE wc_id = ?1 AND local_relpath LIKE ?2 ESCAPE '#' AND op_depth = ?3
-  AND presence = ?4
-
 -- STMT_CLEAR_ACTUAL_NODE_LEAVING_CHANGELIST
 UPDATE actual_node
 SET properties = NULL,
@@ -567,20 +562,6 @@ SET properties = NULL,
     right_checksum = NULL
 WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
 
--- STMT_CLEAR_ACTUAL_NODE_LEAVING_CONFLICT
-UPDATE actual_node
-SET properties = NULL,
-    text_mod = NULL,
-    changelist = NULL,
-    conflict_old = NULL,
-    conflict_new = NULL,
-    conflict_working = NULL,
-    prop_reject = NULL,
-    older_checksum = NULL,
-    left_checksum = NULL,
-    right_checksum = NULL
-WHERE wc_id = ?1 AND local_relpath = ?2
-
 -- STMT_UPDATE_NODE_BASE_DEPTH
 UPDATE nodes SET depth = ?3
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
@@ -604,11 +585,6 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND
 -- STMT_UPDATE_NODE_BASE_PRESENCE
 UPDATE nodes SET presence = ?3
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
-
--- STMT_UPDATE_NODE_WORKING_PRESENCE
-UPDATE nodes SET presence = ?4
-WHERE wc_id = ?1 AND local_relpath = ?2
-  AND op_depth = ?3
 
 -- STMT_UPDATE_BASE_NODE_PRESENCE_REVNUM_AND_REPOS_PATH
 UPDATE nodes SET presence = ?3, revision = ?4, repos_path = ?5
@@ -740,19 +716,6 @@ SELECT wc_id, local_relpath, ?3 /*op_depth*/,
 FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 
--- STMT_INSERT_WORKING_NODE_FROM_NODE
-INSERT OR REPLACE INTO nodes (
-    wc_id, local_relpath, op_depth, parent_relpath, presence, kind, checksum,
-    changed_revision, changed_date, changed_author, depth, symlink_target,
-    translated_size, last_mod_time, properties)
-SELECT wc_id, local_relpath, ?3 /*op_depth*/, parent_relpath, ?4 /*presence*/,
-       kind, checksum, changed_revision, changed_date, changed_author, depth,
-       symlink_target, translated_size, last_mod_time, properties
-FROM nodes
-WHERE wc_id = ?1 AND local_relpath = ?2
-ORDER BY op_depth DESC
-LIMIT 1
-
 -- STMT_INSERT_WORKING_NODE_FROM_NODE_RECURSIVE
 INSERT INTO nodes (
     wc_id, local_relpath, op_depth, parent_relpath, presence, kind, checksum,
@@ -800,25 +763,12 @@ WHERE wc_id = ?1 AND local_relpath = ?2
   AND op_depth = (SELECT MAX(op_depth) FROM nodes
                   WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0)
 
--- STMT_UPDATE_OP_DEPTH_REDUCE_RECURSIVE
-UPDATE nodes SET op_depth = ?3 - 1
-WHERE wc_id = ?1 AND local_relpath LIKE ?2 ESCAPE '#' AND op_depth = ?3
-
 -- STMT_UPDATE_OP_DEPTH_INCREASE_RECURSIVE
 UPDATE nodes SET op_depth = ?3 + 1
 WHERE wc_id = ?1 AND local_relpath LIKE ?2 ESCAPE '#' AND op_depth = ?3
 
 -- STMT_UPDATE_OP_DEPTH
 UPDATE nodes SET op_depth = ?4
-WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3
-
--- STMT_UPDATE_WORKING_TO_DELETED
-UPDATE nodes SET
-  repos_id = NULL, repos_path = NULL, revision = NULL,
-  moved_here = NULL, depth = NULL, properties = NULL,
-  symlink_target = NULL, checksum = NULL,
-  changed_revision = NULL, changed_date = NULL, changed_author = NULL,
-  translated_size = NULL, last_mod_time = NULL
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3
 
 -- STMT_DETERMINE_WHICH_TREES_EXIST
@@ -885,18 +835,6 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 -- STMT_UPDATE_BASE_REPOS
 UPDATE nodes SET repos_id = ?3, repos_path = ?4
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
-
--- STMT_SELECT_NODES_GE_OP_DEPTH_RECURSIVE
-SELECT 1
-FROM nodes
-WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
-  AND op_depth >= ?4
-
--- STMT_SELECT_ACTUAL_NODE_RECURSIVE
-SELECT 1
-FROM actual_node
-WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
-  AND tree_conflict_data IS NULL
 
 -- STMT_SELECT_ACTUAL_CHILDREN
 SELECT 1 FROM actual_node WHERE wc_id = ?1 AND parent_relpath = ?2

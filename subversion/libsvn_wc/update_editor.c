@@ -2047,7 +2047,7 @@ add_directory(const char *path,
      ### we record a delete instead, which will allow resolving the conflict
      ### to theirs with 'svn revert'. */
   if (db->shadowed && db->obstruction_found)
-    SVN_ERR(svn_wc__db_temp_op_delete(eb->db, db->local_abspath, pool));
+    SVN_ERR(svn_wc__db_op_delete(eb->db, db->local_abspath, pool));
 
   /* If this add was obstructed by dir scheduled for addition without
      history let close_file() handle the notification because there
@@ -3954,7 +3954,7 @@ close_file(void *file_baton,
      ### we record a delete instead, which will allow resolving the conflict
      ### to theirs with 'svn revert'. */
   if (fb->shadowed && fb->obstruction_found)
-    SVN_ERR(svn_wc__db_temp_op_delete(eb->db, fb->local_abspath, pool));
+    SVN_ERR(svn_wc__db_op_delete(eb->db, fb->local_abspath, pool));
 
     /* ### ugh. deal with preserving the file external value in the database.
        ### there is no official API, so we do it this way. maybe we should
