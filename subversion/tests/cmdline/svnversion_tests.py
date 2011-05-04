@@ -317,7 +317,6 @@ def non_reposroot_wc(sbox):
                                             wc_dir, repo_url,
                                             [ "1\n" ], [])
 
-@XFail()
 @Issue(3858)
 def child_switched(sbox):
   "test svnversion output for switched children"
