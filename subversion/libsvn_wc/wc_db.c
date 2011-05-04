@@ -6717,9 +6717,8 @@ determine_repos_info(apr_int64_t *repos_id,
   return SVN_NO_ERROR;
 }
 
-#ifdef SVN_WC__EXPERIMENTAL_DESCENDANT_COMMIT
 /* Moves all nodes below PARENT_LOCAL_RELPATH from op-depth OP_DEPTH to
-   op-depth 0 (BASE), setting their presence to 'excluded' if their presence
+   op-depth 0 (BASE), setting their presence to 'not-present' if their presence
    wasn't 'normal'. */
 static svn_error_t *
 descendant_commit(svn_wc__db_wcroot_t *wcroot,
@@ -6767,7 +6766,6 @@ descendant_commit(svn_wc__db_wcroot_t *wcroot,
 
   return SVN_NO_ERROR;
 }
-#endif
 
 struct commit_baton_t {
   svn_revnum_t new_revision;
@@ -6910,11 +6908,9 @@ commit_node(void *baton,
           SVN_ERR(svn_sqlite__step_done(stmt));
         }
 
-#ifdef SVN_WC__EXPERIMENTAL_DESCENDANT_COMMIT
       SVN_ERR(descendant_commit(wcroot, local_relpath, op_depth,
                                 repos_id, repos_relpath, cb->new_revision,
                                 scratch_pool));
-#endif
     }
 
   /* Update or add the BASE_NODE row with all the new information.  */
