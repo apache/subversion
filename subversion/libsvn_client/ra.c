@@ -152,12 +152,12 @@ push_wc_prop(void *baton,
 
       if (strcmp(relpath, item->session_relpath) == 0)
         {
-          apr_pool_t *cpool = item->incoming_prop_changes->pool;
-          svn_prop_t *prop = apr_palloc(cpool, sizeof(*prop));
+          apr_pool_t *changes_pool = item->incoming_prop_changes->pool;
+          svn_prop_t *prop = apr_palloc(changes_pool, sizeof(*prop));
 
-          prop->name = apr_pstrdup(cpool, name);
+          prop->name = apr_pstrdup(changes_pool, name);
           if (value)
-            prop->value = svn_string_dup(value, pool);
+            prop->value = svn_string_dup(value, changes_pool);
           else
             prop->value = NULL;
 
