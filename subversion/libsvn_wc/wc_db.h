@@ -1215,7 +1215,10 @@ svn_wc__db_op_delete(svn_wc__db_t *db,
 /* Make delete notifications for all paths in the delete list created
  * by deleting LOCAL_ABSPATH.
  *
- * This function drops the delete list.
+ * This function drops the delete list.  NOTIFY_FUNC may be NULL in
+ * which case the table is dropped without any notification.
+ *
+ * ### Perhaps this should be part of svn_wc__db_op_delete?
  */
 svn_error_t *
 svn_wc__db_delete_list_notify(svn_wc_notify_func2_t notify_func,
