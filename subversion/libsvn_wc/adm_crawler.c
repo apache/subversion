@@ -34,7 +34,6 @@
 #include "svn_pools.h"
 #include "svn_wc.h"
 #include "svn_io.h"
-#include "svn_base64.h"
 #include "svn_delta.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
@@ -43,7 +42,6 @@
 
 #include "wc.h"
 #include "adm_files.h"
-#include "props.h"
 #include "translate.h"
 #include "workqueue.h"
 #include "conflicts.h"
