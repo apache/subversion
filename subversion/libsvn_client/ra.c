@@ -814,6 +814,8 @@ svn_client__get_youngest_common_ancestor(const char **ancestor_path,
         }
     }
 
+  /* It's possible that PATH_OR_URL1 and PATH_OR_URL2's only common
+     history is revision 0. */
   if (!yc_path && has_rev_zero_history1 && has_rev_zero_history2)
     {
       yc_path = "/";
