@@ -105,8 +105,8 @@ build_info_for_entry(svn_info2_t **info,
     tmpinfo->last_changed_rev = SVN_INVALID_REVNUM;
 
   if (is_copy)
-    SVN_ERR(svn_wc__node_get_commit_base_rev(&tmpinfo->rev, wc_ctx,
-                                             local_abspath, scratch_pool));
+    SVN_ERR(svn_wc__internal_get_commit_base_rev(&tmpinfo->rev, wc_ctx->db,
+                                                 local_abspath, scratch_pool));
   else
     tmpinfo->rev = rev;
 

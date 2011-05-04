@@ -822,11 +822,11 @@ svn_wc__node_is_added(svn_boolean_t *is_added,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_wc__node_get_base_rev(svn_revnum_t *base_revision,
-                          svn_wc_context_t *wc_ctx,
-                          const char *local_abspath,
-                          apr_pool_t *scratch_pool)
+static svn_error_t *
+get_base_rev(svn_revnum_t *base_revision,
+             svn_wc__db_t *db,
+             const char *local_abspath,
+             apr_pool_t *scratch_pool)
 {
   svn_boolean_t have_base;
   svn_error_t *err;
@@ -834,7 +834,7 @@ svn_wc__node_get_base_rev(svn_revnum_t *base_revision,
   err = svn_wc__db_base_get_info(NULL, NULL, base_revision, NULL,
                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                  NULL, NULL, NULL, NULL, NULL,
-                                 wc_ctx->db, local_abspath,
+                                 db, local_abspath,
                                  scratch_pool, scratch_pool);
 
   if (!err || err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
@@ -847,10 +847,20 @@ svn_wc__node_get_base_rev(svn_revnum_t *base_revision,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, &have_base, NULL,
                                NULL, NULL, NULL, NULL, NULL,
-                               wc_ctx->db, local_abspath,
+                               db, local_abspath,
                                scratch_pool, scratch_pool));
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__node_get_base_rev(svn_revnum_t *base_revision,
+                          svn_wc_context_t *wc_ctx,
+                          const char *local_abspath,
+                          apr_pool_t *scratch_pool)
+{
+  return svn_error_return(get_base_rev(base_revision, wc_ctx->db,
+                                       local_abspath, scratch_pool));
 }
 
 svn_error_t *
@@ -903,10 +913,10 @@ svn_wc__node_get_pre_ng_status_data(svn_revnum_t *revision,
 
 
 svn_error_t *
-svn_wc__node_get_commit_base_rev(svn_revnum_t *commit_base_revision,
-                                 svn_wc_context_t *wc_ctx,
-                                 const char *local_abspath,
-                                 apr_pool_t *scratch_pool)
+svn_wc__internal_get_commit_base_rev(svn_revnum_t *commit_base_revision,
+                                     svn_wc__db_t *db,
+                                     const char *local_abspath,
+                                     apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
   svn_boolean_t have_base;
@@ -917,8 +927,7 @@ svn_wc__node_get_commit_base_rev(svn_revnum_t *commit_base_revision,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
                                &have_base, NULL, NULL,
-                               wc_ctx->db, local_abspath, scratch_pool,
-                               scratch_pool));
+                               db, local_abspath, scratch_pool, scratch_pool));
 
   /* If this returned a valid revnum, there is no WORKING node. The node is
      cleanly checked out, no modifications, copies or replaces. */
@@ -932,15 +941,14 @@ svn_wc__node_get_commit_base_rev(svn_revnum_t *commit_base_revision,
          return SVN_INVALID_REVNUM. */
       SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL, NULL, NULL, NULL,
                                        NULL, NULL, commit_base_revision,
-                                       wc_ctx->db, local_abspath,
+                                       db, local_abspath,
                                        scratch_pool, scratch_pool));
 
       if (! SVN_IS_VALID_REVNUM(*commit_base_revision) && have_base)
         /* It is a replace that does not feature a copy/move-here.
            Return the revert-base revision. */
         return svn_error_return(
-          svn_wc__node_get_base_rev(commit_base_revision, wc_ctx,
-                                    local_abspath, scratch_pool));
+          get_base_rev(commit_base_revision, db, local_abspath, scratch_pool));
     }
   else if (status == svn_wc__db_status_deleted)
     {
@@ -950,7 +958,7 @@ svn_wc__node_get_commit_base_rev(svn_revnum_t *commit_base_revision,
 
       SVN_ERR(svn_wc__db_scan_deletion(NULL, NULL,
                                        &work_del_abspath,
-                                       wc_ctx->db, local_abspath,
+                                       db, local_abspath,
                                        scratch_pool, scratch_pool));
       if (work_del_abspath != NULL)
         {
@@ -964,7 +972,7 @@ svn_wc__node_get_commit_base_rev(svn_revnum_t *commit_base_revision,
                                        NULL, NULL, NULL, NULL, NULL, NULL,
                                        NULL, NULL, NULL, NULL, NULL, NULL,
                                        NULL, NULL,
-                                       wc_ctx->db, parent_abspath,
+                                       db, parent_abspath,
                                        scratch_pool, scratch_pool));
 
           SVN_ERR_ASSERT(parent_status == svn_wc__db_status_added);
@@ -972,17 +980,27 @@ svn_wc__node_get_commit_base_rev(svn_revnum_t *commit_base_revision,
           SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL, NULL, NULL, NULL,
                                            NULL, NULL,
                                            commit_base_revision,
-                                           wc_ctx->db, parent_abspath,
+                                           db, parent_abspath,
                                            scratch_pool, scratch_pool));
         }
       else
         /* This is a normal delete. Get the base revision. */
         return svn_error_return(
-          svn_wc__node_get_base_rev(commit_base_revision, wc_ctx,
-                                    local_abspath, scratch_pool));
+          get_base_rev(commit_base_revision, db, local_abspath, scratch_pool));
     }
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__node_get_commit_base_rev(svn_revnum_t *commit_base_revision,
+                                 svn_wc_context_t *wc_ctx,
+                                 const char *local_abspath,
+                                 apr_pool_t *scratch_pool)
+{
+  return svn_error_return(svn_wc__internal_get_commit_base_rev(
+                            commit_base_revision, wc_ctx->db, local_abspath,
+                            scratch_pool));
 }
 
 svn_error_t *
