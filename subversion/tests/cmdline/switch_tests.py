@@ -3181,6 +3181,36 @@ def relocate_with_relative_externals(sbox):
   svntest.actions.run_and_verify_info([{ 'URL' : '.*.other/A/D/H$' }],
                                       os.path.join(wc_dir, 'A', 'B', 'H-ext'))
 
+@Issue(3871)
+@XFail()
+def up_to_old_rev_with_subtree_switched_to_root(sbox):
+  "up to old rev with subtree switched to root"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Some paths we'll care about.
+  A_path = os.path.join(wc_dir, 'A')
+  branch_path = os.path.join(wc_dir, 'branch')
+
+  # Starting with a vanilla greek tree, create a branch of A, switch
+  # that branch to the root of the repository, then update the WC to
+  # r1.
+  svntest.actions.run_and_verify_svn(None, None, [], 'copy', A_path,
+                                     branch_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', wc_dir,
+                                     '-m', 'Create a branch')
+  svntest.actions.run_and_verify_svn(None, None, [], 'sw', sbox.repo_url,
+                                     branch_path, '--ignore-ancestry')
+
+  # Now update the WC to r1.  This should work but currently fails with
+  # this assertion.
+  #
+  #   >svn up -r1
+  #   Updating '.':
+  #   Assertion failed: svn_fspath__is_canonical(fspath),
+  #     file ..\..\..\subversion\libsvn_subr\dirent_uri.c, line 2536
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', '-r1', wc_dir)
 
 ########################################################################
 # Run the tests
@@ -3226,6 +3256,7 @@ test_list = [ None,
               relocate_with_switched_children,
               copy_with_switched_subdir,
               relocate_with_relative_externals,
+              up_to_old_rev_with_subtree_switched_to_root,
               ]
 
 if __name__ == '__main__':
