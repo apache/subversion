@@ -1837,6 +1837,53 @@ def status_locked_deleted(sbox):
   svntest.actions.run_and_verify_svn(None, ['D    K  %s\n' % iota_path], [],
                                      'status', iota_path)
 
+@Issue(3774)
+def wc_wc_copy_timestamp(sbox):
+  "timestamp on wc-wc copies"
+
+  sbox.build(read_only=True)
+  wc_dir = sbox.wc_dir
+
+  time.sleep(1.1)
+  svntest.main.file_append(sbox.ospath('A/D/H/psi'), 'modified\n')
+  svntest.actions.run_and_verify_svn(None, None, [], 'copy',
+                                     sbox.ospath('A/D/H'),
+                                     sbox.ospath('A/D/H2'))
+
+  expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_output.tweak('A/D/H/psi', status='M ')
+  expected_output.add({
+      'A/D/H2'       : Item(status='A ', copied='+', wc_rev='-'),
+      'A/D/H2/chi'   : Item(status='  ', copied='+', wc_rev='-'),
+      'A/D/H2/omega' : Item(status='  ', copied='+', wc_rev='-'),
+      'A/D/H2/psi'   : Item(status='M ', copied='+', wc_rev='-'),
+      })
+  svntest.actions.run_and_verify_status(wc_dir, expected_output)
+
+  # Since copied chi is unmodified the text_timestamp should "match"
+  # the working file but it's not easy to confirm that directly.  We
+  # can confirm that the copied is different from the source.
+  chi_src_timestamp = get_text_timestamp(sbox.ospath('A/D/H/chi'))
+  chi_dst_timestamp1 = get_text_timestamp(sbox.ospath('A/D/H2/chi'))
+  if chi_src_timestamp == chi_dst_timestamp1:
+    raise svntest.Failure("chi timestamps should be different")
+
+  # Since copied psi is modified the text_timestamp should not "match"
+  # the working file, again difficult to confirm directly.  It happens
+  # that the current implementation leaves it equal to the source.
+  psi_src_timestamp = get_text_timestamp(sbox.ospath('A/D/H/psi'))
+  psi_dst_timestamp = get_text_timestamp(sbox.ospath('A/D/H2/psi'))
+  if psi_src_timestamp != psi_dst_timestamp:
+    raise svntest.Failure("psi timestamps should be the same")
+
+  # Cleanup repairs timestamps, so this should be a no-op.
+  svntest.actions.run_and_verify_svn(None, None, [], 'cleanup', wc_dir)
+  chi_dst_timestamp2 = get_text_timestamp(sbox.ospath('A/D/H2/chi'))
+  if chi_dst_timestamp2 != chi_dst_timestamp1:
+    raise svntest.Failure("chi timestamps should be the same")
+
+  svntest.actions.run_and_verify_status(wc_dir, expected_output)
+
 ########################################################################
 # Run the tests
 
@@ -1876,6 +1923,7 @@ test_list = [ None,
               status_with_tree_conflicts,
               status_nested_wc_old_format,
               status_locked_deleted,
+              wc_wc_copy_timestamp,
              ]
 
 if __name__ == '__main__':

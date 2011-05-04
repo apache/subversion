@@ -254,6 +254,29 @@ copy_versioned_file(svn_wc__db_t *db,
                                              tmp_dst_abspath, dst_abspath,
                                              scratch_pool, scratch_pool));
           work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
+
+          if (disk_kind == svn_node_file)
+            {
+              svn_boolean_t modified;
+
+              /* It's faster to look for mods on the source now, as
+                 the timestamp might match, than to examine the
+                 destination later as the destination timestamp will
+                 never match. */
+              SVN_ERR(svn_wc__internal_file_modified_p(&modified, NULL, NULL,
+                                                       db, src_abspath,
+                                                       FALSE, FALSE,
+                                                       scratch_pool));
+              if (!modified)
+                {
+                  SVN_ERR(svn_wc__wq_build_record_fileinfo(&work_item,
+                                                           db, dst_abspath, 0,
+                                                           scratch_pool,
+                                                           scratch_pool));
+                  work_items = svn_wc__wq_merge(work_items, work_item,
+                                                scratch_pool);
+                }
+            }
         }
     }
 
