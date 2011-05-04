@@ -87,10 +87,10 @@ build_info_for_entry(svn_info2_t **info,
   /* If we didn't get an origin, get it directly */
   if (!tmpinfo->repos_root_URL)
     {
-      SVN_ERR(svn_wc__node_get_repos_info(&tmpinfo->repos_root_URL,
-                                          &tmpinfo->repos_UUID,
-                                          wc_ctx, local_abspath, TRUE, TRUE,
-                                          result_pool, scratch_pool));
+      SVN_ERR(svn_wc__internal_get_repos_info(&tmpinfo->repos_root_URL,
+                                              &tmpinfo->repos_UUID,
+                                              wc_ctx->db, local_abspath, TRUE,
+                                              TRUE, result_pool, scratch_pool));
     }
 
   if (repos_relpath)
