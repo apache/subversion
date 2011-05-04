@@ -726,6 +726,8 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
 
   switch (status)
     {
+      /* ### Move this check into svn_wc__db_op_delete so that we
+             check the whole tree? */
       case svn_wc__db_status_absent:
       case svn_wc__db_status_excluded:
       case svn_wc__db_status_not_present:
@@ -738,71 +740,12 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
         break;
     }
 
-#ifdef SVN_NEW_DELETE
   SVN_ERR(svn_wc__db_op_delete(db, local_abspath, pool));
 
   if (notify_func)
     SVN_ERR(svn_wc__db_delete_list_notify(notify_func, notify_baton,
                                           db, local_abspath, pool));
   /* ### else: Delete the list */
-#else
-  if (kind == svn_wc__db_kind_dir)
-    {
-      /* ### NODE_DATA We recurse into the subtree here, which is fine,
-         except that we also need to record the op_depth to pass to
-         svn_wc__db_temp_op_delete(), which is determined by the original
-         path for which svn_wc_delete4() was called. We need a helper
-         function which receives the op_depth as an argument to apply to
-         the entire subtree.
-       */
-      apr_pool_t *iterpool = svn_pool_create(pool);
-      const apr_array_header_t *children;
-      int i;
-
-      SVN_ERR(svn_wc__db_read_children(&children, db, local_abspath,
-                                       pool, pool));
-
-      for (i = 0; i < children->nelts; i++)
-        {
-          const char *child_basename = APR_ARRAY_IDX(children, i, const char *);
-          const char *child_abspath;
-          svn_boolean_t hidden;
-
-          svn_pool_clear(iterpool);
-
-          child_abspath = svn_dirent_join(local_abspath, child_basename,
-                                          iterpool);
-          SVN_ERR(svn_wc__db_node_hidden(&hidden, db, child_abspath, iterpool));
-          if (hidden)
-            continue;
-
-          SVN_ERR(svn_wc_delete4(wc_ctx, child_abspath,
-                                 keep_local, delete_unversioned_target,
-                                 cancel_func, cancel_baton,
-                                 notify_func, notify_baton,
-                                 iterpool));
-        }
-
-      svn_pool_destroy(iterpool);
-    }
-
-  /* ### Maybe we should disallow deleting switched nodes here? */
-
-    {
-      /* ### The following two operations should be inside one SqLite
-             transaction. For even better behavior the tree operation
-             before this block needs the same handling.
-             Luckily most of this is for free once properties and pristine
-             are handled in the WC-NG way. */
-      SVN_ERR(svn_wc__db_temp_op_delete(wc_ctx->db, local_abspath, pool));
-    }
-
-  /* Report the deletion to the caller. */
-  if (notify_func != NULL)
-    (*notify_func)(notify_baton,
-                   svn_wc_create_notify(local_abspath, svn_wc_notify_delete,
-                                        pool), pool);
-#endif
 
   /* By the time we get here, anything that was scheduled to be added has
      become unversioned */

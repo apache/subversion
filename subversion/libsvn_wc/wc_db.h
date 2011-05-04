@@ -2535,14 +2535,6 @@ svn_wc__db_temp_op_set_dir_depth(svn_wc__db_t *db,
                                  svn_depth_t depth,
                                  apr_pool_t *scratch_pool);
 
-/* Performs a non-recursive delete on local_abspath, just like a
-   schedule delete on a local_abspath entry would have been performed
-   before. */
-svn_error_t *
-svn_wc__db_temp_op_delete(svn_wc__db_t *db,
-                          const char *local_abspath,
-                          apr_pool_t *scratch_pool);
-
 /* ### temp function. return the FORMAT for the directory LOCAL_ABSPATH.  */
 svn_error_t *
 svn_wc__db_temp_get_format(int *format,
