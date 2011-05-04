@@ -51,7 +51,7 @@ fail(apr_pool_t *pool, const char *fmt, ...)
 }
 
 static svn_error_t *
-test_read_tree_conflict(apr_pool_t *pool)
+test_deserialize_tree_conflict(apr_pool_t *pool)
 {
   const svn_wc_conflict_description2_t *conflict;
   svn_wc_conflict_description2_t *exp_conflict;
@@ -83,7 +83,7 @@ test_read_tree_conflict(apr_pool_t *pool)
 }
 
 static svn_error_t *
-test_write_tree_conflict(apr_pool_t *pool)
+test_serialize_tree_conflict(apr_pool_t *pool)
 {
   svn_wc_conflict_description2_t *conflict;
   const char *tree_conflict_data;
@@ -118,10 +118,10 @@ test_write_tree_conflict(apr_pool_t *pool)
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS2(test_read_tree_conflict,
-                   "read 1 tree conflict"),
-    SVN_TEST_PASS2(test_write_tree_conflict,
-                   "write 1 tree conflict"),
+    SVN_TEST_PASS2(test_deserialize_tree_conflict,
+                   "deserialize tree conflict"),
+    SVN_TEST_PASS2(test_serialize_tree_conflict,
+                   "serialize tree conflict"),
     SVN_TEST_NULL
   };
 
