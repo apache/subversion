@@ -10388,13 +10388,31 @@ has_switched_subtrees(svn_boolean_t *is_switched,
 {
   svn_sqlite__stmt_t *stmt;
   const char *wcroot_repos_relpath;
+  const char *local_relpath_repos_relpath;
+  svn_boolean_t target_is_switched_subtree;
   svn_boolean_t have_row;
+
+  *is_switched = FALSE;
 
   SVN_ERR(read_info(NULL, NULL, NULL, &wcroot_repos_relpath, NULL,
                     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                     NULL, NULL, NULL,
                     wcroot, "", scratch_pool, scratch_pool));
+
+  SVN_ERR(read_info(NULL, NULL, NULL, &local_relpath_repos_relpath, NULL,
+                    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                    NULL, NULL, NULL,
+                    wcroot, local_relpath, scratch_pool, scratch_pool));
+
+  if (local_relpath[0] == '\0' || !local_relpath_repos_relpath)
+    target_is_switched_subtree = FALSE;
+  else
+    target_is_switched_subtree = (strcmp(local_relpath_repos_relpath,
+                                  svn_relpath_join(wcroot_repos_relpath,
+                                                   local_relpath,
+                                                   scratch_pool)) != 0);
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_SWITCHED_NODES));
@@ -10408,8 +10426,74 @@ has_switched_subtrees(svn_boolean_t *is_switched,
                                                (char *)NULL)));
   /* If this query returns a row, some part of the working copy is switched. */
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  *is_switched = have_row;
+
+  if (have_row)
+    {
+      if (!target_is_switched_subtree)
+        {
+          /* If LOCAL_RELPATH isn't switched against the wc root but even
+             one of its children is, then we have our answer. */
+          *is_switched = TRUE;
+        }
+      else
+        {
+          /* LOCAL_RELPATH is within, or is the root of, a switched subtree.
+             Check if it has any children switched relative to it. */
+          apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+
+          while (have_row)
+            {
+              const char *relpath;
+
+              svn_pool_clear(iterpool);
+              relpath = svn_sqlite__column_text(stmt, 0, iterpool);
+
+              if (strcmp(relpath, local_relpath) != 0)
+                {
+                  const char *child_path = svn_relpath_is_child(local_relpath,
+                                                                relpath,
+                                                                iterpool);
+                  const char *repos_path = svn_sqlite__column_text(stmt, 1,
+                                                                   iterpool);
+
+                  relpath = svn_relpath_join(local_relpath_repos_relpath,
+                                             child_path, iterpool);
+                  if (strcmp(relpath, repos_path) != 0)
+                    {
+                      *is_switched = TRUE;
+                      break;
+                    }
+                }
+              SVN_ERR(svn_sqlite__step(&have_row, stmt));
+            }
+          svn_pool_destroy(iterpool);
+        }
+    }
+
   SVN_ERR(svn_sqlite__reset(stmt));
+
+  /* If LOCAL_RELPATH is itself a switched subtree, any of its subtrees that
+     are switched relative to LOCAL_RELPATH, but not switched relative to the
+     WC root will be missed by STMT_SELECT_SWITCHED_NODES. */
+  if (! *is_switched
+      && target_is_switched_subtree)
+    {
+        SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                          STMT_SELECT_UNSWITCHED_NODES));
+        SVN_ERR(svn_sqlite__bindf(stmt, "isss",
+                                  wcroot->wc_id,
+                                  local_relpath,
+                                  construct_like_arg(local_relpath,
+                                                     scratch_pool),
+                                  wcroot_repos_relpath[0] == '\0' ?
+                                    "" : apr_pstrcat(scratch_pool,
+                                                     wcroot_repos_relpath,
+                                                     "/",
+                                                     (char *)NULL)));
+        SVN_ERR(svn_sqlite__step(&have_row, stmt));
+        *is_switched = have_row;
+        SVN_ERR(svn_sqlite__reset(stmt));
+    }
 
   if (! *is_switched && trail_url != NULL)
     {
