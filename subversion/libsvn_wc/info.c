@@ -95,11 +95,15 @@ build_info_for_entry(svn_info2_t **info,
 
   if (repos_relpath)
     {
-      SVN_ERR(svn_wc__node_get_changed_info(&tmpinfo->last_changed_rev,
-                                            &tmpinfo->last_changed_date,
-                                            &tmpinfo->last_changed_author,
-                                            wc_ctx, local_abspath,
-                                            result_pool, scratch_pool));
+      SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL,
+                                   &tmpinfo->last_changed_rev,
+                                   &tmpinfo->last_changed_date,
+                                   &tmpinfo->last_changed_author,
+                                   NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL,
+                                   wc_ctx->db, local_abspath, result_pool,
+                                   scratch_pool));
     }
   else
     tmpinfo->last_changed_rev = SVN_INVALID_REVNUM;
