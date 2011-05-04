@@ -3182,7 +3182,6 @@ def relocate_with_relative_externals(sbox):
                                       os.path.join(wc_dir, 'A', 'B', 'H-ext'))
 
 @Issue(3871)
-@XFail(svntest.main.is_ra_type_file)
 def up_to_old_rev_with_subtree_switched_to_root(sbox):
   "up to old rev with subtree switched to root"
 
@@ -3203,13 +3202,7 @@ def up_to_old_rev_with_subtree_switched_to_root(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'sw', sbox.repo_url,
                                      branch_path, '--ignore-ancestry')
 
-  # Now update the WC to r1.  This should work but currently fails with
-  # this assertion.
-  #
-  #   >svn up -r1
-  #   Updating '.':
-  #   Assertion failed: svn_fspath__is_canonical(fspath),
-  #     file ..\..\..\subversion\libsvn_subr\dirent_uri.c, line 2536
+  # Now update the WC to r1.
   svntest.actions.run_and_verify_svn(None, None, [], 'up', '-r1', wc_dir)
 
 ########################################################################
