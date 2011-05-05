@@ -236,8 +236,9 @@ run_base_remove(svn_wc__db_t *db,
   if (arg1->next->next)
     {
       not_present_rev = (svn_revnum_t)val;
+
       SVN_ERR(svn_skel__parse_int(&val, arg1->next->next, scratch_pool));
-      not_present_kind = val;
+      not_present_kind = (svn_wc__db_kind_t)val;
 
       if (SVN_IS_VALID_REVNUM(not_present_rev))
         {
