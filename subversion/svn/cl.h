@@ -568,6 +568,12 @@ svn_cl__notifier_mark_checkout(void *baton);
 svn_error_t *
 svn_cl__notifier_mark_export(void *baton);
 
+/* Make the notifier for use with BATON print the appropriate notifications
+ * for a wc to repository copy
+ */
+svn_error_t *
+svn_cl__notifier_mark_wc_to_repos_copy(void *baton);
+
 /* Baton for use with svn_cl__check_externals_failed_notify_wrapper(). */
 struct svn_cl__check_externals_failed_notify_baton
 {

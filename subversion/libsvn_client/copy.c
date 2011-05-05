@@ -1134,6 +1134,39 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
   return svn_error_return(editor->close_edit(edit_baton, pool));
 }
 
+/* Baton for check_url_kind */
+struct check_url_kind_baton
+{
+  svn_ra_session_t *session;
+  const char *repos_root_url;
+  svn_boolean_t should_reparent;
+};
+
+/* Implements svn_client__check_url_kind_t for wc_to_repos_copy */
+static svn_error_t *
+check_url_kind(void *baton,
+               svn_node_kind_t *kind,
+               const char *url,
+               svn_revnum_t revision,
+               apr_pool_t *scratch_pool)
+{
+  struct check_url_kind_baton *cukb = baton;
+
+  /* If we don't have a session or can't use the session, get one */
+  if (!svn_uri_is_ancestor(cukb->repos_root_url, url))
+    *kind = svn_node_none;
+  else
+    {
+      cukb->should_reparent = TRUE;
+
+      SVN_ERR(svn_ra_reparent(cukb->session, url, scratch_pool));
+
+      SVN_ERR(svn_ra_check_path(cukb->session, "", revision,
+                                kind, scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
 
 /* ### Copy ...
  * COMMIT_INFO_P is ...
@@ -1152,7 +1185,7 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
 {
   const char *message;
   const char *top_src_path, *top_dst_url;
-  const char *repos_root_url;
+  struct check_url_kind_baton cukb;
   const char *top_src_abspath;
   svn_ra_session_t *ra_session;
   const svn_delta_editor_t *editor;
@@ -1290,19 +1323,24 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
   SVN_ERR(svn_client__ensure_revprop_table(&commit_revprops, revprop_table,
                                            message, ctx, pool));
 
+  cukb.session = ra_session;
+  SVN_ERR(svn_ra_get_repos_root2(ra_session, &cukb.repos_root_url, pool));
+  cukb.should_reparent = FALSE;
+
   /* Crawl the working copy for commit items. */
   /* ### TODO: Pass check_url_func for issue #3314 handling */
   SVN_ERR(svn_client__get_copy_committables(&committables,
                                             copy_pairs,
-                                            NULL, NULL, /* check_url_func */
+                                            check_url_kind, &cukb,
                                             ctx, pool, pool));
 
   /* The committables are keyed by the repository root */
-  SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_url, pool));
-
-  commit_items = apr_hash_get(committables, repos_root_url,
+  commit_items = apr_hash_get(committables, cukb.repos_root_url,
                               APR_HASH_KEY_STRING);
   SVN_ERR_ASSERT(commit_items != NULL);
+
+  if (cukb.should_reparent)
+    SVN_ERR(svn_ra_reparent(ra_session, top_dst_url, pool));
 
   /* If we are creating intermediate directories, tack them onto the list
      of committables. */
@@ -1469,6 +1507,7 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
         svn_wc_notify_func2_t old_notify_func2 = ctx->notify_func2;
         void *old_notify_baton2 = ctx->notify_baton2;
         struct notification_adjust_baton nb;
+        svn_error_t *err;
 
         nb.inner_func = ctx->notify_func2;
         nb.inner_baton = ctx->notify_baton2;
@@ -1477,17 +1516,19 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
         ctx->notify_func2 = notification_adjust_func;
         ctx->notify_baton2 = &nb;
 
-        SVN_ERR(svn_client__checkout_internal(&pair->src_revnum,
-                                              pair->src_original,
-                                              tmp_abspath,
-                                              &pair->src_peg_revision,
-                                              &pair->src_op_revision, NULL,
-                                              svn_depth_infinity,
-                                              ignore_externals, FALSE, TRUE,
-                                              &sleep_needed, ctx, pool));
+        err = svn_client__checkout_internal(&pair->src_revnum,
+                                            pair->src_original,
+                                            tmp_abspath,
+                                            &pair->src_peg_revision,
+                                            &pair->src_op_revision, NULL,
+                                            svn_depth_infinity,
+                                            ignore_externals, FALSE, TRUE,
+                                            &sleep_needed, ctx, pool);
 
         ctx->notify_func2 = old_notify_func2;
         ctx->notify_baton2 = old_notify_baton2;
+
+        SVN_ERR(err);
       }
 
       /* Schedule dst_path for addition in parent, with copy history.

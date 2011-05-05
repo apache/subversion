@@ -334,6 +334,8 @@ harvest_committables(svn_wc_context_t *wc_ctx,
                      apr_hash_t *changelists,
                      svn_boolean_t skip_files,
                      svn_boolean_t skip_dirs,
+                     svn_client__check_url_kind_t check_url_func,
+                     void *check_url_baton,
                      svn_cancel_func_t cancel_func,
                      void *cancel_baton,
                      apr_pool_t *result_pool,
@@ -488,8 +490,44 @@ harvest_committables(svn_wc_context_t *wc_ctx,
      * We delete nodes that directly replace a node in it's ancestor
    */
 
-  if (is_deleted || is_not_present || is_replaced)
+  if (is_deleted || is_replaced)
     state_flags |= SVN_CLIENT_COMMIT_ITEM_DELETE;
+  else if (is_not_present)
+    {
+      if (! copy_mode)
+        return SVN_NO_ERROR;
+
+      /* We should check if we should really add a delete operation */
+      if (check_url_func)
+        {
+          svn_revnum_t revision;
+          const char *repos_relpath;
+          svn_node_kind_t kind;
+
+          /* Determine from what parent we would be the deleted child */
+          SVN_ERR(svn_wc__node_get_origin(NULL, &revision, &repos_relpath,
+                                          NULL, NULL, wc_ctx,
+                                          svn_dirent_dirname(local_abspath,
+                                                             scratch_pool),
+                                          FALSE, scratch_pool, scratch_pool));
+
+          repos_relpath = svn_relpath_join(repos_relpath,
+                                           svn_dirent_basename(local_abspath,
+                                                               NULL),
+                                           scratch_pool);
+
+          SVN_ERR(check_url_func(check_url_baton, &kind,
+                                 svn_path_url_add_component2(repos_root_url,
+                                                             repos_relpath,
+                                                             scratch_pool),
+                                 revision, scratch_pool));
+
+          if (kind == svn_node_none)
+            return SVN_NO_ERROR; /* This node can't be deleted */
+        }
+
+      state_flags |= SVN_CLIENT_COMMIT_ITEM_DELETE;
+    }
 
   /* Check for adds and copies */
   if (is_added && is_op_root)
@@ -621,10 +659,12 @@ harvest_committables(svn_wc_context_t *wc_ctx,
           /* Finally, add the committable item. */
           SVN_ERR(add_committable(committables, local_abspath, db_kind,
                                   repos_root_url,
-                                  commit_relpath 
+                                  copy_mode
                                       ? commit_relpath
                                       : node_relpath,
-                                  node_rev,
+                                  copy_mode
+                                      ? SVN_INVALID_REVNUM
+                                      : node_rev,
                                   cf_relpath,
                                   cf_rev,
                                   state_flags,
@@ -714,6 +754,7 @@ harvest_committables(svn_wc_context_t *wc_ctx,
                                        changelists,
                                        (depth < svn_depth_files),
                                        (depth < svn_depth_immediates),
+                                       check_url_func, check_url_baton,
                                        cancel_func, cancel_baton,
                                        result_pool,
                                        iterpool));
@@ -1019,6 +1060,7 @@ svn_client__harvest_committables(apr_hash_t **committables,
                                    FALSE /* COPY_MODE_ROOT */,
                                    depth, just_locked, changelist_hash,
                                    FALSE, FALSE,
+                                   check_url_func, check_url_baton,
                                    ctx->cancel_func, ctx->cancel_baton,
                                    result_pool, iterpool));
     }
@@ -1083,6 +1125,8 @@ harvest_copy_committables(void *baton, void *item, apr_pool_t *pool)
                                FALSE,  /* JUST_LOCKED */
                                NULL,
                                FALSE, FALSE, /* skip files, dirs */
+                               btn->check_url_func,
+                               btn->check_url_baton,
                                btn->ctx->cancel_func,
                                btn->ctx->cancel_baton,
                                btn->result_pool, pool));
@@ -1210,11 +1254,10 @@ svn_client__condense_commit_items(const char **base_url,
       else
         this_item->session_relpath = "";
     }
-
 #ifdef SVN_CLIENT_COMMIT_DEBUG
   /* ### TEMPORARY CODE ### */
-  fprintf(stderr, "COMMITTABLES: (base URL=%s)\n", *base_url);
-  fprintf(stderr, "   FLAGS     REV  REL-URL (COPY-URL)\n");
+  SVN_DBG(("COMMITTABLES: (base URL=%s)\n", *base_url));
+  SVN_DBG(("   FLAGS     REV  REL-URL (COPY-URL)\n"));
   for (i = 0; i < ci->nelts; i++)
     {
       svn_client_commit_item3_t *this_item
@@ -1231,11 +1274,11 @@ svn_client__condense_commit_items(const char **base_url,
       flags[4] = (this_item->state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
                    ? 'c' : '-';
       flags[5] = '\0';
-      fprintf(stderr, "   %s  %6ld  '%s' (%s)\n",
-              flags,
-              this_item->revision,
-              this_item->url ? this_item->url : "",
-              this_item->copyfrom_url ? this_item->copyfrom_url : "none");
+      SVN_DBG(("   %s  %6ld  '%s' (%s)\n",
+               flags,
+               this_item->revision,
+               this_item->url ? this_item->url : "",
+               this_item->copyfrom_url ? this_item->copyfrom_url : "none"));
     }
 #endif /* SVN_CLIENT_COMMIT_DEBUG */
 
