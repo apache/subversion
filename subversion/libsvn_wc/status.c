@@ -939,104 +939,6 @@ send_unversioned_item(const struct walk_status_baton *wb,
   return SVN_NO_ERROR;
 }
 
-
-/* Prototype for untangling a tango-ing two-some. */
-static svn_error_t *
-get_dir_status(const struct walk_status_baton *wb,
-               const char *local_abspath,
-               const char *selected,
-               svn_boolean_t skip_this_dir,
-               const char *parent_repos_root_url,
-               const char *parent_repos_relpath,
-               const struct svn_wc__db_info_t *dir_info,
-               const svn_io_dirent2_t *dirent,
-               const apr_array_header_t *ignores,
-               svn_depth_t depth,
-               svn_boolean_t get_all,
-               svn_boolean_t no_ignore,
-               svn_boolean_t had_props,
-               svn_wc_status_func4_t status_func,
-               void *status_baton,
-               svn_cancel_func_t cancel_func,
-               void *cancel_baton,
-               apr_pool_t *scratch_pool);
-
-/* Handle LOCAL_ABSPATH (whose entry is ENTRY).  All other arguments
-   are the same as those passed to get_dir_status(), the function
-   for which this one is a helper.  */
-static svn_error_t *
-handle_dir_entry(const struct walk_status_baton *wb,
-                 const char *local_abspath,
-                 svn_wc__db_status_t status,
-                 svn_wc__db_kind_t db_kind,
-                 const char *dir_repos_root_url,
-                 const char *dir_repos_relpath,
-                 const struct svn_wc__db_info_t *entry_info,
-                 svn_io_dirent2_t *dirent,
-                 const apr_array_header_t *ignores,
-                 svn_depth_t depth,
-                 svn_boolean_t get_all,
-                 svn_boolean_t no_ignore,
-                 svn_boolean_t had_props,
-                 svn_wc_status_func4_t status_func,
-                 void *status_baton,
-                 svn_cancel_func_t cancel_func,
-                 void *cancel_baton,
-                 apr_pool_t *pool)
-{
-  /* We are looking at a directory on-disk.
-     With a db per directory the directory must exist to recurse, but
-     with single-db we only have to check for obstructions.
-
-     (Without recursing you would only see the root of a delete operation
-      in single db mode.)
-     ### TODO: Should we recurse on obstructions anyway?
-     ###       (Requires  changes to the test suite)
-   */
-  if (db_kind == svn_wc__db_kind_dir)
-    {
-      /* Descend only if the subdirectory is a working copy directory (which
-         we've discovered because we got a THIS_DIR entry. And only descend
-         if DEPTH permits it, of course.  */
-
-      if ((depth == svn_depth_unknown
-              || depth == svn_depth_immediates
-              || depth == svn_depth_infinity))
-        {
-          SVN_ERR(get_dir_status(wb, local_abspath, NULL, FALSE,
-                                 dir_repos_root_url, dir_repos_relpath,
-                                 entry_info,
-                                 dirent, ignores, depth, get_all, no_ignore,
-                                 had_props,
-                                 status_func, status_baton, cancel_func,
-                                 cancel_baton,
-                                 pool));
-        }
-      else
-        {
-          /* ENTRY is a child entry (file or parent stub). Or we have a
-             directory entry but DEPTH is limiting our recursion.  */
-          SVN_ERR(send_status_structure(wb, local_abspath,
-                                        dir_repos_root_url,
-                                        dir_repos_relpath,
-                                        entry_info, dirent, get_all,
-                                        status_func, status_baton, pool));
-        }
-    }
-  else
-    {
-      /* This is a file/symlink on-disk or not a directory in the db.  */
-      SVN_ERR(send_status_structure(wb, local_abspath,
-                                    dir_repos_root_url,
-                                    dir_repos_relpath,
-                                    entry_info, dirent, get_all,
-                                    status_func, status_baton, pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
 /* Helper for get_dir_status. If LOCAL_ABSPATH has "svn:externals" property
    set on it, send the name and value to WB->external_func, along with
    this directory's depth, but skip this step if LOCAL_ABSPATH is the anchor
@@ -1230,27 +1132,39 @@ get_dir_status(const struct walk_status_baton *wb,
               && info->status != svn_wc__db_status_excluded
               && info->status != svn_wc__db_status_absent)
             {
+              svn_depth_t dir_depth;
               if (depth == svn_depth_files && info->kind == svn_wc__db_kind_dir)
                 continue;
 
               /* Handle this entry (possibly recursing). */
-              SVN_ERR(handle_dir_entry(wb,
-                                       node_abspath,
-                                       info->status,
-                                       info->kind,
-                                       dir_repos_root_url,
-                                       dir_repos_relpath,
-                                       info,
-                                       dirent_p,
-                                       ignore_patterns,
-                                       depth == svn_depth_infinity
-                                                           ? depth
-                                                           : svn_depth_empty,
-                                       get_all,
-                                       no_ignore,
-                                       info->had_props,
-                                       status_func, status_baton,
-                                       cancel_func, cancel_baton, iterpool));
+              dir_depth = (depth == svn_depth_infinity) ? depth
+                                                        : svn_depth_empty;
+
+              SVN_ERR(send_status_structure(wb, node_abspath,
+                                                  dir_repos_root_url,
+                                                  dir_repos_relpath,
+                                                  info, dirent_p, get_all,
+                                                  status_func, status_baton,
+                                                  iterpool));
+
+              /* Descend only if the subdirectory is a working copy directory
+                 and if DEPTH permits it.  */
+              if ((info->kind == svn_wc__db_kind_dir)
+                  && ((dir_depth == svn_depth_unknown
+                       || dir_depth >= svn_depth_immediates)))
+                {
+                  SVN_ERR(get_dir_status(wb, node_abspath, NULL, TRUE,
+                                         dir_repos_root_url, dir_repos_relpath,
+                                         info,
+                                         dirent_p, ignore_patterns,
+                                         dir_depth, get_all,
+                                         no_ignore,
+                                         info->had_props,
+                                         status_func, status_baton,
+                                         cancel_func, cancel_baton,
+                                         iterpool));
+                }
+
               continue;
             }
         }
@@ -1322,7 +1236,7 @@ hash_stash(void *baton,
 {
   apr_hash_t *stat_hash = baton;
   apr_pool_t *hash_pool = apr_hash_pool_get(stat_hash);
-  assert(! apr_hash_get(stat_hash, path, APR_HASH_KEY_STRING));
+  SVN_ERR_ASSERT(! apr_hash_get(stat_hash, path, APR_HASH_KEY_STRING));
   apr_hash_set(stat_hash, apr_pstrdup(hash_pool, path),
                APR_HASH_KEY_STRING, svn_wc_dup_status3(status, hash_pool));
 
