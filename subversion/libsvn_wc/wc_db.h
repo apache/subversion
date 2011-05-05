@@ -1216,6 +1216,7 @@ svn_wc__db_temp_working_set_props(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_op_delete(svn_wc__db_t *db,
                      const char *local_abspath,
+                     /* ### flip to CANCEL, then NOTIFY. precedent.  */
                      svn_wc_notify_func2_t notify_func,
                      void *notify_baton,
                      svn_cancel_func_t cancel_func,
@@ -1249,6 +1250,7 @@ svn_wc__db_op_set_changelist(svn_wc__db_t *db,
                              const char *new_changelist,
                              const apr_array_header_t *changelist_filter,
                              svn_depth_t depth,
+                             /* ### flip to CANCEL, then NOTIFY. precedent.  */
                              svn_wc_notify_func2_t notify_func,
                              void *notify_baton,
                              svn_cancel_func_t cancel_func,
@@ -1335,6 +1337,7 @@ svn_wc__db_revert_list_notify(svn_wc_notify_func2_t notify_func,
  * basenames to pointers to svn_wc_conflict_description2_t, all
  * allocated in result pool.
  */
+/* ### this is not an OPERATION. remove the _op_.  */
 svn_error_t *
 svn_wc__db_op_read_all_tree_conflicts(apr_hash_t **tree_conflicts,
                                       svn_wc__db_t *db,
@@ -1347,6 +1350,7 @@ svn_wc__db_op_read_all_tree_conflicts(apr_hash_t **tree_conflicts,
 
    Use SCRATCH_POOL for any temporary allocations.
 */
+/* ### this is not an OPERATION. remove the _op_.  */
 svn_error_t *
 svn_wc__db_op_read_tree_conflict(
                      const svn_wc_conflict_description2_t **tree_conflict,
