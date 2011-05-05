@@ -4970,12 +4970,12 @@ def copy_wc_url_with_absent(sbox):
   # A/B a normal delete
   sbox.simple_rm('A/B')
 
-  # A/no not-present but there
+  # A/no not-present but in HEAD
   sbox.simple_copy('A/mu', 'A/no')
   sbox.simple_commit('A/no')
   svntest.main.run_svn(None, 'up', '-r', '1', sbox.ospath('A/no'))
 
-  # A/mu not-present
+  # A/mu not-present and not in HEAD
   sbox.simple_rm('A/mu')
   sbox.simple_commit('A/mu')
 
