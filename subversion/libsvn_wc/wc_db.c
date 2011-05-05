@@ -2692,7 +2692,8 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
          The children are part of the same op and so have the same op_depth.
          (The only time we'd want a different depth is during a recursive
          simple add, but we never insert children here during a simple add.) */
-      if (kind == svn_wc__db_kind_dir)
+      if (kind == svn_wc__db_kind_dir
+          && dst_status == svn_wc__db_status_normal)
         SVN_ERR(insert_incomplete_children(
                   dst_wcroot->sdb,
                   dst_wcroot->wc_id,
@@ -2905,12 +2906,8 @@ op_depth_for_copy(apr_int64_t *op_depth,
   if (have_row)
     {
       apr_int64_t parent_op_depth = svn_sqlite__column_int64(stmt, 0);
-      svn_wc__db_status_t status = svn_sqlite__column_token(stmt, 1,
-                                                            presence_map);
-
-      svn_error_t *err = convert_to_working_status(&status, status);
-      if (err)
-        SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
+      svn_wc__db_status_t presence = svn_sqlite__column_token(stmt, 1,
+                                                              presence_map);
 
       if (parent_op_depth < min_op_depth)
         {
@@ -2918,9 +2915,13 @@ op_depth_for_copy(apr_int64_t *op_depth,
           return SVN_NO_ERROR;
         }
 
-      if (status == svn_wc__db_status_added
-          && ((incomplete_op_depth < 0)
-              || (incomplete_op_depth == parent_op_depth)))
+      /* You can only add children below a node that exists.
+         In WORKING that must be status added, which is represented
+         as presence normal */
+      SVN_ERR_ASSERT(presence == svn_wc__db_status_normal);
+
+      if ((incomplete_op_depth < 0)
+          || (incomplete_op_depth == parent_op_depth))
         {
           apr_int64_t parent_copyfrom_repos_id
             = svn_sqlite__column_int64(stmt, 10);
