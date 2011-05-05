@@ -3462,7 +3462,7 @@ svn_wc__db_op_modified(svn_wc__db_t *db,
 struct set_changelist_baton_t
 {
   const char *new_changelist;
-  const apr_array_header_t *changelists;
+  const apr_array_header_t *changelist_filter;
 };
 
 
@@ -3477,9 +3477,9 @@ set_changelist_txn(void *baton,
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
 
-  /* If we are filtering based on changelists, we *must* already have nodes,
-   * so we can skip this check. */
-  if (scb->changelists && scb->changelists->nelts > 0)
+  /* If we are filtering based on changelist_filter, we *must* already have
+     nodes, so we can skip this check. */
+  if (scb->changelist_filter && scb->changelist_filter->nelts > 0)
     have_row = TRUE;
   else
     {
@@ -3507,7 +3507,7 @@ set_changelist_txn(void *baton,
                                       svn_relpath_dirname(local_relpath,
                                                           scratch_pool)));
     }
-  else if (!scb->changelists || scb->changelists->nelts == 0)
+  else if (!scb->changelist_filter || scb->changelist_filter->nelts == 0)
     {
       /* No filtering going on: we can just use the simple statement. */
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
@@ -3522,9 +3522,10 @@ set_changelist_txn(void *baton,
       /* Start with the second changelist in the list of changelist filters.
          In the case where we only have one changelist filter, this loop is
          skipped, and we get simple single-query execution. */
-      for (i = 1; i < scb->changelists->nelts; i++)
+      for (i = 1; i < scb->changelist_filter->nelts; i++)
         {
-          const char *cl = APR_ARRAY_IDX(scb->changelists, i, const char *);
+          const char *cl = APR_ARRAY_IDX(scb->changelist_filter, i,
+                                         const char *);
 
           SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                            STMT_UPDATE_ACTUAL_CHANGELIST_FILTER_CHANGELIST));
@@ -3538,7 +3539,7 @@ set_changelist_txn(void *baton,
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                            STMT_UPDATE_ACTUAL_CHANGELIST_FILTER_CHANGELIST));
       SVN_ERR(svn_sqlite__bind_text(stmt, 4,
-                                   APR_ARRAY_IDX(scb->changelists, 0,
+                                   APR_ARRAY_IDX(scb->changelist_filter, 0,
                                                  const char *)));
     }
 
@@ -3564,8 +3565,8 @@ set_changelist_txn(void *baton,
 svn_error_t *
 svn_wc__db_op_set_changelist(svn_wc__db_t *db,
                              const char *local_abspath,
-                             const char *changelist,
-                             const apr_array_header_t *changelists,
+                             const char *new_changelist,
+                             const apr_array_header_t *changelist_filter,
                              svn_depth_t depth,
                              svn_wc_notify_func2_t notify_func,
                              void *notify_baton,
@@ -3575,7 +3576,7 @@ svn_wc__db_op_set_changelist(svn_wc__db_t *db,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  struct set_changelist_baton_t scb = { changelist, changelists };
+  struct set_changelist_baton_t scb = { new_changelist, changelist_filter };
   struct with_triggers_baton_t wtb = { STMT_CREATE_CHANGELIST_LIST,
                                        STMT_DROP_CHANGELIST_LIST_TRIGGERS,
                                        NULL, NULL };

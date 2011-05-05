@@ -5811,10 +5811,10 @@ svn_wc_prop_get(const svn_string_t **value,
  * entry property, return the error #SVN_ERR_BAD_PROP_KIND, even if
  * @a skip_checks is TRUE.
  *
- * @a changelists is an array of <tt>const char *</tt> changelist
+ * @a changelist_filter is an array of <tt>const char *</tt> changelist
  * names, used as a restrictive filter on items whose properties are
  * set; that is, don't set properties on any item unless it's a member
- * of one of those changelists.  If @a changelists is empty (or
+ * of one of those changelists.  If @a changelist_filter is empty (or
  * altogether @c NULL), no changelist filtering occurs.
  *
  * For each file or directory operated on, @a notify_func will be called
@@ -5832,7 +5832,7 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
                  const svn_string_t *value,
                  svn_depth_t depth,
                  svn_boolean_t skip_checks,
-                 const apr_array_header_t *changelists,
+                 const apr_array_header_t *changelist_filter,
                  svn_wc_notify_func2_t notify_func,
                  void *notify_baton,
                  apr_pool_t *scratch_pool);
@@ -6011,10 +6011,10 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
  * If @a cancel_func is non-NULL, it will be used along with @a cancel_baton
  * to periodically check if the client has canceled the operation.
  *
- * @a changelists is an array of <tt>const char *</tt> changelist
+ * @a changelist_filter is an array of <tt>const char *</tt> changelist
  * names, used as a restrictive filter on items whose differences are
  * reported; that is, don't generate diffs about any item unless
- * it's a member of one of those changelists.  If @a changelists is
+ * it's a member of one of those changelists.  If @a changelist_filter is
  * empty (or altogether @c NULL), no changelist filtering occurs.
  *
   * If @a server_performs_filtering is TRUE, assume that the server handles
@@ -6036,7 +6036,7 @@ svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
                         svn_boolean_t use_text_base,
                         svn_boolean_t reverse_order,
                         svn_boolean_t server_performs_filtering,
-                        const apr_array_header_t *changelists,
+                        const apr_array_header_t *changelist_filter,
                         const svn_wc_diff_callbacks4_t *callbacks,
                         void *callback_baton,
                         svn_cancel_func_t cancel_func,
@@ -6068,7 +6068,7 @@ svn_wc_get_diff_editor5(svn_wc_adm_access_t *anchor,
                         svn_boolean_t reverse_order,
                         svn_cancel_func_t cancel_func,
                         void *cancel_baton,
-                        const apr_array_header_t *changelists,
+                        const apr_array_header_t *changelist_filter,
                         const svn_delta_editor_t **editor,
                         void **edit_baton,
                         apr_pool_t *pool);
@@ -6091,13 +6091,13 @@ svn_wc_get_diff_editor4(svn_wc_adm_access_t *anchor,
                         svn_boolean_t reverse_order,
                         svn_cancel_func_t cancel_func,
                         void *cancel_baton,
-                        const apr_array_header_t *changelists,
+                        const apr_array_header_t *changelist_filter,
                         const svn_delta_editor_t **editor,
                         void **edit_baton,
                         apr_pool_t *pool);
 
 /**
- * Similar to svn_wc_get_diff_editor4(), but with @a changelists
+ * Similar to svn_wc_get_diff_editor4(), but with @a changelist_filter
  * passed as @c NULL, and @a depth set to #svn_depth_infinity if @a
  * recurse is TRUE, or #svn_depth_files if @a recurse is FALSE.
  *
@@ -6195,10 +6195,10 @@ svn_wc_get_diff_editor(svn_wc_adm_access_t *anchor,
  * if they weren't modified after being copied. This allows the callbacks
  * to generate appropriate --git diff headers for such files.
  *
- * @a changelists is an array of <tt>const char *</tt> changelist
+ * @a changelist_filter is an array of <tt>const char *</tt> changelist
  * names, used as a restrictive filter on items whose differences are
  * reported; that is, don't generate diffs about any item unless
- * it's a member of one of those changelists.  If @a changelists is
+ * it's a member of one of those changelists.  If @a changelist_filter is
  * empty (or altogether @c NULL), no changelist filtering occurs.
  *
  * If @a cancel_func is non-NULL, invoke it with @a cancel_baton at various
@@ -6216,7 +6216,7 @@ svn_wc_diff6(svn_wc_context_t *wc_ctx,
              svn_boolean_t ignore_ancestry,
              svn_boolean_t show_copies_as_adds,
              svn_boolean_t use_git_diff_format,
-             const apr_array_header_t *changelists,
+             const apr_array_header_t *changelist_filter,
              svn_cancel_func_t cancel_func,
              void *cancel_baton,
              apr_pool_t *scratch_pool);
@@ -6238,7 +6238,7 @@ svn_wc_diff5(svn_wc_adm_access_t *anchor,
              void *callback_baton,
              svn_depth_t depth,
              svn_boolean_t ignore_ancestry,
-             const apr_array_header_t *changelists,
+             const apr_array_header_t *changelist_filter,
              apr_pool_t *pool);
 
 /**
@@ -6256,11 +6256,11 @@ svn_wc_diff4(svn_wc_adm_access_t *anchor,
              void *callback_baton,
              svn_depth_t depth,
              svn_boolean_t ignore_ancestry,
-             const apr_array_header_t *changelists,
+             const apr_array_header_t *changelist_filter,
              apr_pool_t *pool);
 
 /**
- * Similar to svn_wc_diff4(), but with @a changelists passed @c NULL,
+ * Similar to svn_wc_diff4(), but with @a changelist_filter passed @c NULL,
  * and @a depth set to #svn_depth_infinity if @a recurse is TRUE, or
  * #svn_depth_files if @a recurse is FALSE.
  *
@@ -6953,10 +6953,10 @@ svn_wc_relocate(const char *path,
  * properties on immediate subdirectories; else if #svn_depth_infinity,
  * revert path and everything under it fully recursively.
  *
- * @a changelists is an array of <tt>const char *</tt> changelist
+ * @a changelist_filter is an array of <tt>const char *</tt> changelist
  * names, used as a restrictive filter on items reverted; that is,
  * don't revert any item unless it's a member of one of those
- * changelists.  If @a changelists is empty (or altogether @c NULL),
+ * changelists.  If @a changelist_filter is empty (or altogether @c NULL),
  * no changelist filtering occurs.
  *
  * If @a cancel_func is non-NULL, call it with @a cancel_baton at
@@ -6982,7 +6982,7 @@ svn_wc_revert4(svn_wc_context_t *wc_ctx,
                const char *local_abspath,
                svn_depth_t depth,
                svn_boolean_t use_commit_times,
-               const apr_array_header_t *changelists,
+               const apr_array_header_t *changelist_filter,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
                svn_wc_notify_func2_t notify_func,
@@ -7000,7 +7000,7 @@ svn_wc_revert3(const char *path,
                svn_wc_adm_access_t *parent_access,
                svn_depth_t depth,
                svn_boolean_t use_commit_times,
-               const apr_array_header_t *changelists,
+               const apr_array_header_t *changelist_filter,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
                svn_wc_notify_func2_t notify_func,
@@ -7008,7 +7008,7 @@ svn_wc_revert3(const char *path,
                apr_pool_t *pool);
 
 /**
- * Similar to svn_wc_revert3(), but with @a changelists passed as @c
+ * Similar to svn_wc_revert3(), but with @a changelist_filter passed as @c
  * NULL, and @a depth set according to @a recursive: if @a recursive
  * is TRUE, @a depth is #svn_depth_infinity; if FALSE, @a depth is
  * #svn_depth_empty.
@@ -7525,11 +7525,11 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
  * changelist assignment from @a local_abspath.  @a changelist may not
  * be the empty string.  Recurse to @a depth.
  *
- * @a changelists is an array of <tt>const char *</tt> changelist
+ * @a changelist_filter is an array of <tt>const char *</tt> changelist
  * names, used as a restrictive filter on items whose changelist
  * assignments are adjusted; that is, don't tweak the changeset of any
  * item unless it's currently a member of one of those changelists.
- * If @a changelists is empty (or altogether @c NULL), no changelist
+ * If @a changelist_filter is empty (or altogether @c NULL), no changelist
  * filtering occurs.
  *
  * If @a cancel_func is not @c NULL, call it with @a cancel_baton to
@@ -7556,7 +7556,7 @@ svn_wc_set_changelist2(svn_wc_context_t *wc_ctx,
                        const char *local_abspath,
                        const char *changelist,
                        svn_depth_t depth,
-                       const apr_array_header_t *changelists,
+                       const apr_array_header_t *changelist_filter,
                        svn_cancel_func_t cancel_func,
                        void *cancel_baton,
                        svn_wc_notify_func2_t notify_func,
@@ -7602,12 +7602,13 @@ svn_error_t *
 svn_wc_get_changelists(svn_wc_context_t *wc_ctx,
                        const char *local_abspath,
                        svn_depth_t depth,
-                       const apr_array_header_t *changelists,
+                       const apr_array_header_t *changelist_filter,
                        svn_changelist_receiver_t callback_func,
                        void *callback_baton,
                        svn_cancel_func_t cancel_func,
                        void *cancel_baton,
                        apr_pool_t *scratch_pool);
+
 
 /** Crop @a local_abspath according to @a depth.
  *

@@ -1800,7 +1800,7 @@ svn_wc_revert4(svn_wc_context_t *wc_ctx,
                const char *local_abspath,
                svn_depth_t depth,
                svn_boolean_t use_commit_times,
-               const apr_array_header_t *changelists,
+               const apr_array_header_t *changelist_filter,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
                svn_wc_notify_func2_t notify_func,
@@ -1809,8 +1809,9 @@ svn_wc_revert4(svn_wc_context_t *wc_ctx,
 {
   apr_hash_t *changelist_hash = NULL;
 
-  if (changelists && changelists->nelts)
-    SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelists, pool));
+  if (changelist_filter && changelist_filter->nelts)
+    SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelist_filter,
+                                       pool));
 
   return svn_error_return(revert_internal(wc_ctx->db,
                                           local_abspath, local_abspath, depth,
@@ -2234,10 +2235,13 @@ svn_wc_remove_lock2(svn_wc_context_t *wc_ctx,
 
 struct changelist_walker_baton
 {
-  const char *changelist;
-  const apr_array_header_t *changelists;
+  const char *new_changelist;
+  const apr_array_header_t *changelist_filter;
 
   svn_wc__db_t *db;
+
+  svn_cancel_func_t cancel_func;
+  void *cancel_baton;
   svn_wc_notify_func2_t notify_func;
   void *notify_baton;
 };
@@ -2252,7 +2256,7 @@ changelist_walker(const char *local_abspath,
   struct changelist_walker_baton *cwb = baton;
 
   /* We can't add directories to changelists. */
-  if (kind == svn_node_dir && cwb->changelist)
+  if (kind == svn_node_dir && cwb->new_changelist)
     {
       if (cwb->notify_func)
         cwb->notify_func(cwb->notify_baton,
@@ -2266,8 +2270,8 @@ changelist_walker(const char *local_abspath,
 
   /* Set the changelist. */
   SVN_ERR(svn_wc__db_op_set_changelist(cwb->db, local_abspath,
-                                       cwb->changelist,
-                                       cwb->changelists,
+                                       cwb->new_changelist,
+                                       cwb->changelist_filter,
                                        svn_depth_empty,
                                        cwb->notify_func, cwb->notify_baton,
                                        NULL, NULL /* cancellation */,
@@ -2280,20 +2284,23 @@ changelist_walker(const char *local_abspath,
 svn_error_t *
 svn_wc_set_changelist2(svn_wc_context_t *wc_ctx,
                        const char *local_abspath,
-                       const char *changelist,
+                       const char *new_changelist,
                        svn_depth_t depth,
-                       const apr_array_header_t *changelists,
+                       const apr_array_header_t *changelist_filter,
                        svn_cancel_func_t cancel_func,
                        void *cancel_baton,
                        svn_wc_notify_func2_t notify_func,
                        void *notify_baton,
                        apr_pool_t *scratch_pool)
 {
-  struct changelist_walker_baton cwb = { changelist, changelists, wc_ctx->db,
+  struct changelist_walker_baton cwb = { new_changelist,
+                                         changelist_filter,
+                                         wc_ctx->db,
+                                         cancel_func, cancel_baton,
                                          notify_func, notify_baton };
 
   /* Assert that we aren't being asked to set an empty changelist. */
-  SVN_ERR_ASSERT(! (changelist && changelist[0] == '\0'));
+  SVN_ERR_ASSERT(! (new_changelist && new_changelist[0] == '\0'));
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -2388,7 +2395,7 @@ svn_error_t *
 svn_wc_get_changelists(svn_wc_context_t *wc_ctx,
                        const char *local_abspath,
                        svn_depth_t depth,
-                       const apr_array_header_t *changelists,
+                       const apr_array_header_t *changelist_filter,
                        svn_changelist_receiver_t callback_func,
                        void *callback_baton,
                        svn_cancel_func_t cancel_func,
@@ -2398,14 +2405,15 @@ svn_wc_get_changelists(svn_wc_context_t *wc_ctx,
   struct get_cl_fn_baton gnb = { wc_ctx->db, NULL,
                                  callback_func, callback_baton };
 
-  if (changelists)
-    SVN_ERR(svn_hash_from_cstring_keys(&gnb.clhash, changelists,
+  if (changelist_filter)
+    SVN_ERR(svn_hash_from_cstring_keys(&gnb.clhash, changelist_filter,
                                        scratch_pool));
 
   return svn_error_return(
     svn_wc__internal_walk_children(wc_ctx->db, local_abspath, FALSE,
-                                   changelists, get_node_changelist, &gnb,
-                                   depth, cancel_func, cancel_baton,
+                                   changelist_filter, get_node_changelist,
+                                   &gnb, depth,
+                                   cancel_func, cancel_baton,
                                    scratch_pool));
 
 }
