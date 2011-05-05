@@ -1142,6 +1142,7 @@ static svn_error_t *
 check_url_kind(void *baton,
                svn_node_kind_t *kind,
                const char *url,
+               svn_revnum_t revision,
                apr_pool_t *scratch_pool)
 {
   struct check_url_kind_baton *cukb = baton;
@@ -1158,7 +1159,7 @@ check_url_kind(void *baton,
     SVN_ERR(svn_ra_reparent(cukb->session, url, scratch_pool));
 
   return svn_error_return(
-                svn_ra_check_path(cukb->session, "", SVN_INVALID_REVNUM,
+                svn_ra_check_path(cukb->session, "", revision,
                                   kind, scratch_pool));
 }
 

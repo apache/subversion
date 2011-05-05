@@ -782,6 +782,7 @@ typedef struct svn_client__copy_pair_t
 typedef svn_error_t *(*svn_client__check_url_kind_t)(void *baton,
                                                      svn_node_kind_t *kind,
                                                      const char *url,
+                                                     svn_revnum_t revision,
                                                      apr_pool_t *scratch_pool);
 
 /* Recursively crawl a set of working copy paths (DIR_ABSPATH + each
