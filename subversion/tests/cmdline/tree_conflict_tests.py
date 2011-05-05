@@ -898,6 +898,13 @@ def force_del_tc_is_target(sbox):
 
 #----------------------------------------------------------------------
 
+# A regression test to check that "rm --keep-local" on a tree-conflicted
+# node leaves the WC in a valid state in which simple commands such as
+# "status" do not error out.  At one time the command left the WC in an
+# invalid state.  (Before r989189, "rm --keep-local" used to have the effect
+# of "disarming" the conflict in the sense that "commit" would ignore the
+# conflict.)
+
 def query_absent_tree_conflicted_dir(sbox):
   "query an unversioned tree-conflicted dir"
 
@@ -942,7 +949,7 @@ def query_absent_tree_conflicted_dir(sbox):
                         None, None, None, None, None, 1,
                         wc_dir)
 
-  # Delete A/C with --keep-local, in effect disarming the tree-conflict.
+  # Delete A/C with --keep-local.
   run_and_verify_svn(None,
                      verify.UnorderedOutput(['D         ' + C_C_path + '\n',
                                              'D         ' + C_path + '\n']),
@@ -955,7 +962,7 @@ def query_absent_tree_conflicted_dir(sbox):
 
   # Try to access the absent tree-conflict as explicit target.
   # They should succeed without error. We don't care what they return.
-  ### Currently, these fail like
+  # These used to fail like this:
   ## CMD: svn status -v -u -q
   ## [...]
   ## subversion/svn/status-cmd.c:248: (apr_err=155035)
