@@ -187,20 +187,6 @@ svn_cl__commit(apr_getopt_t *os,
                            NULL,
                            ctx,
                            pool);
-  if (err)
-    {
-      svn_error_t *root_err = svn_error_root_cause(err);
-      if (root_err->apr_err == SVN_ERR_UNKNOWN_CHANGELIST)
-        {
-          /* Strip any errors wrapped around this root cause.  Note
-             that this handling differs from that of any other
-             commands, because of the way 'commit' internally harvests
-             its list of committables. */
-          root_err = svn_error_dup(root_err);
-          svn_error_clear(err);
-          err = root_err;
-        }
-    }
   SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton3, err, pool));
 
   return SVN_NO_ERROR;
