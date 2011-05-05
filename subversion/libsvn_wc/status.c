@@ -997,12 +997,15 @@ handle_externals(const struct walk_status_baton *wb,
    PARENT_ENTRY is the entry for the parent of the directory or NULL
    if LOCAL_ABSPATH is a working copy root.
 
-   If SKIP_THIS_DIR is TRUE (and SELECTED is NULL), the directory's own
-   status will not be reported.  However, upon recursing, all subdirs
-   *will* be reported, regardless of this parameter's value.
+   If SKIP_THIS_DIR is TRUE, the directory's own status will not be reported.
+   However, upon recursing, all subdirs *will* be reported, regardless of this
+   parameter's value.
 
    DIRENT is LOCAL_ABSPATH's own dirent and is only needed if it is reported,
    so if SKIP_THIS_DIR or SELECTED is not-NULL DIRENT can be left NULL.
+
+   DIR_INFO can be set to the information of LOCAL_ABSPATH, to avoid retrieving
+   it again.
 
    Other arguments are the same as those passed to
    svn_wc_get_status_editor5().  */
@@ -1019,7 +1022,6 @@ get_dir_status(const struct walk_status_baton *wb,
                svn_depth_t depth,
                svn_boolean_t get_all,
                svn_boolean_t no_ignore,
-               svn_boolean_t had_props,
                svn_wc_status_func4_t status_func,
                void *status_baton,
                svn_cancel_func_t cancel_func,
@@ -1087,7 +1089,7 @@ get_dir_status(const struct walk_status_baton *wb,
      value to wc->external_func along with this directory's depth. (Also,
      we want to track the externals internally so we can report status more
      accurately.) */
-  if (had_props)
+  if (dir_info->had_props)
     SVN_ERR(handle_externals(wb, local_abspath, dir_info->depth, iterpool));
 
   if (!selected)
@@ -1132,34 +1134,31 @@ get_dir_status(const struct walk_status_baton *wb,
               && info->status != svn_wc__db_status_excluded
               && info->status != svn_wc__db_status_absent)
             {
-              svn_depth_t dir_depth;
-              if (depth == svn_depth_files && info->kind == svn_wc__db_kind_dir)
-                continue;
-
-              /* Handle this entry (possibly recursing). */
-              dir_depth = (depth == svn_depth_infinity) ? depth
-                                                        : svn_depth_empty;
+              if (depth == svn_depth_files
+                  && info->kind == svn_wc__db_kind_dir)
+                {
+                  continue;
+                }
 
               SVN_ERR(send_status_structure(wb, node_abspath,
-                                                  dir_repos_root_url,
-                                                  dir_repos_relpath,
-                                                  info, dirent_p, get_all,
-                                                  status_func, status_baton,
-                                                  iterpool));
+                                            dir_repos_root_url,
+                                            dir_repos_relpath,
+                                            info, dirent_p, get_all,
+                                            status_func, status_baton,
+                                            iterpool));
 
-              /* Descend only if the subdirectory is a working copy directory
-                 and if DEPTH permits it.  */
-              if ((info->kind == svn_wc__db_kind_dir)
-                  && ((dir_depth == svn_depth_unknown
-                       || dir_depth >= svn_depth_immediates)))
+              if (depth == svn_depth_immediates)
+                continue;
+
+              /* Descend in subdirectories. */
+              if (info->kind == svn_wc__db_kind_dir)
                 {
                   SVN_ERR(get_dir_status(wb, node_abspath, NULL, TRUE,
                                          dir_repos_root_url, dir_repos_relpath,
                                          info,
                                          dirent_p, ignore_patterns,
-                                         dir_depth, get_all,
+                                         svn_depth_infinity, get_all,
                                          no_ignore,
-                                         info->had_props,
                                          status_func, status_baton,
                                          cancel_func, cancel_baton,
                                          iterpool));
@@ -1503,7 +1502,7 @@ make_dir_baton(void **dir_baton,
                              d->depth == svn_depth_files
                                       ? svn_depth_files
                                       : svn_depth_immediates,
-                             TRUE, TRUE, TRUE /* had_props */,
+                             TRUE, TRUE,
                              hash_stash, d->statii,
                              eb->cancel_func, eb->cancel_baton,
                              pool));
@@ -1680,7 +1679,6 @@ handle_statii(struct edit_baton *eb,
                                  NULL,
                                  NULL /* dirent */,
                                  ignores, depth, eb->get_all, eb->no_ignore,
-                                 FALSE,
                                  status_func, status_baton,
                                  eb->cancel_func, eb->cancel_baton,
                                  iterpool));
@@ -1951,7 +1949,6 @@ close_directory(void *dir_baton,
                                          eb->ignores,
                                          eb->default_depth,
                                          eb->get_all, eb->no_ignore,
-                                         FALSE,
                                          eb->status_func, eb->status_baton,
                                          eb->cancel_func, eb->cancel_baton,
                                          pool));
@@ -2355,7 +2352,6 @@ svn_wc__internal_walk_status(svn_wc__db_t *db,
                          depth,
                          get_all,
                          no_ignore,
-                         TRUE /* had_props */,
                          status_func, status_baton,
                          cancel_func, cancel_baton,
                          scratch_pool));
