@@ -76,15 +76,10 @@ copy_warning_notify_func(void *baton,
     {
       svn_error_t *err;
       err = svn_cmdline_printf(pool,
-                               _("svn: warning: The depth of this commit "
-                                 "is '%s', but copied directories will "
-                                 "regardless be committed with depth '%s'.  "
-                                 "You must remove unwanted children of those "
-                                 "directories in a separate commit.  "
-                                 "(Suppressing additional instances of this "
-                                 "warning.)\n"),
-                               svn_depth_to_word(b->depth),
-                               svn_depth_to_word(svn_depth_infinity));
+                               _("svn: The depth of this commit is '%s', "
+                                 "but copies are always performed "
+                                 "recursively in the repository.\n"),
+                               svn_depth_to_word(b->depth));
       /* ### FIXME: Try to return this error showhow? */
       svn_error_clear(err);
 
