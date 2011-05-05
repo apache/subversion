@@ -4220,9 +4220,8 @@ svn_wc__db_revert_list_notify(svn_wc_notify_func2_t notify_func,
 }
 
 
-/* Set *TREE_CONFLICT_DATA to a string describing any tree conflicts on
-   immediate children of WCROOT+LOCAL_RELPATH. The format of the string is as
-   produced by svn_wc__write_tree_conflicts().  */
+/* Like svn_wc__db_op_read_all_tree_conflicts(), but with WCROOT+LOCAL_RELPATH
+   instead of DB+LOCAL_ABSPATH.  */
 static svn_error_t *
 read_all_tree_conflicts(apr_hash_t **tree_conflicts,
                         svn_wc__db_wcroot_t *wcroot,
