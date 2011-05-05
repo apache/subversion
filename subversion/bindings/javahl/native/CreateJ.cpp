@@ -497,9 +497,7 @@ CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
                              "L"JAVA_PACKAGE"/types/Status$Kind;"
                              "L"JAVA_PACKAGE"/types/Status$Kind;"
                              "L"JAVA_PACKAGE"/types/Status$Kind;"
-                             "ZZZL"JAVA_PACKAGE"/ConflictDescriptor;"
-                             "Ljava/lang/String;Ljava/lang/String;"
-                             "Ljava/lang/String;Ljava/lang/String;"
+                             "ZZZLjava/lang/String;"
                              "JZZLjava/lang/String;Ljava/lang/String;"
                              "Ljava/lang/String;"
                              "JL"JAVA_PACKAGE"/types/Lock;"
@@ -526,13 +524,9 @@ CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
   jobject jRepositoryPropType = NULL;
   jboolean jIsLocked = JNI_FALSE;
   jboolean jIsCopied = JNI_FALSE;
+  jboolean jIsConflicted = JNI_FALSE;
   jboolean jIsSwitched = JNI_FALSE;
   jboolean jIsFileExternal = JNI_FALSE;
-  jboolean jIsTreeConflicted = JNI_FALSE;
-  jobject jConflictDescription = NULL;
-  jstring jConflictOld = NULL;
-  jstring jConflictNew = NULL;
-  jstring jConflictWorking = NULL;
   jstring jURLCopiedFrom = NULL;
   jlong jRevisionCopiedFrom =
     org_apache_subversion_javahl_types_Revision_SVN_INVALID_REVNUM;
@@ -560,6 +554,7 @@ CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
           || text_status == svn_wc_status_conflicted)
         text_status = status->text_status;
 
+      jIsConflicted = (status->conflicted == 1) ? JNI_TRUE : JNI_FALSE;
       jTextType = EnumMapper::mapStatusKind(text_status);
       jPropType = EnumMapper::mapStatusKind(status->prop_status);
       jRepositoryTextType = EnumMapper::mapStatusKind(
@@ -570,45 +565,6 @@ CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
       jIsLocked = (status->locked == 1) ? JNI_TRUE: JNI_FALSE;
       jIsSwitched = (status->switched == 1) ? JNI_TRUE: JNI_FALSE;
       jIsFileExternal = (status->file_external == 1) ? JNI_TRUE: JNI_FALSE;
-
-      /* Unparse the meaning of the conflicted flag. */
-      if (status->conflicted)
-        {
-          svn_boolean_t text_conflicted = FALSE;
-          svn_boolean_t prop_conflicted = FALSE;
-          svn_boolean_t tree_conflicted = FALSE;
-
-          SVN_JNI_ERR(svn_wc_conflicted_p3(&text_conflicted,
-                                           &prop_conflicted,
-                                           &tree_conflicted,
-                                           wc_ctx, local_abspath,
-                                           pool),
-                      NULL);
-
-          if (tree_conflicted)
-            {
-              jIsTreeConflicted = JNI_TRUE;
-
-              const svn_wc_conflict_description2_t *tree_conflict;
-              SVN_JNI_ERR(svn_wc__get_tree_conflict(&tree_conflict, wc_ctx,
-                                                    local_abspath, pool, pool),
-                          NULL);
-
-              jConflictDescription = CreateJ::ConflictDescriptor(tree_conflict);
-              if (JNIUtil::isJavaExceptionThrown())
-                POP_AND_RETURN_NULL;
-            }
-
-          if (text_conflicted)
-            {
-              /* ### Fetch conflict marker files, still handled via svn_wc_entry_t */
-            }
-
-          if (prop_conflicted)
-            {
-              /* ### Fetch conflict marker file, still handled via svn_wc_entry_t */
-            }
-        }
 
       jLock = CreateJ::Lock(status->repos_lock);
       if (JNIUtil::isJavaExceptionThrown())
@@ -666,41 +622,9 @@ CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
 
       if (status->versioned && status->conflicted)
         {
-          const char *conflict_new, *conflict_old, *conflict_wrk;
           const char *copyfrom_url;
           svn_revnum_t copyfrom_rev;
           svn_boolean_t is_copy_target;
-
-          /* This call returns SVN_ERR_ENTRY_NOT_FOUND for some hidden
-             cases, which we can just ignore here as hidden nodes
-             are not in text or property conflict. */
-          svn_error_t *err = svn_wc__node_get_conflict_info(&conflict_old,
-                                                            &conflict_new,
-                                                            &conflict_wrk,
-                                                            NULL,
-                                                            wc_ctx,
-                                                            local_abspath,
-                                                            pool, pool);
-
-          if (err)
-            {
-               if (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
-                 svn_error_clear(err);
-               else
-                 SVN_JNI_ERR(err, NULL);
-            }
-
-          jConflictNew = JNIUtil::makeJString(conflict_new);
-          if (JNIUtil::isJavaExceptionThrown())
-            POP_AND_RETURN_NULL;
-
-          jConflictOld = JNIUtil::makeJString(conflict_old);
-          if (JNIUtil::isJavaExceptionThrown())
-            POP_AND_RETURN_NULL;
-
-          jConflictWorking= JNIUtil::makeJString(conflict_wrk);
-          if (JNIUtil::isJavaExceptionThrown())
-            POP_AND_RETURN_NULL;
 
           SVN_JNI_ERR(svn_wc__node_get_copyfrom_info(NULL, NULL,
                                                      &copyfrom_url,
@@ -723,11 +647,10 @@ CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
                                jLastChangedRevision, jLastChangedDate,
                                jLastCommitAuthor, jTextType, jPropType,
                                jRepositoryTextType, jRepositoryPropType,
-                               jIsLocked, jIsCopied, jIsTreeConflicted,
-                               jConflictDescription, jConflictOld, jConflictNew,
-                               jConflictWorking, jURLCopiedFrom,
-                               jRevisionCopiedFrom, jIsSwitched, jIsFileExternal,
-                               jLockToken, jLockOwner,
+                               jIsLocked, jIsCopied, jIsConflicted,
+                               jURLCopiedFrom, jRevisionCopiedFrom,
+                               jIsSwitched, jIsFileExternal, jLockToken,
+                               jLockOwner,
                                jLockComment, jLockCreationDate, jLock,
                                jOODLastCmtRevision, jOODLastCmtDate,
                                jOODKind, jOODLastCmtAuthor, jChangelist);
