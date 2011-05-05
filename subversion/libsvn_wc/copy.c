@@ -422,19 +422,11 @@ copy_versioned_dir(svn_wc__db_t *db,
                                    db, child_src_abspath,
                                    iterpool, iterpool));
 
-      if (child_status == svn_wc__db_status_deleted
-          || child_status == svn_wc__db_status_not_present
-          || child_status == svn_wc__db_status_excluded)
+      if (child_status == svn_wc__db_status_normal
+          || child_status == svn_wc__db_status_added)
         {
-          SVN_ERR(copy_deleted_node(db,
-                                    child_src_abspath, child_dst_abspath,
-                                    dst_op_root_abspath,
-                                    cancel_func, cancel_baton, NULL, NULL,
-                                    iterpool));
-        }
-      else
-        {
-          if (child_kind == svn_wc__db_kind_file)
+          /* We have more work to do than just changing the DB */
+         if (child_kind == svn_wc__db_kind_file)
             SVN_ERR(copy_versioned_file(db,
                                         child_src_abspath, child_dst_abspath,
                                         dst_op_root_abspath,
@@ -453,6 +445,27 @@ copy_versioned_dir(svn_wc__db_t *db,
                                      _("cannot handle node kind for '%s'"),
                                      svn_dirent_local_style(child_src_abspath,
                                                             scratch_pool));
+        }
+      else if (child_status == svn_wc__db_status_deleted
+          || child_status == svn_wc__db_status_not_present
+          || child_status == svn_wc__db_status_excluded)
+        {
+          /* This will be copied as some kind of deletion. Don't touch
+             any actual files */
+          SVN_ERR(copy_deleted_node(db,
+                                    child_src_abspath, child_dst_abspath,
+                                    dst_op_root_abspath,
+                                    cancel_func, cancel_baton, NULL, NULL,
+                                    iterpool));
+        }
+      else
+        {
+          SVN_ERR_ASSERT(child_status == svn_wc__db_status_absent);
+
+          return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                                   _("Cannot copy '%s' excluded by server"),
+                                   svn_dirent_local_style(src_abspath,
+                                                          iterpool));
         }
 
       if (disk_children
