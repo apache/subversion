@@ -191,22 +191,15 @@ def info_with_tree_conflicts(sbox):
                                             },
                           )])
 
-  # Check recursive info.  Just ensure that all victims are listed.
-  exit_code, output, error = svntest.actions.run_and_verify_svn(None, None,
-                                                                [], 'info',
-                                                                G, '-R')
+  # Check recursive info.
+  expected_infos = [{ 'Path' : re.escape(G) }]
   for fname, action, reason in scenarios:
-    found = False
-    expected = ".*incoming %s.*" % (action)
-    for item in output:
-      if re.search(expected, item):
-        found = True
-        break
-    if not found:
-      raise svntest.verify.SVNUnexpectedStdout(
-        "Tree conflict missing in svn info -R output:\n"
-        "  Expected: '%s'\n"
-        "  Found: '%s'" % (expected, output))
+    path = os.path.join(G, fname)
+    tree_conflict_re = ".*local %s, incoming %s.*" % (reason, action)
+    expected_infos.append({ 'Path' : re.escape(path),
+                            'Tree conflict' : tree_conflict_re })
+  expected_infos.sort(key=lambda info: info['Path'])
+  svntest.actions.run_and_verify_info(expected_infos, G, '-R')
 
 def info_on_added_file(sbox):
   """info on added file"""
