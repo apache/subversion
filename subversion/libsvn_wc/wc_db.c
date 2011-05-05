@@ -4244,6 +4244,7 @@ read_all_tree_conflicts(apr_hash_t **tree_conflicts,
     {
       const char *child_basename;
       const char *child_relpath;
+      const char *child_abspath;
       const char *conflict_data;
       const svn_skel_t *skel;
       const svn_wc_conflict_description2_t *conflict;
@@ -4252,10 +4253,12 @@ read_all_tree_conflicts(apr_hash_t **tree_conflicts,
 
       child_relpath = svn_sqlite__column_text(stmt, 0, NULL);
       child_basename = svn_relpath_basename(child_relpath, result_pool);
+      child_abspath = svn_dirent_join(wcroot->abspath, child_relpath, iterpool);
 
       conflict_data = svn_sqlite__column_text(stmt, 1, NULL);
       skel = svn_skel__parse(conflict_data, strlen(conflict_data), iterpool);
-      SVN_ERR(svn_wc__deserialize_conflict(&conflict, skel, wcroot->abspath,
+      SVN_ERR(svn_wc__deserialize_conflict(&conflict, skel,
+                                           svn_dirent_dirname(child_abspath, iterpool),
                                            result_pool, iterpool));
 
       apr_hash_set(*tree_conflicts, child_basename, APR_HASH_KEY_STRING,
@@ -4324,9 +4327,16 @@ read_tree_conflict(const svn_wc_conflict_description2_t **tree_conflict,
 
   conflict_data = svn_sqlite__column_text(stmt, 0, NULL);
   skel = svn_skel__parse(conflict_data, strlen(conflict_data), scratch_pool);
-  err = svn_wc__deserialize_conflict(tree_conflict, skel,
-                                     wcroot->abspath, result_pool,
-                                     scratch_pool);
+
+  {
+    const char *local_abspath
+      = svn_dirent_join(wcroot->abspath, local_relpath, scratch_pool);
+    const char *dir_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+
+    err = svn_wc__deserialize_conflict(tree_conflict, skel,
+                                       dir_abspath, result_pool,
+                                       scratch_pool);
+  }
 
   return svn_error_compose_create(err,
                                   svn_sqlite__reset(stmt));

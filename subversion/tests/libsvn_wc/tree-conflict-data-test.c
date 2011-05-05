@@ -33,8 +33,11 @@
 #include "svn_types.h"
 #include "svn_wc.h"
 #include "private/svn_wc_private.h"
+#include "utils.h"
 #include "../svn_test.h"
 #include "../../libsvn_wc/tree_conflicts.h"
+#include "../../libsvn_wc/wc.h"
+#include "../../libsvn_wc/wc_db.h"
 
 /* A quick way to create error messages.  */
 static svn_error_t *
@@ -48,6 +51,41 @@ fail(apr_pool_t *pool, const char *fmt, ...)
   va_end(ap);
 
   return svn_error_create(SVN_ERR_TEST_FAILED, 0, msg);
+}
+
+/* Raise a test error if EXPECTED and ACTUAL differ. */
+static svn_error_t *
+compare_version(const svn_wc_conflict_version_t *expected,
+                const svn_wc_conflict_version_t *actual)
+{
+  SVN_TEST_STRING_ASSERT(expected->repos_url, actual->repos_url);
+  SVN_TEST_ASSERT(expected->peg_rev == actual->peg_rev);
+  SVN_TEST_STRING_ASSERT(expected->path_in_repos, actual->path_in_repos);
+  SVN_TEST_ASSERT(expected->node_kind == actual->node_kind);
+  return SVN_NO_ERROR;
+}
+
+/* Raise a test error if EXPECTED and ACTUAL differ. */
+static svn_error_t *
+compare_conflict(const svn_wc_conflict_description2_t *expected,
+                 const svn_wc_conflict_description2_t *actual)
+{
+  SVN_TEST_STRING_ASSERT(expected->local_abspath, actual->local_abspath);
+  SVN_TEST_ASSERT(expected->node_kind == actual->node_kind);
+  SVN_TEST_ASSERT(expected->kind == actual->kind);
+  SVN_TEST_STRING_ASSERT(expected->property_name, actual->property_name);
+  SVN_TEST_ASSERT(expected->is_binary == actual->is_binary);
+  SVN_TEST_STRING_ASSERT(expected->mime_type, actual->mime_type);
+  SVN_TEST_ASSERT(expected->action == actual->action);
+  SVN_TEST_ASSERT(expected->reason == actual->reason);
+  SVN_TEST_STRING_ASSERT(expected->base_abspath, actual->base_abspath);
+  SVN_TEST_STRING_ASSERT(expected->their_abspath, actual->their_abspath);
+  SVN_TEST_STRING_ASSERT(expected->my_abspath, actual->my_abspath);
+  SVN_TEST_STRING_ASSERT(expected->merged_file, actual->merged_file);
+  SVN_TEST_ASSERT(expected->operation == actual->operation);
+  compare_version(expected->src_left_version, actual->src_left_version);
+  compare_version(expected->src_right_version, actual->src_right_version);
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -113,6 +151,82 @@ test_serialize_tree_conflict(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Test WC-DB-level conflict APIs. Especially tree conflicts. */
+static svn_error_t *
+test_read_write_tree_conflicts(const svn_test_opts_t *opts,
+                               apr_pool_t *pool)
+{
+  svn_test__sandbox_t sbox;
+
+  svn_wc_conflict_version_t *left, *right;
+  svn_wc_conflict_description2_t *conflict;
+  const char *parent_abspath;
+  const char *child_abspath;
+
+  SVN_ERR(svn_test__sandbox_create(&sbox, "read_write_tree_conflicts", opts, pool));
+  parent_abspath = svn_dirent_join(sbox.wc_abspath, "A", pool);
+  child_abspath = svn_dirent_join(parent_abspath, "foo", pool);
+
+  left = svn_wc_conflict_version_create("dummy://localhost", "path/in/repo",
+                                        51, svn_node_file, pool);
+  right = svn_wc_conflict_version_create("dummy://localhost", "path/in/repo",
+                                        52, svn_node_none, pool);
+  conflict = svn_wc_conflict_description_create_tree2(
+                    child_abspath, svn_node_file, svn_wc_operation_update,
+                    left, right, pool);
+  conflict->action = svn_wc_conflict_action_delete;
+  conflict->reason = svn_wc_conflict_reason_edited;
+
+  /* Write */
+  SVN_ERR(svn_wc__db_op_set_tree_conflict(sbox.wc_ctx->db, child_abspath,
+                                          conflict, pool));
+
+  /* Query */
+  {
+    svn_boolean_t text_c, prop_c, tree_c;
+
+    SVN_ERR(svn_wc__internal_conflicted_p(&text_c, &prop_c, &tree_c,
+                                          sbox.wc_ctx->db, child_abspath, pool));
+    SVN_TEST_ASSERT(tree_c);
+    SVN_TEST_ASSERT(! text_c && ! prop_c);
+  }
+
+  /* Read one */
+  {
+    const svn_wc_conflict_description2_t *read_conflict;
+
+    SVN_ERR(svn_wc__db_op_read_tree_conflict(&read_conflict, sbox.wc_ctx->db,
+                                             child_abspath, pool, pool));
+    SVN_ERR(compare_conflict(conflict, read_conflict));
+  }
+
+  /* Read many */
+  {
+    apr_hash_t *all_conflicts;
+    const svn_wc_conflict_description2_t *read_conflict;
+
+    SVN_ERR(svn_wc__db_op_read_all_tree_conflicts(
+              &all_conflicts, sbox.wc_ctx->db, parent_abspath, pool, pool));
+    SVN_TEST_ASSERT(apr_hash_count(all_conflicts) == 1);
+    read_conflict = apr_hash_get(all_conflicts, "foo", APR_HASH_KEY_STRING);
+    SVN_ERR(compare_conflict(conflict, read_conflict));
+  }
+
+  /* ### TODO: to test...
+   * svn_wc__db_read_conflict_victims
+   * svn_wc__db_read_conflicts
+   * svn_wc__node_get_conflict_info
+   *
+   * svn_wc__add_tree_conflict ~= svn_wc__db_op_set_tree_conflict
+   * svn_wc__del_tree_conflict ~= svn_wc__db_op_set_tree_conflict(NULL)
+   * svn_wc__get_tree_conflict ~= svn_wc__db_op_read_tree_conflict
+   * svn_wc__get_all_tree_conflicts ~= svn_wc__db_op_read_all_tree_conflicts
+   * svn_wc_conflicted_p3 ~= svn_wc__internal_conflicted_p
+   */
+
+  return SVN_NO_ERROR;
+}
+
 /* The test table.  */
 
 struct svn_test_descriptor_t test_funcs[] =
@@ -122,6 +236,8 @@ struct svn_test_descriptor_t test_funcs[] =
                    "deserialize tree conflict"),
     SVN_TEST_PASS2(test_serialize_tree_conflict,
                    "serialize tree conflict"),
+    SVN_TEST_OPTS_PASS(test_read_write_tree_conflicts,
+                       "read and write tree conflicts"),
     SVN_TEST_NULL
   };
 
