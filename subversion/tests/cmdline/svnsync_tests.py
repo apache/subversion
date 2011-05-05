@@ -155,8 +155,9 @@ def run_info(url, expected_error=None):
 
 
 def setup_and_sync(sbox, dump_file_contents, subdir=None,
-                   bypass_prop_validation=False, source_prop_encoding=None):
-  """Create a repository for SBOX, load it with DUMP_FILE_CONTENTS, then create a mirror repository and sync it with SBOX.  Return the mirror sandbox."""
+                   bypass_prop_validation=False, source_prop_encoding=None,
+                   is_src_ra_local=None, is_dest_ra_local=None):
+  """Create a repository for SBOX, load it with DUMP_FILE_CONTENTS, then create a mirror repository and sync it with SBOX. If is_src_ra_local or is_dest_ra_local is True, then run_init, run_sync, and run_copy_revprops will use the file:// scheme for the source and destination URLs.  Return the mirror sandbox."""
 
   # Create the empty master repository.
   build_repos(sbox)
@@ -179,13 +180,21 @@ def setup_and_sync(sbox, dump_file_contents, subdir=None,
   svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
 
   repo_url = sbox.repo_url
+  cwd = os.getcwd()
+  if is_src_ra_local:
+    repo_url = svntest.main.file_scheme_prefix + svntest.main.pathname2url(os.path.join(cwd, sbox.repo_dir))
+
   if subdir:
     repo_url = repo_url + subdir
-  run_init(dest_sbox.repo_url, repo_url, source_prop_encoding)
 
-  run_sync(dest_sbox.repo_url, repo_url,
+  dest_repo_url = dest_sbox.repo_url
+  if is_dest_ra_local:
+    dest_repo_url = svntest.main.file_scheme_prefix + svntest.main.pathname2url(os.path.join(cwd, dest_sbox.repo_dir))
+  run_init(dest_repo_url, repo_url, source_prop_encoding)
+
+  run_sync(dest_repo_url, repo_url,
            source_prop_encoding=source_prop_encoding)
-  run_copy_revprops(dest_sbox.repo_url, repo_url,
+  run_copy_revprops(dest_repo_url, repo_url,
                     source_prop_encoding=source_prop_encoding)
 
   return dest_sbox
@@ -208,7 +217,9 @@ def verify_mirror(dest_sbox, exp_dump_file_contents):
     "Dump files", "DUMP", exp_dump_file_contents, dest_dump)
 
 def run_test(sbox, dump_file_name, subdir=None, exp_dump_file_name=None,
-             bypass_prop_validation=False, source_prop_encoding=None):
+             bypass_prop_validation=False, source_prop_encoding=None,
+             is_src_ra_local=None, is_dest_ra_local=None):
+
   """Load a dump file, sync repositories, and compare contents with the original
 or another dump file."""
 
@@ -222,7 +233,8 @@ or another dump file."""
                                   'rb').readlines()
 
   dest_sbox = setup_and_sync(sbox, master_dumpfile_contents, subdir,
-                             bypass_prop_validation, source_prop_encoding)
+                             bypass_prop_validation, source_prop_encoding,
+                             is_src_ra_local, is_dest_ra_local)
 
   # Compare the dump produced by the mirror repository with either the original
   # dump file (used to create the master repository) or another specified dump
@@ -932,6 +944,14 @@ def delete_revprops(sbox):
   # Does the result look as we expected?
   verify_mirror(dest_sbox, expected_contents)
 
+@Issue(3870)
+@SkipUnless(svntest.main.is_posix_os)
+@XFail(svntest.main.is_ra_type_dav_serf)
+def fd_leak_sync_from_serf_to_local(sbox):
+  "fd leak during sync from serf to local"
+  import resource
+  resource.setrlimit(resource.RLIMIT_NOFILE, (128, 128))
+  run_test(sbox, "largemods.dump", is_src_ra_local=None, is_dest_ra_local=True)
 ########################################################################
 # Run the tests
 
@@ -971,6 +991,7 @@ test_list = [ None,
               commit_a_copy_of_root,
               descend_into_replace,
               delete_revprops,
+              fd_leak_sync_from_serf_to_local,
              ]
 serial_only = True
 
