@@ -23,6 +23,7 @@
 
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
+#include "svn_pools.h"
 #include "svn_wc.h"
 
 #include "wc.h"
@@ -266,6 +267,9 @@ struct found_entry_baton
   svn_info_receiver2_t receiver;
   void *receiver_baton;
   svn_wc__db_t *db;
+  /* The set of tree conflicts that have been found but not (yet) visited by
+   * the tree walker.  Map of abspath -> svn_wc_conflict_description2_t. */
+  apr_hash_t *tree_conflicts;
 };
 
 /* Call WALK_BATON->receiver with WALK_BATON->receiver_baton, passing to it
@@ -278,40 +282,64 @@ info_found_node_callback(const char *local_abspath,
                          apr_pool_t *pool)
 {
   struct found_entry_baton *fe_baton = walk_baton;
-  svn_info2_t *info = NULL;
-  const svn_wc_conflict_description2_t *tree_conflict = NULL;
-  svn_error_t *err;
+  svn_info2_t *info;
 
-  SVN_ERR(svn_wc__db_op_read_tree_conflict(&tree_conflict, fe_baton->db,
-                                           local_abspath, pool, pool));
-
-  err = build_info_for_entry(&info, fe_baton->db, local_abspath,
-                             kind, pool, pool);
-  if (err && (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-      && tree_conflict)
-    {
-      apr_array_header_t *conflicts = apr_array_make(pool,
-        1, sizeof(const svn_wc_conflict_description2_t *));
-
-      svn_error_clear(err);
-
-      SVN_ERR(build_info_for_unversioned(&info, pool));
-      SVN_ERR(svn_wc__internal_get_repos_info(&(info->repos_root_URL),
-                                              NULL, fe_baton->db,
-                                              local_abspath, FALSE, FALSE,
-                                              pool, pool));
-
-      APR_ARRAY_PUSH(conflicts, const svn_wc_conflict_description2_t *)
-        = tree_conflict;
-      info->wc_info->conflicts = conflicts;
-    }
-  else if (err)
-    return svn_error_return(err);
+  SVN_ERR(build_info_for_entry(&info, fe_baton->db, local_abspath,
+                               kind, pool, pool));
 
   SVN_ERR_ASSERT(info != NULL && info->wc_info != NULL);
   SVN_ERR(fe_baton->receiver(fe_baton->receiver_baton, local_abspath,
                              info, pool));
+
+  /* If this node is a versioned directory, make a note of any tree conflicts
+   * on all immediate children.  Some of these may be visited later in this
+   * walk, at which point they will be removed from the list, while any that
+   * are not visited will remain in the list. */
+  if (kind == svn_node_dir)
+    {
+      apr_hash_t *conflicts;
+      apr_hash_index_t *hi;
+
+      SVN_ERR(svn_wc__db_op_read_all_tree_conflicts(
+                &conflicts, fe_baton->db, local_abspath,
+                apr_hash_pool_get(fe_baton->tree_conflicts), pool));
+      for (hi = apr_hash_first(pool, conflicts); hi;
+           hi = apr_hash_next(hi))
+        {
+          const char *this_basename = svn__apr_hash_index_key(hi);
+
+          apr_hash_set(fe_baton->tree_conflicts,
+                       svn_dirent_join(local_abspath, this_basename, pool),
+                       APR_HASH_KEY_STRING, svn__apr_hash_index_val(hi));
+        }
+    }
+
+  /* Delete this path which we are currently visiting from the list of tree
+   * conflicts.  This relies on the walker visiting a directory before visiting
+   * its children. */
+  apr_hash_set(fe_baton->tree_conflicts, local_abspath, APR_HASH_KEY_STRING,
+               NULL);
+
   return SVN_NO_ERROR;
+}
+
+
+/* Return TRUE iff the subtree at ROOT_ABSPATH, restricted to depth DEPTH,
+ * would include the path CHILD_ABSPATH of kind CHILD_KIND. */
+static svn_boolean_t
+depth_includes(const char *root_abspath,
+               svn_depth_t depth,
+               const char *child_abspath,
+               svn_node_kind_t child_kind,
+               apr_pool_t *scratch_pool)
+{
+  const char *parent_abspath = svn_dirent_dirname(child_abspath, scratch_pool);
+
+  return (depth == svn_depth_infinity
+          || ((depth == svn_depth_immediates
+               || (depth == svn_depth_files && child_kind == svn_node_file))
+              && strcmp(root_abspath, parent_abspath) == 0)
+          || strcmp(root_abspath, child_abspath) == 0);
 }
 
 
@@ -327,11 +355,24 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
                  apr_pool_t *scratch_pool)
 {
   struct found_entry_baton fe_baton;
+  const svn_wc_conflict_description2_t *root_tree_conflict;
   svn_error_t *err;
+  apr_pool_t *iterpool;
+  apr_hash_index_t *hi;
 
   fe_baton.receiver = receiver;
   fe_baton.receiver_baton = receiver_baton;
   fe_baton.db = wc_ctx->db;
+  fe_baton.tree_conflicts = apr_hash_make(scratch_pool);
+
+  SVN_ERR(svn_wc__db_op_read_tree_conflict(&root_tree_conflict,
+                                           wc_ctx->db, local_abspath,
+                                           scratch_pool, scratch_pool));
+  if (root_tree_conflict)
+    {
+      apr_hash_set(fe_baton.tree_conflicts, local_abspath, APR_HASH_KEY_STRING,
+                   root_tree_conflict);
+    }
 
   err = svn_wc__internal_walk_children(wc_ctx->db, local_abspath,
                                        FALSE /* show_hidden */,
@@ -342,18 +383,46 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
                                        scratch_pool);
 
   /* If the target root node is not present, svn_wc__internal_walk_children()
-     returns a PATH_NOT_FOUND error and doesn't call the callback.  In this
-     case, check for a tree conflict on this node, and if there
-     is one, send a minimal info struct. */
-  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-    {
-      svn_error_clear(err);
-
-      SVN_ERR(info_found_node_callback(local_abspath, svn_node_none, &fe_baton,
-                                       scratch_pool));
-    }
+     returns a PATH_NOT_FOUND error and doesn't call the callback.  If there
+     is a tree conflict on this node, that is not an error. */
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND && root_tree_conflict)
+    svn_error_clear(err);
   else if (err)
     return svn_error_return(err);
+
+  /* If there are any tree conflicts that we have found but have not reported,
+   * send a minimal info struct for each one now. */
+  iterpool = svn_pool_create(scratch_pool);
+  for (hi = apr_hash_first(scratch_pool, fe_baton.tree_conflicts); hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *this_abspath = svn__apr_hash_index_key(hi);
+      const svn_wc_conflict_description2_t *tree_conflict
+        = svn__apr_hash_index_val(hi);
+
+      svn_pool_clear(iterpool);
+
+      if (depth_includes(local_abspath, depth, tree_conflict->local_abspath,
+                         tree_conflict->kind, iterpool))
+        {
+          apr_array_header_t *conflicts = apr_array_make(iterpool,
+            1, sizeof(const svn_wc_conflict_description2_t *));
+          svn_info2_t *info;
+
+          SVN_ERR(build_info_for_unversioned(&info, iterpool));
+          SVN_ERR(svn_wc__internal_get_repos_info(&(info->repos_root_URL),
+                                                  NULL,
+                                                  fe_baton.db,
+                                                  local_abspath, FALSE, FALSE,
+                                                  iterpool, iterpool));
+          APR_ARRAY_PUSH(conflicts, const svn_wc_conflict_description2_t *)
+            = tree_conflict;
+          info->wc_info->conflicts = conflicts;
+
+          SVN_ERR(receiver(receiver_baton, this_abspath, info, iterpool));
+        }
+    }
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
