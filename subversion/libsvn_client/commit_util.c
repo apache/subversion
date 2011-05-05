@@ -803,7 +803,8 @@ handle_descendants(void *baton,
                                                 iterpool);
 
               SVN_ERR(hdb->check_url_func(hdb->check_url_baton,
-                                          &kind, from_url, iterpool));
+                                          &kind, from_url, item->copyfrom_rev,
+                                          iterpool));
 
               if (kind == svn_node_none)
                 continue; /* This node is already deleted */

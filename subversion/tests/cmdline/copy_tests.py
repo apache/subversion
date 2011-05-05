@@ -1583,11 +1583,9 @@ def wc_to_wc_copy_deleted(sbox):
                         copied=None, wc_rev=3)
   expected_output = svntest.wc.State(wc_dir, {
     'A/B2'         : Item(verb='Adding'),
-    # Before the commit processor verified not-present deletes
-    # the output would also contain
-    # 'A/B2/E/alpha' : Item(verb='Deleting'),
-    # 'A/B2/lambda'  : Item(verb='Deleting'),
-    # 'A/B2/F'       : Item(verb='Deleting'),
+    'A/B2/E/alpha' : Item(verb='Deleting'),
+    'A/B2/lambda'  : Item(verb='Deleting'),
+    'A/B2/F'       : Item(verb='Deleting'),
     })
 
   svntest.actions.run_and_verify_commit(wc_dir,
