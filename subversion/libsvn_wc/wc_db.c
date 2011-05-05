@@ -2480,8 +2480,8 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
         {
           *copyfrom_relpath
             = svn_relpath_join(*copyfrom_relpath,
-                               svn_dirent_skip_ancestor(op_root_relpath,
-                                                        local_relpath),
+                               svn_relpath_skip_ancestor(op_root_relpath,
+                                                         local_relpath),
                                result_pool);
         }
     }
@@ -2507,8 +2507,8 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
                                 scratch_pool, scratch_pool));
           *copyfrom_relpath
             = svn_relpath_join(*copyfrom_relpath,
-                               svn_dirent_skip_ancestor(op_root_relpath,
-                                                        local_relpath),
+                               svn_relpath_skip_ancestor(op_root_relpath,
+                                                         local_relpath),
                                result_pool);
         }
       else if (base_del_relpath)
@@ -2517,7 +2517,7 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
                                 copyfrom_id,
                                 NULL, NULL, NULL, NULL, NULL,
                                 NULL, NULL, NULL, NULL, NULL,
-                                wcroot, base_del_relpath,
+                                wcroot, local_relpath,
                                 result_pool, scratch_pool));
         }
       else
