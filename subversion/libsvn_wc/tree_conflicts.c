@@ -432,6 +432,7 @@ svn_wc__get_all_tree_conflicts(apr_hash_t **tree_conflicts,
 {
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
+  /* ### BUG: uses basenames as keys; supposed to be abspaths. */
   SVN_ERR(svn_wc__db_op_read_all_tree_conflicts(tree_conflicts, wc_ctx->db,
                                                 local_abspath,
                                                 result_pool, scratch_pool));
