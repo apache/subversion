@@ -202,13 +202,6 @@ Candidate changes:
      +1: pburba
      -0: danielsh (authz concerns on the original fix)
 
- * ^/subversion/branches/1.6.x-r1072084
-   svn: preserve the log message when the editor exited non-zero.
-   Justification:
-     Data loss --- I already lost two log messages to this bug.
-   Votes:
-     +1: danielsh, stsp
-
  * r1074572
    Allow building on Windows with a recent Expat.
    Justification:
@@ -238,7 +231,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.6.x-issue3816
    Votes:
-     +1: stsp
+     +1: stsp, pburba
 
  * r1085001, r992114, r1084962, r1084978
    Fix issue #3843, "file externals cause non-inheritable mergeinfo"
@@ -272,7 +265,7 @@ Candidate changes:
      off-the-branch build and not a blessed release.
      http://mid.gmane.org/25D5DB7A-AD59-4B48-8BA1-2D3D034C4C7A@ryandesign.com
    Votes: 
-     +1: danielsh
+     +1: danielsh, pburba
 
  * r1091881
    Fix issue #3853, "svn cleanup fails with obstructed directories"
@@ -281,7 +274,7 @@ Candidate changes:
      copies containing obstructing directories is a huge hassle.
    Branch: ^/subversion/branches/1.6.x-issue3853
    Votes:
-     +1: stsp
+     +1: stsp, pburba
   
 
 Veto-blocked changes:
@@ -395,3 +388,11 @@ Approved changes:
                  that are currently nominated...so my +1 is conditional on
                  that fix being applied first.)
      +1: danielsh (pburba: a fix to #3641 was committed to trunk)
+
+ * ^/subversion/branches/1.6.x-r1072084
+   svn: preserve the log message when the editor exited non-zero.
+   Justification:
+     Data loss --- I already lost two log messages to this bug.
+   Votes:
+     +1: danielsh, stsp, pburba
+
