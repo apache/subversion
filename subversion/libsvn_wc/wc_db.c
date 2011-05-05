@@ -4748,9 +4748,14 @@ op_delete_txn(void *baton,
   return SVN_NO_ERROR;
 }
 
+
 svn_error_t *
 svn_wc__db_op_delete(svn_wc__db_t *db,
                      const char *local_abspath,
+                     svn_wc_notify_func2_t notify_func,
+                     void *notify_baton,
+                     svn_cancel_func_t cancel_func,
+                     void *cancel_baton,
                      apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
@@ -4765,30 +4770,16 @@ svn_wc__db_op_delete(svn_wc__db_t *db,
 
   b.delete_depth = relpath_depth(local_relpath);
 
+  /* ### fix up the code below: if we call op_delete_txn(), then the
+     ### 'delete_list' table may exist. We should ensure it gets dropped
+     ### before we exit this function.  */
+
   SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, op_delete_txn, &b,
                               scratch_pool));
-
   SVN_ERR(flush_entries(wcroot, local_abspath, scratch_pool));
 
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_wc__db_delete_list_notify(svn_wc_notify_func2_t notify_func,
-                              void *notify_baton,
-                              svn_wc__db_t *db,
-                              const char *local_abspath,
-                              apr_pool_t *scratch_pool)
-{
-  svn_wc__db_wcroot_t *wcroot;
-  const char *local_relpath;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
-                              db, local_abspath, scratch_pool, scratch_pool));
-  VERIFY_USABLE_WCROOT(wcroot);
-
+  /* Now that we're outside of the SQLite transaction, we want to process
+     the deletion notification list, then dump the table.  */
   if (notify_func)
     {
       svn_sqlite__stmt_t *stmt;
@@ -4804,6 +4795,10 @@ svn_wc__db_delete_list_notify(svn_wc_notify_func2_t notify_func,
           const char *notify_abspath = svn_dirent_join(wcroot->abspath,
                                                        notify_relpath,
                                                        iterpool);
+
+          if (cancel_func)
+            SVN_ERR(cancel_func(cancel_baton));
+
           notify_func(notify_baton,
                       svn_wc_create_notify(notify_abspath,
                                            svn_wc_notify_delete,
