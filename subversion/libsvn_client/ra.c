@@ -193,9 +193,14 @@ set_wc_prop(void *baton,
      right, but the conflict would remind the user to make sure.
      Unfortunately, we don't have a clean mechanism for doing that
      here, so we just set the property and hope for the best. */
-  return svn_error_return(svn_wc_prop_set4(cb->ctx->wc_ctx, local_abspath, name,
-                                           value, svn_depth_empty, TRUE, NULL,
-                                           NULL, NULL, pool));
+  return svn_error_return(svn_wc_prop_set4(cb->ctx->wc_ctx, local_abspath,
+                                           name,
+                                           value, svn_depth_empty,
+                                           TRUE /* skip_checks */,
+                                           NULL /* changelist_filter */,
+                                           NULL, NULL /* cancellation */,
+                                           NULL, NULL /* notification */,
+                                           pool));
 }
 
 

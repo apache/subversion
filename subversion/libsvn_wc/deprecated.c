@@ -2234,10 +2234,16 @@ svn_wc_prop_set3(const char *name,
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
-                                         svn_wc__adm_get_db(adm_access), pool));
+                                         svn_wc__adm_get_db(adm_access),
+                                         pool));
 
-  err = svn_wc_prop_set4(wc_ctx, local_abspath, name, value, svn_depth_empty,
-                         skip_checks, NULL, notify_func, notify_baton, pool);
+  err = svn_wc_prop_set4(wc_ctx, local_abspath,
+                         name, value,
+                         svn_depth_empty,
+                         skip_checks, NULL /* changelist_filter */,
+                         NULL, NULL /* cancellation */,
+                         notify_func, notify_baton,
+                         pool);
 
   if (err && err->apr_err == SVN_ERR_WC_INVALID_SCHEDULE)
     svn_error_clear(err);

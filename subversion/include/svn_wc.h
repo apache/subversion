@@ -5817,6 +5817,10 @@ svn_wc_prop_get(const svn_string_t **value,
  * of one of those changelists.  If @a changelist_filter is empty (or
  * altogether @c NULL), no changelist filtering occurs.
  *
+ * If @a cancel_func is non-NULL, then it will be invoked (with the
+ * @a cancel_baton value passed) during the processing of the property
+ * set (i.e. when @a depth indicates some amount of recursion).
+ *
  * For each file or directory operated on, @a notify_func will be called
  * with its path and the @a notify_baton.  @a notify_func may be @c NULL
  * if you are not interested in this information.
@@ -5833,12 +5837,15 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
                  svn_depth_t depth,
                  svn_boolean_t skip_checks,
                  const apr_array_header_t *changelist_filter,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
                  svn_wc_notify_func2_t notify_func,
                  void *notify_baton,
                  apr_pool_t *scratch_pool);
 
 /** Similar to svn_wc_prop_set4(), but with a #svn_wc_adm_access_t /
- * relative path parameter pair.
+ * relative path parameter pair, no @a depth parameter, no changelist
+ * filtering (for the depth-based property setting), and no cancelation.
  *
  * @since New in 1.6.
  * @deprecated Provided for backwards compatibility with the 1.6 API.

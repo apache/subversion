@@ -258,7 +258,7 @@ struct set_props_baton
   const char *propname;
   const svn_string_t *propval;
   svn_boolean_t skip_checks;
-  const apr_array_header_t *changelists;
+  const apr_array_header_t *changelist_filter;
 };
 
 /* Working copy lock callback for svn_client_propset4 */
@@ -271,8 +271,10 @@ set_props_cb(void *baton,
 
   SVN_ERR(svn_wc_prop_set4(bt->ctx->wc_ctx, bt->local_abspath, bt->propname,
                            bt->propval, bt->depth, bt->skip_checks,
-                           bt->changelists, bt->ctx->notify_func2,
-                           bt->ctx->notify_baton2, scratch_pool));
+                           bt->changelist_filter,
+                           bt->ctx->cancel_func, bt->ctx->cancel_baton,
+                           bt->ctx->notify_func2, bt->ctx->notify_baton2,
+                           scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -379,7 +381,7 @@ svn_client_propset_local(const char *propname,
       baton.propname = propname;
       baton.propval = propval;
       baton.skip_checks = skip_checks;
-      baton.changelists = changelists;
+      baton.changelist_filter = changelists;
 
       SVN_ERR(svn_wc__call_with_write_lock(set_props_cb, &baton,
                                            ctx->wc_ctx, target_abspath,
