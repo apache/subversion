@@ -1172,7 +1172,11 @@ typedef enum svn_wc_notify_action_t
 
   /** The operation was attempted on a path which doesn't exist.
    * @since New in 1.7. */
-  svn_wc_notify_path_nonexistent
+  svn_wc_notify_path_nonexistent,
+
+  /** Removing a path by excluding it.
+   * @since New in 1.7. */
+  svn_wc_notify_exclude
 
 } svn_wc_notify_action_t;
 

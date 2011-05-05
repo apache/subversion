@@ -301,7 +301,7 @@ svn_wc_exclude(svn_wc_context_t *wc_ctx,
     {
       svn_wc_notify_t *notify;
       notify = svn_wc_create_notify(local_abspath,
-                                    svn_wc_notify_delete,
+                                    svn_wc_notify_exclude,
                                     scratch_pool);
       notify_func(notify_baton, notify, scratch_pool);
     }
