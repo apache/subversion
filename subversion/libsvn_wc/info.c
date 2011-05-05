@@ -410,8 +410,8 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
           svn_info2_t *info;
 
           SVN_ERR(build_info_for_unversioned(&info, iterpool));
-          SVN_ERR(svn_wc__internal_get_repos_info(&(info->repos_root_URL),
-                                                  NULL,
+          SVN_ERR(svn_wc__internal_get_repos_info(&info->repos_root_URL,
+                                                  &info->repos_UUID,
                                                   fe_baton.db,
                                                   local_abspath, FALSE, FALSE,
                                                   iterpool, iterpool));
