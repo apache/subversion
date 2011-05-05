@@ -112,14 +112,9 @@ public class Status implements java.io.Serializable
     private boolean fileExternal;
 
     /**
-     * is this item in a tree conflicted state
+     * is this item in a conflicted state
      */
-    private boolean treeConflicted;
-
-    /**
-     * description of the tree conflict
-     */
-    private ConflictDescriptor conflictDescriptor;
+    private boolean isConflicted;
 
     /**
      * the file or directory status of base (See StatusKind)
@@ -130,24 +125,6 @@ public class Status implements java.io.Serializable
      * the status of the properties base (See StatusKind)
      */
     private Kind repositoryPropStatus;
-
-    /**
-     * if there is a conflict, the filename of the new version
-     * from the repository
-     */
-    private String conflictNew;
-
-    /**
-     * if there is a conflict, the filename of the common base version
-     * from the repository
-     */
-    private String conflictOld;
-
-    /**
-     * if there is a conflict, the filename of the former working copy
-     * version
-     */
-    private String conflictWorking;
 
     /**
      * if copied, the url of the copy source
@@ -231,7 +208,7 @@ public class Status implements java.io.Serializable
      * @param locked                if the item is locked (running or aborted
      *                              operation)
      * @param copied                if the item is copy
-     * @param treeConflicted        if the item is part of a tree conflict
+     * @param isConflicted          if the item is part of a conflict
      * @param conflictDescriptor    the description of the tree conflict
      * @param conflictOld           in case of conflict, the file name of the
      *                              the common base version
@@ -263,9 +240,7 @@ public class Status implements java.io.Serializable
                   long lastChangedRevision, long lastChangedDate,
                   String lastCommitAuthor, Kind textStatus, Kind propStatus,
                   Kind repositoryTextStatus, Kind repositoryPropStatus,
-                  boolean locked, boolean copied, boolean treeConflicted,
-                  ConflictDescriptor conflictDescriptor, String conflictOld,
-                  String conflictNew, String conflictWorking,
+                  boolean locked, boolean copied, boolean isConflicted,
                   String urlCopiedFrom, long revisionCopiedFrom,
                   boolean switched, boolean fileExternal, String lockToken,
                   String lockOwner, String lockComment, long lockCreationDate,
@@ -284,13 +259,9 @@ public class Status implements java.io.Serializable
         this.propStatus = propStatus;
         this.locked = locked;
         this.copied = copied;
-        this.treeConflicted = treeConflicted;
-        this.conflictDescriptor = conflictDescriptor;
+        this.isConflicted = isConflicted;
         this.repositoryTextStatus = repositoryTextStatus;
         this.repositoryPropStatus = repositoryPropStatus;
-        this.conflictOld = conflictOld;
-        this.conflictNew = conflictNew;
-        this.conflictWorking = conflictWorking;
         this.urlCopiedFrom = urlCopiedFrom;
         this.revisionCopiedFrom = revisionCopiedFrom;
         this.switched = switched;
@@ -435,35 +406,6 @@ public class Status implements java.io.Serializable
     public boolean isCopied()
     {
         return copied;
-    }
-
-    /**
-     * Returns in case of conflict, the filename of the most recent repository
-     * version
-     * @return the filename of the most recent repository version
-     */
-    public String getConflictNew()
-    {
-        return conflictNew;
-    }
-
-    /**
-     * Returns in case of conflict, the filename of the common base version
-     * @return the filename of the common base version
-     */
-    public String getConflictOld()
-    {
-        return conflictOld;
-    }
-
-    /**
-     * Returns in case of conflict, the filename of the former working copy
-     * version
-     * @return the filename of the former working copy version
-     */
-    public String getConflictWorking()
-    {
-        return conflictWorking;
     }
 
     /**
@@ -739,19 +681,11 @@ public class Status implements java.io.Serializable
     }
 
     /**
-     * @return the tree conflicted state
+     * @return the conflicted state
      */
-    public boolean hasTreeConflict()
+    public boolean isConflicted()
     {
-        return treeConflicted;
-    }
-
-    /**
-     * @return the conflict descriptor for the tree conflict
-     */
-    public ConflictDescriptor getConflictDescriptor()
-    {
-        return conflictDescriptor;
+        return isConflicted;
     }
 
     /**
