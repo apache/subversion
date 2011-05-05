@@ -2217,6 +2217,8 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
                  svn_depth_t depth,
                  svn_boolean_t skip_checks,
                  const apr_array_header_t *changelist_filter,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
                  svn_wc_notify_func2_t notify_func,
                  void *notify_baton,
                  apr_pool_t *scratch_pool)
@@ -2281,7 +2283,7 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
                                              FALSE, changelist_filter,
                                              propset_walk_cb, &wb,
                                              depth,
-                                             NULL, NULL,  /* cancellation */
+                                             cancel_func, cancel_baton,
                                              scratch_pool));
     }
 

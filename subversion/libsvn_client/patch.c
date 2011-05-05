@@ -2223,8 +2223,9 @@ install_patched_prop_targets(patch_target_t *target,
             SVN_ERR(svn_wc_prop_set4(ctx->wc_ctx, target->local_abspath,
                                      prop_target->name, NULL, svn_depth_empty,
                                      TRUE /* skip_checks */,
-                                     NULL, /* no changelist filtering */
-                                     NULL, NULL, /* suppress notification */
+                                     NULL /* changelist_filter */,
+                                     NULL, NULL /* cancellation */,
+                                     NULL, NULL /* notification */,
                                      iterpool));
           continue;
         }
@@ -2299,8 +2300,10 @@ install_patched_prop_targets(patch_target_t *target,
         {
           err = (svn_wc_prop_set4(ctx->wc_ctx, target->local_abspath,
                                   prop_target->name, prop_val, svn_depth_empty,
-                                  TRUE, /* ### Skipping checks */
-                                  NULL, NULL, NULL,
+                                  TRUE /* skip_checks */,
+                                  NULL /* changelist_filter */,
+                                  NULL, NULL /* cancellation */,
+                                  NULL, NULL /* notification */,
                                   iterpool));
         }
 
