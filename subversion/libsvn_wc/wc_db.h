@@ -1848,7 +1848,7 @@ svn_wc__db_read_conflict_victims(const apr_array_header_t **victims,
 
    Victim must be versioned or be part of a tree conflict.
 
-   Allocate *VICTIMS in RESULT_POOL and do temporary allocations in
+   Allocate *CONFLICTS in RESULT_POOL and do temporary allocations in
    SCRATCH_POOL */
 /* ### Currently there can be just one property conflict recorded
        per victim */
