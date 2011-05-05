@@ -190,6 +190,30 @@ copy_pristine_text_if_necessary(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+/* Copy the versioned node SRC_ABSPATH in DB to the path DST_ABSPATH in DB.
+
+   This is a specific variant of copy_versioned_file and copy_versioned_dir
+   specifically handling deleted nodes.
+ */
+static svn_error_t *
+copy_deleted_node(svn_wc__db_t *db,
+                  const char *src_abspath,
+                  const char *dst_abspath,
+                  const char *dst_op_root_abspath,
+                  svn_cancel_func_t cancel_func,
+                  void *cancel_baton,
+                  svn_wc_notify_func2_t notify_func,
+                  void *notify_baton,
+                  apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_wc__db_op_copy(db, src_abspath, dst_abspath, dst_op_root_abspath,
+                             NULL, scratch_pool));
+
+  /* Don't recurse on children while all we do is creating not-present
+     children */
+
+  return SVN_NO_ERROR;
+}
 
 /* Copy the versioned file SRC_ABSPATH in DB to the path DST_ABSPATH in DB.
    If METADATA_ONLY is true, copy only the versioned metadata,
@@ -378,7 +402,9 @@ copy_versioned_dir(svn_wc__db_t *db,
   for (i = 0; i < versioned_children->nelts; ++i)
     {
       const char *child_name, *child_src_abspath, *child_dst_abspath;
+      svn_wc__db_status_t child_status;
       svn_wc__db_kind_t child_kind;
+      svn_boolean_t op_root;
 
       svn_pool_clear(iterpool);
       if (cancel_func)
@@ -388,32 +414,61 @@ copy_versioned_dir(svn_wc__db_t *db,
       child_src_abspath = svn_dirent_join(src_abspath, child_name, iterpool);
       child_dst_abspath = svn_dirent_join(dst_abspath, child_name, iterpool);
 
-      SVN_ERR(svn_wc__db_read_kind(&child_kind, db, child_src_abspath,
-                                   TRUE, iterpool));
+      SVN_ERR(svn_wc__db_read_info(&child_status, &child_kind, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, &op_root, NULL, NULL,
+                                   NULL, NULL, NULL,
+                                   db, child_src_abspath,
+                                   iterpool, iterpool));
 
-      if (child_kind == svn_wc__db_kind_file)
-        SVN_ERR(copy_versioned_file(db,
+      if (child_status == svn_wc__db_status_normal
+          || child_status == svn_wc__db_status_added
+          || child_status == svn_wc__db_status_incomplete)
+        {
+          if (child_kind == svn_wc__db_kind_file)
+            SVN_ERR(copy_versioned_file(db,
+                                        child_src_abspath, child_dst_abspath,
+                                        dst_op_root_abspath,
+                                        metadata_only,
+                                        cancel_func, cancel_baton, NULL, NULL,
+                                        iterpool));
+          else if (child_kind == svn_wc__db_kind_dir)
+            SVN_ERR(copy_versioned_dir(db,
+                                       child_src_abspath, child_dst_abspath,
+                                       dst_op_root_abspath,
+                                       metadata_only,
+                                       cancel_func, cancel_baton, NULL, NULL,
+                                       iterpool));
+          else
+            return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
+                                     _("cannot handle node kind for '%s'"),
+                                     svn_dirent_local_style(child_src_abspath,
+                                                            scratch_pool));
+        }
+      else if (child_status == svn_wc__db_status_deleted
+               || child_status == svn_wc__db_status_not_present
+               || child_status == svn_wc__db_status_excluded)
+        {
+          SVN_ERR(copy_deleted_node(db,
                                     child_src_abspath, child_dst_abspath,
                                     dst_op_root_abspath,
-                                    metadata_only,
                                     cancel_func, cancel_baton, NULL, NULL,
                                     iterpool));
-      else if (child_kind == svn_wc__db_kind_dir)
-        SVN_ERR(copy_versioned_dir(db,
-                                   child_src_abspath, child_dst_abspath,
-                                   dst_op_root_abspath,
-                                   metadata_only,
-                                   cancel_func, cancel_baton, NULL, NULL,
-                                   iterpool));
+        }
       else
-        return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
-                                 _("cannot handle node kind for '%s'"),
-                                 svn_dirent_local_style(child_src_abspath,
-                                                        scratch_pool));
+        {
+          /* Absent nodes should have been handled before we reach this */
+           SVN_ERR_MALFUNCTION(); 
+        }
 
-      if (disk_children)
-        /* Remove versioned child as it has been handled */
-        apr_hash_set(disk_children, child_name, APR_HASH_KEY_STRING, NULL);
+      if (disk_children
+          && (child_status == svn_wc__db_status_normal
+              || child_status == svn_wc__db_status_added))
+        {
+          /* Remove versioned child as it has been handled */
+          apr_hash_set(disk_children, child_name, APR_HASH_KEY_STRING, NULL);
+        }
     }
 
   /* Copy all the remaining filesystem children, which are unversioned. */
