@@ -519,7 +519,7 @@ svn_wc_diff6(svn_wc_context_t *wc_ctx,
              svn_boolean_t ignore_ancestry,
              svn_boolean_t show_copies_as_adds,
              svn_boolean_t use_git_diff_format,
-             const apr_array_header_t *changelists,
+             const apr_array_header_t *changelist_filter,
              svn_cancel_func_t cancel_func,
              void *cancel_baton,
              apr_pool_t *scratch_pool)
@@ -546,8 +546,8 @@ svn_wc_diff6(svn_wc_context_t *wc_ctx,
   eb.empty_file = NULL;
   eb.pool = scratch_pool;
 
-  if (changelists && changelists->nelts)
-    SVN_ERR(svn_hash_from_cstring_keys(&eb.changelist_hash, changelists,
+  if (changelist_filter && changelist_filter->nelts)
+    SVN_ERR(svn_hash_from_cstring_keys(&eb.changelist_hash, changelist_filter,
                                        scratch_pool));
 
   if (show_copies_as_adds || use_git_diff_format)

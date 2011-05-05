@@ -321,7 +321,7 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
                  svn_depth_t depth,
                  svn_info_receiver2_t receiver,
                  void *receiver_baton,
-                 const apr_array_header_t *changelists,
+                 const apr_array_header_t *changelist_filter,
                  svn_cancel_func_t cancel_func,
                  void *cancel_baton,
                  apr_pool_t *scratch_pool)
@@ -333,10 +333,13 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
   fe_baton.receiver_baton = receiver_baton;
   fe_baton.db = wc_ctx->db;
 
-  err = svn_wc__internal_walk_children(wc_ctx->db, local_abspath, FALSE,
-                                       changelists, info_found_node_callback,
-                                       &fe_baton, depth, cancel_func,
-                                       cancel_baton, scratch_pool);
+  err = svn_wc__internal_walk_children(wc_ctx->db, local_abspath,
+                                       FALSE /* show_hidden */,
+                                       changelist_filter,
+                                       info_found_node_callback,
+                                       &fe_baton, depth,
+                                       cancel_func, cancel_baton,
+                                       scratch_pool);
 
   /* If the target root node is not present, svn_wc__internal_walk_children()
      returns a PATH_NOT_FOUND error and doesn't call the callback.  In this

@@ -2216,7 +2216,7 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
                  const svn_string_t *value,
                  svn_depth_t depth,
                  svn_boolean_t skip_checks,
-                 const apr_array_header_t *changelists,
+                 const apr_array_header_t *changelist_filter,
                  svn_wc_notify_func2_t notify_func,
                  void *notify_baton,
                  apr_pool_t *scratch_pool)
@@ -2257,8 +2257,8 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
     {
       apr_hash_t *changelist_hash = NULL;
 
-      if (changelists && changelists->nelts)
-        SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelists,
+      if (changelist_filter && changelist_filter->nelts)
+        SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelist_filter,
                                            scratch_pool));
 
       if (!svn_wc__internal_changelist_match(wc_ctx->db, local_abspath,
@@ -2278,7 +2278,7 @@ svn_wc_prop_set4(svn_wc_context_t *wc_ctx,
                                        notify_func, notify_baton };
 
       SVN_ERR(svn_wc__internal_walk_children(wc_ctx->db, local_abspath,
-                                             FALSE, changelists,
+                                             FALSE, changelist_filter,
                                              propset_walk_cb, &wb,
                                              depth,
                                              NULL, NULL,  /* cancellation */

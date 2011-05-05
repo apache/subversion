@@ -927,7 +927,7 @@ svn_wc_revert3(const char *path,
                svn_wc_adm_access_t *parent_access,
                svn_depth_t depth,
                svn_boolean_t use_commit_times,
-               const apr_array_header_t *changelists,
+               const apr_array_header_t *changelist_filter,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
                svn_wc_notify_func2_t notify_func,
@@ -945,7 +945,7 @@ svn_wc_revert3(const char *path,
                          local_abspath,
                          depth,
                          use_commit_times,
-                         changelists,
+                         changelist_filter,
                          cancel_func, cancel_baton,
                          notify_func, notify_baton,
                          pool));
@@ -1852,7 +1852,7 @@ svn_wc_get_diff_editor5(svn_wc_adm_access_t *anchor,
                         svn_boolean_t reverse_order,
                         svn_cancel_func_t cancel_func,
                         void *cancel_baton,
-                        const apr_array_header_t *changelists,
+                        const apr_array_header_t *changelist_filter,
                         const svn_delta_editor_t **editor,
                         void **edit_baton,
                         apr_pool_t *pool)
@@ -1881,7 +1881,7 @@ svn_wc_get_diff_editor5(svn_wc_adm_access_t *anchor,
                                    use_text_base,
                                    reverse_order,
                                    FALSE,
-                                   changelists,
+                                   changelist_filter,
                                    &diff_callbacks3_wrapper,
                                    b,
                                    cancel_func,
@@ -1905,7 +1905,7 @@ svn_wc_get_diff_editor4(svn_wc_adm_access_t *anchor,
                         svn_boolean_t reverse_order,
                         svn_cancel_func_t cancel_func,
                         void *cancel_baton,
-                        const apr_array_header_t *changelists,
+                        const apr_array_header_t *changelist_filter,
                         const svn_delta_editor_t **editor,
                         void **edit_baton,
                         apr_pool_t *pool)
@@ -1923,7 +1923,7 @@ svn_wc_get_diff_editor4(svn_wc_adm_access_t *anchor,
                                  reverse_order,
                                  cancel_func,
                                  cancel_baton,
-                                 changelists,
+                                 changelist_filter,
                                  editor,
                                  edit_baton,
                                  pool);
@@ -2012,7 +2012,7 @@ svn_wc_diff5(svn_wc_adm_access_t *anchor,
              void *callback_baton,
              svn_depth_t depth,
              svn_boolean_t ignore_ancestry,
-             const apr_array_header_t *changelists,
+             const apr_array_header_t *changelist_filter,
              apr_pool_t *pool)
 {
   struct diff_callbacks3_wrapper_baton *b = apr_palloc(pool, sizeof(*b));
@@ -2034,7 +2034,7 @@ svn_wc_diff5(svn_wc_adm_access_t *anchor,
                        ignore_ancestry,
                        FALSE,
                        FALSE,
-                       changelists,
+                       changelist_filter,
                        NULL, NULL,
                        pool));
 
@@ -2048,7 +2048,7 @@ svn_wc_diff4(svn_wc_adm_access_t *anchor,
              void *callback_baton,
              svn_depth_t depth,
              svn_boolean_t ignore_ancestry,
-             const apr_array_header_t *changelists,
+             const apr_array_header_t *changelist_filter,
              apr_pool_t *pool)
 {
   struct diff_callbacks2_wrapper_baton *b = apr_palloc(pool, sizeof(*b));
@@ -2056,7 +2056,7 @@ svn_wc_diff4(svn_wc_adm_access_t *anchor,
   b->baton = callback_baton;
 
   return svn_wc_diff5(anchor, target, &diff_callbacks2_wrapper, b,
-                      depth, ignore_ancestry, changelists, pool);
+                      depth, ignore_ancestry, changelist_filter, pool);
 }
 
 svn_error_t *

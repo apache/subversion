@@ -335,7 +335,7 @@ struct file_baton {
  * against working files or text-bases.  REVERSE_ORDER defines which
  * direction to perform the diff.
  *
- * CHANGELISTS is a list of const char * changelist names, used to
+ * CHANGELIST_FILTER is a list of const char * changelist names, used to
  * filter diff output responses to only those items in one of the
  * specified changelists, empty (or NULL altogether) if no changelist
  * filtering is requested.
@@ -353,7 +353,7 @@ make_edit_baton(struct edit_baton **edit_baton,
                 svn_boolean_t use_git_diff_format,
                 svn_boolean_t use_text_base,
                 svn_boolean_t reverse_order,
-                const apr_array_header_t *changelists,
+                const apr_array_header_t *changelist_filter,
                 svn_cancel_func_t cancel_func,
                 void *cancel_baton,
                 apr_pool_t *pool)
@@ -363,8 +363,9 @@ make_edit_baton(struct edit_baton **edit_baton,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(anchor_abspath));
 
-  if (changelists && changelists->nelts)
-    SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelists, pool));
+  if (changelist_filter && changelist_filter->nelts)
+    SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelist_filter,
+                                       pool));
 
   eb = apr_pcalloc(pool, sizeof(*eb));
   eb->db = db;
@@ -1881,7 +1882,7 @@ svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
                         svn_boolean_t use_text_base,
                         svn_boolean_t reverse_order,
                         svn_boolean_t server_performs_filtering,
-                        const apr_array_header_t *changelists,
+                        const apr_array_header_t *changelist_filter,
                         const svn_wc_diff_callbacks4_t *callbacks,
                         void *callback_baton,
                         svn_cancel_func_t cancel_func,
@@ -1902,7 +1903,7 @@ svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
                           callbacks, callback_baton,
                           depth, ignore_ancestry, show_copies_as_adds,
                           use_git_diff_format,
-                          use_text_base, reverse_order, changelists,
+                          use_text_base, reverse_order, changelist_filter,
                           cancel_func, cancel_baton,
                           result_pool));
 
