@@ -889,8 +889,10 @@ def run_and_parse_info(*args):
 
 def run_and_verify_info(expected_infos, *args):
   """Run 'svn info' with the arguments in *ARGS and verify the results
-  against expected_infos.  The latter should be a list of dicts (in the
-  same order as the targets).
+  against expected_infos.  The latter should be a list of dicts, one dict
+  per reported node, in the order in which the 'Path' fields of the output
+  will appear after sorting them as Python strings.  (The dicts in
+  EXPECTED_INFOS, however, need not have a 'Path' key.)
 
   In the dicts, each key is the before-the-colon part of the 'svn info' output,
   and each value is either None (meaning that the key should *not* appear in
@@ -900,6 +902,7 @@ def run_and_verify_info(expected_infos, *args):
   Return if successful, raise on failure."""
 
   actual_infos = run_and_parse_info(*args)
+  actual_infos.sort(key=lambda info: info['Path'])
 
   try:
     # zip() won't complain, so check this manually
