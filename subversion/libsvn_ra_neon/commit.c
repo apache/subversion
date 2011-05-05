@@ -553,6 +553,43 @@ static void record_prop_change(apr_pool_t *pool,
     }
 }
 
+/* Send a Neon COPY request to the location identified by
+   COPYFROM_PATH and COPYFROM_REVISION, using COPY_DST_URL as the
+   "Destination" of that copy. */
+static svn_error_t *copy_resource(svn_ra_neon__session_t *ras,
+                                  const char *copyfrom_path,
+                                  svn_revnum_t copyfrom_revision,
+                                  const char *copy_dst_url,
+                                  svn_boolean_t is_dir,
+                                  apr_pool_t *scratch_pool)
+{
+  svn_string_t bc_url, bc_relative;
+  const char *copy_src_url;
+
+  /* Convert the copyfrom_* url/rev "public" pair into a Baseline
+     Collection (BC) URL that represents the revision -- and a
+     relative path under that BC.  */
+  SVN_ERR(svn_ra_neon__get_baseline_info(NULL, &bc_url, &bc_relative, NULL,
+                                         ras, copyfrom_path,
+                                         copyfrom_revision, scratch_pool));
+
+  /* Combine the BC-URL and relative path; this is the main
+     "source" argument to the COPY request.  The "Destination:"
+     header given to COPY is simply the wr_url that is already
+     part of the file_baton. */
+  copy_src_url = svn_path_url_add_component2(bc_url.data,
+                                             bc_relative.data,
+                                             scratch_pool);
+
+  /* Have neon do the COPY. */
+  SVN_ERR(svn_ra_neon__copy(ras, 1 /* overwrite */,
+                            is_dir ? SVN_RA_NEON__DEPTH_INFINITE 
+                                   : SVN_RA_NEON__DEPTH_ZERO,
+                            copy_src_url, copy_dst_url, scratch_pool));
+  
+  return SVN_NO_ERROR;
+}
+
 /*
 A very long note about enforcing directory-up-to-dateness when
 proppatching, writ by Ben:
@@ -834,7 +871,6 @@ static svn_error_t * commit_delete_entry(const char *path,
 }
 
 
-
 static svn_error_t * commit_add_dir(const char *path,
                                     void *parent_baton,
                                     const char *copyfrom_path,
@@ -873,37 +909,9 @@ static svn_error_t * commit_add_dir(const char *path,
     }
   else
     {
-      svn_string_t bc_url, bc_relative;
-      const char *copy_src;
-
       /* This add has history, so we need to do a COPY. */
-
-      /* Convert the copyfrom_* url/rev "public" pair into a Baseline
-         Collection (BC) URL that represents the revision -- and a
-         relative path under that BC.  */
-      SVN_ERR(svn_ra_neon__get_baseline_info(NULL,
-                                             &bc_url, &bc_relative, NULL,
-                                             parent->cc->ras,
-                                             copyfrom_path,
-                                             copyfrom_revision,
-                                             workpool));
-
-
-      /* Combine the BC-URL and relative path; this is the main
-         "source" argument to the COPY request.  The "Destination:"
-         header given to COPY is simply the wr_url that is already
-         part of the child object. */
-      copy_src = svn_path_url_add_component2(bc_url.data,
-                                             bc_relative.data,
-                                             workpool);
-
-      /* Have neon do the COPY. */
-      SVN_ERR(svn_ra_neon__copy(parent->cc->ras,
-                                1,                   /* overwrite */
-                                SVN_RA_NEON__DEPTH_INFINITE, /* deep copy */
-                                copy_src,            /* source URI */
-                                child->rsrc->wr_url, /* dest URI */
-                                workpool));
+      SVN_ERR(copy_resource(parent->cc->ras, copyfrom_path, copyfrom_revision,
+                            child->rsrc->wr_url, TRUE, workpool));
 
       /* Remember that this object was copied. */
       child->copied = TRUE;
@@ -1074,38 +1082,9 @@ static svn_error_t * commit_add_file(const char *path,
     }
   else
     {
-      svn_string_t bc_url, bc_relative;
-      const char *copy_src;
-
       /* This add has history, so we need to do a COPY. */
-
-      /* Convert the copyfrom_* url/rev "public" pair into a Baseline
-         Collection (BC) URL that represents the revision -- and a
-         relative path under that BC.  */
-      SVN_ERR(svn_ra_neon__get_baseline_info(NULL,
-                                             &bc_url, &bc_relative, NULL,
-                                             parent->cc->ras,
-                                             copyfrom_path,
-                                             copyfrom_revision,
-                                             workpool));
-
-
-      /* Combine the BC-URL and relative path; this is the main
-         "source" argument to the COPY request.  The "Destination:"
-         header given to COPY is simply the wr_url that is already
-         part of the file_baton. */
-      copy_src = svn_path_url_add_component2(bc_url.data,
-                                             bc_relative.data,
-                                             workpool);
-
-      /* Have neon do the COPY. */
-      SVN_ERR(svn_ra_neon__copy(parent->cc->ras,
-                                1,               /* overwrite */
-                                SVN_RA_NEON__DEPTH_ZERO,
-                                                /* file: this doesn't matter */
-                                copy_src,        /* source URI */
-                                file->rsrc->wr_url,/* dest URI */
-                                workpool));
+      SVN_ERR(copy_resource(parent->cc->ras, copyfrom_path, copyfrom_revision,
+                            file->rsrc->wr_url, FALSE, workpool));
 
       /* Remember that this object was copied. */
       file->copied = TRUE;
