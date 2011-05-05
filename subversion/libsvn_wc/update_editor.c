@@ -2050,7 +2050,7 @@ add_directory(const char *path,
     {
       SVN_ERR(svn_wc__db_op_delete(eb->db, db->local_abspath,
                                    NULL, NULL /* notification */,
-                                   NULL, NULL /* cancellation */,
+                                   eb->cancel_func, eb->cancel_baton,
                                    pool));
     }
 
@@ -3967,7 +3967,7 @@ close_file(void *file_baton,
     {
       SVN_ERR(svn_wc__db_op_delete(eb->db, fb->local_abspath,
                                    NULL, NULL /* notification */,
-                                   NULL, NULL /* cancellation */,
+                                   eb->cancel_func, eb->cancel_baton,
                                    scratch_pool));
     }
 

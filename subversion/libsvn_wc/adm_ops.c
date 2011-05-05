@@ -738,8 +738,9 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
         break;
     }
 
-  SVN_ERR(svn_wc__db_op_delete(db, local_abspath, notify_func, notify_baton,
-                               NULL, NULL /* cancellation */,
+  SVN_ERR(svn_wc__db_op_delete(db, local_abspath,
+                               notify_func, notify_baton,
+                               cancel_func, cancel_baton,
                                pool));
 
   /* By the time we get here, anything that was scheduled to be added has
@@ -2274,7 +2275,7 @@ changelist_walker(const char *local_abspath,
                                        cwb->changelist_filter,
                                        svn_depth_empty,
                                        cwb->notify_func, cwb->notify_baton,
-                                       NULL, NULL /* cancellation */,
+                                       cwb->cancel_func, cwb->cancel_baton,
                                        scratch_pool));
 
   return SVN_NO_ERROR;
