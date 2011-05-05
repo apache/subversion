@@ -775,15 +775,13 @@ add_from_disk(svn_wc__db_t *db,
                                           scratch_pool));
 
       /* Remove any existing changelist on the prior node. */
-      SVN_ERR(svn_wc__db_op_set_changelist(db, local_abspath, NULL, NULL,
-                                           svn_depth_empty, scratch_pool));
-
-      /* And tell someone what we've done. */
-      if (notify_func)
-        SVN_ERR(svn_wc__db_changelist_list_notify(notify_func, notify_baton,
-                                                  db, local_abspath,
-                                                  scratch_pool));
-      /* ### else: Delete the list */
+      SVN_ERR(svn_wc__db_op_set_changelist(db, local_abspath,
+                                           NULL /* new_changelist */,
+                                           NULL /* changelist_filter */,
+                                           svn_depth_empty,
+                                           notify_func, notify_baton,
+                                           NULL, NULL /* cancellation */,
+                                           scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -2267,16 +2265,13 @@ changelist_walker(const char *local_abspath,
     }
 
   /* Set the changelist. */
-  SVN_ERR(svn_wc__db_op_set_changelist(cwb->db, local_abspath, cwb->changelist,
-                                       cwb->changelists, svn_depth_empty,
+  SVN_ERR(svn_wc__db_op_set_changelist(cwb->db, local_abspath,
+                                       cwb->changelist,
+                                       cwb->changelists,
+                                       svn_depth_empty,
+                                       cwb->notify_func, cwb->notify_baton,
+                                       NULL, NULL /* cancellation */,
                                        scratch_pool));
-
-  /* And tell someone what we've done. */
-  if (cwb->notify_func)
-    SVN_ERR(svn_wc__db_changelist_list_notify(cwb->notify_func,
-                                              cwb->notify_baton,
-                                              cwb->db, local_abspath,
-                                              scratch_pool));
 
   return SVN_NO_ERROR;
 }

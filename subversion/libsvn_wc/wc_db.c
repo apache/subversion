@@ -3567,6 +3567,10 @@ svn_wc__db_op_set_changelist(svn_wc__db_t *db,
                              const char *changelist,
                              const apr_array_header_t *changelists,
                              svn_depth_t depth,
+                             svn_wc_notify_func2_t notify_func,
+                             void *notify_baton,
+                             svn_cancel_func_t cancel_func,
+                             void *cancel_baton,
                              apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
@@ -3575,7 +3579,10 @@ svn_wc__db_op_set_changelist(svn_wc__db_t *db,
   struct with_triggers_baton_t wtb = { STMT_CREATE_CHANGELIST_LIST,
                                        STMT_DROP_CHANGELIST_LIST_TRIGGERS,
                                        NULL, NULL };
-  wtb.cb_baton = &scb;
+  const char *like_arg;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -3594,32 +3601,31 @@ svn_wc__db_op_set_changelist(svn_wc__db_t *db,
         NOT_IMPLEMENTED();
     }
 
+  wtb.cb_baton = &scb;
+
+  /* ### fix up the code below: if the callback is invokved, then the
+     ### 'changelist_list' table may exist. We should ensure it gets dropped
+     ### before we exit this function.  */
+
   SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, with_triggers, &wtb,
-                              scratch_pool));
+                              iterpool));
+  SVN_ERR(flush_entries(wcroot, local_abspath, iterpool));
 
-  SVN_ERR(flush_entries(wcroot, local_abspath, scratch_pool));
+  /* ### can we unify this notification logic, in some way, with the
+     ### similar logic in op_delete? ... I think we probably want a
+     ### notify_callback that represents the inner loop. the statement
+     ### selection and binding is probably similar (especially if we
+     ### remove like_arg, as questioned below). the unification could
+     ### look similar to db_with_txn or the with_triggers stuff.  */
 
-  return SVN_NO_ERROR;
-}
+  /* ### why we do filter SOME of the changelist notifications? if a row
+     ### is inserted, then don't we want to send a notification for it?  */
 
-
-svn_error_t *
-svn_wc__db_changelist_list_notify(svn_wc_notify_func2_t notify_func,
-                                  void *notify_baton,
-                                  svn_wc__db_t *db,
-                                  const char *local_abspath,
-                                  apr_pool_t *scratch_pool)
-{
-  svn_wc__db_wcroot_t *wcroot;
-  const char *local_relpath;
-  const char *like_arg;
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
-  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
-                              db, local_abspath, scratch_pool, iterpool));
-  VERIFY_USABLE_WCROOT(wcroot);
+  if (notify_func == NULL)
+    {
+      svn_pool_destroy(iterpool);
+      return SVN_NO_ERROR;
+    }
 
   like_arg = construct_like_arg(local_relpath, scratch_pool);
 
@@ -3634,11 +3640,14 @@ svn_wc__db_changelist_list_notify(svn_wc_notify_func2_t notify_func,
   while (have_row)
     {
       const char *notify_relpath = svn_sqlite__column_text(stmt, 0, NULL);
-      svn_wc_notify_action_t action = svn_sqlite__column_int64(stmt, 1);
+      svn_wc_notify_action_t action = svn_sqlite__column_int(stmt, 1);
       svn_wc_notify_t *notify;
       const char *notify_abspath;
 
       svn_pool_clear(iterpool);
+
+      if (cancel_func)
+        SVN_ERR(cancel_func(cancel_baton));
 
       notify_abspath = svn_dirent_join(wcroot->abspath, notify_relpath,
                                        iterpool);
@@ -3659,7 +3668,6 @@ svn_wc__db_changelist_list_notify(svn_wc_notify_func2_t notify_func,
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
-
 }
 
 
@@ -4791,13 +4799,18 @@ svn_wc__db_op_delete(svn_wc__db_t *db,
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
       while (have_row)
         {
-          const char *notify_relpath = svn_sqlite__column_text(stmt, 0, NULL);
-          const char *notify_abspath = svn_dirent_join(wcroot->abspath,
-                                                       notify_relpath,
-                                                       iterpool);
+          const char *notify_relpath;
+          const char *notify_abspath;
+
+          svn_pool_clear(iterpool);
 
           if (cancel_func)
             SVN_ERR(cancel_func(cancel_baton));
+
+          notify_relpath = svn_sqlite__column_text(stmt, 0, NULL);
+          notify_abspath = svn_dirent_join(wcroot->abspath,
+                                           notify_relpath,
+                                           iterpool);
 
           notify_func(notify_baton,
                       svn_wc_create_notify(notify_abspath,
