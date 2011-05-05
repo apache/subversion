@@ -327,6 +327,24 @@ public class Info2 implements java.io.Serializable
 
       return null;
     }
+    
+    static private String
+    getChecksumDigest(org.apache.subversion.javahl.types.Checksum checksum)
+    {
+    	if (checksum == null)
+    		return null;
+    	
+    	if (checksum.getKind() != org.apache.subversion.javahl.types.Checksum.Kind.MD5)
+    		return null;
+    	
+    	StringBuffer hexDigest = new StringBuffer();
+    	for (byte b : checksum.getDigest())
+    	{
+    		hexDigest.append(Integer.toHexString(0xFF & b));
+    	}
+    	
+    	return hexDigest.toString();
+    }
 
     /**
      * A backward-compat constructor.
@@ -346,8 +364,7 @@ public class Info2 implements java.io.Serializable
              aInfo.getCopyFromUrl(), aInfo.getCopyFromRev(),
              aInfo.getTextTime() == null ? 0
                 : aInfo.getTextTime().getTime() * 1000,
-             0, aInfo.getChecksum() == null ? null
-                    : new String(aInfo.getChecksum().getDigest()),
+             0, getChecksumDigest(aInfo.getChecksum()),
              getConflictOld(aInfo.getConflicts()),
              getConflictNew(aInfo.getConflicts()),
              getConflictWrk(aInfo.getConflicts()),
