@@ -1236,7 +1236,7 @@ hash_stash(void *baton,
 {
   apr_hash_t *stat_hash = baton;
   apr_pool_t *hash_pool = apr_hash_pool_get(stat_hash);
-  SVN_ERR_ASSERT(! apr_hash_get(stat_hash, path, APR_HASH_KEY_STRING));
+  assert(! apr_hash_get(stat_hash, path, APR_HASH_KEY_STRING));
   apr_hash_set(stat_hash, apr_pstrdup(hash_pool, path),
                APR_HASH_KEY_STRING, svn_wc_dup_status3(status, hash_pool));
 
