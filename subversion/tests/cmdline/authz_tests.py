@@ -1027,8 +1027,8 @@ def wc_wc_copy_revert(sbox):
   svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
 
   svntest.actions.run_and_verify_svn(None, None,
-                                     'svn: E220001: Cannot copy.*excluded by server',
-                                     'cp', sbox.ospath('A'), sbox.ospath('A2'))
+                             'svn: E155035: Cannot copy.*excluded by server',
+                             'cp', sbox.ospath('A'), sbox.ospath('A2'))
 
 
   # The copy failed and A2/B/E is incomplete.  That means A2 and A2/B
