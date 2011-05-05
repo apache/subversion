@@ -1135,7 +1135,8 @@ def wc_copy_parent_into_child(sbox):
   os.chdir(wc_dir)
 
   svntest.actions.run_and_verify_svn(None,
-                                     ['\n', 'Committed revision 2.\n'], [],
+                                     ['Adding copy of        .\n',
+                                     '\n', 'Committed revision 2.\n'], [],
                                      'cp',
                                      '-m', 'a larger can',
                                      '.', F_B_url)
@@ -4959,7 +4960,6 @@ def move_wc_and_repo_dir_to_itself(sbox):
                                      '.*Cannot move URL.* into itself.*',
                                      'move', repo_url, repo_url)
 
-@XFail()
 @Issues(2763,3314)
 def copy_wc_url_with_absent(sbox):
   "copy wc to url with several absent children"

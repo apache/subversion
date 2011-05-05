@@ -46,6 +46,7 @@ struct notify_baton
   svn_boolean_t received_some_change;
   svn_boolean_t is_checkout;
   svn_boolean_t is_export;
+  svn_boolean_t is_wc_to_repos_copy;
   svn_boolean_t suppress_summary_lines;
   svn_boolean_t sent_first_txdelta;
   svn_boolean_t in_external;
@@ -684,7 +685,9 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
     case svn_wc_notify_commit_modified:
       /* xgettext: Align the %s's on this and the following 4 messages */
       if ((err = svn_cmdline_printf(pool,
-                                    _("Sending        %s\n"),
+                                    _("Sending %s       %s\n"),
+                                    nb->is_wc_to_repos_copy
+                                      ? _("copy of") : "",
                                     path_local)))
         goto print_error;
       break;
@@ -694,21 +697,27 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       if (n->mime_type && svn_mime_type_is_binary(n->mime_type))
         {
           if ((err = svn_cmdline_printf(pool,
-                                        _("Adding  (bin)  %s\n"),
+                                        _("Adding %s (bin)  %s\n"),
+                                        nb->is_wc_to_repos_copy
+                                          ? _("copy of") : "",
                                         path_local)))
           goto print_error;
         }
       else
         {
           if ((err = svn_cmdline_printf(pool,
-                                        _("Adding         %s\n"),
+                                        _("Adding %s        %s\n"),
+                                        nb->is_wc_to_repos_copy
+                                          ? _("copy of") : "",
                                         path_local)))
             goto print_error;
         }
       break;
 
     case svn_wc_notify_commit_deleted:
-      if ((err = svn_cmdline_printf(pool, _("Deleting       %s\n"),
+      if ((err = svn_cmdline_printf(pool, _("Deleting %s      %s\n"),
+                                    nb->is_wc_to_repos_copy
+                                      ? _("copy of") : "",
                                     path_local)))
         goto print_error;
       break;
@@ -716,7 +725,9 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
     case svn_wc_notify_commit_replaced:
     case svn_wc_notify_commit_copied_replaced:
       if ((err = svn_cmdline_printf(pool,
-                                    _("Replacing      %s\n"),
+                                    _("Replacing %s     %s\n"),
+                                    nb->is_wc_to_repos_copy
+                                      ? _("copy of") : "",
                                     path_local)))
         goto print_error;
       break;
@@ -995,12 +1006,13 @@ svn_cl__get_notifier(svn_wc_notify_func2_t *notify_func_p,
                      svn_boolean_t suppress_summary_lines,
                      apr_pool_t *pool)
 {
-  struct notify_baton *nb = apr_palloc(pool, sizeof(*nb));
+  struct notify_baton *nb = apr_pcalloc(pool, sizeof(*nb));
 
   nb->received_some_change = FALSE;
   nb->sent_first_txdelta = FALSE;
   nb->is_checkout = FALSE;
   nb->is_export = FALSE;
+  nb->is_wc_to_repos_copy = FALSE;
   nb->suppress_summary_lines = suppress_summary_lines;
   nb->in_external = FALSE;
   nb->had_print_error = FALSE;
@@ -1030,6 +1042,15 @@ svn_cl__notifier_mark_export(void *baton)
   struct notify_baton *nb = baton;
 
   nb->is_export = TRUE;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_cl__notifier_mark_wc_to_repos_copy(void *baton)
+{
+  struct notify_baton *nb = baton;
+
+  nb->is_wc_to_repos_copy = TRUE;
   return SVN_NO_ERROR;
 }
 

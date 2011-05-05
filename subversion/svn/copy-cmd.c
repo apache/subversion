@@ -95,24 +95,7 @@ svn_cl__copy(apr_getopt_t *os,
   else if ((! srcs_are_urls) && (dst_is_url))
     {
       /* WC->URL : Use notification. */
-      /* ### todo:
-
-         We'd like to use the notifier, but we MAY have a couple of
-         problems with that, the same problems that used to apply to
-         the old trace_editor:
-
-         1) We don't know where the commit editor for this case will
-            be anchored with respect to the repository, so we can't
-            use the DST_URL.
-
-         2) While we do know where the commit editor will be driven
-            from with respect to our working copy, we don't know what
-            basenames will be chosen for our committed things.  So a
-            copy of dir1/foo.c to http://.../dir2/foo-copy-c would
-            display like: "Adding   dir1/foo-copy.c", which could be a
-            bogus path.
-      */
-      ctx->notify_func2 = NULL;
+        SVN_ERR(svn_cl__notifier_mark_wc_to_repos_copy(ctx->notify_baton2));
     }
   else if ((srcs_are_urls) && (! dst_is_url))
     {
