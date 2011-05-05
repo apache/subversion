@@ -4961,6 +4961,44 @@ def move_wc_and_repo_dir_to_itself(sbox):
                                      '.*Cannot move URL.* into itself.*',
                                      'move', repo_url, repo_url)
 
+@XFail()
+@Issues(2763,3314)
+def copy_wc_url_with_absent(sbox):
+  "copy wc to url with several absent children"
+  sbox.build()
+
+  # A/B a normal delete
+  sbox.simple_rm('A/B')
+
+  # A/no not-present but there
+  sbox.simple_copy('A/mu', 'A/no')
+  sbox.simple_commit('A/no')
+  svntest.main.run_svn(None, 'up', '-r', '1', sbox.ospath('A/no'))
+
+  # A/mu not-present
+  sbox.simple_rm('A/mu')
+  sbox.simple_commit('A/mu')
+
+  # A/D excluded
+  svntest.main.run_svn(None, 'up', '--set-depth', 'exclude',
+                       os.path.join(sbox.wc_dir, 'A/D'))
+
+  # Test issue #3314 after copy      ### Currently fails with out of date
+  sbox.simple_copy('A', 'A_copied')
+  svntest.main.run_svn(None, 'ci', os.path.join(sbox.wc_dir, 'A_copied'),
+                       '-m', 'Commit A_copied')
+
+  # This tests issue #2763           ### Currently fails with out of date
+  svntest.main.run_svn(None, 'cp', os.path.join(sbox.wc_dir, 'A'),
+                       '^/A_tagged', '-m', 'Tag A')
+
+  # And perform a normal commit
+  svntest.main.run_svn(None, 'ci', os.path.join(sbox.wc_dir, 'A'),
+                       '-m', 'Commit A')
+
+  # TODO: Verify that A_copied and A_tagged show up like A without mu.
+
+
 ########################################################################
 # Run the tests
 
@@ -5064,6 +5102,7 @@ test_list = [ None,
               copy_wc_over_deleted_same_kind,
               copy_wc_over_deleted_other_kind,
               move_wc_and_repo_dir_to_itself,
+              copy_wc_url_with_absent,
              ]
 
 if __name__ == '__main__':
