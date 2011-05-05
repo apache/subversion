@@ -422,9 +422,17 @@ copy_versioned_dir(svn_wc__db_t *db,
                                    db, child_src_abspath,
                                    iterpool, iterpool));
 
-      if (child_status == svn_wc__db_status_normal
-          || child_status == svn_wc__db_status_added
-          || child_status == svn_wc__db_status_incomplete)
+      if (child_status == svn_wc__db_status_deleted
+          || child_status == svn_wc__db_status_not_present
+          || child_status == svn_wc__db_status_excluded)
+        {
+          SVN_ERR(copy_deleted_node(db,
+                                    child_src_abspath, child_dst_abspath,
+                                    dst_op_root_abspath,
+                                    cancel_func, cancel_baton, NULL, NULL,
+                                    iterpool));
+        }
+      else
         {
           if (child_kind == svn_wc__db_kind_file)
             SVN_ERR(copy_versioned_file(db,
@@ -445,21 +453,6 @@ copy_versioned_dir(svn_wc__db_t *db,
                                      _("cannot handle node kind for '%s'"),
                                      svn_dirent_local_style(child_src_abspath,
                                                             scratch_pool));
-        }
-      else if (child_status == svn_wc__db_status_deleted
-               || child_status == svn_wc__db_status_not_present
-               || child_status == svn_wc__db_status_excluded)
-        {
-          SVN_ERR(copy_deleted_node(db,
-                                    child_src_abspath, child_dst_abspath,
-                                    dst_op_root_abspath,
-                                    cancel_func, cancel_baton, NULL, NULL,
-                                    iterpool));
-        }
-      else
-        {
-          /* Absent nodes should have been handled before we reach this */
-           SVN_ERR_MALFUNCTION(); 
         }
 
       if (disk_children
