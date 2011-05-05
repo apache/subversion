@@ -738,10 +738,9 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
         break;
     }
 
-  SVN_ERR(svn_wc__db_op_delete(db, local_abspath, pool));
-
-  SVN_ERR(svn_wc__db_delete_list_notify(notify_func, notify_baton,
-                                        db, local_abspath, pool));
+  SVN_ERR(svn_wc__db_op_delete(db, local_abspath, notify_func, notify_baton,
+                               NULL, NULL /* cancellation */,
+                               pool));
 
   /* By the time we get here, anything that was scheduled to be added has
      become unversioned */

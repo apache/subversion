@@ -1090,7 +1090,7 @@ SELECT local_relpath FROM delete_list
 ORDER BY local_relpath
 
 -- STMT_DROP_DELETE_LIST
-DROP TABLE delete_list
+DROP TABLE IF EXISTS delete_list
 
 
 /* ------------------------------------------------------------------------- */

@@ -1203,29 +1203,24 @@ svn_wc__db_temp_working_set_props(svn_wc__db_t *db,
                                   apr_pool_t *scratch_pool);
 #endif
 
-/* Delete LOCAL_ABSPATH and all children from the database.
+/* Mark LOCAL_ABSPATH, and all children, for deletion.
  *
- * This function populates the delete list.
+ * If NOTIFY_FUNC is not NULL, then it will be called (with NOTIFY_BATON)
+ * for each node deleted. While this processing occurs, if CANCEL_FUNC is
+ * not NULL, then it will be called (with CANCEL_BATON) to detect cancellation
+ * during the processing.
+ *
+ * Note: the notification (and cancellation) occur outside of a SQLite
+ * transaction.
  */
 svn_error_t *
 svn_wc__db_op_delete(svn_wc__db_t *db,
                      const char *local_abspath,
+                     svn_wc_notify_func2_t notify_func,
+                     void *notify_baton,
+                     svn_cancel_func_t cancel_func,
+                     void *cancel_baton,
                      apr_pool_t *scratch_pool);
-
-/* Make delete notifications for all paths in the delete list created
- * by deleting LOCAL_ABSPATH.
- *
- * This function drops the delete list.  NOTIFY_FUNC may be NULL in
- * which case the table is dropped without any notification.
- *
- * ### Perhaps this should be part of svn_wc__db_op_delete?
- */
-svn_error_t *
-svn_wc__db_delete_list_notify(svn_wc_notify_func2_t notify_func,
-                              void *notify_baton,
-                              svn_wc__db_t *db,
-                              const char *local_abspath,
-                              apr_pool_t *scratch_pool);
 
 
 /* ### KFF: Would like to know behavior when dst_path already exists
@@ -1776,6 +1771,7 @@ svn_wc__db_read_props_streamily(svn_wc__db_t *db,
                                 svn_cancel_func_t cancel_func,
                                 void *cancel_baton,
                                 apr_pool_t *scratch_pool);
+
 
 /* Set *PROPS to the properties of the node LOCAL_ABSPATH in the WORKING
    tree (looking through to the BASE tree as required).
