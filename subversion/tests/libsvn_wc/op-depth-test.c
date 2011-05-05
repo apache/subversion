@@ -2776,7 +2776,10 @@ do_delete(svn_test__sandbox_t *b,
 
   SVN_ERR(insert_dirs(b, before));
   SVN_ERR(check_db_rows(b, "", before));
-  SVN_ERR(svn_wc__db_op_delete(b->wc_ctx->db, local_abspath, b->pool));
+  SVN_ERR(svn_wc__db_op_delete(b->wc_ctx->db, local_abspath,
+                               NULL, NULL /* notification */,
+                               NULL, NULL /* cancellation */,
+                               b->pool));
   SVN_ERR(check_db_rows(b, "", after));
 
   return SVN_NO_ERROR;
