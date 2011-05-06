@@ -34,7 +34,8 @@ public interface StatusCallback
 {
     /**
      * the method will be called for each status item
-     * @param status    the status object
+     * @param path      the path of the object
+     * @param status    the status object, may be null
      */
-    public void doStatus(Status status);
+    public void doStatus(String path, Status status);
 }

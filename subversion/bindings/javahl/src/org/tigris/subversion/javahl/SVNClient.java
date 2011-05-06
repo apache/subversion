@@ -194,8 +194,14 @@ public class SVNClient implements SVNClientInterface
                               changelists == null ? null
                                 : Arrays.asList(changelists),
         new org.apache.subversion.javahl.callback.StatusCallback () {
-         public void doStatus(org.apache.subversion.javahl.types.Status aStatus)
-                    { callback.doStatus(new Status(aSVNClient, aStatus)); }
+         public void doStatus(String path,
+                              org.apache.subversion.javahl.types.Status aStatus)
+                    {
+                        if (aStatus != null)
+                            callback.doStatus(new Status(aSVNClient, aStatus));
+                        else
+                            callback.doStatus(new Status(path));
+                    }
                 });
         }
         catch (org.apache.subversion.javahl.ClientException ex)
