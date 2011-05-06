@@ -59,6 +59,24 @@ svn_client_cleanup(const char *path,
 
   err = svn_wc_cleanup3(ctx->wc_ctx, local_abspath, ctx->cancel_func,
                         ctx->cancel_baton, scratch_pool);
+  if (err && err->apr_err == SVN_ERR_WC_LOCKED)
+    {
+      const char *wcroot_abspath;
+      svn_error_t *err2 = svn_wc_get_wc_root(&wcroot_abspath, ctx->wc_ctx,
+                                             local_abspath, scratch_pool,
+                                             scratch_pool);
+      if (err2)
+        err =  svn_error_compose_create(err, err2);
+      else
+        err = svn_error_createf(SVN_ERR_WC_LOCKED, err,
+                                _("Working copy locked; trying running "
+                                  "'svn cleanup' on the root of the working "
+                                  "copy (%s) instead."),
+                                  svn_dirent_local_style(wcroot_abspath,
+                                                         scratch_pool),
+                                  scratch_pool);
+    }
+
   svn_io_sleep_for_timestamps(path, scratch_pool);
   return svn_error_return(err);
 }
