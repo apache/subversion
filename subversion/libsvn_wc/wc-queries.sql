@@ -734,21 +734,9 @@ SELECT wc_id, local_relpath, ?3 /*op_depth*/, parent_relpath, repos_id,
 FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 
-
-/* ### these statements below should be setting copyfrom_revision! */
--- STMT_UPDATE_COPYFROM
-UPDATE nodes SET repos_id = ?3, repos_path = ?4
-WHERE wc_id = ?1 AND local_relpath = ?2
-  AND op_depth = (SELECT MAX(op_depth) FROM nodes
-                  WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0)
-
 -- STMT_UPDATE_OP_DEPTH_INCREASE_RECURSIVE
 UPDATE nodes SET op_depth = ?3 + 1
 WHERE wc_id = ?1 AND local_relpath LIKE ?2 ESCAPE '#' AND op_depth = ?3
-
--- STMT_UPDATE_OP_DEPTH
-UPDATE nodes SET op_depth = ?4
-WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3
 
 -- STMT_DOES_NODE_EXIST
 SELECT 1 FROM nodes WHERE wc_id = ?1 AND local_relpath = ?2
