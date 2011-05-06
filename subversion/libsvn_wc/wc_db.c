@@ -116,7 +116,7 @@
 #define LIKE_ESCAPE_CHAR     "#"
 
 /* Calculates the depth of the relpath below "" */
-APR_INLINE static int relpath_depth(const char *relpath)
+APR_INLINE static apr_int64_t relpath_depth(const char *relpath)
 {
   int n = 1;
   if (*relpath == '\0')
@@ -133,7 +133,7 @@ APR_INLINE static int relpath_depth(const char *relpath)
 }
 
 
-int svn_wc__db_op_depth_for_upgrade(const char *local_relpath)
+apr_int64_t svn_wc__db_op_depth_for_upgrade(const char *local_relpath)
 {
   return relpath_depth(local_relpath);
 }
@@ -895,7 +895,7 @@ insert_base_node(void *baton,
                              STMT_INSERT_WORKING_NODE_FROM_BASE_COPY_PRESENCE));
       SVN_ERR(svn_sqlite__bindf(stmt, "isit",
                                 wcroot->wc_id, local_relpath,
-                                (apr_int64_t)relpath_depth(local_relpath),
+                                relpath_depth(local_relpath),
                                 presence_map, svn_wc__db_status_base_deleted));
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
