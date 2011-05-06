@@ -430,11 +430,26 @@ svn_wc__get_all_tree_conflicts(apr_hash_t **tree_conflicts,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool)
 {
+  apr_hash_t *conflicts;
+  apr_hash_index_t *hi;
+
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  /* ### BUG: uses basenames as keys; supposed to be abspaths. */
-  SVN_ERR(svn_wc__db_op_read_all_tree_conflicts(tree_conflicts, wc_ctx->db,
+  SVN_ERR(svn_wc__db_op_read_all_tree_conflicts(&conflicts, wc_ctx->db,
                                                 local_abspath,
                                                 result_pool, scratch_pool));
+  *tree_conflicts = apr_hash_make(result_pool);
+  /* Convert from basenames as keys to abspaths as keys. */
+  for (hi = apr_hash_first(scratch_pool, conflicts); hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *name = svn__apr_hash_index_key(hi);
+      const svn_wc_conflict_description2_t *conflict
+        = svn__apr_hash_index_val(hi);
+      const char *abspath = svn_dirent_join(local_abspath, name, scratch_pool);
+
+      apr_hash_set(*tree_conflicts, abspath, APR_HASH_KEY_STRING, conflict);
+    }
+
   return SVN_NO_ERROR;
 }
