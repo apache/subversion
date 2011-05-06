@@ -1231,7 +1231,6 @@ post_headers_iterator_callback(void *baton,
   post_response_ctx_t *prc = baton;
   commit_context_t *prc_cc = prc->commit_ctx;
   svn_ra_serf__session_t *sess = prc_cc->session;
-  const char *txn_name;
 
   /* If we provided a UUID to the POST request, we should get back
      from the server an SVN_DAV_VTXN_NAME_HEADER header; otherwise we
@@ -1242,7 +1241,6 @@ post_headers_iterator_callback(void *baton,
     {
       /* Build out txn and txn-root URLs using the txn name we're
          given, and store the whole lot of it in the commit context.  */
-      txn_name = apr_pstrdup(prc_cc->pool, val);
       prc_cc->txn_url =
         svn_path_url_add_component2(sess->txn_stub, val, prc_cc->pool);
       prc_cc->txn_root_url =
@@ -1253,7 +1251,6 @@ post_headers_iterator_callback(void *baton,
     {
       /* Build out vtxn and vtxn-root URLs using the vtxn name we're
          given, and store the whole lot of it in the commit context.  */
-      txn_name = apr_pstrdup(prc_cc->pool, val);
       prc_cc->txn_url =
         svn_path_url_add_component2(sess->vtxn_stub, val, prc_cc->pool);
       prc_cc->txn_root_url =
