@@ -79,7 +79,6 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * fix warning about copies committed with non-infinity depth (issue #3752)
     * can now commit multiple wc paths lacking a common parent (issue #2381)
     * 'svn export --depth $WC' now works correctly (issue #3800)
-    * multiple locks are sent in one DAV request (issue #2263)
     * fixed: wc-to-wc copy of a switch source (issue #1802)
     * fixed: 'svn st' reports symlinks as obstructed items (issue #2284)
     * fixed: 'cd e:\; svn up e:\' fails (issue #2556)
