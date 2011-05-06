@@ -738,6 +738,19 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
         break;
     }
 
+  if (status == svn_wc__db_status_normal
+      && kind == svn_wc__db_kind_dir)
+    {
+      svn_boolean_t is_wcroot;
+      SVN_ERR(svn_wc__db_is_wcroot(&is_wcroot, db, local_abspath, pool));
+
+      if (is_wcroot)
+        return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                                 _("'%s' is the root of a working copy and "
+                                   "cannot be deleted"),
+                                 svn_dirent_local_style(local_abspath, pool));
+    }
+
   /* Verify if we have a write lock on the parent of this node as we might
      be changing the childlist of that directory. */
   SVN_ERR(svn_wc__write_check(db, svn_dirent_dirname(local_abspath, pool),
