@@ -203,6 +203,23 @@ wc_delete(svn_test__sandbox_t *b, const char *path)
 }
 
 static svn_error_t *
+wc_exclude(svn_test__sandbox_t *b, const char *path)
+{
+  const char *abspath = wc_path(b, path);
+  const char *lock_root_abspath;
+
+  SVN_ERR(svn_wc__acquire_write_lock(&lock_root_abspath, b->wc_ctx,
+                                     abspath, TRUE,
+                                     b->pool, b->pool));
+  SVN_ERR(svn_wc_exclude(b->wc_ctx, abspath,
+                         NULL, NULL, /* cancel baton + func */
+                         NULL, NULL, /* notify baton + func */
+                         b->pool));
+  SVN_ERR(svn_wc__release_write_lock(b->wc_ctx, lock_root_abspath, b->pool));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 wc_commit(svn_test__sandbox_t *b, const char *path)
 {
   svn_client_ctx_t *ctx;
@@ -3026,7 +3043,7 @@ test_shadowed_update(const svn_test_opts_t *opts, apr_pool_t *pool)
 {
   svn_test__sandbox_t b;
 
-  SVN_ERR(svn_test__sandbox_create(&b, "child_replace_with_same", opts, pool));
+  SVN_ERR(svn_test__sandbox_create(&b, "shadowed_update", opts, pool));
 
   /* Set up the base state as revision 1. */
   file_write(&b, "iota", "This is iota");
@@ -3244,6 +3261,100 @@ test_shadowed_update(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* The purpose of this test is to check what happens below a shadowed update,
+   in a few scenarios */
+static svn_error_t *
+test_copy_of_deleted(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "copy_of_deleted", opts, pool));
+  SVN_ERR(add_and_commit_greek_tree(&b));
+
+  /* Recreate the test scenario from copy_tests.py copy_wc_url_with_absent */
+
+  /* Delete A/B */
+  SVN_ERR(wc_delete(&b, "A/B"));
+
+  /* A/no not-present but in HEAD */
+  SVN_ERR(wc_copy(&b, "A/mu", "A/no"));
+  SVN_ERR(wc_commit(&b, "A/no"));
+  SVN_ERR(wc_update(&b, "A/no", 1));
+
+  /* A/mu not-present and not in HEAD */
+  SVN_ERR(wc_delete(&b, "A/mu"));
+  SVN_ERR(wc_commit(&b, "A/mu"));
+
+  /* A/D excluded */
+  SVN_ERR(wc_exclude(&b, "A/D"));
+
+  /* This should have created this structure */
+  {
+    nodes_row_t rows[] = {
+
+      {0, "A",           "normal",           1, "A"},
+      {0, "A/B",         "normal",           1, "A/B"},
+      {0, "A/B/E",       "normal",           1, "A/B/E"},
+      {0, "A/B/E/alpha", "normal",           1, "A/B/E/alpha"},
+      {0, "A/B/E/beta",  "normal",           1, "A/B/E/beta"},
+      {0, "A/B/F",       "normal",           1, "A/B/F"},
+      {0, "A/B/lambda",  "normal",           1, "A/B/lambda"},
+      {0, "A/C",         "normal",           1, "A/C"},
+      {0, "A/D",         "excluded",         1, "A/D"},
+      {0, "A/mu",        "not-present",      3, "A/mu"},
+      {0, "A/no",        "not-present",      1, "A/no"},
+
+      {2, "A/B",         "base-deleted",     NO_COPY_FROM},
+      {2, "A/B/E",       "base-deleted",     NO_COPY_FROM},
+      {2, "A/B/E/alpha", "base-deleted",     NO_COPY_FROM},
+      {2, "A/B/E/beta",  "base-deleted",     NO_COPY_FROM},
+      {2, "A/B/lambda",  "base-deleted",     NO_COPY_FROM},
+      {2, "A/B/F",       "base-deleted",     NO_COPY_FROM},
+
+      { 0 }
+    };
+    SVN_ERR(check_db_rows(&b, "A", rows));
+  }
+
+  SVN_ERR(wc_copy(&b, "A", "A_copied"));
+
+  /* I would expect this behavior, as this copies all layers where possible
+     instead of just constructing a top level layer with not-present nodes
+     whenever we find a deletion. */
+  {
+    nodes_row_t rows[] = {
+
+      {1, "A_copied",           "normal",           1, "A"},
+      /* Currently B is marked not-present */
+      {1, "A_copied/B",         "normal",           1, "A/B"},
+      /* And these nodes aren't represented */
+      {1, "A_copied/B/E",       "normal",           1, "A/B/E"},
+      {1, "A_copied/B/E/alpha", "normal",           1, "A/B/E/alpha"},
+      {1, "A_copied/B/E/beta",  "normal",           1, "A/B/E/beta"},
+      {1, "A_copied/B/F",       "normal",           1, "A/B/F"},
+      {1, "A_copied/B/lambda",  "normal",           1, "A/B/lambda"},
+      /* These are ok */
+      {1, "A_copied/C",         "normal",           1, "A/C"},
+      {1, "A_copied/D",         "excluded",         1, "A/D"},
+      {1, "A_copied/mu",        "not-present",      3, "A/mu"},
+      {1, "A_copied/no",        "not-present",      1, "A/no"},
+
+      /* And this layer is completely unavailable */
+      {2, "A_copied/B",         "base-deleted",     NO_COPY_FROM},
+      {2, "A_copied/B/E",       "base-deleted",     NO_COPY_FROM},
+      {2, "A_copied/B/E/alpha", "base-deleted",     NO_COPY_FROM},
+      {2, "A_copied/B/E/beta",  "base-deleted",     NO_COPY_FROM},
+      {2, "A_copied/B/lambda",  "base-deleted",     NO_COPY_FROM},
+      {2, "A_copied/B/F",       "base-deleted",     NO_COPY_FROM},
+
+      { 0 }
+    };
+    SVN_ERR(check_db_rows(&b, "A_copied", rows));
+  }
+
+  return SVN_NO_ERROR;
+}
+
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
 
@@ -3292,5 +3403,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test_child_replace_with_same"),
     SVN_TEST_OPTS_PASS(test_shadowed_update,
                        "test_shadowed_update"),
+    SVN_TEST_OPTS_XFAIL(test_copy_of_deleted,
+                       "test_copy_of_deleted"),
     SVN_TEST_NULL
   };
