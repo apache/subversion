@@ -1114,21 +1114,6 @@ setup_copy_dir_headers(serf_bucket_t *headers,
 }
 
 static svn_error_t *
-setup_post_headers(serf_bucket_t *headers,
-                   void *baton,
-                   apr_pool_t *pool)
-{
-#ifdef SVN_SERF_SEND_VTXN_NAME
-  /* Enable this to exercise the VTXN-NAME code based on a client
-     supplied transaction name. */
-  serf_bucket_headers_set(headers, SVN_DAV_VTXN_NAME_HEADER,
-                          svn_uuid_generate(pool));
-#endif
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
 setup_delete_headers(serf_bucket_t *headers,
                      void *baton,
                      apr_pool_t *pool)
@@ -1213,6 +1198,22 @@ create_txn_post_body(serf_bucket_t **body_bkt,
   return SVN_NO_ERROR;
 }
 
+/* Implements svn_ra_serf__request_header_delegate_t */
+static svn_error_t *
+setup_post_headers(serf_bucket_t *headers,
+                   void *baton,
+                   apr_pool_t *pool)
+{
+#ifdef SVN_SERF_SEND_VTXN_NAME
+  /* Enable this to exercise the VTXN-NAME code based on a client
+     supplied transaction name. */
+  serf_bucket_headers_set(headers, SVN_DAV_VTXN_NAME_HEADER,
+                          svn_uuid_generate(pool));
+#endif
+
+  return SVN_NO_ERROR;
+}
+
 
 /* Handler baton for POST request. */
 typedef struct post_response_ctx_t
@@ -1231,6 +1232,11 @@ post_headers_iterator_callback(void *baton,
   post_response_ctx_t *prc = baton;
   commit_context_t *prc_cc = prc->commit_ctx;
   svn_ra_serf__session_t *sess = prc_cc->session;
+
+  /* If we provided a UUID to the POST request, we should get back
+     from the server an SVN_DAV_VTXN_NAME_HEADER header; otherwise we
+     expect the SVN_DAV_TXN_NAME_HEADER.  We certainly don't expect to
+     see both. */
 
   if (svn_cstring_casecmp(key, SVN_DAV_TXN_NAME_HEADER) == 0)
     {
