@@ -501,8 +501,7 @@ CreateJ::Status(svn_wc_context_t *wc_ctx,
                              "L"JAVA_PACKAGE"/types/Status$Kind;"
                              "L"JAVA_PACKAGE"/types/Status$Kind;"
                              "L"JAVA_PACKAGE"/types/Status$Kind;"
-                             "ZZZLjava/lang/String;JZZ"
-                             "L"JAVA_PACKAGE"/types/Lock;"
+                             "ZZZZZL"JAVA_PACKAGE"/types/Lock;"
                              "L"JAVA_PACKAGE"/types/Lock;"
                              "JJL"JAVA_PACKAGE"/types/NodeKind;"
                              "Ljava/lang/String;Ljava/lang/String;)V");
@@ -522,9 +521,6 @@ CreateJ::Status(svn_wc_context_t *wc_ctx,
     org_apache_subversion_javahl_types_Revision_SVN_INVALID_REVNUM;
   jlong jLastChangedDate = 0;
   jstring jLastCommitAuthor = NULL;
-  jstring jURLCopiedFrom = NULL;
-  jlong jRevisionCopiedFrom =
-    org_apache_subversion_javahl_types_Revision_SVN_INVALID_REVNUM;
   jobject jLocalLock = NULL;
   jstring jChangelist = NULL;
 
@@ -593,35 +589,11 @@ CreateJ::Status(svn_wc_context_t *wc_ctx,
         POP_AND_RETURN_NULL;
     }
 
-  if (status->versioned && status->conflicted)
-    {
-      const char *copyfrom_url;
-      svn_revnum_t copyfrom_rev;
-      svn_boolean_t is_copy_target;
-
-      SVN_JNI_ERR(svn_wc__node_get_copyfrom_info(NULL, NULL,
-                                                 &copyfrom_url,
-                                                 &copyfrom_rev,
-                                                 &is_copy_target,
-                                                 wc_ctx,
-                                                 status->local_abspath,
-                                                 pool, pool), NULL);
-
-      jURLCopiedFrom = JNIUtil::makeJString(is_copy_target ? copyfrom_url
-                                                           : NULL);
-      if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN_NULL;
-
-      jRevisionCopiedFrom = is_copy_target ? copyfrom_rev
-                                           : SVN_INVALID_REVNUM;
-    }
-
   jobject ret = env->NewObject(clazz, mid, jPath, jUrl, jNodeKind, jRevision,
                                jLastChangedRevision, jLastChangedDate,
                                jLastCommitAuthor, jTextType, jPropType,
                                jRepositoryTextType, jRepositoryPropType,
                                jIsLocked, jIsCopied, jIsConflicted,
-                               jURLCopiedFrom, jRevisionCopiedFrom,
                                jIsSwitched, jIsFileExternal, jLocalLock,
                                jReposLock,
                                jOODLastCmtRevision, jOODLastCmtDate,

@@ -127,16 +127,6 @@ public class Status implements java.io.Serializable
     private Kind repositoryPropStatus;
 
     /**
-     * if copied, the url of the copy source
-     */
-    private String urlCopiedFrom;
-
-    /**
-     * if copied, the revision number of the copy source
-     */
-    private long revisionCopiedFrom;
-
-    /**
      * the current lock
      */
     private Lock localLock;
@@ -200,9 +190,6 @@ public class Status implements java.io.Serializable
      *                              repository version
      * @param conflictWorking       in case of conflict, the file name of the
      *                              former working copy version
-     * @param urlCopiedFrom         if copied, the url of the copy source
-     * @param revisionCopiedFrom    if copied, the revision number of the copy
-     *                              source
      * @param switched              flag if the node has been switched in the
      *                              path
      * @param fileExternal          flag if the node is a file external
@@ -222,7 +209,6 @@ public class Status implements java.io.Serializable
                   String lastCommitAuthor, Kind textStatus, Kind propStatus,
                   Kind repositoryTextStatus, Kind repositoryPropStatus,
                   boolean locked, boolean copied, boolean isConflicted,
-                  String urlCopiedFrom, long revisionCopiedFrom,
                   boolean switched, boolean fileExternal, Lock localLock,
                   Lock reposLock, long reposLastCmtRevision,
                   long reposLastCmtDate, NodeKind reposKind,
@@ -242,8 +228,6 @@ public class Status implements java.io.Serializable
         this.isConflicted = isConflicted;
         this.repositoryTextStatus = repositoryTextStatus;
         this.repositoryPropStatus = repositoryPropStatus;
-        this.urlCopiedFrom = urlCopiedFrom;
-        this.revisionCopiedFrom = revisionCopiedFrom;
         this.switched = switched;
         this.fileExternal = fileExternal;
         this.localLock = localLock;
@@ -425,33 +409,6 @@ public class Status implements java.io.Serializable
     public NodeKind getNodeKind()
     {
         return nodeKind;
-    }
-
-    /**
-     * Returns if copied the copy source url or null
-     * @return the source url
-     */
-    public String getUrlCopiedFrom()
-    {
-        return urlCopiedFrom;
-    }
-
-    /**
-     * Returns if copied the source revision as a Revision object
-     * @return the source revision
-     */
-    public Revision.Number getRevisionCopiedFrom()
-    {
-        return Revision.createNumber(revisionCopiedFrom);
-    }
-
-    /**
-     * Returns if copied the source revision as s long integer
-     * @return the source revision
-     */
-    public long getRevisionCopiedFromNumber()
-    {
-        return revisionCopiedFrom;
     }
 
     /**

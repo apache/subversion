@@ -331,8 +331,8 @@ public class Status implements java.io.Serializable
     }
 
     private void
-    populateConflicts(org.apache.subversion.javahl.SVNClient aClient,
-                      String path)
+    populateFromInfo(org.apache.subversion.javahl.SVNClient aClient,
+                     String path)
         throws org.apache.subversion.javahl.ClientException
     {
         class MyInfoCallback
@@ -357,31 +357,35 @@ public class Status implements java.io.Serializable
                       org.apache.subversion.javahl.types.Depth.empty, null,
                       callback);
 
-        if (callback.getInfo() == null
-                || callback.getInfo().getConflicts() == null)
+        org.apache.subversion.javahl.types.Info aInfo = callback.getInfo();
+        if (aInfo == null)
             return;
 
-        for (org.apache.subversion.javahl.ConflictDescriptor conflict
-                : callback.getInfo().getConflicts())
-        {
-           switch (conflict.getKind())
-           {
-             case tree:
-               this.treeConflicted = true;
-               this.conflictDescriptor = new ConflictDescriptor(conflict);
-               break;
+        if (aInfo.getConflicts() != null)
+            for (org.apache.subversion.javahl.ConflictDescriptor conflict
+                    : aInfo.getConflicts())
+            {
+               switch (conflict.getKind())
+               {
+                 case tree:
+                   this.treeConflicted = true;
+                   this.conflictDescriptor = new ConflictDescriptor(conflict);
+                   break;
+    
+                 case text:
+                   this.conflictOld = conflict.getBasePath();
+                   this.conflictWorking = conflict.getMergedPath();
+                   this.conflictNew = conflict.getMyPath();
+                   break;
+    
+                 case property:
+                   // Ignore
+                   break;
+               }
+            }
 
-             case text:
-               this.conflictOld = conflict.getBasePath();
-               this.conflictWorking = conflict.getMergedPath();
-               this.conflictNew = conflict.getMyPath();
-               break;
-
-             case property:
-               // Ignore
-               break;
-           }
-        }
+        this.urlCopiedFrom = aInfo.getCopyFromUrl();
+        this.revisionCopiedFrom = aInfo.getCopyFromRev();
     }
 
     void
@@ -412,8 +416,8 @@ public class Status implements java.io.Serializable
              fromAStatusKind(aStatus.getRepositoryTextStatus()),
              fromAStatusKind(aStatus.getRepositoryPropStatus()),
              aStatus.isLocked(), aStatus.isCopied(), false,
-             null, null, null, null, aStatus.getUrlCopiedFrom(),
-             aStatus.getRevisionCopiedFromNumber(), aStatus.isSwitched(),
+             null, null, null, null, null, Revision.SVN_INVALID_REVNUM,
+             aStatus.isSwitched(),
              aStatus.isFileExternal(), null, null, null, 0,
              aStatus.getReposLock() == null ? null
                 : new Lock(aStatus.getReposLock()),
@@ -423,8 +427,7 @@ public class Status implements java.io.Serializable
              aStatus.getReposLastCmtAuthor(), aStatus.getChangelist());
 
         try {
-            if (aStatus.isConflicted())
-                populateConflicts(aClient, aStatus.getPath());
+            populateFromInfo(aClient, aStatus.getPath());
             if (aStatus.getLocalLock() != null)
                 populateLocalLock(aStatus.getLocalLock());
         } catch (org.apache.subversion.javahl.ClientException ex) {
