@@ -699,18 +699,14 @@ SELECT wc_id, local_relpath, ?3 /*op_depth*/,
 FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 
--- STMT_INSERT_WORKING_NODE_FROM_NODE_RECURSIVE
+-- STMT_INSERT_DELETE_FROM_NODE_RECURSIVE
 INSERT INTO nodes (
-    wc_id, local_relpath, op_depth, parent_relpath, presence, kind, checksum,
-    changed_revision, changed_date, changed_author, depth, symlink_target,
-    translated_size, last_mod_time, properties)
+    wc_id, local_relpath, op_depth, parent_relpath, presence, kind)
 SELECT wc_id, local_relpath, ?4 /*op_depth*/, parent_relpath, 'base-deleted',
-       kind, checksum, changed_revision, changed_date, changed_author, depth,
-       symlink_target, translated_size, last_mod_time, properties
+       kind
 FROM nodes_current
 WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
-  AND presence NOT IN ('base-deleted', 'not-present')
-      
+  AND presence NOT IN ('base-deleted', 'not-present', 'excluded', 'absent')
 
 -- STMT_INSERT_WORKING_NODE_FROM_BASE_COPY
 INSERT INTO nodes (
