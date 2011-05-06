@@ -895,7 +895,7 @@ insert_base_node(void *baton,
                              STMT_INSERT_WORKING_NODE_FROM_BASE_COPY_PRESENCE));
       SVN_ERR(svn_sqlite__bindf(stmt, "isit",
                                 wcroot->wc_id, local_relpath,
-                                relpath_depth(local_relpath),
+                                (apr_int64_t)relpath_depth(local_relpath),
                                 presence_map, svn_wc__db_status_base_deleted));
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
