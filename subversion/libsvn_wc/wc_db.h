@@ -2659,15 +2659,10 @@ svn_wc__db_temp_op_set_property_conflict_marker_file(svn_wc__db_t *db,
                                                      const char *prej_abspath,
                                                      apr_pool_t *scratch_pool);
 
-/* Tweak a locally added existing directory LOCAL_ABSPATH to have a base
-   node with incomplete status and revision REVISION instead. If
-   REPOS_RELPATH is not NULL, apply REPOS_RELPATH, REPOS_ROOT_URL and
-   REPOS_UUID.
+/* Add a new directory in BASE, whether WORKING nodes exist or not. Mark it
+   as incomplete and with revision REVISION. If REPOS_RELPATH is not NULL,
+   apply REPOS_RELPATH, REPOS_ROOT_URL and REPOS_UUID.
    Perform all temporary allocations in SCRATCH_POOL.
-
-   ### For 1.7 this should probably become a proper tree conflict and
-   ### just handled by putting a base directory below the existing
-   ### working node.
    */
 svn_error_t *
 svn_wc__db_temp_op_set_new_dir_to_incomplete(svn_wc__db_t *db,
