@@ -187,7 +187,9 @@ WHERE wc_id = ?1 AND op_depth = ?3
 -- STMT_COMMIT_DESCENDANT_TO_BASE
 UPDATE NODES SET op_depth = 0, repos_id = ?4, repos_path = ?5, revision = ?6,
   moved_here = NULL, moved_to = NULL, dav_cache = NULL,
-  presence = CASE presence WHEN 'normal' THEN 'normal' ELSE 'not-present' END
+  presence = CASE presence WHEN 'normal' THEN 'normal'
+                           WHEN 'excluded' THEN 'excluded'
+                           ELSE 'not-present' END
 WHERE wc_id = ?1 AND local_relpath = ?2 and op_depth = ?3
 
 -- STMT_SELECT_NODE_CHILDREN
