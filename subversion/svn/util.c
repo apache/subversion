@@ -422,11 +422,21 @@ svn_cl__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
       goto cleanup;
     }
 
-  /* Now, run the editor command line.  */
+  /* Prepare the editor command line.  */
   err = svn_utf_cstring_from_utf8(&tmpfile_native, tmpfile_name, pool);
   if (err)
     goto cleanup;
   cmd = apr_psprintf(pool, "%s %s", editor, tmpfile_native);
+
+  /* If the caller wants us to leave the file around, return the path
+     of the file we used, and make a note not to destroy it.  */
+  if (tmpfile_left)
+    {
+      *tmpfile_left = svn_path_join(base_dir, tmpfile_name, pool);
+      remove_file = FALSE;
+    }
+
+  /* Now, run the editor command line.  */
   sys_err = system(cmd);
   if (sys_err != 0)
     {
@@ -444,14 +454,6 @@ svn_cl__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
     {
       err = svn_error_wrap_apr(apr_err, _("Can't stat '%s'"), tmpfile_name);
       goto cleanup;
-    }
-
-  /* If the caller wants us to leave the file around, return the path
-     of the file we used, and make a note not to destroy it.  */
-  if (tmpfile_left)
-    {
-      *tmpfile_left = svn_path_join(base_dir, tmpfile_name, pool);
-      remove_file = FALSE;
     }
 
   /* If the file looks changed... */
