@@ -469,15 +469,7 @@ WHERE wc_id = ?1 AND local_relpath = ?2
                   WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0)
   AND presence = 'base-deleted'
 
--- STMT_DELETE_ALL_WORKING_NODES
-DELETE FROM nodes
-WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0
-
 -- STMT_DELETE_ALL_LAYERS
-DELETE FROM nodes
-WHERE wc_id = ?1 AND local_relpath = ?2
-
--- STMT_DELETE_NODES
 DELETE FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2
 
@@ -842,11 +834,6 @@ INSERT OR REPLACE INTO actual_node (
   tree_conflict_data)
 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, NULL, ?10)
 
--- STMT_SELECT_NOT_PRESENT
-SELECT 1 FROM nodes
-WHERE wc_id = ?1 AND local_relpath = ?2 AND presence = 'not-present'
-  AND op_depth = 0
-
 -- STMT_SELECT_FILE_EXTERNAL
 SELECT file_external FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
@@ -899,10 +886,6 @@ SELECT 1 FROM actual_node
 WHERE NOT ((prop_reject IS NULL) AND (conflict_old IS NULL)
            AND (conflict_new IS NULL) AND (conflict_working IS NULL)
            AND (tree_conflict_data IS NULL))
-
--- STMT_UPDATE_CHECKSUM
-UPDATE nodes SET checksum = ?4
-WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3
 
 /* ------------------------------------------------------------------------- */
 /* PROOF OF CONCEPT: Complex queries for callback walks, caching results
