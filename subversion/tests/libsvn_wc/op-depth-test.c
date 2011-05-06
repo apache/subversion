@@ -2789,17 +2789,22 @@ static svn_error_t *
 do_delete(svn_test__sandbox_t *b,
           const char *local_relpath,
           nodes_row_t *before,
-          nodes_row_t *after)
+          nodes_row_t *after,
+          actual_row_t *actual_before,
+          actual_row_t *actual_after)
 {
   const char *local_abspath = wc_path(b, local_relpath);
 
   SVN_ERR(insert_dirs(b, before));
+  SVN_ERR(insert_actual(b, actual_before));
   SVN_ERR(check_db_rows(b, "", before));
+  SVN_ERR(check_db_actual(b, actual_before));
   SVN_ERR(svn_wc__db_op_delete(b->wc_ctx->db, local_abspath,
                                NULL, NULL /* notification */,
                                NULL, NULL /* cancellation */,
                                b->pool));
   SVN_ERR(check_db_rows(b, "", after));
+  SVN_ERR(check_db_actual(b, actual_after));
 
   return SVN_NO_ERROR;
 }
@@ -2833,8 +2838,8 @@ test_op_delete(const svn_test_opts_t *opts, apr_pool_t *pool)
       { 1, "A/B", "base-deleted", NO_COPY_FROM },
       { 0 }
     };
-    SVN_ERR(do_delete(&b, "A", before1, after));
-    SVN_ERR(do_delete(&b, "A", before2, after));
+    SVN_ERR(do_delete(&b, "A", before1, after, NULL, NULL));
+    SVN_ERR(do_delete(&b, "A", before2, after, NULL, NULL));
   }
 
   {
@@ -2850,7 +2855,7 @@ test_op_delete(const svn_test_opts_t *opts, apr_pool_t *pool)
       { 0, "A",   "normal",       5, "A" },
       { 0 }
     };
-    SVN_ERR(do_delete(&b, "A/B", before, after));
+    SVN_ERR(do_delete(&b, "A/B", before, after, NULL, NULL));
   }
 
   {
@@ -2888,8 +2893,8 @@ test_op_delete(const svn_test_opts_t *opts, apr_pool_t *pool)
       { 1, "A/B/C", "base-deleted", NO_COPY_FROM },
       { 0 }
     };
-    SVN_ERR(do_delete(&b, "A/B", before, after1));
-    SVN_ERR(do_delete(&b, "A", before, after2));
+    SVN_ERR(do_delete(&b, "A/B", before, after1, NULL, NULL));
+    SVN_ERR(do_delete(&b, "A", before, after2, NULL, NULL));
   }
 
   {
@@ -2913,7 +2918,7 @@ test_op_delete(const svn_test_opts_t *opts, apr_pool_t *pool)
       { 1, "A/B/C",   "base-deleted", NO_COPY_FROM },
       { 0 }
     };
-    SVN_ERR(do_delete(&b, "A", before, after));
+    SVN_ERR(do_delete(&b, "A", before, after, NULL, NULL));
   }
 
   {
@@ -2959,9 +2964,39 @@ test_op_delete(const svn_test_opts_t *opts, apr_pool_t *pool)
       { 1, "A/B/C/D", "base-deleted", NO_COPY_FROM },
       { 0 }
     };
-    SVN_ERR(do_delete(&b, "A/B/C/D", state1, state2));
-    SVN_ERR(do_delete(&b, "A/B", state2, state3));
-    SVN_ERR(do_delete(&b, "A", state3, state4));
+    SVN_ERR(do_delete(&b, "A/B/C/D", state1, state2, NULL, NULL));
+    SVN_ERR(do_delete(&b, "A/B", state2, state3, NULL, NULL));
+    SVN_ERR(do_delete(&b, "A", state3, state4, NULL, NULL));
+  }
+
+  {
+    nodes_row_t before[] = {
+      { 0, "",    "normal", 5, "" },
+      { 0, "A",   "normal", 5, "" },
+      { 0, "A/f", "normal", 5, "" },
+      { 2, "A/B", "normal", 5, "" },
+      { 0 }
+    };
+    nodes_row_t after[] = {
+      { 0, "",    "normal", 5, "" },
+      { 0, "A",   "normal", 5, "" },
+      { 0, "A/f", "normal", 5, "" },
+      { 1, "A",   "base-deleted", NO_COPY_FROM},
+      { 1, "A/f", "base-deleted", NO_COPY_FROM},
+      { 0 }
+    };
+    actual_row_t before_actual[] = {
+      { "A",     NULL },
+      { "A/f",   "qq" },
+      { "A/B",   NULL },
+      { "A/B/C", NULL },
+      { 0 },
+    };
+    actual_row_t after_actual[] = {
+      { "A/f", "qq" },
+      { 0 },
+    };
+    SVN_ERR(do_delete(&b, "A", before, after, before_actual, after_actual));
   }
 
   return SVN_NO_ERROR;

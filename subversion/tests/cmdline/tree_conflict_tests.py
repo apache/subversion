@@ -951,11 +951,10 @@ def query_absent_tree_conflicted_dir(sbox):
                      'delete', C_path, '--keep-local')
 
   expected_status.tweak('A/C', status='D ')
-  expected_status.tweak('A/C/C', status='? ', copied=None, wc_rev=None)
+  expected_status.remove('A/C/C')
   run_and_verify_status(wc_dir, expected_status)
 
   # Try to access the absent tree-conflict as explicit target.
-  # They should succeed without error. We don't care what they return.
   # These used to fail like this:
   ## CMD: svn status -v -u -q
   ## [...]
@@ -967,14 +966,14 @@ def query_absent_tree_conflicted_dir(sbox):
   ## subversion/libsvn_wc/wc_db.c:3288: (apr_err=155035)
   ## svn: Expected node '/.../tree_conflict_tests-20/A/C' to be added.
 
-  # using status:
+  # A/C/C is now unversioned, using status:
   expected_output = wc.State(wc_dir, {
-    'A/C/C' : Item(status='? ', treeconflict='C'),
     })
   run_and_verify_status(C_C_path, expected_output)
 
   # using info:
-  run_and_verify_svn(None, None, [], 'info', C_C_path)
+  run_and_verify_svn(None, None, ".*W155010.*The node.*was not found.*",
+                     'info', C_C_path)
 
 #----------------------------------------------------------------------
 
