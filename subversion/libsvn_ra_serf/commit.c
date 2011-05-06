@@ -78,7 +78,6 @@ typedef struct commit_context_t {
   apr_hash_t *deleted_entries;   /* deleted files (for delete+add detection) */
 
   /* HTTP v2 stuff */
-  const char *txn_name;          /* transaction name (append to txn-ish stubs */
   const char *txn_url;           /* txn URL (!svn/txn/TXN_NAME) */
   const char *txn_root_url;      /* commit anchor txn root URL */
 
@@ -1232,6 +1231,7 @@ post_headers_iterator_callback(void *baton,
   post_response_ctx_t *prc = baton;
   commit_context_t *prc_cc = prc->commit_ctx;
   svn_ra_serf__session_t *sess = prc_cc->session;
+  const char *txn_name;
 
   /* If we provided a UUID to the POST request, we should get back
      from the server an SVN_DAV_VTXN_NAME_HEADER header; otherwise we
@@ -1242,7 +1242,7 @@ post_headers_iterator_callback(void *baton,
     {
       /* Build out txn and txn-root URLs using the txn name we're
          given, and store the whole lot of it in the commit context.  */
-      prc_cc->txn_name = apr_pstrdup(prc_cc->pool, val);
+      txn_name = apr_pstrdup(prc_cc->pool, val);
       prc_cc->txn_url =
         svn_path_url_add_component2(sess->txn_stub, val, prc_cc->pool);
       prc_cc->txn_root_url =
@@ -1253,7 +1253,7 @@ post_headers_iterator_callback(void *baton,
     {
       /* Build out vtxn and vtxn-root URLs using the vtxn name we're
          given, and store the whole lot of it in the commit context.  */
-      prc_cc->txn_name = apr_pstrdup(prc_cc->pool, val);
+      txn_name = apr_pstrdup(prc_cc->pool, val);
       prc_cc->txn_url =
         svn_path_url_add_component2(sess->vtxn_stub, val, prc_cc->pool);
       prc_cc->txn_root_url =
@@ -1343,7 +1343,7 @@ open_root(void *edit_baton,
                                    ctx->session->session_url.scheme,
                                    ctx->session->session_url.hostinfo);
         }
-      if (! (ctx->txn_name && ctx->txn_root_url && ctx->txn_url))
+      if (! (ctx->txn_root_url && ctx->txn_url))
         {
           return svn_error_createf(
             SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
