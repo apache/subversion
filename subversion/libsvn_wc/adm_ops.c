@@ -218,30 +218,7 @@ process_committed_leaf(svn_wc__db_t *db,
     }
   else
     {
-      /* ### if this is a copy op root, then we should fold the entire
-         ### layer down into BASE. later child mods will apply against
-         ### that new BASE tree. ... this is important to ensure that
-         ### we don't have a copy-child listed within an op-root that no
-         ### longer exists when we commit this specific node.
-         ###
-         ### note that we will need to adjust the caller's process to
-         ### avoid a "commit" on a copied child that has already been
-         ### collapsed by the commit of the op root. BUT: we also need
-         ### to deal with modified children of the copy (text+props)
-         ### which do not appear within the tree structure changes of
-         ### the NODES table. text changes need to shift the checksum
-         ### value, and prop changes need to shift the properties column
-         ### from the ACTUAL_NODE table.
-      */
-
-      /* ### GJS: wtf is the following comment about?  */
-      /* ### Issue #3676: If we can determine that nothing below this node was
-         ### changed via this commit, we should keep new_changed_rev at its old
-         ### value, like how we handle files.
-         ###
-         ### On a clean checkout the last changed rev of the directory is the
-         ### latest revision any of the descendants or the node itself was
-         ### changed. */
+      /* Handle svn:externals changes */
       if (have_base && !have_work
           && prop_mods && had_props
           && old_externals)
