@@ -81,6 +81,13 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0
 ORDER BY op_depth DESC
 LIMIT 1
 
+-- STMT_SELECT_DEPTH_NODE
+SELECT repos_id, repos_path, presence, kind, revision, checksum,
+  translated_size, changed_revision, changed_date, changed_author, depth,
+  symlink_target, last_mod_time, properties
+FROM nodes
+WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3
+
 -- STMT_SELECT_LOWEST_WORKING_NODE
 SELECT op_depth, presence
 FROM nodes
@@ -816,6 +823,19 @@ FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0
 ORDER BY op_depth DESC
 LIMIT 1
+
+-- STMT_INSERT_WORKING_NODE_COPY_FROM_DEPTH
+INSERT OR REPLACE INTO nodes (
+    wc_id, local_relpath, op_depth, parent_relpath, repos_id, repos_path,
+    revision, presence, depth, kind, changed_revision, changed_date,
+    changed_author, checksum, properties, translated_size, last_mod_time,
+    symlink_target )
+SELECT wc_id, ?3 /*local_relpath*/, ?4 /*op_depth*/, ?5 /*parent_relpath*/,
+    ?6 /*repos_id*/, ?7 /*repos_path*/, ?8 /*revision*/, ?9 /*presence*/,
+    depth, kind, changed_revision, changed_date, changed_author, checksum,
+    properties, translated_size, last_mod_time, symlink_target
+FROM nodes
+WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?10
 
 -- STMT_INSERT_ACTUAL_NODE_FROM_ACTUAL_NODE
 INSERT OR REPLACE INTO actual_node (
