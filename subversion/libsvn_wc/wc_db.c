@@ -2704,7 +2704,7 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
   const char *copyfrom_relpath;
   svn_revnum_t copyfrom_rev;
   svn_wc__db_status_t status;
-  svn_wc__db_status_t dst_status;
+  svn_wc__db_status_t dst_presence;
   svn_boolean_t op_root;
   svn_boolean_t have_work;
   apr_int64_t copyfrom_id;
@@ -2730,7 +2730,7 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
     case svn_wc__db_status_added:
     case svn_wc__db_status_moved_here:
     case svn_wc__db_status_copied:
-      dst_status = svn_wc__db_status_normal;
+      dst_presence = svn_wc__db_status_normal;
       break;
     case svn_wc__db_status_deleted:
       if (op_root)
@@ -2738,11 +2738,11 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
           /* If the lower layer is already shadowcopied we can skip adding
              a not present node. */
           svn_error_t *err;
-          svn_wc__db_status_t status;
+          svn_wc__db_status_t dst_status;
 
-          err = read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+          err = read_info(&dst_status, NULL, NULL, NULL, NULL, NULL, NULL,
                           NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                          NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                          NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                           dst_wcroot, dst_relpath, scratch_pool, scratch_pool);
 
           if (err)
@@ -2752,7 +2752,7 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
               else
                 return svn_error_return(err);
             }
-          else if (status == svn_wc__db_status_deleted)
+          else if (dst_status == svn_wc__db_status_deleted)
             {
               /* Node is already deleted; skip the NODES work, but do
                  install wq items if requested */
@@ -2771,9 +2771,9 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
           dst_np_op_depth = -1;
         }
       if (status == svn_wc__db_status_excluded)
-        dst_status = svn_wc__db_status_excluded;
+        dst_presence = svn_wc__db_status_excluded;
       else
-        dst_status = svn_wc__db_status_not_present;
+        dst_presence = svn_wc__db_status_not_present;
       break;
     case svn_wc__db_status_absent:
       return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
@@ -2818,7 +2818,7 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
                     dst_relpath,
                     dst_op_depth,
                     dst_parent_relpath,
-                    presence_map, dst_status));
+                    presence_map, dst_presence));
 
       if (copyfrom_relpath)
         {
@@ -2861,7 +2861,7 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
          (The only time we'd want a different depth is during a recursive
          simple add, but we never insert children here during a simple add.) */
       if (kind == svn_wc__db_kind_dir
-          && dst_status == svn_wc__db_status_normal)
+          && dst_presence == svn_wc__db_status_normal)
         SVN_ERR(insert_incomplete_children(
                   dst_wcroot->sdb,
                   dst_wcroot->wc_id,
@@ -2876,7 +2876,7 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
   else
     {
       SVN_ERR(cross_db_copy(src_wcroot, src_relpath, dst_wcroot,
-                            dst_relpath, dst_status, dst_op_depth,
+                            dst_relpath, dst_presence, dst_op_depth,
                             dst_np_op_depth, kind,
                             children, copyfrom_id, copyfrom_relpath,
                             copyfrom_rev, scratch_pool));
