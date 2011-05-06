@@ -699,6 +699,7 @@ SELECT wc_id, local_relpath, ?3 /*op_depth*/,
 FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 
+/* If this query is updated, STMT_INSERT_DELETE_LIST should too. */
 -- STMT_INSERT_DELETE_FROM_NODE_RECURSIVE
 INSERT INTO nodes (
     wc_id, local_relpath, op_depth, parent_relpath, presence, kind)
@@ -1059,11 +1060,12 @@ CREATE TEMPORARY TABLE delete_list (
    local_relpath TEXT PRIMARY KEY
    )
 
+/* This matches the selection in STMT_INSERT_DELETE_FROM_NODE_RECURSIVE */
 -- STMT_INSERT_DELETE_LIST
 INSERT INTO delete_list(local_relpath)
 SELECT local_relpath FROM nodes_current
 WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
-  AND presence NOT IN ('base-deleted', 'not-present')
+  AND presence NOT IN ('base-deleted', 'not-present', 'excluded', 'absent')
 
 -- STMT_SELECT_DELETE_LIST
 SELECT local_relpath FROM delete_list
