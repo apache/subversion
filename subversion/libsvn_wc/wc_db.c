@@ -5217,11 +5217,9 @@ op_delete_txn(void *baton,
                             wcroot->wc_id, local_relpath, like_arg,
                             b->delete_depth));
   SVN_ERR(svn_sqlite__step_done(stmt));
-    
-  /* Delete ACTUAL_NODE rows, but leave those that have tree conflicts
-     and those that have changelist and a NODES row.
-     
-     ### I don't know why we leave tree conflicts. */
+
+  /* Delete ACTUAL_NODE rows, but leave those that have changelist 
+     and a NODES row. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                          STMT_DELETE_ACTUAL_NODE_LEAVING_CHANGELIST_RECURSIVE));
   SVN_ERR(svn_sqlite__bindf(stmt, "iss",
@@ -5243,7 +5241,7 @@ op_delete_txn(void *baton,
   if (add_work)
     {
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                 STMT_INSERT_WORKING_NODE_FROM_NODE_RECURSIVE));
+                                 STMT_INSERT_DELETE_FROM_NODE_RECURSIVE));
       SVN_ERR(svn_sqlite__bindf(stmt, "issi",
                                 wcroot->wc_id, local_relpath, like_arg,
                                 b->delete_depth));
