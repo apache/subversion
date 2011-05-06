@@ -693,7 +693,7 @@ test_inserting_nodes(apr_pool_t *pool)
             props,
             1, TIME_1a, AUTHOR_1,
             checksum,
-            NULL, NULL, FALSE, NULL, FALSE, NULL,
+            NULL, NULL, FALSE, NULL, FALSE, FALSE, NULL,
             pool));
 
   /* Create a new symlink node. */

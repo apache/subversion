@@ -2011,20 +2011,6 @@ add_directory(const char *path,
         }
     }
 
-  if (tree_conflict != NULL)
-    {
-      /* Queue this conflict in the parent so that its descendants
-         are skipped silently. */
-      SVN_ERR(svn_wc__db_op_set_tree_conflict(eb->db, db->local_abspath,
-                                              tree_conflict, pool));
-
-      db->already_notified = TRUE;
-
-      do_notification(eb, db->local_abspath, svn_node_dir,
-                      svn_wc_notify_tree_conflict, pool);
-    }
-
-
   SVN_ERR(svn_wc__db_temp_op_set_new_dir_to_incomplete(eb->db,
                                                        db->local_abspath,
                                                        db->new_relpath,
@@ -2053,6 +2039,21 @@ add_directory(const char *path,
                                    eb->cancel_func, eb->cancel_baton,
                                    pool));
     }
+
+  if (tree_conflict != NULL)
+    {
+      /* Queue this conflict in the parent so that its descendants
+         are skipped silently. */
+      SVN_ERR(svn_wc__db_op_set_tree_conflict(eb->db, db->local_abspath,
+                                              tree_conflict, pool));
+
+      db->already_notified = TRUE;
+
+      do_notification(eb, db->local_abspath, svn_node_dir,
+                      svn_wc_notify_tree_conflict, pool);
+    }
+
+
 
   /* If this add was obstructed by dir scheduled for addition without
      history let close_file() handle the notification because there
@@ -3957,19 +3958,9 @@ close_file(void *file_baton,
                                      (! fb->shadowed) && new_base_props,
                                      new_actual_props,
                                      keep_recorded_info,
+                                     (fb->shadowed && fb->obstruction_found),
                                      all_work_items,
                                      scratch_pool));
-
-  /* ### We can't record an unversioned obstruction yet, so 
-     ### we record a delete instead, which will allow resolving the conflict
-     ### to theirs with 'svn revert'. */
-  if (fb->shadowed && fb->obstruction_found)
-    {
-      SVN_ERR(svn_wc__db_op_delete(eb->db, fb->local_abspath,
-                                   NULL, NULL /* notification */,
-                                   eb->cancel_func, eb->cancel_baton,
-                                   scratch_pool));
-    }
 
     /* ### ugh. deal with preserving the file external value in the database.
        ### there is no official API, so we do it this way. maybe we should

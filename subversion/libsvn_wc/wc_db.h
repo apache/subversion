@@ -517,6 +517,7 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
                          svn_boolean_t update_actual_props,
                          apr_hash_t *new_actual_props,
                          svn_boolean_t keep_recorded_info,
+                         svn_boolean_t insert_base_deleted,
                          const svn_skel_t *work_items,
                          apr_pool_t *scratch_pool);
 

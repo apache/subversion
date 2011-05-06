@@ -178,6 +178,9 @@ typedef struct insert_base_baton_t {
   /* maybe we should copy information from a previous record? */
   svn_boolean_t keep_recorded_info;
 
+  /* insert a base-deleted working node as well as a base node */
+  svn_boolean_t insert_base_deleted;
+
   /* may have work items to queue in this transaction  */
   const svn_skel_t *work_items;
 
@@ -886,6 +889,17 @@ insert_base_node(void *baton,
         }
     }
 
+  if (pibb->insert_base_deleted)
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                             STMT_INSERT_WORKING_NODE_FROM_BASE_COPY_PRESENCE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isit",
+                                wcroot->wc_id, local_relpath,
+                                relpath_depth(local_relpath),
+                                presence_map, svn_wc__db_status_base_deleted));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
+
   SVN_ERR(add_work_items(wcroot->sdb, pibb->work_items, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -1564,6 +1578,7 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
                          svn_boolean_t update_actual_props,
                          apr_hash_t *new_actual_props,
                          svn_boolean_t keep_recorded_info,
+                         svn_boolean_t insert_base_deleted,
                          const svn_skel_t *work_items,
                          apr_pool_t *scratch_pool)
 {
@@ -1613,6 +1628,7 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
     }
 
   ibb.keep_recorded_info = keep_recorded_info;
+  ibb.insert_base_deleted = insert_base_deleted;
 
   /* ### hmm. if this used to be a directory, we should remove children.
      ### or maybe let caller deal with that, if there is a possibility
@@ -5207,13 +5223,13 @@ op_delete_txn(void *baton,
      
      ### I don't know why we leave tree conflicts. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                         STMT_DELETE_ACTUAL_LEAVING_CHANGELIST_AND_CONFLICT));
+                         STMT_DELETE_ACTUAL_NODE_LEAVING_CHANGELIST_RECURSIVE));
   SVN_ERR(svn_sqlite__bindf(stmt, "iss",
                             wcroot->wc_id, local_relpath, like_arg));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                         STMT_CLEAR_ACTUAL_LEAVING_CHANGELIST_AND_CONFLICT));
+                         STMT_CLEAR_ACTUAL_NODE_LEAVING_CHANGELIST_RECURSIVE));
   SVN_ERR(svn_sqlite__bindf(stmt, "iss",
                             wcroot->wc_id, local_relpath, like_arg));
   SVN_ERR(svn_sqlite__step_done(stmt));
