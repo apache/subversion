@@ -2608,7 +2608,7 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
         dst_status = svn_wc__db_status_not_present;
       break;
     case svn_wc__db_status_absent:
-      return svn_error_createf(SVN_ERR_AUTHZ_UNREADABLE, NULL,
+      return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
                                _("Cannot copy '%s' excluded by server"),
                                path_for_error_message(src_wcroot,
                                                       src_relpath,
