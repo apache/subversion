@@ -1038,6 +1038,23 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
                    const svn_skel_t *work_items,
                    apr_pool_t *scratch_pool);
 
+/* Copy the leaves of the op_depth layer directly shadowed by the operation
+ * of SRC_ABSPATH (so SRC_ABSPATH must be an op_root) to dst_abspaths
+ * parents layer.
+ *
+ * This operation is recursive. It copies all the descandants at the lower
+ * layer and adds base-deleted nodes on dst_abspath layer to mark these nodes
+ * properly deleted.
+ *
+ * Usually this operation is directly followed by a call to svn_wc__db_op_copy
+ * which performs the real copy from src_abspath to dst_abspath.
+ */
+svn_error_t *
+svn_wc__db_op_copy_shadowed_layer(svn_wc__db_t *db,
+                                  const char *src_abspath,
+                                  const char *dst_abspath,
+                                  apr_pool_t *scratch_pool);
+
 
 /* Record a copy at LOCAL_ABSPATH from a repository directory.
 

@@ -1692,7 +1692,8 @@ test_wc_move(const svn_test_opts_t *opts, apr_pool_t *pool)
       { 2, "A/B",             "base-deleted", NO_COPY_FROM },
       { 2, "A/B/C",           "base-deleted", NO_COPY_FROM },
       { 2, "A/B-move",        "normal",       1, "A/B" },
-      { 2, "A/B-move/C",      "not-present",  1, "A/B/C" },
+      { 2, "A/B-move/C",      "normal",       1, "A/B/C" },
+      { 3, "A/B-move/C",      "base-deleted", NO_COPY_FROM },
       { 3, "A/B-move/C-move", "normal",       1, "A/B/C" },
       { 0 }
     };
@@ -3325,21 +3326,17 @@ test_copy_of_deleted(const svn_test_opts_t *opts, apr_pool_t *pool)
     nodes_row_t rows[] = {
 
       {1, "A_copied",           "normal",           1, "A"},
-      /* Currently B is marked not-present */
       {1, "A_copied/B",         "normal",           1, "A/B"},
-      /* And these nodes aren't represented */
       {1, "A_copied/B/E",       "normal",           1, "A/B/E"},
       {1, "A_copied/B/E/alpha", "normal",           1, "A/B/E/alpha"},
       {1, "A_copied/B/E/beta",  "normal",           1, "A/B/E/beta"},
       {1, "A_copied/B/F",       "normal",           1, "A/B/F"},
       {1, "A_copied/B/lambda",  "normal",           1, "A/B/lambda"},
-      /* These are ok */
       {1, "A_copied/C",         "normal",           1, "A/C"},
       {1, "A_copied/D",         "excluded",         1, "A/D"},
       {1, "A_copied/mu",        "not-present",      3, "A/mu"},
       {1, "A_copied/no",        "not-present",      1, "A/no"},
 
-      /* And this layer is completely unavailable */
       {2, "A_copied/B",         "base-deleted",     NO_COPY_FROM},
       {2, "A_copied/B/E",       "base-deleted",     NO_COPY_FROM},
       {2, "A_copied/B/E/alpha", "base-deleted",     NO_COPY_FROM},
@@ -3403,7 +3400,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test_child_replace_with_same"),
     SVN_TEST_OPTS_PASS(test_shadowed_update,
                        "test_shadowed_update"),
-    SVN_TEST_OPTS_XFAIL(test_copy_of_deleted,
-                       "test_copy_of_deleted"),
+    SVN_TEST_OPTS_PASS(test_copy_of_deleted,
+                       "test_copy_of_deleted (issue #3873)"),
     SVN_TEST_NULL
   };
