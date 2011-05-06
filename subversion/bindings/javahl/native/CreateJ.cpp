@@ -501,10 +501,9 @@ CreateJ::Status(svn_wc_context_t *wc_ctx,
                              "L"JAVA_PACKAGE"/types/Status$Kind;"
                              "L"JAVA_PACKAGE"/types/Status$Kind;"
                              "L"JAVA_PACKAGE"/types/Status$Kind;"
-                             "ZZZLjava/lang/String;"
-                             "JZZLjava/lang/String;Ljava/lang/String;"
-                             "Ljava/lang/String;"
-                             "JL"JAVA_PACKAGE"/types/Lock;"
+                             "ZZZLjava/lang/String;JZZ"
+                             "L"JAVA_PACKAGE"/types/Lock;"
+                             "L"JAVA_PACKAGE"/types/Lock;"
                              "JJL"JAVA_PACKAGE"/types/NodeKind;"
                              "Ljava/lang/String;Ljava/lang/String;)V");
       if (JNIUtil::isJavaExceptionThrown())
@@ -526,10 +525,7 @@ CreateJ::Status(svn_wc_context_t *wc_ctx,
   jstring jURLCopiedFrom = NULL;
   jlong jRevisionCopiedFrom =
     org_apache_subversion_javahl_types_Revision_SVN_INVALID_REVNUM;
-  jstring jLockToken = NULL;
-  jstring jLockComment = NULL;
-  jstring jLockOwner = NULL;
-  jlong jLockCreationDate = 0;
+  jobject jLocalLock = NULL;
   jstring jChangelist = NULL;
 
   enum svn_wc_status_kind text_status = status->node_status;
@@ -556,7 +552,7 @@ CreateJ::Status(svn_wc_context_t *wc_ctx,
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
-  jobject jLock = CreateJ::Lock(status->repos_lock);
+  jobject jReposLock = CreateJ::Lock(status->repos_lock);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -588,22 +584,9 @@ CreateJ::Status(svn_wc_context_t *wc_ctx,
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
 
-      if (status->lock)
-        {
-          jLockToken = JNIUtil::makeJString(status->lock->token);
-          if (JNIUtil::isJavaExceptionThrown())
-            POP_AND_RETURN_NULL;
-
-          jLockComment = JNIUtil::makeJString(status->lock->comment);
-          if (JNIUtil::isJavaExceptionThrown())
-            POP_AND_RETURN_NULL;
-
-          jLockOwner = JNIUtil::makeJString(status->lock->owner);
-          if (JNIUtil::isJavaExceptionThrown())
-            POP_AND_RETURN_NULL;
-
-          jLockCreationDate = status->lock->creation_date;
-        }
+      jLocalLock = Lock(status->lock);
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
 
       jChangelist = JNIUtil::makeJString(status->changelist);
       if (JNIUtil::isJavaExceptionThrown())
@@ -639,9 +622,8 @@ CreateJ::Status(svn_wc_context_t *wc_ctx,
                                jRepositoryTextType, jRepositoryPropType,
                                jIsLocked, jIsCopied, jIsConflicted,
                                jURLCopiedFrom, jRevisionCopiedFrom,
-                               jIsSwitched, jIsFileExternal, jLockToken,
-                               jLockOwner,
-                               jLockComment, jLockCreationDate, jLock,
+                               jIsSwitched, jIsFileExternal, jLocalLock,
+                               jReposLock,
                                jOODLastCmtRevision, jOODLastCmtDate,
                                jOODKind, jOODLastCmtAuthor, jChangelist);
 

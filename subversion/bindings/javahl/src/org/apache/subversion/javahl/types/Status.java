@@ -137,25 +137,9 @@ public class Status implements java.io.Serializable
     private long revisionCopiedFrom;
 
     /**
-     * token specified for the lock (null if not locked)
+     * the current lock
      */
-    private String lockToken;
-
-    /**
-     * owner of the lock (null if not locked)
-     */
-    private String lockOwner;
-
-    /**
-     * comment specified for the lock (null if not locked)
-     */
-    private String lockComment;
-
-    /**
-     * date of the creation of the lock (represented in microseconds
-     * since the epoch)
-     */
-    private long lockCreationDate;
+    private Lock localLock;
 
     /**
      * the lock in the repository
@@ -222,10 +206,7 @@ public class Status implements java.io.Serializable
      * @param switched              flag if the node has been switched in the
      *                              path
      * @param fileExternal          flag if the node is a file external
-     * @param lockToken             the token for the current lock if any
-     * @param lockOwner             the owner of the current lock is any
-     * @param lockComment           the comment of the current lock if any
-     * @param lockCreationDate      the date, the lock was created if any
+     * @param localLock             the current lock
      * @param reposLock             the lock as stored in the repository if
      *                              any
      * @param reposLastCmtRevision  the youngest revision, if out of date
@@ -242,8 +223,7 @@ public class Status implements java.io.Serializable
                   Kind repositoryTextStatus, Kind repositoryPropStatus,
                   boolean locked, boolean copied, boolean isConflicted,
                   String urlCopiedFrom, long revisionCopiedFrom,
-                  boolean switched, boolean fileExternal, String lockToken,
-                  String lockOwner, String lockComment, long lockCreationDate,
+                  boolean switched, boolean fileExternal, Lock localLock,
                   Lock reposLock, long reposLastCmtRevision,
                   long reposLastCmtDate, NodeKind reposKind,
                   String reposLastCmtAuthor, String changelist)
@@ -266,10 +246,7 @@ public class Status implements java.io.Serializable
         this.revisionCopiedFrom = revisionCopiedFrom;
         this.switched = switched;
         this.fileExternal = fileExternal;
-        this.lockToken = lockToken;
-        this.lockOwner = lockOwner;
-        this.lockComment = lockComment;
-        this.lockCreationDate = lockCreationDate;
+        this.localLock = localLock;
         this.reposLock = reposLock;
         this.reposLastCmtRevision = reposLastCmtRevision;
         this.reposLastCmtDate = reposLastCmtDate;
@@ -563,49 +540,12 @@ public class Status implements java.io.Serializable
     }
 
     /**
-     * Returns the lock token
-     * @return the lock token
+     * Returns the local lock
+     * @return the local lock
      */
-    public String getLockToken()
+    public Lock getLocalLock()
     {
-        return lockToken;
-    }
-
-    /**
-     * Returns the lock  owner
-     * @return the lock owner
-     */
-    public String getLockOwner()
-    {
-        return lockOwner;
-    }
-
-    /**
-     * Returns the lock comment
-     * @return the lock comment
-     */
-    public String getLockComment()
-    {
-        return lockComment;
-    }
-
-    /**
-     * Returns the lock creation date
-     * @return the lock creation date
-     */
-    public Date getLockCreationDate()
-    {
-        return microsecondsToDate(lockCreationDate);
-    }
-
-    /**
-     * Returns the lock creation date measured in the number of
-     * microseconds since 00:00:00 January 1, 1970 UTC.
-     * @return the lock creation date
-     */
-    public long getLockCreationDateMicros()
-    {
-        return lockCreationDate;
+        return localLock;
     }
 
     /**

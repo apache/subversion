@@ -384,6 +384,18 @@ public class Status implements java.io.Serializable
         }
     }
 
+    void
+    populateLocalLock(org.apache.subversion.javahl.types.Lock aLock)
+    {
+        if (aLock == null)
+            return;
+
+        this.lockToken = aLock.getToken();
+        this.lockOwner = aLock.getOwner();
+        this.lockComment = aLock.getComment();
+        this.lockCreationDate = aLock.getCreationDate().getTime() * 1000;;
+    }
+
     /**
      * A backward-compat wrapper.
      */
@@ -402,9 +414,7 @@ public class Status implements java.io.Serializable
              aStatus.isLocked(), aStatus.isCopied(), false,
              null, null, null, null, aStatus.getUrlCopiedFrom(),
              aStatus.getRevisionCopiedFromNumber(), aStatus.isSwitched(),
-             aStatus.isFileExternal(), aStatus.getLockToken(),
-             aStatus.getLockOwner(), aStatus.getLockComment(),
-             aStatus.getLockCreationDateMicros(),
+             aStatus.isFileExternal(), null, null, null, 0,
              aStatus.getReposLock() == null ? null
                 : new Lock(aStatus.getReposLock()),
              aStatus.getReposLastCmtRevisionNumber(),
@@ -415,6 +425,8 @@ public class Status implements java.io.Serializable
         try {
             if (aStatus.isConflicted())
                 populateConflicts(aClient, aStatus.getPath());
+            if (aStatus.getLocalLock() != null)
+                populateLocalLock(aStatus.getLocalLock());
         } catch (org.apache.subversion.javahl.ClientException ex) {
             // Ignore
         }
