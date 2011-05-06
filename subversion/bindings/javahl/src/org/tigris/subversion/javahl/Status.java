@@ -340,9 +340,7 @@ public class Status implements java.io.Serializable
 
         MyInfoCallback callback = new MyInfoCallback();
 
-        aClient.info2(path,
-                      org.apache.subversion.javahl.types.Revision.HEAD,
-                      org.apache.subversion.javahl.types.Revision.HEAD,
+        aClient.info2(path, null, null,
                       org.apache.subversion.javahl.types.Depth.empty, null,
                       callback);
 
