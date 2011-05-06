@@ -2504,23 +2504,6 @@ svn_wc__db_wclock_owns_lock(svn_boolean_t *own_lock,
   @{
 */
 
-/* Removes all knowledge about @a local_dir_abspath from @a db. closing
-   file handles and removing cached information from @a db.
-
-   This function should only called right before blowing away
-   a directory as it removes cached data from the wc_db without releasing
-   memory.
-
-   After this function is called, a new working copy can be created at
-   @a local_dir_abspath.
-
-   Perform temporary allocations in @a scratch_pool.
-*/
-svn_error_t *
-svn_wc__db_temp_forget_directory(svn_wc__db_t *db,
-                                 const char *local_dir_abspath,
-                                 apr_pool_t *scratch_pool);
-
 /* Removes all references to LOCAL_ABSPATH from DB, while optionally leaving
    tree conflicts and/or a not present node.
 

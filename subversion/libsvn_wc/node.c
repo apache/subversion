@@ -1618,11 +1618,22 @@ svn_wc__rename_wc(svn_wc_context_t *wc_ctx,
                   const char *dst_abspath,
                   apr_pool_t *scratch_pool)
 {
-  SVN_ERR(svn_wc__db_temp_forget_directory(wc_ctx->db,
-                                           from_abspath,
-                                           scratch_pool));
+  const char *wcroot_abspath;
+  SVN_ERR(svn_wc__db_get_wcroot(&wcroot_abspath, wc_ctx->db, from_abspath,
+                                scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_io_file_rename(from_abspath, dst_abspath, scratch_pool));
+  if (! strcmp(from_abspath, wcroot_abspath))
+    {
+      SVN_ERR(svn_wc__db_drop_root(wc_ctx->db, wcroot_abspath, scratch_pool));
+
+      SVN_ERR(svn_io_file_rename(from_abspath, dst_abspath, scratch_pool));
+    }
+  else
+    return svn_error_createf(
+                    SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                    _("'%s' is not the root of the working copy '%s'"),
+                    svn_dirent_local_style(from_abspath, scratch_pool),
+                    svn_dirent_local_style(wcroot_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }

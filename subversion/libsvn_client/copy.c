@@ -1549,6 +1549,9 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
                                                        ctx->cancel_func,
                                                        ctx->cancel_baton,
                                                        pool));
+
+          /* Move the temporary disk tree into place. */
+          SVN_ERR(svn_io_file_rename(tmp_abspath, dst_abspath, pool));
         }
       else
         {
@@ -1556,17 +1559,15 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
              a copy from a foreign repos, but we don't yet have the
              WC APIs to do that, so we will just move the whole WC into
              place as a disjoint, nested WC. */
-        }
 
-      /* Move the temporary disk tree into place. */
-      SVN_ERR(svn_wc__rename_wc(ctx->wc_ctx, tmp_abspath, dst_abspath, pool));
+          /* Move the working copy to where it is expected. */
+          SVN_ERR(svn_wc__rename_wc(ctx->wc_ctx, tmp_abspath, dst_abspath,
+                                    pool));
 
-      if (! same_repositories)
-        {
           svn_io_sleep_for_timestamps(dst_abspath, pool);
 
-          return svn_error_createf
-            (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+          return svn_error_createf(
+             SVN_ERR_UNSUPPORTED_FEATURE, NULL,
              _("Source URL '%s' is from foreign repository; "
                "leaving it as a disjoint WC"), pair->src_abspath_or_url);
         }
