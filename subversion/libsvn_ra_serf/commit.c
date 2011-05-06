@@ -81,7 +81,7 @@ typedef struct commit_context_t {
   const char *txn_url;           /* txn URL (!svn/txn/TXN_NAME) */
   const char *txn_root_url;      /* commit anchor txn root URL */
 
-  /* HTTP v1 stuff (only value when 'txn_url' is NULL) */
+  /* HTTP v1 stuff (only valid when 'txn_url' is NULL) */
   const char *activity_url;      /* activity base URL... */
   checkout_context_t *baseline;  /* checkout for the baseline */
   const char *checked_in_url;    /* checked-in root to base CHECKOUTs from */
