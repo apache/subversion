@@ -5639,7 +5639,8 @@ rep_write_contents_close(void *baton)
       svn_error_t *err;
       err = svn_fs_fs__get_rep_reference(&old_rep, b->fs, rep->sha1_checksum,
                                          b->parent_pool);
-      if (err)
+      /* ### Other error codes that we shouldn't mask out? */
+      if (err && err->apr_err != SVN_ERR_FS_CORRUPT)
         {
           /* Something's wrong with the rep-sharing index.  We can continue
              without rep-sharing, but warn.
@@ -5647,6 +5648,17 @@ rep_write_contents_close(void *baton)
           (b->fs->warning)(b->fs->warning_baton, err);
           svn_error_clear(err);
           old_rep = NULL;
+        }
+      else
+        {
+          /* Fatal error; don't mask it.
+           
+             In particular, this block is triggered when the rep-cache refers
+             to revisions in the future.  We signal that as a corruption situation
+             since, once those revisions are less than youngest (because of more
+             commits), the rep-cache would be invalid.
+           */
+          SVN_ERR(err);
         }
     }
   else
