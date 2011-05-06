@@ -898,9 +898,10 @@ class SVNTests extends TestCase
     {
         private List<Status> statuses = new ArrayList<Status>();
 
-        public void doStatus(Status status)
+        public void doStatus(String path, Status status)
         {
-            statuses.add(status);
+            if (status != null)
+                statuses.add(status);
         }
 
         public Status[] getStatusArray()

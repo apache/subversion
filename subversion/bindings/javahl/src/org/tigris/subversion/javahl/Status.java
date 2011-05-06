@@ -317,6 +317,19 @@ public class Status implements java.io.Serializable
         this.changelist = changelist;
     }
 
+    /** Create an empty status struct */
+    public Status(String path)
+    {
+        this(path, null, NodeKind.fromApache(null), Revision.SVN_INVALID_REVNUM,
+             Revision.SVN_INVALID_REVNUM, 0, null, fromAStatusKind(null),
+             fromAStatusKind(null), fromAStatusKind(null),
+             fromAStatusKind(null), false, false, false, null,
+             null, null, null, null, Revision.SVN_INVALID_REVNUM,
+             false, false, null, null, null, 0, null,
+             Revision.SVN_INVALID_REVNUM, 0, NodeKind.fromApache(null),
+             null, null);
+    }
+
     private void
     populateConflicts(org.apache.subversion.javahl.SVNClient aClient,
                       String path)

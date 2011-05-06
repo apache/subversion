@@ -472,9 +472,13 @@ CreateJ::ChangedPath(const char *path, svn_log_changed_path2_t *log_item)
 }
 
 jobject
-CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
-                const svn_client_status_t *status, apr_pool_t *pool)
+CreateJ::Status(svn_wc_context_t *wc_ctx,
+                const svn_client_status_t *status,
+                apr_pool_t *pool)
 {
+  if (status == NULL)
+    return NULL;
+
   JNIEnv *env = JNIUtil::getEnv();
 
   // Create a local frame for our references
@@ -506,10 +510,7 @@ CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
     }
-  jstring jPath = JNIUtil::makeJString(local_abspath);
-  if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN_NULL;
-
+  jstring jPath = NULL;
   jstring jUrl = NULL;
   jobject jNodeKind = NULL;
   jlong jRevision =
@@ -565,6 +566,10 @@ CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
       jIsLocked = (status->locked == 1) ? JNI_TRUE: JNI_FALSE;
       jIsSwitched = (status->switched == 1) ? JNI_TRUE: JNI_FALSE;
       jIsFileExternal = (status->file_external == 1) ? JNI_TRUE: JNI_FALSE;
+
+      jPath = JNIUtil::makeJString(status->local_abspath);
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
 
       jLock = CreateJ::Lock(status->repos_lock);
       if (JNIUtil::isJavaExceptionThrown())
@@ -630,7 +635,8 @@ CreateJ::Status(svn_wc_context_t *wc_ctx, const char *local_abspath,
                                                      &copyfrom_url,
                                                      &copyfrom_rev,
                                                      &is_copy_target,
-                                                     wc_ctx, local_abspath,
+                                                     wc_ctx,
+                                                     status->local_abspath,
                                                      pool, pool), NULL);
 
           jURLCopiedFrom = JNIUtil::makeJString(is_copy_target ? copyfrom_url
