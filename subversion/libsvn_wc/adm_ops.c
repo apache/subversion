@@ -738,13 +738,18 @@ svn_wc_delete4(svn_wc_context_t *wc_ctx,
         break;
     }
 
+  /* Verify if we have a write lock on the parent of this node as we might
+     be changing the childlist of that directory. */
+  SVN_ERR(svn_wc__write_check(db, svn_dirent_dirname(local_abspath, pool),
+                              pool));
+
   SVN_ERR(svn_wc__db_op_delete(db, local_abspath,
                                notify_func, notify_baton,
                                cancel_func, cancel_baton,
                                pool));
 
-  /* By the time we get here, anything that was scheduled to be added has
-     become unversioned */
+  /* By the time we get here, the db knows that everything that is still at
+     LOCAL_ABSPATH is unversioned. */
   if (!keep_local)
     {
         SVN_ERR(erase_unversioned_from_wc(local_abspath, TRUE,
