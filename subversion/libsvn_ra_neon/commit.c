@@ -66,8 +66,8 @@ typedef struct version_rsrc_t
   const char *wr_url;     /* working resource URL for this resource;
                              NULL for resources not (yet) checked out */
   const char *local_path; /* path relative to the root of the commit
-                             (used for get_func, push_func, and
-                             close_func callbacks). */
+                             (used for the get_wc_prop() and push_wc_prop()
+                             callbacks). */
   const char *name;       /* basename of the resource */
   apr_pool_t *pool;       /* pool in which this resource is allocated */
 
@@ -76,6 +76,10 @@ typedef struct version_rsrc_t
 
 typedef struct commit_ctx_t
 {
+  /* Pool for the whole of the commit context. */
+  apr_pool_t *pool;
+
+  /* Pointer to the RA session baton. */
   svn_ra_neon__session_t *ras;
   const char *activity_url;
 
@@ -83,13 +87,9 @@ typedef struct commit_ctx_t
      on the commit transaction. */
   apr_hash_t *revprop_table; 
 
+  /* A hash mapping svn_string_t * paths (those which are valid as
+     target in the MERGE response) to svn_node_kind_t kinds. */
   apr_hash_t *valid_targets;
-
-  svn_ra_get_wc_prop_func_t get_func;
-  svn_ra_push_wc_prop_func_t push_func;
-  void *cb_baton;
-
-  svn_boolean_t disable_merge_response;
 
   /* The (potential) author of this commit. */
   const char *user;
@@ -98,14 +98,10 @@ typedef struct commit_ctx_t
   svn_commit_callback2_t callback;
   void *callback_baton;
 
-  /* The hash of lock-tokens owned by the working copy. */
-  apr_hash_t *tokens;
-
-  /* Whether or not to keep the locks after commit is done. */
+  /* The hash of lock tokens owned by the working copy, and whether
+     or not to keep them after this commit is complete. */
+  apr_hash_t *lock_tokens;
   svn_boolean_t keep_locks;
-
-  /* Pool for the whole of the commit context. */
-  apr_pool_t *pool;
 
 } commit_ctx_t;
 
@@ -192,15 +188,15 @@ static svn_error_t * get_version_url(commit_ctx_t *cc,
 
   if (!force)
     {
-      if  (cc->get_func != NULL)
+      if (cc->ras->callbacks->get_wc_prop != NULL)
         {
           const svn_string_t *vsn_url_value;
 
-          SVN_ERR((*cc->get_func)(cc->cb_baton,
-                                  rsrc->local_path,
-                                  SVN_RA_NEON__LP_VSN_URL,
-                                  &vsn_url_value,
-                                  pool));
+          SVN_ERR(cc->ras->callbacks->get_wc_prop(cc->ras->callback_baton,
+                                                  rsrc->local_path,
+                                                  SVN_RA_NEON__LP_VSN_URL,
+                                                  &vsn_url_value,
+                                                  pool));
           if (vsn_url_value != NULL)
             {
               rsrc->vsn_url = apr_pstrdup(rsrc->pool, vsn_url_value->data);
@@ -264,14 +260,14 @@ static svn_error_t * get_version_url(commit_ctx_t *cc,
      a resource object. */
   rsrc->vsn_url = apr_pstrdup(rsrc->pool, url_str->data);
 
-  if (cc->push_func != NULL)
+  if (cc->ras->callbacks->push_wc_prop != NULL)
     {
       /* Now we can store the new version-url. */
-      SVN_ERR((*cc->push_func)(cc->cb_baton,
-                               rsrc->local_path,
-                               SVN_RA_NEON__LP_VSN_URL,
-                               url_str,
-                               pool));
+      SVN_ERR(cc->ras->callbacks->push_wc_prop(cc->ras->callback_baton,
+                                               rsrc->local_path,
+                                               SVN_RA_NEON__LP_VSN_URL,
+                                               url_str,
+                                               pool));
     }
 
   return SVN_NO_ERROR;
@@ -284,17 +280,17 @@ static svn_error_t * get_activity_collection(commit_ctx_t *cc,
                                              svn_boolean_t force,
                                              apr_pool_t *pool)
 {
-  if (!force && cc->get_func != NULL)
+  if (!force && cc->ras->callbacks->get_wc_prop != NULL)
     {
-      /* with a get_func, we can just ask for the activity URL from the
+      /* with a get_wc_prop, we can just ask for the activity URL from the
          property store. */
 
       /* get the URL where we should create activities */
-      SVN_ERR((*cc->get_func)(cc->cb_baton,
-                              "",
-                              SVN_RA_NEON__LP_ACTIVITY_COLL,
-                              collection,
-                              pool));
+      SVN_ERR(cc->ras->callbacks->get_wc_prop(cc->ras->callback_baton,
+                                              "",
+                                              SVN_RA_NEON__LP_ACTIVITY_COLL,
+                                              collection,
+                                              pool));
 
       if (*collection != NULL)
         {
@@ -310,14 +306,14 @@ static svn_error_t * get_activity_collection(commit_ctx_t *cc,
                                                cc->ras,
                                                pool));
 
-  if (cc->push_func != NULL)
+  if (cc->ras->callbacks->push_wc_prop != NULL)
     {
       /* save the (new) activity collection URL into the directory */
-      SVN_ERR((*cc->push_func)(cc->cb_baton,
-                               "",
-                               SVN_RA_NEON__LP_ACTIVITY_COLL,
-                               *collection,
-                               pool));
+      SVN_ERR(cc->ras->callbacks->push_wc_prop(cc->ras->callback_baton,
+                                               "",
+                                               SVN_RA_NEON__LP_ACTIVITY_COLL,
+                                               *collection,
+                                               pool));
     }
 
   return SVN_NO_ERROR;
@@ -835,10 +831,10 @@ static svn_error_t * commit_delete_entry(const char *path,
   /* Start out assuming that we're deleting a file;  try to lookup the
      path itself in the token-hash, and if found, attach it to the If:
      header. */
-  if (parent->cc->tokens)
+  if (parent->cc->lock_tokens)
     {
       const char *token =
-        apr_hash_get(parent->cc->tokens, path, APR_HASH_KEY_STRING);
+        apr_hash_get(parent->cc->lock_tokens, path, APR_HASH_KEY_STRING);
 
       if (token)
         {
@@ -898,8 +894,8 @@ static svn_error_t * commit_delete_entry(const char *path,
       svn_stringbuf_t *locks_list;
       svn_error_t *err = SVN_NO_ERROR;
 
-      if (parent->cc->tokens)
-        child_tokens = get_child_tokens(parent->cc->tokens, path, pool);
+      if (parent->cc->lock_tokens)
+        child_tokens = get_child_tokens(parent->cc->lock_tokens, path, pool);
 
       /* No kiddos?  Return the original error.  Else, clear it so it
          doesn't get leaked.  */
@@ -911,7 +907,7 @@ static svn_error_t * commit_delete_entry(const char *path,
 
       /* In preparation of directory locks, go ahead and add the actual
          target's lock token to those of its children. */
-      if ((token = apr_hash_get(parent->cc->tokens, path,
+      if ((token = apr_hash_get(parent->cc->lock_tokens, path,
                                 APR_HASH_KEY_STRING)))
         apr_hash_set(child_tokens, path, APR_HASH_KEY_STRING, token);
 
@@ -1098,8 +1094,9 @@ static svn_error_t * commit_add_file(const char *path,
   SVN_ERR(add_child(&rsrc, parent->cc, parent->rsrc,
                     name, 1, SVN_INVALID_REVNUM, workpool));
   file->rsrc = dup_resource(rsrc, file_pool);
-  if (parent->cc->tokens)
-    file->token = apr_hash_get(parent->cc->tokens, path, APR_HASH_KEY_STRING);
+  if (parent->cc->lock_tokens)
+    file->token = apr_hash_get(parent->cc->lock_tokens, path,
+                               APR_HASH_KEY_STRING);
 
   /* If the parent directory existed before this commit then there may be a
      file with this URL already. We need to ensure such a file does not
@@ -1193,8 +1190,9 @@ static svn_error_t * commit_open_file(const char *path,
   SVN_ERR(add_child(&rsrc, parent->cc, parent->rsrc,
                     name, 0, base_revision, workpool));
   file->rsrc = dup_resource(rsrc, file_pool);
-  if (parent->cc->tokens)
-    file->token = apr_hash_get(parent->cc->tokens, path, APR_HASH_KEY_STRING);
+  if (parent->cc->lock_tokens)
+    file->token = apr_hash_get(parent->cc->lock_tokens, path,
+                               APR_HASH_KEY_STRING);
 
   /* do the CHECKOUT now. we'll PUT the new file contents later on. */
   SVN_ERR(checkout_resource(parent->cc, file->rsrc, TRUE,
@@ -1400,9 +1398,9 @@ static svn_error_t * commit_close_edit(void *edit_baton,
                                       cc->ras->root.path,
                                       cc->activity_url,
                                       cc->valid_targets,
-                                      cc->tokens,
+                                      cc->lock_tokens,
                                       cc->keep_locks,
-                                      cc->disable_merge_response,
+                                      cc->ras->callbacks->push_wc_prop == NULL,
                                       pool));
   SVN_ERR(delete_activity(edit_baton, pool));
 
@@ -1440,12 +1438,9 @@ svn_error_t * svn_ra_neon__get_commit_editor(svn_ra_session_t *session,
   cc->pool = pool;
   cc->ras = ras;
   cc->valid_targets = apr_hash_make(pool);
-  cc->get_func = ras->callbacks->get_wc_prop;
-  cc->push_func = ras->callbacks->push_wc_prop;
-  cc->cb_baton = ras->callback_baton;
   cc->callback = callback;
   cc->callback_baton = callback_baton;
-  cc->tokens = lock_tokens;
+  cc->lock_tokens = lock_tokens;
   cc->keep_locks = keep_locks;
 
   /* Dup the revprops into POOL, in case the caller clears the pool
@@ -1461,11 +1456,6 @@ svn_error_t * svn_ra_neon__get_commit_editor(svn_ra_session_t *session,
       apr_hash_set(cc->revprop_table, apr_pstrdup(pool, key), klen,
                    svn_string_dup(val, pool));
     }
-
-  /* If the caller didn't give us any way of storing wcprops, then
-     there's no point in getting back a MERGE response full of VR's.  */
-  if (ras->callbacks->push_wc_prop == NULL)
-    cc->disable_merge_response = TRUE;
 
   /* Set up the editor. */
   commit_editor = svn_delta_default_editor(pool);
