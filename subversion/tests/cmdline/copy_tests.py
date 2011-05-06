@@ -4964,6 +4964,7 @@ def move_wc_and_repo_dir_to_itself(sbox):
 def copy_wc_url_with_absent(sbox):
   "copy wc to url with several absent children"
   sbox.build()
+  wc_dir = sbox.wc_dir
 
   # A/B a normal delete
   sbox.simple_rm('A/B')
@@ -4981,12 +4982,12 @@ def copy_wc_url_with_absent(sbox):
   svntest.main.run_svn(None, 'up', '--set-depth', 'exclude',
                        os.path.join(sbox.wc_dir, 'A/D'))
 
-  # Test issue #3314 after copy      ### Currently fails with out of date
+  # Test issue #3314 after copy
   sbox.simple_copy('A', 'A_copied')
   svntest.main.run_svn(None, 'ci', os.path.join(sbox.wc_dir, 'A_copied'),
                        '-m', 'Commit A_copied')
 
-  # This tests issue #2763           ### Currently fails with out of date
+  # This tests issue #2763
   svntest.main.run_svn(None, 'cp', os.path.join(sbox.wc_dir, 'A'),
                        '^/A_tagged', '-m', 'Tag A')
 
@@ -4994,7 +4995,93 @@ def copy_wc_url_with_absent(sbox):
   svntest.main.run_svn(None, 'ci', os.path.join(sbox.wc_dir, 'A'),
                        '-m', 'Commit A')
 
-  # TODO: Verify that A_copied and A_tagged show up like A without mu.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A_tagged'          : Item(status='A '),
+    'A_tagged/D'        : Item(status='A '),
+    'A_tagged/D/gamma'  : Item(status='A '),
+    'A_tagged/D/H'      : Item(status='A '),
+    'A_tagged/D/H/psi'  : Item(status='A '),
+    'A_tagged/D/H/chi'  : Item(status='A '),
+    'A_tagged/D/H/omega': Item(status='A '),
+    'A_tagged/D/G'      : Item(status='A '),
+    'A_tagged/D/G/pi'   : Item(status='A '),
+    'A_tagged/D/G/rho'  : Item(status='A '),
+    'A_tagged/D/G/tau'  : Item(status='A '),
+    'A_tagged/C'        : Item(status='A '),
+
+    'A/no'              : Item(status='A '),
+    })
+
+  # This should bring in A_tagged and A/no
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        None,
+                                        None)
+
+  # And now bring in the excluded nodes from A and A_copied
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D'               : Item(status='A '),
+    'A/D/G'             : Item(status='A '),
+    'A/D/G/pi'          : Item(status='A '),
+    'A/D/G/tau'         : Item(status='A '),
+    'A/D/G/rho'         : Item(status='A '),
+    'A/D/H'             : Item(status='A '),
+    'A/D/H/psi'         : Item(status='A '),
+    'A/D/H/chi'         : Item(status='A '),
+    'A/D/H/omega'       : Item(status='A '),
+    'A/D/gamma'         : Item(status='A '),
+
+    'A_copied/D'        : Item(status='A '),
+    'A_copied/D/H'      : Item(status='A '),
+    'A_copied/D/H/omega': Item(status='A '),
+    'A_copied/D/H/psi'  : Item(status='A '),
+    'A_copied/D/H/chi'  : Item(status='A '),
+    'A_copied/D/G'      : Item(status='A '),
+    'A_copied/D/G/tau'  : Item(status='A '),
+    'A_copied/D/G/rho'  : Item(status='A '),
+    'A_copied/D/G/pi'   : Item(status='A '),
+    'A_copied/D/gamma'  : Item(status='A '),
+  })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        None,
+                                        None,
+                                        None, None, None, None, None, False,
+                                        wc_dir, '--set-depth', 'infinity')
+
+  # Except for A/no, the 3 directories should now have the same children
+
+  items = {
+    ''                  : Item(status='  ', wc_rev='6'),
+    'C'                 : Item(status='  ', wc_rev='6'),
+    'D'                 : Item(status='  ', wc_rev='6'),
+    'D/gamma'           : Item(status='  ', wc_rev='6'),
+    'D/H'               : Item(status='  ', wc_rev='6'),
+    'D/H/psi'           : Item(status='  ', wc_rev='6'),
+    'D/H/chi'           : Item(status='  ', wc_rev='6'),
+    'D/H/omega'         : Item(status='  ', wc_rev='6'),
+    'D/G'               : Item(status='  ', wc_rev='6'),
+    'D/G/pi'            : Item(status='  ', wc_rev='6'),
+    'D/G/tau'           : Item(status='  ', wc_rev='6'),
+    'D/G/rho'           : Item(status='  ', wc_rev='6'),
+  }
+
+  expected_status = svntest.wc.State(os.path.join(wc_dir, 'A_copied'), items)
+  svntest.actions.run_and_verify_status(os.path.join(wc_dir, 'A_copied'),
+                                        expected_status)
+
+  expected_status = svntest.wc.State(os.path.join(wc_dir, 'A_tagged'), items)
+  svntest.actions.run_and_verify_status(os.path.join(wc_dir, 'A_tagged'),
+                                        expected_status)
+
+  expected_status.add({
+    'no'                : Item(status='  ', wc_rev='6')
+  })
+
+  expected_status = svntest.wc.State(os.path.join(wc_dir, 'A'), items)
+  svntest.actions.run_and_verify_status(os.path.join(wc_dir, 'A'),
+                                        expected_status)
+
 
 
 ########################################################################
