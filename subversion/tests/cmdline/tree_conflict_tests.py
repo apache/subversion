@@ -438,14 +438,14 @@ def ensure_tree_conflict(sbox, operation,
                               target_path)
 
       if modaction.startswith('f'):
-        victim = os.path.join(target_path, 'F')
+        victim_path = os.path.join(target_path, 'F')
       else:
-        victim = os.path.join(target_path, 'D')
+        victim_path = os.path.join(target_path, 'D')
 
       # Perform the operation that tries to apply incoming changes to the WC.
       # The command is expected to do something (and give some output),
       # and it should raise a conflict but not an error.
-      expected_stdout = svntest.verify.ExpectedOutput("   C " + victim
+      expected_stdout = svntest.verify.ExpectedOutput("   C " + victim_path
                                                       + "\n",
                                                       match_all=False)
       # Do the main action
@@ -472,27 +472,27 @@ def ensure_tree_conflict(sbox, operation,
       #   here we get away with passing None because we know an implementation
       #   detail: namely that it's not going to look at that argument if it
       #   gets the stderr that we're expecting.
-      run_and_verify_commit(".", None, None, ".*conflict.*", victim)
+      run_and_verify_commit(".", None, None, ".*conflict.*", victim_path)
 
       verbose_print("--- Checking that 'status' reports the conflict")
       expected_stdout = svntest.verify.RegexOutput("^......C.* " +
-                                                   re.escape(victim) + "$",
+                                                   re.escape(victim_path) + "$",
                                                    match_all=False)
       run_and_verify_svn(None, expected_stdout, [],
-                         'status', victim)
+                         'status', victim_path)
 
       verbose_print("--- Resolving the conflict")
       # Make sure resolving the parent does nothing.
-      run_and_verify_resolved([], os.path.dirname(victim))
+      run_and_verify_resolved([], os.path.dirname(victim_path))
       # The real resolved call.
-      run_and_verify_resolved([victim])
+      run_and_verify_resolved([victim_path])
 
       verbose_print("--- Checking that 'status' does not report a conflict")
       exitcode, stdout, stderr = run_and_verify_svn(None, None, [],
-                                                'status', victim)
+                                                'status', victim_path)
       for line in stdout:
-        if line[6] == 'C': # and line.endswith(victim + '\n'):
-          raise svntest.Failure("unexpected status C") # on path '" + victim + "'")
+        if line[6] == 'C': # and line.endswith(victim_path + '\n'):
+          raise svntest.Failure("unexpected status C") # on victim_path
 
       # verbose_print("--- Committing (should now succeed)")
       # run_and_verify_svn(None, None, [],
