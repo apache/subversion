@@ -35,6 +35,7 @@ from svntest.actions import run_and_verify_commit
 from svntest.actions import run_and_verify_resolved
 from svntest.actions import run_and_verify_update
 from svntest.actions import run_and_verify_status
+from svntest.actions import run_and_verify_info
 from svntest.actions import get_virginal_state
 
 # (abbreviation)
@@ -438,9 +439,10 @@ def ensure_tree_conflict(sbox, operation,
                               target_path)
 
       if modaction.startswith('f'):
-        victim_path = os.path.join(target_path, 'F')
+        victim_name = 'F'
       else:
-        victim_path = os.path.join(target_path, 'D')
+        victim_name = 'D'
+      victim_path = os.path.join(target_path, victim_name)
 
       # Perform the operation that tries to apply incoming changes to the WC.
       # The command is expected to do something (and give some output),
@@ -466,6 +468,22 @@ def ensure_tree_conflict(sbox, operation,
                            source_url, target_path)
       else:
         raise Exception("unknown operation: '" + operation + "'")
+
+      verbose_print("--- Checking that 'info' reports the conflict")
+      if operation == 'update' or operation == 'switch':
+        incoming_left_rev = target_start_rev
+      else:
+        incoming_left_rev = source_left_rev
+      if operation == 'update' or operation == 'merge':
+        incoming_right_rev = source_right_rev
+      else:
+        incoming_right_rev = head_rev
+      expected_info = { 'Tree conflict' : operation +
+          r'.* \((none|(file|dir).*' +
+            re.escape(victim_name + '@' + str(incoming_left_rev)) + r')' +
+          r'.* \((none|(file|dir).*' +
+            re.escape(victim_name + '@' + str(incoming_right_rev)) + r')' }
+      run_and_verify_info([expected_info], victim_path)
 
       verbose_print("--- Trying to commit (expecting 'conflict' error)")
       ### run_and_verify_commit() requires an "output_tree" argument, but
