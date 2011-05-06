@@ -170,10 +170,12 @@ static svn_error_t *
 wc_revert(svn_test__sandbox_t *b, const char *path, svn_depth_t depth)
 {
   const char *abspath = wc_path(b, path);
+  const char *dir_abspath = svn_dirent_dirname(abspath, b->pool);
   const char *lock_root_abspath;
 
-  SVN_ERR(svn_wc__acquire_write_lock(&lock_root_abspath, b->wc_ctx, abspath,
-                                     TRUE /* lock_anchor */, b->pool, b->pool));
+  SVN_ERR(svn_wc__acquire_write_lock(&lock_root_abspath, b->wc_ctx,
+                                     dir_abspath, FALSE /* lock_anchor */,
+                                     b->pool, b->pool));
   SVN_ERR(svn_wc_revert4(b->wc_ctx, abspath, depth, FALSE, NULL,
                          NULL, NULL, /* cancel baton + func */
                          NULL, NULL, /* notify baton + func */
@@ -186,9 +188,18 @@ static svn_error_t *
 wc_delete(svn_test__sandbox_t *b, const char *path)
 {
   const char *abspath = wc_path(b, path);
+  const char *dir_abspath = svn_dirent_dirname(abspath, b->pool);
+  const char *lock_root_abspath;
 
-  return svn_wc_delete4(b->wc_ctx, abspath, FALSE, TRUE, NULL, NULL, NULL, NULL,
-                        b->pool);
+  SVN_ERR(svn_wc__acquire_write_lock(&lock_root_abspath, b->wc_ctx,
+                                     dir_abspath, FALSE,
+                                     b->pool, b->pool));
+  SVN_ERR(svn_wc_delete4(b->wc_ctx, abspath, FALSE, TRUE,
+                         NULL, NULL, /* cancel baton + func */
+                         NULL, NULL, /* notify baton + func */
+                         b->pool));
+  SVN_ERR(svn_wc__release_write_lock(b->wc_ctx, lock_root_abspath, b->pool));
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -757,8 +768,7 @@ test_deletes(const svn_test_opts_t *opts, apr_pool_t *pool)
     SVN_ERR(check_db_rows(&b, "A/B/E/new-file", rows));
   }
 
-  SVN_ERR(svn_wc_delete4(b.wc_ctx, wc_path(&b, "A/B/E/alpha"),
-                         FALSE, TRUE, NULL, NULL, NULL, NULL, pool));
+  SVN_ERR(wc_delete(&b, "A/B/E/alpha"));
   {
     nodes_row_t rows[] = {
       { 0, "A/B/E/alpha", "normal",       1, "A/B/E/alpha" },
@@ -768,8 +778,7 @@ test_deletes(const svn_test_opts_t *opts, apr_pool_t *pool)
     SVN_ERR(check_db_rows(&b, "A/B/E/alpha", rows));
   }
 
-  SVN_ERR(svn_wc_delete4(b.wc_ctx, wc_path(&b, "A/B/F"),
-                         FALSE, TRUE, NULL, NULL, NULL, NULL, pool));
+  SVN_ERR(wc_delete(&b, "A/B/F"));
   {
     nodes_row_t rows[] = {
       { 0, "A/B/F", "normal",       1, "A/B/F" },
@@ -779,8 +788,7 @@ test_deletes(const svn_test_opts_t *opts, apr_pool_t *pool)
     SVN_ERR(check_db_rows(&b, "A/B/F", rows));
   }
 
-  SVN_ERR(svn_wc_delete4(b.wc_ctx, wc_path(&b, "A/B"),
-                         FALSE, TRUE, NULL, NULL, NULL, NULL, pool));
+  SVN_ERR(wc_delete(&b, "A/B"));
   {
     nodes_row_t rows[] = {
       { 0, "A/B",         "normal",       1, "A/B",        },
@@ -914,8 +922,7 @@ test_delete_of_copies(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(add_and_commit_greek_tree(&b));
   SVN_ERR(wc_copy(&b, "A/B", "A/B-copied"));
 
-  SVN_ERR(svn_wc_delete4(b.wc_ctx, wc_path(&b, "A/B-copied/E"),
-                         FALSE, TRUE, NULL, NULL, NULL, NULL, pool));
+  SVN_ERR(wc_delete(&b, "A/B-copied/E"));
   {
     nodes_row_t rows[] = {
       { 2, "A/B-copied/E",       "normal",       1, "A/B/E" },
@@ -946,8 +953,7 @@ test_delete_of_copies(const svn_test_opts_t *opts, apr_pool_t *pool)
     SVN_ERR(check_db_rows(&b, "A/B-copied/E", rows));
   }
 
-  SVN_ERR(svn_wc_delete4(b.wc_ctx, wc_path(&b, "A/B-copied/E/rho"),
-                         FALSE, TRUE, NULL, NULL, NULL, NULL, pool));
+  SVN_ERR(wc_delete(&b, "A/B-copied/E/rho"));
   {
     nodes_row_t rows[] = {
       { 2, "A/B-copied/E",       "normal",       1, "A/B/E" },
@@ -965,8 +971,7 @@ test_delete_of_copies(const svn_test_opts_t *opts, apr_pool_t *pool)
     SVN_ERR(check_db_rows(&b, "A/B-copied/E", rows));
   }
 
-  SVN_ERR(svn_wc_delete4(b.wc_ctx, wc_path(&b, "A/B-copied/E"),
-                         FALSE, TRUE, NULL, NULL, NULL, NULL, pool));
+  SVN_ERR(wc_delete(&b, "A/B-copied/E"));
   {
     nodes_row_t rows[] = {
       { 2, "A/B-copied/E",       "normal",       1, "A/B/E" },
@@ -982,8 +987,7 @@ test_delete_of_copies(const svn_test_opts_t *opts, apr_pool_t *pool)
 
   SVN_ERR(wc_copy(&b, "A/B", "A/B-copied/E"));
 
-  SVN_ERR(svn_wc_delete4(b.wc_ctx, wc_path(&b, "A/B-copied/E/F"),
-                         FALSE, TRUE, NULL, NULL, NULL, NULL, pool));
+  SVN_ERR(wc_delete(&b, "A/B-copied/E/F"));
   {
     nodes_row_t rows[] = {
       { 3, "A/B-copied/E/F", "normal",       1, "A/B/F" },
@@ -993,8 +997,7 @@ test_delete_of_copies(const svn_test_opts_t *opts, apr_pool_t *pool)
     SVN_ERR(check_db_rows(&b, "A/B-copied/E/F", rows));
   }
 
-  SVN_ERR(svn_wc_delete4(b.wc_ctx, wc_path(&b, "A/B-copied"),
-                         FALSE, TRUE, NULL, NULL, NULL, NULL, pool));
+  SVN_ERR(wc_delete(&b, "A/B-copied"));
   {
     nodes_row_t rows[] = { { 0 } };
     SVN_ERR(check_db_rows(&b, "A/B-copied", rows));
@@ -1014,8 +1017,7 @@ test_delete_with_base(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(wc_delete(&b, "A/B/E/beta"));
   SVN_ERR(wc_commit(&b, ""));
 
-  SVN_ERR(svn_wc_delete4(b.wc_ctx, wc_path(&b, "A/B/E"),
-                         FALSE, TRUE, NULL, NULL, NULL, NULL, pool));
+  SVN_ERR(wc_delete(&b, "A/B/E"));
   {
     nodes_row_t rows[] = {
       { 0, "A/B/E",       "normal",        1, "A/B/E"},
@@ -1046,8 +1048,7 @@ test_delete_with_base(const svn_test_opts_t *opts, apr_pool_t *pool)
     SVN_ERR(check_db_rows(&b, "A/B/E", rows));
   }
 
-  SVN_ERR(svn_wc_delete4(b.wc_ctx, wc_path(&b, "A/B/E"),
-                         FALSE, TRUE, NULL, NULL, NULL, NULL, pool));
+  SVN_ERR(wc_delete(&b, "A/B/E"));
   {
     nodes_row_t rows[] = {
       { 0, "A/B/E",       "normal",        1, "A/B/E"},
