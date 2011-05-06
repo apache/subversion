@@ -4943,7 +4943,6 @@ svn_wc__db_op_remove_node(svn_wc__db_t *db,
 
   /* ### Flush everything below this node in all ways */
   SVN_ERR(flush_entries(wcroot, local_abspath, scratch_pool));
-  SVN_ERR(svn_wc__db_temp_forget_directory(db, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -9059,55 +9058,6 @@ svn_wc__db_temp_get_format(int *format,
 
   return SVN_NO_ERROR;
 }
-
-
-/* ### temporary API. remove before release.  */
-svn_error_t *
-svn_wc__db_temp_forget_directory(svn_wc__db_t *db,
-                                 const char *local_dir_abspath,
-                                 apr_pool_t *scratch_pool)
-{
-  apr_hash_t *roots = apr_hash_make(scratch_pool);
-  apr_hash_index_t *hi;
-  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-
-  for (hi = apr_hash_first(scratch_pool, db->dir_data);
-       hi;
-       hi = apr_hash_next(hi))
-    {
-      svn_wc__db_wcroot_t *wcroot = svn__apr_hash_index_val(hi);
-      const char *local_abspath = svn__apr_hash_index_key(hi);
-      svn_error_t *err;
-
-      if (!svn_dirent_is_ancestor(local_dir_abspath, local_abspath))
-        continue;
-
-      svn_pool_clear(iterpool);
-
-      err = svn_wc__db_wclock_release(db, local_abspath, iterpool);
-      if (err
-          && (err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY
-              || err->apr_err == SVN_ERR_WC_NOT_LOCKED))
-        {
-          svn_error_clear(err);
-        }
-      else
-        SVN_ERR(err);
-
-      apr_hash_set(db->dir_data, local_abspath, APR_HASH_KEY_STRING, NULL);
-
-      if (wcroot->sdb &&
-          svn_dirent_is_ancestor(local_dir_abspath, wcroot->abspath))
-        {
-          apr_hash_set(roots, wcroot->abspath, APR_HASH_KEY_STRING, wcroot);
-        }
-    }
-  svn_pool_destroy(iterpool);
-
-  return svn_error_return(svn_wc__db_close_many_wcroots(roots, db->state_pool,
-                                                        scratch_pool));
-}
-
 
 /* ### temporary API. remove before release.  */
 svn_wc_adm_access_t *

@@ -554,17 +554,18 @@ svn_wc__adm_destroy(svn_wc__db_t *db,
                                 scratch_pool, scratch_pool));
 
   /* Well, the coast is clear for blowing away the administrative
-     directory, which also removes the lock */
-  SVN_ERR(svn_wc__db_temp_forget_directory(db, dir_abspath, scratch_pool));
+     directory, which also removes remaining locks */
 
-  /* ### We should check if we are the only user of this DB, or
-         perhaps call svn_wc__db_drop_root? */
+  /* Now close the DB, and we can delete the working copy */
   if (strcmp(adm_abspath, dir_abspath) == 0)
-    SVN_ERR(svn_io_remove_dir2(svn_wc__adm_child(adm_abspath, NULL,
-                                                 scratch_pool),
-                               FALSE,
-                               cancel_func, cancel_baton,
-                               scratch_pool));
+    {
+      SVN_ERR(svn_wc__db_drop_root(db, adm_abspath, scratch_pool));
+      SVN_ERR(svn_io_remove_dir2(svn_wc__adm_child(adm_abspath, NULL,
+                                                   scratch_pool),
+                                 FALSE,
+                                 cancel_func, cancel_baton,
+                                 scratch_pool));
+    }
 
   return SVN_NO_ERROR;
 }
