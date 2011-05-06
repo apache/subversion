@@ -552,28 +552,6 @@ svn_wc__internal_get_copyfrom_info(const char **copyfrom_root_url,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_wc__node_get_copyfrom_info(const char **copyfrom_root_url,
-                               const char **copyfrom_repos_relpath,
-                               const char **copyfrom_url,
-                               svn_revnum_t *copyfrom_rev,
-                               svn_boolean_t *is_copy_target,
-                               svn_wc_context_t *wc_ctx,
-                               const char *local_abspath,
-                               apr_pool_t *result_pool,
-                               apr_pool_t *scratch_pool)
-{
-  return
-    svn_error_return(svn_wc__internal_get_copyfrom_info(copyfrom_root_url,
-                                                        copyfrom_repos_relpath,
-                                                        copyfrom_url,
-                                                        copyfrom_rev,
-                                                        is_copy_target,
-                                                        wc_ctx->db,
-                                                        local_abspath,
-                                                        result_pool,
-                                                        scratch_pool));
-}
 
 /* A recursive node-walker, helper for svn_wc__internal_walk_children().
  *
