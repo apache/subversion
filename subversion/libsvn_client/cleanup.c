@@ -73,8 +73,7 @@ svn_client_cleanup(const char *path,
                                   "'svn cleanup' on the root of the working "
                                   "copy (%s) instead."),
                                   svn_dirent_local_style(wcroot_abspath,
-                                                         scratch_pool),
-                                  scratch_pool);
+                                                         scratch_pool));
     }
 
   svn_io_sleep_for_timestamps(path, scratch_pool);
