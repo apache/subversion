@@ -79,6 +79,10 @@ typedef struct commit_ctx_t
   svn_ra_neon__session_t *ras;
   const char *activity_url;
 
+  /* A hash of revision properties (log messages, etc.) we need to set
+     on the commit transaction. */
+  apr_hash_t *revprop_table; 
+
   apr_hash_t *valid_targets;
 
   svn_ra_get_wc_prop_func_t get_func;
@@ -99,6 +103,9 @@ typedef struct commit_ctx_t
 
   /* Whether or not to keep the locks after commit is done. */
   svn_boolean_t keep_locks;
+
+  /* Pool for the whole of the commit context. */
+  apr_pool_t *pool;
 
 } commit_ctx_t;
 
@@ -158,10 +165,16 @@ static svn_error_t * delete_activity(void *edit_baton,
                                      apr_pool_t *pool)
 {
   commit_ctx_t *cc = edit_baton;
-  return svn_ra_neon__simple_request(NULL, cc->ras, "DELETE",
-                                     cc->activity_url, NULL, NULL,
-                                     204 /* No Content */,
-                                     404 /* Not Found */, pool);
+
+  /* If we started an activity, we need to (try to) delete it.  (If it
+     doesn't exist, that's okay, too.) */
+  if (cc->activity_url)
+    SVN_ERR(svn_ra_neon__simple_request(NULL, cc->ras, "DELETE",
+                                        cc->activity_url, NULL, NULL,
+                                        204 /* No Content */,
+                                        404 /* Not Found */, pool));
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -342,7 +355,7 @@ static svn_error_t * create_activity(commit_ctx_t *cc,
                                           201, 0, pool));
     }
 
-  cc->activity_url = url;
+  cc->activity_url = apr_pstrdup(cc->pool, url);
 
   return SVN_NO_ERROR;
 }
@@ -665,6 +678,59 @@ add_valid_target(commit_ctx_t *cc,
 }
 
 
+/* PROPPATCH the appropriate resource in order to set the properties
+   in REVPROP_TABLE on the commit transaction.  Use POOL for
+   temporary allocations.  */
+static svn_error_t *
+apply_revprops(commit_ctx_t *cc,
+               apr_hash_t *revprop_table,
+               apr_pool_t *pool)
+{
+  const char *vcc;
+  version_rsrc_t vcc_rsrc = { SVN_INVALID_REVNUM };
+  svn_error_t *err = NULL;
+  int retry_count = 5;
+
+  /* ### this whole sequence can/should be replaced with an expand-property
+     ### REPORT when that is available on the server. */
+
+  /* fetch the DAV:version-controlled-configuration from the session's URL */
+  SVN_ERR(svn_ra_neon__get_vcc(&vcc, cc->ras, cc->ras->root.path, pool));
+
+
+  do {
+
+    svn_error_clear(err);
+
+    vcc_rsrc.pool = pool;
+    vcc_rsrc.vsn_url = vcc;
+
+    /* To set the revision properties, we must checkout the latest baseline
+       and get back a mutable "working" baseline.  */
+    err = checkout_resource(cc, &vcc_rsrc, FALSE, NULL, TRUE, pool);
+
+    /* There's a small chance of a race condition here, if apache is
+       experiencing heavy commit concurrency or if the network has
+       long latency.  It's possible that the value of HEAD changed
+       between the time we fetched the latest baseline and the time we
+       checkout that baseline.  If that happens, apache will throw us
+       a BAD_BASELINE error (deltaV says you can only checkout the
+       latest baseline).  We just ignore that specific error and
+       retry a few times, asking for the latest baseline again. */
+    if (err && err->apr_err != SVN_ERR_APMOD_BAD_BASELINE)
+      return err;
+
+  } while (err && (--retry_count > 0));
+
+  /* Yikes, if we couldn't hold onto HEAD after a few retries, throw a
+     real error.*/
+  if (err)
+    return err;
+
+  return svn_ra_neon__do_proppatch(cc->ras, vcc_rsrc.wr_url, revprop_table,
+                                   NULL, NULL, NULL, pool);
+}
+
 
 static svn_error_t * commit_open_root(void *edit_baton,
                                       svn_revnum_t base_revision,
@@ -675,11 +741,19 @@ static svn_error_t * commit_open_root(void *edit_baton,
   resource_baton_t *root;
   version_rsrc_t *rsrc;
 
-  /* create the root resource. no wr_url (yet). */
+  /* Create a server-side activity which corresponds directly to an FS
+     transaction.  We will check out all further resources within the
+     context of this activity.  */
+  SVN_ERR(create_activity(cc, dir_pool));
+
+  /* Find the latest baseline resource, check it out, and then apply
+     the log message onto the thing. */
+  SVN_ERR(apply_revprops(cc, cc->revprop_table, dir_pool));
+
+  /* Create the root resource.  (We don't yet know the wr_url.) */
   rsrc = apr_pcalloc(dir_pool, sizeof(*rsrc));
   rsrc->pool = dir_pool;
   rsrc->revision = base_revision;
-
   rsrc->url = cc->ras->root.path;
   rsrc->local_path = "";
 
@@ -1346,55 +1420,6 @@ static svn_error_t * commit_abort_edit(void *edit_baton,
 }
 
 
-static svn_error_t * apply_revprops(commit_ctx_t *cc,
-                                    apr_hash_t *revprop_table,
-                                    apr_pool_t *pool)
-{
-  const char *vcc;
-  version_rsrc_t vcc_rsrc = { SVN_INVALID_REVNUM };
-  svn_error_t *err = NULL;
-  int retry_count = 5;
-
-  /* ### this whole sequence can/should be replaced with an expand-property
-     ### REPORT when that is available on the server. */
-
-  /* fetch the DAV:version-controlled-configuration from the session's URL */
-  SVN_ERR(svn_ra_neon__get_vcc(&vcc, cc->ras, cc->ras->root.path, pool));
-
-
-  do {
-
-    svn_error_clear(err);
-
-    vcc_rsrc.pool = pool;
-    vcc_rsrc.vsn_url = vcc;
-
-    /* To set the revision properties, we must checkout the latest baseline
-       and get back a mutable "working" baseline.  */
-    err = checkout_resource(cc, &vcc_rsrc, FALSE, NULL, TRUE, pool);
-
-    /* There's a small chance of a race condition here, if apache is
-       experiencing heavy commit concurrency or if the network has
-       long latency.  It's possible that the value of HEAD changed
-       between the time we fetched the latest baseline and the time we
-       checkout that baseline.  If that happens, apache will throw us
-       a BAD_BASELINE error (deltaV says you can only checkout the
-       latest baseline).  We just ignore that specific error and
-       retry a few times, asking for the latest baseline again. */
-    if (err && err->apr_err != SVN_ERR_APMOD_BAD_BASELINE)
-      return err;
-
-  } while (err && (--retry_count > 0));
-
-  /* Yikes, if we couldn't hold onto HEAD after a few retries, throw a
-     real error.*/
-  if (err)
-    return err;
-
-  return svn_ra_neon__do_proppatch(cc->ras, vcc_rsrc.wr_url, revprop_table,
-                                   NULL, NULL, NULL, pool);
-}
-
 svn_error_t * svn_ra_neon__get_commit_editor(svn_ra_session_t *session,
                                              const svn_delta_editor_t **editor,
                                              void **edit_baton,
@@ -1408,10 +1433,11 @@ svn_error_t * svn_ra_neon__get_commit_editor(svn_ra_session_t *session,
   svn_ra_neon__session_t *ras = session->priv;
   svn_delta_editor_t *commit_editor;
   commit_ctx_t *cc;
-  svn_error_t *err;
+  apr_hash_index_t *hi;
 
   /* Build the main commit editor's baton. */
   cc = apr_pcalloc(pool, sizeof(*cc));
+  cc->pool = pool;
   cc->ras = ras;
   cc->valid_targets = apr_hash_make(pool);
   cc->get_func = ras->callbacks->get_wc_prop;
@@ -1422,42 +1448,26 @@ svn_error_t * svn_ra_neon__get_commit_editor(svn_ra_session_t *session,
   cc->tokens = lock_tokens;
   cc->keep_locks = keep_locks;
 
+  /* Dup the revprops into POOL, in case the caller clears the pool
+     they're in before driving the editor that this function returns. */
+  cc->revprop_table = apr_hash_make(pool);
+  for (hi = apr_hash_first(pool, revprop_table); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      apr_ssize_t klen;
+      void *val;
+
+      apr_hash_this(hi, &key, &klen, &val);
+      apr_hash_set(cc->revprop_table, apr_pstrdup(pool, key), klen,
+                   svn_string_dup(val, pool));
+    }
+
   /* If the caller didn't give us any way of storing wcprops, then
-     there's no point in getting back a MERGE response full of VR's. */
+     there's no point in getting back a MERGE response full of VR's.  */
   if (ras->callbacks->push_wc_prop == NULL)
     cc->disable_merge_response = TRUE;
 
-  /* ### should we perform an OPTIONS to validate the server we're about
-     ### to talk to? */
-
-  /*
-  ** Create an Activity. This corresponds directly to an FS transaction.
-  ** We will check out all further resources within the context of this
-  ** activity.
-  */
-  SVN_ERR(create_activity(cc, pool));
-
-  /*
-  ** Find the latest baseline resource, check it out, and then apply the
-  ** log message onto the thing.
-  */
-  err = apply_revprops(cc, revprop_table, pool);
-  /* If the caller gets an error during the editor drive, we rely on them
-     to call abort_edit() so that we can clear up the activity.  But if we
-     got an error here, we need to clear up the activity ourselves. */
-  if (err)
-    {
-      svn_error_clear(commit_abort_edit(cc, pool));
-      return err;
-    }
-
-  /*
-  ** Set up the editor.
-  **
-  ** This structure is used during the commit process. An external caller
-  ** uses these callbacks to describe all the changes in the working copy
-  ** that must be committed to the server.
-  */
+  /* Set up the editor. */
   commit_editor = svn_delta_default_editor(pool);
   commit_editor->open_root = commit_open_root;
   commit_editor->delete_entry = commit_delete_entry;
