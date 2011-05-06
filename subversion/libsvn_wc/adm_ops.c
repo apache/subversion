@@ -1590,6 +1590,20 @@ new_revert_internal(svn_wc__db_t *db,
 {
   SVN_ERR_ASSERT(depth == svn_depth_empty || depth == svn_depth_infinity);
 
+  /* We should have a write lock on the parent of local_abspath, except
+     when local_abspath is the working copy root. */
+  {
+    const char *dir_abspath;
+
+    SVN_ERR(svn_wc__db_get_wcroot(&dir_abspath, db, local_abspath,
+                                  scratch_pool, scratch_pool));
+
+    if (svn_dirent_is_child(dir_abspath, local_abspath, NULL))
+      dir_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+
+    SVN_ERR(svn_wc__write_check(db, dir_abspath, scratch_pool));
+  }
+
   SVN_ERR(svn_wc__db_op_revert(db, local_abspath, depth,
                                scratch_pool, scratch_pool));
 
