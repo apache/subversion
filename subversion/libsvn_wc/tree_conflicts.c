@@ -114,6 +114,7 @@ is_valid_conflict_skel(const svn_skel_t *skel)
           && is_valid_version_info_skel(skel->next));
 }
 
+
 /* Parse the enumeration value in VALUE into a plain
  * 'int', using MAP to convert from strings to enumeration values.
  * In MAP, a null .str field marks the end of the map.
@@ -131,8 +132,10 @@ read_enum_field(int *result,
                               "description"));
 
   *result = value;
+
   return SVN_NO_ERROR;
 }
+
 
 /* Parse the conflict info fields from SKEL into *VERSION_INFO. */
 static svn_error_t *
@@ -181,6 +184,7 @@ read_node_version_info(const svn_wc_conflict_version_t **version_info,
 
   return SVN_NO_ERROR;
 }
+
 
 svn_error_t *
 svn_wc__deserialize_conflict(const svn_wc_conflict_description2_t **conflict,
@@ -260,13 +264,14 @@ svn_wc__deserialize_conflict(const svn_wc_conflict_description2_t **conflict,
   new_conflict->reason = reason;
 
   *conflict = new_conflict;
+
   return SVN_NO_ERROR;
 }
 
 
 /* Prepend to SKEL the string corresponding to enumeration value N, as found
  * in MAP. */
-static svn_error_t *
+static void
 skel_prepend_enum(svn_skel_t *skel,
                   const svn_token_map_t *map,
                   int n,
@@ -274,8 +279,8 @@ skel_prepend_enum(svn_skel_t *skel,
 {
   svn_skel__prepend(svn_skel__str_atom(svn_token__to_word(map, n),
                                        result_pool), skel);
-  return SVN_NO_ERROR;
 }
+
 
 /* Prepend to PARENT_SKEL the several fields that represent VERSION_INFO, */
 static svn_error_t *
@@ -286,8 +291,7 @@ prepend_version_info_skel(svn_skel_t *parent_skel,
   svn_skel_t *skel = svn_skel__make_empty_list(pool);
 
   /* node_kind */
-  SVN_ERR(skel_prepend_enum(skel, node_kind_map, version_info->node_kind,
-                            pool));
+  skel_prepend_enum(skel, node_kind_map, version_info->node_kind, pool);
 
   /* path_in_repos */
   svn_skel__prepend(svn_skel__str_atom(version_info->path_in_repos
@@ -341,22 +345,21 @@ svn_wc__serialize_conflict(svn_skel_t **skel,
     SVN_ERR(prepend_version_info_skel(c_skel, &null_version, result_pool));
 
   /* reason */
-  SVN_ERR(skel_prepend_enum(c_skel, svn_wc__conflict_reason_map,
-                            conflict->reason, result_pool));
+  skel_prepend_enum(c_skel, svn_wc__conflict_reason_map, conflict->reason,
+                    result_pool);
 
   /* action */
-  SVN_ERR(skel_prepend_enum(c_skel, svn_wc__conflict_action_map,
-                            conflict->action, result_pool));
+  skel_prepend_enum(c_skel, svn_wc__conflict_action_map, conflict->action,
+                    result_pool);
 
   /* operation */
-  SVN_ERR(skel_prepend_enum(c_skel, svn_wc__operation_map,
-                            conflict->operation, result_pool));
+  skel_prepend_enum(c_skel, svn_wc__operation_map, conflict->operation,
+                    result_pool);
 
   /* node_kind */
   SVN_ERR_ASSERT(conflict->node_kind == svn_node_dir
                  || conflict->node_kind == svn_node_file);
-  SVN_ERR(skel_prepend_enum(c_skel, node_kind_map, conflict->node_kind,
-                            result_pool));
+  skel_prepend_enum(c_skel, node_kind_map, conflict->node_kind, result_pool);
 
   /* Victim path (escaping separator chars). */
   victim_basename = svn_dirent_basename(conflict->local_abspath, result_pool);
@@ -368,6 +371,7 @@ svn_wc__serialize_conflict(svn_skel_t **skel,
   SVN_ERR_ASSERT(is_valid_conflict_skel(c_skel));
 
   *skel = c_skel;
+
   return SVN_NO_ERROR;
 }
 
@@ -382,8 +386,8 @@ svn_wc__del_tree_conflict(svn_wc_context_t *wc_ctx,
   SVN_ERR(svn_wc__db_op_set_tree_conflict(wc_ctx->db, victim_abspath,
                                           NULL, scratch_pool));
 
-  return SVN_NO_ERROR;
-}
+   return SVN_NO_ERROR;
+ }
 
 svn_error_t *
 svn_wc__add_tree_conflict(svn_wc_context_t *wc_ctx,
