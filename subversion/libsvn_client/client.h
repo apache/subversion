@@ -820,8 +820,6 @@ typedef svn_error_t *(*svn_client__check_url_kind_t)(void *baton,
 
      - add (or update) a reference to this array to the by_repository
        hash within COMMITTABLES and update the by_path member as well-
-       ### todo, until multi-repository support actually exists, the
-       single key here will actually be some arbitrary thing to be ignored.
 
      - if the candidate has a lock token, add it to the LOCK_TOKENS hash.
 
