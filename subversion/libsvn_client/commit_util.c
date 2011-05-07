@@ -901,7 +901,7 @@ validate_dangler(void *baton,
 
 /* Allocate and initialize the COMMITTABLES structure from POOL.
  */
-void
+static void
 create_committables(svn_client__committables_t **committables,
                     apr_pool_t *pool)
 {
