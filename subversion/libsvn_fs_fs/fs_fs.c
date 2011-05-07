@@ -400,6 +400,22 @@ path_node_origin(svn_fs_t *fs, const char *node_id, apr_pool_t *pool)
                               node_id_minus_last_char, NULL);
 }
 
+static APR_INLINE const char *
+path_and_offset_of(apr_file_t *file, apr_pool_t *pool)
+{
+  const char *path;
+  apr_off_t offset;
+
+  if (apr_file_name_get(&path, file) != APR_SUCCESS)
+    path = "(unknown)";
+
+  if (apr_file_seek(file, APR_CUR, &offset) != APR_SUCCESS)
+    offset = -1;
+
+  return apr_psprintf("%s:%" APR_OFF_T_FMT, path, offset);
+}
+
+
 
 /* Functions for working with shared transaction data. */
 
@@ -2701,20 +2717,9 @@ read_rep_line(struct rep_args **rep_args_p,
   return SVN_NO_ERROR;
 
  error:
-  {
-    const char *path;
-    apr_off_t offset;
-
-    if (apr_file_name_get(&path, file) != APR_SUCCESS)
-      path = "(unknown)";
-
-    if (apr_file_seek(file, APR_CUR, &offset) != APR_SUCCESS)
-      offset = -1;
-
-    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                           _("Malformed representation header at %s:%s"),
-                           path, apr_psprintf(pool, "%" APR_OFF_T_FMT, offset));
-  }
+  return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                           _("Malformed representation header at %s"),
+                           path_and_offset_of(file, pool));
 }
 
 /* Given a revision file REV_FILE, opened to REV in FS, find the Node-ID
