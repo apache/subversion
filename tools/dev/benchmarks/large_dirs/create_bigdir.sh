@@ -1,6 +1,26 @@
 #!/bin/bash
 
-#  set SVNPATH to the root of your SVN code working copy
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+# usage: run this script from the root of your working copy
+#        and / or adjust the path settings below as needed
+
+# set SVNPATH to the 'subversion' folder of your SVN source code w/c
 
 SVNPATH="$('pwd')/subversion"
 
@@ -50,7 +70,7 @@ echo -e "[general]\nanon-access = write\n" > $REPOROOT/$REPONAME/conf/svnserve.c
 # fire up svnserve
 
 if [ "${SVNSERVE}" != "" ] ; then
-  VERSION=$( ${SVN} --version | grep " version" | sed 's/.*\ 1\.\([0-9]\).*/\1/' )
+  VERSION=$( ${SVNSERVE} --version | grep " version" | sed 's/.*\ 1\.\([0-9]\).*/\1/' )
   if [ "$VERSION" -lt "7" ]; then
     SERVEROPTS=""
   fi
@@ -145,7 +165,7 @@ while [ $FILECOUNT -lt $MAXCOUNT ]; do
   run_svn_ci ${FILECOUNT}_c copy
 
   echo -ne "\tDelete 1 file ...  \t"
-  run_svn del ${FILECOUNT}_c -q
+  run_svn del ${FILECOUNT}_c/1 -q
 
   echo -ne "\tDeleting files ... \t"
   time (
