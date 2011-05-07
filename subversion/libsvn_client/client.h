@@ -777,6 +777,28 @@ typedef struct svn_client__copy_pair_t
 
 */
 
+/* Structure that contains an apr_hash_t * hash of apr_array_header_t * 
+   arrays of svn_client_commit_item3_t * structures; keyed by the
+   canonical repository URLs. For faster lookup, it also provides
+   an hash index keyed by the local absolute path. */
+typedef struct svn_client__committables_t
+{
+  /* apr_array_header_t array of svn_client_commit_item3_t structures
+     keyed by canonical repository URL */
+  apr_hash_t *by_repository;
+
+  /* svn_client_commit_item3_t structures keyed by local absolute path
+     (path member in the respective structures).
+
+     This member is for fast lookup only, i.e. whether there is an
+     entry for the given path or not, but it will only allow for one
+     entry per absolute path (in case of duplicate entries in the
+     above arrays). The "canonical" data storage containing all item
+     is by_repository. */
+  apr_hash_t *by_path;
+
+} svn_client__committables_t;
+
 /* Callback for the commit harvester to check if a node exists at the specified
    url */
 typedef svn_error_t *(*svn_client__check_url_kind_t)(void *baton,
@@ -796,10 +818,10 @@ typedef svn_error_t *(*svn_client__check_url_kind_t)(void *baton,
        items that are in the same repository, creating a new array if
        necessary.
 
-     - add (or update) a reference to this array to the COMMITTABLES
-       hash, keyed on the canonical repository name.  ### todo, until
-       multi-repository support actually exists, the single key here
-       will actually be some arbitrary thing to be ignored.
+     - add (or update) a reference to this array to the by_repository
+       hash within COMMITTABLES and update the by_path member as well-
+       ### todo, until multi-repository support actually exists, the
+       single key here will actually be some arbitrary thing to be ignored.
 
      - if the candidate has a lock token, add it to the LOCK_TOKENS hash.
 
@@ -807,11 +829,9 @@ typedef svn_error_t *(*svn_client__check_url_kind_t)(void *baton,
        the directories children recursively for any lock tokens and
        add them to the LOCK_TOKENS array.
 
-   At the successful return of this function, COMMITTABLES will be an
-   apr_hash_t * hash of apr_array_header_t * arrays (of
-   svn_client_commit_item3_t * structures), keyed on const char *
-   canonical repository URLs.  LOCK_TOKENS will point to a hash table
-   with const char * lock tokens, keyed on const char * URLs.
+   At the successful return of this function, COMMITTABLES will point
+   a new svn_client__committables_t*.  LOCK_TOKENS will point to a hash 
+   table with const char * lock tokens, keyed on const char * URLs.
 
    If DEPTH is specified, descend (or not) into each target in TARGETS
    as specified by DEPTH; the behavior is the same as that described
@@ -829,7 +849,7 @@ typedef svn_error_t *(*svn_client__check_url_kind_t)(void *baton,
    CTX->CANCEL_BATON while harvesting to determine if the client has
    cancelled the operation. */
 svn_error_t *
-svn_client__harvest_committables(apr_hash_t **committables,
+svn_client__harvest_committables(svn_client__committables_t **committables,
                                  apr_hash_t **lock_tokens,
                                  const char *base_dir_abspath,
                                  const apr_array_header_t *targets,
@@ -844,16 +864,15 @@ svn_client__harvest_committables(apr_hash_t **committables,
 
 
 /* Recursively crawl each absolute working copy path SRC in COPY_PAIRS,
-   harvesting commit_items into a COMMITABLES hash (see the docstring for
-   svn_client__harvest_committables for what that really means) as if
-   every entry at or below the SRC was to be committed as a set of adds
-   (mostly with history) to a new repository URL (DST in COPY_PAIRS).
+   harvesting commit_items into a COMMITABLES structure as if every entry
+   at or below the SRC was to be committed as a set of adds (mostly with
+   history) to a new repository URL (DST in COPY_PAIRS).
 
    If CTX->CANCEL_FUNC is non-null, it will be called with
    CTX->CANCEL_BATON while harvesting to determine if the client has
    cancelled the operation.  */
 svn_error_t *
-svn_client__get_copy_committables(apr_hash_t **committables,
+svn_client__get_copy_committables(svn_client__committables_t **committables,
                                   const apr_array_header_t *copy_pairs,
                                   svn_client__check_url_kind_t check_url_func,
                                   void *check_url_baton,
