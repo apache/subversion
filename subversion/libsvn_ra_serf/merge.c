@@ -515,6 +515,12 @@ create_merge_body(serf_bucket_t **bkt,
   return SVN_NO_ERROR;
 }
 
+
+/* ### FIXME: As of HTTPv2, this isn't necessarily merging an
+   ### "activity".  It might be merging a transaction.  So,
+   ### ACTIVITY_URL might be a transaction root URL, not an actual
+   ### activity URL, etc.  Probably should rename ACTIVITY_URL to
+   ### MERGE_RESOURCE_URL or something.  */
 svn_error_t *
 svn_ra_serf__merge_create_req(svn_ra_serf__merge_context_t **ret_ctx,
                               svn_ra_serf__session_t *session,
