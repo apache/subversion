@@ -412,7 +412,7 @@ path_and_offset_of(apr_file_t *file, apr_pool_t *pool)
   if (apr_file_seek(file, APR_CUR, &offset) != APR_SUCCESS)
     offset = -1;
 
-  return apr_psprintf("%s:%" APR_OFF_T_FMT, path, offset);
+  return apr_psprintf(pool, "%s:%" APR_OFF_T_FMT, path, offset);
 }
 
 
