@@ -2573,7 +2573,7 @@ svn_fs_fs__put_node_revision(svn_fs_t *fs,
 
   if (! txn_id)
     return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                             _("Attempted to write to non-transaction %s"),
+                             _("Attempted to write to non-transaction '%s'"),
                              svn_fs_fs__id_unparse(id, pool)->data);
 
   SVN_ERR(svn_io_file_open(&noderev_file, path_txn_node_rev(fs, id, pool),
