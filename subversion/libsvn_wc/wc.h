@@ -50,101 +50,101 @@ extern "C" {
  *
  * There is no format version 0; we started with 1.
  *
- * The change from 1 to 2 was the introduction of the ".svn-work" extension.
- * For example, ".svn/props/foo" became ".svn/props/foo.svn-work".
+ * The bump to 2 introduced the ".svn-work" extension. For example,
+ *   ".svn/props/foo" became ".svn/props/foo.svn-work".
  *
- * The change from 2 to 3 was the introduction of the entry attribute
- * old-and-busted.c::ENTRIES_ATTR_ABSENT.
+ * The bump to 3 introduced the entry attribute
+ *   old-and-busted.c::ENTRIES_ATTR_ABSENT.
  *
- * The change from 3 to 4 was the renaming of the magic "svn:this_dir"
- * entry name to "".
+ * The bump to 4 renamed the magic "svn:this_dir" entry name to "".
  *
  * == 1.0.x shipped with format 4
  * == 1.1.x shipped with format 4
  * == 1.2.x shipped with format 4
  * == 1.3.x shipped with format 4
  *
- * The change from 4 to 5 was the addition of support for replacing files
- * with history (the "revert base"). This was introduced in 1.4.0, but
- # buggy until 1.4.6.
+ * The bump to 5 added support for replacing files with history (the
+ *   "revert base"). This was introduced in 1.4.0, but buggy until 1.4.6.
  *
- * The change from 5 to 6 was the introduction of caching of property
- * modification state and certain properties in the entries file.
+ * The bump to 6 introduced caching of property modification state and
+ *   certain properties in the entries file.
  *
- * The change from 6 to 7 was changing the entries file format from XML.
+ * The bump to 7 changed the entries file format from XML to a custom
+ *   text-based format.
  *
- * The change from 7 to 8 was putting wcprops in one file per directory.
+ * The bump to 8 placed wcprops in one file per directory (named
+ *   upgrade.c::WCPROPS_ALL_DATA)
  *
  * == 1.4.x shipped with format 8
  *
- * The change from 8 to 9 was the addition of changelists, keep-local,
- * and sticky depth (for selective/sparse checkouts).
+ * The bump to 9 added changelists, keep-local, and sticky depth (for
+ *   selective/sparse checkouts) to each entry.
  *
  * == 1.5.x shipped with format 9
  *
- * The change from 9 to 10 was the addition of tree-conflicts, file
- * externals and a different canonicalization of urls.
+ * The bump to 10 added tree-conflicts, file externals and a different
+ *   canonicalization of urls.
  *
  * == 1.6.x shipped with format 10
  *
- * The change from 10 to 11 was clearing the has_props, has_prop_mods,
- * cachable_props, and present_props values in the entries file. Older
- * client expect proper values for these fields.
+ * The bump to 11 cleared the has_props, has_prop_mods, cachable_props,
+ *   and present_props values in the entries file. Older clients expect
+ *   proper values for these fields.
  *
- * The change from 11 to 12 was a switch from 'entries' to 'wc.db'.
+ * The bump to 12 switched from 'entries' to the SQLite database 'wc.db'.
  *
- * The change from 12 to 13 added the WORK_QUEUE table into 'wc.db', moved
- * the wcprops into the 'dav_cache' column in BASE_NODE, and stopped using
- * the 'incomplete_children' column of BASE_NODE.
+ * The bump to 13 added the WORK_QUEUE table into 'wc.db', moved the
+ *   wcprops into the 'dav_cache' column in BASE_NODE, and stopped using
+ *   the 'incomplete_children' column of BASE_NODE.
  *
- * The change from 13 to 14 added the WCLOCKS table (and migrated locks
- * from the filesystem into wc.db), and some columns to ACTUAL_NODE for
- * future use.
+ * The bump to 14 added the WCLOCKS table (and migrated locks from the
+ *   filesystem into wc.db), and some columns to ACTUAL_NODE for future
+ *   use.
  *
- * The change from 14 to 15 switched from depth='exclude' on directories to
- * using presence='exclude' within the BASE_NODE and WORKING_NODE tables.
- * This change also enabled exclude support on files and symlinks.
+ * The bump to 15 switched from depth='exclude' on directories to using
+ *   presence='exclude' within the BASE_NODE and WORKING_NODE tables.
+ *   This change also enabled exclude support on files and symlinks.
  *
- * The change from 15 to 16 added 'locked_levels' to WC_LOCK, setting
- * any existing locks to a level of 0. The 'md5_checksum' column was
- * added to PRISTINE for future use.
+ * The bump to 16 added 'locked_levels' to WC_LOCK, setting any existing
+ *   locks to a level of 0. The 'md5_checksum' column was added to PRISTINE
+ *   for future use.
  *
- * The change from 16 to 17 added a '.svn/pristine' dir and moved the text
- * bases into the Pristine Store (the PRISTINE table and '.svn/pristine'
- * dir), and removed the '/.svn/text-base' dir.
+ * The bump to 17 added a '.svn/pristine' dir and moved the text bases into
+ *   the Pristine Store (the PRISTINE table and '.svn/pristine' dir), and
+ *   removed the '/.svn/text-base' dir.
  *
- * The change from 17 to 18 moved the properties from separate files in the
- * props and prop-base directory (and .svn for the dir itself) into the
- * wc.db file, and then removes the props and prop-base dir.
+ * The bump to 18 moved the properties from separate files in the props and
+ *   prop-base directory (and .svn for the dir itself) into the wc.db file,
+ *   and then removed the props and prop-base dir.
  *
- * The change from 18 to 19 introduces the 'single DB' per working copy.
- * All metadata is held in a single '.svn/wc.db' in the root directory of
- * the working copy.
+ * The bump to 19 introduced the 'single DB' per working copy. All metadata
+ *   is held in a single '.svn/wc.db' in the root directory of the working
+ *   copy. Bumped in r991236.
  *
- * The change from 19 to 20 introduces NODES and drops BASE_NODE and
- * WORKING_NODE, op_depth is always 0 or 2.
+ * The bump to 20 introduced NODES and drops BASE_NODE and WORKING_NODE,
+ *   op_depth is always 0 or 2. Bumped in r1005388.
  *
- * The change from 20 to 21 moved tree conflict storage from the
- * parent to the conflicted node.
+ * The bump to 21 moved tree conflict storage from the parent to the
+ *   conflicted node. Bumped in r1034436.
  *
- * The change from 21 to 22 moved tree conflict storage from
- * conflict_data column to the tree_conflict_data column.
+ * The bump to 22 moved tree conflict storage from conflict_data column
+ *   to the tree_conflict_data column. Bumped in r1040255.
  *
- * The change from 22 to 23 introduced multi-layer op_depth processing for
- * NODES.
+ * The bump to 23 introduced multi-layer op_depth processing for NODES.
+ *   Bumped in r1044384.
  *
- * The change from 23 to 24 started using the 'refcount' column of the
- * 'pristine' table correctly, instead of always setting it to '1'.
+ * The bump to 24 started using the 'refcount' column of the PRISTINE table
+ *   correctly, instead of always setting it to '1'. Bumped in r1058523.
  *
- * The change from 24 to 25 introduced a NODES_CURRENT view.
+ * The bump to 25 introduced the NODES_CURRENT view. Bumped in r1071283.
  *
- * The change from 25 to 26 introduced a NODES_BASE view.
+ * The bump to 26 introduced the NODES_BASE view. Bumped in r1076617.
  *
- * The change from 26 to 27 stored conflict files as relpaths rather
- * than basenames.
+ * The bump to 27 stored conflict files as relpaths rather than basenames.
+ *   Bumped in r1089593.
  *
- * The change from 27 to 28 converted any remaining references to MD5 checksums
- * to SHA1 checksums
+ * The bump to 28 converted any remaining references to MD5 checksums
+ *   to SHA1 checksums. Bumped in r1095214.
  *
  * == 1.7.x shipped with format ???
  *
@@ -156,12 +156,6 @@ extern "C" {
 
 /* Formats <= this have no concept of "revert text-base/props".  */
 #define SVN_WC__NO_REVERT_FILES 4
-
-/* A version <= this doesn't have property caching in the entries file. */
-#define SVN_WC__NO_PROPCACHING_VERSION 5
-
-/* A version <= this has the entries file in XML format. */
-#define SVN_WC__XML_ENTRIES_VERSION 6
 
 /* A version <= this has wcprops stored in one file per entry. */
 #define SVN_WC__WCPROPS_MANY_FILES_VERSION 7
@@ -179,13 +173,6 @@ extern "C" {
 
 /* A version < this has no work queue (see workqueue.h).  */
 #define SVN_WC__HAS_WORK_QUEUE 13
-
-/* A version < this has wcprops located in files OR in wc.db. Versions using
-   this format or later will only have wcprops in BASE_NODE.dav_cache.  */
-#define SVN_WC__USES_DAV_CACHE 13
-
-/* A version < this does not store properties in wc.db.  */
-#define SVN_WC__PROPS_IN_DB 18
 
 /* Return true iff error E indicates an "is not a working copy" type
    of error, either because something wasn't a working copy at all, or
