@@ -2078,11 +2078,11 @@ open_and_seek_representation(apr_file_t **file_p,
    expected except the "-1" revision number for a mutable
    representation.  Allocate *REP_P in POOL. */
 static svn_error_t *
-read_rep_offsets(representation_t **rep_p,
-                 char *string,
-                 const char *txn_id,
-                 svn_boolean_t mutable_rep_truncated,
-                 apr_pool_t *pool)
+read_rep_offsets_body(representation_t **rep_p,
+                      char *string,
+                      const char *txn_id,
+                      svn_boolean_t mutable_rep_truncated,
+                      apr_pool_t *pool)
 {
   representation_t *rep;
   char *str, *last_str;
@@ -2160,6 +2160,40 @@ read_rep_offsets(representation_t **rep_p,
   rep->uniquifier = apr_pstrdup(pool, str);
 
   return SVN_NO_ERROR;
+}
+
+/* Wrap read_rep_offsets_body(), extracting its TXN_ID from our NODEREV_ID,
+   and adding an error message. */
+static svn_error_t *
+read_rep_offsets(representation_t **rep_p,
+                 char *string,
+                 const svn_fs_id_t *noderev_id,
+                 svn_boolean_t mutable_rep_truncated,
+                 apr_pool_t *pool)
+{
+  svn_error_t *err;
+  const char *txn_id;
+
+  if (noderev_id)
+    txn_id = svn_fs_fs__id_txn_id(noderev_id);
+  else
+    txn_id = NULL;
+  
+  err = read_rep_offsets_body(rep_p, string, txn_id, mutable_rep_truncated,
+                              pool);
+  if (err)
+    {
+      const svn_string_t *id_unparsed = svn_fs_fs__id_unparse(noderev_id, pool);
+      const char *where;
+      where = apr_psprintf(pool,
+                           _("While reading representation offsets "
+                             "for node-revision '%s':"),
+                           noderev_id ? id_unparsed->data : "(null)");
+
+      return svn_error_quick_wrap(err, where);
+    }
+  else
+    return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -2335,7 +2369,7 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
   if (value)
     {
       SVN_ERR(read_rep_offsets(&noderev->prop_rep, value,
-                               svn_fs_fs__id_txn_id(noderev->id), TRUE, pool));
+                               noderev->id, TRUE, pool));
     }
 
   /* Get the data location. */
@@ -2343,7 +2377,7 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
   if (value)
     {
       SVN_ERR(read_rep_offsets(&noderev->data_rep, value,
-                               svn_fs_fs__id_txn_id(noderev->id),
+                               noderev->id,
                                (noderev->kind == svn_node_dir), pool));
     }
 
