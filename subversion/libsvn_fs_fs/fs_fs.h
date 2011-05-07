@@ -80,6 +80,7 @@ svn_fs_fs__write_noderev(svn_stream_t *outfile,
 
 /* Read a node-revision from STREAM. Set *NODEREV to the new structure,
    allocated in POOL. */
+/* ### Currently used only by fs_fs.c */
 svn_error_t *
 svn_fs_fs__read_noderev(node_revision_t **noderev,
                         svn_stream_t *stream,
