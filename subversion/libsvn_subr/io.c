@@ -3162,25 +3162,38 @@ svn_io_file_write_full(apr_file_t *file, const void *buf,
                        apr_size_t nbytes, apr_size_t *bytes_written,
                        apr_pool_t *pool)
 {
-  apr_status_t rv = apr_file_write_full(file, buf, nbytes, bytes_written);
-
+  /* We cannot simply call apr_file_write_full on Win32 as it may fail
+     for larger values of NBYTES. In that case, we have to emulate the
+     "_full" part here. Thus, always call apr_file_write directly on
+     Win32 as this minimizes overhead for small data buffers. */
 #ifdef WIN32
 #define MAXBUFSIZE 30*1024
+  apr_size_t bw = nbytes;
+  apr_size_t to_write = nbytes;
+
+  /* try a simple "write everything at once" first */
+  apr_status_t rv = apr_file_write(file, buf, &bw);
+  buf = (char *)buf + bw;
+  to_write -= bw;
+
+  /* if the OS cannot handle that, use smaller chunks */
   if (rv == APR_FROM_OS_ERROR(ERROR_NOT_ENOUGH_MEMORY)
       && nbytes > MAXBUFSIZE)
     {
-      apr_size_t bw = 0;
-      *bytes_written = 0;
-
       do {
-        rv = apr_file_write_full(file, buf,
-                                 nbytes > MAXBUFSIZE ? MAXBUFSIZE : nbytes, &bw);
-        *bytes_written += bw;
+        bw = to_write > MAXBUFSIZE ? MAXBUFSIZE : to_write;
+        rv = apr_file_write(file, buf, &bw);
         buf = (char *)buf + bw;
-        nbytes -= bw;
-      } while (rv == APR_SUCCESS && nbytes > 0);
+        to_write -= bw;
+      } while (rv == APR_SUCCESS && to_write > 0);
     }
+
+  /* bytes_written may actually be NULL */
+  if (bytes_written)
+    *bytes_written = nbytes - to_write;
 #undef MAXBUFSIZE
+#else
+  apr_status_t rv = apr_file_write_full(file, buf, nbytes, bytes_written);
 #endif
 
   return svn_error_return(do_io_file_wrapper_cleanup(
