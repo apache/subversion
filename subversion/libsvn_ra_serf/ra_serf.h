@@ -56,7 +56,7 @@ extern "C" {
 #define UNUSED_CTX(x) ((void)(x))
 
 /** Our User-Agent string. */
-#define USER_AGENT "SVN/" SVN_VERSION " serf/" \
+#define USER_AGENT "SVN/" SVN_VER_NUMBER " serf/" \
                    APR_STRINGIFY(SERF_MAJOR_VERSION) "." \
                    APR_STRINGIFY(SERF_MINOR_VERSION) "." \
                    APR_STRINGIFY(SERF_PATCH_VERSION)
