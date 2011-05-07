@@ -108,6 +108,14 @@ run_svn() {
   fi
 }
 
+run_svn_del() {
+  if [ "${VALGRIND}" == "" ] ; then
+    time ${SVN} del $WC/${1}_c/$2 -q > /dev/null
+  else
+    ${VALGRIND} ${VG_OUTFILE}="${VG_TOOL}.out.del.$1" ${SVN} del $WC/${1}_c/$2 -q > /dev/null
+  fi
+}
+
 run_svn_ci() {
   if [ "${VALGRIND}" == "" ] ; then
     time ${SVN} ci $WC/$1 -m "" -q > /dev/null
@@ -165,7 +173,7 @@ while [ $FILECOUNT -lt $MAXCOUNT ]; do
   run_svn_ci ${FILECOUNT}_c copy
 
   echo -ne "\tDelete 1 file ...  \t"
-  run_svn del ${FILECOUNT}_c/1 -q
+  run_svn_del ${FILECOUNT} 1
 
   echo -ne "\tDeleting files ... \t"
   time (
