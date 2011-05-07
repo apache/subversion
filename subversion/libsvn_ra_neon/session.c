@@ -799,10 +799,10 @@ svn_ra_neon__open(svn_ra_session_t *session,
     callbacks->get_client_string(callback_baton, &client_string, pool);
 
   if (client_string)
-    useragent = apr_pstrcat(pool, "SVN/" SVN_VERSION "/", client_string,
+    useragent = apr_pstrcat(pool, "SVN/" SVN_VER_NUMBER "/", client_string,
                             (char *)NULL);
   else
-    useragent = "SVN/" SVN_VERSION;
+    useragent = "SVN/" SVN_VER_NUMBER;
 
   /* Sanity check the URI */
   SVN_ERR(parse_url(uri, repos_URL));
@@ -927,8 +927,8 @@ svn_ra_neon__open(svn_ra_session_t *session,
     }
   else
     {
-      ne_set_useragent(sess, "SVN/" SVN_VERSION);
-      ne_set_useragent(sess2, "SVN/" SVN_VERSION);
+      ne_set_useragent(sess, "SVN/" SVN_VER_NUMBER);
+      ne_set_useragent(sess2, "SVN/" SVN_VER_NUMBER);
     }
 
   /* clean up trailing slashes from the URL */
