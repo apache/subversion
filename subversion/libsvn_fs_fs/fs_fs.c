@@ -1796,9 +1796,10 @@ static svn_error_t * read_header_block(apr_hash_t **headers,
       while (header_str->data[i] != ':')
         {
           if (header_str->data[i] == '\0')
-            return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                                    _("Found malformed header in "
-                                      "revision file"));
+            return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                                     _("Found malformed header '%s' in "
+                                       "revision file"),
+                                     header_str->data);
           i++;
         }
 
@@ -1810,9 +1811,15 @@ static svn_error_t * read_header_block(apr_hash_t **headers,
       i += 2;
 
       if (i > header_str->len)
-        return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                                _("Found malformed header in "
-                                  "revision file"));
+        {
+          /* Restore the original line for the error. */
+          i -= 2;
+          header_str->data[i] = ':';
+          return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                                   _("Found malformed header '%s' in "
+                                     "revision file"),
+                                   header_str->data);
+        }
 
       value = header_str->data + i;
 
@@ -1975,9 +1982,9 @@ get_packed_offset(apr_off_t *rev_offset,
 
       err = svn_cstring_atoi64(&val, sb->data);
       if (err)
-        return svn_error_return(
-                 svn_error_create(SVN_ERR_FS_CORRUPT, err,
-                                  _("Manifest offset too large")));
+        return svn_error_createf(SVN_ERR_FS_CORRUPT, err,
+                                 _("Manifest offset '%s' too large"),
+                                 sb->data);
       APR_ARRAY_PUSH(manifest, apr_off_t) = (apr_off_t)val;
     }
   svn_pool_destroy(iterpool);
@@ -2285,6 +2292,7 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
   apr_hash_t *headers;
   node_revision_t *noderev;
   char *value;
+  const char *noderev_id;
 
   SVN_ERR(read_header_block(&headers, stream, pool));
 
@@ -2299,14 +2307,17 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
   SVN_ERR(svn_stream_close(stream));
 
   noderev->id = svn_fs_fs__id_parse(value, strlen(value), pool);
+  noderev_id = value; /* for error messages later */
 
   /* Read the type. */
   value = apr_hash_get(headers, HEADER_TYPE, APR_HASH_KEY_STRING);
 
   if ((value == NULL) ||
       (strcmp(value, KIND_FILE) != 0 && strcmp(value, KIND_DIR)))
-    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Missing kind field in node-rev"));
+    /* ### s/kind/type/ */
+    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                             _("Missing kind field in node-rev '%s'"),
+                             noderev_id);
 
   noderev->kind = (strcmp(value, KIND_FILE) == 0) ? svn_node_file
     : svn_node_dir;
@@ -2339,8 +2350,9 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
   value = apr_hash_get(headers, HEADER_CPATH, APR_HASH_KEY_STRING);
   if (value == NULL)
     {
-      return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                              _("Missing cpath in node-rev"));
+      return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                               _("Missing cpath field in node-rev '%s'"),
+                               noderev_id);
     }
   else
     {
@@ -2366,14 +2378,16 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
 
       str = apr_strtok(value, " ", &last_str);
       if (str == NULL)
-        return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                                _("Malformed copyroot line in node-rev"));
+        return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                                 _("Malformed copyroot line in node-rev '%s'"),
+                                 noderev_id);
 
       noderev->copyroot_rev = SVN_STR_TO_REV(str);
 
       if (last_str == NULL)
-        return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                                _("Malformed copyroot line in node-rev"));
+        return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                                 _("Malformed copyroot line in node-rev '%s'"),
+                                 noderev_id);
       noderev->copyroot_path = apr_pstrdup(pool, last_str);
     }
 
@@ -2390,14 +2404,16 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
 
       str = apr_strtok(value, " ", &last_str);
       if (str == NULL)
-        return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                                _("Malformed copyfrom line in node-rev"));
+        return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                                 _("Malformed copyfrom line in node-rev '%s'"),
+                                 noderev_id);
 
       noderev->copyfrom_rev = SVN_STR_TO_REV(str);
 
       if (last_str == NULL)
-        return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                                _("Malformed copyfrom line in node-rev"));
+        return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                                 _("Malformed copyfrom line in node-rev '%s'"),
+                                 noderev_id);
       noderev->copyfrom_path = apr_pstrdup(pool, last_str);
     }
 
@@ -2556,8 +2572,9 @@ svn_fs_fs__put_node_revision(svn_fs_t *fs,
   noderev->is_fresh_txn_root = fresh_txn_root;
 
   if (! txn_id)
-    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Attempted to write to non-transaction"));
+    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                             _("Attempted to write to non-transaction %s"),
+                             svn_fs_fs__id_unparse(id, pool)->data);
 
   SVN_ERR(svn_io_file_open(&noderev_file, path_txn_node_rev(fs, id, pool),
                            APR_WRITE | APR_CREATE | APR_TRUNCATE
@@ -2674,19 +2691,30 @@ get_fs_id_at_offset(svn_fs_id_t **id_p,
                             svn_stream_from_aprfile2(rev_file, TRUE, pool),
                             pool));
 
+  /* In error messages, the offset is relative to the pack file,
+     not to the rev file. */
+
   node_id_str = apr_hash_get(headers, HEADER_ID, APR_HASH_KEY_STRING);
 
   if (node_id_str == NULL)
-    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Missing node-id in node-rev"));
+    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                             _("Missing node-id in node-rev at r%ld "
+                             "(offset %s)"),
+                             rev,
+                             apr_psprintf(pool, "%" APR_OFF_T_FMT, offset));
 
   id = svn_fs_fs__id_parse(node_id_str, strlen(node_id_str), pool);
 
   if (id == NULL)
-    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Corrupt node-id in node-rev"));
+    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                             _("Corrupt node-id '%s' in node-rev at r%ld "
+                               "(offset %s)"),
+                             node_id_str, rev,
+                             apr_psprintf(pool, "%" APR_OFF_T_FMT, offset));
 
   *id_p = id;
+
+  /* ### assert that the txn_id is REV/OFFSET ? */
 
   return SVN_NO_ERROR;
 }
@@ -2770,7 +2798,8 @@ get_root_changes_offset(apr_off_t *root_offset,
   if (buf[num_bytes - 1] != '\n')
     {
       return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                               _("Revision file lacks trailing newline"));
+                               _("Revision file (r%ld) lacks trailing newline"),
+                               rev);
     }
 
   /* Look for the next previous newline. */
@@ -2783,8 +2812,9 @@ get_root_changes_offset(apr_off_t *root_offset,
   if (i < 0)
     {
       return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                               _("Final line in revision file longer than 64 "
-                                 "characters"));
+                               _("Final line in revision file (r%ld) longer "
+                                 "than 64 characters"),
+                               rev);
     }
 
   i++;
@@ -2796,8 +2826,9 @@ get_root_changes_offset(apr_off_t *root_offset,
       break;
 
   if (i == (num_bytes - 2))
-    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Final line in revision file missing space"));
+    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                             _("Final line in revision file r%ld missing space"),
+                             rev);
 
   if (root_offset)
     {
@@ -3169,6 +3200,7 @@ create_rep_state(struct rep_state **rep_state,
                                representation_string(rep, ffd->format, TRUE,
                                                      pool));
     }
+  /* ### Call representation_string() ? */
   return svn_error_return(err);
 }
 
@@ -3960,6 +3992,7 @@ unparse_dir_entries(apr_hash_t **str_entries_p,
 static svn_error_t *
 parse_dir_entries(apr_hash_t **entries_p,
                   apr_hash_t *str_entries,
+                  const char *unparsed_id,
                   apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
@@ -3979,8 +4012,9 @@ parse_dir_entries(apr_hash_t **entries_p,
 
       str = apr_strtok(str, " ", &last_str);
       if (str == NULL)
-        return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                                _("Directory entry corrupt"));
+        return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                                 _("Directory entry corrupt in '%s'"),
+                                 unparsed_id);
 
       if (strcmp(str, KIND_FILE) == 0)
         {
@@ -3992,14 +4026,16 @@ parse_dir_entries(apr_hash_t **entries_p,
         }
       else
         {
-          return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                                  _("Directory entry corrupt"));
+          return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                                   _("Directory entry corrupt in '%s'"),
+                                   unparsed_id);
         }
 
       str = apr_strtok(NULL, " ", &last_str);
       if (str == NULL)
-        return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                                _("Directory entry corrupt"));
+          return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                                   _("Directory entry corrupt in '%s'"),
+                                   unparsed_id);
 
       dirent->id = svn_fs_fs__id_parse(str, strlen(str), pool);
 
@@ -4046,7 +4082,8 @@ svn_fs_fs__rep_contents_dir(apr_hash_t **entries_p,
   /* Read in the directory hash. */
   unparsed_entries = apr_hash_make(pool);
   SVN_ERR(get_dir_contents(unparsed_entries, fs, noderev, pool));
-  SVN_ERR(parse_dir_entries(&parsed_entries, unparsed_entries, pool));
+  SVN_ERR(parse_dir_entries(&parsed_entries, unparsed_entries,
+                            unparsed_id, pool));
 
   /* Update the cache, if we are to use one. */
   if (cache)
@@ -4884,7 +4921,8 @@ create_txn_dir_pre_1_5(const char **id_p, svn_fs_t *fs, svn_revnum_t rev,
                            NULL,
                            _("Unable to create transaction directory "
                              "in '%s' for revision %ld"),
-                           fs->path, rev);
+                           svn_dirent_local_style(fs->path, pool),
+                           rev);
 }
 
 svn_error_t *
@@ -5208,7 +5246,8 @@ svn_fs_fs__abort_txn(svn_fs_txn_t *txn,
 
   /* Now, purge the transaction. */
   SVN_ERR_W(svn_fs_fs__purge_txn(txn->fs, txn->id, pool),
-            _("Transaction cleanup failed"));
+            apr_psprintf(pool, _("Transaction '%s' cleanup failed"),
+                         txn->id));
 
   return SVN_NO_ERROR;
 }
@@ -5345,8 +5384,9 @@ write_change_entry(apr_file_t *file,
       change_string = ACTION_RESET;
       break;
     default:
-      return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                              _("Invalid change type"));
+      return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                               _("Invalid change type %d"),
+                               change->change_kind);
     }
 
   if (change->node_rev_id)
@@ -5707,8 +5747,9 @@ set_representation(svn_stream_t **contents_p,
   struct rep_write_baton *wb;
 
   if (! svn_fs_fs__id_txn_id(noderev->id))
-    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Attempted to write to non-transaction"));
+    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                             _("Attempted to write to non-transaction '%s'"),
+                             svn_fs_fs__id_unparse(noderev->id, pool)->data);
 
   SVN_ERR(rep_write_get_baton(&wb, fs, noderev, pool));
 
@@ -7370,8 +7411,9 @@ svn_fs_fs__open_txn(svn_fs_txn_t **txn_p,
 
   /* Did we find it? */
   if (kind != svn_node_dir)
-    return svn_error_create(SVN_ERR_FS_NO_SUCH_TRANSACTION, NULL,
-                            _("No such transaction"));
+    return svn_error_createf(SVN_ERR_FS_NO_SUCH_TRANSACTION, NULL,
+                             _("No such transaction '%s'"),
+                             name);
 
   txn = apr_pcalloc(pool, sizeof(*txn));
 
@@ -7846,7 +7888,7 @@ pack_body(void *baton,
      Return a friendly error to that effect. */
   if (format < SVN_FS_FS__MIN_PACKED_FORMAT)
     return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-      _("FSFS format (%d) too old to pack, please upgrade."),
+      _("FSFS format (%d) too old to pack; please upgrade the filesystem."),
       format);
 
   /* If we aren't using sharding, we can't do any packing, so quit. */
