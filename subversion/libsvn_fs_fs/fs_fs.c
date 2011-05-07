@@ -404,7 +404,7 @@ static APR_INLINE const char *
 path_and_offset_of(apr_file_t *file, apr_pool_t *pool)
 {
   const char *path;
-  apr_off_t offset;
+  apr_off_t offset = 0;
 
   if (apr_file_name_get(&path, file) != APR_SUCCESS)
     path = "(unknown)";
