@@ -26,7 +26,8 @@
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_pools.h"
-#include "svn_editor.h"
+
+#include "private/svn_editor.h"
 
 
 struct svn_editor_t
