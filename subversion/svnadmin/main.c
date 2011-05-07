@@ -2000,7 +2000,7 @@ subcommand_crashtest(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   svn_repos_t *repos;
 
   SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
-  abort();
+  SVN_ERR_MALFUNCTION();
 
   /* merely silence a compiler warning (this will never be executed) */
   return SVN_NO_ERROR;
