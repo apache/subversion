@@ -1190,7 +1190,7 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
   svn_ra_session_t *ra_session;
   const svn_delta_editor_t *editor;
   void *edit_baton;
-  apr_hash_t *committables;
+  svn_client__committables_t *committables;
   apr_array_header_t *commit_items;
   apr_pool_t *iterpool;
   apr_array_header_t *new_dirs = NULL;
@@ -1335,7 +1335,8 @@ wc_to_repos_copy(const apr_array_header_t *copy_pairs,
                                             ctx, pool, pool));
 
   /* The committables are keyed by the repository root */
-  commit_items = apr_hash_get(committables, cukb.repos_root_url,
+  commit_items = apr_hash_get(committables->by_repository,
+                              cukb.repos_root_url,
                               APR_HASH_KEY_STRING);
   SVN_ERR_ASSERT(commit_items != NULL);
 

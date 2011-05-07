@@ -1186,7 +1186,7 @@ svn_client_commit5(const apr_array_header_t *targets,
   apr_array_header_t *rel_targets;
   apr_array_header_t *lock_targets;
   apr_array_header_t *locks_obtained;
-  apr_hash_t *committables;
+  svn_client__committables_t *committables;
   apr_hash_t *lock_tokens;
   apr_hash_t *sha1_checksums;
   apr_array_header_t *commit_items;
@@ -1307,11 +1307,11 @@ svn_client_commit5(const apr_array_header_t *targets,
   if (cmt_err)
     goto cleanup;
 
-  if (apr_hash_count(committables) == 0)
+  if (apr_hash_count(committables->by_repository) == 0)
     {
       goto cleanup; /* Nothing to do */
     }
-  else if (apr_hash_count(committables) > 1)
+  else if (apr_hash_count(committables->by_repository) > 1)
     {
       cmt_err = svn_error_create(
              SVN_ERR_UNSUPPORTED_FEATURE, NULL,
@@ -1321,7 +1321,8 @@ svn_client_commit5(const apr_array_header_t *targets,
     }
 
   {
-    apr_hash_index_t *hi = apr_hash_first(iterpool, committables);
+    apr_hash_index_t *hi = apr_hash_first(iterpool, 
+                                          committables->by_repository);
 
     commit_items = svn__apr_hash_index_val(hi);
   }

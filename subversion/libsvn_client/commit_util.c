@@ -75,7 +75,7 @@ fixup_out_of_date_error(const char *path,
    `COMMITTABLES') to the COMMITTABLES hash.  All of the commit item's
    members are allocated out of RESULT_POOL. */
 static svn_error_t *
-add_committable(apr_hash_t *committables,
+add_committable(svn_client__committables_t *committables,
                 const char *local_abspath,
                 svn_node_kind_t kind,
                 const char *repos_root_url,
@@ -97,14 +97,17 @@ add_committable(apr_hash_t *committables,
   /* ### todo: Get the canonical repository for this item, which will
      be the real key for the COMMITTABLES hash, instead of the above
      bogosity. */
-  array = apr_hash_get(committables, repos_root_url, APR_HASH_KEY_STRING);
+  array = apr_hash_get(committables->by_repository,
+                       repos_root_url,
+                       APR_HASH_KEY_STRING);
 
   /* E-gads!  There is no array for this repository yet!  Oh, no
      problem, we'll just create (and add to the hash) one. */
   if (array == NULL)
     {
       array = apr_array_make(result_pool, 1, sizeof(new_item));
-      apr_hash_set(committables, apr_pstrdup(result_pool, repos_root_url),
+      apr_hash_set(committables->by_repository,
+                   apr_pstrdup(result_pool, repos_root_url),
                    APR_HASH_KEY_STRING, array);
     }
 
@@ -129,6 +132,12 @@ add_committable(apr_hash_t *committables,
 
   /* Now, add the commit item to the array. */
   APR_ARRAY_PUSH(array, svn_client_commit_item3_t *) = new_item;
+
+  /* ... and to the hash. */
+  apr_hash_set(committables->by_path,
+               new_item->path,
+               APR_HASH_KEY_STRING,
+               new_item);
 
   return SVN_NO_ERROR;
 }
@@ -165,29 +174,12 @@ check_prop_mods(svn_boolean_t *props_changed,
 /* If there is a commit item for PATH in COMMITTABLES, return it, else
    return NULL.  Use POOL for temporary allocation only. */
 static svn_client_commit_item3_t *
-look_up_committable(apr_hash_t *committables,
+look_up_committable(svn_client__committables_t *committables,
                     const char *path,
                     apr_pool_t *pool)
 {
-  apr_hash_index_t *hi;
-
-  for (hi = apr_hash_first(pool, committables); hi; hi = apr_hash_next(hi))
-    {
-      apr_array_header_t *these_committables = svn__apr_hash_index_val(hi);
-      int i;
-
-      for (i = 0; i < these_committables->nelts; i++)
-        {
-          svn_client_commit_item3_t *this_committable
-            = APR_ARRAY_IDX(these_committables, i,
-                            svn_client_commit_item3_t *);
-
-          if (strcmp(this_committable->path, path) == 0)
-            return this_committable;
-        }
-    }
-
-  return NULL;
+  return (svn_client_commit_item3_t *)
+      apr_hash_get(committables->by_path, path, APR_HASH_KEY_STRING);
 }
 
 /* Helper for harvest_committables().
@@ -324,7 +316,7 @@ bail_on_tree_conflicted_ancestor(svn_wc_context_t *wc_ctx,
 static svn_error_t *
 harvest_committables(svn_wc_context_t *wc_ctx,
                      const char *local_abspath,
-                     apr_hash_t *committables,
+                     svn_client__committables_t *committables,
                      apr_hash_t *lock_tokens,
                      const char *repos_root_url,
                      const char *commit_relpath,
@@ -907,9 +899,20 @@ validate_dangler(void *baton,
   return SVN_NO_ERROR;
 }
 
+/* Allocate and initialize the COMMITTABLES structure from POOL.
+ */
+void
+create_committables(svn_client__committables_t **committables,
+                    apr_pool_t *pool)
+{
+  *committables = apr_palloc(pool, sizeof(**committables));
+
+  (*committables)->by_repository = apr_hash_make(pool);
+  (*committables)->by_path = apr_hash_make(pool);
+}
 
 svn_error_t *
-svn_client__harvest_committables(apr_hash_t **committables,
+svn_client__harvest_committables(svn_client__committables_t **committables,
                                  apr_hash_t **lock_tokens,
                                  const char *base_dir_abspath,
                                  const apr_array_header_t *targets,
@@ -954,8 +957,8 @@ svn_client__harvest_committables(apr_hash_t **committables,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(base_dir_abspath));
 
-  /* Create the COMMITTABLES hash. */
-  *committables = apr_hash_make(result_pool);
+  /* Create the COMMITTABLES structure. */
+  create_committables(committables, result_pool);
 
   /* And the LOCK_TOKENS dito. */
   *lock_tokens = apr_hash_make(result_pool);
@@ -1071,7 +1074,7 @@ svn_client__harvest_committables(apr_hash_t **committables,
   hdb.check_url_func = check_url_func;
   hdb.check_url_baton = check_url_baton;
 
-  SVN_ERR(svn_iter_apr_hash(NULL, *committables,
+  SVN_ERR(svn_iter_apr_hash(NULL, (*committables)->by_repository,
                             handle_descendants, &hdb, iterpool));
 
   /* Make sure that every path in danglers is part of the commit. */
@@ -1087,7 +1090,7 @@ svn_client__harvest_committables(apr_hash_t **committables,
 struct copy_committables_baton
 {
   svn_client_ctx_t *ctx;
-  apr_hash_t *committables;
+  svn_client__committables_t *committables;
   apr_pool_t *result_pool;
   svn_client__check_url_kind_t check_url_func;
   void *check_url_baton;
@@ -1137,7 +1140,7 @@ harvest_copy_committables(void *baton, void *item, apr_pool_t *pool)
   hdb.check_url_func = btn->check_url_func;
   hdb.check_url_baton = btn->check_url_baton;
 
-  SVN_ERR(svn_iter_apr_hash(NULL, btn->committables,
+  SVN_ERR(svn_iter_apr_hash(NULL, btn->committables->by_repository,
                             handle_descendants, &hdb, pool));
 
   return SVN_NO_ERROR;
@@ -1146,7 +1149,7 @@ harvest_copy_committables(void *baton, void *item, apr_pool_t *pool)
 
 
 svn_error_t *
-svn_client__get_copy_committables(apr_hash_t **committables,
+svn_client__get_copy_committables(svn_client__committables_t **committables,
                                   const apr_array_header_t *copy_pairs,
                                   svn_client__check_url_kind_t check_url_func,
                                   void *check_url_baton,
@@ -1156,7 +1159,8 @@ svn_client__get_copy_committables(apr_hash_t **committables,
 {
   struct copy_committables_baton btn;
 
-  *committables = apr_hash_make(result_pool);
+  /* Create the COMMITTABLES structure. */
+  create_committables(committables, result_pool);
 
   btn.ctx = ctx;
   btn.committables = *committables;
