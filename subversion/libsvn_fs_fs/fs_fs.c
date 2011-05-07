@@ -3197,6 +3197,7 @@ create_rep_state_body(struct rep_state **rep_state,
   /* We are dealing with a delta, find out what version. */
   SVN_ERR(svn_io_file_read_full2(rs->file, buf, sizeof(buf),
                                  NULL, NULL, pool));
+  /* ### Layering violation */
   if (! ((buf[0] == 'S') && (buf[1] == 'V') && (buf[2] == 'N')))
     return svn_error_create
       (SVN_ERR_FS_CORRUPT, NULL,
