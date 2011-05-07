@@ -2701,8 +2701,20 @@ read_rep_line(struct rep_args **rep_args_p,
   return SVN_NO_ERROR;
 
  error:
-  return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                          _("Malformed representation header"));
+  {
+    const char *path;
+    apr_off_t offset;
+
+    if (apr_file_name_get(&path, file) != APR_SUCCESS)
+      path = "(unknown)";
+
+    if (apr_file_seek(file, APR_CUR, &offset) != APR_SUCCESS)
+      offset = -1;
+
+    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                           _("Malformed representation header at %s:%s"),
+                           path, apr_psprintf(pool, "%" APR_OFF_T_FMT, offset));
+  }
 }
 
 /* Given a revision file REV_FILE, opened to REV in FS, find the Node-ID
