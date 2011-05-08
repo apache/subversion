@@ -122,25 +122,21 @@ svn_wc_restore(svn_wc_context_t *wc_ctx,
                                wc_ctx->db, local_abspath,
                                scratch_pool, scratch_pool));
 
-  switch (status)
-    {
-      case svn_wc__db_status_added:
-        SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
+  if (status == svn_wc__db_status_added)
+    SVN_ERR(svn_wc__db_scan_addition(&status, NULL, NULL, NULL, NULL, NULL,
                                          NULL, NULL, NULL,
                                          wc_ctx->db, local_abspath,
                                          scratch_pool, scratch_pool));
-        if (status != svn_wc__db_status_added)
-          break; /* Has pristine version */
-      case svn_wc__db_status_deleted:
-      case svn_wc__db_status_not_present:
-      case svn_wc__db_status_absent:
-      case svn_wc__db_status_excluded:
-        return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                                 _("The node '%s' can not be restored."),
-                                 svn_dirent_local_style(local_abspath,
-                                                        scratch_pool));
-      default:
-        break;
+
+  if (status != svn_wc__db_status_normal
+      && status != svn_wc__db_status_copied
+      && status != svn_wc__db_status_moved_here
+      && !(status == svn_wc__db_status_added && kind == svn_wc__db_kind_dir))
+    {
+      return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                               _("The node '%s' can not be restored."),
+                               svn_dirent_local_style(local_abspath,
+                                                      scratch_pool));
     }
 
   if (kind == svn_wc__db_kind_file || kind == svn_wc__db_kind_symlink)
