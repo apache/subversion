@@ -511,7 +511,7 @@ apply_textdelta(void *file_baton,
                                      &eb->new_md5_checksum,
                                      &eb->new_sha1_checksum,
                                      eb->db, eb->wri_abspath,
-                                     pool, pool));
+                                     eb->pool, pool));
 
   svn_txdelta_apply(src_stream, dest_stream, NULL, eb->local_abspath, pool,
                     handler, handler_baton);
