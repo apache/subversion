@@ -434,16 +434,9 @@ switch_file_external(const char *local_abspath,
     void *report_baton;
     const svn_delta_editor_t *switch_editor;
     void *switch_baton;
-    const char *anchor_url;
     const char *switch_rev_url;
+    const char *repos_uuid;
     svn_revnum_t revnum;
-
-    SVN_ERR(svn_wc__node_get_url(&anchor_url, ctx->wc_ctx, dir_abspath,
-                                 subpool, subpool));
-    if (! anchor_url)
-      return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
-                               _("Directory '%s' has no URL"),
-                               svn_dirent_local_style(dir_abspath, subpool));
 
     /* Open an RA session to 'source' URL */
     SVN_ERR(svn_client__ra_session_from_path(&ra_session, &revnum,
@@ -453,19 +446,23 @@ switch_file_external(const char *local_abspath,
                                              ctx, subpool));
 
     SVN_ERR(svn_ra_reparent(ra_session, url, subpool));
+    SVN_ERR(svn_ra_get_uuid2(ra_session, &repos_uuid, subpool));
 
-    SVN_ERR(svn_wc_get_switch_editor4(&switch_editor, &switch_baton,
-                                      &revnum, ctx->wc_ctx,
-                                      dir_abspath, target,
-                                      switch_rev_url, use_commit_times,
-                                      svn_depth_infinity, FALSE, FALSE, TRUE,
-                                      diff3_cmd, preserved_exts,
-                                      ctx->conflict_func2,
-                                      ctx->conflict_baton2,
-                                      NULL, NULL,
-                                      ctx->cancel_func, ctx->cancel_baton,
-                                      ctx->notify_func2, ctx->notify_baton2,
-                                      subpool, subpool));
+    SVN_ERR(svn_wc__get_file_external_editor(&switch_editor, &switch_baton,
+                                             &revnum, ctx->wc_ctx,
+                                             local_abspath,
+                                             switch_rev_url,
+                                             repos_root_url,
+                                             repos_uuid,
+                                             use_commit_times,
+                                             diff3_cmd, preserved_exts,
+                                             ctx->conflict_func2,
+                                             ctx->conflict_baton2,
+                                             ctx->cancel_func,
+                                             ctx->cancel_baton,
+                                             ctx->notify_func2,
+                                             ctx->notify_baton2,
+                                             subpool, subpool));
 
     /* Tell RA to do an update of URL+TARGET to REVISION; if we pass an
      invalid revnum, that means RA will use the latest revision. */
@@ -479,6 +476,19 @@ switch_file_external(const char *local_abspath,
                                       ctx->cancel_func, ctx->cancel_baton,
                                       ctx->notify_func2, ctx->notify_baton2,
                                       subpool));
+
+    if (ctx->notify_func2)
+      {
+        svn_wc_notify_t *notify
+          = svn_wc_create_notify(local_abspath, svn_wc_notify_update_completed,
+                                 subpool);
+        notify->kind = svn_node_none;
+        notify->content_state = notify->prop_state
+          = svn_wc_notify_state_inapplicable;
+        notify->lock_state = svn_wc_notify_lock_state_inapplicable;
+        notify->revision = revnum;
+        (*ctx->notify_func2)(ctx->notify_baton2, notify, subpool);
+      }
   }
 
 cleanup:
