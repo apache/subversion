@@ -156,7 +156,7 @@ typedef struct insert_base_baton_t {
   svn_revnum_t changed_rev;
   apr_time_t changed_date;
   const char *changed_author;
-  apr_hash_t *dav_cache;
+  const apr_hash_t *dav_cache;
 
   /* for inserting directories */
   const apr_array_header_t *children;
@@ -221,6 +221,52 @@ typedef struct insert_working_baton_t {
   apr_int64_t not_present_op_depth;
 
 } insert_working_baton_t;
+
+typedef struct insert_external_baton_t {
+  /* common to all insertions into BASE */
+  svn_wc__db_kind_t kind;
+
+  /* for file and symlink externals */
+  apr_int64_t repos_id;
+  const char *repos_relpath;
+  svn_revnum_t revision;
+
+  /* Only used when repos_id == -1 */
+  const char *repos_root_url;
+  const char *repos_uuid;
+
+  /* for file and symlink externals */
+  const apr_hash_t *props;
+  svn_revnum_t changed_rev;
+  apr_time_t changed_date;
+  const char *changed_author;
+  const apr_hash_t *dav_cache;
+
+  /* for inserting files */
+  const svn_checksum_t *checksum;
+
+  /* for inserting symlinks */
+  const char *target;
+
+  const char *record_ancestor_relpath;
+  const char *recorded_repos_relpath;
+  svn_revnum_t recorded_peg_revision;
+  svn_revnum_t recorded_revision;
+
+  /* may need to insert/update ACTUAL to record a conflict  */
+  const svn_skel_t *conflict;
+
+  /* may need to insert/update ACTUAL to record new properties */
+  svn_boolean_t update_actual_props;
+  const apr_hash_t *new_actual_props;
+
+  /* maybe we should copy information from a previous record? */
+  svn_boolean_t keep_recorded_info;
+
+  /* may have work items to queue in this transaction  */
+  const svn_skel_t *work_items;
+
+} insert_external_baton_t;
 
 
 static const svn_token_map_t kind_map[] = {
@@ -2433,6 +2479,140 @@ with_triggers(void *baton,
   return SVN_NO_ERROR;
 }
 
+static void
+blank_ieb(insert_external_baton_t *ieb)
+{
+  memset(ieb, 0, sizeof(*ieb));
+  ieb->revision = SVN_INVALID_REVNUM;
+  ieb->changed_rev = SVN_INVALID_REVNUM;
+  ieb->repos_id = -1;
+
+  ieb->recorded_peg_revision = SVN_INVALID_REVNUM;
+  ieb->recorded_revision = SVN_INVALID_REVNUM;
+}
+
+static svn_error_t *
+insert_external_node(void *baton,
+                     svn_wc__db_wcroot_t *wcroot,
+                     const char *local_relpath,
+                     apr_pool_t *scratch_pool)
+{
+  const insert_external_baton_t *ieb = baton;
+
+#if SVN_WC__VERSION < SVN_WC__HAS_EXTERNALS_STORE
+  svn_wc__db_status_t status;
+  svn_wc__db_kind_t kind;
+  svn_error_t *err;
+  svn_boolean_t update_root;
+  apr_int64_t repos_id;
+
+  if (ieb->repos_id != INVALID_REPOS_ID)
+    repos_id = ieb->repos_id;
+  else
+    SVN_ERR(create_repos_id(&repos_id, ieb->repos_root_url, ieb->repos_uuid,
+                            wcroot->sdb, scratch_pool));
+
+  /* Currently externals can only be added under an existing directory */
+  SVN_ERR(read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                    NULL, NULL, NULL, NULL, NULL, NULL,
+                    wcroot, svn_relpath_dirname(local_relpath, scratch_pool),
+                    scratch_pool, scratch_pool));
+
+  if ((status != svn_wc__db_status_normal && status != svn_wc__db_status_added)
+      || kind != svn_wc__db_kind_dir)
+    return svn_error_create(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL, NULL);
+
+  /* And there must be no existing BASE node or it must be a file external */
+  err = base_get_info(&status, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                      NULL, NULL, NULL, NULL, &update_root, NULL,
+                      wcroot, local_relpath, scratch_pool, scratch_pool);
+  if (err)
+    {
+      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+        return svn_error_return(err);
+
+      svn_error_clear(err);
+    }
+  else if (status == svn_wc__db_status_normal && !update_root)
+    return svn_error_create(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL, NULL);
+
+  {
+    struct insert_base_baton_t ibb;
+
+    blank_ibb(&ibb);
+
+    ibb.status          = svn_wc__db_status_normal;
+    ibb.kind            = ieb->kind;
+
+    ibb.repos_id        = repos_id;
+    ibb.repos_relpath   = ieb->repos_relpath;
+    ibb.revision        = ieb->revision;
+
+    ibb.props           = ieb->props;
+    ibb.changed_rev     = ieb->changed_rev;
+    ibb.changed_date    = ieb->changed_date;
+    ibb.changed_author  = ieb->changed_author;
+
+    ibb.dav_cache       = ieb->dav_cache;
+
+    ibb.checksum        = ieb->checksum;
+    ibb.target          = ieb->target;
+
+    ibb.conflict        = ieb->conflict;
+
+    ibb.update_actual_props = ieb->update_actual_props;
+    ibb.new_actual_props    = ieb->new_actual_props;
+
+    ibb.keep_recorded_info  = ieb->keep_recorded_info;
+
+    ibb.work_items      = ieb->work_items;
+
+    SVN_ERR(insert_base_node(&ibb, wcroot, local_relpath, scratch_pool));
+  }
+
+  /* And the file external info skel */
+  {
+    svn_sqlite__stmt_t *stmt;
+    svn_opt_revision_t peg_rev;
+    svn_opt_revision_t rev;
+    const char *serialized;
+
+    SVN_ERR_ASSERT(ieb->recorded_repos_relpath);
+
+    if (SVN_IS_VALID_REVNUM(ieb->recorded_peg_revision))
+      {
+        peg_rev.kind = svn_opt_revision_number;
+        peg_rev.value.number = ieb->recorded_peg_revision;
+      }
+    else
+      peg_rev.kind = svn_opt_revision_head;
+
+    if (SVN_IS_VALID_REVNUM(ieb->recorded_revision))
+      {
+        rev.kind = svn_opt_revision_number;
+        rev.value.number = ieb->recorded_revision;
+      }
+    else
+      rev.kind = svn_opt_revision_head;
+
+    SVN_ERR(svn_wc__serialize_file_external(&serialized,
+                                            ieb->recorded_repos_relpath,
+                                            &peg_rev,
+                                            &rev,
+                                            scratch_pool));
+
+    SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_UPDATE_FILE_EXTERNAL));
+    SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id, local_relpath,
+                              serialized));
+    SVN_ERR(svn_sqlite__step_done(stmt));
+  }
+  return SVN_NO_ERROR;
+#else
+  NOT_IMPLEMENTED();
+#endif
+}
 
 svn_error_t *
 svn_wc__db_external_add_file(svn_wc__db_t *db,
@@ -2454,6 +2634,7 @@ svn_wc__db_external_add_file(svn_wc__db_t *db,
 
                              const apr_hash_t *dav_cache,
 
+                             const char *record_ancestor_abspath,
                              const char *recorded_repos_relpath,
                              svn_revnum_t recorded_peg_revision,
                              svn_revnum_t recorded_revision,
@@ -2465,75 +2646,223 @@ svn_wc__db_external_add_file(svn_wc__db_t *db,
                              const svn_skel_t *work_items,
                              apr_pool_t *scratch_pool)
 {
-  NOT_IMPLEMENTED();
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+  insert_external_baton_t ieb;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  if (! wri_abspath)
+    wri_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
+                              wri_abspath, scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  SVN_ERR_ASSERT(svn_dirent_is_ancestor(wcroot->abspath,
+                                        record_ancestor_abspath));
+
+  SVN_ERR_ASSERT(svn_dirent_is_ancestor(wcroot->abspath, local_abspath));
+
+  local_relpath = svn_dirent_skip_ancestor(wcroot->abspath, local_abspath);
+
+  blank_ieb(&ieb);
+
+  ieb.kind = svn_wc__db_kind_file;
+  ieb.repos_relpath = repos_relpath;
+
+  ieb.repos_root_url = repos_root_url;
+  ieb.repos_uuid = repos_uuid;
+  ieb.revision = revision;
+
+  ieb.props = props;
+
+  ieb.changed_rev = changed_rev;
+  ieb.changed_date = changed_date;
+  ieb.changed_author = changed_author;
+
+  ieb.checksum = checksum;
+
+  ieb.dav_cache = dav_cache;
+
+  ieb.record_ancestor_relpath = svn_dirent_skip_ancestor(
+                                                wcroot->abspath,
+                                                record_ancestor_abspath);
+  ieb.recorded_repos_relpath = recorded_repos_relpath;
+  ieb.recorded_peg_revision = recorded_peg_revision;
+  ieb.recorded_revision = recorded_revision;
+
+  ieb.update_actual_props = update_actual_props;
+  ieb.new_actual_props = new_actual_props;
+
+  ieb.keep_recorded_info = keep_recorded_info;
+
+  ieb.work_items = work_items;
+
+  return svn_error_return(
+            svn_wc__db_with_txn(wcroot, local_relpath, insert_external_node,
+                                &ieb, scratch_pool));
 }
 
-/* Adds (or overwrites) a symlink external LOCAL_ABSPATH to the working copy
-   identified by WRI_ABSPATH.
- */
 svn_error_t *
 svn_wc__db_external_add_symlink(svn_wc__db_t *db,
                                 const char *local_abspath,
                                 const char *wri_abspath,
-
                                 const char *repos_relpath,
                                 const char *repos_root_url,
                                 const char *repos_uuid,
                                 svn_revnum_t revision,
-
                                 const apr_hash_t *props,
-
                                 svn_revnum_t changed_rev,
                                 apr_time_t changed_date,
                                 const char *changed_author,
-
                                 const char *target,
-
                                 const apr_hash_t *dav_cache,
-
+                                const char *record_ancestor_abspath,
                                 const char *recorded_repos_relpath,
                                 svn_revnum_t recorded_peg_revision,
                                 svn_revnum_t recorded_revision,
-
                                 svn_boolean_t update_actual_props,
                                 apr_hash_t *new_actual_props,
-
                                 svn_boolean_t keep_recorded_info,
                                 const svn_skel_t *work_items,
                                 apr_pool_t *scratch_pool)
 {
-  NOT_IMPLEMENTED();
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+  insert_external_baton_t ieb;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  if (! wri_abspath)
+    wri_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
+                              wri_abspath, scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  SVN_ERR_ASSERT(svn_dirent_is_ancestor(wcroot->abspath,
+                                        record_ancestor_abspath));
+
+  SVN_ERR_ASSERT(svn_dirent_is_ancestor(wcroot->abspath, local_abspath));
+
+  local_relpath = svn_dirent_skip_ancestor(wcroot->abspath, local_abspath);
+
+  ieb.kind = svn_wc__db_kind_symlink;
+  ieb.repos_relpath = repos_relpath;
+
+  ieb.repos_root_url = repos_root_url;
+  ieb.repos_uuid = repos_uuid;
+  ieb.revision = revision;
+
+  ieb.props = props;
+
+  ieb.changed_rev = changed_rev;
+  ieb.changed_date = changed_date;
+  ieb.changed_author = changed_author;
+
+  ieb.target = target;
+
+  ieb.dav_cache = dav_cache;
+
+  ieb.record_ancestor_relpath = svn_dirent_skip_ancestor(
+                                                wcroot->abspath,
+                                                record_ancestor_abspath);
+  ieb.recorded_repos_relpath = recorded_repos_relpath;
+  ieb.recorded_peg_revision = recorded_peg_revision;
+  ieb.recorded_revision = recorded_revision;
+
+  ieb.update_actual_props = update_actual_props;
+  ieb.new_actual_props = new_actual_props;
+
+  ieb.keep_recorded_info = keep_recorded_info;
+
+  ieb.work_items = work_items;
+
+  return svn_error_return(
+            svn_wc__db_with_txn(wcroot, local_relpath, insert_external_node,
+                                &ieb, scratch_pool));
 }
 
-/* Adds (or overwrites) a directory external LOCAL_ABSPATH to the working copy
-   identified by WRI_ABSPATH.
- 
-  Directory externals are stored in their own working copy, so one should use
-  the normal svn_wc__db functions to access the normal working copy
-  information.
- */
 svn_error_t *
 svn_wc__db_external_add_dir(svn_wc__db_t *db,
                             const char *local_abspath,
                             const char *wri_abspath,
-
+                            const char *record_ancestor_abspath,
                             const char *recorded_repos_relpath,
                             svn_revnum_t recorded_peg_revision,
                             svn_revnum_t recorded_revision,
-
                             const svn_skel_t *work_items,
                             apr_pool_t *scratch_pool)
 {
-  NOT_IMPLEMENTED();
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+  insert_external_baton_t ieb;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  if (! wri_abspath)
+    wri_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
+                              wri_abspath, scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  SVN_ERR_ASSERT(svn_dirent_is_ancestor(wcroot->abspath,
+                                        record_ancestor_abspath));
+
+  SVN_ERR_ASSERT(svn_dirent_is_ancestor(wcroot->abspath, local_abspath));
+
+  local_relpath = svn_dirent_skip_ancestor(wcroot->abspath, local_abspath);
+
+  ieb.kind = svn_wc__db_kind_dir;
+
+  ieb.record_ancestor_relpath = svn_dirent_skip_ancestor(
+                                                wcroot->abspath,
+                                                record_ancestor_abspath);
+  ieb.recorded_repos_relpath = recorded_repos_relpath;
+  ieb.recorded_peg_revision = recorded_peg_revision;
+  ieb.recorded_revision = recorded_revision;
+
+  ieb.work_items = work_items;
+
+  return svn_error_return(
+            svn_wc__db_with_txn(wcroot, local_relpath, insert_external_node,
+                                &ieb, scratch_pool));
 }
 
-/* Reads information on the external LOCAL_ABSPATH as stored in the working
-   copy identified with WRI_ABSPATH (If NULL the parent directory of
-   LOCAL_ABSPATH).
+svn_error_t *
+svn_wc__db_external_remove(svn_wc__db_t *db,
+                           const char *local_abspath,
+                           const char *wri_abspath,
+                           const svn_skel_t *work_items,
+                           apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
 
-   Return SVN_ERR_WC_PATH_NOT_FOUND if LOCAL_ABSPATH is not an external in
-   this working copy
- */
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  if (! wri_abspath)
+    wri_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
+                              wri_abspath, scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  SVN_ERR_ASSERT(svn_dirent_is_ancestor(wcroot->abspath, local_abspath));
+
+  local_relpath = svn_dirent_skip_ancestor(wcroot->abspath, local_abspath);
+
+#if SVN_WC__VERSION < SVN_WC__HAS_EXTERNALS_STORE
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, db_base_remove, NULL,
+                              scratch_pool));
+
+  return SVN_NO_ERROR;
+#else
+  NOT_IMPLEMENTED();
+#endif
+}
 svn_error_t *
 svn_wc__db_external_read(svn_wc__db_kind_t *kind,
                          svn_revnum_t *revision,
@@ -2543,47 +2872,103 @@ svn_wc__db_external_read(svn_wc__db_kind_t *kind,
                          svn_revnum_t *changed_rev,
                          apr_time_t *changed_date,
                          const char **changed_author,
-
-                         const svn_checksum_t **checksum, /* files only */
-                         const char **target, /* symlinks only */
-
-                         /* For files and symlinks */
+                         const svn_checksum_t **checksum,
+                         const char **target,
                          svn_wc__db_lock_t **lock,
-
-                         /* Recorded for files present in the working copy */
                          svn_filesize_t *recorded_size,
                          apr_time_t *recorded_mod_time,
-
-                         /* following fields are stored as copy from the
-                            property which defined the external.
-                            (Currently only for file externals) */
+                         const char **record_ancestor_abspath,
                          const char **recorded_repos_relpath,
                          svn_revnum_t *recorded_peg_revision,
                          svn_revnum_t *recorded_revision,
-
-                         /* From ACTUAL */
                          svn_boolean_t *conflicted,
-
-                         /* Derived (only for files) */
-                         svn_boolean_t had_props,
+                         svn_boolean_t *had_props,
                          svn_boolean_t *props_mod,
-
                          svn_wc__db_t *db,
                          const char *local_abspath,
                          const char *wri_abspath,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  if (! wri_abspath)
+    wri_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
+                              wri_abspath, scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  SVN_ERR_ASSERT(svn_dirent_is_ancestor(wcroot->abspath, local_abspath));
+
+  local_relpath = svn_dirent_skip_ancestor(wcroot->abspath, local_abspath);
+
+#if SVN_WC__VERSION < SVN_WC__HAS_EXTERNALS_STORE
+  {
+    svn_wc__db_status_t base_status;
+    svn_wc__db_kind_t base_kind;
+    svn_boolean_t update_root;
+
+    SVN_ERR(svn_wc__db_base_get_info(&base_status, &base_kind,
+                                     revision, repos_relpath, repos_root_url,
+                                     repos_uuid, changed_rev, changed_date,
+                                     changed_author, NULL, checksum, target,
+                                     lock, had_props, &update_root, NULL,
+                                     db, local_abspath,
+                                     result_pool, scratch_pool));
+
+    if (! update_root
+        || base_status != svn_wc__db_status_normal
+        || base_kind != svn_wc__db_kind_dir)
+      {
+        return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                                 _("Node '%s' is not an external"),
+                                 svn_dirent_local_style(local_abspath,
+                                                        scratch_pool));
+      }
+
+    if (kind)
+      *kind = base_kind;
+
+    if (record_ancestor_abspath)
+      *record_ancestor_abspath = NULL; /* Way to expensive to find now */
+
+    if (recorded_repos_relpath || recorded_peg_revision || recorded_revision)
+      {
+        const char *serialized;
+        const char *path;
+        svn_opt_revision_t peg_rev;
+        svn_opt_revision_t rev;
+
+        SVN_ERR(svn_wc__db_temp_get_file_external(&serialized, db,
+                                                  local_abspath,
+                                                  scratch_pool, scratch_pool));
+
+        SVN_ERR(svn_wc__unserialize_file_external(&path, &peg_rev, &rev,
+                                                  serialized, scratch_pool));
+
+        if (recorded_repos_relpath)
+          *recorded_repos_relpath = apr_pstrdup(result_pool, path);
+
+        if (recorded_peg_revision)
+          *recorded_peg_revision = (peg_rev.kind == svn_opt_revision_number)
+                                   ? peg_rev.value.number : SVN_INVALID_REVNUM;
+
+        if (recorded_revision)
+          *recorded_revision = (rev.kind == svn_opt_revision_number)
+                                   ? rev.value.number : SVN_INVALID_REVNUM;
+      }
+
+    return SVN_NO_ERROR;
+  }
+#else
   NOT_IMPLEMENTED();
+#endif
 }
 
-/* For file and symlink externals reads the pristine properties of
-   LOCAL_ABSPATH as stored in the working copy identified by WRI_ABSPATH
-   (If NULL the parent directory of LOCAL_ABSPATH).
-
-   Return SVN_ERR_WC_PATH_NOT_FOUND if LOCAL_ABSPATH is not an external in
-   this working copy.
- */
 svn_error_t *
 svn_wc__db_external_read_pristine_props(apr_hash_t **props,
                                         svn_wc__db_t *db,
@@ -2592,16 +2977,32 @@ svn_wc__db_external_read_pristine_props(apr_hash_t **props,
                                         apr_pool_t *result_pool,
                                         apr_pool_t *scratch_pool)
 {
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  if (! wri_abspath)
+    wri_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
+                              wri_abspath, scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  SVN_ERR_ASSERT(svn_dirent_is_ancestor(wcroot->abspath, local_abspath));
+
+  local_relpath = svn_dirent_skip_ancestor(wcroot->abspath, local_abspath);
+
+#if SVN_WC__VERSION < SVN_WC__HAS_EXTERNALS_STORE
+  return svn_error_return(svn_wc__db_read_pristine_props(props, db,
+                                                         local_abspath,
+                                                         result_pool,
+                                                         scratch_pool));
+#else
   NOT_IMPLEMENTED();
+#endif
 }
 
-/* For file and symlink externals reads the actual properties of
-   LOCAL_ABSPATH as stored in the working copy identified by WRI_ABSPATH
-   (If NULL the parent directory of LOCAL_ABSPATH).
-
-   Return SVN_ERR_WC_PATH_NOT_FOUND if LOCAL_ABSPATH is not an external in
-   this working copy.
- */
 svn_error_t *
 svn_wc__db_external_read_props(apr_hash_t **props,
                                svn_wc__db_t *db,
@@ -2610,7 +3011,28 @@ svn_wc__db_external_read_props(apr_hash_t **props,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool)
 {
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  if (! wri_abspath)
+    wri_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
+                              wri_abspath, scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  SVN_ERR_ASSERT(svn_dirent_is_ancestor(wcroot->abspath, local_abspath));
+
+  local_relpath = svn_dirent_skip_ancestor(wcroot->abspath, local_abspath);
+
+#if SVN_WC__VERSION < SVN_WC__HAS_EXTERNALS_STORE
+  return svn_error_return(svn_wc__db_read_props(props, db, local_abspath,
+                                                result_pool, scratch_pool));
+#else
   NOT_IMPLEMENTED();
+#endif
 }
 
 
@@ -10468,114 +10890,6 @@ struct set_file_external_baton_t
   const svn_opt_revision_t *peg_rev;
   const svn_opt_revision_t *rev;
 };
-
-
-static svn_error_t *
-set_file_external_txn(void *baton,
-                      svn_wc__db_wcroot_t *wcroot,
-                      const char *local_relpath,
-                      apr_pool_t *scratch_pool)
-{
-  struct set_file_external_baton_t *sfeb = baton;
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t got_row;
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_BASE_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__step(&got_row, stmt));
-  SVN_ERR(svn_sqlite__reset(stmt));
-
-  if (!got_row)
-    {
-      const char *dir_relpath;
-      svn_node_kind_t kind;
-      apr_int64_t repos_id;
-
-      if (!sfeb->repos_relpath)
-        return SVN_NO_ERROR; /* Don't add a BASE node */
-
-      SVN_ERR(svn_io_check_path(svn_dirent_join(wcroot->abspath,
-                                                local_relpath, scratch_pool),
-                                &kind, scratch_pool));
-      if (kind == svn_node_dir)
-        dir_relpath = local_relpath;
-      else
-        dir_relpath = svn_relpath_dirname(local_relpath, scratch_pool);
-
-      SVN_ERR(scan_upwards_for_repos(&repos_id, NULL, wcroot, dir_relpath,
-                                     scratch_pool, scratch_pool));
-
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_INSERT_NODE));
-
-      SVN_ERR(svn_sqlite__bindf(stmt, "isisisntnt",
-                                wcroot->wc_id,
-                                local_relpath,
-                                (apr_int64_t)0, /* op_depth == BASE */
-                                svn_relpath_dirname(local_relpath,
-                                                    scratch_pool),
-                                repos_id,
-                                sfeb->repos_relpath,
-                                presence_map, svn_wc__db_status_not_present,
-                                kind_map, svn_wc__db_kind_file));
-
-      SVN_ERR(svn_sqlite__insert(NULL, stmt));
-    }
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_UPDATE_FILE_EXTERNAL));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-  if (sfeb->repos_relpath)
-    {
-      const char *str;
-
-      SVN_ERR(svn_wc__serialize_file_external(&str,
-                                              sfeb->repos_relpath,
-                                              sfeb->peg_rev,
-                                              sfeb->rev,
-                                              scratch_pool));
-
-      SVN_ERR(svn_sqlite__bind_text(stmt, 3, str));
-    }
-  SVN_ERR(svn_sqlite__step_done(stmt));
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc__db_temp_op_set_file_external(svn_wc__db_t *db,
-                                     const char *local_abspath,
-                                     const char *repos_relpath,
-                                     const svn_opt_revision_t *peg_rev,
-                                     const svn_opt_revision_t *rev,
-                                     apr_pool_t *scratch_pool)
-{
-  svn_wc__db_wcroot_t *wcroot;
-  const char *local_relpath;
-  struct set_file_external_baton_t sfeb;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-  SVN_ERR_ASSERT(!repos_relpath
-                 || svn_relpath_is_canonical(repos_relpath, scratch_pool));
-
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
-                                             local_abspath,
-                                             scratch_pool, scratch_pool));
-  VERIFY_USABLE_WCROOT(wcroot);
-
-  sfeb.repos_relpath = repos_relpath;
-  sfeb.peg_rev = peg_rev;
-  sfeb.rev = rev;
-
-  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, set_file_external_txn,
-                              &sfeb, scratch_pool));
-
-  SVN_ERR(flush_entries(wcroot, local_abspath, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
 
 svn_error_t *
 svn_wc__db_temp_op_set_text_conflict_marker_files(svn_wc__db_t *db,

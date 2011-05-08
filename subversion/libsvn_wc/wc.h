@@ -146,6 +146,8 @@ extern "C" {
  * The bump to 28 converted any remaining references to MD5 checksums
  *   to SHA1 checksums. Bumped in r1095214.
  *
+ * The bump to 29 will probably introduce the EXTERNALS store. Not bumped yet
+ *
  * == 1.7.x shipped with format ???
  *
  * Please document any further format changes here.
@@ -173,6 +175,8 @@ extern "C" {
 
 /* A version < this has no work queue (see workqueue.h).  */
 #define SVN_WC__HAS_WORK_QUEUE 13
+
+#define SVN_WC__HAS_EXTERNALS_STORE 29
 
 /* Return true iff error E indicates an "is not a working copy" type
    of error, either because something wasn't a working copy at all, or

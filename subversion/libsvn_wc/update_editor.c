@@ -3940,32 +3940,17 @@ close_file(void *file_baton,
         content_state = svn_wc_notify_state_unchanged;
     }
 
-  /* ### NOTE: from this point onwards, we make several changes to the
-     ### database in a non-transactional way. we also queue additional
-     ### work after these changes. some revamps need to be performed to
-     ### bring this down to a single DB transaction to perform all the
-     ### changes and to install all the needed work items.  */
-
   /* Insert/replace the BASE node with all of the new metadata.  */
   {
       /* Set the 'checksum' column of the file's BASE_NODE row to
        * NEW_TEXT_BASE_SHA1_CHECKSUM.  The pristine text identified by that
        * checksum is already in the pristine store. */
     const svn_checksum_t *new_checksum = fb->new_text_base_sha1_checksum;
-    const char *serialised = NULL;
 
     /* If we don't have a NEW checksum, then the base must not have changed.
        Just carry over the old checksum.  */
     if (new_checksum == NULL)
       new_checksum = fb->original_checksum;
-
-    /* The adm crawler skips file externals for us, so we only have to check
-       for them at the editor target path. */
-    if ((fb->dir_baton->parent_baton == NULL) /* In update root */
-        && (0 == strcmp(eb->target_abspath, fb->local_abspath)))
-      SVN_ERR(svn_wc__db_temp_get_file_external(&serialised,
-                                                eb->db, fb->local_abspath,
-                                                scratch_pool, scratch_pool));
 
     SVN_ERR(svn_wc__db_base_add_file(eb->db, fb->local_abspath,
                                      fb->new_relpath,
@@ -3988,27 +3973,6 @@ close_file(void *file_baton,
                                      (fb->shadowed && fb->obstruction_found),
                                      all_work_items,
                                      scratch_pool));
-
-    /* ### ugh. deal with preserving the file external value in the database.
-       ### there is no official API, so we do it this way. maybe we should
-       ### have a temp API into wc_db.  */
-    if (serialised)
-      {
-        const char *file_external_repos_relpath;
-        svn_opt_revision_t file_external_peg_rev, file_external_rev;
-
-        SVN_ERR(svn_wc__unserialize_file_external(&file_external_repos_relpath,
-                                                  &file_external_peg_rev,
-                                                  &file_external_rev,
-                                                  serialised, scratch_pool));
-
-        SVN_ERR(svn_wc__db_temp_op_set_file_external(
-                                                  eb->db, fb->local_abspath,
-                                                  file_external_repos_relpath,
-                                                  &file_external_peg_rev,
-                                                  &file_external_rev,
-                                                  scratch_pool));
-      }
   }
 
   /* Deal with the WORKING tree, based on updates to the BASE tree.  */
@@ -4022,12 +3986,7 @@ close_file(void *file_baton,
                                                 scratch_pool));
     }
 
-  /* ### we may as well run whatever is in the queue right now. this
-     ### starts out with some crap node data via construct_base_node(),
-     ### so we can't really monkey things up too badly here. all tests
-     ### continue to pass, so this also gives us a better insight into
-     ### doing things more immediately, rather than queuing to run at
-     ### some future point in time.  */
+  /* We may as well run whatever is in the queue right now.  */
   SVN_ERR(svn_wc__wq_run(eb->db, fb->dir_baton->local_abspath,
                          eb->cancel_func, eb->cancel_baton,
                          scratch_pool));

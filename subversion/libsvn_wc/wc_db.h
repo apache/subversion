@@ -1041,6 +1041,7 @@ svn_wc__db_external_add_file(svn_wc__db_t *db,
 
                              const apr_hash_t *dav_cache,
 
+                             const char *record_ancestor_abspath,
                              const char *recorded_repos_relpath,
                              svn_revnum_t recorded_peg_revision,
                              svn_revnum_t recorded_revision,
@@ -1075,6 +1076,7 @@ svn_wc__db_external_add_symlink(svn_wc__db_t *db,
 
                                 const apr_hash_t *dav_cache,
 
+                                const char *record_ancestor_abspath,
                                 const char *recorded_repos_relpath,
                                 svn_revnum_t recorded_peg_revision,
                                 svn_revnum_t recorded_revision,
@@ -1098,6 +1100,7 @@ svn_wc__db_external_add_dir(svn_wc__db_t *db,
                             const char *local_abspath,
                             const char *wri_abspath,
 
+                            const char *record_ancestor_abspath,
                             const char *recorded_repos_relpath,
                             svn_revnum_t recorded_peg_revision,
                             svn_revnum_t recorded_revision,
@@ -1147,6 +1150,7 @@ svn_wc__db_external_read(svn_wc__db_kind_t *kind,
                          /* following fields are stored as copy from the
                             property which defined the external.
                             (Currently only for file externals) */
+                         const char **record_ancestor_abspath,
                          const char **recorded_repos_relpath,
                          svn_revnum_t *recorded_peg_revision,
                          svn_revnum_t *recorded_revision,
@@ -1155,7 +1159,7 @@ svn_wc__db_external_read(svn_wc__db_kind_t *kind,
                          svn_boolean_t *conflicted,
 
                          /* Derived (only for files) */
-                         svn_boolean_t had_props,
+                         svn_boolean_t *had_props,
                          svn_boolean_t *props_mod,
 
                          svn_wc__db_t *db,
@@ -2807,17 +2811,6 @@ svn_wc__db_temp_get_file_external(const char **serialized_file_external,
                                   const char *local_abspath,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool);
-
-
-/* Set file external information on LOCAL_ABSPATH to REPOS_RELPATH
-   at PEG_REV with revision REV*/
-svn_error_t *
-svn_wc__db_temp_op_set_file_external(svn_wc__db_t *db,
-                                     const char *local_abspath,
-                                     const char *repos_relpath,
-                                     const svn_opt_revision_t *peg_rev,
-                                     const svn_opt_revision_t *rev,
-                                     apr_pool_t *scratch_pool);
 
 /* Set the conflict marker information on LOCAL_ABSPATH to the specified
    values */

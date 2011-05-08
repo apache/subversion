@@ -350,9 +350,9 @@ struct edit_baton
   const char *repos_root_url;
   const char *repos_uuid;
 
-  const char *recorded_url;
-  svn_opt_revision_t *recorded_peg_rev;
-  svn_opt_revision_t *recorded_rev;
+  const char *recorded_repos_relpath;
+  svn_revnum_t recorded_peg_revision;
+  svn_revnum_t recorded_revision;
 
   svn_wc_conflict_resolver_func2_t conflict_func;
   void *conflict_baton;
@@ -736,7 +736,7 @@ close_file(void *file_baton,
             SVN_ERR(svn_wc__internal_file_modified_p(&is_mod, NULL, NULL,
                                                      eb->db, eb->local_abspath,
                                                      FALSE, FALSE, pool));
-      
+
             if (!is_mod)
               {
                 install_pristine = TRUE;
@@ -763,10 +763,10 @@ close_file(void *file_baton,
                                                    eb->cancel_func,
                                                    eb->cancel_baton,
                                                    pool, pool));
-      
+
                 all_work_items = svn_wc__wq_merge(all_work_items, work_item,
                                                   pool);
-      
+
                 if (merge_outcome == svn_wc_merge_conflict)
                   content_state = svn_wc_notify_state_conflicted;
                 else
@@ -780,7 +780,7 @@ close_file(void *file_baton,
                                             install_from,
                                             eb->use_commit_times, TRUE,
                                             pool, pool));
-      
+
             all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
           }
       }
@@ -790,34 +790,28 @@ close_file(void *file_baton,
         /* ### Retranslate on magic property changes, etc. */
       }
 
-    SVN_ERR(svn_wc__db_base_add_file(eb->db, eb->local_abspath,
-                                     repos_relpath,
-                                     eb->repos_root_url,
-                                     eb->repos_uuid,
-                                     *eb->target_revision,
-                                     new_pristine_props,
-                                     changed_rev,
-                                     changed_date,
-                                     changed_author,
-                                     new_checksum,
-                                     new_dav_props,
-                                     NULL,
-                                     TRUE, new_actual_props,
-                                     FALSE /* keep_recorded_info */,
-                                     FALSE /* insert_base_deleted */,
-                                     all_work_items,
-                                     pool));
-
-    {
-      const char *register_relpath = svn_uri_is_child(eb->repos_root_url,
-                                                      eb->recorded_url, pool);
-
-      SVN_ERR(svn_wc__db_temp_op_set_file_external(eb->db, eb->local_abspath,
-                                                   register_relpath,
-                                                   eb->recorded_peg_rev,
-                                                   eb->recorded_rev,
-                                                   pool));
-    }
+    SVN_ERR(svn_wc__db_external_add_file(
+                        eb->db,
+                        eb->local_abspath,
+                        eb->wri_abspath,
+                        repos_relpath,
+                        eb->repos_root_url,
+                        eb->repos_uuid,
+                        *eb->target_revision,
+                        new_pristine_props,
+                        changed_rev,
+                        changed_date,
+                        changed_author,
+                        new_checksum,
+                        new_dav_props,
+                        eb->wri_abspath /* record_ancestor_abspath */,
+                        eb->recorded_repos_relpath,
+                        eb->recorded_peg_revision,
+                        eb->recorded_revision,
+                        TRUE, new_actual_props,
+                        FALSE /* keep_recorded_info */,
+                        all_work_items,
+                        pool));
 
     SVN_ERR(svn_wc__wq_run(eb->db, eb->wri_abspath,
                            eb->cancel_func, eb->cancel_baton, pool));
@@ -846,7 +840,7 @@ close_file(void *file_baton,
 
       eb->notify_func(eb->notify_baton, notify, pool);
     }
-  
+
 
   return SVN_NO_ERROR;
 }
@@ -917,9 +911,18 @@ svn_wc__get_file_external_editor(const svn_delta_editor_t **editor,
   eb->ext_patterns = preserved_exts;
   eb->diff3cmd = diff3_cmd;
 
-  eb->recorded_url = recorded_url;
-  eb->recorded_peg_rev = recorded_peg_rev;
-  eb->recorded_rev = recorded_rev;
+  eb->recorded_repos_relpath = svn_uri_is_child(repos_root_url, recorded_url,
+                                                edit_pool);
+
+  if (recorded_peg_rev->kind == svn_opt_revision_number)
+    eb->recorded_peg_revision = recorded_peg_rev->value.number;
+  else
+    eb->recorded_peg_revision = SVN_INVALID_REVNUM; /* Not fixed/HEAD */
+
+  if (recorded_rev->kind == svn_opt_revision_number)
+    eb->recorded_revision = recorded_rev->value.number;
+  else
+    eb->recorded_revision = SVN_INVALID_REVNUM; /* Not fixed/HEAD */
 
   eb->conflict_func = conflict_func;
   eb->conflict_baton = conflict_baton;
