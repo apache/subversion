@@ -80,17 +80,7 @@ struct handle_external_item_change_baton
   apr_pool_t *iterpool;
 };
 
-
-struct relegate_dir_external_with_write_lock_baton {
-  const char *local_abspath;
-  svn_wc_context_t *wc_ctx;
-  svn_cancel_func_t cancel_func;
-  void *cancel_baton;
-};
-
-/* Note: All arguments are in the baton above.
- *
- * Remove the directory at LOCAL_ABSPATH from revision control, and do the
+/* Remove the directory at LOCAL_ABSPATH from revision control, and do the
  * same to any revision controlled directories underneath LOCAL_ABSPATH
  * (including directories not referred to by parent svn administrative areas);
  * then if LOCAL_ABSPATH is empty afterwards, remove it, else rename it to a
@@ -101,16 +91,17 @@ struct relegate_dir_external_with_write_lock_baton {
  * Use SCRATCH_POOL for all temporary allocation.
  */
 static svn_error_t *
-relegate_dir_external(void *baton,
-                      apr_pool_t *result_pool,
+relegate_dir_external(svn_wc_context_t *wc_ctx,
+                      const char *local_abspath,
+                      svn_cancel_func_t cancel_func,
+                      void *cancel_baton,
                       apr_pool_t *scratch_pool)
 {
-  struct relegate_dir_external_with_write_lock_baton *b = baton;
   svn_error_t *err = SVN_NO_ERROR;
 
-  err = svn_wc_remove_from_revision_control2(b->wc_ctx, b->local_abspath,
+  err = svn_wc_remove_from_revision_control2(wc_ctx, local_abspath,
                                              TRUE, FALSE,
-                                             b->cancel_func, b->cancel_baton,
+                                             cancel_func, cancel_baton,
                                              scratch_pool);
   if (err && (err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
     {
@@ -121,7 +112,7 @@ relegate_dir_external(void *baton,
       svn_error_clear(err);
       err = SVN_NO_ERROR;
 
-      svn_dirent_split(&parent_dir, &dirname, b->local_abspath, scratch_pool);
+      svn_dirent_split(&parent_dir, &dirname, local_abspath, scratch_pool);
 
       /* Reserve the new dir name. */
       SVN_ERR(svn_io_open_uniquely_named(NULL, &new_path,
@@ -151,7 +142,7 @@ relegate_dir_external(void *baton,
       svn_error_clear(svn_io_remove_file2(new_path, TRUE, scratch_pool));
 
       /* Rename. */
-      SVN_ERR(svn_io_file_rename(b->local_abspath, new_path, scratch_pool));
+      SVN_ERR(svn_io_file_rename(local_abspath, new_path, scratch_pool));
     }
 
   return svn_error_return(err);
@@ -160,7 +151,7 @@ relegate_dir_external(void *baton,
 /* Try to update a directory external at PATH to URL at REVISION.
    Use POOL for temporary allocations, and use the client context CTX. */
 static svn_error_t *
-switch_dir_external(const char *path,
+switch_dir_external(const char *local_abspath,
                     const char *url,
                     const svn_opt_revision_t *revision,
                     const svn_opt_revision_t *peg_revision,
@@ -171,13 +162,12 @@ switch_dir_external(const char *path,
   svn_node_kind_t kind;
   svn_error_t *err;
   apr_pool_t *subpool = svn_pool_create(pool);
-  const char *local_abspath;
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   /* If path is a directory, try to update/switch to the correct URL
      and revision. */
-  SVN_ERR(svn_io_check_path(path, &kind, pool));
+  SVN_ERR(svn_io_check_path(local_abspath, &kind, pool));
   if (kind == svn_node_dir)
     {
       const char *node_url;
@@ -232,7 +222,8 @@ switch_dir_external(const char *path,
                   SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root,
                                                  subpool));
 
-                  err = svn_client_relocate2(path, repos_root_url, repos_root,
+                  err = svn_client_relocate2(local_abspath, repos_root_url,
+                                             repos_root,
                                              FALSE, ctx, subpool);
                   /* If the relocation failed because the new URL points
                      to another repository, then we need to relegate and
@@ -249,7 +240,7 @@ switch_dir_external(const char *path,
                     return svn_error_return(err);
                 }
 
-              SVN_ERR(svn_client__switch_internal(NULL, path, url,
+              SVN_ERR(svn_client__switch_internal(NULL, local_abspath, url,
                                                   peg_revision, revision,
                                                   svn_depth_infinity,
                                                   TRUE, FALSE, FALSE,
@@ -273,24 +264,19 @@ switch_dir_external(const char *path,
 
   if (kind == svn_node_dir)
     {
-      struct relegate_dir_external_with_write_lock_baton baton;
-
-      baton.local_abspath = local_abspath;
-      baton.wc_ctx = ctx->wc_ctx;
-      baton.cancel_func = ctx->cancel_func;
-      baton.cancel_baton = ctx->cancel_baton;
-
       /* Buh-bye, old and busted ... */
       SVN_ERR(svn_wc__acquire_write_lock(NULL, ctx->wc_ctx, local_abspath,
                                          FALSE, pool, pool));
 
-      SVN_ERR(relegate_dir_external(&baton, pool, pool));
+      SVN_ERR(relegate_dir_external(ctx->wc_ctx, local_abspath,
+                                    ctx->cancel_func, ctx->cancel_baton,
+                                    pool));
     }
   else
     {
       /* The target dir might have multiple components.  Guarantee
          the path leading down to the last component. */
-      const char *parent = svn_dirent_dirname(path, pool);
+      const char *parent = svn_dirent_dirname(local_abspath, pool);
       SVN_ERR(svn_io_make_dir_recursively(parent, pool));
     }
 
@@ -301,11 +287,11 @@ switch_dir_external(const char *path,
                                        ctx, pool);
 }
 
-/* Try to update a file external at PATH to URL at REVISION using a
-   access baton that has a write lock.  Use POOL for temporary
+/* Try to update a file external at LOCAL_ABSPATH to URL at REVISION using a
+   access baton that has a write lock.  Use SCRATCH_POOL for temporary
    allocations, and use the client context CTX. */
 static svn_error_t *
-switch_file_external(const char *path,
+switch_file_external(const char *local_abspath,
                      const char *url,
                      const svn_opt_revision_t *peg_revision,
                      const svn_opt_revision_t *revision,
@@ -315,37 +301,53 @@ switch_file_external(const char *path,
                      const char *repos_root_url,
                      svn_boolean_t *timestamp_sleep,
                      svn_client_ctx_t *ctx,
-                     apr_pool_t *pool)
+                     apr_pool_t *scratch_pool)
 {
-  apr_pool_t *subpool = svn_pool_create(pool);
-  const char *anchor;
-  const char *anchor_abspath;
-  const char *local_abspath;
+  apr_pool_t *subpool = svn_pool_create(scratch_pool);
+  const char *dir_abspath;
   const char *target;
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
                                                  SVN_CONFIG_CATEGORY_CONFIG,
                                                  APR_HASH_KEY_STRING) : NULL;
   svn_boolean_t use_commit_times;
+  const char *diff3_cmd;
+  const char *preserved_exts_str;
+  const apr_array_header_t *preserved_exts;
   svn_boolean_t locked_here;
   svn_error_t *err = NULL;
   svn_node_kind_t kind;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   /* See if the user wants last-commit timestamps instead of current ones. */
   SVN_ERR(svn_config_get_bool(cfg, &use_commit_times,
                               SVN_CONFIG_SECTION_MISCELLANY,
                               SVN_CONFIG_OPTION_USE_COMMIT_TIMES, FALSE));
 
-  /* There must be a working copy to place the file external into. */
-  SVN_ERR(svn_wc_get_actual_target2(&anchor, &target, ctx->wc_ctx, path,
-                                    subpool, subpool));
-  SVN_ERR(svn_dirent_get_absolute(&anchor_abspath, anchor, subpool));
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, subpool));
+  
+
+  /* Get the external diff3, if any. */
+  svn_config_get(cfg, &diff3_cmd, SVN_CONFIG_SECTION_HELPERS,
+                 SVN_CONFIG_OPTION_DIFF3_CMD, NULL);
+
+  if (diff3_cmd != NULL)
+    SVN_ERR(svn_path_cstring_to_utf8(&diff3_cmd, diff3_cmd, subpool));
+
+  /* See which files the user wants to preserve the extension of when
+     conflict files are made. */
+  svn_config_get(cfg, &preserved_exts_str, SVN_CONFIG_SECTION_MISCELLANY,
+                 SVN_CONFIG_OPTION_PRESERVED_CF_EXTS, "");
+  preserved_exts = *preserved_exts_str
+    ? svn_cstring_split(preserved_exts_str, "\n\r\t\v ", FALSE, subpool)
+    : NULL;
+
+  svn_dirent_split(&dir_abspath, &target, local_abspath, subpool);
 
   /* Try to get a access baton for the anchor using the input access
      baton.  If this fails and returns SVN_ERR_WC_NOT_LOCKED, then try
      to get a new access baton to support inserting a file external
      into a directory external. */
-  SVN_ERR(svn_wc_locked2(&locked_here, NULL, ctx->wc_ctx, anchor_abspath,
+  SVN_ERR(svn_wc_locked2(&locked_here, NULL, ctx->wc_ctx, dir_abspath,
                          subpool));
   if (!locked_here)
     {
@@ -354,7 +356,7 @@ switch_file_external(const char *path,
       /* Check that the repository root URL for the newly opened
          wc is the same as the file external. */
       SVN_ERR(svn_client__get_repos_root(&dest_wc_repos_root_url,
-                                         anchor_abspath,
+                                         dir_abspath,
                                          ctx, subpool, subpool));
 
       if (0 != strcmp(repos_root_url, dest_wc_repos_root_url))
@@ -364,7 +366,7 @@ switch_file_external(const char *path,
              "copy from a different repository rooted at '%s'"),
            url, dest_wc_repos_root_url);
 
-      SVN_ERR(svn_wc__acquire_write_lock(NULL, ctx->wc_ctx, anchor_abspath,
+      SVN_ERR(svn_wc__acquire_write_lock(NULL, ctx->wc_ctx, dir_abspath,
                                          FALSE, subpool, subpool));
     }
 
@@ -392,40 +394,19 @@ switch_file_external(const char *path,
       if (! file_external)
         {
           if (!locked_here)
-            SVN_ERR(svn_wc__release_write_lock(ctx->wc_ctx, anchor_abspath,
+            SVN_ERR(svn_wc__release_write_lock(ctx->wc_ctx, dir_abspath,
                                                subpool));
 
           return svn_error_createf(
               SVN_ERR_CLIENT_FILE_EXTERNAL_OVERWRITE_VERSIONED, 0,
              _("The file external from '%s' cannot overwrite the existing "
                "versioned item at '%s'"),
-             url, svn_dirent_local_style(path, pool));
+             url, svn_dirent_local_style(local_abspath, subpool));
         }
     }
   else
     {
-      svn_boolean_t text_conflicted;
-      svn_boolean_t prop_conflicted;
-      svn_boolean_t tree_conflicted;
       svn_node_kind_t disk_kind;
-
-      /* Check for a conflict on the containing directory.  Because a
-         switch is done on the added file later, it will leave a
-         conflict on the directory.  To prevent resolving a conflict
-         due to another change on the directory, do not allow a file
-         external to be added when one exists. */
-      err = svn_wc_conflicted_p3(&text_conflicted, &prop_conflicted,
-                                 &tree_conflicted, ctx->wc_ctx,
-                                 anchor_abspath, subpool);
-      if (err)
-        goto cleanup;
-
-      if (text_conflicted || prop_conflicted || tree_conflicted)
-        return svn_error_createf
-          (SVN_ERR_WC_FOUND_CONFLICT, 0,
-           _("The file external from '%s' cannot be written to '%s' while "
-             "'%s' remains in conflict"),
-          url, path, anchor);
 
       err = svn_io_check_path(local_abspath, &disk_kind, subpool);
 
@@ -448,30 +429,64 @@ switch_file_external(const char *path,
         goto cleanup;
     }
 
-  err = svn_client__switch_internal(NULL, path, url, peg_revision, revision,
-                                    svn_depth_empty,
-                                    FALSE, /* depth_is_sticky */
-                                    TRUE, /* ignore_externals */
-                                    FALSE, /* allow_unver_obstructions */
-                                    FALSE, /* apply_local_external_mods */
-                                    TRUE, /* ignore_ancestry */
-                                    FALSE, /* innerswitch */
-                                    timestamp_sleep,
-                                    ctx,
-                                    pool);
-  if (err)
-    goto cleanup;
+  {
+    const svn_ra_reporter3_t *reporter;
+    void *report_baton;
+    const svn_delta_editor_t *switch_editor;
+    void *switch_baton;
+    const char *anchor_url;
+    const char *switch_rev_url;
+    svn_revnum_t revnum;
 
+    SVN_ERR(svn_wc__node_get_url(&anchor_url, ctx->wc_ctx, dir_abspath,
+                                 subpool, subpool));
+    if (! anchor_url)
+      return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
+                               _("Directory '%s' has no URL"),
+                               svn_dirent_local_style(dir_abspath, subpool));
+
+    /* Open an RA session to 'source' URL */
+    SVN_ERR(svn_client__ra_session_from_path(&ra_session, &revnum,
+                                             &switch_rev_url,
+                                             url, dir_abspath,
+                                             peg_revision, revision,
+                                             ctx, subpool));
+
+    SVN_ERR(svn_ra_reparent(ra_session, url, subpool));
+
+    SVN_ERR(svn_wc_get_switch_editor4(&switch_editor, &switch_baton,
+                                      &revnum, ctx->wc_ctx,
+                                      dir_abspath, target,
+                                      switch_rev_url, use_commit_times,
+                                      svn_depth_infinity, FALSE, FALSE, TRUE,
+                                      diff3_cmd, preserved_exts,
+                                      ctx->conflict_func2,
+                                      ctx->conflict_baton2,
+                                      NULL, NULL,
+                                      ctx->cancel_func, ctx->cancel_baton,
+                                      ctx->notify_func2, ctx->notify_baton2,
+                                      subpool, subpool));
+
+    /* Tell RA to do an update of URL+TARGET to REVISION; if we pass an
+     invalid revnum, that means RA will use the latest revision. */
+  SVN_ERR(svn_ra_do_switch2(ra_session, &reporter, &report_baton, revnum,
+                            target, svn_depth_unknown, url,
+                            switch_editor, switch_baton, subpool));
+
+  SVN_ERR(svn_wc_crawl_revisions5(ctx->wc_ctx, local_abspath,
+                                  reporter, report_baton, 
+                                  TRUE, svn_depth_infinity, FALSE, TRUE,
+                                  use_commit_times,
+                                  NULL, NULL,
+                                  ctx->cancel_func, ctx->cancel_baton,
+                                  ctx->notify_func2, ctx->notify_baton2,
+                                  subpool));
+  }
+
+cleanup:
   if (!locked_here)
-    SVN_ERR(svn_wc__release_write_lock(ctx->wc_ctx, anchor_abspath, subpool));
-
-  svn_pool_destroy(subpool);
-  return SVN_NO_ERROR;
-
- cleanup:
-  if (!locked_here)
-    svn_error_clear(svn_wc__release_write_lock(ctx->wc_ctx, anchor_abspath,
-                                               subpool));
+    err = svn_error_compose_create(err,
+             svn_wc__release_write_lock(ctx->wc_ctx, dir_abspath, subpool));
 
   svn_pool_destroy(subpool);
   return svn_error_return(err);
