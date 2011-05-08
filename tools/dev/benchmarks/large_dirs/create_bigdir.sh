@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -51,7 +51,7 @@ SERVEROPTS="-c 0 -M 400"
 
 # from here on, we should be good
 
-TIMEFORMAT=$'%3R  %3U  %3S'
+TIMEFORMAT='%3R  %3U  %3S'
 REPONAME=dirs
 PORT=54321
 if [ "${SVNSERVE}" != "" ] ; then
@@ -65,7 +65,8 @@ fi
 rm -rf $WC $REPOROOT/$REPONAME
 mkdir $REPOROOT/$REPONAME
 ${SVNADMIN} create $REPOROOT/$REPONAME
-echo -e "[general]\nanon-access = write\n" > $REPOROOT/$REPONAME/conf/svnserve.conf
+echo "[general]
+anon-access = write" > $REPOROOT/$REPONAME/conf/svnserve.conf
 
 # fire up svnserve
 
@@ -89,7 +90,7 @@ fi
 
 # print header
 
-echo -n "using "
+printf "using "
 ${SVN} --version | grep " version"
 echo
 
@@ -101,7 +102,7 @@ ${SVN} co $URL $WC > /dev/null
 # functions that execute an SVN command
 
 run_svn() {
-  if [ "${VALGRIND}" == "" ] ; then
+  if [ "${VALGRIND}" = "" ] ; then
     time ${SVN} $1 $WC/$2 $3 > /dev/null
   else
     ${VALGRIND} ${VG_OUTFILE}="${VG_TOOL}.out.$1.$2" ${SVN} $1 $WC/$2 $3 > /dev/null
@@ -109,7 +110,7 @@ run_svn() {
 }
 
 run_svn_del() {
-  if [ "${VALGRIND}" == "" ] ; then
+  if [ "${VALGRIND}" = "" ] ; then
     time ${SVN} del $WC/${1}_c/$2 -q > /dev/null
   else
     ${VALGRIND} ${VG_OUTFILE}="${VG_TOOL}.out.del.$1" ${SVN} del $WC/${1}_c/$2 -q > /dev/null
@@ -117,7 +118,7 @@ run_svn_del() {
 }
 
 run_svn_ci() {
-  if [ "${VALGRIND}" == "" ] ; then
+  if [ "${VALGRIND}" = "" ] ; then
     time ${SVN} ci $WC/$1 -m "" -q > /dev/null
   else
     ${VALGRIND} ${VG_OUTFILE}="${VG_TOOL}.out.ci_$2.$1" ${SVN} ci $WC/$1 -m "" -q > /dev/null
@@ -125,7 +126,7 @@ run_svn_ci() {
 }
 
 run_svn_cp() {
-  if [ "${VALGRIND}" == "" ] ; then
+  if [ "${VALGRIND}" = "" ] ; then
     time ${SVN} cp $WC/$1 $WC/$2 > /dev/null
   else
     ${VALGRIND} ${VG_OUTFILE}="${VG_TOOL}.out.cp.$1" ${SVN} cp $WC/$1 $WC/$2 > /dev/null
@@ -133,7 +134,7 @@ run_svn_cp() {
 }
 
 run_svn_get() {
-  if [ "${VALGRIND}" == "" ] ; then
+  if [ "${VALGRIND}" = "" ] ; then
     time ${SVN} $1 $URL $WC -q > /dev/null
   else
     ${VALGRIND} ${VG_OUTFILE}="${VG_TOOL}.out.$1.$2" ${SVN} $1 $URL $WC -q > /dev/null
@@ -145,57 +146,57 @@ run_svn_get() {
 while [ $FILECOUNT -lt $MAXCOUNT ]; do
   echo "Processing $FILECOUNT files in the same folder"
 
-  echo -ne "\tCreating files ... \t real   user    sys\n"
+  printf "\tCreating files ... \t real   user    sys\n"
   mkdir $WC/$FILECOUNT
   for i in `seq 1 ${FILECOUNT}`; do
     echo "File number $i" > $WC/$FILECOUNT/$i
   done    
 
-  echo -ne "\tAdding files ...   \t"
+  printf "\tAdding files ...   \t"
   run_svn add $FILECOUNT -q
 
-  echo -ne "\tRunning status ... \t"
+  printf "\tRunning status ... \t"
   run_svn st $FILECOUNT -q
 
-  echo -ne "\tCommit files ...   \t"
+  printf "\tCommit files ...   \t"
   run_svn_ci $FILECOUNT add
   
-  echo -ne "\tListing files ...  \t"
+  printf "\tListing files ...  \t"
   run_svn ls $FILECOUNT
 
-  echo -ne "\tUpdating files ... \t"
+  printf "\tUpdating files ... \t"
   run_svn up $FILECOUNT -q
 
-  echo -ne "\tLocal copy ...     \t"
+  printf "\tLocal copy ...     \t"
   run_svn_cp $FILECOUNT ${FILECOUNT}_c
 
-  echo -ne "\tCommit copy ...    \t"
+  printf "\tCommit copy ...    \t"
   run_svn_ci ${FILECOUNT}_c copy
 
-  echo -ne "\tDelete 1 file ...  \t"
+  printf "\tDelete 1 file ...  \t"
   run_svn_del ${FILECOUNT} 1
 
-  echo -ne "\tDeleting files ... \t"
-  time (
-  for i in `seq 2 ${FILECOUNT}`; do
+  printf "\tDeleting files ... \t"
+  time sh -c "
+  for i in `seq 2 ${FILECOUNT} | xargs`; do
     ${SVN} del $WC/${FILECOUNT}_c/$i -q
-  done )
+  done "
 
-  echo -ne "\tCommit deletions ...\t"
+  printf "\tCommit deletions ...\t"
   run_svn_ci ${FILECOUNT}_c del
 
   rm -rf $WC
 
-  echo -ne "\tExport all ...  \t"
+  printf "\tExport all ...  \t"
   run_svn_get export $FILECOUNT
 
   rm -rf $WC
   mkdir $WC
 
-  echo -ne "\tCheck out all ...  \t"
+  printf "\tCheck out all ...  \t"
   run_svn_get co $FILECOUNT
 
-  let FILECOUNT=2*FILECOUNT
+  FILECOUNT=`echo 2 \* $FILECOUNT | bc`
   echo ""
 done
 
