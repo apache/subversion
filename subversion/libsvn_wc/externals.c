@@ -329,57 +329,17 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_wc__set_file_external_location(svn_wc_context_t *wc_ctx,
-                                   const char *local_abspath,
-                                   const char *url,
-                                   const svn_opt_revision_t *peg_rev,
-                                   const svn_opt_revision_t *rev,
-                                   const char *repos_root_url,
-                                   apr_pool_t *scratch_pool)
-{
-  const char *external_repos_relpath;
-  const svn_opt_revision_t unspecified_rev = { svn_opt_revision_unspecified };
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-  SVN_ERR_ASSERT(!url || svn_uri_is_canonical(url, scratch_pool));
-
-  if (url)
-    {
-      external_repos_relpath = svn_uri_is_child(repos_root_url, url,
-                                                scratch_pool);
-
-      if (external_repos_relpath == NULL)
-          return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                                   _("Can't add a file external to '%s' as it"
-                                     " is not a file in repository '%s'."),
-                                   url, repos_root_url);
-
-      SVN_ERR_ASSERT(peg_rev != NULL);
-      SVN_ERR_ASSERT(rev != NULL);
-    }
-  else
-    {
-      external_repos_relpath = NULL;
-      peg_rev = &unspecified_rev;
-      rev = &unspecified_rev;
-    }
-
-  SVN_ERR(svn_wc__db_temp_op_set_file_external(wc_ctx->db, local_abspath,
-                                               external_repos_relpath, peg_rev,
-                                               rev, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
 
 struct edit_baton
 {
   apr_pool_t *pool;
   svn_wc__db_t *db;
 
-  const char *wri_abspath;
-  const char *local_abspath;
-  const char *name;
+  /* We explicitly use wri_abspath and local_abspath here, because we
+     might want to install file externals in an obstructing working copy */
+  const char *wri_abspath;     /* The working defining the file external */
+  const char *local_abspath;   /* The file external itself */
+  const char *name;            /* The basename of the file external itself */
 
   /* Information from the caller */
   svn_boolean_t use_commit_times;
@@ -389,6 +349,10 @@ struct edit_baton
   const char *url;
   const char *repos_root_url;
   const char *repos_uuid;
+
+  const char *recorded_url;
+  svn_opt_revision_t *recorded_peg_rev;
+  svn_opt_revision_t *recorded_rev;
 
   svn_wc_conflict_resolver_func2_t conflict_func;
   void *conflict_baton;
@@ -845,14 +809,14 @@ close_file(void *file_baton,
                                      pool));
 
     {
-      svn_opt_revision_t peg_rev, rev;
-      peg_rev.kind = svn_opt_revision_number;
-      peg_rev.value.number = *eb->target_revision;
-      rev.kind = svn_opt_revision_number;
-      rev.value.number = *eb->target_revision;
+      const char *register_relpath = svn_uri_is_child(eb->repos_root_url,
+                                                      eb->recorded_url, pool);
+
       SVN_ERR(svn_wc__db_temp_op_set_file_external(eb->db, eb->local_abspath,
-                                                   repos_relpath, &peg_rev,
-                                                   &rev, pool));
+                                                   register_relpath,
+                                                   eb->recorded_peg_rev,
+                                                   eb->recorded_rev,
+                                                   pool));
     }
 
     SVN_ERR(svn_wc__wq_run(eb->db, eb->wri_abspath,
@@ -921,6 +885,9 @@ svn_wc__get_file_external_editor(const svn_delta_editor_t **editor,
                                  svn_boolean_t use_commit_times,
                                  const char *diff3_cmd,
                                  const apr_array_header_t *preserved_exts,
+                                 const char *recorded_url,
+                                 svn_opt_revision_t *recorded_peg_rev,
+                                 svn_opt_revision_t *recorded_rev,
                                  svn_wc_conflict_resolver_func2_t conflict_func,
                                  void *conflict_baton,
                                  svn_cancel_func_t cancel_func,
@@ -949,6 +916,10 @@ svn_wc__get_file_external_editor(const svn_delta_editor_t **editor,
   eb->use_commit_times = use_commit_times;
   eb->ext_patterns = preserved_exts;
   eb->diff3cmd = diff3_cmd;
+
+  eb->recorded_url = recorded_url;
+  eb->recorded_peg_rev = recorded_peg_rev;
+  eb->recorded_rev = recorded_rev;
 
   eb->conflict_func = conflict_func;
   eb->conflict_baton = conflict_baton;

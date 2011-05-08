@@ -54,24 +54,6 @@ svn_wc__changelist_match(svn_wc_context_t *wc_ctx,
                          const apr_hash_t *clhash,
                          apr_pool_t *scratch_pool);
 
-
-/* For the LOCAL_ABSPATH entry in WC_CTX, set the
- * file_external_path to URL, the file_external_peg_rev to *PEG_REV
- * and the file_external_rev to *REV.  The URL may be NULL which
- * clears the file external information in the entry.  The repository
- * root URL is given in REPOS_ROOT_URL and is used to store a
- * repository root relative path in the entry.  SCRATCH_POOL is used for
- * temporary allocations.
- */
-svn_error_t *
-svn_wc__set_file_external_location(svn_wc_context_t *wc_ctx,
-                                   const char *local_abspath,
-                                   const char *url,
-                                   const svn_opt_revision_t *peg_rev,
-                                   const svn_opt_revision_t *rev,
-                                   const char *repos_root_url,
-                                   apr_pool_t *scratch_pool);
-
 /* Like svn_wc_get_update_editorX and svn_wc_get_status_editorX, but only
    allows updating a file external LOCAL_ABSPATH */
 svn_error_t *
@@ -86,6 +68,9 @@ svn_wc__get_file_external_editor(const svn_delta_editor_t **editor,
                                  svn_boolean_t use_commit_times,
                                  const char *diff3_cmd,
                                  const apr_array_header_t *preserved_exts,
+                                 const char *recorded_url,
+                                 svn_opt_revision_t *recorded_peg_rev,
+                                 svn_opt_revision_t *recorded_rev,
                                  svn_wc_conflict_resolver_func2_t conflict_func,
                                  void *conflict_baton,
                                  svn_cancel_func_t cancel_func,
@@ -651,24 +636,6 @@ svn_wc__call_with_write_lock(svn_wc__with_write_lock_func_t func,
                              svn_boolean_t lock_anchor,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
-
-
-/**
- * Register @a local_abspath as a new file external aimed at
- * @a external_url, @a external_peg_rev, and @a external_rev.
- *
- * If not @c NULL, @a external_peg_rev and @a external_rev must each
- * be of kind @c svn_opt_revision_number or @c svn_opt_revision_head.
- *
- * @since New in 1.7.
- */
-svn_error_t *
-svn_wc__register_file_external(svn_wc_context_t *wc_ctx,
-                               const char *local_abspath,
-                               const char *external_url,
-                               const svn_opt_revision_t *external_peg_rev,
-                               const svn_opt_revision_t *external_rev,
-                               apr_pool_t *scratch_pool);
 
 /**
  * Calculates the schedule and copied status of a node as that would

@@ -1221,34 +1221,6 @@ svn_wc_add_from_disk(svn_wc_context_t *wc_ctx,
 
   return SVN_NO_ERROR;
 }
-
-
-svn_error_t *
-svn_wc__register_file_external(svn_wc_context_t *wc_ctx,
-                               const char *local_abspath,
-                               const char *external_url,
-                               const svn_opt_revision_t *external_peg_rev,
-                               const svn_opt_revision_t *external_rev,
-                               apr_pool_t *scratch_pool)
-{
-  svn_wc__db_t *db = wc_ctx->db;
-  const char *parent_abspath;
-  const char *base_name;
-  const char *repos_root_url;
-
-  svn_dirent_split(&parent_abspath, &base_name, local_abspath, scratch_pool);
-
-  SVN_ERR(svn_wc__db_scan_base_repos(NULL, &repos_root_url, NULL, db,
-                                     parent_abspath, scratch_pool,
-                                     scratch_pool));
-
-  SVN_ERR(svn_wc__set_file_external_location(wc_ctx, local_abspath,
-                                             external_url, external_peg_rev,
-                                             external_rev, repos_root_url,
-                                             scratch_pool));
-  return SVN_NO_ERROR;
-}
-
 
 /* Thoughts on Reversion.
 
