@@ -929,7 +929,6 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
     ++segment_count_shift;
 
   segment_count = 1 << segment_count_shift;
-  printf("%d\n", segment_count);
 
   /* allocate cache as an array of segments / cache objects */
   c = apr_palloc(pool, segment_count * sizeof(*c));
