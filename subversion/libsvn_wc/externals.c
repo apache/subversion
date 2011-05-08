@@ -31,15 +31,16 @@
 #include <apr_tables.h>
 #include <apr_general.h>
 
-#include "svn_types.h"
-#include "svn_string.h"
-#include "svn_pools.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_error.h"
-#include "svn_props.h"
-#include "svn_io.h"
 #include "svn_hash.h"
+#include "svn_io.h"
+#include "svn_pools.h"
+#include "svn_props.h"
+#include "svn_string.h"
+#include "svn_time.h"
+#include "svn_types.h"
 #include "svn_wc.h"
 
 #include "private/svn_skel.h"
@@ -382,11 +383,15 @@ struct edit_baton
 
   /* Information from the caller */
   svn_boolean_t use_commit_times;
+  const apr_array_header_t *ext_patterns;
+  const char *diff3cmd;
 
   const char *url;
   const char *repos_root_url;
   const char *repos_uuid;
 
+  svn_wc_conflict_resolver_func2_t conflict_func;
+  void *conflict_baton;
   svn_cancel_func_t cancel_func;
   void *cancel_baton;
   svn_wc_notify_func2_t notify_func;
@@ -405,6 +410,8 @@ struct edit_baton
 
   /* List of incoming propchanges */
   apr_array_header_t *propchanges;
+
+  svn_boolean_t file_closed;
 };
 
 /* svn_delta_editor_t function for svn_wc__get_file_external_editor */
@@ -572,6 +579,11 @@ close_file(void *file_baton,
            apr_pool_t *pool)
 {
   struct edit_baton *eb = file_baton;
+  svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
+  svn_wc_notify_state_t content_state = svn_wc_notify_state_unknown;
+  svn_boolean_t obstructed = FALSE;
+
+  eb->file_closed = TRUE; /* We bump the revision here */
 
   if (expected_md5_digest)
     {
@@ -608,39 +620,228 @@ close_file(void *file_baton,
                         svn_dirent_local_style(eb->local_abspath, pool));
     }
 
+  /* First move the file in the pristine store; this hands over the cleanup
+     behavior to the pristine store. */
   if (eb->new_sha1_checksum)
-    SVN_ERR(svn_wc__db_pristine_install(eb->db, eb->new_pristine_abspath,
-                                        eb->new_sha1_checksum,
-                                        eb->new_md5_checksum, pool));
+    {
+      SVN_ERR(svn_wc__db_pristine_install(eb->db, eb->new_pristine_abspath,
+                                          eb->new_sha1_checksum,
+                                          eb->new_md5_checksum, pool));
+
+      eb->new_pristine_abspath = NULL;
+    }
 
   /* ### TODO: Merge the changes */
 
   {
-    svn_skel_t *work_items;
+    svn_skel_t *all_work_items = NULL;
+    svn_skel_t *work_item;
+    apr_hash_t *base_props = NULL;
+    apr_hash_t *actual_props = NULL;
+    apr_hash_t *new_pristine_props = NULL;
+    apr_hash_t *new_actual_props = NULL;
+    apr_hash_t *new_dav_props = NULL;
+    const svn_checksum_t *new_checksum = NULL;
+    const svn_checksum_t *original_checksum = NULL;
+    svn_revnum_t changed_rev = SVN_INVALID_REVNUM;
+    apr_time_t changed_date = 0;
+    const char *changed_author = NULL;
+    svn_boolean_t added = !SVN_IS_VALID_REVNUM(eb->original_revision);
     const char *repos_relpath = svn_uri_is_child(eb->repos_root_url,
                                                       eb->url, pool);
 
-    /* ###### COMPLETE HACK: This just overwrites whatever there was.
-       ###### Don't enable this code */
-/*    SVN_ERR(svn_wc__wq_build_file_install(&work_items, eb->db,
-                                          eb->local_abspath,
-                                          NULL, eb->use_commit_times, TRUE,
-                                          pool, pool));
+    if (! added)
+      {
+        svn_boolean_t had_props;
+
+        SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL,
+                                         &changed_rev, &changed_date,
+                                         &changed_author, NULL,
+                                         &original_checksum,
+                                         NULL, NULL, &had_props, NULL, NULL,
+                                         eb->db, eb->local_abspath,
+                                         pool, pool));
+
+        new_checksum = original_checksum;
+
+        if (had_props)
+          SVN_ERR(svn_wc__db_base_get_props(&base_props, eb->db,
+                                            eb->local_abspath,
+                                            pool, pool));
+
+        SVN_ERR(svn_wc__db_read_props(&actual_props, eb->db, eb->local_abspath,
+                                      pool, pool));
+      }
+
+    if (!base_props)
+      base_props = apr_hash_make(pool);
+
+    if (!actual_props)
+      actual_props = apr_hash_make(pool);
+
+    if (eb->new_sha1_checksum)
+      new_checksum = eb->new_sha1_checksum;
+
+    {
+      apr_array_header_t *entry_prop_changes;
+      apr_array_header_t *dav_prop_changes;
+      apr_array_header_t *regular_prop_changes;
+      int i;
+
+      SVN_ERR(svn_categorize_props(eb->propchanges, &entry_prop_changes,
+                                   &dav_prop_changes, &regular_prop_changes,
+                                   pool));
+
+      for (i = 0; i < entry_prop_changes->nelts; i++)
+        {
+          const svn_prop_t *prop = &APR_ARRAY_IDX(entry_prop_changes, i,
+                                                  svn_prop_t);
+
+          if (! prop->value)
+            continue; /* authz or something */
+
+          if (! strcmp(prop->name, SVN_PROP_ENTRY_LAST_AUTHOR))
+            changed_author = apr_pstrdup(pool, prop->value->data);
+          else if (! strcmp(prop->name, SVN_PROP_ENTRY_COMMITTED_REV))
+            {
+              apr_int64_t rev;
+              SVN_ERR(svn_cstring_atoi64(&rev, prop->value->data));
+              changed_rev = (svn_revnum_t)rev;
+            }
+          else if (! strcmp(prop->name, SVN_PROP_ENTRY_COMMITTED_DATE))
+            SVN_ERR(svn_time_from_cstring(&changed_date, prop->value->data,
+                                          pool));
+        }
+
+      if (dav_prop_changes->nelts > 0)
+        new_dav_props = svn_prop_array_to_hash(dav_prop_changes, pool);
+
+      if (regular_prop_changes->nelts > 0)
+        {
+          SVN_ERR(svn_wc__merge_props(&work_item, &prop_state,
+                                      &new_pristine_props,
+                                      &new_actual_props,
+                                      eb->db, eb->local_abspath,
+                                      svn_wc__db_kind_file,
+                                      NULL, NULL,
+                                      NULL /* server_baseprops*/,
+                                      base_props,
+                                      actual_props,
+                                      regular_prop_changes,
+                                      TRUE /* base_merge */,
+                                      FALSE /* dry_run */,
+                                      eb->conflict_func,
+                                      eb->conflict_baton,
+                                      eb->cancel_func, eb->cancel_baton,
+                                      pool, pool));
+
+          if (work_item)
+            all_work_items = svn_wc__wq_merge(all_work_items, work_item,
+                                              pool);
+        }
+      else
+        {
+          new_pristine_props = base_props;
+          new_actual_props = actual_props;
+        }
+    }
+
+    if (eb->new_sha1_checksum)
+      {
+        svn_node_kind_t disk_kind;
+        svn_boolean_t install_pristine = FALSE;
+        const char *install_from = NULL;
+
+        SVN_ERR(svn_io_check_path(eb->local_abspath, &disk_kind, pool));
+
+        if (disk_kind == svn_node_none)
+          {
+            /* Just install the file */
+            install_pristine = TRUE;
+            content_state = svn_wc_notify_state_changed;
+          }
+        else if (disk_kind != svn_node_file)
+          {
+            /* The node is obstructed; we just change the DB */
+            obstructed = TRUE;
+            content_state = svn_wc_notify_state_unchanged;
+          }
+        else
+          {
+            svn_boolean_t is_mod;
+            SVN_ERR(svn_wc__internal_file_modified_p(&is_mod, NULL, NULL,
+                                                     eb->db, eb->local_abspath,
+                                                     FALSE, FALSE, pool));
+      
+            if (!is_mod)
+              {
+                install_pristine = TRUE;
+                content_state = svn_wc_notify_state_changed;
+              }
+            else
+              {
+                enum svn_wc_merge_outcome_t merge_outcome;
+                /* Ok, we have to do some work to merge a local change */
+                SVN_ERR(svn_wc__perform_file_merge(&work_item,
+                                                   &merge_outcome,
+                                                   eb->db,
+                                                   eb->local_abspath,
+                                                   eb->wri_abspath,
+                                                   new_checksum,
+                                                   original_checksum,
+                                                   eb->ext_patterns,
+                                                   eb->original_revision,
+                                                   *eb->target_revision,
+                                                   eb->propchanges,
+                                                   eb->diff3cmd,
+                                                   eb->conflict_func,
+                                                   eb->conflict_baton,
+                                                   eb->cancel_func,
+                                                   eb->cancel_baton,
+                                                   pool, pool));
+      
+                all_work_items = svn_wc__wq_merge(all_work_items, work_item,
+                                                  pool);
+      
+                if (merge_outcome == svn_wc_merge_conflict)
+                  content_state = svn_wc_notify_state_conflicted;
+                else
+                  content_state = svn_wc_notify_state_merged;
+              }
+          }
+        if (install_pristine)
+          {
+            SVN_ERR(svn_wc__wq_build_file_install(&work_item, eb->db,
+                                            eb->local_abspath,
+                                            install_from,
+                                            eb->use_commit_times, TRUE,
+                                            pool, pool));
+      
+            all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
+          }
+      }
+    else
+      {
+        content_state = svn_wc_notify_state_unchanged;
+        /* ### Retranslate on magic property changes, etc. */
+      }
 
     SVN_ERR(svn_wc__db_base_add_file(eb->db, eb->local_abspath,
                                      repos_relpath,
                                      eb->repos_root_url,
                                      eb->repos_uuid,
                                      *eb->target_revision,
-                                     apr_hash_make(pool),
-                                     1,
-                                     1,
-                                     "somebody",
-                                     eb->new_sha1_checksum,
-                                     NULL, NULL,
-                                     FALSE, NULL,
-                                     FALSE, FALSE,
-                                     work_items,
+                                     new_pristine_props,
+                                     changed_rev,
+                                     changed_date,
+                                     changed_author,
+                                     new_checksum,
+                                     new_dav_props,
+                                     NULL,
+                                     TRUE, new_actual_props,
+                                     FALSE /* keep_recorded_info */,
+                                     FALSE /* insert_base_deleted */,
+                                     all_work_items,
                                      pool));
 
     {
@@ -655,7 +856,7 @@ close_file(void *file_baton,
     }
 
     SVN_ERR(svn_wc__wq_run(eb->db, eb->wri_abspath,
-                           eb->cancel_func, eb->cancel_baton, pool));*/
+                           eb->cancel_func, eb->cancel_baton, pool));
   }
 
   if (eb->notify_func)
@@ -664,15 +865,45 @@ close_file(void *file_baton,
       svn_wc_notify_t *notify;
 
       if (SVN_IS_VALID_REVNUM(eb->original_revision))
-        action = svn_wc_notify_update_update;
+        action = obstructed ? svn_wc_notify_update_shadowed_update
+                            : svn_wc_notify_update_update;
       else
-        action = svn_wc_notify_update_add;
+        action = obstructed ? svn_wc_notify_update_shadowed_add
+                            : svn_wc_notify_update_add;
 
       notify = svn_wc_create_notify(eb->local_abspath, action, pool);
-      notify->old_revision = eb->original_revision;
+      notify->kind = svn_node_file;
+
       notify->revision = *eb->target_revision;
+      notify->prop_state = prop_state;
+      notify->content_state = content_state;
+
+      notify->old_revision = eb->original_revision;
 
       eb->notify_func(eb->notify_baton, notify, pool);
+    }
+  
+
+  return SVN_NO_ERROR;
+}
+
+/* svn_delta_editor_t function for svn_wc__get_file_external_editor */
+static svn_error_t *
+close_edit(void *edit_baton,
+           apr_pool_t *pool)
+{
+  struct edit_baton *eb = edit_baton;
+
+  if (!eb->file_closed)
+    {
+      /* The node wasn't updated, so we just have to bump its revision */
+      SVN_ERR(svn_wc__db_op_bump_revisions_post_update(eb->db,
+                                                       eb->local_abspath,
+                                                       svn_depth_infinity,
+                                                       NULL, NULL, NULL,
+                                                       *eb->target_revision,
+                                                       apr_hash_make(pool),
+                                                       pool));
     }
 
   return SVN_NO_ERROR;
@@ -716,7 +947,11 @@ svn_wc__get_file_external_editor(const svn_delta_editor_t **editor,
   eb->repos_uuid = apr_pstrdup(edit_pool, repos_uuid);
 
   eb->use_commit_times = use_commit_times;
+  eb->ext_patterns = preserved_exts;
+  eb->diff3cmd = diff3_cmd;
 
+  eb->conflict_func = conflict_func;
+  eb->conflict_baton = conflict_baton;
   eb->cancel_func = cancel_func;
   eb->cancel_baton = cancel_baton;
   eb->notify_func = notify_func;
@@ -731,6 +966,7 @@ svn_wc__get_file_external_editor(const svn_delta_editor_t **editor,
   tree_editor->apply_textdelta = apply_textdelta;
   tree_editor->change_file_prop = change_file_prop;
   tree_editor->close_file = close_file;
+  tree_editor->close_edit = close_edit;
 
   return svn_delta_get_cancellation_editor(cancel_func, cancel_baton,
                                            tree_editor, eb,
