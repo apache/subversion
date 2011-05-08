@@ -72,6 +72,41 @@ svn_wc__set_file_external_location(svn_wc_context_t *wc_ctx,
                                    const char *repos_root_url,
                                    apr_pool_t *scratch_pool);
 
+/* Like svn_wc_get_update_editorX and svn_wc_get_status_editorX, but only
+   allows updating a file external LOCAL_ABSPATH */
+svn_error_t *
+svn_wc__get_file_external_editor(const svn_delta_editor_t **editor,
+                                 void **edit_baton,
+                                 const char *switch_url,
+                                 svn_revnum_t *target_revision,
+                                 svn_wc_context_t *wc_ctx,
+                                 const char *local_abspath,
+                                 svn_boolean_t use_commit_times,
+                                 const char *diff3_cmd,
+                                 svn_wc_conflict_resolver_func2_t conflict_func,
+                                 void *conflict_baton,
+                                 svn_cancel_func_t cancel_func,
+                                 void *cancel_baton,
+                                 svn_wc_notify_func2_t notify_func,
+                                 void *notify_baton,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
+
+/* Like svn_wc_crawl_revisionsX, but only supports updating a file external
+   LOCAL_ABSPATH which may or may not exist yet. */
+svn_error_t *
+svn_wc__crawl_file_external(svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
+                            const svn_ra_reporter3_t *reporter,
+                            void *report_baton,
+                            svn_boolean_t restore_files,
+                            svn_boolean_t use_commit_times,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
+                            svn_wc_notify_func2_t notify_func,
+                            void *notify_baton,
+                            apr_pool_t *scratch_pool);
+
 
 /** Set @a *tree_conflict to a newly allocated @c
  * svn_wc_conflict_description_t structure describing the tree
