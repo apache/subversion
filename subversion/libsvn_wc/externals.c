@@ -29,8 +29,6 @@
 #include <apr_pools.h>
 #include <apr_hash.h>
 #include <apr_tables.h>
-#include <apr_file_io.h>
-#include <apr_strings.h>
 #include <apr_general.h>
 
 #include "svn_types.h"
@@ -44,10 +42,10 @@
 #include "svn_hash.h"
 #include "svn_wc.h"
 
-#include "private/svn_mergeinfo_private.h"
 #include "private/svn_skel.h"
 
 #include "wc.h"
+#include "adm_files.h"
 #include "props.h"
 #include "translate.h"
 #include "workqueue.h"
@@ -378,11 +376,35 @@ struct edit_baton
   apr_pool_t *pool;
   svn_wc__db_t *db;
 
+  const char *wri_abspath;
   const char *local_abspath;
   const char *name;
 
+  /* Information from the caller */
+  svn_boolean_t use_commit_times;
+
+  const char *url;
+  const char *repos_root_url;
+  const char *repos_uuid;
+
+  svn_cancel_func_t cancel_func;
+  void *cancel_baton;
+  svn_wc_notify_func2_t notify_func;
+  void *notify_baton;
+
   svn_revnum_t *target_revision;
-  svn_revnum_t base_revision;
+
+  /* What was there before the update */
+  svn_revnum_t original_revision;
+  const svn_checksum_t *original_checksum;
+
+  /* What we are installing now */
+  const char *new_pristine_abspath;
+  svn_checksum_t *new_sha1_checksum;
+  svn_checksum_t *new_md5_checksum;
+
+  /* List of incoming propchanges */
+  apr_array_header_t *propchanges;
 };
 
 /* svn_delta_editor_t function for svn_wc__get_file_external_editor */
@@ -425,7 +447,8 @@ add_file(const char *path,
                                svn_dirent_local_style(eb->local_abspath,
                                                       file_pool));
 
-  eb->base_revision = SVN_INVALID_REVNUM;
+  *file_baton = eb;
+  eb->original_revision = SVN_INVALID_REVNUM;
 
   return SVN_NO_ERROR;
 }
@@ -439,25 +462,88 @@ open_file(const char *path,
           void **file_baton)
 {
   struct edit_baton *eb = parent_baton;
+  svn_wc__db_status_t status;
+  svn_wc__db_kind_t kind;
+  svn_boolean_t update_root;
   if (strcmp(path, eb->name))
       return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                                _("This editor can only update '%s'"),
                                svn_dirent_local_style(eb->local_abspath,
                                                       file_pool));
 
-  eb->base_revision = base_revision;
+  *file_baton = eb;
+  SVN_ERR(svn_wc__db_base_get_info(&status, &kind, &eb->original_revision,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   &eb->original_checksum,
+                                   NULL, NULL, NULL, &update_root, NULL,
+                                   eb->db, eb->local_abspath,
+                                   eb->pool, file_pool));
 
+  if (kind != svn_wc__db_kind_file
+      || status != svn_wc__db_status_normal
+      || !update_root)
+    return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                               _("Node '%s' is no existing file external"),
+                               svn_dirent_local_style(eb->local_abspath,
+                                                      file_pool));
   return SVN_NO_ERROR;
 }
 
 /* svn_delta_editor_t function for svn_wc__get_file_external_editor */
 static svn_error_t *
 apply_textdelta(void *file_baton,
-                const char *base_checksum,
+                const char *base_checksum_digest,
                 apr_pool_t *pool,
                 svn_txdelta_window_handler_t *handler,
                 void **handler_baton)
 {
+  struct edit_baton *eb = file_baton;
+  svn_stream_t *src_stream;
+  svn_stream_t *dest_stream;
+
+  if (eb->original_checksum)
+    {
+      if (base_checksum_digest)
+        {
+          svn_checksum_t *expected_checksum;
+          const svn_checksum_t *original_md5;
+
+          SVN_ERR(svn_checksum_parse_hex(&expected_checksum, svn_checksum_md5,
+                                         base_checksum_digest, pool));
+
+          if (eb->original_checksum->kind != svn_checksum_md5)
+            SVN_ERR(svn_wc__db_pristine_get_md5(&original_md5,
+                                                eb->db, eb->wri_abspath,
+                                                eb->original_checksum,
+                                                pool, pool));
+          else
+            original_md5 = eb->original_checksum;
+
+          if (!svn_checksum_match(expected_checksum, original_md5))
+            return svn_error_return(svn_checksum_mismatch_err(
+                                    expected_checksum,
+                                    original_md5,
+                                    pool,
+                                    _("Base checksum mismatch for '%s'"),
+                                    svn_dirent_local_style(eb->local_abspath,
+                                                           pool)));
+        }
+
+      SVN_ERR(svn_wc__db_pristine_read(&src_stream, NULL, eb->db,
+                                       eb->wri_abspath, eb->original_checksum,
+                                       pool, pool));
+    }
+  else
+    src_stream = svn_stream_empty(pool);
+
+  SVN_ERR(svn_wc__open_writable_base(&dest_stream, &eb->new_pristine_abspath,
+                                     &eb->new_md5_checksum,
+                                     &eb->new_sha1_checksum,
+                                     eb->db, eb->wri_abspath,
+                                     pool, pool));
+
+  svn_txdelta_apply(src_stream, dest_stream, NULL, eb->local_abspath, pool,
+                    handler, handler_baton);
 
   return SVN_NO_ERROR;
 }
@@ -469,27 +555,141 @@ change_file_prop(void *file_baton,
                  const svn_string_t *value,
                  apr_pool_t *pool)
 {
+  struct edit_baton *eb = file_baton;
+  svn_prop_t *propchange;
+
+  propchange = apr_array_push(eb->propchanges);
+  propchange->name = apr_pstrdup(eb->pool, name);
+  propchange->value = value ? svn_string_dup(value, eb->pool) : NULL;
+
   return SVN_NO_ERROR;
 }
 
 /* svn_delta_editor_t function for svn_wc__get_file_external_editor */
 static svn_error_t *
 close_file(void *file_baton,
-           const char *text_checksum,
+           const char *expected_md5_digest,
            apr_pool_t *pool)
 {
+  struct edit_baton *eb = file_baton;
+
+  if (expected_md5_digest)
+    {
+      svn_checksum_t *expected_md5_checksum;
+      const svn_checksum_t *actual_md5_checksum = eb->new_md5_checksum;
+
+      SVN_ERR(svn_checksum_parse_hex(&expected_md5_checksum, svn_checksum_md5,
+                                     expected_md5_digest, pool));
+
+      if (actual_md5_checksum == NULL)
+        {
+          SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL,
+                                           NULL, NULL, NULL, NULL,
+                                           &actual_md5_checksum, NULL, NULL,
+                                           NULL, NULL, NULL,
+                                           eb->db, eb->local_abspath,
+                                           pool, pool));
+
+          if (actual_md5_checksum != NULL
+              && actual_md5_checksum->kind != svn_checksum_md5)
+            {
+              SVN_ERR(svn_wc__db_pristine_get_md5(&actual_md5_checksum,
+                                                  eb->db, eb->wri_abspath,
+                                                  actual_md5_checksum,
+                                                  pool, pool));
+            }
+        }
+
+      if (! svn_checksum_match(expected_md5_checksum, actual_md5_checksum))
+        return svn_checksum_mismatch_err(
+                        expected_md5_checksum,
+                        actual_md5_checksum, pool,
+                        _("Checksum mismatch for '%s'"),
+                        svn_dirent_local_style(eb->local_abspath, pool));
+    }
+
+  if (eb->new_sha1_checksum)
+    SVN_ERR(svn_wc__db_pristine_install(eb->db, eb->new_pristine_abspath,
+                                        eb->new_sha1_checksum,
+                                        eb->new_md5_checksum, pool));
+
+  /* ### TODO: Merge the changes */
+
+  {
+    svn_skel_t *work_items;
+    const char *repos_relpath = svn_uri_is_child(eb->repos_root_url,
+                                                      eb->url, pool);
+
+    /* ###### COMPLETE HACK: This just overwrites whatever there was.
+       ###### Don't enable this code */
+/*    SVN_ERR(svn_wc__wq_build_file_install(&work_items, eb->db,
+                                          eb->local_abspath,
+                                          NULL, eb->use_commit_times, TRUE,
+                                          pool, pool));
+
+    SVN_ERR(svn_wc__db_base_add_file(eb->db, eb->local_abspath,
+                                     repos_relpath,
+                                     eb->repos_root_url,
+                                     eb->repos_uuid,
+                                     *eb->target_revision,
+                                     apr_hash_make(pool),
+                                     1,
+                                     1,
+                                     "somebody",
+                                     eb->new_sha1_checksum,
+                                     NULL, NULL,
+                                     FALSE, NULL,
+                                     FALSE, FALSE,
+                                     work_items,
+                                     pool));
+
+    {
+      svn_opt_revision_t peg_rev, rev;
+      peg_rev.kind = svn_opt_revision_number;
+      peg_rev.value.number = *eb->target_revision;
+      rev.kind = svn_opt_revision_number;
+      rev.value.number = *eb->target_revision;
+      SVN_ERR(svn_wc__db_temp_op_set_file_external(eb->db, eb->local_abspath,
+                                                   repos_relpath, &peg_rev,
+                                                   &rev, pool));
+    }
+
+    SVN_ERR(svn_wc__wq_run(eb->db, eb->wri_abspath,
+                           eb->cancel_func, eb->cancel_baton, pool));*/
+  }
+
+  if (eb->notify_func)
+    {
+      svn_wc_notify_action_t action;
+      svn_wc_notify_t *notify;
+
+      if (SVN_IS_VALID_REVNUM(eb->original_revision))
+        action = svn_wc_notify_update_update;
+      else
+        action = svn_wc_notify_update_add;
+
+      notify = svn_wc_create_notify(eb->local_abspath, action, pool);
+      notify->old_revision = eb->original_revision;
+      notify->revision = *eb->target_revision;
+
+      eb->notify_func(eb->notify_baton, notify, pool);
+    }
+
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
 svn_wc__get_file_external_editor(const svn_delta_editor_t **editor,
                                  void **edit_baton,
-                                 const char *switch_url,
                                  svn_revnum_t *target_revision,
                                  svn_wc_context_t *wc_ctx,
                                  const char *local_abspath,
+                                 const char *url,
+                                 const char *repos_root_url,
+                                 const char *repos_uuid,
                                  svn_boolean_t use_commit_times,
                                  const char *diff3_cmd,
+                                 const apr_array_header_t *preserved_exts,
                                  svn_wc_conflict_resolver_func2_t conflict_func,
                                  void *conflict_baton,
                                  svn_cancel_func_t cancel_func,
@@ -507,8 +707,22 @@ svn_wc__get_file_external_editor(const svn_delta_editor_t **editor,
   eb->pool = edit_pool;
   eb->db = db;
   eb->local_abspath = apr_pstrdup(edit_pool, local_abspath);
+  eb->wri_abspath = svn_dirent_dirname(local_abspath, edit_pool);
   eb->name = svn_dirent_basename(eb->local_abspath, NULL);
   eb->target_revision = target_revision;
+
+  eb->url = apr_pstrdup(edit_pool, url);
+  eb->repos_root_url = apr_pstrdup(edit_pool, repos_root_url);
+  eb->repos_uuid = apr_pstrdup(edit_pool, repos_uuid);
+
+  eb->use_commit_times = use_commit_times;
+
+  eb->cancel_func = cancel_func;
+  eb->cancel_baton = cancel_baton;
+  eb->notify_func = notify_func;
+  eb->notify_baton = notify_baton;
+
+  eb->propchanges  = apr_array_make(edit_pool, 1, sizeof(svn_prop_t));
 
   tree_editor->open_root = open_root;
   tree_editor->set_target_revision = set_target_revision;
