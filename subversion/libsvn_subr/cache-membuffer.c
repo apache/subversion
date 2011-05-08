@@ -92,8 +92,8 @@
  *
  * All access to the cached data needs to be serialized. Because we want
  * to scale well despite that bottleneck, we simply segment the cache into
- * CACHE_SEGMENTS independent caches. Items will be multiplexed based on
- * their hash key.
+ * a number of independent caches (segments). Items will be multiplexed based
+ * on their hash key.
  */
 
 /* A 4-way associative cache seems to be the best compromise between 
@@ -112,13 +112,10 @@
  */
 #define ITEM_ALIGNMENT 16
 
-/* Number of cache segements. Keep this a power of two and below 257.
- * To support maximum of N processors, a value of N^2 will give almost
- * perfect scaling, 2*N will make it saturate around N threads.
- * Don't use large values here because small caches severely limit the
- * size of items that can be cached.
+/* Don't create cache segments smaller than this value unless the total
+ * cache size itself is smaller.
  */
-#define CACHE_SEGMENTS 16
+#define MIN_SEGMENT_SIZE 0x200000
 
 /* Invalid index reference value. Equivalent to APR_UINT32_T(-1)
  */
@@ -332,6 +329,11 @@ typedef entry_t entry_group_t[GROUP_SIZE];
  */
 struct svn_membuffer_t
 {
+  /* Number of cache segments. Must be a power of 2.
+     Please note that this structure represents only one such segment
+     and that all segments must / will report the same values here. */
+  apr_uint32_t segment_count;
+
   /* The dictionary, GROUP_SIZE * group_count entries long. Never NULL.
    */
   entry_group_t *directory;
@@ -619,7 +621,7 @@ get_group_index(svn_membuffer_t **cache,
   memcpy(to_find, checksum->digest, APR_MD5_DIGESTSIZE);
 
   /* select the cache segment to use */
-  *cache = &(*cache)[to_find[0] % CACHE_SEGMENTS];
+  *cache = &(*cache)[to_find[0] & ((*cache)->segment_count -1)];
 
   /* Get the group that *must* contain the entry. Fold the hash value 
    * just to be sure (it should not be necessary for perfect hashes).
@@ -903,16 +905,38 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
                                   svn_boolean_t thread_safe,
                                   apr_pool_t *pool)
 {
-  /* allocate cache as an array of segments / cache objects */
-  svn_membuffer_t *c = apr_palloc(pool, CACHE_SEGMENTS * sizeof(*c));
+  svn_membuffer_t *c;
+
+  apr_uint32_t segment_count_shift = 0;
+  apr_uint32_t segment_count = 1;
+
   apr_uint32_t seg;
   apr_uint32_t group_count;
   apr_uint64_t data_size;
 
+  /* Determine a reasonable number of cache segments. Segmentation is
+   * only useful for multi-threaded / multi-core servers as it reduces
+   * lock contention on these systems.
+   *
+   * But on these systems, we can assume that ample memory has been
+   * allocated to this cache. Smaller caches should not be segmented
+   * as this severely limites the maximum size of cachable items.
+   *
+   * Segments should not be smaller than 32MB and max. cachable item
+   * size should grow as fast as segmentation.
+   */
+  while ((2 * MIN_SEGMENT_SIZE << (2 * segment_count_shift)) < total_size)
+    ++segment_count_shift;
+
+  segment_count = 1 << segment_count_shift;
+
+  /* allocate cache as an array of segments / cache objects */
+  c = apr_palloc(pool, segment_count * sizeof(*c));
+
   /* Split total cache size into segments of equal size
    */
-  total_size /= CACHE_SEGMENTS;
-  directory_size /= CACHE_SEGMENTS;
+  total_size >>= segment_count_shift;
+  directory_size >>= segment_count_shift;
 
   /* prevent pathological conditions: ensure a certain minimum cache size
    */
@@ -942,10 +966,12 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
       directory_size = group_count * sizeof(entry_group_t);
     }
 
-  for (seg = 0; seg < CACHE_SEGMENTS; ++seg)
+    for (seg = 0; seg < segment_count; ++seg)
     {
       /* allocate buffers and initialize cache members
        */
+      c[seg].segment_count = segment_count;
+
       c[seg].group_count = group_count;
       c[seg].directory =
           secure_aligned_alloc(pool,
@@ -1654,7 +1680,7 @@ svn_membuffer_cache_get_info(void *cache_void,
   info->used_entries = 0;
   info->total_entries = 0;
 
-  for (i = 0; i < CACHE_SEGMENTS; ++i)
+  for (i = 0; i < cache->membuffer->segment_count; ++i)
     {
       svn_membuffer_t *segment = cache->membuffer + i;
 
