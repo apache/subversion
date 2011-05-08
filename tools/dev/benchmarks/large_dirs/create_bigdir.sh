@@ -99,6 +99,13 @@ echo
 rm -rf $WC
 ${SVN} co $URL $WC > /dev/null
 
+# helpers
+
+get_sequence() {
+  # three equivalents...
+  (jot - "$1" "$2" "1" 2>/dev/null || seq -s ' ' "$1" "$2" 2>/dev/null || python -c "for i in range($1,$2+1): print i")
+}
+
 # functions that execute an SVN command
 
 run_svn() {
@@ -146,9 +153,10 @@ run_svn_get() {
 while [ $FILECOUNT -lt $MAXCOUNT ]; do
   echo "Processing $FILECOUNT files in the same folder"
 
+  sequence=`get_sequence 2 $FILECOUNT`
   printf "\tCreating files ... \t real   user    sys\n"
   mkdir $WC/$FILECOUNT
-  for i in `seq 1 ${FILECOUNT}`; do
+  for i in 1 $sequence; do
     echo "File number $i" > $WC/$FILECOUNT/$i
   done    
 
@@ -178,7 +186,7 @@ while [ $FILECOUNT -lt $MAXCOUNT ]; do
 
   printf "\tDeleting files ... \t"
   time sh -c "
-  for i in `seq 2 ${FILECOUNT} | xargs`; do
+  for i in $sequence; do
     ${SVN} del $WC/${FILECOUNT}_c/\$i -q
   done "
 
