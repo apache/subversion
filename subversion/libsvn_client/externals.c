@@ -473,14 +473,12 @@ switch_file_external(const char *local_abspath,
                             target, svn_depth_unknown, url,
                             switch_editor, switch_baton, subpool));
 
-  SVN_ERR(svn_wc_crawl_revisions5(ctx->wc_ctx, local_abspath,
-                                  reporter, report_baton, 
-                                  TRUE, svn_depth_infinity, FALSE, TRUE,
-                                  use_commit_times,
-                                  NULL, NULL,
-                                  ctx->cancel_func, ctx->cancel_baton,
-                                  ctx->notify_func2, ctx->notify_baton2,
-                                  subpool));
+  SVN_ERR(svn_wc__crawl_file_external(ctx->wc_ctx, local_abspath,
+                                      reporter, report_baton,
+                                      TRUE,  use_commit_times,
+                                      ctx->cancel_func, ctx->cancel_baton,
+                                      ctx->notify_func2, ctx->notify_baton2,
+                                      subpool));
   }
 
 cleanup:

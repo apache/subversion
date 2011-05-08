@@ -7066,7 +7066,9 @@ svn_wc_revert(const char *path,
  * If @a use_commit_times is TRUE, then set restored files' timestamps
  * to their last-commit-times.
  *
- * ### Before Single-DB this function can only restore missing files.
+ * Returns SVN_ERROR_WC_PATH_NOT_FOUND if LOCAL_ABSPATH is not versioned and
+ * SVN_ERROR_WC_PATH_UNEXPECTED_STATUS if LOCAL_ABSPATH is in a status where
+ * it can't be restored.
  *
  * @since New in 1.7.
  */

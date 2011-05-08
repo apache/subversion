@@ -580,6 +580,26 @@ svn_wc__crawl_file_external(svn_wc_context_t *wc_ctx,
     }
   else
     {
+      if (restore_files)
+        {
+          svn_node_kind_t kind;
+          SVN_ERR(svn_io_check_path(local_abspath, &kind, scratch_pool));
+
+          if (kind == svn_node_none)
+            {
+              err = svn_wc_restore(wc_ctx, local_abspath, use_commit_times,
+                                   scratch_pool);
+
+              if (err)
+                {
+                  if (err->apr_err != SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
+                    return svn_error_return(err);
+
+                  svn_error_clear(err);
+                }
+            }
+        }
+
       /* Report that we know the path */
       SVN_ERR(reporter->set_path(report_baton, "", revision,
                                  svn_depth_infinity, FALSE, NULL,
