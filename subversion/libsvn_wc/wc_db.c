@@ -8167,7 +8167,7 @@ scan_addition_txn(void *baton,
     op_depth = svn_sqlite__column_int64(stmt, 0);
     current_relpath = local_relpath;
 
-    for (i = relpath_depth(local_relpath); i > op_depth; --i)
+    for (i = (int)relpath_depth(local_relpath); i > op_depth; --i)
       {
         /* Calculate the path of the operation root */
         repos_prefix_path =
@@ -8265,7 +8265,7 @@ scan_addition_txn(void *baton,
         op_depth = svn_sqlite__column_int64(stmt, 0);
 
         /* Skip to op_depth */
-        for (i = relpath_depth(current_relpath); i > op_depth; i--)
+        for (i = (int)relpath_depth(current_relpath); i > op_depth; i--)
           {
             /* Calculate the path of the operation root */
             repos_prefix_path =
@@ -9570,7 +9570,7 @@ wclock_obtain_cb(void *baton,
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_FIND_WC_LOCK));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, filter));
 
-  lock_depth = relpath_depth(local_relpath);
+  lock_depth = (int)relpath_depth(local_relpath);
   max_depth = lock_depth + bt->levels_to_lock;
 
   SVN_ERR(svn_sqlite__step(&got_row, stmt));
@@ -9641,7 +9641,7 @@ wclock_obtain_cb(void *baton,
         {
           int levels = svn_sqlite__column_int(stmt, 0);
           if (levels >= 0)
-            levels += relpath_depth(lock_relpath);
+            levels += (int)relpath_depth(lock_relpath);
 
           SVN_ERR(svn_sqlite__reset(stmt));
 
@@ -9717,7 +9717,7 @@ svn_wc__db_wclock_obtain(svn_wc__db_t *db,
   if (!steal_lock)
     {
       int i;
-      int depth = relpath_depth(local_relpath);
+      int depth = (int)relpath_depth(local_relpath);
 
       for (i = 0; i < wcroot->owned_locks->nelts; i++)
         {
@@ -9880,7 +9880,7 @@ wclock_owns_lock(svn_boolean_t *own_lock,
 
   *own_lock = FALSE;
   owned_locks = wcroot->owned_locks;
-  lock_level = relpath_depth(local_relpath);
+  lock_level = (int)relpath_depth(local_relpath);
 
   if (exact)
     {
