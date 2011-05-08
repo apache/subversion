@@ -4171,7 +4171,7 @@ close_edit(void *edit_baton,
 /* Helper for the three public editor-supplying functions. */
 static svn_error_t *
 make_editor(svn_revnum_t *target_revision,
-            svn_wc_context_t *wc_ctx,
+            svn_wc__db_t *db,
             const char *anchor_abspath,
             const char *target_basename,
             svn_boolean_t use_commit_times,
@@ -4202,27 +4202,15 @@ make_editor(svn_revnum_t *target_revision,
   svn_delta_editor_t *tree_editor = svn_delta_default_editor(edit_pool);
   const svn_delta_editor_t *inner_editor;
   const char *repos_root, *repos_uuid;
-  svn_wc__db_status_t status;
 
   /* An unknown depth can't be sticky. */
   if (depth == svn_depth_unknown)
     depth_is_sticky = FALSE;
 
-  /* Get the anchor's repository root and uuid. */
-  SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL,
-                               &repos_root, &repos_uuid,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL,
-                               wc_ctx->db, anchor_abspath,
-                               result_pool, scratch_pool));
-  
-  /* ### For adds, REPOS_ROOT and REPOS_UUID would be NULL now. */
-  if (status == svn_wc__db_status_added)
-    SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL,
-                                     &repos_root, &repos_uuid,
-                                     NULL, NULL, NULL, NULL,
-                                     wc_ctx->db, anchor_abspath,
+  /* Get the anchor's repository root and uuid. The anchor must already exist
+     in BASE. */
+  SVN_ERR(svn_wc__db_scan_base_repos(NULL, &repos_root, &repos_uuid,
+                                     db, anchor_abspath,
                                      result_pool, scratch_pool));
 
   /* With WC-NG we need a valid repository root */
@@ -4242,12 +4230,11 @@ make_editor(svn_revnum_t *target_revision,
   eb->target_revision          = target_revision;
   eb->repos_root               = repos_root;
   eb->repos_uuid               = repos_uuid;
-  eb->db                       = wc_ctx->db;
+  eb->db                       = db;
   eb->target_basename          = target_basename;
   eb->anchor_abspath           = anchor_abspath;
 
-  SVN_ERR(svn_wc__db_get_wcroot(&eb->wcroot_abspath,
-                                wc_ctx->db, anchor_abspath,
+  SVN_ERR(svn_wc__db_get_wcroot(&eb->wcroot_abspath, db, anchor_abspath,
                                 edit_pool, scratch_pool));
 
   if (switch_url)
@@ -4316,7 +4303,7 @@ make_editor(svn_revnum_t *target_revision,
       && !depth_is_sticky)
     SVN_ERR(svn_wc__ambient_depth_filter_editor(&inner_editor,
                                                 &inner_baton,
-                                                wc_ctx->db,
+                                                db,
                                                 anchor_abspath,
                                                 target_basename,
                                                 inner_editor,
@@ -4359,7 +4346,7 @@ svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
-  return make_editor(target_revision, wc_ctx, anchor_abspath,
+  return make_editor(target_revision, wc_ctx->db, anchor_abspath,
                      target_basename, use_commit_times,
                      NULL, depth, depth_is_sticky, allow_unver_obstructions,
                      adds_as_modification, server_performs_filtering,
@@ -4399,7 +4386,7 @@ svn_wc_get_switch_editor4(const svn_delta_editor_t **editor,
 {
   SVN_ERR_ASSERT(switch_url && svn_uri_is_canonical(switch_url, scratch_pool));
 
-  return make_editor(target_revision, wc_ctx, anchor_abspath,
+  return make_editor(target_revision, wc_ctx->db, anchor_abspath,
                      target_basename, use_commit_times,
                      switch_url,
                      depth, depth_is_sticky, allow_unver_obstructions,

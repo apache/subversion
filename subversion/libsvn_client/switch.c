@@ -99,7 +99,7 @@ switch_internal(svn_revnum_t *result_rev,
     depth_is_sticky = FALSE;
 
   /* Do not support the situation of both exclude and switch a target. */
-  if (depth_is_sticky && depth == svn_depth_exclude)
+  if (depth == svn_depth_exclude)
     return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                              _("Cannot both exclude and switch a path"));
 
@@ -114,6 +114,18 @@ switch_internal(svn_revnum_t *result_rev,
   SVN_ERR(svn_config_get_bool(cfg, &use_commit_times,
                               SVN_CONFIG_SECTION_MISCELLANY,
                               SVN_CONFIG_OPTION_USE_COMMIT_TIMES, FALSE));
+
+  {
+    svn_boolean_t has_working;
+    SVN_ERR(svn_wc__node_has_working(&has_working, ctx->wc_ctx, local_abspath,
+                                     pool));
+
+    if (has_working)
+      return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                               _("Cannot switch '%s' because it is not in the "
+                                 "repository yet"),
+                               svn_dirent_local_style(local_abspath, pool));
+  }
 
   /* See which files the user wants to preserve the extension of when
      conflict files are made. */
@@ -194,6 +206,8 @@ switch_internal(svn_revnum_t *result_rev,
                                    pool, pool));
       SVN_ERR(svn_wc__node_get_base_rev(&target_rev, ctx->wc_ctx,
                                         local_abspath, pool));
+      /* ### It would be nice if this function could reuse the existing
+             ra session instead of opening two for its own use. */
       SVN_ERR(svn_client__get_youngest_common_ancestor(&yc_path, &yc_rev,
                                                        switch_rev_url, revnum,
                                                        target_url, target_rev,

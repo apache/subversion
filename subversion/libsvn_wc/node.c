@@ -818,6 +818,26 @@ svn_wc__node_is_added(svn_boolean_t *is_added,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc__node_has_working(svn_boolean_t *has_working,
+                         svn_wc_context_t *wc_ctx,
+                         const char *local_abspath,
+                         apr_pool_t *scratch_pool)
+{
+  svn_wc__db_status_t status;
+
+  SVN_ERR(svn_wc__db_read_info(&status,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, has_working,
+                               wc_ctx->db, local_abspath,
+                               scratch_pool, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+
 static svn_error_t *
 get_base_rev(svn_revnum_t *base_revision,
              svn_wc__db_t *db,

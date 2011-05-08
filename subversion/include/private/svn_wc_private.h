@@ -401,6 +401,19 @@ svn_wc__node_is_added(svn_boolean_t *is_added,
                       apr_pool_t *scratch_pool);
 
 /**
+ * Set @a *has_working to whether @a local_abspath has a working node (which
+ * might shadow BASE nodes)
+ *
+ * This is a check similar to status = added or status = deleted.
+ */
+svn_error_t *
+svn_wc__node_has_working(svn_boolean_t *has_working,
+                         svn_wc_context_t *wc_ctx,
+                         const char *local_abspath,
+                         apr_pool_t *scratch_pool);
+
+
+/**
  * Get the base revision of @a local_abspath using @a wc_ctx.  If
  * @a local_abspath is not in the working copy, return
  * @c SVN_ERR_WC_PATH_NOT_FOUND.
