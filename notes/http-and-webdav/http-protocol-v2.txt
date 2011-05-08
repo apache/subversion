@@ -330,7 +330,7 @@ STATUS
 
     - REPORT against the new "me resource" instead of VCC URI  [DONE]
     - use new URIs to avoid unnecessary PROPFIND discovery     [DONE]
-    - eliminate now-unnecessary wcprops cache
+    - eliminate now-unnecessary wcprops cache                  [DEFERRED]
 
  * Rework ra_serf commit editor implementation to use new direct
    methods as described in the design doc.
@@ -348,4 +348,10 @@ STATUS
     - get me resource, and pegrev stub from OPTIONS          [DONE]
     - use me resource instead of the VCC                     [STARTED]
     - use pegrev stubs instead of get_baseline_info() walks  [STARTED]
-    - use rev stubs for revprop stuff
+    - use rev stubs for revprop stuff                        [DONE]
+    - use POST to 'me' resource to get txn name              [DONE]
+    - set revprops using PROPPATCH on the txn resource       [DONE]
+    - abort edit with DELETE against the txn resource        [DONE]
+    - send write requests against txn and txn root URLs      [DONE]
+    - send X-SVN-Version-Name for out-of-dateness checks     [DONE]
+    - enable pipelined PUTs                                  [OUT-OF-SCOPE]
