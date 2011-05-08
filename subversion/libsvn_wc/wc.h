@@ -728,6 +728,35 @@ svn_wc__write_check(svn_wc__db_t *db,
                     const char *local_abspath,
                     apr_pool_t *scratch_pool);
 
+/* Perform the actual merge of file changes between an original file,
+   identified by ORIGINAL_CHECKSUM (an empty file if NULL) to a new file
+   identified by NEW_CHECKSUM.
+   
+   Merge the result into LOCAL_ABSPATH, which is part of the working copy
+   identified by WRI_ABSPATH. Use OLD_REVISION and TARGET_REVISION for naming
+   the intermediate files.
+
+   The rest of the arguments are passed to svn_wc__internal_merge.
+ */
+svn_error_t *
+svn_wc__perform_file_merge(svn_skel_t **work_items,
+                           enum svn_wc_merge_outcome_t *merge_outcome,
+                           svn_wc__db_t *db,
+                           const char *local_abspath,
+                           const char *wri_abspath,
+                           const svn_checksum_t *new_checksum,
+                           const svn_checksum_t *original_checksum,
+                           const apr_array_header_t *ext_patterns,
+                           svn_revnum_t old_revision,
+                           svn_revnum_t target_revision,
+                           const apr_array_header_t *propchanges,
+                           const char *diff3_cmd,
+                           svn_wc_conflict_resolver_func2_t conflict_func,
+                           void *conflict_baton,
+                           svn_cancel_func_t cancel_func,
+                           void *cancel_baton,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }
