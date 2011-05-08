@@ -115,7 +115,7 @@
 /* Don't create cache segments smaller than this value unless the total
  * cache size itself is smaller.
  */
-#define MIN_SEGMENT_SIZE 0x200000
+#define MIN_SEGMENT_SIZE 0x2000000
 
 /* Invalid index reference value. Equivalent to APR_UINT32_T(-1)
  */
@@ -929,6 +929,7 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
     ++segment_count_shift;
 
   segment_count = 1 << segment_count_shift;
+  printf("%d\n", segment_count);
 
   /* allocate cache as an array of segments / cache objects */
   c = apr_palloc(pool, segment_count * sizeof(*c));
