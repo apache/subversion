@@ -179,7 +179,7 @@ while [ $FILECOUNT -lt $MAXCOUNT ]; do
   printf "\tDeleting files ... \t"
   time sh -c "
   for i in `seq 2 ${FILECOUNT} | xargs`; do
-    ${SVN} del $WC/${FILECOUNT}_c/$i -q
+    ${SVN} del $WC/${FILECOUNT}_c/\$i -q
   done "
 
   printf "\tCommit deletions ...\t"
