@@ -326,14 +326,14 @@ svn_wc__open_writable_base(svn_stream_t **stream,
                            svn_checksum_t **md5_checksum,
                            svn_checksum_t **sha1_checksum,
                            svn_wc__db_t *db,
-                           const char *local_abspath,
+                           const char *wri_abspath,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool)
 {
   const char *temp_dir_abspath;
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
 
-  SVN_ERR(svn_wc__db_pristine_get_tempdir(&temp_dir_abspath, db, local_abspath,
+  SVN_ERR(svn_wc__db_pristine_get_tempdir(&temp_dir_abspath, db, wri_abspath,
                                           scratch_pool, scratch_pool));
   SVN_ERR(svn_stream_open_unique(stream,
                                  temp_base_abspath,
