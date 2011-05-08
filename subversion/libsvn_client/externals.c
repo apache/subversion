@@ -432,6 +432,8 @@ switch_file_external(const char *local_abspath,
     const char *switch_rev_url;
     const char *repos_uuid;
     svn_revnum_t revnum;
+    /* ### TODO: Provide the real definition path */
+    const char *definition_abspath = svn_dirent_dirname(local_abspath,subpool);
 
     /* Open an RA session to 'source' URL */
     SVN_ERR(svn_client__ra_session_from_path(&ra_session, &revnum,
@@ -446,11 +448,13 @@ switch_file_external(const char *local_abspath,
     SVN_ERR(svn_wc__get_file_external_editor(&switch_editor, &switch_baton,
                                              &revnum, ctx->wc_ctx,
                                              local_abspath,
+                                             definition_abspath /* wri */, 
                                              switch_rev_url,
                                              repos_root_url,
                                              repos_uuid,
                                              use_commit_times,
                                              diff3_cmd, preserved_exts,
+                                             definition_abspath /* def */,
                                              url, peg_revision, revision,
                                              ctx->conflict_func2,
                                              ctx->conflict_baton2,
@@ -467,6 +471,7 @@ switch_file_external(const char *local_abspath,
                             switch_editor, switch_baton, subpool));
 
   SVN_ERR(svn_wc__crawl_file_external(ctx->wc_ctx, local_abspath,
+                                      definition_abspath /* wri_abspath */,
                                       reporter, report_baton,
                                       TRUE,  use_commit_times,
                                       ctx->cancel_func, ctx->cancel_baton,

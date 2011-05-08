@@ -2922,7 +2922,7 @@ svn_wc__db_external_read(svn_wc__db_kind_t *kind,
 
     if (! update_root
         || base_status != svn_wc__db_status_normal
-        || base_kind != svn_wc__db_kind_dir)
+        || base_kind == svn_wc__db_kind_dir)
       {
         return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                                  _("Node '%s' is not an external"),
@@ -2961,6 +2961,14 @@ svn_wc__db_external_read(svn_wc__db_kind_t *kind,
           *recorded_revision = (rev.kind == svn_opt_revision_number)
                                    ? rev.value.number : SVN_INVALID_REVNUM;
       }
+
+    if (props_mod || recorded_size || recorded_mod_time || conflicted)
+      SVN_ERR(read_info(NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                        NULL, NULL, NULL, NULL, NULL, NULL, recorded_size,
+                        recorded_mod_time, NULL, conflicted, NULL, NULL,
+                        props_mod, NULL, NULL, NULL,
+                        wcroot, local_relpath,
+                        result_pool, scratch_pool));
 
     return SVN_NO_ERROR;
   }

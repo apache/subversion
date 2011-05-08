@@ -350,6 +350,7 @@ struct edit_baton
   const char *repos_root_url;
   const char *repos_uuid;
 
+  const char *record_ancestor_abspath;
   const char *recorded_repos_relpath;
   svn_revnum_t recorded_peg_revision;
   svn_revnum_t recorded_revision;
@@ -433,9 +434,7 @@ open_file(const char *path,
           void **file_baton)
 {
   struct edit_baton *eb = parent_baton;
-  svn_wc__db_status_t status;
   svn_wc__db_kind_t kind;
-  svn_boolean_t update_root;
   if (strcmp(path, eb->name))
       return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                                _("This editor can only update '%s'"),
@@ -443,16 +442,15 @@ open_file(const char *path,
                                                       file_pool));
 
   *file_baton = eb;
-  SVN_ERR(svn_wc__db_base_get_info(&status, &kind, &eb->original_revision,
+  SVN_ERR(svn_wc__db_external_read(&kind, &eb->original_revision,
+                                   NULL, NULL, NULL, NULL, NULL, NULL,
+                                   &eb->original_checksum, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   &eb->original_checksum,
-                                   NULL, NULL, NULL, &update_root, NULL,
-                                   eb->db, eb->local_abspath,
+                                   NULL,
+                                   eb->db, eb->local_abspath, eb->wri_abspath,
                                    eb->pool, file_pool));
 
-  if (kind != svn_wc__db_kind_file
-      || status != svn_wc__db_status_normal
-      || !update_root)
+  if (kind != svn_wc__db_kind_file)
     return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
                                _("Node '%s' is no existing file external"),
                                svn_dirent_local_style(eb->local_abspath,
@@ -559,11 +557,12 @@ close_file(void *file_baton,
 
       if (actual_md5_checksum == NULL)
         {
-          SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL,
-                                           NULL, NULL, NULL, NULL,
-                                           &actual_md5_checksum, NULL, NULL,
-                                           NULL, NULL, NULL,
+          SVN_ERR(svn_wc__db_external_read(NULL, NULL, NULL, NULL, NULL, NULL,
+                                           NULL, NULL, &actual_md5_checksum, 
+                                           NULL, NULL, NULL, NULL, NULL, NULL,
+                                           NULL, NULL, NULL, NULL, NULL,
                                            eb->db, eb->local_abspath,
+                                           eb->wri_abspath,
                                            pool, pool));
 
           if (actual_md5_checksum != NULL
@@ -617,24 +616,31 @@ close_file(void *file_baton,
     if (! added)
       {
         svn_boolean_t had_props;
+        svn_boolean_t props_mod;
 
-        SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL,
+        SVN_ERR(svn_wc__db_external_read(NULL, NULL, NULL, NULL, NULL,
                                          &changed_rev, &changed_date,
-                                         &changed_author, NULL,
-                                         &original_checksum,
-                                         NULL, NULL, &had_props, NULL, NULL,
+                                         &changed_author, &original_checksum,
+                                         NULL, NULL, NULL, NULL, NULL, NULL,
+                                         NULL, NULL, NULL, &had_props,
+                                         &props_mod,
                                          eb->db, eb->local_abspath,
+                                         eb->wri_abspath,
                                          pool, pool));
 
         new_checksum = original_checksum;
 
         if (had_props)
-          SVN_ERR(svn_wc__db_base_get_props(&base_props, eb->db,
-                                            eb->local_abspath,
-                                            pool, pool));
+          SVN_ERR(svn_wc__db_external_read_pristine_props(&base_props, eb->db,
+                                                          eb->local_abspath,
+                                                          eb->wri_abspath,
+                                                          pool, pool));
 
-        SVN_ERR(svn_wc__db_read_props(&actual_props, eb->db, eb->local_abspath,
-                                      pool, pool));
+        if (props_mod)
+          SVN_ERR(svn_wc__db_external_read_props(&actual_props, eb->db,
+                                                 eb->local_abspath,
+                                                 eb->wri_abspath,
+                                                 pool, pool));
       }
 
     if (!base_props)
@@ -804,7 +810,7 @@ close_file(void *file_baton,
                         changed_author,
                         new_checksum,
                         new_dav_props,
-                        eb->wri_abspath /* record_ancestor_abspath */,
+                        eb->record_ancestor_abspath,
                         eb->recorded_repos_relpath,
                         eb->recorded_peg_revision,
                         eb->recorded_revision,
@@ -873,15 +879,17 @@ svn_wc__get_file_external_editor(const svn_delta_editor_t **editor,
                                  svn_revnum_t *target_revision,
                                  svn_wc_context_t *wc_ctx,
                                  const char *local_abspath,
+                                 const char *wri_abspath,
                                  const char *url,
                                  const char *repos_root_url,
                                  const char *repos_uuid,
                                  svn_boolean_t use_commit_times,
                                  const char *diff3_cmd,
                                  const apr_array_header_t *preserved_exts,
+                                 const char *record_ancestor_abspath,
                                  const char *recorded_url,
-                                 svn_opt_revision_t *recorded_peg_rev,
-                                 svn_opt_revision_t *recorded_rev,
+                                 const svn_opt_revision_t *recorded_peg_rev,
+                                 const svn_opt_revision_t *recorded_rev,
                                  svn_wc_conflict_resolver_func2_t conflict_func,
                                  void *conflict_baton,
                                  svn_cancel_func_t cancel_func,
@@ -899,7 +907,10 @@ svn_wc__get_file_external_editor(const svn_delta_editor_t **editor,
   eb->pool = edit_pool;
   eb->db = db;
   eb->local_abspath = apr_pstrdup(edit_pool, local_abspath);
-  eb->wri_abspath = svn_dirent_dirname(local_abspath, edit_pool);
+  if (wri_abspath)
+    eb->wri_abspath = apr_pstrdup(edit_pool, wri_abspath);
+  else
+    eb->wri_abspath = svn_dirent_dirname(local_abspath, edit_pool);
   eb->name = svn_dirent_basename(eb->local_abspath, NULL);
   eb->target_revision = target_revision;
 
@@ -911,6 +922,7 @@ svn_wc__get_file_external_editor(const svn_delta_editor_t **editor,
   eb->ext_patterns = preserved_exts;
   eb->diff3cmd = diff3_cmd;
 
+  eb->record_ancestor_abspath = apr_pstrdup(edit_pool,record_ancestor_abspath);
   eb->recorded_repos_relpath = svn_uri_is_child(repos_root_url, recorded_url,
                                                 edit_pool);
 
@@ -951,6 +963,7 @@ svn_wc__get_file_external_editor(const svn_delta_editor_t **editor,
 svn_error_t *
 svn_wc__crawl_file_external(svn_wc_context_t *wc_ctx,
                             const char *local_abspath,
+                            const char *wri_abspath,
                             const svn_ra_reporter3_t *reporter,
                             void *report_baton,
                             svn_boolean_t restore_files,
@@ -963,22 +976,23 @@ svn_wc__crawl_file_external(svn_wc_context_t *wc_ctx,
 {
   svn_wc__db_t *db = wc_ctx->db;
   svn_error_t *err;
-  svn_wc__db_status_t status;
   svn_wc__db_kind_t kind;
   svn_wc__db_lock_t *lock;
   svn_revnum_t revision;
   const char *repos_root_url;
   const char *repos_relpath;
 
-  err = svn_wc__db_base_get_info(&status, &kind, &revision,
-                                 &repos_relpath, &repos_root_url, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL, &lock,
-                                 NULL, NULL, NULL,
-                                 db, local_abspath,
+  if (! wri_abspath)
+    wri_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+
+  err = svn_wc__db_external_read(&kind, &revision,
+                                 &repos_relpath, &repos_root_url, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, &lock, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 db, local_abspath, wri_abspath,
                                  scratch_pool, scratch_pool);
 
   if (err
-      || status != svn_wc__db_status_normal
       || kind == svn_wc__db_kind_dir)
     {
       if (err && err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
