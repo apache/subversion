@@ -422,11 +422,6 @@ switch_file_external(const char *local_abspath,
                                                          subpool));
           goto cleanup;
         }
-
-      err = svn_wc__register_file_external(ctx->wc_ctx, local_abspath, url,
-                                           peg_revision, revision, subpool);
-      if (err)
-        goto cleanup;
     }
 
   {
@@ -456,6 +451,7 @@ switch_file_external(const char *local_abspath,
                                              repos_uuid,
                                              use_commit_times,
                                              diff3_cmd, preserved_exts,
+                                             url, peg_revision, revision,
                                              ctx->conflict_func2,
                                              ctx->conflict_baton2,
                                              ctx->cancel_func,
