@@ -1729,13 +1729,21 @@ def switch_scheduled_add(sbox):
 
   file_path = os.path.join(wc_dir, 'stub_file')
   switch_url = sbox.repo_url + '/iota'
+  nodo_path = os.path.join(wc_dir, 'nodo')
 
   svntest.main.file_append(file_path, "")
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'add', file_path)
-  svntest.actions.run_and_verify_svn(None, None, [], 'switch',
-                                     '--ignore-ancestry',
+  svntest.actions.run_and_verify_svn(None, None,
+                                     "svn: E200007: Cannot switch '.*file' " +
+                                     "because it is not in the repository yet",
+                                     'switch', '--ignore-ancestry',
                                      switch_url, file_path)
+
+  svntest.actions.run_and_verify_svn(None, None,
+                                     "svn: E155010: The node '.*nodo' was not",
+                                     'switch', '--ignore-ancestry',
+                                     switch_url, nodo_path)
 
 #----------------------------------------------------------------------
 @SkipUnless(server_has_mergeinfo)
