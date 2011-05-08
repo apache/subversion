@@ -668,7 +668,7 @@ test_16k_add(const svn_test_opts_t *opts,
   APR_ARRAY_PUSH(targets, const char *) = wc_path;
   svn_pool_clear(iterpool);
 
-  SVN_ERR(svn_client_commit5(targets, svn_depth_infinity, FALSE, FALSE, 
+  SVN_ERR(svn_client_commit5(targets, svn_depth_infinity, FALSE, FALSE, TRUE,
                              NULL, NULL, NULL, NULL, ctx, iterpool));
 
 
