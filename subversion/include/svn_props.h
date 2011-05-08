@@ -97,6 +97,16 @@ svn_prop_hash_to_array(apr_hash_t *hash,
                        apr_pool_t *pool);
 
 /**
+ * Given an array of svn_prop_t items, return a hash mapping const char *
+ * property names to const svn_string_t * values.
+ *
+ * @since New in 1.7.
+ */
+apr_hash_t *
+svn_prop_array_to_hash(const apr_array_header_t *properties,
+                       apr_pool_t *result);
+
+/**
  * Creates a deep copy of @a hash (keys <tt>const char *</tt> and
  * values <tt>const svn_string_t</tt>) in @a pool.
  *

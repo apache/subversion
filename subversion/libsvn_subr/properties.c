@@ -221,6 +221,21 @@ svn_prop_diffs(apr_array_header_t **propdiffs,
   return SVN_NO_ERROR;
 }
 
+apr_hash_t *
+svn_prop_array_to_hash(const apr_array_header_t *properties,
+                       apr_pool_t *pool)
+{
+  int i;
+  apr_hash_t *prop_hash = apr_hash_make(pool);
+
+  for (i = 0; i < properties->nelts; i++)
+    {
+      const svn_prop_t *prop = &APR_ARRAY_IDX(properties, i, svn_prop_t);
+      apr_hash_set(prop_hash, prop->name, APR_HASH_KEY_STRING, prop->value);
+    }
+
+  return prop_hash;
+}
 
 svn_boolean_t
 svn_prop_is_boolean(const char *prop_name)

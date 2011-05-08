@@ -2244,22 +2244,6 @@ externals_prop_changed(const apr_array_header_t *propchanges)
 }
 
 
-/* Create in POOL a name->value hash from PROP_LIST, and return it. */
-static apr_hash_t *
-prop_hash_from_array(const apr_array_header_t *prop_list,
-                     apr_pool_t *pool)
-{
-  int i;
-  apr_hash_t *prop_hash = apr_hash_make(pool);
-
-  for (i = 0; i < prop_list->nelts; i++)
-    {
-      const svn_prop_t *prop = &APR_ARRAY_IDX(prop_list, i, svn_prop_t);
-      apr_hash_set(prop_hash, prop->name, APR_HASH_KEY_STRING, prop->value);
-    }
-
-  return prop_hash;
-}
 
 /* An svn_delta_editor_t function. */
 static svn_error_t *
@@ -2515,7 +2499,7 @@ close_directory(void *dir_baton,
                 NULL /* children */,
                 depth,
                 (dav_prop_changes && dav_prop_changes->nelts > 0)
-                    ? prop_hash_from_array(dav_prop_changes, pool)
+                    ? svn_prop_array_to_hash(dav_prop_changes, pool)
                     : NULL,
                 NULL /* conflict */,
                 (! db->shadowed) && new_base_props != NULL,
@@ -3951,8 +3935,9 @@ close_file(void *file_baton,
                                      new_checksum,
                                      (dav_prop_changes
                                       && dav_prop_changes->nelts > 0)
-                                       ? prop_hash_from_array(dav_prop_changes,
-                                                              scratch_pool)
+                                       ? svn_prop_array_to_hash(
+                                                        dav_prop_changes,
+                                                        scratch_pool)
                                        : NULL,
                                      NULL /* conflict */,
                                      (! fb->shadowed) && new_base_props,
@@ -4861,7 +4846,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                                  pool));
 
     /* Put regular props back into a hash table. */
-    new_base_props = prop_hash_from_array(regular_props, pool);
+    new_base_props = svn_prop_array_to_hash(regular_props, pool);
 
     /* Get the change_* info from the entry props.  */
     SVN_ERR(accumulate_last_change(&changed_rev,
