@@ -2485,7 +2485,7 @@ blank_ieb(insert_external_baton_t *ieb)
   memset(ieb, 0, sizeof(*ieb));
   ieb->revision = SVN_INVALID_REVNUM;
   ieb->changed_rev = SVN_INVALID_REVNUM;
-  ieb->repos_id = -1;
+  ieb->repos_id = INVALID_REPOS_ID;
 
   ieb->recorded_peg_revision = SVN_INVALID_REVNUM;
   ieb->recorded_revision = SVN_INVALID_REVNUM;
