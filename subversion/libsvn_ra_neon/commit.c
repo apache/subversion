@@ -65,9 +65,6 @@ typedef struct version_rsrc_t
                              locally; NULL if this is a just-added resource */
   const char *wr_url;     /* working resource URL for this resource;
                              NULL for resources not (yet) checked out */
-  const char *local_path; /* path relative to the root of the commit
-                             (used for the get_wc_prop() and push_wc_prop()
-                             callbacks). */
   const char *name;       /* basename of the resource */
   apr_pool_t *pool;       /* pool in which this resource is allocated */
 
@@ -81,7 +78,9 @@ typedef struct commit_ctx_t
 
   /* Pointer to the RA session baton. */
   svn_ra_neon__session_t *ras;
-  const char *activity_url;
+
+  /* Commit anchor repository relpath. */
+  const char *anchor_relpath;
 
   /* A hash of revision properties (log messages, etc.) we need to set
      on the commit transaction. */
@@ -103,7 +102,19 @@ typedef struct commit_ctx_t
   apr_hash_t *lock_tokens;
   svn_boolean_t keep_locks;
 
+  /* HTTP v2 stuff */
+  const char *txn_url;           /* txn URL (!svn/txn/TXN_NAME) */
+  const char *txn_root_url;      /* commit anchor txn root URL */
+
+  /* HTTP v1 stuff (only valid when 'txn_url' is NULL) */
+  const char *activity_url;      /* activity base URL... */
+
 } commit_ctx_t;
+
+
+/* Are we using HTTPv2 semantics for this commit? */
+#define USING_HTTPV2_COMMIT_SUPPORT(commit_ctx) ((commit_ctx)->txn_url != NULL)
+
 
 typedef struct put_baton_t
 {
@@ -119,6 +130,7 @@ typedef struct resource_baton_t
 {
   commit_ctx_t *cc;
   version_rsrc_t *rsrc;
+  svn_revnum_t base_revision; /* base revision */
   apr_hash_t *prop_changes; /* name/values pairs of new/changed properties. */
   apr_array_header_t *prop_deletes; /* names of properties to delete. */
   svn_boolean_t created; /* set if this is an add rather than an update */
@@ -126,6 +138,10 @@ typedef struct resource_baton_t
   apr_pool_t *pool; /* the pool from open_foo() / add_foo() */
   put_baton_t *put_baton;  /* baton for this file's PUT request */
   const char *token;       /* file's lock token, if available */
+  const char *txn_root_url; /* URL under !svn/txr/ (HTTPv2 only) */
+  const char *local_relpath; /* path relative to the root of the commit
+                                (used for the get_wc_prop() and push_wc_prop()
+                                callbacks). */
 } resource_baton_t;
 
 /* this property will be fetched from the server when we don't find it
@@ -149,34 +165,16 @@ static version_rsrc_t * dup_resource(version_rsrc_t *base, apr_pool_t *pool)
     apr_pstrdup(pool, base->vsn_url) : NULL;
   rsrc->wr_url = base->wr_url ?
     apr_pstrdup(pool, base->wr_url) : NULL;
-  rsrc->local_path = base->local_path ?
-    apr_pstrdup(pool, base->local_path) : NULL;
   rsrc->name = base->name ?
     apr_pstrdup(pool, base->name) : NULL;
   rsrc->pool = pool;
   return rsrc;
 }
 
-static svn_error_t * delete_activity(void *edit_baton,
-                                     apr_pool_t *pool)
-{
-  commit_ctx_t *cc = edit_baton;
-
-  /* If we started an activity, we need to (try to) delete it.  (If it
-     doesn't exist, that's okay, too.) */
-  if (cc->activity_url)
-    SVN_ERR(svn_ra_neon__simple_request(NULL, cc->ras, "DELETE",
-                                        cc->activity_url, NULL, NULL,
-                                        204 /* No Content */,
-                                        404 /* Not Found */, pool));
-
-  return SVN_NO_ERROR;
-}
-
-
 /* Get the version resource URL for RSRC, storing it in
    RSRC->vsn_url.  Use POOL for all temporary allocations. */
 static svn_error_t * get_version_url(commit_ctx_t *cc,
+                                     const char *local_relpath,
                                      const version_rsrc_t *parent,
                                      version_rsrc_t *rsrc,
                                      svn_boolean_t force,
@@ -193,7 +191,7 @@ static svn_error_t * get_version_url(commit_ctx_t *cc,
           const svn_string_t *vsn_url_value;
 
           SVN_ERR(cc->ras->callbacks->get_wc_prop(cc->ras->callback_baton,
-                                                  rsrc->local_path,
+                                                  local_relpath,
                                                   SVN_RA_NEON__LP_VSN_URL,
                                                   &vsn_url_value,
                                                   pool));
@@ -264,7 +262,7 @@ static svn_error_t * get_version_url(commit_ctx_t *cc,
     {
       /* Now we can store the new version-url. */
       SVN_ERR(cc->ras->callbacks->push_wc_prop(cc->ras->callback_baton,
-                                               rsrc->local_path,
+                                               local_relpath,
                                                SVN_RA_NEON__LP_VSN_URL,
                                                url_str,
                                                pool));
@@ -361,6 +359,7 @@ static svn_error_t * create_activity(commit_ctx_t *cc,
 static svn_error_t * add_child(version_rsrc_t **child,
                                commit_ctx_t *cc,
                                const version_rsrc_t *parent,
+                               const char *parent_local_relpath,
                                const char *name,
                                int created,
                                svn_revnum_t revision,
@@ -380,7 +379,6 @@ static svn_error_t * add_child(version_rsrc_t **child,
   rsrc->revision = revision;
   rsrc->name = name;
   rsrc->url = svn_path_url_add_component2(parent->url, name, pool);
-  rsrc->local_path = svn_relpath_join(parent->local_path, name, pool);
 
   /* Case 1:  the resource is truly "new".  Either it was added as a
      completely new object, or implicitly created via a COPY.  Either
@@ -388,13 +386,18 @@ static svn_error_t * add_child(version_rsrc_t **child,
      URL by the rules of deltaV:  "copy structure is preserved below
      the WR you COPY to."  */
   if (created || (parent->vsn_url == NULL))
-    rsrc->wr_url = svn_path_url_add_component2(parent->wr_url, name, pool);
-
+    {
+      rsrc->wr_url = svn_path_url_add_component2(parent->wr_url, name, pool);
+    }
   /* Case 2: the resource is already under version-control somewhere.
      This means it has a VR URL already, and the WR URL won't exist
      until it's "checked out". */
   else
-    SVN_ERR(get_version_url(cc, parent, rsrc, FALSE, pool));
+    {
+      SVN_ERR(get_version_url(cc, svn_relpath_join(parent_local_relpath,
+                                                   name, pool),
+                              parent, rsrc, FALSE, pool));
+    }
 
   *child = rsrc;
   return SVN_NO_ERROR;
@@ -465,6 +468,7 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
 
 
 static svn_error_t * checkout_resource(commit_ctx_t *cc,
+                                       const char *local_relpath,
                                        version_rsrc_t *rsrc,
                                        svn_boolean_t allow_404,
                                        const char *token,
@@ -492,7 +496,7 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc,
       locn = NULL;
 
       /* re-fetch, forcing a query to the server */
-      SVN_ERR(get_version_url(cc, NULL, rsrc, TRUE, pool));
+      SVN_ERR(get_version_url(cc, local_relpath, NULL, rsrc, TRUE, pool));
 
       /* do it again, but don't allow a 404 this time */
       err = do_checkout(cc, rsrc->vsn_url, FALSE, token,
@@ -510,7 +514,7 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc,
         return svn_error_createf
           (err->apr_err, err,
            _("File or directory '%s' is out of date; try updating"),
-           svn_relpath_local_style(rsrc->local_path, pool));
+           svn_relpath_local_style(local_relpath, pool));
       return err;
     }
 
@@ -565,101 +569,71 @@ static void record_prop_change(apr_pool_t *pool,
 /* Send a Neon COPY request to the location identified by
    COPYFROM_PATH and COPYFROM_REVISION, using COPY_DST_URL as the
    "Destination" of that copy. */
-static svn_error_t *copy_resource(svn_ra_neon__session_t *ras,
-                                  const char *copyfrom_path,
-                                  svn_revnum_t copyfrom_revision,
-                                  const char *copy_dst_url,
-                                  svn_boolean_t is_dir,
-                                  apr_pool_t *scratch_pool)
+static svn_error_t * copy_resource(svn_ra_neon__session_t *ras,
+                                   const char *copyfrom_path,
+                                   svn_revnum_t copyfrom_revision,
+                                   const char *copy_dst_url,
+                                   apr_pool_t *scratch_pool)
 {
-  svn_string_t bc_url, bc_relative;
-  const char *copy_src_url;
+  const char *baseline_coll_url, *baseline_relpath, *copy_src_url;
+  
+  if (SVN_RA_NEON__HAVE_HTTPV2_SUPPORT(ras))
+    {
+      baseline_coll_url = apr_psprintf(scratch_pool, "%s/%ld",
+                                       ras->rev_root_stub, copyfrom_revision);
+      baseline_relpath = svn_uri_is_child(ras->repos_root,
+                                          copyfrom_path, scratch_pool);
+      if (! baseline_relpath)
+        baseline_relpath = "";
+    }
+  else
+    {
+      svn_string_t bc_url, bc_relative;
 
-  /* Convert the copyfrom_* url/rev "public" pair into a Baseline
-     Collection (BC) URL that represents the revision -- and a
-     relative path under that BC.  */
-  SVN_ERR(svn_ra_neon__get_baseline_info(NULL, &bc_url, &bc_relative, NULL,
-                                         ras, copyfrom_path,
-                                         copyfrom_revision, scratch_pool));
-
+      /* Convert the copyfrom_* url/rev "public" pair into a Baseline
+         Collection (BC) URL that represents the revision -- and a
+         relative path under that BC.  */
+      SVN_ERR(svn_ra_neon__get_baseline_info(NULL, &bc_url, &bc_relative, NULL,
+                                             ras, copyfrom_path,
+                                             copyfrom_revision, scratch_pool));
+      baseline_coll_url = bc_url.data;
+      baseline_relpath = bc_relative.data;
+    }
+     
   /* Combine the BC-URL and relative path; this is the main
      "source" argument to the COPY request.  The "Destination:"
      header given to COPY is simply the wr_url that is already
      part of the file_baton. */
-  copy_src_url = svn_path_url_add_component2(bc_url.data,
-                                             bc_relative.data,
+  copy_src_url = svn_path_url_add_component2(baseline_coll_url,
+                                             baseline_relpath,
                                              scratch_pool);
 
   /* Have neon do the COPY. */
-  SVN_ERR(svn_ra_neon__copy(ras, 1 /* overwrite */,
-                            is_dir ? SVN_RA_NEON__DEPTH_INFINITE 
-                                   : SVN_RA_NEON__DEPTH_ZERO,
+  SVN_ERR(svn_ra_neon__copy(ras, 1 /* overwrite */, SVN_RA_NEON__DEPTH_INFINITE,
                             copy_src_url, copy_dst_url, scratch_pool));
   
   return SVN_NO_ERROR;
 }
 
-/*
-A very long note about enforcing directory-up-to-dateness when
-proppatching, writ by Ben:
 
-Once upon a time, I thought it would be necessary to attach the
-X-SVN-Version-Name header to every PROPPATCH request we send.  This
-would allow mod_dav_svn to verify that a directory is up-to-date.
-
-But it turns out that mod_dav_svn screams and errors if you *ever* try
-to CHECKOUT an out-of-date VR.  And furthermore, a directory is never
-a 'committable' (according to svn_client_commit) unless it has a
-propchange.  Therefore:
-
-1. when ra_neon's commit editor attempts to CHECKOUT a parent directory
-   because some child is being added or deleted, it's *unable* to get
-   the VR cache, and thus just gets the HEAD one instead.  So it ends
-   up always doing a CHECKOUT of the latest version of the directory.
-   This is actually fine; Subversion's semantics allow us to
-   add/delete children on out-of-date directories.  If, in dav terms,
-   this means always checking out the latest directory, so be it.  Any
-   namespace conflicts will be detected with the actual PUT or DELETE
-   of the child.
-
-2. when ra_neon's commit editor receives a directory propchange, it
-   *is* able to get the VR cache (because the dir is a "committable"),
-   and thus it does a CHECKOUT of the older directory.  And mod_dav_svn
-   will scream if the VR is out of date, which is exactly what we want in
-   the directory propchange scenario.
-
-The only potential badness here is the case of committing a directory
-with a propchange, and an add/rm of its child.  This commit should
-fail, due to the out-of-date propchange.  However, it's *possible*
-that it will fail for a different reason:  we might attempt the add/rm
-first, which means checking out the parent VR, which *would* be
-available from the cache, and thus we get an early error.  Instead of
-seeing an error about 'cannot proppatch out-of-date dir', the user
-will see an error about 'cannot checkout out-of-date parent'.  Not
-really a big deal I guess.
-
-*/
-static svn_error_t * do_proppatch(svn_ra_neon__session_t *ras,
-                                  const version_rsrc_t *rsrc,
-                                  resource_baton_t *rb,
+static svn_error_t * do_proppatch(resource_baton_t *rb,
                                   apr_pool_t *pool)
 {
-  const char *url = rsrc->wr_url;
-  apr_hash_t *extra_headers = NULL;
+  apr_hash_t *extra_headers = apr_hash_make(pool);
+  const char *proppatch_target =
+    USING_HTTPV2_COMMIT_SUPPORT(rb->cc) ? rb->txn_root_url : rb->rsrc->wr_url;
+
+  if (SVN_IS_VALID_REVNUM(rb->base_revision))
+    svn_ra_neon__set_header(extra_headers, SVN_DAV_VERSION_NAME_HEADER,
+                            apr_psprintf(pool, "%ld", rb->base_revision));
 
   if (rb->token)
-    {
-      const char *token_header_val;
-      token_header_val = apr_psprintf(pool, "(<%s>)", rb->token);
+    apr_hash_set(extra_headers, "If", APR_HASH_KEY_STRING,
+                 apr_psprintf(pool, "(<%s>)", rb->token));
 
-      extra_headers = apr_hash_make(pool);
-      apr_hash_set(extra_headers, "If", APR_HASH_KEY_STRING,
-                   token_header_val);
-    }
-
-  return svn_ra_neon__do_proppatch(ras, url, rb->prop_changes,
-                                   rb->prop_deletes, NULL, extra_headers,
-                                   pool);
+  return svn_ra_neon__do_proppatch(rb->cc->ras, proppatch_target,
+                                   rb->prop_changes, rb->prop_deletes,
+                                   NULL, extra_headers, pool);
 }
 
 
@@ -671,99 +645,6 @@ add_valid_target(commit_ctx_t *cc,
   apr_hash_t *hash = cc->valid_targets;
   svn_string_t *path_str = svn_string_create(path, apr_hash_pool_get(hash));
   apr_hash_set(hash, path_str->data, path_str->len, (void*)kind);
-}
-
-
-/* PROPPATCH the appropriate resource in order to set the properties
-   in REVPROP_TABLE on the commit transaction.  Use POOL for
-   temporary allocations.  */
-static svn_error_t *
-apply_revprops(commit_ctx_t *cc,
-               apr_hash_t *revprop_table,
-               apr_pool_t *pool)
-{
-  const char *vcc;
-  version_rsrc_t vcc_rsrc = { SVN_INVALID_REVNUM };
-  svn_error_t *err = NULL;
-  int retry_count = 5;
-
-  /* ### this whole sequence can/should be replaced with an expand-property
-     ### REPORT when that is available on the server. */
-
-  /* fetch the DAV:version-controlled-configuration from the session's URL */
-  SVN_ERR(svn_ra_neon__get_vcc(&vcc, cc->ras, cc->ras->root.path, pool));
-
-
-  do {
-
-    svn_error_clear(err);
-
-    vcc_rsrc.pool = pool;
-    vcc_rsrc.vsn_url = vcc;
-
-    /* To set the revision properties, we must checkout the latest baseline
-       and get back a mutable "working" baseline.  */
-    err = checkout_resource(cc, &vcc_rsrc, FALSE, NULL, TRUE, pool);
-
-    /* There's a small chance of a race condition here, if apache is
-       experiencing heavy commit concurrency or if the network has
-       long latency.  It's possible that the value of HEAD changed
-       between the time we fetched the latest baseline and the time we
-       checkout that baseline.  If that happens, apache will throw us
-       a BAD_BASELINE error (deltaV says you can only checkout the
-       latest baseline).  We just ignore that specific error and
-       retry a few times, asking for the latest baseline again. */
-    if (err && err->apr_err != SVN_ERR_APMOD_BAD_BASELINE)
-      return err;
-
-  } while (err && (--retry_count > 0));
-
-  /* Yikes, if we couldn't hold onto HEAD after a few retries, throw a
-     real error.*/
-  if (err)
-    return err;
-
-  return svn_ra_neon__do_proppatch(cc->ras, vcc_rsrc.wr_url, revprop_table,
-                                   NULL, NULL, NULL, pool);
-}
-
-
-static svn_error_t * commit_open_root(void *edit_baton,
-                                      svn_revnum_t base_revision,
-                                      apr_pool_t *dir_pool,
-                                      void **root_baton)
-{
-  commit_ctx_t *cc = edit_baton;
-  resource_baton_t *root;
-  version_rsrc_t *rsrc;
-
-  /* Create a server-side activity which corresponds directly to an FS
-     transaction.  We will check out all further resources within the
-     context of this activity.  */
-  SVN_ERR(create_activity(cc, dir_pool));
-
-  /* Find the latest baseline resource, check it out, and then apply
-     the log message onto the thing. */
-  SVN_ERR(apply_revprops(cc, cc->revprop_table, dir_pool));
-
-  /* Create the root resource.  (We don't yet know the wr_url.) */
-  rsrc = apr_pcalloc(dir_pool, sizeof(*rsrc));
-  rsrc->pool = dir_pool;
-  rsrc->revision = base_revision;
-  rsrc->url = cc->ras->root.path;
-  rsrc->local_path = "";
-
-  SVN_ERR(get_version_url(cc, NULL, rsrc, FALSE, dir_pool));
-
-  root = apr_pcalloc(dir_pool, sizeof(*root));
-  root->pool = dir_pool;
-  root->cc = cc;
-  root->rsrc = rsrc;
-  root->created = FALSE;
-
-  *root_baton = root;
-
-  return SVN_NO_ERROR;
 }
 
 
@@ -798,6 +679,160 @@ static apr_hash_t *get_child_tokens(apr_hash_t *lock_tokens,
 }
 
 
+/* PROPPATCH the appropriate resource in order to set the revision
+   properties in CC->REVPROP_TABLE on the commit transaction.  Use
+   POOL for temporary allocations.  */
+static svn_error_t *
+apply_revprops(commit_ctx_t *cc,
+               apr_pool_t *pool)
+{
+  const char *proppatch_url;
+
+  if (USING_HTTPV2_COMMIT_SUPPORT(cc))
+    {
+      proppatch_url = cc->txn_url;
+    }
+  else
+    {
+      const char *vcc;
+      version_rsrc_t vcc_rsrc = { SVN_INVALID_REVNUM };
+      svn_error_t *err = NULL;
+      int retry_count = 5;
+
+      /* Fetch the DAV:version-controlled-configuration from the
+         session's URL.  */
+      SVN_ERR(svn_ra_neon__get_vcc(&vcc, cc->ras, cc->ras->root.path, pool));
+
+      do {
+        svn_error_clear(err);
+
+        vcc_rsrc.pool = pool;
+        vcc_rsrc.vsn_url = vcc;
+
+        /* To set the revision properties, we must checkout the latest
+           baseline and get back a mutable "working" baseline.  */
+        err = checkout_resource(cc, "", &vcc_rsrc, FALSE, NULL, TRUE, pool);
+
+        /* There's a small chance of a race condition here, if apache
+           is experiencing heavy commit concurrency or if the network
+           has long latency.  It's possible that the value of HEAD
+           changed between the time we fetched the latest baseline and
+           the time we checkout that baseline.  If that happens,
+           apache will throw us a BAD_BASELINE error (deltaV says you
+           can only checkout the latest baseline).  We just ignore
+           that specific error and retry a few times, asking for the
+           latest baseline again. */
+        if (err && err->apr_err != SVN_ERR_APMOD_BAD_BASELINE)
+          return err;
+
+      } while (err && (--retry_count > 0));
+
+      /* Yikes, if we couldn't hold onto HEAD after a few retries, throw a
+         real error.*/
+      if (err)
+        return err;
+
+      proppatch_url = vcc_rsrc.wr_url;
+    }
+
+  return svn_ra_neon__do_proppatch(cc->ras, proppatch_url, cc->revprop_table,
+                                   NULL, NULL, NULL, pool);
+}
+
+
+/*** Commit Editor Functions ***/
+
+static svn_error_t * commit_open_root(void *edit_baton,
+                                      svn_revnum_t base_revision,
+                                      apr_pool_t *dir_pool,
+                                      void **root_baton)
+{
+  commit_ctx_t *cc = edit_baton;
+  resource_baton_t *root;
+  version_rsrc_t *rsrc = NULL;
+
+  root = apr_pcalloc(dir_pool, sizeof(*root));
+  root->pool = dir_pool;
+  root->cc = cc;
+  root->base_revision = base_revision;
+  root->created = FALSE;
+  root->local_relpath = "";
+
+  if (SVN_RA_NEON__HAVE_HTTPV2_SUPPORT(cc->ras))
+    {
+      /* POST to the 'me' resource to create our server-side
+         transaction (and, optionally, a corresponding activity). */
+      svn_ra_neon__request_t *req;
+      const char *header_val;
+
+      SVN_ERR(svn_ra_neon__request_create(&req, cc->ras, "POST",
+                                          cc->ras->me_resource, dir_pool));
+      ne_add_request_header(req->ne_req, "Content-Type", SVN_SKEL_MIME_TYPE);
+
+#ifdef SVN_NEON_SEND_VTXN_NAME
+      /* Enable this to exercise the VTXN-NAME code based on a client
+         supplied transaction name. */
+      ne_add_request_header(req->ne_req, SVN_DAV_VTXN_NAME_HEADER,
+                            svn_uuid_generate(dir_pool));
+#endif
+
+      SVN_ERR(svn_ra_neon__request_dispatch(NULL, req, NULL, "( create-txn )",
+                                            201, 0, dir_pool));
+
+      /* Check the response headers for either the virtual transaction
+         details, or the real transaction details.  We need to have
+         one or the other of those!  */
+      header_val = ne_get_response_header(req->ne_req,
+                                          SVN_DAV_VTXN_NAME_HEADER);
+      if (! header_val)
+        header_val = ne_get_response_header(req->ne_req,
+                                            SVN_DAV_TXN_NAME_HEADER);
+      if (! header_val)
+        return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                                 _("POST request did not return transaction "
+                                   "information"));
+      cc->txn_url = svn_path_url_add_component2(cc->ras->txn_stub,
+                                                header_val, cc->pool);
+      cc->txn_root_url = svn_path_url_add_component2(cc->ras->txn_root_stub,
+                                                     header_val, cc->pool);
+
+      root->rsrc = NULL;
+      root->txn_root_url = svn_path_url_add_component2(cc->txn_root_url,
+                                                       cc->anchor_relpath,
+                                                       dir_pool);
+    }
+  else
+    {
+      /* Use MKACTIVITY against a unique child of activity collection
+         to create a server-side activity which corresponds directly
+         to an FS transaction.  We will check out all further
+         resources within the context of this activity. */
+      SVN_ERR(create_activity(cc, dir_pool));
+
+      /* Create the root resource.  (We don't yet know the wr_url.) */
+      rsrc = apr_pcalloc(dir_pool, sizeof(*rsrc));
+      rsrc->pool = dir_pool;
+      rsrc->revision = base_revision;
+      rsrc->url = cc->ras->root.path;
+
+      SVN_ERR(get_version_url(cc, root->local_relpath, NULL, rsrc,
+                              FALSE, dir_pool));
+
+      root->rsrc = rsrc;
+      root->txn_root_url = NULL;
+    }
+
+  /* Find the latest baseline resource, check it out, and then apply
+     the log message onto the thing. */
+  SVN_ERR(apply_revprops(cc, dir_pool));
+
+
+  *root_baton = root;
+
+  return SVN_NO_ERROR;
+}
+
+
 static svn_error_t * commit_delete_entry(const char *path,
                                          svn_revnum_t revision,
                                          void *parent_baton,
@@ -805,32 +840,36 @@ static svn_error_t * commit_delete_entry(const char *path,
 {
   resource_baton_t *parent = parent_baton;
   const char *name = svn_relpath_basename(path, NULL);
-  apr_hash_t *extra_headers = NULL;
-  const char *child;
+  apr_hash_t *extra_headers = apr_hash_make(pool);
   int code;
   svn_error_t *serr;
+  const char *delete_target;
 
-  if (SVN_IS_VALID_REVNUM(revision))
+  if (USING_HTTPV2_COMMIT_SUPPORT(parent->cc))
     {
-      const char *revstr = apr_psprintf(pool, "%ld", revision);
+      delete_target = svn_path_url_add_component2(parent->txn_root_url,
+                                                  name, pool);
+    }
+  else
+    {
+      /* Get the URL to the working collection.  */
+      SVN_ERR(checkout_resource(parent->cc, parent->local_relpath,
+                                parent->rsrc, TRUE, NULL, FALSE, pool));
 
-      if (! extra_headers)
-        extra_headers = apr_hash_make(pool);
-
-      apr_hash_set(extra_headers, SVN_DAV_VERSION_NAME_HEADER,
-                   APR_HASH_KEY_STRING, revstr);
+      /* Create the URL for the child resource. */
+      delete_target = svn_path_url_add_component2(parent->rsrc->wr_url,
+                                                  name, pool);
     }
 
-  /* get the URL to the working collection */
-  SVN_ERR(checkout_resource(parent->cc, parent->rsrc, TRUE,
-                            NULL, FALSE, pool));
+  /* If we have a base revision for the server to compare against,
+     pass that along in a custom header. */
+  if (SVN_IS_VALID_REVNUM(revision))
+    svn_ra_neon__set_header(extra_headers, SVN_DAV_VERSION_NAME_HEADER,
+                            apr_psprintf(pool, "%ld", revision));
 
-  /* create the URL for the child resource */
-  child = svn_path_url_add_component2(parent->rsrc->wr_url, name, pool);
-
-  /* Start out assuming that we're deleting a file;  try to lookup the
-     path itself in the token-hash, and if found, attach it to the If:
-     header. */
+  /* We start out assuming that we're deleting a file; try to lookup
+     the path itself in the token-hash, and if found, attach it to the
+     If: header. */
   if (parent->cc->lock_tokens)
     {
       const char *token =
@@ -856,15 +895,12 @@ static svn_error_t * commit_delete_entry(const char *path,
      header which prevents mod_dav_svn from actually doing the unlock. */
   if (parent->cc->keep_locks)
     {
-      if (! extra_headers)
-        extra_headers = apr_hash_make(pool);
-
       apr_hash_set(extra_headers, SVN_DAV_OPTIONS_HEADER,
                    APR_HASH_KEY_STRING, SVN_DAV_OPTION_KEEP_LOCKS);
     }
 
   serr = svn_ra_neon__simple_request(&code, parent->cc->ras,
-                                     "DELETE", child,
+                                     "DELETE", delete_target,
                                      extra_headers, NULL,
                                      204 /* No Content */,
                                      0, pool);
@@ -877,15 +913,17 @@ static svn_error_t * commit_delete_entry(const char *path,
                || (serr->apr_err == SVN_ERR_FS_LOCK_OWNER_MISMATCH)
                || (serr->apr_err == SVN_ERR_FS_PATH_ALREADY_LOCKED)))
     {
-      /* Re-attempt the DELETE request as if the path were a directory.
-         Discover all lock-tokens within the directory, and send them in
-         the body of the request (which is normally empty).  Of course,
-         if we don't *find* any additional lock-tokens, don't bother to
-         retry (it ain't gonna do any good).
+      /* Re-attempt the DELETE request as if the path were a
+         directory.  Discover all lock-tokens within the directory,
+         and send them in the body of the request (which is normally
+         empty).  Of course, if we don't *find* any additional
+         lock-tokens, don't bother to retry (it ain't gonna do any
+         good).
 
          Note that we're not sending the locks in the If: header, for
-         the same reason we're not sending in MERGE's headers: httpd has
-       limits on the amount of data it's willing to receive in headers. */
+         the same reason we're not sending in MERGE's headers: httpd
+         has limits on the amount of data it's willing to receive in
+         headers. */
 
       apr_hash_t *child_tokens = NULL;
       svn_ra_neon__request_t *request;
@@ -899,8 +937,7 @@ static svn_error_t * commit_delete_entry(const char *path,
 
       /* No kiddos?  Return the original error.  Else, clear it so it
          doesn't get leaked.  */
-      if ((! child_tokens)
-          || (apr_hash_count(child_tokens) == 0))
+      if ((! child_tokens) || (apr_hash_count(child_tokens) == 0))
         return serr;
       else
         svn_error_clear(serr);
@@ -912,7 +949,7 @@ static svn_error_t * commit_delete_entry(const char *path,
         apr_hash_set(child_tokens, path, APR_HASH_KEY_STRING, token);
 
       SVN_ERR(svn_ra_neon__request_create(&request, parent->cc->ras, "DELETE",
-                                          child, pool));
+                                          delete_target, pool));
 
       err = svn_ra_neon__assemble_locktoken_body(&locks_list,
                                                  child_tokens, request->pool);
@@ -954,34 +991,51 @@ static svn_error_t * commit_add_dir(const char *path,
   const char *name = svn_relpath_basename(path, dir_pool);
   apr_pool_t *workpool = svn_pool_create(dir_pool);
   version_rsrc_t *rsrc = NULL;
-
-  /* check out the parent resource so that we can create the new collection
-     as one of its children. */
-  SVN_ERR(checkout_resource(parent->cc, parent->rsrc, TRUE,
-                            NULL, FALSE, dir_pool));
+  const char *mkcol_target = NULL;
 
   /* create a child object that contains all the resource urls */
   child = apr_pcalloc(dir_pool, sizeof(*child));
   child->pool = dir_pool;
+  child->base_revision = SVN_INVALID_REVNUM;
   child->cc = parent->cc;
   child->created = TRUE;
-  SVN_ERR(add_child(&rsrc, parent->cc, parent->rsrc,
-                    name, 1, SVN_INVALID_REVNUM, workpool));
-  child->rsrc = dup_resource(rsrc, dir_pool);
+  child->local_relpath = svn_relpath_join(parent->local_relpath,
+                                          name, dir_pool);
+
+  if (USING_HTTPV2_COMMIT_SUPPORT(parent->cc))
+    {
+      child->rsrc = NULL;
+      child->txn_root_url = svn_path_url_add_component2(parent->txn_root_url,
+                                                        name, dir_pool);
+      mkcol_target = child->txn_root_url;
+    }
+  else
+    {
+      /* check out the parent resource so that we can create the new collection
+         as one of its children. */
+      SVN_ERR(checkout_resource(parent->cc, parent->local_relpath,
+                                parent->rsrc, TRUE, NULL, FALSE, dir_pool));
+      SVN_ERR(add_child(&rsrc, parent->cc, parent->rsrc, parent->local_relpath,
+                        name, 1, SVN_INVALID_REVNUM, workpool));
+
+      child->rsrc = dup_resource(rsrc, dir_pool);
+      child->txn_root_url = NULL;
+      mkcol_target = child->rsrc->wr_url;
+    }
 
   if (! copyfrom_path)
     {
       /* This a new directory with no history, so just create a new,
          empty collection */
       SVN_ERR(svn_ra_neon__simple_request(&code, parent->cc->ras, "MKCOL",
-                                          child->rsrc->wr_url, NULL, NULL,
+                                          mkcol_target, NULL, NULL,
                                           201 /* Created */, 0, workpool));
     }
   else
     {
       /* This add has history, so we need to do a COPY. */
       SVN_ERR(copy_resource(parent->cc->ras, copyfrom_path, copyfrom_revision,
-                            child->rsrc->wr_url, TRUE, workpool));
+                            mkcol_target, workpool));
 
       /* Remember that this object was copied. */
       child->copied = TRUE;
@@ -1005,27 +1059,36 @@ static svn_error_t * commit_open_dir(const char *path,
   resource_baton_t *parent = parent_baton;
   resource_baton_t *child = apr_pcalloc(dir_pool, sizeof(*child));
   const char *name = svn_relpath_basename(path, dir_pool);
-  apr_pool_t *workpool = svn_pool_create(dir_pool);
   version_rsrc_t *rsrc = NULL;
 
   child->pool = dir_pool;
+  child->base_revision = base_revision;
   child->cc = parent->cc;
   child->created = FALSE;
+  child->local_relpath = svn_relpath_join(parent->local_relpath,
+                                          name, dir_pool);
 
-  SVN_ERR(add_child(&rsrc, parent->cc, parent->rsrc,
-                    name, 0, base_revision, workpool));
-  child->rsrc = dup_resource(rsrc, dir_pool);
+  if (USING_HTTPV2_COMMIT_SUPPORT(parent->cc))
+    {
+      child->rsrc = NULL;
+      child->txn_root_url = svn_path_url_add_component2(parent->txn_root_url,
+                                                        name, dir_pool);
+    }
+  else
+    {
+      apr_pool_t *workpool = svn_pool_create(dir_pool);
 
-  /*
-  ** Note: open_dir simply means that a change has occurred somewhere
-  **       within this directory. We have nothing to do, to prepare for
-  **       those changes (each will be considered independently).
-  **
-  ** Note: if a directory is replaced by something else, then this callback
-  **       will not be used: a true replacement is modeled with a "delete"
-  **       followed by an "add".
-  */
-  svn_pool_destroy(workpool);
+      SVN_ERR(add_child(&rsrc, parent->cc, parent->rsrc, parent->local_relpath,
+                        name, 0, base_revision, workpool));
+      child->rsrc = dup_resource(rsrc, dir_pool);
+      child->txn_root_url = NULL;
+
+      svn_pool_destroy(workpool);
+    }
+
+  /* We don't do any real work here -- open_dir() just sets up the
+     baton for this directory for use later when we operate on one of
+     its children. */
   *child_baton = child;
   return SVN_NO_ERROR;
 }
@@ -1038,14 +1101,18 @@ static svn_error_t * commit_change_dir_prop(void *dir_baton,
   resource_baton_t *dir = dir_baton;
 
   /* record the change. it will be applied at close_dir time. */
-  /* ### we should put this into the dir_baton's pool */
   record_prop_change(dir->pool, dir, name, value);
 
-  /* do the CHECKOUT sooner rather than later */
-  SVN_ERR(checkout_resource(dir->cc, dir->rsrc, TRUE, NULL, FALSE, pool));
+  if (! USING_HTTPV2_COMMIT_SUPPORT(dir->cc))
+    {
+      /* We might as well CHECKOUT now (if we haven't already).  Why
+         wait?  */
+      SVN_ERR(checkout_resource(dir->cc, dir->local_relpath, dir->rsrc,
+                                TRUE, NULL, FALSE, pool));
+    }
 
-  /* Add this path to the valid targets hash. */
-  add_valid_target(dir->cc, dir->rsrc->local_path, svn_nonrecursive);
+    /* Add the path to the valid targets hash. */
+  add_valid_target(dir->cc, dir->local_relpath, svn_nonrecursive);
 
   return SVN_NO_ERROR;
 }
@@ -1057,7 +1124,7 @@ static svn_error_t * commit_close_dir(void *dir_baton,
 
   /* Perform all of the property changes on the directory. Note that we
      checked out the directory when the first prop change was noted. */
-  return do_proppatch(dir->cc->ras, dir->rsrc, dir, pool);
+  return do_proppatch(dir, pool);
 }
 
 static svn_error_t * commit_add_file(const char *path,
@@ -1071,7 +1138,7 @@ static svn_error_t * commit_add_file(const char *path,
   resource_baton_t *file;
   const char *name = svn_relpath_basename(path, file_pool);
   apr_pool_t *workpool = svn_pool_create(file_pool);
-  version_rsrc_t *rsrc = NULL;
+  const char *put_target = NULL;
 
   /*
   ** To add a new file into the repository, we CHECKOUT the parent
@@ -1082,51 +1149,71 @@ static svn_error_t * commit_add_file(const char *path,
   ** method to copy into the working collection.
   */
 
-  /* Do the parent CHECKOUT first */
-  SVN_ERR(checkout_resource(parent->cc, parent->rsrc, TRUE,
-                            NULL, FALSE, workpool));
-
   /* Construct a file_baton that contains all the resource urls. */
   file = apr_pcalloc(file_pool, sizeof(*file));
+  file->base_revision = SVN_INVALID_REVNUM;
   file->pool = file_pool;
   file->cc = parent->cc;
   file->created = TRUE;
-  SVN_ERR(add_child(&rsrc, parent->cc, parent->rsrc,
-                    name, 1, SVN_INVALID_REVNUM, workpool));
-  file->rsrc = dup_resource(rsrc, file_pool);
+  file->local_relpath = svn_relpath_join(parent->local_relpath,
+                                         name, file_pool);
+
+  if (USING_HTTPV2_COMMIT_SUPPORT(parent->cc))
+    {
+      file->rsrc = NULL;
+      file->txn_root_url = svn_path_url_add_component2(parent->txn_root_url,
+                                                       name, file_pool);
+      put_target = file->txn_root_url;
+    }
+  else
+    {
+      version_rsrc_t *rsrc = NULL;
+
+      /* Do the parent CHECKOUT first */
+      SVN_ERR(checkout_resource(parent->cc, parent->local_relpath, parent->rsrc,
+                                TRUE, NULL, FALSE, workpool));
+      SVN_ERR(add_child(&rsrc, parent->cc, parent->rsrc, parent->local_relpath,
+                        name, 1, SVN_INVALID_REVNUM, workpool));
+
+      file->rsrc = dup_resource(rsrc, file_pool);
+      file->txn_root_url = NULL;
+      put_target = file->rsrc->wr_url;
+    }
+
   if (parent->cc->lock_tokens)
     file->token = apr_hash_get(parent->cc->lock_tokens, path,
                                APR_HASH_KEY_STRING);
 
-  /* If the parent directory existed before this commit then there may be a
-     file with this URL already. We need to ensure such a file does not
-     exist, which we do by attempting a PROPFIND in both public URL (the path
-     in HEAD) and the working URL (the path within the transaction), since
-     we cannot differentiate between deleted items.
+  /* If the parent directory existed before this commit then there may
+     be a file with this URL already. We need to ensure such a file
+     does not exist, which we do by attempting a PROPFIND in both
+     public URL (the path in HEAD) and the working URL (the path
+     within the transaction), since we cannot differentiate between
+     deleted items.
 
      ### For now, we'll assume that if this path has already been
-     added to the valid targets hash, that addition occurred during the
-     "delete" phase (if that's not the case, this editor is being
-     driven incorrectly, as we should never visit the same path twice
-     except in a delete+add situation). */
+     ### added to the valid targets hash, that addition occurred
+     ### during the "delete" phase (if that's not the case, this
+     ### editor is being driven incorrectly, as we should never visit
+     ### the same path twice except in a delete+add situation). */
   if ((! parent->created)
       && (! apr_hash_get(file->cc->valid_targets, path, APR_HASH_KEY_STRING)))
     {
       svn_ra_neon__resource_t *res;
-      svn_error_t *err1 = svn_ra_neon__get_starting_props(&res,
-                                                          file->cc->ras,
-                                                          file->rsrc->wr_url,
-                                                          NULL, workpool);
-      svn_error_t *err2 = svn_ra_neon__get_starting_props(&res,
-                                                          file->cc->ras,
-                                                          file->rsrc->url,
-                                                          NULL, workpool);
+      const char *public_url;
+      svn_error_t *err1, *err2;
+
+      public_url = svn_path_url_add_component2(file->cc->ras->url->data,
+                                               path, workpool);
+      err1 = svn_ra_neon__get_starting_props(&res, file->cc->ras,
+                                             put_target, NULL, workpool);
+      err2 = svn_ra_neon__get_starting_props(&res, file->cc->ras,
+                                             public_url, NULL, workpool);
       if (! err1 && ! err2)
         {
           /* If the PROPFINDs succeed the file already exists */
           return svn_error_createf(SVN_ERR_RA_DAV_ALREADY_EXISTS, NULL,
-                                   _("File '%s' already exists"),
-                                   file->rsrc->url);
+                                   _("File '%s' already exists"), path);
         }
       else if ((err1 && (err1->apr_err == SVN_ERR_FS_NOT_FOUND))
                || (err2 && (err2->apr_err == SVN_ERR_FS_NOT_FOUND)))
@@ -1145,17 +1232,15 @@ static svn_error_t * commit_add_file(const char *path,
     {
       /* This a truly new file. */
 
-      /* ### wait for apply_txdelta before doing a PUT. it might arrive a
-         ### "long time" from now. certainly after many other operations, so
-         ### we don't want to start a PUT just yet.
-         ### so... anything else to do here?
-      */
+      /* Wait for apply_txdelta() before doing a PUT.  It might arrive
+         a "long time" from now -- certainly after many other
+         operations -- we don't want to start a PUT just yet. */
     }
   else
     {
       /* This add has history, so we need to do a COPY. */
       SVN_ERR(copy_resource(parent->cc->ras, copyfrom_path, copyfrom_revision,
-                            file->rsrc->wr_url, FALSE, workpool));
+                            put_target, workpool));
 
       /* Remember that this object was copied. */
       file->copied = TRUE;
@@ -1180,31 +1265,46 @@ static svn_error_t * commit_open_file(const char *path,
   resource_baton_t *parent = parent_baton;
   resource_baton_t *file;
   const char *name = svn_relpath_basename(path, file_pool);
-  apr_pool_t *workpool = svn_pool_create(file_pool);
-  version_rsrc_t *rsrc = NULL;
 
   file = apr_pcalloc(file_pool, sizeof(*file));
   file->pool = file_pool;
+  file->base_revision = base_revision;
   file->cc = parent->cc;
   file->created = FALSE;
-  SVN_ERR(add_child(&rsrc, parent->cc, parent->rsrc,
-                    name, 0, base_revision, workpool));
-  file->rsrc = dup_resource(rsrc, file_pool);
+  file->local_relpath = svn_relpath_join(parent->local_relpath,
+                                         name, file_pool);
+
   if (parent->cc->lock_tokens)
     file->token = apr_hash_get(parent->cc->lock_tokens, path,
                                APR_HASH_KEY_STRING);
 
-  /* do the CHECKOUT now. we'll PUT the new file contents later on. */
-  SVN_ERR(checkout_resource(parent->cc, file->rsrc, TRUE,
-                            file->token, FALSE, workpool));
+  if (USING_HTTPV2_COMMIT_SUPPORT(parent->cc))
+    {
+      file->rsrc = NULL;
+      file->txn_root_url = svn_path_url_add_component2(parent->txn_root_url,
+                                                       name, file_pool);
+    }
+  else
+    {
+      version_rsrc_t *rsrc = NULL;
+      apr_pool_t *workpool = svn_pool_create(file_pool);
 
-  /* ### wait for apply_txdelta before doing a PUT. it might arrive a
-     ### "long time" from now. certainly after many other operations, so
-     ### we don't want to start a PUT just yet.
-     ### so... anything else to do here? what about the COPY case?
-  */
+      SVN_ERR(add_child(&rsrc, parent->cc, parent->rsrc, parent->local_relpath,
+                        name, 0, base_revision, workpool));
+      file->rsrc = dup_resource(rsrc, file_pool);
+      file->txn_root_url = NULL;
 
-  svn_pool_destroy(workpool);
+      /* Do the CHECKOUT now.  */
+      SVN_ERR(checkout_resource(parent->cc, file->local_relpath, file->rsrc,
+                                TRUE, file->token, FALSE, workpool));
+
+      svn_pool_destroy(workpool);
+    }
+
+  /* Wait for apply_txdelta() before doing a PUT.  It might arrive
+     a "long time" from now -- certainly after many other
+     operations -- we don't want to start a PUT just yet. */
+
   *file_baton = file;
   return SVN_NO_ERROR;
 }
@@ -1269,7 +1369,7 @@ commit_apply_txdelta(void *file_baton,
   svn_txdelta_to_svndiff2(handler, handler_baton, stream, 0, pool);
 
   /* Add this path to the valid targets hash. */
-  add_valid_target(file->cc, file->rsrc->local_path, svn_nonrecursive);
+  add_valid_target(file->cc, file->local_relpath, svn_nonrecursive);
 
   return SVN_NO_ERROR;
 }
@@ -1281,16 +1381,19 @@ static svn_error_t * commit_change_file_prop(void *file_baton,
 {
   resource_baton_t *file = file_baton;
 
-  /* record the change. it will be applied at close_file time. */
-  /* ### we should put this into the file_baton's pool */
+  /* Record the change.  It will be applied at close_file() time. */
   record_prop_change(file->pool, file, name, value);
 
-  /* do the CHECKOUT sooner rather than later */
-  SVN_ERR(checkout_resource(file->cc, file->rsrc, TRUE,
-                            file->token, FALSE, pool));
+  if (! USING_HTTPV2_COMMIT_SUPPORT(file->cc))
+    {
+      /* We might as well CHECKOUT now (if we haven't already).  Why
+         wait?  */
+      SVN_ERR(checkout_resource(file->cc, file->local_relpath, file->rsrc,
+                                TRUE, file->token, FALSE, pool));
+    }
 
-  /* Add this path to the valid targets hash. */
-  add_valid_target(file->cc, file->rsrc->local_path, svn_nonrecursive);
+    /* Add the path to the valid targets hash. */
+  add_valid_target(file->cc, file->local_relpath, svn_nonrecursive);
 
   return SVN_NO_ERROR;
 }
@@ -1314,26 +1417,27 @@ static svn_error_t * commit_close_file(void *file_baton,
 
   if (file->put_baton)
     {
+      svn_error_t *err = SVN_NO_ERROR;
       put_baton_t *pb = file->put_baton;
-      const char *url = file->rsrc->wr_url;
       apr_hash_t *extra_headers;
       svn_ra_neon__request_t *request;
-      svn_error_t *err = SVN_NO_ERROR;
+      const char *public_url =
+        svn_path_url_add_component2(file->cc->ras->url->data,
+                                    file->local_relpath, pool);
+      const char *put_target =
+        USING_HTTPV2_COMMIT_SUPPORT(cc) ? file->txn_root_url
+                                        : file->rsrc->wr_url;
 
       /* create/prep the request */
-      SVN_ERR(svn_ra_neon__request_create(&request, cc->ras, "PUT", url,
-                                          pool));
+      SVN_ERR(svn_ra_neon__request_create(&request, cc->ras, "PUT",
+                                          put_target, pool));
 
       extra_headers = apr_hash_make(request->pool);
 
       if (file->token)
-        svn_ra_neon__set_header
-          (extra_headers, "If",
-           apr_psprintf(pool, "<%s> (<%s>)",
-                        svn_path_url_add_component2(cc->ras->url->data,
-                                                    file->rsrc->url,
-                                                    request->pool),
-                        file->token));
+        svn_ra_neon__set_header(extra_headers, "If",
+                                apr_psprintf(pool, "<%s> (<%s>)",
+                                             public_url, file->token));
 
       if (pb->base_checksum)
         svn_ra_neon__set_header(extra_headers,
@@ -1344,6 +1448,11 @@ static svn_error_t * commit_close_file(void *file_baton,
         svn_ra_neon__set_header(extra_headers,
                                 SVN_DAV_RESULT_FULLTEXT_MD5_HEADER,
                                 text_checksum);
+
+      if (SVN_IS_VALID_REVNUM(file->base_revision))
+        svn_ra_neon__set_header(extra_headers,
+                                SVN_DAV_VERSION_NAME_HEADER,
+                                apr_psprintf(pool, "%ld", file->base_revision));
 
       if (pb->tmpfile)
         {
@@ -1380,7 +1489,7 @@ static svn_error_t * commit_close_file(void *file_baton,
 
   /* Perform all of the property changes on the file. Note that we
      checked out the file when the first prop change was noted. */
-  return do_proppatch(cc->ras, file->rsrc, file, pool);
+  return do_proppatch(file, pool);
 }
 
 
@@ -1389,6 +1498,8 @@ static svn_error_t * commit_close_edit(void *edit_baton,
 {
   commit_ctx_t *cc = edit_baton;
   svn_commit_info_t *commit_info = svn_create_commit_info(pool);
+  const char *merge_resource_url =
+    USING_HTTPV2_COMMIT_SUPPORT(cc) ? cc->txn_url : cc->activity_url;
 
   SVN_ERR(svn_ra_neon__merge_activity(&(commit_info->revision),
                                       &(commit_info->date),
@@ -1396,13 +1507,21 @@ static svn_error_t * commit_close_edit(void *edit_baton,
                                       &(commit_info->post_commit_err),
                                       cc->ras,
                                       cc->ras->root.path,
-                                      cc->activity_url,
+                                      merge_resource_url,
                                       cc->valid_targets,
                                       cc->lock_tokens,
                                       cc->keep_locks,
                                       cc->ras->callbacks->push_wc_prop == NULL,
                                       pool));
-  SVN_ERR(delete_activity(edit_baton, pool));
+
+  /* DELETE any activity that might be left on the server. */
+  if (cc->activity_url)
+    {
+      SVN_ERR(svn_ra_neon__simple_request(NULL, cc->ras, "DELETE",
+                                          cc->activity_url, NULL, NULL,
+                                          204 /* No Content */,
+                                          404 /* Not Found */, pool));
+    }
 
   if (cc->callback && commit_info->revision != SVN_INVALID_REVNUM)
     SVN_ERR(cc->callback(commit_info, cc->callback_baton, pool));
@@ -1414,7 +1533,22 @@ static svn_error_t * commit_close_edit(void *edit_baton,
 static svn_error_t * commit_abort_edit(void *edit_baton,
                                        apr_pool_t *pool)
 {
-  return delete_activity(edit_baton, pool);
+  commit_ctx_t *cc = edit_baton;
+  const char *delete_target = NULL;
+
+  /* If we started an activity and/or transaction, we need to (try to)
+     delete it.  (If it doesn't exist, that's okay, too.) */
+  if (USING_HTTPV2_COMMIT_SUPPORT(cc))
+    delete_target = cc->txn_url;
+  else
+    delete_target = cc->activity_url;
+
+  if (delete_target)
+    SVN_ERR(svn_ra_neon__simple_request(NULL, cc->ras, "DELETE",
+                                        delete_target, NULL, NULL,
+                                        204 /* No Content */,
+                                        404 /* Not Found */, pool));
+  return SVN_NO_ERROR;
 }
 
 
@@ -1456,6 +1590,11 @@ svn_error_t * svn_ra_neon__get_commit_editor(svn_ra_session_t *session,
       apr_hash_set(cc->revprop_table, apr_pstrdup(pool, key), klen,
                    svn_string_dup(val, pool));
     }
+
+  /* Calculate the commit anchor's repository relpath. */
+  SVN_ERR(svn_ra_neon__get_path_relative_to_root(session,
+                                                 &(cc->anchor_relpath),
+                                                 ras->url->data, pool));
 
   /* Set up the editor. */
   commit_editor = svn_delta_default_editor(pool);

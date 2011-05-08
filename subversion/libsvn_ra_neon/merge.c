@@ -683,7 +683,11 @@ svn_error_t * svn_ra_neon__assemble_locktoken_body(svn_stringbuf_t **body,
 }
 
 
-
+/* ### FIXME: As of HTTPv2, this isn't necessarily merging an
+   ### "activity".  It might be merging a transaction.  So,
+   ### ACTIVITY_URL might be a transaction root URL, not an actual
+   ### activity URL, etc.  Probably should rename ACTIVITY_URL to
+   ### MERGE_RESOURCE_URL or something.  */
 svn_error_t * svn_ra_neon__merge_activity(svn_revnum_t *new_rev,
                                           const char **committed_date,
                                           const char **committed_author,
