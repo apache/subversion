@@ -72,14 +72,14 @@ svn_property_kind(int *prefix_len,
   if (strncmp(prop_name, SVN_PROP_WC_PREFIX, wc_prefix_len) == 0)
     {
       if (prefix_len)
-        *prefix_len = wc_prefix_len;
+        *prefix_len = (int) wc_prefix_len;
       return svn_prop_wc_kind;
     }
 
   if (strncmp(prop_name, SVN_PROP_ENTRY_PREFIX, entry_prefix_len) == 0)
     {
       if (prefix_len)
-        *prefix_len = entry_prefix_len;
+        *prefix_len = (int) entry_prefix_len;
       return svn_prop_entry_kind;
     }
 
