@@ -2613,7 +2613,70 @@ insert_external_node(void *baton,
   }
   return SVN_NO_ERROR;
 #else
-  NOT_IMPLEMENTED();
+  apr_int64_t repos_id;
+  svn_sqlite__stmt_t *stmt;
+
+  if (ieb->repos_id != INVALID_REPOS_ID)
+    repos_id = ieb->repos_id;
+  else
+    SVN_ERR(create_repos_id(&repos_id, ieb->repos_root_url, ieb->repos_uuid,
+                            wcroot->sdb, scratch_pool));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_INSERT_EXTERNAL));
+
+  if (ieb->kind != svn_wc__db_kind_dir)
+    {
+      SVN_ERR(svn_sqlite__bindf(stmt, "issisrtsrisss",
+                                wcroot->wc_id,
+                                local_relpath,
+                                svn_relpath_dirname(local_relpath,
+                                                    scratch_pool),
+                                repos_id,
+                                ieb->repos_relpath,
+                                ieb->revision,
+                                kind_map, ieb->kind,
+                                (ieb->kind == svn_wc__db_kind_symlink)
+                                            ? ieb->target
+                                            : NULL,
+                                ieb->changed_rev,
+                                ieb->changed_date,
+                                ieb->changed_author,
+                                ieb->record_ancestor_relpath,
+                                ieb->recorded_repos_relpath));
+
+      if (ieb->checksum)
+        SVN_ERR(svn_sqlite__bind_checksum(stmt, 16, ieb->checksum,
+                                          scratch_pool));
+
+      if (ieb->props)
+        SVN_ERR(svn_sqlite__bind_properties(stmt, 17, ieb->props,
+                                            scratch_pool));
+
+      if (ieb->dav_cache)
+        SVN_ERR(svn_sqlite__bind_properties(stmt, 18, ieb->dav_cache,
+                                            scratch_pool));
+    }
+  else
+    {
+      SVN_ERR(svn_sqlite__bindf(stmt, "issnnntnnnnss",
+                                wcroot->wc_id,
+                                local_relpath,
+                                svn_relpath_dirname(local_relpath,
+                                                    scratch_pool),
+                                kind_map, ieb->kind,
+                                ieb->record_ancestor_relpath,
+                                ieb->recorded_repos_relpath));
+    }
+
+  if (SVN_IS_VALID_REVNUM(ieb->recorded_peg_revision))
+    SVN_ERR(svn_sqlite__bind_revnum(stmt, 14, ieb->recorded_peg_revision));
+
+  if (SVN_IS_VALID_REVNUM(ieb->recorded_revision))
+    SVN_ERR(svn_sqlite__bind_revnum(stmt, 15, ieb->recorded_revision));
+
+  SVN_ERR(svn_sqlite__insert(NULL, stmt));
+
+  return SVN_NO_ERROR;
 #endif
 }
 
@@ -2895,7 +2958,11 @@ svn_wc__db_external_read(svn_wc__db_kind_t *kind,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-
+#if SVN_WC__VERSION >= SVN_WC__HAS_EXTERNALS_STORE
+  svn_sqlite__stmt_t *stmt, *stmt_act = NULL;
+  svn_boolean_t have_info, have_act;
+  svn_error_t *err;
+#endif
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   if (! wri_abspath)
@@ -2928,7 +2995,7 @@ svn_wc__db_external_read(svn_wc__db_kind_t *kind,
         || base_kind == svn_wc__db_kind_dir)
       {
         return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                                 _("Node '%s' is not an external"),
+                                 _("The node '%s' is not an external"),
                                  svn_dirent_local_style(local_abspath,
                                                         scratch_pool));
       }
@@ -2976,7 +3043,116 @@ svn_wc__db_external_read(svn_wc__db_kind_t *kind,
     return SVN_NO_ERROR;
   }
 #else
-  NOT_IMPLEMENTED();
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    lock ? STMT_SELECT_EXTERNAL_INFO_WITH_LOCK
+                                         : STMT_SELECT_EXTERNAL_INFO));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_info, stmt));
+
+  if (conflicted || props_mod)
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt_act, wcroot->sdb,
+                                        STMT_SELECT_ACTUAL_NODE));
+      SVN_ERR(svn_sqlite__bindf(stmt_act, "is", wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__step(&have_act, stmt_act));
+    }
+
+  if (have_info)
+    {
+      apr_int64_t repos_id;
+      if (kind)
+        *kind = svn_sqlite__column_token(stmt, 0, kind_map);
+
+      err = repos_location_from_columns(&repos_id, revision, repos_relpath,
+                                        stmt, 2, 1, 3, result_pool);
+
+      if (repos_root_url || repos_uuid)
+        {
+          err = svn_error_compose_create(
+                        err,
+                        fetch_repos_info(repos_root_url, repos_uuid,
+                                         wcroot->sdb, repos_id, result_pool));
+        }
+
+      if (changed_rev)
+        *changed_rev = svn_sqlite__column_revnum(stmt, 7);
+      if (changed_author)
+        *changed_author = svn_sqlite__column_text(stmt, 9, result_pool);
+      if (changed_date)
+        *changed_date = svn_sqlite__column_int64(stmt, 8);
+
+      if (checksum)
+        {
+          err = svn_error_compose_create(
+                        err,
+                        svn_sqlite__column_checksum(checksum, stmt, 5,
+                                                    result_pool));
+        }
+      if (target)
+        *target = svn_sqlite__column_text(stmt, 6, result_pool);
+
+      if (lock)
+        *lock = lock_from_columns(stmt, 16, 17, 18, 19, result_pool);
+
+      if (recorded_size)
+        *recorded_size = get_recorded_size(stmt, 10);
+      if (recorded_mod_time)
+        *recorded_mod_time = svn_sqlite__column_int64(stmt, 11);
+
+      if (record_ancestor_abspath)
+        {
+          const char *record_relpath = svn_sqlite__column_text(stmt, 12, NULL);
+
+          *record_ancestor_abspath = svn_dirent_join(wcroot->abspath,
+                                                     record_relpath,
+                                                     result_pool);
+        }
+
+      if (recorded_repos_relpath)
+        *recorded_repos_relpath = svn_sqlite__column_text(stmt, 13,
+                                                          result_pool);
+
+      if (recorded_peg_revision)
+        *recorded_peg_revision = svn_sqlite__column_revnum(stmt, 14);
+
+      if (recorded_revision)
+        *recorded_revision = svn_sqlite__column_revnum(stmt, 15);
+
+      if (had_props)
+        *had_props = SQLITE_PROPERTIES_AVAILABLE(stmt, 4);
+
+      if (props_mod)
+        {
+          *props_mod = have_act && !svn_sqlite__column_is_null(stmt_act, 6);
+        }
+      if (conflicted)
+        {
+          if (have_act)
+            {
+              *conflicted =
+                 !svn_sqlite__column_is_null(stmt_act, 2) || /* old */
+                 !svn_sqlite__column_is_null(stmt_act, 3) || /* new */
+                 !svn_sqlite__column_is_null(stmt_act, 4) || /* working */
+                 !svn_sqlite__column_is_null(stmt_act, 0) || /* prop_reject */
+                 !svn_sqlite__column_is_null(stmt_act, 5); /* tree_conflict_data */
+            }
+          else
+            *conflicted = FALSE;
+        }
+    }
+  else
+    {
+      err = svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                              _("The node '%s' is not an external."),
+                              svn_dirent_local_style(local_abspath,
+                                                     scratch_pool));
+    }
+
+  if (stmt_act != NULL)
+    err = svn_error_compose_create(err, svn_sqlite__reset(stmt_act));
+
+  return svn_error_return(
+                svn_error_compose_create(err, svn_sqlite__reset(stmt)));
 #endif
 }
 
