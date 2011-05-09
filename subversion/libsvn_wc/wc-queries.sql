@@ -386,7 +386,7 @@ CREATE INDEX changelist_list_index ON changelist_list(wc_id, local_relpath);
         Action          Old CL      New CL      Notification
         ------          ------      ------      ------------
         UPDATE ACTUAL   NULL        NOT NULL    cl-set
-        UPDATE ACTUAL   NOT NULL    NOT NULL    cl-clear / cl-set
+        UPDATE ACTUAL   NOT NULL    NOT NULL    cl-set
         UPDATE ACTUAL   NOT NULL    NULL        cl-clear
 
 Of the following triggers, the first address the first case, and the second
@@ -430,15 +430,13 @@ DROP TRIGGER IF EXISTS trigger_changelist_list_actual_cl_clear
 INSERT INTO changelist_list(wc_id, local_relpath, notify, changelist)
 VALUES (?1, ?2, ?3, ?4)
 
--- STMT_DELETE_CHANGELIST_LIST_RECURSIVE
-DELETE FROM changelist_list
-WHERE wc_id = ?1 AND local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#'
+-- STMT_DROP_CHANGELIST_LIST
+DROP TABLE IF EXISTS changelist_list
 
--- STMT_SELECT_CHANGELIST_LIST_RECURSIVE
-SELECT local_relpath, notify, changelist
+-- STMT_SELECT_CHANGELIST_LIST
+SELECT wc_id, local_relpath, notify, changelist
 FROM changelist_list
-WHERE wc_id = ?1 AND local_relpath = ?2 or local_relpath LIKE ?3 ESCAPE '#'
-ORDER BY local_relpath
+ORDER BY wc_id, local_relpath
 
 -- STMT_DELETE_ACTUAL_EMPTY
 DELETE FROM actual_node
@@ -1079,6 +1077,8 @@ WHERE local_relpath = ?1 OR local_relpath LIKE ?2 ESCAPE '#'
 -- STMT_CREATE_DELETE_LIST
 DROP TABLE IF EXISTS delete_list;
 CREATE TEMPORARY TABLE delete_list (
+/* ### we should put the wc_id in here in case a delete spans multiple
+   ### working copies. queries, etc will need to be adjusted.  */
    local_relpath TEXT PRIMARY KEY
    )
 
