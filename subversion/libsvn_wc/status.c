@@ -247,7 +247,7 @@ read_info(const struct svn_wc__db_info_t **info,
           apr_pool_t *result_pool,
           apr_pool_t *scratch_pool)
 {
-  struct svn_wc__db_info_t *mtb = apr_pcalloc(scratch_pool, sizeof(*mtb));
+  struct svn_wc__db_info_t *mtb = apr_pcalloc(result_pool, sizeof(*mtb));
 
   SVN_ERR(svn_wc__db_read_info(&mtb->status, &mtb->kind,
                                &mtb->revnum, &mtb->repos_relpath,
@@ -261,6 +261,19 @@ read_info(const struct svn_wc__db_info_t **info,
                                &mtb->have_base, NULL, NULL,
                                db, local_abspath,
                                result_pool, scratch_pool));
+
+  /* Maybe we have to get some shadowed lock from BASE to make our test suite
+     happy... (It might be completely unrelated, but...) */
+  if (mtb->have_base
+      && (mtb->status == svn_wc__db_status_added
+         || mtb->status == svn_wc__db_status_deleted))
+    {
+      SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       &mtb->lock, NULL, NULL, NULL,
+                                       db, local_abspath,
+                                       result_pool, scratch_pool));
+    }
 
 #ifdef HAVE_SYMLINK
   if (mtb->had_props || mtb->props_mod)
@@ -308,7 +321,7 @@ get_repos_root_url_relpath(const char **repos_relpath,
       *repos_relpath = svn_relpath_join(parent_repos_relpath,
                                         svn_dirent_basename(local_abspath,
                                                             NULL),
-                                        scratch_pool);
+                                        result_pool);
       *repos_root_url = parent_repos_root_url;
     }
   else if (info->status == svn_wc__db_status_added)
@@ -1044,12 +1057,7 @@ get_dir_status(const struct walk_status_baton *wb,
 
   iterpool = svn_pool_create(subpool);
 
-  /* ### Performance: Use read_info() on single path if selected != NULL */
-  SVN_ERR(svn_wc__db_read_children_info(&nodes, &conflicts,
-                                        wb->db, local_abspath,
-                                        subpool, iterpool));
-
-  err = svn_io_get_dirents3(&dirents, local_abspath, FALSE, subpool, subpool);
+  err = svn_io_get_dirents3(&dirents, local_abspath, FALSE, subpool, iterpool);
   if (err
       && (APR_STATUS_IS_ENOENT(err->apr_err)
          || SVN__APR_STATUS_IS_ENOTDIR(err->apr_err)))
@@ -1062,26 +1070,60 @@ get_dir_status(const struct walk_status_baton *wb,
 
   if (!dir_info)
     SVN_ERR(read_info(&dir_info, local_abspath, wb->db,
-                      scratch_pool, scratch_pool));
+                      subpool, iterpool));
 
   SVN_ERR(get_repos_root_url_relpath(&dir_repos_relpath, &dir_repos_root_url,
                                      dir_info, parent_repos_relpath,
                                      parent_repos_root_url,
                                      wb->db, local_abspath,
-                                     scratch_pool, scratch_pool));
+                                     subpool, iterpool));
   if (selected == NULL)
     {
       /* Create a hash containing all children.  The source hashes
          don't all map the same types, but only the keys of the result
          hash are subsequently used. */
+      SVN_ERR(svn_wc__db_read_children_info(&nodes, &conflicts,
+                                        wb->db, local_abspath,
+                                        subpool, iterpool));
+
       all_children = apr_hash_overlay(subpool, nodes, dirents);
       if (apr_hash_count(conflicts) > 0)
         all_children = apr_hash_overlay(subpool, conflicts, all_children);
     }
   else
     {
+      const struct svn_wc__db_info_t *info;
+      const char *selected_abspath = svn_dirent_join(local_abspath, selected,
+                                                     iterpool);
       /* Create a hash containing just selected */
       all_children = apr_hash_make(subpool);
+      nodes = apr_hash_make(subpool);
+      conflicts = apr_hash_make(subpool);
+
+      err = read_info(&info, selected_abspath, wb->db, subpool, iterpool);
+
+      if (err)
+        {
+          if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+            return svn_error_return(err);
+          svn_error_clear(err);
+          /* The node is neither a tree conflict nor a versioned node */
+        }
+      else
+        {
+          if (!info->conflicted
+              || info->status != svn_wc__db_status_normal
+              || info->kind != svn_wc__db_kind_unknown)
+             {
+               /* The node is a normal versioned node */
+               apr_hash_set(nodes, selected, APR_HASH_KEY_STRING, info);
+             }
+
+          /* Drop it in the list of possible conflicts */
+          if (info->conflicted)
+            apr_hash_set(conflicts, selected, APR_HASH_KEY_STRING, info);
+        }
+
       apr_hash_set(all_children, selected, APR_HASH_KEY_STRING, selected);
     }
 
@@ -1147,11 +1189,9 @@ get_dir_status(const struct walk_status_baton *wb,
                                             status_func, status_baton,
                                             iterpool));
 
-              if (depth == svn_depth_immediates)
-                continue;
-
               /* Descend in subdirectories. */
-              if (info->kind == svn_wc__db_kind_dir)
+              if (depth == svn_depth_infinity
+                  && info->kind == svn_wc__db_kind_dir)
                 {
                   SVN_ERR(get_dir_status(wb, node_abspath, NULL, TRUE,
                                          dir_repos_root_url, dir_repos_relpath,
