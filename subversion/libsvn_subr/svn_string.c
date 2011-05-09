@@ -730,8 +730,10 @@ svn_cstring_strtoui64(apr_uint64_t *n, const char *str,
                              str);
   if ((errno == ERANGE && (val == APR_INT64_MIN || val == APR_INT64_MAX)) ||
       val < 0 || (apr_uint64_t)val < minval || (apr_uint64_t)val > maxval)
+    /* ### Mark this for translation when gettext doesn't choke on macros. */
     return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                             _("Number '%s' is out of range '[%llu, %llu]'"),
+                             "Number '%s' is out of range "
+                             "'[%" APR_UINT64_T_FMT ", %" APR_UINT64_T_FMT "]'",
                              str, minval, maxval);
   *n = val;
   return SVN_NO_ERROR;
@@ -772,8 +774,10 @@ svn_cstring_strtoi64(apr_int64_t *n, const char *str,
                              str);
   if ((errno == ERANGE && (val == APR_INT64_MIN || val == APR_INT64_MAX)) ||
       val < minval || val > maxval)
+    /* ### Mark this for translation when gettext doesn't choke on macros. */
     return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                             _("Number '%s' is out of range '[%lld, %lld]'"),
+                             "Number '%s' is out of range "
+                             "'[%" APR_INT64_T_FMT ", %" APR_INT64_T_FMT "]'",
                              str, minval, maxval);
   *n = val;
   return SVN_NO_ERROR;
