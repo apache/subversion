@@ -782,19 +782,27 @@ static svn_error_t * commit_open_root(void *edit_baton,
       /* Check the response headers for either the virtual transaction
          details, or the real transaction details.  We need to have
          one or the other of those!  */
-      header_val = ne_get_response_header(req->ne_req,
-                                          SVN_DAV_VTXN_NAME_HEADER);
-      if (! header_val)
-        header_val = ne_get_response_header(req->ne_req,
-                                            SVN_DAV_TXN_NAME_HEADER);
-      if (! header_val)
+      if ((header_val = ne_get_response_header(req->ne_req,
+                                               SVN_DAV_VTXN_NAME_HEADER)))
+        {
+          cc->txn_url = svn_path_url_add_component2(cc->ras->vtxn_stub,
+                                                    header_val, cc->pool);
+          cc->txn_root_url
+            = svn_path_url_add_component2(cc->ras->vtxn_root_stub,
+                                          header_val, cc->pool);
+        }
+      else if ((header_val = ne_get_response_header(req->ne_req,
+                                                    SVN_DAV_TXN_NAME_HEADER)))
+        {
+          cc->txn_url = svn_path_url_add_component2(cc->ras->txn_stub,
+                                                    header_val, cc->pool);
+          cc->txn_root_url = svn_path_url_add_component2(cc->ras->txn_root_stub,
+                                                         header_val, cc->pool);
+        }
+      else
         return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                                  _("POST request did not return transaction "
                                    "information"));
-      cc->txn_url = svn_path_url_add_component2(cc->ras->txn_stub,
-                                                header_val, cc->pool);
-      cc->txn_root_url = svn_path_url_add_component2(cc->ras->txn_root_stub,
-                                                     header_val, cc->pool);
 
       root->rsrc = NULL;
       root->txn_root_url = svn_path_url_add_component2(cc->txn_root_url,
