@@ -1216,12 +1216,12 @@ bump_to_28(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 static svn_error_t *
 bump_to_29(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
 {
-  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_CREATE_EXTERNALS));
-  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_29));
-
   /* ### Before enabling this code we should be able to upgrade existing
      ### file externals to their new location */
   SVN_ERR_MALFUNCTION();
+
+  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_CREATE_EXTERNALS));
+  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_29));
   return SVN_NO_ERROR;
 }
 
