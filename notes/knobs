@@ -55,6 +55,7 @@ DEBUG_DOUBLE_FREE
 SERF_VERBOSE
 SSL_VERBOSE
 SVN_DEPRECATED
+SVN_FS__TRAIL_DEBUG
 
 2.4 Test-only
 
@@ -276,6 +277,14 @@ SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
   Range:     function declaration decorator
   Default:   (compiler dependant)
   Suggested: "" (disable deprecation warnings), or compiler-specific decorators
+
+5.12 SVN_FS__TRAIL_DEBUG
+
+  Scope:     libsvn_fs_base
+  Purpose:   
+  Range:     definedness
+  Default:   not defined
+  Suggested: defined, not defined
 
 6 Defines that affect unit tests
 ================================
