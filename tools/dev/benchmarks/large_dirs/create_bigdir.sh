@@ -103,7 +103,7 @@ ${SVN} co $URL $WC > /dev/null
 
 get_sequence() {
   # three equivalents...
-  (jot - "$1" "$2" "1" 2>/dev/null || seq -s ' ' "$1" "$2" 2>/dev/null || python -c "for i in range($1,$2+1): print i")
+  (jot - "$1" "$2" "1" 2>/dev/null || seq -s ' ' "$1" "$2" 2>/dev/null || python -c "for i in range($1,$2+1): print(i)")
 }
 
 # functions that execute an SVN command
