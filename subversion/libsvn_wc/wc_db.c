@@ -4858,7 +4858,6 @@ svn_wc__db_op_set_changelist(svn_wc__db_t *db,
   struct with_triggers_baton_t wtb = { STMT_CREATE_CHANGELIST_LIST,
                                        STMT_DROP_CHANGELIST_LIST_TRIGGERS,
                                        NULL, NULL };
-  const char *like_arg;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
@@ -4906,20 +4905,15 @@ svn_wc__db_op_set_changelist(svn_wc__db_t *db,
       return SVN_NO_ERROR;
     }
 
-  like_arg = construct_like_arg(local_relpath, scratch_pool);
-
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_CHANGELIST_LIST_RECURSIVE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id, local_relpath,
-                            like_arg));
+                                    STMT_SELECT_CHANGELIST_LIST));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  if (!have_row)
-    return svn_error_return(svn_sqlite__reset(stmt)); /* optimise for no row */
 
   while (have_row)
     {
-      const char *notify_relpath = svn_sqlite__column_text(stmt, 0, NULL);
-      svn_wc_notify_action_t action = svn_sqlite__column_int(stmt, 1);
+      /* ### wc_id is column 0. use it one day...  */
+      const char *notify_relpath = svn_sqlite__column_text(stmt, 1, NULL);
+      svn_wc_notify_action_t action = svn_sqlite__column_int(stmt, 2);
       svn_wc_notify_t *notify;
       const char *notify_abspath;
 
@@ -4931,18 +4925,14 @@ svn_wc__db_op_set_changelist(svn_wc__db_t *db,
       notify_abspath = svn_dirent_join(wcroot->abspath, notify_relpath,
                                        iterpool);
       notify = svn_wc_create_notify(notify_abspath, action, iterpool);
-      notify->changelist_name = svn_sqlite__column_text(stmt, 2, NULL);
+      notify->changelist_name = svn_sqlite__column_text(stmt, 3, NULL);
       notify_func(notify_baton, notify, iterpool);
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
   SVN_ERR(svn_sqlite__reset(stmt));
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_DELETE_CHANGELIST_LIST_RECURSIVE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id, local_relpath,
-                            like_arg));
-  SVN_ERR(svn_sqlite__step_done(stmt));
+  SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb, STMT_DROP_CHANGELIST_LIST));
 
   svn_pool_destroy(iterpool);
 
