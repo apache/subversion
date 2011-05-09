@@ -65,9 +65,9 @@ del_lines_res = [
 # This is a list of lines to search and replace text on.
 rep_lines_res = [
                  # In 'svn --version', this line varies, for example:
-                 # "Subversion Client, version 0.10.2 (dev build)"
+                 # "Subversion Client, version 0.10.2-dev (under development)"
                  # "Subversion Client, version 0.10.2 (r1729)"
-                 (re.compile(r'version \d+\.\d+\.\d+ \(.*\)'),
+                 (re.compile(r'version \d+\.\d+\.\d+(-[^ ]*)? \(.*\)'),
                   'version X.Y.Z '),
                  # The copyright end date keeps changing; fix forever.
                  (re.compile(r'Copyright \(C\) 2000-\d+ CollabNet\.'),
