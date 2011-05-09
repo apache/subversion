@@ -1139,6 +1139,7 @@ create_tree_conflict(svn_wc_conflict_description2_t **pconflict,
   *pconflict = NULL;
 
   SVN_ERR_ASSERT(reason != SVN_WC_CONFLICT_REASON_NONE);
+  SVN_ERR_ASSERT(their_relpath != NULL);
 
   /* Get the source-left information, i.e. the local state of the node
    * before any changes were made to the working copy, i.e. the state the
@@ -1227,23 +1228,8 @@ create_tree_conflict(svn_wc_conflict_description2_t **pconflict,
    * to which we would like to update. */
   if (eb->switch_relpath)
     {
-      /* If this is a 'switch' operation, try to construct the switch
-       * target's REPOS_RELPATH. */
-      if (their_relpath != NULL)
-        right_repos_relpath = their_relpath;
-      else
-        {
-          /* The complete source-right URL is not available, but it
-           * is somewhere below the SWITCH_URL. For now, just go
-           * without it.
-           * ### TODO: Construct a proper THEIR_URL in some of the
-           * delete cases that still pass NULL for THEIR_URL when
-           * calling this function. Do that on the caller's side. */
-          right_repos_relpath = eb->switch_relpath;
-          right_repos_relpath = apr_pstrcat(result_pool, right_repos_relpath,
-                                            "_THIS_IS_INCOMPLETE",
-                                            (char *)NULL);
-        }
+      /* This is a 'switch' operation. */
+      right_repos_relpath = their_relpath;
     }
   else
     {
@@ -1342,6 +1328,8 @@ check_tree_conflict(svn_wc_conflict_description2_t **pconflict,
   svn_boolean_t locally_replaced = FALSE;
   svn_boolean_t modified = FALSE;
   svn_boolean_t all_mods_are_deletes = FALSE;
+
+  SVN_ERR_ASSERT(their_relpath != NULL);
 
   *pconflict = NULL;
 
