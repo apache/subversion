@@ -731,6 +731,9 @@ svn_repos_trace_node_locations(svn_fs_t *fs,
                                   authz_read_baton, currpool));
           if (! readable)
             {
+              svn_pool_destroy(lastpool);
+              svn_pool_destroy(currpool);
+
               return SVN_NO_ERROR;
             }
         }
