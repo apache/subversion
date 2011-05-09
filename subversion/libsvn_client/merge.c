@@ -1064,19 +1064,19 @@ merge_props_changed(svn_wc_notify_state_t *state,
   apr_array_header_t *props;
   merge_cmd_baton_t *merge_b = baton;
   svn_client_ctx_t *ctx = merge_b->ctx;
-  apr_pool_t *subpool = svn_pool_create(merge_b->pool);
   svn_error_t *err;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(svn_categorize_props(propchanges, NULL, NULL, &props, subpool));
+  SVN_ERR(svn_categorize_props(propchanges, NULL, NULL, &props,
+                               scratch_pool));
 
   /* If we are only applying mergeinfo changes then we need to do
      additional filtering of PROPS so it contains only mergeinfo changes. */
   if (merge_b->record_only && props->nelts)
     {
       apr_array_header_t *mergeinfo_props =
-        apr_array_make(subpool, 1, sizeof(svn_prop_t));
+        apr_array_make(scratch_pool, 1, sizeof(svn_prop_t));
       int i;
 
       for (i = 0; i < props->nelts; i++)
@@ -1110,13 +1110,13 @@ merge_props_changed(svn_wc_notify_state_t *state,
                                                   merge_b->reintegrate_merge,
                                                   merge_b->ra_session2,
                                                   merge_b->ctx,
-                                                  subpool));
+                                                  scratch_pool));
 
       err = svn_wc_merge_props3(state, ctx->wc_ctx, local_abspath, NULL, NULL,
                                 original_props, props, merge_b->dry_run,
                                 ctx->conflict_func2, ctx->conflict_baton2,
                                 ctx->cancel_func, ctx->cancel_baton,
-                                subpool);
+                                scratch_pool);
 
       /* If this is not a dry run then make a record in BATON if we find a
          PATH where mergeinfo is added where none existed previously or PATH
@@ -1176,14 +1176,12 @@ merge_props_changed(svn_wc_notify_state_t *state,
           if (tree_conflicted)
             *tree_conflicted = TRUE;
           svn_error_clear(err);
-          svn_pool_destroy(subpool);
           return SVN_NO_ERROR;
         }
       else if (err)
         return svn_error_return(err);
     }
 
-  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
