@@ -258,18 +258,6 @@ Candidate changes:
      +1: danielsh (trusting Philip's explanation that the noderev offset,length
                    are cached to be the correct values for a non-corrupt file)
 
- * r1084575, r1084581
-   Change the version string from "(dev build)" to "(under development)".
-   Justification:
-     Same as for trunk: clarification that "1.6.17 (dev build)" is actually a
-     off-the-branch build and not a blessed release.
-     http://mid.gmane.org/25D5DB7A-AD59-4B48-8BA1-2D3D034C4C7A@ryandesign.com
-   Votes: 
-     +1: danielsh, pburba
-     -1: julianfoad (r1084581 changes the user-agent string; see
-           dev@ email "New)(?) Subversion client user-agent string ugliness."
-           <http://svn.haxx.se/dev/archive-2011-05/0219.shtml>)
-
  * r1091881
    Fix issue #3853, "svn cleanup fails with obstructed directories"
    Justification:
@@ -398,3 +386,12 @@ Approved changes:
                  that are currently nominated...so my +1 is conditional on
                  that fix being applied first.)
      +1: danielsh (pburba: a fix to #3641 was committed to trunk)
+
+ * r1084575, r1084581
+   Change the version string from "(dev build)" to "(under development)".
+   Justification:
+     Same as for trunk: clarification that "1.6.17 (dev build)" is actually a
+     off-the-branch build and not a blessed release.
+     http://mid.gmane.org/25D5DB7A-AD59-4B48-8BA1-2D3D034C4C7A@ryandesign.com
+   Votes: 
+     +1: danielsh, pburba, julianfoad
