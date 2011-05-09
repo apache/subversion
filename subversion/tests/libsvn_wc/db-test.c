@@ -1490,8 +1490,6 @@ test_externals_store(apr_pool_t *pool)
                                      db, file_external_path, local_abspath,
                                      pool, pool));
 
-    SVN_DBG(("Revision: %d (%s)\n", (int)revision, local_abspath));
-
     SVN_TEST_ASSERT(kind == svn_wc__db_kind_file);
     SVN_TEST_ASSERT(revision == 12);
     SVN_TEST_STRING_ASSERT(repos_relpath, "some/location");
