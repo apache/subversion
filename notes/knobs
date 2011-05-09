@@ -54,6 +54,7 @@ PACK_AFTER_EVERY_COMMIT
 DEBUG_DOUBLE_FREE
 SERF_VERBOSE
 SSL_VERBOSE
+SVN_DEPRECATED
 
 2.4 Test-only
 
@@ -268,6 +269,13 @@ SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
   Default:   not defined
   Suggested: defined, not defined
 
+5.11 SVN_DEPRECATED
+
+  Scope:     (everywhere)
+  Purpose:   disable "deprecated function calls" warnings
+  Range:     function declaration decorator
+  Default:   (compiler dependant)
+  Suggested: "" (disable deprecation warnings), or compiler-specific decorators
 
 6 Defines that affect unit tests
 ================================
