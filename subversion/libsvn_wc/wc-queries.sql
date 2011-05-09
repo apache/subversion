@@ -816,24 +816,24 @@ SELECT 1 FROM actual_node WHERE wc_id = ?1 AND parent_relpath = ?2
 INSERT OR REPLACE INTO externals (
     wc_id, local_relpath, parent_relpath, repos_id, repos_path, revision,
     kind, symlink_target, changed_revision, changed_date, changed_author,
-    record_relpath, recorded_url, recorded_operational_revision,
-    recorded_revision, checksum, properties, dav_cache)
+    def_local_relpath, def_repos_relpath, def_operational_revision,
+    def_revision, checksum, properties, dav_cache)
 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16,
         ?17, ?18)
 
 -- STMT_SELECT_EXTERNAL_INFO
 SELECT kind, revision, repos_id, repos_path, properties, checksum,
     symlink_target, changed_revision, changed_date, changed_author,
-    translated_size, last_mod_time, record_relpath, recorded_url,
-    recorded_operational_revision, recorded_revision,
+    recorded_size, recorded_mod_time, def_local_relpath, def_repos_relpath,
+    def_operational_revision, def_revision
 FROM externals WHERE wc_id = ?1 AND local_relpath = ?2
 LIMIT 1
 
 -- STMT_SELECT_EXTERNAL_INFO_WITH_LOCK
 SELECT kind, revision, externals.repos_id, externals.repos_path, properties,
     checksum, symlink_target, changed_revision, changed_date, changed_author,
-    translated_size, last_mod_time, record_relpath, recorded_url,
-    recorded_operational_revision, recorded_revision,
+    recorded_size, recorded_mod_time, def_local_relpath, def_repos_relpath,
+    def_operational_revision, def_revision,
     lock_token, lock_owner, lock_comment, lock_date
 FROM externals
 LEFT OUTER JOIN lock ON externals.repos_id = lock.repos_id
@@ -847,7 +847,7 @@ FROM externals WHERE wc_id = ?1 AND parent_relpath = ?2
 
 -- STMT_SELECT_EXTERNALS_DEFINED
 SELECT local_relpath
-FROM externals WHERE wc_id = ?1 AND record_relpath = ?2
+FROM externals WHERE wc_id = ?1 AND def_local_relpath = ?2
 
 /* ------------------------------------------------------------------------- */
 
