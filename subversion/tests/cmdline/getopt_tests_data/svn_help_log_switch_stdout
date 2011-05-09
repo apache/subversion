@@ -57,6 +57,8 @@ Valid options:
   --with-all-revprops      : retrieve all revision properties
   --with-no-revprops       : retrieve no revision properties
   --with-revprop ARG       : retrieve revision property ARG
+  --depth ARG              : limit operation by depth ARG ('empty', 'files',
+                             'immediates', or 'infinity')
   --diff                   : produce diff output
   --diff-cmd ARG           : use ARG as diff command
   --internal-diff [--idiff] : override diff-cmd specified in config file
