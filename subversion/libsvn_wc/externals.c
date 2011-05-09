@@ -1020,10 +1020,10 @@ svn_wc__crawl_file_external(svn_wc_context_t *wc_ctx,
     {
       if (restore_files)
         {
-          svn_node_kind_t kind;
-          SVN_ERR(svn_io_check_path(local_abspath, &kind, scratch_pool));
+          svn_node_kind_t disk_kind;
+          SVN_ERR(svn_io_check_path(local_abspath, &disk_kind, scratch_pool));
 
-          if (kind == svn_node_none)
+          if (disk_kind == svn_node_none)
             {
               err = svn_wc_restore(wc_ctx, local_abspath, use_commit_times,
                                    scratch_pool);
