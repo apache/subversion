@@ -953,25 +953,18 @@ open_root(void *edit_baton,
   SVN_ERR(make_dir_baton(&db, NULL, eb, NULL, FALSE, pool));
   *dir_baton = db;
 
-  SVN_ERR(svn_wc__db_read_kind(&kind, eb->db, db->local_abspath, TRUE, pool));
+  err = already_in_a_tree_conflict(&already_conflicted, eb->db,
+                                   db->local_abspath, pool);
 
-  if (kind == svn_wc__db_kind_dir)
+  if (err)
     {
-      err = already_in_a_tree_conflict(&already_conflicted, eb->db,
-                                       db->local_abspath, pool);
+      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+        return svn_error_return(err);
 
-      if (err && err->apr_err == SVN_ERR_WC_MISSING)
-        {
-          svn_error_clear(err);
-          already_conflicted = FALSE;
-        }
-      else
-        SVN_ERR(err);
+      svn_error_clear(err);
+      already_conflicted = FALSE;
     }
-  else
-    already_conflicted = FALSE;
-
-  if (already_conflicted)
+  else if (already_conflicted)
     {
       db->skip_this = TRUE;
       db->already_notified = TRUE;
