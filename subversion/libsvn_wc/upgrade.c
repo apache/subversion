@@ -1213,6 +1213,19 @@ bump_to_28(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+bump_to_29(void *baton, svn_sqlite__db_t *sdb, apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_CREATE_EXTERNALS));
+  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_29));
+
+  /* ### Before enabling this code we should be able to upgrade existing
+     ### file externals to their new location */
+  SVN_ERR_MALFUNCTION();
+  return SVN_NO_ERROR;
+}
+
+
 struct upgrade_data_t {
   svn_sqlite__db_t *sdb;
   const char *root_abspath;
@@ -1497,6 +1510,14 @@ svn_wc__upgrade_sdb(int *result_format,
                                              scratch_pool));
         *result_format = 28;
         /* FALLTHROUGH  */
+
+#if SVN_WC__VERSION >= SVN_WC__HAS_EXTERNALS_STORE
+      case 28:
+        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_29, &bb,
+                                             scratch_pool));
+        *result_format = 29;
+        /* FALLTHROUGH  */
+#endif
 
       /* ### future bumps go here.  */
 #if 0
