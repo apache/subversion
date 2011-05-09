@@ -1319,7 +1319,6 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
                    apr_pool_t *scratch_pool)
 {
   merge_cmd_baton_t *merge_b = baton;
-  apr_pool_t *subpool;
   enum svn_wc_merge_outcome_t merge_outcome;
   svn_node_kind_t wc_kind;
   svn_boolean_t is_deleted;
@@ -1395,8 +1394,6 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
       return SVN_NO_ERROR;
     }
 
-   subpool = svn_pool_create(merge_b->pool);
-
   /* ### TODO: Thwart attempts to merge into a path that has
      ### unresolved conflicts.  This needs to be smart enough to deal
      ### with tree conflicts!
@@ -1431,7 +1428,6 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
           if (tree_conflicted != NULL)
             *tree_conflicted = TRUE;
 
-          svn_pool_destroy(subpool);
           return SVN_NO_ERROR;
         }
     }
@@ -1441,7 +1437,6 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
   /* Easy out: We are only applying mergeinfo differences. */
   if (merge_b->record_only)
     {
-      svn_pool_destroy(subpool);
       if (content_state)
         *content_state = svn_wc_notify_state_unchanged;
       return SVN_NO_ERROR;
@@ -1455,10 +1450,10 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
          '.merge-right.r%ld' strings are used to tag onto a file
          name in case of a merge conflict */
       const char *target_label = _(".working");
-      const char *left_label = apr_psprintf(subpool,
+      const char *left_label = apr_psprintf(scratch_pool,
                                             _(".merge-left.r%ld"),
                                             older_rev);
-      const char *right_label = apr_psprintf(subpool,
+      const char *right_label = apr_psprintf(scratch_pool,
                                              _(".merge-right.r%ld"),
                                              yours_rev);
       conflict_resolver_baton_t conflict_baton = { 0 };
@@ -1466,7 +1461,7 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
       const svn_wc_conflict_version_t *right;
 
       SVN_ERR(svn_wc_text_modified_p2(&has_local_mods, merge_b->ctx->wc_ctx,
-                                      mine_abspath, FALSE, subpool));
+                                      mine_abspath, FALSE, scratch_pool));
 
       conflict_baton.wrapped_func = merge_b->ctx->conflict_func2;
       conflict_baton.wrapped_baton = merge_b->ctx->conflict_baton2;
@@ -1484,7 +1479,7 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
                             conflict_resolver, &conflict_baton,
                             merge_b->ctx->cancel_func,
                             merge_b->ctx->cancel_baton,
-                            subpool));
+                            scratch_pool));
 
       if (content_state)
         {
@@ -1502,7 +1497,6 @@ merge_file_changed(svn_wc_notify_state_t *content_state,
         }
     }
 
-  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
@@ -1526,7 +1520,6 @@ merge_file_added(svn_wc_notify_state_t *content_state,
                  apr_pool_t *scratch_pool)
 {
   merge_cmd_baton_t *merge_b = baton;
-  apr_pool_t *subpool = svn_pool_create(merge_b->pool);
   svn_node_kind_t kind;
   int i;
   apr_hash_t *file_props;
@@ -1536,7 +1529,6 @@ merge_file_added(svn_wc_notify_state_t *content_state,
   /* Easy out: We are only applying mergeinfo differences. */
   if (merge_b->record_only)
     {
-      svn_pool_destroy(subpool);
       if (content_state)
         *content_state = svn_wc_notify_state_unchanged;
       if (prop_state)
@@ -1551,7 +1543,7 @@ merge_file_added(svn_wc_notify_state_t *content_state,
     *prop_state = svn_wc_notify_state_unknown;
 
   /* Apply the prop changes to a new hash table. */
-  file_props = apr_hash_copy(subpool, original_props);
+  file_props = apr_hash_copy(scratch_pool, original_props);
   for (i = 0; i < prop_changes->nelts; ++i)
     {
       const svn_prop_t *prop = &APR_ARRAY_IDX(prop_changes, i, svn_prop_t);
@@ -1600,12 +1592,11 @@ merge_file_added(svn_wc_notify_state_t *content_state,
         else if (content_state)
           *content_state = obstr_state;
 
-        svn_pool_destroy(subpool);
         return SVN_NO_ERROR;
       }
   }
 
-  SVN_ERR(svn_io_check_path(mine_abspath, &kind, subpool));
+  SVN_ERR(svn_io_check_path(mine_abspath, &kind, scratch_pool));
   switch (kind)
     {
     case svn_node_none:
@@ -1623,33 +1614,35 @@ merge_file_added(svn_wc_notify_state_t *content_state,
                Otherwise, we'll use a pure add. */
             if (merge_b->same_repos)
               {
-                const char *child = svn_dirent_is_child(merge_b->target_abspath,
-                                                        mine_abspath, subpool);
+                const char *child =
+                  svn_dirent_is_child(merge_b->target_abspath, mine_abspath,
+                                      scratch_pool);
                 if (child != NULL)
                   copyfrom_url = svn_path_url_add_component2(
                                                merge_b->merge_source.url2,
-                                               child, subpool);
+                                               child, scratch_pool);
                 else
                   copyfrom_url = merge_b->merge_source.url2;
                 copyfrom_rev = rev2;
                 SVN_ERR(check_repos_match(merge_b, mine_abspath, copyfrom_url,
-                                          subpool));
+                                          scratch_pool));
                 new_base_props = file_props;
                 new_props = NULL; /* inherit from new_base_props */
                 SVN_ERR(svn_stream_open_readonly(&new_base_contents,
                                                  yours_abspath,
-                                                 subpool, subpool));
+                                                 scratch_pool,
+                                                 scratch_pool));
                 new_contents = NULL; /* inherit from new_base_contents */
               }
             else
               {
                 copyfrom_url = NULL;
                 copyfrom_rev = SVN_INVALID_REVNUM;
-                new_base_props = apr_hash_make(subpool);
+                new_base_props = apr_hash_make(scratch_pool);
                 new_props = file_props;
-                new_base_contents = svn_stream_empty(subpool);
+                new_base_contents = svn_stream_empty(scratch_pool);
                 SVN_ERR(svn_stream_open_readonly(&new_contents, yours_abspath,
-                                                 subpool, subpool));
+                                                 scratch_pool, scratch_pool));
               }
 
             SVN_ERR(svn_wc__get_tree_conflict(&existing_conflict,
@@ -1677,14 +1670,15 @@ merge_file_added(svn_wc_notify_state_t *content_state,
                    copying 'yours' to 'mine', isn't enough; we need to get
                    the whole text-base and props installed too, just as if
                    we had called 'svn cp wc wc'. */
-                SVN_ERR(svn_wc_add_repos_file4(
-                            merge_b->ctx->wc_ctx, mine_abspath,
-                            new_base_contents, new_contents,
-                            new_base_props, new_props,
-                            copyfrom_url, copyfrom_rev,
-                            merge_b->ctx->cancel_func,
-                            merge_b->ctx->cancel_baton,
-                            subpool));
+                SVN_ERR(svn_wc_add_repos_file4(merge_b->ctx->wc_ctx,
+                                               mine_abspath,
+                                               new_base_contents,
+                                               new_contents,
+                                               new_base_props, new_props,
+                                               copyfrom_url, copyfrom_rev,
+                                               merge_b->ctx->cancel_func,
+                                               merge_b->ctx->cancel_baton,
+                                               scratch_pool));
 
                 /* ### delete 'yours' ? */
               }
@@ -1711,7 +1705,7 @@ merge_file_added(svn_wc_notify_state_t *content_state,
           /* directory already exists, is it under version control? */
           svn_node_kind_t wc_kind;
           SVN_ERR(svn_wc_read_kind(&wc_kind, merge_b->ctx->wc_ctx,
-                                   mine_abspath, FALSE, subpool));
+                                   mine_abspath, FALSE, scratch_pool));
 
           if ((wc_kind != svn_node_none)
               && dry_run_deleted_p(merge_b, mine_abspath))
@@ -1750,7 +1744,6 @@ merge_file_added(svn_wc_notify_state_t *content_state,
       break;
     }
 
-  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
@@ -1844,7 +1837,6 @@ merge_file_deleted(svn_wc_notify_state_t *state,
                    apr_pool_t *scratch_pool)
 {
   merge_cmd_baton_t *merge_b = baton;
-  apr_pool_t *subpool = svn_pool_create(merge_b->pool);
   svn_node_kind_t kind;
 
   if (merge_b->dry_run)
@@ -1857,7 +1849,6 @@ merge_file_deleted(svn_wc_notify_state_t *state,
   /* Easy out: We are only applying mergeinfo differences. */
   if (merge_b->record_only)
     {
-      svn_pool_destroy(subpool);
       if (state)
         *state = svn_wc_notify_state_unchanged;
       return SVN_NO_ERROR;
@@ -1876,12 +1867,11 @@ merge_file_deleted(svn_wc_notify_state_t *state,
       {
         if (state)
           *state = obstr_state;
-        svn_pool_destroy(subpool);
         return SVN_NO_ERROR;
       }
   }
 
-  SVN_ERR(svn_io_check_path(mine_abspath, &kind, subpool));
+  SVN_ERR(svn_io_check_path(mine_abspath, &kind, scratch_pool));
   switch (kind)
     {
     case svn_node_file:
@@ -1890,14 +1880,15 @@ merge_file_deleted(svn_wc_notify_state_t *state,
 
         /* If the files are identical, attempt deletion */
         SVN_ERR(files_same_p(&same, older_abspath, original_props,
-                             mine_abspath, merge_b->ctx->wc_ctx, subpool));
+                             mine_abspath, merge_b->ctx->wc_ctx,
+                             scratch_pool));
         if (same || merge_b->force || merge_b->record_only /* ### why? */)
           {
             /* Passing NULL for the notify_func and notify_baton because
                repos_diff.c:delete_entry() will do it for us. */
             SVN_ERR(svn_client__wc_delete(mine_abspath, TRUE,
                                           merge_b->dry_run, FALSE, NULL, NULL,
-                                          merge_b->ctx, subpool));
+                                          merge_b->ctx, scratch_pool));
             if (state)
               *state = svn_wc_notify_state_changed;
           }
@@ -1953,7 +1944,6 @@ merge_file_deleted(svn_wc_notify_state_t *state,
       break;
     }
 
-  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
@@ -1968,10 +1958,9 @@ merge_dir_added(svn_wc_notify_state_t *state,
                 const char *copyfrom_path,
                 svn_revnum_t copyfrom_revision,
                 void *baton,
-               apr_pool_t *scratch_pool)
+                apr_pool_t *scratch_pool)
 {
   merge_cmd_baton_t *merge_b = baton;
-  apr_pool_t *subpool = svn_pool_create(merge_b->pool);
   svn_node_kind_t kind;
   const char *copyfrom_url = NULL, *child;
   svn_revnum_t copyfrom_rev = SVN_INVALID_REVNUM;
@@ -1982,7 +1971,6 @@ merge_dir_added(svn_wc_notify_state_t *state,
   /* Easy out: We are only applying mergeinfo differences. */
   if (merge_b->record_only)
     {
-      svn_pool_destroy(subpool);
       if (state)
         *state = svn_wc_notify_state_unchanged;
       return SVN_NO_ERROR;
@@ -1999,11 +1987,11 @@ merge_dir_added(svn_wc_notify_state_t *state,
   if (merge_b->same_repos)
     {
       copyfrom_url = svn_path_url_add_component2(merge_b->merge_source.url2,
-                                                 child, subpool);
+                                                 child, scratch_pool);
       copyfrom_rev = rev;
 
       SVN_ERR(check_repos_match(merge_b, parent_abspath, copyfrom_url,
-                                subpool));
+                                scratch_pool));
     }
 
   /* Check for an obstructed or missing node on disk. */
@@ -2046,7 +2034,6 @@ merge_dir_added(svn_wc_notify_state_t *state,
           }
         else if (state)
           *state = obstr_state;
-        svn_pool_destroy(subpool);
         return SVN_NO_ERROR;
       }
 
@@ -2067,14 +2054,15 @@ merge_dir_added(svn_wc_notify_state_t *state,
         }
       else
         {
-          SVN_ERR(svn_io_dir_make(local_abspath, APR_OS_DEFAULT, subpool));
+          SVN_ERR(svn_io_dir_make(local_abspath, APR_OS_DEFAULT,
+                                  scratch_pool));
           SVN_ERR(svn_wc_add4(merge_b->ctx->wc_ctx, local_abspath,
                               svn_depth_infinity,
                               copyfrom_url, copyfrom_rev,
                               merge_b->ctx->cancel_func,
                               merge_b->ctx->cancel_baton,
                               NULL, NULL, /* don't pass notification func! */
-                              subpool));
+                              scratch_pool));
 
         }
       if (state)
@@ -2093,7 +2081,7 @@ merge_dir_added(svn_wc_notify_state_t *state,
                                 merge_b->ctx->cancel_func,
                                 merge_b->ctx->cancel_baton,
                                 NULL, NULL, /* no notification func! */
-                                subpool));
+                                scratch_pool));
           else
             merge_b->added_path = apr_pstrdup(merge_b->pool, local_abspath);
           if (state)
@@ -2153,7 +2141,6 @@ merge_dir_added(svn_wc_notify_state_t *state,
       break;
     }
 
-  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
@@ -2166,7 +2153,6 @@ merge_dir_deleted(svn_wc_notify_state_t *state,
                   apr_pool_t *scratch_pool)
 {
   merge_cmd_baton_t *merge_b = baton;
-  apr_pool_t *subpool = svn_pool_create(merge_b->pool);
   svn_node_kind_t kind;
   svn_error_t *err;
   svn_boolean_t is_versioned;
@@ -2175,7 +2161,6 @@ merge_dir_deleted(svn_wc_notify_state_t *state,
   /* Easy out: We are only applying mergeinfo differences. */
   if (merge_b->record_only)
     {
-      svn_pool_destroy(subpool);
       if (state)
         *state = svn_wc_notify_state_unchanged;
       return SVN_NO_ERROR;
@@ -2196,7 +2181,6 @@ merge_dir_deleted(svn_wc_notify_state_t *state,
       {
         if (state)
           *state = obstr_state;
-        svn_pool_destroy(subpool);
         return SVN_NO_ERROR;
       }
 
@@ -2231,7 +2215,7 @@ merge_dir_deleted(svn_wc_notify_state_t *state,
             err = svn_client__wc_delete(local_abspath, merge_b->force,
                                         merge_b->dry_run, FALSE,
                                         NULL, NULL,
-                                        merge_b->ctx, subpool);
+                                        merge_b->ctx, scratch_pool);
             if (err)
               {
                 svn_error_clear(err);
@@ -2287,7 +2271,6 @@ merge_dir_deleted(svn_wc_notify_state_t *state,
       break;
     }
 
-  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
