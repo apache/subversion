@@ -27,8 +27,8 @@
 #error "You should not be using these data structures directly"
 #endif /* SVN_WC__I_AM_WC_DB */
 
-#ifndef WC_DB_PDH_H
-#define WC_DB_PDH_H
+#ifndef WC_DB_PRIVATE_H
+#define WC_DB_PRIVATE_H
 
 #include "wc_db.h"
 
@@ -185,4 +185,4 @@ svn_wc__db_with_txn(svn_wc__db_wcroot_t *wcroot,
                     apr_pool_t *scratch_pool);
 
 
-#endif /* WC_DB_PDH_H */
+#endif /* WC_DB_PRIVATE_H */
