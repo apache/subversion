@@ -63,7 +63,7 @@ typedef struct hunk_info_t {
 
   /* The fuzz factor used when matching this hunk, i.e. how many
    * lines of leading and trailing context to ignore during matching. */
-  int fuzz;
+  svn_linenum_t fuzz;
 } hunk_info_t;
 
 /* A struct carrying the information related to the content of a target, be it
@@ -835,7 +835,7 @@ seek_to_line(target_content_info_t *content_info, svn_linenum_t line,
  * Do temporary allocations in POOL. */
 static svn_error_t *
 match_hunk(svn_boolean_t *matched, target_content_info_t *content_info,
-           svn_diff_hunk_t *hunk, int fuzz,
+           svn_diff_hunk_t *hunk, svn_linenum_t fuzz,
            svn_boolean_t ignore_whitespace,
            svn_boolean_t match_modified, apr_pool_t *pool)
 {
@@ -952,7 +952,7 @@ static svn_error_t *
 scan_for_match(svn_linenum_t *matched_line,
                target_content_info_t *content_info,
                svn_diff_hunk_t *hunk, svn_boolean_t match_first,
-               svn_linenum_t upper_line, int fuzz,
+               svn_linenum_t upper_line, svn_linenum_t fuzz,
                svn_boolean_t ignore_whitespace,
                svn_boolean_t match_modified,
                svn_cancel_func_t cancel_func, void *cancel_baton,
@@ -1088,7 +1088,7 @@ match_existing_target(svn_boolean_t *match,
 static svn_error_t *
 get_hunk_info(hunk_info_t **hi, patch_target_t *target,
               target_content_info_t *content_info,
-              svn_diff_hunk_t *hunk, int fuzz,
+              svn_diff_hunk_t *hunk, svn_linenum_t fuzz,
               svn_boolean_t ignore_whitespace,
               svn_boolean_t is_prop_hunk,
               svn_cancel_func_t cancel_func, void *cancel_baton,
@@ -1640,7 +1640,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
   patch_target_t *target;
   apr_pool_t *iterpool;
   int i;
-  static const int MAX_FUZZ = 2;
+  static const svn_linenum_t MAX_FUZZ = 2;
   apr_hash_index_t *hash_index;
   target_content_info_t *prop_content_info;
 
@@ -1671,7 +1671,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
     {
       svn_diff_hunk_t *hunk;
       hunk_info_t *hi;
-      int fuzz = 0;
+      svn_linenum_t fuzz = 0;
 
       svn_pool_clear(iterpool);
 
@@ -1755,7 +1755,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
         {
           svn_diff_hunk_t *hunk;
           hunk_info_t *hi;
-          int fuzz = 0;
+          svn_linenum_t fuzz = 0;
 
           svn_pool_clear(iterpool);
 
