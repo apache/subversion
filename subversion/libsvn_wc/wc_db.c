@@ -1364,6 +1364,9 @@ create_db(svn_sqlite__db_t **sdb,
   SVN_ERR(svn_sqlite__exec_statements(*sdb, STMT_CREATE_SCHEMA));
   SVN_ERR(svn_sqlite__exec_statements(*sdb, STMT_CREATE_NODES));
   SVN_ERR(svn_sqlite__exec_statements(*sdb, STMT_CREATE_NODES_TRIGGERS));
+#if SVN_WC__VERSION >= SVN_WC__HAS_EXTERNALS_STORE
+  SVN_ERR(svn_sqlite__exec_statements(*sdb, STMT_CREATE_EXTERNALS));
+#endif
 
   /* Insert the repository. */
   SVN_ERR(create_repos_id(repos_id, repos_root_url, repos_uuid, *sdb,

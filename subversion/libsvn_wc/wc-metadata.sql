@@ -530,7 +530,64 @@ BEGIN
   WHERE checksum = OLD.checksum;
 END;
 
+-- STMT_CREATE_EXTERNALS
 
+CREATE TABLE EXTERNALS (
+  /* Working copy location related fields (like NODES)*/
+
+  wc_id  INTEGER NOT NULL REFERENCES WCROOT (id),
+  local_relpath  TEXT NOT NULL,
+
+  /* The working copy root can't be recorded as an external in itself
+     so this will never be NULL. */
+  parent_relpath  TEXT NOT NULL,
+
+  /* Repository location fields */
+
+  /* Always set for file and symlink externals. NULL for directory externals */
+  repos_id  INTEGER REFERENCES REPOSITORY (id),
+  repos_path  TEXT,
+  revision  INTEGER,
+
+  /* Content fields */
+
+  /* the kind of the external. */
+  kind  TEXT NOT NULL,
+
+  /* Variouse information (NULL for directories; see NODES for explanation) */
+  properties  BLOB,
+  checksum  TEXT REFERENCES PRISTINE (checksum),
+  symlink_target  TEXT,
+
+  /* Last-Change fields (NULL for directories; see NODES for explanation) */
+  changed_revision  INTEGER,
+  changed_date      INTEGER,
+  changed_author    TEXT,
+
+  /* Various cache fields (NULL for directories; see NODES for explanation) */
+  translated_size  INTEGER,
+  last_mod_time  INTEGER,
+  dav_cache  BLOB,
+
+
+  /* The local relpath of the directory NODE defining this external 
+     (Defaults to the parent directory of the file external after upgrade) */
+  record_relpath         TEXT NOT NULL,
+
+  /* The url of the external as used in the definition */
+  recorded_url           TEXT NOT NULL,
+
+  /* The operational (peg) and node revision if this is a revision fixed
+     external; otherwise NULL. (Usually these will both have the same value) */
+  recorded_operational_revision  TEXT NOT NULL,
+  recorded_revision              TEXT NOT NULL,
+
+  PRIMARY KEY (wc_id, local_relpath)
+);
+
+CREATE INDEX I_EXTERNALS_PARENT ON EXTERNALS (wc_id, parent_relpath);
+CREATE UNIQUE INDEX I_EXTERNALS_RECORDED ON EXTERNALS (wc_id, record_relpath,
+                                                       local_relpath);
 
 /* Format 20 introduces NODES and removes BASE_NODE and WORKING_NODE */
 
@@ -664,7 +721,8 @@ PRAGMA user_version = 28;
 
 /* ------------------------------------------------------------------------- */
 
-/* Format 29 introduces ... */
+/* Format 29 introduces the EXTERNALS table (See STMT_CREATE_TRIGGERS) and
+   optimizes a trigger definition. ... */
 
 -- STMT_UPGRADE_TO_29
 
