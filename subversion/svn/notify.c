@@ -346,7 +346,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
                   err = svn_cmdline_printf(pool,
                                            apr_pstrcat(pool, s,
                                                        "%"APR_UINT64_T_FMT
-                                                       " and fuzz %d (%s)\n",
+                                                       " and fuzz %lu (%s)\n",
                                                        (char *)NULL),
                                            n->hunk_original_start,
                                            n->hunk_original_length,
@@ -363,7 +363,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
                   err = svn_cmdline_printf(pool,
                                            apr_pstrcat(pool, s,
                                                        "%"APR_UINT64_T_FMT
-                                                       " and fuzz %d\n",
+                                                       " and fuzz %lu\n",
                                                        (char *)NULL),
                                            n->hunk_original_start,
                                            n->hunk_original_length,
@@ -416,7 +416,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
           if (n->prop_name)
             err = svn_cmdline_printf(pool,
                           _(">         applied hunk ## -%lu,%lu +%lu,%lu ## "
-                                        "with fuzz %d (%s)\n"),
+                                        "with fuzz %lu (%s)\n"),
                                         n->hunk_original_start,
                                         n->hunk_original_length,
                                         n->hunk_modified_start,
@@ -426,7 +426,7 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
           else
             err = svn_cmdline_printf(pool,
                           _(">         applied hunk @@ -%lu,%lu +%lu,%lu @@ "
-                                        "with fuzz %d\n"),
+                                        "with fuzz %lu\n"),
                                         n->hunk_original_start,
                                         n->hunk_original_length,
                                         n->hunk_modified_start,
