@@ -796,6 +796,68 @@ def merge_sensitive_blame_and_empty_mergeinfo(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                     'blame', '-g', psi_COPY_path)
 
+def blame_multiple_targets(sbox):
+  "blame multiple target"
+
+  sbox.build()
+
+  def multiple_wc_targets():
+    "multiple wc targets"
+    
+    # First, make a new revision of iota.
+    iota = os.path.join(sbox.wc_dir, 'iota')
+    non_existent = os.path.join(sbox.wc_dir, 'non-existent')
+    svntest.main.file_append(iota, "New contents for iota\n")
+    svntest.main.run_svn(None, 'ci',
+                         '-m', '', iota)
+
+    expected_output = [
+      "     1    jrandom This is the file 'iota'.\n",
+      "     2    jrandom New contents for iota\n",
+      ]
+
+    expected_err = ".*W155010.*\n.*E200009.*"
+    expected_err_re = re.compile(expected_err, re.DOTALL)
+
+    exit_code, output, error = svntest.main.run_svn(1, 'blame', 
+                                                    non_existent, iota)
+
+    # Verify error
+    if not expected_err_re.match("".join(error)):
+      raise svntest.Failure('blame failed: expected error "%s", but received '
+                            '"%s"' % (expected_err, "".join(error)))
+
+  def multiple_url_targets():
+    "multiple url targets"
+
+    # First, make a new revision of iota.
+    iota = os.path.join(sbox.wc_dir, 'iota')
+    iota_url = sbox.repo_url + '/iota'
+    non_existent = sbox.repo_url + '/non-existent'
+    svntest.main.file_append(iota, "New contents for iota\n")
+    svntest.main.run_svn(None, 'ci',
+                         '-m', '', iota)
+
+    expected_output = [
+      "     1    jrandom This is the file 'iota'.\n",
+      "     2    jrandom New contents for iota\n",
+      ]
+
+    expected_err = ".*(W160017|W160013).*\n.*E200009.*"
+    expected_err_re = re.compile(expected_err, re.DOTALL)
+
+    exit_code, output, error = svntest.main.run_svn(1, 'blame', 
+                                                    non_existent, iota_url)
+
+    # Verify error
+    if not expected_err_re.match("".join(error)):
+      raise svntest.Failure('blame failed: expected error "%s", but received '
+                            '"%s"' % (expected_err, "".join(error)))
+
+  # Test one by one
+  multiple_wc_targets()
+  multiple_url_targets()
+
 ########################################################################
 # Run the tests
 
@@ -817,6 +879,7 @@ test_list = [ None,
               blame_file_not_in_head,
               blame_output_after_merge,
               merge_sensitive_blame_and_empty_mergeinfo,
+              blame_multiple_targets,
              ]
 
 if __name__ == '__main__':
