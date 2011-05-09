@@ -565,28 +565,29 @@ CREATE TABLE EXTERNALS (
   changed_author    TEXT,
 
   /* Various cache fields (NULL for directories; see NODES for explanation) */
-  translated_size  INTEGER,
-  last_mod_time  INTEGER,
+  recorded_size  INTEGER,
+  recorded_mod_time  INTEGER,
   dav_cache  BLOB,
 
 
   /* The local relpath of the directory NODE defining this external 
      (Defaults to the parent directory of the file external after upgrade) */
-  record_relpath         TEXT NOT NULL,
+  def_local_relpath         TEXT NOT NULL,
 
   /* The url of the external as used in the definition */
-  recorded_url           TEXT NOT NULL,
+  def_repos_relpath         TEXT NOT NULL,
 
   /* The operational (peg) and node revision if this is a revision fixed
      external; otherwise NULL. (Usually these will both have the same value) */
-  recorded_operational_revision  TEXT NOT NULL,
-  recorded_revision              TEXT NOT NULL,
+  def_operational_revision  TEXT,
+  def_revision              TEXT,
 
   PRIMARY KEY (wc_id, local_relpath)
 );
 
 CREATE INDEX I_EXTERNALS_PARENT ON EXTERNALS (wc_id, parent_relpath);
-CREATE UNIQUE INDEX I_EXTERNALS_RECORDED ON EXTERNALS (wc_id, record_relpath,
+CREATE UNIQUE INDEX I_EXTERNALS_RECORDED ON EXTERNALS (wc_id,
+                                                       def_local_relpath,
                                                        local_relpath);
 
 /* Format 20 introduces NODES and removes BASE_NODE and WORKING_NODE */
