@@ -7838,13 +7838,13 @@ descendant_commit(svn_wc__db_wcroot_t *wcroot,
 
       local_relpath = svn_relpath_join(parent_local_relpath, name, iterpool);
       repos_relpath = svn_relpath_join(parent_repos_relpath, name, iterpool);
-      SVN_ERR(svn_sqlite__bindf(stmt, "isiisi",
+      SVN_ERR(svn_sqlite__bindf(stmt, "isiisr",
                                 wcroot->wc_id,
                                 local_relpath,
                                 op_depth,
                                 repos_id,
                                 repos_relpath,
-                                (apr_int64_t)revision));
+                                revision));
       SVN_ERR(svn_sqlite__step_done(stmt));
 
       SVN_ERR(descendant_commit(wcroot, local_relpath, op_depth, repos_id,
