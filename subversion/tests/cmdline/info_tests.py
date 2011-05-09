@@ -329,6 +329,60 @@ def info_url_special_characters(sbox):
   for url in special_urls:
     svntest.actions.run_and_verify_info([expected], url)
 
+def info_multiple_targets(sbox):
+  "info multiple targets"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  def multiple_wc_targets():
+    "multiple wc targets"
+
+    alpha = sbox.ospath('A/B/E/alpha')
+    beta = sbox.ospath('A/B/E/beta')
+    non_existent_path = os.path.join(wc_dir, 'non-existent')
+
+    # All targets are existing
+    svntest.actions.run_and_verify_svn2(None, None, [],
+                                        0, 'info', alpha, beta)
+
+    # One non-existing target
+    expected_err = ".*W155010.*\n\n.*E200009.*"
+    expected_err_re = re.compile(expected_err, re.DOTALL)
+
+    exit_code, output, error = svntest.main.run_svn(1, 'info', alpha, 
+                                                    non_existent_path, beta)
+
+    # Verify error
+    if not expected_err_re.match("".join(error)):
+      raise svntest.Failure('info failed: expected error "%s", but received '
+                            '"%s"' % (expected_err, "".join(error)))
+
+  def multiple_url_targets():
+    "multiple url targets"
+
+    alpha = sbox.repo_url +  '/A/B/E/alpha'
+    beta = sbox.repo_url +  '/A/B/E/beta'
+    non_existent_url = sbox.repo_url +  '/non-existent'
+
+    # All targets are existing
+    svntest.actions.run_and_verify_svn2(None, None, [],
+                                        0, 'info', alpha, beta)
+
+    # One non-existing target
+    expected_err = ".*W170000.*\n\n.*E200009.*"
+    expected_err_re = re.compile(expected_err, re.DOTALL)
+
+    exit_code, output, error = svntest.main.run_svn(1, 'info', alpha, 
+                                                    non_existent_url, beta)
+
+    # Verify error
+    if not expected_err_re.match("".join(error)):
+      raise svntest.Failure('info failed: expected error "%s", but received '
+                            '"%s"' % (expected_err, "".join(error)))
+  # Test one by one
+  multiple_wc_targets()
+  multiple_url_targets()
 
 ########################################################################
 # Run the tests
@@ -340,6 +394,7 @@ test_list = [ None,
               info_on_mkdir,
               info_wcroot_abspaths,
               info_url_special_characters,
+              info_multiple_targets,
              ]
 
 if __name__ == '__main__':
