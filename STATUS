@@ -266,6 +266,9 @@ Candidate changes:
      http://mid.gmane.org/25D5DB7A-AD59-4B48-8BA1-2D3D034C4C7A@ryandesign.com
    Votes: 
      +1: danielsh, pburba
+     -1: julianfoad (r1084581 changes the user-agent string; see
+           dev@ email "New)(?) Subversion client user-agent string ugliness."
+           <http://svn.haxx.se/dev/archive-2011-05/0219.shtml>)
 
  * r1091881
    Fix issue #3853, "svn cleanup fails with obstructed directories"
