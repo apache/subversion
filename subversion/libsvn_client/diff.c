@@ -801,9 +801,9 @@ diff_props_changed(svn_wc_notify_state_t *state,
   struct diff_cmd_baton *diff_cmd_baton = diff_baton;
   apr_array_header_t *props;
   svn_boolean_t show_diff_header;
-  apr_pool_t *subpool = svn_pool_create(diff_cmd_baton->pool);
 
-  SVN_ERR(svn_categorize_props(propchanges, NULL, NULL, &props, subpool));
+  SVN_ERR(svn_categorize_props(propchanges, NULL, NULL, &props,
+                               scratch_pool));
 
   if (apr_hash_get(diff_cmd_baton->visited_paths, path, APR_HASH_KEY_STRING))
     show_diff_header = FALSE;
@@ -828,7 +828,7 @@ diff_props_changed(svn_wc_notify_state_t *state,
                                  diff_cmd_baton->ra_session,
                                  diff_cmd_baton->wc_ctx,
                                  diff_cmd_baton->wc_root_abspath,
-                                 subpool));
+                                 scratch_pool));
 
       /* We've printed the diff header so now we can mark the path as
        * visited. */
@@ -842,7 +842,6 @@ diff_props_changed(svn_wc_notify_state_t *state,
   if (tree_conflicted)
     *tree_conflicted = FALSE;
 
-  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
