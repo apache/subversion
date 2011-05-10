@@ -2199,7 +2199,6 @@ close_edit(void *edit_baton,
   /* MERGE our activity */
   SVN_ERR(svn_ra_serf__merge_create_req(&merge_ctx, ctx->session,
                                         ctx->session->conns[0],
-                                        ctx->session->session_url.path,
                                         merge_target,
                                         ctx->lock_tokens,
                                         ctx->keep_locks,

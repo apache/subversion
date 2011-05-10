@@ -98,8 +98,8 @@ struct svn_ra_serf__merge_context_t
   apr_hash_t *lock_tokens;
   svn_boolean_t keep_locks;
 
-  const char *activity_url;
-  const char *merge_url;
+  const char *merge_resource_url; /* URL of resource to be merged. */
+  const char *merge_url; /* URL at which the MERGE request is aimed. */
 
   int status;
 
@@ -488,8 +488,8 @@ create_merge_body(serf_bucket_t **bkt,
   svn_ra_serf__add_open_tag_buckets(body_bkt, alloc, "D:href", NULL);
 
   svn_ra_serf__add_cdata_len_buckets(body_bkt, alloc,
-                                     ctx->activity_url,
-                                     strlen(ctx->activity_url));
+                                     ctx->merge_resource_url,
+                                     strlen(ctx->merge_resource_url));
 
   svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:href");
   svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:source");
@@ -516,17 +516,11 @@ create_merge_body(serf_bucket_t **bkt,
 }
 
 
-/* ### FIXME: As of HTTPv2, this isn't necessarily merging an
-   ### "activity".  It might be merging a transaction.  So,
-   ### ACTIVITY_URL might be a transaction root URL, not an actual
-   ### activity URL, etc.  Probably should rename ACTIVITY_URL to
-   ### MERGE_RESOURCE_URL or something.  */
 svn_error_t *
 svn_ra_serf__merge_create_req(svn_ra_serf__merge_context_t **ret_ctx,
                               svn_ra_serf__session_t *session,
                               svn_ra_serf__connection_t *conn,
-                              const char *path,
-                              const char *activity_url,
+                              const char *merge_resource_url,
                               apr_hash_t *lock_tokens,
                               svn_boolean_t keep_locks,
                               apr_pool_t *pool)
@@ -540,7 +534,7 @@ svn_ra_serf__merge_create_req(svn_ra_serf__merge_context_t **ret_ctx,
   merge_ctx->pool = pool;
   merge_ctx->session = session;
 
-  merge_ctx->activity_url = activity_url;
+  merge_ctx->merge_resource_url = merge_resource_url;
 
   merge_ctx->lock_tokens = lock_tokens;
   merge_ctx->keep_locks = keep_locks;
