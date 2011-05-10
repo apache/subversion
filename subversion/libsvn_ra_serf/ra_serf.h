@@ -1033,13 +1033,16 @@ svn_ra_serf__merge_lock_token_list(apr_hash_t *lock_tokens,
                                    serf_bucket_alloc_t *alloc,
                                    apr_pool_t *pool);
 
-/* Create an MERGE request */
+/* Create an MERGE request aimed at the SESSION url, requesting the
+   merge of the resource identified by MERGE_RESOURCE_URL.
+   LOCK_TOKENS is a hash mapping paths to lock tokens owned by the
+   client.  If KEEP_LOCKS is set, instruct the server to not release
+   locks set on the paths included in this commit.  */
 svn_error_t *
 svn_ra_serf__merge_create_req(svn_ra_serf__merge_context_t **merge_ctx,
                               svn_ra_serf__session_t *session,
                               svn_ra_serf__connection_t *conn,
-                              const char *path,
-                              const char *activity_url,
+                              const char *merge_resource_url,
                               apr_hash_t *lock_tokens,
                               svn_boolean_t keep_locks,
                               apr_pool_t *pool);
