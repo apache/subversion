@@ -373,8 +373,6 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
                               apr_pool_t *pool);
 
 /* Callback for response handlers */
-/* ### The return type should be changed to svn_error_t *,
-       but that is work in progress. */
 typedef svn_error_t *
 (*svn_ra_serf__response_handler_t)(serf_request_t *request,
                                    serf_bucket_t *response,
