@@ -894,6 +894,17 @@ svn_ra_serf__set_bare_props(void *baton,
                         ns, ns_len, name, name_len, val, pool);
 }
 
+
+/*
+ * Contact the server (using SESSION and CONN) to calculate baseline
+ * information for BASELINE_URL at REVISION (which may be
+ * SVN_INVALID_REVNUM to query the HEAD revision).
+ *
+ * If ACTUAL_REVISION is non-NULL, set *ACTUAL_REVISION to revision
+ * retrieved from the server as part of this process (which should
+ * match REVISION when REVISION is valid).  Set *BASECOLL_URL_P to the
+ * baseline collection URL.
+ */
 static svn_error_t *
 retrieve_baseline_info(svn_revnum_t *actual_revision,
                        const char **basecoll_url_p,
@@ -901,7 +912,7 @@ retrieve_baseline_info(svn_revnum_t *actual_revision,
                        svn_ra_serf__connection_t *conn,
                        const char *baseline_url,
                        svn_revnum_t revision,                       
-                       apr_pool_t  *pool)
+                       apr_pool_t *pool)
 {
   apr_hash_t *props = apr_hash_make(pool);
   const char *basecoll_url;
@@ -911,9 +922,8 @@ retrieve_baseline_info(svn_revnum_t *actual_revision,
                                       baseline_url, revision, "0",
                                       baseline_props, pool));
 
-  basecoll_url  = svn_ra_serf__get_ver_prop(props, baseline_url, revision,
-                                            "DAV:",
-                                            "baseline-collection");
+  basecoll_url = svn_ra_serf__get_ver_prop(props, baseline_url, revision,
+                                           "DAV:", "baseline-collection");
 
   if (!basecoll_url)
     {
@@ -925,15 +935,18 @@ retrieve_baseline_info(svn_revnum_t *actual_revision,
   *basecoll_url_p = svn_urlpath__canonicalize(basecoll_url, pool);
 
   version_name = svn_ra_serf__get_ver_prop(props, baseline_url, revision,
-                                       "DAV:", SVN_DAV__VERSION_NAME);
+                                           "DAV:", SVN_DAV__VERSION_NAME);
   if (!version_name)
     {
       return svn_error_create(SVN_ERR_RA_DAV_PROPS_NOT_FOUND, NULL,
                               _("The PROPFIND response did not include "
-                              "the requested version-name value"));
+                                "the requested version-name value"));
     }
 
-  *actual_revision = SVN_STR_TO_REV(version_name);
+  if (actual_revision)
+    {
+      *actual_revision = SVN_STR_TO_REV(version_name);
+    }
   
   return SVN_NO_ERROR;
 }
@@ -996,8 +1009,6 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
   /* Otherwise, we fall back to the old VCC_URL PROPFIND hunt.  */
   else
     {
-      svn_revnum_t actual_revision;
-
       SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session, conn, pool));
 
       if (revision != SVN_INVALID_REVNUM)
@@ -1009,17 +1020,21 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
 
           if (!basecoll_url)
             {
-              SVN_ERR(retrieve_baseline_info(&actual_revision, &basecoll_url,
-                                             session, conn,
-                                             vcc_url, revision,
-                                             pool));
-              SVN_ERR(svn_ra_serf__blncache_set(session->blncache,
-                                                NULL, revision, basecoll_url,
-                                                pool));
+              SVN_ERR(retrieve_baseline_info(NULL, &basecoll_url, session,
+                                             conn, vcc_url, revision, pool));
+              SVN_ERR(svn_ra_serf__blncache_set(session->blncache, NULL,
+                                                revision, basecoll_url, pool));
+            }
+
+          if (latest_revnum)
+            {
+              *latest_revnum = revision;
             }
         }
       else
         {
+          svn_revnum_t actual_revision;
+
           SVN_ERR(svn_ra_serf__retrieve_props(props, session, conn,
                                               vcc_url, revision, "0",
                                               checked_in_props, pool));
@@ -1045,16 +1060,15 @@ svn_ra_serf__get_baseline_info(const char **bc_url,
               SVN_ERR(retrieve_baseline_info(&actual_revision, &basecoll_url,
                                              session, conn,
                                              baseline_url, revision, pool));
-
               SVN_ERR(svn_ra_serf__blncache_set(session->blncache,
                                                 baseline_url, actual_revision,
                                                 basecoll_url, pool));
             }
-        }
 
-      if (latest_revnum)
-        {
-          *latest_revnum = actual_revision;
+          if (latest_revnum)
+            {
+              *latest_revnum = actual_revision;
+            }
         }
     }
 
