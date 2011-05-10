@@ -11842,7 +11842,7 @@ has_local_mods(svn_boolean_t *is_modified,
             {
               SVN_ERR(svn_wc__internal_file_modified_p(is_modified, NULL,
                                                        NULL, db, node_abspath,
-                                                       FALSE, TRUE, NULL,
+                                                       FALSE, TRUE,
                                                        iterpool));
               if (*is_modified)
                 break;
