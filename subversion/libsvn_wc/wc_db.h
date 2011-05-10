@@ -1108,6 +1108,16 @@ svn_wc__db_external_add_dir(svn_wc__db_t *db,
                             const svn_skel_t *work_items,
                             apr_pool_t *scratch_pool);
 
+/* Record the specified size and timestamp for the file external LOCAL_ABSPATH
+   in the working copy identified by WRI_ABSPATH */
+svn_error_t *
+svn_wc__db_external_record_fileinfo(svn_wc__db_t *db,
+                                    const char *local_abspath,
+                                    const char *wri_abspath,
+                                    svn_filesize_t recorded_size,
+                                    apr_time_t recorded_mod_time,
+                                    apr_pool_t *scratch_pool);
+
 /* Remove a registered external LOCAL_ABSPATH from the working copy identified
    by WRI_ABSPATH.
  */
