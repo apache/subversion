@@ -41,6 +41,7 @@ SVN_DISABLE_ENTRY_CACHE
 SVN_MERGE__ALLOW_ALL_FORWARD_MERGES_FROM_SELF
 SVN_USE_WIN32_CRASHHANDLER
 SVN_SERF_SEND_VTXN_NAME
+SVN_NEON_SEND_VTXN_NAME
 
 2.3 Debugging Support
 
@@ -168,8 +169,18 @@ SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
 
 4.6 SVN_SERF_SEND_VTXN_NAME
 
-  Scope:     serf
-  Purpose:   
+  Scope:     libsvn_ra_serf
+  Purpose:   Testing VTXN name for v2 commits.
+             Defining this causes the client to send a VTXN name header.
+  Range:     definedness
+  Default:   not defined
+  Suggested: defined, not defined
+
+4.7 SVN_NEON_SEND_VTXN_NAME
+
+  Scope:     libsvn_ra_neon
+  Purpose:   Testing VTXN name for v2 commits.
+             Defining this causes the client to send a VTXN name header.
   Range:     definedness
   Default:   not defined
   Suggested: defined, not defined
