@@ -277,6 +277,13 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1098608
+   Disallow GETs of baselined versions of resources.
+   Justification:
+     Returning proper errors is a Good Thing.
+   Votes:
+     +1: hwright
+
 Veto-blocked changes:
 =====================
 
