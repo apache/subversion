@@ -505,7 +505,7 @@ CREATE VIEW NODES_BASE AS
 
 CREATE TRIGGER nodes_insert_trigger
 AFTER INSERT ON nodes
-/* WHEN NEW.checksum IS NOT NULL */
+WHEN NEW.checksum IS NOT NULL
 BEGIN
   UPDATE pristine SET refcount = refcount + 1
   WHERE checksum = NEW.checksum;
@@ -513,7 +513,7 @@ END;
 
 CREATE TRIGGER nodes_delete_trigger
 AFTER DELETE ON nodes
-/* WHEN OLD.checksum IS NOT NULL */
+WHEN OLD.checksum IS NOT NULL
 BEGIN
   UPDATE pristine SET refcount = refcount - 1
   WHERE checksum = OLD.checksum;
@@ -586,9 +586,36 @@ CREATE TABLE EXTERNALS (
 );
 
 CREATE INDEX I_EXTERNALS_PARENT ON EXTERNALS (wc_id, parent_relpath);
-CREATE UNIQUE INDEX I_EXTERNALS_RECORDED ON EXTERNALS (wc_id,
-                                                       def_local_relpath,
-                                                       local_relpath);
+CREATE UNIQUE INDEX I_EXTERNALS_DEFINED ON EXTERNALS (wc_id,
+                                                      def_local_relpath,
+                                                      local_relpath);
+
+CREATE TRIGGER externals_update_checksum_trigger
+AFTER UPDATE OF checksum ON externals
+WHEN NEW.checksum IS NOT OLD.checksum
+  /* AND (NEW.checksum IS NOT NULL OR OLD.checksum IS NOT NULL) */
+BEGIN
+  UPDATE pristine SET refcount = refcount + 1
+  WHERE checksum = NEW.checksum;
+  UPDATE pristine SET refcount = refcount - 1
+  WHERE checksum = OLD.checksum;
+END;
+
+CREATE TRIGGER externals_insert_trigger
+AFTER INSERT ON externals
+WHEN NEW.checksum IS NOT NULL
+BEGIN
+  UPDATE pristine SET refcount = refcount + 1
+  WHERE checksum = NEW.checksum;
+END;
+
+CREATE TRIGGER externals_delete_trigger
+AFTER DELETE ON externals
+WHEN OLD.checksum IS NOT NULL
+BEGIN
+  UPDATE pristine SET refcount = refcount - 1
+  WHERE checksum = OLD.checksum;
+END;
 
 /* Format 20 introduces NODES and removes BASE_NODE and WORKING_NODE */
 
@@ -723,11 +750,13 @@ PRAGMA user_version = 28;
 /* ------------------------------------------------------------------------- */
 
 /* Format 29 introduces the EXTERNALS table (See STMT_CREATE_TRIGGERS) and
-   optimizes a trigger definition. ... */
+   optimizes a few trigger definitions. ... */
 
 -- STMT_UPGRADE_TO_29
 
 DROP TRIGGER IF EXISTS nodes_update_checksum_trigger;
+DROP TRIGGER IF EXISTS nodes_insert_trigger;
+DROP TRIGGER IF EXISTS nodes_delete_trigger;
 
 CREATE TRIGGER nodes_update_checksum_trigger
 AFTER UPDATE OF checksum ON nodes
@@ -740,6 +769,21 @@ BEGIN
   WHERE checksum = OLD.checksum;
 END;
 
+CREATE TRIGGER nodes_insert_trigger
+AFTER INSERT ON nodes
+WHEN NEW.checksum IS NOT NULL
+BEGIN
+  UPDATE pristine SET refcount = refcount + 1
+  WHERE checksum = NEW.checksum;
+END;
+
+CREATE TRIGGER nodes_delete_trigger
+AFTER DELETE ON nodes
+WHEN OLD.checksum IS NOT NULL
+BEGIN
+  UPDATE pristine SET refcount = refcount - 1
+  WHERE checksum = OLD.checksum;
+END;
 
 /* ------------------------------------------------------------------------- */
 
