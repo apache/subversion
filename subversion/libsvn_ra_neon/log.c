@@ -501,9 +501,8 @@ svn_error_t * svn_ra_neon__get_log(svn_ra_session_t *session,
      baseline-collection URL, which we get from the largest of the
      START and END revisions. */
   use_rev = (start > end) ? start : end;
-  SVN_ERR(svn_ra_neon__get_baseline_info(NULL, &bc_url, &bc_relative, NULL,
-                                         ras, ras->url->data, use_rev,
-                                         pool));
+  SVN_ERR(svn_ra_neon__get_baseline_info(&bc_url, &bc_relative, NULL, ras,
+                                         ras->url->data, use_rev, pool));
   final_bc_url = svn_path_url_add_component2(bc_url.data, bc_relative.data,
                                              pool);
 

@@ -1116,8 +1116,8 @@ static svn_error_t *svn_ra_neon__get_repos_root(svn_ra_session_t *session,
       svn_string_t bc_relative;
       svn_stringbuf_t *url_buf;
 
-      SVN_ERR(svn_ra_neon__get_baseline_info(NULL, NULL, &bc_relative,
-                                             NULL, ras, ras->url->data,
+      SVN_ERR(svn_ra_neon__get_baseline_info(NULL, &bc_relative, NULL,
+                                             ras, ras->url->data,
                                              SVN_INVALID_REVNUM, pool));
 
       /* Remove as many path components from the URL as there are components

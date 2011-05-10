@@ -957,8 +957,7 @@ svn_error_t *svn_ra_neon__get_baseline_props(svn_string_t *bc_relative,
 }
 
 
-svn_error_t *svn_ra_neon__get_baseline_info(svn_boolean_t *is_dir,
-                                            svn_string_t *bc_url,
+svn_error_t *svn_ra_neon__get_baseline_info(svn_string_t *bc_url,
                                             svn_string_t *bc_relative,
                                             svn_revnum_t *latest_rev,
                                             svn_ra_neon__session_t *sess,
@@ -966,9 +965,47 @@ svn_error_t *svn_ra_neon__get_baseline_info(svn_boolean_t *is_dir,
                                             svn_revnum_t revision,
                                             apr_pool_t *pool)
 {
-  svn_ra_neon__resource_t *baseline_rsrc, *rsrc;
+  svn_ra_neon__resource_t *baseline_rsrc;
   const svn_string_t *my_bc_url;
   svn_string_t my_bc_rel;
+
+  /* If the server supports HTTPv2, we can bypass alot of the hard
+     work here.  Otherwise, we fall back to older (less direct)
+     semantics.  */
+  if (SVN_RA_NEON__HAVE_HTTPV2_SUPPORT(sess))
+    {
+      svn_revnum_t youngest;
+
+      if (! SVN_IS_VALID_REVNUM(revision))
+        {
+          SVN_ERR(svn_ra_neon__exchange_capabilities(sess, NULL,
+                                                     &youngest, pool));
+          if (! SVN_IS_VALID_REVNUM(youngest))
+            return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+                                    _("The OPTIONS response did not include "
+                                      "the youngest revision"));
+          revision = youngest;
+        }
+      if (bc_url)
+        {
+          bc_url->data = apr_psprintf(pool, "%s/%ld", sess->rev_root_stub,
+                                      revision);
+          bc_url->len = strlen(bc_url->data);
+        }
+      if (bc_relative)
+        {
+          const char *relpath = svn_uri_is_child(sess->repos_root, url, pool);
+          if (! relpath)
+            relpath = "";
+          bc_relative->data = relpath;
+          bc_relative->len = strlen(relpath);
+        }
+      if (latest_rev)
+        {
+          *latest_rev = revision;
+        }
+      return SVN_NO_ERROR;
+    }
 
   /* Go fetch a BASELINE_RSRC that contains specific properties we
      want.  This routine will also fill in BC_RELATIVE as best it
@@ -1018,17 +1055,6 @@ svn_error_t *svn_ra_neon__get_baseline_info(svn_boolean_t *is_dir,
                                    "DAV:" SVN_DAV__VERSION_NAME);
         }
       *latest_rev = SVN_STR_TO_REV(vsn_name->data);
-    }
-
-  if (is_dir != NULL)
-    {
-      /* query the DAV:resourcetype of the full, assembled URL. */
-      const char *full_bc_url = svn_path_url_add_component2(my_bc_url->data,
-                                                            my_bc_rel.data,
-                                                            pool);
-      SVN_ERR(svn_ra_neon__get_starting_props(&rsrc, sess, full_bc_url,
-                                              NULL, pool));
-      *is_dir = rsrc->is_collection;
     }
 
   if (bc_relative)
@@ -1253,10 +1279,11 @@ svn_ra_neon__do_check_path(svn_ra_session_t *session,
 {
   svn_ra_neon__session_t *ras = session->priv;
   const char *url = ras->url->data;
+  svn_string_t bc_url, bc_relative;
   svn_error_t *err;
   svn_boolean_t is_dir;
 
-  /* ### For now, using svn_ra_neon__get_baseline_info() works because
+  /* ### For now, using svn_ra_neon__get_starting_props() works because
      we only have three possibilities: dir, file, or none.  When we
      add symlinks, we will need to do something different.  Here's one
      way described by Greg Stein:
@@ -1288,8 +1315,22 @@ svn_ra_neon__do_check_path(svn_ra_session_t *session,
   if (path)
     url = svn_path_url_add_component2(url, path, pool);
 
-  err = svn_ra_neon__get_baseline_info(&is_dir, NULL, NULL, NULL,
-                                       ras, url, revision, pool);
+  err = svn_ra_neon__get_baseline_info(&bc_url, &bc_relative, NULL, ras,
+                                       url, revision, pool);
+
+  if (! err)
+    {
+      svn_ra_neon__resource_t *rsrc;
+      const char *full_bc_url = svn_path_url_add_component2(bc_url.data,
+                                                            bc_relative.data,
+                                                            pool);
+
+      /* query the DAV:resourcetype of the full, assembled URL. */
+      err = svn_ra_neon__get_starting_props(&rsrc, ras, full_bc_url,
+                                            NULL, pool);
+      if (! err)
+        is_dir = rsrc->is_collection;
+    }
 
   if (err == SVN_NO_ERROR)
     {
@@ -1338,8 +1379,7 @@ svn_ra_neon__do_stat(svn_ra_session_t *session,
       /* Else, convert (rev, path) into an opaque server-generated URL. */
       svn_string_t bc_url, bc_relative;
 
-      err = svn_ra_neon__get_baseline_info(NULL, &bc_url, &bc_relative,
-                                           NULL, ras,
+      err = svn_ra_neon__get_baseline_info(&bc_url, &bc_relative, NULL, ras,
                                            url, revision, pool);
       if (err)
         {

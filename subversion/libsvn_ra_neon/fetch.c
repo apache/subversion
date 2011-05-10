@@ -684,14 +684,9 @@ svn_error_t *svn_ra_neon__get_file(svn_ra_session_t *session,
       svn_revnum_t got_rev;
       svn_string_t bc_url, bc_relative;
 
-      SVN_ERR(svn_ra_neon__get_baseline_info(NULL,
-                                             &bc_url, &bc_relative,
-                                             &got_rev,
-                                             ras,
-                                             url, revision,
-                                             pool));
-      final_url = svn_path_url_add_component2(bc_url.data,
-                                              bc_relative.data,
+      SVN_ERR(svn_ra_neon__get_baseline_info(&bc_url, &bc_relative, &got_rev,
+                                             ras, url, revision, pool));
+      final_url = svn_path_url_add_component2(bc_url.data, bc_relative.data,
                                               pool);
       if (fetched_rev != NULL)
         *fetched_rev = got_rev;
@@ -816,14 +811,9 @@ svn_error_t *svn_ra_neon__get_dir(svn_ra_session_t *session,
       svn_revnum_t got_rev;
       svn_string_t bc_url, bc_relative;
 
-      SVN_ERR(svn_ra_neon__get_baseline_info(NULL,
-                                             &bc_url, &bc_relative,
-                                             &got_rev,
-                                             ras,
-                                             url, revision,
-                                             pool));
-      final_url = svn_path_url_add_component2(bc_url.data,
-                                              bc_relative.data,
+      SVN_ERR(svn_ra_neon__get_baseline_info(&bc_url, &bc_relative, &got_rev,
+                                             ras, url, revision, pool));
+      final_url = svn_path_url_add_component2(bc_url.data, bc_relative.data,
                                               pool);
       if (fetched_rev != NULL)
         *fetched_rev = got_rev;
@@ -1093,29 +1083,9 @@ svn_error_t *svn_ra_neon__get_latest_revnum(svn_ra_session_t *session,
                                             apr_pool_t *pool)
 {
   svn_ra_neon__session_t *ras = session->priv;
-
-  /* If we detected HTTPv2 support, we can fetch the youngest revision
-     from a quick OPTIONS request instead of via a batch of
-     PROPFINDs. */
-  if (SVN_RA_NEON__HAVE_HTTPV2_SUPPORT(ras))
-    {
-      SVN_ERR(svn_ra_neon__exchange_capabilities(ras, NULL,
-                                                 latest_revnum, pool));
-      if (! SVN_IS_VALID_REVNUM(*latest_revnum))
-        return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
-                                _("The OPTIONS response did not include "
-                                  "the youngest revision"));
-    }
-  else
-    {
-      /* We don't need any of the baseline URLs and stuff, but this
-         does give us the latest revision number.  */
-      SVN_ERR(svn_ra_neon__get_baseline_info(NULL, NULL, NULL, latest_revnum,
-                                             ras, ras->root.path,
-                                             SVN_INVALID_REVNUM, pool));
-    }
-
-  return NULL;
+  return svn_ra_neon__get_baseline_info(NULL, NULL, latest_revnum,
+                                        ras, ras->root.path,
+                                        SVN_INVALID_REVNUM, pool);
 }
 
 /* ------------------------------------------------------------------------- */
@@ -2344,10 +2314,8 @@ static svn_error_t * reporter_link_path(void *report_baton,
   /* Convert the copyfrom_* url/rev "public" pair into a Baseline
      Collection (BC) URL that represents the revision -- and a
      relative path under that BC.  */
-  SVN_ERR(svn_ra_neon__get_baseline_info(NULL, NULL, &bc_relative, NULL,
-                                         rb->ras,
-                                         url, revision,
-                                         pool));
+  SVN_ERR(svn_ra_neon__get_baseline_info(NULL, &bc_relative, NULL, rb->ras,
+                                         url, revision, pool));
 
 
   svn_xml_escape_cdata_cstring(&qpath, path, pool);

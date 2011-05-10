@@ -251,7 +251,7 @@ do_lock(svn_lock_t **lock,
 
   /* To begin, we convert the incoming path into an absolute fs-path. */
   url = svn_path_url_add_component2(ras->url->data, path, pool);
-  SVN_ERR(svn_ra_neon__get_baseline_info(NULL, NULL, &fs_path, NULL, ras,
+  SVN_ERR(svn_ra_neon__get_baseline_info(NULL, &fs_path, NULL, ras,
                                          url, SVN_INVALID_REVNUM, pool));
 
   if (ne_uri_parse(url, &uri) != 0)
@@ -559,7 +559,7 @@ svn_ra_neon__get_lock_internal(svn_ra_neon__session_t *ras,
   /* To begin, we convert the incoming path into an absolute fs-path. */
   url = svn_path_url_add_component2(ras->url->data, path, pool);
 
-  err = svn_ra_neon__get_baseline_info(NULL, NULL, &fs_path, NULL, ras,
+  err = svn_ra_neon__get_baseline_info(NULL, &fs_path, NULL, ras,
                                        url, SVN_INVALID_REVNUM, pool);
   SVN_ERR(svn_ra_neon__maybe_store_auth_info_after_result(err, ras, pool));
 
