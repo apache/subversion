@@ -246,14 +246,6 @@ svn_wc__node_get_children(const apr_array_header_t **children,
  * @a result_pool for result allocations. Note: the result may be NULL if the
  * given node has no repository root associated with it (e.g. locally added).
  *
- * If @a scan_added is TRUE, scan parents to find the intended repos root
- * and/or UUID of added nodes. Otherwise set @a *repos_root_url and
- * *repos_uuid to NULL for added nodes.
- *
- * If @a scan_deleted is TRUE, then scan the base information to find
- * the (former) repos root and/or UUID of deleted nodes. Otherwise set
- * @a *repos_root_url and *repos_uuid to NULL for deleted nodes.
- *
  * Either input value may be NULL, indicating no interest.
  */
 svn_error_t *
@@ -261,8 +253,6 @@ svn_wc__node_get_repos_info(const char **repos_root_url,
                             const char **repos_uuid,
                             svn_wc_context_t *wc_ctx,
                             const char *local_abspath,
-                            svn_boolean_t scan_added,
-                            svn_boolean_t scan_deleted,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
 

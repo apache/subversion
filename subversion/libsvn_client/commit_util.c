@@ -958,8 +958,8 @@ svn_client__harvest_committables(svn_client__committables_t **committables,
         }
 
       SVN_ERR(svn_wc__node_get_repos_info(&repos_root_url, NULL, wc_ctx,
-                                            target_abspath, TRUE, TRUE,
-                                            result_pool, iterpool));
+                                          target_abspath,
+                                          result_pool, iterpool));
 
       SVN_ERR(svn_wc__node_get_repos_relpath(&repos_relpath, ctx->wc_ctx,
                                              target_abspath,
@@ -1058,7 +1058,7 @@ harvest_copy_committables(void *baton, void *item, apr_pool_t *pool)
   SVN_ERR_ASSERT(svn_dirent_is_absolute(pair->src_abspath_or_url));
 
   SVN_ERR(svn_wc__node_get_repos_info(&repos_root_url, NULL, btn->ctx->wc_ctx,
-                                      pair->src_abspath_or_url, TRUE, TRUE,
+                                      pair->src_abspath_or_url,
                                       pool, pool));
 
   commit_relpath = svn_path_uri_decode(svn_uri_skip_ancestor(

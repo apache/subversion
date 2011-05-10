@@ -7902,7 +7902,7 @@ remove_noop_subtree_ranges(const char *url1,
 
   SVN_ERR(svn_wc__node_get_repos_info(&repos_root_url, NULL,
                                       merge_b->ctx->wc_ctx,
-                                      merge_b->target_abspath, FALSE, FALSE,
+                                      merge_b->target_abspath,
                                       scratch_pool, scratch_pool));
 
   /* Set up the log baton. */
@@ -8527,7 +8527,7 @@ do_merge(apr_hash_t **modified_subtrees,
   SVN_ERR(svn_wc__node_get_repos_info(&merge_cmd_baton.repos_root_url, NULL,
                                       ctx->wc_ctx,
                                       merge_cmd_baton.target_abspath,
-                                      TRUE, FALSE, pool, subpool));
+                                      pool, subpool));
   merge_cmd_baton.pool = subpool;
   merge_cmd_baton.merge_options = merge_options;
   merge_cmd_baton.diff3_cmd = diff3_cmd;

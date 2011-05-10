@@ -678,8 +678,6 @@ svn_wc__internal_get_repos_info(const char **repos_root_url,
                                 const char **repos_uuid,
                                 svn_wc__db_t *db,
                                 const char *local_abspath,
-                                svn_boolean_t scan_added,
-                                svn_boolean_t scan_deleted,
                                 apr_pool_t *result_pool,
                                 apr_pool_t *scratch_pool);
 

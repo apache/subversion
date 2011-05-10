@@ -90,8 +90,8 @@ build_info_for_entry(svn_info2_t **info,
     {
       SVN_ERR(svn_wc__internal_get_repos_info(&tmpinfo->repos_root_URL,
                                               &tmpinfo->repos_UUID,
-                                              db, local_abspath, TRUE,
-                                              TRUE, result_pool, scratch_pool));
+                                              db, local_abspath,
+                                              result_pool, scratch_pool));
     }
 
   if (repos_relpath)
@@ -413,7 +413,7 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
           SVN_ERR(svn_wc__internal_get_repos_info(&info->repos_root_URL,
                                                   &info->repos_UUID,
                                                   fe_baton.db,
-                                                  local_abspath, FALSE, FALSE,
+                                                  local_abspath,
                                                   iterpool, iterpool));
           APR_ARRAY_PUSH(conflicts, const svn_wc_conflict_description2_t *)
             = tree_conflict;

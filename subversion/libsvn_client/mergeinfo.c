@@ -329,7 +329,7 @@ svn_client__get_wc_mergeinfo_catalog(svn_mergeinfo_catalog_t *mergeinfo_cat,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   *mergeinfo_cat = NULL;
   SVN_ERR(svn_wc__node_get_repos_info(&repos_root, NULL,
-                                      ctx->wc_ctx, local_abspath, TRUE, FALSE,
+                                      ctx->wc_ctx, local_abspath,
                                       scratch_pool, scratch_pool));
   if (!repos_root)
     {

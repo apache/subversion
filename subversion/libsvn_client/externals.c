@@ -205,7 +205,7 @@ switch_dir_external(const char *local_abspath,
 
           SVN_ERR(svn_wc__node_get_repos_info(&repos_root_url, NULL,
                                               ctx->wc_ctx, local_abspath,
-                                              FALSE, FALSE, pool, subpool));
+                                              pool, subpool));
           if (repos_root_url)
             {
               /* URLs don't match.  Try to relocate (if necessary) and then
@@ -1170,7 +1170,7 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
   else
     SVN_ERR(svn_wc__node_get_repos_info(&ib.repos_root_url, NULL,
                                         cb->ctx->wc_ctx, local_abspath,
-                                        TRUE, FALSE, cb->pool, scratch_pool));
+                                        cb->pool, scratch_pool));
   ib.ctx               = cb->ctx;
   ib.is_export         = cb->is_export;
   ib.native_eol        = cb->native_eol;
