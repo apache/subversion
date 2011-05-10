@@ -172,7 +172,7 @@ reporter_link_path(void *report_baton, const char *path, const char *url,
       ancestor = svn_uri_get_longest_ancestor(url, rb->ancestor, pool);
 
       /* If we got a shorter ancestor, truncate our current ancestor.
-         Note that svn_dirent_get_longest_ancestor will allocate its return
+         Note that svn_uri_get_longest_ancestor will allocate its return
          value even if it identical to one of its arguments. */
 
       rb->ancestor[strlen(ancestor)] = '\0';
