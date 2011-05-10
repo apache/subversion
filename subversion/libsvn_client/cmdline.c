@@ -267,6 +267,8 @@ svn_client_args_to_target_array(apr_array_header_t **targets_p,
                                           err,
                                           _("'%s' ends in a reserved name"),
                                           utf8_target);
+
+                  /* ### Error leaks! Mixing SVN_ERR with err is a leak */
                   continue;
                 }
             }
@@ -275,6 +277,8 @@ svn_client_args_to_target_array(apr_array_header_t **targets_p,
 
           if (rel_url_found)
             {
+              /* Later targets have priority over earlier target, I
+                 don't know why, see basic_relative_url_multi_repo. */
               SVN_ERR(check_root_url_of_target(&root_url, target,
                                                ctx, pool));
             }
