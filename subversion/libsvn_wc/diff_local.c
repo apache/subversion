@@ -355,7 +355,7 @@ file_diff(struct diff_baton *eb,
 
       /* Here we deal with showing pure modifications. */
       SVN_ERR(svn_wc__internal_file_modified_p(&modified, NULL, NULL, db,
-                                               local_abspath, FALSE, TRUE,
+                                               local_abspath, FALSE,
                                                scratch_pool));
       if (modified)
         {

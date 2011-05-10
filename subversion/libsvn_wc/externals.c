@@ -741,7 +741,7 @@ close_file(void *file_baton,
             svn_boolean_t is_mod;
             SVN_ERR(svn_wc__internal_file_modified_p(&is_mod, NULL, NULL,
                                                      eb->db, eb->local_abspath,
-                                                     FALSE, FALSE, pool));
+                                                     FALSE, pool));
 
             if (!is_mod)
               {

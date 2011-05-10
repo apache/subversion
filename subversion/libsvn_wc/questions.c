@@ -84,15 +84,10 @@
  * (of VERSIONED_FILE_SIZE bytes) differs from PRISTINE_STREAM (of
  * PRISTINE_SIZE bytes), else to FALSE if not.
  *
- * If VERIFY_CHECKSUM is not NULL, also verify that PRISTINE_STREAM matches
- * this checksum (which should be the stored checksum for 
- * VERSIONED_FILE_ABSPATH). If the checksum does not match, return the error
- * SVN_ERR_WC_CORRUPT_TEXT_BASE.
- *
- * If COMPARE_TEXTBASES is true, translate VERSIONED_FILE_ABSPATH's EOL
+ * If EXACT_COMPARISON is FALSE, translate VERSIONED_FILE_ABSPATH's EOL
  * style and keywords to repository-normal form according to its properties,
- * and compare the result with PRISTINE_STREAM.  If COMPARE_TEXTBASES is
- * false, translate PRISTINE_STREAM's EOL style and keywords to working-copy
+ * and compare the result with PRISTINE_STREAM.  If EXACT_COMPARISON is
+ * TRUE, translate PRISTINE_STREAM's EOL style and keywords to working-copy
  * form according to VERSIONED_FILE_ABSPATH's properties, and compare the
  * result with VERSIONED_FILE_ABSPATH.
  *
@@ -115,8 +110,7 @@ compare_and_verify(svn_boolean_t *modified_p,
                    svn_filesize_t pristine_size,
                    svn_boolean_t has_props,
                    svn_boolean_t props_mod,
-                   svn_boolean_t compare_textbases,
-                   const svn_checksum_t *verify_checksum,
+                   svn_boolean_t exact_comparison,
                    apr_pool_t *scratch_pool)
 {
   svn_boolean_t same;
@@ -137,7 +131,7 @@ compare_and_verify(svn_boolean_t *modified_p,
                                          &keywords,
                                          &special,
                                          db, versioned_file_abspath, NULL,
-                                         compare_textbases,
+                                         exact_comparison,
                                          scratch_pool, scratch_pool));
 
       need_translation = svn_subst_translation_required(eol_style, eol_str,
@@ -148,7 +142,6 @@ compare_and_verify(svn_boolean_t *modified_p,
     need_translation = FALSE;
 
   if (! need_translation
-      && ! verify_checksum
       && (versioned_file_size != pristine_size))
     {
       *modified_p = TRUE;
@@ -179,20 +172,10 @@ compare_and_verify(svn_boolean_t *modified_p,
 
   /* ### Other checks possible? */
 
-  if (verify_checksum || need_translation)
+  if (need_translation)
     {
       /* Reading files is necessary. */
-      svn_checksum_t *checksum;
       svn_stream_t *v_stream;  /* versioned_file */
-
-      if (verify_checksum)
-        {
-          pristine_stream = svn_stream_checksummed2(pristine_stream,
-                                                    &checksum, NULL,
-                                                    verify_checksum->kind,
-                                                    TRUE,
-                                                    scratch_pool);
-        }
 
       if (special)
         {
@@ -204,7 +187,7 @@ compare_and_verify(svn_boolean_t *modified_p,
           SVN_ERR(svn_stream_open_readonly(&v_stream, versioned_file_abspath,
                                            scratch_pool, scratch_pool));
 
-          if (compare_textbases && need_translation)
+          if (!exact_comparison && need_translation)
             {
               if (eol_style == svn_subst_eol_style_native)
                 eol_str = SVN_SUBST_NATIVE_EOL_STR;
@@ -234,19 +217,6 @@ compare_and_verify(svn_boolean_t *modified_p,
 
       SVN_ERR(svn_stream_contents_same2(&same, pristine_stream, v_stream,
                                         scratch_pool));
-
-      if (verify_checksum)
-        {
-          if (checksum && !svn_checksum_match(checksum, verify_checksum))
-            return svn_error_create(SVN_ERR_WC_CORRUPT_TEXT_BASE,
-                    svn_checksum_mismatch_err(verify_checksum, checksum,
-                                              scratch_pool,
-                                _("Checksum mismatch indicates corrupt "
-                                  "text base for file: '%s'"),
-                                svn_dirent_local_style(versioned_file_abspath,
-                                                       scratch_pool)),
-                    NULL);
-        }
     }
   else
     {
@@ -271,8 +241,7 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
                                  svn_boolean_t *read_only_p,
                                  svn_wc__db_t *db,
                                  const char *local_abspath,
-                                 svn_boolean_t force_comparison,
-                                 svn_boolean_t compare_textbases,
+                                 svn_boolean_t exact_comparison,
                                  apr_pool_t *scratch_pool)
 {
   svn_stream_t *pristine_stream;
@@ -340,7 +309,7 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
       return SVN_NO_ERROR;
     }
 
-  if (! force_comparison)
+  if (! exact_comparison)
     {
       /* We're allowed to use a heuristic to determine whether files may
          have changed.  The heuristic has these steps:
@@ -396,8 +365,7 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
                              local_abspath, finfo.size,
                              pristine_stream, pristine_size,
                              has_props, props_mod,
-                             compare_textbases,
-                             force_comparison ? checksum : NULL,
+                             exact_comparison,
                              scratch_pool));
 
   if (!*modified_p)
@@ -424,9 +392,10 @@ svn_wc_text_modified_p2(svn_boolean_t *modified_p,
                         svn_boolean_t force_comparison,
                         apr_pool_t *scratch_pool)
 {
+  /* ### We ignore FORCE_COMPARISON, but we also fixed its only
+         remaining use-case */
   return svn_wc__internal_file_modified_p(modified_p, NULL, NULL, wc_ctx->db,
-                                          local_abspath, force_comparison,
-                                          TRUE, scratch_pool);
+                                          local_abspath, FALSE, scratch_pool);
 }
 
 

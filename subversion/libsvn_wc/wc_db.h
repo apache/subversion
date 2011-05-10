@@ -1361,10 +1361,15 @@ svn_wc__db_op_add_symlink(svn_wc__db_t *db,
    WORK_ITEMS are inserted into the work queue, as additional things that
    need to be completed before the working copy is stable.
 
+
+   If CLEAR_RECORDED_INFO is true, the recorded information for the node
+   is cleared. (commonly used when updating svn:* magic properties).
+
    NOTE: This will overwrite ALL working properties the node currently
    has. There is no db_op_set_prop() function. Callers must read all the
    properties, change one, and write all the properties.
    ### ugh. this has poor transaction semantics...
+
 
    NOTE: This will create an entry in the ACTUAL table for the node if it
    does not yet have one.
@@ -1373,6 +1378,7 @@ svn_error_t *
 svn_wc__db_op_set_props(svn_wc__db_t *db,
                         const char *local_abspath,
                         apr_hash_t *props,
+                        svn_boolean_t clear_recorded_info,
                         const svn_skel_t *conflict,
                         const svn_skel_t *work_items,
                         apr_pool_t *scratch_pool);

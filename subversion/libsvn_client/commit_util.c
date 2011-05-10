@@ -142,35 +142,6 @@ add_committable(svn_client__committables_t *committables,
   return SVN_NO_ERROR;
 }
 
-
-static svn_error_t *
-check_prop_mods(svn_boolean_t *props_changed,
-                svn_boolean_t *eol_prop_changed,
-                const char *local_abspath,
-                svn_wc_context_t *wc_ctx,
-                apr_pool_t *pool)
-{
-  apr_array_header_t *prop_mods;
-  int i;
-
-  *eol_prop_changed = *props_changed = FALSE;
-  SVN_ERR(svn_wc_get_prop_diffs2(&prop_mods, NULL, wc_ctx, local_abspath,
-                                 pool, pool));
-  if (prop_mods->nelts == 0)
-    return SVN_NO_ERROR;
-
-  *props_changed = TRUE;
-  for (i = 0; i < prop_mods->nelts; i++)
-    {
-      svn_prop_t *prop_mod = &APR_ARRAY_IDX(prop_mods, i, svn_prop_t);
-      if (strcmp(prop_mod->name, SVN_PROP_EOL_STYLE) == 0)
-        *eol_prop_changed = TRUE;
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
 /* If there is a commit item for PATH in COMMITTABLES, return it, else
    return NULL.  Use POOL for temporary allocation only. */
 static svn_client_commit_item3_t *
@@ -568,8 +539,6 @@ harvest_committables(svn_wc_context_t *wc_ctx,
      information about it. */
   if (state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
     {
-      svn_boolean_t eol_prop_changed = FALSE;
-
       /* First of all, the working file or directory must exist.
          See issue #3198. */
       if (working_kind == svn_node_none)
@@ -580,25 +549,14 @@ harvest_committables(svn_wc_context_t *wc_ctx,
              svn_dirent_local_style(local_abspath, scratch_pool));
         }
 
-      /* If there are property modifications, check if eol-style changed. */
-      if (prop_mod)
-        SVN_ERR(check_prop_mods(&prop_mod, &eol_prop_changed, local_abspath,
-                                wc_ctx, scratch_pool));
-
       /* Regular adds of files have text mods, but for copies we have
          to test for textual mods.  Directories simply don't have text! */
       if (db_kind == svn_node_file)
         {
-          /* Check for text mods.  If EOL_PROP_CHANGED is TRUE, then
-             we need to force a translated byte-for-byte comparison
-             against the text-base so that a timestamp comparison
-             won't bail out early.  Depending on how the svn:eol-style
-             prop was changed, we might have to send new text to the
-             server to match the new newline style.  */
+          /* Check for text mods.  */
           if (state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
-            SVN_ERR(svn_wc_text_modified_p2(&text_mod, wc_ctx,
-                                            local_abspath, eol_prop_changed,
-                                            scratch_pool));
+            SVN_ERR(svn_wc_text_modified_p2(&text_mod, wc_ctx, local_abspath,
+                                            FALSE, scratch_pool));
           else
             text_mod = TRUE;
         }
@@ -609,15 +567,6 @@ harvest_committables(svn_wc_context_t *wc_ctx,
      committable. */
   else if (! (state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE))
     {
-      svn_boolean_t eol_prop_changed;
-
-      /* See if there are property modifications to send. */
-      if (prop_mod)
-        SVN_ERR(check_prop_mods(&prop_mod, &eol_prop_changed, local_abspath,
-                                wc_ctx, scratch_pool));
-      else
-        eol_prop_changed = FALSE;
-
       /* Check for text mods on files.  If EOL_PROP_CHANGED is TRUE,
          then we need to force a translated byte-for-byte comparison
          against the text-base so that a timestamp comparison won't
@@ -626,7 +575,7 @@ harvest_committables(svn_wc_context_t *wc_ctx,
          match the new newline style.  */
       if (db_kind == svn_node_file)
         SVN_ERR(svn_wc_text_modified_p2(&text_mod, wc_ctx, local_abspath,
-                                        eol_prop_changed, scratch_pool));
+                                        FALSE, scratch_pool));
     }
 
   /* Set text/prop modification flags accordingly. */

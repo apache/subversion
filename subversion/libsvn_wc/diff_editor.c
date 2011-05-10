@@ -701,7 +701,7 @@ file_diff(struct edit_baton *eb,
 
       /* Here we deal with showing pure modifications. */
       SVN_ERR(svn_wc__internal_file_modified_p(&modified, NULL, NULL, db,
-                                               local_abspath, FALSE, TRUE,
+                                               local_abspath, FALSE,
                                                scratch_pool));
       if (modified)
         {
@@ -1737,7 +1737,7 @@ close_file(void *file_baton,
   if (!modified && !eb->use_text_base)
     SVN_ERR(svn_wc__internal_file_modified_p(&modified, NULL, NULL, eb->db,
                                              fb->local_abspath,
-                                             FALSE, TRUE, scratch_pool));
+                                             FALSE, scratch_pool));
 
   if (modified)
     {

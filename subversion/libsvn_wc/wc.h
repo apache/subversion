@@ -372,16 +372,16 @@ void svn_wc__compat_call_notify_func(void *baton,
  * the text base is much longer than the working file, every byte of
  * the text base will still be examined.)
  *
- * If COMPARE_TEXTBASES is true, translate LOCAL_ABSPATH's EOL
+ * If EXACT_COMPARISON is FALSE, translate LOCAL_ABSPATH's EOL
  * style and keywords to repository-normal form according to its properties,
  * and compare the result with the text base.  If COMPARE_TEXTBASES is
- * false, translate the text base's EOL style and keywords to working-copy
+ * TRUE, translate the text base's EOL style and keywords to working-copy
  * form according to LOCAL_ABSPATH's properties, and compare the
- * result with LOCAL_ABSPATH.
+ * result with LOCAL_ABSPATH.  Usually, EXACT_COMPARISON should be FALSE.
  *
  * If LOCAL_ABSPATH does not exist, consider it unmodified.  If it exists
  * but is not under revision control (not even scheduled for
- * addition), return the error SVN_ERR_ENTRY_NOT_FOUND.
+ * addition), return the error SVN_WC_PATH_NOT_FOUND.
  *
  * If the text is unmodified and a write-lock is held this function
  * will ensure that the last-known-unmodified timestamp and
@@ -396,8 +396,7 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
                                  svn_boolean_t *read_only_p,
                                  svn_wc__db_t *db,
                                  const char *local_abspath,
-                                 svn_boolean_t force_comparison,
-                                 svn_boolean_t compare_textbases,
+                                 svn_boolean_t exact_comparison,
                                  apr_pool_t *scratch_pool);
 
 

@@ -289,8 +289,7 @@ copy_versioned_file(svn_wc__db_t *db,
                  never match. */
               SVN_ERR(svn_wc__internal_file_modified_p(&modified, NULL, NULL,
                                                        db, src_abspath,
-                                                       FALSE, FALSE,
-                                                       scratch_pool));
+                                                       FALSE, scratch_pool));
               if (!modified)
                 {
                   SVN_ERR(svn_wc__wq_build_record_fileinfo(&work_item,

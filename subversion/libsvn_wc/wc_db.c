@@ -4630,10 +4630,69 @@ svn_wc__db_op_add_symlink(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+struct record_baton_t {
+  svn_filesize_t translated_size;
+  apr_time_t last_mod_time;
+};
+
+
+/* Record TRANSLATED_SIZE and LAST_MOD_TIME into top layer in NODES */
+static svn_error_t *
+db_record_fileinfo(void *baton,
+                   svn_wc__db_wcroot_t *wcroot,
+                   const char *local_relpath,
+                   apr_pool_t *scratch_pool)
+{
+  struct record_baton_t *rb = baton;
+  svn_sqlite__stmt_t *stmt;
+  int affected_rows;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_UPDATE_NODE_FILEINFO));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isii", wcroot->wc_id, local_relpath,
+                            rb->translated_size, rb->last_mod_time));
+  SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
+
+  SVN_ERR_ASSERT(affected_rows == 1);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__db_global_record_fileinfo(svn_wc__db_t *db,
+                                  const char *local_abspath,
+                                  svn_filesize_t translated_size,
+                                  apr_time_t last_mod_time,
+                                  apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+  struct record_baton_t rb;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
+                              local_abspath, scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  rb.translated_size = translated_size;
+  rb.last_mod_time = last_mod_time;
+
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, db_record_fileinfo, &rb,
+                              scratch_pool));
+
+  /* We *totally* monkeyed the entries. Toss 'em.  */
+  SVN_ERR(flush_entries(wcroot, local_abspath, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 
 struct set_props_baton_t
 {
   apr_hash_t *props;
+  svn_boolean_t clear_recorded_info;
 
   const svn_skel_t *conflict;
   const svn_skel_t *work_items;
@@ -4711,6 +4770,14 @@ set_props_txn(void *baton,
   SVN_ERR(set_actual_props(wcroot->wc_id, local_relpath,
                            spb->props, wcroot->sdb, scratch_pool));
 
+  if (spb->clear_recorded_info)
+    {
+      struct record_baton_t rb;
+      rb.translated_size = SVN_INVALID_FILESIZE;
+      rb.last_mod_time = 0;
+      SVN_ERR(db_record_fileinfo(&rb, wcroot, local_relpath, scratch_pool));
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -4719,6 +4786,7 @@ svn_error_t *
 svn_wc__db_op_set_props(svn_wc__db_t *db,
                         const char *local_abspath,
                         apr_hash_t *props,
+                        svn_boolean_t clear_recorded_info,
                         const svn_skel_t *conflict,
                         const svn_skel_t *work_items,
                         apr_pool_t *scratch_pool)
@@ -4734,6 +4802,7 @@ svn_wc__db_op_set_props(svn_wc__db_t *db,
   VERIFY_USABLE_WCROOT(wcroot);
 
   spb.props = props;
+  spb.clear_recorded_info = clear_recorded_info;
   spb.conflict = conflict;
   spb.work_items = work_items;
 
@@ -8757,66 +8826,6 @@ svn_wc__db_op_bump_revisions_post_update(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
-
-struct record_baton_t {
-  svn_filesize_t translated_size;
-  apr_time_t last_mod_time;
-};
-
-
-/* Record TRANSLATED_SIZE and LAST_MOD_TIME into top layer in NODES */
-static svn_error_t *
-record_fileinfo(void *baton,
-                svn_wc__db_wcroot_t *wcroot,
-                const char *local_relpath,
-                apr_pool_t *scratch_pool)
-{
-  struct record_baton_t *rb = baton;
-  svn_sqlite__stmt_t *stmt;
-  int affected_rows;
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_UPDATE_NODE_FILEINFO));
-  SVN_ERR(svn_sqlite__bindf(stmt, "isii", wcroot->wc_id, local_relpath,
-                            rb->translated_size, rb->last_mod_time));
-  SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
-
-  SVN_ERR_ASSERT(affected_rows == 1);
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc__db_global_record_fileinfo(svn_wc__db_t *db,
-                                  const char *local_abspath,
-                                  svn_filesize_t translated_size,
-                                  apr_time_t last_mod_time,
-                                  apr_pool_t *scratch_pool)
-{
-  svn_wc__db_wcroot_t *wcroot;
-  const char *local_relpath;
-  struct record_baton_t rb;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
-                              local_abspath, scratch_pool, scratch_pool));
-  VERIFY_USABLE_WCROOT(wcroot);
-
-  rb.translated_size = translated_size;
-  rb.last_mod_time = last_mod_time;
-
-  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, record_fileinfo, &rb,
-                              scratch_pool));
-
-  /* We *totally* monkeyed the entries. Toss 'em.  */
-  SVN_ERR(flush_entries(wcroot, local_abspath, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-
 static svn_error_t *
 lock_add_txn(void *baton,
              svn_wc__db_wcroot_t *wcroot,
@@ -11842,8 +11851,7 @@ has_local_mods(svn_boolean_t *is_modified,
             {
               SVN_ERR(svn_wc__internal_file_modified_p(is_modified, NULL,
                                                        NULL, db, node_abspath,
-                                                       FALSE, TRUE,
-                                                       iterpool));
+                                                       FALSE, iterpool));
               if (*is_modified)
                 break;
             }

@@ -3400,8 +3400,7 @@ merge_file(svn_skel_t **work_items,
 
       SVN_ERR(svn_wc__internal_file_modified_p(&is_locally_modified, NULL,
                                                NULL, eb->db, fb->local_abspath,
-                                               FALSE /* force_comparison */,
-                                               FALSE /* compare_textbases */,
+                                               FALSE /* exact_comparison */,
                                                scratch_pool));
     }
 
@@ -4960,7 +4959,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   /* ### if below fails, then the above db change would remain :-(  */
 
   SVN_ERR(svn_wc__db_op_set_props(db, local_abspath,
-                                  new_props,
+                                  new_props, FALSE,
                                   NULL /* conflict */,
                                   all_work_items,
                                   pool));

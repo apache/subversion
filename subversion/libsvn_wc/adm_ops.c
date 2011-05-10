@@ -1401,11 +1401,13 @@ revert_restore(svn_wc__db_t *db,
             }
           else
             {
+              /* This compares the file against a pristine version of the
+                 translated file. So it will return modified in all cases
+                 where delete+restore would install a different file */
               SVN_ERR(svn_wc__internal_file_modified_p(&modified, &executable,
                                                        &read_only,
                                                        db, local_abspath,
-                                                       FALSE, FALSE,
-                                                       scratch_pool));
+                                                       TRUE, scratch_pool));
               if (modified)
                 {
                   SVN_ERR(svn_io_remove_file2(local_abspath, FALSE,
@@ -1903,92 +1905,31 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
 
   if (kind == svn_wc__db_kind_file || kind == svn_wc__db_kind_symlink)
     {
-      svn_node_kind_t on_disk;
-      svn_boolean_t text_modified_p;
-      const svn_checksum_t *base_sha1_checksum, *working_sha1_checksum;
+      svn_boolean_t text_modified_p = FALSE;
 
       if (instant_error || destroy_wf)
         {
-          svn_boolean_t wc_special, local_special;
-          /* Only check if the file was modified when it wasn't overwritten
-             with a special file */
-
-          SVN_ERR(svn_wc__get_translate_info(NULL, NULL, NULL,
-                                             &wc_special,
-                                             db, local_abspath, NULL, TRUE,
-                                             scratch_pool, scratch_pool));
-          SVN_ERR(svn_io_check_special_path(local_abspath, &on_disk,
-                                            &local_special, scratch_pool));
-          if (wc_special || ! local_special)
+          svn_node_kind_t on_disk;
+          SVN_ERR(svn_io_check_path(local_abspath, &on_disk, scratch_pool));
+          if (on_disk == svn_node_file)
             {
               /* Check for local mods. before removing entry */
               SVN_ERR(svn_wc__internal_file_modified_p(&text_modified_p, NULL,
                                                        NULL, db,
                                                        local_abspath, FALSE,
-                                                       TRUE, scratch_pool));
+                                                       scratch_pool));
               if (text_modified_p && instant_error)
                 return svn_error_createf(SVN_ERR_WC_LEFT_LOCAL_MOD, NULL,
                        _("File '%s' has local modifications"),
                        svn_dirent_local_style(local_abspath, scratch_pool));
             }
-
-          if (! wc_special && local_special)
-            text_modified_p = TRUE;
         }
 
-      /* Find the checksum(s) of the node's one or two pristine texts.  Note
-         that read_info() may give us the one from BASE_NODE again. */
-      err = svn_wc__db_base_get_info(NULL, NULL, NULL, NULL, NULL, NULL,
-                                     NULL, NULL, NULL, NULL,
-                                     &base_sha1_checksum, NULL,
-                                     NULL, NULL, NULL, NULL,
-                                     db, local_abspath,
-                                     scratch_pool, scratch_pool);
-      if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-        {
-          svn_error_clear(err);
-          base_sha1_checksum = NULL;
-        }
-      else
-        SVN_ERR(err);
-      err = svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL,
-                                 &working_sha1_checksum, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL,
-                                 db, local_abspath,
-                                 scratch_pool, scratch_pool);
-      if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-        {
-          svn_error_clear(err);
-          working_sha1_checksum = NULL;
-        }
-      else
-        SVN_ERR(err);
-
-      /* Remove NAME from PATH's entries file: */
+      /* Remove NAME from DB */
       SVN_ERR(svn_wc__db_op_remove_node(db, local_abspath,
                                         SVN_INVALID_REVNUM,
                                         svn_wc__db_kind_unknown,
                                         scratch_pool));
-
-      /* Having removed the checksums that reference the pristine texts,
-         remove the pristine texts (if now totally unreferenced) from the
-         pristine store.  Don't try to remove the same pristine text twice.
-         The two checksums might be the same, either because the copied base
-         was exactly the same as the replaced base, or just because the
-         ..._read_info() code above sets WORKING_SHA1_CHECKSUM to the base
-         checksum if there is no WORKING_NODE row. */
-      if (base_sha1_checksum)
-        SVN_ERR(svn_wc__db_pristine_remove(db, local_abspath,
-                                           base_sha1_checksum,
-                                           scratch_pool));
-      if (working_sha1_checksum
-          && ! svn_checksum_match(base_sha1_checksum, working_sha1_checksum))
-        SVN_ERR(svn_wc__db_pristine_remove(db, local_abspath,
-                                           working_sha1_checksum,
-                                           scratch_pool));
 
       /* If we were asked to destroy the working file, do so unless
          it has local mods. */
@@ -2016,35 +1957,54 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
 
       for (i = 0; i < children->nelts; i++)
         {
-          const char *entry_name = APR_ARRAY_IDX(children, i, const char*);
-          const char *entry_abspath;
-          svn_boolean_t hidden;
+          const char *node_name = APR_ARRAY_IDX(children, i, const char*);
+          const char *node_abspath;
+          svn_wc__db_status_t status;
+          svn_wc__db_kind_t kind;
 
           svn_pool_clear(iterpool);
 
-          entry_abspath = svn_dirent_join(local_abspath, entry_name, iterpool);
+          node_abspath = svn_dirent_join(local_abspath, node_name, iterpool);
 
-          /* ### where did the adm_missing and depth_exclude test go?!?
+          SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL,
+                                       db, node_abspath,
+                                       iterpool, iterpool));
 
-             ### BH: depth exclude is handled by hidden and missing is ok
-                     for this temp_op. */
-
-          SVN_ERR(svn_wc__db_node_hidden(&hidden, db, entry_abspath,
-                                         iterpool));
-          if (hidden)
+          if (status == svn_wc__db_status_normal
+              && kind == svn_wc__db_kind_dir)
             {
-              SVN_ERR(svn_wc__db_op_remove_node(db, entry_abspath,
+              svn_boolean_t is_root;
+
+              SVN_ERR(svn_wc__check_wc_root(&is_root, NULL, NULL,
+                                            db, node_abspath, iterpool));
+
+              if (is_root)
+                continue; /* Just skip working copies as obstruction */
+            }
+
+          if (status != svn_wc__db_status_normal
+              && status != svn_wc__db_status_added
+              && status != svn_wc__db_status_incomplete)
+            {
+              /* The node is already 'deleted', so nothing to do on
+                 versioned nodes */
+              SVN_ERR(svn_wc__db_op_remove_node(db, node_abspath,
                                                 SVN_INVALID_REVNUM,
                                                 svn_wc__db_kind_unknown,
                                                 iterpool));
+
               continue;
             }
 
           err = svn_wc__internal_remove_from_revision_control(
-            db, entry_abspath,
-            destroy_wf, instant_error,
-            cancel_func, cancel_baton,
-            iterpool);
+                            db, node_abspath,
+                            destroy_wf, instant_error,
+                            cancel_func, cancel_baton,
+                            iterpool);
 
           if (err && (err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
             {
@@ -2081,12 +2041,14 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
                                               svn_wc__db_kind_unknown,
                                               iterpool));
           }
+        else
+          {
+            /* Remove the entire administrative .svn area, thereby removing
+               _this_ dir from revision control too.  */
+            SVN_ERR(svn_wc__adm_destroy(db, local_abspath,
+                                        cancel_func, cancel_baton, iterpool));
+          }
       }
-
-      /* Remove the entire administrative .svn area, thereby removing
-         _this_ dir from revision control too.  */
-      SVN_ERR(svn_wc__adm_destroy(db, local_abspath,
-                                  cancel_func, cancel_baton, iterpool));
 
       /* If caller wants us to recursively nuke everything on disk, go
          ahead, provided that there are no dangling local-mod files
