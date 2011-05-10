@@ -414,9 +414,9 @@ install_committed_file(svn_boolean_t *overwrote_working,
     SVN_ERR(svn_wc__get_translate_info(NULL, NULL,
                                        NULL,
                                        &special,
-                                       db, file_abspath, NULL,
+                                       db, file_abspath, NULL, FALSE,
                                        scratch_pool, scratch_pool));
-    /* ### Should this be a strcmp()? */
+    /* Translated file returns the exact pointer if not translated. */
     if (! special && tmp != tmp_wfile)
       SVN_ERR(svn_io_files_contents_same_p(&same, tmp_wfile,
                                            file_abspath, scratch_pool));
@@ -652,7 +652,8 @@ run_file_install(svn_wc__db_t *db,
   /* Fetch all the translation bits.  */
   SVN_ERR(svn_wc__get_translate_info(&style, &eol,
                                      &keywords,
-                                     &special, db, local_abspath, props,
+                                     &special, db, local_abspath,
+                                     props, FALSE,
                                      scratch_pool, scratch_pool));
   if (special)
     {
@@ -952,7 +953,7 @@ run_file_copy_translated(svn_wc__db_t *db,
   SVN_ERR(svn_wc__get_translate_info(&style, &eol,
                                      &keywords,
                                      &special,
-                                     db, local_abspath, NULL,
+                                     db, local_abspath, NULL, FALSE,
                                      scratch_pool, scratch_pool));
 
   SVN_ERR(svn_subst_copy_and_translate4(src_abspath, dst_abspath,
