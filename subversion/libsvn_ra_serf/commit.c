@@ -1203,7 +1203,7 @@ setup_post_headers(serf_bucket_t *headers,
                    void *baton,
                    apr_pool_t *pool)
 {
-#ifdef SVN_SERF_SEND_VTXN_NAME
+#ifdef SVN_DAV_SEND_VTXN_NAME
   /* Enable this to exercise the VTXN-NAME code based on a client
      supplied transaction name. */
   serf_bucket_headers_set(headers, SVN_DAV_VTXN_NAME_HEADER,

@@ -769,7 +769,7 @@ static svn_error_t * commit_open_root(void *edit_baton,
                                           cc->ras->me_resource, dir_pool));
       ne_add_request_header(req->ne_req, "Content-Type", SVN_SKEL_MIME_TYPE);
 
-#ifdef SVN_NEON_SEND_VTXN_NAME
+#ifdef SVN_DAV_SEND_VTXN_NAME
       /* Enable this to exercise the VTXN-NAME code based on a client
          supplied transaction name. */
       ne_add_request_header(req->ne_req, SVN_DAV_VTXN_NAME_HEADER,
