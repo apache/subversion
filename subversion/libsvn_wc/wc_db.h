@@ -1904,7 +1904,15 @@ svn_wc__db_read_pristine_info(svn_wc__db_status_t *status,
    Set WCROOT_ABSPATH to the working copy root, STATUS to the presence of the
    node, KIND to the node kind, SHA1_CHECKSUM to the checksum of the node
    (a valid reference into the pristine store) and PRISTINE_PROPS to the node's
-   pristine properties (to use for installing the file). */
+   pristine properties (to use for installing the file).
+
+   If IS_FILE_EXTERNAL is not NULL, check if the node might be a file external
+   when the node is not present in the working copy and return that information
+   instead and set *IS_FILE_EXTERNAL to true.
+
+   If WRI_ABSPATH is not NULL, check for information in the working copy
+   identified by WRI_ABSPATH.
+   */
 svn_error_t *
 svn_wc__db_read_node_install_info(const char **wcroot_abspath,
                                   svn_wc__db_status_t *status,
@@ -1912,8 +1920,11 @@ svn_wc__db_read_node_install_info(const char **wcroot_abspath,
                                   const svn_checksum_t **sha1_checksum,
                                   const char **target,
                                   apr_hash_t **pristine_props,
+                                  apr_time_t *changed_date,
+                                  svn_boolean_t *is_file_external,
                                   svn_wc__db_t *db,
                                   const char *local_abspath,
+                                  const char *wri_abspath,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool);
 
