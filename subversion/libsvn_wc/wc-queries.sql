@@ -849,6 +849,14 @@ FROM externals WHERE wc_id = ?1 AND parent_relpath = ?2
 SELECT local_relpath
 FROM externals WHERE wc_id = ?1 AND def_local_relpath = ?2
 
+-- STMT_UPDATE_EXTERNAL_FILEINFO
+UPDATE externals SET recorded_size = ?3, recorded_mod_time = ?4
+WHERE wc_id = ?1 AND local_relpath = ?2
+
+-- STMT_DELETE_EXTERNAL
+DELETE FROM externals
+WHERE wc_id = ?1 AND local_relpath = ?2
+
 /* ------------------------------------------------------------------------- */
 
 /* these are used in entries.c  */

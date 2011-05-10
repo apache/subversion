@@ -2675,6 +2675,9 @@ insert_external_node(void *baton,
     SVN_ERR(svn_sqlite__bind_revnum(stmt, 15, ieb->recorded_revision));
 
   SVN_ERR(svn_sqlite__insert(NULL, stmt));
+  /* ### TODO: Implement keeping recorded info */
+
+  SVN_ERR(add_work_items(wcroot->sdb, ieb->work_items, scratch_pool));
 
   return SVN_NO_ERROR;
 #endif
@@ -2897,6 +2900,21 @@ svn_wc__db_external_add_dir(svn_wc__db_t *db,
                                 &ieb, scratch_pool));
 }
 
+static svn_error_t *
+db_external_remove(void *baton, svn_wc__db_wcroot_t *wcroot,
+                   const char *local_relpath, apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_DELETE_EXTERNAL));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  /* ### What about actual? */
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_wc__db_external_remove(svn_wc__db_t *db,
                            const char *local_abspath,
@@ -2926,9 +2944,44 @@ svn_wc__db_external_remove(svn_wc__db_t *db,
 
   return SVN_NO_ERROR;
 #else
-  NOT_IMPLEMENTED();
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, db_external_remove, NULL,
+                              scratch_pool));
+
+  return SVN_NO_ERROR;
 #endif
 }
+
+svn_error_t *
+svn_wc__db_external_record_fileinfo(svn_wc__db_t *db,
+                                    const char *local_abspath,
+                                    const char *wri_abspath,
+                                    svn_filesize_t recorded_size,
+                                    apr_time_t recorded_mod_time,
+                                    apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+  svn_sqlite__stmt_t *stmt;
+  int affected_rows;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
+                              local_abspath, scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_UPDATE_EXTERNAL_FILEINFO));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isii", wcroot->wc_id, local_relpath,
+                            recorded_size,
+                            recorded_mod_time));
+  SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
+
+  SVN_ERR_ASSERT(affected_rows == 1);
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_wc__db_external_read(svn_wc__db_kind_t *kind,
                          svn_revnum_t *revision,
@@ -3166,6 +3219,11 @@ svn_wc__db_external_read_pristine_props(apr_hash_t **props,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
+#if SVN_WC__VERSION >= SVN_WC__HAS_EXTERNALS_STORE
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  svn_error_t *err;
+#endif
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -3186,7 +3244,40 @@ svn_wc__db_external_read_pristine_props(apr_hash_t **props,
                                                          result_pool,
                                                          scratch_pool));
 #else
-  NOT_IMPLEMENTED();
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_EXTERNAL_INFO));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  if (have_row)
+    {
+      svn_wc__db_kind_t kind = svn_sqlite__column_token(stmt, 0, kind_map);
+
+      if (kind != svn_wc__db_kind_file
+          && kind != svn_wc__db_kind_symlink)
+        {
+          err = svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                              _("The node '%s' is not a file external."),
+                              svn_dirent_local_style(local_abspath,
+                                                     scratch_pool));
+        }
+      else
+        err = svn_sqlite__column_properties(props, stmt, 6, result_pool,
+                                            scratch_pool);
+
+      if (props && !*props)
+        *props = apr_hash_make(result_pool);
+    }
+  else
+    {
+      err = svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                              _("The node '%s' is not an external."),
+                              svn_dirent_local_style(local_abspath,
+                                                     scratch_pool));
+    }
+
+  return svn_error_return(svn_error_compose_create(err,
+                                                   svn_sqlite__reset(stmt)));
 #endif
 }
 
@@ -11751,7 +11842,8 @@ has_local_mods(svn_boolean_t *is_modified,
             {
               SVN_ERR(svn_wc__internal_file_modified_p(is_modified, NULL,
                                                        NULL, db, node_abspath,
-                                                       FALSE, TRUE, iterpool));
+                                                       FALSE, TRUE, NULL,
+                                                       iterpool));
               if (*is_modified)
                 break;
             }
