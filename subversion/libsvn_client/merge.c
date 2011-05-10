@@ -1753,13 +1753,13 @@ static svn_error_t *
 properties_same_p(svn_boolean_t *same,
                   apr_hash_t *props1,
                   apr_hash_t *props2,
-                  apr_pool_t *pool)
+                  apr_pool_t *scratch_pool)
 {
   apr_array_header_t *prop_changes;
   int i, diffs;
 
   /* Examine the properties that differ */
-  SVN_ERR(svn_prop_diffs(&prop_changes, props1, props2, pool));
+  SVN_ERR(svn_prop_diffs(&prop_changes, props1, props2, scratch_pool));
   diffs = 0;
   for (i = 0; i < prop_changes->nelts; i++)
     {
@@ -3411,7 +3411,8 @@ inherit_implicit_mergeinfo_from_parent(svn_client__merge_path_t *parent,
                                        svn_revnum_t revision2,
                                        svn_ra_session_t *ra_session,
                                        svn_client_ctx_t *ctx,
-                                       apr_pool_t *pool)
+                                       apr_pool_t *result_pool,
+                                       apr_pool_t *scratch_pool)
 {
   const char *path_diff;
 
@@ -3427,19 +3428,20 @@ inherit_implicit_mergeinfo_from_parent(svn_client__merge_path_t *parent,
                                ra_session, child->abspath,
                                MAX(revision1, revision2),
                                MIN(revision1, revision2),
-                               ctx, pool, pool));
+                               ctx, result_pool, scratch_pool));
 
   /* Let CHILD inherit PARENT's implicit mergeinfo. */
-  child->implicit_mergeinfo = apr_hash_make(pool);
+  child->implicit_mergeinfo = apr_hash_make(result_pool);
 
-  path_diff = svn_dirent_is_child(parent->abspath, child->abspath, pool);
+  path_diff = svn_dirent_is_child(parent->abspath, child->abspath,
+                                  scratch_pool);
 
   /* PARENT->PATH better be an ancestor of CHILD->ABSPATH! */
   SVN_ERR_ASSERT(path_diff);
 
   SVN_ERR(svn_client__adjust_mergeinfo_source_paths(
     child->implicit_mergeinfo, path_diff,
-    parent->implicit_mergeinfo, pool));
+    parent->implicit_mergeinfo, result_pool));
   return SVN_NO_ERROR;
 }
 
@@ -3479,7 +3481,8 @@ ensure_implicit_mergeinfo(svn_client__merge_path_t *parent,
                                                    revision2,
                                                    ra_session,
                                                    ctx,
-                                                   result_pool));
+                                                   result_pool,
+                                                   scratch_pool));
   else
     SVN_ERR(get_full_mergeinfo(NULL,
                                &(child->implicit_mergeinfo),
@@ -4569,31 +4572,34 @@ record_skips(const char *mergeinfo_path,
              svn_boolean_t is_rollback,
              notification_receiver_baton_t *notify_b,
              merge_cmd_baton_t *merge_b,
-             apr_pool_t *pool)
+             apr_pool_t *scratch_pool)
 {
   apr_hash_index_t *hi;
   apr_hash_t *merges;
   apr_size_t nbr_skips = (notify_b->skipped_abspaths != NULL ?
                           apr_hash_count(notify_b->skipped_abspaths) : 0);
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   if (nbr_skips == 0)
     return SVN_NO_ERROR;
 
-  merges = apr_hash_make(pool);
+  merges = apr_hash_make(scratch_pool);
 
   /* Override the mergeinfo for child paths which weren't actually merged. */
-  for (hi = apr_hash_first(pool, notify_b->skipped_abspaths); hi;
+  for (hi = apr_hash_first(scratch_pool, notify_b->skipped_abspaths); hi;
        hi = apr_hash_next(hi))
     {
       const char *skipped_abspath = svn__apr_hash_index_key(hi);
       svn_wc_notify_state_t obstruction_state;
+
+      svn_pool_clear(iterpool);
 
       /* Before we override, make sure this is a versioned path, it might
          be an external or missing from disk due to authz restrictions. */
       SVN_ERR(perform_obstruction_check(&obstruction_state,
                                         NULL, NULL, NULL,
                                         merge_b, skipped_abspath,
-                                        svn_node_unknown, pool));
+                                        svn_node_unknown, iterpool));
       if (obstruction_state == svn_wc_notify_state_obstructed
           || obstruction_state == svn_wc_notify_state_missing)
         continue;
@@ -4611,7 +4617,8 @@ record_skips(const char *mergeinfo_path,
          ### http://subversion.tigris.org/issues/show_bug.cgi?id=3440. */
       apr_hash_set(merges, skipped_abspath,
                    APR_HASH_KEY_STRING,
-                   apr_array_make(pool, 0, sizeof(svn_merge_range_t *)));
+                   apr_array_make(scratch_pool, 0,
+                                  sizeof(svn_merge_range_t *)));
 
       if (nbr_skips < notify_b->nbr_notifications)
         /* ### Use RANGELIST as the mergeinfo for all children of
@@ -4619,9 +4626,10 @@ record_skips(const char *mergeinfo_path,
            ### skipped? */
         ;
     }
+  svn_pool_destroy(iterpool);
   SVN_ERR(update_wc_mergeinfo(NULL, merge_b->target_abspath,
                               mergeinfo_path, merges,
-                              is_rollback, merge_b->ctx, pool));
+                              is_rollback, merge_b->ctx, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -4631,7 +4639,7 @@ record_skips(const char *mergeinfo_path,
 static APR_INLINE svn_error_t *
 make_merge_conflict_error(const char *target_wcpath,
                           svn_merge_range_t *r,
-                          apr_pool_t *pool)
+                          apr_pool_t *scratch_pool)
 {
   return svn_error_createf
     (SVN_ERR_WC_FOUND_CONFLICT, NULL,
@@ -4639,7 +4647,7 @@ make_merge_conflict_error(const char *target_wcpath,
        "'%s' --\n"
        "resolve all conflicts and rerun the merge to apply the remaining\n"
        "unmerged revisions"),
-     r->start, r->end, svn_dirent_local_style(target_wcpath, pool));
+     r->start, r->end, svn_dirent_local_style(target_wcpath, scratch_pool));
 }
 
 /* Remove the element at IDX from the array ARR.
@@ -4807,7 +4815,7 @@ drive_merge_report_editor(const char *target_abspath,
                           svn_depth_t depth,
                           notification_receiver_baton_t *notify_b,
                           merge_cmd_baton_t *merge_b,
-                          apr_pool_t *pool)
+                          apr_pool_t *scratch_pool)
 {
   const svn_ra_reporter3_t *reporter;
   const svn_delta_editor_t *diff_editor;
@@ -4878,7 +4886,7 @@ drive_merge_report_editor(const char *target_abspath,
      this to request individual file contents. */
   SVN_ERR(svn_client__ensure_ra_session_url(&old_sess2_url,
                                             merge_b->ra_session2,
-                                            url1, pool));
+                                            url1, scratch_pool));
 
   /* Get the diff editor and a reporter with which to, ultimately,
      drive it. */
@@ -4891,22 +4899,23 @@ drive_merge_report_editor(const char *target_abspath,
                                       merge_b->ctx->cancel_func,
                                       merge_b->ctx->cancel_baton,
                                       notification_receiver, notify_b,
-                                      pool, pool));
+                                      scratch_pool, scratch_pool));
   SVN_ERR(svn_ra_do_diff3(merge_b->ra_session1,
                           &reporter, &report_baton, revision2,
                           "", depth, merge_b->ignore_ancestry,
                           TRUE,  /* text_deltas */
-                          url2, diff_editor, diff_edit_baton, pool));
+                          url2, diff_editor, diff_edit_baton, scratch_pool));
 
   /* Drive the reporter. */
   SVN_ERR(reporter->set_path(report_baton, "", target_start, depth,
-                             FALSE, NULL, pool));
+                             FALSE, NULL, scratch_pool));
   if (honor_mergeinfo && children_with_mergeinfo)
     {
       /* Describe children with mergeinfo overlapping this merge
          operation such that no repeated diff is retrieved for them from
          the repository. */
       int i;
+      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
       /* Start with CHILDREN_WITH_MERGEINFO[1], CHILDREN_WITH_MERGEINFO[0]
          is always the merge target (TARGET_ABSPATH). */
@@ -4923,6 +4932,8 @@ drive_merge_report_editor(const char *target_abspath,
           SVN_ERR_ASSERT(child);
           if (child->absent)
             continue;
+
+          svn_pool_clear(iterpool);
 
           /* Find this child's nearest wc ancestor with mergeinfo. */
           parent_index = find_nearest_ancestor(children_with_mergeinfo,
@@ -4972,7 +4983,8 @@ drive_merge_report_editor(const char *target_abspath,
           /* Ok, we really need to describe this subtree as it needs different
              ranges applied than its nearest working copy parent. */
           child_repos_path = svn_dirent_is_child(target_abspath,
-                                                 child->abspath, pool);
+                                                 child->abspath,
+                                                 iterpool);
           /* This loop is only processing subtrees, so CHILD->ABSPATH
              better be a proper child of the merge target. */
           SVN_ERR_ASSERT(child_repos_path);
@@ -4986,21 +4998,22 @@ drive_merge_report_editor(const char *target_abspath,
                  anything. */
               SVN_ERR(reporter->set_path(report_baton, child_repos_path,
                                          revision2, depth, FALSE,
-                                         NULL, pool));
+                                         NULL, iterpool));
             }
           else
             {
               SVN_ERR(reporter->set_path(report_baton, child_repos_path,
                                          range->start, depth, FALSE,
-                                         NULL, pool));
+                                         NULL, iterpool));
             }
         }
+      svn_pool_destroy(iterpool);
     }
-  SVN_ERR(reporter->finish_report(report_baton, pool));
+  SVN_ERR(reporter->finish_report(report_baton, scratch_pool));
 
   /* Point the merge baton's second session back where it was. */
   if (old_sess2_url)
-    SVN_ERR(svn_ra_reparent(merge_b->ra_session2, old_sess2_url, pool));
+    SVN_ERR(svn_ra_reparent(merge_b->ra_session2, old_sess2_url, scratch_pool));
 
   /* Caller must call svn_sleep_for_timestamps() */
   *(merge_b->use_sleep) = TRUE;
