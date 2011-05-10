@@ -228,13 +228,9 @@ static svn_error_t * get_version_url(commit_ctx_t *cc,
       svn_string_t bc_relative;
 
       /* The version URL comes from a resource in the Baseline Collection. */
-      SVN_ERR(svn_ra_neon__get_baseline_info(NULL,
-                                             &bc_url, &bc_relative, NULL,
-                                             cc->ras,
-                                             rsrc->url,
-                                             rsrc->revision,
-                                             pool));
-
+      SVN_ERR(svn_ra_neon__get_baseline_info(&bc_url, &bc_relative, NULL,
+                                             cc->ras, rsrc->url,
+                                             rsrc->revision, pool));
       url = svn_path_url_add_component2(bc_url.data, bc_relative.data, pool);
     }
 
@@ -593,7 +589,7 @@ static svn_error_t * copy_resource(svn_ra_neon__session_t *ras,
       /* Convert the copyfrom_* url/rev "public" pair into a Baseline
          Collection (BC) URL that represents the revision -- and a
          relative path under that BC.  */
-      SVN_ERR(svn_ra_neon__get_baseline_info(NULL, &bc_url, &bc_relative, NULL,
+      SVN_ERR(svn_ra_neon__get_baseline_info(&bc_url, &bc_relative, NULL,
                                              ras, copyfrom_path,
                                              copyfrom_revision, scratch_pool));
       baseline_coll_url = bc_url.data;

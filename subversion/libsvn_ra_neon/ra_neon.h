@@ -514,9 +514,6 @@ svn_error_t * svn_ra_neon__get_one_prop(const svn_string_t **propval,
 
 /* Get various Baseline-related information for a given "public" URL.
 
-   Given a session SESS and a URL, return whether the URL is a
-   directory in *IS_DIR.  IS_DIR may be NULL if this flag is unneeded.
-
    REVISION may be SVN_INVALID_REVNUM to indicate that the operation
    should work against the latest (HEAD) revision, or whether it should
    return information about that specific revision.
@@ -540,8 +537,7 @@ svn_error_t * svn_ra_neon__get_one_prop(const svn_string_t **propval,
    DeltaV baselines correspond one-to-one to Subversion revisions. Thus,
    the entire state of a revision can be found in a Baseline Collection.
 */
-svn_error_t *svn_ra_neon__get_baseline_info(svn_boolean_t *is_dir,
-                                            svn_string_t *bc_url,
+svn_error_t *svn_ra_neon__get_baseline_info(svn_string_t *bc_url,
                                             svn_string_t *bc_relative,
                                             svn_revnum_t *latest_rev,
                                             svn_ra_neon__session_t *sess,

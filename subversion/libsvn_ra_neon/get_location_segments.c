@@ -191,9 +191,9 @@ svn_ra_neon__get_location_segments(svn_ra_session_t *session,
      it as the main argument to the REPORT request; it might cause
      dav_get_resource() to choke on the server.  So instead, we pass a
      baseline-collection URL, which we get from the PEG_REVISION.  */
-  SVN_ERR(svn_ra_neon__get_baseline_info(NULL, &bc_url, &bc_relative, NULL,
-                                         ras, ras->url->data,
-                                         peg_revision, subpool));
+  SVN_ERR(svn_ra_neon__get_baseline_info(&bc_url, &bc_relative, NULL, ras,
+                                         ras->url->data, peg_revision,
+                                         subpool));
   bc = svn_path_url_add_component2(bc_url.data, bc_relative.data, subpool);
 
   err = svn_ra_neon__parsed_request(ras, "REPORT", bc,
