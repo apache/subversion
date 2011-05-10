@@ -289,8 +289,8 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
   if (base_dir_abspath)
     {
       svn_error_t *err = svn_wc__node_get_repos_info(NULL, &uuid, ctx->wc_ctx,
-                                                     base_dir_abspath, FALSE,
-                                                     FALSE, pool, pool);
+                                                     base_dir_abspath,
+                                                     pool, pool);
 
       if (err && (err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY
                   || err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND
@@ -407,7 +407,7 @@ svn_client_uuid_from_path2(const char **uuid,
 {
   return svn_error_return(
     svn_wc__node_get_repos_info(NULL, uuid, ctx->wc_ctx, local_abspath,
-                                TRUE, TRUE, result_pool, scratch_pool));
+                                result_pool, scratch_pool));
 }
 
 

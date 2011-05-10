@@ -5083,6 +5083,41 @@ def copy_wc_url_with_absent(sbox):
                                         expected_status)
 
 
+def copy_url_shortcut(sbox):
+  "copy using URL shortcut source"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  # Can't use ^/A/D/G shortcut here because wc/X is unversioned.
+  svntest.actions.run_and_verify_svn(None, None, [], 'copy',
+                                     sbox.ospath('A/D/G'), sbox.ospath('X'))
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm',
+                                     sbox.ospath('X/pi'))
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'X'     : Item(status='A ', copied='+', wc_rev='-'),
+    'X/pi'  : Item(status='D ', copied='+', wc_rev='-'),
+    'X/rho' : Item(status='  ', copied='+', wc_rev='-'),
+    'X/tau' : Item(status='  ', copied='+', wc_rev='-'),
+    })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Can use ^/A/D/G even though X/pi is a delete within a copy.
+  svntest.actions.run_and_verify_svn(None, None, [], 'copy',
+                                     '^/A/D/G/pi', sbox.ospath('X/pi'))
+  
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'X'     : Item(status='A ', copied='+', wc_rev='-'),
+    'X/pi'  : Item(status='R ', copied='+', wc_rev='-', entry_status='  '),
+    'X/rho' : Item(status='  ', copied='+', wc_rev='-'),
+    'X/tau' : Item(status='  ', copied='+', wc_rev='-'),
+    })
+
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 ########################################################################
 # Run the tests
@@ -5188,6 +5223,7 @@ test_list = [ None,
               copy_wc_over_deleted_other_kind,
               move_wc_and_repo_dir_to_itself,
               copy_wc_url_with_absent,
+              copy_url_shortcut,
              ]
 
 if __name__ == '__main__':

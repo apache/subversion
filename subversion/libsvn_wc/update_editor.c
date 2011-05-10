@@ -4789,13 +4789,11 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
     {
       /* Find the repository_root via the parent directory, which
          is always versioned before this function is called */
-      SVN_ERR(svn_wc__node_get_repos_info(&original_root_url,
-                                          &original_uuid,
-                                          wc_ctx,
-                                          dir_abspath,
-                                          TRUE /* scan_added */,
-                                          FALSE /* scan_deleted */,
-                                          pool, pool));
+      SVN_ERR(svn_wc__internal_get_repos_info(&original_root_url,
+                                              &original_uuid,
+                                              wc_ctx->db,
+                                              dir_abspath,
+                                              pool, pool));
 
       if (!svn_uri_is_ancestor(original_root_url, copyfrom_url))
         return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,

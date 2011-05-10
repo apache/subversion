@@ -194,7 +194,6 @@ svn_client__get_repos_root(const char **repos_root,
     {
       SVN_ERR(svn_wc__node_get_repos_info(repos_root, NULL,
                                           ctx->wc_ctx, abspath_or_url,
-                                          TRUE, TRUE,
                                           result_pool, scratch_pool));
 
       return SVN_NO_ERROR;

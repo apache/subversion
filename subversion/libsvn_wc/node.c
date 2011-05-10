@@ -143,8 +143,6 @@ svn_wc__internal_get_repos_info(const char **repos_root_url,
                                 const char **repos_uuid,
                                 svn_wc__db_t *db,
                                 const char *local_abspath,
-                                svn_boolean_t scan_added,
-                                svn_boolean_t scan_deleted,
                                 apr_pool_t *result_pool,
                                 apr_pool_t *scratch_pool)
 {
@@ -157,51 +155,64 @@ svn_wc__internal_get_repos_info(const char **repos_root_url,
                              NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL, NULL,
                              NULL, NULL, NULL,
-                             db, local_abspath, result_pool,
-                             scratch_pool);
+                             db, local_abspath,
+                             result_pool, scratch_pool);
   if (err)
     {
       if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND
           && err->apr_err != SVN_ERR_WC_NOT_WORKING_COPY)
         return svn_error_return(err);
-
+ 
       /* This node is not versioned. Return NULL repos info.  */
       svn_error_clear(err);
-
+ 
       if (repos_root_url)
         *repos_root_url = NULL;
       if (repos_uuid)
         *repos_uuid = NULL;
       return SVN_NO_ERROR;
     }
-
-  if (scan_added && (status == svn_wc__db_status_added))
+ 
+  if (((repos_root_url && *repos_root_url) || !repos_root_url)
+      && ((repos_uuid && *repos_uuid) || !repos_uuid))
+    return SVN_NO_ERROR;
+ 
+  if (status == svn_wc__db_status_deleted)
+    {
+      const char *base_del_abspath, *wrk_del_abspath;
+ 
+      SVN_ERR(svn_wc__db_scan_deletion(&base_del_abspath, NULL,
+                                       &wrk_del_abspath,
+                                       db, local_abspath,
+                                       scratch_pool, scratch_pool));
+ 
+      if (base_del_abspath)
+        SVN_ERR(svn_wc__db_scan_base_repos(NULL,repos_root_url,
+                                           repos_uuid, db, base_del_abspath,
+                                           result_pool, scratch_pool));
+      else if (wrk_del_abspath)
+        SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL,
+                                         repos_root_url, repos_uuid,
+                                         NULL, NULL, NULL, NULL,
+                                         db, svn_dirent_dirname(
+                                                   wrk_del_abspath,
+                                                   scratch_pool),
+                                         result_pool, scratch_pool));
+    }
+  else if (status == svn_wc__db_status_added)
     {
       /* We have an addition. scan_addition() will find the intended
          repository location by scanning up the tree.  */
-      return svn_error_return(svn_wc__db_scan_addition(
-                                &status, NULL,
-                                NULL, repos_root_url, repos_uuid,
-                                NULL, NULL, NULL, NULL,
-                                db, local_abspath,
-                                result_pool, scratch_pool));
+      SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL,
+                                       repos_root_url, repos_uuid,
+                                       NULL, NULL, NULL, NULL,
+                                       db, local_abspath,
+                                       result_pool, scratch_pool));
     }
-
-  /* If we didn't get repository information, and the status means we are
-     looking at an unchanged BASE node, then scan upwards for repos info.  */
-  if (((repos_root_url != NULL && *repos_root_url == NULL)
-       || (repos_uuid != NULL && *repos_uuid == NULL))
-      && (status == svn_wc__db_status_normal
-          || status == svn_wc__db_status_absent
-          || status == svn_wc__db_status_excluded
-          || status == svn_wc__db_status_not_present
-          || (scan_deleted && (status == svn_wc__db_status_deleted))))
-    {
-      SVN_ERR(svn_wc__db_scan_base_repos(NULL, repos_root_url, repos_uuid,
-                                         db, local_abspath,
-                                         result_pool, scratch_pool));
-    }
-  /* else maybe a deletion, or an addition w/ SCAN_ADDED==FALSE.  */
+  else
+    SVN_ERR(svn_wc__db_scan_base_repos(NULL, repos_root_url, repos_uuid,
+                                       db, local_abspath,
+                                       result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -211,14 +222,12 @@ svn_wc__node_get_repos_info(const char **repos_root_url,
                             const char **repos_uuid,
                             svn_wc_context_t *wc_ctx,
                             const char *local_abspath,
-                            svn_boolean_t scan_added,
-                            svn_boolean_t scan_deleted,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool)
 {
   return svn_error_return(svn_wc__internal_get_repos_info(
-            repos_root_url, repos_uuid, wc_ctx->db, local_abspath, scan_added,
-            scan_deleted, result_pool, scratch_pool));
+            repos_root_url, repos_uuid, wc_ctx->db, local_abspath,
+            result_pool, scratch_pool));
 }
 
 /* Convert DB_KIND into the appropriate NODE_KIND value.

@@ -648,7 +648,7 @@ test_access_baton_like_locking(apr_pool_t *pool)
     svn_boolean_t is_root;
     SVN_ERR(svn_wc__node_get_url(&url, wc_ctx, local_abspath, pool, pool));
     SVN_ERR(svn_wc__node_get_repos_info(&repos_root_url, &repos_uuid,
-                                        wc_ctx, local_abspath, FALSE, FALSE,
+                                        wc_ctx, local_abspath,
                                         pool, pool));
 
     SVN_ERR(svn_io_make_dir_recursively(subdir, pool));
