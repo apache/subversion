@@ -1959,23 +1959,23 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
         {
           const char *node_name = APR_ARRAY_IDX(children, i, const char*);
           const char *node_abspath;
-          svn_wc__db_status_t status;
-          svn_wc__db_kind_t kind;
+          svn_wc__db_status_t node_status;
+          svn_wc__db_kind_t node_kind;
 
           svn_pool_clear(iterpool);
 
           node_abspath = svn_dirent_join(local_abspath, node_name, iterpool);
 
-          SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL,
+          SVN_ERR(svn_wc__db_read_info(&node_status, &node_kind, NULL, NULL,
                                        NULL, NULL, NULL, NULL, NULL, NULL,
                                        NULL, NULL, NULL, NULL, NULL, NULL,
                                        NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL,
                                        db, node_abspath,
                                        iterpool, iterpool));
 
-          if (status == svn_wc__db_status_normal
-              && kind == svn_wc__db_kind_dir)
+          if (node_status == svn_wc__db_status_normal
+              && node_kind == svn_wc__db_kind_dir)
             {
               svn_boolean_t is_root;
 
@@ -1986,9 +1986,9 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
                 continue; /* Just skip working copies as obstruction */
             }
 
-          if (status != svn_wc__db_status_normal
-              && status != svn_wc__db_status_added
-              && status != svn_wc__db_status_incomplete)
+          if (node_status != svn_wc__db_status_normal
+              && node_status != svn_wc__db_status_added
+              && node_status != svn_wc__db_status_incomplete)
             {
               /* The node is already 'deleted', so nothing to do on
                  versioned nodes */
