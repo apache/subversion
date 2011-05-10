@@ -409,12 +409,6 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
    properties, which could affect the way the wc target is
    detranslated and compared with LEFT and RIGHT for merging.
 
-   If COPYFROM_ABSPATH is not NULL, the "local mods" text should be
-   taken from the path named there instead of from TARGET_ABSPATH
-   (but the merge should still be installed into TARGET_ABSPATH).
-   The merge target is allowed to not be under version control in
-   this case.
-
    The merge result is stored in *MERGE_OUTCOME and merge conflicts
    are marked in MERGE_RESULT using LEFT_LABEL, RIGHT_LABEL and
    TARGET_LABEL.
@@ -437,6 +431,12 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
    ## TODO: We should store the information in LEFT_VERSION and RIGHT_VERSION
             in the workingcopy for future retrieval via svn info.
 
+   WRI_ABSPATH describes in which working copy information should be
+   retrieved. (Interesting for merging file externals).
+
+   ACTUAL_PROPS is the set of actual properties before merging; used for
+   detranslating the file before merging.
+
    Property changes sent by the update are provided in PROP_DIFF.
 
    For a complete description, see svn_wc_merge3() for which this is
@@ -454,10 +454,11 @@ svn_wc__internal_merge(svn_skel_t **work_items,
                        const char *right_abspath,
                        const svn_wc_conflict_version_t *right_version,
                        const char *target_abspath,
-                       const char *copyfrom_abspath,
+                       const char *wri_abspath,
                        const char *left_label,
                        const char *right_label,
                        const char *target_label,
+                       apr_hash_t *actual_props,
                        svn_boolean_t dry_run,
                        const char *diff3_cmd,
                        const apr_array_header_t *merge_options,
@@ -734,8 +735,8 @@ svn_wc__write_check(svn_wc__db_t *db,
 
 /* Perform the actual merge of file changes between an original file,
    identified by ORIGINAL_CHECKSUM (an empty file if NULL) to a new file
-   identified by NEW_CHECKSUM.
-   
+   identified by NEW_CHECKSUM in the working copy identified by WRI_ABSPATH.
+
    Merge the result into LOCAL_ABSPATH, which is part of the working copy
    identified by WRI_ABSPATH. Use OLD_REVISION and TARGET_REVISION for naming
    the intermediate files.
@@ -750,6 +751,7 @@ svn_wc__perform_file_merge(svn_skel_t **work_items,
                            const char *wri_abspath,
                            const svn_checksum_t *new_checksum,
                            const svn_checksum_t *original_checksum,
+                           apr_hash_t *actual_props,
                            const apr_array_header_t *ext_patterns,
                            svn_revnum_t old_revision,
                            svn_revnum_t target_revision,
@@ -760,7 +762,8 @@ svn_wc__perform_file_merge(svn_skel_t **work_items,
                            svn_cancel_func_t cancel_func,
                            void *cancel_baton,
                            apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool);
+                           apr_pool_t *scratch_pool)
+;
 
 #ifdef __cplusplus
 }

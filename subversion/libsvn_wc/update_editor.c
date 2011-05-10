@@ -3214,6 +3214,7 @@ svn_wc__perform_file_merge(svn_skel_t **work_items,
                            const char *wri_abspath,
                            const svn_checksum_t *new_checksum,
                            const svn_checksum_t *original_checksum,
+                           apr_hash_t *actual_props,
                            const apr_array_header_t *ext_patterns,
                            svn_revnum_t old_revision,
                            svn_revnum_t target_revision,
@@ -3287,19 +3288,15 @@ svn_wc__perform_file_merge(svn_skel_t **work_items,
      textbase into the file we're updating.
      Remember that this function wants full paths! */
   /* ### TODO: Pass version info here. */
-  /* ### NOTE: if this call bails out, then we must ensure
-     ###   that no work items have been queued which might
-     ###   place this file into an inconsistent state.
-     ###   in the future, all the state changes should be
-     ###   made atomically.  */
   SVN_ERR(svn_wc__internal_merge(&work_item,
                                  merge_outcome,
                                  db,
                                  merge_left, NULL,
                                  new_text_base_tmp_abspath, NULL,
                                  local_abspath,
-                                 NULL /* copyfrom_abspath */,
+                                 wri_abspath,
                                  oldrev_str, newrev_str, mine_str,
+                                 actual_props,
                                  FALSE /* dry_run */,
                                  diff3_cmd, NULL, propchanges,
                                  conflict_func, conflict_baton,
@@ -3348,6 +3345,7 @@ merge_file(svn_skel_t **work_items,
            const char **install_from,
            svn_wc_notify_state_t *content_state,
            struct file_baton *fb,
+           apr_hash_t *actual_props,
            apr_time_t last_changed_date,
            apr_pool_t *result_pool,
            apr_pool_t *scratch_pool)
@@ -3452,6 +3450,7 @@ merge_file(svn_skel_t **work_items,
                                          fb->add_existed
                                                   ? NULL
                                                   : fb->original_checksum,
+                                         actual_props,
                                          eb->ext_patterns,
                                          fb->old_revision,
                                          *eb->target_revision,
@@ -3477,7 +3476,8 @@ merge_file(svn_skel_t **work_items,
       SVN_ERR(svn_wc__get_translate_info(NULL, NULL,
                                          &keywords,
                                          NULL,
-                                         eb->db, fb->local_abspath, NULL,
+                                         eb->db, fb->local_abspath,
+                                         actual_props, TRUE,
                                          scratch_pool, scratch_pool));
       if (magic_props_changed || keywords)
         {
@@ -3808,8 +3808,8 @@ close_file(void *file_baton,
       if (!fb->obstruction_found)
         {
           SVN_ERR(merge_file(&work_item, &install_pristine, &install_from,
-                             &content_state, fb, new_changed_date,
-                             scratch_pool, scratch_pool));
+                             &content_state, fb, current_actual_props,
+                             new_changed_date, scratch_pool, scratch_pool));
 
           all_work_items = svn_wc__wq_merge(all_work_items, work_item,
                                             scratch_pool);
