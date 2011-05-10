@@ -1150,9 +1150,7 @@ get_dir_status(const struct walk_status_baton *wb,
         return SVN_NO_ERROR;
     }
 
-  /* Add empty status structures for each of the unversioned things.
-     This also catches externals; not sure whether that's good or bad,
-     but it's what's happening right now. */
+  /* Walk all the children of this directory. */
   for (hi = apr_hash_first(subpool, all_children); hi; hi = apr_hash_next(hi))
     {
       const void *key;
@@ -1515,14 +1513,8 @@ make_dir_baton(void **dir_baton,
   else
     status_in_parent = eb->anchor_status;
 
-  /* Order is important here.  We can't depend on status_in_parent->entry
-     being non-NULL until after we've checked all the conditions that
-     might indicate that the parent is unversioned ("unversioned" for
-     our purposes includes being an external or ignored item). */
   if (status_in_parent
-      && (status_in_parent->node_status != svn_wc_status_unversioned)
-      && (status_in_parent->node_status != svn_wc_status_external)
-      && (status_in_parent->node_status != svn_wc_status_ignored)
+      && status_in_parent->versioned
       && (status_in_parent->kind == svn_node_dir)
       && (! d->excluded)
       && (d->depth == svn_depth_unknown
