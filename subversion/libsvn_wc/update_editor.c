@@ -943,7 +943,6 @@ open_root(void *edit_baton,
   struct edit_baton *eb = edit_baton;
   struct dir_baton *db;
   svn_boolean_t already_conflicted;
-  svn_wc__db_kind_t kind;
   svn_error_t *err;
 
   /* Note that something interesting is actually happening in this
