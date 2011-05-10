@@ -340,6 +340,7 @@ svn_wc__perform_props_merge(svn_wc_notify_state_t *state,
                               U_("base_merge=TRUE is no longer supported"));
 #endif
     SVN_ERR(svn_wc__db_op_set_props(db, local_abspath, new_actual_props,
+                                    svn_wc__has_magic_property(propchanges),
                                     NULL /* conflict */,
                                     work_items,
                                     scratch_pool));
@@ -2014,6 +2015,7 @@ do_propset(svn_wc__db_t *db,
   svn_wc_notify_action_t notify_action;
   svn_wc__db_status_t status;
   svn_skel_t *work_item = NULL;
+  svn_boolean_t clear_recorded_info = FALSE;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -2116,11 +2118,18 @@ do_propset(svn_wc__db_t *db,
              then it could be different, relative to the pristine. We want
              to ensure the LAST_MOD_TIME is different, to indicate that
              a full detranslate/compare is performed.  */
-          /* ### we should be performing similar logic for changes to the
-             ### svn:eol-style property.  */
-          SVN_ERR(svn_wc__db_global_record_fileinfo(db, local_abspath,
-                                                    SVN_INVALID_FILESIZE, 0,
-                                                    scratch_pool));
+          clear_recorded_info = TRUE;
+        }
+    }
+  else if (kind == svn_node_file && strcmp(name, SVN_PROP_EOL_STYLE) == 0)
+    {
+      svn_string_t *old_value = apr_hash_get(prophash, SVN_PROP_KEYWORDS,
+                                             APR_HASH_KEY_STRING);
+
+      if (((value == NULL) != (old_value == NULL))
+          || (value && ! svn_string_compare(value, old_value)))
+        {
+          clear_recorded_info = TRUE;
         }
     }
 
@@ -2150,7 +2159,8 @@ do_propset(svn_wc__db_t *db,
   apr_hash_set(prophash, name, APR_HASH_KEY_STRING, value);
 
   /* Drop it right into the db..  */
-  SVN_ERR(svn_wc__db_op_set_props(db, local_abspath, prophash, NULL, work_item,
+  SVN_ERR(svn_wc__db_op_set_props(db, local_abspath, prophash,
+                                  clear_recorded_info, NULL, work_item,
                                   scratch_pool));
 
   /* Run our workqueue item for sync'ing flags with props. */

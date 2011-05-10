@@ -496,8 +496,8 @@ process_commit_file_install(svn_wc__db_t *db,
          right kind of lock (and we ignore the result)
        */
       SVN_ERR(svn_wc__internal_file_modified_p(&modified, NULL, NULL,
-                                               db, local_abspath,
-                                               FALSE, FALSE, scratch_pool));
+                                               db, local_abspath, FALSE,
+                                               scratch_pool));
     }
   return SVN_NO_ERROR;
 }

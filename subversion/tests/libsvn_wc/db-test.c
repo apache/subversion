@@ -643,7 +643,7 @@ validate_node(svn_wc__db_t *db,
   {
     apr_hash_t *actual_props = apr_hash_copy(scratch_pool, props);
     apr_hash_set(actual_props, "p999", APR_HASH_KEY_STRING, value);
-    SVN_ERR(svn_wc__db_op_set_props(db, path, actual_props,
+    SVN_ERR(svn_wc__db_op_set_props(db, path, actual_props, FALSE,
                                     NULL, NULL, scratch_pool));
     SVN_ERR(svn_wc__db_read_props(&props, db, path,
                                   scratch_pool, scratch_pool));

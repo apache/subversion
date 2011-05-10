@@ -518,8 +518,7 @@ assemble_status(svn_wc_status3_t **status,
             {
               err = svn_wc__internal_file_modified_p(&text_modified_p, NULL,
                                                      NULL, db, local_abspath,
-                                                     FALSE, TRUE,
-                                                     scratch_pool);
+                                                     FALSE, scratch_pool);
 
               if (err)
                 {

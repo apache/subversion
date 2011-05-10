@@ -99,7 +99,7 @@ repair_timestamps(svn_wc__db_t *db,
     {
       svn_boolean_t modified;
       SVN_ERR(svn_wc__internal_file_modified_p(&modified, NULL, NULL,
-                                               db, local_abspath, FALSE, FALSE,
+                                               db, local_abspath, FALSE,
                                                scratch_pool));
     }
   else if (kind == svn_wc__db_kind_dir)
