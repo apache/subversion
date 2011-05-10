@@ -2086,14 +2086,16 @@ do_propset(svn_wc__db_t *db,
 
       if (old_value)
         SVN_ERR(svn_wc__expand_keywords(&old_keywords,
-                                        db, local_abspath, old_value->data,
+                                        db, local_abspath, NULL,
+                                        old_value->data, TRUE,
                                         scratch_pool, scratch_pool));
       else
         old_keywords = apr_hash_make(scratch_pool);
 
       if (value)
         SVN_ERR(svn_wc__expand_keywords(&new_keywords,
-                                        db, local_abspath, value->data,
+                                        db, local_abspath, NULL,
+                                        value->data, TRUE,
                                         scratch_pool, scratch_pool));
       else
         new_keywords = apr_hash_make(scratch_pool);

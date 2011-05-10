@@ -85,7 +85,7 @@ svn_wc__internal_translated_stream(svn_stream_t **stream,
   SVN_ERR(svn_wc__get_translate_info(&style, &eol,
                                      &keywords,
                                      &special,
-                                     db, versioned_abspath, NULL,
+                                     db, versioned_abspath, NULL, FALSE,
                                      scratch_pool, scratch_pool));
 
   if (special)
@@ -170,7 +170,7 @@ svn_wc__internal_translated_file(const char **xlated_abspath,
   SVN_ERR(svn_wc__get_translate_info(&style, &eol,
                                      &keywords,
                                      &special,
-                                     db, versioned_abspath, NULL, 
+                                     db, versioned_abspath, NULL, FALSE,
                                      scratch_pool, scratch_pool));
 
   if (! svn_subst_translation_required(style, eol, keywords, special, TRUE)
@@ -259,6 +259,7 @@ svn_wc__get_translate_info(svn_subst_eol_style_t *style,
                            svn_wc__db_t *db,
                            const char *local_abspath,
                            apr_hash_t *props,
+                           svn_boolean_t for_normalization,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool)
 {
@@ -286,8 +287,8 @@ svn_wc__get_translate_info(svn_subst_eol_style_t *style,
         *keywords = NULL;
       else
         SVN_ERR(svn_wc__expand_keywords(keywords,
-                                        db, local_abspath,
-                                        propval->data,
+                                        db, local_abspath, NULL,
+                                        propval->data, for_normalization,
                                         result_pool, scratch_pool));
     }
   if (special)
@@ -305,7 +306,9 @@ svn_error_t *
 svn_wc__expand_keywords(apr_hash_t **keywords,
                         svn_wc__db_t *db,
                         const char *local_abspath,
+                        const char *wri_abspath,
                         const char *keyword_list,
+                        svn_boolean_t for_normalization,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
@@ -314,17 +317,34 @@ svn_wc__expand_keywords(apr_hash_t **keywords,
   const char *changed_author;
   const char *url;
 
-  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL,
-                               NULL, NULL, &changed_rev,
-                               &changed_date, &changed_author, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL,
-                               db, local_abspath,
-                               scratch_pool, scratch_pool));
+  if (! for_normalization)
+    {
+      const char *repos_root_url;
+      const char *repos_relpath;
 
-  SVN_ERR(svn_wc__db_read_url(&url, db, local_abspath, scratch_pool,
-                              scratch_pool));
+      SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, &repos_relpath,
+                                   &repos_root_url, NULL, &changed_rev,
+                                   &changed_date, &changed_author, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL,
+                                   db, local_abspath,
+                                   scratch_pool, scratch_pool));
+
+      if (repos_relpath)
+        url = svn_path_url_add_component2(repos_root_url, repos_relpath,
+                                          scratch_pool);
+      else
+         SVN_ERR(svn_wc__db_read_url(&url, db, local_abspath, scratch_pool,
+                                     scratch_pool));
+    }
+  else
+    {
+      url = "";
+      changed_rev = SVN_INVALID_REVNUM;
+      changed_date = 0;
+      changed_author = "";
+    }
 
   SVN_ERR(svn_subst_build_keywords2(keywords,
                                     keyword_list,
