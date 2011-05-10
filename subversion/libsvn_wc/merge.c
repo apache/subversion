@@ -828,12 +828,9 @@ maybe_resolve_conflicts(svn_skel_t **work_items,
                         apr_pool_t *scratch_pool)
 {
   svn_wc_conflict_result_t *result;
-  const char *dir_abspath;
   svn_skel_t *work_item;
 
   *work_items = NULL;
-
-  dir_abspath = svn_dirent_dirname(mt->local_abspath, scratch_pool);
 
   /* Give the conflict resolution callback a chance to clean
      up the conflicts before we mark the file 'conflicted' */
