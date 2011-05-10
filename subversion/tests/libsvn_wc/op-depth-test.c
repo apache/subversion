@@ -2999,6 +2999,36 @@ test_op_delete(const svn_test_opts_t *opts, apr_pool_t *pool)
     SVN_ERR(do_delete(&b, "A", before, after, before_actual, after_actual));
   }
 
+  {
+    nodes_row_t before[] = {
+      { 0, "",      "normal",       5, "" },
+      { 0, "A",     "normal",       5, "A" },
+      { 0, "A/B",   "normal",       5, "A/B" },
+      { 0, "A/B/f", "normal",       5, "A/B/f" },
+      { 0, "A/B/g", "normal",       5, "A/B/g" },
+      { 1, "A",     "normal",       4, "A" },
+      { 1, "A/B",   "normal",       4, "A/B" },
+      { 1, "A/B/f", "normal",       4, "A/B/f" },
+      { 1, "A/B/g", "base-deleted", NO_COPY_FROM},
+      { 0 }
+    };
+    nodes_row_t after[] = {
+      { 0, "",      "normal",       5, "" },
+      { 0, "A",     "normal",       5, "A" },
+      { 0, "A/B",   "normal",       5, "A/B" },
+      { 0, "A/B/f", "normal",       5, "A/B/f" },
+      { 0, "A/B/g", "normal",       5, "A/B/g" },
+      { 1, "A",     "normal",       4, "A" },
+      { 1, "A/B",   "normal",       4, "A/B" },
+      { 1, "A/B/f", "normal",       4, "A/B/f" },
+      { 1, "A/B/g", "base-deleted", NO_COPY_FROM},
+      { 2, "A/B",   "base-deleted", NO_COPY_FROM},
+      { 2, "A/B/f", "base-deleted", NO_COPY_FROM},
+      { 0 }
+    };
+    SVN_ERR(do_delete(&b, "A/B", before, after, NULL, NULL));
+  }
+
   return SVN_NO_ERROR;
 }
 
