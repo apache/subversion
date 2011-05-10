@@ -613,7 +613,9 @@ run_file_install(svn_wc__db_t *db,
   const char *wcroot_abspath;
   const char *source_abspath;
   const svn_checksum_t *checksum;
+  svn_boolean_t is_file_external;
   apr_hash_t *props;
+  apr_time_t changed_date;
 
   local_relpath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
   SVN_ERR(svn_wc__db_from_relpath(&local_abspath, db, wri_abspath,
@@ -626,7 +628,9 @@ run_file_install(svn_wc__db_t *db,
 
   SVN_ERR(svn_wc__db_read_node_install_info(&wcroot_abspath, NULL, NULL,
                                             &checksum, NULL, &props,
-                                            db, local_abspath,
+                                            &changed_date,
+                                            &is_file_external,
+                                            db, local_abspath, wri_abspath,
                                             scratch_pool, scratch_pool));
 
   if (arg4 != NULL)
@@ -720,16 +724,6 @@ run_file_install(svn_wc__db_t *db,
 
   if (use_commit_times)
     {
-      apr_time_t changed_date;
-
-      SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, &changed_date, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL,
-                                   db, local_abspath,
-                                   scratch_pool, scratch_pool));
-
       if (changed_date)
         SVN_ERR(svn_io_set_file_affected_time(changed_date,
                                               local_abspath,
@@ -737,7 +731,7 @@ run_file_install(svn_wc__db_t *db,
     }
 
   /* ### this should happen before we rename the file into place.  */
-  if (record_fileinfo)
+  if (record_fileinfo && !is_file_external)
     {
       SVN_ERR(get_and_record_fileinfo(db, local_abspath,
                                       FALSE /* ignore_enoent */,

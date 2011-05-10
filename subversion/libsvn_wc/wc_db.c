@@ -7145,8 +7145,11 @@ svn_wc__db_read_node_install_info(const char **wcroot_abspath,
                                   const svn_checksum_t **sha1_checksum,
                                   const char **target,
                                   apr_hash_t **pristine_props,
+                                  apr_time_t *changed_date,
+                                  svn_boolean_t *is_file_external,
                                   svn_wc__db_t *db,
                                   const char *local_abspath,
+                                  const char *wri_abspath,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool)
 {
@@ -7154,46 +7157,143 @@ svn_wc__db_read_node_install_info(const char **wcroot_abspath,
   const char *local_relpath;
   svn_sqlite__stmt_t *stmt;
   svn_error_t *err = NULL;
+  svn_boolean_t have_row;
+  svn_boolean_t try_external = FALSE;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  if (!wri_abspath)
+    wri_abspath = local_abspath;
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
-                              local_abspath, scratch_pool, scratch_pool));
+                              wri_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
+
+  if (local_abspath != wri_abspath
+      && strcmp(local_abspath, wri_abspath))
+    {
+      if (!svn_dirent_is_ancestor(wcroot->abspath, local_abspath))
+        return svn_error_createf(
+                    SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                    _("The node '%s' is not in working copy '%s'"),
+                    svn_dirent_local_style(local_abspath, scratch_pool),
+                    svn_dirent_local_style(wcroot->abspath, scratch_pool));
+
+      local_relpath = svn_dirent_skip_ancestor(wcroot->abspath, local_abspath);
+    }
 
   if (wcroot_abspath != NULL)
     *wcroot_abspath = apr_pstrdup(result_pool, wcroot->abspath);
+
+  if (is_file_external)
+    *is_file_external = FALSE;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_NODE_INFO));
 
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
 
-  SVN_ERR(svn_sqlite__step_row(stmt)); /* Row must exist */
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
-  if (status)
+  if (have_row)
     {
-      apr_int64_t op_depth = svn_sqlite__column_int64(stmt, 0);
+      svn_wc__db_status_t db_status;
 
-      *status = svn_sqlite__column_token(stmt, 3, presence_map);
+      apr_int64_t op_depth = svn_sqlite__column_int64(stmt, 0);
+      db_status = svn_sqlite__column_token(stmt, 3, presence_map);
 
       if (op_depth > 0)
-        err = convert_to_working_status(status, *status);
+         err = convert_to_working_status(&db_status, db_status);
+
+      if (status)
+        *status = db_status;
+
+      if (is_file_external
+          && (db_status == svn_wc__db_status_not_present
+              || db_status == svn_wc__db_status_excluded
+              || db_status == svn_wc__db_status_absent))
+        try_external = TRUE;
+
+      if (kind)
+        *kind = svn_sqlite__column_token(stmt, 4, kind_map);
+
+      if (!err && sha1_checksum)
+        err = svn_sqlite__column_checksum(sha1_checksum, stmt, 6, result_pool);
+
+      if (target)
+        *target = svn_sqlite__column_text(stmt, 12, result_pool);
+
+      if (!err && pristine_props)
+        err = svn_sqlite__column_properties(pristine_props, stmt, 14,
+                                            result_pool, scratch_pool);
+
+      if (changed_date)
+        *changed_date = svn_sqlite__column_int64(stmt, 9);
     }
+  else
+    try_external = (is_file_external != NULL);
 
-  if (kind)
-    *kind = svn_sqlite__column_token(stmt, 4, kind_map);
+  SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
 
-  if (!err && sha1_checksum)
-    err = svn_sqlite__column_checksum(sha1_checksum, stmt, 6, result_pool);
+#if SVN_WC__VERSION >= SVN_WC__HAS_EXTERNALS_STORE
+  if (try_external)
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_SELECT_EXTERNAL_INFO));
 
-  if (target)
-    *target = svn_sqlite__column_text(stmt, 12, result_pool);
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
 
-  if (!err && pristine_props)
-    err = svn_sqlite__column_properties(pristine_props, stmt, 14, result_pool,
-                                        scratch_pool);
+      SVN_ERR(svn_sqlite__step(is_file_external, stmt));
 
-  return svn_error_compose_create(err,
-                                  svn_sqlite__reset(stmt));
+      if (*is_file_external)
+        {
+          svn_wc__db_kind_t external_kind;
+          
+          external_kind = svn_sqlite__column_token(stmt, 0, kind_map);
+
+          if (external_kind == svn_wc__db_kind_file
+              || external_kind == svn_wc__db_kind_symlink)
+            {
+              if (status)
+                *status = svn_wc__db_status_normal;
+
+              if (kind)
+                *kind = external_kind;
+
+              if (sha1_checksum)
+                err = svn_sqlite__column_checksum(sha1_checksum, stmt, 5,
+                                                  result_pool);
+
+              if (target)
+                *target = svn_sqlite__column_text(stmt, 6, result_pool);
+
+              if (!err && pristine_props)
+                err = svn_sqlite__column_properties(pristine_props, stmt, 4,
+                                                    result_pool, scratch_pool);
+
+              if (changed_date)
+                *changed_date = svn_sqlite__column_int64(stmt, 8);
+            }
+          else
+            {
+              *is_file_external = FALSE;
+              try_external = FALSE;
+            }
+        }
+
+      SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
+    }
+#else
+  try_external = FALSE;
+#endif
+
+  if (!have_row && ! try_external)
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                             _("The node '%s' is not installable"),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+
+  return SVN_NO_ERROR;
 }
 
 
