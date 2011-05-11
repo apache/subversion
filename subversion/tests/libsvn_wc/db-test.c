@@ -1447,6 +1447,8 @@ test_externals_store(apr_pool_t *pool)
   SVN_ERR(svn_wc__db_external_add_dir(db,
                                       dir_external_path,
                                       local_abspath /* wri_abspath */,
+                                      "svn://other-repos/nsv",
+                                      "no-uuid-either",
                                       subdir,
                                       "some/other-location",
                                       70,
@@ -1456,6 +1458,7 @@ test_externals_store(apr_pool_t *pool)
 #endif
 
   {
+    svn_wc__db_status_t status;
     svn_wc__db_kind_t kind;
     svn_revnum_t revision;
     const char *repos_relpath;
@@ -1477,7 +1480,7 @@ test_externals_store(apr_pool_t *pool)
     svn_boolean_t had_props;
     svn_boolean_t props_mod;
 
-    SVN_ERR(svn_wc__db_external_read(&kind, &revision, &repos_relpath,
+    SVN_ERR(svn_wc__db_external_read(&status, &kind, &revision, &repos_relpath,
                                      &repos_root_url, &repos_uuid,
                                      &changed_rev, &changed_date,
                                      &changed_author, &checksum, &target,
@@ -1490,6 +1493,7 @@ test_externals_store(apr_pool_t *pool)
                                      db, file_external_path, local_abspath,
                                      pool, pool));
 
+    SVN_TEST_ASSERT(status == svn_wc__db_status_normal);
     SVN_TEST_ASSERT(kind == svn_wc__db_kind_file);
     SVN_TEST_ASSERT(revision == 12);
     SVN_TEST_STRING_ASSERT(repos_relpath, "some/location");
@@ -1516,7 +1520,7 @@ test_externals_store(apr_pool_t *pool)
     SVN_TEST_ASSERT(!props_mod);
 
 #if SVN_WC__VERSION >= SVN_WC__HAS_EXTERNALS_STORE
-    SVN_ERR(svn_wc__db_external_read(&kind, &revision, &repos_relpath,
+    SVN_ERR(svn_wc__db_external_read(&status, &kind, &revision, &repos_relpath,
                                      &repos_root_url, &repos_uuid,
                                      &changed_rev, &changed_date,
                                      &changed_author, &checksum, &target,
@@ -1529,11 +1533,12 @@ test_externals_store(apr_pool_t *pool)
                                      db, dir_external_path, local_abspath,
                                      pool, pool));
 
+    SVN_TEST_ASSERT(status == svn_wc__db_status_normal);
     SVN_TEST_ASSERT(kind == svn_wc__db_kind_dir);
     SVN_TEST_ASSERT(revision == SVN_INVALID_REVNUM);
     SVN_TEST_ASSERT(repos_relpath == NULL);
-    SVN_TEST_ASSERT(repos_root_url == NULL);
-    SVN_TEST_ASSERT(repos_uuid == NULL);
+    SVN_TEST_STRING_ASSERT(repos_root_url, "svn://other-repos/nsv");
+    SVN_TEST_STRING_ASSERT(repos_uuid, "no-uuid-either");
     SVN_TEST_ASSERT(changed_rev == SVN_INVALID_REVNUM);
     SVN_TEST_ASSERT(changed_date == 0);
     SVN_TEST_ASSERT(changed_author == NULL);

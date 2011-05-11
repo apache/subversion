@@ -442,7 +442,7 @@ open_file(const char *path,
                                                       file_pool));
 
   *file_baton = eb;
-  SVN_ERR(svn_wc__db_external_read(&kind, &eb->original_revision,
+  SVN_ERR(svn_wc__db_external_read(NULL, &kind, &eb->original_revision,
                                    NULL, NULL, NULL, NULL, NULL, NULL,
                                    &eb->original_checksum, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -558,8 +558,9 @@ close_file(void *file_baton,
       if (actual_md5_checksum == NULL)
         {
           SVN_ERR(svn_wc__db_external_read(NULL, NULL, NULL, NULL, NULL, NULL,
-                                           NULL, NULL, &actual_md5_checksum, 
-                                           NULL, NULL, NULL, NULL, NULL, NULL,
+                                           NULL, NULL, NULL,
+                                           &actual_md5_checksum, NULL,
+                                           NULL, NULL, NULL, NULL, NULL,
                                            NULL, NULL, NULL, NULL, NULL,
                                            eb->db, eb->local_abspath,
                                            eb->wri_abspath,
@@ -618,7 +619,7 @@ close_file(void *file_baton,
         svn_boolean_t had_props;
         svn_boolean_t props_mod;
 
-        SVN_ERR(svn_wc__db_external_read(NULL, NULL, NULL, NULL, NULL,
+        SVN_ERR(svn_wc__db_external_read(NULL, NULL, NULL, NULL, NULL, NULL,
                                          &changed_rev, &changed_date,
                                          &changed_author, &original_checksum,
                                          NULL, NULL, NULL, NULL, NULL, NULL,
@@ -986,7 +987,7 @@ svn_wc__crawl_file_external(svn_wc_context_t *wc_ctx,
   if (! wri_abspath)
     wri_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
 
-  err = svn_wc__db_external_read(&kind, &revision,
+  err = svn_wc__db_external_read(NULL, &kind, &revision,
                                  &repos_relpath, &repos_root_url, NULL, NULL,
                                  NULL, NULL, NULL, NULL, &lock, NULL, NULL,
                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -1076,10 +1077,11 @@ svn_wc__read_external_info(svn_node_kind_t *external_kind,
                            apr_pool_t *scratch_pool)
 {
   const char *repos_root_url;
+  svn_wc__db_status_t status;
   svn_wc__db_kind_t kind;
   svn_error_t *err;
 
-  err = svn_wc__db_external_read(&kind, NULL, NULL,
+  err = svn_wc__db_external_read(&status, &kind, NULL, NULL,
                                  defining_url ? &repos_root_url : NULL,
                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                  NULL, NULL, defining_abspath, defining_url,
@@ -1136,18 +1138,23 @@ svn_wc__read_external_info(svn_node_kind_t *external_kind,
     }
 
   if (external_kind)
-    switch(kind)
-      {
-        case svn_wc__db_kind_file:
-        case svn_wc__db_kind_symlink:
-          *external_kind = svn_node_file;
-          break;
-        case svn_wc__db_kind_dir:
-          *external_kind = svn_node_dir;
-          break;
-        default:
-          *external_kind = svn_node_none;
-      }
+    {
+      if (status != svn_wc__db_status_normal)
+        *external_kind = svn_node_unknown;
+      else
+        switch(kind)
+          {
+            case svn_wc__db_kind_file:
+            case svn_wc__db_kind_symlink:
+              *external_kind = svn_node_file;
+              break;
+            case svn_wc__db_kind_dir:
+              *external_kind = svn_node_dir;
+              break;
+            default:
+              *external_kind = svn_node_none;
+          }
+    }
 
 #if SVN_WC__VERSION < SVN_WC__HAS_EXTERNALS_STORE
   if (defining_abspath && !*defining_abspath)

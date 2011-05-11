@@ -543,11 +543,14 @@ CREATE TABLE EXTERNALS (
   parent_relpath  TEXT NOT NULL,
 
   /* Repository location fields */
+  repos_id  INTEGER NOT NULL REFERENCES REPOSITORY (id),
 
   /* Always set for file and symlink externals. NULL for directory externals */
-  repos_id  INTEGER REFERENCES REPOSITORY (id),
   repos_path  TEXT,
   revision  INTEGER,
+
+  /* Either 'normal' or 'excluded' */
+  presence  TEXT NOT NULL,
 
   /* Content fields */
 

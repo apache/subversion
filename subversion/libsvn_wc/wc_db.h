@@ -1100,6 +1100,9 @@ svn_wc__db_external_add_dir(svn_wc__db_t *db,
                             const char *local_abspath,
                             const char *wri_abspath,
 
+                            const char *repos_root_url,
+                            const char *repos_uuid,
+
                             const char *record_ancestor_abspath,
                             const char *recorded_repos_relpath,
                             svn_revnum_t recorded_peg_revision,
@@ -1135,10 +1138,49 @@ svn_wc__db_external_remove(svn_wc__db_t *db,
    LOCAL_ABSPATH).
 
    Return SVN_ERR_WC_PATH_NOT_FOUND if LOCAL_ABSPATH is not an external in
-   this working copy
+   this working copy.
+
+   When STATUS is requested it has one of these values
+      svn_wc__db_status_normal           The external is available
+      svn_wc__db_status_excluded         The external is user excluded
+
+   When KIND is requested it has the kind of external
+
+   If REVISION is requested, and the node is NOT a directory, then
+   the value will be set to the revision of the file external.
+
+   If REPOS_RELPATH is requested, and the node is NOT a directory, then
+   the value will be set to the repository relative path of the file external.
+
+   If REPOS_ROOT_URL is requested, then the value will be set to the
+   repository root of the external.
+
+   If REPOS_UUID is requested, then the value will be set to the
+   repository uuid of the external.
+
+   When any of CHANGED_REV, CHANGED_DATE, CHANGED_AUTHOR, CHECKSUM, TARGET,
+   LOCK, RECORDED_SIZE, RECORDED_MOD_TIME, CONFLICTED, HAD_PROPS or PROPS_MOD
+   is requested,  and the node is NOT a directory, their value will set like
+   how svn_wc__db_read_info() would handle the value.
+
+   If RECORD_ANCESTOR_ABSPATH is requested, then the value will be set to the
+   absolute path of the directory which originally defined the external.
+
+   If RECORDED_REPOS_RELPATH is requested, then the value will be set to the
+   original repository relative path inside REPOS_ROOT_URL of the external.
+
+   If RECORDED_PEG_REVISION is requested, then the value will be set to the
+   original recorded operational (peg) revision of the external.
+
+   If RECORDED_REVISION is requested, then the value will be set to the
+   original recorded revision of the external.
+
+   Allocate the result in RESULT_POOL and perform temporary allocations in
+   SCRATCH_POOL.
  */
 svn_error_t *
-svn_wc__db_external_read(svn_wc__db_kind_t *kind,
+svn_wc__db_external_read(svn_wc__db_status_t *status,
+                         svn_wc__db_kind_t *kind,
                          svn_revnum_t *revision,
                          const char **repos_relpath,
                          const char **repos_root_url,

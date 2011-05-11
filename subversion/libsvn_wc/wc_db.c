@@ -223,11 +223,13 @@ typedef struct insert_working_baton_t {
 } insert_working_baton_t;
 
 typedef struct insert_external_baton_t {
-  /* common to all insertions into BASE */
+  /* common to all insertions into EXTERNALS */
   svn_wc__db_kind_t kind;
-
-  /* for file and symlink externals */
+  svn_wc__db_status_t presence;
+  
+  /* The repository of the external */
   apr_int64_t repos_id;
+  /* for file and symlink externals */
   const char *repos_relpath;
   svn_revnum_t revision;
 
@@ -2625,6 +2627,10 @@ insert_external_node(void *baton,
   apr_int64_t repos_id;
   svn_sqlite__stmt_t *stmt;
 
+  /* Externals only support presence normal and excluded */
+  SVN_ERR_ASSERT(ieb->presence == svn_wc__db_status_normal
+                 || ieb->presence == svn_wc__db_status_excluded);
+
   if (ieb->repos_id != INVALID_REPOS_ID)
     repos_id = ieb->repos_id;
   else
@@ -2635,7 +2641,7 @@ insert_external_node(void *baton,
 
   if (ieb->kind != svn_wc__db_kind_dir)
     {
-      SVN_ERR(svn_sqlite__bindf(stmt, "issisrtsrisss",
+      SVN_ERR(svn_sqlite__bindf(stmt, "issisrttsrisss",
                                 wcroot->wc_id,
                                 local_relpath,
                                 svn_relpath_dirname(local_relpath,
@@ -2643,6 +2649,7 @@ insert_external_node(void *baton,
                                 repos_id,
                                 ieb->repos_relpath,
                                 ieb->revision,
+                                presence_map, ieb->presence,
                                 kind_map, ieb->kind,
                                 (ieb->kind == svn_wc__db_kind_symlink)
                                             ? ieb->target
@@ -2654,34 +2661,36 @@ insert_external_node(void *baton,
                                 ieb->recorded_repos_relpath));
 
       if (ieb->checksum)
-        SVN_ERR(svn_sqlite__bind_checksum(stmt, 16, ieb->checksum,
+        SVN_ERR(svn_sqlite__bind_checksum(stmt, 17, ieb->checksum,
                                           scratch_pool));
 
       if (ieb->props)
-        SVN_ERR(svn_sqlite__bind_properties(stmt, 17, ieb->props,
+        SVN_ERR(svn_sqlite__bind_properties(stmt, 18, ieb->props,
                                             scratch_pool));
 
       if (ieb->dav_cache)
-        SVN_ERR(svn_sqlite__bind_properties(stmt, 18, ieb->dav_cache,
+        SVN_ERR(svn_sqlite__bind_properties(stmt, 19, ieb->dav_cache,
                                             scratch_pool));
     }
   else
     {
-      SVN_ERR(svn_sqlite__bindf(stmt, "issnnntnnnnss",
+      SVN_ERR(svn_sqlite__bindf(stmt, "issinnttnnnnss",
                                 wcroot->wc_id,
                                 local_relpath,
                                 svn_relpath_dirname(local_relpath,
                                                     scratch_pool),
+                                repos_id,
+                                presence_map, ieb->presence,
                                 kind_map, ieb->kind,
                                 ieb->record_ancestor_relpath,
                                 ieb->recorded_repos_relpath));
     }
 
   if (SVN_IS_VALID_REVNUM(ieb->recorded_peg_revision))
-    SVN_ERR(svn_sqlite__bind_revnum(stmt, 14, ieb->recorded_peg_revision));
+    SVN_ERR(svn_sqlite__bind_revnum(stmt, 15, ieb->recorded_peg_revision));
 
   if (SVN_IS_VALID_REVNUM(ieb->recorded_revision))
-    SVN_ERR(svn_sqlite__bind_revnum(stmt, 15, ieb->recorded_revision));
+    SVN_ERR(svn_sqlite__bind_revnum(stmt, 16, ieb->recorded_revision));
 
   SVN_ERR(svn_sqlite__insert(NULL, stmt));
   /* ### TODO: Implement keeping recorded info */
@@ -2747,10 +2756,12 @@ svn_wc__db_external_add_file(svn_wc__db_t *db,
   blank_ieb(&ieb);
 
   ieb.kind = svn_wc__db_kind_file;
-  ieb.repos_relpath = repos_relpath;
+  ieb.presence = svn_wc__db_status_normal;
 
   ieb.repos_root_url = repos_root_url;
   ieb.repos_uuid = repos_uuid;
+
+  ieb.repos_relpath = repos_relpath;
   ieb.revision = revision;
 
   ieb.props = props;
@@ -2826,11 +2837,15 @@ svn_wc__db_external_add_symlink(svn_wc__db_t *db,
 
   local_relpath = svn_dirent_skip_ancestor(wcroot->abspath, local_abspath);
 
+  blank_ieb(&ieb);
+
   ieb.kind = svn_wc__db_kind_symlink;
-  ieb.repos_relpath = repos_relpath;
+  ieb.presence = svn_wc__db_status_normal;
 
   ieb.repos_root_url = repos_root_url;
   ieb.repos_uuid = repos_uuid;
+
+  ieb.repos_relpath = repos_relpath;
   ieb.revision = revision;
 
   ieb.props = props;
@@ -2866,6 +2881,8 @@ svn_error_t *
 svn_wc__db_external_add_dir(svn_wc__db_t *db,
                             const char *local_abspath,
                             const char *wri_abspath,
+                            const char *repos_root_url,
+                            const char *repos_uuid,
                             const char *record_ancestor_abspath,
                             const char *recorded_repos_relpath,
                             svn_revnum_t recorded_peg_revision,
@@ -2893,7 +2910,13 @@ svn_wc__db_external_add_dir(svn_wc__db_t *db,
 
   local_relpath = svn_dirent_skip_ancestor(wcroot->abspath, local_abspath);
 
+  blank_ieb(&ieb);
+
   ieb.kind = svn_wc__db_kind_dir;
+  ieb.presence = svn_wc__db_status_normal;
+
+  ieb.repos_root_url = repos_root_url;
+  ieb.repos_uuid = repos_uuid;
 
   ieb.record_ancestor_relpath = svn_dirent_skip_ancestor(
                                                 wcroot->abspath,
@@ -2992,7 +3015,8 @@ svn_wc__db_external_record_fileinfo(svn_wc__db_t *db,
 }
 
 svn_error_t *
-svn_wc__db_external_read(svn_wc__db_kind_t *kind,
+svn_wc__db_external_read(svn_wc__db_status_t *status,
+                         svn_wc__db_kind_t *kind,
                          svn_revnum_t *revision,
                          const char **repos_relpath,
                          const char **repos_root_url,
@@ -3062,6 +3086,9 @@ svn_wc__db_external_read(svn_wc__db_kind_t *kind,
                                                         scratch_pool));
       }
 
+    if (status)
+      *status = svn_wc__db_status_normal;
+
     if (kind)
       *kind = base_kind;
 
@@ -3122,6 +3149,10 @@ svn_wc__db_external_read(svn_wc__db_kind_t *kind,
   if (have_info)
     {
       apr_int64_t repos_id;
+
+      if (status)
+        *status = svn_sqlite__column_token(stmt, 16, presence_map);
+
       if (kind)
         *kind = svn_sqlite__column_token(stmt, 0, kind_map);
 
@@ -3154,7 +3185,7 @@ svn_wc__db_external_read(svn_wc__db_kind_t *kind,
         *target = svn_sqlite__column_text(stmt, 6, result_pool);
 
       if (lock)
-        *lock = lock_from_columns(stmt, 16, 17, 18, 19, result_pool);
+        *lock = lock_from_columns(stmt, 17, 18, 19, 20, result_pool);
 
       if (recorded_size)
         *recorded_size = get_recorded_size(stmt, 10);
