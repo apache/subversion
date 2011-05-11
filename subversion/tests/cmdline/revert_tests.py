@@ -300,9 +300,27 @@ def revert_reexpand_keyword(sbox):
   # Now un-expand the keyword again.
   svntest.main.file_write(newfile_path, unexpanded_contents)
 
-  fp = open(newfile_path, 'r')
-  lines = fp.readlines()
-  fp.close()
+  # Revert the file.  The keyword should reexpand.
+  svntest.main.run_svn(None, 'revert', newfile_path)
+
+  # Verify that the keyword got re-expanded.
+  check_expanded(newfile_path)
+
+  # Now un-expand the keyword again.
+  svntest.main.file_write(newfile_path, unexpanded_contents)
+
+  # And now we trick svn in ignoring the file on newfile_path
+  newfile2_path = newfile_path + '2'
+  svntest.main.file_write(newfile2_path, 'This is file 2')
+  svntest.main.run_svn(None, 'add', newfile2_path)
+  os.remove(newfile2_path)
+
+  # This commit fails because newfile2_path is missing, but only after
+  # we call svn_wc__internal_file_modified_p() on new_file
+  svntest.actions.run_and_verify_commit(wc_dir, None, None, "2' is scheduled"+
+                                        " for addition, but is missing",
+                                        newfile_path, newfile2_path,
+                                        '-m', "Shouldn't be committed")
 
   # Revert the file.  The keyword should reexpand.
   svntest.main.run_svn(None, 'revert', newfile_path)
