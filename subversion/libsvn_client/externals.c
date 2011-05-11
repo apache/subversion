@@ -31,7 +31,6 @@
 #include "svn_wc.h"
 #include "svn_pools.h"
 #include "svn_client.h"
-#include "svn_hash.h"
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_dirent_uri.h"
@@ -1044,101 +1043,49 @@ handle_external_item_change_wrapper(const struct item_change_baton_t *ib,
   return svn_error_return(err);
 }
 
-
-/* Closure for handle_externals_change. */
-struct handle_externals_desc_change_baton
-{
-  /* As returned by svn_wc_edited_externals(). */
-  apr_hash_t *externals_new;
-  apr_hash_t *externals_old;
-
-  /* The requested depth of the driving operation (e.g., update, switch). */
-  svn_depth_t requested_depth;
-
-  /* As returned by svn_wc_traversed_depths().  NULL means no ambient
-     depths available (e.g., svn export). */
-  apr_hash_t *ambient_depths;
-
-  /* Passed through to handle_external_item_change_baton. */
-  svn_client_ctx_t *ctx;
-  const char *repos_root_url;
-  svn_boolean_t *timestamp_sleep;
-  svn_boolean_t is_export;
-
-  /* Passed to svn_client_exportX() */
-  const char *native_eol;
-
-  /* Handling a delete only update (from commit) */
-  svn_boolean_t delete_only;
-
-  apr_pool_t *iterpool;
-};
-
-
 /* This implements the 'svn_hash_diff_func_t' interface.
    BATON is of type 'struct handle_externals_desc_change_baton *'.
    KEY is a 'const char *'.
 */
 static svn_error_t *
-handle_externals_desc_change(const void *key, apr_ssize_t klen,
-                             enum svn_hash_diff_key_status status,
-                             void *baton)
+handle_externals_change(const char *local_abspath,
+                        const char *old_desc_text,
+                        const char *new_desc_text,
+                        svn_depth_t ambient_depth,
+                        svn_depth_t requested_depth,
+                        const char *repos_root_url,
+                        svn_boolean_t delete_only,
+                        svn_boolean_t *timestamp_sleep,
+                        svn_client_ctx_t *ctx,
+                        apr_pool_t *scratch_pool)
 {
-  struct handle_externals_desc_change_baton *cb = baton;
   struct item_change_baton_t ib = { 0 };
-  const char *old_desc_text, *new_desc_text;
   apr_array_header_t *old_desc, *new_desc;
   apr_hash_t *new_desc_hash;
   int i;
-  const char *ambient_depth_w;
-  svn_depth_t ambient_depth;
-  const char *local_abspath = key;
-  apr_pool_t *scratch_pool;
   apr_pool_t *iterpool;
   const char *url;
 
   /* The apr hash function doesn't hand us an iterpool, so we manage our own.*/
-  svn_pool_clear(cb->iterpool);
-  scratch_pool = cb->iterpool;
   iterpool = svn_pool_create(scratch_pool);
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  if (cb->ambient_depths)
-    {
-      ambient_depth_w = apr_hash_get(cb->ambient_depths, local_abspath, klen);
-      if (ambient_depth_w == NULL)
-        {
-          return svn_error_createf(
-                        SVN_ERR_WC_CORRUPT, NULL,
-                        _("Traversal of '%s' found no ambient depth"),
-                        svn_dirent_local_style(local_abspath, scratch_pool));
-        }
-      else
-        {
-          ambient_depth = svn_depth_from_word(ambient_depth_w);
-        }
-    }
-  else
-    {
-      ambient_depth = svn_depth_infinity;
-    }
-
   /* Bag out if the depth here is too shallow for externals action. */
-  if ((cb->requested_depth < svn_depth_infinity
-       && cb->requested_depth != svn_depth_unknown)
+  if ((requested_depth < svn_depth_infinity
+       && requested_depth != svn_depth_unknown)
       || (ambient_depth < svn_depth_infinity
-          && cb->requested_depth < svn_depth_infinity))
+          && requested_depth < svn_depth_infinity))
     return SVN_NO_ERROR;
 
-  if ((old_desc_text = apr_hash_get(cb->externals_old, local_abspath, klen)))
+  if (old_desc_text)
     SVN_ERR(svn_wc_parse_externals_description3(&old_desc, local_abspath,
                                                 old_desc_text,
                                                 FALSE, scratch_pool));
   else
     old_desc = NULL;
 
-  if ((new_desc_text = apr_hash_get(cb->externals_new, local_abspath, klen)))
+  if (new_desc_text)
     SVN_ERR(svn_wc_parse_externals_description3(&new_desc, local_abspath,
                                                 new_desc_text,
                                                 FALSE, scratch_pool));
@@ -1159,19 +1106,19 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
                    APR_HASH_KEY_STRING, item);
     }
 
-  if (cb->repos_root_url)
-    ib.repos_root_url    = cb->repos_root_url;
-  else
-    SVN_ERR(svn_wc__node_get_repos_info(&ib.repos_root_url, NULL,
-                                        cb->ctx->wc_ctx, local_abspath,
-                                        scratch_pool, scratch_pool));
-  ib.ctx               = cb->ctx;
-  ib.is_export         = cb->is_export;
-  ib.native_eol        = cb->native_eol;
-  ib.delete_only       = cb->delete_only;
-  ib.timestamp_sleep   = cb->timestamp_sleep;
+  ib.repos_root_url    = repos_root_url;
+  ib.ctx               = ctx;
+  ib.is_export         = FALSE;
+  ib.native_eol        = NULL;
+  ib.delete_only       = delete_only;
+  ib.timestamp_sleep   = timestamp_sleep;
 
-  SVN_ERR(svn_wc__node_get_url(&url, cb->ctx->wc_ctx, local_abspath,
+  if (!ib.repos_root_url)
+    SVN_ERR(svn_wc__node_get_repos_info(&ib.repos_root_url, NULL,
+                                        ctx->wc_ctx, local_abspath,
+                                        scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_wc__node_get_url(&url, ctx->wc_ctx, local_abspath,
                                scratch_pool, scratch_pool));
 
   SVN_ERR_ASSERT(url && ib.repos_root_url);
@@ -1239,29 +1186,65 @@ svn_client__handle_externals(apr_hash_t *externals_old,
                              svn_boolean_t delete_only,
                              svn_boolean_t *timestamp_sleep,
                              svn_client_ctx_t *ctx,
-                             apr_pool_t *pool)
+                             apr_pool_t *scratch_pool)
 {
-  struct handle_externals_desc_change_baton cb = { 0 };
-  svn_error_t *err;
+  apr_hash_t *combined;
+  apr_hash_index_t *hi;
+  apr_pool_t *iterpool;
 
-  cb.externals_new     = externals_new;
-  cb.externals_old     = externals_old;
-  cb.requested_depth   = requested_depth;
-  cb.ambient_depths    = ambient_depths;
+  if (! externals_old)
+    combined = externals_new;
+  else if (! externals_new)
+    combined = externals_old;
+  else
+    combined = apr_hash_overlay(scratch_pool, externals_old, externals_new);
 
-  cb.repos_root_url    = repos_root_url;
-  cb.ctx               = ctx;
-  cb.timestamp_sleep   = timestamp_sleep;
-  cb.is_export         = FALSE;
-  cb.native_eol        = NULL;
-  cb.delete_only       = delete_only;
-  cb.iterpool          = svn_pool_create(pool);
+  iterpool = svn_pool_create(scratch_pool);
 
-  err = svn_hash_diff(cb.externals_old, cb.externals_new,
-                      handle_externals_desc_change, &cb, pool);
+  for (hi = apr_hash_first(scratch_pool, combined);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const void *key;
+      apr_ssize_t klen;
+      svn_depth_t ambient_depth = svn_depth_infinity;
+      svn_pool_clear(iterpool);
 
-  svn_pool_destroy(cb.iterpool);
-  return svn_error_return(err);
+      apr_hash_this(hi, &key, &klen, NULL);
+
+      if (ambient_depths)
+        {
+          const char *ambient_depth_w;
+
+          ambient_depth_w = apr_hash_get(ambient_depths, key, klen);
+
+          if (ambient_depth_w == NULL)
+            {
+              return svn_error_createf(
+                        SVN_ERR_WC_CORRUPT, NULL,
+                        _("Traversal of '%s' found no ambient depth"),
+                        svn_dirent_local_style(key, scratch_pool));
+            }
+          else
+            {
+              ambient_depth = svn_depth_from_word(ambient_depth_w);
+            }
+        }
+
+      SVN_ERR(handle_externals_change(
+                svn__apr_hash_index_key(hi),
+                externals_old ? apr_hash_get(externals_old, key, klen) : NULL,
+                externals_new ? apr_hash_get(externals_new, key, klen) : NULL,
+                ambient_depth, requested_depth,
+                repos_root_url,
+                delete_only,
+                timestamp_sleep,
+                ctx,
+                iterpool));
+    }
+
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
 }
 
 
