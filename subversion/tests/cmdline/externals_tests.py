@@ -973,18 +973,18 @@ def cannot_move_or_remove_file_externals(sbox):
   # Should not be able to delete the file external.
   svntest.actions.run_and_verify_svn("Able to delete file external",
                                      None,
-                                     ".*Cannot remove the file external at "
-                                     ".*gamma.*; please propedit or propdel "
-                                     "the svn:externals description",
+                                     ".*Cannot remove the external at "
+                                     ".*gamma.*; please .* "
+                                     "the svn:externals .*",
                                      'rm',
                                      os.path.join(wc_dir, 'A', 'B', 'gamma'))
 
   # Should not be able to move the file external.
   svntest.actions.run_and_verify_svn("Able to move file external",
                                      None,
-                                     ".*Cannot move the file external at "
-                                     ".*gamma.*; please propedit the "
-                                     "svn:externals description",
+                                     ".*Cannot move the external at "
+                                     ".*gamma.*; please .*edit.*"
+                                     "svn:externals.*",
                                      'mv',
                                      os.path.join(wc_dir, 'A', 'B', 'gamma'),
                                      os.path.join(wc_dir, 'A', 'B', 'gamma1'))
@@ -1003,6 +1003,13 @@ def cannot_move_or_remove_file_externals(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 6)
   expected_status.remove('A/B', 'A/B/E', 'A/B/E/alpha', 'A/B/E/beta',
                          'A/B/F', 'A/B/lambda')
+
+  expected_status.add({
+    'A/D/exdir_A'       : Item(status='X '),
+    'A/D/x'             : Item(status='X '),
+    'A/C/exdir_H'       : Item(status='X '),
+    'A/C/exdir_G'       : Item(status='X '),
+  })
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output, expected_status,
@@ -1365,6 +1372,9 @@ def relegate_external(sbox):
       'A/external/beta'  : Item('This is the file \'beta\'.\n'),
       })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.add({
+    'A/external'        : Item(status='X '),
+  })
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,

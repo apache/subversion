@@ -2078,21 +2078,26 @@ try_copy(const apr_array_header_t *sources,
           svn_client__copy_pair_t *pair =
             APR_ARRAY_IDX(copy_pairs, i, svn_client__copy_pair_t *);
           svn_boolean_t is_file_external;
+          svn_node_kind_t external_kind;
+          const char *defining_abspath;
 
           svn_pool_clear(iterpool);
 
           SVN_ERR_ASSERT(svn_dirent_is_absolute(pair->src_abspath_or_url));
-          SVN_ERR(svn_wc__node_is_file_external(&is_file_external, ctx->wc_ctx,
-                                                pair->src_abspath_or_url,
-                                                iterpool));
-          if (is_file_external)
+          SVN_ERR(svn_wc__read_external_info(&external_kind, &defining_abspath,
+                                             NULL, NULL, NULL, ctx->wc_ctx,
+                                             pair->src_abspath_or_url,
+                                             pair->src_abspath_or_url, TRUE,
+                                             iterpool, iterpool));
+
+          if (external_kind != svn_node_none)
             return svn_error_createf(
                      SVN_ERR_WC_CANNOT_MOVE_FILE_EXTERNAL,
                      NULL,
-                     _("Cannot move the file external at '%s'; please "
-                       "propedit the svn:externals description that "
-                       "created it"),
-                     svn_dirent_local_style(pair->src_abspath_or_url, pool));
+                     _("Cannot move the external at '%s'; please "
+                       "edit the svn:externals property on '%s'."),
+                     svn_dirent_local_style(pair->src_abspath_or_url, pool),
+                     svn_dirent_local_style(defining_abspath, pool));
         }
       svn_pool_destroy(iterpool);
     }

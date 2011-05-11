@@ -594,14 +594,6 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
                                               void *cancel_baton,
                                               apr_pool_t *scratch_pool);
 
-
-/* Library-internal version of svn_wc__node_is_file_external(). */
-svn_error_t *
-svn_wc__internal_is_file_external(svn_boolean_t *file_external,
-                                  svn_wc__db_t *db,
-                                  const char *local_abspath,
-                                  apr_pool_t *scratch_pool);
-
 /* Library-internal version of svn_wc__node_get_schedule(). */
 svn_error_t *
 svn_wc__internal_node_get_schedule(svn_wc_schedule_t *schedule,

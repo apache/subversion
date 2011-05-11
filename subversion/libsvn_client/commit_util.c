@@ -414,11 +414,6 @@ harvest_committables(svn_wc_context_t *wc_ctx,
       && is_update_root
       && db_kind == svn_node_file)
     {
-      svn_boolean_t is_file_external;
-
-      SVN_ERR(svn_wc__node_is_file_external(&is_file_external, wc_ctx,
-                                            local_abspath, scratch_pool));
-
       if (copy_mode)
         return SVN_NO_ERROR;
     }

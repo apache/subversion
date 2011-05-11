@@ -1067,36 +1067,6 @@ svn_wc__node_get_lock_info(const char **lock_token,
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svn_wc__internal_is_file_external(svn_boolean_t *file_external,
-                                  svn_wc__db_t *db,
-                                  const char *local_abspath,
-                                  apr_pool_t *scratch_pool)
-{
-  const char *serialized;
-
-  SVN_ERR(svn_wc__db_temp_get_file_external(&serialized,
-                                            db, local_abspath,
-                                            scratch_pool, scratch_pool));
-  *file_external = (serialized != NULL);
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_wc__node_is_file_external(svn_boolean_t *file_external,
-                              svn_wc_context_t *wc_ctx,
-                              const char *local_abspath,
-                              apr_pool_t *scratch_pool)
-{
-  return svn_error_return(svn_wc__internal_is_file_external(file_external,
-                                                            wc_ctx->db,
-                                                            local_abspath,
-                                                            scratch_pool));
-}
-
 svn_error_t *
 svn_wc__internal_node_get_schedule(svn_wc_schedule_t *schedule,
                                    svn_boolean_t *copied,
