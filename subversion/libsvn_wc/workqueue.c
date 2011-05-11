@@ -495,7 +495,7 @@ process_commit_file_install(svn_wc__db_t *db,
          that already does implement this when it notices that we have the
          right kind of lock (and we ignore the result)
        */
-      SVN_ERR(svn_wc__internal_file_modified_p(&modified, NULL, NULL,
+      SVN_ERR(svn_wc__internal_file_modified_p(&modified,
                                                db, local_abspath, FALSE,
                                                scratch_pool));
     }

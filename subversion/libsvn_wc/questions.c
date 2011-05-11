@@ -47,7 +47,6 @@
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
-#include "private/svn_io_private.h"
 
 
 
@@ -237,8 +236,6 @@ compare_and_verify(svn_boolean_t *modified_p,
 
 svn_error_t *
 svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
-                                 svn_boolean_t *executable_p,
-                                 svn_boolean_t *read_only_p,
                                  svn_wc__db_t *db,
                                  const char *local_abspath,
                                  svn_boolean_t exact_comparison,
@@ -253,40 +250,10 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
   apr_time_t recorded_mod_time;
   svn_boolean_t has_props;
   svn_boolean_t props_mod;
-  svn_error_t *err;
-  apr_finfo_t finfo;
-  apr_int32_t wanted
-    = APR_FINFO_SIZE | APR_FINFO_MTIME | APR_FINFO_TYPE | APR_FINFO_LINK;
+  const svn_io_dirent2_t *dirent;
 
-  if (executable_p)
-    wanted |= SVN__APR_FINFO_EXECUTABLE;
-  if (read_only_p)
-    wanted |= SVN__APR_FINFO_READONLY;
-
-  /* No matter which way you look at it, the file needs to exist. */
-  err = svn_io_stat(&finfo, local_abspath, wanted, scratch_pool);
-  if ((err && APR_STATUS_IS_ENOENT(err->apr_err))
-      || (!err && !(finfo.filetype == APR_REG ||
-                    finfo.filetype == APR_LNK)))
-    {
-      /* There is no entity, or, the entity is not a regular file or link.
-         So, it can't be modified. */
-      svn_error_clear(err);
-      *modified_p = FALSE;
-      if (executable_p)
-        *executable_p = FALSE;
-      if (read_only_p)
-        *read_only_p = FALSE;
-
-      return SVN_NO_ERROR;
-    }
-  else if (err)
-    return err;
-
-  if (executable_p)
-    SVN_ERR(svn_io__is_finfo_executable(executable_p, &finfo, scratch_pool));
-  if (read_only_p)
-    SVN_ERR(svn_io__is_finfo_read_only(read_only_p, &finfo, scratch_pool));
+  SVN_ERR(svn_io_stat_dirent(&dirent, local_abspath, TRUE,
+                             scratch_pool, scratch_pool));
 
   /* Read the relevant info */
   SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
@@ -340,7 +307,7 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
 
       /* Compare the sizes, if applicable */
       if (recorded_size != SVN_INVALID_FILESIZE
-          && finfo.size != recorded_size)
+          && dirent->filesize != recorded_size)
         goto compare_them;
 
       /* Compare the timestamps
@@ -348,7 +315,7 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
          Note: recorded_mod_time == 0 means not available,
                which also means the timestamps won't be equal,
                so there's no need to explicitly check the 'absent' value. */
-      if (recorded_mod_time != finfo.mtime)
+      if (recorded_mod_time != dirent->mtime)
         goto compare_them;
 
       *modified_p = FALSE;
@@ -362,7 +329,7 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
 
   /* Check all bytes, and verify checksum if requested. */
   SVN_ERR(compare_and_verify(modified_p, db,
-                             local_abspath, finfo.size,
+                             local_abspath, dirent->filesize,
                              pristine_stream, pristine_size,
                              has_props, props_mod,
                              exact_comparison,
@@ -377,7 +344,8 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
                                           scratch_pool));
       if (own_lock)
         SVN_ERR(svn_wc__db_global_record_fileinfo(db, local_abspath,
-                                                  finfo.size, finfo.mtime,
+                                                  dirent->filesize,
+                                                  dirent->mtime,
                                                   scratch_pool));
     }
 
@@ -394,7 +362,7 @@ svn_wc_text_modified_p2(svn_boolean_t *modified_p,
 {
   /* ### We ignore FORCE_COMPARISON, but we also fixed its only
          remaining use-case */
-  return svn_wc__internal_file_modified_p(modified_p, NULL, NULL, wc_ctx->db,
+  return svn_wc__internal_file_modified_p(modified_p, wc_ctx->db,
                                           local_abspath, FALSE, scratch_pool);
 }
 

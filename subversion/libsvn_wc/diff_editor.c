@@ -700,9 +700,8 @@ file_diff(struct edit_baton *eb,
       svn_boolean_t modified;
 
       /* Here we deal with showing pure modifications. */
-      SVN_ERR(svn_wc__internal_file_modified_p(&modified, NULL, NULL, db,
-                                               local_abspath, FALSE,
-                                               scratch_pool));
+      SVN_ERR(svn_wc__internal_file_modified_p(&modified, db, local_abspath,
+                                               FALSE, scratch_pool));
       if (modified)
         {
           /* Note that this might be the _second_ time we translate
@@ -1735,7 +1734,7 @@ close_file(void *file_baton,
      (BASE:WORKING) modifications. */
   modified = (fb->temp_file_path != NULL);
   if (!modified && !eb->use_text_base)
-    SVN_ERR(svn_wc__internal_file_modified_p(&modified, NULL, NULL, eb->db,
+    SVN_ERR(svn_wc__internal_file_modified_p(&modified, eb->db,
                                              fb->local_abspath,
                                              FALSE, scratch_pool));
 

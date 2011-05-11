@@ -56,6 +56,7 @@
 #include "workqueue.h"
 
 #include "svn_private_config.h"
+#include "private/svn_io_private.h"
 #include "private/svn_wc_private.h"
 
 
@@ -1318,6 +1319,9 @@ revert_restore(svn_wc__db_t *db,
   const char *conflict_new;
   const char *conflict_working;
   const char *prop_reject;
+  svn_filesize_t recorded_size;
+  apr_time_t recorded_mod_time;
+  apr_finfo_t finfo;
 
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
@@ -1330,9 +1334,9 @@ revert_restore(svn_wc__db_t *db,
 
   err = svn_wc__db_read_info(&status, &kind,
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, 
                              NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL,
+                             &recorded_size, &recorded_mod_time, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                              db, local_abspath, scratch_pool, scratch_pool);
 
   if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
@@ -1356,8 +1360,31 @@ revert_restore(svn_wc__db_t *db,
   else if (err)
     return svn_error_return(err);
 
-  SVN_ERR(svn_io_check_special_path(local_abspath, &on_disk, &special,
-                                    scratch_pool));
+  err = svn_io_stat(&finfo, local_abspath, 
+                    APR_FINFO_TYPE | APR_FINFO_LINK
+                    | APR_FINFO_SIZE | APR_FINFO_MTIME
+                    | SVN__APR_FINFO_EXECUTABLE
+                    | SVN__APR_FINFO_READONLY,
+                    scratch_pool);
+
+  if (err && (APR_STATUS_IS_ENOENT(err->apr_err)
+              || SVN__APR_STATUS_IS_ENOTDIR(err->apr_err)))
+    {
+      svn_error_clear(err);
+      on_disk = svn_node_none;
+      special = FALSE;
+    }
+  else
+    {
+      if (finfo.filetype == APR_REG || finfo.filetype == APR_LNK)
+        on_disk = svn_node_file;
+      else if (finfo.filetype == APR_DIR)
+        on_disk = svn_node_dir;
+      else
+        on_disk = svn_node_unknown;
+
+      special = (finfo.filetype == APR_LNK);
+    }
 
   /* If we expect a versioned item to be present then check that any
      item on disk matches the versioned item, if it doesn't match then
@@ -1393,18 +1420,47 @@ revert_restore(svn_wc__db_t *db,
           special_prop = apr_hash_get(props, SVN_PROP_SPECIAL,
                                       APR_HASH_KEY_STRING);
 
-          if ((special_prop != NULL) != special)
+#ifdef HAVE_SYMLINK
+          if ((special_prop != NULL) != dirent->special)
             {
               /* File/symlink mismatch. */
               SVN_ERR(svn_io_remove_file2(local_abspath, FALSE, scratch_pool));
               on_disk = svn_node_none;
             }
           else
+#endif
             {
-              SVN_ERR(svn_wc__internal_file_modified_p(&modified, &executable,
-                                                       &read_only,
-                                                       db, local_abspath,
-                                                       FALSE, scratch_pool));
+              /* Issue #1663 asserts that we should compare a file in its
+                 working copy format here, but before r1101473 we would only
+                 do that if the file was already unequal to its recorded
+                 information.
+
+                 r1101473 removes the option of asking for a working format
+                 compare but *also* check the recorded information first, as
+                 that combination doesn't guarantee a stable behavior.
+                 (See the revert_test.py: revert_reexpand_keyword)
+
+                 But to have the same issue #1663 behavior for revert as we
+                 had in <=1.6 we only have to check the recorded information
+                 ourselves. And we already have everything we need, because
+                 we called stat ourselves. */
+              if (recorded_size != SVN_INVALID_FILESIZE
+                  && recorded_mod_time != 0
+                  && recorded_size == finfo.size
+                  && recorded_mod_time == finfo.mtime)
+                {
+                  modified = FALSE;
+                }
+              else
+                SVN_ERR(svn_wc__internal_file_modified_p(&modified,
+                                                         db, local_abspath,
+                                                         TRUE, scratch_pool));
+
+              SVN_ERR(svn_io__is_finfo_executable(&executable, &finfo,
+                                                  scratch_pool));
+              SVN_ERR(svn_io__is_finfo_read_only(&read_only, &finfo,
+                                                 scratch_pool));
+
               if (modified)
                 {
                   SVN_ERR(svn_io_remove_file2(local_abspath, FALSE,
@@ -1911,8 +1967,7 @@ svn_wc__internal_remove_from_revision_control(svn_wc__db_t *db,
           if (on_disk == svn_node_file)
             {
               /* Check for local mods. before removing entry */
-              SVN_ERR(svn_wc__internal_file_modified_p(&text_modified_p, NULL,
-                                                       NULL, db,
+              SVN_ERR(svn_wc__internal_file_modified_p(&text_modified_p, db,
                                                        local_abspath, FALSE,
                                                        scratch_pool));
               if (text_modified_p && instant_error)
