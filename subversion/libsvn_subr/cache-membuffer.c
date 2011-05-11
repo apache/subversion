@@ -422,7 +422,7 @@ struct svn_membuffer_t
 
 /* Align POINTER value to the next ITEM_ALIGNMENT boundary.
  */
-#define ALIGN_POINTER(pointer) ((void*)ALIGN_VALUE((apr_size_t)pointer))
+#define ALIGN_POINTER(pointer) ((void*)ALIGN_VALUE((apr_size_t)(char*)(pointer)))
 
 /* Acquire the cache mutex, if necessary.
  */
@@ -878,7 +878,7 @@ static void* secure_aligned_alloc(apr_pool_t *pool,
                                   apr_size_t size,
                                   svn_boolean_t zero)
 {
-  char* memory = apr_palloc(pool, (apr_size_t)size + ITEM_ALIGNMENT);
+  void* memory = apr_palloc(pool, size + ITEM_ALIGNMENT);
   if (memory != NULL)
     {
       memory = (char *)ALIGN_POINTER(memory);
