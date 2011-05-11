@@ -179,7 +179,7 @@ struct bdb_env_t
 #if APR_HAS_THREADS
 /* Get the thread-specific error info from a bdb_env_t. */
 static bdb_error_info_t *
-get_error_info(bdb_env_t *bdb)
+get_error_info(const bdb_env_t *bdb)
 {
   void *priv;
   apr_threadkey_private_get(&priv, bdb->error_info);
@@ -221,7 +221,7 @@ bdb_error_gatherer(const DB_ENV *dbenv, const char *baton, const char *msg)
 {
   /* See the documentation at bdb_env_t's definition why the
      (bdb_env_t *) cast is safe and why it is done. */
-  bdb_error_info_t *error_info = get_error_info((bdb_env_t *) baton);
+  bdb_error_info_t *error_info = get_error_info((const bdb_env_t *) baton);
   svn_error_t *new_err;
 
   SVN_BDB_ERROR_GATHERER_IGNORE(dbenv);
