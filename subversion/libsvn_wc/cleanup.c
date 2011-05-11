@@ -95,10 +95,11 @@ repair_timestamps(svn_wc__db_t *db,
       || status == svn_wc__db_status_not_present)
     return SVN_NO_ERROR;
 
-  if (kind == svn_wc__db_kind_file)
+  if (kind == svn_wc__db_kind_file
+      || kind == svn_wc__db_kind_symlink)
     {
       svn_boolean_t modified;
-      SVN_ERR(svn_wc__internal_file_modified_p(&modified, NULL, NULL,
+      SVN_ERR(svn_wc__internal_file_modified_p(&modified,
                                                db, local_abspath, FALSE,
                                                scratch_pool));
     }

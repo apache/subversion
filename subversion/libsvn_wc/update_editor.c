@@ -3398,8 +3398,8 @@ merge_file(svn_skel_t **work_items,
          This function sets is_locally_modified to FALSE for
          files that do not exist and for directories. */
 
-      SVN_ERR(svn_wc__internal_file_modified_p(&is_locally_modified, NULL,
-                                               NULL, eb->db, fb->local_abspath,
+      SVN_ERR(svn_wc__internal_file_modified_p(&is_locally_modified,
+                                               eb->db, fb->local_abspath,
                                                FALSE /* exact_comparison */,
                                                scratch_pool));
     }

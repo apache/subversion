@@ -231,28 +231,6 @@ def revert_from_wc_root(sbox):
 
   svntest.actions.run_and_verify_status('', expected_output)
 
-# I temporarily mark this test XFail as the current implementation
-# (and the one in 1.5/1.6) contain a contradiction.
-#
-# If the recorded timestamp and size match the file (E.g. after 'svn cleanup')
-# then revert won't reinstall the file as the file is 'not modified'
-# when compared in repository normal form.
-#
-# But if there is no recorded information, revert would ask to compare the file
-# in translated form, so it would notice that the file was modified.
-#
-# We should decide:
-#  * if we want to perform a full scan (and catch these expansion changes
-#    always), at the cost of performing a full scan from revert.
-#
-#  * Don't catch these changes (and do nothing). Keep this test broken.
-#
-#  * Implement another level of recording 'unmodified'
-#    (one for unmodified in translated form and one for normalized or similar).
-#
-#  * Or revert r1101473, which removed this contradiction. So this option would
-#    would fix the test, but not the real problem.
-@XFail()
 @Issue(1663)
 def revert_reexpand_keyword(sbox):
   "revert reexpands manually contracted keyword"
@@ -306,7 +284,18 @@ def revert_reexpand_keyword(sbox):
   # Verify that the keyword got re-expanded.
   check_expanded(newfile_path)
 
-  # Now un-expand the keyword again.
+  # Ok, the first part of this test was written in 2004. We are now in 2011
+  # and note that there is more to test:
+
+  # If the recorded timestamp and size match the file then revert won't
+  # reinstall the file as the file was not modified when last compared in
+  # the repository normal form.
+  #
+  # The easiest way to get the information recorded would be calling cleanup,
+  # because that 'repairs' the recorded information. But some developers
+  # (including me) would call that cheating, so I just use a failed commit.
+
+  # Un-expand the keyword again.
   svntest.main.file_write(newfile_path, unexpanded_contents)
 
   # And now we trick svn in ignoring the file on newfile_path
@@ -316,17 +305,14 @@ def revert_reexpand_keyword(sbox):
   os.remove(newfile2_path)
 
   # This commit fails because newfile2_path is missing, but only after
-  # we call svn_wc__internal_file_modified_p() on new_file
+  # we call svn_wc__internal_file_modified_p() on new_file.
   svntest.actions.run_and_verify_commit(wc_dir, None, None, "2' is scheduled"+
                                         " for addition, but is missing",
                                         newfile_path, newfile2_path,
                                         '-m', "Shouldn't be committed")
 
-  # Revert the file.  The keyword should reexpand.
-  svntest.main.run_svn(None, 'revert', newfile_path)
-
-  # Verify that the keyword got re-expanded.
-  check_expanded(newfile_path)
+  # Revert the file.  The file is not reverted!
+  svntest.actions.run_and_verify_svn(None, [], [], 'revert', newfile_path)
 
 
 #----------------------------------------------------------------------

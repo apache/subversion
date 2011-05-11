@@ -360,17 +360,7 @@ void svn_wc__compat_call_notify_func(void *baton,
                                      apr_pool_t *pool);
 
 /* Set *MODIFIED_P to non-zero if LOCAL_ABSPATH's text is modified with
- * regard to the base revision, else set *MODIFIED_P to zero.  Also
- * set *EXECUTABLE_P and *READ_ONLY_P based on the files current
- * permissions.  (EXECUTABLE_P and READ_ONLY_P can individually be
- * NULL if the caller doesn't care about those attributes of the file.)
- *
- * If FORCE_COMPARISON is true, this function will not allow early
- * return mechanisms that avoid actual content comparison.  Instead,
- * if there is a text base, a full byte-by-byte comparison will be
- * done, and the entry checksum verified as well.  (This means that if
- * the text base is much longer than the working file, every byte of
- * the text base will still be examined.)
+ * regard to the base revision, else set *MODIFIED_P to zero.
  *
  * If EXACT_COMPARISON is FALSE, translate LOCAL_ABSPATH's EOL
  * style and keywords to repository-normal form according to its properties,
@@ -392,8 +382,6 @@ void svn_wc__compat_call_notify_func(void *baton,
  */
 svn_error_t *
 svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
-                                 svn_boolean_t *executable_p,
-                                 svn_boolean_t *read_only_p,
                                  svn_wc__db_t *db,
                                  const char *local_abspath,
                                  svn_boolean_t exact_comparison,
