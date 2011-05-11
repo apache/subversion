@@ -2108,10 +2108,27 @@ static svn_error_t *
 close_handler_pyio(void *baton)
 {
   PyObject *py_io = baton;
+  PyObject *result;
+  svn_error_t *err = NULL;
+
+  svn_swig_py_acquire_py_lock();
+  if ((result = PyObject_CallMethod(py_io, (char *)"close", NULL)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  Py_XDECREF(result);
+  svn_swig_py_release_py_lock();
+
+  return err;
+}
+
+static apr_status_t
+svn_swig_py_stream_destroy(void *py_io)
+{
   svn_swig_py_acquire_py_lock();
   Py_DECREF(py_io);
   svn_swig_py_release_py_lock();
-  return SVN_NO_ERROR;
+  return APR_SUCCESS;
 }
 
 svn_stream_t *
@@ -2123,6 +2140,8 @@ svn_swig_py_make_stream(PyObject *py_io, apr_pool_t *pool)
   svn_stream_set_read(stream, read_handler_pyio);
   svn_stream_set_write(stream, write_handler_pyio);
   svn_stream_set_close(stream, close_handler_pyio);
+  apr_pool_cleanup_register(pool, py_io, svn_swig_py_stream_destroy,
+                            apr_pool_cleanup_null);
   Py_INCREF(py_io);
 
   return stream;
