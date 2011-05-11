@@ -580,47 +580,6 @@ repos_location_from_columns(apr_int64_t *repos_id,
 }
 
 
-/* Set *REPOS_ID and *REPOS_RELPATH to the BASE node of LOCAL_RELPATH.
-   Either of REPOS_ID and REPOS_RELPATH may be NULL if not wanted.  */
-static svn_error_t *
-scan_upwards_for_repos(apr_int64_t *repos_id,
-                       const char **repos_relpath,
-                       const svn_wc__db_wcroot_t *wcroot,
-                       const char *local_relpath,
-                       apr_pool_t *result_pool,
-                       apr_pool_t *scratch_pool)
-{
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
-
-  SVN_ERR_ASSERT(wcroot->sdb != NULL && wcroot->wc_id != UNKNOWN_WC_ID);
-  SVN_ERR_ASSERT(repos_id != NULL || repos_relpath != NULL);
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_SELECT_BASE_NODE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-
-  if (!have_row)
-    {
-      svn_error_t *err = svn_error_createf(
-            SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-            _("The node '%s' was not found."),
-            path_for_error_message(wcroot, local_relpath, scratch_pool));
-
-      return svn_error_compose_create(err, svn_sqlite__reset(stmt));
-    }
-
-  SVN_ERR_ASSERT(!svn_sqlite__column_is_null(stmt, 0));
-  SVN_ERR_ASSERT(!svn_sqlite__column_is_null(stmt, 1));
-
-  if (repos_id)
-    *repos_id = svn_sqlite__column_int64(stmt, 0);
-  if (repos_relpath)
-    *repos_relpath = svn_sqlite__column_text(stmt, 1, result_pool);
-  return svn_sqlite__reset(stmt);
-}
-
-
 /* Get the statement given by STMT_IDX, and bind the appropriate wc_id and
    local_relpath based upon LOCAL_ABSPATH.  Store it in *STMT, and use
    SCRATCH_POOL for temporary allocations.
@@ -5862,8 +5821,11 @@ remove_node_txn(void *baton,
 
   /* Need info for not_present node? */
   if (SVN_IS_VALID_REVNUM(rnb->not_present_rev))
-    SVN_ERR(scan_upwards_for_repos(&repos_id, &repos_relpath, wcroot,
-                                   local_relpath, scratch_pool, scratch_pool));
+    SVN_ERR(base_get_info(NULL, NULL, NULL, &repos_relpath, &repos_id,
+                          NULL, NULL, NULL, NULL, NULL,
+                          NULL, NULL, NULL, NULL, NULL,
+                          wcroot, local_relpath,
+                          scratch_pool, scratch_pool));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_DELETE_NODES_RECURSIVE));
@@ -7388,9 +7350,11 @@ read_url_txn(void *baton,
         }
       else if (have_base)
         {
-          SVN_ERR(scan_upwards_for_repos(&repos_id, &repos_relpath,
-                                         wcroot, local_relpath,
-                                         scratch_pool, scratch_pool));
+          SVN_ERR(base_get_info(NULL, NULL, NULL, &repos_relpath, &repos_id,
+                                NULL, NULL, NULL, NULL, NULL,
+                                NULL, NULL, NULL, NULL, NULL,
+                                wcroot, local_relpath,
+                                scratch_pool, scratch_pool));
         }
       else if (status == svn_wc__db_status_absent
                || status == svn_wc__db_status_excluded
@@ -8207,9 +8171,12 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
                                 scratch_pool, scratch_pool));
         }
       else
-        SVN_ERR(scan_upwards_for_repos(&rb.old_repos_id, &rb.repos_relpath,
-                                       wcroot, local_dir_relpath,
-                                       scratch_pool, scratch_pool));
+        SVN_ERR(base_get_info(NULL, NULL, NULL,
+                              &rb.repos_relpath, &rb.old_repos_id,
+                              NULL, NULL, NULL, NULL, NULL,
+                              NULL, NULL, NULL, NULL, NULL,
+                              wcroot, local_dir_relpath,
+                              scratch_pool, scratch_pool));
     }
 
   SVN_ERR(fetch_repos_info(NULL, &rb.repos_uuid,
@@ -8277,9 +8244,11 @@ determine_repos_info(apr_int64_t *repos_id,
   svn_relpath_split(&local_parent_relpath, &name, local_relpath, scratch_pool);
 
   /* The REPOS_ID will be the same (### until we support mixed-repos)  */
-  SVN_ERR(scan_upwards_for_repos(repos_id, &repos_parent_relpath,
-                                 wcroot, local_parent_relpath,
-                                 scratch_pool, scratch_pool));
+  SVN_ERR(base_get_info(NULL, NULL, NULL, &repos_parent_relpath, repos_id,
+                        NULL, NULL, NULL, NULL, NULL,
+                        NULL, NULL, NULL, NULL, NULL,
+                        wcroot, local_parent_relpath,
+                        scratch_pool, scratch_pool));
 
   *repos_relpath = svn_relpath_join(repos_parent_relpath, name, result_pool);
 
@@ -8818,9 +8787,11 @@ bump_node_revision(svn_wc__db_wcroot_t *wcroot,
   if (new_repos_relpath != NULL)
     {
       if (!repos_relpath)
-        SVN_ERR(scan_upwards_for_repos(&repos_id, &repos_relpath,
-                                       wcroot, local_relpath,
-                                       scratch_pool, scratch_pool));
+        SVN_ERR(base_get_info(NULL, NULL, NULL, &repos_relpath, &repos_id,
+                              NULL, NULL, NULL, NULL, NULL,
+                              NULL, NULL, NULL, NULL, NULL,
+                              wcroot, local_relpath,
+                              scratch_pool, scratch_pool));
 
       if (strcmp(repos_relpath, new_repos_relpath))
           set_repos_relpath = TRUE;
@@ -8992,9 +8963,11 @@ lock_add_txn(void *baton,
   const char *repos_relpath;
   apr_int64_t repos_id;
 
-  SVN_ERR(scan_upwards_for_repos(&repos_id, &repos_relpath,
-                                 wcroot, local_relpath,
-                                 scratch_pool, scratch_pool));
+  SVN_ERR(base_get_info(NULL, NULL, NULL, &repos_relpath, &repos_id,
+                        NULL, NULL, NULL, NULL, NULL,
+                        NULL, NULL, NULL, NULL, NULL,
+                        wcroot, local_relpath,
+                        scratch_pool, scratch_pool));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_INSERT_LOCK));
   SVN_ERR(svn_sqlite__bindf(stmt, "iss",
@@ -9051,9 +9024,11 @@ lock_remove_txn(void *baton,
   apr_int64_t repos_id;
   svn_sqlite__stmt_t *stmt;
 
-  SVN_ERR(scan_upwards_for_repos(&repos_id, &repos_relpath,
-                                 wcroot, local_relpath,
-                                 scratch_pool, scratch_pool));
+  SVN_ERR(base_get_info(NULL, NULL, NULL, &repos_relpath, &repos_id,
+                        NULL, NULL, NULL, NULL, NULL,
+                        NULL, NULL, NULL, NULL, NULL,
+                        wcroot, local_relpath,
+                        scratch_pool, scratch_pool));
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_DELETE_LOCK));
@@ -9108,8 +9083,10 @@ svn_wc__db_scan_base_repos(const char **repos_relpath,
                               local_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  SVN_ERR(scan_upwards_for_repos(&repos_id, repos_relpath, wcroot,
-                                 local_relpath, result_pool, scratch_pool));
+  SVN_ERR(base_get_info(NULL, NULL, NULL, repos_relpath, &repos_id,
+                        NULL, NULL, NULL, NULL, NULL,
+                        NULL, NULL, NULL, NULL, NULL,
+                        wcroot, local_relpath, result_pool, scratch_pool));
   SVN_ERR(fetch_repos_info(repos_root_url, repos_uuid, wcroot->sdb,
                            repos_id, result_pool));
 
@@ -9276,7 +9253,7 @@ scan_addition_txn(void *baton,
 
 
     /* ### This loop here is to skip up to the first node which is a BASE node,
-       because scan_upwards_for_repos() doesn't accomodate the scenario that
+       because base_get_info() doesn't accomodate the scenario that
        we're looking at here; we found the true op_root, which may be inside
        further changed trees. */
     while (TRUE)
@@ -9326,9 +9303,11 @@ scan_addition_txn(void *baton,
     {
       const char *base_relpath;
 
-      SVN_ERR(scan_upwards_for_repos(sab->repos_id, &base_relpath,
-                                     wcroot, current_relpath,
-                                     scratch_pool, scratch_pool));
+      SVN_ERR(base_get_info(NULL, NULL, NULL, &base_relpath, sab->repos_id,
+                            NULL, NULL, NULL, NULL, NULL,
+                            NULL, NULL, NULL, NULL, NULL,
+                            wcroot, current_relpath,
+                            scratch_pool, scratch_pool));
 
       if (sab->repos_relpath)
         *sab->repos_relpath = svn_relpath_join(base_relpath, build_relpath,
