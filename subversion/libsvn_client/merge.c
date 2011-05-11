@@ -5460,12 +5460,19 @@ pre_merge_status_cb(void *baton,
   /* ### Probably needed: Calculate file external status */
   svn_boolean_t is_file_external = FALSE;
 
+  /* ### This block can go once we bumped to the EXTERNALS store */
   if (status->versioned
       && status->switched
       && status->kind == svn_node_file)
     {
-      SVN_ERR(svn_wc__node_is_file_external(&is_file_external, pmsb->wc_ctx,
-                                            local_abspath, pool));
+      svn_node_kind_t external_kind;
+
+      SVN_ERR(svn_wc__read_external_info(&external_kind, NULL, NULL, NULL,
+                                         NULL,
+                                         pmsb->wc_ctx, local_abspath,
+                                         local_abspath, TRUE, pool, pool));
+
+      is_file_external = (external_kind == svn_node_file);
     }
 
   if (status->switched && !is_file_external)

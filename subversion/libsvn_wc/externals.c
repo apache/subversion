@@ -1061,3 +1061,102 @@ svn_wc__crawl_file_external(svn_wc_context_t *wc_ctx,
 
   return svn_error_return(reporter->finish_report(report_baton, scratch_pool));
 }
+
+svn_error_t *
+svn_wc__read_external_info(svn_node_kind_t *external_kind,
+                           const char **defining_abspath,
+                           const char **defining_url,
+                           svn_revnum_t *defining_operational_revision,
+                           svn_revnum_t *defining_revision,
+                           svn_wc_context_t *wc_ctx,
+                           const char *wri_abspath,
+                           const char *local_abspath,
+                           svn_boolean_t ignore_enoent,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
+{
+  const char *repos_root_url;
+  svn_wc__db_kind_t kind;
+  svn_error_t *err;
+
+  err = svn_wc__db_external_read(&kind, NULL, NULL,
+                                 defining_url ? &repos_root_url : NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, defining_abspath, defining_url,
+                                 defining_operational_revision,
+                                 defining_revision,
+                                 NULL, NULL, NULL,
+                                 wc_ctx->db, local_abspath, wri_abspath,
+                                 result_pool, scratch_pool);
+
+  if (err)
+    {
+      if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+        return svn_error_return(err);
+
+      svn_error_clear(err);
+
+      if (external_kind)
+        *external_kind = svn_node_none;
+
+      if (defining_abspath)
+        *defining_abspath = NULL;
+
+      if (defining_url)
+        *defining_url = NULL;
+
+      if (defining_operational_revision)
+        *defining_operational_revision = SVN_INVALID_REVNUM;
+
+      if (defining_revision)
+        *defining_revision = SVN_INVALID_REVNUM;
+
+#if SVN_WC__VERSION < SVN_WC__HAS_EXTERNALS_STORE
+      {
+        svn_boolean_t is_wcroot;
+        err = svn_wc__db_is_wcroot(&is_wcroot, wc_ctx->db, local_abspath,
+                                   scratch_pool);
+
+        if (err && err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+          return svn_error_return(err);
+
+        svn_error_clear(err);
+
+        if (is_wcroot && external_kind)
+          {
+            *external_kind = svn_node_dir;
+          }
+      }
+
+      if (defining_abspath && !*defining_abspath)
+        *defining_abspath = svn_dirent_dirname(local_abspath, result_pool);
+#endif
+
+      return SVN_NO_ERROR;
+    }
+
+  if (external_kind)
+    switch(kind)
+      {
+        case svn_wc__db_kind_file:
+        case svn_wc__db_kind_symlink:
+          *external_kind = svn_node_file;
+          break;
+        case svn_wc__db_kind_dir:
+          *external_kind = svn_node_dir;
+          break;
+        default:
+          *external_kind = svn_node_none;
+      }
+
+#if SVN_WC__VERSION < SVN_WC__HAS_EXTERNALS_STORE
+  if (defining_abspath && !*defining_abspath)
+        *defining_abspath = svn_dirent_dirname(local_abspath, result_pool);
+#endif
+
+  if (defining_url && *defining_url)
+    *defining_url = svn_path_url_add_component2(repos_root_url, *defining_url,
+                                                result_pool);
+
+  return SVN_NO_ERROR;
+}

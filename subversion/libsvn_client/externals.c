@@ -296,7 +296,7 @@ switch_file_external(const char *local_abspath,
   const apr_array_header_t *preserved_exts;
   svn_boolean_t locked_here;
   svn_error_t *err = NULL;
-  svn_node_kind_t kind;
+  svn_node_kind_t kind, external_kind;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -304,8 +304,6 @@ switch_file_external(const char *local_abspath,
   SVN_ERR(svn_config_get_bool(cfg, &use_commit_times,
                               SVN_CONFIG_SECTION_MISCELLANY,
                               SVN_CONFIG_OPTION_USE_COMMIT_TIMES, FALSE));
-
-  
 
   /* Get the external diff3, if any. */
   svn_config_get(cfg, &diff3_cmd, SVN_CONFIG_SECTION_HELPERS,
@@ -355,10 +353,12 @@ switch_file_external(const char *local_abspath,
   if (err)
     goto cleanup;
 
+  err = svn_wc__read_external_info(&external_kind, NULL, NULL, NULL, NULL,
+                                   ctx->wc_ctx, local_abspath, local_abspath,
+                                   TRUE, scratch_pool, scratch_pool);
 
-  /* Only one notification is done for the external, so don't notify
-     for any following steps.  Use the following trick to add the file
-     then switch it to the external URL. */
+  if (err)
+    goto cleanup;
 
   /* If there is a versioned item with this name, ensure it's a file
      external before working with it.  If there is no entry in the
@@ -366,13 +366,7 @@ switch_file_external(const char *local_abspath,
      copy. */
   if (kind != svn_node_none && kind != svn_node_unknown)
     {
-      svn_boolean_t file_external;
-      err = svn_wc__node_is_file_external(&file_external, ctx->wc_ctx,
-                                          local_abspath, subpool);
-      if (err)
-        goto cleanup;
-
-      if (! file_external)
+      if (external_kind != svn_node_file)
         {
           if (!locked_here)
             SVN_ERR(svn_wc__release_write_lock(ctx->wc_ctx, dir_abspath,

@@ -440,7 +440,10 @@ svn_cl__print_status(const char *path,
                      apr_pool_t *pool)
 {
   if (! status
-      || (skip_unrecognized && !(status->versioned || status->conflicted))
+      || (skip_unrecognized
+          && !(status->versioned
+               || status->conflicted
+               || status->node_status == svn_wc_status_external))
       || (status->node_status == svn_wc_status_none
           && status->repos_node_status == svn_wc_status_none))
     return SVN_NO_ERROR;

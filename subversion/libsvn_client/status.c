@@ -630,18 +630,25 @@ create_client_status(svn_client_status_t **cst,
   (*cst)->switched = status->switched;
   (*cst)->file_external = FALSE;
 
-  if (status->versioned
-      && status->switched
-      && status->kind == svn_node_file)
+  if (((*cst)->node_status == svn_wc_status_external)
+      /* Old style file-externals */
+      || (status->versioned
+          && status->switched
+          && status->kind == svn_node_file))
     {
-      svn_boolean_t is_file_external;
-      SVN_ERR(svn_wc__node_is_file_external(&is_file_external, wc_ctx,
-                                            local_abspath, scratch_pool));
+      svn_node_kind_t external_kind;
 
-      if (is_file_external)
+      SVN_ERR(svn_wc__read_external_info(&external_kind, NULL, NULL, NULL,
+                                         NULL, wc_ctx,
+                                         local_abspath /* wri_abspath */,
+                                         local_abspath, TRUE,
+                                         scratch_pool, scratch_pool));
+
+      if (external_kind == svn_node_file)
         {
-          (*cst)->file_external = is_file_external;
-          (*cst)->switched = FALSE; /* ### Keep switched true now? */
+          (*cst)->file_external = TRUE;
+          (*cst)->switched = FALSE;
+          (*cst)->node_status = (*cst)->text_status;
         }
     }
 

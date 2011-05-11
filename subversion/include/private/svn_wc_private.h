@@ -98,6 +98,31 @@ svn_wc__crawl_file_external(svn_wc_context_t *wc_ctx,
                             void *notify_baton,
                             apr_pool_t *scratch_pool);
 
+/* Check if LOCAL_ABSPATH is an external in the working copy identified
+   by WRI_ABSPATH. If not return SVN_ERR_WC_PATH_NOT_FOUND.
+
+   If it is an external return more information on this external.
+
+   If IGNORE_ENOENT, then set *external_kind to svn_node_none, when
+   LOCAL_ABSPATH is not an external instead of returning an error.
+
+   ### While we are not at the SVN_WC__HAS_EXTERNALS_STORE format, roots
+   ### of working copies will be identified as directory externals. The
+   ### recorded information will be NULL for directory externals.
+*/
+svn_error_t *
+svn_wc__read_external_info(svn_node_kind_t *external_kind,
+                           const char **defining_abspath,
+                           const char **defining_url,
+                           svn_revnum_t *defining_operational_revision,
+                           svn_revnum_t *defining_revision,
+                           svn_wc_context_t *wc_ctx,
+                           const char *wri_abspath,
+                           const char *local_abspath,
+                           svn_boolean_t ignore_enoent,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
+
 
 /** Set @a *tree_conflict to a newly allocated @c
  * svn_wc_conflict_description_t structure describing the tree
@@ -533,18 +558,6 @@ svn_wc__node_get_lock_info(const char **lock_token,
                            const char *local_abspath,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
-
-
-/* Return TRUE in *FILE_EXTERNAL if the node LOCAL_ABSPATH is a file
-   external.
-
-   If the node does not exist in BASE, then SVN_ERR_WC_PATH_NOT_FOUND
-   will be returned.  */
-svn_error_t *
-svn_wc__node_is_file_external(svn_boolean_t *file_external,
-                              svn_wc_context_t *wc_ctx,
-                              const char *local_abspath,
-                              apr_pool_t *scratch_pool);
 
 /**
  * A hack to remove the last entry from libsvn_client.  This simply fetches an
