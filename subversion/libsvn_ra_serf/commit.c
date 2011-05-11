@@ -675,7 +675,7 @@ typedef struct walker_baton_t {
  * then set *HAVE_OLD_VAL to TRUE and set *OLD_VAL_P to that old value
  * (which may be NULL); else set *HAVE_OLD_VAL to FALSE.
  *
- * Allocate *OLD_VAL_P in POOL. */
+ * The string pointed to by *OLD_VAL_P is not copied into POOL. */
 static svn_error_t *
 derive_old_val(svn_boolean_t *have_old_val,
                const svn_string_t **old_val_p,
@@ -694,7 +694,7 @@ derive_old_val(svn_boolean_t *have_old_val,
       if (val)
         {
           *have_old_val = TRUE;
-          *old_val_p = svn_string_dup(val, pool);
+          *old_val_p = val;
         }
     }
 
