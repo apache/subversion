@@ -3524,8 +3524,8 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
       if (work_del_relpath)
         {
           const char *op_root_relpath;
-          const char *parent_del_relpath = svn_dirent_dirname(work_del_relpath,
-                                                              scratch_pool);
+          const char *parent_del_relpath = svn_relpath_dirname(work_del_relpath,
+                                                               scratch_pool);
 
           /* Similar to, but not the same as, the _scan_addition and
              _join above.  Can we use get_copyfrom here? */
