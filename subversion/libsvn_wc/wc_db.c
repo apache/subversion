@@ -12219,6 +12219,8 @@ verify_wcroot(svn_wc__db_wcroot_t *wcroot,
       const char *local_relpath, *parent_relpath;
       apr_int64_t op_depth;
 
+      svn_pool_clear(iterpool);
+
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
       if (!have_row)
         break;
