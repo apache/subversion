@@ -881,7 +881,7 @@ static void* secure_aligned_alloc(apr_pool_t *pool,
   void* memory = apr_palloc(pool, size + ITEM_ALIGNMENT);
   if (memory != NULL)
     {
-      memory = (char *)ALIGN_POINTER(memory);
+      memory = ALIGN_POINTER(memory);
       if (zero)
         memset(memory, 0, size);
     }
@@ -1169,7 +1169,7 @@ membuffer_cache_get(svn_membuffer_t *cache,
     }
 
   size = ALIGN_VALUE(entry->size);
-  buffer = (char *)ALIGN_POINTER(apr_palloc(pool, size + ITEM_ALIGNMENT-1));
+  buffer = ALIGN_POINTER(apr_palloc(pool, size + ITEM_ALIGNMENT-1));
   memcpy(buffer, (const char*)cache->data + entry->offset, size);
 
 #ifdef DEBUG_CACHE_MEMBUFFER
