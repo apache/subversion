@@ -8784,18 +8784,8 @@ bump_node_revision(svn_wc__db_wcroot_t *wcroot,
                                              scratch_pool));
     }
 
-  if (new_repos_relpath != NULL)
-    {
-      if (!repos_relpath)
-        SVN_ERR(base_get_info(NULL, NULL, NULL, &repos_relpath, &repos_id,
-                              NULL, NULL, NULL, NULL, NULL,
-                              NULL, NULL, NULL, NULL, NULL,
-                              wcroot, local_relpath,
-                              scratch_pool, scratch_pool));
-
-      if (strcmp(repos_relpath, new_repos_relpath))
-          set_repos_relpath = TRUE;
-    }
+  if (new_repos_relpath != NULL && strcmp(repos_relpath, new_repos_relpath))
+    set_repos_relpath = TRUE;
 
   if (set_repos_relpath
       || (SVN_IS_VALID_REVNUM(new_rev) && new_rev != revision))
