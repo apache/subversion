@@ -1633,6 +1633,18 @@ def run_and_verify_resolved(expected_paths, *args):
   elements of EXPECTED_PATHS as the arguments."""
   _run_and_verify_resolve('resolved', expected_paths, *args)
 
+def run_and_verify_revert(expected_paths, *args):
+  """Run "svn revert" with arguments ARGS, and verify that it reverts
+  the paths in EXPECTED_PATHS and no others.  If no ARGS are
+  specified, use the elements of EXPECTED_PATHS as the arguments."""
+  if len(args) == 0:
+    args = expected_paths
+  expected_output = verify.UnorderedOutput([
+    "Reverted '" + path + "'\n" for path in
+    expected_paths])
+  run_and_verify_svn(None, expected_output, [],
+                     "revert", *args)
+
 
 ######################################################################
 # Other general utilities
