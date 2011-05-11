@@ -12178,3 +12178,99 @@ svn_wc__db_base_get_lock_tokens_recursive(apr_hash_t **lock_tokens,
     }
   return svn_sqlite__reset(stmt);
 }
+
+
+/* If EXPRESSION is false, cause the caller to return an SVN_ERR_WC_CORRUPT
+ * error, showing EXPRESSION and the caller's LOCAL_RELPATH in the message. */
+#define VERIFY(expression) \
+  do { \
+    if (! (expression)) \
+      return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL, \
+        _("database inconsistency at local_relpath='%s' verifying " \
+          "expression '%s'"), local_relpath, #expression); \
+  } while (0)
+
+
+/* Verify consistency of the metadata concerning WCROOT.  This is intended
+ * for use only during testing and debugging, so is not intended to be
+ * blazingly fast.
+ *
+ * This code is a complement to any verification that we can do in SQLite
+ * triggers.  See, for example, 'wc-checks.sql'.
+ *
+ * Some more verification steps we might want to add are:
+ *
+ *   * on every ACTUAL row (except root): a NODES row exists at its parent path
+ *   * the op-depth root must always exist and every intermediate too
+ */
+static svn_error_t *
+verify_wcroot(svn_wc__db_wcroot_t *wcroot,
+              apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_ALL_NODES));
+  SVN_ERR(svn_sqlite__bindf(stmt, "i", wcroot->wc_id));
+  while (TRUE)
+    {
+      svn_boolean_t have_row;
+      const char *local_relpath, *parent_relpath;
+      apr_int64_t op_depth;
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+      if (!have_row)
+        break;
+
+      op_depth = svn_sqlite__column_int(stmt, 0);
+      local_relpath = svn_sqlite__column_text(stmt, 1, iterpool);
+      parent_relpath = svn_sqlite__column_text(stmt, 2, iterpool);
+
+      /* Verify parent_relpath is the parent path of local_relpath */
+      VERIFY((parent_relpath == NULL)
+             ? (local_relpath[0] == '\0')
+             : (strcmp(svn_relpath_dirname(local_relpath, iterpool),
+                       parent_relpath) == 0));
+
+      /* Verify op_depth <= the tree depth of local_relpath */
+      VERIFY(op_depth <= relpath_depth(local_relpath));
+
+      /* Verify parent_relpath refers to a row that exists */
+      /* TODO: Verify there is a suitable parent row - e.g. has op_depth <=
+       * the child's and a suitable presence */
+      if (parent_relpath)
+        {
+          svn_sqlite__stmt_t *stmt2;
+          svn_boolean_t have_a_parent_row;
+
+          SVN_ERR(svn_sqlite__get_statement(&stmt2, wcroot->sdb,
+                                            STMT_SELECT_NODE_INFO));
+          SVN_ERR(svn_sqlite__bindf(stmt2, "is", wcroot->wc_id,
+                                    parent_relpath));
+          SVN_ERR(svn_sqlite__step(&have_a_parent_row, stmt2));
+          VERIFY(have_a_parent_row);
+          SVN_ERR(svn_sqlite__reset(stmt2));
+        }
+    }
+  svn_pool_destroy(iterpool);
+
+  return svn_error_return(svn_sqlite__reset(stmt));
+}
+
+svn_error_t *
+svn_wc__db_verify(svn_wc__db_t *db,
+                  const char *wri_abspath,
+                  apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
+                                                db, wri_abspath,
+                                                scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  SVN_ERR(verify_wcroot(wcroot, scratch_pool));
+  return SVN_NO_ERROR;
+}
