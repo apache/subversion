@@ -1739,7 +1739,7 @@ deserialize_svn_stringbuf(void **item,
 {
   svn_string_t *value_str = apr_palloc(pool, sizeof(svn_string_t));
 
-  value_str->data = (char*)buffer;
+  value_str->data = buffer;
   value_str->len = buffer_size-1;
   *item = value_str;
 
