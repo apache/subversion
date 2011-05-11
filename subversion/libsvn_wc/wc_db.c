@@ -2453,6 +2453,7 @@ depth_get_info(svn_wc__db_status_t *status,
   return svn_error_compose_create(err, svn_sqlite__reset(stmt));
 }
 
+
 /* Helper for creating SQLite triggers, running the main transaction
    callback, and then dropping the triggers.  It guarantees that the
    triggers will not survive the transaction.  This could be used for
@@ -2465,6 +2466,7 @@ struct with_triggers_baton_t {
   void *cb_baton;
 };
 
+/* conforms to svn_wc__db_txn_callback_t  */
 static svn_error_t *
 with_triggers(void *baton,
               svn_wc__db_wcroot_t *wcroot,
@@ -2472,15 +2474,63 @@ with_triggers(void *baton,
               apr_pool_t *scratch_pool)
 {
   struct with_triggers_baton_t *b = baton;
+  svn_error_t *err1;
+  svn_error_t *err2;
 
   SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb, b->create_trigger));
 
-  SVN_ERR(b->cb_func(b->cb_baton, wcroot, local_relpath, scratch_pool));
+  err1 = b->cb_func(b->cb_baton, wcroot, local_relpath, scratch_pool);
 
-  SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb, b->drop_trigger));
+  err2 = svn_sqlite__exec_statements(wcroot->sdb, b->drop_trigger);
 
-  return SVN_NO_ERROR;
+  return svn_error_return(svn_error_compose_create(err1, err2));
 }
+
+
+typedef svn_error_t * (*work_callback_t)(
+                          void *baton,
+                          svn_wc__db_wcroot_t *wcroot,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          apr_pool_t *scratch_pool);
+
+static svn_error_t *
+with_finalization(void *baton,
+                  svn_wc__db_wcroot_t *wcroot,
+                  const char *local_relpath,
+                  svn_wc__db_txn_callback_t txn_cb,
+                  void *txn_baton,
+                  work_callback_t work_cb,
+                  void *work_baton,
+                  svn_cancel_func_t cancel_func,
+                  void *cancel_baton,
+                  svn_wc_notify_func2_t notify_func,
+                  void *notify_baton,
+                  int finalize_idx,
+                  apr_pool_t *scratch_pool)
+{
+  svn_error_t *err1;
+  svn_error_t *err2;
+
+  err1 = svn_wc__db_with_txn(wcroot, local_relpath, txn_cb, txn_baton,
+                             scratch_pool);
+
+  if (notify_func != NULL)
+    {
+      err2 = work_cb(work_baton, wcroot,
+                     cancel_func, cancel_baton,
+                     notify_func, notify_baton,
+                     scratch_pool);
+      err1 = svn_error_compose_create(err1, err2);
+    }
+
+  err2 = svn_sqlite__exec_statements(wcroot->sdb, finalize_idx);
+
+  return svn_error_return(svn_error_compose_create(err1, err2));
+}
+
 
 static void
 blank_ieb(insert_external_baton_t *ieb)
@@ -4915,6 +4965,9 @@ set_changelist_txn(void *baton,
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
 
+  SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb,
+                                      STMT_CREATE_CHANGELIST_LIST));
+
   /* If we are filtering based on changelist_filter, we *must* already have
      nodes, so we can skip this check. */
   if (scb->changelist_filter && scb->changelist_filter->nelts > 0)
@@ -5000,75 +5053,24 @@ set_changelist_txn(void *baton,
 }
 
 
-svn_error_t *
-svn_wc__db_op_set_changelist(svn_wc__db_t *db,
-                             const char *local_abspath,
-                             const char *new_changelist,
-                             const apr_array_header_t *changelist_filter,
-                             svn_depth_t depth,
-                             svn_wc_notify_func2_t notify_func,
-                             void *notify_baton,
-                             svn_cancel_func_t cancel_func,
-                             void *cancel_baton,
-                             apr_pool_t *scratch_pool)
+static svn_error_t *
+do_changelist_notify(void *baton,
+                     svn_wc__db_wcroot_t *wcroot,
+                     svn_cancel_func_t cancel_func,
+                     void *cancel_baton,
+                     svn_wc_notify_func2_t notify_func,
+                     void *notify_baton,
+                     apr_pool_t *scratch_pool)
 {
-  svn_wc__db_wcroot_t *wcroot;
-  const char *local_relpath;
-  struct set_changelist_baton_t scb = { new_changelist, changelist_filter };
-  struct with_triggers_baton_t wtb = { STMT_CREATE_CHANGELIST_LIST,
-                                       STMT_DROP_CHANGELIST_LIST_TRIGGERS,
-                                       NULL, NULL };
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
-  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
-                              db, local_abspath, scratch_pool, scratch_pool));
-  VERIFY_USABLE_WCROOT(wcroot);
-
-  switch (depth)
-    {
-      case svn_depth_empty:
-        wtb.cb_func = set_changelist_txn;
-        break;
-
-      default:
-        /* ### This is only implemented for depth = empty right now. */
-        NOT_IMPLEMENTED();
-    }
-
-  wtb.cb_baton = &scb;
-
-  /* ### fix up the code below: if the callback is invokved, then the
-     ### 'changelist_list' table may exist. We should ensure it gets dropped
-     ### before we exit this function.  */
-
-  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, with_triggers, &wtb,
-                              iterpool));
-  SVN_ERR(flush_entries(wcroot, local_abspath, iterpool));
-
-  /* ### can we unify this notification logic, in some way, with the
-     ### similar logic in op_delete? ... I think we probably want a
-     ### notify_callback that represents the inner loop. the statement
-     ### selection and binding is probably similar (especially if we
-     ### remove like_arg, as questioned below). the unification could
-     ### look similar to db_with_txn or the with_triggers stuff.  */
-
-  /* ### why we do filter SOME of the changelist notifications? if a row
-     ### is inserted, then don't we want to send a notification for it?  */
-
-  if (notify_func == NULL)
-    {
-      svn_pool_destroy(iterpool);
-      return SVN_NO_ERROR;
-    }
+  apr_pool_t *iterpool;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_CHANGELIST_LIST));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
+  iterpool = svn_pool_create(scratch_pool);
   while (have_row)
     {
       /* ### wc_id is column 0. use it one day...  */
@@ -5090,13 +5092,53 @@ svn_wc__db_op_set_changelist(svn_wc__db_t *db,
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
-  SVN_ERR(svn_sqlite__reset(stmt));
-
-  SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb, STMT_DROP_CHANGELIST_LIST));
-
   svn_pool_destroy(iterpool);
 
-  return SVN_NO_ERROR;
+  return svn_error_return(svn_sqlite__reset(stmt));
+}
+
+
+svn_error_t *
+svn_wc__db_op_set_changelist(svn_wc__db_t *db,
+                             const char *local_abspath,
+                             const char *new_changelist,
+                             const apr_array_header_t *changelist_filter,
+                             svn_depth_t depth,
+                             svn_wc_notify_func2_t notify_func,
+                             void *notify_baton,
+                             svn_cancel_func_t cancel_func,
+                             void *cancel_baton,
+                             apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+  struct set_changelist_baton_t scb = { new_changelist, changelist_filter };
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+  SVN_ERR_ASSERT(depth == svn_depth_empty);
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
+                                                db, local_abspath,
+                                                scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  /* Flush the entries before we do the work. Even if no work is performed,
+     the flush isn't a problem.
+
+     ### if DEPTH ever svn_depth_infinity, then we need to recursively
+     ### wipe out all the entries.  */
+  SVN_ERR(flush_entries(wcroot, local_abspath, scratch_pool));
+
+  /* Perform the set-changelist operation (transactionally), perform any
+     notifications necessary, and then clean out our temporary tables.  */
+  return svn_error_return(with_finalization(NULL,
+                                            wcroot, local_relpath,
+                                            set_changelist_txn, &scb,
+                                            do_changelist_notify, NULL,
+                                            cancel_func, cancel_baton,
+                                            notify_func, notify_baton,
+                                            STMT_DROP_CHANGELIST_LIST,
+                                            scratch_pool));
 }
 
 
@@ -5482,6 +5524,8 @@ svn_wc__db_op_revert(svn_wc__db_t *db,
   SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, with_triggers, &wtb,
                               scratch_pool));
 
+  /* ### this is not good enough! when DEPTH is svn_depth_infinity, we need
+     ### to flush entries recursively.  */
   SVN_ERR(flush_entries(wcroot, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -6192,6 +6236,53 @@ op_delete_txn(void *baton,
 }
 
 
+static svn_error_t *
+do_delete_notify(void *baton,
+                 svn_wc__db_wcroot_t *wcroot,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
+                 svn_wc_notify_func2_t notify_func,
+                 void *notify_baton,
+                 apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  apr_pool_t *iterpool;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_DELETE_LIST));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  iterpool = svn_pool_create(scratch_pool);
+  while (have_row)
+    {
+      const char *notify_relpath;
+      const char *notify_abspath;
+
+      svn_pool_clear(iterpool);
+
+      if (cancel_func)
+        SVN_ERR(cancel_func(cancel_baton));
+
+      notify_relpath = svn_sqlite__column_text(stmt, 0, NULL);
+      notify_abspath = svn_dirent_join(wcroot->abspath,
+                                       notify_relpath,
+                                       iterpool);
+
+      notify_func(notify_baton,
+                  svn_wc_create_notify(notify_abspath,
+                                       svn_wc_notify_delete,
+                                       iterpool),
+                  iterpool);
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+  svn_pool_destroy(iterpool);
+
+  return svn_error_return(svn_sqlite__reset(stmt));
+}
+
+
 svn_error_t *
 svn_wc__db_op_delete(svn_wc__db_t *db,
                      const char *local_abspath,
@@ -6203,67 +6294,31 @@ svn_wc__db_op_delete(svn_wc__db_t *db,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  struct op_delete_baton_t b;
+  struct op_delete_baton_t odb;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
-                              db, local_abspath, scratch_pool, scratch_pool));
+                                                db, local_abspath,
+                                                scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  b.delete_depth = relpath_depth(local_relpath);
+  odb.delete_depth = relpath_depth(local_relpath);
 
-  /* ### fix up the code below: if we call op_delete_txn(), then the
-     ### 'delete_list' table may exist. We should ensure it gets dropped
-     ### before we exit this function.  */
-
-  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, op_delete_txn, &b,
-                              scratch_pool));
+  /* ### this is NOT good enough! ... we may need to flush entries
+     ### recursively.  */
   SVN_ERR(flush_entries(wcroot, local_abspath, scratch_pool));
 
-  /* Now that we're outside of the SQLite transaction, we want to process
-     the deletion notification list, then dump the table.  */
-  if (notify_func)
-    {
-      svn_sqlite__stmt_t *stmt;
-      svn_boolean_t have_row;
-      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_SELECT_DELETE_LIST));
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
-      while (have_row)
-        {
-          const char *notify_relpath;
-          const char *notify_abspath;
-
-          svn_pool_clear(iterpool);
-
-          if (cancel_func)
-            SVN_ERR(cancel_func(cancel_baton));
-
-          notify_relpath = svn_sqlite__column_text(stmt, 0, NULL);
-          notify_abspath = svn_dirent_join(wcroot->abspath,
-                                           notify_relpath,
-                                           iterpool);
-
-          notify_func(notify_baton,
-                      svn_wc_create_notify(notify_abspath,
-                                           svn_wc_notify_delete,
-                                           iterpool),
-                      iterpool);
-
-          SVN_ERR(svn_sqlite__step(&have_row, stmt));
-        }
-
-      SVN_ERR(svn_sqlite__reset(stmt));
-
-      svn_pool_destroy(iterpool);
-    }
-
-  SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb, STMT_DROP_DELETE_LIST));
-
-  return SVN_NO_ERROR;
+  /* Perform the deletion operation (transactionally), perform any
+     notifications necessary, and then clean out our temporary tables.  */
+  return svn_error_return(with_finalization(NULL,
+                                            wcroot, local_relpath,
+                                            op_delete_txn, &odb,
+                                            do_delete_notify, NULL,
+                                            cancel_func, cancel_baton,
+                                            notify_func, notify_baton,
+                                            STMT_DROP_DELETE_LIST,
+                                            scratch_pool));
 }
 
 
