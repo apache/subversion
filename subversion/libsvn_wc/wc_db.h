@@ -3022,6 +3022,14 @@ svn_wc__db_has_local_mods(svn_boolean_t *is_modified,
                           apr_pool_t *scratch_pool);
 
 
+/* Verify the consistency of metadata concerning the WC that contains
+ * WRI_ABSPATH, in DB.  Return an error if any problem is found. */
+svn_error_t *
+svn_wc__db_verify(svn_wc__db_t *db,
+                  const char *wri_abspath,
+                  apr_pool_t *scratch_pool);
+
+
 /* @} */
 
 

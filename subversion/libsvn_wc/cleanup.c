@@ -160,6 +160,10 @@ cleanup_internal(svn_wc__db_t *db,
   SVN_ERR(svn_wc__db_get_wcroot(&cleanup_abspath, db, dir_abspath,
                                 scratch_pool, scratch_pool));
 
+#ifdef SVN_DEBUG
+  SVN_ERR(svn_wc__db_verify(db, dir_abspath, scratch_pool));
+#endif
+
   /* Perform these operations if we lock the entire working copy.
      Note that we really need to check a wcroot value and not
      svn_wc__check_wcroot() as that function, will just return true

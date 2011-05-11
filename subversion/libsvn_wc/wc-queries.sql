@@ -1168,6 +1168,16 @@ WHERE wc_id = ?1
   AND presence IN ('normal', 'incomplete')
   AND file_external IS NULL
 
+/* ------------------------------------------------------------------------- */
+
+/* Queries for verification. */
+
+-- STMT_SELECT_ALL_NODES
+SELECT op_depth, local_relpath, parent_relpath FROM nodes
+WHERE wc_id == ?1
+
+/* ------------------------------------------------------------------------- */
+
 /* Grab all the statements related to the schema.  */
 
 -- include: wc-metadata
