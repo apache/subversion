@@ -1421,7 +1421,7 @@ revert_restore(svn_wc__db_t *db,
                                       APR_HASH_KEY_STRING);
 
 #ifdef HAVE_SYMLINK
-          if ((special_prop != NULL) != dirent->special)
+          if ((special_prop != NULL) != special)
             {
               /* File/symlink mismatch. */
               SVN_ERR(svn_io_remove_file2(local_abspath, FALSE, scratch_pool));
