@@ -1005,8 +1005,13 @@ handle_stream(serf_request_t *request,
   serf_status_line sl;
   const char *location;
   svn_error_t *err;
+  apr_status_t status;
 
-  serf_bucket_response_status(response, &sl);
+  status = serf_bucket_response_status(response, &sl);
+  if (SERF_BUCKET_READ_ERROR(status))
+    {
+      return svn_error_wrap_apr(status, NULL);
+    }
 
   /* Woo-hoo.  Nothing here to see.  */
   location = svn_ra_serf__response_get_location(response, pool);
@@ -1029,7 +1034,6 @@ handle_stream(serf_request_t *request,
     {
       const char *data;
       apr_size_t len;
-      apr_status_t status;
 
       status = serf_bucket_read(response, 8000, &data, &len);
       if (SERF_BUCKET_READ_ERROR(status))
