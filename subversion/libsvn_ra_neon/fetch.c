@@ -798,14 +798,16 @@ svn_error_t *svn_ra_neon__get_dir(svn_ra_session_t *session,
   apr_size_t final_url_n_components;
   svn_boolean_t supports_deadprop_count;
   svn_ra_neon__session_t *ras = session->priv;
+  const svn_string_t *deadprop_count;
   const char *url = svn_path_url_add_component2(ras->url->data, path, pool);
 
-  /* If the revision is invalid (head), then we're done.  Just fetch
-     the public URL, because that will always get HEAD. */
+  /* If the revision is invalid (HEAD), then we're done -- just fetch
+     the public URL, because that will always get HEAD.  Otherwise, we
+     need to create a bc_url. */
   if ((! SVN_IS_VALID_REVNUM(revision)) && (fetched_rev == NULL))
-    final_url = url;
-
-  /* If the revision is something specific, we need to create a bc_url. */
+    {
+      final_url = url;
+    }
   else
     {
       svn_revnum_t got_rev;
@@ -823,20 +825,13 @@ svn_error_t *svn_ra_neon__get_dir(svn_ra_session_t *session,
      understands the deadprop-count property.  If it doesn't, we'll
      need to do an allprop PROPFIND.  If it does, we'll execute a more
      targeted PROPFIND. */
-  {
-    const svn_string_t *deadprop_count;
-
-    SVN_ERR(svn_ra_neon__get_props_resource(&rsrc, ras,
-                                            final_url, NULL,
-                                            deadprop_count_support_props,
-                                            pool));
-
-    deadprop_count = apr_hash_get(rsrc->propset,
-                                  SVN_RA_NEON__PROP_DEADPROP_COUNT,
-                                  APR_HASH_KEY_STRING);
-
-    supports_deadprop_count = (deadprop_count != NULL);
-  }
+  SVN_ERR(svn_ra_neon__get_props_resource(&rsrc, ras, final_url, NULL,
+                                          deadprop_count_support_props,
+                                          pool));
+  deadprop_count = apr_hash_get(rsrc->propset,
+                                SVN_RA_NEON__PROP_DEADPROP_COUNT,
+                                APR_HASH_KEY_STRING);
+  supports_deadprop_count = (deadprop_count != NULL);
 
   if (dirents)
     {
