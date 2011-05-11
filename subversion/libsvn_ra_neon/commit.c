@@ -571,40 +571,15 @@ static svn_error_t * copy_resource(svn_ra_neon__session_t *ras,
                                    const char *copy_dst_url,
                                    apr_pool_t *scratch_pool)
 {
-  const char *baseline_coll_url, *baseline_relpath, *copy_src_url;
-  
-  if (SVN_RA_NEON__HAVE_HTTPV2_SUPPORT(ras))
-    {
-      baseline_coll_url = apr_psprintf(scratch_pool, "%s/%ld",
-                                       ras->rev_root_stub, copyfrom_revision);
-      baseline_relpath = svn_uri_is_child(ras->repos_root,
-                                          copyfrom_path, scratch_pool);
-      if (! baseline_relpath)
-        baseline_relpath = "";
-    }
-  else
-    {
-      svn_string_t bc_url, bc_relative;
+  svn_string_t bc_url, bc_relative;
+  const char *copy_src_url;
 
-      /* Convert the copyfrom_* url/rev "public" pair into a Baseline
-         Collection (BC) URL that represents the revision -- and a
-         relative path under that BC.  */
-      SVN_ERR(svn_ra_neon__get_baseline_info(&bc_url, &bc_relative, NULL,
-                                             ras, copyfrom_path,
-                                             copyfrom_revision, scratch_pool));
-      baseline_coll_url = bc_url.data;
-      baseline_relpath = bc_relative.data;
-    }
-     
-  /* Combine the BC-URL and relative path; this is the main
-     "source" argument to the COPY request.  The "Destination:"
-     header given to COPY is simply the wr_url that is already
-     part of the file_baton. */
-  copy_src_url = svn_path_url_add_component2(baseline_coll_url,
-                                             baseline_relpath,
+  SVN_ERR(svn_ra_neon__get_baseline_info(&bc_url, &bc_relative, NULL,
+                                         ras, copyfrom_path,
+                                         copyfrom_revision, scratch_pool));
+  copy_src_url = svn_path_url_add_component2(bc_url.data,
+                                             bc_relative.data,
                                              scratch_pool);
-
-  /* Have neon do the COPY. */
   SVN_ERR(svn_ra_neon__copy(ras, 1 /* overwrite */, SVN_RA_NEON__DEPTH_INFINITE,
                             copy_src_url, copy_dst_url, scratch_pool));
   
