@@ -2126,7 +2126,7 @@ static apr_status_t
 svn_swig_py_stream_destroy(void *py_io)
 {
   svn_swig_py_acquire_py_lock();
-  Py_DECREF(py_io);
+  Py_DECREF((PyObject*)py_io);
   svn_swig_py_release_py_lock();
   return APR_SUCCESS;
 }
