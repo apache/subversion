@@ -1183,11 +1183,12 @@ svn_client_export5(svn_revnum_t *result_rev,
               const char *to_abspath;
 
               SVN_ERR(svn_dirent_get_absolute(&to_abspath, to_path, pool));
-              SVN_ERR(svn_client__fetch_externals(eb->externals,
-                                                  from_path_or_url, to_abspath,
-                                                  repos_root_url, depth, TRUE,
-                                                  native_eol, &use_sleep,
-                                                  ctx, pool));
+              SVN_ERR(svn_client__export_externals(eb->externals,
+                                                   from_path_or_url,
+                                                   to_abspath, repos_root_url,
+                                                   depth,
+                                                   native_eol, &use_sleep,
+                                                   ctx, pool));
             }
         }
       else if (kind == svn_node_none)
