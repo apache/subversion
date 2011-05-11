@@ -974,33 +974,35 @@ svn_ra_serf__set_bare_props(void *baton,
                             const svn_string_t *val,
                             apr_pool_t *pool);
 
-/* Get PROPS for PATH at REV revision with a NS:NAME. */
+/* Return the property value for PATH at REV revision with a NS:NAME.
+ * PROPS is a four-level nested hash: (svn_revnum_t => char *path =>
+ * char *ns => char *name => svn_string_t *). */
 const svn_string_t *
 svn_ra_serf__get_ver_prop_string(apr_hash_t *props,
                                  const char *path, svn_revnum_t rev,
                                  const char *ns, const char *name);
 
-/* Wraps svn_ra_serf__get_ver_prop_string(). */
+/* Same as svn_ra_serf__get_ver_prop_string(), but returns a C string. */
 const char *
 svn_ra_serf__get_ver_prop(apr_hash_t *props,
                           const char *path, svn_revnum_t rev,
                           const char *ns, const char *name);
 
-/* Same as get_ver_prop_string, but for the unknown revision */
+/* Same as svn_ra_serf__get_ver_prop_string(), but for the unknown revision. */
 const svn_string_t *
 svn_ra_serf__get_prop_string(apr_hash_t *props,
                              const char *path,
                              const char *ns,
                              const char *name);
 
-/* Same as get_ver_prop, but for the unknown revision */
+/* Same as svn_ra_serf__get_ver_prop(), but for the unknown revision. */
 const char *
 svn_ra_serf__get_prop(apr_hash_t *props,
                       const char *path,
                       const char *ns,
                       const char *name);
 
-/* Same as set_rev_prop, but sets it for the unknown revision. */
+/* Same as svn_ra_serf__set_rev_prop(), but for the unknown revision. */
 void
 svn_ra_serf__set_prop(apr_hash_t *props, const char *path,
                       const char *ns, const char *name,
