@@ -31,7 +31,7 @@ import re, os, stat
 import svntest
 from svntest import wc, main, actions
 from svntest.actions import run_and_verify_svn
-
+from svntest.main import file_append, file_write, run_svn
 
 # (abbreviation)
 Skip = svntest.testcase.Skip_deco
@@ -1310,7 +1310,173 @@ def revert_empty_actual(sbox):
 
   expected_status.remove('alpha')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
-                                     
+
+@XFail()
+@Issue(3879)
+def revert_tree_conflicts_with_replacements(sbox):
+  "revert tree conflicts with replacements"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  wc = sbox.ospath
+
+  # Use case 1: local replace, incoming replace
+  # A/mu
+  # A/D/H --> A/D/H/chi, A/D/H/{loc,inc}_psi
+
+  # Use case 2: local edit, incoming replace
+  # A/D/gamma
+  # A/D/G --> A/D/G/pi, A/D/G/inc_rho
+
+  # Use case 3: local replace, incoming edit
+  # A/B/lambda
+  # A/B/E --> A/B/E/alpha, A/B/E/loc_beta
+
+  # Case 1: incoming replacements
+  sbox.simple_rm('A/mu', 'A/D/H')
+  file_write(wc('A/mu'), "A fresh file.\n")
+  os.mkdir(wc('A/D/H'))
+  file_write(wc('A/D/H/chi'), "A fresh file.\n")
+  file_write(wc('A/D/H/inc_psi'), "A fresh file.\n")
+  sbox.simple_add('A/mu', 'A/D/H')
+
+  # Case 2: incoming replacements
+  sbox.simple_rm('A/D/gamma', 'A/D/G')
+  file_write(wc('A/D/gamma'), "A fresh file.\n")
+  os.mkdir(wc('A/D/G'))
+  file_write(wc('A/D/G/pi'), "A fresh file.\n")
+  file_write(wc('A/D/G/inc_rho'), "A fresh file.\n")
+  sbox.simple_add('A/D/gamma','A/D/G')
+
+  # Case 3: incoming edits
+  file_append(wc('A/B/lambda'), "Incoming!\n")
+  file_write(wc('A/B/E/alpha'), "Incoming!.\n")
+  
+  # Commit and roll back to r1.
+  sbox.simple_commit()
+  run_svn(None, 'up', wc_dir, '-r1', '-q')
+
+  # Case 1: local replacements
+  sbox.simple_rm('A/mu', 'A/D/H')
+  file_write(wc('A/mu'), "A fresh file.\n")
+  os.mkdir(wc('A/D/H'))
+  file_write(wc('A/D/H/chi'), "A fresh local file.\n")
+  file_write(wc('A/D/H/loc_psi'), "A fresh local file.\n")
+  sbox.simple_add('A/mu', 'A/D/H')
+
+  # Case 2: local edits
+  file_append(wc('A/D/gamma'), "Local change.\n")
+  file_append(wc('A/D/G/pi'), "Local change.\n")
+
+  # Case 3: incoming replacements
+  sbox.simple_rm('A/B/lambda', 'A/B/E')
+  file_write(wc('A/B/lambda'), "A fresh local file.\n")
+  os.mkdir(wc('A/B/E'))
+  file_write(wc('A/B/E/alpha'), "A fresh local file.\n")
+  file_write(wc('A/B/E/loc_beta'), "A fresh local file.\n")
+  sbox.simple_add('A/B/lambda', 'A/B/E')
+
+  # Update and check tree conflict status.
+  run_svn(None, 'up', wc_dir)
+  expected_status = svntest.wc.State(wc_dir, {
+    ''                : Item(status='  ', wc_rev=2),
+    'A'               : Item(status='  ', wc_rev=2),
+    'A/B'             : Item(status='  ', wc_rev=2),
+    'A/B/E'           : Item(status='R ', wc_rev=2, treeconflict='C'),
+    'A/B/E/alpha'     : Item(status='A ', wc_rev='-'),
+    'A/B/E/beta'      : Item(status='D ', wc_rev=2),
+    'A/B/E/loc_beta'  : Item(status='A ', wc_rev='-'),
+    'A/B/F'           : Item(status='  ', wc_rev=2),
+    'A/B/lambda'      : Item(status='R ', wc_rev=2, treeconflict='C'),
+    'A/C'             : Item(status='  ', wc_rev=2),
+    'A/D'             : Item(status='  ', wc_rev=2),
+    'A/D/G'           : Item(status='A ', wc_rev='-', copied='+',
+                             treeconflict='C'),
+    'A/D/G/inc_rho'   : Item(status='  '),
+    'A/D/G/pi'        : Item(status='M ', wc_rev='-', copied='+'),
+    'A/D/G/rho'       : Item(status='  ', wc_rev='-', copied='+'),
+    'A/D/G/tau'       : Item(status='  ', wc_rev='-', copied='+'),
+    'A/D/H'           : Item(status='A ', wc_rev='-', treeconflict='C'),
+    'A/D/H/chi'       : Item(status='A ', wc_rev='-'),
+    'A/D/H/inc_psi'   : Item(status='  '),
+    'A/D/H/loc_psi'   : Item(status='A ', wc_rev='-'),
+    'A/D/gamma'       : Item(status='A ', wc_rev='-', copied='+',
+                             treeconflict='C'),
+    'A/mu'            : Item(status='A ', wc_rev='-', treeconflict='C'),
+    'iota'            : Item(status='  ', wc_rev=2),
+    })
+  #svntest.actions.run_and_verify_unquiet_status(wc_dir, expected_status)
+
+  def cd_and_status_u(dir_target):
+    was_cwd = os.getcwd()
+    os.chdir(os.path.abspath(wc(dir_target)))
+    run_svn(None, 'status', '-u')
+    os.chdir(was_cwd)
+
+  cd_and_status_u('A')
+  cd_and_status_u('A/D')
+
+  # As of r1101762, the following 'status -u' commands fail with "svn:
+  # E165004: Two top-level reports with no target".
+  #cd_and_status_u('A/D/G')
+  #cd_and_status_u('A/D/H')
+
+  # Revert everything (i.e., accept "theirs-full").
+  svntest.actions.run_and_verify_revert([    
+    wc('A/B/E'),
+    wc('A/B/E/beta'),
+    wc('A/B/E/loc_beta'),
+    wc('A/B/lambda'),
+    wc('A/D/G'),
+    wc('A/D/G/pi'),
+    wc('A/D/G/rho'),
+    wc('A/D/G/tau'),
+    wc('A/D/H'),
+    wc('A/D/H/chi'),
+    wc('A/D/H/loc_psi'),
+    wc('A/D/gamma'),
+    wc('A/mu'),
+    wc('A/B/E/alpha'),
+    ], '-R', wc_dir)
+  os.remove(wc('A/B/E/loc_beta'))
+
+  # After reverting, there shouldn't be any unversioned items on disk
+  # except for loc_beta, a locally added file.  The following deletions
+  # make the following update successful (as of r1101762), but they
+  # shouldn't be needed.
+  #svntest.main.safe_rmtree(wc('A/D/G'))
+  #svntest.main.safe_rmtree(wc('A/D/H'))
+  #os.remove(wc('A/D/gamma'))
+  #os.remove(wc('A/mu'))
+
+  # Where the update skipped tree conflicts, the incoming items were thrown
+  # away.  Currently we have to update again to get that data.
+  run_svn(None, 'up', wc_dir)
+
+  # The revert operation should put all of the incoming items in place.
+  expected_status = svntest.wc.State(wc_dir, {
+    ''                : Item(status='  ', wc_rev=2),
+    'A'               : Item(status='  ', wc_rev=2),
+    'A/B'             : Item(status='  ', wc_rev=2),
+    'A/B/E'           : Item(status='  ', wc_rev=2),
+    'A/B/E/alpha'     : Item(status='  ', wc_rev=2),
+    'A/B/E/beta'      : Item(status='  ', wc_rev=2),
+    'A/B/F'           : Item(status='  ', wc_rev=2),
+    'A/B/lambda'      : Item(status='  ', wc_rev=2),
+    'A/C'             : Item(status='  ', wc_rev=2),
+    'A/D'             : Item(status='  ', wc_rev=2),
+    'A/D/G'           : Item(status='  ', wc_rev=2),
+    'A/D/G/inc_rho'   : Item(status='  ', wc_rev=2),
+    'A/D/G/pi'        : Item(status='  ', wc_rev=2),
+    'A/D/H'           : Item(status='  ', wc_rev=2),
+    'A/D/H/chi'       : Item(status='  ', wc_rev=2),
+    'A/D/H/inc_psi'   : Item(status='  ', wc_rev=2),
+    'A/D/gamma'       : Item(status='  ', wc_rev=2),
+    'A/mu'            : Item(status='  ', wc_rev=2),
+    'iota'            : Item(status='  ', wc_rev=2),
+    })
+  svntest.actions.run_and_verify_unquiet_status(wc_dir, expected_status)
+
 
 ########################################################################
 # Run the tests
@@ -1345,6 +1511,7 @@ test_list = [ None,
               revert_copy_depth_files,
               revert_nested_add_depth_immediates,
               revert_empty_actual,
+              revert_tree_conflicts_with_replacements,
              ]
 
 if __name__ == '__main__':
