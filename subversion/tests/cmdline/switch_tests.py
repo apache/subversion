@@ -794,7 +794,7 @@ def failed_anchor_is_target(sbox):
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/H', switched='S', wc_rev=2)
-  expected_status.tweak('A/D/H/psi', status='A ', copied='+',
+  expected_status.tweak('A/D/H/psi', status='R ', copied='+',
                         wc_rev='-', treeconflict='C')
   expected_status.remove('A/D/H/chi', 'A/D/H/omega')
   expected_status.add({
