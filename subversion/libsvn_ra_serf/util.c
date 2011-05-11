@@ -880,9 +880,13 @@ svn_ra_serf__handle_status_only(serf_request_t *request,
   if (err && APR_STATUS_IS_EOF(err->apr_err))
     {
       serf_status_line sl;
-      apr_status_t rv;
+      apr_status_t status;
 
-      rv = serf_bucket_response_status(response, &sl);
+      status = serf_bucket_response_status(response, &sl);
+      if (SERF_BUCKET_READ_ERROR(status))
+        {
+          return svn_error_wrap_apr(status, NULL);
+        }
 
       ctx->status = sl.code;
       ctx->reason = sl.reason;
@@ -1092,9 +1096,13 @@ svn_ra_serf__handle_multistatus_only(serf_request_t *request,
   if (err && APR_STATUS_IS_EOF(err->apr_err))
     {
       serf_status_line sl;
-      apr_status_t rv;
+      apr_status_t status;
 
-      rv = serf_bucket_response_status(response, &sl);
+      status = serf_bucket_response_status(response, &sl);
+      if (SERF_BUCKET_READ_ERROR(status))
+        {
+          return svn_error_wrap_apr(status, NULL);
+        }
 
       ctx->status = sl.code;
       ctx->reason = sl.reason;
@@ -1166,7 +1174,11 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
   svn_ra_serf__xml_parser_t *ctx = baton;
   svn_error_t *err;
 
-  serf_bucket_response_status(response, &sl);
+  status = serf_bucket_response_status(response, &sl);
+  if (SERF_BUCKET_READ_ERROR(status))
+    {
+      return svn_error_wrap_apr(status, NULL);
+    }
 
   if (ctx->status_code)
     {

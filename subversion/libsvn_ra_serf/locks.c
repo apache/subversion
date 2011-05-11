@@ -360,9 +360,13 @@ handle_lock(serf_request_t *request,
       const char *val;
 
       serf_status_line sl;
-      apr_status_t rv;
+      apr_status_t status;
 
-      rv = serf_bucket_response_status(response, &sl);
+      status = serf_bucket_response_status(response, &sl);
+      if (SERF_BUCKET_READ_ERROR(status))
+        {
+          return svn_error_wrap_apr(status, NULL);
+        }
 
       ctx->status_code = sl.code;
       ctx->reason = sl.reason;
