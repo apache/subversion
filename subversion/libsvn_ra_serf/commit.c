@@ -671,42 +671,45 @@ typedef struct walker_baton_t {
   svn_boolean_t deleting;
 } walker_baton_t;
 
+/* If we have (recorded in WB) the old value of the property named NS:NAME,
+ * then set *HAVE_OLD_VAL to TRUE and set *OLD_VAL_P to that old value
+ * (which may be NULL); else set *HAVE_OLD_VAL to FALSE.
+ *
+ * Allocate *OLD_VAL_P in POOL. */
 static svn_error_t *
-derive_old_val(const svn_string_t *const *   *old_val_p_p,
+derive_old_val(svn_boolean_t *have_old_val,
+               const svn_string_t **old_val_p,
                walker_baton_t *wb,
                const char *ns,
                const char *name,
                apr_pool_t *pool)
 {
-  const svn_string_t *const *old_val_p;
-
-  old_val_p = NULL;
+  *have_old_val = FALSE;
 
   if (wb->previous_changed_props)
     {
-      const svn_string_t *old_val;
-      old_val = svn_ra_serf__get_prop_string(wb->previous_changed_props,
-                                             wb->path, ns, name);
-      if (old_val)
+      const svn_string_t *val;
+      val = svn_ra_serf__get_prop_string(wb->previous_changed_props,
+                                         wb->path, ns, name);
+      if (val)
         {
-          old_val_p = apr_pcalloc(pool, sizeof(*old_val_p));
-          *(const svn_string_t **)old_val_p = svn_string_dup(old_val, pool);
+          *have_old_val = TRUE;
+          *old_val_p = svn_string_dup(val, pool);
         }
     }
 
   if (wb->previous_removed_props)
     {
-      const svn_string_t *old_val;
-      old_val = svn_ra_serf__get_prop_string(wb->previous_removed_props,
-                                             wb->path, ns, name);
-      if (old_val)
+      const svn_string_t *val;
+      val = svn_ra_serf__get_prop_string(wb->previous_removed_props,
+                                         wb->path, ns, name);
+      if (val)
         {
-          old_val_p = apr_pcalloc(pool, sizeof(*old_val_p));
-          *(const svn_string_t **)old_val_p = NULL;
+          *have_old_val = TRUE;
+          *old_val_p = NULL;
         }
     }
 
-  *old_val_p_p = old_val_p;
   return SVN_NO_ERROR;
 }
 
@@ -722,7 +725,8 @@ proppatch_walker(void *baton,
   serf_bucket_t *cdata_bkt;
   serf_bucket_alloc_t *alloc;
   const char *encoding;
-  const svn_string_t *const *old_val_p;
+  svn_boolean_t have_old_val;
+  const svn_string_t *old_val;
   const svn_string_t *encoded_value;
   char *prop_name;
 
@@ -733,15 +737,15 @@ proppatch_walker(void *baton,
   else if (strcmp(ns, SVN_DAV_PROP_NS_CUSTOM) == 0)
     prop_name = apr_pstrcat(pool, "C:", name, (char *)NULL);
 
-  SVN_ERR(derive_old_val(&old_val_p, wb, ns, name, pool));
+  SVN_ERR(derive_old_val(&have_old_val, &old_val, wb, ns, name, pool));
 
   /* Jump through hoops to work with D:remove and its val = (""-for-NULL)
    * representation. */
   if (wb->filter != filter_all_props)
     {
-      if (wb->filter == filter_props_with_old_value && ! old_val_p)
+      if (wb->filter == filter_props_with_old_value && ! have_old_val)
       	return SVN_NO_ERROR;
-      if (wb->filter == filter_props_without_old_value && old_val_p)
+      if (wb->filter == filter_props_without_old_value && have_old_val)
       	return SVN_NO_ERROR;
     }
   if (wb->deleting)
@@ -770,14 +774,14 @@ proppatch_walker(void *baton,
                                       "V:" SVN_DAV__OLD_VALUE__ABSENT, "1",
                                       NULL);
 
-  if (old_val_p)
+  if (have_old_val)
     {
       const char *encoding2;
       const svn_string_t *encoded_value2;
       serf_bucket_t *cdata_bkt2;
 
       SVN_ERR(get_encoding_and_cdata(&encoding2, &encoded_value2,
-                                     alloc, *old_val_p, pool));
+                                     alloc, old_val, pool));
 
       if (encoded_value2)
         {
