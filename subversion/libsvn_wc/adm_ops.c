@@ -1401,13 +1401,10 @@ revert_restore(svn_wc__db_t *db,
             }
           else
             {
-              /* This compares the file against a pristine version of the
-                 translated file. So it will return modified in all cases
-                 where delete+restore would install a different file */
               SVN_ERR(svn_wc__internal_file_modified_p(&modified, &executable,
                                                        &read_only,
                                                        db, local_abspath,
-                                                       TRUE, scratch_pool));
+                                                       FALSE, scratch_pool));
               if (modified)
                 {
                   SVN_ERR(svn_io_remove_file2(local_abspath, FALSE,
