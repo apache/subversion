@@ -976,10 +976,10 @@ svn_client__handle_externals(apr_hash_t *externals_old,
                              apr_pool_t *pool);
 
 
-/* Fetch externals definitions described by EXTERNALS, a hash of the
-   form returned by svn_wc_edited_externals() (which see).  If
-   IS_EXPORT is set, the external items will be exported instead of
-   checked out -- they will have no administrative subdirectories.
+/* Export externals definitions described by EXTERNALS, a hash of the
+   form returned by svn_wc_edited_externals() (which see). The external
+   items will be exported instead of checked out -- they will have no
+   administrative subdirectories.
 
    The checked out or exported tree's top level directory is at
    TO_ABSPATH and corresponds to FROM_URL URL in the repository, which
@@ -997,16 +997,15 @@ svn_client__handle_externals(apr_hash_t *externals_old,
 
    Use POOL for temporary allocation. */
 svn_error_t *
-svn_client__fetch_externals(apr_hash_t *externals,
-                            const char *from_url,
-                            const char *to_abspath,
-                            const char *repos_root_url,
-                            svn_depth_t requested_depth,
-                            svn_boolean_t is_export,
-                            const char *native_eol,
-                            svn_boolean_t *timestamp_sleep,
-                            svn_client_ctx_t *ctx,
-                            apr_pool_t *pool);
+svn_client__export_externals(apr_hash_t *externals,
+                             const char *from_url,
+                             const char *to_abspath,
+                             const char *repos_root_url,
+                             svn_depth_t requested_depth,
+                             const char *native_eol,
+                             svn_boolean_t *timestamp_sleep,
+                             svn_client_ctx_t *ctx,
+                             apr_pool_t *pool);
 
 
 /* Perform status operations on each external in TRAVERSAL_INFO.  All
