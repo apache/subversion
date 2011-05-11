@@ -11,9 +11,9 @@ details on how release lines and voting work, what kinds of bugs can
 delay a release, etc.
 
 Status of 1.6.17:
-=================
 
 Candidate changes:
+==================
 
  * r879766
    Fix issue #3498: Subversion password stores freeze Eclipse
@@ -156,9 +156,12 @@ Candidate changes:
      Adds a new private API, which would break 1.6.16 mod_dav_svn with
      1.6.15 libsvn_repos; thread:
      http://mid.gmane.org/20110214164421.GB19247@daniel3.local
+     http://mid.gmane.org/4D9DD614.2000709@collab.net
+   Note:
+     Found a potential issue in close_edit() during review, I would prefer to
+     see it fixed before merge.
    Votes:
-     +1: blair
-     =0: danielsh (haven't reviewed it yet)
+     +1: blair, danielsh
 
  * ^/branches/1.6.x-r1053984
    Fix bug where committing a changelist was prevented by a file outside that
@@ -167,7 +170,7 @@ Candidate changes:
      Local fix.  users@ reports.
    Votes:
 
-  * 1.6.x-fsfs-begin-txn-deadlock
+ * 1.6.x-fsfs-begin-txn-deadlock
    Fix a deadlock that can occur when two or more multithreaded
    Subversion servers on the same system serve two or more fsfs
    repositories.
@@ -175,8 +178,11 @@ Candidate changes:
      Avoiding deadlocks is a good thing.
    Branch:
     ^/subversion/branches/1.6.x-fsfs-begin-txn-deadlock
+   Thread:
+     http://mid.gmane.org/20110330055635.GA31369@daniel3.local
+     http://mid.gmane.org/4D3FC68F.7020709@orcaware.com
    Votes:
-     +1: blair
+     +1: blair, danielsh
 
  * r962377, r962378, r1036978, r1037762, r1063572, r1063573, r1063592
    Fix issue #3641 svnsync handling of directory copyfrom.
@@ -190,39 +196,93 @@ Candidate changes:
      tweak to the expected dump file for svnsync test 29, to account for the
      differences in how 1.6 prints property hashes and how 1.7 does it, see
      r966458.
+   Notes:
+     See also the r1036429 group.
    Votes:
      +1: cmpilato (r962377, r962378 only)
      +1: philip (962377, r962378, r1063572, r1063573, r1063592 only)
      +1: pburba
      -0: danielsh (authz concerns on the original fix)
 
- * ^/branches/1.6.x-r1072084
-   svn: preserve the log message when the editor exited non-zero.
+ * r1074572
+   Allow building on Windows with a recent Expat.
    Justification:
-     Data loss --- I already lost two log messages to this bug.
+     We like building Subversion, even on Windows.  User requested.
+   Votes:
+     +0: hwright (I like the idea, but have no knowledge of the change, or
+                  ability to test it.)
+
+ * r1076730, r1078954, r1081255
+   Fix issue #3650 "log -g produces excessive duplicate output"
+   Justification:
+     Eliminates potentially massive duplication when tracing logs
+     across merge reintegrations.
+   Branch: ^/subversion/branches/1.6.x-issue3650
+   Votes:
+     +1: pburba
+
+ * r1083883, r1076826
+   Fix issue #3816, "file external can cause mixed-revision working
+   copy after checkout"
+   Justification:
+     Without this fix, file externals pinned to a revision can prevent
+     reintegrate merges.
+   Notes:
+     r1083883 is the actual fix and has no corresponding trunk revision.
+     r1076826 added a test case on trunk (merged to the branch in r1083892).
+   Branch:
+     ^/subversion/branches/1.6.x-issue3816
+   Votes:
+     +1: stsp, pburba
+
+ * r1085001, r992114, r1084962, r1084978
+   Fix issue #3843, "file externals cause non-inheritable mergeinfo"
+   Justification:
+     Without this fix, merges into working copies which contain
+     file externals create non-inheritable mergeinfo on the merge
+     target, and explicit mergeinfo on file externals and all children.
+     This is not desirable, and can cause commits to fail unless mergeinfo
+     is manually removed from the file external.
+   Notes:
+     The r1083883 group is much less useful without this fix.
+     r1085001 was a commit to the branch. The other revisions are from trunk.
+   Branch:
+     ^/subversion/branches/1.6.x-issue3843
+   Votes:
+     +1: stsp, pburba
+
+ * ^/subversion/branches/1.6.x-issue3845
+   Detect very occasional corruption and abort commit.
+   Justification:
+     Don't know the cause, but we can stop it getting into the repo.
+   Votes:
+     +1: philip
+     +1: danielsh (trusting Philip's explanation that the noderev offset,length
+                   are cached to be the correct values for a non-corrupt file)
+
+ * r1091881
+   Fix issue #3853, "svn cleanup fails with obstructed directories"
+   Justification:
+     Trunk doesn't fail like this. Without this fix, cleaning up working
+     copies containing obstructing directories is a huge hassle.
+   Branch: ^/subversion/branches/1.6.x-issue3853
+   Votes:
+     +1: stsp, pburba
+  
+ * r1100213
+   In FSFS, identify a corruption condition, and don't mask other (unknown)
+   corruption conditions.
+   Note:
+     I think at least the latter part (the fs_fs.c part) should be backported.
    Votes:
      +1: danielsh
 
-  * ^/subversion/branches/1.6.x-issue3719
-    Fix issue #3719 "Extremely slow checkout on Windows"
-    Justification:
-      Has been reported to improve checkout performance on Windows
-      by a factor of 10 for one user (85 minutes down to 8 minutes).
-      The problem is most visible on NTFS with working copies that have
-      many files with svn: properties.
-    Notes:
-      See the issue for details, and also this thread:
-      http://svn.haxx.se/dev/archive-2011-02/0066.shtml
-    Votes:
-      +1: stsp
-
-  * r1074572
-    Allow building on Windows with a recent Expat.
-    Justification:
-      We like building Subversion, even on Windows.  User requested.
-    Votes:
-      +0: hwright (I like the idea, but have no knowledge of the change, or
-                   ability to test it.)
+ * r1098608
+   Disallow GETs of baselined versions of resources.
+   Justification:
+     Returning proper errors is a Good Thing.
+   Votes:
+     +1: hwright
 
 Veto-blocked changes:
 =====================
@@ -325,6 +385,8 @@ Approved changes:
    Fix svnsync_tests 29 for BDB.
    Justification:
      Avoids an assert in the server.
+   Notes:
+     See also the r962377 group.
    Votes:
      +1: philip
      +0: stsp (it fixes the test, but pburba asked on IRC how this change

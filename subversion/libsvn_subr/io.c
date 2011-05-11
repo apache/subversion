@@ -50,7 +50,10 @@
 #include "svn_pools.h"
 #include "svn_utf.h"
 #include "svn_config.h"
+#include "svn_dirent_uri.h"
 #include "svn_private_config.h"
+
+#include "private/svn_atomic.h"
 
 #define SVN_SLEEP_ENV_VAR "SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_SLEEP_FOR_TIMESTAMPS"
 
@@ -458,6 +461,151 @@ svn_io_open_uniquely_named(apr_file_t **file,
                            svn_path_local_style(path, scratch_pool));
 }
 
+#ifdef WIN32
+/* Counter value of file_mktemp request (used in a threadsafe way), to make
+   sure that a single process normally never generates the same tempname
+   twice */
+static volatile apr_uint32_t tempname_counter = 0;
+#endif
+
+/* Creates a new temporary file in DIRECTORY with apr flags FLAGS.
+   Set *NEW_FILE to the file handle and *NEW_FILE_NAME to its name.
+   Perform temporary allocations in SCRATCH_POOL and the result in
+   RESULT_POOL. */
+static svn_error_t *
+temp_file_create(apr_file_t **new_file,
+                 const char **new_file_name,
+                 const char *directory,
+                 apr_int32_t flags,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
+{
+#ifndef WIN32
+  const char *templ = svn_dirent_join(directory, "svn-XXXXXX", scratch_pool);
+  const char *templ_apr;
+  apr_status_t status;
+
+  SVN_ERR(svn_path_cstring_from_utf8(&templ_apr, templ, scratch_pool));
+
+  /* ### svn_path_cstring_from_utf8() guarantees to make a copy of the
+         data available in POOL and we need a non-const pointer here,
+         as apr changes the template to return the new filename. */
+  status = apr_file_mktemp(new_file, (char *)templ_apr, flags, result_pool);
+
+  if (status)
+    return svn_error_wrap_apr(status, _("Can't create temporary file from "
+                              "template '%s'"), templ);
+
+  /* Translate the returned path back to utf-8 before returning it */
+  return svn_path_cstring_to_utf8(new_file_name, templ_apr, result_pool);
+#else
+  /* The Windows implementation of apr_file_mktemp doesn't handle access
+     denied errors correctly. Therefore we implement our own temp file
+     creation function here. */
+
+  /* ### Most of this is borrowed from the svn_io_open_uniquely_named(),
+     ### the function we used before. But we try to guess a more unique
+     ### name before trying if it exists. */
+
+  /* Offset by some time value and a unique request nr to make the number
+     +- unique for both this process and on the computer */
+  int baseNr = (GetTickCount() << 11) + 7 * svn_atomic_inc(&tempname_counter)
+               + GetCurrentProcessId();
+  int i;
+
+  /* ### Maybe use an iterpool? */
+  for (i = 0; i <= 99999; i++)
+    {
+      apr_uint32_t unique_nr;
+      const char *unique_name;
+      const char *unique_name_apr;
+      apr_file_t *try_file;
+      apr_status_t apr_err;
+
+      /* Generate a number that should be unique for this application and
+         usually for the entire computer to reduce the number of cycles
+         through this loop. (A bit of calculation is much cheaper then
+         disk io) */
+      unique_nr = baseNr + 3 * i;
+
+      unique_name = svn_dirent_join(directory,
+                                    apr_psprintf(scratch_pool, "svn-%X",
+                                                 unique_nr),
+                                    scratch_pool);
+
+      SVN_ERR(cstring_from_utf8(&unique_name_apr, unique_name, scratch_pool));
+
+      apr_err = file_open(&try_file, unique_name_apr, flags,
+                          APR_OS_DEFAULT, FALSE, scratch_pool);
+
+      if (APR_STATUS_IS_EEXIST(apr_err))
+          continue;
+      else if (apr_err)
+        {
+          /* On Win32, CreateFile fails with an "Access Denied" error
+             code, rather than "File Already Exists", if the colliding
+             name belongs to a directory. */
+
+          if (APR_STATUS_IS_EACCES(apr_err))
+            {
+              apr_finfo_t finfo;
+              apr_status_t apr_err_2 = apr_stat(&finfo, unique_name_apr,
+                                                APR_FINFO_TYPE, scratch_pool);
+
+              if (!apr_err_2 && finfo.filetype == APR_DIR)
+                continue;
+
+#ifdef WIN32
+              apr_err_2 = APR_TO_OS_ERROR(apr_err);
+
+              if (apr_err_2 == ERROR_ACCESS_DENIED ||
+                  apr_err_2 == ERROR_SHARING_VIOLATION)
+                {
+                  /* The file is in use by another process or is hidden;
+                     create a new name, but don't do this 99999 times in
+                     case the folder is not writable */
+                  i += 797;
+                  continue;
+                }
+#endif
+
+              /* Else fall through and return the original error. */
+            }
+
+          return svn_error_wrap_apr(apr_err, _("Can't open '%s'"),
+                                    svn_dirent_local_style(unique_name,
+                                                           scratch_pool));
+        }
+      else
+        {
+          /* Move file to the right pool */
+          apr_err = apr_file_setaside(new_file, try_file, result_pool);
+
+          if (apr_err)
+            return svn_error_wrap_apr(apr_err, _("Can't set aside '%s'"),
+                                      svn_dirent_local_style(unique_name,
+                                                             scratch_pool));
+
+          *new_file_name = apr_pstrdup(result_pool, unique_name);
+
+          return SVN_NO_ERROR;
+        }
+    }
+
+  return svn_error_createf(SVN_ERR_IO_UNIQUE_NAMES_EXHAUSTED,
+                           NULL,
+                           _("Unable to make name in '%s'"),
+                           svn_dirent_local_style(directory, scratch_pool));
+#endif
+}
+
+/* ### forward declarations */
+static svn_error_t *
+merge_default_file_perms(apr_file_t *fd, apr_fileperms_t *perms,
+                         apr_pool_t *scratch_pool);
+static svn_error_t *
+file_perms_set2(apr_file_t* file, apr_fileperms_t perms);
+
 svn_error_t *
 svn_io_open_unique_file3(apr_file_t **file,
                          const char **temp_path,
@@ -466,9 +614,77 @@ svn_io_open_unique_file3(apr_file_t **file,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
-  return svn_io_open_uniquely_named(file, temp_path,
-                                    dirpath, "tempfile", ".tmp",
-                                    delete_when, result_pool, scratch_pool);
+  apr_file_t *tempfile;
+  const char *tempname;
+  struct temp_file_cleanup_s *baton = NULL;
+  apr_int32_t flags = (APR_READ | APR_WRITE | APR_CREATE | APR_EXCL |
+                       APR_BUFFERED | APR_BINARY);
+#ifndef WIN32
+  apr_fileperms_t perms;
+#endif
+
+  SVN_ERR_ASSERT(file || temp_path);
+  if (file)
+    *file = NULL;
+  if (temp_path)
+    *temp_path = NULL;
+
+  if (dirpath == NULL)
+    SVN_ERR(svn_io_temp_dir(&dirpath, scratch_pool));
+
+  switch (delete_when)
+    {
+      case svn_io_file_del_on_pool_cleanup:
+        baton = apr_palloc(result_pool, sizeof(*baton));
+        baton->pool = result_pool;
+        baton->name = NULL;
+
+        /* Because cleanups are run LIFO, we need to make sure to register
+           our cleanup before the apr_file_close cleanup:
+
+           On Windows, you can't remove an open file.
+        */
+        apr_pool_cleanup_register(result_pool, baton,
+                                  temp_file_plain_cleanup_handler,
+                                  temp_file_child_cleanup_handler);
+
+        break;
+      case svn_io_file_del_on_close:
+        flags |= APR_DELONCLOSE;
+        break;
+      default:
+        break;
+    }
+
+  SVN_ERR(temp_file_create(&tempfile, &tempname, dirpath, flags,
+                           result_pool, scratch_pool));
+
+#if !defined(WIN32) && !defined(__OS2__)
+  /* ### file_mktemp() creates files with mode 0600.
+   * ### As of r880338, tempfiles created by svn_io_open_unique_file3()
+   * ### often end up being copied or renamed into the working copy.
+   * ### This will cause working files having mode 0600 while users might
+   * ### expect to see 644 or 664. Ideally, permissions should be tweaked
+   * ### by our callers after installing tempfiles in the WC, but until
+   * ### that's done we need to avoid breaking pre-r880338 behaviour.
+   * ### So we tweak perms of the tempfile here, but only if the umask
+   * ### allows it. */
+  SVN_ERR(merge_default_file_perms(tempfile, &perms, scratch_pool));
+  SVN_ERR(file_perms_set2(tempfile, perms));
+#endif
+
+  if (file)
+    *file = tempfile;
+  else
+    SVN_ERR(svn_io_file_close(tempfile, scratch_pool));
+
+  if (temp_path)
+    *temp_path = tempname; /* Was allocated in result_pool */
+
+  if (baton)
+    SVN_ERR(cstring_from_utf8(&baton->name, tempname, result_pool));
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -772,6 +988,30 @@ svn_io_copy_file(const char *src,
 
   return svn_io_file_rename(dst_tmp, dst, pool);
 }
+
+#if !defined(WIN32) && !defined(__OS2__)
+/* Set permissions PERMS on the FILE. This is a cheaper variant of the
+ * file_perms_set wrapper() function because no locale-dependent string
+ * conversion is required.
+ */
+static svn_error_t *
+file_perms_set2(apr_file_t* file, apr_fileperms_t perms)
+{
+  const char *fname_apr;
+  apr_status_t status;
+
+  status = apr_file_name_get(&fname_apr, file);
+  if (status)
+    return svn_error_wrap_apr(status, _("Can't get file name"));
+
+  status = apr_file_perms_set(fname_apr, perms);
+  if (status)
+    return svn_error_wrap_apr(status, _("Can't set permissions on '%s'"),
+                              fname_apr);
+  else
+    return SVN_NO_ERROR;
+}
+#endif /* !WIN32 && !__OS2__ */
 
 
 svn_error_t *
@@ -1214,60 +1454,75 @@ reown_file(const char *path,
   return svn_io_remove_file(unique_name, pool);
 }
 
-/* Determine what the read-write PERMS for PATH should be by ORing
-   together the permissions of PATH and the permissions of a temporary
-   file that we create.  Unfortunately, this is the only way to
-   determine which combination of write bits (User/Group/World) should
-   be set to restore a file from read-only to read-write.  Make
-   temporary allocations in POOL.  */
+/* Determine what the PERMS for a new file should be by looking at the
+   permissions of a temporary file that we create.
+   Unfortunately, umask() as defined in POSIX provides no thread-safe way
+   to get at the current value of the umask, so what we're doing here is
+   the only way we have to determine which combination of write bits
+   (User/Group/World) should be set by default.
+   Make temporary allocations in SCRATCH_POOL.  */
 static svn_error_t *
-get_default_file_perms(const char *path, apr_fileperms_t *perms,
-                       apr_pool_t *pool)
+get_default_file_perms(apr_fileperms_t *perms, apr_pool_t *scratch_pool)
 {
-  apr_status_t status;
-  apr_finfo_t tmp_finfo, finfo;
-  apr_file_t *fd;
-  const char *tmp_path;
-  const char *apr_path;
+  /* the default permissions as read from the temp folder */
+  static apr_fileperms_t default_perms = 0;
 
-  /* Get the perms for a newly created file to find out what write
-     bits should be set.
+  /* Technically, this "racy": Multiple threads may use enter here and
+     try to figure out the default permisission concurrently. That's fine
+     since they will end up with the same results. Even more technical,
+     apr_fileperms_t is an atomic type on 32+ bit machines.
+   */
+  if (default_perms == 0)
+    {
+      apr_finfo_t finfo;
+      apr_file_t *fd;
 
-     NOTE: normally del_on_close can be problematic because APR might
-       delete the file if we spawned any child processes. In this case,
-       the lifetime of this file handle is about 3 lines of code, so
-       we can safely use del_on_close here.
+      /* Get the perms for a newly created file to find out what bits
+        should be set.
 
-     NOTE: not so fast, shorty. if some other thread forks off a child,
-       then the APR cleanups run, and the file will disappear. sigh.
-  */
-  SVN_ERR(svn_io_open_unique_file3(&fd, &tmp_path,
-                                   svn_path_dirname(path, pool),
-                                   svn_io_file_del_on_pool_cleanup,
-                                   pool, pool));
-  status = apr_stat(&tmp_finfo, tmp_path, APR_FINFO_PROT, pool);
-  if (status)
-    return svn_error_wrap_apr(status, _("Can't get default file perms "
-                                        "for file at '%s' (file stat error)"),
-                              path);
-  apr_file_close(fd);
+        Normally del_on_close can be problematic because APR might
+        delete the file if we spawned any child processes. In this
+        case, the lifetime of this file handle is about 3 lines of
+        code, so we can safely use del_on_close here.
 
-  /* Get the perms for the original file so we'll have any other bits
-   * that were already set (like the execute bits, for example). */
-  SVN_ERR(cstring_from_utf8(&apr_path, path, pool));
-  status = apr_file_open(&fd, apr_path, APR_READ | APR_BINARY,
-                         APR_OS_DEFAULT, pool);
-  if (status)
-    return svn_error_wrap_apr(status, _("Can't open file at '%s'"), path);
+        Not so fast! If some other thread forks off a child, then the
+        APR cleanups run, and the file will disappear. So use
+        del_on_pool_cleanup instead.
 
-  status = apr_stat(&finfo, apr_path, APR_FINFO_PROT, pool);
-  if (status)
-    return svn_error_wrap_apr(status, _("Can't get file perms for file at "
-                                        "'%s' (file stat error)"), path);
-  apr_file_close(fd);
+        Using svn_io_open_uniquely_named() here because other tempfile
+        creation functions tweak the permission bits of files they create.
+      */
+      SVN_ERR(svn_io_open_uniquely_named(&fd, NULL, NULL, "svn-tempfile", ".tmp",
+                                        svn_io_file_del_on_pool_cleanup,
+                                        scratch_pool, scratch_pool));
+      SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_PROT, fd, scratch_pool));
+      SVN_ERR(svn_io_file_close(fd, scratch_pool));
+
+      *perms = finfo.protection;
+      default_perms = finfo.protection;
+    }
+  else
+    *perms = default_perms;
+
+  return SVN_NO_ERROR;
+}
+
+
+/* OR together permission bits of the file FD and the default permissions
+   of a file as determined by get_default_file_perms(). Do temporary
+   allocations in SCRATCH_POOL. */
+static svn_error_t *
+merge_default_file_perms(apr_file_t *fd, apr_fileperms_t *perms,
+                         apr_pool_t *scratch_pool)
+{
+  apr_finfo_t finfo;
+  apr_fileperms_t default_perms;
+
+  SVN_ERR(get_default_file_perms(&default_perms, scratch_pool));
+  SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_PROT, fd, scratch_pool));
 
   /* Glom the perms together. */
-  *perms = tmp_finfo.protection | finfo.protection;
+  *perms = default_perms | finfo.protection;
   return SVN_NO_ERROR;
 }
 
@@ -1313,7 +1568,16 @@ io_set_file_perms(const char *path,
   if (change_readwrite)
     {
       if (enable_write) /* Make read-write. */
-        SVN_ERR(get_default_file_perms(path, &perms_to_set, pool));
+        {
+          apr_file_t *fd;
+
+          /* Get the perms for the original file so we'll have any other bits
+           * that were already set (like the execute bits, for example). */
+          SVN_ERR(svn_io_file_open(&fd, path, APR_READ | APR_BINARY,
+                                   APR_OS_DEFAULT, pool));
+          SVN_ERR(merge_default_file_perms(fd, &perms_to_set, pool));
+          SVN_ERR(svn_io_file_close(fd, pool));
+        }
       else
         {
           if (finfo.protection & APR_UREAD)
