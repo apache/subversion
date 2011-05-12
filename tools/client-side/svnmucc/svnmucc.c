@@ -985,6 +985,9 @@ main(int argc, const char **argv)
         action->action = ACTION_PROPSETF;
       else if (! strcmp(action_string, "propdel"))
         action->action = ACTION_PROPDEL;
+      else if (! strcmp(action_string, "?") || ! strcmp(action_string, "h")
+               || ! strcmp(action_string, "help"))
+        usage(pool, EXIT_SUCCESS);
       else
         handle_error(svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
                                        "'%s' is not an action\n",
