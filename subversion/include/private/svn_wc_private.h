@@ -686,9 +686,10 @@ typedef svn_error_t *(*svn_wc__proplist_receiver_t)(void *baton,
                                                     apr_pool_t *scratch_pool);
 
 /** Call @a receiver_func, passing @a receiver_baton, an absolute path, and
- * a hash table mapping <tt>char *</tt> names onto <tt>svn_string_t *</tt>
- * values for all the regular properties of the node at @a local_abspath
- * and any node beneath @a local_abspath within the specified @a depth.
+ * a hash table mapping <tt>const char *</tt> names onto <tt>const
+ * svn_string_t *</tt> values for all the regular properties of the node
+ * at @a local_abspath and any node beneath @a local_abspath within the
+ * specified @a depth.
  * If @a propname is not NULL, the passed hash table will only contain
  * the property @a propname.
  *

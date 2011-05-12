@@ -1438,25 +1438,17 @@ externals_crawl_proplist_receiver(void *baton,
                                   apr_hash_t *props,
                                   apr_pool_t *scratch_pool)
 {
-  apr_hash_index_t *hi;
-  apr_hash_t *externals_hash = (apr_hash_t*)baton;
+  apr_hash_t *externals_hash = baton;
+  const svn_string_t *propval;
 
-  for (hi = apr_hash_first(scratch_pool, props);
-       hi;
-       hi = apr_hash_next(hi))
+  propval = apr_hash_get(props, SVN_PROP_EXTERNALS, APR_HASH_KEY_STRING);
+
+  if (propval)
     {
-      const char *propname;
+      apr_pool_t *hash_pool = apr_hash_pool_get(externals_hash);
 
-      propname = svn__apr_hash_index_key(hi);
-      if (strcmp(propname, SVN_PROP_EXTERNALS) == 0)
-        {
-          apr_pool_t *hash_pool = apr_hash_pool_get(externals_hash);
-          svn_string_t *propval = svn__apr_hash_index_val(hi);
-
-          apr_hash_set(externals_hash, apr_pstrdup(hash_pool, local_abspath),
-                       APR_HASH_KEY_STRING, svn_string_dup(propval, hash_pool));
-          break;
-        }
+      apr_hash_set(externals_hash, apr_pstrdup(hash_pool, local_abspath),
+                   APR_HASH_KEY_STRING, svn_string_dup(propval, hash_pool));
     }
 
   return SVN_NO_ERROR;
