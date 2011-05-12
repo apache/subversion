@@ -911,6 +911,32 @@ def tree_replace1(sbox):
   # D       wc/B/D/f
   # D       wc/B/g
 
+@XFail()
+@Issue(3777)
+def tree_replace2(sbox):
+  "upgrade 1.6 with tree replaced (2)"
+
+  sbox.build(create_wc = False)
+  replace_sbox_with_tarfile(sbox, 'tree-replace2.tar.bz2')
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'upgrade', sbox.wc_dir)
+
+  ### Check status (once upgrade no longer asserts)
+
+  # The working copy contains two trees B and C that have replaced
+  # each other
+
+  #  deleted             replaced by
+  #   B                   B
+  #   B/f
+  #   B/D
+  #                       B/g
+  #                       B/E
+  #   C                   C
+  #                       C/f
+  #                       C/D
+  #   C/g
+  #   C/E
 
 ########################################################################
 # Run the tests
@@ -952,6 +978,7 @@ test_list = [ None,
               replaced_files,
               upgrade_with_scheduled_change,
               tree_replace1,
+              tree_replace2,
              ]
 
 
