@@ -305,7 +305,9 @@ static void sigchld_handler(int signo)
 }
 #endif
 
-/* In tunnel or inetd mode, we don't want hook scripts corrupting the
+/* Redirect stdout to stderr.  ARG is the pool.
+ *
+ * In tunnel or inetd mode, we don't want hook scripts corrupting the
  * data stream by sending data to stdout, so we need to redirect
  * stdout somewhere else.  Sending it to stderr is acceptable; sending
  * it to /dev/null is another option, but apr doesn't provide a way to
