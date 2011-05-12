@@ -1161,11 +1161,13 @@ WHERE wc_id = ?1 AND local_relpath != ""
   AND file_external IS NULL
 LIMIT 1
 
--- STMT_SELECT_CURRENT_NODES_RECURSIVE
-SELECT local_relpath, kind FROM nodes_current
+-- STMT_SELECT_BASE_FILES_RECURSIVE
+SELECT local_relpath, translated_size, last_mod_time FROM nodes AS n
 WHERE wc_id = ?1
-  AND (?2 = '' OR local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
-  AND presence IN ('normal', 'incomplete')
+  AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
+  AND op_depth = 0
+  AND kind='file'
+  AND presence='normal'
   AND file_external IS NULL
 
 /* ------------------------------------------------------------------------- */
