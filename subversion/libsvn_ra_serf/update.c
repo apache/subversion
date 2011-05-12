@@ -2790,6 +2790,9 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
       handler->conn = conn;
       handler->session = session;
 
+      handler->header_delegate = headers_fetch;
+      handler->header_delegate_baton = stream_ctx;
+
       handler->response_handler = handle_stream;
       handler->response_baton = stream_ctx;
 
