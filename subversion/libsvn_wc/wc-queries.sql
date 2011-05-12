@@ -1129,7 +1129,7 @@ LIMIT 1
       * Check on a node that is neither wcroot nor repos root
       * Check on a node that is repos_root, but not wcroot.
       * Check on a node that is wcroot, but not repos root.
-      * Check on a node that is both wcroot and repo sroot.
+      * Check on a node that is both wcroot and repos root.
 
    To make things easier, our testsuite is usually in that last category,
    while normal working copies are almost always in one of the others.
