@@ -731,8 +731,6 @@ SELECT local_relpath FROM nodes
 WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
   AND op_depth = 0 AND presence = 'absent'
 
-/* ### Why can't this query not just use the BASE repository
-   location values, instead of taking 3 additional parameters?! */
 -- STMT_INSERT_WORKING_NODE_COPY_FROM_BASE
 INSERT OR REPLACE INTO nodes (
     wc_id, local_relpath, op_depth, parent_relpath, repos_id,
@@ -740,7 +738,7 @@ INSERT OR REPLACE INTO nodes (
     changed_date, changed_author, checksum, properties, translated_size,
     last_mod_time, symlink_target )
 SELECT wc_id, ?3 /*local_relpath*/, ?4 /*op_depth*/, ?5 /*parent_relpath*/,
-    ?6 /*repos_id*/, ?7 /*repos_path*/, ?8 /*revision*/, ?9 /*presence*/, depth,
+    repos_id, repos_path, revision, ?6 /*presence*/, depth,
     kind, changed_revision, changed_date, changed_author, checksum, properties,
     translated_size, last_mod_time, symlink_target
 FROM nodes
@@ -753,7 +751,7 @@ INSERT OR REPLACE INTO nodes (
     changed_author, checksum, properties, translated_size, last_mod_time,
     symlink_target )
 SELECT wc_id, ?3 /*local_relpath*/, ?4 /*op_depth*/, ?5 /*parent_relpath*/,
-    ?6 /*repos_id*/, ?7 /*repos_path*/, ?8 /*revision*/, ?9 /*presence*/, depth,
+    repos_id, repos_path, revision, ?6 /*presence*/, depth,
     kind, changed_revision, changed_date, changed_author, checksum, properties,
     translated_size, last_mod_time, symlink_target
 FROM nodes
@@ -768,11 +766,11 @@ INSERT OR REPLACE INTO nodes (
     changed_author, checksum, properties, translated_size, last_mod_time,
     symlink_target )
 SELECT wc_id, ?3 /*local_relpath*/, ?4 /*op_depth*/, ?5 /*parent_relpath*/,
-    ?6 /*repos_id*/, ?7 /*repos_path*/, ?8 /*revision*/, ?9 /*presence*/,
+    repos_id, repos_path, revision, ?6 /*presence*/,
     depth, kind, changed_revision, changed_date, changed_author, checksum,
     properties, translated_size, last_mod_time, symlink_target
 FROM nodes
-WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?10
+WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?7
 
 -- STMT_INSERT_ACTUAL_NODE_FROM_ACTUAL_NODE
 INSERT OR REPLACE INTO actual_node (

@@ -3734,19 +3734,13 @@ db_op_copy(svn_wc__db_wcroot_t *src_wcroot,
         SVN_ERR(svn_sqlite__get_statement(&stmt, src_wcroot->sdb,
                           STMT_INSERT_WORKING_NODE_COPY_FROM_BASE));
 
-      SVN_ERR(svn_sqlite__bindf(stmt, "issisnnnt",
+      SVN_ERR(svn_sqlite__bindf(stmt, "issist",
                     src_wcroot->wc_id, src_relpath,
                     dst_relpath,
                     dst_op_depth,
                     dst_parent_relpath,
                     presence_map, dst_presence));
 
-      if (copyfrom_relpath)
-        {
-          SVN_ERR(svn_sqlite__bind_int64(stmt, 6, copyfrom_id));
-          SVN_ERR(svn_sqlite__bind_text(stmt, 7, copyfrom_relpath));
-          SVN_ERR(svn_sqlite__bind_int64(stmt, 8, copyfrom_rev));
-        }
       SVN_ERR(svn_sqlite__step_done(stmt));
 
       /* ### Copying changelist is OK for a move but what about a copy? */
@@ -4011,21 +4005,15 @@ db_op_copy_shadowed_layer(svn_wc__db_wcroot_t *src_wcroot,
         SVN_ERR(svn_sqlite__get_statement(&stmt, src_wcroot->sdb,
                              STMT_INSERT_WORKING_NODE_COPY_FROM_BASE));
 
-      SVN_ERR(svn_sqlite__bindf(stmt, "issisnnnt",
+      SVN_ERR(svn_sqlite__bindf(stmt, "issist",
                         src_wcroot->wc_id, src_relpath,
                         dst_relpath,
                         dst_op_depth,
                         svn_relpath_basename(dst_relpath, iterpool),
                         presence_map, dst_presence));
 
-      if (repos_relpath)
-        {
-          SVN_ERR(svn_sqlite__bind_int64(stmt, 6, repos_id));
-          SVN_ERR(svn_sqlite__bind_text(stmt, 7, repos_relpath));
-          SVN_ERR(svn_sqlite__bind_int64(stmt, 8, revision));
-        }
       if (src_op_depth > 0)
-        SVN_ERR(svn_sqlite__bind_int64(stmt, 10, src_op_depth));
+        SVN_ERR(svn_sqlite__bind_int64(stmt, 7, src_op_depth));
       
       SVN_ERR(svn_sqlite__step_done(stmt));
 
