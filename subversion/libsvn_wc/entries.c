@@ -1723,6 +1723,12 @@ write_entry(struct write_baton **entry_node,
         break;
 
       case svn_wc_schedule_delete:
+        if (entry->copied)
+          return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                   _("Cannot upgrade with copied/replaced directory '%s'"),
+                   svn_dirent_local_style(parent_node->base->local_relpath,
+                                          scratch_pool));
+
         SVN_ERR_ASSERT(!entry->copied);
         working_node = MAYBE_ALLOC(working_node, result_pool);
         if (parent_node->base)
@@ -1730,6 +1736,12 @@ write_entry(struct write_baton **entry_node,
         break;
 
       case svn_wc_schedule_replace:
+        if (parent_node->base && parent_node->work)
+          return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                   _("Cannot upgrade with copied/replaced directory '%s'"),
+                   svn_dirent_local_style(parent_node->base->local_relpath,
+                                          scratch_pool));
+                                   
         SVN_ERR_ASSERT((parent_node->base && !parent_node->work)
                        || (parent_node->work && !parent_node->base));
         working_node = MAYBE_ALLOC(working_node, result_pool);
