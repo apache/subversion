@@ -2247,7 +2247,10 @@ headers_report(serf_bucket_t *headers,
 {
   report_context_t *report = baton;
 
-  serf_bucket_headers_setn(headers, "Accept-Encoding", "gzip");
+  if (report->conn->using_compression)
+    {
+      serf_bucket_headers_setn(headers, "Accept-Encoding", "gzip");
+    }
 
   return SVN_NO_ERROR;
 }
