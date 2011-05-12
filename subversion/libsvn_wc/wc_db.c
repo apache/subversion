@@ -11980,7 +11980,7 @@ has_local_mods(svn_boolean_t *is_modified,
 
       /* Check for text modifications. */
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_SELECT_CURRENT_NODES_RECURSIVE));
+                                        STMT_SELECT_BASE_FILES_RECURSIVE));
       SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id, local_relpath,
                                 construct_like_arg(local_relpath,
                                                    scratch_pool)));
@@ -11990,7 +11990,9 @@ has_local_mods(svn_boolean_t *is_modified,
       while (have_row)
         {
           const char *node_abspath;
-          svn_wc__db_kind_t node_kind;
+          svn_filesize_t recorded_size;
+          apr_time_t recorded_mod_time;
+          svn_boolean_t skip_check = FALSE;
 
           if (cancel_func)
             SVN_ERR(cancel_func(cancel_baton));
@@ -12001,8 +12003,32 @@ has_local_mods(svn_boolean_t *is_modified,
                                          svn_sqlite__column_text(stmt, 0,
                                                                  iterpool),
                                          iterpool);
-          node_kind = svn_sqlite__column_token(stmt, 1, kind_map);
-          if (node_kind == svn_wc__db_kind_file)
+
+          recorded_size = get_recorded_size(stmt, 1);
+          recorded_mod_time = svn_sqlite__column_int64(stmt, 2);
+
+          if (recorded_size != SVN_INVALID_FILESIZE
+              && recorded_mod_time != 0)
+            {
+              const svn_io_dirent2_t *dirent;
+
+              SVN_ERR(svn_io_stat_dirent(&dirent, node_abspath, TRUE,
+                                         iterpool, iterpool));
+
+              if (dirent->kind != svn_node_file)
+                {
+                  *is_modified = TRUE; /* Missing or obstruction */
+                  break;
+                }
+              else if (dirent->filesize == recorded_size
+                       && dirent->mtime == recorded_mod_time)
+                {
+                  /* The file is not modified */
+                  skip_check = TRUE;
+                }
+            }
+
+          if (! skip_check)
             {
               SVN_ERR(svn_wc__internal_file_modified_p(is_modified,
                                                        db, node_abspath,
