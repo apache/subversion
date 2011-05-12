@@ -2241,6 +2241,18 @@ create_update_report_body(serf_bucket_t **body_bkt,
 }
 
 static svn_error_t *
+headers_report(serf_bucket_t *headers,
+               void *baton,
+               apr_pool_t *pool)
+{
+  report_context_t *report = baton;
+
+  serf_bucket_headers_setn(headers, "Accept-Encoding", "gzip");
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 finish_report(void *report_baton,
               apr_pool_t *pool)
 {
@@ -2288,6 +2300,8 @@ finish_report(void *report_baton,
   handler->body_type = "text/xml";
   handler->conn = sess->conns[0];
   handler->session = sess;
+  handler->header_delegate = headers_report;
+  handler->header_delegate_baton = report;
 
   parser_ctx = apr_pcalloc(pool, sizeof(*parser_ctx));
 
