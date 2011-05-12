@@ -858,8 +858,56 @@ def upgrade_with_scheduled_change(sbox):
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'upgrade', sbox.wc_dir)
-  
-   
+  ### Need to check post-upgrade status.
+
+@XFail()
+@Issue(3777)
+def tree_replace1(sbox):
+  "upgrade 1.6 with tree replaced"
+
+  sbox.build(create_wc = False)
+  replace_sbox_with_tarfile(sbox, 'tree-replace1.tar.bz2')
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'upgrade', sbox.wc_dir)
+
+  ### Check status (once upgrade no longer asserts)
+
+  # The working copy contains a tree B that is deleted and replaced by a
+  # an another tree:
+  #
+  #  deleted            replaced by
+  #   B                  B
+  #   B/f                B/f
+  #   B/g
+  #                      B/h
+  #   B/C                B/C
+  #   B/C/f              B/C/f
+  #   B/D
+  #   B/D/f
+  #                      B/E
+  #                      B/E/f
+
+  # 1.6 status:
+  #  M      wc
+  # R  +    wc/B
+  # R  +    wc/B/C
+  # R  +    wc/B/C/f
+  # D  +    wc/B/D
+  # D  +    wc/B/D/f
+  # A  +    wc/B/E
+  # A  +    wc/B/E/f
+  # R  +    wc/B/f
+  # D  +    wc/B/g
+  # A  +    wc/B/h
+
+  # 1.7 status:
+  #  M      wc
+  # R  +    wc/B
+  # D       wc/B/D
+  # D       wc/B/D/f
+  # D       wc/B/g
+
+
 ########################################################################
 # Run the tests
 
@@ -899,6 +947,7 @@ test_list = [ None,
               delete_in_copy_upgrade,
               replaced_files,
               upgrade_with_scheduled_change,
+              tree_replace1,
              ]
 
 
