@@ -1019,7 +1019,7 @@ handle_external_item_change_wrapper(const struct item_change_baton_t *ib,
                                     target_abspath,
                                     old_item, new_item, scratch_pool);
 
-  if (err && err->apr_err != SVN_ERR_CANCELLED)
+  /*if (err && err->apr_err != SVN_ERR_CANCELLED)
     {
       if (ib->ctx->notify_func2)
         {
@@ -1033,7 +1033,7 @@ handle_external_item_change_wrapper(const struct item_change_baton_t *ib,
         }
       svn_error_clear(err);
       return SVN_NO_ERROR;
-    }
+    }*/
 
   return svn_error_return(err);
 }
@@ -1374,7 +1374,7 @@ svn_client__do_external_status(svn_client_ctx_t *ctx,
           if (kind != svn_node_dir)
             continue;
 
-          /* Tell the client we're staring an external status set. */
+          /* Tell the client we're starting an external status set. */
           if (ctx->notify_func2)
             (ctx->notify_func2)
               (ctx->notify_baton2,
