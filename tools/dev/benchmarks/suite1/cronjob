@@ -40,7 +40,7 @@ else
   else
 
     /home/neels/bin/pat remake
-    if [ "$?" != "0" ]; then
+    if [ "$?" -ne "0" ]; then
       subject="Failed to build $rev."
       echo "$subject" > "$results"
       echo "$subject"
