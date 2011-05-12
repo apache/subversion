@@ -945,41 +945,49 @@ svn_wc__internal_get_commit_base_rev(svn_revnum_t *commit_base_revision,
 {
   svn_wc__db_status_t status;
   svn_boolean_t have_base;
+  svn_boolean_t have_more_work;
+  svn_revnum_t revision;
+  svn_revnum_t original_revision;
 
-  SVN_ERR(svn_wc__db_read_info(&status, NULL,
-                               commit_base_revision,
+  *commit_base_revision = SVN_INVALID_REVNUM;
+
+  SVN_ERR(svn_wc__db_read_info(&status, NULL, &revision, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, &original_revision, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL,
-                               &have_base, NULL, NULL,
+                               &have_base, &have_more_work, NULL,
                                db, local_abspath, scratch_pool, scratch_pool));
 
-  /* If this returned a valid revnum, there is no WORKING node. The node is
-     cleanly checked out, no modifications, copies or replaces. */
-  if (SVN_IS_VALID_REVNUM(*commit_base_revision))
-    return SVN_NO_ERROR;
+  if (SVN_IS_VALID_REVNUM(revision))
+    {
+      /* We are looking directly at BASE */
+      *commit_base_revision = revision;
+      return SVN_NO_ERROR;
+    }
+  else if (SVN_IS_VALID_REVNUM(original_revision))
+    {
+      /* We are looking at a copied node */
+      *commit_base_revision = original_revision;
+      return SVN_NO_ERROR;
+    }
 
   if (status == svn_wc__db_status_added)
     {
       /* If the node was copied/moved-here, return the copy/move source
-         revision (not this node's base revision). If it's just added,
-         return SVN_INVALID_REVNUM. */
+         revision (not this node's base revision). */
       SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL, NULL, NULL, NULL,
                                        NULL, NULL, commit_base_revision,
                                        db, local_abspath,
                                        scratch_pool, scratch_pool));
 
-      if (! SVN_IS_VALID_REVNUM(*commit_base_revision) && have_base)
-        /* It is a replace that does not feature a copy/move-here.
-           Return the revert-base revision. */
-        return svn_error_return(
-          get_base_rev(commit_base_revision, db, local_abspath, scratch_pool));
+
+      if (SVN_IS_VALID_REVNUM(*commit_base_revision))
+        return SVN_NO_ERROR;
+      /* Fall through to handle simple replacements */
     }
   else if (status == svn_wc__db_status_deleted)
     {
       const char *work_del_abspath;
-      const char *parent_abspath;
-      svn_wc__db_status_t parent_status;
 
       SVN_ERR(svn_wc__db_scan_deletion(NULL, NULL,
                                        &work_del_abspath,
@@ -989,29 +997,32 @@ svn_wc__internal_get_commit_base_rev(svn_revnum_t *commit_base_revision,
         {
           /* This is a deletion within a copied subtree. Get the copied-from
            * revision. */
-          parent_abspath = svn_dirent_dirname(work_del_abspath, scratch_pool);
-
-          SVN_ERR(svn_wc__db_read_info(&parent_status,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL,
-                                       db, parent_abspath,
-                                       scratch_pool, scratch_pool));
-
-          SVN_ERR_ASSERT(parent_status == svn_wc__db_status_added);
-
           SVN_ERR(svn_wc__db_scan_addition(NULL, NULL, NULL, NULL, NULL, NULL,
                                            NULL, NULL,
                                            commit_base_revision,
-                                           db, parent_abspath,
+                                           db,
+                                           svn_dirent_dirname(work_del_abspath,
+                                                              scratch_pool),
                                            scratch_pool, scratch_pool));
+
+          SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(*commit_base_revision));
+
+          return SVN_NO_ERROR;
         }
-      else
-        /* This is a normal delete. Get the base revision. */
-        return svn_error_return(
-          get_base_rev(commit_base_revision, db, local_abspath, scratch_pool));
+      /* else deletion of BASE node, fall through */
+    }
+
+  /* Catch replacement by local addition and deleted BASE nodes. */
+  if (have_base && !have_more_work)
+    {
+      SVN_ERR(svn_wc__db_base_get_info(&status, NULL, commit_base_revision,
+                                       NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       db, local_abspath,
+                                       scratch_pool, scratch_pool));
+
+      if (status == svn_wc__db_status_not_present)
+        *commit_base_revision = SVN_INVALID_REVNUM; /* No replacement */
     }
 
   return SVN_NO_ERROR;
@@ -1260,56 +1271,6 @@ svn_wc__node_get_conflict_info(const char **conflict_old,
             case svn_wc_conflict_kind_tree:
               break;
             }
-        }
-    }
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_wc__get_mergeinfo_walk_info(svn_boolean_t *is_present,
-                                svn_boolean_t *is_deleted,
-                                svn_boolean_t *is_absent,
-                                svn_boolean_t *is_switched,
-                                svn_boolean_t *is_file_external,
-                                svn_depth_t *depth,
-                                svn_wc_context_t *wc_ctx,
-                                const char *local_abspath,
-                                apr_pool_t *scratch_pool)
-{
-  svn_wc__db_status_t status;
-
-  SVN_ERR(svn_wc__db_read_info(&status,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, depth, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL,
-                               wc_ctx->db, local_abspath,
-                               scratch_pool, scratch_pool));
-
-  *is_present = (status != svn_wc__db_status_not_present);
-  *is_deleted = (status == svn_wc__db_status_deleted);
-  *is_absent = (status == svn_wc__db_status_absent);
-  *is_switched = FALSE;
-  *is_file_external = FALSE;
-
-  if (*is_present && (! (*is_deleted || *is_absent)))
-    {
-      svn_boolean_t wc_root;
-
-      SVN_ERR(svn_wc__check_wc_root(&wc_root, NULL, is_switched, wc_ctx->db,
-                                    local_abspath, scratch_pool));
-
-      /* File externals appear switched. */
-      if (is_switched)
-        {
-          const char *serialized_file_ext;
-
-          SVN_ERR(svn_wc__db_temp_get_file_external(&serialized_file_ext,
-                                                    wc_ctx->db, local_abspath,
-                                                    scratch_pool,
-                                                    scratch_pool));
-          *is_file_external = (serialized_file_ext != NULL);
         }
     }
 
