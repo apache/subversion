@@ -703,16 +703,11 @@ SELECT wc_id, local_relpath, ?3 /*op_depth*/, parent_relpath, repos_id,
 FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 
--- STMT_INSERT_WORKING_NODE_FROM_BASE_COPY_PRESENCE
+-- STMT_INSERT_DELETE_FROM_BASE
 INSERT INTO nodes (
-    wc_id, local_relpath, op_depth, parent_relpath, repos_id, repos_path,
-    revision, presence, depth, kind, changed_revision, changed_date,
-    changed_author, checksum, properties, translated_size, last_mod_time,
-    symlink_target )
-SELECT wc_id, local_relpath, ?3 /*op_depth*/, parent_relpath, repos_id,
-    repos_path, revision, ?4 /*presence*/, depth, kind, changed_revision,
-    changed_date, changed_author, checksum, properties, translated_size,
-    last_mod_time, symlink_target
+    wc_id, local_relpath, op_depth, parent_relpath, presence, kind)
+SELECT wc_id, local_relpath, ?3 /*op_depth*/, parent_relpath,
+    'base-deleted', kind
 FROM nodes
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
 

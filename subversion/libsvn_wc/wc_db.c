@@ -899,11 +899,10 @@ insert_base_node(void *baton,
   if (pibb->insert_base_deleted)
     {
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                             STMT_INSERT_WORKING_NODE_FROM_BASE_COPY_PRESENCE));
-      SVN_ERR(svn_sqlite__bindf(stmt, "isit",
+                                        STMT_INSERT_DELETE_FROM_BASE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isi",
                                 wcroot->wc_id, local_relpath,
-                                relpath_depth(local_relpath),
-                                presence_map, svn_wc__db_status_base_deleted));
+                                relpath_depth(local_relpath)));
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
 
@@ -11210,10 +11209,9 @@ make_copy_txn(void *baton,
   if (add_working_base_deleted)
     {
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                           STMT_INSERT_WORKING_NODE_FROM_BASE_COPY_PRESENCE));
-      SVN_ERR(svn_sqlite__bindf(stmt, "isit", wcroot->wc_id, local_relpath,
-                                mcb->op_depth, presence_map,
-                                svn_wc__db_status_base_deleted));
+                                        STMT_INSERT_DELETE_FROM_BASE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "isi", wcroot->wc_id, local_relpath,
+                                mcb->op_depth));
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
   else
