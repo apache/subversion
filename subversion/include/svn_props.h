@@ -100,6 +100,9 @@ svn_prop_hash_to_array(apr_hash_t *hash,
  * Given an array of svn_prop_t items, return a hash mapping const char *
  * property names to const svn_string_t * values.
  *
+ * @warning The behaviour on #svn_prop_t objects with a @c NULL @c
+ * svn_prop_t.value member is undefined.
+ *
  * @since New in 1.7.
  */
 apr_hash_t *
