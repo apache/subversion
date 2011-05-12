@@ -11730,135 +11730,79 @@ has_switched_subtrees(svn_boolean_t *is_switched,
                       apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
-  const char *wcroot_repos_relpath;
-  const char *local_relpath_repos_relpath;
-  svn_boolean_t target_is_switched_subtree;
   svn_boolean_t have_row;
+  apr_int64_t repos_id;
+  const char *repos_relpath;
+
+  /* Optional argument handling for caller */
+  if (!is_switched)
+    return SVN_NO_ERROR;
 
   *is_switched = FALSE;
 
-  SVN_ERR(read_info(NULL, NULL, NULL, &wcroot_repos_relpath, NULL,
-                    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                    NULL, NULL, NULL,
-                    wcroot, "", scratch_pool, scratch_pool));
+  SVN_ERR(base_get_info(NULL, NULL, NULL, &repos_relpath, &repos_id, NULL,
+                        NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                        wcroot, local_relpath,
+                        scratch_pool, scratch_pool));
 
-  SVN_ERR(read_info(NULL, NULL, NULL, &local_relpath_repos_relpath, NULL,
-                    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                    NULL, NULL, NULL,
-                    wcroot, local_relpath, scratch_pool, scratch_pool));
-
-  if (local_relpath[0] == '\0' || !local_relpath_repos_relpath)
-    target_is_switched_subtree = FALSE;
-  else
-    target_is_switched_subtree = (strcmp(local_relpath_repos_relpath,
-                                  svn_relpath_join(wcroot_repos_relpath,
-                                                   local_relpath,
-                                                   scratch_pool)) != 0);
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_SWITCHED_NODES));
-  SVN_ERR(svn_sqlite__bindf(stmt, "issss", wcroot->wc_id, local_relpath,
-                            construct_like_arg(local_relpath, scratch_pool),
-                            construct_like_arg(wcroot_repos_relpath,
-                                               scratch_pool),
-                            wcroot_repos_relpath[0] == '\0' ?
-                              "" : apr_pstrcat(scratch_pool,
-                                               wcroot_repos_relpath, "/",
-                                               (char *)NULL)));
-  /* If this query returns a row, some part of the working copy is switched. */
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-
-  if (have_row)
+  /* First do the cheap check where we only need info on the origin itself */
+  if (trail_url != NULL)
     {
-      if (!target_is_switched_subtree)
-        {
-          /* If LOCAL_RELPATH isn't switched against the wc root but even
-             one of its children is, then we have our answer. */
-          *is_switched = TRUE;
-        }
-      else
-        {
-          /* LOCAL_RELPATH is within, or is the root of, a switched subtree.
-             Check if it has any children switched relative to it. */
-          apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-
-          while (have_row)
-            {
-              const char *relpath;
-
-              svn_pool_clear(iterpool);
-              relpath = svn_sqlite__column_text(stmt, 0, iterpool);
-
-              if (strcmp(relpath, local_relpath) != 0)
-                {
-                  const char *child_path = svn_relpath_is_child(local_relpath,
-                                                                relpath,
-                                                                iterpool);
-                  const char *repos_path = svn_sqlite__column_text(stmt, 1,
-                                                                   iterpool);
-
-                  relpath = svn_relpath_join(local_relpath_repos_relpath,
-                                             child_path, iterpool);
-                  if (strcmp(relpath, repos_path) != 0)
-                    {
-                      *is_switched = TRUE;
-                      break;
-                    }
-                }
-              SVN_ERR(svn_sqlite__step(&have_row, stmt));
-            }
-          svn_pool_destroy(iterpool);
-        }
-    }
-
-  SVN_ERR(svn_sqlite__reset(stmt));
-
-  /* If LOCAL_RELPATH is itself a switched subtree, any of its subtrees that
-     are switched relative to LOCAL_RELPATH, but not switched relative to the
-     WC root will be missed by STMT_SELECT_SWITCHED_NODES. */
-  if (! *is_switched
-      && target_is_switched_subtree)
-    {
-        SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                          STMT_SELECT_UNSWITCHED_NODES));
-        SVN_ERR(svn_sqlite__bindf(stmt, "isss",
-                                  wcroot->wc_id,
-                                  local_relpath,
-                                  construct_like_arg(local_relpath,
-                                                     scratch_pool),
-                                  wcroot_repos_relpath[0] == '\0' ?
-                                    "" : apr_pstrcat(scratch_pool,
-                                                     wcroot_repos_relpath,
-                                                     "/",
-                                                     (char *)NULL)));
-        SVN_ERR(svn_sqlite__step(&have_row, stmt));
-        *is_switched = have_row;
-        SVN_ERR(svn_sqlite__reset(stmt));
-    }
-
-  if (! *is_switched && trail_url != NULL)
-    {
+      const char *repos_root_url;
       const char *url;
+      apr_size_t len1, len2;
 
       /* If the trailing part of the URL of the working copy directory
          does not match the given trailing URL then the whole working
          copy is switched. */
-      SVN_ERR(read_url(&url, wcroot, local_relpath, scratch_pool,
-                       scratch_pool));
-      if (! url)
+
+      SVN_ERR(fetch_repos_info(&repos_root_url, NULL, wcroot->sdb, repos_id,
+                           scratch_pool));
+      url = svn_path_url_add_component2(repos_root_url, repos_relpath,
+                                        scratch_pool);
+
+      len1 = strlen(trail_url);
+      len2 = strlen(url);
+      if ((len1 > len2) || strcmp(url + len2 - len1, trail_url))
         {
           *is_switched = TRUE;
-        }
-      else
-        {
-          apr_size_t len1 = strlen(trail_url);
-          apr_size_t len2 = strlen(url);
-          if ((len1 > len2) || strcmp(url + len2 - len1, trail_url))
-            *is_switched = TRUE;
+          return SVN_NO_ERROR;
         }
     }
+
+  /* Select the right query based on whether the node is the wcroot, repos root
+     or neither. */
+  if (*local_relpath == '\0')
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                        (*repos_relpath == '\0')
+                            ? STMT_HAS_SWITCHED_WCROOT_REPOS_ROOT
+                            : STMT_HAS_SWITCHED_WCROOT));
+    }
+  else
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                        (*repos_relpath == '\0')
+                            ? STMT_HAS_SWITCHED_REPOS_ROOT
+                            : STMT_HAS_SWITCHED));
+    }
+
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  /* ### Please keep this code for a little while or until the code has enough
+         test coverage. These columns are only available in the 4 queries
+         after their selection is uncommented. */
+/*if (have_row)
+    SVN_DBG(("Expected %s for %s, but got %s. Origin=%s with %s\n",
+             svn_sqlite__column_text(stmt, 0, scratch_pool),
+             svn_sqlite__column_text(stmt, 1, scratch_pool),
+             svn_sqlite__column_text(stmt, 2, scratch_pool),
+             svn_sqlite__column_text(stmt, 3, scratch_pool),
+             svn_sqlite__column_text(stmt, 4, scratch_pool)));*/
+  if (have_row)
+    *is_switched = TRUE;
+  SVN_ERR(svn_sqlite__reset(stmt));
 
   return SVN_NO_ERROR;
 }
@@ -12098,6 +12042,18 @@ revision_status_txn(void *baton,
                     apr_pool_t *scratch_pool)
 {
   struct revision_status_baton_t *rsb = baton;
+  svn_error_t *err;
+  svn_boolean_t exists;
+
+  SVN_ERR(does_node_exist(&exists, wcroot, local_relpath));
+
+  if (!exists)
+    {
+      return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                               _("The node '%s' was not found."),
+                               path_for_error_message(wcroot, local_relpath,
+                                                      scratch_pool));
+    }
 
   /* Determine mixed-revisionness. */
   SVN_ERR(get_min_max_revisions(rsb->min_revision, rsb->max_revision, wcroot,
@@ -12114,8 +12070,19 @@ revision_status_txn(void *baton,
     SVN_ERR(rsb->cancel_func(rsb->cancel_baton));
 
   /* Check for switched nodes. */
-  SVN_ERR(has_switched_subtrees(rsb->is_switched, wcroot, local_relpath,
-                                rsb->trail_url, scratch_pool));
+  {
+    err = has_switched_subtrees(rsb->is_switched, wcroot, local_relpath,
+                                rsb->trail_url, scratch_pool);
+
+    if (err)
+      {
+        if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+          return svn_error_return(err);
+
+        svn_error_clear(err); /* No Base node, but no fatal error */
+        *rsb->is_switched = FALSE;
+      }
+  }
 
   if (rsb->cancel_func)
     SVN_ERR(rsb->cancel_func(rsb->cancel_baton));
