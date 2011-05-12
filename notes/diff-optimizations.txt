@@ -1,0 +1,133 @@
+Introduction
+------------
+
+This file documents some potential optimizations for "svn diff" (or more
+specifically for the diff algorithm in libsvn_diff, which is used in the
+"diff", "blame", "merge" and "update" subcommands on the client side).
+
+There are two broad approaches:
+
+  - Speed up the existing algorithm, while maintaining a "minimal diff" 
+    (i.e. without heuristics).
+    
+  - Introduce a "non-minimal diff" mode, either by adding heuristics in the
+    existing algorithm, or by implementing another algorithm which doesn't
+    guarantee that it will produce the "minimal diff" in all cases.
+
+
+I. Speeding up "minimal" diff (no heuristics)
+---------------------------------------------
+
+1) More low-level optimization of prefix/suffix scanning.
+
+  - Further optimization of the N-ary prefix/suffix scanning.
+  - Add special-case code for N==2 (i.e. "svn diff").
+
+2) Optimize line hashing.
+
+  - Merge hash calculation with EOL scanning.
+  - Reduce function calling overhead, including loop setup & finalization.
+
+3) Reduce overhead of line/hash container.
+
+  - Use a low collision rate / low overhead hash container.
+
+4) Avoid some hashing by exploiting the fact that matching lines often come
+   in series.
+
+  - If the previous line had a match with the other file, first try to
+    directly compare (memcmp) the next line with the successor of the
+    matched line. Only if it doesn't match, calculate the hash to insert
+    it into the container.
+  - This approach probably conflicts with the "Merge hash calculation with 
+    EOL scanning" suggestion.
+
+5) Discarding non-matching lines before running the LCS (Longest Common
+   Subsequence) algorithm.
+
+  - Can make a *huge* impact on files which have a lot of different/unique
+    lines.
+    (for instance, an example script from the users list [1], which
+    generates two files with random lines, 3/4th of which are
+    non-matching: diff goes from several hours to a couple of seconds;
+    another example is a big file of which indentation style was changed
+    from tabs to spaces, and diffing without an ignore-whitespace option).
+
+  - GNU diff does this as well, but strangely, it does it only as part
+    of a heuristic (which also discards other "confusing lines"). If run
+    with --minimal, these lines are not discarded (though, AFAICS, there
+    should be no problem discarding the non-matching lines even when going
+    for a minimal diff).
+
+  - From mailthread [2]:
+    The core algorithm for calculating a (minimal) diff is to first find
+    the Longest Common Subsequence (the longest sequence of lines which
+    appear both in A and in B (not necessarily as contiguous lines, there
+    can be gaps)). The actual diff can be derived from this very quickly.
+
+    But lines which only appear in A, or only in B, can never be part of
+    the LCS, because they are not common lines to begin with.
+
+    So we can just as well calculate the LCS of A' and B' (A and B
+    without their "definitely non-matching" lines). This will also be an
+    LCS of A and B, because there are no common lines added which can make
+    it even longer.
+
+    The only thing I'm not 100% sure of is if it would yield the same LCS
+    (there can be many LCS's, all equally long, hence the different
+    possible diff-representations which are sometimes not nice for human
+    readers). However, gut feeling tells me it will be the same. I can't
+    prove this though, so feel free to come up with a counter example :-).
+    (although having a different LCS would not be a disaster: it would
+    still be a minimal diff, but a different one).
+
+    The practical difficulty is to map line numbers from lines in A and B
+    to their corresponding lines in A' and B', and back again.
+
+
+II. Going for a non-minimal diff (i.e. heuristics)
+--------------------------------------------------
+
+In some cases, heuristics can make a big difference (while not guaranteeing
+that you'll get a minimal diff).
+See also issue #1966 (libsvn_diff needs 'non-minimal-diff' mode) [3].
+
+1) Make prefix/suffix scanning able to skip 1 or a couple of 
+   non-matching lines, if it is able to find strictly more matching lines
+   after that, to keep the prefix/suffix scanning going.
+
+   This will usually work well, but can sometimes lead to missynchronization
+   (see [4]):
+
+     bxxaxxbxx
+      || ||
+     axxbxx
+
+   instead of (longest common subsequence):
+	
+     bxxaxxbxx
+       //////
+      axxbxx 
+
+2) Add some heuristics-based shortcuts in the LCS algorithm.
+      
+3) Implement another diff algorithm, such as "Patience Diff" [5], which is
+   already implemented in several other (D)VCS's. It has the potential to
+   be much faster (reducing the problem to calculating several, much
+   smaller LCS's), and has the added advantage of often producing "nicer"
+   diff output. It is however slightly "heuristical", it doesn't guarantee
+   minimality of the diff.
+
+
+References
+----------
+
+[1] http://svn.haxx.se/users/archive-2011-01/0319.shtml
+[2] http://svn.haxx.se/dev/archive-2011-02/0772.shtml
+[3] http://subversion.tigris.org/issues/show_bug.cgi?id=1966 (libsvn_diff
+needs 'non-minimal-diff' mode)
+[4] Miller, W., and Myers, E.W. "A File Comparison Program.", Software -
+    Practice & Experience 15 (1985), pp. 1025-1040.
+[5] http://bramcohen.livejournal.com/73318.html
+[6] Mailthread with an earlier version of these notes, and some additional
+    discussion: http://svn.haxx.se/dev/archive-2011-02/0490.shtml
