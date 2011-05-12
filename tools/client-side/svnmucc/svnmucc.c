@@ -926,6 +926,7 @@ main(int argc, const char **argv)
           break;
         case 'h':
           usage(pool, EXIT_SUCCESS);
+          break;
         }
     }
 
