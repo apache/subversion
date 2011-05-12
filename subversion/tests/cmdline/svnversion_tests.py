@@ -329,19 +329,28 @@ def child_switched(sbox):
   sbox.simple_commit()
   sbox.simple_update()
 
+  ### Target is repos root and WC root.
+
+  # No switches.
+  svntest.actions.run_and_verify_svnversion(None, wc_dir, None,
+                                            [ "2\n" ], [])
+
   # Switch A/B to a sibling.
   sbox.simple_switch(repo_url + '/A/D', 'A/B')
 
-  # This should detect the switch at A/B
+  # This should detect the switch at A/B.
   svntest.actions.run_and_verify_svnversion(None, wc_dir, None,
                                             [ "2S\n" ], [])
 
-  # But A/B/G and its children are not switched by itself
-  svntest.actions.run_and_verify_svnversion(None, os.path.join(wc_dir,'A/B/G'),
+  ### Target is neither repos root nor WC root.
+
+  # But A/B/G and its children are not switched by itself.
+  svntest.actions.run_and_verify_svnversion(None,
+                                            os.path.join(wc_dir, 'A/B/G'),
                                             None, [ "2\n" ], [])
 
-  # And A/B isn't when you look at it directly
-  svntest.actions.run_and_verify_svnversion(None, os.path.join(wc_dir,'A/B'),
+  # And A/B isn't switched when you look at it directly.
+  svntest.actions.run_and_verify_svnversion(None, os.path.join(wc_dir, 'A/B'),
                                             None, [ "2\n" ], [])
 
   # Switch branch/D to ^/A, then switch branch/D/G back to ^/branch/D/G so
@@ -349,17 +358,58 @@ def child_switched(sbox):
   sbox.simple_switch(repo_url + '/A/D', 'branch/D')
   sbox.simple_switch(repo_url + '/branch/D/G', 'branch/D/G')
 
-  # This should detect the switch at branch/D and branch/D/G
+  # This should detect the switch at branch/D and branch/D/G.
   svntest.actions.run_and_verify_svnversion(None,
-                                            os.path.join(wc_dir,'branch'),
+                                            os.path.join(wc_dir, 'branch'),
                                             None, [ "2S\n" ], [])
 
   # Directly targeting the switched branch/D should still detect the switch
   # at branch/D/G even though the latter isn't switched against the root of
   # the working copy.
   svntest.actions.run_and_verify_svnversion(None,
-                                            os.path.join(wc_dir,'branch', 'D'),
+                                            os.path.join(wc_dir, 'branch',
+                                                         'D'),
                                             None, [ "2S\n" ], [])
+
+  # Switch A/B to ^/.
+  sbox.simple_switch(repo_url, 'A/B')
+  svntest.actions.run_and_verify_svnversion(None,
+                                            os.path.join(wc_dir),
+                                            None, [ "2S\n" ], [])
+  svntest.actions.run_and_verify_svnversion(None,
+                                            os.path.join(wc_dir, 'A'),
+                                            None, [ "2S\n" ], [])
+
+  ### Target is repos root but not WC root.
+
+  svntest.actions.run_and_verify_svnversion(None,
+                                            os.path.join(wc_dir, 'A', 'B'),
+                                            None, [ "2\n" ], [])
+
+  # Switch A/B/A/D/G to ^/A/D/H.
+  sbox.simple_switch(repo_url + '/A/D/H', 'A/B/A/D/G')
+  svntest.actions.run_and_verify_svnversion(None,
+                                            os.path.join(wc_dir, 'A', 'B'),
+                                            None, [ "2S\n" ], [])
+  
+  ### Target is not repos root but is WC root.
+  
+  # Switch the root of the working copy to ^/branch, then switch D/G to
+  # ^A/D/G.
+  sbox.simple_switch(repo_url + '/branch', '.')
+  sbox.simple_switch(repo_url + '/A/D/G', 'D/G')
+  svntest.actions.run_and_verify_svnversion(None,
+                                            os.path.join(wc_dir,),
+                                            None, [ "2S\n" ], [])
+
+  ### Target is neither repos root nor WC root.
+
+  svntest.actions.run_and_verify_svnversion(None,
+                                            os.path.join(wc_dir, 'D'),
+                                            None, [ "2S\n" ], [])
+  svntest.actions.run_and_verify_svnversion(None,
+                                            os.path.join(wc_dir, 'D', 'H'),
+                                            None, [ "2\n" ], [])
 
 ########################################################################
 # Run the tests
