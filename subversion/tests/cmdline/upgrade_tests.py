@@ -858,7 +858,11 @@ def upgrade_with_scheduled_change(sbox):
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'upgrade', sbox.wc_dir)
-  ### Need to check post-upgrade status.
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  expected_status.add({
+      'A/scheduled_file_1' : Item(status='A ', wc_rev='-'),
+      })
+  run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 
 @XFail()
 @Issue(3777)
