@@ -405,11 +405,12 @@ static svn_error_t *authz_check_access(svn_boolean_t *allowed,
      username we used for authz purposes", do so now. */
   if (b->user && (! b->authz_user))
     {
-      b->authz_user = apr_pstrdup(b->pool, b->user);
+      char *authz_user = apr_pstrdup(b->pool, b->user);
       if (b->username_case == CASE_FORCE_UPPER)
-        convert_case((char *)b->authz_user, TRUE);
+        convert_case(authz_user, TRUE);
       else if (b->username_case == CASE_FORCE_LOWER)
-        convert_case((char *)b->authz_user, FALSE);
+        convert_case(authz_user, FALSE);
+      b->authz_user = authz_user;
     }
 
   return svn_repos_authz_check_access(b->authzdb, b->authz_repos_name,
