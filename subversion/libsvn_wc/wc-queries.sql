@@ -1137,28 +1137,73 @@ WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
   AND properties IS NOT NULL
 LIMIT 1
 
-/* Find nodes that are switched relative to the wc root.
-   This query expects repos_path(wcroot)/% as arg 4,
-   and repos_path(wcroot), with a slash appended unless the path is empty,
-   as arg 5. */
--- STMT_SELECT_SWITCHED_NODES
-SELECT local_relpath, repos_path FROM nodes_base
-WHERE wc_id = ?1 AND local_relpath != ""
-  AND op_depth = 0
-  AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
-  AND ((repos_path NOT LIKE ?4 ESCAPE '#' AND repos_path != local_relpath)
-       OR (repos_path != ?5 || local_relpath))
-  AND file_external IS NULL
+/* Determine if there is some switched subtree in just SQL. This looks easy,
+   but it really isn't, because we don't have a simple (and optimizable)
+   path join operation in SQL.
 
-/* Find nodes that are unswitched relative to the wc root.
-   This query expects repos_path(wcroot), with a slash appended unless the
-   path is empty, as arg 4. */
--- STMT_SELECT_UNSWITCHED_NODES
-SELECT local_relpath FROM nodes_base
-WHERE wc_id = ?1 AND local_relpath != ""
-  AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
-  AND (repos_path == ?4 || local_relpath)
-  AND file_external IS NULL
+   To work around that we have 4 different cases:
+      * Check on a node that is neither wcroot nor repos root
+      * Check on a node that is repos_root, but not wcroot.
+      * Check on a node that is wcroot, but not repos root.
+      * Check on a node that is both wcroot and repo sroot.
+
+   To make things easier, our testsuite is usually in that last category,
+   while normal working copies are almost always in one of the others.
+*/
+-- STMT_HAS_SWITCHED
+SELECT o.repos_path || '/' || SUBSTR(s.local_relpath, LENGTH(?2)+2) AS expected
+       /*,s.local_relpath, s.repos_path, o.local_relpath, o.repos_path*/
+FROM nodes AS o
+LEFT JOIN nodes AS s
+ON o.wc_id = s.wc_id
+   AND s.local_relpath > ?2 || '/' AND s.local_relpath < ?2 || '0'
+   AND s.op_depth = 0
+   AND s.repos_id = o.repos_id
+   AND s.file_external IS NULL
+WHERE o.wc_id = ?1 AND o.local_relpath=?2 AND o.op_depth=0
+  AND s.repos_path != expected
+LIMIT 1
+
+-- STMT_HAS_SWITCHED_REPOS_ROOT
+SELECT SUBSTR(s.local_relpath, LENGTH(?2)+2) AS expected
+       /*,s.local_relpath, s.repos_path, o.local_relpath, o.repos_path*/
+FROM nodes AS o
+LEFT JOIN nodes AS s
+ON o.wc_id = s.wc_id
+   AND s.local_relpath > ?2 || '/' AND s.local_relpath < ?2 || '0'
+   AND s.op_depth = 0
+   AND s.repos_id = o.repos_id
+   AND s.file_external IS NULL
+WHERE o.wc_id = ?1 AND o.local_relpath=?2 AND o.op_depth=0
+  AND s.repos_path != expected
+LIMIT 1
+
+-- STMT_HAS_SWITCHED_WCROOT
+SELECT o.repos_path || '/' || s.local_relpath AS expected
+       /*,s.local_relpath, s.repos_path, o.local_relpath, o.repos_path*/
+FROM nodes AS o
+LEFT JOIN nodes AS s
+ON o.wc_id = s.wc_id
+   AND s.local_relpath != ''
+   AND s.op_depth = 0
+   AND s.repos_id = o.repos_id
+   AND s.file_external IS NULL
+WHERE o.wc_id = ?1 AND o.local_relpath=?2 AND o.op_depth=0
+  AND s.repos_path != expected
+LIMIT 1
+
+-- STMT_HAS_SWITCHED_WCROOT_REPOS_ROOT
+SELECT s.local_relpath AS expected
+       /*,s.local_relpath, s.repos_path, o.local_relpath, o.repos_path*/
+FROM nodes AS o
+LEFT JOIN nodes AS s
+ON o.wc_id = s.wc_id
+   AND s.local_relpath != ''
+   AND s.op_depth = 0
+   AND s.repos_id = o.repos_id
+   AND s.file_external IS NULL
+WHERE o.wc_id = ?1 AND o.local_relpath=?2 AND o.op_depth=0
+  AND s.repos_path != expected
 LIMIT 1
 
 -- STMT_SELECT_BASE_FILES_RECURSIVE
