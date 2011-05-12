@@ -1116,20 +1116,19 @@ SELECT MIN(revision), MAX(revision),
   AND file_external IS NULL
   AND op_depth = 0
 
--- STMT_SELECT_SPARSE_NODES
-SELECT local_relpath, presence, depth FROM nodes
+-- STMT_HAS_SPARSE_NODES
+SELECT 1 FROM nodes
 WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
   AND op_depth = 0
   AND (presence IN ('absent', 'excluded')
         OR depth NOT IN ('infinity', 'unknown'))
   AND file_external IS NULL
+LIMIT 1
 
 -- STMT_SUBTREE_HAS_TREE_MODIFICATIONS
 SELECT 1 FROM nodes
 WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
   AND op_depth > 0
-  AND presence IN ('normal', 'incomplete', 'base-deleted')
-  AND file_external IS NULL
 LIMIT 1
 
 -- STMT_SUBTREE_HAS_PROP_MODIFICATIONS
@@ -1145,6 +1144,7 @@ LIMIT 1
 -- STMT_SELECT_SWITCHED_NODES
 SELECT local_relpath, repos_path FROM nodes_base
 WHERE wc_id = ?1 AND local_relpath != ""
+  AND op_depth = 0
   AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
   AND ((repos_path NOT LIKE ?4 ESCAPE '#' AND repos_path != local_relpath)
        OR (repos_path != ?5 || local_relpath))

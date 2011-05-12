@@ -11683,7 +11683,7 @@ is_sparse_checkout_internal(svn_boolean_t *is_sparse_checkout,
   svn_boolean_t have_row;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_SPARSE_NODES));
+                                    STMT_HAS_SPARSE_NODES));
   SVN_ERR(svn_sqlite__bindf(stmt, "iss",
                             wcroot->wc_id,
                             local_relpath,
