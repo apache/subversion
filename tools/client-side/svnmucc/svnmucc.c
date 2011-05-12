@@ -50,6 +50,7 @@
 #include "svn_props.h"
 #include "svn_ra.h"
 #include "svn_string.h"
+#include "svn_subst.h"
 #include "svn_utf.h"
 #include "private/svn_cmdline_private.h"
 
@@ -1062,6 +1063,21 @@ main(int argc, const char **argv)
                 handle_error(err, pool);
 
               action->action = ACTION_PROPSET;
+            }
+
+          if (action->prop_value
+              && svn_prop_needs_translation(action->prop_name))
+            {
+              svn_string_t *translated_value;
+              err = svn_subst_translate_string2(&translated_value, NULL,
+                                                NULL, action->prop_value, NULL,
+                                                FALSE, pool, pool);
+              if (err)
+                handle_error(
+                    svn_error_quick_wrap(err,
+                                         "Error normalizing property value"),
+                    pool);
+              action->prop_value = translated_value;
             }
         }
 
