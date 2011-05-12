@@ -2077,7 +2077,6 @@ try_copy(const apr_array_header_t *sources,
         {
           svn_client__copy_pair_t *pair =
             APR_ARRAY_IDX(copy_pairs, i, svn_client__copy_pair_t *);
-          svn_boolean_t is_file_external;
           svn_node_kind_t external_kind;
           const char *defining_abspath;
 
