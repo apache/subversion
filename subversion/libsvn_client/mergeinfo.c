@@ -646,26 +646,56 @@ svn_client__get_history_as_mergeinfo(svn_mergeinfo_t *mergeinfo_p,
 {
   apr_array_header_t *segments;
   svn_revnum_t peg_revnum = SVN_INVALID_REVNUM;
-  const char *url;
   apr_pool_t *sesspool = NULL;  /* only used for an RA session we open */
   svn_ra_session_t *session = ra_session;
 
-  /* If PATH_OR_URL is a local path (not a URL), we need to transform
-     it into a URL, open an RA session for it, and resolve the peg
-     revision.  Note that if the local item is scheduled for addition
-     as a copy of something else, we'll use its copyfrom data to query
-     its history.  */
-  if (!svn_path_is_url(path_or_url))
-    SVN_ERR(svn_dirent_get_absolute(&path_or_url, path_or_url, pool));
-  SVN_ERR(svn_client__derive_location(&url, &peg_revnum, path_or_url,
-                                      peg_revision, session, ctx, pool, pool));
-
+  /* If SESSION is NULL, resolve the url */
   if (session == NULL)
     {
+      svn_opt_revision_t opt_rev;
+      const char *url;
+      opt_rev.kind = svn_opt_revision_unspecified;
+
       sesspool = svn_pool_create(pool);
-      SVN_ERR(svn_client__open_ra_session_internal(&session, NULL, url, NULL,
-                                                   NULL, FALSE, TRUE,
-                                                   ctx, sesspool));
+
+      SVN_ERR(svn_client__ra_session_from_path(&session, &peg_revnum, &url,
+                                               path_or_url, NULL,
+                                               peg_revision, &opt_rev,
+                                               ctx, sesspool));
+    }
+  else
+    {
+      const char *local_abspath;
+      /* The session is rooted correctly, so we don't need the url,
+         but we do need a revision */
+      switch (peg_revision->kind)
+        {
+          case svn_opt_revision_head:
+          case svn_opt_revision_unspecified:
+            SVN_ERR(svn_ra_get_latest_revnum(session, &peg_revnum, pool));
+            break;
+          case svn_opt_revision_number:
+            peg_revnum = peg_revision->value.number;
+            break;
+          case svn_opt_revision_date:
+            SVN_ERR(svn_ra_get_dated_revision(session, &peg_revnum,
+                                              peg_revision->value.date, pool));
+            break;
+          default:
+            if (svn_path_is_url(path_or_url))
+              return svn_error_create(SVN_ERR_CLIENT_VERSIONED_PATH_REQUIRED,
+                                      NULL, NULL);
+
+            SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url,
+                                            pool));
+
+            SVN_ERR(svn_client__get_revision_number(&peg_revnum, NULL,
+                                                    ctx->wc_ctx,
+                                                    local_abspath,
+                                                    session, peg_revision,
+                                                    pool));
+            break;
+        }
     }
 
   /* Fetch the location segments for our URL@PEG_REVNUM. */
@@ -927,72 +957,54 @@ get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_catalog,
   svn_revnum_t rev;
   const char *local_abspath;
   const char *url;
-  svn_boolean_t is_url = svn_path_is_url(path_or_url);
-  svn_opt_revision_t peg_rev;
+  svn_boolean_t use_url = svn_path_is_url(path_or_url);
+  svn_revnum_t peg_rev;
+  svn_opt_revision_t opt_rev;
+  opt_rev.kind = svn_opt_revision_unspecified;
 
-  peg_rev.kind = peg_revision->kind;
-  peg_rev.value = peg_revision->value;
+  SVN_ERR(svn_client__ra_session_from_path(&ra_session, &peg_rev, &url,
+                                           path_or_url, NULL, peg_revision,
+                                           &opt_rev, ctx, scratch_pool));
 
   /* If PATH_OR_URL is as working copy path determine if we will need to
      contact the repository for the requested PEG_REVISION. */
-  if (!is_url)
+  if (!use_url)
     {
+      const char *repos_root_url;
+      const char *repos_relpath;
+      const char *origin_url = NULL;
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url,
                                       scratch_pool));
 
-      if (peg_rev.kind == svn_opt_revision_date
-          || peg_rev.kind == svn_opt_revision_head)
-        {
-          /* If a working copy path is pegged at head or a date then
-             we know we must contact the repository for the revision.
-             So get only the url for PATH_OR_URL... */
-          SVN_ERR(svn_client__entry_location(&url, NULL, ctx->wc_ctx,
-                                             local_abspath,
-                                             svn_opt_revision_working,
-                                             result_pool, scratch_pool));
-        }
-      else
-        {
-          /* ...Otherwise get the revision too. */
-          SVN_ERR(svn_client__entry_location(&url, &rev, ctx->wc_ctx,
-                                             local_abspath,
-                                             peg_rev.kind,
-                                             result_pool, scratch_pool));
-        }
+      SVN_ERR(svn_wc__node_get_origin(NULL, &rev, &repos_relpath,
+                                      &repos_root_url, NULL,
+                                      ctx->wc_ctx, local_abspath, FALSE,
+                                      scratch_pool, scratch_pool));
 
+      if(repos_relpath)
+        origin_url = svn_path_url_add_component2(repos_root_url, repos_relpath,
+                                                 scratch_pool);
 
-      if (peg_rev.kind == svn_opt_revision_date
-          || peg_rev.kind == svn_opt_revision_head
-          || peg_rev.kind == svn_opt_revision_previous
-          || (peg_rev.kind == svn_opt_revision_number
-              && peg_rev.value.number != rev))
-        {
-          /* This working copy path PATH_OR_URL is pegged at a value
-             which requires we contact the repository. */
-          path_or_url = url;
-          is_url = TRUE;
-          if (peg_rev.kind == svn_opt_revision_previous)
-            {
-              peg_rev.kind = svn_opt_revision_number;
-              peg_rev.value.number = rev;
-            }
-        }
+      if (!origin_url
+          || strcmp(origin_url, url) != 0
+          || peg_rev != rev)
+      {
+        use_url = TRUE; /* Don't rely on local merginfo */
+      }
     }
 
-  if (is_url)
+  /* Check server Merge Tracking capability. */
+  SVN_ERR(svn_ra__assert_mergeinfo_capable_server(ra_session, path_or_url,
+                                                  scratch_pool));
+
+  SVN_ERR(svn_ra_get_repos_root2(ra_session, repos_root, result_pool));
+
+  if (use_url)
     {
       svn_mergeinfo_catalog_t tmp_catalog;
       svn_boolean_t validate_inherited_mergeinfo = FALSE;
 
-      SVN_ERR(svn_dirent_get_absolute(&local_abspath, "", scratch_pool));
-      SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL,
-                                                   path_or_url, NULL, NULL,
-                                                   FALSE, TRUE, ctx,
-                                                   scratch_pool));
-      SVN_ERR(svn_client__get_revision_number(&rev, NULL, ctx->wc_ctx,
-                                              local_abspath, ra_session,
-                                              &peg_rev, scratch_pool));
-      SVN_ERR(svn_ra_get_repos_root2(ra_session, repos_root, scratch_pool));
+      rev = peg_rev;
       SVN_ERR(svn_client__get_repos_mergeinfo_catalog(
         &tmp_catalog, ra_session, "", rev, svn_mergeinfo_inherited,
         FALSE, include_descendants, &validate_inherited_mergeinfo,
@@ -1002,7 +1014,7 @@ get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_catalog,
          we fetched will be keyed on paths relative to the session
          URL.  But our caller is expecting repository relpaths.  So we
          do a little dance...  */
-      if (tmp_catalog && (strcmp(path_or_url, *repos_root) != 0))
+      if (tmp_catalog && (strcmp(url, *repos_root) != 0))
         {
           apr_hash_index_t *hi;
 
@@ -1013,8 +1025,7 @@ get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_catalog,
             {
               /* session-relpath -> repos-url -> repos-relpath */
               const char *path =
-                svn_path_url_add_component2(path_or_url,
-                                            svn__apr_hash_index_key(hi),
+                svn_path_url_add_component2(url, svn__apr_hash_index_key(hi),
                                             scratch_pool);
               SVN_ERR(svn_ra_get_path_relative_to_root(ra_session, &path, path,
                                                        result_pool));
@@ -1031,17 +1042,7 @@ get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo_catalog,
     {
       svn_boolean_t indirect;
 
-      /* Check server Merge Tracking capability. */
-      SVN_ERR(svn_client__open_ra_session_internal(&ra_session, NULL, url,
-                                                   NULL, NULL, FALSE, TRUE,
-                                                   ctx, scratch_pool));
-      SVN_ERR(svn_ra__assert_mergeinfo_capable_server(ra_session, path_or_url,
-                                                      scratch_pool));
-
       /* Acquire return values. */
-      SVN_ERR(svn_client__get_repos_root(repos_root, local_abspath,
-                                         ctx, result_pool,
-                                         scratch_pool));
       SVN_ERR(svn_client__get_wc_or_repos_mergeinfo_catalog(
         mergeinfo_catalog, &indirect, include_descendants, FALSE,
         svn_mergeinfo_inherited, ra_session, path_or_url, ctx,
@@ -1519,55 +1520,6 @@ logs_for_mergeinfo_rangelist(const char *source_url,
 
   return SVN_NO_ERROR;
 }
-
-
-/* Set URL and REVISION to the url and revision (of kind
-   svn_opt_revision_number) which is associated with PATH_OR_URL at
-   PEG_REVISION.  Use POOL for allocations.
-
-   Implementation Note: sometimes this information can be found
-   locally via the information in the 'entries' files, such as when
-   PATH_OR_URL is a working copy path and PEG_REVISION is of kind
-   svn_opt_revision_base.  At other times, this function needs to
-   contact the repository, resolving revision keywords into real
-   revision numbers and tracing node history to find the correct
-   location.
-
-   ### Can this be used elsewhere?  I was *sure* I'd find this same
-   ### functionality elsewhere before writing this helper, but I
-   ### didn't.  Seems like an operation that we'd be likely to do
-   ### often, though.  -- cmpilato
-*/
-static svn_error_t *
-location_from_path_and_rev(const char **url,
-                           svn_opt_revision_t **revision,
-                           const char *path_or_url,
-                           const svn_opt_revision_t *peg_revision,
-                           svn_client_ctx_t *ctx,
-                           apr_pool_t *pool)
-{
-  svn_ra_session_t *ra_session;
-  apr_pool_t *subpool = svn_pool_create(pool);
-  svn_revnum_t rev;
-  const char *local_abspath = NULL;
-
-  if (!svn_path_is_url(path_or_url))
-    SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url, subpool));
-
-  SVN_ERR(svn_client__ra_session_from_path(&ra_session, &rev, url,
-                                           path_or_url, local_abspath,
-                                           peg_revision, peg_revision,
-                                           ctx, subpool));
-  *url = apr_pstrdup(pool, *url);
-  *revision = apr_pcalloc(pool, sizeof(**revision));
-  (*revision)->kind = svn_opt_revision_number;
-  (*revision)->value.number = rev;
-
-  svn_pool_destroy(subpool);
-
-  return SVN_NO_ERROR;
-}
-
 
 /*** Public APIs ***/
 
@@ -1645,7 +1597,6 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
 {
   const char *log_target = NULL;
   const char *repos_root;
-  const char *merge_source_url;
   const char *path_or_url_repos_rel;
   svn_mergeinfo_catalog_t path_or_url_mergeinfo_cat;
 
@@ -1659,7 +1610,6 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
   apr_array_header_t *master_inheritable_rangelist;
   apr_array_header_t *merge_source_paths =
     apr_array_make(scratch_pool, 1, sizeof(const char *));
-  svn_opt_revision_t *real_src_peg_revision;
   apr_hash_index_t *hi_catalog;
   apr_hash_index_t *hi;
   apr_pool_t *iterpool;
@@ -1670,12 +1620,7 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
       SVN_ERR_UNSUPPORTED_FEATURE, NULL,
       _("Only depths 'infinity' and 'empty' are currently supported"));
 
-  /* Step 1: Ensure that we have a merge source URL to work with. */
-  SVN_ERR(location_from_path_and_rev(&merge_source_url, &real_src_peg_revision,
-                                     merge_source_path_or_url,
-                                     src_peg_revision, ctx, scratch_pool));
-
-  /* Step 2: We need the union of PATH_OR_URL@PEG_REVISION's mergeinfo
+  /* We need the union of PATH_OR_URL@PEG_REVISION's mergeinfo
      and MERGE_SOURCE_URL's history.  It's not enough to do path
      matching, because renames in the history of MERGE_SOURCE_URL
      throw that all in a tizzy.  Of course, if there's no mergeinfo on
@@ -1729,8 +1674,8 @@ svn_client_mergeinfo_log(svn_boolean_t finding_merged,
                                                  NULL, ctx, scratch_pool));
 
   SVN_ERR(svn_client__get_history_as_mergeinfo(&source_history, NULL,
-                                               merge_source_url,
-                                               real_src_peg_revision,
+                                               merge_source_path_or_url,
+                                               src_peg_revision,
                                                SVN_INVALID_REVNUM,
                                                SVN_INVALID_REVNUM,
                                                NULL, ctx, scratch_pool));

@@ -39,51 +39,6 @@
 extern "C" {
 #endif /* __cplusplus */
 
-
-/* Set *URL and *PEG_REVNUM (the latter is ignored if NULL) to the
-   repository URL of ABSPATH_OR_URL as found in revision PEG_REVISION.
-   If PEG_REVISION->kind is svn_opt_revision_unspecified, use the head
-   revision for a URL or the working revision for a local path.  If
-   ABSPATH_OR_URL is an absolute WC path and PEG_REVISION->kind is
-   svn_opt_revision_working, use the corresponding entry's copyfrom info.
-   RA_SESSION may be NULL regardless of whether ABSPATH_OR_URL is a URL.
-   Use CTX for authentication and for a working copy context.  Allocate
-   *URL in RESULT_POOL. Use SCRATCH_POOL for temporary allocations. */
-svn_error_t *
-svn_client__derive_location(const char **url,
-                            svn_revnum_t *peg_revnum,
-                            const char *abspath_or_url,
-                            const svn_opt_revision_t *peg_revision,
-                            svn_ra_session_t *ra_session,
-                            svn_client_ctx_t *ctx,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool);
-
-/* Get the repository URL and revision number for LOCAL_ABSPATH and put them
-   in *URL and *REVNUM.  REVNUM may be null, in which case it is ignored.
-
-   If PEG_REV_KIND is svn_opt_revision_working, then use the LOCAL_ABSPATH's
-   copyfrom info to populate *URL and *REVNUM.
-
-   If PEG_REV_KIND is svn_opt_revision_date or svn_opt_revision_head then
-   return SVN_ERR_CLIENT_BAD_REVISION.
-
-   If PEG_REV_KIND is svn_opt_revision_committed or svn_opt_revision_previous
-   then set *REVNUM to the last committed or previous revision respectively.
-
-   If PEG_REV_NUM is svn_opt_revision_unspecified, svn_opt_revision_number,
-   svn_opt_revision_base, or svn_opt_revision_working then set *REVNUM
-   to the base revision.
-   ### What's up with this last paragraph? Sounds all wrong. */
-svn_error_t *
-svn_client__entry_location(const char **url,
-                           svn_revnum_t *revnum,
-                           svn_wc_context_t *wc_ctx,
-                           const char *local_abspath,
-                           enum svn_opt_revision_kind peg_rev_kind,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool);
-
 /* Set *REVNUM to the revision number identified by REVISION.
 
    If REVISION->kind is svn_opt_revision_number, just use
