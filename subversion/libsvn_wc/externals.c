@@ -1169,6 +1169,32 @@ svn_wc__read_external_info(svn_node_kind_t *external_kind,
 }
 
 svn_error_t *
+svn_wc__external_read_props(apr_hash_t **props,
+                            svn_wc_context_t *wc_ctx,
+                            const char *wri_abspath,
+                            const char *local_abspath,
+                            svn_boolean_t pristine_props,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
+{
+  if (pristine_props)
+    SVN_ERR(svn_wc__db_external_read_pristine_props(props, wc_ctx->db,
+                                                    local_abspath,
+                                                    wri_abspath,
+                                                    result_pool,
+                                                    scratch_pool));
+  else
+    SVN_ERR(svn_wc__db_external_read_props(props, wc_ctx->db,
+                                           local_abspath,
+                                           wri_abspath,
+                                           result_pool,
+                                           scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_wc__external_status(const svn_wc_status3_t **stat,
                         svn_node_kind_t *external_kind,
                         svn_wc_context_t *wc_ctx,
@@ -1234,3 +1260,4 @@ svn_wc__external_status(const svn_wc_status3_t **stat,
   *stat = st;
   return SVN_NO_ERROR;
 }
+
