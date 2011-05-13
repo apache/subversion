@@ -41,6 +41,7 @@
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_client_private.h"
 
 
 /*** Getting update information ***/
@@ -59,15 +60,6 @@ struct status_baton
   const char *anchor_relpath;                 /* Relative path of anchor */
   svn_wc_context_t *wc_ctx;                   /* A working copy context. */
 };
-
-/* Create svn_client_status_t from svn_wc_satus3_t */
-static svn_error_t *
-create_client_status(svn_client_status_t **cst,
-                     svn_wc_context_t *wc_ctx,
-                     const char *local_abspath,
-                     const svn_wc_status3_t *status,
-                     apr_pool_t *result_pool,
-                     apr_pool_t *scratch_pool);
 
 /* A status callback function which wraps the *real* status
    function/baton.   This sucker takes care of any status tweaks we
@@ -101,8 +93,8 @@ tweak_status(void *baton,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(create_client_status(&cst, sb->wc_ctx, local_abspath, status,
-                               scratch_pool, scratch_pool));
+  SVN_ERR(svn_client__create_status(&cst, sb->wc_ctx, local_abspath, status,
+                                    scratch_pool, scratch_pool));
 
   /* If we know that the target was deleted in HEAD of the repository,
      we need to note that fact in all the status structures that come
@@ -586,18 +578,13 @@ svn_client_status_dup(const svn_client_status_t *status,
   return st;
 }
 
-/* Create a svn_client_status_t structure *CST for LOCAL_ABSPATH, shallow
- * copying data from *STATUS wherever possible and retrieving the other values
- * where needed. Peform temporary allocations in SCRATCH_POOL and allocate the
- * result in RESULT_POOL
- */
-static svn_error_t *
-create_client_status(svn_client_status_t **cst,
-                     svn_wc_context_t *wc_ctx,
-                     const char *local_abspath,
-                     const svn_wc_status3_t *status,
-                     apr_pool_t *result_pool,
-                     apr_pool_t *scratch_pool)
+svn_error_t *
+svn_client__create_status(svn_client_status_t **cst,
+                          svn_wc_context_t *wc_ctx,
+                          const char *local_abspath,
+                          const svn_wc_status3_t *status,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
 {
   *cst = apr_pcalloc(result_pool, sizeof(**cst));
 
@@ -630,11 +617,10 @@ create_client_status(svn_client_status_t **cst,
   (*cst)->switched = status->switched;
   (*cst)->file_external = FALSE;
 
-  if (((*cst)->node_status == svn_wc_status_external)
-      /* Old style file-externals */
-      || (status->versioned
-          && status->switched
-          && status->kind == svn_node_file))
+  if (/* Old style file-externals */
+      (status->versioned
+       && status->switched
+       && status->kind == svn_node_file))
     {
       svn_node_kind_t external_kind;
 
@@ -646,9 +632,14 @@ create_client_status(svn_client_status_t **cst,
 
       if (external_kind == svn_node_file)
         {
+          /* Make it similar to the new status */
           (*cst)->file_external = TRUE;
           (*cst)->switched = FALSE;
-          (*cst)->node_status = (*cst)->text_status;
+          (*cst)->node_status = svn_wc_status_external;
+          (*cst)->versioned = FALSE;
+          (*cst)->kind = svn_node_unknown;
+          (*cst)->text_status = svn_wc_status_none;
+          (*cst)->prop_status = svn_wc_status_none;
         }
     }
 

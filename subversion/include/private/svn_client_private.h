@@ -45,6 +45,20 @@ extern "C" {
 svn_error_t *
 svn_client__assert_homogeneous_target_type(const apr_array_header_t *targets);
 
+
+/* Create a svn_client_status_t structure *CST for LOCAL_ABSPATH, shallow
+ * copying data from *STATUS wherever possible and retrieving the other values
+ * where needed. Peform temporary allocations in SCRATCH_POOL and allocate the
+ * result in RESULT_POOL
+ */
+svn_error_t *
+svn_client__create_status(svn_client_status_t **cst,
+                          svn_wc_context_t *wc_ctx,
+                          const char *local_abspath,
+                          const svn_wc_status3_t *status,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
