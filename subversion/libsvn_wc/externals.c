@@ -1203,7 +1203,6 @@ svn_wc__external_status(const svn_wc_status3_t **stat,
   else if (kind == svn_wc__db_kind_file
       || kind == svn_wc__db_kind_symlink)
     {
-      SVN_DBG(("Revision of %s is %d\n", local_abspath, st->revision));
       st->versioned = TRUE;
       st->kind = svn_node_file;
       st->node_status = svn_wc_status_external;
