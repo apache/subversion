@@ -927,6 +927,16 @@ typedef struct svn_delta_editor_t
    * Allocations for the returned @a file_baton should be performed in
    * @a file_pool. It is also typical to save this pool for later usage
    * by @c apply_textdelta and possibly @c close_file.
+   *
+   * @note Because the editor driver could be employing the "postfix
+   * deltas" paradigm, @a file_pool could potentially be relatively
+   * long-lived.  Every file baton created by the editor for a given
+   * editor drive might be resident in memory similtaneously.  Editor
+   * implementations should ideally keep their file batons as
+   * conservative (memory-usage-wise) as possible, and use @a file_pool
+   * only for those batons.  (Consider using a subpool of @a file_pool
+   * for scratch work, destroying the subpool before exiting this
+   * function's implementation.)
    */
   svn_error_t *(*add_file)(const char *path,
                            void *parent_baton,
@@ -946,6 +956,9 @@ typedef struct svn_delta_editor_t
    * Allocations for the returned @a file_baton should be performed in
    * @a file_pool. It is also typical to save this pool for later usage
    * by @c apply_textdelta and possibly @c close_file.
+   *
+   * @note See note about memory usage on @a add_file, which also
+   * applies here.
    */
   svn_error_t *(*open_file)(const char *path,
                             void *parent_baton,
