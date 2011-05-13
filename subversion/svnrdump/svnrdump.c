@@ -580,6 +580,11 @@ validate_and_resolve_revisions(opt_baton_t *opt_baton,
     {
       provided_start_rev = opt_baton->start_revision.value.number;
     }
+  else if (opt_baton->start_revision.kind == svn_opt_revision_head)
+    {
+      opt_baton->start_revision.kind = svn_opt_revision_number;
+      opt_baton->start_revision.value.number = latest_revision;
+    }
   else if (opt_baton->start_revision.kind == svn_opt_revision_unspecified)
     {
       opt_baton->start_revision.kind = svn_opt_revision_number;
@@ -613,6 +618,11 @@ validate_and_resolve_revisions(opt_baton_t *opt_baton,
         opt_baton->end_revision.value.number = provided_start_rev;
       else
         opt_baton->end_revision.value.number = latest_revision;
+    }
+  else if (opt_baton->end_revision.kind == svn_opt_revision_head)
+    {
+      opt_baton->end_revision.kind = svn_opt_revision_number;
+      opt_baton->end_revision.value.number = latest_revision;
     }
 
   if (opt_baton->end_revision.kind != svn_opt_revision_number)
