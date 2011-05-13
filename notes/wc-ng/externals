@@ -26,7 +26,7 @@ then we start comparing them, following this schema
 (There are some small variations around relative externals, unmatched externals
  and revision locked externals, but this is the primary idea)
 
-This schema allows a read only working copy to fully follow svn:externals
+This schema allows a read-only working copy to fully follow svn:externals
 changes without any user interaction as long as any intermediate update is
 followed.
 
@@ -35,7 +35,7 @@ new versions of the property and we can just run the external update schema.
 
 
 Ok, pretty straightforward, but things get much harder once you start looking
-at how to change svn:externals de finitions locally.
+at how to change svn:externals definitions locally.
 
 
  Handling changes to svn:externals
