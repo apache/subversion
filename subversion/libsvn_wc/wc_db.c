@@ -5938,51 +5938,48 @@ svn_wc__db_temp_op_remove_working(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+/* Baton for db_op_set_base_depth */
+struct set_base_depth_baton_t
+{
+  svn_depth_t depth;
+};
 
 static svn_error_t *
-update_depth_values(svn_wc__db_t *db,
-                    const char *local_abspath,
-                    svn_wc__db_wcroot_t *wcroot,
-                    const char *local_relpath,
-                    svn_depth_t depth,
-                    apr_pool_t *scratch_pool)
+db_op_set_base_depth(void *baton,
+                     svn_wc__db_wcroot_t *wcroot,
+                     const char *local_relpath,
+                     apr_pool_t *scratch_pool)
 {
-  svn_boolean_t excluded = (depth == svn_depth_exclude);
+  struct set_base_depth_baton_t *sbd = baton;
   svn_sqlite__stmt_t *stmt;
+  int affected_rows;
 
   /* Flush any entries before we start monkeying the database.  */
-  SVN_ERR(flush_entries(wcroot, local_abspath, scratch_pool));
-
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    excluded
-                                      ? STMT_UPDATE_NODE_BASE_EXCLUDED
-                                      : STMT_UPDATE_NODE_BASE_DEPTH));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-  if (!excluded)
-    SVN_ERR(svn_sqlite__bind_text(stmt, 3, svn_depth_to_word(depth)));
-  SVN_ERR(svn_sqlite__step_done(stmt));
+                                    STMT_UPDATE_NODE_BASE_DEPTH));
+  SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id, local_relpath,
+                                         svn_depth_to_word(sbd->depth)));
+  SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    excluded
-                                      ? STMT_UPDATE_NODE_WORKING_EXCLUDED
-                                      : STMT_UPDATE_NODE_WORKING_DEPTH));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-  if (!excluded)
-    SVN_ERR(svn_sqlite__bind_text(stmt, 3, svn_depth_to_word(depth)));
-  SVN_ERR(svn_sqlite__step_done(stmt));
+  if (affected_rows == 0)
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                             "The node '%s' is not a committed directory",
+                             path_for_error_message(wcroot, local_relpath,
+                                                    scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
-svn_wc__db_temp_op_set_dir_depth(svn_wc__db_t *db,
-                                 const char *local_abspath,
-                                 svn_depth_t depth,
-                                  apr_pool_t *scratch_pool)
+svn_wc__db_op_set_base_depth(svn_wc__db_t *db,
+                             const char *local_abspath,
+                             svn_depth_t depth,
+                             apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
+  struct set_base_depth_baton_t sbd;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(depth >= svn_depth_empty && depth <= svn_depth_infinity);
@@ -5993,9 +5990,12 @@ svn_wc__db_temp_op_set_dir_depth(svn_wc__db_t *db,
 
   /* ### We set depth on working and base to match entry behavior.
          Maybe these should be separated later? */
+  sbd.depth = depth;
 
-  SVN_ERR(update_depth_values(db, local_abspath, wcroot, local_relpath, depth,
-                              scratch_pool));
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, db_op_set_base_depth,
+                              &sbd, scratch_pool));
+
+  SVN_ERR(flush_entries(wcroot, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }
