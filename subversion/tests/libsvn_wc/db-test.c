@@ -1408,6 +1408,10 @@ test_externals_store(apr_pool_t *pool)
   const char *file_external_path;
   const char *dir_external_path;
   const char *subdir;
+  apr_hash_t *props = apr_hash_make(pool);
+  svn_string_t *value = svn_string_create("value-data", pool);
+
+  apr_hash_set(props, "key", APR_HASH_KEY_STRING, value);
 
   SVN_ERR(create_open(&db, &local_abspath,
                       "test_externals_store", SVN_WC__VERSION, pool));
@@ -1428,7 +1432,7 @@ test_externals_store(apr_pool_t *pool)
                                        "svn://some-repos/svn",
                                        "not-a-uuid",
                                        12,
-                                       apr_hash_make(pool),
+                                       props,
                                        10,
                                        987654,
                                        "somebody",
@@ -1516,8 +1520,23 @@ test_externals_store(apr_pool_t *pool)
     SVN_TEST_ASSERT(recorded_peg_revision == 90);
     SVN_TEST_ASSERT(recorded_revision == 12);
     SVN_TEST_ASSERT(!conflicted);
-    SVN_TEST_ASSERT(!had_props);
+    SVN_TEST_ASSERT(had_props);
     SVN_TEST_ASSERT(!props_mod);
+
+    {
+      apr_hash_t *new_props;
+      svn_string_t *v;
+
+      SVN_ERR(svn_wc__db_external_read_pristine_props(&new_props, db,
+                                                     file_external_path,
+                                                     local_abspath,
+                                                     pool, pool));
+
+      SVN_TEST_ASSERT(new_props != NULL);
+      v = apr_hash_get(new_props, "key", APR_HASH_KEY_STRING);
+      SVN_TEST_ASSERT(v != NULL);
+      SVN_TEST_STRING_ASSERT(v->data, "value-data");
+    }
 
 #if SVN_WC__VERSION >= SVN_WC__HAS_EXTERNALS_STORE
     SVN_ERR(svn_wc__db_external_read(&status, &kind, &revision, &repos_relpath,

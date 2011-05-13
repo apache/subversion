@@ -3301,7 +3301,7 @@ svn_wc__db_external_read_pristine_props(apr_hash_t **props,
                                                      scratch_pool));
         }
       else
-        err = svn_sqlite__column_properties(props, stmt, 6, result_pool,
+        err = svn_sqlite__column_properties(props, stmt, 4, result_pool,
                                             scratch_pool);
 
       if (props && !*props)
@@ -3348,7 +3348,11 @@ svn_wc__db_external_read_props(apr_hash_t **props,
   return svn_error_return(svn_wc__db_read_props(props, db, local_abspath,
                                                 result_pool, scratch_pool));
 #else
-  NOT_IMPLEMENTED();
+  /* ### Where do we store actual properties? ACTUAL? New column? */
+  SVN_ERR(svn_wc__db_external_read_pristine_props(props, db, local_abspath,
+                                                  wri_abspath,
+                                                  result_pool, scratch_pool));
+  return SVN_NO_ERROR;
 #endif
 }
 
