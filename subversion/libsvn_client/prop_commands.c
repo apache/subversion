@@ -922,25 +922,48 @@ svn_client_propget3(apr_hash_t **props,
       svn_node_kind_t kind;
       svn_boolean_t pristine;
       const char *local_abspath;
-      svn_error_t *err;
       svn_boolean_t added;
 
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url, pool));
 
-      err = svn_wc_read_kind(&kind, ctx->wc_ctx, local_abspath, FALSE, pool);
+      /* If FALSE, we want the working revision. */
+      pristine = (revision->kind == svn_opt_revision_committed
+                  || revision->kind == svn_opt_revision_base);
 
-      if ((err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-          || kind == svn_node_unknown || kind == svn_node_none)
+      SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, local_abspath, FALSE,
+                               pool));
+
+      if (kind == svn_node_unknown || kind == svn_node_none)
         {
+          {
+            apr_hash_t *node_props;
+            svn_error_t *err;
+
+            err = svn_wc__external_read_props(&node_props,  ctx->wc_ctx, NULL,
+                                              local_abspath, pristine,
+                                              pool, pool);
+
+            if (!err)
+              {
+                if (node_props)
+                  apr_hash_set(*props, propname, APR_HASH_KEY_STRING,
+                               apr_hash_get(node_props, propname,
+                                            APR_HASH_KEY_STRING));
+
+                return SVN_NO_ERROR;
+              }
+            else if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+              svn_error_clear(err);
+            else
+              return svn_error_return(err);
+          }
           /* svn uses SVN_ERR_UNVERSIONED_RESOURCE as warning only
              for this function. */
-          return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, err,
+          return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
                                    _("'%s' is not under version control"),
                                    svn_dirent_local_style(local_abspath,
                                                           pool));
         }
-      else
-        SVN_ERR(err);
 
       /* Get the actual_revnum; added nodes have no revision yet, and we
        * return the mock-up revision of 0.
@@ -952,10 +975,6 @@ svn_client_propget3(apr_hash_t **props,
         SVN_ERR(svn_client__get_revision_number(&revnum, NULL, ctx->wc_ctx,
                                                 local_abspath, NULL, revision,
                                                 pool));
-
-      /* If FALSE, we must want the working revision. */
-      pristine = (revision->kind == svn_opt_revision_committed
-                  || revision->kind == svn_opt_revision_base);
 
       SVN_ERR(get_prop_from_wc(*props, propname, path_or_url,
                                FALSE, pristine, kind,
@@ -1226,7 +1245,6 @@ svn_client_proplist3(const char *path_or_url,
       svn_node_kind_t kind;
       apr_hash_t *changelist_hash = NULL;
       const char *local_abspath;
-      svn_error_t *err;
 
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url, pool));
 
@@ -1242,26 +1260,27 @@ svn_client_proplist3(const char *path_or_url,
              before returning an error */
           {
             apr_hash_t *props;
+            svn_error_t *err;
 
-             err = svn_wc__external_read_props(&props,  ctx->wc_ctx, NULL,
-                                               local_abspath, pristine,
-                                               pool, pool);
+            err = svn_wc__external_read_props(&props,  ctx->wc_ctx, NULL,
+                                              local_abspath, pristine,
+                                              pool, pool);
 
-             if (!err)
-               {
-                 if (props)
-                   SVN_ERR(receiver(receiver_baton, path_or_url, props, pool));
+            if (!err)
+              {
+                if (props)
+                  SVN_ERR(receiver(receiver_baton, path_or_url, props, pool));
 
-                 return SVN_NO_ERROR;
-               }
-             else if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-               svn_error_clear(err);
-             else
-               return svn_error_return(err);
+                return SVN_NO_ERROR;
+              }
+            else if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+              svn_error_clear(err);
+            else
+              return svn_error_return(err);
           }
           /* svn uses SVN_ERR_UNVERSIONED_RESOURCE as warning only
              for this function. */
-          return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, err,
+          return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
                                    _("'%s' is not under version control"),
                                    svn_dirent_local_style(local_abspath,
                                                           pool));
