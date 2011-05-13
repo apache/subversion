@@ -93,6 +93,8 @@ typedef struct prop_info_t {
 typedef struct replay_context_t {
   apr_pool_t *src_rev_pool;
   apr_pool_t *dst_rev_pool;
+  /*file_pool is cleared after completion of each file. */
+  apr_pool_t *file_pool;
 
   /* Are we done fetching this file? */
   svn_boolean_t done;
@@ -336,6 +338,7 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
       const char *file_name, *rev;
       replay_info_t *info;
 
+      svn_pool_clear(ctx->file_pool);
       file_name = svn_xml_get_attr_value("name", attrs);
       if (!file_name)
         {
@@ -353,7 +356,7 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
 
       SVN_ERR(ctx->editor->open_file(file_name, info->parent->baton,
                                      SVN_STR_TO_REV(rev),
-                                     ctx->dst_rev_pool, &info->baton));
+                                     ctx->file_pool, &info->baton));
     }
   else if ((state == OPEN_DIR || state == ADD_DIR) &&
            strcmp(name.name, "add-file") == 0)
@@ -362,6 +365,7 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
       svn_revnum_t rev;
       replay_info_t *info;
 
+      svn_pool_clear(ctx->file_pool);
       file_name = svn_xml_get_attr_value("name", attrs);
       if (!file_name)
         {
@@ -380,7 +384,7 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
 
       SVN_ERR(ctx->editor->add_file(file_name, info->parent->baton,
                                     copyfrom, rev,
-                                    ctx->dst_rev_pool, &info->baton));
+                                    ctx->file_pool, &info->baton));
     }
   else if ((state == OPEN_FILE || state == ADD_FILE) &&
            strcmp(name.name, "apply-textdelta") == 0)
@@ -400,7 +404,7 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
         }
 
       SVN_ERR(ctx->editor->apply_textdelta(info->baton, checksum,
-                                           info->pool,
+                                           ctx->file_pool,
                                            &textdelta,
                                            &textdelta_baton));
 
@@ -417,7 +421,7 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
       checksum = svn_xml_get_attr_value("checksum", attrs);
 
       SVN_ERR(ctx->editor->close_file(info->baton, checksum,
-                                      ctx->dst_rev_pool));
+                                      ctx->file_pool));
 
       svn_ra_serf__xml_pop_state(parser);
     }
@@ -439,7 +443,6 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
 
       info = push_state(parser, ctx, CHANGE_PROP);
 
-      info->name = apr_pstrdup(ctx->dst_rev_pool, prop_name);
 
       if (svn_xml_get_attr_value("del", attrs))
         info->del_prop = TRUE;
@@ -447,9 +450,15 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
         info->del_prop = FALSE;
 
       if (state == OPEN_FILE || state == ADD_FILE)
-        info->change = ctx->editor->change_file_prop;
+        {
+          info->name = apr_pstrdup(ctx->file_pool, prop_name);
+          info->change = ctx->editor->change_file_prop;
+        }
       else
-        info->change = ctx->editor->change_dir_prop;
+        {
+          info->name = apr_pstrdup(ctx->dst_rev_pool, prop_name);
+          info->change = ctx->editor->change_dir_prop;
+        }
 
     }
 
@@ -527,7 +536,10 @@ end_replay(svn_ra_serf__xml_parser_t *parser,
           tmp_prop.data = info->data;
           tmp_prop.len = info->len;
 
-          prop_val = svn_base64_decode_string(&tmp_prop, ctx->dst_rev_pool);
+          if (strcmp(name.name, "change-file-prop") == 0)
+            prop_val = svn_base64_decode_string(&tmp_prop, ctx->file_pool);
+          else
+            prop_val = svn_base64_decode_string(&tmp_prop, ctx->dst_rev_pool);
         }
 
       SVN_ERR(info->change(info->parent->baton, info->name, prop_val,
@@ -635,6 +647,7 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
 
   replay_ctx = apr_pcalloc(pool, sizeof(*replay_ctx));
   replay_ctx->src_rev_pool = pool;
+  replay_ctx->file_pool = svn_pool_create(pool);
   replay_ctx->editor = editor;
   replay_ctx->editor_baton = edit_baton;
   replay_ctx->done = FALSE;
@@ -751,6 +764,7 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
 
           replay_ctx = apr_pcalloc(ctx_pool, sizeof(*replay_ctx));
           replay_ctx->src_rev_pool = ctx_pool;
+          replay_ctx->file_pool = svn_pool_create(pool);
           replay_ctx->revstart_func = revstart_func;
           replay_ctx->revfinish_func = revfinish_func;
           replay_ctx->replay_baton = replay_baton;
