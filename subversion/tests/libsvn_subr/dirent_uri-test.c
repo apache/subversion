@@ -1042,7 +1042,7 @@ test_relpath_is_canonical(apr_pool_t *pool)
       svn_boolean_t canonical;
       const char* canonicalized;
 
-      canonical = svn_relpath_is_canonical(tests[i].path, pool);
+      canonical = svn_relpath_is_canonical(tests[i].path);
       if (tests[i].canonical != canonical)
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "svn_relpath_is_canonical(\"%s\") returned "

@@ -1819,8 +1819,7 @@ svn_mergeinfo__add_suffix_to_mergeinfo(svn_mergeinfo_t *out_mergeinfo,
 {
   apr_hash_index_t *hi;
 
-  SVN_ERR_ASSERT(suffix_relpath && svn_relpath_is_canonical(suffix_relpath,
-                                                            scratch_pool));
+  SVN_ERR_ASSERT(suffix_relpath && svn_relpath_is_canonical(suffix_relpath));
 
   *out_mergeinfo = apr_hash_make(result_pool);
 

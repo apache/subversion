@@ -50,7 +50,7 @@ url_remove_final_relpath(const char *url,
   const char *relpath_end;
 
   SVN_ERR_ASSERT_NO_RETURN(svn_path_is_url(url));
-  SVN_ERR_ASSERT_NO_RETURN(svn_relpath_is_canonical(relpath, scratch_pool));
+  SVN_ERR_ASSERT_NO_RETURN(svn_relpath_is_canonical(relpath));
 
   if (relpath[0] == 0)
     return result;

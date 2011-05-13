@@ -197,7 +197,7 @@ read_path(const char **result,
           apr_pool_t *pool)
 {
   SVN_ERR(read_str(result, buf, end, pool));
-  if (*result && **result && !svn_relpath_is_canonical(*result, pool))
+  if (*result && **result && !svn_relpath_is_canonical(*result))
     return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
                              _("Entry contains non-canonical path '%s'"),
                              *result);

@@ -1447,7 +1447,7 @@ svn_wc__db_from_relpath(const char **local_abspath,
   svn_wc__db_wcroot_t *wcroot;
   const char *unused_relpath;
 #if 0
-  SVN_ERR_ASSERT(svn_relpath_is_canonical(local_relpath, scratch_pool));
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(local_relpath));
 #endif
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &unused_relpath, db,
@@ -8645,7 +8645,7 @@ svn_wc__db_global_update(svn_wc__db_t *db,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   /* ### allow NULL for NEW_REPOS_RELPATH to indicate "no change"?  */
-  SVN_ERR_ASSERT(svn_relpath_is_canonical(new_repos_relpath, scratch_pool));
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(new_repos_relpath));
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(new_revision));
   SVN_ERR_ASSERT(new_props != NULL);
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(new_changed_rev));
@@ -11062,7 +11062,7 @@ svn_wc__db_temp_op_start_directory_update(svn_wc__db_t *db,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(new_rev));
-  SVN_ERR_ASSERT(svn_relpath_is_canonical(new_repos_relpath, scratch_pool));
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(new_repos_relpath));
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
                               local_abspath, scratch_pool, scratch_pool));
