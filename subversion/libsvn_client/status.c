@@ -93,9 +93,6 @@ tweak_status(void *baton,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(svn_client__create_status(&cst, sb->wc_ctx, local_abspath, status,
-                                    scratch_pool, scratch_pool));
-
   /* If we know that the target was deleted in HEAD of the repository,
      we need to note that fact in all the status structures that come
      through here. */
@@ -105,6 +102,9 @@ tweak_status(void *baton,
       new_status->repos_node_status = svn_wc_status_deleted;
       status = new_status;
     }
+
+  SVN_ERR(svn_client__create_status(&cst, sb->wc_ctx, local_abspath, status,
+                                    scratch_pool, scratch_pool));
 
   /* Call the real status function/baton. */
   return sb->real_status_func(sb->real_status_baton, path, cst,
