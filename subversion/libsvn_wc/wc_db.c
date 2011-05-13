@@ -12171,6 +12171,7 @@ svn_wc__db_base_get_lock_tokens_recursive(apr_hash_t **lock_tokens,
           last_repos_id = child_repos_id;
         }
 
+      SVN_ERR_ASSERT(last_repos_root_url != NULL);
       apr_hash_set(*lock_tokens,
                    svn_path_url_add_component2(last_repos_root_url,
                                                child_relpath,
