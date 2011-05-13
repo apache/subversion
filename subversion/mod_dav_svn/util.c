@@ -496,7 +496,7 @@ dav_svn__test_canonical(const char *path, apr_pool_t *pool)
     return NULL;
   if ((path[0] == '/') && svn_fspath__is_canonical(path))
     return NULL;
-  if (svn_relpath_is_canonical(path, pool))
+  if (svn_relpath_is_canonical(path))
     return NULL;
       
   /* Otherwise, generate a generic HTTP_BAD_REQUEST error. */

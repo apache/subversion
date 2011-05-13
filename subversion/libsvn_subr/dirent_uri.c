@@ -1748,8 +1748,7 @@ relpath_is_canonical(const char *relpath)
 }
 
 svn_boolean_t
-svn_relpath_is_canonical(const char *relpath,
-                         apr_pool_t *pool)
+svn_relpath_is_canonical(const char *relpath)
 {
   return relpath_is_canonical(relpath);
 }
@@ -2452,7 +2451,7 @@ svn_fspath__is_child(const char *parent_fspath,
 
   result = svn_relpath_is_child(parent_fspath + 1, child_fspath + 1, pool);
 
-  assert(result == NULL || svn_relpath_is_canonical(result, pool));
+  assert(result == NULL || svn_relpath_is_canonical(result));
   return result;
 }
 
@@ -2469,7 +2468,7 @@ svn_fspath__skip_ancestor(const char *parent_fspath,
   else
     result = child_fspath;
 
-  assert(svn_relpath_is_canonical(result, NULL)
+  assert(svn_relpath_is_canonical(result)
          || strcmp(result, child_fspath) == 0);
   return result;
 }
@@ -2534,7 +2533,7 @@ svn_fspath__join(const char *fspath,
 {
   char *result;
   assert(svn_fspath__is_canonical(fspath));
-  assert(svn_relpath_is_canonical(relpath, result_pool));
+  assert(svn_relpath_is_canonical(relpath));
 
   if (relpath[0] == '\0')
     result = apr_pstrdup(result_pool, fspath);
