@@ -153,7 +153,7 @@ extern "C" {
  * Please document any further format changes here.
  */
 
-#define SVN_WC__VERSION 28
+#define SVN_WC__VERSION 29
 
 
 /* Formats <= this have no concept of "revert text-base/props".  */

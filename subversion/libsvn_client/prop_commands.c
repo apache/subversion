@@ -946,9 +946,12 @@ svn_client_propget3(apr_hash_t **props,
             if (!err)
               {
                 if (node_props)
-                  apr_hash_set(*props, propname, APR_HASH_KEY_STRING,
+                  apr_hash_set(*props, path_or_url, APR_HASH_KEY_STRING,
                                apr_hash_get(node_props, propname,
                                             APR_HASH_KEY_STRING));
+
+                if (actual_revnum)
+                  *actual_revnum = SVN_INVALID_REVNUM; /* Unrelated */
 
                 return SVN_NO_ERROR;
               }
@@ -1125,7 +1128,8 @@ remote_proplist(const char *target_prefix,
         }
     }
 
-  call_receiver(target_full_url, final_hash, receiver, receiver_baton, pool);
+  SVN_ERR(call_receiver(target_full_url, final_hash, receiver, receiver_baton,
+                        pool));
 
   if (depth > svn_depth_empty
       && (kind == svn_node_dir) && (apr_hash_count(dirents) > 0))
