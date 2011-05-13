@@ -624,6 +624,10 @@ END;
 
 -- STMT_UPGRADE_TO_20
 
+UPDATE NODES SET checksum=(SELECT checksum FROM pristine
+                           WHERE md5_checksum=nodes.checksum)
+WHERE EXISTS(SELECT 1 FROM pristine WHERE md5_checksum=nodes.checksum);
+
 INSERT INTO NODES (
        wc_id, local_relpath, op_depth, parent_relpath,
        repos_id, repos_path, revision,
