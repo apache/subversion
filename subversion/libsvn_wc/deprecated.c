@@ -648,7 +648,7 @@ svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
                                          pool));
   SVN_ERR(svn_wc_process_committed_queue2(queue, wc_ctx, new_revnum,
                                           rev_date, rev_author,
-                                          NULL, NULL, NULL, NULL, pool));
+                                          NULL, NULL, pool));
   SVN_ERR(svn_wc_context_destroy(wc_ctx));
 
   return SVN_NO_ERROR;
@@ -707,7 +707,7 @@ svn_wc_process_committed4(const char *path,
                                              new_revnum, new_date, rev_author,
                                              wcprop_changes_hash,
                                              !remove_lock, !remove_changelist,
-                                             sha1_checksum, NULL, NULL, pool));
+                                             sha1_checksum, NULL, pool));
 
   /* Run the log file(s) we just created. */
   return svn_error_return(svn_wc__wq_run(db, local_abspath, NULL, NULL, pool));

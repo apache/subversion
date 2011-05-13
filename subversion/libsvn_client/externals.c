@@ -57,7 +57,6 @@ struct item_change_baton_t
 
   svn_boolean_t *timestamp_sleep;
   svn_boolean_t is_export;
-  svn_boolean_t delete_only;
 };
 
 /* Remove the directory at LOCAL_ABSPATH from revision control, and do the
@@ -760,7 +759,7 @@ handle_external_item_change(const struct item_change_baton_t *ib,
 
   /* If the external is being checked out, exported or updated,
      determine if the external is a file or directory. */
-  if (new_item && !ib->delete_only)
+  if (new_item)
     {
       svn_node_kind_t kind;
 
@@ -800,7 +799,7 @@ handle_external_item_change(const struct item_change_baton_t *ib,
      the global case is hard, and it should be pretty obvious to a
      user when it happens.  Worst case: your disk fills up :-). */
 
-  if (! old_item && !ib->delete_only)
+  if (! old_item)
     {
       /* This branch is only used during a checkout or an export. */
       const char *parent_abspath;
@@ -952,7 +951,7 @@ handle_external_item_change(const struct item_change_baton_t *ib,
 
       SVN_ERR(err);
     }
-  else if (!ib->delete_only)
+  else
     {
       /* This branch handles all other changes. */
 
@@ -1048,18 +1047,14 @@ handle_external_item_change_wrapper(const struct item_change_baton_t *ib,
    KEY is a 'const char *'.
 */
 static svn_error_t *
-handle_externals_change(const char *local_abspath,
+handle_externals_change(const struct item_change_baton_t *ib,
+                        const char *local_abspath,
                         const char *old_desc_text,
                         const char *new_desc_text,
                         svn_depth_t ambient_depth,
                         svn_depth_t requested_depth,
-                        const char *repos_root_url,
-                        svn_boolean_t delete_only,
-                        svn_boolean_t *timestamp_sleep,
-                        svn_client_ctx_t *ctx,
                         apr_pool_t *scratch_pool)
 {
-  struct item_change_baton_t ib = { 0 };
   apr_array_header_t *old_desc, *new_desc;
   apr_hash_t *new_desc_hash;
   int i;
@@ -1106,22 +1101,10 @@ handle_externals_change(const char *local_abspath,
                    APR_HASH_KEY_STRING, item);
     }
 
-  ib.repos_root_url    = repos_root_url;
-  ib.ctx               = ctx;
-  ib.is_export         = FALSE;
-  ib.native_eol        = NULL;
-  ib.delete_only       = delete_only;
-  ib.timestamp_sleep   = timestamp_sleep;
-
-  if (!ib.repos_root_url)
-    SVN_ERR(svn_wc__node_get_repos_info(&ib.repos_root_url, NULL,
-                                        ctx->wc_ctx, local_abspath,
-                                        scratch_pool, scratch_pool));
-
-  SVN_ERR(svn_wc__node_get_url(&url, ctx->wc_ctx, local_abspath,
+  SVN_ERR(svn_wc__node_get_url(&url, ib->ctx->wc_ctx, local_abspath,
                                scratch_pool, scratch_pool));
 
-  SVN_ERR_ASSERT(url && ib.repos_root_url);
+  SVN_ERR_ASSERT(url);
 
   for (i = 0; old_desc && (i < old_desc->nelts); i++)
     {
@@ -1139,7 +1122,7 @@ handle_externals_change(const char *local_abspath,
       new_item = apr_hash_get(new_desc_hash, old_item->target_dir,
                               APR_HASH_KEY_STRING);
 
-      SVN_ERR(handle_external_item_change_wrapper(&ib, local_abspath, url,
+      SVN_ERR(handle_external_item_change_wrapper(ib, local_abspath, url,
                                                   target_abspath,
                                                   old_item, new_item,
                                                   iterpool));
@@ -1164,7 +1147,7 @@ handle_externals_change(const char *local_abspath,
                                                        new_item->target_dir,
                                                        iterpool);
 
-          SVN_ERR(handle_external_item_change_wrapper(&ib, local_abspath, url,
+          SVN_ERR(handle_external_item_change_wrapper(ib, local_abspath, url,
                                                       target_abspath,
                                                       NULL, new_item,
                                                       iterpool));
@@ -1183,7 +1166,6 @@ svn_client__handle_externals(apr_hash_t *externals_old,
                              apr_hash_t *ambient_depths,
                              const char *repos_root_url,
                              svn_depth_t requested_depth,
-                             svn_boolean_t delete_only,
                              svn_boolean_t *timestamp_sleep,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *scratch_pool)
@@ -1191,6 +1173,15 @@ svn_client__handle_externals(apr_hash_t *externals_old,
   apr_hash_t *combined;
   apr_hash_index_t *hi;
   apr_pool_t *iterpool;
+  struct item_change_baton_t ib;
+
+  SVN_ERR_ASSERT(repos_root_url);
+
+  ib.repos_root_url = repos_root_url;
+  ib.ctx = ctx;
+  ib.native_eol = NULL;
+  ib.timestamp_sleep = timestamp_sleep;
+  ib.is_export = FALSE;
 
   if (! externals_old)
     combined = externals_new;
@@ -1232,14 +1223,11 @@ svn_client__handle_externals(apr_hash_t *externals_old,
         }
 
       SVN_ERR(handle_externals_change(
+                &ib,
                 svn__apr_hash_index_key(hi),
                 externals_old ? apr_hash_get(externals_old, key, klen) : NULL,
                 externals_new ? apr_hash_get(externals_new, key, klen) : NULL,
                 ambient_depth, requested_depth,
-                repos_root_url,
-                delete_only,
-                timestamp_sleep,
-                ctx,
                 iterpool));
     }
 
@@ -1271,7 +1259,6 @@ svn_client__export_externals(apr_hash_t *externals,
   ib.native_eol = native_eol;
   ib.timestamp_sleep = timestamp_sleep;
   ib.is_export = TRUE;
-  ib.delete_only = FALSE;
 
   for (hi = apr_hash_first(scratch_pool, externals);
        hi;

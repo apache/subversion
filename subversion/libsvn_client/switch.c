@@ -290,7 +290,7 @@ switch_internal(svn_revnum_t *result_rev,
       err = svn_client__handle_externals(efb.externals_old,
                                          efb.externals_new, efb.ambient_depths,
                                          source_root,
-                                         depth, FALSE, use_sleep, ctx, pool);
+                                         depth, use_sleep, ctx, pool);
     }
 
   /* Sleep to ensure timestamp integrity (we do this regardless of
