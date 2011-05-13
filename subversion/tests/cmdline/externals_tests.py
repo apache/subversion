@@ -1177,6 +1177,7 @@ def binary_file_externals(sbox):
 #----------------------------------------------------------------------
 
 # Issue #3351.
+@XFail()
 @Issue(3351)
 def update_lose_file_external(sbox):
   "delete a file external"
@@ -1226,12 +1227,10 @@ def update_lose_file_external(sbox):
   # commit the property change
   expected_output = svntest.wc.State(wc_dir, {
     'A/C' : Item(verb='Sending'),
-    'A/C/external' : Item(verb='Removed external'),
     })
 
   # (re-use above expected_status)
   expected_status.tweak('A/C', wc_rev = 3)
-  expected_status.remove('A/C/external')
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, wc_dir)

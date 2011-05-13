@@ -1408,11 +1408,6 @@ svn_client_commit5(const apr_array_header_t *targets,
       || (cmt_err->apr_err == SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED))
     {
       svn_wc_committed_queue_t *queue = svn_wc_committed_queue_create(pool);
-      svn_client__external_func_baton_t efb = {0};
-
-      efb.externals_old = apr_hash_make(pool);
-      efb.externals_new = apr_hash_make(pool);
-      efb.result_pool = pool;
 
       /* Make a note that our commit is finished. */
       commit_in_progress = FALSE;
@@ -1440,21 +1435,8 @@ svn_client_commit5(const apr_array_header_t *targets,
                    commit_info->revision,
                    commit_info->date,
                    commit_info->author,
-                   svn_client__external_info_gatherer,
-                   &efb,
                    ctx->cancel_func, ctx->cancel_baton,
                    iterpool);
-
-      if (apr_hash_count(efb.externals_old))
-        {
-          /* Ok, we should process externals changes; but now we have */
-
-          SVN_ERR(svn_client__handle_externals(efb.externals_old,
-                                               efb.externals_new,
-                                               NULL, NULL,
-                                               svn_depth_unknown, TRUE,
-                                               NULL, ctx, iterpool));
-        }
     }
 
   /* Sleep to ensure timestamp integrity. */

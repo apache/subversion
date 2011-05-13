@@ -119,7 +119,6 @@ process_committed_leaf(svn_wc__db_t *db,
                        svn_boolean_t no_unlock,
                        svn_boolean_t keep_changelist,
                        const svn_checksum_t *checksum,
-                       apr_hash_t *old_externals,
                        apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
@@ -217,40 +216,6 @@ process_committed_leaf(svn_wc__db_t *db,
                                            prop_mods,
                                            scratch_pool, scratch_pool));
     }
-  else
-    {
-      /* Handle svn:externals changes */
-      if (have_base && !have_work
-          && prop_mods && had_props
-          && old_externals)
-        {
-          apr_hash_t *props;
-          const svn_string_t *val;
-
-          /* We are committing a property modification to a not-shadoweded
-             directory, which might be an svn:externals change.
-
-             BH: I think this is the only kind of change we have to capture.
-             (If the node is shadowed it's definition wasn't currently in
-             used anyway) */
-          SVN_ERR(svn_wc__db_base_get_props(&props, db, local_abspath,
-                                            scratch_pool, scratch_pool));
-
-          val = props ? apr_hash_get(props, SVN_PROP_EXTERNALS,
-                                     APR_HASH_KEY_STRING)
-                      : NULL;
-
-          if (val)
-            {
-              apr_pool_t *hash_pool = apr_hash_pool_get(old_externals);
-
-              apr_hash_set(old_externals, apr_pstrdup(hash_pool,
-                                                      local_abspath),
-                           APR_HASH_KEY_STRING,
-                           svn_string_dup(val, hash_pool));
-            }
-        }
-    }
 
   /* The new text base will be found in the pristine store by its checksum. */
   SVN_ERR(svn_wc__db_global_commit(db, local_abspath,
@@ -281,7 +246,6 @@ svn_wc__process_committed_internal(svn_wc__db_t *db,
                                    svn_boolean_t keep_changelist,
                                    const svn_checksum_t *sha1_checksum,
                                    const svn_wc_committed_queue_t *queue,
-                                   apr_hash_t *old_externals,
                                    apr_pool_t *scratch_pool)
 {
   svn_wc__db_kind_t kind;
@@ -293,7 +257,7 @@ svn_wc__process_committed_internal(svn_wc__db_t *db,
                                  new_revnum, new_date, rev_author,
                                  new_dav_cache,
                                  no_unlock, keep_changelist,
-                                 sha1_checksum, old_externals,
+                                 sha1_checksum,
                                  scratch_pool));
 
   /* Only check kind after processing the node itself. The node might
@@ -362,7 +326,6 @@ svn_wc__process_committed_internal(svn_wc__db_t *db,
                     keep_changelist,
                     sha1_checksum,
                     queue,
-                    old_externals,
                     iterpool));
         }
 
@@ -482,8 +445,6 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
                                 svn_revnum_t new_revnum,
                                 const char *rev_date,
                                 const char *rev_author,
-                                svn_wc_external_update_t external_func,
-                                void *external_baton,
                                 svn_cancel_func_t cancel_func,
                                 void *cancel_baton,
                                 apr_pool_t *scratch_pool)
@@ -494,10 +455,6 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
   apr_time_t new_date;
   apr_hash_t *run_wqs = apr_hash_make(scratch_pool);
   apr_hash_index_t *hi;
-  apr_hash_t *old_externals = NULL;
-
-  if (external_func)
-    old_externals = apr_hash_make(scratch_pool);
 
   if (rev_date)
     SVN_ERR(svn_time_from_cstring(&new_date, rev_date, iterpool));
@@ -533,7 +490,6 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
                 cqi->no_unlock,
                 cqi->keep_changelist,
                 cqi->sha1_checksum, queue,
-                old_externals,
                 iterpool));
 
       /* Don't run the wq now, but remember that we must call it for this
@@ -555,34 +511,8 @@ svn_wc_process_committed_queue2(svn_wc_committed_queue_t *queue,
 
   /* Ok; everything is committed now. Now we can start calling callbacks */
 
-  /* Are there changed externals definitions that we should report? */
-  if (old_externals != NULL && apr_hash_count(old_externals) > 0)
-    {
-      for (hi = apr_hash_first(scratch_pool, old_externals);
-           hi;
-           hi = apr_hash_next(hi))
-        {
-           apr_hash_t *node_props;
-           const char *local_abspath = svn__apr_hash_index_key(hi);
-           const svn_string_t *old_val = svn__apr_hash_index_val(hi);
-           const svn_string_t *new_val = NULL;
-
-           svn_pool_clear(iterpool);
-
-           SVN_ERR(svn_wc__db_base_get_props(&node_props, wc_ctx->db,
-                                             local_abspath,
-                                             iterpool, iterpool));
-
-           if (node_props)
-              new_val = apr_hash_get(node_props, SVN_PROP_EXTERNALS,
-                                     APR_HASH_KEY_STRING);
-
-           SVN_ERR(external_func(external_baton, local_abspath,
-                                 old_val, new_val, svn_depth_unknown,
-                                 iterpool));
-                                 
-        }
-    } 
+  if (cancel_func)
+    SVN_ERR(cancel_func(cancel_baton));
 
   for (hi = apr_hash_first(scratch_pool, run_wqs);
        hi;
