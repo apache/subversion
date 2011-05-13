@@ -81,7 +81,7 @@ copy_to_tmpdir(const char **dst_abspath,
     }
   else if (*kind == svn_node_dir || is_special)
     delete_when = svn_io_file_del_on_close;
-  else if (*kind == svn_node_file)
+  else /* the default case: (*kind == svn_node_file) */
     delete_when = svn_io_file_del_none;
 
   /* ### Do we need a pool cleanup to remove the copy?  We can't use
