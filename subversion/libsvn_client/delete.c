@@ -60,7 +60,8 @@ find_undeletables(void *baton,
                              _("'%s' is in the way of the resource "
                                "actually under version control"),
                              svn_dirent_local_style(path, pool));
-  else if (! status->versioned)
+  else if (! status->versioned 
+           || status->node_status == svn_wc_status_external)
     return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
                              _("'%s' is not under version control"),
                              svn_dirent_local_style(path, pool));

@@ -73,6 +73,10 @@ combined_status(const svn_client_status_t *status)
         /* This value might be the property status */
         new_status = status->text_status;
         break;
+      case svn_wc_status_external:
+        if (status->file_external)
+          new_status = status->text_status;
+        break;
       default:
         break;
     }
