@@ -1019,7 +1019,11 @@ handle_external_item_change_wrapper(const struct item_change_baton_t *ib,
                                     target_abspath,
                                     old_item, new_item, scratch_pool);
 
-  /*if (err && err->apr_err != SVN_ERR_CANCELLED)
+  /* ### This #ifndef should probably be removed once the externals handling
+         has stabilized, but currently it catches some errors in the test suite
+         that are ignored if this code is enabled */
+#ifndef SVN_DEBUG
+  if (err && err->apr_err != SVN_ERR_CANCELLED)
     {
       if (ib->ctx->notify_func2)
         {
@@ -1033,7 +1037,8 @@ handle_external_item_change_wrapper(const struct item_change_baton_t *ib,
         }
       svn_error_clear(err);
       return SVN_NO_ERROR;
-    }*/
+    }
+#endif
 
   return svn_error_return(err);
 }
