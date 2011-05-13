@@ -946,7 +946,6 @@ def delete_revprops(sbox):
 
 @Issue(3870)
 @SkipUnless(svntest.main.is_posix_os)
-@XFail(svntest.main.is_ra_type_dav_serf)
 def fd_leak_sync_from_serf_to_local(sbox):
   "fd leak during sync from serf to local"
   import resource
