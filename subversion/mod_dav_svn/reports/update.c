@@ -1176,18 +1176,24 @@ dav_svn__update_report(const dav_resource *resource,
                     saw_rev = TRUE;
                     if (revnum_is_head && rev > revnum)
                       {
-                        /* ### This error could be improved with more details
-                           ### if we know  that this repository is a slave
-                           ### repository in a master-slave setup. */
-                        return dav_svn__new_error_tag(
-                                            resource->pool,
-                                            HTTP_INTERNAL_SERVER_ERROR,
-                                            0,
-                                            "A reported revision is higher"
-                                            " than the current HEAD revision"
-                                            " of the repository.",
-                                            SVN_DAV_ERROR_NAMESPACE,
-                                            SVN_DAV_ERROR_TAG);
+                        if (dav_svn__get_master_uri(resource->info->r))
+                          return dav_svn__new_error_tag(
+                                     resource->pool,
+                                     HTTP_INTERNAL_SERVER_ERROR, 0,
+                                     "A reported revision is higher than the "
+                                     "current repository HEAD revision.  "
+                                     "Perhaps the repository is out of date "
+                                     "with respect to the master repository?",
+                                     SVN_DAV_ERROR_NAMESPACE,
+                                     SVN_DAV_ERROR_TAG);
+                        else
+                          return dav_svn__new_error_tag(
+                                     resource->pool,
+                                     HTTP_INTERNAL_SERVER_ERROR, 0,
+                                     "A reported revision is higher than the "
+                                     "current repository HEAD revision.",
+                                     SVN_DAV_ERROR_NAMESPACE,
+                                     SVN_DAV_ERROR_TAG);
                       }
                   }
                 else if (strcmp(this_attr->name, "depth") == 0)
