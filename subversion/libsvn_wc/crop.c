@@ -50,8 +50,10 @@
   } while (0)
 
 /* Helper function that crops the children of the LOCAL_ABSPATH, under the
- * constraint of DEPTH. The DIR_PATH itself will never be cropped. The whole
- * subtree should have been locked.
+ * constraint of NEW_DEPTH. The DIR_PATH itself will never be cropped. The
+ * whole subtree should have been locked.
+ *
+ * DIR_DEPTH is the current depth of LOCAL_ABSPATH as stored in DB.
  *
  * If NOTIFY_FUNC is not null, each file and ROOT of subtree will be reported
  * upon remove.
@@ -59,7 +61,8 @@
 static svn_error_t *
 crop_children(svn_wc__db_t *db,
               const char *local_abspath,
-              svn_depth_t depth,
+              svn_depth_t dir_depth,
+              svn_depth_t new_depth,
               svn_wc_notify_func2_t notify_func,
               void *notify_baton,
               svn_cancel_func_t cancel_func,
@@ -67,31 +70,24 @@ crop_children(svn_wc__db_t *db,
               apr_pool_t *pool)
 {
   const apr_array_header_t *children;
-  svn_depth_t dir_depth;
   apr_pool_t *iterpool;
   int i;
 
-  SVN_ERR_ASSERT(depth >= svn_depth_empty && depth <= svn_depth_infinity);
+  SVN_ERR_ASSERT(new_depth >= svn_depth_empty
+                 && new_depth <= svn_depth_infinity);
 
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
 
   iterpool = svn_pool_create(pool);
 
-  SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, &dir_depth, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL,
-                               db, local_abspath, pool, iterpool));
-
   if (dir_depth == svn_depth_unknown)
     dir_depth = svn_depth_infinity;
 
   /* Update the depth of target first, if needed. */
-  if (dir_depth > depth)
-    SVN_ERR(svn_wc__db_temp_op_set_dir_depth(db, local_abspath, depth,
-                                             iterpool));
+  if (dir_depth > new_depth)
+    SVN_ERR(svn_wc__db_op_set_base_depth(db, local_abspath, new_depth,
+                                         iterpool));
 
   /* Looping over current directory's SVN entries: */
   SVN_ERR(svn_wc__db_read_children(&children, db, local_abspath, pool,
@@ -124,7 +120,7 @@ crop_children(svn_wc__db_t *db,
           svn_depth_t remove_below = (kind == svn_wc__db_kind_dir)
                                             ? svn_depth_immediates
                                             : svn_depth_files;
-          if (depth < remove_below)
+          if (new_depth < remove_below)
             SVN_ERR(svn_wc__db_op_remove_node(db, local_abspath,
                                               SVN_INVALID_REVNUM,
                                               svn_wc__db_kind_unknown,
@@ -139,7 +135,7 @@ crop_children(svn_wc__db_t *db,
              file in the future, svn_wc_remove_from_revision_control() can
              also handle it. We only need to skip the notification in that
              case. */
-          if (depth == svn_depth_empty)
+          if (new_depth == svn_depth_empty)
             IGNORE_LOCAL_MOD(
               svn_wc__internal_remove_from_revision_control(
                                                    db,
@@ -154,7 +150,7 @@ crop_children(svn_wc__db_t *db,
         }
       else if (kind == svn_wc__db_kind_dir)
         {
-          if (depth < svn_depth_immediates)
+          if (new_depth < svn_depth_immediates)
             {
               IGNORE_LOCAL_MOD(
                 svn_wc__internal_remove_from_revision_control(
@@ -170,6 +166,7 @@ crop_children(svn_wc__db_t *db,
             {
               SVN_ERR(crop_children(db,
                                     child_abspath,
+                                    child_depth,
                                     svn_depth_empty,
                                     notify_func,
                                     notify_baton,
@@ -322,6 +319,7 @@ svn_wc_crop_tree2(svn_wc_context_t *wc_ctx,
   svn_wc__db_t *db = wc_ctx->db;
   svn_wc__db_status_t status;
   svn_wc__db_kind_t kind;
+  svn_depth_t dir_depth;
 
   /* Only makes sense when the depth is restrictive. */
   if (depth == svn_depth_infinity)
@@ -331,7 +329,7 @@ svn_wc_crop_tree2(svn_wc_context_t *wc_ctx,
       _("Can only crop a working copy with a restrictive depth"));
 
   SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, &dir_depth, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL,
                                db, local_abspath,
@@ -374,7 +372,7 @@ svn_wc_crop_tree2(svn_wc_context_t *wc_ctx,
         SVN_ERR_MALFUNCTION();
     }
 
-  return crop_children(db, local_abspath, depth,
+  return crop_children(db, local_abspath, dir_depth, depth,
                        notify_func, notify_baton,
                        cancel_func, cancel_baton, scratch_pool);
 }

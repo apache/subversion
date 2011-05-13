@@ -860,17 +860,6 @@ svn_wc__db_base_get_lock_tokens_recursive(apr_hash_t **lock_tokens,
                                           apr_pool_t *result_pool,
                                           apr_pool_t *scratch_pool);
 
-/* ### how to handle depth? empty != absent. thus, record depth on each
-   ### directory? empty, files, immediates, infinity. recording depth
-   ### doesn't seem to be part of BASE, but instructions on how to maintain
-   ### the BASE/WORKING/ACTUAL trees. are there other instructional items?
-
-   ### BH: We use depth as a partial incomplete marker on directories. If
-   ### depth < svn_depth_infinity, the directory can miss entries that fall
-   ### out of the scope marked by the depth. (There can still be explicitly
-   ### pulled in targets)
-*/
-
 /* ### anything else needed for maintaining the BASE tree? */
 
 
@@ -2777,13 +2766,15 @@ svn_wc__db_temp_op_remove_working(svn_wc__db_t *db,
                                   const char *local_abspath,
                                   apr_pool_t *scratch_pool);
 
-/* Sets the depth of LOCAL_ABSPATH in its working copy to DEPTH
-   using DB. */
+/* Sets the depth of LOCAL_ABSPATH in its working copy to DEPTH using DB.
+
+   Returns SVN_ERR_WC_PATH_NOT_FOUND if LOCAL_ABSPATH is not a BASE directory
+ */
 svn_error_t *
-svn_wc__db_temp_op_set_dir_depth(svn_wc__db_t *db,
-                                 const char *local_abspath,
-                                 svn_depth_t depth,
-                                 apr_pool_t *scratch_pool);
+svn_wc__db_op_set_base_depth(svn_wc__db_t *db,
+                             const char *local_abspath,
+                             svn_depth_t depth,
+                             apr_pool_t *scratch_pool);
 
 /* ### temp function. return the FORMAT for the directory LOCAL_ABSPATH.  */
 svn_error_t *

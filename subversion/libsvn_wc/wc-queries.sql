@@ -529,22 +529,7 @@ WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
 -- STMT_UPDATE_NODE_BASE_DEPTH
 UPDATE nodes SET depth = ?3
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
-
--- STMT_UPDATE_NODE_WORKING_DEPTH
-UPDATE nodes SET depth = ?3
-WHERE wc_id = ?1 AND local_relpath = ?2 AND
-      op_depth = (SELECT MAX(op_depth) FROM nodes
-                  WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth > 0)
-
--- STMT_UPDATE_NODE_BASE_EXCLUDED
-UPDATE nodes SET presence = 'excluded', depth = NULL
-WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = 0
-
--- STMT_UPDATE_NODE_WORKING_EXCLUDED
-UPDATE nodes SET presence = 'excluded', depth = NULL
-WHERE wc_id = ?1 AND local_relpath = ?2 AND
-      op_depth = (SELECT MAX(op_depth) FROM nodes
-                  WHERE wc_id = ?1 AND local_relpath = ?2)
+  AND kind='dir'
 
 -- STMT_UPDATE_NODE_BASE_PRESENCE
 UPDATE nodes SET presence = ?3
