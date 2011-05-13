@@ -2015,7 +2015,7 @@ base_get_info(svn_wc__db_status_t *status,
         {
           *update_root = svn_sqlite__column_boolean(stmt, 14);
         }
-      if (needs_full_update)
+      if (needs_full_update && status)
         {
           /* Before we add a new column it is equivalent to the wc-ng
              incomplete presence */
