@@ -555,16 +555,16 @@ svn_wc_diff6(svn_wc_context_t *wc_ctx,
     get_all = FALSE;
 
   /* Walk status handles files and directories */
-  SVN_ERR(svn_wc_walk_status(wc_ctx, local_abspath, depth,
-                             get_all,
-                             TRUE /* no_ignore */,
-                             FALSE /* ignore_text_mods */,
-                             NULL /* ignore_patterns */,
-                             diff_status_callback,
-                             &eb,
-                             NULL, NULL, /* external func & baton */
-                             cancel_func, cancel_baton,
-                             scratch_pool));
+  SVN_ERR(svn_wc__internal_walk_status(wc_ctx->db, local_abspath, depth,
+                                       get_all,
+                                       TRUE /* no_ignore */,
+                                       FALSE /* ignore_text_mods */,
+                                       NULL /* ignore_patterns */,
+                                       diff_status_callback,
+                                       &eb,
+                                       NULL, NULL, /* external func & baton */
+                                       cancel_func, cancel_baton,
+                                       scratch_pool));
 
   return SVN_NO_ERROR;
 }
