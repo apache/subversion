@@ -2466,8 +2466,7 @@ run_final_query(void *baton,
                 svn_wc__db_wcroot_t *wcroot,
                 apr_pool_t *scratch_pool)
 {
-  int *final_queries = baton;
-  int *query_idx = final_queries;
+  int *query_idx = baton;
   svn_error_t *err = SVN_NO_ERROR;
 
   while (*query_idx >= 0)
