@@ -2271,14 +2271,16 @@ close_directory(void *dir_baton,
   struct dir_baton *db = dir_baton;
   struct edit_baton *eb = db->edit_baton;
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
-  apr_array_header_t *entry_prop_changes, *dav_prop_changes,
-                     *regular_prop_changes;
+  apr_array_header_t *entry_prop_changes;
+  apr_array_header_t *dav_prop_changes;
+  apr_array_header_t *regular_prop_changes;
   apr_hash_t *base_props;
   apr_hash_t *actual_props;
-  apr_hash_t *new_base_props = NULL, *new_actual_props = NULL;
+  apr_hash_t *new_base_props = NULL;
+  apr_hash_t *new_actual_props = NULL;
   svn_revnum_t new_changed_rev = SVN_INVALID_REVNUM;
-  apr_time_t new_changed_date;
-  const char *new_changed_author;
+  apr_time_t new_changed_date = 0;
+  const char *new_changed_author = NULL;
   apr_pool_t *scratch_pool = db->pool;
   svn_skel_t *all_work_items = NULL;
 
