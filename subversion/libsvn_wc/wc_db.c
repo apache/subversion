@@ -2466,10 +2466,18 @@ run_final_query(void *baton,
                 svn_wc__db_wcroot_t *wcroot,
                 apr_pool_t *scratch_pool)
 {
-  int *finalize_idx = baton;
+  int *final_queries = baton;
+  int *query_idx = final_queries;
+  svn_error_t *err = SVN_NO_ERROR;
 
-  return svn_error_return(svn_sqlite__exec_statements(wcroot->sdb,
-                                                      *finalize_idx));
+  while (*query_idx >= 0)
+    {
+      err = svn_error_compose_create(err, svn_sqlite__exec_statements(
+                                                 wcroot->sdb, *query_idx));
+      query_idx++;
+    }
+
+  return err;
 }
 
 static svn_error_t *
@@ -4944,11 +4952,105 @@ svn_wc__db_op_modified(svn_wc__db_t *db,
   NOT_IMPLEMENTED();
 }
 
+/* */
+static svn_error_t *
+populate_targets_tree(svn_wc__db_wcroot_t *wcroot,
+                      const char *local_relpath,
+                      svn_depth_t depth,
+                      const apr_array_header_t *changelist_filter,
+                      apr_pool_t *scratch_pool)
+{
+  apr_hash_t *changelist_hash = NULL;
+  svn_boolean_t have_row;
+  svn_sqlite__stmt_t *stmt;
+  const char *parent_relpath;
+
+  parent_relpath = svn_relpath_dirname(local_relpath, scratch_pool);
+
+  if (changelist_filter && changelist_filter->nelts)
+    SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelist_filter,
+                                       scratch_pool));
+
+  SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb,
+                                      STMT_CREATE_TARGETS_LIST));
+
+  switch (depth)
+    {
+      case svn_depth_empty:
+        if (changelist_hash)
+          {
+            const char *changelist;
+
+            SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                              STMT_SELECT_ACTUAL_CHANGELIST));
+            SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id,
+                                      local_relpath));
+            SVN_ERR(svn_sqlite__step(&have_row, stmt));
+            changelist = svn_sqlite__column_text(stmt, 0, scratch_pool);
+            SVN_ERR(svn_sqlite__reset(stmt));
+
+            if (changelist == NULL)
+              {
+                /* No changelist, so return. */
+                return SVN_NO_ERROR;
+              }
+
+            if (apr_hash_get(changelist_hash, changelist,
+                             APR_HASH_KEY_STRING) == NULL)
+              {
+                /* Changelist exists, but doesn't match. */
+                return SVN_NO_ERROR;
+              }
+          }
+
+        /* Insert this single path. */
+        SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                          STMT_INSERT_TARGET));
+        SVN_ERR(svn_sqlite__bindf(stmt, "ss", local_relpath, parent_relpath));
+        SVN_ERR(svn_sqlite__step_done(stmt));
+
+        break;
+
+      default:
+        /* Currently only defined for depth == empty */
+        SVN_ERR_MALFUNCTION();
+        break;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+#if 0
+static svn_error_t *
+dump_targets(svn_wc__db_wcroot_t *wcroot,
+             apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_TARGETS));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  while (have_row)
+    {
+      const char *target = svn_sqlite__column_text(stmt, 0, NULL);
+      SVN_DBG(("Target: '%s'\n", target));
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  return SVN_NO_ERROR;
+}
+#endif
+
 
 struct set_changelist_baton_t
 {
   const char *new_changelist;
   const apr_array_header_t *changelist_filter;
+  svn_depth_t depth;
 };
 
 
@@ -4961,91 +5063,34 @@ set_changelist_txn(void *baton,
 {
   struct set_changelist_baton_t *scb = baton;
   svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
 
+  SVN_ERR(populate_targets_tree(wcroot, local_relpath, scb->depth,
+                                scb->changelist_filter, scratch_pool));
+
+  /* Ensure we have actual nodes for our targets. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_INSERT_ACTUAL_EMPTIES));
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 1, wcroot->wc_id));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  /* Now create our notification table. */
   SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb,
                                       STMT_CREATE_CHANGELIST_LIST));
 
-  /* If we are filtering based on changelist_filter, we *must* already have
-     nodes, so we can skip this check. */
-  if (scb->changelist_filter && scb->changelist_filter->nelts > 0)
-    have_row = TRUE;
-  else
-    {
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_SELECT_ACTUAL_NODE));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
-      SVN_ERR(svn_sqlite__reset(stmt));
-    }
-
-  if (!have_row)
-    {
-      /* We need to insert an ACTUAL node, but only if we're not attempting
-         to remove a (non-existent) changelist. */
-      if (scb->new_changelist == NULL)
-        return SVN_NO_ERROR;
-
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_INSERT_ACTUAL_CHANGELIST));
-
-      /* The parent of relpath=="" is null, so we simply skip binding the
-         column. Otherwise, bind the proper value to 'parent_relpath'.  */
-      if (*local_relpath != '\0')
-        SVN_ERR(svn_sqlite__bind_text(stmt, 4,
-                                      svn_relpath_dirname(local_relpath,
-                                                          scratch_pool)));
-    }
-  else if (!scb->changelist_filter || scb->changelist_filter->nelts == 0)
-    {
-      /* No filtering going on: we can just use the simple statement. */
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_UPDATE_ACTUAL_CHANGELIST));
-    }
-  else
-    {
-      /* We need to execute (potentially) multiple changelist-filtered
-         queries, one for each changelist.  */
-      int i;
-
-      /* Start with the second changelist in the list of changelist filters.
-         In the case where we only have one changelist filter, this loop is
-         skipped, and we get simple single-query execution. */
-      for (i = 1; i < scb->changelist_filter->nelts; i++)
-        {
-          const char *cl = APR_ARRAY_IDX(scb->changelist_filter, i,
-                                         const char *);
-
-          SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                           STMT_UPDATE_ACTUAL_CHANGELIST_FILTER_CHANGELIST));
-          SVN_ERR(svn_sqlite__bindf(stmt, "isss", wcroot->wc_id,
-                                    local_relpath, scb->new_changelist, cl));
-          SVN_ERR(svn_sqlite__step_done(stmt));
-        }
-
-      /* Finally, we do the first changelist, and let the actual execution
-         fall through below. */
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                           STMT_UPDATE_ACTUAL_CHANGELIST_FILTER_CHANGELIST));
-      SVN_ERR(svn_sqlite__bind_text(stmt, 4,
-                                   APR_ARRAY_IDX(scb->changelist_filter, 0,
-                                                 const char *)));
-    }
-
-  /* Run the update or insert query */
-  SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id, local_relpath,
-                            scb->new_changelist));
+  /* Update our changelists. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_UPDATE_ACTUAL_CHANGELISTS));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, scb->new_changelist));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
-  if (scb->new_changelist == NULL)
-    {
-     /* When removing a changelist, we may have left an empty ACTUAL node, so
-        remove it.  */
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_DELETE_ACTUAL_EMPTY));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-      SVN_ERR(svn_sqlite__step_done(stmt));
-    }
+  /* We may have left empty ACTUAL nodes, so remove it.  */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_DELETE_ACTUAL_EMPTIES));
+  SVN_ERR(svn_sqlite__bind_int64(stmt, 1, wcroot->wc_id));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  /* Drop the targets tree table. */
+  SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb, STMT_DROP_TARGETS_LIST));
 
   return SVN_NO_ERROR;
 }
@@ -5110,8 +5155,10 @@ svn_wc__db_op_set_changelist(svn_wc__db_t *db,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  struct set_changelist_baton_t scb = { new_changelist, changelist_filter };
-  int final_query = STMT_DROP_CHANGELIST_LIST;
+  struct set_changelist_baton_t scb = { new_changelist, changelist_filter,
+                                        depth };
+  int final_queries[] = { STMT_DROP_CHANGELIST_LIST, STMT_DROP_TARGETS_LIST,
+                          -1 };
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(depth == svn_depth_empty);
@@ -5136,7 +5183,7 @@ svn_wc__db_op_set_changelist(svn_wc__db_t *db,
                                             do_changelist_notify, NULL,
                                             cancel_func, cancel_baton,
                                             notify_func, notify_baton,
-                                            run_final_query, &final_query,
+                                            run_final_query, final_queries,
                                             scratch_pool));
 }
 
@@ -6297,7 +6344,7 @@ svn_wc__db_op_delete(svn_wc__db_t *db,
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
   struct op_delete_baton_t odb;
-  int final_query = STMT_DROP_DELETE_LIST;
+  int final_queries[] = { STMT_DROP_DELETE_LIST, -1 };
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -6320,7 +6367,7 @@ svn_wc__db_op_delete(svn_wc__db_t *db,
                                             do_delete_notify, NULL,
                                             cancel_func, cancel_baton,
                                             notify_func, notify_baton,
-                                            run_final_query, &final_query,
+                                            run_final_query, final_queries,
                                             scratch_pool));
 }
 
