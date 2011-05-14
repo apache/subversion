@@ -106,6 +106,11 @@ SELECT tree_conflict_data
 FROM actual_node
 WHERE wc_id = ?1 AND local_relpath = ?2 AND tree_conflict_data IS NOT NULL
 
+-- STMT_SELECT_ACTUAL_CHANGELIST
+SELECT changelist
+FROM actual_node
+WHERE wc_id = ?1 AND local_relpath = ?2 AND changelist IS NOT NULL
+
 -- STMT_SELECT_NODE_CHILDREN_INFO
 /* Getting rows in an advantageous order using
      ORDER BY local_relpath, op_depth DESC
@@ -339,19 +344,10 @@ INSERT INTO actual_node (
   wc_id, local_relpath, prop_reject, parent_relpath)
 VALUES (?1, ?2, ?3, ?4)
 
--- STMT_UPDATE_ACTUAL_CHANGELIST_FILTER_CHANGELIST
-UPDATE actual_node SET changelist = ?3
-WHERE wc_id = ?1 AND local_relpath = ?2
-  AND changelist=?4
-
--- STMT_UPDATE_ACTUAL_CHANGELIST
-UPDATE actual_node SET changelist = ?3
-WHERE wc_id = ?1 AND local_relpath = ?2
-
--- STMT_INSERT_ACTUAL_CHANGELIST
-INSERT INTO actual_node (
-  wc_id, local_relpath, changelist, parent_relpath)
-VALUES (?1, ?2, ?3, ?4)
+-- STMT_UPDATE_ACTUAL_CHANGELISTS
+UPDATE actual_node SET changelist = ?2
+WHERE wc_id = ?1 AND local_relpath IN
+(SELECT local_relpath from targets_list)
 
 -- STMT_RESET_ACTUAL_WITH_CHANGELIST
 REPLACE INTO actual_node (
@@ -427,9 +423,48 @@ SELECT wc_id, local_relpath, notify, changelist
 FROM changelist_list
 ORDER BY wc_id, local_relpath
 
+-- STMT_CREATE_TARGETS_LIST
+DROP TABLE IF EXISTS targets_list;
+CREATE TEMPORARY TABLE targets_list (
+  local_relpath TEXT NOT NULL,
+  parent_relpath TEXT NOT NULL
+  );
+
+-- STMT_DROP_TARGETS_LIST
+DROP TABLE targets_list;
+
+-- STMT_INSERT_TARGET
+INSERT INTO targets_list(local_relpath, parent_relpath) VALUES (?1, ?2)
+
+-- STMT_SELECT_TARGETS
+SELECT local_relpath, parent_relpath from targets_list
+
+-- STMT_INSERT_ACTUAL_EMPTIES
+INSERT OR IGNORE INTO actual_node (
+     wc_id, local_relpath, parent_relpath, properties,
+     conflict_old, conflict_new, conflict_working,
+     prop_reject, changelist, text_mod, tree_conflict_data )
+SELECT ?1, local_relpath, parent_relpath, NULL, NULL, NULL, NULL,
+       NULL, NULL, NULL, NULL
+FROM targets_list
+
 -- STMT_DELETE_ACTUAL_EMPTY
 DELETE FROM actual_node
 WHERE wc_id = ?1 AND local_relpath = ?2
+  AND properties IS NULL
+  AND conflict_old IS NULL
+  AND conflict_new IS NULL
+  AND prop_reject IS NULL
+  AND changelist IS NULL
+  AND text_mod IS NULL
+  AND tree_conflict_data IS NULL
+  AND older_checksum IS NULL
+  AND right_checksum IS NULL
+  AND left_checksum IS NULL
+
+-- STMT_DELETE_ACTUAL_EMPTIES
+DELETE FROM actual_node
+WHERE wc_id = ?1
   AND properties IS NULL
   AND conflict_old IS NULL
   AND conflict_new IS NULL
