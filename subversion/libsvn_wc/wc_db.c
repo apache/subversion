@@ -2456,6 +2456,22 @@ typedef svn_error_t * (*work_callback_t)(
                           void *notify_baton,
                           apr_pool_t *scratch_pool);
 
+typedef svn_error_t * (*finalize_callback_t)(
+                          void *baton,
+                          svn_wc__db_wcroot_t *wcroot,
+                          apr_pool_t *scratch_pool);
+
+static svn_error_t *
+run_final_query(void *baton,
+                svn_wc__db_wcroot_t *wcroot,
+                apr_pool_t *scratch_pool)
+{
+  int *finalize_idx = baton;
+
+  return svn_error_return(svn_sqlite__exec_statements(wcroot->sdb,
+                                                      *finalize_idx));
+}
+
 static svn_error_t *
 with_finalization(void *baton,
                   svn_wc__db_wcroot_t *wcroot,
@@ -2468,7 +2484,8 @@ with_finalization(void *baton,
                   void *cancel_baton,
                   svn_wc_notify_func2_t notify_func,
                   void *notify_baton,
-                  int finalize_idx,
+                  finalize_callback_t finalize_func,
+                  void *finalize_baton,
                   apr_pool_t *scratch_pool)
 {
   svn_error_t *err1;
@@ -2486,7 +2503,7 @@ with_finalization(void *baton,
       err1 = svn_error_compose_create(err1, err2);
     }
 
-  err2 = svn_sqlite__exec_statements(wcroot->sdb, finalize_idx);
+  err2 = finalize_func(finalize_baton, wcroot, scratch_pool);
 
   return svn_error_return(svn_error_compose_create(err1, err2));
 }
@@ -5094,6 +5111,7 @@ svn_wc__db_op_set_changelist(svn_wc__db_t *db,
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
   struct set_changelist_baton_t scb = { new_changelist, changelist_filter };
+  int final_query = STMT_DROP_CHANGELIST_LIST;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(depth == svn_depth_empty);
@@ -5118,7 +5136,7 @@ svn_wc__db_op_set_changelist(svn_wc__db_t *db,
                                             do_changelist_notify, NULL,
                                             cancel_func, cancel_baton,
                                             notify_func, notify_baton,
-                                            STMT_DROP_CHANGELIST_LIST,
+                                            run_final_query, &final_query,
                                             scratch_pool));
 }
 
@@ -6279,6 +6297,7 @@ svn_wc__db_op_delete(svn_wc__db_t *db,
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
   struct op_delete_baton_t odb;
+  int final_query = STMT_DROP_DELETE_LIST;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -6301,7 +6320,7 @@ svn_wc__db_op_delete(svn_wc__db_t *db,
                                             do_delete_notify, NULL,
                                             cancel_func, cancel_baton,
                                             notify_func, notify_baton,
-                                            STMT_DROP_DELETE_LIST,
+                                            run_final_query, &final_query,
                                             scratch_pool));
 }
 
