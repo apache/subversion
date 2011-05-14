@@ -431,7 +431,7 @@ CREATE TEMPORARY TABLE targets_list (
   );
 
 -- STMT_DROP_TARGETS_LIST
-DROP TABLE targets_list;
+DROP TABLE IF EXISTS targets_list;
 
 -- STMT_INSERT_TARGET
 INSERT INTO targets_list(local_relpath, parent_relpath) VALUES (?1, ?2)
