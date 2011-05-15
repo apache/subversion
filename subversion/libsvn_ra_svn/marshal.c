@@ -638,11 +638,11 @@ static svn_error_t *read_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     }
 
   /* Return the string properly wrapped into an RA_SVN item.
+   * Note that the svn_string_t structure is identical to the
+   * data and len members in stringbuf. 
    */
   item->kind = SVN_RA_SVN_STRING;
-  item->u.string = apr_palloc(pool, sizeof(*item->u.string));
-  item->u.string->data = stringbuf->data;
-  item->u.string->len = stringbuf->len;
+  item->u.string = (svn_string_t *)(&stringbuf->data);
 
   return SVN_NO_ERROR;
 }
