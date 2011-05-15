@@ -551,6 +551,12 @@ tree_conflict(merge_cmd_baton_t *merge_b,
                                  node_kind, action, reason));
       SVN_ERR(svn_wc__add_tree_conflict(merge_b->ctx->wc_ctx, conflict,
                                         merge_b->pool));
+
+      if (merge_b->conflicted_paths == NULL)
+        merge_b->conflicted_paths = apr_hash_make(merge_b->pool);
+
+      apr_hash_set(merge_b->conflicted_paths, victim_abspath,
+                   APR_HASH_KEY_STRING, victim_abspath);
     }
 
   return SVN_NO_ERROR;
@@ -586,6 +592,12 @@ tree_conflict_on_add(merge_cmd_baton_t *merge_b,
       /* There is no existing tree conflict so it is safe to add one. */
       SVN_ERR(svn_wc__add_tree_conflict(merge_b->ctx->wc_ctx, conflict,
                                         merge_b->pool));
+
+      if (merge_b->conflicted_paths == NULL)
+        merge_b->conflicted_paths = apr_hash_make(merge_b->pool);
+
+      apr_hash_set(merge_b->conflicted_paths, victim_abspath,
+                   APR_HASH_KEY_STRING, victim_abspath);
     }
   else if (existing_conflict->action == svn_wc_conflict_action_delete &&
            conflict->action == svn_wc_conflict_action_add)
@@ -610,6 +622,12 @@ tree_conflict_on_add(merge_cmd_baton_t *merge_b,
 
       SVN_ERR(svn_wc__add_tree_conflict(merge_b->ctx->wc_ctx, conflict,
                                         merge_b->pool));
+
+      if (merge_b->conflicted_paths == NULL)
+        merge_b->conflicted_paths = apr_hash_make(merge_b->pool);
+
+      apr_hash_set(merge_b->conflicted_paths, victim_abspath,
+                   APR_HASH_KEY_STRING, victim_abspath);
     }
 
   /* In any other cases, we don't touch the existing conflict. */
@@ -8040,6 +8058,9 @@ remove_noop_subtree_ranges(const char *url1,
 
    Handle DEPTH as documented for svn_client_merge3().
 
+   If ABORT_ON_CONFLICTS is TRUE raise an SVN_ERR_WC_FOUND_CONFLICT error
+   if any merge conflicts occur.
+
    Perform any temporary allocations in SCRATCH_POOL.
 
    NOTE: This is a wrapper around drive_merge_report_editor() which
@@ -8056,6 +8077,7 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
                    const char *target_abspath,
                    svn_depth_t depth,
                    svn_boolean_t squelch_mergeinfo_notifications,
+                   svn_boolean_t abort_on_conflicts,
                    notification_receiver_baton_t *notify_b,
                    merge_cmd_baton_t *merge_b,
                    apr_pool_t *scratch_pool)
@@ -8331,7 +8353,7 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
               next_end_rev =
                 get_most_inclusive_end_rev(notify_b->children_with_mergeinfo,
                                            is_rollback);
-              if ((next_end_rev != SVN_INVALID_REVNUM)
+              if ((next_end_rev != SVN_INVALID_REVNUM || abort_on_conflicts)
                   && is_path_conflicted_by_merge(merge_b))
                 {
                   svn_merge_range_t conflicted_range;
@@ -8685,9 +8707,16 @@ do_merge(apr_hash_t **modified_subtrees,
         }
       else if (target_kind == svn_node_dir)
         {
+          /* If conflicts occur while merging any but the very last
+           * revision range we want an error to be raised that aborts
+           * the merge operation. The user will be asked to resolve conflicts
+           * before merging subsequent revision ranges. */
+          svn_boolean_t abort_on_conflicts = (i < merge_sources->nelts - 1);
+
           SVN_ERR(do_directory_merge(result_catalog,
                                      url1, rev1, url2, rev2, target_abspath,
                                      depth, squelch_mergeinfo_notifications,
+                                     abort_on_conflicts,
                                      &notify_baton, &merge_cmd_baton,
                                      iterpool));
 
