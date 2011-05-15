@@ -1331,36 +1331,47 @@ membuffer_cache_set_partial(svn_membuffer_t *cache,
        */
       err = func(&data, &size, baton, pool);
 
-      /* if modification caused a re-allocation, we need to remove the old
-       * entry and to copy the new data back into cache.
-       */
-      if (data != orig_data)
+      if (err)
         {
-          /* Remove the old entry and try to make space for the new one.
+          /* Something somewhere when wrong while FUNC was modifying the 
+           * changed item. Thus, it might have become invalid /corrupted.
+           * We better drop that. 
            */
           drop_entry(cache, entry);
-          if (   (cache->data_size / 4 > size)
-              && ensure_data_insertable(cache, size))
+        }
+      else
+        {
+          /* if the modification caused a re-allocation, we need to remove
+           * the old entry and to copy the new data back into cache.
+           */
+          if (!err && (data != orig_data))
             {
-              /* Write the new entry.
+              /* Remove the old entry and try to make space for the new one.
                */
-              entry->size = size;
-              entry->offset = cache->current_data;
-              if (size)
-                memcpy(cache->data + entry->offset, data, size);
+              drop_entry(cache, entry);
+              if (   (cache->data_size / 4 > size)
+                  && ensure_data_insertable(cache, size))
+                {
+                  /* Write the new entry.
+                   */
+                  entry->size = size;
+                  entry->offset = cache->current_data;
+                  if (size)
+                    memcpy(cache->data + entry->offset, data, size);
 
-              /* Link the entry properly.
-               */
-              insert_entry(cache, entry);
+                  /* Link the entry properly.
+                   */
+                  insert_entry(cache, entry);
 
 #ifdef DEBUG_CACHE_MEMBUFFER
 
-              /* Remember original content, type and key (hashes)
-               */
-              SVN_ERR(store_content_part(tag, data, size, pool));
-              memcpy(&entry->tag, tag, sizeof(*tag));
+                  /* Remember original content, type and key (hashes)
+                   */
+                  SVN_ERR(store_content_part(tag, data, size, pool));
+                  memcpy(&entry->tag, tag, sizeof(*tag));
 
 #endif
+                }
             }
         }
     }
