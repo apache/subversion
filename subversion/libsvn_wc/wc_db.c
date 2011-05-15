@@ -2955,6 +2955,7 @@ svn_wc__db_external_add_dir(svn_wc__db_t *db,
                                 &ieb, scratch_pool));
 }
 
+#if SVN_WC__VERSION >= SVN_WC__HAS_EXTERNALS_STORE
 static svn_error_t *
 db_external_remove(void *baton, svn_wc__db_wcroot_t *wcroot,
                    const char *local_relpath, apr_pool_t *scratch_pool)
@@ -2969,6 +2970,7 @@ db_external_remove(void *baton, svn_wc__db_wcroot_t *wcroot,
   /* ### What about actual? */
   return SVN_NO_ERROR;
 }
+#endif
 
 svn_error_t *
 svn_wc__db_external_remove(svn_wc__db_t *db,
@@ -4959,7 +4961,6 @@ populate_targets_tree(svn_wc__db_wcroot_t *wcroot,
                       const apr_array_header_t *changelist_filter,
                       apr_pool_t *scratch_pool)
 {
-  svn_boolean_t have_row;
   svn_sqlite__stmt_t *stmt;
   const char *parent_relpath;
 
