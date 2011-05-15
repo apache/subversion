@@ -1311,7 +1311,6 @@ def revert_empty_actual(sbox):
   expected_status.remove('alpha')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-@XFail()
 @Issue(3879)
 def revert_tree_conflicts_with_replacements(sbox):
   "revert tree conflicts with replacements"
@@ -1368,7 +1367,7 @@ def revert_tree_conflicts_with_replacements(sbox):
   file_append(wc('A/D/gamma'), "Local change.\n")
   file_append(wc('A/D/G/pi'), "Local change.\n")
 
-  # Case 3: incoming replacements
+  # Case 3: local replacements
   sbox.simple_rm('A/B/lambda', 'A/B/E')
   file_write(wc('A/B/lambda'), "A fresh local file.\n")
   os.mkdir(wc('A/B/E'))
@@ -1390,22 +1389,22 @@ def revert_tree_conflicts_with_replacements(sbox):
     'A/B/lambda'      : Item(status='R ', wc_rev=2, treeconflict='C'),
     'A/C'             : Item(status='  ', wc_rev=2),
     'A/D'             : Item(status='  ', wc_rev=2),
-    'A/D/G'           : Item(status='A ', wc_rev='-', copied='+',
+    'A/D/G'           : Item(status='R ', wc_rev='-', copied='+',
                              treeconflict='C'),
-    'A/D/G/inc_rho'   : Item(status='  '),
+    'A/D/G/inc_rho'   : Item(status='D ', wc_rev=2),
     'A/D/G/pi'        : Item(status='M ', wc_rev='-', copied='+'),
     'A/D/G/rho'       : Item(status='  ', wc_rev='-', copied='+'),
     'A/D/G/tau'       : Item(status='  ', wc_rev='-', copied='+'),
-    'A/D/H'           : Item(status='A ', wc_rev='-', treeconflict='C'),
+    'A/D/H'           : Item(status='R ', wc_rev=2, treeconflict='C'),
     'A/D/H/chi'       : Item(status='A ', wc_rev='-'),
-    'A/D/H/inc_psi'   : Item(status='  '),
+    'A/D/H/inc_psi'   : Item(status='D ', wc_rev=2),
     'A/D/H/loc_psi'   : Item(status='A ', wc_rev='-'),
-    'A/D/gamma'       : Item(status='A ', wc_rev='-', copied='+',
+    'A/D/gamma'       : Item(status='R ', wc_rev='-', copied='+',
                              treeconflict='C'),
-    'A/mu'            : Item(status='A ', wc_rev='-', treeconflict='C'),
+    'A/mu'            : Item(status='R ', wc_rev=2, treeconflict='C'),
     'iota'            : Item(status='  ', wc_rev=2),
     })
-  #svntest.actions.run_and_verify_unquiet_status(wc_dir, expected_status)
+  svntest.actions.run_and_verify_unquiet_status(wc_dir, expected_status)
 
   def cd_and_status_u(dir_target):
     was_cwd = os.getcwd()
@@ -1416,44 +1415,39 @@ def revert_tree_conflicts_with_replacements(sbox):
   cd_and_status_u('A')
   cd_and_status_u('A/D')
 
-  # As of r1101762, the following 'status -u' commands fail with "svn:
+  # Until r1102143, the following 'status -u' commands failed with "svn:
   # E165004: Two top-level reports with no target".
-  #cd_and_status_u('A/D/G')
-  #cd_and_status_u('A/D/H')
+  cd_and_status_u('A/D/G')
+  cd_and_status_u('A/D/H')
 
   # Revert everything (i.e., accept "theirs-full").
   svntest.actions.run_and_verify_revert([    
     wc('A/B/E'),
+    wc('A/B/E/alpha'),   # incoming
     wc('A/B/E/beta'),
     wc('A/B/E/loc_beta'),
     wc('A/B/lambda'),
     wc('A/D/G'),
     wc('A/D/G/pi'),
+    wc('A/D/G/inc_rho'), # incoming
     wc('A/D/G/rho'),
     wc('A/D/G/tau'),
     wc('A/D/H'),
     wc('A/D/H/chi'),
+    wc('A/D/H/inc_psi'), # incoming
     wc('A/D/H/loc_psi'),
     wc('A/D/gamma'),
     wc('A/mu'),
     wc('A/B/E/alpha'),
     ], '-R', wc_dir)
+
+  # Remove a few unversioned files that revert left behind.
   os.remove(wc('A/B/E/loc_beta'))
+  os.remove(wc('A/D/G/rho'))
+  os.remove(wc('A/D/G/tau'))
+  os.remove(wc('A/D/H/loc_psi'))
 
-  # After reverting, there shouldn't be any unversioned items on disk
-  # except for loc_beta, a locally added file.  The following deletions
-  # make the following update successful (as of r1101762), but they
-  # shouldn't be needed.
-  #svntest.main.safe_rmtree(wc('A/D/G'))
-  #svntest.main.safe_rmtree(wc('A/D/H'))
-  #os.remove(wc('A/D/gamma'))
-  #os.remove(wc('A/mu'))
-
-  # Where the update skipped tree conflicts, the incoming items were thrown
-  # away.  Currently we have to update again to get that data.
-  run_svn(None, 'up', wc_dir)
-
-  # The revert operation should put all of the incoming items in place.
+  # The update operation should have put all incoming items in place.
   expected_status = svntest.wc.State(wc_dir, {
     ''                : Item(status='  ', wc_rev=2),
     'A'               : Item(status='  ', wc_rev=2),
