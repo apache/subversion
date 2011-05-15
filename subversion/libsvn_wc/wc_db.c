@@ -5005,7 +5005,8 @@ populate_targets_tree(svn_wc__db_wcroot_t *wcroot,
         /* Insert this single path. */
         SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                           STMT_INSERT_TARGET));
-        SVN_ERR(svn_sqlite__bindf(stmt, "ss", local_relpath, parent_relpath));
+        SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id, local_relpath,
+                                  parent_relpath));
         SVN_ERR(svn_sqlite__step_done(stmt));
 
         break;
@@ -5081,6 +5082,16 @@ set_changelist_txn(void *baton,
                                     STMT_UPDATE_ACTUAL_CHANGELISTS));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, scb->new_changelist));
   SVN_ERR(svn_sqlite__step_done(stmt));
+
+  if (scb->new_changelist)
+    {
+      /* We have to notify that we skipped directories, so do that now. */
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_MARK_SKIPPED_CHANGELIST_DIRS));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id,
+                                scb->new_changelist));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
 
   /* We may have left empty ACTUAL nodes, so remove it.  */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,

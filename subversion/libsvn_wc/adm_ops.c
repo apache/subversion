@@ -2181,19 +2181,6 @@ changelist_walker(const char *local_abspath,
 {
   struct changelist_walker_baton *cwb = baton;
 
-  /* We can't add directories to changelists. */
-  if (kind == svn_node_dir && cwb->new_changelist)
-    {
-      if (cwb->notify_func)
-        cwb->notify_func(cwb->notify_baton,
-                         svn_wc_create_notify(local_abspath,
-                                              svn_wc_notify_skip,
-                                              scratch_pool),
-                         scratch_pool);
-
-      return SVN_NO_ERROR;
-    }
-
   /* Set the changelist. */
   SVN_ERR(svn_wc__db_op_set_changelist(cwb->db, local_abspath,
                                        cwb->new_changelist,
