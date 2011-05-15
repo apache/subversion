@@ -8061,6 +8061,7 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
                    apr_pool_t *scratch_pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
+  svn_error_t *merge_conflict_err = SVN_NO_ERROR;
 
   /* The range defining the mergeinfo we will record to describe the merge
      (assuming we are recording mergeinfo
@@ -8336,9 +8337,10 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
                   svn_merge_range_t conflicted_range;
                   conflicted_range.start = start_rev;
                   conflicted_range.end = end_rev;
-                  err = make_merge_conflict_error(merge_b->target_abspath,
-                                                  &conflicted_range,
-                                                  scratch_pool);
+                  merge_conflict_err = make_merge_conflict_error(
+                                         merge_b->target_abspath,
+                                         &conflicted_range,
+                                         scratch_pool);
                   range.end = end_rev;
                   break;
                 }
@@ -8371,14 +8373,14 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
   /* Record mergeinfo where appropriate.*/
   if (record_mergeinfo)
     {
-      SVN_ERR(record_mergeinfo_for_dir_merge(result_catalog,
-                                             &range,
-                                             mergeinfo_path,
-                                             depth,
-                                             squelch_mergeinfo_notifications,
-                                             notify_b,
-                                             merge_b,
-                                             scratch_pool));
+      err = record_mergeinfo_for_dir_merge(result_catalog,
+                                           &range,
+                                           mergeinfo_path,
+                                           depth,
+                                           squelch_mergeinfo_notifications,
+                                           notify_b,
+                                           merge_b,
+                                           scratch_pool);
 
       /* If a path has an immediate parent with non-inheritable mergeinfo at
          this point, then it meets criteria 3 or 5 described in
@@ -8394,12 +8396,16 @@ do_directory_merge(svn_mergeinfo_catalog_t result_catalog,
          So here we look at the root path of each subtree added during the
          merge and set explicit mergeinfo on it if it meets the aforementioned
          conditions. */
-      SVN_ERR(record_mergeinfo_for_added_subtrees(
-        &range, mergeinfo_path, depth, squelch_mergeinfo_notifications,
-        notify_b, merge_b, scratch_pool));
+      if (err == SVN_NO_ERROR)
+        {
+          err = record_mergeinfo_for_added_subtrees(
+                  &range, mergeinfo_path, depth,
+                  squelch_mergeinfo_notifications,
+                  notify_b, merge_b, scratch_pool);
+        }
     }
 
-  return svn_error_return(err);
+  return svn_error_compose_create(err, merge_conflict_err);
 }
 
 /** Ensure that *RA_SESSION is opened to URL, either by reusing
