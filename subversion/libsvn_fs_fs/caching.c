@@ -363,7 +363,7 @@ static void
 init_txn_callbacks(svn_cache__t **cache,
                    apr_pool_t *pool)
 {
-  if (cache != NULL)
+  if (*cache != NULL)
     {
       struct txn_cleanup_baton_t *baton;
 
