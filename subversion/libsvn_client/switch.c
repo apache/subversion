@@ -88,6 +88,7 @@ switch_internal(svn_revnum_t *result_rev,
   const char *preserved_exts_str;
   apr_array_header_t *preserved_exts;
   svn_boolean_t server_supports_depth;
+  struct svn_client__dirent_fetcher_baton_t dfb;
   svn_client__external_func_baton_t efb;
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
                                                  SVN_CONFIG_CATEGORY_CONFIG,
@@ -231,6 +232,10 @@ switch_internal(svn_revnum_t *result_rev,
   SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
                                 SVN_RA_CAPABILITY_DEPTH, pool));
 
+  dfb.ra_session = ra_session;
+  SVN_ERR(svn_ra_get_session_url(ra_session, &dfb.anchor_url, pool));
+  dfb.target_revision = revnum;
+
   SVN_ERR(svn_wc_get_switch_editor4(&switch_editor, &switch_edit_baton,
                                     &revnum, ctx->wc_ctx, anchor_abspath,
                                     target, switch_rev_url, use_commit_times,
@@ -238,6 +243,7 @@ switch_internal(svn_revnum_t *result_rev,
                                     depth_is_sticky, allow_unver_obstructions,
                                     server_supports_depth,
                                     diff3_cmd, preserved_exts,
+                                    svn_client__dirent_fetcher, &dfb,
                                     ctx->conflict_func2, ctx->conflict_baton2,
                                     svn_client__external_info_gatherer, &efb,
                                     ctx->cancel_func, ctx->cancel_baton,

@@ -5156,11 +5156,6 @@ def update_deleted_locked_files(sbox):
 #----------------------------------------------------------------------
 # Test for issue #3569 svn update --depth <DEPTH> allows making a working
 # copy incomplete.
-#
-# XFail until issue #3569 is fixed.  This test needs extension to map some
-# real use cases (all add operations are missing if a directory is updated
-# without its children.)
-@XFail()
 @Issue(3569)
 def update_empty_hides_entries(sbox):
   "svn up --depth empty hides entries for next update"

@@ -1029,8 +1029,23 @@ svn_client__external_info_gatherer(void *baton,
                                    svn_depth_t depth,
                                    apr_pool_t *scratch_pool);
 
+/* Baton for svn_client__dirent_fetcher */
+struct svn_client__dirent_fetcher_baton_t
+{
+  svn_ra_session_t *ra_session;
+  svn_revnum_t target_revision;
+  const char *anchor_url;
+};
 
-
+/* Implements svn_wc_dirents_func_t for update and switch handling. Assumes
+   a struct svn_client__dirent_fetcher_baton_t * baton */
+svn_error_t *
+svn_client__dirent_fetcher(void *baton,
+                           apr_hash_t **dirents,
+                           const char *repos_root_url,
+                           const char *repos_relpath,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
 
 /* Retrieve log messages using the first provided (non-NULL) callback
    in the set of *CTX->log_msg_func3, CTX->log_msg_func2, or
