@@ -356,7 +356,7 @@ remove_txn_cache(void *baton_void)
   return  APR_SUCCESS;
 }
 
-static svn_error_t *
+static void
 init_txn_callbacks(svn_cache__t **cache,
                    apr_pool_t *pool)
 {
@@ -373,8 +373,6 @@ init_txn_callbacks(svn_cache__t **cache,
                                 remove_txn_cache,
                                 apr_pool_cleanup_null);
     }
-
-  return SVN_NO_ERROR;
 }
 
 svn_error_t *
