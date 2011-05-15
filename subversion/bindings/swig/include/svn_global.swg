@@ -86,7 +86,7 @@ static PyObject * _global_py_pool = NULL;
 #define $svn_argnum svn_argnum_$input
 
 /* We assume here that Subversion functions have no more than
-   20 fixed parameters. If you want to wrap a function that has
+   40 fixed parameters. If you want to wrap a function that has
    more fixed parameters, you'll need to add more #define
    statements. */
 %{
