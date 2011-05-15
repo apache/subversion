@@ -349,9 +349,12 @@ remove_txn_cache(void *baton_void)
 {
   struct txn_cleanup_baton_t *baton = baton_void;
 
-  /* be careful not to hurt performance by resetting newer txn's caches */
+  /* be careful not to hurt performance by resetting newer txn's caches. */
   if (*baton->to_reset == baton->txn_cache)
-    *baton->to_reset  = NULL;
+    {
+     /* This is equivalent to calling svn_fs_fs__reset_txn_caches(). */
+      *baton->to_reset  = NULL;
+    }
 
   return  APR_SUCCESS;
 }
