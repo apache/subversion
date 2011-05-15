@@ -258,7 +258,8 @@ create_stringbuf(char *data, apr_size_t size, apr_size_t blocksize,
 svn_stringbuf_t *
 svn_stringbuf_create_ensure(apr_size_t blocksize, apr_pool_t *pool)
 {
-  char *data;
+  void *mem;
+  svn_stringbuf_t *new_string;
 
   /* apr_palloc will allocate multiples of 8.
    * Thus, we would waste some of that memory if we stuck to the
@@ -266,12 +267,21 @@ svn_stringbuf_create_ensure(apr_size_t blocksize, apr_pool_t *pool)
    * use some other aligment or none at all. */
 
   ++blocksize; /* + space for '\0' */
-  data = apr_palloc(pool, APR_ALIGN_DEFAULT(blocksize));
+  blocksize = APR_ALIGN_DEFAULT(blocksize);
+  
+  /* Allocate memory for svn_string_t and data in one chunk. */
+  mem = apr_palloc(pool, sizeof(*new_string) + blocksize);
 
-  data[0] = '\0';
+  /* Initialize header and string */
+  new_string = mem;
 
-  /* wrap an svn_stringbuf_t around the new data buffer. */
-  return create_stringbuf(data, 0, blocksize, pool);
+  new_string->data = (char*)mem + sizeof(*new_string);
+  new_string->data[0] = '\0';
+  new_string->len = 0;
+  new_string->blocksize = blocksize;
+  new_string->pool = pool;
+
+  return new_string;
 }
 
 svn_stringbuf_t *
