@@ -4959,16 +4959,11 @@ populate_targets_tree(svn_wc__db_wcroot_t *wcroot,
                       const apr_array_header_t *changelist_filter,
                       apr_pool_t *scratch_pool)
 {
-  apr_hash_t *changelist_hash = NULL;
   svn_boolean_t have_row;
   svn_sqlite__stmt_t *stmt;
   const char *parent_relpath;
 
   parent_relpath = svn_relpath_dirname(local_relpath, scratch_pool);
-
-  if (changelist_filter && changelist_filter->nelts)
-    SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelist_filter,
-                                       scratch_pool));
 
   SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb,
                                       STMT_CREATE_TARGETS_LIST));
@@ -4976,38 +4971,35 @@ populate_targets_tree(svn_wc__db_wcroot_t *wcroot,
   switch (depth)
     {
       case svn_depth_empty:
-        if (changelist_hash)
+        if (changelist_filter && changelist_filter->nelts > 0)
           {
-            const char *changelist;
+            /* Iterate over the changelists, adding the nodes which match.
+               Common case: we only have one changelist, so this only
+               happens once. */
 
-            SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                              STMT_SELECT_ACTUAL_CHANGELIST));
-            SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id,
-                                      local_relpath));
-            SVN_ERR(svn_sqlite__step(&have_row, stmt));
-            changelist = svn_sqlite__column_text(stmt, 0, scratch_pool);
-            SVN_ERR(svn_sqlite__reset(stmt));
+            int i;
 
-            if (changelist == NULL)
+            for (i = 0; i < changelist_filter->nelts; i++)
               {
-                /* No changelist, so return. */
-                return SVN_NO_ERROR;
-              }
+                const char *changelist = APR_ARRAY_IDX(changelist_filter, i,
+                                                       const char *);
 
-            if (apr_hash_get(changelist_hash, changelist,
-                             APR_HASH_KEY_STRING) == NULL)
-              {
-                /* Changelist exists, but doesn't match. */
-                return SVN_NO_ERROR;
+                SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_INSERT_TARGET_WITH_CHANGELIST));
+                SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id,
+                                          local_relpath, changelist));
+                SVN_ERR(svn_sqlite__step_done(stmt));
               }
           }
-
-        /* Insert this single path. */
-        SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                          STMT_INSERT_TARGET));
-        SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id, local_relpath,
-                                  parent_relpath));
-        SVN_ERR(svn_sqlite__step_done(stmt));
+        else
+          {
+            /* Insert this single path. */
+            SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                              STMT_INSERT_TARGET));
+            SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id,
+                                      local_relpath, parent_relpath));
+            SVN_ERR(svn_sqlite__step_done(stmt));
+          }
 
         break;
 

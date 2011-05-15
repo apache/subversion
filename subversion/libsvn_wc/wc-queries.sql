@@ -445,6 +445,13 @@ DROP TABLE IF EXISTS targets_list;
 INSERT INTO targets_list(local_relpath, parent_relpath, kind)
 SELECT ?2, ?3, kind FROM nodes_current WHERE wc_id = ?1 AND local_relpath = ?2
 
+-- STMT_INSERT_TARGET_WITH_CHANGELIST
+INSERT INTO targets_list(local_relpath, parent_relpath, kind)
+SELECT N.local_relpath, N.parent_relpath, N.kind
+  FROM actual_node AS A JOIN nodes_current AS N
+    ON A.wc_id = N.wc_id AND A.local_relpath = N.local_relpath
+ WHERE N.wc_id = ?1 AND N.local_relpath = ?2 AND A.changelist = ?3
+
 -- STMT_SELECT_TARGETS
 SELECT local_relpath, parent_relpath from targets_list
 
