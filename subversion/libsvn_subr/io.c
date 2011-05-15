@@ -3582,6 +3582,15 @@ svn_io_dir_read(apr_finfo_t *finfo,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_io_dir_close(apr_dir_t *thedir)
+{
+  apr_status_t apr_err = apr_dir_close(thedir);
+  if (apr_err)
+    return svn_error_wrap_apr(apr_err, _("Error closing directory"));
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_io_dir_walk2(const char *dirname,

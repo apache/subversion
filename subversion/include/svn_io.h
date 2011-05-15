@@ -2022,6 +2022,12 @@ svn_io_dir_open(apr_dir_t **new_dir,
                 const char *dirname,
                 apr_pool_t *pool);
 
+/** Wrapper for apr_dir_close().
+ *
+ * @since New in 1.7.
+ */
+svn_error_t *
+svn_io_dir_close(apr_dir_t *thedir);
 
 /** Wrapper for apr_dir_remove().  @a dirname is utf8-encoded.
  * @note This function has this name to avoid confusion with
