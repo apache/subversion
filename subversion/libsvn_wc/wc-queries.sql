@@ -347,7 +347,12 @@ VALUES (?1, ?2, ?3, ?4)
 -- STMT_UPDATE_ACTUAL_CHANGELISTS
 UPDATE actual_node SET changelist = ?2
 WHERE wc_id = ?1 AND local_relpath IN
-(SELECT local_relpath from targets_list)
+(SELECT local_relpath FROM targets_list WHERE kind = 'file')
+
+-- STMT_MARK_SKIPPED_CHANGELIST_DIRS
+/* 7 corresponds to svn_wc_notify_skip */
+INSERT INTO changelist_list (wc_id, local_relpath, notify, changelist)
+SELECT ?1, local_relpath, 7, ?2 FROM targets_list WHERE kind = 'dir'
 
 -- STMT_RESET_ACTUAL_WITH_CHANGELIST
 REPLACE INTO actual_node (
@@ -427,14 +432,18 @@ ORDER BY wc_id, local_relpath
 DROP TABLE IF EXISTS targets_list;
 CREATE TEMPORARY TABLE targets_list (
   local_relpath TEXT NOT NULL,
-  parent_relpath TEXT NOT NULL
+  parent_relpath TEXT NOT NULL,
+  kind TEXT NOT NULL
   );
+CREATE INDEX targets_list_kind
+  ON targets_list (kind)
 
 -- STMT_DROP_TARGETS_LIST
 DROP TABLE IF EXISTS targets_list;
 
 -- STMT_INSERT_TARGET
-INSERT INTO targets_list(local_relpath, parent_relpath) VALUES (?1, ?2)
+INSERT INTO targets_list(local_relpath, parent_relpath, kind)
+SELECT ?2, ?3, kind FROM nodes_current WHERE wc_id = ?1 AND local_relpath = ?2
 
 -- STMT_SELECT_TARGETS
 SELECT local_relpath, parent_relpath from targets_list
