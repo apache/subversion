@@ -1716,6 +1716,40 @@ def file_external_update_without_commit(sbox):
   # A2/ is an uncommitted added dir with an svn:externals property set.
   sbox.simple_update()
 
+def incoming_file_on_file_external(sbox):
+  "bring in a new file over a file external"
+
+  sbox.build()
+  repo_url = sbox.repo_url
+  wc_dir = sbox.wc_dir
+
+  change_external(sbox.wc_dir, "^/A/B/lambda ext\n")
+  # And bring in the file external
+  sbox.simple_update()
+
+  svntest.main.run_svn(None, 'cp', repo_url + '/iota',
+                       repo_url + '/ext', '-m', 'copied')
+
+  # Until recently this took over the file external as 'E'xisting file, with
+  # a textual conflict.
+  expected_output = svntest.wc.State(wc_dir, {
+    'ext' : Item(verb='Skipped'),
+    })
+  svntest.actions.run_and_verify_update(wc_dir, expected_output, None, None)
+
+def incoming_file_external_on_file(sbox):
+  "bring in a new file external over a file"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  change_external(sbox.wc_dir, "^/A/B/lambda iota\n")
+
+  # And bring in the file external
+  # Returns an error: WC status of external unchanged.
+  svntest.actions.run_and_verify_update(wc_dir, None, None, None,
+                                        '.*The file external.*overwrite.*')
+
 ########################################################################
 # Run the tests
 
@@ -1751,6 +1785,8 @@ test_list = [ None,
               switch_external_on_locally_added_dir,
               file_external_in_sibling,
               file_external_update_without_commit,
+              incoming_file_on_file_external,
+              incoming_file_external_on_file,
              ]
 
 if __name__ == '__main__':
