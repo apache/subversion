@@ -1887,6 +1887,30 @@ add_directory(const char *path,
 
       return SVN_NO_ERROR;
     }
+  else if (status == svn_wc__db_status_normal
+           && (wc_kind == svn_wc__db_kind_file
+               || wc_kind == svn_wc__db_kind_symlink))
+    {
+      /* We found a file external occupating the place we need in BASE.
+
+         We can't add a not-present node in this case as that would overwrite
+         the file external. Luckily the file external itself stops us from
+         forgetting a child of this parent directory like an obstructing
+         working copy would.
+
+         The reason we get here is that the adm crawler doesn't report
+         file externals.
+      */
+
+      remember_skipped_tree(eb, db->local_abspath, pool);
+      db->skip_this = TRUE;
+      db->already_notified = TRUE;
+
+      do_notification(eb, db->local_abspath, svn_node_file,
+                      svn_wc_notify_update_skip_obstruction, pool);
+
+      return SVN_NO_ERROR;
+    }
   else if (wc_kind == svn_wc__db_kind_unknown)
     versioned_locally_and_present = FALSE; /* Tree conflict ACTUAL-only node */
   else
@@ -2858,6 +2882,31 @@ add_file(const char *path,
                                                    NULL, NULL,
                                                    pool));
 
+      remember_skipped_tree(eb, fb->local_abspath, pool);
+      fb->skip_this = TRUE;
+      fb->already_notified = TRUE;
+
+      do_notification(eb, fb->local_abspath, svn_node_file,
+                      svn_wc_notify_update_skip_obstruction, scratch_pool);
+
+      svn_pool_destroy(scratch_pool);
+
+      return SVN_NO_ERROR;
+    }
+  else if (status == svn_wc__db_status_normal
+           && (wc_kind == svn_wc__db_kind_file
+               || wc_kind == svn_wc__db_kind_symlink))
+    {
+      /* We found a file external occupating the place we need in BASE.
+
+         We can't add a not-present node in this case as that would overwrite
+         the file external. Luckily the file external itself stops us from
+         forgetting a child of this parent directory like an obstructing
+         working copy would.
+
+         The reason we get here is that the adm crawler doesn't report
+         file externals.
+      */
       remember_skipped_tree(eb, fb->local_abspath, pool);
       fb->skip_this = TRUE;
       fb->already_notified = TRUE;
