@@ -9,4 +9,8 @@ Potential items for discussion:
  * Let's finish Subversion 1.7
  * What's the plan for 1.8?
  * Key signing
+ * ra_serf issues
+   - Should we leave serf as default http library?
+   - Checkout/update editor memory and performance issues. May be
+     it is worth implementing non-skelta update editor mode in ra_serf.
  * [insert item here]
