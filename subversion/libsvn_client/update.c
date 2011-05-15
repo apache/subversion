@@ -41,6 +41,54 @@
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
 
+/* Implements svn_wc_dirents_func_t for update and switch handling. Assumes
+   a struct svn_client__dirent_fetcher_baton_t * baton */
+svn_error_t *
+svn_client__dirent_fetcher(void *baton,
+                           apr_hash_t **dirents,
+                           const char *repos_root_url,
+                           const char *repos_relpath,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
+{
+  struct svn_client__dirent_fetcher_baton_t *dfb = baton;
+  const char *old_url = NULL;
+  const char *session_relpath;
+  svn_node_kind_t kind;
+  const char *url;
+
+  url = svn_path_url_add_component2(repos_root_url, repos_relpath,
+                                    scratch_pool);
+
+  if (!svn_uri_is_ancestor(dfb->anchor_url, url))
+    {
+      SVN_ERR(svn_client__ensure_ra_session_url(&old_url, dfb->ra_session,
+                                                url, scratch_pool));
+      session_relpath = "";
+    }
+  else
+    SVN_ERR(svn_ra_get_path_relative_to_session(dfb->ra_session,
+                                                &session_relpath, url,
+                                                scratch_pool));
+
+  /* Is session_relpath still a directory? */
+  SVN_ERR(svn_ra_check_path(dfb->ra_session, session_relpath,
+                            dfb->target_revision, &kind, scratch_pool));
+
+  if (kind == svn_node_dir)
+    SVN_ERR(svn_ra_get_dir2(dfb->ra_session, dirents, NULL, NULL,
+                            session_relpath, dfb->target_revision,
+                            SVN_DIRENT_KIND, result_pool));
+  else
+    *dirents = NULL;
+
+  if (old_url)
+    SVN_ERR(svn_client__ensure_ra_session_url(&old_url, dfb->ra_session,
+                                              old_url, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 
 /*** Code. ***/
 
@@ -91,6 +139,7 @@ update_internal(svn_revnum_t *result_rev,
   const char *preserved_exts_str;
   apr_array_header_t *preserved_exts;
   svn_client__external_func_baton_t efb;
+  struct svn_client__dirent_fetcher_baton_t dfb;
   svn_boolean_t server_supports_depth;
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config,
                                                  SVN_CONFIG_CATEGORY_CONFIG,
@@ -202,12 +251,24 @@ update_internal(svn_revnum_t *result_rev,
                                                anchor_abspath, NULL, TRUE,
                                                TRUE, ctx, pool));
 
+  SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, pool));
+
   /* If we got a corrected URL from the RA subsystem, we'll need to
      relocate our working copy first. */
   if (corrected_url)
     {
-      SVN_ERR(svn_client_relocate2(anchor_abspath, anchor_url, corrected_url,
-                                   TRUE, ctx, pool));
+      const char *current_repos_root;
+      const char *current_uuid;
+
+      /* To relocate everything inside our repository we need the old and new
+         repos root. ### And we should only perform relocates on the wcroot */
+      SVN_ERR(svn_wc__node_get_repos_info(&current_repos_root, &current_uuid,
+                                          ctx->wc_ctx, anchor_abspath,
+                                          pool, pool));
+
+      /* ### Check uuid here before calling relocate? */
+      SVN_ERR(svn_client_relocate2(anchor_abspath, current_repos_root,
+                                   repos_root, ignore_externals, ctx, pool));
       anchor_url = corrected_url;
     }
 
@@ -216,12 +277,6 @@ update_internal(svn_revnum_t *result_rev,
   SVN_ERR(svn_client__get_revision_number(&revnum, NULL, ctx->wc_ctx,
                                           local_abspath, ra_session, revision,
                                           pool));
-
-  /* Take the chance to set the repository root on the target.
-     It's nice to get this information into old WCs so they are "ready"
-     when we start depending on it.  (We can never *depend* upon it in
-     a strict sense, however.) */
-  SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root, pool));
 
   /* Build a baton for the externals-info-gatherer callback. */
   efb.externals_new = apr_hash_make(pool);
@@ -232,6 +287,10 @@ update_internal(svn_revnum_t *result_rev,
   SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
                                 SVN_RA_CAPABILITY_DEPTH, pool));
 
+  dfb.ra_session = ra_session;
+  dfb.target_revision = revnum;
+  dfb.anchor_url = anchor_url;
+
   /* Fetch the update editor.  If REVISION is invalid, that's okay;
      the RA driver will call editor->set_target_revision later on. */
   SVN_ERR(svn_wc_get_update_editor4(&update_editor, &update_edit_baton,
@@ -241,6 +300,7 @@ update_internal(svn_revnum_t *result_rev,
                                     adds_as_modification,
                                     server_supports_depth,
                                     diff3_cmd, preserved_exts,
+                                    svn_client__dirent_fetcher, &dfb,
                                     ctx->conflict_func2, ctx->conflict_baton2,
                                     ignore_externals
                                         ? NULL

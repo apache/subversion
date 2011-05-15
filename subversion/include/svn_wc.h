@@ -5331,6 +5331,28 @@ typedef svn_error_t *(*svn_wc_get_file_t)(void *baton,
                                           apr_pool_t *pool);
 
 /**
+ * A simple callback type to wrap svn_ra_get_dir2() for avoiding issue #3569,
+ * where a directory is updated to a revision without some of its children
+ * recorded in the working copy. A future update won't bring these files in
+ * because the repository assumes they are already there.
+ *
+ * We really only need the names of the dirents for a not-present marking,
+ * but we also store the node-kind if we receive one.
+ *
+ * *dirents should be set to a hash mapping <tt>const char *</tt> child names,
+ * to <tt>const svn_dirent_t *</tt> instances.
+ *
+ * @since New in 1.7.
+ */
+typedef svn_error_t *(*svn_wc_dirents_func_t)(void *baton,
+                                              apr_hash_t **dirents,
+                                              const char *repos_root_url,
+                                              const char *repos_relpath,
+                                              apr_pool_t *result_pool,
+                                              apr_pool_t *scratch_pool);
+
+
+/**
  * Set @a *editor and @a *edit_baton to an editor and baton for updating a
  * working copy.
  *
@@ -5398,6 +5420,10 @@ typedef svn_error_t *(*svn_wc_get_file_t)(void *baton,
  * the ambient depth filtering, so this doesn't have to be handled in the
  * editor.
  *
+ * If @a fetch_dirents_func is not NULL, the update editor may call this
+ * callback, when asked to perform a depth restricted update. It will do this
+ * before returning the editor to allow using the primary ra session for this.
+ *
  * @since New in 1.7.
  */
 svn_error_t *
@@ -5415,6 +5441,8 @@ svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
                           svn_boolean_t server_performs_filtering,
                           const char *diff3_cmd,
                           const apr_array_header_t *preserved_exts,
+                          svn_wc_dirents_func_t fetch_dirents_func,
+                          void *fetch_dirents_baton,
                           svn_wc_conflict_resolver_func2_t conflict_func,
                           void *conflict_baton,
                           svn_wc_external_update_t external_func,
@@ -5445,6 +5473,8 @@ svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
  *
  * This function assumes that @a diff3_cmd is path encoded. Later versions
  * assume utf-8.
+ *
+ * Always passes a null dirent function.
  *
  * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.6 API.
@@ -5551,6 +5581,8 @@ svn_wc_get_switch_editor4(const svn_delta_editor_t **editor,
                           svn_boolean_t server_performs_filtering,
                           const char *diff3_cmd,
                           const apr_array_header_t *preserved_exts,
+                          svn_wc_dirents_func_t fetch_dirents_func,
+                          void *fetch_dirents_baton,
                           svn_wc_conflict_resolver_func2_t conflict_func,
                           void *conflict_baton,
                           svn_wc_external_update_t external_func,

@@ -230,6 +230,12 @@ struct edit_baton
      relative to the working copy root and the values unspecified. */
   apr_hash_t *skipped_trees;
 
+  /* A mapping from const char * repos_relpaths to the apr_hash_t * instances
+     returned from fetch_dirents_func for that repos_relpath. These
+     are used to avoid issue #3569 in specific update scenarios where a
+     restricted depth is used. */
+  apr_hash_t *dir_dirents;
+
   /* Absolute path of the working copy root or NULL if not initialized yet */
   const char *wcroot_abspath;
 
@@ -2442,6 +2448,84 @@ close_directory(void *dir_baton,
                                      scratch_pool, scratch_pool));
     }
 
+  /* Check if we should add some not-present markers before marking the
+     directory complete (Issue #3569) */
+  {
+    apr_hash_t *new_children = apr_hash_get(eb->dir_dirents, db->new_relpath,
+                                            APR_HASH_KEY_STRING);
+
+    if (new_children != NULL)
+      {
+        apr_hash_index_t *hi;
+        apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+
+        for (hi = apr_hash_first(scratch_pool, new_children);
+             hi;
+             hi = apr_hash_next(hi))
+          {
+            const char *child_name;
+            const char *child_abspath;
+            const char *child_relpath;
+            const svn_dirent_t *dirent;
+            svn_wc__db_status_t status;
+            svn_wc__db_kind_t child_kind;
+            svn_error_t *err;
+
+            svn_pool_clear(iterpool);
+
+            child_name = svn__apr_hash_index_key(hi);
+            child_abspath = svn_dirent_join(db->local_abspath, child_name,
+                                            iterpool);
+
+            dirent = svn__apr_hash_index_val(hi);
+            child_kind = (dirent->kind == svn_node_dir)
+                                        ? svn_wc__db_kind_dir
+                                        : svn_wc__db_kind_file;
+
+            if (db->ambient_depth < svn_depth_immediates
+                && child_kind == svn_wc__db_kind_dir)
+              continue; /* We don't need the subdirs */
+
+            /* ### We just check if there is some node in BASE at this path */
+            err = svn_wc__db_base_get_info(&status, NULL, NULL, NULL, NULL,
+                                           NULL, NULL, NULL, NULL, NULL, NULL,
+                                           NULL, NULL, NULL, NULL, NULL,
+                                           eb->db, child_abspath,
+                                           iterpool, iterpool);
+
+            if (!err)
+              {
+                svn_boolean_t is_wcroot;
+                SVN_ERR(svn_wc__db_is_wcroot(&is_wcroot, eb->db, child_abspath,
+                                             iterpool));
+
+                if (!is_wcroot)
+                  continue; /* Everything ok... Nothing to do here */
+                /* Fall through to allow recovering later */
+              }
+            else if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+              return svn_error_return(err);
+
+            svn_error_clear(err);
+
+            child_relpath = svn_relpath_join(db->new_relpath, child_name,
+                                             iterpool);
+
+            SVN_ERR(svn_wc__db_base_add_not_present_node(eb->db,
+                                                         child_abspath,
+                                                         child_relpath,
+                                                         eb->repos_root,
+                                                         eb->repos_uuid,
+                                                         *eb->target_revision,
+                                                         child_kind,
+                                                         NULL, NULL,
+                                                         iterpool));
+          }
+
+        svn_pool_destroy(iterpool);
+      }
+  }
+
   /* If this directory is merely an anchor for a targeted child, then we
      should not be updating the node at all.  */
   if (db->parent_baton == NULL
@@ -2454,7 +2538,6 @@ close_directory(void *dir_baton,
     }
   else
     {
-      svn_depth_t depth;
       svn_revnum_t changed_rev;
       apr_time_t changed_date;
       const char *changed_author;
@@ -2468,7 +2551,7 @@ close_directory(void *dir_baton,
                                        &changed_rev,
                                        &changed_date,
                                        &changed_author,
-                                       &depth, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, NULL,
                                        NULL, NULL,
                                        eb->db, db->local_abspath,
                                        scratch_pool, scratch_pool));
@@ -2482,11 +2565,11 @@ close_directory(void *dir_baton,
         changed_author = new_changed_author;
 
       /* If no depth is set yet, set to infinity. */
-      if (depth == svn_depth_unknown)
-        depth = svn_depth_infinity;
+      if (db->ambient_depth == svn_depth_unknown)
+        db->ambient_depth = svn_depth_infinity;
 
       if (eb->depth_is_sticky
-          && depth != eb->requested_depth)
+          && db->ambient_depth != eb->requested_depth)
         {
           /* After a depth upgrade the entry must reflect the new depth.
              Upgrading to infinity changes the depth of *all* directories,
@@ -2494,9 +2577,9 @@ close_directory(void *dir_baton,
 
           if (eb->requested_depth == svn_depth_infinity
               || (strcmp(db->local_abspath, eb->target_abspath) == 0
-                  && eb->requested_depth > depth))
+                  && eb->requested_depth > db->ambient_depth))
             {
-              depth = eb->requested_depth;
+              db->ambient_depth = eb->requested_depth;
             }
         }
 
@@ -2517,7 +2600,7 @@ close_directory(void *dir_baton,
                 props,
                 changed_rev, changed_date, changed_author,
                 NULL /* children */,
-                depth,
+                db->ambient_depth,
                 (dav_prop_changes->nelts > 0)
                     ? svn_prop_array_to_hash(dav_prop_changes, pool)
                     : NULL,
@@ -4216,6 +4299,8 @@ make_editor(svn_revnum_t *target_revision,
             void *notify_baton,
             svn_cancel_func_t cancel_func,
             void *cancel_baton,
+            svn_wc_dirents_func_t fetch_dirents_func,
+            void *fetch_dirents_baton,
             svn_wc_conflict_resolver_func2_t conflict_func,
             void *conflict_baton,
             svn_wc_external_update_t external_func,
@@ -4295,6 +4380,7 @@ make_editor(svn_revnum_t *target_revision,
   eb->allow_unver_obstructions = allow_unver_obstructions;
   eb->adds_as_modification     = adds_as_modification;
   eb->skipped_trees            = apr_hash_make(edit_pool);
+  eb->dir_dirents              = apr_hash_make(edit_pool);
   eb->ext_patterns             = preserved_exts;
 
   apr_pool_cleanup_register(edit_pool, eb, cleanup_edit_baton,
@@ -4320,6 +4406,116 @@ make_editor(svn_revnum_t *target_revision,
   /* Fiddle with the type system. */
   inner_editor = tree_editor;
   inner_baton = eb;
+
+  if (!depth_is_sticky
+      && depth != svn_depth_unknown
+      && svn_depth_empty <= depth && depth < svn_depth_infinity
+      && fetch_dirents_func)
+    {
+      /* We are asked to perform an update at a depth less than the ambient
+         depth. In this case the update won't describe additions that would
+         have been reported if we updated at the ambient depth. */
+      svn_error_t *err;
+      svn_wc__db_kind_t dir_kind;
+      svn_wc__db_status_t dir_status;
+      const char *dir_repos_relpath;
+      svn_depth_t dir_depth;
+
+      /* we have to do this on the target of the update, not the anchor */
+      err = svn_wc__db_base_get_info(&dir_status, &dir_kind, NULL,
+                                     &dir_repos_relpath, NULL, NULL, NULL,
+                                     NULL, NULL, &dir_depth, NULL, NULL, NULL,
+                                     NULL, NULL, NULL,
+                                     db, eb->target_abspath,
+                                     scratch_pool, scratch_pool);
+
+      if (!err
+          && dir_kind == svn_wc__db_kind_dir
+          && dir_status == svn_wc__db_status_normal)
+        {
+          if (dir_depth > depth)
+            {
+              apr_hash_t *dirents;
+
+              /* If we switch, we should look at the new relpath */
+              if (eb->switch_relpath)
+                dir_repos_relpath = eb->switch_relpath;
+
+              SVN_ERR(fetch_dirents_func(fetch_dirents_baton, &dirents,
+                                         repos_root, dir_repos_relpath,
+                                         edit_pool, scratch_pool));
+
+              if (dirents != NULL && apr_hash_count(dirents))
+                apr_hash_set(eb->dir_dirents,
+                             apr_pstrdup(edit_pool, dir_repos_relpath),
+                             APR_HASH_KEY_STRING,
+                             dirents);
+            }
+
+          if (depth == svn_depth_immediates)
+            {
+              /* Worst case scenario of issue #3569 fix: We have to do the
+                 same for all existing subdirs, but then we check for
+                 svn_depth_empty. */
+              apr_array_header_t *children;
+              apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+              int i;
+              SVN_ERR(svn_wc__db_base_get_children(&children, db,
+                                                   eb->target_abspath,
+                                                   scratch_pool,
+                                                   iterpool));
+
+              for (i = 0; i < children->nelts; i++)
+                {
+                  const char *child_abspath;
+                  const char *child_name;
+
+                  svn_pool_clear(iterpool);
+
+                  child_name = APR_ARRAY_IDX(children, i, const char *);
+
+                  child_abspath = svn_dirent_join(eb->target_abspath,
+                                                  child_name, iterpool);
+
+                  SVN_ERR(svn_wc__db_base_get_info(&dir_status, &dir_kind,
+                                                   NULL, &dir_repos_relpath,
+                                                   NULL, NULL, NULL, NULL,
+                                                   NULL, &dir_depth, NULL,
+                                                   NULL, NULL, NULL, NULL,
+                                                   NULL,
+                                                   db, child_abspath,
+                                                   iterpool, iterpool));
+
+                  if (dir_kind == svn_wc__db_kind_dir
+                      && dir_status == svn_wc__db_status_normal
+                      && dir_depth > svn_depth_empty)
+                    {
+                      apr_hash_t *dirents;
+
+                      /* If we switch, we should look at the new relpath */
+                      if (eb->switch_relpath)
+                        dir_repos_relpath = svn_relpath_join(
+                                                eb->switch_relpath,
+                                                child_name, iterpool);
+
+                      SVN_ERR(fetch_dirents_func(fetch_dirents_baton, &dirents,
+                                                 repos_root, dir_repos_relpath,
+                                                 edit_pool, iterpool));
+
+                      if (dirents != NULL && apr_hash_count(dirents))
+                        apr_hash_set(eb->dir_dirents,
+                                     apr_pstrdup(edit_pool, dir_repos_relpath),
+                                     APR_HASH_KEY_STRING,
+                                     dirents);
+                    }
+                }
+            }
+        }
+      else if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+        svn_error_clear(err);
+      else
+        SVN_ERR(err);
+    }
 
   /* We need to limit the scope of our operation to the ambient depths
      present in the working copy already, but only if the requested
@@ -4366,6 +4562,8 @@ svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
                           svn_boolean_t server_performs_filtering,
                           const char *diff3_cmd,
                           const apr_array_header_t *preserved_exts,
+                          svn_wc_dirents_func_t fetch_dirents_func,
+                          void *fetch_dirents_baton,
                           svn_wc_conflict_resolver_func2_t conflict_func,
                           void *conflict_baton,
                           svn_wc_external_update_t external_func,
@@ -4383,6 +4581,7 @@ svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
                      adds_as_modification, server_performs_filtering,
                      notify_func, notify_baton,
                      cancel_func, cancel_baton,
+                     fetch_dirents_func, fetch_dirents_baton,
                      conflict_func, conflict_baton,
                      external_func, external_baton,
                      diff3_cmd, preserved_exts, editor, edit_baton,
@@ -4404,6 +4603,8 @@ svn_wc_get_switch_editor4(const svn_delta_editor_t **editor,
                           svn_boolean_t server_performs_filtering,
                           const char *diff3_cmd,
                           const apr_array_header_t *preserved_exts,
+                          svn_wc_dirents_func_t fetch_dirents_func,
+                          void *fetch_dirents_baton,
                           svn_wc_conflict_resolver_func2_t conflict_func,
                           void *conflict_baton,
                           svn_wc_external_update_t external_func,
@@ -4425,6 +4626,7 @@ svn_wc_get_switch_editor4(const svn_delta_editor_t **editor,
                      server_performs_filtering,
                      notify_func, notify_baton,
                      cancel_func, cancel_baton,
+                     fetch_dirents_func, fetch_dirents_baton,
                      conflict_func, conflict_baton,
                      external_func, external_baton,
                      diff3_cmd, preserved_exts,

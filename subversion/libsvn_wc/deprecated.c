@@ -3099,6 +3099,7 @@ svn_wc_get_update_editor3(svn_revnum_t *target_revision,
                                     FALSE /* server_performs_filtering */,
                                     diff3_cmd,
                                     preserved_exts,
+                                    NULL, NULL, /* fetch_dirents_func, baton */
                                     conflict_func ? conflict_func_1to2_wrapper
                                                   : NULL,
                                     cfw,
@@ -3229,6 +3230,7 @@ svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
                                     FALSE /* server_performs_filtering */,
                                     diff3_cmd,
                                     preserved_exts,
+                                    NULL, NULL, /* fetch_dirents_func, baton */
                                     conflict_func ? conflict_func_1to2_wrapper
                                                   : NULL,
                                     cfw,
