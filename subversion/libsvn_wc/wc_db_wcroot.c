@@ -344,12 +344,12 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
                                       const char **local_relpath,
                                       svn_wc__db_t *db,
                                       const char *local_abspath,
-                                      svn_node_kind_t kind,
                                       apr_pool_t *result_pool,
                                       apr_pool_t *scratch_pool)
 {
   const char *local_dir_abspath;
   const char *original_abspath = local_abspath;
+  svn_node_kind_t kind;
   const char *build_relpath;
   svn_wc__db_wcroot_t *probe_wcroot;
   svn_wc__db_wcroot_t *found_wcroot = NULL;
@@ -380,15 +380,11 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
       return SVN_NO_ERROR;
     }
 
-  if (kind == svn_node_unknown)
-    {
-      /* ### at some point in the future, we may need to find a way to get
-         ### rid of this stat() call. it is going to happen for EVERY call
-         ### into wc_db which references a file. calls for directories could
-         ### get an early-exit in the hash lookup just above.  */
-      SVN_ERR(get_path_kind(db, local_abspath, &kind, scratch_pool));
-    }
-    
+  /* ### at some point in the future, we may need to find a way to get
+     ### rid of this stat() call. it is going to happen for EVERY call
+     ### into wc_db which references a file. calls for directories could
+     ### get an early-exit in the hash lookup just above.  */
+  SVN_ERR(get_path_kind(db, local_abspath, &kind, scratch_pool));
   if (kind != svn_node_dir)
     {
       /* If the node specified by the path is NOT present, then it cannot
