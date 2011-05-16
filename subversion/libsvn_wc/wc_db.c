@@ -5090,11 +5090,15 @@ set_changelist_txn(void *baton,
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
 
-  /* We may have left empty ACTUAL nodes, so remove it.  */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_DELETE_ACTUAL_EMPTIES));
-  SVN_ERR(svn_sqlite__bind_int64(stmt, 1, wcroot->wc_id));
-  SVN_ERR(svn_sqlite__step_done(stmt));
+  /* We may have left empty ACTUAL nodes, so remove them.  This is only a
+     potential problem if we removed changelists. */
+  if (!scb->new_changelist)
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_DELETE_ACTUAL_EMPTIES));
+      SVN_ERR(svn_sqlite__bind_int64(stmt, 1, wcroot->wc_id));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
 
   /* Drop the targets tree table. */
   SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb, STMT_DROP_TARGETS_LIST));
