@@ -3286,7 +3286,7 @@ apply_textdelta(void *file_baton,
       && expected_base_checksum
       && recorded_base_checksum->kind != svn_checksum_md5)
     SVN_ERR(svn_wc__db_pristine_get_md5(&recorded_base_checksum,
-                                        eb->db, fb->local_abspath,
+                                        eb->db, eb->wcroot_abspath,
                                         recorded_base_checksum, pool, pool));
 
 
@@ -3353,7 +3353,7 @@ apply_textdelta(void *file_baton,
   /* Open the text base for writing (this will get us a temporary file).  */
   err = svn_wc__open_writable_base(&target, &hb->new_text_base_tmp_abspath,
                                    NULL, &hb->new_text_base_sha1_checksum,
-                                   fb->edit_baton->db, fb->local_abspath,
+                                   fb->edit_baton->db, eb->wcroot_abspath,
                                    handler_pool, pool);
   if (err)
     {
