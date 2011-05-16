@@ -4969,45 +4969,52 @@ populate_targets_tree(svn_wc__db_wcroot_t *wcroot,
   SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb,
                                       STMT_CREATE_TARGETS_LIST));
 
-  switch (depth)
+  if (changelist_filter && changelist_filter->nelts > 0)
     {
-      case svn_depth_empty:
-        if (changelist_filter && changelist_filter->nelts > 0)
-          {
-            /* Iterate over the changelists, adding the nodes which match.
-               Common case: we only have one changelist, so this only
-               happens once. */
+      /* Iterate over the changelists, adding the nodes which match.
+         Common case: we only have one changelist, so this only
+         happens once. */
+      int i;
+      for (i = 0; i < changelist_filter->nelts; i++)
+        {
+          const char *changelist = APR_ARRAY_IDX(changelist_filter, i,
+                                                 const char *);
 
-            int i;
-
-            for (i = 0; i < changelist_filter->nelts; i++)
-              {
-                const char *changelist = APR_ARRAY_IDX(changelist_filter, i,
-                                                       const char *);
-
+          switch (depth)
+            {
+              case svn_depth_empty:
                 SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_INSERT_TARGET_WITH_CHANGELIST));
                 SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id,
                                           local_relpath, changelist));
                 SVN_ERR(svn_sqlite__step_done(stmt));
-              }
-          }
-        else
-          {
+                break;
+
+              default:
+                /* Currently only defined for depth == empty */
+                SVN_ERR_MALFUNCTION();
+                break;
+            }
+        }
+    }
+  else /* No changelist filtering */
+    {
+      switch (depth)
+        {
+          case svn_depth_empty:
             /* Insert this single path. */
             SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                               STMT_INSERT_TARGET));
             SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id,
                                       local_relpath, parent_relpath));
             SVN_ERR(svn_sqlite__step_done(stmt));
-          }
+            break;
 
-        break;
-
-      default:
-        /* Currently only defined for depth == empty */
-        SVN_ERR_MALFUNCTION();
-        break;
+          default:
+            /* Currently only defined for depth == empty */
+            SVN_ERR_MALFUNCTION();
+            break;
+        }
     }
 
   return SVN_NO_ERROR;
