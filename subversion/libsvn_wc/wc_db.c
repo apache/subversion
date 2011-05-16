@@ -1495,6 +1495,7 @@ svn_wc__db_get_wcroot(const char **wcroot_abspath,
 svn_error_t *
 svn_wc__db_base_add_directory(svn_wc__db_t *db,
                               const char *local_abspath,
+                              const char *wri_abspath,
                               const char *repos_relpath,
                               const char *repos_root_url,
                               const char *repos_uuid,
@@ -1528,8 +1529,9 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
 #endif
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
-                              local_abspath, scratch_pool, scratch_pool));
+                              wri_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
+  local_relpath = svn_dirent_skip_ancestor(wcroot->abspath, local_abspath);
 
   blank_ibb(&ibb);
 
@@ -1576,6 +1578,7 @@ svn_wc__db_base_add_directory(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_base_add_file(svn_wc__db_t *db,
                          const char *local_abspath,
+                         const char *wri_abspath,
                          const char *repos_relpath,
                          const char *repos_root_url,
                          const char *repos_uuid,
@@ -1608,8 +1611,9 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
   SVN_ERR_ASSERT(checksum != NULL);
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
-                              local_abspath, scratch_pool, scratch_pool));
+                              wri_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
+  local_relpath = svn_dirent_skip_ancestor(wcroot->abspath, local_abspath);
 
   blank_ibb(&ibb);
 
@@ -1657,6 +1661,7 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_base_add_symlink(svn_wc__db_t *db,
                             const char *local_abspath,
+                            const char *wri_abspath,
                             const char *repos_relpath,
                             const char *repos_root_url,
                             const char *repos_uuid,
@@ -1687,9 +1692,9 @@ svn_wc__db_base_add_symlink(svn_wc__db_t *db,
   SVN_ERR_ASSERT(target != NULL);
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
-                              local_abspath, scratch_pool, scratch_pool));
+                              wri_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
-
+  local_relpath = svn_dirent_skip_ancestor(wcroot->abspath, local_abspath);
   blank_ibb(&ibb);
 
   /* Calculate repos_id in insert_base_node() to avoid extra transaction */
