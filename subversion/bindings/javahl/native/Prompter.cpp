@@ -38,8 +38,6 @@
 /**
  * Constructor
  * @param jprompter     a global reference to the Java callback object
- * @param v2            the callback objects implements PromptUserPassword2
- * @param v3            the callback objects implements PromptUserPassword3
  */
 Prompter::Prompter(jobject jprompter)
 {
@@ -76,7 +74,7 @@ Prompter *Prompter::makeCPrompter(jobject jprompter)
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
-  // Sanity check that the Java object implements PromptUserPassword.
+  // Sanity check that the Java object implements UserPasswordCallback.
   jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/UserPasswordCallback");
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
@@ -115,7 +113,7 @@ jstring Prompter::username()
 
   if (mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/PromptUserPassword");
+      jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/UserPasswordCallback");
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
 
@@ -150,7 +148,7 @@ jstring Prompter::password()
 
   if (mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/PromptUserPassword");
+      jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/UserPasswordCallback");
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
 
@@ -188,7 +186,7 @@ bool Prompter::askYesNo(const char *realm, const char *question,
 
   if (mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/PromptUserPassword");
+      jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/UserPasswordCallback");
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN(false);
 
@@ -231,7 +229,7 @@ const char *Prompter::askQuestion(const char *realm, const char *question,
   static jmethodID mid2 = 0;
   if (mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/PromptUserPassword3");
+      jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/UserPasswordCallback");
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
 
@@ -292,7 +290,7 @@ int Prompter::askTrust(const char *question, bool maySave)
 
    if (mid == 0)
      {
-       jclass clazz = env->FindClass(JAVA_PACKAGE"/PromptUserPassword2");
+       jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/UserPasswordCallback");
        if (JNIUtil::isJavaExceptionThrown())
          POP_AND_RETURN(-1);
 
@@ -328,7 +326,7 @@ bool Prompter::prompt(const char *realm, const char *pi_username, bool maySave)
   static jmethodID mid2 = 0;
   if (mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/PromptUserPassword3");
+      jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/UserPasswordCallback");
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN(false);
 
