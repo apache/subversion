@@ -117,6 +117,9 @@ print_properties(svn_stream_t *out,
 {
   apr_hash_index_t *hi;
   apr_pool_t *iterpool = svn_pool_create(pool);
+  const char *path_prefix;
+
+  SVN_ERR(svn_dirent_get_absolute(&path_prefix, "", pool));
 
   for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
     {
@@ -132,7 +135,12 @@ print_properties(svn_stream_t *out,
           /* Print the file name. */
 
           if (! is_url)
-            filename = svn_dirent_local_style(filename, iterpool);
+            {
+              if (path_prefix)
+                filename = svn_dirent_skip_ancestor(path_prefix, filename);
+
+              filename = svn_dirent_local_style(filename, iterpool);
+            }
 
           /* In verbose mode, print exactly same as "proplist" does;
            * otherwise, print a brief header. */

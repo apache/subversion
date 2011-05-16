@@ -220,6 +220,9 @@ svn_cl__propedit(apr_getopt_t *os,
           svn_pool_clear(subpool);
           SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
 
+          if (!svn_path_is_url(target))
+            SVN_ERR(svn_dirent_get_absolute(&local_abspath, target, subpool));
+
           /* Propedits can only happen on HEAD or the working copy, so
              the peg revision can be as unspecified. */
           peg_revision.kind = svn_opt_revision_unspecified;
@@ -232,7 +235,10 @@ svn_cl__propedit(apr_getopt_t *os,
                                       NULL, ctx, subpool));
 
           /* Get the property value. */
-          propval = apr_hash_get(props, target, APR_HASH_KEY_STRING);
+          propval = apr_hash_get(props,
+                                 svn_path_is_url(target)
+                                    ? target : local_abspath,
+                                 APR_HASH_KEY_STRING);
           if (! propval)
             propval = svn_string_create("", subpool);
 
@@ -253,8 +259,6 @@ svn_cl__propedit(apr_getopt_t *os,
                 }
 
               /* Split the path if it is a file path. */
-              SVN_ERR(svn_dirent_get_absolute(&local_abspath, target, subpool));
-
               SVN_ERR(svn_wc_read_kind(&kind, ctx->wc_ctx, local_abspath, FALSE,
                                        subpool));
 
