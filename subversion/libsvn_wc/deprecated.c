@@ -3097,6 +3097,7 @@ svn_wc_get_update_editor3(svn_revnum_t *target_revision,
                                     allow_unver_obstructions,
                                     TRUE /* adds_as_modification */,
                                     FALSE /* server_performs_filtering */,
+                                    FALSE /* clean_checkout */,
                                     diff3_cmd,
                                     preserved_exts,
                                     NULL, NULL, /* fetch_dirents_func, baton */

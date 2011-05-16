@@ -190,6 +190,10 @@ struct edit_baton
   /* Handle local additions as modifications of new nodes */
   svn_boolean_t adds_as_modification;
 
+  /* If set, we check out into an empty directory. This allows for a number
+     of conflict checks to be omitted. */
+  svn_boolean_t clean_checkout;
+
   /* If this is a 'switch' operation, the new relpath of target_abspath,
      else NULL. */
   const char *switch_relpath;
@@ -2807,14 +2811,14 @@ add_file(const char *path,
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
   struct file_baton *fb;
-  svn_node_kind_t kind;
-  svn_wc__db_kind_t wc_kind;
-  svn_wc__db_status_t status;
+  svn_node_kind_t kind = svn_node_none;
+  svn_wc__db_kind_t wc_kind = svn_wc__db_kind_unknown;
+  svn_wc__db_status_t status = svn_wc__db_status_normal;
   apr_pool_t *scratch_pool;
-  svn_boolean_t conflicted;
-  svn_boolean_t versioned_locally_and_present;
+  svn_boolean_t conflicted = FALSE;
+  svn_boolean_t versioned_locally_and_present = FALSE;
   svn_wc_conflict_description2_t *tree_conflict = NULL;
-  svn_error_t *err;
+  svn_error_t *err = SVN_NO_ERROR;
 
   SVN_ERR_ASSERT(! (copyfrom_path || SVN_IS_VALID_REVNUM(copyfrom_rev)));
 
@@ -2839,14 +2843,17 @@ add_file(const char *path,
          "administrative directory"),
        svn_dirent_local_style(fb->local_abspath, pool));
 
-  SVN_ERR(svn_io_check_path(fb->local_abspath, &kind, scratch_pool));
+  if (!eb->clean_checkout)
+    {
+      SVN_ERR(svn_io_check_path(fb->local_abspath, &kind, scratch_pool));
 
-  err = svn_wc__db_read_info(&status, &wc_kind, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                             NULL, NULL, NULL, NULL, NULL,
-                             &conflicted, NULL, NULL, NULL, NULL, NULL, NULL,
-                             eb->db, fb->local_abspath,
-                             scratch_pool, scratch_pool);
+      err = svn_wc__db_read_info(&status, &wc_kind, NULL, NULL, NULL, NULL, NULL,
+                                NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                NULL, NULL, NULL, NULL, NULL,
+                                &conflicted, NULL, NULL, NULL, NULL, NULL, NULL,
+                                eb->db, fb->local_abspath,
+                                scratch_pool, scratch_pool);
+    }
 
   if (err)
     {
@@ -2855,7 +2862,6 @@ add_file(const char *path,
 
       svn_error_clear(err);
       wc_kind = svn_wc__db_kind_unknown;
-      status = svn_wc__db_status_normal;
       conflicted = FALSE;
 
       versioned_locally_and_present = FALSE;
@@ -4344,6 +4350,7 @@ make_editor(svn_revnum_t *target_revision,
             svn_boolean_t allow_unver_obstructions,
             svn_boolean_t adds_as_modification,
             svn_boolean_t server_performs_filtering,
+            svn_boolean_t clean_checkout,
             svn_wc_notify_func2_t notify_func,
             void *notify_baton,
             svn_cancel_func_t cancel_func,
@@ -4428,6 +4435,7 @@ make_editor(svn_revnum_t *target_revision,
   eb->conflict_baton           = conflict_baton;
   eb->allow_unver_obstructions = allow_unver_obstructions;
   eb->adds_as_modification     = adds_as_modification;
+  eb->clean_checkout           = clean_checkout;
   eb->skipped_trees            = apr_hash_make(edit_pool);
   eb->dir_dirents              = apr_hash_make(edit_pool);
   eb->ext_patterns             = preserved_exts;
@@ -4609,6 +4617,7 @@ svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
                           svn_boolean_t allow_unver_obstructions,
                           svn_boolean_t adds_as_modification,
                           svn_boolean_t server_performs_filtering,
+                          svn_boolean_t clean_checkout,
                           const char *diff3_cmd,
                           const apr_array_header_t *preserved_exts,
                           svn_wc_dirents_func_t fetch_dirents_func,
@@ -4628,6 +4637,7 @@ svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
                      target_basename, use_commit_times,
                      NULL, depth, depth_is_sticky, allow_unver_obstructions,
                      adds_as_modification, server_performs_filtering,
+                     clean_checkout,
                      notify_func, notify_baton,
                      cancel_func, cancel_baton,
                      fetch_dirents_func, fetch_dirents_baton,
@@ -4673,6 +4683,7 @@ svn_wc_get_switch_editor4(const svn_delta_editor_t **editor,
                      depth, depth_is_sticky, allow_unver_obstructions,
                      FALSE /* adds_as_modification */,
                      server_performs_filtering,
+                     FALSE /* clean_checkout */,
                      notify_func, notify_baton,
                      cancel_func, cancel_baton,
                      fetch_dirents_func, fetch_dirents_baton,
