@@ -50,10 +50,21 @@ get_old_version(int *version,
 {
   svn_error_t *err;
   const char *format_file_path;
+  svn_node_kind_t kind;
 
   /* Try reading the format number from the entries file.  */
   format_file_path = svn_wc__adm_child(abspath, SVN_WC__ADM_ENTRIES,
                                        scratch_pool);
+  
+  /* Since trying to open a non-existent file is quite expensive, try a
+     quick stat call first. In wc-ng w/cs, this will be an early exit. */
+  SVN_ERR(svn_io_check_path(format_file_path, &kind, scratch_pool));
+  if (kind == svn_node_none)
+    {
+      *version = 0;
+      return SVN_NO_ERROR;
+    }
+  
   err = svn_io_read_version_file(version, format_file_path, scratch_pool);
   if (err == NULL)
     return SVN_NO_ERROR;
