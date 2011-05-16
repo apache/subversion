@@ -1302,7 +1302,10 @@ does_node_exist(svn_boolean_t *exists,
 }
 
 
-/* */
+/* Create an sqlite database at DIR_ABSPATH/SDB_FNAME and insert
+   records for REPOS_ID (using REPOS_ROOT_URL and REPOS_UUID) into
+   REPOSITORY and for WC_ID into WCROOT.  Return the DB connection
+   in *SDB. */
 static svn_error_t *
 create_db(svn_sqlite__db_t **sdb,
           apr_int64_t *repos_id,
