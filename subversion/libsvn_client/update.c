@@ -92,6 +92,59 @@ svn_client__dirent_fetcher(void *baton,
 
 /*** Code. ***/
 
+/* Set *CLEAN_CHECKOUT to FALSE only if LOCAL_ABSPATH is a non-empty
+   folder. ANCHOR_ABSPATH is the w/c root and LOCAL_ABSPATH will still
+   be considered empty, if it is equal to ANCHOR_ABSPATH and only
+   contains the admin sub-folder. 
+ */
+static svn_error_t *
+is_empty_wc(const char *local_abspath, 
+            const char *anchor_abspath, 
+            svn_boolean_t *clean_checkout, 
+            apr_pool_t *pool)
+{
+  apr_dir_t *dir;
+  apr_finfo_t finfo;
+  svn_error_t *err;
+
+  /* "clean" until found dirty */
+  *clean_checkout = TRUE;
+  
+  /* open directory. If it does not exist, yet, a clean one will
+     be created by the caller. If it cannot be openend for other
+     reasons, the caller will detect and report those as well. */
+  err = svn_io_dir_open(&dir, local_abspath, pool);
+  if (err)
+    {
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
+  
+  for (err = svn_io_dir_read(&finfo, APR_FINFO_NAME, dir, pool);
+       err == SVN_NO_ERROR;
+       err = svn_io_dir_read(&finfo, APR_FINFO_NAME, dir, pool))
+    {
+      /* Ignore entries for this dir and its parent, robustly.
+         (APR promises that they'll come first, so technically
+         this guard could be moved outside the loop.  But Ryan Bloom
+         says he doesn't believe it, and I believe him. */
+      if (! (finfo.name[0] == '.'
+             && (finfo.name[1] == '\0'
+                 || (finfo.name[1] == '.' && finfo.name[2] == '\0'))))
+        {
+          if (   ! svn_wc_is_adm_dir(finfo.name, pool)
+              || strcmp(local_abspath, anchor_abspath) != 0)
+            {
+              *clean_checkout = FALSE;
+              break;
+            }
+        }
+    }
+  
+  svn_error_clear(err);
+  return svn_io_dir_close(dir);
+}
+
 /* This is a helper for svn_client__update_internal(), which see for
    an explanation of most of these parameters.  Some stuff that's
    unique is as follows:
@@ -134,6 +187,7 @@ update_internal(svn_revnum_t *result_rev,
   svn_boolean_t use_commit_times;
   svn_boolean_t sleep_here = FALSE;
   svn_boolean_t *use_sleep = timestamp_sleep ? timestamp_sleep : &sleep_here;
+  svn_boolean_t clean_checkout = FALSE;
   const char *diff3_cmd;
   svn_ra_session_t *ra_session;
   const char *preserved_exts_str;
@@ -210,6 +264,9 @@ update_internal(svn_revnum_t *result_rev,
                                     pool));
         }
     }
+
+  /* check whether the "clean c/o" optimization is applicable */
+  SVN_ERR(is_empty_wc(local_abspath, anchor_abspath, &clean_checkout, pool));
 
   /* Get the external diff3, if any. */
   svn_config_get(cfg, &diff3_cmd, SVN_CONFIG_SECTION_HELPERS,
@@ -299,6 +356,7 @@ update_internal(svn_revnum_t *result_rev,
                                     depth_is_sticky, allow_unver_obstructions,
                                     adds_as_modification,
                                     server_supports_depth,
+                                    clean_checkout,
                                     diff3_cmd, preserved_exts,
                                     svn_client__dirent_fetcher, &dfb,
                                     ctx->conflict_func2, ctx->conflict_baton2,

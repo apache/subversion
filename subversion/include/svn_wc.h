@@ -5439,6 +5439,7 @@ svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
                           svn_boolean_t allow_unver_obstructions,
                           svn_boolean_t adds_as_modification,
                           svn_boolean_t server_performs_filtering,
+                          svn_boolean_t clean_checkout,
                           const char *diff3_cmd,
                           const apr_array_header_t *preserved_exts,
                           svn_wc_dirents_func_t fetch_dirents_func,
@@ -5465,8 +5466,8 @@ svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
  * All locks, both those in @a anchor and newly acquired ones, will be
  * released when the editor driver calls @c close_edit.
  *
- * Always sets @a adds_as_modification to TRUE and @a server_performs_filtering
- * to FALSE.
+ * Always sets @a adds_as_modification to TRUE, @a server_performs_filtering
+ * and @a clean_checkout to FALSE.
  *
  * Uses a svn_wc_conflict_resolver_func_t conflict resolver instead of a
  * svn_wc_conflict_resolver_func2_t.
