@@ -662,6 +662,10 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  follow copy history by default.  Use --stop-on-copy to disable this\n"
      "  behavior, which can be useful for determining branchpoints.\n"
      "\n"
+     "  The --depth option is only valid in combination with the --diff option\n"
+     "  and limits the scope of the displayed diff to the specified depth.\n"
+
+     "\n"
      "  Examples:\n"
      "    svn log\n"
      "    svn log foo.c\n"
