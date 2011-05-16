@@ -4514,7 +4514,7 @@ make_editor(svn_revnum_t *target_revision,
               /* Worst case scenario of issue #3569 fix: We have to do the
                  same for all existing subdirs, but then we check for
                  svn_depth_empty. */
-              apr_array_header_t *children;
+              const apr_array_header_t *children;
               apr_pool_t *iterpool = svn_pool_create(scratch_pool);
               int i;
               SVN_ERR(svn_wc__db_base_get_children(&children, db,
