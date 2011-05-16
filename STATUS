@@ -307,15 +307,6 @@ Candidate changes:
    Votes:
      +1: kameshj
 
-  * r1103665
-    Use the correct type when fetching the shard offsets from the cache in FSFS.
-    Justification:
-      Without this patch, the cache always misses on 64-bit platforms, causing
-      performance degradation.  This is user-reported.
-    Notes:
-      There is a trivial conflict, which should be easily resolvable.
-    Votes:
-     +1: hwright, danielsh
 
 Veto-blocked changes:
 =====================
@@ -430,3 +421,13 @@ Approved changes:
                  that are currently nominated...so my +1 is conditional on
                  that fix being applied first.)
      +1: danielsh (pburba: a fix to #3641 was committed to trunk)
+
+  * r1103665
+    Use the correct type when fetching the shard offsets from the cache in FSFS.
+    Justification:
+      Without this patch, the cache always misses on 64-bit platforms, causing
+      performance degradation.  This is user-reported.
+    Notes:
+      There is a trivial conflict, which should be easily resolvable.
+    Votes:
+     +1: hwright, danielsh, stsp
