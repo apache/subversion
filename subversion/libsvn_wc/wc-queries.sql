@@ -347,12 +347,12 @@ VALUES (?1, ?2, ?3, ?4)
 -- STMT_UPDATE_ACTUAL_CHANGELISTS
 UPDATE actual_node SET changelist = ?2
 WHERE wc_id = ?1 AND local_relpath IN
-(SELECT local_relpath FROM targets_list WHERE kind = 'file')
+(SELECT local_relpath FROM targets_list WHERE kind = 'file' AND wc_id = ?1)
 
 -- STMT_MARK_SKIPPED_CHANGELIST_DIRS
 /* 7 corresponds to svn_wc_notify_skip */
 INSERT INTO changelist_list (wc_id, local_relpath, notify, changelist)
-SELECT ?1, local_relpath, 7, ?2 FROM targets_list WHERE kind = 'dir'
+SELECT wc_id, local_relpath, 7, ?1 FROM targets_list WHERE kind = 'dir'
 
 -- STMT_RESET_ACTUAL_WITH_CHANGELIST
 REPLACE INTO actual_node (
@@ -431,24 +431,26 @@ ORDER BY wc_id, local_relpath
 -- STMT_CREATE_TARGETS_LIST
 DROP TABLE IF EXISTS targets_list;
 CREATE TEMPORARY TABLE targets_list (
+  wc_id  INTEGER NOT NULL,
   local_relpath TEXT NOT NULL,
   parent_relpath TEXT,
   kind TEXT NOT NULL
   );
 CREATE INDEX targets_list_kind
   ON targets_list (kind)
+/* need more indicies? */
 
 -- STMT_DROP_TARGETS_LIST
 DROP TABLE IF EXISTS targets_list;
 
 -- STMT_INSERT_TARGET
-INSERT INTO targets_list(local_relpath, parent_relpath, kind)
-SELECT ?2, parent_relpath, kind
+INSERT INTO targets_list(wc_id, local_relpath, parent_relpath, kind)
+SELECT wc_id, local_relpath, parent_relpath, kind
 FROM nodes_current WHERE wc_id = ?1 AND local_relpath = ?2
 
 -- STMT_INSERT_TARGET_WITH_CHANGELIST
-INSERT INTO targets_list(local_relpath, parent_relpath, kind)
-SELECT N.local_relpath, N.parent_relpath, N.kind
+INSERT INTO targets_list(wc_id, local_relpath, parent_relpath, kind)
+SELECT N.wc_id, N.local_relpath, N.parent_relpath, N.kind
   FROM actual_node AS A JOIN nodes_current AS N
     ON A.wc_id = N.wc_id AND A.local_relpath = N.local_relpath
  WHERE N.wc_id = ?1 AND N.local_relpath = ?2 AND A.changelist = ?3
@@ -461,7 +463,7 @@ INSERT OR IGNORE INTO actual_node (
      wc_id, local_relpath, parent_relpath, properties,
      conflict_old, conflict_new, conflict_working,
      prop_reject, changelist, text_mod, tree_conflict_data )
-SELECT ?1, local_relpath, parent_relpath, NULL, NULL, NULL, NULL,
+SELECT wc_id, local_relpath, parent_relpath, NULL, NULL, NULL, NULL,
        NULL, NULL, NULL, NULL
 FROM targets_list
 
