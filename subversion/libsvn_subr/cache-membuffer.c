@@ -418,7 +418,7 @@ struct svn_membuffer_t
 
 /* Align integer VALUE to the next ITEM_ALIGNMENT boundary.
  */
-#define ALIGN_VALUE(value) ((value + ITEM_ALIGNMENT-1) & -ITEM_ALIGNMENT) 
+#define ALIGN_VALUE(value) (((value) + ITEM_ALIGNMENT-1) & -ITEM_ALIGNMENT)
 
 /* Align POINTER value to the next ITEM_ALIGNMENT boundary.
  */
