@@ -4962,9 +4962,6 @@ populate_targets_tree(svn_wc__db_wcroot_t *wcroot,
                       apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
-  const char *parent_relpath;
-
-  parent_relpath = svn_relpath_dirname(local_relpath, scratch_pool);
 
   SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb,
                                       STMT_CREATE_TARGETS_LIST));
@@ -5005,8 +5002,8 @@ populate_targets_tree(svn_wc__db_wcroot_t *wcroot,
             /* Insert this single path. */
             SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                               STMT_INSERT_TARGET));
-            SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id,
-                                      local_relpath, parent_relpath));
+            SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id,
+                                      local_relpath));
             SVN_ERR(svn_sqlite__step_done(stmt));
             break;
 

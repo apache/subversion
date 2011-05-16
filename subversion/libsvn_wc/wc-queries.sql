@@ -432,7 +432,7 @@ ORDER BY wc_id, local_relpath
 DROP TABLE IF EXISTS targets_list;
 CREATE TEMPORARY TABLE targets_list (
   local_relpath TEXT NOT NULL,
-  parent_relpath TEXT NOT NULL,
+  parent_relpath TEXT,
   kind TEXT NOT NULL
   );
 CREATE INDEX targets_list_kind
@@ -443,7 +443,8 @@ DROP TABLE IF EXISTS targets_list;
 
 -- STMT_INSERT_TARGET
 INSERT INTO targets_list(local_relpath, parent_relpath, kind)
-SELECT ?2, ?3, kind FROM nodes_current WHERE wc_id = ?1 AND local_relpath = ?2
+SELECT ?2, parent_relpath, kind
+FROM nodes_current WHERE wc_id = ?1 AND local_relpath = ?2
 
 -- STMT_INSERT_TARGET_WITH_CHANGELIST
 INSERT INTO targets_list(local_relpath, parent_relpath, kind)
