@@ -6814,6 +6814,7 @@ struct read_children_info_item_t
 {
   struct svn_wc__db_info_t info;
   apr_int64_t op_depth;
+  int nr_layers;
 };
 
 static svn_error_t *
@@ -6836,7 +6837,6 @@ read_children_info(void *baton,
   SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, dir_relpath));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
-  
   while (have_row)
     {
       /* CHILD item points to what we have about the node. We only provide
@@ -6930,6 +6930,7 @@ read_children_info(void *baton,
 
           child->recorded_mod_time = svn_sqlite__column_int64(stmt, 13);
           child->recorded_size = get_recorded_size(stmt, 7);
+          child->has_checksum = !svn_sqlite__column_is_null(stmt, 6);
           child->had_props = SQLITE_PROPERTIES_AVAILABLE(stmt, 14);
 #ifdef HAVE_SYMLINK
           if (child->had_props)
@@ -6963,6 +6964,11 @@ read_children_info(void *baton,
           if (op_depth == 0)
             child_item->info.lock = lock_from_columns(stmt, 15, 16, 17, 18,
                                                       result_pool);
+        }
+      else
+        {
+          child_item->nr_layers++;
+          child_item->info.have_more_work = (child_item->nr_layers > 1);
         }
 
       err = svn_sqlite__step(&have_row, stmt);
