@@ -27,6 +27,9 @@ usage: 1. log [PATH][@REV]
   follow copy history by default.  Use --stop-on-copy to disable this
   behavior, which can be useful for determining branchpoints.
 
+  The --depth option is only valid in combination with the --diff option
+  and limits the scope of the displayed diff to the specified depth.
+
   Examples:
     svn log
     svn log foo.c
