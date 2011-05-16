@@ -252,9 +252,6 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
   svn_boolean_t props_mod;
   const svn_io_dirent2_t *dirent;
 
-  SVN_ERR(svn_io_stat_dirent(&dirent, local_abspath, TRUE,
-                             scratch_pool, scratch_pool));
-
   /* Read the relevant info */
   SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, &checksum, NULL, NULL, NULL,
@@ -275,6 +272,9 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
       *modified_p = TRUE;
       return SVN_NO_ERROR;
     }
+
+  SVN_ERR(svn_io_stat_dirent(&dirent, local_abspath, TRUE,
+                             scratch_pool, scratch_pool));
 
   if (! exact_comparison)
     {
