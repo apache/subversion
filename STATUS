@@ -412,12 +412,3 @@ Approved changes:
                  that are currently nominated...so my +1 is conditional on
                  that fix being applied first.)
      +1: danielsh (pburba: a fix to #3641 was committed to trunk)
-
- * r1091881
-   Fix issue #3853, "svn cleanup fails with obstructed directories"
-   Justification:
-     Trunk doesn't fail like this. Without this fix, cleaning up working
-     copies containing obstructing directories is a huge hassle.
-   Branch: ^/subversion/branches/1.6.x-issue3853
-   Votes:
-     +1: stsp, pburba, jcorvel
