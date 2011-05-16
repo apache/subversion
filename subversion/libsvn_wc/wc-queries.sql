@@ -417,11 +417,12 @@ END
 INSERT INTO changelist_list(wc_id, local_relpath, notify, changelist)
 VALUES (?1, ?2, ?3, ?4)
 
--- STMT_DROP_CHANGELIST_LIST
+-- STMT_FINALIZE_CHANGELIST
 DROP TRIGGER IF EXISTS trigger_changelist_list_actual_cl_insert;
 DROP TRIGGER IF EXISTS trigger_changelist_list_actual_cl_set;
 DROP TRIGGER IF EXISTS trigger_changelist_list_actual_cl_clear;
-DROP TABLE IF EXISTS changelist_list
+DROP TABLE IF EXISTS changelist_list;
+DROP TABLE IF EXISTS targets_list
 
 -- STMT_SELECT_CHANGELIST_LIST
 SELECT wc_id, local_relpath, notify, changelist
@@ -439,9 +440,6 @@ CREATE TEMPORARY TABLE targets_list (
 CREATE INDEX targets_list_kind
   ON targets_list (kind)
 /* need more indicies? */
-
--- STMT_DROP_TARGETS_LIST
-DROP TABLE IF EXISTS targets_list;
 
 -- STMT_INSERT_TARGET
 INSERT INTO targets_list(wc_id, local_relpath, parent_relpath, kind)
@@ -1165,7 +1163,7 @@ WHERE wc_id = ?1 AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
 SELECT local_relpath FROM delete_list
 ORDER BY local_relpath
 
--- STMT_DROP_DELETE_LIST
+-- STMT_FINALIZE_DELETE
 DROP TABLE IF EXISTS delete_list
 
 
