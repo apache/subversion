@@ -73,7 +73,7 @@ typedef struct
 } svn_fs_fs__txdelta_cached_window_t;
 
 /**
- * Implements @ref svn_cache__serialize_fn_t for
+ * Implements @ref svn_cache__serialize_func_t for
  * @ref svn_fs_fs__txdelta_cached_window_t.
  */
 svn_error_t *
@@ -83,7 +83,7 @@ svn_fs_fs__serialize_txdelta_window(char **buffer,
                                     apr_pool_t *pool);
 
 /**
- * Implements @ref svn_cache__deserialize_fn_t for
+ * Implements @ref svn_cache__deserialize_func_t for
  * @ref svn_fs_fs__txdelta_cached_window_t.
  */
 svn_error_t *
@@ -93,7 +93,7 @@ svn_fs_fs__deserialize_txdelta_window(void **item,
                                       apr_pool_t *pool);
 
 /**
- * Implements @ref svn_cache__serialize_fn_t for manifests
+ * Implements @ref svn_cache__serialize_func_t for manifests
  * (@a apr_array_header_t).
  */
 svn_error_t *
@@ -103,7 +103,7 @@ svn_fs_fs__serialize_manifest(char **data,
                               apr_pool_t *pool);
 
 /**
- * Implements @ref svn_cache__deserialize_fn_t for manifests
+ * Implements @ref svn_cache__deserialize_func_t for manifests
  * (@a apr_array_header_t).
  */
 svn_error_t *
@@ -113,7 +113,7 @@ svn_fs_fs__deserialize_manifest(void **out,
                                 apr_pool_t *pool);
 
 /**
- * Implements @ref svn_cache__serialize_fn_t for @ref svn_fs_id_t
+ * Implements @ref svn_cache__serialize_func_t for @ref svn_fs_id_t
  */
 svn_error_t *
 svn_fs_fs__serialize_id(char **data,
@@ -122,7 +122,7 @@ svn_fs_fs__serialize_id(char **data,
                         apr_pool_t *pool);
 
 /**
- * Implements @ref svn_cache__deserialize_fn_t for @ref svn_fs_id_t
+ * Implements @ref svn_cache__deserialize_func_t for @ref svn_fs_id_t
  */
 svn_error_t *
 svn_fs_fs__deserialize_id(void **out,
@@ -131,7 +131,7 @@ svn_fs_fs__deserialize_id(void **out,
                           apr_pool_t *pool);
 
 /**
- * Implements @ref svn_cache__serialize_fn_t for @ref node_revision_t
+ * Implements @ref svn_cache__serialize_func_t for @ref node_revision_t
  */
 svn_error_t *
 svn_fs_fs__serialize_node_revision(char **buffer,
@@ -140,7 +140,7 @@ svn_fs_fs__serialize_node_revision(char **buffer,
                                    apr_pool_t *pool);
 
 /**
- * Implements @ref svn_cache__deserialize_fn_t for @ref node_revision_t
+ * Implements @ref svn_cache__deserialize_func_t for @ref node_revision_t
  */
 svn_error_t *
 svn_fs_fs__deserialize_node_revision(void **item,
