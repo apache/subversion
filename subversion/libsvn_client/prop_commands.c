@@ -758,10 +758,6 @@ struct recursive_propget_receiver_baton
   apr_pool_t *pool; /* Pool to allocate additions to PROPS. */
   apr_hash_t *changelist_hash; /* Keys are changelists to filter on. */
   svn_wc_context_t *wc_ctx;  /* Working copy context. */
-
-  /* Anchor, anchor_abspath pair for converting to relative paths */
-  const char *anchor;
-  const char *anchor_abspath;
 };
 
 /* An implementation of svn_wc__proplist_receiver_t. */
@@ -772,29 +768,16 @@ recursive_propget_receiver(void *baton,
                            apr_pool_t *scratch_pool)
 {
   struct recursive_propget_receiver_baton *b = baton;
-  const char *path;
 
   /* If the node doesn't pass changelist filtering, get outta here. */
   if (! svn_wc__changelist_match(b->wc_ctx, local_abspath,
                                  b->changelist_hash, scratch_pool))
     return SVN_NO_ERROR;
 
-  /* Attempt to convert absolute paths to relative paths for
-   * presentation purposes, if needed. */
-  if (b->anchor && b->anchor_abspath)
-    {
-      path = svn_dirent_join(b->anchor,
-                             svn_dirent_skip_ancestor(b->anchor_abspath,
-                                                      local_abspath),
-                             scratch_pool);
-    }
-  else
-    path = local_abspath;
-
   if (apr_hash_count(props))
     {
       apr_hash_index_t *hi = apr_hash_first(scratch_pool, props);
-      apr_hash_set(b->props, apr_pstrdup(b->pool, path),
+      apr_hash_set(b->props, apr_pstrdup(b->pool, local_abspath),
                    APR_HASH_KEY_STRING,
                    svn_string_dup(svn__apr_hash_index_val(hi), b->pool));
     }
@@ -818,7 +801,7 @@ recursive_propget_receiver(void *baton,
 static svn_error_t *
 get_prop_from_wc(apr_hash_t *props,
                  const char *propname,
-                 const char *target,
+                 const char *target_abspath,
                  svn_boolean_t base_props,
                  svn_boolean_t pristine,
                  svn_node_kind_t kind,
@@ -829,10 +812,6 @@ get_prop_from_wc(apr_hash_t *props,
 {
   apr_hash_t *changelist_hash = NULL;
   struct recursive_propget_receiver_baton rb;
-  const char *target_abspath;
-
-
-  SVN_ERR(svn_dirent_get_absolute(&target_abspath, target, pool));
 
   if (changelists && changelists->nelts)
     SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelists, pool));
@@ -849,17 +828,6 @@ get_prop_from_wc(apr_hash_t *props,
   rb.pool = pool;
   rb.wc_ctx = ctx->wc_ctx;
   rb.changelist_hash = changelist_hash;
-
-  if (strcmp(target, target_abspath) != 0)
-    {
-      rb.anchor = target;
-      rb.anchor_abspath = target_abspath;
-    }
-  else
-    {
-      rb.anchor = NULL;
-      rb.anchor_abspath = NULL;
-    }
 
   /* Fetch the property, recursively or for a single resource. */
   if (depth >= svn_depth_files && kind == svn_node_dir)
@@ -979,7 +947,7 @@ svn_client_propget3(apr_hash_t **props,
                                                 local_abspath, NULL, revision,
                                                 pool));
 
-      SVN_ERR(get_prop_from_wc(*props, propname, path_or_url,
+      SVN_ERR(get_prop_from_wc(*props, propname, local_abspath,
                                FALSE, pristine, kind,
                                depth, changelists, ctx, pool));
     }
