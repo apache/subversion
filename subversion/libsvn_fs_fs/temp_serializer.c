@@ -492,7 +492,7 @@ serialize_txdeltawindow(svn_temp_serializer__context_t *context,
   svn_temp_serializer__pop(context);
 }
 
-/* Implements svn_cache__serialize_fn_t for svn_fs_fs__txdelta_cached_window_t
+/* Implements svn_cache__serialize_func_t for svn_fs_fs__txdelta_cached_window_t
  */
 svn_error_t *
 svn_fs_fs__serialize_txdelta_window(char **buffer,
@@ -526,7 +526,7 @@ svn_fs_fs__serialize_txdelta_window(char **buffer,
   return SVN_NO_ERROR;
 }
 
-/* Implements svn_cache__deserialize_fn_t for
+/* Implements svn_cache__deserialize_func_t for
  * svn_fs_fs__txdelta_cached_window_t.
  */
 svn_error_t *
@@ -556,7 +556,7 @@ svn_fs_fs__deserialize_txdelta_window(void **item,
   return SVN_NO_ERROR;
 }
 
-/* Implements svn_cache__serialize_fn_t for manifests.
+/* Implements svn_cache__serialize_func_t for manifests.
  */
 svn_error_t *
 svn_fs_fs__serialize_manifest(char **data,
@@ -573,7 +573,7 @@ svn_fs_fs__serialize_manifest(char **data,
   return SVN_NO_ERROR;
 }
 
-/* Implements svn_cache__deserialize_fn_t for manifests.
+/* Implements svn_cache__deserialize_func_t for manifests.
  */
 svn_error_t *
 svn_fs_fs__deserialize_manifest(void **out,
@@ -592,7 +592,7 @@ svn_fs_fs__deserialize_manifest(void **out,
   return SVN_NO_ERROR;
 }
 
-/* Implements svn_cache__serialize_fn_t for svn_fs_id_t
+/* Implements svn_cache__serialize_func_t for svn_fs_id_t
  */
 svn_error_t *
 svn_fs_fs__serialize_id(char **data,
@@ -618,7 +618,7 @@ svn_fs_fs__serialize_id(char **data,
   return SVN_NO_ERROR;
 }
 
-/* Implements svn_cache__deserialize_fn_t for svn_fs_id_t
+/* Implements svn_cache__deserialize_func_t for svn_fs_id_t
  */
 svn_error_t *
 svn_fs_fs__deserialize_id(void **out,
@@ -639,7 +639,7 @@ svn_fs_fs__deserialize_id(void **out,
 
 /** Caching node_revision_t objects. **/
 
-/* Implements svn_cache__serialize_fn_t for node_revision_t.
+/* Implements svn_cache__serialize_func_t for node_revision_t.
  */
 svn_error_t *
 svn_fs_fs__serialize_node_revision(char **buffer,
@@ -665,7 +665,7 @@ svn_fs_fs__serialize_node_revision(char **buffer,
   return SVN_NO_ERROR;
 }
 
-/* Implements svn_cache__deserialize_fn_t for node_revision_t
+/* Implements svn_cache__deserialize_func_t for node_revision_t
  */
 svn_error_t *
 svn_fs_fs__deserialize_node_revision(void **item,
