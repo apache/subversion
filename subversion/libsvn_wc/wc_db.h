@@ -1872,10 +1872,12 @@ struct svn_wc__db_info_t {
 #endif
   svn_boolean_t op_root;
 
+  svn_boolean_t has_checksum;
   svn_boolean_t had_props;
   svn_boolean_t props_mod;
 
   svn_boolean_t have_base;
+  svn_boolean_t have_more_work;
 
   svn_wc__db_lock_t *lock;
 };

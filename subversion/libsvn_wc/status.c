@@ -248,17 +248,18 @@ read_info(const struct svn_wc__db_info_t **info,
           apr_pool_t *scratch_pool)
 {
   struct svn_wc__db_info_t *mtb = apr_pcalloc(result_pool, sizeof(*mtb));
+  const svn_checksum_t *checksum;
 
   SVN_ERR(svn_wc__db_read_info(&mtb->status, &mtb->kind,
                                &mtb->revnum, &mtb->repos_relpath,
                                &mtb->repos_root_url, NULL, &mtb->changed_rev,
                                &mtb->changed_date, &mtb->changed_author,
-                               &mtb->depth, NULL, NULL, NULL, NULL, NULL, NULL,
-                               &mtb->lock, &mtb->recorded_size,
+                               &mtb->depth, &checksum, NULL, NULL, NULL, NULL,
+                               NULL, &mtb->lock, &mtb->recorded_size,
                                &mtb->recorded_mod_time, &mtb->changelist,
                                &mtb->conflicted, &mtb->op_root,
                                &mtb->had_props, &mtb->props_mod,
-                               &mtb->have_base, NULL, NULL,
+                               &mtb->have_base, &mtb->have_more_work, NULL,
                                db, local_abspath,
                                result_pool, scratch_pool));
 
@@ -274,6 +275,8 @@ read_info(const struct svn_wc__db_info_t **info,
                                        db, local_abspath,
                                        result_pool, scratch_pool));
     }
+
+  mtb->has_checksum = (checksum != NULL);
 
 #ifdef HAVE_SYMLINK
   if (mtb->had_props || mtb->props_mod)
@@ -507,12 +510,14 @@ assemble_status(svn_wc_status3_t **status,
              to avoid an extra filestat for every file, which can be
              expensive on network drives as a filestat usually can't
              be cached there */
-          if (ignore_text_mods
-              ||(dirent
-                 && dirent->filesize != SVN_INVALID_FILESIZE
-                 && dirent->mtime != 0
-                 && info->recorded_size == dirent->filesize
-                 && info->recorded_mod_time == dirent->mtime))
+          if (!info->has_checksum)
+            text_modified_p = TRUE; /* Local addition -> Modified */
+          else if (ignore_text_mods
+                  ||(dirent
+                     && info->recorded_size != SVN_INVALID_FILESIZE
+                     && info->recorded_mod_time != 0
+                     && info->recorded_size == dirent->filesize
+                     && info->recorded_mod_time == dirent->mtime))
             text_modified_p = FALSE;
           else
             {
@@ -569,6 +574,14 @@ assemble_status(svn_wc_status3_t **status,
         {
           if (!info->op_root)
             copied = TRUE; /* And keep status normal */
+          else if (info->kind == svn_wc__db_kind_file
+                   && !info->have_base && !info->have_more_work
+                   && !info->has_checksum)
+            {
+              /* Simple file addition, no replacement */
+              node_status = svn_wc_status_added;
+              copied = FALSE;
+            }
           else
             {
               svn_wc_schedule_t schedule;
