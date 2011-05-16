@@ -1955,7 +1955,7 @@ get_packed_offset(apr_off_t *rev_offset,
   fs_fs_data_t *ffd = fs->fsap_data;
   svn_stream_t *manifest_stream;
   svn_boolean_t is_cached;
-  apr_int64_t shard;
+  svn_revnum_t shard;
   apr_int64_t shard_pos;
   apr_array_header_t *manifest;
   apr_pool_t *iterpool;
