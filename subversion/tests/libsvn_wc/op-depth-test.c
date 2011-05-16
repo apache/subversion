@@ -1230,6 +1230,7 @@ base_dir_insert_remove(svn_test__sandbox_t *b,
   SVN_ERR(insert_dirs(b, before));
 
   SVN_ERR(svn_wc__db_base_add_directory(b->wc_ctx->db, dir_abspath,
+                                        dir_abspath,
                                         local_relpath, b->repos_url,
                                         "not-even-a-uuid", revision,
                                         apr_hash_make(b->pool), revision,

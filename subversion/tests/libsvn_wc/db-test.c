@@ -679,6 +679,7 @@ test_inserting_nodes(apr_pool_t *pool)
   set_prop(props, "for-file", "N", pool);
   SVN_ERR(svn_wc__db_base_add_directory(
             db, svn_dirent_join(local_abspath, "N", pool),
+            local_abspath,
             "N", ROOT_ONE, UUID_ONE, 3,
             props,
             1, TIME_1a, AUTHOR_1,
@@ -690,6 +691,7 @@ test_inserting_nodes(apr_pool_t *pool)
   set_prop(props, "for-file", "N/N-a", pool);
   SVN_ERR(svn_wc__db_base_add_file(
             db, svn_dirent_join(local_abspath, "N/N-a", pool),
+            local_abspath,
             "N/N-a", ROOT_ONE, UUID_ONE, 3,
             props,
             1, TIME_1a, AUTHOR_1,
@@ -701,6 +703,7 @@ test_inserting_nodes(apr_pool_t *pool)
   set_prop(props, "for-file", "O", pool);
   SVN_ERR(svn_wc__db_base_add_symlink(
             db, svn_dirent_join(local_abspath, "O", pool),
+            local_abspath,
             "O", ROOT_ONE, UUID_ONE, 3,
             props,
             1, TIME_1a, AUTHOR_1,

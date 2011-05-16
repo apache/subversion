@@ -2622,6 +2622,7 @@ close_directory(void *dir_baton,
          complete */
       SVN_ERR(svn_wc__db_base_add_directory(
                 eb->db, db->local_abspath,
+                eb->wcroot_abspath,
                 db->new_relpath,
                 eb->repos_root, eb->repos_uuid,
                 *eb->target_revision,
@@ -4136,6 +4137,7 @@ close_file(void *file_baton,
       new_checksum = fb->original_checksum;
 
     SVN_ERR(svn_wc__db_base_add_file(eb->db, fb->local_abspath,
+                                     eb->wcroot_abspath,
                                      fb->new_relpath,
                                      eb->repos_root, eb->repos_uuid,
                                      *eb->target_revision,
