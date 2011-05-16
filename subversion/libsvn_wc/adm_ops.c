@@ -2159,41 +2159,6 @@ svn_wc_remove_lock2(svn_wc_context_t *wc_ctx,
 }
 
 
-struct changelist_walker_baton
-{
-  const char *new_changelist;
-  const apr_array_header_t *changelist_filter;
-
-  svn_wc__db_t *db;
-
-  svn_cancel_func_t cancel_func;
-  void *cancel_baton;
-  svn_wc_notify_func2_t notify_func;
-  void *notify_baton;
-};
-
-
-static svn_error_t *
-changelist_walker(const char *local_abspath,
-                  svn_node_kind_t kind,
-                  void *baton,
-                  apr_pool_t *scratch_pool)
-{
-  struct changelist_walker_baton *cwb = baton;
-
-  /* Set the changelist. */
-  SVN_ERR(svn_wc__db_op_set_changelist(cwb->db, local_abspath,
-                                       cwb->new_changelist,
-                                       cwb->changelist_filter,
-                                       svn_depth_empty,
-                                       cwb->notify_func, cwb->notify_baton,
-                                       cwb->cancel_func, cwb->cancel_baton,
-                                       scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-
 svn_error_t *
 svn_wc_set_changelist2(svn_wc_context_t *wc_ctx,
                        const char *local_abspath,
@@ -2206,21 +2171,16 @@ svn_wc_set_changelist2(svn_wc_context_t *wc_ctx,
                        void *notify_baton,
                        apr_pool_t *scratch_pool)
 {
-  struct changelist_walker_baton cwb = { new_changelist,
-                                         changelist_filter,
-                                         wc_ctx->db,
-                                         cancel_func, cancel_baton,
-                                         notify_func, notify_baton };
-
   /* Assert that we aren't being asked to set an empty changelist. */
   SVN_ERR_ASSERT(! (new_changelist && new_changelist[0] == '\0'));
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(svn_wc__internal_walk_children(wc_ctx->db, local_abspath, FALSE,
-                                         NULL, changelist_walker, &cwb,
-                                         depth, cancel_func, cancel_baton,
-                                         scratch_pool));
+  SVN_ERR(svn_wc__db_op_set_changelist(wc_ctx->db, local_abspath,
+                                       new_changelist, changelist_filter,
+                                       depth, notify_func, notify_baton,
+                                       cancel_func, cancel_baton,
+                                       scratch_pool));
 
   return SVN_NO_ERROR;
 }

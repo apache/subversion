@@ -4962,6 +4962,13 @@ populate_targets_tree(svn_wc__db_wcroot_t *wcroot,
                       apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
+  const char *like_arg;
+
+  if (depth == svn_depth_infinity)
+    {
+      /* Calculate a value we're going to need later. */
+      like_arg = construct_like_arg(local_relpath, scratch_pool);
+    }
 
   SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb,
                                       STMT_CREATE_TARGETS_LIST));
@@ -4972,46 +4979,78 @@ populate_targets_tree(svn_wc__db_wcroot_t *wcroot,
          Common case: we only have one changelist, so this only
          happens once. */
       int i;
+      int stmt_idx;
+
+      switch (depth)
+        {
+          case svn_depth_empty:
+            stmt_idx = STMT_INSERT_TARGET_WITH_CHANGELIST;
+            break;
+
+          case svn_depth_files:
+            stmt_idx = STMT_INSERT_TARGET_WITH_CHANGELIST_DEPTH_FILES;
+            break;
+
+          case svn_depth_immediates:
+            stmt_idx = STMT_INSERT_TARGET_WITH_CHANGELIST_DEPTH_IMMEDIATES;
+            break;
+
+          case svn_depth_infinity:
+            stmt_idx = STMT_INSERT_TARGET_WITH_CHANGELIST_DEPTH_INFINITY;
+            break;
+
+          default:
+            /* We don't know how to handle unknown or exclude. */
+            SVN_ERR_MALFUNCTION();
+            break;
+        }
+
       for (i = 0; i < changelist_filter->nelts; i++)
         {
           const char *changelist = APR_ARRAY_IDX(changelist_filter, i,
                                                  const char *);
 
-          switch (depth)
-            {
-              case svn_depth_empty:
-                SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                        STMT_INSERT_TARGET_WITH_CHANGELIST));
-                SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id,
-                                          local_relpath, changelist));
-                SVN_ERR(svn_sqlite__step_done(stmt));
-                break;
-
-              default:
-                /* Currently only defined for depth == empty */
-                SVN_ERR_MALFUNCTION();
-                break;
-            }
+          SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, stmt_idx));
+          SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id,
+                                    local_relpath, changelist));
+          if (depth == svn_depth_infinity)
+            SVN_ERR(svn_sqlite__bind_text(stmt, 4, like_arg));
+          SVN_ERR(svn_sqlite__step_done(stmt));
         }
     }
   else /* No changelist filtering */
     {
+      int stmt_idx;
+
       switch (depth)
         {
           case svn_depth_empty:
-            /* Insert this single path. */
-            SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                              STMT_INSERT_TARGET));
-            SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id,
-                                      local_relpath));
-            SVN_ERR(svn_sqlite__step_done(stmt));
+            stmt_idx = STMT_INSERT_TARGET;
+            break;
+
+          case svn_depth_files:
+            stmt_idx = STMT_INSERT_TARGET_DEPTH_FILES;
+            break;
+
+          case svn_depth_immediates:
+            stmt_idx = STMT_INSERT_TARGET_DEPTH_IMMEDIATES;
+            break;
+
+          case svn_depth_infinity:
+            stmt_idx = STMT_INSERT_TARGET_DEPTH_INFINITY;
             break;
 
           default:
-            /* Currently only defined for depth == empty */
+            /* We don't know how to handle unknown or exclude. */
             SVN_ERR_MALFUNCTION();
             break;
         }
+
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, stmt_idx));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+      if (depth == svn_depth_infinity)
+        SVN_ERR(svn_sqlite__bind_text(stmt, 3, like_arg));
+      SVN_ERR(svn_sqlite__step_done(stmt));
     }
 
   return SVN_NO_ERROR;
@@ -5169,7 +5208,6 @@ svn_wc__db_op_set_changelist(svn_wc__db_t *db,
                           -1 };
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-  SVN_ERR_ASSERT(depth == svn_depth_empty);
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
                                                 db, local_abspath,
