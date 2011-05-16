@@ -19,7 +19,7 @@
  * @brief Header file for currently internal svn_uri_*() API
  *
  * ### These Functions will be added to the public API in 1.7
- *     but because their is some discussion on how they should work
+ *     but because there is some discussion on how they should work
  *     this api has been removed from 1.6 to allow future redesign.
  */
 
