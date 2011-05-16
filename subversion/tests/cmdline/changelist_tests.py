@@ -170,7 +170,10 @@ def verify_pget_output(output, expected_props):
       raise svntest.Failure("Unexpected output line: " + line)
     actual_props[path] = prop
   if expected_props != actual_props:
-    raise svntest.Failure("Got unexpected property results")
+    raise svntest.Failure("Got unexpected property results\n"
+                          "\tExpected: %s\n"
+                          "\tActual: %s" % (str(expected_props),
+                                            str(actual_props)))
 
 
 ######################################################################
