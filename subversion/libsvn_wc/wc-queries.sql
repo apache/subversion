@@ -1007,20 +1007,25 @@ WHERE NOT ((prop_reject IS NULL) AND (conflict_old IS NULL)
 /* PROOF OF CONCEPT: Complex queries for callback walks, caching results
                      in a temporary table. */
 
--- STMT_CLEAR_NODE_PROPS_CACHE
-DROP TABLE IF EXISTS temp__node_props_cache
+-- STMT_CREATE_NODE_PROPS_CACHE
+DROP TABLE IF EXISTS temp__node_props_cache;
+CREATE TEMPORARY TABLE temp__node_props_cache (
+  local_Relpath TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  properties BLOB
+  );
+/* ###  Need index?
+CREATE UNIQUE INDEX temp__node_props_cache_unique
+  ON temp__node_props_cache (local_relpath) */
 
 -- STMT_CACHE_NODE_PROPS_RECURSIVE
-CREATE TEMPORARY TABLE temp__node_props_cache AS
-  SELECT local_relpath, kind, properties FROM nodes_current
+INSERT INTO temp__node_props_cache(local_relpath, kind, properties)
+ SELECT local_relpath, kind, properties FROM nodes_current
   WHERE wc_id = ?1
     AND (?2 = '' OR local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
     AND local_relpath NOT IN (
       SELECT local_relpath FROM actual_node WHERE wc_id = ?1)
     AND presence IN ('normal', 'incomplete')
-/* ###  Need index?
-CREATE UNIQUE INDEX temp__node_props_cache_unique
-  ON temp__node_props_cache (local_relpath) */
 
 -- STMT_CACHE_ACTUAL_PROPS_RECURSIVE
 INSERT INTO temp__node_props_cache (local_relpath, kind, properties)
@@ -1034,28 +1039,22 @@ INSERT INTO temp__node_props_cache (local_relpath, kind, properties)
       (SELECT local_relpath FROM temp__node_props_cache)
 
 -- STMT_CACHE_NODE_BASE_PROPS_RECURSIVE
-CREATE TEMPORARY TABLE temp__node_props_cache AS
+INSERT INTO temp__node_props_cache (local_relpath, kind, properties)
   SELECT local_relpath, kind, properties FROM nodes_base
   WHERE wc_id = ?1
     AND (?2 = '' OR local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
     AND local_relpath NOT IN (
       SELECT local_relpath FROM actual_node WHERE wc_id = ?1)
     AND presence IN ('normal', 'incomplete')
-/* ###  Need index?
-CREATE UNIQUE INDEX temp__node_props_cache_unique
-  ON temp__node_props_cache (local_relpath) */
 
 -- STMT_CACHE_NODE_PROPS_OF_CHILDREN
-CREATE TEMPORARY TABLE temp__node_props_cache AS
+INSERT INTO temp__node_props_cache (local_relpath, kind, properties)
   SELECT local_relpath, kind, properties FROM nodes_current
   WHERE wc_id = ?1
     AND (local_relpath = ?2 OR parent_relpath = ?2)
     AND local_relpath NOT IN (
       SELECT local_relpath FROM actual_node WHERE wc_id = ?1)
     AND presence IN ('normal', 'incomplete')
-/* ###  Need index?
-CREATE UNIQUE INDEX temp__node_props_cache_unique
-  ON temp__node_props_cache (local_relpath) */
 
 -- STMT_CACHE_ACTUAL_PROPS_OF_CHILDREN
 INSERT INTO temp__node_props_cache (local_relpath, kind, properties)
@@ -1069,20 +1068,21 @@ INSERT INTO temp__node_props_cache (local_relpath, kind, properties)
       (SELECT local_relpath FROM temp__node_props_cache)
 
 -- STMT_CACHE_NODE_BASE_PROPS_OF_CHILDREN
-CREATE TEMPORARY TABLE temp__node_props_cache AS
+INSERT INTO temp__node_props_cache (local_relpath, kind, properties)
   SELECT local_relpath, kind, properties FROM nodes_base
   WHERE wc_id = ?1
     AND (local_relpath = ?2 OR parent_relpath = ?2)
     AND local_relpath NOT IN (
       SELECT local_relpath FROM actual_node WHERE wc_id = ?1)
     AND presence IN ('normal', 'incomplete')
-/* ###  Need index?
-CREATE UNIQUE INDEX temp__node_props_cache_unique
-  ON temp__node_props_cache (local_relpath) */
 
 -- STMT_SELECT_RELEVANT_PROPS_FROM_CACHE
 SELECT local_relpath, kind, properties FROM temp__node_props_cache
 ORDER BY local_relpath
+
+-- STMT_DROP_NODE_PROPS_CACHE
+DROP TABLE IF EXISTS temp__node_props_cache;
+
 
 -- STMT_CREATE_REVERT_LIST
 DROP TABLE IF EXISTS revert_list;
