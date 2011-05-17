@@ -95,11 +95,9 @@ Candidate changes:
    Votes:
      +1: pburba
 
- * r1100213
+ * r1100213, rep-cache.c only
    In FSFS, identify a corruption condition, and don't mask other (unknown)
    corruption conditions.
-   Note:
-     I think at least the latter part (the fs_fs.c part) should be backported.
    Votes:
      +1: danielsh, gstein
 
