@@ -1190,6 +1190,8 @@ svn_error_t *svn_ra_neon__rev_proplist(svn_ra_session_t *session,
 {
   svn_ra_neon__session_t *ras = session->priv;
   svn_ra_neon__resource_t *bln;
+  const char *label;
+  const char *url;
 
   *props = apr_hash_make(pool);
 
@@ -1199,15 +1201,17 @@ svn_error_t *svn_ra_neon__rev_proplist(svn_ra_session_t *session,
      in these functions because we want 'em all.)  */
   if (SVN_RA_NEON__HAVE_HTTPV2_SUPPORT(ras))
     {
-      const char *url = apr_psprintf(pool, "%s/%ld", ras->rev_stub, rev);
-      SVN_ERR(svn_ra_neon__get_props_resource(&bln, ras, url,
-                                              NULL, NULL, pool));
+      url = apr_psprintf(pool, "%s/%ld", ras->rev_stub, rev);
+      label = NULL;
     }
   else
     {
-      SVN_ERR(svn_ra_neon__get_baseline_props(NULL, &bln, ras, ras->url->data,
-                                              rev, NULL, pool));
+      SVN_ERR(svn_ra_neon__get_vcc(&url, ras, ras->url->data, pool));
+      label = apr_psprintf(pool, "%ld", rev);
     }
+
+    SVN_ERR(svn_ra_neon__get_props_resource(&bln, ras, url,
+                                            label, NULL, pool));
 
   /* Build a new property hash, based on the one in the baseline
      resource.  In particular, convert the xml-property-namespaces
