@@ -168,8 +168,8 @@ extern "C" {
 
 /* The format number written to wc-ng working copies so that old clients
    can recognize them as "newer Subversion"'s working copies. */
-#define SVN_WC__NON_ENTRIES 11
-#define SVN_WC__NON_ENTRIES_STRING "11\n"
+#define SVN_WC__NON_ENTRIES 12
+#define SVN_WC__NON_ENTRIES_STRING "12\n"
 
 /* A version < this uses the old 'entries' file mechanism.  */
 #define SVN_WC__WC_NG_VERSION 12
