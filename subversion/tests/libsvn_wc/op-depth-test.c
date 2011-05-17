@@ -3418,17 +3418,29 @@ test_copy_of_deleted(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Part of issue #3702, #3865 */
 static svn_error_t *
 test_case_rename(const svn_test_opts_t *opts, apr_pool_t *pool)
 {
   svn_test__sandbox_t b;
+  apr_hash_t *dirents;
 
   SVN_ERR(svn_test__sandbox_create(&b, "case_rename", opts, pool));
   SVN_ERR(add_and_commit_greek_tree(&b));
 
   SVN_ERR(wc_move(&b, "A", "a"));
+  SVN_ERR(wc_move(&b, "iota", "iotA"));
 
-  return svn_error_create(APR_EOF, NULL, NULL);
+  SVN_ERR(svn_io_get_dirents3(&dirents, wc_path(&b, ""), TRUE, pool, pool));
+
+  /* A shouldn't be there, but a should */
+  SVN_TEST_ASSERT(apr_hash_get(dirents, "a", APR_HASH_KEY_STRING));
+  SVN_TEST_ASSERT(apr_hash_get(dirents, "A", APR_HASH_KEY_STRING) == NULL);
+  /* iota shouldn't be there, but iotA should */
+  SVN_TEST_ASSERT(apr_hash_get(dirents, "iotA", APR_HASH_KEY_STRING));
+  SVN_TEST_ASSERT(apr_hash_get(dirents, "iota", APR_HASH_KEY_STRING) == NULL);
+
+  return SVN_NO_ERROR;
 }
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
@@ -3480,7 +3492,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test_shadowed_update"),
     SVN_TEST_OPTS_PASS(test_copy_of_deleted,
                        "test_copy_of_deleted (issue #3873)"),
-    SVN_TEST_OPTS_XFAIL(test_case_rename,
+    SVN_TEST_OPTS_PASS(test_case_rename,
                        "test_case_rename on case (in)sensitive system"),
     SVN_TEST_NULL
   };
