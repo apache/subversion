@@ -245,15 +245,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r880027
-   Follow-up on already backported 1.6.x-svn_fs_commit_txn branch branch;
-   export the new private functions from the shared libraries on Windows.
-   Justification:
-     Can't build 1.6.x on Windows without this change.
-   Votes:
-     +1: jcorvel (actually, for 1.6.x-svn_fs_commit_txn only one of the two
-                  added exports from r880027 is needed
-                  (private/svn_repos_private.h), but the additional one
-                  (private/svn_client_private.h) doesn't hurt either, so ok)
-     +1 (second hunk only): danielsh, rhuijben, pburba
