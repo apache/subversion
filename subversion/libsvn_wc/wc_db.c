@@ -7791,7 +7791,7 @@ svn_wc__db_read_props_streamily(svn_wc__db_t *db,
                                                    iterpool));
                 }
 
-              if (receiver_func && props && apr_hash_count(props) != 0)
+              if (props && apr_hash_count(props) != 0)
                 {
                   SVN_ERR((*receiver_func)(receiver_baton,
                                            child_abspath, props,
