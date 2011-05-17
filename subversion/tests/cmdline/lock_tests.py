@@ -1647,6 +1647,41 @@ def cp_isnt_ro(sbox):
   is_readonly(mu3_path)
 
 
+#----------------------------------------------------------------------
+# Issue #3525: Locked file which is scheduled for delete causes tree
+# conflict
+@XFail()
+@Issue(3525)
+def update_locked_deleted(sbox):
+  "updating locked scheduled-for-delete file"
+  
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  
+  iota_path = os.path.join(wc_dir, 'iota')
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+
+  svntest.main.run_svn(None, 'lock', '-m', 'locked', mu_path, iota_path)
+  sbox.simple_rm('iota')
+  sbox.simple_rm('A/mu')
+
+  # Create expected output tree for an update to rev 2.
+  expected_output = svntest.wc.State(wc_dir, {
+  })
+  
+  # Create expected status tree for the update.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', 'A/mu', status='D ', writelocked='K')
+    
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        None,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None)
+
+  
+  
 ########################################################################
 # Run the tests
 
@@ -1692,6 +1727,7 @@ test_list = [ None,
               verify_path_escaping,
               replace_and_propset_locked_path,
               cp_isnt_ro,
+              update_locked_deleted,
             ]
 
 if __name__ == '__main__':
