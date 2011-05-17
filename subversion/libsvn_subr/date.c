@@ -261,9 +261,9 @@ words_match(apr_time_exp_t *expt, svn_boolean_t *localtz,
   for (i = 0, unit_str = unit_words_table[i].word;
        unit_str = unit_words_table[i].word, unit_str != NULL; i++)
     {
-      /* Tolerate missing trailing 's' from unit for n=1. */
+      /* Tolerate missing trailing 's' from unit. */
       if (!strcmp(word, unit_str) ||
-          (n == 1 && !strncmp(word, unit_str, strlen(unit_str) - 1)))
+          !strncmp(word, unit_str, strlen(unit_str) - 1))
         {
           t = now - (n * unit_words_table[i].value);
           break;
