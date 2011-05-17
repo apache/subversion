@@ -17,6 +17,7 @@
 
 #include "svn_private_config.h"
 
+#include "fs_fs.h"
 #include "fs.h"
 #include "rep-cache.h"
 #include "../libsvn_fs/fs-loader.h"
@@ -122,6 +123,26 @@ svn_fs_fs__get_rep_reference(representation_t **rep,
     }
   else
     *rep = NULL;
+
+  /* Sanity check. */
+  if (*rep)
+    {
+      svn_revnum_t youngest;
+      
+      youngest = ffd->youngest_rev_cache;
+      if (youngest < (*rep)->revision)
+      {
+        /* Stale cache. */
+        SVN_ERR(svn_fs_fs__youngest_rev(&youngest, fs, pool));
+
+        /* Fresh cache. */
+        if (youngest < (*rep)->revision)
+          return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                                   _("Youngest revision is r%ld, but "
+                                     "rep-cache contains r%ld"),
+                                   youngest, (*rep)->revision);
+      }
+    }
 
   return svn_sqlite__reset(stmt);
 }
