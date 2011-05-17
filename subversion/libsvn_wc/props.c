@@ -1665,34 +1665,6 @@ svn_wc_prop_list2(apr_hash_t **props,
                                                    scratch_pool));
 }
 
-struct propname_filter_baton_t {
-  svn_wc__proplist_receiver_t receiver_func;
-  void *receiver_baton;
-  const char *propname;
-};
-
-static svn_error_t *
-propname_filter_receiver(void *baton,
-                         const char *local_abspath,
-                         apr_hash_t *props,
-                         apr_pool_t *scratch_pool)
-{
-  struct propname_filter_baton_t *pfb = baton;
-  const svn_string_t *propval = apr_hash_get(props, pfb->propname,
-                                             APR_HASH_KEY_STRING);
-
-  if (propval)
-    {
-      props = apr_hash_make(scratch_pool);
-      apr_hash_set(props, pfb->propname, APR_HASH_KEY_STRING, propval);
-
-      SVN_ERR(pfb->receiver_func(pfb->receiver_baton, local_abspath, props,
-                                 scratch_pool));
-    }
-    
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *
 svn_wc__prop_list_recursive(svn_wc_context_t *wc_ctx,
                             const char *local_abspath,
@@ -1706,23 +1678,40 @@ svn_wc__prop_list_recursive(svn_wc_context_t *wc_ctx,
                             void *cancel_baton,
                             apr_pool_t *scratch_pool)
 {
-  svn_wc__proplist_receiver_t receiver = receiver_func;
-  void *baton = receiver_baton;
-
-  struct propname_filter_baton_t pfb = { receiver_func, receiver_baton,
-                                         propname };
-
-  if (propname)
+  switch (depth)
     {
-      baton = &pfb;
-      receiver = propname_filter_receiver;
+    case svn_depth_empty:
+      {
+        apr_hash_t *props;
+
+        if (pristine)
+          SVN_ERR(svn_wc__db_read_pristine_props(&props, wc_ctx->db,
+                                                 local_abspath,
+                                                 scratch_pool, scratch_pool));
+        else
+          SVN_ERR(svn_wc__db_read_props(&props, wc_ctx->db, local_abspath,
+                                        scratch_pool, scratch_pool));
+
+        if (receiver_func && props && apr_hash_count(props) > 0)
+          SVN_ERR((*receiver_func)(receiver_baton, local_abspath, props,
+                                   scratch_pool));
+      }
+      break;
+    case svn_depth_files:
+    case svn_depth_immediates:
+    case svn_depth_infinity:
+      SVN_ERR(svn_wc__db_read_props_streamily(wc_ctx->db, local_abspath,
+                                              propname, depth,
+                                              base_props, pristine,
+                                              receiver_func, receiver_baton,
+                                              cancel_func, cancel_baton,
+                                              scratch_pool));
+      break;
+    default:
+      SVN_ERR_MALFUNCTION();
     }
 
-  return svn_wc__db_read_props_streamily(wc_ctx->db, local_abspath, depth,
-                                         base_props, pristine,
-                                         receiver, baton,
-                                         cancel_func, cancel_baton,
-                                         scratch_pool);
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
