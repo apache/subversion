@@ -261,9 +261,8 @@ Approved changes:
      2. Fixes the master information leak via the Location header.
      3. Need this to be ported for the other defect to be ported
         without conflict.
-   Notes:
-     There are non-trivial conflicts when backporting.  Perhaps a branch is in
-     order?
+   Branch:
+     ^/subversion/branches/1.6.x-r878590
    Votes:
      +1: kameshj, cmpilato, pburba
      -0: julianfoad (seem to be multiple changes here for different reasons -
