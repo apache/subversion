@@ -2017,14 +2017,10 @@ svn_wc__db_read_props(apr_hash_t **props,
  *
  * If BASE_PROPS is FALSE and, PRISTINE is TRUE, the local modifications will
  * be suppressed. If PRISTINE is FALSE, local modifications will be visible.
- *
- * NOTE: The only valid values for DEPTH are svn_depth_files,
- *       svn_depth_immediates, and svn_depth_infinity.
  */
 svn_error_t *
 svn_wc__db_read_props_streamily(svn_wc__db_t *db,
                                 const char *local_abspath,
-                                const char *propname,
                                 svn_depth_t depth,
                                 svn_boolean_t base_props,
                                 svn_boolean_t pristine,
