@@ -246,33 +246,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r878590, r878607, r878625, r878626, r878627
-   In trunk we optimized the common case of 'find-and-replace with same uri'
-   of proxied content thanks to issue 3445 "WebDAV proxy code munging user
-   data".
-   r878590 is just a change that adds FIXME marker to code comment. We take it
-   to avoid spurious conflicts with other revisions.
-   r878607 Special cases no-op find and replace.
-   "r878625, r878626, r878627" are follow-up to r878607 and the other long 
-   pending Master info leak to the clients.
-   Justification:
-     1. This group has the most common 'optimization' fix of *not* groking the
-        proxied response to find and replace with same string.
-     2. Fixes the master information leak via the Location header.
-     3. Need this to be ported for the other defect to be ported
-        without conflict.
-   Branch:
-     ^/subversion/branches/1.6.x-r878590
-   Votes:
-     +1: kameshj, cmpilato, pburba
-     -0: julianfoad (seem to be multiple changes here for different reasons -
-           at least issue '3445 and an optimization and an information leak;
-           r878607 log msg says it fixes bugs but it's not clear what bugs;
-           don't know how to tell whether justification 1 is significant;
-           justifications don't seem to refer to issue #3445. Please can we
-           separate these changes and clearly describe each one? And update
-           the r878607 log msg.)
-
  * r880027
    Follow-up on already backported 1.6.x-svn_fs_commit_txn branch branch;
    export the new private functions from the shared libraries on Windows.
@@ -284,4 +257,3 @@ Approved changes:
                   (private/svn_repos_private.h), but the additional one
                   (private/svn_client_private.h) doesn't hurt either, so ok)
      +1 (second hunk only): danielsh, rhuijben, pburba
-

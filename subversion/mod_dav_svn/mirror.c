@@ -106,7 +106,6 @@ typedef struct locate_ctx_t
 {
     const apr_strmatch_pattern *pattern;
     apr_size_t pattern_len;
-    apr_uri_t uri;
     const char *localpath;
     apr_size_t  localpath_len;
     const char *remotepath;
@@ -123,26 +122,39 @@ apr_status_t dav_svn__location_in_filter(ap_filter_t *f,
     locate_ctx_t *ctx = f->ctx;
     apr_status_t rv;
     apr_bucket *bkt;
-    const char *master_uri;
+    const char *master_uri, *root_dir;
+    apr_uri_t uri;
 
+    /* Don't filter if we're in a subrequest or we aren't setup to
+       proxy anything. */
     master_uri = dav_svn__get_master_uri(r);
-
     if (r->main || !master_uri) {
         ap_remove_input_filter(f);
         return ap_get_brigade(f->next, bb, mode, block, readbytes);
     }
 
+    /* And don't filter if our search-n-replace would be a noop anyway
+       (that is, if our root path matches that of the master server). */
+    apr_uri_parse(r->pool, master_uri, &uri);
+    root_dir = dav_svn__get_root_dir(r);
+    if (strcmp(uri.path, root_dir) == 0) {
+        ap_remove_input_filter(f);
+        return ap_get_brigade(f->next, bb, mode, block, readbytes);
+    }
+
+    /* ### FIXME: While we want to fix up any locations in proxied XML
+       ### requests, we do *not* want to be futzing with versioned (or
+       ### to-be-versioned) data, such as the file contents present in
+       ### PUT requests and properties in PROPPATCH requests.
+       ### See issue #3445 for details. */
+
     if (!f->ctx) {
         ctx = f->ctx = apr_pcalloc(r->pool, sizeof(*ctx));
-
-        apr_uri_parse(r->pool, master_uri, &ctx->uri);
-        /* We are url encoding the current url and the master url
-           as incoming(from client) request body has it encoded already. */
-        ctx->remotepath = svn_path_uri_encode(ctx->uri.path, r->pool);
+        ctx->remotepath = svn_path_uri_encode(uri.path, r->pool);
         ctx->remotepath_len = strlen(ctx->remotepath);
-        ctx->localpath = svn_path_uri_encode(dav_svn__get_root_dir(r), r->pool);
+        ctx->localpath = svn_path_uri_encode(root_dir, r->pool);
         ctx->localpath_len = strlen(ctx->localpath);
-        ctx->pattern = apr_strmatch_precompile(r->pool, ctx->localpath, 0);
+        ctx->pattern = apr_strmatch_precompile(r->pool, ctx->localpath, 1);
         ctx->pattern_len = ctx->localpath_len;
     }
 
@@ -189,30 +201,32 @@ apr_status_t dav_svn__location_header_filter(ap_filter_t *f,
 {
     request_rec *r = f->r;
     const char *master_uri;
+    const char *location, *start_foo = NULL;
 
+    /* Don't filter if we're in a subrequest or we aren't setup to
+       proxy anything. */
     master_uri = dav_svn__get_master_uri(r);
     master_uri = svn_path_uri_encode(master_uri, r->pool);
-
-    if (!r->main && master_uri) {
-        const char *location, *start_foo = NULL;
-
-        location = apr_table_get(r->headers_out, "Location");
-        if (location) {
-            start_foo = ap_strstr_c(location, master_uri);
-        }
-        if (start_foo) {
-            const char *new_uri;
-            start_foo += strlen(master_uri);
-            new_uri = ap_construct_url(r->pool,
-                                       apr_pstrcat(r->pool,
-                                                   dav_svn__get_root_dir(r),
-                                                   start_foo, NULL),
-                                       r);
-            new_uri = svn_path_uri_encode(new_uri, r->pool);
-            apr_table_set(r->headers_out, "Location", new_uri);
-        }
+    if (r->main || !master_uri) {
+        ap_remove_output_filter(f);
+        return ap_pass_brigade(f->next, bb);
     }
-    ap_remove_output_filter(f);
+
+    location = apr_table_get(r->headers_out, "Location");
+    if (location) {
+        start_foo = ap_strstr_c(location, master_uri);
+    }
+    if (start_foo) {
+        const char *new_uri;
+        start_foo += strlen(master_uri);
+        new_uri = ap_construct_url(r->pool,
+                                   apr_pstrcat(r->pool,
+                                               dav_svn__get_root_dir(r),
+                                               start_foo, NULL),
+                                   r);
+        new_uri = svn_path_uri_encode(new_uri, r->pool);
+        apr_table_set(r->headers_out, "Location", new_uri);
+    }
     return ap_pass_brigade(f->next, bb);
 }
 
@@ -222,26 +236,41 @@ apr_status_t dav_svn__location_body_filter(ap_filter_t *f,
     request_rec *r = f->r;
     locate_ctx_t *ctx = f->ctx;
     apr_bucket *bkt;
-    const char *master_uri;
+    const char *master_uri, *root_dir;
+    apr_uri_t uri;
 
+    /* Don't filter if we're in a subrequest or we aren't setup to
+       proxy anything. */
     master_uri = dav_svn__get_master_uri(r);
-
     if (r->main || !master_uri) {
         ap_remove_output_filter(f);
         return ap_pass_brigade(f->next, bb);
     }
 
+    /* And don't filter if our search-n-replace would be a noop anyway
+       (that is, if our root path matches that of the master server). */
+    apr_uri_parse(r->pool, master_uri, &uri);
+    root_dir = dav_svn__get_root_dir(r);
+    if (strcmp(uri.path, root_dir) == 0) {
+        ap_remove_output_filter(f);
+        return ap_pass_brigade(f->next, bb);
+    }
+
+    /* ### FIXME: GET and PROPFIND requests that make it here must be
+       ### referring to data inside commit transactions-in-progress.
+       ### We've got to be careful not to munge the versioned data
+       ### they return in the process of trying to do URI fix-ups.
+       ### See issue #3445 for details. */
+
     if (!f->ctx) {
         ctx = f->ctx = apr_pcalloc(r->pool, sizeof(*ctx));
-
-        apr_uri_parse(r->pool, master_uri, &ctx->uri);
         /* We are url encoding the current url and the master url
            as incoming (from master) request body has it encoded already. */
-        ctx->remotepath = svn_path_uri_encode(ctx->uri.path, r->pool);
+        ctx->remotepath = svn_path_uri_encode(uri.path, r->pool);
         ctx->remotepath_len = strlen(ctx->remotepath);
-        ctx->localpath = svn_path_uri_encode(dav_svn__get_root_dir(r), r->pool);
+        ctx->localpath = svn_path_uri_encode(root_dir, r->pool);
         ctx->localpath_len = strlen(ctx->localpath);
-        ctx->pattern = apr_strmatch_precompile(r->pool, ctx->remotepath, 0);
+        ctx->pattern = apr_strmatch_precompile(r->pool, ctx->remotepath, 1);
         ctx->pattern_len = ctx->remotepath_len;
     }
 
