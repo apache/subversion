@@ -7755,7 +7755,7 @@ svn_wc__db_read_props_streamily(svn_wc__db_t *db,
       if (cancel_func)
         SVN_ERR(cancel_func(cancel_baton));
 
-      SVN_ERR(svn_sqlite__column_properties(&props, stmt, 2, iterpool,
+      SVN_ERR(svn_sqlite__column_properties(&props, stmt, 1, iterpool,
                                             iterpool));
       if (props && apr_hash_count(props) != 0)
         {

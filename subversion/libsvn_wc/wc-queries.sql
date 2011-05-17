@@ -1051,7 +1051,7 @@ INSERT INTO temp__node_props_cache (local_relpath, kind, properties)
     AND presence IN ('normal', 'incomplete')
 
 -- STMT_SELECT_RELEVANT_PROPS_FROM_CACHE
-SELECT local_relpath, kind, properties FROM temp__node_props_cache
+SELECT local_relpath, properties FROM temp__node_props_cache
 ORDER BY local_relpath
 
 -- STMT_DROP_NODE_PROPS_CACHE
