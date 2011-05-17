@@ -17,4 +17,8 @@ Potential items for discussion:
    - How important is performance of SVN in comparison to other
      qualities like maintainability etc.
    - What is a reasonable long-term performance goal for SVN?
- * [insert item here]
+ * 'svn resolve --accept {mine,theirs}-full' for tree conflicts
+   - Now that update skips no tree conflicts, we have a fighting chance.
+ * Python test timing
+   - Identify slow tests
+   - Sort tests into short- and long-running sets, for convenience.
