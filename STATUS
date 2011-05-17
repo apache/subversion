@@ -328,15 +328,3 @@ Approved changes:
            justifications don't seem to refer to issue #3445. Please can we
            separate these changes and clearly describe each one? And update
            the r878607 log msg.)
-
- * ^/subversion/trunk/get-deps.sh
-   Backport the get-deps.sh script from trunk.
-   Justification:
-     Another (easier) way to build the branch.  Consistency with trunk
-     (e.g., for the buildslaves).
-   Note:
-     While backporting, please replace the hard-coded dependency versions with
-     those from the 1.6.16-deps tarball:
-     expat-1.95, apr-1.3.9, apr-util 1.3.9, sqlite-3.7.3, serf-0.7.0, zlib-1.2.4
-   Votes:
-     +1: danielsh, cmpilato, hwright
