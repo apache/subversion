@@ -367,14 +367,3 @@ Approved changes:
      ^/subversion/branches/1.6.x-issue3843
    Votes:
      +1: stsp, pburba, cmpilato
-
- * ^/subversion/branches/1.6.x-issue3845
-   Detect very occasional corruption and abort commit.
-   Justification:
-     Don't know the cause, but we can stop it getting into the repo.
-   Votes:
-     +1: philip
-     +1: danielsh, cmpilato (trusting Philip's explanation that the noderev
-         offset,length are cached to be the correct values for a non-corrupt
-         file)
-  
