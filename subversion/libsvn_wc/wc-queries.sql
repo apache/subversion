@@ -261,7 +261,9 @@ FROM nodes
 LEFT JOIN lock ON nodes.repos_id = lock.repos_id
   AND nodes.repos_path = lock.repos_relpath
 WHERE wc_id = ?1 AND op_depth = 0
-  AND (local_relpath = ?2 OR local_relpath LIKE ?3 ESCAPE '#')
+  AND (local_relpath = ?2
+       OR ?2 = ''
+       OR (local_relpath > ?2 || '/' AND local_relpath < ?2 || '0'))
 
 -- STMT_INSERT_WCROOT
 INSERT INTO wcroot (local_abspath)
@@ -293,21 +295,22 @@ WHERE repos_id = ?1 AND repos_relpath = ?2
 
 -- STMT_CLEAR_BASE_NODE_RECURSIVE_DAV_CACHE
 UPDATE nodes SET dav_cache = NULL
-WHERE dav_cache IS NOT NULL AND wc_id = ?1 AND op_depth = 0 AND
-  (local_relpath = ?2 OR
-   local_relpath LIKE ?3 ESCAPE '#')
+WHERE dav_cache IS NOT NULL AND wc_id = ?1 AND op_depth = 0
+  AND (local_relpath = ?2
+       OR ?2 = ''
+       OR (local_relpath > ?2 || '/' AND local_relpath < ?2 || '0'))
 
 -- STMT_RECURSIVE_UPDATE_NODE_REPO
-UPDATE nodes SET repos_id = ?5, dav_cache = NULL
-WHERE wc_id = ?1 AND repos_id = ?4 AND
-  (local_relpath = ?2
-   OR local_relpath LIKE ?3 ESCAPE '#')
+UPDATE nodes SET repos_id = ?4, dav_cache = NULL
+WHERE wc_id = ?1
+  AND repos_id = ?3
+  AND (local_relpath = ?2
+       OR ?2 = ''
+       OR (local_relpath > ?2 || '/' AND local_relpath < ?2 || '0'))
 
 -- STMT_UPDATE_LOCK_REPOS_ID
-UPDATE lock SET repos_id = ?4
-WHERE repos_id = ?1 AND
-  (repos_relpath = ?2 OR
-   repos_relpath LIKE ?3 ESCAPE '#')
+UPDATE lock SET repos_id = ?2
+WHERE repos_id = ?1
 
 -- STMT_UPDATE_NODE_FILEINFO
 UPDATE nodes SET translated_size = ?3, last_mod_time = ?4
