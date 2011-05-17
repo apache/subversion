@@ -178,8 +178,20 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.17
     * make 'blame -g' more efficient on with large mergeinfo (r1094692)
     * avoid some invalid handle exceptions on Windows (r1095654)
     * preserve log message with a non-zero editor exit (r1072084)
+    * fix FSFS cache performance on 64-bit platforms (r1103665)
+    * make svn cleanup tolerate obstructed directories (r1091881)
+    * fix potential deadlock in multithreaded servers serving FSFS repositories
+    * detect very occasional corruption and abort commit (issue #3845)
+    * fixed: file externals cause non-inheritable mergeinfo (issue #3843)
+    * fixed: file externals cause mixed-revision working copies (issue #3816)
+    * disallow GETs of baselined versions of resources (r1104126)
+    * fixed: write-through proxy could direcly commit to slave (r917523)
+    * detect a particular corruption condition in FSFS (r1100213)
+    * improve error message when clients refer to unkown revisions (939000)
 
   Developer-visible changes:
+    * fix reporting FS-level post-commit processing errors
+    * fix JVM recognition on OS X Snow Leopard (10.6) (r1028084)
 
 
 Version 1.6.16
