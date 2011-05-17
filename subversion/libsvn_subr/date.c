@@ -22,6 +22,7 @@
 
 #include "svn_time.h"
 #include "svn_error.h"
+#include "svn_string.h"
 
 #include "svn_private_config.h"
 
@@ -187,6 +188,114 @@ template_match(apr_time_exp_t *expt, svn_boolean_t *localtz,
   return TRUE;
 }
 
+static struct unit_words_table {
+  const char *word;
+  apr_time_t value;
+} unit_words_table[] = {
+  /* Word matching does not concern itself with exact days of the month
+   * or leap years so these amounts are always fixed. */
+  { "years",    apr_time_from_sec(60 * 60 * 24 * 365) },
+  { "months",   apr_time_from_sec(60 * 60 * 24 * 30) },
+  { "weeks",    apr_time_from_sec(60 * 60 * 24 * 7) },
+  { "days",     apr_time_from_sec(60 * 60 * 24) },
+  { "hours",    apr_time_from_sec(60 * 60) },
+  { "minutes",  apr_time_from_sec(60) },
+  { "mins",     apr_time_from_sec(60) },
+  { NULL ,      0 }
+};
+
+static struct number_words_table {
+  const char *word;
+  int number;
+} number_words_table[] = {
+  { "zero", 0 }, { "one", 1 }, { "two", 2 }, { "three", 3 }, { "four", 4 },
+  { "five", 5 }, { "six", 6 }, { "seven", 7 }, { "eight", 8 }, { "nine", 9 },
+  { "ten", 10 }, { "eleven", 11 }, { "twelve", 12 }, { NULL, 0 }
+};
+
+/* Attempt to match the date-string in TEXT according to the following rules:
+ *
+ * "N years|months|weeks|days|hours|minutes ago" resolve to the most recent
+ * revision prior to the specified time. N may either be a word from
+ * NUMBER_WORDS_TABLE defined above, or a non-negative digit.
+ *
+ * Return TRUE on successful match, FALSE otherwise. On successful match,
+ * fill in *EXP with the matched value and set *LOCALTZ to TRUE (this
+ * function always uses local time). Use POOL for temporary allocations. */
+static svn_boolean_t
+words_match(apr_time_exp_t *expt, svn_boolean_t *localtz,
+            apr_time_t now, const char *text, apr_pool_t *pool)
+{
+  apr_time_t t = -1;
+  const char *word;
+  apr_array_header_t *words;
+  int i;
+  int n = -1;
+  const char *number_str;
+  const char *unit_str;
+
+  words = svn_cstring_split(text, " ", TRUE /* chop_whitespace */, pool);
+  
+  if (words->nelts != 3)
+    return FALSE;
+
+  word = APR_ARRAY_IDX(words, 0, const char *);
+
+  /* Try to parse a number word. */
+  for (i = 0, number_str = number_words_table[i].word;
+       number_str = number_words_table[i].word, number_str != NULL; i++)
+    {
+      if (!strcmp(word, number_str))
+        {
+          n = number_words_table[i].number;
+          break;
+        }
+    }
+
+  if (n < 0)
+    {
+      svn_error_t *err; 
+
+      /* Try to parse a digit. */
+      err = svn_cstring_atoi(&n, word);
+      if (err)
+        {
+          svn_error_clear(err);
+          return FALSE;
+        }
+      if (n < 0)
+        return FALSE;
+    }
+
+  /* Try to parse a unit. */
+  word = APR_ARRAY_IDX(words, 1, const char *);
+  for (i = 0, unit_str = unit_words_table[i].word;
+       unit_str = unit_words_table[i].word, unit_str != NULL; i++)
+    {
+      /* Tolerate missing trailing 's' from unit for n=1. */
+      if (!strcmp(word, unit_str) ||
+          (n == 1 && !strncmp(word, unit_str, strlen(unit_str) - 1)))
+        {
+          t = now - (n * unit_words_table[i].value);
+          break;
+        }
+    }
+
+  if (t < 0)
+    return FALSE;
+
+  /* Require trailing "ago". */
+  word = APR_ARRAY_IDX(words, 2, const char *);
+  if (strcmp(word, "ago"))
+    return FALSE;
+
+  if (apr_time_exp_lt(expt, t) != APR_SUCCESS)
+    return FALSE;
+
+  *localtz = TRUE;
+  return TRUE;
+}
+
 static int
 valid_days_by_month[] = {
   31, 29, 31, 30,
@@ -244,7 +353,7 @@ svn_parse_date(svn_boolean_t *matched, apr_time_t *result, const char *text,
       expt.tm_mon = expnow.tm_mon;
       expt.tm_mday = expnow.tm_mday;
     }
-  else
+  else if (!words_match(&expt, &localtz, now, text, pool))
     return SVN_NO_ERROR;
 
   /* Range validation, allowing for leap seconds */
