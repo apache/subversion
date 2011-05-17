@@ -112,7 +112,7 @@ class SvnCoreTest < Test::Unit::TestCase
     ver_num = vers.collect {|ver| ver.to_s}.join(".")
     assert_equal(ver_num, Svn::Core::VER_NUM)
     assert_equal("#{ver_num}#{Svn::Core::VER_NUMTAG}", Svn::Core::VER_NUMBER)
-    assert_equal("#{ver_num}#{Svn::Core::VER_TAG}", Svn::Core::VERSION)
+    assert_equal("#{Svn::Core::VER_NUMBER}#{Svn::Core::VER_TAG}", Svn::Core::VERSION)
   end
 
   def test_auth_parameter

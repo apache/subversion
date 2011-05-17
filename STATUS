@@ -305,11 +305,3 @@ Approved changes:
            justifications don't seem to refer to issue #3445. Please can we
            separate these changes and clearly describe each one? And update
            the r878607 log msg.)
-
- * r1084764
-   Fix expected output in the ruby tests, as a result of the '--version' change.
-   Justification:
-     This doesn't affect production builds, but makes the buildbots fail
-     spuriously.
-   Votes:
-     +1: hwright, gstein
