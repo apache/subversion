@@ -1026,29 +1026,37 @@ INSERT INTO temp__node_props_cache(local_relpath, kind, properties)
  SELECT local_relpath, kind, properties FROM nodes_current
   WHERE wc_id = ?1
     AND local_relpath IN (SELECT local_relpath FROM targets_list)
-    AND local_relpath NOT IN (
-      SELECT local_relpath FROM actual_node WHERE wc_id = ?1)
     AND presence IN ('normal', 'incomplete')
 
 -- STMT_CACHE_ACTUAL_PROPS
-INSERT INTO temp__node_props_cache (local_relpath, kind, properties)
-  SELECT A.local_relpath, N.kind, A.properties
-  FROM actual_node AS A JOIN nodes_current AS N
-    ON A.wc_id = N.wc_id AND A.local_relpath = N.local_relpath
-       AND N.presence IN ('normal', 'incomplete')
-  WHERE A.wc_id = ?1
-    AND A.local_relpath IN (SELECT local_relpath FROM targets_list)
-    AND A.local_relpath NOT IN
-      (SELECT local_relpath FROM temp__node_props_cache)
+UPDATE temp__node_props_cache 
+   SET properties=
+        IFNULL((SELECT properties FROM actual_node a
+                 WHERE a.wc_id = ?1
+                   AND a.local_relpath = temp__node_props_cache.local_relpath),
+               properties)
 
 -- STMT_CACHE_NODE_BASE_PROPS
 INSERT INTO temp__node_props_cache (local_relpath, kind, properties)
   SELECT local_relpath, kind, properties FROM nodes_base
   WHERE wc_id = ?1
     AND local_relpath IN (SELECT local_relpath FROM targets_list)
-    AND local_relpath NOT IN (
-      SELECT local_relpath FROM actual_node WHERE wc_id = ?1)
     AND presence IN ('normal', 'incomplete')
+
+-- STMT_CACHE_NODE_PRISTINE_PROPS
+INSERT INTO temp__node_props_cache(local_relpath, kind, properties)
+ SELECT local_relpath, kind, 
+        IFNULL((SELECT properties FROM nodes nn
+                 WHERE n.presence = 'base-deleted'
+                   AND nn.wc_id = n.wc_id
+                   AND nn.local_relpath = n.local_relpath
+                   AND nn.op_depth < n.op_depth
+                 ORDER BY op_depth DESC),
+               properties)
+  FROM nodes_current n
+  WHERE wc_id = ?1
+    AND local_relpath IN (SELECT local_relpath FROM targets_list)
+    AND presence IN ('normal', 'incomplete', 'base-deleted')
 
 -- STMT_SELECT_RELEVANT_PROPS_FROM_CACHE
 SELECT local_relpath, properties FROM temp__node_props_cache

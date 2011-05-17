@@ -1081,6 +1081,9 @@ def recursive_base_wc_ops(sbox):
   # Test recursive proplist
   exit_code, output, errput = svntest.main.run_svn(None, 'proplist', '-R',
                                                    '-v', wc_dir, '-rBASE')
+
+  # For some reason this test doesn't fail if the next verification
+  # doesn't see any output.
   verify_output([ 'old-del', 'old-keep', 'p', 'p',
                   'Properties on ', 'Properties on ' ],
                 output, errput)
@@ -2431,7 +2434,6 @@ def file_matching_dir_prop_reject(sbox):
                                         expected_status,
                                         None, None, None, None, None, True)
 
-@XFail()
 def pristine_props_listed(sbox):
   "check if pristine properties are visible"
 
