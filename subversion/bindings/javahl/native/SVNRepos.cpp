@@ -635,7 +635,7 @@ jobject SVNRepos::lslocks(File &path, svn_depth_t depth)
               NULL);
 
   JNIEnv *env = JNIUtil::getEnv();
-  jclass clazz = env->FindClass(JAVA_PACKAGE"/Lock");
+  jclass clazz = env->FindClass(JAVA_PACKAGE"/types/Lock");
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
