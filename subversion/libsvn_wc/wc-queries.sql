@@ -444,6 +444,9 @@ CREATE INDEX targets_list_kind
   ON targets_list (kind)
 /* need more indicies? */
 
+-- STMT_DROP_TARGETS_LIST
+DROP TABLE IF EXISTS targets_list
+
 -- STMT_INSERT_TARGET
 INSERT INTO targets_list(wc_id, local_relpath, parent_relpath, kind)
 SELECT wc_id, local_relpath, parent_relpath, kind
