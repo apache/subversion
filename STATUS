@@ -142,9 +142,16 @@ Veto-blocked changes:
          svn_uri_canonicalize.  This API does exist in 1.6, but only for
          testing purposes, see subversion\libsvn_subr\private_uri.h and
          http://svn.apache.org/viewvc?view=revision&revision=876419
-         All that is *probably* needed is a backport branch which makes
-         use of svn_path_canonicalize instead, but this will have to wait
-         until the r878590 group is backported.)
+         So problem #1: This won't build.
+         
+         Problem #2: Since I first made this veto, further changes were
+         backported which prevent a clean merge.
+         
+         Problem #3: I tried to create a backport branch to address the
+         conflicts and makes use of svn_path_canonicalize instead of
+         svn_uri_canonicalize.  Unfortunately I cannot replicate the error
+         described in the log message for r878590 - see
+         http://svn.haxx.se/dev/archive-2011-05/0545.shtml)
 
  * r921453, r927184, r927243
    Fix reopened issue #3020 'Reflect dropped/renumbered revisions in
