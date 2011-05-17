@@ -5316,9 +5316,6 @@ def update_with_excluded_subdir(sbox):
 
 #----------------------------------------------------------------------
 # Test for issue #3471 'svn up touches file w/ lock & svn:keywords property'
-#
-# Marked as XFail until the issue is fixed.
-@XFail()
 @Issue(3471)
 def update_with_file_lock_and_keywords_property_set(sbox):
   """update with file lock & keywords property set"""

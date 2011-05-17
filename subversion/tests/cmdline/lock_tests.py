@@ -1650,7 +1650,6 @@ def cp_isnt_ro(sbox):
 #----------------------------------------------------------------------
 # Issue #3525: Locked file which is scheduled for delete causes tree
 # conflict
-@XFail()
 @Issue(3525)
 def update_locked_deleted(sbox):
   "updating locked scheduled-for-delete file"
