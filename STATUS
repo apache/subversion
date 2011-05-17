@@ -15,22 +15,6 @@ Status of 1.6.17:
 Candidate changes:
 ==================
 
- * r879766
-   Fix issue #3498: Subversion password stores freeze Eclipse
-   Justification:
-     All subclipse users are in great need of this.
-   Branch:
-     Resolves a minor conflict in libsvn_auth_gnome_keyring/gnome_keyring.c
-     where the code changed was refactored on trunk.
-     ^/subversion/branches/1.6.x-r39692
-   Votes:
-     +1: stylesen
-     +0: julianfoad (reviewed, not tested)
-     -0: rhuijben (needs more explanation: The not-interactive and no
-                   callback code paths should be more similar if the code
-                   works correctly. I think the not interactive code path
-                   needs the same fix).
-
  * r1028084, r1028125, r1041638
    Fix JVM recognition on OS X Snow Leopard (10.6).
    Justification:
@@ -277,6 +261,24 @@ Veto-blocked changes:
      -1: hwright (I'm not sure we need this: the merge conflicts, and the
                   assert isn't even in 1.6.x.  I'm happy to remove this veto
                   if a proper backport branch is provided.)
+
+
+ * r879766
+   Fix issue #3498: Subversion password stores freeze Eclipse
+   Justification:
+     All subclipse users are in great need of this.
+   Branch:
+     Resolves a minor conflict in libsvn_auth_gnome_keyring/gnome_keyring.c
+     where the code changed was refactored on trunk.
+     ^/subversion/branches/1.6.x-r39692
+   Votes:
+     +1: stylesen
+     +0: julianfoad (reviewed, not tested)
+     -0: rhuijben (needs more explanation: The not-interactive and no
+                   callback code paths should be more similar if the code
+                   works correctly. I think the not interactive code path
+                   needs the same fix).
+     -1: markphip (tested multiple builds of this and never saw it work).
 
 Approved changes:
 =================
