@@ -193,7 +193,7 @@ atomic_swap(volatile void **mem, void *new_value)
 #endif
 #else
    /* no threads - no sync. necessary */
-   void *old_value = *mem;
+   void *old_value = (void*)*mem;
    *mem = new_value;
    return old_value;
 #endif
