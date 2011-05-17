@@ -3492,7 +3492,13 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test_shadowed_update"),
     SVN_TEST_OPTS_PASS(test_copy_of_deleted,
                        "test_copy_of_deleted (issue #3873)"),
+#ifndef DARWIN
     SVN_TEST_OPTS_PASS(test_case_rename,
                        "test_case_rename on case (in)sensitive system"),
+#else
+    /* apr doesn't implement APR_FILEPATH_TRUENAME for MAC OS yet */
+    SVN_TEST_OPTS_XFAIL(test_case_rename,
+                        "test_case_rename on case (in)sensitive system"),
+#endif
     SVN_TEST_NULL
   };
