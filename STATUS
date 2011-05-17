@@ -107,6 +107,7 @@ Candidate changes:
    Justification:
      Local fix.  users@ reports.
    Votes:
+     +0: danielsh
 
  * 1.6.x-fsfs-begin-txn-deadlock
    Fix a deadlock that can occur when two or more multithreaded
@@ -138,7 +139,7 @@ Candidate changes:
      See also the r1036429 group.
    Votes:
      +1: cmpilato (r962377, r962378 only)
-     +1: philip (962377, r962378, r1063572, r1063573, r1063592 only)
+     +1: philip (r962377, r962378, r1063572, r1063573, r1063592 only)
      +1: pburba
      -0: danielsh (authz concerns on the original fix)
 
