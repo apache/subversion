@@ -645,7 +645,20 @@ svn_io_files_contents_same_p(svn_boolean_t *same,
 /** Create file at utf8-encoded @a file with contents @a contents.
  * @a file must not already exist.
  * Use @a pool for memory allocations.
+ *
+ * @since New in 1.7.
  */
+svn_error_t *
+svn_io_file_create2(const char *file,
+                    const svn_string_t *contents,
+                    apr_pool_t *scratch_pool);
+
+/** Like svn_io_file_create2(), but with a C string instead
+ * of an #svn_string_t.
+ * 
+ * @deprecated Provided for backward compatibility with the 1.6 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_io_file_create(const char *file,
                    const char *contents,
