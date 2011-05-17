@@ -62,13 +62,6 @@ Candidate changes:
    Votes:
      +1: pburba, stsp
 
- * r1100213, rep-cache.c only
-   In FSFS, identify a corruption condition, and don't mask other (unknown)
-   corruption conditions.
-   Votes:
-     +1: danielsh, gstein
-     +0: stsp (trunk commit reviews fine, but there are merge conflicts)
-
  * r939000, r939002, r1102803
    Provide clueful error when editor drive refers revision > HEAD.
    This situation would normally occur in master-slave setup.
@@ -291,3 +284,12 @@ Approved changes:
            justifications don't seem to refer to issue #3445. Please can we
            separate these changes and clearly describe each one? And update
            the r878607 log msg.)
+
+ * r1100213, rep-cache.c only
+   In FSFS, identify a corruption condition, and don't mask other (unknown)
+   corruption conditions.
+   Notes:
+     There is a merge conflict in fs_fs.c but we don't want to backport
+     this change. Just revert that file after merging r1100213 from trunk.
+   Votes:
+     +1: danielsh, gstein, stsp
