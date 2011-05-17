@@ -1678,40 +1678,12 @@ svn_wc__prop_list_recursive(svn_wc_context_t *wc_ctx,
                             void *cancel_baton,
                             apr_pool_t *scratch_pool)
 {
-  switch (depth)
-    {
-    case svn_depth_empty:
-      {
-        apr_hash_t *props;
-
-        if (pristine)
-          SVN_ERR(svn_wc__db_read_pristine_props(&props, wc_ctx->db,
-                                                 local_abspath,
-                                                 scratch_pool, scratch_pool));
-        else
-          SVN_ERR(svn_wc__db_read_props(&props, wc_ctx->db, local_abspath,
-                                        scratch_pool, scratch_pool));
-
-        if (receiver_func && props && apr_hash_count(props) > 0)
-          SVN_ERR((*receiver_func)(receiver_baton, local_abspath, props,
-                                   scratch_pool));
-      }
-      break;
-    case svn_depth_files:
-    case svn_depth_immediates:
-    case svn_depth_infinity:
-      SVN_ERR(svn_wc__db_read_props_streamily(wc_ctx->db, local_abspath,
-                                              propname, depth,
-                                              base_props, pristine,
-                                              receiver_func, receiver_baton,
-                                              cancel_func, cancel_baton,
-                                              scratch_pool));
-      break;
-    default:
-      SVN_ERR_MALFUNCTION();
-    }
-
-  return SVN_NO_ERROR;
+  return svn_wc__db_read_props_streamily(wc_ctx->db, local_abspath,
+                                         propname, depth,
+                                         base_props, pristine,
+                                         receiver_func, receiver_baton,
+                                         cancel_func, cancel_baton,
+                                         scratch_pool);
 }
 
 svn_error_t *
