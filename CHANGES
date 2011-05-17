@@ -180,7 +180,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.17
     * preserve log message with a non-zero editor exit (r1072084)
     * fix FSFS cache performance on 64-bit platforms (r1103665)
     * make svn cleanup tolerate obstructed directories (r1091881)
-    * fix potential deadlock in multithreaded servers serving FSFS repositories
+    * fix deadlock in multithreaded servers serving FSFS repositories (r1104093)
     * detect very occasional corruption and abort commit (issue #3845)
     * fixed: file externals cause non-inheritable mergeinfo (issue #3843)
     * fixed: file externals cause mixed-revision working copies (issue #3816)
@@ -190,7 +190,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.17
     * improve error message when clients refer to unkown revisions (r939000)
 
   Developer-visible changes:
-    * fix reporting FS-level post-commit processing errors
+    * fix reporting FS-level post-commit processing errors (r1104098)
     * fix JVM recognition on OS X Snow Leopard (10.6) (r1028084)
 
 
