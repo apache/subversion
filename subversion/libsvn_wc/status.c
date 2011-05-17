@@ -575,12 +575,12 @@ assemble_status(svn_wc_status3_t **status,
           if (!info->op_root)
             copied = TRUE; /* And keep status normal */
           else if (info->kind == svn_wc__db_kind_file
-                   && !info->have_base && !info->have_more_work
-                   && !info->has_checksum)
+                   && !info->have_base && !info->have_more_work)
             {
-              /* Simple file addition, no replacement */
+              /* Simple addition or copy, no replacement */
               node_status = svn_wc_status_added;
-              copied = FALSE;
+              /* If an added node has a pristine file, it was copied */
+              copied = info->has_checksum;
             }
           else
             {
