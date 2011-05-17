@@ -2278,7 +2278,6 @@ svn_wc__db_base_clear_dav_cache_recursive(svn_wc__db_t *db,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  const char *like_arg;
   svn_sqlite__stmt_t *stmt;
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
@@ -2286,12 +2285,9 @@ svn_wc__db_base_clear_dav_cache_recursive(svn_wc__db_t *db,
                                              scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  like_arg = construct_like_arg(local_relpath, scratch_pool);
-
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_CLEAR_BASE_NODE_RECURSIVE_DAV_CACHE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id, local_relpath,
-                            like_arg));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
 
   SVN_ERR(svn_sqlite__step_done(stmt));
 
@@ -8156,7 +8152,6 @@ svn_wc__db_read_children(const apr_array_header_t **children,
 
 struct relocate_baton_t
 {
-  const char *repos_relpath;
   const char *repos_root_url;
   const char *repos_uuid;
   svn_boolean_t have_base_node;
@@ -8172,7 +8167,6 @@ relocate_txn(void *baton,
              apr_pool_t *scratch_pool)
 {
   struct relocate_baton_t *rb = baton;
-  const char *like_arg;
   svn_sqlite__stmt_t *stmt;
   apr_int64_t new_repos_id;
 
@@ -8187,24 +8181,19 @@ relocate_txn(void *baton,
   SVN_ERR(create_repos_id(&new_repos_id, rb->repos_root_url, rb->repos_uuid,
                           wcroot->sdb, scratch_pool));
 
-  like_arg = construct_like_arg(local_relpath, scratch_pool);
-
   /* Set the (base and working) repos_ids and clear the dav_caches */
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_RECURSIVE_UPDATE_NODE_REPO));
-  SVN_ERR(svn_sqlite__bindf(stmt, "issii", wcroot->wc_id, local_relpath,
-                            like_arg, rb->old_repos_id, new_repos_id));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isii", wcroot->wc_id, local_relpath,
+                            rb->old_repos_id, new_repos_id));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
   if (rb->have_base_node)
     {
       /* Update any locks for the root or its children. */
-      like_arg = construct_like_arg(rb->repos_relpath, scratch_pool);
-
       SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                         STMT_UPDATE_LOCK_REPOS_ID));
-      SVN_ERR(svn_sqlite__bindf(stmt, "issi", rb->old_repos_id,
-                                rb->repos_relpath, like_arg, new_repos_id));
+      SVN_ERR(svn_sqlite__bindf(stmt, "ii", rb->old_repos_id, new_repos_id));
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
 
@@ -8223,7 +8212,6 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
   const char *local_dir_relpath;
   svn_wc__db_status_t status;
   struct relocate_baton_t rb;
-  const char *stored_local_dir_relpath;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_dir_abspath));
   /* ### assert that we were passed a directory?  */
@@ -8234,8 +8222,7 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
   local_relpath = local_dir_relpath;
 
   SVN_ERR(read_info(&status,
-                    NULL, NULL,
-                    &rb.repos_relpath, &rb.old_repos_id,
+                    NULL, NULL, NULL, &rb.old_repos_id,
                     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                     NULL,
@@ -8250,21 +8237,17 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
       const char *parent_relpath = svn_relpath_dirname(local_dir_relpath,
                                                        scratch_pool);
       SVN_ERR(read_info(&status,
-                        NULL, NULL,
-                        &rb.repos_relpath, &rb.old_repos_id,
+                        NULL, NULL, NULL, &rb.old_repos_id,
                         NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                         NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                         NULL, NULL, NULL,
                         NULL, NULL, NULL,
                         wcroot, parent_relpath,
                         scratch_pool, scratch_pool));
-      stored_local_dir_relpath = local_relpath;
       local_dir_relpath = parent_relpath;
     }
-  else
-    stored_local_dir_relpath = NULL;
 
-  if (!rb.repos_relpath || rb.old_repos_id == INVALID_REPOS_ID)
+  if (rb.old_repos_id == INVALID_REPOS_ID)
     {
       /* Do we need to support relocating something that is
          added/deleted/excluded without relocating the parent?  If not
@@ -8280,8 +8263,6 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
           if (work_del_relpath)
             {
               /* Deleted within a copy/move */
-              SVN_ERR_ASSERT(!stored_local_dir_relpath);
-              stored_local_dir_relpath = local_relpath;
 
               /* The parent of the delete is added. */
               status = svn_wc__db_status_added;
@@ -8292,15 +8273,13 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
 
       if (status == svn_wc__db_status_added)
         {
-          SVN_ERR(scan_addition(NULL, NULL,
-                                &rb.repos_relpath, &rb.old_repos_id,
+          SVN_ERR(scan_addition(NULL, NULL, NULL, &rb.old_repos_id,
                                 NULL, NULL, NULL,
                                 wcroot, local_dir_relpath,
                                 scratch_pool, scratch_pool));
         }
       else
-        SVN_ERR(base_get_info(NULL, NULL, NULL,
-                              &rb.repos_relpath, &rb.old_repos_id,
+        SVN_ERR(base_get_info(NULL, NULL, NULL, NULL, &rb.old_repos_id,
                               NULL, NULL, NULL, NULL, NULL,
                               NULL, NULL, NULL, NULL, NULL,
                               wcroot, local_dir_relpath,
@@ -8309,16 +8288,7 @@ svn_wc__db_global_relocate(svn_wc__db_t *db,
 
   SVN_ERR(fetch_repos_info(NULL, &rb.repos_uuid,
                            wcroot->sdb, rb.old_repos_id, scratch_pool));
-  SVN_ERR_ASSERT(rb.repos_relpath && rb.repos_uuid);
-
-  if (stored_local_dir_relpath)
-    {
-      const char *part = svn_relpath_is_child(local_dir_relpath,
-                                              stored_local_dir_relpath,
-                                              scratch_pool);
-      rb.repos_relpath = svn_relpath_join(rb.repos_relpath, part,
-                                          scratch_pool);
-    }
+  SVN_ERR_ASSERT(rb.repos_uuid);
 
   rb.repos_root_url = repos_root_url;
 
@@ -12252,8 +12222,7 @@ svn_wc__db_base_get_lock_tokens_recursive(apr_hash_t **lock_tokens,
               &stmt, wcroot->sdb,
               STMT_SELECT_BASE_NODE_LOCK_TOKENS_RECURSIVE));
 
-  SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id, local_relpath,
-                            construct_like_arg(local_relpath, scratch_pool)));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   while (have_row)
     {
