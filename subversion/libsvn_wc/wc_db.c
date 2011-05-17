@@ -6217,7 +6217,7 @@ op_delete_txn(void *baton,
 {
   struct op_delete_baton_t *b = baton;
   svn_wc__db_status_t status;
-  svn_boolean_t op_root, have_base, have_work;
+  svn_boolean_t op_root;
   svn_boolean_t add_work = FALSE;
   svn_sqlite__stmt_t *stmt;
   const char *like_arg;
@@ -6230,7 +6230,7 @@ op_delete_txn(void *baton,
                     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                     &op_root, NULL, NULL,
-                    &have_base, NULL, &have_work,
+                    NULL, NULL, NULL,
                     wcroot, local_relpath,
                     scratch_pool, scratch_pool));
 
@@ -6240,14 +6240,15 @@ op_delete_txn(void *baton,
 
   if (op_root)
     {
-      svn_boolean_t have_base;
-      svn_boolean_t have_work;
+      svn_boolean_t below_base;
+      svn_boolean_t below_work;
       svn_wc__db_status_t below_status;
+
       /* Use STMT_SELECT_NODE_INFO directly instead of read_info plus
          info_below_working */
-      SVN_ERR(info_below_working(&have_base, &have_work, &below_status,
+      SVN_ERR(info_below_working(&below_base, &below_work, &below_status,
                                  wcroot, local_relpath, -1, scratch_pool));
-      if ((have_base || have_work)
+      if ((below_base || below_work)
           && below_status != svn_wc__db_status_not_present
           && below_status != svn_wc__db_status_deleted)
         {
