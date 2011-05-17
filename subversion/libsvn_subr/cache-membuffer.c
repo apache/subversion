@@ -981,6 +981,7 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
 
   apr_uint32_t seg;
   apr_uint32_t group_count;
+  apr_uint32_t group_init_size;
   apr_uint64_t data_size;
 
   /* Determine a reasonable number of cache segments. Segmentation is
@@ -1035,6 +1036,7 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
       directory_size = group_count * sizeof(entry_group_t);
     }
 
+  group_init_size = 1 + group_count / (8 * GROUP_INIT_GRANULARITY);
   for (seg = 0; seg < segment_count; ++seg)
     {
       /* allocate buffers and initialize cache members
@@ -1047,7 +1049,7 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
                                group_count * sizeof(entry_group_t),
                                FALSE);
       c[seg].group_initialized = secure_aligned_alloc(pool, 
-                                                      group_count, 
+                                                      group_init_size, 
                                                       FALSE);
       c[seg].first = NO_INDEX;
       c[seg].last = NO_INDEX;
@@ -1074,9 +1076,9 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
           return svn_error_wrap_apr(APR_ENOMEM, _("OOM"));
         }
 
-      /* initialize directory entries as "unused"
+      /* initialize directory entries as "not initialized", hence "unused"
        */
-      memset(c[seg].group_initialized, FALSE, (apr_size_t)c->group_count);
+      memset(c[seg].group_initialized, 0, group_init_size);
 
 #if APR_HAS_THREADS
       /* A lock for intra-process synchronization to the cache, or NULL if
