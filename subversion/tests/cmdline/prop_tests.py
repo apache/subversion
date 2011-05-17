@@ -2431,6 +2431,28 @@ def file_matching_dir_prop_reject(sbox):
                                         expected_status,
                                         None, None, None, None, None, True)
 
+@XFail()
+def pristine_props_listed(sbox):
+  "check if pristine properties are visible"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_propset('prop', 'val', 'A')
+  sbox.simple_commit()
+
+  expected_output = ["Properties on '" + sbox.ospath('A') + "':\n", "  prop\n"]
+
+  # Now we see the pristine properties
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'proplist', '-R', wc_dir, '-r', 'BASE')
+
+  sbox.simple_propset('prop', 'needs-fix', 'A')
+
+  # And now we see no property at all
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'proplist', '-R', wc_dir, '-r', 'BASE')
+
 ########################################################################
 # Run the tests
 
@@ -2472,6 +2494,7 @@ test_list = [ None,
               atomic_over_ra,
               propget_redirection,
               file_matching_dir_prop_reject,
+              pristine_props_listed,
              ]
 
 if __name__ == '__main__':
