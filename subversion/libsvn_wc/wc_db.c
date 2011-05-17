@@ -5133,6 +5133,7 @@ set_changelist_txn(void *baton,
 }
 
 
+/* Implement work_callback_t. */
 static svn_error_t *
 do_changelist_notify(void *baton,
                      svn_wc__db_wcroot_t *wcroot,
