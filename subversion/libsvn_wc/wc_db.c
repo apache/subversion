@@ -6243,7 +6243,6 @@ op_delete_txn(void *baton,
       svn_boolean_t have_base;
       svn_boolean_t have_work;
       svn_wc__db_status_t below_status;
-      SVN_DBG(("Deleting %s\n", local_relpath));
       /* Use STMT_SELECT_NODE_INFO directly instead of read_info plus
          info_below_working */
       SVN_ERR(info_below_working(&have_base, &have_work, &below_status,
