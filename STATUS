@@ -60,7 +60,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.6.x-issue3650
    Votes:
-     +1: pburba
+     +1: pburba, stsp
 
  * r1100213, rep-cache.c only
    In FSFS, identify a corruption condition, and don't mask other (unknown)
