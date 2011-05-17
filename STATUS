@@ -323,10 +323,3 @@ Approved changes:
      ^/subversion/branches/1.6.x-r917523
    Votes:
      +1: kameshj, cmpilato, gstein
-
- * r1098608
-   Disallow GETs of baselined versions of resources.
-   Justification:
-     Returning proper errors is a Good Thing.
-   Votes:
-     +1: hwright, cmpilato, gstein
