@@ -396,11 +396,23 @@ init_adm(svn_wc__db_t *db,
   /** Init the tmp area. ***/
   SVN_ERR(init_adm_tmp_area(local_abspath, pool));
 
-  /* Lastly, create the SDB.  */
+  /* Create the SDB. */
   SVN_ERR(svn_wc__db_init(db, local_abspath,
                           repos_relpath, repos_root_url, repos_uuid,
                           initial_rev, depth,
                           pool));
+
+  /* Stamp ENTRIES and FORMAT files for old clients.  */
+  SVN_ERR(svn_io_file_create(svn_wc__adm_child(local_abspath,
+                                               SVN_WC__ADM_ENTRIES,
+                                               pool),
+                             SVN_WC__NON_ENTRIES_STRING,
+                             pool));
+  SVN_ERR(svn_io_file_create(svn_wc__adm_child(local_abspath,
+                                               SVN_WC__ADM_FORMAT,
+                                               pool),
+                             SVN_WC__NON_ENTRIES_STRING,
+                             pool));
 
   return SVN_NO_ERROR;
 }
