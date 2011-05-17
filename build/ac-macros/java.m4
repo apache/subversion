@@ -64,19 +64,47 @@ AC_DEFUN(SVN_FIND_JDK,
   dnl /System/Library/Frameworks/JavaVM.framework/Versions/CurrentJDK/Commands
   dnl See http://developer.apple.com/qa/qa2001/qa1170.html
   os_arch="`uname`"
+  if test "$os_arch" = "Darwin"; then
+    OSX_VER=`/usr/bin/sw_vers | grep ProductVersion | cut -f2 | cut -d"." -f1,2`
+
+    if test "$OSX_VER" = "10.4"; then
+      dnl For OS X 10.4, the SDK version is 10.4u instead of 10.4.
+      OSX_VER="10.4u"
+    fi
+
+    OSX_SYS_JAVA_FRAMEWORK="/System/Library/Frameworks/JavaVM.framework"
+    OSX_SDK_JAVA_FRAMEWORK="/Developer/SDKs/MacOSX$OSX_VER.sdk/System/Library"
+    OSX_SDK_JAVA_FRAMEWORK="$OSX_SDK_JAVA_FRAMEWORK/Frameworks/JavaVM.framework"
+  fi
+
   if test "$os_arch" = "Darwin" && test "$JDK" = "/usr" &&
      test -d "/Library/Java/Home"; then
-      JDK="/Library/Java/Home"
+    JDK="/Library/Java/Home"
   fi
+
   if test "$os_arch" = "Darwin" && test "$JDK" = "/Library/Java/Home"; then
-      JRE_LIB_DIR="/System/Library/Frameworks/JavaVM.framework/Classes"
+    JRE_LIB_DIR="$OSX_SYS_JAVA_FRAMEWORK/Classes"
   else
-      JRE_LIB_DIR="$JDK/jre/lib"
+    JRE_LIB_DIR="$JDK/jre/lib"
   fi
 
   if test -f "$JDK/include/jni.h"; then
     dnl This *must* be fully expanded, or we'll have problems later in find.
     JNI_INCLUDEDIR="$JDK/include"
+    JDK_SUITABLE=yes
+  elif test "$os_arch" = "Darwin" && test -e "$JDK/Headers/jni.h"; then
+    dnl Search the Headers directory in the JDK
+    JNI_INCLUDEDIR="$JDK/Headers"
+    JDK_SUITABLE=yes
+  elif test "$os_arch" = "Darwin" &&
+       test -e "$OSX_SYS_JAVA_FRAMEWORK/Headers/jni.h"; then
+    dnl Search the System framework's Headers directory
+    JNI_INCLUDEDIR="$OSX_SYS_JAVA_FRAMEWORK/Headers"
+    JDK_SUITABLE=yes
+  elif test "$os_arch" = "Darwin" &&
+       test -e "$OSX_SDK_JAVA_FRAMEWORK/Headers/jni.h"; then
+    dnl Search the SDK's System framework's Headers directory
+    JNI_INCLUDEDIR="$OSX_SDK_JAVA_FRAMEWORK/Headers"
     JDK_SUITABLE=yes
   else
     AC_MSG_WARN([no JNI header files found.])
@@ -85,7 +113,7 @@ AC_DEFUN(SVN_FIND_JDK,
     fi
     JDK_SUITABLE=no
   fi
-  AC_MSG_RESULT([$JDK_SUITABLE])
+  AC_MSG_RESULT([$JNI_INCLUDEDIR/jni.h])
 
   if test "$JDK_SUITABLE" = "yes"; then
     JAVA_BIN='$(JDK)/bin'
