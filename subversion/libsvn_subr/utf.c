@@ -29,6 +29,7 @@
 #include <apr_strings.h>
 #include <apr_lib.h>
 #include <apr_xlate.h>
+#include <apr_atomic.h>
 
 #include "svn_string.h"
 #include "svn_error.h"
@@ -42,9 +43,13 @@
 
 
 
-#define SVN_UTF_NTOU_XLATE_HANDLE "svn-utf-ntou-xlate-handle"
-#define SVN_UTF_UTON_XLATE_HANDLE "svn-utf-uton-xlate-handle"
-#define SVN_APR_UTF8_CHARSET "UTF-8"
+/* Use these static strings to maximize performance on standard conversions.
+ * Any strings on other locations are still valid, however.
+ */
+static const char *SVN_UTF_NTOU_XLATE_HANDLE = "svn-utf-ntou-xlate-handle";
+static const char *SVN_UTF_UTON_XLATE_HANDLE = "svn-utf-uton-xlate-handle";
+
+static const char *SVN_APR_UTF8_CHARSET = "UTF-8";
 
 #if APR_HAS_THREADS
 static apr_thread_mutex_t *xlate_handle_mutex = NULL;
@@ -79,6 +84,13 @@ typedef struct xlate_handle_node_t {
    memory leak. */
 static apr_hash_t *xlate_handle_hash = NULL;
 
+/* "1st level cache" to standard conversion maps. We may access these
+ * using atomic xchange ops, i.e. without further thread synchronization.
+ * If the respective item is NULL, fallback to hash lookup.
+ */
+static volatile void *xlat_ntou_static_handle = NULL;
+static volatile void *xlat_uton_static_handle = NULL;
+
 /* Clean up the xlate handle cache. */
 static apr_status_t
 xlate_cleanup(void *arg)
@@ -90,6 +102,10 @@ xlate_cleanup(void *arg)
   xlate_handle_mutex = NULL;
 #endif
   xlate_handle_hash = NULL;
+
+  /* ensure no stale objects get accessed */
+  xlat_ntou_static_handle = NULL;
+  xlat_uton_static_handle = NULL;
 
   return APR_SUCCESS;
 }
@@ -183,6 +199,19 @@ get_xlate_handle_node(xlate_handle_node_t **ret,
     {
       if (xlate_handle_hash)
         {
+          /* 1st level: global, static items */
+          if (userdata_key == SVN_UTF_NTOU_XLATE_HANDLE)
+            old_node = apr_atomic_xchgptr(&xlat_ntou_static_handle, NULL);
+          else if (userdata_key == SVN_UTF_UTON_XLATE_HANDLE)
+            old_node = apr_atomic_xchgptr(&xlat_uton_static_handle, NULL);
+
+          if (old_node && old_node->valid)
+            {
+              *ret = old_node;
+              return SVN_NO_ERROR;
+            }
+          
+          /* 2nd level: hash lookup */
 #if APR_HAS_THREADS
           apr_err = apr_thread_mutex_lock(xlate_handle_mutex);
           if (apr_err != APR_SUCCESS)
@@ -321,9 +350,20 @@ put_xlate_handle_node(xlate_handle_node_t *node,
   assert(node->next == NULL);
   if (!userdata_key)
     return;
+
+  /* push previous global node to the hash */
   if (xlate_handle_hash)
     {
       xlate_handle_node_t **node_p;
+
+      /* 1st level: global, static items */
+      if (userdata_key == SVN_UTF_NTOU_XLATE_HANDLE)
+        node = apr_atomic_xchgptr(&xlat_ntou_static_handle, node);
+      else if (userdata_key == SVN_UTF_UTON_XLATE_HANDLE)
+        node = apr_atomic_xchgptr(&xlat_uton_static_handle, node);
+      if (node == NULL)
+        return;
+
 #if APR_HAS_THREADS
       if (apr_thread_mutex_lock(xlate_handle_mutex) != APR_SUCCESS)
         SVN_ERR_MALFUNCTION_NO_RETURN();
