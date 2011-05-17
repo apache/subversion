@@ -1586,12 +1586,14 @@ new_revert_changelist(svn_wc__db_t *db,
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
 
+  /* Revert this node (depth=empty) if it matches one of the changelists.  */
   if (svn_wc__internal_changelist_match(db, local_abspath, changelist_hash,
                                         scratch_pool))
     SVN_ERR(new_revert_internal(db, revert_root, local_abspath,
                                 svn_depth_empty, use_commit_times,
-                                cancel_func, cancel_baton, notify_func,
-                                notify_baton, scratch_pool));
+                                cancel_func, cancel_baton,
+                                notify_func, notify_baton,
+                                scratch_pool));
 
   if (depth == svn_depth_empty)
     return SVN_NO_ERROR;
@@ -1655,9 +1657,7 @@ new_revert_partial(svn_wc__db_t *db,
                    apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool;
-  svn_wc__db_kind_t kind;
   const apr_array_header_t *children;
-  svn_boolean_t is_revert_root = !strcmp(local_abspath, revert_root);
   int i;
 
   SVN_ERR_ASSERT(depth == svn_depth_files || depth == svn_depth_immediates);
@@ -1665,23 +1665,13 @@ new_revert_partial(svn_wc__db_t *db,
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
 
-  SVN_ERR(svn_wc__db_read_info(NULL, &kind,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL,
-                               db, local_abspath, scratch_pool, scratch_pool));
-
-  if (is_revert_root || depth == svn_depth_immediates
-      || (depth == svn_depth_files && kind == svn_wc__db_kind_file))
-    SVN_ERR(new_revert_internal(db, revert_root, local_abspath, svn_depth_empty,
-                                use_commit_times, cancel_func, cancel_baton,
-                                notify_func, notify_baton, scratch_pool));
-
-  if (!is_revert_root)
-    return SVN_NO_ERROR;
-
   iterpool = svn_pool_create(scratch_pool);
+
+  /* Revert the root node itself (depth=empty), then move on to the
+     children.  */
+  SVN_ERR(new_revert_internal(db, revert_root, local_abspath, svn_depth_empty,
+                              use_commit_times, cancel_func, cancel_baton,
+                              notify_func, notify_baton, iterpool));
 
   SVN_ERR(svn_wc__db_read_children_of_working_node(&children, db,
                                                    local_abspath,
@@ -1694,15 +1684,26 @@ new_revert_partial(svn_wc__db_t *db,
       svn_pool_clear(iterpool);
 
       child_abspath = svn_dirent_join(local_abspath,
-                                      APR_ARRAY_IDX(children, i,
-                                                    const char *),
+                                      APR_ARRAY_IDX(children, i, const char *),
                                       iterpool);
 
-      SVN_ERR(new_revert_partial(db, revert_root, child_abspath, depth,
-                                 use_commit_times,
-                                 cancel_func, cancel_baton,
-                                 notify_func, notify_baton,
-                                 iterpool));
+      /* For svn_depth_files: don't revert non-files.  */
+      if (depth == svn_depth_files)
+        {
+          svn_wc__db_kind_t kind;
+
+          SVN_ERR(svn_wc__db_read_kind(&kind, db, local_abspath, TRUE,
+                                       iterpool));
+          if (kind != svn_wc__db_kind_file)
+            continue;
+        }
+
+      /* Revert just this node (depth=empty).  */
+      SVN_ERR(new_revert_internal(db, revert_root, child_abspath,
+                                  svn_depth_empty, use_commit_times,
+                                  cancel_func, cancel_baton,
+                                  notify_func, notify_baton,
+                                  iterpool));
     }
 
   svn_pool_destroy(iterpool);
