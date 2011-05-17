@@ -348,7 +348,7 @@ do_wc_to_wc_moves_with_locks2(void *baton,
                              scratch_pool));
 
   SVN_ERR(svn_wc_delete4(b->ctx->wc_ctx, b->pair->src_abspath_or_url,
-                         FALSE, FALSE,
+                         TRUE, FALSE,
                          b->ctx->cancel_func, b->ctx->cancel_baton,
                          b->ctx->notify_func2, b->ctx->notify_baton2,
                          scratch_pool));
@@ -452,6 +452,7 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
 static svn_error_t *
 verify_wc_srcs_and_dsts(const apr_array_header_t *copy_pairs,
                         svn_boolean_t make_parents,
+                        svn_boolean_t is_move,
                         svn_client_ctx_t *ctx,
                         apr_pool_t *pool)
 {
@@ -482,10 +483,51 @@ verify_wc_srcs_and_dsts(const apr_array_header_t *copy_pairs,
       SVN_ERR(svn_io_check_path(pair->dst_abspath_or_url, &dst_kind,
                                 iterpool));
       if (dst_kind != svn_node_none)
-        return svn_error_createf(
-          SVN_ERR_ENTRY_EXISTS, NULL,
-          _("Path '%s' already exists"),
-          svn_dirent_local_style(pair->dst_abspath_or_url, pool));
+        {
+          if (is_move
+              && copy_pairs->nelts == 1
+              && strcmp(svn_dirent_dirname(pair->src_abspath_or_url, iterpool),
+                        svn_dirent_dirname(pair->dst_abspath_or_url,
+                                           iterpool)) == 0)
+            {
+              const char *dst;
+              char *dst_apr;
+              apr_status_t apr_err;
+              /* We have a rename inside a directory, which might collide
+                 just because the case insensivity of the filesystem makes
+                 the source match the destination. */
+
+              SVN_ERR(svn_path_cstring_from_utf8(&dst,
+                                                 pair->dst_abspath_or_url,
+                                                 pool));
+
+              apr_err = apr_filepath_merge(&dst_apr, NULL, dst,
+                                           APR_FILEPATH_TRUENAME, iterpool);
+
+              if (!apr_err)
+                {
+                  /* And now bring it back to our canonical format */
+                  SVN_ERR(svn_path_cstring_to_utf8(&dst, dst_apr, iterpool));
+                  dst = svn_dirent_canonicalize(dst, iterpool);
+                }
+              /* else: Don't report this error; just report the normal error */
+
+              if (!apr_err && strcmp(dst, pair->src_abspath_or_url) == 0)
+                {
+                  /* Ok, we have a single case only rename. Get out of here */
+                  svn_dirent_split(&pair->dst_parent_abspath, &pair->base_name,
+                                   pair->dst_abspath_or_url, pool);
+
+                  svn_pool_destroy(iterpool);
+                  return SVN_NO_ERROR;
+                }
+            }
+
+          return svn_error_createf(
+                      SVN_ERR_ENTRY_EXISTS, NULL,
+                      _("Path '%s' already exists"),
+                      svn_dirent_local_style(pair->dst_abspath_or_url, pool));
+        }
 
       svn_dirent_split(&pair->dst_parent_abspath, &pair->base_name,
                        pair->dst_abspath_or_url, pool);
@@ -2222,7 +2264,8 @@ try_copy(const apr_array_header_t *sources,
   /* Now, call the right handler for the operation. */
   if ((! srcs_are_urls) && (! dst_is_url))
     {
-      SVN_ERR(verify_wc_srcs_and_dsts(copy_pairs, make_parents, ctx, pool));
+      SVN_ERR(verify_wc_srcs_and_dsts(copy_pairs, make_parents, is_move,
+                                      ctx, pool));
 
       /* Copy or move all targets. */
       if (is_move)
