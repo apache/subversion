@@ -117,6 +117,15 @@
  */
 #define MIN_SEGMENT_SIZE 0x2000000ull
 
+/* We don't mark the initialization status for every group but initialize
+ * a number of groups at once. That will allow for a very small init flags
+ * vector that is likely to fit into the CPU caches even for fairly large
+ * caches. For instance, the default of 32 means 8x32 groups per byte, i.e.
+ * 8 flags/byte x 32 groups/flag x 4 entries/group x 40 index bytes/entry 
+ * x 16 cache bytes/index byte = 1kB init vector / 640MB cache.
+ */
+#define GROUP_INIT_GRANULARITY 32
+
 /* Invalid index reference value. Equivalent to APR_UINT32_T(-1)
  */
 #define NO_INDEX APR_UINT32_MAX
@@ -337,6 +346,11 @@ struct svn_membuffer_t
   /* The dictionary, GROUP_SIZE * group_count entries long. Never NULL.
    */
   entry_group_t *directory;
+  
+  /* Flag array with group_count / GROUP_INIT_GRANULARITY _bit_ elements.
+   * Allows for efficiently marking groups as "not initialized".
+   */
+  unsigned char *group_initialized;
 
   /* Size of dictionary in groups. Must be > 0.
    */
@@ -644,6 +658,48 @@ let_entry_age(svn_membuffer_t *cache, entry_t *entry)
   entry->hit_count -= hits_removed;
 }
 
+/* Returns 0 if the entry group idenified by GROUP_INDEX in CACHE has not
+ * been intialized, yet. In that case, this group can not data. Otherwise,
+ * a non-zero value is returned.
+ */
+static APR_INLINE unsigned char
+is_group_initialized(svn_membuffer_t *cache, apr_uint32_t group_index)
+{
+  unsigned char flags = cache->group_initialized
+                          [group_index / (8 * GROUP_INIT_GRANULARITY)];
+  unsigned char bit_mask = 1 << ((group_index / GROUP_INIT_GRANULARITY) % 8);
+  return flags & bit_mask;
+}
+
+/* Initializes the section of the directory in CACHE that contains
+ * the entry group indentified by GROUP_INDEX. */
+static void
+initialize_group(svn_membuffer_t *cache, apr_uint32_t group_index)
+{
+  unsigned char bit_mask;
+  entry_t *entry;
+  apr_uint32_t i;
+
+  /* range of groups to initialize due to GROUP_INIT_GRANULARITY */
+  apr_uint32_t first_index = group_index & GROUP_INIT_GRANULARITY;
+  apr_uint32_t last_index = group_index + GROUP_INIT_GRANULARITY;
+  if (last_index > cache->group_count)
+    last_index = cache->group_count;
+  
+  /* initialize their entries */
+  first_index *= GROUP_SIZE;
+  last_index *= GROUP_SIZE;
+
+  entry = &cache->directory[0][0];
+  for (i = first_index; i < last_index; ++i)
+    entry[i].offset = -1;
+
+  /* set the "initialized" bit for these groups */
+  bit_mask = 1 << ((group_index / GROUP_INIT_GRANULARITY) % 8);
+  cache->group_initialized[group_index / (8 * GROUP_INIT_GRANULARITY)]
+    |= bit_mask;
+}
+
 /* Given the GROUP_INDEX that shall contain an entry with the hash key
  * TO_FIND, find that entry in the specified group. 
  *
@@ -670,6 +726,19 @@ find_entry(svn_membuffer_t *cache,
    */
   group = &cache->directory[group_index][0];
 
+  /* If the entry group has not been initialized, yet, there is no data. 
+   */
+  if (! is_group_initialized(cache, group_index))
+    {
+      if (find_empty)
+        {
+          initialize_group(cache, group_index);
+          entry = group;
+        }
+        
+      return entry;
+    }
+  
   /* try to find the matching entry 
    */
   for (i = 0; i < GROUP_SIZE; ++i)
@@ -977,6 +1046,9 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
           secure_aligned_alloc(pool,
                                group_count * sizeof(entry_group_t),
                                FALSE);
+      c[seg].group_initialized = secure_aligned_alloc(pool, 
+                                                      group_count, 
+                                                      FALSE);
       c[seg].first = NO_INDEX;
       c[seg].last = NO_INDEX;
       c[seg].next = NO_INDEX;
@@ -1004,12 +1076,7 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
 
       /* initialize directory entries as "unused"
        */
-      memset(c[seg].directory,
-             0xff,
-             (apr_size_t)c->group_count * sizeof(entry_group_t));
-
-      /* this may fail on exotic platforms (1s complement) only */
-      assert(c[seg].directory[0][0].offset == -1);
+      memset(c[seg].group_initialized, FALSE, (apr_size_t)c->group_count);
 
 #if APR_HAS_THREADS
       /* A lock for intra-process synchronization to the cache, or NULL if
