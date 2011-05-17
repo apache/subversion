@@ -5109,51 +5109,6 @@ def update_wc_of_dir_to_rev_not_containing_this_dir(sbox):
                                      "up", other_wc_dir)
 
 #----------------------------------------------------------------------
-# Test for issue #3525 'Locked file which is scheduled for delete causes
-# tree conflict'
-#
-# Marked as XFail until that issue is fixed.
-@Issue(3525)
-@XFail()
-def update_deleted_locked_files(sbox):
-  "verify update of deleted locked files"
-
-  # No tree conflicts expected.
-
-  sbox.build()
-  wc_dir = sbox.wc_dir
-  iota = os.path.join(wc_dir, 'iota')
-  E = os.path.join(wc_dir, 'A', 'B', 'E')
-  alpha = os.path.join(E, 'alpha')
-
-  svntest.main.run_svn(None, 'lock', iota, alpha)
-  svntest.main.run_svn(None, 'delete', iota, E)
-
-  expected_output = svntest.wc.State(wc_dir, {})
-
-  expected_disk = svntest.main.greek_state.copy()
-  expected_disk.remove('iota',
-                       'A/B/E/alpha',
-                       'A/B/E/beta')
-
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak('iota',
-                        'A/B/E/alpha',
-                        writelocked='K')
-  expected_status.tweak('iota',
-                        'A/B/E',
-                        'A/B/E/alpha',
-                        'A/B/E/beta',
-                        status='D ')
-
-  # Issue #3525 manifests itself here; the update causes a spurious
-  # tree conflict.
-  svntest.actions.run_and_verify_update(wc_dir,
-                                        expected_output,
-                                        expected_disk,
-                                        expected_status)
-
-#----------------------------------------------------------------------
 # Test for issue #3569 svn update --depth <DEPTH> allows making a working
 # copy incomplete.
 @Issue(3569)
