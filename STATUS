@@ -22,6 +22,10 @@ Candidate changes:
      Can't build 1.6.x on Windows without this change.
    Votes:
      +1: pburba
+     +1: jcorvel (actually, for 1.6.x-svn_fs_commit_txn only one of the two
+                  added exports from r880027 is needed
+                  (private/svn_repos_private.h), but the additional one
+                  (private/svn_client_private.h) doesn't hurt either, so ok)
 
  * r962377, r962378, r1036978, r1037762, r1063572, r1063573, r1063592
    Fix issue #3641 svnsync handling of directory copyfrom.
@@ -61,10 +65,6 @@ Candidate changes:
    Votes:
      +1: pburba, stsp
 
-     +1: jcorvel (actually, for 1.6.x-svn_fs_commit_txn only one of the two
-                  added exports from r880027 is needed
-                  (private/svn_repos_private.h), but the additional one
-                  (private/svn_client_private.h) doesn't hurt either, so ok)
 
 Veto-blocked changes:
 =====================
