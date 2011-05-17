@@ -7654,9 +7654,6 @@ svn_wc__db_read_props_streamily(svn_wc__db_t *db,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(receiver_func);
-  SVN_ERR_ASSERT((depth == svn_depth_files) ||
-                 (depth == svn_depth_immediates) ||
-                 (depth == svn_depth_infinity));
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
                                                 db, local_abspath,
