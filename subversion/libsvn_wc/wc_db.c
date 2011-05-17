@@ -7603,6 +7603,8 @@ cache_props_recursive(void *cb_baton,
 
   if (baton->base_props)
     stmt_idx = STMT_CACHE_NODE_BASE_PROPS;
+  else if (baton->pristine)
+    stmt_idx = STMT_CACHE_NODE_PRISTINE_PROPS;
   else
     stmt_idx = STMT_CACHE_NODE_PROPS;
 
