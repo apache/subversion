@@ -371,20 +371,6 @@ Approved changes:
    Votes:
      +1: blair, danielsh, cmpilato
 
- * 1.6.x-fsfs-begin-txn-deadlock
-   Fix a deadlock that can occur when two or more multithreaded
-   Subversion servers on the same system serve two or more fsfs
-   repositories.
-   Justification:
-     Avoiding deadlocks is a good thing.
-   Branch:
-     ^/subversion/branches/1.6.x-fsfs-begin-txn-deadlock
-   Thread:
-     http://mid.gmane.org/20110330055635.GA31369@daniel3.local
-     http://mid.gmane.org/4D3FC68F.7020709@orcaware.com
-   Votes:
-     +1: blair, danielsh, cmpilato
-
  * r1083883, r1076826
    Fix issue #3816, "file external can cause mixed-revision working
    copy after checkout"

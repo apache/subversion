@@ -75,26 +75,52 @@
   retry loop cannot completely solve this problem either, but can
   help mitigate it.
 */
-#ifdef WIN32
-#define WIN32_RETRY_LOOP(err, expr)                                        \
+#define RETRY_MAX_ATTEMPTS 100
+#define RETRY_INITIAL_SLEEP 1000
+#define RETRY_MAX_SLEEP 128000
+
+#define RETRY_LOOP(err, expr, retry_test, sleep_test)                      \
   do                                                                       \
     {                                                                      \
       apr_status_t os_err = APR_TO_OS_ERROR(err);                       \
-      int sleep_count = 1000;                                              \
+      int sleep_count = RETRY_INITIAL_SLEEP;                               \
       int retries;                                                         \
       for (retries = 0;                                                    \
-           retries < 100 && (os_err == ERROR_ACCESS_DENIED                 \
-                             || os_err == ERROR_SHARING_VIOLATION          \
-                             || os_err == ERROR_DIR_NOT_EMPTY);            \
-           ++retries, os_err = APR_TO_OS_ERROR(err))                    \
+           retries < RETRY_MAX_ATTEMPTS && (retry_test);                   \
+           os_err = APR_TO_OS_ERROR(err))                                  \
         {                                                                  \
-          apr_sleep(sleep_count);                                       \
-          if (sleep_count < 128000)                                        \
-            sleep_count *= 2;                                              \
+          if (sleep_test)                                                  \
+            {                                                              \
+              ++retries;                                                   \
+              apr_sleep(sleep_count);                                      \
+              if (sleep_count < RETRY_MAX_SLEEP)                           \
+                sleep_count *= 2;                                          \
+            }                                                              \
           (err) = (expr);                                                  \
         }                                                                  \
     }                                                                      \
   while (0)
+
+#if defined(EDEADLK) && APR_HAS_THREADS
+#define FILE_LOCK_RETRY_LOOP(err, expr)                                    \
+  RETRY_LOOP(err,                                                          \
+             expr,                                                         \
+             (APR_STATUS_IS_EINTR(err) || os_err == EDEADLK),              \
+             (!APR_STATUS_IS_EINTR(err)))
+#else
+#define FILE_LOCK_RETRY_LOOP(err, expr)                                    \
+  RETRY_LOOP(err,                                                          \
+             expr,                                                         \
+             (APR_STATUS_IS_EINTR(err)),                                   \
+             0)
+#endif
+
+#ifdef WIN32
+#define WIN32_RETRY_LOOP(err, expr)                                        \
+  RETRY_LOOP(err, expr, (os_err == ERROR_ACCESS_DENIED                     \
+                         || os_err == ERROR_SHARING_VIOLATION              \
+                         || os_err == ERROR_DIR_NOT_EMPTY),                \
+             1)
 #else
 #define WIN32_RETRY_LOOP(err, expr) ((void)0)
 #endif
@@ -1855,6 +1881,22 @@ svn_error_t *svn_io_file_lock2(const char *lock_file,
 
   /* Get lock on the filehandle. */
   apr_err = apr_file_lock(lockfile_handle, locktype);
+
+  /* In deployments with two or more multithreaded servers running on
+     the same system serving two or more fsfs repositories it is
+     possible for a deadlock to occur when getting a write lock on
+     db/txn-current-lock:
+
+     Process 1                         Process 2
+     ---------                         ---------
+     thread 1: get lock in repos A
+                                       thread 1: get lock in repos B
+                                       thread 2: block getting lock in repos A
+     thread 2: try to get lock in B *** deadlock ***
+
+     Retry for a while for the deadlock to clear. */
+  FILE_LOCK_RETRY_LOOP(apr_err, apr_file_lock(lockfile_handle, locktype));
+
   if (apr_err)
     {
       switch (locktype & APR_FLOCK_TYPEMASK)
