@@ -139,12 +139,16 @@ Candidate changes:
    Provide clueful error when editor drive refers revision > HEAD.
    This situation would normally occur in master-slave setup.
    Justification:
-     This backport fixes the following vague error
-     "svn: REPORT of '/svn/repo1/!svn/vcc/default': Could not read chunk size: connection was closed by server (http://127.0.0.1)".
-     to
-     "svn: A reported revision is higher than the current repository HEAD revision.  Perhaps the repository is out of date with respect to the master repository?". if the setup is master-slave.
+     This backport fixes the following vague error:
+       svn: REPORT of '/svn/repo1/!svn/vcc/default': Could not read
+       chunk size: connection was closed by server (http://127.0.0.1)
+     to:
+       svn: A reported revision is higher than the current repository
+       HEAD revision.  Perhaps the repository is out of date with
+       respect to the master repository?
+     if WebDAV proxying is enabled for the server.
    Votes:
-     +1: kameshj
+     +1: kameshj, cmpilato
 
 
 Veto-blocked changes:
