@@ -1113,7 +1113,7 @@ static svn_error_t *svn_ra_neon__get_repos_root(svn_ra_session_t *session,
 
   if (! ras->repos_root)
     {
-      svn_string_t bc_relative;
+      const char *bc_relative;
       svn_stringbuf_t *url_buf;
 
       SVN_ERR(svn_ra_neon__get_baseline_info(NULL, &bc_relative, NULL,
@@ -1124,7 +1124,7 @@ static svn_error_t *svn_ra_neon__get_repos_root(svn_ra_session_t *session,
          in bc_relative. */
       url_buf = svn_stringbuf_dup(ras->url, pool);
       svn_path_remove_components
-        (url_buf, svn_path_component_count(bc_relative.data));
+        (url_buf, svn_path_component_count(bc_relative));
       ras->repos_root = apr_pstrdup(ras->pool, url_buf->data);
     }
 

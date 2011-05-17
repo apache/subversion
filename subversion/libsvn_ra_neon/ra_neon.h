@@ -518,10 +518,10 @@ svn_error_t * svn_ra_neon__get_one_prop(const svn_string_t **propval,
    should work against the latest (HEAD) revision, or whether it should
    return information about that specific revision.
 
-   If BC_URL is not NULL, then it will be filled in with the URL for
+   If BC_URL_P is not NULL, then it will be filled in with the URL for
    the Baseline Collection for the specified revision, or the HEAD.
 
-   If BC_RELATIVE is not NULL, then it will be filled in with a
+   If BC_RELATIVE_P is not NULL, then it will be filled in with a
    relative pathname for the baselined resource corresponding to the
    revision of the resource specified by URL.
 
@@ -530,15 +530,15 @@ svn_error_t * svn_ra_neon__get_one_prop(const svn_string_t **propval,
    as the REVISION parameter, unless we are working against the HEAD. In
    that case, the HEAD revision number is returned.
 
-   Allocation for BC_URL->data, BC_RELATIVE->data, and temporary data,
+   Allocation for *BC_URL_P, *BC_RELATIVE_P, and temporary data,
    will occur in POOL.
 
    Note: a Baseline Collection is a complete tree for a specified Baseline.
    DeltaV baselines correspond one-to-one to Subversion revisions. Thus,
    the entire state of a revision can be found in a Baseline Collection.
 */
-svn_error_t *svn_ra_neon__get_baseline_info(svn_string_t *bc_url,
-                                            svn_string_t *bc_relative,
+svn_error_t *svn_ra_neon__get_baseline_info(const char **bc_url_p,
+                                            const char **bc_relative_p,
                                             svn_revnum_t *latest_rev,
                                             svn_ra_neon__session_t *sess,
                                             const char *url,

@@ -242,7 +242,7 @@ do_lock(svn_lock_t **lock,
   ne_uri uri;
   int code;
   const char *url;
-  svn_string_t fs_path;
+  const char *fs_path;
   ne_xml_parser *lck_parser;
   svn_ra_neon__session_t *ras = session->priv;
   lock_baton_t *lrb = apr_pcalloc(pool, sizeof(*lrb));
@@ -309,7 +309,7 @@ do_lock(svn_lock_t **lock,
   /*###FIXME: we never verified whether we have received back the type
     of lock we requested: was it shared/exclusive? was it write/otherwise?
     How many did we get back? Only one? */
-  err = lock_from_baton(lock, req, fs_path.data, lrb, pool);
+  err = lock_from_baton(lock, req, fs_path, lrb, pool);
 
  cleanup:
   /* 405 == Method Not Allowed (Occurs when trying to lock a working
@@ -541,7 +541,7 @@ svn_ra_neon__get_lock_internal(svn_ra_neon__session_t *ras,
                                apr_pool_t *pool)
 {
   const char *url;
-  svn_string_t fs_path;
+  const char *fs_path;
   svn_error_t *err;
   ne_uri uri;
   lock_baton_t *lrb = apr_pcalloc(pool, sizeof(*lrb));
@@ -593,7 +593,7 @@ svn_ra_neon__get_lock_internal(svn_ra_neon__session_t *ras,
 
   /*###FIXME We assume here we only got one lock response. The WebDAV
     spec makes no such guarantees. How to make sure we grab the one we need? */
-  err = lock_from_baton(lock, req, fs_path.data, lrb, pool);
+  err = lock_from_baton(lock, req, fs_path, lrb, pool);
 
  cleanup:
   svn_ra_neon__request_destroy(req);

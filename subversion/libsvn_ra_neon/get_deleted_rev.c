@@ -120,7 +120,8 @@ svn_ra_neon__get_deleted_rev(svn_ra_session_t *session,
 {
   svn_ra_neon__session_t *ras = session->priv;
   const char *body, *final_bc_url;
-  svn_string_t bc_url, bc_relative;
+  const char *bc_url;
+  const char *bc_relative;
   int status_code;
   svn_error_t *err;
   drev_baton_t *b = apr_palloc(pool, sizeof(*b));
@@ -135,8 +136,7 @@ svn_ra_neon__get_deleted_rev(svn_ra_session_t *session,
      baseline-collection URL, which we get from the peg revision.  */
   SVN_ERR(svn_ra_neon__get_baseline_info(&bc_url, &bc_relative, NULL, ras,
                                          ras->url->data, peg_revision, pool));
-  final_bc_url = svn_path_url_add_component2(bc_url.data, bc_relative.data,
-                                             pool);
+  final_bc_url = svn_path_url_add_component2(bc_url, bc_relative, pool);
 
   body = apr_psprintf(pool,
                       "<?xml version=\"1.0\" encoding=\"utf-8\"?>"

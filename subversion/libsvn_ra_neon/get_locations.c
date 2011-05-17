@@ -130,7 +130,8 @@ svn_ra_neon__get_locations(svn_ra_session_t *session,
   svn_error_t *err;
   get_locations_baton_t request_baton;
   const char *relative_path_quoted;
-  svn_string_t bc_url, bc_relative;
+  const char *bc_url;
+  const char *bc_relative;
   const char *final_bc_url;
   int i;
   int status_code = 0;
@@ -176,8 +177,7 @@ svn_ra_neon__get_locations(svn_ra_session_t *session,
      baseline-collection URL, which we get from the peg revision.  */
   SVN_ERR(svn_ra_neon__get_baseline_info(&bc_url, &bc_relative, NULL, ras,
                                          ras->url->data, peg_revision, pool));
-  final_bc_url = svn_path_url_add_component2(bc_url.data, bc_relative.data,
-                                             pool);
+  final_bc_url = svn_path_url_add_component2(bc_url, bc_relative, pool);
 
   err = svn_ra_neon__parsed_request(ras, "REPORT", final_bc_url,
                                     request_body->data, NULL, NULL,
