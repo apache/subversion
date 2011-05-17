@@ -5430,21 +5430,6 @@ op_revert_txn(void *baton,
   op_depth = svn_sqlite__column_int64(stmt, 0);
   SVN_ERR(svn_sqlite__reset(stmt));
 
-  /* Handle ACTUAL_NODE first. We want any changes to NODES, which fire
-     triggers to update 'revert_list', to take precedence over these
-     changes to ACTUAL_NODE.  */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                  STMT_DELETE_ACTUAL_NODE_LEAVING_CHANGELIST));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
-  if (!affected_rows)
-    {
-      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_CLEAR_ACTUAL_NODE_LEAVING_CHANGELIST));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-      SVN_ERR(svn_sqlite__step_done(stmt));
-    }
-
   if (op_depth > 0 && op_depth == relpath_depth(local_relpath))
     {
       /* Can't do non-recursive revert if children exist */
@@ -5482,6 +5467,18 @@ op_revert_txn(void *baton,
                                         STMT_DELETE_WC_LOCK_ORPHAN));
       SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
       SVN_ERR(svn_sqlite__step_done(stmt));
+    }
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                  STMT_DELETE_ACTUAL_NODE_LEAVING_CHANGELIST));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
+  if (!affected_rows)
+    {
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_CLEAR_ACTUAL_NODE_LEAVING_CHANGELIST));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+      SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
     }
 
   return SVN_NO_ERROR;
@@ -5542,9 +5539,12 @@ op_revert_recursive_txn(void *baton,
   if (!op_depth)
     op_depth = 1; /* Don't delete BASE nodes */
 
-  /* Handle ACTUAL_NODE first. We want any changes to NODES, which fire
-     triggers to update 'revert_list', to take precedence over these
-     changes to ACTUAL_NODE.  */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_DELETE_NODES_RECURSIVE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isi", wcroot->wc_id,
+                            local_relpath, op_depth));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                         STMT_DELETE_ACTUAL_NODE_LEAVING_CHANGELIST_RECURSIVE));
   SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id,
@@ -5555,12 +5555,6 @@ op_revert_recursive_txn(void *baton,
                         STMT_CLEAR_ACTUAL_NODE_LEAVING_CHANGELIST_RECURSIVE));
   SVN_ERR(svn_sqlite__bindf(stmt, "iss", wcroot->wc_id,
                             local_relpath, like_arg));
-  SVN_ERR(svn_sqlite__step_done(stmt));
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_DELETE_NODES_RECURSIVE));
-  SVN_ERR(svn_sqlite__bindf(stmt, "isi", wcroot->wc_id,
-                            local_relpath, op_depth));
   SVN_ERR(svn_sqlite__step_done(stmt));
 
   /* ### This removes the locks, but what about the access batons? */
