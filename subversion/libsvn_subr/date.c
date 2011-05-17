@@ -25,6 +25,7 @@
 #include "svn_string.h"
 
 #include "svn_private_config.h"
+#include "private/svn_token.h"
 
 /* Valid rule actions */
 enum rule_action {
@@ -204,10 +205,7 @@ static struct unit_words_table {
   { NULL ,      0 }
 };
 
-static struct number_words_table {
-  const char *word;
-  int number;
-} number_words_table[] = {
+static svn_token_map_t number_words_map[] = {
   { "zero", 0 }, { "one", 1 }, { "two", 2 }, { "three", 3 }, { "four", 4 },
   { "five", 5 }, { "six", 6 }, { "seven", 7 }, { "eight", 8 }, { "nine", 9 },
   { "ten", 10 }, { "eleven", 11 }, { "twelve", 12 }, { NULL, 0 }
@@ -231,7 +229,6 @@ words_match(apr_time_exp_t *expt, svn_boolean_t *localtz,
   apr_array_header_t *words;
   int i;
   int n = -1;
-  const char *number_str;
   const char *unit_str;
 
   words = svn_cstring_split(text, " ", TRUE /* chop_whitespace */, pool);
@@ -242,17 +239,9 @@ words_match(apr_time_exp_t *expt, svn_boolean_t *localtz,
   word = APR_ARRAY_IDX(words, 0, const char *);
 
   /* Try to parse a number word. */
-  for (i = 0, number_str = number_words_table[i].word;
-       number_str = number_words_table[i].word, number_str != NULL; i++)
-    {
-      if (!strcmp(word, number_str))
-        {
-          n = number_words_table[i].number;
-          break;
-        }
-    }
+  n = svn_token__from_word(number_words_map, word);
 
-  if (n < 0)
+  if (n == SVN_TOKEN_UNKNOWN)
     {
       svn_error_t *err; 
 
