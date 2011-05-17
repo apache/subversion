@@ -40,6 +40,7 @@
 #include "win32_xlate.h"
 
 #include "private/svn_utf_private.h"
+#include "private/svn_dep_compat.h"
 
 
 
@@ -174,6 +175,30 @@ get_xlate_key(const char *topage,
                      "-xlate-handle", (char *)NULL);
 }
 
+/* Atomically replace the content in *MEM with NEW_VALUE and return
+ * the previous content of *MEM. If atomicy cannot be guaranteed,
+ * *MEM will not be modified and NEW_VALUE is simply returned to
+ * the caller.
+ */
+static void*
+atomic_swap(volatile void **mem, void *new_value)
+{
+#if APR_HAS_THREADS
+#if APR_VERSION_AT_LEAST(1,3,0)
+   return apr_atomic_xchgptr(mem, new_value);
+#else
+   /* old APRs don't support atomic swaps. Simply return the
+    * input to the caller for further proccessing. */
+   return new_value;
+#endif
+#else
+   /* no threads - no sync. necessary */
+   void *old_value = *mem;
+   *mem = new_value;
+   return old_value;
+#endif
+}
+
 /* Set *RET to a handle node for converting from FROMPAGE to TOPAGE,
    creating the handle node if it doesn't exist in USERDATA_KEY.
    If a node is not cached and apr_xlate_open() returns APR_EINVAL or
@@ -201,9 +226,9 @@ get_xlate_handle_node(xlate_handle_node_t **ret,
         {
           /* 1st level: global, static items */
           if (userdata_key == SVN_UTF_NTOU_XLATE_HANDLE)
-            old_node = apr_atomic_xchgptr(&xlat_ntou_static_handle, NULL);
+            old_node = atomic_swap(&xlat_ntou_static_handle, NULL);
           else if (userdata_key == SVN_UTF_UTON_XLATE_HANDLE)
-            old_node = apr_atomic_xchgptr(&xlat_uton_static_handle, NULL);
+            old_node = atomic_swap(&xlat_uton_static_handle, NULL);
 
           if (old_node && old_node->valid)
             {
@@ -358,12 +383,12 @@ put_xlate_handle_node(xlate_handle_node_t *node,
 
       /* 1st level: global, static items */
       if (userdata_key == SVN_UTF_NTOU_XLATE_HANDLE)
-        node = apr_atomic_xchgptr(&xlat_ntou_static_handle, node);
+        node = atomic_swap(&xlat_ntou_static_handle, node);
       else if (userdata_key == SVN_UTF_UTON_XLATE_HANDLE)
-        node = apr_atomic_xchgptr(&xlat_uton_static_handle, node);
+        node = atomic_swap(&xlat_uton_static_handle, node);
       if (node == NULL)
         return;
-
+        
 #if APR_HAS_THREADS
       if (apr_thread_mutex_lock(xlate_handle_mutex) != APR_SUCCESS)
         SVN_ERR_MALFUNCTION_NO_RETURN();
