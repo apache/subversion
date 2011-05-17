@@ -1343,6 +1343,52 @@ def wc_repos_file_externals(sbox):
                                         None, None, None, None, None,
                                         True)
 
+#----------------------------------------------------------------------
+# issue #3843
+def merge_target_with_externals(sbox):
+  "merge target with externals"
+
+  # Test for a problem the plagued Subversion in the pre-1.7-single-DB world:
+  # Externals in a merge target would get meaningless explicit mergeinfo set
+  # on them.  See http://svn.haxx.se/dev/archive-2010-08/0088.shtml
+  externals_test_setup(sbox)
+  wc_dir = sbox.wc_dir
+  repo_url = sbox.repo_url
+
+  # Some paths we'll care about
+  A_path              = os.path.join(wc_dir, "A")
+  A_branch_path       = os.path.join(wc_dir, "A-branch")
+  A_gamma_branch_path = os.path.join(wc_dir, "A-branch", "D", "gamma")
+  
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'checkout',
+                                     repo_url, wc_dir)
+
+  # Setup A/external as file external to A/mu
+  # and A/external-pinned as a pinned file external to A/mu
+  externals_prop = "^/A/mu external\n^/A/mu@6 external-pinned\n"
+  change_external(os.path.join(wc_dir, 'A'), externals_prop)
+
+  # Branch A@1 to A-branch and make a simple text change on the latter in r8.
+  svntest.actions.run_and_verify_svn(None, None, [], 'copy', A_path + '@1',
+                                     A_branch_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+                                     '-m', 'make a copy', wc_dir)
+  svntest.main.file_write(A_gamma_branch_path, "The new gamma!\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+                                     '-m', 'branch edit', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  # Merge r8 from A-branch back to A.  There should be explicit mergeinfo
+  # only at the root of A; the externals should not get any.
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge', '-c8',
+                                     repo_url + '/A-branch', A_path)
+  svntest.actions.run_and_verify_svn(
+    "Unexpected subtree mergeinfo created",
+    ["Properties on '" + A_path + "':\n",
+     "  svn:mergeinfo\n",
+     "    /A-branch:8\n"],
+    [], 'pg', svntest.main.SVN_PROP_MERGEINFO, '-vR', wc_dir)
 
 ########################################################################
 # Run the tests
@@ -1370,6 +1416,7 @@ test_list = [ None,
               binary_file_externals,
               switch_relative_external,
               wc_repos_file_externals,
+              merge_target_with_externals,
              ]
 
 if __name__ == '__main__':

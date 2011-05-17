@@ -351,19 +351,3 @@ Approved changes:
      ^/subversion/branches/1.6.x-issue3816
    Votes:
      +1: stsp, pburba, cmpilato
-
- * r1085001, r992114, r1084962, r1084978
-   Fix issue #3843, "file externals cause non-inheritable mergeinfo"
-   Justification:
-     Without this fix, merges into working copies which contain
-     file externals create non-inheritable mergeinfo on the merge
-     target, and explicit mergeinfo on file externals and all children.
-     This is not desirable, and can cause commits to fail unless mergeinfo
-     is manually removed from the file external.
-   Notes:
-     The r1083883 group is much less useful without this fix.
-     r1085001 was a commit to the branch. The other revisions are from trunk.
-   Branch:
-     ^/subversion/branches/1.6.x-issue3843
-   Votes:
-     +1: stsp, pburba, cmpilato
