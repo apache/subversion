@@ -7714,9 +7714,7 @@ svn_wc__db_read_props_streamily(svn_wc__db_t *db,
   svn_sqlite__stmt_t *stmt;
   cache_props_baton_t baton;
   svn_boolean_t have_row;
-  int row_number;
   apr_pool_t *iterpool;
-  svn_boolean_t files_only = (depth == svn_depth_files);
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(receiver_func);
@@ -7747,23 +7745,10 @@ svn_wc__db_read_props_streamily(svn_wc__db_t *db,
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_SELECT_RELEVANT_PROPS_FROM_CACHE));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
-  for (row_number = 0; have_row; ++row_number)
+  while (have_row)
     {
       const char *prop_data;
       apr_size_t len;
-
-      if (files_only && row_number > 0)
-        {
-          svn_wc__db_kind_t child_kind;
-
-          child_kind = svn_sqlite__column_token(stmt, 1, kind_map);
-          if (child_kind != svn_wc__db_kind_file &&
-              child_kind != svn_wc__db_kind_symlink)
-            {
-              SVN_ERR(svn_sqlite__step(&have_row, stmt));
-              continue;
-            }
-        }
 
       svn_pool_clear(iterpool);
 
