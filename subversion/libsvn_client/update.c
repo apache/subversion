@@ -96,11 +96,14 @@ svn_client__dirent_fetcher(void *baton,
    folder. ANCHOR_ABSPATH is the w/c root and LOCAL_ABSPATH will still
    be considered empty, if it is equal to ANCHOR_ABSPATH and only
    contains the admin sub-folder. 
+   If the w/c folder already exists but cannot be openend, we return
+   "unclean" - just in case. Most likely, the caller will have to bail
+   out later due to the same error we got here.
  */
 static svn_error_t *
-is_empty_wc(const char *local_abspath, 
+is_empty_wc(svn_boolean_t *clean_checkout, 
+            const char *local_abspath, 
             const char *anchor_abspath, 
-            svn_boolean_t *clean_checkout, 
             apr_pool_t *pool)
 {
   apr_dir_t *dir;
@@ -111,11 +114,13 @@ is_empty_wc(const char *local_abspath,
   *clean_checkout = TRUE;
   
   /* open directory. If it does not exist, yet, a clean one will
-     be created by the caller. If it cannot be openend for other
-     reasons, the caller will detect and report those as well. */
+     be created by the caller. */
   err = svn_io_dir_open(&dir, local_abspath, pool);
   if (err)
     {
+      if (! APR_STATUS_IS_ENOENT(err->apr_err))
+        *clean_checkout = FALSE;
+      
       svn_error_clear(err);
       return SVN_NO_ERROR;
     }
@@ -141,7 +146,14 @@ is_empty_wc(const char *local_abspath,
         }
     }
   
-  svn_error_clear(err);
+  if (err)
+    {
+      /* There was some issue reading the folder content.
+       * We better disable optimizations in that case. */
+      *clean_checkout = FALSE;
+      svn_error_clear(err);
+    }
+
   return svn_io_dir_close(dir);
 }
 
@@ -266,7 +278,7 @@ update_internal(svn_revnum_t *result_rev,
     }
 
   /* check whether the "clean c/o" optimization is applicable */
-  SVN_ERR(is_empty_wc(local_abspath, anchor_abspath, &clean_checkout, pool));
+  SVN_ERR(is_empty_wc(&clean_checkout, local_abspath, anchor_abspath, pool));
 
   /* Get the external diff3, if any. */
   svn_config_get(cfg, &diff3_cmd, SVN_CONFIG_SECTION_HELPERS,
