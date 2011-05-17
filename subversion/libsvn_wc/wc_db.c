@@ -2451,6 +2451,7 @@ with_triggers(void *baton,
 }
 
 
+/* Prototype for the "work callback" used by with_finalization().  */
 typedef svn_error_t * (*work_callback_t)(
                           void *baton,
                           svn_wc__db_wcroot_t *wcroot,
@@ -2460,9 +2461,21 @@ typedef svn_error_t * (*work_callback_t)(
                           void *notify_baton,
                           apr_pool_t *scratch_pool);
 
+/* Utility function to provide several features, with a guaranteed
+   finalization (ie. to drop temporary tables).
+
+   1) for WCROOT and LOCAL_RELPATH, run TXN_CB(TXN_BATON) within a
+      sqlite transaction
+   2) if (1) is successful and a NOTIFY_FUNC is provided, then run
+      the "work" step: WORK_CB(WORK_BATON).
+   3) execute FINALIZE_STMT_IDX no matter what errors may be thrown
+      from the above two steps.
+
+   CANCEL_FUNC, CANCEL_BATON, NOTIFY_FUNC and NOTIFY_BATON are their
+   typical values. These are passed to the work callback, which typically
+   provides notification about the work done by TXN_CB.  */
 static svn_error_t *
-with_finalization(void *baton,
-                  svn_wc__db_wcroot_t *wcroot,
+with_finalization(svn_wc__db_wcroot_t *wcroot,
                   const char *local_relpath,
                   svn_wc__db_txn_callback_t txn_cb,
                   void *txn_baton,
@@ -2481,7 +2494,7 @@ with_finalization(void *baton,
   err1 = svn_wc__db_with_txn(wcroot, local_relpath, txn_cb, txn_baton,
                              scratch_pool);
 
-  if (notify_func != NULL)
+  if (err1 == NULL && notify_func != NULL)
     {
       err2 = work_cb(work_baton, wcroot,
                      cancel_func, cancel_baton,
@@ -5198,8 +5211,7 @@ svn_wc__db_op_set_changelist(svn_wc__db_t *db,
 
   /* Perform the set-changelist operation (transactionally), perform any
      notifications necessary, and then clean out our temporary tables.  */
-  return svn_error_return(with_finalization(NULL,
-                                            wcroot, local_relpath,
+  return svn_error_return(with_finalization(wcroot, local_relpath,
                                             set_changelist_txn, &scb,
                                             do_changelist_notify, NULL,
                                             cancel_func, cancel_baton,
@@ -6397,8 +6409,7 @@ svn_wc__db_op_delete(svn_wc__db_t *db,
 
   /* Perform the deletion operation (transactionally), perform any
      notifications necessary, and then clean out our temporary tables.  */
-  return svn_error_return(with_finalization(NULL,
-                                            wcroot, local_relpath,
+  return svn_error_return(with_finalization(wcroot, local_relpath,
                                             op_delete_txn, &odb,
                                             do_delete_notify, NULL,
                                             cancel_func, cancel_baton,
@@ -7656,7 +7667,7 @@ svn_wc__db_read_props_streamily(svn_wc__db_t *db,
   baton.pristine = pristine;
   baton.cancel_func = cancel_func;
   baton.cancel_baton = cancel_baton;
-  SVN_ERR(with_finalization(NULL, wcroot, local_relpath,
+  SVN_ERR(with_finalization(wcroot, local_relpath,
                             cache_props_recursive, &baton,
                             NULL, NULL,
                             cancel_func, cancel_baton,
