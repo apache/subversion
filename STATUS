@@ -122,7 +122,7 @@ Candidate changes:
    Justification:
      Returning proper errors is a Good Thing.
    Votes:
-     +1: hwright
+     +1: hwright, cmpilato
 
  * ^/subversion/trunk/get-deps.sh
    Backport the get-deps.sh script from trunk.
