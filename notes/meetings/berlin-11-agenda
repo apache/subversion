@@ -22,3 +22,9 @@ Potential items for discussion:
  * Python test timing
    - Identify slow tests
    - Sort tests into short- and long-running sets, for convenience.
+ * Making blame faster (1.8+ probably)
+   - Implementing reverse blame
+   - Making diff faster (see notes/diff-optimizations.txt)
+   - Calculating blame info on server side?
+   - Caching/saving changed-line-info on server side?
+ * [insert item here]
