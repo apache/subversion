@@ -7734,8 +7734,13 @@ svn_wc__db_read_props_streamily(svn_wc__db_t *db,
   baton.pristine = pristine;
   baton.cancel_func = cancel_func;
   baton.cancel_baton = cancel_baton;
-  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, cache_props_recursive,
-                              &baton, scratch_pool));
+  SVN_ERR(with_finalization(NULL, wcroot, local_relpath,
+                            cache_props_recursive, &baton,
+                            NULL, NULL,
+                            cancel_func, cancel_baton,
+                            NULL, NULL,
+                            STMT_DROP_TARGETS_LIST,
+                            scratch_pool));
 
   iterpool = svn_pool_create(scratch_pool);
 
