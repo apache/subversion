@@ -284,5 +284,5 @@ Approved changes:
                   added exports from r880027 is needed
                   (private/svn_repos_private.h), but the additional one
                   (private/svn_client_private.h) doesn't hurt either, so ok)
-     +1 (second hunk only): danielsh
+     +1 (second hunk only): danielsh, rhuijben
 
