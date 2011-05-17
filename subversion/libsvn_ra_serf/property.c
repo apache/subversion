@@ -911,7 +911,7 @@ retrieve_baseline_info(svn_revnum_t *actual_revision,
                        svn_ra_serf__session_t *session,
                        svn_ra_serf__connection_t *conn,
                        const char *baseline_url,
-                       svn_revnum_t revision,                       
+                       svn_revnum_t revision,
                        apr_pool_t *pool)
 {
   apr_hash_t *props = apr_hash_make(pool);
