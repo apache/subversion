@@ -224,14 +224,14 @@ static svn_error_t * get_version_url(commit_ctx_t *cc,
     }
   else
     {
-      svn_string_t bc_url;
-      svn_string_t bc_relative;
+      const char *bc_url;
+      const char *bc_relative;
 
       /* The version URL comes from a resource in the Baseline Collection. */
       SVN_ERR(svn_ra_neon__get_baseline_info(&bc_url, &bc_relative, NULL,
                                              cc->ras, rsrc->url,
                                              rsrc->revision, pool));
-      url = svn_path_url_add_component2(bc_url.data, bc_relative.data, pool);
+      url = svn_path_url_add_component2(bc_url, bc_relative, pool);
     }
 
   /* Get the DAV:checked-in property, which contains the URL of the
@@ -571,14 +571,14 @@ static svn_error_t * copy_resource(svn_ra_neon__session_t *ras,
                                    const char *copy_dst_url,
                                    apr_pool_t *scratch_pool)
 {
-  svn_string_t bc_url, bc_relative;
+  const char *bc_url;
+  const char *bc_relative;
   const char *copy_src_url;
 
   SVN_ERR(svn_ra_neon__get_baseline_info(&bc_url, &bc_relative, NULL,
                                          ras, copyfrom_path,
                                          copyfrom_revision, scratch_pool));
-  copy_src_url = svn_path_url_add_component2(bc_url.data,
-                                             bc_relative.data,
+  copy_src_url = svn_path_url_add_component2(bc_url, bc_relative,
                                              scratch_pool);
   SVN_ERR(svn_ra_neon__copy(ras, 1 /* overwrite */, SVN_RA_NEON__DEPTH_INFINITE,
                             copy_src_url, copy_dst_url, scratch_pool));

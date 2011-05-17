@@ -682,12 +682,12 @@ svn_error_t *svn_ra_neon__get_file(svn_ra_session_t *session,
   else
     {
       svn_revnum_t got_rev;
-      svn_string_t bc_url, bc_relative;
+      const char *bc_url;
+      const char *bc_relative;
 
       SVN_ERR(svn_ra_neon__get_baseline_info(&bc_url, &bc_relative, &got_rev,
                                              ras, url, revision, pool));
-      final_url = svn_path_url_add_component2(bc_url.data, bc_relative.data,
-                                              pool);
+      final_url = svn_path_url_add_component2(bc_url, bc_relative, pool);
       if (fetched_rev != NULL)
         *fetched_rev = got_rev;
     }
@@ -811,12 +811,12 @@ svn_error_t *svn_ra_neon__get_dir(svn_ra_session_t *session,
   else
     {
       svn_revnum_t got_rev;
-      svn_string_t bc_url, bc_relative;
+      const char *bc_url;
+      const char *bc_relative;
 
       SVN_ERR(svn_ra_neon__get_baseline_info(&bc_url, &bc_relative, &got_rev,
                                              ras, url, revision, pool));
-      final_url = svn_path_url_add_component2(bc_url.data, bc_relative.data,
-                                              pool);
+      final_url = svn_path_url_add_component2(bc_url, bc_relative, pool);
       if (fetched_rev != NULL)
         *fetched_rev = got_rev;
     }
@@ -2296,7 +2296,7 @@ static svn_error_t * reporter_link_path(void *report_baton,
   report_baton_t *rb = report_baton;
   const char *entry;
   svn_stringbuf_t *qpath = NULL, *qlinkpath = NULL;
-  svn_string_t bc_relative;
+  const char *bc_relative;
   const char *tokenstring = "";
   const char *depthstring = apr_psprintf(pool, "depth=\"%s\"",
                                          svn_depth_to_word(depth));
@@ -2318,7 +2318,7 @@ static svn_error_t * reporter_link_path(void *report_baton,
 
 
   svn_xml_escape_cdata_cstring(&qpath, path, pool);
-  svn_xml_escape_attr_cstring(&qlinkpath, bc_relative.data, pool);
+  svn_xml_escape_attr_cstring(&qlinkpath, bc_relative, pool);
   if (start_empty)
     entry = apr_psprintf(pool,
                          "<S:entry rev=\"%ld\" %s %s"

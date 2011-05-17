@@ -957,8 +957,8 @@ svn_error_t *svn_ra_neon__get_baseline_props(svn_string_t *bc_relative,
 }
 
 
-svn_error_t *svn_ra_neon__get_baseline_info(svn_string_t *bc_url,
-                                            svn_string_t *bc_relative,
+svn_error_t *svn_ra_neon__get_baseline_info(const char **bc_url_p,
+                                            const char **bc_relative_p,
                                             svn_revnum_t *latest_rev,
                                             svn_ra_neon__session_t *sess,
                                             const char *url,
@@ -986,19 +986,17 @@ svn_error_t *svn_ra_neon__get_baseline_info(svn_string_t *bc_url,
                                       "the youngest revision"));
           revision = youngest;
         }
-      if (bc_url)
+      if (bc_url_p)
         {
-          bc_url->data = apr_psprintf(pool, "%s/%ld", sess->rev_root_stub,
-                                      revision);
-          bc_url->len = strlen(bc_url->data);
+          *bc_url_p = apr_psprintf(pool, "%s/%ld", sess->rev_root_stub,
+                                   revision);
         }
-      if (bc_relative)
+      if (bc_relative_p)
         {
           const char *relpath = svn_uri_is_child(sess->repos_root, url, pool);
           if (! relpath)
             relpath = "";
-          bc_relative->data = relpath;
-          bc_relative->len = strlen(relpath);
+          *bc_relative_p = relpath;
         }
       if (latest_rev)
         {
@@ -1036,8 +1034,8 @@ svn_error_t *svn_ra_neon__get_baseline_info(svn_string_t *bc_url,
     }
 
   /* maybe return bc_url to the caller */
-  if (bc_url)
-    *bc_url = *my_bc_url;
+  if (bc_url_p)
+    *bc_url_p = my_bc_url->data;
 
   if (latest_rev != NULL)
     {
@@ -1057,8 +1055,8 @@ svn_error_t *svn_ra_neon__get_baseline_info(svn_string_t *bc_url,
       *latest_rev = SVN_STR_TO_REV(vsn_name->data);
     }
 
-  if (bc_relative)
-    *bc_relative = my_bc_rel;
+  if (bc_relative_p)
+    *bc_relative_p = my_bc_rel.data;
 
   return SVN_NO_ERROR;
 }
@@ -1279,7 +1277,8 @@ svn_ra_neon__do_check_path(svn_ra_session_t *session,
 {
   svn_ra_neon__session_t *ras = session->priv;
   const char *url = ras->url->data;
-  svn_string_t bc_url, bc_relative;
+  const char *bc_url;
+  const char *bc_relative;
   svn_error_t *err;
   svn_boolean_t is_dir;
 
@@ -1321,8 +1320,8 @@ svn_ra_neon__do_check_path(svn_ra_session_t *session,
   if (! err)
     {
       svn_ra_neon__resource_t *rsrc;
-      const char *full_bc_url = svn_path_url_add_component2(bc_url.data,
-                                                            bc_relative.data,
+      const char *full_bc_url = svn_path_url_add_component2(bc_url,
+                                                            bc_relative,
                                                             pool);
 
       /* query the DAV:resourcetype of the full, assembled URL. */
@@ -1377,7 +1376,8 @@ svn_ra_neon__do_stat(svn_ra_session_t *session,
   else
     {
       /* Else, convert (rev, path) into an opaque server-generated URL. */
-      svn_string_t bc_url, bc_relative;
+      const char *bc_url;
+      const char *bc_relative;
 
       err = svn_ra_neon__get_baseline_info(&bc_url, &bc_relative, NULL, ras,
                                            url, revision, pool);
@@ -1394,8 +1394,7 @@ svn_ra_neon__do_stat(svn_ra_session_t *session,
             return err;
         }
 
-      final_url = svn_path_url_add_component2(bc_url.data, bc_relative.data,
-                                              pool);
+      final_url = svn_path_url_add_component2(bc_url, bc_relative, pool);
     }
 
   /* Depth-zero PROPFIND is the One True DAV Way. */

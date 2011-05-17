@@ -143,7 +143,8 @@ svn_ra_neon__get_location_segments(svn_ra_session_t *session,
   svn_stringbuf_t *request_body;
   svn_error_t *err;
   get_location_segments_baton_t request_baton;
-  svn_string_t bc_url, bc_relative;
+  const char *bc_url;
+  const char *bc_relative;
   const char *bc;
   int status_code = 0;
   apr_pool_t *subpool = svn_pool_create(pool);
@@ -194,7 +195,7 @@ svn_ra_neon__get_location_segments(svn_ra_session_t *session,
   SVN_ERR(svn_ra_neon__get_baseline_info(&bc_url, &bc_relative, NULL, ras,
                                          ras->url->data, peg_revision,
                                          subpool));
-  bc = svn_path_url_add_component2(bc_url.data, bc_relative.data, subpool);
+  bc = svn_path_url_add_component2(bc_url, bc_relative, subpool);
 
   err = svn_ra_neon__parsed_request(ras, "REPORT", bc,
                                     request_body->data, NULL, NULL,
