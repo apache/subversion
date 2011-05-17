@@ -187,7 +187,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.17
     * disallow GETs of baselined versions of resources (r1104126)
     * fixed: write-through proxy could direcly commit to slave (r917523)
     * detect a particular corruption condition in FSFS (r1100213)
-    * improve error message when clients refer to unkown revisions (939000)
+    * improve error message when clients refer to unkown revisions (r939000)
 
   Developer-visible changes:
     * fix reporting FS-level post-commit processing errors
