@@ -103,49 +103,11 @@ Candidate changes:
    Justification:
      Eliminates potentially massive duplication when tracing logs
      across merge reintegrations.
-   Branch: ^/subversion/branches/1.6.x-issue3650
+   Branch:
+     ^/subversion/branches/1.6.x-issue3650
    Votes:
      +1: pburba
 
- * r1083883, r1076826
-   Fix issue #3816, "file external can cause mixed-revision working
-   copy after checkout"
-   Justification:
-     Without this fix, file externals pinned to a revision can prevent
-     reintegrate merges.
-   Notes:
-     r1083883 is the actual fix and has no corresponding trunk revision.
-     r1076826 added a test case on trunk (merged to the branch in r1083892).
-   Branch:
-     ^/subversion/branches/1.6.x-issue3816
-   Votes:
-     +1: stsp, pburba
-
- * r1085001, r992114, r1084962, r1084978
-   Fix issue #3843, "file externals cause non-inheritable mergeinfo"
-   Justification:
-     Without this fix, merges into working copies which contain
-     file externals create non-inheritable mergeinfo on the merge
-     target, and explicit mergeinfo on file externals and all children.
-     This is not desirable, and can cause commits to fail unless mergeinfo
-     is manually removed from the file external.
-   Notes:
-     The r1083883 group is much less useful without this fix.
-     r1085001 was a commit to the branch. The other revisions are from trunk.
-   Branch:
-     ^/subversion/branches/1.6.x-issue3843
-   Votes:
-     +1: stsp, pburba
-
- * ^/subversion/branches/1.6.x-issue3845
-   Detect very occasional corruption and abort commit.
-   Justification:
-     Don't know the cause, but we can stop it getting into the repo.
-   Votes:
-     +1: philip
-     +1: danielsh (trusting Philip's explanation that the noderev offset,length
-                   are cached to be the correct values for a non-corrupt file)
-  
  * r1100213
    In FSFS, identify a corruption condition, and don't mask other (unknown)
    corruption conditions.
@@ -423,3 +385,43 @@ Approved changes:
    Votes:
      +1: blair, danielsh, cmpilato
 
+ * r1083883, r1076826
+   Fix issue #3816, "file external can cause mixed-revision working
+   copy after checkout"
+   Justification:
+     Without this fix, file externals pinned to a revision can prevent
+     reintegrate merges.
+   Notes:
+     r1083883 is the actual fix and has no corresponding trunk revision.
+     r1076826 added a test case on trunk (merged to the branch in r1083892).
+   Branch:
+     ^/subversion/branches/1.6.x-issue3816
+   Votes:
+     +1: stsp, pburba, cmpilato
+
+ * r1085001, r992114, r1084962, r1084978
+   Fix issue #3843, "file externals cause non-inheritable mergeinfo"
+   Justification:
+     Without this fix, merges into working copies which contain
+     file externals create non-inheritable mergeinfo on the merge
+     target, and explicit mergeinfo on file externals and all children.
+     This is not desirable, and can cause commits to fail unless mergeinfo
+     is manually removed from the file external.
+   Notes:
+     The r1083883 group is much less useful without this fix.
+     r1085001 was a commit to the branch. The other revisions are from trunk.
+   Branch:
+     ^/subversion/branches/1.6.x-issue3843
+   Votes:
+     +1: stsp, pburba, cmpilato
+
+ * ^/subversion/branches/1.6.x-issue3845
+   Detect very occasional corruption and abort commit.
+   Justification:
+     Don't know the cause, but we can stop it getting into the repo.
+   Votes:
+     +1: philip
+     +1: danielsh, cmpilato (trusting Philip's explanation that the noderev
+         offset,length are cached to be the correct values for a non-corrupt
+         file)
+  
