@@ -337,17 +337,3 @@ Approved changes:
                  that are currently nominated...so my +1 is conditional on
                  that fix being applied first.)
      +1: danielsh (pburba: a fix to #3641 was committed to trunk)
-
- * r1083883, r1076826
-   Fix issue #3816, "file external can cause mixed-revision working
-   copy after checkout"
-   Justification:
-     Without this fix, file externals pinned to a revision can prevent
-     reintegrate merges.
-   Notes:
-     r1083883 is the actual fix and has no corresponding trunk revision.
-     r1076826 added a test case on trunk (merged to the branch in r1083892).
-   Branch:
-     ^/subversion/branches/1.6.x-issue3816
-   Votes:
-     +1: stsp, pburba, cmpilato
