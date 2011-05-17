@@ -134,7 +134,7 @@ Candidate changes:
      those from the 1.6.16-deps tarball:
      expat-1.95, apr-1.3.9, apr-util 1.3.9, sqlite-3.7.3, serf-0.7.0, zlib-1.2.4
    Votes:
-     +1: danielsh
+     +1: danielsh, cmpilato
 
  * r939000, r939002, r1102803
    Provide clueful error when editor drive refers revision > HEAD.
