@@ -207,7 +207,7 @@ apr_status_t dav_svn__location_header_filter(ap_filter_t *f,
        proxy anything. */
     master_uri = dav_svn__get_master_uri(r);
     master_uri = svn_path_uri_encode(master_uri, r->pool);
-    if (!r->main && master_uri) {
+    if (r->main || !master_uri) {
         ap_remove_output_filter(f);
         return ap_pass_brigade(f->next, bb);
     }
@@ -227,7 +227,7 @@ apr_status_t dav_svn__location_header_filter(ap_filter_t *f,
         new_uri = svn_path_uri_encode(new_uri, r->pool);
         apr_table_set(r->headers_out, "Location", new_uri);
     }
-    return APR_SUCCESS;
+    return ap_pass_brigade(f->next, bb);
 }
 
 apr_status_t dav_svn__location_body_filter(ap_filter_t *f,
