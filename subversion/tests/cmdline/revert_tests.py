@@ -1261,7 +1261,7 @@ def revert_nested_add_depth_immediates(sbox):
   expected_status.remove('A/X', 'A/X/Y')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-@XFail()
+
 @Issue(3859)
 def revert_empty_actual(sbox):
   "revert with superfluous actual node"
