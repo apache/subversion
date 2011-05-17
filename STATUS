@@ -275,6 +275,19 @@ Veto-blocked changes:
            Discussing on list.)
      -1: cmpilato (Changes semantics of svn_io_dir_walk()).
 
+ * r996383
+   Add shorthands for 'svn --accept=%s' values.
+   Justication:
+     Require less typing to resolve conflicts.
+   Votes:
+     +1: danielsh, blair
+     -0: rhuijben (Should we apply a change like this in a patch release?)
+     -0: stsp (I'd say no...)
+     -0: pburba (I see no harm, but have to agree with stsp)
+     -1: cmpilato (to the degree that our command-line syntax is an API,
+         this would prevent rollback to prior 1.6.x versions without
+         changes to scripts which call this API)
+
 Approved changes:
 =================
 
@@ -302,19 +315,6 @@ Approved changes:
            justifications don't seem to refer to issue #3445. Please can we
            separate these changes and clearly describe each one? And update
            the r878607 log msg.)
-
- * r996383
-   Add shorthands for 'svn --accept=%s' values.
-   Justication:
-     Require less typing to resolve conflicts.
-   Votes:
-     +1: danielsh, blair
-     -0: rhuijben (Should we apply a change like this in a patch release?)
-     -0: stsp (I'd say no...)
-     -0: pburba (I see no harm, but have to agree with stsp)
-     -1: cmpilato (to the degree that our command-line syntax is an API,
-         this would prevent rollback to prior 1.6.x versions without
-         changes to scripts which call this API)
 
  * r1036429
    Fix svnsync_tests 29 for BDB.
