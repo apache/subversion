@@ -744,6 +744,53 @@ def symlink_destination_change(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Now replace the symlink with a normal file and try to commit, we
+
+#----------------------------------------------------------------------
+# This used to lose the special status in the target working copy
+# (disk and metadata).
+@Issue(3884)
+@SkipUnless(svntest.main.is_posix_os)
+@XFail()
+def merge_foreign_symlink(sbox):
+  "merge symlink-add from foreign repos"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make a copy of this repository and associated working copy.  Both
+  # should have nothing but a Greek tree in them, and the two
+  # repository UUIDs should differ.
+  sbox2 = sbox.clone_dependent(True)
+  sbox2.build()
+  wc_dir2 = sbox2.wc_dir
+
+  # convenience variables
+  zeta_path = sbox.ospath('A/zeta')
+  zeta2_path = sbox2.ospath('A/zeta')
+
+  # sbox2 r2: create zeta2 in sbox2
+  os.symlink('target', zeta2_path)
+  sbox2.simple_add('A/zeta')
+  sbox2.simple_commit('A/zeta')
+
+
+  # sbox1: merge that
+  svntest.main.run_svn(None, 'merge', '-c', '2', sbox2.repo_url,
+                       sbox.ospath(''))
+
+  # Verify special status.
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A/zeta': Item(props={ 'svn:special': '*' })
+  })
+  svntest.actions.verify_disk(sbox.ospath(''), expected_disk, True)
+
+  # TODO: verify status:
+  #   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  #   expected_status.add({
+  #     'A/zeta' : Item(status='A ', wc_rev='-', props={'svn:special': '*'}),
+  #     })
+  
 ########################################################################
 # Run the tests
 
@@ -767,6 +814,7 @@ test_list = [ None,
               propvalue_normalized,
               unrelated_changed_special_status,
               symlink_destination_change,
+              merge_foreign_symlink,
              ]
 
 if __name__ == '__main__':
