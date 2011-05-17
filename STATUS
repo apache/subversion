@@ -62,6 +62,14 @@ Candidate changes:
    Votes:
      +1: pburba, stsp
 
+ * r880027
+   Follow-up on already backported 1.6.x-svn_fs_commit_txn branch branch;
+   export the new private functions from the shared libraries on Windows.
+   Justification:
+     Can't build 1.6.x on Windows without this change.
+   Votes:
+     +1: pburba
+
 
 Veto-blocked changes:
 =====================
@@ -96,14 +104,6 @@ Veto-blocked changes:
      -0: cmpilato (Introduces new features and changes output)
      -1: rhuijben (Introduces new features and changes output;
                    I think it should be removed from STATUS)
-
- * r880027
-   Follow-up on already backported 1.6.x-svn_fs_commit_txn branch branch;
-   export the new private functions from the shared libraries on Windows.
-   Justification:
-     Can't build 1.6.x on Windows without this change.
-   Votes:
-     +1: pburba
 
  * r878078, r878088, r878102, r878196
    Make KWallet window attached to terminal window.
