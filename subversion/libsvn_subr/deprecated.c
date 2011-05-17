@@ -630,6 +630,17 @@ svn_opt_print_generic_help(const char *header,
 
 /*** From io.c ***/
 svn_error_t *
+svn_io_file_create(const char *file,
+                   const char *contents,
+                   apr_pool_t *pool)
+{
+  const svn_string_t *contents_string;
+
+  contents_string = (contents ? svn_string_create(contents, pool) : NULL);
+  return svn_io_file_create2(file, contents_string, pool);
+}
+
+svn_error_t *
 svn_io_open_unique_file2(apr_file_t **file,
                          const char **temp_path,
                          const char *path,
