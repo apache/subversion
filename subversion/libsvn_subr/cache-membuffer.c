@@ -681,7 +681,7 @@ initialize_group(svn_membuffer_t *cache, apr_uint32_t group_index)
   apr_uint32_t i;
 
   /* range of groups to initialize due to GROUP_INIT_GRANULARITY */
-  apr_uint32_t first_index = group_index & GROUP_INIT_GRANULARITY;
+  apr_uint32_t first_index = group_index & -GROUP_INIT_GRANULARITY;
   apr_uint32_t last_index = group_index + GROUP_INIT_GRANULARITY;
   if (last_index > cache->group_count)
     last_index = cache->group_count;
