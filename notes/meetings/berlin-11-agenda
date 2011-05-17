@@ -13,4 +13,8 @@ Potential items for discussion:
    - Should we leave serf as default http library?
    - Checkout/update editor memory and performance issues. May be
      it is worth implementing non-skelta update editor mode in ra_serf.
+ * The P-word
+   - How important is performance of SVN in comparison to other
+     qualities like maintainability etc.
+   - What is a reasonable long-term performance goal for SVN?
  * [insert item here]
