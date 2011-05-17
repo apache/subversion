@@ -293,6 +293,26 @@ Veto-blocked changes:
          this would prevent rollback to prior 1.6.x versions without
          changes to scripts which call this API)
 
+ * r1036429
+   Fix svnsync_tests 29 for BDB.
+   Justification:
+     Avoids an assert in the server.
+   Notes:
+     See also the r962377 group.
+   Votes:
+     +1: philip
+     +0: stsp (it fixes the test, but pburba asked on IRC how this change
+               will affect replaced directories and I'm not sure about that)
+     +1: pburba (since we reverted r962377-962378 in r1037005 - see
+                 http://svn.haxx.se/dev/archive-2010-11/0412.shtml, this
+                 change is now dependent on the new set of issue #3641 fixes
+                 that are currently nominated...so my +1 is conditional on
+                 that fix being applied first.)
+     +1: danielsh (pburba: a fix to #3641 was committed to trunk)
+     -1: hwright (I'm not sure we need this: the merge conflicts, and the
+                  assert isn't even in 1.6.x.  I'm happy to remove this veto
+                  if a proper backport branch is provided.)
+
 Approved changes:
 =================
 
@@ -320,20 +340,3 @@ Approved changes:
            justifications don't seem to refer to issue #3445. Please can we
            separate these changes and clearly describe each one? And update
            the r878607 log msg.)
-
- * r1036429
-   Fix svnsync_tests 29 for BDB.
-   Justification:
-     Avoids an assert in the server.
-   Notes:
-     See also the r962377 group.
-   Votes:
-     +1: philip
-     +0: stsp (it fixes the test, but pburba asked on IRC how this change
-               will affect replaced directories and I'm not sure about that)
-     +1: pburba (since we reverted r962377-962378 in r1037005 - see
-                 http://svn.haxx.se/dev/archive-2010-11/0412.shtml, this
-                 change is now dependent on the new set of issue #3641 fixes
-                 that are currently nominated...so my +1 is conditional on
-                 that fix being applied first.)
-     +1: danielsh (pburba: a fix to #3641 was committed to trunk)
