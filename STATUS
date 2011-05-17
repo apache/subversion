@@ -279,10 +279,9 @@ Approved changes:
    Justification:
      Can't build 1.6.x on Windows without this change.
    Votes:
-     +1: pburba
      +1: jcorvel (actually, for 1.6.x-svn_fs_commit_txn only one of the two
                   added exports from r880027 is needed
                   (private/svn_repos_private.h), but the additional one
                   (private/svn_client_private.h) doesn't hurt either, so ok)
-     +1 (second hunk only): danielsh, rhuijben
+     +1 (second hunk only): danielsh, rhuijben, pburba
 
