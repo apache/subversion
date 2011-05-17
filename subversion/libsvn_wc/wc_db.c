@@ -7690,8 +7690,25 @@ svn_wc__db_read_props_streamily(svn_wc__db_t *db,
           child_abspath = svn_dirent_join(wcroot->abspath,
                                           child_relpath, iterpool);
 
-          SVN_ERR(receiver_func(receiver_baton, child_abspath, props,
-                                iterpool));
+          /* Filter on the propname, if given one. */
+          if (propname)
+            {
+              svn_string_t *propval = apr_hash_get(props, propname,
+                                                   APR_HASH_KEY_STRING);
+
+              if (propval)
+                {
+                  props = apr_hash_make(iterpool);
+                  apr_hash_set(props, propname, APR_HASH_KEY_STRING,
+                               propval);
+                }
+              else
+                props = NULL;
+            }
+
+          if (props)
+            SVN_ERR(receiver_func(receiver_baton, child_abspath, props,
+                                  iterpool));
         }
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
