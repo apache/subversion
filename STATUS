@@ -271,12 +271,3 @@ Approved changes:
            justifications don't seem to refer to issue #3445. Please can we
            separate these changes and clearly describe each one? And update
            the r878607 log msg.)
-
- * ^/branches/1.6.x-r1053984
-   Fix bug where committing a changelist was prevented by a file outside that
-   changelist having unexpectedly changed special status.
-   Justification:
-     Local fix.  users@ reports.
-   Votes:
-     +1: gstein, stsp, rhuijben
-     +0: danielsh
