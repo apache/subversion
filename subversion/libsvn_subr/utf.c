@@ -180,7 +180,7 @@ get_xlate_key(const char *topage,
  * *MEM will not be modified and NEW_VALUE is simply returned to
  * the caller.
  */
-static void*
+static APR_INLINE void*
 atomic_swap(volatile void **mem, void *new_value)
 {
 #if APR_HAS_THREADS
