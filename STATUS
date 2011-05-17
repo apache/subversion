@@ -45,7 +45,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.6.x-r917523
    Votes:
-     +1: kameshj, cmpilato
+     +1: kameshj, cmpilato, gstein
 
  * r1028084, r1028125, r1041638
    Fix JVM recognition on OS X Snow Leopard (10.6).
@@ -59,7 +59,7 @@ Candidate changes:
      isn't exactly intuitive enough to expect regular people to know how to
      find the right path to use.
    Votes:
-     +1: jwhitlock
+     +1: jwhitlock, gstein
      +0.9: blair, I tested this on Snow Leopard and it worked, but
            didn't do a line-by-line review of the changes
      +0: danielsh (only touches java.m4)
@@ -70,6 +70,7 @@ Candidate changes:
    Justification:
      Local fix.  users@ reports.
    Votes:
+     +1: gstein
      +0: danielsh
 
  * r962377, r962378, r1036978, r1037762, r1063572, r1063573, r1063592
@@ -96,6 +97,7 @@ Candidate changes:
    Justification:
      We like building Subversion, even on Windows.  User requested.
    Votes:
+     +1: gstein
      +0: hwright (I like the idea, but have no knowledge of the change, or
                   ability to test it.)
 
@@ -115,14 +117,14 @@ Candidate changes:
    Note:
      I think at least the latter part (the fs_fs.c part) should be backported.
    Votes:
-     +1: danielsh
+     +1: danielsh, gstein
 
  * r1098608
    Disallow GETs of baselined versions of resources.
    Justification:
      Returning proper errors is a Good Thing.
    Votes:
-     +1: hwright, cmpilato
+     +1: hwright, cmpilato, gstein
 
  * r939000, r939002, r1102803
    Provide clueful error when editor drive refers revision > HEAD.
