@@ -15,18 +15,6 @@ Status of 1.6.17:
 Candidate changes:
 ==================
 
- * r880027
-   Follow-up on already backported 1.6.x-svn_fs_commit_txn branch branch;
-   export the new private functions from the shared libraries on Windows.
-   Justification:
-     Can't build 1.6.x on Windows without this change.
-   Votes:
-     +1: pburba
-     +1: jcorvel (actually, for 1.6.x-svn_fs_commit_txn only one of the two
-                  added exports from r880027 is needed
-                  (private/svn_repos_private.h), but the additional one
-                  (private/svn_client_private.h) doesn't hurt either, so ok)
-
  * r962377, r962378, r1036978, r1037762, r1063572, r1063573, r1063592
    Fix issue #3641 svnsync handling of directory copyfrom.
    Justification:
@@ -64,7 +52,6 @@ Candidate changes:
      ^/subversion/branches/1.6.x-issue3650
    Votes:
      +1: pburba, stsp
-
 
 Veto-blocked changes:
 =====================
@@ -275,3 +262,17 @@ Approved changes:
            justifications don't seem to refer to issue #3445. Please can we
            separate these changes and clearly describe each one? And update
            the r878607 log msg.)
+
+ * r880027
+   Follow-up on already backported 1.6.x-svn_fs_commit_txn branch branch;
+   export the new private functions from the shared libraries on Windows.
+   Justification:
+     Can't build 1.6.x on Windows without this change.
+   Votes:
+     +1: pburba
+     +1: jcorvel (actually, for 1.6.x-svn_fs_commit_txn only one of the two
+                  added exports from r880027 is needed
+                  (private/svn_repos_private.h), but the additional one
+                  (private/svn_client_private.h) doesn't hurt either, so ok)
+     +1 (second hunk only): danielsh
+
