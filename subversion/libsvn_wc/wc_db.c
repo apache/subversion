@@ -7555,88 +7555,6 @@ svn_wc__db_read_url(const char **url,
                                    scratch_pool));
 }
 
-/* Baton for db_read_props */
-struct db_read_props_baton_t
-{
-  apr_hash_t *props;
-  apr_pool_t *result_pool;
-};
-
-
-/* Helper for svn_wc__db_read_props(). Implements svn_wc__db_txn_callback_t */
-static svn_error_t *
-db_read_props(void *baton,
-              svn_wc__db_wcroot_t *wcroot,
-              const char *local_relpath,
-              apr_pool_t *scratch_pool)
-{
-  struct db_read_props_baton_t *rpb = baton;
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
-  svn_error_t *err = NULL;
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_SELECT_ACTUAL_PROPS));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-
-  if (have_row && !svn_sqlite__column_is_null(stmt, 0))
-    {
-      err = svn_sqlite__column_properties(&rpb->props, stmt, 0,
-                                          rpb->result_pool, scratch_pool);
-    }
-  else
-    have_row = FALSE;
-
-  SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
-
-  if (have_row)
-    return SVN_NO_ERROR;
-
-  /* No local changes. Return the pristine props for this node.  */
-  SVN_ERR(db_read_pristine_props(&rpb->props, wcroot, local_relpath,
-                                 rpb->result_pool, scratch_pool));
-  if (rpb->props == NULL)
-    {
-      /* Pristine properties are not defined for this node.
-         ### we need to determine whether this node is in a state that
-         ### allows for ACTUAL properties (ie. not deleted). for now,
-         ### just say all nodes, no matter the state, have at least an
-         ### empty set of props.  */
-      rpb->props = apr_hash_make(rpb->result_pool);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_wc__db_read_props(apr_hash_t **props,
-                      svn_wc__db_t *db,
-                      const char *local_abspath,
-                      apr_pool_t *result_pool,
-                      apr_pool_t *scratch_pool)
-{
-  svn_wc__db_wcroot_t *wcroot;
-  const char *local_relpath;
-  struct db_read_props_baton_t rpb;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
-                              local_abspath, scratch_pool, scratch_pool));
-  VERIFY_USABLE_WCROOT(wcroot);
-
-  rpb.result_pool = result_pool;
-
-  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, db_read_props, &rpb,
-                              scratch_pool));
-
-  *props = rpb.props;
-
-  return SVN_NO_ERROR;
-}
-
-
 
 /* Call RECEIVER_FUNC, passing RECEIVER_BATON, an absolute path, and
    a hash table mapping <tt>char *</tt> names onto svn_string_t *
@@ -7779,6 +7697,89 @@ svn_wc__db_read_props_streamily(svn_wc__db_t *db,
 
   SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb,
                                       STMT_DROP_NODE_PROPS_CACHE));
+  return SVN_NO_ERROR;
+}
+
+
+/* Baton for db_read_props */
+struct db_read_props_baton_t
+{
+  apr_hash_t *props;
+  apr_pool_t *result_pool;
+};
+
+
+/* Helper for svn_wc__db_read_props(). Implements svn_wc__db_txn_callback_t */
+static svn_error_t *
+db_read_props(void *baton,
+              svn_wc__db_wcroot_t *wcroot,
+              const char *local_relpath,
+              apr_pool_t *scratch_pool)
+{
+  struct db_read_props_baton_t *rpb = baton;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  svn_error_t *err = NULL;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_ACTUAL_PROPS));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  if (have_row && !svn_sqlite__column_is_null(stmt, 0))
+    {
+      err = svn_sqlite__column_properties(&rpb->props, stmt, 0,
+                                          rpb->result_pool, scratch_pool);
+    }
+  else
+    have_row = FALSE;
+
+  SVN_ERR(svn_error_compose_create(err, svn_sqlite__reset(stmt)));
+
+  if (have_row)
+    return SVN_NO_ERROR;
+
+  /* No local changes. Return the pristine props for this node.  */
+  SVN_ERR(db_read_pristine_props(&rpb->props, wcroot, local_relpath,
+                                 rpb->result_pool, scratch_pool));
+  if (rpb->props == NULL)
+    {
+      /* Pristine properties are not defined for this node.
+         ### we need to determine whether this node is in a state that
+         ### allows for ACTUAL properties (ie. not deleted). for now,
+         ### just say all nodes, no matter the state, have at least an
+         ### empty set of props.  */
+      rpb->props = apr_hash_make(rpb->result_pool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__db_read_props(apr_hash_t **props,
+                      svn_wc__db_t *db,
+                      const char *local_abspath,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+  struct db_read_props_baton_t rpb;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
+                              local_abspath, scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  rpb.result_pool = result_pool;
+
+  SVN_ERR(svn_wc__db_with_txn(wcroot, local_relpath, db_read_props, &rpb,
+                              scratch_pool));
+
+  *props = rpb.props;
+
   return SVN_NO_ERROR;
 }
 
