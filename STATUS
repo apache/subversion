@@ -31,22 +31,6 @@ Candidate changes:
                    works correctly. I think the not interactive code path
                    needs the same fix).
 
- * r917523
-   If the configured slave url employes URI-unsafe characters
-   (<space>, '?', '%'), proxying of commits fails and commit affects
-   the slave repository directly.
-   Notes:
-     This backport depends on the r878590 and r916286 groups only for the
-     conflict free port.  Alternatively, the back-port branch '1.6.x-r917523'
-     attempts to represent a dependency-free version of the same change.
-   Justification:
-     With this commit we avoid accidental commit to the slave and hence 
-     making it unusable as a proxy anymore.
-   Branch:
-     ^/subversion/branches/1.6.x-r917523
-   Votes:
-     +1: kameshj, cmpilato, gstein
-
  * r1028084, r1028125, r1041638
    Fix JVM recognition on OS X Snow Leopard (10.6).
    Justification:
@@ -118,13 +102,6 @@ Candidate changes:
      I think at least the latter part (the fs_fs.c part) should be backported.
    Votes:
      +1: danielsh, gstein
-
- * r1098608
-   Disallow GETs of baselined versions of resources.
-   Justification:
-     Returning proper errors is a Good Thing.
-   Votes:
-     +1: hwright, cmpilato, gstein
 
  * r939000, r939002, r1102803
    Provide clueful error when editor drive refers revision > HEAD.
@@ -330,3 +307,26 @@ Approved changes:
            justifications don't seem to refer to issue #3445. Please can we
            separate these changes and clearly describe each one? And update
            the r878607 log msg.)
+
+ * r917523
+   If the configured slave url employes URI-unsafe characters
+   (<space>, '?', '%'), proxying of commits fails and commit affects
+   the slave repository directly.
+   Notes:
+     This backport depends on the r878590 and r916286 groups only for the
+     conflict free port.  Alternatively, the back-port branch '1.6.x-r917523'
+     attempts to represent a dependency-free version of the same change.
+   Justification:
+     With this commit we avoid accidental commit to the slave and hence 
+     making it unusable as a proxy anymore.
+   Branch:
+     ^/subversion/branches/1.6.x-r917523
+   Votes:
+     +1: kameshj, cmpilato, gstein
+
+ * r1098608
+   Disallow GETs of baselined versions of resources.
+   Justification:
+     Returning proper errors is a Good Thing.
+   Votes:
+     +1: hwright, cmpilato, gstein
