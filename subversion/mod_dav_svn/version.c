@@ -32,6 +32,7 @@
 #include "svn_props.h"
 #include "svn_dav.h"
 #include "svn_base64.h"
+#include "private/svn_repos_private.h"
 #include "private/svn_dav_protocol.h"
 #include "private/svn_log.h"
 
@@ -846,30 +847,57 @@ dav_svn__checkin(dav_resource *resource,
                                      resource->info->root.txn,
                                      resource->pool);
 
-      if (serr != NULL)
+      if (SVN_IS_VALID_REVNUM(new_rev))
+        {
+          if (serr)
+            {
+              const char *post_commit_err = svn_repos__post_commit_error_str
+                                              (serr, resource->pool);
+              ap_log_perror(APLOG_MARK, APLOG_ERR, serr->apr_err,
+                            resource->pool,
+                            "commit of r%ld succeeded, but an error occurred "
+                            "after the commit: '%s'",
+                            new_rev,
+                            post_commit_err);
+              svn_error_clear(serr);
+              serr = SVN_NO_ERROR;
+            }
+        }
+      else
         {
           const char *msg;
           svn_error_clear(svn_fs_abort_txn(resource->info->root.txn,
                                            resource->pool));
-
-          if (serr->apr_err == SVN_ERR_FS_CONFLICT)
-            {
-              msg = apr_psprintf(resource->pool,
-                                 "A conflict occurred during the CHECKIN "
-                                 "processing. The problem occurred with  "
-                                 "the \"%s\" resource.",
-                                 conflict_msg);
-            }
-          else
-            msg = "An error occurred while committing the transaction.";
 
           /* Attempt to destroy the shared activity. */
           dav_svn__delete_activity(resource->info->repos, shared_activity);
           apr_pool_userdata_set(NULL, DAV_SVN__AUTOVERSIONING_ACTIVITY,
                                 NULL, resource->info->r->pool);
 
-          return dav_svn__convert_err(serr, HTTP_CONFLICT, msg,
-                                      resource->pool);
+          if (serr)
+            {
+              if (serr->apr_err == SVN_ERR_FS_CONFLICT)
+                {
+                  msg = apr_psprintf(resource->pool,
+                                     "A conflict occurred during the CHECKIN "
+                                     "processing. The problem occurred with  "
+                                     "the \"%s\" resource.",
+                                     conflict_msg);
+                }
+              else
+                msg = "An error occurred while committing the transaction.";
+
+              return dav_svn__convert_err(serr, HTTP_CONFLICT, msg,
+                                          resource->pool);
+            }
+          else
+            {
+              return dav_new_error(resource->pool,
+                                        HTTP_INTERNAL_SERVER_ERROR,
+                                        0,
+                                        "Commit failed but there was no error "
+                                        "provided.");
+            }
         }
 
       /* Attempt to destroy the shared activity. */
@@ -1254,7 +1282,7 @@ merge(dav_resource *target,
   svn_fs_txn_t *txn;
   const char *conflict;
   svn_error_t *serr;
-  char *post_commit_err = NULL;
+  const char *post_commit_err = NULL;
   svn_revnum_t new_rev;
   apr_hash_t *locks;
   svn_boolean_t disable_merge_response = FALSE;
@@ -1310,35 +1338,51 @@ merge(dav_resource *target,
   serr = svn_repos_fs_commit_txn(&conflict, source->info->repos->repos,
                                  &new_rev, txn, pool);
 
-  /* If the error was just a post-commit hook failure, we ignore it.
-     Otherwise, we deal with it.
-     ### TODO: Figure out if the MERGE response can grow a means by
+  /* ### TODO: Figure out if the MERGE response can grow a means by
      which to marshal back both the success of the commit (and its
      commit info) and the failure of the post-commit hook.  */
-  if (serr && (serr->apr_err != SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED))
+  if (SVN_IS_VALID_REVNUM(new_rev))
     {
-      const char *msg;
+      if (serr)
+        {
+          /* ### Any error from svn_fs_commit_txn() itself, and not
+             ### the post-commit script, should be reported to the
+             ### client some other way than hijacking the post-commit
+             ### error message.*/
+          post_commit_err = svn_repos__post_commit_error_str(serr, pool);
+          svn_error_clear(serr);
+          serr = SVN_NO_ERROR;
+        }
+    }
+  else
+    {
       svn_error_clear(svn_fs_abort_txn(txn, pool));
 
-      if (serr->apr_err == SVN_ERR_FS_CONFLICT)
+      if (serr)
         {
-          /* ### we need to convert the conflict path into a URI */
-          msg = apr_psprintf(pool,
-                             "A conflict occurred during the MERGE "
-                             "processing. The problem occurred with the "
-                             "\"%s\" resource.",
-                             conflict);
+          const char *msg;
+          if (serr->apr_err == SVN_ERR_FS_CONFLICT)
+            {
+              /* ### we need to convert the conflict path into a URI */
+              msg = apr_psprintf(pool,
+                                 "A conflict occurred during the MERGE "
+                                 "processing. The problem occurred with the "
+                                 "\"%s\" resource.",
+                                 conflict);
+            }
+          else
+            msg = "An error occurred while committing the transaction.";
+
+          return dav_svn__convert_err(serr, HTTP_CONFLICT, msg, pool);
         }
       else
-        msg = "An error occurred while committing the transaction.";
-
-      return dav_svn__convert_err(serr, HTTP_CONFLICT, msg, pool);
-    }
-  else if (serr)
-    {
-      if (serr->child && serr->child->message)
-        post_commit_err = apr_pstrdup(pool, serr->child->message);
-      svn_error_clear(serr);
+        {
+          return dav_new_error(pool,
+                                    HTTP_INTERNAL_SERVER_ERROR,
+                                    0,
+                                    "Commit failed but there was no error "
+                                    "provided.");
+        }
     }
 
   /* Commit was successful, so schedule deltification. */

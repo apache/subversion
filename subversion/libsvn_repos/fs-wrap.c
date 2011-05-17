@@ -40,7 +40,7 @@ svn_repos_fs_commit_txn(const char **conflict_p,
                         svn_fs_txn_t *txn,
                         apr_pool_t *pool)
 {
-  svn_error_t *err;
+  svn_error_t *err, *err2;
   const char *txn_name;
 
   *new_rev = SVN_INVALID_REVNUM;
@@ -50,17 +50,19 @@ svn_repos_fs_commit_txn(const char **conflict_p,
   SVN_ERR(svn_repos__hooks_pre_commit(repos, txn_name, pool));
 
   /* Commit. */
-  SVN_ERR(svn_fs_commit_txn(conflict_p, new_rev, txn, pool));
+  err = svn_fs_commit_txn(conflict_p, new_rev, txn, pool);
+  if (! SVN_IS_VALID_REVNUM(*new_rev))
+    return err;
 
-  /* Run post-commit hooks.   Notice that we're wrapping the error
-     with a -specific- errorcode, so that our caller knows not to try
-     and abort the transaction. */
-  if ((err = svn_repos__hooks_post_commit(repos, *new_rev, pool)))
-    return svn_error_create
-      (SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED, err,
-       _("Commit succeeded, but post-commit hook failed"));
+  /* Run post-commit hooks. */
+  if ((err2 = svn_repos__hooks_post_commit(repos, *new_rev, pool)))
+    {
+      err2 = svn_error_create
+               (SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED, err2,
+                _("Commit succeeded, but post-commit hook failed"));
+    }
 
-  return SVN_NO_ERROR;
+  return svn_error_compose_create(err, err2);
 }
 
 
