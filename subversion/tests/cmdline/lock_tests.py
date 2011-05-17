@@ -1665,7 +1665,7 @@ def update_locked_deleted(sbox):
   sbox.simple_rm('iota')
   sbox.simple_rm('A/mu')
 
-  # Create expected output tree for an update to rev 2.
+  # Create expected output tree for an update.
   expected_output = svntest.wc.State(wc_dir, {
   })
   
