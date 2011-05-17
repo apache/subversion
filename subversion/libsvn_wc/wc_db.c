@@ -7747,8 +7747,7 @@ svn_wc__db_read_props_streamily(svn_wc__db_t *db,
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   while (have_row)
     {
-      const char *prop_data;
-      apr_size_t len;
+      apr_hash_t *props;
 
       svn_pool_clear(iterpool);
 
@@ -7756,48 +7755,19 @@ svn_wc__db_read_props_streamily(svn_wc__db_t *db,
       if (cancel_func)
         SVN_ERR(cancel_func(cancel_baton));
 
-      prop_data = svn_sqlite__column_blob(stmt, 2, &len, NULL);
-      if (prop_data)
+      SVN_ERR(svn_sqlite__column_properties(&props, stmt, 2, iterpool,
+                                            iterpool));
+      if (props && apr_hash_count(props) != 0)
         {
-          svn_skel_t *prop_skel;
+          const char *child_relpath;
+          const char *child_abspath;
 
-          prop_skel = svn_skel__parse(prop_data, len, iterpool);
-          if (svn_skel__list_length(prop_skel) != 0)
-            {
-              const char *child_relpath;
-              const char *child_abspath;
-              apr_hash_t *props = NULL;
+          child_relpath = svn_sqlite__column_text(stmt, 0, NULL);
+          child_abspath = svn_dirent_join(wcroot->abspath,
+                                          child_relpath, iterpool);
 
-              child_relpath = svn_sqlite__column_text(stmt, 0, NULL);
-              child_abspath = svn_dirent_join(wcroot->abspath,
-                                              child_relpath, iterpool);
-              if (propname)
-                {
-                  svn_string_t *propval;
-
-                  SVN_ERR(svn_skel__parse_prop(&propval, prop_skel, propname,
-                                               iterpool));
-                  if (propval)
-                    {
-                      props = apr_hash_make(iterpool);
-                      apr_hash_set(props, propname, APR_HASH_KEY_STRING,
-                                   propval);
-                    }
-
-                }
-              else
-                {
-                  SVN_ERR(svn_skel__parse_proplist(&props, prop_skel,
-                                                   iterpool));
-                }
-
-              if (props && apr_hash_count(props) != 0)
-                {
-                  SVN_ERR((*receiver_func)(receiver_baton,
-                                           child_abspath, props,
-                                           iterpool));
-                }
-            }
+          SVN_ERR(receiver_func(receiver_baton, child_abspath, props,
+                                iterpool));
         }
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
