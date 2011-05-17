@@ -3418,6 +3418,18 @@ test_copy_of_deleted(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_case_rename(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "case_rename", opts, pool));
+  SVN_ERR(add_and_commit_greek_tree(&b));
+
+  SVN_ERR(wc_move(&b, "A", "a"));
+
+  return svn_error_create(APR_EOF, NULL, NULL);
+}
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
 
@@ -3468,5 +3480,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test_shadowed_update"),
     SVN_TEST_OPTS_PASS(test_copy_of_deleted,
                        "test_copy_of_deleted (issue #3873)"),
+    SVN_TEST_OPTS_XFAIL(test_case_rename,
+                       "test_case_rename on case (in)sensitive system"),
     SVN_TEST_NULL
   };
