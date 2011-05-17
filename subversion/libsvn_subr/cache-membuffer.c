@@ -1413,7 +1413,7 @@ membuffer_cache_set_partial(svn_membuffer_t *cache,
           /* if the modification caused a re-allocation, we need to remove
            * the old entry and to copy the new data back into cache.
            */
-          if (!err && (data != orig_data))
+          if (data != orig_data)
             {
               /* Remove the old entry and try to make space for the new one.
                */
