@@ -147,7 +147,8 @@ svn_client_revert2(const apr_array_header_t *paths,
   for (i = 0; i < paths->nelts; i++)
     {
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
-      const char *local_abspath;
+      const char *local_abspath, *lock_target;
+      svn_boolean_t wc_root;
 
       svn_pool_clear(subpool);
 
@@ -163,8 +164,13 @@ svn_client_revert2(const apr_array_header_t *paths,
       baton.use_commit_times = use_commit_times;
       baton.changelists = changelists;
       baton.ctx = ctx;
+
+      SVN_ERR(svn_wc__strictly_is_wc_root(&wc_root, ctx->wc_ctx,
+                                          local_abspath, pool));
+      lock_target = wc_root ? local_abspath
+                            : svn_dirent_dirname(local_abspath, pool);
       err = svn_wc__call_with_write_lock(revert, &baton, ctx->wc_ctx,
-                                         local_abspath, TRUE, pool, pool);
+                                         lock_target, FALSE, pool, pool);
       if (err)
         goto errorful;
     }
