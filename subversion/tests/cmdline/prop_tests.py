@@ -1081,42 +1081,30 @@ def recursive_base_wc_ops(sbox):
   svntest.main.run_svn(None, 'del', '--force', fp_del)
 
   # Test recursive proplist
-  expected_output = svntest.verify.UnorderedRegexOutput([
-     "Properties on '" + sbox.ospath('A/mu') + "':\n",
-     "  p\n",
-     "    old-del\n",
-     "Properties on '" + sbox.ospath('iota') + "':\n",
-     "  p\n",
-     "    old-keep\n",
-     ])
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
-                                     'proplist', '-R', '-v', wc_dir, '-rBASE')
+  exit_code, output, errput = svntest.main.run_svn(None, 'proplist', '-R',
+                                                   '-v', wc_dir, '-rBASE')
+  verify_output([ 'old-del', 'old-keep', 'p', 'p',
+                  'Properties on ', 'Properties on ' ],
+                output, errput)
+  svntest.verify.verify_exit_code(None, exit_code, 0)
 
-  expected_output = svntest.verify.UnorderedRegexOutput([
-     "Properties on '" + sbox.ospath('A/added') + "':\n",
-     "  p\n",
-     "    new-add\n",
-     "Properties on '" + sbox.ospath('iota') + "':\n",
-     "  p\n",
-     "    new-keep\n",
-     ])
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
-                                     'proplist', '-R', '-v', wc_dir)
+  exit_code, output, errput = svntest.main.run_svn(None, 'proplist', '-R',
+                                                   '-v', wc_dir)
+  verify_output([ 'new-add', 'new-keep', 'p', 'p',
+                  'Properties on ', 'Properties on ' ],
+                output, errput)
+  svntest.verify.verify_exit_code(None, exit_code, 0)
 
   # Test recursive propget
-  expected_output = svntest.verify.UnorderedRegexOutput([
-     sbox.ospath('iota') + " - old-keep\n",
-     sbox.ospath('A/mu') + " - old-del\n",
-  ])
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
-                                     'propget', 'p', '-R', wc_dir, '-rBASE')
+  exit_code, output, errput = svntest.main.run_svn(None, 'propget', '-R',
+                                                   'p', wc_dir, '-rBASE')
+  verify_output([ 'old-del', 'old-keep' ], output, errput)
+  svntest.verify.verify_exit_code(None, exit_code, 0)
 
-  expected_output = svntest.verify.UnorderedRegexOutput([
-     sbox.ospath('iota') + " - new-keep\n",
-     sbox.ospath('A/added') + " - new-add\n",
-  ])
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
-                                     'propget', 'p', '-R', wc_dir)
+  exit_code, output, errput = svntest.main.run_svn(None, 'propget', '-R',
+                                                   'p', wc_dir)
+  verify_output([ 'new-add', 'new-keep' ], output, errput)
+  svntest.verify.verify_exit_code(None, exit_code, 0)
 
   # Test recursive propset (issue 1794)
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
