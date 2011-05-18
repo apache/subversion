@@ -788,7 +788,8 @@ recursive_propget_receiver(void *baton,
 /* Return the property value for any PROPNAME set on TARGET in *PROPS,
    with WC paths of char * for keys and property values of
    svn_string_t * for values.  Assumes that PROPS is non-NULL.  Additions
-   to *PROPS are allocated in POOL.
+   to *PROPS are allocated in RESULT_POOL, temporary allocations happen in
+   SCRATCH_POOL.
 
    CHANGELISTS is an array of const char * changelist names, used as a
    restrictive filter on items whose properties are set; that is,
@@ -808,13 +809,15 @@ get_prop_from_wc(apr_hash_t *props,
                  svn_depth_t depth,
                  const apr_array_header_t *changelists,
                  svn_client_ctx_t *ctx,
-                 apr_pool_t *pool)
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
 {
   apr_hash_t *changelist_hash = NULL;
   struct recursive_propget_receiver_baton rb;
 
   if (changelists && changelists->nelts)
-    SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelists, pool));
+    SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelists,
+                                       scratch_pool));
 
   /* Technically, svn_depth_unknown just means use whatever depth(s)
      we find in the working copy.  But this is a walk over extant
@@ -825,7 +828,7 @@ get_prop_from_wc(apr_hash_t *props,
     depth = svn_depth_infinity;
 
   rb.props = props;
-  rb.pool = pool;
+  rb.pool = result_pool;
   rb.wc_ctx = ctx->wc_ctx;
   rb.changelist_hash = changelist_hash;
 
@@ -837,23 +840,24 @@ get_prop_from_wc(apr_hash_t *props,
                                           base_props, pristine,
                                           recursive_propget_receiver, &rb,
                                           ctx->cancel_func, ctx->cancel_baton,
-                                          pool));
+                                          scratch_pool));
     }
   else if (svn_wc__changelist_match(ctx->wc_ctx, target_abspath,
-                                    changelist_hash, pool))
+                                    changelist_hash, scratch_pool))
     {
       const svn_string_t *propval;
 
       SVN_ERR(pristine_or_working_propval(&propval, ctx->wc_ctx, target_abspath,
-                                          propname, pristine, pool, pool));
+                                          propname, pristine,
+                                          result_pool, scratch_pool));
       if (propval)
         {
-          apr_hash_t *target_props = apr_hash_make(pool);
+          apr_hash_t *target_props = apr_hash_make(result_pool);
 
           apr_hash_set(target_props, target_abspath, APR_HASH_KEY_STRING,
                        propval);
           SVN_ERR(recursive_propget_receiver(&rb, target_abspath, target_props,
-                                             pool));      
+                                             scratch_pool));      
         }
     }
 
@@ -949,7 +953,7 @@ svn_client_propget3(apr_hash_t **props,
 
       SVN_ERR(get_prop_from_wc(*props, propname, local_abspath,
                                FALSE, pristine, kind,
-                               depth, changelists, ctx, pool));
+                               depth, changelists, ctx, pool, pool));
     }
   else
     {
