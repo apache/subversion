@@ -570,8 +570,8 @@ svn_fs_fs__deserialize_manifest(void **out,
 {
   apr_array_header_t *manifest = apr_array_make(pool, 1, sizeof(apr_off_t));
 
-  manifest->nelts = data_len / sizeof(apr_off_t);
-  manifest->nalloc = data_len / sizeof(apr_off_t);
+  manifest->nelts = (int) (data_len / sizeof(apr_off_t));
+  manifest->nalloc = (int) (data_len / sizeof(apr_off_t));
   manifest->elts = (char*)data;
 
   *out = manifest;
