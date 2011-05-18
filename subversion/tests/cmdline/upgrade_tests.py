@@ -318,8 +318,7 @@ def logs_left_1_5(sbox):
   replace_sbox_with_tarfile(sbox, 'logs_left_1_5.tar.bz2')
 
   # Try to upgrade, this should give an error
-  expected_stderr = (".*Cannot upgrade with existing logs; please "
-                     "run 'svn cleanup' with Subversion 1.6")
+  expected_stderr = (".*Cannot upgrade with existing logs; .*")
   svntest.actions.run_and_verify_svn(None, None, expected_stderr,
                                      'upgrade', sbox.wc_dir)
 
