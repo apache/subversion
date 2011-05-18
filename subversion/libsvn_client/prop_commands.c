@@ -803,7 +803,6 @@ static svn_error_t *
 get_prop_from_wc(apr_hash_t *props,
                  const char *propname,
                  const char *target_abspath,
-                 svn_boolean_t base_props,
                  svn_boolean_t pristine,
                  svn_node_kind_t kind,
                  svn_depth_t depth,
@@ -836,8 +835,7 @@ get_prop_from_wc(apr_hash_t *props,
   if (depth >= svn_depth_files && kind == svn_node_dir)
     {
       SVN_ERR(svn_wc__prop_list_recursive(ctx->wc_ctx, target_abspath,
-                                          propname, depth,
-                                          base_props, pristine,
+                                          propname, depth, FALSE, pristine,
                                           recursive_propget_receiver, &rb,
                                           ctx->cancel_func, ctx->cancel_baton,
                                           scratch_pool));
@@ -952,7 +950,7 @@ svn_client_propget3(apr_hash_t **props,
                                                 pool));
 
       SVN_ERR(get_prop_from_wc(*props, propname, local_abspath,
-                               FALSE, pristine, kind,
+                               pristine, kind,
                                depth, changelists, ctx, pool, pool));
     }
   else
