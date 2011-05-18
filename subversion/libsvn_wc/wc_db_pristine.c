@@ -43,7 +43,6 @@
    configured for the working copy indicated by PDH. The returned path
    does not necessarily currently exist.
 
-
    Any other allocations are made in SCRATCH_POOL. */
 static svn_error_t *
 get_pristine_fname(const char **pristine_abspath,
@@ -62,9 +61,6 @@ get_pristine_fname(const char **pristine_abspath,
   SVN_ERR_ASSERT(sha1_checksum != NULL);
   SVN_ERR_ASSERT(sha1_checksum->kind == svn_checksum_sha1);
 
-  /* ### need to fix this to use a symbol for ".svn". we don't need
-     ### to use join_many since we know "/" is the separator for
-     ### internal canonical paths */
   base_dir_abspath = svn_dirent_join_many(scratch_pool,
                                           wcroot_abspath,
                                           svn_wc_get_adm_dir(scratch_pool),
