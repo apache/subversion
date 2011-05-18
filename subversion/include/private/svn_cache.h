@@ -312,7 +312,7 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
  * handler will be called with @a baton and the error, and the
  * original function will return whatever error @a handler returns
  * instead (possibly SVN_NO_ERROR); @a handler will receive the pool
- * passed to the svn_cache_* function.  @a pool is used for temporary
+ * passed to the svn_cache__* function.  @a pool is used for temporary
  * allocations.
  */
 svn_error_t *
