@@ -1052,6 +1052,8 @@ def verify_output(expected_out, output, errput):
       print('       actual full output: %s' % output)
       raise svntest.Failure
     ln = ln + 1
+  if ln != len(expected_out):
+    raise svntest.Failure
 
 @Issue(1794)
 def recursive_base_wc_ops(sbox):
@@ -1079,33 +1081,42 @@ def recursive_base_wc_ops(sbox):
   svntest.main.run_svn(None, 'del', '--force', fp_del)
 
   # Test recursive proplist
-  exit_code, output, errput = svntest.main.run_svn(None, 'proplist', '-R',
-                                                   '-v', wc_dir, '-rBASE')
+  expected_output = [
+     "Properties on '" + sbox.ospath('A/mu') + "':\n",
+     "  p\n",
+     "    old-del\n",
+     "Properties on '" + sbox.ospath('iota') + "':\n",
+     "  p\n",
+     "    old-keep\n"
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'proplist', '-R', '-v', wc_dir, '-rBASE')
 
-  # For some reason this test doesn't fail if the next verification
-  # doesn't see any output.
-  verify_output([ 'old-del', 'old-keep', 'p', 'p',
-                  'Properties on ', 'Properties on ' ],
-                output, errput)
-  svntest.verify.verify_exit_code(None, exit_code, 0)
-
-  exit_code, output, errput = svntest.main.run_svn(None, 'proplist', '-R',
-                                                   '-v', wc_dir)
-  verify_output([ 'new-add', 'new-keep', 'p', 'p',
-                  'Properties on ', 'Properties on ' ],
-                output, errput)
-  svntest.verify.verify_exit_code(None, exit_code, 0)
+  expected_output = [
+     "Properties on '" + sbox.ospath('A/added') + "':\n",
+     "  p\n",
+     "    new-add\n",
+     "Properties on '" + sbox.ospath('iota') + "':\n",
+     "  p\n",
+     "    new-keep\n"
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'proplist', '-R', '-v', wc_dir)
 
   # Test recursive propget
-  exit_code, output, errput = svntest.main.run_svn(None, 'propget', '-R',
-                                                   'p', wc_dir, '-rBASE')
-  verify_output([ 'old-del', 'old-keep' ], output, errput)
-  svntest.verify.verify_exit_code(None, exit_code, 0)
+  expected_output = [
+     sbox.ospath('iota') + " - old-keep\n",
+     sbox.ospath('A/mu') + " - old-del\n",
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'propget', 'p', '-R', wc_dir, '-rBASE')
 
-  exit_code, output, errput = svntest.main.run_svn(None, 'propget', '-R',
-                                                   'p', wc_dir)
-  verify_output([ 'new-add', 'new-keep' ], output, errput)
-  svntest.verify.verify_exit_code(None, exit_code, 0)
+  expected_output = [
+     sbox.ospath('iota') + " - new-keep\n",
+     sbox.ospath('A/added') + " - new-add\n",
+  ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'propget', 'p', '-R', wc_dir)
 
   # Test recursive propset (issue 1794)
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -1394,12 +1405,13 @@ def depthy_url_proplist(sbox):
   sbox.simple_propset('p', 'prop2', 'iota')
   sbox.simple_propset('p', 'prop3', 'A')
   sbox.simple_propset('p', 'prop4', 'A/mu')
+  sbox.simple_commit()
 
   # Test depth-empty proplist.
   exit_code, output, errput = svntest.main.run_svn(None, 'proplist',
                                                    '--depth', 'empty',
                                                    '-v', repo_url)
-  verify_output([ 'prop1', 'Properties on ' ],
+  verify_output([ 'prop1', 'p', 'Properties on '],
                 output, errput)
   svntest.verify.verify_exit_code(None, exit_code, 0)
 
@@ -1407,7 +1419,8 @@ def depthy_url_proplist(sbox):
   exit_code, output, errput = svntest.main.run_svn(None, 'proplist',
                                                    '--depth', 'files',
                                                    '-v', repo_url)
-  verify_output([ 'prop1', 'prop2', 'Properties on ', 'Properties on ' ],
+  verify_output([ 'prop1', 'prop2', 'p', 'p',
+                 'Properties on ', 'Properties on ' ],
                 output, errput)
   svntest.verify.verify_exit_code(None, exit_code, 0)
 
@@ -1416,7 +1429,8 @@ def depthy_url_proplist(sbox):
                                                    '--depth', 'immediates',
                                                    '-v', repo_url)
 
-  verify_output([ 'prop1', 'prop2', 'prop3' ] + ['Properties on '] * 3,
+  verify_output([ 'prop1', 'prop2', 'prop3' ] + ['p'] * 3 +
+                ['Properties on '] * 3,
                 output, errput)
   svntest.verify.verify_exit_code(None, exit_code, 0)
 
@@ -1424,7 +1438,8 @@ def depthy_url_proplist(sbox):
   exit_code, output, errput = svntest.main.run_svn(None,
                                                    'proplist', '--depth',
                                                    'infinity', '-v', repo_url)
-  verify_output([ 'prop1', 'prop2', 'prop3', 'prop4' ] + ['Properties on '] * 4,
+  verify_output([ 'prop1', 'prop2', 'prop3', 'prop4' ] + ['p'] * 4 +
+                ['Properties on '] * 4,
                 output, errput)
   svntest.verify.verify_exit_code(None, exit_code, 0)
 
