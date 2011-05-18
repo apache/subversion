@@ -304,12 +304,18 @@ struct dir_baton
      marked as deleted. */
   svn_boolean_t shadowed;
 
-  /* If not NULL, contains a mapping of const char* basenames of children that have been
-     deleted to their svn_wc_conflict_description2_t* tree conflicts. We store this hash
-     to allow replacements      to continue under a just installed tree conflict.
+  /* The (new) changed_* information, cached to avoid retrieving it later */
+  svn_revnum_t changed_rev;
+  apr_time_t changed_date;
+  const char *changed_author;
 
-     The add after the delete will then update the tree conflicts information and
-     reinstall it. */
+  /* If not NULL, contains a mapping of const char* basenames of children that
+     have been deleted to their svn_wc_conflict_description2_t* tree conflicts.
+     We store this hash to allow replacements to continue under a just
+     installed tree conflict.
+
+     The add after the delete will then update the tree conflicts information
+     and reinstall it. */
   apr_hash_t *deletion_conflicts;
 
   /* Set if an unversioned dir of the same name already existed in
@@ -589,6 +595,7 @@ make_dir_baton(struct dir_baton **d_p,
   d->bump_info    = bdi;
   d->old_revision = SVN_INVALID_REVNUM;
   d->adding_dir   = adding;
+  d->changed_rev  = SVN_INVALID_REVNUM;
 
   /* Copy some flags from the parent baton */
   if (pb)
@@ -704,6 +711,11 @@ struct file_baton
      in the working copy (replaced, deleted, etc.). */
   svn_boolean_t shadowed;
 
+  /* The (new) changed_* information, cached to avoid retrieving it later */
+  svn_revnum_t changed_rev;
+  apr_time_t changed_date;
+  const char *changed_author;
+
   /* If there are file content changes, these are the checksums of the
      resulting new text base, which is in the pristine store, else NULL. */
   const svn_checksum_t *new_text_base_md5_checksum;
@@ -769,6 +781,7 @@ make_file_baton(struct file_baton **f_p,
   f->skip_this         = pb->skip_this;
   f->shadowed          = pb->shadowed;
   f->dir_baton         = pb;
+  f->changed_rev       = SVN_INVALID_REVNUM;
 
   /* the directory's bump info has one more referer now */
   ++f->bump_info->ref_count;
@@ -997,15 +1010,15 @@ open_root(void *edit_baton,
   if (*eb->target_basename == '\0')
     {
       /* For an update with a NULL target, this is equivalent to open_dir(): */
-      svn_depth_t depth;
       svn_wc__db_status_t status;
 
       /* Read the depth from the entry. */
       SVN_ERR(svn_wc__db_base_get_info(&status, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, &depth, NULL,
-                                   NULL, NULL, NULL, NULL, NULL,
-                                   eb->db, db->local_abspath, pool, pool));
-      db->ambient_depth = depth;
+                                       &db->changed_rev, &db->changed_date,
+                                       &db->changed_author, &db->ambient_depth,
+                                       NULL, NULL, NULL, NULL, NULL, NULL,
+                                       eb->db, db->local_abspath,
+                                       db->pool, pool));
       db->was_incomplete = (status == svn_wc__db_status_incomplete);
 
       SVN_ERR(svn_wc__db_temp_op_start_directory_update(eb->db,
@@ -2180,21 +2193,25 @@ open_directory(const char *path,
   SVN_ERR(svn_wc__write_check(eb->db, db->local_abspath, pool));
 
   SVN_ERR(svn_wc__db_read_info(&status, &wc_kind, &db->old_revision, NULL,
-                               NULL, NULL, NULL, NULL, NULL,
-                               &db->ambient_depth, NULL, NULL, NULL, NULL,
+                               NULL, NULL, &db->changed_rev, &db->changed_date,
+                               &db->changed_author, &db->ambient_depth,
+                               NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL,
                                &conflicted, NULL, NULL, NULL,
                                NULL, NULL, &have_work,
-                               eb->db, db->local_abspath, pool, pool));
+                               eb->db, db->local_abspath,
+                               db->pool, pool));
 
   if (!have_work)
     base_status = status;
   else
     SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, &db->old_revision,
-                                     NULL, NULL, NULL, NULL, NULL, NULL,
+                                     NULL, NULL, NULL, &db->changed_rev,
+                                     &db->changed_date, &db->changed_author,
                                      &db->ambient_depth, NULL, NULL, NULL,
                                      NULL, NULL, NULL,
-                                     eb->db, db->local_abspath, pool, pool));
+                                     eb->db, db->local_abspath,
+                                     db->pool, pool));
 
   db->was_incomplete = (base_status == svn_wc__db_status_incomplete);
 
@@ -2566,31 +2583,18 @@ close_directory(void *dir_baton,
     }
   else
     {
-      svn_revnum_t changed_rev;
-      apr_time_t changed_date;
-      const char *changed_author;
       apr_hash_t *props;
 
       /* ### we know a base node already exists. it was created in
          ### open_directory or add_directory.  let's just preserve the
          ### existing DEPTH value, and possibly CHANGED_*.  */
-      SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL,
-                                       NULL, NULL, NULL,
-                                       &changed_rev,
-                                       &changed_date,
-                                       &changed_author,
-                                       NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL,
-                                       eb->db, db->local_abspath,
-                                       scratch_pool, scratch_pool));
-
       /* If we received any changed_* values, then use them.  */
       if (SVN_IS_VALID_REVNUM(new_changed_rev))
-        changed_rev = new_changed_rev;
+        db->changed_rev = new_changed_rev;
       if (new_changed_date != 0)
-        changed_date = new_changed_date;
+        db->changed_date = new_changed_date;
       if (new_changed_author != NULL)
-        changed_author = new_changed_author;
+        db->changed_author = new_changed_author;
 
       /* If no depth is set yet, set to infinity. */
       if (db->ambient_depth == svn_depth_unknown)
@@ -2627,7 +2631,7 @@ close_directory(void *dir_baton,
                 eb->repos_root, eb->repos_uuid,
                 *eb->target_revision,
                 props,
-                changed_rev, changed_date, changed_author,
+                db->changed_rev, db->changed_date, db->changed_author,
                 NULL /* children */,
                 db->ambient_depth,
                 (dav_prop_changes->nelts > 0)
@@ -3170,7 +3174,8 @@ open_file(const char *path,
 
   /* If replacing, make sure the .svn entry already exists. */
   SVN_ERR(svn_wc__db_read_info(&status, &wc_kind, &fb->old_revision, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, &fb->changed_rev, &fb->changed_date,
+                               &fb->changed_author, NULL,
                                &fb->original_checksum, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL,
                                &conflicted, NULL, NULL, NULL,
@@ -3180,8 +3185,9 @@ open_file(const char *path,
 
   if (have_work)
     SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, &fb->old_revision,
-                                     NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                     &fb->original_checksum, NULL, NULL,
+                                     NULL, NULL, NULL, &fb->changed_rev,
+                                     &fb->changed_date, &fb->changed_author,
+                                     NULL, &fb->original_checksum, NULL, NULL,
                                      NULL, NULL, NULL,
                                      eb->db, fb->local_abspath,
                                      fb->pool, scratch_pool));
@@ -3795,9 +3801,6 @@ close_file(void *file_baton,
   apr_hash_t *local_actual_props = NULL;
   svn_skel_t *all_work_items = NULL;
   svn_skel_t *work_item;
-  svn_revnum_t new_changed_rev;
-  apr_time_t new_changed_date;
-  const char *new_changed_author;
   apr_pool_t *scratch_pool = fb->pool; /* Destroyed at function exit */
   svn_boolean_t keep_recorded_info = FALSE;
 
@@ -3833,11 +3836,24 @@ close_file(void *file_baton,
                                scratch_pool));
 
   /* Extract the changed_* and lock state information.  */
-  SVN_ERR(accumulate_last_change(&new_changed_rev,
-                                 &new_changed_date,
-                                 &new_changed_author,
-                                 entry_prop_changes,
-                                 scratch_pool, scratch_pool));
+  {
+    svn_revnum_t new_changed_rev;
+    apr_time_t new_changed_date;
+    const char *new_changed_author;
+
+    SVN_ERR(accumulate_last_change(&new_changed_rev,
+                                   &new_changed_date,
+                                   &new_changed_author,
+                                   entry_prop_changes,
+                                   scratch_pool, scratch_pool));
+
+    if (SVN_IS_VALID_REVNUM(new_changed_rev))
+      fb->changed_rev = new_changed_rev;
+    if (new_changed_date != 0)
+      fb->changed_date = new_changed_date;
+    if (new_changed_author != NULL)
+      fb->changed_author = new_changed_author;
+  }
 
   /* Determine whether the file has become unlocked.  */
   {
@@ -4003,7 +4019,7 @@ close_file(void *file_baton,
                                   eb->cancel_func, eb->cancel_baton,
                                   scratch_pool,
                                   scratch_pool));
-      /* We will ALWAYS have properties to save (after a not-dry-run merge).  */
+      /* We will ALWAYS have properties to save (after a not-dry-run merge). */
       SVN_ERR_ASSERT(new_base_props != NULL && new_actual_props != NULL);
       all_work_items = svn_wc__wq_merge(all_work_items, work_item,
                                         scratch_pool);
@@ -4013,7 +4029,7 @@ close_file(void *file_baton,
         {
           SVN_ERR(merge_file(&work_item, &install_pristine, &install_from,
                              &content_state, fb, current_actual_props,
-                             new_changed_date, scratch_pool, scratch_pool));
+                             fb->changed_date, scratch_pool, scratch_pool));
 
           all_work_items = svn_wc__wq_merge(all_work_items, work_item,
                                             scratch_pool);
@@ -4142,9 +4158,9 @@ close_file(void *file_baton,
                                      eb->repos_root, eb->repos_uuid,
                                      *eb->target_revision,
                                      new_base_props,
-                                     new_changed_rev,
-                                     new_changed_date,
-                                     new_changed_author,
+                                     fb->changed_rev,
+                                     fb->changed_date,
+                                     fb->changed_author,
                                      new_checksum,
                                      (dav_prop_changes->nelts > 0)
                                        ? svn_prop_array_to_hash(
