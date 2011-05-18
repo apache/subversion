@@ -2248,6 +2248,98 @@ def two_URL_merge_removes_valid_mergeinfo_from_target(sbox):
                                        None, None, None, None,
                                        None, 1, 1)
 
+#----------------------------------------------------------------------
+# Test for issue #3867 'reintegrate merges create mergeinfo for
+# non-existent paths'.
+@Issue(3867)
+@XFail()
+def reintegrate_creates_bogus_mergeinfo(sbox):
+  "reintegrate creates bogus mergeinfo"
+
+  sbox.build()
+  wc_dir=sbox.wc_dir
+
+  mu_path         = os.path.join(sbox.wc_dir, "A", "mu")
+  lambda_path     = os.path.join(sbox.wc_dir, "A", "B", "lambda")
+  alpha_path      = os.path.join(sbox.wc_dir, "A", "B", "E", "alpha")
+  beta_path       = os.path.join(sbox.wc_dir, "A", "B", "E", "beta")
+  A_path          = os.path.join(sbox.wc_dir, "A")
+  A_path_1        = os.path.join(sbox.wc_dir, "A@1")
+  A_COPY_path     = os.path.join(sbox.wc_dir, "A_COPY") 
+  A_COPY_psi_path = os.path.join(sbox.wc_dir, "A_COPY", "D", "H", "psi")
+  A_COPY_url      = sbox.repo_url + "/A_COPY"
+
+  # Make 2 commits under /A pushing the repo to rev3
+
+  svntest.main.file_write(mu_path, "New content.\n")
+  svntest.main.run_svn(None, "ci", "-m", "simple text edit", wc_dir)
+  svntest.main.file_write(lambda_path, "New content.\n")
+  svntest.main.run_svn(None, "ci", "-m", "simple text edit", wc_dir)
+
+  # Branch A@1 as A_COPY in revision 4
+
+  svntest.main.run_svn(None, "cp", A_path_1, A_COPY_path)
+  svntest.main.run_svn(None, "ci", "-m", "create a branch", wc_dir)
+
+  # Make a text edit on the branch pushing the repo to rev6
+  svntest.main.file_write(A_COPY_psi_path, "Branch edit.\n")
+  svntest.main.run_svn(None, "ci", "-m", "branch edit", wc_dir)
+
+  # Sync the A_COPY with A in preparation for reintegrate
+  svntest.main.run_svn(None, "up", wc_dir)
+  svntest.main.run_svn(None, "merge", sbox.repo_url + "/A", A_COPY_path)
+  svntest.main.run_svn(None, "ci", "-m", "sync A_COPY with A", wc_dir)
+
+  # Update the working copy to allow the merge
+  svntest.main.run_svn(None, "up", wc_dir)
+
+  # Reintegrate A_COPY to A.  The resulting merginfo on A should be
+  # /A_COPY:4-10
+  #
+  # Currently this test fails because the resulting mergeinfo is /A_COPY:2-6.
+  # But A_COPY didn't exist unitl r4, so /A_COPY:2-3 describes merge source
+  # path-revs which don't exist.
+  expected_output = wc.State(A_path, {
+    'D/H/psi' : Item(status='U '),
+    })
+  expected_mergeinfo_output = wc.State(A_path, {
+    '' : Item(status=' U'),
+    })
+  expected_elision_output = wc.State(A_path, {
+    })
+  expected_disk = wc.State('', {
+    ''          : Item(props={SVN_PROP_MERGEINFO :
+                              '/A_COPY:4-6'}),
+    'B'         : Item(),
+    'mu'        : Item("New content.\n"),
+    'B/E'       : Item(),
+    'B/E/alpha' : Item("This is the file 'alpha'.\n"),
+    'B/E/beta'  : Item("This is the file 'beta'.\n"),
+    'B/lambda'  : Item("New content.\n"),
+    'B/F'       : Item(),
+    'C'         : Item(),
+    'D'         : Item(),
+    'D/G'       : Item(),
+    'D/G/pi'    : Item("This is the file 'pi'.\n"),
+    'D/G/rho'   : Item("This is the file 'rho'.\n"),
+    'D/G/tau'   : Item("This is the file 'tau'.\n"),
+    'D/gamma'   : Item("This is the file 'gamma'.\n"),
+    'D/H'       : Item(),
+    'D/H/chi'   : Item("This is the file 'chi'.\n"),
+    'D/H/psi'   : Item("Branch edit.\n"),
+    'D/H/omega' : Item("This is the file 'omega'.\n"),
+    })
+  expected_skip = wc.State(A_COPY_path, {})
+
+  svntest.actions.run_and_verify_merge(A_path, None, None,
+                                       A_COPY_url, None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_disk, None, expected_skip,
+                                       None, None, None, None, None,
+                                       1, 1, "--reintegrate", A_path)
+
 ########################################################################
 # Run the tests
 
@@ -2268,6 +2360,7 @@ test_list = [ None,
               reintegrate_with_self_referential_mergeinfo,
               added_subtrees_with_mergeinfo_break_reintegrate,
               two_URL_merge_removes_valid_mergeinfo_from_target,
+              reintegrate_creates_bogus_mergeinfo,
              ]
 
 if __name__ == '__main__':
