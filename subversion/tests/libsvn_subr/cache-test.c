@@ -51,7 +51,7 @@ serialize_revnum(char **data,
 /* Implements svn_cache__deserialize_func_t */
 static svn_error_t *
 deserialize_revnum(void **out,
-                   const char *data,
+                   char *data,
                    apr_size_t data_len,
                    apr_pool_t *pool)
 {

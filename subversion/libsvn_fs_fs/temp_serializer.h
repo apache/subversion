@@ -88,7 +88,7 @@ svn_fs_fs__serialize_txdelta_window(char **buffer,
  */
 svn_error_t *
 svn_fs_fs__deserialize_txdelta_window(void **item,
-                                      const char *buffer,
+                                      char *buffer,
                                       apr_size_t buffer_size,
                                       apr_pool_t *pool);
 
@@ -108,7 +108,7 @@ svn_fs_fs__serialize_manifest(char **data,
  */
 svn_error_t *
 svn_fs_fs__deserialize_manifest(void **out,
-                                const char *data,
+                                char *data,
                                 apr_size_t data_len,
                                 apr_pool_t *pool);
 
@@ -126,7 +126,7 @@ svn_fs_fs__serialize_id(char **data,
  */
 svn_error_t *
 svn_fs_fs__deserialize_id(void **out,
-                          const char *data,
+                          char *data,
                           apr_size_t data_len,
                           apr_pool_t *pool);
 
@@ -144,7 +144,7 @@ svn_fs_fs__serialize_node_revision(char **buffer,
  */
 svn_error_t *
 svn_fs_fs__deserialize_node_revision(void **item,
-                                     const char *buffer,
+                                     char *buffer,
                                      apr_size_t buffer_size,
                                      apr_pool_t *pool);
 
@@ -162,7 +162,7 @@ svn_fs_fs__serialize_dir_entries(char **data,
  */
 svn_error_t *
 svn_fs_fs__deserialize_dir_entries(void **out,
-                                   const char *data,
+                                   char *data,
                                    apr_size_t data_len,
                                    apr_pool_t *pool);
 

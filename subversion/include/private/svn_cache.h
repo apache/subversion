@@ -50,10 +50,12 @@ extern "C" {
 
 /**
  * A function type for deserializing an object @a *out from the string
- * @a data of length @a data_len in the pool @a pool.
-*/
+ * @a data of length @a data_len in the pool @a pool. It is legal and
+ * generally suggested that the deserialization will be done in-place,
+ * i.e. modify @a data directly and return it in @a *out.
+ */
 typedef svn_error_t *(*svn_cache__deserialize_func_t)(void **out,
-                                                      const char *data,
+                                                      char *data,
                                                       apr_size_t data_len,
                                                       apr_pool_t *pool);
 
