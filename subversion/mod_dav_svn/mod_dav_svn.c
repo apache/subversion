@@ -437,7 +437,7 @@ SVNInMemoryCacheSize_cmd(cmd_parms *cmd, void *config, const char *arg1)
       return "Invalid decimal number for the SVN cache size.";
     }
 
-  settings.cache_size = value * 0x100000;
+  settings.cache_size = value * 0x400;
 
   svn_set_cache_config(&settings);
 
@@ -931,8 +931,8 @@ static const command_rec cmds[] =
   /* per server */
   AP_INIT_TAKE1("SVNInMemoryCacheSize", SVNInMemoryCacheSize_cmd, NULL,
                 RSRC_CONF,
-                "specifies the maximum size im MB per process of Subversion's "
-                "in-memory object cache (default value is 16; 0 deactivates "
+                "specifies the maximum size im kB per process of Subversion's "
+                "in-memory object cache (default value is 16384; 0 deactivates "
                 "the cache)."),
   /* per server */
   AP_INIT_TAKE1("SVNCompressionLevel", SVNCompressionLevel_cmd, NULL,
