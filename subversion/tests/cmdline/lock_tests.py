@@ -1657,12 +1657,15 @@ def update_locked_deleted(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
   
-  iota_path = os.path.join(wc_dir, 'iota')
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  iota_path = sbox.ospath('iota')
+  mu_path = sbox.ospath('A/mu')
+  alpha_path = sbox.ospath('A/B/E/alpha')
 
-  svntest.main.run_svn(None, 'lock', '-m', 'locked', mu_path, iota_path)
+  svntest.main.run_svn(None, 'lock', '-m', 'locked', mu_path, iota_path,
+                       alpha_path)
   sbox.simple_rm('iota')
   sbox.simple_rm('A/mu')
+  sbox.simple_rm('A/B/E')
 
   # Create expected output tree for an update.
   expected_output = svntest.wc.State(wc_dir, {
@@ -1670,17 +1673,26 @@ def update_locked_deleted(sbox):
   
   # Create expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak('iota', 'A/mu', status='D ', writelocked='K')
-    
-  svntest.actions.run_and_verify_update(wc_dir,
-                                        expected_output,
-                                        None,
-                                        expected_status,
-                                        None, None, None,
-                                        None, None)
+  expected_status.tweak('A/B/E', status='D ')
+  expected_status.tweak('iota', 'A/mu', 'A/B/E/alpha',
+                        status='D ', writelocked='K')
+  expected_status.tweak('A/B/E/beta', status='D ')
 
-  
-  
+  svntest.actions.run_and_verify_update(wc_dir, expected_output,
+                                        None, expected_status)
+
+  # Now we steal the lock of iota and A/mu via URL and retry
+  svntest.main.run_svn(None, 'lock', '-m', 'locked', sbox.repo_url + '/iota',
+                       '--force', sbox.repo_url + '/A/mu',
+                       sbox.repo_url + '/A/B/E/alpha')
+
+  expected_status.tweak('iota', 'A/mu', 'A/B/E/alpha',
+                        status='D ', writelocked='O')
+
+  svntest.actions.run_and_verify_update(wc_dir, expected_output,
+                                        None, expected_status)
+
+
 ########################################################################
 # Run the tests
 

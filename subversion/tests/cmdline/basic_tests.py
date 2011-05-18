@@ -2605,9 +2605,8 @@ def delete_child_parent_update(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.remove('A/B/E/alpha', 'A/B/E/beta', 'A/B/E')
 
-  # This produces a tree-conflict
+  # This produced a tree-conflict until we fixed issue #3533
   expected_status.tweak(wc_rev=2)
-  expected_status.tweak('A/B/E', treeconflict='C')
   svntest.actions.run_and_verify_update(wc_dir,
                                         [],
                                         expected_disk,
