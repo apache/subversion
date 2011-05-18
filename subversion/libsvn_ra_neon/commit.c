@@ -508,7 +508,7 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc,
          ### overly generic.  See issue #2740. */
       if (err->apr_err == SVN_ERR_FS_CONFLICT)
         return svn_error_createf
-          (err->apr_err, err,
+          (SVN_ERR_FS_OUT_OF_DATE, err,
            _("File or directory '%s' is out of date; try updating"),
            svn_relpath_local_style(local_relpath, pool));
       return err;
