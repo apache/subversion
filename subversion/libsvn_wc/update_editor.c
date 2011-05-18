@@ -5027,10 +5027,10 @@ svn_wc__strictly_is_wc_root(svn_boolean_t *wc_root,
                             const char *local_abspath,
                             apr_pool_t *scratch_pool)
 {
-  return svn_error_return(
-             svn_wc__check_wc_root(wc_root, NULL, NULL,
-                                   wc_ctx->db, local_abspath,
-                                   scratch_pool));
+  return svn_error_return(svn_wc__db_is_wcroot(wc_root,
+                                               wc_ctx->db,
+                                               local_abspath,
+                                               scratch_pool));
 }
 
 
