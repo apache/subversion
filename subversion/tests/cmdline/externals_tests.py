@@ -992,14 +992,8 @@ def cannot_move_or_remove_file_externals(sbox):
   # But the directory that contains it can be deleted.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 6)
 
-  svntest.actions.run_and_verify_svn(None, None,
-                                     ".*gamma' is not under version.*",
-                                     'rm',
-                                     os.path.join(wc_dir, "A", "B"))
-
-  # When you apply a bit of force
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'rm', '--force',
+                                     'rm',
                                      os.path.join(wc_dir, "A", "B"))
 
   expected_status.tweak('A/B', status='D ')

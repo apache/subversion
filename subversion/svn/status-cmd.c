@@ -41,7 +41,7 @@
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
-#include "private/svn_client_private.h"
+
 
 
 /*** Code. ***/
@@ -221,34 +221,6 @@ print_status(void *baton,
         }
 
       status = twks;
-    }
-  else if (status->node_status == svn_wc_status_external)
-    {
-      const svn_wc_status3_t *wc_status;
-      svn_client_status_t *twks;
-      svn_node_kind_t kind;
-      svn_error_t *err;
-
-      err = svn_wc__external_status(&wc_status, &kind, sb->ctx->wc_ctx,
-                                    local_abspath, local_abspath,
-                                    sb->cl_pool, pool);
-
-      if (err)
-        {
-          if (err->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-            return svn_error_return(err);
-          svn_error_clear(err);
-        }
-      else
-        {
-          SVN_ERR(svn_client__create_status(&twks, sb->ctx->wc_ctx,
-                                            local_abspath, wc_status,
-                                            sb->cl_pool, pool));
-
-          twks->file_external = (kind == svn_node_file);
-
-          status = twks;
-        }
     }
 
   /* If the path is part of a changelist, then we don't print
