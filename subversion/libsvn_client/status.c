@@ -632,14 +632,9 @@ svn_client__create_status(svn_client_status_t **cst,
 
       if (external_kind == svn_node_file)
         {
-          /* Make it similar to the new status */
           (*cst)->file_external = TRUE;
           (*cst)->switched = FALSE;
-          (*cst)->node_status = svn_wc_status_external;
-          (*cst)->versioned = FALSE;
-          (*cst)->kind = svn_node_unknown;
-          (*cst)->text_status = svn_wc_status_none;
-          (*cst)->prop_status = svn_wc_status_none;
+          (*cst)->node_status = (*cst)->text_status;
         }
     }
 

@@ -123,18 +123,6 @@ svn_wc__read_external_info(svn_node_kind_t *external_kind,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
 
-/* Fill a svn_wc_status3_t * structure with information about the external,
-   like how it would be shown if file externals were still part of the parent
-   working copy. */
-svn_error_t *
-svn_wc__external_status(const svn_wc_status3_t **status,
-                        svn_node_kind_t *external_kind,
-                        svn_wc_context_t *wc_ctx,
-                        const char *wri_abspath,
-                        const char *local_abspath,
-                        apr_pool_t *result_pool,
-                        apr_pool_t *scratch_pool);
-
 
 /** Set @a *tree_conflict to a newly allocated @c
  * svn_wc_conflict_description_t structure describing the tree
