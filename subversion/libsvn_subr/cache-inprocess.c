@@ -155,10 +155,12 @@ move_page_to_front(inprocess_cache_t *cache,
   SVN_ERR_ASSERT(page != cache->sentinel);
 
   if (! page->next)
-    return;
+    return SVN_NO_ERROR;
 
   remove_page_from_list(page);
   insert_page(cache, page);
+
+  return SVN_NO_ERROR;
 }
 
 /* Return a copy of KEY inside POOL, using CACHE->KLEN to figure out
