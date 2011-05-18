@@ -123,21 +123,6 @@ svn_wc__read_external_info(svn_node_kind_t *external_kind,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
 
-/* Reads the properties of the file external at LOCAL_ABSPATH, as defined in
-   the working copy identified by WRI_ABSPATH.
-
-   If PRISTINE is TRUE, retrieve the pristine version of the properties,
-   otherwise the ACTUAL properties.
- */
-svn_error_t *
-svn_wc__external_read_props(apr_hash_t **props,
-                            svn_wc_context_t *wc_ctx,
-                            const char *wri_abspath,
-                            const char *local_abspath,
-                            svn_boolean_t pristine_props,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool);
-
 /* Fill a svn_wc_status3_t * structure with information about the external,
    like how it would be shown if file externals were still part of the parent
    working copy. */
