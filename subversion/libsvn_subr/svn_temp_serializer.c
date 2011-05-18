@@ -1,5 +1,5 @@
 /*
- * svn_serializer.c: implement the tempoary structure serialization API
+ * svn_temp_serializer.c: implement the tempoary structure serialization API
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
