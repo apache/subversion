@@ -148,11 +148,11 @@ insert_page(inprocess_cache_t *cache,
 
 /* If PAGE is in the circularly linked list (eg, its NEXT isn't NULL),
  * move it to the front of the list. */
-static void
+static svn_error_t *
 move_page_to_front(inprocess_cache_t *cache,
                    struct cache_page *page)
 {
-  assert(page != cache->sentinel);
+  SVN_ERR_ASSERT(page != cache->sentinel);
 
   if (! page->next)
     return;
@@ -230,7 +230,7 @@ inprocess_cache_get(void **value_p,
       return unlock_cache(cache, SVN_NO_ERROR);
     }
 
-  move_page_to_front(cache, entry->page);
+  SVN_ERR(move_page_to_front(cache, entry->page));
 
   /* duplicate the buffer entry */
   buffer = apr_palloc(pool, entry->size);
@@ -321,7 +321,7 @@ inprocess_cache_set(void *cache_void,
     {
       struct cache_page *page = existing_entry->page;
 
-      move_page_to_front(cache, page);
+      SVN_ERR(move_page_to_front(cache, page));
       cache->data_size -= existing_entry->size;
       if (value)
         {
@@ -474,7 +474,7 @@ inprocess_cache_get_partial(void **value_p,
       return unlock_cache(cache, SVN_NO_ERROR);
     }
 
-  move_page_to_front(cache, entry->page);
+  SVN_ERR(move_page_to_front(cache, entry->page));
 
   *found = TRUE;
   return unlock_cache(cache,
@@ -498,7 +498,7 @@ inprocess_cache_set_partial(void *cache_void,
   if (! entry)
     return unlock_cache(cache, err);
 
-  move_page_to_front(cache, entry->page);
+  SVN_ERR(move_page_to_front(cache, entry->page));
 
   cache->data_size -= entry->size;
   err = func((char **)&entry->value,
