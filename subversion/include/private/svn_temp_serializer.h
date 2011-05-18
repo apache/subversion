@@ -20,7 +20,7 @@
  * ====================================================================
  * @endcopyright
  *
- * @file svn_serializer.h
+ * @file svn_temp_serializer.h
  * @brief Helper API for serializing _temporarily_ data structures.
  *
  * @note This API is intended for efficient serialization and duplication
@@ -28,8 +28,15 @@
  *       suitable for persistent data.
  */
 
+#ifndef SVN_TEMP_SERIALIZER_H
+#define SVN_TEMP_SERIALIZER_H
+
 #include <apr.h>
 #include "svn_types.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 /* forward declaration */
 struct svn_stringbuf_t;
@@ -185,3 +192,9 @@ svn_temp_deserializer__resolve(void *buffer, void **ptr);
  */
 const void *
 svn_temp_deserializer__ptr(const void *buffer, const void **ptr);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* SVN_TEMP_SERIALIZER_H */
