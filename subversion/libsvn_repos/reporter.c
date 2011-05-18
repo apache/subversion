@@ -788,10 +788,25 @@ update_entry(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
     {
       distance = svn_fs_compare_ids(s_entry->id, t_entry->id);
       if (distance == 0 && !any_path_info(b, e_path)
-          && (!info || (!info->start_empty && !info->lock_token))
           && (requested_depth <= wc_depth || t_entry->kind == svn_node_file))
-        return SVN_NO_ERROR;
-      else if (distance != -1 || b->ignore_ancestry)
+        {
+          if (!info)
+            return SVN_NO_ERROR;
+
+          if (!info->start_empty)
+            {
+              svn_lock_t *lock;
+
+              if (!info->lock_token)
+                return SVN_NO_ERROR;
+
+              SVN_ERR(svn_fs_get_lock(&lock, b->repos->fs, t_path, pool));
+              if (lock && (strcmp(lock->token, info->lock_token) == 0))
+                return SVN_NO_ERROR;
+            }
+        }
+
+      if (distance != -1 || b->ignore_ancestry)
         related = TRUE;
     }
 
