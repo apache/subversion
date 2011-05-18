@@ -819,7 +819,7 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
              && svn_uri_is_ancestor(repos_root, pair->dst_abspath_or_url)))
         return svn_error_create
           (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-           _("Source and destination URLs appear not to all point to the "
+           _("Source and destination URLs appear not to point to the "
              "same repository."));
 
       /* Resolve revision keywords and such into real revision number,
