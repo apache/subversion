@@ -905,31 +905,6 @@ svn_client_propget3(apr_hash_t **props,
 
       if (kind == svn_node_unknown || kind == svn_node_none)
         {
-          {
-            apr_hash_t *node_props;
-            svn_error_t *err;
-
-            err = svn_wc__external_read_props(&node_props,  ctx->wc_ctx, NULL,
-                                              local_abspath, pristine,
-                                              pool, pool);
-
-            if (!err)
-              {
-                if (node_props)
-                  apr_hash_set(*props, path_or_url, APR_HASH_KEY_STRING,
-                               apr_hash_get(node_props, propname,
-                                            APR_HASH_KEY_STRING));
-
-                if (actual_revnum)
-                  *actual_revnum = SVN_INVALID_REVNUM; /* Unrelated */
-
-                return SVN_NO_ERROR;
-              }
-            else if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-              svn_error_clear(err);
-            else
-              return svn_error_return(err);
-          }
           /* svn uses SVN_ERR_UNVERSIONED_RESOURCE as warning only
              for this function. */
           return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
@@ -1230,28 +1205,6 @@ svn_client_proplist3(const char *path_or_url,
 
       if (kind == svn_node_unknown || kind == svn_node_none)
         {
-          /* Be friendly: Check if the explicit target is a file external
-             before returning an error */
-          {
-            apr_hash_t *props;
-            svn_error_t *err;
-
-            err = svn_wc__external_read_props(&props,  ctx->wc_ctx, NULL,
-                                              local_abspath, pristine,
-                                              pool, pool);
-
-            if (!err)
-              {
-                if (props)
-                  SVN_ERR(receiver(receiver_baton, path_or_url, props, pool));
-
-                return SVN_NO_ERROR;
-              }
-            else if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-              svn_error_clear(err);
-            else
-              return svn_error_return(err);
-          }
           /* svn uses SVN_ERR_UNVERSIONED_RESOURCE as warning only
              for this function. */
           return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
