@@ -254,10 +254,41 @@ svn_client_args_to_target_array(apr_array_header_t **targets_p,
           else  /* not a url, so treat as a path */
             {
               const char *base_name;
+              const char *original_target;
 
+              original_target = svn_dirent_internal_style(true_target, pool);
               SVN_ERR(svn_opt__arg_canonicalize_path(&true_target,
                                                      true_target, pool));
 
+              /* If there was a truepath-conversion (which can happen on
+                 case-insensitive filesystems), check if there is an exact
+                 match in the wc-db (e.g. a scheduled-for-delete file only
+                 differing in case from an on-disk file).  If so, use that
+                 instead of the truepath converted variant. */
+              if (strcmp(original_target, true_target) != 0)
+                {
+                  const char *target_abspath;
+                  svn_node_kind_t kind;
+                  svn_error_t *err2;
+
+                  SVN_ERR(svn_dirent_get_absolute(&target_abspath, 
+                                                  original_target, pool));
+                  err2 = svn_wc_read_kind(&kind, ctx->wc_ctx, target_abspath,
+                                          FALSE, pool);
+                  if (err2 && err2->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
+                    {
+                      svn_error_clear(err2);
+                    }
+                  else
+                    {
+                      SVN_ERR(err2);
+                      /* We successfully did a lookup in the wc-db. Now see
+                         if it's something interesting. */
+                      if (kind == svn_node_file || kind == svn_node_dir)
+                        true_target = original_target;
+                    }
+                }
+              
               /* If the target has the same name as a Subversion
                  working copy administrative dir, skip it. */
               base_name = svn_dirent_basename(true_target, pool);

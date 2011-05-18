@@ -5123,7 +5123,6 @@ def copy_url_shortcut(sbox):
 # Regression test for issue #3865: 'svn' on Windows cannot address
 # scheduled-for-delete file, if another file differing only in case is
 # present on disk
-@XFail(svntest.main.is_fs_case_insensitive)
 @Issue(3865)
 def deleted_file_with_case_clash(sbox):
   """address a deleted file hidden by case clash"""
