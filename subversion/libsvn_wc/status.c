@@ -1540,7 +1540,7 @@ make_dir_baton(void **dir_baton,
 
       SVN_ERR(get_dir_status(&eb->wb, local_abspath, NULL, TRUE,
                              status_in_parent->repos_root_url,
-                             status_in_parent->repos_relpath,
+                             NULL /*parent_repos_relpath*/,
                              NULL,
                              NULL /* dirent */, ignores,
                              d->depth == svn_depth_files
