@@ -724,9 +724,6 @@ struct file_baton
   /* The checksum of the file before the update */
   const svn_checksum_t *original_checksum;
 
-  /* Set if we've received an apply_textdelta for this file. */
-  svn_boolean_t received_textdelta;
-
   /* An array of svn_prop_t structures, representing all the property
      changes to be applied to this file.  Once a file baton is
      initialized, this is never NULL, but it may have zero elements.  */
@@ -3275,8 +3272,6 @@ apply_textdelta(void *file_baton,
   SVN_ERR(svn_checksum_parse_hex(&expected_base_checksum, svn_checksum_md5,
                                  expected_checksum, pool));
 
-  fb->received_textdelta = TRUE;
-
   /* Before applying incoming svndiff data to text base, make sure
      text base hasn't been corrupted, and that its checksum
      matches the expected base checksum. */
@@ -3814,13 +3809,6 @@ close_file(void *file_baton,
   if (expected_md5_digest)
     SVN_ERR(svn_checksum_parse_hex(&expected_md5_checksum, svn_checksum_md5,
                                    expected_md5_digest, scratch_pool));
-
-  if (fb->received_textdelta)
-    SVN_ERR_ASSERT(fb->new_text_base_sha1_checksum
-                   && fb->new_text_base_md5_checksum);
-  else
-    SVN_ERR_ASSERT(! fb->new_text_base_sha1_checksum
-                   && ! fb->new_text_base_md5_checksum);
 
   if (fb->new_text_base_md5_checksum && expected_md5_checksum
       && !svn_checksum_match(expected_md5_checksum,
