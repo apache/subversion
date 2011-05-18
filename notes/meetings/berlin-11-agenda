@@ -7,8 +7,6 @@ discuss, and make themselves merry.
 
 Potential items for discussion:
  * Let's finish Subversion 1.7
- * What's the plan for 1.8?
- * Key signing
  * ra_serf issues
    - Should we leave serf as default http library?
    - Checkout/update editor memory and performance issues. May be
@@ -27,4 +25,5 @@ Potential items for discussion:
    - Making diff faster (see notes/diff-optimizations.txt)
    - Calculating blame info on server side?
    - Caching/saving changed-line-info on server side?
+ * Externals discussion
  * [insert item here]
