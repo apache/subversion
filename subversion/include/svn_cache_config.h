@@ -38,7 +38,7 @@ extern "C" {
  * @{
  * @since New in 1.7. */
 
-/** Cache ressource settings. It controls what caches, in what size and
+/** Cache resource settings. It controls what caches, in what size and
    how they will be created. The settings apply for the whole process.
 
    @since New in 1.7.
