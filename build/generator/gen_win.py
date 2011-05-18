@@ -809,6 +809,9 @@ class WinGeneratorBase(GeneratorBase):
     if target.name.endswith('svn_subr'):
       fakedefines.append("SVN_USE_WIN32_CRASHHANDLER")
 
+    # use static linking to Expat
+    fakedefines.append("XML_STATIC")
+
     return fakedefines
 
   def get_win_includes(self, target):
