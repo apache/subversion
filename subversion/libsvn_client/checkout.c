@@ -198,8 +198,8 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
           if (strcmp(entry_url, session_url) != 0)
             return svn_error_createf(
                           SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-                          _("'%s' is already a working copy for a different URL;"
-                            " use 'svn update' to update it"),
+                          _("'%s' is already a working copy for a"
+                            " different URL"),
                           svn_dirent_local_style(local_abspath, pool));
         }
     }

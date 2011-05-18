@@ -1273,8 +1273,9 @@ upgrade_to_wcng(void **dir_baton,
   SVN_ERR(svn_io_check_path(logfile_path, &logfile_on_disk, scratch_pool));
   if (logfile_on_disk == svn_node_file)
     return svn_error_create(SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
-                            _("Cannot upgrade with existing logs; please "
-                              "run 'svn cleanup' with Subversion 1.6"));
+                            _("Cannot upgrade with existing logs; Use "
+                              "an 1.6 client to clean up before using "
+                              "this client"));
 
   /* Lock this working copy directory, or steal an existing lock. Do this
      BEFORE we read the entries. We don't want another process to modify the
