@@ -34,15 +34,6 @@ Candidate changes:
      +1: pburba, cmpilato
      -0: danielsh (authz concerns on the original fix)
 
- * r1074572
-   Allow building on Windows with a recent Expat.
-   Justification:
-     We like building Subversion, even on Windows.  User requested.
-   Votes:
-     +1: gstein, rhuijben
-     +0: hwright (I like the idea, but have no knowledge of the change, or
-                  ability to test it.)
-
  * r1076730, r1078954, r1081255
    Fix issue #3650 "log -g produces excessive duplicate output"
    Justification:
@@ -241,3 +232,12 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1074572
+   Allow building on Windows with a recent Expat.
+   Justification:
+     We like building Subversion, even on Windows.  User requested.
+   Votes:
+     +1: gstein, rhuijben, jcorvel
+     +0: hwright (I like the idea, but have no knowledge of the change, or
+                  ability to test it.)
