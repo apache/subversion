@@ -36,7 +36,7 @@ typedef struct inprocess_cache_t {
   /* A user-defined identifier for this cache instance. */
   const char *id;
 
-  /* Maps from a key (of size CACHE->KLEN) to a struct cache_entry. */
+  /* HASH maps a key (of size KLEN) to a struct cache_entry. */
   apr_hash_t *hash;
   apr_ssize_t klen;
 
